@@ -16,7 +16,9 @@ import type { BlockKind, MapBlock, MapData, SpawnPoint } from './mapTypes';
  *   stubs. Behind the corridor wall, a room with two doors leads to an alcove and the central hall.
  *
  * Cover heights: full (≥ 2.4 m) or crouch cover (1.2 m: hides a crouched player, a standing one can
- * shoot over). No straight line along a lane is longer than 23 m. Layout rules are checked in depot.test.ts.
+ * shoot over). No straight line along a lane is longer than 23 m, and no line of sight between points on a
+ * 1 m grid is longer than 30 m (a finer scan still finds a few, see docs/KNOWN_ISSUES.md).
+ * Layout rules are checked in depot.test.ts.
  */
 
 const HALF_X = 22;
@@ -102,7 +104,7 @@ const WEST_HALF: MapBlock[] = [
   ...crateStack(-12.4, DIVIDER_Z1 + 2 * CRATE),
   ...crateStack(-8.2, HALF_Z - 2 * CRATE),
   ...crateStack(-8.2, HALF_Z - CRATE),
-  crate(-5, 10),
+  ...crateStack(-5, 10), // also blocks long diagonals from the far spawn yard through the crate window
   crate(-3.8, 10),
 
   // Mid, north flank: staggered stacks (each covers a band of the flank) plus crouch cover.
@@ -112,6 +114,8 @@ const WEST_HALF: MapBlock[] = [
   ...crateStack(-9.5, DIVIDER_Z0 - CRATE),
   box('barrier', -10.5, -9.9, 0, CROUCH_COVER_HEIGHT, -1.5, 1.5),
   crate(-3.4, -1.8),
+  // South of the centre container: breaks diagonals from the south spawn yard across mid.
+  ...crateStack(-3.6, -5),
 
   // Mid, south flank.
   ...crateStack(-7.2, -4),
@@ -134,9 +138,9 @@ const WEST_HALF: MapBlock[] = [
   wall(-6.2, -6.2 + WALL_THICKNESS, -8.7, OFFICE_N0),
   wall(-3.2, -3.2 + WALL_THICKNESS, CORRIDOR_WALL_Z1, -8.4),
 
-  // Corridor wall with a door into the west room.
-  wall(OFFICE_W1, -8.5, CORRIDOR_WALL_Z0, CORRIDOR_WALL_Z1),
-  wall(-7.3, -3, CORRIDOR_WALL_Z0, CORRIDOR_WALL_Z1),
+  // Corridor wall with a door into the west room (offset from the mid door so they never line up).
+  wall(OFFICE_W1, -11.2, CORRIDOR_WALL_Z0, CORRIDOR_WALL_Z1),
+  wall(-10, -3, CORRIDOR_WALL_Z0, CORRIDOR_WALL_Z1),
 
   // West room divider with a second door into the alcove (so the room is a route, not a dead end).
   wall(-6.4, -6, -HALF_Z, -12.8),

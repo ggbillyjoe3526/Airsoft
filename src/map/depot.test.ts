@@ -19,8 +19,13 @@ const MIN_UNCLIMBABLE_HEIGHT = JUMP_APEX + 0.2;
 const CROUCH_HIDE_MARGIN = 0.05;
 /** Longest clear line of sight allowed along a lane: keeps fights at AEG/CQB range. */
 const MAX_LANE_SIGHTLINE = 23;
+/**
+ * Longest clear line of sight allowed in any direction between two places a player can stand. BBs are
+ * still accurate-ish here but slow and visible; beyond it, engagements would be cheap long-range picks.
+ */
+const MAX_ANY_SIGHTLINE = 30;
 /** Players this close to a spawn point count as "at spawn" and must be hidden from the enemy's spawn. */
-const SPAWN_ZONE_RADIUS = 2.5;
+const SPAWN_ZONE_RADIUS = 5;
 
 const top = (b: MapBlock): number => b.center.y + b.size.y / 2;
 const bottom = (b: MapBlock): number => b.center.y - b.size.y / 2;
@@ -251,6 +256,27 @@ describe('Depot map', () => {
         expect(run, `${name} lane, z = ${z.toFixed(2)}: ${run.toFixed(1)} m clear`).toBeLessThanOrEqual(MAX_LANE_SIGHTLINE);
       }
     }
+  });
+
+  it(`has no line of sight longer than ${MAX_ANY_SIGHTLINE} m in any direction`, () => {
+    const points: { x: number; z: number }[] = [];
+    for (let x = -halfX + 0.5; x < halfX; x += 1) {
+      for (let z = -halfZ + 0.5; z < halfZ; z += 1) if (standable(x, z)) points.push({ x, z });
+    }
+    const blockers = blockersAt(STANDING_EYE);
+    const limitSq = MAX_ANY_SIGHTLINE * MAX_ANY_SIGHTLINE;
+    const open: string[] = [];
+    for (let i = 0; i < points.length; i++) {
+      const a = points[i]!;
+      for (let j = i + 1; j < points.length; j++) {
+        const b = points[j]!;
+        if ((a.x - b.x) ** 2 + (a.z - b.z) ** 2 <= limitSq) continue;
+        if (!blockers.some((k) => segmentHitsBox(a.x, a.z, b.x, b.z, k))) {
+          open.push(`(${a.x}, ${a.z}) → (${b.x}, ${b.z}) ${Math.hypot(a.x - b.x, a.z - b.z).toFixed(1)} m`);
+        }
+      }
+    }
+    expect(open.slice(0, 10), `${open.length} long sightlines`).toEqual([]);
   });
 
   describe('with Rapier', () => {

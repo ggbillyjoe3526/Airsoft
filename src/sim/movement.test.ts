@@ -226,6 +226,41 @@ describe('movement', () => {
     expect(c.velocity.y).toBeLessThanOrEqual(0);
   });
 
+  it('does not build up hidden fall speed while caught on an edge', () => {
+    let caught = true;
+    const ledge: CharacterMover = {
+      ...flatMover(-Infinity, null),
+      move(_c, d, out) {
+        out.x = d.x;
+        out.z = d.z;
+        out.y = caught ? 0 : d.y; // held in place while "caught"
+        return false;
+      },
+    };
+    const c = createCharacter(0, vec3(0, 1, 0), 0);
+    step(c, createCommand(), 60, ledge);
+    expect(c.velocity.y).toBeGreaterThan(-MOVEMENT.gravity * DT * 1.01);
+    caught = false;
+    step(c, createCommand(), 1, ledge);
+    expect(c.velocity.y).toBeGreaterThan(-MOVEMENT.gravity * DT * 2.01);
+  });
+
+  it('never turns a depenetration push into upward velocity', () => {
+    // While falling, the collision layer pushes the character up out of a wedge (as Rapier does).
+    const wedge: CharacterMover = {
+      ...flatMover(-Infinity, null),
+      move(_c, d, out) {
+        out.x = d.x;
+        out.z = d.z;
+        out.y = d.y < 0 ? 0.2 : d.y;
+        return false;
+      },
+    };
+    const c = createCharacter(0, vec3(0, 1, 0), 0);
+    step(c, createCommand(), 5, wedge);
+    expect(c.velocity.y).toBeLessThanOrEqual(0);
+  });
+
   it('caps fall speed', () => {
     const c = createCharacter(0, vec3(0, 100, 0), 0);
     step(c, createCommand(), 300, flatMover(-Infinity, null));

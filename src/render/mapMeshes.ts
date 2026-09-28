@@ -7,7 +7,7 @@ type UvMode = 'world' | 'perFace';
 interface KindStyle {
   texture: keyof SurfaceTextures;
   uv: UvMode;
-  /** Tints cycled per block so repeated props don't look cloned. */
+  /** Tint palette; each block picks one from its position (see blockTint) so props don't look cloned. */
   tints: number[];
   castShadow: boolean;
 }
@@ -17,9 +17,24 @@ const STYLES: Record<BlockKind, KindStyle> = {
   floor: { texture: 'concrete', uv: 'world', tints: [0xffffff], castShadow: false },
   wall: { texture: 'blockWall', uv: 'world', tints: [0xffffff, 0xf2efe6], castShadow: true },
   crate: { texture: 'crate', uv: 'perFace', tints: [0xffffff, 0xe8dcc8, 0xd8ccb4], castShadow: true },
-  container: { texture: 'corrugated', uv: 'world', tints: [0x3d6ea8, 0xb5533c, 0x4f8a57, 0xd2a23a], castShadow: true },
-  barrier: { texture: 'barrier', uv: 'world', tints: [0xf07c2a, 0xf2f2ea], castShadow: true },
+  // No team blue or orange on neutral props: those colours belong to the teams.
+  container: { texture: 'corrugated', uv: 'world', tints: [0x4f8a57, 0xc9a13b, 0x7a8288, 0x8c5b3e], castShadow: true },
+  barrier: { texture: 'barrier', uv: 'world', tints: [0xe8e4da, 0xd9c04a], castShadow: true },
 };
+
+/** Team colours, which must never appear on neutral props. */
+export const TEAM_COLOURS: readonly number[] = [0x3d8bff, 0xff8a2a];
+
+/**
+ * Tint for a block, picked from its kind's palette by a hash of its position. The hash uses |x|, so a
+ * block and its mirror twin across x = 0 always match and a symmetric map looks symmetric.
+ */
+export function blockTint(block: MapBlock): number {
+  const tints = STYLES[block.kind].tints;
+  const q = (v: number): number => Math.round(v * 10);
+  const h = (Math.imul(q(Math.abs(block.center.x)), 73856093) ^ Math.imul(q(block.center.y), 19349663) ^ Math.imul(q(block.center.z), 83492791)) >>> 0;
+  return tints[h % tints.length] ?? 0xffffff;
+}
 
 interface Buffers {
   positions: number[];
@@ -86,7 +101,6 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures): THREE.G
   const group = new THREE.Group();
   group.name = 'map';
   const byTexture = new Map<keyof SurfaceTextures, { buf: Buffers; castShadow: boolean }>();
-  const tintCounters = new Map<BlockKind, number>();
 
   for (const block of map.blocks) {
     const style = STYLES[block.kind];
@@ -96,9 +110,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures): THREE.G
       byTexture.set(style.texture, entry);
     }
     entry.castShadow ||= style.castShadow;
-    const n = tintCounters.get(block.kind) ?? 0;
-    tintCounters.set(block.kind, n + 1);
-    const tint = style.tints[n % style.tints.length] ?? 0xffffff;
+    const tint = blockTint(block);
     appendBox(entry.buf, block, style.uv, textures[style.texture], tint);
   }
 

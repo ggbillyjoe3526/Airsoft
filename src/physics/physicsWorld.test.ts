@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BODY, MOVEMENT } from '../config/movement';
 import { PHYSICS } from '../config/physics';
 import type { MapBlock, MapData } from '../map/mapTypes';
+import { DEPOT } from '../map/depot';
 import { TEST_YARD, TEST_YARD_HALF_SIZE } from '../map/testYard';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
@@ -132,6 +133,38 @@ describe('PhysicsWorld (Rapier)', () => {
     }
     expect(maxY).toBeLessThan(JUMP_APEX + 0.1);
     expect(airborneGroundedTicks).toBe(0);
+    world.dispose();
+  });
+
+  // Smoke test: the launch itself is chaotic and hard to reproduce exactly in Rapier; the deterministic
+  // guard is the 'depenetration push' unit test in movement.test.ts.
+  it('never launches upward out of a crate-against-wall wedge (Depot nook)', () => {
+    // Where crate(-12.4, -5.9) nearly meets the office north wall. Rapier's push out of the wedge once
+    // became upward velocity and flung players over the 3 m office wall.
+    const world = new PhysicsWorld(DEPOT, BODY, DT);
+    let id = 0;
+    let highest = 0;
+    const run = (x: number, z: number, yaw: number, ticks: number, jumpEvery: number): void => {
+      const c = createCharacter(id++, vec3(x, REST, z), yaw);
+      world.addCharacter(c);
+      const cmd = createCommand();
+      cmd.yaw = yaw;
+      cmd.forward = 1;
+      cmd.sprint = true;
+      for (let i = 0; i < ticks; i++) {
+        cmd.jump = i % jumpEvery === 0;
+        stepMovement(c, cmd, MOVEMENT, DT, world, scratch);
+        highest = Math.max(highest, c.position.y);
+      }
+    };
+    run(-7.08, -1.8, 0.5, 400, 20); // the reported repro
+    // Sprint-hop into the nook from all around it (1 m out, jumping every 20 ticks).
+    for (let a = 0; a < 60; a++) {
+      const yaw = (a / 60) * Math.PI * 2;
+      run(-11.2 + Math.sin(yaw), -5.9 + Math.cos(yaw), yaw, 90, 20);
+    }
+    // A normal hop peaks at REST + JUMP_APEX (~0.72 m); unclamped, the wedge pushed players ~0.84 m.
+    expect(highest).toBeLessThan(REST + JUMP_APEX + 0.05);
     world.dispose();
   });
 

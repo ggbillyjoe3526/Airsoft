@@ -126,5 +126,10 @@ export function stepMovement(
   } else if (desired.y > 0 && corrected.y < desired.y * cfg.ceilingBlockFraction) {
     c.velocity.y = 0; // bumped a ceiling
   }
+  // Held up while falling (caught on an edge): fall only as fast as we actually moved, so speed doesn't
+  // build up invisibly and fire us downward when we slip off.
+  // Clamped to <= 0: when Rapier pushes a wedged capsule out of geometry, corrected.y can be positive,
+  // and turning that push into upward velocity launched players metres into the air.
+  if (!grounded && desired.y < 0 && corrected.y > desired.y) c.velocity.y = Math.min(0, corrected.y / dt);
   c.grounded = grounded;
 }
