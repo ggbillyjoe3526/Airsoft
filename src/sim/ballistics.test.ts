@@ -50,7 +50,8 @@ describe('BB ballistics', () => {
   });
 
   it('hop-up makes a big difference compared with no hop-up', () => {
-    expect(noHop.dropAt(30)).toBeLessThan(aeg.dropAt(30) * 3);
+    // Without hop-up the BB drops at least three times as far by 30 m (both drops are negative).
+    expect(Math.abs(noHop.dropAt(30))).toBeGreaterThan(Math.abs(aeg.dropAt(30)) * 3);
     expect(noHop.dropAt(30)).toBeLessThan(-0.6);
   });
 

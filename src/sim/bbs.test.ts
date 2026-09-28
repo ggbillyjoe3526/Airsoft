@@ -62,3 +62,16 @@ describe('stepBBs', () => {
     expect(bb.prevPosition).toEqual(before);
   });
 });
+
+describe('stepBBs out-of-world removal', () => {
+  it('removes a BB that falls below killY before its lifetime ends', () => {
+    const pool = createBBPool(1);
+    // Fired straight down from just above the kill height, with no level to hit.
+    const bb = spawnBB(pool, 0, vec3(0, KILL_Y + 1, 0), vec3(0, -1, 0), 60, 0);
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 5; i++) stepBBs(pool, BALLISTICS, { raycastStatic: () => -1 }, KILL_Y, events, DT);
+    expect(bb.active).toBe(false);
+    expect(bb.age).toBeLessThan(BALLISTICS.maxLifetime);
+    expect(events).toHaveLength(0);
+  });
+});
