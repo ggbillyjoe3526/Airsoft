@@ -39,4 +39,6 @@ export const MOUSE = {
   minSensitivity: 0.2,
   maxSensitivity: 4,
   sensitivityStep: 0.05,
+  /** Wheel travel (pixels) that counts as one replica switch; stops trackpad swipes flipping replicas every frame. */
+  wheelStepPixels: 100,
 } as const;

@@ -34,7 +34,13 @@ export class Sfx {
   /** Keep the 3D listener at the camera. */
   setListener(pos: Vec3, forwardX: number, forwardY: number, forwardZ: number): void {
     const l = this.ctx?.listener;
-    if (!l || !l.positionX) return;
+    if (!l) return;
+    if (!l.positionX) {
+      // Firefox has no AudioParam listener properties; fall back to the older setters.
+      l.setPosition(pos.x, pos.y, pos.z);
+      l.setOrientation(forwardX, forwardY, forwardZ, 0, 1, 0);
+      return;
+    }
     const t = this.ctx!.currentTime;
     l.positionX.setValueAtTime(pos.x, t);
     l.positionY.setValueAtTime(pos.y, t);

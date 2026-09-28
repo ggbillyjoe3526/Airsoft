@@ -1,3 +1,5 @@
+import { MOUSE } from '../config/controls';
+
 /**
  * Pointer Lock plus mouse input: look deltas, the fire button and wheel steps. Input is ignored
  * unless the pointer is locked to the game canvas.
@@ -68,8 +70,9 @@ export class PointerLock {
     return p;
   }
 
-  /** Returns and resets wheel steps since the last call (+1 per notch down, -1 per notch up). */
+  /** Returns one replica step (+1 down, -1 up) once enough wheel travel has built up, else 0. */
   consumeWheelSteps(): number {
+    if (Math.abs(this.wheel) < MOUSE.wheelStepPixels) return 0;
     const w = Math.sign(this.wheel);
     this.wheel = 0;
     return w;
@@ -119,6 +122,9 @@ export class PointerLock {
   };
 
   private readonly onWheel = (e: WheelEvent): void => {
-    if (this.locked) this.wheel += e.deltaY;
+    if (!this.locked) return;
+    // Normalise line/page scrolling to pixels so every device needs about one notch per step.
+    const scale = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1;
+    this.wheel += e.deltaY * scale;
   };
 }
