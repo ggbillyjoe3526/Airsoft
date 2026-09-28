@@ -5,10 +5,21 @@ One line each: decision, then why.
 - **2026-09-28 · TypeScript 5.9 (not 7.x).** Stable, well-known compiler API; TS 7 is newly released. Revisit later.
 - **2026-09-28 · Node 24 LTS installed via winget.** Nothing was installed; LTS is the safe default.
 - **2026-09-28 · Crouch is bound to C only, not Ctrl.** Ctrl+W closes the tab and can't be blocked outside fullscreen.
-- **2026-09-28 · Crouch lowers eyes/hitbox but not the movement capsule.** No crawl spaces in Phase 1; avoids stand-up-inside-geometry bugs.
-- **2026-09-28 · Characters don't physically collide with each other in Rapier.** The sim handles spacing and BB hits; keeps physics simple and deterministic.
-- **2026-09-28 · Gravity 20 m/s², jump apex ~0.73 m with 0.55 s cooldown.** Snappier than real gravity; jump is a hop, not a traversal tool.
+- **2026-09-28 · Crouch lowers eyes (and later the hitbox) but not the movement capsule.** No crawl spaces in Phase 1; avoids stand-up-inside-geometry bugs.
+- **2026-09-28 · Characters don't physically collide with each other in Rapier.** The sim will handle spacing and BB hits; keeps physics simple and deterministic.
+- **2026-09-28 · Gravity 20 m/s², jump apex 0.68 m (measured), 0.55 s cooldown, 30 m/s terminal fall speed.** Snappier than real gravity; jump is a hop, not a traversal tool.
+- **2026-09-28 · Walkable ledges ≤ 0.15 m.** Rapier autostep with a capsule only clears ~0.15 m reliably (measured); maps avoid ledges between that and jump height.
+- **2026-09-28 · FOV is configured as 100° horizontal at 16:9, Hor+.** Three.js FOV is vertical; a fixed vertical FOV avoids fisheye on ultrawide while matching CS/Valorant-like width on 16:9.
+- **2026-09-28 · Default sensitivity 0.001 rad per mouse count.** Close to the CS default (0.00096), a familiar baseline; slider 0.2×–4×, stored in localStorage.
+- **2026-09-28 · Commands are keyed by character id (Map), not array index.** Bots joining/leaving can't misroute input.
 - **2026-09-28 · Level materials are MeshLambert with merged geometry per texture.** Cheap on integrated GPUs; a few draw calls for the whole map.
-- **2026-09-28 · Pixel ratio capped at 1.5.** High-DPI laptops with iGPUs can't afford native resolution at 60 FPS.
-- **2026-09-28 · Rapier compat build (inlined WASM) accepted, ~1.4 MB gzip.** Simplest loading; well under the 30 MB budget.
+- **2026-09-28 · Pixel ratio capped at 1.5, PCF shadows (2048 map).** High-DPI laptops with iGPUs can't afford native resolution at 60 FPS; PCFSoft was removed in three r186.
+- **2026-09-28 · Rapier compat build (inlined WASM) in its own chunk: 4.3 MB raw / 1.7 MB gzip.** Simplest loading; well under the 30 MB budget. Three.js is also split out (0.5 MB / 0.13 MB gzip).
 - **2026-09-28 · Dev-only `?nolock` flag.** Automated browsers can't take pointer lock; needed for verification.
+- **2026-09-28 · Features add only the code they use.** Critic review of the scaffold (attempt 1) flagged speculative code; command fields, bindings and helpers now arrive with their features.
+- **2026-09-28 · All level blocks collide as closed 12-triangle trimeshes with FIX_INTERNAL_EDGES, not cuboids.** Rapier 0.21's capsule controller sinks into any cuboid (any size) along its x = ±z diagonal planes; convex hulls and round cuboids too. Without FIX_INTERNAL_EDGES, face-diagonal edges give ghost ground contacts (wall sticking, crate climbing).
+- **2026-09-28 · Kill-height safety net (`MapData.killY`).** Any character below it returns to its spawn with no momentum; defence in depth against physics glitches.
+- **2026-09-28 · Ceiling detection uses a tolerance (`ceilingBlockFraction` 0.5).** Rapier trims upward moves by ~1e-5 m while sliding along walls; a strict check killed jumps next to cover.
+- **2026-09-28 · Game keys only suppress browser defaults while playing.** Paused menus (slider arrows, Space on buttons) keep native behaviour.
+- **2026-09-28 · Sun shadow frustum is fitted to the level's box in light space.** Guarantees every corner of the map gets shadows.
+- **2026-09-28 · Per-chunk size budgets via a tiny build plugin (Rapier 4.5 MB, others 800 kB).** Vite has only one global limit, which Rapier's inlined WASM forces high.

@@ -41,16 +41,15 @@ npm run check
 
 ## Controls
 
+Only controls that currently do something are listed; more arrive with each feature.
+
 | Key | Action |
 |---|---|
 | W A S D | Move |
-| Mouse | Aim |
-| Left click | Fire |
-| Shift | Sprint (can't shoot while sprinting) |
+| Mouse | Look |
+| Shift | Sprint (forward only) |
 | C | Crouch |
-| Space | Jump |
-| R | Reload |
-| 1 / 2 / Q | Switch replica |
+| Space | Jump (small hop) |
 | Esc | Pause (releases the mouse) |
 | ` or F3 | Debug overlay |
 
@@ -61,14 +60,15 @@ npm run check
 ## Layout
 
 ```
-src/config   tuning data (movement, weapons, bots, match, render)
-src/sim      pure simulation: plain-data state, fixed 60 Hz tick, commands, rules
-src/physics  Rapier wrapper: level collision, character controllers, ray casts
-src/ai       bot controllers (produce the same commands as the player)
+src/config   tuning data (movement, physics, controls, render, sim timing)
+src/core     fixed-timestep accumulator
+src/sim      pure simulation: plain-data state, fixed 60 Hz tick, commands, movement
+src/physics  Rapier wrapper: level collision, character controller
 src/map      map data
 src/render   Three.js presentation
-src/audio    Web Audio presentation
 src/input    keyboard / pointer lock → commands
-src/ui       DOM HUD, start screen, debug overlay
+src/ui       start/pause screen, debug overlay
 docs/        vision, architecture, decisions, assets, ideas, known issues, reviews
 ```
+
+Bots (`src/ai`), audio (`src/audio`) and the HUD arrive with their Phase 1 features.
