@@ -39,10 +39,10 @@ Judge the feature against what it was asked to deliver at this stage of the proj
 
 ```
 Feature: <name>
-Attempt: <n> of 4
+Attempt: <n> of 3
 Scores: Correctness x | Pillar fit x | Feel x | Code x | Performance x | Scope x
 Caps applied: <none / which>
-Total: x.x → <Discard / Rework / Accept>
+Total: x.x → <Restart / Rework / Accept>
 Top issues (most important first):
 1. ...
 2. ...
@@ -50,4 +50,4 @@ Must-fix before next attempt: ...
 Browser tests for the human: ...
 ```
 
-Thresholds: < 8.0 Discard, 8.0–8.9 Rework, 9.0–10 Accept. Cite file paths and line numbers for every issue.
+Thresholds: < 7.0 Restart, 7.0–8.4 Rework, 8.5–10 Accept (max 3 attempts). Cite file paths and line numbers for every issue.
