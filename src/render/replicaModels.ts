@@ -26,7 +26,8 @@ function createMaterials(teamColor: number): Record<MaterialKey, THREE.Material>
     rubber: new THREE.MeshStandardMaterial({ color: 0x17181a, roughness: 0.95, metalness: 0 }),
     orange: new THREE.MeshStandardMaterial({ color: 0xff6a13, roughness: 0.55, metalness: 0 }),
     dot: new THREE.MeshBasicMaterial({ color: 0xff3a2a }),
-    glove: new THREE.MeshStandardMaterial({ color: 0x3b3a36, roughness: 0.9, metalness: 0 }),
+    // Olive gloves: clearly separate from the black polymer and tan furniture.
+    glove: new THREE.MeshStandardMaterial({ color: 0x5d6146, roughness: 0.9, metalness: 0 }),
     sleeve: new THREE.MeshStandardMaterial({ color: 0x4a525c, roughness: 1, metalness: 0 }),
     // Team tape on the sleeve, as players wear at real sites.
     armband: new THREE.MeshStandardMaterial({ color: teamColor, roughness: 0.7, metalness: 0 }),

@@ -25,6 +25,8 @@ export interface Armament {
   draw: number;
   /** Seconds left to honour a semi-auto trigger press that came in while the replica wasn't ready. */
   pendingPress: number;
+  /** True once this trigger pull has clicked dry, so a held trigger clicks only once per pull. */
+  dryFiredThisPull: boolean;
   /** Trigger state last tick, for semi-auto press detection. */
   triggerWasDown: boolean;
   /** Current upward aim kick from recoil (radians). */
@@ -39,6 +41,7 @@ export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
     reload: 0,
     draw: 0,
     pendingPress: 0,
+    dryFiredThisPull: false,
     triggerWasDown: false,
     recoil: 0,
   };
@@ -130,14 +133,18 @@ export function stepArmament(
 
   const pressed = cmd.fire && !a.triggerWasDown;
   a.triggerWasDown = cmd.fire;
+  if (!cmd.fire) a.dryFiredThisPull = false;
   // Semi-auto presses are buffered briefly so a click during the cooldown still fires when ready.
   if (pressed) a.pendingPress = TRIGGER.pressBuffer;
   const wantsShot = replica.fireMode === 'auto' ? cmd.fire : a.pendingPress > 0;
   if (!wantsShot || !canFire || a.draw > 0 || a.reload > 0 || a.cooldown > 0) return;
 
   if (ammo.mag <= 0) {
-    // Empty: a dry-fire click on the trigger press, then reload automatically if there's ammo.
-    if (pressed || a.pendingPress > 0) {
+    // Empty: one dry click per trigger pull (a held AEG trigger clicks when the mag runs dry), then
+    // reload automatically if there's ammo.
+    const click = replica.fireMode === 'auto' ? !a.dryFiredThisPull : pressed || a.pendingPress > 0;
+    if (click) {
+      a.dryFiredThisPull = true;
       a.pendingPress = 0;
       ctx.events.push({ type: 'dryFire', characterId, replicaId: replica.id });
       if (ammo.reserve > 0) startReload(characterId, a, replica, ctx);

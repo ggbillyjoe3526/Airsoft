@@ -181,3 +181,14 @@ describe('semi-auto trigger buffering', () => {
     }
   });
 });
+
+describe('empty AEG with the trigger held', () => {
+  it('clicks dry once when the mag runs out mid-burst, then reloads automatically', () => {
+    const { a, run, count } = setup();
+    a.ammo[0]!.mag = 3;
+    const evs = run(60, (c) => (c.fire = true));
+    expect(count(evs, 'shot')).toBe(3);
+    expect(count(evs, 'dryFire')).toBe(1);
+    expect(count(evs, 'reloadStart')).toBe(1);
+  });
+});

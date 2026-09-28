@@ -62,7 +62,7 @@ export class Hud {
     let status = '';
     if (reloading) status = 'Reloading';
     else if (ammo.mag === 0 && ammo.reserve === 0) status = 'Out of BBs';
-    else if (ammo.mag === 0) status = 'Empty: R to reload';
+    else if (ammo.mag === 0) status = 'Empty: pull the trigger or press R to reload';
     if (s.status !== status) this.status.textContent = s.status = status;
   }
 
