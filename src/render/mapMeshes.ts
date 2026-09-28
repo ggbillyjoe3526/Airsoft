@@ -18,12 +18,10 @@ const STYLES: Record<BlockKind, KindStyle> = {
   wall: { texture: 'blockWall', uv: 'world', tints: [0xffffff, 0xf2efe6], castShadow: true },
   crate: { texture: 'crate', uv: 'perFace', tints: [0xffffff, 0xe8dcc8, 0xd8ccb4], castShadow: true },
   // No team blue or orange on neutral props: those colours belong to the teams.
-  container: { texture: 'corrugated', uv: 'world', tints: [0x4f8a57, 0xc9a13b, 0x7a8288, 0x8c5b3e], castShadow: true },
+  container: { texture: 'corrugated', uv: 'world', tints: [0x4f8a57, 0xcdb338, 0x7a8288, 0x4f7a80], castShadow: true },
   barrier: { texture: 'barrier', uv: 'world', tints: [0xe8e4da, 0xd9c04a], castShadow: true },
 };
 
-/** Team colours, which must never appear on neutral props. */
-export const TEAM_COLOURS: readonly number[] = [0x3d8bff, 0xff8a2a];
 
 /**
  * Tint for a block, picked from its kind's palette by a hash of its position. The hash uses |x|, so a

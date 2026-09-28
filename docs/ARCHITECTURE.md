@@ -12,7 +12,10 @@ ai (bots) ─► PlayerCommand ┤
           render (Three.js) · audio (Web Audio) · ui (DOM HUD)
 ```
 
-- **sim/**: all gameplay rules. Plain data (`GameState`, `Character`), no Three.js, no DOM, no `Math.random`.
+- **sim/**: all gameplay rules. Plain data (`GameState`, `Character`, the BB pool), no Three.js, no DOM, no `Math.random`.
+  Each tick: move characters, handle replicas (`armament.ts`: fire, reload, switch; spawns BBs), then fly BBs
+  (`ballistics.ts` flight model, `bbs.ts` collision via the `WorldQuery` ray cast). Anything presentation needs
+  to react to is pushed to `state.events` (shots, impacts, reloads), cleared every tick.
   Advances only via `stepSimulation(state, commands, ctx, dt)`. Randomness comes from the seedable `state.rng`.
 - **Commands**: every character (player, bot, later remote players) is driven by one `PlayerCommand` per tick,
   passed to the sim in a Map keyed by character id.
@@ -26,7 +29,11 @@ ai (bots) ─► PlayerCommand ┤
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input; `PlayerInput` latches one-shot actions (currently jump) until a tick consumes them.
-- **ui/**: DOM overlays (start/pause screen, debug overlay, HUD).
+- **ui/**: DOM overlays (start/pause screen, debug overlay, ammo HUD).
+- **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
+  each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
+- **audio/**: synthesised Web Audio effects; positional for everything but the local player's own replica.
+- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop. The only place that knows about every layer.
 
 ## Map data

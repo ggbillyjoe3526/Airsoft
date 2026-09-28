@@ -1,14 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { MOVEMENT } from '../config/movement';
+import { BALLISTICS } from '../config/ballistics';
+import { BODY, MOVEMENT } from '../config/movement';
+import { LOADOUT } from '../config/replicas';
 import { createCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
 import type { CharacterMover } from './movement';
-import { createSimContext, stepSimulation } from './simulation';
+import { createSimContext, type SimContext, stepSimulation } from './simulation';
 import { createGameState } from './state';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
 const KILL_Y = -10;
+
+/** A world with no level geometry to hit. */
+const openSky = { raycastStatic: () => -1 };
+
+function testContext(mover: CharacterMover, killY: number): SimContext {
+  return createSimContext({ mover, query: openSky, movement: MOVEMENT, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY });
+}
 
 const floor: CharacterMover = {
   move(c, d, out) {
@@ -25,14 +34,14 @@ const floor: CharacterMover = {
 
 describe('stepSimulation', () => {
   it('routes commands by character id, not array order', () => {
-    const state = createGameState(1);
+    const state = createGameState(1, 16);
     const a = createCharacter(7, vec3(), 0);
     const b = createCharacter(3, vec3(10, 0, 0), 0);
     state.characters.push(a, b);
     const moveB = createCommand();
     moveB.forward = 1;
     const commands = new Map<number, PlayerCommand>([[3, moveB]]);
-    const ctx = createSimContext(floor, MOVEMENT, KILL_Y);
+    const ctx = testContext(floor, KILL_Y);
 
     for (let i = 0; i < 30; i++) stepSimulation(state, commands, ctx, DT);
 
@@ -43,10 +52,10 @@ describe('stepSimulation', () => {
   });
 
   it('lets characters without a command settle under gravity and keep their view', () => {
-    const state = createGameState(1);
+    const state = createGameState(1, 16);
     const c = createCharacter(0, vec3(0, 1, 0), 1.25);
     state.characters.push(c);
-    const ctx = createSimContext(floor, MOVEMENT, KILL_Y);
+    const ctx = testContext(floor, KILL_Y);
     for (let i = 0; i < 60; i++) stepSimulation(state, new Map(), ctx, DT);
     expect(c.position.y).toBe(0);
     expect(c.grounded).toBe(true);
@@ -54,7 +63,7 @@ describe('stepSimulation', () => {
   });
 
   it('returns a character that falls below killY to its spawn without momentum', () => {
-    const state = createGameState(1);
+    const state = createGameState(1, 16);
     const c = createCharacter(0, vec3(2, 0, 3), 0);
     state.characters.push(c);
     const noFloor: CharacterMover = {
@@ -68,7 +77,7 @@ describe('stepSimulation', () => {
         return Number.NaN;
       },
     };
-    const ctx = createSimContext(noFloor, MOVEMENT, -5);
+    const ctx = testContext(noFloor, -5);
     let rescued = false;
     for (let i = 0; i < 120 && !rescued; i++) {
       stepSimulation(state, new Map(), ctx, DT);
@@ -81,12 +90,12 @@ describe('stepSimulation', () => {
   });
 
   it('records the previous position for interpolation', () => {
-    const state = createGameState(1);
+    const state = createGameState(1, 16);
     const c = createCharacter(0, vec3(), 0);
     state.characters.push(c);
     const cmd = createCommand();
     cmd.forward = 1;
-    const ctx = createSimContext(floor, MOVEMENT, KILL_Y);
+    const ctx = testContext(floor, KILL_Y);
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
     const before = { ...c.position };
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
@@ -95,12 +104,12 @@ describe('stepSimulation', () => {
   });
 
   it('records the previous crouch amount so the eye height can be interpolated', () => {
-    const state = createGameState(1);
+    const state = createGameState(1, 16);
     const c = createCharacter(0, vec3(), 0);
     state.characters.push(c);
     const cmd = createCommand();
     cmd.crouch = true;
-    const ctx = createSimContext(floor, MOVEMENT, KILL_Y);
+    const ctx = testContext(floor, KILL_Y);
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
     const after1 = c.crouchAmount;
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT);

@@ -51,10 +51,12 @@ export class StartScreen {
         </label>
         <div class="start-controls">
           <div><kbd>WASD</kbd> move</div>
-          <div><kbd>Mouse</kbd> look</div>
+          <div><kbd>Mouse</kbd> aim, <kbd>LMB</kbd> fire</div>
           <div><kbd>Shift</kbd> sprint</div>
           <div><kbd>C</kbd> crouch</div>
           <div><kbd>Space</kbd> jump</div>
+          <div><kbd>R</kbd> reload</div>
+          <div><kbd>1</kbd> <kbd>2</kbd> <kbd>Q</kbd> / wheel: switch</div>
           <div><kbd>Esc</kbd> pause</div>
           <div><kbd>\`</kbd> / <kbd>F3</kbd> debug info</div>
         </div>

@@ -40,8 +40,14 @@ export class Renderer {
     return this.renderer.domElement;
   }
 
-  render(): void {
+  /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */
+  render(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
+    this.renderer.autoClear = true;
     this.renderer.render(this.scene, this.camera);
+    if (!overlay) return;
+    this.renderer.autoClear = false;
+    this.renderer.clearDepth();
+    this.renderer.render(overlay.scene, overlay.camera);
   }
 
   dispose(): void {

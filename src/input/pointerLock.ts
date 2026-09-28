@@ -1,10 +1,13 @@
 /**
- * Pointer Lock + mouse-look deltas. Movement is ignored unless the pointer is locked to the
- * game canvas.
+ * Pointer Lock plus mouse input: look deltas, the fire button and wheel steps. Input is ignored
+ * unless the pointer is locked to the game canvas.
  */
 export class PointerLock {
   private dx = 0;
   private dy = 0;
+  private fireHeldState = false;
+  private firePressedState = false;
+  private wheel = 0;
   private readonly changeListeners = new Set<(locked: boolean) => void>();
   private readonly errorListeners = new Set<() => void>();
 
@@ -12,6 +15,9 @@ export class PointerLock {
     document.addEventListener('pointerlockchange', this.onLockChange);
     document.addEventListener('pointerlockerror', this.onLockError);
     document.addEventListener('mousemove', this.onMouseMove);
+    document.addEventListener('mousedown', this.onMouseDown);
+    document.addEventListener('mouseup', this.onMouseUp);
+    document.addEventListener('wheel', this.onWheel, { passive: true });
   }
 
   get locked(): boolean {
@@ -51,10 +57,31 @@ export class PointerLock {
     this.dy = 0;
   }
 
+  get fireHeld(): boolean {
+    return this.fireHeldState;
+  }
+
+  /** Returns true once if the fire button went down since the last call (catches sub-frame clicks). */
+  consumeFirePress(): boolean {
+    const p = this.firePressedState;
+    this.firePressedState = false;
+    return p;
+  }
+
+  /** Returns and resets wheel steps since the last call (+1 per notch down, -1 per notch up). */
+  consumeWheelSteps(): number {
+    const w = Math.sign(this.wheel);
+    this.wheel = 0;
+    return w;
+  }
+
   dispose(): void {
     document.removeEventListener('pointerlockchange', this.onLockChange);
     document.removeEventListener('pointerlockerror', this.onLockError);
     document.removeEventListener('mousemove', this.onMouseMove);
+    document.removeEventListener('mousedown', this.onMouseDown);
+    document.removeEventListener('mouseup', this.onMouseUp);
+    document.removeEventListener('wheel', this.onWheel);
     this.changeListeners.clear();
     this.errorListeners.clear();
   }
@@ -64,6 +91,9 @@ export class PointerLock {
     if (!locked) {
       this.dx = 0;
       this.dy = 0;
+      this.fireHeldState = false;
+      this.firePressedState = false;
+      this.wheel = 0;
     }
     for (const fn of this.changeListeners) fn(locked);
   };
@@ -76,5 +106,19 @@ export class PointerLock {
     if (!this.locked) return;
     this.dx += e.movementX;
     this.dy += e.movementY;
+  };
+
+  private readonly onMouseDown = (e: MouseEvent): void => {
+    if (!this.locked || e.button !== 0) return;
+    this.fireHeldState = true;
+    this.firePressedState = true;
+  };
+
+  private readonly onMouseUp = (e: MouseEvent): void => {
+    if (e.button === 0) this.fireHeldState = false;
+  };
+
+  private readonly onWheel = (e: WheelEvent): void => {
+    if (this.locked) this.wheel += e.deltaY;
   };
 }

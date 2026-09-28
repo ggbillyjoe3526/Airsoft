@@ -57,6 +57,8 @@ export function stepMovement(
 
   // Sprint: forward only, never crouched.
   c.sprinting = cmd.sprint && cmd.forward >= cfg.sprintMinForward && !crouched;
+  // The replica is carried, not aimed, while sprinting and for a moment after.
+  c.sprintLockout = c.sprinting ? cfg.sprintFireLockout : Math.max(0, c.sprintLockout - dt);
 
   // Wish direction on the ground plane. forward = (-sin, 0, -cos), right = (cos, 0, -sin).
   let f = cmd.forward;

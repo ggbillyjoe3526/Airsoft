@@ -35,3 +35,49 @@ export const LIGHTING = {
   /** PCF filter radius; softens shadow edges a little. */
   shadowRadius: 2,
 } as const;
+
+/** BB and impact visuals. BBs are drawn bigger than 6 mm so they read at speed. */
+export const BB_VISUALS = {
+  radius: 0.018,
+  color: 0xfffbe8,
+  /** Trail length in seconds of flight (streak = velocity × this). */
+  trailSeconds: 0.022,
+  trailColor: 0xfff4cc,
+  trailOpacity: 0.75,
+  /** Debug BB-path overlay: how many recent paths, and points per path. */
+  debugPaths: 48,
+  debugPathPoints: 150,
+  debugPathColor: 0xff3fa4,
+} as const;
+
+export const IMPACT_PUFFS = {
+  max: 64,
+  lifetime: 0.35,
+  /** Seconds to reach full size. */
+  growTime: 0.06,
+  radius: 0.045,
+  color: 0xd9d2c3,
+  opacity: 0.4,
+} as const;
+
+/** First-person replica rendering and motion. */
+export const VIEWMODEL = {
+  /** Paint the muzzle orange like many real-world replicas. Off by default (user preference). */
+  orangeTips: false,
+  fov: 50,
+  /** How far the model lags behind mouse turns (radians of turn → metres of offset). */
+  swayPerRadian: 0.05,
+  swayMax: 0.035,
+  /** Spring stiffness for sway/kick recovery (1/s). */
+  returnRate: 14,
+  bobAmount: 0.012,
+  bobFrequency: 1.7,
+  /** Recoil kick per shot: metres back and radians up. */
+  kickBack: 0.028,
+  kickUp: 0.05,
+  /** How far the replica drops while reloading / drawing / sprinting (metres). */
+  reloadDrop: 0.12,
+  drawDrop: 0.22,
+  sprintDrop: 0.06,
+  sprintTilt: 0.5,
+} as const;

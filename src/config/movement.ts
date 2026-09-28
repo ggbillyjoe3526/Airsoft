@@ -16,6 +16,8 @@ export interface MovementConfig {
   jumpCooldown: number;
   /** Sprint only counts when forward input is at least this. */
   sprintMinForward: number;
+  /** Seconds after a sprint ends before the replica can fire (sprinting itself always blocks firing). */
+  sprintFireLockout: number;
   /** Seconds to go fully between standing and crouched (eye height blend). */
   crouchTransitionTime: number;
   /** At or above this crouch amount the character counts as crouched: no sprinting or jumping. */
@@ -56,6 +58,7 @@ export const MOVEMENT: MovementConfig = {
   jumpSpeed: 5.4,
   jumpCooldown: 0.55,
   sprintMinForward: 0.5,
+  sprintFireLockout: 0.2,
   crouchTransitionTime: 0.15,
   crouchedThreshold: 0.5,
   ceilingBlockFraction: 0.5,

@@ -18,3 +18,8 @@ export function rngNext(r: RngState): number {
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
+
+/** Approximately normal (mean 0, sd 1) from the sum of four uniforms: cheap and bounded (±3.46). */
+export function rngGaussian(r: RngState): number {
+  return (rngNext(r) + rngNext(r) + rngNext(r) + rngNext(r) - 2) * 1.7320508;
+}

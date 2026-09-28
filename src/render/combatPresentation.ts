@@ -1,0 +1,108 @@
+import * as THREE from 'three';
+import { Sfx } from '../audio/sfx';
+import type { MovementConfig } from '../config/movement';
+import type { ReplicaConfig } from '../config/replicas';
+import type { Character } from '../sim/character';
+import type { GameState } from '../sim/state';
+import { Hud } from '../ui/hud';
+import { BBPathsDebug } from './bbPathsDebug';
+import { BBRenderer } from './bbRenderer';
+import { ImpactPuffs } from './impactPuffs';
+import type { Renderer } from './renderer';
+import { Viewmodel } from './viewmodel';
+
+/**
+ * Everything the player sees and hears about replicas and BBs: BBs in flight, impact puffs, the held
+ * replica, the ammo HUD and sound. Reads simulation state and the events of each tick; never writes.
+ */
+export class CombatPresentation {
+  private readonly bbs: BBRenderer;
+  private readonly puffs = new ImpactPuffs();
+  private readonly paths: BBPathsDebug;
+  private readonly viewmodel: Viewmodel;
+  private readonly hud: Hud;
+  private readonly sfx = new Sfx();
+  private readonly forward = new THREE.Vector3();
+  private readonly listenerPos = { x: 0, y: 0, z: 0 };
+  private readonly overlay: { scene: THREE.Scene; camera: THREE.Camera };
+
+  constructor(
+    private readonly renderer: Renderer,
+    container: HTMLElement,
+    private readonly state: GameState,
+    private readonly player: Character,
+    private readonly loadout: readonly ReplicaConfig[],
+    private readonly movement: MovementConfig,
+    teamColor: number,
+  ) {
+    this.bbs = new BBRenderer(state.bbs);
+    this.paths = new BBPathsDebug(state.bbs);
+    renderer.scene.add(this.bbs.object, this.puffs.object, this.paths.object);
+    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor);
+    this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
+    this.hud = new Hud(container);
+  }
+
+  /** Browsers only allow audio after a user gesture: call from the Play click. */
+  unlockAudio(): void {
+    this.sfx.unlock();
+  }
+
+  setPlaying(playing: boolean): void {
+    this.hud.setVisible(playing);
+  }
+
+  toggleBbPaths(): void {
+    this.paths.toggle();
+  }
+
+  get bbsInFlight(): number {
+    return this.bbs.visibleCount;
+  }
+
+  /** Call after every simulation tick, while that tick's events are still in the state. */
+  afterTick(): void {
+    this.paths.recordTick();
+    for (const e of this.state.events) {
+      if (e.type === 'bbImpact') this.puffs.spawn(e.position);
+      if (e.type === 'shot' && e.characterId === this.player.id) this.viewmodel.onShot();
+      this.sfx.onEvent(e, this.player.id, this.positionOf);
+    }
+  }
+
+  /** Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. */
+  frame(dt: number, alpha: number, yaw: number, pitch: number): void {
+    this.bbs.update(alpha);
+    this.puffs.update(dt);
+    this.paths.update();
+
+    const p = this.player;
+    const carried = p.sprinting || p.sprintLockout > 0;
+    this.viewmodel.setAspect(this.renderer.camera.aspect);
+    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.walkSpeed, carried, p.armament, this.loadout);
+    this.hud.update(p.armament, this.loadout);
+
+    const cam = this.renderer.camera;
+    cam.getWorldDirection(this.forward);
+    this.listenerPos.x = cam.position.x;
+    this.listenerPos.y = cam.position.y;
+    this.listenerPos.z = cam.position.z;
+    this.sfx.setListener(this.listenerPos, this.forward.x, this.forward.y, this.forward.z);
+  }
+
+  render(): void {
+    this.renderer.render(this.overlay);
+  }
+
+  dispose(): void {
+    this.bbs.dispose();
+    this.puffs.dispose();
+    this.paths.dispose();
+    this.viewmodel.dispose();
+    this.hud.dispose();
+    this.sfx.dispose();
+  }
+
+  private readonly positionOf = (id: number): { x: number; y: number; z: number } | undefined =>
+    this.state.characters.find((c) => c.id === id)?.position;
+}

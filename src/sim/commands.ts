@@ -1,7 +1,6 @@
 /**
  * The single input interface for every character. The local player, bots and (later) remote
  * players all drive the simulation exclusively through one PlayerCommand per tick.
- * Fields are added as gameplay features need them (firing, reloading, etc.).
  */
 export interface PlayerCommand {
   /** -1..1, forward is positive. Relative to `yaw`. */
@@ -18,8 +17,24 @@ export interface PlayerCommand {
   sprint: boolean;
   crouch: boolean;
   jump: boolean;
+  /** Trigger held. Semi-auto replicas fire on the press only. */
+  fire: boolean;
+  reload: boolean;
+  /** Loadout slot to switch to, or -1 for no switch. */
+  switchTo: number;
 }
 
 export function createCommand(): PlayerCommand {
-  return { forward: 0, right: 0, yaw: 0, pitch: 0, sprint: false, crouch: false, jump: false };
+  return {
+    forward: 0,
+    right: 0,
+    yaw: 0,
+    pitch: 0,
+    sprint: false,
+    crouch: false,
+    jump: false,
+    fire: false,
+    reload: false,
+    switchTo: -1,
+  };
 }

@@ -8,7 +8,13 @@ export const BINDINGS = {
   // Ctrl is deliberately not bound: Ctrl+W would close the tab and can't be blocked outside fullscreen.
   crouch: ['KeyC'],
   jump: ['Space'],
+  reload: ['KeyR'],
+  slot1: ['Digit1'],
+  slot2: ['Digit2'],
+  swap: ['KeyQ'],
   debugOverlay: ['Backquote', 'F3'],
+  /** Debug: draw the recent flight paths of BBs. */
+  debugBbPaths: ['BracketRight'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type Action = keyof typeof BINDINGS;

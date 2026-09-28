@@ -1,4 +1,6 @@
 import type { BodyConfig } from '../config/movement';
+import { LOADOUT, type ReplicaConfig } from '../config/replicas';
+import { type Armament, createArmament } from './armament';
 import { copy, type Vec3, vec3 } from './vec';
 
 /** Plain-data character state. No Three.js objects live here. */
@@ -20,9 +22,17 @@ export interface Character {
   grounded: boolean;
   jumpCooldown: number;
   sprinting: boolean;
+  /** Seconds until the replica can be fired again after sprinting (0 = ready). */
+  sprintLockout: number;
+  armament: Armament;
 }
 
-export function createCharacter(id: number, spawn: Vec3, yaw: number): Character {
+export function createCharacter(
+  id: number,
+  spawn: Vec3,
+  yaw: number,
+  loadout: readonly ReplicaConfig[] = LOADOUT,
+): Character {
   return {
     id,
     position: vec3(spawn.x, spawn.y, spawn.z),
@@ -36,6 +46,8 @@ export function createCharacter(id: number, spawn: Vec3, yaw: number): Character
     grounded: false,
     jumpCooldown: 0,
     sprinting: false,
+    sprintLockout: 0,
+    armament: createArmament(loadout),
   };
 }
 

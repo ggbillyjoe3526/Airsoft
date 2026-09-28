@@ -3,8 +3,8 @@
 A browser-based, first-person, round-based team shooter built around the feel of recreational airsoft:
 visible BBs, one hit and you're out, call your hit and walk off.
 
-Status: **Phase 1** (single-player vs bots prototype) in progress: you can walk around the first map,
-"Depot" (a warehouse yard with a container lane, a crate yard and an office block). See `CLAUDE.md` for the project guide
+Status: **Phase 1** (single-player vs bots prototype) in progress: you can walk around the first map
+"Depot" and shoot BBs from an AEG rifle and a gas pistol (no opponents yet). See `CLAUDE.md` for the project guide
 and `docs/` for design notes.
 
 ## Requirements
@@ -47,12 +47,16 @@ Only controls that currently do something are listed; more arrive with each feat
 | Key | Action |
 |---|---|
 | W A S D | Move |
-| Mouse | Look |
+| Mouse | Aim |
+| Left click | Fire (hold for the AEG, click per shot for the pistol) |
 | Shift | Sprint (forward only) |
 | C | Crouch |
 | Space | Jump (small hop) |
+| R | Reload (an empty trigger pull also reloads) |
+| 1 / 2, Q or mouse wheel | Switch between AEG rifle and gas pistol |
 | Esc | Pause (releases the mouse) |
 | ` or F3 | Debug overlay |
+| ] | Debug: show BB flight paths |
 
 ## Dev-only URL flags
 
