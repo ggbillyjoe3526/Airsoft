@@ -100,7 +100,7 @@ export class Game {
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     this.input.yaw = spawn.yaw;
     // Phase 1: the player is always on Blue.
-    this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, TEAMS[0].color);
+    this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, TEAMS[0].color, SIM_DT);
 
     this.debug = new DebugOverlay(container, () => ({
       tick: this.state.tick,

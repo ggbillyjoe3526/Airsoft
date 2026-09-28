@@ -44,6 +44,11 @@ export const BB_VISUALS = {
   trailSeconds: 0.022,
   trailColor: 0xfff4cc,
   trailOpacity: 0.75,
+  /**
+   * Your own BBs are drawn leaving the replica's muzzle and blend onto their true (eye-line) path over
+   * this many seconds (~10 m), so you can see them fly instead of edge-on along your line of sight.
+   */
+  muzzleConvergeTime: 0.12,
   /** Debug BB-path overlay: how many recent paths, and points per path. */
   debugPaths: 48,
   debugPathPoints: 150,

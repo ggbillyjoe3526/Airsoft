@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Sfx } from '../audio/sfx';
 import type { MovementConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
+import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
 import type { GameState } from '../sim/state';
 import { Hud } from '../ui/hud';
@@ -24,6 +25,8 @@ export class CombatPresentation {
   private readonly sfx = new Sfx();
   private readonly forward = new THREE.Vector3();
   private readonly listenerPos = { x: 0, y: 0, z: 0 };
+  private readonly muzzle = new THREE.Vector3();
+  private lastOwnSerial = 0;
   private readonly overlay: { scene: THREE.Scene; camera: THREE.Camera };
 
   constructor(
@@ -34,8 +37,9 @@ export class CombatPresentation {
     private readonly loadout: readonly ReplicaConfig[],
     private readonly movement: MovementConfig,
     teamColor: number,
+    tickSeconds: number,
   ) {
-    this.bbs = new BBRenderer(state.bbs);
+    this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.paths.object);
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor);
@@ -65,7 +69,10 @@ export class CombatPresentation {
     this.paths.recordTick();
     for (const e of this.state.events) {
       if (e.type === 'bbImpact') this.puffs.spawn(e.position);
-      if (e.type === 'shot' && e.characterId === this.player.id) this.viewmodel.onShot();
+      if (e.type === 'shot' && e.characterId === this.player.id) {
+        this.viewmodel.onShot();
+        this.drawFromMuzzle();
+      }
       this.sfx.onEvent(e, this.player.id, this.positionOf);
     }
   }
@@ -101,6 +108,17 @@ export class CombatPresentation {
     this.viewmodel.dispose();
     this.hud.dispose();
     this.sfx.dispose();
+  }
+
+  /** Starts the player's newest BB (if the shot spawned one) visually at the replica's muzzle. */
+  private drawFromMuzzle(): void {
+    let newest: BB | undefined;
+    for (const bb of this.state.bbs.bbs) {
+      if (bb.active && bb.ownerId === this.player.id && bb.serial > this.lastOwnSerial && (!newest || bb.serial > newest.serial)) newest = bb;
+    }
+    if (!newest) return; // blocked muzzle: the shot hit cover immediately
+    this.lastOwnSerial = newest.serial;
+    if (this.viewmodel.muzzleWorld(this.renderer.camera, this.muzzle)) this.bbs.startFromMuzzle(newest, this.muzzle);
   }
 
   private readonly positionOf = (id: number): { x: number; y: number; z: number } | undefined =>

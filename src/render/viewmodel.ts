@@ -29,6 +29,7 @@ export class Viewmodel {
   private bobPhase = 0;
   private lastYaw = 0;
   private lastPitch = 0;
+  private readonly muzzleView = new THREE.Vector3();
 
   constructor(aspect: number, teamColor: number) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, 0.01, 5);
@@ -114,6 +115,24 @@ export class Viewmodel {
       this.sprintBlend * VIEWMODEL.sprintTilt,
       -reloadDip * 0.4,
     );
+  }
+
+  /**
+   * World position that appears on screen where the held replica's muzzle is drawn. The viewmodel has
+   * its own camera and FOV, so the muzzle is projected to the screen with that camera and then placed
+   * at the same distance along the main camera's ray through that screen point.
+   */
+  muzzleWorld(mainCamera: THREE.PerspectiveCamera, out: THREE.Vector3): boolean {
+    let marker: THREE.Object3D | undefined;
+    for (const m of this.replicas.models.values()) if (m.visible) marker = m.getObjectByName('muzzle');
+    if (!marker) return false;
+    this.rig.updateMatrixWorld(true);
+    marker.getWorldPosition(this.muzzleView); // viewmodel camera sits at the origin, so this is camera space
+    const distance = this.muzzleView.length();
+    this.muzzleView.project(this.camera);
+    out.set(this.muzzleView.x, this.muzzleView.y, 0.5).unproject(mainCamera);
+    out.sub(mainCamera.position).normalize().multiplyScalar(distance).add(mainCamera.position);
+    return true;
   }
 
   dispose(): void {

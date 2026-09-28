@@ -220,6 +220,7 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 6), m.dot);
   dot.position.set(0, 0.108, 0.009);
   dot.name = 'dot';
+  group.add(muzzleMarker(0.611, 0.034));
   group.add(dot);
   return group;
 }
@@ -269,7 +270,9 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
     thumb: { swing: 0.3, curl: [0.1, 0.1] },
   });
   buildForearm(b, leftWrist, [-0.19, -0.3, -0.34]);
-  return b.build(m);
+  const group = b.build(m);
+  group.add(muzzleMarker(0.104, 0.015));
+  return group;
 }
 
 export interface ReplicaModels {
@@ -295,4 +298,12 @@ export function buildReplicaModels(teamColor: number, orangeTips: boolean): Repl
       for (const mat of Object.values(materials)) mat.dispose();
     },
   };
+}
+
+/** Empty marker at the muzzle (forward, up) so presentation can start visual BBs there. */
+function muzzleMarker(forward: number, up: number): THREE.Object3D {
+  const marker = new THREE.Object3D();
+  marker.name = 'muzzle';
+  marker.position.set(0, up, -forward);
+  return marker;
 }

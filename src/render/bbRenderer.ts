@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BB_VISUALS } from '../config/render';
-import type { BBPool } from '../sim/ballistics';
+import type { BB, BBPool } from '../sim/ballistics';
 
 /**
  * Draws every BB in flight as a small bright ball with a short streak behind it (one instanced
@@ -12,9 +12,17 @@ export class BBRenderer {
   private readonly trails: THREE.LineSegments;
   private readonly trailPositions: Float32Array;
   private readonly matrix = new THREE.Matrix4();
+  /** Per pool slot: visual offset (muzzle minus true spawn point) for your own BBs, and which BB it belongs to. */
+  private readonly offsets: Float32Array;
+  private readonly offsetSerial: Float64Array;
 
-  constructor(private readonly pool: BBPool) {
+  constructor(
+    private readonly pool: BBPool,
+    private readonly tickSeconds: number,
+  ) {
     const n = pool.bbs.length;
+    this.offsets = new Float32Array(n * 3);
+    this.offsetSerial = new Float64Array(n);
     this.balls = new THREE.InstancedMesh(
       new THREE.SphereGeometry(BB_VISUALS.radius, 8, 6),
       new THREE.MeshBasicMaterial({ color: BB_VISUALS.color }),
@@ -52,20 +60,40 @@ export class BBRenderer {
   update(alpha: number): void {
     let count = 0;
     const tp = this.trailPositions;
-    for (const bb of this.pool.bbs) {
+    const bbs = this.pool.bbs;
+    const converge = BB_VISUALS.muzzleConvergeTime;
+    const trail = BB_VISUALS.trailSeconds;
+    for (let i = 0; i < bbs.length; i++) {
+      const bb = bbs[i]!;
       if (!bb.active) continue;
-      const x = bb.prevPosition.x + (bb.position.x - bb.prevPosition.x) * alpha;
-      const y = bb.prevPosition.y + (bb.position.y - bb.prevPosition.y) * alpha;
-      const z = bb.prevPosition.z + (bb.position.z - bb.prevPosition.z) * alpha;
+      let x = bb.prevPosition.x + (bb.position.x - bb.prevPosition.x) * alpha;
+      let y = bb.prevPosition.y + (bb.position.y - bb.prevPosition.y) * alpha;
+      let z = bb.prevPosition.z + (bb.position.z - bb.prevPosition.z) * alpha;
+      let tx = x - bb.velocity.x * trail;
+      let ty = y - bb.velocity.y * trail;
+      let tz = z - bb.velocity.z * trail;
+      // Own shots: start at the muzzle, blend onto the true path (head and tail blend separately).
+      if (this.offsetSerial[i] === bb.serial) {
+        const age = bb.age - (1 - alpha) * this.tickSeconds;
+        const head = Math.max(0, 1 - age / converge);
+        const tail = Math.min(1, Math.max(0, 1 - (age - trail) / converge));
+        const o = i * 3;
+        x += this.offsets[o]! * head;
+        y += this.offsets[o + 1]! * head;
+        z += this.offsets[o + 2]! * head;
+        tx += this.offsets[o]! * tail;
+        ty += this.offsets[o + 1]! * tail;
+        tz += this.offsets[o + 2]! * tail;
+      }
       this.matrix.makeTranslation(x, y, z);
       this.balls.setMatrixAt(count, this.matrix);
       const o = count * 6;
       tp[o] = x;
       tp[o + 1] = y;
       tp[o + 2] = z;
-      tp[o + 3] = x - bb.velocity.x * BB_VISUALS.trailSeconds;
-      tp[o + 4] = y - bb.velocity.y * BB_VISUALS.trailSeconds;
-      tp[o + 5] = z - bb.velocity.z * BB_VISUALS.trailSeconds;
+      tp[o + 3] = tx;
+      tp[o + 4] = ty;
+      tp[o + 5] = tz;
       count++;
     }
     this.balls.count = count;
@@ -73,6 +101,19 @@ export class BBRenderer {
     const geo = this.trails.geometry;
     geo.setDrawRange(0, count * 2);
     (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+  }
+
+  /**
+   * Draw `bb` as if fired from `muzzle` (world space): it starts there and blends onto its real path
+   * over BB_VISUALS.muzzleConvergeTime. Only the visuals move; the simulated BB is untouched.
+   */
+  startFromMuzzle(bb: BB, muzzle: { x: number; y: number; z: number }): void {
+    const i = this.pool.bbs.indexOf(bb);
+    if (i < 0) return;
+    this.offsetSerial[i] = bb.serial;
+    this.offsets[i * 3] = muzzle.x - bb.prevPosition.x;
+    this.offsets[i * 3 + 1] = muzzle.y - bb.prevPosition.y;
+    this.offsets[i * 3 + 2] = muzzle.z - bb.prevPosition.z;
   }
 
   get visibleCount(): number {
