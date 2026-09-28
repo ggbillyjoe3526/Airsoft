@@ -63,3 +63,11 @@ export const RECOIL = {
   /** Kick never accumulates past this (degrees). */
   maxDeg: 2,
 } as const;
+
+export const TRIGGER = {
+  /**
+   * A semi-auto trigger press that arrives while the replica isn't ready (cooldown, draw) still fires
+   * if it becomes ready within this many seconds, so fast clicking isn't silently eaten.
+   */
+  pressBuffer: 0.15,
+} as const;

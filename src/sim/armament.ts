@@ -1,6 +1,6 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { ReplicaConfig } from '../config/replicas';
-import { RECOIL } from '../config/replicas';
+import { RECOIL, TRIGGER } from '../config/replicas';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -23,6 +23,8 @@ export interface Armament {
   reload: number;
   /** Seconds left bringing the active replica up after a switch. */
   draw: number;
+  /** Seconds left to honour a semi-auto trigger press that came in while the replica wasn't ready. */
+  pendingPress: number;
   /** Trigger state last tick, for semi-auto press detection. */
   triggerWasDown: boolean;
   /** Current upward aim kick from recoil (radians). */
@@ -36,6 +38,7 @@ export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
     cooldown: 0,
     reload: 0,
     draw: 0,
+    pendingPress: 0,
     triggerWasDown: false,
     recoil: 0,
   };
@@ -95,6 +98,7 @@ export function stepArmament(
 ): void {
   a.recoil *= Math.exp(-dt / RECOIL.recoveryTime);
   a.cooldown = Math.max(-dt, a.cooldown - dt);
+  a.pendingPress = Math.max(0, a.pendingPress - dt);
   if (a.draw > 0) a.draw = Math.max(0, a.draw - dt);
 
   let replica = ctx.loadout[a.active]!;
@@ -126,18 +130,22 @@ export function stepArmament(
 
   const pressed = cmd.fire && !a.triggerWasDown;
   a.triggerWasDown = cmd.fire;
-  const wantsShot = replica.fireMode === 'auto' ? cmd.fire : pressed;
+  // Semi-auto presses are buffered briefly so a click during the cooldown still fires when ready.
+  if (pressed) a.pendingPress = TRIGGER.pressBuffer;
+  const wantsShot = replica.fireMode === 'auto' ? cmd.fire : a.pendingPress > 0;
   if (!wantsShot || !canFire || a.draw > 0 || a.reload > 0 || a.cooldown > 0) return;
 
   if (ammo.mag <= 0) {
     // Empty: a dry-fire click on the trigger press, then reload automatically if there's ammo.
-    if (pressed) {
+    if (pressed || a.pendingPress > 0) {
+      a.pendingPress = 0;
       ctx.events.push({ type: 'dryFire', characterId, replicaId: replica.id });
       if (ammo.reserve > 0) startReload(characterId, a, replica, ctx);
     }
     return;
   }
 
+  a.pendingPress = 0;
   ammo.mag--;
   a.cooldown += 1 / replica.fireRate;
   fire(characterId, a, replica, muzzle, ctx);

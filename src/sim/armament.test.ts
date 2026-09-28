@@ -101,7 +101,8 @@ describe('replica handling', () => {
     expect(a.reload).toBe(0);
     expect(a.ammo[0]!.mag).toBe(5); // the cancelled reload didn't load anything
     expect(count(run(Math.floor(GAS_PISTOL.drawTime / DT) - 1, (c, i) => (c.fire = i % 2 === 0)), 'shot')).toBe(0);
-    run(5, (c) => (c.fire = false));
+    // A click near the end of the draw is buffered and may fire once ready; let that settle.
+    run(30, (c) => (c.fire = false));
     expect(count(run(1, (c) => (c.fire = true)), 'shot')).toBe(1);
   });
 
@@ -160,5 +161,23 @@ describe('replica handling', () => {
     expect(count(evs, 'shot')).toBe(1);
     expect(count(evs, 'bbImpact')).toBe(1);
     expect(ctx.bbs.bbs.some((b) => b.active)).toBe(false);
+  });
+});
+
+describe('semi-auto trigger buffering', () => {
+  it('turns fast clicking into shots at the full fire rate instead of dropping clicks', () => {
+    for (const hz of [7.5, 8.6, 10]) {
+      const { run, count } = setup();
+      run(1, (c) => (c.switchTo = 1));
+      run(Math.ceil(GAS_PISTOL.drawTime / DT) + 1);
+      const period = 60 / hz;
+      const shots = count(
+        run(120, (c, i) => (c.fire = i % period < 2)), // 2-tick presses at `hz`
+        'shot',
+      );
+      const clicks = Math.ceil(120 / period);
+      expect(shots, `${hz} Hz`).toBeGreaterThanOrEqual(Math.min(clicks, GAS_PISTOL.fireRate * 2) - 1);
+      expect(shots).toBeLessThanOrEqual(GAS_PISTOL.fireRate * 2 + 1);
+    }
   });
 });
