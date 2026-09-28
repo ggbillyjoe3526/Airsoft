@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.local
+.vite/
+coverage/
+.DS_Store
+Thumbs.db
+
+# Machine-specific dev server launcher for the Claude desktop app
+.claude/launch.json
