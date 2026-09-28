@@ -14,6 +14,12 @@ const groups = (membership: number, filter: number): number => ((membership & 0x
 const STATIC_GROUPS = groups(GROUP_STATIC, 0xffff);
 /** Characters collide with level geometry only, never with each other. */
 const CHARACTER_GROUPS = groups(GROUP_CHARACTER, GROUP_STATIC);
+/** Queries that should only see level geometry. */
+const QUERY_STATIC_ONLY = groups(0xffff, GROUP_STATIC);
+const IDENTITY_ROTATION = { x: 0, y: 0, z: 0, w: 1 };
+const DOWN = { x: 0, y: -1, z: 0 };
+/** A ground-probe hit counts as floor only if its surface normal is at most the max slope from vertical. */
+const MIN_GROUND_NORMAL_Y = Math.cos(PHYSICS.maxSlopeClimb);
 
 /** Box corners, then triangles wound counter-clockwise seen from outside (outward normals). */
 const BOX_TRIANGLES = new Uint32Array([
@@ -63,6 +69,8 @@ export class PhysicsWorld implements CharacterMover {
   private readonly capsuleHalfHeight: number;
   private readonly capsuleCenterOffset: number;
   private readonly scratch = { x: 0, y: 0, z: 0 };
+  private readonly groundProbe: RAPIER.Ball;
+  private readonly ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
 
   /** Call `initPhysics()` first. */
   constructor(
@@ -72,6 +80,7 @@ export class PhysicsWorld implements CharacterMover {
   ) {
     this.capsuleHalfHeight = body.height / 2 - body.radius;
     this.capsuleCenterOffset = body.height / 2;
+    this.groundProbe = new RAPIER.Ball(body.radius - PHYSICS.groundProbeInset);
 
     this.world = new RAPIER.World({ x: 0, y: 0, z: 0 });
     this.world.timestep = timestep;
@@ -85,7 +94,6 @@ export class PhysicsWorld implements CharacterMover {
     this.controller = this.world.createCharacterController(PHYSICS.controllerOffset);
     this.controller.setUp({ x: 0, y: 1, z: 0 });
     this.controller.enableAutostep(PHYSICS.autostepHeight, PHYSICS.autostepMinWidth, false);
-    this.controller.enableSnapToGround(PHYSICS.snapToGround);
     this.controller.setMaxSlopeClimbAngle(PHYSICS.maxSlopeClimb);
     this.controller.setSlideEnabled(true);
     this.controller.setApplyImpulsesToDynamicBodies(false);
@@ -121,6 +129,47 @@ export class PhysicsWorld implements CharacterMover {
     s.z += m.z;
     col.setTranslation(s);
     return this.controller.computedGrounded();
+  }
+
+  probeGround(c: Character, maxDrop: number): number {
+    const lift = PHYSICS.groundProbeLift;
+    const s = this.scratch;
+    s.x = c.position.x;
+    s.y = c.position.y + lift + this.groundProbe.radius;
+    s.z = c.position.z;
+    const hit = this.world.castShape(
+      s,
+      IDENTITY_ROTATION,
+      DOWN,
+      this.groundProbe,
+      PHYSICS.groundRestGap,
+      lift + maxDrop,
+      true,
+      undefined,
+      QUERY_STATIC_ONLY,
+    );
+    // Starting inside geometry (toi 0) gives no usable height; let the character fall and land normally.
+    if (!hit || hit.time_of_impact <= 0) return Number.NaN;
+    // Only surfaces facing up count as ground; the probe grazing the top edge of cover does not.
+    // (World.castShape reports the hit collider as shape 1, so normal1 is the surface normal.)
+    if (hit.normal1.y < MIN_GROUND_NORMAL_Y) return Number.NaN;
+    return lift - hit.time_of_impact;
+  }
+
+  /**
+   * Distance along a normalised direction to the first level surface, or -1 if nothing is hit
+   * within `maxDist`. Characters are ignored.
+   */
+  raycastStatic(origin: Vec3, dir: Vec3, maxDist: number): number {
+    const r = this.ray;
+    r.origin.x = origin.x;
+    r.origin.y = origin.y;
+    r.origin.z = origin.z;
+    r.dir.x = dir.x;
+    r.dir.y = dir.y;
+    r.dir.z = dir.z;
+    const hit = this.world.castRay(r, maxDist, true, undefined, QUERY_STATIC_ONLY);
+    return hit ? hit.timeOfImpact : -1;
   }
 
   dispose(): void {

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BODY, MOVEMENT } from '../config/movement';
 import { PHYSICS } from '../config/physics';
-import type { MapData } from '../map/mapTypes';
+import type { MapBlock, MapData } from '../map/mapTypes';
 import { TEST_YARD, TEST_YARD_HALF_SIZE } from '../map/testYard';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
@@ -12,6 +12,8 @@ import { initPhysics, PhysicsWorld } from './physicsWorld';
 const DT = 1 / 60;
 const scratch = createMovementScratch();
 const JUMP_APEX = (MOVEMENT.jumpSpeed * MOVEMENT.jumpSpeed) / (2 * MOVEMENT.gravity);
+/** Height a standing character rests at above the surface. */
+const REST = PHYSICS.groundRestGap;
 
 const MAP: MapData = {
   name: 'physics-test',
@@ -133,36 +135,98 @@ describe('PhysicsWorld (Rapier)', () => {
     world.dispose();
   });
 
+  it('never stands on, hangs on, or hops over the edge of crouch-height cover', () => {
+    const floor: MapBlock = { kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(40, 0.5, 40) };
+    // Cover spans the whole floor so the only way past is over it.
+    const barrier: MapBlock = { kind: 'barrier', center: vec3(0, 0.5, 0), size: vec3(40, 1, 0.6) };
+    // A window: 1 m sill, lintel from 2 m, solid wall either side.
+    const window: MapBlock[] = [
+      { kind: 'wall', center: vec3(0, 0.5, 0), size: vec3(1.5, 1, 0.4) },
+      { kind: 'wall', center: vec3(0, 2.5, 0), size: vec3(1.5, 1, 0.4) },
+      { kind: 'wall', center: vec3(-10.375, 1.5, 0), size: vec3(19.25, 3, 0.4) },
+      { kind: 'wall', center: vec3(10.375, 1.5, 0), size: vec3(19.25, 3, 0.4) },
+    ];
+    const freeJumpAirTicks = Math.ceil((2 * MOVEMENT.jumpSpeed) / MOVEMENT.gravity / DT) + 2;
+    for (const cover of [[barrier], window]) {
+      for (const yaw of [0, 0.5]) {
+        const world = new PhysicsWorld({ name: 'cover', blocks: [floor, ...cover], killY: -50, spawns: [[], []] }, BODY, DT);
+        const c = createCharacter(0, vec3(0, REST, 3), yaw); // facing the cover
+        world.addCharacter(c);
+        const cmd = createCommand();
+        cmd.yaw = yaw;
+        cmd.forward = 1;
+        // One jump into the cover: airborne no longer than a free jump (no hanging on the edge).
+        let airborne = 0;
+        simulate(world, c, cmd, 120, () => {
+          cmd.jump = false;
+          if (!c.grounded) airborne++;
+        });
+        cmd.jump = true;
+        airborne = 0;
+        simulate(world, c, cmd, 90, () => {
+          cmd.jump = false;
+          if (!c.grounded) airborne++;
+        });
+        expect(airborne).toBeLessThanOrEqual(freeJumpAirTicks);
+        // Then spam jump: never grounded above the floor, never across, every landing at rest height.
+        for (let i = 0; i < 300; i++) {
+          cmd.jump = i % 5 === 0;
+          stepMovement(c, cmd, MOVEMENT, DT, world, scratch);
+          if (c.grounded) expect(c.position.y).toBeCloseTo(REST, 3);
+        }
+        expect(c.position.z).toBeGreaterThan(0);
+        world.dispose();
+      }
+    }
+  });
+
+  /** How far from REST a walking character's feet may drift (sinks and bumps both fail). */
+  const REST_TOLERANCE = 0.005;
+
   /**
    * Walks back and forth along both diagonals through `centre` (the block's x = ±z planes, where Rapier
-   * cuboids used to swallow the capsule) and returns the lowest height reached relative to `surfaceY`.
+   * cuboids used to swallow the capsule and triangle seams used to bump it) and returns the lowest and
+   * highest feet height reached relative to `surfaceY`, after settling.
    */
-  function lowestAlongDiagonals(map: MapData, centre: { x: number; z: number }, surfaceY: number): number {
+  function heightRangeAlongDiagonals(
+    map: MapData,
+    centre: { x: number; z: number },
+    surfaceY: number,
+  ): { min: number; max: number } {
     const world = new PhysicsWorld(map, BODY, DT);
-    const yaws = [Math.PI / 4, -Math.PI / 4, (3 * Math.PI) / 4, (-3 * Math.PI) / 4];
-    let lowest = Infinity;
+    const yaws = [Math.PI / 4, -Math.PI / 4, (3 * Math.PI) / 4, (-3 * Math.PI) / 4, Math.PI / 4 + 0.01];
+    const range = { min: Infinity, max: -Infinity };
     yaws.forEach((yaw, id) => {
-      const c = createCharacter(id, vec3(centre.x, surfaceY, centre.z), yaw);
+      const c = createCharacter(id, vec3(centre.x, surfaceY + REST, centre.z), yaw);
       world.addCharacter(c);
       const cmd = createCommand();
       cmd.yaw = yaw;
+      simulate(world, c, cmd, 10); // settle
       for (let leg = 0; leg < 10; leg++) {
         cmd.forward = leg % 2 === 0 ? 1 : -1;
-        simulate(world, c, cmd, 60, () => (lowest = Math.min(lowest, c.position.y - surfaceY)));
+        simulate(world, c, cmd, 60, () => {
+          range.min = Math.min(range.min, c.position.y - surfaceY);
+          range.max = Math.max(range.max, c.position.y - surfaceY);
+        });
       }
     });
     world.dispose();
-    return lowest;
+    return range;
   }
 
-  it('never sinks into blocks along their diagonal planes', () => {
+  function expectAtRest(range: { min: number; max: number }): void {
+    expect(range.min).toBeGreaterThan(REST - REST_TOLERANCE);
+    expect(range.max).toBeLessThan(REST + REST_TOLERANCE);
+  }
+
+  it('neither sinks nor bumps along block diagonals', () => {
     // Test Yard floor, walked from its centre and from off-centre points on its diagonals.
     for (const p of [
       { x: 0, z: 0 },
       { x: -5, z: 5 },
       { x: 3, z: -3 },
     ]) {
-      expect(lowestAlongDiagonals(TEST_YARD, p, 0)).toBeGreaterThan(-0.02);
+      expectAtRest(heightRangeAlongDiagonals(TEST_YARD, p, 0));
     }
 
     // Thick slab floor, off-centre in the world.
@@ -172,7 +236,7 @@ describe('PhysicsWorld (Rapier)', () => {
       killY: -50,
       spawns: [[], []],
     };
-    expect(lowestAlongDiagonals(slab, { x: 3, z: -2 }, 0)).toBeGreaterThan(-0.02);
+    expectAtRest(heightRangeAlongDiagonals(slab, { x: 3, z: -2 }, 0));
 
     // Standing on top of a wide, low crate.
     const ledge = PHYSICS.maxWalkableLedge;
@@ -185,7 +249,37 @@ describe('PhysicsWorld (Rapier)', () => {
       killY: -50,
       spawns: [[], []],
     };
-    expect(lowestAlongDiagonals(lowCrate, { x: 2, z: 1 }, ledge)).toBeGreaterThan(-0.02);
+    expectAtRest(heightRangeAlongDiagonals(lowCrate, { x: 2, z: 1 }, ledge));
+  });
+
+  it('walks and sprints at a steady speed on open floor (no stalls)', () => {
+    const open: MapData = {
+      name: 'open',
+      blocks: [{ kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(200, 0.5, 200) }],
+      killY: -50,
+      spawns: [[], []],
+    };
+    const world = new PhysicsWorld(open, BODY, DT);
+    const runs = 24;
+    for (let i = 0; i < runs; i++) {
+      // Headings spread evenly around the circle, plus an irrational offset so none is axis-aligned.
+      const yaw = (i / runs) * Math.PI * 2 + 0.123;
+      const c = createCharacter(i, vec3(0, REST, 0), yaw);
+      world.addCharacter(c);
+      const cmd = createCommand();
+      cmd.yaw = yaw;
+      cmd.forward = 1;
+      cmd.sprint = i % 2 === 0;
+      const topSpeed = cmd.sprint ? MOVEMENT.sprintSpeed : MOVEMENT.walkSpeed;
+      simulate(world, c, cmd, 20); // accelerate
+      let slowest = Infinity;
+      simulate(world, c, cmd, 240, () => {
+        slowest = Math.min(slowest, Math.hypot(c.velocity.x, c.velocity.z));
+      });
+      expect(slowest).toBeGreaterThan(topSpeed * 0.99);
+      expect(c.grounded).toBe(true);
+    }
+    world.dispose();
   });
 
   it('keeps the player inside the Test Yard whichever way they run', () => {

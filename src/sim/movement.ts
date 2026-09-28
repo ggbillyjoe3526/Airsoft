@@ -10,6 +10,12 @@ import { type Vec3, vec3 } from './vec';
  */
 export interface CharacterMover {
   move(c: Character, desired: Vec3, out: Vec3): boolean;
+  /**
+   * Vertical offset that puts a standing character exactly at rest on the ground beneath it
+   * (negative = down, slightly positive if it has crept into the floor), or NaN if there is no
+   * ground within `maxDrop` below its feet.
+   */
+  probeGround(c: Character, maxDrop: number): number;
 }
 
 /** Reusable vectors so a movement step allocates nothing. One per simulation instance. */
@@ -85,15 +91,18 @@ export function stepMovement(
     c.jumpCooldown = cfg.jumpCooldown;
   }
 
-  c.velocity.y = Math.max(-cfg.maxFallSpeed, c.velocity.y - cfg.gravity * dt);
+  // Standing characters move purely horizontally, then settle onto the floor in a separate move.
+  // Folding gravity into the main move makes Rapier's controller occasionally reject the whole move
+  // when it starts in contact with the floor, which stalls walking for a tick (then re-accelerates).
+  const onGround = c.grounded && c.velocity.y <= 0;
+  c.velocity.y = onGround ? 0 : Math.max(-cfg.maxFallSpeed, c.velocity.y - cfg.gravity * dt);
 
   const { desired, corrected } = scratch;
   desired.x = c.velocity.x * dt;
   desired.y = c.velocity.y * dt;
   desired.z = c.velocity.z * dt;
 
-  const grounded = mover.move(c, desired, corrected);
-
+  const controllerGrounded = mover.move(c, desired, corrected);
   c.position.x += corrected.x;
   c.position.y += corrected.y;
   c.position.z += corrected.z;
@@ -101,7 +110,21 @@ export function stepMovement(
   // Velocity follows what actually happened, so walls absorb speed instead of storing it.
   c.velocity.x = corrected.x / dt;
   c.velocity.z = corrected.z / dt;
-  if (grounded && c.velocity.y < 0) c.velocity.y = 0;
-  else if (desired.y > 0 && corrected.y < desired.y * cfg.ceilingBlockFraction) c.velocity.y = 0; // bumped a ceiling
+
+  // Only the ground probe decides whether we stand: the controller also reports "ground" for the
+  // rounded capsule touching the top edge of cover, which would let players hang on (and hop over)
+  // barriers. The probe also lands us exactly at rest height.
+  let grounded = false;
+  if (onGround || (controllerGrounded && c.velocity.y <= 0)) {
+    const dy = mover.probeGround(c, cfg.groundSettleDistance);
+    grounded = !Number.isNaN(dy);
+    if (grounded) {
+      c.position.y += dy;
+      c.velocity.y = 0;
+    }
+    // No ground under the probe: walked off an edge, or caught on one. Keep falling (and sliding off).
+  } else if (desired.y > 0 && corrected.y < desired.y * cfg.ceilingBlockFraction) {
+    c.velocity.y = 0; // bumped a ceiling
+  }
   c.grounded = grounded;
 }

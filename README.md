@@ -3,7 +3,8 @@
 A browser-based, first-person, round-based team shooter built around the feel of recreational airsoft:
 visible BBs, one hit and you're out, call your hit and walk off.
 
-Status: **Phase 1** (single-player vs bots prototype) in progress. See `CLAUDE.md` for the project guide
+Status: **Phase 1** (single-player vs bots prototype) in progress: you can walk around the first map,
+"Depot" (a warehouse yard with a container lane, a crate yard and an office block). See `CLAUDE.md` for the project guide
 and `docs/` for design notes.
 
 ## Requirements

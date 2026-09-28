@@ -17,6 +17,8 @@ const STYLES: Record<BlockKind, KindStyle> = {
   floor: { texture: 'concrete', uv: 'world', tints: [0xffffff], castShadow: false },
   wall: { texture: 'blockWall', uv: 'world', tints: [0xffffff, 0xf2efe6], castShadow: true },
   crate: { texture: 'crate', uv: 'perFace', tints: [0xffffff, 0xe8dcc8, 0xd8ccb4], castShadow: true },
+  container: { texture: 'corrugated', uv: 'world', tints: [0x3d6ea8, 0xb5533c, 0x4f8a57, 0xd2a23a], castShadow: true },
+  barrier: { texture: 'barrier', uv: 'world', tints: [0xf07c2a, 0xf2f2ea], castShadow: true },
 };
 
 interface Buffers {

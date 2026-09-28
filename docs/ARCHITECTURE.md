@@ -19,7 +19,9 @@ ai (bots) ─► PlayerCommand ┤
   View angles are absolute, so a lost or duplicated command can't accumulate drift.
 - **physics/**: `PhysicsWorld` implements the sim's `CharacterMover` interface (Rapier kinematic character
   controller). Characters collide only with level geometry, never each other. Level blocks collide as
-  closed triangle meshes to avoid a Rapier capsule-vs-cuboid bug. The sim returns anything below `killY` to its spawn.
+  closed triangle meshes to avoid a Rapier capsule-vs-cuboid bug. Standing characters move horizontally,
+  then `probeGround` (a downward sphere cast) rests them 0.04 m above the floor. It also offers static ray casts.
+  The sim returns anything below `killY` to its spawn.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
   The local camera uses the latest input angles directly, so aim is never a tick behind.

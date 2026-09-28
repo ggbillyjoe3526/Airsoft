@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import { BODY, MOVEMENT } from './config/movement';
+import { PHYSICS } from './config/physics';
 import { SIM, SIM_DT } from './config/sim';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import { Keyboard } from './input/keyboard';
@@ -16,6 +17,7 @@ import { type Character, createCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
+import { vec3 } from './sim/vec';
 import { DebugOverlay } from './ui/debugOverlay';
 import { StartScreen } from './ui/startScreen';
 
@@ -72,7 +74,9 @@ export class Game {
     this.state = createGameState(SIM.seed);
     const spawn = map.spawns[0][0];
     if (!spawn) throw new Error(`Map ${map.name} has no spawn for team 0`);
-    this.player = createCharacter(PLAYER_ID, spawn.position, spawn.yaw);
+    // Map spawns are floor points; characters stand the physics rest gap above the floor.
+    const feet = vec3(spawn.position.x, spawn.position.y + PHYSICS.groundRestGap, spawn.position.z);
+    this.player = createCharacter(PLAYER_ID, feet, spawn.yaw);
     this.state.characters.push(this.player);
     this.physics.addCharacter(this.player);
     this.commands.set(PLAYER_ID, this.playerCommand);

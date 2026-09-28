@@ -22,6 +22,11 @@ function flatMover(wallZ = -Infinity, floorY: number | null = 0): CharacterMover
       out.y = d.y;
       return false;
     },
+    probeGround(c: Character, maxDrop: number): number {
+      if (floorY === null) return Number.NaN;
+      const gap = c.position.y - floorY;
+      return gap <= maxDrop ? -gap : Number.NaN;
+    },
   };
 }
 
@@ -179,6 +184,7 @@ describe('movement', () => {
 
   it('keeps full jump height when collision trims upward moves by a hair (sliding along a wall)', () => {
     const slidingMover: CharacterMover = {
+      ...flatMover(),
       move(c, d, out) {
         const base = flatMover();
         const grounded = base.move(c, d, out);
@@ -202,6 +208,7 @@ describe('movement', () => {
   it('stops rising when it really hits a ceiling', () => {
     const ceilingY = 0.3;
     const lowCeiling: CharacterMover = {
+      ...flatMover(),
       move(c, d, out) {
         const grounded = flatMover().move(c, d, out);
         if (c.position.y + out.y > ceilingY) out.y = ceilingY - c.position.y;

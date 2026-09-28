@@ -1,12 +1,12 @@
 import './style.css';
 import { Game } from './game';
-import { TEST_YARD } from './map/testYard';
+import { DEPOT } from './map/depot';
 
 async function main(): Promise<void> {
   const container = document.getElementById('app');
   if (!container) throw new Error('#app container missing');
   const params = new URLSearchParams(window.location.search);
-  const game = await Game.create(container, TEST_YARD, {
+  const game = await Game.create(container, DEPOT, {
     allowUnlocked: import.meta.env.DEV && params.has('nolock'),
   });
   game.start();

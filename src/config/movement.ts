@@ -26,11 +26,17 @@ export interface MovementConfig {
    * strict comparison would kill jumps next to cover.
    */
   ceilingBlockFraction: number;
+  /**
+   * A standing character stays glued to ground up to this far below its feet (so it follows small
+   * drops such as stepping off a ledge). Larger drops become a fall.
+   */
+  groundSettleDistance: number;
   /** Movement input magnitude below this is treated as no input. */
   inputDeadzone: number;
   maxPitch: number;
 }
 
+/** Heights are measured from the character's position (capsule bottom), which rests PHYSICS.groundRestGap above the floor. */
 export interface BodyConfig {
   radius: number;
   height: number;
@@ -53,6 +59,7 @@ export const MOVEMENT: MovementConfig = {
   crouchTransitionTime: 0.15,
   crouchedThreshold: 0.5,
   ceilingBlockFraction: 0.5,
+  groundSettleDistance: 0.06,
   inputDeadzone: 0.01,
   maxPitch: Math.PI / 2 - 0.02,
 };

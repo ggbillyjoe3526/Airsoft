@@ -21,7 +21,7 @@ function perimeter(half: number): MapBlock[] {
   ];
 }
 
-/** Minimal walled yard with a crate, used until the warehouse map exists. */
+/** Minimal walled yard with a crate: a small, predictable fixture for physics and lighting tests. */
 export const TEST_YARD: MapData = {
   name: 'Test Yard',
   blocks: [

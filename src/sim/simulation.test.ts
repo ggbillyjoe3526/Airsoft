@@ -18,6 +18,9 @@ const floor: CharacterMover = {
     out.y = y <= 0 ? -c.position.y : d.y;
     return y <= 0;
   },
+  probeGround(c, maxDrop) {
+    return c.position.y <= maxDrop ? -c.position.y : Number.NaN;
+  },
 };
 
 describe('stepSimulation', () => {
@@ -60,6 +63,9 @@ describe('stepSimulation', () => {
         out.y = d.y;
         out.z = d.z;
         return false;
+      },
+      probeGround() {
+        return Number.NaN;
       },
     };
     const ctx = createSimContext(noFloor, MOVEMENT, -5);

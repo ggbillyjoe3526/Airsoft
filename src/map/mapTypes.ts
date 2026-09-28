@@ -1,7 +1,7 @@
 import type { Vec3 } from '../sim/vec';
 
 /** Visual family of a greybox block. Every kind collides as a solid box. */
-export type BlockKind = 'floor' | 'wall' | 'crate';
+export type BlockKind = 'floor' | 'wall' | 'crate' | 'container' | 'barrier';
 
 /** Axis-aligned block. `center` and `size` are in metres. */
 export interface MapBlock {

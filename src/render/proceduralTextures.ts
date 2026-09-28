@@ -111,10 +111,42 @@ function crate(): ProceduralTexture {
   return finish(canvas, 1.2);
 }
 
-export type SurfaceTextures = Record<'concrete' | 'blockWall' | 'crate', ProceduralTexture>;
+/** Corrugated shipping-container steel; white so per-container tints show through. */
+function corrugated(): ProceduralTexture {
+  const [canvas, ctx] = makeCanvas();
+  const rng = createRng(41);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  const ribs = 8;
+  const ribW = SIZE / ribs;
+  for (let i = 0; i < ribs; i++) {
+    const grad = ctx.createLinearGradient(i * ribW, 0, (i + 1) * ribW, 0);
+    grad.addColorStop(0, 'rgba(0,0,0,0.28)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.12)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.28)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(i * ribW, 0, ribW, SIZE);
+  }
+  speckle(ctx, rng, 600, 0.18, false);
+  return finish(canvas, 2);
+}
+
+/** Moulded plastic site barrier: light, slightly scuffed, darker kick strip at the base. */
+function barrier(): ProceduralTexture {
+  const [canvas, ctx] = makeCanvas();
+  const rng = createRng(53);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  speckle(ctx, rng, 900, 0.12, false);
+  ctx.fillStyle = 'rgba(0,0,0,0.14)';
+  ctx.fillRect(0, SIZE - 24, SIZE, 24);
+  return finish(canvas, 1);
+}
+
+export type SurfaceTextures = Record<'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'barrier', ProceduralTexture>;
 
 export function createSurfaceTextures(): SurfaceTextures {
-  return { concrete: concrete(), blockWall: blockWall(), crate: crate() };
+  return { concrete: concrete(), blockWall: blockWall(), crate: crate(), corrugated: corrugated(), barrier: barrier() };
 }
 
 export function disposeSurfaceTextures(t: SurfaceTextures): void {
