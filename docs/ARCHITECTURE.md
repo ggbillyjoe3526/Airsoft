@@ -28,7 +28,7 @@ ai (bots) ─► PlayerCommand ┤
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
-- **input/**: `Keyboard` and `PointerLock` collect raw input; `PlayerInput` latches one-shot actions (currently jump) until a tick consumes them.
+- **input/**: `Keyboard` and `PointerLock` collect raw input; `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them.
 - **ui/**: DOM overlays (start/pause screen, debug overlay, ammo HUD).
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.

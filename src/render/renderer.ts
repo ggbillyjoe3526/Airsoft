@@ -42,6 +42,9 @@ export class Renderer {
 
   /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */
   render(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
+    // Count both passes in renderer.info (the debug overlay reads it).
+    this.renderer.info.autoReset = false;
+    this.renderer.info.reset();
     this.renderer.autoClear = true;
     this.renderer.render(this.scene, this.camera);
     if (!overlay) return;

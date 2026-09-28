@@ -133,7 +133,6 @@ class ModelBuilder {
   }
 }
 
-// Hand poses (joint bends in radians: knuckle, middle, tip)./** Pistol-grip axis, top to bottom: grips rake back about 22 degrees. */const GRIP_DOWN = [0, -0.93, -0.37] as const;/** Index finger laid straight along the frame, off the trigger. */const STRAIGHT_INDEX: FingerCurl = [0.12, 0.08, 0.04];/** Fingers wrapped round a pistol grip. */const WRAP: FingerCurl = [1.15, 1.25, 0.7];/** Fingers curled up the side of a handguard. */const CRADLE: FingerCurl = [0.85, 1.05, 0.6];/** Support-hand fingers wrapped over the shooting hand. */const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
 // Hand poses (joint bends in radians: knuckle, middle, tip).
 /** Pistol-grip axis, top to bottom: grips rake back about 22 degrees. */
 const GRIP_DOWN = [0, -0.93, -0.37] as const;
