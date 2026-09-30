@@ -37,7 +37,7 @@ ai (bots) ─► PlayerCommand ┤
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
 - **audio/**: synthesised Web Audio effects; positional for everything but the local player's own replica.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox
-  figures, a few meshes each, one shared material), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
+  figures, a few meshes each on one material per figure), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
   you're out, and round messages.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop. The only place that knows about every layer.

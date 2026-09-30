@@ -27,3 +27,7 @@ Classified as **fix now / document / can wait**.
 | Other players' yaw isn't interpolated between ticks | can wait | Invisible at 60 Hz for standing dummies; revisit with bots turning. |
 | Hit volume is round, so from the side it's deeper than the figure (0.4 m vs ~0.28 m chest): a BB ~6 cm in front of the chest counts | can wait | Playtest flank shots; consider a slimmer lower capsule or an elliptical test. |
 | Arms don't count as hits (most sites count them; replica hits don't) | can wait | Playtest whether BBs visibly striking an arm with no hit feel unfair. |
+| A walk-off that reaches the dead zone in its last 0.6 s fades, then pops back to full opacity on arrival | can wait | Feature 4 critic. Fade only when the remaining distance can't be walked in the remaining time, or after the stuck skip. Rare on Depot (needs a clear 11–13 m line). |
+| Stuck check only counts < 0.5 m/s, so sliding along diagonal cover or into a corner can still grind for up to 4 s | can wait | Better: measure progress towards the dead zone, not speed. Superseded once walk-off uses navigation. |
+| The hit-direction wedge is cut off at the end of calling (its 2.2 s fade is longer than the 1.4 s call) | can wait | Match the wedge fade to HITS.callTime. |
+| Players moved into the dead zone keep their walk-off facing (often towards a wall) | can wait | Turn them to the dead-zone spot's yaw on arrival. |

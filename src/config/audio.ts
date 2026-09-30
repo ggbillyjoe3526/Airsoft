@@ -19,6 +19,7 @@ export const AUDIO = {
     noiseHz: 5200,
     noiseQ: 2,
     noiseGain: 0.8,
+    noiseAttack: 0.0005,
     noiseTime: 0.03,
     thumpFromHz: 180,
     thumpToHz: 70,
@@ -27,7 +28,7 @@ export const AUDIO = {
   },
   /** A BB landing on someone else (positional): a dull smack on fabric. */
   bodyHitVolume: 0.6,
-  bodyHit: { hz: 2200, q: 1.5, time: 0.04 },
+  bodyHit: { hz: 2200, q: 1.5, attack: 0.001, time: 0.04 },
   /** Confirmation that your BB hit someone: a soft wooden "tock". */
   hitMarkerVolume: 0.35,
   hitMarker: { fromHz: 1100, toHz: 700, time: 0.07 },
@@ -40,6 +41,8 @@ export const AUDIO = {
   /** Fade in / out at each end of a blast (s). */
   whistleAttack: 0.02,
   whistleRelease: 0.05,
+  /** Oscillators stop this long after a sound's end so the fade-out isn't clipped (s). */
+  stopPadding: 0.02,
   roundOverWhistle: 0.8,
   /** Round start: two short blasts, the second starting this many blast-lengths after the first. */
   roundStartWhistle: 0.14,

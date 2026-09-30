@@ -153,14 +153,14 @@ export class Sfx {
     const k = AUDIO.hitTick;
     const v = AUDIO.hitTickVolume;
     this.click(out, k.clickHz, k.clickTime, v);
-    this.noise(out, 'bandpass', k.noiseHz, k.noiseQ, v * k.noiseGain, 0.0005, k.noiseTime);
+    this.noise(out, 'bandpass', k.noiseHz, k.noiseQ, v * k.noiseGain, k.noiseAttack, k.noiseTime);
     this.tone(out, 'sine', k.thumpFromHz, k.thumpToHz, v * k.thumpGain, k.thumpTime);
   }
 
   /** A BB smacking into someone's jacket: duller than a hard surface. */
   private bodyHit(at: Vec3): void {
     const b = AUDIO.bodyHit;
-    this.noise(this.output(at), 'bandpass', b.hz, b.q, AUDIO.bodyHitVolume, 0.001, b.time);
+    this.noise(this.output(at), 'bandpass', b.hz, b.q, AUDIO.bodyHitVolume, b.attack, b.time);
   }
 
   /** Your BB hit someone: a soft wooden "tock". */
@@ -189,8 +189,8 @@ export class Sfx {
     osc.connect(g).connect(this.master!);
     osc.start(t);
     lfo.start(t);
-    osc.stop(t + duration + 0.02);
-    lfo.stop(t + duration + 0.02);
+    osc.stop(t + duration + AUDIO.stopPadding);
+    lfo.stop(t + duration + AUDIO.stopPadding);
   }
 
   // ---- Building blocks ----------------------------------------------------------------------
