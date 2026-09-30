@@ -265,9 +265,11 @@ describe('bots in a duel', () => {
       ['sprint', 8, true],
       ['walk', 8, false],
       ['crouch', 8, false],
-      // Between the running (11 m) and sprinting (16 m) hearing ranges.
-      ['run', 14, false],
-      ['sprint', 14, true],
+      // Between the running (11 m) and sprinting (16 m) hearing ranges, and beyond both.
+      ['run', 13, false],
+      ['sprint', 12, true],
+      ['sprint', 20, false],
+      ['walk', 4, false],
     ] as const;
     expect(BOTS.footstepHearingRun).toBeLessThan(13);
     expect(BOTS.footstepHearingSprint).toBeGreaterThan(15);

@@ -41,7 +41,7 @@ export const AUDIO = {
     landThumpTime: 0.14,
     /** Other players' steps further than this (m) aren't played: about as far as bots hear a sprint. */
     maxDistance: 22,
-    /** At most this many steps start within `window` seconds (six sprinters stay readable). */
+    /** At most this many other players' steps start within `window` seconds (six sprinters stay readable). */
     maxPerWindow: 4,
     window: 0.1,
   },
