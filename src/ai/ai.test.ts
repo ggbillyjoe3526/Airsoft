@@ -312,5 +312,68 @@ describe('bot modes', () => {
     expect(b.hasLastKnown).toBe(false);
     expect(b.mode).toBe('advance');
   });
+
+  it('fight back from cover that turns out not to hide them', () => {
+    const { state, bot, bots, run } = duel(12);
+    const b = bots.bots[0]!;
+    run(0.3); // in contact (not yet firing)
+    expect(b.targetVisible).toBe(true);
+    // Pretend it just settled into "cover" right where it stands, in the open.
+    b.mode = 'cover';
+    b.cover.position.x = bot.position.x;
+    b.cover.position.z = bot.position.z;
+    b.coverLeft = 10;
+    b.coverGiveUp = 10;
+    b.coverHeld = 0;
+    b.routeState = 'none';
+    let shots = 0;
+    let fought = false;
+    run(BOTS.coverSettle + 0.5, () => {
+      fought ||= b.mode === 'fight';
+      for (const e of state.events) if (e.type === 'shot' && e.characterId === 1) shots++;
+    });
+    expect(fought).toBe(true);
+    expect(shots).toBeGreaterThan(0);
+  });
+});
+
+describe('bot hearing and targets', () => {
+  it('keep one steady guess of an unseen shooter during a long burst', () => {
+    const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // can't see anyone
+    const { state, bots, run, commands } = duel(18, () => {}, walls);
+    const b = bots.bots[0]!;
+    Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 }); // a long burst into the air
+    let jumps = 0;
+    let last: { x: number; z: number } | undefined;
+    let turned = 0;
+    let prevYaw = b.aim.yaw;
+    run(3, () => {
+      if (b.hasLastKnown) {
+        if (last && Math.hypot(b.lastKnown.x - last.x, b.lastKnown.z - last.z) > 0.5) jumps++;
+        last = { x: b.lastKnown.x, z: b.lastKnown.z };
+      }
+      turned += Math.abs(Math.atan2(Math.sin(b.aim.yaw - prevYaw), Math.cos(b.aim.yaw - prevYaw)));
+      prevYaw = b.aim.yaw;
+    });
+    expect(state.events).toBeDefined();
+    expect(last).toBeDefined();
+    expect(jumps).toBe(0);
+    expect(turned).toBeLessThan(Math.PI); // turns towards the noise once; no swinging back and forth
+  });
+
+  it('stay on one target rather than flip between two enemies side by side', () => {
+    const { bots, run } = duel(14, (s) => {
+      s.characters.push(createCharacter(2, vec3(1.2, 0, 0), 0, LOADOUT, 0));
+    });
+    const b = bots.bots[0]!;
+    let switches = 0;
+    let prev = -1;
+    run(3, () => {
+      if (b.targetId >= 0 && prev >= 0 && b.targetId !== prev) switches++;
+      if (b.targetId >= 0) prev = b.targetId;
+    });
+    // A switch is fine once someone is hit (they're out); flip-flopping isn't.
+    expect(switches).toBeLessThanOrEqual(1);
+  });
 });
 

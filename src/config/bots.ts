@@ -17,6 +17,11 @@ export const BOTS = {
   hearingDistance: 22,
   /** A heard position is off by up to this fraction of the distance (hearing through walls is vague). */
   hearingError: 0.3,
+  /**
+   * Hearing the same shooter again within this long (s) keeps the same guess of where they are (one
+   * error per contact, not per BB), only moving it if they have clearly moved (replanDistance).
+   */
+  hearingContactTime: 2,
   /** How long a bot keeps hunting a last-known position after losing sight or hearing (s); after this it forgets the contact. */
   memoryTime: 6,
   /** A BB landing this close (metres) or a teammate being hit nearby makes a bot want cover. */
@@ -29,6 +34,8 @@ export const BOTS = {
   reactionTime: [0.3, 0.55] as const,
   /** Seconds a target can be out of sight and still count as "the same contact" (no new reaction delay). */
   contactGrace: 1.2,
+  /** Stay on the current target unless another is at least this much closer (metres). */
+  targetSwitchMargin: 3,
   /** Turning speed when aiming (rad/s). */
   turnRate: 4.5,
   /** Aim error (degrees) right after acquiring a target, what it settles to, and how long that takes (s). */
@@ -76,6 +83,11 @@ export const BOTS = {
   coverTime: [1.2, 2.4] as const,
   /** Give up on reaching cover after this long (s), e.g. if the route there is blocked. */
   coverMaxTime: 5,
+  /**
+   * After this long at a cover spot (s: time to crouch and look again), still seeing the enemy means
+   * the spot doesn't hide us (or we've been flanked): leave cover and fight.
+   */
+  coverSettle: 0.5,
   /** Route waypoints count as reached within this distance (metres). */
   waypointReach: 0.45,
   /** Walking slower than this (m/s) for `stuckTime` seconds along a route means blocked: re-plan. */
@@ -97,6 +109,8 @@ export const BOTS = {
    */
   huntSectorSize: 4,
   huntCandidates: 12,
+  /** Random cells drawn per candidate before giving up (most of the grid is walkable). */
+  huntTriesPerCandidate: 20,
   /** Among never-visited sectors, each metre further from home counts like this many seconds staler. */
   huntFarBias: 0.01,
   /** At most this many route searches per simulation tick, shared by all bots. */

@@ -39,6 +39,10 @@ export interface Bot {
   targetPart: number;
   lastSeenAt: number;
   heardAt: number;
+  /** Who was last heard, and the error of the guess of where they are (kept for the whole contact). */
+  heardFromId: number;
+  heardOffsetX: number;
+  heardOffsetZ: number;
   lastKnown: Vec3;
   hasLastKnown: boolean;
   acquiredAt: number;
@@ -67,6 +71,8 @@ export interface Bot {
   coverLeft: number;
   /** Time left before giving up on cover altogether (unreachable spot, endless reload...). */
   coverGiveUp: number;
+  /** Seconds spent at the cover spot so far. */
+  coverHeld: number;
   coverCooldown: number;
   strafeDir: number;
   strafeLeft: number;
@@ -104,6 +110,9 @@ export function createBot(character: Character, seed: number, laneCount: number,
     targetPart: cfg.aimHeightFraction,
     lastSeenAt: Number.NEGATIVE_INFINITY,
     heardAt: Number.NEGATIVE_INFINITY,
+    heardFromId: -1,
+    heardOffsetX: 0,
+    heardOffsetZ: 0,
     lastKnown: vec3(),
     hasLastKnown: false,
     acquiredAt: 0,
@@ -125,6 +134,7 @@ export function createBot(character: Character, seed: number, laneCount: number,
     cover: { position: vec3(), crouchOnly: false },
     coverLeft: 0,
     coverGiveUp: 0,
+    coverHeld: 0,
     coverCooldown: 0,
     strafeDir: 1,
     strafeLeft: 0,
@@ -142,6 +152,7 @@ export function resetBot(b: Bot, laneCount: number, cfg: BotConfig): void {
   forgetTarget(b);
   b.hasLastKnown = false;
   b.heardAt = Number.NEGATIVE_INFINITY;
+  b.heardFromId = -1;
   b.lastThreatAt = Number.NEGATIVE_INFINITY;
   b.suppressedAt = Number.NEGATIVE_INFINITY;
   b.burstLeft = 0;
@@ -167,9 +178,11 @@ function forgetTarget(b: Bot): void {
 
 const range = (rng: RngState, r: readonly [number, number]): number => r[0] + rngNext(rng) * (r[1] - r[0]);
 
-const eye = vec3();
-const aimPoint = vec3();
+// Scratch vectors, one per role, so no step depends on another step having filled them.
+const myEye = vec3();
+const aimAt = vec3();
 const aimDir = vec3();
+const threatEye = vec3();
 const huntGoal = vec3();
 const look = { yaw: 0, pitch: 0 };
 const move = { x: 0, z: 0 };
@@ -211,6 +224,20 @@ function perceive(b: Bot, w: BotWorld): void {
       best = other;
       bestPart = part;
       bestD = d;
+    }
+  }
+  // Stay on the current target while it's in sight, unless someone else is clearly closer.
+  if (best && best.id !== b.targetId && b.targetId >= 0) {
+    for (const cur of w.characters) {
+      if (cur.id !== b.targetId || !isInPlay(cur)) continue;
+      const d = Math.hypot(cur.position.x - me.position.x, cur.position.z - me.position.z);
+      if (d - bestD >= cfg.targetSwitchMargin) break;
+      const part = visiblePart(me, cur, w.query, cfg, w.body, w.hits);
+      if (part > 0) {
+        best = cur;
+        bestPart = part;
+        bestD = d;
+      }
     }
   }
   if (!best) {
@@ -322,11 +349,12 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
 
   if (seeing && target && (suppressed || reloading || armament.ammo[0]!.mag === 0) && b.mode !== 'cover' && b.coverCooldown <= 0) {
     b.coverCooldown = cfg.coverCooldown;
-    eyeOf(target, w.body, eye);
-    if (findCover(me.position, eye, w.nav, w.query, cfg, w.body, b.rng, b.cover)) {
+    eyeOf(target, w.body, threatEye);
+    if (findCover(me.position, threatEye, w.nav, w.query, cfg, w.body, b.rng, b.cover)) {
       b.mode = 'cover';
       b.coverLeft = range(b.rng, cfg.coverTime);
       b.coverGiveUp = cfg.coverMaxTime;
+      b.coverHeld = 0;
       b.routeState = 'none';
       wantRoute(b, b.cover.position, cfg);
       return;
@@ -334,9 +362,14 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   }
   if (b.mode === 'cover') {
     const atCover = Math.hypot(b.cover.position.x - me.position.x, b.cover.position.z - me.position.z) < cfg.coverArrive;
-    if (atCover) b.coverLeft -= dt;
+    if (atCover) {
+      b.coverLeft -= dt;
+      b.coverHeld += dt;
+    }
     b.coverGiveUp -= dt;
-    const done = (b.coverLeft <= 0 && !reloading) || b.coverGiveUp <= 0 || b.routeState === 'failed';
+    // Settled in cover but still in sight of an enemy (flanked, or the spot doesn't hide us): fight back.
+    const exposed = b.coverHeld >= cfg.coverSettle && seeing && !reloading;
+    const done = exposed || (b.coverLeft <= 0 && !reloading) || b.coverGiveUp <= 0 || b.routeState === 'failed';
     if (!done) return;
     b.routeState = 'none';
   }
@@ -402,14 +435,14 @@ function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): boolean {
 }
 
 /**
- * Turns the view: at the target (with lead and aim error), towards where a threat was, or along the
- * route. Returns how far the view still is from the (erroneous) aim point, or Infinity with no target.
+ * Turns the view from `eye`: at the target (with lead and aim error; the point aimed at is written to
+ * `aimPoint`), towards where a threat was, or along the route. Returns how far the view still is from
+ * the (erroneous) aim point, or Infinity with no target.
  */
-function aimBot(b: Bot, w: BotWorld, target: Character | undefined, moving: boolean, strafing: boolean, dt: number): number {
+function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: Vec3, aimPoint: Vec3, moving: boolean, strafing: boolean, dt: number): number {
   const me = b.character;
   const cfg = w.cfg;
   const enemyYaw = w.enemyYaw[me.team] ?? 0;
-  eyeOf(me, w.body, eye);
   if (b.targetVisible && target) {
     // Aim at the part of the body it can see, leading the target by part of the BB's flight time.
     bodyPoint(target, w.hits, b.targetPart, aimPoint);
@@ -434,8 +467,8 @@ function aimBot(b: Bot, w: BotWorld, target: Character | undefined, moving: bool
   return Number.POSITIVE_INFINITY;
 }
 
-/** Bursts at the target once reacted and on aim, never with a teammate or cover in the way. */
-function shootBot(b: Bot, w: BotWorld, target: Character | undefined, offAim: number, cmd: PlayerCommand, dt: number): void {
+/** Bursts at the target from `eye` towards `aimPoint` once reacted and on aim, never with a teammate or cover in the way. */
+function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye: Vec3, aimPoint: Vec3, offAim: number, cmd: PlayerCommand, dt: number): void {
   const me = b.character;
   const cfg = w.cfg;
   const ready = w.live && b.targetVisible && b.reactionLeft <= 0 && !cmd.sprint && b.mode !== 'cover';
@@ -484,6 +517,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.reload = false;
   cmd.switchTo = 0; // bots use their primary
   if (!isInPlay(me)) {
+    b.mode = 'advance';
     b.aim.yaw = cmd.yaw = me.yaw;
     b.aim.pitch = cmd.pitch = me.pitch;
     return;
@@ -509,9 +543,10 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     const calm = w.time - b.lastThreatAt > cfg.sprintWhenCalmFor;
     cmd.sprint = b.mode === 'advance' && calm && cmd.forward > cfg.sprintForward;
   }
-  const offAim = aimBot(b, w, target, moving, cmd.right !== 0, dt);
+  eyeOf(me, w.body, myEye);
+  const offAim = aimBot(b, w, target, myEye, aimAt, moving, cmd.right !== 0, dt);
   cmd.yaw = b.aim.yaw;
   cmd.pitch = b.aim.pitch;
-  shootBot(b, w, target, offAim, cmd, dt);
+  shootBot(b, w, target, myEye, aimAt, offAim, cmd, dt);
   reloadBot(b, w, cmd);
 }

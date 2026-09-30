@@ -32,3 +32,4 @@ Classified as **fix now / document / can wait**.
 | A walk-off that can't reach the dead zone within 14 s, or gets stuck, fades out where it is and reappears in the dead zone | document | Rare now that walk-offs follow nav routes. |
 | Each hit runs one route search for the victim's walk-off inside the simulation tick (~2 ms worst case on Depot, not rationed) | can wait | Hits are rare (a few per round); profile before rationing. |
 | Bots fight by standing and strafing; they don't crouch-peek over 1.2 m cover or push to close distance | can wait | Phase 2 "smarter bots". |
+| Bots may be too lethal up close: ~30% of their BBs hit in bot-only matches (median range ~6 m); being seen first at close range usually means being out | can wait | Tuning for playtesting: reactionTime, aimErrorStartDeg, burst length in config/bots.ts. |
