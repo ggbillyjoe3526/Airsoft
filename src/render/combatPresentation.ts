@@ -61,6 +61,7 @@ export class CombatPresentation {
 
   setPlaying(playing: boolean): void {
     this.hud.setVisible(playing);
+    this.sfx.setPaused(!playing);
   }
 
   toggleBbPaths(): void {

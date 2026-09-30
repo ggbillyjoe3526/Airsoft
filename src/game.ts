@@ -255,7 +255,7 @@ export class Game {
       const theirs = 1 - mine;
       this.startScreen.show(
         this.started,
-        `Round ${r.number} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${ROUNDS.winsNeeded}`,
+        `${r.phase === 'over' ? `After round ${r.number}` : `Round ${r.number}`} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${ROUNDS.winsNeeded}`,
       );
     }
     this.combat.setPlaying(false);

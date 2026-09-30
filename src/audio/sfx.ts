@@ -1,4 +1,4 @@
-import { AUDIO } from '../config/audio';
+import { AUDIO, matchOverBlastStart } from '../config/audio';
 import type { ReplicaConfig, ReplicaModelKind } from '../config/replicas';
 import type { GameEvent } from '../sim/events';
 import type { Vec3 } from '../sim/vec';
@@ -15,9 +15,17 @@ export class Sfx {
   private impactWindowStart = 0;
   private impactsInWindow = 0;
   private readonly shotSounds = new Map<string, ReplicaModelKind>();
+  /** Whistle oscillators still playing or scheduled (a new round silences them). */
+  private readonly whistles: OscillatorNode[] = [];
 
   constructor(loadout: readonly ReplicaConfig[]) {
     for (const r of loadout) this.shotSounds.set(r.id, r.look.shotSound);
+  }
+
+  /** Pauses all sound with the game (and resumes it). */
+  setPaused(paused: boolean): void {
+    if (!this.ctx) return;
+    void (paused ? this.ctx.suspend() : this.ctx.resume());
   }
 
   /** Must be called from a user gesture (browsers keep audio suspended until then). */
@@ -97,9 +105,10 @@ export class Sfx {
         return;
       case 'matchOver':
         // Extra long blasts after the round's: game over.
-        for (let i = 0; i < AUDIO.matchOverBlasts; i++) this.whistle(AUDIO.roundOverWhistle, AUDIO.roundOverWhistle * AUDIO.matchOverWhistleGap * (i + 1));
+        for (let i = 0; i < AUDIO.matchOverBlasts; i++) this.whistle(AUDIO.roundOverWhistle, matchOverBlastStart(i));
         return;
       case 'roundStart':
+        this.stopWhistles();
         this.whistle(AUDIO.roundStartWhistle, 0);
         this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
         return;
@@ -173,6 +182,17 @@ export class Sfx {
     this.tone(this.master!, 'triangle', m.fromHz, m.toHz, AUDIO.hitMarkerVolume, m.time);
   }
 
+  private stopWhistles(): void {
+    for (const o of this.whistles.splice(0)) {
+      o.onended = null;
+      try {
+        o.stop();
+      } catch {
+        // Already stopped.
+      }
+    }
+  }
+
   /** Referee whistle: a pea whistle's warbling tone. */
   private whistle(duration: number, delay: number): void {
     const ctx = this.ctx!;
@@ -193,6 +213,13 @@ export class Sfx {
     osc.connect(g).connect(this.master!);
     osc.start(t);
     lfo.start(t);
+    this.whistles.push(osc, lfo);
+    osc.onended = () => {
+      for (const node of [osc, lfo]) {
+        const k = this.whistles.indexOf(node);
+        if (k >= 0) this.whistles.splice(k, 1);
+      }
+    };
     osc.stop(t + duration + AUDIO.stopPadding);
     lfo.stop(t + duration + AUDIO.stopPadding);
   }

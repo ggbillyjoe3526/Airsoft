@@ -153,7 +153,7 @@ export class MatchPresentation {
         r.winner === this.player.team
           ? 'Your team wins the round'
           : r.winner >= 0
-            ? `${TEAMS[r.winner]!.name} wins the round`
+            ? `Your team loses the round (${TEAMS[r.winner]!.name} wins)`
             : this.lastRoundReason === 'time'
               ? "Time's up · draw"
               : 'Draw';
