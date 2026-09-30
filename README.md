@@ -1,12 +1,16 @@
-# Airsoft — version 0.1
+# Airsoft — v0.1-alpha.2a
 
 A browser-based, first-person, round-based team shooter built around the feel of recreational airsoft:
 visible BBs, one hit and you're out, call your hit and walk off.
 
-**Version 0.1 (Phase 1 prototype).** On the warehouse map "Depot" you play a 3v3 against bots: you and two
+**v0.1-alpha.2a (alpha: Phase 1 plus the first half of Phase 2).** On the warehouse map "Depot" you play a 3v3 against bots: you and two
 bot teammates (Blue) against three bots (Orange), with an AEG rifle and a gas pistol. One BB hit and you're
 out: your hand goes up, you walk off, and you spectate. Knock out the whole other team to win a round
 (2:30 on the clock; a time-out is a draw). First to 5 rounds wins the match.
+
+New since v0.1-alpha: walk quietly with Shift (sprint moved to Left Alt), rebindable keys, a bigger and more
+open Depot, footsteps you and the bots can hear, a visible magazine-swap reload, hit flinches, clearer hit
+confirmation at range, and smoother-moving players.
 
 ---
 
@@ -22,20 +26,21 @@ Go to **https://nodejs.org**, download the **LTS** version (22 or newer), and in
 
 ### 2. Download the game
 
-Download version 0.1 as a ZIP file:
+Download v0.1-alpha.2a as a ZIP file:
 
-**https://github.com/ggbillyjoe3526/airsoft/archive/refs/tags/v0.1.zip**
+**https://github.com/ggbillyjoe3526/airsoft/archive/refs/tags/v0.1-alpha.2a.zip**
 
-Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `airsoft-0.1`.
+Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `airsoft-0.1-alpha.2a`.
+(Older versions are on the **Releases / Tags** page of the repository.)
 
 (If that link doesn't work, open **https://github.com/ggbillyjoe3526/airsoft**, click the green **Code**
 button, then **Download ZIP**. The folder will then be called `airsoft-main`; use it the same way.)
 
 ### 3. Open a terminal in that folder
 
-- **Windows:** open the unzipped folder (`airsoft-0.1`, or `airsoft-main` if you used the Download ZIP
+- **Windows:** open the unzipped folder (`airsoft-0.1-alpha.2a`, or `airsoft-main` if you used the Download ZIP
   button), click the address bar at the top of the window, type `cmd` and press Enter.
-- **Mac:** right-click the unzipped folder (`airsoft-0.1` or `airsoft-main`) and choose **New Terminal at Folder**.
+- **Mac:** right-click the unzipped folder (`airsoft-0.1-alpha.2a` or `airsoft-main`) and choose **New Terminal at Folder**.
 - **Linux:** right-click inside the folder and choose **Open in Terminal**.
 
 ### 4. Install and start the game
@@ -111,11 +116,15 @@ Then open **http://localhost:4173**.
 
 ---
 
-## What's in version 0.1 and what isn't
+## What's in v0.1-alpha.2a and what isn't
 
 **In:** one map (Depot), two replicas (AEG rifle, gas pistol), BB ballistics with hop-up, one-hit
-elimination with hit calling, bots (patrol, spot, react, shoot, take cover, search, hunt), 3v3 matches
-with a round clock and first-to-5 scoring, synthesised sounds, a minimal HUD.
+elimination with hit calling, bots (patrol, spot, react, shoot, take cover, search, hunt, hear footsteps),
+3v3 matches with a round clock and first-to-5 scoring, walk/run/sprint, rebindable keys, synthesised sounds
+with footsteps, reload animations, hit reactions, a minimal HUD.
+
+**Still to come in Alpha 2 (v0.1-alpha.2):** bot difficulty levels and smarter bots, an objective mode.
+Progress and plans: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 **Not yet:** objectives, more maps or replicas, menus beyond the start screen, real art.
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty and pacing

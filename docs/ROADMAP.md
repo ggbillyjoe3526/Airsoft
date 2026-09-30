@@ -7,8 +7,28 @@ this file is the current detailed plan.
 v0.1 line: Phase 1 = Alpha 1 (`v0.1-alpha`), Phase 2 = Alpha 2 (`v0.1-alpha.2`), Phase 3 = Alpha 3
 (`v0.1-alpha.3`), and Phase 4 possibly Alpha 4 (`v0.1-alpha.4`). Git tags can't contain spaces, hence the dots.
 
-**Multiplayer is not planned** (owner decision, 2026-09-30). The game is single-player against bots. Every milestone goes through the critic (CLAUDE.md §12) and is
-pushed when accepted. Move on only when the previous part is fun.
+**Multiplayer is not planned** (owner decision, 2026-09-30). The game is single-player against bots.
+
+Every milestone goes through the critic (CLAUDE.md §12) and is pushed when accepted. Move on only when
+the previous part is fun.
+
+## Progress (updated 2026-09-30)
+
+| Milestone | Status | Critic score |
+|---|---|---|
+| Phase 1 (all) | Done, released as `v0.1-alpha` | see REVIEWS.md |
+| Phase 2 · M1 Controls and map | Done | 8.6 |
+| Phase 2 · M2 Sound you can play by | Done | 8.8 |
+| Phase 2 · M3 Feel and feedback | Done (arm hits: owner to decide from playtest) | 8.8 |
+| **Checkpoint `v0.1-alpha.2a`** | M1–M3, for the owner to play | |
+| Phase 2 · M4 Bots that feel fair | **Next** | |
+| Phase 2 · M5 Objective mode | To do | |
+| Final bug pass (before M6) | To do | |
+| Phase 2 · M6 Wrap-up → `v0.1-alpha.2` | Owner assesses | |
+| Phase 3 → `v0.1-alpha.3` | Later | |
+| Phase 4 (polish) → possibly `v0.1-alpha.4` | Later | |
+
+Remaining in Phase 2: about half by milestone count (M4, M5, the bug pass, M6).
 
 ## Phase 2: Core gameplay (Depot only) → Alpha 2 (`v0.1-alpha.2`)
 

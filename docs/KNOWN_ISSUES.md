@@ -40,3 +40,6 @@ Classified as **fix now / document / can wait**.
 | Bots hear footsteps and gunfire through walls (no occlusion); only range limits it, and the guess is vague (±30% of distance) | document | Deliberate simplification; playtest whether bots feel spooky. Occlusion could halve range through walls later. |
 | Bots never walk or crouch-move, so their own footsteps always give them away | can wait | Phase 2 M4 (smarter bots): walk when closing in on a heard contact. |
 | Footstep ranges are first guesses: bots hear run 11 m, sprint 16 m, land 12 m; you hear other players' steps to 22 m | can wait | Tune from playtesting (the player's range is deliberately a bit longer than the bots'). |
+| The reload pose lifts and turns the replica across the centre of the view for the whole reload | can wait | Chosen so the magazine swap is visible; playtest whether it blocks too much (VIEWMODEL.reload lift/turn/tilt). |
+| Support-hand reload positions (toMag in replicaModels.ts) were checked only in headless screenshots | can wait | Owner to confirm in the browser; tune the offsets if the hand misses the magazine. |
+| Arm hits don't count (only body capsule and head) | document | Owner to decide from playtest (DECISIONS 2026-09-30). |
