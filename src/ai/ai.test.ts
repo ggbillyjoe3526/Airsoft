@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { BOTS } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
+import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
@@ -148,6 +149,7 @@ function duel(dist: number, extra: (state: GameState) => void = () => {}, query:
     mover: flatFloor,
     query,
     movement: MOVEMENT,
+    footsteps: FOOTSTEPS,
     body: BODY,
     ballistics: BALLISTICS,
     loadout: LOADOUT,
@@ -241,8 +243,7 @@ describe('bots in a duel', () => {
 
   it('go after someone they only heard shooting', () => {
     // The bot faces away; the player fires from behind it, 15 m away.
-    const { state, bot, player, run, commands } = duel(15);
-    bot.yaw += Math.PI;
+    const { state, bot, player, run, commands } = duel(15, (st) => (st.characters[1]!.yaw += Math.PI));
     const playerCmd = commands.get(0)!;
     const fire = createCommand();
     fire.fire = true;
@@ -256,6 +257,27 @@ describe('bots in a duel', () => {
       if (Math.abs(Math.atan2(Math.sin(bot.yaw - toPlayer), Math.cos(bot.yaw - toPlayer))) < 0.35) turned = true;
     });
     expect(turned).toBe(true);
+  });
+
+  it('hear an enemy running behind them, but not one walking or moving crouched', () => {
+    for (const [pace, heard] of [
+      ['run', true],
+      ['walk', false],
+      ['crouch', false],
+    ] as const) {
+      // The bot faces away (turned before its brain starts); the player crosses behind it, 8 m back.
+      const { run, commands, bots } = duel(8, (st) => (st.characters[1]!.yaw += Math.PI));
+      const cmd = commands.get(0)!;
+      cmd.right = 1;
+      cmd.walk = pace === 'walk';
+      cmd.crouch = pace === 'crouch';
+      let heardIt = false;
+      run(1.5, () => {
+        const b = bots.bots[0]!;
+        if (b.hasLastKnown && !b.targetVisible) heardIt = true;
+      });
+      expect(heardIt, pace).toBe(heard);
+    }
   });
 
   it('still need their full reaction time on re-sighting someone after only hearing them', () => {

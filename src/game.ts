@@ -5,6 +5,7 @@ import { BOTS } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
 import { NAV } from './config/nav';
 import { matchOverScreenDelay } from './config/render';
+import { FOOTSTEPS } from './config/footsteps';
 import { BODY, MOVEMENT } from './config/movement';
 import { PHYSICS } from './config/physics';
 import { LOADOUT } from './config/replicas';
@@ -114,6 +115,7 @@ export class Game {
       mover: this.physics,
       query: this.physics,
       movement: MOVEMENT,
+      footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
       loadout: LOADOUT,

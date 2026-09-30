@@ -32,7 +32,7 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 - **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
   routes (8-neighbour A*, string-pulled into straight legs). Pure; used by bots and by the sim for walk-offs.
 - **ai/**: bots. `BotController` runs before each tick (fills every bot's `PlayerCommand`, rations route searches to one
-  per tick) and after it (bots hear shots, near misses and hit calls from `state.events`). `botBrain.ts` is each bot's
+  per tick) and after it (bots hear shots, near misses, hit calls and footsteps from `state.events`). `botBrain.ts` is each bot's
   state machine (advance along a lane → fight → cover → search) built on `perception.ts` (view cone + static ray casts),
   `aim.ts` (turn rate, reaction, settling aim error) and `cover.ts` (random nearby spots hidden from the threat).
   Bots read game state, never write it; their randomness is seeded per bot.
@@ -43,7 +43,10 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 - **ui/**: DOM overlays (start/pause screen, debug overlay, ammo HUD).
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
-- **audio/**: synthesised Web Audio effects; positional for everything but the local player's own replica.
+- **audio/**: synthesised Web Audio effects; positional for everything but the local player's own sounds. In-world
+  sounds feed a short procedural reverb (the yard's echo); UI sounds (hit tick, hit marker, whistle) stay dry.
+- **sim/footsteps.ts**: after movement, emits `footstep` events every stride while running/sprinting and on hard
+  landings; walking and crouched movement are silent.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox
   figures, a few meshes each on one material per figure), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
   you're out, round messages and the scoreboard (`ui/scoreboard.ts`: score, clock, who's still in).

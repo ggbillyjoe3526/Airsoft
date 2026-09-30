@@ -8,6 +8,37 @@ export const AUDIO = {
   refDistance: 3,
   rolloff: 1.4,
   maxDistance: 60,
+  /**
+   * Footsteps on concrete: a gritty scuff plus a soft heel thump, pitch varied per step. Sprinting adds
+   * a rattle of kit; landing a jump is a heavier thud. Your own steps are quieter than other players'.
+   */
+  footsteps: {
+    volume: 0.45,
+    sprintVolume: 0.6,
+    selfVolume: 0.35,
+    scuffHz: 900,
+    /** Each step's scuff pitch varies by up to ± this fraction. */
+    scuffSpread: 0.25,
+    scuffQ: 1.2,
+    scuffTime: 0.05,
+    thumpFromHz: 130,
+    thumpToHz: 60,
+    thumpGain: 0.55,
+    thumpTime: 0.06,
+    gearHz: 3200,
+    gearQ: 4,
+    gearGain: 0.25,
+    gearTime: 0.04,
+    landVolume: 0.7,
+    landThumpFromHz: 150,
+    landThumpToHz: 45,
+    landThumpTime: 0.14,
+  },
+  /**
+   * The yard's echo: a short procedural reverb (decaying noise) that every in-world sound feeds, so
+   * shots and steps sound like they're between walls. UI sounds (hit tick, hit marker, whistle) stay dry.
+   */
+  reverb: { seconds: 0.8, decayPower: 3.5, wet: 0.22 },
   /** At most this many impact ticks start within `impactWindow` seconds (a hose of BBs stays readable). */
   maxImpactsPerWindow: 8,
   impactWindow: 0.1,

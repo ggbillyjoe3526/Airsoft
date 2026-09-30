@@ -48,6 +48,11 @@ export interface Character {
   sprinting: boolean;
   /** Walking slowly and quietly (walk key held, not crouched). */
   walking: boolean;
+  /** Ground covered since the last footstep (m). */
+  stepDistance: number;
+  /** In the air since the last tick on the ground, and the fastest it fell meanwhile (m/s), for landing sounds. */
+  airborne: boolean;
+  fallSpeed: number;
   /** Seconds until the replica can be fired again after sprinting (0 = ready). */
   sprintLockout: number;
   armament: Armament;
@@ -84,6 +89,9 @@ export function createCharacter(
     jumpCooldown: 0,
     sprinting: false,
     walking: false,
+    stepDistance: 0,
+    airborne: false,
+    fallSpeed: 0,
     sprintLockout: 0,
     armament: createArmament(loadout),
   };
@@ -107,6 +115,8 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
   c.velocity.y = 0;
   c.velocity.z = 0;
   c.grounded = false;
+  c.airborne = false;
+  c.fallSpeed = 0;
   return true;
 }
 
@@ -125,6 +135,9 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.jumpCooldown = 0;
   c.sprinting = false;
   c.walking = false;
+  c.stepDistance = 0;
+  c.airborne = false;
+  c.fallSpeed = 0;
   c.sprintLockout = 0;
   c.status = 'alive';
   c.statusTime = 0;

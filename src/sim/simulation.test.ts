@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
+import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { HITS, ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
@@ -23,7 +24,7 @@ const DEAD_ZONES = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(3
 const openSky = { raycastStatic: () => -1 };
 
 function testContext(mover: CharacterMover, killY: number): SimContext {
-  return createSimContext({ mover, query: openSky, movement: MOVEMENT, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
+  return createSimContext({ mover, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
 }
 
 const floor: CharacterMover = {
@@ -316,6 +317,7 @@ describe('hit calling and round flow', () => {
       mover: floor,
       query: { raycastStatic: (_o, _d, max) => (wallAt <= max ? wallAt : -1) },
       movement: MOVEMENT,
+      footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
       loadout: LOADOUT,

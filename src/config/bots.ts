@@ -15,6 +15,13 @@ export const BOTS = {
   closeAwareness: 2.5,
   /** Gunfire within this distance gives away roughly where the shooter is (metres). */
   hearingDistance: 22,
+  /**
+   * How far an enemy's footsteps carry (metres): running, sprinting, and the thud of landing a jump.
+   * Walking and moving crouched are silent (only `closeAwareness` gives those away).
+   */
+  footstepHearingRun: 11,
+  footstepHearingSprint: 16,
+  footstepHearingLand: 12,
   /** A heard position is off by up to this fraction of the distance (hearing through walls is vague). */
   hearingError: 0.3,
   /**

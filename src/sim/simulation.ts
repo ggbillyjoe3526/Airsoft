@@ -1,4 +1,5 @@
 import type { BallisticsConfig } from '../config/ballistics';
+import type { FootstepConfig } from '../config/footsteps';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig, MovementConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
@@ -10,6 +11,7 @@ import { type BBTargets, stepBBs } from './bbs';
 import { eyeHeight, rescueIfOutOfWorld } from './character';
 import { createCommand, type PlayerCommand } from './commands';
 import { fillEliminatedCommand, isInPlay, stepElimination } from './elimination';
+import { stepFootsteps } from './footsteps';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { createRng } from './rng';
 import { type RoundRules, stepRound } from './round';
@@ -20,6 +22,7 @@ export interface SimServices {
   mover: CharacterMover;
   query: WorldQuery;
   movement: MovementConfig;
+  footsteps: FootstepConfig;
   body: BodyConfig;
   ballistics: BallisticsConfig;
   loadout: readonly ReplicaConfig[];
@@ -76,7 +79,7 @@ export function createSimContext(services: SimServices): SimContext {
  * Advances the whole game by one fixed tick. Each character is driven by the command stored under
  * its id; the player and bots are indistinguishable here. Characters without a command this tick
  * keep their view and stand still (gravity still applies); characters that have been hit follow the
- * hit-calling routine instead of their command. Order: move, then use replicas (BBs leave from the new
+ * hit-calling routine instead of their command. Order: move (and footsteps), then use replicas (BBs leave from the new
  * eye position), then fly BBs (hitting walls or characters), then round flow.
  */
 export function stepSimulation(
@@ -111,6 +114,7 @@ export function stepSimulation(
       stepElimination(c, ctx.hits, dt);
       continue;
     }
+    stepFootsteps(c, ctx.footsteps, state.events);
 
     const m = ctx.muzzle;
     m.eye.x = c.position.x;

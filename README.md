@@ -88,6 +88,8 @@ Then open **http://localhost:4173**.
 - **BBs are real projectiles:** they take time to fly and drop at range, so lead moving targets.
 - **Friendly fire counts,** like at a real site, so watch your teammates.
 - **Sprinting** carries your replica: you can't shoot until a moment after you stop.
+- **Footsteps give you away.** Running and sprinting are heard by you and the bots (sprinting from further away);
+  walking (Shift) and moving crouched are silent. Listen for enemies the same way.
 
 ### Controls
 
@@ -96,7 +98,7 @@ Then open **http://localhost:4173**.
 | W A S D | Move |
 | Mouse | Aim |
 | Left click | Fire (hold for the AEG rifle, click per shot for the pistol) |
-| Shift | Walk: slow and steady, for holding angles |
+| Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
 | Left Alt | Sprint (forward only) |
 | C | Crouch |
 | Space | Jump (small hop) |

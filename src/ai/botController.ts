@@ -122,12 +122,16 @@ export class BotController {
         for (const b of this.bots) resetBot(b, this.opts.lanes.length, cfg);
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
-        if (shooter) this.hear(shooter.team, e.position, time, shooter.position);
+        if (shooter) this.hear(shooter.team, e.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'characterHit') {
         // Teammates near someone who calls a hit turn towards where it came from.
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
-        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, time, shooter.position);
+        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, time, shooter.position, cfg.hearingDistance);
+      } else if (e.type === 'footstep') {
+        const walker = this.character(state, e.characterId);
+        const range = e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : cfg.footstepHearingRun;
+        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, time, walker.position, range);
       } else if (e.type === 'bbImpact') {
         for (const b of this.bots) {
           const p = bodyPoint(b.character, this.opts.hits, cfg.aimHeightFraction, this.chest);
@@ -141,17 +145,17 @@ export class BotController {
   }
 
   /**
-   * Bots not on `shooterTeam` within hearing distance of `heardAt` learn roughly where the shooter is,
+   * Bots not on `shooterTeam` within `range` of `heardAt` (gunfire, a hit call, footsteps) learn roughly where the source is,
    * unless they can already see someone. The guess is off by up to hearingError × distance and is kept
    * while the noise keeps coming from about there (bursts and nearby shooters don't make it jump).
    * Hearing is not sight: it never skips a bot's reaction when the shooter then appears.
    */
-  private hear(shooterTeam: number, heardAt: Vec3, time: number, shooterPos: Vec3): void {
+  private hear(shooterTeam: number, heardAt: Vec3, time: number, shooterPos: Vec3, range: number): void {
     const cfg = this.opts.cfg;
     for (const b of this.bots) {
       const c = b.character;
       if (c.team === shooterTeam || !isInPlay(c) || b.targetVisible) continue;
-      if (Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z) > cfg.hearingDistance) continue;
+      if (Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z) > range) continue;
       // Gunfire from within the current guess's margin of error (any shooter) is the same noise: keep
       // the guess. Only a clearly different source makes a new one; the guess never tracks anyone.
       const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);

@@ -1,6 +1,7 @@
 import { AUDIO, matchOverBlastStart } from '../config/audio';
 import type { ReplicaConfig, ReplicaModelKind } from '../config/replicas';
 import type { GameEvent } from '../sim/events';
+import type { FootstepKind } from '../sim/footsteps';
 import type { Vec3 } from '../sim/vec';
 
 /**
@@ -11,6 +12,8 @@ import type { Vec3 } from '../sim/vec';
 export class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  /** In-world sounds go here: straight to the mix plus a send to the yard's reverb. */
+  private world: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private impactWindowStart = 0;
   private impactsInWindow = 0;
@@ -39,6 +42,13 @@ export class Sfx {
     this.master = ctx.createGain();
     this.master.gain.value = AUDIO.masterVolume;
     this.master.connect(ctx.destination);
+    this.world = ctx.createGain();
+    this.world.connect(this.master);
+    const reverb = ctx.createConvolver();
+    reverb.buffer = this.reverbImpulse(ctx);
+    const wet = ctx.createGain();
+    wet.gain.value = AUDIO.reverb.wet;
+    this.world.connect(reverb).connect(wet).connect(this.master);
     const len = ctx.sampleRate;
     this.noiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
     const data = this.noiseBuffer.getChannelData(0);
@@ -92,6 +102,13 @@ export class Sfx {
       case 'bbImpact':
         this.impact(e.position);
         return;
+      case 'footstep': {
+        const self = e.characterId === localId;
+        const at = self ? null : positionOf(e.characterId);
+        if (!self && !at) return;
+        this.footstep(this.output(at ?? null), e.kind, self ? AUDIO.footsteps.selfVolume / AUDIO.footsteps.volume : 1);
+        return;
+      }
       case 'characterHit':
         if (e.victimId === localId) {
           this.hitTick();
@@ -118,6 +135,7 @@ export class Sfx {
   dispose(): void {
     void this.ctx?.close();
     this.ctx = null;
+    this.world = null;
   }
 
   // ---- Recipes ------------------------------------------------------------------------------
@@ -134,6 +152,22 @@ export class Sfx {
     this.noise(out, 'highpass', 1800, 0.7, AUDIO.shotVolume * 0.75, 0.001, 0.06);
     this.noise(out, 'lowpass', 5000, 0.5, AUDIO.shotVolume * 0.25, 0.005, 0.14);
     this.click(out, 800, 0.016, AUDIO.mechanismVolume);
+  }
+
+  /** A footstep (`run` or `sprint`) or landing thud; `scale` turns your own steps down. */
+  private footstep(out: AudioNode, kind: FootstepKind, scale: number): void {
+    const f = AUDIO.footsteps;
+    if (kind === 'land') {
+      const v = f.landVolume * scale;
+      this.tone(out, 'sine', f.landThumpFromHz, f.landThumpToHz, v, f.landThumpTime);
+      this.noise(out, 'bandpass', f.scuffHz * 0.8, f.scuffQ, v * 0.6, 0.002, f.scuffTime * 1.5);
+      return;
+    }
+    const v = (kind === 'sprint' ? f.sprintVolume : f.volume) * scale;
+    const pitch = 1 + (Math.random() * 2 - 1) * f.scuffSpread; // presentation-only randomness
+    this.noise(out, 'bandpass', f.scuffHz * pitch, f.scuffQ, v, 0.002, f.scuffTime);
+    this.tone(out, 'sine', f.thumpFromHz * pitch, f.thumpToHz, v * f.thumpGain, f.thumpTime);
+    if (kind === 'sprint') this.noise(out, 'bandpass', f.gearHz * pitch, f.gearQ, v * f.gearGain, 0.004, f.gearTime);
   }
 
   private magOut(out: AudioNode): void {
@@ -226,10 +260,22 @@ export class Sfx {
 
   // ---- Building blocks ----------------------------------------------------------------------
 
-  /** Where a sound goes: straight to the mix (null = local), or through a 3D panner at `at`. */
+  /** Stereo impulse response: noise dying away over `seconds` (a small walled yard, no roof). */
+  private reverbImpulse(ctx: AudioContext): AudioBuffer {
+    const r = AUDIO.reverb;
+    const len = Math.round(ctx.sampleRate * r.seconds);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** r.decayPower;
+    }
+    return buf;
+  }
+
+  /** Where an in-world sound goes: centred (null = your own), or through a 3D panner at `at`. */
   private output(at: Vec3 | null): AudioNode {
     const ctx = this.ctx!;
-    if (!at) return this.master!;
+    if (!at) return this.world!;
     const p = ctx.createPanner();
     p.panningModel = 'equalpower';
     p.distanceModel = 'inverse';
@@ -239,7 +285,7 @@ export class Sfx {
     p.positionX.value = at.x;
     p.positionY.value = at.y;
     p.positionZ.value = at.z;
-    p.connect(this.master!);
+    p.connect(this.world!);
     return p;
   }
 

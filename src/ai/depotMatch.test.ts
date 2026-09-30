@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { BOTS } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
+import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
@@ -41,6 +42,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3) {
     mover: physics,
     query: physics,
     movement: MOVEMENT,
+    footsteps: FOOTSTEPS,
     body: BODY,
     ballistics: BALLISTICS,
     loadout: LOADOUT,

@@ -31,7 +31,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'back', label: 'Move back' },
   { action: 'left', label: 'Move left' },
   { action: 'right', label: 'Move right' },
-  { action: 'walk', label: 'Walk (hold, slow)' },
+  { action: 'walk', label: 'Walk (hold, quiet)' },
   { action: 'sprint', label: 'Sprint (hold)' },
   { action: 'crouch', label: 'Crouch (hold)' },
   { action: 'jump', label: 'Jump' },
