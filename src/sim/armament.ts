@@ -82,10 +82,6 @@ export function aimDirection(out: Vec3, yaw: number, pitch: number): Vec3 {
   return out;
 }
 
-export function isReloading(a: Armament): boolean {
-  return a.reload > 0;
-}
-
 /**
  * One tick of replica handling for one character: switching, reloading, firing and recoil.
  * `canFire` is false while sprinting (or just after) — the replica is carried, not aimed.

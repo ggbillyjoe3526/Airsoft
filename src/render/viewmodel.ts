@@ -6,12 +6,6 @@ import { buildReplicaModels, type ReplicaModels } from './replicaModels';
 
 const clampSway = (v: number): number => Math.max(-VIEWMODEL.swayMax, Math.min(VIEWMODEL.swayMax, v));
 
-/** Where each replica sits in view (camera space, metres) and how much it's canted inward (radians). */
-const HOLD: Record<string, { position: [number, number, number]; yaw: number }> = {
-  aeg: { position: [0.16, -0.17, -0.48], yaw: 0.14 },
-  pistol: { position: [0.075, -0.07, -0.36], yaw: 0.12 },
-};
-
 /**
  * The replica in your hands. Rendered in its own scene on top of the world (so it never clips into
  * walls) and animated purely from presentation state: mouse sway, walk bob, sprint carry, recoil
@@ -31,23 +25,21 @@ export class Viewmodel {
   private lastPitch = 0;
   private readonly muzzleView = new THREE.Vector3();
 
-  constructor(aspect: number, teamColor: number) {
+  constructor(aspect: number, teamColor: number, loadout: readonly ReplicaConfig[]) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, 0.01, 5);
     // Soft sky fill, a warm key from above-right and a cool rim from behind to separate the silhouette.
-    this.scene.add(new THREE.HemisphereLight(0xe8f0ff, 0x4a4438, 1.3));
-    const key = new THREE.DirectionalLight(0xfff0d8, 2.2);
-    key.position.set(0.6, 1, 0.4);
-    const rim = new THREE.DirectionalLight(0xcfe0ff, 1.2);
-    rim.position.set(-0.8, 0.4, -1);
+    this.scene.add(new THREE.HemisphereLight(...VIEWMODEL.light.hemi));
+    const key = new THREE.DirectionalLight(VIEWMODEL.light.keyColor, VIEWMODEL.light.keyIntensity);
+    key.position.set(...VIEWMODEL.light.keyPosition);
+    const rim = new THREE.DirectionalLight(VIEWMODEL.light.rimColor, VIEWMODEL.light.rimIntensity);
+    rim.position.set(...VIEWMODEL.light.rimPosition);
     this.scene.add(key, rim, this.rig);
 
-    this.replicas = buildReplicaModels(teamColor, VIEWMODEL.orangeTips);
-    for (const [id, model] of this.replicas.models) {
-      const hold = HOLD[id];
-      if (hold) {
-        model.position.set(...hold.position);
-        model.rotation.y = hold.yaw;
-      }
+    this.replicas = buildReplicaModels(loadout, teamColor, VIEWMODEL.orangeTips);
+    for (const r of loadout) {
+      const model = this.replicas.models.get(r.id)!;
+      model.position.set(...r.look.hold.position);
+      model.rotation.y = r.look.hold.yaw;
       model.visible = false;
       this.rig.add(model);
     }
@@ -111,9 +103,9 @@ export class Viewmodel {
       this.kick * VIEWMODEL.kickBack,
     );
     this.rig.rotation.set(
-      this.kick * VIEWMODEL.kickUp - reloadDip * 0.35 - drawP * 0.6,
+      this.kick * VIEWMODEL.kickUp - reloadDip * VIEWMODEL.reloadTilt - drawP * VIEWMODEL.drawTilt,
       this.sprintBlend * VIEWMODEL.sprintTilt,
-      -reloadDip * 0.4,
+      -reloadDip * VIEWMODEL.reloadRoll,
     );
   }
 

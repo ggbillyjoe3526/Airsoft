@@ -57,12 +57,13 @@ export class BBRenderer {
   }
 
   /** `alpha` interpolates between the last two simulation ticks. */
-  update(alpha: number): void {
+  update(alpha: number, camera: { x: number; y: number; z: number }): void {
     let count = 0;
     const tp = this.trailPositions;
     const bbs = this.pool.bbs;
     const converge = BB_VISUALS.muzzleConvergeTime;
     const trail = BB_VISUALS.trailSeconds;
+    const minScale = BB_VISUALS.minAngularRadius / BB_VISUALS.radius;
     for (let i = 0; i < bbs.length; i++) {
       const bb = bbs[i]!;
       if (!bb.active) continue;
@@ -85,7 +86,10 @@ export class BBRenderer {
         ty += this.offsets[o + 1]! * tail;
         tz += this.offsets[o + 2]! * tail;
       }
-      this.matrix.makeTranslation(x, y, z);
+      // Keep far BBs visible: scale up in proportion to distance once they'd be under the minimum size.
+      const dist = Math.hypot(x - camera.x, y - camera.y, z - camera.z);
+      const s = Math.max(1, dist * minScale);
+      this.matrix.makeScale(s, s, s).setPosition(x, y, z);
       this.balls.setMatrixAt(count, this.matrix);
       const o = count * 6;
       tp[o] = x;

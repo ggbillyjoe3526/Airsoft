@@ -165,7 +165,7 @@ export function buildForearm(sink: GeometrySink, wrist: V3, elbow: V3, elbowRadi
   const b = toVec(elbow);
   const axis = b.clone().sub(a);
   const length = axis.length();
-  const start = 0.06; // the glove cuff covers the first few centimetres
+  const start = 0.01; // starts just inside the glove cuff (which ends at the wrist point) so there is no gap
   const points = FOREARM_PROFILE.map(([t, r]) => new THREE.Vector2(r * elbowRadius, start + t * (length - start)));
   const sleeve = new THREE.LatheGeometry(points, 18);
   sleeve.scale(1, 1, 0.82); // forearms are wider than they are deep
@@ -178,7 +178,7 @@ export function buildForearm(sink: GeometrySink, wrist: V3, elbow: V3, elbowRadi
   const cuff = new THREE.TorusGeometry(FOREARM_PROFILE[1]![1] * elbowRadius * 1.02, 0.007, 8, 18);
   cuff.rotateX(Math.PI / 2);
   cuff.scale(1, 1, 0.82);
-  cuff.translate(0, start + 0.01, 0);
+  cuff.translate(0, start + 0.015, 0);
   cuff.applyQuaternion(orient);
   cuff.translate(a.x, a.y, a.z);
   sink.addGeometry('sleeve', cuff);

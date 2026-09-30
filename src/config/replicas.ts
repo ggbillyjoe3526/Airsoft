@@ -20,6 +20,18 @@ export interface ReplicaConfig {
   spreadDeg: number;
   /** Upward view kick per shot (degrees). Light: these are toys, not firearms. */
   recoilDeg: number;
+  /** How it looks and sounds (presentation only; the simulation ignores this). */
+  look: ReplicaLook;
+}
+
+export type ReplicaModelKind = 'rifle' | 'pistol';
+
+export interface ReplicaLook {
+  model: ReplicaModelKind;
+  /** Sound family played for its shots. */
+  shotSound: ReplicaModelKind;
+  /** Where it sits in the first-person view (camera space, metres) and its inward cant (radians). */
+  hold: { position: readonly [number, number, number]; yaw: number };
 }
 
 /** Electric rifle: full auto, medium range, medium magazine. */
@@ -36,6 +48,7 @@ export const AEG: ReplicaConfig = {
   hopUp: 0.12,
   spreadDeg: 0.45,
   recoilDeg: 0.18,
+  look: { model: 'rifle', shotSound: 'rifle', hold: { position: [0.16, -0.17, -0.48], yaw: 0.14 } },
 };
 
 /** Gas pistol: semi auto, shorter range, quick to handle, small magazine. */
@@ -52,6 +65,7 @@ export const GAS_PISTOL: ReplicaConfig = {
   hopUp: 0.11,
   spreadDeg: 0.8,
   recoilDeg: 0.5,
+  look: { model: 'pistol', shotSound: 'pistol', hold: { position: [0.075, -0.07, -0.36], yaw: 0.12 } },
 };
 
 /** Loadout for Phase 1: slot 0 primary, slot 1 sidearm. */

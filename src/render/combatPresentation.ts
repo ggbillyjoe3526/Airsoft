@@ -22,7 +22,7 @@ export class CombatPresentation {
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
   private readonly hud: Hud;
-  private readonly sfx = new Sfx();
+  private readonly sfx: Sfx;
   private readonly forward = new THREE.Vector3();
   private readonly listenerPos = { x: 0, y: 0, z: 0 };
   private readonly muzzle = new THREE.Vector3();
@@ -39,10 +39,11 @@ export class CombatPresentation {
     teamColor: number,
     tickSeconds: number,
   ) {
+    this.sfx = new Sfx(loadout);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.paths.object);
-    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor);
+    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container);
   }
@@ -79,7 +80,7 @@ export class CombatPresentation {
 
   /** Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. */
   frame(dt: number, alpha: number, yaw: number, pitch: number): void {
-    this.bbs.update(alpha);
+    this.bbs.update(alpha, this.renderer.camera.position);
     this.puffs.update(dt);
     this.paths.update();
 

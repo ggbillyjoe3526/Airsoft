@@ -40,6 +40,11 @@ export const LIGHTING = {
 export const BB_VISUALS = {
   radius: 0.018,
   color: 0xfffbe8,
+  /**
+   * A BB is never drawn smaller than this on screen: its radius grows with distance so it stays a
+   * visible dot at 10-30 m (radians of view; 0.002 ≈ 4 px wide at 1080p).
+   */
+  minAngularRadius: 0.002,
   /** Trail length in seconds of flight (streak = velocity × this). */
   trailSeconds: 0.022,
   trailColor: 0xfff4cc,
@@ -85,4 +90,18 @@ export const VIEWMODEL = {
   drawDrop: 0.22,
   sprintDrop: 0.06,
   sprintTilt: 0.5,
+  /** Pitch-down (radians) at the deepest point of a reload / at the start of a draw, and reload roll. */
+  reloadTilt: 0.35,
+  drawTilt: 0.6,
+  reloadRoll: 0.4,
+  /** Viewmodel lighting: [sky, ground, intensity] hemisphere, warm key from above-right, cool rim from behind. */
+  light: {
+    hemi: [0xe8f0ff, 0x4a4438, 1.3],
+    keyColor: 0xfff0d8,
+    keyIntensity: 2.2,
+    keyPosition: [0.6, 1, 0.4],
+    rimColor: 0xcfe0ff,
+    rimIntensity: 1.2,
+    rimPosition: [-0.8, 0.4, -1],
+  },
 } as const;

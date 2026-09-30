@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildForearm, buildHand, type FingerCurl } from './handModels';
+import type { ReplicaConfig } from '../config/replicas';
 
 /**
  * First-person replica models built in code. They resemble real-world replica types (an AR-pattern
@@ -280,13 +281,13 @@ export interface ReplicaModels {
   dispose(): void;
 }
 
-/** Builds the held-replica model (with hands and team armband) for each replica id. */
-export function buildReplicaModels(teamColor: number, orangeTips: boolean): ReplicaModels {
+/** Builds the held-replica model (with hands and team armband) for each replica in the loadout, keyed by replica id. */
+export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor: number, orangeTips: boolean): ReplicaModels {
   const materials = createMaterials(teamColor);
-  const models = new Map<string, THREE.Group>([
-    ['aeg', buildAeg(materials, orangeTips)],
-    ['pistol', buildPistol(materials, orangeTips)],
-  ]);
+  const models = new Map<string, THREE.Group>();
+  for (const r of loadout) {
+    models.set(r.id, r.look.model === 'pistol' ? buildPistol(materials, orangeTips) : buildAeg(materials, orangeTips));
+  }
   return {
     models,
     dispose() {

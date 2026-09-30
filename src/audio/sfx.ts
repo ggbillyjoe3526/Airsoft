@@ -1,4 +1,5 @@
 import { AUDIO } from '../config/audio';
+import type { ReplicaConfig, ReplicaModelKind } from '../config/replicas';
 import type { GameEvent } from '../sim/events';
 import type { Vec3 } from '../sim/vec';
 
@@ -13,6 +14,11 @@ export class Sfx {
   private noiseBuffer: AudioBuffer | null = null;
   private impactWindowStart = 0;
   private impactsInWindow = 0;
+  private readonly shotSounds = new Map<string, ReplicaModelKind>();
+
+  constructor(loadout: readonly ReplicaConfig[]) {
+    for (const r of loadout) this.shotSounds.set(r.id, r.look.shotSound);
+  }
 
   /** Must be called from a user gesture (browsers keep audio suspended until then). */
   unlock(): void {
@@ -59,7 +65,7 @@ export class Sfx {
     switch (e.type) {
       case 'shot': {
         const out = this.output(e.characterId === localId ? null : e.position);
-        if (e.replicaId === 'pistol') this.pistolShot(out);
+        if (this.shotSounds.get(e.replicaId) === 'pistol') this.pistolShot(out);
         else this.aegShot(out);
         return;
       }

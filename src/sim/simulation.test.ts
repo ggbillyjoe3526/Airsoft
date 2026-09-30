@@ -116,4 +116,47 @@ describe('stepSimulation', () => {
     expect(c.prevCrouchAmount).toBe(after1);
     expect(c.crouchAmount).toBeGreaterThan(after1);
   });
+
+  it('does not fire while sprinting or in the post-sprint lockout, then fires again', () => {
+    const state = createGameState(1, 16);
+    const c = createCharacter(0, vec3(), 0);
+    state.characters.push(c);
+    const cmd = createCommand();
+    cmd.forward = 1;
+    cmd.sprint = true;
+    cmd.fire = true;
+    const ctx = testContext(floor, KILL_Y);
+    const shots = () => state.events.filter((e) => e.type === 'shot').length;
+    let fired = 0;
+    for (let i = 0; i < 60; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      fired += shots();
+    }
+    expect(c.sprinting).toBe(true);
+    expect(fired).toBe(0);
+    // Stop sprinting but keep the trigger held: still locked out for a moment.
+    cmd.sprint = false;
+    cmd.forward = 0;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.sprintLockout).toBeGreaterThan(0);
+    expect(shots()).toBe(0);
+    for (let i = 0; i < 90 && fired === 0; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      fired += shots();
+    }
+    expect(fired).toBeGreaterThan(0);
+  });
+
+  it('clears last tick\'s events at the start of every tick', () => {
+    const state = createGameState(1, 16);
+    state.characters.push(createCharacter(0, vec3(), 0));
+    const cmd = createCommand();
+    cmd.fire = true;
+    const ctx = testContext(floor, KILL_Y);
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(state.events.some((e) => e.type === 'shot')).toBe(true);
+    cmd.fire = false;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(state.events.some((e) => e.type === 'shot')).toBe(false);
+  });
 });
