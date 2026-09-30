@@ -4,7 +4,7 @@ import { BALLISTICS } from './config/ballistics';
 import { BOTS } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
 import { NAV } from './config/nav';
-import { HUD } from './config/render';
+import { matchOverScreenDelay } from './config/render';
 import { BODY, MOVEMENT } from './config/movement';
 import { PHYSICS } from './config/physics';
 import { LOADOUT } from './config/replicas';
@@ -251,7 +251,12 @@ export class Game {
         `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`,
       );
     } else {
-      this.startScreen.show(this.started);
+      const mine = this.player.team;
+      const theirs = 1 - mine;
+      this.startScreen.show(
+        this.started,
+        `Round ${r.number} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${ROUNDS.winsNeeded}`,
+      );
     }
     this.combat.setPlaying(false);
     this.match.setPlaying(false);
@@ -280,7 +285,7 @@ export class Game {
       this.ticksThisSecond += ticks;
     }
     // A little after the match is decided, give the mouse back and show the result screen.
-    if (running && this.state.time - this.matchOverAt >= HUD.matchOverScreenDelay) {
+    if (running && this.state.time - this.matchOverAt >= matchOverScreenDelay()) {
       this.matchOverAt = Number.NaN;
       if (this.unlockedPlay) {
         this.unlockedPlay = false;

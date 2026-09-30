@@ -112,9 +112,15 @@ export class StartScreen {
     return this.sensitivityValue;
   }
 
-  show(paused: boolean): void {
+  /** Title screen (`paused` false) or pause screen; `status` (e.g. the score) shows on the pause screen. */
+  show(paused: boolean, status = ''): void {
     this.playButton.textContent = paused ? 'Click to resume' : 'Click to play';
-    this.result.hidden = true;
+    const showStatus = paused && status !== '';
+    this.result.hidden = !showStatus;
+    if (showStatus) {
+      (this.result.firstElementChild as HTMLElement).textContent = 'Paused';
+      (this.result.lastElementChild as HTMLElement).textContent = status;
+    }
     this.root.hidden = false;
   }
 

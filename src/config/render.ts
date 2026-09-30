@@ -1,3 +1,5 @@
+import { matchOverWhistlesDuration } from './audio';
+
 /** Presentation tuning. Kept conservative for integrated GPUs. */
 export const RENDER = {
   /**
@@ -103,11 +105,8 @@ export const HUD = {
   roundStartMessageTime: 1.8,
   /** The round clock turns to a warning colour at or below this many seconds. */
   lowClockSeconds: 20,
-  /**
-   * After the match is decided, the result screen appears this many seconds later: after the last HIT!
-   * and the match-over whistles (~3.9 s, see AUDIO.matchOverBlasts).
-   */
-  matchOverScreenDelay: 4.2,
+  /** The result screen appears this long after the match-over whistles end (see matchOverScreenDelay). */
+  matchOverScreenPause: 0.3,
 } as const;
 
 /** First-person replica rendering and motion. */
@@ -173,3 +172,8 @@ export const VIEWMODEL = {
     rimPosition: [-0.8, 0.4, -1],
   },
 } as const;
+
+/** How long after the match is decided the result screen appears: once the whistles have finished. */
+export function matchOverScreenDelay(): number {
+  return matchOverWhistlesDuration() + HUD.matchOverScreenPause;
+}

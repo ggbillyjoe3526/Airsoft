@@ -51,3 +51,8 @@ export const AUDIO = {
   matchOverBlasts: 3,
   matchOverWhistleGap: 1.3,
 } as const;
+
+/** Seconds from the deciding hit to the end of the match-over whistles (the round's blast plus the extra ones). */
+export function matchOverWhistlesDuration(): number {
+  return AUDIO.roundOverWhistle * (1 + AUDIO.matchOverWhistleGap * AUDIO.matchOverBlasts);
+}

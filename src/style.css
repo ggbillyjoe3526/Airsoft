@@ -570,3 +570,13 @@ kbd {
 .sb-clock.low {
   color: #ff5a4f;
 }
+
+.sb-name em {
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--team);
+  color: #10131a;
+  font-style: normal;
+  font-size: 10px;
+}

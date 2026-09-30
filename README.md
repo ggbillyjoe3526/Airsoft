@@ -33,9 +33,9 @@ button, then **Download ZIP**. The folder will then be called `airsoft-main`; us
 
 ### 3. Open a terminal in that folder
 
-- **Windows:** open the `airsoft-0.1` folder, click the address bar at the top of the window, type `cmd`
-  and press Enter.
-- **Mac:** right-click the `airsoft-0.1` folder and choose **New Terminal at Folder**.
+- **Windows:** open the unzipped folder (`airsoft-0.1`, or `airsoft-main` if you used the Download ZIP
+  button), click the address bar at the top of the window, type `cmd` and press Enter.
+- **Mac:** right-click the unzipped folder (`airsoft-0.1` or `airsoft-main`) and choose **New Terminal at Folder**.
 - **Linux:** right-click inside the folder and choose **Open in Terminal**.
 
 ### 4. Install and start the game

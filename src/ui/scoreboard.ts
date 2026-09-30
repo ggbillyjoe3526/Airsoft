@@ -20,13 +20,14 @@ export class Scoreboard {
   private shownLow = false;
   private shownAlive = -1;
 
-  constructor(parent: HTMLElement, teamSize: number) {
+  /** `playerTeam` is marked "you" so it's obvious which score is yours. */
+  constructor(parent: HTMLElement, teamSize: number, playerTeam: number) {
     this.root = document.createElement('div');
     this.root.className = 'scoreboard';
     this.root.hidden = true;
     const side = (team: number) => `
       <div class="sb-team sb-team-${team}" style="--team:${hex(TEAMS[team]!.color)}">
-        <span class="sb-name">${TEAMS[team]!.name}</span>
+        <span class="sb-name">${TEAMS[team]!.name}${team === playerTeam ? ' <em>you</em>' : ''}</span>
         <span class="sb-pips">${'<i></i>'.repeat(teamSize)}</span>
         <span class="sb-score">0</span>
       </div>`;

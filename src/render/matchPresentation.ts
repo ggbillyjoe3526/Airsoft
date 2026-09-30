@@ -46,7 +46,7 @@ export class MatchPresentation {
     this.characters = new CharacterRenderer(state.characters, TEAM_COLORS, hits);
     scene.add(this.characters.object);
     this.feedback = new HitFeedback(container);
-    this.scoreboard = new Scoreboard(container, teamSize);
+    this.scoreboard = new Scoreboard(container, teamSize, player.team);
     this.spectator = new SpectatorCamera(state.characters, player, body, query);
     const perTeam = [0, 0];
     for (const c of state.characters) {
@@ -147,9 +147,16 @@ export class MatchPresentation {
     shown.start = showStart;
     let text = '';
     if (r.phase === 'matchOver') {
-      text = r.matchWinner === this.player.team ? 'You win the match!' : `${TEAMS[r.matchWinner]!.name} wins the match`;
+      text = r.matchWinner === this.player.team ? 'You win the match!' : 'You lose the match';
     } else if (r.phase === 'over') {
-      const result = r.winner >= 0 ? `${TEAMS[r.winner]!.name} wins the round` : this.lastRoundReason === 'time' ? "Time's up · draw" : 'Draw';
+      const result =
+        r.winner === this.player.team
+          ? 'Your team wins the round'
+          : r.winner >= 0
+            ? `${TEAMS[r.winner]!.name} wins the round`
+            : this.lastRoundReason === 'time'
+              ? "Time's up · draw"
+              : 'Draw';
       text = `${result} · next round in ${seconds}`;
     } else if (showStart) {
       text = `Round ${r.number}`;
