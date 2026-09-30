@@ -307,5 +307,47 @@ describe('hit calling and round flow', () => {
     expect(walkOff).toBeLessThan(HITS.walkOffTime);
     expect(target.position.x).toBeCloseTo(30, 3); // in its dead-zone spot
   });
+
+  it('hits cover right in front of the shooter in the same tick instead of shooting through it', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    state.characters.push(createCharacter(0, vec3(), 0, LOADOUT, 0));
+    const wallAt = 0.2;
+    const ctx = createSimContext({
+      mover: floor,
+      query: { raycastStatic: (_o, _d, max) => (wallAt <= max ? wallAt : -1) },
+      movement: MOVEMENT,
+      body: BODY,
+      ballistics: BALLISTICS,
+      loadout: LOADOUT,
+      killY: KILL_Y,
+      hits: HITS,
+      deadZones: DEAD_ZONES,
+      rounds: ROUNDS,
+      nav: OPEN_NAV,
+      navSnap: NAV.snap,
+    });
+    const fire = createCommand();
+    fire.fire = true;
+    stepSimulation(state, new Map([[0, fire]]), ctx, DT);
+    expect(state.events.filter((e) => e.type === 'shot')).toHaveLength(1);
+    const impact = state.events.find((e) => e.type === 'bbImpact');
+    expect(impact?.type === 'bbImpact' && impact.position.z).toBeCloseTo(-wallAt, 4);
+    expect(state.bbs.bbs.some((b) => b.active)).toBe(false);
+  });
+
+  it('hits someone at point-blank range, even standing right inside the shooter', () => {
+    for (const gap of [0.05, 0.3, 1]) {
+      const state = createGameState(1, 16, ROUNDS);
+      const shooter = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
+      const target = createCharacter(1, vec3(0, 0, -gap), 0, LOADOUT, 1);
+      state.characters.push(shooter, target, createCharacter(2, vec3(50, 0, 0), 0, LOADOUT, 1));
+      const ctx = testContext(floor, KILL_Y);
+      const fire = createCommand();
+      fire.fire = true;
+      fire.pitch = -0.3; // aimed at the body
+      for (let i = 0; i < 3 && target.status === 'alive'; i++) stepSimulation(state, new Map([[0, fire]]), ctx, DT);
+      expect(target.status, `target ${gap} m away`).toBe('calling');
+    }
+  });
 });
 

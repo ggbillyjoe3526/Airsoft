@@ -71,7 +71,6 @@ export interface ArmamentContext {
 
 const DEG = Math.PI / 180;
 const dir = vec3();
-const muzzlePoint = vec3();
 
 /** Unit aim direction for yaw/pitch (yaw 0 = -Z, positive pitch = up). */
 export function aimDirection(out: Vec3, yaw: number, pitch: number): Vec3 {
@@ -167,18 +166,8 @@ function fire(characterId: number, a: Armament, replica: ReplicaConfig, muzzle: 
   a.recoil = Math.min(RECOIL.maxDeg * DEG, a.recoil + replica.recoilDeg * DEG);
   ctx.events.push({ type: 'shot', characterId, replicaId: replica.id, position: vec3(muzzle.eye.x, muzzle.eye.y, muzzle.eye.z) });
 
-  // The BB leaves a little ahead of the eye; if cover is closer than that, it hits the cover.
-  const offset = ctx.ballistics.muzzleOffset;
-  const blocked = ctx.query.raycastStatic(muzzle.eye, dir, offset);
-  if (blocked >= 0) {
-    ctx.events.push({
-      type: 'bbImpact',
-      position: vec3(muzzle.eye.x + dir.x * blocked, muzzle.eye.y + dir.y * blocked, muzzle.eye.z + dir.z * blocked),
-    });
-    return;
-  }
-  muzzlePoint.x = muzzle.eye.x + dir.x * offset;
-  muzzlePoint.y = muzzle.eye.y + dir.y * offset;
-  muzzlePoint.z = muzzle.eye.z + dir.z * offset;
-  spawnBB(ctx.bbs, characterId, muzzlePoint, dir, replica.muzzleVelocity, replica.hopUp);
+  // The BB's path starts at the eye: its first step then catches cover right in front of the shooter
+  // and anyone standing point-blank (even overlapping the shooter), and it never hits its owner.
+  // Presentation draws it leaving the replica's muzzle.
+  spawnBB(ctx.bbs, characterId, muzzle.eye, dir, replica.muzzleVelocity, replica.hopUp);
 }

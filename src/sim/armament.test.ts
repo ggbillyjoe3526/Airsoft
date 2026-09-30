@@ -111,7 +111,7 @@ describe('replica handling', () => {
     expect(count(run(30, (c) => (c.fire = true), false), 'shot')).toBe(0);
   });
 
-  it('spawns a BB just ahead of the eye, moving at muzzle velocity along the aim', () => {
+  it('spawns a BB at the eye, moving at muzzle velocity along the aim', () => {
     const { ctx, run } = setup();
     run(1, (c) => (c.fire = true));
     const bb = ctx.bbs.bbs.find((b) => b.active)!;
@@ -119,7 +119,7 @@ describe('replica handling', () => {
     const speed = Math.hypot(bb.velocity.x, bb.velocity.y, bb.velocity.z);
     expect(speed).toBeCloseTo(AEG.muzzleVelocity, 6);
     expect(bb.velocity.z).toBeLessThan(-0.99 * speed); // yaw 0 aims down -Z
-    expect(Math.hypot(bb.position.x, bb.position.y - 1.6, bb.position.z)).toBeCloseTo(BALLISTICS.muzzleOffset, 6);
+    expect(Math.hypot(bb.position.x, bb.position.y - 1.6, bb.position.z)).toBeCloseTo(0, 6);
   });
 
   it('spreads shots around the aim point by roughly the configured amount, deterministically', () => {
@@ -154,14 +154,6 @@ describe('replica handling', () => {
     expect(a.recoil).toBeLessThan(AEG.recoilDeg * DEG * 0.1);
   });
 
-  it('hits cover right in front of the muzzle instead of shooting through it', () => {
-    const wallAt = 0.2;
-    const { ctx, run, count } = setup({ raycastStatic: (_o, _d, max) => (wallAt <= max ? wallAt : -1) });
-    const evs = run(1, (c) => (c.fire = true));
-    expect(count(evs, 'shot')).toBe(1);
-    expect(count(evs, 'bbImpact')).toBe(1);
-    expect(ctx.bbs.bbs.some((b) => b.active)).toBe(false);
-  });
 });
 
 describe('semi-auto trigger buffering', () => {

@@ -14,8 +14,6 @@ export interface BallisticsConfig {
   maxLifetime: number;
   /** Size of the BB pool (maximum BBs in flight at once). */
   maxBBs: number;
-  /** BBs start this far in front of the eye so they never spawn inside nearby cover's far side. */
-  muzzleOffset: number;
 }
 
 export const BALLISTICS: BallisticsConfig = {
@@ -24,5 +22,4 @@ export const BALLISTICS: BallisticsConfig = {
   spinDecayTime: 0.55,
   maxLifetime: 2.5,
   maxBBs: 256,
-  muzzleOffset: 0.35,
 };
