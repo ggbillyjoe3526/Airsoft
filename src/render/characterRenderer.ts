@@ -61,8 +61,8 @@ export class CharacterRenderer {
       const moved = Math.hypot(x - s.lastX, z - s.lastZ);
       s.lastX = x;
       s.lastZ = z;
-      if (moved < 1) s.phase += moved * FIGURE.stridesPerMetre * Math.PI * 2;
-      const walking = Math.hypot(c.velocity.x, c.velocity.z) > 0.2;
+      if (moved < FIGURE.maxStride) s.phase += moved * FIGURE.stridesPerMetre * Math.PI * 2;
+      const walking = Math.hypot(c.velocity.x, c.velocity.z) > FIGURE.walkingSpeed;
       const swing = walking ? Math.sin(s.phase) * FIGURE.legSwing : 0;
 
       const crouch = c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * alpha;
@@ -76,21 +76,26 @@ export class CharacterRenderer {
       f.legL.rotation.x = swing;
       f.legR.rotation.x = -swing;
 
-      const inPlay = c.status === 'alive';
-      f.aim.visible = inPlay;
-      f.aim.rotation.x = c.pitch;
-      f.hitPose.visible = !inPlay;
+      // In play: aiming. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
+      const handUp = c.status === 'calling' || c.status === 'walkingOff';
+      f.aim.visible = !handUp;
+      f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.pitch;
+      f.hitPose.visible = handUp;
       f.callout.visible = c.status === 'calling';
 
-      // Until walk-off has navigation, anyone who can't reach the dead zone in time fades out on the
-      // field instead of visibly jumping there (the sim moves them when walk-off time runs out).
-      const opacity = c.status === 'walkingOff' ? Math.min(1, Math.max(0, (this.hits.walkOffTime - c.statusTime) / FIGURE.walkOffFade)) : 1;
+      // Until walk-off has navigation, anyone who can't reach the dead zone fades off the field during the
+      // last `vanishTime` of the walk-off instead of visibly jumping there (the sim moves them afterwards).
+      const opacity = c.status === 'walkingOff' ? Math.min(1, Math.max(0, (this.hits.walkOffTime - c.statusTime) / this.hits.vanishTime)) : 1;
       if (opacity !== s.material.opacity) {
         s.material.opacity = opacity;
         const fading = opacity < 1;
         if (s.material.transparent !== fading) {
           s.material.transparent = fading;
           s.material.needsUpdate = true;
+          // Shadow maps ignore opacity: a fading figure would leave a solid shadow behind.
+          f.root.traverse((o) => {
+            if (o instanceof THREE.Mesh) o.castShadow = !fading;
+          });
         }
       }
     }

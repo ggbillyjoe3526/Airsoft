@@ -18,3 +18,12 @@ export function copy(out: Vec3, a: Vec3): Vec3 {
   out.z = a.z;
   return out;
 }
+
+/** Wraps an angle to (-PI, PI] so it never grows unbounded. */
+export function wrapAngle(a: number): number {
+  const twoPi = Math.PI * 2;
+  let r = a % twoPi;
+  if (r <= -Math.PI) r += twoPi;
+  else if (r > Math.PI) r -= twoPi;
+  return r;
+}

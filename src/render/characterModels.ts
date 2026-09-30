@@ -4,7 +4,7 @@ import { FIGURE } from '../config/characters';
 
 /**
  * Third-person figures: chunky greybox players in airsoft kit (cap, goggles, team-colour chest rig and
- * armbands, replica). Each moving part is one mesh with flat vertex colours; all figures share one
+ * armbands, replica). Each moving part is one mesh with flat vertex colours, all on the figure's one
  * material. Figures face -Z with their feet at the origin.
  */
 
@@ -91,7 +91,7 @@ export interface Figure {
   callout: THREE.Sprite;
 }
 
-/** Builds one figure in its team colour. Geometry is per figure; `material` and `calloutMaterial` are shared. */
+/** Builds one figure in its team colour, using `material` (vertex colours) and the shared `calloutMaterial`. */
 export function buildFigure(teamColor: Color, material: THREE.Material, calloutMaterial: THREE.SpriteMaterial): Figure {
   const F = FIGURE;
   const root = new THREE.Group();

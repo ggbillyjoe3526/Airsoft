@@ -25,6 +25,7 @@ export function eliminate(victim: Character, shooterId: number, characters: read
   victim.status = 'calling';
   victim.statusTime = 0;
   victim.hitBy = shooterId;
+  victim.walkOffStuck = 0;
   victim.sprinting = false;
   const spots = deadZones[victim.team];
   const spot = spots && spots.length > 0 ? spots[alreadyOut % spots.length]! : undefined;
@@ -65,6 +66,10 @@ export function stepElimination(c: Character, cfg: HitConfig, dt: number): void 
     c.status = 'walkingOff';
     c.statusTime = 0;
   } else if (c.status === 'walkingOff') {
+    // Blocked by cover (no navigation yet): stop grinding and go straight to leaving the field.
+    const leaving = cfg.walkOffTime - cfg.vanishTime;
+    c.walkOffStuck = Math.hypot(c.velocity.x, c.velocity.z) < cfg.stuckSpeed ? c.walkOffStuck + dt : 0;
+    if (c.walkOffStuck >= cfg.stuckTime && c.statusTime < leaving) c.statusTime = leaving;
     const arrived = Math.hypot(c.deadZoneTarget.x - c.position.x, c.deadZoneTarget.z - c.position.z) <= cfg.deadZoneArrive;
     if (arrived || c.statusTime >= cfg.walkOffTime) {
       c.status = 'out';

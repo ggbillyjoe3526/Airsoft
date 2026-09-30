@@ -2,7 +2,7 @@ import { HITS } from './hits';
 
 /**
  * Third-person look of players and bots: greybox figures in airsoft kit. Colours are flat vertex
- * colours on one shared material, so each figure costs a handful of draw calls.
+ * colours on one material per figure, so each figure costs a handful of draw calls.
  */
 export const FIGURE = {
   colors: {
@@ -31,8 +31,11 @@ export const FIGURE = {
   /** Walk cycle: leg swing (radians) and strides per metre walked. */
   legSwing: 0.55,
   stridesPerMetre: 0.75,
-  /** Seconds over which a walking-off player who hasn't reached the dead zone fades away. */
-  walkOffFade: 0.6,
+  /** Legs swing only above this speed (m/s); a jump bigger than `maxStride` (m) in one frame is a teleport, not a step. */
+  walkingSpeed: 0.2,
+  maxStride: 1,
+  /** Players out in the dead zone hold their replica pointing at the ground (radians of aim pitch). */
+  outAimPitch: -0.9,
   /** "HIT!" sign above a player calling their hit. */
   callout: { height: 2.25, width: 0.62, aspect: 0.45, color: '#ffffff', background: '#d8262e' },
 } as const;

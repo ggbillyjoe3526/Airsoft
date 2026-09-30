@@ -22,6 +22,8 @@ Classified as **fix now / document / can wait**.
 | The BB path and near puffs sit on the crosshair's lower arm | can wait | Consider a smaller lower arm or a dot-only crosshair option. |
 | AEG BBs fly nearly flat within Depot's 30 m (hop-up 0.12, spinDecayTime 0.55) | can wait | Tuning: playtest a shorter spinDecayTime so the drop shows within 30 m. |
 | Sound recipe numbers are hardcoded in sfx.ts; one vec3 per shot/impact event; per-tick armCtx; `muzzle` looked up by name per shot; viewmodel `setAspect` every frame; untyped `userData.axis` | can wait | Minor code debt; profile before optimising. |
-| Walk-off goes in a straight line; anyone blocked by cover slides along it, fades out over the last 0.6 s and reappears in the dead zone after 4 s | document | Use the bots' waypoint graph for walk-off once it exists. |
+| Walk-off goes in a straight line; anyone blocked by cover (slower than 0.5 m/s for 0.5 s) fades off the field over 0.6 s and reappears in the dead zone | document | Use the bots' waypoint graph for walk-off once it exists. |
 | Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing, no turn interpolation | can wait | Art pass / Phase 2 animations. |
 | Other players' yaw isn't interpolated between ticks | can wait | Invisible at 60 Hz for standing dummies; revisit with bots turning. |
+| Hit volume is round, so from the side it's deeper than the figure (0.4 m vs ~0.28 m chest): a BB ~6 cm in front of the chest counts | can wait | Playtest flank shots; consider a slimmer lower capsule or an elliptical test. |
+| Arms don't count as hits (most sites count them; replica hits don't) | can wait | Playtest whether BBs visibly striking an arm with no hit feel unfair. |

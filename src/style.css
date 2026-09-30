@@ -397,7 +397,7 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  top: 12%;
+  top: max(13%, 96px);
   text-align: center;
   opacity: 0;
   transition: opacity 0.15s;
@@ -462,9 +462,9 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  top: 62%;
+  top: 54px;
   text-align: center;
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: 0.03em;
   opacity: 0;

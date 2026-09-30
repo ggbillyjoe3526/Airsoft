@@ -10,6 +10,9 @@ export interface HitConfig {
   walkOffSpeed: number;
   walkOffTime: number;
   deadZoneArrive: number;
+  stuckSpeed: number;
+  stuckTime: number;
+  vanishTime: number;
 }
 
 /**
@@ -28,7 +31,7 @@ export const HITS: HitConfig = {
   headHeight: 1.62,
   headRadius: 0.13,
   /**
-   * Crouching lowers everything above the hips this far. Crouched, the head top is at 1.12 m, so
+   * Crouching lowers everything above the hips this far. Crouched, the head top is at 1.13 m, so
    * 1.2 m crouch cover hides you completely.
    */
   crouchDrop: 0.62,
@@ -45,6 +48,14 @@ export const HITS: HitConfig = {
   walkOffTime: 4,
   /** Close enough to the dead-zone slot to stop walking (metres). */
   deadZoneArrive: 0.6,
+  /**
+   * Walking off slower than this (m/s) for `stuckTime` seconds counts as blocked: the character skips
+   * ahead to leaving the field instead of grinding against cover.
+   */
+  stuckSpeed: 0.5,
+  stuckTime: 0.5,
+  /** The last seconds of a walk-off that doesn't reach the dead zone: the figure fades off the field. */
+  vanishTime: 0.6,
 };
 
 /** Round flow (Phase 1 minimum: one team out ends the round, everyone respawns). */

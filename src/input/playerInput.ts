@@ -1,17 +1,9 @@
 import { MOUSE } from '../config/controls';
 import type { MovementConfig } from '../config/movement';
 import type { PlayerCommand } from '../sim/commands';
+import { wrapAngle } from '../sim/vec';
 import type { Keyboard } from './keyboard';
 import type { PointerLock } from './pointerLock';
-
-/** Wraps an angle to (-PI, PI] so yaw never grows unbounded. */
-function wrapAngle(a: number): number {
-  const twoPi = Math.PI * 2;
-  let r = a % twoPi;
-  if (r <= -Math.PI) r += twoPi;
-  else if (r > Math.PI) r -= twoPi;
-  return r;
-}
 
 /**
  * Turns keyboard/mouse state into PlayerCommands. View angles update every render frame for

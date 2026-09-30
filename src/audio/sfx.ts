@@ -151,19 +151,22 @@ export class Sfx {
   private hitTick(): void {
     const out = this.master!;
     const k = AUDIO.hitTick;
-    this.click(out, k.clickHz, 0.012, AUDIO.hitTickVolume);
-    this.noise(out, 'bandpass', k.noiseHz, 2, AUDIO.hitTickVolume * 0.8, 0.0005, 0.03);
-    this.tone(out, 'sine', k.thumpFromHz, k.thumpToHz, AUDIO.hitTickVolume * 0.6, k.thumpTime);
+    const v = AUDIO.hitTickVolume;
+    this.click(out, k.clickHz, k.clickTime, v);
+    this.noise(out, 'bandpass', k.noiseHz, k.noiseQ, v * k.noiseGain, 0.0005, k.noiseTime);
+    this.tone(out, 'sine', k.thumpFromHz, k.thumpToHz, v * k.thumpGain, k.thumpTime);
   }
 
   /** A BB smacking into someone's jacket: duller than a hard surface. */
   private bodyHit(at: Vec3): void {
-    this.noise(this.output(at), 'bandpass', 2200, 1.5, AUDIO.bodyHitVolume, 0.001, 0.04);
+    const b = AUDIO.bodyHit;
+    this.noise(this.output(at), 'bandpass', b.hz, b.q, AUDIO.bodyHitVolume, 0.001, b.time);
   }
 
   /** Your BB hit someone: a soft wooden "tock". */
   private hitMarker(): void {
-    this.tone(this.master!, 'triangle', 1100, 700, AUDIO.hitMarkerVolume, 0.07);
+    const m = AUDIO.hitMarker;
+    this.tone(this.master!, 'triangle', m.fromHz, m.toHz, AUDIO.hitMarkerVolume, m.time);
   }
 
   /** Referee whistle: a pea whistle's warbling tone. */
@@ -180,8 +183,8 @@ export class Sfx {
     lfo.connect(depth).connect(osc.frequency);
     const g = ctx.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(AUDIO.whistleVolume, t + 0.02);
-    g.gain.setValueAtTime(AUDIO.whistleVolume, t + duration - 0.05);
+    g.gain.linearRampToValueAtTime(AUDIO.whistleVolume, t + AUDIO.whistleAttack);
+    g.gain.setValueAtTime(AUDIO.whistleVolume, t + duration - AUDIO.whistleRelease);
     g.gain.linearRampToValueAtTime(0, t + duration);
     osc.connect(g).connect(this.master!);
     osc.start(t);

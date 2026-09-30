@@ -74,6 +74,7 @@ export class HitFeedback {
     if (calling === this.shownCalling) return;
     this.shownCalling = calling;
     this.banner.classList.toggle('show', calling);
+    if (!calling) this.direction.classList.remove('show'); // it points relative to a view you no longer have
   }
 
   /** Small label while you're out (e.g. "OUT · hit by Orange 2"), or '' to hide it. */

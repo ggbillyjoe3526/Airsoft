@@ -21,6 +21,8 @@ export interface Character {
   hitBy: number;
   /** Dead-zone spot this character walks to once hit. */
   deadZoneTarget: Vec3;
+  /** Seconds this character has made no real progress while walking off. */
+  walkOffStuck: number;
   /** Feet position (bottom of the collision capsule). */
   position: Vec3;
   /** Position at the start of the last tick, for render interpolation. */
@@ -57,6 +59,7 @@ export function createCharacter(
     statusTime: 0,
     hitBy: -1,
     deadZoneTarget: vec3(),
+    walkOffStuck: 0,
     position: vec3(spawn.x, spawn.y, spawn.z),
     prevPosition: vec3(spawn.x, spawn.y, spawn.z),
     velocity: vec3(),
@@ -113,5 +116,6 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.status = 'alive';
   c.statusTime = 0;
   c.hitBy = -1;
+  c.walkOffStuck = 0;
   c.armament = createArmament(loadout);
 }

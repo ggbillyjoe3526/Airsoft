@@ -6,6 +6,7 @@ import { TEAM_COLORS, TEAMS } from '../config/teams';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { GameState } from '../sim/state';
+import { wrapAngle } from '../sim/vec';
 import { HitFeedback } from '../ui/hitFeedback';
 import { CharacterRenderer } from './characterRenderer';
 import { SpectatorCamera } from './spectatorCamera';
@@ -25,6 +26,8 @@ export class MatchPresentation {
   private hitFromYaw = 0;
   /** Identifies the round message on screen, so its text is only rebuilt when it changes. */
   private roundKey = 0;
+  private outLabelFor = Number.NaN;
+  private outLabelText = '';
 
   constructor(
     scene: THREE.Scene,
@@ -62,7 +65,7 @@ export class MatchPresentation {
         if (e.victimId === this.player.id) {
           // It came from the opposite of the BB's flight direction.
           this.hitFromYaw = Math.atan2(e.direction.x, e.direction.z);
-          this.feedback.showHit(wrap(cameraYaw - this.hitFromYaw));
+          this.feedback.showHit(wrapAngle(cameraYaw - this.hitFromYaw));
         } else if (e.shooterId === this.player.id) {
           const victim = this.state.characters.find((c) => c.id === e.victimId);
           this.feedback.showHitMarker(victim?.team === this.player.team);
@@ -96,7 +99,7 @@ export class MatchPresentation {
     this.characters.update(alpha, spectating ? -1 : this.player.id);
 
     this.feedback.setCalling(status === 'calling');
-    if (status === 'calling') this.feedback.setHitDirection(wrap(cameraYaw - this.hitFromYaw));
+    if (status === 'calling') this.feedback.setHitDirection(wrapAngle(cameraYaw - this.hitFromYaw));
     this.feedback.setOutLabel(spectating ? this.outLabel() : '');
     this.updateRoundMessage();
     return spectating;
@@ -107,9 +110,15 @@ export class MatchPresentation {
     this.feedback.dispose();
   }
 
+  /** "OUT · hit by Orange 2", rebuilt only when who hit you changes. */
   private outLabel(): string {
-    const by = this.names.get(this.player.hitBy);
-    return by && this.player.hitBy !== this.player.id ? `OUT · hit by ${by}` : 'OUT';
+    const hitBy = this.player.hitBy;
+    if (hitBy !== this.outLabelFor) {
+      this.outLabelFor = hitBy;
+      const by = this.names.get(hitBy);
+      this.outLabelText = by && hitBy !== this.player.id ? `OUT · hit by ${by}` : 'OUT';
+    }
+    return this.outLabelText;
   }
 
   /** Rebuilds the round message only when what it says changes. */
@@ -129,12 +138,4 @@ export class MatchPresentation {
     }
     this.feedback.setRoundMessage(text);
   }
-}
-
-function wrap(a: number): number {
-  const twoPi = Math.PI * 2;
-  let r = a % twoPi;
-  if (r <= -Math.PI) r += twoPi;
-  else if (r > Math.PI) r -= twoPi;
-  return r;
 }

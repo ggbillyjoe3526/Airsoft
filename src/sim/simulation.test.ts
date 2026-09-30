@@ -275,5 +275,33 @@ describe('hit calling and round flow', () => {
     expect(shots).toBe(0);
     expect(mate.status).toBe('alive');
   });
+
+  it('a walk-off blocked by cover gives up early and leaves the field instead of grinding', () => {
+    const state = createGameState(1, 16);
+    const target = createCharacter(1, vec3(0, 0, -8), 0, LOADOUT, 1);
+    state.characters.push(createCharacter(0, vec3(), 0, LOADOUT, 0), target, createCharacter(2, vec3(50, 0, 0), 0, LOADOUT, 1));
+    // Everything horizontal is blocked, like walking into a wall.
+    const wall: CharacterMover = {
+      move(c, d, out) {
+        out.x = 0;
+        out.z = 0;
+        const y = c.position.y + d.y;
+        out.y = y <= 0 ? -c.position.y : d.y;
+        return y <= 0;
+      },
+      probeGround: floor.probeGround,
+    };
+    const ctx = testContext(wall, KILL_Y);
+    eliminate(target, 0, state.characters, DEAD_ZONES);
+    let ticks = 0;
+    while (target.status !== 'out' && ticks < 1000) {
+      stepSimulation(state, new Map(), ctx, DT);
+      ticks++;
+    }
+    const walkOff = ticks * DT - HITS.callTime;
+    expect(walkOff).toBeLessThan(HITS.stuckTime + HITS.vanishTime + 0.1);
+    expect(walkOff).toBeLessThan(HITS.walkOffTime);
+    expect(target.position.x).toBeCloseTo(30, 3); // in its dead-zone spot
+  });
 });
 
