@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BINDINGS } from '../config/controls';
-import { KeyBindings, type KeyValueStore, keyLabel } from './keyBindings';
+import { describeKeys, KeyBindings, type KeyValueStore, keyLabel } from './keyBindings';
 
 class MemoryStore implements KeyValueStore {
   readonly data = new Map<string, string>();
@@ -56,6 +56,16 @@ describe('KeyBindings', () => {
     const b = new KeyBindings(null);
     expect(b.rebind('jump', 'Escape')).toBe(false);
     expect(b.primary('jump')).toBe('Space');
+  });
+
+  it('keeps the debug keys reserved: they never swap onto a player key', () => {
+    const b = new KeyBindings(null);
+    expect(b.rebind('jump', 'Backquote')).toBe(false);
+    expect(b.rebind('reload', 'BracketRight')).toBe(false);
+    expect(b.codes('jump')).toEqual(['Space']);
+    expect(b.codes('debugOverlay')).toEqual(['Backquote', 'F3']);
+    expect(b.codes('debugBbPaths')).toEqual(['BracketRight']);
+    expect(b.rebind('debugOverlay', 'KeyP')).toBe(false);
   });
 
   it('saves changes and loads them in a new session', () => {
@@ -120,6 +130,16 @@ describe('KeyBindings', () => {
     const b = new KeyBindings(broken);
     expect(b.rebind('jump', 'KeyJ')).toBe(true);
     expect(b.primary('jump')).toBe('KeyJ');
+  });
+});
+
+describe('describeKeys', () => {
+  it('lists every key, showing a Left+Right modifier pair as one', () => {
+    expect(describeKeys(['KeyW', 'ArrowUp'])).toBe('W / ↑');
+    expect(describeKeys(['ShiftLeft', 'ShiftRight'])).toBe('Shift');
+    expect(describeKeys(['ShiftRight', 'ShiftLeft'])).toBe('Shift');
+    expect(describeKeys(['AltLeft', 'ShiftRight'])).toBe('Left Alt / Right Shift');
+    expect(describeKeys(['ControlLeft', 'ControlRight', 'KeyX'])).toBe('Ctrl / X');
   });
 });
 

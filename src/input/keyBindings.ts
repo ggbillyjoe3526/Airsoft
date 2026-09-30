@@ -1,4 +1,6 @@
-import { type Action, DEFAULT_BINDINGS, UNBINDABLE_KEYS } from '../config/controls';
+import { type Action, DEFAULT_BINDINGS, REBINDABLE, UNBINDABLE_KEYS } from '../config/controls';
+
+const REBINDABLE_ACTIONS: ReadonlySet<Action> = new Set(REBINDABLE.map((r) => r.action));
 
 const STORAGE_KEY = 'airsoft.keyBindings';
 
@@ -40,13 +42,16 @@ export class KeyBindings {
   /**
    * Makes `code` the only key for `action` (its other keys are released). If another action used
    * `code` as its main key, that action gets `action`'s old main key in its place (a swap); if it was
-   * only its extra key, it just loses it. Returns false for keys that can't be bound.
+   * only its extra key, it just loses it. Returns false for keys that can't be bound, including keys
+   * reserved by actions the settings don't list (the debug keys), which never swap.
    */
   rebind(action: Action, code: string): boolean {
-    if (UNBINDABLE_KEYS.has(code)) return false;
+    if (UNBINDABLE_KEYS.has(code) || !REBINDABLE_ACTIONS.has(action)) return false;
+    const owner = this.actionOf(code);
+    if (owner && !REBINDABLE_ACTIONS.has(owner)) return false;
     const mine = this.map.get(action) ?? [];
     const old = mine[0];
-    const other = this.actionOf(code);
+    const other = owner;
     if (other && other !== action) {
       const theirs = this.map.get(other)!;
       const swapIn = old !== undefined && !theirs.includes(old) && (theirs[0] === code || theirs.length === 1);
@@ -88,7 +93,8 @@ export class KeyBindings {
     try {
       const saved = JSON.parse(raw) as Record<string, unknown>;
       for (const action of Object.keys(DEFAULT_BINDINGS) as Action[]) {
-        const codes = saved[action];
+        if (!REBINDABLE_ACTIONS.has(action)) continue; // debug keys always keep their defaults
+      const codes = saved[action];
         if (Array.isArray(codes) && codes.length > 0 && codes.every((c) => typeof c === 'string' && !UNBINDABLE_KEYS.has(c))) this.map.set(action, codes as string[]);
       }
     } catch {
@@ -109,6 +115,21 @@ export class KeyBindings {
       }
     }
   }
+}
+
+/** An action's keys for display; a Left+Right pair of one modifier shows as just "Shift" etc. */
+export function describeKeys(codes: readonly string[]): string {
+  const labels: string[] = [];
+  for (const code of codes) {
+    const side = code.match(/^(Shift|Control|Alt)(Left|Right)$/);
+    const twin = side ? `${side[1]}${side[2] === 'Left' ? 'Right' : 'Left'}` : '';
+    if (side && codes.includes(twin)) {
+      if (side[2] === 'Left') labels.push(side[1] === 'Control' ? 'Ctrl' : side[1]!);
+    } else {
+      labels.push(keyLabel(code));
+    }
+  }
+  return labels.join(' / ');
 }
 
 /** A readable name for a KeyboardEvent.code ("KeyW" → "W", "ShiftLeft" → "Left Shift"). */

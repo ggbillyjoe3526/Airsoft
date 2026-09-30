@@ -1,22 +1,7 @@
 import { type Action, REBINDABLE, UNBINDABLE_KEYS } from '../config/controls';
-import { type KeyBindings, keyLabel } from '../input/keyBindings';
+import { describeKeys, type KeyBindings, keyLabel } from '../input/keyBindings';
 
 const CTRL_WARNING = 'Heads up: some Ctrl combinations (like Ctrl+W, close tab) can\'t be blocked by the browser.';
-
-/** An action's keys for display; a Left+Right pair of one modifier shows as just "Shift" etc. */
-function describeKeys(codes: readonly string[]): string {
-  const labels: string[] = [];
-  for (const code of codes) {
-    const side = code.match(/^(Shift|Control|Alt)(Left|Right)$/);
-    const twin = side ? `${side[1]}${side[2] === 'Left' ? 'Right' : 'Left'}` : '';
-    if (side && codes.includes(twin)) {
-      if (side[2] === 'Left') labels.push(side[1] === 'Control' ? 'Ctrl' : side[1]!);
-    } else {
-      labels.push(keyLabel(code));
-    }
-  }
-  return labels.join(' / ');
-}
 
 /**
  * Key-binding settings: one row per rebindable action. Click a key button, then press the new key
