@@ -151,7 +151,7 @@ export const VIEWMODEL = {
    * Calling your hit: the replica drops out of view and your left hand rises to this spot (camera
    * space, metres) over `raiseTime` seconds.
    */
-  hitDrop: 0.35,
+  hitDrop: 0.5,
   raisedHand: [-0.3, -0.02, -0.62] as const,
   raiseFrom: 0.35,
   raiseTime: 0.25,

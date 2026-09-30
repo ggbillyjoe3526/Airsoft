@@ -83,7 +83,7 @@ describe('stepBBs hitting characters', () => {
   const noWall: WorldQuery = { raycastStatic: () => -1 };
   const deadZones = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }]];
 
-  /** Shooter (team 0, id 1) at the origin; BB fired from eye height towards -Z. */
+  /** Shooter (team 0, id 1) at the origin; BB fired at chest height (1.2 m) towards -Z. */
   function setup(targets: { id: number; team: number; z: number; x?: number; crouch?: number }[], hits: HitConfig = HITS) {
     const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
     const characters = [shooter];
@@ -93,7 +93,7 @@ describe('stepBBs hitting characters', () => {
       characters.push(c);
     }
     const pool = createBBPool(4);
-    const bb = spawnBB(pool, shooter.id, vec3(0, 1.5, 0), vec3(0, 0, -1), 88, 0);
+    const bb = spawnBB(pool, shooter.id, vec3(0, 1.2, 0), vec3(0, 0, -1), 88, 0);
     const events: GameEvent[] = [];
     const bbTargets: BBTargets = { characters, hits, deadZones };
     const run = (wall = noWall) => {
@@ -153,12 +153,12 @@ describe('stepBBs hitting characters', () => {
     expect(noFf.characters[1]!.status).toBe('alive');
   });
 
-  it('flies over a crouched character that a standing one would have caught at head height', () => {
-    // BB at 1.5 m: hits a standing target, passes over a fully crouched one (top 1.15 m).
-    const standing = setup([{ id: 2, team: 1, z: -10 }]);
+  it('flies over a crouched character that a standing one would have caught in the chest', () => {
+    // BB at 1.2 m: hits a standing target, passes over a fully crouched one (top 1.13 m).
+    const standing = setup([{ id: 2, team: 1, z: -5 }]);
     standing.run();
     expect(standing.characters[1]!.status).toBe('calling');
-    const crouched = setup([{ id: 2, team: 1, z: -10, crouch: 1 }]);
+    const crouched = setup([{ id: 2, team: 1, z: -5, crouch: 1 }]);
     crouched.run();
     expect(crouched.characters[1]!.status).toBe('alive');
   });
@@ -170,8 +170,8 @@ describe('stepBBs hitting characters', () => {
     const zones = [[], [{ position: vec3(30, 0, 0), yaw: 0 }, { position: vec3(30, 0, 1), yaw: 0 }]];
     const characters = [shooter, a, b];
     const pool = createBBPool(4);
-    spawnBB(pool, 1, vec3(0, 1.5, 0), vec3(0, 0, -1), 88, 0);
-    spawnBB(pool, 1, vec3(0.6, 1.5, 0), vec3(0, 0, -1), 88, 0);
+    spawnBB(pool, 1, vec3(0, 1.2, 0), vec3(0, 0, -1), 88, 0);
+    spawnBB(pool, 1, vec3(0.6, 1.2, 0), vec3(0, 0, -1), 88, 0);
     for (let i = 0; i < 30; i++) stepBBs(pool, BALLISTICS, noWall, KILL_Y, [], DT, { characters, hits: HITS, deadZones: zones });
     expect(a.status).toBe('calling');
     expect(b.status).toBe('calling');

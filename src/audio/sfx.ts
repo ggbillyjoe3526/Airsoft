@@ -97,9 +97,7 @@ export class Sfx {
         return;
       case 'roundStart':
         this.whistle(AUDIO.roundStartWhistle, 0);
-        this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * 1.6);
-        return;
-      case 'walkOff':
+        this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
         return;
     }
   }
@@ -152,9 +150,10 @@ export class Sfx {
   /** You're hit: a sharp, close plastic "tick" with a little thump. Unmistakable. */
   private hitTick(): void {
     const out = this.master!;
-    this.click(out, 3400, 0.012, AUDIO.hitTickVolume);
-    this.noise(out, 'bandpass', 5200, 2, AUDIO.hitTickVolume * 0.8, 0.0005, 0.03);
-    this.tone(out, 'sine', 180, 70, AUDIO.hitTickVolume * 0.6, 0.08);
+    const k = AUDIO.hitTick;
+    this.click(out, k.clickHz, 0.012, AUDIO.hitTickVolume);
+    this.noise(out, 'bandpass', k.noiseHz, 2, AUDIO.hitTickVolume * 0.8, 0.0005, 0.03);
+    this.tone(out, 'sine', k.thumpFromHz, k.thumpToHz, AUDIO.hitTickVolume * 0.6, k.thumpTime);
   }
 
   /** A BB smacking into someone's jacket: duller than a hard surface. */
@@ -177,7 +176,7 @@ export class Sfx {
     const lfo = ctx.createOscillator();
     lfo.frequency.value = AUDIO.whistleWarble;
     const depth = ctx.createGain();
-    depth.gain.value = AUDIO.whistlePitch * 0.04;
+    depth.gain.value = AUDIO.whistlePitch * AUDIO.whistleWarbleDepth;
     lfo.connect(depth).connect(osc.frequency);
     const g = ctx.createGain();
     g.gain.setValueAtTime(0, t);

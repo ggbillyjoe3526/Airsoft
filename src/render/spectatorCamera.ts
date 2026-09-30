@@ -5,10 +5,15 @@ import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
 
+/** Worth watching: still in play, or calling a hit that just happened (so you see them call it). */
+function watchable(c: Character): boolean {
+  return isInPlay(c) || c.status === 'calling';
+}
+
 /**
  * Over-the-shoulder camera for watching someone still in play after you've been hit. Prefers your
- * teammates; clicking cycles through everyone still in play. Pulled in front of walls so it never looks
- * through the level.
+ * teammates; clicking cycles through everyone still in play. If nobody is left it watches your own
+ * figure. Pulled in front of walls so it never looks through the level.
  */
 export class SpectatorCamera {
   private targetId = -1;
@@ -19,22 +24,28 @@ export class SpectatorCamera {
 
   constructor(
     private readonly characters: readonly Character[],
+    /** You: watched when nobody else is left. */
+    private readonly self: Character,
     private readonly body: BodyConfig,
     private readonly query: WorldQuery,
   ) {}
 
-  /** Who is being watched, or undefined if nobody is left in play. */
-  target(): Character | undefined {
-    for (const c of this.characters) if (c.id === this.targetId && isInPlay(c)) return c;
+  /** Who is being watched, or undefined if that player is no longer worth watching. */
+  private target(): Character | undefined {
+    if (this.targetId === this.self.id) return this.self;
+    for (const c of this.characters) if (c.id === this.targetId && watchable(c)) return c;
     return undefined;
   }
 
-  /** Makes sure someone in play is being watched, preferring `team`. */
-  ensureTarget(team: number): Character | undefined {
+  /** Makes sure someone is being watched: a teammate in play, else anyone in play, else yourself. */
+  ensureTarget(): Character {
     const current = this.target();
-    if (current) return current;
-    const pick = this.characters.find((c) => isInPlay(c) && c.team === team) ?? this.characters.find(isInPlay);
-    this.targetId = pick ? pick.id : -1;
+    if (current && (current !== this.self || !this.characters.some(isInPlay))) return current;
+    let pick: Character | undefined;
+    for (const c of this.characters) if (isInPlay(c) && c.team === this.self.team) pick ??= c;
+    for (const c of this.characters) if (isInPlay(c)) pick ??= c;
+    pick ??= this.self;
+    this.targetId = pick.id;
     this.placed = false;
     return pick;
   }
@@ -54,10 +65,8 @@ export class SpectatorCamera {
     this.placed = false;
   }
 
-  /** Places `camera` behind the current target. `alpha` interpolates ticks. */
-  place(camera: THREE.PerspectiveCamera, alpha: number, dt: number): void {
-    const c = this.target();
-    if (!c) return;
+  /** Places `camera` behind `c` (from ensureTarget). `alpha` interpolates ticks. */
+  place(camera: THREE.PerspectiveCamera, c: Character, alpha: number, dt: number): void {
     const crouch = c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * alpha;
     const h = this.head;
     h.x = c.prevPosition.x + (c.position.x - c.prevPosition.x) * alpha;

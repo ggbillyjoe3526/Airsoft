@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { FIGURE } from '../config/characters';
 import { HITS } from '../config/hits';
 import { createCharacter } from './character';
-import { characterHitCapsule, hitTop, rayCapsule, type VerticalCapsule } from './hitbox';
+import { characterHitVolume, hitTop, rayCapsule, rayCharacter, type VerticalCapsule } from './hitbox';
 import { vec3 } from './vec';
 
 const cap: VerticalCapsule = { x: 0, z: 0, y0: 0.26, y1: 1.54, r: 0.26 };
@@ -49,17 +50,41 @@ describe('rayCapsule', () => {
   });
 });
 
-describe('characterHitCapsule', () => {
-  it('shrinks when crouching so 1.2 m crouch cover hides the whole head', () => {
-    const c = createCharacter(0, vec3(3, 0, -2), 0);
-    const out: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
-    characterHitCapsule(c, HITS, out);
-    expect(out.y1 + out.r).toBeCloseTo(HITS.standingTop, 9);
-    c.crouchAmount = 1;
-    characterHitCapsule(c, HITS, out);
-    expect(out.y1 + out.r).toBeCloseTo(HITS.crouchedTop, 9);
+describe('characterHitVolume', () => {
+  const body: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
+  const head: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
+  const shoot = (c: ReturnType<typeof createCharacter>, x: number, y: number) => {
+    characterHitVolume(c, HITS, body, head);
+    return rayCharacter(vec3(x, y, 10), vec3(0, 0, -1), 20, body, head);
+  };
+
+  it('tops out at the head: 1.75 m standing, and under 1.2 m crouch cover when crouched', () => {
+    expect(hitTop(0, HITS)).toBeCloseTo(1.75, 9);
     expect(hitTop(1, HITS)).toBeLessThanOrEqual(1.15);
-    expect(out.x).toBe(3);
-    expect(out.z).toBe(-2);
+    const c = createCharacter(0, vec3(), 0);
+    expect(shoot(c, 0, hitTop(0, HITS) - 0.01)).toBeGreaterThan(0);
+    expect(shoot(c, 0, hitTop(0, HITS) + 0.01)).toBe(-1);
+    c.crouchAmount = 1;
+    expect(shoot(c, 0, 1.2)).toBe(-1);
+    expect(shoot(c, 0, 1.0)).toBeGreaterThan(0);
+  });
+
+  it('follows the figure: a BB past the ear or beside the legs misses, one on the torso hits', () => {
+    const c = createCharacter(0, vec3(), 0);
+    expect(shoot(c, 0.16, FIGURE.headHeight)).toBe(-1); // beside the head
+    expect(shoot(c, 0.1, FIGURE.headHeight)).toBeGreaterThan(0); // grazing the head
+    expect(shoot(c, 0.22, 0.5)).toBe(-1); // beside the legs
+    expect(shoot(c, 0.15, 0.5)).toBeGreaterThan(0); // on a leg
+    expect(shoot(c, 0.18, 1.2)).toBeGreaterThan(0); // on the torso edge
+  });
+
+  it('is built from the same numbers as the drawn figure', () => {
+    expect(FIGURE.headHeight).toBe(HITS.headHeight);
+    expect(FIGURE.crouchDrop).toBe(HITS.crouchDrop);
+    // Head, cap and goggles fit inside the head sphere; body capsule spans the torso and legs.
+    expect(FIGURE.headRadius * 1.06).toBeLessThanOrEqual(HITS.headRadius);
+    expect(FIGURE.hipSpread + FIGURE.legRadius).toBeLessThanOrEqual(HITS.bodyRadius);
+    expect(Math.abs(FIGURE.torso.width / 2 - HITS.bodyRadius)).toBeLessThanOrEqual(0.02);
+    expect(Math.abs(FIGURE.torso.bottom + FIGURE.torso.height - HITS.bodyTop)).toBeLessThanOrEqual(0.03);
   });
 });

@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import { FIGURE } from '../config/characters';
+import type { HitConfig } from '../config/hits';
 import type { Character } from '../sim/character';
 import { buildFigure, createCalloutTexture, disposeFigure, type Figure } from './characterModels';
 
 interface FigureState {
   figure: Figure;
+  /** Per-figure copy of the shared material, so one figure can fade out on its own. */
+  material: THREE.MeshStandardMaterial;
   /** Walk-cycle phase (radians), advanced by distance walked. */
   phase: number;
   lastX: number;
@@ -26,11 +29,13 @@ export class CharacterRenderer {
   constructor(
     private readonly characters: readonly Character[],
     teamColors: readonly number[],
+    private readonly hits: HitConfig,
   ) {
     for (const c of characters) {
-      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, this.material, this.calloutMaterial);
+      const material = this.material.clone();
+      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial);
       this.object.add(figure.root);
-      this.figures.push({ figure, phase: 0, lastX: c.position.x, lastZ: c.position.z });
+      this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z });
     }
   }
 
@@ -76,11 +81,26 @@ export class CharacterRenderer {
       f.aim.rotation.x = c.pitch;
       f.hitPose.visible = !inPlay;
       f.callout.visible = c.status === 'calling';
+
+      // Until walk-off has navigation, anyone who can't reach the dead zone in time fades out on the
+      // field instead of visibly jumping there (the sim moves them when walk-off time runs out).
+      const opacity = c.status === 'walkingOff' ? Math.min(1, Math.max(0, (this.hits.walkOffTime - c.statusTime) / FIGURE.walkOffFade)) : 1;
+      if (opacity !== s.material.opacity) {
+        s.material.opacity = opacity;
+        const fading = opacity < 1;
+        if (s.material.transparent !== fading) {
+          s.material.transparent = fading;
+          s.material.needsUpdate = true;
+        }
+      }
     }
   }
 
   dispose(): void {
-    for (const s of this.figures) disposeFigure(s.figure);
+    for (const s of this.figures) {
+      disposeFigure(s.figure);
+      s.material.dispose();
+    }
     this.material.dispose();
     this.calloutMaterial.dispose();
     this.calloutTexture.dispose();

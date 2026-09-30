@@ -2,7 +2,6 @@ import type { HitConfig } from '../config/hits';
 import type { SpawnPoint } from '../map/mapTypes';
 import type { Character } from './character';
 import type { PlayerCommand } from './commands';
-import type { GameEvent } from './events';
 import { copy } from './vec';
 
 /**
@@ -59,13 +58,12 @@ export function fillEliminatedCommand(c: Character, cfg: HitConfig, out: PlayerC
 }
 
 /** Advances an eliminated character's hit call / walk-off by one tick. */
-export function stepElimination(c: Character, cfg: HitConfig, events: GameEvent[], dt: number): void {
+export function stepElimination(c: Character, cfg: HitConfig, dt: number): void {
   if (isInPlay(c)) return;
   c.statusTime += dt;
   if (c.status === 'calling' && c.statusTime >= cfg.callTime) {
     c.status = 'walkingOff';
     c.statusTime = 0;
-    events.push({ type: 'walkOff', characterId: c.id });
   } else if (c.status === 'walkingOff') {
     const arrived = Math.hypot(c.deadZoneTarget.x - c.position.x, c.deadZoneTarget.z - c.position.z) <= cfg.deadZoneArrive;
     if (arrived || c.statusTime >= cfg.walkOffTime) {

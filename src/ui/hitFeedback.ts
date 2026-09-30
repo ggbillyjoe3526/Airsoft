@@ -9,10 +9,14 @@ export class HitFeedback {
   private readonly flash: HTMLDivElement;
   private readonly banner: HTMLDivElement;
   private readonly direction: HTMLDivElement;
+  private readonly out: HTMLDivElement;
   private readonly spectating: HTMLDivElement;
   private readonly round: HTMLDivElement;
   private shownSpectating = '';
   private shownRound = '';
+  private shownOut = '';
+  private shownCalling = false;
+  private shownAngle = Number.NaN;
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -22,7 +26,8 @@ export class HitFeedback {
       <div class="hitfx-flash"></div>
       <div class="hitfx-marker"><i></i><i></i><i></i><i></i></div>
       <div class="hitfx-direction"><b></b></div>
-      <div class="hitfx-banner"><strong>HIT!</strong><span>Hand up, walk off to your dead zone</span></div>
+      <div class="hitfx-banner"><strong>HIT!</strong><span>You called your hit</span></div>
+      <div class="hitfx-out"></div>
       <div class="hitfx-spectating"></div>
       <div class="hitfx-round"></div>`;
     parent.appendChild(this.root);
@@ -31,6 +36,7 @@ export class HitFeedback {
     this.marker = q('.hitfx-marker');
     this.direction = q('.hitfx-direction');
     this.banner = q('.hitfx-banner');
+    this.out = q('.hitfx-out');
     this.spectating = q('.hitfx-spectating');
     this.round = q('.hitfx-round');
   }
@@ -45,20 +51,37 @@ export class HitFeedback {
     restart(this.marker, 'show');
   }
 
-  /**
-   * You've been hit. `fromAngle` is where the BB came from relative to where you're looking
-   * (radians, 0 = straight ahead, positive = to your right).
-   */
+  /** You've been hit: flash, and show where it came from (see setHitDirection). */
   showHit(fromAngle: number): void {
-    this.direction.style.transform = `rotate(${fromAngle}rad)`;
+    this.setHitDirection(fromAngle);
     restart(this.flash, 'show');
     restart(this.direction, 'show');
-    this.banner.classList.add('show');
   }
 
-  /** Clears the "you're hit" banner (new round). */
-  clearHit(): void {
-    this.banner.classList.remove('show');
+  /**
+   * Where the BB that hit you came from, relative to where you're looking now (radians, 0 = straight
+   * ahead, positive = to your right). Call as the view turns so the marker keeps pointing at the shooter.
+   */
+  setHitDirection(fromAngle: number): void {
+    const a = Math.round(fromAngle * 100) / 100;
+    if (a === this.shownAngle) return;
+    this.shownAngle = a;
+    this.direction.style.transform = `rotate(${a}rad)`;
+  }
+
+  /** The big "HIT!" while you call your hit. */
+  setCalling(calling: boolean): void {
+    if (calling === this.shownCalling) return;
+    this.shownCalling = calling;
+    this.banner.classList.toggle('show', calling);
+  }
+
+  /** Small label while you're out (e.g. "OUT · hit by Orange 2"), or '' to hide it. */
+  setOutLabel(text: string): void {
+    if (text === this.shownOut) return;
+    this.shownOut = text;
+    this.out.textContent = text;
+    this.out.classList.toggle('show', text !== '');
   }
 
   /** Name of the player being watched, or '' when not spectating. */

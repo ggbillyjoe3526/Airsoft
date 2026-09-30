@@ -1,3 +1,5 @@
+import { HITS } from './hits';
+
 /**
  * Third-person look of players and bots: greybox figures in airsoft kit. Colours are flat vertex
  * colours on one shared material, so each figure costs a handful of draw calls.
@@ -14,7 +16,7 @@ export const FIGURE = {
     replica: 0x26282c,
     furniture: 0xb49a70,
   },
-  /** Body layout (metres, feet at y = 0, facing -Z). The head top is near HITS.standingTop. */
+  /** Body layout (metres, feet at y = 0, facing -Z). Head height and crouch come from the hit volume so they always match. */
   hipHeight: 0.92,
   legRadius: 0.075,
   hipSpread: 0.1,
@@ -23,12 +25,14 @@ export const FIGURE = {
   shoulderSpread: 0.22,
   armRadius: 0.055,
   headRadius: 0.11,
-  headHeight: 1.62,
-  /** Crouched, the upper body drops this far and the legs fold to fit (keeps the head under 1.15 m). */
-  crouchDrop: 0.62,
+  headHeight: HITS.headHeight,
+  /** Crouched, the upper body drops this far and the legs fold to fit. */
+  crouchDrop: HITS.crouchDrop,
   /** Walk cycle: leg swing (radians) and strides per metre walked. */
   legSwing: 0.55,
   stridesPerMetre: 0.75,
+  /** Seconds over which a walking-off player who hasn't reached the dead zone fades away. */
+  walkOffFade: 0.6,
   /** "HIT!" sign above a player calling their hit. */
   callout: { height: 2.25, width: 0.62, aspect: 0.45, color: '#ffffff', background: '#d8262e' },
 } as const;

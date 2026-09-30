@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import { HUD } from '../config/render';
 import { TEAM_COLORS, TEAMS } from '../config/teams';
@@ -17,7 +18,13 @@ export class MatchPresentation {
   private readonly characters: CharacterRenderer;
   private readonly feedback: HitFeedback;
   private readonly spectator: SpectatorCamera;
+  /** Display names by character id ("Blue 2", "you"). */
+  private readonly names = new Map<number, string>();
   private roundStartedAt = 0;
+  /** World yaw the BB that hit you came from (see showHit), and when. */
+  private hitFromYaw = 0;
+  /** Identifies the round message on screen, so its text is only rebuilt when it changes. */
+  private roundKey = 0;
 
   constructor(
     scene: THREE.Scene,
@@ -25,12 +32,18 @@ export class MatchPresentation {
     private readonly state: GameState,
     private readonly player: Character,
     body: BodyConfig,
+    hits: HitConfig,
     query: WorldQuery,
   ) {
-    this.characters = new CharacterRenderer(state.characters, TEAM_COLORS);
+    this.characters = new CharacterRenderer(state.characters, TEAM_COLORS, hits);
     scene.add(this.characters.object);
     this.feedback = new HitFeedback(container);
-    this.spectator = new SpectatorCamera(state.characters, body, query);
+    this.spectator = new SpectatorCamera(state.characters, player, body, query);
+    const perTeam = [0, 0];
+    for (const c of state.characters) {
+      const n = ++perTeam[c.team]!;
+      this.names.set(c.id, c === player ? 'you' : `${TEAMS[c.team]!.name} ${n}`);
+    }
   }
 
   setPlaying(playing: boolean): void {
@@ -47,16 +60,15 @@ export class MatchPresentation {
     for (const e of this.state.events) {
       if (e.type === 'characterHit') {
         if (e.victimId === this.player.id) {
-          // The BB came from the opposite of its flight direction; express that relative to the view.
-          const fromYaw = Math.atan2(e.direction.x, e.direction.z);
-          this.feedback.showHit(wrap(cameraYaw - fromYaw));
+          // It came from the opposite of the BB's flight direction.
+          this.hitFromYaw = Math.atan2(e.direction.x, e.direction.z);
+          this.feedback.showHit(wrap(cameraYaw - this.hitFromYaw));
         } else if (e.shooterId === this.player.id) {
           const victim = this.state.characters.find((c) => c.id === e.victimId);
           this.feedback.showHitMarker(victim?.team === this.player.team);
         }
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
-        this.feedback.clearHit();
         this.spectator.reset();
       }
     }
@@ -67,19 +79,27 @@ export class MatchPresentation {
     this.spectator.next();
   }
 
-  /** Once per frame. Places the camera when spectating (returns true), otherwise leaves it alone. */
-  frame(camera: THREE.PerspectiveCamera, alpha: number, dt: number): boolean {
+  /**
+   * Once per frame. Places the camera when spectating and returns true; otherwise leaves the camera
+   * alone. `cameraYaw` is the first-person view yaw.
+   */
+  frame(camera: THREE.PerspectiveCamera, alpha: number, dt: number, cameraYaw: number): boolean {
     const spectating = this.spectating;
-    let watched: Character | undefined;
+    const status = this.player.status;
     if (spectating) {
-      watched = this.spectator.ensureTarget(this.player.team);
-      if (watched) this.spectator.place(camera, alpha, dt);
+      const watched = this.spectator.ensureTarget();
+      this.spectator.place(camera, watched, alpha, dt);
+      this.feedback.setSpectating(watched === this.player ? '' : this.names.get(watched.id) ?? '');
+    } else {
+      this.feedback.setSpectating('');
     }
-    const firstPerson = !spectating || !watched;
-    this.characters.update(alpha, firstPerson ? this.player.id : -1);
-    this.feedback.setSpectating(spectating && watched ? this.nameOf(watched) : '');
-    this.feedback.setRoundMessage(this.roundMessage());
-    return !firstPerson;
+    this.characters.update(alpha, spectating ? -1 : this.player.id);
+
+    this.feedback.setCalling(status === 'calling');
+    if (status === 'calling') this.feedback.setHitDirection(wrap(cameraYaw - this.hitFromYaw));
+    this.feedback.setOutLabel(spectating ? this.outLabel() : '');
+    this.updateRoundMessage();
+    return spectating;
   }
 
   dispose(): void {
@@ -87,25 +107,27 @@ export class MatchPresentation {
     this.feedback.dispose();
   }
 
-  private roundMessage(): string {
-    const r = this.state.round;
-    if (r.phase === 'over') {
-      const result = r.winner < 0 ? 'Draw' : `${TEAMS[r.winner]!.name} wins the round`;
-      return `${result} · next round in ${Math.max(1, Math.ceil(r.timer))}`;
-    }
-    if (this.state.time - this.roundStartedAt < HUD.roundStartMessageTime) return `Round ${r.number}`;
-    return '';
+  private outLabel(): string {
+    const by = this.names.get(this.player.hitBy);
+    return by && this.player.hitBy !== this.player.id ? `OUT · hit by ${by}` : 'OUT';
   }
 
-  /** "Blue 2", "Orange 1"... numbered within the team in roster order; you are "you". */
-  private nameOf(c: Character): string {
-    if (c === this.player) return 'you';
-    let n = 0;
-    for (const o of this.state.characters) {
-      if (o.team === c.team) n++;
-      if (o === c) break;
+  /** Rebuilds the round message only when what it says changes. */
+  private updateRoundMessage(): void {
+    const r = this.state.round;
+    const showStart = r.phase === 'live' && this.state.time - this.roundStartedAt < HUD.roundStartMessageTime;
+    const seconds = Math.max(1, Math.ceil(r.timer));
+    const key = r.phase === 'over' ? 1 + (r.winner + 1) * 1000 + seconds : showStart ? -r.number : 0;
+    if (key === this.roundKey) return;
+    this.roundKey = key;
+    let text = '';
+    if (r.phase === 'over') {
+      const result = r.winner < 0 ? 'Draw' : `${TEAMS[r.winner]!.name} wins the round`;
+      text = `${result} · next round in ${seconds}`;
+    } else if (showStart) {
+      text = `Round ${r.number}`;
     }
-    return `${TEAMS[c.team]!.name} ${n}`;
+    this.feedback.setRoundMessage(text);
   }
 }
 

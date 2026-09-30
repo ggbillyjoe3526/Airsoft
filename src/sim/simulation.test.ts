@@ -8,6 +8,8 @@ import { createCommand, type PlayerCommand } from './commands';
 import type { CharacterMover } from './movement';
 import { createSimContext, type SimContext, stepSimulation } from './simulation';
 import type { GameEvent } from './events';
+import { spawnBB } from './ballistics';
+import { eliminate } from './elimination';
 import { createGameState } from './state';
 import { vec3 } from './vec';
 
@@ -197,13 +199,8 @@ describe('hit calling and round flow', () => {
     expect(Math.hypot(target.position.x - called.x, target.position.z - called.z)).toBeLessThan(0.05);
 
     // Walking off: heads for its dead-zone spot (x = +30).
-    let walkOffEvent = false;
-    for (let i = 0; i < 5 && target.status === 'calling'; i++) {
-      stepSimulation(state, commands, ctx, DT);
-      walkOffEvent ||= state.events.some((e) => e.type === 'walkOff' && e.characterId === 1);
-    }
+    for (let i = 0; i < 5 && target.status === 'calling'; i++) stepSimulation(state, commands, ctx, DT);
     expect(target.status).toBe('walkingOff');
-    expect(walkOffEvent).toBe(true);
     for (let i = 0; i < 30; i++) stepSimulation(state, commands, ctx, DT);
     expect(target.position.x).toBeGreaterThan(called.x + 0.5);
 
@@ -252,6 +249,31 @@ describe('hit calling and round flow', () => {
     expect(target.position).toEqual(target.spawnPosition);
     expect(shooter.armament.ammo[0]!.mag).toBe(LOADOUT[0]!.magSize);
     expect(state.bbs.bbs.every((b) => !b.active)).toBe(true);
+  });
+
+  it('is a cease-fire once the round is decided: no shots, and BBs in flight hit nobody', () => {
+    const state = createGameState(1, 16);
+    const blue = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
+    const mate = createCharacter(1, vec3(0, 0, -6), 0, LOADOUT, 0);
+    const orange = createCharacter(2, vec3(40, 0, 0), 0, LOADOUT, 1);
+    state.characters.push(blue, mate, orange);
+    const ctx = testContext(floor, KILL_Y);
+    // A BB already on its way to the teammate when Orange is eliminated.
+    spawnBB(state.bbs, 0, vec3(0, 1.2, -1), vec3(0, 0, -1), 88, 0);
+    eliminate(orange, 0, state.characters, DEAD_ZONES);
+    stepSimulation(state, new Map(), ctx, DT);
+    expect(state.round.phase).toBe('over');
+    expect(state.bbs.bbs.some((b) => b.active)).toBe(true);
+    const fire = createCommand();
+    fire.fire = true;
+    let shots = 0;
+    for (let i = 0; i < 30; i++) {
+      stepSimulation(state, new Map([[0, fire]]), ctx, DT);
+      shots += state.events.filter((e) => e.type === 'shot').length;
+    }
+    expect(state.round.phase).toBe('over');
+    expect(shots).toBe(0);
+    expect(mate.status).toBe('alive');
   });
 });
 

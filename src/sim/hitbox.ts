@@ -62,17 +62,29 @@ export function rayCapsule(o: Vec3, d: Vec3, maxT: number, cap: VerticalCapsule)
   return best <= maxT ? best : -1;
 }
 
-/** Top of a character's hit volume above its feet for a crouch amount (0 standing, 1 crouched). */
+/** Top of a character's hit volume (top of the head) above its feet for a crouch amount (0..1). */
 export function hitTop(crouchAmount: number, cfg: HitConfig): number {
-  return cfg.standingTop + (cfg.crouchedTop - cfg.standingTop) * crouchAmount;
+  return cfg.headHeight + cfg.headRadius - cfg.crouchDrop * crouchAmount;
 }
 
-/** Writes the character's current hit capsule into `out`. */
-export function characterHitCapsule(c: Character, cfg: HitConfig, out: VerticalCapsule): VerticalCapsule {
-  out.x = c.position.x;
-  out.z = c.position.z;
-  out.r = cfg.bodyRadius;
-  out.y0 = c.position.y + cfg.bodyRadius;
-  out.y1 = c.position.y + hitTop(c.crouchAmount, cfg) - cfg.bodyRadius;
-  return out;
+/**
+ * Writes the character's current hit volume: `body` (boots to shoulders) and `head` (a sphere, stored
+ * as a capsule with y0 = y1).
+ */
+export function characterHitVolume(c: Character, cfg: HitConfig, body: VerticalCapsule, head: VerticalCapsule): void {
+  const drop = cfg.crouchDrop * c.crouchAmount;
+  body.x = head.x = c.position.x;
+  body.z = head.z = c.position.z;
+  body.r = cfg.bodyRadius;
+  body.y0 = c.position.y + cfg.bodyBottom + cfg.bodyRadius;
+  body.y1 = c.position.y + cfg.bodyTop - drop - cfg.bodyRadius;
+  head.r = cfg.headRadius;
+  head.y0 = head.y1 = c.position.y + cfg.headHeight - drop;
+}
+
+/** Distance along the unit ray to the character's hit volume (≤ maxT), or -1 if it misses. */
+export function rayCharacter(o: Vec3, d: Vec3, maxT: number, body: VerticalCapsule, head: VerticalCapsule): number {
+  const tb = rayCapsule(o, d, maxT, body);
+  const th = rayCapsule(o, d, tb >= 0 ? tb : maxT, head);
+  return th >= 0 ? th : tb;
 }

@@ -101,7 +101,7 @@ export class Game {
     this.input.yaw = this.player.spawnYaw;
     // Phase 1: the player is always on Blue.
     this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
-    this.match = new MatchPresentation(this.renderer.scene, container, this.state, this.player, BODY, this.physics);
+    this.match = new MatchPresentation(this.renderer.scene, container, this.state, this.player, BODY, HITS, this.physics);
 
     this.debug = new DebugOverlay(container, () => ({
       tick: this.state.tick,
@@ -233,7 +233,7 @@ export class Game {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, alpha, this.input.yaw, pitch);
     const frameDt = running ? dt : 0; // presentation is frozen while paused
-    const spectating = this.match.frame(this.renderer.camera, alpha, frameDt);
+    const spectating = this.match.frame(this.renderer.camera, alpha, frameDt, this.input.yaw);
     this.combat.frame(frameDt, alpha, this.input.yaw, pitch);
     this.combat.render(!spectating);
     this.debug.frame(dt);

@@ -82,6 +82,9 @@ export function stepSimulation(
   armCtx.rng = state.rng;
   armCtx.events = state.events;
   ctx.targets.characters = state.characters;
+  // Once the round is decided it's a cease-fire, as after the end whistle at a site: nobody can fire,
+  // and BBs still in the air can't hit anyone.
+  const live = state.round.phase === 'live';
 
   for (const c of state.characters) {
     copy(c.prevPosition, c.position);
@@ -96,7 +99,7 @@ export function stepSimulation(
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);
     if (!inPlay) {
-      stepElimination(c, ctx.hits, state.events, dt);
+      stepElimination(c, ctx.hits, dt);
       continue;
     }
 
@@ -106,11 +109,11 @@ export function stepSimulation(
     m.eye.z = c.position.z;
     m.yaw = c.yaw;
     m.pitch = c.pitch;
-    const canFire = !c.sprinting && c.sprintLockout <= 0;
+    const canFire = live && !c.sprinting && c.sprintLockout <= 0;
     stepArmament(c.id, c.armament, cmd, m, canFire, armCtx, dt);
   }
 
-  stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, ctx.targets);
+  stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, live ? ctx.targets : undefined);
   stepRound(state.round, state.characters, state.bbs, ctx.loadout, ctx.roundResetDelay, state.events, dt);
   state.tick++;
   state.time += dt;
