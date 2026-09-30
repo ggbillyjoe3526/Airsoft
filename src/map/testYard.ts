@@ -36,4 +36,5 @@ export const TEST_YARD: MapData = {
   killY: -10,
   spawns: [[{ position: vec3(0, 0, 4), yaw: 0 }], []],
   deadZones: [[{ position: vec3(-8, 0, 8), yaw: 0 }], []],
+  lanes: [],
 };

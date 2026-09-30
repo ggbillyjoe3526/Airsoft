@@ -77,15 +77,15 @@ export class CharacterRenderer {
       f.legR.rotation.x = -swing;
 
       // In play: aiming. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
-      const handUp = c.status === 'calling' || c.status === 'walkingOff';
+      const handUp = c.status === 'calling' || c.status === 'walkingOff' || c.status === 'leaving';
       f.aim.visible = !handUp;
       f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.pitch;
       f.hitPose.visible = handUp;
       f.callout.visible = c.status === 'calling';
 
-      // Until walk-off has navigation, anyone who can't reach the dead zone fades off the field during the
-      // last `vanishTime` of the walk-off instead of visibly jumping there (the sim moves them afterwards).
-      const opacity = c.status === 'walkingOff' ? Math.min(1, Math.max(0, (this.hits.walkOffTime - c.statusTime) / this.hits.vanishTime)) : 1;
+      // A walk-off that couldn't finish leaves the field: the figure fades out where it stands (the sim
+      // then puts it in the dead zone) instead of visibly jumping there.
+      const opacity = c.status === 'leaving' ? Math.min(1, Math.max(0, 1 - c.statusTime / this.hits.vanishTime)) : 1;
       if (opacity !== s.material.opacity) {
         s.material.opacity = opacity;
         const fading = opacity < 1;

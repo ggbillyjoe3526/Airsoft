@@ -10,6 +10,7 @@ export interface HitConfig {
   walkOffSpeed: number;
   walkOffTime: number;
   deadZoneArrive: number;
+  waypointReach: number;
   stuckSpeed: number;
   stuckTime: number;
   vanishTime: number;
@@ -41,20 +42,19 @@ export const HITS: HitConfig = {
   callTime: 1.4,
   /** Walk-off pace as a fraction of walking speed. */
   walkOffSpeed: 0.8,
-  /**
-   * Longest walk-off (seconds). Walk-off heads straight for the dead zone; until bots bring
-   * navigation, anyone still on the way after this is moved into the dead zone.
-   */
-  walkOffTime: 4,
-  /** Close enough to the dead-zone slot to stop walking (metres). */
+  /** Longest walk-off (seconds): enough to cross Depot; anyone still walking then leaves the field. */
+  walkOffTime: 14,
+  /** Close enough to the dead-zone spot to stop walking (metres). */
   deadZoneArrive: 0.6,
+  /** A route waypoint counts as reached within this distance (metres). */
+  waypointReach: 0.4,
   /**
-   * Walking off slower than this (m/s) for `stuckTime` seconds counts as blocked: the character skips
-   * ahead to leaving the field instead of grinding against cover.
+   * Walking off slower than this (m/s) for `stuckTime` seconds counts as blocked: the character leaves
+   * the field instead of grinding against cover.
    */
   stuckSpeed: 0.5,
   stuckTime: 0.5,
-  /** The last seconds of a walk-off that doesn't reach the dead zone: the figure fades off the field. */
+  /** Leaving the field: the figure stands and fades out over this long, then appears in the dead zone. */
   vanishTime: 0.6,
 };
 

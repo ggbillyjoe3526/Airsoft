@@ -1,4 +1,4 @@
-import { vec3 } from '../sim/vec';
+import { type Vec3, vec3 } from '../sim/vec';
 import type { BlockKind, MapBlock, MapData, SpawnPoint } from './mapTypes';
 
 /**
@@ -188,12 +188,23 @@ const DEAD_ZONE_SPOTS: readonly [number, number][] = [
 const BLUE_DEAD_ZONE: SpawnPoint[] = DEAD_ZONE_SPOTS.map(([dx, z]) => ({ position: vec3(-DEAD_ZONE_X + dx, 0, z), yaw: -Math.PI / 2 }));
 const ORANGE_DEAD_ZONE: SpawnPoint[] = DEAD_ZONE_SPOTS.map(([dx, z]) => ({ position: vec3(DEAD_ZONE_X - dx, 0, z), yaw: Math.PI / 2 }));
 
+/** Advance routes, west to east, one per lane (points hand-picked on the walkable grid, checked in tests). */
+const LANES: Vec3[][] = [
+  // North: around the S-bend stacks.
+  [vec3(-9.5, 0, 9.5), vec3(-3.5, 0, 12.5), vec3(0, 0, 9.5), vec3(3.5, 0, 12.5), vec3(9.5, 0, 9.5)],
+  // Mid: through the crate yard, either side of the centre container.
+  [vec3(-10.5, 0, 2.5), vec3(-4.5, 0, -2.5), vec3(0, 0, 3.5), vec3(4.5, 0, -2.5), vec3(10.5, 0, 2.5)],
+  // South: through the office corridors.
+  [vec3(-10.5, 0, -8.5), vec3(-6.5, 0, -12.5), vec3(-2.5, 0, -8.5), vec3(2.5, 0, -12.5), vec3(6.5, 0, -12.5), vec3(10.5, 0, -8.5)],
+];
+
 export const DEPOT: MapData = {
   name: 'Depot',
   blocks: [...perimeter(), ...WEST_HALF, ...WEST_HALF.map(mirrorX), ...CENTRE],
   killY: -10,
   spawns: [BLUE_SPAWNS, ORANGE_SPAWNS],
   deadZones: [BLUE_DEAD_ZONE, ORANGE_DEAD_ZONE],
+  lanes: LANES,
 };
 
 /** Layout facts the tests check against, exported so they can't drift from the geometry. */

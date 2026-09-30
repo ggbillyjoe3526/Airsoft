@@ -4,7 +4,7 @@
 
 ```
 input ──► PlayerCommand ──┐
-ai (bots) ─► PlayerCommand ┤
+ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability grid + A*)
                            ▼
                    sim (pure, fixed 60 Hz) ◄── physics (Rapier: level collision)
                            │ plain-data GameState + events
@@ -28,6 +28,13 @@ ai (bots) ─► PlayerCommand ┤
   closed triangle meshes to avoid a Rapier capsule-vs-cuboid bug. Standing characters move horizontally,
   then `probeGround` (a downward sphere cast) rests them 0.04 m above the floor. It also offers static ray casts.
   The sim returns anything below `killY` to its spawn.
+- **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
+  routes (8-neighbour A*, string-pulled into straight legs). Pure; used by bots and by the sim for walk-offs.
+- **ai/**: bots. `BotController` runs before each tick (fills every bot's `PlayerCommand`, rations route searches to one
+  per tick) and after it (bots hear shots, near misses and hit calls from `state.events`). `botBrain.ts` is each bot's
+  state machine (advance along a lane → fight → cover → search) built on `perception.ts` (view cone + static ray casts),
+  `aim.ts` (turn rate, reaction, settling aim error) and `cover.ts` (random nearby spots hidden from the threat).
+  Bots read game state, never write it; their randomness is seeded per bot.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
   The local camera uses the latest input angles directly, so aim is never a tick behind.

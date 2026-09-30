@@ -55,7 +55,8 @@ export class MatchPresentation {
 
   /** True once you've called your hit and are watching someone else. */
   get spectating(): boolean {
-    return this.player.status === 'walkingOff' || this.player.status === 'out';
+    const s = this.player.status;
+    return s === 'walkingOff' || s === 'leaving' || s === 'out';
   }
 
   /** Call after every simulation tick, while that tick's events are still in the state. */

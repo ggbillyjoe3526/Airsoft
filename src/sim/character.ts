@@ -5,9 +5,10 @@ import { copy, type Vec3, vec3 } from './vec';
 
 /**
  * Where a character is in the hit-calling cycle: playing, standing with a hand up calling the hit,
- * walking off to the dead zone, or out (waiting in the dead zone for the next round).
+ * walking off to the dead zone, leaving the field (a walk-off that couldn't finish fades out where it
+ * is), or out (waiting in the dead zone for the next round).
  */
-export type LifeStatus = 'alive' | 'calling' | 'walkingOff' | 'out';
+export type LifeStatus = 'alive' | 'calling' | 'walkingOff' | 'leaving' | 'out';
 
 /** Plain-data character state. No Three.js objects live here. */
 export interface Character {
@@ -21,6 +22,11 @@ export interface Character {
   hitBy: number;
   /** Dead-zone spot this character walks to once hit. */
   deadZoneTarget: Vec3;
+  /** Way the dead-zone spot faces. */
+  deadZoneYaw: number;
+  /** Planned walk to the dead zone (waypoints) and the one currently being walked to. */
+  walkOffRoute: Vec3[];
+  walkOffLeg: number;
   /** Seconds this character has made no real progress while walking off. */
   walkOffStuck: number;
   /** Feet position (bottom of the collision capsule). */
@@ -59,6 +65,9 @@ export function createCharacter(
     statusTime: 0,
     hitBy: -1,
     deadZoneTarget: vec3(),
+    deadZoneYaw: 0,
+    walkOffRoute: [],
+    walkOffLeg: 0,
     walkOffStuck: 0,
     position: vec3(spawn.x, spawn.y, spawn.z),
     prevPosition: vec3(spawn.x, spawn.y, spawn.z),

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { BODY, MOVEMENT } from '../config/movement';
 import { HITS, ROUNDS } from '../config/hits';
+import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
 import { createCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
@@ -11,17 +12,18 @@ import type { GameEvent } from './events';
 import { spawnBB } from './ballistics';
 import { eliminate } from './elimination';
 import { createGameState } from './state';
+import { OPEN_NAV, openFieldElimination } from './testSupport';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
 const KILL_Y = -10;
-const DEAD_ZONES = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }]];
+const DEAD_ZONES = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 1.2 }]];
 
 /** A world with no level geometry to hit. */
 const openSky = { raycastStatic: () => -1 };
 
 function testContext(mover: CharacterMover, killY: number): SimContext {
-  return createSimContext({ mover, query: openSky, movement: MOVEMENT, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY, hits: HITS, deadZones: DEAD_ZONES, roundResetDelay: ROUNDS.resetDelay });
+  return createSimContext({ mover, query: openSky, movement: MOVEMENT, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY, hits: HITS, deadZones: DEAD_ZONES, roundResetDelay: ROUNDS.resetDelay, nav: OPEN_NAV, navSnap: NAV.snap });
 }
 
 const floor: CharacterMover = {
@@ -204,12 +206,14 @@ describe('hit calling and round flow', () => {
     for (let i = 0; i < 30; i++) stepSimulation(state, commands, ctx, DT);
     expect(target.position.x).toBeGreaterThan(called.x + 0.5);
 
-    // Too far to walk within walkOffTime: steps into the dead zone and stays there.
+    // Walks all the way to its dead-zone spot (x = 30), turns to face the way the spot faces, and stays.
     for (let i = 0; i < ticksFor(HITS.walkOffTime) && target.status === 'walkingOff'; i++) stepSimulation(state, commands, ctx, DT);
     expect(target.status).toBe('out');
-    expect(target.position.x).toBeCloseTo(30, 3);
+    expect(Math.hypot(target.position.x - 30, target.position.z)).toBeLessThanOrEqual(HITS.deadZoneArrive + 0.05);
+    expect(target.yaw).toBe(DEAD_ZONES[1]![0]!.yaw);
+    const parked = { ...target.position };
     for (let i = 0; i < 30; i++) stepSimulation(state, commands, ctx, DT);
-    expect(target.position.x).toBeCloseTo(30, 1);
+    expect(Math.hypot(target.position.x - parked.x, target.position.z - parked.z)).toBeLessThan(0.01);
   });
 
   it('a hit character cannot shoot', () => {
@@ -260,7 +264,7 @@ describe('hit calling and round flow', () => {
     const ctx = testContext(floor, KILL_Y);
     // A BB already on its way to the teammate when Orange is eliminated.
     spawnBB(state.bbs, 0, vec3(0, 1.2, -1), vec3(0, 0, -1), 88, 0);
-    eliminate(orange, 0, state.characters, DEAD_ZONES);
+    eliminate(orange, 0, state.characters, openFieldElimination(DEAD_ZONES));
     stepSimulation(state, new Map(), ctx, DT);
     expect(state.round.phase).toBe('over');
     expect(state.bbs.bbs.some((b) => b.active)).toBe(true);
@@ -292,7 +296,7 @@ describe('hit calling and round flow', () => {
       probeGround: floor.probeGround,
     };
     const ctx = testContext(wall, KILL_Y);
-    eliminate(target, 0, state.characters, DEAD_ZONES);
+    eliminate(target, 0, state.characters, openFieldElimination(DEAD_ZONES));
     let ticks = 0;
     while (target.status !== 'out' && ticks < 1000) {
       stepSimulation(state, new Map(), ctx, DT);

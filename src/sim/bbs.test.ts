@@ -6,6 +6,7 @@ import type { WorldQuery } from './armament';
 import { createBBPool, spawnBB } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
 import { createCharacter } from './character';
+import { openFieldElimination } from './testSupport';
 import type { GameEvent } from './events';
 import { vec3 } from './vec';
 
@@ -95,7 +96,7 @@ describe('stepBBs hitting characters', () => {
     const pool = createBBPool(4);
     const bb = spawnBB(pool, shooter.id, vec3(0, 1.2, 0), vec3(0, 0, -1), 88, 0);
     const events: GameEvent[] = [];
-    const bbTargets: BBTargets = { characters, hits, deadZones };
+    const bbTargets: BBTargets = { characters, hits, elimination: openFieldElimination(deadZones) };
     const run = (wall = noWall) => {
       for (let i = 0; i < 60 && bb.active; i++) stepBBs(pool, BALLISTICS, wall, KILL_Y, events, DT, bbTargets);
     };
@@ -172,7 +173,7 @@ describe('stepBBs hitting characters', () => {
     const pool = createBBPool(4);
     spawnBB(pool, 1, vec3(0, 1.2, 0), vec3(0, 0, -1), 88, 0);
     spawnBB(pool, 1, vec3(0.6, 1.2, 0), vec3(0, 0, -1), 88, 0);
-    for (let i = 0; i < 30; i++) stepBBs(pool, BALLISTICS, noWall, KILL_Y, [], DT, { characters, hits: HITS, deadZones: zones });
+    for (let i = 0; i < 30; i++) stepBBs(pool, BALLISTICS, noWall, KILL_Y, [], DT, { characters, hits: HITS, elimination: openFieldElimination(zones) });
     expect(a.status).toBe('calling');
     expect(b.status).toBe('calling');
     expect(a.deadZoneTarget).not.toEqual(b.deadZoneTarget);

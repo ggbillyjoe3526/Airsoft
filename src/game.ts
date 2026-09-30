@@ -1,6 +1,9 @@
 import type * as THREE from 'three';
+import { BotController } from './ai/botController';
 import { BALLISTICS } from './config/ballistics';
+import { BOTS } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
+import { NAV } from './config/nav';
 import { BODY, MOVEMENT } from './config/movement';
 import { PHYSICS } from './config/physics';
 import { LOADOUT } from './config/replicas';
@@ -11,6 +14,7 @@ import { Keyboard } from './input/keyboard';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
 import type { MapData } from './map/mapTypes';
+import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { initPhysics, PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { addLighting } from './render/lighting';
@@ -43,6 +47,8 @@ export class Game {
   readonly state: GameState;
   private readonly renderer: Renderer;
   private readonly physics: PhysicsWorld;
+  private readonly nav: NavGrid;
+  private readonly bots: BotController;
   private readonly keyboard: Keyboard;
   private readonly pointer: PointerLock;
   private readonly input: PlayerInput;
@@ -79,9 +85,16 @@ export class Game {
     this.disposeLighting = addLighting(this.renderer.scene, map);
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
+    this.nav = buildNavGrid(map, NAV);
     this.state = createGameState(SIM.seed, BALLISTICS.maxBBs);
     this.player = this.spawnRoster(map);
     this.commands.set(PLAYER_ID, this.playerCommand);
+    this.bots = new BotController(
+      this.state,
+      this.state.characters.filter((c) => c !== this.player),
+      this.commands,
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, body: BODY, hits: HITS, loadout: LOADOUT, cfg: BOTS, seed: SIM.seed },
+    );
     this.ctx = createSimContext({
       mover: this.physics,
       query: this.physics,
@@ -92,6 +105,8 @@ export class Game {
       killY: map.killY,
       hits: HITS,
       deadZones: map.deadZones,
+      nav: this.nav,
+      navSnap: NAV.snap,
       roundResetDelay: ROUNDS.resetDelay,
     });
 
@@ -129,8 +144,8 @@ export class Game {
   }
 
   /**
-   * Creates both teams at the map's spawns: the local player plus teammates on Blue, and Orange.
-   * Until bots arrive, everyone but the player just stands at their spawn. Returns the player.
+   * Creates both teams at the map's spawns: the local player plus bot teammates on Blue, and Orange
+   * bots. Returns the player.
    */
   private spawnRoster(map: MapData): Character {
     let id = PLAYER_ID;
@@ -212,7 +227,9 @@ export class Game {
       const ticks = advanceStepper(this.stepper, dt);
       for (let i = 0; i < ticks; i++) {
         this.input.fillCommand(this.playerCommand);
+        this.bots.think(this.state, SIM_DT);
         stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
+        this.bots.observe(this.state);
         this.combat.afterTick();
         this.match.afterTick(this.input.yaw);
         for (const e of this.state.events) if (e.type === 'roundStart') this.input.resetView(this.player.spawnYaw);

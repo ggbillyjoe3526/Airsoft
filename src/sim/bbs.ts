@@ -1,10 +1,9 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { HitConfig } from '../config/hits';
-import type { SpawnPoint } from '../map/mapTypes';
 import type { WorldQuery } from './armament';
 import { type BB, type BBPool, stepBBFlight } from './ballistics';
 import type { Character } from './character';
-import { eliminate, isInPlay } from './elimination';
+import { type EliminationContext, eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
 import { characterHitVolume, rayCharacter, type VerticalCapsule } from './hitbox';
 import { copy, vec3 } from './vec';
@@ -17,7 +16,7 @@ const head: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
 export interface BBTargets {
   characters: Character[];
   hits: HitConfig;
-  deadZones: readonly (readonly SpawnPoint[])[];
+  elimination: EliminationContext;
 }
 
 /** The first character in play along the BB's segment this tick (before `maxT`), or undefined. */
@@ -74,7 +73,7 @@ export function stepBBs(
         bb.position.y = bb.prevPosition.y + segmentDir.y * hit.at;
         bb.position.z = bb.prevPosition.z + segmentDir.z * hit.at;
         bb.active = false;
-        eliminate(hit.victim, bb.ownerId, targets!.characters, targets!.deadZones);
+        eliminate(hit.victim, bb.ownerId, targets!.characters, targets!.elimination);
         events.push({
           type: 'characterHit',
           victimId: hit.victim.id,

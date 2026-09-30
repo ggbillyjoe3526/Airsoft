@@ -26,4 +26,9 @@ export interface MapData {
    * way of play (a corner of the spawn yard), one per player.
    */
   deadZones: [SpawnPoint[], SpawnPoint[]];
+  /**
+   * Routes across the map, each an ordered list of floor points from the west (Blue) side to the east
+   * (Orange) side. Bots advance along one; empty on maps without bots.
+   */
+  lanes: Vec3[][];
 }

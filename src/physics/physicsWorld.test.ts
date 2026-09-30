@@ -32,6 +32,7 @@ const MAP: MapData = {
   killY: -10,
   spawns: [[], []],
   deadZones: [[], []],
+  lanes: [],
 };
 
 function simulate(world: PhysicsWorld, c: Character, cmd: PlayerCommand, ticks: number, onTick?: () => void): void {
@@ -183,7 +184,7 @@ describe('PhysicsWorld (Rapier)', () => {
     const freeJumpAirTicks = Math.ceil((2 * MOVEMENT.jumpSpeed) / MOVEMENT.gravity / DT) + 2;
     for (const cover of [[barrier], window]) {
       for (const yaw of [0, 0.5]) {
-        const world = new PhysicsWorld({ name: 'cover', blocks: [floor, ...cover], killY: -50, spawns: [[], []], deadZones: [[], []] }, BODY, DT);
+        const world = new PhysicsWorld({ name: 'cover', blocks: [floor, ...cover], killY: -50, spawns: [[], []], deadZones: [[], []], lanes: [] }, BODY, DT);
         const c = createCharacter(0, vec3(0, REST, 3), yaw); // facing the cover
         world.addCharacter(c);
         const cmd = createCommand();
@@ -270,6 +271,7 @@ describe('PhysicsWorld (Rapier)', () => {
       killY: -50,
       spawns: [[], []],
       deadZones: [[], []],
+      lanes: [],
     };
     expectAtRest(heightRangeAlongDiagonals(slab, { x: 3, z: -2 }, 0));
 
@@ -284,6 +286,7 @@ describe('PhysicsWorld (Rapier)', () => {
       killY: -50,
       spawns: [[], []],
       deadZones: [[], []],
+      lanes: [],
     };
     expectAtRest(heightRangeAlongDiagonals(lowCrate, { x: 2, z: 1 }, ledge));
   });
@@ -295,6 +298,7 @@ describe('PhysicsWorld (Rapier)', () => {
       killY: -50,
       spawns: [[], []],
       deadZones: [[], []],
+      lanes: [],
     };
     const world = new PhysicsWorld(open, BODY, DT);
     const runs = 24;

@@ -3,6 +3,7 @@ import type { HitConfig } from '../config/hits';
 import type { BodyConfig, MovementConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
 import type { SpawnPoint } from '../map/mapTypes';
+import { createNavSearch, type NavGrid } from '../nav/navGrid';
 import { type ArmamentContext, type Muzzle, stepArmament, type WorldQuery } from './armament';
 import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
@@ -27,6 +28,10 @@ export interface SimServices {
   hits: HitConfig;
   /** Per team, dead-zone spots (map data). */
   deadZones: readonly (readonly SpawnPoint[])[];
+  /** Walkability grid of the map (walk-off routes). */
+  nav: NavGrid;
+  /** Route ends snap to the nearest walkable cell within this distance. */
+  navSnap: number;
   /** Seconds from a team being wiped out to everyone respawning. */
   roundResetDelay: number;
 }
@@ -59,7 +64,11 @@ export function createSimContext(services: SimServices): SimContext {
       query: services.query,
       events: [],
     },
-    targets: { characters: [], hits: services.hits, deadZones: services.deadZones },
+    targets: {
+      characters: [],
+      hits: services.hits,
+      elimination: { deadZones: services.deadZones, nav: services.nav, navSearch: createNavSearch(services.nav), snap: services.navSnap },
+    },
   };
 }
 

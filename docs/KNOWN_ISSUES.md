@@ -22,12 +22,12 @@ Classified as **fix now / document / can wait**.
 | The BB path and near puffs sit on the crosshair's lower arm | can wait | Consider a smaller lower arm or a dot-only crosshair option. |
 | AEG BBs fly nearly flat within Depot's 30 m (hop-up 0.12, spinDecayTime 0.55) | can wait | Tuning: playtest a shorter spinDecayTime so the drop shows within 30 m. |
 | Sound recipe numbers are hardcoded in sfx.ts; one vec3 per shot/impact event; per-tick armCtx; `muzzle` looked up by name per shot; viewmodel `setAspect` every frame; untyped `userData.axis` | can wait | Minor code debt; profile before optimising. |
-| Walk-off goes in a straight line; anyone blocked by cover (slower than 0.5 m/s for 0.5 s) fades off the field over 0.6 s and reappears in the dead zone | document | Use the bots' waypoint graph for walk-off once it exists. |
 | Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing, no turn interpolation | can wait | Art pass / Phase 2 animations. |
-| Other players' yaw isn't interpolated between ticks | can wait | Invisible at 60 Hz for standing dummies; revisit with bots turning. |
+| Other players' yaw isn't interpolated between ticks | can wait | Bots turn at most 4.5 rad/s (≈4.3° per tick); check turning bots look smooth on high-refresh screens. |
 | Hit volume is round, so from the side it's deeper than the figure (0.4 m vs ~0.28 m chest): a BB ~6 cm in front of the chest counts | can wait | Playtest flank shots; consider a slimmer lower capsule or an elliptical test. |
 | Arms don't count as hits (most sites count them; replica hits don't) | can wait | Playtest whether BBs visibly striking an arm with no hit feel unfair. |
-| A walk-off that reaches the dead zone in its last 0.6 s fades, then pops back to full opacity on arrival | can wait | Feature 4 critic. Fade only when the remaining distance can't be walked in the remaining time, or after the stuck skip. Rare on Depot (needs a clear 11–13 m line). |
-| Stuck check only counts < 0.5 m/s, so sliding along diagonal cover or into a corner can still grind for up to 4 s | can wait | Better: measure progress towards the dead zone, not speed. Superseded once walk-off uses navigation. |
 | The hit-direction wedge is cut off at the end of calling (its 2.2 s fade is longer than the 1.4 s call) | can wait | Match the wedge fade to HITS.callTime. |
-| Players moved into the dead zone keep their walk-off facing (often towards a wall) | can wait | Turn them to the dead-zone spot's yaw on arrival. |
+| Bots only use the AEG, never switch to the pistol, and don't jump | can wait | Fine for Phase 1. |
+| Bots' default look direction when idle is "towards the enemy side" along x (Depot's layout) | can wait | Use lane direction / map data if a map runs north-south. |
+| Bots hear gunfire through walls and always know roughly where it came from | document | Deliberate simplification (hearing range 22 m). |
+| A walk-off that can't reach the dead zone within 14 s, or gets stuck, fades out where it is and reappears in the dead zone | document | Rare now that walk-offs follow nav routes. |
