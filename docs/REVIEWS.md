@@ -11,3 +11,4 @@ One line per feature: feature · attempts used · final score · verdict.
 | Bots + navigation | 3 of 3 (7.4 → 8.1 → 8.0) | 8.0 | Auto-accepted (attempt 3 ≥ 7.0); two-shooter hearing twitch fixed after review; remaining issues in KNOWN_ISSUES |
 | Full matches (clock, score, first to 5, result screen) | 3 of 3 (7.7 → 8.4 → 8.6) | 8.6 | Accepted; the review's small leftovers (round-loss wording, shared whistle schedule, audio pause) fixed in the bug pass |
 | Phase 2 M1: walk/sprint keys, key bindings, bigger Depot | 3 of 3 (7.9 → 8.2 → 8.6) | 8.6 | Accepted; leftovers (debug-key priority on old saves, reserved-key message, indentation) fixed after review |
+| Phase 2 M2: footsteps, bots hear them, sound pass | 3 of 3 (7.6 → 8.4 → 8.8) | 8.8 | Accepted; footstep ranges and caps are first guesses (KNOWN_ISSUES) |

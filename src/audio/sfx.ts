@@ -119,7 +119,8 @@ export class Sfx {
         if (!self && (!at || Math.hypot(at.x - this.listener.x, at.z - this.listener.z) > AUDIO.footsteps.maxDistance)) return;
         // Your own steps always play: they're how you judge your own pace and noise.
         if (!self && !this.stepLimit.take(this.ctx.currentTime)) return;
-        this.footstep(this.output(at ?? null), e.kind, self ? AUDIO.footsteps.selfVolume / AUDIO.footsteps.volume : 1);
+        const ownStepScale = AUDIO.footsteps.selfVolume / AUDIO.footsteps.volume;
+        this.footstep(this.output(at ?? null), e.kind, self ? ownStepScale : 1);
         return;
       }
       case 'characterHit':
