@@ -98,7 +98,8 @@ export class KeySettings {
       return;
     }
     if (UNBINDABLE_KEYS.has(e.code) || !this.bindings.rebind(action, e.code)) {
-      this.refresh(`${keyLabel(e.code)} can't be bound.`);
+      const reserved = this.bindings.actionOf(e.code)?.startsWith('debug');
+      this.refresh(`${keyLabel(e.code)} can't be bound${reserved ? ' (it shows debug info)' : ''}.`);
       return;
     }
     this.listening = null;

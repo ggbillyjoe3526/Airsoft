@@ -110,6 +110,14 @@ describe('KeyBindings', () => {
     expect(b.codes('crouch')).toEqual(['KeyC']);
   });
 
+  it('gives reserved debug keys priority over old saves that used them', () => {
+    const store = new MemoryStore();
+    store.setItem('airsoft.keyBindings', JSON.stringify({ jump: ['Backquote', 'KeyJ'] }));
+    const b = new KeyBindings(store);
+    expect(b.codes('debugOverlay')).toEqual(['Backquote', 'F3']);
+    expect(b.codes('jump')).toEqual(['KeyJ']);
+  });
+
   it('never leaves one key on two actions after loading', () => {
     const store = new MemoryStore();
     store.setItem('airsoft.keyBindings', JSON.stringify({ jump: ['KeyW'] }));

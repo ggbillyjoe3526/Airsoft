@@ -47,11 +47,10 @@ export class KeyBindings {
    */
   rebind(action: Action, code: string): boolean {
     if (UNBINDABLE_KEYS.has(code) || !REBINDABLE_ACTIONS.has(action)) return false;
-    const owner = this.actionOf(code);
-    if (owner && !REBINDABLE_ACTIONS.has(owner)) return false;
+    const other = this.actionOf(code);
+    if (other && !REBINDABLE_ACTIONS.has(other)) return false;
     const mine = this.map.get(action) ?? [];
     const old = mine[0];
-    const other = owner;
     if (other && other !== action) {
       const theirs = this.map.get(other)!;
       const swapIn = old !== undefined && !theirs.includes(old) && (theirs[0] === code || theirs.length === 1);
@@ -94,16 +93,18 @@ export class KeyBindings {
       const saved = JSON.parse(raw) as Record<string, unknown>;
       for (const action of Object.keys(DEFAULT_BINDINGS) as Action[]) {
         if (!REBINDABLE_ACTIONS.has(action)) continue; // debug keys always keep their defaults
-      const codes = saved[action];
+        const codes = saved[action];
         if (Array.isArray(codes) && codes.length > 0 && codes.every((c) => typeof c === 'string' && !UNBINDABLE_KEYS.has(c))) this.map.set(action, codes as string[]);
       }
     } catch {
       // Corrupt entry: keep the defaults.
     }
     // A key belongs to one action: if saved keys clash with a default (e.g. a newly added action), the
-    // first action in the table keeps it.
+    // reserved debug keys win, then the first action in the table.
     const seen = new Set<string>();
-    for (const [action, codes] of this.map) {
+    const order = [...this.map.keys()].sort((a, b) => Number(REBINDABLE_ACTIONS.has(a)) - Number(REBINDABLE_ACTIONS.has(b)));
+    for (const action of order) {
+      const codes = this.map.get(action)!;
       this.map.set(action, codes.filter((c) => !seen.has(c)));
       for (const c of codes) seen.add(c);
     }
