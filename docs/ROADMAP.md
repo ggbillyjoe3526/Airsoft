@@ -1,10 +1,16 @@
 # Roadmap
 
-Agreed with the project owner on 2026-09-30 after v0.1 (Phase 1). CLAUDE.md §7 holds the original outline;
-this file is the current detailed plan. Every milestone goes through the critic (CLAUDE.md §12) and is
+Agreed with the project owner on 2026-09-30 after v0.1-alpha (Phase 1). CLAUDE.md §7 holds the outline;
+this file is the current detailed plan.
+
+**Releases:** the game stays in alpha at least until Phase 3 is complete. Each phase is one alpha on the
+v0.1 line: Phase 1 = Alpha 1 (`v0.1-alpha`), Phase 2 = Alpha 2 (`v0.1-alpha.2`), Phase 3 = Alpha 3
+(`v0.1-alpha.3`), and Phase 4 possibly Alpha 4 (`v0.1-alpha.4`). Git tags can't contain spaces, hence the dots.
+
+**Multiplayer is not planned** (owner decision, 2026-09-30). The game is single-player against bots. Every milestone goes through the critic (CLAUDE.md §12) and is
 pushed when accepted. Move on only when the previous part is fun.
 
-## Phase 2: Core gameplay (Depot only), target v0.1-alpha.2
+## Phase 2: Core gameplay (Depot only) → Alpha 2 (`v0.1-alpha.2`)
 
 Focus: make the existing loop feel great on one map. No second map yet.
 
@@ -28,7 +34,7 @@ Focus: make the existing loop feel great on one map. No second map yet.
   - Mode choice on the start screen (elimination stays).
 - **M6. Wrap-up:** owner playtest, 60 FPS check on the target laptop, bug pass, tag v0.1-alpha.2.
 
-## Phase 3: Content, target v0.3
+## Phase 3: Content → Alpha 3 (`v0.1-alpha.3`)
 
 - New replica categories: shotgun, DMR, SMG. Loadout screen (primary + sidearm).
 - Shooting range. Basic unlockable cosmetics (gloves, goggles, patches).
@@ -36,13 +42,7 @@ Focus: make the existing loop feel great on one map. No second map yet.
   bang-bang surrender.
 - Second map (woodland) once Depot and the core game feel right.
 
-## Phase 4: Multiplayer, target v0.4 (plan with the owner before starting)
-
-- Authoritative Node.js server reusing the deterministic simulation.
-- Client prediction, lag compensation for BB projectiles.
-- Private lobbies with invite links; bots fill empty slots.
-
-## Phase 5: Polish, target v1.0
+## Phase 4: Polish → possibly Alpha 4 (`v0.1-alpha.4`)
 
 - Art pass (CC0 assets only), VFX, lighting, proper menus.
 - Onboarding / short tutorial.

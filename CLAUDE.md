@@ -33,18 +33,18 @@ These are decided. Do not revisit them without asking me.
 | Audio | Web Audio API; procedurally generated sounds first, CC0 samples later |
 | Input | Pointer Lock API, keyboard + mouse |
 | Tests | Vitest for pure logic (ballistics, round state, hit rules) |
-| Multiplayer | **Not in the prototype.** Single-player vs bots first. |
+| Multiplayer | **Out of scope.** Single-player vs bots only (owner decision, 2026-09-30). |
 
-### Designing for later multiplayer
+### Simulation structure
 
-Multiplayer will come later, so keep the path open cheaply:
+There is no multiplayer planned, but keep the simulation clean and testable:
 
 - Run gameplay on a **fixed-timestep simulation** (e.g. 60 Hz), separate from rendering.
 - Players and bots both act through the same **input/command interface**; bots are just another controller.
 - Keep game state in plain data objects separate from Three.js scene objects.
 - Keep randomness seedable.
 
-Do **not** build networking code, servers, or matchmaking until I ask.
+Do **not** build networking code, servers, or matchmaking.
 
 ## 4. Assets Policy
 
@@ -108,10 +108,14 @@ Spawn, understand the goal, move naturally, fire BBs, feel the replica, hit a bo
 
 Move on only when the previous phase is actually fun. Validate before expanding.
 
-1. **Phase 2 — Core feel:** better audio, reload animations, hit reactions, an objective mode (e.g. attack/defend a flag or "hostage" prop), a second map (outdoor woodland), smarter bots.
-2. **Phase 3 — Content:** more replica categories (shotgun, DMR, SMG), loadout screen, a shooting range, basic unlockable cosmetics.
-3. **Phase 4 — Multiplayer:** authoritative server (Node.js + WebSockets/WebRTC), client prediction, lag compensation for projectiles, private lobbies. Plan this phase with me before starting.
-4. **Phase 5 — Polish:** art pass, VFX, onboarding, accessibility, optimisation, balance.
+The game stays in **alpha** at least until Phase 3 is complete. Each phase ships as an alpha release on the
+v0.1 line (Phase 1 = `v0.1-alpha`, Phase 2 = Alpha 2 `v0.1-alpha.2`, and so on). Detailed plan: `docs/ROADMAP.md`.
+
+1. **Phase 2 — Core gameplay (Alpha 2):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, an objective mode, all on Depot.
+2. **Phase 3 — Content (Alpha 3):** more replica categories (shotgun, DMR, SMG), loadout screen, a shooting range, basic unlockable cosmetics, a second map.
+3. **Phase 4 — Polish (possibly Alpha 4):** art pass, VFX, onboarding, accessibility, optimisation, balance.
+
+Multiplayer is not planned.
 
 Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do not implement them unless asked.
 

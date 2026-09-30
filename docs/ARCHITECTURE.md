@@ -56,7 +56,8 @@ Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind,
 per team (later also waypoints/cover points). The same data builds Rapier colliders and merged Three.js meshes
 (one draw call per surface texture).
 
-## Multiplayer readiness (not implemented)
+## Simulation structure
 
-Fixed tick, command-driven characters, plain-data state and seeded RNG are in place so an authoritative
-server can later run the same `stepSimulation`.
+Multiplayer is not planned. The fixed tick, command-driven characters (bots drive the same commands as
+the player), plain-data state and seeded RNG stay because they make the simulation deterministic and
+unit-testable (headless bot matches in tests).

@@ -230,7 +230,7 @@ export class Game {
 
   /**
    * A fresh match from round 1 (after the result screen's "Play again"). A direct sim-state change from
-   * the composition root: with multiplayer this becomes a server-side decision, not a local call.
+   * the composition root.
    */
   private restartMatch(): void {
     this.state.events.length = 0;

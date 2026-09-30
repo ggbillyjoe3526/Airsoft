@@ -115,8 +115,8 @@ Then open **http://localhost:4173**.
 elimination with hit calling, bots (patrol, spot, react, shoot, take cover, search, hunt), 3v3 matches
 with a round clock and first-to-5 scoring, synthesised sounds, a minimal HUD.
 
-**Not yet:** multiplayer, objectives, more maps or replicas, menus beyond the start screen, real art.
-Known rough edges are listed in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty and pacing
+**Not yet:** objectives, more maps or replicas, menus beyond the start screen, real art.
+The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty and pacing
 still need tuning from playtesting (they may feel quite deadly up close).
 
 ---
