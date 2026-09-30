@@ -113,21 +113,22 @@ export const VIEWMODEL = {
   sprintDrop: 0.06,
   sprintTilt: 0.5,
   /**
-   * Reload: the replica is lifted and brought inward, and cants about its own grip (radians at the
-   * midpoint: muzzle up, roll top-right, turn in) so the magwell faces you and stays on screen, while the magazine slides out along the magwell,
+   * Reload: the replica lifts slightly and cants about its own grip (radians at the midpoint: muzzle
+   * up, roll top-right, turn) so it stays on screen without covering the crosshair, while the magazine slides out along the magwell,
    * stays out, then is pushed back in. Phase times are fractions of the replica's reloadTime.
    */
   reload: {
-    tilt: 0.2,
+    tilt: 0.1,
     roll: -0.42,
-    turn: 0.25,
+    turn: 0.0,
     /** Lifted up (m) and brought in towards the centre of view (m), so the magwell is in sight. */
-    lift: 0.08,
-    inward: 0.06,
-    magTravel: 0.32,
+    lift: 0.03,
+    inward: 0.0,
+    magTravel: 0.14,
     magOutEnd: 0.28,
-    magInStart: 0.5,
-    magSeated: 0.78,
+    magInStart: 0.62,
+    /** Seated right at the end, when the reloadEnd click plays. */
+    magSeated: 0.97,
   },
   /** Pitch-down (radians) of the replica at the start of a draw. */
   drawTilt: 0.6,
