@@ -33,9 +33,9 @@ function approach(current: number, target: number, maxDelta: number): number {
   return Math.max(current - maxDelta, target);
 }
 
-/** Speed the character is aiming for given current stance and sprint state. */
+/** Speed the character is aiming for given current stance and pace (walk / run / sprint). */
 export function targetSpeed(c: Character, cfg: MovementConfig): number {
-  const base = c.sprinting ? cfg.sprintSpeed : cfg.walkSpeed;
+  const base = c.walking ? cfg.walkSpeed : c.sprinting ? cfg.sprintSpeed : cfg.runSpeed;
   return base + (cfg.crouchSpeed - base) * c.crouchAmount;
 }
 
@@ -55,8 +55,9 @@ export function stepMovement(
   c.crouchAmount = approach(c.crouchAmount, cmd.crouch ? 1 : 0, dt / cfg.crouchTransitionTime);
   const crouched = c.crouchAmount >= cfg.crouchedThreshold;
 
-  // Sprint: forward only, never crouched.
-  c.sprinting = cmd.sprint && cmd.forward >= cfg.sprintMinForward && !crouched;
+  // Walk (slow, quiet) wins over sprint. Sprint: forward only, never crouched.
+  c.walking = cmd.walk && !crouched;
+  c.sprinting = cmd.sprint && !c.walking && cmd.forward >= cfg.sprintMinForward && !crouched;
   // The replica is carried, not aimed, while sprinting and for a moment after.
   c.sprintLockout = c.sprinting ? cfg.sprintFireLockout : Math.max(0, c.sprintLockout - dt);
 

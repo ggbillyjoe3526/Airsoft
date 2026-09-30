@@ -1,11 +1,17 @@
-/** Key bindings use KeyboardEvent.code, so they follow physical key positions on any layout. */
-export const BINDINGS = {
+/**
+ * Default key bindings (players can rebind them; see input/keyBindings.ts). They use
+ * KeyboardEvent.code, so they follow physical key positions on any layout. The first key of each
+ * action is the one shown and rebound in the settings.
+ */
+export const DEFAULT_BINDINGS = {
   forward: ['KeyW', 'ArrowUp'],
   back: ['KeyS', 'ArrowDown'],
   left: ['KeyA', 'ArrowLeft'],
   right: ['KeyD', 'ArrowRight'],
-  sprint: ['ShiftLeft', 'ShiftRight'],
-  // Ctrl is deliberately not bound: Ctrl+W would close the tab and can't be blocked outside fullscreen.
+  // Walk on Shift like CS/Valorant. Ctrl is deliberately not a default: Ctrl+W would close the tab
+  // and can't be blocked outside fullscreen.
+  walk: ['ShiftLeft', 'ShiftRight'],
+  sprint: ['AltLeft'],
   crouch: ['KeyC'],
   jump: ['Space'],
   reload: ['KeyR'],
@@ -17,9 +23,31 @@ export const BINDINGS = {
   debugBbPaths: ['BracketRight'],
 } as const satisfies Record<string, readonly string[]>;
 
-export type Action = keyof typeof BINDINGS;
+export type Action = keyof typeof DEFAULT_BINDINGS;
 
-/** Keys whose browser default (page scroll, find bar) must be suppressed while playing. */
+/** Actions players can rebind, in the order the settings list them, with their labels. */
+export const REBINDABLE: readonly { action: Action; label: string }[] = [
+  { action: 'forward', label: 'Move forward' },
+  { action: 'back', label: 'Move back' },
+  { action: 'left', label: 'Move left' },
+  { action: 'right', label: 'Move right' },
+  { action: 'walk', label: 'Walk (hold, quiet)' },
+  { action: 'sprint', label: 'Sprint (hold)' },
+  { action: 'crouch', label: 'Crouch (hold)' },
+  { action: 'jump', label: 'Jump' },
+  { action: 'reload', label: 'Reload' },
+  { action: 'slot1', label: 'Rifle' },
+  { action: 'slot2', label: 'Pistol' },
+  { action: 'swap', label: 'Switch replica' },
+];
+
+/** Keys that can't be bound: Escape pauses (the browser releases the mouse), and Meta/OS keys. */
+export const UNBINDABLE_KEYS: ReadonlySet<string> = new Set(['Escape', 'MetaLeft', 'MetaRight', 'ContextMenu']);
+
+/**
+ * Keys whose browser default (page scroll, find bar, Alt opening the menu bar) is suppressed while
+ * playing, on key down and up. Any bound key is suppressed too.
+ */
 export const PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
   'Space',
   'F3',
@@ -27,6 +55,9 @@ export const PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
   'ArrowDown',
   'ArrowLeft',
   'ArrowRight',
+  'AltLeft',
+  'AltRight',
+  'Tab',
 ]);
 
 export const MOUSE = {

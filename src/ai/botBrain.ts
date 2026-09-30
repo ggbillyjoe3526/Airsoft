@@ -503,6 +503,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.forward = 0;
   cmd.right = 0;
   cmd.sprint = false;
+  cmd.walk = false;
   cmd.crouch = false;
   cmd.jump = false;
   cmd.fire = false;

@@ -1,4 +1,6 @@
-import { MOUSE } from '../config/controls';
+import { type Action, MOUSE } from '../config/controls';
+import { type KeyBindings, keyLabel } from '../input/keyBindings';
+import { KeySettings } from './keySettings';
 
 const SENSITIVITY_KEY = 'airsoft.sensitivity';
 
@@ -20,6 +22,10 @@ function describeRules(r: MatchRulesText): string {
     `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` +
     `First to ${r.winsNeeded} rounds wins the match. One hit and you're out.`
   );
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"]/g, (c) => `&${({ '&': 'amp', '<': 'lt', '>': 'gt', '"': 'quot' } as Record<string, string>)[c]};`);
 }
 
 function loadSensitivity(): number {
@@ -51,11 +57,15 @@ export class StartScreen {
   private readonly playButton: HTMLButtonElement;
   private readonly hint: HTMLParagraphElement;
   private readonly result: HTMLDivElement;
+  private readonly controls: HTMLDivElement;
+  private readonly keySettings: KeySettings;
+  private readonly keysButton: HTMLButtonElement;
   private sensitivityValue = loadSensitivity();
 
   constructor(
     parent: HTMLElement,
     rules: MatchRulesText,
+    private readonly bindings: KeyBindings,
     onPlay: () => void,
     onSensitivity: (v: number) => void,
   ) {
@@ -73,17 +83,8 @@ export class StartScreen {
           <input type="range" min="${MOUSE.minSensitivity}" max="${MOUSE.maxSensitivity}" step="${MOUSE.sensitivityStep}" />
           <output></output>
         </label>
-        <div class="start-controls">
-          <div><kbd>WASD</kbd> move</div>
-          <div><kbd>Mouse</kbd> aim, <kbd>LMB</kbd> fire</div>
-          <div><kbd>Shift</kbd> sprint</div>
-          <div><kbd>C</kbd> crouch</div>
-          <div><kbd>Space</kbd> jump</div>
-          <div><kbd>R</kbd> reload</div>
-          <div><kbd>1</kbd> <kbd>2</kbd> <kbd>Q</kbd> / wheel: switch</div>
-          <div><kbd>Esc</kbd> pause</div>
-          <div><kbd>\`</kbd> / <kbd>F3</kbd> debug info</div>
-        </div>
+        <div class="start-controls"></div>
+        <button class="start-keys" type="button">Key bindings</button>
       </div>`;
     parent.appendChild(this.root);
 
@@ -106,6 +107,37 @@ export class StartScreen {
       this.showHint('');
       onPlay();
     });
+
+    this.controls = this.root.querySelector('.start-controls') as HTMLDivElement;
+    this.keysButton = this.root.querySelector('.start-keys') as HTMLButtonElement;
+    this.keySettings = new KeySettings(bindings);
+    this.keysButton.before(this.keySettings.root);
+    this.keysButton.addEventListener('click', () => this.showKeySettings(!this.keySettings.visible));
+    bindings.onChange(() => this.renderControls());
+    this.renderControls();
+  }
+
+  /** Swaps the controls summary for the key-binding settings (or back). */
+  private showKeySettings(show: boolean): void {
+    this.keySettings.setVisible(show);
+    this.controls.hidden = show;
+    this.keysButton.textContent = show ? 'Done' : 'Key bindings';
+  }
+
+  /** The controls summary, showing the player's current keys. */
+  private renderControls(): void {
+    const k = (a: Action): string => `<kbd>${escapeHtml(keyLabel(this.bindings.primary(a)))}</kbd>`;
+    this.controls.innerHTML = `
+      <div>${k('forward')}${k('left')}${k('back')}${k('right')} move</div>
+      <div><kbd>Mouse</kbd> aim, <kbd>LMB</kbd> fire</div>
+      <div>${k('walk')} walk (quiet)</div>
+      <div>${k('sprint')} sprint</div>
+      <div>${k('crouch')} crouch</div>
+      <div>${k('jump')} jump</div>
+      <div>${k('reload')} reload</div>
+      <div>${k('slot1')} ${k('slot2')} ${k('swap')} / wheel: switch</div>
+      <div><kbd>Esc</kbd> pause</div>
+      <div><kbd>\`</kbd> / <kbd>F3</kbd> debug info</div>`;
   }
 
   get sensitivity(): number {
@@ -135,6 +167,7 @@ export class StartScreen {
 
   hide(): void {
     this.root.hidden = true;
+    this.showKeySettings(false);
     this.showHint('');
   }
 
@@ -145,6 +178,7 @@ export class StartScreen {
   }
 
   dispose(): void {
+    this.keySettings.dispose();
     this.root.remove();
   }
 }

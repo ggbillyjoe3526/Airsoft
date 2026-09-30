@@ -77,7 +77,7 @@ export class Viewmodel {
   }
 
   /**
-   * Called once per frame. `speed` is the player's horizontal speed and `walkSpeed` its walk speed;
+   * Called once per frame. `speed` is the player's horizontal speed and `runSpeed` its walk speed;
    * `carried` is true while sprinting or in the post-sprint lockout; `callingHit` lowers the replica
    * and raises your hand.
    */
@@ -86,7 +86,7 @@ export class Viewmodel {
     yaw: number,
     pitch: number,
     speed: number,
-    walkSpeed: number,
+    runSpeed: number,
     carried: boolean,
     armament: Armament,
     loadout: readonly ReplicaConfig[],
@@ -108,7 +108,7 @@ export class Viewmodel {
     this.swayY = clampSway(this.swayY * settle - dPitch * VIEWMODEL.swayPerRadian);
     this.kick *= settle;
 
-    const moving = Math.min(1, speed / walkSpeed);
+    const moving = Math.min(1, speed / runSpeed);
     this.bobPhase += dt * VIEWMODEL.bobFrequency * Math.PI * 2 * moving;
     this.sprintBlend += ((carried ? 1 : 0) - this.sprintBlend) * (1 - settle);
 

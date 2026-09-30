@@ -96,13 +96,14 @@ Then open **http://localhost:4173**.
 | W A S D | Move |
 | Mouse | Aim |
 | Left click | Fire (hold for the AEG rifle, click per shot for the pistol) |
-| Shift | Sprint (forward only) |
+| Shift | Walk: slow and quiet, for sneaking and holding angles |
+| Left Alt | Sprint (forward only) |
 | C | Crouch |
 | Space | Jump (small hop) |
 | R | Reload (an empty trigger pull also reloads) |
 | 1 / 2, Q or mouse wheel | Switch between AEG rifle and gas pistol |
 | Left click while out | Watch the next player still in play |
-| Esc | Pause (releases the mouse) |
+| Esc | Pause (releases the mouse). The pause screen has **Key bindings** to change keys. |
 | `` ` `` or F3 | Frame rate and debug info |
 | ] | Debug: show BB flight paths |
 

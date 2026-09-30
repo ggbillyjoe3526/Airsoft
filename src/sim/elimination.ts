@@ -59,6 +59,7 @@ export function fillEliminatedCommand(c: Character, cfg: HitConfig, out: PlayerC
   out.right = 0;
   out.pitch = 0;
   out.sprint = false;
+  out.walk = false;
   out.crouch = false;
   out.jump = false;
   out.fire = false;

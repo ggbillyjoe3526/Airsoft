@@ -1,5 +1,8 @@
 /** Character movement tuning. Units: metres, seconds, radians. */
 export interface MovementConfig {
+  /** Normal pace, with no modifier key. */
+  runSpeed: number;
+  /** Walking (hold the walk key): slow and quiet, for sneaking and holding angles. */
   walkSpeed: number;
   sprintSpeed: number;
   crouchSpeed: number;
@@ -47,7 +50,8 @@ export interface BodyConfig {
 }
 
 export const MOVEMENT: MovementConfig = {
-  walkSpeed: 4.2,
+  runSpeed: 4.2,
+  walkSpeed: 2.3,
   sprintSpeed: 6.3,
   crouchSpeed: 2.1,
   groundAccel: 45,

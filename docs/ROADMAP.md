@@ -4,7 +4,7 @@ Agreed with the project owner on 2026-09-30 after v0.1 (Phase 1). CLAUDE.md §7 
 this file is the current detailed plan. Every milestone goes through the critic (CLAUDE.md §12) and is
 pushed when accepted. Move on only when the previous part is fun.
 
-## Phase 2: Core gameplay (Depot only), target v0.2
+## Phase 2: Core gameplay (Depot only), target v0.1-alpha.2
 
 Focus: make the existing loop feel great on one map. No second map yet.
 
@@ -26,7 +26,7 @@ Focus: make the existing loop feel great on one map. No second map yet.
 - **M5. Objective mode**
   - Attack/defend a flag on Depot: capture, wipe-out or time; sides swap at half-time.
   - Mode choice on the start screen (elimination stays).
-- **M6. Wrap-up:** owner playtest, 60 FPS check on the target laptop, bug pass, tag v0.2.
+- **M6. Wrap-up:** owner playtest, 60 FPS check on the target laptop, bug pass, tag v0.1-alpha.2.
 
 ## Phase 3: Content, target v0.3
 

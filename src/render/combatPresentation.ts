@@ -94,7 +94,7 @@ export class CombatPresentation {
     const p = this.player;
     const carried = p.sprinting || p.sprintLockout > 0;
     this.viewmodel.setAspect(this.renderer.camera.aspect);
-    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.walkSpeed, carried, p.armament, this.loadout, p.status === 'calling');
+    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carried, p.armament, this.loadout, p.status === 'calling');
     this.hud.update(p.armament, this.loadout, p.status === 'alive');
 
     const cam = this.renderer.camera;

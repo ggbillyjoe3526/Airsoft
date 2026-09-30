@@ -311,7 +311,7 @@ describe('PhysicsWorld (Rapier)', () => {
       cmd.yaw = yaw;
       cmd.forward = 1;
       cmd.sprint = i % 2 === 0;
-      const topSpeed = cmd.sprint ? MOVEMENT.sprintSpeed : MOVEMENT.walkSpeed;
+      const topSpeed = cmd.sprint ? MOVEMENT.sprintSpeed : MOVEMENT.runSpeed;
       simulate(world, c, cmd, 20); // accelerate
       let slowest = Infinity;
       simulate(world, c, cmd, 240, () => {

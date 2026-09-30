@@ -48,7 +48,7 @@ describe('movement', () => {
     step(c, command((k) => (k.forward = 1)), 12);
     expect(c.position.z).toBeLessThan(0);
     expect(Math.abs(c.position.x)).toBeLessThan(1e-9);
-    expect(horizontalSpeed(c)).toBeCloseTo(MOVEMENT.walkSpeed, 3);
+    expect(horizontalSpeed(c)).toBeCloseTo(MOVEMENT.runSpeed, 3);
   });
 
   it('strafes right along +X at yaw 0 and forward along -X at yaw +90°', () => {
@@ -79,10 +79,28 @@ describe('movement', () => {
       }),
       60,
     );
-    expect(horizontalSpeed(c)).toBeCloseTo(MOVEMENT.walkSpeed, 3);
+    expect(horizontalSpeed(c)).toBeCloseTo(MOVEMENT.runSpeed, 3);
   });
 
-  it('sprints faster than walking, crouches slower', () => {
+  it('walks slowly and quietly with the walk key, which beats sprint, and can still shoot', () => {
+    const walker = createCharacter(0, vec3(), 0);
+    step(
+      walker,
+      command((k) => {
+        k.forward = 1;
+        k.walk = true;
+        k.sprint = true;
+      }),
+      60,
+    );
+    expect(walker.walking).toBe(true);
+    expect(walker.sprinting).toBe(false);
+    expect(walker.sprintLockout).toBe(0);
+    expect(horizontalSpeed(walker)).toBeCloseTo(MOVEMENT.walkSpeed, 3);
+    expect(MOVEMENT.walkSpeed).toBeLessThan(MOVEMENT.runSpeed);
+  });
+
+  it('sprints faster than running, crouches slower', () => {
     const sprinter = createCharacter(0, vec3(), 0);
     step(
       sprinter,
@@ -127,7 +145,7 @@ describe('movement', () => {
         60,
       );
       expect(c.sprinting).toBe(false);
-      expect(horizontalSpeed(c)).toBeLessThanOrEqual(MOVEMENT.walkSpeed + 1e-9);
+      expect(horizontalSpeed(c)).toBeLessThanOrEqual(MOVEMENT.runSpeed + 1e-9);
     }
   });
 

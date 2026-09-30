@@ -75,6 +75,8 @@ body {
   border-radius: 14px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
   text-align: center;
+  max-height: 96vh;
+  overflow-y: auto;
 }
 
 .start-title {
@@ -132,6 +134,82 @@ body {
   font-size: 13px;
   color: #444;
   text-align: left;
+}
+
+.start-controls[hidden],
+.key-settings[hidden] {
+  display: none;
+}
+
+.start-controls kbd + kbd {
+  margin-left: 2px;
+}
+
+.start-keys,
+.key-reset {
+  margin-top: 12px;
+  padding: 6px 14px;
+  font: 600 13px var(--ui-font);
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.start-keys:hover,
+.key-reset:hover,
+.key-button:hover {
+  border-color: #888;
+}
+
+.key-settings {
+  margin-top: 12px;
+  font-size: 13px;
+  text-align: left;
+}
+
+.key-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+}
+
+.key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.key-button {
+  min-width: 7.5em;
+  padding: 3px 6px;
+  font: 600 12px var(--ui-mono);
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #bbb;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.key-button.listening {
+  color: #fff;
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.key-note {
+  min-height: 1.3em;
+  margin: 8px 0 0;
+  color: #a14b00;
+  text-align: center;
+}
+
+.key-settings .key-reset {
+  display: block;
+  margin: 6px auto 0;
 }
 
 kbd {

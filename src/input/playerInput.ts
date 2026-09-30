@@ -58,6 +58,7 @@ export class PlayerInput {
     cmd.right = (kb.isDown('right') ? 1 : 0) - (kb.isDown('left') ? 1 : 0);
     cmd.yaw = this.yaw;
     cmd.pitch = this.pitch;
+    cmd.walk = kb.isDown('walk');
     cmd.sprint = kb.isDown('sprint');
     cmd.crouch = kb.isDown('crouch');
     cmd.jump = this.jumpLatch;

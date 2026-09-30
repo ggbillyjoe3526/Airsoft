@@ -15,6 +15,8 @@ export interface PlayerCommand {
   /** Absolute view pitch in radians, positive looks up. */
   pitch: number;
   sprint: boolean;
+  /** Walk key held: slow and quiet. Overrides sprint. */
+  walk: boolean;
   crouch: boolean;
   jump: boolean;
   /** Trigger held. Semi-auto replicas fire on the press only. */
@@ -31,6 +33,7 @@ export function createCommand(): PlayerCommand {
     yaw: 0,
     pitch: 0,
     sprint: false,
+    walk: false,
     crouch: false,
     jump: false,
     fire: false,

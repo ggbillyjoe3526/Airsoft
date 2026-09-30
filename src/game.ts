@@ -11,6 +11,7 @@ import { LOADOUT } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
 import { TEAMS } from './config/teams';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
+import { KeyBindings } from './input/keyBindings';
 import { Keyboard } from './input/keyboard';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
@@ -36,6 +37,15 @@ import { StartScreen } from './ui/startScreen';
 const PLAYER_ID = 0;
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
 
+/** localStorage, or null where the browser blocks it (settings then last for the session only). */
+function browserStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export interface GameOptions {
   /**
    * Dev/testing only: run without pointer lock (automated browsers can't lock the pointer).
@@ -51,6 +61,7 @@ export class Game {
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
+  private readonly bindings: KeyBindings;
   private readonly keyboard: Keyboard;
   private readonly pointer: PointerLock;
   private readonly input: PlayerInput;
@@ -114,7 +125,8 @@ export class Game {
       rounds: ROUNDS,
     });
 
-    this.keyboard = new Keyboard(window);
+    this.bindings = new KeyBindings(browserStorage());
+    this.keyboard = new Keyboard(window, this.bindings);
     this.pointer = new PointerLock(this.renderer.canvas);
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     this.input.yaw = this.player.spawnYaw;
@@ -143,6 +155,7 @@ export class Game {
         playerTeam: TEAMS[this.player.team]!.name,
         enemyTeam: TEAMS[1 - this.player.team]!.name,
       },
+      this.bindings,
       () => this.play(options.allowUnlocked),
       (v) => (this.input.sensitivity = v),
     );

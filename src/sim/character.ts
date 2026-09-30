@@ -46,6 +46,8 @@ export interface Character {
   grounded: boolean;
   jumpCooldown: number;
   sprinting: boolean;
+  /** Walking slowly and quietly (walk key held, not crouched). */
+  walking: boolean;
   /** Seconds until the replica can be fired again after sprinting (0 = ready). */
   sprintLockout: number;
   armament: Armament;
@@ -81,6 +83,7 @@ export function createCharacter(
     grounded: false,
     jumpCooldown: 0,
     sprinting: false,
+    walking: false,
     sprintLockout: 0,
     armament: createArmament(loadout),
   };
@@ -121,6 +124,7 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.grounded = false;
   c.jumpCooldown = 0;
   c.sprinting = false;
+  c.walking = false;
   c.sprintLockout = 0;
   c.status = 'alive';
   c.statusTime = 0;
