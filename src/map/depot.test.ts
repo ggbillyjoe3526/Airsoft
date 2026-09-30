@@ -18,12 +18,12 @@ const MIN_UNCLIMBABLE_HEIGHT = JUMP_APEX + 0.2;
 /** A crouched player's eyes must be at least this far below the top of crouch cover. */
 const CROUCH_HIDE_MARGIN = 0.05;
 /** Longest clear line of sight allowed along a lane: keeps fights at AEG/CQB range. */
-const MAX_LANE_SIGHTLINE = 23;
+const MAX_LANE_SIGHTLINE = 26;
 /**
  * Longest clear line of sight allowed in any direction between two places a player can stand. BBs are
  * still accurate-ish here but slow and visible; beyond it, engagements would be cheap long-range picks.
  */
-const MAX_ANY_SIGHTLINE = 30;
+const MAX_ANY_SIGHTLINE = 34;
 /** Players this close to a spawn point count as "at spawn" and must be hidden from the enemy's spawn. */
 const SPAWN_ZONE_RADIUS = 5;
 

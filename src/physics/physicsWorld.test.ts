@@ -141,7 +141,7 @@ describe('PhysicsWorld (Rapier)', () => {
   // Smoke test: the launch itself is chaotic and hard to reproduce exactly in Rapier; the deterministic
   // guard is the 'depenetration push' unit test in movement.test.ts.
   it('never launches upward out of a crate-against-wall wedge (Depot nook)', () => {
-    // Where crate(-12.4, -5.9) nearly meets the office north wall. Rapier's push out of the wedge once
+    // Where crate(-14.2, -7.15) nearly meets the office north wall. Rapier's push out of the wedge once
     // became upward velocity and flung players over the 3 m office wall.
     const world = new PhysicsWorld(DEPOT, BODY, DT);
     let id = 0;
@@ -163,7 +163,7 @@ describe('PhysicsWorld (Rapier)', () => {
     // Sprint-hop into the nook from all around it (1 m out, jumping every 20 ticks).
     for (let a = 0; a < 60; a++) {
       const yaw = (a / 60) * Math.PI * 2;
-      run(-11.2 + Math.sin(yaw), -5.9 + Math.cos(yaw), yaw, 90, 20);
+      run(-12.9 + Math.sin(yaw), -6.6 + Math.cos(yaw), yaw, 90, 20);
     }
     // A normal hop peaks at REST + JUMP_APEX (~0.72 m); unclamped, the wedge pushed players ~0.84 m.
     expect(highest).toBeLessThan(REST + JUMP_APEX + 0.05);

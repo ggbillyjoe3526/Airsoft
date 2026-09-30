@@ -115,7 +115,7 @@ describe('a 3v3 bot match on Depot', () => {
   it('hunt down a player hiding off their routes, so a round never stalls', { timeout: 30_000 }, () => {
     const nav = buildNavGrid(DEPOT, NAV);
     // Deep in the Blue spawn yard, and in the far corner of the Blue office side room.
-    for (const spot of [vec3(-21.2, 0, 3.8), vec3(-11.4, 0, -13.1)]) {
+    for (const spot of [vec3(-24.1, 0, 4.3), vec3(-13, 0, -15.4)]) {
       expect(isWalkableAt(nav, spot.x, spot.z), `${spot.x},${spot.z} walkable`).toBe(true);
       const stats = playMatch(120, 5, spot);
       expect(stats.firstRoundEnd, `hider at ${spot.x},${spot.z}`).toBeGreaterThan(0);

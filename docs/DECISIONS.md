@@ -56,3 +56,4 @@ One line each: decision, then why.
 - **2026-09-30 · Phase 2 stays on one map (Depot, enlarged and opened up); the woodland map moves to Phase 3.** Owner's call: improve the core game on a single map first.
 - **2026-09-30 · Phase 2 ships as v0.1-alpha.2, not v0.2.** Owner's call: stay on the v0.1 line for now (git tags can't contain spaces, hence the dot).
 - **2026-09-30 · Key bindings are saved in the browser; a key belongs to one action and taking a used key swaps the two.** Nothing is silently left unbound; Esc and OS keys can't be bound, and binding Ctrl shows a warning (Ctrl+W closes the tab).
+- **2026-09-30 · Depot grows from 44 × 28 m to 50 × 32 m with the same layout spread out; crate sizes unchanged.** Owner found it cluttered and small: lanes, doors and gaps widen, cover density drops ~25%; sightline caps scale with it (lane 26 m, any 34 m).

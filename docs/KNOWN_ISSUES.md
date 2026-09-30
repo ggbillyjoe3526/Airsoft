@@ -18,7 +18,7 @@ Classified as **fix now / document / can wait**.
 | Pistol glove fingers look thick; the pistol armband is off screen | can wait | Slim the finger radii / proportions in handModels.ts during the art pass. |
 | An impact puff is only ~28% of full size in its first frame | can wait | Consider starting puffs at ~50% scale so a close-range hit doesn't show a near-empty frame. |
 | The BB path and near puffs sit on the crosshair's lower arm | can wait | Consider a smaller lower arm or a dot-only crosshair option. |
-| AEG BBs fly nearly flat within Depot's 30 m (hop-up 0.12, spinDecayTime 0.55) | can wait | Tuning: playtest a shorter spinDecayTime so the drop shows within 30 m. |
+| AEG BBs fly nearly flat within Depot's 34 m (hop-up 0.12, spinDecayTime 0.55) | can wait | Tuning: playtest a shorter spinDecayTime so the drop shows within 34 m. |
 | Sound recipe numbers are hardcoded in sfx.ts; one vec3 per shot/impact event; per-tick armCtx; `muzzle` looked up by name per shot; viewmodel `setAspect` every frame; untyped `userData.axis` | can wait | Minor code debt; profile before optimising. |
 | Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing, no turn interpolation | can wait | Art pass / Phase 2 animations. |
 | Other players' yaw isn't interpolated between ticks | can wait | Bots turn at most 4.5 rad/s (≈4.3° per tick); check turning bots look smooth on high-refresh screens. |
