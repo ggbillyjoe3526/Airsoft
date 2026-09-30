@@ -96,7 +96,7 @@ Then open **http://localhost:4173**.
 | W A S D | Move |
 | Mouse | Aim |
 | Left click | Fire (hold for the AEG rifle, click per shot for the pistol) |
-| Shift | Walk: slow and quiet, for sneaking and holding angles |
+| Shift | Walk: slow and steady, for holding angles |
 | Left Alt | Sprint (forward only) |
 | C | Crouch |
 | Space | Jump (small hop) |

@@ -130,7 +130,7 @@ export class StartScreen {
     this.controls.innerHTML = `
       <div>${k('forward')}${k('left')}${k('back')}${k('right')} move</div>
       <div><kbd>Mouse</kbd> aim, <kbd>LMB</kbd> fire</div>
-      <div>${k('walk')} walk (quiet)</div>
+      <div>${k('walk')} walk (slow)</div>
       <div>${k('sprint')} sprint</div>
       <div>${k('crouch')} crouch</div>
       <div>${k('jump')} jump</div>

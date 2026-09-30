@@ -22,19 +22,34 @@ describe('KeyBindings', () => {
     expect(b.actionOf('KeyZ')).toBeUndefined();
   });
 
-  it('rebinds an action and keeps its extra keys', () => {
+  it('rebinding gives the action only the new key (no hidden extra keys left working)', () => {
     const b = new KeyBindings(null);
     expect(b.rebind('forward', 'KeyI')).toBe(true);
-    expect(b.codes('forward')).toEqual(['KeyI', 'ArrowUp']);
+    expect(b.codes('forward')).toEqual(['KeyI']);
     expect(b.actionOf('KeyW')).toBeUndefined();
+    expect(b.actionOf('ArrowUp')).toBeUndefined();
   });
 
-  it('swaps keys when the new key belongs to another action', () => {
+  it('swaps keys when the new key is another action\'s main key', () => {
     const b = new KeyBindings(null);
     b.rebind('reload', 'KeyC');
-    expect(b.primary('reload')).toBe('KeyC');
-    expect(b.primary('crouch')).toBe('KeyR');
-    expect(b.actionOf('KeyC')).toBe('reload');
+    expect(b.codes('reload')).toEqual(['KeyC']);
+    expect(b.codes('crouch')).toEqual(['KeyR']);
+  });
+
+  it('swaps Walk and Sprint when Sprint takes Left Shift; Walk keeps its visible extra key', () => {
+    const b = new KeyBindings(null);
+    b.rebind('sprint', 'ShiftLeft');
+    expect(b.codes('sprint')).toEqual(['ShiftLeft']);
+    expect(b.codes('walk')).toEqual(['AltLeft', 'ShiftRight']);
+  });
+
+  it('taking another action\'s extra key just removes it there', () => {
+    const b = new KeyBindings(null);
+    b.rebind('jump', 'ArrowUp');
+    expect(b.codes('jump')).toEqual(['ArrowUp']);
+    expect(b.codes('forward')).toEqual(['KeyW']);
+    expect(b.actionOf('Space')).toBeUndefined();
   });
 
   it('refuses keys that cannot be bound', () => {
@@ -49,7 +64,7 @@ describe('KeyBindings', () => {
     a.rebind('walk', 'ControlLeft');
     const b = new KeyBindings(store);
     expect(b.primary('walk')).toBe('ControlLeft');
-    expect(b.actionOf('ShiftRight')).toBe('walk');
+    expect(b.actionOf('ShiftRight')).toBeUndefined();
   });
 
   it('resets to the defaults and notifies listeners', () => {
@@ -72,6 +87,17 @@ describe('KeyBindings', () => {
     const b = new KeyBindings(store);
     expect(b.primary('jump')).toBe('Space');
     expect(b.primary('reload')).toBe('KeyR');
+  });
+
+  it('falls back to the defaults when saved data would leave an action without a key', () => {
+    const store = new MemoryStore();
+    store.setItem('airsoft.keyBindings', JSON.stringify({ jump: [] }));
+    expect(new KeyBindings(store).codes('jump')).toEqual(['Space']);
+    // Forward takes Crouch's only key: Crouch would end up with none.
+    store.setItem('airsoft.keyBindings', JSON.stringify({ forward: ['KeyC'], crouch: ['KeyC'] }));
+    const b = new KeyBindings(store);
+    expect(b.codes('forward')).toEqual(['KeyW', 'ArrowUp']);
+    expect(b.codes('crouch')).toEqual(['KeyC']);
   });
 
   it('never leaves one key on two actions after loading', () => {

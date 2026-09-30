@@ -10,8 +10,8 @@ export interface KeyValueStore {
 
 /**
  * The player's key bindings: defaults plus their changes, saved in the browser. Each action has an
- * ordered list of keys; the first is the one shown and changed in the settings. A key belongs to at
- * most one action: binding a key that another action uses swaps their keys.
+ * ordered list of keys (defaults give some a second key, e.g. arrow keys); the settings show them all.
+ * A key belongs to at most one action, and every action always has at least one key.
  */
 export class KeyBindings {
   private map = new Map<Action, string[]>();
@@ -38,23 +38,21 @@ export class KeyBindings {
   }
 
   /**
-   * Makes `code` the main key for `action`. If another action used `code`, it gets `action`'s old main
-   * key instead (a swap), so nothing is silently left without a key. Returns false for keys that
-   * can't be bound.
+   * Makes `code` the only key for `action` (its other keys are released). If another action used
+   * `code` as its main key, that action gets `action`'s old main key in its place (a swap); if it was
+   * only its extra key, it just loses it. Returns false for keys that can't be bound.
    */
   rebind(action: Action, code: string): boolean {
     if (UNBINDABLE_KEYS.has(code)) return false;
     const mine = this.map.get(action) ?? [];
     const old = mine[0];
-    if (old === code) return true;
     const other = this.actionOf(code);
     if (other && other !== action) {
-      const theirs = this.map.get(other)!.filter((c) => c !== code);
-      if (old !== undefined && !theirs.includes(old)) theirs.unshift(old);
-      this.map.set(other, theirs);
+      const theirs = this.map.get(other)!;
+      const swapIn = old !== undefined && !theirs.includes(old) && (theirs[0] === code || theirs.length === 1);
+      this.map.set(other, theirs.flatMap((c) => (c !== code ? [c] : swapIn ? [old] : [])));
     }
-    // The new key first; keep the action's other keys (e.g. arrow keys), minus the old main key.
-    this.map.set(action, [code, ...mine.filter((c) => c !== code && c !== old)]);
+    this.map.set(action, [code]);
     this.save();
     return true;
   }
@@ -91,7 +89,7 @@ export class KeyBindings {
       const saved = JSON.parse(raw) as Record<string, unknown>;
       for (const action of Object.keys(DEFAULT_BINDINGS) as Action[]) {
         const codes = saved[action];
-        if (Array.isArray(codes) && codes.every((c) => typeof c === 'string' && !UNBINDABLE_KEYS.has(c))) this.map.set(action, codes as string[]);
+        if (Array.isArray(codes) && codes.length > 0 && codes.every((c) => typeof c === 'string' && !UNBINDABLE_KEYS.has(c))) this.map.set(action, codes as string[]);
       }
     } catch {
       // Corrupt entry: keep the defaults.
@@ -102,6 +100,13 @@ export class KeyBindings {
     for (const [action, codes] of this.map) {
       this.map.set(action, codes.filter((c) => !seen.has(c)));
       for (const c of codes) seen.add(c);
+    }
+    // An action left with no key can't be used or even seen: the saved set is unusable, start over.
+    for (const codes of this.map.values()) {
+      if (codes.length === 0) {
+        this.reset(false);
+        return;
+      }
     }
   }
 }

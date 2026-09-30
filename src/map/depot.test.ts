@@ -17,7 +17,11 @@ const JUMP_APEX = (MOVEMENT.jumpSpeed * MOVEMENT.jumpSpeed) / (2 * MOVEMENT.grav
 const MIN_UNCLIMBABLE_HEIGHT = JUMP_APEX + 0.2;
 /** A crouched player's eyes must be at least this far below the top of crouch cover. */
 const CROUCH_HIDE_MARGIN = 0.05;
-/** Longest clear line of sight allowed along a lane: keeps fights at AEG/CQB range. */
+/**
+ * Longest clear line of sight allowed along a lane: keeps fights at AEG/CQB range. Both caps scale with
+ * the map: they rose ~13% (23 → 26, 30 → 34 m) when Depot grew ~13% (44 × 28 → 50 × 32 m). Don't raise
+ * them to make a layout pass; fix the layout.
+ */
 const MAX_LANE_SIGHTLINE = 26;
 /**
  * Longest clear line of sight allowed in any direction between two places a player can stand. BBs are

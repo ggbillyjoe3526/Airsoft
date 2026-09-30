@@ -31,7 +31,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'back', label: 'Move back' },
   { action: 'left', label: 'Move left' },
   { action: 'right', label: 'Move right' },
-  { action: 'walk', label: 'Walk (hold, quiet)' },
+  { action: 'walk', label: 'Walk (hold, slow)' },
   { action: 'sprint', label: 'Sprint (hold)' },
   { action: 'crouch', label: 'Crouch (hold)' },
   { action: 'jump', label: 'Jump' },
@@ -57,6 +57,7 @@ export const PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
   'ArrowRight',
   'AltLeft',
   'AltRight',
+  // Tab would move keyboard focus off the game to the page's buttons.
   'Tab',
 ]);
 

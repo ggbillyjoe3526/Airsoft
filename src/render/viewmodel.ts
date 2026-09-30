@@ -77,7 +77,7 @@ export class Viewmodel {
   }
 
   /**
-   * Called once per frame. `speed` is the player's horizontal speed and `runSpeed` its walk speed;
+   * Called once per frame. `speed` is the player's horizontal speed and `runSpeed` its normal (run) speed;
    * `carried` is true while sprinting or in the post-sprint lockout; `callingHit` lowers the replica
    * and raises your hand.
    */

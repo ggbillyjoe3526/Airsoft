@@ -3,6 +3,21 @@ import { type KeyBindings, keyLabel } from '../input/keyBindings';
 
 const CTRL_WARNING = 'Heads up: some Ctrl combinations (like Ctrl+W, close tab) can\'t be blocked by the browser.';
 
+/** An action's keys for display; a Left+Right pair of one modifier shows as just "Shift" etc. */
+function describeKeys(codes: readonly string[]): string {
+  const labels: string[] = [];
+  for (const code of codes) {
+    const side = code.match(/^(Shift|Control|Alt)(Left|Right)$/);
+    const twin = side ? `${side[1]}${side[2] === 'Left' ? 'Right' : 'Left'}` : '';
+    if (side && codes.includes(twin)) {
+      if (side[2] === 'Left') labels.push(side[1] === 'Control' ? 'Ctrl' : side[1]!);
+    } else {
+      labels.push(keyLabel(code));
+    }
+  }
+  return labels.join(' / ');
+}
+
 /**
  * Key-binding settings: one row per rebindable action. Click a key button, then press the new key
  * (Esc cancels). Taking a key another action uses swaps the two. Lives inside the start screen.
@@ -81,7 +96,7 @@ export class KeySettings {
     let ctrl = false;
     for (const [action, button] of this.buttons) {
       const waiting = action === this.listening;
-      button.textContent = waiting ? 'Press a key…' : keyLabel(this.bindings.primary(action));
+      button.textContent = waiting ? 'Press a key…' : describeKeys(this.bindings.codes(action));
       button.classList.toggle('listening', waiting);
       if (this.bindings.codes(action).some((c) => c.startsWith('Control'))) ctrl = true;
     }
