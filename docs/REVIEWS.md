@@ -8,3 +8,4 @@ One line per feature: feature · attempts used · final score · verdict.
 | Movement fixes + Depot map | 3 of 3 (7.2 → 8.1 → 7.6) | 7.6 | Auto-accepted (attempt 3 ≥ 7.0, rules relaxed mid-feature); launch regression fixed before commit; remaining issues in KNOWN_ISSUES |
 | Replicas + BBs | 3 of 3 (7.2 → 7.5 → 7.9) | 7.9 | Auto-accepted (attempt 3 ≥ 7.0); reload pose and seat timing tweaked after review; remaining issues in KNOWN_ISSUES |
 | Hits + hit calling | 3 of 3 (7.9 → 8.3 → 8.4) | 8.4 | Auto-accepted (attempt 3 ≥ 7.0); remaining issues in KNOWN_ISSUES |
+| Bots + navigation | 3 of 3 (7.4 → 8.1 → 8.0) | 8.0 | Auto-accepted (attempt 3 ≥ 7.0); two-shooter hearing twitch fixed after review; remaining issues in KNOWN_ISSUES |

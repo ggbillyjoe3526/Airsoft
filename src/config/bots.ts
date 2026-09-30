@@ -18,8 +18,8 @@ export const BOTS = {
   /** A heard position is off by up to this fraction of the distance (hearing through walls is vague). */
   hearingError: 0.3,
   /**
-   * Hearing the same shooter again within this long (s) keeps the same guess of where they are (one
-   * error per contact, not per BB), only moving it if they have clearly moved (replanDistance).
+   * Gunfire heard within this long (s) of the last, from within the current guess's margin of error,
+   * keeps the same guess of where the noise is (one guess per contact, not per BB or per shooter).
    */
   hearingContactTime: 2,
   /** How long a bot keeps hunting a last-known position after losing sight or hearing (s); after this it forgets the contact. */

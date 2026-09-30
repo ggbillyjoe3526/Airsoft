@@ -33,3 +33,7 @@ Classified as **fix now / document / can wait**.
 | Each hit runs one route search for the victim's walk-off inside the simulation tick (~2 ms worst case on Depot, not rationed) | can wait | Hits are rare (a few per round); profile before rationing. |
 | Bots fight by standing and strafing; they don't crouch-peek over 1.2 m cover or push to close distance | can wait | Phase 2 "smarter bots". |
 | Bots may be too lethal up close: ~30% of their BBs hit in bot-only matches (median range ~6 m); being seen first at close range usually means being out | can wait | Tuning for playtesting: reactionTime, aimErrorStartDeg, burst length in config/bots.ts. |
+| Bots: switching back to an earlier target within contactGrace restarts the reaction delay (only one "last seen" is remembered) | can wait | Feature 5 critic. Keep a per-enemy last-seen time. |
+| Bots: `move`, `look` and the hunt goal are module-level scratch in botBrain.ts (reads are guarded, but it's implicit coupling); botBrain.ts is ~550 lines | can wait | Pass explicitly / split perception+modes into their own files when bots get smarter (Phase 2). |
+| Bot-only rounds are fast (7–15 s) and a last 1v1 can wander for ~40 s | can wait | Revisit lethality and hunting pace with the round timer. |
+| `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |

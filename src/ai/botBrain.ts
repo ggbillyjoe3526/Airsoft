@@ -39,10 +39,6 @@ export interface Bot {
   targetPart: number;
   lastSeenAt: number;
   heardAt: number;
-  /** Who was last heard, and the error of the guess of where they are (kept for the whole contact). */
-  heardFromId: number;
-  heardOffsetX: number;
-  heardOffsetZ: number;
   lastKnown: Vec3;
   hasLastKnown: boolean;
   acquiredAt: number;
@@ -110,9 +106,6 @@ export function createBot(character: Character, seed: number, laneCount: number,
     targetPart: cfg.aimHeightFraction,
     lastSeenAt: Number.NEGATIVE_INFINITY,
     heardAt: Number.NEGATIVE_INFINITY,
-    heardFromId: -1,
-    heardOffsetX: 0,
-    heardOffsetZ: 0,
     lastKnown: vec3(),
     hasLastKnown: false,
     acquiredAt: 0,
@@ -152,7 +145,6 @@ export function resetBot(b: Bot, laneCount: number, cfg: BotConfig): void {
   forgetTarget(b);
   b.hasLastKnown = false;
   b.heardAt = Number.NEGATIVE_INFINITY;
-  b.heardFromId = -1;
   b.lastThreatAt = Number.NEGATIVE_INFINITY;
   b.suppressedAt = Number.NEGATIVE_INFINITY;
   b.burstLeft = 0;

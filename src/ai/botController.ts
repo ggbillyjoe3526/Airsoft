@@ -122,12 +122,12 @@ export class BotController {
         for (const b of this.bots) resetBot(b, this.opts.lanes.length, cfg);
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
-        if (shooter) this.hear(shooter.id, shooter.team, e.position, time, shooter.position);
+        if (shooter) this.hear(shooter.team, e.position, time, shooter.position);
       } else if (e.type === 'characterHit') {
         // Teammates near someone who calls a hit turn towards where it came from.
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
-        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.id, shooter.team, victim.position, time, shooter.position);
+        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, time, shooter.position);
       } else if (e.type === 'bbImpact') {
         for (const b of this.bots) {
           const p = bodyPoint(b.character, this.opts.hits, cfg.aimHeightFraction, this.chest);
@@ -141,32 +141,28 @@ export class BotController {
   }
 
   /**
-   * Bots not on `shooterTeam` within hearing distance of `heardAt` learn roughly where shooter
-   * `shooterId` is, unless they can already see someone. The guess is off by up to hearingError ×
-   * distance, picked once per heard contact (a burst doesn't make it jump around). Hearing is not
-   * sight: it never skips a bot's reaction when the shooter then appears.
+   * Bots not on `shooterTeam` within hearing distance of `heardAt` learn roughly where the shooter is,
+   * unless they can already see someone. The guess is off by up to hearingError × distance and is kept
+   * while the noise keeps coming from about there (bursts and nearby shooters don't make it jump).
+   * Hearing is not sight: it never skips a bot's reaction when the shooter then appears.
    */
-  private hear(shooterId: number, shooterTeam: number, heardAt: Vec3, time: number, shooterPos: Vec3): void {
+  private hear(shooterTeam: number, heardAt: Vec3, time: number, shooterPos: Vec3): void {
     const cfg = this.opts.cfg;
     for (const b of this.bots) {
       const c = b.character;
       if (c.team === shooterTeam || !isInPlay(c) || b.targetVisible) continue;
       if (Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z) > cfg.hearingDistance) continue;
-      const sameContact = b.heardFromId === shooterId && time - b.heardAt < cfg.hearingContactTime;
-      if (!sameContact) {
-        const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);
+      // Gunfire from within the current guess's margin of error (any shooter) is the same noise: keep
+      // the guess. Only a clearly different source makes a new one; the guess never tracks anyone.
+      const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);
+      const margin = dist * cfg.hearingError + cfg.replanDistance;
+      const sameNoise = b.hasLastKnown && time - b.heardAt < cfg.hearingContactTime && Math.hypot(shooterPos.x - b.lastKnown.x, shooterPos.z - b.lastKnown.z) <= margin;
+      if (!sameNoise) {
         const angle = rngNext(b.rng) * Math.PI * 2;
         const off = Math.sqrt(rngNext(b.rng)) * dist * cfg.hearingError;
-        b.heardOffsetX = Math.cos(angle) * off;
-        b.heardOffsetZ = Math.sin(angle) * off;
-        b.heardFromId = shooterId;
-      }
-      const x = shooterPos.x + b.heardOffsetX;
-      const z = shooterPos.z + b.heardOffsetZ;
-      if (!sameContact || !b.hasLastKnown || Math.hypot(x - b.lastKnown.x, z - b.lastKnown.z) > cfg.replanDistance) {
-        b.lastKnown.x = x;
+        b.lastKnown.x = shooterPos.x + Math.cos(angle) * off;
         b.lastKnown.y = c.position.y;
-        b.lastKnown.z = z;
+        b.lastKnown.z = shooterPos.z + Math.sin(angle) * off;
       }
       b.hasLastKnown = true;
       b.heardAt = time;

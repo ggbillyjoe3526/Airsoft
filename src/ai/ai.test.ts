@@ -357,8 +357,31 @@ describe('bot hearing and targets', () => {
     });
     expect(state.events).toBeDefined();
     expect(last).toBeDefined();
-    expect(jumps).toBe(0);
-    expect(turned).toBeLessThan(Math.PI); // turns towards the noise once; no swinging back and forth
+    // At most one re-guess: when the bot gets to its guess and the noise is clearly elsewhere.
+    expect(jumps).toBeLessThanOrEqual(1);
+    expect(turned).toBeLessThan(Math.PI); // turns towards the noise; no swinging back and forth
+  });
+
+  it('keep one steady guess when two unseen enemies near each other take turns firing', () => {
+    const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 };
+    const { state, bots, run, commands } = duel(18, (s) => s.characters.push(createCharacter(2, vec3(4, 0, 0), 0, LOADOUT, 0)), walls);
+    const b = bots.bots[0]!;
+    const second = createCommand();
+    commands.set(2, second);
+    let jumps = 0;
+    let last: { x: number; z: number } | undefined;
+    run(3, () => {
+      // Alternate bursts between the two shooters every few ticks.
+      const turn = Math.floor(state.tick / 5) % 2 === 0;
+      Object.assign(commands.get(0)!, { fire: turn, pitch: 1.2 });
+      Object.assign(second, { fire: !turn, pitch: 1.2 });
+      if (b.hasLastKnown) {
+        if (last && Math.hypot(b.lastKnown.x - last.x, b.lastKnown.z - last.z) > 0.5) jumps++;
+        last = { x: b.lastKnown.x, z: b.lastKnown.z };
+      }
+    });
+    expect(last).toBeDefined();
+    expect(jumps).toBeLessThanOrEqual(1); // (was dozens when each shooter reset the guess)
   });
 
   it('stay on one target rather than flip between two enemies side by side', () => {
