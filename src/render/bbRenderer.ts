@@ -15,6 +15,8 @@ export class BBRenderer {
   /** Per pool slot: visual offset (muzzle minus true spawn point) for your own BBs, and which BB it belongs to. */
   private readonly offsets: Float32Array;
   private readonly offsetSerial: Float64Array;
+  /** Per pool slot: seconds over which the muzzle offset blends away (never longer than the flight). */
+  private readonly convergeTimes: Float32Array;
 
   constructor(
     private readonly pool: BBPool,
@@ -23,6 +25,7 @@ export class BBRenderer {
     const n = pool.bbs.length;
     this.offsets = new Float32Array(n * 3);
     this.offsetSerial = new Float64Array(n);
+    this.convergeTimes = new Float32Array(n);
     this.balls = new THREE.InstancedMesh(
       new THREE.SphereGeometry(BB_VISUALS.radius, 8, 6),
       new THREE.MeshBasicMaterial({ color: BB_VISUALS.color }),
@@ -61,7 +64,6 @@ export class BBRenderer {
     let count = 0;
     const tp = this.trailPositions;
     const bbs = this.pool.bbs;
-    const converge = BB_VISUALS.muzzleConvergeTime;
     const trail = BB_VISUALS.trailSeconds;
     const minScale = BB_VISUALS.minAngularRadius / BB_VISUALS.radius;
     for (let i = 0; i < bbs.length; i++) {
@@ -76,6 +78,7 @@ export class BBRenderer {
       // Own shots: start at the muzzle, blend onto the true path (head and tail blend separately).
       if (this.offsetSerial[i] === bb.serial) {
         const age = bb.age - (1 - alpha) * this.tickSeconds;
+        const converge = this.convergeTimes[i]!;
         const head = Math.max(0, 1 - age / converge);
         const tail = Math.min(1, Math.max(0, 1 - (age - trail) / converge));
         const o = i * 3;
@@ -109,12 +112,18 @@ export class BBRenderer {
 
   /**
    * Draw `bb` as if fired from `muzzle` (world space): it starts there and blends onto its real path
-   * over BB_VISUALS.muzzleConvergeTime. Only the visuals move; the simulated BB is untouched.
+   * over BB_VISUALS.muzzleConvergeTime, or sooner if it will hit something first (`flightTime`, s), so
+   * the streak always arrives where the impact puff appears. Only the visuals move; the simulated BB
+   * is untouched.
    */
-  startFromMuzzle(bb: BB, muzzle: { x: number; y: number; z: number }): void {
+  startFromMuzzle(bb: BB, muzzle: { x: number; y: number; z: number }, flightTime: number): void {
     const i = this.pool.bbs.indexOf(bb);
     if (i < 0) return;
     this.offsetSerial[i] = bb.serial;
+    this.convergeTimes[i] = Math.max(
+      BB_VISUALS.minConvergeTime,
+      Math.min(BB_VISUALS.muzzleConvergeTime, flightTime * BB_VISUALS.convergeBeforeImpact),
+    );
     this.offsets[i * 3] = muzzle.x - bb.prevPosition.x;
     this.offsets[i * 3 + 1] = muzzle.y - bb.prevPosition.y;
     this.offsets[i * 3 + 2] = muzzle.z - bb.prevPosition.z;

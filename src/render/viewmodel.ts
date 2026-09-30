@@ -4,6 +4,19 @@ import type { ReplicaConfig } from '../config/replicas';
 import type { Armament } from '../sim/armament';
 import { buildReplicaModels, type ReplicaModels } from './replicaModels';
 
+const smooth = (t: number): number => {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
+};
+
+/** How far the magazine is out of the magwell (0 seated, 1 fully out) at reload progress `p` (0..1). */
+export function magazineOut(p: number): number {
+  const R = VIEWMODEL.reload;
+  if (p < R.magOutEnd) return smooth(p / R.magOutEnd);
+  if (p < R.magInStart) return 1;
+  return 1 - smooth((p - R.magInStart) / (R.magSeated - R.magInStart));
+}
+
 const clampSway = (v: number): number => Math.max(-VIEWMODEL.swayMax, Math.min(VIEWMODEL.swayMax, v));
 
 /**
@@ -16,6 +29,8 @@ export class Viewmodel {
   readonly camera: THREE.PerspectiveCamera;
   private readonly rig = new THREE.Group();
   private readonly replicas: ReplicaModels;
+  /** Per loadout slot: the model, its magazine part (if any) and hold pose. */
+  private readonly slots: { model: THREE.Group; mag: THREE.Object3D | undefined; hold: ReplicaConfig['look']['hold'] }[] = [];
   private swayX = 0;
   private swayY = 0;
   private kick = 0;
@@ -26,7 +41,7 @@ export class Viewmodel {
   private readonly muzzleView = new THREE.Vector3();
 
   constructor(aspect: number, teamColor: number, loadout: readonly ReplicaConfig[]) {
-    this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, 0.01, 5);
+    this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, VIEWMODEL.near, VIEWMODEL.far);
     // Soft sky fill, a warm key from above-right and a cool rim from behind to separate the silhouette.
     this.scene.add(new THREE.HemisphereLight(...VIEWMODEL.light.hemi));
     const key = new THREE.DirectionalLight(VIEWMODEL.light.keyColor, VIEWMODEL.light.keyIntensity);
@@ -40,6 +55,7 @@ export class Viewmodel {
       const model = this.replicas.models.get(r.id)!;
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
+      this.slots.push({ model, mag: model.getObjectByName('magazine'), hold: r.look.hold });
       model.visible = false;
       this.rig.add(model);
     }
@@ -52,7 +68,7 @@ export class Viewmodel {
 
   /** A shot from the player's replica: kick back and up. */
   onShot(): void {
-    this.kick = Math.min(1.5, this.kick + 1);
+    this.kick = Math.min(VIEWMODEL.kickMax, this.kick + 1);
   }
 
   /**
@@ -70,7 +86,8 @@ export class Viewmodel {
     loadout: readonly ReplicaConfig[],
   ): void {
     const replica = loadout[armament.active]!;
-    for (const [id, m] of this.replicas.models) m.visible = id === replica.id;
+    for (let i = 0; i < this.slots.length; i++) this.slots[i]!.model.visible = i === armament.active;
+    const slot = this.slots[armament.active]!;
 
     // Sway: the replica lags behind the view a little, then springs back.
     let dYaw = yaw - this.lastYaw;
@@ -90,23 +107,25 @@ export class Viewmodel {
 
     const reloadP = armament.reload > 0 ? 1 - armament.reload / replica.reloadTime : 0;
     const reloadDip = Math.sin(Math.PI * reloadP);
+    const R = VIEWMODEL.reload;
+    slot.model.rotation.set(reloadDip * R.tilt, slot.hold.yaw + reloadDip * R.turn, reloadDip * R.roll);
+    if (slot.mag) {
+      const out = armament.reload > 0 ? magazineOut(reloadP) : 0;
+      slot.mag.position.copy(slot.mag.userData.axis as THREE.Vector3).multiplyScalar(out * R.magTravel);
+    }
     const drawP = replica.drawTime > 0 ? armament.draw / replica.drawTime : 0;
 
     const bob = VIEWMODEL.bobAmount * moving;
     this.rig.position.set(
-      this.swayX + Math.cos(this.bobPhase) * bob,
+      this.swayX + Math.cos(this.bobPhase) * bob - reloadDip * R.inward,
       this.swayY -
-        Math.abs(Math.sin(this.bobPhase)) * bob -
-        reloadDip * VIEWMODEL.reloadDrop -
+        Math.abs(Math.sin(this.bobPhase)) * bob +
+        reloadDip * R.lift -
         drawP * VIEWMODEL.drawDrop -
         this.sprintBlend * VIEWMODEL.sprintDrop,
       this.kick * VIEWMODEL.kickBack,
     );
-    this.rig.rotation.set(
-      this.kick * VIEWMODEL.kickUp - reloadDip * VIEWMODEL.reloadTilt - drawP * VIEWMODEL.drawTilt,
-      this.sprintBlend * VIEWMODEL.sprintTilt,
-      -reloadDip * VIEWMODEL.reloadRoll,
-    );
+    this.rig.rotation.set(this.kick * VIEWMODEL.kickUp - drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
   }
 
   /**
@@ -116,7 +135,7 @@ export class Viewmodel {
    */
   muzzleWorld(mainCamera: THREE.PerspectiveCamera, out: THREE.Vector3): boolean {
     let marker: THREE.Object3D | undefined;
-    for (const m of this.replicas.models.values()) if (m.visible) marker = m.getObjectByName('muzzle');
+    for (const s of this.slots) if (s.model.visible) marker = s.model.getObjectByName('muzzle');
     if (!marker) return false;
     this.rig.updateMatrixWorld(true);
     marker.getWorldPosition(this.muzzleView); // viewmodel camera sits at the origin, so this is camera space

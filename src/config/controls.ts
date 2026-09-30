@@ -41,4 +41,7 @@ export const MOUSE = {
   sensitivityStep: 0.05,
   /** Wheel travel (pixels) that counts as one replica switch; stops trackpad swipes flipping replicas every frame. */
   wheelStepPixels: 100,
+  /** Pixels per wheel delta when the browser reports lines / pages instead of pixels. */
+  wheelLinePixels: 40,
+  wheelPagePixels: 800,
 } as const;

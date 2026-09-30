@@ -54,7 +54,7 @@ const toVec = (p: V3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], -p[2]);
 function capsule(a: THREE.Vector3, b: THREE.Vector3, radius: number): THREE.BufferGeometry {
   const dir = b.clone().sub(a);
   const len = Math.max(1e-4, dir.length());
-  const geo = new THREE.CapsuleGeometry(radius, len, 4, 10);
+  const geo = new THREE.CapsuleGeometry(radius, len, 6, 14);
   geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
   geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
   return geo;

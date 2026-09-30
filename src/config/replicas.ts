@@ -65,7 +65,7 @@ export const GAS_PISTOL: ReplicaConfig = {
   hopUp: 0.11,
   spreadDeg: 0.8,
   recoilDeg: 0.5,
-  look: { model: 'pistol', shotSound: 'pistol', hold: { position: [0.075, -0.07, -0.36], yaw: 0.12 } },
+  look: { model: 'pistol', shotSound: 'pistol', hold: { position: [0.12, -0.1, -0.55], yaw: 0.36 } },
 };
 
 /** Loadout for Phase 1: slot 0 primary, slot 1 sidearm. */

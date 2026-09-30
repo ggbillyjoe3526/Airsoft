@@ -171,9 +171,10 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   );
   b.box('metal', 0.001, 0.008, -0.056, -0.034, 0.006);
   b.profile('furniture', [[-0.012, -0.028], [-0.056, -0.028], [-0.092, -0.13], [-0.06, -0.142], [-0.03, -0.098]], 0.034, 0.012);
-  // Curved polymer magazine with a black base plate.
-  b.profile('furniture', [[0.03, -0.076], [0.092, -0.076], [0.105, -0.15], [0.127, -0.222], [0.073, -0.236], [0.055, -0.156]], 0.026, 0.008);
-  b.profile('polymer', [[0.071, -0.232], [0.129, -0.219], [0.133, -0.232], [0.074, -0.246]], 0.03, 0.004);
+  // Curved polymer magazine with a black base plate (its own part so reloads can drop it out).
+  const mag = new ModelBuilder();
+  mag.profile('furniture', [[0.03, -0.076], [0.092, -0.076], [0.105, -0.15], [0.127, -0.222], [0.073, -0.236], [0.055, -0.156]], 0.026, 0.008);
+  mag.profile('polymer', [[0.071, -0.232], [0.129, -0.219], [0.133, -0.232], [0.074, -0.246]], 0.03, 0.004);
   // Handguard (tan) with slots and a top rail.
   b.profile('furniture', [[0.15, 0.0], [0.4, 0.0], [0.4, 0.066], [0.15, 0.066]], 0.058, 0.014);
   for (const x of [0.19, 0.245, 0.3, 0.35]) b.box('rubber', x, x + 0.035, 0.026, 0.042, 0.06);
@@ -218,6 +219,7 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   buildForearm(b, leftWrist, [-0.3, -0.28, 0.02]);
 
   const group = b.build(m);
+  group.add(magazinePart(mag, m, [0, -0.97, 0.25]));
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 6), m.dot);
   dot.position.set(0, 0.108, 0.009);
   dot.name = 'dot';
@@ -249,7 +251,10 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
     [[-0.022, -0.02], [0.026, -0.02], [0.026, -0.042], [-0.027, -0.04]],
   );
   b.box('polymer', -0.004, 0.003, -0.036, -0.016, 0.005); // trigger
-  b.box('polymer', -0.108, -0.062, -0.13, -0.119, 0.032); // magazine base plate
+  // Magazine: hidden inside the grip until a reload drops it out, base plate showing below.
+  const mag = new ModelBuilder();
+  mag.profile('mag', [[-0.058, -0.02], [-0.076, -0.02], [-0.1, -0.118], [-0.078, -0.12]], 0.022, 0.003);
+  mag.box('polymer', -0.108, -0.062, -0.13, -0.119, 0.032); // base plate
 
   // Two-handed grip: right hand round the grip, index finger along the frame; the left hand presses
   // against the left of the grip with its fingers wrapped over the right hand's.
@@ -261,7 +266,7 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
     fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP],
     thumb: { swing: 0.6, curl: [0.2, 0.2] },
   });
-  buildForearm(b, rightWrist, [0.14, -0.3, -0.38]);
+  buildForearm(b, rightWrist, [0.1, -0.26, -0.3]);
   const leftWrist = buildHand(b, {
     side: 'left',
     palm: [-0.034, -0.072, -0.066],
@@ -270,8 +275,9 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
     fingers: [SUPPORT, SUPPORT, SUPPORT, SUPPORT],
     thumb: { swing: 0.3, curl: [0.1, 0.1] },
   });
-  buildForearm(b, leftWrist, [-0.19, -0.3, -0.34]);
+  buildForearm(b, leftWrist, [-0.16, -0.26, -0.28]);
   const group = b.build(m);
+  group.add(magazinePart(mag, m, GRIP_DOWN));
   group.add(muzzleMarker(0.104, 0.015));
   return group;
 }
@@ -299,6 +305,17 @@ export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor:
       for (const mat of Object.values(materials)) mat.dispose();
     },
   };
+}
+
+/**
+ * The magazine as its own group named 'magazine', so the viewmodel can slide it out along `axis`
+ * (the magwell direction, as (across, up, forward)) during reloads.
+ */
+function magazinePart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>, axis: readonly [number, number, number]): THREE.Group {
+  const group = builder.build(m);
+  group.name = 'magazine';
+  group.userData.axis = new THREE.Vector3(axis[0], axis[1], -axis[2]).normalize();
+  return group;
 }
 
 /** Empty marker at the muzzle (forward, up) so presentation can start visual BBs there. */

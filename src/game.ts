@@ -100,7 +100,7 @@ export class Game {
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     this.input.yaw = spawn.yaw;
     // Phase 1: the player is always on Blue.
-    this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, TEAMS[0].color, SIM_DT);
+    this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[0].color, SIM_DT);
 
     this.debug = new DebugOverlay(container, () => ({
       tick: this.state.tick,
@@ -204,7 +204,7 @@ export class Game {
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, alpha, this.input.yaw, pitch);
-    this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    this.combat.frame(running ? dt : 0, alpha, this.input.yaw, pitch); // frozen while paused
     this.combat.render();
     this.debug.frame(dt);
   };

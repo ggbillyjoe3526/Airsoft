@@ -1,4 +1,5 @@
 import type { ReplicaConfig } from '../config/replicas';
+import { HUD } from '../config/render';
 import type { Armament } from '../sim/armament';
 
 /**
@@ -47,7 +48,7 @@ export class Hud {
     if (s.name !== replica.name) this.name.textContent = s.name = replica.name;
     if (s.mag !== ammo.mag) {
       this.mag.textContent = String((s.mag = ammo.mag));
-      this.mag.classList.toggle('low', ammo.mag <= Math.ceil(replica.magSize * 0.2));
+      this.mag.classList.toggle('low', ammo.mag <= Math.ceil(replica.magSize * HUD.lowAmmoFraction));
     }
     if (s.reserve !== ammo.reserve) this.reserve.textContent = String((s.reserve = ammo.reserve));
 

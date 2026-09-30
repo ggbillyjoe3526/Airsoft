@@ -124,7 +124,7 @@ export class PointerLock {
   private readonly onWheel = (e: WheelEvent): void => {
     if (!this.locked) return;
     // Normalise line/page scrolling to pixels so every device needs about one notch per step.
-    const scale = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1;
+    const scale = e.deltaMode === 1 ? MOUSE.wheelLinePixels : e.deltaMode === 2 ? MOUSE.wheelPagePixels : 1;
     this.wheel += e.deltaY * scale;
   };
 }

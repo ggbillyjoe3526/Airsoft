@@ -42,9 +42,9 @@ export const BB_VISUALS = {
   color: 0xfffbe8,
   /**
    * A BB is never drawn smaller than this on screen: its radius grows with distance so it stays a
-   * visible dot at 10-30 m (radians of view; 0.002 ≈ 4 px wide at 1080p).
+   * visible dot at 10-30 m (radians of view; 0.003 ≈ 5 px wide at 1080p).
    */
-  minAngularRadius: 0.002,
+  minAngularRadius: 0.003,
   /** Trail length in seconds of flight (streak = velocity × this). */
   trailSeconds: 0.022,
   trailColor: 0xfff4cc,
@@ -54,6 +54,10 @@ export const BB_VISUALS = {
    * this many seconds (~10 m), so you can see them fly instead of edge-on along your line of sight.
    */
   muzzleConvergeTime: 0.12,
+  /** Close to a wall the blend finishes at this fraction of the flight time, so the BB visibly arrives. */
+  convergeBeforeImpact: 0.7,
+  /** Point-blank shots still blend over at least this long (s) instead of snapping. */
+  minConvergeTime: 0.01,
   /** Debug BB-path overlay: how many recent paths, and points per path. */
   debugPaths: 48,
   debugPathPoints: 150,
@@ -65,9 +69,23 @@ export const IMPACT_PUFFS = {
   lifetime: 0.35,
   /** Seconds to reach full size. */
   growTime: 0.06,
-  radius: 0.045,
-  color: 0xd9d2c3,
-  opacity: 0.4,
+  radius: 0.06,
+  /**
+   * Never smaller than this on screen (radians of view; 0.013 ≈ 20 px wide at 1080p), so a puff reads
+   * at 20 m and isn't hidden inside the crosshair's centre gap.
+   */
+  minAngularRadius: 0.013,
+  /** Bright warm dust, strong enough to stand out on grey concrete and dark wood. */
+  color: 0xfff1c9,
+  opacity: 0.8,
+  /** Upward drift while fading (m/s). */
+  drift: 0.15,
+} as const;
+
+/** Heads-up display. */
+export const HUD = {
+  /** The magazine count turns to a warning colour at or below this fraction of a full magazine. */
+  lowAmmoFraction: 0.2,
 } as const;
 
 /** First-person replica rendering and motion. */
@@ -85,15 +103,34 @@ export const VIEWMODEL = {
   /** Recoil kick per shot: metres back and radians up. */
   kickBack: 0.028,
   kickUp: 0.05,
-  /** How far the replica drops while reloading / drawing / sprinting (metres). */
-  reloadDrop: 0.12,
+  /** Recoil kick never stacks beyond this many shots' worth. */
+  kickMax: 1.5,
+  /** Viewmodel camera clip planes (metres); the replica is always within arm's reach. */
+  near: 0.01,
+  far: 5,
+  /** How far the replica drops while drawing / sprinting (metres). */
   drawDrop: 0.22,
   sprintDrop: 0.06,
   sprintTilt: 0.5,
-  /** Pitch-down (radians) at the deepest point of a reload / at the start of a draw, and reload roll. */
-  reloadTilt: 0.35,
+  /**
+   * Reload: the replica is lifted and brought inward, and cants about its own grip (radians at the
+   * midpoint: muzzle up, roll top-right, turn in) so the magwell faces you and stays on screen, while the magazine slides out along the magwell,
+   * stays out, then is pushed back in. Phase times are fractions of the replica's reloadTime.
+   */
+  reload: {
+    tilt: 0.2,
+    roll: -0.42,
+    turn: 0.25,
+    /** Lifted up (m) and brought in towards the centre of view (m), so the magwell is in sight. */
+    lift: 0.08,
+    inward: 0.06,
+    magTravel: 0.32,
+    magOutEnd: 0.28,
+    magInStart: 0.5,
+    magSeated: 0.78,
+  },
+  /** Pitch-down (radians) of the replica at the start of a draw. */
   drawTilt: 0.6,
-  reloadRoll: 0.4,
   /** Viewmodel lighting: [sky, ground, intensity] hemisphere, warm key from above-right, cool rim from behind. */
   light: {
     hemi: [0xe8f0ff, 0x4a4438, 1.3],

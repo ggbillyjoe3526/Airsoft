@@ -47,16 +47,16 @@ export class Sfx {
       l.setOrientation(forwardX, forwardY, forwardZ, 0, 1, 0);
       return;
     }
-    const t = this.ctx!.currentTime;
-    l.positionX.setValueAtTime(pos.x, t);
-    l.positionY.setValueAtTime(pos.y, t);
-    l.positionZ.setValueAtTime(pos.z, t);
-    l.forwardX.setValueAtTime(forwardX, t);
-    l.forwardY.setValueAtTime(forwardY, t);
-    l.forwardZ.setValueAtTime(forwardZ, t);
-    l.upX.setValueAtTime(0, t);
-    l.upY.setValueAtTime(1, t);
-    l.upZ.setValueAtTime(0, t);
+    // Plain value writes: no automation events pile up at 60+ updates per second.
+    l.positionX.value = pos.x;
+    l.positionY.value = pos.y;
+    l.positionZ.value = pos.z;
+    l.forwardX.value = forwardX;
+    l.forwardY.value = forwardY;
+    l.forwardZ.value = forwardZ;
+    l.upX.value = 0;
+    l.upY.value = 1;
+    l.upZ.value = 0;
   }
 
   /** Plays the sound for a simulation event. `localId` is the player's character id. */

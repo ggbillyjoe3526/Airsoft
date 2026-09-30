@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { Sfx } from '../audio/sfx';
+import { BB_VISUALS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
+import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
 import type { GameState } from '../sim/state';
@@ -26,6 +28,7 @@ export class CombatPresentation {
   private readonly forward = new THREE.Vector3();
   private readonly listenerPos = { x: 0, y: 0, z: 0 };
   private readonly muzzle = new THREE.Vector3();
+  private readonly dir = { x: 0, y: 0, z: 0 };
   private lastOwnSerial = 0;
   private readonly overlay: { scene: THREE.Scene; camera: THREE.Camera };
 
@@ -36,6 +39,7 @@ export class CombatPresentation {
     private readonly player: Character,
     private readonly loadout: readonly ReplicaConfig[],
     private readonly movement: MovementConfig,
+    private readonly query: WorldQuery,
     teamColor: number,
     tickSeconds: number,
   ) {
@@ -81,7 +85,7 @@ export class CombatPresentation {
   /** Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. */
   frame(dt: number, alpha: number, yaw: number, pitch: number): void {
     this.bbs.update(alpha, this.renderer.camera.position);
-    this.puffs.update(dt);
+    this.puffs.update(dt, this.renderer.camera.position);
     this.paths.update();
 
     const p = this.player;
@@ -119,7 +123,22 @@ export class CombatPresentation {
     }
     if (!newest) return; // blocked muzzle: the shot hit cover immediately
     this.lastOwnSerial = newest.serial;
-    if (this.viewmodel.muzzleWorld(this.renderer.camera, this.muzzle)) this.bbs.startFromMuzzle(newest, this.muzzle);
+    if (this.viewmodel.muzzleWorld(this.renderer.camera, this.muzzle)) {
+      this.bbs.startFromMuzzle(newest, this.muzzle, this.estimateFlightTime(newest));
+    }
+  }
+
+  /** Rough seconds until `bb` hits level geometry (straight line at its launch speed); Infinity if nothing is near. */
+  private estimateFlightTime(bb: BB): number {
+    const v = bb.velocity;
+    const speed = Math.hypot(v.x, v.y, v.z);
+    if (speed <= 0) return Number.POSITIVE_INFINITY;
+    this.dir.x = v.x / speed;
+    this.dir.y = v.y / speed;
+    this.dir.z = v.z / speed;
+    const reach = speed * BB_VISUALS.muzzleConvergeTime;
+    const d = this.query.raycastStatic(bb.prevPosition, this.dir, reach);
+    return d < 0 ? Number.POSITIVE_INFINITY : d / speed;
   }
 
   private readonly positionOf = (id: number): { x: number; y: number; z: number } | undefined =>
