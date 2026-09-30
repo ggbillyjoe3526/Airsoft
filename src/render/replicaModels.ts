@@ -207,8 +207,9 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   buildForearm(b, rightWrist, [0.2, -0.3, -0.42]);
 
   // Left hand cradling the handguard: palm underneath, index finger forward, fingers curling up the
-  // right side, thumb along the left side.
-  const leftWrist = buildHand(b, {
+  // right side, thumb along the left side. Its own part: on reloads it cups the magazine's base plate.
+  const support = new ModelBuilder();
+  const leftWrist = buildHand(support, {
     side: 'left',
     palm: [-0.012, -0.018, 0.29],
     across: [0, 0, -1],
@@ -216,10 +217,12 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
     fingers: [CRADLE, CRADLE, CRADLE, CRADLE],
     thumb: { swing: 0.2, curl: [0.2, 0.2] },
   });
-  buildForearm(b, leftWrist, [-0.3, -0.28, 0.02]);
+  buildForearm(support, leftWrist, [-0.3, -0.28, 0.02]);
 
   const group = b.build(m);
   group.add(magazinePart(mag, m, [0, -0.97, 0.25]));
+  // From the handguard to just under the magazine's base plate (forward 0.1, up -0.26).
+  group.add(supportHandPart(support, m, [0.012, -0.242, -0.19]));
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 6), m.dot);
   dot.position.set(0, 0.108, 0.009);
   dot.name = 'dot';
@@ -267,7 +270,8 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
     thumb: { swing: 0.6, curl: [0.2, 0.2] },
   });
   buildForearm(b, rightWrist, [0.1, -0.26, -0.3]);
-  const leftWrist = buildHand(b, {
+  const support = new ModelBuilder();
+  const leftWrist = buildHand(support, {
     side: 'left',
     palm: [-0.034, -0.072, -0.066],
     across: GRIP_DOWN,
@@ -275,9 +279,11 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
     fingers: [SUPPORT, SUPPORT, SUPPORT, SUPPORT],
     thumb: { swing: 0.3, curl: [0.1, 0.1] },
   });
-  buildForearm(b, leftWrist, [-0.16, -0.26, -0.28]);
+  buildForearm(support, leftWrist, [-0.16, -0.26, -0.28]);
   const group = b.build(m);
   group.add(magazinePart(mag, m, GRIP_DOWN));
+  // From the side of the grip down to the magazine's base plate.
+  group.add(supportHandPart(support, m, [0.004, -0.068, -0.024]));
   group.add(muzzleMarker(0.104, 0.015));
   return group;
 }
@@ -340,6 +346,17 @@ function magazinePart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Materi
   const group = builder.build(m);
   group.name = 'magazine';
   group.userData.axis = new THREE.Vector3(axis[0], axis[1], -axis[2]).normalize();
+  return group;
+}
+
+/**
+ * The support (left) hand and forearm as their own group named 'supportHand', so reloads can move it
+ * to the magazine: `toMag` is the offset from its grip to holding the magazine, as (across, up, forward).
+ */
+function supportHandPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>, toMag: readonly [number, number, number]): THREE.Group {
+  const group = builder.build(m);
+  group.name = 'supportHand';
+  group.userData.toMag = new THREE.Vector3(toMag[0], toMag[1], -toMag[2]);
   return group;
 }
 

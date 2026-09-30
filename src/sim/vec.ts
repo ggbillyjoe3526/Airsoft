@@ -19,6 +19,11 @@ export function copy(out: Vec3, a: Vec3): Vec3 {
   return out;
 }
 
+/** Interpolates from angle `a` to `b` by `t` the short way round (for drawing between ticks). */
+export function lerpAngle(a: number, b: number, t: number): number {
+  return a + wrapAngle(b - a) * t;
+}
+
 /** Wraps an angle to (-PI, PI] so it never grows unbounded. */
 export function wrapAngle(a: number): number {
   const twoPi = Math.PI * 2;

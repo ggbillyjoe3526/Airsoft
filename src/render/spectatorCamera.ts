@@ -4,6 +4,7 @@ import { SPECTATOR } from '../config/render';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
+import { lerpAngle } from '../sim/vec';
 
 /** Worth watching: still in play, or calling a hit that just happened (so you see them call it). */
 function watchable(c: Character): boolean {
@@ -74,8 +75,9 @@ export class SpectatorCamera {
     h.z = c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha;
 
     // Behind the target (it faces (-sin yaw, 0, -cos yaw)) and a little above, pulled in front of walls.
-    const backX = Math.sin(c.yaw);
-    const backZ = Math.cos(c.yaw);
+    const yaw = lerpAngle(c.prevYaw, c.yaw, alpha);
+    const backX = Math.sin(yaw);
+    const backZ = Math.cos(yaw);
     const d = this.dir;
     const len = Math.hypot(SPECTATOR.distance, SPECTATOR.height);
     d.x = (backX * SPECTATOR.distance) / len;

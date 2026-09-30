@@ -43,6 +43,9 @@ export interface Character {
   crouchAmount: number;
   /** Crouch amount at the start of the last tick, for render interpolation of the eye height. */
   prevCrouchAmount: number;
+  /** View angles at the start of the last tick, for render interpolation of turning. */
+  prevYaw: number;
+  prevPitch: number;
   grounded: boolean;
   jumpCooldown: number;
   sprinting: boolean;
@@ -85,6 +88,8 @@ export function createCharacter(
     pitch: 0,
     crouchAmount: 0,
     prevCrouchAmount: 0,
+    prevYaw: yaw,
+    prevPitch: 0,
     grounded: false,
     jumpCooldown: 0,
     sprinting: false,
@@ -129,6 +134,8 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.velocity.z = 0;
   c.yaw = c.spawnYaw;
   c.pitch = 0;
+  c.prevYaw = c.yaw;
+  c.prevPitch = 0;
   c.crouchAmount = 0;
   c.prevCrouchAmount = 0;
   c.grounded = false;

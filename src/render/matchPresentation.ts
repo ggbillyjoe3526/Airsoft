@@ -70,6 +70,7 @@ export class MatchPresentation {
   afterTick(cameraYaw: number): void {
     for (const e of this.state.events) {
       if (e.type === 'characterHit') {
+        this.characters.flinch(e.victimId, e.direction);
         if (e.victimId === this.player.id) {
           // It came from the opposite of the BB's flight direction.
           this.hitFromYaw = Math.atan2(e.direction.x, e.direction.z);
@@ -106,7 +107,7 @@ export class MatchPresentation {
     } else {
       this.feedback.setSpectating('');
     }
-    this.characters.update(alpha, spectating ? -1 : this.player.id);
+    this.characters.update(alpha, dt, spectating ? -1 : this.player.id);
 
     this.feedback.setCalling(status === 'calling');
     if (status === 'calling') this.feedback.setHitDirection(wrapAngle(cameraYaw - this.hitFromYaw));

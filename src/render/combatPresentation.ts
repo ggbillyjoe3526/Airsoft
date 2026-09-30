@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Sfx } from '../audio/sfx';
-import { BB_VISUALS } from '../config/render';
+import { BB_VISUALS, HIT_PUFFS, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
 import type { WorldQuery } from '../sim/armament';
@@ -21,7 +21,9 @@ import { Viewmodel } from './viewmodel';
  */
 export class CombatPresentation {
   private readonly bbs: BBRenderer;
-  private readonly puffs = new ImpactPuffs();
+  private readonly puffs = new ImpactPuffs(IMPACT_PUFFS);
+  /** Bigger puffs where BBs land on players: hit confirmation at range. */
+  private readonly hitPuffs = new ImpactPuffs(HIT_PUFFS);
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
   private readonly hud: Hud;
@@ -48,7 +50,7 @@ export class CombatPresentation {
     this.sfx = new Sfx(loadout);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
-    renderer.scene.add(this.bbs.object, this.puffs.object, this.paths.object);
+    renderer.scene.add(this.bbs.object, this.puffs.object, this.hitPuffs.object, this.paths.object);
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container);
@@ -77,6 +79,11 @@ export class CombatPresentation {
     this.paths.recordTick();
     for (const e of this.state.events) {
       if (e.type === 'bbImpact') this.puffs.spawn(e.position);
+      else if (e.type === 'characterHit') {
+        // Your own hit: the replica jolts in your hands (the puff would fill your view).
+        if (e.victimId === this.player.id) this.viewmodel.onHit();
+        else this.hitPuffs.spawn(e.position);
+      }
       if (e.type === 'shot') {
         if (e.characterId === this.player.id) this.viewmodel.onShot();
         this.drawFromMuzzle(e.characterId);
@@ -89,6 +96,7 @@ export class CombatPresentation {
   frame(dt: number, alpha: number, yaw: number, pitch: number): void {
     this.bbs.update(alpha, this.renderer.camera.position);
     this.puffs.update(dt, this.renderer.camera.position);
+    this.hitPuffs.update(dt, this.renderer.camera.position);
     this.paths.update();
 
     const p = this.player;
@@ -113,6 +121,7 @@ export class CombatPresentation {
   dispose(): void {
     this.bbs.dispose();
     this.puffs.dispose();
+    this.hitPuffs.dispose();
     this.paths.dispose();
     this.viewmodel.dispose();
     this.hud.dispose();

@@ -9,6 +9,16 @@ const smooth = (t: number): number => {
   return c * c * (3 - 2 * c);
 };
 
+/**
+ * While the magazine is out: how far it has gone to fetch a fresh one (0 at the magwell, 1 out of view
+ * and back) at reload progress `p` (0..1).
+ */
+export function magazineSwap(p: number): number {
+  const R = VIEWMODEL.reload;
+  if (p <= R.magOutEnd || p >= R.magInStart) return 0;
+  return Math.sin((Math.PI * (p - R.magOutEnd)) / (R.magInStart - R.magOutEnd));
+}
+
 /** How far the magazine is out of the magwell (0 seated, 1 fully out) at reload progress `p` (0..1). */
 export function magazineOut(p: number): number {
   const R = VIEWMODEL.reload;
@@ -29,8 +39,15 @@ export class Viewmodel {
   readonly camera: THREE.PerspectiveCamera;
   private readonly rig = new THREE.Group();
   private readonly replicas: ReplicaModels;
-  /** Per loadout slot: the model, its magazine part (if any) and hold pose. */
-  private readonly slots: { model: THREE.Group; mag: THREE.Object3D | undefined; hold: ReplicaConfig['look']['hold'] }[] = [];
+  /** Per loadout slot: the model, its magazine and support-hand parts (if any) and hold pose. */
+  private readonly slots: {
+    model: THREE.Group;
+    mag: THREE.Object3D | undefined;
+    hand: THREE.Object3D | undefined;
+    hold: ReplicaConfig['look']['hold'];
+  }[] = [];
+  /** 0 = support hand on its grip, 1 = on the magazine (reloading). */
+  private handBlend = 0;
   private swayX = 0;
   private swayY = 0;
   private kick = 0;
@@ -57,7 +74,7 @@ export class Viewmodel {
       const model = this.replicas.models.get(r.id)!;
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
-      this.slots.push({ model, mag: model.getObjectByName('magazine'), hold: r.look.hold });
+      this.slots.push({ model, mag: model.getObjectByName('magazine'), hand: model.getObjectByName('supportHand'), hold: r.look.hold });
       model.visible = false;
       this.rig.add(model);
     }
@@ -69,6 +86,11 @@ export class Viewmodel {
     if (this.camera.aspect === aspect) return;
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
+  }
+
+  /** You've been hit: the replica jolts in your hands before you lower it to call the hit. */
+  onHit(): void {
+    this.kick = VIEWMODEL.kickMax * VIEWMODEL.hitJolt;
   }
 
   /** A shot from the player's replica: kick back and up. */
@@ -116,9 +138,18 @@ export class Viewmodel {
     const reloadDip = Math.sin(Math.PI * reloadP);
     const R = VIEWMODEL.reload;
     slot.model.rotation.set(reloadDip * R.tilt, slot.hold.yaw + reloadDip * R.turn, reloadDip * R.roll);
-    if (slot.mag) {
-      const out = armament.reload > 0 ? magazineOut(reloadP) : 0;
-      slot.mag.position.copy(slot.mag.userData.axis as THREE.Vector3).multiplyScalar(out * R.magTravel);
+    // Magazine swap: the support hand goes to the magazine, pulls it, stows it out of view, brings a
+    // fresh one up and seats it, then returns to its grip once the reload is done.
+    const reloading = armament.reload > 0;
+    this.handBlend = Math.max(0, Math.min(1, this.handBlend + (reloading ? dt : -dt) / R.handMoveTime));
+    const magDistance = reloading ? magazineOut(reloadP) * R.magTravel + magazineSwap(reloadP) * R.swapTravel : 0;
+    const magAxis = slot.mag?.userData.axis as THREE.Vector3 | undefined;
+    if (slot.mag && magAxis) slot.mag.position.copy(magAxis).multiplyScalar(magDistance);
+    for (const s of this.slots) if (s !== slot && s.hand) s.hand.position.set(0, 0, 0);
+    if (slot.hand) {
+      const grab = smooth(this.handBlend);
+      slot.hand.position.copy(slot.hand.userData.toMag as THREE.Vector3).multiplyScalar(grab);
+      if (magAxis) slot.hand.position.addScaledVector(magAxis, magDistance * grab);
     }
     const drawP = replica.drawTime > 0 ? armament.draw / replica.drawTime : 0;
 

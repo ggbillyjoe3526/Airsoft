@@ -125,6 +125,24 @@ describe('stepSimulation', () => {
     expect(c.crouchAmount).toBeGreaterThan(after1);
   });
 
+  it('records the previous view angles so other players turn smoothly between ticks', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0);
+    state.characters.push(c);
+    const cmd = createCommand();
+    const ctx = testContext(floor, KILL_Y);
+    cmd.yaw = 0.3;
+    cmd.pitch = 0.1;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    cmd.yaw = 0.5;
+    cmd.pitch = -0.2;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.prevYaw).toBeCloseTo(0.3, 9);
+    expect(c.prevPitch).toBeCloseTo(0.1, 9);
+    expect(c.yaw).toBeCloseTo(0.5, 9);
+    expect(c.pitch).toBeCloseTo(-0.2, 9);
+  });
+
   it('does not fire while sprinting or in the post-sprint lockout, then fires again', () => {
     const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0);

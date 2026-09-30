@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { FIGURE } from '../config/characters';
 import type { HitConfig } from '../config/hits';
 import type { Character } from '../sim/character';
+import { lerpAngle } from '../sim/vec';
 import { buildFigure, createCalloutTexture, disposeFigure, type Figure } from './characterModels';
 
 interface FigureState {
@@ -12,6 +13,19 @@ interface FigureState {
   phase: number;
   lastX: number;
   lastZ: number;
+  /** Seconds since this figure was last hit (flinch), and the BB's flight direction then (world x/z). */
+  flinchAge: number;
+  flinchX: number;
+  flinchZ: number;
+}
+
+/** Flinch strength (0..1) `t` seconds after a hit: a quick snap, then easing back. */
+export function flinchEnvelope(t: number): number {
+  const F = FIGURE.flinch;
+  if (t >= F.time) return 0;
+  if (t < F.rise) return t / F.rise;
+  const k = 1 - (t - F.rise) / (F.time - F.rise);
+  return k * k;
 }
 
 /**
@@ -35,15 +49,26 @@ export class CharacterRenderer {
       const material = this.material.clone();
       const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial);
       this.object.add(figure.root);
-      this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z });
+      this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0 });
     }
   }
 
+  /** Character `id` was hit by a BB flying along `direction`: its figure flinches. */
+  flinch(id: number, direction: { x: number; z: number }): void {
+    const i = this.characters.findIndex((c) => c.id === id);
+    const s = this.figures[i];
+    if (!s) return;
+    const len = Math.hypot(direction.x, direction.z) || 1;
+    s.flinchAge = 0;
+    s.flinchX = direction.x / len;
+    s.flinchZ = direction.z / len;
+  }
+
   /**
-   * `alpha` interpolates ticks; `hiddenId` is the character the camera is inside (drawn in first
-   * person instead), or -1.
+   * `alpha` interpolates ticks; `dt` is the frame time; `hiddenId` is the character the camera is
+   * inside (drawn in first person instead), or -1.
    */
-  update(alpha: number, hiddenId: number): void {
+  update(alpha: number, dt: number, hiddenId: number): void {
     for (let i = 0; i < this.characters.length; i++) {
       const c = this.characters[i]!;
       const s = this.figures[i]!;
@@ -55,7 +80,17 @@ export class CharacterRenderer {
       const y = c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha;
       const z = c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha;
       f.root.position.set(x, y, z);
-      f.root.rotation.y = c.yaw;
+      const yaw = lerpAngle(c.prevYaw, c.yaw, alpha);
+      f.root.rotation.y = yaw;
+
+      // Flinch: lean the upper body the way the BB was going, in the figure's own frame (it faces -Z).
+      s.flinchAge += dt;
+      const lean = flinchEnvelope(s.flinchAge) * FIGURE.flinch.lean;
+      const cy = Math.cos(yaw);
+      const sy = Math.sin(yaw);
+      const localX = s.flinchX * cy - s.flinchZ * sy;
+      const localZ = s.flinchX * sy + s.flinchZ * cy;
+      f.upper.rotation.set(localZ * lean, 0, -localX * lean);
 
       // Walk cycle from distance actually covered (teleports into the dead zone don't count).
       const moved = Math.hypot(x - s.lastX, z - s.lastZ);
@@ -79,7 +114,7 @@ export class CharacterRenderer {
       // In play: aiming. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
       const handUp = c.status === 'calling' || c.status === 'walkingOff' || c.status === 'leaving';
       f.aim.visible = !handUp;
-      f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.pitch;
+      f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.prevPitch + (c.pitch - c.prevPitch) * alpha;
       f.hitPose.visible = handUp;
       f.callout.visible = c.status === 'calling';
 

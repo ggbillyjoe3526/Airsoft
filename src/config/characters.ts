@@ -42,6 +42,11 @@ export const FIGURE = {
   maxStride: 1,
   /** Players out in the dead zone hold their replica pointing at the ground (radians of aim pitch). */
   outAimPitch: -0.9,
+  /**
+   * Hit flinch: the upper body jolts the way the BB was travelling (radians of lean), snapping in over
+   * `rise` seconds and easing back over `time`, just before the hand goes up.
+   */
+  flinch: { lean: 0.32, rise: 0.05, time: 0.4 },
   /** "HIT!" sign above a player calling their hit. */
   callout: { height: 2.25, width: 0.62, aspect: 0.45, color: '#ffffff', background: '#d8262e' },
 } as const;

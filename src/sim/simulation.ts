@@ -101,6 +101,8 @@ export function stepSimulation(
   for (const c of state.characters) {
     copy(c.prevPosition, c.position);
     c.prevCrouchAmount = c.crouchAmount;
+    c.prevYaw = c.yaw;
+    c.prevPitch = c.pitch;
     const inPlay = isInPlay(c);
     let cmd = inPlay ? commands.get(c.id) : fillEliminatedCommand(c, ctx.hits, ctx.eliminatedCommand);
     if (!cmd) {

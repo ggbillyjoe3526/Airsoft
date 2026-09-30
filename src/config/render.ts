@@ -66,7 +66,19 @@ export const BB_VISUALS = {
   debugPathColor: 0xff3fa4,
 } as const;
 
-export const IMPACT_PUFFS = {
+/** Settings for a pool of puffs (see ImpactPuffs). */
+export interface PuffConfig {
+  max: number;
+  lifetime: number;
+  growTime: number;
+  radius: number;
+  minAngularRadius: number;
+  color: number;
+  opacity: number;
+  drift: number;
+}
+
+export const IMPACT_PUFFS: PuffConfig = {
   max: 64,
   lifetime: 0.35,
   /** Seconds to reach full size. */
@@ -82,7 +94,22 @@ export const IMPACT_PUFFS = {
   opacity: 0.8,
   /** Upward drift while fading (m/s). */
   drift: 0.15,
-} as const;
+};
+
+/**
+ * A BB landing on a player: a bigger, brighter burst of fabric dust that lingers a little, so a hit is
+ * unmistakable even at 30 m (the "HIT!" sign follows a moment later). No blood, ever.
+ */
+export const HIT_PUFFS: PuffConfig = {
+  max: 8,
+  lifetime: 0.6,
+  growTime: 0.05,
+  radius: 0.16,
+  minAngularRadius: 0.03,
+  color: 0xffffff,
+  opacity: 0.9,
+  drift: 0.3,
+};
 
 /** Third-person camera used while you're out, watching someone still in play. */
 export const SPECTATOR = {
@@ -139,13 +166,20 @@ export const VIEWMODEL = {
    * stays out, then is pushed back in. Phase times are fractions of the replica's reloadTime.
    */
   reload: {
-    tilt: 0.1,
-    roll: -0.42,
-    turn: 0.0,
-    /** Lifted up (m) and brought in towards the centre of view (m), so the magwell is in sight. */
-    lift: 0.03,
-    inward: 0.0,
+    tilt: 0.3,
+    roll: -0.55,
+    turn: 0.35,
+    /** Lifted up (m) and brought in towards the centre of view (m), so the magwell and hand are in sight. */
+    lift: 0.14,
+    inward: 0.1,
     magTravel: 0.14,
+    /**
+     * While the magazine is out, it (and the support hand holding it) drops this much further (m) out
+     * of view and comes back: the old one is stowed and a fresh one fetched.
+     */
+    swapTravel: 0.3,
+    /** Seconds for the support hand to move between its grip and the magazine. */
+    handMoveTime: 0.15,
     magOutEnd: 0.28,
     magInStart: 0.62,
     /** Seated right at the end, when the reloadEnd click plays. */
@@ -158,6 +192,8 @@ export const VIEWMODEL = {
    * space, metres) over `raiseTime` seconds.
    */
   hitDrop: 0.5,
+  /** Being hit jolts the replica like this many times a full recoil kick. */
+  hitJolt: 1.5,
   raisedHand: [-0.3, -0.02, -0.62] as const,
   raiseFrom: 0.35,
   raiseTime: 0.25,
