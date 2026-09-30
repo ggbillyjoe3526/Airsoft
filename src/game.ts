@@ -136,6 +136,13 @@ export class Game {
 
     this.startScreen = new StartScreen(
       container,
+      {
+        teamSize: ROUNDS.teamSize,
+        winsNeeded: ROUNDS.winsNeeded,
+        roundTime: ROUNDS.roundTime,
+        playerTeam: TEAMS[this.player.team]!.name,
+        enemyTeam: TEAMS[1 - this.player.team]!.name,
+      },
       () => this.play(options.allowUnlocked),
       (v) => (this.input.sensitivity = v),
     );
@@ -190,7 +197,6 @@ export class Game {
 
   private play(allowUnlocked: boolean): void {
     this.combat.unlockAudio();
-    if (this.state.round.phase === 'matchOver') this.restartMatch();
     if (allowUnlocked) {
       this.unlockedPlay = true;
       this.resume();
@@ -200,6 +206,8 @@ export class Game {
   }
 
   private resume(): void {
+    // "Play again" on the result screen: the new match starts only once play really resumes.
+    if (this.state.round.phase === 'matchOver') this.restartMatch();
     this.started = true;
     this.keyboard.capturing = true;
     this.startScreen.hide();
@@ -207,7 +215,10 @@ export class Game {
     this.match.setPlaying(true);
   }
 
-  /** A fresh match from round 1 (after the result screen's "Play again"). */
+  /**
+   * A fresh match from round 1 (after the result screen's "Play again"). A direct sim-state change from
+   * the composition root: with multiplayer this becomes a server-side decision, not a local call.
+   */
   private restartMatch(): void {
     this.state.events.length = 0;
     restartMatch(this.state.round, this.state.characters, this.state.bbs, LOADOUT, ROUNDS, this.state.events);
@@ -232,8 +243,13 @@ export class Game {
     this.input.clearLatches();
     const r = this.state.round;
     if (r.phase === 'matchOver') {
-      const w = r.matchWinner;
-      this.startScreen.showResult(`${TEAMS[w]!.name} wins the match ${r.score[w]}–${r.score[1 - w]}${w === this.player.team ? '!' : ''}`);
+      const mine = this.player.team;
+      const theirs = 1 - mine;
+      const draws = r.number - r.score[0] - r.score[1];
+      this.startScreen.showResult(
+        r.matchWinner === mine ? 'You win!' : 'You lose',
+        `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`,
+      );
     } else {
       this.startScreen.show(this.started);
     }

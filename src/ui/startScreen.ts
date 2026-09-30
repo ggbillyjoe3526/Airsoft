@@ -2,6 +2,26 @@ import { MOUSE } from '../config/controls';
 
 const SENSITIVITY_KEY = 'airsoft.sensitivity';
 
+/** What the start screen needs to explain the match. */
+export interface MatchRulesText {
+  teamSize: number;
+  winsNeeded: number;
+  roundTime: number;
+  playerTeam: string;
+  enemyTeam: string;
+}
+
+function describeRules(r: MatchRulesText): string {
+  const minutes = Math.floor(r.roundTime / 60);
+  const seconds = String(Math.round(r.roundTime % 60)).padStart(2, '0');
+  const mates = r.teamSize - 1;
+  return (
+    `${r.teamSize}v${r.teamSize} with bots: you and ${mates} bot teammate${mates === 1 ? '' : 's'} (${r.playerTeam}) against ${r.enemyTeam}. ` +
+    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` +
+    `First to ${r.winsNeeded} rounds wins the match. One hit and you're out.`
+  );
+}
+
 function loadSensitivity(): number {
   try {
     const raw = localStorage.getItem(SENSITIVITY_KEY);
@@ -30,11 +50,12 @@ export class StartScreen {
   private readonly root: HTMLDivElement;
   private readonly playButton: HTMLButtonElement;
   private readonly hint: HTMLParagraphElement;
-  private readonly result: HTMLParagraphElement;
+  private readonly result: HTMLDivElement;
   private sensitivityValue = loadSensitivity();
 
   constructor(
     parent: HTMLElement,
+    rules: MatchRulesText,
     onPlay: () => void,
     onSensitivity: (v: number) => void,
   ) {
@@ -44,9 +65,8 @@ export class StartScreen {
       <div class="start-card">
         <h1 class="start-title">AIRSOFT<span>.</span></h1>
         <p class="start-tagline">One BB, you're hit. Call it, walk off, go again.</p>
-        <p class="start-result" hidden></p>
-        <p class="start-goal">3v3 with bots: you and two teammates (Blue) against Orange. Knock out the whole
-          other team to win a round; first to 5 rounds wins the match. One hit and you're out.</p>
+        <div class="start-result" hidden><strong></strong><span></span></div>
+        <p class="start-goal"></p>
         <button class="start-play" type="button">Click to play</button>
         <p class="start-hint" hidden></p>
         <label class="start-sens">Mouse sensitivity
@@ -69,7 +89,8 @@ export class StartScreen {
 
     this.playButton = this.root.querySelector('.start-play') as HTMLButtonElement;
     this.hint = this.root.querySelector('.start-hint') as HTMLParagraphElement;
-    this.result = this.root.querySelector('.start-result') as HTMLParagraphElement;
+    this.result = this.root.querySelector('.start-result') as HTMLDivElement;
+    (this.root.querySelector('.start-goal') as HTMLParagraphElement).textContent = describeRules(rules);
     const slider = this.root.querySelector('input') as HTMLInputElement;
     const output = this.root.querySelector('output') as HTMLOutputElement;
 
@@ -97,9 +118,10 @@ export class StartScreen {
     this.root.hidden = false;
   }
 
-  /** The match result (e.g. "Blue wins the match 5–3"), with the button offering a rematch. */
-  showResult(text: string): void {
-    this.result.textContent = text;
+  /** The match result ("You win!" and the score line), with the button offering a rematch. */
+  showResult(headline: string, detail: string): void {
+    (this.result.firstElementChild as HTMLElement).textContent = headline;
+    (this.result.lastElementChild as HTMLElement).textContent = detail;
     this.result.hidden = false;
     this.playButton.textContent = 'Play again';
     this.root.hidden = false;

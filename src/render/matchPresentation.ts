@@ -28,8 +28,8 @@ export class MatchPresentation {
   private roundStartedAt = 0;
   /** World yaw the BB that hit you came from (see showHit), and when. */
   private hitFromYaw = 0;
-  /** Identifies the round message on screen, so its text is only rebuilt when it changes. */
-  private roundKey = 0;
+  /** What the round message on screen was built from, so its text is only rebuilt when that changes. */
+  private readonly shownRound = { phase: '', winner: -2, seconds: -1, number: -1, start: false };
   private outLabelFor = Number.NaN;
   private outLabelText = '';
 
@@ -138,13 +138,16 @@ export class MatchPresentation {
     const r = this.state.round;
     const showStart = r.phase === 'live' && this.state.time - this.roundStartedAt < HUD.roundStartMessageTime;
     const seconds = Math.max(1, Math.ceil(r.timer));
-    const key =
-      r.phase === 'matchOver' ? 100000 + r.matchWinner : r.phase === 'over' ? 1 + (r.winner + 1) * 1000 + seconds : showStart ? -r.number : 0;
-    if (key === this.roundKey) return;
-    this.roundKey = key;
+    const shown = this.shownRound;
+    if (shown.phase === r.phase && shown.winner === r.winner && shown.seconds === seconds && shown.number === r.number && shown.start === showStart) return;
+    shown.phase = r.phase;
+    shown.winner = r.winner;
+    shown.seconds = seconds;
+    shown.number = r.number;
+    shown.start = showStart;
     let text = '';
     if (r.phase === 'matchOver') {
-      text = `${TEAMS[r.matchWinner]!.name} wins the match!`;
+      text = r.matchWinner === this.player.team ? 'You win the match!' : `${TEAMS[r.matchWinner]!.name} wins the match`;
     } else if (r.phase === 'over') {
       const result = r.winner >= 0 ? `${TEAMS[r.winner]!.name} wins the round` : this.lastRoundReason === 'time' ? "Time's up · draw" : 'Draw';
       text = `${result} · next round in ${seconds}`;
@@ -153,4 +156,5 @@ export class MatchPresentation {
     }
     this.feedback.setRoundMessage(text);
   }
+
 }

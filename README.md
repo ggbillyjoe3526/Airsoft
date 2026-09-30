@@ -17,7 +17,7 @@ setup takes about 5 minutes.
 
 ### 1. Install Node.js (one time only)
 
-Go to **https://nodejs.org**, download the **LTS** version, and install it with the default options.
+Go to **https://nodejs.org**, download the **LTS** version (22 or newer), and install it with the default options.
 (The game uses Node.js to run a small local web server; nothing is installed into your browser.)
 
 ### 2. Download the game
@@ -27,6 +27,9 @@ Download version 0.1 as a ZIP file:
 **https://github.com/ggbillyjoe3526/airsoft/archive/refs/tags/v0.1.zip**
 
 Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `airsoft-0.1`.
+
+(If that link doesn't work, open **https://github.com/ggbillyjoe3526/airsoft**, click the green **Code**
+button, then **Download ZIP**. The folder will then be called `airsoft-main`; use it the same way.)
 
 ### 3. Open a terminal in that folder
 
@@ -119,7 +122,7 @@ still need tuning from playtesting (they may feel quite deadly up close).
 
 ## For developers
 
-Requirements: Node.js 20.19+ (developed on Node 22/24).
+Requirements: Node.js 22.12+ (or 24 LTS; the test runner needs 22.12+).
 
 ```bash
 npm install

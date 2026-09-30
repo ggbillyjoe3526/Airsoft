@@ -17,6 +17,7 @@ export class Scoreboard {
   private readonly pips: HTMLElement[][];
   private shownScore = [-1, -1];
   private shownSeconds = -1;
+  private shownLow = false;
   private shownAlive = -1;
 
   constructor(parent: HTMLElement, teamSize: number) {
@@ -49,8 +50,10 @@ export class Scoreboard {
     if (seconds !== this.shownSeconds) {
       this.shownSeconds = seconds;
       this.clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-      this.clock.classList.toggle('low', seconds <= HUD.lowClockSeconds && round.phase === 'live');
     }
+    // Red while time is running out, and at 0:00 after a time-out; not during a pause after a wipe-out.
+    const low = seconds <= HUD.lowClockSeconds && (round.phase === 'live' || seconds === 0);
+    if (low !== this.shownLow) this.clock.classList.toggle('low', (this.shownLow = low));
     // Pips: which players are still in play (one bit each), so the DOM is only touched on a change.
     let mask = 0;
     for (let i = 0; i < characters.length; i++) if (isInPlay(characters[i]!)) mask |= 1 << i;

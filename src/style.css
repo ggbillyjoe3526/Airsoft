@@ -471,9 +471,18 @@ kbd {
 }
 
 .start-result {
-  margin: 0 0 12px;
-  font-size: 24px;
-  font-weight: 800;
+  margin: 0 0 14px;
+}
+
+.start-result strong {
+  display: block;
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.start-result span {
+  font-size: 15px;
+  color: #444;
 }
 
 .start-result[hidden] {

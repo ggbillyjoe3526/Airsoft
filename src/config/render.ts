@@ -103,8 +103,11 @@ export const HUD = {
   roundStartMessageTime: 1.8,
   /** The round clock turns to a warning colour at or below this many seconds. */
   lowClockSeconds: 20,
-  /** After the match is decided, the result screen appears this many seconds later (whistle, last HIT!). */
-  matchOverScreenDelay: 3,
+  /**
+   * After the match is decided, the result screen appears this many seconds later: after the last HIT!
+   * and the match-over whistles (~3.9 s, see AUDIO.matchOverBlasts).
+   */
+  matchOverScreenDelay: 4.2,
 } as const;
 
 /** First-person replica rendering and motion. */
