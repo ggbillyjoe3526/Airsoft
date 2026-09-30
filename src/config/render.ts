@@ -101,6 +101,10 @@ export const HUD = {
   lowAmmoFraction: 0.2,
   /** How long "Round N" stays up after a round starts (seconds). */
   roundStartMessageTime: 1.8,
+  /** The round clock turns to a warning colour at or below this many seconds. */
+  lowClockSeconds: 20,
+  /** After the match is decided, the result screen appears this many seconds later (whistle, last HIT!). */
+  matchOverScreenDelay: 3,
 } as const;
 
 /** First-person replica rendering and motion. */

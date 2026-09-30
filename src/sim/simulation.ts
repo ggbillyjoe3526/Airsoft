@@ -12,7 +12,7 @@ import { createCommand, type PlayerCommand } from './commands';
 import { fillEliminatedCommand, isInPlay, stepElimination } from './elimination';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { createRng } from './rng';
-import { stepRound } from './round';
+import { type RoundRules, stepRound } from './round';
 import type { GameState } from './state';
 import { copy, vec3 } from './vec';
 
@@ -32,8 +32,8 @@ export interface SimServices {
   nav: NavGrid;
   /** Route ends snap to the nearest walkable cell within this distance. */
   navSnap: number;
-  /** Seconds from a team being wiped out to everyone respawning. */
-  roundResetDelay: number;
+  /** Round length, pause between rounds, wins needed. */
+  rounds: RoundRules;
 }
 
 /** Services and tuning the simulation needs from outside, plus reusable scratch. */
@@ -123,7 +123,7 @@ export function stepSimulation(
   }
 
   stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, live ? ctx.targets : undefined);
-  stepRound(state.round, state.characters, state.bbs, ctx.loadout, ctx.roundResetDelay, state.events, dt);
+  stepRound(state.round, state.characters, state.bbs, ctx.loadout, ctx.rounds, state.events, dt);
   state.tick++;
   state.time += dt;
 }

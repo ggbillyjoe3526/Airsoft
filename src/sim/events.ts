@@ -13,5 +13,7 @@ export type GameEvent =
   | { type: 'bbImpact'; position: Vec3 }
   /** A BB hit a character: they are eliminated and start calling their hit. `direction` is the BB's flight direction. */
   | { type: 'characterHit'; victimId: number; shooterId: number; position: Vec3; direction: Vec3 }
-  | { type: 'roundOver'; winner: number }
+  /** A round ended: `winner` is the team that won it, or -1 for a draw (time ran out, or both teams out). */
+  | { type: 'roundOver'; winner: number; reason: 'eliminated' | 'time' }
+  | { type: 'matchOver'; winner: number }
   | { type: 'roundStart'; round: number };

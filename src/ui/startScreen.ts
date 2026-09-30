@@ -30,6 +30,7 @@ export class StartScreen {
   private readonly root: HTMLDivElement;
   private readonly playButton: HTMLButtonElement;
   private readonly hint: HTMLParagraphElement;
+  private readonly result: HTMLParagraphElement;
   private sensitivityValue = loadSensitivity();
 
   constructor(
@@ -43,6 +44,9 @@ export class StartScreen {
       <div class="start-card">
         <h1 class="start-title">AIRSOFT<span>.</span></h1>
         <p class="start-tagline">One BB, you're hit. Call it, walk off, go again.</p>
+        <p class="start-result" hidden></p>
+        <p class="start-goal">3v3 with bots: you and two teammates (Blue) against Orange. Knock out the whole
+          other team to win a round; first to 5 rounds wins the match. One hit and you're out.</p>
         <button class="start-play" type="button">Click to play</button>
         <p class="start-hint" hidden></p>
         <label class="start-sens">Mouse sensitivity
@@ -65,6 +69,7 @@ export class StartScreen {
 
     this.playButton = this.root.querySelector('.start-play') as HTMLButtonElement;
     this.hint = this.root.querySelector('.start-hint') as HTMLParagraphElement;
+    this.result = this.root.querySelector('.start-result') as HTMLParagraphElement;
     const slider = this.root.querySelector('input') as HTMLInputElement;
     const output = this.root.querySelector('output') as HTMLOutputElement;
 
@@ -88,6 +93,15 @@ export class StartScreen {
 
   show(paused: boolean): void {
     this.playButton.textContent = paused ? 'Click to resume' : 'Click to play';
+    this.result.hidden = true;
+    this.root.hidden = false;
+  }
+
+  /** The match result (e.g. "Blue wins the match 5–3"), with the button offering a rematch. */
+  showResult(text: string): void {
+    this.result.textContent = text;
+    this.result.hidden = false;
+    this.playButton.textContent = 'Play again';
     this.root.hidden = false;
   }
 

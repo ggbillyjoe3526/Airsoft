@@ -397,7 +397,7 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  top: max(13%, 96px);
+  top: max(18%, 124px);
   text-align: center;
   opacity: 0;
   transition: opacity 0.15s;
@@ -443,7 +443,7 @@ kbd {
 .hitfx-out {
   position: absolute;
   left: 50%;
-  top: 22px;
+  top: 56px;
   transform: translateX(-50%);
   padding: 4px 12px;
   border-radius: 4px;
@@ -462,10 +462,102 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  top: 54px;
+  top: 88px;
   text-align: center;
   font-size: 24px;
   font-weight: 800;
   letter-spacing: 0.03em;
   opacity: 0;
+}
+
+.start-result {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.start-result[hidden] {
+  display: none;
+}
+
+.start-goal {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #444;
+}
+
+/* Scoreboard: Blue score · clock · Orange score, with a pip per player */
+.scoreboard {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(16, 18, 22, 0.55);
+  color: #fff;
+  font-family: var(--ui-font);
+  pointer-events: none;
+  z-index: 12;
+}
+
+.scoreboard[hidden] {
+  display: none;
+}
+
+.sb-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sb-team-1 {
+  flex-direction: row-reverse;
+}
+
+.sb-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--team);
+}
+
+.sb-score {
+  min-width: 18px;
+  text-align: center;
+  font: 800 24px/1 var(--ui-mono);
+  color: var(--team);
+}
+
+.sb-pips {
+  display: flex;
+  gap: 3px;
+}
+
+.sb-pips i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--team);
+  border: 1px solid var(--team);
+}
+
+.sb-pips i.out {
+  background: transparent;
+  opacity: 0.6;
+}
+
+.sb-clock {
+  min-width: 52px;
+  text-align: center;
+  font: 700 20px/1 var(--ui-mono);
+}
+
+.sb-clock.low {
+  color: #ff5a4f;
 }

@@ -15,7 +15,8 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 - **sim/**: all gameplay rules. Plain data (`GameState`, `Character`, the BB pool), no Three.js, no DOM, no `Math.random`.
   Each tick: move characters, handle replicas (`armament.ts`: fire, reload, switch; spawns BBs), then fly BBs
   (`ballistics.ts` flight model, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
-  characters via `hitbox.ts` capsules), then round flow (`round.ts`). A hit character is eliminated
+  characters via `hitbox.ts` capsules), then match flow (`round.ts`: round clock, wipe-out or time-out, score, first to
+`winsNeeded`, `restartMatch`). A hit character is eliminated
   (`elimination.ts`: alive → calling → walkingOff → out) and from then on follows a built-in command instead of its
   controller's, can't fire and can't be hit. Anything presentation needs
   to react to is pushed to `state.events` (shots, impacts, reloads), cleared every tick.
@@ -45,7 +46,7 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 - **audio/**: synthesised Web Audio effects; positional for everything but the local player's own replica.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox
   figures, a few meshes each on one material per figure), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
-  you're out, and round messages.
+  you're out, round messages and the scoreboard (`ui/scoreboard.ts`: score, clock, who's still in).
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop. The only place that knows about every layer.
 

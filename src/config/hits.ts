@@ -58,10 +58,14 @@ export const HITS: HitConfig = {
   vanishTime: 0.6,
 };
 
-/** Round flow (Phase 1 minimum: one team out ends the round, everyone respawns). */
+/** Match flow: 3v3 elimination rounds against the clock, first to 5 round wins. */
 export const ROUNDS = {
   /** Players per team, including the local player on team 0. */
   teamSize: 3,
-  /** Seconds between the last elimination and everyone respawning. */
+  /** Round length (s). A round that runs out of time is a draw (nobody scores). */
+  roundTime: 150,
+  /** Seconds between a round ending and everyone respawning. */
   resetDelay: 4,
+  /** Round wins needed to win the match. */
+  winsNeeded: 5,
 } as const;

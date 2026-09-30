@@ -47,4 +47,6 @@ export const AUDIO = {
   /** Round start: two short blasts, the second starting this many blast-lengths after the first. */
   roundStartWhistle: 0.14,
   roundStartWhistleGap: 1.6,
+  /** Match over: three more long blasts after the round's, each this many blast-lengths apart. */
+  matchOverWhistleGap: 1.3,
 } as const;

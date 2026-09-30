@@ -138,7 +138,7 @@ describe('cover', () => {
 
 /** A duel on an open floor: one Orange bot facing a Blue character `dist` metres away. */
 function duel(dist: number, extra: (state: GameState) => void = () => {}, query: WorldQuery = noWalls) {
-  const state = createGameState(1, 64);
+  const state = createGameState(1, 64, ROUNDS);
   const player = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
   const bot = createCharacter(1, vec3(0, 0, -dist), 0, LOADOUT, 1);
   bot.yaw = facing(bot.position, player.position);
@@ -156,7 +156,7 @@ function duel(dist: number, extra: (state: GameState) => void = () => {}, query:
     deadZones: [[{ position: vec3(-40, 0, 0), yaw: 0 }], [{ position: vec3(40, 0, 0), yaw: 0 }]],
     nav: OPEN_NAV,
     navSnap: NAV.snap,
-    roundResetDelay: ROUNDS.resetDelay,
+    rounds: ROUNDS,
   });
   const commands = new Map<number, PlayerCommand>([[0, createCommand()]]);
   const bots = new BotController(state, [bot], commands, {

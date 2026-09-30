@@ -43,6 +43,11 @@ export class PointerLock {
     }
   }
 
+  /** Gives the mouse back (e.g. to click a button on the match result screen). */
+  release(): void {
+    if (this.locked) document.exitPointerLock();
+  }
+
   onChange(fn: (locked: boolean) => void): void {
     this.changeListeners.add(fn);
   }

@@ -23,7 +23,7 @@ const DEAD_ZONES = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(3
 const openSky = { raycastStatic: () => -1 };
 
 function testContext(mover: CharacterMover, killY: number): SimContext {
-  return createSimContext({ mover, query: openSky, movement: MOVEMENT, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY, hits: HITS, deadZones: DEAD_ZONES, roundResetDelay: ROUNDS.resetDelay, nav: OPEN_NAV, navSnap: NAV.snap });
+  return createSimContext({ mover, query: openSky, movement: MOVEMENT, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
 }
 
 const floor: CharacterMover = {
@@ -41,7 +41,7 @@ const floor: CharacterMover = {
 
 describe('stepSimulation', () => {
   it('routes commands by character id, not array order', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const a = createCharacter(7, vec3(), 0);
     const b = createCharacter(3, vec3(10, 0, 0), 0);
     state.characters.push(a, b);
@@ -59,7 +59,7 @@ describe('stepSimulation', () => {
   });
 
   it('lets characters without a command settle under gravity and keep their view', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(0, 1, 0), 1.25);
     state.characters.push(c);
     const ctx = testContext(floor, KILL_Y);
@@ -70,7 +70,7 @@ describe('stepSimulation', () => {
   });
 
   it('returns a character that falls below killY to its spawn without momentum', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(2, 0, 3), 0);
     state.characters.push(c);
     const noFloor: CharacterMover = {
@@ -97,7 +97,7 @@ describe('stepSimulation', () => {
   });
 
   it('records the previous position for interpolation', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0);
     state.characters.push(c);
     const cmd = createCommand();
@@ -111,7 +111,7 @@ describe('stepSimulation', () => {
   });
 
   it('records the previous crouch amount so the eye height can be interpolated', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0);
     state.characters.push(c);
     const cmd = createCommand();
@@ -125,7 +125,7 @@ describe('stepSimulation', () => {
   });
 
   it('does not fire while sprinting or in the post-sprint lockout, then fires again', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0);
     state.characters.push(c);
     const cmd = createCommand();
@@ -155,7 +155,7 @@ describe('stepSimulation', () => {
   });
 
   it('clears last tick\'s events at the start of every tick', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     state.characters.push(createCharacter(0, vec3(), 0));
     const cmd = createCommand();
     cmd.fire = true;
@@ -171,7 +171,7 @@ describe('stepSimulation', () => {
 describe('hit calling and round flow', () => {
   /** Blue shooter (id 0) facing -Z at the origin; one Orange target (id 1) 8 m ahead. */
   function duel() {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const shooter = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
     const target = createCharacter(1, vec3(0, 0, -8), 0, LOADOUT, 1);
     state.characters.push(shooter, target);
@@ -237,7 +237,7 @@ describe('hit calling and round flow', () => {
       stepSimulation(state, commands, ctx, DT);
       over = state.events.find((e) => e.type === 'roundOver');
     }
-    expect(over).toEqual({ type: 'roundOver', winner: 0 });
+    expect(over).toEqual({ type: 'roundOver', winner: 0, reason: 'eliminated' });
     expect(state.round.phase).toBe('over');
     fire.fire = false;
     expect(shooter.armament.ammo[0]!.mag).toBeLessThan(LOADOUT[0]!.magSize);
@@ -256,7 +256,7 @@ describe('hit calling and round flow', () => {
   });
 
   it('is a cease-fire once the round is decided: no shots, and BBs in flight hit nobody', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const blue = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
     const mate = createCharacter(1, vec3(0, 0, -6), 0, LOADOUT, 0);
     const orange = createCharacter(2, vec3(40, 0, 0), 0, LOADOUT, 1);
@@ -281,7 +281,7 @@ describe('hit calling and round flow', () => {
   });
 
   it('a walk-off blocked by cover gives up early and leaves the field instead of grinding', () => {
-    const state = createGameState(1, 16);
+    const state = createGameState(1, 16, ROUNDS);
     const target = createCharacter(1, vec3(0, 0, -8), 0, LOADOUT, 1);
     state.characters.push(createCharacter(0, vec3(), 0, LOADOUT, 0), target, createCharacter(2, vec3(50, 0, 0), 0, LOADOUT, 1));
     // Everything horizontal is blocked, like walking into a wall.

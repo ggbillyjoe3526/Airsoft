@@ -5,7 +5,8 @@ visible BBs, one hit and you're out, call your hit and walk off.
 
 Status: **Phase 1** (single-player vs bots prototype) in progress: on the first map "Depot" you can
 play a 3v3 against bots (you and two bot teammates on Blue, three bots on Orange) with an AEG rifle and a
-gas pistol. One hit and you're out: call it, walk off, spectate; when a team is wiped out, a new round starts. See `CLAUDE.md` for the project guide
+gas pistol. One hit and you're out: call it, walk off, spectate. Wipe out the other team to win a round
+(2:30 on the clock; a time-out is a draw); first to 5 rounds wins the match. See `CLAUDE.md` for the project guide
 and `docs/` for design notes.
 
 ## Requirements

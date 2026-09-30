@@ -8,6 +8,7 @@ import type { Character } from '../sim/character';
 import type { GameState } from '../sim/state';
 import { wrapAngle } from '../sim/vec';
 import { HitFeedback } from '../ui/hitFeedback';
+import { Scoreboard } from '../ui/scoreboard';
 import { CharacterRenderer } from './characterRenderer';
 import { SpectatorCamera } from './spectatorCamera';
 
@@ -19,6 +20,9 @@ export class MatchPresentation {
   private readonly characters: CharacterRenderer;
   private readonly feedback: HitFeedback;
   private readonly spectator: SpectatorCamera;
+  private readonly scoreboard: Scoreboard;
+  /** Why the last round ended (for the round message). */
+  private lastRoundReason: 'eliminated' | 'time' = 'eliminated';
   /** Display names by character id ("Blue 2", "you"). */
   private readonly names = new Map<number, string>();
   private roundStartedAt = 0;
@@ -37,10 +41,12 @@ export class MatchPresentation {
     body: BodyConfig,
     hits: HitConfig,
     query: WorldQuery,
+    teamSize: number,
   ) {
     this.characters = new CharacterRenderer(state.characters, TEAM_COLORS, hits);
     scene.add(this.characters.object);
     this.feedback = new HitFeedback(container);
+    this.scoreboard = new Scoreboard(container, teamSize);
     this.spectator = new SpectatorCamera(state.characters, player, body, query);
     const perTeam = [0, 0];
     for (const c of state.characters) {
@@ -51,6 +57,7 @@ export class MatchPresentation {
 
   setPlaying(playing: boolean): void {
     this.feedback.setVisible(playing);
+    this.scoreboard.setVisible(playing);
   }
 
   /** True once you've called your hit and are watching someone else. */
@@ -71,6 +78,8 @@ export class MatchPresentation {
           const victim = this.state.characters.find((c) => c.id === e.victimId);
           this.feedback.showHitMarker(victim?.team === this.player.team);
         }
+      } else if (e.type === 'roundOver') {
+        this.lastRoundReason = e.reason;
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
         this.spectator.reset();
@@ -103,12 +112,14 @@ export class MatchPresentation {
     if (status === 'calling') this.feedback.setHitDirection(wrapAngle(cameraYaw - this.hitFromYaw));
     this.feedback.setOutLabel(spectating ? this.outLabel() : '');
     this.updateRoundMessage();
+    this.scoreboard.update(this.state.round, this.state.characters);
     return spectating;
   }
 
   dispose(): void {
     this.characters.dispose();
     this.feedback.dispose();
+    this.scoreboard.dispose();
   }
 
   /** "OUT · hit by Orange 2", rebuilt only when who hit you changes. */
@@ -127,12 +138,15 @@ export class MatchPresentation {
     const r = this.state.round;
     const showStart = r.phase === 'live' && this.state.time - this.roundStartedAt < HUD.roundStartMessageTime;
     const seconds = Math.max(1, Math.ceil(r.timer));
-    const key = r.phase === 'over' ? 1 + (r.winner + 1) * 1000 + seconds : showStart ? -r.number : 0;
+    const key =
+      r.phase === 'matchOver' ? 100000 + r.matchWinner : r.phase === 'over' ? 1 + (r.winner + 1) * 1000 + seconds : showStart ? -r.number : 0;
     if (key === this.roundKey) return;
     this.roundKey = key;
     let text = '';
-    if (r.phase === 'over') {
-      const result = r.winner < 0 ? 'Draw' : `${TEAMS[r.winner]!.name} wins the round`;
+    if (r.phase === 'matchOver') {
+      text = `${TEAMS[r.matchWinner]!.name} wins the match!`;
+    } else if (r.phase === 'over') {
+      const result = r.winner >= 0 ? `${TEAMS[r.winner]!.name} wins the round` : this.lastRoundReason === 'time' ? "Time's up · draw" : 'Draw';
       text = `${result} · next round in ${seconds}`;
     } else if (showStart) {
       text = `Round ${r.number}`;

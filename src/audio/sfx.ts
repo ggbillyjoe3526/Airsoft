@@ -95,6 +95,10 @@ export class Sfx {
       case 'roundOver':
         this.whistle(AUDIO.roundOverWhistle, 0);
         return;
+      case 'matchOver':
+        // Three long blasts: game over.
+        for (let i = 0; i < 3; i++) this.whistle(AUDIO.roundOverWhistle, AUDIO.roundOverWhistle * AUDIO.matchOverWhistleGap * (i + 1));
+        return;
       case 'roundStart':
         this.whistle(AUDIO.roundStartWhistle, 0);
         this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);

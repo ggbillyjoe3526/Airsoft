@@ -4,6 +4,7 @@ import { BALLISTICS } from './config/ballistics';
 import { BOTS } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
 import { NAV } from './config/nav';
+import { HUD } from './config/render';
 import { BODY, MOVEMENT } from './config/movement';
 import { PHYSICS } from './config/physics';
 import { LOADOUT } from './config/replicas';
@@ -25,6 +26,7 @@ import { MatchPresentation } from './render/matchPresentation';
 import { Renderer } from './render/renderer';
 import { type Character, createCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
+import { restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
@@ -71,6 +73,8 @@ export class Game {
   private tickRateTimer = 0;
   private started = false;
   private unlockedPlay = false;
+  /** Simulation time the match was decided (NaN while it's on). */
+  private matchOverAt = Number.NaN;
 
   static async create(container: HTMLElement, map: MapData, options: GameOptions): Promise<Game> {
     await initPhysics();
@@ -86,7 +90,7 @@ export class Game {
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     this.nav = buildNavGrid(map, NAV);
-    this.state = createGameState(SIM.seed, BALLISTICS.maxBBs);
+    this.state = createGameState(SIM.seed, BALLISTICS.maxBBs, ROUNDS);
     this.player = this.spawnRoster(map);
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.bots = new BotController(
@@ -107,7 +111,7 @@ export class Game {
       deadZones: map.deadZones,
       nav: this.nav,
       navSnap: NAV.snap,
-      roundResetDelay: ROUNDS.resetDelay,
+      rounds: ROUNDS,
     });
 
     this.keyboard = new Keyboard(window);
@@ -116,7 +120,7 @@ export class Game {
     this.input.yaw = this.player.spawnYaw;
     // Phase 1: the player is always on Blue.
     this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
-    this.match = new MatchPresentation(this.renderer.scene, container, this.state, this.player, BODY, HITS, this.physics);
+    this.match = new MatchPresentation(this.renderer.scene, container, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize);
 
     this.debug = new DebugOverlay(container, () => ({
       tick: this.state.tick,
@@ -186,6 +190,7 @@ export class Game {
 
   private play(allowUnlocked: boolean): void {
     this.combat.unlockAudio();
+    if (this.state.round.phase === 'matchOver') this.restartMatch();
     if (allowUnlocked) {
       this.unlockedPlay = true;
       this.resume();
@@ -202,11 +207,36 @@ export class Game {
     this.match.setPlaying(true);
   }
 
+  /** A fresh match from round 1 (after the result screen's "Play again"). */
+  private restartMatch(): void {
+    this.state.events.length = 0;
+    restartMatch(this.state.round, this.state.characters, this.state.bbs, LOADOUT, ROUNDS, this.state.events);
+    this.matchOverAt = Number.NaN;
+    this.afterTick();
+  }
+
+  /** Everything that reacts to a simulation tick's events. */
+  private afterTick(): void {
+    this.bots.observe(this.state);
+    this.combat.afterTick();
+    this.match.afterTick(this.input.yaw);
+    for (const e of this.state.events) {
+      if (e.type === 'roundStart') this.input.resetView(this.player.spawnYaw);
+      if (e.type === 'matchOver') this.matchOverAt = this.state.time;
+    }
+  }
+
   private pause(): void {
     this.keyboard.capturing = false;
     this.keyboard.releaseAll();
     this.input.clearLatches();
-    this.startScreen.show(this.started);
+    const r = this.state.round;
+    if (r.phase === 'matchOver') {
+      const w = r.matchWinner;
+      this.startScreen.showResult(`${TEAMS[w]!.name} wins the match ${r.score[w]}–${r.score[1 - w]}${w === this.player.team ? '!' : ''}`);
+    } else {
+      this.startScreen.show(this.started);
+    }
     this.combat.setPlaying(false);
     this.match.setPlaying(false);
   }
@@ -229,12 +259,19 @@ export class Game {
         this.input.fillCommand(this.playerCommand);
         this.bots.think(this.state, SIM_DT);
         stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
-        this.bots.observe(this.state);
-        this.combat.afterTick();
-        this.match.afterTick(this.input.yaw);
-        for (const e of this.state.events) if (e.type === 'roundStart') this.input.resetView(this.player.spawnYaw);
+        this.afterTick();
       }
       this.ticksThisSecond += ticks;
+    }
+    // A little after the match is decided, give the mouse back and show the result screen.
+    if (running && this.state.time - this.matchOverAt >= HUD.matchOverScreenDelay) {
+      this.matchOverAt = Number.NaN;
+      if (this.unlockedPlay) {
+        this.unlockedPlay = false;
+        this.pause();
+      } else {
+        this.pointer.release();
+      }
     }
     this.keyboard.endFrame();
 

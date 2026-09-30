@@ -37,3 +37,4 @@ Classified as **fix now / document / can wait**.
 | Bots: `move`, `look` and the hunt goal are module-level scratch in botBrain.ts (reads are guarded, but it's implicit coupling); botBrain.ts is ~550 lines | can wait | Pass explicitly / split perception+modes into their own files when bots get smarter (Phase 2). |
 | Bot-only rounds are fast (7–15 s) and a last 1v1 can wander for ~40 s | can wait | Revisit lethality and hunting pace with the round timer. |
 | `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |
+| No pre-round freeze: everyone can move and fire from the round-start whistle | can wait | Spawns are hidden from each other (tested), so nobody can be shot at spawn; revisit with playtesting. |

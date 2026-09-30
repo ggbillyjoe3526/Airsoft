@@ -25,7 +25,7 @@ const DT = 1 / 60;
 function playMatch(seconds: number, seed: number, hider?: Vec3) {
   const physics = new PhysicsWorld(DEPOT, BODY, DT);
   const nav = buildNavGrid(DEPOT, NAV);
-  const state = createGameState(seed, BALLISTICS.maxBBs);
+  const state = createGameState(seed, BALLISTICS.maxBBs, ROUNDS);
   let id = 0;
   for (let team = 0; team < 2; team++) {
     for (let i = 0; i < ROUNDS.teamSize; i++) {
@@ -49,7 +49,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3) {
     deadZones: DEPOT.deadZones,
     nav,
     navSnap: NAV.snap,
-    roundResetDelay: ROUNDS.resetDelay,
+    rounds: ROUNDS,
   });
   const commands = new Map<number, PlayerCommand>();
   const bots = new BotController(state, hider ? state.characters.filter((c) => c.team === 1) : state.characters, commands, {
