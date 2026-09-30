@@ -73,3 +73,24 @@ describe('Viewmodel reload', () => {
     });
   }
 });
+
+describe('Viewmodel weapon switch mid-reload', () => {
+  it('draws the other replica with its support hand on the grip, not snapping from the magazine', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    const hands: THREE.Object3D[] = [];
+    vm.scene.traverse((o) => o.name === 'supportHand' && hands.push(o));
+    const dt = 1 / 60;
+    const frame = () => vm.update(dt, 0, 0, 0, 4.2, false, arm, LOADOUT, false);
+    arm.reload = LOADOUT[0]!.reloadTime;
+    for (let i = 0; i < 30; i++, arm.reload -= dt) frame();
+    expect(hands[0]!.position.length()).toBeGreaterThan(0.1);
+    // Switching cancels the reload and draws the pistol.
+    arm.reload = 0;
+    arm.active = 1;
+    frame();
+    expect(hands[1]!.position.length()).toBe(0);
+    expect(hands[0]!.position.length()).toBe(0);
+    vm.dispose();
+  });
+});

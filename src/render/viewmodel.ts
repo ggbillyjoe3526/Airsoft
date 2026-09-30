@@ -48,6 +48,8 @@ export class Viewmodel {
   }[] = [];
   /** 0 = support hand on its grip, 1 = on the magazine (reloading). */
   private handBlend = 0;
+  /** Loadout slot shown last frame: a newly drawn replica starts with its hand on the grip. */
+  private shownSlot = -1;
   private swayX = 0;
   private swayY = 0;
   private kick = 0;
@@ -141,6 +143,10 @@ export class Viewmodel {
     // Magazine swap: the support hand goes to the magazine, pulls it, stows it out of view, brings a
     // fresh one up and seats it, then returns to its grip once the reload is done.
     const reloading = armament.reload > 0;
+    if (armament.active !== this.shownSlot) {
+      this.shownSlot = armament.active;
+      this.handBlend = 0;
+    }
     this.handBlend = Math.max(0, Math.min(1, this.handBlend + (reloading ? dt : -dt) / R.handMoveTime));
     const magDistance = reloading ? magazineOut(reloadP) * R.magTravel + magazineSwap(reloadP) * R.swapTravel : 0;
     const magAxis = slot.mag?.userData.axis as THREE.Vector3 | undefined;

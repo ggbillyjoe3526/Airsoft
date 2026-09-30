@@ -19,6 +19,22 @@ interface FigureState {
   flinchZ: number;
 }
 
+/**
+ * Upper-body lean (radians about the figure's local X and Z) for a flinch of `amount` from a BB flying
+ * along world (dirX, dirZ), for a figure turned by `yaw` (it faces -Z locally): the body is pushed the
+ * way the BB was going. Writes into `out`.
+ */
+export function flinchLean(dirX: number, dirZ: number, yaw: number, amount: number, out: { x: number; z: number }): { x: number; z: number } {
+  const cy = Math.cos(yaw);
+  const sy = Math.sin(yaw);
+  const localX = dirX * cy - dirZ * sy;
+  const localZ = dirX * sy + dirZ * cy;
+  // +X rotation tips the top towards +Z (backwards); +Z rotation tips it towards -X.
+  out.x = localZ * amount;
+  out.z = -localX * amount;
+  return out;
+}
+
 /** Flinch strength (0..1) `t` seconds after a hit: a quick snap, then easing back. */
 export function flinchEnvelope(t: number): number {
   const F = FIGURE.flinch;
@@ -39,6 +55,7 @@ export class CharacterRenderer {
   private readonly calloutTexture = createCalloutTexture();
   private readonly calloutMaterial = new THREE.SpriteMaterial({ map: this.calloutTexture, transparent: true });
   private readonly figures: FigureState[] = [];
+  private readonly lean = { x: 0, z: 0 };
 
   constructor(
     private readonly characters: readonly Character[],
@@ -85,12 +102,8 @@ export class CharacterRenderer {
 
       // Flinch: lean the upper body the way the BB was going, in the figure's own frame (it faces -Z).
       s.flinchAge += dt;
-      const lean = flinchEnvelope(s.flinchAge) * FIGURE.flinch.lean;
-      const cy = Math.cos(yaw);
-      const sy = Math.sin(yaw);
-      const localX = s.flinchX * cy - s.flinchZ * sy;
-      const localZ = s.flinchX * sy + s.flinchZ * cy;
-      f.upper.rotation.set(localZ * lean, 0, -localX * lean);
+      const lean = flinchLean(s.flinchX, s.flinchZ, yaw, flinchEnvelope(s.flinchAge) * FIGURE.flinch.lean, this.lean);
+      f.upper.rotation.set(lean.x, 0, lean.z);
 
       // Walk cycle from distance actually covered (teleports into the dead zone don't count).
       const moved = Math.hypot(x - s.lastX, z - s.lastZ);
