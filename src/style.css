@@ -278,3 +278,176 @@ kbd {
   font-size: 13px;
   letter-spacing: 0.05em;
 }
+
+.hud.out .hud-crosshair,
+.hud.out .hud-replica {
+  display: none;
+}
+
+/* Hit feedback and round messages */
+.hitfx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 11;
+  color: #fff;
+  font-family: var(--ui-font);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+}
+
+.hitfx[hidden] {
+  display: none;
+}
+
+.hitfx-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0) 45%, rgba(255, 244, 214, 0.75) 100%);
+}
+
+.hitfx-flash.show {
+  animation: hitfx-flash 0.6s ease-out forwards;
+}
+
+@keyframes hitfx-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Hit marker: four short diagonal ticks around the crosshair. */
+.hitfx-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+}
+
+.hitfx-marker i {
+  position: absolute;
+  width: 9px;
+  height: 2px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.hitfx-marker.friendly i {
+  background: #7fd0ff;
+}
+
+.hitfx-marker i:nth-child(1) {
+  transform: translate(-15px, -15px) rotate(45deg);
+}
+
+.hitfx-marker i:nth-child(2) {
+  transform: translate(6px, -15px) rotate(-45deg);
+}
+
+.hitfx-marker i:nth-child(3) {
+  transform: translate(-15px, 13px) rotate(-45deg);
+}
+
+.hitfx-marker i:nth-child(4) {
+  transform: translate(6px, 13px) rotate(45deg);
+}
+
+.hitfx-marker.show {
+  animation: hitfx-fade 0.35s ease-out forwards;
+}
+
+@keyframes hitfx-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Where the BB that hit you came from: a wedge on a ring around the crosshair. */
+.hitfx-direction {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.hitfx-direction b {
+  position: absolute;
+  left: -22px;
+  top: -150px;
+  width: 44px;
+  height: 22px;
+  background: rgba(255, 244, 214, 0.95);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+}
+
+.hitfx-direction.show {
+  animation: hitfx-fade 2.2s ease-in forwards;
+}
+
+.hitfx-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18%;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.hitfx-banner.show {
+  opacity: 1;
+}
+
+.hitfx-banner strong {
+  display: block;
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ff3b30;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.55),
+    0 0 12px rgba(0, 0, 0, 0.45);
+}
+
+.hitfx-banner span {
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
+}
+
+.hitfx-spectating {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  text-align: center;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  opacity: 0;
+}
+
+.hitfx-spectating.show,
+.hitfx-round.show {
+  opacity: 1;
+}
+
+.hitfx-round {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9%;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  opacity: 0;
+}

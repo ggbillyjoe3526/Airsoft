@@ -39,6 +39,8 @@ export class Viewmodel {
   private lastYaw = 0;
   private lastPitch = 0;
   private readonly muzzleView = new THREE.Vector3();
+  /** 0 = playing, 1 = hand fully raised calling a hit. */
+  private hitBlend = 0;
 
   constructor(aspect: number, teamColor: number, loadout: readonly ReplicaConfig[]) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, VIEWMODEL.near, VIEWMODEL.far);
@@ -59,9 +61,12 @@ export class Viewmodel {
       model.visible = false;
       this.rig.add(model);
     }
+    this.replicas.raisedHand.visible = false;
+    this.scene.add(this.replicas.raisedHand);
   }
 
   setAspect(aspect: number): void {
+    if (this.camera.aspect === aspect) return;
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }
@@ -73,7 +78,8 @@ export class Viewmodel {
 
   /**
    * Called once per frame. `speed` is the player's horizontal speed and `walkSpeed` its walk speed;
-   * `carried` is true while sprinting or in the post-sprint lockout.
+   * `carried` is true while sprinting or in the post-sprint lockout; `callingHit` lowers the replica
+   * and raises your hand.
    */
   update(
     dt: number,
@@ -84,6 +90,7 @@ export class Viewmodel {
     carried: boolean,
     armament: Armament,
     loadout: readonly ReplicaConfig[],
+    callingHit: boolean,
   ): void {
     const replica = loadout[armament.active]!;
     for (let i = 0; i < this.slots.length; i++) this.slots[i]!.model.visible = i === armament.active;
@@ -116,13 +123,21 @@ export class Viewmodel {
     const drawP = replica.drawTime > 0 ? armament.draw / replica.drawTime : 0;
 
     const bob = VIEWMODEL.bobAmount * moving;
+    this.hitBlend = Math.max(0, Math.min(1, this.hitBlend + (callingHit ? dt : -dt) / VIEWMODEL.raiseTime));
+    const raise = smooth(this.hitBlend);
+    const hand = this.replicas.raisedHand;
+    hand.visible = this.hitBlend > 0;
+    const [hx, hy, hz] = VIEWMODEL.raisedHand;
+    hand.position.set(hx, hy - (1 - raise) * VIEWMODEL.raiseFrom, hz);
+
     this.rig.position.set(
       this.swayX + Math.cos(this.bobPhase) * bob - reloadDip * R.inward,
       this.swayY -
         Math.abs(Math.sin(this.bobPhase)) * bob +
         reloadDip * R.lift -
         drawP * VIEWMODEL.drawDrop -
-        this.sprintBlend * VIEWMODEL.sprintDrop,
+        this.sprintBlend * VIEWMODEL.sprintDrop -
+        raise * VIEWMODEL.hitDrop,
       this.kick * VIEWMODEL.kickBack,
     );
     this.rig.rotation.set(this.kick * VIEWMODEL.kickUp - drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);

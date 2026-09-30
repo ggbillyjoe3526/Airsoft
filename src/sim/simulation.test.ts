@@ -1,22 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { BODY, MOVEMENT } from '../config/movement';
+import { HITS, ROUNDS } from '../config/hits';
 import { LOADOUT } from '../config/replicas';
 import { createCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
 import type { CharacterMover } from './movement';
 import { createSimContext, type SimContext, stepSimulation } from './simulation';
+import type { GameEvent } from './events';
 import { createGameState } from './state';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
 const KILL_Y = -10;
+const DEAD_ZONES = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }]];
 
 /** A world with no level geometry to hit. */
 const openSky = { raycastStatic: () => -1 };
 
 function testContext(mover: CharacterMover, killY: number): SimContext {
-  return createSimContext({ mover, query: openSky, movement: MOVEMENT, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY });
+  return createSimContext({ mover, query: openSky, movement: MOVEMENT, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY, hits: HITS, deadZones: DEAD_ZONES, roundResetDelay: ROUNDS.resetDelay });
 }
 
 const floor: CharacterMover = {
@@ -160,3 +163,95 @@ describe('stepSimulation', () => {
     expect(state.events.some((e) => e.type === 'shot')).toBe(false);
   });
 });
+
+describe('hit calling and round flow', () => {
+  /** Blue shooter (id 0) facing -Z at the origin; one Orange target (id 1) 8 m ahead. */
+  function duel() {
+    const state = createGameState(1, 16);
+    const shooter = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
+    const target = createCharacter(1, vec3(0, 0, -8), 0, LOADOUT, 1);
+    state.characters.push(shooter, target);
+    const ctx = testContext(floor, KILL_Y);
+    const fire = createCommand();
+    fire.fire = true;
+    const commands = new Map([[0, fire]]);
+    return { state, shooter, target, ctx, commands, fire };
+  }
+
+  const ticksFor = (seconds: number) => Math.ceil(seconds / DT) + 1;
+
+  it('a hit character stops, calls the hit, walks off, then waits in the dead zone', () => {
+    const { state, target, ctx, commands, fire } = duel();
+    state.characters.push(createCharacter(2, vec3(50, 0, 0), 0, LOADOUT, 1)); // keeps the round live
+    for (let i = 0; i < 30 && target.status === 'alive'; i++) stepSimulation(state, commands, ctx, DT);
+    expect(target.status).toBe('calling');
+    fire.fire = false;
+
+    // Calling: stands still with no say over its own movement.
+    const called = { ...target.position };
+    const orders = createCommand();
+    orders.forward = 1;
+    commands.set(1, orders);
+    for (let i = 0; i < ticksFor(HITS.callTime) - 2; i++) stepSimulation(state, commands, ctx, DT);
+    expect(target.status).toBe('calling');
+    expect(Math.hypot(target.position.x - called.x, target.position.z - called.z)).toBeLessThan(0.05);
+
+    // Walking off: heads for its dead-zone spot (x = +30).
+    let walkOffEvent = false;
+    for (let i = 0; i < 5 && target.status === 'calling'; i++) {
+      stepSimulation(state, commands, ctx, DT);
+      walkOffEvent ||= state.events.some((e) => e.type === 'walkOff' && e.characterId === 1);
+    }
+    expect(target.status).toBe('walkingOff');
+    expect(walkOffEvent).toBe(true);
+    for (let i = 0; i < 30; i++) stepSimulation(state, commands, ctx, DT);
+    expect(target.position.x).toBeGreaterThan(called.x + 0.5);
+
+    // Too far to walk within walkOffTime: steps into the dead zone and stays there.
+    for (let i = 0; i < ticksFor(HITS.walkOffTime) && target.status === 'walkingOff'; i++) stepSimulation(state, commands, ctx, DT);
+    expect(target.status).toBe('out');
+    expect(target.position.x).toBeCloseTo(30, 3);
+    for (let i = 0; i < 30; i++) stepSimulation(state, commands, ctx, DT);
+    expect(target.position.x).toBeCloseTo(30, 1);
+  });
+
+  it('a hit character cannot shoot', () => {
+    const { state, target, ctx, commands } = duel();
+    for (let i = 0; i < 30 && target.status === 'alive'; i++) stepSimulation(state, commands, ctx, DT);
+    const theirFire = createCommand();
+    theirFire.fire = true;
+    commands.set(1, theirFire);
+    let shots = 0;
+    for (let i = 0; i < 60; i++) {
+      stepSimulation(state, commands, ctx, DT);
+      shots += state.events.filter((e) => e.type === 'shot' && e.characterId === 1).length;
+    }
+    expect(shots).toBe(0);
+  });
+
+  it('ends the round when a team is wiped out, then respawns everyone with full magazines', () => {
+    const { state, shooter, target, ctx, commands, fire } = duel();
+    let over: GameEvent | undefined;
+    for (let i = 0; i < 30 && !over; i++) {
+      stepSimulation(state, commands, ctx, DT);
+      over = state.events.find((e) => e.type === 'roundOver');
+    }
+    expect(over).toEqual({ type: 'roundOver', winner: 0 });
+    expect(state.round.phase).toBe('over');
+    fire.fire = false;
+    expect(shooter.armament.ammo[0]!.mag).toBeLessThan(LOADOUT[0]!.magSize);
+
+    let started: GameEvent | undefined;
+    for (let i = 0; i < ticksFor(ROUNDS.resetDelay) && !started; i++) {
+      stepSimulation(state, commands, ctx, DT);
+      started = state.events.find((e) => e.type === 'roundStart');
+    }
+    expect(started).toEqual({ type: 'roundStart', round: 2 });
+    expect(state.round.phase).toBe('live');
+    expect(target.status).toBe('alive');
+    expect(target.position).toEqual(target.spawnPosition);
+    expect(shooter.armament.ammo[0]!.mag).toBe(LOADOUT[0]!.magSize);
+    expect(state.bbs.bbs.every((b) => !b.active)).toBe(true);
+  });
+});
+

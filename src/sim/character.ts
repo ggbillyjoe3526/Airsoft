@@ -3,16 +3,32 @@ import { LOADOUT, type ReplicaConfig } from '../config/replicas';
 import { type Armament, createArmament } from './armament';
 import { copy, type Vec3, vec3 } from './vec';
 
+/**
+ * Where a character is in the hit-calling cycle: playing, standing with a hand up calling the hit,
+ * walking off to the dead zone, or out (waiting in the dead zone for the next round).
+ */
+export type LifeStatus = 'alive' | 'calling' | 'walkingOff' | 'out';
+
 /** Plain-data character state. No Three.js objects live here. */
 export interface Character {
   id: number;
+  /** Team index (0 = Blue, 1 = Orange). */
+  team: number;
+  status: LifeStatus;
+  /** Seconds since `status` last changed. */
+  statusTime: number;
+  /** Who hit this character this round (-1 if not hit). */
+  hitBy: number;
+  /** Dead-zone spot this character walks to once hit. */
+  deadZoneTarget: Vec3;
   /** Feet position (bottom of the collision capsule). */
   position: Vec3;
   /** Position at the start of the last tick, for render interpolation. */
   prevPosition: Vec3;
   velocity: Vec3;
-  /** Where the character returns to if it ever leaves the world (safety net). */
+  /** Where the character starts each round (and returns to if it ever leaves the world). */
   spawnPosition: Vec3;
+  spawnYaw: number;
   yaw: number;
   pitch: number;
   /** 0 = standing, 1 = fully crouched. */
@@ -32,13 +48,20 @@ export function createCharacter(
   spawn: Vec3,
   yaw: number,
   loadout: readonly ReplicaConfig[] = LOADOUT,
+  team = 0,
 ): Character {
   return {
     id,
+    team,
+    status: 'alive',
+    statusTime: 0,
+    hitBy: -1,
+    deadZoneTarget: vec3(),
     position: vec3(spawn.x, spawn.y, spawn.z),
     prevPosition: vec3(spawn.x, spawn.y, spawn.z),
     velocity: vec3(),
     spawnPosition: vec3(spawn.x, spawn.y, spawn.z),
+    spawnYaw: yaw,
     yaw,
     pitch: 0,
     crouchAmount: 0,
@@ -70,4 +93,25 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
   c.velocity.z = 0;
   c.grounded = false;
   return true;
+}
+
+/** Puts a character back at its spawn for a new round: alive, standing, full magazines. */
+export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]): void {
+  copy(c.position, c.spawnPosition);
+  copy(c.prevPosition, c.spawnPosition);
+  c.velocity.x = 0;
+  c.velocity.y = 0;
+  c.velocity.z = 0;
+  c.yaw = c.spawnYaw;
+  c.pitch = 0;
+  c.crouchAmount = 0;
+  c.prevCrouchAmount = 0;
+  c.grounded = false;
+  c.jumpCooldown = 0;
+  c.sprinting = false;
+  c.sprintLockout = 0;
+  c.status = 'alive';
+  c.statusTime = 0;
+  c.hitBy = -1;
+  c.armament = createArmament(loadout);
 }

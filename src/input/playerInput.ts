@@ -75,6 +75,20 @@ export class PlayerInput {
     this.clearLatches();
   }
 
+  /** Returns true once per trigger click since the last tick (used for menus-in-play such as spectating). */
+  takeClick(): boolean {
+    const clicked = this.fireLatch;
+    this.fireLatch = false;
+    return clicked;
+  }
+
+  /** Looks the way a new round starts: along `yaw`, level. */
+  resetView(yaw: number): void {
+    this.yaw = yaw;
+    this.pitch = 0;
+    this.clearLatches();
+  }
+
   /** Drops pending one-shot actions (e.g. when the game pauses). */
   clearLatches(): void {
     this.jumpLatch = false;

@@ -82,10 +82,25 @@ export const IMPACT_PUFFS = {
   drift: 0.15,
 } as const;
 
+/** Third-person camera used while you're out, watching someone still in play. */
+export const SPECTATOR = {
+  /** Behind and above the watched player's head (metres). */
+  distance: 2.6,
+  height: 0.55,
+  /** The camera looks at a point this far ahead of the watched player's head. */
+  lookAhead: 3,
+  /** Kept this far in front of any wall between the head and the camera. */
+  wallPadding: 0.25,
+  /** How quickly the camera follows (1/s). */
+  followRate: 10,
+} as const;
+
 /** Heads-up display. */
 export const HUD = {
   /** The magazine count turns to a warning colour at or below this fraction of a full magazine. */
   lowAmmoFraction: 0.2,
+  /** How long "Round N" stays up after a round starts (seconds). */
+  roundStartMessageTime: 1.8,
 } as const;
 
 /** First-person replica rendering and motion. */
@@ -132,6 +147,14 @@ export const VIEWMODEL = {
   },
   /** Pitch-down (radians) of the replica at the start of a draw. */
   drawTilt: 0.6,
+  /**
+   * Calling your hit: the replica drops out of view and your left hand rises to this spot (camera
+   * space, metres) over `raiseTime` seconds.
+   */
+  hitDrop: 0.35,
+  raisedHand: [-0.3, -0.02, -0.62] as const,
+  raiseFrom: 0.35,
+  raiseTime: 0.25,
   /** Viewmodel lighting: [sky, ground, intensity] hemisphere, warm key from above-right, cool rim from behind. */
   light: {
     hemi: [0xe8f0ff, 0x4a4438, 1.3],

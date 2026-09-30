@@ -91,8 +91,8 @@ export class CombatPresentation {
     const p = this.player;
     const carried = p.sprinting || p.sprintLockout > 0;
     this.viewmodel.setAspect(this.renderer.camera.aspect);
-    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.walkSpeed, carried, p.armament, this.loadout);
-    this.hud.update(p.armament, this.loadout);
+    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.walkSpeed, carried, p.armament, this.loadout, p.status === 'calling');
+    this.hud.update(p.armament, this.loadout, p.status === 'alive');
 
     const cam = this.renderer.camera;
     cam.getWorldDirection(this.forward);
@@ -102,8 +102,9 @@ export class CombatPresentation {
     this.sfx.setListener(this.listenerPos, this.forward.x, this.forward.y, this.forward.z);
   }
 
-  render(): void {
-    this.renderer.render(this.overlay);
+  /** Draws the frame; the held replica only when the camera is in first person. */
+  render(firstPerson: boolean): void {
+    this.renderer.render(firstPerson ? this.overlay : undefined);
   }
 
   dispose(): void {

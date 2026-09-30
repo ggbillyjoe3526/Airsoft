@@ -284,7 +284,27 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
 
 export interface ReplicaModels {
   models: Map<string, THREE.Group>;
+  /** Your own left hand raised high, palm forward: calling your hit. */
+  raisedHand: THREE.Group;
   dispose(): void;
+}
+
+/** Fingers held straight and together. */
+const OPEN: FingerCurl = [0.06, 0.05, 0.03];
+
+/** Left hand raised to call a hit: palm facing forward, fingers up, forearm dropping out of view. */
+function buildRaisedHand(m: Record<MaterialKey, THREE.Material>): THREE.Group {
+  const b = new ModelBuilder();
+  const wrist = buildHand(b, {
+    side: 'left',
+    palm: [0, 0, 0],
+    across: [-1, 0, 0],
+    back: [0, 0, -1],
+    fingers: [OPEN, OPEN, OPEN, OPEN],
+    thumb: { swing: 0.1, curl: [0.1, 0.05] },
+  });
+  buildForearm(b, wrist, [wrist[0] + 0.03, wrist[1] - 0.3, wrist[2] - 0.08]);
+  return b.build(m);
 }
 
 /** Builds the held-replica model (with hands and team armband) for each replica in the loadout, keyed by replica id. */
@@ -294,9 +314,14 @@ export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor:
   for (const r of loadout) {
     models.set(r.id, r.look.model === 'pistol' ? buildPistol(materials, orangeTips) : buildAeg(materials, orangeTips));
   }
+  const raisedHand = buildRaisedHand(materials);
   return {
     models,
+    raisedHand,
     dispose() {
+      raisedHand.traverse((o) => {
+        if (o instanceof THREE.Mesh) o.geometry.dispose();
+      });
       for (const group of models.values()) {
         group.traverse((o) => {
           if (o instanceof THREE.Mesh) o.geometry.dispose();

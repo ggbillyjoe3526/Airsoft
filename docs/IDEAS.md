@@ -7,5 +7,6 @@ Parking lot for future features. Do not implement unless asked.
 - **Dead-rag / hit cloth**: hit players pull a red dead-rag out, not just a raised hand.
 - **Chrono station** on the range to show each replica's muzzle velocity.
 - **Game modes** from real sites: domination (flags), bomb/"hostage" prop, medic rules, VIP escort, speedsoft.
+- **Voiced hit calls**: a shouted "HIT!" (CC0 recording, or the browser's speech synthesis) when someone is hit.
 - **Referee NPC** who whistles for round start/end.
 - **Surrender rule** at close range (sites often use "bang-bang" or surrender for CQB).

@@ -84,6 +84,23 @@ export class Sfx {
       case 'bbImpact':
         this.impact(e.position);
         return;
+      case 'characterHit':
+        if (e.victimId === localId) {
+          this.hitTick();
+          return;
+        }
+        this.bodyHit(e.position);
+        if (e.shooterId === localId) this.hitMarker();
+        return;
+      case 'roundOver':
+        this.whistle(AUDIO.roundOverWhistle, 0);
+        return;
+      case 'roundStart':
+        this.whistle(AUDIO.roundStartWhistle, 0);
+        this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * 1.6);
+        return;
+      case 'walkOff':
+        return;
     }
   }
 
@@ -130,6 +147,48 @@ export class Sfx {
     }
     if (this.impactsInWindow++ >= AUDIO.maxImpactsPerWindow) return;
     this.noise(this.output(at), 'bandpass', 4200, 3, AUDIO.impactVolume, 0.0005, 0.018);
+  }
+
+  /** You're hit: a sharp, close plastic "tick" with a little thump. Unmistakable. */
+  private hitTick(): void {
+    const out = this.master!;
+    this.click(out, 3400, 0.012, AUDIO.hitTickVolume);
+    this.noise(out, 'bandpass', 5200, 2, AUDIO.hitTickVolume * 0.8, 0.0005, 0.03);
+    this.tone(out, 'sine', 180, 70, AUDIO.hitTickVolume * 0.6, 0.08);
+  }
+
+  /** A BB smacking into someone's jacket: duller than a hard surface. */
+  private bodyHit(at: Vec3): void {
+    this.noise(this.output(at), 'bandpass', 2200, 1.5, AUDIO.bodyHitVolume, 0.001, 0.04);
+  }
+
+  /** Your BB hit someone: a soft wooden "tock". */
+  private hitMarker(): void {
+    this.tone(this.master!, 'triangle', 1100, 700, AUDIO.hitMarkerVolume, 0.07);
+  }
+
+  /** Referee whistle: a pea whistle's warbling tone. */
+  private whistle(duration: number, delay: number): void {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime + delay;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = AUDIO.whistlePitch;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = AUDIO.whistleWarble;
+    const depth = ctx.createGain();
+    depth.gain.value = AUDIO.whistlePitch * 0.04;
+    lfo.connect(depth).connect(osc.frequency);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(AUDIO.whistleVolume, t + 0.02);
+    g.gain.setValueAtTime(AUDIO.whistleVolume, t + duration - 0.05);
+    g.gain.linearRampToValueAtTime(0, t + duration);
+    osc.connect(g).connect(this.master!);
+    osc.start(t);
+    lfo.start(t);
+    osc.stop(t + duration + 0.02);
+    lfo.stop(t + duration + 0.02);
   }
 
   // ---- Building blocks ----------------------------------------------------------------------

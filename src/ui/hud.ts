@@ -14,6 +14,7 @@ export class Hud {
   private readonly status: HTMLDivElement;
   private readonly reloadBar: HTMLDivElement;
   private readonly reloadFill: HTMLDivElement;
+  private shownInPlay = true;
   private shown = { name: '', mag: -1, reserve: -1, status: '', reloadPct: -1 };
 
   constructor(parent: HTMLElement) {
@@ -41,7 +42,9 @@ export class Hud {
     this.root.hidden = !visible;
   }
 
-  update(armament: Armament, loadout: readonly ReplicaConfig[]): void {
+  /** `inPlay` is false once you've been hit: the crosshair and ammo panel go away. */
+  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean): void {
+    if (this.shownInPlay !== inPlay) this.root.classList.toggle('out', !(this.shownInPlay = inPlay));
     const replica = loadout[armament.active]!;
     const ammo = armament.ammo[armament.active]!;
     const s = this.shown;

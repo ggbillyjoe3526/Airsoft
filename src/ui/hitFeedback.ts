@@ -1,0 +1,90 @@
+/**
+ * Hit feedback and round messages over the game view: the hit marker when your BB lands, the "you're
+ * hit" flash with a marker pointing to where the shot came from, the spectating label and the
+ * round banner. Timed effects are CSS animations restarted from here, so nothing runs per frame.
+ */
+export class HitFeedback {
+  private readonly root: HTMLDivElement;
+  private readonly marker: HTMLDivElement;
+  private readonly flash: HTMLDivElement;
+  private readonly banner: HTMLDivElement;
+  private readonly direction: HTMLDivElement;
+  private readonly spectating: HTMLDivElement;
+  private readonly round: HTMLDivElement;
+  private shownSpectating = '';
+  private shownRound = '';
+
+  constructor(parent: HTMLElement) {
+    this.root = document.createElement('div');
+    this.root.className = 'hitfx';
+    this.root.hidden = true;
+    this.root.innerHTML = `
+      <div class="hitfx-flash"></div>
+      <div class="hitfx-marker"><i></i><i></i><i></i><i></i></div>
+      <div class="hitfx-direction"><b></b></div>
+      <div class="hitfx-banner"><strong>HIT!</strong><span>Hand up, walk off to your dead zone</span></div>
+      <div class="hitfx-spectating"></div>
+      <div class="hitfx-round"></div>`;
+    parent.appendChild(this.root);
+    const q = (sel: string) => this.root.querySelector(sel) as HTMLDivElement;
+    this.flash = q('.hitfx-flash');
+    this.marker = q('.hitfx-marker');
+    this.direction = q('.hitfx-direction');
+    this.banner = q('.hitfx-banner');
+    this.spectating = q('.hitfx-spectating');
+    this.round = q('.hitfx-round');
+  }
+
+  setVisible(visible: boolean): void {
+    this.root.hidden = !visible;
+  }
+
+  /** Your BB hit someone. `friendly` marks a teammate (friendly fire counts, as at a real site). */
+  showHitMarker(friendly: boolean): void {
+    this.marker.classList.toggle('friendly', friendly);
+    restart(this.marker, 'show');
+  }
+
+  /**
+   * You've been hit. `fromAngle` is where the BB came from relative to where you're looking
+   * (radians, 0 = straight ahead, positive = to your right).
+   */
+  showHit(fromAngle: number): void {
+    this.direction.style.transform = `rotate(${fromAngle}rad)`;
+    restart(this.flash, 'show');
+    restart(this.direction, 'show');
+    this.banner.classList.add('show');
+  }
+
+  /** Clears the "you're hit" banner (new round). */
+  clearHit(): void {
+    this.banner.classList.remove('show');
+  }
+
+  /** Name of the player being watched, or '' when not spectating. */
+  setSpectating(name: string): void {
+    if (name === this.shownSpectating) return;
+    this.shownSpectating = name;
+    this.spectating.textContent = name ? `Spectating ${name} · click for next` : '';
+    this.spectating.classList.toggle('show', name !== '');
+  }
+
+  /** Round message (e.g. "Blue wins the round"), or '' to hide it. */
+  setRoundMessage(text: string): void {
+    if (text === this.shownRound) return;
+    this.shownRound = text;
+    this.round.textContent = text;
+    this.round.classList.toggle('show', text !== '');
+  }
+
+  dispose(): void {
+    this.root.remove();
+  }
+}
+
+/** Restarts a CSS animation by toggling its class across a reflow. */
+function restart(el: HTMLElement, cls: string): void {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}

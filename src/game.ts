@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import { BALLISTICS } from './config/ballistics';
+import { HITS, ROUNDS } from './config/hits';
 import { BODY, MOVEMENT } from './config/movement';
 import { PHYSICS } from './config/physics';
 import { LOADOUT } from './config/replicas';
@@ -16,6 +17,7 @@ import { addLighting } from './render/lighting';
 import { buildMapMeshes, disposeMapMeshes } from './render/mapMeshes';
 import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './render/proceduralTextures';
 import { CombatPresentation } from './render/combatPresentation';
+import { MatchPresentation } from './render/matchPresentation';
 import { Renderer } from './render/renderer';
 import { type Character, createCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
@@ -55,6 +57,7 @@ export class Game {
   private readonly ctx: SimContext;
   private readonly player: Character;
   private readonly combat: CombatPresentation;
+  private readonly match: MatchPresentation;
   private rafId = 0;
   private lastTime = 0;
   private ticksThisSecond = 0;
@@ -77,13 +80,7 @@ export class Game {
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     this.state = createGameState(SIM.seed, BALLISTICS.maxBBs);
-    const spawn = map.spawns[0][0];
-    if (!spawn) throw new Error(`Map ${map.name} has no spawn for team 0`);
-    // Map spawns are floor points; characters stand the physics rest gap above the floor.
-    const feet = vec3(spawn.position.x, spawn.position.y + PHYSICS.groundRestGap, spawn.position.z);
-    this.player = createCharacter(PLAYER_ID, feet, spawn.yaw);
-    this.state.characters.push(this.player);
-    this.physics.addCharacter(this.player);
+    this.player = this.spawnRoster(map);
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.ctx = createSimContext({
       mover: this.physics,
@@ -93,14 +90,18 @@ export class Game {
       ballistics: BALLISTICS,
       loadout: LOADOUT,
       killY: map.killY,
+      hits: HITS,
+      deadZones: map.deadZones,
+      roundResetDelay: ROUNDS.resetDelay,
     });
 
     this.keyboard = new Keyboard(window);
     this.pointer = new PointerLock(this.renderer.canvas);
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
-    this.input.yaw = spawn.yaw;
+    this.input.yaw = this.player.spawnYaw;
     // Phase 1: the player is always on Blue.
-    this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[0].color, SIM_DT);
+    this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
+    this.match = new MatchPresentation(this.renderer.scene, container, this.state, this.player, BODY, this.physics);
 
     this.debug = new DebugOverlay(container, () => ({
       tick: this.state.tick,
@@ -127,6 +128,27 @@ export class Game {
     this.pointer.onError(() => this.startScreen.showHint(LOCK_REFUSED_HINT));
   }
 
+  /**
+   * Creates both teams at the map's spawns: the local player plus teammates on Blue, and Orange.
+   * Until bots arrive, everyone but the player just stands at their spawn. Returns the player.
+   */
+  private spawnRoster(map: MapData): Character {
+    let id = PLAYER_ID;
+    for (let team = 0; team < TEAMS.length; team++) {
+      const spawns = map.spawns[team] ?? [];
+      if (spawns.length < ROUNDS.teamSize) throw new Error(`Map ${map.name} needs ${ROUNDS.teamSize} spawns for team ${team}`);
+      for (let i = 0; i < ROUNDS.teamSize; i++) {
+        const s = spawns[i]!;
+        // Map spawns are floor points; characters stand the physics rest gap above the floor.
+        const feet = vec3(s.position.x, s.position.y + PHYSICS.groundRestGap, s.position.z);
+        const c = createCharacter(id++, feet, s.yaw, LOADOUT, team);
+        this.state.characters.push(c);
+        this.physics.addCharacter(c);
+      }
+    }
+    return this.state.characters[0]!;
+  }
+
   start(): void {
     this.lastTime = performance.now();
     this.rafId = requestAnimationFrame(this.frame);
@@ -138,6 +160,7 @@ export class Game {
     this.pointer.dispose();
     this.debug.dispose();
     this.combat.dispose();
+    this.match.dispose();
     this.startScreen.dispose();
     disposeMapMeshes(this.mapGroup);
     disposeSurfaceTextures(this.textures);
@@ -161,6 +184,7 @@ export class Game {
     this.keyboard.capturing = true;
     this.startScreen.hide();
     this.combat.setPlaying(true);
+    this.match.setPlaying(true);
   }
 
   private pause(): void {
@@ -169,6 +193,7 @@ export class Game {
     this.input.clearLatches();
     this.startScreen.show(this.started);
     this.combat.setPlaying(false);
+    this.match.setPlaying(false);
   }
 
   private readonly frame = (now: number): void => {
@@ -183,11 +208,14 @@ export class Game {
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) this.combat.toggleBbPaths();
       this.input.update(this.player.armament.active, LOADOUT.length);
+      if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
       const ticks = advanceStepper(this.stepper, dt);
       for (let i = 0; i < ticks; i++) {
         this.input.fillCommand(this.playerCommand);
         stepSimulation(this.state, this.commands, this.ctx, SIM_DT);
         this.combat.afterTick();
+        this.match.afterTick(this.input.yaw);
+        for (const e of this.state.events) if (e.type === 'roundStart') this.input.resetView(this.player.spawnYaw);
       }
       this.ticksThisSecond += ticks;
     }
@@ -204,8 +232,10 @@ export class Game {
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, alpha, this.input.yaw, pitch);
-    this.combat.frame(running ? dt : 0, alpha, this.input.yaw, pitch); // frozen while paused
-    this.combat.render();
+    const frameDt = running ? dt : 0; // presentation is frozen while paused
+    const spectating = this.match.frame(this.renderer.camera, alpha, frameDt);
+    this.combat.frame(frameDt, alpha, this.input.yaw, pitch);
+    this.combat.render(!spectating);
     this.debug.frame(dt);
   };
 }

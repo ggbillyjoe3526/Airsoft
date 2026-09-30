@@ -178,11 +178,22 @@ function perimeter(): MapBlock[] {
 const BLUE_SPAWNS: SpawnPoint[] = SPAWN_ZS.map((z) => ({ position: vec3(-SPAWN_X, 0, z), yaw: -Math.PI / 2 }));
 const ORANGE_SPAWNS: SpawnPoint[] = SPAWN_ZS.map((z) => ({ position: vec3(SPAWN_X, 0, z), yaw: Math.PI / 2 }));
 
+/** Dead zone: the back corner of each spawn yard, behind the spawn line and out of every lane. */
+const DEAD_ZONE_X = 21.2;
+const DEAD_ZONE_SPOTS: readonly [number, number][] = [
+  [0, -3.4],
+  [0, -4.1],
+  [0.8, -4.1],
+];
+const BLUE_DEAD_ZONE: SpawnPoint[] = DEAD_ZONE_SPOTS.map(([dx, z]) => ({ position: vec3(-DEAD_ZONE_X + dx, 0, z), yaw: -Math.PI / 2 }));
+const ORANGE_DEAD_ZONE: SpawnPoint[] = DEAD_ZONE_SPOTS.map(([dx, z]) => ({ position: vec3(DEAD_ZONE_X - dx, 0, z), yaw: Math.PI / 2 }));
+
 export const DEPOT: MapData = {
   name: 'Depot',
   blocks: [...perimeter(), ...WEST_HALF, ...WEST_HALF.map(mirrorX), ...CENTRE],
   killY: -10,
   spawns: [BLUE_SPAWNS, ORANGE_SPAWNS],
+  deadZones: [BLUE_DEAD_ZONE, ORANGE_DEAD_ZONE],
 };
 
 /** Layout facts the tests check against, exported so they can't drift from the geometry. */

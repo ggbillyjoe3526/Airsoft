@@ -1,15 +1,47 @@
 import type { BallisticsConfig } from '../config/ballistics';
+import type { HitConfig } from '../config/hits';
+import type { SpawnPoint } from '../map/mapTypes';
 import type { WorldQuery } from './armament';
-import { type BBPool, stepBBFlight } from './ballistics';
+import { type BB, type BBPool, stepBBFlight } from './ballistics';
+import type { Character } from './character';
+import { eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
+import { characterHitCapsule, rayCapsule, type VerticalCapsule } from './hitbox';
 import { copy, vec3 } from './vec';
 
 const segmentDir = vec3();
+const capsule: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
+
+/** Who BBs can hit this tick, and what happens to them. */
+export interface BBTargets {
+  characters: Character[];
+  hits: HitConfig;
+  deadZones: readonly (readonly SpawnPoint[])[];
+}
+
+/** The first character in play along the BB's segment this tick (before `maxT`), or undefined. */
+function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { victim: Character; at: number } | undefined {
+  let ownerTeam = -1;
+  for (const c of t.characters) if (c.id === bb.ownerId) ownerTeam = c.team;
+  let victim: Character | undefined;
+  let best = Math.min(len, maxT);
+  for (const c of t.characters) {
+    if (c.id === bb.ownerId || !isInPlay(c)) continue;
+    if (!t.hits.friendlyFire && c.team === ownerTeam) continue;
+    const d = rayCapsule(bb.prevPosition, segmentDir, best, characterHitCapsule(c, t.hits, capsule));
+    if (d >= 0 && d <= best) {
+      best = d;
+      victim = c;
+    }
+  }
+  return victim ? { victim, at: best } : undefined;
+}
 
 /**
- * Moves every BB in flight one tick and stops it at the first level surface its path crosses this
- * tick (reported as a bbImpact event). BBs that fall out of the world or get too old just vanish.
- * Characters are not hit yet; hit rules come with hit calling.
+ * Moves every BB in flight one tick and stops it at whatever its path crosses first this tick: a level
+ * surface (bbImpact event) or a character in play (characterHit event; the character is eliminated).
+ * BBs that fall out of the world or get too old just vanish. A BB never hits whoever fired it, nor
+ * anyone already hit.
  */
 export function stepBBs(
   pool: BBPool,
@@ -18,6 +50,7 @@ export function stepBBs(
   killY: number,
   events: GameEvent[],
   dt: number,
+  targets?: BBTargets,
 ): void {
   for (const bb of pool.bbs) {
     if (!bb.active) continue;
@@ -33,6 +66,22 @@ export function stepBBs(
       segmentDir.y = dy / len;
       segmentDir.z = dz / len;
       const t = query.raycastStatic(bb.prevPosition, segmentDir, len);
+      const hit = targets ? firstCharacterHit(bb, len, t >= 0 ? t : len, targets) : undefined;
+      if (hit) {
+        bb.position.x = bb.prevPosition.x + segmentDir.x * hit.at;
+        bb.position.y = bb.prevPosition.y + segmentDir.y * hit.at;
+        bb.position.z = bb.prevPosition.z + segmentDir.z * hit.at;
+        bb.active = false;
+        eliminate(hit.victim, bb.ownerId, targets!.characters, targets!.deadZones);
+        events.push({
+          type: 'characterHit',
+          victimId: hit.victim.id,
+          shooterId: bb.ownerId,
+          position: vec3(bb.position.x, bb.position.y, bb.position.z),
+          direction: vec3(segmentDir.x, segmentDir.y, segmentDir.z),
+        });
+        continue;
+      }
       if (t >= 0) {
         bb.position.x = bb.prevPosition.x + segmentDir.x * t;
         bb.position.y = bb.prevPosition.y + segmentDir.y * t;

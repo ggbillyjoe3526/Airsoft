@@ -21,4 +21,9 @@ export interface MapData {
   /** Anything below this height has left the level and is returned to its spawn. */
   killY: number;
   spawns: [SpawnPoint[], SpawnPoint[]];
+  /**
+   * Per team, spots in that team's dead zone where hit players wait for the next round. Out of the
+   * way of play (a corner of the spawn yard), one per player.
+   */
+  deadZones: [SpawnPoint[], SpawnPoint[]];
 }

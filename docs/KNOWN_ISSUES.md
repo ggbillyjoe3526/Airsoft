@@ -22,3 +22,6 @@ Classified as **fix now / document / can wait**.
 | The BB path and near puffs sit on the crosshair's lower arm | can wait | Consider a smaller lower arm or a dot-only crosshair option. |
 | AEG BBs fly nearly flat within Depot's 30 m (hop-up 0.12, spinDecayTime 0.55) | can wait | Tuning: playtest a shorter spinDecayTime so the drop shows within 30 m. |
 | Sound recipe numbers are hardcoded in sfx.ts; one vec3 per shot/impact event; per-tick armCtx; `muzzle` looked up by name per shot; viewmodel `setAspect` every frame; untyped `userData.axis` | can wait | Minor code debt; profile before optimising. |
+| Walk-off goes in a straight line; anyone blocked by a wall slides along it and is moved into the dead zone after 4 s | document | Use the bots' waypoint graph for walk-off once it exists. |
+| Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing, no turn interpolation | can wait | Art pass / Phase 2 animations. |
+| Other players' yaw isn't interpolated between ticks | can wait | Invisible at 60 Hz for standing dummies; revisit with bots turning. |

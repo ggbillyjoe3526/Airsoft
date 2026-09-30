@@ -14,7 +14,10 @@ ai (bots) ─► PlayerCommand ┤
 
 - **sim/**: all gameplay rules. Plain data (`GameState`, `Character`, the BB pool), no Three.js, no DOM, no `Math.random`.
   Each tick: move characters, handle replicas (`armament.ts`: fire, reload, switch; spawns BBs), then fly BBs
-  (`ballistics.ts` flight model, `bbs.ts` collision via the `WorldQuery` ray cast). Anything presentation needs
+  (`ballistics.ts` flight model, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
+  characters via `hitbox.ts` capsules), then round flow (`round.ts`). A hit character is eliminated
+  (`elimination.ts`: alive → calling → walkingOff → out) and from then on follows a built-in command instead of its
+  controller's, can't fire and can't be hit. Anything presentation needs
   to react to is pushed to `state.events` (shots, impacts, reloads), cleared every tick.
   Advances only via `stepSimulation(state, commands, ctx, dt)`. Randomness comes from the seedable `state.rng`.
 - **Commands**: every character (player, bot, later remote players) is driven by one `PlayerCommand` per tick,
@@ -33,13 +36,16 @@ ai (bots) ─► PlayerCommand ┤
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
 - **audio/**: synthesised Web Audio effects; positional for everything but the local player's own replica.
+- **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox
+  figures, a few meshes each, one shared material), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
+  you're out, and round messages.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop. The only place that knows about every layer.
 
 ## Map data
 
-Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind and spawns (later also
-waypoints/cover points). The same data builds Rapier colliders and merged Three.js meshes
+Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind, spawns and dead-zone spots
+per team (later also waypoints/cover points). The same data builds Rapier colliders and merged Three.js meshes
 (one draw call per surface texture).
 
 ## Multiplayer readiness (not implemented)

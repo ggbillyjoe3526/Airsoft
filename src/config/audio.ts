@@ -11,4 +11,16 @@ export const AUDIO = {
   /** At most this many impact ticks start within `impactWindow` seconds (a hose of BBs stays readable). */
   maxImpactsPerWindow: 8,
   impactWindow: 0.1,
+  /** The sharp "tick" you hear when a BB hits you. */
+  hitTickVolume: 0.8,
+  /** A BB landing on someone else (positional). */
+  bodyHitVolume: 0.6,
+  /** Confirmation that your BB hit someone. */
+  hitMarkerVolume: 0.35,
+  /** Referee whistle at the end and start of a round. */
+  whistleVolume: 0.25,
+  whistlePitch: 2900,
+  whistleWarble: 28,
+  roundOverWhistle: 0.8,
+  roundStartWhistle: 0.14,
 } as const;
