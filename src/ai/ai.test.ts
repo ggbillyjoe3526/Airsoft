@@ -259,24 +259,34 @@ describe('bots in a duel', () => {
     expect(turned).toBe(true);
   });
 
-  it('hear an enemy running behind them, but not one walking or moving crouched', () => {
-    for (const [pace, heard] of [
-      ['run', true],
-      ['walk', false],
-      ['crouch', false],
-    ] as const) {
-      // The bot faces away (turned before its brain starts); the player crosses behind it, 8 m back.
-      const { run, commands, bots } = duel(8, (st) => (st.characters[1]!.yaw += Math.PI));
+  it('hear enemy footsteps behind them only when running or sprinting, and only within range', () => {
+    const cases = [
+      ['run', 8, true],
+      ['sprint', 8, true],
+      ['walk', 8, false],
+      ['crouch', 8, false],
+      // Between the running (11 m) and sprinting (16 m) hearing ranges.
+      ['run', 14, false],
+      ['sprint', 14, true],
+    ] as const;
+    expect(BOTS.footstepHearingRun).toBeLessThan(13);
+    expect(BOTS.footstepHearingSprint).toBeGreaterThan(15);
+    for (const [pace, dist, heard] of cases) {
+      // The bot faces away (turned before its brain starts); the player crosses behind it along +X,
+      // staying at about `dist` metres.
+      const { run, commands, bots } = duel(dist, (st) => (st.characters[1]!.yaw += Math.PI));
       const cmd = commands.get(0)!;
-      cmd.right = 1;
+      cmd.yaw = -Math.PI / 2; // faces +X
+      cmd.forward = 1;
       cmd.walk = pace === 'walk';
       cmd.crouch = pace === 'crouch';
+      cmd.sprint = pace === 'sprint';
       let heardIt = false;
-      run(1.5, () => {
+      run(1, () => {
         const b = bots.bots[0]!;
         if (b.hasLastKnown && !b.targetVisible) heardIt = true;
       });
-      expect(heardIt, pace).toBe(heard);
+      expect(heardIt, `${pace} at ${dist} m`).toBe(heard);
     }
   });
 

@@ -20,8 +20,11 @@ Focus: make the existing loop feel great on one map. No second map yet.
   - Depot enlarged and opened up: ~15–20% larger, ~20% less clutter, wider lanes, same identity;
     all layout tests kept (sightline cap may rise to ~34 m).
 - **M2. Sound you can play by**
-  - Positional footsteps: loud running, quiet walking, silent crouched. Bots hear footsteps.
-  - Sound pass: replica sounds, impacts, indoor/outdoor feel.
+  - Positional footsteps: running and sprinting are heard; walking and moving crouched are silent
+    (CS/Valorant rule, see DECISIONS). Bots hear footsteps.
+  - Sound pass: per-shot and per-impact pitch variation, AEG motor whirr, a short yard reverb.
+    Indoor/outdoor acoustics are out of scope while Depot is the only map (it's roofless); revisit
+    with the second map in Phase 3.
 - **M3. Feel and feedback**
   - Reload animation (support hand swaps the magazine).
   - Hit reactions (flinch), clearer hit confirmation at range.

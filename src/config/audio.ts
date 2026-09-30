@@ -3,6 +3,12 @@ export const AUDIO = {
   masterVolume: 0.7,
   shotVolume: 0.55,
   mechanismVolume: 0.35,
+  /** Each shot's pitch varies by up to ± this fraction, so full auto sounds mechanical, not looped. */
+  shotPitchSpread: 0.05,
+  /** AEG gearbox: the motor's short whirr under each cycle (sawtooth sweep, Hz). */
+  aegMotor: { fromHz: 105, toHz: 80, gain: 0.12, time: 0.06 },
+  /** BB impact pitch varies by up to ± this fraction (a hose of BBs doesn't tick on one note). */
+  impactPitchSpread: 0.15,
   impactVolume: 0.5,
   /** Positional sounds: full volume within refDistance, then roll off. */
   refDistance: 3,
@@ -33,6 +39,11 @@ export const AUDIO = {
     landThumpFromHz: 150,
     landThumpToHz: 45,
     landThumpTime: 0.14,
+    /** Other players' steps further than this (m) aren't played: about as far as bots hear a sprint. */
+    maxDistance: 22,
+    /** At most this many steps start within `window` seconds (six sprinters stay readable). */
+    maxPerWindow: 4,
+    window: 0.1,
   },
   /**
    * The yard's echo: a short procedural reverb (decaying noise) that every in-world sound feeds, so

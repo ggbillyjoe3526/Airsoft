@@ -37,3 +37,6 @@ Classified as **fix now / document / can wait**.
 | `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |
 | No pre-round freeze: everyone can move and fire from the round-start whistle | can wait | Spawns are hidden from each other (tested), so nobody can be shot at spawn; revisit with playtesting. |
 | config/render.ts and config/audio.ts hold small derived helpers (whistle schedule, result-screen delay) and render imports audio | can wait | Fine at this size; move derived timing into a module if config grows more logic. |
+| Bots hear footsteps and gunfire through walls (no occlusion); only range limits it, and the guess is vague (±30% of distance) | document | Deliberate simplification; playtest whether bots feel spooky. Occlusion could halve range through walls later. |
+| Bots never walk or crouch-move, so their own footsteps always give them away | can wait | Phase 2 M4 (smarter bots): walk when closing in on a heard contact. |
+| Footstep hearing ranges (run 11 m, sprint 16 m, land 12 m) are first guesses | can wait | Tune from playtesting. |

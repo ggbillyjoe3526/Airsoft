@@ -3,6 +3,12 @@ import type { ReplicaConfig, ReplicaModelKind } from '../config/replicas';
 import type { GameEvent } from '../sim/events';
 import type { FootstepKind } from '../sim/footsteps';
 import type { Vec3 } from '../sim/vec';
+import { VoiceLimit } from './voiceLimit';
+
+/** A random pitch factor within ± `spread` (presentation-only randomness, not the simulation's RNG). */
+function jitter(spread: number): number {
+  return 1 + (Math.random() * 2 - 1) * spread;
+}
 
 /**
  * Procedurally synthesised sound effects (no audio files). Replicas are meant to sound like what they
@@ -15,8 +21,10 @@ export class Sfx {
   /** In-world sounds go here: straight to the mix plus a send to the yard's reverb. */
   private world: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
-  private impactWindowStart = 0;
-  private impactsInWindow = 0;
+  private readonly impactLimit = new VoiceLimit(AUDIO.maxImpactsPerWindow, AUDIO.impactWindow);
+  private readonly stepLimit = new VoiceLimit(AUDIO.footsteps.maxPerWindow, AUDIO.footsteps.window);
+  /** Where the listener is (for distance culling of quiet sounds). */
+  private readonly listener = { x: 0, y: 0, z: 0 };
   private readonly shotSounds = new Map<string, ReplicaModelKind>();
   /** Whistle oscillators still playing or scheduled (a new round silences them). */
   private readonly whistles: OscillatorNode[] = [];
@@ -57,6 +65,9 @@ export class Sfx {
 
   /** Keep the 3D listener at the camera. */
   setListener(pos: Vec3, forwardX: number, forwardY: number, forwardZ: number): void {
+    this.listener.x = pos.x;
+    this.listener.y = pos.y;
+    this.listener.z = pos.z;
     const l = this.ctx?.listener;
     if (!l) return;
     if (!l.positionX) {
@@ -105,7 +116,8 @@ export class Sfx {
       case 'footstep': {
         const self = e.characterId === localId;
         const at = self ? null : positionOf(e.characterId);
-        if (!self && !at) return;
+        if (!self && (!at || Math.hypot(at.x - this.listener.x, at.z - this.listener.z) > AUDIO.footsteps.maxDistance)) return;
+        if (!this.stepLimit.take(this.ctx.currentTime)) return;
         this.footstep(this.output(at ?? null), e.kind, self ? AUDIO.footsteps.selfVolume / AUDIO.footsteps.volume : 1);
         return;
       }
@@ -140,18 +152,22 @@ export class Sfx {
 
   // ---- Recipes ------------------------------------------------------------------------------
 
-  /** AEG: a short airy puff from the nozzle plus the gearbox's piston slap. */
+  /** AEG: a short airy puff from the nozzle, the gearbox's piston slap and the motor's whirr. */
   private aegShot(out: AudioNode): void {
-    this.noise(out, 'bandpass', 2600, 0.9, AUDIO.shotVolume * 0.6, 0.002, 0.03);
-    this.tone(out, 'triangle', 190, 90, AUDIO.shotVolume * 0.5, 0.045);
-    this.click(out, 1500, 0.008, AUDIO.mechanismVolume * 0.6);
+    const p = jitter(AUDIO.shotPitchSpread);
+    const m = AUDIO.aegMotor;
+    this.noise(out, 'bandpass', 2600 * p, 0.9, AUDIO.shotVolume * 0.6, 0.002, 0.03);
+    this.tone(out, 'triangle', 190 * p, 90 * p, AUDIO.shotVolume * 0.5, 0.045);
+    this.tone(out, 'sawtooth', m.fromHz * p, m.toHz * p, AUDIO.shotVolume * m.gain, m.time);
+    this.click(out, 1500 * p, 0.008, AUDIO.mechanismVolume * 0.6);
   }
 
   /** Gas pistol: a sharper gas hiss and the slide's plastic clack. */
   private pistolShot(out: AudioNode): void {
-    this.noise(out, 'highpass', 1800, 0.7, AUDIO.shotVolume * 0.75, 0.001, 0.06);
+    const p = jitter(AUDIO.shotPitchSpread);
+    this.noise(out, 'highpass', 1800 * p, 0.7, AUDIO.shotVolume * 0.75, 0.001, 0.06);
     this.noise(out, 'lowpass', 5000, 0.5, AUDIO.shotVolume * 0.25, 0.005, 0.14);
-    this.click(out, 800, 0.016, AUDIO.mechanismVolume);
+    this.click(out, 800 * p, 0.016, AUDIO.mechanismVolume);
   }
 
   /** A footstep (`run` or `sprint`) or landing thud; `scale` turns your own steps down. */
@@ -164,7 +180,7 @@ export class Sfx {
       return;
     }
     const v = (kind === 'sprint' ? f.sprintVolume : f.volume) * scale;
-    const pitch = 1 + (Math.random() * 2 - 1) * f.scuffSpread; // presentation-only randomness
+    const pitch = jitter(f.scuffSpread);
     this.noise(out, 'bandpass', f.scuffHz * pitch, f.scuffQ, v, 0.002, f.scuffTime);
     this.tone(out, 'sine', f.thumpFromHz * pitch, f.thumpToHz, v * f.thumpGain, f.thumpTime);
     if (kind === 'sprint') this.noise(out, 'bandpass', f.gearHz * pitch, f.gearQ, v * f.gearGain, 0.004, f.gearTime);
@@ -185,13 +201,8 @@ export class Sfx {
 
   /** The dry "tik" of a BB hitting something hard. Rate-limited so full auto doesn't become a hiss. */
   private impact(at: Vec3): void {
-    const t = this.ctx!.currentTime;
-    if (t - this.impactWindowStart > AUDIO.impactWindow) {
-      this.impactWindowStart = t;
-      this.impactsInWindow = 0;
-    }
-    if (this.impactsInWindow++ >= AUDIO.maxImpactsPerWindow) return;
-    this.noise(this.output(at), 'bandpass', 4200, 3, AUDIO.impactVolume, 0.0005, 0.018);
+    if (!this.impactLimit.take(this.ctx!.currentTime)) return;
+    this.noise(this.output(at), 'bandpass', 4200 * jitter(AUDIO.impactPitchSpread), 3, AUDIO.impactVolume, 0.0005, 0.018);
   }
 
   /** You're hit: a sharp, close plastic "tick" with a little thump. Unmistakable. */
