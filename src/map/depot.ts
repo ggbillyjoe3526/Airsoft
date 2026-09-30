@@ -114,14 +114,15 @@ const WEST_HALF: MapBlock[] = [
   ...crateStack(-9.5, DIVIDER_Z0 - CRATE),
   box('barrier', -10.5, -9.9, 0, CROUCH_COVER_HEIGHT, -1.5, 1.5),
   crate(-3.4, -1.8),
-  // South of the centre container: breaks diagonals from the south spawn yard across mid.
-  ...crateStack(-3.6, -5),
+  // South of the centre container: breaks diagonals from the south spawn yard across mid. Its corner
+  // nearly touches the stack by the office wall (no half-width slit between them).
+  ...crateStack(-4.0, -5),
 
   // Mid, south flank.
   ...crateStack(-7.2, -4),
   ...crateStack(-10.4, -5.2),
   ...crateStack(-5.4, OFFICE_N1 + 0.1),
-  crate(-12.4, -5.9),
+  crate(-12.5, -6.25), // against the office wall (no slit behind it), a clear 0.9 m from the stack
 
   // Office north wall: wall, door, wall, window, wall, (centre door shared with the east half).
   wall(OFFICE_W0, -9, OFFICE_N0, OFFICE_N1),

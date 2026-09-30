@@ -207,6 +207,27 @@ describe('Depot map', () => {
     }
   });
 
+  it('has no slits: gaps between obstacles are either sealed (< 0.3 m) or clearly walkable (≥ 0.9 m)', () => {
+    const blockers = DEPOT.blocks.filter(blocksWalking);
+    const inside = (x: number, z: number, skip: MapBlock[]): boolean =>
+      blockers.some((b) => !skip.includes(b) && x > minX(b) && x < maxX(b) && z > minZ(b) && z < maxZ(b));
+    for (let i = 0; i < blockers.length; i++) {
+      for (let j = i + 1; j < blockers.length; j++) {
+        const a = blockers[i]!;
+        const b = blockers[j]!;
+        const gx = Math.max(0, Math.max(minX(a), minX(b)) - Math.min(maxX(a), maxX(b)));
+        const gz = Math.max(0, Math.max(minZ(a), minZ(b)) - Math.min(maxZ(a), maxZ(b)));
+        const gap = Math.hypot(gx, gz);
+        if (gap < 0.3 || gap >= 0.9) continue;
+        // The middle of the gap: if a third block fills it, there's no slit there.
+        const mx = gx > 0 ? (Math.max(minX(a), minX(b)) + Math.min(maxX(a), maxX(b))) / 2 : (Math.max(minX(a), minX(b)) + Math.min(maxX(a), maxX(b))) / 2;
+        const mz = gz > 0 ? (Math.max(minZ(a), minZ(b)) + Math.min(maxZ(a), maxZ(b))) / 2 : (Math.max(minZ(a), minZ(b)) + Math.min(maxZ(a), maxZ(b))) / 2;
+        const where = `${gap.toFixed(2)} m between ${a.kind} (${a.center.x}, ${a.center.z}) and ${b.kind} (${b.center.x}, ${b.center.z})`;
+        expect(inside(mx, mz, [a, b]), where).toBe(true);
+      }
+    }
+  });
+
   it('gives each team three spawns on the floor, clear of geometry, facing the enemy side', () => {
     for (const [team, spawns] of [
       [0, blue],
