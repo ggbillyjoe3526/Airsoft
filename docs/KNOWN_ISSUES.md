@@ -28,6 +28,7 @@ Classified as **fix now / document / can wait**.
 | Arms don't count as hits (most sites count them; replica hits don't) | can wait | Playtest whether BBs visibly striking an arm with no hit feel unfair. |
 | The hit-direction wedge is cut off at the end of calling (its 2.2 s fade is longer than the 1.4 s call) | can wait | Match the wedge fade to HITS.callTime. |
 | Bots only use the AEG, never switch to the pistol, and don't jump | can wait | Fine for Phase 1. |
-| Bots' default look direction when idle is "towards the enemy side" along x (Depot's layout) | can wait | Use lane direction / map data if a map runs north-south. |
-| Bots hear gunfire through walls and always know roughly where it came from | document | Deliberate simplification (hearing range 22 m). |
+| Bots hear gunfire through walls within 22 m and know roughly where it came from (off by up to 30% of the distance) | document | Deliberate simplification; hearing never skips a bot's reaction delay. |
 | A walk-off that can't reach the dead zone within 14 s, or gets stuck, fades out where it is and reappears in the dead zone | document | Rare now that walk-offs follow nav routes. |
+| Each hit runs one route search for the victim's walk-off inside the simulation tick (~2 ms worst case on Depot, not rationed) | can wait | Hits are rare (a few per round); profile before rationing. |
+| Bots fight by standing and strafing; they don't crouch-peek over 1.2 m cover or push to close distance | can wait | Phase 2 "smarter bots". |

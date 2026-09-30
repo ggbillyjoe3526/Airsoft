@@ -168,11 +168,25 @@ const NCOST = [1, 1, 1, 1, SQRT2, SQRT2, SQRT2, SQRT2];
  * start, ending at the goal, or the nearest walkable cell to it). Returns false if there is no route.
  */
 export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap: number, out: Vec3[]): boolean {
-  out.length = 0;
   const a = nearestWalkable(g, start.x, start.z, snap);
   const b = nearestWalkable(g, goal.x, goal.z, snap);
-  if (a < 0 || b < 0) return false;
-  if (!astar(g, s, a, b)) return false;
+  if (a < 0 || b < 0 || !astar(g, s, a, b)) {
+    out.length = 0;
+    return false;
+  }
+  // Waypoints reuse the objects already in `out`, so re-planning a route allocates nothing.
+  let n = 0;
+  const emit = (x: number, z: number): void => {
+    const p = out[n];
+    if (p) {
+      p.x = x;
+      p.y = goal.y;
+      p.z = z;
+    } else {
+      out.push({ x, y: goal.y, z });
+    }
+    n++;
+  };
 
   // Cells from goal back to start, reversed.
   const cells = s.cells;
@@ -201,13 +215,16 @@ export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap
     const c = cells[next]!;
     ax = cellX(g, c % g.cols);
     az = cellZ(g, Math.floor(c / g.cols));
-    out.push({ x: ax, y: goal.y, z: az });
+    emit(ax, az);
     k = next;
   }
-  if (out.length === 0) out.push({ x: cellX(g, b % g.cols), y: goal.y, z: cellZ(g, Math.floor(b / g.cols)) });
+  if (n === 0) emit(cellX(g, b % g.cols), cellZ(g, Math.floor(b / g.cols)));
+  out.length = n;
   // End exactly on the goal when it's walkable (the search works in cell centres).
-  const end = out[out.length - 1]!;
-  if (isWalkableAt(g, goal.x, goal.z) && clearLine(g, out.length > 1 ? out[out.length - 2]!.x : start.x, out.length > 1 ? out[out.length - 2]!.z : start.z, goal.x, goal.z)) {
+  const end = out[n - 1]!;
+  const fromX = n > 1 ? out[n - 2]!.x : start.x;
+  const fromZ = n > 1 ? out[n - 2]!.z : start.z;
+  if (isWalkableAt(g, goal.x, goal.z) && clearLine(g, fromX, fromZ, goal.x, goal.z)) {
     end.x = goal.x;
     end.z = goal.z;
   }

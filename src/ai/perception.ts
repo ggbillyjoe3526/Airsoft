@@ -40,20 +40,28 @@ export function lineClear(query: WorldQuery, a: Vec3, b: Vec3): boolean {
 }
 
 /**
- * Whether `viewer` can see `target` right now: within view distance, inside the field of view (unless
- * very close), and with a clear line from the viewer's eyes to the target's head or chest.
+ * Which part of `target` `viewer` can see right now, as a fraction of the target's height: the chest
+ * (bots.aimHeightFraction) if it's in view, else the head (bots.headHeightFraction), else 0 (not seen).
+ * Seeing needs the target within view distance, inside the field of view (unless very close), and a
+ * clear line from the viewer's eyes.
  */
-export function canSee(viewer: Character, target: Character, query: WorldQuery, bots: BotConfig, body: BodyConfig, hits: HitConfig): boolean {
+export function visiblePart(viewer: Character, target: Character, query: WorldQuery, bots: BotConfig, body: BodyConfig, hits: HitConfig): number {
   const dx = target.position.x - viewer.position.x;
   const dz = target.position.z - viewer.position.z;
   const dist = Math.hypot(dx, dz);
-  if (dist > bots.viewDistance) return false;
+  if (dist > bots.viewDistance) return 0;
   if (dist > bots.closeAwareness) {
     // Facing (-sin yaw, -cos yaw); compare with the direction to the target.
     const cos = (-Math.sin(viewer.yaw) * dx - Math.cos(viewer.yaw) * dz) / dist;
-    if (cos < Math.cos(((bots.fovDeg / 2) * Math.PI) / 180)) return false;
+    if (cos < Math.cos(((bots.fovDeg / 2) * Math.PI) / 180)) return 0;
   }
   eyeOf(viewer, body, eye);
-  if (lineClear(query, eye, bodyPoint(target, hits, bots.headHeightFraction, point))) return true;
-  return lineClear(query, eye, bodyPoint(target, hits, bots.aimHeightFraction, point)); // chest
+  if (lineClear(query, eye, bodyPoint(target, hits, bots.aimHeightFraction, point))) return bots.aimHeightFraction;
+  if (lineClear(query, eye, bodyPoint(target, hits, bots.headHeightFraction, point))) return bots.headHeightFraction;
+  return 0;
+}
+
+/** Whether `viewer` can see any of `target` right now (see visiblePart). */
+export function canSee(viewer: Character, target: Character, query: WorldQuery, bots: BotConfig, body: BodyConfig, hits: HitConfig): boolean {
+  return visiblePart(viewer, target, query, bots, body, hits) > 0;
 }

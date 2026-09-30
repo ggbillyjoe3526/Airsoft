@@ -7,27 +7,32 @@ import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
 import { LOADOUT } from '../config/replicas';
 import { DEPOT } from '../map/depot';
-import { buildNavGrid } from '../nav/navGrid';
+import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
-import { vec3 } from '../sim/vec';
+import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
 
 const DT = 1 / 60;
 
-/** Six bots (3v3) play on Depot with real physics: the whole loop, headless. */
-function playMatch(seconds: number, seed: number) {
+/**
+ * A 3v3 on Depot with real physics, headless. By default all six are bots; with `hider`, Blue is a
+ * single non-bot player standing still at that spot (hiding) against three Orange bots.
+ */
+function playMatch(seconds: number, seed: number, hider?: Vec3) {
   const physics = new PhysicsWorld(DEPOT, BODY, DT);
   const nav = buildNavGrid(DEPOT, NAV);
   const state = createGameState(seed, BALLISTICS.maxBBs);
   let id = 0;
   for (let team = 0; team < 2; team++) {
     for (let i = 0; i < ROUNDS.teamSize; i++) {
+      if (hider && team === 0 && i > 0) continue;
       const s = DEPOT.spawns[team]![i]!;
-      const c = createCharacter(id++, vec3(s.position.x, s.position.y + PHYSICS.groundRestGap, s.position.z), s.yaw, LOADOUT, team);
+      const at = hider && team === 0 ? hider : s.position;
+      const c = createCharacter(id++, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), s.yaw, LOADOUT, team);
       state.characters.push(c);
       physics.addCharacter(c);
     }
@@ -47,7 +52,7 @@ function playMatch(seconds: number, seed: number) {
     roundResetDelay: ROUNDS.resetDelay,
   });
   const commands = new Map<number, PlayerCommand>();
-  const bots = new BotController(state, state.characters, commands, {
+  const bots = new BotController(state, hider ? state.characters.filter((c) => c.team === 1) : state.characters, commands, {
     query: physics,
     nav,
     navSnap: NAV.snap,
@@ -59,13 +64,16 @@ function playMatch(seconds: number, seed: number) {
     seed,
   });
 
-  const stats = { rounds: 0, shots: 0, hits: 0, friendlyHits: 0, farthestFromSpawn: state.characters.map(() => 0) };
+  const stats = { rounds: 0, shots: 0, hits: 0, friendlyHits: 0, firstRoundEnd: -1, farthestFromSpawn: state.characters.map(() => 0) };
   for (let tick = 0; tick < seconds / DT; tick++) {
     bots.think(state, DT);
     stepSimulation(state, commands, ctx, DT);
     bots.observe(state);
     for (const e of state.events) {
-      if (e.type === 'roundOver') stats.rounds++;
+      if (e.type === 'roundOver') {
+        stats.rounds++;
+        if (stats.firstRoundEnd < 0) stats.firstRoundEnd = state.time;
+      }
       if (e.type === 'shot') stats.shots++;
       if (e.type === 'characterHit') {
         stats.hits++;
@@ -103,4 +111,16 @@ describe('a 3v3 bot match on Depot', () => {
   it('never has bots hit their own teammates', { timeout: 30_000 }, () => {
     for (const seed of [2, 3]) expect(playMatch(90, seed).friendlyHits).toBe(0);
   });
+
+  it('hunt down a player hiding off their routes, so a round never stalls', { timeout: 30_000 }, () => {
+    const nav = buildNavGrid(DEPOT, NAV);
+    // Deep in the Blue spawn yard, and in the far corner of the Blue office side room.
+    for (const spot of [vec3(-21.2, 0, 3.8), vec3(-11.4, 0, -13.1)]) {
+      expect(isWalkableAt(nav, spot.x, spot.z), `${spot.x},${spot.z} walkable`).toBe(true);
+      const stats = playMatch(120, 5, spot);
+      expect(stats.firstRoundEnd, `hider at ${spot.x},${spot.z}`).toBeGreaterThan(0);
+      expect(stats.firstRoundEnd).toBeLessThan(90);
+    }
+  });
 });
+

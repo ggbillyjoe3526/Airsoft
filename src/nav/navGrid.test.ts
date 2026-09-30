@@ -70,9 +70,28 @@ describe('nav grid', () => {
     }
   });
 
-  it('reports no route into a sealed-off area', () => {
+  it('reports no route into a sealed-off room', () => {
+    // A walled 4 m room in an open yard: its inside is walkable but unreachable.
+    const room = (x0: number, x1: number, z0: number, z1: number) => ({ kind: 'wall' as const, center: vec3((x0 + x1) / 2, 1.5, (z0 + z1) / 2), size: vec3(x1 - x0, 3, z1 - z0) });
+    const map = {
+      ...TEST_YARD,
+      blocks: [...TEST_YARD.blocks, room(3, 11, 3, 3.4), room(3, 11, 10.6, 11), room(3, 3.4, 3, 11), room(10.6, 11, 3, 11)],
+    };
+    const g = buildNavGrid(map, NAV);
+    const inside = vec3(7, 0, 7);
+    expect(isWalkableAt(g, inside.x, inside.z)).toBe(true);
+    const path: Vec3[] = [vec3()];
+    expect(findPath(g, createNavSearch(g), vec3(-5, 0, -2), inside, NAV.snap, path)).toBe(false);
+    expect(path).toHaveLength(0);
+  });
+
+  it('reuses the waypoint objects of the previous route', () => {
     const path: Vec3[] = [];
-    expect(findPath(yard, createNavSearch(yard), vec3(0, 0, 0), vec3(0, 0, -6), 0.1, path)).toBe(false);
+    const s = createNavSearch(yard);
+    findPath(yard, s, vec3(0, 0, -2), vec3(0, 0, -10), NAV.snap, path);
+    const first = path[0];
+    findPath(yard, s, vec3(0, 0, -2.5), vec3(0.5, 0, -10), NAV.snap, path);
+    expect(path[0]).toBe(first);
   });
 
   it('puts every Depot lane point on walkable ground, reachable from both spawns', () => {
@@ -81,6 +100,12 @@ describe('nav grid', () => {
     expect(DEPOT.lanes).toHaveLength(3);
     for (const lane of DEPOT.lanes) {
       for (let i = 1; i < lane.length; i++) expect(lane[i]!.x).toBeGreaterThan(lane[i - 1]!.x); // west to east
+      // Mirror-symmetric, like the map: both teams walk the same lane.
+      for (let i = 0; i < lane.length; i++) {
+        const m = lane[lane.length - 1 - i]!;
+        expect(lane[i]!.x).toBeCloseTo(-m.x, 9);
+        expect(lane[i]!.z).toBeCloseTo(m.z, 9);
+      }
       for (const p of lane) {
         expect(isWalkableAt(depot, p.x, p.z), `${p.x},${p.z}`).toBe(true);
         for (const s of [DEPOT.spawns[0][0]!, DEPOT.spawns[1][0]!]) expect(findPath(depot, search, s.position, p, NAV.snap, path)).toBe(true);

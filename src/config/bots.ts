@@ -13,9 +13,11 @@ export const BOTS = {
   viewDistance: 40,
   /** Anyone this close is noticed whatever way the bot faces (footsteps, rustling). */
   closeAwareness: 2.5,
-  /** Gunfire within this distance gives away the shooter's position (metres). */
+  /** Gunfire within this distance gives away roughly where the shooter is (metres). */
   hearingDistance: 22,
-  /** How long a bot keeps hunting a last-known position after losing sight or hearing (s). */
+  /** A heard position is off by up to this fraction of the distance (hearing through walls is vague). */
+  hearingError: 0.3,
+  /** How long a bot keeps hunting a last-known position after losing sight or hearing (s); after this it forgets the contact. */
   memoryTime: 6,
   /** A BB landing this close (metres) or a teammate being hit nearby makes a bot want cover. */
   suppressionRadius: 1.6,
@@ -60,6 +62,7 @@ export const BOTS = {
   holdTime: [0.8, 2.5] as const,
   /** Cover search: candidate spots within this radius, how many to test, and the least time between searches (s). */
   coverRadius: 8,
+  coverMinRadius: 1,
   coverCandidates: 28,
   coverCooldown: 1.5,
   /** Skip cover spots that end up closer to the threat than this fraction of the current distance (or 2 m closer). */
@@ -71,6 +74,8 @@ export const BOTS = {
   coverArrive: 0.9,
   /** Stay in cover this long before peeking out again (s). */
   coverTime: [1.2, 2.4] as const,
+  /** Give up on reaching cover after this long (s), e.g. if the route there is blocked. */
+  coverMaxTime: 5,
   /** Route waypoints count as reached within this distance (metres). */
   waypointReach: 0.45,
   /** Walking slower than this (m/s) for `stuckTime` seconds along a route means blocked: re-plan. */
@@ -82,8 +87,18 @@ export const BOTS = {
   strafeTime: [0.5, 1.2] as const,
   /** Strafing speed as a fraction of full input. */
   strafeInput: 0.6,
-  /** Sprint along routes when nobody has been seen or heard for this long (s). */
+  /** Sprint along routes when nobody has been seen or heard for this long (s), if heading mostly forward. */
   sprintWhenCalmFor: 3,
+  sprintForward: 0.9,
+  /**
+   * Hunting, once a bot has swept its lane: the map is split into square sectors (metres) and the bot
+   * heads for whichever of `huntCandidates` random spots its team visited least recently, so hiding
+   * players are eventually found.
+   */
+  huntSectorSize: 4,
+  huntCandidates: 12,
+  /** Among never-visited sectors, each metre further from home counts like this many seconds staler. */
+  huntFarBias: 0.01,
   /** At most this many route searches per simulation tick, shared by all bots. */
   pathsPerTick: 1,
 } as const;

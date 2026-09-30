@@ -34,7 +34,7 @@ export function findCover(
   let bestScore = Number.POSITIVE_INFINITY;
   for (let i = 0; i < cfg.coverCandidates; i++) {
     const angle = rngNext(rng) * Math.PI * 2;
-    const r = 1 + rngNext(rng) * (cfg.coverRadius - 1);
+    const r = cfg.coverMinRadius + rngNext(rng) * (cfg.coverRadius - cfg.coverMinRadius);
     const x = from.x + Math.cos(angle) * r;
     const z = from.z + Math.sin(angle) * r;
     if (!isWalkableAt(nav, x, z)) continue;

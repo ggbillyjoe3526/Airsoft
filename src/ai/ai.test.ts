@@ -137,7 +137,7 @@ describe('cover', () => {
 });
 
 /** A duel on an open floor: one Orange bot facing a Blue character `dist` metres away. */
-function duel(dist: number, extra: (state: GameState) => void = () => {}) {
+function duel(dist: number, extra: (state: GameState) => void = () => {}, query: WorldQuery = noWalls) {
   const state = createGameState(1, 64);
   const player = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
   const bot = createCharacter(1, vec3(0, 0, -dist), 0, LOADOUT, 1);
@@ -146,7 +146,7 @@ function duel(dist: number, extra: (state: GameState) => void = () => {}) {
   extra(state);
   const ctx = createSimContext({
     mover: flatFloor,
-    query: noWalls,
+    query,
     movement: MOVEMENT,
     body: BODY,
     ballistics: BALLISTICS,
@@ -160,7 +160,7 @@ function duel(dist: number, extra: (state: GameState) => void = () => {}) {
   });
   const commands = new Map<number, PlayerCommand>([[0, createCommand()]]);
   const bots = new BotController(state, [bot], commands, {
-    query: noWalls,
+    query,
     nav: OPEN_NAV,
     navSnap: NAV.snap,
     lanes: OPEN_FIELD.lanes,
@@ -180,7 +180,7 @@ function duel(dist: number, extra: (state: GameState) => void = () => {}) {
       onTick();
     }
   };
-  return { state, player, bot, run, commands };
+  return { state, player, bot, run, commands, bots };
 }
 
 describe('bots in a duel', () => {
@@ -257,4 +257,60 @@ describe('bots in a duel', () => {
     });
     expect(turned).toBe(true);
   });
+
+  it('still need their full reaction time on re-sighting someone after only hearing them', () => {
+    // Line of sight can be switched off, like the target stepping behind a wall.
+    let blocked = false;
+    const blinds: WorldQuery = { raycastStatic: (_o, _d, max) => (blocked ? max * 0.5 : -1) };
+    const { state, player, run, commands } = duel(12, () => {}, blinds);
+    const playerCmd = commands.get(0)!;
+    run(0.2); // sees the player (reaction under way)
+    blocked = true;
+    run(BOTS.contactGrace + 1); // loses them for longer than the grace period
+    // The player fires into the air: the bot hears it.
+    Object.assign(playerCmd, { fire: true, pitch: 1.2 });
+    run(0.3);
+    Object.assign(playerCmd, { fire: false, pitch: 0 });
+    player.armament.recoil = 0;
+    blocked = false;
+    const unblockedAt = state.time;
+    let firstShot = -1;
+    run(3, () => {
+      for (const e of state.events) if (e.type === 'shot' && e.characterId === 1 && firstShot < 0) firstShot = state.time;
+    });
+    expect(firstShot).toBeGreaterThan(0);
+    expect(firstShot - unblockedAt).toBeGreaterThanOrEqual(BOTS.reactionTime[0]);
+  });
 });
+
+describe('bot modes', () => {
+  it('leave cover when the route there fails or takes too long, and give up searching unreachable spots', () => {
+    const { bot, bots, run } = duel(30);
+    bot.yaw += Math.PI; // facing away: nothing in sight
+    const b = bots.bots[0]!;
+    run(0.1);
+    b.mode = 'cover';
+    b.coverLeft = 2;
+    b.coverGiveUp = BOTS.coverMaxTime;
+    b.routeState = 'failed';
+    run(DT);
+    expect(b.mode).not.toBe('cover');
+
+    b.mode = 'cover';
+    b.coverLeft = 99;
+    b.coverGiveUp = BOTS.coverMaxTime;
+    b.cover.position.x = 1000; // never reachable
+    b.routeState = 'none';
+    run(BOTS.coverMaxTime + 0.2);
+    expect(b.mode).not.toBe('cover');
+
+    b.mode = 'search';
+    b.hasLastKnown = true;
+    b.heardAt = 0;
+    b.lastKnown.x = 1000; // off the map: no route
+    run(0.5);
+    expect(b.hasLastKnown).toBe(false);
+    expect(b.mode).toBe('advance');
+  });
+});
+

@@ -2,15 +2,19 @@ import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
-import { createNavSearch, findPath, type NavGrid, type NavSearch } from '../nav/navGrid';
+import { cellX, cellZ, createNavSearch, findPath, type NavGrid, type NavSearch } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
+import { rngNext } from '../sim/rng';
 import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, createBot, resetBot, thinkBot } from './botBrain';
 import { bodyPoint } from './perception';
+
+/** Score of a sector nobody has visited this round: older than any real visit. */
+const NEVER = -1e6;
 
 export interface BotControllerOptions {
   query: WorldQuery;
@@ -28,14 +32,22 @@ export interface BotControllerOptions {
 /**
  * Runs every bot: before each simulation tick it writes each bot's PlayerCommand (bots are just
  * another controller); after each tick it lets bots hear what happened (gunfire, near misses,
- * teammates being hit). Route searches are rationed per tick and handed out round-robin.
+ * teammates being hit). Route searches are rationed per tick and handed out round-robin. It also
+ * remembers, per team, when each part of the map was last visited, so bots hunt where nobody has
+ * looked for a while.
  */
 export class BotController {
   readonly bots: Bot[] = [];
   private readonly world: BotWorld;
   private readonly search: NavSearch;
+  private readonly commandsById = new Map<number, PlayerCommand>();
   private readonly chest = vec3();
   private plannerCursor = 0;
+  /** Hunt sectors: per team, the last time a player of that team stood in each sector. */
+  private readonly sectorCols: number;
+  private readonly sectorRows: number;
+  private readonly visited: Float64Array[];
+  private readonly spawnCentre: Vec3[];
 
   constructor(
     state: GameState,
@@ -43,26 +55,41 @@ export class BotController {
     commands: Map<number, PlayerCommand>,
     private readonly opts: BotControllerOptions,
   ) {
+    const nav = opts.nav;
+    const cfg = opts.cfg;
+    this.sectorCols = Math.ceil((nav.cols * nav.cell) / cfg.huntSectorSize);
+    this.sectorRows = Math.ceil((nav.rows * nav.cell) / cfg.huntSectorSize);
+    this.visited = [0, 1].map(() => new Float64Array(this.sectorCols * this.sectorRows).fill(Number.NEGATIVE_INFINITY));
+
+    // Where each team starts, and which way its enemy is.
+    this.spawnCentre = [0, 1].map((team) => {
+      const members = state.characters.filter((c) => c.team === team);
+      const n = Math.max(1, members.length);
+      return vec3(members.reduce((a, c) => a + c.spawnPosition.x, 0) / n, 0, members.reduce((a, c) => a + c.spawnPosition.z, 0) / n);
+    });
+    const [blue, orange] = this.spawnCentre as [Vec3, Vec3];
+    const enemyYaw = [Math.atan2(-(orange.x - blue.x), -(orange.z - blue.z)), Math.atan2(-(blue.x - orange.x), -(blue.z - orange.z))];
+
     this.world = {
       characters: state.characters,
       query: opts.query,
-      nav: opts.nav,
+      nav,
       lanes: opts.lanes,
       body: opts.body,
       hits: opts.hits,
       loadout: opts.loadout,
-      cfg: opts.cfg,
+      cfg,
+      enemyYaw,
+      huntPoint: (bot, out) => this.huntPoint(bot, out),
       time: 0,
       live: true,
     };
-    this.search = createNavSearch(opts.nav);
+    this.search = createNavSearch(nav);
     for (const c of botCharacters) {
-      this.bots.push(createBot(c, (opts.seed * 7919 + c.id * 104729) >>> 0, opts.lanes.length));
+      this.bots.push(createBot(c, (opts.seed * 7919 + c.id * 104729) >>> 0, opts.lanes.length, cfg));
       commands.set(c.id, this.commandFor(c.id));
     }
   }
-
-  private readonly commandsById = new Map<number, PlayerCommand>();
 
   private commandFor(id: number): PlayerCommand {
     let cmd = this.commandsById.get(id);
@@ -78,6 +105,9 @@ export class BotController {
     const w = this.world;
     w.time = state.time;
     w.live = state.round.phase === 'live';
+    for (const c of state.characters) {
+      if (isInPlay(c)) this.visited[c.team]![this.sectorOf(c.position.x, c.position.z)] = state.time;
+    }
     this.planRoutes();
     for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
   }
@@ -88,17 +118,16 @@ export class BotController {
     const time = state.time;
     for (const e of state.events) {
       if (e.type === 'roundStart') {
-        for (const b of this.bots) resetBot(b, this.opts.lanes.length);
-        continue;
-      }
-      if (e.type === 'shot') {
+        for (const v of this.visited) v.fill(Number.NEGATIVE_INFINITY);
+        for (const b of this.bots) resetBot(b, this.opts.lanes.length, cfg);
+      } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
-        if (shooter) this.hear(shooter.team, e.position, time, cfg.hearingDistance);
+        if (shooter) this.hear(shooter.team, e.position, time, shooter.position);
       } else if (e.type === 'characterHit') {
+        // Teammates near someone who calls a hit turn towards where it came from.
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
-        // Teammates nearby hear the hit called and turn towards where it came from.
-        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, shooter.position, time, cfg.hearingDistance, victim.position);
+        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, time, shooter.position);
       } else if (e.type === 'bbImpact') {
         for (const b of this.bots) {
           const p = bodyPoint(b.character, this.opts.hits, cfg.aimHeightFraction, this.chest);
@@ -112,21 +141,64 @@ export class BotController {
   }
 
   /**
-   * Bots of the other team than `shooterTeam` within `range` of `heardAt` (default: the shooter)
-   * learn roughly where the shooter is, unless they can already see someone.
+   * Bots not on `shooterTeam` within hearing distance of `heardAt` learn roughly where the shooter is
+   * (off by up to hearingError × distance), unless they can already see someone. Hearing is not sight:
+   * it never skips a bot's reaction when the shooter then appears.
    */
-  private hear(shooterTeam: number, shooterPos: Vec3, time: number, range: number, heardAt: Vec3 = shooterPos): void {
+  private hear(shooterTeam: number, heardAt: Vec3, time: number, shooterPos: Vec3): void {
+    const cfg = this.opts.cfg;
     for (const b of this.bots) {
       const c = b.character;
       if (c.team === shooterTeam || !isInPlay(c) || b.targetVisible) continue;
-      if (Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z) > range) continue;
-      b.lastKnown.x = shooterPos.x;
+      if (Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z) > cfg.hearingDistance) continue;
+      const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);
+      const angle = rngNext(b.rng) * Math.PI * 2;
+      const off = Math.sqrt(rngNext(b.rng)) * dist * cfg.hearingError;
+      b.lastKnown.x = shooterPos.x + Math.cos(angle) * off;
       b.lastKnown.y = c.position.y;
-      b.lastKnown.z = shooterPos.z;
+      b.lastKnown.z = shooterPos.z + Math.sin(angle) * off;
       b.hasLastKnown = true;
-      b.lastSeenAt = time;
+      b.heardAt = time;
       b.lastThreatAt = time;
     }
+  }
+
+  /**
+   * A walkable spot worth checking for `bot`'s team: of a few random walkable spots, the one in the
+   * sector the team visited least recently (never-visited sectors further from home first).
+   */
+  private huntPoint(bot: Bot, out: Vec3): boolean {
+    const nav = this.opts.nav;
+    const cfg = this.opts.cfg;
+    const visited = this.visited[bot.character.team]!;
+    const home = this.spawnCentre[bot.character.team]!;
+    let best = Number.POSITIVE_INFINITY;
+    const cells = nav.cols * nav.rows;
+    for (let k = 0, tries = 0; k < cfg.huntCandidates && tries < cfg.huntCandidates * 20; tries++) {
+      const cell = Math.floor(rngNext(bot.rng) * cells);
+      if (!nav.walkable[cell]) continue;
+      k++;
+      const x = cellX(nav, cell % nav.cols);
+      const z = cellZ(nav, Math.floor(cell / nav.cols));
+      const seen = visited[this.sectorOf(x, z)]!;
+      // Stale sectors first (never visited counts as long ago); then prefer those far from home (the enemy's side).
+      const score = (Number.isFinite(seen) ? seen : NEVER) - Math.hypot(x - home.x, z - home.z) * cfg.huntFarBias;
+      if (score < best) {
+        best = score;
+        out.x = x;
+        out.y = bot.character.position.y;
+        out.z = z;
+      }
+    }
+    return Number.isFinite(best);
+  }
+
+  private sectorOf(x: number, z: number): number {
+    const nav = this.opts.nav;
+    const size = this.opts.cfg.huntSectorSize;
+    const i = Math.min(this.sectorCols - 1, Math.max(0, Math.floor((x - nav.minX) / size)));
+    const j = Math.min(this.sectorRows - 1, Math.max(0, Math.floor((z - nav.minZ) / size)));
+    return j * this.sectorCols + i;
   }
 
   private character(state: GameState, id: number): Character | undefined {
