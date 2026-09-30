@@ -10,6 +10,7 @@ import type { GameState } from '../sim/state';
 import { Hud } from '../ui/hud';
 import { BBPathsDebug } from './bbPathsDebug';
 import { BBRenderer } from './bbRenderer';
+import { figureMuzzle } from './characterModels';
 import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
 import { Viewmodel } from './viewmodel';
@@ -29,7 +30,8 @@ export class CombatPresentation {
   private readonly listenerPos = { x: 0, y: 0, z: 0 };
   private readonly muzzle = new THREE.Vector3();
   private readonly dir = { x: 0, y: 0, z: 0 };
-  private lastOwnSerial = 0;
+  /** Newest BB serial already given a muzzle start, per shooter. */
+  private readonly lastSerialByOwner = new Map<number, number>();
   private readonly overlay: { scene: THREE.Scene; camera: THREE.Camera };
 
   constructor(
@@ -74,9 +76,9 @@ export class CombatPresentation {
     this.paths.recordTick();
     for (const e of this.state.events) {
       if (e.type === 'bbImpact') this.puffs.spawn(e.position);
-      if (e.type === 'shot' && e.characterId === this.player.id) {
-        this.viewmodel.onShot();
-        this.drawFromMuzzle();
+      if (e.type === 'shot') {
+        if (e.characterId === this.player.id) this.viewmodel.onShot();
+        this.drawFromMuzzle(e.characterId);
       }
       this.sfx.onEvent(e, this.player.id, this.positionOf);
     }
@@ -116,17 +118,28 @@ export class CombatPresentation {
     this.sfx.dispose();
   }
 
-  /** Starts the player's newest BB (if the shot spawned one) visually at the replica's muzzle. */
-  private drawFromMuzzle(): void {
+  /**
+   * Starts a shooter's newest BB (if the shot spawned one) visually at their replica's muzzle: the
+   * held replica for you, the third-person figure's rifle for everyone else (BBs really leave from the
+   * eyes, which would look like they come out of faces).
+   */
+  private drawFromMuzzle(shooterId: number): void {
+    const last = this.lastSerialByOwner.get(shooterId) ?? 0;
     let newest: BB | undefined;
     for (const bb of this.state.bbs.bbs) {
-      if (bb.active && bb.ownerId === this.player.id && bb.serial > this.lastOwnSerial && (!newest || bb.serial > newest.serial)) newest = bb;
+      if (bb.active && bb.ownerId === shooterId && bb.serial > last && (!newest || bb.serial > newest.serial)) newest = bb;
     }
     if (!newest) return; // blocked muzzle: the shot hit cover immediately
-    this.lastOwnSerial = newest.serial;
-    if (this.viewmodel.muzzleWorld(this.renderer.camera, this.muzzle)) {
-      this.bbs.startFromMuzzle(newest, this.muzzle, this.estimateFlightTime(newest));
+    this.lastSerialByOwner.set(shooterId, newest.serial);
+    let ok: boolean;
+    if (shooterId === this.player.id) {
+      ok = this.viewmodel.muzzleWorld(this.renderer.camera, this.muzzle);
+    } else {
+      const shooter = this.state.characters.find((c) => c.id === shooterId);
+      ok = shooter !== undefined;
+      if (shooter) figureMuzzle(shooter, this.muzzle);
     }
+    if (ok) this.bbs.startFromMuzzle(newest, this.muzzle, this.estimateFlightTime(newest));
   }
 
   /** Rough seconds until `bb` hits level geometry (straight line at its launch speed); Infinity if nothing is near. */

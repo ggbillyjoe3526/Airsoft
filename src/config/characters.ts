@@ -24,6 +24,12 @@ export const FIGURE = {
   shoulderHeight: 1.43,
   shoulderSpread: 0.22,
   armRadius: 0.055,
+  /**
+   * Where the rifle sits in the aiming pose, relative to the shoulder-line pivot (metres; x right, y up,
+   * z forward is negative): its butt, and its length to the muzzle. BBs from other players are drawn
+   * leaving this muzzle.
+   */
+  rifle: { x: 0.06, y: -0.06, butt: 0.12, length: 0.98 },
   headRadius: 0.11,
   headHeight: HITS.headHeight,
   /** Crouched, the upper body drops this far and the legs fold to fit. */

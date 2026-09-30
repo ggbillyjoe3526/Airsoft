@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FIGURE } from '../config/characters';
+import type { Character } from '../sim/character';
+import type { Vec3 } from '../sim/vec';
 
 /**
  * Third-person figures: chunky greybox players in airsoft kit (cap, goggles, team-colour chest rig and
@@ -143,7 +145,7 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   arms.box(teamColor, 0.13, 0.07, 0.13, -F.shoulderSpread, -0.07, 0);
   arms.sphere(C.skin, 0.045, grip.x, grip.y, grip.z);
   arms.sphere(C.skin, 0.045, fore.x, fore.y, fore.z);
-  addRifle(arms, 0.06, -0.06, 0.12);
+  addRifle(arms, F.rifle.x, F.rifle.y, F.rifle.butt);
   aim.add(arms.build(material));
   upper.add(aim);
 
@@ -206,4 +208,25 @@ export function disposeFigure(f: Figure): void {
     if (o instanceof THREE.Mesh) o.geometry.dispose();
   });
   f.root.removeFromParent();
+}
+
+/**
+ * World position of a character's rifle muzzle in the third-person aiming pose (matches buildFigure:
+ * the aim group pivots at the shoulder line by the view pitch, the figure turns by yaw).
+ */
+export function figureMuzzle(c: Character, out: Vec3): Vec3 {
+  const F = FIGURE;
+  const lx = F.rifle.x;
+  const ly = F.rifle.y;
+  const lz = F.rifle.butt - F.rifle.length;
+  const cp = Math.cos(c.pitch);
+  const sp = Math.sin(c.pitch);
+  const y1 = ly * cp - lz * sp;
+  const z1 = ly * sp + lz * cp;
+  const cy = Math.cos(c.yaw);
+  const sy = Math.sin(c.yaw);
+  out.x = c.position.x + lx * cy + z1 * sy;
+  out.y = c.position.y + F.shoulderHeight - F.crouchDrop * c.crouchAmount + y1;
+  out.z = c.position.z - lx * sy + z1 * cy;
+  return out;
 }
