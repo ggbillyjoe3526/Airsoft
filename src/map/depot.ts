@@ -16,8 +16,8 @@ import type { BlockKind, MapBlock, MapData, SpawnPoint } from './mapTypes';
  *   stubs. Behind the corridor wall, a room with two doors leads to an alcove and the central hall.
  *
  * Cover heights: full (≥ 2.4 m) or crouch cover (1.2 m: hides a crouched player, a standing one can
- * shoot over). No straight line along a lane is longer than 23 m, and no line of sight between points on a
- * 1 m grid is longer than 30 m (a finer scan still finds a few, see docs/KNOWN_ISSUES.md).
+ * shoot over). No straight line along a lane is longer than 23 m, and no line of sight between standable
+ * points (0.5 m grid) is longer than 30 m.
  * Layout rules are checked in depot.test.ts.
  */
 
@@ -106,6 +106,8 @@ const WEST_HALF: MapBlock[] = [
   ...crateStack(-8.2, HALF_Z - CRATE),
   ...crateStack(-5, 10), // also blocks long diagonals from the far spawn yard through the crate window
   crate(-3.8, 10),
+  // North-west corner of the north lane: stops corner-to-corner diagonals into the far office hall.
+  crate(-10.3, HALF_Z - CRATE),
 
   // Mid, north flank: staggered stacks (each covers a band of the flank) plus crouch cover.
   ...crateStack(-7.2, 2),
@@ -153,6 +155,10 @@ const WEST_HALF: MapBlock[] = [
 
   // Spawn yard, between the spawn wall and the office door.
   crate(-17, -11),
+  // Two stacks against the office's north-west corner: block long diagonals from the yard's far corner
+  // across mid to the north lane, while leaving the yard exit and the office door open.
+  ...crateStack(-14.8, -7.2),
+  ...crateStack(-13.6, -7.2),
 ];
 
 /** Pieces centred on x = 0 (their own mirror image). */

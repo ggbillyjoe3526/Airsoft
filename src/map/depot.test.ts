@@ -294,8 +294,9 @@ describe('Depot map', () => {
 
   it(`has no line of sight longer than ${MAX_ANY_SIGHTLINE} m in any direction`, () => {
     const points: { x: number; z: number }[] = [];
-    for (let x = -halfX + 0.5; x < halfX; x += 1) {
-      for (let z = -halfZ + 0.5; z < halfZ; z += 1) if (standable(x, z)) points.push({ x, z });
+    // Every standable point on a 0.5 m grid (a 0.25 m scan was also clean when this was written).
+    for (let x = -halfX + 0.5; x < halfX; x += 0.5) {
+      for (let z = -halfZ + 0.5; z < halfZ; z += 0.5) if (standable(x, z)) points.push({ x, z });
     }
     const blockers = blockersAt(STANDING_EYE);
     const limitSq = MAX_ANY_SIGHTLINE * MAX_ANY_SIGHTLINE;
