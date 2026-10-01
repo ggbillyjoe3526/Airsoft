@@ -108,12 +108,29 @@ Spawn, understand the goal, move naturally, fire BBs, feel the replica, hit a bo
 
 Move on only when the previous phase is actually fun. Validate before expanding.
 
-The game stays in **alpha** at least until Phase 3 is complete. Each phase ships as an alpha release on the
-v0.1 line (Phase 1 = `v0.1-alpha`, Phase 2 = Alpha 2 `v0.1-alpha.2`, and so on). Detailed plan: `docs/ROADMAP.md`.
+Phases and milestones are development steps, not versions: all of Phases 1–4 build the initial **v0.1** product.
+The game stays in **alpha** at least until Phase 3 is complete. Detailed plan and build status: `docs/ROADMAP.md`.
 
-1. **Phase 2 — Core gameplay (Alpha 2):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, an objective mode, all on Depot.
-2. **Phase 3 — Content (Alpha 3):** more replica categories (shotgun, DMR, SMG), loadout screen, a shooting range, basic unlockable cosmetics, a second map.
-3. **Phase 4 — Polish (possibly Alpha 4):** art pass, VFX, onboarding, accessibility, optimisation, balance.
+1. **Phase 2 — Core gameplay (planned to ship as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, an objective mode, all on Depot.
+2. **Phase 3 — Content (alpha):** more replica categories (shotgun, DMR, SMG), loadout screen, a shooting range, basic unlockable cosmetics, a second map.
+3. **Phase 4 — Polish (alpha or beta, see below):** art pass, VFX, onboarding, accessibility, optimisation, balance.
+
+### Versioning (authoritative policy)
+
+The number describes the product; an `-alpha`/`-beta` suffix describes its development state. Never move to
+`v0.2` just because a phase ends, time passes or small improvements pile up.
+
+| Version | Meaning |
+|---|---|
+| `v0.1-alpha`, `v0.1-alpha.2`, `v0.1-alpha.2a`, `v0.1-alpha.2b` … | **Alpha**: building the game. Systems and content can be added, gameplay can change a lot, breaking changes are fine, not feature complete. A build number (`.2`, `.3`) is a meaningful release; a letter (`a`, `b`) is an interim checkpoint of that build (e.g. for playtesting). |
+| `v0.1-beta`, `v0.1-beta.2`, `v0.1-beta.2a` … | **Beta**: starts when the owner calls the planned game feature complete. Bug fixes, balance, performance, stability, UX/QoL, polish, final tuning; no major new systems unless the owner approves. Open-ended number of builds. |
+| `v0.1` | First public release of the completed initial game, when the owner considers it a stable public product (not when a phase ends). |
+| `v0.1.1`, `v0.1.2` … | Fixes, performance, balance, small UI/UX or accessibility improvements, minor tuning, small content additions, maintenance. |
+| `v0.2`, `v0.3` … (each with `.x` maintenance) | A substantially expanded or evolved product: major new systems or modes, a large content expansion across systems, a core-loop redesign. No feature-count threshold; contents are not predefined. |
+| `v1.0` | The release the owner considers fully mature and stable. |
+
+- Milestones and critic cycles give development granularity; they don't each get a version.
+- Git tags use the dotted forms above (no spaces). Don't create, rename or move tags unless the owner asks.
 
 Multiplayer is not planned.
 

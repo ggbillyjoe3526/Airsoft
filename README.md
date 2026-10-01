@@ -28,9 +28,10 @@ Go to **https://nodejs.org**, download the **LTS** version (22 or newer), and in
 
 Download v0.1-alpha.2a as a ZIP file:
 
-**https://github.com/ggbillyjoe3526/airsoft/archive/refs/tags/v0.1-alpha.2a.zip**
+**https://github.com/ggbillyjoe3526/airsoft/archive/refs/tags/v0.1-alpha-2a.zip**
 
-Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `airsoft-0.1-alpha.2a`.
+Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `airsoft-0.1-alpha-2a`
+(this build's git tag is spelled with a hyphen).
 (Older versions are on the **Releases / Tags** page of the repository.)
 
 (If that link doesn't work, open **https://github.com/ggbillyjoe3526/airsoft**, click the green **Code**
@@ -38,9 +39,9 @@ button, then **Download ZIP**. The folder will then be called `airsoft-main`; us
 
 ### 3. Open a terminal in that folder
 
-- **Windows:** open the unzipped folder (`airsoft-0.1-alpha.2a`, or `airsoft-main` if you used the Download ZIP
+- **Windows:** open the unzipped folder (`airsoft-0.1-alpha-2a`, or `airsoft-main` if you used the Download ZIP
   button), click the address bar at the top of the window, type `cmd` and press Enter.
-- **Mac:** right-click the unzipped folder (`airsoft-0.1-alpha.2a` or `airsoft-main`) and choose **New Terminal at Folder**.
+- **Mac:** right-click the unzipped folder (`airsoft-0.1-alpha-2a` or `airsoft-main`) and choose **New Terminal at Folder**.
 - **Linux:** right-click inside the folder and choose **Open in Terminal**.
 
 ### 4. Install and start the game
@@ -130,6 +131,10 @@ with footsteps, reload animations, hit reactions, a minimal HUD.
 
 **Still to come in Alpha 2 (v0.1-alpha.2):** smarter bots (crouch-peeking, moving as a team, varied routes), an objective mode.
 Progress and plans: [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+**Version names:** the game is being built as **v0.1**. Alpha builds (`v0.1-alpha`, `v0.1-alpha.2`, with letters
+like `v0.1-alpha.2a` for in-between playtest builds) come first. Beta builds (`v0.1-beta` …) follow once it's
+feature complete, and **v0.1** is the first public release.
 
 **Not yet:** objectives, more maps or replicas, menus beyond the start screen, real art.
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels
