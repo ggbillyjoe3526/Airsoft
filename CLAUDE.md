@@ -109,11 +109,17 @@ Spawn, understand the goal, move naturally, fire BBs, feel the replica, hit a bo
 Move on only when the previous phase is actually fun. Validate before expanding.
 
 Phases and milestones are development steps, not versions: all of Phases 1–4 build the initial **v0.1** product.
-The game stays in **alpha** at least until Phase 3 is complete. Detailed plan and build status: `docs/ROADMAP.md`.
+**Current focus: alpha.** The game stays in alpha through Phase 4, until the owner calls it feature complete.
+Detailed plan and build status: `docs/ROADMAP.md`.
 
-1. **Phase 2 — Core gameplay (planned to ship as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, an objective mode, all on Depot.
+1. **Phase 2 — Core gameplay (alpha, ships as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, an objective mode, all on Depot.
 2. **Phase 3 — Content (alpha):** more replica categories (shotgun, DMR, SMG), loadout screen, a shooting range, basic unlockable cosmetics, a second map.
-3. **Phase 4 — Polish (alpha or beta, see below):** art pass, VFX, onboarding, accessibility, optimisation, balance.
+3. **Phase 4 — Presentation and onboarding (alpha):** art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
+4. **Beta (when the owner calls the game feature complete):** optimisation, final balance and tuning, bug fixing, stability, UX/QoL and polish.
+
+**Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
+performance, stability, UX/QoL, polish and final tuning are beta. During alpha, note beta-type work in
+`docs/ROADMAP.md` (Beta) or `docs/KNOWN_ISSUES.md` unless it blocks alpha work.
 
 ### Versioning (authoritative policy)
 
@@ -130,7 +136,8 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
 | `v1.0` | The release the owner considers fully mature and stable. |
 
 - Milestones and critic cycles give development granularity; they don't each get a version.
-- Git tags use the dotted forms above (no spaces). Don't create, rename or move tags unless the owner asks.
+- Git tags use the dotted forms above, always with a dot (e.g. `v0.1-alpha.2b`, never `v0.1-alpha-2b`).
+  The owner creates tags; don't create, rename or move them unless asked.
 
 Multiplayer is not planned.
 
