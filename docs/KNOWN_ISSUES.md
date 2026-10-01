@@ -28,15 +28,16 @@ Classified as **fix now / document / can wait**.
 | Bots hear gunfire through walls within 22 m and know roughly where it came from (off by up to 30% of the distance) | document | Deliberate simplification; hearing never skips a bot's reaction delay. |
 | A walk-off that can't reach the dead zone within 14 s, or gets stuck, fades out where it is and reappears in the dead zone | document | Rare now that walk-offs follow nav routes. |
 | Each hit runs one route search for the victim's walk-off inside the simulation tick (~2 ms worst case on Depot, not rationed) | can wait | Hits are rare (a few per round); profile before rationing. |
-| Bots fight by standing and strafing; they don't crouch-peek over 1.2 m cover or push to close distance | can wait | Phase 2 "smarter bots". |
+| Bots crouch-peek only over crouch-high cover; at full-height cover they wait, then move on (no leaning or stepping out to peek a corner), and they don't push to close distance | can wait | M4b covers low cover only. Corner peeking would be a later alpha bot task. |
 | Difficulty numbers are first guesses tuned against headless duels (measured, not tested: Normal bots hit with ~13% of BBs in bot-only matches, was ~30%) | can wait | Playtest each level; tune BOT_SKILL in config/bots.ts. |
 | At 10–16 m, a strafing target is still hit about as fast as a standing one (the BB stream sweeps across it) | can wait | Up close strafing clearly helps; raise aimErrorTracking if mid-range strafing should help more. |
-| Bot-only rounds are fast (7–15 s) and a last 1v1 can wander for ~40 s | can wait | Revisit lethality and hunting pace with the round timer. |
+| Bot-only rounds are still quick (median ~15 s on Normal, was ~11 s before M4b) and a last 1v1 can wander for ~40–60 s | can wait | Revisit hunting pace with the objective mode (M5). |
 | `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |
 | No pre-round freeze: everyone can move and fire from the round-start whistle | can wait | Spawns are hidden from each other (tested), so nobody can be shot at spawn; revisit with playtesting. |
 | config/render.ts and config/audio.ts hold small derived helpers (whistle schedule, result-screen delay) and render imports audio | can wait | Fine at this size; move derived timing into a module if config grows more logic. |
 | Bots hear footsteps and gunfire through walls (no occlusion); only range limits it, and the guess is vague (±30% of distance) | document | Deliberate simplification; playtest whether bots feel spooky. Occlusion could halve range through walls later. |
-| Bots never walk or crouch-move, so their own footsteps always give them away | can wait | Phase 2 M4 (smarter bots): walk when closing in on a heard contact. |
+| Bots walk only for the last 12 m of a search; they run (and are heard) everywhere else, and never crouch-move | can wait | Playtest whether bots are too easy to hear coming, or too sneaky (BOTS.searchWalkDistance). |
+| Team pacing ignores the player: bots wait for bot teammates only | document | Deliberate (DECISIONS 2026-10-01); a player who holds back must never stall the bots. |
 | Footstep ranges are first guesses: bots hear run 11 m, sprint 16 m, land 12 m; you hear other players' steps to 22 m | can wait | Tune from playtesting (the player's range is deliberately a bit longer than the bots'). |
 | Arm hits don't count (only body capsule and head) | document | Owner playtested and kept it (DECISIONS 2026-10-01). |
 | A difficulty change waiting for the next round is tracked twice (ai/difficultyChoice.ts `next` and BotController's pending config), kept in step by game.ts | can wait | M4a critic. Both sides are tested; the glue isn't. Give the pending level one owner if this grows. |

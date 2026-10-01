@@ -79,6 +79,15 @@ export const BOT_BEHAVIOUR = {
   coverArrive: 0.9,
   /** Stay in cover this long before peeking out again (s). */
   coverTime: [1.2, 2.4] as const,
+  /**
+   * Crouch-peeking at crouch-high cover: how many times to stand up and look (whole number, rounded
+   * down), how long each look lasts with nobody in sight (s), how long to stay up shooting once someone
+   * is (s), and how long to stay ducked between looks (s). Ducks early when under fire or reloading.
+   */
+  peekCount: [2, 4] as const,
+  peekLook: [0.6, 1.1] as const,
+  peekFight: [1.2, 2.4] as const,
+  peekDown: [0.8, 1.6] as const,
   /** Give up on reaching cover after this long (s), e.g. if the route there is blocked. */
   coverMaxTime: 5,
   /**
@@ -97,9 +106,31 @@ export const BOT_BEHAVIOUR = {
   strafeTime: [0.5, 1.2] as const,
   /** Strafing speed as a fraction of full input. */
   strafeInput: 0.6,
+  /** Walk (silent) for the last this-many metres to where someone was seen or heard. */
+  searchWalkDistance: 12,
   /** Sprint along routes when nobody has been seen or heard for this long (s), if heading mostly forward. */
   sprintWhenCalmFor: 3,
   sprintForward: 0.9,
+  // ---- Team play and routes -------------------------------------------------------------------
+  /**
+   * Each round a team picks a plan for its bots, by these weights: split (each on a different lane),
+   * pair (two share a lane, the rest take others) or stack (all on one lane).
+   */
+  planSplitWeight: 0.4,
+  planPairWeight: 0.4,
+  planStackWeight: 0.2,
+  /** Bots sharing a lane set off this long apart (s), so they don't walk on each other's heels. */
+  laneFollowDelay: [0.8, 1.6] as const,
+  /** Lane points are moved up to this far at random (metres, onto walkable ground), so no two rounds run the same line. */
+  laneJitter: 1.2,
+  laneJitterTries: 6,
+  /**
+   * Moving as a team: a bot more than this far (metres, towards the enemy side) ahead of its rearmost
+   * bot teammate waits at lane points, for at most teamWaitMax seconds per point.
+   */
+  teamSpread: 7,
+  teamWaitMax: 4,
+
   /**
    * Hunting, once a bot has swept its lane: the map is split into square sectors (metres) and the bot
    * heads for whichever of `huntCandidates` random spots its team visited least recently, so hiding

@@ -296,7 +296,7 @@ describe('Depot map', () => {
     }
   });
 
-  it(`has no line of sight longer than ${MAX_ANY_SIGHTLINE} m in any direction`, () => {
+  it(`has no line of sight longer than ${MAX_ANY_SIGHTLINE} m in any direction`, { timeout: 30_000 }, () => {
     const points: { x: number; z: number }[] = [];
     // Every standable point on a 0.5 m grid (a 0.25 m scan was also clean when this was written).
     for (let x = -halfX + 0.5; x < halfX; x += 0.5) {

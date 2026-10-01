@@ -35,7 +35,9 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
   per tick) and after it (bots hear shots, near misses, hit calls and footsteps from `state.events`). `bot.ts` holds a bot's state
   (plain data, including one contact record per enemy seen); `botBrain.ts` is its per-tick decision and mode choice
   (advance along a lane → fight → cover → search), calling `botSenses.ts` (what it sees: target choice, contacts and
-  reaction), `botMovement.ts` (routes, lanes, hunting, strafing) and `botCombat.ts` (aim, bursts, reloads). These build on
+  reaction), `botMovement.ts` (routes, jittered lane points, waiting for the team, hunting, strafing) and `botCombat.ts` (aim, bursts,
+  reloads). In cover a bot ducks; at crouch-high cover it stands up to look and fights from the spot (`fromCover`) before
+  ducking again. Each round the controller deals each team's bots onto lanes by a plan (`teamPlan.ts`: split, pair or stack). These build on
   `perception.ts` (view cone + static ray casts), `aim.ts` (turn rate, settling aim error, hasty first aim, tracking error)
   and `cover.ts` (random nearby spots hidden from the threat). Tuning is `BotConfig` = shared behaviour + one difficulty's
   skill (config/bots.ts); `BotController.setConfig` swaps it now or at the next round start, as decided by

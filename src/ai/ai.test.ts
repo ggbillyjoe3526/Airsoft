@@ -7,7 +7,9 @@ import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
 import { TEST_YARD } from '../map/testYard';
-import { buildNavGrid } from '../nav/navGrid';
+import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
+import { DEPOT } from '../map/depot';
+import { isInPlay } from '../sim/elimination';
 import type { WorldQuery } from '../sim/armament';
 import { createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
@@ -342,8 +344,9 @@ describe('bots in a duel', () => {
 
 describe('bot modes', () => {
   it('leave cover when the route there fails or takes too long, and give up searching unreachable spots', () => {
-    const { bot, bots, run } = duel(30);
-    bot.yaw += Math.PI; // facing away: nothing in sight
+    // Nobody can see anyone (as if a wall stood between them): this is about cover and search timing.
+    const blind: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 };
+    const { bots, run } = duel(30, () => {}, blind);
     const b = bots.bots[0]!;
     run(0.1);
     b.mode = 'cover';
@@ -539,5 +542,244 @@ describe('difficulty levels', () => {
     expect(bots.cfg).toBe(easy);
     bots.setConfig(BOTS, 'now');
     expect(bots.cfg).toBe(BOTS);
+  });
+});
+
+describe('bot team play and routes', () => {
+  /** Orange bots on Depot (no physics needed: planning only). */
+  function depotBots() {
+    const state = createGameState(4, 64, ROUNDS);
+    for (let team = 0; team < 2; team++) {
+      for (let i = 0; i < ROUNDS.teamSize; i++) {
+        const s = DEPOT.spawns[team]![i]!;
+        state.characters.push(createCharacter(state.characters.length, vec3(s.position.x, 0, s.position.z), s.yaw, LOADOUT, team));
+      }
+    }
+    const nav = buildNavGrid(DEPOT, NAV);
+    const commands = new Map<number, PlayerCommand>();
+    const bots = new BotController(state, state.characters.filter((c) => c.team === 1), commands, {
+      query: noWalls,
+      nav,
+      navSnap: NAV.snap,
+      lanes: DEPOT.lanes,
+      body: BODY,
+      hits: HITS,
+      loadout: LOADOUT,
+      cfg: BOTS,
+      seed: 4,
+    });
+    return { state, bots, nav, commands };
+  }
+
+  it('vary the plan and the lanes from round to round, and split means one bot per lane', () => {
+    const { state, bots } = depotBots();
+    const plans = new Set<string>();
+    const assignments = new Set<string>();
+    for (let round = 2; round < 40; round++) {
+      state.events.length = 0;
+      state.events.push({ type: 'roundStart', round });
+      bots.observe(state);
+      const lanes = bots.bots.map((b) => b.lane);
+      plans.add(bots.plans[1]!);
+      assignments.add(lanes.join());
+      if (bots.plans[1] === 'split') expect(new Set(lanes).size).toBe(3);
+      if (bots.plans[1] === 'stack') expect(new Set(lanes).size).toBe(1);
+      // Bots sharing a lane set off one after another.
+      const holds = bots.bots.filter((b) => b.lane === lanes[0]).map((b) => b.holdLeft);
+      expect(new Set(holds).size).toBe(holds.length);
+    }
+    expect(plans).toEqual(new Set(['split', 'pair', 'stack']));
+    expect(assignments.size).toBeGreaterThan(6);
+  });
+
+  it('move lane points a little at random, always onto walkable ground', () => {
+    const { state, bots, nav } = depotBots();
+    const offsets: number[] = [];
+    for (let tick = 0; tick < 60 * 20; tick++) {
+      state.time += DT;
+      bots.think(state, DT);
+      for (const b of bots.bots) {
+        if (b.mode !== 'advance' || b.hunting || b.laneIndex < 0) continue;
+        const p = DEPOT.lanes[b.lane]![b.laneIndex]!;
+        const off = Math.hypot(b.laneGoal.x - p.x, b.laneGoal.z - p.z);
+        expect(off).toBeLessThanOrEqual(BOTS.laneJitter + 1e-9);
+        expect(isWalkableAt(nav, b.laneGoal.x, b.laneGoal.z)).toBe(true);
+        offsets.push(off);
+      }
+    }
+    expect(Math.max(...offsets)).toBeGreaterThan(0.3);
+  });
+
+  /**
+   * Two Orange bots on an open field with a lane along x; the second is held at its start. Returns how
+   * far (towards the enemy) the first gets in `seconds`.
+   */
+  function leaderProgress(cfg: BotConfig, seconds: number): number {
+    const blind: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 };
+    const lane = [-20, -15, -10, -5, 0, 5, 10, 15, 20].map((x) => vec3(x, 0, 0));
+    const state = createGameState(2, 64, ROUNDS);
+    state.characters.push(createCharacter(0, vec3(-30, 0, 0), 0, LOADOUT, 0));
+    state.characters.push(createCharacter(1, vec3(24, 0, 0), 0, LOADOUT, 1), createCharacter(2, vec3(24, 0, 2), 0, LOADOUT, 1));
+    const ctx = createSimContext({
+      mover: flatFloor,
+      query: blind,
+      movement: MOVEMENT,
+      footsteps: FOOTSTEPS,
+      body: BODY,
+      ballistics: BALLISTICS,
+      loadout: LOADOUT,
+      killY: -10,
+      hits: HITS,
+      deadZones: [[{ position: vec3(-40, 0, 0), yaw: 0 }], [{ position: vec3(40, 0, 0), yaw: 0 }]],
+      nav: OPEN_NAV,
+      navSnap: NAV.snap,
+      rounds: ROUNDS,
+    });
+    const commands = new Map<number, PlayerCommand>([[0, createCommand()]]);
+    const bots = new BotController(state, state.characters.slice(1), commands, {
+      query: blind,
+      nav: OPEN_NAV,
+      navSnap: NAV.snap,
+      lanes: [lane],
+      body: BODY,
+      hits: HITS,
+      loadout: LOADOUT,
+      cfg: { ...cfg, holdTime: [0.1, 0.1], laneJitter: 0 },
+      seed: 5,
+    });
+    const leader = state.characters[1]!;
+    for (let i = 0; i < seconds / DT; i++) {
+      bots.bots[1]!.holdLeft = 1; // the teammate stays put
+      bots.think(state, DT);
+      stepSimulation(state, commands, ctx, DT);
+      bots.observe(state);
+    }
+    return 24 - leader.position.x;
+  }
+
+  it('wait for teammates at lane points instead of running far ahead, but not for ever', { timeout: 20_000 }, () => {
+    const alone = leaderProgress({ ...BOTS, teamWaitMax: 0 }, 6);
+    const paced = leaderProgress(BOTS, 6);
+    expect(alone).toBeGreaterThan(BOTS.teamSpread + 10);
+    expect(paced).toBeLessThan(BOTS.teamSpread + 6); // stops at the first lane point past teamSpread
+    // Each wait is capped, so a stuck teammate never stalls the round.
+    expect(leaderProgress(BOTS, 30)).toBeGreaterThan(paced + 10);
+  });
+
+  it('walk the last stretch to where they heard someone, so their own steps are silent', () => {
+    const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // heard, never seen
+    const { state, bots, run, commands } = duel(22, () => {}, walls);
+    const b = bots.bots[0]!;
+    const botCmd = commands.get(1)!;
+    Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 });
+    run(0.3);
+    Object.assign(commands.get(0)!, { fire: false, pitch: 0 });
+    let walkedNear = 0;
+    let ranFar = 0;
+    let botSteps = 0;
+    run(8, () => {
+      if (b.mode !== 'search') return;
+      const d = Math.hypot(b.lastKnown.x - b.character.position.x, b.lastKnown.z - b.character.position.z);
+      const moving = botCmd.forward !== 0 || botCmd.right !== 0;
+      if (moving && d < BOTS.searchWalkDistance - 0.5) {
+        expect(botCmd.walk).toBe(true);
+        walkedNear++;
+        for (const e of state.events) if (e.type === 'footstep' && e.characterId === 1) botSteps++;
+      }
+      if (moving && d > BOTS.searchWalkDistance + 0.5) {
+        expect(botCmd.walk).toBe(false);
+        ranFar++;
+      }
+    });
+    expect(ranFar).toBeGreaterThan(0);
+    expect(walkedNear).toBeGreaterThan(0);
+    expect(botSteps).toBe(0);
+  });
+
+  /**
+   * A bot settled at crouch cover: a 1.2 m wall at x = 5 between it (just behind, at x = 4.2) and a
+   * standing player at x = 15. Plays `seconds` (or until the player is hit) and reports what it did.
+   */
+  function peekScenario(cfg: BotConfig, seconds: number) {
+    const wall = wallAcrossX(5, 1.2);
+    const state = createGameState(3, 64, ROUNDS);
+    const player = createCharacter(0, vec3(15, 0, 0), Math.PI / 2, LOADOUT, 0);
+    const bot = createCharacter(1, vec3(4.2, 0, 0), -Math.PI / 2, LOADOUT, 1);
+    state.characters.push(player, bot);
+    const ctx = createSimContext({
+      mover: flatFloor,
+      query: wall,
+      movement: MOVEMENT,
+      footsteps: FOOTSTEPS,
+      body: BODY,
+      ballistics: BALLISTICS,
+      loadout: LOADOUT,
+      killY: -10,
+      hits: HITS,
+      deadZones: [[{ position: vec3(-40, 0, 20), yaw: 0 }], [{ position: vec3(40, 0, 20), yaw: 0 }]],
+      nav: OPEN_NAV,
+      navSnap: NAV.snap,
+      rounds: ROUNDS,
+    });
+    const commands = new Map<number, PlayerCommand>([[0, createCommand()]]);
+    const bots = new BotController(state, [bot], commands, {
+      query: wall,
+      nav: OPEN_NAV,
+      navSnap: NAV.snap,
+      lanes: [],
+      body: BODY,
+      hits: HITS,
+      loadout: LOADOUT,
+      cfg,
+      seed: 3,
+    });
+    const b = bots.bots[0]!;
+    // Just settled (crouched) at crouch cover right where it stands, knowing roughly where the player is.
+    Object.assign(b, { mode: 'cover', coverPhase: 'down', coverLeft: 0.6, coverGiveUp: 5, coverHeld: 0, peeksLeft: 3, routeState: 'none' });
+    bot.crouchAmount = bot.prevCrouchAmount = 1;
+    b.cover.position.x = bot.position.x;
+    b.cover.position.z = bot.position.z;
+    b.cover.crouchOnly = true;
+    b.hasLastKnown = true;
+    b.heardAt = 0;
+    b.lastKnown.x = player.position.x;
+    b.lastKnown.z = player.position.z;
+    const botCmd = commands.get(1)!;
+    const out = { shots: 0, shotsCrouched: 0, downs: 0, ups: 0, foughtFromCover: false, drift: 0, playerHit: false };
+    let wasDown = true;
+    for (let i = 0; i < seconds / DT && isInPlay(player); i++) {
+      bots.think(state, DT);
+      stepSimulation(state, commands, ctx, DT);
+      bots.observe(state);
+      if (botCmd.crouch && !wasDown) out.downs++;
+      if (!botCmd.crouch && wasDown) out.ups++;
+      wasDown = botCmd.crouch;
+      out.foughtFromCover ||= b.mode === 'fight' && b.fromCover;
+      out.drift = Math.max(out.drift, Math.hypot(bot.position.x - 4.2, bot.position.z));
+      for (const e of state.events) {
+        if (e.type !== 'shot' || e.characterId !== 1) continue;
+        out.shots++;
+        if (bot.crouchAmount > 0.5) out.shotsCrouched++;
+      }
+    }
+    out.playerHit = !isInPlay(player);
+    return out;
+  }
+
+  it('crouch-peek over low cover: stand up to look, shoot over it from the spot, never into it', () => {
+    const r = peekScenario(BOTS, 6);
+    expect(r.foughtFromCover).toBe(true);
+    expect(r.shots).toBeGreaterThan(0); // stood up, saw the player and fired over the wall
+    expect(r.shotsCrouched).toBe(0); // never fires into its own cover
+    expect(r.drift).toBeLessThan(0.5); // no sidestepping out from behind it
+  });
+
+  it('crouch-peek again and again: duck after a short look or fight, then stand up once more', () => {
+    // Holding fire, so the player stays in: the bot keeps cycling between ducking and peeking.
+    const r = peekScenario({ ...BOTS, fireCone: 0 }, 8);
+    expect(r.playerHit).toBe(false);
+    expect(r.ups).toBeGreaterThanOrEqual(2);
+    expect(r.downs).toBeGreaterThanOrEqual(2);
+    expect(r.drift).toBeLessThan(0.5);
   });
 });

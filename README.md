@@ -126,9 +126,11 @@ elimination with hit calling, bots (patrol, spot, react, shoot, take cover, sear
 3v3 matches with a round clock and first-to-5 scoring, walk/run/sprint, rebindable keys, synthesised sounds
 with footsteps, reload animations, hit reactions, a minimal HUD.
 
-**On the way to Alpha 2 (since v0.1-alpha.2a):** bot difficulty levels (Easy / Normal / Hard).
+**On the way to Alpha 2 (since v0.1-alpha.2a):** bot difficulty levels (Easy / Normal / Hard), and smarter bots: they pop
+up over low cover to shoot and duck again, move as a team, take different routes each round, and walk quietly
+when closing in on you.
 
-**Still to come in Alpha 2 (v0.1-alpha.2):** smarter bots (crouch-peeking, moving as a team, varied routes), an objective mode.
+**Still to come in Alpha 2 (v0.1-alpha.2):** an objective mode.
 Progress and plans: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 **Version names:** the game is being built as **v0.1**. Alpha builds (`v0.1-alpha`, `v0.1-alpha.2`, with letters

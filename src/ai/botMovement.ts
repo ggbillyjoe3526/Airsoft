@@ -1,4 +1,5 @@
 import type { BotConfig } from '../config/bots';
+import { isWalkableAt } from '../nav/navGrid';
 import type { PlayerCommand } from '../sim/commands';
 import { rngNext } from '../sim/rng';
 import type { Vec3 } from '../sim/vec';
@@ -19,18 +20,40 @@ export function wantRoute(b: Bot, goal: Vec3, cfg: BotConfig): void {
   b.routeState = 'wanted';
 }
 
-/** Next place to go while advancing: the next lane point, or once the lane is swept, a hunt spot. */
+/**
+ * Next place to go while advancing: the next lane point (moved a little at random onto walkable
+ * ground, so routes vary), or once the lane is swept, a hunt spot.
+ */
 function nextAdvanceGoal(b: Bot, w: BotWorld): Vec3 | undefined {
   const lane = w.lanes[b.lane];
   if (!b.hunting && lane && lane.length > 0) {
     const next = b.laneIndex < 0 ? (b.laneDir > 0 ? 0 : lane.length - 1) : b.laneIndex + b.laneDir;
     if (next >= 0 && next < lane.length) {
       b.laneIndex = next;
-      return lane[next];
+      jitterLanePoint(b, w, lane[next]!);
+      return b.laneGoal;
     }
   }
   b.hunting = true;
   return w.huntPoint(b, b.huntGoal) ? b.huntGoal : undefined;
+}
+
+/** Writes `point` moved up to laneJitter in a random direction into `b.laneGoal` (unmoved if no walkable spot turns up). */
+function jitterLanePoint(b: Bot, w: BotWorld, point: Vec3): void {
+  const cfg = w.cfg;
+  b.laneGoal.x = point.x;
+  b.laneGoal.y = point.y;
+  b.laneGoal.z = point.z;
+  for (let i = 0; i < cfg.laneJitterTries; i++) {
+    const angle = rngNext(b.rng) * Math.PI * 2;
+    const r = Math.sqrt(rngNext(b.rng)) * cfg.laneJitter;
+    const x = point.x + Math.cos(angle) * r;
+    const z = point.z + Math.sin(angle) * r;
+    if (!isWalkableAt(w.nav, x, z)) continue;
+    b.laneGoal.x = x;
+    b.laneGoal.z = z;
+    return;
+  }
 }
 
 /**
@@ -76,6 +99,12 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
       }
       if (b.routeState === 'none' || b.routeState === 'failed') {
         const arrived = b.routeState === 'none' && b.route.length > 0;
+        // Reached a lane point well ahead of the team: wait for them to catch up (for a while).
+        if (arrived && !b.hunting && b.teamWait < cfg.teamWaitMax && w.aheadOfTeam(b)) {
+          b.teamWait += dt;
+          return false;
+        }
+        b.teamWait = 0;
         const goal = nextAdvanceGoal(b, w);
         if (!goal) return false;
         if (arrived) b.holdLeft = pick(b.rng, cfg.holdTime); // pause at the point just reached, looking ahead
@@ -95,13 +124,15 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
       return moving;
     }
     case 'cover': {
-      // Get there, then keep low until it's time to peek (fight mode stands up again).
+      // Get there, then keep low, standing up only to look over crouch cover.
       const moving = followRoute(b, w, dt);
-      cmd.crouch = !moving;
+      cmd.crouch = !moving && b.coverPhase === 'down';
       return moving;
     }
     case 'fight':
-      // Sidestep while shooting.
+      // Fighting over crouch cover: stay put behind it.
+      if (b.fromCover) return false;
+      // Otherwise sidestep while shooting.
       b.strafeLeft -= dt;
       if (b.strafeLeft <= 0) {
         b.strafeLeft = pick(b.rng, cfg.strafeTime);

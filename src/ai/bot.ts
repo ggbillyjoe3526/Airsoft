@@ -15,7 +15,8 @@ import type { CoverSpot } from './cover';
  * - advance: walk a lane towards the enemy side, pausing at lane points to look ahead; once the lane
  *   is swept, hunt: head for the parts of the map the team has checked least recently;
  * - fight: someone is in sight: react, aim, shoot in bursts, sidestep;
- * - cover: under fire or reloading: move to a spot hidden from the threat, wait, then peek;
+ * - cover: under fire or reloading: move to a spot hidden from the threat and duck; at crouch-high
+ *   cover, stand up to look (and fight from the spot) a few times before moving on;
  * - search: lost sight of (or heard) someone: go to where they were last known.
  */
 export type BotMode = 'advance' | 'fight' | 'cover' | 'search';
@@ -63,7 +64,11 @@ export interface Bot {
   /** Swept the whole lane: now hunting the least recently checked parts of the map. */
   hunting: boolean;
   huntGoal: Vec3;
+  /** The current lane point, moved a little at random (laneJitter). */
+  laneGoal: Vec3;
   holdLeft: number;
+  /** Seconds spent waiting at the current lane point for teammates to catch up. */
+  teamWait: number;
   route: Vec3[];
   routeLeg: number;
   routeGoal: Vec3;
@@ -79,6 +84,14 @@ export interface Bot {
   /** Seconds spent at the cover spot so far. */
   coverHeld: number;
   coverCooldown: number;
+  /** At a crouch-high cover spot: ducked, or standing up to look over it. */
+  coverPhase: 'down' | 'peek';
+  /** Looks over the cover left, and time left in the current look (s). */
+  peeksLeft: number;
+  peekLeft: number;
+  /** Fighting from a crouch-cover spot (stays put; ducks again after `peekFightLeft` s or under fire). */
+  fromCover: boolean;
+  peekFightLeft: number;
   strafeDir: number;
   strafeLeft: number;
 }
@@ -97,13 +110,16 @@ export interface BotWorld {
   enemyYaw: readonly number[];
   /** Picks somewhere worth checking for `bot`'s team (least recently visited); false if none. */
   huntPoint(bot: Bot, out: Vec3): boolean;
+  /** True if `bot` is more than teamSpread ahead (towards the enemy side) of its rearmost bot teammate. */
+  aheadOfTeam(bot: Bot): boolean;
   /** Simulation time now (s). */
   time: number;
   /** False after the round is decided (cease-fire). */
   live: boolean;
 }
 
-export function createBot(character: Character, seed: number, laneCount: number, cfg: BotConfig): Bot {
+/** A bot for `character`, with no lane until the controller plans the round (resetBot). */
+export function createBot(character: Character, seed: number, cfg: BotConfig): Bot {
   const bot: Bot = {
     character,
     rng: createRng(seed),
@@ -127,7 +143,9 @@ export function createBot(character: Character, seed: number, laneCount: number,
     laneDir: 1,
     hunting: false,
     huntGoal: vec3(),
+    laneGoal: vec3(),
     holdLeft: 0,
+    teamWait: 0,
     route: [],
     routeLeg: 0,
     routeGoal: vec3(),
@@ -139,15 +157,23 @@ export function createBot(character: Character, seed: number, laneCount: number,
     coverGiveUp: 0,
     coverHeld: 0,
     coverCooldown: 0,
+    coverPhase: 'down',
+    peeksLeft: 0,
+    peekLeft: 0,
+    fromCover: false,
+    peekFightLeft: 0,
     strafeDir: 1,
     strafeLeft: 0,
   };
-  resetBot(bot, laneCount, cfg);
+  resetBot(bot, -1, 0, cfg);
   return bot;
 }
 
-/** Fresh round: forget everything, pick a lane and head for its first point on the way to the enemy. */
-export function resetBot(b: Bot, laneCount: number, cfg: BotConfig): void {
+/**
+ * Fresh round: forget everything and head for the first point of `lane` (-1: none, hunt) on the way
+ * to the enemy, after waiting `startHold` seconds (bots sharing a lane set off apart).
+ */
+export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotConfig): void {
   const c = b.character;
   b.aim = createAim(c.yaw);
   b.mode = 'advance';
@@ -160,17 +186,19 @@ export function resetBot(b: Bot, laneCount: number, cfg: BotConfig): void {
   b.suppressedAt = Number.NEGATIVE_INFINITY;
   b.burstLeft = 0;
   b.pauseLeft = 0;
-  b.lane = laneCount > 0 ? Math.floor(rngNext(b.rng) * laneCount) : -1;
+  b.lane = lane;
   // Blue (team 0) advances west → east through lane points, Orange the other way.
   b.laneDir = c.team === 0 ? 1 : -1;
   b.laneIndex = -1;
   b.hunting = false;
-  b.holdLeft = 0;
+  b.holdLeft = startHold;
+  b.teamWait = 0;
   b.routeState = 'none';
   b.route.length = 0;
   b.stuckFor = 0;
   b.coverLeft = 0;
   b.coverCooldown = 0;
+  b.fromCover = false;
 }
 
 /** Drops the current target (its contact stays remembered for contactGrace). */

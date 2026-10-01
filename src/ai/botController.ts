@@ -7,12 +7,13 @@ import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
-import { rngNext } from '../sim/rng';
+import { createRng, type RngState, rngNext } from '../sim/rng';
 import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
-import { type Bot, type BotWorld, createBot, resetBot } from './bot';
+import { type Bot, type BotWorld, createBot, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import { bodyPoint } from './perception';
+import { assignLanes, pickTeamPlan, shuffledLanes, type TeamPlan } from './teamPlan';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
 const NEVER = -1e6;
@@ -35,7 +36,8 @@ export interface BotControllerOptions {
  * another controller); after each tick it lets bots hear what happened (gunfire, near misses,
  * teammates being hit). Route searches are rationed per tick and handed out round-robin. It also
  * remembers, per team, when each part of the map was last visited, so bots hunt where nobody has
- * looked for a while.
+ * looked for a while, and plans each round per team: which lanes its bots take (TeamPlan) and how far
+ * ahead of the team a bot may get.
  */
 export class BotController {
   readonly bots: Bot[] = [];
@@ -51,6 +53,12 @@ export class BotController {
   private readonly sectorRows: number;
   private readonly visited: Float64Array[];
   private readonly spawnCentre: Vec3[];
+  /** Per team, the unit direction (x, z) from its spawn towards the enemy's. */
+  private readonly attackDir: { x: number; z: number }[];
+  /** The team plans' own random stream (separate from each bot's). */
+  private readonly planRng: RngState;
+  /** Per team, this round's plan. */
+  readonly plans: TeamPlan[] = ['split', 'split'];
 
   constructor(
     state: GameState,
@@ -72,6 +80,14 @@ export class BotController {
     });
     const [blue, orange] = this.spawnCentre as [Vec3, Vec3];
     const enemyYaw = [Math.atan2(-(orange.x - blue.x), -(orange.z - blue.z)), Math.atan2(-(blue.x - orange.x), -(blue.z - orange.z))];
+    const span = Math.max(1e-6, Math.hypot(orange.x - blue.x, orange.z - blue.z));
+    const ux = (orange.x - blue.x) / span;
+    const uz = (orange.z - blue.z) / span;
+    this.attackDir = [
+      { x: ux, z: uz },
+      { x: -ux, z: -uz },
+    ];
+    this.planRng = createRng((opts.seed * 15485863 + 12345) >>> 0);
 
     this.world = {
       characters: state.characters,
@@ -84,14 +100,16 @@ export class BotController {
       cfg,
       enemyYaw,
       huntPoint: (bot, out) => this.huntPoint(bot, out),
+      aheadOfTeam: (bot) => this.aheadOfTeam(bot),
       time: 0,
       live: true,
     };
     this.search = createNavSearch(nav);
     for (const c of botCharacters) {
-      this.bots.push(createBot(c, (opts.seed * 7919 + c.id * 104729) >>> 0, opts.lanes.length, cfg));
+      this.bots.push(createBot(c, (opts.seed * 7919 + c.id * 104729) >>> 0, cfg));
       commands.set(c.id, this.commandFor(c.id));
     }
+    this.planRound();
   }
 
   /** The tuning bots play by now. */
@@ -144,7 +162,7 @@ export class BotController {
           this.pendingCfg = undefined;
         }
         for (const v of this.visited) v.fill(Number.NEGATIVE_INFINITY);
-        for (const b of this.bots) resetBot(b, this.opts.lanes.length, this.world.cfg);
+        this.planRound();
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
         if (shooter) this.hear(shooter.team, e.position, time, shooter.position, cfg.hearingDistance);
@@ -197,6 +215,48 @@ export class BotController {
       b.heardAt = time;
       b.lastThreatAt = time;
     }
+  }
+
+  /**
+   * A fresh round for every bot: per team, pick a plan, deal out the lanes in a random order, and have
+   * bots that share a lane set off a moment apart.
+   */
+  private planRound(): void {
+    const cfg = this.world.cfg;
+    for (let team = 0; team < this.plans.length; team++) {
+      const members = this.bots.filter((b) => b.character.team === team);
+      const plan = pickTeamPlan(this.planRng, cfg);
+      this.plans[team] = plan;
+      const lanes = assignLanes(plan, members.length, shuffledLanes(this.planRng, this.opts.lanes.length));
+      const onLane = new Map<number, number>();
+      members.forEach((b, i) => {
+        const lane = lanes[i]!;
+        const ahead = onLane.get(lane) ?? 0;
+        onLane.set(lane, ahead + 1);
+        let hold = 0;
+        for (let k = 0; k < ahead; k++) hold += pick(b.rng, cfg.laneFollowDelay);
+        resetBot(b, lane, hold, cfg);
+      });
+    }
+  }
+
+  /** How far `c` is from its spawn towards the enemy side (metres). */
+  private progress(c: Character): number {
+    const home = this.spawnCentre[c.team]!;
+    const dir = this.attackDir[c.team]!;
+    return (c.position.x - home.x) * dir.x + (c.position.z - home.z) * dir.z;
+  }
+
+  /** True if `bot` is more than teamSpread ahead of its rearmost teammate bot in play (players don't hold bots back). */
+  private aheadOfTeam(bot: Bot): boolean {
+    const me = bot.character;
+    let rear = Number.POSITIVE_INFINITY;
+    for (const b of this.bots) {
+      const c = b.character;
+      if (c === me || c.team !== me.team || !isInPlay(c)) continue;
+      rear = Math.min(rear, this.progress(c));
+    }
+    return this.progress(me) - rear > this.world.cfg.teamSpread;
   }
 
   /**

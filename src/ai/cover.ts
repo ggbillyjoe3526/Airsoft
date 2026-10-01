@@ -60,3 +60,11 @@ export function findCover(
   }
   return Number.isFinite(bestScore);
 }
+
+/** True if a player crouched at `spot` (standing on its floor) is hidden from `threatEye`. */
+export function hidesFrom(spot: Vec3, threatEye: Vec3, query: WorldQuery, body: BodyConfig): boolean {
+  crouchedEye.x = spot.x;
+  crouchedEye.y = spot.y + body.crouchEyeHeight;
+  crouchedEye.z = spot.z;
+  return !lineClear(query, threatEye, crouchedEye);
+}
