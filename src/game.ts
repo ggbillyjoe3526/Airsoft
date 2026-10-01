@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import { BotController } from './ai/botController';
+import { createDifficultyChoice, type DifficultyChoice, difficultyNote, difficultyRoundStarted, pickDifficulty } from './ai/difficultyChoice';
 import { BALLISTICS } from './config/ballistics';
 import { botConfig, type Difficulty } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
@@ -86,9 +87,8 @@ export class Game {
   private tickRateTimer = 0;
   private started = false;
   private unlockedPlay = false;
-  /** The bot difficulty in play, and one chosen mid-match that waits for the next round (or null). */
-  private difficultyInPlay: Difficulty;
-  private difficultyNext: Difficulty | null = null;
+  /** The bot difficulty in play, and one picked mid-match that waits for the next round. */
+  private readonly difficulty: DifficultyChoice;
   /** Simulation time the match was decided (NaN while it's on). */
   private matchOverAt = Number.NaN;
 
@@ -108,13 +108,13 @@ export class Game {
     this.nav = buildNavGrid(map, NAV);
     this.state = createGameState(SIM.seed, BALLISTICS.maxBBs, ROUNDS);
     this.player = this.spawnRoster(map);
-    this.difficultyInPlay = loadDifficulty();
+    this.difficulty = createDifficultyChoice(loadDifficulty());
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.bots = new BotController(
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(this.difficultyInPlay), seed: SIM.seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(this.difficulty.inPlay), seed: SIM.seed },
     );
     this.ctx = createSimContext({
       mover: this.physics,
@@ -165,7 +165,7 @@ export class Game {
       this.bindings,
       () => this.play(options.allowUnlocked),
       (v) => (this.input.sensitivity = v),
-      (d) => this.changeDifficulty(d),
+      { initial: this.difficulty.inPlay, onChange: (d) => this.changeDifficulty(d) },
     );
     this.input.sensitivity = this.startScreen.sensitivity;
     this.pointer.onChange((locked) => {
@@ -255,35 +255,21 @@ export class Game {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
-        // The bots switched to a waiting difficulty at this round start.
-        if (this.difficultyNext) this.difficultyInPlay = this.difficultyNext;
-        this.difficultyNext = null;
-        this.startScreen.setDifficultyNote('');
+        difficultyRoundStarted(this.difficulty); // the bots switched to a waiting level at this event too
+        this.startScreen.setDifficultyNote(difficultyNote(this.difficulty, false));
       }
       if (e.type === 'matchOver') {
         this.matchOverAt = this.state.time;
-        // A waiting change now starts with the next match; the result screen needs no note.
-        this.startScreen.setDifficultyNote('');
+        this.startScreen.setDifficultyNote(difficultyNote(this.difficulty, true));
       }
     }
   }
 
-  /**
-   * A new bot difficulty: before the first round is played or after a match it applies at once;
-   * mid-match it starts with the next round, so a fight in progress isn't changed.
-   */
+  /** The player picked a bot difficulty on the start/pause/result screen (see ai/difficultyChoice.ts). */
   private changeDifficulty(d: Difficulty): void {
-    const midMatch = this.started && this.state.round.phase !== 'matchOver';
-    if (!midMatch || d === this.difficultyInPlay) {
-      // Applies at once (or, back to the level in play, cancels a change still waiting).
-      this.difficultyInPlay = d;
-      this.difficultyNext = null;
-      this.bots.setConfig(botConfig(d), 'now');
-    } else {
-      this.difficultyNext = d;
-      this.bots.setConfig(botConfig(d), 'nextRound');
-    }
-    this.startScreen.setDifficultyNote(this.difficultyNext ? 'Starts next round.' : '');
+    const matchOver = this.state.round.phase === 'matchOver';
+    this.bots.setConfig(botConfig(d), pickDifficulty(this.difficulty, d, this.started && !matchOver));
+    this.startScreen.setDifficultyNote(difficultyNote(this.difficulty, matchOver));
   }
 
   private pause(): void {

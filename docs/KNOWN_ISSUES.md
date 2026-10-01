@@ -29,7 +29,7 @@ Classified as **fix now / document / can wait**.
 | A walk-off that can't reach the dead zone within 14 s, or gets stuck, fades out where it is and reappears in the dead zone | document | Rare now that walk-offs follow nav routes. |
 | Each hit runs one route search for the victim's walk-off inside the simulation tick (~2 ms worst case on Depot, not rationed) | can wait | Hits are rare (a few per round); profile before rationing. |
 | Bots fight by standing and strafing; they don't crouch-peek over 1.2 m cover or push to close distance | can wait | Phase 2 "smarter bots". |
-| Difficulty numbers are first guesses tuned against headless duels (Normal: ~13% of bot BBs hit in bot-only matches, was ~30%) | can wait | Playtest each level; tune BOT_SKILL in config/bots.ts. |
+| Difficulty numbers are first guesses tuned against headless duels (measured, not tested: Normal bots hit with ~13% of BBs in bot-only matches, was ~30%) | can wait | Playtest each level; tune BOT_SKILL in config/bots.ts. |
 | At 10–16 m, a strafing target is still hit about as fast as a standing one (the BB stream sweeps across it) | can wait | Up close strafing clearly helps; raise aimErrorTracking if mid-range strafing should help more. |
 | Bot-only rounds are fast (7–15 s) and a last 1v1 can wander for ~40 s | can wait | Revisit lethality and hunting pace with the round timer. |
 | `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |

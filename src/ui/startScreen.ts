@@ -71,7 +71,7 @@ export class StartScreen {
     private readonly bindings: KeyBindings,
     onPlay: () => void,
     onSensitivity: (v: number) => void,
-    onDifficulty: (d: Difficulty) => void,
+    difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void },
   ) {
     this.root = document.createElement('div');
     this.root.className = 'start-screen';
@@ -97,7 +97,7 @@ export class StartScreen {
     this.result = this.root.querySelector('.start-result') as HTMLDivElement;
     const goal = this.root.querySelector('.start-goal') as HTMLParagraphElement;
     goal.textContent = describeRules(rules);
-    this.difficultyPicker = new DifficultyPicker(onDifficulty);
+    this.difficultyPicker = new DifficultyPicker(difficulty.initial, difficulty.onChange);
     goal.after(this.difficultyPicker.root);
     const slider = this.root.querySelector('input') as HTMLInputElement;
     const output = this.root.querySelector('output') as HTMLOutputElement;
@@ -149,11 +149,6 @@ export class StartScreen {
 
   get sensitivity(): number {
     return this.sensitivityValue;
-  }
-
-  /** The bot difficulty the player has chosen (saved in the browser). */
-  get difficulty(): Difficulty {
-    return this.difficultyPicker.difficulty;
   }
 
   /** A note shown with the difficulty, e.g. when a change waits for the next round. */

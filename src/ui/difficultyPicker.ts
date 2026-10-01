@@ -31,10 +31,12 @@ export class DifficultyPicker {
   readonly root: HTMLDivElement;
   private readonly buttons = new Map<Difficulty, HTMLButtonElement>();
   private readonly blurb: HTMLParagraphElement;
-  private current: Difficulty = loadDifficulty();
+  private current: Difficulty;
   private note = '';
 
-  constructor(onChange: (d: Difficulty) => void) {
+  /** `initial`: the level shown as picked (normally loadDifficulty()). */
+  constructor(initial: Difficulty, onChange: (d: Difficulty) => void) {
+    this.current = initial;
     this.root = document.createElement('div');
     this.root.className = 'difficulty';
     const row = document.createElement('div');
@@ -65,10 +67,6 @@ export class DifficultyPicker {
     this.blurb.className = 'difficulty-blurb';
     this.root.append(row, this.blurb);
     this.refresh();
-  }
-
-  get difficulty(): Difficulty {
-    return this.current;
   }
 
   /** A short note after the level's description (empty to clear). */

@@ -38,7 +38,8 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
   reaction), `botMovement.ts` (routes, lanes, hunting, strafing) and `botCombat.ts` (aim, bursts, reloads). These build on
   `perception.ts` (view cone + static ray casts), `aim.ts` (turn rate, settling aim error, hasty first aim, tracking error)
   and `cover.ts` (random nearby spots hidden from the threat). Tuning is `BotConfig` = shared behaviour + one difficulty's
-  skill (config/bots.ts); `BotController.setConfig` swaps it now or at the next round start.
+  skill (config/bots.ts); `BotController.setConfig` swaps it now or at the next round start, as decided by
+  `difficultyChoice.ts` (pure: which level is in play, which one waits; game.ts calls it from the start-screen picker).
   Bots read game state, never write it; their randomness is seeded per bot.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
