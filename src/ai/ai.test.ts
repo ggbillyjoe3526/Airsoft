@@ -877,20 +877,24 @@ describe('bot team play and routes', () => {
     // A 1.2 m crate 2 m in front of the bot, between it and the player 14 m away.
     const crate = boxQuery(0, -12, 0.6, 0.6, 1.2);
     const block: LowCoverBlock = { x: 0, z: -12, halfX: 0.6, halfZ: 0.6 };
-    const { state, bot, bots, run } = duel(14, () => {}, crate, { ...BOTS, fireCone: 0 }, 7, [block]);
+    // A bot that fires normally: any shot before it reaches the spot would show up here.
+    const { state, bot, bots, run } = duel(14, () => {}, crate, BOTS, 7, [block]);
     const b = bots.bots[0]!;
     let tookCover = false;
     let foughtFromCover = false;
-    let shotsBeforeCover = 0;
+    let shotsBeforeArriving = 0;
+    let arrivedAt = -1;
     run(4, () => {
       tookCover ||= b.mode === 'cover';
       foughtFromCover ||= b.mode === 'fight' && b.fromCover;
-      for (const e of state.events) if (e.type === 'shot' && e.characterId === 1 && !tookCover) shotsBeforeCover++;
+      const there = tookCover && Math.hypot(bot.position.x - b.cover.position.x, bot.position.z - b.cover.position.z) < BOTS.coverArrive;
+      if (there && arrivedAt < 0) arrivedAt = state.time;
+      for (const e of state.events) if (e.type === 'shot' && e.characterId === 1 && arrivedAt < 0) shotsBeforeArriving++;
     });
     expect(tookCover).toBe(true);
     expect(foughtFromCover).toBe(true);
-    expect(shotsBeforeCover).toBe(0);
-    expect(Math.hypot(bot.position.x - b.cover.position.x, bot.position.z - b.cover.position.z)).toBeLessThan(BOTS.coverArrive);
+    expect(arrivedAt).toBeGreaterThan(0);
+    expect(shotsBeforeArriving).toBe(0); // holds fire while getting behind the crate
     expect(b.cover.position.z).toBeLessThan(-12.6); // behind the crate, not in front of it
   });
 

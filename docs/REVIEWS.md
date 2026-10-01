@@ -14,3 +14,4 @@ One line per feature: feature · attempts used · final score · verdict.
 | Phase 2 M2: footsteps, bots hear them, sound pass | 3 of 3 (7.6 → 8.4 → 8.8) | 8.8 | Accepted; footstep ranges and caps are first guesses (KNOWN_ISSUES) |
 | Phase 2 M3: reload hand, hit flinch, hit puffs, smooth turning | 2 of 3 (8.3 → 8.8) | 8.8 | Accepted; support-hand placement and reload pose size to confirm in the owner's playtest |
 | Phase 2 M4a: difficulty levels, fairer close range, per-enemy contacts, bot brain split | 3 of 3 (8.1 → 8.4 → 8.7) | 8.7 | Accepted; minor leftovers in KNOWN_ISSUES (waiting level tracked in two places, picker shows the waiting level) |
+| Phase 2 M4b: crouch-peeking, moving as a team, varied routes, walking | 3 of 3 (7.8 → 8.2 → 8.2) | 8.2 | Auto-accepted (attempt 3 ≥ 7.0); a hollow test assertion fixed after review; leftovers in KNOWN_ISSUES (longer round tail, contact cover before reaction, re-contact cycle untested) |
