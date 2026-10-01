@@ -14,6 +14,9 @@ export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
+  /** View size in CSS pixels (kept up to date on resize, so HUD code never has to read layout). */
+  width = 0;
+  height = 0;
 
   constructor(private readonly container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: RENDER.antialias, powerPreference: 'high-performance' });
@@ -62,6 +65,8 @@ export class Renderer {
   private readonly resize = (): void => {
     const w = this.container.clientWidth || window.innerWidth;
     const h = this.container.clientHeight || window.innerHeight;
+    this.width = w;
+    this.height = h;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();

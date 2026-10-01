@@ -31,4 +31,9 @@ export interface MapData {
    * (Orange) side. Bots advance along one; empty on maps without bots.
    */
   lanes: Vec3[][];
+  /**
+   * Flag mode: per team, the foot of the flagpole that team defends (on its own side of the map). Maps
+   * without flags can only be played in elimination.
+   */
+  flags?: [Vec3, Vec3];
 }

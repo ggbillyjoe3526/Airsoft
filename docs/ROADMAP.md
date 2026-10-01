@@ -18,7 +18,7 @@ Three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the initial game (not released yet). Everything below builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2, M5 next (awaiting the owner's go-ahead). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: M5 done; bug pass and M6 next. |
 
 **Which stage a piece of work belongs to:**
 - **Alpha:** new systems, modes, content, maps, replicas, menus, art and anything else that adds to the game or changes how it plays.
@@ -51,7 +51,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | **Build `v0.1-alpha.2a`** (interim checkpoint) | M1–M3, played by the owner | |
 | Alpha · Phase 2 · M4a Difficulty levels, close-range lethality | Done | 8.7 |
 | Alpha · Phase 2 · M4b Crouch-peeking, team movement, varied routes, walking | Done | 8.2 |
-| Alpha · Phase 2 · M5 Objective mode | **Next** (awaiting the owner's go-ahead) | |
+| Alpha · Phase 2 · M5 Objective mode (Attack / Defend) | Done | 8.4 |
 | Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | To do | |
 | Alpha · Phase 3 Content | Later | |
 | Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |

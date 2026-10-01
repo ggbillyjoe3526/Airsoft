@@ -87,7 +87,15 @@ Then open **http://localhost:4173**.
 
 ## How to play
 
-- **Goal:** knock out every player on the other team. First team to 5 round wins takes the match.
+- **Goal:** pick a mode on the start screen. First team to 5 round wins takes the match.
+  - **Elimination:** knock out every player on the other team. If the clock runs out, the round is a draw.
+  - **Attack / Defend:** each team has a flagpole in its half. Each round one team attacks the other's pole: stand by it
+    (inside the painted ring) for 5 s to raise your flag and win the round. Defenders standing by the pole pull
+    the flag back down; with both teams at the pole the flag doesn't move. The defenders win if the clock runs
+    out (if attackers are still at the pole then, play goes on in overtime, up to 15 s, until they leave or
+    finish), and knocking out the whole other team wins in either role. Your team attacks first; sides swap after
+    round 4. The strip under the scoreboard shows how far up the flag is, and a marker shows where the pole is.
+    A mode picked mid-match starts with the next match.
 - **One hit = out.** When a BB hits you, you hear a sharp "tick", see where it came from, raise your hand
   and walk off to the dead zone. While out, you watch your teammates (click to switch).
 - **BBs are real projectiles:** they take time to fly and drop at range, so lead moving targets.
@@ -128,16 +136,16 @@ with footsteps, reload animations, hit reactions, a minimal HUD.
 
 **On the way to Alpha 2 (since v0.1-alpha.2a):** bot difficulty levels (Easy / Normal / Hard), and smarter bots: they pop
 up over low cover to shoot and duck again, move as a team, take different routes each round, and walk quietly
-when closing in on you.
+when closing in on you. An **Attack / Defend** mode: attack or defend a flagpole, with sides swapping at half-time.
 
-**Still to come in Alpha 2 (v0.1-alpha.2):** an objective mode.
+**Still to come in Alpha 2 (v0.1-alpha.2):** a bug pass and the owner's playtest.
 Progress and plans: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 **Version names:** the game is being built as **v0.1**. Alpha builds (`v0.1-alpha`, `v0.1-alpha.2`, with letters
 like `v0.1-alpha.2a` for in-between playtest builds) come first. Beta builds (`v0.1-beta` …) follow once it's
 feature complete, and **v0.1** is the first public release.
 
-**Not yet:** objectives, more maps or replicas, menus beyond the start screen, real art.
+**Not yet:** more maps or replicas, menus beyond the start screen, real art.
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels
 still need tuning from playtesting.
 

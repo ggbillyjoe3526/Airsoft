@@ -138,6 +138,9 @@ export class Sfx {
         // Extra long blasts after the round's: game over.
         for (let i = 0; i < AUDIO.matchOverBlasts; i++) this.whistle(AUDIO.roundOverWhistle, matchOverBlastStart(i));
         return;
+      case 'flagRope':
+        this.rope(this.output(e.position), e.raising);
+        return;
       case 'roundStart':
         this.stopWhistles();
         this.whistle(AUDIO.roundStartWhistle, 0);
@@ -227,6 +230,15 @@ export class Sfx {
   private hitMarker(): void {
     const m = AUDIO.hitMarker;
     this.tone(this.master!, 'triangle', m.fromHz, m.toHz, AUDIO.hitMarkerVolume, m.time);
+  }
+
+  /** The flagpole's pulley ratcheting: two clicks and a squeak of rope, pitched by direction. */
+  private rope(out: AudioNode, raising: boolean): void {
+    const r = AUDIO.flagRope;
+    const hz = (raising ? r.upHz : r.downHz) * jitter(AUDIO.shotPitchSpread);
+    this.click(out, hz, r.clickTime, r.volume);
+    this.click(out, hz * r.secondClickPitch, r.clickTime, r.volume * r.secondClickGain, r.secondClickDelay);
+    this.noise(out, 'bandpass', raising ? r.squeakUpHz : r.squeakDownHz, r.squeakQ, r.volume * r.squeakGain, r.squeakAttack, r.squeakTime);
   }
 
   private stopWhistles(): void {

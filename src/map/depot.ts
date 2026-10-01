@@ -207,6 +207,13 @@ const LANES: Vec3[][] = [
   [vec3(-11.9, 0, -9.7), vec3(-7.4, 0, -13.9), vec3(-1.7, 0, -9.7), vec3(1.7, 0, -9.7), vec3(7.4, 0, -13.9), vec3(11.9, 0, -9.7)],
 ];
 
+/**
+ * Flag mode: each team defends a pole in mid on its own side, between the crouch barrier (cover for
+ * the defenders, and for attackers crouched at the pole) and the crate yard. About 17 m from the
+ * defenders' spawn and 35 m from the attackers', reachable through all three lanes (tested).
+ */
+const FLAG_X = 9.5;
+
 export const DEPOT: MapData = {
   name: 'Depot',
   blocks: [...perimeter(), ...WEST_HALF, ...WEST_HALF.map(mirrorX), ...CENTRE],
@@ -214,6 +221,7 @@ export const DEPOT: MapData = {
   spawns: [BLUE_SPAWNS, ORANGE_SPAWNS],
   deadZones: [BLUE_DEAD_ZONE, ORANGE_DEAD_ZONE],
   lanes: LANES,
+  flags: [vec3(-FLAG_X, 0, 0), vec3(FLAG_X, 0, 0)],
 };
 
 /** Layout facts the tests check against, exported so they can't drift from the geometry. */

@@ -102,6 +102,7 @@ export class BotController {
       hits: opts.hits,
       loadout: opts.loadout,
       cfg,
+      round: state.round,
       enemyYaw,
       huntPoint: (bot, out) => this.huntPoint(bot, out),
       aheadOfTeam: (bot) => this.aheadOfTeam(bot),
@@ -152,7 +153,32 @@ export class BotController {
       if (isInPlay(c)) this.visited[c.team]![this.sectorOf(c.position.x, c.position.z)] = state.time;
     }
     this.planRoutes();
+    this.pickRetakers();
     for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
+  }
+
+  /**
+   * Attack / Defend: the `retakers` defending bots in play nearest the pole are the ones who go and pull
+   * the flag down once it's off the bottom; the rest hold their posts, so tagging the pole doesn't empty
+   * every lane. Re-picked every tick, so if a retaker is hit the next nearest takes over.
+   */
+  private pickRetakers(): void {
+    const r = this.world.round;
+    const pole = r.flag.position;
+    for (const b of this.bots) {
+      const c = b.character;
+      b.retake = false;
+      if (r.mode !== 'attackDefend' || r.attackers < 0 || c.team === r.attackers || !isInPlay(c)) continue;
+      const d = Math.hypot(c.position.x - pole.x, c.position.z - pole.z);
+      let closer = 0;
+      for (const o of this.bots) {
+        const oc = o.character;
+        if (o === b || oc.team !== c.team || !isInPlay(oc)) continue;
+        const od = Math.hypot(oc.position.x - pole.x, oc.position.z - pole.z);
+        if (od < d || (od === d && oc.id < c.id)) closer++;
+      }
+      b.retake = closer < this.world.cfg.retakers;
+    }
   }
 
   /** After a simulation tick, while its events are still in the state. */
@@ -223,13 +249,21 @@ export class BotController {
 
   /**
    * A fresh round for every bot: per team, pick a plan, deal out the lanes in a random order, and have
-   * bots that share a lane set off a moment apart.
+   * bots that share a lane set off a moment apart. In Attack / Defend, defenders don't advance: each holds
+   * the first point of its lane (nearest home), or the second (see defendForwardChance), and they never
+   * stack all on one lane. Attackers walk their lane only as far as the first point past the middle of
+   * the map, then head for the pole.
    */
   private planRound(): void {
     const cfg = this.world.cfg;
+    const round = this.world.round;
+    const objective = round.mode === 'attackDefend' && round.attackers >= 0;
     for (let team = 0; team < this.plans.length; team++) {
       const members = this.bots.filter((b) => b.character.team === team);
-      const plan = pickTeamPlan(this.planRng, cfg);
+      const defending = objective && team !== round.attackers;
+      const attacking = objective && team === round.attackers;
+      let plan = pickTeamPlan(this.planRng, cfg);
+      if (defending && plan === 'stack') plan = 'pair'; // three bots holding one lane point would stand in a heap
       this.plans[team] = plan;
       const lanes = assignLanes(plan, members.length, shuffledLanes(this.planRng, this.opts.lanes.length));
       const onLane = new Map<number, number>();
@@ -239,9 +273,37 @@ export class BotController {
         onLane.set(lane, ahead + 1);
         let hold = 0;
         for (let k = 0; k < ahead; k++) hold += pick(b.rng, cfg.laneFollowDelay);
-        resetBot(b, lane, hold, cfg);
+        let points = Number.POSITIVE_INFINITY;
+        if (defending) {
+          const shared = lanes.filter((l) => l === lane).length > 1;
+          const forward = ahead === 0 && (shared || rngNext(this.planRng) < cfg.defendForwardChance);
+          points = forward ? 2 : 1;
+        } else if (attacking) {
+          points = this.pointsToMidfield(team, lane);
+        }
+        resetBot(b, lane, hold, cfg, points);
       });
     }
+  }
+
+  /**
+   * How many of `lane`'s points `team` walks to reach the first one past the middle of the map (all of
+   * them if none is): attackers go for the pole from there.
+   */
+  private pointsToMidfield(team: number, lane: number): number {
+    const points = this.opts.lanes[lane];
+    if (!points) return Number.POSITIVE_INFINITY;
+    const home = this.spawnCentre[team]!;
+    const dir = this.attackDir[team]!;
+    const enemy = this.spawnCentre[1 - team]!;
+    const half = Math.hypot(enemy.x - home.x, enemy.z - home.z) / 2;
+    const n = points.length;
+    for (let k = 0; k < n; k++) {
+      // Walking order: Blue goes through the points first to last, Orange last to first (see resetBot).
+      const p = points[team === 0 ? k : n - 1 - k]!;
+      if ((p.x - home.x) * dir.x + (p.z - home.z) * dir.z >= half) return k + 1;
+    }
+    return n;
   }
 
   /** How far `c` is from its spawn towards the enemy side (metres). */

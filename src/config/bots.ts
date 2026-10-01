@@ -160,6 +160,30 @@ export const BOT_BEHAVIOUR = {
   huntTriesPerCandidate: 20,
   /** Among never-visited sectors, each metre further from home counts like this many seconds staler. */
   huntFarBias: 0.01,
+  // ---- Flag mode -------------------------------------------------------------------------------
+  /**
+   * Bots stand at a random spot within this distance of the pole (metres): close enough to work the
+   * rope (FLAG.radius) once within flagArrive of the spot, and spread out so they don't stand in a heap.
+   */
+  flagStand: 0.8,
+  /** Close enough to that spot to stop, crouch and work the rope (metres). */
+  flagArrive: 0.5,
+  /**
+   * Defenders hold the first point of their lane (nearest home). The first bot on a shared lane holds
+   * the next one, and a bot alone on its lane does so this often: a forward hold.
+   */
+  defendForwardChance: 0.3,
+  /**
+   * Defenders go after someone seen or heard within this distance of the pole (metres); further away
+   * they hold their post and watch that way, so the attackers have to come to them.
+   */
+  defendSearchRadius: 12,
+  /**
+   * Once the flag is off the bottom, this many defenders (those nearest the pole) go and pull it down;
+   * the rest hold their posts.
+   */
+  retakers: 2,
+
   /** At most this many route searches per simulation tick, shared by all bots. */
   pathsPerTick: 1,
 } as const;

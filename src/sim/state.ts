@@ -1,8 +1,10 @@
+import type { MatchMode } from '../config/modes';
 import { type BBPool, createBBPool } from './ballistics';
 import type { Character } from './character';
 import type { GameEvent } from './events';
 import { createRoundState, type RoundRules, type RoundState } from './round';
 import { createRng, type RngState } from './rng';
+import type { Vec3 } from './vec';
 
 /** Entire simulation state as plain data. Presentation layers read it, never write it. */
 export interface GameState {
@@ -16,7 +18,8 @@ export interface GameState {
   round: RoundState;
 }
 
-export function createGameState(seed: number, maxBBs: number, rules: RoundRules): GameState {
+/** A fresh game in `mode` (flag mode needs the map's flag spots, one per defending team). */
+export function createGameState(seed: number, maxBBs: number, rules: RoundRules, mode: MatchMode = 'elimination', flagSpots: readonly Vec3[] = []): GameState {
   return {
     tick: 0,
     time: 0,
@@ -24,6 +27,6 @@ export function createGameState(seed: number, maxBBs: number, rules: RoundRules)
     bbs: createBBPool(maxBBs),
     events: [],
     rng: createRng(seed),
-    round: createRoundState(rules),
+    round: createRoundState(rules, mode, flagSpots),
   };
 }

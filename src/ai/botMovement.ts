@@ -3,7 +3,7 @@ import { isWalkableAt } from '../nav/navGrid';
 import type { PlayerCommand } from '../sim/commands';
 import { rngNext } from '../sim/rng';
 import type { Vec3 } from '../sim/vec';
-import { type Bot, type BotWorld, pick } from './bot';
+import { type Bot, type BotWorld, flagRole, pick } from './bot';
 
 /** Asks the planner for a route to `goal`, unless the current (or failed) one already goes about there. */
 export function wantRoute(b: Bot, goal: Vec3, cfg: BotConfig): void {
@@ -22,38 +22,54 @@ export function wantRoute(b: Bot, goal: Vec3, cfg: BotConfig): void {
 
 /**
  * Next place to go while advancing: the next lane point (moved a little at random onto walkable
- * ground, so routes vary), or once the lane is swept, a hunt spot.
+ * ground, so routes vary), or once the lane is swept, a hunt spot. In flag mode nobody hunts:
+ * defenders hold their last lane point (no goal) and attackers mark the lane done, which sends them to
+ * the pole (see wantsFlag).
  */
 function nextAdvanceGoal(b: Bot, w: BotWorld): Vec3 | undefined {
   const lane = w.lanes[b.lane];
   if (!b.hunting && lane && lane.length > 0) {
     const next = b.laneIndex < 0 ? (b.laneDir > 0 ? 0 : lane.length - 1) : b.laneIndex + b.laneDir;
-    if (next >= 0 && next < lane.length) {
+    const walked = b.laneDir > 0 ? next : lane.length - 1 - next; // lane points before `next`
+    if (next >= 0 && next < lane.length && walked < b.lanePoints) {
       b.laneIndex = next;
-      jitterLanePoint(b, w, lane[next]!);
+      jitterPoint(b, w, lane[next]!, w.cfg.laneJitter, b.laneGoal);
       return b.laneGoal;
     }
+  }
+  const role = flagRole(b, w);
+  if (role === 'defend') return undefined;
+  if (role === 'attack') {
+    b.laneDone = true;
+    return undefined;
   }
   b.hunting = true;
   return w.huntPoint(b, b.huntGoal) ? b.huntGoal : undefined;
 }
 
-/** Writes `point` moved up to laneJitter in a random direction into `b.laneGoal` (unmoved if no walkable spot turns up). */
-function jitterLanePoint(b: Bot, w: BotWorld, point: Vec3): void {
-  const cfg = w.cfg;
-  b.laneGoal.x = point.x;
-  b.laneGoal.y = point.y;
-  b.laneGoal.z = point.z;
-  for (let i = 0; i < cfg.laneJitterTries; i++) {
+/** Writes `point` moved up to `radius` in a random direction into `out` (unmoved if no walkable spot turns up). */
+function jitterPoint(b: Bot, w: BotWorld, point: Vec3, radius: number, out: Vec3): void {
+  out.x = point.x;
+  out.y = point.y;
+  out.z = point.z;
+  for (let i = 0; i < w.cfg.laneJitterTries; i++) {
     const angle = rngNext(b.rng) * Math.PI * 2;
-    const r = Math.sqrt(rngNext(b.rng)) * cfg.laneJitter;
+    const r = Math.sqrt(rngNext(b.rng)) * radius;
     const x = point.x + Math.cos(angle) * r;
     const z = point.z + Math.sin(angle) * r;
     if (!isWalkableAt(w.nav, x, z)) continue;
-    b.laneGoal.x = x;
-    b.laneGoal.z = z;
+    out.x = x;
+    out.z = z;
     return;
   }
+}
+
+/** Flag mode: picks a spot by the pole to stand at and heads there. */
+export function enterFlagMode(b: Bot, w: BotWorld): void {
+  b.mode = 'flag';
+  jitterPoint(b, w, w.round.flag.position, w.cfg.flagStand, b.flagGoal);
+  b.routeState = 'none';
+  b.route.length = 0;
 }
 
 /**
@@ -129,6 +145,23 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
         b.heardAt = Number.NEGATIVE_INFINITY;
       }
       return moving;
+    }
+    case 'flag': {
+      // At the spot by the pole: crouch and stay, working the rope.
+      const p = b.character.position;
+      if (Math.hypot(b.flagGoal.x - p.x, b.flagGoal.z - p.z) <= cfg.flagArrive) {
+        b.routeState = 'none';
+        cmd.crouch = true;
+        return false;
+      }
+      if (b.routeState === 'failed' && (b.flagGoal.x !== w.round.flag.position.x || b.flagGoal.z !== w.round.flag.position.z)) {
+        // No way to that spot: try the foot of the pole itself, once.
+        b.flagGoal.x = w.round.flag.position.x;
+        b.flagGoal.z = w.round.flag.position.z;
+        b.routeState = 'none';
+      }
+      wantRoute(b, b.flagGoal, cfg);
+      return followRoute(b, w, dt);
     }
     case 'cover': {
       // Get there, then keep low, standing up only to look over crouch cover.

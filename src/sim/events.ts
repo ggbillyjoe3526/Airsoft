@@ -16,7 +16,15 @@ export type GameEvent =
   | { type: 'footstep'; characterId: number; kind: FootstepKind }
   /** A BB hit a character: they are eliminated and start calling their hit. `direction` is the BB's flight direction. */
   | { type: 'characterHit'; victimId: number; shooterId: number; position: Vec3; direction: Vec3 }
-  /** A round ended: `winner` is the team that won it, or -1 for a draw (time ran out, or both teams out). */
-  | { type: 'roundOver'; winner: number; reason: 'eliminated' | 'time' }
+  /**
+   * A round ended: `winner` is the team that won it, or -1 for a draw (elimination: time ran out, or
+   * both teams out at once). In flag mode the attackers win by raising the flag ('captured') and the
+   * defenders when time runs out.
+   */
+  | { type: 'roundOver'; winner: number; reason: RoundEndReason }
   | { type: 'matchOver'; winner: number }
-  | { type: 'roundStart'; round: number };
+  | { type: 'roundStart'; round: number }
+  /** The flag passed another notch of its rope, going up (`raising`) or being pulled down. */
+  | { type: 'flagRope'; position: Vec3; raising: boolean };
+
+export type RoundEndReason = 'eliminated' | 'time' | 'captured';

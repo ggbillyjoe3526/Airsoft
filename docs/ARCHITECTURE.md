@@ -15,8 +15,10 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 - **sim/**: all gameplay rules. Plain data (`GameState`, `Character`, the BB pool), no Three.js, no DOM, no `Math.random`.
   Each tick: move characters, handle replicas (`armament.ts`: fire, reload, switch; spawns BBs), then fly BBs
   (`ballistics.ts` flight model, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
-  characters via `hitbox.ts` capsules), then match flow (`round.ts`: round clock, wipe-out or time-out, score, first to
-`winsNeeded`, `restartMatch`). A hit character is eliminated
+  characters via `hitbox.ts` capsules), then match flow (`round.ts`: the match mode, round clock, wipe-out or time-out, score, first to
+`winsNeeded`, `restartMatch(mode)`; in Attack / Defend also who attacks (swapping at half-time) and the pole, stepped by
+`flag.ts`: attackers in play at the pole raise the flag, defenders pull it down, both hold it still; a raised flag
+ends the round). A hit character is eliminated
   (`elimination.ts`: alive → calling → walkingOff → out) and from then on follows a built-in command instead of its
   controller's, can't fire and can't be hit. Anything presentation needs
   to react to is pushed to `state.events` (shots, impacts, reloads), cleared every tick.
@@ -43,7 +45,10 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
   and `cover.ts` (random nearby spots hidden from the threat). Tuning is `BotConfig` = shared behaviour + one difficulty's
   skill (config/bots.ts); `BotController.setConfig` swaps it now or at the next round start, as decided by
   `difficultyChoice.ts` (pure: which level is in play, which one waits; game.ts calls it from the start-screen picker).
-  Bots read game state, never write it; their randomness is seeded per bot.
+  Bots read game state, never write it; their randomness is seeded per bot. In Attack / Defend (`BotWorld.round`, `flagRole`
+  / `wantsFlag` in `bot.ts`) defenders walk only the first one or two points of their lane and hold there, chase
+  noises only near the pole, and the two nearest it run to the pole (mode `flag`) once the flag is off the bottom; attackers go to
+  the pole once they have walked their lane to midfield, crouch by it and stay. Nobody hunts.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
@@ -57,14 +62,20 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
   landings; walking and crouched movement are silent.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox
   figures, a few meshes each on one material per figure), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
-  you're out, round messages and the scoreboard (`ui/scoreboard.ts`: score, clock, who's still in).
+  you're out, round messages (`ui/roundBanner.ts`, worded from your side) and the scoreboard (`ui/scoreboard.ts`:
+  score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
+  also the pole (`flagRenderer.ts`: pole, rippling cloth at the sim's height, ring at the rope's reach) and its
+  screen marker (`screenMarker.ts` projects it, pinned to the screen edge when out of view; `ui/flagMarker.ts`).
+- **ui/startScreen.ts**: title/pause/result overlay with the rules for the picked mode and two `OptionPicker`s
+  (match mode, bot difficulty; saved in the browser).
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop. The only place that knows about every layer.
 
 ## Map data
 
 Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind, spawns and dead-zone spots
-per team (later also waypoints/cover points). The same data builds Rapier colliders and merged Three.js meshes
+per team, bot lanes, and optionally a flagpole spot per team (the pole that team defends; maps without one are
+elimination only). The same data builds Rapier colliders and merged Three.js meshes
 (one draw call per surface texture).
 
 ## Simulation structure

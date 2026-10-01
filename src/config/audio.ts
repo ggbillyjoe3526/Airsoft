@@ -92,6 +92,26 @@ export const AUDIO = {
   /** Match over: this many more long blasts after the round's, each this many blast-lengths apart. */
   matchOverBlasts: 3,
   matchOverWhistleGap: 1.3,
+  /**
+   * The flagpole's rope ratchet, heard at the pole each time the flag passes a notch: two quick clicks of
+   * the pulley and a squeak of rope, higher going up than coming down.
+   */
+  flagRope: {
+    volume: 0.45,
+    upHz: 1900,
+    downHz: 1250,
+    clickTime: 0.014,
+    /** The second click: this long after the first (s), this much higher and this loud relative to it. */
+    secondClickDelay: 0.07,
+    secondClickPitch: 1.12,
+    secondClickGain: 0.8,
+    squeakUpHz: 2600,
+    squeakDownHz: 2100,
+    squeakQ: 6,
+    squeakGain: 0.5,
+    squeakAttack: 0.01,
+    squeakTime: 0.09,
+  },
 } as const;
 
 /** When extra match-over blast `i` (0-based) starts, in seconds after the deciding hit. */

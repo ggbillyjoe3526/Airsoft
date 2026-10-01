@@ -213,3 +213,48 @@ export const VIEWMODEL = {
 export function matchOverScreenDelay(): number {
   return matchOverWhistlesDuration() + HUD.matchOverScreenPause;
 }
+
+/**
+ * Flag mode's pole: a site's flagpole on a weighted base, with the attackers' flag climbing it as
+ * they raise it, and a painted ring on the floor marking how close you must be to work the rope.
+ */
+export const FLAG_VISUALS = {
+  poleHeight: 3.4,
+  poleRadius: 0.035,
+  poleColor: 0xe9e6dd,
+  poleRoughness: 0.5,
+  poleMetalness: 0.3,
+  poleSegments: 10,
+  baseRadius: 0.28,
+  /** The base tapers to this radius at the top (metres). */
+  baseTopRadius: 0.22,
+  baseSegments: 16,
+  baseRoughness: 0.9,
+  baseHeight: 0.14,
+  baseColor: 0x6f6a60,
+  /** Flag cloth size (metres) and where its bottom edge sits at the bottom and top of the pole. */
+  clothWidth: 0.95,
+  clothHeight: 0.62,
+  clothLowest: 0.3,
+  clothHighest: 2.72,
+  /** Segments along the cloth: enough for a smooth ripple. */
+  clothSegments: 8,
+  clothRoughness: 0.8,
+  /** Cloth ripple: waves along the cloth (per metre), speed (rad/s) and how far the free edge flaps (metres). */
+  waveNumber: 6,
+  waveSpeed: 7,
+  waveAmplitude: 0.07,
+  /** Ring on the floor at the rope's reach: neutral when nobody works it, else the team working it. */
+  ringWidth: 0.08,
+  ringColor: 0xffffff,
+  ringContestedColor: 0xffe14d,
+  ringOpacity: 0.6,
+  ringSegments: 48,
+  /** Height of the ring above the floor (metres): just enough not to flicker against it. */
+  ringLift: 0.01,
+  /** Screen marker over the pole: anchor height (metres), and kept this far in from the screen edge (px). */
+  markerHeight: 3.7,
+  markerEdge: 36,
+  /** Closer than this to the pole (metres, while playing) the marker hides: the pole is right there. */
+  markerHideWithin: 5,
+} as const;

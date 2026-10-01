@@ -14,9 +14,9 @@ import { fillEliminatedCommand, isInPlay, stepElimination } from './elimination'
 import { stepFootsteps } from './footsteps';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { createRng } from './rng';
-import { type RoundRules, stepRound } from './round';
+import { type RoundContext, type RoundRules, stepRound } from './round';
 import type { GameState } from './state';
-import { copy, vec3 } from './vec';
+import { copy, type Vec3, vec3 } from './vec';
 
 export interface SimServices {
   mover: CharacterMover;
@@ -35,8 +35,10 @@ export interface SimServices {
   nav: NavGrid;
   /** Route ends snap to the nearest walkable cell within this distance. */
   navSnap: number;
-  /** Round length, pause between rounds, wins needed. */
+  /** Round length, pause between rounds, wins needed, flag rules. */
   rounds: RoundRules;
+  /** Per team, where the flagpole stands when that team defends (map data; absent: no flag mode). */
+  flagSpots?: readonly Vec3[];
 }
 
 /** Services and tuning the simulation needs from outside, plus reusable scratch. */
@@ -50,6 +52,7 @@ export interface SimContext extends SimServices {
   /** Reused every tick; the state-dependent fields are filled in by stepSimulation. */
   armament: ArmamentContext;
   targets: BBTargets;
+  round: RoundContext;
 }
 
 export function createSimContext(services: SimServices): SimContext {
@@ -72,6 +75,7 @@ export function createSimContext(services: SimServices): SimContext {
       hits: services.hits,
       elimination: { deadZones: services.deadZones, nav: services.nav, navSearch: createNavSearch(services.nav), snap: services.navSnap },
     },
+    round: { rules: services.rounds, loadout: services.loadout, flagSpots: services.flagSpots ?? [] },
   };
 }
 
@@ -129,7 +133,7 @@ export function stepSimulation(
   }
 
   stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, live ? ctx.targets : undefined);
-  stepRound(state.round, state.characters, state.bbs, ctx.loadout, ctx.rounds, state.events, dt);
+  stepRound(state.round, state.characters, state.bbs, ctx.round, state.events, dt);
   state.tick++;
   state.time += dt;
 }

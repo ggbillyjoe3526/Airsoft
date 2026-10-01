@@ -1,6 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { FLAG } from '../config/modes';
 import { BODY, MOVEMENT } from '../config/movement';
+import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
+import { buildNavGrid, createNavSearch, findPath } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { type Vec3, vec3 } from '../sim/vec';
 import { DEPOT, DEPOT_LAYOUT } from './depot';
@@ -270,6 +273,66 @@ describe('Depot map', () => {
         }
       }
     }
+  });
+
+  describe('flagpoles (flag mode)', () => {
+    const flags = DEPOT.flags!;
+
+    it('stand one per team in its own half, mirror images, on open ground all round the pole', () => {
+      const [west, east] = flags;
+      expect(west.x).toBeLessThan(-2);
+      expect(east).toEqual(vec3(-west.x, west.y, west.z));
+      for (const f of flags) {
+        expect(f.y).toBe(0);
+        // Most of the ground within reach of the rope is standable, so players can work it from any side.
+        let open = 0;
+        let all = 0;
+        const r = FLAG.radius;
+        for (let dx = -r; dx <= r; dx += 0.2) {
+          for (let dz = -r; dz <= r; dz += 0.2) {
+            if (Math.hypot(dx, dz) > r) continue;
+            all++;
+            if (standable(f.x + dx, f.z + dz)) open++;
+          }
+        }
+        expect(open / all, `open ground at ${f.x}, ${f.z}`).toBeGreaterThan(0.9);
+      }
+    });
+
+    it('can be reached by the attackers through each of the three lanes', () => {
+      const grid = buildWalkable();
+      for (const [name, lane] of Object.entries(lanes)) {
+        const viaLane = (x: number, z: number): boolean => Math.abs(x) > 1.6 || (z > lane.minZ && z < lane.maxZ);
+        for (const s of orange) expect(reachable(grid, s.position, flags[0], viaLane), `no ${name} route to the Blue pole`).toBe(true);
+      }
+    });
+
+    it('stand much closer to the defenders than to the attackers, out of sight of the attackers’ spawn', () => {
+      const nav = buildNavGrid(DEPOT, NAV);
+      const search = createNavSearch(nav);
+      const route: Vec3[] = [];
+      const walk = (from: Vec3, to: Vec3): number => {
+        expect(findPath(nav, search, from, to, NAV.snap, route)).toBe(true);
+        let d = 0;
+        let p = from;
+        for (const q of route) {
+          d += Math.hypot(q.x - p.x, q.z - p.z);
+          p = q;
+        }
+        return d;
+      };
+      const blockers = blockersAt(STANDING_EYE);
+      for (const [team, f] of flags.entries()) {
+        const defenders = DEPOT.spawns[team]!;
+        const attackers = DEPOT.spawns[1 - team]!;
+        const defend = Math.max(...defenders.map((s) => walk(s.position, f)));
+        const attack = Math.min(...attackers.map((s) => walk(s.position, f)));
+        expect(attack, `pole ${team}: attackers ${attack.toFixed(1)} m, defenders ${defend.toFixed(1)} m`).toBeGreaterThan(defend * 1.6);
+        for (const a of spawnZone(attackers, 0.5)) {
+          expect(blockers.some((k) => segmentHitsBox(a.x, a.z, f.x, f.z, k)), `(${a.x}, ${a.z}) sees pole ${team}`).toBe(true);
+        }
+      }
+    });
   });
 
   it('hides everyone near one spawn from everyone near the other, standing or crouched', () => {

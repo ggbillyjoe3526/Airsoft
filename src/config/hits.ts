@@ -1,3 +1,5 @@
+import { FLAG } from './modes';
+
 export interface HitConfig {
   bodyRadius: number;
   bodyBottom: number;
@@ -58,14 +60,15 @@ export const HITS: HitConfig = {
   vanishTime: 0.6,
 };
 
-/** Match flow: 3v3 elimination rounds against the clock, first to 5 round wins. */
+/** Match flow: 3v3 rounds against the clock (elimination or flag, see config/modes.ts), first to 5 round wins. */
 export const ROUNDS = {
   /** Players per team, including the local player on team 0. */
   teamSize: 3,
-  /** Round length (s). A round that runs out of time is a draw (nobody scores). */
+  /** Round length (s). Elimination: a round that runs out of time is a draw (nobody scores). Flag: the defenders win it. */
   roundTime: 150,
   /** Seconds between a round ending and everyone respawning. */
   resetDelay: 4,
   /** Round wins needed to win the match. */
   winsNeeded: 5,
+  flag: FLAG,
 } as const;

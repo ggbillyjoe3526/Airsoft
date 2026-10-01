@@ -5,6 +5,7 @@ import { createDifficultyChoice, type DifficultyChoice, difficultyNote, difficul
 import { BALLISTICS } from './config/ballistics';
 import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
+import type { MatchMode } from './config/modes';
 import { NAV } from './config/nav';
 import { matchOverScreenDelay } from './config/render';
 import { FOOTSTEPS } from './config/footsteps';
@@ -30,13 +31,13 @@ import { MatchPresentation } from './render/matchPresentation';
 import { Renderer } from './render/renderer';
 import { type Character, createCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
-import { restartMatch } from './sim/round';
+import { attackersInRound, restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { DebugOverlay } from './ui/debugOverlay';
-import { loadDifficulty } from './ui/difficultyPicker';
-import { StartScreen } from './ui/startScreen';
+import { modeNote, modeTakesEffect, modeToDescribe } from './ui/modeChoice';
+import { loadDifficulty, loadMode, StartScreen } from './ui/startScreen';
 
 const PLAYER_ID = 0;
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
@@ -90,6 +91,8 @@ export class Game {
   private unlockedPlay = false;
   /** The bot difficulty in play, and one picked mid-match that waits for the next round. */
   private readonly difficulty: DifficultyChoice;
+  /** The mode picked on the start screen: the next match is played in it (the one in play is state.round.mode). */
+  private mode: MatchMode;
   /** Simulation time the match was decided (NaN while it's on). */
   private matchOverAt = Number.NaN;
 
@@ -107,7 +110,9 @@ export class Game {
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     this.nav = buildNavGrid(map, NAV);
-    this.state = createGameState(SIM.seed, BALLISTICS.maxBBs, ROUNDS);
+    // Maps without flagpoles can only be played in elimination.
+    this.mode = map.flags ? loadMode() : 'elimination';
+    this.state = createGameState(SIM.seed, BALLISTICS.maxBBs, ROUNDS, this.mode, map.flags);
     this.player = this.spawnRoster(map);
     this.difficulty = createDifficultyChoice(loadDifficulty());
     this.commands.set(PLAYER_ID, this.playerCommand);
@@ -131,6 +136,7 @@ export class Game {
       nav: this.nav,
       navSnap: NAV.snap,
       rounds: ROUNDS,
+      flagSpots: map.flags,
     });
 
     this.bindings = new KeyBindings(browserStorage());
@@ -140,7 +146,7 @@ export class Game {
     this.input.yaw = this.player.spawnYaw;
     // Phase 1: the player is always on Blue.
     this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
-    this.match = new MatchPresentation(this.renderer.scene, container, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize);
+    this.match = new MatchPresentation(this.renderer.scene, container, this.renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS.flag);
 
     this.debug = new DebugOverlay(container, () => ({
       tick: this.state.tick,
@@ -162,11 +168,15 @@ export class Game {
         roundTime: ROUNDS.roundTime,
         playerTeam: TEAMS[this.player.team]!.name,
         enemyTeam: TEAMS[1 - this.player.team]!.name,
+        raiseTime: ROUNDS.flag.raiseTime,
+        halfTimeAfter: ROUNDS.flag.halfTimeAfter,
+        attackFirst: ROUNDS.flag.firstAttackers === this.player.team,
       },
       this.bindings,
       () => this.play(options.allowUnlocked),
       (v) => (this.input.sensitivity = v),
       { initial: this.difficulty.inPlay, onChange: (d) => this.changeDifficulty(d) },
+      { initial: this.mode, onChange: (m) => this.changeMode(m) },
     );
     this.input.sensitivity = this.startScreen.sensitivity;
     this.pointer.onChange((locked) => {
@@ -238,14 +248,35 @@ export class Game {
   }
 
   /**
-   * A fresh match from round 1 (after the result screen's "Play again"). A direct sim-state change from
-   * the composition root.
+   * A fresh match from round 1 in the picked mode (after the result screen's "Play again", or a mode
+   * picked before the first match). A direct sim-state change from the composition root.
    */
   private restartMatch(): void {
     this.state.events.length = 0;
-    restartMatch(this.state.round, this.state.characters, this.state.bbs, LOADOUT, ROUNDS, this.state.events);
+    restartMatch(this.state.round, this.state.characters, this.state.bbs, this.ctx.round, this.state.events, this.mode);
     this.matchOverAt = Number.NaN;
     this.afterTick();
+  }
+
+  /**
+   * The player picked a match mode on the start/pause/result screen. Before the first match it applies at
+   * once; otherwise the next match is played in it (a match in progress keeps its mode).
+   */
+  private changeMode(m: MatchMode): void {
+    this.mode = m;
+    if (modeTakesEffect(this.started) === 'now') this.restartMatch();
+    this.refreshModeText();
+  }
+
+  /**
+   * The start screen's mode text: the rules of the match in progress (or of the next one when none is on),
+   * and a note while a picked mode waits for the next match.
+   */
+  private refreshModeText(): void {
+    const r = this.state.round;
+    const matchOver = r.phase === 'matchOver';
+    this.startScreen.setModeNote(modeNote(this.mode, r.mode, this.started, matchOver));
+    this.startScreen.describeMode(modeToDescribe(this.mode, r.mode, this.started, matchOver));
   }
 
   /** Everything that reacts to a simulation tick's events. */
@@ -256,12 +287,14 @@ export class Game {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
+        if (e.round === 1) this.refreshModeText();
         difficultyRoundStarted(this.difficulty); // the bots switched to a waiting level at this event too
         this.startScreen.setDifficultyNote(difficultyNote(this.difficulty, false));
       }
       if (e.type === 'matchOver') {
         this.matchOverAt = this.state.time;
         this.startScreen.setDifficultyNote(difficultyNote(this.difficulty, true));
+        this.refreshModeText();
       }
     }
   }
@@ -289,9 +322,12 @@ export class Game {
     } else {
       const mine = this.player.team;
       const theirs = 1 - mine;
+      // Between rounds, the role you'll have next round (it swaps at half-time).
+      const attackers = r.phase === 'over' ? attackersInRound(r.number + 1, ROUNDS) : r.attackers;
+      const role = r.mode === 'attackDefend' ? ` · attack / defend, you ${attackers === mine ? 'attack' : 'defend'}${r.phase === 'over' ? ' next' : ''}` : '';
       this.startScreen.show(
         this.started,
-        `${r.phase === 'over' ? `After round ${r.number}` : `Round ${r.number}`} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${ROUNDS.winsNeeded}`,
+        `${r.phase === 'over' ? `After round ${r.number}` : `Round ${r.number}`}${role} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${ROUNDS.winsNeeded}`,
       );
     }
     this.combat.setPlaying(false);

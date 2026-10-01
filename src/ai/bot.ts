@@ -5,6 +5,7 @@ import type { ReplicaConfig } from '../config/replicas';
 import type { NavGrid } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
+import type { RoundState } from '../sim/round';
 import { createRng, type RngState, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type AimState, createAim } from './aim';
@@ -17,9 +18,12 @@ import type { CoverSpot, LowCoverBlock } from './cover';
  * - fight: someone is in sight: react, aim, shoot in bursts, sidestep;
  * - cover: under fire or reloading: move to a spot hidden from the threat and duck; at crouch-high
  *   cover, stand up to look (and fight from the spot) a few times before moving on;
- * - search: lost sight of (or heard) someone: go to where they were last known.
+ * - search: lost sight of (or heard) someone: go to where they were last known;
+ * - flag (flag mode): go to the pole, crouch there and work the rope: attackers once their lane is swept,
+ *   defenders while the flag is off the bottom. In flag mode defenders hold a point near home on their
+ *   lane instead of advancing, and nobody hunts.
  */
-export type BotMode = 'advance' | 'fight' | 'cover' | 'search';
+export type BotMode = 'advance' | 'fight' | 'cover' | 'search' | 'flag';
 
 /** What a bot remembers about one enemy it has seen (sight only; hearing never counts). */
 export interface Contact {
@@ -61,6 +65,14 @@ export interface Bot {
   lane: number;
   laneIndex: number;
   laneDir: number;
+  /** Lane points to walk this round (Infinity: all of them). Flag-mode defenders stop at the last one and hold it. */
+  lanePoints: number;
+  /** Flag-mode attacker that has swept its lane: heads for the pole from now on. */
+  laneDone: boolean;
+  /** Attack / Defend defender picked to go and pull the flag down (one of the nearest to the pole; set by the controller each tick). */
+  retake: boolean;
+  /** Where by the pole this bot stands (flag mode). */
+  flagGoal: Vec3;
   /** Swept the whole lane: now hunting the least recently checked parts of the map. */
   hunting: boolean;
   huntGoal: Vec3;
@@ -111,6 +123,8 @@ export interface BotWorld {
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
   cfg: BotConfig;
+  /** The match: mode, who attacks the flag, and the pole (read only). */
+  round: RoundState;
   /** Per team, the yaw that faces the enemy's side of the map. */
   enemyYaw: readonly number[];
   /** Picks somewhere worth checking for `bot`'s team (least recently visited); false if none. */
@@ -146,6 +160,10 @@ export function createBot(character: Character, seed: number, cfg: BotConfig): B
     lane: 0,
     laneIndex: -1,
     laneDir: 1,
+    lanePoints: Number.POSITIVE_INFINITY,
+    laneDone: false,
+    retake: false,
+    flagGoal: vec3(),
     hunting: false,
     huntGoal: vec3(),
     laneGoal: vec3(),
@@ -178,9 +196,10 @@ export function createBot(character: Character, seed: number, cfg: BotConfig): B
 
 /**
  * Fresh round: forget everything and head for the first point of `lane` (-1: none, hunt) on the way
- * to the enemy, after waiting `startHold` seconds (bots sharing a lane set off apart).
+ * to the enemy, after waiting `startHold` seconds (bots sharing a lane set off apart). `lanePoints`:
+ * how many of the lane's points to walk (flag-mode defenders hold the last one).
  */
-export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotConfig): void {
+export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotConfig, lanePoints = Number.POSITIVE_INFINITY): void {
   const c = b.character;
   b.aim = createAim(c.yaw);
   b.mode = 'advance';
@@ -198,6 +217,9 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotConfig
   b.laneDir = c.team === 0 ? 1 : -1;
   b.laneIndex = -1;
   b.hunting = false;
+  b.lanePoints = lanePoints;
+  b.laneDone = false;
+  b.retake = false;
   b.holdLeft = startHold;
   b.teamWait = 0;
   b.waitForTeam = false;
@@ -223,3 +245,21 @@ export function lastSeenAt(b: Bot): number {
 
 /** A random value in [min, max] from the bot's own seeded generator. */
 export const pick = (rng: RngState, r: readonly [number, number]): number => r[0] + rngNext(rng) * (r[1] - r[0]);
+
+/** Flag mode: whether `b`'s team attacks or defends the pole this round ('none' in elimination). */
+export function flagRole(b: Bot, w: BotWorld): 'attack' | 'defend' | 'none' {
+  const r = w.round;
+  if (r.mode !== 'attackDefend' || r.attackers < 0) return 'none';
+  return b.character.team === r.attackers ? 'attack' : 'defend';
+}
+
+/**
+ * True if `b` should be at the pole now: an attacker that has swept its lane, or a defender picked to
+ * retake while the flag is off the bottom (the flag on its pole is in plain view; bots know how far up
+ * it is). The others hold their posts.
+ */
+export function wantsFlag(b: Bot, w: BotWorld): boolean {
+  const role = flagRole(b, w);
+  if (role === 'attack') return b.laneDone;
+  return role === 'defend' && w.round.flag.progress > 0 && b.retake;
+}

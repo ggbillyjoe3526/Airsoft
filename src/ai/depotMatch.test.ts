@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { BOTS, type BotConfig, botConfig } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
+import type { MatchMode } from '../config/modes';
 import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
@@ -13,6 +14,7 @@ import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
+import type { RoundRules } from '../sim/round';
 import { createGameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
@@ -24,10 +26,10 @@ const DT = 1 / 60;
  * A 3v3 on Depot with real physics, headless. By default all six are bots; with `hider`, Blue is a
  * single non-bot player standing still at that spot (hiding) against three Orange bots.
  */
-function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig = BOTS) {
+function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig = BOTS, mode: MatchMode = 'elimination', rules: RoundRules = ROUNDS) {
   const physics = new PhysicsWorld(DEPOT, BODY, DT);
   const nav = buildNavGrid(DEPOT, NAV);
-  const state = createGameState(seed, BALLISTICS.maxBBs, ROUNDS);
+  const state = createGameState(seed, BALLISTICS.maxBBs, rules, mode, DEPOT.flags);
   let id = 0;
   for (let team = 0; team < 2; team++) {
     for (let i = 0; i < ROUNDS.teamSize; i++) {
@@ -52,7 +54,8 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     deadZones: DEPOT.deadZones,
     nav,
     navSnap: NAV.snap,
-    rounds: ROUNDS,
+    rounds: rules,
+    flagSpots: DEPOT.flags,
   });
   const commands = new Map<number, PlayerCommand>();
   const bots = new BotController(state, hider ? state.characters.filter((c) => c.team === 1) : state.characters, commands, {
@@ -68,13 +71,28 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     seed,
   });
 
-  const stats = { rounds: 0, shots: 0, hits: 0, friendlyHits: 0, firstRoundEnd: -1, roundEnds: [] as number[], farthestFromSpawn: state.characters.map(() => 0) };
+  const stats = {
+    rounds: 0,
+    shots: 0,
+    hits: 0,
+    friendlyHits: 0,
+    firstRoundEnd: -1,
+    roundEnds: [] as number[],
+    farthestFromSpawn: state.characters.map(() => 0),
+    /** Per finished round: who attacked, who won and why (flag mode). */
+    results: [] as { attackers: number; winner: number; reason: string; length: number }[],
+    /** Most of the flag raised in any round. */
+    maxFlag: 0,
+  };
+  let roundStart = 0;
   for (let tick = 0; tick < seconds / DT; tick++) {
     bots.think(state, DT);
     stepSimulation(state, commands, ctx, DT);
     bots.observe(state);
     for (const e of state.events) {
+      if (e.type === 'roundStart') roundStart = state.time;
       if (e.type === 'roundOver') {
+        stats.results.push({ attackers: state.round.attackers, winner: e.winner, reason: e.reason, length: state.time - roundStart });
         stats.rounds++;
         stats.roundEnds.push(state.time);
         if (stats.firstRoundEnd < 0) stats.firstRoundEnd = state.time;
@@ -87,6 +105,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
         if (v.team === s.team) stats.friendlyHits++;
       }
     }
+    stats.maxFlag = Math.max(stats.maxFlag, state.round.flag.progress);
     if (state.round.number === 1) {
       for (const [i, c] of state.characters.entries()) {
         const d = Math.hypot(c.position.x - c.spawnPosition.x, c.position.z - c.spawnPosition.z);
@@ -137,3 +156,52 @@ describe('a 3v3 bot match on Depot', () => {
   });
 });
 
+
+describe('a 3v3 Attack / Defend match on Depot', () => {
+  beforeAll(async () => {
+    await initPhysics();
+  });
+
+  it('plays out rounds where the pole matters: flags go up, some rounds are won by raising one, roles swap at half-time', { timeout: 180_000 }, () => {
+    let rounds = 0;
+    let captures = 0;
+    let attackWins = 0;
+    let flagsRaised = 0;
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const stats = playMatch(400, seed, undefined, BOTS, 'attackDefend');
+      expect(stats.friendlyHits).toBe(0);
+      // Rounds 1-4 Blue attacks, then Orange.
+      expect(stats.results.map((r) => r.attackers)).toEqual(stats.results.map((_, i) => (i < ROUNDS.flag.halfTimeAfter ? 0 : 1)));
+      for (const r of stats.results) {
+        rounds++;
+        if (r.reason === 'captured') captures++;
+        if (r.winner === r.attackers) attackWins++;
+        expect(r.length).toBeLessThanOrEqual(ROUNDS.roundTime + ROUNDS.flag.maxOvertime + 0.1); // overtime may run past the clock
+      }
+      if (stats.maxFlag >= 1) flagsRaised++;
+    }
+    // Measured when written (5 s raise, 2 retakers): 10 captures in 54 rounds, a flag raised in 6 of 8
+    // matches, attackers winning 59%. The bounds leave a small margin for tuning, not for regressions.
+    expect(captures).toBeGreaterThanOrEqual(8);
+    expect(captures / rounds).toBeGreaterThan(0.12);
+    expect(flagsRaised).toBeGreaterThanOrEqual(5);
+    expect(attackWins / rounds).toBeGreaterThan(0.35);
+    expect(attackWins / rounds).toBeLessThan(0.7);
+  });
+
+  it('attackers raise their flag when nobody stops them', { timeout: 30_000 }, () => {
+    // Orange attacks first; Blue is one player hiding in the spawn yard's corner.
+    const rules = { ...ROUNDS, flag: { ...ROUNDS.flag, firstAttackers: 1 } };
+    const stats = playMatch(60, 1, vec3(-24.1, 0, 4.3), BOTS, 'attackDefend', rules);
+    expect(stats.results[0]).toMatchObject({ attackers: 1, winner: 1, reason: 'captured' });
+    expect(stats.results[0]!.length).toBeLessThan(35);
+  });
+
+  it('defenders win on time when the attackers never come for the pole', { timeout: 30_000 }, () => {
+    // Blue attacks with one player who stays hidden in the spawn yard's corner, far from the pole: the
+    // defending bots hold their posts (it's further than defendSearchRadius) and the clock runs out.
+    const rules = { ...ROUNDS, roundTime: 30 };
+    const stats = playMatch(32, 2, vec3(-24.1, 0, 4.3), BOTS, 'attackDefend', rules);
+    expect(stats.results[0]).toMatchObject({ attackers: 0, winner: 1, reason: 'time' });
+  });
+});

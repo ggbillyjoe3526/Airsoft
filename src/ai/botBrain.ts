@@ -2,9 +2,9 @@ import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { vec3 } from '../sim/vec';
-import { type Bot, type BotWorld, lastSeenAt, pick } from './bot';
+import { type Bot, type BotWorld, flagRole, lastSeenAt, pick, wantsFlag } from './bot';
 import { aimBot, reloadBot, shootBot } from './botCombat';
-import { wantRoute, moveBot } from './botMovement';
+import { enterFlagMode, moveBot, wantRoute } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
 import { type CoverSearch, findCover, hidesFrom } from './cover';
 import { eyeOf } from './perception';
@@ -132,7 +132,14 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     if (!done) return;
     b.routeState = 'none';
   }
-  const remembered = b.hasLastKnown && w.time - Math.max(lastSeenAt(b), b.heardAt) < cfg.memoryTime;
+  // What the bot still remembers of an enemy it saw or heard (memoryTime). Attack / Defend defenders
+  // only go after what is near their pole; anything further off they hold their post for, and keep
+  // watching that way (aimBot looks at lastKnown) until it is old news.
+  const fresh = b.hasLastKnown && w.time - Math.max(lastSeenAt(b), b.heardAt) < cfg.memoryTime;
+  const defending = flagRole(b, w) === 'defend';
+  const pole = w.round.flag.position;
+  const watchFromPost = fresh && defending && Math.hypot(b.lastKnown.x - pole.x, b.lastKnown.z - pole.z) > cfg.defendSearchRadius;
+  const remembered = fresh && !watchFromPost;
   if (seeing && target) {
     // A fresh contact at range while on the move: get behind close crouch cover first, then peek.
     if ((b.mode === 'advance' || b.mode === 'search') && b.coverCooldown <= 0) {
@@ -144,17 +151,22 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
       }
     }
     b.mode = 'fight';
+  } else if (wantsFlag(b, w)) {
+    // Attack / Defend: the pole comes before chasing noises.
+    if (b.mode !== 'flag') enterFlagMode(b, w);
   } else if (remembered) {
     if (b.mode !== 'search') b.routeState = 'none';
     b.mode = 'search';
   } else if (b.mode !== 'advance') {
-    b.hasLastKnown = false;
+    b.hasLastKnown = watchFromPost; // back to the post (or lane), still watching that way if holding
     b.mode = 'advance';
     b.routeState = 'none';
     b.route.length = 0; // not "arrived" anywhere: the old route was for another mode
     b.waitForTeam = false;
     b.holdLeft = 0; // a pause cut short by a fight doesn't resume somewhere else
     if (!b.hunting && b.laneIndex >= 0) b.laneIndex -= b.laneDir; // re-take the lane point we left
+  } else if (defending && !fresh) {
+    b.hasLastKnown = false; // holding a post: stop watching where a noise was once it's old news
   }
 }
 
@@ -199,7 +211,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     cmd.forward = -Math.sin(b.aim.yaw) * dir.x - Math.cos(b.aim.yaw) * dir.z;
     cmd.right = Math.cos(b.aim.yaw) * dir.x - Math.sin(b.aim.yaw) * dir.z;
     const calm = w.time - b.lastThreatAt > cfg.sprintWhenCalmFor;
-    cmd.sprint = b.mode === 'advance' && calm && cmd.forward > cfg.sprintForward;
+    cmd.sprint = (b.mode === 'advance' || b.mode === 'flag') && calm && cmd.forward > cfg.sprintForward;
     // Closing in on where someone was seen or heard: walk, so footsteps don't give us away.
     cmd.walk = b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < cfg.searchWalkDistance;
   }

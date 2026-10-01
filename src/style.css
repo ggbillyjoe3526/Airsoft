@@ -521,7 +521,7 @@ kbd {
 .hitfx-out {
   position: absolute;
   left: 50%;
-  top: 56px;
+  top: 80px;
   transform: translateX(-50%);
   padding: 4px 12px;
   border-radius: 4px;
@@ -540,7 +540,7 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  top: 88px;
+  top: 112px;
   text-align: center;
   font-size: 24px;
   font-weight: 800;
@@ -574,25 +574,25 @@ kbd {
   color: #444;
 }
 
-/* Bot difficulty picker on the start screen */
-.difficulty {
+/* Option pickers on the start screen (match mode, bot difficulty) */
+.picker {
   margin: 0 0 16px;
 }
 
-.difficulty-row {
+.picker-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
 }
 
-.difficulty-label {
+.picker-label {
   margin-right: 4px;
   font-size: 14px;
   font-weight: 700;
 }
 
-.difficulty-button {
+.picker-button {
   padding: 6px 14px;
   font: 600 13px var(--ui-font);
   color: var(--ink);
@@ -602,17 +602,17 @@ kbd {
   cursor: pointer;
 }
 
-.difficulty-button:hover {
+.picker-button:hover {
   border-color: #888;
 }
 
-.difficulty-button.selected {
+.picker-button.selected {
   color: #fff;
   background: var(--ink);
   border-color: var(--ink);
 }
 
-.difficulty-blurb {
+.picker-blurb {
   margin: 6px 0 0;
   min-height: 1.4em;
   font-size: 13px;
@@ -626,8 +626,9 @@ kbd {
   top: 10px;
   transform: translateX(-50%);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 5px;
   padding: 6px 14px;
   border-radius: 8px;
   background: rgba(16, 18, 22, 0.55);
@@ -639,6 +640,12 @@ kbd {
 
 .scoreboard[hidden] {
   display: none;
+}
+
+.sb-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .sb-team {
@@ -702,4 +709,95 @@ kbd {
   color: #10131a;
   font-style: normal;
   font-size: 10px;
+}
+
+/* Flag mode: ATK / DEF tags, and the strip under the scoreboard showing how far up the flag is */
+.sb-role {
+  margin-left: 6px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+
+.sb-role:empty {
+  display: none;
+}
+
+.sb-flag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sb-flag[hidden] {
+  display: none;
+}
+
+.sb-flag-bar {
+  position: relative;
+  width: 90px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+.sb-flag-bar b {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--flag);
+}
+
+.sb-flag.urgent .sb-flag-text {
+  color: #ffd84d;
+  animation: sb-flag-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes sb-flag-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+/* Marker over the flagpole (pinned to the screen edge when the pole is out of view) */
+.flag-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: -14px 0 0 -20px;
+  width: 40px;
+  color: #fff;
+  font: 700 11px var(--ui-font);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.flag-marker[hidden] {
+  display: none;
+}
+
+/* A little flag: the pole is the left border, the cloth a clipped block in the attackers' colour. */
+.flag-marker-icon {
+  width: 14px;
+  height: 16px;
+  border-left: 2px solid #fff;
+  background: linear-gradient(var(--flag), var(--flag)) left top / 12px 9px no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.flag-marker.edge {
+  opacity: 0.75;
 }

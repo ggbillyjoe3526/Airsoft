@@ -1,10 +1,23 @@
-import type { Difficulty } from '../config/bots';
+import { DIFFICULTIES, DEFAULT_DIFFICULTY, type Difficulty } from '../config/bots';
 import { type Action, MOUSE } from '../config/controls';
+import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../config/modes';
 import { type KeyBindings, keyLabel } from '../input/keyBindings';
-import { DifficultyPicker } from './difficultyPicker';
 import { KeySettings } from './keySettings';
+import { loadChoice, OptionPicker } from './optionPicker';
 
 const SENSITIVITY_KEY = 'airsoft.sensitivity';
+const DIFFICULTY_KEY = 'airsoft.difficulty';
+const MODE_KEY = 'airsoft.mode';
+
+/** The saved bot difficulty, or the default. */
+export function loadDifficulty(): Difficulty {
+  return loadChoice(DIFFICULTY_KEY, DIFFICULTIES, DEFAULT_DIFFICULTY);
+}
+
+/** The saved match mode, or the default. */
+export function loadMode(): MatchMode {
+  return loadChoice(MODE_KEY, MATCH_MODES, DEFAULT_MODE);
+}
 
 /** What the start screen needs to explain the match. */
 export interface MatchRulesText {
@@ -13,17 +26,29 @@ export interface MatchRulesText {
   roundTime: number;
   playerTeam: string;
   enemyTeam: string;
+  /** Flag mode: seconds to raise the flag, rounds before the sides swap, and whether your team attacks first. */
+  raiseTime: number;
+  halfTimeAfter: number;
+  attackFirst: boolean;
 }
 
-function describeRules(r: MatchRulesText): string {
+/** The goal paragraph for `mode`. */
+export function describeRules(r: MatchRulesText, mode: MatchMode): string {
   const minutes = Math.floor(r.roundTime / 60);
   const seconds = String(Math.round(r.roundTime % 60)).padStart(2, '0');
   const mates = r.teamSize - 1;
-  return (
-    `${r.teamSize}v${r.teamSize} with bots: you and ${mates} bot teammate${mates === 1 ? '' : 's'} (${r.playerTeam}) against ${r.enemyTeam}. ` +
-    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` +
-    `First to ${r.winsNeeded} rounds wins the match. One hit and you're out.`
-  );
+  const teams = `${r.teamSize}v${r.teamSize} with bots: you and ${mates} bot teammate${mates === 1 ? '' : 's'} (${r.playerTeam}) against ${r.enemyTeam}. `;
+  const end = `First to ${r.winsNeeded} rounds wins the match. One hit and you're out.`;
+  if (mode === 'attackDefend') {
+    return (
+      teams +
+      `Each round one team attacks the other's flagpole: stand by it for ${r.raiseTime} s to raise your flag and win the round. ` +
+      `Defenders by the pole pull it back down, and win if the clock (${minutes}:${seconds}) runs out. Knocking out the whole other team also wins. ` +
+      `Your team ${r.attackFirst ? 'attacks' : 'defends'} first; sides swap after round ${r.halfTimeAfter}. ` +
+      end
+    );
+  }
+  return teams + `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` + end;
 }
 
 function escapeHtml(text: string): string {
@@ -62,16 +87,19 @@ export class StartScreen {
   private readonly controls: HTMLDivElement;
   private readonly keySettings: KeySettings;
   private readonly keysButton: HTMLButtonElement;
-  private readonly difficultyPicker: DifficultyPicker;
+  private readonly difficultyPicker: OptionPicker<Difficulty>;
+  private readonly modePicker: OptionPicker<MatchMode>;
+  private readonly goal: HTMLParagraphElement;
   private sensitivityValue = loadSensitivity();
 
   constructor(
     parent: HTMLElement,
-    rules: MatchRulesText,
+    private readonly rules: MatchRulesText,
     private readonly bindings: KeyBindings,
     onPlay: () => void,
     onSensitivity: (v: number) => void,
     difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void },
+    mode: { initial: MatchMode; onChange: (m: MatchMode) => void },
   ) {
     this.root = document.createElement('div');
     this.root.className = 'start-screen';
@@ -95,10 +123,11 @@ export class StartScreen {
     this.playButton = this.root.querySelector('.start-play') as HTMLButtonElement;
     this.hint = this.root.querySelector('.start-hint') as HTMLParagraphElement;
     this.result = this.root.querySelector('.start-result') as HTMLDivElement;
-    const goal = this.root.querySelector('.start-goal') as HTMLParagraphElement;
-    goal.textContent = describeRules(rules);
-    this.difficultyPicker = new DifficultyPicker(difficulty.initial, difficulty.onChange);
-    goal.after(this.difficultyPicker.root);
+    this.goal = this.root.querySelector('.start-goal') as HTMLParagraphElement;
+    this.goal.textContent = describeRules(rules, mode.initial);
+    this.modePicker = new OptionPicker('Mode', MATCH_MODES, mode.initial, MODE_KEY, mode.onChange);
+    this.difficultyPicker = new OptionPicker('Bots', DIFFICULTIES, difficulty.initial, DIFFICULTY_KEY, difficulty.onChange);
+    this.goal.after(this.modePicker.root, this.difficultyPicker.root);
     const slider = this.root.querySelector('input') as HTMLInputElement;
     const output = this.root.querySelector('output') as HTMLOutputElement;
 
@@ -154,6 +183,16 @@ export class StartScreen {
   /** A note shown with the difficulty, e.g. when a change waits for the next round. */
   setDifficultyNote(text: string): void {
     this.difficultyPicker.setNote(text);
+  }
+
+  /** A note shown with the mode, e.g. when a change waits for the next match. */
+  setModeNote(text: string): void {
+    this.modePicker.setNote(text);
+  }
+
+  /** Explains the rules of `mode`: the match in progress, or the one about to start (the game decides). */
+  describeMode(mode: MatchMode): void {
+    this.goal.textContent = describeRules(this.rules, mode);
   }
 
   /** Title screen (`paused` false) or pause screen; `status` (e.g. the score) shows on the pause screen. */
