@@ -1,7 +1,8 @@
 /**
- * Bot behaviour tuning shared by every difficulty level (skill per level is BOT_SKILL below). Bots play through the same commands as the player and have human limits:
- * they only know what they've seen or heard, react after a delay, turn at a finite speed and aim
- * with an error that settles over time. Ranges are [min, max], picked at random (seeded) each time.
+ * Bot behaviour tuning shared by every difficulty level (the skill per level is BOT_SKILL below).
+ * Bots play through the same commands as the player and have human limits: they only know what
+ * they've seen or heard, react after a delay, turn at a finite speed and aim with an error that
+ * settles over time. Ranges are [min, max], picked at random (seeded) each time.
  */
 export const BOT_BEHAVIOUR = {
   /** Seconds between perception updates per bot (staggered across bots). */
@@ -210,5 +211,5 @@ export function botConfig(difficulty: Difficulty): BotConfig {
   return { ...BOT_BEHAVIOUR, ...BOT_SKILL[difficulty] };
 }
 
-/** Bots at the default difficulty (tests use this as "a typical bot"). */
+/** Bots at the default difficulty: the reference bot for tests and tuning docs. */
 export const BOTS: BotConfig = botConfig(DEFAULT_DIFFICULTY);

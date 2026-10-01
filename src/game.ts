@@ -86,6 +86,9 @@ export class Game {
   private tickRateTimer = 0;
   private started = false;
   private unlockedPlay = false;
+  /** The bot difficulty in play, and one chosen mid-match that waits for the next round (or null). */
+  private difficultyInPlay: Difficulty;
+  private difficultyNext: Difficulty | null = null;
   /** Simulation time the match was decided (NaN while it's on). */
   private matchOverAt = Number.NaN;
 
@@ -105,12 +108,13 @@ export class Game {
     this.nav = buildNavGrid(map, NAV);
     this.state = createGameState(SIM.seed, BALLISTICS.maxBBs, ROUNDS);
     this.player = this.spawnRoster(map);
+    this.difficultyInPlay = loadDifficulty();
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.bots = new BotController(
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(loadDifficulty()), seed: SIM.seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(this.difficultyInPlay), seed: SIM.seed },
     );
     this.ctx = createSimContext({
       mover: this.physics,
@@ -251,9 +255,16 @@ export class Game {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
-        this.startScreen.setDifficultyNote(''); // a pending difficulty change is now in play
+        // The bots switched to a waiting difficulty at this round start.
+        if (this.difficultyNext) this.difficultyInPlay = this.difficultyNext;
+        this.difficultyNext = null;
+        this.startScreen.setDifficultyNote('');
       }
-      if (e.type === 'matchOver') this.matchOverAt = this.state.time;
+      if (e.type === 'matchOver') {
+        this.matchOverAt = this.state.time;
+        // A waiting change now starts with the next match; the result screen needs no note.
+        this.startScreen.setDifficultyNote('');
+      }
     }
   }
 
@@ -263,8 +274,16 @@ export class Game {
    */
   private changeDifficulty(d: Difficulty): void {
     const midMatch = this.started && this.state.round.phase !== 'matchOver';
-    this.bots.setConfig(botConfig(d), midMatch ? 'nextRound' : 'now');
-    this.startScreen.setDifficultyNote(midMatch ? 'Starts next round.' : '');
+    if (!midMatch || d === this.difficultyInPlay) {
+      // Applies at once (or, back to the level in play, cancels a change still waiting).
+      this.difficultyInPlay = d;
+      this.difficultyNext = null;
+      this.bots.setConfig(botConfig(d), 'now');
+    } else {
+      this.difficultyNext = d;
+      this.bots.setConfig(botConfig(d), 'nextRound');
+    }
+    this.startScreen.setDifficultyNote(this.difficultyNext ? 'Starts next round.' : '');
   }
 
   private pause(): void {

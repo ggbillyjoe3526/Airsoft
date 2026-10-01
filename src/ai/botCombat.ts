@@ -16,10 +16,11 @@ const mateHead: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
 
 /**
  * Turns the view from `eye`: at the target (with lead and aim error; the point aimed at is written to
- * `aimPoint`), towards where a threat was, or along the route (`moving`: walking `b.moveDir`). Returns
- * how far the view still is from the (erroneous) aim point, or Infinity with no target.
+ * `aimPoint`), towards where a threat was, or along the route (`walking`: following `b.moveDir`).
+ * Aim is worse while walking or sidestepping (`cmd.right`). Returns how far the view still is from the
+ * (erroneous) aim point, or Infinity with no target.
  */
-export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: Vec3, aimPoint: Vec3, moving: boolean, strafing: boolean, dt: number): number {
+export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: Vec3, aimPoint: Vec3, walking: boolean, cmd: PlayerCommand, dt: number): number {
   const me = b.character;
   const cfg = w.cfg;
   const enemyYaw = w.enemyYaw[me.team] ?? 0;
@@ -34,15 +35,15 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // The target's own speed across the line of sight (the bot's movement is aimErrorMovingDeg).
     const v = target.velocity;
     const sideways = (v.x * (aimPoint.z - eye.z) - v.z * (aimPoint.x - eye.x)) / Math.max(Math.hypot(aimPoint.x - eye.x, aimPoint.z - eye.z), 1e-3);
-    const error = aimErrorSize(w.time - b.contact.acquiredAt, moving || strafing, dist, sideways, cfg);
+    const error = aimErrorSize(w.time - b.contact.acquiredAt, walking || cmd.right !== 0, dist, sideways, cfg);
     return stepAim(b.aim, look.yaw, look.pitch, error, cfg, b.rng, dt);
   }
   look.pitch = 0;
   const walkYaw = Math.atan2(-b.moveDir.x, -b.moveDir.z);
-  if (b.hasLastKnown && (b.mode === 'search' || b.mode === 'cover' || !moving)) {
+  if (b.hasLastKnown && (b.mode === 'search' || b.mode === 'cover' || !walking)) {
     // Watch where the threat was, even while moving there.
     lookAngles(eye.x, eye.y, eye.z, b.lastKnown.x, eye.y, b.lastKnown.z, look);
-  } else if (moving && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
+  } else if (walking && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
     look.yaw = walkYaw;
   } else {
     // Holding a point, or walking back along the lane: face the enemy side rather than turn our back.

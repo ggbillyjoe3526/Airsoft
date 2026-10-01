@@ -113,7 +113,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     cmd.sprint = b.mode === 'advance' && calm && cmd.forward > cfg.sprintForward;
   }
   eyeOf(me, w.body, myEye);
-  const offAim = aimBot(b, w, target, myEye, aimAt, moving, cmd.right !== 0, dt);
+  const offAim = aimBot(b, w, target, myEye, aimAt, moving, cmd, dt);
   cmd.yaw = b.aim.yaw;
   cmd.pitch = b.aim.pitch;
   shootBot(b, w, target, myEye, aimAt, offAim, cmd, dt);

@@ -39,7 +39,7 @@ export class DifficultyPicker {
     this.root.className = 'difficulty';
     const row = document.createElement('div');
     row.className = 'difficulty-row';
-    row.setAttribute('role', 'radiogroup');
+    row.setAttribute('role', 'group');
     row.setAttribute('aria-label', 'Bot difficulty');
     const label = document.createElement('span');
     label.className = 'difficulty-label';
@@ -49,7 +49,6 @@ export class DifficultyPicker {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'difficulty-button';
-      button.setAttribute('role', 'radio');
       button.textContent = text;
       button.addEventListener('click', () => {
         if (id === this.current) return;
@@ -82,7 +81,7 @@ export class DifficultyPicker {
     for (const [id, button] of this.buttons) {
       const on = id === this.current;
       button.classList.toggle('selected', on);
-      button.setAttribute('aria-checked', String(on));
+      button.setAttribute('aria-pressed', String(on));
     }
     const blurb = DIFFICULTIES.find((d) => d.id === this.current)?.blurb ?? '';
     this.blurb.textContent = this.note ? `${blurb} ${this.note}` : blurb;

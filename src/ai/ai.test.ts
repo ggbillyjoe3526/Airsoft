@@ -522,10 +522,11 @@ describe('difficulty levels', () => {
   });
 
   it('give you a moment up close on normal, and reward moving', { timeout: 30_000 }, () => {
-    // The old bots hit a standing player 4 m away ~0.5 s after seeing them: about their reaction time.
-    const standing = medianTimeToHit('normal', 4, false);
-    expect(standing).toBeGreaterThan(0.75);
-    expect(medianTimeToHit('normal', 4, true)).toBeGreaterThan(standing);
+    // The old bots hit a standing player 3-5 m away ~0.5 s after seeing them (about their reaction
+    // time); Normal now takes ~0.75-0.9 s. The floor sits between the two, clear of seed noise.
+    for (const dist of [3, 4, 5]) expect(medianTimeToHit('normal', dist, false), `${dist} m`).toBeGreaterThan(0.65);
+    // Strafing up close buys clearly more time (~0.5 s at 4 m).
+    expect(medianTimeToHit('normal', 4, true)).toBeGreaterThan(medianTimeToHit('normal', 4, false) + 0.2);
   });
 
   it('switch from the next round when asked to, so a fight in progress is not changed', () => {
