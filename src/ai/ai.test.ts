@@ -11,7 +11,7 @@ import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
 import { DEPOT } from '../map/depot';
 import { isInPlay } from '../sim/elimination';
 import type { WorldQuery } from '../sim/armament';
-import { createCharacter } from '../sim/character';
+import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import type { CharacterMover } from '../sim/movement';
 import { createRng } from '../sim/rng';
@@ -20,8 +20,9 @@ import { createGameState, type GameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
+import type { Bot } from './bot';
 import { BotController } from './botController';
-import { findCover } from './cover';
+import { findCover, lowCoverBlocks } from './cover';
 import { canSee } from './perception';
 
 const DT = 1 / 60;
@@ -155,10 +156,28 @@ describe('cover', () => {
     };
     const threatEye = vec3(0, BODY.standEyeHeight, 2);
     const out = { position: vec3(), crouchOnly: false };
-    const found = findCover(vec3(0.5, 0, -4), threatEye, nav, crate, { ...BOTS, coverCandidates: 200 }, BODY, createRng(5), out);
+    const found = findCover(vec3(0.5, 0, -4), threatEye, nav, crate, { ...BOTS, coverCandidates: 200 }, BODY, createRng(5), [], out);
     expect(found).toBe(true);
     expect(out.position.z).toBeLessThan(-6.6); // on the far side of the crate
     expect(out.crouchOnly).toBe(true); // 1.2 m crate: hides a crouched player only
+
+    // With no random candidates at all, the spot right behind the crate (from the threat) is still tried.
+    const lowOnly = { position: vec3(), crouchOnly: false };
+    const crateBlock = { x: 0, z: -6, halfX: 0.6, halfZ: 0.6 };
+    expect(findCover(vec3(0.5, 0, -4), threatEye, nav, crate, { ...BOTS, coverCandidates: 0 }, BODY, createRng(5), [crateBlock], lowOnly)).toBe(true);
+    expect(lowOnly.position.z).toBeCloseTo(-6.6 - BOTS.lowCoverGap, 6);
+    expect(lowOnly.crouchOnly).toBe(true);
+  });
+
+  it("treats the map's crate-high blocks standing on the floor as low cover", () => {
+    const low = lowCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap);
+    expect(low.length).toBeGreaterThan(20);
+    for (const l of low) {
+      const block = DEPOT.blocks.find((b) => b.center.x === l.x && b.center.z === l.z && b.kind !== 'floor')!;
+      const top = block.center.y + block.size.y / 2;
+      expect(top).toBeGreaterThan(BODY.crouchEyeHeight);
+      expect(top).toBeLessThan(BODY.standEyeHeight);
+    }
   });
 });
 
@@ -191,6 +210,7 @@ function duel(dist: number, extra: (state: GameState) => void = () => {}, query:
     nav: OPEN_NAV,
     navSnap: NAV.snap,
     lanes: OPEN_FIELD.lanes,
+    lowCover: [],
     body: BODY,
     hits: HITS,
     loadout: LOADOUT,
@@ -562,6 +582,7 @@ describe('bot team play and routes', () => {
       nav,
       navSnap: NAV.snap,
       lanes: DEPOT.lanes,
+      lowCover: lowCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap),
       body: BODY,
       hits: HITS,
       loadout: LOADOUT,
@@ -641,6 +662,7 @@ describe('bot team play and routes', () => {
       nav: OPEN_NAV,
       navSnap: NAV.snap,
       lanes: [lane],
+      lowCover: [],
       body: BODY,
       hits: HITS,
       loadout: LOADOUT,
@@ -698,9 +720,15 @@ describe('bot team play and routes', () => {
 
   /**
    * A bot settled at crouch cover: a 1.2 m wall at x = 5 between it (just behind, at x = 4.2) and a
-   * standing player at x = 15. Plays `seconds` (or until the player is hit) and reports what it did.
+   * standing player at x = 15. Plays `seconds` (or until the player is hit, unless `onTick` is given)
+   * and reports what it did. `setup` can change the bot before it starts; `onTick` runs after each tick.
    */
-  function peekScenario(cfg: BotConfig, seconds: number) {
+  function peekScenario(
+    cfg: BotConfig,
+    seconds: number,
+    setup: (b: Bot) => void = () => {},
+    onTick?: (b: Bot, player: Character, time: number) => void,
+  ) {
     const wall = wallAcrossX(5, 1.2);
     const state = createGameState(3, 64, ROUNDS);
     const player = createCharacter(0, vec3(15, 0, 0), Math.PI / 2, LOADOUT, 0);
@@ -727,6 +755,7 @@ describe('bot team play and routes', () => {
       nav: OPEN_NAV,
       navSnap: NAV.snap,
       lanes: [],
+      lowCover: [],
       body: BODY,
       hits: HITS,
       loadout: LOADOUT,
@@ -744,13 +773,15 @@ describe('bot team play and routes', () => {
     b.heardAt = 0;
     b.lastKnown.x = player.position.x;
     b.lastKnown.z = player.position.z;
+    setup(b);
     const botCmd = commands.get(1)!;
     const out = { shots: 0, shotsCrouched: 0, downs: 0, ups: 0, foughtFromCover: false, drift: 0, playerHit: false };
     let wasDown = true;
-    for (let i = 0; i < seconds / DT && isInPlay(player); i++) {
+    for (let i = 0; i < seconds / DT && (onTick || isInPlay(player)); i++) {
       bots.think(state, DT);
       stepSimulation(state, commands, ctx, DT);
       bots.observe(state);
+      onTick?.(b, player, state.time);
       if (botCmd.crouch && !wasDown) out.downs++;
       if (!botCmd.crouch && wasDown) out.ups++;
       wasDown = botCmd.crouch;
@@ -781,5 +812,39 @@ describe('bot team play and routes', () => {
     expect(r.ups).toBeGreaterThanOrEqual(2);
     expect(r.downs).toBeGreaterThanOrEqual(2);
     expect(r.drift).toBeLessThan(0.5);
+  });
+
+  it('move on from crouch cover once their target is out, instead of peeking at nothing', () => {
+    let outAt = -1;
+    let leftAt = -1;
+    peekScenario({ ...BOTS, fireCone: 0 }, 6, undefined, (b, player, time) => {
+      // The moment it fights from cover, the player is hit (by someone else).
+      if (outAt < 0 && b.mode === 'fight' && b.fromCover) {
+        player.status = 'calling';
+        outAt = time;
+      }
+      if (outAt >= 0 && leftAt < 0 && b.mode !== 'cover' && !b.fromCover) leftAt = time;
+    });
+    expect(outAt).toBeGreaterThan(0);
+    expect(leftAt - outAt).toBeLessThan(0.2);
+  });
+
+  it('leave cover with no ammo left at all, and never hold a cover episode past coverEpisodeMax', () => {
+    let inCover = 0;
+    peekScenario(BOTS, 1, (b) => {
+      b.character.armament.ammo[0]!.mag = 0;
+      b.character.armament.ammo[0]!.reserve = 0;
+    }, (b) => {
+      if (b.mode === 'cover' || b.fromCover) inCover++;
+    });
+    expect(inCover).toBeLessThanOrEqual(1);
+
+    // Holding fire, the player never goes down; the bot cycles duck/peek/fight until the cap.
+    let lastCoverAt = 0;
+    peekScenario({ ...BOTS, fireCone: 0 }, BOTS.coverEpisodeMax + 4, undefined, (b, _p, time) => {
+      if (b.mode === 'cover' || b.fromCover) lastCoverAt = time;
+    });
+    expect(lastCoverAt).toBeGreaterThan(4);
+    expect(lastCoverAt).toBeLessThanOrEqual(BOTS.coverEpisodeMax + DT);
   });
 });

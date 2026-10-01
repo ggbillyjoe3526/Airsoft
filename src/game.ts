@@ -1,8 +1,9 @@
 import type * as THREE from 'three';
 import { BotController } from './ai/botController';
+import { lowCoverBlocks } from './ai/cover';
 import { createDifficultyChoice, type DifficultyChoice, difficultyNote, difficultyRoundStarted, pickDifficulty } from './ai/difficultyChoice';
 import { BALLISTICS } from './config/ballistics';
-import { botConfig, type Difficulty } from './config/bots';
+import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
 import { NAV } from './config/nav';
 import { matchOverScreenDelay } from './config/render';
@@ -114,7 +115,7 @@ export class Game {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(this.difficulty.inPlay), seed: SIM.seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(this.difficulty.inPlay), seed: SIM.seed },
     );
     this.ctx = createSimContext({
       mover: this.physics,

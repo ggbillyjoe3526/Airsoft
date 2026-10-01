@@ -8,7 +8,7 @@ import type { Character } from '../sim/character';
 import { createRng, type RngState, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type AimState, createAim } from './aim';
-import type { CoverSpot } from './cover';
+import type { CoverSpot, LowCoverBlock } from './cover';
 
 /**
  * A bot's modes:
@@ -67,8 +67,9 @@ export interface Bot {
   /** The current lane point, moved a little at random (laneJitter). */
   laneGoal: Vec3;
   holdLeft: number;
-  /** Seconds spent waiting at the current lane point for teammates to catch up. */
+  /** Seconds stood at the lane point just reached (the hold there counts), and whether to wait for teammates. */
   teamWait: number;
+  waitForTeam: boolean;
   route: Vec3[];
   routeLeg: number;
   routeGoal: Vec3;
@@ -83,6 +84,8 @@ export interface Bot {
   coverGiveUp: number;
   /** Seconds spent at the cover spot so far. */
   coverHeld: number;
+  /** When this cover episode began (s): it ends after coverEpisodeMax. */
+  coverSince: number;
   coverCooldown: number;
   /** At a crouch-high cover spot: ducked, or standing up to look over it. */
   coverPhase: 'down' | 'peek';
@@ -102,6 +105,8 @@ export interface BotWorld {
   query: WorldQuery;
   nav: NavGrid;
   lanes: readonly (readonly Vec3[])[];
+  /** The map's low blocks, tried as cover spots (see findCover). */
+  lowCover: readonly LowCoverBlock[];
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
@@ -146,6 +151,7 @@ export function createBot(character: Character, seed: number, cfg: BotConfig): B
     laneGoal: vec3(),
     holdLeft: 0,
     teamWait: 0,
+    waitForTeam: false,
     route: [],
     routeLeg: 0,
     routeGoal: vec3(),
@@ -156,6 +162,7 @@ export function createBot(character: Character, seed: number, cfg: BotConfig): B
     coverLeft: 0,
     coverGiveUp: 0,
     coverHeld: 0,
+    coverSince: 0,
     coverCooldown: 0,
     coverPhase: 'down',
     peeksLeft: 0,
@@ -193,6 +200,7 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotConfig
   b.hunting = false;
   b.holdLeft = startHold;
   b.teamWait = 0;
+  b.waitForTeam = false;
   b.routeState = 'none';
   b.route.length = 0;
   b.stuckFor = 0;

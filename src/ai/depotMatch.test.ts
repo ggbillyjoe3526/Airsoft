@@ -16,6 +16,7 @@ import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
+import { lowCoverBlocks } from './cover';
 
 const DT = 1 / 60;
 
@@ -59,6 +60,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     nav,
     navSnap: NAV.snap,
     lanes: DEPOT.lanes,
+    lowCover: lowCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap),
     body: BODY,
     hits: HITS,
     loadout: LOADOUT,

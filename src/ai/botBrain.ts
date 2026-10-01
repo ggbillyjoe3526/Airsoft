@@ -24,12 +24,13 @@ const threatEye = vec3();
 function takeCover(b: Bot, w: BotWorld, threat: Character): boolean {
   const cfg = w.cfg;
   eyeOf(threat, w.body, threatEye);
-  if (!findCover(b.character.position, threatEye, w.nav, w.query, cfg, w.body, b.rng, b.cover)) return false;
+  if (!findCover(b.character.position, threatEye, w.nav, w.query, cfg, w.body, b.rng, w.lowCover, b.cover)) return false;
   b.mode = 'cover';
   b.coverPhase = 'down';
   b.coverLeft = pick(b.rng, cfg.coverTime);
   b.coverGiveUp = cfg.coverMaxTime;
   b.coverHeld = 0;
+  b.coverSince = w.time;
   b.peeksLeft = Math.floor(pick(b.rng, cfg.peekCount));
   b.fromCover = false;
   b.routeState = 'none';
@@ -39,18 +40,25 @@ function takeCover(b: Bot, w: BotWorld, threat: Character): boolean {
 
 /**
  * Ducks back down behind the crouch cover it is fighting from, unless the spot no longer hides it from
- * `threat` (flanked). Having found someone, it keeps peeking for a fresh number of looks.
+ * where the bot knows the threat to be (flanked). Ducking with the enemy still in sight (under fire,
+ * reloading, end of a burst) renews its looks; ducking because the enemy went out of sight doesn't.
  */
-function duckBack(b: Bot, w: BotWorld, threat: Character | undefined): boolean {
-  if (threat) {
-    eyeOf(threat, w.body, threatEye);
-    if (!hidesFrom(b.cover.position, threatEye, w.query, w.body)) return false;
+function duckBack(b: Bot, w: BotWorld, target: Character | undefined, seeing: boolean): boolean {
+  const cfg = w.cfg;
+  if (seeing && target) {
+    eyeOf(target, w.body, threatEye);
+  } else {
+    // Only what it knows: where the enemy was last seen or heard, at standing eye height.
+    threatEye.x = b.lastKnown.x;
+    threatEye.y = b.lastKnown.y + w.body.standEyeHeight;
+    threatEye.z = b.lastKnown.z;
   }
+  if (!hidesFrom(b.cover.position, threatEye, w.query, w.body)) return false;
   b.mode = 'cover';
   b.coverPhase = 'down';
-  b.coverLeft = pick(b.rng, w.cfg.peekDown);
+  b.coverLeft = pick(b.rng, cfg.peekDown);
   b.coverHeld = 0; // time to crouch before "still in sight" counts as exposed
-  b.peeksLeft = Math.floor(pick(b.rng, w.cfg.peekCount));
+  if (seeing) b.peeksLeft = Math.max(b.peeksLeft, Math.floor(pick(b.rng, cfg.peekCount)));
   b.fromCover = false;
   return true;
 }
@@ -61,17 +69,21 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   const cfg = w.cfg;
   const seeing = b.targetVisible && target !== undefined;
   const armament = me.armament;
+  const ammo = armament.ammo[0]!;
   const reloading = armament.reload > 0;
-  const empty = armament.ammo[0]!.mag === 0;
+  const outOfAmmo = ammo.mag === 0 && ammo.reserve === 0;
+  const empty = ammo.mag === 0 && !outOfAmmo; // empty, but a reload will fix it
   const suppressed = w.time - b.suppressedAt < cfg.suppressionTime;
   const atCover = Math.hypot(b.cover.position.x - me.position.x, b.cover.position.z - me.position.z) < cfg.coverArrive;
+  const coverOver = w.time - b.coverSince > cfg.coverEpisodeMax || outOfAmmo;
 
-  // Fighting over crouch cover: duck again when shot at, reloading, out of sight or after a short burst.
+  // Fighting over crouch cover: duck again when shot at, reloading, out of sight or after a short
+  // burst. With the target gone (hit, or forgotten), there's nothing to duck from: move on.
   if (b.mode === 'fight' && b.fromCover) {
     b.peekFightLeft -= dt;
     const duck = !seeing || suppressed || reloading || empty || b.peekFightLeft <= 0;
-    if (atCover && duck && duckBack(b, w, target)) return;
-    if (!atCover || duck) b.fromCover = false; // pushed off the spot, or flanked: fight like anywhere else
+    if (atCover && duck && target && !coverOver && duckBack(b, w, target, seeing)) return;
+    if (!atCover || duck || coverOver) b.fromCover = false; // pushed off the spot, flanked or done: fight like anywhere else
   }
   if (seeing && target && (suppressed || reloading || empty) && b.mode !== 'cover' && b.coverCooldown <= 0) {
     b.coverCooldown = cfg.coverCooldown;
@@ -83,7 +95,7 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     if (atCover && b.coverPhase === 'down') b.coverLeft -= dt;
     // Settled in cover but still in sight of an enemy (flanked, or the spot doesn't hide us): fight back.
     const exposed = b.coverPhase === 'down' && b.coverHeld >= cfg.coverSettle && seeing && !reloading;
-    let done = exposed || b.coverGiveUp <= 0 || b.routeState === 'failed';
+    let done = exposed || coverOver || b.coverGiveUp <= 0 || b.routeState === 'failed';
     if (!done && atCover && b.coverPhase === 'down' && b.coverLeft <= 0 && !reloading) {
       // Time to look again: over crouch cover by standing up, otherwise by moving on.
       if (b.cover.crouchOnly && b.peeksLeft > 0) {
@@ -124,6 +136,8 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     b.hasLastKnown = false;
     b.mode = 'advance';
     b.routeState = 'none';
+    b.route.length = 0; // not "arrived" anywhere: the old route was for another mode
+    b.waitForTeam = false;
     if (!b.hunting && b.laneIndex >= 0) b.laneIndex -= b.laneDir; // re-take the lane point we left
   }
 }

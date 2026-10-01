@@ -8,7 +8,7 @@ describe('team plans', () => {
     expect(assignLanes('split', 3, [2, 0, 1])).toEqual([2, 0, 1]);
     expect(assignLanes('split', 4, [2, 0, 1])).toEqual([2, 0, 1, 2]); // more bots than lanes: wraps
     expect(assignLanes('pair', 3, [1, 2, 0])).toEqual([1, 1, 2]);
-    expect(assignLanes('pair', 2, [1, 2, 0])).toEqual([1, 1]);
+    expect(assignLanes('pair', 2, [1, 2, 0])).toEqual([1, 2]); // two bots (plus the player): a pair would be a stack
     expect(assignLanes('stack', 3, [0, 2, 1])).toEqual([0, 0, 0]);
     expect(assignLanes('split', 2, [])).toEqual([-1, -1]); // no lanes on the map
   });

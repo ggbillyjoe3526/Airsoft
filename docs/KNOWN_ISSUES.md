@@ -31,7 +31,7 @@ Classified as **fix now / document / can wait**.
 | Bots crouch-peek only over crouch-high cover; at full-height cover they wait, then move on (no leaning or stepping out to peek a corner), and they don't push to close distance | can wait | M4b covers low cover only. Corner peeking would be a later alpha bot task. |
 | Difficulty numbers are first guesses tuned against headless duels (measured, not tested: Normal bots hit with ~13% of BBs in bot-only matches, was ~30%) | can wait | Playtest each level; tune BOT_SKILL in config/bots.ts. |
 | At 10–16 m, a strafing target is still hit about as fast as a standing one (the BB stream sweeps across it) | can wait | Up close strafing clearly helps; raise aimErrorTracking if mid-range strafing should help more. |
-| Bot-only rounds are still quick (median ~15 s on Normal, was ~11 s before M4b) and a last 1v1 can wander for ~40–60 s | can wait | Revisit hunting pace with the objective mode (M5). |
+| Bot-only rounds are still quick (median ~13.5 s on Normal, was ~11 s before M4b); a last 1v1 can wander for ~40–60 s, and Easy bot standoffs once ran ~95 s | can wait | Revisit hunting pace with the objective mode (M5). |
 | `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |
 | No pre-round freeze: everyone can move and fire from the round-start whistle | can wait | Spawns are hidden from each other (tested), so nobody can be shot at spawn; revisit with playtesting. |
 | config/render.ts and config/audio.ts hold small derived helpers (whistle schedule, result-screen delay) and render imports audio | can wait | Fine at this size; move derived timing into a module if config grows more logic. |
@@ -43,3 +43,4 @@ Classified as **fix now / document / can wait**.
 | A difficulty change waiting for the next round is tracked twice (ai/difficultyChoice.ts `next` and BotController's pending config), kept in step by game.ts | can wait | M4a critic. Both sides are tested; the glue isn't. Give the pending level one owner if this grows. |
 | While a mid-match difficulty change waits, the picker highlights the new level; only the "Starts next round." note says the bots are still on the old one | can wait | M4a critic. Playtest whether that's clear enough. |
 | A bot re-acquiring a recent contact keeps the aim-error direction it had on its other target | can wait | Cosmetic: the error keeps wandering anyway. |
+| A bot fighting from crouch cover stops when its own target goes down, even if a second enemy is about | can wait | It re-acquires the next enemy through normal sight. Playtest whether bots leave good cover too readily. |

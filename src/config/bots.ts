@@ -74,7 +74,14 @@ export const BOT_BEHAVIOUR = {
   coverTowardThreatFraction: 0.7,
   coverTowardThreatMetres: 2,
   /** Crouch-high cover scores as if it were this much closer (metres): you can stand up and shoot back. */
-  crouchCoverBonus: 1,
+  crouchCoverBonus: 4,
+  /**
+   * Low blocks (crates, barriers, sills) are also tried as cover: the spot this far (metres) past a
+   * block's far side from the threat. Just over the body radius, so the bot hugs the block.
+   */
+  lowCoverGap: 0.45,
+  /** A low block counts as standing on the floor if its bottom is within this of y = 0 (metres). */
+  lowCoverFloorGap: 0.05,
   /** Close enough to a cover spot to settle in (metres). */
   coverArrive: 0.9,
   /** Stay in cover this long before peeking out again (s). */
@@ -90,6 +97,8 @@ export const BOT_BEHAVIOUR = {
   peekDown: [0.8, 1.6] as const,
   /** Give up on reaching cover after this long (s), e.g. if the route there is blocked. */
   coverMaxTime: 5,
+  /** A whole cover episode (getting there, ducking, peeking, fighting from it) ends after this long (s). */
+  coverEpisodeMax: 12,
   /**
    * After this long at a cover spot (s: time to crouch and look again), still seeing the enemy means
    * the spot doesn't hide us (or we've been flanked): leave cover and fight.

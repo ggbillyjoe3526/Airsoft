@@ -95,19 +95,26 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
     case 'advance': {
       if (b.holdLeft > 0) {
         b.holdLeft -= dt;
+        b.teamWait += dt;
         return false;
       }
+      // At a lane point well ahead of the team: wait for them to catch up. The hold counts towards
+      // teamWaitMax, so a bot stands still at a point for at most max(hold, teamWaitMax).
+      if (b.waitForTeam && b.teamWait < cfg.teamWaitMax && w.aheadOfTeam(b)) {
+        b.teamWait += dt;
+        return false;
+      }
+      b.waitForTeam = false;
       if (b.routeState === 'none' || b.routeState === 'failed') {
         const arrived = b.routeState === 'none' && b.route.length > 0;
-        // Reached a lane point well ahead of the team: wait for them to catch up (for a while).
-        if (arrived && !b.hunting && b.teamWait < cfg.teamWaitMax && w.aheadOfTeam(b)) {
-          b.teamWait += dt;
-          return false;
-        }
-        b.teamWait = 0;
         const goal = nextAdvanceGoal(b, w);
         if (!goal) return false;
-        if (arrived) b.holdLeft = pick(b.rng, cfg.holdTime); // pause at the point just reached, looking ahead
+        if (arrived) {
+          // Pause at the point just reached, looking ahead, then wait for the team if need be.
+          b.holdLeft = pick(b.rng, cfg.holdTime);
+          b.teamWait = 0;
+          b.waitForTeam = !b.hunting;
+        }
         b.routeState = 'none';
         wantRoute(b, goal, cfg);
       }
