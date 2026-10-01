@@ -5,8 +5,7 @@ Parking lot for future features. Do not implement unless asked.
 - **Medic mechanic** (proposed for Phase 2, deferred by the owner to a later update): a teammate can revive a hit player once per round by touch (listed in CLAUDE.md as "later idea to test").
 - **BB ricochets** off hard surfaces (real BBs bounce; could count as hits like on many sites, or not).
 - **Dead-rag / hit cloth**: hit players pull a red dead-rag out, not just a raised hand.
-- **Chrono station** on the range to show each replica's muzzle velocity.
-- **Game modes** from real sites: domination (flags), bomb/"hostage" prop, medic rules, VIP escort, speedsoft.
+- **More game modes** from real sites beyond the roadmap's (TDM, Capture the Flag, Domination and Bomb are planned): "hostage" prop, VIP escort, medic rules, speedsoft rules.
 - **Voiced hit calls**: a shouted "HIT!" (CC0 recording, or the browser's speech synthesis) when someone is hit.
 - **Referee NPC** who whistles for round start/end.
 - **Surrender rule** at close range (sites often use "bang-bang" or surrender for CQB).

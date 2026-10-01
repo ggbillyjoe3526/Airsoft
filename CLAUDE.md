@@ -112,10 +112,18 @@ Phases and milestones are development steps, not versions: all of Phases 1–4 b
 **Current focus: alpha.** The game stays in alpha through Phase 4, until the owner calls it feature complete.
 Detailed plan and build status: `docs/ROADMAP.md`.
 
-1. **Phase 2 — Core gameplay (alpha, ships as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, an objective mode, all on Depot.
-2. **Phase 3 — Content (alpha):** more replica categories (shotgun, DMR, SMG), loadout screen, a shooting range, basic unlockable cosmetics, a second map.
+v0.1 is the core game with strong foundations (owner, 2026-10-01): two replicas (AEG, gas pistol), Depot,
+Elimination and Attack / Defend.
+
+1. **Phase 2 — Core gameplay (alpha, ships as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, the Attack / Defend objective mode, all on Depot.
+2. **Phase 3 — Core foundations (alpha, `v0.1-alpha.3`):** magazines and meaningful reloads (limited ammunition), a BB physics pass, movement and positioning over raw weapon stats, and a Depot rework to the field checklist.
 3. **Phase 4 — Presentation and onboarding (alpha):** art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
 4. **Beta (when the owner calls the game feature complete):** optimisation, final balance and tuning, bug fixing, stability, UX/QoL and polish.
+
+**After v0.1 (later versions, proposed in `docs/ROADMAP.md`):** more modes (TDM, Capture the Flag,
+Domination, Bomb), more fields, replica platforms that differ mechanically (GBBR, spring sniper, SMG,
+shotgun, DMR, LMG …), loadouts (free from the start), chrono, customisation, unlock-based progression
+(never levels), and team communication once the bots are good enough. Don't build these during v0.1.
 
 **Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
 performance, stability, UX/QoL, polish and final tuning are beta. During alpha, note beta-type work in

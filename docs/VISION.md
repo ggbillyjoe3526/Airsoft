@@ -11,6 +11,14 @@ see, a single hit and you're out, hand up, "HIT!", walk off, reset, go again.
 4. **Fun beats simulation.** When realism hurts responsiveness, readability, balance or performance, choose good game design.
 5. **Its own identity.** Before copying a CS/Valorant mechanic, ask whether airsoft suggests something better.
 
+## Design rules (owner, 2026-10-01)
+
+- **Movement and positioning matter more than raw weapon stats.** Where you stand and how you move decide fights.
+- **Replicas differ mechanically, not in damage.** One hit is one hit; platforms differ in how they load, cycle, sound and handle.
+- **Fields follow a checklist:** cover, barricades, buildings, windows, doorways, choke points, flanking routes,
+  objectives, dead zones / spawn areas.
+- **Unlocks never block fun:** free from the start until progression exists, and progression is never level-based.
+
 ## Tone
 
 Should feel: physical, playful, tactical, readable, approachable, social, authentic to airsoft.
