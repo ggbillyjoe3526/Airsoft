@@ -13,3 +13,4 @@ One line per feature: feature · attempts used · final score · verdict.
 | Phase 2 M1: walk/sprint keys, key bindings, bigger Depot | 3 of 3 (7.9 → 8.2 → 8.6) | 8.6 | Accepted; leftovers (debug-key priority on old saves, reserved-key message, indentation) fixed after review |
 | Phase 2 M2: footsteps, bots hear them, sound pass | 3 of 3 (7.6 → 8.4 → 8.8) | 8.8 | Accepted; footstep ranges and caps are first guesses (KNOWN_ISSUES) |
 | Phase 2 M3: reload hand, hit flinch, hit puffs, smooth turning | 2 of 3 (8.3 → 8.8) | 8.8 | Accepted; support-hand placement and reload pose size to confirm in the owner's playtest |
+| Phase 2 M4a: difficulty levels, fairer close range, per-enemy contacts, bot brain split | 3 of 3 (8.1 → 8.4 → 8.7) | 8.7 | Accepted; minor leftovers in KNOWN_ISSUES (waiting level tracked in two places, picker shows the waiting level) |

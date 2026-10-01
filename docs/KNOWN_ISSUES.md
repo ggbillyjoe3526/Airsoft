@@ -39,3 +39,6 @@ Classified as **fix now / document / can wait**.
 | Bots never walk or crouch-move, so their own footsteps always give them away | can wait | Phase 2 M4 (smarter bots): walk when closing in on a heard contact. |
 | Footstep ranges are first guesses: bots hear run 11 m, sprint 16 m, land 12 m; you hear other players' steps to 22 m | can wait | Tune from playtesting (the player's range is deliberately a bit longer than the bots'). |
 | Arm hits don't count (only body capsule and head) | document | Owner playtested and kept it (DECISIONS 2026-10-01). |
+| A difficulty change waiting for the next round is tracked twice (ai/difficultyChoice.ts `next` and BotController's pending config), kept in step by game.ts | can wait | M4a critic. Both sides are tested; the glue isn't. Give the pending level one owner if this grows. |
+| While a mid-match difficulty change waits, the picker highlights the new level; only the "Starts next round." note says the bots are still on the old one | can wait | M4a critic. Playtest whether that's clear enough. |
+| A bot re-acquiring a recent contact keeps the aim-error direction it had on its other target | can wait | Cosmetic: the error keeps wandering anyway. |

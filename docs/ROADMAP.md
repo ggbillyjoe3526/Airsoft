@@ -21,8 +21,8 @@ the previous part is fun.
 | Phase 2 · M2 Sound you can play by | Done | 8.8 |
 | Phase 2 · M3 Feel and feedback | Done (owner playtested 2a: no issues; arm hits stay off) | 8.8 |
 | **Checkpoint `v0.1-alpha.2a`** | M1–M3, played by the owner | |
-| Phase 2 · M4a Difficulty levels, close-range lethality | **In progress** | |
-| Phase 2 · M4b Crouch-peeking, team movement, varied routes, walking | Next | |
+| Phase 2 · M4a Difficulty levels, close-range lethality | Done | 8.7 |
+| Phase 2 · M4b Crouch-peeking, team movement, varied routes, walking | **Next** | |
 | Phase 2 · M5 Objective mode | To do | |
 | Final bug pass (before M6) | To do | |
 | Phase 2 · M6 Wrap-up → `v0.1-alpha.2` | Owner assesses | |
