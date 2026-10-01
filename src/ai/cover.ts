@@ -40,12 +40,19 @@ export interface CoverSpot {
   crouchOnly: boolean;
 }
 
+/** Narrows a cover search: within `radius` metres, `randomCandidates` random tries, and optionally crouch cover only. */
+export interface CoverSearch {
+  radius: number;
+  randomCandidates: number;
+  crouchOnly: boolean;
+}
+
 /**
  * Looks for a nearby spot hidden from `threatEye`: random walkable points within cfg.coverRadius of
  * `from`, plus the spot right behind each low block in reach (as seen from the threat; random points
  * rarely land in a crate's small shadow). Keeps the closest that hides a crouched (preferably
- * standing up to shoot over) player and doesn't mean running towards the threat. Returns false if
- * none of the candidates works.
+ * standing up to shoot over) player and doesn't mean running towards the threat. `search` narrows
+ * it (default: the config's radius and candidates, any cover). Returns false if nothing works.
  */
 export function findCover(
   from: Vec3,
@@ -57,13 +64,17 @@ export function findCover(
   rng: RngState,
   lowCover: readonly LowCoverBlock[],
   out: CoverSpot,
+  search?: CoverSearch,
 ): boolean {
+  const radius = search ? search.radius : cfg.coverRadius;
+  const candidates = search ? search.randomCandidates : cfg.coverCandidates;
+  const crouchOnlyWanted = search ? search.crouchOnly : false;
   const threatDist = Math.hypot(threatEye.x - from.x, threatEye.z - from.z);
   let bestScore = Number.POSITIVE_INFINITY;
   const consider = (x: number, z: number): void => {
     if (!isWalkableAt(nav, x, z)) return;
     const r = Math.hypot(x - from.x, z - from.z);
-    if (r > cfg.coverRadius) return;
+    if (r > radius) return;
     // Don't pick cover that means running at the threat.
     const toThreat = Math.hypot(threatEye.x - x, threatEye.z - z);
     if (toThreat < Math.min(threatDist * cfg.coverTowardThreatFraction, threatDist - cfg.coverTowardThreatMetres)) return;
@@ -74,6 +85,7 @@ export function findCover(
     standingEye.y = from.y + body.standEyeHeight;
     if (lineClear(query, threatEye, crouchedEye)) return; // not cover at all
     const crouchOnly = lineClear(query, threatEye, standingEye);
+    if (crouchOnlyWanted && !crouchOnly) return;
     // Closest wins; crouch cover (you can stand up and shoot back) gets a bonus.
     const score = r - (crouchOnly ? cfg.crouchCoverBonus : 0);
     if (score < bestScore) {
@@ -84,9 +96,9 @@ export function findCover(
       out.crouchOnly = crouchOnly;
     }
   };
-  for (let i = 0; i < cfg.coverCandidates; i++) {
+  for (let i = 0; i < candidates; i++) {
     const angle = rngNext(rng) * Math.PI * 2;
-    const r = cfg.coverMinRadius + rngNext(rng) * (cfg.coverRadius - cfg.coverMinRadius);
+    const r = cfg.coverMinRadius + rngNext(rng) * (radius - cfg.coverMinRadius);
     consider(from.x + Math.cos(angle) * r, from.z + Math.sin(angle) * r);
   }
   for (const b of lowCover) {
@@ -94,11 +106,18 @@ export function findCover(
     const dx = b.x - threatEye.x;
     const dz = b.z - threatEye.z;
     const d = Math.hypot(dx, dz);
-    if (d < 1e-6 || Math.hypot(b.x - from.x, b.z - from.z) > cfg.coverRadius + cfg.lowCoverGap + Math.max(b.halfX, b.halfZ)) continue;
+    if (d < 1e-6 || Math.hypot(b.x - from.x, b.z - from.z) > radius + cfg.lowCoverGapFar + Math.max(b.halfX, b.halfZ)) continue;
     const ux = dx / d;
     const uz = dz / d;
-    const reach = Math.abs(ux) * b.halfX + Math.abs(uz) * b.halfZ + cfg.lowCoverGap;
-    consider(b.x + ux * reach, b.z + uz * reach);
+    const edge = Math.abs(ux) * b.halfX + Math.abs(uz) * b.halfZ;
+    // Hug the block; if that's too tight to stand (another block close behind), try a step further back.
+    for (const gap of [cfg.lowCoverGap, cfg.lowCoverGapFar]) {
+      const x = b.x + ux * (edge + gap);
+      const z = b.z + uz * (edge + gap);
+      if (!isWalkableAt(nav, x, z)) continue;
+      consider(x, z);
+      break;
+    }
   }
   return Number.isFinite(bestScore);
 }

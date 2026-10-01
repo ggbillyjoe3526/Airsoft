@@ -80,6 +80,8 @@ export const BOT_BEHAVIOUR = {
    * block's far side from the threat. Just over the body radius, so the bot hugs the block.
    */
   lowCoverGap: 0.45,
+  /** Second try behind a low block when the spot at lowCoverGap isn't walkable (metres). */
+  lowCoverGapFar: 0.8,
   /** A low block counts as standing on the floor if its bottom is within this of y = 0 (metres). */
   lowCoverFloorGap: 0.05,
   /** Close enough to a cover spot to settle in (metres). */
@@ -97,6 +99,13 @@ export const BOT_BEHAVIOUR = {
   peekDown: [0.8, 1.6] as const,
   /** Give up on reaching cover after this long (s), e.g. if the route there is blocked. */
   coverMaxTime: 5,
+  /**
+   * On spotting someone at least contactCoverMinDistance away (metres) while advancing or searching, a
+   * bot first moves to crouch cover within contactCoverRadius (metres), if there is any, and fights
+   * from it: the way players at a site get behind a barricade before trading BBs.
+   */
+  contactCoverMinDistance: 8,
+  contactCoverRadius: 3.5,
   /** A whole cover episode (getting there, ducking, peeking, fighting from it) ends after this long (s). */
   coverEpisodeMax: 12,
   /**

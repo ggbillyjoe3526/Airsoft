@@ -6,7 +6,7 @@ import { type Bot, type BotWorld, lastSeenAt, pick } from './bot';
 import { aimBot, reloadBot, shootBot } from './botCombat';
 import { wantRoute, moveBot } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
-import { findCover, hidesFrom } from './cover';
+import { type CoverSearch, findCover, hidesFrom } from './cover';
 import { eyeOf } from './perception';
 
 /**
@@ -20,14 +20,20 @@ const myEye = vec3();
 const aimAt = vec3();
 const threatEye = vec3();
 
-/** Looks for cover from `threat` and heads there; false if no spot nearby hides the bot. */
-function takeCover(b: Bot, w: BotWorld, threat: Character): boolean {
+/** Narrowed cover search for a fresh contact: close crouch cover only, no random tries (filled per call). */
+const contactSearch: CoverSearch = { radius: 0, randomCandidates: 0, crouchOnly: true };
+
+/**
+ * Looks for cover from `threat` and heads there (`search` narrows the search, see findCover); false
+ * if no spot nearby hides the bot. Ducks for `down` seconds once there before looking again.
+ */
+function takeCover(b: Bot, w: BotWorld, threat: Character, down: number, search?: CoverSearch): boolean {
   const cfg = w.cfg;
   eyeOf(threat, w.body, threatEye);
-  if (!findCover(b.character.position, threatEye, w.nav, w.query, cfg, w.body, b.rng, w.lowCover, b.cover)) return false;
+  if (!findCover(b.character.position, threatEye, w.nav, w.query, cfg, w.body, b.rng, w.lowCover, b.cover, search)) return false;
   b.mode = 'cover';
   b.coverPhase = 'down';
-  b.coverLeft = pick(b.rng, cfg.coverTime);
+  b.coverLeft = down;
   b.coverGiveUp = cfg.coverMaxTime;
   b.coverHeld = 0;
   b.coverSince = w.time;
@@ -87,7 +93,7 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   }
   if (seeing && target && (suppressed || reloading || empty) && b.mode !== 'cover' && b.coverCooldown <= 0) {
     b.coverCooldown = cfg.coverCooldown;
-    if (takeCover(b, w, target)) return;
+    if (takeCover(b, w, target, pick(b.rng, cfg.coverTime))) return;
   }
   if (b.mode === 'cover') {
     if (atCover) b.coverHeld += dt;
@@ -127,7 +133,16 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     b.routeState = 'none';
   }
   const remembered = b.hasLastKnown && w.time - Math.max(lastSeenAt(b), b.heardAt) < cfg.memoryTime;
-  if (seeing) {
+  if (seeing && target) {
+    // A fresh contact at range while on the move: get behind close crouch cover first, then peek.
+    if ((b.mode === 'advance' || b.mode === 'search') && b.coverCooldown <= 0) {
+      const d = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
+      contactSearch.radius = cfg.contactCoverRadius;
+      if (d >= cfg.contactCoverMinDistance && takeCover(b, w, target, 0, contactSearch)) {
+        b.coverCooldown = cfg.coverCooldown;
+        return;
+      }
+    }
     b.mode = 'fight';
   } else if (remembered) {
     if (b.mode !== 'search') b.routeState = 'none';
@@ -138,6 +153,7 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     b.routeState = 'none';
     b.route.length = 0; // not "arrived" anywhere: the old route was for another mode
     b.waitForTeam = false;
+    b.holdLeft = 0; // a pause cut short by a fight doesn't resume somewhere else
     if (!b.hunting && b.laneIndex >= 0) b.laneIndex -= b.laneDir; // re-take the lane point we left
   }
 }

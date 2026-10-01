@@ -22,8 +22,8 @@ import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
 import type { Bot } from './bot';
 import { BotController } from './botController';
-import { findCover, lowCoverBlocks } from './cover';
-import { canSee } from './perception';
+import { findCover, type LowCoverBlock, lowCoverBlocks } from './cover';
+import { canSee, lineClear } from './perception';
 
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
@@ -37,6 +37,33 @@ function wallAcrossX(wallX: number, height = 3): WorldQuery {
       const t = (wallX - o.x) / d.x;
       if (t < 0 || t > max) return -1;
       return o.y + d.y * t <= height ? t : -1;
+    },
+  };
+}
+
+/** A solid box from the floor up to `height`, centred at (cx, cz) with half extents (hx, hz). */
+function boxQuery(cx: number, cz: number, hx: number, hz: number, height: number): WorldQuery {
+  return {
+    raycastStatic(o, d, max) {
+      let t0 = 0;
+      let t1 = max;
+      for (const [p, v, lo, hi] of [
+        [o.x, d.x, cx - hx, cx + hx],
+        [o.y, d.y, 0, height],
+        [o.z, d.z, cz - hz, cz + hz],
+      ] as const) {
+        if (Math.abs(v) < 1e-9) {
+          if (p < lo || p > hi) return -1;
+          continue;
+        }
+        let a = (lo - p) / v;
+        let b = (hi - p) / v;
+        if (a > b) [a, b] = [b, a];
+        t0 = Math.max(t0, a);
+        t1 = Math.min(t1, b);
+        if (t0 > t1) return -1;
+      }
+      return t0;
     },
   };
 }
@@ -169,6 +196,31 @@ describe('cover', () => {
     expect(lowOnly.crouchOnly).toBe(true);
   });
 
+  it('tries the spot right behind a crate as seen from the threat: hidden crouched, able to shoot over standing', () => {
+    // A lone 1.2 m crate at (3, -5) on the open field; no random candidates, so only the crate is tried.
+    const crate = boxQuery(3, -5, 0.6, 0.6, 1.2);
+    const block: LowCoverBlock = { x: 3, z: -5, halfX: 0.6, halfZ: 0.6 };
+    const cfg = { ...BOTS, coverCandidates: 0 };
+    for (const threat of [vec3(3, 0, 6), vec3(12, 0, 4), vec3(-6, 0, 3)]) {
+      const threatEye = vec3(threat.x, BODY.standEyeHeight, threat.z);
+      const out = { position: vec3(), crouchOnly: false };
+      expect(findCover(vec3(3, 0, -2.5), threatEye, OPEN_NAV, crate, cfg, BODY, createRng(1), [block], out), `threat ${threat.x},${threat.z}`).toBe(true);
+      const p = out.position;
+      // On the far side of the crate from the threat...
+      const toBlock = Math.hypot(block.x - threat.x, block.z - threat.z);
+      expect(Math.hypot(p.x - threat.x, p.z - threat.z)).toBeGreaterThan(toBlock);
+      // ...on walkable ground, hidden when crouched, and able to see (shoot) over it standing.
+      expect(isWalkableAt(OPEN_NAV, p.x, p.z)).toBe(true);
+      expect(lineClear(crate, threatEye, vec3(p.x, BODY.crouchEyeHeight, p.z))).toBe(false);
+      expect(lineClear(crate, threatEye, vec3(p.x, BODY.standEyeHeight, p.z))).toBe(true);
+      expect(out.crouchOnly).toBe(true);
+    }
+    // Asking for crouch cover only within a short radius: the crate is 2.5 m away, so 2 m finds nothing.
+    const out = { position: vec3(), crouchOnly: false };
+    const near = { radius: 2, randomCandidates: 0, crouchOnly: true };
+    expect(findCover(vec3(3, 0, -2.5), vec3(3, BODY.standEyeHeight, 6), OPEN_NAV, crate, BOTS, BODY, createRng(1), [block], out, near)).toBe(false);
+  });
+
   it("treats the map's crate-high blocks standing on the floor as low cover", () => {
     const low = lowCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap);
     expect(low.length).toBeGreaterThan(20);
@@ -182,7 +234,14 @@ describe('cover', () => {
 });
 
 /** A duel on an open floor: one Orange bot facing a Blue character `dist` metres away. */
-function duel(dist: number, extra: (state: GameState) => void = () => {}, query: WorldQuery = noWalls, cfg: BotConfig = BOTS, seed = 7) {
+function duel(
+  dist: number,
+  extra: (state: GameState) => void = () => {},
+  query: WorldQuery = noWalls,
+  cfg: BotConfig = BOTS,
+  seed = 7,
+  lowCover: readonly LowCoverBlock[] = [],
+) {
   const state = createGameState(seed, 64, ROUNDS);
   const player = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
   const bot = createCharacter(1, vec3(0, 0, -dist), 0, LOADOUT, 1);
@@ -210,7 +269,7 @@ function duel(dist: number, extra: (state: GameState) => void = () => {}, query:
     nav: OPEN_NAV,
     navSnap: NAV.snap,
     lanes: OPEN_FIELD.lanes,
-    lowCover: [],
+    lowCover,
     body: BODY,
     hits: HITS,
     loadout: LOADOUT,
@@ -812,6 +871,37 @@ describe('bot team play and routes', () => {
     expect(r.ups).toBeGreaterThanOrEqual(2);
     expect(r.downs).toBeGreaterThanOrEqual(2);
     expect(r.drift).toBeLessThan(0.5);
+  });
+
+  it('on spotting someone at range, get behind close crouch cover first, then fight from it', () => {
+    // A 1.2 m crate 2 m in front of the bot, between it and the player 14 m away.
+    const crate = boxQuery(0, -12, 0.6, 0.6, 1.2);
+    const block: LowCoverBlock = { x: 0, z: -12, halfX: 0.6, halfZ: 0.6 };
+    const { state, bot, bots, run } = duel(14, () => {}, crate, { ...BOTS, fireCone: 0 }, 7, [block]);
+    const b = bots.bots[0]!;
+    let tookCover = false;
+    let foughtFromCover = false;
+    let shotsBeforeCover = 0;
+    run(4, () => {
+      tookCover ||= b.mode === 'cover';
+      foughtFromCover ||= b.mode === 'fight' && b.fromCover;
+      for (const e of state.events) if (e.type === 'shot' && e.characterId === 1 && !tookCover) shotsBeforeCover++;
+    });
+    expect(tookCover).toBe(true);
+    expect(foughtFromCover).toBe(true);
+    expect(shotsBeforeCover).toBe(0);
+    expect(Math.hypot(bot.position.x - b.cover.position.x, bot.position.z - b.cover.position.z)).toBeLessThan(BOTS.coverArrive);
+    expect(b.cover.position.z).toBeLessThan(-12.6); // behind the crate, not in front of it
+  });
+
+  it('fight on the spot when someone appears close by, without running for cover', () => {
+    const crate = boxQuery(0, -4, 0.6, 0.6, 1.2);
+    const block: LowCoverBlock = { x: 0, z: -4, halfX: 0.6, halfZ: 0.6 };
+    const { bots, run } = duel(6, () => {}, crate, { ...BOTS, fireCone: 0 }, 7, [block]);
+    const b = bots.bots[0]!;
+    let tookCover = false;
+    run(1.5, () => (tookCover ||= b.mode === 'cover'));
+    expect(tookCover).toBe(false);
   });
 
   it('move on from crouch cover once their target is out, instead of peeking at nothing', () => {
