@@ -1,16 +1,19 @@
-# Airsoft — v0.1-alpha.2a
+# Airsoft — v0.1-alpha.2
 
 A browser-based, first-person, round-based team shooter built around the feel of recreational airsoft:
 visible BBs, one hit and you're out, call your hit and walk off.
 
-**v0.1-alpha.2a (alpha: Phase 1 plus the first half of Phase 2).** On the warehouse map "Depot" you play a 3v3 against bots: you and two
+**v0.1-alpha.2 (alpha: Phases 1 and 2).** On the warehouse map "Depot" you play a 3v3 against bots: you and two
 bot teammates (Blue) against three bots (Orange), with an AEG rifle and a gas pistol. One BB hit and you're
-out: your hand goes up, you walk off, and you spectate. Knock out the whole other team to win a round
-(2:30 on the clock; a time-out is a draw). First to 5 rounds wins the match.
+out: your hand goes up, you walk off, and you spectate. Pick a mode on the start screen:
+**Elimination** (knock out the whole other team) or **Attack / Defend** (raise your flag on the other team's
+pole, or keep yours down; sides swap at half-time). First to 5 rounds wins the match.
 
-New since v0.1-alpha: walk quietly with Shift (sprint moved to Left Alt), rebindable keys, a bigger and more
-open Depot, footsteps you and the bots can hear, a visible magazine-swap reload, hit flinches, clearer hit
-confirmation at range, and smoother-moving players.
+New since v0.1-alpha: the **Attack / Defend** mode, bot difficulty levels (Easy / Normal / Hard), smarter bots
+(they pop up over low cover, move as a team, vary their routes and walk quietly when closing in), walk quietly
+with Shift (sprint moved to Left Alt), rebindable keys, a bigger and more open Depot, footsteps you and the
+bots can hear, a visible magazine-swap reload, hit flinches, clearer hit confirmation at range, and
+smoother-moving players.
 
 ---
 
@@ -26,11 +29,11 @@ Go to **https://nodejs.org**, download the **LTS** version (22 or newer), and in
 
 ### 2. Download the game
 
-Download v0.1-alpha.2a as a ZIP file:
+Download v0.1-alpha.2 as a ZIP file:
 
-**https://github.com/ggbillyjoe3526/airsoft/archive/refs/tags/v0.1-alpha.2a.zip**
+**https://github.com/ggbillyjoe3526/airsoft/archive/refs/tags/v0.1-alpha.2.zip**
 
-Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `airsoft-0.1-alpha.2a`.
+Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `airsoft-0.1-alpha.2`.
 (Older versions are on the **Releases / Tags** page of the repository.)
 
 (If that link doesn't work, open **https://github.com/ggbillyjoe3526/airsoft**, click the green **Code**
@@ -38,9 +41,9 @@ button, then **Download ZIP**. The folder will then be called `airsoft-main`; us
 
 ### 3. Open a terminal in that folder
 
-- **Windows:** open the unzipped folder (`airsoft-0.1-alpha.2a`, or `airsoft-main` if you used the Download ZIP
+- **Windows:** open the unzipped folder (`airsoft-0.1-alpha.2`, or `airsoft-main` if you used the Download ZIP
   button), click the address bar at the top of the window, type `cmd` and press Enter.
-- **Mac:** right-click the unzipped folder (`airsoft-0.1-alpha.2a` or `airsoft-main`) and choose **New Terminal at Folder**.
+- **Mac:** right-click the unzipped folder (`airsoft-0.1-alpha.2` or `airsoft-main`) and choose **New Terminal at Folder**.
 - **Linux:** right-click inside the folder and choose **Open in Terminal**.
 
 ### 4. Install and start the game
@@ -127,27 +130,27 @@ Then open **http://localhost:4173**.
 
 ---
 
-## What's in v0.1-alpha.2a and what isn't
+## What's in v0.1-alpha.2 and what isn't
 
 **In:** one map (Depot), two replicas (AEG rifle, gas pistol), BB ballistics with hop-up, one-hit
-elimination with hit calling, bots (patrol, spot, react, shoot, take cover, search, hunt, hear footsteps),
-3v3 matches with a round clock and first-to-5 scoring, walk/run/sprint, rebindable keys, synthesised sounds
-with footsteps, reload animations, hit reactions, a minimal HUD.
+elimination with hit calling, two modes (Elimination; Attack / Defend with a flagpole, overtime and a
+half-time swap), bots at three difficulty levels (patrol, spot, react, shoot, take cover, crouch-peek over low
+cover, move as a team, search, hunt, hear footsteps, hold and retake the pole), 3v3 matches with a round clock
+and first-to-5 scoring, walk/run/sprint, rebindable keys, synthesised sounds with footsteps, reload
+animations, hit reactions and a minimal HUD.
 
-**On the way to Alpha 2 (since v0.1-alpha.2a):** bot difficulty levels (Easy / Normal / Hard), and smarter bots: they pop
-up over low cover to shoot and duck again, move as a team, take different routes each round, and walk quietly
-when closing in on you. An **Attack / Defend** mode: attack or defend a flagpole, with sides swapping at half-time.
+**Next (Phase 3, v0.1-alpha.3):** core foundations: carrying a set of magazines with meaningful reloads, a BB
+physics pass, movement and positioning, and a reworked Depot. Progress and plans:
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
 
-**Still to come in Alpha 2 (v0.1-alpha.2):** a bug pass and the owner's playtest.
-Progress and plans: [`docs/ROADMAP.md`](docs/ROADMAP.md).
-
-**Version names:** the game is being built as **v0.1**. Alpha builds (`v0.1-alpha`, `v0.1-alpha.2`, with letters
-like `v0.1-alpha.2a` for in-between playtest builds) come first. Beta builds (`v0.1-beta` …) follow once it's
-feature complete, and **v0.1** is the first public release.
+**Version names:** the game is being built as **v0.1**. Alpha releases (`v0.1-alpha`, `v0.1-alpha.2`,
+`v0.1-alpha.3` …) come first. Beta releases (`v0.1-beta` …) follow once it's feature complete, and **v0.1** is
+the first public release. More modes, maps, replicas, loadouts and customisation come in later versions.
 
 **Not yet:** more maps or replicas, menus beyond the start screen, real art.
-The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels
-still need tuning from playtesting.
+The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in
+[`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels and Attack / Defend balance still need
+tuning from playtesting.
 
 ---
 

@@ -18,7 +18,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: M5 done; bug pass and M6 next. |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done; `v0.1-alpha.2` ready for the owner's playtest and tag. Phase 3 (M7) next. |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -72,7 +72,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 2 · M4a Difficulty levels, close-range lethality | Done | 8.7 |
 | Alpha · Phase 2 · M4b Crouch-peeking, team movement, varied routes, walking | Done | 8.2 |
 | Alpha · Phase 2 · M5 Objective mode: Attack / Defend | Done | 8.4 |
-| Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | **Next** | |
+| Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | Bug pass done; ready for the owner's playtest and tag | |
 | Alpha · Phase 3 · M7 Magazines and reloads | To do | |
 | Alpha · Phase 3 · M8 BB physics pass | To do | |
 | Alpha · Phase 3 · M9 Movement and positioning | To do | |
@@ -104,6 +104,11 @@ bots, 3v3 rounds to 5, and a minimal HUD.
 - **Bug pass**, then **M6. Wrap-up:** the owner playtests both modes, a 60 FPS check on the target laptop,
   and the owner tags `v0.1-alpha.2`. A bug pass before each alpha build keeps the game playable; it
   isn't beta work.
+  - Bug pass (2026-10-01): a soak of 48 long bot matches (both modes, all difficulties) found no crashes,
+    NaNs or stuck rounds; bots now mind teammates moving into their line of fire.
+  - Performance in the dev build: about 0.3 ms of CPU per frame, 48–58 draw calls and up to ~35k triangles
+    in either mode; GPU memory is stable across match restarts (no leaks). The 60 FPS check on the target
+    laptop is the owner's.
 
 ### Phase 3: Core foundations → build `v0.1-alpha.3`
 
