@@ -10,7 +10,8 @@ import { isInPlay } from '../sim/elimination';
 import { rngNext } from '../sim/rng';
 import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
-import { type Bot, type BotWorld, createBot, resetBot, thinkBot } from './botBrain';
+import { type Bot, type BotWorld, createBot, resetBot } from './bot';
+import { thinkBot } from './botBrain';
 import { bodyPoint } from './perception';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
@@ -43,6 +44,8 @@ export class BotController {
   private readonly commandsById = new Map<number, PlayerCommand>();
   private readonly chest = vec3();
   private plannerCursor = 0;
+  /** Tuning to switch to at the next round start (a difficulty change made mid-match). */
+  private pendingCfg: BotConfig | undefined;
   /** Hunt sectors: per team, the last time a player of that team stood in each sector. */
   private readonly sectorCols: number;
   private readonly sectorRows: number;
@@ -91,6 +94,24 @@ export class BotController {
     }
   }
 
+  /** The tuning bots play by now. */
+  get cfg(): BotConfig {
+    return this.world.cfg;
+  }
+
+  /**
+   * Changes the bots' tuning (a difficulty level): right away, or from the next round so a fight in
+   * progress isn't changed under the player.
+   */
+  setConfig(cfg: BotConfig, when: 'now' | 'nextRound'): void {
+    if (when === 'now') {
+      this.world.cfg = cfg;
+      this.pendingCfg = undefined;
+    } else {
+      this.pendingCfg = cfg;
+    }
+  }
+
   private commandFor(id: number): PlayerCommand {
     let cmd = this.commandsById.get(id);
     if (!cmd) {
@@ -114,12 +135,16 @@ export class BotController {
 
   /** After a simulation tick, while its events are still in the state. */
   observe(state: GameState): void {
-    const cfg = this.opts.cfg;
     const time = state.time;
     for (const e of state.events) {
+      const cfg = this.world.cfg;
       if (e.type === 'roundStart') {
+        if (this.pendingCfg) {
+          this.world.cfg = this.pendingCfg;
+          this.pendingCfg = undefined;
+        }
         for (const v of this.visited) v.fill(Number.NEGATIVE_INFINITY);
-        for (const b of this.bots) resetBot(b, this.opts.lanes.length, cfg);
+        for (const b of this.bots) resetBot(b, this.opts.lanes.length, this.world.cfg);
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
         if (shooter) this.hear(shooter.team, e.position, time, shooter.position, cfg.hearingDistance);
@@ -151,7 +176,7 @@ export class BotController {
    * Hearing is not sight: it never skips a bot's reaction when the shooter then appears.
    */
   private hear(shooterTeam: number, heardAt: Vec3, time: number, shooterPos: Vec3, range: number): void {
-    const cfg = this.opts.cfg;
+    const cfg = this.world.cfg;
     for (const b of this.bots) {
       const c = b.character;
       if (c.team === shooterTeam || !isInPlay(c) || b.targetVisible) continue;
@@ -180,7 +205,7 @@ export class BotController {
    */
   private huntPoint(bot: Bot, out: Vec3): boolean {
     const nav = this.opts.nav;
-    const cfg = this.opts.cfg;
+    const cfg = this.world.cfg;
     const visited = this.visited[bot.character.team]!;
     const home = this.spawnCentre[bot.character.team]!;
     let best = Number.POSITIVE_INFINITY;
@@ -206,7 +231,7 @@ export class BotController {
 
   private sectorOf(x: number, z: number): number {
     const nav = this.opts.nav;
-    const size = this.opts.cfg.huntSectorSize;
+    const size = this.opts.cfg.huntSectorSize; // fixed at construction, like the sector grid
     const i = Math.min(this.sectorCols - 1, Math.max(0, Math.floor((x - nav.minX) / size)));
     const j = Math.min(this.sectorRows - 1, Math.max(0, Math.floor((z - nav.minZ) / size)));
     return j * this.sectorCols + i;
@@ -219,7 +244,7 @@ export class BotController {
 
   /** Serves at most cfg.pathsPerTick route requests, round-robin across bots. */
   private planRoutes(): void {
-    let budget = this.opts.cfg.pathsPerTick;
+    let budget = this.world.cfg.pathsPerTick;
     const n = this.bots.length;
     for (let k = 0; k < n && budget > 0; k++) {
       const b = this.bots[(this.plannerCursor + k) % n]!;

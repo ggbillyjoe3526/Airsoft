@@ -25,13 +25,18 @@ export function createAim(yaw: number): AimState {
 }
 
 /**
- * Aim error size (radians) `sinceAcquired` seconds after picking up a target: starts large and settles
- * over aimSettleTime; worse while the bot moves.
+ * Aim error size (radians) `sinceAcquired` seconds after picking up a target `dist` metres away that
+ * moves across the view at `sideways` m/s: starts large and settles over aimSettleTime; worse while the
+ * bot moves or the target does. The starting error is never smaller than aimErrorStartMetres off the
+ * target, so up close the first BBs can miss.
  */
-export function aimErrorSize(sinceAcquired: number, moving: boolean, cfg: BotConfig): number {
+export function aimErrorSize(sinceAcquired: number, moving: boolean, dist: number, sideways: number, cfg: BotConfig): number {
   const t = Math.min(1, Math.max(0, sinceAcquired / cfg.aimSettleTime));
-  const deg = cfg.aimErrorStartDeg + (cfg.aimErrorSettledDeg - cfg.aimErrorStartDeg) * t + (moving ? cfg.aimErrorMovingDeg : 0);
-  return deg * DEG;
+  const d = Math.max(dist, 1e-3);
+  const start = Math.max(cfg.aimErrorStartDeg * DEG, Math.atan2(cfg.aimErrorStartMetres, d));
+  const settled = cfg.aimErrorSettledDeg * DEG;
+  const tracking = Math.atan2(Math.abs(sideways) * cfg.aimErrorTracking, d);
+  return start + (settled - start) * t + (moving ? cfg.aimErrorMovingDeg * DEG : 0) + tracking;
 }
 
 /**
@@ -62,6 +67,19 @@ export function stepAim(a: AimState, desiredYaw: number, desiredPitch: number, e
   a.yaw = wrapAngle(a.yaw + dYaw * s);
   a.pitch += dPitch * s;
   return off * (1 - s);
+}
+
+/**
+ * A new contact: the aim error jumps to a random direction, at least cfg.aimFirstErrorMin of the way
+ * out, and holds there while its size settles, so the first BBs walk onto the target instead of
+ * starting dead on it.
+ */
+export function freshAimError(a: AimState, cfg: BotConfig, rng: RngState): void {
+  const angle = rngNext(rng) * Math.PI * 2;
+  const r = cfg.aimFirstErrorMin + rngNext(rng) * (1 - cfg.aimFirstErrorMin);
+  a.errYaw = a.goalErrYaw = Math.cos(angle) * r;
+  a.errPitch = a.goalErrPitch = Math.sin(angle) * r;
+  a.wanderLeft = 1 / cfg.aimWanderRate;
 }
 
 /** Yaw and pitch that look from (ax, ay, az) at (bx, by, bz). Yaw 0 looks down -Z; positive yaw turns left. */

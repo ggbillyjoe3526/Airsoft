@@ -23,16 +23,14 @@ Classified as **fix now / document / can wait**.
 | Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing, no turn interpolation | can wait | Art pass / Phase 2 animations. |
 | Other players' yaw isn't interpolated between ticks | can wait | Bots turn at most 4.5 rad/s (≈4.3° per tick); check turning bots look smooth on high-refresh screens. |
 | Hit volume is round, so from the side it's deeper than the figure (0.4 m vs ~0.28 m chest): a BB ~6 cm in front of the chest counts | can wait | Playtest flank shots; consider a slimmer lower capsule or an elliptical test. |
-| Arms don't count as hits (most sites count them; replica hits don't) | can wait | Playtest whether BBs visibly striking an arm with no hit feel unfair. |
 | The hit-direction wedge is cut off at the end of calling (its 2.2 s fade is longer than the 1.4 s call) | can wait | Match the wedge fade to HITS.callTime. |
 | Bots only use the AEG, never switch to the pistol, and don't jump | can wait | Fine for Phase 1. |
 | Bots hear gunfire through walls within 22 m and know roughly where it came from (off by up to 30% of the distance) | document | Deliberate simplification; hearing never skips a bot's reaction delay. |
 | A walk-off that can't reach the dead zone within 14 s, or gets stuck, fades out where it is and reappears in the dead zone | document | Rare now that walk-offs follow nav routes. |
 | Each hit runs one route search for the victim's walk-off inside the simulation tick (~2 ms worst case on Depot, not rationed) | can wait | Hits are rare (a few per round); profile before rationing. |
 | Bots fight by standing and strafing; they don't crouch-peek over 1.2 m cover or push to close distance | can wait | Phase 2 "smarter bots". |
-| Bots may be too lethal up close: ~30% of their BBs hit in bot-only matches (median range ~6 m); being seen first at close range usually means being out | can wait | Tuning for playtesting: reactionTime, aimErrorStartDeg, burst length in config/bots.ts. |
-| Bots: switching back to an earlier target within contactGrace restarts the reaction delay (only one "last seen" is remembered) | can wait | Feature 5 critic. Keep a per-enemy last-seen time. |
-| Bots: `move`, `look` and the hunt goal are module-level scratch in botBrain.ts (reads are guarded, but it's implicit coupling); botBrain.ts is ~550 lines | can wait | Pass explicitly / split perception+modes into their own files when bots get smarter (Phase 2). |
+| Difficulty numbers are first guesses tuned against headless duels (Normal: ~13% of bot BBs hit in bot-only matches, was ~30%) | can wait | Playtest each level; tune BOT_SKILL in config/bots.ts. |
+| At 10–16 m, a strafing target is still hit about as fast as a standing one (the BB stream sweeps across it) | can wait | Up close strafing clearly helps; raise aimErrorTracking if mid-range strafing should help more. |
 | Bot-only rounds are fast (7–15 s) and a last 1v1 can wander for ~40 s | can wait | Revisit lethality and hunting pace with the round timer. |
 | `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |
 | No pre-round freeze: everyone can move and fire from the round-start whistle | can wait | Spawns are hidden from each other (tested), so nobody can be shot at spawn; revisit with playtesting. |
@@ -40,6 +38,4 @@ Classified as **fix now / document / can wait**.
 | Bots hear footsteps and gunfire through walls (no occlusion); only range limits it, and the guess is vague (±30% of distance) | document | Deliberate simplification; playtest whether bots feel spooky. Occlusion could halve range through walls later. |
 | Bots never walk or crouch-move, so their own footsteps always give them away | can wait | Phase 2 M4 (smarter bots): walk when closing in on a heard contact. |
 | Footstep ranges are first guesses: bots hear run 11 m, sprint 16 m, land 12 m; you hear other players' steps to 22 m | can wait | Tune from playtesting (the player's range is deliberately a bit longer than the bots'). |
-| The reload pose lifts and turns the replica across the centre of the view for the whole reload | can wait | Chosen so the magazine swap is visible; playtest whether it blocks too much (VIEWMODEL.reload lift/turn/tilt). |
-| Support-hand reload positions (toMag in replicaModels.ts) were checked only in headless screenshots | can wait | Owner to confirm in the browser; tune the offsets if the hand misses the magazine. |
-| Arm hits don't count (only body capsule and head) | document | Owner to decide from playtest (DECISIONS 2026-09-30). |
+| Arm hits don't count (only body capsule and head) | document | Owner playtested and kept it (DECISIONS 2026-10-01). |

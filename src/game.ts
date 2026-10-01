@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import { BotController } from './ai/botController';
 import { BALLISTICS } from './config/ballistics';
-import { BOTS } from './config/bots';
+import { botConfig, type Difficulty } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
 import { NAV } from './config/nav';
 import { matchOverScreenDelay } from './config/render';
@@ -33,6 +33,7 @@ import { createSimContext, type SimContext, stepSimulation } from './sim/simulat
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { DebugOverlay } from './ui/debugOverlay';
+import { loadDifficulty } from './ui/difficultyPicker';
 import { StartScreen } from './ui/startScreen';
 
 const PLAYER_ID = 0;
@@ -109,7 +110,7 @@ export class Game {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, body: BODY, hits: HITS, loadout: LOADOUT, cfg: BOTS, seed: SIM.seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(loadDifficulty()), seed: SIM.seed },
     );
     this.ctx = createSimContext({
       mover: this.physics,
@@ -160,6 +161,7 @@ export class Game {
       this.bindings,
       () => this.play(options.allowUnlocked),
       (v) => (this.input.sensitivity = v),
+      (d) => this.changeDifficulty(d),
     );
     this.input.sensitivity = this.startScreen.sensitivity;
     this.pointer.onChange((locked) => {
@@ -247,9 +249,22 @@ export class Game {
     this.combat.afterTick();
     this.match.afterTick(this.input.yaw);
     for (const e of this.state.events) {
-      if (e.type === 'roundStart') this.input.resetView(this.player.spawnYaw);
+      if (e.type === 'roundStart') {
+        this.input.resetView(this.player.spawnYaw);
+        this.startScreen.setDifficultyNote(''); // a pending difficulty change is now in play
+      }
       if (e.type === 'matchOver') this.matchOverAt = this.state.time;
     }
+  }
+
+  /**
+   * A new bot difficulty: before the first round is played or after a match it applies at once;
+   * mid-match it starts with the next round, so a fight in progress isn't changed.
+   */
+  private changeDifficulty(d: Difficulty): void {
+    const midMatch = this.started && this.state.round.phase !== 'matchOver';
+    this.bots.setConfig(botConfig(d), midMatch ? 'nextRound' : 'now');
+    this.startScreen.setDifficultyNote(midMatch ? 'Starts next round.' : '');
   }
 
   private pause(): void {

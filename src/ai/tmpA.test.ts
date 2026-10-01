@@ -540,3 +540,25 @@ describe('difficulty levels', () => {
     expect(bots.cfg).toBe(BOTS);
   });
 });
+
+describe('MEASURE', () => {
+  it('prints', { timeout: 120_000 }, () => {
+    const out: string[] = [];
+    for (const level of ['easy', 'normal', 'hard'] as const) for (const dist of [3, 6, 12]) for (const strafe of [false, true]) {
+      const times: number[] = [];
+      for (let seed = 1; seed <= 40; seed++) {
+        const { state, run, commands } = duel(dist, () => {}, noWalls, botConfig(level), seed);
+        const cmd = commands.get(0)!;
+        let hitAt = 8;
+        run(8, () => {
+          if (strafe) cmd.right = Math.floor(state.time / 0.7) % 2 === 0 ? 1 : -1;
+          for (const e of state.events) if (e.type === 'characterHit' && e.victimId === 0 && hitAt === 8) hitAt = state.time;
+        });
+        times.push(hitAt);
+      }
+      times.sort((a, b) => a - b);
+      out.push(`${level} ${dist}m strafe=${strafe} median=${times[20]!.toFixed(2)} min=${times[0]!.toFixed(2)} p25=${times[10]!.toFixed(2)} miss8=${times.filter(t=>t===8).length}`);
+    }
+    console.log(out.join('\n'));
+  });
+});

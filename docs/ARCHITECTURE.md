@@ -32,9 +32,13 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 - **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
   routes (8-neighbour A*, string-pulled into straight legs). Pure; used by bots and by the sim for walk-offs.
 - **ai/**: bots. `BotController` runs before each tick (fills every bot's `PlayerCommand`, rations route searches to one
-  per tick) and after it (bots hear shots, near misses, hit calls and footsteps from `state.events`). `botBrain.ts` is each bot's
-  state machine (advance along a lane → fight → cover → search) built on `perception.ts` (view cone + static ray casts),
-  `aim.ts` (turn rate, reaction, settling aim error) and `cover.ts` (random nearby spots hidden from the threat).
+  per tick) and after it (bots hear shots, near misses, hit calls and footsteps from `state.events`). `bot.ts` holds a bot's state
+  (plain data, including one contact record per enemy seen); `botBrain.ts` is its per-tick decision and mode choice
+  (advance along a lane → fight → cover → search), calling `botSenses.ts` (what it sees: target choice, contacts and
+  reaction), `botMovement.ts` (routes, lanes, hunting, strafing) and `botCombat.ts` (aim, bursts, reloads). These build on
+  `perception.ts` (view cone + static ray casts), `aim.ts` (turn rate, settling aim error, hasty first aim, tracking error)
+  and `cover.ts` (random nearby spots hidden from the threat). Tuning is `BotConfig` = shared behaviour + one difficulty's
+  skill (config/bots.ts); `BotController.setConfig` swaps it now or at the next round start.
   Bots read game state, never write it; their randomness is seeded per bot.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.

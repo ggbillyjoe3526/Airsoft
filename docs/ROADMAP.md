@@ -12,16 +12,17 @@ v0.1 line: Phase 1 = Alpha 1 (`v0.1-alpha`), Phase 2 = Alpha 2 (`v0.1-alpha.2`),
 Every milestone goes through the critic (CLAUDE.md §12) and is pushed when accepted. Move on only when
 the previous part is fun.
 
-## Progress (updated 2026-09-30)
+## Progress (updated 2026-10-01)
 
 | Milestone | Status | Critic score |
 |---|---|---|
 | Phase 1 (all) | Done, released as `v0.1-alpha` | see REVIEWS.md |
 | Phase 2 · M1 Controls and map | Done | 8.6 |
 | Phase 2 · M2 Sound you can play by | Done | 8.8 |
-| Phase 2 · M3 Feel and feedback | Done (arm hits: owner to decide from playtest) | 8.8 |
-| **Checkpoint `v0.1-alpha.2a`** | M1–M3, for the owner to play | |
-| Phase 2 · M4 Bots that feel fair | **Next** | |
+| Phase 2 · M3 Feel and feedback | Done (owner playtested 2a: no issues; arm hits stay off) | 8.8 |
+| **Checkpoint `v0.1-alpha.2a`** | M1–M3, played by the owner | |
+| Phase 2 · M4a Difficulty levels, close-range lethality | **In progress** | |
+| Phase 2 · M4b Crouch-peeking, team movement, varied routes, walking | Next | |
 | Phase 2 · M5 Objective mode | To do | |
 | Final bug pass (before M6) | To do | |
 | Phase 2 · M6 Wrap-up → `v0.1-alpha.2` | Owner assesses | |
@@ -49,9 +50,9 @@ Focus: make the existing loop feel great on one map. No second map yet.
   - Reload animation (support hand swaps the magazine).
   - Hit reactions (flinch), clearer hit confirmation at range.
   - Smooth turning of other players (yaw interpolation); playtest whether arm hits count.
-- **M4. Bots that feel fair**
-  - Difficulty levels (easy / normal / hard); normal less deadly up close.
-  - Crouch-peeking over low cover, moving as a team, varied routes.
+- **M4. Bots that feel fair** (split in two, each its own critic cycle)
+  - M4a: difficulty levels (easy / normal / hard); normal less deadly up close; per-enemy contacts.
+  - M4b: crouch-peeking over low cover, moving as a team, varied routes, walking when closing in on a sound.
 - **M5. Objective mode**
   - Attack/defend a flag on Depot: capture, wipe-out or time; sides swap at half-time.
   - Mode choice on the start screen (elimination stays).

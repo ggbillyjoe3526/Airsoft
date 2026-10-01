@@ -1,9 +1,9 @@
 /**
- * Bot behaviour tuning. Bots play through the same commands as the player and have human limits:
+ * Bot behaviour tuning shared by every difficulty level (skill per level is BOT_SKILL below). Bots play through the same commands as the player and have human limits:
  * they only know what they've seen or heard, react after a delay, turn at a finite speed and aim
  * with an error that settles over time. Ranges are [min, max], picked at random (seeded) each time.
  */
-export const BOTS = {
+export const BOT_BEHAVIOUR = {
   /** Seconds between perception updates per bot (staggered across bots). */
   thinkInterval: 0.1,
 
@@ -36,25 +36,18 @@ export const BOTS = {
   /** A bot counts as under fire for this long after a near miss (s). */
   suppressionTime: 0.4,
 
-  // ---- Reaction and aim -------------------------------------------------------------------------
-  /** Delay between first seeing someone and opening fire (s). */
-  reactionTime: [0.3, 0.55] as const,
+  // ---- Reaction and aim (the skill values live in BOT_SKILL) -------------------------------------
   /** Seconds a target can be out of sight and still count as "the same contact" (no new reaction delay). */
   contactGrace: 1.2,
   /** Stay on the current target unless another is at least this much closer (metres). */
   targetSwitchMargin: 3,
-  /** Turning speed when aiming (rad/s). */
-  turnRate: 4.5,
-  /** Aim error (degrees) right after acquiring a target, what it settles to, and how long that takes (s). */
-  aimErrorStartDeg: 4.5,
-  aimErrorSettledDeg: 1.1,
-  aimSettleTime: 0.9,
-  /** Extra aim error while the bot itself is moving (degrees). */
-  aimErrorMovingDeg: 1.5,
+  /**
+   * On a new contact the aim error starts at least this fraction of its full size off target (in a
+   * random direction), then settles: a hasty first aim, never dead on.
+   */
+  aimFirstErrorMin: 0.6,
   /** How fast the error drifts around (Hz): low values look like a hand correcting, not jitter. */
   aimWanderRate: 0.7,
-  /** Fraction of the target's movement a bot leads by (BBs are slow; bots are imperfect at it). */
-  leadFactor: 0.5,
   /** Fire only when the view is within this of the (erroneous) aim point (degrees). */
   fireCone: 3,
   /** Aim at this height on the target's body, as a fraction of its hit-volume height (chest). */
@@ -63,9 +56,6 @@ export const BOTS = {
   headHeightFraction: 0.93,
 
   // ---- Firing -----------------------------------------------------------------------------------
-  /** Trigger held per burst and pause between bursts (s). */
-  burst: [0.2, 0.5] as const,
-  burstPause: [0.25, 0.6] as const,
   /** Reload when the magazine is below this fraction and nobody is in sight. */
   tacticalReloadFraction: 0.35,
   /** Never fire if a teammate is this close to the line of fire (metres, beyond their hit volume). */
@@ -124,7 +114,101 @@ export const BOTS = {
   pathsPerTick: 1,
 } as const;
 
-/** BOTS with its values widened to plain numbers, so tests and future difficulty levels can vary them. */
-export type BotConfig = {
-  readonly [K in keyof typeof BOTS]: (typeof BOTS)[K] extends readonly [number, number] ? readonly [number, number] : number;
+type Widen<T> = { readonly [K in keyof T]: T[K] extends readonly [number, number] ? readonly [number, number] : number };
+
+/**
+ * How good a bot is: reaction, turning, aim and trigger discipline. One set per difficulty level; all
+ * bots in a match (teammates too) play at the chosen level.
+ */
+export interface BotSkill {
+  /** Delay between first seeing someone and opening fire (s). */
+  readonly reactionTime: readonly [number, number];
+  /** Turning speed when aiming (rad/s). */
+  readonly turnRate: number;
+  /** Aim error (degrees) right after acquiring a target, what it settles to, and how long that takes (s). */
+  readonly aimErrorStartDeg: number;
+  readonly aimErrorSettledDeg: number;
+  readonly aimSettleTime: number;
+  /**
+   * The starting aim error is at least this far off the target (metres) however close it is, so up
+   * close a bot's first BBs can whizz past instead of always landing: you get a moment to answer.
+   */
+  readonly aimErrorStartMetres: number;
+  /** Extra aim error while the bot itself is moving (degrees). */
+  readonly aimErrorMovingDeg: number;
+  /**
+   * Extra aim error while tracking a target that moves across the view: the target's sideways speed
+   * (m/s) times this (s) gives metres off. Moving targets are harder to hit, as with real slow BBs.
+   */
+  readonly aimErrorTracking: number;
+  /** Fraction of the target's movement a bot leads by (BBs are slow; bots are imperfect at it). */
+  readonly leadFactor: number;
+  /** Trigger held per burst and pause between bursts (s). */
+  readonly burst: readonly [number, number];
+  readonly burstPause: readonly [number, number];
+}
+
+export type Difficulty = 'easy' | 'normal' | 'hard';
+
+/** Difficulty levels in the order the start screen lists them, with their labels. */
+export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string }[] = [
+  { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim. Learn the map.' },
+  { id: 'normal', label: 'Normal', blurb: 'A fair fight: their first BBs up close can miss.' },
+  { id: 'hard', label: 'Hard', blurb: 'Quick and steady. Get seen first and you\'re out.' },
+];
+
+export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
+
+/** Skill per difficulty level (see BotSkill). Tuned with measured time-to-hit (docs/DECISIONS.md). */
+export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
+  easy: {
+    reactionTime: [0.55, 0.9],
+    turnRate: 3.2,
+    aimErrorStartDeg: 7,
+    aimErrorSettledDeg: 1.9,
+    aimSettleTime: 1.6,
+    aimErrorStartMetres: 0.9,
+    aimErrorMovingDeg: 2.5,
+    aimErrorTracking: 0.12,
+    leadFactor: 0.25,
+    burst: [0.15, 0.35],
+    burstPause: [0.45, 0.9],
+  },
+  normal: {
+    reactionTime: [0.35, 0.6],
+    turnRate: 4.5,
+    aimErrorStartDeg: 4.5,
+    aimErrorSettledDeg: 1.1,
+    aimSettleTime: 1.0,
+    aimErrorStartMetres: 0.75,
+    aimErrorMovingDeg: 1.5,
+    aimErrorTracking: 0.09,
+    leadFactor: 0.5,
+    burst: [0.2, 0.45],
+    burstPause: [0.3, 0.65],
+  },
+  hard: {
+    reactionTime: [0.25, 0.45],
+    turnRate: 5.5,
+    aimErrorStartDeg: 4,
+    aimErrorSettledDeg: 0.9,
+    aimSettleTime: 0.8,
+    aimErrorStartMetres: 0.25,
+    aimErrorMovingDeg: 1.2,
+    aimErrorTracking: 0.06,
+    leadFactor: 0.7,
+    burst: [0.25, 0.55],
+    burstPause: [0.2, 0.5],
+  },
 };
+
+/** Everything a bot's decisions are tuned by: shared behaviour plus one difficulty's skill. */
+export type BotConfig = Widen<typeof BOT_BEHAVIOUR> & BotSkill;
+
+/** The full bot tuning for a difficulty level. */
+export function botConfig(difficulty: Difficulty): BotConfig {
+  return { ...BOT_BEHAVIOUR, ...BOT_SKILL[difficulty] };
+}
+
+/** Bots at the default difficulty (tests use this as "a typical bot"). */
+export const BOTS: BotConfig = botConfig(DEFAULT_DIFFICULTY);

@@ -135,3 +135,21 @@ describe('a 3v3 bot match on Depot', () => {
   });
 });
 
+
+describe('MEASURE', () => {
+  beforeAll(async () => { await initPhysics(); });
+  it('prints', { timeout: 300_000 }, () => {
+    const out: string[] = [];
+    for (const level of ['easy', 'normal', 'hard'] as const) {
+      let shots = 0, hits = 0; const rounds: number[] = [];
+      for (const seed of [1,2,3,4,5,6]) {
+        const s = playMatch(150, seed, undefined, botConfig(level));
+        shots += s.shots; hits += s.hits;
+        let prev = 0; for (const r of s.roundEnds) { rounds.push(r - prev); prev = r; }
+      }
+      rounds.sort((a,b)=>a-b);
+      out.push(`${level} hitrate=${(hits/shots*100).toFixed(1)}% medianRound=${rounds[Math.floor(rounds.length/2)]?.toFixed(1)} n=${rounds.length}`);
+    }
+    console.log(out.join('\n'));
+  });
+});

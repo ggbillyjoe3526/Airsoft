@@ -95,6 +95,9 @@ Then open **http://localhost:4173**.
 - **Sprinting** carries your replica: you can't shoot until a moment after you stop.
 - **Footsteps give you away.** Running and sprinting are heard by you and the bots (sprinting from further away);
   walking (Shift) and moving crouched are silent. Listen for enemies the same way.
+- **Bot difficulty** (Easy, Normal, Hard) is picked on the start screen and applies to all bots, teammates too.
+  Changed mid-match, it starts with the next round. On Normal, a bot's first BBs up close can miss, and
+  moving targets are harder for bots to hit.
 
 ### Controls
 
@@ -123,12 +126,14 @@ elimination with hit calling, bots (patrol, spot, react, shoot, take cover, sear
 3v3 matches with a round clock and first-to-5 scoring, walk/run/sprint, rebindable keys, synthesised sounds
 with footsteps, reload animations, hit reactions, a minimal HUD.
 
-**Still to come in Alpha 2 (v0.1-alpha.2):** bot difficulty levels and smarter bots, an objective mode.
+**On the way to Alpha 2 (since v0.1-alpha.2a):** bot difficulty levels (Easy / Normal / Hard).
+
+**Still to come in Alpha 2 (v0.1-alpha.2):** smarter bots (crouch-peeking, moving as a team, varied routes), an objective mode.
 Progress and plans: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 **Not yet:** objectives, more maps or replicas, menus beyond the start screen, real art.
-The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty and pacing
-still need tuning from playtesting (they may feel quite deadly up close).
+The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels
+still need tuning from playtesting.
 
 ---
 
