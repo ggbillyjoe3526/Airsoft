@@ -28,6 +28,11 @@ The path:
    progression and team comms (see [After v0.1](#after-v01-later-versions)). Each later version gets its
    own alpha → beta → release cycle. `v0.1.x` releases are for fixes and small changes.
 
+**Branches** (owner, 2026-10-01). `main` holds the latest stable release. During the v0.1 cycle all work is
+committed and pushed to `main`, and its tagged commits are the releases. Later (about when v0.1 is done and
+v0.2 starts; the owner decides when), work moves to an `alpha` branch: builds ready for testing are merged into
+`beta`, then, once tested, into `main` and tagged.
+
 **Builds so far.** The owner creates tags. They are dotted (e.g. `v0.1-alpha.2`), and only full releases are
 tagged (owner, 2026-10-01): playtests in between are plain commits.
 

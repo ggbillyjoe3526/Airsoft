@@ -147,6 +147,11 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
 - Git tags use the dotted forms above, always with a dot (e.g. `v0.1-alpha.2`, never `v0.1-alpha-2`). Only full
   releases are tagged (owner, 2026-10-01): no letter checkpoints (`.2a`, `.2b`); the old ones are removed.
   The owner creates tags; don't create, rename or move them unless asked.
+- **Branches** (owner, 2026-10-01): `main` holds the latest stable release.
+  - **Now (the v0.1 cycle):** all work is committed and pushed to `main`, and its tagged commits are the releases.
+  - **Later (about when v0.1 is done and v0.2 starts; the owner decides when):** day-to-day work happens on an
+    `alpha` branch. A build ready for testing is merged into `beta`; once tested, it is merged into `main` and tagged.
+    From then on, never push unreleased work to `main`.
 
 Multiplayer is not planned.
 
