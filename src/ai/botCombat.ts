@@ -56,11 +56,20 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
 /** True if a teammate stands in (or right next to) the line of fire before the target. */
 function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number): boolean {
   const me = b.character;
+  // A teammate on the move can run into the BBs' path while they fly: check where they'll be too.
+  const flight = dist / w.loadout[0]!.muzzleVelocity;
   for (const mate of w.characters) {
     if (mate === me || mate.team !== me.team || !isInPlay(mate)) continue;
     characterHitVolume(mate, w.hits, mateBody, mateHead);
     mateBody.r += w.cfg.friendlyMargin;
     mateHead.r += w.cfg.friendlyMargin;
+    if (rayCharacter(from, dir, dist, mateBody, mateHead) >= 0) return true;
+    const dx = mate.velocity.x * flight;
+    const dz = mate.velocity.z * flight;
+    mateBody.x += dx;
+    mateBody.z += dz;
+    mateHead.x += dx;
+    mateHead.z += dz;
     if (rayCharacter(from, dir, dist, mateBody, mateHead) >= 0) return true;
   }
   return false;

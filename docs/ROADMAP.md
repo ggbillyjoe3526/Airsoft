@@ -28,13 +28,15 @@ The path:
    progression and team comms (see [After v0.1](#after-v01-later-versions)). Each later version gets its
    own alpha → beta → release cycle. `v0.1.x` releases are for fixes and small changes.
 
-**Builds so far.** The owner creates tags; they are dotted, e.g. `v0.1-alpha.2b`.
+**Builds so far.** The owner creates tags. They are dotted (e.g. `v0.1-alpha.2`), and only full releases are
+tagged (owner, 2026-10-01): playtests in between are plain commits.
 
 | Build | Date | What it was | Git tag |
 |---|---|---|---|
 | `v0.1-alpha` | 2026-09-30 | Phase 1, the playable single-player slice | `v0.1-alpha` |
-| `v0.1-alpha.2a` | 2026-09-30 | Interim checkpoint of alpha 2: Phase 2 M1–M3, for the owner's playtest | `v0.1-alpha-2a` on GitHub (hyphenated, on d8c4568) |
-| `v0.1-alpha.2b` | 2026-10-01 | Interim checkpoint of alpha 2: Phase 2 M1–M4b | `v0.1-alpha.2b` (on 08b37e3) |
+| (playtest) | 2026-09-30 | Phase 2 M1–M3, for the owner's playtest (commit d8c4568) | was `v0.1-alpha.2a`; removed after `v0.1-alpha.2` |
+| (checkpoint) | 2026-10-01 | Phase 2 M1–M4b (commit 08b37e3) | was `v0.1-alpha.2b`; removed after `v0.1-alpha.2` |
+| `v0.1-alpha.2` | (M6) | Phase 2 complete: Elimination and Attack / Defend on Depot | `v0.1-alpha.2` (the owner tags it) |
 
 ## What v0.1 is (owner decision, 2026-10-01)
 
@@ -80,7 +82,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
-Interim builds (`v0.1-alpha.2c` …) are cut only when the owner wants something to playtest. Phase 4's
+Playtests between releases use the latest pushed commit; they are not tagged. Phase 4's
 build number is assigned when it's cut.
 
 ## Alpha: building v0.1
@@ -160,8 +162,8 @@ When the owner calls the game feature complete, alpha ends.
 Beta adds no major new systems unless the owner approves. Its likely work, collected here so the alpha
 phases stay focused:
 - **Optimisation:** profile, then fix. The "can wait" performance items in KNOWN_ISSUES land here.
-- **Balance:** replicas, magazines, bot difficulty levels, and Attack / Defend (attackers win ~59% of
-  bot rounds today; raise time, holds and retakes).
+- **Balance:** replicas, magazines, bot difficulty levels, and Attack / Defend (about 1 bot round in 10
+  is won at the pole today; raise time, holds and retakes).
 - **Final tuning** of values that are first guesses today: footstep ranges, hop-up arcs, difficulty numbers.
 - **Bug fixing and stability.**
 - **UX/QoL, polish and accessibility.**

@@ -14,14 +14,12 @@ Classified as **fix now / document / can wait**.
 | `probeGround` allocates one small hit object per standing character per tick (Rapier's castShape API) | can wait | ~360 short-lived objects/s with 6 characters; profile before optimising. |
 | Diagonal sightline from the west room through both office doors into mid (~18 m) | document | Minor; a jog in the room entrance would remove it. |
 | First-person hand poses are hand-tuned numbers and only checked by screenshot | document | Poses live in replicaModels.ts (palm/across/back + finger curls). Check in the browser that fingers wrap the grip/handguard without clipping; adjust poses rather than the hand builder. |
-| Reload: the dropped magazine is mostly below the frame (AEG) or behind the hands (pistol) | fix now (Phase 2 reload animations) | Feature 3 critic, attempt 3. Have the support hand carry the mag into view. After the review, the pose was tuned so the replica no longer covers the crosshair and the mag seats at 97% (in time with the seat click). |
 | Pistol glove fingers look thick; the pistol armband is off screen | can wait | Slim the finger radii / proportions in handModels.ts during the art pass. |
 | An impact puff is only ~28% of full size in its first frame | can wait | Consider starting puffs at ~50% scale so a close-range hit doesn't show a near-empty frame. |
 | The BB path and near puffs sit on the crosshair's lower arm | can wait | Consider a smaller lower arm or a dot-only crosshair option. |
 | AEG BBs fly nearly flat within Depot's 34 m (hop-up 0.12, spinDecayTime 0.55) | can wait | Tuning: playtest a shorter spinDecayTime so the drop shows within 34 m. |
 | Sound recipe numbers are hardcoded in sfx.ts; one vec3 per shot/impact event; per-tick armCtx; `muzzle` looked up by name per shot; viewmodel `setAspect` every frame; untyped `userData.axis` | can wait | Minor code debt; profile before optimising. |
-| Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing, no turn interpolation | can wait | Art pass / Phase 2 animations. |
-| Other players' yaw isn't interpolated between ticks | can wait | Bots turn at most 4.5 rad/s (≈4.3° per tick); check turning bots look smooth on high-refresh screens. |
+| Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing | can wait | Art pass / Phase 2 animations. |
 | Hit volume is round, so from the side it's deeper than the figure (0.4 m vs ~0.28 m chest): a BB ~6 cm in front of the chest counts | can wait | Playtest flank shots; consider a slimmer lower capsule or an elliptical test. |
 | The hit-direction wedge is cut off at the end of calling (its 2.2 s fade is longer than the 1.4 s call) | can wait | Match the wedge fade to HITS.callTime. |
 | Bots only use the AEG, never switch to the pistol, and don't jump | can wait | Fine for Phase 1. |
@@ -52,9 +50,11 @@ Classified as **fix now / document / can wait**.
 | Attack / Defend: bots know how far up the flag is without seeing the pole | document | Deliberate (a flag on a pole is in plain view at a site). |
 | The flag cloth's normals aren't recomputed as it ripples (lighting is that of a flat cloth) | can wait | Art pass. |
 | The flagpole has no collider: players walk through it and BBs pass through it | document | Deliberate (DECISIONS 2026-10-01). |
-| Attack / Defend: attackers win ~59% of bot-only rounds (8 seeds); about a fifth of rounds are won by raising the flag, the rest by wipe-outs | can wait | Beta balance (raise time, defender holds, retakers). A headless test guards the capture rate and the win split. |
+| Attack / Defend: about 1 bot-only round in 10 is won by raising the flag (12 of 119 over 16 seeds), the rest by wipe-outs; attackers win 50% | can wait | Beta balance (raise time, defender holds, retakers). A headless test guards the capture rate and the win split. |
 | Attack / Defend: two defenders still leave their posts as soon as the flag is tagged, so a human can bait them and flank | can wait | Playtest; a defender could wait to see the pole, or only retake past a few percent. |
 | Attack / Defend: the edge-pinned pole marker is only dimmed, with no arrow showing which way to turn | can wait | Phase 4 HUD pass. |
 | The "their flag is going up" warning pulses with no reduced-motion option | can wait | Phase 4 accessibility settings. |
 | Attack / Defend overtime: an attacker and a defender both standing at the pole (contested) keep overtime going for the full 15 s before the defenders win; a pole tagged for a moment at 0:00 gets no overtime | can wait | Overtime counts time the rope is being worked. Playtest; the cap keeps it short. |
-| Attack / Defend capture-rate guard (depotMatch.test.ts) sits close to the measured values (10 captures vs a floor of 8 over 8 seeds) | document | Deliberate: a bot-tuning change that fails it should re-measure and update the numbers in DECISIONS with the test. |
+| Attack / Defend capture-rate guard (depotMatch.test.ts) sits close to the measured values (12 captures vs a floor of 9 over 16 seeds) | document | Deliberate: a bot-tuning change that fails it should re-measure and update the numbers in DECISIONS with the test. |
+| Bots occasionally hit a teammate who runs into BBs already in the air (about 7 hits in 12 hours of bot-only play, mostly on Easy) | can wait | Bots check where moving teammates will be when the BBs arrive (DECISIONS); the leftovers come from aim spread and BB drop. Friendly fire counts at real sites. |
+| A bot once stood stuck for ~6 s at the doorway of an office side room (search mode; seen once in 12 hours of soak) | can wait | It re-plans after `stuckTime` and gets free; look at doorway clearance in the M10 Depot rework. |

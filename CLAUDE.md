@@ -136,15 +136,16 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
 
 | Version | Meaning |
 |---|---|
-| `v0.1-alpha`, `v0.1-alpha.2`, `v0.1-alpha.2a`, `v0.1-alpha.2b` … | **Alpha**: building the game. Systems and content can be added, gameplay can change a lot, breaking changes are fine, not feature complete. A build number (`.2`, `.3`) is a meaningful release; a letter (`a`, `b`) is an interim checkpoint of that build (e.g. for playtesting). |
-| `v0.1-beta`, `v0.1-beta.2`, `v0.1-beta.2a` … | **Beta**: starts when the owner calls the planned game feature complete. Bug fixes, balance, performance, stability, UX/QoL, polish, final tuning; no major new systems unless the owner approves. Open-ended number of builds. |
+| `v0.1-alpha`, `v0.1-alpha.2`, `v0.1-alpha.3` … | **Alpha**: building the game. Systems and content can be added, gameplay can change a lot, breaking changes are fine, not feature complete. Each build number (`.2`, `.3`) is a full alpha release. In-between playtests use plain commits, never a tag. |
+| `v0.1-beta`, `v0.1-beta.2`, `v0.1-beta.3` … | **Beta**: starts when the owner calls the planned game feature complete. Bug fixes, balance, performance, stability, UX/QoL, polish, final tuning; no major new systems unless the owner approves. Open-ended number of builds. |
 | `v0.1` | First public release of the completed initial game, when the owner considers it a stable public product (not when a phase ends). |
 | `v0.1.1`, `v0.1.2` … | Fixes, performance, balance, small UI/UX or accessibility improvements, minor tuning, small content additions, maintenance. |
 | `v0.2`, `v0.3` … (each with `.x` maintenance) | A substantially expanded or evolved product: major new systems or modes, a large content expansion across systems, a core-loop redesign. No feature-count threshold; contents are not predefined. |
 | `v1.0` | The release the owner considers fully mature and stable. |
 
 - Milestones and critic cycles give development granularity; they don't each get a version.
-- Git tags use the dotted forms above, always with a dot (e.g. `v0.1-alpha.2b`, never `v0.1-alpha-2b`).
+- Git tags use the dotted forms above, always with a dot (e.g. `v0.1-alpha.2`, never `v0.1-alpha-2`). Only full
+  releases are tagged (owner, 2026-10-01): no letter checkpoints (`.2a`, `.2b`); the old ones are removed.
   The owner creates tags; don't create, rename or move them unless asked.
 
 Multiplayer is not planned.
