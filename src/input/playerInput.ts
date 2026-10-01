@@ -28,7 +28,7 @@ export class PlayerInput {
   ) {}
 
   /**
-   * Call once per render frame, before any ticks run. `activeSlot`/`slotCount` let Q and the
+   * Call once per render frame, before any ticks run. `activeSlot`/`slotCount` let the
    * mouse wheel cycle replicas.
    */
   update(activeSlot: number, slotCount: number): void {
@@ -44,7 +44,7 @@ export class PlayerInput {
     if (this.pointer.consumeFirePress()) this.fireLatch = true;
     if (kb.wasPressed('slot1')) this.switchLatch = 0;
     if (kb.wasPressed('slot2')) this.switchLatch = 1;
-    const cycle = (kb.wasPressed('swap') ? 1 : 0) + this.pointer.consumeWheelSteps();
+    const cycle = this.pointer.consumeWheelSteps();
     if (cycle !== 0 && slotCount > 1) {
       const from = this.switchLatch >= 0 ? this.switchLatch : activeSlot;
       this.switchLatch = (((from + cycle) % slotCount) + slotCount) % slotCount;

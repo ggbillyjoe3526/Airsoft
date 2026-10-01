@@ -122,7 +122,7 @@ Then open **http://localhost:4173**.
 | C | Crouch |
 | Space | Jump (small hop) |
 | R | Reload (an empty trigger pull also reloads) |
-| 1 / 2, Q or mouse wheel | Switch between AEG rifle and gas pistol |
+| 1 / 2 or mouse wheel | Switch between AEG rifle and gas pistol |
 | Left click while out | Watch the next player still in play |
 | Esc | Pause (releases the mouse). The pause screen has **Key bindings** to change keys. |
 | `` ` `` or F3 | Frame rate and debug info |

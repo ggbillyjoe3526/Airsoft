@@ -13,3 +13,4 @@ Parking lot for future features. Do not implement unless asked.
 - **Bang-bang surrender**: tag out an unaware enemy within ~3 m without shooting. (Deferred to a later update; see also the surrender rule above.)
 - **End-of-match summary** (hits, accuracy, times hit) and a **who-hit-you view** after being hit.
 - **Depot variations**: alternative cover layouts and a dusk lighting option.
+- **Vaulting** over low obstacles (owner idea, 2026-10-01): parked until the M11 Depot rework, which may add a few 0.7–0.9 m obstacles designed for it (see ROADMAP).

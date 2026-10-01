@@ -18,7 +18,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done; `v0.1-alpha.2` ready for the owner's playtest and tag. Phase 3 (M7) next. |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done; `v0.1-alpha.2` ready for the owner's playtest and tag. Phase 3: M7a done, M7b (leaning) next. |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -41,7 +41,7 @@ tagged (owner, 2026-10-01): playtests in between are plain commits.
 | `v0.1-alpha` | 2026-09-30 | Phase 1, the playable single-player slice | `v0.1-alpha` |
 | (playtest) | 2026-09-30 | Phase 2 M1–M3, for the owner's playtest (commit d8c4568) | was `v0.1-alpha.2a`; removed after `v0.1-alpha.2` |
 | (checkpoint) | 2026-10-01 | Phase 2 M1–M4b (commit 08b37e3) | was `v0.1-alpha.2b`; removed after `v0.1-alpha.2` |
-| `v0.1-alpha.2` | (M6) | Phase 2 complete: Elimination and Attack / Defend on Depot | `v0.1-alpha.2` (the owner tags it) |
+| `v0.1-alpha.2` | 2026-10-01 | Phase 2 complete: Elimination and Attack / Defend on Depot | `v0.1-alpha.2` |
 
 ## What v0.1 is (owner decision, 2026-10-01)
 
@@ -77,11 +77,13 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 2 · M4a Difficulty levels, close-range lethality | Done | 8.7 |
 | Alpha · Phase 2 · M4b Crouch-peeking, team movement, varied routes, walking | Done | 8.2 |
 | Alpha · Phase 2 · M5 Objective mode: Attack / Defend | Done | 8.4 |
-| Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | Bug pass done; ready for the owner's playtest and tag | |
-| Alpha · Phase 3 · M7 Magazines and reloads | To do | |
-| Alpha · Phase 3 · M8 BB physics pass | To do | |
-| Alpha · Phase 3 · M9 Movement and positioning | To do | |
-| Alpha · Phase 3 · M10 Depot rework | To do | |
+| Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | Done (tagged; owner playtesting) | |
+| Alpha · Phase 3 · M7a Controls for leaning (swap key removed; Q / E free) | Done (small change, no critic) | |
+| Alpha · Phase 3 · M7b Leaning (peek left / right) | **Next** | |
+| Alpha · Phase 3 · M8 Magazines and reloads | To do | |
+| Alpha · Phase 3 · M9 BB physics pass | To do | |
+| Alpha · Phase 3 · M10 Movement and positioning | To do | |
+| Alpha · Phase 3 · M11 Depot rework | To do | |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | To do | |
 | Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
@@ -120,14 +122,30 @@ bots, 3v3 rounds to 5, and a minimal HUD.
 These systems shape how every later replica, mode and field plays, so they come before any new
 content. The game keeps the AEG and the gas pistol.
 
-- **M7. Magazines and reloads** (limited ammunition, meaningful reloads)
+- **M7. Leaning: peek left / right** (owner request after the v0.1-alpha.2 playtest)
+  - **M7a (done):** the "switch replica" key (Q) is removed, so Q and E are free. You switch replicas
+    with 1, 2 or the mouse wheel.
+  - **M7b (next):** hold Q / E to lean left / right and see around cover and corners without stepping
+    out (hold, not toggle). The design:
+    - The upper body pivots at the hips by up to about 34°, so the eyes move about 0.4 m sideways and
+      drop a little. It eases in over about 0.18 s and works crouched too, for leaning around crouch cover.
+    - The lean stops short of walls: rays from the upright eye and shoulder decide how far you can go,
+      so you can never see or shoot through geometry.
+    - BBs leave from the leaned eye, and the hit volume follows the lean: the head and a shoulder
+      shape shift sideways while the legs stay put, so only what pokes out can be hit.
+    - While leaning you move at walking pace (quiet) and can't sprint; there's no leaning in the air.
+    - The camera shifts and rolls; other players' figures tilt from the hips, matching the hit volume
+      (tested).
+    - Bots see and aim at where a leaning player's head and shoulder actually are. Bots leaning
+      themselves comes in M10.
+- **M8. Magazines and reloads** (limited ammunition, meaningful reloads)
   - Each replica carries a set number of magazines per round, instead of today's pooled reserve count.
   - A reload swaps in the next magazine. The old one goes back in the pouch with whatever is left in it,
     so there is no topping up, and partly used mags come round again.
   - Running dry is a real risk: there is no refill during a round (resupply is a later idea for respawn modes).
   - The HUD shows your magazines and how full each one is.
   - Bots count their magazines and reload from cover.
-- **M8. BB physics pass**
+- **M9. BB physics pass**
   - Reassess travel time, drop and hop-up against real airsoft behaviour, keeping the game readable.
   - Each replica has its own muzzle velocity.
   - BB weight (e.g. 0.20 g or 0.25 g) becomes a real parameter of the flight model: it changes speed,
@@ -137,20 +155,21 @@ content. The game keeps the AEG and the gas pistol.
   - Deferred: wind (it comes with outdoor fields), and player options for BB weight and tracers (they
     come with loadouts).
   - The ballistics stay pure and unit-tested.
-- **M9. Movement and positioning**
+- **M10. Movement and positioning**
   - Make position and movement count for more than replica stats.
   - Accuracy depends on movement and stance: standing still and crouching are steady; running,
     jumping and just after sprinting are not.
   - Peeking and holding angles behind cover should be rewarding.
   - Bots play by the same rules.
-  - New movement systems, such as leaning around corners, are to be confirmed with the owner when this
-    milestone starts.
-- **M10. Depot rework** to the field checklist
+  - Bots learn to lean (M7b gives the player leaning) and to peek full-height corners with it.
+- **M11. Depot rework** to the field checklist
   - Purpose-built airsoft barricades (walls with shooting ports).
   - Buildings with windows and doorways: today it's one office block, so add at least one more structure.
   - Deliberate choke points and flanking routes.
   - Objective locations: the poles, plus spots that later modes can use.
   - Clear dead zones and spawn areas.
+  - Consider a few genuinely low obstacles (about 0.7–0.9 m: pallets, low walls) designed for **vaulting**
+    (owner idea; parked until here, with bots taught to use them). Today's 1.2 m crouch cover stays unclimbable.
   - Depot stays mirror-symmetric and keeps its identity.
   - Layout tests are extended to the checklist; bot lanes and poles are updated.
 - **Bug pass** → the owner playtests and tags `v0.1-alpha.3`.
@@ -221,7 +240,7 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
     protection and boots. Gear decides what you carry, e.g. how many magazines.
 - **Chrono before a match:** check your loadout's muzzle velocity, and pick the BB weight and tracers.
 - **A practice range** to try replicas and loadouts.
-- **Suppressors** with their own sound, built on the M8 groundwork.
+- **Suppressors** with their own sound, built on the M9 groundwork.
 
 ### Proposed v0.4: More fields
 

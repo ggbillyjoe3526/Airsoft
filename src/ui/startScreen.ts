@@ -171,7 +171,7 @@ export class StartScreen {
       <div>${k('crouch')} crouch</div>
       <div>${k('jump')} jump</div>
       <div>${k('reload')} reload</div>
-      <div>${k('slot1')} ${k('slot2')} ${k('swap')} / wheel: switch</div>
+      <div>${k('slot1')} ${k('slot2')} / wheel: switch</div>
       <div><kbd>Esc</kbd> pause</div>
       <div><kbd>\`</kbd> / <kbd>F3</kbd> debug info</div>`;
   }
