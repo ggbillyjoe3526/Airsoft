@@ -147,8 +147,13 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
 - Git tags use the dotted forms above, always with a dot (e.g. `v0.1-alpha.2`, never `v0.1-alpha-2`). Only full
   releases are tagged (owner, 2026-10-01): no letter checkpoints (`.2a`, `.2b`); the old ones are removed.
   The owner creates tags; don't create, rename or move them unless asked.
+- **Pull requests** (owner, 2026-10-02): every change lands as a pull request that the owner reviews and merges.
+  Work on a new branch made from the latest `main` (one per milestone or batch), push that branch, and open a pull
+  request into `main`. **Never push to `main` and never merge a pull request yourself**, whatever else in this
+  repo says. One pull request may hold several commits.
 - **Branches** (owner, 2026-10-01): `main` holds the latest stable release.
-  - **Now (the v0.1 cycle):** all work is committed and pushed to `main`, and its tagged commits are the releases.
+  - **Now (the v0.1 cycle):** work reaches `main` only when the owner merges its pull request, and the tagged
+    commits on `main` are the releases.
   - **Later (about when v0.1 is done and v0.2 starts; the owner decides when):** day-to-day work happens on an
     `alpha` branch. A build ready for testing is merged into `beta`; once tested, it is merged into `main` and tagged.
     From then on, never push unreleased work to `main`.
@@ -167,7 +172,7 @@ Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do
 
 **At the start of every later session:** read `docs/HANDOFF.md` first, then this file and `docs/`, check the repository state and git log, then continue from where we left off.
 
-**At the end of every session** (or when the owner says usage is running out): rewrite `docs/HANDOFF.md` for the next session (where we are, what's next and any half-made plans, open questions, gotchas; about a screen; replace it, don't append), then commit and push it with the rest.
+**At the end of every session** (or when the owner says usage is running out): rewrite `docs/HANDOFF.md` for the next session (where we are, what's next and any half-made plans, open questions, gotchas; about a screen; replace it, don't append), then commit it on the working branch and push it with the rest, so it is part of the pull request.
 
 **For each substantial change,** state briefly:
 - **Goal:** what it achieves
@@ -177,12 +182,12 @@ Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do
 Then implement, then **verify**: run the type checker, tests, and build, and report what changed, what was tested, what passed, what failed, and what's incomplete. Never claim something works if you haven't verified it. For things you can't verify yourself (how it feels to play), tell me exactly what to test in the browser.
 
 **Context hygiene** (owner, 2026-10-02; the context window fills up fast on long sessions):
-- **One milestone per session.** After a milestone is accepted, committed and pushed, rewrite `docs/HANDOFF.md`, push, and tell the owner it's a good point to start a fresh session.
+- **One milestone per session.** After a milestone is accepted and committed on its branch, rewrite `docs/HANDOFF.md` on the same branch, push, open the pull request (or update it), and tell the owner it's ready to review and a good point to start a fresh session.
 - Read files in ranges (grep first, then only the lines you need), and filter command and test output (e.g. only failures and totals).
 - Take screenshots only when you need to see something; prefer reading values with page text or JS.
 - Keep critic reports short (`.claude/agents/critic.md` caps them at ~300 words).
 
-**Design decisions:** if something is unclear, choose a sensible default, note it in `docs/DECISIONS.md` with a one-line reason, and keep going. Stop and ask me only for decisions that are expensive to reverse.
+**Design decisions:** if you're unsure about something, ask me before acting (owner, 2026-10-02). For small details that are easy to change later, choose a sensible default, note it in `docs/DECISIONS.md` with a one-line reason, say which you chose, and keep going.
 
 ## 9. Code Standards
 

@@ -154,7 +154,8 @@ physics pass, movement and positioning, and a reworked Depot. Progress and plans
 `v0.1-alpha.3` …) come first. Beta releases (`v0.1-beta` …) follow once it's feature complete, and **v0.1** is
 the first public release. More modes, maps, replicas, loadouts and customisation come in later versions.
 
-**Branches:** `main` holds the latest stable release (for now, that includes alpha releases). Later, development
+**Branches:** `main` holds the latest stable release (for now, that includes alpha releases). Every change
+arrives as a pull request that the owner reviews and merges. Later, development
 moves to an `alpha` branch and testing to a `beta` branch, and `main` only receives tested releases.
 
 **Not yet:** more maps or replicas, menus beyond the start screen, real art.

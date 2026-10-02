@@ -43,4 +43,5 @@ pushes attackers to 62%), and a friendly-fire margin that should widen with dist
 - **Browser:** `.claude/launch.json` (git-ignored) runs "dev" on port 5173. Open `/?nolock`; `window.airsoft` is the
   Game. Use `find` for the "Click to play" ref. While the pane is hidden, animation frames don't run: call
   `airsoft.combat.frame(0, 0, 0, 0)` to update the HUD by hand.
-- **Git:** commit and push to `main`. Never create or move tags. Commits are unsigned; that's fine.
+- **Git:** work on a new branch from the latest `main`, push it, and open a pull request; the owner reviews and merges
+  it. Never push to `main` or merge a pull request. Never create or move tags. Commits are unsigned; that's fine.
