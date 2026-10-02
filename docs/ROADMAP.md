@@ -7,8 +7,8 @@ v0.1 is the core game with strong foundations, and new content comes in later ve
 **Current focus: alpha.** We build first. Balance, bug fixing, QoL and performance come in beta.
 **Multiplayer is not planned** (owner decision, 2026-09-30). The game is single-player against bots.
 
-Every milestone goes through the critic (CLAUDE.md §12), is committed when accepted, and is pushed to
-GitHub. Move on only when the previous part is fun.
+Every milestone goes through the critic (CLAUDE.md §12), is committed on its own branch when accepted, and is
+opened as a pull request that the owner reviews and merges into `main`. Move on only when the previous part is fun.
 
 ## Versioning
 
@@ -28,8 +28,9 @@ The path:
    progression and team comms (see [After v0.1](#after-v01-later-versions)). Each later version gets its
    own alpha → beta → release cycle. `v0.1.x` releases are for fixes and small changes.
 
-**Branches** (owner, 2026-10-01). `main` holds the latest stable release. During the v0.1 cycle all work is
-committed and pushed to `main`, and its tagged commits are the releases. Later (about when v0.1 is done and
+**Branches** (owner, 2026-10-01). `main` holds the latest stable release. During the v0.1 cycle every change
+lands on `main` as a pull request the owner reviews and merges (owner, 2026-10-02; nothing is pushed to `main`
+directly), and its tagged commits are the releases. Later (about when v0.1 is done and
 v0.2 starts; the owner decides when), work moves to an `alpha` branch: builds ready for testing are merged into
 `beta`, then, once tested, into `main` and tagged.
 
@@ -90,7 +91,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
-Playtests between releases use the latest pushed commit; they are not tagged. Phase 4's
+Playtests between releases use the latest merged commit on `main`; they are not tagged. Phase 4's
 build number is assigned when it's cut.
 
 ## Alpha: building v0.1
