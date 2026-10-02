@@ -154,11 +154,17 @@ export class Sfx {
         this.rope(this.output(e.position), e.raising);
         return;
       case 'roundStart':
-        this.stopWhistles();
-        this.whistle(AUDIO.roundStartWhistle, 0);
-        this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
+        this.roundStartWhistle();
         return;
     }
+  }
+
+  /** The two short blasts that start a round. */
+  roundStartWhistle(): void {
+    if (!this.ctx) return;
+    this.stopWhistles();
+    this.whistle(AUDIO.roundStartWhistle, 0);
+    this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
   }
 
   dispose(): void {

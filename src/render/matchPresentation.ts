@@ -41,6 +41,8 @@ export class MatchPresentation {
   private readonly shownRound = { phase: '', winner: -2, seconds: -1, number: -1, start: false, mode: '' };
   private outLabelFor = Number.NaN;
   private outLabelText = '';
+  /** False while the start/pause screen or the result screen is up: the pole marker stays hidden then. */
+  private playing = false;
 
   constructor(
     scene: THREE.Scene,
@@ -71,6 +73,7 @@ export class MatchPresentation {
   setPlaying(playing: boolean): void {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
+    this.playing = playing;
     if (!playing) this.marker.hide();
   }
 
@@ -149,7 +152,7 @@ export class MatchPresentation {
     const pole = r.flag.position;
     const metres = Math.hypot(pole.x - p.x, pole.z - p.z);
     const near = !spectating && metres <= FLAG_VISUALS.markerHideWithin;
-    if (!this.flag.object.visible || r.phase !== 'live' || near) {
+    if (!this.playing || !this.flag.object.visible || r.phase !== 'live' || near) {
       this.marker.hide();
       return;
     }

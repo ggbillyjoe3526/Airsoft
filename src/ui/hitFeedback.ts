@@ -39,6 +39,9 @@ export class HitFeedback {
     this.out = q('.hitfx-out');
     this.spectating = q('.hitfx-spectating');
     this.round = q('.hitfx-round');
+    // Drop a finished one-shot effect's class: an element coming back from display:none (pause, Play again)
+    // would otherwise replay its animation.
+    for (const el of [this.flash, this.marker]) el.addEventListener('animationend', () => el.classList.remove('show'));
   }
 
   setVisible(visible: boolean): void {

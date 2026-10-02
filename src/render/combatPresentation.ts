@@ -61,6 +61,14 @@ export class CombatPresentation {
     this.sfx.unlock();
   }
 
+  /**
+   * The round-start whistle for the session's first round: round 1 of the first match is set up before audio
+   * is unlocked, so its roundStart event (if any) went unheard.
+   */
+  roundStartWhistle(): void {
+    this.sfx.roundStartWhistle();
+  }
+
   setPlaying(playing: boolean): void {
     this.hud.setVisible(playing);
     this.sfx.setPaused(!playing);
@@ -78,7 +86,8 @@ export class CombatPresentation {
   afterTick(): void {
     this.paths.recordTick();
     for (const e of this.state.events) {
-      if (e.type === 'bbImpact') this.puffs.spawn(e.position);
+      if (e.type === 'roundStart') this.viewmodel.resetSway(); // the view snaps to the spawn yaw
+      else if (e.type === 'bbImpact') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
         if (e.victimId === this.player.id) this.viewmodel.onHit();

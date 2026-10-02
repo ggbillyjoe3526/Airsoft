@@ -94,3 +94,25 @@ describe('Viewmodel weapon switch mid-reload', () => {
     vm.dispose();
   });
 });
+
+describe('Viewmodel sway', () => {
+  it('does not swing the replica when the view is set rather than turned (first frame, a new round)', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    const rig = vm.scene.children.find((o) => o instanceof THREE.Group && o.children.length > 0)!;
+    const dt = 1 / 60;
+    const frame = (yaw: number) => vm.update(dt, yaw, 0, 0, 4.2, false, arm, LOADOUT, false);
+    frame(2.5); // first frame, already facing the spawn yaw
+    const rest = rig.position.x;
+    frame(2.5);
+    expect(rig.position.x).toBeCloseTo(rest, 9);
+    // A new round snaps the view to another spawn yaw.
+    vm.resetSway();
+    frame(-0.5);
+    expect(rig.position.x).toBeCloseTo(rest, 9);
+    // A real turn still sways it.
+    frame(-0.4);
+    expect(Math.abs(rig.position.x - rest)).toBeGreaterThan(1e-3);
+    vm.dispose();
+  });
+});

@@ -249,11 +249,13 @@ export class Game {
   private resume(): void {
     // "Play again" on the result screen: the new match starts only once play really resumes.
     if (this.state.round.phase === 'matchOver') this.restartMatch();
+    const first = !this.started;
     this.started = true;
     this.keyboard.capturing = true;
     this.startScreen.hide();
     this.combat.setPlaying(true);
     this.match.setPlaying(true);
+    if (first) this.combat.roundStartWhistle();
   }
 
   /**

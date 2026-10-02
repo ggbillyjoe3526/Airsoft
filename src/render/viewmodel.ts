@@ -57,6 +57,8 @@ export class Viewmodel {
   private bobPhase = 0;
   private lastYaw = 0;
   private lastPitch = 0;
+  /** The view was set rather than turned (first frame, a new round's spawn yaw): no sway from that jump. */
+  private snapView = true;
   private readonly muzzleView = new THREE.Vector3();
   /** 0 = playing, 1 = hand fully raised calling a hit. */
   private hitBlend = 0;
@@ -91,6 +93,11 @@ export class Viewmodel {
   }
 
   /** You've been hit: the replica jolts in your hands before you lower it to call the hit. */
+  /** The view is about to be set, not turned (a new round): the next update takes it without swaying. */
+  resetSway(): void {
+    this.snapView = true;
+  }
+
   onHit(): void {
     this.kick = VIEWMODEL.kickMax * VIEWMODEL.hitJolt;
   }
@@ -121,6 +128,13 @@ export class Viewmodel {
     const slot = this.slots[armament.active]!;
 
     // Sway: the replica lags behind the view a little, then springs back.
+    if (this.snapView) {
+      this.snapView = false;
+      this.lastYaw = yaw;
+      this.lastPitch = pitch;
+      this.swayX = 0;
+      this.swayY = 0;
+    }
     let dYaw = yaw - this.lastYaw;
     if (dYaw > Math.PI) dYaw -= Math.PI * 2;
     else if (dYaw < -Math.PI) dYaw += Math.PI * 2;
