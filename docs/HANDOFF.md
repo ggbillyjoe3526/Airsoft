@@ -13,7 +13,7 @@ other branches are left on GitHub)._
 - **Phase 3 is built.** M7–M10, the code review pass, the Fable audit fixes (C-01 to C-05, PRs #3–#6, all merged)
   and elevation support are on `main`. Ramp Yard (`src/map/testYard.ts`) is the elevation test map; no shipped
   map uses elevation yet.
-- **Code bug pass done (2026-10-02, critic SCORE):** three reviewers read all of `src/` (sim/physics/config/map,
+- **Code bug pass done (2026-10-02, critic 9.0 on attempt 2):** three reviewers read all of `src/` (sim/physics/config/map,
   AI/nav, and game/render/UI/input/audio, with headless soaks and a Chromium run); 9 bugs fixed with tests (see
   ROADMAP, Phase 3 bug pass). Smaller leftovers went to KNOWN_ISSUES ("Bug pass 2026-10-02").
 - The Attack / Defend balance guard was re-measured over seeds 1–48 (attackers 53%); its ceiling is now 67% because

@@ -94,3 +94,4 @@ Classified as **fix now / document / can wait**.
 | Firing at the very top of the pitch range plus recoil can send a BB a hair past vertical (it goes up and slightly backwards) | can wait | Bug pass 2026-10-02. Harmless in play; clamp the shot pitch if it ever matters. |
 | A semi-auto double-tap's second shot can come one tick (17 ms) early, because the idle cooldown rests at −1 tick | can wait | Bug pass 2026-10-02. The average fire rate is exact. |
 | Audio resumes on Play before the pointer lock is granted, so if Chrome refuses re-lock (~1 s after Esc) the pause screen can play queued sounds | can wait | Bug pass 2026-10-02. Low impact; resume the audio on lock instead. |
+| The bots' aim-wall check compares a 3D distance along the aim with the 2D distance to the target | can wait | Bug pass critic 2026-10-02. Tolerant at half the distance; re-check on M11's ramps and raised floors. |

@@ -159,12 +159,13 @@ export class Sfx {
     }
   }
 
-  /** The two short blasts that start a round. */
-  roundStartWhistle(): void {
-    if (!this.ctx) return;
+  /** The two short blasts that start a round. False if audio isn't unlocked yet (nothing played). */
+  roundStartWhistle(): boolean {
+    if (!this.ctx) return false;
     this.stopWhistles();
     this.whistle(AUDIO.roundStartWhistle, 0);
     this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
+    return true;
   }
 
   dispose(): void {

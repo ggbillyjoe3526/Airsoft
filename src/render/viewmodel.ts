@@ -98,7 +98,6 @@ export class Viewmodel {
   }
 
   /** You've been hit: the replica jolts in your hands before you lower it to call the hit. */
-
   onHit(): void {
     this.kick = VIEWMODEL.kickMax * VIEWMODEL.hitJolt;
   }

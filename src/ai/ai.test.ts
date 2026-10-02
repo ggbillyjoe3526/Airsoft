@@ -14,7 +14,7 @@ import { buildNavGrid, isWalkableAt, type NavGrid } from '../nav/navGrid';
 import { DEPOT } from '../map/depot';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { isInPlay } from '../sim/elimination';
-import type { WorldQuery } from '../sim/armament';
+import { aimDirection, type WorldQuery } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import type { CharacterMover } from '../sim/movement';
@@ -25,10 +25,10 @@ import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
 import type { Bot, BotWorld } from './bot';
-import { reloadBot } from './botCombat';
+import { reloadBot, shootBot } from './botCombat';
 import { BotController } from './botController';
 import { type CoverBlock, type CoverWorld, createCoverSpot, findCover, hidesFrom, lowCoverBlocks, tallCoverBlocks } from './cover';
-import { canSee, lineClear, visiblePart } from './perception';
+import { bodyPoint, canSee, eyeOf, lineClear, visiblePart } from './perception';
 
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
@@ -698,6 +698,38 @@ describe('bot suppression', () => {
     state.events.push({ type: 'bbImpact', position: near, ownerId: 0 }); // the enemy player
     bots.observe(state);
     expect(b.suppressedAt).toBe(state.time);
+  });
+});
+
+describe('bot line of fire', () => {
+  it('holds fire when its actual aim (aim error included) would put the BB into a wall right beside it', () => {
+    // A thin door-frame post 4 m long just beside the straight line from the bot (z = -14) to the player (the
+    // origin): sight to the player is clear, but an aim drifting that way runs into it.
+    const { state, bot, player, bots } = duel(14, () => {}, boxQuery(0.12, -12, 0.05, 2, 3));
+    const b = bots.bots[0]!;
+    const w = (bots as unknown as { world: BotWorld }).world;
+    b.targetVisible = true;
+    b.contact = { seenAt: state.time, acquiredAt: 0, reactAt: 0 };
+    w.live = true;
+    w.time = state.time;
+    const eye = eyeOf(bot, BODY, HITS, vec3());
+    const aimPoint = bodyPoint(player, HITS, BOTS.aimHeightFraction, vec3());
+    const straightYaw = Math.atan2(-(aimPoint.x - eye.x), -(aimPoint.z - eye.z));
+    const pitch = Math.atan2(aimPoint.y - eye.y, Math.hypot(aimPoint.x - eye.x, aimPoint.z - eye.z));
+    const fires = (yaw: number): boolean => {
+      const cmd = createCommand();
+      b.aim.yaw = yaw;
+      b.aim.pitch = pitch;
+      b.burstLeft = 0;
+      b.pauseLeft = 0;
+      shootBot(b, w, player, eye, aimPoint, 0, cmd, DT);
+      return cmd.fire;
+    };
+    expect(fires(straightYaw)).toBe(true);
+    // 1.5° off is well inside the fire cone; one way it runs into the post 2-4 m out, the other way it's clear.
+    const towardsPost = aimDirection(vec3(), straightYaw + 1.5 * DEG, pitch).x > 0 ? 1.5 * DEG : -1.5 * DEG;
+    expect(fires(straightYaw - towardsPost)).toBe(true);
+    expect(fires(straightYaw + towardsPost)).toBe(false);
   });
 });
 

@@ -68,10 +68,7 @@ export class CombatPresentation {
     this.hud.setVisible(playing);
     this.sfx.setPaused(!playing);
     this.playing = playing;
-    if (playing && this.startWhistleOwed) {
-      this.startWhistleOwed = false;
-      this.sfx.roundStartWhistle();
-    }
+    if (playing && this.startWhistleOwed) this.startWhistleOwed = !this.sfx.roundStartWhistle();
   }
 
   toggleBbPaths(): void {
