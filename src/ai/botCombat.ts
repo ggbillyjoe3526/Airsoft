@@ -1,4 +1,5 @@
 import { canReload } from '../sim/armament';
+import { muzzleVelocity } from '../config/replicas';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
@@ -28,7 +29,7 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // Aim at the part of the body it can see, leading the target by part of the BB's flight time.
     bodyPoint(target, w.hits, b.targetPart, aimPoint);
     const dist = Math.hypot(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
-    const flight = dist / w.loadout[0]!.muzzleVelocity;
+    const flight = dist / muzzleVelocity(w.loadout[0]!);
     aimPoint.x += target.velocity.x * flight * cfg.leadFactor;
     aimPoint.z += target.velocity.z * flight * cfg.leadFactor;
     lookAngles(eye.x, eye.y, eye.z, aimPoint.x, aimPoint.y, aimPoint.z, look);
@@ -57,7 +58,7 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
 function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number): boolean {
   const me = b.character;
   // A teammate on the move can run into the BBs' path while they fly: check where they'll be too.
-  const flight = dist / w.loadout[0]!.muzzleVelocity;
+  const flight = dist / muzzleVelocity(w.loadout[0]!);
   for (const mate of w.characters) {
     if (mate === me || mate.team !== me.team || !isInPlay(mate)) continue;
     const v = mateVolume;

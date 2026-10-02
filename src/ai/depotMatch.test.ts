@@ -181,8 +181,8 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
       }
       if (stats.maxFlag >= 1) flagsRaised++;
     }
-    // Measured when written (5 s raise, 2 retakers, bots minding moving teammates; 16 seeds): 12 captures
-    // in 119 rounds, a flag raised in 7 of 16 matches, attackers winning 50%, 1 friendly hit. Bots check
+    // Measured (5 s raise, 2 retakers, bots minding moving teammates, M9 BB physics; 16 seeds): 12 captures
+    // in 123 rounds, a flag raised in 7 of 16 matches, attackers winning 45%, no friendly hits. Bots check
     // their line of fire, but a teammate dodging into a BB already in the air can't always be helped
     // (KNOWN_ISSUES). Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);

@@ -176,6 +176,12 @@ Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do
 
 Then implement, then **verify**: run the type checker, tests, and build, and report what changed, what was tested, what passed, what failed, and what's incomplete. Never claim something works if you haven't verified it. For things you can't verify yourself (how it feels to play), tell me exactly what to test in the browser.
 
+**Context hygiene** (owner, 2026-10-02; the context window fills up fast on long sessions):
+- **One milestone per session.** After a milestone is accepted, committed and pushed, rewrite `docs/HANDOFF.md`, push, and tell the owner it's a good point to start a fresh session.
+- Read files in ranges (grep first, then only the lines you need), and filter command and test output (e.g. only failures and totals).
+- Take screenshots only when you need to see something; prefer reading values with page text or JS.
+- Keep critic reports short (`.claude/agents/critic.md` caps them at ~300 words).
+
 **Design decisions:** if something is unclear, choose a sensible default, note it in `docs/DECISIONS.md` with a one-line reason, and keep going. Stop and ask me only for decisions that are expensive to reverse.
 
 ## 9. Code Standards

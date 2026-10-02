@@ -52,3 +52,5 @@ Browser tests for the human: ...
 ```
 
 Thresholds: < 7.0 Restart, 7.0–8.4 Rework, 8.5–10 Accept (max 3 attempts). Cite file paths and line numbers for every issue.
+
+**Keep the report to about 300 words** (owner, 2026-10-02: your report lands in the main session's context window). Do all the checking you need, but report only: the format above, at most 5 top issues (one or two lines each, with file:line), the must-fixes, and at most 6 short browser tests. No preamble, no "what was verified" recap beyond one line, no repeating the brief back.

@@ -92,6 +92,11 @@ export const AUDIO = {
   /** Match over: this many more long blasts after the round's, each this many blast-lengths apart. */
   matchOverBlasts: 3,
   matchOverWhistleGap: 1.3,
+  /**
+   * A suppressed replica's shots: its usual sound, low-passed and turned down (ReplicaLook.suppressed). No
+   * replica has a suppressor yet; muzzle devices come with loadouts (after v0.1).
+   */
+  suppressed: { lowpassHz: 1400, volume: 0.45 },
   /** Reload pressed with no fuller magazine: a dull pat on the pouch (your own sound only). */
   reloadRefused: { hz: 600, q: 1, gain: 0.5, attack: 0.002, time: 0.06 },
   /**

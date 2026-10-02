@@ -15,6 +15,8 @@ export interface BB {
   age: number;
   /** Hop-up strength of the replica that fired it (see ReplicaConfig.hopUp). */
   hopUp: number;
+  /** BB mass (kg): drag, hop-up lift and how long the spin lasts all depend on it. */
+  mass: number;
 }
 
 export interface BBPool {
@@ -36,13 +38,19 @@ export function createBBPool(size: number): BBPool {
       velocity: vec3(),
       age: 0,
       hopUp: 0,
+      mass: 0,
     });
   }
   return { bbs, nextSerial: 1, cursor: 0 };
 }
 
-/** Fires a BB from `origin` along the unit vector `dir`. Reuses a free slot, else the oldest BB. */
-export function spawnBB(pool: BBPool, ownerId: number, origin: Vec3, dir: Vec3, speed: number, hopUp: number): BB {
+/**
+ * Fires a BB of `mass` kg from `origin` along the unit vector `dir` at `speed`. Reuses a free slot, else
+ * the oldest BB.
+ */
+export function spawnBB(pool: BBPool, ownerId: number, origin: Vec3, dir: Vec3, speed: number, hopUp: number, mass: number): BB {
+  // Drag, lift and spin all divide by the mass: a missing or zero mass would fill the flight with NaN.
+  if (!(mass > 0)) throw new Error(`BB mass must be positive (kg), got ${mass}`);
   let bb = pool.bbs.find((b) => !b.active);
   if (!bb) {
     bb = pool.bbs[pool.cursor]!;
@@ -59,6 +67,7 @@ export function spawnBB(pool: BBPool, ownerId: number, origin: Vec3, dir: Vec3, 
   bb.velocity.z = dir.z * speed;
   bb.age = 0;
   bb.hopUp = hopUp;
+  bb.mass = mass;
   return bb;
 }
 
@@ -67,21 +76,25 @@ const SUBSTEPS = 2;
 
 /**
  * Advances a BB's flight by `dt` (no collision). Pure: depends only on the BB and config.
- * Acceleration = gravity + quadratic drag + hop-up lift, where lift acts perpendicular to the
- * velocity, in the vertical plane, with magnitude hopUp · speed · spin and spin = exp(-age/decay).
+ * Acceleration = gravity + quadratic drag (dragArea / mass · speed²) + hop-up lift, where lift acts
+ * perpendicular to the velocity, in the vertical plane, with magnitude hopUp · (referenceMass / mass) ·
+ * speed · spin and spin = exp(-age / (spinDecayTime · mass / referenceMass)).
  */
 export function stepBBFlight(bb: BB, cfg: BallisticsConfig, dt: number): void {
   const h = dt / SUBSTEPS;
   const v = bb.velocity;
+  const drag = cfg.dragArea / bb.mass;
+  const hop = (bb.hopUp * cfg.referenceMass) / bb.mass;
+  const spinDecay = (cfg.spinDecayTime * bb.mass) / cfg.referenceMass;
   for (let s = 0; s < SUBSTEPS; s++) {
     const speed = Math.hypot(v.x, v.y, v.z);
     let ax = 0;
     let ay = -cfg.gravity;
     let az = 0;
     if (speed > 1e-6) {
-      ax -= cfg.drag * speed * v.x;
-      ay -= cfg.drag * speed * v.y;
-      az -= cfg.drag * speed * v.z;
+      ax -= drag * speed * v.x;
+      ay -= drag * speed * v.y;
+      az -= drag * speed * v.z;
       // Lift direction: world up with the along-velocity component removed.
       const along = v.y / speed;
       let lx = -along * (v.x / speed);
@@ -89,7 +102,7 @@ export function stepBBFlight(bb: BB, cfg: BallisticsConfig, dt: number): void {
       let lz = -along * (v.z / speed);
       const len = Math.hypot(lx, ly, lz);
       if (len > 1e-6) {
-        const lift = (bb.hopUp * speed * Math.exp(-bb.age / cfg.spinDecayTime)) / len;
+        const lift = (hop * speed * Math.exp(-bb.age / spinDecay)) / len;
         lx *= lift;
         ly *= lift;
         lz *= lift;

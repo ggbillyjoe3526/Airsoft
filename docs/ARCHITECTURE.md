@@ -14,7 +14,7 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 
 - **sim/**: all gameplay rules. Plain data (`GameState`, `Character`, the BB pool), no Three.js, no DOM, no `Math.random`.
   Each tick: move characters, handle replicas (`armament.ts`: fire, switch, reload by magazine swap; spawns BBs), then fly BBs
-  (`ballistics.ts` flight model, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
+  (`ballistics.ts` flight model: gravity, drag and hop-up lift by BB mass; replicas are rated in joules and BB weight, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
   characters via `hitbox.ts` capsules), then match flow (`round.ts`: the match mode, round clock, wipe-out or time-out, score, first to
 `winsNeeded`, `restartMatch(mode)`; in Attack / Defend also who attacks (swapping at half-time) and the pole, stepped by
 `flag.ts`: attackers in play at the pole raise the flag, defenders pull it down, both hold it still; a raised flag

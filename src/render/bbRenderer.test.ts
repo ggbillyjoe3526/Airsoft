@@ -25,7 +25,7 @@ describe('BBRenderer', () => {
   it('draws an own BB at the muzzle, then exactly on its path once it has converged', () => {
     const pool = createBBPool(2);
     const r = new BBRenderer(pool, DT);
-    const bb = spawnBB(pool, 0, vec3(0, 1.6, 0), vec3(0, 0, -1), 88, 0);
+    const bb = spawnBB(pool, 0, vec3(0, 1.6, 0), vec3(0, 0, -1), 88, 0, 0.25e-3);
     stepBBFlight(bb, BALLISTICS, DT); // as in the game: presentation sees the BB after its first tick
     r.startFromMuzzle(bb, { x: 0.2, y: 1.4, z: -0.5 }, Number.POSITIVE_INFINITY);
     r.update(0, eye);
@@ -40,7 +40,7 @@ describe('BBRenderer', () => {
   it('finishes the muzzle blend before a close wall, so the BB arrives where it hits', () => {
     const pool = createBBPool(2);
     const r = new BBRenderer(pool, DT);
-    const bb = spawnBB(pool, 0, vec3(0, 1.6, 0), vec3(0, 0, -1), 88, 0);
+    const bb = spawnBB(pool, 0, vec3(0, 1.6, 0), vec3(0, 0, -1), 88, 0, 0.25e-3);
     stepBBFlight(bb, BALLISTICS, DT);
     const flight = 4.4 / 88; // a wall 4.4 m away: 0.05 s, much shorter than muzzleConvergeTime
     r.startFromMuzzle(bb, { x: 0.2, y: 1.4, z: -0.5 }, flight);
@@ -54,8 +54,8 @@ describe('BBRenderer', () => {
   it('keeps far BBs at least the minimum angular size', () => {
     const pool = createBBPool(2);
     const r = new BBRenderer(pool, DT);
-    spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0);
-    spawnBB(pool, 1, vec3(0, 1.6, -1), vec3(0, 0, -1), 88, 0);
+    spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    spawnBB(pool, 1, vec3(0, 1.6, -1), vec3(0, 0, -1), 88, 0, 0.25e-3);
     r.update(0, eye);
     const far = drawn(r, 0);
     expect((far.scale * BB_VISUALS.radius) / 30).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);

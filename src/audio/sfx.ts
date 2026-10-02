@@ -26,11 +26,16 @@ export class Sfx {
   /** Where the listener is (for distance culling of quiet sounds). */
   private readonly listener = { x: 0, y: 0, z: 0 };
   private readonly shotSounds = new Map<string, ReplicaModelKind>();
+  /** Replicas whose shots go through a suppressor (quieter, duller). */
+  private readonly suppressed = new Set<string>();
   /** Whistle oscillators still playing or scheduled (a new round silences them). */
   private readonly whistles: OscillatorNode[] = [];
 
   constructor(loadout: readonly ReplicaConfig[]) {
-    for (const r of loadout) this.shotSounds.set(r.id, r.look.shotSound);
+    for (const r of loadout) {
+      this.shotSounds.set(r.id, r.look.shotSound);
+      if (r.look.suppressed) this.suppressed.add(r.id);
+    }
   }
 
   /** Pauses all sound with the game (and resumes it). */
@@ -93,7 +98,8 @@ export class Sfx {
     if (!this.ctx || !this.master) return;
     switch (e.type) {
       case 'shot': {
-        const out = this.output(e.characterId === localId ? null : e.position);
+        let out = this.output(e.characterId === localId ? null : e.position);
+        if (this.suppressed.has(e.replicaId)) out = this.muffled(out);
         if (this.shotSounds.get(e.replicaId) === 'pistol') this.pistolShot(out);
         else this.aegShot(out);
         return;
@@ -301,6 +307,19 @@ export class Sfx {
       for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** r.decayPower;
     }
     return buf;
+  }
+
+  /** A suppressed shot: the same recipe through a low-pass filter and turned down, then on to `out`. */
+  private muffled(out: AudioNode): AudioNode {
+    const ctx = this.ctx!;
+    const s = AUDIO.suppressed;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = s.lowpassHz;
+    const g = ctx.createGain();
+    g.gain.value = s.volume;
+    filter.connect(g).connect(out);
+    return filter;
   }
 
   /** Where an in-world sound goes: centred (null = your own), or through a 3D panner at `at`. */

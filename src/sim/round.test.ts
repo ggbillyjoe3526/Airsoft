@@ -69,7 +69,7 @@ describe('round flow', () => {
     expect(cs[0]!.status).toBe('out');
 
     const bbs = createBBPool(2);
-    spawnBB(bbs, 0, vec3(), vec3(0, 0, -1), 80, 0);
+    spawnBB(bbs, 0, vec3(), vec3(0, 0, -1), 80, 0, 0.25e-3);
     const restart: GameEvent[] = [];
     restartMatch(round, cs, bbs, CTX, restart, 'elimination');
     expect(restart).toContainEqual({ type: 'roundStart', round: 1 });

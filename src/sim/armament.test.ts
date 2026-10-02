@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
-import { AEG, GAS_PISTOL, LOADOUT, RECOIL } from '../config/replicas';
+import { AEG, GAS_PISTOL, LOADOUT, muzzleVelocity, RECOIL } from '../config/replicas';
 import { type ArmamentContext, createArmament, type Muzzle, nextSpare, stepArmament, type WorldQuery } from './armament';
 import { createBBPool } from './ballistics';
 import { createCommand, type PlayerCommand } from './commands';
@@ -173,9 +173,27 @@ describe('replica handling', () => {
     const bb = ctx.bbs.bbs.find((b) => b.active)!;
     expect(bb.ownerId).toBe(1);
     const speed = Math.hypot(bb.velocity.x, bb.velocity.y, bb.velocity.z);
-    expect(speed).toBeCloseTo(AEG.muzzleVelocity, 6);
+    expect(speed).toBeCloseTo(muzzleVelocity(AEG), 6);
     expect(bb.velocity.z).toBeLessThan(-0.99 * speed); // yaw 0 aims down -Z
     expect(Math.hypot(bb.position.x, bb.position.y - 1.6, bb.position.z)).toBeCloseTo(0, 6);
+  });
+
+  it('fires each replica’s own BBs: the pistol’s lighter, slower 0.20 g BBs, the AEG’s 0.25 g', () => {
+    const { ctx, a, run } = setup();
+    run(1, (c) => (c.fire = true));
+    const rifleBB = ctx.bbs.bbs.find((b) => b.active)!;
+    expect(rifleBB.mass).toBeCloseTo(0.00025, 9);
+    expect(rifleBB.hopUp).toBe(AEG.hopUp);
+    run(1, (c) => (c.fire = false));
+    run(1, (c) => (c.switchTo = 1));
+    run(Math.ceil(GAS_PISTOL.drawTime / DT) + 1);
+    expect(a.active).toBe(1);
+    const before = ctx.bbs.nextSerial;
+    run(1, (c) => (c.fire = true));
+    const pistolBB = ctx.bbs.bbs.find((b) => b.active && b.serial >= before)!;
+    expect(pistolBB.mass).toBeCloseTo(0.0002, 9);
+    expect(pistolBB.hopUp).toBe(GAS_PISTOL.hopUp);
+    expect(Math.hypot(pistolBB.velocity.x, pistolBB.velocity.y, pistolBB.velocity.z)).toBeCloseTo(72, 0);
   });
 
   it('spreads shots around the aim point by roughly the configured amount, deterministically', () => {

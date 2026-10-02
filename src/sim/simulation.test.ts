@@ -306,7 +306,7 @@ describe('hit calling and round flow', () => {
     state.characters.push(blue, mate, orange);
     const ctx = testContext(floor, KILL_Y);
     // A BB already on its way to the teammate when Orange is eliminated.
-    spawnBB(state.bbs, 0, vec3(0, 1.2, -1), vec3(0, 0, -1), 88, 0);
+    spawnBB(state.bbs, 0, vec3(0, 1.2, -1), vec3(0, 0, -1), 88, 0, 0.25e-3);
     eliminate(orange, 0, state.characters, openFieldElimination(DEAD_ZONES));
     stepSimulation(state, new Map(), ctx, DT);
     expect(state.round.phase).toBe('over');

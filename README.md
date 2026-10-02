@@ -101,7 +101,9 @@ Then open **http://localhost:4173**.
     A mode picked mid-match starts with the next match.
 - **One hit = out.** When a BB hits you, you hear a sharp "tick", see where it came from, raise your hand
   and walk off to the dead zone. While out, you watch your teammates (click to switch).
-- **BBs are real projectiles:** they take time to fly and drop at range, so lead moving targets.
+- **BBs are real projectiles:** they take time to fly (about half a second across the map), slow down and drop at
+  range, so lead moving targets and aim a little high far away. The AEG shoots heavier 0.25 g BBs at about a joule;
+  the gas pistol lighter 0.20 g BBs, slower, so it drops off sooner.
 - **Magazines are limited:** each replica carries a few magazines a round. A reload swaps in your fullest spare and
   the old one goes back in the pouch with whatever is left in it, so reloading early has a cost. The small
   gauges next to your BB count show each spare magazine (the yellow one is next); nothing refills until the next

@@ -17,7 +17,6 @@ Classified as **fix now / document / can wait**.
 | Pistol glove fingers look thick; the pistol armband is off screen | can wait | Slim the finger radii / proportions in handModels.ts during the art pass. |
 | An impact puff is only ~28% of full size in its first frame | can wait | Consider starting puffs at ~50% scale so a close-range hit doesn't show a near-empty frame. |
 | The BB path and near puffs sit on the crosshair's lower arm | can wait | Consider a smaller lower arm or a dot-only crosshair option. |
-| AEG BBs fly nearly flat within Depot's 34 m (hop-up 0.12, spinDecayTime 0.55) | can wait | Tuning: playtest a shorter spinDecayTime so the drop shows within 34 m. |
 | Sound recipe numbers are hardcoded in sfx.ts; one vec3 per shot/impact event; per-tick armCtx; `muzzle` looked up by name per shot; viewmodel `setAspect` every frame; untyped `userData.axis` | can wait | Minor code debt; profile before optimising. |
 | Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing | can wait | Art pass / Phase 2 animations. |
 | Hit volume is round, so from the side it's deeper than the figure (0.4 m vs ~0.28 m chest): a BB ~6 cm in front of the chest counts | can wait | Playtest flank shots; consider a slimmer lower capsule or an elliptical test. |
@@ -70,3 +69,8 @@ Classified as **fix now / document / can wait**.
 | The spare-magazine gauges have no numeric mode | can wait | Phase 4 accessibility settings. |
 | The spare-magazine gauges tell low (orange) and next (yellow outline) apart mostly by colour | can wait | Phase 4 accessibility (colour-blind options). Empty is dashed, so that one doesn't rely on colour. |
 | Reload is refused when no spare is fuller than the loaded magazine (e.g. 30 loaded, spares at 25) | document | Deliberate (no topping up); the HUD notice and a pat sound explain it. Playtest whether players expect a swap anyway. |
+| Bots lead moving targets using the muzzle velocity, not the slower speed a BB has after drag, so they under-lead a little at long range | can wait | Small at Depot's ranges; part of difficulty tuning (beta). |
+| Bots hear suppressed and open shots at the same range | document | No replica is suppressed yet; decide when suppressors arrive (loadouts, after v0.1). |
+| The suppressed-shot sound path (Sfx.muffled) has no test and no replica uses it yet; each suppressed shot creates a filter and gain node | can wait | M9 critic. Verify (and check the nodes are released) when suppressors arrive with loadouts. |
+| Tracer visibility was reviewed on paper only (no per-replica tracer setting) | can wait | M9 critic. Fine with two replicas; give tracers per-replica settings when more platforms arrive. |
+| The Attack / Defend guard test allows 1 bot friendly hit over 16 matches while the latest measurement is 0 | document | Kept as headroom: rare friendly hits are possible (see the friendly-fire row above). |

@@ -1,6 +1,6 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { ReplicaConfig } from '../config/replicas';
-import { RECOIL, TRIGGER } from '../config/replicas';
+import { bbMass, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -212,5 +212,5 @@ function fire(characterId: number, a: Armament, replica: ReplicaConfig, muzzle: 
   // The BB's path starts at the eye: its first step then catches cover right in front of the shooter
   // and anyone standing point-blank (even overlapping the shooter), and it never hits its owner.
   // Presentation draws it leaving the replica's muzzle.
-  spawnBB(ctx.bbs, characterId, muzzle.eye, dir, replica.muzzleVelocity, replica.hopUp);
+  spawnBB(ctx.bbs, characterId, muzzle.eye, dir, muzzleVelocity(replica), replica.hopUp, bbMass(replica));
 }
