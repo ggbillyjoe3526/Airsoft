@@ -177,6 +177,7 @@ npm run preview    # serve dist/ locally
 ```
 
 Dev-only URL flag: `?nolock` plays without pointer lock (for automated browsers; no mouse look).
+Each page load picks a fresh random seed (shown in the debug overlay); `?seed=N` (0 to 4294967295) replays one.
 In development, `window.airsoft` exposes the running game.
 
 ### Layout

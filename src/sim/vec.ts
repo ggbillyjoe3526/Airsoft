@@ -1,6 +1,6 @@
 /**
- * Plain-data 3D vector used by the simulation. Plain objects keep game state serialisable
- * (future netcode). Helpers are added as systems need them.
+ * Plain-data 3D vector used by the simulation. Plain objects keep game state simple to copy, compare
+ * and test. Helpers are added as systems need them.
  */
 export interface Vec3 {
   x: number;

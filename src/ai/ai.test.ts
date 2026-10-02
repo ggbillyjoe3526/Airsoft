@@ -401,6 +401,8 @@ describe('bots in a duel', () => {
     };
     expect(shotsWith(noWalls)).toBe(0);
     expect(shotsWith(boxQuery(0, 1.2, 5, 0.2, 3))).toBeGreaterThan(0);
+    // A low crate there is no wall: BBs can clear its top, so the teammate still counts.
+    expect(shotsWith(boxQuery(0, 1.2, 5, 0.2, 1.2))).toBe(0);
   });
 
   it('play out identically from the same seed', () => {
@@ -698,7 +700,7 @@ describe('difficulty levels', () => {
 
 describe('bot team play and routes', () => {
   /** Orange bots on Depot (no physics needed: planning only). */
-  function depotBots(mode: MatchMode = 'elimination', query: WorldQuery = noWalls) {
+  function depotBots(mode: MatchMode = 'elimination', query: WorldQuery = noWalls, cfg: BotConfig = BOTS) {
     const state = createGameState(4, 64, ROUNDS, mode, DEPOT.flags);
     for (let team = 0; team < 2; team++) {
       for (let i = 0; i < ROUNDS.teamSize; i++) {
@@ -718,7 +720,7 @@ describe('bot team play and routes', () => {
       body: BODY,
       hits: HITS,
       loadout: LOADOUT,
-      cfg: BOTS,
+      cfg,
       seed: 4,
     });
     return { state, bots, nav, commands };
@@ -743,6 +745,28 @@ describe('bot team play and routes', () => {
     }
     expect(plans).toEqual(new Set(['split', 'pair', 'stack']));
     expect(assignments.size).toBeGreaterThan(6);
+  });
+
+  it('serve route requests round-robin, without skipping anyone', () => {
+    // Two searches per tick for three bots that all want one: 0 and 1, then 2 and 0, then 1 and 2.
+    const blind: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // nobody sees anyone
+    const { state, bots } = depotBots('elimination', blind, { ...BOTS, pathsPerTick: 2 });
+    const served: number[][] = [];
+    for (let tick = 0; tick < 3; tick++) {
+      for (const b of bots.bots) {
+        b.routeState = 'wanted';
+        b.routeGoal.x = b.character.position.x;
+        b.routeGoal.z = b.character.position.z;
+        b.holdLeft = 100; // holding still: thinking leaves the route alone
+      }
+      bots.think(state, DT);
+      served.push(bots.bots.flatMap((b, i) => (b.routeState === 'wanted' ? [] : [i])));
+    }
+    expect(served).toEqual([
+      [0, 1],
+      [0, 2],
+      [1, 2],
+    ]);
   });
 
   describe('managing magazines', () => {

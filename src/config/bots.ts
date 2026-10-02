@@ -68,6 +68,14 @@ export const BOT_BEHAVIOUR = {
    * behind the target in the line of fire is as much in the way as one in front.
    */
   friendlyBeyondTarget: 15,
+  /**
+   * ...unless a wall stops the line first. What the aim line meets counts as a wall only if it also stands
+   * this much higher (metres) where the line meets it: BBs (spread, hop-up) can sail over low cover such
+   * as a crate with a teammate crouched behind it, but not over a wall.
+   */
+  friendlyWallClearance: 0.6,
+  /** The raised check looks for the wall from this far (metres) before the point the aim line meets it, to as far past it. */
+  friendlyWallProbe: 0.2,
 
   // ---- Movement and cover -----------------------------------------------------------------------
   /** Pause at each lane point, looking ahead (s). */

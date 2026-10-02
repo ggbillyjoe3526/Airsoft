@@ -1,6 +1,7 @@
 import type { ReplicaConfig } from '../config/replicas';
 import { HUD } from '../config/render';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
+import { isLowAmmo } from './ammoStatus';
 
 /**
  * Minimal in-game HUD: crosshair and the replica panel (name, BBs in the loaded magazine, a gauge per
@@ -27,7 +28,8 @@ export class Hud {
   private shownInPlay = true;
   private readonly crosshair: HTMLDivElement;
   private shownGap = -1;
-  private shown = { name: '', mag: -1, status: '', reloadPct: -1 };
+  /** What is on screen now: the DOM is only written when one of these changes. */
+  private shown = { name: '', mag: -1, low: false, status: '', reloadPct: -1 };
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -73,10 +75,10 @@ export class Hud {
     const ammo = armament.ammo[armament.active]!;
     const s = this.shown;
     if (s.name !== replica.name) this.name.textContent = s.name = replica.name;
-    if (s.mag !== ammo.mag) {
-      this.mag.textContent = String((s.mag = ammo.mag));
-      this.mag.classList.toggle('low', ammo.mag <= Math.ceil(replica.magSize * HUD.lowAmmoFraction));
-    }
+    if (s.mag !== ammo.mag) this.mag.textContent = String((s.mag = ammo.mag));
+    // Compared on its own: switching replicas can change it with the count unchanged.
+    const low = isLowAmmo(ammo.mag, replica.magSize);
+    if (s.low !== low) this.mag.classList.toggle('low', (s.low = low));
     if (this.shownReplica !== replica.id) {
       this.shownReplica = replica.id;
       this.shownFill.length = 0; // different magazines: redraw every gauge
@@ -125,7 +127,7 @@ export class Hud {
       (gauge.firstElementChild as HTMLElement).style.height = `${pct}%`;
       gauge.classList.toggle('empty', pct === 0);
       // Same threshold as the loaded magazine's count turning orange.
-      gauge.classList.toggle('low', ammo.pouch[i]! > 0 && ammo.pouch[i]! <= Math.ceil(magSize * HUD.lowAmmoFraction));
+      gauge.classList.toggle('low', ammo.pouch[i]! > 0 && isLowAmmo(ammo.pouch[i]!, magSize));
     }
     const next = nextSpare(ammo); // the one a reload would take (none if no spare is fuller)
     if (next !== this.shownNext) {

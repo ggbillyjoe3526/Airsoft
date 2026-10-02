@@ -1,4 +1,4 @@
-import { canReload } from '../sim/armament';
+import { aimDirection, canReload } from '../sim/armament';
 import { muzzleVelocity } from '../config/replicas';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
@@ -12,7 +12,8 @@ import { bodyPoint, lineClear } from './perception';
 
 // Scratch, each used only within one call of the function that fills it.
 const look = { yaw: 0, pitch: 0 };
-const aimDir = vec3();
+const aimLine = vec3();
+const raisedPoint = vec3();
 const mateVolume: HitVolume = createHitVolume();
 
 /**
@@ -80,6 +81,34 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
   return false;
 }
 
+/**
+ * True if the bot must hold fire at `aimPoint` (`dist` metres away): cover in the way (sight is refreshed
+ * 10×/s, so the target may have just stepped behind some), or a teammate in the line of fire `dir` (unit),
+ * up to the first wall past the target (a BB that misses flies on, but not through walls).
+ */
+function lineOfFireBlocked(b: Bot, w: BotWorld, eye: Vec3, aimPoint: Vec3, dir: Vec3, dist: number): boolean {
+  if (!lineClear(w.query, eye, aimPoint)) return true;
+  return friendInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist));
+}
+
+/**
+ * How far along `dir` (unit) from `eye` a missed BB can still hit someone: cfg.friendlyBeyondTarget past
+ * the target (`dist` metres away), or less if a wall is in the way. Only a wall: what the line meets must
+ * also stand cfg.friendlyWallClearance higher right there (BBs can sail over the top of low cover).
+ */
+function friendlyReach(w: BotWorld, eye: Vec3, dir: Vec3, dist: number): number {
+  const cfg = w.cfg;
+  const reach = dist + cfg.friendlyBeyondTarget;
+  const hit = w.query.raycastStatic(eye, dir, reach);
+  if (hit < 0) return reach;
+  // Just before the point the line meets, raised: is the same surface there too?
+  const back = Math.min(hit, cfg.friendlyWallProbe);
+  raisedPoint.x = eye.x + dir.x * (hit - back);
+  raisedPoint.y = eye.y + dir.y * (hit - back) + cfg.friendlyWallClearance;
+  raisedPoint.z = eye.z + dir.z * (hit - back);
+  return w.query.raycastStatic(raisedPoint, dir, back + cfg.friendlyWallProbe) >= 0 ? hit : reach;
+}
+
 /** Bursts at the target from `eye` towards `aimPoint` once reacted and on aim, never with a teammate or cover in the way. */
 export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye: Vec3, aimPoint: Vec3, offAim: number, cmd: PlayerCommand, dt: number): void {
   const me = b.character;
@@ -89,17 +118,9 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
     b.pauseLeft = Math.max(0, b.pauseLeft - dt);
     return;
   }
-  const cp = Math.cos(b.aim.pitch);
-  aimDir.x = -Math.sin(b.aim.yaw) * cp;
-  aimDir.y = Math.sin(b.aim.pitch);
-  aimDir.z = -Math.cos(b.aim.yaw) * cp;
+  aimDirection(aimLine, b.aim.yaw, b.aim.pitch);
   const dist = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
-  // Sight is refreshed 10×/s; don't fire into cover the target has just stepped behind.
-  if (!lineClear(w.query, eye, aimPoint)) return;
-  // A BB that misses flies on past the target, but not through the first wall it meets.
-  const reach = dist + cfg.friendlyBeyondTarget;
-  const wall = w.query.raycastStatic(eye, aimDir, reach);
-  if (friendInLine(b, w, eye, aimDir, wall >= 0 ? wall : reach)) return;
+  if (lineOfFireBlocked(b, w, eye, aimPoint, aimLine, dist)) return;
   if (b.burstLeft <= 0 && b.pauseLeft <= 0) b.burstLeft = pick(b.rng, cfg.burst);
   if (b.burstLeft > 0) {
     cmd.fire = true;

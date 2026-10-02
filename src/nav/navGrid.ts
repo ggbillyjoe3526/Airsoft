@@ -174,7 +174,7 @@ export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap
     out.length = 0;
     return false;
   }
-  // Waypoints reuse the objects already in `out`, so re-planning a route allocates nothing.
+  // Waypoints reuse the objects already in `out`, so re-planning a route doesn't allocate new ones.
   let n = 0;
   const emit = (x: number, z: number): void => {
     const p = out[n];

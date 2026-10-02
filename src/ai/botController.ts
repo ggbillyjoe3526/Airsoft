@@ -2,6 +2,7 @@ import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
+import { botSeed, planSeed } from '../core/seed';
 import { cellX, cellZ, createNavSearch, findPath, type NavGrid, type NavSearch } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
@@ -91,7 +92,7 @@ export class BotController {
       { x: ux, z: uz },
       { x: -ux, z: -uz },
     ];
-    this.planRng = createRng((opts.seed * 15485863 + 12345) >>> 0);
+    this.planRng = createRng(planSeed(opts.seed));
 
     this.world = {
       characters: state.characters,
@@ -113,7 +114,7 @@ export class BotController {
     };
     this.search = createNavSearch(nav);
     for (const c of botCharacters) {
-      this.bots.push(createBot(c, (opts.seed * 7919 + c.id * 104729) >>> 0, cfg));
+      this.bots.push(createBot(c, botSeed(opts.seed, c.id), cfg));
       commands.set(c.id, this.commandFor(c.id));
     }
     this.planRound();
@@ -374,11 +375,13 @@ export class BotController {
   private planRoutes(): void {
     let budget = this.world.cfg.pathsPerTick;
     const n = this.bots.length;
+    const start = this.plannerCursor;
     for (let k = 0; k < n && budget > 0; k++) {
-      const b = this.bots[(this.plannerCursor + k) % n]!;
+      const i = (start + k) % n;
+      const b = this.bots[i]!;
       if (b.routeState !== 'wanted') continue;
       budget--;
-      this.plannerCursor = (this.plannerCursor + k + 1) % n;
+      this.plannerCursor = (i + 1) % n; // the next tick starts after the last bot served
       const ok = findPath(this.opts.nav, this.search, b.character.position, b.routeGoal, this.opts.navSnap, b.route);
       b.routeLeg = 0;
       b.stuckFor = 0;

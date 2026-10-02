@@ -193,8 +193,8 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
       }
       if (stats.maxFlag >= 1) flagsRaised++;
     }
-    // Measured (M10: accuracy by stance and movement, bots leaning round corners; 16 seeds): 21 captures in
-    // 119 rounds, a flag raised in 12 of 16 matches, attackers winning 59%, no friendly hits. Bots check
+    // Measured (after the code review pass, 2026-10-02; 16 seeds): 20 captures in 114 rounds, a flag raised
+    // in 13 of 16 matches, attackers winning 56%, one friendly hit. Bots check
     // their line of fire, but a teammate dodging into a BB already in the air can't always be helped
     // (KNOWN_ISSUES). Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);

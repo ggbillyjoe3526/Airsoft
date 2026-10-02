@@ -1,6 +1,6 @@
 # Architecture
 
-## Layers (target shape; ai, audio and the HUD arrive with their Phase 1 features)
+## Layers
 
 ```
 input ──► PlayerCommand ──┐
@@ -23,7 +23,7 @@ ends the round). A hit character is eliminated
   controller's, can't fire and can't be hit. Anything presentation needs
   to react to is pushed to `state.events` (shots, impacts, reloads), cleared every tick.
   Advances only via `stepSimulation(state, commands, ctx, dt)`. Randomness comes from the seedable `state.rng`.
-- **Commands**: every character (player, bot, later remote players) is driven by one `PlayerCommand` per tick,
+- **Commands**: every character (the player and the bots) is driven by one `PlayerCommand` per tick,
   passed to the sim in a Map keyed by character id.
   View angles are absolute, so a lost or duplicated command can't accumulate drift.
 - **physics/**: `PhysicsWorld` implements the sim's `CharacterMover` interface (Rapier kinematic character
@@ -50,6 +50,8 @@ ends the round). A hit character is eliminated
   noises only near the pole, and the two nearest it run to the pole (mode `flag`) once the flag is off the bottom; attackers go to
   the pole once they have walked their lane to midfield, crouch by it and stay. Nobody hunts.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
+- **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
+  streams made from it (the bots' plans, each bot).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input; `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them.

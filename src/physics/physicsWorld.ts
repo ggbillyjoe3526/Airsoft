@@ -59,8 +59,8 @@ export function initPhysics(): Promise<void> {
 }
 
 /**
- * Static level collision + a kinematic character controller. Crouching lowers the eyes (and later
- * the hitbox) but not the movement capsule; Phase 1 maps have no crawl spaces.
+ * Static level collision + a kinematic character controller. Crouching lowers the eyes and the hit
+ * volume but not the movement capsule; Depot has no crawl spaces.
  */
 export class PhysicsWorld implements CharacterMover {
   private readonly world: RAPIER.World;

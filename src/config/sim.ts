@@ -6,8 +6,6 @@ export const SIM = {
   maxTicksPerFrame: 5,
   /** Longest frame (seconds) accepted as real elapsed time; longer gaps (tab switch, breakpoint) are dropped. */
   maxFrameDt: 0.25,
-  /** Seed for the simulation RNG. */
-  seed: 1,
 } as const;
 
 export const SIM_DT = 1 / SIM.tickRate;

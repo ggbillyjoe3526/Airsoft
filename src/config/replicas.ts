@@ -89,7 +89,7 @@ export function muzzleVelocity(r: ReplicaConfig): number {
   return Math.sqrt((2 * r.muzzleEnergy) / bbMass(r));
 }
 
-/** Loadout for Phase 1: slot 0 primary, slot 1 sidearm. */
+/** The loadout everyone carries (v0.1): slot 0 primary, slot 1 sidearm. */
 export const LOADOUT: readonly ReplicaConfig[] = [AEG, GAS_PISTOL];
 
 export const RECOIL = {

@@ -18,7 +18,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines), M9 (BB physics) and M10 (movement and positioning) done; a code review pass, then M11 (Depot rework). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines), M9 (BB physics), M10 (movement and positioning) and a code review pass done; M11 (Depot rework) next. |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -83,7 +83,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · M8 Magazines and reloads | Done | 8.7 |
 | Alpha · Phase 3 · M9 BB physics pass | Done | 8.5 |
 | Alpha · Phase 3 · M10 Movement and positioning | Done (auto-accepted, attempt 4) | 8.4 |
-| Alpha · Phase 3 · Code review pass (owner, 2026-10-02) | **In progress** | |
+| Alpha · Phase 3 · Code review pass (owner, 2026-10-02) | Done (auto-accepted, attempt 4) | 8.4 |
 | Alpha · Phase 3 · M11 Depot rework | To do | |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | To do | |
 | Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |

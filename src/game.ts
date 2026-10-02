@@ -57,6 +57,8 @@ export interface GameOptions {
    * Mouse look is unavailable in this mode; keyboard still works.
    */
   allowUnlocked: boolean;
+  /** Seeds the simulation and the bots (core/seed.ts): the same seed replays the same bot decisions for the same inputs. */
+  seed: number;
 }
 
 /** Composition root: wires simulation, physics, input and presentation together and runs the loop. */
@@ -112,7 +114,7 @@ export class Game {
     this.nav = buildNavGrid(map, NAV);
     // Maps without flagpoles can only be played in elimination.
     this.mode = map.flags ? loadMode() : 'elimination';
-    this.state = createGameState(SIM.seed, BALLISTICS.maxBBs, ROUNDS, this.mode, map.flags);
+    this.state = createGameState(options.seed, BALLISTICS.maxBBs, ROUNDS, this.mode, map.flags);
     this.player = this.spawnRoster(map);
     this.difficulty = createDifficultyChoice(loadDifficulty());
     this.commands.set(PLAYER_ID, this.playerCommand);
@@ -120,7 +122,7 @@ export class Game {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(this.difficulty.inPlay), seed: SIM.seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(this.difficulty.inPlay), seed: options.seed },
     );
     this.ctx = createSimContext({
       mover: this.physics,
@@ -144,11 +146,12 @@ export class Game {
     this.pointer = new PointerLock(this.renderer.canvas);
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     this.input.yaw = this.player.spawnYaw;
-    // Phase 1: the player is always on Blue.
+    // The player is always on Blue.
     this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
     this.match = new MatchPresentation(this.renderer.scene, container, this.renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS.flag);
 
     this.debug = new DebugOverlay(container, () => ({
+      seed: options.seed,
       tick: this.state.tick,
       'sim ticks/s': this.tickRate,
       characters: this.state.characters.length,

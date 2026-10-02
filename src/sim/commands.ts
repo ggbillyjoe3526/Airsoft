@@ -1,6 +1,6 @@
 /**
- * The single input interface for every character. The local player, bots and (later) remote
- * players all drive the simulation exclusively through one PlayerCommand per tick.
+ * The single input interface for every character. The local player and the bots both drive the
+ * simulation exclusively through one PlayerCommand per tick.
  */
 export interface PlayerCommand {
   /** -1..1, forward is positive. Relative to `yaw`. */
