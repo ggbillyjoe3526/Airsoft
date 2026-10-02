@@ -83,7 +83,9 @@ function windowWall(x0: number, x1: number, z0: number, z1: number): MapBlock[] 
 }
 
 function mirrorX(b: MapBlock): MapBlock {
-  return { kind: b.kind, center: vec3(-b.center.x, b.center.y, b.center.z), size: vec3(b.size.x, b.size.y, b.size.z) };
+  const m: MapBlock = { kind: b.kind, center: vec3(-b.center.x, b.center.y, b.center.z), size: vec3(b.size.x, b.size.y, b.size.z) };
+  if (b.rise) m.rise = b.rise === '+x' ? '-x' : b.rise === '-x' ? '+x' : b.rise;
+  return m;
 }
 
 /** West half (Blue side). Mirrored to build the east half. */

@@ -1,13 +1,24 @@
 import type { Vec3 } from '../sim/vec';
 
-/** Visual family of a greybox block. Every kind collides as a solid box. */
-export type BlockKind = 'floor' | 'wall' | 'crate' | 'container' | 'barrier';
+/**
+ * Visual family of a greybox block. Every kind collides as a solid box, except `ramp`: a wedge whose top
+ * slopes up along `rise`. Only the tops of floors and ramps are walkable (see map/surfaces.ts).
+ */
+export type BlockKind = 'floor' | 'ramp' | 'wall' | 'crate' | 'container' | 'barrier';
+
+/** The way a ramp's top goes up: towards +x, -x, +z or -z. */
+export type RampRise = '+x' | '-x' | '+z' | '-z';
 
 /** Axis-aligned block. `center` and `size` are in metres. */
 export interface MapBlock {
   kind: BlockKind;
   center: Vec3;
   size: Vec3;
+  /**
+   * Ramps only (required for them): the top runs from the bottom of the box (`center.y - size.y / 2`) at
+   * the low edge up to its top at the high edge, the edge this points to.
+   */
+  rise?: RampRise;
 }
 
 export interface SpawnPoint {

@@ -86,7 +86,8 @@ ends the round). A hit character is eliminated
 
 ## Map data
 
-Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind, spawns and dead-zone spots
+Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind (a `ramp` is a wedge sloping up
+along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramps), spawns and dead-zone spots
 per team, bot lanes, and optionally a flagpole spot per team (the pole that team defends; maps without one are
 elimination only). The same data builds Rapier colliders and merged Three.js meshes
 (one draw call per surface texture).
