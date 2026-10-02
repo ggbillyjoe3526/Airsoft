@@ -65,6 +65,11 @@ export interface AccuracyConfig {
   sprint: number;
   /** Off the ground (jumping, falling); the shake carries into the landing. */
   air: number;
+  /**
+   * Seconds off the ground before `air` applies (a jump applies it at once). A brief loss of ground contact
+   * (a step down, a bump in the floor) then never flashes the spread wide.
+   */
+  airSpreadDelay: number;
   /** Multiplier for being fully crouched (applied on top of the movement one). */
   crouched: number;
   /** Seconds for the multiplier to settle back (time constant) once the cause stops. */
@@ -108,6 +113,7 @@ export const MOVEMENT: MovementConfig = {
     run: 2.6,
     sprint: 3.5,
     air: 4.5,
+    airSpreadDelay: 0.1,
     crouched: 0.65,
     settleTime: 0.15,
   },

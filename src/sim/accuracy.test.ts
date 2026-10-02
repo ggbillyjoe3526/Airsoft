@@ -39,6 +39,7 @@ describe('accuracy by stance and movement', () => {
   it('is worst in the air and while sprinting', () => {
     const air = at(MOVEMENT.runSpeed);
     air.grounded = false;
+    air.airTime = A.airSpreadDelay;
     expect(targetSpreadScale(air, MOVEMENT)).toBe(A.air);
     const sprint = at(MOVEMENT.sprintSpeed);
     sprint.sprinting = true;
@@ -73,10 +74,53 @@ describe('accuracy by stance and movement', () => {
   it('settles after a landing too', () => {
     const c = at();
     c.grounded = false;
+    c.airTime = A.airSpreadDelay; // as a jump leaves it (sim/movement.ts)
     stepAccuracy(c, MOVEMENT, DT);
     expect(c.spreadScale).toBe(A.air);
     c.grounded = true;
     stepAccuracy(c, MOVEMENT, DT);
     expect(c.spreadScale).toBeGreaterThan(A.run); // the landing tick is still very shaky
+  });
+
+  describe('a brief loss of ground contact', () => {
+    /** Ticks off the ground (from standing still) that add up to at least `seconds`. */
+    const ticksFor = (seconds: number) => Math.ceil(seconds / DT - 1e-9);
+
+    it('leaves the spread alone for one tick off the ground', () => {
+      const c = at();
+      stepAccuracy(c, MOVEMENT, DT);
+      c.grounded = false;
+      stepAccuracy(c, MOVEMENT, DT);
+      expect(c.spreadScale).toBe(1);
+      expect(c.airTime).toBeCloseTo(DT, 9);
+    });
+
+    it('applies the in-air spread once the character has been off the ground for airSpreadDelay', () => {
+      const c = at();
+      c.grounded = false;
+      const n = ticksFor(A.airSpreadDelay);
+      for (let i = 0; i < n - 1; i++) stepAccuracy(c, MOVEMENT, DT);
+      expect(c.spreadScale).toBe(1);
+      for (let i = 0; i < 2; i++) stepAccuracy(c, MOVEMENT, DT); // n + 1 ticks: past the delay whatever the rounding
+      expect(c.spreadScale).toBe(A.air);
+    });
+
+    it('applies the in-air spread at once on a jump', () => {
+      const c = at();
+      c.grounded = false;
+      c.airTime = A.airSpreadDelay; // what sim/movement.ts sets on a jump
+      stepAccuracy(c, MOVEMENT, DT);
+      expect(c.spreadScale).toBe(A.air);
+    });
+
+    it('resets the air time on landing', () => {
+      const c = at();
+      c.grounded = false;
+      for (let i = 0; i < 3; i++) stepAccuracy(c, MOVEMENT, DT);
+      expect(c.airTime).toBeGreaterThan(0);
+      c.grounded = true;
+      stepAccuracy(c, MOVEMENT, DT);
+      expect(c.airTime).toBe(0);
+    });
   });
 });

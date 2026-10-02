@@ -64,6 +64,8 @@ export interface Character {
   sprintLockout: number;
   /** How much stance and movement scale the replica's spread right now (1 = standing still; see sim/accuracy.ts). */
   spreadScale: number;
+  /** Seconds off the ground so far (0 while grounded); a jump starts it at the in-air spread delay (sim/accuracy.ts). */
+  airTime: number;
   armament: Armament;
 }
 
@@ -107,6 +109,7 @@ export function createCharacter(
     fallSpeed: 0,
     sprintLockout: 0,
     spreadScale: 1,
+    airTime: 0,
     armament: createArmament(loadout),
   };
 }
@@ -131,6 +134,7 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
   c.grounded = false;
   c.airborne = false;
   c.fallSpeed = 0;
+  c.airTime = 0;
   return true;
 }
 
@@ -158,6 +162,7 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.fallSpeed = 0;
   c.sprintLockout = 0;
   c.spreadScale = 1;
+  c.airTime = 0;
   c.status = 'alive';
   c.statusTime = 0;
   c.hitBy = -1;

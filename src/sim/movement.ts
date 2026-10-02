@@ -100,6 +100,7 @@ export function stepMovement(
     c.velocity.y = cfg.jumpSpeed;
     c.grounded = false;
     c.jumpCooldown = cfg.jumpCooldown;
+    c.airTime = cfg.accuracy.airSpreadDelay; // a deliberate jump gets the in-air spread at once
   }
 
   // Standing characters move purely horizontally, then settle onto the floor in a separate move.
