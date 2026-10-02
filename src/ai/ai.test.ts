@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { BOTS, type BotConfig, botConfig, DIFFICULTIES, type Difficulty } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
@@ -6,10 +6,13 @@ import { FLAG, type MatchMode } from '../config/modes';
 import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
+import { PHYSICS } from '../config/physics';
 import { LOADOUT } from '../config/replicas';
+import type { MapData } from '../map/mapTypes';
 import { TEST_YARD } from '../map/testYard';
 import { buildNavGrid, isWalkableAt, type NavGrid } from '../nav/navGrid';
 import { DEPOT } from '../map/depot';
+import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { isInPlay } from '../sim/elimination';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
@@ -24,7 +27,7 @@ import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
 import type { Bot, BotWorld } from './bot';
 import { reloadBot } from './botCombat';
 import { BotController } from './botController';
-import { type CoverBlock, type CoverWorld, createCoverSpot, findCover, lowCoverBlocks, tallCoverBlocks } from './cover';
+import { type CoverBlock, type CoverWorld, createCoverSpot, findCover, hidesFrom, lowCoverBlocks, tallCoverBlocks } from './cover';
 import { canSee, lineClear, visiblePart } from './perception';
 
 const DT = 1 / 60;
@@ -267,7 +270,7 @@ describe('cover', () => {
   });
 
   it("treats the map's walls and other blocks at least a player's height as full cover", () => {
-    const tall = tallCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap);
+    const tall = tallCoverBlocks(DEPOT.blocks, buildNavGrid(DEPOT, NAV), BODY, BOTS.lowCoverFloorGap);
     expect(tall.length).toBeGreaterThan(10);
     for (const t of tall) {
       const block = DEPOT.blocks.find((b) => b.center.x === t.x && b.center.z === t.z && b.kind !== 'floor')!;
@@ -276,7 +279,7 @@ describe('cover', () => {
   });
 
   it("treats the map's crate-high blocks standing on the floor as low cover", () => {
-    const low = lowCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap);
+    const low = lowCoverBlocks(DEPOT.blocks, buildNavGrid(DEPOT, NAV), BODY, BOTS.lowCoverFloorGap);
     expect(low.length).toBeGreaterThan(20);
     for (const l of low) {
       const block = DEPOT.blocks.find((b) => b.center.x === l.x && b.center.z === l.z && b.kind !== 'floor')!;
@@ -284,6 +287,45 @@ describe('cover', () => {
       expect(top).toBeGreaterThan(BODY.crouchEyeHeight);
       expect(top).toBeLessThan(BODY.standEyeHeight);
     }
+  });
+});
+
+describe('cover on a raised floor', () => {
+  beforeAll(async () => {
+    await initPhysics();
+  });
+
+  it('counts a crate standing on a platform as low cover, and hides behind it at the platform’s height', () => {
+    // A 1 m platform (12 × 12 m) with a crate on it; the threat stands on the yard floor to the north.
+    const map: MapData = {
+      name: 'platform',
+      blocks: [
+        { kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(40, 0.5, 40) },
+        { kind: 'floor', center: vec3(0, 0.5, 0), size: vec3(12, 1, 12) },
+        { kind: 'crate', center: vec3(0, 1.6, -2), size: vec3(1.2, 1.2, 1.2) },
+      ],
+      killY: -10,
+      spawns: [[], []],
+      deadZones: [[], []],
+      lanes: [],
+    };
+    const nav = buildNavGrid(map, NAV);
+    const physics = new PhysicsWorld(map, BODY, DT);
+    const low = lowCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap);
+    expect(low).toEqual([{ x: 0, z: -2, halfX: 0.6, halfZ: 0.6 }]);
+    expect(tallCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap)).toEqual([]);
+    const rest = 1 + PHYSICS.groundRestGap;
+    const threatEye = vec3(0, PHYSICS.groundRestGap + BODY.standEyeHeight, -12);
+    const spot = createCoverSpot();
+    expect(findCover(vec3(0, rest, 1.5), threatEye, coverWorld(physics, nav, BOTS, low), createRng(3), spot)).toBe(true);
+    expect(spot.position.y).toBeCloseTo(rest, 9);
+    expect(spot.crouchOnly).toBe(true);
+    // In the crate's shadow, on the platform.
+    expect(Math.abs(spot.position.x)).toBeLessThan(0.6);
+    expect(spot.position.z).toBeGreaterThan(-1.4);
+    expect(spot.position.z).toBeLessThan(6);
+    expect(hidesFrom(spot.position, threatEye, physics, BODY)).toBe(true);
+    physics.dispose();
   });
 });
 
@@ -715,8 +757,8 @@ describe('bot team play and routes', () => {
       nav,
       navSnap: NAV.snap,
       lanes: DEPOT.lanes,
-      lowCover: lowCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap),
-      tallCover: tallCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap),
+      lowCover: lowCoverBlocks(DEPOT.blocks, nav, BODY, BOTS.lowCoverFloorGap),
+      tallCover: tallCoverBlocks(DEPOT.blocks, nav, BODY, BOTS.lowCoverFloorGap),
       body: BODY,
       hits: HITS,
       loadout: LOADOUT,

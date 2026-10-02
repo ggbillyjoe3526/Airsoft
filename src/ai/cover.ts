@@ -2,7 +2,7 @@ import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { MapBlock } from '../map/mapTypes';
-import { isWalkableAt, type NavGrid } from '../nav/navGrid';
+import { floorAt, isWalkableAt, type NavGrid } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
 import { leanOffset } from '../sim/lean';
 import { type RngState, rngNext } from '../sim/rng';
@@ -26,13 +26,18 @@ export interface CoverBlock {
   halfZ: number;
 }
 
-/** Blocks standing on the floor (bottom within `floorGap` of y = 0) whose top is in [minTop, maxTop). */
-function floorBlocks(blocks: readonly MapBlock[], floorGap: number, minTop: number, maxTop: number): CoverBlock[] {
+/**
+ * Blocks standing on the floor (bottom within `floorGap` of the nav floor under the block's centre) whose
+ * top is between minTop and maxTop above that floor.
+ */
+function floorBlocks(blocks: readonly MapBlock[], nav: NavGrid, floorGap: number, minTop: number, maxTop: number): CoverBlock[] {
   const out: CoverBlock[] = [];
   for (const b of blocks) {
-    if (b.kind === 'floor') continue;
-    const bottom = b.center.y - b.size.y / 2;
-    const top = b.center.y + b.size.y / 2;
+    if (b.kind === 'floor' || b.kind === 'ramp') continue;
+    const floor = floorAt(nav, b.center.x, b.center.z);
+    if (Number.isNaN(floor)) continue;
+    const bottom = b.center.y - b.size.y / 2 - floor;
+    const top = b.center.y + b.size.y / 2 - floor;
     if (Math.abs(bottom) > floorGap || top <= minTop || top >= maxTop) continue;
     out.push({ x: b.center.x, z: b.center.z, halfX: b.size.x / 2, halfZ: b.size.z / 2 });
   }
@@ -43,13 +48,13 @@ function floorBlocks(blocks: readonly MapBlock[], floorGap: number, minTop: numb
  * The map's low cover: blocks standing on the floor whose top is above a crouched player's eyes but
  * below a standing player's (crates, barriers, window sills).
  */
-export function lowCoverBlocks(blocks: readonly MapBlock[], body: BodyConfig, floorGap: number): CoverBlock[] {
-  return floorBlocks(blocks, floorGap, body.crouchEyeHeight, body.standEyeHeight);
+export function lowCoverBlocks(blocks: readonly MapBlock[], nav: NavGrid, body: BodyConfig, floorGap: number): CoverBlock[] {
+  return floorBlocks(blocks, nav, floorGap, body.crouchEyeHeight, body.standEyeHeight);
 }
 
 /** The map's full-height cover: blocks standing on the floor at least as tall as a player (walls, containers). */
-export function tallCoverBlocks(blocks: readonly MapBlock[], body: BodyConfig, floorGap: number): CoverBlock[] {
-  return floorBlocks(blocks, floorGap, body.height - EPSILON, Number.POSITIVE_INFINITY);
+export function tallCoverBlocks(blocks: readonly MapBlock[], nav: NavGrid, body: BodyConfig, floorGap: number): CoverBlock[] {
+  return floorBlocks(blocks, nav, floorGap, body.height - EPSILON, Number.POSITIVE_INFINITY);
 }
 
 export interface CoverSpot {
@@ -115,6 +120,8 @@ export function leanSideToSee(spot: Vec3, threatEye: Vec3, w: CoverWorld): numbe
  */
 interface SearchState {
   from: Vec3;
+  /** How far `from` is above its nav floor (a standing character's rest gap); candidate spots keep it. */
+  fromAboveFloor: number;
   threatEye: Vec3;
   radius: number;
   threatDist: number;
@@ -124,6 +131,7 @@ interface SearchState {
 
 const searchState: SearchState = {
   from: vec3(),
+  fromAboveFloor: 0,
   threatEye: vec3(),
   radius: 0,
   threatDist: 0,
@@ -145,6 +153,8 @@ export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngSt
   const cfg = w.cfg;
   const s = searchState;
   copy(s.from, from);
+  const fromFloor = floorAt(w.nav, from.x, from.z);
+  s.fromAboveFloor = Number.isNaN(fromFloor) ? 0 : from.y - fromFloor;
   copy(s.threatEye, threatEye);
   s.radius = search ? search.radius : cfg.coverRadius;
   s.peekable = search ? search.peekable : false;
@@ -185,7 +195,8 @@ export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngSt
 
 /**
  * Tests the spot (x, z) for the search `s` and keeps it in `out` if it beats the best so far: it must be
- * walkable, in reach, not towards the threat, and hide a crouched player.
+ * walkable, in reach, not towards the threat, and hide a crouched player. The spot stands on its cell's
+ * floor, as high above it as the searcher is above its own (so eye heights are a standing player's).
  */
 function consider(s: SearchState, w: CoverWorld, out: CoverSpot, x: number, z: number): void {
   const cfg = w.cfg;
@@ -199,16 +210,17 @@ function consider(s: SearchState, w: CoverWorld, out: CoverSpot, x: number, z: n
   const toThreat = Math.hypot(threatEye.x - x, threatEye.z - z);
   if (toThreat < Math.min(s.threatDist * cfg.coverTowardThreatFraction, s.threatDist - cfg.coverTowardThreatMetres)) return;
 
+  const y = floorAt(w.nav, x, z) + s.fromAboveFloor;
   crouchedEye.x = x;
   crouchedEye.z = z;
-  crouchedEye.y = from.y + body.crouchEyeHeight;
+  crouchedEye.y = y + body.crouchEyeHeight;
   if (lineClear(w.query, threatEye, crouchedEye)) return; // not cover at all
   standingEye.x = x;
   standingEye.z = z;
-  standingEye.y = from.y + body.standEyeHeight;
+  standingEye.y = y + body.standEyeHeight;
   const crouchOnly = lineClear(w.query, threatEye, standingEye);
   candidateSpot.x = x;
-  candidateSpot.y = from.y;
+  candidateSpot.y = y;
   candidateSpot.z = z;
   const lean = crouchOnly ? 0 : leanSideToSee(candidateSpot, threatEye, w);
   if (s.peekable && !crouchOnly && lean === 0) return;
@@ -217,7 +229,7 @@ function consider(s: SearchState, w: CoverWorld, out: CoverSpot, x: number, z: n
   if (score < s.bestScore) {
     s.bestScore = score;
     out.position.x = x;
-    out.position.y = from.y;
+    out.position.y = y;
     out.position.z = z;
     out.crouchOnly = crouchOnly;
     out.lean = lean;
