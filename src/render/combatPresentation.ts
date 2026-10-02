@@ -108,7 +108,7 @@ export class CombatPresentation {
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
     const spread = THREE.MathUtils.degToRad(this.loadout[p.armament.active]!.spreadDeg * p.spreadScale);
-    const focalPx = this.renderer.renderer.domElement.clientHeight / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
+    const focalPx = this.renderer.height / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
     this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, dt);
 
     cam.getWorldDirection(this.forward);

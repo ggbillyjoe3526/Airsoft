@@ -54,13 +54,15 @@ function knownThreatEye(b: Bot, w: BotWorld): void {
 
 /**
  * At a lean spot: re-checks, from where the bot actually stands, which way a lean shows where the threat
- * was (the bot stops a few centimetres off the planned spot). False if neither way does, or not a lean spot.
+ * was (the bot stops a few centimetres off the planned spot). False if neither way does (the caller ends
+ * the cover episode; the spot stays a lean spot until then), or not a lean spot.
  */
 function leansOutHere(b: Bot, w: BotWorld): boolean {
   if (b.cover.lean === 0) return false;
   knownThreatEye(b, w);
-  b.cover.lean = leanSideToSee(b.character.position, threatEye, w);
-  return b.cover.lean !== 0;
+  const side = leanSideToSee(b.character.position, threatEye, w);
+  if (side !== 0) b.cover.lean = side;
+  return side !== 0;
 }
 
 /** Leaning out of full cover at a corner: peeking, or fighting from the spot. */
@@ -70,8 +72,9 @@ function leaningOut(b: Bot): boolean {
 
 /**
  * Ducks back down behind the crouch cover (or leans back in behind the corner) it is fighting from,
- * unless the spot no longer hides it from where the bot knows the threat to be (flanked). Ducking with the enemy still in sight (under fire,
- * reloading, end of a burst) renews its looks; ducking because the enemy went out of sight doesn't.
+ * unless the spot no longer hides it from where the bot knows the threat to be (flanked). Ducking with
+ * the enemy still in sight (under fire, reloading, end of a burst) renews its looks; ducking because the
+ * enemy went out of sight doesn't.
  */
 function duckBack(b: Bot, w: BotWorld, target: Character | undefined, seeing: boolean): boolean {
   const cfg = w.cfg;

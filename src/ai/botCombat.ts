@@ -95,7 +95,11 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
   aimDir.z = -Math.cos(b.aim.yaw) * cp;
   const dist = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
   // Sight is refreshed 10×/s; don't fire into cover the target has just stepped behind.
-  if (friendInLine(b, w, eye, aimDir, dist + cfg.friendlyBeyondTarget) || !lineClear(w.query, eye, aimPoint)) return;
+  if (!lineClear(w.query, eye, aimPoint)) return;
+  // A BB that misses flies on past the target, but not through the first wall it meets.
+  const reach = dist + cfg.friendlyBeyondTarget;
+  const wall = w.query.raycastStatic(eye, aimDir, reach);
+  if (friendInLine(b, w, eye, aimDir, wall >= 0 ? wall : reach)) return;
   if (b.burstLeft <= 0 && b.pauseLeft <= 0) b.burstLeft = pick(b.rng, cfg.burst);
   if (b.burstLeft > 0) {
     cmd.fire = true;

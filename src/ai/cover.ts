@@ -6,7 +6,7 @@ import { isWalkableAt, type NavGrid } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
 import { leanOffset } from '../sim/lean';
 import { type RngState, rngNext } from '../sim/rng';
-import { type Vec3, vec3 } from '../sim/vec';
+import { copy, type Vec3, vec3 } from '../sim/vec';
 import { lineClear } from './perception';
 
 const standingEye = vec3();
@@ -15,6 +15,8 @@ const uprightEye = vec3();
 const leanEye = vec3();
 const leanReach = vec3();
 const offset = vec3();
+/** Distances (metres) below this count as zero. */
+const EPSILON = 1e-6;
 
 /** A block's footprint on the floor: centre and half extents. */
 export interface CoverBlock {
@@ -47,7 +49,7 @@ export function lowCoverBlocks(blocks: readonly MapBlock[], body: BodyConfig, fl
 
 /** The map's full-height cover: blocks standing on the floor at least as tall as a player (walls, containers). */
 export function tallCoverBlocks(blocks: readonly MapBlock[], body: BodyConfig, floorGap: number): CoverBlock[] {
-  return floorBlocks(blocks, floorGap, body.height - 1e-6, Number.POSITIVE_INFINITY);
+  return floorBlocks(blocks, floorGap, body.height - EPSILON, Number.POSITIVE_INFINITY);
 }
 
 export interface CoverSpot {
@@ -91,7 +93,8 @@ export function leanSideToSee(spot: Vec3, threatEye: Vec3, w: CoverWorld): numbe
   uprightEye.x = spot.x;
   uprightEye.y = spot.y + w.body.standEyeHeight;
   uprightEye.z = spot.z;
-  for (const side of [1, -1]) {
+  for (let side = 1; side >= -1; side -= 2) {
+    // Right first, then left.
     leanOffset(w.body.standEyeHeight, side, 0, yaw, w.hits, offset);
     leanEye.x = uprightEye.x + offset.x;
     leanEye.y = uprightEye.y + offset.y;
@@ -107,6 +110,29 @@ export function leanSideToSee(spot: Vec3, threatEye: Vec3, w: CoverWorld): numbe
 }
 
 /**
+ * One cover search's inputs (copied, so nothing of the caller's is kept afterwards) and best score so far:
+ * a single object reused for every search, so a search allocates nothing.
+ */
+interface SearchState {
+  from: Vec3;
+  threatEye: Vec3;
+  radius: number;
+  threatDist: number;
+  peekable: boolean;
+  bestScore: number;
+}
+
+const searchState: SearchState = {
+  from: vec3(),
+  threatEye: vec3(),
+  radius: 0,
+  threatDist: 0,
+  peekable: false,
+  bestScore: 0,
+};
+const candidateSpot = vec3();
+
+/**
  * Looks for a nearby spot hidden from `threatEye`: random walkable points within cfg.coverRadius of
  * `from`, plus the spot right behind each low block in reach and just behind each corner of each tall
  * block in reach (as seen from the threat; random points rarely land in a crate's small shadow or a
@@ -117,85 +143,96 @@ export function leanSideToSee(spot: Vec3, threatEye: Vec3, w: CoverWorld): numbe
  */
 export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngState, out: CoverSpot, search?: CoverSearch): boolean {
   const cfg = w.cfg;
-  const body = w.body;
-  const radius = search ? search.radius : cfg.coverRadius;
+  const s = searchState;
+  copy(s.from, from);
+  copy(s.threatEye, threatEye);
+  s.radius = search ? search.radius : cfg.coverRadius;
+  s.peekable = search ? search.peekable : false;
+  s.threatDist = Math.hypot(threatEye.x - from.x, threatEye.z - from.z);
+  s.bestScore = Number.POSITIVE_INFINITY;
+  const radius = s.radius;
   const candidates = search ? search.randomCandidates : cfg.coverCandidates;
-  const peekableWanted = search ? search.peekable : false;
-  const threatDist = Math.hypot(threatEye.x - from.x, threatEye.z - from.z);
-  let bestScore = Number.POSITIVE_INFINITY;
-  const spot = vec3();
-  const consider = (x: number, z: number): void => {
-    if (!isWalkableAt(w.nav, x, z)) return;
-    const r = Math.hypot(x - from.x, z - from.z);
-    if (r > radius) return;
-    // Don't pick cover that means running at the threat.
-    const toThreat = Math.hypot(threatEye.x - x, threatEye.z - z);
-    if (toThreat < Math.min(threatDist * cfg.coverTowardThreatFraction, threatDist - cfg.coverTowardThreatMetres)) return;
-
-    crouchedEye.x = x;
-    crouchedEye.z = z;
-    crouchedEye.y = from.y + body.crouchEyeHeight;
-    if (lineClear(w.query, threatEye, crouchedEye)) return; // not cover at all
-    standingEye.x = x;
-    standingEye.z = z;
-    standingEye.y = from.y + body.standEyeHeight;
-    const crouchOnly = lineClear(w.query, threatEye, standingEye);
-    spot.x = x;
-    spot.y = from.y;
-    spot.z = z;
-    const lean = crouchOnly ? 0 : leanSideToSee(spot, threatEye, w);
-    if (peekableWanted && !crouchOnly && lean === 0) return;
-    // Closest wins; cover you can fight from (stand up over it, or lean out) gets a bonus.
-    const score = r - (crouchOnly ? cfg.crouchCoverBonus : lean !== 0 ? cfg.leanCoverBonus : 0);
-    if (score < bestScore) {
-      bestScore = score;
-      out.position.x = x;
-      out.position.y = from.y;
-      out.position.z = z;
-      out.crouchOnly = crouchOnly;
-      out.lean = lean;
-    }
-  };
   for (let i = 0; i < candidates; i++) {
     const angle = rngNext(rng) * Math.PI * 2;
     const r = cfg.coverMinRadius + rngNext(rng) * (radius - cfg.coverMinRadius);
-    consider(from.x + Math.cos(angle) * r, from.z + Math.sin(angle) * r);
+    consider(s, w, out, from.x + Math.cos(angle) * r, from.z + Math.sin(angle) * r);
   }
   for (const b of w.lowCover) {
     // Behind the block from the threat: past its far edge (along the threat→block line) by the gap.
     const dx = b.x - threatEye.x;
     const dz = b.z - threatEye.z;
     const d = Math.hypot(dx, dz);
-    if (d < 1e-6 || Math.hypot(b.x - from.x, b.z - from.z) > radius + cfg.lowCoverGapFar + Math.max(b.halfX, b.halfZ)) continue;
+    if (d < EPSILON || Math.hypot(b.x - from.x, b.z - from.z) > radius + cfg.lowCoverGapFar + Math.max(b.halfX, b.halfZ)) continue;
     const ux = dx / d;
     const uz = dz / d;
     const edge = Math.abs(ux) * b.halfX + Math.abs(uz) * b.halfZ;
     // Hug the block; if that's too tight to stand (another block close behind), try a step further back.
-    for (const gap of [cfg.lowCoverGap, cfg.lowCoverGapFar]) {
+    for (let tryFar = 0; tryFar < 2; tryFar++) {
+      const gap = tryFar === 0 ? cfg.lowCoverGap : cfg.lowCoverGapFar;
       const x = b.x + ux * (edge + gap);
       const z = b.z + uz * (edge + gap);
       if (!isWalkableAt(w.nav, x, z)) continue;
-      consider(x, z);
+      consider(s, w, out, x, z);
       break;
     }
   }
   for (const b of w.tallCover) {
     if (Math.hypot(b.x - from.x, b.z - from.z) > radius + Math.hypot(b.halfX, b.halfZ)) continue;
-    cornerSpots(b, threatEye, cfg.lowCoverGap, cfg, consider);
+    cornerSpots(s, w, out, b);
   }
-  return Number.isFinite(bestScore);
+  return Number.isFinite(s.bestScore);
 }
 
 /**
- * Lean spots at a tall block's two outline corners as seen from the threat: on the sight line past the
- * corner, moved cfg.leanSpotInset into the block's shadow, and far enough along it to stand clear of the
- * block (`clear` metres from its sides). Each goes to `consider`, which checks it properly.
+ * Tests the spot (x, z) for the search `s` and keeps it in `out` if it beats the best so far: it must be
+ * walkable, in reach, not towards the threat, and hide a crouched player.
  */
-function cornerSpots(b: CoverBlock, threatEye: Vec3, clear: number, cfg: BotConfig, consider: (x: number, z: number) => void): void {
+function consider(s: SearchState, w: CoverWorld, out: CoverSpot, x: number, z: number): void {
+  const cfg = w.cfg;
+  const body = w.body;
+  const from = s.from;
+  const threatEye = s.threatEye;
+  if (!isWalkableAt(w.nav, x, z)) return;
+  const r = Math.hypot(x - from.x, z - from.z);
+  if (r > s.radius) return;
+  // Don't pick cover that means running at the threat.
+  const toThreat = Math.hypot(threatEye.x - x, threatEye.z - z);
+  if (toThreat < Math.min(s.threatDist * cfg.coverTowardThreatFraction, s.threatDist - cfg.coverTowardThreatMetres)) return;
+
+  crouchedEye.x = x;
+  crouchedEye.z = z;
+  crouchedEye.y = from.y + body.crouchEyeHeight;
+  if (lineClear(w.query, threatEye, crouchedEye)) return; // not cover at all
+  standingEye.x = x;
+  standingEye.z = z;
+  standingEye.y = from.y + body.standEyeHeight;
+  const crouchOnly = lineClear(w.query, threatEye, standingEye);
+  candidateSpot.x = x;
+  candidateSpot.y = from.y;
+  candidateSpot.z = z;
+  const lean = crouchOnly ? 0 : leanSideToSee(candidateSpot, threatEye, w);
+  if (s.peekable && !crouchOnly && lean === 0) return;
+  // Closest wins; cover you can fight from (stand up over it, or lean out) gets a bonus.
+  const score = r - (crouchOnly ? cfg.crouchCoverBonus : lean !== 0 ? cfg.leanCoverBonus : 0);
+  if (score < s.bestScore) {
+    s.bestScore = score;
+    out.position.x = x;
+    out.position.y = from.y;
+    out.position.z = z;
+    out.crouchOnly = crouchOnly;
+    out.lean = lean;
+  }
+}
+
+/**
+ * Lean spots at a tall block's two outline corners as seen from the threat (see cornerSpot). Each goes
+ * to `consider`, which checks it properly.
+ */
+function cornerSpots(s: SearchState, w: CoverWorld, out: CoverSpot, b: CoverBlock): void {
+  const threatEye = s.threatEye;
   const cx = b.x - threatEye.x;
   const cz = b.z - threatEye.z;
-  const cd = Math.hypot(cx, cz);
-  if (cd < 1e-6) return;
+  if (Math.hypot(cx, cz) < EPSILON) return;
   // The outline corners are the ones furthest round either side of the line to the centre.
   let minA = Number.POSITIVE_INFINITY;
   let maxA = Number.NEGATIVE_INFINITY;
@@ -203,40 +240,57 @@ function cornerSpots(b: CoverBlock, threatEye: Vec3, clear: number, cfg: BotConf
   let minZ = 0;
   let maxX = 0;
   let maxZ = 0;
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      const x = b.x + sx * b.halfX;
-      const z = b.z + sz * b.halfZ;
-      const a = Math.atan2(cx * (z - threatEye.z) - cz * (x - threatEye.x), cx * (x - threatEye.x) + cz * (z - threatEye.z));
-      if (a < minA) [minA, minX, minZ] = [a, x, z];
-      if (a > maxA) [maxA, maxX, maxZ] = [a, x, z];
+  for (let corner = 0; corner < 4; corner++) {
+    const x = b.x + (corner & 1 ? b.halfX : -b.halfX);
+    const z = b.z + (corner & 2 ? b.halfZ : -b.halfZ);
+    const a = Math.atan2(cx * (z - threatEye.z) - cz * (x - threatEye.x), cx * (x - threatEye.x) + cz * (z - threatEye.z));
+    if (a < minA) {
+      minA = a;
+      minX = x;
+      minZ = z;
+    }
+    if (a > maxA) {
+      maxA = a;
+      maxX = x;
+      maxZ = z;
     }
   }
-  for (const [x, z] of [[minX, minZ], [maxX, maxZ]] as const) {
-    const dx = x - threatEye.x;
-    const dz = z - threatEye.z;
-    const d = Math.hypot(dx, dz);
-    if (d < 1e-6) continue;
-    const ux = dx / d;
-    const uz = dz / d;
-    // Into the shadow: perpendicular to the sight line, towards the block's centre.
-    let nx = -uz;
-    let nz = ux;
-    if (nx * (b.x - x) + nz * (b.z - z) < 0) {
-      nx = -nx;
-      nz = -nz;
-    }
-    const px = x + nx * cfg.leanSpotInset;
-    const pz = z + nz * cfg.leanSpotInset;
-    // Step along the sight line until standing there clears the block.
-    const maxAlong = 2 * Math.hypot(b.halfX, b.halfZ) + clear + cfg.lowCoverGapFar;
-    for (let along = clear; along <= maxAlong; along += cfg.lowCoverGap / 2) {
-      const sx = px + ux * along;
-      const sz = pz + uz * along;
-      if (Math.abs(sx - b.x) < b.halfX + clear && Math.abs(sz - b.z) < b.halfZ + clear) continue;
-      consider(sx, sz);
-      break;
-    }
+  cornerSpot(s, w, out, b, minX, minZ);
+  cornerSpot(s, w, out, b, maxX, maxZ);
+}
+
+/**
+ * The lean spot at the corner (x, z) of tall block `b`: on the sight line from the threat past the
+ * corner, moved cfg.leanSpotInset into the block's shadow, and far enough along it to stand clear of the
+ * block (cfg.lowCoverGap from its sides).
+ */
+function cornerSpot(s: SearchState, w: CoverWorld, out: CoverSpot, b: CoverBlock, x: number, z: number): void {
+  const cfg = w.cfg;
+  const clear = cfg.lowCoverGap;
+  const dx = x - s.threatEye.x;
+  const dz = z - s.threatEye.z;
+  const d = Math.hypot(dx, dz);
+  if (d < EPSILON) return;
+  const ux = dx / d;
+  const uz = dz / d;
+  // Into the shadow: perpendicular to the sight line, towards the block's centre.
+  let nx = -uz;
+  let nz = ux;
+  if (nx * (b.x - x) + nz * (b.z - z) < 0) {
+    nx = -nx;
+    nz = -nz;
+  }
+  const px = x + nx * cfg.leanSpotInset;
+  const pz = z + nz * cfg.leanSpotInset;
+  // Step along the sight line until standing there clears the block: past the block's whole diagonal at most.
+  const diagonal = Math.hypot(2 * b.halfX, 2 * b.halfZ);
+  const maxAlong = diagonal + clear + cfg.lowCoverGapFar;
+  for (let along = clear; along <= maxAlong; along += cfg.leanSpotStep) {
+    const sx = px + ux * along;
+    const sz = pz + uz * along;
+    if (Math.abs(sx - b.x) < b.halfX + clear && Math.abs(sz - b.z) < b.halfZ + clear) continue;
+    consider(s, w, out, sx, sz);
+    return;
   }
 }
 

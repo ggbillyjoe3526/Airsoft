@@ -84,6 +84,12 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     results: [] as { attackers: number; winner: number; reason: string; length: number }[],
     /** Most of the flag raised in any round. */
     maxFlag: 0,
+    /**
+     * Ticks someone in play spent off the ground during a live round, after the first half second (spawning
+     * drops you onto the floor). Nobody here jumps, so any is a lost ground contact, which would spike
+     * that character's spread to the in-air value.
+     */
+    airTicks: 0,
   };
   let roundStart = 0;
   for (let tick = 0; tick < seconds / DT; tick++) {
@@ -107,6 +113,9 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
       }
     }
     stats.maxFlag = Math.max(stats.maxFlag, state.round.flag.progress);
+    if (state.round.phase === 'live' && state.time - roundStart > 0.5) {
+      for (const c of state.characters) if (c.status === 'alive' && !c.grounded) stats.airTicks++;
+    }
     if (state.round.number === 1) {
       for (const [i, c] of state.characters.entries()) {
         const d = Math.hypot(c.position.x - c.spawnPosition.x, c.position.z - c.spawnPosition.z);
@@ -131,6 +140,8 @@ describe('a 3v3 bot match on Depot', () => {
     for (const d of stats.farthestFromSpawn) expect(d).toBeGreaterThan(8);
     // Shots per hit: bots aren't laser-accurate, but they aren't spraying blindly either.
     expect(stats.shots / stats.hits).toBeGreaterThan(1.5);
+    // Walking round Depot never loses the ground for a tick (accuracy would flash to its in-air value).
+    expect(stats.airTicks).toBe(0);
   });
 
   it('plays out rounds at every difficulty', { timeout: 60_000 }, () => {

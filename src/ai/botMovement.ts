@@ -175,7 +175,7 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
       const dx = b.cover.position.x - p.x;
       const dz = b.cover.position.z - p.z;
       const d = Math.hypot(dx, dz);
-      if (b.routeState !== 'none' || d <= cfg.leanSpotReach || d > cfg.waypointReach * 2) return false;
+      if (b.routeState !== 'none' || d <= cfg.leanSpotReach || d > cfg.leanSpotApproachMax) return false;
       b.moveDir.x = dx / d;
       b.moveDir.z = dz / d;
       cmd.walk = true;

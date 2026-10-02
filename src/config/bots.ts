@@ -98,10 +98,17 @@ export const BOT_BEHAVIOUR = {
    * the head and one shoulder, as a player peeking that corner would.
    */
   leanSpotInset: 0.27,
+  /**
+   * From the corner, the lean spot moves along the sight line in steps of this (metres) until standing
+   * there clears the block by lowCoverGap.
+   */
+  leanSpotStep: 0.225,
   /** Lean spots score as if they were this much closer (metres): you can lean out and shoot back. */
   leanCoverBonus: 1.5,
   /** Walk right onto a lean spot, to within this distance (metres): a few centimetres decide the peek. */
   leanSpotReach: 0.1,
+  /** ...and only from this close (metres): further off, the route brings the bot there first. */
+  leanSpotApproachMax: 0.9,
   /** At a lean spot, the bot counts as there (to peek and fight from it) only within this distance (metres). */
   leanSpotArrive: 0.2,
   /** A lean needs this much room past the leaned eyes (metres; the lean stops this short of walls). */

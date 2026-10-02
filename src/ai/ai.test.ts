@@ -387,6 +387,22 @@ describe('bots in a duel', () => {
     expect(friendlyHits).toBe(0);
   });
 
+  it('hold fire for a teammate just past the target, but not for one behind a wall there', () => {
+    // An Orange teammate 2.5 m behind the player, in the line of fire; optionally a wall in between. The
+    // bot doesn't sidestep, so the line stays on the teammate.
+    const shotsWith = (query: WorldQuery) => {
+      const mate = (s: GameState) => s.characters.push(createCharacter(2, vec3(0, 0, 2.5), 0, LOADOUT, 1));
+      const { state, run } = duel(12, mate, query, { ...BOTS, strafeInput: 0 });
+      let shots = 0;
+      run(3, () => {
+        for (const e of state.events) if (e.type === 'shot' && e.characterId === 1) shots++;
+      });
+      return shots;
+    };
+    expect(shotsWith(noWalls)).toBe(0);
+    expect(shotsWith(boxQuery(0, 1.2, 5, 0.2, 3))).toBeGreaterThan(0);
+  });
+
   it('play out identically from the same seed', () => {
     const trace = () => {
       const { state, bot, run } = duel(15);
@@ -1186,6 +1202,43 @@ describe('bot team play and routes', () => {
     expect(foughtLeaning).toBe(true);
     expect(shotsFromCover).toBeGreaterThan(0);
     expect(shotsUpright).toBe(0); // from the spot it only ever shoots leaning out, never into the wall
+  });
+
+  it('at a corner where a lean no longer sees out, end the cover episode instead of crouching there', () => {
+    // As above, holding fire; once the bot is down on its lean spot, the wall grows past the corner.
+    const wall = boxQuery(1.8, -11, 1.5, 0.3, 2.5);
+    const wide = boxQuery(0, -11, 3, 0.3, 2.5);
+    let grown = false;
+    const query: WorldQuery = { raycastStatic: (o, d, max) => (grown ? wide : wall).raycastStatic(o, d, max) };
+    const tall: CoverBlock = { x: 1.8, z: -11, halfX: 1.5, halfZ: 0.3 };
+    const { state, bot, bots, run } = duel(14, () => {}, query, { ...BOTS, fireCone: 0 }, 7, [], [tall]);
+    const b = bots.bots[0]!;
+    let grownAt = -1;
+    let leftAt = -1;
+    let leanWhenLeft = 0;
+    let peeked = false;
+    let crouched = false;
+    run(6, () => {
+      const onSpot = Math.hypot(bot.position.x - b.cover.position.x, bot.position.z - b.cover.position.z) < BOTS.leanSpotArrive;
+      if (!grown && b.mode === 'cover' && b.coverPhase === 'down' && onSpot) {
+        grown = true;
+        grownAt = state.time;
+      } else if (grown && leftAt < 0) {
+        if (b.mode === 'cover') {
+          peeked ||= b.coverPhase === 'peek';
+          crouched ||= bot.crouchAmount > 0.5;
+        } else {
+          leftAt = state.time;
+          leanWhenLeft = b.cover.lean;
+        }
+      }
+    });
+    expect(grownAt).toBeGreaterThan(0);
+    expect(leftAt).toBeGreaterThan(0);
+    expect(leftAt - grownAt).toBeLessThanOrEqual(BOTS.peekDown[1] + 0.1); // no later than the next look
+    expect(peeked).toBe(false);
+    expect(crouched).toBe(false);
+    expect(leanWhenLeft).toBe(1); // still a lean spot: it ended, it didn't turn into crouch cover
   });
 
   it('fight on the spot when someone appears close by, without running for cover', () => {

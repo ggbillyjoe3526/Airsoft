@@ -18,7 +18,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines) and M9 (BB physics) done; M10 (movement and positioning) next. |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines), M9 (BB physics) and M10 (movement and positioning) done; a code review pass, then M11 (Depot rework). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -82,7 +82,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · M7b Leaning (peek left / right) | Done | 8.6 |
 | Alpha · Phase 3 · M8 Magazines and reloads | Done | 8.7 |
 | Alpha · Phase 3 · M9 BB physics pass | Done | 8.5 |
-| Alpha · Phase 3 · M10 Movement and positioning | **In rework** (critic attempt 1: 7.9) | |
+| Alpha · Phase 3 · M10 Movement and positioning | Done (auto-accepted, attempt 4) | 8.4 |
+| Alpha · Phase 3 · Code review pass (owner, 2026-10-02) | **In progress** | |
 | Alpha · Phase 3 · M11 Depot rework | To do | |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | To do | |
 | Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |
@@ -162,6 +163,11 @@ content. The game keeps the AEG and the gas pistol.
   - Peeking and holding angles behind cover should be rewarding.
   - Bots play by the same rules.
   - Bots learn to lean (M7b gives the player leaning) and to peek full-height corners with it.
+- **Code review pass** (owner request, 2026-10-02; right after M10, in the same session)
+  - A quick pass over all existing code for bugs and quality issues (CLAUDE.md §9): logic errors, stale or
+    misleading comments, magic numbers, per-frame allocations, missing disposal, dead code, weak tests.
+  - Fix-now items are fixed in this pass (with tests for bugs); the rest go to `KNOWN_ISSUES.md` or Beta.
+  - No new features or behaviour changes beyond bug fixes; the critic reviews the fixes.
 - **M11. Depot rework** to the field checklist
   - Purpose-built airsoft barricades (walls with shooting ports).
   - Buildings with windows and doorways: today it's one office block, so add at least one more structure.
@@ -172,6 +178,7 @@ content. The game keeps the AEG and the gas pistol.
     (owner idea; parked until here, with bots taught to use them). Today's 1.2 m crouch cover stays unclimbable.
   - Depot stays mirror-symmetric and keeps its identity.
   - Layout tests are extended to the checklist; bot lanes and poles are updated.
+  - Any ramps or stairs must keep the ground-contact guard in depotMatch.test.ts green (see KNOWN_ISSUES: in-air spread).
 - **Bug pass** → the owner playtests and tags `v0.1-alpha.3`.
 
 ### Phase 4: Presentation and onboarding (the last alpha phase)
