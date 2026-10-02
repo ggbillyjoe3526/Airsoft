@@ -11,6 +11,17 @@ This file is standalone. It gives Opus everything needed to implement the audit'
 - **Project rules that bind you** (`CLAUDE.md`): fixed technical decisions are not to be changed (Three.js, Rapier compat, Vite, Vitest, Pointer Lock, TypeScript strict); no new dependency without a stated reason; every substantial change goes through the critic agent (`.claude/agents/critic.md`) and gets a line in `docs/REVIEWS.md`; decisions go in `docs/DECISIONS.md` with a date and reason; never create or move git tags; work is pushed to `main` during the v0.1 cycle; one milestone per session; rewrite `docs/HANDOFF.md` at session end.
 - **Audit verdict in one line**: the simulation and AI are solid and fast (≈0.1 ms per tick for a 3v3, flat heap over 30 simulated minutes); the risks are an unwritten flat-floor assumption right before the map rework, no automated check of the browser shell, and an unmeasured GPU budget.
 
+## 1a. Owner answers (2026-10-02, after the audit) and the defaults taken
+
+| Question | William's answer | Default applied in this handoff |
+|---|---|---|
+| Elevation | "Maps may have elevations but aren't present yet; may appear in the Depot rework. Propose these changes for the rework." | C-01 branch (b) is in scope. Its full spec is **C-05** below; do C-05 before the Depot layout work. |
+| Reference machine | Playtests on a desktop: RTX 5090, 9950X3D, 64 GB. No laptop. | The 60 FPS-on-iGPU target in `CLAUDE.md` §6 cannot be checked on the owner's machine. C-04 stays (presets + overlay numbers) so a weaker machine has a way down; note in `docs/DECISIONS.md` that the iGPU target is unverified and not blocking until someone with an iGPU laptop measures it. |
+| Rapier compat (base64) | Doesn't know the term. | Leave as is (D-01). Plain meaning for the record: the physics engine is packed inside a text file, which makes the download ~1.2 MB bigger than it has to be; it is within budget and a fixed decision. |
+| Licence | Doesn't know. | Leave undeclared (D-03). Plain meaning: without a licence file nobody else may legally reuse the code, which is fine for a private project. Revisit only if the repo is made public on purpose. |
+| `?nolock` in test builds | Doesn't know. | Take C-02 step 2 as written: the switch exists only when building with `VITE_ALLOW_NOLOCK=1`, which only the smoke test does. Normal builds are unchanged. |
+| Fast/slow test split | Doesn't know. | Do W-06 when convenient; `npm run check` (the critic's command) keeps running everything, so the critic gate is unchanged. |
+
 ## 2. Rules for Opus
 
 1. One change ID per commit. Commit message starts with the ID, e.g. `C-02: browser smoke test`.
@@ -19,19 +30,19 @@ This file is standalone. It gives Opus everything needed to implement the audit'
 4. If the code you find contradicts a spec here (a file moved, a symbol renamed, a behaviour already changed), stop that change, note the discrepancy in the commit or in `docs/HANDOFF.md`, and move on to the next change. Do not improvise a different fix.
 5. No new runtime dependency. Dev dependencies only where a spec names one (`@playwright/test` in C-02).
 6. Keep diffs minimal: the spec's files, plus the docs the project's rules require (`DECISIONS.md`, `KNOWN_ISSUES.md`, `HANDOFF.md`, `README.md` for new scripts).
-7. Run the critic for C-01 (if its implementation branch is taken), C-02 and C-04. C-03 is a config file and can skip it.
+7. Run the critic for C-01, C-02, C-04 and each C-05 commit. C-03 is a config file and can skip it.
 
 ## 3. Master execution order
 
 | Phase | Changes | Notes |
 |---|---|---|
-| 1. Critical stabilisation | C-01 (decision + spread debounce) | The decision is the owner's; the debounce is yours. Do before M11 starts. |
+| 1. Critical stabilisation | C-01 (record the decision + spread debounce), then C-05 (elevation support) | Decision is taken (§1a). C-05 lands before any Depot layout change, with its own test map, so the rework starts on a nav layer that understands height. |
 | 2. Performance (instrument, don't optimise) | C-04 | Gives the owner numbers; no rendering behaviour changes by default. |
 | 3. Architecture and debt | C-02, C-03 | Browser smoke test, then CI that runs it. |
 | 4. Future-proofing | W-01 … W-07 (when touched) | Do each only inside the milestone that already edits that file. |
 | 5. Optional | D-xx list | Owner's call. |
 
-Dependencies: C-03 depends on C-02 (the workflow runs the smoke script). C-04's quality presets need no UI; Phase 4's settings screen will consume them later. C-01's debounce is independent of the decision outcome.
+Dependencies: C-05 depends on C-01 step 2 (the debounce) and must precede the Depot layout rework. C-03 depends on C-02 (the workflow runs the smoke script). C-04's quality presets need no UI; Phase 4's settings screen will consume them later. C-01's debounce is independent of the decision outcome.
 
 ## 4. Full change specs (Fix Now / Fix Soon)
 
@@ -113,6 +124,28 @@ Dependencies: C-03 depends on C-02 (the workflow runs the smoke script). C-04's 
 - **Test plan**: `npm run check`; in the browser `?quality=low` shows `shadows` off and DPR 1 on the overlay; `?quality=high` shows today's numbers; a unit test that `QUALITY.high` equals the former `RENDER` values (pin the numbers).
 - **Acceptance criteria**: default visuals unchanged (screenshot compare by eye at `?seed=1`), overlay shows draw calls and preset, F-06 fixed, decision recorded.
 - **Priority**: Fix Soon. **Confidence**: Likely that this is where the frame budget goes; Confirmed that there is no instrument today.
+
+### C-05 — Elevation support for the Depot rework (ramps and raised floors)
+
+- **Objective**: Let the Depot rework use ramps and raised floor areas without breaking bot routes, walk-offs, cover search or the accuracy rules, at the smallest change that keeps the current grid design.
+- **Current problem and evidence**: see C-01. In addition: `src/nav/navGrid.ts:33–79` stamps blocking boxes using absolute heights (`bottom(b) >= cfg.bodyHeight`, `top(b) <= cfg.maxLedge`), so a 1 m platform is a wall and a block sitting on that platform is tested against y = 0; `src/ai/cover.ts:30–41` keeps only blocks whose bottom is within `floorGap` of y = 0; `src/map/mapTypes.ts` has only axis-aligned boxes (`kind` is a visual family; "every kind collides as a solid box"); `src/config/physics.ts:10–12` autostep 0.35 m (reliably ~0.15 m with the capsule, `maxWalkableLedge`), max slope 45°; `src/physics/physicsWorld.ts:50` builds every block as a trimesh, so a sloped collider is already supported by the physics side.
+- **Design rules (record in `docs/DECISIONS.md`)**:
+  1. Walkable surfaces are the tops of `floor` blocks (at any height) and the tops of `ramp` blocks. Nothing else is walkable by design (crate tops stay unreachable, as today).
+  2. **No overlapping walkable surfaces**: a point (x, z) has at most one floor height. No mezzanine with walkable space beneath it, no bridge over a lane. This keeps one height per nav cell; a layered grid or recast is the upgrade path if that rule ever has to go.
+  3. Ramps slope at most 30° (rise ≤ 0.577 per metre) so a 0.2 m cell steps ≤ 0.12 m, under `maxWalkableLedge` (0.15 m). Stairs are drawn as steps but collide as the ramp underneath (visual only), so nothing depends on autostep.
+  4. Height changes between adjacent cells larger than `maxWalkableLedge` are not walkable edges (a platform edge is a drop you can fall off but not route over).
+- **Proposed implementation** (four commits, in this order):
+  - **C-05a Map data and collider**: in `src/map/mapTypes.ts` add `kind: 'ramp'` with `rise: '+x' | '-x' | '+z' | '-z'` on `MapBlock` (the top surface goes from `center.y - size.y/2` at the low edge to `center.y + size.y/2` at the high edge). `src/physics/physicsWorld.ts`: build a ramp as a wedge trimesh (6 vertices, 8 triangles) with `FIX_INTERNAL_EDGES`. `src/render/mapMeshes.ts`: a wedge geometry for the visual, same texture family as `floor`. Add `surfaceHeightAt(block, x, z): number | undefined` to a new `src/map/surfaces.ts` (floor: top; ramp: linear interpolation along `rise`; undefined outside the block's footprint). Unit test the ramp height at its low edge, centre and high edge.
+  - **C-05b Nav grid with floor heights**: `NavGrid` gains `floorY: Float32Array` (NaN = no surface). In `buildNavGrid`: for each cell take the highest `surfaceHeightAt` over floor and ramp blocks at the cell centre; a cell with no surface is not walkable. Stamp blocking boxes **relative to the cell floor**: a block blocks a cell when its footprint (grown by clearance) covers the cell and `bottom(b) < floorY + bodyHeight` and `top(b) > floorY + maxLedge` (this is the current test with `floorY` in place of 0, computed per cell inside the stamp loop instead of per block). Replace the implicit 8-neighbour walkability in `astar` and the cell walk in `clearLine` (`:121–142`) with a shared `canStep(g, a, b)` = both walkable and `|floorY[a] − floorY[b]| ≤ maxStep` (new `NavGridConfig.maxStep`, default `PHYSICS.maxWalkableLedge`). `findPath` (`:170–230`) emits `floorY` of the emitted cell as `y`, and the final goal point uses `floorY` at the goal cell rather than `goal.y`. `nearestWalkable` unchanged. Tests in `src/nav/navGrid.test.ts`: a ramp between two floor levels is routable; a 1 m platform without a ramp is not; string-pulled waypoints carry the surface height; the existing flat-map tests pass unchanged (`floorY` is 0 everywhere on today's Depot).
+  - **C-05c Cover, lanes and walk-offs**: `src/ai/cover.ts` `floorBlocks` takes the nav grid and keeps a block when its bottom is within `floorGap` of `floorY` at the block centre (and the top thresholds are measured from that floor). Candidate spots (`findCover` random samples and corner spots) set `position.y = floorY(cell)` and eye heights from that. `src/sim/elimination.ts` already routes on the grid, so walk-offs get heights for free; `deadZoneTarget` y comes from the map data. Add one test in `src/map/depot.test.ts` (or a new `mapData.test.ts`) that every spawn, dead-zone spot, lane point and flag spot lies within 0.05 m of the nav floor at its (x, z), so map data cannot drift from the surfaces. Update `BotController.huntPoint` to return the cell's `floorY` as y.
+  - **C-05d Guards**: in `src/ai/depotMatch.test.ts` replace the "nobody leaves the ground" guard with "nobody is off the ground for more than `airSpreadDelay` (C-01) consecutive ticks while in play, and nobody's y goes below the lowest floor or above the highest floor + 2 m". Add a small ramp test map (extend `src/map/testYard.ts` or a fixture in `src/sim/testSupport.ts`) and one headless match test on it: bots reach a goal on the upper level, the walk-off reaches a dead zone on the lower level.
+- **Affected files**: `src/map/mapTypes.ts`, `src/map/surfaces.ts` (new), `src/physics/physicsWorld.ts`, `src/render/mapMeshes.ts`, `src/nav/navGrid.ts`, `src/config/nav.ts`, `src/ai/cover.ts`, `src/ai/botController.ts`, `src/sim/testSupport.ts` or `src/map/testYard.ts`, tests in `src/nav`, `src/map`, `src/ai`, `docs/DECISIONS.md`, `docs/ARCHITECTURE.md` (nav paragraph), `docs/KNOWN_ISSUES.md`.
+- **Dependencies**: C-01 step 2 (debounce) first. The Depot layout rework (M11) starts only after C-05d is green.
+- **Migration notes**: Today's Depot has only `floor` at y = 0 and boxes on it, so after C-05b `floorY` is 0 everywhere and every existing nav, cover and match test must pass unchanged; treat any change in those numbers as a bug in C-05, not a retune.
+- **Risks**: Rapier's ground probe (`probeGround`, `castShape`) on a 30° slope reports a normal within `maxSlopeClimb` (45°), so grounding holds; verify with the ramp match test, because a lost ground contact on slopes would trip the accuracy rule even with the debounce. Bot aim uses straight-line lead in 3D already (`src/ai/aim.ts`), so height differences need no change there. The 2D distance checks in the brain (`Math.hypot(x, z)`) under-estimate distance on steep ramps by a few percent; acceptable.
+- **Test plan**: `npm run check`; the new nav, surface, map-data and ramp-match tests; a manual run on the ramp test map via `?map=` if such a switch exists, otherwise temporarily in dev.
+- **Acceptance criteria**: all existing tests unchanged and green; ramp fixture tests green; design rules recorded; `docs/ARCHITECTURE.md` says the grid stores one floor height per cell and why.
+- **Priority**: Fix Now (precondition of M11). **Confidence**: Confirmed for the problem; the design is the auditor's proposal and the owner has asked for it.
 
 ## 5. Fix When Touched (one paragraph each)
 
