@@ -108,6 +108,20 @@ to 2:30, and the first team to win 5 rounds takes the match.
 - [ ] **Press ` or F3.** A box shows the frame rate and the seed. Around 60 is smooth (more on a fast screen);
   well below that, note your computer and browser.
 
+## Fixed in the code bug pass (2026-10-02)
+
+Quick checks that these stay fixed:
+
+- [ ] **The first round of a fresh page load** starts with the referee's two short whistle blasts.
+- [ ] **Hit a bot, then press Esc and resume.** No hit marker or white flash appears again on resume (same after
+  **Play again**).
+- [ ] **Attack / Defend: press Esc mid-round.** The pole marker is not visible through the pause screen.
+- [ ] **At the start of each round** the replica in your hands stays still; it doesn't swing in from the side.
+- [ ] **Watch the dead zone after two teammates are out.** They stand on separate spots, not inside each other.
+- [ ] **Empty the AEG with the trigger held, press 2 then 1 while still holding.** It clicks dry and starts a reload.
+- [ ] **Watch bots fighting near door frames.** They shouldn't fire into the frame right beside them, or dive for
+  cover after their own BB hits the wall next to them.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:

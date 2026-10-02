@@ -20,7 +20,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines), M9 (BB physics), M10 (movement and positioning), a code review pass, the audit fixes and elevation support done or in review; the bug pass and the `v0.1-alpha.3` tag are left (the owner tags when ready). M11 (Depot rework) moved to Phase 4 (owner, 2026-10-02). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines), M9 (BB physics), M10 (movement and positioning), a code review pass, the audit fixes, elevation support and a code bug pass done; the owner's playtest and the `v0.1-alpha.3` tag are left (the owner tags when ready). M11 (Depot rework) moved to Phase 4 (owner, 2026-10-02). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -88,9 +88,9 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · M10 Movement and positioning | Done (auto-accepted, attempt 4) | 8.4 |
 | Alpha · Phase 3 · Code review pass (owner, 2026-10-02) | Done (auto-accepted, attempt 4) | 8.4 |
 | Alpha · Phase 3 · Audit fixes 1: automatic checks on every pull request (Fable audit C-02, C-03) | Done | 9.0 |
-| Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | In review | 9.1 |
-| Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | In review | 9.0 |
-| Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** (owner tags when ready) | To do | |
+| Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | Done | 9.1 |
+| Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | Done | 9.0 |
+| Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** (owner tags when ready) | Code bug pass done (10 fixes, on `main`); owner's playtest next | SCORE |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later | |
 | Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
@@ -186,6 +186,13 @@ content. The game keeps the AEG and the gas pistol.
   ramp test map with its own headless match. One rule keeps it simple: walkable surfaces never overlap (no walkable
   floor under a mezzanine or bridge). Done before any Depot layout change.
 - **Bug pass** → the owner plays the whole playtest guide (`docs/PLAYTEST.md`) and tags `v0.1-alpha.3` when ready.
+  - Code bug pass (2026-10-02, committed straight to `main` at the owner's request): a read-through of all code
+    plus headless soaks and a browser run found 10 bugs, all fixed with tests: the hit marker and hit flash
+    replayed after every pause, the Attack / Defend pole marker showed through the pause screen, the first
+    round of a session had no start whistle, the held replica swung sideways at each round start, teammates
+    could stand inside each other in the dead zone, an empty AEG stopped clicking (and auto-reloading) after a
+    switch with the trigger held, bots ducked from their own BBs and fired into the wall beside them, and two
+    robustness gaps (a bad frame time stopped the clock; a failed physics load couldn't be retried).
 - **M11 (Depot rework)** moved to Phase 4 (owner, 2026-10-02), so `v0.1-alpha.3` ships with today's Depot layout.
 
 ### Phase 4: Presentation and onboarding (the last alpha phase)
