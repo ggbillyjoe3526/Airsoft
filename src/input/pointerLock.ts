@@ -2,9 +2,11 @@ import { MOUSE } from '../config/controls';
 
 /**
  * Pointer Lock plus mouse input: look deltas, the fire button and wheel steps. Input is ignored
- * unless the pointer is locked to the game canvas.
+ * unless the pointer is locked to the game canvas (or, for the fire button and wheel only, unlocked
+ * play is on: see `setUnlockedButtons`).
  */
 export class PointerLock {
+  private unlockedButtons = false;
   private dx = 0;
   private dy = 0;
   private fireHeldState = false;
@@ -40,6 +42,19 @@ export class PointerLock {
       } catch {
         this.onLockError();
       }
+    }
+  }
+
+  /**
+   * Unlocked play (the `?nolock` test path): the fire button and wheel count without the lock. Mouse look
+   * still needs the lock. Turning it off drops any held or pending fire.
+   */
+  setUnlockedButtons(on: boolean): void {
+    this.unlockedButtons = on;
+    if (!on && !this.locked) {
+      this.fireHeldState = false;
+      this.firePressedState = false;
+      this.wheel = 0;
     }
   }
 
@@ -117,7 +132,7 @@ export class PointerLock {
   };
 
   private readonly onMouseDown = (e: MouseEvent): void => {
-    if (!this.locked || e.button !== 0) return;
+    if (!(this.locked || this.unlockedButtons) || e.button !== 0) return;
     this.fireHeldState = true;
     this.firePressedState = true;
   };
@@ -127,7 +142,7 @@ export class PointerLock {
   };
 
   private readonly onWheel = (e: WheelEvent): void => {
-    if (!this.locked) return;
+    if (!(this.locked || this.unlockedButtons)) return;
     // Normalise line/page scrolling to pixels so every device needs about one notch per step.
     const scale = e.deltaMode === 1 ? MOUSE.wheelLinePixels : e.deltaMode === 2 ? MOUSE.wheelPagePixels : 1;
     this.wheel += e.deltaY * scale;
