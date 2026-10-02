@@ -179,6 +179,8 @@ npm run preview    # serve dist/ locally
 
 Dev-only URL flag: `?nolock` plays without pointer lock (for automated browsers; no mouse look).
 Each page load picks a fresh random seed (shown in the debug overlay); `?seed=N` (0 to 4294967295) replays one.
+`?quality=low|medium|high` picks a render preset (default `high`; `low` drops shadows, antialiasing and high-DPI
+rendering). The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
 In development, `window.airsoft` exposes the running game.
 
 ### Layout

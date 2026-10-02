@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RENDER } from '../config/render';
+import { RENDER, type QualitySettings } from '../config/render';
 
 const REFERENCE_ASPECT = 16 / 9;
 const DEG = Math.PI / 180;
@@ -18,12 +18,14 @@ export class Renderer {
   width = 0;
   height = 0;
 
-  constructor(private readonly container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: RENDER.antialias, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDER.maxPixelRatio));
+  constructor(
+    private readonly container: HTMLElement,
+    private readonly quality: QualitySettings,
+  ) {
+    this.renderer = new THREE.WebGLRenderer({ antialias: quality.antialias, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.shadowMap.enabled = RENDER.shadows;
+    this.renderer.shadowMap.enabled = quality.shadows;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.domElement.className = 'game-canvas';
     container.appendChild(this.renderer.domElement);
@@ -67,6 +69,8 @@ export class Renderer {
     const h = this.container.clientHeight || window.innerHeight;
     this.width = w;
     this.height = h;
+    // Re-read on every resize: moving the window to a monitor with another scaling changes it.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality.maxPixelRatio));
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();

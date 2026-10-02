@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LIGHTING, RENDER } from '../config/render';
+import { LIGHTING, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
 
 /** World-space bounding box of every block in the map (walls, floor, props). */
@@ -46,7 +46,7 @@ export function fitShadowCamera(
 }
 
 /** Adds daylight sized to the map and returns a disposer that removes it and frees the shadow map. */
-export function addLighting(scene: THREE.Scene, map: MapData): () => void {
+export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings): () => void {
   const hemi = new THREE.HemisphereLight(LIGHTING.hemiSky, LIGHTING.hemiGround, LIGHTING.hemiIntensity);
 
   const sun = new THREE.DirectionalLight(LIGHTING.sunColor, LIGHTING.sunIntensity);
@@ -54,8 +54,8 @@ export function addLighting(scene: THREE.Scene, map: MapData): () => void {
   const centre = box.getCenter(new THREE.Vector3());
   sun.target.position.set(centre.x, 0, centre.z);
   sun.position.set(centre.x + LIGHTING.sunOffset.x, LIGHTING.sunOffset.y, centre.z + LIGHTING.sunOffset.z);
-  sun.castShadow = RENDER.shadows;
-  sun.shadow.mapSize.set(RENDER.shadowMapSize, RENDER.shadowMapSize);
+  sun.castShadow = quality.shadows;
+  sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
   fitShadowCamera(sun.shadow.camera, sun.position, sun.target.position, box, LIGHTING.shadowMargin);
   sun.shadow.bias = LIGHTING.shadowBias;
   sun.shadow.normalBias = LIGHTING.shadowNormalBias;

@@ -7,7 +7,7 @@ import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
 import type { MatchMode } from './config/modes';
 import { NAV } from './config/nav';
-import { matchOverScreenDelay } from './config/render';
+import { matchOverScreenDelay, QUALITY, type QualityPreset } from './config/render';
 import { FOOTSTEPS } from './config/footsteps';
 import { BODY, MOVEMENT } from './config/movement';
 import { PHYSICS } from './config/physics';
@@ -59,6 +59,8 @@ export interface GameOptions {
   allowUnlocked: boolean;
   /** Seeds the simulation and the bots (core/seed.ts): the same seed replays the same bot decisions for the same inputs. */
   seed: number;
+  /** Render quality preset (config/render.ts); fixed for the session. */
+  quality: QualityPreset;
 }
 
 /** Composition root: wires simulation, physics, input and presentation together and runs the loop. */
@@ -104,11 +106,11 @@ export class Game {
   }
 
   private constructor(container: HTMLElement, map: MapData, options: GameOptions) {
-    this.renderer = new Renderer(container);
+    this.renderer = new Renderer(container, QUALITY[options.quality]);
     this.textures = createSurfaceTextures();
     this.mapGroup = buildMapMeshes(map, this.textures);
     this.renderer.scene.add(this.mapGroup);
-    this.disposeLighting = addLighting(this.renderer.scene, map);
+    this.disposeLighting = addLighting(this.renderer.scene, map, QUALITY[options.quality]);
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     this.nav = buildNavGrid(map, NAV);
@@ -159,8 +161,11 @@ export class Game {
       speed: Math.hypot(this.player.velocity.x, this.player.velocity.z).toFixed(2),
       grounded: String(this.player.grounded),
       'BBs in flight': this.combat.bbsInFlight,
+      quality: options.quality,
+      'pixel ratio': this.renderer.renderer.getPixelRatio(),
       'draw calls': this.renderer.renderer.info.render.calls,
       triangles: this.renderer.renderer.info.render.triangles,
+      'programs / geometries / textures': `${this.renderer.renderer.info.programs?.length ?? 0} / ${this.renderer.renderer.info.memory.geometries} / ${this.renderer.renderer.info.memory.textures}`,
     }));
 
     this.startScreen = new StartScreen(

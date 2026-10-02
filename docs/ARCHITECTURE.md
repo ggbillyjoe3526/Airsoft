@@ -53,6 +53,8 @@ ends the round). A hit character is eliminated
 - **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
   streams made from it (the bots' plans, each bot).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
+  `Renderer` and the sun's shadow take a quality preset (`config/render.ts` `QUALITY`, `?quality=low|medium|high`,
+  fixed for the session); the debug overlay shows the preset, pixel ratio, draw calls and GPU object counts.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input; `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them.
 - **ui/**: DOM overlays (start/pause screen, debug overlay, ammo HUD).
