@@ -39,7 +39,9 @@ pushes attackers to 62%), and a friendly-fire margin that should widen with dist
   behaviour, not just the first, and update the guard comment, DECISIONS and KNOWN_ISSUES together.
 - **Editing:** don't put backticks or `\n` inside shell strings (bash eats them); write a small `.cjs` edit script in the
   scratchpad with a quoted heredoc, or use the Edit tool.
-- **Checks:** `npm run check` runs the type check, tests and build. There is no Python on this PC.
+- **Checks:** `npm run check` runs the type check, tests and build. `npm run check:all` adds the browser smoke test
+  (`e2e/boot.spec.ts`; run `npx playwright install chromium` once per machine). GitHub runs both on every pull request
+  (`.github/workflows/check.yml`); a red check there blocks nothing but means look before merging. There is no Python on this PC.
 - **Browser:** `.claude/launch.json` (git-ignored) runs "dev" on port 5173. Open `/?nolock`; `window.airsoft` is the
   Game. Use `find` for the "Click to play" ref. While the pane is hidden, animation frames don't run: call
   `airsoft.combat.frame(0, 0, 0, 0)` to update the HUD by hand.

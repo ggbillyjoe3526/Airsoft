@@ -11,7 +11,8 @@ async function main(): Promise<void> {
   // (the debug overlay shows the seed in use). An unreadable ?seed= value is ignored.
   const seed = parseSeed(params.get('seed')) ?? randomSeed();
   const game = await Game.create(container, DEPOT, {
-    allowUnlocked: import.meta.env.DEV && params.has('nolock'),
+    // ?nolock works on the dev server and in the smoke test's `e2e` build, never in a normal release build.
+    allowUnlocked: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('nolock'),
     seed,
   });
   game.start();
