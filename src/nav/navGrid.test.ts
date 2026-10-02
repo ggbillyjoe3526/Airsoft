@@ -4,7 +4,7 @@ import { DEPOT } from '../map/depot';
 import { TEST_YARD } from '../map/testYard';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { type Vec3, vec3 } from '../sim/vec';
-import { buildNavGrid, clearLine, createNavSearch, findPath, floorAt, isWalkableAt, nearestWalkable } from './navGrid';
+import { buildNavGrid, clearLine, createNavSearch, dropOnLine, findPath, floorAt, isWalkableAt, nearestWalkable } from './navGrid';
 
 const yard = buildNavGrid(TEST_YARD, NAV);
 const depot = buildNavGrid(DEPOT, NAV);
@@ -164,6 +164,17 @@ describe('nav grid with raised floors', () => {
     const path: Vec3[] = [];
     expect(findPath(g, createNavSearch(g), below, above, NAV.snap, path)).toBe(false);
     expect(clearLine(g, -4, 0, 6, 0)).toBe(false);
+  });
+
+  it('finds drops on a line (platform edges, ramp sides, the floor’s end) but not walls or the ramp itself', () => {
+    const g = buildNavGrid(platformYard(true, [{ kind: 'wall', center: vec3(-4, 1.5, 3), size: vec3(4, 3, 0.4) }]), NAV);
+    expect(dropOnLine(g, 6, 2, 7, 2)).toBe(false); // across the platform
+    expect(dropOnLine(g, 2.4, 2, 1.6, 2)).toBe(true); // off its west edge
+    expect(dropOnLine(g, 1.6, 2, 2.4, 2)).toBe(true); // and up it
+    expect(dropOnLine(g, -1, 0, 3, 0)).toBe(false); // up the ramp
+    expect(dropOnLine(g, 1, 0.5, 1, 1.5)).toBe(true); // off the ramp's side
+    expect(dropOnLine(g, -4, 2, -4, 4)).toBe(false); // through a wall: not a drop
+    expect(dropOnLine(g, 9.5, 0, 10.5, 0)).toBe(true); // past the floor's edge
   });
 
   it('keeps the clearance from a drop on both sides of it, as from a wall', () => {

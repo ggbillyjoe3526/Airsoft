@@ -327,6 +327,32 @@ describe('cover on a raised floor', () => {
     expect(hidesFrom(spot.position, threatEye, physics, BODY)).toBe(true);
     physics.dispose();
   });
+
+  it('finds the floor a block stands on from its whole footprint: at a platform edge and past the grid', () => {
+    // Floor 40 × 40 m; a 1 m platform from x = -6 to 6. A crate on the platform overhangs its east edge
+    // (centre over the yard floor), a wall stands on the yard floor straddling that edge (centre over the
+    // platform), and a perimeter wall stands just past the floor (centre off the grid).
+    const map: MapData = {
+      name: 'edges',
+      blocks: [
+        { kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(40, 0.5, 40) },
+        { kind: 'floor', center: vec3(0, 0.5, 0), size: vec3(12, 1, 12) },
+        { kind: 'crate', center: vec3(6.1, 1.6, 3), size: vec3(1.2, 1.2, 1.2) },
+        { kind: 'wall', center: vec3(5.95, 1.5, -3), size: vec3(0.4, 3, 2) },
+        { kind: 'wall', center: vec3(20.2, 1.5, 0), size: vec3(0.4, 3, 40) },
+      ],
+      killY: -10,
+      spawns: [[], []],
+      deadZones: [[], []],
+      lanes: [],
+    };
+    const nav = buildNavGrid(map, NAV);
+    expect(lowCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap)).toEqual([{ x: 6.1, z: 3, halfX: 0.6, halfZ: 0.6 }]);
+    expect(tallCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap)).toEqual([
+      { x: 5.95, z: -3, halfX: 0.2, halfZ: 1 },
+      { x: 20.2, z: 0, halfX: 0.2, halfZ: 20 },
+    ]);
+  });
 });
 
 /** A duel on an open floor: one Orange bot facing a Blue character `dist` metres away. */

@@ -343,49 +343,43 @@ describe('PhysicsWorld (Rapier)', () => {
   });
 
   it('walks up and down a ramp onto a raised floor without losing the ground', () => {
-    // A 1 m platform reached by a ramp along +x: 1:2 (26.6°) at every pace, and 30° (the steepest maps may
-    // use) short of sprinting down it, which outruns the ground probe (KNOWN_ISSUES).
-    for (const [deg, paces] of [
-      [26.6, ['walk', 'run', 'sprint', 'crouch']],
-      [30, ['walk', 'run', 'crouch']],
-    ] as const) {
-      const run = 1 / Math.tan((deg * Math.PI) / 180);
-      const map: MapData = {
-        name: 'ramp',
-        blocks: [
-          { kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(40, 0.5, 40) },
-          { kind: 'ramp', center: vec3(run / 2, 0.5, 0), size: vec3(run, 1, 4), rise: '+x' },
-          { kind: 'floor', center: vec3(run + 3, 0.5, 0), size: vec3(6, 1, 4) },
-        ],
-        killY: -10,
-        spawns: [[], []],
-        deadZones: [[], []],
-        lanes: [],
-      };
-      const world = new PhysicsWorld(map, BODY, DT);
-      for (const pace of paces) {
-        for (const up of [true, false]) {
-          const c = createCharacter(0, vec3(up ? -2 : run + 2, (up ? 0 : 1) + REST, 0.3), up ? -Math.PI / 2 : Math.PI / 2);
-          world.addCharacter(c);
-          const cmd = createCommand();
-          cmd.yaw = c.yaw;
-          cmd.forward = 1;
-          cmd.walk = pace === 'walk';
-          cmd.sprint = pace === 'sprint';
-          cmd.crouch = pace === 'crouch';
-          let streak = 0;
-          let longest = 0;
-          for (let t = 0; t < 600 && (up ? c.position.x < run + 1.5 : c.position.x > -1.5); t++) {
-            stepMovement(c, cmd, MOVEMENT, DT, world, scratch);
-            streak = c.grounded ? 0 : streak + 1;
-            longest = Math.max(longest, streak);
-          }
-          const label = `${deg}° ${pace} ${up ? 'up' : 'down'}`;
-          expect(longest, label).toBe(0);
-          expect(c.position.y, label).toBeCloseTo((up ? 1 : 0) + REST, 2);
+    // A 1 m platform reached by a ramp along +x at the steepest slope maps may use, at every pace.
+    const run = 1 / PHYSICS.maxRampSlope;
+    const map: MapData = {
+      name: 'ramp',
+      blocks: [
+        { kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(40, 0.5, 40) },
+        { kind: 'ramp', center: vec3(run / 2, 0.5, 0), size: vec3(run, 1, 4), rise: '+x' },
+        { kind: 'floor', center: vec3(run + 3, 0.5, 0), size: vec3(6, 1, 4) },
+      ],
+      killY: -10,
+      spawns: [[], []],
+      deadZones: [[], []],
+      lanes: [],
+    };
+    const world = new PhysicsWorld(map, BODY, DT);
+    for (const pace of ['walk', 'run', 'sprint', 'crouch'] as const) {
+      for (const up of [true, false]) {
+        const c = createCharacter(0, vec3(up ? -2 : run + 2, (up ? 0 : 1) + REST, 0.3), up ? -Math.PI / 2 : Math.PI / 2);
+        world.addCharacter(c);
+        const cmd = createCommand();
+        cmd.yaw = c.yaw;
+        cmd.forward = 1;
+        cmd.walk = pace === 'walk';
+        cmd.sprint = pace === 'sprint';
+        cmd.crouch = pace === 'crouch';
+        let streak = 0;
+        let longest = 0;
+        for (let t = 0; t < 600 && (up ? c.position.x < run + 1.5 : c.position.x > -1.5); t++) {
+          stepMovement(c, cmd, MOVEMENT, DT, world, scratch);
+          streak = c.grounded ? 0 : streak + 1;
+          longest = Math.max(longest, streak);
         }
+        const label = `${pace} ${up ? 'up' : 'down'}`;
+        expect(longest, label).toBe(0);
+        expect(c.position.y, label).toBeCloseTo((up ? 1 : 0) + REST, 2);
       }
-      world.dispose();
     }
+    world.dispose();
   });
 });

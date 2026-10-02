@@ -207,6 +207,25 @@ export function clearLine(g: NavGrid, ax: number, az: number, bx: number, bz: nu
   return true;
 }
 
+/**
+ * True if walking the straight line a → b would step off a floor: some cell under it has no floor, or its
+ * floor differs from the one before by more than maxStep (a platform's edge, a ramp's side). Walls and
+ * other blocks don't count, only drops; past the grid's edge counts as a drop. Flat maps never have one.
+ */
+export function dropOnLine(g: NavGrid, ax: number, az: number, bx: number, bz: number): boolean {
+  const len = Math.hypot(bx - ax, bz - az);
+  const steps = Math.max(1, Math.ceil(len / (g.cell * 0.5)));
+  let prev = cellIndex(g, ax, az);
+  for (let s = 1; s <= steps; s++) {
+    const t = s / steps;
+    const c = cellIndex(g, ax + (bx - ax) * t, az + (bz - az) * t);
+    if (c < 0 || Number.isNaN(g.floorY[c]!)) return true;
+    if (prev >= 0 && Math.abs(g.floorY[c]! - g.floorY[prev]!) > g.maxStep) return true;
+    prev = c;
+  }
+  return false;
+}
+
 /** Reusable A* working memory for one grid (so searches don't allocate). */
 export interface NavSearch {
   g: Float32Array;

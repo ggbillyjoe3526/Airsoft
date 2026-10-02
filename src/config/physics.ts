@@ -30,4 +30,10 @@ export const PHYSICS = {
    * (checked for Depot in depot.test.ts).
    */
   maxWalkableLedge: 0.15,
+  /**
+   * Steepest ramp a map may use, as rise per metre of run: 1:2 (26.6°). Every pace, sprinting down
+   * included, holds the ground on it; sprinting down 30° outruns the ground probe for ~0.3 s. At this
+   * slope a 0.2 m nav cell rises 0.1 m, under maxWalkableLedge. Checked for every map in mapData.test.ts.
+   */
+  maxRampSlope: 0.5,
 } as const;

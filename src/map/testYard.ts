@@ -47,16 +47,14 @@ const PLATFORM_HEIGHT = 1;
 /** Each ramp rises the platform height over this run (1:2, 26.6°) and is this wide. */
 const RAMP_RUN = 2;
 const RAMP_HALF_WIDTH = 1.5;
-/** Railings along the platform's edges and the ramps' sides stand this high above the platform. */
-const RAIL_HEIGHT = 1;
 
 /**
  * Elevation fixture for headless matches: a walled 40 × 16 m yard whose middle is a 1 m platform wall to
  * wall, reached only by a ramp at each end. A wall in the platform's middle splits it into a north and a
  * south lane and hides the spawns from each other. Teams spawn and wait out on the lower floor, so every
  * fight is on or across the upper level and every walk-off comes back down a ramp. The platform's edges
- * and the ramps' sides are railed: bots sidestep while fighting without looking at the nav grid, and would
- * step off an open edge (KNOWN_ISSUES).
+ * and the ramps' sides are open drops, as a loading dock's are: bots must fight up there without
+ * stepping off.
  */
 export const RAMP_YARD: MapData = {
   name: 'Ramp Yard',
@@ -85,8 +83,6 @@ export const RAMP_YARD: MapData = {
     { kind: 'crate', center: vec3(4.5, PLATFORM_HEIGHT + 0.6, 5.5), size: vec3(1.2, 1.2, 1.2) },
     { kind: 'crate', center: vec3(-4.5, PLATFORM_HEIGHT + 0.6, -5.5), size: vec3(1.2, 1.2, 1.2) },
     { kind: 'crate', center: vec3(4.5, PLATFORM_HEIGHT + 0.6, -5.5), size: vec3(1.2, 1.2, 1.2) },
-    ...rampYardRails(-1),
-    ...rampYardRails(1),
     ...rampYardPerimeter(),
   ],
   killY: -10,
@@ -103,22 +99,6 @@ export const RAMP_YARD: MapData = {
     [vec3(-11, 0, 0), vec3(-2, PLATFORM_HEIGHT, -6), vec3(2, PLATFORM_HEIGHT, -6), vec3(11, 0, 0)],
   ],
 };
-
-/** Railings at the west (side -1) or east (side 1) end of the platform: along its edge and both sides of its ramp. */
-function rampYardRails(side: number): MapBlock[] {
-  const t = WALL_THICKNESS;
-  const top = PLATFORM_HEIGHT + RAIL_HEIGHT;
-  const edgeLength = RAMP_YARD_HALF_Z - RAMP_HALF_WIDTH - t;
-  const edgeZ = RAMP_HALF_WIDTH + t + edgeLength / 2;
-  const edgeX = side * (PLATFORM_HALF_X + t / 2);
-  const rampX = side * (PLATFORM_HALF_X + RAMP_RUN / 2);
-  return [
-    { kind: 'wall', center: vec3(edgeX, top / 2, edgeZ), size: vec3(t, top, edgeLength) },
-    { kind: 'wall', center: vec3(edgeX, top / 2, -edgeZ), size: vec3(t, top, edgeLength) },
-    { kind: 'wall', center: vec3(rampX, top / 2, RAMP_HALF_WIDTH + t / 2), size: vec3(RAMP_RUN, top, t) },
-    { kind: 'wall', center: vec3(rampX, top / 2, -RAMP_HALF_WIDTH - t / 2), size: vec3(RAMP_RUN, top, t) },
-  ];
-}
 
 function rampYardPerimeter(): MapBlock[] {
   const h = WALL_HEIGHT / 2;

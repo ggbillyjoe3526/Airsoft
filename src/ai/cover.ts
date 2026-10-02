@@ -27,14 +27,35 @@ export interface CoverBlock {
 }
 
 /**
- * Blocks standing on the floor (bottom within `floorGap` of the nav floor under the block's centre) whose
+ * The nav floor a block stands on: of the floor heights under its footprint and one cell around it, the
+ * one nearest its bottom (NaN if there are none). Reading the whole footprint, not just the centre, finds
+ * the floor of a block on a platform's edge, or one whose centre is past the grid (a perimeter wall).
+ */
+function floorUnder(nav: NavGrid, b: MapBlock): number {
+  const bottom = b.center.y - b.size.y / 2;
+  const i0 = Math.max(0, Math.floor((b.center.x - b.size.x / 2 - nav.minX) / nav.cell) - 1);
+  const i1 = Math.min(nav.cols - 1, Math.floor((b.center.x + b.size.x / 2 - nav.minX) / nav.cell) + 1);
+  const j0 = Math.max(0, Math.floor((b.center.z - b.size.z / 2 - nav.minZ) / nav.cell) - 1);
+  const j1 = Math.min(nav.rows - 1, Math.floor((b.center.z + b.size.z / 2 - nav.minZ) / nav.cell) + 1);
+  let best = Number.NaN;
+  for (let j = j0; j <= j1; j++) {
+    for (let i = i0; i <= i1; i++) {
+      const f = nav.floorY[j * nav.cols + i]!;
+      if (!Number.isNaN(f) && !(Math.abs(bottom - f) >= Math.abs(bottom - best))) best = f;
+    }
+  }
+  return best;
+}
+
+/**
+ * Blocks standing on the floor (bottom within `floorGap` of the nav floor under them, see floorUnder) whose
  * top is between minTop and maxTop above that floor.
  */
 function floorBlocks(blocks: readonly MapBlock[], nav: NavGrid, floorGap: number, minTop: number, maxTop: number): CoverBlock[] {
   const out: CoverBlock[] = [];
   for (const b of blocks) {
     if (b.kind === 'floor' || b.kind === 'ramp') continue;
-    const floor = floorAt(nav, b.center.x, b.center.z);
+    const floor = floorUnder(nav, b);
     if (Number.isNaN(floor)) continue;
     const bottom = b.center.y - b.size.y / 2 - floor;
     const top = b.center.y + b.size.y / 2 - floor;
