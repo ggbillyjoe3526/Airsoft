@@ -206,4 +206,5 @@ src/ui       start/result screen, HUD, scoreboard, hit feedback, debug overlay
 docs/        vision, architecture, decisions, assets, ideas, known issues, reviews
 ```
 
-See `CLAUDE.md` for the project guide and `docs/` for design notes.
+See `CLAUDE.md` for the project guide and `docs/` for design notes. `docs/PLAYTEST.md` is the step-by-step
+playtest checklist.
