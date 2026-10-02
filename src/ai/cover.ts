@@ -1,99 +1,159 @@
 import type { BotConfig } from '../config/bots';
+import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { MapBlock } from '../map/mapTypes';
 import { isWalkableAt, type NavGrid } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
+import { leanOffset } from '../sim/lean';
 import { type RngState, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { lineClear } from './perception';
 
 const standingEye = vec3();
 const crouchedEye = vec3();
+const uprightEye = vec3();
+const leanEye = vec3();
+const leanReach = vec3();
+const offset = vec3();
 
-/** A low block (footprint centre and half extents): hides a crouched player, a standing one sees over it. */
-export interface LowCoverBlock {
+/** A block's footprint on the floor: centre and half extents. */
+export interface CoverBlock {
   x: number;
   z: number;
   halfX: number;
   halfZ: number;
 }
 
-/**
- * The map's low cover: blocks standing on the floor (bottom within `floorGap` of y = 0) whose top is
- * above a crouched player's eyes but below a standing player's (crates, barriers, window sills).
- */
-export function lowCoverBlocks(blocks: readonly MapBlock[], body: BodyConfig, floorGap: number): LowCoverBlock[] {
-  const out: LowCoverBlock[] = [];
+/** Blocks standing on the floor (bottom within `floorGap` of y = 0) whose top is in [minTop, maxTop). */
+function floorBlocks(blocks: readonly MapBlock[], floorGap: number, minTop: number, maxTop: number): CoverBlock[] {
+  const out: CoverBlock[] = [];
   for (const b of blocks) {
     if (b.kind === 'floor') continue;
     const bottom = b.center.y - b.size.y / 2;
     const top = b.center.y + b.size.y / 2;
-    if (Math.abs(bottom) > floorGap || top <= body.crouchEyeHeight || top >= body.standEyeHeight) continue;
+    if (Math.abs(bottom) > floorGap || top <= minTop || top >= maxTop) continue;
     out.push({ x: b.center.x, z: b.center.z, halfX: b.size.x / 2, halfZ: b.size.z / 2 });
   }
   return out;
+}
+
+/**
+ * The map's low cover: blocks standing on the floor whose top is above a crouched player's eyes but
+ * below a standing player's (crates, barriers, window sills).
+ */
+export function lowCoverBlocks(blocks: readonly MapBlock[], body: BodyConfig, floorGap: number): CoverBlock[] {
+  return floorBlocks(blocks, floorGap, body.crouchEyeHeight, body.standEyeHeight);
+}
+
+/** The map's full-height cover: blocks standing on the floor at least as tall as a player (walls, containers). */
+export function tallCoverBlocks(blocks: readonly MapBlock[], body: BodyConfig, floorGap: number): CoverBlock[] {
+  return floorBlocks(blocks, floorGap, body.height - 1e-6, Number.POSITIVE_INFINITY);
 }
 
 export interface CoverSpot {
   position: Vec3;
   /** True if only crouching hides you here (you can stand up to shoot over it). */
   crouchOnly: boolean;
+  /** Full cover you can lean out of to see the threat: -1 lean left, 1 lean right, 0 not a lean spot. */
+  lean: number;
 }
 
-/** Narrows a cover search: within `radius` metres, `randomCandidates` random tries, and optionally crouch cover only. */
+export function createCoverSpot(): CoverSpot {
+  return { position: vec3(), crouchOnly: false, lean: 0 };
+}
+
+/** Narrows a cover search: within `radius` metres, `randomCandidates` random tries, and optionally only spots you can peek from (crouch or lean cover). */
 export interface CoverSearch {
   radius: number;
   randomCandidates: number;
-  crouchOnly: boolean;
+  peekable: boolean;
+}
+
+/** What a cover search needs to know about the world (a BotWorld has all of it). */
+export interface CoverWorld {
+  nav: NavGrid;
+  query: WorldQuery;
+  cfg: BotConfig;
+  body: BodyConfig;
+  hits: HitConfig;
+  /** The map's low blocks (lowCoverBlocks) and full-height blocks (tallCoverBlocks). */
+  lowCover: readonly CoverBlock[];
+  tallCover: readonly CoverBlock[];
+}
+
+/**
+ * Which way (1 right, -1 left, 0 neither) a player standing at `spot`, facing `threatEye`, can lean to see
+ * it: the leaned eyes (the same geometry as sim/lean.ts) must have a clear line to the threat, and room
+ * to lean (no wall within cfg.leanRoomMargin past them).
+ */
+export function leanSideToSee(spot: Vec3, threatEye: Vec3, w: CoverWorld): number {
+  const yaw = Math.atan2(-(threatEye.x - spot.x), -(threatEye.z - spot.z));
+  uprightEye.x = spot.x;
+  uprightEye.y = spot.y + w.body.standEyeHeight;
+  uprightEye.z = spot.z;
+  for (const side of [1, -1]) {
+    leanOffset(w.body.standEyeHeight, side, 0, yaw, w.hits, offset);
+    leanEye.x = uprightEye.x + offset.x;
+    leanEye.y = uprightEye.y + offset.y;
+    leanEye.z = uprightEye.z + offset.z;
+    const sideways = Math.hypot(offset.x, offset.z);
+    const k = 1 + w.cfg.leanRoomMargin / sideways;
+    leanReach.x = uprightEye.x + offset.x * k;
+    leanReach.y = leanEye.y;
+    leanReach.z = uprightEye.z + offset.z * k;
+    if (lineClear(w.query, uprightEye, leanReach) && lineClear(w.query, threatEye, leanEye)) return side;
+  }
+  return 0;
 }
 
 /**
  * Looks for a nearby spot hidden from `threatEye`: random walkable points within cfg.coverRadius of
- * `from`, plus the spot right behind each low block in reach (as seen from the threat; random points
- * rarely land in a crate's small shadow). Keeps the closest that hides a crouched (preferably
- * standing up to shoot over) player and doesn't mean running towards the threat. `search` narrows
- * it (default: the config's radius and candidates, any cover). Returns false if nothing works.
+ * `from`, plus the spot right behind each low block in reach and just behind each corner of each tall
+ * block in reach (as seen from the threat; random points rarely land in a crate's small shadow or a
+ * hand's width from a corner). Keeps the closest that hides a crouched player, preferring spots you can
+ * fight from (stand up over crouch cover, or lean out of full cover), and that doesn't mean running
+ * towards the threat. `search` narrows it (default: the config's radius and candidates, any cover).
+ * Returns false if nothing works.
  */
-export function findCover(
-  from: Vec3,
-  threatEye: Vec3,
-  nav: NavGrid,
-  query: WorldQuery,
-  cfg: BotConfig,
-  body: BodyConfig,
-  rng: RngState,
-  lowCover: readonly LowCoverBlock[],
-  out: CoverSpot,
-  search?: CoverSearch,
-): boolean {
+export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngState, out: CoverSpot, search?: CoverSearch): boolean {
+  const cfg = w.cfg;
+  const body = w.body;
   const radius = search ? search.radius : cfg.coverRadius;
   const candidates = search ? search.randomCandidates : cfg.coverCandidates;
-  const crouchOnlyWanted = search ? search.crouchOnly : false;
+  const peekableWanted = search ? search.peekable : false;
   const threatDist = Math.hypot(threatEye.x - from.x, threatEye.z - from.z);
   let bestScore = Number.POSITIVE_INFINITY;
+  const spot = vec3();
   const consider = (x: number, z: number): void => {
-    if (!isWalkableAt(nav, x, z)) return;
+    if (!isWalkableAt(w.nav, x, z)) return;
     const r = Math.hypot(x - from.x, z - from.z);
     if (r > radius) return;
     // Don't pick cover that means running at the threat.
     const toThreat = Math.hypot(threatEye.x - x, threatEye.z - z);
     if (toThreat < Math.min(threatDist * cfg.coverTowardThreatFraction, threatDist - cfg.coverTowardThreatMetres)) return;
 
-    crouchedEye.x = standingEye.x = x;
-    crouchedEye.z = standingEye.z = z;
+    crouchedEye.x = x;
+    crouchedEye.z = z;
     crouchedEye.y = from.y + body.crouchEyeHeight;
+    if (lineClear(w.query, threatEye, crouchedEye)) return; // not cover at all
+    standingEye.x = x;
+    standingEye.z = z;
     standingEye.y = from.y + body.standEyeHeight;
-    if (lineClear(query, threatEye, crouchedEye)) return; // not cover at all
-    const crouchOnly = lineClear(query, threatEye, standingEye);
-    if (crouchOnlyWanted && !crouchOnly) return;
-    // Closest wins; crouch cover (you can stand up and shoot back) gets a bonus.
-    const score = r - (crouchOnly ? cfg.crouchCoverBonus : 0);
+    const crouchOnly = lineClear(w.query, threatEye, standingEye);
+    spot.x = x;
+    spot.y = from.y;
+    spot.z = z;
+    const lean = crouchOnly ? 0 : leanSideToSee(spot, threatEye, w);
+    if (peekableWanted && !crouchOnly && lean === 0) return;
+    // Closest wins; cover you can fight from (stand up over it, or lean out) gets a bonus.
+    const score = r - (crouchOnly ? cfg.crouchCoverBonus : lean !== 0 ? cfg.leanCoverBonus : 0);
     if (score < bestScore) {
       bestScore = score;
       out.position.x = x;
       out.position.y = from.y;
       out.position.z = z;
       out.crouchOnly = crouchOnly;
+      out.lean = lean;
     }
   };
   for (let i = 0; i < candidates; i++) {
@@ -101,7 +161,7 @@ export function findCover(
     const r = cfg.coverMinRadius + rngNext(rng) * (radius - cfg.coverMinRadius);
     consider(from.x + Math.cos(angle) * r, from.z + Math.sin(angle) * r);
   }
-  for (const b of lowCover) {
+  for (const b of w.lowCover) {
     // Behind the block from the threat: past its far edge (along the threat→block line) by the gap.
     const dx = b.x - threatEye.x;
     const dz = b.z - threatEye.z;
@@ -114,12 +174,70 @@ export function findCover(
     for (const gap of [cfg.lowCoverGap, cfg.lowCoverGapFar]) {
       const x = b.x + ux * (edge + gap);
       const z = b.z + uz * (edge + gap);
-      if (!isWalkableAt(nav, x, z)) continue;
+      if (!isWalkableAt(w.nav, x, z)) continue;
       consider(x, z);
       break;
     }
   }
+  for (const b of w.tallCover) {
+    if (Math.hypot(b.x - from.x, b.z - from.z) > radius + Math.hypot(b.halfX, b.halfZ)) continue;
+    cornerSpots(b, threatEye, cfg.lowCoverGap, cfg, consider);
+  }
   return Number.isFinite(bestScore);
+}
+
+/**
+ * Lean spots at a tall block's two outline corners as seen from the threat: on the sight line past the
+ * corner, moved cfg.leanSpotInset into the block's shadow, and far enough along it to stand clear of the
+ * block (`clear` metres from its sides). Each goes to `consider`, which checks it properly.
+ */
+function cornerSpots(b: CoverBlock, threatEye: Vec3, clear: number, cfg: BotConfig, consider: (x: number, z: number) => void): void {
+  const cx = b.x - threatEye.x;
+  const cz = b.z - threatEye.z;
+  const cd = Math.hypot(cx, cz);
+  if (cd < 1e-6) return;
+  // The outline corners are the ones furthest round either side of the line to the centre.
+  let minA = Number.POSITIVE_INFINITY;
+  let maxA = Number.NEGATIVE_INFINITY;
+  let minX = 0;
+  let minZ = 0;
+  let maxX = 0;
+  let maxZ = 0;
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const x = b.x + sx * b.halfX;
+      const z = b.z + sz * b.halfZ;
+      const a = Math.atan2(cx * (z - threatEye.z) - cz * (x - threatEye.x), cx * (x - threatEye.x) + cz * (z - threatEye.z));
+      if (a < minA) [minA, minX, minZ] = [a, x, z];
+      if (a > maxA) [maxA, maxX, maxZ] = [a, x, z];
+    }
+  }
+  for (const [x, z] of [[minX, minZ], [maxX, maxZ]] as const) {
+    const dx = x - threatEye.x;
+    const dz = z - threatEye.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 1e-6) continue;
+    const ux = dx / d;
+    const uz = dz / d;
+    // Into the shadow: perpendicular to the sight line, towards the block's centre.
+    let nx = -uz;
+    let nz = ux;
+    if (nx * (b.x - x) + nz * (b.z - z) < 0) {
+      nx = -nx;
+      nz = -nz;
+    }
+    const px = x + nx * cfg.leanSpotInset;
+    const pz = z + nz * cfg.leanSpotInset;
+    // Step along the sight line until standing there clears the block.
+    const maxAlong = 2 * Math.hypot(b.halfX, b.halfZ) + clear + cfg.lowCoverGapFar;
+    for (let along = clear; along <= maxAlong; along += cfg.lowCoverGap / 2) {
+      const sx = px + ux * along;
+      const sz = pz + uz * along;
+      if (Math.abs(sx - b.x) < b.halfX + clear && Math.abs(sz - b.z) < b.halfZ + clear) continue;
+      consider(sx, sz);
+      break;
+    }
+  }
 }
 
 /** True if a player crouched at `spot` (standing on its floor) is hidden from `threatEye`. */

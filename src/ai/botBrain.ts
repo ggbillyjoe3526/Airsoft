@@ -7,7 +7,7 @@ import { type Bot, type BotWorld, flagRole, lastSeenAt, pick, wantsFlag } from '
 import { aimBot, reloadBot, shootBot } from './botCombat';
 import { enterFlagMode, moveBot, wantRoute } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
-import { type CoverSearch, findCover, hidesFrom } from './cover';
+import { type CoverSearch, findCover, hidesFrom, leanSideToSee } from './cover';
 import { eyeOf } from './perception';
 
 /**
@@ -21,8 +21,8 @@ const myEye = vec3();
 const aimAt = vec3();
 const threatEye = vec3();
 
-/** Narrowed cover search for a fresh contact: close crouch cover only, no random tries (filled per call). */
-const contactSearch: CoverSearch = { radius: 0, randomCandidates: 0, crouchOnly: true };
+/** Narrowed cover search for a fresh contact: close cover to peek from only, no random tries (filled per call). */
+const contactSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
 
 /**
  * Looks for cover from `threat` and heads there (`search` narrows the search, see findCover); false
@@ -31,7 +31,7 @@ const contactSearch: CoverSearch = { radius: 0, randomCandidates: 0, crouchOnly:
 function takeCover(b: Bot, w: BotWorld, threat: Character, down: number, search?: CoverSearch): boolean {
   const cfg = w.cfg;
   eyeOf(threat, w.body, w.hits, threatEye);
-  if (!findCover(b.character.position, threatEye, w.nav, w.query, cfg, w.body, b.rng, w.lowCover, b.cover, search)) return false;
+  if (!findCover(b.character.position, threatEye, w, b.rng, b.cover, search)) return false;
   b.mode = 'cover';
   b.coverPhase = 'down';
   b.coverLeft = down;
@@ -45,9 +45,32 @@ function takeCover(b: Bot, w: BotWorld, threat: Character, down: number, search?
   return true;
 }
 
+/** Where the bot knows the threat to be (last seen or heard), at standing eye height, into `threatEye`. */
+function knownThreatEye(b: Bot, w: BotWorld): void {
+  threatEye.x = b.lastKnown.x;
+  threatEye.y = b.lastKnown.y + w.body.standEyeHeight;
+  threatEye.z = b.lastKnown.z;
+}
+
 /**
- * Ducks back down behind the crouch cover it is fighting from, unless the spot no longer hides it from
- * where the bot knows the threat to be (flanked). Ducking with the enemy still in sight (under fire,
+ * At a lean spot: re-checks, from where the bot actually stands, which way a lean shows where the threat
+ * was (the bot stops a few centimetres off the planned spot). False if neither way does, or not a lean spot.
+ */
+function leansOutHere(b: Bot, w: BotWorld): boolean {
+  if (b.cover.lean === 0) return false;
+  knownThreatEye(b, w);
+  b.cover.lean = leanSideToSee(b.character.position, threatEye, w);
+  return b.cover.lean !== 0;
+}
+
+/** Leaning out of full cover at a corner: peeking, or fighting from the spot. */
+function leaningOut(b: Bot): boolean {
+  return b.cover.lean !== 0 && ((b.mode === 'cover' && b.coverPhase === 'peek') || (b.mode === 'fight' && b.fromCover));
+}
+
+/**
+ * Ducks back down behind the crouch cover (or leans back in behind the corner) it is fighting from,
+ * unless the spot no longer hides it from where the bot knows the threat to be (flanked). Ducking with the enemy still in sight (under fire,
  * reloading, end of a burst) renews its looks; ducking because the enemy went out of sight doesn't.
  */
 function duckBack(b: Bot, w: BotWorld, target: Character | undefined, seeing: boolean): boolean {
@@ -55,10 +78,7 @@ function duckBack(b: Bot, w: BotWorld, target: Character | undefined, seeing: bo
   if (seeing && target) {
     eyeOf(target, w.body, w.hits, threatEye);
   } else {
-    // Only what it knows: where the enemy was last seen or heard, at standing eye height.
-    threatEye.x = b.lastKnown.x;
-    threatEye.y = b.lastKnown.y + w.body.standEyeHeight;
-    threatEye.z = b.lastKnown.z;
+    knownThreatEye(b, w);
   }
   if (!hidesFrom(b.cover.position, threatEye, w.query, w.body)) return false;
   b.mode = 'cover';
@@ -81,11 +101,13 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   const outOfAmmo = ammo.mag === 0 && !canReload(ammo);
   const empty = ammo.mag === 0 && !outOfAmmo; // empty, but a spare mag has BBs
   const suppressed = w.time - b.suppressedAt < cfg.suppressionTime;
-  const atCover = Math.hypot(b.cover.position.x - me.position.x, b.cover.position.z - me.position.z) < cfg.coverArrive;
+  // A lean spot only works right on it: a few centimetres decide whether the lean sees round the corner.
+  const arrive = b.cover.lean !== 0 ? cfg.leanSpotArrive : cfg.coverArrive;
+  const atCover = Math.hypot(b.cover.position.x - me.position.x, b.cover.position.z - me.position.z) < arrive;
   const coverOver = w.time - b.coverSince > cfg.coverEpisodeMax || outOfAmmo;
 
-  // Fighting over crouch cover: duck again when shot at, reloading, out of sight or after a short
-  // burst. With the target gone (hit, or forgotten), there's nothing to duck from: move on.
+  // Fighting over crouch cover (or round a corner): duck (lean back in) again when shot at, reloading,
+  // out of sight or after a short burst. With the target gone (hit, or forgotten), there's nothing to duck from: move on.
   if (b.mode === 'fight' && b.fromCover) {
     b.peekFightLeft -= dt;
     const duck = !seeing || suppressed || reloading || empty || b.peekFightLeft <= 0;
@@ -104,8 +126,9 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     const exposed = b.coverPhase === 'down' && b.coverHeld >= cfg.coverSettle && seeing && !reloading;
     let done = exposed || coverOver || b.coverGiveUp <= 0 || b.routeState === 'failed';
     if (!done && atCover && b.coverPhase === 'down' && b.coverLeft <= 0 && !reloading) {
-      // Time to look again: over crouch cover by standing up, otherwise by moving on.
-      if (b.cover.crouchOnly && b.peeksLeft > 0) {
+      // Time to look again: over crouch cover by standing up, round a corner by leaning out, otherwise
+      // by moving on.
+      if ((b.cover.crouchOnly || leansOutHere(b, w)) && b.peeksLeft > 0) {
         b.coverPhase = 'peek';
         b.peekLeft = pick(b.rng, cfg.peekLook);
         b.peeksLeft--;
@@ -183,7 +206,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.sprint = false;
   cmd.walk = false;
   cmd.crouch = false;
-  cmd.lean = 0; // bots don't lean yet (M10)
+  cmd.lean = 0;
   cmd.jump = false;
   cmd.fire = false;
   cmd.reload = false;
@@ -215,8 +238,10 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     const calm = w.time - b.lastThreatAt > cfg.sprintWhenCalmFor;
     cmd.sprint = (b.mode === 'advance' || b.mode === 'flag') && calm && cmd.forward > cfg.sprintForward;
     // Closing in on where someone was seen or heard: walk, so footsteps don't give us away.
-    cmd.walk = b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < cfg.searchWalkDistance;
+    cmd.walk ||= b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < cfg.searchWalkDistance;
   }
+  // Round a corner of full cover: lean out to look and fight, back in to hide.
+  if (leaningOut(b)) cmd.lean = b.cover.lean;
   eyeOf(me, w.body, w.hits, myEye);
   const offAim = aimBot(b, w, target, myEye, aimAt, moving, cmd, dt);
   cmd.yaw = b.aim.yaw;

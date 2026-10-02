@@ -45,6 +45,30 @@ export interface MovementConfig {
   leanWallClearance: number;
   /** From this much of a full lean (0..1) you move at walking pace, quietly; less slows you part of the way. */
   leanQuietFrom: number;
+  /** How a shooter's stance and movement scale their replica's spread (see sim/accuracy.ts). */
+  accuracy: AccuracyConfig;
+}
+
+/**
+ * Accuracy by stance and movement: multipliers on a replica's spreadDeg. Standing still is the
+ * reference (1); crouching steadies; walking, running, jumping and sprinting shake the aim. The
+ * multiplier jumps up at once when you start moving and settles back over settleTime once you stop,
+ * so the moments just after a sprint, a run or a landing are still shaky.
+ */
+export interface AccuracyConfig {
+  /** Below this horizontal speed (m/s) a character counts as still. */
+  stillBelow: number;
+  /** At walking pace (walkSpeed) and at the normal pace (runSpeed); in between it blends linearly. */
+  walk: number;
+  run: number;
+  /** While sprinting (you can't fire, but the shake carries into the moments after). */
+  sprint: number;
+  /** Off the ground (jumping, falling); the shake carries into the landing. */
+  air: number;
+  /** Multiplier for being fully crouched (applied on top of the movement one). */
+  crouched: number;
+  /** Seconds for the multiplier to settle back (time constant) once the cause stops. */
+  settleTime: number;
 }
 
 /** Heights are measured from the character's position (capsule bottom), which rests PHYSICS.groundRestGap above the floor. */
@@ -78,6 +102,15 @@ export const MOVEMENT: MovementConfig = {
   leanTime: 0.18,
   leanWallClearance: 0.2,
   leanQuietFrom: 0.5,
+  accuracy: {
+    stillBelow: 0.4,
+    walk: 1.5,
+    run: 2.6,
+    sprint: 3.5,
+    air: 4.5,
+    crouched: 0.65,
+    settleTime: 0.15,
+  },
 };
 
 export const BODY: BodyConfig = {

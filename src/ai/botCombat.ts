@@ -54,7 +54,7 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   return Number.POSITIVE_INFINITY;
 }
 
-/** True if a teammate stands in (or right next to) the line of fire before the target. */
+/** True if a teammate stands in (or right next to) the line of fire within `dist` metres. */
 function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number): boolean {
   const me = b.character;
   // A teammate on the move can run into the BBs' path while they fly: check where they'll be too.
@@ -95,7 +95,7 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
   aimDir.z = -Math.cos(b.aim.yaw) * cp;
   const dist = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
   // Sight is refreshed 10×/s; don't fire into cover the target has just stepped behind.
-  if (friendInLine(b, w, eye, aimDir, dist) || !lineClear(w.query, eye, aimPoint)) return;
+  if (friendInLine(b, w, eye, aimDir, dist + cfg.friendlyBeyondTarget) || !lineClear(w.query, eye, aimPoint)) return;
   if (b.burstLeft <= 0 && b.pauseLeft <= 0) b.burstLeft = pick(b.rng, cfg.burst);
   if (b.burstLeft > 0) {
     cmd.fire = true;

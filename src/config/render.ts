@@ -141,6 +141,14 @@ export const HUD = {
   lowClockSeconds: 20,
   /** The result screen appears this long after the match-over whistles end (see matchOverScreenDelay). */
   matchOverScreenPause: 0.3,
+  /**
+   * The crosshair's arms open to show where your BBs can go: the gap is this many standard deviations
+   * of the current spread (replica spread × stance and movement), on screen, but never under
+   * crosshairMinGap pixels. Gaps change only in steps of crosshairGapStep pixels (fewer DOM writes).
+   */
+  crosshairSpreadSigmas: 2,
+  crosshairMinGap: 4,
+  crosshairGapStep: 0.5,
 } as const;
 
 /** First-person replica rendering and motion. */

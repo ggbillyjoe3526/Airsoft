@@ -254,6 +254,8 @@ kbd {
   top: 50%;
   width: 0;
   height: 0;
+  --gap: 6px;
+  --arm: 7px;
 }
 
 .hud-crosshair i,
@@ -273,31 +275,31 @@ kbd {
 .hud-crosshair i:nth-child(1),
 .hud-crosshair i:nth-child(2) {
   top: -1px;
-  width: 7px;
+  width: var(--arm);
   height: 2px;
 }
 
 .hud-crosshair i:nth-child(1) {
-  left: -13px;
+  left: calc(-1 * (var(--gap) + var(--arm)));
 }
 
 .hud-crosshair i:nth-child(2) {
-  left: 6px;
+  left: var(--gap);
 }
 
 .hud-crosshair i:nth-child(3),
 .hud-crosshair i:nth-child(4) {
   left: -1px;
   width: 2px;
-  height: 7px;
+  height: var(--arm);
 }
 
 .hud-crosshair i:nth-child(3) {
-  top: -13px;
+  top: calc(-1 * (var(--gap) + var(--arm)));
 }
 
 .hud-crosshair i:nth-child(4) {
-  top: 6px;
+  top: var(--gap);
 }
 
 .hud-replica {

@@ -86,6 +86,8 @@ export interface Muzzle {
   eye: Vec3;
   yaw: number;
   pitch: number;
+  /** The shooter's stance and movement multiplier on the replica's spread (sim/accuracy.ts). */
+  spreadScale: number;
 }
 
 /** Level geometry queries the armament needs. */
@@ -202,7 +204,7 @@ function startReload(characterId: number, a: Armament, replica: ReplicaConfig, c
 }
 
 function fire(characterId: number, a: Armament, replica: ReplicaConfig, muzzle: Muzzle, ctx: ArmamentContext): void {
-  const spread = replica.spreadDeg * DEG;
+  const spread = replica.spreadDeg * muzzle.spreadScale * DEG;
   const yaw = muzzle.yaw + rngGaussian(ctx.rng) * spread;
   const pitch = muzzle.pitch + a.recoil + rngGaussian(ctx.rng) * spread;
   aimDirection(dir, yaw, pitch);

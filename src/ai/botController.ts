@@ -12,7 +12,7 @@ import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, createBot, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
-import type { LowCoverBlock } from './cover';
+import type { CoverBlock } from './cover';
 import { bodyPoint } from './perception';
 import { assignLanes, pickTeamPlan, shuffledLanes, type TeamPlan } from './teamPlan';
 
@@ -25,8 +25,9 @@ export interface BotControllerOptions {
   /** Route ends snap to the nearest walkable cell within this distance. */
   navSnap: number;
   lanes: readonly (readonly Vec3[])[];
-  /** The map's low cover (lowCoverBlocks(map.blocks, ...)); empty if none. */
-  lowCover: readonly LowCoverBlock[];
+  /** The map's low and full-height cover (lowCoverBlocks / tallCoverBlocks of map.blocks); empty if none. */
+  lowCover: readonly CoverBlock[];
+  tallCover: readonly CoverBlock[];
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
@@ -98,6 +99,7 @@ export class BotController {
       nav,
       lanes: opts.lanes,
       lowCover: opts.lowCover,
+      tallCover: opts.tallCover,
       body: opts.body,
       hits: opts.hits,
       loadout: opts.loadout,

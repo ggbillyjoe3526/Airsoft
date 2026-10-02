@@ -164,10 +164,22 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
       return followRoute(b, w, dt);
     }
     case 'cover': {
-      // Get there, then keep low, standing up only to look over crouch cover.
-      const moving = followRoute(b, w, dt);
-      cmd.crouch = !moving && b.coverPhase === 'down';
-      return moving;
+      // Get there, then keep low, standing up only to look over crouch cover. At a corner of full cover,
+      // stand right on the spot (a few centimetres decide whether a lean sees round it) and stay upright.
+      if (followRoute(b, w, dt)) return true;
+      if (b.cover.lean === 0) {
+        cmd.crouch = b.coverPhase === 'down';
+        return false;
+      }
+      const p = b.character.position;
+      const dx = b.cover.position.x - p.x;
+      const dz = b.cover.position.z - p.z;
+      const d = Math.hypot(dx, dz);
+      if (b.routeState !== 'none' || d <= cfg.leanSpotReach || d > cfg.waypointReach * 2) return false;
+      b.moveDir.x = dx / d;
+      b.moveDir.z = dz / d;
+      cmd.walk = true;
+      return true;
     }
     case 'fight':
       // Fighting over crouch cover: stay put behind it.

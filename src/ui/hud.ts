@@ -25,6 +25,8 @@ export class Hud {
   private readonly reloadBar: HTMLDivElement;
   private readonly reloadFill: HTMLDivElement;
   private shownInPlay = true;
+  private readonly crosshair: HTMLDivElement;
+  private shownGap = -1;
   private shown = { name: '', mag: -1, status: '', reloadPct: -1 };
 
   constructor(parent: HTMLElement) {
@@ -46,6 +48,7 @@ export class Hud {
     this.status = this.root.querySelector('.hud-status') as HTMLDivElement;
     this.reloadBar = this.root.querySelector('.hud-reload') as HTMLDivElement;
     this.reloadFill = this.reloadBar.firstElementChild as HTMLDivElement;
+    this.crosshair = this.root.querySelector('.hud-crosshair') as HTMLDivElement;
   }
 
   setVisible(visible: boolean): void {
@@ -58,9 +61,14 @@ export class Hud {
     this.noticeLeft = seconds;
   }
 
-  /** Once per frame (`dt` seconds). `inPlay` is false once you've been hit: the crosshair and ammo panel go away. */
-  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, dt: number): void {
+  /**
+   * Once per frame (`dt` seconds). `inPlay` is false once you've been hit: the crosshair and ammo panel go
+   * away. `spreadPx` is one standard deviation of where the next BB can go, in screen pixels.
+   */
+  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, spreadPx: number, dt: number): void {
     if (this.shownInPlay !== inPlay) this.root.classList.toggle('out', !(this.shownInPlay = inPlay));
+    const gap = Math.round(Math.max(HUD.crosshairMinGap, HUD.crosshairSpreadSigmas * spreadPx) / HUD.crosshairGapStep) * HUD.crosshairGapStep;
+    if (gap !== this.shownGap) this.crosshair.style.setProperty('--gap', `${(this.shownGap = gap)}px`);
     const replica = loadout[armament.active]!;
     const ammo = armament.ammo[armament.active]!;
     const s = this.shown;

@@ -1,3 +1,5 @@
+import { MOVEMENT } from './movement';
+
 /**
  * Bot behaviour tuning shared by every difficulty level (the skill per level is BOT_SKILL below).
  * Bots play through the same commands as the player and have human limits: they only know what
@@ -61,6 +63,11 @@ export const BOT_BEHAVIOUR = {
   tacticalReloadFraction: 0.35,
   /** Never fire if a teammate is this close to the line of fire (metres, beyond their hit volume). */
   friendlyMargin: 0.3,
+  /**
+   * ...and this far (metres) past the target too: a BB that misses keeps flying, so a teammate just
+   * behind the target in the line of fire is as much in the way as one in front.
+   */
+  friendlyBeyondTarget: 15,
 
   // ---- Movement and cover -----------------------------------------------------------------------
   /** Pause at each lane point, looking ahead (s). */
@@ -84,6 +91,21 @@ export const BOT_BEHAVIOUR = {
   lowCoverGapFar: 0.8,
   /** A low block counts as standing on the floor if its bottom is within this of y = 0 (metres). */
   lowCoverFloorGap: 0.05,
+  /**
+   * Corners of full-height blocks (walls, containers) are tried as lean spots: just behind the corner as
+   * seen from the threat, leanSpotInset (metres) inside its shadow. More than the body's hit radius
+   * (hidden standing upright) but less than the eyes move in a full lean (~0.4 m), so leaning out shows
+   * the head and one shoulder, as a player peeking that corner would.
+   */
+  leanSpotInset: 0.27,
+  /** Lean spots score as if they were this much closer (metres): you can lean out and shoot back. */
+  leanCoverBonus: 1.5,
+  /** Walk right onto a lean spot, to within this distance (metres): a few centimetres decide the peek. */
+  leanSpotReach: 0.1,
+  /** At a lean spot, the bot counts as there (to peek and fight from it) only within this distance (metres). */
+  leanSpotArrive: 0.2,
+  /** A lean needs this much room past the leaned eyes (metres; the lean stops this short of walls). */
+  leanRoomMargin: MOVEMENT.leanWallClearance,
   /** Close enough to a cover spot to settle in (metres). */
   coverArrive: 0.9,
   /** Stay in cover this long before peeking out again (s). */

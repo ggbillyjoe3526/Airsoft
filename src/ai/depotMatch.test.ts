@@ -18,7 +18,7 @@ import type { RoundRules } from '../sim/round';
 import { createGameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
-import { lowCoverBlocks } from './cover';
+import { lowCoverBlocks, tallCoverBlocks } from './cover';
 
 const DT = 1 / 60;
 
@@ -64,6 +64,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     navSnap: NAV.snap,
     lanes: DEPOT.lanes,
     lowCover: lowCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap),
+    tallCover: tallCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap),
     body: BODY,
     hits: HITS,
     loadout: LOADOUT,
@@ -181,8 +182,8 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
       }
       if (stats.maxFlag >= 1) flagsRaised++;
     }
-    // Measured (5 s raise, 2 retakers, bots minding moving teammates, M9 BB physics; 16 seeds): 12 captures
-    // in 123 rounds, a flag raised in 7 of 16 matches, attackers winning 45%, no friendly hits. Bots check
+    // Measured (M10: accuracy by stance and movement, bots leaning round corners; 16 seeds): 21 captures in
+    // 119 rounds, a flag raised in 12 of 16 matches, attackers winning 59%, no friendly hits. Bots check
     // their line of fire, but a teammate dodging into a BB already in the air can't always be helped
     // (KNOWN_ISSUES). Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);

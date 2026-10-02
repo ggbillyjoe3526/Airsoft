@@ -23,7 +23,7 @@ function setup(query: WorldQuery = openSky) {
     events,
   };
   const a = createArmament(LOADOUT);
-  const muzzle: Muzzle = { eye: vec3(0, 1.6, 0), yaw: 0, pitch: 0 };
+  const muzzle: Muzzle = { eye: vec3(0, 1.6, 0), yaw: 0, pitch: 0, spreadScale: 1 };
   const cmd = createCommand();
   /** Runs ticks, clearing one-shot inputs after the first. Returns all events. */
   const run = (ticks: number, setupCmd: (c: PlayerCommand, tick: number) => void = () => {}, canFire = true): GameEvent[] => {
@@ -197,8 +197,9 @@ describe('replica handling', () => {
   });
 
   it('spreads shots around the aim point by roughly the configured amount, deterministically', () => {
-    const angles = (seedRuns: number): number[] => {
-      const { ctx, a, run } = setup();
+    const angles = (seedRuns: number, spreadScale = 1): number[] => {
+      const { ctx, a, run, muzzle } = setup();
+      muzzle.spreadScale = spreadScale;
       const out: number[] = [];
       for (let i = 0; i < seedRuns; i++) {
         a.recoil = 0;
@@ -216,6 +217,9 @@ describe('replica handling', () => {
     expect(sd).toBeGreaterThan(AEG.spreadDeg * DEG * 0.7);
     expect(sd).toBeLessThan(AEG.spreadDeg * DEG * 1.3);
     expect(angles(20)).toEqual(xs.slice(0, 20));
+    // The shooter's stance and movement multiplier scales the spread (same seed: exactly).
+    const shaky = angles(20, 2.6);
+    for (let i = 0; i < 20; i++) expect(shaky[i]).toBeCloseTo(xs[i]! * 2.6, 9);
   });
 
   it('kicks the aim up a little per shot, caps it, and recovers quickly', () => {

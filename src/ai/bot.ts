@@ -9,7 +9,7 @@ import type { RoundState } from '../sim/round';
 import { createRng, type RngState, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type AimState, createAim } from './aim';
-import type { CoverSpot, LowCoverBlock } from './cover';
+import { type CoverBlock, type CoverSpot, createCoverSpot } from './cover';
 
 /**
  * A bot's modes:
@@ -17,7 +17,8 @@ import type { CoverSpot, LowCoverBlock } from './cover';
  *   is swept, hunt: head for the parts of the map the team has checked least recently;
  * - fight: someone is in sight: react, aim, shoot in bursts, sidestep;
  * - cover: under fire or reloading: move to a spot hidden from the threat and duck; at crouch-high
- *   cover, stand up to look (and fight from the spot) a few times before moving on;
+ *   cover, stand up to look (and fight from the spot) a few times before moving on, and at a corner of
+ *   full-height cover, lean out to look the same way;
  * - search: lost sight of (or heard) someone: go to where they were last known;
  * - flag (flag mode): go to the pole, crouch there and work the rope: attackers once their lane is swept,
  *   defenders while the flag is off the bottom. In flag mode defenders hold a point near home on their
@@ -117,8 +118,9 @@ export interface BotWorld {
   query: WorldQuery;
   nav: NavGrid;
   lanes: readonly (readonly Vec3[])[];
-  /** The map's low blocks, tried as cover spots (see findCover). */
-  lowCover: readonly LowCoverBlock[];
+  /** The map's low and full-height blocks, tried as cover spots (see findCover). */
+  lowCover: readonly CoverBlock[];
+  tallCover: readonly CoverBlock[];
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
@@ -176,7 +178,7 @@ export function createBot(character: Character, seed: number, cfg: BotConfig): B
     routeState: 'none',
     moveDir: { x: 0, z: 0 },
     stuckFor: 0,
-    cover: { position: vec3(), crouchOnly: false },
+    cover: createCoverSpot(),
     coverLeft: 0,
     coverGiveUp: 0,
     coverHeld: 0,

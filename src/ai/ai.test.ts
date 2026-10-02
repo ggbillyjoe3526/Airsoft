@@ -8,7 +8,7 @@ import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
 import { TEST_YARD } from '../map/testYard';
-import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
+import { buildNavGrid, isWalkableAt, type NavGrid } from '../nav/navGrid';
 import { DEPOT } from '../map/depot';
 import { isInPlay } from '../sim/elimination';
 import type { WorldQuery } from '../sim/armament';
@@ -24,7 +24,7 @@ import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
 import type { Bot, BotWorld } from './bot';
 import { reloadBot } from './botCombat';
 import { BotController } from './botController';
-import { findCover, type LowCoverBlock, lowCoverBlocks } from './cover';
+import { type CoverBlock, type CoverWorld, createCoverSpot, findCover, lowCoverBlocks, tallCoverBlocks } from './cover';
 import { canSee, lineClear, visiblePart } from './perception';
 
 const DT = 1 / 60;
@@ -169,6 +169,11 @@ describe('aim', () => {
   });
 });
 
+/** What findCover needs: the given walls, walkability and tuning, and the map's low and tall blocks. */
+function coverWorld(query: WorldQuery, nav: NavGrid, cfg: BotConfig, lowCover: readonly CoverBlock[] = [], tallCover: readonly CoverBlock[] = []): CoverWorld {
+  return { query, nav, cfg, body: BODY, hits: HITS, lowCover, tallCover };
+}
+
 describe('cover', () => {
   it('finds a spot behind the crate, hidden from the threat', () => {
     const nav = buildNavGrid(TEST_YARD, NAV);
@@ -198,16 +203,16 @@ describe('cover', () => {
       },
     };
     const threatEye = vec3(0, BODY.standEyeHeight, 2);
-    const out = { position: vec3(), crouchOnly: false };
-    const found = findCover(vec3(0.5, 0, -4), threatEye, nav, crate, { ...BOTS, coverCandidates: 200 }, BODY, createRng(5), [], out);
+    const out = createCoverSpot();
+    const found = findCover(vec3(0.5, 0, -4), threatEye, coverWorld(crate, nav, { ...BOTS, coverCandidates: 200 }), createRng(5), out);
     expect(found).toBe(true);
     expect(out.position.z).toBeLessThan(-6.6); // on the far side of the crate
     expect(out.crouchOnly).toBe(true); // 1.2 m crate: hides a crouched player only
 
     // With no random candidates at all, the spot right behind the crate (from the threat) is still tried.
-    const lowOnly = { position: vec3(), crouchOnly: false };
+    const lowOnly = createCoverSpot();
     const crateBlock = { x: 0, z: -6, halfX: 0.6, halfZ: 0.6 };
-    expect(findCover(vec3(0.5, 0, -4), threatEye, nav, crate, { ...BOTS, coverCandidates: 0 }, BODY, createRng(5), [crateBlock], lowOnly)).toBe(true);
+    expect(findCover(vec3(0.5, 0, -4), threatEye, coverWorld(crate, nav, { ...BOTS, coverCandidates: 0 }, [crateBlock]), createRng(5), lowOnly)).toBe(true);
     expect(lowOnly.position.z).toBeCloseTo(-6.6 - BOTS.lowCoverGap, 6);
     expect(lowOnly.crouchOnly).toBe(true);
   });
@@ -215,12 +220,12 @@ describe('cover', () => {
   it('tries the spot right behind a crate as seen from the threat: hidden crouched, able to shoot over standing', () => {
     // A lone 1.2 m crate at (3, -5) on the open field; no random candidates, so only the crate is tried.
     const crate = boxQuery(3, -5, 0.6, 0.6, 1.2);
-    const block: LowCoverBlock = { x: 3, z: -5, halfX: 0.6, halfZ: 0.6 };
+    const block: CoverBlock = { x: 3, z: -5, halfX: 0.6, halfZ: 0.6 };
     const cfg = { ...BOTS, coverCandidates: 0 };
     for (const threat of [vec3(3, 0, 6), vec3(12, 0, 4), vec3(-6, 0, 3)]) {
       const threatEye = vec3(threat.x, BODY.standEyeHeight, threat.z);
-      const out = { position: vec3(), crouchOnly: false };
-      expect(findCover(vec3(3, 0, -2.5), threatEye, OPEN_NAV, crate, cfg, BODY, createRng(1), [block], out), `threat ${threat.x},${threat.z}`).toBe(true);
+      const out = createCoverSpot();
+      expect(findCover(vec3(3, 0, -2.5), threatEye, coverWorld(crate, OPEN_NAV, cfg, [block]), createRng(1), out), `threat ${threat.x},${threat.z}`).toBe(true);
       const p = out.position;
       // On the far side of the crate from the threat...
       const toBlock = Math.hypot(block.x - threat.x, block.z - threat.z);
@@ -232,9 +237,42 @@ describe('cover', () => {
       expect(out.crouchOnly).toBe(true);
     }
     // Asking for crouch cover only within a short radius: the crate is 2.5 m away, so 2 m finds nothing.
-    const out = { position: vec3(), crouchOnly: false };
-    const near = { radius: 2, randomCandidates: 0, crouchOnly: true };
-    expect(findCover(vec3(3, 0, -2.5), vec3(3, BODY.standEyeHeight, 6), OPEN_NAV, crate, BOTS, BODY, createRng(1), [block], out, near)).toBe(false);
+    const out = createCoverSpot();
+    const near = { radius: 2, randomCandidates: 0, peekable: true };
+    expect(findCover(vec3(3, 0, -2.5), vec3(3, BODY.standEyeHeight, 6), coverWorld(crate, OPEN_NAV, BOTS, [block]), createRng(1), out, near)).toBe(false);
+  });
+
+  it('finds a spot just round the corner of a tall wall, hidden upright, that a lean sees out of', () => {
+    // A 2.5 m wall 3 m long whose near end is 0.3 m off the line between the bot and the threat.
+    const wall = boxQuery(1.8, -11, 1.5, 0.3, 2.5);
+    const tall: CoverBlock = { x: 1.8, z: -11, halfX: 1.5, halfZ: 0.3 };
+    const threatEye = vec3(0, BODY.standEyeHeight, 0);
+    const out = createCoverSpot();
+    const search = { radius: 3.5, randomCandidates: 0, peekable: true };
+    expect(findCover(vec3(0, 0, -14), threatEye, coverWorld(wall, OPEN_NAV, BOTS, [], [tall]), createRng(1), out, search)).toBe(true);
+    const p = out.position;
+    expect(out.crouchOnly).toBe(false);
+    // Facing the threat (+Z), the open side (-X) is to the bot's right.
+    expect(out.lean).toBe(1);
+    expect(p.z).toBeLessThan(-11.3); // behind the wall
+    // Hidden upright, eyes and the near edge of the body alike...
+    expect(lineClear(wall, threatEye, vec3(p.x, BODY.standEyeHeight, p.z))).toBe(false);
+    expect(lineClear(wall, threatEye, vec3(p.x - HITS.bodyRadius, 1.2, p.z))).toBe(false);
+    // ...but a full lean puts the eyes out past the corner.
+    expect(lineClear(wall, threatEye, vec3(p.x - 0.39, BODY.standEyeHeight - 0.1, p.z))).toBe(true);
+    // Only full cover you can't lean out of: no peekable spot.
+    const blind = boxQuery(0, -11, 3, 0.3, 2.5);
+    const wide: CoverBlock = { x: 0, z: -11, halfX: 3, halfZ: 0.3 };
+    expect(findCover(vec3(0, 0, -14), threatEye, coverWorld(blind, OPEN_NAV, BOTS, [], [wide]), createRng(1), createCoverSpot(), search)).toBe(false);
+  });
+
+  it("treats the map's walls and other blocks at least a player's height as full cover", () => {
+    const tall = tallCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap);
+    expect(tall.length).toBeGreaterThan(10);
+    for (const t of tall) {
+      const block = DEPOT.blocks.find((b) => b.center.x === t.x && b.center.z === t.z && b.kind !== 'floor')!;
+      expect(block.center.y + block.size.y / 2).toBeGreaterThanOrEqual(BODY.height - 1e-6);
+    }
   });
 
   it("treats the map's crate-high blocks standing on the floor as low cover", () => {
@@ -256,7 +294,8 @@ function duel(
   query: WorldQuery = noWalls,
   cfg: BotConfig = BOTS,
   seed = 7,
-  lowCover: readonly LowCoverBlock[] = [],
+  lowCover: readonly CoverBlock[] = [],
+  tallCover: readonly CoverBlock[] = [],
 ) {
   const state = createGameState(seed, 64, ROUNDS);
   const player = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
@@ -286,6 +325,7 @@ function duel(
     navSnap: NAV.snap,
     lanes: OPEN_FIELD.lanes,
     lowCover,
+    tallCover,
     body: BODY,
     hits: HITS,
     loadout: LOADOUT,
@@ -658,6 +698,7 @@ describe('bot team play and routes', () => {
       navSnap: NAV.snap,
       lanes: DEPOT.lanes,
       lowCover: lowCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap),
+      tallCover: tallCoverBlocks(DEPOT.blocks, BODY, BOTS.lowCoverFloorGap),
       body: BODY,
       hits: HITS,
       loadout: LOADOUT,
@@ -942,6 +983,7 @@ describe('bot team play and routes', () => {
       navSnap: NAV.snap,
       lanes: [lane],
       lowCover: [],
+      tallCover: [],
       body: BODY,
       hits: HITS,
       loadout: LOADOUT,
@@ -1035,6 +1077,7 @@ describe('bot team play and routes', () => {
       navSnap: NAV.snap,
       lanes: [],
       lowCover: [],
+      tallCover: [],
       body: BODY,
       hits: HITS,
       loadout: LOADOUT,
@@ -1096,7 +1139,7 @@ describe('bot team play and routes', () => {
   it('on spotting someone at range, get behind close crouch cover first, then fight from it', () => {
     // A 1.2 m crate 2 m in front of the bot, between it and the player 14 m away.
     const crate = boxQuery(0, -12, 0.6, 0.6, 1.2);
-    const block: LowCoverBlock = { x: 0, z: -12, halfX: 0.6, halfZ: 0.6 };
+    const block: CoverBlock = { x: 0, z: -12, halfX: 0.6, halfZ: 0.6 };
     // A bot that fires normally: any shot before it reaches the spot would show up here.
     const { state, bot, bots, run } = duel(14, () => {}, crate, BOTS, 7, [block]);
     const b = bots.bots[0]!;
@@ -1118,9 +1161,36 @@ describe('bot team play and routes', () => {
     expect(b.cover.position.z).toBeLessThan(-12.6); // behind the crate, not in front of it
   });
 
+  it('on spotting someone at range, get round the corner of a wall, then lean out to fight from it', () => {
+    // A 2.5 m wall whose near end is just off the line to the player 14 m away (as in the cover test).
+    const wall = boxQuery(1.8, -11, 1.5, 0.3, 2.5);
+    const tall: CoverBlock = { x: 1.8, z: -11, halfX: 1.5, halfZ: 0.3 };
+    const { state, bot, bots, run } = duel(14, () => {}, wall, BOTS, 7, [], [tall]);
+    const b = bots.bots[0]!;
+    let tookCover = false;
+    let foughtLeaning = false;
+    let shotsFromCover = 0;
+    let shotsUpright = 0;
+    run(6, () => {
+      tookCover ||= b.mode === 'cover';
+      foughtLeaning ||= b.mode === 'fight' && b.fromCover && bot.lean > 0.9;
+      const atSpot = tookCover && Math.hypot(bot.position.x - b.cover.position.x, bot.position.z - b.cover.position.z) < BOTS.coverArrive;
+      for (const e of state.events) {
+        if (e.type !== 'shot' || e.characterId !== 1 || !atSpot) continue;
+        shotsFromCover++;
+        if (Math.abs(bot.lean) < 0.5) shotsUpright++;
+      }
+    });
+    expect(tookCover).toBe(true);
+    expect(b.cover.lean).toBe(1);
+    expect(foughtLeaning).toBe(true);
+    expect(shotsFromCover).toBeGreaterThan(0);
+    expect(shotsUpright).toBe(0); // from the spot it only ever shoots leaning out, never into the wall
+  });
+
   it('fight on the spot when someone appears close by, without running for cover', () => {
     const crate = boxQuery(0, -4, 0.6, 0.6, 1.2);
-    const block: LowCoverBlock = { x: 0, z: -4, halfX: 0.6, halfZ: 0.6 };
+    const block: CoverBlock = { x: 0, z: -4, halfX: 0.6, halfZ: 0.6 };
     const { bots, run } = duel(6, () => {}, crate, { ...BOTS, fireCone: 0 }, 7, [block]);
     const b = bots.bots[0]!;
     let tookCover = false;

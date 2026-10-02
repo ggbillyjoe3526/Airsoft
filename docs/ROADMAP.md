@@ -82,7 +82,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · M7b Leaning (peek left / right) | Done | 8.6 |
 | Alpha · Phase 3 · M8 Magazines and reloads | Done | 8.7 |
 | Alpha · Phase 3 · M9 BB physics pass | Done | 8.5 |
-| Alpha · Phase 3 · M10 Movement and positioning | **Next** | |
+| Alpha · Phase 3 · M10 Movement and positioning | **In rework** (critic attempt 1: 7.9) | |
 | Alpha · Phase 3 · M11 Depot rework | To do | |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | To do | |
 | Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |

@@ -105,9 +105,12 @@ export class CombatPresentation {
     const carried = p.sprinting || p.sprintLockout > 0;
     this.viewmodel.setAspect(this.renderer.camera.aspect);
     this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carried, p.armament, this.loadout, p.status === 'calling');
-    this.hud.update(p.armament, this.loadout, p.status === 'alive', dt);
-
+    // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
+    const spread = THREE.MathUtils.degToRad(this.loadout[p.armament.active]!.spreadDeg * p.spreadScale);
+    const focalPx = this.renderer.renderer.domElement.clientHeight / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
+    this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, dt);
+
     cam.getWorldDirection(this.forward);
     this.listenerPos.x = cam.position.x;
     this.listenerPos.y = cam.position.y;

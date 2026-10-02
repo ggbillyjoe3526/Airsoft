@@ -5,6 +5,7 @@ import type { BodyConfig, MovementConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
 import type { SpawnPoint } from '../map/mapTypes';
 import { createNavSearch, type NavGrid } from '../nav/navGrid';
+import { stepAccuracy } from './accuracy';
 import { type ArmamentContext, type Muzzle, stepArmament, type WorldQuery } from './armament';
 import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
@@ -62,7 +63,7 @@ export function createSimContext(services: SimServices): SimContext {
     scratch: createMovementScratch(),
     idleCommand: createCommand(),
     eliminatedCommand: createCommand(),
-    muzzle: { eye: vec3(), yaw: 0, pitch: 0 },
+    muzzle: { eye: vec3(), yaw: 0, pitch: 0, spreadScale: 1 },
     armament: {
       loadout: services.loadout,
       ballistics: services.ballistics,
@@ -119,6 +120,7 @@ export function stepSimulation(
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);
+    stepAccuracy(c, ctx.movement, dt);
     if (!inPlay) {
       stepElimination(c, ctx.hits, dt);
       continue;
@@ -129,6 +131,7 @@ export function stepSimulation(
     leanedEye(c, ctx.body, ctx.hits, m.eye); // BBs leave from the eyes, wherever a lean puts them
     m.yaw = c.yaw;
     m.pitch = c.pitch;
+    m.spreadScale = c.spreadScale;
     const canFire = live && !c.sprinting && c.sprintLockout <= 0;
     stepArmament(c.id, c.armament, cmd, m, canFire, armCtx, dt);
   }

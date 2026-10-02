@@ -62,6 +62,8 @@ export interface Character {
   fallSpeed: number;
   /** Seconds until the replica can be fired again after sprinting (0 = ready). */
   sprintLockout: number;
+  /** How much stance and movement scale the replica's spread right now (1 = standing still; see sim/accuracy.ts). */
+  spreadScale: number;
   armament: Armament;
 }
 
@@ -104,6 +106,7 @@ export function createCharacter(
     airborne: false,
     fallSpeed: 0,
     sprintLockout: 0,
+    spreadScale: 1,
     armament: createArmament(loadout),
   };
 }
@@ -154,6 +157,7 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.airborne = false;
   c.fallSpeed = 0;
   c.sprintLockout = 0;
+  c.spreadScale = 1;
   c.status = 'alive';
   c.statusTime = 0;
   c.hitBy = -1;

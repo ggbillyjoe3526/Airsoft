@@ -38,9 +38,9 @@ ends the round). A hit character is eliminated
   (plain data, including one contact record per enemy seen); `botBrain.ts` is its per-tick decision and mode choice
   (advance along a lane → fight → cover → search), calling `botSenses.ts` (what it sees: target choice, contacts and
   reaction), `botMovement.ts` (routes, jittered lane points, waiting for the team, hunting, strafing) and `botCombat.ts` (aim, bursts,
-  reloads). In cover a bot ducks; at crouch-high cover it stands up to look and fights from the spot (`fromCover`) before
-  ducking again. `cover.ts` also tries the spot behind each low block (`lowCoverBlocks`, from the map) as cover; a fresh contact at
-  range sends a bot to close crouch cover first (a narrowed `CoverSearch`). Each round the controller deals each team's bots onto lanes by a plan (`teamPlan.ts`: split, pair or stack). These build on
+  reloads). In cover a bot ducks; at crouch-high cover it stands up to look, and at a wall corner it leans out (`cover.lean`), then fights from the spot (`fromCover`) before
+  ducking (leaning back) again. `cover.ts` also tries the spot behind each low block (`lowCoverBlocks`) and just round each outline corner of each full-height block (`tallCoverBlocks`) as cover; a fresh contact at
+  range sends a bot to close cover it can peek from first (a narrowed `CoverSearch`). Each round the controller deals each team's bots onto lanes by a plan (`teamPlan.ts`: split, pair or stack). These build on
   `perception.ts` (view cone + static ray casts), `aim.ts` (turn rate, settling aim error, hasty first aim, tracking error)
   and `cover.ts` (random nearby spots hidden from the threat). Tuning is `BotConfig` = shared behaviour + one difficulty's
   skill (config/bots.ts); `BotController.setConfig` swaps it now or at the next round start, as decided by
@@ -64,6 +64,9 @@ ends the round). A hit character is eliminated
   The eye and BB origin (`leanedEye`), the hit volume (`hitbox.ts`: body plus a head and shoulder sphere that
   swing out), the camera (`render/cameraRig.ts`, plus a small roll), the drawn figure (`figureLeanRoll`) and what
   bots see and aim at (`ai/perception.ts`) all use it. Leaning slows you towards walking pace (quiet from half a lean) and blocks sprinting.
+- **sim/accuracy.ts**: accuracy by stance and movement. `stepAccuracy` (after leaning) keeps `Character.spreadScale`,
+  the multiplier on the replica's spread (`MOVEMENT.accuracy`): steadier crouched, shakier walking, running, sprinting and
+  in the air; it jumps up at once and settles back. The muzzle carries it into `armament.ts`; the HUD crosshair opens to show it.
 - **sim/footsteps.ts**: after movement, emits `footstep` events every stride while running/sprinting and on hard
   landings; walking and crouched movement are silent.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox
