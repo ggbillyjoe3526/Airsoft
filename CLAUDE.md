@@ -116,8 +116,8 @@ v0.1 is the core game with strong foundations (owner, 2026-10-01): two replicas 
 Elimination and Attack / Defend.
 
 1. **Phase 2 — Core gameplay (alpha, ships as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, the Attack / Defend objective mode, all on Depot.
-2. **Phase 3 — Core foundations (alpha, `v0.1-alpha.3`):** leaning (Q / E peek), magazines and meaningful reloads (limited ammunition), a BB physics pass, movement and positioning over raw weapon stats, and a Depot rework to the field checklist.
-3. **Phase 4 — Presentation and onboarding (alpha):** art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
+2. **Phase 3 — Core foundations (alpha, `v0.1-alpha.3`):** leaning (Q / E peek), magazines and meaningful reloads (limited ammunition), a BB physics pass, movement and positioning over raw weapon stats, the audit fixes and elevation support (ramps, raised floors).
+3. **Phase 4 — Presentation and onboarding (alpha):** a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
 4. **Beta (when the owner calls the game feature complete):** optimisation, final balance and tuning, bug fixing, stability, UX/QoL and polish.
 
 **After v0.1 (later versions, proposed in `docs/ROADMAP.md`):** more modes (TDM, Capture the Flag,

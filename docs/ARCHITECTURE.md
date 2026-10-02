@@ -36,7 +36,9 @@ ends the round). A hit character is eliminated
   ramp top under its centre); blocks are judged against it, neighbours connect only if their floors differ by at most
   `maxStep` (0.15 m), drops get the same clearance as walls, and waypoints carry the floor height. One height per cell
   is enough because maps never put one walkable surface over another (DECISIONS 2026-10-02), and it keeps the grid
-  2D: a layered grid or recast would be the upgrade if that rule goes. Pure; used by bots and by the sim for walk-offs.
+  2D: a layered grid or recast would be the upgrade if that rule goes. `dropOnLine` tells bots' off-route steps (combat
+  sidesteps, the last step to a lean spot) where a floor ends, so they never walk off an open edge. Pure; used by bots
+  and by the sim for walk-offs.
 - **ai/**: bots. `BotController` runs before each tick (fills every bot's `PlayerCommand`, rations route searches to one
   per tick) and after it (bots hear shots, near misses, hit calls and footsteps from `state.events`). `bot.ts` holds a bot's state
   (plain data, including one contact record per enemy seen); `botBrain.ts` is its per-tick decision and mode choice

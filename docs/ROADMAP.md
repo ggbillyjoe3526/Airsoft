@@ -20,7 +20,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines), M9 (BB physics), M10 (movement and positioning) and a code review pass done; audit fixes and elevation support next, then M11 (Depot rework). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines), M9 (BB physics), M10 (movement and positioning), a code review pass, the audit fixes and elevation support done or in review; the bug pass and the `v0.1-alpha.3` tag are left (the owner tags when ready). M11 (Depot rework) moved to Phase 4 (owner, 2026-10-02). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -87,11 +87,11 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · M9 BB physics pass | Done | 8.5 |
 | Alpha · Phase 3 · M10 Movement and positioning | Done (auto-accepted, attempt 4) | 8.4 |
 | Alpha · Phase 3 · Code review pass (owner, 2026-10-02) | Done (auto-accepted, attempt 4) | 8.4 |
-| Alpha · Phase 3 · Audit fixes 1: automatic checks on every pull request (Fable audit C-02, C-03) | In review | 9.0 |
-| Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | In review | |
-| Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | In progress | |
-| Alpha · Phase 3 · M11 Depot rework | To do | |
-| Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | To do | |
+| Alpha · Phase 3 · Audit fixes 1: automatic checks on every pull request (Fable audit C-02, C-03) | Done | 9.0 |
+| Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | In review | 9.1 |
+| Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | In review | |
+| Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** (owner tags when ready) | To do | |
+| Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later | |
 | Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
@@ -175,37 +175,39 @@ content. The game keeps the AEG and the gas pistol.
   - Fix-now items are fixed in this pass (with tests for bugs); the rest go to `KNOWN_ISSUES.md` or Beta.
   - No new features or behaviour changes beyond bug fixes; the critic reviews the fixes.
 - **Audit fixes** (Fable audit, 2026-10-02; the report and specs are in `audit/`). The audit found no
-  stop-the-line bugs. Its Fix Now and Fix Soon items come before M11, one pull request per batch:
+  stop-the-line bugs. Its Fix Now and Fix Soon items come first, one pull request per batch:
   - **Automatic checks (C-02, C-03):** a browser smoke test of the release build and a GitHub workflow that runs
     `npm run check` and the smoke test on every pull request.
   - **In-air spread debounce (C-01):** a moment off the ground no longer flashes the spread wide; a jump still does.
   - **Render quality presets (C-04):** `?quality=low|medium|high` and GPU numbers on the debug overlay, so frame cost
     can be measured; the pixel ratio follows the window between monitors.
-- **Elevation support (C-05)** (owner, 2026-10-02: maps may have elevation, starting with the Depot rework).
+- **Elevation support (C-05)** (owner, 2026-10-02: maps may have elevation, starting with the Depot rework in Phase 4).
   Ramp blocks, a floor height per nav cell so bots route up and down, cover and walk-offs at the right height, and a
   ramp test map with its own headless match. One rule keeps it simple: walkable surfaces never overlap (no walkable
   floor under a mezzanine or bridge). Done before any Depot layout change.
-- **M11. Depot rework** to the field checklist
-  - Purpose-built airsoft barricades (walls with shooting ports).
-  - Buildings with windows and doorways: today it's one office block, so add at least one more structure.
-  - Deliberate choke points and flanking routes.
-  - Objective locations: the poles, plus spots that later modes can use.
-  - Clear dead zones and spawn areas.
-  - **Elevation** (owner, 2026-10-02): the layout sketch proposes where ramps, raised platforms or stairs go, built on
-    the elevation support above.
-  - Consider a few genuinely low obstacles (about 0.7–0.9 m: pallets, low walls) designed for **vaulting**
-    (owner idea; parked until here, with bots taught to use them). Today's 1.2 m crouch cover stays unclimbable.
-  - Depot stays mirror-symmetric and keeps its identity.
-  - Layout tests are extended to the checklist; bot lanes and poles are updated.
-  - The headless match guards stay green on the new layout (re-measured, not loosened).
-  - Fix when touched (audit): reset the reload bar of a player who is hit (W-07), if playtesting shows it frozen.
-- **Bug pass** → the owner plays the whole playtest guide (`docs/PLAYTEST.md`) and tags `v0.1-alpha.3`.
+- **Bug pass** → the owner plays the whole playtest guide (`docs/PLAYTEST.md`) and tags `v0.1-alpha.3` when ready.
+- **M11 (Depot rework)** moved to Phase 4 (owner, 2026-10-02), so `v0.1-alpha.3` ships with today's Depot layout.
 
 ### Phase 4: Presentation and onboarding (the last alpha phase)
 
 New content and systems that replace the greybox and placeholders. This is alpha work, even though it
 makes the game look finished.
 
+- **M11. Depot rework** to the field checklist (moved from Phase 3, owner, 2026-10-02; first in this phase, since the art
+  pass dresses its layout). A layout sketch is ready for the owner's approval: https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD
+  - Purpose-built airsoft barricades (walls with shooting ports).
+  - Buildings with windows and doorways: today it's one office block, so add at least one more structure.
+  - Deliberate choke points and flanking routes.
+  - Objective locations: the poles, plus spots that later modes can use.
+  - Clear dead zones and spawn areas.
+  - **Elevation** (owner, 2026-10-02): the layout sketch proposes where ramps, raised platforms or stairs go, built on
+    the elevation support (Phase 3). Raised edges stay open: bots don't step off them.
+  - Consider a few genuinely low obstacles (about 0.7–0.9 m: pallets, low walls) designed for **vaulting**
+    (owner idea; parked until here, with bots taught to use them). Today's 1.2 m crouch cover stays unclimbable.
+  - Depot stays mirror-symmetric and keeps its identity.
+  - Layout tests are extended to the checklist; bot lanes and poles are updated.
+  - The headless match guards stay green on the new layout (re-measured, not loosened).
+  - Fix when touched (audit): reset the reload bar of a player who is hit (W-07), if playtesting shows it frozen.
 - Art pass (CC0 assets only), VFX and lighting for Depot, the replicas and the figures.
 - Proper menus and a full settings screen: FOV, volume, colour-blind team colours, reduced motion and
   other accessibility options.
