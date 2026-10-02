@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { NAV } from '../config/nav';
 import { DEPOT } from '../map/depot';
 import { TEST_YARD } from '../map/testYard';
+import type { MapBlock, MapData } from '../map/mapTypes';
 import { type Vec3, vec3 } from '../sim/vec';
-import { buildNavGrid, clearLine, createNavSearch, findPath, isWalkableAt, nearestWalkable } from './navGrid';
+import { buildNavGrid, clearLine, createNavSearch, dropOnLine, findPath, floorAt, isWalkableAt, nearestWalkable } from './navGrid';
 
 const yard = buildNavGrid(TEST_YARD, NAV);
 const depot = buildNavGrid(DEPOT, NAV);
@@ -114,3 +115,89 @@ describe('nav grid', () => {
   });
 });
 
+describe('nav grid with raised floors', () => {
+  /** A 1 m platform (x 2..8, z -4..4) on a 20 m yard, optionally with a 2 m wide ramp up to it from the west (1:2). */
+  function platformYard(ramp: boolean, extra: MapBlock[] = []): MapData {
+    return {
+      name: 'platform yard',
+      blocks: [
+        { kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(20, 0.5, 20) },
+        { kind: 'floor', center: vec3(5, 0.5, 0), size: vec3(6, 1, 8) },
+        ...(ramp ? [{ kind: 'ramp', center: vec3(1, 0.5, 0), size: vec3(2, 1, 2), rise: '+x' } as MapBlock] : []),
+        ...extra,
+      ],
+      killY: -10,
+      spawns: [[], []],
+      deadZones: [[], []],
+      lanes: [],
+    };
+  }
+  const below = vec3(-4, 0, 0);
+  const above = vec3(6, 1, 0);
+
+  it('gives each cell the height of the surface under it', () => {
+    const g = buildNavGrid(platformYard(true), NAV);
+    expect(floorAt(g, -4, 0)).toBe(0);
+    expect(floorAt(g, 6, 0)).toBe(1);
+    expect(floorAt(g, 1.1, 0)).toBeCloseTo(0.55, 5); // the ramp, at that cell's centre (x = 1.1)
+  });
+
+  it('routes up a ramp onto the platform, with every waypoint on the surface under it', () => {
+    const g = buildNavGrid(platformYard(true), NAV);
+    const path: Vec3[] = [];
+    expect(findPath(g, createNavSearch(g), below, above, NAV.snap, path)).toBe(true);
+    checkRoute(g, below, above, path);
+    for (const p of path) expect(p.y, `${p.x.toFixed(1)},${p.z.toFixed(1)}`).toBe(floorAt(g, p.x, p.z));
+    expect(path[path.length - 1]!.y).toBe(1);
+    // Up the ramp, not up the platform's side: the route crosses x = 2 between the ramp's sides.
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1]!;
+      const b = path[i]!;
+      if ((a.x - 2) * (b.x - 2) < 0) expect(Math.abs(a.z + ((2 - a.x) / (b.x - a.x)) * (b.z - a.z))).toBeLessThan(1);
+    }
+  });
+
+  it('has no route onto a 1 m platform without a ramp, and no straight line up its side', () => {
+    const g = buildNavGrid(platformYard(false), NAV);
+    expect(isWalkableAt(g, -4, 0)).toBe(true);
+    expect(isWalkableAt(g, 6, 0)).toBe(true);
+    const path: Vec3[] = [];
+    expect(findPath(g, createNavSearch(g), below, above, NAV.snap, path)).toBe(false);
+    expect(clearLine(g, -4, 0, 6, 0)).toBe(false);
+  });
+
+  it('finds drops on a line (platform edges, ramp sides, the floor’s end) but not walls or the ramp itself', () => {
+    const g = buildNavGrid(platformYard(true, [{ kind: 'wall', center: vec3(-4, 1.5, 3), size: vec3(4, 3, 0.4) }]), NAV);
+    expect(dropOnLine(g, 6, 2, 7, 2)).toBe(false); // across the platform
+    expect(dropOnLine(g, 2.4, 2, 1.6, 2)).toBe(true); // off its west edge
+    expect(dropOnLine(g, 1.6, 2, 2.4, 2)).toBe(true); // and up it
+    expect(dropOnLine(g, -1, 0, 3, 0)).toBe(false); // up the ramp
+    expect(dropOnLine(g, 1, 0.5, 1, 1.5)).toBe(true); // off the ramp's side
+    expect(dropOnLine(g, -4, 2, -4, 4)).toBe(false); // through a wall: not a drop
+    expect(dropOnLine(g, 9.5, 0, 10.5, 0)).toBe(true); // past the floor's edge
+  });
+
+  it('keeps the clearance from a drop on both sides of it, as from a wall', () => {
+    const g = buildNavGrid(platformYard(false), NAV);
+    // The platform's west side is at x = 2.
+    expect(isWalkableAt(g, 2 - NAV.clearance + 0.1, 2)).toBe(false);
+    expect(isWalkableAt(g, 2 - NAV.clearance - 0.15, 2)).toBe(true);
+    expect(isWalkableAt(g, 2 + NAV.clearance - 0.1, 2)).toBe(false);
+    expect(isWalkableAt(g, 2 + NAV.clearance + 0.15, 2)).toBe(true);
+  });
+
+  it('judges blocks against the floor they stand over', () => {
+    const extra: MapBlock[] = [
+      // On the platform: a crate (blocks) and a 0.1 m mat (walked onto). Across the yard and the platform, a
+      // beam 2 m above the yard floor: it passes overhead in the yard but is only 1 m above the platform.
+      { kind: 'crate', center: vec3(4, 1.6, 2), size: vec3(1.2, 1.2, 1.2) },
+      { kind: 'barrier', center: vec3(6.5, 1.05, 1), size: vec3(1, 0.1, 1) },
+      { kind: 'barrier', center: vec3(0, 2.1, -2.5), size: vec3(20, 0.2, 0.4) },
+    ];
+    const g = buildNavGrid(platformYard(true, extra), NAV);
+    expect(isWalkableAt(g, 4, 2)).toBe(false);
+    expect(isWalkableAt(g, 6.5, 1)).toBe(true);
+    expect(isWalkableAt(g, -4, -2.5)).toBe(true);
+    expect(isWalkableAt(g, 6.5, -2.5)).toBe(false);
+  });
+});

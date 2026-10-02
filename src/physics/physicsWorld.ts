@@ -2,6 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import type { BodyConfig } from '../config/movement';
 import { PHYSICS } from '../config/physics';
 import type { MapBlock, MapData } from '../map/mapTypes';
+import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import type { Character } from '../sim/character';
 import type { CharacterMover } from '../sim/movement';
 import type { Vec3 } from '../sim/vec';
@@ -31,15 +32,24 @@ const BOX_TRIANGLES = new Uint32Array([
   1, 2, 6, 1, 6, 5, // right (+x)
 ]);
 
+/** A ramp's wedge as triangles: each face of RAMP_FACES fanned from its first corner. */
+const RAMP_TRIANGLES = new Uint32Array(RAMP_FACES.flatMap((f) => f.slice(2).flatMap((c, k) => [f[0]!, f[k + 1]!, c])));
+
 /**
  * Level blocks collide as closed 12-triangle meshes rather than Rapier cuboids. With cuboids, the
  * capsule character controller sinks into a block when it moves along one of the block's diagonal
  * planes (x = ±z about the block centre), whatever the block's size or thickness; convex hulls and
  * round cuboids sink too. Triangle meshes don't. FIX_INTERNAL_EDGES is essential: without it the diagonal
  * edge splitting each face produces ghost "ground" contacts on vertical faces, letting players stick
- * to walls and climb crates by spamming jump (see physicsWorld.test.ts regression tests).
+ * to walls and climb crates by spamming jump (see physicsWorld.test.ts regression tests). A ramp is a
+ * closed 8-triangle wedge built the same way.
  */
 function blockCollider(b: MapBlock): RAPIER.ColliderDesc {
+  if (b.kind === 'ramp') {
+    const corners = new Float32Array(18);
+    rampCorners(b, corners);
+    return RAPIER.ColliderDesc.trimesh(corners, RAMP_TRIANGLES, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES);
+  }
   const hx = b.size.x / 2;
   const hy = b.size.y / 2;
   const hz = b.size.z / 2;

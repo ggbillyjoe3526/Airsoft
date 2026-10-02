@@ -161,6 +161,12 @@ export const BOT_BEHAVIOUR = {
   strafeTime: [0.5, 1.2] as const,
   /** Strafing speed as a fraction of full input. */
   strafeInput: 0.6,
+  /**
+   * Steps off the route (sidesteps, the last few centimetres to a lean spot) look this far ahead for a
+   * drop (a platform's edge, a ramp's side) and don't take it (metres): more than the body's radius, so
+   * the bot turns back before its feet leave the floor.
+   */
+  edgeLookahead: 0.6,
   /** Walk (silent) for the last this-many metres to where someone was seen or heard. */
   searchWalkDistance: 12,
   /** Sprint along routes when nobody has been seen or heard for this long (s), if heading mostly forward. */

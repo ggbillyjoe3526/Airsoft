@@ -351,7 +351,7 @@ export class BotController {
       if (score < best) {
         best = score;
         out.x = x;
-        out.y = bot.character.position.y;
+        out.y = nav.floorY[cell]!;
         out.z = z;
       }
     }

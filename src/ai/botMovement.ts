@@ -1,5 +1,5 @@
 import type { BotConfig } from '../config/bots';
-import { isWalkableAt } from '../nav/navGrid';
+import { dropOnLine, isWalkableAt } from '../nav/navGrid';
 import type { PlayerCommand } from '../sim/commands';
 import { rngNext } from '../sim/rng';
 import type { Vec3 } from '../sim/vec';
@@ -176,6 +176,8 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
       const dz = b.cover.position.z - p.z;
       const d = Math.hypot(dx, dz);
       if (b.routeState !== 'none' || d <= cfg.leanSpotReach || d > cfg.leanSpotApproachMax) return false;
+      const reach = Math.min(d, cfg.edgeLookahead) / d;
+      if (dropOnLine(w.nav, p.x, p.z, p.x + dx * reach, p.z + dz * reach)) return false;
       b.moveDir.x = dx / d;
       b.moveDir.z = dz / d;
       cmd.walk = true;
@@ -190,8 +192,17 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
         b.strafeLeft = pick(b.rng, cfg.strafeTime);
         b.strafeDir = rngNext(b.rng) < 0.5 ? -1 : 1;
       }
-      cmd.right = b.strafeDir * cfg.strafeInput;
+      // Never sidestep off a floor: turn back from a drop, or stand still between two.
+      if (strafeDrops(b, w, b.strafeDir)) b.strafeDir = -b.strafeDir;
+      cmd.right = strafeDrops(b, w, b.strafeDir) ? 0 : b.strafeDir * cfg.strafeInput;
       return false;
   }
 }
 
+/** True if sidestepping to the right (dir 1) or left (dir -1) of the bot's view would step off a floor soon. */
+function strafeDrops(b: Bot, w: BotWorld, dir: number): boolean {
+  // The view's right on the ground plane is (cos yaw, 0, -sin yaw) (see stepMovement).
+  const reach = dir * w.cfg.edgeLookahead;
+  const p = b.character.position;
+  return dropOnLine(w.nav, p.x, p.z, p.x + Math.cos(b.aim.yaw) * reach, p.z - Math.sin(b.aim.yaw) * reach);
+}

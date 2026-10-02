@@ -10,6 +10,8 @@ export const NAV: NavGridConfig & { snap: number } = {
   clearance: BODY.radius + 0.06,
   maxLedge: PHYSICS.maxWalkableLedge,
   bodyHeight: BODY.height,
+  /** The tallest ledge a character always walks onto; a ramp no steeper than PHYSICS.maxRampSlope rises less than this per cell. */
+  maxStep: PHYSICS.maxWalkableLedge,
   /** Route ends off the grid (e.g. inside a wall's clearance) snap to the nearest walkable cell within this. */
   snap: 2,
 };
