@@ -239,6 +239,7 @@ export class Game {
     this.combat.unlockAudio();
     if (allowUnlocked) {
       this.unlockedPlay = true;
+      this.pointer.setUnlockedButtons(true);
       this.resume();
       return;
     }
@@ -369,6 +370,7 @@ export class Game {
       this.matchOverAt = Number.NaN;
       if (this.unlockedPlay) {
         this.unlockedPlay = false;
+        this.pointer.setUnlockedButtons(false);
         this.pause();
       } else {
         this.pointer.release();

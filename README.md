@@ -175,9 +175,17 @@ npm run dev        # development server with hot reload
 npm run check      # type check + unit tests + production build
 npm run build      # static site in dist/ (relative paths; any static host)
 npm run preview    # serve dist/ locally
+npm run test:browser  # browser smoke test of a production build (Chromium)
+npm run check:all  # check, then the browser smoke test
 ```
 
-Dev-only URL flag: `?nolock` plays without pointer lock (for automated browsers; no mouse look).
+The browser smoke test (`e2e/boot.spec.ts`) needs Playwright's Chromium once per machine:
+`npx playwright install chromium`. It builds its own copy of the game into `dist-e2e/` and serves it on port 4180.
+GitHub runs `npm run check` and the smoke test on every pull request and every push to `main`
+(`.github/workflows/check.yml`).
+
+URL flag `?nolock` plays without pointer lock (for automated browsers; fire and wheel work, mouse look doesn't). It works only on the
+dev server and in the smoke test's build (`npm run build:e2e`), never in a normal release build.
 Each page load picks a fresh random seed (shown in the debug overlay); `?seed=N` (0 to 4294967295) replays one.
 `?quality=low|medium|high` picks a render preset (default `high`; `medium` renders at standard resolution with smaller shadows,
 `low` also drops shadows and antialiasing). The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
@@ -200,4 +208,5 @@ src/ui       start/result screen, HUD, scoreboard, hit feedback, debug overlay
 docs/        vision, architecture, decisions, assets, ideas, known issues, reviews
 ```
 
-See `CLAUDE.md` for the project guide and `docs/` for design notes.
+See `CLAUDE.md` for the project guide and `docs/` for design notes. `docs/PLAYTEST.md` is the step-by-step
+playtest checklist.
