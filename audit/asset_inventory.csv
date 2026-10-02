@@ -1,0 +1,6 @@
+path,kind,size_bytes,source,license,notes
+(none),binary asset,0,n/a,n/a,"No images, models, fonts, audio files or shaders are checked in; docs/ASSETS.md is deliberately empty. Textures are generated in src/render/proceduralTextures.ts, sounds in src/audio/sfx.ts, models from primitives in src/render/*Models.ts, fonts are system fonts via CSS variables in src/style.css."
+node_modules/@dimforge/rapier3d-compat/dist/rapier_wasm3d_bg.wasm,wasm (dependency),3082103,npm @dimforge/rapier3d-compat 0.21.0,Apache-2.0,"Inlined as base64 into the rapier chunk (4,332,811 B raw, 1,669,300 B gzip) by the compat package."
+dist/assets/three-*.js,js (dependency),602818,npm three 0.186.1,MIT,"588.69 kB raw, 148.14 kB gzip"
+dist/assets/index-*.js,js (project),152812,src/,undeclared (no LICENSE file),"149.23 kB raw, 52.07 kB gzip"
+dist/assets/index-*.css,css (project),10076,src/style.css,undeclared,"9.84 kB raw, 2.80 kB gzip"
