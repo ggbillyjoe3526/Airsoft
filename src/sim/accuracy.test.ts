@@ -83,8 +83,6 @@ describe('accuracy by stance and movement', () => {
   });
 
   describe('a brief loss of ground contact', () => {
-    /** Ticks off the ground (from standing still) that add up to at least `seconds`. */
-    const ticksFor = (seconds: number) => Math.ceil(seconds / DT - 1e-9);
 
     it('leaves the spread alone for one tick off the ground', () => {
       const c = at();
@@ -96,12 +94,12 @@ describe('accuracy by stance and movement', () => {
     });
 
     it('applies the in-air spread once the character has been off the ground for airSpreadDelay', () => {
+      const ticks = Math.round(A.airSpreadDelay / DT); // 6 at 60 Hz
       const c = at();
       c.grounded = false;
-      const n = ticksFor(A.airSpreadDelay);
-      for (let i = 0; i < n - 1; i++) stepAccuracy(c, MOVEMENT, DT);
+      for (let i = 0; i < ticks - 1; i++) stepAccuracy(c, MOVEMENT, DT);
       expect(c.spreadScale).toBe(1);
-      for (let i = 0; i < 2; i++) stepAccuracy(c, MOVEMENT, DT); // n + 1 ticks: past the delay whatever the rounding
+      stepAccuracy(c, MOVEMENT, DT); // exactly airSpreadDelay, despite float drift in the summed ticks
       expect(c.spreadScale).toBe(A.air);
     });
 
