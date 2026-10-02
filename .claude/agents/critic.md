@@ -40,7 +40,7 @@ Judge the feature against what it was asked to deliver at this stage of the proj
 
 ```
 Feature: <name>
-Attempt: <n> of 3
+Attempt: <n> of 4
 Scores: Correctness x | Pillar fit x | Feel x | Code x | Performance x | Scope x
 Caps applied: <none / which>
 Total: x.x → <Restart / Rework / Accept>
@@ -51,6 +51,6 @@ Must-fix before next attempt: ...
 Browser tests for the human: ...
 ```
 
-Thresholds: < 7.0 Restart, 7.0–8.4 Rework, 8.5–10 Accept (max 3 attempts). Cite file paths and line numbers for every issue.
+Thresholds: < 8.0 Restart, 8.0–8.9 Rework, 9.0–10 Accept (max 4 attempts). Cite file paths and line numbers for every issue.
 
 **Keep the report to about 300 words** (owner, 2026-10-02: your report lands in the main session's context window). Do all the checking you need, but report only: the format above, at most 5 top issues (one or two lines each, with file:line), the must-fixes, and at most 6 short browser tests. No preamble, no "what was verified" recap beyond one line, no repeating the brief back.

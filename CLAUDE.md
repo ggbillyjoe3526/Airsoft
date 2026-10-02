@@ -248,17 +248,19 @@ Score each criterion from 0–10, then compute the weighted total (one decimal p
 
 ### Score thresholds
 
+Stricter thresholds and a fourth attempt since owner decision 2026-10-02.
+
 | Score | Verdict | Action |
 |---|---|---|
-| **< 7.0** | Restart | Revert the attempt (e.g. `git stash`/reset to the pre-attempt commit) and try again with a different approach informed by the critic's feedback. |
-| **7.0 – 8.4** | Rework | Keep the attempt and fix the specific issues the critic listed. |
-| **8.5 – 10** | Accept | Commit and move on. |
+| **< 8.0** | Restart | Revert the attempt (e.g. `git stash`/reset to the pre-attempt commit) and try again with a different approach informed by the critic's feedback. |
+| **8.0 – 8.9** | Rework | Keep the attempt and fix the specific issues the critic listed. |
+| **9.0 – 10** | Accept | Commit and move on. |
 
 ### Attempt limit
 
-- Maximum of **3 attempts** per feature to reach 8.5.
-- If attempt 3 scores **7.0 or higher**, auto-accept it, commit it, and log the critic's remaining issues in `docs/KNOWN_ISSUES.md`.
-- If attempt 3 scores **below 7.0**, do not accept it automatically. Restore the best-scoring attempt, stop, and report to me what went wrong across all attempts so we can decide together (the feature may be too large and need splitting, or the design may be wrong).
+- Maximum of **4 attempts** per feature to reach 9.0.
+- If attempt 4 scores **8.0 or higher**, auto-accept it, commit it, and log the critic's remaining issues in `docs/KNOWN_ISSUES.md`.
+- If attempt 4 scores **below 8.0**, do not accept it automatically. Restore the best-scoring attempt, stop, and report to me what went wrong across all attempts so we can decide together (the feature may be too large and need splitting, or the design may be wrong).
 
 ### Critic report format
 
@@ -266,7 +268,7 @@ After each review, the critic outputs:
 
 ```
 Feature: <name>
-Attempt: <n> of 3
+Attempt: <n> of 4
 Scores: Correctness x | Pillar fit x | Feel x | Code x | Performance x | Scope x
 Caps applied: <none / which>
 Total: x.x → <Restart / Rework / Accept>
