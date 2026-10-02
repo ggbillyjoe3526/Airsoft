@@ -39,13 +39,16 @@ export class HitFeedback {
     this.out = q('.hitfx-out');
     this.spectating = q('.hitfx-spectating');
     this.round = q('.hitfx-round');
-    // Drop a finished one-shot effect's class: an element coming back from display:none (pause, Play again)
-    // would otherwise replay its animation.
-    for (const el of [this.flash, this.marker]) el.addEventListener('animationend', () => el.classList.remove('show'));
   }
 
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
+    // One-shot effects end when hidden: an element coming back from display:none (resume, Play again) would
+    // otherwise replay its animation.
+    if (!visible) {
+      this.flash.classList.remove('show');
+      this.marker.classList.remove('show');
+    }
   }
 
   /** Your BB hit someone. `friendly` marks a teammate (friendly fire counts, as at a real site). */

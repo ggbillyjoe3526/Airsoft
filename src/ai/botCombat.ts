@@ -89,20 +89,21 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
  */
 function lineOfFireBlocked(b: Bot, w: BotWorld, eye: Vec3, aimPoint: Vec3, dir: Vec3, dist: number): boolean {
   if (!lineClear(w.query, eye, aimPoint)) return true;
+  const wall = w.query.raycastStatic(eye, dir, dist + w.cfg.friendlyBeyondTarget);
   // The BB flies along the actual aim, not the line to the target: hold fire rather than shoot the wall beside you.
-  if (w.query.raycastStatic(eye, dir, dist * w.cfg.aimWallFraction) >= 0) return true;
-  return friendInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist));
+  if (wall >= 0 && wall < dist * w.cfg.aimWallFraction) return true;
+  return friendInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist, wall));
 }
 
 /**
  * How far along `dir` (unit) from `eye` a missed BB can still hit someone: cfg.friendlyBeyondTarget past
- * the target (`dist` metres away), or less if a wall is in the way. Only a wall: what the line meets must
+ * the target (`dist` metres away), or less if a wall is in the way (`hit`: where the line meets geometry
+ * within that reach, or -1). Only a wall: what the line meets must
  * also stand cfg.friendlyWallClearance higher right there (BBs can sail over the top of low cover).
  */
-function friendlyReach(w: BotWorld, eye: Vec3, dir: Vec3, dist: number): number {
+function friendlyReach(w: BotWorld, eye: Vec3, dir: Vec3, dist: number, hit: number): number {
   const cfg = w.cfg;
   const reach = dist + cfg.friendlyBeyondTarget;
-  const hit = w.query.raycastStatic(eye, dir, reach);
   if (hit < 0) return reach;
   // Just before the point the line meets, raised: is the same surface there too?
   const back = Math.min(hit, cfg.friendlyWallProbe);

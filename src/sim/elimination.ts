@@ -96,7 +96,13 @@ export function stepElimination(c: Character, cfg: HitConfig, dt: number): void 
     const last = route[route.length - 1] ?? c.deadZoneTarget;
     const arrived = c.walkOffLeg >= route.length - 1 && Math.hypot(last.x - c.position.x, last.z - c.position.z) <= cfg.deadZoneArrive;
     c.walkOffStuck = Math.hypot(c.velocity.x, c.velocity.z) < cfg.stuckSpeed ? c.walkOffStuck + dt : 0;
-    if (arrived) goOut(c, true); // onto the spot itself (at most deadZoneArrive away), so teammates never overlap
+    if (arrived) {
+      // Onto the spot itself (at most deadZoneArrive away), so teammates on neighbouring spots never overlap.
+      // Only x and z move, and prevPosition stays, so the drawn figure slides that last bit instead of jumping.
+      c.position.x = last.x;
+      c.position.z = last.z;
+      goOut(c, false);
+    }
     else if (c.walkOffStuck >= cfg.stuckTime || c.statusTime >= cfg.walkOffTime) setStatus(c, 'leaving');
   } else if (c.status === 'leaving' && c.statusTime >= cfg.vanishTime) {
     goOut(c, true);
@@ -108,7 +114,7 @@ function setStatus(c: Character, status: Character['status']): void {
   c.statusTime = 0;
 }
 
-/** Into the dead zone (placed on the spot: the last step of a walk-off, or after leaving the field), facing the way the spot faces. */
+/** Into the dead zone (placed on the spot if it left the field elsewhere), facing the way the spot faces. */
 function goOut(c: Character, place: boolean): void {
   setStatus(c, 'out');
   if (place) {

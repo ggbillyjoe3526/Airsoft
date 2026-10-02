@@ -35,6 +35,9 @@ export class CombatPresentation {
   /** Newest BB serial already given a muzzle start, per shooter. */
   private readonly lastSerialByOwner = new Map<number, number>();
   private readonly overlay: { scene: THREE.Scene; camera: THREE.Camera };
+  private playing = false;
+  /** The round in play started behind a screen (round 1 of a match, set up before play): whistle on Play. */
+  private startWhistleOwed = true;
 
   constructor(
     private readonly renderer: Renderer,
@@ -61,17 +64,14 @@ export class CombatPresentation {
     this.sfx.unlock();
   }
 
-  /**
-   * The round-start whistle for the session's first round: round 1 of the first match is set up before audio
-   * is unlocked, so its roundStart event (if any) went unheard.
-   */
-  roundStartWhistle(): void {
-    this.sfx.roundStartWhistle();
-  }
-
   setPlaying(playing: boolean): void {
     this.hud.setVisible(playing);
     this.sfx.setPaused(!playing);
+    this.playing = playing;
+    if (playing && this.startWhistleOwed) {
+      this.startWhistleOwed = false;
+      this.sfx.roundStartWhistle();
+    }
   }
 
   toggleBbPaths(): void {
@@ -86,8 +86,14 @@ export class CombatPresentation {
   afterTick(): void {
     this.paths.recordTick();
     for (const e of this.state.events) {
-      if (e.type === 'roundStart') this.viewmodel.resetSway(); // the view snaps to the spawn yaw
-      else if (e.type === 'bbImpact') this.puffs.spawn(e.position);
+      if (e.type === 'roundStart') {
+        this.viewmodel.resetSway(); // the view snaps to the spawn yaw
+        // A round set up behind the start or result screen gets its whistle when play starts.
+        if (!this.playing) {
+          this.startWhistleOwed = true;
+          continue;
+        }
+      } else if (e.type === 'bbImpact') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
         if (e.victimId === this.player.id) this.viewmodel.onHit();

@@ -92,11 +92,12 @@ export class Viewmodel {
     this.camera.updateProjectionMatrix();
   }
 
-  /** You've been hit: the replica jolts in your hands before you lower it to call the hit. */
   /** The view is about to be set, not turned (a new round): the next update takes it without swaying. */
   resetSway(): void {
     this.snapView = true;
   }
+
+  /** You've been hit: the replica jolts in your hands before you lower it to call the hit. */
 
   onHit(): void {
     this.kick = VIEWMODEL.kickMax * VIEWMODEL.hitJolt;
