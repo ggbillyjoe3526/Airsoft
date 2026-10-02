@@ -165,7 +165,9 @@ Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do
 3. Get a single scene running: a floor, a box, and a first-person camera that moves.
 4. Then build Phase 1 in small steps, each leaving the game runnable.
 
-**At the start of every later session:** read this file and `docs/`, check the repository state and git log, then continue from where we left off.
+**At the start of every later session:** read `docs/HANDOFF.md` first, then this file and `docs/`, check the repository state and git log, then continue from where we left off.
+
+**At the end of every session** (or when the owner says usage is running out): rewrite `docs/HANDOFF.md` for the next session (where we are, what's next and any half-made plans, open questions, gotchas; about a screen; replace it, don't append), then commit and push it with the rest.
 
 **For each substantial change,** state briefly:
 - **Goal:** what it achieves
@@ -199,6 +201,7 @@ Then implement, then **verify**: run the type checker, tests, and build, and rep
   - `docs/ASSETS.md` — asset sources and licenses
   - `docs/IDEAS.md` — future features, not yet approved
   - `docs/KNOWN_ISSUES.md`
+  - `docs/HANDOFF.md` — where the last session left off (rewritten each session)
 
 ## 11. Tone Check
 
