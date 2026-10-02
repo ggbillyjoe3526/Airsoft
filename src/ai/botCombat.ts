@@ -83,11 +83,14 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
 
 /**
  * True if the bot must hold fire at `aimPoint` (`dist` metres away): cover in the way (sight is refreshed
- * 10×/s, so the target may have just stepped behind some), or a teammate in the line of fire `dir` (unit),
+ * 10×/s, so the target may have just stepped behind some), a wall close in front along the aim `dir` (unit),
+ * or a teammate in the line of fire `dir`,
  * up to the first wall past the target (a BB that misses flies on, but not through walls).
  */
 function lineOfFireBlocked(b: Bot, w: BotWorld, eye: Vec3, aimPoint: Vec3, dir: Vec3, dist: number): boolean {
   if (!lineClear(w.query, eye, aimPoint)) return true;
+  // The BB flies along the actual aim, not the line to the target: hold fire rather than shoot the wall beside you.
+  if (w.query.raycastStatic(eye, dir, dist * w.cfg.aimWallFraction) >= 0) return true;
   return friendInLine(b, w, eye, dir, friendlyReach(w, eye, dir, dist));
 }
 

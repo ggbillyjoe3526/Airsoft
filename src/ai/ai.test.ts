@@ -682,6 +682,25 @@ describe('bot hearing and targets', () => {
 });
 
 
+describe('bot suppression', () => {
+  it('ducks from enemy BBs landing close, not from its own or a teammate\'s', () => {
+    const { state, bot, bots } = duel(18, (s) => s.characters.push(createCharacter(2, vec3(30, 0, 0), 0, LOADOUT, 1)));
+    const b = bots.bots[0]!;
+    const near = vec3(bot.position.x + 0.5, bot.position.y + 1.2, bot.position.z);
+    const before = b.suppressedAt;
+    for (const ownerId of [bot.id, 2]) {
+      state.events.length = 0;
+      state.events.push({ type: 'bbImpact', position: near, ownerId });
+      bots.observe(state);
+      expect(b.suppressedAt, `owner ${ownerId}`).toBe(before);
+    }
+    state.events.length = 0;
+    state.events.push({ type: 'bbImpact', position: near, ownerId: 0 }); // the enemy player
+    bots.observe(state);
+    expect(b.suppressedAt).toBe(state.time);
+  });
+});
+
 describe('bot contacts', () => {
   it('switch back to someone seen moments ago without a fresh reaction delay', () => {
     // A (the player, id 0) straight ahead at 14 m; B (id 2) closer, off to the side, hidden at first.

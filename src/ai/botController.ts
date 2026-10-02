@@ -209,7 +209,10 @@ export class BotController {
         const range = e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : cfg.footstepHearingRun;
         if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, time, walker.position, range);
       } else if (e.type === 'bbImpact') {
+        // Only enemy fire suppresses: a bot's own BB (or a teammate's) landing near it is no threat.
+        const shooter = this.character(state, e.ownerId);
         for (const b of this.bots) {
+          if (shooter && shooter.team === b.character.team) continue;
           const p = bodyPoint(b.character, this.opts.hits, cfg.aimHeightFraction, this.chest);
           if (Math.hypot(e.position.x - p.x, e.position.y - p.y, e.position.z - p.z) <= cfg.suppressionRadius) {
             b.suppressedAt = time;

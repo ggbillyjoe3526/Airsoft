@@ -34,7 +34,7 @@ export const BOT_BEHAVIOUR = {
   hearingContactTime: 2,
   /** How long a bot keeps hunting a last-known position after losing sight or hearing (s); after this it forgets the contact. */
   memoryTime: 6,
-  /** A BB landing this close (metres) or a teammate being hit nearby makes a bot want cover. */
+  /** An enemy BB landing this close (metres) makes a bot want cover. */
   suppressionRadius: 1.6,
   /** A bot counts as under fire for this long after a near miss (s). */
   suppressionTime: 0.4,
@@ -76,6 +76,11 @@ export const BOT_BEHAVIOUR = {
   friendlyWallClearance: 0.6,
   /** The raised check looks for the wall from this far (metres) before the point the aim line meets it, to as far past it. */
   friendlyWallProbe: 0.2,
+  /**
+   * Hold fire when the aim line itself (aim error included) meets a wall within this fraction of the
+   * distance to the target: the clear line to the target doesn't help if the BB would go into the door frame.
+   */
+  aimWallFraction: 0.5,
 
   // ---- Movement and cover -----------------------------------------------------------------------
   /** Pause at each lane point, looking ahead (s). */

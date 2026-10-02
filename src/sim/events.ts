@@ -13,7 +13,8 @@ export type GameEvent =
   /** Reload pressed but no spare magazine has more BBs than the loaded one: nothing happens (the HUD says why). */
   | { type: 'reloadRefused'; characterId: number; replicaId: string }
   | { type: 'draw'; characterId: number; replicaId: string }
-  | { type: 'bbImpact'; position: Vec3 }
+  /** A BB hit level geometry; `ownerId` fired it. */
+  | { type: 'bbImpact'; position: Vec3; ownerId: number }
   /** A character's footstep or landing, heard at its feet (walking and crouched moves are silent). */
   | { type: 'footstep'; characterId: number; kind: FootstepKind }
   /** A BB hit a character: they are eliminated and start calling their hit. `direction` is the BB's flight direction. */

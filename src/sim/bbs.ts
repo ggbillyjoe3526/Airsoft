@@ -87,7 +87,7 @@ export function stepBBs(
         bb.position.y = bb.prevPosition.y + segmentDir.y * t;
         bb.position.z = bb.prevPosition.z + segmentDir.z * t;
         bb.active = false;
-        events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z) });
+        events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
         continue;
       }
     }
