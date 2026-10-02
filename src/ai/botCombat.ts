@@ -1,7 +1,7 @@
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
-import { characterHitVolume, rayCharacter, type VerticalCapsule } from '../sim/hitbox';
+import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from '../sim/hitbox';
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, lookAngles, stepAim } from './aim';
 import { type Bot, type BotWorld, pick } from './bot';
@@ -11,8 +11,7 @@ import { bodyPoint, lineClear } from './perception';
 // Scratch, each used only within one call of the function that fills it.
 const look = { yaw: 0, pitch: 0 };
 const aimDir = vec3();
-const mateBody: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
-const mateHead: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
+const mateVolume: HitVolume = createHitVolume();
 
 /**
  * Turns the view from `eye`: at the target (with lead and aim error; the point aimed at is written to
@@ -60,17 +59,21 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
   const flight = dist / w.loadout[0]!.muzzleVelocity;
   for (const mate of w.characters) {
     if (mate === me || mate.team !== me.team || !isInPlay(mate)) continue;
-    characterHitVolume(mate, w.hits, mateBody, mateHead);
-    mateBody.r += w.cfg.friendlyMargin;
-    mateHead.r += w.cfg.friendlyMargin;
-    if (rayCharacter(from, dir, dist, mateBody, mateHead) >= 0) return true;
+    const v = mateVolume;
+    characterHitVolume(mate, w.hits, v);
+    v.body.r += w.cfg.friendlyMargin;
+    v.head.r += w.cfg.friendlyMargin;
+    v.shoulder.r += w.cfg.friendlyMargin;
+    if (rayCharacter(from, dir, dist, v) >= 0) return true;
     const dx = mate.velocity.x * flight;
     const dz = mate.velocity.z * flight;
-    mateBody.x += dx;
-    mateBody.z += dz;
-    mateHead.x += dx;
-    mateHead.z += dz;
-    if (rayCharacter(from, dir, dist, mateBody, mateHead) >= 0) return true;
+    v.body.x += dx;
+    v.body.z += dz;
+    v.head.x += dx;
+    v.head.z += dz;
+    v.shoulder.x += dx;
+    v.shoulder.z += dz;
+    if (rayCharacter(from, dir, dist, v) >= 0) return true;
   }
   return false;
 }

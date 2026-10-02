@@ -18,6 +18,8 @@ export interface PlayerCommand {
   /** Walk key held: slow and quiet. Overrides sprint. */
   walk: boolean;
   crouch: boolean;
+  /** Lean (held): -1 left, 1 right, 0 upright. */
+  lean: number;
   jump: boolean;
   /** Trigger held. Semi-auto replicas fire on the press only. */
   fire: boolean;
@@ -35,6 +37,7 @@ export function createCommand(): PlayerCommand {
     sprint: false,
     walk: false,
     crouch: false,
+    lean: 0,
     jump: false,
     fire: false,
     reload: false,

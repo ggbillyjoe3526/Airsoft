@@ -8,11 +8,12 @@ import { createNavSearch, type NavGrid } from '../nav/navGrid';
 import { type ArmamentContext, type Muzzle, stepArmament, type WorldQuery } from './armament';
 import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
-import { eyeHeight, rescueIfOutOfWorld } from './character';
+import { rescueIfOutOfWorld } from './character';
 import { createCommand, type PlayerCommand } from './commands';
 import { fillEliminatedCommand, isInPlay, stepElimination } from './elimination';
 import { stepFootsteps } from './footsteps';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
+import { leanedEye, stepLean } from './lean';
 import { createRng } from './rng';
 import { type RoundContext, type RoundRules, stepRound } from './round';
 import type { GameState } from './state';
@@ -105,6 +106,7 @@ export function stepSimulation(
   for (const c of state.characters) {
     copy(c.prevPosition, c.position);
     c.prevCrouchAmount = c.crouchAmount;
+    c.prevLean = c.lean;
     c.prevYaw = c.yaw;
     c.prevPitch = c.pitch;
     const inPlay = isInPlay(c);
@@ -116,6 +118,7 @@ export function stepSimulation(
     }
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);
+    stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);
     if (!inPlay) {
       stepElimination(c, ctx.hits, dt);
       continue;
@@ -123,9 +126,7 @@ export function stepSimulation(
     stepFootsteps(c, ctx.footsteps, state.events);
 
     const m = ctx.muzzle;
-    m.eye.x = c.position.x;
-    m.eye.y = c.position.y + eyeHeight(c.crouchAmount, ctx.body);
-    m.eye.z = c.position.z;
+    leanedEye(c, ctx.body, ctx.hits, m.eye); // BBs leave from the eyes, wherever a lean puts them
     m.yaw = c.yaw;
     m.pitch = c.pitch;
     const canFire = live && !c.sprinting && c.sprintLockout <= 0;

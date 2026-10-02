@@ -378,7 +378,7 @@ export class Game {
     const alpha = stepperAlpha(this.stepper); // frozen while paused, so the view holds still
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
-    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, alpha, this.input.yaw, pitch);
+    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch);
     const frameDt = running ? dt : 0; // presentation is frozen while paused
     const spectating = this.match.frame(this.renderer.camera, alpha, frameDt, this.input.yaw);
     this.combat.frame(frameDt, alpha, this.input.yaw, pitch);

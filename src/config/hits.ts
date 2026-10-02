@@ -16,6 +16,16 @@ export interface HitConfig {
   stuckSpeed: number;
   stuckTime: number;
   vanishTime: number;
+  /**
+   * Leaning (peeking around cover): the upper body tilts sideways about a pivot at the hips. Everything
+   * that leans (eyes and BB origin, hit volume, the drawn figure, what bots see) uses this one geometry.
+   */
+  lean: {
+    /** Tilt at full lean (radians). */
+    maxAngle: number;
+    /** Height of the pivot (the hips) above the feet when standing; crouching lowers it by crouchDrop. */
+    pivotHeight: number;
+  };
 }
 
 /**
@@ -58,6 +68,11 @@ export const HITS: HitConfig = {
   stuckTime: 0.5,
   /** Leaving the field: the figure stands and fades out over this long, then appears in the dead zone. */
   vanishTime: 0.6,
+  /**
+   * About 34°: the eyes move ~0.4 m sideways (enough to see past a corner from a body-width back) and drop
+   * ~0.12 m; the legs stay put. The pivot is the drawn figure's hip height (config/characters.ts uses it).
+   */
+  lean: { maxAngle: 0.6, pivotHeight: 0.92 },
 };
 
 /** Match flow: 3v3 rounds against the clock (elimination or flag, see config/modes.ts), first to 5 round wins. */

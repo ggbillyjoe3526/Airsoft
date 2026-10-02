@@ -29,7 +29,7 @@ const contactSearch: CoverSearch = { radius: 0, randomCandidates: 0, crouchOnly:
  */
 function takeCover(b: Bot, w: BotWorld, threat: Character, down: number, search?: CoverSearch): boolean {
   const cfg = w.cfg;
-  eyeOf(threat, w.body, threatEye);
+  eyeOf(threat, w.body, w.hits, threatEye);
   if (!findCover(b.character.position, threatEye, w.nav, w.query, cfg, w.body, b.rng, w.lowCover, b.cover, search)) return false;
   b.mode = 'cover';
   b.coverPhase = 'down';
@@ -52,7 +52,7 @@ function takeCover(b: Bot, w: BotWorld, threat: Character, down: number, search?
 function duckBack(b: Bot, w: BotWorld, target: Character | undefined, seeing: boolean): boolean {
   const cfg = w.cfg;
   if (seeing && target) {
-    eyeOf(target, w.body, threatEye);
+    eyeOf(target, w.body, w.hits, threatEye);
   } else {
     // Only what it knows: where the enemy was last seen or heard, at standing eye height.
     threatEye.x = b.lastKnown.x;
@@ -182,6 +182,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.sprint = false;
   cmd.walk = false;
   cmd.crouch = false;
+  cmd.lean = 0; // bots don't lean yet (M10)
   cmd.jump = false;
   cmd.fire = false;
   cmd.reload = false;
@@ -215,7 +216,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     // Closing in on where someone was seen or heard: walk, so footsteps don't give us away.
     cmd.walk = b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < cfg.searchWalkDistance;
   }
-  eyeOf(me, w.body, myEye);
+  eyeOf(me, w.body, w.hits, myEye);
   const offAim = aimBot(b, w, target, myEye, aimAt, moving, cmd, dt);
   cmd.yaw = b.aim.yaw;
   cmd.pitch = b.aim.pitch;

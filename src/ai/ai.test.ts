@@ -24,7 +24,7 @@ import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
 import type { Bot } from './bot';
 import { BotController } from './botController';
 import { findCover, type LowCoverBlock, lowCoverBlocks } from './cover';
-import { canSee, lineClear } from './perception';
+import { canSee, lineClear, visiblePart } from './perception';
 
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
@@ -95,6 +95,20 @@ describe('perception', () => {
     expect(canSee(viewer, createCharacter(1, vec3(0, 0, -(BOTS.viewDistance + 1)), 0, LOADOUT, 1), noWalls, BOTS, BODY, HITS)).toBe(false);
     expect(canSee(viewer, createCharacter(1, vec3(0, 0, BOTS.closeAwareness - 0.5), 0, LOADOUT, 1), noWalls, BOTS, BODY, HITS)).toBe(true);
   });
+  it('sees a player who leans out from behind cover, but only on the side they lean to', () => {
+    const v = createCharacter(0, vec3(0, 0, 0), -Math.PI / 2, LOADOUT, 0); // faces +X
+    // Facing the bot (yaw 90°: its left is +Z), tucked behind a tall box whose edge is at z = -0.6.
+    const peeker = createCharacter(1, vec3(10, 0, -1.0), Math.PI / 2, LOADOUT, 1);
+    const box = boxQuery(8, -1.8, 1, 1.2, 3);
+    expect(canSee(v, peeker, box, BOTS, BODY, HITS)).toBe(false);
+    peeker.lean = -1; // leans left, out past the edge
+    expect(canSee(v, peeker, box, BOTS, BODY, HITS)).toBe(true);
+    const part = visiblePart(v, peeker, box, BOTS, BODY, HITS);
+    expect(part).toBe(BOTS.headHeightFraction); // just the head is out
+    peeker.lean = 1; // leaning the other way stays behind the box
+    expect(canSee(v, peeker, box, BOTS, BODY, HITS)).toBe(false);
+  });
+
   it('does not see through a wall, and sees a head over crouch-high cover', () => {
     const v = createCharacter(0, vec3(0, 0, 0), -Math.PI / 2, LOADOUT, 0); // faces +X
     const behind = createCharacter(1, vec3(10, 0, 0), 0, LOADOUT, 1);

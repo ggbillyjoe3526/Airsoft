@@ -58,6 +58,12 @@ ends the round). A hit character is eliminated
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
 - **audio/**: synthesised Web Audio effects; positional for everything but the local player's own sounds. In-world
   sounds feed a short procedural reverb (the yard's echo); UI sounds (hit tick, hit marker, whistle) stay dry.
+- **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
+  `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
+  in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
+  The eye and BB origin (`leanedEye`), the hit volume (`hitbox.ts`: body plus a head and shoulder sphere that
+  swing out), the camera (`render/cameraRig.ts`, plus a small roll), the drawn figure (`figureLeanRoll`) and what
+  bots see and aim at (`ai/perception.ts`) all use it. Leaning slows you towards walking pace (quiet from half a lean) and blocks sprinting.
 - **sim/footsteps.ts**: after movement, emits `footstep` events every stride while running/sprinting and on hard
   landings; walking and crouched movement are silent.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox

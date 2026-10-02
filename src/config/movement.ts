@@ -39,6 +39,12 @@ export interface MovementConfig {
   /** Movement input magnitude below this is treated as no input. */
   inputDeadzone: number;
   maxPitch: number;
+  /** Seconds to go from upright to a full lean (Q / E held). */
+  leanTime: number;
+  /** A leaning head stays at least this far from walls (metres), so you never see or shoot through them. */
+  leanWallClearance: number;
+  /** From this much of a full lean (0..1) you move at walking pace, quietly; less slows you part of the way. */
+  leanQuietFrom: number;
 }
 
 /** Heights are measured from the character's position (capsule bottom), which rests PHYSICS.groundRestGap above the floor. */
@@ -69,6 +75,9 @@ export const MOVEMENT: MovementConfig = {
   groundSettleDistance: 0.06,
   inputDeadzone: 0.01,
   maxPitch: Math.PI / 2 - 0.02,
+  leanTime: 0.18,
+  leanWallClearance: 0.2,
+  leanQuietFrom: 0.5,
 };
 
 export const BODY: BodyConfig = {

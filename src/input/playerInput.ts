@@ -61,6 +61,7 @@ export class PlayerInput {
     cmd.walk = kb.isDown('walk');
     cmd.sprint = kb.isDown('sprint');
     cmd.crouch = kb.isDown('crouch');
+    cmd.lean = (kb.isDown('leanRight') ? 1 : 0) - (kb.isDown('leanLeft') ? 1 : 0);
     cmd.jump = this.jumpLatch;
     cmd.reload = this.reloadLatch;
     cmd.fire = this.pointer.fireHeld || this.fireLatch;

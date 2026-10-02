@@ -313,3 +313,36 @@ describe('movement', () => {
     expect(c.pitch).toBe(MOVEMENT.maxPitch);
   });
 });
+
+describe('moving while leaning', () => {
+  const speed = (c: Character) => Math.hypot(c.velocity.x, c.velocity.z);
+  const running = (lean: number, keyLean = lean) => {
+    const c = createCharacter(0, vec3(0, 0, 0), 0);
+    c.lean = lean; // the actual lean (sim/lean.ts eases it in; here it's held fixed)
+    step(c, command((cmd) => ((cmd.forward = 1), (cmd.sprint = true), (cmd.lean = keyLean))), 60);
+    c.lean = lean;
+    step(c, command((cmd) => ((cmd.forward = 1), (cmd.sprint = true), (cmd.lean = keyLean))), 1);
+    return c;
+  };
+
+  it('goes at walking pace, quietly, and never sprints once leaning well out', () => {
+    const c = running(1);
+    expect(c.walking).toBe(true); // walking is the quiet pace (no footsteps)
+    expect(c.sprinting).toBe(false);
+    expect(speed(c)).toBeCloseTo(MOVEMENT.walkSpeed, 1);
+  });
+
+  it('slows smoothly as the lean comes in, instead of dropping to walking pace at a tap', () => {
+    const slight = running(MOVEMENT.leanQuietFrom / 2);
+    expect(slight.sprinting).toBe(false);
+    expect(slight.walking).toBe(false); // not quiet yet
+    expect(speed(slight)).toBeGreaterThan(MOVEMENT.walkSpeed + 0.3);
+    expect(speed(slight)).toBeLessThan(MOVEMENT.runSpeed - 0.3);
+  });
+
+  it('follows the actual lean, not the key: holding a lean that a jump or a wall stops costs no speed', () => {
+    const c = running(0, 1); // key held, but no lean (in the air, or flush against a wall)
+    expect(c.sprinting).toBe(true);
+    expect(speed(c)).toBeCloseTo(MOVEMENT.sprintSpeed, 1);
+  });
+});

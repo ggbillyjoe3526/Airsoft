@@ -173,6 +173,30 @@ describe('stepSimulation', () => {
     expect(fired).toBeGreaterThan(0);
   });
 
+  it('leans while Q / E is held, records the previous lean for smooth rendering, and fires from the leaned eye', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0); // facing -Z: its right is +X
+    state.characters.push(c);
+    const cmd = createCommand();
+    cmd.lean = 1;
+    const ctx = testContext(floor, KILL_Y);
+    for (let i = 0; i < 60; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.lean).toBe(1);
+    expect(c.prevLean).toBe(1);
+    cmd.fire = true;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    const shot = state.events.find((e) => e.type === 'shot');
+    expect(shot?.type).toBe('shot');
+    if (shot?.type === 'shot') {
+      expect(shot.position.x).toBeGreaterThan(0.35); // out past the right shoulder
+      expect(shot.position.y).toBeLessThan(c.position.y + BODY.standEyeHeight);
+    }
+    cmd.lean = 0;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.prevLean).toBe(1);
+    expect(c.lean).toBeLessThan(1);
+  });
+
   it('clears last tick\'s events at the start of every tick', () => {
     const state = createGameState(1, 16, ROUNDS);
     state.characters.push(createCharacter(0, vec3(), 0));

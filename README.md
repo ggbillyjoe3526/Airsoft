@@ -120,6 +120,7 @@ Then open **http://localhost:4173**.
 | Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
 | Left Alt | Sprint (forward only) |
 | C | Crouch |
+| Q / E (hold) | Lean left / right: peek around cover (leaning slows you to a quiet walk and stops sprinting) |
 | Space | Jump (small hop) |
 | R | Reload (an empty trigger pull also reloads) |
 | 1 / 2 or mouse wheel | Switch between AEG rifle and gas pistol |

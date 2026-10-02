@@ -19,6 +19,11 @@ export const RENDER = {
   skyColor: 0xa9c6de,
   fogNear: 60,
   fogFar: 160,
+  /**
+   * Leaning tilts the view by this much at full lean (radians), a fraction of the body's tilt: enough to
+   * feel the peek without making the world swing.
+   */
+  leanCameraRoll: 0.12,
 } as const;
 
 /** Bright, friendly daylight: hemisphere fill plus one shadow-casting sun. */

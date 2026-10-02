@@ -2,27 +2,30 @@ import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { WorldQuery } from '../sim/armament';
-import { type Character, eyeHeight } from '../sim/character';
+import type { Character } from '../sim/character';
 import { hitTop } from '../sim/hitbox';
+import { leanedEye, leanOffset } from '../sim/lean';
 import { type Vec3, vec3 } from '../sim/vec';
 
 const eye = vec3();
 const point = vec3();
 const dir = vec3();
 
-/** Where a character's eyes are. */
-export function eyeOf(c: Character, body: BodyConfig, out: Vec3): Vec3 {
-  out.x = c.position.x;
-  out.y = c.position.y + eyeHeight(c.crouchAmount, body);
-  out.z = c.position.z;
-  return out;
+/** Where a character's eyes are, lean included. */
+export function eyeOf(c: Character, body: BodyConfig, hits: HitConfig, out: Vec3): Vec3 {
+  return leanedEye(c, body, hits, out);
 }
 
-/** A point `fraction` of the way up a character's hit volume (0.7 ≈ chest), following its crouch. */
+/**
+ * A point `fraction` of the way up a character's hit volume (0.7 ≈ chest), following its crouch and lean
+ * (a leaning player's head and shoulders are out past cover).
+ */
 export function bodyPoint(c: Character, hits: HitConfig, fraction: number, out: Vec3): Vec3 {
-  out.x = c.position.x;
-  out.y = c.position.y + hitTop(c.crouchAmount, hits) * fraction;
-  out.z = c.position.z;
+  const h = hitTop(c.crouchAmount, hits) * fraction;
+  leanOffset(h, c.lean, c.crouchAmount, c.yaw, hits, out);
+  out.x += c.position.x;
+  out.y += c.position.y + h;
+  out.z += c.position.z;
   return out;
 }
 
@@ -55,7 +58,7 @@ export function visiblePart(viewer: Character, target: Character, query: WorldQu
     const cos = (-Math.sin(viewer.yaw) * dx - Math.cos(viewer.yaw) * dz) / dist;
     if (cos < Math.cos(((bots.fovDeg / 2) * Math.PI) / 180)) return 0;
   }
-  eyeOf(viewer, body, eye);
+  eyeOf(viewer, body, hits, eye);
   if (lineClear(query, eye, bodyPoint(target, hits, bots.aimHeightFraction, point))) return bots.aimHeightFraction;
   if (lineClear(query, eye, bodyPoint(target, hits, bots.headHeightFraction, point))) return bots.headHeightFraction;
   return 0;

@@ -35,6 +35,14 @@ export function flinchLean(dirX: number, dirZ: number, yaw: number, amount: numb
   return out;
 }
 
+/**
+ * Roll of the figure's upper body (about its local Z, pivoting at the hips) for a lean of `lean` (-1 left
+ * .. 1 right). +Z tips the top to the figure's left, so leaning right is negative. Matches sim/lean.ts.
+ */
+export function figureLeanRoll(lean: number, hits: HitConfig): number {
+  return -lean * hits.lean.maxAngle;
+}
+
 /** Flinch strength (0..1) `t` seconds after a hit: a quick snap, then easing back. */
 export function flinchEnvelope(t: number): number {
   const F = FIGURE.flinch;
@@ -103,7 +111,9 @@ export class CharacterRenderer {
       // Flinch: lean the upper body the way the BB was going, in the figure's own frame (it faces -Z).
       s.flinchAge += dt;
       const lean = flinchLean(s.flinchX, s.flinchZ, yaw, flinchEnvelope(s.flinchAge) * FIGURE.flinch.lean, this.lean);
-      f.upper.rotation.set(lean.x, 0, lean.z);
+      // Leaning (peeking): the upper body tilts about the hips, exactly as the hit volume does.
+      const leaning = c.prevLean + (c.lean - c.prevLean) * alpha;
+      f.upper.rotation.set(lean.x, 0, lean.z + figureLeanRoll(leaning, this.hits));
 
       // Walk cycle from distance actually covered (teleports into the dead zone don't count).
       const moved = Math.hypot(x - s.lastX, z - s.lastZ);

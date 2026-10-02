@@ -43,6 +43,10 @@ export interface Character {
   crouchAmount: number;
   /** Crouch amount at the start of the last tick, for render interpolation of the eye height. */
   prevCrouchAmount: number;
+  /** How far the character leans: -1 fully left, 1 fully right, 0 upright (see sim/lean.ts). */
+  lean: number;
+  /** Lean at the start of the last tick, for render interpolation. */
+  prevLean: number;
   /** View angles at the start of the last tick, for render interpolation of turning. */
   prevYaw: number;
   prevPitch: number;
@@ -88,6 +92,8 @@ export function createCharacter(
     pitch: 0,
     crouchAmount: 0,
     prevCrouchAmount: 0,
+    lean: 0,
+    prevLean: 0,
     prevYaw: yaw,
     prevPitch: 0,
     grounded: false,
@@ -138,6 +144,8 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.prevPitch = 0;
   c.crouchAmount = 0;
   c.prevCrouchAmount = 0;
+  c.lean = 0;
+  c.prevLean = 0;
   c.grounded = false;
   c.jumpCooldown = 0;
   c.sprinting = false;

@@ -1,6 +1,7 @@
 import type { HitConfig } from '../config/hits';
 import type { Character } from './character';
-import type { Vec3 } from './vec';
+import { leanOffset } from './lean';
+import { type Vec3, vec3 } from './vec';
 
 /** An upright capsule: vertical axis at (x, z) from y0 to y1 (sphere centres), radius r. */
 export interface VerticalCapsule {
@@ -68,23 +69,60 @@ export function hitTop(crouchAmount: number, cfg: HitConfig): number {
 }
 
 /**
- * Writes the character's current hit volume: `body` (boots to shoulders) and `head` (a sphere, stored
- * as a capsule with y0 = y1).
+ * A character's hit volume: `body` (boots to shoulders), `head` (a sphere, stored as a capsule with
+ * y0 = y1) and `shoulder` (a sphere at the top of the body). Upright, the shoulder sphere sits inside the
+ * body; leaning, the head and shoulder swing out with the upper body (sim/lean.ts) while the body's top
+ * comes down towards the hips, so only what pokes out past cover can be hit.
  */
-export function characterHitVolume(c: Character, cfg: HitConfig, body: VerticalCapsule, head: VerticalCapsule): void {
+export interface HitVolume {
+  body: VerticalCapsule;
+  head: VerticalCapsule;
+  shoulder: VerticalCapsule;
+}
+
+const capsule = (): VerticalCapsule => ({ x: 0, z: 0, y0: 0, y1: 0, r: 0 });
+
+export function createHitVolume(): HitVolume {
+  return { body: capsule(), head: capsule(), shoulder: capsule() };
+}
+
+const offset = vec3();
+
+/** Writes the character's current hit volume (see HitVolume) into `v`. */
+export function characterHitVolume(c: Character, cfg: HitConfig, v: HitVolume): void {
   const drop = cfg.crouchDrop * c.crouchAmount;
-  body.x = head.x = c.position.x;
-  body.z = head.z = c.position.z;
+  const p = c.position;
+  const lean = Math.abs(c.lean);
+  const { body, head, shoulder } = v;
+  body.x = p.x;
+  body.z = p.z;
   body.r = cfg.bodyRadius;
-  body.y0 = c.position.y + cfg.bodyBottom + cfg.bodyRadius;
-  body.y1 = c.position.y + cfg.bodyTop - drop - cfg.bodyRadius;
+  body.y0 = p.y + cfg.bodyBottom + cfg.bodyRadius;
+  // Leaning, the body capsule's top comes down from the shoulders to the hips; the shoulder sphere
+  // covers the tilted upper body.
+  const top = cfg.bodyTop - drop - cfg.bodyRadius;
+  const hips = cfg.lean.pivotHeight - drop;
+  body.y1 = p.y + Math.max(cfg.bodyBottom + cfg.bodyRadius, top - (top - hips) * lean);
+
+  leanOffset(top, c.lean, c.crouchAmount, c.yaw, cfg, offset);
+  shoulder.x = p.x + offset.x;
+  shoulder.z = p.z + offset.z;
+  shoulder.y0 = shoulder.y1 = p.y + top + offset.y;
+  shoulder.r = cfg.bodyRadius;
+
+  const headHeight = cfg.headHeight - drop;
+  leanOffset(headHeight, c.lean, c.crouchAmount, c.yaw, cfg, offset);
+  head.x = p.x + offset.x;
+  head.z = p.z + offset.z;
+  head.y0 = head.y1 = p.y + headHeight + offset.y;
   head.r = cfg.headRadius;
-  head.y0 = head.y1 = c.position.y + cfg.headHeight - drop;
 }
 
 /** Distance along the unit ray to the character's hit volume (≤ maxT), or -1 if it misses. */
-export function rayCharacter(o: Vec3, d: Vec3, maxT: number, body: VerticalCapsule, head: VerticalCapsule): number {
-  const tb = rayCapsule(o, d, maxT, body);
-  const th = rayCapsule(o, d, tb >= 0 ? tb : maxT, head);
-  return th >= 0 ? th : tb;
+export function rayCharacter(o: Vec3, d: Vec3, maxT: number, v: HitVolume): number {
+  const body = rayCapsule(o, d, maxT, v.body);
+  const shoulder = rayCapsule(o, d, body >= 0 ? body : maxT, v.shoulder);
+  const nearest = shoulder >= 0 ? shoulder : body;
+  const head = rayCapsule(o, d, nearest >= 0 ? nearest : maxT, v.head);
+  return head >= 0 ? head : nearest;
 }

@@ -1,10 +1,14 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { HITS } from '../config/hits';
 import { FLAG } from '../config/modes';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
 import { buildNavGrid, createNavSearch, findPath } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
+import { createCharacter } from '../sim/character';
+import { createCommand } from '../sim/commands';
+import { leanedEye, stepLean } from '../sim/lean';
 import { type Vec3, vec3 } from '../sim/vec';
 import { DEPOT, DEPOT_LAYOUT } from './depot';
 import type { MapBlock, SpawnPoint } from './mapTypes';
@@ -384,6 +388,39 @@ describe('Depot map', () => {
   describe('with Rapier', () => {
     beforeAll(async () => {
       await initPhysics();
+    });
+
+    it('keeps a leaning head clear of a real wall, and lets a lean see past a wall’s end', () => {
+      const world = new PhysicsWorld(DEPOT, BODY, 1 / 60);
+      const lean = (x: number, z: number, yaw: number, dir: number, crouch: number) => {
+        const c = createCharacter(0, vec3(x, PHYSICS.groundRestGap, z), yaw);
+        c.grounded = true;
+        c.crouchAmount = crouch;
+        const cmd = createCommand();
+        cmd.lean = dir;
+        for (let i = 0; i < 60; i++) stepLean(c, cmd, BODY, HITS, MOVEMENT, world, 1 / 60);
+        return { c, eye: leanedEye(c, BODY, HITS, vec3()) };
+      };
+      // Beside Blue's spawn wall (x -17.7 .. -17.3), facing -Z: the wall is on the right.
+      for (const crouch of [0, 1]) {
+        const right = lean(-18.1, 0, 0, 1, crouch);
+        expect(right.c.lean).toBeLessThan(1);
+        expect(right.eye.x).toBeLessThanOrEqual(-17.7 - MOVEMENT.leanWallClearance + 1e-6);
+        expect(lean(-18.1, 0, 0, -1, crouch).c.lean).toBe(-1); // nothing on the left
+      }
+      // Behind the wall near its north end (z 5.5), facing +X: the right is +Z. Upright, the wall hides the
+      // ground beyond its end; leaning right puts the eyes past the end, so that line of sight opens.
+      const target = vec3(-16.6, PHYSICS.groundRestGap + BODY.standEyeHeight, 5.6); // in the gap before the crates past the end
+      const sees = (from: Vec3) => {
+        const d = vec3(target.x - from.x, target.y - from.y, target.z - from.z);
+        const len = Math.hypot(d.x, d.y, d.z);
+        return world.raycastStatic(from, vec3(d.x / len, d.y / len, d.z / len), len) < 0;
+      };
+      expect(sees(lean(-18.3, 5.1, -Math.PI / 2, 0, 0).eye)).toBe(false);
+      const peek = lean(-18.3, 5.1, -Math.PI / 2, 1, 0);
+      expect(peek.c.lean).toBe(1);
+      expect(sees(peek.eye)).toBe(true);
+      world.dispose();
     });
 
     it('agrees that the spawn points cannot see each other', () => {

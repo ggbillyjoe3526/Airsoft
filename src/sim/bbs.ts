@@ -5,12 +5,11 @@ import { type BB, type BBPool, stepBBFlight } from './ballistics';
 import type { Character } from './character';
 import { type EliminationContext, eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
-import { characterHitVolume, rayCharacter, type VerticalCapsule } from './hitbox';
+import { characterHitVolume, createHitVolume, rayCharacter } from './hitbox';
 import { copy, vec3 } from './vec';
 
 const segmentDir = vec3();
-const body: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
-const head: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
+const volume = createHitVolume();
 
 /** Who BBs can hit this tick, and what happens to them. */
 export interface BBTargets {
@@ -28,8 +27,8 @@ function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { v
   for (const c of t.characters) {
     if (c.id === bb.ownerId || !isInPlay(c)) continue;
     if (!t.hits.friendlyFire && c.team === ownerTeam) continue;
-    characterHitVolume(c, t.hits, body, head);
-    const d = rayCharacter(bb.prevPosition, segmentDir, best, body, head);
+    characterHitVolume(c, t.hits, volume);
+    const d = rayCharacter(bb.prevPosition, segmentDir, best, volume);
     if (d >= 0 && d <= best) {
       best = d;
       victim = c;

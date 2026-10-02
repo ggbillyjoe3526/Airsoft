@@ -18,7 +18,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done; `v0.1-alpha.2` ready for the owner's playtest and tag. Phase 3: M7a done, M7b (leaning) next. |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning) done; M8 (magazines and reloads) next. |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -79,8 +79,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 2 · M5 Objective mode: Attack / Defend | Done | 8.4 |
 | Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | Done (tagged; owner playtesting) | |
 | Alpha · Phase 3 · M7a Controls for leaning (swap key removed; Q / E free) | Done (small change, no critic) | |
-| Alpha · Phase 3 · M7b Leaning (peek left / right) | **Next** | |
-| Alpha · Phase 3 · M8 Magazines and reloads | To do | |
+| Alpha · Phase 3 · M7b Leaning (peek left / right) | Done | 8.6 |
+| Alpha · Phase 3 · M8 Magazines and reloads | **Next** | |
 | Alpha · Phase 3 · M9 BB physics pass | To do | |
 | Alpha · Phase 3 · M10 Movement and positioning | To do | |
 | Alpha · Phase 3 · M11 Depot rework | To do | |
@@ -125,7 +125,7 @@ content. The game keeps the AEG and the gas pistol.
 - **M7. Leaning: peek left / right** (owner request after the v0.1-alpha.2 playtest)
   - **M7a (done):** the "switch replica" key (Q) is removed, so Q and E are free. You switch replicas
     with 1, 2 or the mouse wheel.
-  - **M7b (next):** hold Q / E to lean left / right and see around cover and corners without stepping
+  - **M7b (done):** hold Q / E to lean left / right and see around cover and corners without stepping
     out (hold, not toggle). The design:
     - The upper body pivots at the hips by up to about 34°, so the eyes move about 0.4 m sideways and
       drop a little. It eases in over about 0.18 s and works crouched too, for leaning around crouch cover.

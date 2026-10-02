@@ -13,6 +13,9 @@ export const DEFAULT_BINDINGS = {
   walk: ['ShiftLeft', 'ShiftRight'],
   sprint: ['AltLeft'],
   crouch: ['KeyC'],
+  // Hold to lean (peek) around cover.
+  leanLeft: ['KeyQ'],
+  leanRight: ['KeyE'],
   jump: ['Space'],
   reload: ['KeyR'],
   slot1: ['Digit1'],
@@ -33,6 +36,8 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'walk', label: 'Walk (hold, quiet)' },
   { action: 'sprint', label: 'Sprint (hold)' },
   { action: 'crouch', label: 'Crouch (hold)' },
+  { action: 'leanLeft', label: 'Lean left (hold)' },
+  { action: 'leanRight', label: 'Lean right (hold)' },
   { action: 'jump', label: 'Jump' },
   { action: 'reload', label: 'Reload' },
   { action: 'slot1', label: 'Rifle' },

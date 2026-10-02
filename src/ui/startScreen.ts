@@ -169,6 +169,7 @@ export class StartScreen {
       <div>${k('walk')} walk (quiet)</div>
       <div>${k('sprint')} sprint</div>
       <div>${k('crouch')} crouch</div>
+      <div>${k('leanLeft')} ${k('leanRight')} lean (hold)</div>
       <div>${k('jump')} jump</div>
       <div>${k('reload')} reload</div>
       <div>${k('slot1')} ${k('slot2')} / wheel: switch</div>

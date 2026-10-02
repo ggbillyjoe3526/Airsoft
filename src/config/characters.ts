@@ -17,10 +17,10 @@ export const FIGURE = {
     furniture: 0xb49a70,
   },
   /** Body layout (metres, feet at y = 0, facing -Z). Head height and crouch come from the hit volume so they always match. */
-  hipHeight: 0.92,
+  hipHeight: HITS.lean.pivotHeight,
   legRadius: 0.075,
   hipSpread: 0.1,
-  torso: { width: 0.4, height: 0.56, depth: 0.24, bottom: 0.92 },
+  torso: { width: 0.4, height: 0.56, depth: 0.24, bottom: HITS.lean.pivotHeight },
   shoulderHeight: 1.43,
   shoulderSpread: 0.22,
   armRadius: 0.055,

@@ -33,9 +33,14 @@ function approach(current: number, target: number, maxDelta: number): number {
   return Math.max(current - maxDelta, target);
 }
 
-/** Speed the character is aiming for given current stance and pace (walk / run / sprint). */
+/**
+ * Speed the character is aiming for given current stance and pace (walk / run / sprint). A lean slows
+ * running smoothly down to walking pace, reached at cfg.leanQuietFrom of a full lean.
+ */
 export function targetSpeed(c: Character, cfg: MovementConfig): number {
-  const base = c.walking ? cfg.walkSpeed : c.sprinting ? cfg.sprintSpeed : cfg.runSpeed;
+  let base = c.walking ? cfg.walkSpeed : c.sprinting ? cfg.sprintSpeed : cfg.runSpeed;
+  const lean = Math.abs(c.lean);
+  if (lean > 0 && !c.walking) base += (cfg.walkSpeed - base) * Math.min(1, lean / cfg.leanQuietFrom);
   return base + (cfg.crouchSpeed - base) * c.crouchAmount;
 }
 
@@ -55,9 +60,12 @@ export function stepMovement(
   c.crouchAmount = approach(c.crouchAmount, cmd.crouch ? 1 : 0, dt / cfg.crouchTransitionTime);
   const crouched = c.crouchAmount >= cfg.crouchedThreshold;
 
-  // Walk (slow, quiet) wins over sprint. Sprint: forward only, never crouched.
-  c.walking = cmd.walk && !crouched;
-  c.sprinting = cmd.sprint && !c.walking && cmd.forward >= cfg.sprintMinForward && !crouched;
+  // Walk (slow, quiet) wins over sprint. Sprint: forward only, never crouched. Leaning (the actual lean,
+  // which the key eases in and walls or a jump can stop) slows you towards walking pace, is quiet from
+  // leanQuietFrom of a full lean, and rules out sprinting: no running out of a peek.
+  const lean = Math.abs(c.lean);
+  c.walking = (cmd.walk || lean >= cfg.leanQuietFrom) && !crouched;
+  c.sprinting = cmd.sprint && !c.walking && lean === 0 && cmd.forward >= cfg.sprintMinForward && !crouched;
   // The replica is carried, not aimed, while sprinting and for a moment after.
   c.sprintLockout = c.sprinting ? cfg.sprintFireLockout : Math.max(0, c.sprintLockout - dt);
 
