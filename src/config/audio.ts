@@ -92,6 +92,8 @@ export const AUDIO = {
   /** Match over: this many more long blasts after the round's, each this many blast-lengths apart. */
   matchOverBlasts: 3,
   matchOverWhistleGap: 1.3,
+  /** Reload pressed with no fuller magazine: a dull pat on the pouch (your own sound only). */
+  reloadRefused: { hz: 600, q: 1, gain: 0.5, attack: 0.002, time: 0.06 },
   /**
    * The flagpole's rope ratchet, heard at the pole each time the flag passes a notch: two quick clicks of
    * the pulley and a squeak of rope, higher going up than coming down.

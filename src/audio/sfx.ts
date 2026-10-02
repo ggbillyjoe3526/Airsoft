@@ -107,6 +107,12 @@ export class Sfx {
       case 'reloadEnd':
         this.magIn(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null));
         return;
+      case 'reloadRefused': {
+        if (e.characterId !== localId) return;
+        const r = AUDIO.reloadRefused;
+        this.noise(this.output(null), 'lowpass', r.hz, r.q, AUDIO.mechanismVolume * r.gain, r.attack, r.time);
+        return;
+      }
       case 'draw':
         this.rattle(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null));
         return;

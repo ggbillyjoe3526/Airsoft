@@ -323,14 +323,48 @@ kbd {
   color: var(--orange);
 }
 
-.hud-sep,
-.hud-reserve {
-  font-size: 22px;
-  opacity: 0.75;
+/* Spare magazines: a small gauge each, filled to how many BBs are left; the one a reload takes is brighter */
+.hud-mags {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 5px;
+  margin-left: 12px;
+  height: 32px;
+  vertical-align: bottom;
 }
 
-.hud-sep {
-  margin: 0 4px;
+.hud-mags i {
+  position: relative;
+  width: 10px;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+  background: rgba(16, 18, 22, 0.45);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.hud-mags i b {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  height: 100%;
+  max-height: calc(100% - 2px);
+  background: #f2f2f2;
+}
+
+/* The magazine a reload takes: outlined in yellow */
+.hud-mags i.next {
+  border: 2px solid #ffd84d;
+}
+
+.hud-mags i.low b {
+  background: var(--orange);
+}
+
+.hud-mags i.empty {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 .hud-reload {

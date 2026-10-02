@@ -1,3 +1,4 @@
+import { canReload } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
@@ -77,8 +78,8 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   const armament = me.armament;
   const ammo = armament.ammo[0]!;
   const reloading = armament.reload > 0;
-  const outOfAmmo = ammo.mag === 0 && ammo.reserve === 0;
-  const empty = ammo.mag === 0 && !outOfAmmo; // empty, but a reload will fix it
+  const outOfAmmo = ammo.mag === 0 && !canReload(ammo);
+  const empty = ammo.mag === 0 && !outOfAmmo; // empty, but a spare mag has BBs
   const suppressed = w.time - b.suppressedAt < cfg.suppressionTime;
   const atCover = Math.hypot(b.cover.position.x - me.position.x, b.cover.position.z - me.position.z) < cfg.coverArrive;
   const coverOver = w.time - b.coverSince > cfg.coverEpisodeMax || outOfAmmo;

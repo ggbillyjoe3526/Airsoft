@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Sfx } from '../audio/sfx';
-import { BB_VISUALS, HIT_PUFFS, IMPACT_PUFFS } from '../config/render';
+import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
 import type { WorldQuery } from '../sim/armament';
@@ -83,6 +83,8 @@ export class CombatPresentation {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
         if (e.victimId === this.player.id) this.viewmodel.onHit();
         else this.hitPuffs.spawn(e.position);
+      } else if (e.type === 'reloadRefused' && e.characterId === this.player.id) {
+        this.hud.showNotice('No fuller magazine', HUD.noticeTime);
       }
       if (e.type === 'shot') {
         if (e.characterId === this.player.id) this.viewmodel.onShot();
@@ -103,7 +105,7 @@ export class CombatPresentation {
     const carried = p.sprinting || p.sprintLockout > 0;
     this.viewmodel.setAspect(this.renderer.camera.aspect);
     this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carried, p.armament, this.loadout, p.status === 'calling');
-    this.hud.update(p.armament, this.loadout, p.status === 'alive');
+    this.hud.update(p.armament, this.loadout, p.status === 'alive', dt);
 
     const cam = this.renderer.camera;
     cam.getWorldDirection(this.forward);

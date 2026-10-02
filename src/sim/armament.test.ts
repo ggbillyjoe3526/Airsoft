@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, GAS_PISTOL, LOADOUT, RECOIL } from '../config/replicas';
-import { type ArmamentContext, createArmament, type Muzzle, stepArmament, type WorldQuery } from './armament';
+import { type ArmamentContext, createArmament, type Muzzle, nextSpare, stepArmament, type WorldQuery } from './armament';
 import { createBBPool } from './ballistics';
 import { createCommand, type PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -63,8 +63,9 @@ describe('replica handling', () => {
     expect(count(clicks, 'shot')).toBeGreaterThanOrEqual(GAS_PISTOL.fireRate - 1);
   });
 
-  it('clicks dry when empty, then reloads automatically from reserve', () => {
+  it('clicks dry when empty, then reloads automatically with a full spare magazine', () => {
     const { a, run, count } = setup();
+    expect(a.ammo[0]!.pouch).toEqual(Array(AEG.mags - 1).fill(AEG.magSize));
     a.ammo[0]!.mag = 0;
     const evs = run(1, (c) => (c.fire = true));
     expect(count(evs, 'shot')).toBe(0);
@@ -73,22 +74,77 @@ describe('replica handling', () => {
     const done = run(Math.ceil(AEG.reloadTime / DT) + 1, (c) => (c.fire = false));
     expect(count(done, 'reloadEnd')).toBe(1);
     expect(a.ammo[0]!.mag).toBe(AEG.magSize);
-    expect(a.ammo[0]!.reserve).toBe(AEG.reserve - AEG.magSize);
+    // The empty magazine went back in the pouch: one fewer full spare.
+    expect([...a.ammo[0]!.pouch].sort((x, y) => x - y)).toEqual([0, ...Array(AEG.mags - 2).fill(AEG.magSize)]);
   });
 
-  it('reloads on request only when it helps, and tops up from what reserve is left', () => {
+  it('swaps in the fullest spare and keeps the old magazine as it is: no topping up', () => {
     const { a, run, count } = setup();
-    expect(count(run(1, (c) => (c.reload = true)), 'reloadStart')).toBe(0); // full mag
+    expect(count(run(1, (c) => (c.reload = true)), 'reloadStart')).toBe(0); // full mag, nothing fuller
     a.ammo[0]!.mag = 10;
-    a.ammo[0]!.reserve = 5;
+    a.ammo[0]!.pouch = [25, 40, 5];
     expect(count(run(1, (c) => (c.reload = true)), 'reloadStart')).toBe(1);
     run(Math.ceil(AEG.reloadTime / DT) + 1);
-    expect(a.ammo[0]!.mag).toBe(15);
-    expect(a.ammo[0]!.reserve).toBe(0);
+    expect(a.ammo[0]!.mag).toBe(40); // the fullest spare
+    expect(a.ammo[0]!.pouch).toEqual([25, 10, 5]); // the 10 went back where the 40 was
+    // Reloading again only if a spare has more than the loaded mag.
+    a.ammo[0]!.mag = 30;
+    expect(count(run(1, (c) => (c.reload = true)), 'reloadStart')).toBe(0);
+  });
+
+  it('says so when a reload is pressed but no spare is fuller, so the HUD can explain', () => {
+    const { a, run, count } = setup();
+    a.ammo[0]!.mag = 30;
+    a.ammo[0]!.pouch = [25, 25, 25];
+    const evs = run(1, (c) => (c.reload = true));
+    expect(count(evs, 'reloadStart')).toBe(0);
+    expect(count(evs, 'reloadRefused')).toBe(1);
+    expect(count(run(5), 'reloadRefused')).toBe(0); // only on the press
+  });
+
+  it('knows which spare a reload would take: the fullest, only if it beats the loaded one (what the HUD marks)', () => {
+    expect(nextSpare({ mag: 10, pouch: [25, 40, 5] })).toBe(1);
+    expect(nextSpare({ mag: 30, pouch: [25, 25, 25] })).toBe(-1); // nothing fuller: no reload, no mark
+    expect(nextSpare({ mag: 0, pouch: [0, 0, 0] })).toBe(-1);
+    expect(nextSpare({ mag: 0, pouch: [0, 3, 0] })).toBe(1);
+    expect(nextSpare({ mag: 5, pouch: [] })).toBe(-1);
+    // A full magazine: R does nothing, quietly (nothing to explain).
+    const { a, run, count } = setup();
+    expect(count(run(1, (c) => (c.reload = true)), 'reloadRefused')).toBe(0);
+    a.ammo[0]!.mag = AEG.magSize - 1;
+    a.ammo[0]!.pouch = [AEG.magSize - 1, 0, 0];
+    expect(count(run(1, (c) => (c.reload = true)), 'reloadRefused')).toBe(1);
+  });
+
+  it('leaves the magazines as they were when a switch cancels a reload', () => {
+    const { a, run } = setup();
+    a.ammo[0]!.mag = 12;
+    a.ammo[0]!.pouch = [60, 30, 0];
+    run(1, (c) => (c.reload = true));
+    run(Math.floor(AEG.reloadTime / DT / 2));
+    run(1, (c) => (c.switchTo = 1));
+    run(Math.ceil(AEG.reloadTime / DT));
+    expect(a.ammo[0]!.mag).toBe(12);
+    expect(a.ammo[0]!.pouch).toEqual([60, 30, 0]);
+  });
+
+  it('runs dry for good once every magazine is empty', () => {
+    const { a, run, count } = setup();
     a.ammo[0]!.mag = 0;
+    a.ammo[0]!.pouch = [0, 0, 0];
     const evs = run(1, (c) => (c.fire = true));
     expect(count(evs, 'dryFire')).toBe(1);
     expect(count(evs, 'reloadStart')).toBe(0); // nothing left to load
+    expect(count(run(1, (c) => (c.reload = true)), 'reloadStart')).toBe(0);
+  });
+
+  it('empties every magazine it carries, and no more, over a long burst', () => {
+    const { a, run, count } = setup();
+    let shots = 0;
+    for (let i = 0; i < 60 * 40; i++) shots += count(run(1, (c) => (c.fire = true)), 'shot');
+    expect(shots).toBe(AEG.magSize * AEG.mags);
+    expect(a.ammo[0]!.mag).toBe(0);
+    expect(a.ammo[0]!.pouch.every((m) => m === 0)).toBe(true);
   });
 
   it('cannot fire while reloading or drawing; switching cancels a reload', () => {

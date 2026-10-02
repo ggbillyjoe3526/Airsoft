@@ -7,10 +7,44 @@ import type { GameEvent } from './events';
 import { type RngState, rngGaussian } from './rng';
 import { type Vec3, vec3 } from './vec';
 
-/** Ammo carried for one replica. */
+/**
+ * Magazines carried for one replica: the one loaded and the spares in the pouch, each with however many
+ * BBs it has left. A reload swaps the loaded mag for the fullest spare and puts the old one back in the
+ * pouch as it is (no topping up); empties stay empty. Nothing refills during a round.
+ */
 export interface ReplicaAmmo {
+  /** BBs in the loaded magazine. */
   mag: number;
-  reserve: number;
+  /** BBs in each spare magazine (fixed length; a slot is never removed, only swapped). */
+  pouch: number[];
+}
+
+/** Index of the fullest spare magazine, or -1 if the pouch is empty. */
+export function fullestSpare(ammo: ReplicaAmmo): number {
+  let best = -1;
+  for (let i = 0; i < ammo.pouch.length; i++) if (best < 0 || ammo.pouch[i]! > ammo.pouch[best]!) best = i;
+  return best;
+}
+
+/**
+ * The spare magazine a reload would take: the fullest, if it has more BBs than the loaded one; else -1
+ * (a reload wouldn't help, so none happens). The HUD marks this one.
+ */
+export function nextSpare(ammo: ReplicaAmmo): number {
+  const best = fullestSpare(ammo);
+  return best >= 0 && ammo.pouch[best]! > ammo.mag ? best : -1;
+}
+
+/** True if a reload would give more BBs than the loaded mag has (see nextSpare). */
+export function canReload(ammo: ReplicaAmmo): boolean {
+  return nextSpare(ammo) >= 0;
+}
+
+/** BBs left in all the spare magazines together. */
+export function spareBBs(ammo: ReplicaAmmo): number {
+  let n = 0;
+  for (const m of ammo.pouch) n += m;
+  return n;
 }
 
 /** A character's replicas and what they're doing. Plain data. */
@@ -35,7 +69,7 @@ export interface Armament {
 
 export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
   return {
-    ammo: loadout.map((r) => ({ mag: r.magSize, reserve: r.reserve })),
+    ammo: loadout.map((r) => ({ mag: r.magSize, pouch: Array.from({ length: Math.max(0, r.mags - 1) }, () => r.magSize) })),
     active: 0,
     cooldown: 0,
     reload: 0,
@@ -106,9 +140,14 @@ export function stepArmament(
     a.reload -= dt;
     if (a.reload <= 0) {
       a.reload = 0;
-      const moved = Math.min(replica.magSize - ammo.mag, ammo.reserve);
-      ammo.mag += moved;
-      ammo.reserve -= moved;
+      // Swap: the fullest spare goes in, the old magazine goes back in the pouch as it is.
+      const best = nextSpare(ammo);
+      if (best >= 0) {
+        const loaded = ammo.mag;
+        ammo.mag = ammo.pouch[best]!;
+        ammo.pouch[best] = loaded;
+      }
+      a.dryFiredThisPull = false; // a fresh magazine: running it dry again clicks (and reloads) again
       ctx.events.push({ type: 'reloadEnd', characterId, replicaId: replica.id });
     }
   }
@@ -124,7 +163,11 @@ export function stepArmament(
   }
 
   const ready = a.draw <= 0 && a.reload <= 0;
-  if (cmd.reload && ready && ammo.mag < replica.magSize && ammo.reserve > 0) startReload(characterId, a, replica, ctx);
+  if (cmd.reload && ready) {
+    if (canReload(ammo)) startReload(characterId, a, replica, ctx);
+    // Nothing fuller to swap in: say so, unless the magazine is full anyway (then R obviously does nothing).
+    else if (ammo.mag < replica.magSize) ctx.events.push({ type: 'reloadRefused', characterId, replicaId: replica.id });
+  }
 
   const pressed = cmd.fire && !a.triggerWasDown;
   a.triggerWasDown = cmd.fire;
@@ -136,13 +179,13 @@ export function stepArmament(
 
   if (ammo.mag <= 0) {
     // Empty: one dry click per trigger pull (a held AEG trigger clicks when the mag runs dry), then
-    // reload automatically if there's ammo.
+    // reload automatically if a spare has BBs in it.
     const click = replica.fireMode === 'auto' ? !a.dryFiredThisPull : pressed || a.pendingPress > 0;
     if (click) {
       a.dryFiredThisPull = true;
       a.pendingPress = 0;
       ctx.events.push({ type: 'dryFire', characterId, replicaId: replica.id });
-      if (ammo.reserve > 0) startReload(characterId, a, replica, ctx);
+      if (canReload(ammo)) startReload(characterId, a, replica, ctx);
     }
     return;
   }

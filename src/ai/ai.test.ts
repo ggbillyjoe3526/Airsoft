@@ -21,7 +21,8 @@ import { createGameState, type GameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
-import type { Bot } from './bot';
+import type { Bot, BotWorld } from './bot';
+import { reloadBot } from './botCombat';
 import { BotController } from './botController';
 import { findCover, type LowCoverBlock, lowCoverBlocks } from './cover';
 import { canSee, lineClear, visiblePart } from './perception';
@@ -687,6 +688,54 @@ describe('bot team play and routes', () => {
     expect(assignments.size).toBeGreaterThan(6);
   });
 
+  describe('managing magazines', () => {
+    function oneBot() {
+      const { bots } = depotBots();
+      const world = (bots as unknown as { world: BotWorld }).world;
+      const b = bots.bots[0]!;
+      const ammo = b.character.armament.ammo[0]!;
+      const wantsReload = () => {
+        const cmd = createCommand();
+        reloadBot(b, world, cmd);
+        return cmd.reload;
+      };
+      return { b, ammo, wantsReload };
+    }
+    const low = Math.floor(LOADOUT[0]!.magSize * BOTS.tacticalReloadFraction) - 1;
+
+    it('swap a low magazine for a fuller spare when nobody is in sight, but not mid-fight', () => {
+      const { b, ammo, wantsReload } = oneBot();
+      ammo.mag = low;
+      ammo.pouch = [60, 60, 60];
+      b.targetVisible = false;
+      expect(wantsReload()).toBe(true);
+      b.targetVisible = true;
+      expect(wantsReload()).toBe(false); // keep shooting what's left
+      ammo.mag = 0;
+      expect(wantsReload()).toBe(true); // empty: reload whatever
+    });
+
+    it('never reload into a magazine that has no more in it (no reload loops)', () => {
+      const { b, ammo, wantsReload } = oneBot();
+      b.targetVisible = false;
+      ammo.mag = low;
+      ammo.pouch = [low, 3, 0];
+      expect(wantsReload()).toBe(false);
+    });
+
+    it('use a nearly empty last spare, then are out for good and stop asking to reload', () => {
+      const { ammo, wantsReload } = oneBot();
+      ammo.mag = 0;
+      ammo.pouch = [3, 0, 0];
+      expect(wantsReload()).toBe(true);
+      ammo.mag = 3; // after the swap
+      ammo.pouch = [0, 0, 0];
+      expect(wantsReload()).toBe(false);
+      ammo.mag = 0;
+      expect(wantsReload()).toBe(false);
+    });
+  });
+
   describe('in Attack / Defend', () => {
     /** Orange defends (Blue attacks first). Blind bots: nobody is ever seen, only heard. */
     const blind: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 };
@@ -1098,7 +1147,7 @@ describe('bot team play and routes', () => {
     let inCover = 0;
     peekScenario(BOTS, 1, (b) => {
       b.character.armament.ammo[0]!.mag = 0;
-      b.character.armament.ammo[0]!.reserve = 0;
+      b.character.armament.ammo[0]!.pouch.fill(0);
     }, (b) => {
       if (b.mode === 'cover' || b.fromCover) inCover++;
     });

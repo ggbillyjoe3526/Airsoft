@@ -66,3 +66,7 @@ Classified as **fix now / document / can wait**.
 | After letting go of Q / E with sprint held, sprinting resumes only once the lean is fully back upright (0.18 s) | can wait | M7b critic. Small input delay; an epsilon or a shorter ease-out would fix it. |
 | Movement reads the lean from the previous tick (stepLean runs after stepMovement) | document | One 60 Hz tick; harmless. |
 | The camera's lean offset and roll have no unit test (the roll sign was checked in the browser) | can wait | M7b critic. The figure and simulation geometry are tested. |
+| Bots don't ration BBs or play differently on their last magazine; they only swap a low magazine when nobody is in sight | can wait | M8 critic. The run-dry risk is mostly the player's for now; smarter ammo use belongs with M10 bot work or beta. |
+| The spare-magazine gauges have no numeric mode | can wait | Phase 4 accessibility settings. |
+| The spare-magazine gauges tell low (orange) and next (yellow outline) apart mostly by colour | can wait | Phase 4 accessibility (colour-blind options). Empty is dashed, so that one doesn't rely on colour. |
+| Reload is refused when no spare is fuller than the loaded magazine (e.g. 30 loaded, spares at 25) | document | Deliberate (no topping up); the HUD notice and a pat sound explain it. Playtest whether players expect a swap anyway. |

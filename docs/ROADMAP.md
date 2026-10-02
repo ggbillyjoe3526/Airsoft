@@ -18,7 +18,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning) done; M8 (magazines and reloads) next. |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning) and M8 (magazines) done; M9 (BB physics) next. |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -80,8 +80,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | Done (tagged; owner playtesting) | |
 | Alpha · Phase 3 · M7a Controls for leaning (swap key removed; Q / E free) | Done (small change, no critic) | |
 | Alpha · Phase 3 · M7b Leaning (peek left / right) | Done | 8.6 |
-| Alpha · Phase 3 · M8 Magazines and reloads | **Next** | |
-| Alpha · Phase 3 · M9 BB physics pass | To do | |
+| Alpha · Phase 3 · M8 Magazines and reloads | Done | 8.7 |
+| Alpha · Phase 3 · M9 BB physics pass | **Next** | |
 | Alpha · Phase 3 · M10 Movement and positioning | To do | |
 | Alpha · Phase 3 · M11 Depot rework | To do | |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | To do | |
@@ -191,7 +191,7 @@ When the owner calls the game feature complete, alpha ends.
 Beta adds no major new systems unless the owner approves. Its likely work, collected here so the alpha
 phases stay focused:
 - **Optimisation:** profile, then fix. The "can wait" performance items in KNOWN_ISSUES land here.
-- **Balance:** replicas, magazines, bot difficulty levels, and Attack / Defend (about 1 bot round in 10
+- **Balance:** replicas, how many magazines each carries (4 × 60 AEG, 4 × 18 pistol today), bot difficulty levels, and Attack / Defend (about 1 bot round in 10
   is won at the pole today; raise time, holds and retakes).
 - **Final tuning** of values that are first guesses today: footstep ranges, hop-up arcs, difficulty numbers.
 - **Bug fixing and stability.**

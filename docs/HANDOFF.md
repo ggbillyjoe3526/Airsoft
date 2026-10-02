@@ -5,7 +5,7 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-02 · `main` pushed and clean after "Phase 3 M7b: leaning"._
+_Last updated: 2026-10-02 · mid-session: M7b and M8 pushed; M9 (BB physics) next._
 
 ## Where we are
 
@@ -25,19 +25,12 @@ _Last updated: 2026-10-02 · `main` pushed and clean after "Phase 3 M7b: leaning
 
 Tune in config: `HITS.lean`, `MOVEMENT.leanTime`, `MOVEMENT.leanQuietFrom`, `RENDER.leanCameraRoll`.
 
-## M8: notes for the start
+## M8: magazines (built this session; see DECISIONS)
 
-- **Today:** each replica has one loaded `mag` and a pooled `reserve` (`sim/armament.ts` `ReplicaAmmo`).
-  A reload tops the mag up from the reserve (`magSize`/`reserve` in `config/replicas.ts`: AEG 60/180,
-  pistol 18/54).
-- **Owner's decision (DECISIONS 2026-10-01):** carry a set of magazines per round. A reload swaps in the
-  next mag and keeps the old one with what's left in it (no topping up), with no refill during a round.
-- **To decide sensibly and record in DECISIONS:**
-  - Mags per replica.
-  - Which mag a reload picks (the fullest is the obvious default).
-  - A HUD showing each mag's fill.
-  - Bots counting their mags and reloading from cover.
-- **Process:** M8 is a feature, so state Goal / Approach / Risks, then implement, verify and run the critic.
+Built: a pouch of magazines per replica (AEG 4 × 60, pistol 4 × 18). A reload swaps in the fullest spare
+and the old mag goes back as it is. The HUD has spare-mag gauges and a "No fuller magazine" notice.
+Decisions are in DECISIONS (2026-10-02). The rest of Phase 3 follows: M9 BB physics, M10 movement and
+positioning, M11 Depot rework, then the bug pass.
 
 ## Working notes and gotchas
 

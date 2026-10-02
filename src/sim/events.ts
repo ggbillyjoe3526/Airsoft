@@ -10,6 +10,8 @@ export type GameEvent =
   | { type: 'dryFire'; characterId: number; replicaId: string }
   | { type: 'reloadStart'; characterId: number; replicaId: string }
   | { type: 'reloadEnd'; characterId: number; replicaId: string }
+  /** Reload pressed but no spare magazine has more BBs than the loaded one: nothing happens (the HUD says why). */
+  | { type: 'reloadRefused'; characterId: number; replicaId: string }
   | { type: 'draw'; characterId: number; replicaId: string }
   | { type: 'bbImpact'; position: Vec3 }
   /** A character's footstep or landing, heard at its feet (walking and crouched moves are silent). */

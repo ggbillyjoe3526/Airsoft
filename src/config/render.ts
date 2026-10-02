@@ -133,6 +133,8 @@ export const SPECTATOR = {
 export const HUD = {
   /** The magazine count turns to a warning colour at or below this fraction of a full magazine. */
   lowAmmoFraction: 0.2,
+  /** How long a short HUD notice (e.g. "No fuller magazine" after a reload that can't help) stays up (s). */
+  noticeTime: 1.4,
   /** How long "Round N" stays up after a round starts (seconds). */
   roundStartMessageTime: 1.8,
   /** The round clock turns to a warning colour at or below this many seconds. */

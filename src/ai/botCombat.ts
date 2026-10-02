@@ -1,3 +1,4 @@
+import { canReload } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
@@ -104,10 +105,13 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
   }
 }
 
-/** Reloads when empty, or tops up when nobody is in sight. */
+/**
+ * Reloads when empty, or swaps a low magazine for a fuller spare when nobody is in sight (the low one goes
+ * back in the pouch as it is).
+ */
 export function reloadBot(b: Bot, w: BotWorld, cmd: PlayerCommand): void {
   const ammo = b.character.armament.ammo[0]!;
   const replica = w.loadout[0]!;
-  if (ammo.reserve <= 0) return;
+  if (!canReload(ammo)) return;
   if (ammo.mag === 0 || (!b.targetVisible && ammo.mag < replica.magSize * w.cfg.tacticalReloadFraction)) cmd.reload = true;
 }

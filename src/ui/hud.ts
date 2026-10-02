@@ -1,21 +1,31 @@
 import type { ReplicaConfig } from '../config/replicas';
 import { HUD } from '../config/render';
-import type { Armament } from '../sim/armament';
+import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
 
 /**
- * Minimal in-game HUD: crosshair and the replica panel (name, magazine / reserve, reload progress).
+ * Minimal in-game HUD: crosshair and the replica panel (name, BBs in the loaded magazine, a gauge per
+ * spare magazine showing how full it is, with the one a reload takes marked, and reload progress).
  * DOM is only touched when a displayed value changes.
  */
 export class Hud {
   private readonly root: HTMLDivElement;
   private readonly name: HTMLDivElement;
   private readonly mag: HTMLSpanElement;
-  private readonly reserve: HTMLSpanElement;
+  private readonly mags: HTMLSpanElement;
+  /** One fill element per spare magazine gauge, and what each shows (percent full). */
+  private gauges: HTMLElement[] = [];
+  private readonly shownFill: number[] = [];
+  private shownNext = -1;
+  /** Replica the gauges were last drawn for (a switch redraws them). */
+  private shownReplica = '';
+  /** A short notice that briefly takes the status line (see showNotice). */
+  private noticeText = '';
+  private noticeLeft = 0;
   private readonly status: HTMLDivElement;
   private readonly reloadBar: HTMLDivElement;
   private readonly reloadFill: HTMLDivElement;
   private shownInPlay = true;
-  private shown = { name: '', mag: -1, reserve: -1, status: '', reloadPct: -1 };
+  private shown = { name: '', mag: -1, status: '', reloadPct: -1 };
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -25,14 +35,14 @@ export class Hud {
       <div class="hud-crosshair"><i></i><i></i><i></i><i></i><b></b></div>
       <div class="hud-replica">
         <div class="hud-replica-name"></div>
-        <div class="hud-ammo"><span class="hud-mag"></span><span class="hud-sep">/</span><span class="hud-reserve"></span></div>
+        <div class="hud-ammo"><span class="hud-mag"></span><span class="hud-mags"></span></div>
         <div class="hud-reload"><div></div></div>
         <div class="hud-status"></div>
       </div>`;
     parent.appendChild(this.root);
     this.name = this.root.querySelector('.hud-replica-name') as HTMLDivElement;
     this.mag = this.root.querySelector('.hud-mag') as HTMLSpanElement;
-    this.reserve = this.root.querySelector('.hud-reserve') as HTMLSpanElement;
+    this.mags = this.root.querySelector('.hud-mags') as HTMLSpanElement;
     this.status = this.root.querySelector('.hud-status') as HTMLDivElement;
     this.reloadBar = this.root.querySelector('.hud-reload') as HTMLDivElement;
     this.reloadFill = this.reloadBar.firstElementChild as HTMLDivElement;
@@ -42,8 +52,14 @@ export class Hud {
     this.root.hidden = !visible;
   }
 
-  /** `inPlay` is false once you've been hit: the crosshair and ammo panel go away. */
-  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean): void {
+  /** Shows `text` in the status line for `seconds` (unless a reload is under way). */
+  showNotice(text: string, seconds: number): void {
+    this.noticeText = text;
+    this.noticeLeft = seconds;
+  }
+
+  /** Once per frame (`dt` seconds). `inPlay` is false once you've been hit: the crosshair and ammo panel go away. */
+  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, dt: number): void {
     if (this.shownInPlay !== inPlay) this.root.classList.toggle('out', !(this.shownInPlay = inPlay));
     const replica = loadout[armament.active]!;
     const ammo = armament.ammo[armament.active]!;
@@ -53,7 +69,16 @@ export class Hud {
       this.mag.textContent = String((s.mag = ammo.mag));
       this.mag.classList.toggle('low', ammo.mag <= Math.ceil(replica.magSize * HUD.lowAmmoFraction));
     }
-    if (s.reserve !== ammo.reserve) this.reserve.textContent = String((s.reserve = ammo.reserve));
+    if (this.shownReplica !== replica.id) {
+      this.shownReplica = replica.id;
+      this.shownFill.length = 0; // different magazines: redraw every gauge
+      for (const gauge of this.gauges) gauge.classList.remove('next');
+      this.shownNext = -1;
+      this.noticeLeft = 0; // a notice about the other replica no longer applies
+    }
+    this.updateGauges(ammo, replica.magSize);
+    // A notice is about the moment it was raised: a reload starting (or time passing) ends it.
+    this.noticeLeft = armament.reload > 0 ? 0 : Math.max(0, this.noticeLeft - dt);
 
     const reloading = armament.reload > 0;
     const pct = reloading ? Math.round((1 - armament.reload / replica.reloadTime) * 100) : -1;
@@ -65,12 +90,40 @@ export class Hud {
 
     let status = '';
     if (reloading) status = 'Reloading';
-    else if (ammo.mag === 0 && ammo.reserve === 0) status = 'Out of BBs';
+    else if (this.noticeLeft > 0) status = this.noticeText;
+    else if (ammo.mag === 0 && !canReload(ammo)) status = 'Out of BBs';
     else if (ammo.mag === 0) status = 'Empty: pull the trigger or press R to reload';
+    else if (spareBBs(ammo) === 0) status = 'Last magazine';
     if (s.status !== status) this.status.textContent = s.status = status;
   }
 
   dispose(): void {
     this.root.remove();
+  }
+
+  /** A gauge per spare magazine, filled to how many BBs it has; the one a reload would take is marked. */
+  private updateGauges(ammo: ReplicaAmmo, magSize: number): void {
+    if (this.gauges.length !== ammo.pouch.length) {
+      this.mags.innerHTML = '<i><b></b></i>'.repeat(ammo.pouch.length);
+      this.gauges = Array.from(this.mags.querySelectorAll('i'));
+      this.shownFill.length = 0;
+      this.shownNext = -1;
+    }
+    for (let i = 0; i < ammo.pouch.length; i++) {
+      const pct = Math.round((ammo.pouch[i]! / magSize) * 100);
+      if (this.shownFill[i] === pct) continue;
+      this.shownFill[i] = pct;
+      const gauge = this.gauges[i]!;
+      (gauge.firstElementChild as HTMLElement).style.height = `${pct}%`;
+      gauge.classList.toggle('empty', pct === 0);
+      // Same threshold as the loaded magazine's count turning orange.
+      gauge.classList.toggle('low', ammo.pouch[i]! > 0 && ammo.pouch[i]! <= Math.ceil(magSize * HUD.lowAmmoFraction));
+    }
+    const next = nextSpare(ammo); // the one a reload would take (none if no spare is fuller)
+    if (next !== this.shownNext) {
+      this.gauges[this.shownNext]?.classList.remove('next');
+      this.gauges[next]?.classList.add('next');
+      this.shownNext = next;
+    }
   }
 }

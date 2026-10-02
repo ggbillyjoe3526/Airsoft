@@ -7,8 +7,8 @@ export interface ReplicaConfig {
   /** Shots per second while the trigger is held (auto) or the fastest you can click (semi). */
   fireRate: number;
   magSize: number;
-  /** Spare rounds carried besides the loaded magazine. */
-  reserve: number;
+  /** Magazines carried per round, the loaded one included; each holds magSize BBs at the start. */
+  mags: number;
   reloadTime: number;
   /** Time to bring this replica up after switching to it. */
   drawTime: number;
@@ -41,7 +41,7 @@ export const AEG: ReplicaConfig = {
   fireMode: 'auto',
   fireRate: 13,
   magSize: 60,
-  reserve: 180,
+  mags: 4,
   reloadTime: 2.1,
   drawTime: 0.45,
   muzzleVelocity: 88,
@@ -58,7 +58,7 @@ export const GAS_PISTOL: ReplicaConfig = {
   fireMode: 'semi',
   fireRate: 7,
   magSize: 18,
-  reserve: 54,
+  mags: 4,
   reloadTime: 1.4,
   drawTime: 0.3,
   muzzleVelocity: 72,
