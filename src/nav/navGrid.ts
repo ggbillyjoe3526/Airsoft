@@ -1,9 +1,12 @@
 import type { MapBlock, MapData } from '../map/mapTypes';
+import { surfaceHeightAt } from '../map/surfaces';
 import type { Vec3 } from '../sim/vec';
 
 /**
- * Walkability grid built from map blocks: a cell is walkable if a character standing at its centre
- * keeps `clearance` from every block that stops walking. Pure data, shared by bots (routes) and the
+ * Walkability grid built from map blocks: each cell has one floor height (the walkable surface under its
+ * centre; maps never put one walkable surface over another), and is walkable if a character standing
+ * there keeps `clearance` from every block that stops walking and from every drop. Neighbouring cells
+ * connect only if their floors differ by at most `maxStep`. Pure data, shared by bots (routes) and the
  * simulation (walk-off to the dead zone).
  */
 export interface NavGrid {
@@ -14,6 +17,10 @@ export interface NavGrid {
   minZ: number;
   /** 1 = walkable, 0 = blocked; index = row * cols + col. */
   walkable: Uint8Array;
+  /** Height of the walkable surface at each cell's centre; NaN where there is none. */
+  floorY: Float32Array;
+  /** Largest floor height difference between neighbouring cells that a character walks across. */
+  maxStep: number;
 }
 
 export interface NavGridConfig {
@@ -21,23 +28,26 @@ export interface NavGridConfig {
   cell: number;
   /** Distance kept from blocks: the body radius plus a margin so routes don't scrape walls. */
   clearance: number;
-  /** Blocks lower than this can be walked onto (don't block). */
+  /** Blocks whose top is less than this above a cell's floor can be walked onto (don't block). */
   maxLedge: number;
-  /** Blocks whose bottom is above this pass overhead (don't block). */
+  /** Blocks whose bottom is this far or more above a cell's floor pass overhead (don't block). */
   bodyHeight: number;
+  /** Neighbouring cells whose floors differ by more than this are not connected (a drop, or a platform's side). */
+  maxStep: number;
 }
 
 const top = (b: MapBlock): number => b.center.y + b.size.y / 2;
 const bottom = (b: MapBlock): number => b.center.y - b.size.y / 2;
+const isSurface = (b: MapBlock): boolean => b.kind === 'floor' || b.kind === 'ramp';
 
 export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
-  // Bounds: the floor blocks.
+  // Bounds: the floor and ramp blocks.
   let minX = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
   let minZ = Number.POSITIVE_INFINITY;
   let maxZ = Number.NEGATIVE_INFINITY;
   for (const b of map.blocks) {
-    if (b.kind !== 'floor') continue;
+    if (!isSurface(b)) continue;
     minX = Math.min(minX, b.center.x - b.size.x / 2);
     maxX = Math.max(maxX, b.center.x + b.size.x / 2);
     minZ = Math.min(minZ, b.center.z - b.size.z / 2);
@@ -46,22 +56,40 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
   if (!Number.isFinite(minX)) throw new Error(`Map ${map.name} has no floor`);
   const cols = Math.ceil((maxX - minX) / cfg.cell);
   const rows = Math.ceil((maxZ - minZ) / cfg.cell);
-  const walkable = new Uint8Array(cols * rows).fill(1);
-  const grid: NavGrid = { cell: cfg.cell, cols, rows, minX, minZ, walkable };
+  const walkable = new Uint8Array(cols * rows);
+  const floorY = new Float32Array(cols * rows).fill(Number.NaN);
+  const grid: NavGrid = { cell: cfg.cell, cols, rows, minX, minZ, walkable, floorY, maxStep: cfg.maxStep };
 
-  // Stamp every blocking box, grown by the clearance, onto the grid.
+  // Floor heights: the highest walkable surface under each cell's centre. A cell without one is not walkable.
+  for (const b of map.blocks) {
+    if (!isSurface(b)) continue;
+    forCellsUnder(grid, b, 0, (c, x, z) => {
+      const y = surfaceHeightAt(b, x, z);
+      if (y !== undefined && !(y <= floorY[c]!)) floorY[c] = y;
+    });
+  }
+  for (let c = 0; c < walkable.length; c++) walkable[c] = Number.isNaN(floorY[c]!) ? 0 : 1;
+
+  // Stamp every blocking box, grown by the clearance, onto the cells it stops walking on: those whose floor
+  // it stands on or above (higher than a walkable ledge) without passing overhead.
   const r = cfg.clearance;
   for (const b of map.blocks) {
-    if (b.kind === 'floor' || bottom(b) >= cfg.bodyHeight || top(b) <= cfg.maxLedge) continue;
-    const x0 = b.center.x - b.size.x / 2 - r;
-    const x1 = b.center.x + b.size.x / 2 + r;
-    const z0 = b.center.z - b.size.z / 2 - r;
-    const z1 = b.center.z + b.size.z / 2 + r;
-    const i0 = Math.max(0, Math.ceil((x0 - minX) / cfg.cell - 0.5));
-    const i1 = Math.min(cols - 1, Math.floor((x1 - minX) / cfg.cell - 0.5));
-    const j0 = Math.max(0, Math.ceil((z0 - minZ) / cfg.cell - 0.5));
-    const j1 = Math.min(rows - 1, Math.floor((z1 - minZ) / cfg.cell - 0.5));
-    for (let j = j0; j <= j1; j++) walkable.fill(0, j * cols + i0, j * cols + i1 + 1);
+    if (isSurface(b)) continue;
+    forCellsUnder(grid, b, r, (c) => {
+      const f = floorY[c]!;
+      if (bottom(b) < f + cfg.bodyHeight && top(b) > f + cfg.maxLedge) walkable[c] = 0;
+    });
+  }
+  // Drops inside the level (a platform's edge, a gap between floors): keep the clearance from them on both
+  // sides, as from a wall. Cells past the outer edge (the last row or column can overhang it) are left to
+  // the outer-edge rule below.
+  const inside = (i: number, j: number): boolean => cellX(grid, i) <= maxX && cellZ(grid, j) <= maxZ;
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      if (!inside(i, j)) continue;
+      if (i + 1 < cols && inside(i + 1, j)) blockNearDrop(grid, r, j * cols + i, j * cols + i + 1);
+      if (j + 1 < rows && inside(i, j + 1)) blockNearDrop(grid, r, j * cols + i, (j + 1) * cols + i);
+    }
   }
   // The floor's own edge.
   for (let j = 0; j < rows; j++) {
@@ -76,6 +104,50 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
 
 export const cellX = (g: NavGrid, i: number): number => g.minX + (i + 0.5) * g.cell;
 export const cellZ = (g: NavGrid, j: number): number => g.minZ + (j + 0.5) * g.cell;
+
+/** Calls `fn` for every cell whose centre lies within block `b`'s footprint grown by `grow`. */
+function forCellsUnder(g: NavGrid, b: MapBlock, grow: number, fn: (c: number, x: number, z: number) => void): void {
+  const i0 = Math.max(0, Math.ceil((b.center.x - b.size.x / 2 - grow - g.minX) / g.cell - 0.5));
+  const i1 = Math.min(g.cols - 1, Math.floor((b.center.x + b.size.x / 2 + grow - g.minX) / g.cell - 0.5));
+  const j0 = Math.max(0, Math.ceil((b.center.z - b.size.z / 2 - grow - g.minZ) / g.cell - 0.5));
+  const j1 = Math.min(g.rows - 1, Math.floor((b.center.z + b.size.z / 2 + grow - g.minZ) / g.cell - 0.5));
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) fn(j * g.cols + i, cellX(g, i), cellZ(g, j));
+}
+
+/**
+ * If neighbouring cells `a` and `b` are split by a drop (floors more than maxStep apart, or one without a
+ * floor), blocks every cell within `r` of the edge between them.
+ */
+function blockNearDrop(g: NavGrid, r: number, a: number, b: number): void {
+  const fa = g.floorY[a]!;
+  const fb = g.floorY[b]!;
+  if (Math.abs(fa - fb) <= g.maxStep || (Number.isNaN(fa) && Number.isNaN(fb))) return;
+  const ai = a % g.cols;
+  const bi = b % g.cols;
+  const ex = (cellX(g, ai) + cellX(g, bi)) / 2;
+  const ez = (cellZ(g, (a - ai) / g.cols) + cellZ(g, (b - bi) / g.cols)) / 2;
+  const reach = Math.ceil(r / g.cell);
+  const i0 = Math.max(0, ai - reach);
+  const i1 = Math.min(g.cols - 1, ai + reach);
+  const j0 = Math.max(0, (a - ai) / g.cols - reach);
+  const j1 = Math.min(g.rows - 1, (a - ai) / g.cols + reach);
+  for (let j = j0; j <= j1; j++) {
+    for (let i = i0; i <= i1; i++) {
+      if (Math.hypot(cellX(g, i) - ex, cellZ(g, j) - ez) < r) g.walkable[j * g.cols + i] = 0;
+    }
+  }
+}
+
+/** True if a character can walk from cell `a` to its neighbour `b`: both walkable, floors at most maxStep apart. */
+export function canStep(g: NavGrid, a: number, b: number): boolean {
+  return g.walkable[a] === 1 && g.walkable[b] === 1 && Math.abs(g.floorY[a]! - g.floorY[b]!) <= g.maxStep;
+}
+
+/** Floor height of the cell containing (x, z): NaN outside the grid or where there is no walkable surface. */
+export function floorAt(g: NavGrid, x: number, z: number): number {
+  const c = cellIndex(g, x, z);
+  return c >= 0 ? g.floorY[c]! : Number.NaN;
+}
 
 /** Cell index containing (x, z), or -1 outside the grid. */
 export function cellIndex(g: NavGrid, x: number, z: number): number {
@@ -117,13 +189,20 @@ export function nearestWalkable(g: NavGrid, x: number, z: number, maxRadius: num
   return bestD <= maxRadius ? best : -1;
 }
 
-/** True if a character can walk the straight line a → b (every cell under it, sampled finely, is walkable). */
+/**
+ * True if a character can walk the straight line a → b: every cell under it (sampled finely) is walkable,
+ * and each step from one of those cells to the next is one a character can take (canStep).
+ */
 export function clearLine(g: NavGrid, ax: number, az: number, bx: number, bz: number): boolean {
   const len = Math.hypot(bx - ax, bz - az);
   const steps = Math.max(1, Math.ceil(len / (g.cell * 0.5)));
+  let prev = -1;
   for (let s = 0; s <= steps; s++) {
     const t = s / steps;
-    if (!isWalkableAt(g, ax + (bx - ax) * t, az + (bz - az) * t)) return false;
+    const c = cellIndex(g, ax + (bx - ax) * t, az + (bz - az) * t);
+    if (c < 0 || g.walkable[c] !== 1) return false;
+    if (prev >= 0 && c !== prev && !canStep(g, prev, c)) return false;
+    prev = c;
   }
   return true;
 }
@@ -174,16 +253,20 @@ export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap
     out.length = 0;
     return false;
   }
-  // Waypoints reuse the objects already in `out`, so re-planning a route doesn't allocate new ones.
+  // Waypoints reuse the objects already in `out`, so re-planning a route doesn't allocate new ones. Each
+  // stands on its cell's floor.
   let n = 0;
-  const emit = (x: number, z: number): void => {
+  const emit = (c: number): void => {
+    const x = cellX(g, c % g.cols);
+    const y = g.floorY[c]!;
+    const z = cellZ(g, Math.floor(c / g.cols));
     const p = out[n];
     if (p) {
       p.x = x;
-      p.y = goal.y;
+      p.y = y;
       p.z = z;
     } else {
-      out.push({ x, y: goal.y, z });
+      out.push({ x, y, z });
     }
     n++;
   };
@@ -215,10 +298,10 @@ export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap
     const c = cells[next]!;
     ax = cellX(g, c % g.cols);
     az = cellZ(g, Math.floor(c / g.cols));
-    emit(ax, az);
+    emit(c);
     k = next;
   }
-  if (n === 0) emit(cellX(g, b % g.cols), cellZ(g, Math.floor(b / g.cols)));
+  if (n === 0) emit(b);
   out.length = n;
   // End exactly on the goal when it's walkable (the search works in cell centres).
   const end = out[n - 1]!;
@@ -226,6 +309,7 @@ export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap
   const fromZ = n > 1 ? out[n - 2]!.z : start.z;
   if (isWalkableAt(g, goal.x, goal.z) && clearLine(g, fromX, fromZ, goal.x, goal.z)) {
     end.x = goal.x;
+    end.y = floorAt(g, goal.x, goal.z);
     end.z = goal.z;
   }
   return true;
@@ -237,6 +321,8 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
   const cols = g.cols;
   const rows = g.rows;
   const walk = g.walkable;
+  const floorY = g.floorY;
+  const maxStep = g.maxStep;
   const heap = s.heap;
   const heapF = s.heapF;
   const bi = b % cols;
@@ -276,14 +362,20 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
     const ci = c % cols;
     const cj: number = (c - ci) / cols;
     const gc = s.g[c]!;
+    const fc = floorY[c]!;
     for (let k = 0; k < 8; k++) {
       const ni = ci + NDI[k]!;
       const nj: number = cj + NDJ[k]!;
       if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) continue;
       const n = nj * cols + ni;
-      if (!walk[n] || s.closed[n] === gen) continue;
-      // No squeezing diagonally between two blocked cells.
-      if (k >= 4 && (!walk[cj * cols + ni] || !walk[nj * cols + ci])) continue;
+      // canStep(c, n), inlined (c is walkable).
+      if (!walk[n] || s.closed[n] === gen || Math.abs(floorY[n]! - fc) > maxStep) continue;
+      // No squeezing diagonally past a blocked cell (or a drop).
+      if (k >= 4) {
+        const sa = cj * cols + ni;
+        const sb = nj * cols + ci;
+        if (!walk[sa] || !walk[sb] || Math.abs(floorY[sa]! - fc) > maxStep || Math.abs(floorY[sb]! - fc) > maxStep) continue;
+      }
       const ng = gc + NCOST[k]!;
       if (s.stamp[n] === gen && s.g[n]! <= ng) continue;
       s.stamp[n] = gen;
