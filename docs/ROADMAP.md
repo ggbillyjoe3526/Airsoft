@@ -89,7 +89,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · Code review pass (owner, 2026-10-02) | Done (auto-accepted, attempt 4) | 8.4 |
 | Alpha · Phase 3 · Audit fixes 1: automatic checks on every pull request (Fable audit C-02, C-03) | Done | 9.0 |
 | Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | In review | 9.1 |
-| Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | In review | |
+| Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | In review | 9.0 |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** (owner tags when ready) | To do | |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later | |
 | Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |

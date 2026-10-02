@@ -41,7 +41,8 @@ function floorUnder(nav: NavGrid, b: MapBlock): number {
   for (let j = j0; j <= j1; j++) {
     for (let i = i0; i <= i1; i++) {
       const f = nav.floorY[j * nav.cols + i]!;
-      if (!Number.isNaN(f) && !(Math.abs(bottom - f) >= Math.abs(bottom - best))) best = f;
+      if (Number.isNaN(f)) continue;
+      if (Number.isNaN(best) || Math.abs(bottom - f) < Math.abs(bottom - best)) best = f;
     }
   }
   return best;

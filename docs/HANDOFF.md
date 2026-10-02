@@ -14,7 +14,7 @@ _Last updated: 2026-10-02 · branch `elevation/c05` (its pull request is stacked
   - PR #5 (merged): roadmap updated from the audit; `docs/PLAYTEST.md`, the owner's playtest guide.
   - PR #4 (open, green, 9.1): in-air spread waits 0.1 s off the ground unless you jump (C-01);
     `?quality=low|medium|high` presets and GPU numbers on the overlay (C-04).
-  - Elevation support (C-05, this branch): `ramp` blocks, one floor height per nav cell, cover and
+  - Elevation support (C-05, this branch, 9.0 on attempt 2): `ramp` blocks, one floor height per nav cell, cover and
     walk-offs at height, bots that never sidestep off an edge, ramps at most 1:2. Ramp Yard (`src/map/testYard.ts`)
     is the test map; no shipped map uses elevation yet.
 - **The owner wraps up Phase 3 without the Depot rework**: M11 moved to the start of Phase 4 (owner, 2026-10-02).
