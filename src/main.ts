@@ -14,7 +14,8 @@ async function main(): Promise<void> {
   // ?quality=low|medium|high picks a render preset (the debug overlay shows which); anything else means the default.
   const quality = parseQuality(params.get('quality')) ?? DEFAULT_QUALITY;
   const game = await Game.create(container, DEPOT, {
-    allowUnlocked: import.meta.env.DEV && params.has('nolock'),
+    // ?nolock works on the dev server and in the smoke test's `e2e` build, never in a normal release build.
+    allowUnlocked: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('nolock'),
     seed,
     quality,
   });

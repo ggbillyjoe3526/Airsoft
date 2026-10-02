@@ -4,7 +4,7 @@ Classified as **fix now / document / can wait**.
 
 | Issue | Class | Notes |
 |---|---|---|
-| Automated browsers can't take pointer lock | document | Use the dev-only `?nolock` URL flag. |
+| Automated browsers can't take pointer lock | document | Use the `?nolock` URL flag (dev server and the smoke test's `e2e` build only; fire and wheel work without the lock there). The real lock flow, mouse look and Esc to pause stay manual tests. |
 | Ledges 0.2–0.3 m tall are climbable only sometimes (sprinting yes, crouching no) | document | Rapier autostep with capsules; keep map ledges ≤ 0.15 m or ≥ uncrossable cover height (tested for Depot). |
 | Firefox ignores `unadjustedMovement` (raw mouse input) | can wait | Sensitivity may feel different vs Chrome/Edge when OS acceleration is on. |
 | Chrome refuses pointer re-lock for ~1 s after Esc | document | Start screen shows a "click again" hint (promise rejection or `pointerlockerror`). Firefox path untested. |
