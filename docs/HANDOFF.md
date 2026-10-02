@@ -47,8 +47,7 @@ These were worked out at the end of the last session and aren't in the roadmap:
 
 ## Open with the owner
 
-- The owner said "swapping weapons should use numerical keys". I kept the **mouse wheel** for switching
-  too; confirm whether they want it removed.
+- Replica switching: 1, 2 and the mouse wheel (owner confirmed the wheel stays, 2026-10-02).
 - Vaulting is parked for the M11 Depot rework.
 
 ## Working notes and gotchas
