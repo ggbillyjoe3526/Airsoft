@@ -7,11 +7,17 @@ import type { Character } from './character';
  * a sprint are not. Bots and the player follow the same rule.
  */
 
-/** The spread multiplier this character's state calls for right now (before settling). */
+/** Summed tick lengths drift below round numbers (6 × 1/60 < 0.1); this keeps the delay a whole number of ticks. */
+const AIR_TIME_EPSILON = 1e-9;
+
+/**
+ * The spread multiplier this character's state calls for right now (before settling). Off the ground it is
+ * cfg.accuracy.air once airTime reaches airSpreadDelay; until then the horizontal speed decides, as on the ground.
+ */
 export function targetSpreadScale(c: Character, cfg: MovementConfig): number {
   const a = cfg.accuracy;
   let move: number;
-  if (!c.grounded) move = a.air;
+  if (!c.grounded && c.airTime >= a.airSpreadDelay - AIR_TIME_EPSILON) move = a.air;
   else if (c.sprinting) move = a.sprint;
   else {
     const speed = Math.hypot(c.velocity.x, c.velocity.z);
@@ -27,6 +33,7 @@ export function targetSpreadScale(c: Character, cfg: MovementConfig): number {
  * and settles back towards it over cfg.accuracy.settleTime once the shake stops.
  */
 export function stepAccuracy(c: Character, cfg: MovementConfig, dt: number): void {
+  c.airTime = c.grounded ? 0 : c.airTime + dt;
   const target = targetSpreadScale(c, cfg);
   c.spreadScale = target >= c.spreadScale ? target : target + (c.spreadScale - target) * Math.exp(-dt / cfg.accuracy.settleTime);
 }

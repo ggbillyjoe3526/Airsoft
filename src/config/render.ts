@@ -9,13 +9,8 @@ export const RENDER = {
   horizontalFov16x9: 100,
   near: 0.05,
   far: 250,
-  /** Caps devicePixelRatio; high-DPI laptops with iGPUs pay a lot for full resolution. */
-  maxPixelRatio: 1.5,
-  antialias: true,
   /** Anisotropic filtering for surface textures; keeps floor detail readable at grazing angles. */
   textureAnisotropy: 4,
-  shadows: true,
-  shadowMapSize: 2048,
   skyColor: 0xa9c6de,
   fogNear: 60,
   fogFar: 160,
@@ -25,6 +20,34 @@ export const RENDER = {
    */
   leanCameraRoll: 0.12,
 } as const;
+
+export type QualityPreset = 'low' | 'medium' | 'high';
+
+/** What a quality preset sets. Read once at start-up (antialiasing needs a new WebGL context to change). */
+export interface QualitySettings {
+  /** Caps devicePixelRatio; high-DPI laptops with iGPUs pay a lot for full resolution. */
+  maxPixelRatio: number;
+  antialias: boolean;
+  shadows: boolean;
+  shadowMapSize: 1024 | 2048;
+}
+
+/**
+ * Render quality presets, picked with `?quality=low|medium|high` until the Phase 4 settings screen exposes
+ * them. `high` is the game's look so far; the others trade sharpness and shadows for frame time on iGPUs.
+ */
+export const QUALITY: Record<QualityPreset, QualitySettings> = {
+  low: { maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024 },
+  medium: { maxPixelRatio: 1, antialias: true, shadows: true, shadowMapSize: 1024 },
+  high: { maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048 },
+};
+
+export const DEFAULT_QUALITY: QualityPreset = 'high';
+
+/** The preset a `?quality=` value names, or null for a missing or unknown value. */
+export function parseQuality(value: string | null): QualityPreset | null {
+  return value !== null && Object.hasOwn(QUALITY, value) ? (value as QualityPreset) : null;
+}
 
 /** Bright, friendly daylight: hemisphere fill plus one shadow-casting sun. */
 export const LIGHTING = {

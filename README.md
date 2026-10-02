@@ -187,6 +187,8 @@ GitHub runs `npm run check` and the smoke test on every pull request and every p
 URL flag `?nolock` plays without pointer lock (for automated browsers; fire and wheel work, mouse look doesn't). It works only on the
 dev server and in the smoke test's build (`npm run build:e2e`), never in a normal release build.
 Each page load picks a fresh random seed (shown in the debug overlay); `?seed=N` (0 to 4294967295) replays one.
+`?quality=low|medium|high` picks a render preset (default `high`; `medium` renders at standard resolution with smaller shadows,
+`low` also drops shadows and antialiasing). The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
 In development, `window.airsoft` exposes the running game.
 
 ### Layout
