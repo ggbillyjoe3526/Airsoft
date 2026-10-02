@@ -261,4 +261,17 @@ describe('empty AEG with the trigger held', () => {
     expect(count(evs, 'dryFire')).toBe(1);
     expect(count(evs, 'reloadStart')).toBe(1);
   });
+
+  it('clicks and reloads again after switching away mid-reload and back, trigger still held', () => {
+    const { a, run, count } = setup();
+    a.ammo[0]!.mag = 0;
+    run(2, (c) => (c.fire = true)); // dry click, auto-reload starts
+    expect(a.reload).toBeGreaterThan(0);
+    run(1, (c) => ((c.fire = true), (c.switchTo = 1))); // switching cancels the reload
+    run(Math.ceil(GAS_PISTOL.drawTime / DT) + 1, (c) => (c.fire = true));
+    run(1, (c) => ((c.fire = true), (c.switchTo = 0)));
+    const evs = run(Math.ceil(AEG.drawTime / DT) + 2, (c) => (c.fire = true));
+    expect(count(evs, 'dryFire')).toBe(1);
+    expect(count(evs, 'reloadStart')).toBe(1);
+  });
 });

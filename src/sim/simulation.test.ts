@@ -252,7 +252,7 @@ describe('hit calling and round flow', () => {
     // Walks all the way to its dead-zone spot (x = 30), turns to face the way the spot faces, and stays.
     for (let i = 0; i < ticksFor(HITS.walkOffTime) && target.status === 'walkingOff'; i++) stepSimulation(state, commands, ctx, DT);
     expect(target.status).toBe('out');
-    expect(Math.hypot(target.position.x - 30, target.position.z)).toBeLessThanOrEqual(HITS.deadZoneArrive + 0.05);
+    expect(Math.hypot(target.position.x - 30, target.position.z)).toBeLessThan(0.01); // on the spot itself
     expect(target.yaw).toBe(DEAD_ZONES[1]![0]!.yaw);
     const parked = { ...target.position };
     for (let i = 0; i < 30; i++) stepSimulation(state, commands, ctx, DT);

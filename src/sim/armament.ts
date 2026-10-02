@@ -161,6 +161,7 @@ export function stepArmament(
     replica = ctx.loadout[a.active]!;
     ammo = a.ammo[a.active]!;
     a.draw = replica.drawTime;
+    a.dryFiredThisPull = false; // a dry click on the other replica doesn't count for this one
     ctx.events.push({ type: 'draw', characterId, replicaId: replica.id });
   }
 

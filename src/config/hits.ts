@@ -52,12 +52,15 @@ export const HITS: HitConfig = {
   friendlyFire: true,
   /** Seconds a hit player stands still with a hand up calling the hit. */
   callTime: 1.4,
-  /** Walk-off pace as a fraction of walking speed. */
+  /** Walk-off pace as a fraction of the normal (run) speed: a brisk walk-off, so it fits in walkOffTime. */
   walkOffSpeed: 0.8,
   /** Longest walk-off (seconds): enough to cross Depot; anyone still walking then leaves the field. */
   walkOffTime: 14,
-  /** Close enough to the dead-zone spot to stop walking (metres). */
-  deadZoneArrive: 0.6,
+  /**
+   * Close enough to the dead-zone spot to stop walking (metres). Well under half the spots' spacing, so
+   * teammates who walk in from the same side don't end up standing inside each other.
+   */
+  deadZoneArrive: 0.15,
   /** A route waypoint counts as reached within this distance (metres). */
   waypointReach: 0.4,
   /**

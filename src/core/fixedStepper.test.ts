@@ -18,6 +18,12 @@ describe('fixedStepper', () => {
     expect(stepperAlpha(s)).toBeCloseTo(0.4, 5);
   });
 
+  it('ignores a frame time that is not a number instead of stopping for good', () => {
+    const s = createStepper(step, 5);
+    expect(advanceStepper(s, Number.NaN)).toBe(0);
+    expect(advanceStepper(s, step * 1.5)).toBe(1);
+  });
+
   it('caps catch-up ticks and drops the backlog', () => {
     const s = createStepper(step, 5);
     expect(advanceStepper(s, 1)).toBe(5);

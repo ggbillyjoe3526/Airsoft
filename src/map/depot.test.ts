@@ -253,7 +253,7 @@ describe('Depot map', () => {
     }
   });
 
-  it('gives each team a dead-zone spot per player on the floor, clear of geometry, apart and away from the spawns', () => {
+  it('gives each team a dead-zone spot per player on the floor, clear of geometry, a body apart and away from the spawns', () => {
     for (const [team, spots] of DEPOT.deadZones.entries()) {
       expect(spots.length).toBe(3);
       for (const s of spots) {
@@ -261,7 +261,7 @@ describe('Depot map', () => {
         expect(s.position.y).toBe(0);
         expect(standable(s.position.x, s.position.z), `${where} is blocked`).toBe(true);
         for (const sp of DEPOT.spawns[team]!) expect(Math.hypot(s.position.x - sp.position.x, s.position.z - sp.position.z), where).toBeGreaterThan(1);
-        for (const o of spots) if (o !== s) expect(Math.hypot(s.position.x - o.position.x, s.position.z - o.position.z), where).toBeGreaterThan(0.6);
+        for (const o of spots) if (o !== s) expect(Math.hypot(s.position.x - o.position.x, s.position.z - o.position.z), where).toBeGreaterThan(2 * BODY.radius); // figures on neighbouring spots don't overlap
       }
     }
   });

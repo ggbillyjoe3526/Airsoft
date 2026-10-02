@@ -64,7 +64,10 @@ let rapierReady: Promise<void> | null = null;
 
 /** Loads the Rapier WASM module once. */
 export function initPhysics(): Promise<void> {
-  rapierReady ??= RAPIER.init();
+  rapierReady ??= RAPIER.init().catch((err: unknown) => {
+    rapierReady = null; // a failed load can be retried
+    throw err;
+  });
   return rapierReady;
 }
 

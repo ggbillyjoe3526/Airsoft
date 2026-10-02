@@ -14,7 +14,7 @@ export function createStepper(step: number, maxTicks: number): FixedStepper {
 
 /** Adds elapsed frame time and returns how many ticks to run now. Excess time beyond maxTicks is dropped. */
 export function advanceStepper(s: FixedStepper, frameDt: number): number {
-  s.accumulator += Math.max(0, frameDt);
+  if (Number.isFinite(frameDt)) s.accumulator += Math.max(0, frameDt); // one bad timestamp must not stop the clock for good
   let ticks = Math.floor(s.accumulator / s.step);
   if (ticks > s.maxTicks) {
     ticks = s.maxTicks;
