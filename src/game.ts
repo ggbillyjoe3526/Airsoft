@@ -378,7 +378,7 @@ export class Game {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) this.combat.toggleBbPaths();
-      this.input.update(this.player.armament.active, LOADOUT.length, this.player.aiming);
+      this.input.update(this.player.armament.active, LOADOUT.length, this.combat.aimRaised);
       if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
       const ticks = advanceStepper(this.stepper, dt);
       for (let i = 0; i < ticks; i++) {

@@ -42,6 +42,11 @@ export class CombatPresentation {
   /** How far the player's optic is raised to their eye (0..1): eases over AIMING.raiseTime. */
   private aimBlend = 0;
 
+  /** How far the player's optic is raised to their eye (0..1); the aiming sensitivity blends in with it. */
+  get aimRaised(): number {
+    return this.aimBlend;
+  }
+
   constructor(
     private readonly renderer: Renderer,
     container: HTMLElement,
@@ -118,8 +123,9 @@ export class CombatPresentation {
 
     const p = this.player;
     const carried = p.sprinting || p.sprintLockout > 0;
-    // Aiming down sights: the sight comes up to your eye and the view narrows by the optic's zoom.
-    const aiming = p.aiming && p.status === 'alive';
+    // Aiming down sights: the sight comes up to your eye and the view narrows by the optic's zoom. Straight out of a
+    // sprint the replica is still carried (firing is locked out too), so it rises once that ends.
+    const aiming = p.aiming && p.status === 'alive' && !carried;
     this.aimBlend = Math.max(0, Math.min(1, this.aimBlend + (aiming ? dt : -dt) / AIMING.raiseTime));
     const optic = p.armament.optics[p.armament.active];
     const zoom = optic ? OPTICS[optic].zoom : 1;

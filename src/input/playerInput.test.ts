@@ -130,16 +130,22 @@ describe('aiming down sights', () => {
     expect(cmd.aim).toBe(false);
   });
 
-  it('turns at the aiming sensitivity (a multiple of the mouse sensitivity) only while aiming', () => {
+  it('turns at the aiming sensitivity (a multiple of the mouse sensitivity) as the sight comes up', () => {
     const hip = aimingSetup(true);
     hip.sensitivity = 1.5;
     hip.aimSensitivity = 0.5;
-    hip.update(0, 2, false);
+    hip.update(0, 2, 0);
     const aimed = aimingSetup(true);
     aimed.sensitivity = 1.5;
     aimed.aimSensitivity = 0.5;
-    aimed.update(0, 2, true);
+    aimed.update(0, 2, 1);
     expect(aimed.yaw).toBeCloseTo(hip.yaw * 0.5, 12);
     expect(hip.yaw).not.toBe(0);
+    // Halfway up, halfway between: no jump in turn rate while the sight rises.
+    const rising = aimingSetup(true);
+    rising.sensitivity = 1.5;
+    rising.aimSensitivity = 0.5;
+    rising.update(0, 2, 0.5);
+    expect(rising.yaw).toBeCloseTo(hip.yaw * 0.75, 12);
   });
 });

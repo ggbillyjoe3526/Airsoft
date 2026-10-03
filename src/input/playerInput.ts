@@ -11,7 +11,7 @@ import type { PointerLock } from './pointerLock';
  * responsiveness; one-shot actions (jump, reload, switch, fire selector, a trigger click) are latched until
  * a simulation tick consumes them, so none is lost or duplicated when frames and ticks don't line up.
  * The crouch key either toggles crouching (sprint or jump stands you back up) or crouches while held. The right
- * mouse button aims down sights while held; the mouse turns at `aimSensitivity` times the normal rate meanwhile.
+ * mouse button aims down sights while held; the mouse turns at `aimSensitivity` times the normal rate once the sight is up.
  */
 export class PlayerInput {
   yaw = 0;
@@ -48,11 +48,12 @@ export class PlayerInput {
 
   /**
    * Call once per render frame, before any ticks run. `activeSlot`/`slotCount` let the
-   * mouse wheel cycle replicas; `aiming` (the player is aiming down sights) picks the aiming sensitivity.
+   * mouse wheel cycle replicas; `aimRaised` (how far the sight is raised to the eye, 0..1) blends in the aiming
+   * sensitivity as the view zooms, so the turn rate never jumps.
    */
-  update(activeSlot: number, slotCount: number, aiming = false): void {
+  update(activeSlot: number, slotCount: number, aimRaised = 0): void {
     this.pointer.consumeDelta(this.mouseDelta);
-    const k = MOUSE.radiansPerCount * this.sensitivity * (aiming ? this.aimSensitivity : 1);
+    const k = MOUSE.radiansPerCount * this.sensitivity * (1 + (this.aimSensitivity - 1) * aimRaised);
     const maxPitch = this.movement.maxPitch;
     this.yaw = wrapAngle(this.yaw - this.mouseDelta.x * k);
     this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch - this.mouseDelta.y * k));

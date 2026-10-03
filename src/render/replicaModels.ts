@@ -161,7 +161,7 @@ const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
  * where its axis sits above the model's origin and where its tube starts and ends along the forward axis.
  * The rifle's aiming hold (config/replicas.ts aimHold) puts this axis on the view's centre line.
  */
-export const RIFLE_OPTIC = { axisUp: 0.108, from: -0.005, length: 0.07, outer: 0.019, inner: 0.0155 } as const;
+export const RIFLE_OPTIC = { axisUp: 0.126, from: -0.005, length: 0.07, outer: 0.021, inner: 0.018 } as const;
 
 /**
  * AR-pattern AEG in two-tone: black upper and lower receiver, tan stock, grip, handguard and magazine.
@@ -213,9 +213,10 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   sightsUp.box('polymer', 0.365, 0.39, 0.082, 0.092, 0.024);
   sightsUp.profile('polymer', [[0.37, 0.092], [0.386, 0.092], [0.381, 0.112], [0.375, 0.112]], 0.018, 0.002);
   const sightsDown = new ModelBuilder();
-  sightsDown.box('polymer', -0.088, -0.054, 0.074, 0.086, 0.026);
+  sightsDown.box('polymer', -0.088, -0.054, 0.074, 0.082, 0.026);
   sightsDown.box('polymer', 0.362, 0.396, 0.082, 0.089, 0.024);
-  // The red dot: a riser mount clamped to the rail under a tube you look through (front lens faintly tinted).
+  // The red dot: a tall riser mount clamped to the rail under a tube you look through (front lens faintly tinted). The
+  // riser keeps the receiver and the folded sights well below the dot in the aimed view (a lower-third co-witness).
   const optic = new ModelBuilder();
   const o = RIFLE_OPTIC;
   optic.box('polymer', 0.004, 0.056, 0.074, 0.084, 0.034);

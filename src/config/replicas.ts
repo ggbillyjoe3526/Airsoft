@@ -86,7 +86,7 @@ export const AEG: ReplicaConfig = {
     hold: { position: [0.16, -0.17, -0.48], yaw: 0.14 },
     // The optic's axis is RIFLE_OPTIC.axisUp above the model's origin (render/replicaModels.ts); its back end about
     // 0.2 m in front of the eye, so the tube frames the view without filling it.
-    aimHold: [0, -0.108, -0.195],
+    aimHold: [0, -0.126, -0.205],
   },
 };
 

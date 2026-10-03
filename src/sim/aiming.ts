@@ -10,5 +10,6 @@ import type { PlayerCommand } from './commands';
  */
 export function stepAiming(c: Character, cmd: PlayerCommand, loadout: readonly ReplicaConfig[]): void {
   const a = c.armament;
+  // Reload and draw are as the last tick left them: a reload started this tick drops the sight on the next one.
   c.aiming = cmd.aim && a.optics[a.active] != null && loadout[a.active]!.opticMount && a.reload <= 0 && a.draw <= 0;
 }
