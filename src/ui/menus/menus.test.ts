@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { LOADOUT_SLOTS, POWER_LABELS, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
-import { DEFAULT_QUALITY, QUALITY, QUALITY_CHOICES } from '../../config/render';
+import { DEFAULT_QUALITY, FOV_SETTING, RENDER } from '../../config/render';
 import { AEG, GAS_PISTOL, LOADOUT } from '../../config/replicas';
+import { DEPOT } from '../../map/depot';
+import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
 import { backTarget, screenWhenStopped } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
+import { loadFov, loadMap } from './savedChoices';
 
 describe('menu navigation', () => {
   it('opens the title before the first match, the pause menu during one and the result after it', () => {
@@ -42,9 +45,24 @@ describe('menu data', () => {
     }
   });
 
-  it('offers every render quality preset in Settings, the default among them', () => {
-    expect(QUALITY_CHOICES.map((q) => q.id).sort()).toEqual(Object.keys(QUALITY).sort());
-    expect(QUALITY_CHOICES.map((q) => q.id)).toContain(DEFAULT_QUALITY);
+  it('holds the quality picker back, showing the preset the game runs on, and has no Brightness setting', () => {
+    const graphics = SETTINGS_LATER.graphics;
+    expect(graphics.find((s) => s.label === 'Quality')?.value?.toLowerCase()).toBe(DEFAULT_QUALITY);
+    expect(graphics.some((s) => s.label === 'Brightness' || s.label === 'Field of view')).toBe(false);
+  });
+
+  it('has the field of view slider around the default view', () => {
+    expect(FOV_SETTING.min).toBeLessThan(RENDER.horizontalFov16x9);
+    expect(FOV_SETTING.max).toBeGreaterThan(RENDER.horizontalFov16x9);
+    // No browser storage in the tests: nothing saved, so the default view.
+    expect(loadFov()).toBe(RENDER.horizontalFov16x9);
+  });
+
+  it('offers Depot as the default map', () => {
+    expect(DEFAULT_MAP).toBe('depot');
+    expect(MAPS.map((m) => m.id)).toContain(DEFAULT_MAP);
+    expect(loadMap()).toBe(DEFAULT_MAP);
+    expect(mapData('depot')).toBe(DEPOT);
   });
 
   it('sums up each replica under its name on the Loadout screen', () => {

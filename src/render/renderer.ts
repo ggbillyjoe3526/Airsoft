@@ -19,8 +19,10 @@ export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
+  /** The field of view setting: horizontal degrees on a 16:9 screen (Settings, Graphics). */
+  private horizontalFov: number = RENDER.horizontalFov16x9;
   /** The main camera's vertical FOV with no zoom (degrees). */
-  private readonly baseFov = verticalFovFor(RENDER.horizontalFov16x9);
+  private baseFov = verticalFovFor(RENDER.horizontalFov16x9);
   private zoom = 1;
   /** View size in CSS pixels (kept up to date on resize, so HUD code never has to read layout). */
   width = 0;
@@ -51,6 +53,22 @@ export class Renderer {
 
   get canvas(): HTMLCanvasElement {
     return this.renderer.domElement;
+  }
+
+  /** The field of view setting in use (horizontal degrees on a 16:9 screen). */
+  get fov(): number {
+    return this.horizontalFov;
+  }
+
+  /**
+   * Sets the field of view (horizontal degrees on a 16:9 screen; wider screens see more at the sides). Applies at
+   * once, and a zoom (aiming down an optic) narrows whatever is set. The held replica keeps its own camera.
+   */
+  setFov(horizontalFov16x9: number): void {
+    this.horizontalFov = horizontalFov16x9;
+    this.baseFov = verticalFovFor(horizontalFov16x9);
+    this.camera.fov = zoomedFov(this.baseFov, this.zoom);
+    this.camera.updateProjectionMatrix();
   }
 
   /** Narrows the main camera's view by `zoom` (1 = the normal view), e.g. while aiming down an optic. */

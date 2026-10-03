@@ -179,13 +179,14 @@ swap ends after round 4.
   after round 4, and round 5 starts you in the west yard. In bot-only tests the east end wins a little more often (about 54%); say if either end feels unfair.
 - [ ] **Watch where hit players walk.** Each end has its own dead zone, away from the fighting.
 
-## Menus (M15)
+## Menus (M15, M15b)
 
-- [ ] **Load the game.** A title screen says **AIRSOFT** in the middle with the field behind it, and **Start** at
-  the bottom left. Nothing else.
-- [ ] **Click Start.** The New game screen has four big buttons: **Mode**, **Difficulty**, **Loadout** and
+- [ ] **Load the game.** A title screen says **AIRSOFT** in the middle on a plain dark background (no field behind
+  it: no map is loaded yet), and **Start** at the bottom left. Nothing else.
+- [ ] **Click Start.** The New game screen has five big buttons: **Map**, **Mode**, **Difficulty**, **Loadout** and
   **Settings**, each showing what is picked now, the rules of the picked mode under them, **Back** (to the title)
-  and **Play**.
+  and **Play**. No controls list here any more: the keys are under Settings, Key bindings.
+- [ ] **Click Map.** A pop-up lists Depot (picked, the only map for now). Esc or × closes it.
 - [ ] **Click Mode, then Attack and Defend.** A pop-up lists both modes with a line each; picking one closes it, and
   the Mode button and the rules underneath change. Open it again and press Esc or ×: it closes with no change.
   Do the same with **Difficulty** (Easy, Normal, Hard).
@@ -194,23 +195,27 @@ swap ends after round 4.
   power greyed out and marked LATER. Click the pistol: its own hop-up dial, and its gas type marked LATER. Back
   returns to New game, and the Loadout button shows your optic and dials.
 - [ ] **Click Settings.** Tabs on the left: **Controls** (mouse sensitivity, aiming sensitivity, crouch key),
-  **Key bindings**, **Graphics** (quality), and Audio and Accessibility marked LATER. Back returns to New game.
-- [ ] **Graphics: pick Low.** A line says it applies when the game reloads, with **Reload now**. Click it: the game
-  reloads to the title screen with no shadows. Set it back to High the same way.
+  **Key bindings**, **Graphics**, and Audio and Accessibility marked LATER. Back returns to New game.
+- [ ] **Graphics.** A **Field of view** slider at 100°, and **Quality** greyed out (High, LATER). No Brightness.
+- [ ] **Field of view in a match.** Play, press Esc, Settings, Graphics: drag the slider to 120°. Back and Resume:
+  you see more at the sides. Aim down the red dot: it still zooms in. Set it to 80°: a narrower view. Reload the
+  page: the slider keeps your setting.
 - [ ] **Headings are in capitals** (NEW GAME, LOADOUT, MODE, HOP-UP …); descriptions are in normal writing.
-- [ ] **Click Play.** The match starts as before.
+- [ ] **Click Play.** The field loads (a moment's pause at most) and the match starts as before.
 
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
-  with **Resume**, **Settings** and **Quit to title screen**. Resume puts you back exactly where you were.
+  with **Resume**, **Settings** and **Quit to title screen** on a solid background (the match doesn't show
+  through). Resume puts you back exactly where you were.
 - [ ] **Change keys.** In the pause menu click **Settings**, then **Key bindings**, click an action and press a new
   key. **Back** returns to the pause menu; back in the game the new key works. **Reset to defaults** puts
   everything back.
 - [ ] **Change the mouse sensitivity** (Settings, Controls) from the pause menu. Mouse look feels faster or slower
-  straight away, and the setting is still there after you reload the page. Graphics shows no Reload button here
-  (it would end the match); a new quality applies next time the game loads.
-- [ ] **Quit to title screen.** The title screen comes back. Start, then Play: a fresh match from round 1, 0–0.
+  straight away, and the setting is still there after you reload the page.
+- [ ] **Quit to title screen.** The title screen comes back with nothing behind it. Start, change the mode or
+  difficulty, then Play: a fresh match from round 1, 0–0, in what you picked. Do this a few times: it loads just as
+  quickly each time (nothing piles up).
 - [ ] **Win or lose a match.** The result screen shows MATCH OVER, YOU WIN! (or YOU LOSE) and the score, with
   **Play Again** (same setup), **Change setup** (back to New game) and **Title screen**.
 - [ ] **Switch to another browser tab, then come back.** The game pauses by itself and nothing happened while you

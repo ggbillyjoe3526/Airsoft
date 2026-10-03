@@ -53,8 +53,8 @@ body {
   z-index: 30;
 }
 
-/* Menus (M15): title, New game and its pop-ups, Loadout, Settings, pause, result. One screen at a time over the
-   frozen field. Headings and labels are in capitals (owner, 2026-10-03); descriptions stay as written. */
+/* Menus (M15, M15b): title, New game and its pop-ups, Loadout, Settings, pause, result. One opaque screen at a time:
+   nothing of the field shows through (owner, 2026-10-03), and before Play no field is loaded at all. Headings and labels are in capitals (owner, 2026-10-03); descriptions stay as written. */
 .menus {
   --menu-panel: #20232a;
   --menu-panel-hi: #2a2e37;
@@ -78,7 +78,7 @@ body {
   position: absolute;
   inset: 0;
   overflow-y: auto;
-  background: rgba(22, 24, 29, 0.94);
+  background: #16181d;
 }
 
 .menu-heading,
@@ -189,11 +189,6 @@ body {
   border-radius: 4px;
 }
 
-/* Title screen: the field shows through behind the name */
-.menu-title {
-  background: rgba(22, 24, 29, 0.72);
-}
-
 .menu-title-centre {
   position: absolute;
   inset: 0 0 60px;
@@ -299,18 +294,18 @@ body {
   letter-spacing: 0.03em;
 }
 
-/* New game: four big buttons */
+/* New game: five big buttons, three to a row */
 .setup-tiles {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
 }
 
 .setup-tile {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 250px;
+  min-height: 210px;
   padding: 26px;
   font: inherit;
   color: var(--paper);
@@ -348,34 +343,6 @@ body {
   font-size: 15px;
   font-weight: 600;
   color: #d8d4c9;
-}
-
-.menu-controls {
-  max-width: 60em;
-  margin: 14px 0 0;
-  font-size: 14px;
-  line-height: 2;
-  color: var(--menu-faint);
-}
-
-.menu-controls-item {
-  display: inline-block;
-  white-space: nowrap;
-}
-
-/* The dot sits at the end of an item, so a wrapped line never starts with one. */
-.menu-controls-item:not(:last-child)::after {
-  content: '·';
-  margin: 0 8px;
-}
-
-.menu-controls kbd + kbd {
-  margin-left: 2px;
-}
-
-.menu-pause-panel .menu-controls {
-  margin-top: 4px;
-  font-size: 13px;
 }
 
 .setup-rules {
@@ -489,12 +456,6 @@ body {
   font-size: 15px;
   line-height: 1.45;
   color: var(--menu-muted);
-}
-
-.menu-dialog-note {
-  margin: 14px 0 0;
-  font-size: 14px;
-  color: #ffb27a;
 }
 
 /* Rows of settings and loadout parts: a label (and help) on the left, the control on the right */
@@ -826,11 +787,7 @@ kbd {
   border-radius: 4px;
 }
 
-/* Pause menu: a column on the left over the dimmed match */
-.menu-pause {
-  background: rgba(10, 11, 14, 0.8);
-}
-
+/* Pause menu: a column on the left */
 .menu-pause-panel {
   display: flex;
   flex-direction: column;
@@ -920,11 +877,6 @@ kbd {
   .setup-rules {
     margin-top: 14px;
     font-size: 15px;
-  }
-
-  .menu-controls {
-    margin-top: 8px;
-    line-height: 1.8;
   }
 
   .menu-pause-panel {

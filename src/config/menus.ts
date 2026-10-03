@@ -36,14 +36,15 @@ export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: bo
   { id: 'accessibility', label: 'Accessibility', later: true },
 ];
 
-/** Settings not built yet, listed greyed out on their tab (label and a short line on what it will do). */
-export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: string; help: string }[]>> = {
+/**
+ * Settings not built yet, listed greyed out on their tab (label, a short line on what it will do, and the value in
+ * use where there is one).
+ */
+export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: string; help: string; value?: string }[]>> = {
   controls: [{ label: 'Invert mouse', help: 'Up and down swapped.' }],
   keys: [],
-  graphics: [
-    { label: 'Field of view', help: 'How wide you see.' },
-    { label: 'Brightness', help: '' },
-  ],
+  // The quality picker is held back until there is real graphics work to scale (owner, 2026-10-03): the game runs on High.
+  graphics: [{ label: 'Quality', help: 'Comes back with the art pass.', value: 'High' }],
   audio: [
     { label: 'Master volume', help: 'Comes with the audio rework.' },
     { label: 'Effects volume', help: '' },
