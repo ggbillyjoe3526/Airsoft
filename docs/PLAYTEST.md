@@ -118,6 +118,25 @@ on the **Loadout** screen (**Start**, then **Loadout**; between matches only, it
 - [ ] **Switch to the pistol (2).** It leans only slightly to the left, much less than it used to, not dead straight.
   The rifle points straight ahead.
 
+## Loadout: replicas and BBs (M17a)
+
+Start, then Loadout. Each slot (Primary, Secondary) shows its replica; the right side has a **Replica** row (one
+replica per slot for now), then the optic, the **BB weight** (0.20, 0.25 or 0.28 g) and the hop-up dial set for it.
+
+- [ ] **The BB weight starts where each replica comes set up:** 0.25 g on the rifle, 0.20 g on the pistol. The line
+  under it gives both sides: how fast the BB leaves and reaches 20 m, and the hop-up that gives it the longest reach and how far it then
+  stays on target (rifle: 88 m/s, 20 m in 0.28 s, best about 65%, ~38 m).
+- [ ] **Pick 0.28 g on the rifle.** It leaves slower (about 84 m/s) and the hop-up line now says it is on target to
+  about 34 m: heavy BBs need more hop. Turn the dial up to the 75% the weight line suggests: on target to about 40 m.
+- [ ] **Pick 0.20 g on the rifle with the dial at 65%.** The hop-up line warns it's too much (light BBs rise more on
+  the same hop). In a match, far shots fly high and float; turn the dial down to about 55% and they fly flat.
+- [ ] **Is the choice worth having?** The differences are small on purpose, as at a real site (DECISIONS): 0.28 g
+  carries a couple of metres further past Depot's longest sightlines (~34 m), 0.20 g gets to 10–20 m a hundredth of a
+  second sooner (by ~30 m they arrive together). On the pistol the gap is bigger (25 → 34 m of reach on full hop). If you can't feel
+  it on Depot, say so and it can be widened (for example, light BBs scattering more).
+- [ ] **Back on New game** the Loadout button lists the weights (e.g. "0.28 g / 0.20 g BBs"), and they are still
+  picked after reloading the page. Bots always shoot their replicas' standard BBs.
+
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the
@@ -191,9 +210,9 @@ swap ends after round 4.
   the Mode button and the rules underneath change. Open it again and press Esc or ×: it closes with no change.
   Do the same with **Difficulty** (Easy, Normal, Hard).
 - [ ] **Click Loadout.** The AEG rifle (primary) and gas pistol (secondary) are on the left, with "More replicas
-  later" under each. On the right: the optic and hop-up dial for the rifle, then BB weight, grip, magazine and
-  power greyed out and marked LATER. Click the pistol: its own hop-up dial, and its gas type marked LATER. Back
-  returns to New game, and the Loadout button shows your optic and dials.
+  later" under each. On the right: the replica in that slot, the optic, BB weight and hop-up dial for the rifle, then
+  grip, magazine and power greyed out and marked LATER. Click the pistol: its own BB weight and hop-up dial, and its gas
+  type marked LATER. Back returns to New game, and the Loadout button shows your optic, BB weights and dials.
 - [ ] **Click Settings.** Tabs on the left: **Controls** (mouse sensitivity, aiming sensitivity, crouch key),
   **Key bindings**, **Graphics**, **Audio** (volumes, see Sound below) and Accessibility marked LATER. Back
   returns to New game.

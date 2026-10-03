@@ -10,8 +10,9 @@ export const SETTINGS_KEY = 'airsoft.settings';
 export const SETTINGS_VERSION = 1;
 
 /**
- * What each setting is called in the stored object (`hopUp.<replica id>`: that replica's hop-up dial;
- * `volume.<channel>`: a volume slider on Settings → Audio; `crosshair.<part>`: Settings → Crosshair).
+ * What each setting is called in the stored object (`hopUp.<replica id>` and `bbWeight.<replica id>`: that replica's
+ * hop-up dial and BB weight; `slot.<slot id>`: the replica picked for that loadout slot; `volume.<channel>`: a volume
+ * slider on Settings → Audio; `crosshair.<part>`: Settings → Crosshair).
  */
 export type SettingField =
   | 'sensitivity'
@@ -24,6 +25,8 @@ export type SettingField =
   | 'fov'
   | `hopUp.${string}`
   | `volume.${string}`
+  | `bbWeight.${string}`
+  | `slot.${string}`
   | `crosshair.${string}`;
 
 /** Where earlier builds kept a setting, before the settings object. */

@@ -21,7 +21,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) and the owner's M15 notes (M15b) are done; next is the Loadout feature (M17, added by the owner), then an audio rework (M13), the owner's feature picks (M18 comfort and accessibility, M19 match info, M20 custom matches, M21 practice range, M22 squad orders), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13) and match info (M19) are done; the Loadout feature (M17, added by the owner) is under way (M17a built, M17b next), then the rest of the owner's feature picks (M18 comfort and accessibility, M20 custom matches, M21 practice range, M22 squad orders), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -106,11 +106,11 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Done (merged; owner played it: five notes, for M15b and later) | 9.1 |
 | Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Done (merged; owner to play it) | 9.0 |
-| Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Next | |
-| Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Later | |
-| Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (pull request open; owner's playtest next) | 9.0 |
+| Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Done (pull request; owner to play it) | 9.0 |
+| Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Next | |
+| Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M18 Comfort, accessibility and browser basics (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, colour-blind options, on-screen sound cues, pause on a hidden tab, fullscreen | Later | |
-| Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (pull request open; owner's playtest next) | 9.0 |
+| Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Later | |
@@ -479,6 +479,11 @@ each one went:**
       the BB weight" (DECISIONS 2026-10-02).
     - **Hop-up:** the M12c dial stays per replica and now works with the picked BB weight: the line under it says how
       far the BB flies flat with that weight and dial (the "on target to about 38 m" readout).
+    - Built (2026-10-03): the Replica picker sits at the top of each slot's panel; the BB weight comes before the hop-up
+      and its line gives both sides of the choice (speed out and time to 20 m, the best dial and how far it then
+      carries); a heavier BB gets a little more muzzle energy (DECISIONS). Weights 0.20, 0.25 and 0.28 g: 0.30 g only
+      matched 0.28 g's reach while arriving later on these replicas, so it waits for stronger platforms. Rifle at its
+      best dial: 0.20 g 37 m (20 m in 0.27 s), 0.25 g 38 m (0.28 s), 0.28 g 40 m (0.29 s).
   - **M17b. Attachments**
     - **Optics:** iron sights and the red dot, plus one magnified optic (first guess: a low-power 2× scope: a closer view
       for Depot's long lanes, but slower to raise and a narrower view around it). Rifle only; the pistol has no rail.

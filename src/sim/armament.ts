@@ -1,7 +1,7 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
-import { bbMass, type FireMode, HOP_UP, hopUpLift, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
+import { BB_WEIGHT, bbMass, type FireMode, HOP_UP, hopUpLift, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -74,6 +74,8 @@ export interface Armament {
   optics: (OpticId | null)[];
   /** Each replica's hop-up dial (0..1, see ReplicaConfig.hopUpDial), by loadout slot. Set before a round, kept between rounds. */
   hopUps: number[];
+  /** The BB weight each replica shoots (grams, see ReplicaConfig.bbWeight), by loadout slot. Set before a match, kept between rounds. */
+  bbWeights: number[];
 }
 
 export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
@@ -91,7 +93,16 @@ export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
     burstShotsLeft: 0,
     optics: loadout.map(() => null),
     hopUps: loadout.map((r) => r.hopUpDial),
+    bbWeights: loadout.map((r) => r.bbWeight),
   };
+}
+
+/** Sets the BB weight each replica shoots (grams, by loadout slot; missing slots and weights not offered keep theirs). */
+export function setBbWeights(a: Armament, grams: readonly number[]): void {
+  for (let i = 0; i < a.bbWeights.length && i < grams.length; i++) {
+    const g = grams[i]!;
+    if ((BB_WEIGHT.choices as readonly number[]).includes(g)) a.bbWeights[i] = g;
+  }
 }
 
 /** Sets each replica's hop-up dial (by loadout slot; missing slots keep theirs), kept within the dial's range. */
@@ -270,5 +281,6 @@ function fire(characterId: number, a: Armament, replica: ReplicaConfig, muzzle: 
   // The BB's path starts at the eye: its first step then catches cover right in front of the shooter
   // and anyone standing point-blank (even overlapping the shooter), and it never hits its owner.
   // Presentation draws it leaving the replica's muzzle.
-  spawnBB(ctx.bbs, characterId, muzzle.eye, dir, muzzleVelocity(replica), hopUpLift(replica, a.hopUps[a.active] ?? replica.hopUpDial), bbMass(replica));
+  const grams = a.bbWeights[a.active] ?? replica.bbWeight;
+  spawnBB(ctx.bbs, characterId, muzzle.eye, dir, muzzleVelocity(replica, grams), hopUpLift(replica, a.hopUps[a.active] ?? replica.hopUpDial), bbMass(replica, grams));
 }

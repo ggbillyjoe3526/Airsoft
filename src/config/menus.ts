@@ -9,9 +9,6 @@ import type { PowerSource } from './replicas';
 /** Shown in the title screen's corner: the release this build belongs to (moves with each tag, CLAUDE.md §7). */
 export const BUILD_LABEL = 'v0.1-alpha.3';
 
-/** The loadout screen's slots, in loadout order: slot i holds LOADOUT[i]. More replicas per slot come later. */
-export const LOADOUT_SLOTS: readonly { title: string }[] = [{ title: 'Primary' }, { title: 'Secondary' }];
-
 /** How a replica's power source shows on the loadout screen: its slot tag, and the placeholder row under it. */
 export const POWER_LABELS: Readonly<Record<PowerSource, { tag: string; row: string; value: string }>> = {
   electric: { tag: 'Electric', row: 'Power', value: 'Battery (electric)' },

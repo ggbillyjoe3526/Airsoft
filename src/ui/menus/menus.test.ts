@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { LOADOUT_SLOTS, POWER_LABELS, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
+import { POWER_LABELS, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { FOV_SETTING, QUALITY, QUALITY_LABELS, RENDER } from '../../config/render';
-import { AEG, GAS_PISTOL, LOADOUT } from '../../config/replicas';
+import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
 import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
@@ -34,10 +34,6 @@ describe('menu navigation', () => {
 });
 
 describe('menu data', () => {
-  it('has a loadout slot for every replica in the loadout', () => {
-    expect(LOADOUT_SLOTS).toHaveLength(LOADOUT.length);
-  });
-
   it('lists placeholders for every settings tab, and only "later" tabs have nothing built', () => {
     for (const tab of SETTINGS_TABS) {
       expect(SETTINGS_LATER[tab.id]).toBeDefined();

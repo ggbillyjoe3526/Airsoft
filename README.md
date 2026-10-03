@@ -117,8 +117,9 @@ Then open **http://localhost:4173**.
   moving targets are harder for bots to hit.
 - **Loadout, before a match:** the Loadout screen (**Start**, then **Loadout**) fits the rifle's optic (iron sights or a red dot) and
   sets each replica's **hop-up**: the backspin that keeps a BB flying flat. Out of the box the rifle is on target to
-  about 38 m and the pistol to about 25 m; turn it up too far and BBs rise and float. BB weight, grips, magazines and
-  gas type are listed there too, marked LATER: they come in later updates.
+  about 38 m and the pistol to about 25 m; turn it up too far and BBs rise and float. It also picks each replica's
+  **BB weight** (0.20 to 0.28 g): heavier BBs leave slower, carry a little further and need more hop. Grips, magazines and gas
+  type are listed there too, marked LATER: they come in later updates.
 
 ### Controls
 
@@ -169,7 +170,7 @@ the first public release. More modes, maps, replicas, loadouts and customisation
 arrives as a pull request that the owner reviews and merges. Later, development
 moves to an `alpha` branch and testing to a `beta` branch, and `main` only receives tested releases.
 
-**Not yet:** more maps or replicas, real art, and the menu items marked LATER (BB weight, grips, magazines, gas type,
+**Not yet:** more maps or replicas, real art, and the menu items marked LATER (grips, magazines, gas type,
 graphics quality, audio and accessibility settings).
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels and Attack / Defend balance still need
