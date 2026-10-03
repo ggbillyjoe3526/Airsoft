@@ -15,6 +15,8 @@ export class PointerLock {
   private wheel = 0;
   private readonly changeListeners = new Set<(locked: boolean) => void>();
   private readonly errorListeners = new Set<() => void>();
+  /** A request() is under way: its first try may fail and the second succeed, so errors wait for its outcome. */
+  private requesting = false;
 
   constructor(private readonly element: HTMLElement) {
     document.addEventListener('pointerlockchange', this.onLockChange);
@@ -32,19 +34,25 @@ export class PointerLock {
   }
 
   /**
-   * Must be called from a user gesture (click). Prefers raw, unaccelerated input where supported.
-   * Refusals (Chrome blocks re-locking for ~1 s after Esc) are reported through `onError`, either
-   * via the rejected promise or the `pointerlockerror` event, whichever the browser uses.
+   * Must be called from a user gesture (click). Prefers raw, unaccelerated input where supported, else tries
+   * again without it. Refusals (Chrome blocks re-locking for ~1 s after Esc) are reported through `onError` once
+   * both tries have failed: `pointerlockerror` events during the request are held back (the first try's would
+   * otherwise report a refusal the second try then overturns), and browsers that only fire the event, without a
+   * promise to reject, still report it.
    */
   async request(): Promise<void> {
+    this.requesting = true;
     try {
       await this.element.requestPointerLock({ unadjustedMovement: true });
     } catch {
       try {
         await this.element.requestPointerLock();
       } catch {
-        this.onLockError();
+        this.requesting = false;
+        this.reportError();
       }
+    } finally {
+      this.requesting = false;
     }
   }
 
@@ -125,8 +133,12 @@ export class PointerLock {
   };
 
   private readonly onLockError = (): void => {
-    for (const fn of this.errorListeners) fn();
+    if (!this.requesting) this.reportError();
   };
+
+  private reportError(): void {
+    for (const fn of this.errorListeners) fn();
+  }
 
   private readonly onMouseMove = (e: MouseEvent): void => {
     if (!this.locked) return;

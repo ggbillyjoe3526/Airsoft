@@ -202,7 +202,11 @@ export class Menus {
 
   private back(): void {
     const target = backTarget(this.current, this.settings.openedFrom);
-    if (target) this.go(target, true);
+    if (!target) return;
+    // No match is ever under way on New game, but a Play whose mouse lock was refused leaves one built and unstarted:
+    // leaving for the title unloads it, so no map stays loaded behind the title screen.
+    if (this.current === 'setup') this.opts.onLeaveMatch();
+    this.go(target, true);
   }
 
   /** Shows `screen`. Going back, the focus returns to where it was on that screen (the tile you opened, say). */

@@ -146,11 +146,7 @@ export class Game {
       if (locked) this.resume();
       else this.pause();
     });
-    this.pointer.onError(() => {
-      this.menus.showHint(LOCK_REFUSED_HINT);
-      // Play built a match that never started: unload it, so no map stays loaded behind New game (the next Play builds it again).
-      if (!this.started) this.leaveMatch();
-    });
+    this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
   }
 
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
@@ -202,7 +198,11 @@ export class Game {
 
   private resume(): void {
     const s = this.session;
-    if (!s) return;
+    if (!s) {
+      // Nothing to play (should not happen: Play builds the match before asking for the lock); give the mouse back.
+      this.pointer.release();
+      return;
+    }
     // "Play Again" on the result screen: the new match starts only once play really resumes.
     if (s.state.round.phase === 'matchOver') s.restart();
     this.started = true;
@@ -212,8 +212,9 @@ export class Game {
   }
 
   /**
-   * The player left the match (Quit to title screen on the pause menu, Change setup or Title screen on the result):
-   * the match is unloaded, and the next Play builds a new one from New game, where everything can change again.
+   * The player left the match (Quit to title screen on the pause menu, Change setup or Title screen on the result), or
+   * went Back from New game after a Play whose mouse lock was refused: the match is unloaded, and the next Play builds a
+   * new one from New game, where everything can change again.
    */
   private leaveMatch(): void {
     this.started = false;
