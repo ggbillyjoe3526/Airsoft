@@ -47,6 +47,11 @@ export class ChoiceDialog<T extends string> {
     this.noteLine = el('p', 'menu-dialog-note');
     this.noteLine.hidden = true;
     this.root.append(head, list, this.noteLine);
+    // A click on the dimmed backdrop (outside the box) closes it, like Esc.
+    this.root.addEventListener('click', (e) => {
+      const r = this.root.getBoundingClientRect();
+      if (e.target === this.root && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) this.close();
+    });
     this.refresh();
   }
 

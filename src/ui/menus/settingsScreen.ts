@@ -55,6 +55,7 @@ export class SettingsScreen {
       button.append(el('span', '', label));
       if (later) button.append(laterTag());
       button.addEventListener('click', () => this.showTab(id));
+      if (id === 'controls') button.dataset.autofocus = '';
       const panel = el('div', 'settings-tab-panel');
       panel.setAttribute('role', 'tabpanel');
       panel.append(el('h2', 'menu-panel-title', label));

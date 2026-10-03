@@ -15,7 +15,7 @@ describe('picking a match mode', () => {
   });
 });
 
-describe('the rules shown on the start screen', () => {
+describe('the rules shown on New game', () => {
   it('describe the match in progress while it is on, and the picked mode otherwise', () => {
     expect(modeToDescribe('attackDefend', 'elimination', true, false)).toBe('elimination'); // paused mid-match
     expect(modeToDescribe('attackDefend', 'elimination', true, true)).toBe('attackDefend'); // result screen

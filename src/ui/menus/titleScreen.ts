@@ -12,6 +12,7 @@ export class TitleScreen {
     centre.append(wordmark('menu-title-wordmark', 'h1'), el('p', 'menu-title-tagline', "One BB, you're hit. Call it, walk off, go again."));
     const start = menuButton('Start', 'primary', onStart, true);
     start.classList.add('menu-title-start');
+    start.dataset.autofocus = '';
     this.root.append(centre, start, el('p', 'menu-title-build', BUILD_LABEL));
   }
 }

@@ -7,6 +7,7 @@ import type { ReplicaConfig } from '../../config/replicas';
 import type { KeyBindings } from '../../input/keyBindings';
 import { loadoutSummary } from '../loadoutChoice';
 import { ChoiceDialog } from './choiceDialog';
+import { ControlsLine } from './controlsLine';
 import { LoadoutScreen } from './loadoutScreen';
 import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el } from './menuParts';
@@ -71,7 +72,7 @@ export class Menus {
       onSettings: () => this.openSettings('setup'),
       onBack: () => this.back(),
       onPlay: () => this.play(),
-    });
+    }, new ControlsLine(opts.bindings).root);
     this.modeDialog = new ChoiceDialog('Game mode', MATCH_MODES, opts.mode.initial, 'mode', (m) => {
       opts.mode.onChange(m);
       this.refreshSetup();
@@ -108,7 +109,10 @@ export class Menus {
       quality: opts.quality,
       onBack: () => this.back(),
     });
-    this.pause = new PauseScreen({ onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => opts.onQuit() });
+    this.pause = new PauseScreen(
+      { onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => opts.onQuit() },
+      new ControlsLine(opts.bindings).root,
+    );
     this.result = new ResultScreen({ onPlayAgain: () => this.play(), onChangeSetup: () => this.go('setup'), onTitle: () => this.go('title') });
     this.screens = {
       title: this.title.root,
@@ -120,6 +124,7 @@ export class Menus {
     };
     this.root.append(...Object.values(this.screens), this.modeDialog.root, this.difficultyDialog.root);
     parent.appendChild(this.root);
+    window.addEventListener('keydown', this.onKeyDown);
     this.describeMode(opts.mode.initial);
     this.refreshSetup();
   }
@@ -176,6 +181,7 @@ export class Menus {
   }
 
   dispose(): void {
+    window.removeEventListener('keydown', this.onKeyDown);
     this.settings.dispose();
     this.root.remove();
   }
@@ -197,10 +203,24 @@ export class Menus {
 
   private go(screen: MenuScreen): void {
     this.leave();
+    this.showHint('');
     this.current = screen;
     for (const [id, node] of Object.entries(this.screens)) node.hidden = id !== screen;
     this.root.hidden = false;
+    // The screen's main button takes the keyboard focus, so Enter does the obvious thing (Play, Resume …).
+    this.screens[screen].querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true });
   }
+
+  /**
+   * Esc on Loadout, Settings or New game acts as Back. A pop-up closes itself on Esc, and Settings swallows the Esc
+   * that cancels a key binding before it gets here.
+   */
+  private readonly onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code !== 'Escape' || this.root.hidden || this.modeDialog.root.open || this.difficultyDialog.root.open) return;
+    if (backTarget(this.current, this.settings.openedFrom) === null) return;
+    e.preventDefault();
+    this.back();
+  };
 
   /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */
   private leave(): void {

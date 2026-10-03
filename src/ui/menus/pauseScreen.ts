@@ -15,19 +15,22 @@ export class PauseScreen {
   private readonly status: HTMLParagraphElement;
   private readonly hint = hintLine();
 
-  constructor(actions: PauseActions) {
+  constructor(actions: PauseActions, controls: HTMLElement) {
     this.root = el('div', 'menu-screen menu-pause');
     this.root.hidden = true;
     const panel = el('div', 'menu-pause-panel');
+    const resume = menuButton('Resume', 'primary', actions.onResume);
+    resume.dataset.autofocus = '';
     this.status = el('p', 'menu-pause-status');
     panel.append(
       el('h1', 'menu-heading', 'Paused'),
       this.status,
-      menuButton('Resume', 'primary', actions.onResume),
+      resume,
       this.hint,
       menuButton('Settings', 'secondary', actions.onSettings),
       menuButton('Quit to title screen', 'secondary', actions.onQuit),
       el('p', 'menu-footer-note', 'Quitting ends the match. Loadout, mode and difficulty change between matches.'),
+      controls,
     );
     this.root.append(panel);
   }

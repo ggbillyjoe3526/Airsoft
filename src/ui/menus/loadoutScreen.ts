@@ -42,6 +42,7 @@ export class LoadoutScreen {
       button.type = 'button';
       button.append(el('span', 'loadout-slot-name', replica.name), el('span', 'loadout-slot-tag', POWER_LABELS[replica.power].tag));
       button.addEventListener('click', () => this.pick(slot));
+      if (slot === 0) button.dataset.autofocus = '';
       const more = el('div', 'loadout-slot-more', 'More replicas later');
       more.append(laterTag());
       slots.append(button, more);

@@ -41,7 +41,7 @@ export class SetupScreen {
   private readonly rules: HTMLParagraphElement;
   private readonly hint = hintLine();
 
-  constructor(actions: SetupActions) {
+  constructor(actions: SetupActions, controls: HTMLElement) {
     const page = menuPage('menu-setup', 'New game');
     this.root = page.root;
     this.mode = new SetupTile('Mode', 'Change', actions.onMode);
@@ -52,9 +52,11 @@ export class SetupScreen {
     const tiles = el('div', 'setup-tiles');
     tiles.append(this.mode.root, this.difficulty.root, this.loadout.root, settings.root);
     this.rules = el('p', 'setup-rules');
-    page.body.append(tiles, this.rules);
+    page.body.append(tiles, this.rules, controls);
     const play = el('div', 'menu-footer-end');
-    play.append(this.hint, menuButton('Play', 'primary', actions.onPlay, true));
+    const playButton = menuButton('Play', 'primary', actions.onPlay, true);
+    playButton.dataset.autofocus = '';
+    play.append(this.hint, playButton);
     page.footer.append(backButton(actions.onBack), play);
   }
 

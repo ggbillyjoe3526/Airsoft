@@ -1,13 +1,13 @@
 /**
  * Optics: accessories fitted to a replica, never part of its model (owner, 2026-10-03). In v0.1 there is one,
- * the red dot, fitted to the rifle from the start screen before a match. Aiming down sights (hold the right
+ * the red dot, fitted to the rifle on the Loadout screen before a match. Aiming down sights (hold the right
  * mouse button) works only with an optic fitted. More optics and full customisation come with loadouts (v0.3)
  * and customisation (v0.5).
  */
 export type OpticId = 'redDot';
 
 export interface OpticConfig {
-  /** Shown on the start screen. */
+  /** Shown on the Loadout screen. */
   name: string;
   /** How much aiming through it narrows the view: the main camera's zoom (1 = none). A red dot has no magnifier. */
   zoom: number;
@@ -18,7 +18,7 @@ export const OPTICS: Readonly<Record<OpticId, OpticConfig>> = {
   redDot: { name: 'Red dot', zoom: 1.25 },
 };
 
-/** What the start screen offers for the rifle's optic slot: nothing (iron sights) or an optic. */
+/** What the Loadout screen offers for the rifle's optic slot: nothing (iron sights) or an optic. */
 export type OpticChoice = 'none' | OpticId;
 
 export const OPTIC_CHOICES: readonly { id: OpticChoice; label: string; blurb: string }[] = [

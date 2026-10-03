@@ -21,8 +21,10 @@ export class ResultScreen {
     this.detail = el('p', 'menu-result-detail');
     centre.append(el('p', 'menu-kicker', 'Match over'), this.headline, this.detail);
     const buttons = el('div', 'menu-result-buttons');
+    const playAgain = menuButton('Play Again', 'primary', actions.onPlayAgain);
+    playAgain.dataset.autofocus = '';
     buttons.append(
-      menuButton('Play Again', 'primary', actions.onPlayAgain),
+      playAgain,
       menuButton('Change setup', 'secondary', actions.onChangeSetup),
       menuButton('Title screen', 'secondary', actions.onTitle),
     );

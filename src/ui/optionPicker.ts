@@ -16,7 +16,7 @@ export function loadChoice<T extends string>(field: SettingField, options: reado
 /**
  * A labelled row of buttons, one per option, and a line describing the picked one (plus an optional
  * note, e.g. that a change made mid-match waits). The choice is saved in the browser's settings as
- * `field`. Lives inside the start screen (bot difficulty, match mode, crouch key).
+ * `field`. Used in the menus (the optic on the Loadout screen, the crouch key and quality in Settings).
  */
 export class OptionPicker<T extends string> {
   readonly root: HTMLDivElement;

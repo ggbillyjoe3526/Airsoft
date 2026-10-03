@@ -142,7 +142,7 @@ export const HOP_UP = {
   maxDial: 1,
   dialStep: 0.05,
   /**
-   * For the start screen's readout: a BB counts as on target while it stays within this far (m) above or below
+   * For the Loadout screen's readout: a BB counts as on target while it stays within this far (m) above or below
    * the aim line, about half a torso. "On target to N m" is where it first leaves that band.
    */
   onTargetBand: 0.15,
