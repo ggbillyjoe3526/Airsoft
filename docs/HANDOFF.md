@@ -10,14 +10,16 @@ _Last updated: 2026-10-03 · branch `claude/m15b-menu-fixes-adsroh` (the end of 
 ## Where we are
 
 - **Phase 4 so far** (all merged): M12a–c weapon handling, M11 Depot rework, M15 menus, **M15b** (#18) and the
-  owner's feature picks as M18–M20 in the roadmap (#20). The owner asked (2026-10-03) for all remaining Phase 4
+  owner's feature picks in the roadmap (#20; his second batch, #22, adds M18 comfort and M22 squad orders and
+  renumbers the picks M19–M21). The owner asked (2026-10-03) for all remaining Phase 4
   milestones to be built: M15b → M17a → M17b in one thread, M13 audio in a parallel one.
 - **M15b** (critic 9.0): no map is loaded until Play. `src/matchSession.ts` is one match (meshes, lighting, physics,
   nav, sim, bots, presentation), built in the Play click from New game's choices and disposed when the player leaves
   the match; `game.ts` is the app around it. Pull request #18 was merged at round 2; this branch carries round 3
   (the pointer-lock request counting, `pause()` with no match, the review line and leftovers).
 - **Next: M17a** (replica slots, BB weight per replica; built, in review), then **M17b** attachments, then M13 audio,
-  M18 match info, M19 custom matches, M20 practice range, M14 art, M16 tutorial (ROADMAP Phase 4 order).
+  M18 comfort and accessibility, M19 match info, M20 custom matches, M21 practice range, M22 squad orders, M14 art,
+  M16 tutorial (ROADMAP Phase 4 order).
 - **M13 audio** (critic 9.0) is built in its own pull request (#19, branch `claude/m13-audio-rework-j2lmeh`). Sounds are
   data recipes (`config/sounds.ts`) rendered by the pure `audio/dsp.ts`, once per page (`SoundLibrary`, owned by
   `Game` with the volume sliders as `SfxSetup`); `Sfx` keeps one HRTF channel per character, muffled by rays. A new

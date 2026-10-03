@@ -21,7 +21,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) and the owner's M15 notes (M15b) are done; next is the Loadout feature (M17, added by the owner), then an audio rework (M13), the owner's feature picks (M18 match info, M19 custom matches, M20 practice range), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) and the owner's M15 notes (M15b) are done; next is the Loadout feature (M17, added by the owner), then an audio rework (M13), the owner's feature picks (M18 comfort and accessibility, M19 match info, M20 custom matches, M21 practice range, M22 squad orders), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -57,6 +57,9 @@ v0.1 focuses on core gameplay and foundations. Later content builds on those fou
   attachments (optics, grips, magazines), picked before a match. Gear and more parts come with later versions.
 - **Match info and options** (owner, 2026-10-03): a hit feed, teammate markers, an end-of-match summary, crosshair
   options, custom match settings (rounds, round time, team size, a ricochets setting) and a practice range.
+- **Comfort, accessibility and squad orders** (owner, 2026-10-03, second batch): the basic comfort and accessibility
+  settings, browser basics (pause on a hidden tab, fullscreen, graphics problems handled), and three orders for your
+  bot teammates.
 - **Modes:** the two that exist, Elimination and Attack / Defend.
 - **Field:** Depot, reworked to the field checklist below.
 - **Foundations:** magazines and reloads, a BB physics pass, and movement and positioning.
@@ -106,9 +109,11 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Next | |
 | Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Later | |
 | Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (pull request open; owner's playtest next) | 9.0 |
-| Alpha · Phase 4 · M18 Match info (owner's feature picks, 2026-10-03): hit feed, teammate markers, end-of-match summary, crosshair options | Later | |
-| Alpha · Phase 4 · M19 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
-| Alpha · Phase 4 · M20 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
+| Alpha · Phase 4 · M18 Comfort, accessibility and browser basics (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, colour-blind options, on-screen sound cues, pause on a hidden tab, fullscreen | Later | |
+| Alpha · Phase 4 · M19 Match info (owner's feature picks, 2026-10-03): hit feed, teammate markers, end-of-match summary, crosshair options | Later | |
+| Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
+| Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
+| Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Later | |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
@@ -264,7 +269,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 6 | Perhaps eventually skins for the replicas and the outfit | Not built in v0.1: a greyed Skins row (LATER) in M17b; the skins themselves in v0.5 |
 
 **Order** (owner picked weapon handling first, 2026-10-03; he pulled the menus forward the same day and added the
-Loadout feature after the M15 notes, then picked M18–M20 from a feature research list): **M12a → M12b → M11 → M15 → M15b → M17a → M17b → M13 → M18 → M19 → M20 → M14 → M16.** Weapon handling comes
+Loadout feature after the M15 notes, then picked M18–M22 from a feature research list and his own gap list): **M12a → M12b → M11 → M15 → M15b → M17a → M17b → M13 → M18 → M19 → M20 → M21 → M22 → M14 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
 the Depot layout sketch. The Depot rework follows once the sketch is approved (approved 2026-10-03). The audio rework comes after it so
 movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
@@ -276,16 +281,20 @@ LATER rows while that screen is fresh from M15 and M15b; most of its groundwork 
 drag, lift and spin since M9, the optic slot since M12b, the hop-up dials since M12c); it is gameplay, which comes before
 the dressing; and the audio rework (magazine sounds, a hi-cap's rattle), the art pass (models for every part) and the
 tutorial can then cover the parts, instead of being redone for them.
-The owner's feature picks (M18, M19, M20) come after the audio rework, which was already under way when he picked them,
+The owner's feature picks (M19, M20, M21) come after the audio rework, which was already under way when he picked them,
 and before the art pass and the tutorial, for the same reason as the Loadout: they are gameplay and screens that the art
 pass then dresses and the tutorial then explains (the tutorial can use the practice range).
+The second batch (2026-10-03) renumbered the first picks (match info, custom matches and practice range were M18–M20 when
+merged) so that the comfort and accessibility settings (M18) come first among them: they are the basics every player
+looks for, and they don't wait on any other system. Squad orders (M22) come last because they build on the bots' team
+plans and on the custom matches' teammate difficulty.
 
 **The owner's feature picks (2026-10-03, from a researched list of what airsoft players and FPS fans expect) and where
 each one went:**
 
 | # | Note | Goes to |
 |---|---|---|
-| 1 | BB ricochets as a setting in the menus; off by default (ricochets don't count) | M19 |
+| 1 | BB ricochets as a setting in the menus; off by default (ricochets don't count) | M20 |
 | 2 | Keep the chrono before a match | v0.3 (unchanged) |
 | 3 | Keep the planned game modes for later | v0.2 (unchanged: TDM, Capture the Flag, Domination, Bomb) |
 | 4 | Medic mode with a bleed-out timer, as a future feature | v0.2 (moved from IDEAS) |
@@ -297,15 +306,43 @@ each one went:**
 | 10 | Pouches that allow extra gear. Later | v0.3 (gear) |
 | 11 | Gas simulation: fast shooting means less power | v0.3 |
 | 12 | Tracer BBs as a loadout option | v0.3 (with the chrono; at their best on night maps) |
-| 13 | Hit feed | M18 |
-| 14 | End-of-match summary screen | M18 (moved from IDEAS) |
-| 15 | Teammate markers | M18 |
-| 16 | Custom match settings: rounds, round time, team size and the like | M19 |
-| 17 | A practice range to test replicas and the loadout | M20 (moved up from v0.3) |
-| 18 | Crosshair customisation in the settings menu: size, colour, shape and the like | M18 |
+| 13 | Hit feed | M19 |
+| 14 | End-of-match summary screen | M19 (moved from IDEAS) |
+| 15 | Teammate markers | M19 |
+| 16 | Custom match settings: rounds, round time, team size and the like | M20 |
+| 17 | A practice range to test replicas and the loadout | M21 (moved up from v0.3) |
+| 18 | Crosshair customisation in the settings menu: size, colour, shape and the like | M19 |
 | 19 | Team communication (wheel, pings, hand signals) for later versions | Unchanged ([when the bots are ready](#when-the-bots-are-ready-team-communication)) |
 | 20 | Esport difficulty for later | Unchanged (parked) |
 | 21 | Absolutely no multiplayer | Confirmed (DECISIONS) |
+
+**The owner's second batch (2026-10-03, his own gap list, confirmed "yes to all") and where each item went:**
+
+| # | Note | Goes to |
+|---|---|---|
+| 1 | No volume slider (master fixed at 0.7) | M13 (done, #19: Master, Effects and Interface volume on Settings → Audio) |
+| 2 | Invert mouse | M18 |
+| 3 | A way to turn off camera shake and weapon bob | M18 (Reduced motion) |
+| 4 | Toggle or hold for aim and sprint, not only crouch | M18 |
+| 5 | The Accessibility tab has no milestone; colour-blind options (the magazine gauges rely on colour) | M18 |
+| 6 | Crosshair options: colour, size, dot only | M19 (already there) |
+| 7 | On-screen cues for sounds (footsteps, shots, hit calls) | M18 |
+| 8 | Match setup: team size, rounds to win, round time | M20 (already there) |
+| 9 | A separate difficulty for your teammates and for your opponents | M20 |
+| 10 | A hold-Tab scoreboard | M19 |
+| 11 | Numbers at the end of a round and a match: accuracy, hits, BBs fired, time alive | M19 |
+| 12 | Local records saved between sessions (wins per difficulty, best accuracy) | M19 |
+| 13 | An elimination feed in airsoft style ("Orange 2 called HIT · Blue 1") | M19 (the hit feed, in that wording) |
+| 14 | Pause when the tab is hidden | M18 |
+| 15 | Handle a lost graphics context (audit W-01) | M18 (no longer "fix when touched") |
+| 16 | Warn when hardware acceleration is off | M18 |
+| 17 | A fullscreen toggle | M18 |
+| 18 | Orders for bot teammates: follow me, hold here, regroup | M22 (the wheel, pings and hand signals stay later) |
+| 19 | Practice range; the tutorial could end in a free-practice yard | M21 (already there) |
+| 20 | Bots hear through walls with no muffling; at higher difficulties it feels like wallhacking | M22 |
+| 21 | For a future Esport difficulty: sensitivity as cm/360 or "same as CS2 / Valorant", aim stats, first-shot spread tuned for that tier, bot hearing through walls fixed | cm/360 in M18; the rest as notes on the parked Esport idea (IDEAS); hearing in M22 |
+| 22 | Bug: the HUD says "press R to reload" after reload is rebound | Fixed in its own pull request (not a milestone) |
+| 23 | Mouse buttons can't be rebound (fire and aim fixed; side buttons unused) | M18 |
 
 - **M12. Weapon handling** (owner's playtest notes 1, 2, 3, 4, 5 and 7). Split in two so the quick changes can be
   played first. Bots play by the same handling rules where they apply.
@@ -457,39 +494,68 @@ each one went:**
     - The power or gas type row stays LATER (the v0.3 platforms).
     - Each part shows on the held replica as simple geometry; the art pass (M14) models them properly.
   - The playtest guide gets a Loadout section for each half.
-- **M18. Match info** (the owner's feature picks 13, 14, 15 and 18). What any FPS player expects to see; first guesses
+- **M18. Comfort, accessibility and browser basics** (the owner's second batch, items 2–5, 7, 14–17, 21 and 23). The
+  settings every player looks for first (PCGamingWiki's list, the Game Accessibility Guidelines' basic tier). It fills
+  the Controls and Accessibility tabs' LATER rows; volume comes with M13.
+  - **Controls:** invert mouse; toggle or hold for aiming down sights and for sprint (as crouch already has); fire,
+    aim and any other action bindable to mouse buttons, side buttons included; the sensitivity also shown as cm/360
+    (worked out from the mouse's DPI, which the player enters), so it can match another shooter.
+  - **Reduced motion:** turns off camera shake and weapon bob (and softens the lean's roll).
+  - **Colour-blind options:** team colour sets that stay apart for the common kinds of colour blindness, and nothing
+    told by colour alone: the spare-magazine gauges get a shape or label for "low" and "next" (KNOWN_ISSUES).
+  - **On-screen sound cues** (opt-in): a marker at the screen edge pointing to footsteps, shots and hit calls, the way
+    the ears do today. Off by default so playing by ear stays the norm.
+  - **Browser basics:** the game pauses when its tab is hidden; a fullscreen toggle (Settings and a key); a lost
+    graphics context shows a "graphics reset" message and recovers (audit W-01, moved here from "fix when touched");
+    a warning on the title screen when the browser runs without hardware acceleration (the game would crawl).
+- **M19. Match info** (the owner's feature picks 13, 14, 15 and 18; second batch 10–13). What any FPS player expects to see; first guesses
   to tune in play.
-  - **Hit feed:** a short list in a corner of who hit whom ("Orange 2 hit Blue 1"), newest at the top, each line fading
+  - **Hit feed:** a short list in a corner of who hit whom, in airsoft style ("Orange 2 called HIT · Blue 1"), newest at the top, each line fading
     after a few seconds. Friendly hits are marked as such, and lines carry a team label as well as the team colour, so
     colour isn't the only cue.
   - **Teammate markers:** a small team-coloured marker with the name over each teammate still in play, so you know
     where they are and don't knock them out (friendly fire counts). It greys out when they're hit. Enemies never get
     one.
   - **End-of-match summary:** a screen between the last round and the result menu (and reachable from it): for every
-    player, hits, times hit, friendly hits, BBs fired and accuracy, plus rounds won; your line stands out.
+    player, hits, times hit, friendly hits, BBs fired, accuracy and time alive, plus rounds won; your line stands out.
+    The same numbers for the last round show between rounds.
+  - **Hold-Tab scoreboard:** the same table mid-match, while Tab is held (rebindable).
+  - **Local records,** saved in the browser between sessions: wins and losses per difficulty and mode, best accuracy,
+    longest win streak. Records only, never levels or unlocks (design rules).
   - **Crosshair options** on the Settings screen, with a live preview: shape (cross, dot, circle, cross with a dot),
     size, thickness, gap, colour and outline. It keeps opening and closing with the real spread, as today. Saved in the
     settings store.
-- **M19. Custom matches** (the owner's feature picks 1 and 16)
+- **M20. Custom matches** (the owner's feature picks 1 and 16; second batch 9)
   - **A Match pop-up** on New game, beside Mode, Map, Difficulty, Loadout and Settings, saved like the other choices.
     First guesses: rounds to win (3, 5, 7 or 10; 5 by default), round time (1:30 to 5:00; 2:30 by default), team size
     (1v1, 2v2 or 3v3 on Depot; 3v3 by default) and friendly fire (on by default, as at a real site). Attack / Defend's
     half-time follows the rounds to win. Bigger teams wait for bigger fields (the 4v4 / 5v5 experiment, v0.2).
+  - **Teammate and opponent difficulty:** Difficulty picks a level for your team's bots and one for the other team's
+    (both Normal by default; one level drives every bot today, DECISIONS 2026-10-01).
   - **BB ricochets:** BBs bounce off hard surfaces (concrete, steel containers) and lose speed doing it, instead of
     stopping dead as today. A **Ricochets count** setting in the Match pop-up decides whether a bounced BB knocks someone
     out, the way fields set their own rule. **Off by default** (owner): a ricochet that hits you ticks but you stay in.
     Bots follow the same rule.
   - Layout and headless match tests cover every team size.
-- **M20. Practice range** (the owner's feature pick 17; moved up from v0.3)
+- **M21. Practice range** (the owner's feature pick 17; moved up from v0.3)
   - A small range of its own, opened from the title screen: lanes with distance markers out past Depot's longest
     sightlines, steel targets that ring when hit and standing and crouched figure targets.
   - Open the Loadout screen from the range (not a match, so the never-mid-match rule doesn't apply) and try a replica,
     BB weight, hop-up or part straight away; magazines refill and a readout gives the last shot's distance.
-  - The tutorial (M16) can take place here.
+  - The tutorial (M16) can take place here and ends in free practice on it.
+- **M22. Squad orders** (the owner's second batch, items 18 and 20). A small first step towards team communication;
+  the wheel, pings and hand signals still wait until the bots can follow them.
+  - **Three orders** for your bot teammates, each on a key (rebindable): **Follow me** (they move with you and cover
+    your back), **Hold here** (they hold the spot you look at, or their own if you look at nothing) and **Regroup**
+    (they come back to you). A short voice line or hand sign confirms, and the HUD shows the current order.
+    Without an order the bots play their team plan as today.
+  - **Hearing through walls:** bots hear footsteps and gunfire through walls at a shorter range, using the wall rays
+    the audio rework (M13) casts for muffling, so they no longer seem to hear through walls like a wallhack
+    (KNOWN_ISSUES). The headless match guards are re-measured on Depot.
 - **M16. Onboarding:** a short tutorial.
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
-  in M12a), a "graphics reset" message on a lost WebGL context (W-01), shader warm-up if the overlay shows a hitch
+  in M12a), a "graphics reset" message on a lost WebGL context (W-01, now in M18), shader warm-up if the overlay shows a hitch
   (W-04), and reusing audio nodes in M13 (W-03).
 
 When the owner calls the game feature complete, alpha ends.
@@ -566,7 +632,7 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
 - **Grenades, smoke and flash bombs** (owner, 2026-10-03): airsoft-style throwables, such as a CO2 sound grenade (a
   bang, no shrapnel), smoke for cover and a flash bomb. How each one knocks players out or blinds them, how many you
   carry and how bots use them are designed when they come.
-- The practice range moved up into v0.1 (M20).
+- The practice range moved up into v0.1 (M21).
 - **Suppressors** with their own sound, built on the M9 groundwork.
 
 ### Proposed v0.4: More fields
@@ -590,7 +656,8 @@ covers part of "CQB warehouse / industrial". Which fields, and in what order, is
 ### When the bots are ready: team communication
 
 An action wheel or menu, pings and hand signals, with bots that act on them. This is built only once
-the bot AI is good enough to follow the calls. It can join whichever version that happens in.
+the bot AI is good enough to follow the calls. It can join whichever version that happens in. Three simple orders
+(follow me, hold here, regroup) come first, in v0.1 (M22, owner, 2026-10-03).
 
 ### Parked ideas
 
