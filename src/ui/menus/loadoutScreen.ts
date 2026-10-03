@@ -22,12 +22,11 @@ export interface LoadoutOptions {
 /**
  * The Loadout screen: the replica in each slot (primary, secondary) on the left, and what can be changed on the
  * picked one on the right. Built today: the optic (on a replica with a rail) and the hop-up dial; BB weight, grip,
- * magazine and power or gas are listed as coming later. Choices save as they are made and are fitted at once,
- * since the screen is reached only between matches.
+ * magazine and power or gas are listed as coming later. Choices save as they are made; the next Play fits them
+ * (the screen is reached only through New game, never mid-match).
  */
 export class LoadoutScreen {
   readonly root: HTMLDivElement;
-  private opticPicker: OptionPicker<OpticChoice> | null = null;
   private readonly slotButtons: HTMLButtonElement[] = [];
   private readonly panels: HTMLDivElement[] = [];
 
@@ -53,9 +52,7 @@ export class LoadoutScreen {
       head.append(el('h2', 'menu-panel-title', `Customise: ${replica.name}`), el('span', 'loadout-replica-summary', replicaSummary(replica)));
       panel.append(head);
       if (replica.opticMount) {
-        const picker = new OptionPicker('Optic', OPTIC_CHOICES, opts.optic.initial, 'optic', opts.optic.onChange);
-        this.opticPicker = picker;
-        panel.append(menuRow('Optic', '', picker.root));
+        panel.append(menuRow('Optic', '', new OptionPicker('Optic', OPTIC_CHOICES, opts.optic.initial, 'optic', opts.optic.onChange).root));
       } else {
         panel.append(laterRow('Optic', '', LOADOUT_LATER.noOptic));
       }
@@ -74,11 +71,6 @@ export class LoadoutScreen {
     page.body.append(columns);
     page.footer.append(backButton(opts.onBack), el('p', 'menu-footer-note', 'Changes save as you make them.'));
     this.pick(0);
-  }
-
-  /** A note with the optic, e.g. that a change waits for the next round (empty to clear). */
-  setOpticNote(text: string): void {
-    this.opticPicker?.setNote(text);
   }
 
   /** Shows the replica in `slot` for customising. */

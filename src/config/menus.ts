@@ -40,10 +40,8 @@ export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: bo
 export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: string; help: string }[]>> = {
   controls: [{ label: 'Invert mouse', help: 'Up and down swapped.' }],
   keys: [],
-  graphics: [
-    { label: 'Field of view', help: 'How wide you see.' },
-    { label: 'Brightness', help: '' },
-  ],
+  // Quality is listed greyed out too, with the preset in use (settingsScreen.ts).
+  graphics: [],
   audio: [
     { label: 'Master volume', help: 'Comes with the audio rework.' },
     { label: 'Effects volume', help: '' },

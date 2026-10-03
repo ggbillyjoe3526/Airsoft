@@ -20,7 +20,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) are done; next are the owner's M15 notes (M15b), then the Loadout feature (M17, added by the owner), an audio rework (M13), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes and his Loadout request are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) and the owner's M15 notes (M15b) are done; next is the Loadout feature (M17, added by the owner), then an audio rework (M13), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes and his Loadout request are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -99,8 +99,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M12c The owner's M12b notes: the loadout off the pause screen, BBs drawn from the muzzle, the pistol facing forward, hop-up dials | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Done (merged; owner played it: five notes, for M15b and later) | 9.1 |
-| Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Next | |
-| Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Later (after M15b) | |
+| Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Done (pull request; owner to play it) | CRITIC |
+| Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Next | |
 | Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Later | |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
@@ -362,7 +362,7 @@ tutorial can then cover the parts, instead of being redone for them.
   - **Pause** (Esc): Resume, Settings, Quit to title screen. **Result:** Play Again, Change setup, Title screen.
   - Headings and labels in capitals (owner); descriptions as written.
   - Still to do: the settings and parts marked LATER, as their systems arrive (audio in M13, parts with loadouts).
-- **M15b. The owner's M15 notes** (above, notes 1–4). Not built yet; the next step.
+- **M15b. The owner's M15 notes** (above, notes 1–4). Built as below; the owner plays it next.
   - **No map until Play:** the title and New game screens stand on their own, with no field loaded or drawn behind
     them. Pressing Play builds the picked map with the picked mode, difficulty, loadout and settings, then starts the
     match. Quit to title screen and Change setup unload it, so the next Play can load a different map (no leaks:
@@ -383,6 +383,8 @@ tutorial can then cover the parts, instead of being redone for them.
     cost (Phase 3 audit C-04). The picker comes back with the art pass (M14) or the beta performance work, when
     there is real graphics work to scale.
   - The playtest guide's "Menus (M15)" section is updated to match.
+  - Also: mode, difficulty and loadout are only picked on New game, with no match loaded, so the old "starts with the
+    next round / match" rules and notes are gone; Play always builds the match from what is picked.
 - **M17. Loadout** (the owner's Loadout request, above; added 2026-10-03 as an alpha feature). The Loadout screen from
   M15 becomes a working loadout: what you carry and how it is set up, picked between matches (never mid-match, the M12c
   rule), saved like the other choices, and free from the start (no unlocks, DECISIONS 2026-10-01). Parts are trade-offs,

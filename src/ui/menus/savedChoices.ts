@@ -2,7 +2,8 @@ import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty } from '../../config/
 import { CROUCH_MODES, type CrouchMode, DEFAULT_CROUCH_MODE, MOUSE } from '../../config/controls';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING, DEFAULT_OPTIC, OPTIC_CHOICES, type OpticChoice } from '../../config/optics';
-import { DEFAULT_QUALITY, QUALITY_CHOICES, type QualityPreset } from '../../config/render';
+import { FOV_SETTING, RENDER } from '../../config/render';
+import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
 import { loadSetting, numberIn } from '../../settings/storage';
 import { loadChoice } from '../optionPicker';
 
@@ -26,9 +27,14 @@ export function loadOptic(): OpticChoice {
   return loadChoice('optic', OPTIC_CHOICES, DEFAULT_OPTIC);
 }
 
-/** The render quality preset picked on the Settings screen (a `?quality=` in the address wins for that visit). */
-export function loadQuality(): QualityPreset {
-  return loadChoice('quality', QUALITY_CHOICES, DEFAULT_QUALITY);
+/** The map picked on New game. */
+export function loadMap(): MapId {
+  return loadChoice('map', MAPS, DEFAULT_MAP);
+}
+
+/** The field of view (horizontal degrees on a 16:9 screen). */
+export function loadFov(): number {
+  return loadSetting('fov', numberIn(FOV_SETTING.min, FOV_SETTING.max), RENDER.horizontalFov16x9);
 }
 
 export function loadSensitivity(): number {

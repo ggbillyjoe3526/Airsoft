@@ -15,7 +15,7 @@ export class PauseScreen {
   private readonly status: HTMLParagraphElement;
   private readonly hint = hintLine();
 
-  constructor(actions: PauseActions, controls: HTMLElement) {
+  constructor(actions: PauseActions) {
     this.root = el('div', 'menu-screen menu-pause');
     this.root.hidden = true;
     const panel = el('div', 'menu-pause-panel');
@@ -30,7 +30,6 @@ export class PauseScreen {
       menuButton('Settings', 'secondary', actions.onSettings),
       menuButton('Quit to title screen', 'secondary', actions.onQuit),
       el('p', 'menu-footer-note', 'Quitting ends the match. Loadout, mode and difficulty change between matches.'),
-      controls,
     );
     this.root.append(panel);
   }
