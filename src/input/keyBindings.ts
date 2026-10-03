@@ -35,6 +35,12 @@ export class KeyBindings {
     return this.codes(action)[0] ?? '';
   }
 
+  /** The readable name of `action`'s main key ("R", "Left Shift"), or '' if it's unbound. */
+  label(action: Action): string {
+    const code = this.primary(action);
+    return code ? keyLabel(code) : '';
+  }
+
   /** The action `code` is bound to, if any. */
   actionOf(code: string): Action | undefined {
     for (const [action, codes] of this.map) if (codes.includes(code)) return action;

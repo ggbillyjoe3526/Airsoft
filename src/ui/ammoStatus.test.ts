@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HUD } from '../config/render';
 import { AEG, GAS_PISTOL } from '../config/replicas';
-import { isLowAmmo } from './ammoStatus';
+import { emptyMagHint, isLowAmmo } from './ammoStatus';
 
 describe('low ammo', () => {
   it('is at most the configured fraction of a full magazine, rounded up', () => {
@@ -18,5 +18,16 @@ describe('low ammo', () => {
     expect(count).toBeLessThanOrEqual(Math.ceil(AEG.magSize * HUD.lowAmmoFraction));
     expect(isLowAmmo(count, AEG.magSize)).toBe(true);
     expect(isLowAmmo(count, GAS_PISTOL.magSize)).toBe(false);
+  });
+});
+
+describe('empty magazine hint', () => {
+  it('names the reload key the player has bound', () => {
+    expect(emptyMagHint('R')).toBe('Empty: pull the trigger or press R to reload');
+    expect(emptyMagHint('X')).toContain('press X to reload');
+  });
+
+  it('names no key when reload is unbound', () => {
+    expect(emptyMagHint('')).toBe('Empty: pull the trigger to reload');
   });
 });
