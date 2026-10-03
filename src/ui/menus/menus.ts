@@ -56,6 +56,9 @@ export class Menus {
   private optic: OpticChoice;
   private readonly dials: number[];
   private current: MenuScreen = 'title';
+  /** What had the focus on each screen when it was left, so Back puts the keyboard where it was. */
+  private readonly lastFocus = new Map<MenuScreen, HTMLElement>();
+  private readonly controls: ControlsLine[] = [];
 
   constructor(
     parent: HTMLElement,
@@ -72,7 +75,7 @@ export class Menus {
       onSettings: () => this.openSettings('setup'),
       onBack: () => this.back(),
       onPlay: () => this.play(),
-    }, new ControlsLine(opts.bindings).root);
+    }, this.controlsLine().root);
     this.modeDialog = new ChoiceDialog('Game mode', MATCH_MODES, opts.mode.initial, 'mode', (m) => {
       opts.mode.onChange(m);
       this.refreshSetup();
@@ -105,13 +108,19 @@ export class Menus {
       bindings: opts.bindings,
       sensitivity: opts.sensitivity,
       aimSensitivity: opts.aimSensitivity,
-      crouch: opts.crouch,
+      crouch: {
+        initial: opts.crouch.initial,
+        onChange: (m) => {
+          opts.crouch.onChange(m);
+          for (const line of this.controls) line.setCrouchMode(m);
+        },
+      },
       quality: opts.quality,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen(
       { onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => opts.onQuit() },
-      new ControlsLine(opts.bindings).root,
+      this.controlsLine().root,
     );
     this.result = new ResultScreen({ onPlayAgain: () => this.play(), onChangeSetup: () => this.go('setup'), onTitle: () => this.go('title') });
     this.screens = {
@@ -198,17 +207,27 @@ export class Menus {
 
   private back(): void {
     const target = backTarget(this.current, this.settings.openedFrom);
-    if (target) this.go(target);
+    if (target) this.go(target, true);
   }
 
-  private go(screen: MenuScreen): void {
+  private controlsLine(): ControlsLine {
+    const line = new ControlsLine(this.opts.bindings, this.opts.crouch.initial);
+    this.controls.push(line);
+    return line;
+  }
+
+  /** Shows `screen`. Going back, the focus returns to where it was on that screen (the tile you opened, say). */
+  private go(screen: MenuScreen, returning = false): void {
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && this.screens[this.current].contains(focused)) this.lastFocus.set(this.current, focused);
     this.leave();
     this.showHint('');
     this.current = screen;
     for (const [id, node] of Object.entries(this.screens)) node.hidden = id !== screen;
     this.root.hidden = false;
     // The screen's main button takes the keyboard focus, so Enter does the obvious thing (Play, Resume …).
-    this.screens[screen].querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true });
+    const previous = returning ? this.lastFocus.get(screen) : undefined;
+    (previous ?? this.screens[screen].querySelector<HTMLElement>('[data-autofocus]'))?.focus({ preventScroll: true });
   }
 
   /**

@@ -1,4 +1,4 @@
-import type { Action } from '../../config/controls';
+import type { Action, CrouchMode } from '../../config/controls';
 import { type KeyBindings, keyLabel } from '../../input/keyBindings';
 import { el } from './menuParts';
 
@@ -15,9 +15,11 @@ const CONTROLS: readonly { keys: readonly Action[] | string; does: string }[] = 
   { keys: ['crouch'], does: 'crouch' },
   { keys: ['leanLeft', 'leanRight'], does: 'lean' },
   { keys: ['jump'], does: 'jump' },
-  { keys: ['slot1', 'slot2'], does: 'switch' },
+  { keys: ['slot1', 'slot2'], does: 'rifle / pistol' },
   { keys: 'Esc', does: 'pause' },
 ];
+
+const CROUCH_KEYS = CONTROLS.find((c) => c.does === 'crouch')!.keys;
 
 /**
  * A short line of the main controls with the player's current keys (New game and the pause menu), so nobody presses
@@ -26,21 +28,31 @@ const CONTROLS: readonly { keys: readonly Action[] | string; does: string }[] = 
 export class ControlsLine {
   readonly root: HTMLParagraphElement;
 
-  constructor(private readonly bindings: KeyBindings) {
+  constructor(
+    private readonly bindings: KeyBindings,
+    private crouchMode: CrouchMode,
+  ) {
     this.root = el('p', 'menu-controls');
     bindings.onChange(() => this.render());
     this.render();
   }
 
+  /** The crouch key's behaviour changed in Settings. */
+  setCrouchMode(mode: CrouchMode): void {
+    this.crouchMode = mode;
+    this.render();
+  }
+
   private render(): void {
-    const parts: Node[] = [];
-    for (const { keys, does } of CONTROLS) {
-      if (parts.length > 0) parts.push(document.createTextNode(' · '));
-      if (typeof keys === 'string') parts.push(el('kbd', '', keys));
-      else for (const action of keys) parts.push(el('kbd', '', keyLabel(this.bindings.primary(action))));
-      parts.push(document.createTextNode(` ${does}`));
-    }
-    parts.push(document.createTextNode('. Change any key in Settings.'));
-    this.root.replaceChildren(...parts);
+    // One unbreakable chunk per control, so a line never wraps between a key and what it does.
+    const items = CONTROLS.map(({ keys, does }) => {
+      const item = el('span', 'menu-controls-item');
+      if (typeof keys === 'string') item.append(el('kbd', '', keys));
+      else for (const action of keys) item.append(el('kbd', '', keyLabel(this.bindings.primary(action))));
+      const text = keys === CROUCH_KEYS ? `${does} (${this.crouchMode})` : does;
+      item.append(` ${text}`);
+      return item;
+    });
+    this.root.replaceChildren(...items, el('span', 'menu-controls-item', 'Change any key in Settings.'));
   }
 }

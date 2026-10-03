@@ -58,7 +58,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await loadout.getByRole('button', { name: 'Back' }).click();
   await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('Red dot');
 
-  // Settings: its own screen with tabs; Esc works as Back and returns to New game, with Play focused.
+  // Settings: its own screen with tabs; Esc works as Back and returns to New game, with focus back on the Settings tile.
   await setup.getByRole('button', { name: /Settings/i }).click();
   const settings = page.locator('.menu-settings');
   await expect(settings).toBeVisible();
@@ -66,7 +66,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.locator('.key-row').first()).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
-  await expect(setup.getByRole('button', { name: 'Play', exact: true })).toBeFocused();
+  await expect(setup.getByRole('button', { name: /Settings/i })).toBeFocused();
 
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });

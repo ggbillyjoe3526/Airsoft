@@ -358,6 +358,21 @@ body {
   color: var(--menu-faint);
 }
 
+.menu-controls-item {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* The dot sits at the end of an item, so a wrapped line never starts with one. */
+.menu-controls-item:not(:last-child)::after {
+  content: '·';
+  margin: 0 8px;
+}
+
+.menu-controls kbd + kbd {
+  margin-left: 2px;
+}
+
 .menu-pause-panel .menu-controls {
   margin-top: 4px;
   font-size: 13px;
@@ -879,6 +894,55 @@ kbd {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
+}
+
+/* Short windows (a laptop with the browser's bars): tighter pages, so Play and Back stay on screen. */
+@media (max-height: 800px) {
+  .menu-page {
+    gap: 12px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .menu-heading {
+    font-size: 32px;
+  }
+
+  .setup-tile {
+    min-height: 0;
+    padding: 20px 22px;
+  }
+
+  .setup-tile-value {
+    font-size: 24px;
+  }
+
+  .setup-rules {
+    margin-top: 14px;
+    font-size: 15px;
+  }
+
+  .menu-controls {
+    margin-top: 8px;
+    line-height: 1.8;
+  }
+
+  .menu-pause-panel {
+    gap: 10px;
+  }
+
+  .menu-panel {
+    padding: 18px 24px;
+  }
+
+  .menu-row {
+    min-height: 48px;
+    padding: 6px 0;
+  }
+
+  .key-row {
+    min-height: 36px;
+  }
 }
 
 @media (max-width: 900px) {
