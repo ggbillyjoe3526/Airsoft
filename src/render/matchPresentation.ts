@@ -1,28 +1,36 @@
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { HitConfig } from '../config/hits';
+import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
-import { TEAM_COLORS, TEAMS } from '../config/teams';
+import { TEAM_COLORS, TEAM_CSS } from '../config/teams';
 import type { WorldQuery } from '../sim/armament';
-import type { Character } from '../sim/character';
+import { type Character, eyeHeight } from '../sim/character';
 import type { RoundRules } from '../sim/round';
 import type { GameState } from '../sim/state';
 import { wrapAngle } from '../sim/vec';
+import type { MatchStats } from '../stats/matchStats';
 import { FlagMarker } from '../ui/flagMarker';
+import { HitFeed } from '../ui/hitFeed';
 import { HitFeedback } from '../ui/hitFeedback';
+import { MatchBoard } from '../ui/matchBoard';
 import { roundBanner } from '../ui/roundBanner';
 import { Scoreboard } from '../ui/scoreboard';
+import { rosterNames, statsBlocks } from '../ui/statsRows';
+import { TeammateMarkers } from '../ui/teammateMarkers';
 import { CharacterRenderer } from './characterRenderer';
 import { FlagRenderer } from './flagRenderer';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 
-const TEAM_CSS = TEAM_COLORS.map((c) => `#${c.toString(16).padStart(6, '0')}`);
+/** What the scoreboard over the field shows: nothing, the round just played, or the match so far. */
+type BoardView = 'none' | 'round' | 'match';
 
 /**
  * Everything about the match that isn't your own replica: other players' figures, hit feedback (hit
- * marker, being hit), spectating once you're out, round messages, and in flag mode the pole and its
- * screen marker. Reads state and events only.
+ * marker, being hit), spectating once you're out, round messages, in flag mode the pole and its
+ * screen marker, and the match info (M19): the hit feed, teammate markers and the scoreboard over the field.
+ * Reads state, events and the match stats only.
  */
 export class MatchPresentation {
   private readonly characters: CharacterRenderer;
@@ -32,8 +40,16 @@ export class MatchPresentation {
   private readonly flag: FlagRenderer;
   private readonly marker: FlagMarker;
   private readonly markerAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
-  /** Display names by character id ("Blue 2", "you"). */
-  private readonly names = new Map<number, string>();
+  private readonly feed: HitFeed;
+  private readonly board: MatchBoard;
+  /** What the board shows now, and what its numbers were built from (redrawn only when that changes). */
+  private readonly shownBoard = { view: 'none' as BoardView, version: -1, second: -1, phase: '' };
+  private readonly mates: Character[];
+  private readonly mateMarkers: TeammateMarkers;
+  private readonly mateAnchor = new THREE.Vector3();
+  private readonly mateAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
+  /** Display names by character id ("Blue 2", "You"). */
+  private readonly names: Map<number, string>;
   private roundStartedAt = 0;
   /** World yaw the BB that hit you came from (see showHit), and when. */
   private hitFromYaw = 0;
@@ -50,11 +66,12 @@ export class MatchPresentation {
     private readonly view: { readonly width: number; readonly height: number },
     private readonly state: GameState,
     private readonly player: Character,
-    body: BodyConfig,
+    private readonly body: BodyConfig,
     hits: HitConfig,
     query: WorldQuery,
     teamSize: number,
     private readonly rules: RoundRules,
+    private readonly stats: MatchStats,
   ) {
     this.characters = new CharacterRenderer(state.characters, TEAM_COLORS, hits);
     this.flag = new FlagRenderer(TEAM_COLORS, rules.flag.radius);
@@ -63,18 +80,24 @@ export class MatchPresentation {
     this.scoreboard = new Scoreboard(container, teamSize, player.team);
     this.marker = new FlagMarker(container);
     this.spectator = new SpectatorCamera(state.characters, player, body, query);
-    const perTeam = [0, 0];
-    for (const c of state.characters) {
-      const n = ++perTeam[c.team]!;
-      this.names.set(c.id, c === player ? 'you' : `${TEAMS[c.team]!.name} ${n}`);
-    }
+    this.names = rosterNames(state.characters, player.id);
+    this.mates = state.characters.filter((c) => c.team === player.team && c !== player);
+    this.mateMarkers = new TeammateMarkers(container, this.mates.map((c) => this.names.get(c.id) ?? ''), TEAM_CSS[player.team]!);
+    this.feed = new HitFeed(container);
+    this.board = new MatchBoard(container);
   }
 
   setPlaying(playing: boolean): void {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
+    this.feed.setVisible(playing);
     this.playing = playing;
-    if (!playing) this.marker.hide();
+    if (!playing) {
+      this.marker.hide();
+      this.mateMarkers.hideAll();
+      this.board.setVisible(false);
+      this.shownBoard.view = 'none';
+    }
   }
 
   /** True once you've called your hit and are watching someone else. */
@@ -88,6 +111,7 @@ export class MatchPresentation {
     for (const e of this.state.events) {
       if (e.type === 'characterHit') {
         this.characters.flinch(e.victimId, e.direction);
+        this.addFeedLine(e.victimId, e.shooterId);
         if (e.victimId === this.player.id) {
           // It came from the opposite of the BB's flight direction.
           this.hitFromYaw = Math.atan2(e.direction.x, e.direction.z);
@@ -99,6 +123,7 @@ export class MatchPresentation {
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
         this.spectator.reset();
+        this.feed.clear();
       }
     }
   }
@@ -110,13 +135,14 @@ export class MatchPresentation {
 
   /**
    * Once per frame. Places the camera when spectating and returns true; otherwise leaves the camera
-   * alone. `cameraYaw` is the first-person view yaw.
+   * alone. `cameraYaw` is the first-person view yaw; `boardHeld`: the scoreboard key is held.
    */
-  frame(camera: THREE.PerspectiveCamera, alpha: number, dt: number, cameraYaw: number): boolean {
+  frame(camera: THREE.PerspectiveCamera, alpha: number, dt: number, cameraYaw: number, boardHeld: boolean): boolean {
     const spectating = this.spectating;
     const status = this.player.status;
+    let watched: Character | undefined;
     if (spectating) {
-      const watched = this.spectator.ensureTarget();
+      watched = this.spectator.ensureTarget();
       this.spectator.place(camera, watched, alpha, dt);
       this.feedback.setSpectating(watched === this.player ? '' : this.names.get(watched.id) ?? '');
     } else {
@@ -125,6 +151,9 @@ export class MatchPresentation {
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id);
     this.flag.update(this.state.round, this.state.time);
     this.updateMarker(camera, spectating);
+    this.updateMateMarkers(camera, alpha, watched);
+    this.feed.update(this.state.time);
+    this.updateBoard(boardHeld);
 
     this.feedback.setCalling(status === 'calling');
     if (status === 'calling') this.feedback.setHitDirection(wrapAngle(cameraYaw - this.hitFromYaw));
@@ -140,6 +169,73 @@ export class MatchPresentation {
     this.feedback.dispose();
     this.scoreboard.dispose();
     this.marker.dispose();
+    this.feed.dispose();
+    this.board.dispose();
+    this.mateMarkers.dispose();
+  }
+
+  /** A hit feed line for `victimId` calling a hit from `shooterId`'s BB. */
+  private addFeedLine(victimId: number, shooterId: number): void {
+    const victim = this.state.characters.find((c) => c.id === victimId);
+    const shooter = this.state.characters.find((c) => c.id === shooterId);
+    if (!victim || !shooter) return;
+    const you = victim === this.player || shooter === this.player;
+    this.feed.add(
+      { name: this.names.get(victim.id) ?? '', team: victim.team },
+      { name: this.names.get(shooter.id) ?? '', team: shooter.team },
+      victim.team === shooter.team,
+      you,
+      this.state.time,
+    );
+  }
+
+  /**
+   * A marker over each teammate's head, wherever they are on screen (through walls too): in colour while they're in
+   * play, grey while they call a hit and walk off. None once they're in the dead zone, over the teammate you're
+   * watching, or with a menu up.
+   */
+  private updateMateMarkers(camera: THREE.PerspectiveCamera, alpha: number, watched: Character | undefined): void {
+    for (let i = 0; i < this.mates.length; i++) {
+      const c = this.mates[i]!;
+      if (!this.playing || c.status === 'out' || c === watched) {
+        this.mateMarkers.hide(i);
+        continue;
+      }
+      const crouch = c.prevCrouchAmount + (c.crouchAmount - c.prevCrouchAmount) * alpha;
+      this.mateAnchor.set(
+        c.prevPosition.x + (c.position.x - c.prevPosition.x) * alpha,
+        c.prevPosition.y + (c.position.y - c.prevPosition.y) * alpha + eyeHeight(crouch, this.body) + TEAMMATE_MARKERS.aboveEyes,
+        c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha,
+      );
+      const m = projectMarker(this.mateAnchor, camera, this.view.width, this.view.height, 0, this.mateAt);
+      if (m.onScreen) this.mateMarkers.show(i, m.x, m.y, c.status !== 'alive');
+      else this.mateMarkers.hide(i);
+    }
+  }
+
+  /**
+   * The scoreboard over the field: the match so far while the key is held, the round just played between rounds,
+   * and the whole match once it's decided (until the summary screen). Its numbers are rebuilt only when a count or the
+   * phase changes (which is when the score does), or, while a round is live, each second of time alive.
+   */
+  private updateBoard(held: boolean): void {
+    const r = this.state.round;
+    const view: BoardView = r.phase === 'matchOver' || held ? 'match' : r.phase === 'over' ? 'round' : 'none';
+    this.board.setVisible(view !== 'none');
+    const shown = this.shownBoard;
+    const second = r.phase === 'live' ? Math.floor(this.state.time) : -1;
+    if (view === 'none' || (view === shown.view && this.stats.version === shown.version && second === shown.second && r.phase === shown.phase)) {
+      shown.view = view;
+      return;
+    }
+    shown.view = view;
+    shown.version = this.stats.version;
+    shown.second = second;
+    shown.phase = r.phase;
+    const match = view === 'match';
+    const heading = match ? (r.phase === 'matchOver' ? 'Match' : `Match so far · round ${r.number}`) : `Round ${r.number}`;
+    const statsOf = match ? (id: number) => this.stats.matchOf(id) : (id: number) => this.stats.roundOf(id);
+    this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live'));
   }
 
   /**

@@ -22,6 +22,13 @@ describe('KeyBindings', () => {
     expect(b.actionOf('KeyZ')).toBeUndefined();
   });
 
+  it('holds the scoreboard on Tab by default, and it can be rebound (M19)', () => {
+    const b = new KeyBindings(null);
+    expect(b.codes('scoreboard')).toEqual(['Tab']);
+    expect(b.rebind('scoreboard', 'KeyX')).toBe(true);
+    expect(b.codes('scoreboard')).toEqual(['KeyX']);
+  });
+
   it('rebinding gives the action only the new key (no hidden extra keys left working)', () => {
     const b = new KeyBindings(null);
     expect(b.rebind('forward', 'KeyI')).toBe(true);

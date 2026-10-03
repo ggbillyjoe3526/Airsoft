@@ -6,6 +6,7 @@ import { BALLISTICS } from './config/ballistics';
 import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import { HITS, ROUNDS } from './config/hits';
+import type { CrosshairSettings } from './config/matchInfo';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
@@ -34,6 +35,9 @@ import { placeTeams, restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
+import { MatchStats } from './stats/matchStats';
+import type { MatchResult } from './stats/records';
+import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
 
@@ -59,6 +63,8 @@ export class MatchSession {
   readonly combat: CombatPresentation;
   readonly match: MatchPresentation;
   readonly mode: MatchMode;
+  /** Every player's numbers for the match and the round (M19). */
+  readonly stats: MatchStats;
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
@@ -71,15 +77,18 @@ export class MatchSession {
   private readonly ctx: SimContext;
   /** Simulation time the match was decided (NaN while it's on, and once the result screen is due). */
   private matchOverAt = Number.NaN;
+  /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
+  private resultTaken = false;
 
   constructor(
     private readonly renderer: Renderer,
     container: HTMLElement,
     private readonly input: PlayerInput,
-    private readonly setup: MatchSetup,
+    readonly setup: MatchSetup,
     seed: number,
     quality: QualitySettings,
     audio: SfxSetup,
+    crosshair: CrosshairSettings,
   ) {
     const map = setup.map;
     this.textures = createSurfaceTextures();
@@ -121,8 +130,9 @@ export class MatchSession {
     );
     input.resetView(this.player.spawnYaw);
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio, (action) => input.keyName(action));
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
+    this.stats = new MatchStats(this.state.characters);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS, this.stats);
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -154,13 +164,34 @@ export class MatchSession {
     return true;
   }
 
-  /** Places the camera and draws the frame; `dt` is 0 while paused, so presentation holds still. */
-  draw(dt: number): void {
+  /**
+   * The decided match for the records, once per match (null before it's decided, and after the first call). Only a
+   * match played to the end counts: quitting one counts as nothing.
+   */
+  takeMatchResult(): MatchResult | null {
+    const r = this.state.round;
+    if (r.phase !== 'matchOver' || this.resultTaken) return null;
+    this.resultTaken = true;
+    const mine = this.stats.matchOf(this.player.id);
+    return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+  }
+
+  /** Every player's numbers over the match, your team first, for the end-of-match summary. */
+  summaryBlocks(): TeamBlock[] {
+    const names = rosterNames(this.state.characters, this.player.id);
+    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false);
+  }
+
+  /**
+   * Places the camera and draws the frame; `dt` is 0 while paused, so presentation holds still. `boardHeld`: the
+   * scoreboard key is held.
+   */
+  draw(dt: number, boardHeld: boolean): void {
     const alpha = stepperAlpha(this.stepper); // frozen while paused, so the view holds still
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch);
-    const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw);
+    const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.combat.render(!spectating);
   }
@@ -175,6 +206,8 @@ export class MatchSession {
     this.state.events.length = 0;
     restartMatch(this.state.round, this.state.characters, this.state.bbs, this.ctx.round, this.state.events, this.mode);
     this.matchOverAt = Number.NaN;
+    this.resultTaken = false;
+    this.stats.reset();
     this.afterTick();
   }
 
@@ -217,6 +250,7 @@ export class MatchSession {
 
   /** Everything that reacts to a simulation tick's events. */
   private afterTick(): void {
+    this.stats.afterTick(this.state, SIM_DT);
     this.bots.observe(this.state);
     this.combat.afterTick();
     this.match.afterTick(this.input.yaw);

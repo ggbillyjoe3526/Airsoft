@@ -110,7 +110,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Later | |
 | Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (pull request open; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M18 Comfort, accessibility and browser basics (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, colour-blind options, on-screen sound cues, pause on a hidden tab, fullscreen | Later | |
-| Alpha · Phase 4 · M19 Match info (owner's feature picks, 2026-10-03): hit feed, teammate markers, end-of-match summary, crosshair options | Later | |
+| Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (pull request open; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Later | |

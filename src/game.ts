@@ -4,6 +4,7 @@ import { SoundLibrary } from './audio/soundBank';
 import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
 import { ROUNDS } from './config/hits';
+import type { CrosshairSettings } from './config/matchInfo';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import type { OpticChoice } from './config/optics';
@@ -21,11 +22,14 @@ import { Renderer } from './render/renderer';
 import { MatchSession } from './matchSession';
 import { attackersInRound } from './sim/round';
 import type { GameState } from './sim/state';
+import { addMatch, loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
+import { loadCrosshair } from './ui/crosshair';
 import { DebugOverlay } from './ui/debugOverlay';
 import { loadHopUps } from './ui/loadoutChoice';
 import { browserStorage } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
+import { recordsView } from './ui/recordsView';
 import { loadAimSensitivity, loadCrouchMode, loadDifficulty, loadFov, loadMap, loadMode, loadOptic, loadSensitivity } from './ui/menus/savedChoices';
 
 /** The player is the first character, on Blue (see MatchSession). */
@@ -74,6 +78,11 @@ export class Game {
   private readonly hopUps: number[];
   /** The volume sliders and the synthesised sounds, kept across matches (each match's Sfx plays from them). */
   private readonly audio: SfxSetup = { volumes: loadVolumes(), library: new SoundLibrary() };
+  /** The crosshair's look (Settings → Crosshair), kept across matches. */
+  private crosshair: CrosshairSettings = loadCrosshair();
+  /** The local records (M19), and what the last match finished changed in them. */
+  private readonly records: Records = loadRecords(browserStorage());
+  private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     await initPhysics();
@@ -147,6 +156,7 @@ export class Game {
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
       quality: options.quality,
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v) },
+      crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
     });
     this.menus.showTitle();
     this.pointer.onChange((locked) => {
@@ -160,6 +170,12 @@ export class Game {
   private changeVolume(channel: VolumeChannel, position: number): void {
     this.audio.volumes[channel] = position;
     this.session?.combat.setVolume(channel, position);
+  }
+
+  /** The crosshair changed on Settings → Crosshair: kept for the next match and applied to the one loaded. */
+  private changeCrosshair(crosshair: CrosshairSettings): void {
+    this.crosshair = crosshair;
+    this.session?.combat.setCrosshair(crosshair);
   }
 
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
@@ -197,7 +213,7 @@ export class Game {
         difficulty: this.difficulty,
         optic: this.optic,
         hopUps: this.hopUps,
-      }, this.options.seed, QUALITY[this.options.quality], this.audio);
+      }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair);
     }
     this.session!.combat.unlockAudio();
     if (this.options.allowUnlocked) {
@@ -251,10 +267,19 @@ export class Game {
       const mine = s.player.team;
       const theirs = 1 - mine;
       const draws = r.number - r.score[0] - r.score[1];
-      this.menus.showResult(
-        r.matchWinner === mine ? 'You win!' : 'You lose',
-        `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`,
-      );
+      const headline = r.matchWinner === mine ? 'You win!' : 'You lose';
+      const score = `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name}`;
+      // The finished match goes into the records once (a second stop on the same result shows the same news).
+      const result = s.takeMatchResult();
+      if (result) {
+        this.recordNews = addMatch(this.records, result);
+        saveRecords(this.records, browserStorage());
+      }
+      this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
+        result: `${headline} · ${score}`,
+        blocks: s.summaryBlocks(),
+        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode),
+      });
     } else {
       const mine = s.player.team;
       const theirs = 1 - mine;
@@ -302,7 +327,7 @@ export class Game {
     }
 
     // Only while playing: the menus are opaque, so drawing the paused field under them would be GPU work nobody sees.
-    if (running) s.draw(dt);
+    if (running) s.draw(dt, this.keyboard.isDown('scoreboard'));
     this.debug.frame(dt);
   };
 }
