@@ -35,7 +35,7 @@ export function magazineOut(p: number): number {
 export function sprintCarry(lockout: number, total: number): number {
   if (!(total > 0) || lockout <= 0) return 0;
   const share = VIEWMODEL.carrySquareAt;
-  return Math.max(0, Math.min(1, (lockout / total - share) / (1 - share)));
+  return smooth((lockout / total - share) / (1 - share)); // eased, so the replica settles rather than stopping hard
 }
 
 const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
