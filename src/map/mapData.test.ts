@@ -16,7 +16,7 @@ describe.each([DEPOT, RAMP_YARD])('$name map data', (map: MapData) => {
       ...map.spawns.flat().map((s) => ['spawn', s.position] as const),
       ...map.deadZones.flat().map((s) => ['dead-zone spot', s.position] as const),
       ...map.lanes.flat().map((p) => ['lane point', p] as const),
-      ...(map.flags ?? []).map((p) => ['flag', p] as const),
+      ...(map.flag ? [['flag', map.flag] as const] : []),
     ];
     expect(points.length).toBeGreaterThan(0);
     for (const [what, p] of points) {

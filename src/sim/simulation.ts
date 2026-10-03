@@ -32,16 +32,20 @@ export interface SimServices {
   /** Anything below this height has left the level (map data). */
   killY: number;
   hits: HitConfig;
-  /** Per team, dead-zone spots (map data). */
+  /** Per end of the map, its dead-zone spots (map data). */
   deadZones: readonly (readonly SpawnPoint[])[];
+  /** Per end of the map, its spawn points (map data; empty: characters keep the spawns they were made with). */
+  spawns?: readonly (readonly SpawnPoint[])[];
+  /** Characters stand this far above a spawn's floor point (the physics rest gap). */
+  spawnLift?: number;
   /** Walkability grid of the map (walk-off routes). */
   nav: NavGrid;
   /** Route ends snap to the nearest walkable cell within this distance. */
   navSnap: number;
   /** Round length, pause between rounds, wins needed, flag rules. */
   rounds: RoundRules;
-  /** Per team, where the flagpole stands when that team defends (map data; absent: no flag mode). */
-  flagSpots?: readonly Vec3[];
+  /** The flagpole, at end 1 where the defenders start (map data; absent: no flag mode). */
+  pole?: Vec3;
 }
 
 /** Services and tuning the simulation needs from outside, plus reusable scratch. */
@@ -78,7 +82,7 @@ export function createSimContext(services: SimServices): SimContext {
       hits: services.hits,
       elimination: { deadZones: services.deadZones, nav: services.nav, navSearch: createNavSearch(services.nav), snap: services.navSnap },
     },
-    round: { rules: services.rounds, loadout: services.loadout, flagSpots: services.flagSpots ?? [] },
+    round: { rules: services.rounds, loadout: services.loadout, pole: services.pole, spawns: services.spawns ?? [], spawnLift: services.spawnLift ?? 0 },
   };
 }
 

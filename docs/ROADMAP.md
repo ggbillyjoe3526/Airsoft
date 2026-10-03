@@ -93,8 +93,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | Done | 9.0 |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | Done (tagged 2026-10-03; the owner's playtest notes went into Phase 4) | 9.0 |
 | Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Done (merged; owner played it: the crosshair should lock on faster, fixed in M12b) | 9.0 |
-| Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (pull request; owner's playtest next) | 9.1 |
-| Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later (layout sketch waits for the owner's OK) | |
+| Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (merged; owner's playtest next) | 9.1 |
+| Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (pull request; owner's playtest next) | see REVIEWS |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
 | Alpha · Phase 4 · M14 Art pass, M15 Menus and settings, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
@@ -220,7 +220,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 
 **Order** (owner picked weapon handling first, 2026-10-03): **M12a → M12b → M11 → M13 → M14 → M15 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
-the Depot layout sketch. The Depot rework follows once the sketch is approved. The audio rework comes after it so
+the Depot layout sketch. The Depot rework follows once the sketch is approved (approved 2026-10-03). The audio rework comes after it so
 movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
 the tutorial come last because they dress and explain everything before them.
 
@@ -256,7 +256,8 @@ the tutorial come last because they dress and explain everything before them.
       pace. A first guess: no extra accuracy beyond what standing still gives, so stillness stays the accuracy rule.
     - **Aiming sensitivity:** a separate mouse sensitivity while aiming down sights, as its own setting.
 - **M11. Depot rework** to the field checklist (moved from Phase 3, owner, 2026-10-02; before the art pass, since the
-  art pass dresses its layout). A layout sketch is ready for the owner's approval: https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD
+  art pass dresses its layout). Built from the layout sketch the owner approved on 2026-10-03 (revision 2):
+  https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD
   - Purpose-built airsoft barricades (walls with shooting ports).
   - Buildings with windows and doorways: today it's one office block, so add at least one more structure.
   - Deliberate choke points and flanking routes.
@@ -266,7 +267,10 @@ the tutorial come last because they dress and explain everything before them.
     the elevation support (Phase 3). Raised edges stay open: bots don't step off them.
   - Consider a few genuinely low obstacles (about 0.7–0.9 m: pallets, low walls) designed for **vaulting**
     (owner idea; parked until here, with bots taught to use them). Today's 1.2 m crouch cover stays unclimbable.
-  - Depot stays mirror-symmetric and keeps its identity.
+    Not in the approved sketch, so still parked (IDEAS); it needs a vault move for players and bots first.
+  - ~~Depot stays mirror-symmetric~~ The approved sketch makes Depot asymmetric (attackers in the west yard, one
+    flagpole in the defenders' loading bay), so teams swap ends at half-time in both modes (owner, 2026-10-03).
+    It keeps its identity: the crate yard, the containers and the office.
   - Layout tests are extended to the checklist; bot lanes and poles are updated.
   - The headless match guards stay green on the new layout (re-measured, not loosened).
   - Fix when touched (audit): reset the reload bar of a player who is hit (W-07), if playtesting shows it frozen.

@@ -20,7 +20,10 @@ export interface FlagRules {
   raiseTime: number;
   /** Seconds for the defenders to pull it from the top back down to the bottom. */
   lowerTime: number;
-  /** Attack and defence swap after this many rounds (half-time). */
+  /**
+   * Half-time: the teams swap ends of the map after this many rounds, in both modes (in Attack / Defend that
+   * swaps attack and defence too). It lives here because flag mode introduced it.
+   */
   halfTimeAfter: number;
   /** Team that attacks first (0 = Blue, the player's team). */
   firstAttackers: number;

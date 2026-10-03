@@ -4,7 +4,7 @@ import { halfTimeAfterRound, type RoundState } from '../sim/round';
 
 /**
  * The round message in the middle of the screen, worded from your side: the result of the round just
- * played (and the countdown to the next, with a half-time note in flag mode), the match result, or
+ * played (and the countdown to the next, with a note at half-time), the match result, or
  * "Round N" (with your job in flag mode) just after a round starts. Empty when there's nothing to say.
  */
 export function roundBanner(r: RoundState, playerTeam: number, showStart: boolean, secondsToNext: number, flag: FlagRules): string {
@@ -18,7 +18,7 @@ export function roundBanner(r: RoundState, playerTeam: number, showStart: boolea
     else if (flagMode && r.reason === 'time') result = mine ? "Time's up · your team held the pole" : `Time's up · ${winner} held the pole`;
     else if (r.winner < 0) result = r.reason === 'time' ? "Time's up · draw" : 'Draw';
     else result = mine ? 'Your team wins the round' : `Your team loses the round (${winner} wins)`;
-    const halfTime = flagMode && halfTimeAfterRound(r.number, flag) ? ' · half-time, sides swap' : '';
+    const halfTime = halfTimeAfterRound(r.number, flag) ? (flagMode ? ' · half-time, sides swap' : ' · half-time, ends swap') : '';
     return `${result}${halfTime} · next round in ${secondsToNext}`;
   }
   if (!showStart) return '';

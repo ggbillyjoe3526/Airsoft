@@ -30,10 +30,10 @@ import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } f
 import { CombatPresentation } from './render/combatPresentation';
 import { MatchPresentation } from './render/matchPresentation';
 import { Renderer } from './render/renderer';
-import { type Character, createCharacter } from './sim/character';
+import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { fitOptic } from './sim/armament';
-import { attackersInRound, restartMatch } from './sim/round';
+import { attackersInRound, placeTeams, restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
@@ -112,9 +112,27 @@ export class Game {
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     this.nav = buildNavGrid(map, NAV);
-    // Maps without flagpoles can only be played in elimination.
-    this.mode = map.flags ? loadMode() : 'elimination';
-    this.state = createGameState(options.seed, BALLISTICS.maxBBs, ROUNDS, this.mode, map.flags);
+    // Maps without a flagpole can only be played in elimination.
+    this.mode = map.flag ? loadMode() : 'elimination';
+    this.state = createGameState(options.seed, BALLISTICS.maxBBs, ROUNDS, this.mode, map.flag);
+    this.ctx = createSimContext({
+      mover: this.physics,
+      query: this.physics,
+      movement: MOVEMENT,
+      footsteps: FOOTSTEPS,
+      body: BODY,
+      ballistics: BALLISTICS,
+      loadout: LOADOUT,
+      killY: map.killY,
+      hits: HITS,
+      deadZones: map.deadZones,
+      spawns: map.spawns,
+      spawnLift: PHYSICS.groundRestGap,
+      nav: this.nav,
+      navSnap: NAV.snap,
+      rounds: ROUNDS,
+      pole: map.flag,
+    });
     this.player = this.spawnRoster(map);
     this.optic = loadOptic();
     this.fittedOptic = this.optic;
@@ -127,22 +145,6 @@ export class Game {
       this.commands,
       { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(this.difficulty.inPlay), seed: options.seed },
     );
-    this.ctx = createSimContext({
-      mover: this.physics,
-      query: this.physics,
-      movement: MOVEMENT,
-      footsteps: FOOTSTEPS,
-      body: BODY,
-      ballistics: BALLISTICS,
-      loadout: LOADOUT,
-      killY: map.killY,
-      hits: HITS,
-      deadZones: map.deadZones,
-      nav: this.nav,
-      navSnap: NAV.snap,
-      rounds: ROUNDS,
-      flagSpots: map.flags,
-    });
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
@@ -201,22 +203,21 @@ export class Game {
   }
 
   /**
-   * Creates both teams at the map's spawns: the local player plus bot teammates on Blue, and Orange
-   * bots. Returns the player.
+   * Creates both teams at the map's spawns for round 1 (each team at its end, see placeTeams): the local player
+   * plus bot teammates on Blue, and Orange bots. Returns the player.
    */
   private spawnRoster(map: MapData): Character {
+    for (const [end, spawns] of map.spawns.entries()) {
+      if (spawns.length < ROUNDS.teamSize) throw new Error(`Map ${map.name} needs ${ROUNDS.teamSize} spawns at end ${end}`);
+    }
     let id = PLAYER_ID;
     for (let team = 0; team < TEAMS.length; team++) {
-      const spawns = map.spawns[team] ?? [];
-      if (spawns.length < ROUNDS.teamSize) throw new Error(`Map ${map.name} needs ${ROUNDS.teamSize} spawns for team ${team}`);
-      for (let i = 0; i < ROUNDS.teamSize; i++) {
-        const s = spawns[i]!;
-        // Map spawns are floor points; characters stand the physics rest gap above the floor.
-        const feet = vec3(s.position.x, s.position.y + PHYSICS.groundRestGap, s.position.z);
-        const c = createCharacter(id++, feet, s.yaw, LOADOUT, team);
-        this.state.characters.push(c);
-        this.physics.addCharacter(c);
-      }
+      for (let i = 0; i < ROUNDS.teamSize; i++) this.state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
+    }
+    placeTeams(this.state.round, this.state.characters, this.ctx.round);
+    for (const c of this.state.characters) {
+      respawnCharacter(c, LOADOUT);
+      this.physics.addCharacter(c);
     }
     return this.state.characters[0]!;
   }

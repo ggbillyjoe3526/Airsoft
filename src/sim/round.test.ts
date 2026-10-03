@@ -4,14 +4,19 @@ import { LOADOUT } from '../config/replicas';
 import { createBBPool, spawnBB } from './ballistics';
 import { type Character, createCharacter } from './character';
 import type { GameEvent } from './events';
-import { attackersInRound, createRoundState, type RoundContext, type RoundRules, type RoundState, restartMatch, stepRound } from './round';
+import { attackersInRound, createRoundState, placeTeams, type RoundContext, type RoundRules, type RoundState, restartMatch, stepRound, teamEnd } from './round';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
 const RULES: RoundRules = { roundTime: 10, resetDelay: 2, winsNeeded: 3, flag: { ...FLAG, halfTimeAfter: 2, firstAttackers: 0 } };
-/** Blue's pole on the west, Orange's on the east. */
-const FLAG_SPOTS = [vec3(-10, 0, 0), vec3(10, 0, 0)];
-const CTX: RoundContext = { rules: RULES, loadout: LOADOUT, flagSpots: FLAG_SPOTS };
+/** The pole, on the east side: end 1, where the defenders start. */
+const POLE = vec3(10, 0, 0);
+/** Two spawns at each end: west (end 0) and east (end 1). */
+const SPAWNS = [
+  [0, 1].map((z) => ({ position: vec3(-20, 0, z), yaw: -Math.PI / 2 })),
+  [2, 3].map((z) => ({ position: vec3(20, 0, z), yaw: Math.PI / 2 })),
+];
+const CTX: RoundContext = { rules: RULES, loadout: LOADOUT, pole: POLE, spawns: SPAWNS, spawnLift: 0.05 };
 
 function teams(): Character[] {
   return [0, 1, 2, 3].map((id) => createCharacter(id, vec3(id < 2 ? -20 : 20, 0, id), 0, LOADOUT, id < 2 ? 0 : 1));
@@ -89,9 +94,9 @@ describe('round flow', () => {
   });
 
   it('has no attackers and ignores anyone standing at a flag spot in elimination', () => {
-    const round = createRoundState(RULES, 'elimination', FLAG_SPOTS);
+    const round = createRoundState(RULES, 'elimination', POLE);
     const cs = teams();
-    cs[0]!.position.x = FLAG_SPOTS[1]!.x;
+    cs[0]!.position.x = POLE.x;
     const events: GameEvent[] = [];
     run(RULES.flag.raiseTime + 1, round, cs, events);
     expect(round.attackers).toBe(-1);
@@ -100,13 +105,62 @@ describe('round flow', () => {
   });
 });
 
+describe('ends of the map', () => {
+  it('put Blue at the west end first in elimination and the attackers there in Attack / Defend, swapping at half-time', () => {
+    const ends = (mode: 'elimination' | 'attackDefend', rules: RoundRules) => [1, 2, 3, 4].map((n) => [teamEnd(0, mode, n, rules), teamEnd(1, mode, n, rules)]);
+    const swap = [
+      [0, 1],
+      [0, 1],
+      [1, 0],
+      [1, 0],
+    ];
+    expect(ends('elimination', RULES)).toEqual(swap);
+    expect(ends('attackDefend', RULES)).toEqual(swap);
+    // Orange attacking first starts at the west end.
+    expect(ends('attackDefend', { ...RULES, flag: { ...RULES.flag, firstAttackers: 1 } })).toEqual(swap.map(([a, b]) => [b, a]));
+  });
+
+  it('give each character its slot’s spawn at its team’s end, lifted off the floor, and swap ends in elimination too', () => {
+    const round = createRoundState(RULES);
+    const cs = teams();
+    placeTeams(round, cs, CTX);
+    expect(cs.map((c) => [c.end, c.spawnPosition.x, c.spawnPosition.y, c.spawnPosition.z, c.spawnYaw])).toEqual([
+      [0, -20, 0.05, 0, -Math.PI / 2],
+      [0, -20, 0.05, 1, -Math.PI / 2],
+      [1, 20, 0.05, 2, Math.PI / 2],
+      [1, 20, 0.05, 3, Math.PI / 2],
+    ]);
+    const events: GameEvent[] = [];
+    for (let r = 0; r < RULES.flag.halfTimeAfter; r++) run(RULES.roundTime + RULES.resetDelay + 0.1, round, cs, events); // draws
+    expect(round.number).toBe(RULES.flag.halfTimeAfter + 1);
+    expect(cs.map((c) => [c.end, c.position.x, c.position.z])).toEqual([
+      [1, 20, 2],
+      [1, 20, 3],
+      [0, -20, 0],
+      [0, -20, 1],
+    ]);
+  });
+
+  it('leave spawns alone when the map gives none for an end', () => {
+    const round = createRoundState(RULES);
+    const cs = teams();
+    placeTeams(round, cs, { ...CTX, spawns: [] });
+    expect(cs.map((c) => [c.end, c.spawnPosition.x])).toEqual([
+      [0, -20],
+      [0, -20],
+      [1, 20],
+      [1, 20],
+    ]);
+  });
+});
+
 describe('flag rounds', () => {
   it('put the pole on the defenders’ side and give the round to the attackers once their flag is raised', () => {
-    const round = createRoundState(RULES, 'attackDefend', FLAG_SPOTS);
+    const round = createRoundState(RULES, 'attackDefend', POLE);
     expect(round.attackers).toBe(0);
-    expect(round.flag.position).toEqual(FLAG_SPOTS[1]); // Orange defends its own pole
+    expect(round.flag.position).toEqual(POLE);
     const cs = teams();
-    cs[0]!.position.x = FLAG_SPOTS[1]!.x + 1;
+    cs[0]!.position.x = POLE.x + 1;
     const events: GameEvent[] = [];
     run(RULES.flag.raiseTime - 0.2, round, cs, events);
     expect(round.phase).toBe('live');
@@ -116,7 +170,7 @@ describe('flag rounds', () => {
   });
 
   it('give the round to the defenders when time runs out, even with the flag part-way up', () => {
-    const round = createRoundState(RULES, 'attackDefend', FLAG_SPOTS);
+    const round = createRoundState(RULES, 'attackDefend', POLE);
     const cs = teams();
     round.flag.progress = 0.9;
     const events: GameEvent[] = [];
@@ -126,12 +180,12 @@ describe('flag rounds', () => {
   });
 
   it('go to overtime while the attackers are working the rope at time-out, and end when they stop', () => {
-    const round = createRoundState(RULES, 'attackDefend', FLAG_SPOTS);
+    const round = createRoundState(RULES, 'attackDefend', POLE);
     const cs = teams();
     const attacker = cs[0]!;
     const events: GameEvent[] = [];
     run(RULES.roundTime - 1, round, cs, events);
-    attacker.position.x = FLAG_SPOTS[1]!.x; // starts raising with a second to go
+    attacker.position.x = POLE.x; // starts raising with a second to go
     run(2, round, cs, events);
     expect(round.phase).toBe('live');
     expect(round.overtime).toBeGreaterThan(0.9);
@@ -141,19 +195,19 @@ describe('flag rounds', () => {
   });
 
   it('let a raise finish in overtime, but never run overtime past maxOvertime', () => {
-    const round = createRoundState(RULES, 'attackDefend', FLAG_SPOTS);
+    const round = createRoundState(RULES, 'attackDefend', POLE);
     const cs = teams();
-    cs[0]!.position.x = FLAG_SPOTS[1]!.x;
+    cs[0]!.position.x = POLE.x;
     const events: GameEvent[] = [];
     run(RULES.roundTime - 2, round, cs, events); // the flag is nearly up when time runs out
     round.flag.progress = 0.8;
     run(3, round, cs, events);
     expect(events).toContainEqual({ type: 'roundOver', winner: 0, reason: 'captured' });
 
-    const stuck = createRoundState(RULES, 'attackDefend', FLAG_SPOTS);
+    const stuck = createRoundState(RULES, 'attackDefend', POLE);
     const both = teams();
-    both[0]!.position.x = FLAG_SPOTS[1]!.x; // attacker and defender at the pole: contested for ever
-    both[2]!.position.x = FLAG_SPOTS[1]!.x;
+    both[0]!.position.x = POLE.x; // attacker and defender at the pole: contested for ever
+    both[2]!.position.x = POLE.x;
     both[2]!.position.z = 0;
     const late: GameEvent[] = [];
     run(RULES.roundTime + RULES.flag.maxOvertime + 0.1, stuck, both, late);
@@ -162,7 +216,7 @@ describe('flag rounds', () => {
   });
 
   it('still end on a wipe-out, whoever attacks', () => {
-    const round = createRoundState(RULES, 'attackDefend', FLAG_SPOTS);
+    const round = createRoundState(RULES, 'attackDefend', POLE);
     const cs = teams();
     cs[0]!.status = 'out';
     cs[1]!.status = 'out';
@@ -171,32 +225,38 @@ describe('flag rounds', () => {
     expect(events).toContainEqual({ type: 'roundOver', winner: 1, reason: 'eliminated' });
   });
 
-  it('swap attack and defence at half-time, moving the pole to the other side, with the flag back at the bottom', () => {
+  it('swap attack and defence at half-time: the new attackers start at the west end, the pole stays, the flag is back at the bottom', () => {
     expect([1, 2, 3, 4].map((n) => attackersInRound(n, RULES))).toEqual([0, 0, 1, 1]);
-    const round = createRoundState(RULES, 'attackDefend', FLAG_SPOTS);
+    const round = createRoundState(RULES, 'attackDefend', POLE);
     const cs = teams();
     const events: GameEvent[] = [];
-    const seen: { number: number; attackers: number; x: number }[] = [];
+    const seen: { number: number; attackers: number; blueEnd: number; blueX: number }[] = [];
     for (let r = 0; r < 3; r++) {
-      seen.push({ number: round.number, attackers: round.attackers, x: round.flag.position.x });
       round.flag.progress = 0.5;
       run(RULES.roundTime + RULES.resetDelay + 0.1, round, cs, events); // defenders win on time
+      seen.push({ number: round.number, attackers: round.attackers, blueEnd: cs[0]!.end, blueX: cs[0]!.position.x });
     }
     expect(seen).toEqual([
-      { number: 1, attackers: 0, x: 10 },
-      { number: 2, attackers: 0, x: 10 },
-      { number: 3, attackers: 1, x: -10 },
+      { number: 2, attackers: 0, blueEnd: 0, blueX: -20 },
+      { number: 3, attackers: 1, blueEnd: 1, blueX: 20 },
+      { number: 4, attackers: 1, blueEnd: 1, blueX: 20 },
     ]);
+    expect(round.flag.position).toEqual(POLE);
     expect(round.flag.progress).toBe(0);
     expect(round.score).toEqual([1, 2]);
+    // Orange, attacking now, starts at the west end.
+    expect(cs.filter((c) => c.team === 1).map((c) => [c.end, c.position.x])).toEqual([
+      [0, -20],
+      [0, -20],
+    ]);
   });
 
   it('restart in the chosen mode, with the first attackers again', () => {
-    const round = createRoundState(RULES, 'elimination', FLAG_SPOTS);
+    const round = createRoundState(RULES, 'elimination', POLE);
     const cs = teams();
     restartMatch(round, cs, createBBPool(1), CTX, [], 'attackDefend');
     expect(round).toMatchObject({ mode: 'attackDefend', number: 1, attackers: RULES.flag.firstAttackers });
-    expect(round.flag.position).toEqual(FLAG_SPOTS[1 - RULES.flag.firstAttackers]);
+    expect(round.flag.position).toEqual(POLE);
     restartMatch(round, cs, createBBPool(1), CTX, [], 'elimination');
     expect(round).toMatchObject({ mode: 'elimination', attackers: -1 });
   });

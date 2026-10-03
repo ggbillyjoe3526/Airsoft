@@ -15,6 +15,11 @@ export interface Character {
   id: number;
   /** Team index (0 = Blue, 1 = Orange). */
   team: number;
+  /**
+   * The end of the map (0 or 1) this character starts from this round: map spawns, dead zones and lanes are
+   * per end, and the teams swap ends at half-time (sim/round.ts teamEnd). Starts as the team index.
+   */
+  end: number;
   status: LifeStatus;
   /** Seconds since `status` last changed. */
   statusTime: number;
@@ -88,6 +93,7 @@ export function createCharacter(
   return {
     id,
     team,
+    end: team,
     status: 'alive',
     statusTime: 0,
     hitBy: -1,

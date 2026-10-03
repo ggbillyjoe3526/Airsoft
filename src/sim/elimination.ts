@@ -7,13 +7,14 @@ import { copy } from './vec';
 
 /**
  * Hit calling, enforced by the game: a hit character stops, raises a hand and calls the hit, then walks
- * off to its team's dead zone along a navigation route. From the moment of the hit it can't shoot and
+ * off to the dead zone at its end of the map along a navigation route. From the moment of the hit it can't shoot and
  * BBs pass through it. A walk-off that gets stuck or takes too long ends with the character leaving
  * the field (fading out where it stands) and reappearing in the dead zone.
  */
 
 /** What eliminating someone needs from the map. */
 export interface EliminationContext {
+  /** Per end of the map, its dead-zone spots (map data); a character uses its own end's (Character.end). */
   deadZones: readonly (readonly SpawnPoint[])[];
   nav: NavGrid;
   navSearch: NavSearch;
@@ -39,7 +40,7 @@ export function eliminate(victim: Character, shooterId: number, characters: read
   victim.hitBy = shooterId;
   victim.walkOffStuck = 0;
   victim.sprinting = false;
-  const spots = ctx.deadZones[victim.team];
+  const spots = ctx.deadZones[victim.end];
   const spot = spots && spots.length > 0 ? spots[alreadyOut % spots.length]! : undefined;
   copy(victim.deadZoneTarget, spot ? spot.position : victim.spawnPosition);
   victim.deadZoneYaw = spot ? spot.yaw : victim.spawnYaw;

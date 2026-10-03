@@ -5,10 +5,10 @@ import { vec3 } from '../sim/vec';
 import { roundBanner } from './roundBanner';
 
 const FLAG = ROUNDS.flag;
-const SPOTS = [vec3(-10, 0, 0), vec3(10, 0, 0)];
+const POLE = vec3(10, 0, 0);
 
 function round(mode: 'elimination' | 'attackDefend', patch: Partial<RoundState>): RoundState {
-  return Object.assign(createRoundState(ROUNDS, mode, SPOTS), patch);
+  return Object.assign(createRoundState(ROUNDS, mode, POLE), patch);
 }
 
 describe('the round banner', () => {
@@ -28,9 +28,12 @@ describe('the round banner', () => {
     expect(roundBanner(round('attackDefend', { attackers: 0 }), 0, false, 0, FLAG)).toBe('');
   });
 
-  it('announces half-time after the last round before the sides swap', () => {
+  it('announces half-time after the last round before the teams swap, in both modes', () => {
     const text = roundBanner(round('attackDefend', { phase: 'over', number: FLAG.halfTimeAfter, winner: 0, reason: 'eliminated' }), 0, false, 4, FLAG);
     expect(text).toBe('Your team wins the round · half-time, sides swap · next round in 4');
-    expect(roundBanner(round('elimination', { phase: 'over', number: FLAG.halfTimeAfter, winner: 0 }), 0, false, 4, FLAG)).not.toContain('half-time');
+    expect(roundBanner(round('elimination', { phase: 'over', number: FLAG.halfTimeAfter, winner: 0 }), 0, false, 4, FLAG)).toBe(
+      'Your team wins the round · half-time, ends swap · next round in 4',
+    );
+    expect(roundBanner(round('elimination', { phase: 'over', number: FLAG.halfTimeAfter + 1, winner: 0 }), 0, false, 4, FLAG)).not.toContain('half-time');
   });
 });

@@ -31,20 +31,24 @@ export interface MapData {
   blocks: MapBlock[];
   /** Anything below this height has left the level and is returned to its spawn. */
   killY: number;
+  /**
+   * Per end of the map (0 = west, 1 = east), the spawn points of the team starting there, one per player. Teams
+   * swap ends at half-time (sim/round.ts teamEnd); in Attack / Defend the attackers start at end 0.
+   */
   spawns: [SpawnPoint[], SpawnPoint[]];
   /**
-   * Per team, spots in that team's dead zone where hit players wait for the next round. Out of the
-   * way of play (a corner of the spawn yard), one per player.
+   * Per end, spots in that end's dead zone where hit players wait for the next round. Out of the way of play
+   * (a corner of the spawn yard), one per player.
    */
   deadZones: [SpawnPoint[], SpawnPoint[]];
   /**
-   * Routes across the map, each an ordered list of floor points from the west (Blue) side to the east
-   * (Orange) side. Bots advance along one; empty on maps without bots.
+   * Routes across the map, each an ordered list of floor points from end 0 to end 1. Bots advance along one
+   * (from their own end); empty on maps without bots.
    */
   lanes: Vec3[][];
   /**
-   * Flag mode: per team, the foot of the flagpole that team defends (on its own side of the map). Maps
-   * without flags can only be played in elimination.
+   * Attack / Defend: the foot of the flagpole, on the side of end 1 (the defenders' end). Maps without one can
+   * only be played in Elimination.
    */
-  flags?: [Vec3, Vec3];
+  flag?: Vec3;
 }
