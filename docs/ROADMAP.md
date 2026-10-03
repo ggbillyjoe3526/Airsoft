@@ -21,7 +21,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) the owner's M15 notes (M15b) and the audio rework (M13) are done; the Loadout feature (M17, added by the owner) is under way (M17a built, M17b next), then the owner's feature picks (M18 comfort and accessibility, M19 match info, M20 custom matches, M21 practice range, M22 squad orders), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13) and match info (M19) are done; the Loadout feature (M17, added by the owner) is under way (M17a built, M17b next), then the rest of the owner's feature picks (M18 comfort and accessibility, M20 custom matches, M21 practice range, M22 squad orders), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -110,7 +110,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Next | |
 | Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M18 Comfort, accessibility and browser basics (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, colour-blind options, on-screen sound cues, pause on a hidden tab, fullscreen | Later | |
-| Alpha · Phase 4 · M19 Match info (owner's feature picks, 2026-10-03): hit feed, teammate markers, end-of-match summary, crosshair options | Later | |
+| Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Later | |

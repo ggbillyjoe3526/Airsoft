@@ -22,13 +22,14 @@ export const LOADOUT_LATER = {
   noOptic: 'Iron sights',
 } as const;
 
-export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'audio' | 'accessibility';
+export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'audio' | 'accessibility';
 
 /** The Settings screen's tabs, top to bottom. `later`: nothing on it is built yet. */
 export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: boolean }[] = [
   { id: 'controls', label: 'Controls', later: false },
   { id: 'keys', label: 'Key bindings', later: false },
   { id: 'graphics', label: 'Graphics', later: false },
+  { id: 'crosshair', label: 'Crosshair', later: false },
   { id: 'audio', label: 'Audio', later: false },
   { id: 'accessibility', label: 'Accessibility', later: true },
 ];
@@ -39,6 +40,7 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   keys: [],
   // Quality is listed greyed out too, with the preset in use (settingsScreen.ts).
   graphics: [],
+  crosshair: [],
   audio: [{ label: 'Voices (hit calls)', help: '' }],
   accessibility: [
     { label: 'Colour-blind team colours', help: '' },

@@ -951,35 +951,47 @@ kbd {
   display: none;
 }
 
+/* The crosshair (M19: Settings → Crosshair picks the shape, size, thickness, gap, colour and outline). Four arms, a
+   centre dot and a ring, positioned from the centre; --gap opens with the spread, --half keeps odd widths sharp. */
 .hud-crosshair {
   position: absolute;
   left: 50%;
   top: 50%;
   width: 0;
   height: 0;
-  --gap: 6px;
+  --gap: 4px;
   --arm: 7px;
+  --thick: 2px;
+  --half: 1px;
+  --xh: rgba(255, 255, 255, 0.92);
+  --xh-edge: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  --xh-ring-edge: 0 0 0 1px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+.hud-crosshair.no-outline {
+  --xh-edge: none;
+  --xh-ring-edge: none;
 }
 
 .hud-crosshair i,
 .hud-crosshair b {
   position: absolute;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  background: var(--xh);
+  box-shadow: var(--xh-edge);
 }
 
 .hud-crosshair b {
-  left: -1px;
-  top: -1px;
-  width: 2px;
-  height: 2px;
+  left: calc(-1 * var(--half));
+  top: calc(-1 * var(--half));
+  width: var(--thick);
+  height: var(--thick);
 }
 
 .hud-crosshair i:nth-child(1),
 .hud-crosshair i:nth-child(2) {
-  top: -1px;
+  top: calc(-1 * var(--half));
   width: var(--arm);
-  height: 2px;
+  height: var(--thick);
 }
 
 .hud-crosshair i:nth-child(1) {
@@ -992,8 +1004,8 @@ kbd {
 
 .hud-crosshair i:nth-child(3),
 .hud-crosshair i:nth-child(4) {
-  left: -1px;
-  width: 2px;
+  left: calc(-1 * var(--half));
+  width: var(--thick);
   height: var(--arm);
 }
 
@@ -1003,6 +1015,38 @@ kbd {
 
 .hud-crosshair i:nth-child(4) {
   top: var(--gap);
+}
+
+/* The ring: its inside edge is --gap from the centre. */
+.hud-crosshair u {
+  position: absolute;
+  display: none;
+  left: calc(-1 * (var(--gap) + var(--thick)));
+  top: calc(-1 * (var(--gap) + var(--thick)));
+  width: calc(2 * (var(--gap) + var(--thick)));
+  height: calc(2 * (var(--gap) + var(--thick)));
+  border: var(--thick) solid var(--xh);
+  border-radius: 50%;
+  box-shadow: var(--xh-ring-edge);
+}
+
+.hud-crosshair.shape-cross b,
+.hud-crosshair.shape-dot i,
+.hud-crosshair.shape-circle i {
+  display: none;
+}
+
+.hud-crosshair.shape-circle u {
+  display: block;
+}
+
+/* Dot only: a round dot twice the line width. */
+.hud-crosshair.shape-dot b {
+  left: calc(-1 * var(--thick));
+  top: calc(-1 * var(--thick));
+  width: calc(2 * var(--thick));
+  height: calc(2 * var(--thick));
+  border-radius: 50%;
 }
 
 /* Aiming down a red dot: the dot is the aim point, so it takes the crosshair's place. */
@@ -1501,4 +1545,327 @@ kbd {
 
 .flag-marker.edge {
   opacity: 0.75;
+}
+
+/* Match info (M19): the hit feed, teammate markers, the scoreboard over the field and the stats tables */
+.hit-feed {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--paper);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.hit-feed[hidden] {
+  display: none;
+}
+
+.hit-feed-line {
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: rgba(12, 14, 18, 0.6);
+  white-space: nowrap;
+  transition: opacity var(--feed-fade, 1s) linear;
+}
+
+.hit-feed-line.you {
+  background: rgba(12, 14, 18, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.hit-feed-line.fading {
+  opacity: 0;
+}
+
+/* Each name in its team's colour, with a bar of it in front (the name says the team too). */
+.hit-feed-name {
+  padding-left: 6px;
+  border-left: 3px solid var(--team);
+  color: var(--team);
+  font-weight: 800;
+}
+
+.hit-feed-line em {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Teammate markers: a name tag and a team-coloured arrow whose tip is just over the head. */
+.mate-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  translate: -50% -100%;
+  color: #fff;
+  font: 700 12px var(--ui-font);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 9;
+}
+
+.mate-marker[hidden] {
+  display: none;
+}
+
+.mate-marker span {
+  padding: 1px 6px;
+  border-bottom: 2px solid var(--team);
+  border-radius: 3px;
+  background: rgba(12, 14, 18, 0.5);
+  white-space: nowrap;
+}
+
+.mate-marker i {
+  width: 0;
+  height: 0;
+  margin-top: 2px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--team);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+/* Hit: grey, and it says so. */
+.mate-marker.hit {
+  --team: #8a8f99;
+  color: #c8ccd4;
+}
+
+.mate-marker.hit span::after {
+  content: ' · hit';
+}
+
+.match-board {
+  position: absolute;
+  left: 50%;
+  /* Under the "HIT!" call stamp (.hitfx-banner), so holding Tab while calling a hit doesn't hide it. */
+  top: calc(max(18%, 124px) + 96px);
+  transform: translateX(-50%);
+  width: min(760px, calc(100% - 32px));
+  padding: 14px 18px 16px;
+  border-radius: 8px;
+  background: rgba(14, 16, 20, 0.85);
+  color: var(--paper);
+  pointer-events: none;
+  z-index: 12;
+}
+
+.match-board[hidden] {
+  display: none;
+}
+
+.match-board-heading {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(247, 243, 234, 0.7);
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-table thead th {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: right;
+  text-transform: uppercase;
+  color: rgba(247, 243, 234, 0.6);
+}
+
+.stats-table td:first-child {
+  width: 28%;
+}
+
+.stats-table td {
+  padding: 4px 8px;
+  text-align: right;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.stats-table thead th:first-child,
+.stats-table td:first-child {
+  text-align: left;
+}
+
+.stats-team th {
+  padding: 12px 8px 4px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--team);
+  border-bottom: 2px solid var(--team);
+}
+
+/* Your line stands out: brighter, bold, with a bar in your team's colour. */
+.stats-team tr.you td {
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 800;
+}
+
+.stats-team tr.you td:first-child {
+  box-shadow: inset 4px 0 0 var(--team);
+}
+
+.stats-team tr.out td {
+  opacity: 0.5;
+}
+
+.stats-team tr.out td:first-child::after {
+  content: ' · hit';
+}
+
+/* End-of-match summary: compact, so Continue stays on screen in a 1366x657 window. */
+.summary-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 24px;
+}
+
+.summary-result {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.summary-table td {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.summary-table .stats-team th {
+  padding-top: 8px;
+}
+
+.summary-records {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.records-grid {
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.records-grid th,
+.records-grid td {
+  padding: 3px 28px 3px 0;
+  text-align: left;
+}
+
+.records-grid thead th {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--menu-muted);
+}
+
+.records-grid thead th:first-child {
+  color: var(--orange);
+}
+
+.records-grid tbody th {
+  font-weight: 700;
+}
+
+.records-grid td.current {
+  font-weight: 800;
+  color: var(--orange);
+}
+
+.records-bests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+}
+
+.records-best-label {
+  margin-right: 8px;
+  color: var(--menu-muted);
+}
+
+.records-new {
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--orange);
+  color: var(--ink);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Settings → Crosshair: the live preview, standing still and as when moving, on a mid-tone backdrop. */
+.crosshair-preview {
+  gap: 12px;
+}
+
+.crosshair-preview-cell {
+  position: relative;
+  flex: 0 0 140px;
+  height: 110px;
+  border: 1px solid var(--menu-line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6f7a6a 0%, #8c8a7c 50%, #c9c4b3 100%);
+  overflow: hidden;
+}
+
+.crosshair-preview-caption {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.crosshair-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 7px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  vertical-align: -1px;
 }

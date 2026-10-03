@@ -2,11 +2,16 @@ import { el, hintLine, menuButton, setHint } from './menuParts';
 
 export interface ResultActions {
   onPlayAgain: () => void;
+  /** Back to the end-of-match summary. */
+  onSummary: () => void;
   onChangeSetup: () => void;
   onTitle: () => void;
 }
 
-/** The end of a match: who won and the score, then Play Again (same setup), Change setup (New game) or Title screen. */
+/**
+ * The end of a match: who won and the score, then Play Again (same setup), Change setup (New game), Title screen, or
+ * Match summary to look at the numbers again.
+ */
 export class ResultScreen {
   readonly root: HTMLDivElement;
   private readonly headline: HTMLHeadingElement;
@@ -27,6 +32,7 @@ export class ResultScreen {
       playAgain,
       menuButton('Change setup', 'secondary', actions.onChangeSetup),
       menuButton('Title screen', 'secondary', actions.onTitle),
+      menuButton('Match summary', 'secondary', actions.onSummary),
     );
     const foot = el('div', 'menu-result-foot');
     foot.append(this.hint, buttons);

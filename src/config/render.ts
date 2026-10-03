@@ -178,11 +178,11 @@ export const HUD = {
   matchOverScreenPause: 0.3,
   /**
    * The crosshair's arms open to show where your BBs can go: the gap is this many standard deviations
-   * of the current spread (replica spread × stance and movement), on screen, but never under
-   * crosshairMinGap pixels. Gaps change only in steps of crosshairGapStep pixels (fewer DOM writes).
+   * of the current spread (replica spread × stance and movement), on screen, but never under the
+   * player's own smallest gap (Settings → Crosshair, config/matchInfo.ts). Gaps change only in steps of
+   * crosshairGapStep pixels (fewer DOM writes).
    */
   crosshairSpreadSigmas: 2,
-  crosshairMinGap: 4,
   crosshairGapStep: 0.5,
 } as const;
 
