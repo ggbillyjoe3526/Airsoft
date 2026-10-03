@@ -20,7 +20,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 2: done (`v0.1-alpha.2` tagged). Phase 3: M7 (leaning), M8 (magazines), M9 (BB physics), M10 (movement and positioning), a code review pass, the audit fixes, elevation support and a code bug pass done; the owner's playtest and the `v0.1-alpha.3` tag are left (the owner tags when ready). M11 (Depot rework) moved to Phase 4 (owner, 2026-10-02). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is next: weapon handling (M12), the Depot rework (M11), an audio rework (M13), then art, menus and settings, and a tutorial. The owner's `v0.1-alpha.3` playtest notes are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -45,6 +45,7 @@ tagged (owner, 2026-10-01): playtests in between are plain commits.
 | (playtest) | 2026-09-30 | Phase 2 M1–M3, for the owner's playtest (commit d8c4568) | was `v0.1-alpha.2a`; removed after `v0.1-alpha.2` |
 | (checkpoint) | 2026-10-01 | Phase 2 M1–M4b (commit 08b37e3) | was `v0.1-alpha.2b`; removed after `v0.1-alpha.2` |
 | `v0.1-alpha.2` | 2026-10-01 | Phase 2 complete: Elimination and Attack / Defend on Depot | `v0.1-alpha.2` |
+| `v0.1-alpha.3` | 2026-10-03 | Phase 3 complete: leaning, magazines, BB physics, movement and positioning, audit fixes, elevation support | `v0.1-alpha.3` |
 
 ## What v0.1 is (owner decision, 2026-10-01)
 
@@ -67,7 +68,7 @@ v0.1 focuses on core gameplay and foundations. Later content builds on those fou
 - **Unlocks never block fun.** Until progression is designed, everything is free from the start. When
   progression comes, it is earned by unlocking replicas and gear, never by levels.
 
-## Progress (updated 2026-10-02)
+## Progress (updated 2026-10-03)
 
 Milestones are development steps. Only the rows marked as builds become tagged releases.
 
@@ -90,14 +91,18 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · Audit fixes 1: automatic checks on every pull request (Fable audit C-02, C-03) | Done | 9.0 |
 | Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | Done | 9.1 |
 | Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | Done | 9.0 |
-| Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** (owner tags when ready) | Code bug pass done (9 fixes, on `main`); owner's playtest next | 9.0 |
-| Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later | |
-| Alpha · Phase 4 Presentation and onboarding → feature complete | Later | |
+| Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | Done (tagged 2026-10-03; the owner's playtest notes went into Phase 4) | 9.0 |
+| Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Next | |
+| Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity | Later | |
+| Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later (layout sketch waits for the owner's OK) | |
+| Alpha · Phase 4 · M13 Audio rework | Later | |
+| Alpha · Phase 4 · M14 Art pass, M15 Menus and settings, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
 Playtests between releases use the latest merged commit on `main`; they are not tagged. Phase 4's
-build number is assigned when it's cut.
+build number is assigned when it's cut. The Phase 4 rows are listed in the proposed working order; milestone
+numbers are names, not the order.
 
 ## Alpha: building v0.1
 
@@ -124,7 +129,7 @@ bots, 3v3 rounds to 5, and a minimal HUD.
     in either mode; GPU memory is stable across match restarts (no leaks). The 60 FPS check on the target
     laptop is the owner's.
 
-### Phase 3: Core foundations → build `v0.1-alpha.3`
+### Phase 3: Core foundations → build `v0.1-alpha.3` (done)
 
 These systems shape how every later replica, mode and field plays, so they come before any new
 content. The game keeps the AEG and the gas pistol.
@@ -194,14 +199,63 @@ content. The game keeps the AEG and the gas pistol.
     switch with the trigger held, bots ducked from their own BBs and fired into the wall beside them, and one bad
     frame time could stop the game clock for good. Smaller leftovers are in KNOWN_ISSUES.
 - **M11 (Depot rework)** moved to Phase 4 (owner, 2026-10-02), so `v0.1-alpha.3` ships with today's Depot layout.
+- **Done:** the owner playtested and tagged `v0.1-alpha.3` on 2026-10-03. The playtest notes are in Phase 4 below.
 
-### Phase 4: Presentation and onboarding (the last alpha phase)
+### Phase 4: Feel, presentation and onboarding (the last alpha phase)
 
-New content and systems that replace the greybox and placeholders. This is alpha work, even though it
-makes the game look finished.
+New content and systems that replace the greybox and placeholders, plus the handling and sound changes from the
+owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the game look finished.
 
-- **M11. Depot rework** to the field checklist (moved from Phase 3, owner, 2026-10-02; first in this phase, since the art
-  pass dresses its layout). A layout sketch is ready for the owner's approval: https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD
+**The owner's `v0.1-alpha.3` playtest notes (2026-10-03) and where each one went:**
+
+| # | Note | Goes to |
+|---|---|---|
+| 1 | Fire modes: single shot, semi auto, burst, fully auto, per replica as on the real type it's based on (a Glock-17-style pistol semi only, an MP5-style SMG single, burst and auto) | M12a |
+| 2 | The reload is a tiny bit too slow | M12a |
+| 3 | Aim down sights only with a scope fitted; a separate sensitivity while aiming | M12b |
+| 4 | Scopes aren't part of the replica models; they're accessories added through customisation | M12b (the optic slot), v0.3 / v0.5 (more optics, full customisation) |
+| 5 | Crouch toggles on and off instead of hold, with a setting to change it | M12a |
+| 6 | Audio rework: higher quality, movement you can locate by ear, impactful but true-to-airsoft shots, each replica sounding like how it fires | M13 |
+| 7 | Standing still or walking (Shift) tightens the crosshair more than today: the stiller you are, the more accurate; less skill-heavy than CS / Valorant | M12a |
+
+**Proposed order** (the owner picks; 2026-10-03): **M12a → M12b → M11 → M13 → M14 → M15 → M16.** Weapon handling comes
+first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
+the Depot layout sketch. The Depot rework follows once the sketch is approved. The audio rework comes after it so
+movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
+the tutorial come last because they dress and explain everything before them.
+
+- **M12. Weapon handling** (owner's playtest notes 1, 2, 3, 4, 5 and 7). Split in two so the quick changes can be
+  played first. Bots play by the same handling rules where they apply.
+  - **M12a. Fire modes, reloads, crouch, steadier aim** (notes 1, 2, 5, 7)
+    - **Fire modes:** not every replica has every mode (owner, 2026-10-03). Each replica lists the modes of the
+      real-world type it is modelled on, and a fire selector key (B by default, rebindable) cycles them. A
+      Glock-17-style pistol is semi only (one shot per trigger pull); an MP5-style SMG has single, burst and full
+      auto. Today's AR-pattern AEG gets single, a 3-round burst and full auto (full auto by default); the gas
+      pistol stays semi only. The HUD shows the current mode next to the ammo. Later platforms (v0.3) follow the
+      same rule. In-game names stay generic (no brand names, CLAUDE.md §4).
+    - **Faster reloads:** about 15% quicker (AEG 2.1 → 1.8 s, pistol 1.4 → 1.2 s). The reload animation and its
+      sounds already scale with the reload time.
+    - **Crouch toggle:** C toggles crouch by default (press to crouch, press again to stand), with a setting to switch
+      back to hold. Sprinting or jumping stands you up. The key-bindings screen labels it to match.
+    - **Steadier aim when still** (note 7): the longer you hold still, the tighter the spread gets, and walking with
+      Shift costs less than today. A first guess to tune in play: standing still steadies from ×1 to ×0.7 of the
+      replica's spread over about half a second, and walking pace drops from ×1.5 to ×1.15; crouching still stacks
+      on top. Running, sprinting and jumping stay as they are. The crosshair already shows the real spread, so it
+      shrinks with it. Gentler than CS / Valorant: no counter-strafing trick and no spray patterns to learn.
+    - New settings (crouch toggle or hold) go on the existing start-screen settings, saved in one versioned settings
+      store (audit W-02, fixed here because this step adds settings).
+  - **M12b. Optics and aiming down sights** (notes 3, 4)
+    - Replica models carry no optic by default: the AEG's red dot comes off its model, and it gets flip-up iron
+      sights instead.
+    - **An optic slot:** optics are accessories fitted to a replica. v0.1 has one (the red dot), fitted from a simple
+      option before a match, off by default. More optics and full customisation come with loadouts (v0.3) and
+      customisation (v0.5).
+    - **Aiming down sights** works only with an optic fitted: hold the right mouse button to raise the sight to your
+      eye. It narrows the view slightly, hides the crosshair (the dot is the aim point) and slows you to walking
+      pace. A first guess: no extra accuracy beyond what standing still gives, so stillness stays the accuracy rule.
+    - **Aiming sensitivity:** a separate mouse sensitivity while aiming down sights, as its own setting.
+- **M11. Depot rework** to the field checklist (moved from Phase 3, owner, 2026-10-02; before the art pass, since the
+  art pass dresses its layout). A layout sketch is ready for the owner's approval: https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD
   - Purpose-built airsoft barricades (walls with shooting ports).
   - Buildings with windows and doorways: today it's one office block, so add at least one more structure.
   - Deliberate choke points and flanking routes.
@@ -215,14 +269,26 @@ makes the game look finished.
   - Layout tests are extended to the checklist; bot lanes and poles are updated.
   - The headless match guards stay green on the new layout (re-measured, not loosened).
   - Fix when touched (audit): reset the reload bar of a player who is hit (W-07), if playtesting shows it frozen.
-- Art pass (CC0 assets only), VFX and lighting for Depot, the replicas and the figures.
-- Proper menus and a full settings screen: FOV, volume, colour-blind team colours, reduced motion and
-  other accessibility options.
-- Onboarding: a short tutorial.
+- **M13. Audio rework** (owner's playtest note 6). Today's sound works; this makes it sound good and tell you more.
+  - **Replicas sound like how they fire.** Each replica has a power source with its own sound profile: electric (the
+    AEG: motor spin-up, gearbox and piston cycle, the BB leaving the barrel), gas (the pistol: a sharp gas pop and
+    the slide or bolt clack), and spring for the spring replicas that come later (a piston thump and spring
+    twang). More impact and body than today, but still the sound of an airsoft replica, never a firearm.
+  - **Movement you can locate by ear:** clearer footsteps by surface and pace, gear rustle, landings, crouch and
+    lean movement, with better direction and distance cues (HRTF panning) and sounds muffled when a wall is in the
+    way. How far bots hear each sound stays as it is unless the rework deliberately retunes it.
+  - Higher quality overall: richer synthesis, and CC0 samples where synthesis falls short (assets policy, CLAUDE.md
+    §4; every file recorded in `docs/ASSETS.md`).
+  - Fix when touched (audit W-03): reuse one panner per character and disconnect one-shot sound chains.
+- **M14. Art pass** (CC0 assets only), VFX and lighting for Depot, the replicas and the figures.
+- **M15. Menus and a full settings screen:** FOV, volume, colour-blind team colours, reduced motion and
+  other accessibility options. It gathers the M12 settings (crouch toggle or hold, aiming sensitivity) and the
+  render quality presets.
+- **M16. Onboarding:** a short tutorial.
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
-  start screen and menus out of `game.ts` first (W-05), one versioned settings store for the new settings (W-02),
-  a "graphics reset" message on a lost WebGL context (W-01), shader warm-up if the overlay shows a hitch (W-04), and
-  reusing audio nodes when the audio pass comes (W-03). The settings screen exposes the quality presets.
+  start screen and menus out of `game.ts` first (W-05), one versioned settings store for the new settings (W-02,
+  in M12a), a "graphics reset" message on a lost WebGL context (W-01), shader warm-up if the overlay shows a hitch
+  (W-04), and reusing audio nodes in M13 (W-03).
 
 When the owner calls the game feature complete, alpha ends.
 
@@ -263,7 +329,8 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
 
 ### Proposed v0.3: The armoury
 
-- **Replica platforms** that feel mechanically different, not like damage models:
+- **Replica platforms** that feel mechanically different, not like damage models. Each one sounds like its
+  power source (electric, gas, spring; HPA if it comes), using the sound profiles from M13:
 
   | Platform | What sets it apart |
   |---|---|
@@ -278,7 +345,8 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
 
 - **Loadout building**, free from the start:
   - Weapon parts: receivers, handguards, stocks, optics, grips, muzzle devices, suppressors,
-    lasers/lights and bipods.
+    lasers/lights and bipods. The optic slot and aiming down sights already exist from M12b (one red dot);
+    this adds more optics, such as magnified scopes.
   - Gear: plate carriers, chest rigs, belts, helmets, comms, backpacks, gloves, eye protection, face
     protection and boots. Gear decides what you carry, e.g. how many magazines.
 - **Chrono before a match:** check your loadout's muzzle velocity, and pick the BB weight and tracers.

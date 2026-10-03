@@ -137,7 +137,7 @@ Then open **http://localhost:4173**.
 
 ---
 
-## What's in v0.1-alpha.2 and what isn't
+## What's in v0.1-alpha.3 and what isn't
 
 **In:** one map (Depot), two replicas (AEG rifle, gas pistol), BB ballistics with hop-up, one-hit
 elimination with hit calling, two modes (Elimination; Attack / Defend with a flagpole, overtime and a
@@ -146,9 +146,12 @@ cover, move as a team, search, hunt, hear footsteps, hold and retake the pole), 
 and first-to-5 scoring, walk/run/sprint, rebindable keys, synthesised sounds with footsteps, reload
 animations, hit reactions and a minimal HUD.
 
-**Next (Phase 3, v0.1-alpha.3):** core foundations: carrying a set of magazines with meaningful reloads, a BB
-physics pass, movement and positioning, and a reworked Depot. Progress and plans:
-[`docs/ROADMAP.md`](docs/ROADMAP.md).
+**Added in v0.1-alpha.3 (Phase 3, tagged 2026-10-03):** leaning (Q / E), a set of magazines per round with
+meaningful reloads, a BB physics pass, accuracy by stance and movement, and support for ramps and raised floors.
+
+**Next (Phase 4, the last alpha phase):** weapon handling from the owner's playtest (fire modes, faster reloads,
+crouch toggle, steadier aim when still, optics with aiming down sights), a reworked Depot, an audio rework, then
+art, menus and settings, and a short tutorial. Progress and plans: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 **Version names:** the game is being built as **v0.1**. Alpha releases (`v0.1-alpha`, `v0.1-alpha.2`,
 `v0.1-alpha.3` …) come first. Beta releases (`v0.1-beta` …) follow once it's feature complete, and **v0.1** is

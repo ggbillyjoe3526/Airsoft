@@ -5,33 +5,27 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · `main` (the code bug pass was committed straight to `main` at the owner's request)._
+_Last updated: 2026-10-03 · branch `docs/playtest-feedback-roadmap` (roadmap update after the `v0.1-alpha.3` playtest)._
 
 ## Where we are
 
-- **Phase 3 is built.** M7–M10, the code review pass, the Fable audit fixes (C-01 to C-05, PRs #3–#6, all merged)
-  and elevation support are on `main`. Ramp Yard (`src/map/testYard.ts`) is the elevation test map; no shipped
-  map uses elevation yet.
-- **Code bug pass done (2026-10-02, critic 9.0 on attempt 2):** three reviewers read all of `src/` (sim/physics/config/map,
-  AI/nav, and game/render/UI/input/audio, with headless soaks and a Chromium run); 9 bugs fixed with tests (see
-  ROADMAP, Phase 3 bug pass). Smaller leftovers went to KNOWN_ISSUES ("Bug pass 2026-10-02").
-- The Attack / Defend balance guard was re-measured over seeds 1–48 (attackers 53%); its ceiling is now 67% because
-  the 16 guard seeds read high (63%). See DECISIONS.
-- **Branches and name (2026-10-03):** the owner deleted the old merged branches, so only `main` is left, and renamed
-  the repository to `Airsoft` (capital A). GitHub redirects the old lowercase links. The cloud session can't delete
-  branches (its GitHub access doesn't allow it), so the owner deletes merged branches on GitHub's Branches page.
-- **The owner playtests next** (`docs/PLAYTEST.md`, all sections, plus its new "Fixed in the code bug pass" list) and
-  then decides whether to tag `v0.1-alpha.3`. **Don't tag it**; the owner tags.
+- **Phase 3 is done and tagged** (`v0.1-alpha.3`, 2026-10-03, by the owner). Ramp Yard (`src/map/testYard.ts`) is the
+  elevation test map; no shipped map uses elevation yet.
+- **The owner's playtest notes are in the roadmap** (Phase 4 table of notes): M12 Weapon handling (M12a fire modes,
+  faster reloads, crouch toggle, steadier aim when still; M12b optics as accessories, aiming down sights, aiming
+  sensitivity) and M13 Audio rework. DECISIONS has the first-guess numbers (2026-10-03).
+- Open owner questions: the Phase 4 order (proposed M12a → M12b → M11 → M13 → art → menus → tutorial) and the
+  M11 layout sketch
+  (https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD).
 - The critic runs on Opus (`.claude/agents/critic.md`). The owner plays on an RTX 5090 desktop; the iGPU 60 FPS
   target is a Beta item. The owner is new to GitHub: explain in plain words and say exactly what to click.
 
 ## Next
 
-1. **The owner's playtest** of `main`. Fix what they post, as a pull request (the direct-to-`main` commit was a one-off
-   for this bug pass; CLAUDE.md's pull-request rule still holds).
-2. **Phase 4, M11 Depot rework**: the layout sketch (https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD: loading
-   docks with 1:2 ramps, a workshop, barricades with ports, stacked divider containers) waits for the owner's
-   approval. Then build it, re-measure the bot guards on the new layout, and add a playtest section for it.
+1. **M12a** (unless the owner picks another order): fire selector, reload times, crouch toggle setting, the stillness
+   spread. The spread lives in `MOVEMENT.accuracy` / `sim/accuracy.ts`; reload times and `fireMode` in
+   `config/replicas.ts`; crouch input in `input/playerInput.ts`. Add a playtest section for it.
+2. **M12b**, then **M11 Depot rework** once the owner approves the sketch, then **M13 Audio rework**.
 
 ## Working notes and gotchas
 
