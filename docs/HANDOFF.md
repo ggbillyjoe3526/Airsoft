@@ -18,6 +18,10 @@ _Last updated: 2026-10-03 · branch `claude/m15b-menu-fixes-adsroh` (the end of 
   (the pointer-lock request counting, `pause()` with no match, the review line and leftovers).
 - **Next: M17a** (replica slots, BB weight per replica; built, in review), then **M17b** attachments, then M13 audio,
   M18 match info, M19 custom matches, M20 practice range, M14 art, M16 tutorial (ROADMAP Phase 4 order).
+- **M13 audio** (critic 9.0) is built in its own pull request (#19, branch `claude/m13-audio-rework-j2lmeh`). Sounds are
+  data recipes (`config/sounds.ts`) rendered by the pure `audio/dsp.ts`, once per page (`SoundLibrary`, owned by
+  `Game` with the volume sliders as `SfxSetup`); `Sfx` keeps one HRTF channel per character, muffled by rays. A new
+  replica (M17, v0.3) only needs a `power`: its shot, dry-fire and magazine sounds follow from it.
 
 ## Working notes and gotchas
 
@@ -29,6 +33,9 @@ _Last updated: 2026-10-03 · branch `claude/m15b-menu-fixes-adsroh` (the end of 
   "starts next round" notes are gone.
 - **Menus:** one screen at a time (`Menus.go`); `menuNav.ts` decides Back and which menu opens when play stops. Text
   is set in capitals by CSS, so the code keeps normal case. `BUILD_LABEL` in `config/menus.ts` moves with each tag.
+- **Sound:** `npm test -- src/audio` checks every recipe renders (audible, no clipping, no end click), the profiles
+  differ, a shot stays louder than steps, and `Sfx` against a fake Web Audio context. To listen offline, render a cue
+  with `renderSounds` in a scratch test and write a WAV. The Audio tab is `ui/audioSettings.ts`.
 - **Parallel pull requests conflict** in `docs/DECISIONS.md`, `docs/REVIEWS.md` and `docs/KNOWN_ISSUES.md` (all
   append at the end). Merge `main` in and keep both sides, `main`'s lines first.
 - **Checks:** `npm run check` (type check, tests, build). In a cloud container, run the smoke test with a temporary copy

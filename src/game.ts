@@ -1,3 +1,7 @@
+import { loadVolumes } from './audio/audioMix';
+import type { SfxSetup } from './audio/sfx';
+import { SoundLibrary } from './audio/soundBank';
+import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
 import { ROUNDS } from './config/hits';
 import type { MatchMode } from './config/modes';
@@ -68,6 +72,8 @@ export class Game {
   private difficulty: Difficulty;
   private optic: OpticChoice;
   private readonly hopUps: number[];
+  /** The volume sliders and the synthesised sounds, kept across matches (each match's Sfx plays from them). */
+  private readonly audio: SfxSetup = { volumes: loadVolumes(), library: new SoundLibrary() };
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     await initPhysics();
@@ -140,6 +146,7 @@ export class Game {
       crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
       quality: options.quality,
+      audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v) },
     });
     this.menus.showTitle();
     this.pointer.onChange((locked) => {
@@ -147,6 +154,12 @@ export class Game {
       else this.pause();
     });
     this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
+  }
+
+  /** A volume slider moved on Settings → Audio: kept for the next match and applied to the one loaded. */
+  private changeVolume(channel: VolumeChannel, position: number): void {
+    this.audio.volumes[channel] = position;
+    this.session?.combat.setVolume(channel, position);
   }
 
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
@@ -184,7 +197,7 @@ export class Game {
         difficulty: this.difficulty,
         optic: this.optic,
         hopUps: this.hopUps,
-      }, this.options.seed, QUALITY[this.options.quality]);
+      }, this.options.seed, QUALITY[this.options.quality], this.audio);
     }
     this.session!.combat.unlockAudio();
     if (this.options.allowUnlocked) {
