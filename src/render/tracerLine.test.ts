@@ -55,7 +55,7 @@ describe('BB tracers leave the muzzle in line with the barrel (owner playtest, 2
         arm.active = slot;
         if (aim) fitOptic(arm, LOADOUT, 'redDot');
         if (kicked) for (let i = 0; i < 5; i++) vm.onShot(); // stacked to VIEWMODEL.kickMax
-        vm.update(0, 0, 0, 0, 4.2, false, arm, LOADOUT, false, aim);
+        vm.update(0, 0, 0, 0, 4.2, 0, arm, LOADOUT, false, aim);
         const cam = mainCamera();
         const muzzle = new THREE.Vector3();
         expect(vm.muzzleWorld(cam, muzzle)).toBe(true);
@@ -84,8 +84,9 @@ describe('BB tracers leave the muzzle in line with the barrel (owner playtest, 2
           for (const p of streak(r, 0)) {
             const s = onScreen(p, cam);
             expect(s.inFront, `frame ${frame}`).toBe(true); // never reaching back behind the camera
-            // On the muzzle-to-centre line (cross product ~0; 0.004 is about 2 px at 1080p, the BB's own small rise from
-            // its hop-up), between the two ends.
+            // On the muzzle-to-centre line (cross product ~0, normalised by the muzzle's distance from the centre; 0.004
+            // is about 2 px at 1080p: the kicked muzzle sits nearer the centre, which magnifies the BB's own small
+            // rise from its hop-up), between the two ends.
             expect(Math.abs(s.x * m.y - s.y * m.x) / len, `frame ${frame}`).toBeLessThan(0.004);
             expect(Math.hypot(s.x, s.y), `frame ${frame}`).toBeLessThanOrEqual(len + 1e-6);
           }

@@ -1,4 +1,5 @@
 import type { BallisticsConfig } from '../config/ballistics';
+import { SIM_DT } from '../config/sim';
 import { bbMass, HOP_UP, hopUpLift, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
 import { createBBPool, spawnBB, stepBBFlight } from './ballistics';
 import { vec3 } from './vec';
@@ -11,8 +12,6 @@ export interface HopUpReach {
   peakRise: number;
 }
 
-const DT = 1 / 120;
-
 /**
  * Flies one BB level from `replica` with its hop-up dial at `dial` (the game's flight model, no spread) and
  * reports how far it stays on target and how high it rises. Cheap enough to run on every slider move.
@@ -22,7 +21,7 @@ export function hopUpReach(replica: ReplicaConfig, dial: number, cfg: Ballistics
   let peakRise = 0;
   let onTargetTo: number = HOP_UP.readoutRange;
   while (bb.age < cfg.maxLifetime) {
-    stepBBFlight(bb, cfg, DT);
+    stepBBFlight(bb, cfg, SIM_DT); // the game's own tick, so the readout matches the BBs you fire
     const distance = -bb.position.z;
     if (distance >= HOP_UP.readoutRange) break;
     peakRise = Math.max(peakRise, bb.position.y);
@@ -33,7 +32,7 @@ export function hopUpReach(replica: ReplicaConfig, dial: number, cfg: Ballistics
   }
   // Past the band it may still climb (over-hopped): follow it to its peak for the readout.
   while (bb.age < cfg.maxLifetime && bb.velocity.y > 0 && -bb.position.z < HOP_UP.readoutRange) {
-    stepBBFlight(bb, cfg, DT);
+    stepBBFlight(bb, cfg, SIM_DT);
     peakRise = Math.max(peakRise, bb.position.y);
   }
   return { onTargetTo, peakRise };

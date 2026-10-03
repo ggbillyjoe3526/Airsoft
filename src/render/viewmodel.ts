@@ -27,6 +27,17 @@ export function magazineOut(p: number): number {
   return 1 - smooth((p - R.magInStart) / (R.magSeated - R.magInStart));
 }
 
+/**
+ * How far the replica is still carried for a sprint (0..1) with `lockout` seconds of the post-sprint fire lockout
+ * (`total`) left: it comes down over the lockout and is square to the view (0) a few ticks before firing unlocks, so
+ * a shot straight out of a sprint leaves in line with the barrel.
+ */
+export function sprintCarry(lockout: number, total: number): number {
+  if (!(total > 0) || lockout <= 0) return 0;
+  const share = VIEWMODEL.carrySquareAt;
+  return Math.max(0, Math.min(1, (lockout / total - share) / (1 - share)));
+}
+
 const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
 
 /**
@@ -125,7 +136,8 @@ export class Viewmodel {
 
   /**
    * Called once per frame. `speed` is the player's horizontal speed and `runSpeed` its normal (run) speed;
-   * `carried` is true while sprinting or in the post-sprint lockout; `callingHit` lowers the replica
+   * `carry` is how far the replica is carried for a sprint (1 while sprinting, falling to 0 over the post-sprint
+   * lockout, so it is square to the view again the moment it can fire); `callingHit` lowers the replica
    * and raises your hand. `aim` is how far a fitted optic is raised to your eye (0..1).
    */
   update(
@@ -134,7 +146,7 @@ export class Viewmodel {
     pitch: number,
     speed: number,
     runSpeed: number,
-    carried: boolean,
+    carry: number,
     armament: Armament,
     loadout: readonly ReplicaConfig[],
     callingHit: boolean,
@@ -183,7 +195,9 @@ export class Viewmodel {
 
     const moving = Math.min(1, speed / runSpeed);
     this.bobPhase += dt * VIEWMODEL.bobFrequency * Math.PI * 2 * moving;
-    this.sprintBlend += ((carried ? 1 : 0) - this.sprintBlend) * (1 - settle);
+    // Eases into the carry, but comes back no later than `carry` does: a shot fired straight out of a sprint leaves a
+    // replica pointing straight ahead, in line with its BBs.
+    this.sprintBlend = Math.min(carry, this.sprintBlend + (carry - this.sprintBlend) * (1 - settle));
 
     const reloadP = armament.reload > 0 ? 1 - armament.reload / replica.reloadTime : 0;
     const reloadDip = Math.sin(Math.PI * reloadP);

@@ -109,6 +109,8 @@ in the **Loadout** box on the start screen (before a match; it is not on the pau
 
 - [ ] **Fire the rifle from the hip, a few single shots and a burst.** Each BB and its short streak start at the tip
   of the barrel and fly out along it towards the crosshair. Nothing streaks up from below the rifle.
+- [ ] **Sprint, let go and fire at once, and spray full auto.** The first BBs out of a sprint and a long burst still
+  leave the barrel in line; the rifle kicks back and up a little rather than tipping up.
 - [ ] **Do the same aiming down the red dot, and with the pistol.** The BBs come out of the muzzle under the sight
   (or the pistol's barrel) and rise into the dot or crosshair.
 - [ ] **Switch to the pistol (2).** It points straight ahead, its slide square to the view, instead of turned to the
@@ -123,7 +125,7 @@ Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longe
   more).** Rifle BBs rise a little (about a hand's width) around 20 m and are still on target at Depot's longest
   sightlines (about 34 m). The pistol's BBs drop sooner, from about 25 m.
 - [ ] **Turn the rifle's hop-up right down (0%).** BBs start dropping from about 14 m; far shots land low.
-- [ ] **Turn it right up (90–100%).** The BBs climb half a metre or more over your aim and float before they fall.
+- [ ] **Turn it right up (90–100%).** The BBs climb about half a metre over your aim and float before they fall.
   The line under the slider says so.
 - [ ] **Find a setting you like.** The game remembers it. Bots always use the factory setting.
 
