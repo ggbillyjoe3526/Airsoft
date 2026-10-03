@@ -520,6 +520,28 @@ body {
   font: 700 15px var(--ui-mono);
 }
 
+/* Number boxes (cm/360 and the mouse's DPI on Settings → Controls) */
+.menu-turn {
+  font-size: 14px;
+  color: var(--menu-muted);
+}
+
+.menu-number {
+  width: 6.5em;
+  min-height: 36px;
+  padding: 0 10px;
+  font: 700 15px var(--ui-mono);
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-radius: 6px;
+}
+
+.menu-number:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 1px;
+}
+
 .menu-readout {
   flex-basis: 100%;
   margin: 0;

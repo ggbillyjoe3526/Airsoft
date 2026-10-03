@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { REDUCED_MOTION } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import { LOADOUT } from '../config/replicas';
 import { createArmament, fitOptic } from '../sim/armament';
@@ -212,4 +213,40 @@ describe('sprint carry', () => {
       vm.dispose();
     });
   }
+});
+
+describe('Viewmodel reduced motion (M18)', () => {
+  /** Where the held replica sits after walking and turning for a second, then firing a shot. */
+  function after(reduced: boolean): { walkY: number[]; turned: number; kicked: number } {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    if (reduced) vm.setMotion(REDUCED_MOTION);
+    const arm = createArmament(LOADOUT);
+    arm.draw = 0;
+    const rig = vm.scene.children.find((o) => o instanceof THREE.Group)!;
+    const walkY: number[] = [];
+    const dt = 1 / 60;
+    vm.update(dt, 0, 0, 4.2, 4.2, 0, arm, LOADOUT, false, 0);
+    for (let i = 0; i < 60; i++) {
+      vm.update(dt, 0, 0, 4.2, 4.2, 0, arm, LOADOUT, false, 0);
+      walkY.push(rig.position.y);
+    }
+    vm.update(dt, 0.3, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+    const turned = rig.position.x;
+    const rest = rig.position.z;
+    vm.onShot();
+    vm.update(dt, 0.3, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+    return { walkY, turned, kicked: rig.position.z - rest };
+  }
+
+  it('takes away the walk bob and the sway behind a turn, and halves the kick', () => {
+    const full = after(false);
+    const reduced = after(true);
+    const spread = (ys: number[]) => Math.max(...ys) - Math.min(...ys);
+    expect(spread(full.walkY)).toBeGreaterThan(0.005);
+    expect(spread(reduced.walkY)).toBeCloseTo(0, 9);
+    expect(Math.abs(full.turned)).toBeGreaterThan(0.005);
+    expect(reduced.turned).toBeCloseTo(0, 9);
+    expect(reduced.kicked).toBeCloseTo(full.kicked * REDUCED_MOTION.kick, 6);
+    expect(full.kicked).toBeGreaterThan(0);
+  });
 });

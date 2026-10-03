@@ -1,20 +1,18 @@
-import { CROUCH_MODES, type CrouchMode, MOUSE } from '../../config/controls';
 import { SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/menus';
-import { AIMING } from '../../config/optics';
 import { FOV_SETTING, QUALITY_LABELS, type QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
+import { type AccessibilitySettingsOptions, accessibilitySettings } from '../accessibilitySettings';
 import { type AudioSettingsOptions, audioSettings } from '../audioSettings';
+import { type ControlsSettingsOptions, controlsSettings } from '../controlsSettings';
 import { type CrosshairSettingsOptions, crosshairSettings } from '../crosshairSettings';
 import { KeySettings } from '../keySettings';
-import { OptionPicker } from '../optionPicker';
 import type { SettingsOrigin } from './menuNav';
 import { backButton, el, laterRow, laterTag, menuPage, menuRow, rangeControl } from './menuParts';
 
 export interface SettingsOptions {
   bindings: KeyBindings;
-  sensitivity: { initial: number; onChange: (v: number) => void };
-  aimSensitivity: { initial: number; onChange: (v: number) => void };
-  crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
+  /** The mouse and the stance keys on the Controls tab (ui/controlsSettings.ts). */
+  controls: ControlsSettingsOptions;
   /** Field of view (horizontal degrees on a 16:9 screen), applied at once. */
   fov: { initial: number; onChange: (v: number) => void };
   /** The render preset in use: the Quality picker is held back (LATER), so its row only shows this. */
@@ -23,12 +21,14 @@ export interface SettingsOptions {
   audio: AudioSettingsOptions;
   /** The crosshair's look on the Crosshair tab (ui/crosshairSettings.ts). */
   crosshair: CrosshairSettingsOptions;
+  /** The Accessibility tab (ui/accessibilitySettings.ts). */
+  accessibility: AccessibilitySettingsOptions;
   onBack: () => void;
 }
 
 /**
- * The Settings screen: tabs down the left (Controls, Key bindings, Graphics, Crosshair, Audio, and Accessibility, which
- * is still to come), the picked tab's settings on the right. Everything saves as it changes. Reached from New game and from the
+ * The Settings screen: tabs down the left (Controls, Key bindings, Graphics, Crosshair, Audio, Accessibility), the
+ * picked tab's settings on the right. Everything saves as it changes. Reached from New game and from the
  * pause menu; Back returns to whichever opened it.
  */
 export class SettingsScreen {
@@ -103,39 +103,10 @@ export class SettingsScreen {
 
   private fillTab(id: SettingsTab, panel: HTMLDivElement, opts: SettingsOptions): void {
     if (id === 'controls') {
-      panel.append(
-        menuRow(
-          'Mouse sensitivity',
-          '',
-          rangeControl(
-            'Mouse sensitivity',
-            { min: MOUSE.minSensitivity, max: MOUSE.maxSensitivity, step: MOUSE.sensitivityStep },
-            opts.sensitivity.initial,
-            (v) => v.toFixed(2),
-            'sensitivity',
-            opts.sensitivity.onChange,
-          ),
-        ),
-        // A multiple of the mouse sensitivity, so it follows when that changes.
-        menuRow(
-          'Aiming sensitivity',
-          'While aiming through an optic.',
-          rangeControl(
-            'Aiming sensitivity',
-            { min: AIMING.minSensitivity, max: AIMING.maxSensitivity, step: AIMING.sensitivityStep },
-            opts.aimSensitivity.initial,
-            (v) => `×${v.toFixed(2)}`,
-            'aimSensitivity',
-            opts.aimSensitivity.onChange,
-          ),
-        ),
-        menuRow('Crouch key', '', new OptionPicker('Crouch key', CROUCH_MODES, opts.crouch.initial, 'crouch', opts.crouch.onChange).root),
-      );
+      panel.append(...controlsSettings(opts.controls));
     } else if (id === 'keys') {
       const mouse = el('p', 'menu-readout settings-mouse');
-      mouse.innerHTML =
-        '<kbd>Left mouse</kbd> fire · <kbd>Right mouse</kbd> aim (hold, needs an optic) · <kbd>Wheel</kbd> switch · ' +
-        '<kbd>Esc</kbd> pause · <kbd>`</kbd> / <kbd>F3</kbd> debug info';
+      mouse.innerHTML = '<kbd>Wheel</kbd> switch replica · <kbd>Esc</kbd> pause · <kbd>`</kbd> / <kbd>F3</kbd> debug info';
       panel.append(this.keySettings.root, mouse);
     } else if (id === 'graphics') {
       panel.append(
@@ -151,6 +122,8 @@ export class SettingsScreen {
       panel.append(...crosshairSettings(opts.crosshair));
     } else if (id === 'audio') {
       panel.append(...audioSettings(opts.audio));
+    } else if (id === 'accessibility') {
+      panel.append(...accessibilitySettings(opts.accessibility));
     }
   }
 

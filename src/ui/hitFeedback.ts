@@ -18,7 +18,11 @@ export class HitFeedback {
   private shownCalling = false;
   private shownAngle = Number.NaN;
 
-  constructor(parent: HTMLElement) {
+  /** `fireKey` names the key or button the player has on fire now (the spectating label's "… for next"). */
+  constructor(
+    parent: HTMLElement,
+    private readonly fireKey: () => string,
+  ) {
     this.root = document.createElement('div');
     this.root.className = 'hitfx';
     this.root.hidden = true;
@@ -95,7 +99,8 @@ export class HitFeedback {
   setSpectating(name: string): void {
     if (name === this.shownSpectating) return;
     this.shownSpectating = name;
-    this.spectating.textContent = name ? `Spectating ${name} · click for next` : '';
+    const key = this.fireKey();
+    this.spectating.textContent = name ? `Spectating ${name}${key ? ` · ${key} for next` : ''}` : '';
     this.spectating.classList.toggle('show', name !== '');
   }
 

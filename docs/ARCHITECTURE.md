@@ -64,7 +64,7 @@ ends the round). A hit character is eliminated
   the debug overlay shows the preset, pixel ratio, draw calls and GPU object counts. `Renderer.setFov` applies the
   Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
-- **input/**: `Keyboard` and `PointerLock` collect raw input; `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them.
+- **input/**: `Keyboard` and `PointerLock` collect raw input (mouse buttons go into the keyboard as binding codes, `Mouse0` …, so every action binds to a key or a button); `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them, and runs the hold or toggle modes of crouch, aim and sprint. `sensitivity.ts` converts the sensitivity to cm/360.
 - **ui/**: DOM overlays (the menus in `ui/menus/`, debug overlay, ammo HUD).
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.

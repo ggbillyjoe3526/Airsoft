@@ -27,7 +27,7 @@ function fakeKeyboard() {
   };
 }
 
-const pointer = { consumeDelta: () => {}, consumeFirePress: () => false, consumeWheelSteps: () => 0, fireHeld: false, aimHeld: false } as unknown as PointerLock;
+const pointer = { consumeDelta: () => {}, consumeWheelSteps: () => 0 } as unknown as PointerLock;
 
 function setup(mode: 'toggle' | 'hold') {
   const keys = fakeKeyboard();
@@ -102,18 +102,16 @@ describe('fire selector key', () => {
 });
 
 describe('aiming down sights', () => {
-  /** A mouse that moves `dx` counts every frame, with the right button held or not. */
-  function aimingSetup(aimHeld: boolean) {
+  /** A mouse that moves `dx` counts every frame, with the aim button held or not. */
+  function aimingSetup(aimHeld: boolean, dy = 0) {
     const keys = fakeKeyboard();
+    if (aimHeld) keys.press('aim');
     const mouse = {
       consumeDelta: (out: { x: number; y: number }) => {
         out.x = 100;
-        out.y = 0;
+        out.y = dy;
       },
-      consumeFirePress: () => false,
       consumeWheelSteps: () => 0,
-      fireHeld: false,
-      aimHeld,
     } as unknown as PointerLock;
     return new PlayerInput(keys.kb, mouse, MOVEMENT);
   }
@@ -147,5 +145,133 @@ describe('aiming down sights', () => {
     rising.aimSensitivity = 0.5;
     rising.update(0, 2, 0.5);
     expect(rising.yaw).toBeCloseTo(hip.yaw * 0.75, 12);
+  });
+});
+
+describe('invert mouse (M18)', () => {
+  function pitchAfter(invert: boolean): number {
+    const keys = fakeKeyboard();
+    const mouse = {
+      consumeDelta: (out: { x: number; y: number }) => {
+        out.x = 0;
+        out.y = 50; // mouse pulled back (towards you)
+      },
+      consumeWheelSteps: () => 0,
+    } as unknown as PointerLock;
+    const input = new PlayerInput(keys.kb, mouse, MOVEMENT);
+    input.invertY = invert;
+    input.update(0, 2);
+    return input.pitch;
+  }
+
+  it('looks down when the mouse is pulled back, and up with invert on', () => {
+    expect(pitchAfter(false)).toBeLessThan(0);
+    expect(pitchAfter(true)).toBeCloseTo(-pitchAfter(false), 12);
+  });
+});
+
+describe('fire button as a binding (M18)', () => {
+  it('fires while the fire action is held, and a click between ticks still fires once', () => {
+    const { keys, frame } = setup('hold');
+    expect(frame(() => keys.press('fire')).fire).toBe(true);
+    expect(frame().fire).toBe(true); // still held
+    keys.release('fire');
+    expect(frame().fire).toBe(false);
+    // Pressed and let go within one frame: latched for the next tick.
+    expect(
+      frame(() => {
+        keys.press('fire');
+        keys.release('fire');
+      }).fire,
+    ).toBe(true);
+    expect(frame().fire).toBe(false);
+  });
+});
+
+describe('aim toggle (M18)', () => {
+  function toggleSetup() {
+    const t = setup('hold');
+    t.input.aimMode = 'toggle';
+    return t;
+  }
+
+  it('raises the sight on a press and lowers it on the next', () => {
+    const { keys, frame } = toggleSetup();
+    expect(frame(() => keys.press('aim')).aim).toBe(true);
+    keys.release('aim');
+    expect(frame().aim).toBe(true);
+    expect(frame(() => keys.press('aim')).aim).toBe(false);
+  });
+
+  it('lowers on a sprint press or a replica switch', () => {
+    const { keys, frame } = toggleSetup();
+    frame(() => keys.press('aim'));
+    keys.release('aim');
+    expect(frame(() => keys.press('sprint')).aim).toBe(false);
+    keys.release('sprint');
+    frame(() => keys.press('aim'));
+    keys.release('aim');
+    expect(frame(() => keys.press('slot2')).aim).toBe(false);
+  });
+
+  it('never waits, unseen, while the replica in hand has no sight', () => {
+    const { keys, input } = toggleSetup();
+    const cmd = createCommand();
+    keys.press('aim');
+    input.update(1, 2, 0, false);
+    input.fillCommand(cmd);
+    expect(cmd.aim).toBe(false);
+  });
+
+  it('a new round starts with the sight down', () => {
+    const { keys, input, frame } = toggleSetup();
+    frame(() => keys.press('aim'));
+    keys.release('aim');
+    input.resetView(0);
+    expect(frame().aim).toBe(false);
+  });
+
+  it('stays a held button by default', () => {
+    const { keys, frame } = setup('toggle');
+    expect(frame(() => keys.press('aim')).aim).toBe(true);
+    keys.release('aim');
+    expect(frame().aim).toBe(false);
+  });
+});
+
+describe('sprint toggle (M18)', () => {
+  function toggleSetup() {
+    const t = setup('hold');
+    t.input.sprintMode = 'toggle';
+    t.keys.press('forward');
+    return t;
+  }
+
+  it('sprints after one press until forward is let go', () => {
+    const { keys, frame } = toggleSetup();
+    expect(frame(() => keys.press('sprint')).sprint).toBe(true);
+    keys.release('sprint');
+    expect(frame().sprint).toBe(true);
+    keys.release('forward');
+    expect(frame().sprint).toBe(false);
+    keys.press('forward');
+    expect(frame().sprint).toBe(false); // pushing forward again doesn't restart it
+  });
+
+  it('stops on a second press, or a crouch, aim, walk or fire press', () => {
+    for (const stopper of ['sprint', 'crouch', 'aim', 'walk', 'fire'] as const) {
+      const { keys, frame } = toggleSetup();
+      frame(() => keys.press('sprint'));
+      keys.release('sprint');
+      expect(frame(() => keys.press(stopper)).sprint, stopper).toBe(false);
+    }
+  });
+
+  it('stays a held key by default', () => {
+    const { keys, frame } = setup('hold');
+    keys.press('forward');
+    expect(frame(() => keys.press('sprint')).sprint).toBe(true);
+    keys.release('sprint');
+    expect(frame().sprint).toBe(false);
   });
 });

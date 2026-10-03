@@ -24,6 +24,10 @@ export const DEFAULT_BINDINGS = {
   slot2: ['Digit2'],
   /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
   scoreboard: ['Tab'],
+  /** Mouse buttons are codes too (`Mouse0` left … `Mouse4` the forward side button; see input/keyBindings.ts), so fire and aim rebind like any key (M18). */
+  fire: ['Mouse0'],
+  /** Aims down sights (needs an optic); hold or toggle, see AIM_MODES. */
+  aim: ['Mouse2'],
   debugOverlay: ['Backquote', 'F3'],
   /** Debug: draw the recent flight paths of BBs. */
   debugBbPaths: ['BracketRight'],
@@ -33,12 +37,14 @@ export type Action = keyof typeof DEFAULT_BINDINGS;
 
 /** Actions players can rebind, in the order the settings list them, with their labels. */
 export const REBINDABLE: readonly { action: Action; label: string }[] = [
+  { action: 'fire', label: 'Fire' },
+  { action: 'aim', label: 'Aim (needs an optic)' },
   { action: 'forward', label: 'Move forward' },
   { action: 'back', label: 'Move back' },
   { action: 'left', label: 'Move left' },
   { action: 'right', label: 'Move right' },
   { action: 'walk', label: 'Walk (hold, quiet)' },
-  { action: 'sprint', label: 'Sprint (hold)' },
+  { action: 'sprint', label: 'Sprint' },
   { action: 'crouch', label: 'Crouch' },
   { action: 'leanLeft', label: 'Lean left (hold)' },
   { action: 'leanRight', label: 'Lean right (hold)' },
@@ -71,10 +77,15 @@ export const PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * How the crouch key works: press to crouch and again to stand (toggle, the default since the owner's
- * v0.1-alpha.3 playtest), or crouch only while held. In toggle mode, sprinting or jumping stands you up.
+ * How a stance key works: press once to turn it on and again to turn it off (toggle), or only while held.
+ * Crouch, aim and sprint each have their own (M18; crouch since the owner's v0.1-alpha.3 playtest).
  */
-export type CrouchMode = 'toggle' | 'hold';
+export type HoldMode = 'toggle' | 'hold';
+
+/**
+ * The crouch key: toggle by default (owner's v0.1-alpha.3 playtest). In toggle mode, sprinting or jumping stands you up.
+ */
+export type CrouchMode = HoldMode;
 
 export const CROUCH_MODES: readonly { id: CrouchMode; label: string; blurb: string }[] = [
   { id: 'toggle', label: 'Toggle', blurb: 'Press crouch to go down, press again to stand. Sprint or jump also stands you up.' },
@@ -82,6 +93,30 @@ export const CROUCH_MODES: readonly { id: CrouchMode; label: string; blurb: stri
 ];
 
 export const DEFAULT_CROUCH_MODE: CrouchMode = 'toggle';
+
+/** The aim button: hold by default, as before M18. In toggle mode, sprinting or switching replicas lowers the sight. */
+export const AIM_MODES: readonly { id: HoldMode; label: string; blurb: string }[] = [
+  { id: 'hold', label: 'Hold', blurb: 'Aim while the button is held.' },
+  { id: 'toggle', label: 'Toggle', blurb: 'Press aim to raise the sight, press again to lower it. Sprinting or switching replicas lowers it too.' },
+];
+
+export const DEFAULT_AIM_MODE: HoldMode = 'hold';
+
+/** The sprint key: hold by default, as before M18. A toggled sprint stops when you let go of forward, or crouch, aim, walk or fire. */
+export const SPRINT_MODES: readonly { id: HoldMode; label: string; blurb: string }[] = [
+  { id: 'hold', label: 'Hold', blurb: 'Sprint while the key is held.' },
+  { id: 'toggle', label: 'Toggle', blurb: 'Press sprint to run flat out until you let go of forward, or crouch, aim, walk or fire.' },
+];
+
+export const DEFAULT_SPRINT_MODE: HoldMode = 'hold';
+
+/** An on / off setting on a picker (invert mouse, reduced motion). Stored as the id. */
+export type Switch = 'off' | 'on';
+
+export const INVERT_MOUSE: readonly { id: Switch; label: string; blurb: string }[] = [
+  { id: 'off', label: 'Off', blurb: 'Mouse forward looks up.' },
+  { id: 'on', label: 'On', blurb: 'Mouse forward looks down, like a flight stick.' },
+];
 
 export const MOUSE = {
   /**
@@ -99,3 +134,21 @@ export const MOUSE = {
   wheelLinePixels: 40,
   wheelPagePixels: 800,
 } as const;
+
+/**
+ * Sensitivity as cm/360 (M18): how far the mouse travels for one full turn, worked out from the mouse's DPI (counts per
+ * inch, entered by the player), so a sensitivity can be matched with another shooter. The two shooters' turn per count
+ * at sensitivity 1 give the "same as" figures, which need no DPI.
+ */
+export const MOUSE_DPI = {
+  default: 800,
+  min: 100,
+  max: 32000,
+  step: 50,
+} as const;
+
+/** Degrees of view turn per mouse count at sensitivity 1 in other shooters, for the "same as" line. */
+export const OTHER_SHOOTERS: readonly { name: string; degreesPerCount: number }[] = [
+  { name: 'CS2', degreesPerCount: 0.022 },
+  { name: 'Valorant', degreesPerCount: 0.07 },
+];

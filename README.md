@@ -127,17 +127,17 @@ Then open **http://localhost:4173**.
 |---|---|
 | W A S D | Move |
 | Mouse | Aim |
-| Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click) |
+| Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click). Fire and aim can be moved to any key or mouse button, side buttons included (**Settings**, **Key bindings**). |
 | B | Fire mode: step the AEG rifle through Semi, Burst and Auto (the pistol is semi only) |
-| Right click (hold) | Aim down sights: only with an optic fitted (pick **Red dot** for the rifle on the Loadout screen). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. |
+| Right click (hold) | Aim down sights: only with an optic fitted (pick **Red dot** for the rifle on the Loadout screen). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. **Settings**, Controls, can make it a toggle. |
 | Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
-| Left Alt | Sprint (forward only) |
+| Left Alt | Sprint (forward only; hold, or a toggle under **Settings**, Controls) |
 | C | Crouch: press to go down, again to stand (sprint or jump also stands you up). **Settings**, Controls, can switch it to hold. |
 | Q / E (hold) | Lean left / right: peek around cover (leaning slows you to a quiet walk and stops sprinting) |
 | Space | Jump (small hop) |
 | R | Reload (an empty trigger pull also reloads) |
 | 1 / 2 or mouse wheel | Switch between AEG rifle and gas pistol |
-| Left click while out | Watch the next player still in play |
+| Left click while out | Watch the next player still in play (the fire button) |
 | Esc | Pause (releases the mouse): Resume, Settings (keys are under **Key bindings**) or Quit to title screen. |
 | `` ` `` or F3 | Frame rate and debug info |
 | ] | Debug: show BB flight paths |

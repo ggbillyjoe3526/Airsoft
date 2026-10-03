@@ -1,10 +1,11 @@
 import { DIFFICULTIES, type Difficulty } from '../../config/bots';
-import type { CrouchMode } from '../../config/controls';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
 import type { QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
 import { MAPS, type MapId } from '../../map/maps';
+import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
+import type { ControlsSettingsOptions } from '../controlsSettings';
 import type { CrosshairSettingsOptions } from '../crosshairSettings';
 import { ChoiceDialog } from './choiceDialog';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
@@ -31,14 +32,13 @@ export interface MenusOptions {
   map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
-  sensitivity: { initial: number; onChange: (v: number) => void };
-  aimSensitivity: { initial: number; onChange: (v: number) => void };
-  crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
+  controls: ControlsSettingsOptions;
   fov: { initial: number; onChange: (v: number) => void };
   /** The render preset in use, shown on the greyed Quality row. */
   quality: QualityPreset;
   audio: AudioSettingsOptions;
   crosshair: CrosshairSettingsOptions;
+  accessibility: AccessibilitySettingsOptions;
 }
 
 /**
@@ -103,13 +103,12 @@ export class Menus {
     });
     this.settings = new SettingsScreen({
       bindings: opts.bindings,
-      sensitivity: opts.sensitivity,
-      aimSensitivity: opts.aimSensitivity,
-      crouch: opts.crouch,
+      controls: opts.controls,
       fov: opts.fov,
       quality: opts.quality,
       audio: opts.audio,
       crosshair: opts.crosshair,
+      accessibility: opts.accessibility,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen({ onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => this.leaveMatch('title') });
