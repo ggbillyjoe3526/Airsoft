@@ -15,8 +15,8 @@ export class PointerLock {
   private wheel = 0;
   private readonly changeListeners = new Set<(locked: boolean) => void>();
   private readonly errorListeners = new Set<() => void>();
-  /** A request() is under way: its first try may fail and the second succeed, so errors wait for its outcome. */
-  private requesting = false;
+  /** request() calls under way: a first try may fail and the second succeed, so errors wait for their outcome. */
+  private requesting = 0;
 
   constructor(private readonly element: HTMLElement) {
     document.addEventListener('pointerlockchange', this.onLockChange);
@@ -35,24 +35,23 @@ export class PointerLock {
 
   /**
    * Must be called from a user gesture (click). Prefers raw, unaccelerated input where supported, else tries
-   * again without it. Refusals (Chrome blocks re-locking for ~1 s after Esc) are reported through `onError` once
+   * again without it. Refusals (Chrome blocks re-locking for ~1 s after Esc) are reported through `onError` when
    * both tries have failed: `pointerlockerror` events during the request are held back (the first try's would
    * otherwise report a refusal the second try then overturns), and browsers that only fire the event, without a
    * promise to reject, still report it.
    */
   async request(): Promise<void> {
-    this.requesting = true;
+    this.requesting++;
     try {
       await this.element.requestPointerLock({ unadjustedMovement: true });
     } catch {
       try {
         await this.element.requestPointerLock();
       } catch {
-        this.requesting = false;
         this.reportError();
       }
     } finally {
-      this.requesting = false;
+      this.requesting--;
     }
   }
 
@@ -133,7 +132,7 @@ export class PointerLock {
   };
 
   private readonly onLockError = (): void => {
-    if (!this.requesting) this.reportError();
+    if (this.requesting === 0) this.reportError();
   };
 
   private reportError(): void {
