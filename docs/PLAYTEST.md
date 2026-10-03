@@ -3,8 +3,8 @@
 How the owner plays the game to check a change. Each pull request names the sections to play; a bug pass
 before a release plays all of them. Written 2026-10-02 for the game as of M10 (leaning, magazines, BB physics,
 the 2σ crosshair); updated 2026-10-03 for M12a (fire modes, crouch toggle, steadier aim when still, quicker
-reloads), M12b (the red dot as an accessory, aiming down sights, the crosshair's instant lock) and M11 (the
-reworked Depot). Update a section when a change alters what it describes.
+reloads), M12b (the red dot as an accessory, aiming down sights, the crosshair's instant lock), M11 (the
+reworked Depot) and M15 (the new menus). Update a section when a change alters what it describes.
 
 ## Get the game running
 
@@ -25,7 +25,7 @@ Needs a desktop computer with Chrome, Edge or Firefox. Setup takes about 10 minu
 5. **Type `npm install` and press Enter.** It downloads the game's building blocks. Wait until you can type
    again (about a minute).
 6. **Type `npm run dev` and press Enter.** It prints an address. Leave this window open: closing it stops the game.
-7. **Open http://localhost:5173 in your browser** and you'll see the start screen.
+7. **Open http://localhost:5173 in your browser** and you'll see the title screen.
 
 To stop, click the terminal and press **Ctrl+C**. Next time, repeat steps 4 and 6 only (steps 2–7 for a new download).
 
@@ -41,7 +41,8 @@ Note the seed when something goes wrong; it lets the same match be replayed.
 
 ## Movement
 
-On the start screen, pick **Elimination** and **Normal**, set the mouse sensitivity, then click **Click to play**.
+Click **Start**. On the New game screen, pick **Elimination** (Mode) and **Normal** (Difficulty), set the mouse
+sensitivity under **Settings**, then click **Play**.
 Tick each box once it behaves as described; anything else is a bug worth noting.
 
 - [ ] **Look around with the mouse.** The view turns smoothly, with no jumps or drift when you stop moving the mouse.
@@ -51,7 +52,7 @@ Tick each box once it behaves as described; anything else is a bug worth noting.
   fires until a moment after you stop.
 - [ ] **Press C.** You crouch and move slowly and silently, without holding the key. Press C again and you
   stand up. Crouch again, then press Left Alt or Space: you stand up (the Space press only stands you up).
-- [ ] **On the start screen, set Crouch to Hold.** Now you crouch only while C is held. Set it back to Toggle if
+- [ ] **In Settings (Controls), set Crouch key to Hold.** Now you crouch only while C is held. Set it back to Toggle if
   you prefer that; the game remembers your choice.
 - [ ] **Hold Q, then E, beside a wall or crate.** Your view leans left or right around it and tilts a little.
   Up against a wall, the lean stops short so you never see through it.
@@ -88,23 +89,23 @@ The rifle holds 60 BBs and the pistol 18, and each comes with 4 magazines per ro
 ## Optics and aiming down sights
 
 The rifle has no optic of its own any more: it comes with flip-up iron sights, and the red dot is an accessory you fit
-in the **Loadout** box on the start screen (before a match; it is not on the pause screen).
+on the **Loadout** screen (**Start**, then **Loadout**; between matches only, it is not on the pause menu).
 
 - [ ] **Leave Optic on Iron sights and play.** The rifle has small flip-up sights standing on its rails and no red
   dot. Holding right click does nothing: aiming down sights needs an optic.
-- [ ] **On the start screen, pick Optic: Red dot, then play.** The red dot sits on the rifle, and the iron sights
+- [ ] **On the Loadout screen, pick Red dot for the AEG rifle, then play.** The red dot sits on the rifle, and the iron sights
   fold flat under it.
 - [ ] **Hold right click.** The rifle comes up to your eye, the view narrows a little, the crosshair gives way to the
   red dot, and you move at a quiet walk (sprint does nothing while aiming). Let go and it all goes back.
 - [ ] **Shoot while aiming.** BBs go where the red dot is. Standing still is still what makes you accurate; aiming
   adds no extra accuracy of its own.
-- [ ] **Move the mouse while aiming.** It turns at the **Aiming sensitivity** set on the start screen (×0.80 of your
+- [ ] **Move the mouse while aiming.** It turns at the **Aiming sensitivity** set in Settings, Controls (×0.80 of your
   mouse sensitivity at first, so the world moves across the screen at the same speed as from the hip). Try other
   values; the game remembers your choice.
 - [ ] **Reload or switch to the pistol while aiming.** The sight drops for the reload and comes back up if you are
   still holding right click. The pistol has no optic, so it never aims down sights.
-- [ ] **Press Esc during a match.** The pause screen has no Loadout box: the optic and hop-up are set before a
-  match (on the start screen, or on the result screen before the next match).
+- [ ] **Press Esc during a match.** The pause menu has no Loadout: the optic and hop-up are set between matches
+  (Start, then Loadout; or Change setup on the result screen before the next match).
 
 ## BBs leaving the muzzle
 
@@ -120,7 +121,8 @@ in the **Loadout** box on the start screen (before a match; it is not on the pau
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the
-**Loadout** box on the start screen (0–100%); the line under it says what the setting does.
+**Loadout** screen (0–100%; click the replica on the left to see its dial); the line under it says what the
+setting does.
 
 - [ ] **Leave both on the factory setting (rifle 65%, pistol 55%) and shoot at a bot or a wall far away (30 m and
   more).** Rifle BBs rise a little (about a hand's width) around 20 m and are still on target at Depot's longest
@@ -177,14 +179,40 @@ swap ends after round 4.
   after round 4, and round 5 starts you in the west yard. In bot-only tests the east end wins a little more often (about 54%); say if either end feels unfair.
 - [ ] **Watch where hit players walk.** Each end has its own dead zone, away from the fighting.
 
+## Menus (M15)
+
+- [ ] **Load the game.** A title screen says **AIRSOFT** in the middle with the field behind it, and **Start** at
+  the bottom left. Nothing else.
+- [ ] **Click Start.** The New game screen has four big buttons: **Mode**, **Difficulty**, **Loadout** and
+  **Settings**, each showing what is picked now, the rules of the picked mode under them, **Back** (to the title)
+  and **Play**.
+- [ ] **Click Mode, then Attack and Defend.** A pop-up lists both modes with a line each; picking one closes it, and
+  the Mode button and the rules underneath change. Open it again and press Esc or ×: it closes with no change.
+  Do the same with **Difficulty** (Easy, Normal, Hard).
+- [ ] **Click Loadout.** The AEG rifle (primary) and gas pistol (secondary) are on the left, with "More replicas
+  later" under each. On the right: the optic and hop-up dial for the rifle, then BB weight, grip, magazine and
+  power greyed out and marked LATER. Click the pistol: its own hop-up dial, and its gas type marked LATER. Back
+  returns to New game, and the Loadout button shows your optic and dials.
+- [ ] **Click Settings.** Tabs on the left: **Controls** (mouse sensitivity, aiming sensitivity, crouch key),
+  **Key bindings**, **Graphics** (quality), and Audio and Accessibility marked LATER. Back returns to New game.
+- [ ] **Graphics: pick Low.** A line says it applies when the game reloads, with **Reload now**. Click it: the game
+  reloads to the title screen with no shadows. Set it back to High the same way.
+- [ ] **Headings are in capitals** (NEW GAME, LOADOUT, MODE, HOP-UP …); descriptions are in normal writing.
+- [ ] **Click Play.** The match starts as before.
+
 ## Pause, menus and tabbing away
 
-- [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and a pause screen shows the round and score
-  with **Click to resume**. Clicking it puts you back exactly where you were.
-- [ ] **Change keys.** On the pause screen click **Key bindings**, click an action and press a new key. Back in the
-  game the new key works. **Reset to defaults** puts everything back.
-- [ ] **Change the sensitivity slider** on the pause screen. Mouse look feels faster or slower straight away, and
-  the setting is still there after you reload the page.
+- [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
+  with **Resume**, **Settings** and **Quit to title screen**. Resume puts you back exactly where you were.
+- [ ] **Change keys.** In the pause menu click **Settings**, then **Key bindings**, click an action and press a new
+  key. **Back** returns to the pause menu; back in the game the new key works. **Reset to defaults** puts
+  everything back.
+- [ ] **Change the mouse sensitivity** (Settings, Controls) from the pause menu. Mouse look feels faster or slower
+  straight away, and the setting is still there after you reload the page. Graphics shows no Reload button here
+  (it would end the match); a new quality applies next time the game loads.
+- [ ] **Quit to title screen.** The title screen comes back. Start, then Play: a fresh match from round 1, 0–0.
+- [ ] **Win or lose a match.** The result screen shows MATCH OVER, YOU WIN! (or YOU LOSE) and the score, with
+  **Play Again** (same setup), **Change setup** (back to New game) and **Title screen**.
 - [ ] **Switch to another browser tab, then come back.** The game pauses by itself and nothing happened while you
   were away: no surprise hits, the round clock didn't run.
 - [ ] **Alt+Tab to another program, then come back.** Same as above: paused and frozen until you click to resume.

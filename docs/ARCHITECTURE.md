@@ -59,11 +59,11 @@ ends the round). A hit character is eliminated
 - **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
   streams made from it (the bots' plans, each bot).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
-  `Renderer` and the sun's shadow take a quality preset (`config/render.ts` `QUALITY`, `?quality=low|medium|high`,
-  fixed for the session); the debug overlay shows the preset, pixel ratio, draw calls and GPU object counts.
+  `Renderer` and the sun's shadow take a quality preset (`config/render.ts` `QUALITY`: the one saved in Settings, or
+  `?quality=low|medium|high` for a visit; fixed until the page reloads); the debug overlay shows the preset, pixel ratio, draw calls and GPU object counts.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input; `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them.
-- **ui/**: DOM overlays (start/pause screen, debug overlay, ammo HUD).
+- **ui/**: DOM overlays (the menus in `ui/menus/`, debug overlay, ammo HUD).
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
 - **audio/**: synthesised Web Audio effects; positional for everything but the local player's own sounds. In-world
@@ -78,7 +78,7 @@ ends the round). A hit character is eliminated
   the multiplier on the replica's spread (`MOVEMENT.accuracy`): steadier crouched, shakier walking, running, sprinting and
   in the air; it jumps up at once and locks back on within a few ticks once you stop (slower for a moment after a sprint or a landing). The muzzle carries it into `armament.ts`; the HUD crosshair opens to show it.
 - **sim/aiming.ts**: aiming down sights (hold right click). `stepAiming` (before movement) sets `Character.aiming` only
-  with an optic fitted to the replica in hand (`Armament.optics`, fitted per slot by `fitOptic` from the start screen's
+  with an optic fitted to the replica in hand (`Armament.optics`, fitted per slot by `fitOptic` from the Loadout screen's
   pick at each round start; `config/optics.ts`), and not while reloading or drawing. Aiming moves you at walking pace
   (quiet, no sprint) and adds no accuracy. Presentation raises the sight (`render/viewmodel.ts`, the replica's `aimHold`
   puts the optic on the view's centre line), narrows the view (`Renderer.setZoom`) and swaps the crosshair for the red
@@ -91,13 +91,18 @@ ends the round). A hit character is eliminated
   score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
   also the pole (`flagRenderer.ts`: pole, rippling cloth at the sim's height, ring at the rope's reach) and its
   screen marker (`screenMarker.ts` projects it, pinned to the screen edge when out of view; `ui/flagMarker.ts`).
-- **ui/startScreen.ts**: title/pause/result overlay with the rules for the picked mode, `OptionPicker`s (match mode,
-  bot difficulty, the crouch key), the mouse and aiming sensitivity sliders and a **Loadout** box (the rifle's optic and
-  a hop-up dial per replica), all saved in the browser. The Loadout box shows on the title and result screens, never
-  on the pause screen (`ui/loadoutChoice.ts`); it grows into the loadout screen later.
+- **ui/menus/** (M15): `Menus` shows one screen at a time over the frozen field and reports choices to `game.ts`:
+  the title screen, New game (`setupScreen.ts`: Mode, Difficulty, Loadout, Settings, the rules from `rulesText.ts`,
+  Back and Play) with `ChoiceDialog` pop-ups (a `<dialog>`: Esc or × closes it) for mode and difficulty, the Loadout
+  screen (`loadoutScreen.ts`: slots, optic, hop-up dials, LATER rows), the Settings screen (`settingsScreen.ts`: tabs;
+  Key bindings reuses `ui/keySettings.ts`), the pause menu and the result. `menuNav.ts` holds where Back goes and which
+  menu opens when play stops (title before the first match, pause during one, result after it); `game.ts`'s
+  `quitToTitle` ends a match from the pause menu. The placeholder lists and labels are data in `config/menus.ts`;
+  choices are saved in the browser (`savedChoices.ts` reads them back). The loadout is reached only through New game,
+  so never mid-match (`ui/loadoutChoice.ts` keeps the wait-for-next-round rule for if it ever is).
 - **Hop-up:** each replica has a dial (`Armament.hopUps`, 0..1, kept between rounds; `setHopUps`) that scales its
   `hopUpMax` lift (`hopUpLift` in `config/replicas.ts`); bots keep the factory `hopUpDial`. `sim/hopUp.ts` flies a
-  level shot to word the start screen's readout ("on target to about N m").
+  level shot to word the Loadout screen's readout ("on target to about N m").
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop. The only place that knows about every layer.
 

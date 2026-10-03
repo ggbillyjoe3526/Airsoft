@@ -154,8 +154,9 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
      (`.../archive/refs/tags/<tag>.zip`), the unzipped folder name (`Airsoft-<tag without the v>`, e.g.
      `Airsoft-0.1-alpha.3`) and the "What's in …" section.
   2. `docs/ROADMAP.md`: the builds table and the status rows that mention the release.
-  3. Any other "latest release" mention: run `grep -rn "alpha\.[0-9]\|beta\.[0-9]" README.md docs/ CLAUDE.md` and
-     update each line that names the previous release as current (history and policy examples stay as they are).
+  3. Any other "latest release" mention: run `grep -rn "alpha\.[0-9]\|beta\.[0-9]" README.md docs/ CLAUDE.md src/config/`
+     and update each line that names the previous release as current (history and policy examples stay as they are),
+     including `BUILD_LABEL` in `src/config/menus.ts` (shown on the title screen).
 - **Pull requests** (owner, 2026-10-02): every change lands as a pull request that the owner reviews and merges.
   Work on a new branch made from the latest `main` (one per milestone or batch), push that branch, and open a pull
   request into `main`. **Never push to `main` and never merge a pull request yourself**, whatever else in this

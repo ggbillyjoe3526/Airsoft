@@ -20,7 +20,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is next: weapon handling (M12), the Depot rework (M11), an audio rework (M13), then art, menus and settings, and a tutorial. The owner's `v0.1-alpha.3` playtest notes are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12) and the Depot rework (M11) are done, the menus (M15, pulled forward by the owner) are in review, then an audio rework (M13), art and a tutorial. The owner's `v0.1-alpha.3` playtest notes are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -95,9 +95,10 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Done (merged; owner played it: the crosshair should lock on faster, fixed in M12b) | 9.0 |
 | Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (merged; owner played it: "red dot works great", six notes for M12c) | 9.1 |
 | Alpha · Phase 4 · M12c The owner's M12b notes: the loadout off the pause screen, BBs drawn from the muzzle, the pistol facing forward, hop-up dials | Done (merged; owner's playtest next) | 9.0 |
-| Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (pull request; owner's playtest next) | 9.0 |
+| Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (merged; owner's playtest next) | 9.0 |
+| Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Pull request (owner's playtest next) | |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
-| Alpha · Phase 4 · M14 Art pass, M15 Menus and settings, M16 Tutorial → feature complete | Later | |
+| Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -230,7 +231,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 5 | The pistol is held turned slightly to the left, not facing forward; disorientating | M12c |
 | 6 | Hop-up adjustment, set before a match in the loadout: long shots aren't hitting | M12c |
 
-**Order** (owner picked weapon handling first, 2026-10-03): **M12a → M12b → M11 → M13 → M14 → M15 → M16.** Weapon handling comes
+**Order** (owner picked weapon handling first, 2026-10-03; he pulled the menus forward the same day): **M12a → M12b → M11 → M15 → M13 → M14 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
 the Depot layout sketch. The Depot rework follows once the sketch is approved (approved 2026-10-03). The audio rework comes after it so
 movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
@@ -270,8 +271,8 @@ the tutorial come last because they dress and explain everything before them.
   - **M12c. The owner's M12b notes** (above)
     - **A Loadout box on the start screen:** the optic and a hop-up dial per replica, set before a match (the title
       and result screens), not on the pause screen. These start-screen settings are the beginning of the **loadout
-      screen**: it takes them over when loadouts arrive (more optics and parts in v0.3), and M15 moves them into
-      the proper menus.
+      screen**: it takes them over when loadouts arrive (more optics and parts in v0.3). M15 moved them onto the
+      Loadout screen.
     - **BBs drawn from the muzzle:** a fresh BB's streak no longer reaches back past the muzzle (it ran behind the
       camera and showed as a line slanting up from the bottom of the screen), and both replicas are held pointing
       straight ahead, so the BBs fly out along the barrel's line to the crosshair, from the hip and aiming.
@@ -311,12 +312,25 @@ the tutorial come last because they dress and explain everything before them.
     §4; every file recorded in `docs/ASSETS.md`).
   - Fix when touched (audit W-03): reuse one panner per character and disconnect one-shot sound chains.
 - **M14. Art pass** (CC0 assets only), VFX and lighting for Depot, the replicas and the figures.
-- **M15. Menus and a full settings screen:** FOV, volume, colour-blind team colours, reduced motion and
-  other accessibility options. It gathers the M12 settings (crouch toggle or hold, aiming sensitivity) and the
-  render quality presets, and gives the pre-match Loadout box (optic, hop-up) its own loadout screen.
+- **M15. Menus and a full settings screen** (pulled forward ahead of M13 by the owner, 2026-10-03, to his own
+  design; concept sketch approved the same day). The start screen was too cluttered, so it becomes:
+  - **Title screen:** "AIRSOFT" in the middle over the field, **Start** at the bottom left.
+  - **New game:** four buttons, **Mode**, **Difficulty**, **Loadout** and **Settings**, with the picked mode's rules
+    under them, **Back** and **Play**. Mode (Elimination, Attack and Defend) and Difficulty (Easy, Normal, Hard)
+    open a pop-up.
+  - **Loadout screen** (replaces the start screen's Loadout box): the replica in each slot, primary (the AEG
+    rifle) and secondary (the gas pistol), with "more replicas later"; for the picked one the optic and the hop-up
+    dial, and BB weight, grip, magazine and power or gas type listed as coming later.
+  - **Settings screen:** tabs for Controls (mouse and aiming sensitivity, crouch toggle or hold), Key bindings
+    (and the fixed mouse controls), Graphics (the quality presets, now a saved setting; `?quality=` still works
+    for a visit), and Audio and Accessibility listed as coming later (volume, colour-blind team colours, reduced
+    motion; FOV, brightness and invert mouse are listed on their tabs too).
+  - **Pause** (Esc): Resume, Settings, Quit to title screen. **Result:** Play Again, Change setup, Title screen.
+  - Headings and labels in capitals (owner); descriptions as written.
+  - Still to do: the settings and parts marked LATER, as their systems arrive (audio in M13, parts with loadouts).
 - **M16. Onboarding:** a short tutorial.
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
-  start screen and menus out of `game.ts` first (W-05), one versioned settings store for the new settings (W-02,
+  start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
   in M12a), a "graphics reset" message on a lost WebGL context (W-01), shader warm-up if the overlay shows a hitch
   (W-04), and reusing audio nodes in M13 (W-03).
 
@@ -376,8 +390,8 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
 - **Loadout building**, free from the start:
   - Weapon parts: receivers, handguards, stocks, optics, grips, muzzle devices, suppressors,
     lasers/lights and bipods. The optic slot and aiming down sights already exist from M12b (one red dot);
-    this adds more optics, such as magnified scopes. It builds on the start screen's Loadout box (optic and
-    hop-up, M12c), which becomes the loadout screen.
+    this adds more optics, such as magnified scopes. It builds on the Loadout screen (M15: the optic and
+    hop-up, with BB weight, grip, magazine and gas type waiting as LATER rows).
   - Gear: plate carriers, chest rigs, belts, helmets, comms, backpacks, gloves, eye protection, face
     protection and boots. Gear decides what you carry, e.g. how many magazines.
 - **Chrono before a match:** check your loadout's muzzle velocity, and pick the BB weight and tracers.
