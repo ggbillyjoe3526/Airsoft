@@ -20,14 +20,14 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) are done; next are the owner's M15 notes (M15b), then an audio rework (M13), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) are done; next are the owner's M15 notes (M15b), then the Loadout feature (M17, added by the owner), an audio rework (M13), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes and his Loadout request are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
 2. **`v0.1-beta` builds** once the owner calls v0.1 feature complete.
 3. **`v0.1`**, the first public release, when the owner calls it ready.
-4. **Later versions** (`v0.2`, `v0.3` …): new modes, fields, replica platforms, loadouts, customisation,
-   progression and team comms (see [After v0.1](#after-v01-later-versions)). Each later version gets its
+4. **Later versions** (`v0.2`, `v0.3` …): new modes, fields, replica platforms, bigger loadouts (gear, parts for
+   the new platforms), customisation, progression and team comms (see [After v0.1](#after-v01-later-versions)). Each later version gets its
    own alpha → beta → release cycle. `v0.1.x` releases are for fixes and small changes.
 
 **Branches** (owner, 2026-10-01). `main` holds the latest stable release. During the v0.1 cycle every change
@@ -52,6 +52,8 @@ tagged (owner, 2026-10-01): playtests in between are plain commits.
 v0.1 focuses on core gameplay and foundations. Later content builds on those foundations.
 
 - **Replicas:** the two that exist, the AEG rifle and the gas pistol. More platforms come later.
+- **Loadout** (owner, 2026-10-03): a primary and a secondary replica, BB weight, hop-up and a first set of
+  attachments (optics, grips, magazines), picked before a match. Gear and more parts come with later versions.
 - **Modes:** the two that exist, Elimination and Attack / Defend.
 - **Field:** Depot, reworked to the field checklist below.
 - **Foundations:** magazines and reloads, a BB physics pass, and movement and positioning.
@@ -98,6 +100,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Done (merged; owner played it: five notes, for M15b and later) | 9.1 |
 | Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Next | |
+| Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Later (after M15b) | |
+| Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Later | |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
@@ -242,13 +246,30 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 4 | Graphics quality is held back for now (still basic geometry and models), but its place is kept for later | M15b (greyed out, LATER); M14 or beta brings it back |
 | 5 | An **Esport** difficulty above Hard that plays almost like a competitive title (Counter-Strike, Valorant). Noted, not built: Easy, Normal and Hard come first | Parked (`docs/IDEAS.md`; [After v0.1](#after-v01-later-versions)) |
 
-**Order** (owner picked weapon handling first, 2026-10-03; he pulled the menus forward the same day): **M12a → M12b → M11 → M15 → M15b → M13 → M14 → M16.** Weapon handling comes
+**The owner's Loadout request (2026-10-03, after the M15 notes) and where it went:**
+
+| # | Note | Goes to |
+|---|---|---|
+| 1 | Build the Loadout feature behind the Loadout menu, as an alpha feature | M17a, M17b |
+| 2 | Pick a primary and a secondary replica (today the AEG rifle and the gas pistol) | M17a |
+| 3 | Pick BBs and their weight | M17a |
+| 4 | Hop-up settings | M17a (the M12c dial, reworked with BB weight) |
+| 5 | Attachments: optics, grips, magazines and the like | M17b (more parts, muzzle devices and gear in v0.3) |
+| 6 | Perhaps eventually skins for the replicas and the outfit | Not built in v0.1: a greyed Skins row (LATER) in M17b; the skins themselves in v0.5 |
+
+**Order** (owner picked weapon handling first, 2026-10-03; he pulled the menus forward the same day and added the
+Loadout feature after the M15 notes): **M12a → M12b → M11 → M15 → M15b → M17a → M17b → M13 → M14 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
 the Depot layout sketch. The Depot rework follows once the sketch is approved (approved 2026-10-03). The audio rework comes after it so
 movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
 the tutorial come last because they dress and explain everything before them.
 M15b follows M15 straight away: the owner's playtest notes set the priorities, and it reworks the screens the owner just
 played, before the audio rework adds settings to them.
+The Loadout (M17) comes right after M15b and before the audio rework, for four reasons: it fills the Loadout screen's
+LATER rows while that screen is fresh from M15 and M15b; most of its groundwork is already in the game (BB mass drives
+drag, lift and spin since M9, the optic slot since M12b, the hop-up dials since M12c); it is gameplay, which comes before
+the dressing; and the audio rework (magazine sounds, a hi-cap's rattle), the art pass (models for every part) and the
+tutorial can then cover the parts, instead of being redone for them.
 
 - **M12. Weapon handling** (owner's playtest notes 1, 2, 3, 4, 5 and 7). Split in two so the quick changes can be
   played first. Bots play by the same handling rules where they apply.
@@ -362,6 +383,37 @@ played, before the audio rework adds settings to them.
     cost (Phase 3 audit C-04). The picker comes back with the art pass (M14) or the beta performance work, when
     there is real graphics work to scale.
   - The playtest guide's "Menus (M15)" section is updated to match.
+- **M17. Loadout** (the owner's Loadout request, above; added 2026-10-03 as an alpha feature). The Loadout screen from
+  M15 becomes a working loadout: what you carry and how it is set up, picked between matches (never mid-match, the M12c
+  rule), saved like the other choices, and free from the start (no unlocks, DECISIONS 2026-10-01). Parts are trade-offs,
+  never straight upgrades: one hit is still one hit, and where you stand and move still decides fights (design rules,
+  above). Bots keep each replica's factory setup. Split in two so the first half can be played sooner.
+  - **M17a. Replica slots and BBs**
+    - **Primary and secondary:** each slot opens a picker listing the replicas that fit it: today the AEG rifle (primary)
+      and the gas pistol (secondary), one each, so the picker is ready for the v0.3 platforms rather than a choice yet.
+      The match gives you what the slots hold. The "more replicas later" line stays.
+    - **BB weight** per replica, picked from the weights sites sell (first guess: 0.20, 0.25, 0.28 and 0.30 g; the AEG
+      keeps 0.25 g and the pistol 0.20 g by default). The BB physics already uses the BB's mass (M9): a heavier BB leaves
+      the barrel slower, keeps its speed better and needs more hop; a lighter one is quicker early but sheds speed
+      sooner and rises on the same hop. Its LATER row is replaced. Revisits the placeholder "same muzzle energy whatever
+      the BB weight" (DECISIONS 2026-10-02).
+    - **Hop-up:** the M12c dial stays per replica and now works with the picked BB weight: the line under it says how
+      far the BB flies flat with that weight and dial (the "on target to about 38 m" readout).
+  - **M17b. Attachments**
+    - **Optics:** iron sights and the red dot, plus one magnified optic (first guess: a low-power 2× scope: a closer view
+      for Depot's long lanes, but slower to raise and a narrower view around it). Rifle only; the pistol has no rail.
+    - **Grips** (rifle): none by default, plus a vertical and an angled grip with small, opposite strengths (first guess:
+      the vertical grip steadies the aim a little sooner after moving, the angled grip raises the sight a little faster).
+      Replaces the Grip LATER row.
+    - **Magazines:** the standard magazine stays the default. First guesses: the rifle gets a hi-cap (more BBs per
+      magazine, but fewer carried and it rattles when you move, so bots hear you sooner) and a low-cap (fewer BBs,
+      silent, one more carried); the pistol gets an extended magazine (more BBs, slower to draw). Replaces the Magazine
+      LATER row. How many each carries is final-tuned in beta.
+    - **Skins:** a greyed **Skins** row (replicas and outfit) marked LATER keeps their place; skins come with
+      customisation (v0.5).
+    - The power or gas type row stays LATER (the v0.3 platforms).
+    - Each part shows on the held replica as simple geometry; the art pass (M14) models them properly.
+  - The playtest guide gets a Loadout section for each half.
 - **M16. Onboarding:** a short tutorial.
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
@@ -421,14 +473,14 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
   | DMRs | Semi-auto only; high velocity; a minimum engagement distance, as at real sites |
   | LMGs | Huge box mags; slow to move and aim; covering fire; a bipod |
 
-- **Loadout building**, free from the start:
-  - Weapon parts: receivers, handguards, stocks, optics, grips, muzzle devices, suppressors,
-    lasers/lights and bipods. The optic slot and aiming down sights already exist from M12b (one red dot);
-    this adds more optics, such as magnified scopes. It builds on the Loadout screen (M15: the optic and
-    hop-up, with BB weight, grip, magazine and gas type waiting as LATER rows).
+- **Bigger loadouts**, free from the start. The Loadout itself (primary and secondary, BB weight, hop-up, optics,
+  grips and magazines) is built in v0.1 (M17); this adds:
+  - Weapon parts: receivers, handguards, stocks, more optics, muzzle devices, suppressors,
+    lasers/lights and bipods, and the parts the new platforms need (shotgun shells, LMG box mags).
   - Gear: plate carriers, chest rigs, belts, helmets, comms, backpacks, gloves, eye protection, face
     protection and boots. Gear decides what you carry, e.g. how many magazines.
-- **Chrono before a match:** check your loadout's muzzle velocity, and pick the BB weight and tracers.
+- **Chrono before a match:** check your loadout's muzzle velocity, and pick tracer BBs (BB weight is picked on the
+  Loadout screen from M17a).
 - **A practice range** to try replicas and loadouts.
 - **Suppressors** with their own sound, built on the M9 groundwork.
 
@@ -440,9 +492,9 @@ covers part of "CQB warehouse / industrial". Which fields, and in what order, is
 
 ### Proposed v0.5: Kit, looks and progression
 
-- **Replica customisation:** colour, furniture, optic, handguard, stock, grip, magazine, muzzle device,
-  tape and markings.
-- **Kit customisation:** camouflage, plate carrier, pouches, helmet, goggles, gloves, patches and armbands.
+- **Replica customisation and skins** (the owner's "eventually skins", 2026-10-03; on the Loadout screen's Skins
+  row from M17b): colour, furniture, optic, handguard, stock, grip, magazine, muzzle device, tape and markings.
+- **Kit customisation (outfit skins):** camouflage, plate carrier, pouches, helmet, goggles, gloves, patches and armbands.
 - **Progression:** not level-based. You earn it by unlocking replicas and gear; how you earn unlocks is
   still open. Until this exists, everything is free from the start.
 - No real brand names or trademarked designs, ever (CLAUDE.md §4).
