@@ -68,6 +68,8 @@ export interface Character {
   airTime: number;
   /** Seconds standing still on the ground so far (0 while moving or in the air); steadies the aim (sim/accuracy.ts). */
   stillTime: number;
+  /** Seconds left in which a sprint's or a jump's shake still settles slowly (sim/accuracy.ts); 0 = locks on fast. */
+  shakeCarry: number;
   armament: Armament;
 }
 
@@ -113,6 +115,7 @@ export function createCharacter(
     spreadScale: 1,
     airTime: 0,
     stillTime: 0,
+    shakeCarry: 0,
     armament: createArmament(loadout),
   };
 }
@@ -167,6 +170,7 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.spreadScale = 1;
   c.airTime = 0;
   c.stillTime = 0;
+  c.shakeCarry = 0;
   c.status = 'alive';
   c.statusTime = 0;
   c.hitBy = -1;

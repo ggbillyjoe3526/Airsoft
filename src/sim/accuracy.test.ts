@@ -52,7 +52,7 @@ describe('accuracy by stance and movement', () => {
     const c = at();
     stepAccuracy(c, MOVEMENT, DT);
     expect(c.spreadScale).toBeLessThanOrEqual(1);
-    expect(c.spreadScale).toBeGreaterThan(0.99); // just stopped: hardly steadied yet
+    expect(c.spreadScale).toBeGreaterThan(A.steady); // just stopped: not fully steadied yet
     c.sprinting = true;
     c.velocity.x = MOVEMENT.sprintSpeed;
     stepAccuracy(c, MOVEMENT, DT);
@@ -65,7 +65,7 @@ describe('accuracy by stance and movement', () => {
       stepAccuracy(c, MOVEMENT, DT);
       t += DT;
     }
-    expect(c.spreadScale).toBeGreaterThan(1.5);
+    expect(c.spreadScale).toBeGreaterThan(1.3);
     // ...and steady again within about a second (steadier than at first, having held still that long).
     for (let i = 0; i < 60; i++) stepAccuracy(c, MOVEMENT, DT);
     expect(c.spreadScale).toBeLessThan(A.steady + 0.02);
@@ -97,7 +97,7 @@ describe('accuracy by stance and movement', () => {
     expect(c.spreadScale).toBeCloseTo(A.walk, 9);
     c.velocity.x = 0;
     stepAccuracy(c, MOVEMENT, DT);
-    expect(targetSpreadScale(c, MOVEMENT)).toBeGreaterThan(0.98); // one tick still: barely steadied
+    expect(targetSpreadScale(c, MOVEMENT)).toBeGreaterThan(A.steady); // one tick still: not fully steadied yet
 
     // Drifting below the still threshold counts as still; being off the ground doesn't.
     const drift = at(A.stillBelow * 0.9);
@@ -106,6 +106,36 @@ describe('accuracy by stance and movement', () => {
     drift.grounded = false;
     stepAccuracy(drift, MOVEMENT, DT);
     expect(drift.stillTime).toBe(0);
+  });
+
+  it('locks on almost at once when you stop walking or running (owner, 2026-10-03: "instant lock")', () => {
+    for (const speed of [MOVEMENT.walkSpeed, MOVEMENT.runSpeed]) {
+      const c = at(speed);
+      for (let i = 0; i < 30; i++) stepAccuracy(c, MOVEMENT, DT);
+      expect(c.spreadScale).toBeGreaterThan(1);
+      c.velocity.x = 0; // stopped (the ground deceleration itself takes 0.05 s from walking, 0.1 s from running)
+      let t = 0;
+      while (c.spreadScale > A.steady + 0.01) {
+        stepAccuracy(c, MOVEMENT, DT);
+        t += DT;
+      }
+      expect(t).toBeLessThanOrEqual(0.1 + 1e-9);
+    }
+    expect(A.steadyTime).toBeLessThanOrEqual(0.1);
+    expect(A.lockTime).toBeLessThan(A.settleTime);
+  });
+
+  it('keeps the slower settle for a moment after a sprint or a landing', () => {
+    const c = at();
+    c.sprinting = true;
+    stepAccuracy(c, MOVEMENT, DT);
+    c.sprinting = false;
+    for (let t = 0; t < 0.1; t += DT) stepAccuracy(c, MOVEMENT, DT);
+    expect(c.spreadScale).toBeGreaterThan(1.5); // still shaky 0.1 s after the sprint
+    expect(c.shakeCarry).toBeGreaterThan(0);
+    for (let t = 0; t < A.carryTime + 0.2; t += DT) stepAccuracy(c, MOVEMENT, DT);
+    expect(c.shakeCarry).toBe(0);
+    expect(c.spreadScale).toBeLessThan(A.steady + 0.01);
   });
 
   it('makes walking with the walk key only a little shakier than standing (owner, 2026-10-03)', () => {

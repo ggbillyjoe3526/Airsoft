@@ -30,12 +30,17 @@ export function targetSpreadScale(c: Character, cfg: MovementConfig): number {
 
 /**
  * One tick: the multiplier rises to the target at once (you can't fire steadily while starting to move)
- * and settles back towards it over cfg.accuracy.settleTime once the shake stops.
+ * and comes back down towards it once the shake stops: within a few ticks after walking or running
+ * (cfg.accuracy.lockTime, the "instant lock"), more slowly (settleTime) for carryTime after a sprint or a landing.
  */
 export function stepAccuracy(c: Character, cfg: MovementConfig, dt: number): void {
+  const a = cfg.accuracy;
   c.airTime = c.grounded ? 0 : c.airTime + dt;
-  const still = c.grounded && Math.hypot(c.velocity.x, c.velocity.z) <= cfg.accuracy.stillBelow;
+  const still = c.grounded && Math.hypot(c.velocity.x, c.velocity.z) <= a.stillBelow;
   c.stillTime = still ? c.stillTime + dt : 0;
+  const shaken = c.sprinting || (!c.grounded && c.airTime >= a.airSpreadDelay - AIR_TIME_EPSILON);
+  c.shakeCarry = shaken ? a.carryTime : Math.max(0, c.shakeCarry - dt);
   const target = targetSpreadScale(c, cfg);
-  c.spreadScale = target >= c.spreadScale ? target : target + (c.spreadScale - target) * Math.exp(-dt / cfg.accuracy.settleTime);
+  const settle = c.shakeCarry > 0 ? a.settleTime : a.lockTime;
+  c.spreadScale = target >= c.spreadScale ? target : target + (c.spreadScale - target) * Math.exp(-dt / settle);
 }
