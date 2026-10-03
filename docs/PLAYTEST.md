@@ -114,8 +114,8 @@ in the **Loadout** box on the start screen (before a match; it is not on the pau
   leave the barrel in line; the rifle kicks back and up a little rather than tipping up.
 - [ ] **Do the same aiming down the red dot, and with the pistol.** The BBs come out of the muzzle under the sight
   (or the pistol's barrel) and rise into the dot or crosshair.
-- [ ] **Switch to the pistol (2).** It points straight ahead, its slide square to the view, instead of turned to the
-  left. The rifle points straight ahead too.
+- [ ] **Switch to the pistol (2).** It leans only slightly to the left, much less than it used to, not dead straight.
+  The rifle points straight ahead.
 
 ## Hop-up
 

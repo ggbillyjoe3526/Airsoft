@@ -10,7 +10,7 @@ _Last updated: 2026-10-03 · branch `claude/project-thread-p14he8` (Phase 4 M11 
 ## Where we are
 
 - **Phase 3 is done and tagged** (`v0.1-alpha.3`). Phase 4 order (owner): M12a → M12b → M11 → M13 → art → menus and
-  settings → tutorial. M12a, M12b and M12c (the owner's M12b notes, hop-up dials) are merged.
+  settings → tutorial. M12a, M12b, M12c (the owner's M12b notes, hop-up dials) and the pistol lean (PR #13) are merged.
 - **M11 is built** on this branch (pull request open for the owner), from the layout sketch he approved
   (https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD, revision 2): `map/depot.ts` is written in plan coordinates
   (north = +z, as drawn) and mirrored to world coordinates at the bottom of the file. One pole (`MapData.flag`) at
@@ -35,6 +35,9 @@ _Last updated: 2026-10-03 · branch `claude/project-thread-p14he8` (Phase 4 M11 
   ramp foot. The headless matches assert the longest time off the ground stays within `airSpreadDelay`.
 - **The ground probe** now runs on every tick a character isn't rising (`sim/movement.ts`), after a one-off Rapier
   shape-cast miss on a ramp. If landings ever feel odd (hanging on edges), look there first.
+- **The barrel line:** BBs are drawn from the muzzle, blending onto the eye line, so on screen they run from the muzzle
+  to the crosshair. The rifle's `look.hold.yaw` stays 0; the pistol has a slight 0.1 rad left lean at the owner's
+  request (capped at 0.12 by `tracerLine.test.ts`).
 - **Measuring bots:** copy the top of `src/ai/depotMatch.test.ts` (up to the first `describe`) into a scratch test,
   add a test that writes JSON with `writeFileSync`, run it with `-t`, then delete it (it breaks `tsc` while in `src`).
   Run several seed ranges in parallel processes; 96 seeds of both modes take about 2 minutes on 4 cores.
