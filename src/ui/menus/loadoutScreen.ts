@@ -13,6 +13,7 @@ import {
   magazineChoices,
   magazineField,
   magazineReadout,
+  opticReadout,
   slotField,
 } from '../loadoutChoice';
 import { OptionPicker } from '../optionPicker';
@@ -153,8 +154,18 @@ export class LoadoutScreen {
   /** What can be set on `replica`: optic, BB weight, hop-up, grip and magazine, and the parts still to come. */
   private replicaPanel(replica: ReplicaConfig, opts: LoadoutOptions): HTMLDivElement {
     const panel = el('div', 'loadout-replica');
+    // The optic's line depends on the grip too (a grip changes how fast a sight comes up), so both update it.
+    let optic = opts.optic.initial;
+    let parts = opts.parts.initial(replica);
+    const opticLine = el('p', 'menu-readout', opticReadout(replica, optic, parts.grip));
     if (replica.opticMount) {
-      panel.append(menuRow('Optic', '', new OptionPicker('Optic', OPTIC_CHOICES, opts.optic.initial, 'optic', opts.optic.onChange).root));
+      const picker = new OptionPicker('Optic', OPTIC_CHOICES, optic, 'optic', (o) => {
+        optic = o;
+        opticLine.textContent = opticReadout(replica, optic, parts.grip);
+        opts.optic.onChange(o);
+      });
+      picker.root.append(opticLine);
+      panel.append(menuRow('Optic', '', picker.root));
     } else {
       panel.append(fixedRow('Optic', LOADOUT_FIXED.noOptic));
     }
@@ -188,12 +199,12 @@ export class LoadoutScreen {
     panel.append(menuRow('BB weight', '', weightPicker.root), menuRow('Hop-up', '', hopControl));
 
     // Grip and magazine (M17b), each with its numbers under it.
-    let parts = opts.parts.initial(replica);
     if (replica.gripMount) {
       const gripLine = el('p', 'menu-readout', gripReadout(replica, parts.grip));
       const grip = new OptionPicker(`${replica.name} grip`, GRIP_CHOICES, parts.grip, gripField(replica), (id) => {
         parts = { ...parts, grip: id };
         gripLine.textContent = gripReadout(replica, id);
+        opticLine.textContent = opticReadout(replica, optic, id);
         opts.parts.onChange(replica, parts);
       });
       grip.root.append(gripLine);

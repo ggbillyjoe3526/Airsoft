@@ -2,7 +2,7 @@ import { factoryParts, GRIP_CHOICES, GRIPS, type GripId, handlingOf, MAGAZINES, 
 import { BALLISTICS } from '../config/ballistics';
 import { MOVEMENT } from '../config/movement';
 import { SIM_DT } from '../config/sim';
-import { OPTIC_CHOICES, type OpticChoice } from '../config/optics';
+import { AIMING, OPTIC_CHOICES, type OpticChoice, opticOf, OPTICS } from '../config/optics';
 import { BB_WEIGHT, HOP_UP, type LoadoutSlot, muzzleEnergy, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
 import { loadSetting, numberIn } from '../settings/storage';
 import { timeToSteady } from '../sim/accuracy';
@@ -120,13 +120,28 @@ export function magazineReadout(r: ReplicaConfig, magazine: MagazineId): string 
   return `${h.magSize} BBs each, ${h.mags} carried (${h.magSize * h.mags} in all). Reload ${h.reloadTime.toFixed(1)} s.${draw}`;
 }
 
-/** The Loadout grip line's "steady": the aim back within 10% of standing still (sim/accuracy.ts timeToSteady). */
+/**
+ * One line under the optic: how quickly the fitted optic comes up to your eye with this replica's grip, e.g. "Up to
+ * your eye in 0.30 s with the vertical grip.", or that iron sights fire from the hip.
+ */
+export function opticReadout(r: ReplicaConfig, optic: OpticChoice, grip: GripId): string {
+  const id = opticOf(optic);
+  if (id === null) return 'Fired from the hip: no sight to raise.';
+  const h = handlingOf(r, { grip, magazine: r.magazines[0]! });
+  const time = (AIMING.raiseTime * OPTICS[id].raiseScale * h.raiseScale).toFixed(2);
+  return `Up to your eye in ${time} s${grip === 'none' ? '' : ` with the ${GRIPS[grip].label.toLowerCase()}`}.`;
+}
+
+/**
+ * The Loadout grip line's "steady": the spread multiplier back within 0.1 of ×1, an ordinary stance's spread (holding
+ * still then tightens it further; sim/accuracy.ts timeToSteady).
+ */
 const STEADY_MARGIN = 0.1;
 
 /**
  * One line under the grip, in numbers: how quickly the replica comes up after a switch, and after a sprint when it can
  * fire against when the aim is steady again (from the sim's own accuracy rule), e.g. "Brings the AEG rifle up in
- * 0.45 s. After a sprint it can fire from 0.20 s and is steady from 0.27 s."
+ * 0.45 s. After a sprint it can fire from 0.20 s, steady from 0.27 s."
  */
 export function gripReadout(r: ReplicaConfig, grip: GripId): string {
   const parts = { grip, magazine: r.magazines[0]! };

@@ -7,6 +7,7 @@ import {
   bbWeightReadout,
   gripField,
   gripReadout,
+  opticReadout,
   hopUpField,
   hopUpLabel,
   hopUpReadout,
@@ -121,6 +122,11 @@ describe('grip and magazine choice (M17b)', () => {
     expect(magazineReadout(AEG, 'hiCap')).toBe('120 BBs each, 2 carried (240 in all). Reload 1.8 s.');
     expect(magazineReadout(AEG, 'lowCap')).toBe('30 BBs each, 5 carried (150 in all). Reload 1.4 s.');
     expect(magazineReadout(GAS_PISTOL, 'extended')).toBe('27 BBs each, 4 carried (108 in all). Reload 1.2 s. Draw 0.41 s.');
+    // The optic's line: its raise time with the grip, or the hip with iron sights.
+    expect(opticReadout(AEG, 'redDot', 'none')).toBe('Up to your eye in 0.15 s.');
+    expect(opticReadout(AEG, 'scope2x', 'vertical')).toBe('Up to your eye in 0.30 s with the vertical grip.');
+    expect(opticReadout(AEG, 'scope2x', 'angled')).toBe('Up to your eye in 0.19 s with the angled grip.');
+    expect(opticReadout(AEG, 'none', 'angled')).toBe('Fired from the hip: no sight to raise.');
     expect(gripReadout(AEG, 'none')).toBe('Brings the AEG rifle up in 0.45 s. After a sprint it can fire from 0.20 s, steady from 0.27 s.');
     // Steadier and slower with a vertical grip; quicker and shakier with an angled one.
     expect(gripReadout(AEG, 'vertical')).toBe('Brings the AEG rifle up in 0.56 s. After a sprint it can fire from 0.20 s, already steady.');

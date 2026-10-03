@@ -238,4 +238,3 @@ describe('time to steady after a sprint (the Loadout grip line)', () => {
     }
   });
 });
-

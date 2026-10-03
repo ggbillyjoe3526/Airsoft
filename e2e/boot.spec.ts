@@ -85,6 +85,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(rifleGrip.getByRole('button', { name: 'No grip' })).toHaveAttribute('aria-pressed', 'true');
   await rifleGrip.getByRole('button', { name: 'Angled grip' }).click();
   await expect(loadout.getByText(/Brings the AEG rifle up in 0\.36 s/)).toBeVisible();
+  await expect(loadout.getByText('Up to your eye in 0.19 s with the angled grip.')).toBeVisible();
   await loadout.getByRole('group', { name: 'AEG rifle magazine' }).getByRole('button', { name: 'Hi-cap' }).click();
   await expect(loadout.getByText('120 BBs each, 2 carried (240 in all). Reload 1.8 s.')).toBeVisible();
   await expect(loadout.getByText('Replicas and outfit').first()).toBeAttached(); // skins, greyed as LATER
