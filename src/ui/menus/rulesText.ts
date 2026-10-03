@@ -1,0 +1,38 @@
+import type { MatchMode } from '../../config/modes';
+
+/** What the New game screen needs to explain the match. */
+export interface MatchRulesText {
+  teamSize: number;
+  winsNeeded: number;
+  roundTime: number;
+  playerTeam: string;
+  enemyTeam: string;
+  /** Seconds to raise the flag (flag mode), rounds before the teams swap ends (both modes), and whether your team attacks first. */
+  raiseTime: number;
+  halfTimeAfter: number;
+  attackFirst: boolean;
+}
+
+/** The goal paragraph for `mode`. */
+export function describeRules(r: MatchRulesText, mode: MatchMode): string {
+  const minutes = Math.floor(r.roundTime / 60);
+  const seconds = String(Math.round(r.roundTime % 60)).padStart(2, '0');
+  const mates = r.teamSize - 1;
+  const teams = `${r.teamSize}v${r.teamSize} with bots: you and ${mates} bot teammate${mates === 1 ? '' : 's'} (${r.playerTeam}) against ${r.enemyTeam}. `;
+  const end = `First to ${r.winsNeeded} rounds wins the match. One hit and you're out.`;
+  if (mode === 'attackDefend') {
+    return (
+      teams +
+      `Each round one team attacks the other's flagpole: stand by it for ${r.raiseTime} s to raise your flag and win the round. ` +
+      `Defenders by the pole pull it back down, and win if the clock (${minutes}:${seconds}) runs out. Knocking out the whole other team also wins. ` +
+      `Your team ${r.attackFirst ? 'attacks' : 'defends'} first; sides swap after round ${r.halfTimeAfter}. ` +
+      end
+    );
+  }
+  return (
+    teams +
+    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` +
+    `Teams swap ends after round ${r.halfTimeAfter}. ` +
+    end
+  );
+}

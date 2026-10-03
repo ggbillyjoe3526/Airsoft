@@ -33,8 +33,9 @@ export interface QualitySettings {
 }
 
 /**
- * Render quality presets, picked with `?quality=low|medium|high` until the Phase 4 settings screen exposes
- * them. `high` is the game's look so far; the others trade sharpness and shadows for frame time on iGPUs.
+ * Render quality presets, picked on the Settings screen's Graphics tab (saved, and read when the game loads) or for
+ * one visit with `?quality=low|medium|high`. `high` is the game's look so far; the others trade sharpness and
+ * shadows for frame time on iGPUs.
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
   low: { maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024 },
@@ -43,6 +44,13 @@ export const QUALITY: Record<QualityPreset, QualitySettings> = {
 };
 
 export const DEFAULT_QUALITY: QualityPreset = 'high';
+
+/** The quality presets as the Settings screen offers them. */
+export const QUALITY_CHOICES: readonly { id: QualityPreset; label: string; blurb: string }[] = [
+  { id: 'low', label: 'Low', blurb: 'No shadows or edge smoothing: runs best on a laptop or an older computer.' },
+  { id: 'medium', label: 'Medium', blurb: 'Shadows and edge smoothing, with less detailed shadows.' },
+  { id: 'high', label: 'High', blurb: 'The full look: detailed shadows, and a sharper picture on high-resolution screens.' },
+];
 
 /** The preset a `?quality=` value names, or null for a missing or unknown value. */
 export function parseQuality(value: string | null): QualityPreset | null {

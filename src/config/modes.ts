@@ -5,10 +5,10 @@
  */
 export type MatchMode = 'elimination' | 'attackDefend';
 
-/** Modes in the order the start screen lists them, with their labels. */
+/** Modes in the order the Mode pop-up lists them, with their labels. */
 export const MATCH_MODES: readonly { id: MatchMode; label: string; blurb: string }[] = [
   { id: 'elimination', label: 'Elimination', blurb: 'Last team with someone in play wins the round.' },
-  { id: 'attackDefend', label: 'Attack / Defend', blurb: "Raise your flag on the other team's pole, or keep yours down." },
+  { id: 'attackDefend', label: 'Attack and Defend', blurb: "Raise your flag on the other team's pole, or keep yours down." },
 ];
 
 export const DEFAULT_MODE: MatchMode = 'elimination';

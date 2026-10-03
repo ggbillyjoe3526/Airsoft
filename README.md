@@ -5,7 +5,7 @@ visible BBs, one hit and you're out, call your hit and walk off.
 
 **v0.1-alpha.3 (alpha: Phases 1 to 3).** On the warehouse map "Depot" you play a 3v3 against bots: you and two
 bot teammates (Blue) against three bots (Orange), with an AEG rifle and a gas pistol. One BB hit and you're
-out: your hand goes up, you walk off, and you spectate. Pick a mode on the start screen:
+out: your hand goes up, you walk off, and you spectate. Pick a mode on the New game screen (**Start**, then **Mode**):
 **Elimination** (knock out the whole other team) or **Attack / Defend** (raise your flag on the other team's
 pole, or keep yours down; sides swap at half-time). First to 5 rounds wins the match.
 
@@ -60,7 +60,7 @@ first time). The second starts the game and prints an address.
 
 ### 5. Play
 
-Open **http://localhost:5173** in Chrome, Firefox or Edge and click **Click to play**.
+Open **http://localhost:5173** in Chrome, Firefox or Edge, click **Start**, then **Play**.
 
 To stop the game, go back to the terminal and press **Ctrl+C**. To play again later, repeat step 3 and
 run `npm run dev` (no need for `npm install` again).
@@ -90,7 +90,7 @@ Then open **http://localhost:4173**.
 
 ## How to play
 
-- **Goal:** pick a mode on the start screen. First team to 5 round wins takes the match.
+- **Goal:** pick a mode on the New game screen (**Start**, then **Mode**). First team to 5 round wins takes the match.
   - **Elimination:** knock out every player on the other team. If the clock runs out, the round is a draw.
   - **Attack / Defend:** each team has a flagpole in its half. Each round one team attacks the other's pole: stand by it
     (inside the painted ring) for 5 s to raise your flag and win the round. Defenders standing by the pole pull
@@ -98,7 +98,7 @@ Then open **http://localhost:4173**.
     out (if attackers are still at the pole then, play goes on in overtime, up to 15 s, until they leave or
     finish), and knocking out the whole other team wins in either role. Your team attacks first; sides swap after
     round 4. The strip under the scoreboard shows how far up the flag is, and a marker shows where the pole is.
-    A mode picked mid-match starts with the next match.
+    The mode, the bot difficulty and your loadout are picked between matches, on the New game screen.
 - **One hit = out.** When a BB hits you, you hear a sharp "tick", see where it came from, raise your hand
   and walk off to the dead zone. While out, you watch your teammates (click to switch).
 - **BBs are real projectiles:** they take time to fly (about half a second across the map), slow down and drop at
@@ -112,12 +112,13 @@ Then open **http://localhost:4173**.
 - **Sprinting** carries your replica: you can't shoot until a moment after you stop.
 - **Footsteps give you away.** Running and sprinting are heard by you and the bots (sprinting from further away);
   walking (Shift) and moving crouched are silent. Listen for enemies the same way.
-- **Bot difficulty** (Easy, Normal, Hard) is picked on the start screen and applies to all bots, teammates too.
-  Changed mid-match, it starts with the next round. On Normal, a bot's first BBs up close can miss, and
+- **Bot difficulty** (Easy, Normal, Hard) is picked on the New game screen and applies to all bots, teammates too.
+  On Normal, a bot's first BBs up close can miss, and
   moving targets are harder for bots to hit.
-- **Loadout, before a match:** the start screen's Loadout box fits the rifle's optic (iron sights or a red dot) and
+- **Loadout, before a match:** the Loadout screen (**Start**, then **Loadout**) fits the rifle's optic (iron sights or a red dot) and
   sets each replica's **hop-up**: the backspin that keeps a BB flying flat. Out of the box the rifle is on target to
-  about 38 m and the pistol to about 25 m; turn it up too far and BBs rise and float. It isn't on the pause screen.
+  about 38 m and the pistol to about 25 m; turn it up too far and BBs rise and float. BB weight, grips, magazines and
+  gas type are listed there too, marked LATER: they come in later updates.
 
 ### Controls
 
@@ -127,16 +128,16 @@ Then open **http://localhost:4173**.
 | Mouse | Aim |
 | Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click) |
 | B | Fire mode: step the AEG rifle through Semi, Burst and Auto (the pistol is semi only) |
-| Right click (hold) | Aim down sights: only with an optic fitted (pick **Optic: Red dot** in the Loadout box on the start screen for the rifle). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. |
+| Right click (hold) | Aim down sights: only with an optic fitted (pick **Red dot** for the rifle on the Loadout screen). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. |
 | Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
 | Left Alt | Sprint (forward only) |
-| C | Crouch: press to go down, again to stand (sprint or jump also stands you up). The start screen can switch it to hold. |
+| C | Crouch: press to go down, again to stand (sprint or jump also stands you up). **Settings**, Controls, can switch it to hold. |
 | Q / E (hold) | Lean left / right: peek around cover (leaning slows you to a quiet walk and stops sprinting) |
 | Space | Jump (small hop) |
 | R | Reload (an empty trigger pull also reloads) |
 | 1 / 2 or mouse wheel | Switch between AEG rifle and gas pistol |
 | Left click while out | Watch the next player still in play |
-| Esc | Pause (releases the mouse). The pause screen has **Key bindings** to change keys. |
+| Esc | Pause (releases the mouse): Resume, Settings (keys are under **Key bindings**) or Quit to title screen. |
 | `` ` `` or F3 | Frame rate and debug info |
 | ] | Debug: show BB flight paths |
 
@@ -168,7 +169,8 @@ the first public release. More modes, maps, replicas, loadouts and customisation
 arrives as a pull request that the owner reviews and merges. Later, development
 moves to an `alpha` branch and testing to a `beta` branch, and `main` only receives tested releases.
 
-**Not yet:** more maps or replicas, menus beyond the start screen, real art.
+**Not yet:** more maps or replicas, real art, and the menu items marked LATER (BB weight, grips, magazines, gas type,
+audio and accessibility settings).
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels and Attack / Defend balance still need
 tuning from playtesting.
@@ -197,8 +199,9 @@ GitHub runs `npm run check` and the smoke test on every pull request and every p
 URL flag `?nolock` plays without pointer lock (for automated browsers; fire and wheel work, mouse look doesn't). It works only on the
 dev server and in the smoke test's build (`npm run build:e2e`), never in a normal release build.
 Each page load picks a fresh random seed (shown in the debug overlay); `?seed=N` (0 to 4294967295) replays one.
-`?quality=low|medium|high` picks a render preset (default `high`; `medium` renders at standard resolution with smaller shadows,
-`low` also drops shadows and antialiasing). The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
+**Settings → Graphics** picks a render preset, saved for next time (default `high`; `medium` renders at standard
+resolution with smaller shadows, `low` also drops shadows and antialiasing); `?quality=low|medium|high` overrides it
+for one visit. The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
 In development, `window.airsoft` exposes the running game.
 
 ### Layout

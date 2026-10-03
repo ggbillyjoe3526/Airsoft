@@ -10,7 +10,15 @@ export const SETTINGS_KEY = 'airsoft.settings';
 export const SETTINGS_VERSION = 1;
 
 /** What each setting is called in the stored object (`hopUp.<replica id>`: that replica's hop-up dial). */
-export type SettingField = 'sensitivity' | 'aimSensitivity' | 'difficulty' | 'mode' | 'crouch' | 'optic' | `hopUp.${string}`;
+export type SettingField =
+  | 'sensitivity'
+  | 'aimSensitivity'
+  | 'difficulty'
+  | 'mode'
+  | 'crouch'
+  | 'optic'
+  | 'quality'
+  | `hopUp.${string}`;
 
 /** Where earlier builds kept a setting, before the settings object. */
 const LEGACY_KEYS: Partial<Record<SettingField, string>> = {

@@ -5,47 +5,44 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `claude/project-thread-p14he8` (Phase 4 M11 Depot rework; critic 9.0 on attempt 2)._
+_Last updated: 2026-10-03 · branch `claude/project-thread-1nyjk6` (Phase 4 M15 menus). The owner stopped work for
+now at the end of this session ("wrap everything up cleanly")._
 
 ## Where we are
 
-- **Phase 3 is done and tagged** (`v0.1-alpha.3`). Phase 4 order (owner): M12a → M12b → M11 → M13 → art → menus and
-  settings → tutorial. M12a, M12b, M12c (the owner's M12b notes, hop-up dials) and the pistol lean (PR #13) are merged.
-- **M11 is built** on this branch (pull request open for the owner), from the layout sketch he approved
-  (https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD, revision 2): `map/depot.ts` is written in plan coordinates
-  (north = +z, as drawn) and mirrored to world coordinates at the bottom of the file. One pole (`MapData.flag`) at
-  end 1. Spawns, dead zones and lanes are per **end** (0 west, 1 east); `round.ts` `teamEnd` / `placeTeams` put teams at
-  ends each round and swap them after `ROUNDS.halfTimeAfter` (4) in both modes; `Character.end` drives dead zones and
-  bot lane direction (`BotController.measureEnds`). Attackers always start west; in Elimination Blue starts east
-  (`ROUNDS.eliminationFirstEnd`).
-- `map/depot.test.ts` checks the layout in 3D from the nav grid (sightlines, spawns hidden, the pole, lanes, dock).
-- Bot balance (96 seeds, with hop-up): Attack / Defend attackers 50%; Elimination east end 54%. Numbers in DECISIONS.
+- **Phase 3 is done and tagged** (`v0.1-alpha.3`). On `main` since the tag (all merged 2026-10-03): M12a, M12b and
+  M12c weapon handling, the pistol's slight left lean (#13) and the **M11 Depot rework** (#14).
+- **M15 menus** (pulled forward by the owner ahead of M13, to his own design; concept sketch approved) is on this
+  branch as pull request #15 for the owner (critic 9.1): title screen → New game (Mode and Difficulty pop-ups, Loadout and Settings
+  screens), pause menu (Resume / Settings / Quit to title screen), result (Play Again / Change setup / Title screen),
+  headings in capitals, unbuilt items greyed with LATER, render quality as a saved setting. Code in `src/ui/menus/`,
+  placeholder data in `src/config/menus.ts`. Concept sketch: https://claude.ai/artifact/R6WwSeS2sXSAdqzzZBGSQt.
 
-## Next
+## Next (when the owner comes back)
 
-1. **The owner's M11 playtest** (PLAYTEST.md: The Depot). Tune from his notes: lanes, the dock, which end feels strong.
-2. **M13** audio rework (tune echoes and muffling on the new buildings), then M14 art.
+1. **The owner merges the M15 pull request** (#15, if not done yet).
+2. **The owner's playtest of the new Depot and the new menus** (PLAYTEST.md: "The Depot (M11 rework)" and
+   "Menus (M15)"). His Depot feedback is still awaited; his M12c notes (hop-up good, pistol too straight) are done.
+   Fix what he finds first.
+3. **Then M13, the audio rework** (ROADMAP Phase 4, order M12 → M11 → M15 → M13 → M14 → M16). `ReplicaConfig.power`
+   (electric / gas) is there for sound profiles by power source. Volume settings then fill the Audio tab's LATER rows.
 
 ## Working notes and gotchas
 
-- **Editing Depot:** work in plan coordinates; `toWorld` negates z (and flips ramp rises and spawn yaw). Test
-  coordinates in `depot.test.ts`, `ai.test.ts` and `depotMatch.test.ts` are world coordinates. Cover must be 1.2 m
-  (crouch) or ≥ 2.4 m (full); the layout tests find slits, long lines and climbable cover, so fix geometry, not tests.
-- **Ramps:** keep the stepped kerbs on a ramp's open side (DECISIONS); without them characters leave the ground at the
-  ramp foot. The headless matches assert the longest time off the ground stays within `airSpreadDelay`.
-- **The ground probe** now runs on every tick a character isn't rising (`sim/movement.ts`), after a one-off Rapier
-  shape-cast miss on a ramp. If landings ever feel odd (hanging on edges), look there first.
-- **The barrel line:** BBs are drawn from the muzzle, blending onto the eye line, so on screen they run from the muzzle
-  to the crosshair. The rifle's `look.hold.yaw` stays 0; the pistol has a slight 0.1 rad left lean at the owner's
-  request (capped at 0.12 by `tracerLine.test.ts`).
-- **Measuring bots:** copy the top of `src/ai/depotMatch.test.ts` (up to the first `describe`) into a scratch test,
-  add a test that writes JSON with `writeFileSync`, run it with `-t`, then delete it (it breaks `tsc` while in `src`).
-  Run several seed ranges in parallel processes; 96 seeds of both modes take about 2 minutes on 4 cores.
-- **Parallel pull requests conflict** in `docs/DECISIONS.md`, `docs/REVIEWS.md` and the ROADMAP status table. Merge
+- **Menus:** one screen at a time (`Menus.go`); `menuNav.ts` decides Back and which menu opens when play stops.
+  The loadout is only reachable through New game, so never mid-match; Quit to title screen ends the match
+  (`Game.quitToTitle`). Text is set in capitals by CSS, so the code keeps normal case (and tests' accessible names
+  use case-insensitive matches). `BUILD_LABEL` in `config/menus.ts` moves with each release tag (CLAUDE.md §7).
+- **The barrel line:** BBs are drawn from the muzzle, blending onto the eye line. The rifle keeps hold yaw 0; the
+  pistol leans 0.1 rad, and `tracerLine.test.ts` caps it.
+- **Parallel pull requests conflict** in `docs/DECISIONS.md` and `docs/REVIEWS.md` (both append at the end). Merge
   `main` in and keep both sides, `main`'s lines first.
+- **Measuring bots:** copy the top of `src/ai/depotMatch.test.ts` (up to the first `describe`) into a scratch test,
+  add a test that writes JSON with `writeFileSync` (Vitest hides `console.log` here), run it with `-t`, then delete it.
 - **Checks:** `npm run check` (type check, tests, build). `npm run check:all` adds the browser smoke test. In a cloud
   container with a preinstalled Chromium, run Playwright with a temporary copy of the config whose
-  `launchOptions.executablePath` points at `/opt/pw-browsers/chromium` (don't commit it).
-- **Browser:** `npm run dev`, open `/?nolock` (dev or `build:e2e` only); `window.airsoft` is the Game.
+  `launchOptions.executablePath` points at it (`/opt/pw-browsers/chromium`; don't commit it).
+- **Browser:** `npm run dev`, open `/?nolock` (dev or `build:e2e` only); `window.airsoft` is the Game (private methods
+  such as `pause()` are callable from a script for screenshots; set `unlockedPlay = false` first).
 - **Git:** new branch from the latest `main`, push, open a pull request; the owner merges. Never push to `main`, merge a
   pull request, or create or move tags. Install with npm 11 (`npx -y npm@11 install`) so the lockfile keeps its `libc` fields.

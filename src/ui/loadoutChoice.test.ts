@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_OPTIC, OPTIC_CHOICES, opticOf } from '../config/optics';
 import { AEG, GAS_PISTOL, HOP_UP, LOADOUT } from '../config/replicas';
-import { hopUpField, hopUpLabel, hopUpReadout, loadHopUps, loadoutOffered, loadoutTakesEffect, opticNote } from './loadoutChoice';
+import { hopUpField, hopUpLabel, hopUpReadout, loadHopUps, loadoutSummary, loadoutTakesEffect, opticNote } from './loadoutChoice';
 
 describe('optic choice', () => {
   it('is off by default (iron sights) and offers the red dot', () => {
@@ -19,10 +19,11 @@ describe('optic choice', () => {
 });
 
 describe('loadout choice', () => {
-  it('is offered before a match (title and result screens), never on the pause screen', () => {
-    expect(loadoutOffered('title')).toBe(true);
-    expect(loadoutOffered('result')).toBe(true);
-    expect(loadoutOffered('pause')).toBe(false);
+  it('sums up the optic and the hop-up dials for the New game screen', () => {
+    expect(loadoutSummary(LOADOUT, 'none', [0.65, 0.55])).toBe('Iron sights · hop-up 65% / 55%');
+    expect(loadoutSummary(LOADOUT, 'redDot', [1, 0])).toBe('Red dot · hop-up 100% / 0%');
+    // No replica with a rail: no optic to mention. A missing dial shows the factory setting.
+    expect(loadoutSummary([GAS_PISTOL], 'redDot', [])).toBe(`hop-up ${hopUpLabel(GAS_PISTOL.hopUpDial)}`);
   });
 
   it('is fitted at once before the first match and on the result screen, else from the next round', () => {

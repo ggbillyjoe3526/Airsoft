@@ -272,7 +272,7 @@ export interface BotSkill {
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
-/** Difficulty levels in the order the start screen lists them, with their labels. */
+/** Difficulty levels in the order the Difficulty pop-up lists them, with their labels. */
 export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string }[] = [
   { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim. Learn the map.' },
   { id: 'normal', label: 'Normal', blurb: 'A fair fight: their first BBs up close can miss.' },

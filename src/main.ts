@@ -1,8 +1,9 @@
 import './style.css';
-import { DEFAULT_QUALITY, parseQuality } from './config/render';
+import { parseQuality } from './config/render';
 import { parseSeed, randomSeed } from './core/seed';
 import { Game } from './game';
 import { DEPOT } from './map/depot';
+import { loadQuality } from './ui/menus/savedChoices';
 
 async function main(): Promise<void> {
   const container = document.getElementById('app');
@@ -11,8 +12,8 @@ async function main(): Promise<void> {
   // A fresh seed each load, so the bots' plans differ from session to session; ?seed=N replays one
   // (the debug overlay shows the seed in use). An unreadable ?seed= value is ignored.
   const seed = parseSeed(params.get('seed')) ?? randomSeed();
-  // ?quality=low|medium|high picks a render preset (the debug overlay shows which); anything else means the default.
-  const quality = parseQuality(params.get('quality')) ?? DEFAULT_QUALITY;
+  // The render preset saved in Settings; ?quality=low|medium|high overrides it for this visit (the debug overlay shows which).
+  const quality = parseQuality(params.get('quality')) ?? loadQuality();
   const game = await Game.create(container, DEPOT, {
     // ?nolock works on the dev server and in the smoke test's `e2e` build, never in a normal release build.
     allowUnlocked: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('nolock'),

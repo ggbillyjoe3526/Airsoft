@@ -4,7 +4,7 @@ import { bbMass, HOP_UP, hopUpLift, muzzleVelocity, type ReplicaConfig } from '.
 import { createBBPool, spawnBB, stepBBFlight } from './ballistics';
 import { vec3 } from './vec';
 
-/** What a hop-up setting does to a level shot, for the start screen's readout. */
+/** What a hop-up setting does to a level shot, for the Loadout screen's readout. */
 export interface HopUpReach {
   /** Metres the BB stays within HOP_UP.onTargetBand of the aim line (HOP_UP.readoutRange if it never leaves it). */
   onTargetTo: number;
