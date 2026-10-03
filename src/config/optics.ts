@@ -45,6 +45,6 @@ export const AIMING = {
   minSensitivity: 0.2,
   maxSensitivity: 2,
   sensitivityStep: 0.05,
-  /** The crosshair gives way to the red dot once the sight is this far up (0..1). */
-  reticleFrom: 0.6,
+  /** The crosshair gives way to the red dot once the sight is this far up (0..1): by then the glass is in front of it. */
+  reticleFrom: 0.9,
 } as const;

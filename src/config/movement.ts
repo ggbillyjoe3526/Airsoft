@@ -136,7 +136,7 @@ export const MOVEMENT: MovementConfig = {
     airSpreadDelay: 0.1,
     crouched: 0.65,
     settleTime: 0.15,
-    carryTime: 0.45,
+    carryTime: 0.25,
     lockTime: 0.015,
   },
 };

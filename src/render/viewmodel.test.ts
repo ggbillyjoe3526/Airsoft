@@ -157,4 +157,29 @@ describe('Viewmodel optic', () => {
     expect(front.z).toBeLessThan(back.z);
     vm.dispose();
   });
+
+  it('keeps the dot (the view centre) inside the glass at the strongest recoil kick', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    fitOptic(arm, LOADOUT, 'redDot');
+    for (let i = 0; i < 5; i++) vm.onShot(); // full auto: the kick is at kickMax
+    vm.update(0, 0, 0, 0, 4.2, false, arm, LOADOUT, false, 1);
+    const [optic] = named(vm, 'optic');
+    optic!.updateWorldMatrix(true, false);
+    // The view's centre line (from the eye along -Z) in the optic's own frame.
+    const toLocal = optic!.matrixWorld.clone().invert();
+    const eye = new THREE.Vector3(0, 0, 0).applyMatrix4(toLocal);
+    const far = new THREE.Vector3(0, 0, -1).applyMatrix4(toLocal);
+    const o = RIFLE_OPTIC;
+    let tilt = 0;
+    for (const forward of [o.from, o.from + o.length]) {
+      // Where the line crosses the tube's end (local z = -forward), measured from the tube's axis.
+      const t = (-forward - eye.z) / (far.z - eye.z);
+      const off = Math.hypot(eye.x + (far.x - eye.x) * t, eye.y + (far.y - eye.y) * t - o.axisUp);
+      expect(off).toBeLessThan(o.inner);
+      tilt = Math.max(tilt, off);
+    }
+    expect(tilt).toBeGreaterThan(0); // it still kicks a little
+    vm.dispose();
+  });
 });

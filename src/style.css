@@ -315,8 +315,11 @@ kbd {
   height: 5px;
   margin: -2.5px 0 0 -2.5px;
   border-radius: 50%;
-  background: #ff3a2a;
-  box-shadow: 0 0 3px 1px rgba(255, 70, 50, 0.75);
+  background: #ff2418;
+  /* A thin dark ring keeps it readable against orange shirts and bright walls. */
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 4px 1px rgba(255, 50, 30, 0.8);
   display: none;
 }
 

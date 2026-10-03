@@ -193,6 +193,11 @@ export const VIEWMODEL = {
   kickMax: 1.5,
   /** How much of the mouse sway and walk bob goes away with the sight raised to your eye (0..1). */
   aimSteady: 0.75,
+  /**
+   * The share of the recoil kick left with the sight raised: the rig pivots at the eye, so a full kick would lift the
+   * optic's glass off the HUD dot. A quarter keeps the dot inside the glass even at kickMax (a viewmodel test pins it).
+   */
+  aimKick: 0.25,
   /** Viewmodel camera clip planes (metres); the replica is always within arm's reach. */
   near: 0.01,
   far: 5,

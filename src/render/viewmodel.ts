@@ -152,12 +152,13 @@ export class Viewmodel {
     const slot = this.slots[armament.active]!;
     // Raising the sight: the replica comes in from its hip hold to the aiming hold, square to the view.
     const raised = slot.aimHold ? smooth(aim) : 0;
-    const [hx0, hy0, hz0] = slot.hold.position;
-    const [ax, ay, az] = slot.aimHold ?? slot.hold.position;
-    slot.model.position.set(hx0 + (ax - hx0) * raised, hy0 + (ay - hy0) * raised, hz0 + (az - hz0) * raised);
+    const h = slot.hold.position;
+    const t = slot.aimHold ?? h;
+    slot.model.position.set(h[0] + (t[0] - h[0]) * raised, h[1] + (t[1] - h[1]) * raised, h[2] + (t[2] - h[2]) * raised);
     const holdYaw = slot.hold.yaw * (1 - raised);
-    // Steadier on the shoulder: sway and bob shrink while aiming.
+    // Steadier on the shoulder: sway and bob shrink while aiming, and the kick only nudges the sight (the dot stays in the glass).
     const motion = 1 - VIEWMODEL.aimSteady * raised;
+    const kick = this.kick * (1 - (1 - VIEWMODEL.aimKick) * raised);
 
     // Sway: the replica lags behind the view a little, then springs back.
     if (this.snapView) {
@@ -221,9 +222,9 @@ export class Viewmodel {
         drawP * VIEWMODEL.drawDrop -
         this.sprintBlend * VIEWMODEL.sprintDrop -
         raise * VIEWMODEL.hitDrop,
-      this.kick * VIEWMODEL.kickBack,
+      kick * VIEWMODEL.kickBack,
     );
-    this.rig.rotation.set(this.kick * VIEWMODEL.kickUp - drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
+    this.rig.rotation.set(kick * VIEWMODEL.kickUp - drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
   }
 
   /**
