@@ -71,7 +71,7 @@ These are defaults to prototype, not final. Tune them through play.
 - On hit: the player hears a distinct "tick" impact, sees a hit indicator, and their character raises a hand ("HIT!" callout).
 - Eliminated players become a visible **"dead" state**: hand raised, walking off to the dead zone, cannot shoot, and cannot be targeted. They can still spectate.
 - Prototype bots always call their hits honestly. Honesty is enforced by the game, not the player.
-- Later idea to test: a **medic mechanic** where a teammate can revive a hit player once per round by touch.
+- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature, proposed for v0.2).
 
 **Replicas (Phase 1 needs only two)**
 - **AEG rifle**: full auto, medium range, medium magazine.
@@ -117,13 +117,14 @@ Elimination and Attack / Defend.
 
 1. **Phase 2 — Core gameplay (alpha, ships as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, the Attack / Defend objective mode, all on Depot.
 2. **Phase 3 — Core foundations (alpha, `v0.1-alpha.3`):** leaning (Q / E peek), magazines and meaningful reloads (limited ammunition), a BB physics pass, movement and positioning over raw weapon stats, the audit fixes and elevation support (ramps, raised floors).
-3. **Phase 4 — Feel, presentation and onboarding (alpha):** weapon handling from the owner's `v0.1-alpha.3` playtest (fire modes, faster reloads, crouch toggle, steadier aim when still, optics as accessories with aiming down sights), a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), the Loadout (owner, 2026-10-03: primary and secondary replica, BB weight, hop-up, optics, grips, magazines), an audio rework, art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
+3. **Phase 4 — Feel, presentation and onboarding (alpha):** weapon handling from the owner's `v0.1-alpha.3` playtest (fire modes, faster reloads, crouch toggle, steadier aim when still, optics as accessories with aiming down sights), a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), the Loadout (owner, 2026-10-03: primary and secondary replica, BB weight, hop-up, optics, grips, magazines), an audio rework, match info (owner, 2026-10-03: hit feed, teammate markers, end-of-match summary, crosshair options), custom matches (rounds, round time, team size, a ricochets setting off by default), a practice range, art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
 4. **Beta (when the owner calls the game feature complete):** optimisation, final balance and tuning, bug fixing, stability, UX/QoL and polish.
 
 **After v0.1 (later versions, proposed in `docs/ROADMAP.md`):** more modes (TDM, Capture the Flag,
 Domination, Bomb), more fields, replica platforms that differ mechanically (GBBR, spring sniper, SMG,
-shotgun, DMR, LMG …), bigger loadouts (gear and more parts, free from the start), chrono, customisation, unlock-based progression
-(never levels), and team communication once the bots are good enough. Don't build these during v0.1.
+shotgun, DMR, LMG …), bigger loadouts (gear, pouches and more parts, free from the start), chrono and tracer BBs, gas
+simulation, grenades, smoke and flash bombs, a medic mode, bigger teams (4v4 / 5v5), day and night maps, customisation,
+unlock-based progression (never levels), and team communication once the bots are good enough. Don't build these during v0.1.
 
 **Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
 performance, stability, UX/QoL, polish and final tuning are beta. During alpha, note beta-type work in
@@ -168,7 +169,7 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
     `alpha` branch. A build ready for testing is merged into `beta`; once tested, it is merged into `main` and tagged.
     From then on, never push unreleased work to `main`.
 
-Multiplayer is not planned.
+Multiplayer is not planned (owner, confirmed 2026-10-03: absolutely none).
 
 Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do not implement them unless asked.
 
