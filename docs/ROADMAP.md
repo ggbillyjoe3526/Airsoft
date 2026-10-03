@@ -5,7 +5,8 @@ First agreed with the owner on 2026-09-30. **Rewritten on 2026-10-01** from the 
 v0.1 is the core game with strong foundations, and new content comes in later versions.
 
 **Current focus: alpha.** We build first. Balance, bug fixing, QoL and performance come in beta.
-**Multiplayer is not planned** (owner decision, 2026-09-30). The game is single-player against bots.
+**Multiplayer is not planned** (owner decision, 2026-09-30; confirmed 2026-10-03: absolutely no multiplayer). The game is
+single-player against bots.
 
 Every milestone goes through the critic (CLAUDE.md §12), is committed on its own branch when accepted, and is
 opened as a pull request that the owner reviews and merges into `main`. GitHub runs the checks on every pull
@@ -20,7 +21,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) are done; next are the owner's M15 notes (M15b), then the Loadout feature (M17, added by the owner), an audio rework (M13), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes and his Loadout request are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) are done; next are the owner's M15 notes (M15b), then the Loadout feature (M17, added by the owner), an audio rework (M13), the owner's feature picks (M18 match info, M19 custom matches, M20 practice range), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -54,6 +55,8 @@ v0.1 focuses on core gameplay and foundations. Later content builds on those fou
 - **Replicas:** the two that exist, the AEG rifle and the gas pistol. More platforms come later.
 - **Loadout** (owner, 2026-10-03): a primary and a secondary replica, BB weight, hop-up and a first set of
   attachments (optics, grips, magazines), picked before a match. Gear and more parts come with later versions.
+- **Match info and options** (owner, 2026-10-03): a hit feed, teammate markers, an end-of-match summary, crosshair
+  options, custom match settings (rounds, round time, team size, a ricochets setting) and a practice range.
 - **Modes:** the two that exist, Elimination and Attack / Defend.
 - **Field:** Depot, reworked to the field checklist below.
 - **Foundations:** magazines and reloads, a BB physics pass, and movement and positioning.
@@ -103,6 +106,9 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Later (after M15b) | |
 | Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Later | |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
+| Alpha · Phase 4 · M18 Match info (owner's feature picks, 2026-10-03): hit feed, teammate markers, end-of-match summary, crosshair options | Later | |
+| Alpha · Phase 4 · M19 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
+| Alpha · Phase 4 · M20 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
@@ -258,7 +264,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 6 | Perhaps eventually skins for the replicas and the outfit | Not built in v0.1: a greyed Skins row (LATER) in M17b; the skins themselves in v0.5 |
 
 **Order** (owner picked weapon handling first, 2026-10-03; he pulled the menus forward the same day and added the
-Loadout feature after the M15 notes): **M12a → M12b → M11 → M15 → M15b → M17a → M17b → M13 → M14 → M16.** Weapon handling comes
+Loadout feature after the M15 notes, then picked M18–M20 from a feature research list): **M12a → M12b → M11 → M15 → M15b → M17a → M17b → M13 → M18 → M19 → M20 → M14 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
 the Depot layout sketch. The Depot rework follows once the sketch is approved (approved 2026-10-03). The audio rework comes after it so
 movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
@@ -270,6 +276,36 @@ LATER rows while that screen is fresh from M15 and M15b; most of its groundwork 
 drag, lift and spin since M9, the optic slot since M12b, the hop-up dials since M12c); it is gameplay, which comes before
 the dressing; and the audio rework (magazine sounds, a hi-cap's rattle), the art pass (models for every part) and the
 tutorial can then cover the parts, instead of being redone for them.
+The owner's feature picks (M18, M19, M20) come after the audio rework, which was already under way when he picked them,
+and before the art pass and the tutorial, for the same reason as the Loadout: they are gameplay and screens that the art
+pass then dresses and the tutorial then explains (the tutorial can use the practice range).
+
+**The owner's feature picks (2026-10-03, from a researched list of what airsoft players and FPS fans expect) and where
+each one went:**
+
+| # | Note | Goes to |
+|---|---|---|
+| 1 | BB ricochets as a setting in the menus; off by default (ricochets don't count) | M19 |
+| 2 | Keep the chrono before a match | v0.3 (unchanged) |
+| 3 | Keep the planned game modes for later | v0.2 (unchanged: TDM, Capture the Flag, Domination, Bomb) |
+| 4 | Medic mode with a bleed-out timer, as a future feature | v0.2 (moved from IDEAS) |
+| 5 | VIP escort, flagged as an idea for later | IDEAS |
+| 6 | Hostage rescue, flagged as an idea for later | IDEAS |
+| 7 | Experiment later with 4v4 or 5v5 Team Deathmatch instead of 3v3; may need a Depot rework or fields built for it | v0.2 |
+| 8 | Day and night maps, picked before a game; at night BBs glow and lights stand out (e.g. attachment lights). Later | v0.4 |
+| 9 | Grenades, smoke and flash bombs | v0.3 |
+| 10 | Pouches that allow extra gear. Later | v0.3 (gear) |
+| 11 | Gas simulation: fast shooting means less power | v0.3 |
+| 12 | Tracer BBs as a loadout option | v0.3 (with the chrono; at their best on night maps) |
+| 13 | Hit feed | M18 |
+| 14 | End-of-match summary screen | M18 (moved from IDEAS) |
+| 15 | Teammate markers | M18 |
+| 16 | Custom match settings: rounds, round time, team size and the like | M19 |
+| 17 | A practice range to test replicas and the loadout | M20 (moved up from v0.3) |
+| 18 | Crosshair customisation in the settings menu: size, colour, shape and the like | M18 |
+| 19 | Team communication (wheel, pings, hand signals) for later versions | Unchanged ([when the bots are ready](#when-the-bots-are-ready-team-communication)) |
+| 20 | Esport difficulty for later | Unchanged (parked) |
+| 21 | Absolutely no multiplayer | Confirmed (DECISIONS) |
 
 - **M12. Weapon handling** (owner's playtest notes 1, 2, 3, 4, 5 and 7). Split in two so the quick changes can be
   played first. Bots play by the same handling rules where they apply.
@@ -414,6 +450,35 @@ tutorial can then cover the parts, instead of being redone for them.
     - The power or gas type row stays LATER (the v0.3 platforms).
     - Each part shows on the held replica as simple geometry; the art pass (M14) models them properly.
   - The playtest guide gets a Loadout section for each half.
+- **M18. Match info** (the owner's feature picks 13, 14, 15 and 18). What any FPS player expects to see; first guesses
+  to tune in play.
+  - **Hit feed:** a short list in a corner of who hit whom ("Orange 2 hit Blue 1"), newest at the top, each line fading
+    after a few seconds. Friendly hits are marked as such, and lines carry a team label as well as the team colour, so
+    colour isn't the only cue.
+  - **Teammate markers:** a small team-coloured marker with the name over each teammate still in play, so you know
+    where they are and don't knock them out (friendly fire counts). It greys out when they're hit. Enemies never get
+    one.
+  - **End-of-match summary:** a screen between the last round and the result menu (and reachable from it): for every
+    player, hits, times hit, friendly hits, BBs fired and accuracy, plus rounds won; your line stands out.
+  - **Crosshair options** on the Settings screen, with a live preview: shape (cross, dot, circle, cross with a dot),
+    size, thickness, gap, colour and outline. It keeps opening and closing with the real spread, as today. Saved in the
+    settings store.
+- **M19. Custom matches** (the owner's feature picks 1 and 16)
+  - **A Match pop-up** on New game, beside Mode, Map, Difficulty, Loadout and Settings, saved like the other choices.
+    First guesses: rounds to win (3, 5, 7 or 10; 5 by default), round time (1:30 to 5:00; 2:30 by default), team size
+    (1v1, 2v2 or 3v3 on Depot; 3v3 by default) and friendly fire (on by default, as at a real site). Attack / Defend's
+    half-time follows the rounds to win. Bigger teams wait for bigger fields (the 4v4 / 5v5 experiment, v0.2).
+  - **BB ricochets:** BBs bounce off hard surfaces (concrete, steel containers) and lose speed doing it, instead of
+    stopping dead as today. A **Ricochets count** setting in the Match pop-up decides whether a bounced BB knocks someone
+    out, the way fields set their own rule. **Off by default** (owner): a ricochet that hits you ticks but you stay in.
+    Bots follow the same rule.
+  - Layout and headless match tests cover every team size.
+- **M20. Practice range** (the owner's feature pick 17; moved up from v0.3)
+  - A small range of its own, opened from the title screen: lanes with distance markers out past Depot's longest
+    sightlines, steel targets that ring when hit and standing and crouched figure targets.
+  - Open the Loadout screen from the range (not a match, so the never-mid-match rule doesn't apply) and try a replica,
+    BB weight, hop-up or part straight away; magazines refill and a readout gives the last shot's distance.
+  - The tutorial (M16) can take place here.
 - **M16. Onboarding:** a short tutorial.
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
@@ -456,6 +521,10 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
 - **Domination:** capture and hold physical locations.
 - **Bomb / Objective:** plant, defend and disable a prop device, as sites do with timer boxes.
 - **A second field: Woodland**, built to the checklist, with wind for BBs and indoor/outdoor acoustics.
+- **Bigger teams** (owner, 2026-10-03): an experiment with 4v4 or 5v5 Team Deathmatch instead of 3v3. It may need a
+  reworked Depot or fields built for it.
+- **Medic mode** (owner, 2026-10-03; was the parked "medic revive"): a hit player goes down and calls for a medic,
+  who can bring them back before a bleed-out timer runs out (real events use 5–10 minutes; the game, seconds).
 
 ### Proposed v0.3: The armoury
 
@@ -478,10 +547,19 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
   - Weapon parts: receivers, handguards, stocks, more optics, muzzle devices, suppressors,
     lasers/lights and bipods, and the parts the new platforms need (shotgun shells, LMG box mags).
   - Gear: plate carriers, chest rigs, belts, helmets, comms, backpacks, gloves, eye protection, face
-    protection and boots. Gear decides what you carry, e.g. how many magazines.
-- **Chrono before a match:** check your loadout's muzzle velocity, and pick tracer BBs (BB weight is picked on the
-  Loadout screen from M17a).
-- **A practice range** to try replicas and loadouts.
+    protection and boots. Gear decides what you carry, e.g. how many magazines. Pouches allow extra gear (owner,
+    2026-10-03), such as another magazine or a grenade.
+- **Chrono before a match** (kept, owner, 2026-10-03): check your loadout's muzzle velocity (BB weight is picked on
+  the Loadout screen from M17a).
+- **Tracer BBs as a loadout option** (owner, 2026-10-03): a row on the Loadout screen beside BB weight. They glow
+  brightest on night maps (v0.4).
+- **Gas simulation** (owner, 2026-10-03): fast shooting means less power. Gas cools in the magazine as it is used, so
+  rapid fire lowers a gas replica's muzzle velocity (shorter, droopier shots) until it recovers. For the gas pistol and
+  the GBB platforms above.
+- **Grenades, smoke and flash bombs** (owner, 2026-10-03): airsoft-style throwables, such as a CO2 sound grenade (a
+  bang, no shrapnel), smoke for cover and a flash bomb. How each one knocks players out or blinds them, how many you
+  carry and how bots use them are designed when they come.
+- The practice range moved up into v0.1 (M20).
 - **Suppressors** with their own sound, built on the M9 groundwork.
 
 ### Proposed v0.4: More fields
@@ -489,6 +567,9 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
 New fields from this list, each built to the checklist: CQB warehouse, urban streets, industrial site,
 outdoor village, milsim-style compound, indoor arena, speedsoft arena and mixed terrain. Depot already
 covers part of "CQB warehouse / industrial". Which fields, and in what order, is for the owner to pick.
+
+- **Day and night** (owner, 2026-10-03): a Day / Night choice before a match, beside the Map choice. At night BBs glow
+  (tracer BBs most of all) and lights stand out, such as weapon lights fitted as attachments.
 
 ### Proposed v0.5: Kit, looks and progression
 
@@ -506,6 +587,6 @@ the bot AI is good enough to follow the calls. It can join whichever version tha
 
 ### Parked ideas
 
-Not approved yet; see `docs/IDEAS.md`: an Esport difficulty above Hard (owner, 2026-10-03), adjustable hop-up,
-medic revive, dead rag and voiced hit calls, bang-bang surrender, BB ricochets, a referee NPC, an end-of-match summary, and Depot
-variations.
+Not approved yet; see `docs/IDEAS.md`: an Esport difficulty above Hard (owner, 2026-10-03), VIP escort and hostage
+rescue modes (owner, 2026-10-03), adjustable hop-up, dead rag and voiced hit calls, bang-bang surrender, a referee NPC,
+a who-hit-you view and Depot variations.
