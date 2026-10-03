@@ -5,7 +5,7 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `claude/roadmap-loadout-feature-9d8epf` (roadmap only: the owner's Loadout feature)._
+_Last updated: 2026-10-03 · branch `claude/feature-research-roadmap-ccty3q` (roadmap only: the owner's feature picks, M18–M20 and later versions)._
 
 ## Where we are
 
@@ -33,6 +33,11 @@ _Last updated: 2026-10-03 · branch `claude/roadmap-loadout-feature-9d8epf` (roa
    its own pull request, branch `claude/m13-audio-rework-j2lmeh`). Sounds are data recipes (`config/sounds.ts`)
    rendered once on Play by `audio/dsp.ts`; `Sfx` keeps one HRTF channel per character, muffled by rays. A new replica
    (M17, v0.3) only needs a `power`: its shot, dry-fire and magazine sounds follow from it.
+5. **Then the owner's feature picks** (2026-10-03, ROADMAP Phase 4 table): M18 match info (hit feed, teammate markers,
+   end-of-match summary, crosshair options), M19 custom matches (rounds, round time, team size, friendly fire, BB
+   ricochets with a "ricochets count" setting, off by default; BBs stop dead today, so the bounce is new), M20 a
+   practice range. Later-version picks (medic mode, 4v4 / 5v5, tracers, gas simulation, grenades, pouches, day and
+   night) are in ROADMAP "After v0.1".
 
 ## Working notes and gotchas
 

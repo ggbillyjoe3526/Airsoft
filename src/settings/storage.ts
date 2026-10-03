@@ -20,7 +20,8 @@ export type SettingField =
   | 'mode'
   | 'crouch'
   | 'optic'
-  | 'quality'
+  | 'map'
+  | 'fov'
   | `hopUp.${string}`
   | `volume.${string}`;
 

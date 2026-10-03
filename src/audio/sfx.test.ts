@@ -8,6 +8,7 @@ import { vec3 } from '../sim/vec';
 import { volumeGain } from './audioMix';
 import type { OcclusionQuery } from './occlusion';
 import { Sfx } from './sfx';
+import { SoundLibrary } from './soundBank';
 
 // ---- A minimal stand-in for the Web Audio API (records what Sfx builds and connects) --------------
 
@@ -159,12 +160,14 @@ const OPEN: OcclusionQuery = { raycastStatic: () => -1 };
 const WALLED: OcclusionQuery = { raycastStatic: () => 1 };
 const FLOOR: MapBlock[] = [{ kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(100, 0.5, 100) }];
 const VOLUMES = { master: 1, effects: 1, interface: 1 };
+/** Shared across tests: the sounds render once. */
+const LIBRARY = new SoundLibrary();
 const PLAYER = 0;
 
 function setup(query: OcclusionQuery = OPEN): { sfx: Sfx; ctx: FakeContext; player: Character; bot: Character; characterOf: (id: number) => Character | undefined } {
   const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
   const bot = createCharacter(1, vec3(6, 0, 0), 0, LOADOUT, 1);
-  const sfx = new Sfx(LOADOUT, FLOOR, query, VOLUMES);
+  const sfx = new Sfx(LOADOUT, FLOOR, query, { volumes: VOLUMES, library: LIBRARY });
   sfx.unlock();
   sfx.setListener(vec3(0, 1.6, 0), 0, 0, -1);
   const all = [player, bot];

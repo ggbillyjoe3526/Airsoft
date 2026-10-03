@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Smoke test: the built game boots to the title screen, goes through New game (a pop-up, the Loadout and Settings
- * screens) and starts a match with a red dot fitted, fires, reloads, moves the fire selector, aims down the sight and
- * keeps running without a page error.
+ * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map and
+ * Difficulty pop-ups, the Loadout and Settings screens) and starts a match with a red dot fitted, fires, reloads,
+ * moves the fire selector, aims down the sight and keeps running without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
@@ -31,12 +31,24 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   }
   await expect(page.locator('#loading')).toHaveCount(0);
   await expect(page.locator('.menu-title-wordmark')).toBeVisible();
+  // No map is loaded until Play (M15b); the e2e build exposes the game as `airsoft`.
+  const matchLoaded = () => page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null);
+  expect(await matchLoaded()).toBe(false);
 
   // Title → Start → New game, with the picked mode's rules under the four buttons.
   await page.getByRole('button', { name: 'Start' }).click();
   const setup = page.locator('.menu-setup');
   await expect(setup).toBeVisible();
   await expect(page.locator('.setup-rules')).not.toBeEmpty();
+
+  // Map opens a pop-up listing Depot, the default.
+  await setup.getByRole('button', { name: /Map/i }).click();
+  const mapDialog = page.getByRole('dialog', { name: 'Map' });
+  await expect(mapDialog).toBeVisible();
+  await expect(mapDialog.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
+  await mapDialog.getByRole('button', { name: /Depot/i }).click();
+  await expect(mapDialog).toBeHidden();
+  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Depot');
 
   // Difficulty opens a pop-up; picking an option closes it and the button shows the choice.
   await setup.getByRole('button', { name: /Difficulty/i }).click();
@@ -62,6 +74,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await setup.getByRole('button', { name: /Settings/i }).click();
   const settings = page.locator('.menu-settings');
   await expect(settings).toBeVisible();
+  await settings.getByRole('tab', { name: /Graphics/i }).click();
+  await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('100');
   await settings.getByRole('tab', { name: /Key bindings/i }).click();
   await expect(settings.locator('.key-row').first()).toBeVisible();
   await settings.getByRole('tab', { name: /Audio/i }).click();
@@ -72,6 +86,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
 
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
+  expect(await matchLoaded()).toBe(true);
   await expect(page.locator('.hud')).toBeVisible();
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
   const mag = page.locator('.hud-mag');

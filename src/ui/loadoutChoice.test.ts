@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_OPTIC, OPTIC_CHOICES, opticOf } from '../config/optics';
 import { AEG, GAS_PISTOL, HOP_UP, LOADOUT } from '../config/replicas';
-import { hopUpField, hopUpLabel, hopUpReadout, loadHopUps, loadoutSummary, loadoutTakesEffect, opticNote } from './loadoutChoice';
+import { hopUpField, hopUpLabel, hopUpReadout, loadHopUps, loadoutSummary } from './loadoutChoice';
 
 describe('optic choice', () => {
   it('is off by default (iron sights) and offers the red dot', () => {
@@ -9,12 +9,6 @@ describe('optic choice', () => {
     expect(opticOf('none')).toBeNull();
     expect(OPTIC_CHOICES.map((o) => o.id)).toEqual(['none', 'redDot']);
     expect(opticOf('redDot')).toBe('redDot');
-  });
-
-  it('notes a change only while it waits for the next round', () => {
-    expect(opticNote('redDot', 'none', false)).toBe('Fitted from the next round.');
-    expect(opticNote('none', 'none', false)).toBe('');
-    expect(opticNote('redDot', 'none', true)).toBe('');
   });
 });
 
@@ -24,12 +18,6 @@ describe('loadout choice', () => {
     expect(loadoutSummary(LOADOUT, 'redDot', [1, 0])).toBe('Red dot · hop-up 100% / 0%');
     // No replica with a rail: no optic to mention. A missing dial shows the factory setting.
     expect(loadoutSummary([GAS_PISTOL], 'redDot', [])).toBe(`hop-up ${hopUpLabel(GAS_PISTOL.hopUpDial)}`);
-  });
-
-  it('is fitted at once before the first match and on the result screen, else from the next round', () => {
-    expect(loadoutTakesEffect(false, false)).toBe('now');
-    expect(loadoutTakesEffect(true, true)).toBe('now');
-    expect(loadoutTakesEffect(true, false)).toBe('nextRound');
   });
 });
 

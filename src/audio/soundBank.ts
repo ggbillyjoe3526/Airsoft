@@ -25,3 +25,20 @@ export function suppressedCopies(variants: readonly Float32Array[], sampleRate: 
     return copy;
   });
 }
+
+/**
+ * The rendered sounds, kept for the page's lifetime: each match makes its own audio context, but the sounds are
+ * only synthesised once per sample rate (the first Play), not on every Play.
+ */
+export class SoundLibrary {
+  private readonly bySampleRate = new Map<number, RenderedSounds>();
+
+  get(sampleRate: number): RenderedSounds {
+    let sounds = this.bySampleRate.get(sampleRate);
+    if (!sounds) {
+      sounds = renderSounds(sampleRate);
+      this.bySampleRate.set(sampleRate, sounds);
+    }
+    return sounds;
+  }
+}

@@ -1,21 +1,23 @@
 import { CROUCH_MODES, type CrouchMode, MOUSE } from '../../config/controls';
 import { SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/menus';
 import { AIMING } from '../../config/optics';
-import { QUALITY_CHOICES, type QualityPreset } from '../../config/render';
+import { FOV_SETTING, QUALITY_LABELS, type QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
 import { type AudioSettingsOptions, audioSettings } from '../audioSettings';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
 import type { SettingsOrigin } from './menuNav';
-import { backButton, el, laterRow, laterTag, menuButton, menuPage, menuRow, rangeControl } from './menuParts';
+import { backButton, el, laterRow, laterTag, menuPage, menuRow, rangeControl } from './menuParts';
 
 export interface SettingsOptions {
   bindings: KeyBindings;
   sensitivity: { initial: number; onChange: (v: number) => void };
   aimSensitivity: { initial: number; onChange: (v: number) => void };
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
-  /** The preset the game loaded with, and the one saved for next time. */
-  quality: { inUse: QualityPreset; saved: QualityPreset; onReload: () => void };
+  /** Field of view (horizontal degrees on a 16:9 screen), applied at once. */
+  fov: { initial: number; onChange: (v: number) => void };
+  /** The render preset in use: the Quality picker is held back (LATER), so its row only shows this. */
+  quality: QualityPreset;
   /** The volume sliders on the Audio tab (ui/audioSettings.ts). */
   audio: AudioSettingsOptions;
   onBack: () => void;
@@ -30,22 +32,13 @@ export class SettingsScreen {
   readonly root: HTMLDivElement;
   private readonly tabs = new Map<SettingsTab, { button: HTMLButtonElement; panel: HTMLDivElement }>();
   private readonly keySettings: KeySettings;
-  private readonly reloadRow: HTMLDivElement;
-  private readonly qualityNote: HTMLParagraphElement;
-  private readonly qualityInUse: QualityPreset;
-  private qualitySaved: QualityPreset;
   private tab: SettingsTab = 'controls';
   private origin: SettingsOrigin = 'setup';
 
   constructor(opts: SettingsOptions) {
     const page = menuPage('menu-settings', 'Settings');
     this.root = page.root;
-    this.qualityInUse = opts.quality.inUse;
-    this.qualitySaved = opts.quality.saved;
     this.keySettings = new KeySettings(opts.bindings);
-    this.qualityNote = el('p', 'menu-readout');
-    this.reloadRow = el('div', 'settings-reload');
-    this.reloadRow.append(this.qualityNote, menuButton('Reload now', 'secondary', opts.quality.onReload));
 
     const tabList = el('div', 'settings-tabs');
     tabList.setAttribute('role', 'tablist');
@@ -75,10 +68,9 @@ export class SettingsScreen {
     this.showTab('controls');
   }
 
-  /** Called as the screen opens: remembers where Back returns to (and so whether a reload would cut a match short). */
+  /** Called as the screen opens: remembers where Back returns to. */
   openFrom(origin: SettingsOrigin): void {
     this.origin = origin;
-    this.refreshQuality();
     this.keySettings.setVisible(this.tab === 'keys');
   }
 
@@ -143,26 +135,18 @@ export class SettingsScreen {
         '<kbd>Esc</kbd> pause · <kbd>`</kbd> / <kbd>F3</kbd> debug info';
       panel.append(this.keySettings.root, mouse);
     } else if (id === 'graphics') {
-      const picker = new OptionPicker('Quality', QUALITY_CHOICES, this.qualitySaved, 'quality', (q) => {
-        this.qualitySaved = q;
-        this.refreshQuality();
-      });
-      panel.append(menuRow('Quality', 'Lower is smoother on weaker computers.', picker.root), this.reloadRow);
+      panel.append(
+        menuRow(
+          'Field of view',
+          'How wide you see, across a 16:9 screen. Aiming through an optic zooms in from it.',
+          rangeControl('Field of view', FOV_SETTING, opts.fov.initial, (v) => `${Math.round(v)}°`, 'fov', opts.fov.onChange),
+        ),
+        // Held back until there is real graphics work to scale (owner, 2026-10-03): the game runs on High.
+        laterRow('Quality', 'Comes back with the art pass.', QUALITY_LABELS[opts.quality]),
+      );
     } else if (id === 'audio') {
       panel.append(...audioSettings(opts.audio));
     }
   }
 
-  /**
-   * The quality applies when the game loads (smoothing needs a fresh WebGL context). While the saved preset differs
-   * from the one in use, say so, and offer a reload unless a match is in progress (opened from the pause menu).
-   */
-  private refreshQuality(): void {
-    const pending = this.qualitySaved !== this.qualityInUse;
-    this.reloadRow.hidden = !pending;
-    const reload = this.reloadRow.querySelector('button');
-    if (reload) reload.hidden = this.origin === 'pause';
-    this.qualityNote.textContent =
-      this.origin === 'pause' ? 'Applies the next time the game loads.' : 'Applies when the game reloads (a second or two).';
-  }
 }

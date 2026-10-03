@@ -9,7 +9,7 @@ import { volumeGain, type Volumes } from './audioMix';
 import { FoleyTracker, type FoleyMove } from './foley';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, type Muffle, muffleFor, type OcclusionQuery } from './occlusion';
-import { renderSounds, suppressedCopies } from './soundBank';
+import { type SoundLibrary, suppressedCopies } from './soundBank';
 import { impactMaterialAt, surfaceUnder } from './soundMaterials';
 import { VoiceLimit } from './voiceLimit';
 import { Whistle } from './whistle';
@@ -41,6 +41,12 @@ interface ReplicaSound {
   fireRate: number;
   /** Its shot variants (muffled copies for a suppressed replica). */
   shots: AudioBuffer[];
+}
+
+/** What every match's sound shares: the volume sliders and the synthesised sounds. */
+export interface SfxSetup {
+  volumes: Volumes;
+  library: SoundLibrary;
 }
 
 /** A random pitch factor within ± `spread` (presentation-only randomness, not the simulation's RNG). */
@@ -82,9 +88,9 @@ export class Sfx {
     private readonly loadout: readonly ReplicaConfig[],
     private readonly blocks: readonly MapBlock[],
     private readonly query: OcclusionQuery,
-    volumes: Volumes,
+    private readonly setup: SfxSetup,
   ) {
-    this.volumes = { ...volumes };
+    this.volumes = { ...setup.volumes };
   }
 
   /** Pauses all sound with the game (and resumes it). */
@@ -130,7 +136,7 @@ export class Sfx {
     this.self.connect(this.world);
     this.whistle = new Whistle(ctx, this.buses.get('interface')!);
 
-    const rendered = renderSounds(ctx.sampleRate);
+    const rendered = this.setup.library.get(ctx.sampleRate);
     for (const [cue, variants] of rendered) this.buffers.set(cue, variants.map((v) => this.toBuffer(v)));
     for (const r of this.loadout) {
       const variants = rendered.get(cues.shot(r.power))!;

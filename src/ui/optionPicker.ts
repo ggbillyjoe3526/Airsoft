@@ -14,16 +14,14 @@ export function loadChoice<T extends string>(field: SettingField, options: reado
 }
 
 /**
- * A labelled row of buttons, one per option, and a line describing the picked one (plus an optional
- * note, e.g. that a change made mid-match waits). The choice is saved in the browser's settings as
- * `field`. Used in the menus (the optic on the Loadout screen, the crouch key and quality in Settings).
+ * A labelled row of buttons, one per option, and a line describing the picked one. The choice is saved in the
+ * browser's settings as `field`. Used in the menus (the optic on the Loadout screen, the crouch key in Settings).
  */
 export class OptionPicker<T extends string> {
   readonly root: HTMLDivElement;
   private readonly buttons = new Map<T, HTMLButtonElement>();
   private readonly blurb: HTMLParagraphElement;
   private current: T;
-  private note = '';
 
   /** `initial`: the option shown as picked (normally loadChoice(field, ...)). */
   constructor(
@@ -53,7 +51,6 @@ export class OptionPicker<T extends string> {
         if (id === this.current) return;
         this.current = id;
         saveSetting(field, id);
-        this.note = '';
         onChange(id);
         this.refresh();
       });
@@ -66,19 +63,12 @@ export class OptionPicker<T extends string> {
     this.refresh();
   }
 
-  /** A short note after the option's description (empty to clear). */
-  setNote(text: string): void {
-    this.note = text;
-    this.refresh();
-  }
-
   private refresh(): void {
     for (const [id, button] of this.buttons) {
       const on = id === this.current;
       button.classList.toggle('selected', on);
       button.setAttribute('aria-pressed', String(on));
     }
-    const blurb = this.options.find((o) => o.id === this.current)?.blurb ?? '';
-    this.blurb.textContent = this.note ? `${blurb} ${this.note}` : blurb;
+    this.blurb.textContent = this.options.find((o) => o.id === this.current)?.blurb ?? '';
   }
 }

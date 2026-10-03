@@ -49,8 +49,8 @@ ends the round). A hit character is eliminated
   range sends a bot to close cover it can peek from first (a narrowed `CoverSearch`). Each round the controller deals each team's bots onto lanes by a plan (`teamPlan.ts`: split, pair or stack). These build on
   `perception.ts` (view cone + static ray casts), `aim.ts` (turn rate, settling aim error, hasty first aim, tracking error)
   and `cover.ts` (random nearby spots hidden from the threat). Tuning is `BotConfig` = shared behaviour + one difficulty's
-  skill (config/bots.ts); `BotController.setConfig` swaps it now or at the next round start, as decided by
-  `difficultyChoice.ts` (pure: which level is in play, which one waits; game.ts calls it from the start-screen picker).
+  skill (config/bots.ts), fixed for a match: the session builds the controller with the level picked on New game
+  (`BotController.setConfig` can swap it now or at the next round start).
   Bots read game state, never write it; their randomness is seeded per bot. In Attack / Defend (`BotWorld.round`, `flagRole`
   / `wantsFlag` in `bot.ts`) defenders walk only the first one or two points of their lane and hold there, chase
   noises only near the pole, and the two nearest it run to the pole (mode `flag`) once the flag is off the bottom; attackers go to
@@ -59,8 +59,10 @@ ends the round). A hit character is eliminated
 - **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
   streams made from it (the bots' plans, each bot).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
-  `Renderer` and the sun's shadow take a quality preset (`config/render.ts` `QUALITY`: the one saved in Settings, or
-  `?quality=low|medium|high` for a visit; fixed until the page reloads); the debug overlay shows the preset, pixel ratio, draw calls and GPU object counts.
+  `Renderer` and the sun's shadow take a quality preset (`config/render.ts` `QUALITY`: `high`, or
+  `?quality=low|medium|high` for a visit; fixed until the page reloads; the Settings picker is held back since M15b);
+  the debug overlay shows the preset, pixel ratio, draw calls and GPU object counts. `Renderer.setFov` applies the
+  Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input; `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them.
 - **ui/**: DOM overlays (the menus in `ui/menus/`, debug overlay, ammo HUD).
@@ -100,20 +102,24 @@ ends the round). A hit character is eliminated
   score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
   also the pole (`flagRenderer.ts`: pole, rippling cloth at the sim's height, ring at the rope's reach) and its
   screen marker (`screenMarker.ts` projects it, pinned to the screen edge when out of view; `ui/flagMarker.ts`).
-- **ui/menus/** (M15): `Menus` shows one screen at a time over the frozen field and reports choices to `game.ts`:
-  the title screen, New game (`setupScreen.ts`: Mode, Difficulty, Loadout, Settings, the rules from `rulesText.ts`,
-  Back and Play) with `ChoiceDialog` pop-ups (a `<dialog>`: Esc or × closes it) for mode and difficulty, the Loadout
+- **ui/menus/** (M15, M15b): `Menus` shows one opaque screen at a time and reports choices to `game.ts`:
+  the title screen, New game (`setupScreen.ts`: Map, Mode, Difficulty, Loadout, Settings, the rules from `rulesText.ts`,
+  Back and Play) with `ChoiceDialog` pop-ups (a `<dialog>`: Esc or × closes it) for map, mode and difficulty, the Loadout
   screen (`loadoutScreen.ts`: slots, optic, hop-up dials, LATER rows), the Settings screen (`settingsScreen.ts`: tabs;
   Key bindings reuses `ui/keySettings.ts`), the pause menu and the result. `menuNav.ts` holds where Back goes and which
-  menu opens when play stops (title before the first match, pause during one, result after it); `game.ts`'s
-  `quitToTitle` ends a match from the pause menu. The placeholder lists and labels are data in `config/menus.ts`;
-  choices are saved in the browser (`savedChoices.ts` reads them back). The loadout is reached only through New game,
-  so never mid-match (`ui/loadoutChoice.ts` keeps the wait-for-next-round rule for if it ever is).
+  menu opens when play stops (title before the first match, pause during one, result after it); leaving a match
+  (Quit to title screen, Change setup, Title screen) calls `onLeaveMatch`, which unloads it. The placeholder lists and
+  labels are data in `config/menus.ts`; choices are saved in the browser (`savedChoices.ts` reads them back). Map,
+  mode, difficulty and loadout are picked only on New game, with no match loaded, so Play always uses them as they are.
 - **Hop-up:** each replica has a dial (`Armament.hopUps`, 0..1, kept between rounds; `setHopUps`) that scales its
   `hopUpMax` lift (`hopUpLift` in `config/replicas.ts`); bots keep the factory `hopUpDial`. `sim/hopUp.ts` flies a
   level shot to word the Loadout screen's readout ("on target to about N m").
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
-- **game.ts**: composition root and main loop. The only place that knows about every layer.
+- **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
+  and New game's choices. No map is loaded on the title and New game screens (M15b).
+- **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,
+  navigation, the simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it
+  when the player leaves the match, so the next Play can load another map; Play Again restarts it in place.
 
 ## Map data
 

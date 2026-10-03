@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import type { Volumes } from '../audio/audioMix';
-import { Sfx } from '../audio/sfx';
+import { Sfx, type SfxSetup } from '../audio/sfx';
 import type { VolumeChannel } from '../config/audio';
 import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
@@ -63,9 +62,9 @@ export class CombatPresentation {
     teamColor: number,
     tickSeconds: number,
     blocks: readonly MapBlock[],
-    volumes: Volumes,
+    audio: SfxSetup,
   ) {
-    this.sfx = new Sfx(loadout, blocks, query, volumes);
+    this.sfx = new Sfx(loadout, blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.hitPuffs.object, this.paths.object);
