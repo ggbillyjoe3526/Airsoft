@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
+import type { SfxSetup } from './audio/sfx';
 import { BALLISTICS } from './config/ballistics';
 import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
@@ -78,6 +79,7 @@ export class MatchSession {
     private readonly setup: MatchSetup,
     seed: number,
     quality: QualitySettings,
+    audio: SfxSetup,
   ) {
     const map = setup.map;
     this.textures = createSurfaceTextures();
@@ -119,7 +121,7 @@ export class MatchSession {
     );
     input.resetView(this.player.spawnYaw);
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS);
   }
 

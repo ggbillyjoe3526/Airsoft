@@ -4,7 +4,10 @@
  */
 export type FireMode = 'semi' | 'burst' | 'auto';
 
-/** What drives a replica: a battery and motor (an AEG) or gas (green gas for now). Spring and HPA may come later. */
+/**
+ * What drives a replica: a battery and motor (an AEG) or gas (green gas for now). Spring and HPA may come later.
+ * It also picks the replica's shot sound (config/sounds.ts ShotProfile).
+ */
 export type PowerSource = 'electric' | 'gas';
 
 /** Stats for one replica. All weapon behaviour is data; nothing about specific replicas is hardcoded. */
@@ -60,8 +63,6 @@ export type ReplicaModelKind = 'rifle' | 'pistol';
 
 export interface ReplicaLook {
   model: ReplicaModelKind;
-  /** Sound family played for its shots. */
-  shotSound: ReplicaModelKind;
   /** Fitted with a suppressor: its shots sound quieter and duller (config/audio.ts suppressed). */
   suppressed: boolean;
   /**
@@ -103,7 +104,6 @@ export const AEG: ReplicaConfig = {
   opticMount: true,
   look: {
     model: 'rifle',
-    shotSound: 'rifle',
     suppressed: false,
     hold: { position: [0.16, -0.17, -0.48], yaw: 0 },
     // The optic's axis is RIFLE_OPTIC.axisUp above the model's origin (render/replicaModels.ts); its back end about
@@ -133,7 +133,7 @@ export const GAS_PISTOL: ReplicaConfig = {
   spreadDeg: 0.8,
   recoilDeg: 0.5,
   opticMount: false,
-  look: { model: 'pistol', shotSound: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
+  look: { model: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
 };
 
 /** The hop-up dial the player turns before a match (0..1 of a replica's hopUpMax), shown as a percentage. */

@@ -1,9 +1,53 @@
-import { AUDIO, matchOverBlastStart } from '../config/audio';
-import type { ReplicaConfig, ReplicaModelKind } from '../config/replicas';
+import { AUDIO, matchOverBlastStart, VOLUME, type VolumeChannel } from '../config/audio';
+import type { ReplicaConfig } from '../config/replicas';
+import { cues, type ShotProfile, type SoundCue } from '../config/sounds';
+import type { MapBlock } from '../map/mapTypes';
+import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
-import type { FootstepKind } from '../sim/footsteps';
 import type { Vec3 } from '../sim/vec';
+import { volumeGain, type Volumes } from './audioMix';
+import { FoleyTracker, type FoleyMove } from './foley';
+import { MotorSound } from './motor';
+import { blockedShare, lineBlocked, type Muffle, muffleFor, type OcclusionQuery } from './occlusion';
+import { type SoundLibrary, suppressedCopies } from './soundBank';
+import { impactMaterialAt, surfaceUnder } from './soundMaterials';
 import { VoiceLimit } from './voiceLimit';
+import { Whistle } from './whistle';
+
+/** A playback level and per-play pitch spread (AUDIO.levels). */
+type Level = { readonly gain: number; readonly pitchSpread: number };
+
+/** A sound playing (or scheduled): its source, its level, and when it starts on the audio clock. */
+interface Voice {
+  src: AudioBufferSourceNode;
+  gain: GainNode;
+  startsAt: number;
+}
+
+/**
+ * One other character's sound source: a 3D panner that follows them, then a low-pass and a gain that muffle
+ * them while level geometry stands between you (one chain per character, reused for all their sounds).
+ */
+interface Channel {
+  panner: PannerNode;
+  filter: BiquadFilterNode;
+  gain: GainNode;
+  /** The blocked share last applied (-1 before the first update). */
+  share: number;
+}
+
+interface ReplicaSound {
+  profile: ShotProfile;
+  fireRate: number;
+  /** Its shot variants (muffled copies for a suppressed replica). */
+  shots: AudioBuffer[];
+}
+
+/** What every match's sound shares: the volume sliders and the synthesised sounds. */
+export interface SfxSetup {
+  volumes: Volumes;
+  library: SoundLibrary;
+}
 
 /** A random pitch factor within ± `spread` (presentation-only randomness, not the simulation's RNG). */
 function jitter(spread: number): number {
@@ -11,31 +55,42 @@ function jitter(spread: number): number {
 }
 
 /**
- * Procedurally synthesised sound effects (no audio files). Replicas are meant to sound like what they
- * are: an electric gearbox cycling a plastic piston, a gas blowback slide clacking. Sounds made by the
- * local player are played centred; everything else, including BB impacts, is positioned in 3D.
+ * The game's sound (M13). Every effect is synthesised once when audio starts (config/sounds.ts, rendered by
+ * audio/dsp.ts) and played back from buffers. Your own sounds play centred; everyone else's come through their
+ * own 3D channel (HRTF panning, muffled through walls), and one-off sounds in the world (BB impacts, the flag's
+ * rope) get a panner of their own that is disconnected when they end. Interface cues (hit tick, hit marker,
+ * whistle) stay dry. Three volume buses: master, effects (the world) and interface.
  */
 export class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
-  /** In-world sounds go here: straight to the mix plus a send to the yard's reverb. */
+  private readonly buses = new Map<VolumeChannel, GainNode>();
+  /** In-world sounds go here: straight to the effects bus plus a send to the yard's reverb. */
   private world: GainNode | null = null;
-  private noiseBuffer: AudioBuffer | null = null;
+  /** Your own sounds: centred, into the world (so they echo too). */
+  private self: GainNode | null = null;
+  private readonly buffers = new Map<SoundCue, AudioBuffer[]>();
+  private readonly lastVariant = new Map<SoundCue | string, number>();
+  private readonly replicas = new Map<string, ReplicaSound>();
+  private readonly channels = new Map<number, Channel>();
+  private readonly motors = new Map<number, { motor: MotorSound; spinDown: Voice | null }>();
+  private readonly foley = new FoleyTracker();
   private readonly impactLimit = new VoiceLimit(AUDIO.maxImpactsPerWindow, AUDIO.impactWindow);
   private readonly stepLimit = new VoiceLimit(AUDIO.footsteps.maxPerWindow, AUDIO.footsteps.window);
-  /** Where the listener is (for distance culling of quiet sounds). */
+  private readonly foleyLimit = new VoiceLimit(AUDIO.foley.maxPerWindow, AUDIO.foley.window);
+  /** Where the listener is (distance culling of quiet sounds, and muffling). */
   private readonly listener = { x: 0, y: 0, z: 0 };
-  private readonly shotSounds = new Map<string, ReplicaModelKind>();
-  /** Replicas whose shots go through a suppressor (quieter, duller). */
-  private readonly suppressed = new Set<string>();
-  /** Whistle oscillators still playing or scheduled (a new round silences them). */
-  private readonly whistles: OscillatorNode[] = [];
+  private readonly muffle: Muffle = { hz: 0, gain: 0 };
+  private whistle: Whistle | null = null;
+  private readonly volumes: Volumes;
 
-  constructor(loadout: readonly ReplicaConfig[]) {
-    for (const r of loadout) {
-      this.shotSounds.set(r.id, r.look.shotSound);
-      if (r.look.suppressed) this.suppressed.add(r.id);
-    }
+  constructor(
+    private readonly loadout: readonly ReplicaConfig[],
+    private readonly blocks: readonly MapBlock[],
+    private readonly query: OcclusionQuery,
+    private readonly setup: SfxSetup,
+  ) {
+    this.volumes = { ...setup.volumes };
   }
 
   /** Pauses all sound with the game (and resumes it). */
@@ -44,7 +99,7 @@ export class Sfx {
     void (paused ? this.ctx.suspend() : this.ctx.resume());
   }
 
-  /** Must be called from a user gesture (browsers keep audio suspended until then). */
+  /** Must be called from a user gesture (browsers keep audio suspended until then). Builds every sound the first time. */
   unlock(): void {
     if (this.ctx) {
       void this.ctx.resume();
@@ -53,19 +108,48 @@ export class Sfx {
     const ctx = new AudioContext();
     this.ctx = ctx;
     this.master = ctx.createGain();
-    this.master.gain.value = AUDIO.masterVolume;
-    this.master.connect(ctx.destination);
+    const lim = AUDIO.limiter;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = lim.threshold;
+    limiter.knee.value = lim.knee;
+    limiter.ratio.value = lim.ratio;
+    limiter.attack.value = lim.attack;
+    limiter.release.value = lim.release;
+    this.master.connect(limiter).connect(ctx.destination);
+    for (const ch of ['effects', 'interface'] as const) {
+      const bus = ctx.createGain();
+      bus.connect(this.master);
+      this.buses.set(ch, bus);
+    }
+    this.buses.set('master', this.master);
+    for (const [ch, v] of Object.entries(this.volumes) as [VolumeChannel, number][]) this.buses.get(ch)!.gain.value = this.busGain(ch, v);
+
+    const effects = this.buses.get('effects')!;
     this.world = ctx.createGain();
-    this.world.connect(this.master);
+    this.world.connect(effects);
     const reverb = ctx.createConvolver();
     reverb.buffer = this.reverbImpulse(ctx);
     const wet = ctx.createGain();
     wet.gain.value = AUDIO.reverb.wet;
-    this.world.connect(reverb).connect(wet).connect(this.master);
-    const len = ctx.sampleRate;
-    this.noiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = this.noiseBuffer.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1; // presentation-only randomness
+    this.world.connect(reverb).connect(wet).connect(effects);
+    this.self = ctx.createGain();
+    this.self.connect(this.world);
+    this.whistle = new Whistle(ctx, this.buses.get('interface')!);
+
+    const rendered = this.setup.library.get(ctx.sampleRate);
+    for (const [cue, variants] of rendered) this.buffers.set(cue, variants.map((v) => this.toBuffer(v)));
+    for (const r of this.loadout) {
+      const variants = rendered.get(cues.shot(r.power))!;
+      const shots = r.look.suppressed ? suppressedCopies(variants, ctx.sampleRate).map((v) => this.toBuffer(v)) : this.buffers.get(cues.shot(r.power))!;
+      this.replicas.set(r.id, { profile: r.power, fireRate: r.fireRate, shots });
+    }
+  }
+
+  /** A volume slider moved (Settings → Audio): eases the bus to its new level. */
+  setVolume(channel: VolumeChannel, position: number): void {
+    this.volumes[channel] = position;
+    const bus = this.buses.get(channel);
+    if (this.ctx && bus) bus.gain.setTargetAtTime(this.busGain(channel, position), this.ctx.currentTime, VOLUME.smoothing);
   }
 
   /** Keep the 3D listener at the camera. */
@@ -93,70 +177,100 @@ export class Sfx {
     l.upZ.value = 0;
   }
 
+  /**
+   * Once per rendered frame, after setListener: moves every other character's channel to them and muffles it by
+   * how much level geometry stands between you.
+   */
+  updateSources(characters: readonly Character[], localId: number): void {
+    if (!this.ctx) return;
+    for (const c of characters) {
+      if (c.id === localId) continue;
+      const ch = this.channel(c);
+      this.placePanner(ch.panner, c.position, AUDIO.spatial.sourceHeight);
+      const share = blockedShare(this.query, this.listener, c.position);
+      if (share === ch.share) continue;
+      muffleFor(share, this.muffle);
+      const t = this.ctx.currentTime;
+      if (ch.share < 0) {
+        ch.filter.frequency.value = this.muffle.hz;
+        ch.gain.gain.value = this.muffle.gain;
+      } else {
+        ch.filter.frequency.setTargetAtTime(this.muffle.hz, t, AUDIO.occlusion.smoothing);
+        ch.gain.gain.setTargetAtTime(this.muffle.gain, t, AUDIO.occlusion.smoothing);
+      }
+      ch.share = share;
+    }
+  }
+
+  /** After every simulation tick: the rustle of anyone starting to crouch, stand or lean. */
+  afterTick(characters: readonly Character[], localId: number): void {
+    if (!this.ctx) return;
+    this.foley.update(characters, (c, move) => this.foleyMove(c, move, localId));
+  }
+
   /** Plays the sound for a simulation event. `localId` is the player's character id. */
-  onEvent(e: GameEvent, localId: number, positionOf: (characterId: number) => Vec3 | undefined): void {
-    if (!this.ctx || !this.master) return;
+  onEvent(e: GameEvent, localId: number, characterOf: (id: number) => Character | undefined): void {
+    if (!this.ctx) return;
+    const L = AUDIO.levels;
     switch (e.type) {
-      case 'shot': {
-        let out = this.output(e.characterId === localId ? null : e.position);
-        if (this.suppressed.has(e.replicaId)) out = this.muffled(out);
-        if (this.shotSounds.get(e.replicaId) === 'pistol') this.pistolShot(out);
-        else this.aegShot(out);
+      case 'shot':
+        this.shot(e.characterId, e.replicaId, localId, characterOf);
         return;
-      }
       case 'dryFire':
-        this.click(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null), 2600, 0.006);
-        return;
       case 'reloadStart':
-        this.magOut(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null));
-        return;
-      case 'reloadEnd':
-        this.magIn(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null));
-        return;
-      case 'reloadRefused': {
-        if (e.characterId !== localId) return;
-        const r = AUDIO.reloadRefused;
-        this.noise(this.output(null), 'lowpass', r.hz, r.q, AUDIO.mechanismVolume * r.gain, r.attack, r.time);
+      case 'reloadEnd': {
+        const profile = this.replicas.get(e.replicaId)?.profile ?? 'electric';
+        const cue = e.type === 'dryFire' ? cues.dryFire(profile) : e.type === 'reloadStart' ? cues.magOut(profile) : cues.magIn(profile);
+        this.playFrom(e.characterId, localId, characterOf, cue, L.mechanism);
         return;
       }
-      case 'fireMode': {
-        const f = AUDIO.fireSelector;
-        this.click(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null), f.hz, f.time, AUDIO.mechanismVolume * f.gain);
+      case 'reloadRefused':
+        if (e.characterId === localId) this.play('reloadRefused', this.self!, L.mechanism);
         return;
-      }
+      case 'fireMode':
+        this.playFrom(e.characterId, localId, characterOf, 'selector', L.mechanism);
+        return;
       case 'draw':
-        this.rattle(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null));
+        this.playFrom(e.characterId, localId, characterOf, 'draw', L.mechanism);
         return;
       case 'bbImpact':
-        this.impact(e.position);
+        // Rate-limited so full auto doesn't become a hiss.
+        if (this.impactLimit.take(this.ctx.currentTime)) this.oneShot(cues.impact(impactMaterialAt(this.blocks, e.position)), e.position, L.impact);
         return;
       case 'footstep': {
-        const self = e.characterId === localId;
-        const at = self ? null : positionOf(e.characterId);
-        if (!self && (!at || Math.hypot(at.x - this.listener.x, at.z - this.listener.z) > AUDIO.footsteps.maxDistance)) return;
+        const c = characterOf(e.characterId);
+        if (!c) return;
+        const cue = cues.step(surfaceUnder(this.blocks, c.position), e.kind);
         // Your own steps always play: they're how you judge your own pace and noise.
-        if (!self && !this.stepLimit.take(this.ctx.currentTime)) return;
-        const ownStepScale = AUDIO.footsteps.selfVolume / AUDIO.footsteps.volume;
-        this.footstep(this.output(at ?? null), e.kind, self ? ownStepScale : 1);
-        return;
-      }
-      case 'characterHit':
-        if (e.victimId === localId) {
-          this.hitTick();
+        if (c.id === localId) {
+          this.play(cue, this.self!, L.ownStep);
           return;
         }
-        this.bodyHit(e.position);
-        if (e.shooterId === localId) this.hitMarker();
+        if (this.distanceTo(c.position) > AUDIO.footsteps.maxDistance || !this.stepLimit.take(this.ctx.currentTime)) return;
+        this.play(cue, this.channel(c).panner, L.step);
         return;
+      }
+      case 'characterHit': {
+        if (e.victimId === localId) {
+          this.play('hitTick', this.buses.get('interface')!, L.hitTick);
+          return;
+        }
+        // On the victim's own channel: muffled with them if they're behind cover.
+        const victim = characterOf(e.victimId);
+        if (victim) this.play('bodyHit', this.channel(victim).panner, L.bodyHit);
+        else this.oneShot('bodyHit', e.position, L.bodyHit);
+        if (e.shooterId === localId) this.play('hitMarker', this.buses.get('interface')!, L.hitMarker);
+        return;
+      }
       case 'roundOver':
-        this.whistle(AUDIO.roundOverWhistle, 0);
+        this.whistle?.blast(AUDIO.roundOverWhistle, 0);
         return;
       case 'matchOver':
         // Extra long blasts after the round's: game over.
-        for (let i = 0; i < AUDIO.matchOverBlasts; i++) this.whistle(AUDIO.roundOverWhistle, matchOverBlastStart(i));
+        for (let i = 0; i < AUDIO.matchOverBlasts; i++) this.whistle?.blast(AUDIO.roundOverWhistle, matchOverBlastStart(i));
         return;
       case 'flagRope':
-        this.rope(this.output(e.position), e.raising);
+        this.oneShot(e.raising ? 'rope.up' : 'rope.down', e.position, L.rope);
         return;
       case 'roundStart':
         this.roundStartWhistle();
@@ -167,147 +281,186 @@ export class Sfx {
   /** The two short blasts that start a round. False if audio isn't unlocked yet (nothing played). */
   roundStartWhistle(): boolean {
     if (!this.ctx) return false;
-    this.stopWhistles();
-    this.whistle(AUDIO.roundStartWhistle, 0);
-    this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
+    const w = this.whistle!;
+    w.stopAll();
+    w.blast(AUDIO.roundStartWhistle, 0);
+    w.blast(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
     return true;
   }
 
   dispose(): void {
     void this.ctx?.close();
     this.ctx = null;
+    this.master = null;
     this.world = null;
+    this.self = null;
+    this.whistle = null;
+    this.buses.clear();
+    this.buffers.clear();
+    this.replicas.clear();
+    this.channels.clear();
+    this.motors.clear();
   }
 
-  // ---- Recipes ------------------------------------------------------------------------------
+  // ---- What plays ---------------------------------------------------------------------------
 
-  /** AEG: a short airy puff from the nozzle, the gearbox's piston slap and the motor's whirr. */
-  private aegShot(out: AudioNode): void {
-    const p = jitter(AUDIO.shotPitchSpread);
-    const m = AUDIO.aegMotor;
-    this.noise(out, 'bandpass', 2600 * p, 0.9, AUDIO.shotVolume * 0.6, 0.002, 0.03);
-    this.tone(out, 'triangle', 190 * p, 90 * p, AUDIO.shotVolume * 0.5, 0.045);
-    this.tone(out, 'sawtooth', m.fromHz * p, m.toHz * p, AUDIO.shotVolume * m.gain, m.time);
-    this.click(out, 1500 * p, 0.008, AUDIO.mechanismVolume * 0.6);
+  /**
+   * A shot. An AEG winds its motor up on the first shot of a trigger pull and coasts down after the last: each
+   * shot reschedules the wind-down, so it only sounds once the trigger is let go.
+   */
+  private shot(characterId: number, replicaId: string, localId: number, characterOf: (id: number) => Character | undefined): void {
+    const r = this.replicas.get(replicaId);
+    const out = this.outputFor(characterId, localId, characterOf);
+    if (!r || !out) return;
+    const L = AUDIO.levels;
+    this.playBuffer(r.shots, replicaId, out, L.shot);
+    if (r.profile !== 'electric') return;
+    let m = this.motors.get(characterId);
+    if (!m) {
+      m = { motor: new MotorSound(), spinDown: null };
+      this.motors.set(characterId, m);
+    }
+    if (m.motor.shot(this.ctx!.currentTime, r.fireRate)) this.play('motor.spinUp', out, L.motor);
+    if (m.spinDown) this.cancel(m.spinDown);
+    m.spinDown = this.play('motor.spinDown', out, L.motor, m.motor.spinDownAt(r.fireRate));
   }
 
-  /** Gas pistol: a sharper gas hiss and the slide's plastic clack. */
-  private pistolShot(out: AudioNode): void {
-    const p = jitter(AUDIO.shotPitchSpread);
-    this.noise(out, 'highpass', 1800 * p, 0.7, AUDIO.shotVolume * 0.75, 0.001, 0.06);
-    this.noise(out, 'lowpass', 5000, 0.5, AUDIO.shotVolume * 0.25, 0.005, 0.14);
-    this.click(out, 800 * p, 0.016, AUDIO.mechanismVolume);
-  }
-
-  /** A footstep (`run` or `sprint`) or landing thud; `scale` turns your own steps down. */
-  private footstep(out: AudioNode, kind: FootstepKind, scale: number): void {
-    const f = AUDIO.footsteps;
-    if (kind === 'land') {
-      const v = f.landVolume * scale;
-      this.tone(out, 'sine', f.landThumpFromHz, f.landThumpToHz, v, f.landThumpTime);
-      this.noise(out, 'bandpass', f.scuffHz * 0.8, f.scuffQ, v * 0.6, 0.002, f.scuffTime * 1.5);
+  /** Stops a voice: one not started yet never sounds; one already playing fades out quickly rather than clicking. */
+  private cancel(v: Voice): void {
+    const now = this.ctx!.currentTime;
+    if (now < v.startsAt) {
+      v.src.stop();
       return;
     }
-    const v = (kind === 'sprint' ? f.sprintVolume : f.volume) * scale;
-    const pitch = jitter(f.scuffSpread);
-    this.noise(out, 'bandpass', f.scuffHz * pitch, f.scuffQ, v, 0.002, f.scuffTime);
-    this.tone(out, 'sine', f.thumpFromHz * pitch, f.thumpToHz, v * f.thumpGain, f.thumpTime);
-    if (kind === 'sprint') this.noise(out, 'bandpass', f.gearHz * pitch, f.gearQ, v * f.gearGain, 0.004, f.gearTime);
+    v.gain.gain.setTargetAtTime(0, now, AUDIO.cutFade / 4);
+    v.src.stop(now + AUDIO.cutFade);
   }
 
-  private magOut(out: AudioNode): void {
-    this.noise(out, 'bandpass', 1300, 2, AUDIO.mechanismVolume, 0.001, 0.03);
-  }
-
-  private magIn(out: AudioNode): void {
-    this.click(out, 900, 0.02, AUDIO.mechanismVolume);
-    this.click(out, 1400, 0.012, AUDIO.mechanismVolume * 0.8, 0.06);
-  }
-
-  private rattle(out: AudioNode): void {
-    this.noise(out, 'bandpass', 1800, 1.5, AUDIO.mechanismVolume * 0.6, 0.002, 0.05);
-  }
-
-  /** The dry "tik" of a BB hitting something hard. Rate-limited so full auto doesn't become a hiss. */
-  private impact(at: Vec3): void {
-    if (!this.impactLimit.take(this.ctx!.currentTime)) return;
-    this.noise(this.output(at), 'bandpass', 4200 * jitter(AUDIO.impactPitchSpread), 3, AUDIO.impactVolume, 0.0005, 0.018);
-  }
-
-  /** You're hit: a sharp, close plastic "tick" with a little thump. Unmistakable. */
-  private hitTick(): void {
-    const out = this.master!;
-    const k = AUDIO.hitTick;
-    const v = AUDIO.hitTickVolume;
-    this.click(out, k.clickHz, k.clickTime, v);
-    this.noise(out, 'bandpass', k.noiseHz, k.noiseQ, v * k.noiseGain, k.noiseAttack, k.noiseTime);
-    this.tone(out, 'sine', k.thumpFromHz, k.thumpToHz, v * k.thumpGain, k.thumpTime);
-  }
-
-  /** A BB smacking into someone's jacket: duller than a hard surface. */
-  private bodyHit(at: Vec3): void {
-    const b = AUDIO.bodyHit;
-    this.noise(this.output(at), 'bandpass', b.hz, b.q, AUDIO.bodyHitVolume, b.attack, b.time);
-  }
-
-  /** Your BB hit someone: a soft wooden "tock". */
-  private hitMarker(): void {
-    const m = AUDIO.hitMarker;
-    this.tone(this.master!, 'triangle', m.fromHz, m.toHz, AUDIO.hitMarkerVolume, m.time);
-  }
-
-  /** The flagpole's pulley ratcheting: two clicks and a squeak of rope, pitched by direction. */
-  private rope(out: AudioNode, raising: boolean): void {
-    const r = AUDIO.flagRope;
-    const hz = (raising ? r.upHz : r.downHz) * jitter(AUDIO.shotPitchSpread);
-    this.click(out, hz, r.clickTime, r.volume);
-    this.click(out, hz * r.secondClickPitch, r.clickTime, r.volume * r.secondClickGain, r.secondClickDelay);
-    this.noise(out, 'bandpass', raising ? r.squeakUpHz : r.squeakDownHz, r.squeakQ, r.volume * r.squeakGain, r.squeakAttack, r.squeakTime);
-  }
-
-  private stopWhistles(): void {
-    for (const o of this.whistles.splice(0)) {
-      o.onended = null;
-      try {
-        o.stop();
-      } catch {
-        // Already stopped.
-      }
+  private foleyMove(c: Character, move: FoleyMove, localId: number): void {
+    const cue: SoundCue = move === 'crouch' ? 'foley.crouch' : move === 'stand' ? 'foley.stand' : 'foley.lean';
+    if (c.id === localId) {
+      this.play(cue, this.self!, AUDIO.levels.ownFoley);
+      return;
     }
+    if (this.distanceTo(c.position) > AUDIO.foley.maxDistance || !this.foleyLimit.take(this.ctx!.currentTime)) return;
+    this.play(cue, this.channel(c).panner, AUDIO.levels.foley);
   }
 
-  /** Referee whistle: a pea whistle's warbling tone. */
-  private whistle(duration: number, delay: number): void {
+  /** A character's sound: centred if it's yours, otherwise from their channel. */
+  private playFrom(characterId: number, localId: number, characterOf: (id: number) => Character | undefined, cue: SoundCue, level: Level): void {
+    const out = this.outputFor(characterId, localId, characterOf);
+    if (out) this.play(cue, out, level);
+  }
+
+  private outputFor(characterId: number, localId: number, characterOf: (id: number) => Character | undefined): AudioNode | null {
+    if (characterId === localId) return this.self;
+    const c = characterOf(characterId);
+    return c ? this.channel(c).panner : null;
+  }
+
+  /** A one-off sound at a point in the world, muffled if level geometry is in the way; its nodes go when it ends. */
+  private oneShot(cue: SoundCue, at: Vec3, level: Level): void {
     const ctx = this.ctx!;
-    const t = ctx.currentTime + delay;
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = AUDIO.whistlePitch;
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = AUDIO.whistleWarble;
-    const depth = ctx.createGain();
-    depth.gain.value = AUDIO.whistlePitch * AUDIO.whistleWarbleDepth;
-    lfo.connect(depth).connect(osc.frequency);
+    // Equal-power for these (up to 80 BB impacts a second): HRTF is kept for the characters you locate by ear.
+    const panner = this.createPanner(AUDIO.spatial.oneShotPanningModel);
+    this.placePanner(panner, at, 0);
+    muffleFor(lineBlocked(this.query, this.listener, at, AUDIO.occlusion.surfaceGap) ? 1 : 0, this.muffle);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = this.muffle.hz;
     const g = ctx.createGain();
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(AUDIO.whistleVolume, t + AUDIO.whistleAttack);
-    g.gain.setValueAtTime(AUDIO.whistleVolume, t + duration - AUDIO.whistleRelease);
-    g.gain.linearRampToValueAtTime(0, t + duration);
-    osc.connect(g).connect(this.master!);
-    osc.start(t);
-    lfo.start(t);
-    this.whistles.push(osc, lfo);
-    osc.onended = () => {
-      for (const node of [osc, lfo]) {
-        const k = this.whistles.indexOf(node);
-        if (k >= 0) this.whistles.splice(k, 1);
-      }
-    };
-    osc.stop(t + duration + AUDIO.stopPadding);
-    lfo.stop(t + duration + AUDIO.stopPadding);
+    g.gain.value = this.muffle.gain;
+    panner.connect(filter).connect(g).connect(this.world!);
+    const voice = this.play(cue, panner, level);
+    if (!voice) {
+      panner.disconnect();
+      return;
+    }
+    voice.src.addEventListener('ended', () => {
+      panner.disconnect();
+      filter.disconnect();
+      g.disconnect();
+    });
   }
 
-  // ---- Building blocks ----------------------------------------------------------------------
+  /** Plays a variant of `cue` into `out` at `when` (audio clock; now if not given). */
+  private play(cue: SoundCue, out: AudioNode, level: Level, when?: number): Voice | null {
+    const variants = this.buffers.get(cue);
+    return variants ? this.playBuffer(variants, cue, out, level, when) : null;
+  }
+
+  /** Plays one of `variants` (never the same one twice running) and disconnects its nodes when it ends. */
+  private playBuffer(variants: readonly AudioBuffer[], key: string, out: AudioNode, level: Level, when?: number): Voice | null {
+    const ctx = this.ctx!;
+    if (variants.length === 0) return null;
+    const last = this.lastVariant.get(key) ?? -1;
+    let i = Math.floor(Math.random() * variants.length);
+    if (i === last && variants.length > 1) i = (i + 1) % variants.length;
+    this.lastVariant.set(key, i);
+    const src = ctx.createBufferSource();
+    src.buffer = variants[i]!;
+    src.playbackRate.value = jitter(level.pitchSpread);
+    const g = ctx.createGain();
+    g.gain.value = level.gain;
+    src.connect(g).connect(out);
+    src.onended = () => {
+      src.disconnect();
+      g.disconnect();
+    };
+    const startsAt = when ?? ctx.currentTime;
+    src.start(startsAt);
+    return { src, gain: g, startsAt };
+  }
+
+  // ---- Channels and buses -------------------------------------------------------------------
+
+  private channel(c: Character): Channel {
+    let ch = this.channels.get(c.id);
+    if (ch) return ch;
+    const ctx = this.ctx!;
+    const panner = this.createPanner(AUDIO.spatial.panningModel);
+    this.placePanner(panner, c.position, AUDIO.spatial.sourceHeight);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = AUDIO.occlusion.openHz;
+    const gain = ctx.createGain();
+    panner.connect(filter).connect(gain).connect(this.world!);
+    ch = { panner, filter, gain, share: -1 };
+    this.channels.set(c.id, ch);
+    return ch;
+  }
+
+  private createPanner(model: PanningModelType): PannerNode {
+    const s = AUDIO.spatial;
+    const p = this.ctx!.createPanner();
+    p.panningModel = model;
+    p.distanceModel = 'inverse';
+    p.refDistance = s.refDistance;
+    p.rolloffFactor = s.rolloff;
+    p.maxDistance = s.maxDistance;
+    return p;
+  }
+
+  /** Puts a panner at `at`, `lift` metres up. Plain value writes (no automation piling up at 60 a second). */
+  private placePanner(p: PannerNode, at: Vec3, lift: number): void {
+    p.positionX.value = at.x;
+    p.positionY.value = at.y + lift;
+    p.positionZ.value = at.z;
+  }
+
+  private busGain(channel: VolumeChannel, position: number): number {
+    return (channel === 'master' ? AUDIO.masterVolume : 1) * volumeGain(position);
+  }
+
+  private distanceTo(p: Vec3): number {
+    return Math.hypot(p.x - this.listener.x, p.z - this.listener.z);
+  }
+
+  private toBuffer(samples: Float32Array): AudioBuffer {
+    const buf = this.ctx!.createBuffer(1, samples.length, this.ctx!.sampleRate);
+    buf.copyToChannel(samples as Float32Array<ArrayBuffer>, 0);
+    return buf;
+  }
 
   /** Stereo impulse response: noise dying away over `seconds` (a small walled yard, no roof). */
   private reverbImpulse(ctx: AudioContext): AudioBuffer {
@@ -319,82 +472,5 @@ export class Sfx {
       for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** r.decayPower;
     }
     return buf;
-  }
-
-  /** A suppressed shot: the same recipe through a low-pass filter and turned down, then on to `out`. */
-  private muffled(out: AudioNode): AudioNode {
-    const ctx = this.ctx!;
-    const s = AUDIO.suppressed;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = s.lowpassHz;
-    const g = ctx.createGain();
-    g.gain.value = s.volume;
-    filter.connect(g).connect(out);
-    return filter;
-  }
-
-  /** Where an in-world sound goes: centred (null = your own), or through a 3D panner at `at`. */
-  private output(at: Vec3 | null): AudioNode {
-    const ctx = this.ctx!;
-    if (!at) return this.world!;
-    const p = ctx.createPanner();
-    p.panningModel = 'equalpower';
-    p.distanceModel = 'inverse';
-    p.refDistance = AUDIO.refDistance;
-    p.rolloffFactor = AUDIO.rolloff;
-    p.maxDistance = AUDIO.maxDistance;
-    p.positionX.value = at.x;
-    p.positionY.value = at.y;
-    p.positionZ.value = at.z;
-    p.connect(this.world!);
-    return p;
-  }
-
-  private noise(out: AudioNode, type: BiquadFilterType, freq: number, q: number, gain: number, attack: number, decay: number): void {
-    const ctx = this.ctx!;
-    const t = ctx.currentTime;
-    const src = ctx.createBufferSource();
-    src.buffer = this.noiseBuffer;
-    const filter = ctx.createBiquadFilter();
-    filter.type = type;
-    filter.frequency.value = freq;
-    filter.Q.value = q;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(gain, t + attack);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
-    src.connect(filter).connect(g).connect(out);
-    src.start(t, Math.random() * 0.5);
-    src.stop(t + attack + decay + 0.02);
-  }
-
-  private tone(out: AudioNode, type: OscillatorType, from: number, to: number, gain: number, duration: number): void {
-    const ctx = this.ctx!;
-    const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    osc.type = type;
-    osc.frequency.setValueAtTime(from, t);
-    osc.frequency.exponentialRampToValueAtTime(to, t + duration);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(gain, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    osc.connect(g).connect(out);
-    osc.start(t);
-    osc.stop(t + duration + 0.02);
-  }
-
-  private click(out: AudioNode, freq: number, duration: number, gain: number = AUDIO.mechanismVolume, delay = 0): void {
-    const ctx = this.ctx!;
-    const t = ctx.currentTime + delay;
-    const osc = ctx.createOscillator();
-    osc.type = 'square';
-    osc.frequency.value = freq;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(gain, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    osc.connect(g).connect(out);
-    osc.start(t);
-    osc.stop(t + duration + 0.02);
   }
 }

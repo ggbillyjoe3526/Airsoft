@@ -6,8 +6,8 @@ Only CC0 or clearly permissive licenses. No real brand names or trademarked repl
 ## External assets
 
 None yet. All geometry is greybox (code-generated boxes) and all textures are generated on a
-canvas at runtime (`src/render/proceduralTextures.ts`). There is no audio yet; sounds will be synthesised
-with Web Audio first.
+canvas at runtime (`src/render/proceduralTextures.ts`). All sounds are synthesised in code when audio starts
+(recipes in `src/config/sounds.ts`, rendered by `src/audio/dsp.ts`); there are no audio files.
 
 ## Libraries (npm)
 

@@ -3,6 +3,7 @@ import { SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/me
 import { AIMING } from '../../config/optics';
 import { FOV_SETTING, QUALITY_LABELS, type QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
+import { type AudioSettingsOptions, audioSettings } from '../audioSettings';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
 import type { SettingsOrigin } from './menuNav';
@@ -17,12 +18,14 @@ export interface SettingsOptions {
   fov: { initial: number; onChange: (v: number) => void };
   /** The render preset in use: the Quality picker is held back (LATER), so its row only shows this. */
   quality: QualityPreset;
+  /** The volume sliders on the Audio tab (ui/audioSettings.ts). */
+  audio: AudioSettingsOptions;
   onBack: () => void;
 }
 
 /**
- * The Settings screen: tabs down the left (Controls, Key bindings, Graphics, and Audio and Accessibility still to
- * come), the picked tab's settings on the right. Everything saves as it changes. Reached from New game and from the
+ * The Settings screen: tabs down the left (Controls, Key bindings, Graphics, Audio, and Accessibility, which is still
+ * to come), the picked tab's settings on the right. Everything saves as it changes. Reached from New game and from the
  * pause menu; Back returns to whichever opened it.
  */
 export class SettingsScreen {
@@ -141,6 +144,8 @@ export class SettingsScreen {
         // Held back until there is real graphics work to scale (owner, 2026-10-03): the game runs on High.
         laterRow('Quality', 'Comes back with the art pass.', QUALITY_LABELS[opts.quality]),
       );
+    } else if (id === 'audio') {
+      panel.append(...audioSettings(opts.audio));
     }
   }
 

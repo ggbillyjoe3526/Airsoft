@@ -95,8 +95,9 @@ function container(x0: number, x1: number, z0: number, z1: number, height = CONT
   return box('container', x0, x1, 0, height, z0, z1);
 }
 
+/** A dock ramp: a ribbed steel plate, so footsteps on it clank (M13) and give away someone coming up. */
 function ramp(x0: number, x1: number, z0: number, z1: number, height: number, rise: RampRise): MapBlock {
-  return { ...box('ramp', x0, x1, 0, height, z0, z1), rise };
+  return { ...box('ramp', x0, x1, 0, height, z0, z1), rise, surface: 'metal' };
 }
 
 /**
@@ -298,6 +299,7 @@ const FLIP_RISE: Record<RampRise, RampRise> = { '+x': '+x', '-x': '-x', '+z': '-
 function blockToWorld(b: MapBlock): MapBlock {
   const w: MapBlock = { kind: b.kind, center: toWorld(b.center), size: vec3(b.size.x, b.size.y, b.size.z) };
   if (b.rise) w.rise = FLIP_RISE[b.rise];
+  if (b.surface) w.surface = b.surface;
   return w;
 }
 /** Mirroring z turns a facing `yaw` (forward = (-sin yaw, -cos yaw)) into π - yaw. */
