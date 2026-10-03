@@ -130,7 +130,7 @@ export class MatchSession {
     );
     input.resetView(this.player.spawnYaw);
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio, crosshair);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS, this.stats);
   }

@@ -11,9 +11,8 @@ _Last updated: 2026-10-03 · branch `claude/match-info-29vkrt` (match info, crit
 
 - **Phase 4 so far:** M12a–c, M11, M15, M15b and M13 audio are merged. The owner asked (2026-10-03) for all remaining
   Phase 4 milestones to be built; the Loadout (M17a, M17b) is being built on its own branch in parallel.
-- **Match info** (this branch, critic 9.0 at attempt 1) is numbered M19 by the owner's second batch (roadmap pull
-  request #22) and M18 on `main` until that merges; the roadmap row on this branch is `main`'s M18 row. When #22 is
-  merged, merge `main` in and keep #22's numbering (move the status to its M19 row).
+- **M19 match info** (this branch, critic 9.0 at attempt 1; M18 before the owner's second batch, #22, renumbered it).
+  It also covers the second batch's additions: the hold-Tab scoreboard, round and match numbers, local records.
   - Stats: `stats/matchStats.ts` (from tick events, in `MatchSession.afterTick`), tables from `ui/statsRows.ts` (pure)
     and `ui/statsTable.ts`; the board over the field is `ui/matchBoard.ts` (Tab held, between rounds, match over).
   - Hit feed `ui/hitFeed.ts`, teammate markers `ui/teammateMarkers.ts` (both driven by `MatchPresentation`).
@@ -22,7 +21,7 @@ _Last updated: 2026-10-03 · branch `claude/match-info-29vkrt` (match info, crit
   - Crosshair: `ui/crosshair.ts` (element, style, load), Settings → Crosshair `ui/crosshairSettings.ts`, tuning in
     `config/matchInfo.ts`. The default is the old crosshair.
 - **Next (ROADMAP order):** M18 comfort and accessibility, M20 custom matches, M21 practice range, M22 squad orders,
-  M14 art, M16 tutorial (numbers as in #22).
+  M14 art, M16 tutorial.
 
 ## Working notes and gotchas
 

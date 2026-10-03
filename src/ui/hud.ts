@@ -1,8 +1,9 @@
+import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { FIRE_MODE_LABELS, type ReplicaConfig } from '../config/replicas';
 import { HUD } from '../config/render';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
-import { isLowAmmo } from './ammoStatus';
+import { emptyMagHint, isLowAmmo } from './ammoStatus';
 import { crosshairElement, setCrosshairGap, styleCrosshair } from './crosshair';
 
 /**
@@ -25,6 +26,9 @@ export class Hud {
   /** A short notice that briefly takes the status line (see showNotice). */
   private noticeText = '';
   private noticeLeft = 0;
+  /** The reload key the empty-magazine hint was last worded for, and that hint (rebuilt only when the key changes). */
+  private hintKey: string | null = null;
+  private emptyHint = '';
   private readonly status: HTMLDivElement;
   private readonly reloadBar: HTMLDivElement;
   private readonly reloadFill: HTMLDivElement;
@@ -37,7 +41,12 @@ export class Hud {
   /** What is on screen now: the DOM is only written when one of these changes. */
   private shown = { name: '', fireMode: '', mag: -1, low: false, status: '', reloadPct: -1 };
 
-  constructor(parent: HTMLElement, crosshair: CrosshairSettings) {
+  /** `keyName` gives the key the player has bound to an action now ('' if unbound), so hints follow rebinding. */
+  constructor(
+    parent: HTMLElement,
+    private readonly keyName: (action: Action) => string,
+    crosshair: CrosshairSettings,
+  ) {
     this.root = document.createElement('div');
     this.root.className = 'hud';
     this.root.hidden = true;
@@ -68,6 +77,12 @@ export class Hud {
     styleCrosshair(this.crosshair, crosshair);
     this.minGap = crosshair.gap;
     this.shownGap = -1;
+  }
+
+  private emptyMagHint(): string {
+    const key = this.keyName('reload');
+    if (key !== this.hintKey) this.emptyHint = emptyMagHint((this.hintKey = key));
+    return this.emptyHint;
   }
 
   setVisible(visible: boolean): void {
@@ -123,7 +138,7 @@ export class Hud {
     if (reloading) status = 'Reloading';
     else if (this.noticeLeft > 0) status = this.noticeText;
     else if (ammo.mag === 0 && !canReload(ammo)) status = 'Out of BBs';
-    else if (ammo.mag === 0) status = 'Empty: pull the trigger or press R to reload';
+    else if (ammo.mag === 0) status = this.emptyMagHint();
     else if (spareBBs(ammo) === 0) status = 'Last magazine';
     if (s.status !== status) this.status.textContent = s.status = status;
   }
