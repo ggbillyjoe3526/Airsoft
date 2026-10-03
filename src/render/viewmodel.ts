@@ -27,7 +27,7 @@ export function magazineOut(p: number): number {
   return 1 - smooth((p - R.magInStart) / (R.magSeated - R.magInStart));
 }
 
-const clampSway = (v: number): number => Math.max(-VIEWMODEL.swayMax, Math.min(VIEWMODEL.swayMax, v));
+const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
 
 /**
  * The replica in your hands. Rendered in its own scene on top of the world (so it never clips into
@@ -175,8 +175,10 @@ export class Viewmodel {
     this.lastYaw = yaw;
     this.lastPitch = pitch;
     const settle = Math.exp(-VIEWMODEL.returnRate * dt);
-    this.swayX = clampSway(this.swayX * settle + dYaw * VIEWMODEL.swayPerRadian * motion);
-    this.swayY = clampSway(this.swayY * settle - dPitch * VIEWMODEL.swayPerRadian * motion);
+    // Aimed, the sway is capped well inside the glass's radius, so even a hard flick keeps the dot in it.
+    const swayMax = VIEWMODEL.swayMax * motion;
+    this.swayX = clampSway(this.swayX * settle + dYaw * VIEWMODEL.swayPerRadian * motion, swayMax);
+    this.swayY = clampSway(this.swayY * settle - dPitch * VIEWMODEL.swayPerRadian * motion, swayMax);
     this.kick *= settle;
 
     const moving = Math.min(1, speed / runSpeed);

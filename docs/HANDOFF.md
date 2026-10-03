@@ -5,7 +5,7 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `m12b-optics-ads` (Phase 4 M12b; see REVIEWS for the critic score)._
+_Last updated: 2026-10-03 · branch `m12b-optics-ads` (Phase 4 M12b, critic 9.1 on attempt 3)._
 
 ## Where we are
 

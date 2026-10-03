@@ -23,8 +23,8 @@ export class PointerLock {
     document.addEventListener('mousedown', this.onMouseDown);
     document.addEventListener('mouseup', this.onMouseUp);
     document.addEventListener('wheel', this.onWheel, { passive: true });
-    // The right button aims; never let it open the browser's menu over the game.
-    element.addEventListener('contextmenu', this.onContextMenu);
+    // The right button aims; never let it open the browser's menu over the game (or its HUD) while playing.
+    document.addEventListener('contextmenu', this.onContextMenu);
   }
 
   get locked(): boolean {
@@ -109,7 +109,7 @@ export class PointerLock {
     document.removeEventListener('mousedown', this.onMouseDown);
     document.removeEventListener('mouseup', this.onMouseUp);
     document.removeEventListener('wheel', this.onWheel);
-    this.element.removeEventListener('contextmenu', this.onContextMenu);
+    document.removeEventListener('contextmenu', this.onContextMenu);
     this.changeListeners.clear();
     this.errorListeners.clear();
   }
@@ -155,7 +155,7 @@ export class PointerLock {
   };
 
   private readonly onContextMenu = (e: MouseEvent): void => {
-    e.preventDefault();
+    if (this.locked || this.unlockedButtons) e.preventDefault();
   };
 
   private readonly onWheel = (e: WheelEvent): void => {
