@@ -9,11 +9,19 @@ export function verticalFovFor(horizontalFov16x9: number): number {
   return (2 * Math.atan(Math.tan((horizontalFov16x9 * DEG) / 2) / REFERENCE_ASPECT)) / DEG;
 }
 
+/** The vertical FOV (degrees) that magnifies a `fov` view by `zoom`. */
+export function zoomedFov(fov: number, zoom: number): number {
+  return (2 * Math.atan(Math.tan((fov * DEG) / 2) / zoom)) / DEG;
+}
+
 /** Owns the WebGL renderer, main camera and scene. Handles resizing. */
 export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
+  /** The main camera's vertical FOV with no zoom (degrees). */
+  private readonly baseFov = verticalFovFor(RENDER.horizontalFov16x9);
+  private zoom = 1;
   /** View size in CSS pixels (kept up to date on resize, so HUD code never has to read layout). */
   width = 0;
   height = 0;
@@ -31,7 +39,7 @@ export class Renderer {
     container.appendChild(this.renderer.domElement);
 
     // Vertical FOV is fixed; horizontal grows with aspect (Hor+).
-    this.camera = new THREE.PerspectiveCamera(verticalFovFor(RENDER.horizontalFov16x9), 1, RENDER.near, RENDER.far);
+    this.camera = new THREE.PerspectiveCamera(this.baseFov, 1, RENDER.near, RENDER.far);
     this.camera.rotation.order = 'YXZ';
 
     this.scene.background = new THREE.Color(RENDER.skyColor);
@@ -43,6 +51,14 @@ export class Renderer {
 
   get canvas(): HTMLCanvasElement {
     return this.renderer.domElement;
+  }
+
+  /** Narrows the main camera's view by `zoom` (1 = the normal view), e.g. while aiming down an optic. */
+  setZoom(zoom: number): void {
+    if (zoom === this.zoom) return;
+    this.zoom = zoom;
+    this.camera.fov = zoomedFov(this.baseFov, zoom);
+    this.camera.updateProjectionMatrix();
   }
 
   /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */

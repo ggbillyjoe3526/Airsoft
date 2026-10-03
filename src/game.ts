@@ -7,6 +7,7 @@ import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';
 import type { MatchMode } from './config/modes';
 import { NAV } from './config/nav';
+import { type OpticChoice, opticOf } from './config/optics';
 import { matchOverScreenDelay, QUALITY, type QualityPreset } from './config/render';
 import { FOOTSTEPS } from './config/footsteps';
 import { BODY, MOVEMENT } from './config/movement';
@@ -31,14 +32,16 @@ import { MatchPresentation } from './render/matchPresentation';
 import { Renderer } from './render/renderer';
 import { type Character, createCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
+import { fitOptic } from './sim/armament';
 import { attackersInRound, restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { DebugOverlay } from './ui/debugOverlay';
 import { modeNote, modeTakesEffect, modeToDescribe } from './ui/modeChoice';
+import { opticNote, opticTakesEffect } from './ui/opticChoice';
 import { browserStorage } from './settings/storage';
-import { loadCrouchMode, loadDifficulty, loadMode, StartScreen } from './ui/startScreen';
+import { loadCrouchMode, loadDifficulty, loadMode, loadOptic, StartScreen } from './ui/startScreen';
 
 const PLAYER_ID = 0;
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
@@ -89,6 +92,9 @@ export class Game {
   private readonly difficulty: DifficultyChoice;
   /** The mode picked on the start screen: the next match is played in it (the one in play is state.round.mode). */
   private mode: MatchMode;
+  /** The rifle optic picked on the start screen, and the one fitted to the player's replica now (see ui/opticChoice.ts). */
+  private optic: OpticChoice;
+  private fittedOptic: OpticChoice;
   /** Simulation time the match was decided (NaN while it's on). */
   private matchOverAt = Number.NaN;
 
@@ -110,6 +116,9 @@ export class Game {
     this.mode = map.flags ? loadMode() : 'elimination';
     this.state = createGameState(options.seed, BALLISTICS.maxBBs, ROUNDS, this.mode, map.flags);
     this.player = this.spawnRoster(map);
+    this.optic = loadOptic();
+    this.fittedOptic = this.optic;
+    fitOptic(this.player.armament, LOADOUT, opticOf(this.optic));
     this.difficulty = createDifficultyChoice(loadDifficulty());
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.bots = new BotController(
@@ -179,8 +188,11 @@ export class Game {
       { initial: this.difficulty.inPlay, onChange: (d) => this.changeDifficulty(d) },
       { initial: this.mode, onChange: (m) => this.changeMode(m) },
       { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
+      { initial: this.optic, onChange: (o) => this.changeOptic(o) },
+      (v) => (this.input.aimSensitivity = v),
     );
     this.input.sensitivity = this.startScreen.sensitivity;
+    this.input.aimSensitivity = this.startScreen.aimSensitivity;
     this.pointer.onChange((locked) => {
       if (locked) this.resume();
       else this.pause();
@@ -282,6 +294,22 @@ export class Game {
     this.startScreen.describeMode(modeToDescribe(this.mode, r.mode, this.started, matchOver));
   }
 
+  /**
+   * The player picked a rifle optic on the start/pause/result screen: fitted at once before the first match and
+   * on the result screen, otherwise at the next round start (a round in progress is never changed).
+   */
+  private changeOptic(o: OpticChoice): void {
+    this.optic = o;
+    if (opticTakesEffect(this.started, this.state.round.phase === 'matchOver') === 'now') this.fitPickedOptic();
+    this.startScreen.setOpticNote(opticNote(this.optic, this.fittedOptic, this.state.round.phase === 'matchOver'));
+  }
+
+  /** Fits the picked optic to the player's replicas. A direct sim-state change from the composition root, between rounds. */
+  private fitPickedOptic(): void {
+    this.fittedOptic = this.optic;
+    fitOptic(this.player.armament, LOADOUT, opticOf(this.optic));
+  }
+
   /** Everything that reacts to a simulation tick's events. */
   private afterTick(): void {
     this.bots.observe(this.state);
@@ -290,6 +318,8 @@ export class Game {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
+        this.fitPickedOptic();
+        this.startScreen.setOpticNote('');
         if (e.round === 1) this.refreshModeText();
         difficultyRoundStarted(this.difficulty); // the bots switched to a waiting level at this event too
         this.startScreen.setDifficultyNote(difficultyNote(this.difficulty, false));
@@ -348,7 +378,7 @@ export class Game {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) this.combat.toggleBbPaths();
-      this.input.update(this.player.armament.active, LOADOUT.length);
+      this.input.update(this.player.armament.active, LOADOUT.length, this.player.aiming);
       if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
       const ticks = advanceStepper(this.stepper, dt);
       for (let i = 0; i < ticks; i++) {

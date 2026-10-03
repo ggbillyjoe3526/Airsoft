@@ -10,7 +10,7 @@ export const SETTINGS_KEY = 'airsoft.settings';
 export const SETTINGS_VERSION = 1;
 
 /** What each setting is called in the stored object. */
-export type SettingField = 'sensitivity' | 'difficulty' | 'mode' | 'crouch';
+export type SettingField = 'sensitivity' | 'aimSensitivity' | 'difficulty' | 'mode' | 'crouch' | 'optic';
 
 /** Where earlier builds kept a setting, before the settings object. */
 const LEGACY_KEYS: Partial<Record<SettingField, string>> = {
@@ -81,7 +81,7 @@ export function saveSetting(field: SettingField, value: string | number | boolea
   }
 }
 
-/** A parser for settings that are one of a fixed set of ids (difficulty, mode, crouch). */
+/** A parser for settings that are one of a fixed set of ids (difficulty, mode, crouch, optic). */
 export function oneOf<T extends string>(ids: readonly T[]): (raw: unknown) => T | undefined {
   return (raw) => ids.find((id) => id === raw);
 }

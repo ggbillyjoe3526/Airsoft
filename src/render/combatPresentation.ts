@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Sfx } from '../audio/sfx';
 import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
+import { AIMING, OPTICS } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
@@ -38,6 +39,8 @@ export class CombatPresentation {
   private playing = false;
   /** The round in play started behind a screen (round 1 of a match, set up before play): whistle on Play. */
   private startWhistleOwed = true;
+  /** How far the player's optic is raised to their eye (0..1): eases over AIMING.raiseTime. */
+  private aimBlend = 0;
 
   constructor(
     private readonly renderer: Renderer,
@@ -115,13 +118,19 @@ export class CombatPresentation {
 
     const p = this.player;
     const carried = p.sprinting || p.sprintLockout > 0;
+    // Aiming down sights: the sight comes up to your eye and the view narrows by the optic's zoom.
+    const aiming = p.aiming && p.status === 'alive';
+    this.aimBlend = Math.max(0, Math.min(1, this.aimBlend + (aiming ? dt : -dt) / AIMING.raiseTime));
+    const optic = p.armament.optics[p.armament.active];
+    const zoom = optic ? OPTICS[optic].zoom : 1;
+    this.renderer.setZoom(1 + (zoom - 1) * this.aimBlend);
     this.viewmodel.setAspect(this.renderer.camera.aspect);
-    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carried, p.armament, this.loadout, p.status === 'calling');
+    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carried, p.armament, this.loadout, p.status === 'calling', this.aimBlend);
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
     const spread = THREE.MathUtils.degToRad(this.loadout[p.armament.active]!.spreadDeg * p.spreadScale);
     const focalPx = this.renderer.height / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
-    this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, dt);
+    this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, this.aimBlend >= AIMING.reticleFrom, dt);
 
     cam.getWorldDirection(this.forward);
     this.listenerPos.x = cam.position.x;

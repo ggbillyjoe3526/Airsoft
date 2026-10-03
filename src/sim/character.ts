@@ -68,6 +68,11 @@ export interface Character {
   airTime: number;
   /** Seconds standing still on the ground so far (0 while moving or in the air); steadies the aim (sim/accuracy.ts). */
   stillTime: number;
+  /**
+   * Aiming down the sights of the replica in hand (sim/aiming.ts): only with an optic fitted, and it slows you to
+   * walking pace. Bots never aim down sights.
+   */
+  aiming: boolean;
   /** Seconds left in which a sprint's or a jump's shake still settles slowly (sim/accuracy.ts); 0 = locks on fast. */
   shakeCarry: number;
   armament: Armament;
@@ -116,6 +121,7 @@ export function createCharacter(
     airTime: 0,
     stillTime: 0,
     shakeCarry: 0,
+    aiming: false,
     armament: createArmament(loadout),
   };
 }
@@ -144,7 +150,10 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
   return true;
 }
 
-/** Puts a character back at its spawn for a new round: alive, standing, full magazines, fire selectors left where they were. */
+/**
+ * Puts a character back at its spawn for a new round: alive, standing, full magazines, fire selectors and optics
+ * left as they were.
+ */
 export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]): void {
   copy(c.position, c.spawnPosition);
   copy(c.prevPosition, c.spawnPosition);
@@ -171,11 +180,13 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.airTime = 0;
   c.stillTime = 0;
   c.shakeCarry = 0;
+  c.aiming = false;
   c.status = 'alive';
   c.statusTime = 0;
   c.hitBy = -1;
   c.walkOffStuck = 0;
-  const modes = c.armament.modes;
+  const { modes, optics } = c.armament;
   c.armament = createArmament(loadout);
   if (modes.length === c.armament.modes.length) c.armament.modes = modes;
+  if (optics.length === c.armament.optics.length) c.armament.optics = optics;
 }

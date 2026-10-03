@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { VIEWMODEL } from '../config/render';
 import { LOADOUT } from '../config/replicas';
-import { createArmament } from '../sim/armament';
+import { createArmament, fitOptic } from '../sim/armament';
+import { RIFLE_OPTIC } from './replicaModels';
 import { magazineOut, magazineSwap, Viewmodel } from './viewmodel';
 
 describe('magazineOut', () => {
@@ -50,7 +51,7 @@ describe('Viewmodel reload', () => {
       const mag: THREE.Object3D[] = [];
       vm.scene.traverse((o) => o.name === 'magazine' && mag.push(o));
       const dt = 1 / 60;
-      const frame = () => vm.update(dt, 0, 0, 0, 4.2, false, arm, LOADOUT, false);
+      const frame = () => vm.update(dt, 0, 0, 0, 4.2, false, arm, LOADOUT, false, 0);
       frame();
       expect(hand.position.length()).toBe(0);
       // Mid-swap: hand and magazine are far below the magwell together.
@@ -81,7 +82,7 @@ describe('Viewmodel weapon switch mid-reload', () => {
     const hands: THREE.Object3D[] = [];
     vm.scene.traverse((o) => o.name === 'supportHand' && hands.push(o));
     const dt = 1 / 60;
-    const frame = () => vm.update(dt, 0, 0, 0, 4.2, false, arm, LOADOUT, false);
+    const frame = () => vm.update(dt, 0, 0, 0, 4.2, false, arm, LOADOUT, false, 0);
     arm.reload = LOADOUT[0]!.reloadTime;
     for (let i = 0; i < 30; i++, arm.reload -= dt) frame();
     expect(hands[0]!.position.length()).toBeGreaterThan(0.1);
@@ -101,7 +102,7 @@ describe('Viewmodel sway', () => {
     const arm = createArmament(LOADOUT);
     const rig = vm.scene.children.find((o) => o instanceof THREE.Group && o.children.length > 0)!;
     const dt = 1 / 60;
-    const frame = (yaw: number) => vm.update(dt, yaw, 0, 0, 4.2, false, arm, LOADOUT, false);
+    const frame = (yaw: number) => vm.update(dt, yaw, 0, 0, 4.2, false, arm, LOADOUT, false, 0);
     frame(2.5); // first frame, already facing the spawn yaw
     const rest = rig.position.x;
     frame(2.5);
@@ -113,6 +114,47 @@ describe('Viewmodel sway', () => {
     // A real turn still sways it.
     frame(-0.4);
     expect(Math.abs(rig.position.x - rest)).toBeGreaterThan(1e-3);
+    vm.dispose();
+  });
+});
+
+describe('Viewmodel optic', () => {
+  const named = (vm: Viewmodel, name: string): THREE.Object3D[] => {
+    const found: THREE.Object3D[] = [];
+    vm.scene.traverse((o) => o.name === name && found.push(o));
+    return found;
+  };
+
+  it('shows the optic only when one is fitted, folding the iron sights down under it', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    const [optic] = named(vm, 'optic');
+    const [up] = named(vm, 'sightsUp');
+    const [down] = named(vm, 'sightsDown');
+    expect(named(vm, 'optic')).toHaveLength(1); // only the rifle has a rail for one
+    vm.update(1 / 60, 0, 0, 0, 4.2, false, arm, LOADOUT, false, 0);
+    expect([optic!.visible, up!.visible, down!.visible]).toEqual([false, true, false]);
+    fitOptic(arm, LOADOUT, 'redDot');
+    vm.update(1 / 60, 0, 0, 0, 4.2, false, arm, LOADOUT, false, 0);
+    expect([optic!.visible, up!.visible, down!.visible]).toEqual([true, false, true]);
+    vm.dispose();
+  });
+
+  it('raised to the eye, puts the optic square on the view centre line, where BBs go', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    fitOptic(arm, LOADOUT, 'redDot');
+    vm.update(1 / 60, 0, 0, 0, 4.2, false, arm, LOADOUT, false, 1);
+    const [optic] = named(vm, 'optic');
+    optic!.updateWorldMatrix(true, false);
+    const o = RIFLE_OPTIC;
+    const back = optic!.localToWorld(new THREE.Vector3(0, o.axisUp, -o.from));
+    const front = optic!.localToWorld(new THREE.Vector3(0, o.axisUp, -(o.from + o.length)));
+    for (const p of [back, front]) {
+      expect(Math.hypot(p.x, p.y)).toBeLessThan(1e-6); // on the axis the viewmodel camera looks down
+      expect(p.z).toBeLessThan(-VIEWMODEL.near); // in front of the eye, past the near clip
+    }
+    expect(front.z).toBeLessThan(back.z);
     vm.dispose();
   });
 });

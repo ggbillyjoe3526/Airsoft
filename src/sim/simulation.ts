@@ -6,6 +6,7 @@ import type { ReplicaConfig } from '../config/replicas';
 import type { SpawnPoint } from '../map/mapTypes';
 import { createNavSearch, type NavGrid } from '../nav/navGrid';
 import { stepAccuracy } from './accuracy';
+import { stepAiming } from './aiming';
 import { type ArmamentContext, type Muzzle, stepArmament, type WorldQuery } from './armament';
 import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
@@ -117,6 +118,8 @@ export function stepSimulation(
       cmd.yaw = c.yaw;
       cmd.pitch = c.pitch;
     }
+    if (inPlay) stepAiming(c, cmd, armCtx.loadout);
+    else c.aiming = false;
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);

@@ -191,6 +191,8 @@ export const VIEWMODEL = {
   kickUp: 0.05,
   /** Recoil kick never stacks beyond this many shots' worth. */
   kickMax: 1.5,
+  /** How much of the mouse sway and walk bob goes away with the sight raised to your eye (0..1). */
+  aimSteady: 0.75,
   /** Viewmodel camera clip planes (metres); the replica is always within arm's reach. */
   near: 0.01,
   far: 5,

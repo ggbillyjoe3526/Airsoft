@@ -1,8 +1,9 @@
 import { DIFFICULTIES, DEFAULT_DIFFICULTY, type Difficulty } from '../config/bots';
 import { type Action, CROUCH_MODES, type CrouchMode, DEFAULT_CROUCH_MODE, MOUSE } from '../config/controls';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../config/modes';
+import { AIMING, DEFAULT_OPTIC, OPTIC_CHOICES, type OpticChoice } from '../config/optics';
 import { type KeyBindings, keyLabel } from '../input/keyBindings';
-import { loadSetting, numberIn, saveSetting } from '../settings/storage';
+import { loadSetting, numberIn, saveSetting, type SettingField } from '../settings/storage';
 import { KeySettings } from './keySettings';
 import { loadChoice, OptionPicker } from './optionPicker';
 
@@ -19,6 +20,11 @@ export function loadMode(): MatchMode {
 /** The saved crouch key behaviour (toggle or hold), or the default. */
 export function loadCrouchMode(): CrouchMode {
   return loadChoice('crouch', CROUCH_MODES, DEFAULT_CROUCH_MODE);
+}
+
+/** The saved optic for the rifle, or the default (none). */
+export function loadOptic(): OpticChoice {
+  return loadChoice('optic', OPTIC_CHOICES, DEFAULT_OPTIC);
 }
 
 /** What the start screen needs to explain the match. */
@@ -61,6 +67,40 @@ function loadSensitivity(): number {
   return loadSetting('sensitivity', numberIn(MOUSE.minSensitivity, MOUSE.maxSensitivity), MOUSE.defaultSensitivity);
 }
 
+function loadAimSensitivity(): number {
+  return loadSetting('aimSensitivity', numberIn(AIMING.minSensitivity, AIMING.maxSensitivity), AIMING.defaultSensitivity);
+}
+
+/** A labelled slider for a number setting, saved as `field` on every change. */
+function settingSlider(
+  label: string,
+  range: { min: number; max: number; step: number },
+  initial: number,
+  format: (v: number) => string,
+  field: SettingField,
+  onChange: (v: number) => void,
+): HTMLLabelElement {
+  const root = document.createElement('label');
+  root.className = 'start-sens';
+  root.append(label);
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = String(range.min);
+  slider.max = String(range.max);
+  slider.step = String(range.step);
+  slider.value = String(initial);
+  const output = document.createElement('output');
+  output.textContent = format(initial);
+  slider.addEventListener('input', () => {
+    const v = Number(slider.value);
+    output.textContent = format(v);
+    saveSetting(field, v);
+    onChange(v);
+  });
+  root.append(slider, output);
+  return root;
+}
+
 /**
  * Title / pause overlay. The play button asks the game to start (normally by locking the pointer);
  * the overlay hides while playing and returns as a pause screen when the pointer is released.
@@ -77,8 +117,10 @@ export class StartScreen {
   private readonly difficultyPicker: OptionPicker<Difficulty>;
   private readonly modePicker: OptionPicker<MatchMode>;
   private readonly crouchPicker: OptionPicker<CrouchMode>;
+  private readonly opticPicker: OptionPicker<OpticChoice>;
   private readonly goal: HTMLParagraphElement;
   private sensitivityValue = loadSensitivity();
+  private aimSensitivityValue = loadAimSensitivity();
   private crouchMode: CrouchMode;
 
   constructor(
@@ -90,6 +132,8 @@ export class StartScreen {
     difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void },
     mode: { initial: MatchMode; onChange: (m: MatchMode) => void },
     crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void },
+    optic: { initial: OpticChoice; onChange: (o: OpticChoice) => void },
+    onAimSensitivity: (v: number) => void,
   ) {
     this.crouchMode = crouch.initial;
     this.root = document.createElement('div');
@@ -102,10 +146,6 @@ export class StartScreen {
         <p class="start-goal"></p>
         <button class="start-play" type="button">Click to play</button>
         <p class="start-hint" hidden></p>
-        <label class="start-sens">Mouse sensitivity
-          <input type="range" min="${MOUSE.minSensitivity}" max="${MOUSE.maxSensitivity}" step="${MOUSE.sensitivityStep}" />
-          <output></output>
-        </label>
         <div class="start-controls"></div>
         <button class="start-keys" type="button">Key bindings</button>
       </div>`;
@@ -118,24 +158,38 @@ export class StartScreen {
     this.goal.textContent = describeRules(rules, mode.initial);
     this.modePicker = new OptionPicker('Mode', MATCH_MODES, mode.initial, 'mode', mode.onChange);
     this.difficultyPicker = new OptionPicker('Bots', DIFFICULTIES, difficulty.initial, 'difficulty', difficulty.onChange);
-    this.goal.after(this.modePicker.root, this.difficultyPicker.root);
-    const slider = this.root.querySelector('input') as HTMLInputElement;
+    this.opticPicker = new OptionPicker('Optic', OPTIC_CHOICES, optic.initial, 'optic', optic.onChange);
+    this.goal.after(this.modePicker.root, this.difficultyPicker.root, this.opticPicker.root);
+    const sensitivity = settingSlider(
+      'Mouse sensitivity',
+      { min: MOUSE.minSensitivity, max: MOUSE.maxSensitivity, step: MOUSE.sensitivityStep },
+      this.sensitivityValue,
+      (v) => v.toFixed(2),
+      'sensitivity',
+      (v) => {
+        this.sensitivityValue = v;
+        onSensitivity(v);
+      },
+    );
+    // A multiple of the mouse sensitivity, so it follows when that changes.
+    const aimSensitivity = settingSlider(
+      'Aiming sensitivity',
+      { min: AIMING.minSensitivity, max: AIMING.maxSensitivity, step: AIMING.sensitivityStep },
+      this.aimSensitivityValue,
+      (v) => `×${v.toFixed(2)}`,
+      'aimSensitivity',
+      (v) => {
+        this.aimSensitivityValue = v;
+        onAimSensitivity(v);
+      },
+    );
+    aimSensitivity.classList.add('start-aim-sens');
     this.crouchPicker = new OptionPicker('Crouch', CROUCH_MODES, crouch.initial, 'crouch', (m) => {
       this.crouchMode = m;
       this.renderControls();
       crouch.onChange(m);
     });
-    (slider.parentElement as HTMLElement).after(this.crouchPicker.root);
-    const output = this.root.querySelector('output') as HTMLOutputElement;
-
-    slider.value = String(this.sensitivityValue);
-    output.textContent = this.sensitivityValue.toFixed(2);
-    slider.addEventListener('input', () => {
-      this.sensitivityValue = Number(slider.value);
-      output.textContent = this.sensitivityValue.toFixed(2);
-      saveSetting('sensitivity', this.sensitivityValue);
-      onSensitivity(this.sensitivityValue);
-    });
+    this.hint.after(sensitivity, aimSensitivity, this.crouchPicker.root);
     this.playButton.addEventListener('click', () => {
       this.showHint('');
       onPlay();
@@ -163,6 +217,7 @@ export class StartScreen {
     this.controls.innerHTML = `
       <div>${k('forward')}${k('left')}${k('back')}${k('right')} move</div>
       <div><kbd>Mouse</kbd> aim, <kbd>LMB</kbd> fire</div>
+      <div><kbd>RMB</kbd> aim down sights (hold, needs an optic)</div>
       <div>${k('walk')} walk (quiet)</div>
       <div>${k('sprint')} sprint</div>
       <div>${k('crouch')} crouch (${this.crouchMode === 'toggle' ? 'toggle' : 'hold'})</div>
@@ -177,6 +232,15 @@ export class StartScreen {
 
   get sensitivity(): number {
     return this.sensitivityValue;
+  }
+
+  get aimSensitivity(): number {
+    return this.aimSensitivityValue;
+  }
+
+  /** A note shown with the optic, e.g. when a change waits for the next round. */
+  setOpticNote(text: string): void {
+    this.opticPicker.setNote(text);
   }
 
   /** A note shown with the difficulty, e.g. when a change waits for the next round. */

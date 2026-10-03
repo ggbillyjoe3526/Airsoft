@@ -16,7 +16,7 @@ import type { ReplicaConfig } from '../config/replicas';
 
 type Pt = readonly [forward: number, up: number];
 
-type MaterialKey = 'polymer' | 'furniture' | 'mag' | 'metal' | 'rubber' | 'orange' | 'dot' | 'glove' | 'sleeve' | 'armband';
+type MaterialKey = 'polymer' | 'furniture' | 'mag' | 'metal' | 'rubber' | 'orange' | 'lens' | 'glove' | 'sleeve' | 'armband';
 
 function createMaterials(teamColor: number): Record<MaterialKey, THREE.Material> {
   return {
@@ -26,7 +26,7 @@ function createMaterials(teamColor: number): Record<MaterialKey, THREE.Material>
     metal: new THREE.MeshStandardMaterial({ color: 0x5c6068, roughness: 0.42, metalness: 0.55 }),
     rubber: new THREE.MeshStandardMaterial({ color: 0x17181a, roughness: 0.95, metalness: 0 }),
     orange: new THREE.MeshStandardMaterial({ color: 0xff6a13, roughness: 0.55, metalness: 0 }),
-    dot: new THREE.MeshBasicMaterial({ color: 0xff3a2a }),
+    lens: new THREE.MeshBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.12, depthWrite: false }),
     // Olive gloves: clearly separate from the black polymer and tan furniture.
     glove: new THREE.MeshStandardMaterial({ color: 0x5d6146, roughness: 0.9, metalness: 0 }),
     sleeve: new THREE.MeshStandardMaterial({ color: 0x4a525c, roughness: 1, metalness: 0 }),
@@ -101,6 +101,15 @@ class ModelBuilder {
     return this.add(key, geo);
   }
 
+  /** Hollow tube along the forward axis (an optic's body you can look through), `outer` and `inner` radii. */
+  ringTube(key: MaterialKey, from: number, length: number, up: number, outer: number, inner: number, segments = 24): this {
+    const shape = new THREE.Shape().absarc(0, 0, outer, 0, Math.PI * 2, false);
+    shape.holes.push(new THREE.Path().absarc(0, 0, inner, 0, Math.PI * 2, true));
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: false, curveSegments: segments });
+    geo.translate(0, up, -(from + length));
+    return this.add(key, geo);
+  }
+
   /** Adds a prebuilt part (used by the hand and forearm builders). */
   addGeometry(key: MaterialKey, geo: THREE.BufferGeometry): void {
     this.add(key, geo);
@@ -148,8 +157,16 @@ const CRADLE: FingerCurl = [0.85, 1.05, 0.6];
 const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
 
 /**
+ * The red dot fitted to the rifle's receiver rail (an accessory, never part of the rifle: owner, 2026-10-03):
+ * where its axis sits above the model's origin and where its tube starts and ends along the forward axis.
+ * The rifle's aiming hold (config/replicas.ts aimHold) puts this axis on the view's centre line.
+ */
+export const RIFLE_OPTIC = { axisUp: 0.108, from: -0.005, length: 0.07, outer: 0.019, inner: 0.0155 } as const;
+
+/**
  * AR-pattern AEG in two-tone: black upper and lower receiver, tan stock, grip, handguard and magazine.
- * Flat-top rail with a red-dot, A-frame front sight, birdcage-style flash hider.
+ * Flat-top rails with flip-up iron sights (folded down when an optic is fitted), birdcage-style flash hider.
+ * The optic is its own part, shown only when one is fitted.
  */
 function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): THREE.Group {
   const b = new ModelBuilder();
@@ -179,19 +196,33 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   b.profile('furniture', [[0.15, 0.0], [0.4, 0.0], [0.4, 0.066], [0.15, 0.066]], 0.058, 0.014);
   for (const x of [0.19, 0.245, 0.3, 0.35]) b.box('rubber', x, x + 0.035, 0.026, 0.042, 0.06);
   b.rail(0.155, 0.395, 0.066, 0.02);
-  // Barrel, gas block with A-frame front sight, flash hider.
+  // Barrel, low-profile gas block (the front sight is a flip-up on the rail), flash hider.
   b.tube('metal', 0.4, 0.165, 0.034, 0.009);
   b.box('polymer', 0.43, 0.455, 0.022, 0.05, 0.03);
-  b.profile('polymer', [[0.425, 0.05], [0.46, 0.05], [0.449, 0.108], [0.436, 0.108]], 0.02, 0.003);
   b.tube(orangeTip ? 'orange' : 'metal', 0.565, 0.016, 0.034, 0.013, 10);
   b.tube(orangeTip ? 'orange' : 'polymer', 0.581, 0.03, 0.034, 0.012, 6);
   // Buffer tube, collapsible stock, butt pad.
   b.tube('polymer', -0.27, 0.17, 0.032, 0.016);
   b.profile('furniture', [[-0.2, 0.056], [-0.33, 0.06], [-0.336, -0.056], [-0.31, -0.064], [-0.236, -0.012], [-0.2, 0.0]], 0.044, 0.012);
   b.profile('rubber', [[-0.332, 0.06], [-0.352, 0.06], [-0.358, -0.056], [-0.338, -0.058]], 0.046, 0.006);
-  // Red-dot sight on the rail.
-  b.box('polymer', 0.0, 0.05, 0.074, 0.088, 0.03);
-  b.tube('polymer', -0.008, 0.065, 0.108, 0.019);
+  // Flip-up iron sights: a rear aperture at the back of the receiver rail and a front post at the front of the
+  // handguard rail, standing up on the bare rifle and folded flat under a fitted optic.
+  const sightsUp = new ModelBuilder();
+  sightsUp.box('polymer', -0.085, -0.062, 0.074, 0.084, 0.026);
+  sightsUp.profile('polymer', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.112], [-0.078, 0.112]], 0.022, 0.003, [[-0.0755, 0.098], [-0.0705, 0.098], [-0.0705, 0.104], [-0.0755, 0.104]]);
+  sightsUp.box('polymer', 0.365, 0.39, 0.082, 0.092, 0.024);
+  sightsUp.profile('polymer', [[0.37, 0.092], [0.386, 0.092], [0.381, 0.112], [0.375, 0.112]], 0.018, 0.002);
+  const sightsDown = new ModelBuilder();
+  sightsDown.box('polymer', -0.088, -0.054, 0.074, 0.086, 0.026);
+  sightsDown.box('polymer', 0.362, 0.396, 0.082, 0.089, 0.024);
+  // The red dot: a riser mount clamped to the rail under a tube you look through (front lens faintly tinted).
+  const optic = new ModelBuilder();
+  const o = RIFLE_OPTIC;
+  optic.box('polymer', 0.004, 0.056, 0.074, 0.084, 0.034);
+  optic.box('polymer', 0.012, 0.048, 0.084, o.axisUp - o.outer + 0.004, 0.024);
+  optic.ringTube('polymer', o.from, o.length, o.axisUp, o.outer, o.inner);
+  optic.box('polymer', 0.02, 0.04, o.axisUp - 0.008, o.axisUp + 0.008, 0.012, o.outer + 0.004); // brightness dial, right side
+  optic.tube('lens', o.from + o.length - 0.004, 0.002, o.axisUp, o.inner, 24);
 
   // Right hand on the pistol grip: back of the hand to the right, knuckle row running down the
   // grip, three fingers wrapped round its front, index finger straight along the frame (trigger
@@ -223,11 +254,8 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   group.add(magazinePart(mag, m, [0, -0.97, 0.25]));
   // From the handguard to just under the magazine's base plate (forward 0.1, up -0.26).
   group.add(supportHandPart(support, m, [0.012, -0.242, -0.19]));
-  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 8, 6), m.dot);
-  dot.position.set(0, 0.108, 0.009);
-  dot.name = 'dot';
+  group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'), namedPart(optic, m, 'optic'));
   group.add(muzzleMarker(0.611, 0.034));
-  group.add(dot);
   return group;
 }
 
@@ -357,6 +385,13 @@ function supportHandPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Mat
   const group = builder.build(m);
   group.name = 'supportHand';
   group.userData.toMag = new THREE.Vector3(toMag[0], toMag[1], -toMag[2]);
+  return group;
+}
+
+/** A part the viewmodel shows or hides by name (the fitted optic, the iron sights up or folded). */
+function namedPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>, name: string): THREE.Group {
+  const group = builder.build(m);
+  group.name = name;
   return group;
 }
 

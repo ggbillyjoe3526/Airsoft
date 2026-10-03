@@ -92,8 +92,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | Done | 9.1 |
 | Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | Done | 9.0 |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | Done (tagged 2026-10-03; the owner's playtest notes went into Phase 4) | 9.0 |
-| Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Done (pull request; owner's playtest next) | 9.0 |
-| Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity | Later | |
+| Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Done (merged; owner played it: the crosshair should lock on faster, fixed in M12b) | 9.0 |
+| Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (pull request; owner's playtest next) | CRITIC_SCORE |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later (layout sketch waits for the owner's OK) | |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
 | Alpha · Phase 4 · M14 Art pass, M15 Menus and settings, M16 Tutorial → feature complete | Later | |

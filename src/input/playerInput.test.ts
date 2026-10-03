@@ -27,7 +27,7 @@ function fakeKeyboard() {
   };
 }
 
-const pointer = { consumeDelta: () => {}, consumeFirePress: () => false, consumeWheelSteps: () => 0, fireHeld: false } as unknown as PointerLock;
+const pointer = { consumeDelta: () => {}, consumeFirePress: () => false, consumeWheelSteps: () => 0, fireHeld: false, aimHeld: false } as unknown as PointerLock;
 
 function setup(mode: 'toggle' | 'hold') {
   const keys = fakeKeyboard();
@@ -98,5 +98,48 @@ describe('fire selector key', () => {
     const { keys, frame } = setup('toggle');
     expect(frame(() => keys.press('fireMode')).cycleFireMode).toBe(true);
     expect(frame().cycleFireMode).toBe(false); // held: no repeat
+  });
+});
+
+describe('aiming down sights', () => {
+  /** A mouse that moves `dx` counts every frame, with the right button held or not. */
+  function aimingSetup(aimHeld: boolean) {
+    const keys = fakeKeyboard();
+    const mouse = {
+      consumeDelta: (out: { x: number; y: number }) => {
+        out.x = 100;
+        out.y = 0;
+      },
+      consumeFirePress: () => false,
+      consumeWheelSteps: () => 0,
+      fireHeld: false,
+      aimHeld,
+    } as unknown as PointerLock;
+    return new PlayerInput(keys.kb, mouse, MOVEMENT);
+  }
+
+  it('holds the aim button as the command says', () => {
+    const cmd = createCommand();
+    const held = aimingSetup(true);
+    held.update(0, 2);
+    held.fillCommand(cmd);
+    expect(cmd.aim).toBe(true);
+    const free = aimingSetup(false);
+    free.update(0, 2);
+    free.fillCommand(cmd);
+    expect(cmd.aim).toBe(false);
+  });
+
+  it('turns at the aiming sensitivity (a multiple of the mouse sensitivity) only while aiming', () => {
+    const hip = aimingSetup(true);
+    hip.sensitivity = 1.5;
+    hip.aimSensitivity = 0.5;
+    hip.update(0, 2, false);
+    const aimed = aimingSetup(true);
+    aimed.sensitivity = 1.5;
+    aimed.aimSensitivity = 0.5;
+    aimed.update(0, 2, true);
+    expect(aimed.yaw).toBeCloseTo(hip.yaw * 0.5, 12);
+    expect(hip.yaw).not.toBe(0);
   });
 });
