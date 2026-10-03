@@ -5,7 +5,7 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `claude/roadmap-playtest-feedback-jzijlg` (roadmap only: the owner's M15 notes)._
+_Last updated: 2026-10-03 · branch `claude/roadmap-loadout-feature-9d8epf` (roadmap only: the owner's Loadout feature)._
 
 ## Where we are
 
@@ -25,7 +25,11 @@ _Last updated: 2026-10-03 · branch `claude/roadmap-playtest-feedback-jzijlg` (r
    removed, graphics quality greyed out as LATER. The Esport difficulty is parked in IDEAS.
 2. **Build M15b next.** The hard part is loading the map only on Play and unloading it on Quit / Change setup:
    today the field is built at start-up and drawn behind the title screen. The owner's Depot feedback is still awaited.
-3. **Then M13, the audio rework** (order M12 → M11 → M15 → M15b → M13 → M14 → M16). `ReplicaConfig.power`
+3. **Then M17, the Loadout** (the owner asked for it as an alpha feature, 2026-10-03; ROADMAP Phase 4): M17a replica
+   slots, BB weight and hop-up; M17b optics, grips and magazines, with skins as a LATER row (skins themselves in v0.5).
+   The groundwork is in: BB mass in the physics (M9, `bbMass`), the optic slot (`config/optics.ts`), the hop-up dials
+   and the LATER rows (`config/menus.ts`).
+4. **Then M13, the audio rework** (order M12 → M11 → M15 → M15b → M17a → M17b → M13 → M14 → M16). `ReplicaConfig.power`
    (electric / gas) is there for sound profiles by power source. Volume settings then fill the Audio tab's LATER rows.
 
 ## Working notes and gotchas

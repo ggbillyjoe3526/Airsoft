@@ -117,12 +117,12 @@ Elimination and Attack / Defend.
 
 1. **Phase 2 — Core gameplay (alpha, ships as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, the Attack / Defend objective mode, all on Depot.
 2. **Phase 3 — Core foundations (alpha, `v0.1-alpha.3`):** leaning (Q / E peek), magazines and meaningful reloads (limited ammunition), a BB physics pass, movement and positioning over raw weapon stats, the audit fixes and elevation support (ramps, raised floors).
-3. **Phase 4 — Feel, presentation and onboarding (alpha):** weapon handling from the owner's `v0.1-alpha.3` playtest (fire modes, faster reloads, crouch toggle, steadier aim when still, optics as accessories with aiming down sights), a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), an audio rework, art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
+3. **Phase 4 — Feel, presentation and onboarding (alpha):** weapon handling from the owner's `v0.1-alpha.3` playtest (fire modes, faster reloads, crouch toggle, steadier aim when still, optics as accessories with aiming down sights), a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), the Loadout (owner, 2026-10-03: primary and secondary replica, BB weight, hop-up, optics, grips, magazines), an audio rework, art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
 4. **Beta (when the owner calls the game feature complete):** optimisation, final balance and tuning, bug fixing, stability, UX/QoL and polish.
 
 **After v0.1 (later versions, proposed in `docs/ROADMAP.md`):** more modes (TDM, Capture the Flag,
 Domination, Bomb), more fields, replica platforms that differ mechanically (GBBR, spring sniper, SMG,
-shotgun, DMR, LMG …), loadouts (free from the start), chrono, customisation, unlock-based progression
+shotgun, DMR, LMG …), bigger loadouts (gear and more parts, free from the start), chrono, customisation, unlock-based progression
 (never levels), and team communication once the bots are good enough. Don't build these during v0.1.
 
 **Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
