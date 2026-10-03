@@ -1,3 +1,5 @@
+import type { MagazineId } from './attachments';
+
 /**
  * How a trigger pull fires: one BB per pull (semi; "single" on a rifle's selector), a short burst per pull
  * (TRIGGER.burstShots), or for as long as the trigger is held (auto).
@@ -58,6 +60,10 @@ export interface ReplicaConfig {
   recoilDeg: number;
   /** Has a rail an optic can be fitted to (config/optics.ts); aiming down sights needs one fitted. */
   opticMount: boolean;
+  /** Has a rail under the handguard a grip can be fitted to (config/attachments.ts). */
+  gripMount: boolean;
+  /** The magazines made for it (config/attachments.ts), the one it comes with first. */
+  magazines: readonly MagazineId[];
   /** How it looks and sounds (presentation only; the simulation ignores this). */
   look: ReplicaLook;
 }
@@ -105,6 +111,8 @@ export const AEG: ReplicaConfig = {
   spreadDeg: 0.45,
   recoilDeg: 0.18,
   opticMount: true,
+  gripMount: true,
+  magazines: ['standard', 'hiCap', 'lowCap'],
   look: {
     model: 'rifle',
     suppressed: false,
@@ -136,6 +144,8 @@ export const GAS_PISTOL: ReplicaConfig = {
   spreadDeg: 0.8,
   recoilDeg: 0.5,
   opticMount: false,
+  gripMount: false,
+  magazines: ['standard', 'extended'],
   look: { model: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
 };
 

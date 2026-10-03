@@ -99,6 +99,7 @@ export class Menus {
       optic: { initial: lo.optic.initial, onChange: (o) => (lo.optic.onChange(o), this.refreshSetup()) },
       hopUp: { initial: lo.hopUp.initial, onChange: (r, dial) => (lo.hopUp.onChange(r, dial), this.refreshSetup()) },
       bbWeight: { initial: lo.bbWeight.initial, onChange: (r, grams) => (lo.bbWeight.onChange(r, grams), this.refreshSetup()) },
+      parts: { initial: lo.parts.initial, onChange: (r, parts) => (lo.parts.onChange(r, parts), this.refreshSetup()) },
       onBack: () => this.back(),
     });
     this.settings = new SettingsScreen({

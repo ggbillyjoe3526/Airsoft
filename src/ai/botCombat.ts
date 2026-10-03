@@ -141,7 +141,7 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
  */
 export function reloadBot(b: Bot, w: BotWorld, cmd: PlayerCommand): void {
   const ammo = b.character.armament.ammo[0]!;
-  const replica = w.loadout[0]!;
+  const magSize = b.character.armament.handling[0]!.magSize;
   if (!canReload(ammo)) return;
-  if (ammo.mag === 0 || (!b.targetVisible && ammo.mag < replica.magSize * w.cfg.tacticalReloadFraction)) cmd.reload = true;
+  if (ammo.mag === 0 || (!b.targetVisible && ammo.mag < magSize * w.cfg.tacticalReloadFraction)) cmd.reload = true;
 }

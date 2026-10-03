@@ -1,13 +1,32 @@
 import { describe, expect, it } from 'vitest';
+import { factoryParts } from '../config/attachments';
 import { DEFAULT_OPTIC, OPTIC_CHOICES, opticOf } from '../config/optics';
 import { AEG, BB_WEIGHT, BB_WEIGHT_CHOICES, GAS_PISTOL, HOP_UP, LOADOUT, LOADOUT_SLOTS, muzzleEnergy, muzzleVelocity } from '../config/replicas';
-import { bbWeightField, bbWeightReadout, hopUpField, hopUpLabel, hopUpReadout, loadBbWeight, loadHopUp, loadoutSummary, loadSlotPick, slotField } from './loadoutChoice';
+import {
+  bbWeightField,
+  bbWeightReadout,
+  gripField,
+  gripReadout,
+  opticReadout,
+  hopUpField,
+  hopUpLabel,
+  hopUpReadout,
+  loadBbWeight,
+  loadHopUp,
+  loadoutSummary,
+  loadParts,
+  loadSlotPick,
+  magazineChoices,
+  magazineField,
+  magazineReadout,
+  slotField,
+} from './loadoutChoice';
 
 describe('optic choice', () => {
-  it('is off by default (iron sights) and offers the red dot', () => {
+  it('is off by default (iron sights) and offers the red dot and the 2× scope', () => {
     expect(DEFAULT_OPTIC).toBe('none');
     expect(opticOf('none')).toBeNull();
-    expect(OPTIC_CHOICES.map((o) => o.id)).toEqual(['none', 'redDot']);
+    expect(OPTIC_CHOICES.map((o) => o.id)).toEqual(['none', 'redDot', 'scope2x']);
     expect(opticOf('redDot')).toBe('redDot');
   });
 });
@@ -86,5 +105,40 @@ describe('BB weight choice', () => {
   it('changes how far the same hop-up keeps the BB on target: a light BB rises more on the factory dial', () => {
     expect(hopUpReadout(AEG, AEG.hopUpDial, 0.2)).toMatch(/^Too much/);
     expect(hopUpReadout(AEG, AEG.hopUpDial, 0.28)).not.toBe(hopUpReadout(AEG, AEG.hopUpDial, 0.25));
+  });
+});
+
+describe('grip and magazine choice (M17b)', () => {
+  it('starts each replica on its factory parts and saves them per replica', () => {
+    for (const r of LOADOUT) expect(loadParts(r)).toEqual(factoryParts(r));
+    expect(gripField(AEG)).toBe('grip.aeg');
+    expect(magazineField(GAS_PISTOL)).toBe('mag.pistol');
+    expect(magazineChoices(AEG).map((m) => m.id)).toEqual(['standard', 'hiCap', 'lowCap']);
+    expect(magazineChoices(GAS_PISTOL).map((m) => m.id)).toEqual(['standard', 'extended']);
+  });
+
+  it('says in numbers what a magazine and a grip do', () => {
+    expect(magazineReadout(AEG, 'standard')).toBe('60 BBs each, 4 carried (240 in all). Reload 1.8 s.');
+    expect(magazineReadout(AEG, 'hiCap')).toBe('120 BBs each, 2 carried (240 in all). Reload 1.8 s.');
+    expect(magazineReadout(AEG, 'lowCap')).toBe('30 BBs each, 5 carried (150 in all). Reload 1.4 s.');
+    expect(magazineReadout(GAS_PISTOL, 'extended')).toBe('27 BBs each, 4 carried (108 in all). Reload 1.2 s. Draw 0.41 s.');
+    // The optic's line: its raise time with the grip, or the hip with iron sights.
+    expect(opticReadout(AEG, 'redDot', 'none')).toBe('Up to your eye in 0.15 s.');
+    expect(opticReadout(AEG, 'scope2x', 'vertical')).toBe('Up to your eye in 0.30 s with the vertical grip.');
+    expect(opticReadout(AEG, 'scope2x', 'angled')).toBe('Up to your eye in 0.19 s with the angled grip.');
+    expect(opticReadout(AEG, 'none', 'angled')).toBe('Fired from the hip: no sight to raise.');
+    expect(gripReadout(AEG, 'none')).toBe('Brings the AEG rifle up in 0.45 s. After a sprint it can fire from 0.20 s, steady from 0.27 s.');
+    // Steadier and slower with a vertical grip; quicker and shakier with an angled one.
+    expect(gripReadout(AEG, 'vertical')).toBe('Brings the AEG rifle up in 0.56 s. After a sprint it can fire from 0.20 s, already steady.');
+    expect(gripReadout(AEG, 'angled')).toBe('Brings the AEG rifle up in 0.36 s. After a sprint it can fire from 0.20 s, steady from 0.33 s.');
+  });
+
+  it('lists the parts that differ from the factory ones on the New game button', () => {
+    const parts = [
+      { grip: 'angled', magazine: 'hiCap' },
+      { grip: 'none', magazine: 'standard' },
+    ] as const;
+    expect(loadoutSummary(LOADOUT, 'scope2x', [0.65, 0.55], [0.25, 0.2], parts)).toBe('2× scope · Angled grip · Hi-cap mag · 0.25 g / 0.20 g BBs · hop-up 65% / 55%');
+    expect(loadoutSummary(LOADOUT, 'none', [0.65, 0.55], [0.25, 0.2], LOADOUT.map(factoryParts))).toBe('Iron sights · 0.25 g / 0.20 g BBs · hop-up 65% / 55%');
   });
 });

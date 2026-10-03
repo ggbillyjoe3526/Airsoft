@@ -41,11 +41,22 @@ export function sprintCarry(lockout: number, total: number): number {
 
 const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
 
+/** The parts a model can be fitted with: its objects named 'optic:<id>', 'grip:<id>' or 'magazine:<id>'. */
+function fittableParts(model: THREE.Object3D): { kind: 'optic' | 'grip' | 'magazine'; id: string; object: THREE.Object3D }[] {
+  const parts: { kind: 'optic' | 'grip' | 'magazine'; id: string; object: THREE.Object3D }[] = [];
+  model.traverse((o) => {
+    const [kind, id] = o.name.split(':');
+    if (id && (kind === 'optic' || kind === 'grip' || kind === 'magazine')) parts.push({ kind, id, object: o });
+  });
+  return parts;
+}
+
 /**
  * The replica in your hands. Rendered in its own scene on top of the world (so it never clips into
  * walls) and animated purely from presentation state: mouse sway, walk bob, sprint carry, recoil
- * kick, reload dip, draw and raising a fitted optic to your eye. A fitted optic shows on the model and
- * folds the iron sights down. Reduced motion (`setMotion`) scales the bob, sway and kick down.
+ * kick, reload dip, draw and raising a fitted optic to your eye. The fitted optic, grip and magazine show on the
+ * model (simple shapes until the art pass), and an optic folds the iron sights down. Reduced motion (`setMotion`)
+ * scales the bob, sway and kick down.
  */
 export class Viewmodel {
   readonly scene = new THREE.Scene();
@@ -60,8 +71,11 @@ export class Viewmodel {
     hold: ReplicaConfig['look']['hold'];
     /** Where it sits aiming down a fitted optic (replicas with an optic mount). */
     aimHold: ReplicaConfig['look']['aimHold'];
-    /** The optic part and the iron sights standing up / folded (replicas with an optic mount). */
-    optic: THREE.Object3D | undefined;
+    /** The optics, grips and magazines it can be fitted with ('optic:<id>' …), each shown only while fitted. */
+    parts: { kind: 'optic' | 'grip' | 'magazine'; id: string; object: THREE.Object3D }[];
+    /** The fitted magazine's base plate against the standard one's (replicaModels.ts), where the support hand reaches. */
+    magBase: THREE.Vector3 | undefined;
+    /** The iron sights standing up / folded (replicas with an optic mount). */
     sightsUp: THREE.Object3D | undefined;
     sightsDown: THREE.Object3D | undefined;
   }[] = [];
@@ -105,7 +119,8 @@ export class Viewmodel {
         hand: model.getObjectByName('supportHand'),
         hold: r.look.hold,
         aimHold: r.look.aimHold,
-        optic: model.getObjectByName('optic'),
+        parts: fittableParts(model),
+        magBase: undefined,
         sightsUp: model.getObjectByName('sightsUp'),
         sightsDown: model.getObjectByName('sightsDown'),
       });
@@ -125,6 +140,14 @@ export class Viewmodel {
   /** Reduced motion on or off: how much of the bob, sway and kick to show. */
   setMotion(scale: MotionScale): void {
     this.motionScale = scale;
+  }
+
+  /**
+   * Looking through a scope's eyepiece (M17b): the replica isn't drawn, as its own tube would fill the eyepiece; the
+   * HUD draws the eyepiece and reticle.
+   */
+  setScoped(scoped: boolean): void {
+    this.rig.visible = !scoped;
   }
 
   /** The view is about to be set, not turned (a new round): the next update takes it without swaying. */
@@ -156,16 +179,20 @@ export class Viewmodel {
     runSpeed: number,
     carry: number,
     armament: Armament,
-    loadout: readonly ReplicaConfig[],
     callingHit: boolean,
     aim: number,
   ): void {
-    const replica = loadout[armament.active]!;
     for (let i = 0; i < this.slots.length; i++) {
       const s = this.slots[i]!;
       s.model.visible = i === armament.active;
-      const fitted = armament.optics[i] != null;
-      if (s.optic) s.optic.visible = fitted;
+      const optic = armament.optics[i] ?? null;
+      const parts = armament.parts[i];
+      for (const p of s.parts) {
+        const fitted = p.kind === 'optic' ? optic : p.kind === 'grip' ? parts?.grip : parts?.magazine;
+        p.object.visible = p.id === fitted;
+        if (p.kind === 'magazine' && p.object.visible) s.magBase = p.object.userData.toBase as THREE.Vector3 | undefined;
+      }
+      const fitted = optic != null;
       if (s.sightsUp) s.sightsUp.visible = !fitted;
       if (s.sightsDown) s.sightsDown.visible = fitted;
     }
@@ -209,7 +236,8 @@ export class Viewmodel {
     // replica pointing straight ahead, in line with its BBs.
     this.sprintBlend = Math.min(carry, this.sprintBlend + (carry - this.sprintBlend) * (1 - settle));
 
-    const reloadP = armament.reload > 0 ? 1 - armament.reload / replica.reloadTime : 0;
+    const handling = armament.handling[armament.active]!;
+    const reloadP = armament.reload > 0 ? 1 - armament.reload / handling.reloadTime : 0;
     const reloadDip = Math.sin(Math.PI * reloadP);
     const R = VIEWMODEL.reload;
     slot.model.rotation.set(reloadDip * R.tilt, holdYaw + reloadDip * R.turn, reloadDip * R.roll);
@@ -227,10 +255,12 @@ export class Viewmodel {
     for (const s of this.slots) if (s !== slot && s.hand) s.hand.position.set(0, 0, 0);
     if (slot.hand) {
       const grab = smooth(this.handBlend);
-      slot.hand.position.copy(slot.hand.userData.toMag as THREE.Vector3).multiplyScalar(grab);
+      slot.hand.position.copy(slot.hand.userData.toMag as THREE.Vector3);
+      if (slot.magBase) slot.hand.position.add(slot.magBase);
+      slot.hand.position.multiplyScalar(grab);
       if (magAxis) slot.hand.position.addScaledVector(magAxis, magDistance * grab);
     }
-    const drawP = replica.drawTime > 0 ? armament.draw / replica.drawTime : 0;
+    const drawP = handling.drawTime > 0 ? armament.draw / handling.drawTime : 0;
 
     const bob = VIEWMODEL.bobAmount * moving * motion * m.bob;
     this.hitBlend = Math.max(0, Math.min(1, this.hitBlend + (callingHit ? dt : -dt) / VIEWMODEL.raiseTime));

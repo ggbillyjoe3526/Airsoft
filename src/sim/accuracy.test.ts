@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MOVEMENT } from '../config/movement';
-import { stepAccuracy, targetSpreadScale } from './accuracy';
+import type { GripId } from '../config/attachments';
+import { LOADOUT } from '../config/replicas';
+import { stepAccuracy, targetSpreadScale, timeToSteady } from './accuracy';
+import { fitParts } from './armament';
 import { type Character, createCharacter } from './character';
 import { vec3 } from './vec';
 
@@ -138,6 +141,26 @@ describe('accuracy by stance and movement', () => {
     expect(c.spreadScale).toBeLessThan(A.steady + 0.01);
   });
 
+  it('settles sooner after a sprint with a vertical grip, later with an angled one (M17b)', () => {
+    const settleAfterSprint = (grip: GripId): number => {
+      const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
+      c.grounded = true;
+      fitParts(c.armament, LOADOUT, [{ grip, magazine: 'standard' }]);
+      c.sprinting = true;
+      stepAccuracy(c, MOVEMENT, DT);
+      c.sprinting = false;
+      let t = 0;
+      while (c.spreadScale > 1.05 && t < 2) {
+        stepAccuracy(c, MOVEMENT, DT);
+        t += DT;
+      }
+      return t;
+    };
+    const none = settleAfterSprint('none');
+    expect(settleAfterSprint('vertical')).toBeLessThan(none - 0.02);
+    expect(settleAfterSprint('angled')).toBeGreaterThan(none + 0.02);
+  });
+
   it('makes walking with the walk key only a little shakier than standing (owner, 2026-10-03)', () => {
     expect(A.walk).toBeGreaterThan(1);
     expect(A.walk).toBeLessThanOrEqual(1.2);
@@ -193,5 +216,25 @@ describe('accuracy by stance and movement', () => {
       stepAccuracy(c, MOVEMENT, DT);
       expect(c.airTime).toBe(0);
     });
+  });
+});
+
+describe('time to steady after a sprint (the Loadout grip line)', () => {
+  it('follows stepAccuracy itself: the spread is above the margin a tick before and within it at the time', () => {
+    for (const grip of ['none', 'vertical', 'angled'] as GripId[]) {
+      const c = createCharacter(0, vec3(), 0);
+      fitParts(c.armament, LOADOUT, [{ grip, magazine: 'standard' }]);
+      const t = timeToSteady(c, MOVEMENT, DT, 0.1);
+      expect(c.spreadScale).toBeLessThanOrEqual(1.1);
+      // Replay by hand: one tick short of t the aim is still shaky.
+      const d = createCharacter(0, vec3(), 0);
+      fitParts(d.armament, LOADOUT, [{ grip, magazine: 'standard' }]);
+      d.grounded = true;
+      d.sprinting = true;
+      stepAccuracy(d, MOVEMENT, DT);
+      d.sprinting = false;
+      for (let s = 0; s < t - DT * 1.5; s += DT) stepAccuracy(d, MOVEMENT, DT);
+      if (t > 0) expect(d.spreadScale).toBeGreaterThan(1.1);
+    }
   });
 });

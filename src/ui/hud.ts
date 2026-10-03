@@ -1,5 +1,6 @@
 import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
+import { type OpticId, OPTICS } from '../config/optics';
 import { FIRE_MODE_LABELS, type ReplicaConfig } from '../config/replicas';
 import { HUD } from '../config/render';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
@@ -7,7 +8,7 @@ import { emptyMagHint, isLowAmmo } from './ammoStatus';
 import { crosshairElement, setCrosshairGap, styleCrosshair } from './crosshair';
 
 /**
- * Minimal in-game HUD: crosshair (the player's own, Settings → Crosshair; or the red dot while aiming down one) and the replica panel (name and fire mode, BBs in the loaded magazine, a
+ * Minimal in-game HUD: crosshair (the player's own, Settings → Crosshair; or the red dot, or a scope's eyepiece and reticle, while aiming down one) and the replica panel (name and fire mode, BBs in the loaded magazine, a
  * gauge per spare magazine showing how full it is, with the one a reload takes marked, and reload progress).
  * DOM is only touched when a displayed value changes.
  */
@@ -34,6 +35,7 @@ export class Hud {
   private readonly reloadFill: HTMLDivElement;
   private shownInPlay = true;
   private shownAiming = false;
+  private shownScoped = false;
   private readonly crosshair: HTMLDivElement;
   /** The smallest gap the crosshair shows (px, Settings → Crosshair); the spread opens it further. */
   private minGap: number;
@@ -52,6 +54,7 @@ export class Hud {
     this.root.hidden = true;
     this.root.innerHTML = `
       <div class="hud-reddot"></div>
+      <div class="hud-scope"><i></i><i></i><i></i></div>
       <div class="hud-replica">
         <div class="hud-replica-name"><span></span><span class="hud-firemode"></span></div>
         <div class="hud-ammo"><span class="hud-mag"></span><span class="hud-mags"></span></div>
@@ -97,12 +100,15 @@ export class Hud {
 
   /**
    * Once per frame (`dt` seconds). `inPlay` is false once you've been hit: the crosshair and ammo panel go
-   * away. `spreadPx` is one standard deviation of where the next BB can go, in screen pixels. `aiming`: the sight
-   * is up at your eye, so the red dot takes the crosshair's place.
+   * away. `spreadPx` is one standard deviation of where the next BB can go, in screen pixels. `sight`: the optic
+   * up at your eye (null if none), whose red dot or scope reticle takes the crosshair's place.
    */
-  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, spreadPx: number, aiming: boolean, dt: number): void {
+  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, spreadPx: number, sight: OpticId | null, dt: number): void {
     if (this.shownInPlay !== inPlay) this.root.classList.toggle('out', !(this.shownInPlay = inPlay));
+    const aiming = sight !== null;
     if (this.shownAiming !== aiming) this.root.classList.toggle('aiming', (this.shownAiming = aiming));
+    const scoped = sight !== null && OPTICS[sight].scope;
+    if (this.shownScoped !== scoped) this.root.classList.toggle('scoped', (this.shownScoped = scoped));
     const gap = Math.round(Math.max(this.minGap, HUD.crosshairSpreadSigmas * spreadPx) / HUD.crosshairGapStep) * HUD.crosshairGapStep;
     if (gap !== this.shownGap) setCrosshairGap(this.crosshair, (this.shownGap = gap));
     const replica = loadout[armament.active]!;
@@ -113,7 +119,8 @@ export class Hud {
     if (s.fireMode !== fireMode) this.fireMode.textContent = s.fireMode = fireMode;
     if (s.mag !== ammo.mag) this.mag.textContent = String((s.mag = ammo.mag));
     // Compared on its own: switching replicas can change it with the count unchanged.
-    const low = isLowAmmo(ammo.mag, replica.magSize);
+    const handling = armament.handling[armament.active]!;
+    const low = isLowAmmo(ammo.mag, handling.magSize);
     if (s.low !== low) this.mag.classList.toggle('low', (s.low = low));
     if (this.shownReplica !== replica.id) {
       this.shownReplica = replica.id;
@@ -122,12 +129,12 @@ export class Hud {
       this.shownNext = -1;
       this.noticeLeft = 0; // a notice about the other replica no longer applies
     }
-    this.updateGauges(ammo, replica.magSize);
+    this.updateGauges(ammo, handling.magSize);
     // A notice is about the moment it was raised: a reload starting (or time passing) ends it.
     this.noticeLeft = armament.reload > 0 ? 0 : Math.max(0, this.noticeLeft - dt);
 
     const reloading = armament.reload > 0;
-    const pct = reloading ? Math.round((1 - armament.reload / replica.reloadTime) * 100) : -1;
+    const pct = reloading ? Math.round((1 - armament.reload / handling.reloadTime) * 100) : -1;
     if (s.reloadPct !== pct) {
       s.reloadPct = pct;
       this.reloadBar.classList.toggle('active', reloading);

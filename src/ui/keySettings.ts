@@ -134,6 +134,8 @@ export class KeySettings {
       this.listen(null);
       return;
     }
+    // The second press of a double-click on the box: its click cancels, as clicking the waiting box once more always did.
+    if (e.button === 0 && e.detail >= 2) return;
     e.preventDefault();
     e.stopPropagation();
     this.boundButton = e.button;

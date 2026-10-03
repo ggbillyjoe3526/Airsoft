@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import { REDUCED_MOTION } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import { LOADOUT } from '../config/replicas';
-import { createArmament, fitOptic } from '../sim/armament';
-import { RIFLE_OPTIC } from './replicaModels';
+import { createArmament, fitOptic, fitParts } from '../sim/armament';
+import { RIFLE_OPTIC, RIFLE_SCOPE } from './replicaModels';
 import { magazineOut, magazineSwap, sprintCarry, Viewmodel } from './viewmodel';
 
 describe('magazineOut', () => {
@@ -52,7 +52,7 @@ describe('Viewmodel reload', () => {
       const mag: THREE.Object3D[] = [];
       vm.scene.traverse((o) => o.name === 'magazine' && mag.push(o));
       const dt = 1 / 60;
-      const frame = () => vm.update(dt, 0, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+      const frame = () => vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 0);
       frame();
       expect(hand.position.length()).toBe(0);
       // Mid-swap: hand and magazine are far below the magwell together.
@@ -76,6 +76,33 @@ describe('Viewmodel reload', () => {
   }
 });
 
+describe('Viewmodel reload with a fitted magazine (M17b)', () => {
+  it("the support hand reaches the fitted magazine's base plate: higher on a low-cap, lower on an extended one", () => {
+    const parts = [{ grip: 'none', magazine: 'lowCap' }, { grip: 'none', magazine: 'extended' }] as const;
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT, [...parts]);
+    const hands: THREE.Object3D[] = [];
+    vm.scene.traverse((o) => o.name === 'supportHand' && hands.push(o));
+    const dt = 1 / 60;
+    for (const [slot, replica] of LOADOUT.entries()) {
+      arm.active = slot;
+      const magOf = (id: string) => vm.scene.getObjectByName(`magazine:${id}`);
+      const base = magOf(parts[slot]!.magazine)!.userData.toBase as THREE.Vector3;
+      expect(base).toBeDefined();
+      // Once the hand is on the magazine, it sits at the standard grab plus the fitted base's offset.
+      arm.reload = replica.reloadTime;
+      for (let t = 0; t < VIEWMODEL.reload.handMoveTime + 2 * dt; t += dt, arm.reload -= dt) vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 0);
+      const mag = hands[slot]!.parent!.getObjectByName('magazine')!;
+      const expected = (hands[slot]!.userData.toMag as THREE.Vector3).clone().add(base).add(mag.position);
+      expect(hands[slot]!.position.distanceTo(expected)).toBeLessThan(1e-9);
+      expect(Math.sign(base.y)).toBe(parts[slot]!.magazine === 'lowCap' ? 1 : -1);
+      arm.reload = 0;
+      for (let t = 0; t <= VIEWMODEL.reload.handMoveTime + dt; t += dt) vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 0);
+    }
+    vm.dispose();
+  });
+});
+
 describe('Viewmodel weapon switch mid-reload', () => {
   it('draws the other replica with its support hand on the grip, not snapping from the magazine', () => {
     const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
@@ -83,7 +110,7 @@ describe('Viewmodel weapon switch mid-reload', () => {
     const hands: THREE.Object3D[] = [];
     vm.scene.traverse((o) => o.name === 'supportHand' && hands.push(o));
     const dt = 1 / 60;
-    const frame = () => vm.update(dt, 0, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+    const frame = () => vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 0);
     arm.reload = LOADOUT[0]!.reloadTime;
     for (let i = 0; i < 30; i++, arm.reload -= dt) frame();
     expect(hands[0]!.position.length()).toBeGreaterThan(0.1);
@@ -103,7 +130,7 @@ describe('Viewmodel sway', () => {
     const arm = createArmament(LOADOUT);
     const rig = vm.scene.children.find((o) => o instanceof THREE.Group && o.children.length > 0)!;
     const dt = 1 / 60;
-    const frame = (yaw: number) => vm.update(dt, yaw, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+    const frame = (yaw: number) => vm.update(dt, yaw, 0, 0, 4.2, 0, arm, false, 0);
     frame(2.5); // first frame, already facing the spawn yaw
     const rest = rig.position.x;
     frame(2.5);
@@ -129,15 +156,51 @@ describe('Viewmodel optic', () => {
   it('shows the optic only when one is fitted, folding the iron sights down under it', () => {
     const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
     const arm = createArmament(LOADOUT);
-    const [optic] = named(vm, 'optic');
+    const [optic] = named(vm, 'optic:redDot');
     const [up] = named(vm, 'sightsUp');
     const [down] = named(vm, 'sightsDown');
-    expect(named(vm, 'optic')).toHaveLength(1); // only the rifle has a rail for one
-    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+    expect(named(vm, 'optic:redDot')).toHaveLength(1); // only the rifle has a rail for one
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
     expect([optic!.visible, up!.visible, down!.visible]).toEqual([false, true, false]);
     fitOptic(arm, LOADOUT, 'redDot');
-    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
     expect([optic!.visible, up!.visible, down!.visible]).toEqual([true, false, true]);
+    vm.dispose();
+  });
+
+  it('shows only the fitted optic, grip and magazine on each replica (M17b)', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    const shown = (name: string) => named(vm, name).map((o) => o.visible);
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
+    expect([...shown('magazine:standard'), ...shown('magazine:hiCap'), ...shown('magazine:extended')]).toEqual([true, true, false, false]);
+    expect([...shown('grip:vertical'), ...shown('grip:angled'), ...shown('optic:scope2x')]).toEqual([false, false, false]);
+    fitOptic(arm, LOADOUT, 'scope2x');
+    fitParts(arm, LOADOUT, [
+      { grip: 'angled', magazine: 'hiCap' },
+      { grip: 'none', magazine: 'extended' },
+    ]);
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
+    // Two standard magazines (rifle, pistol): both are swapped for the fitted kind.
+    expect([...shown('magazine:standard'), ...shown('magazine:hiCap'), ...shown('magazine:extended')]).toEqual([false, false, true, true]);
+    expect([...shown('grip:vertical'), ...shown('grip:angled'), ...shown('optic:scope2x'), ...shown('optic:redDot')]).toEqual([false, true, true, false]);
+    vm.dispose();
+  });
+
+  it('raised to the eye, puts the 2× scope on the same axis as the red dot (M17b)', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    fitOptic(arm, LOADOUT, 'scope2x');
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 1);
+    const [scope] = named(vm, 'optic:scope2x');
+    scope!.updateWorldMatrix(true, false);
+    const sc = RIFLE_SCOPE;
+    const back = scope!.localToWorld(new THREE.Vector3(0, RIFLE_OPTIC.axisUp, -(sc.from - sc.eyeLength)));
+    const front = scope!.localToWorld(new THREE.Vector3(0, RIFLE_OPTIC.axisUp, -(sc.from + sc.length + sc.bellLength)));
+    for (const p of [back, front]) {
+      expect(Math.hypot(p.x, p.y)).toBeLessThan(1e-6);
+      expect(p.z).toBeLessThan(-VIEWMODEL.near);
+    }
     vm.dispose();
   });
 
@@ -145,8 +208,8 @@ describe('Viewmodel optic', () => {
     const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
     const arm = createArmament(LOADOUT);
     fitOptic(arm, LOADOUT, 'redDot');
-    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, LOADOUT, false, 1);
-    const [optic] = named(vm, 'optic');
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 1);
+    const [optic] = named(vm, 'optic:redDot');
     optic!.updateWorldMatrix(true, false);
     const o = RIFLE_OPTIC;
     const back = optic!.localToWorld(new THREE.Vector3(0, o.axisUp, -o.from));
@@ -164,8 +227,8 @@ describe('Viewmodel optic', () => {
     const arm = createArmament(LOADOUT);
     fitOptic(arm, LOADOUT, 'redDot');
     for (let i = 0; i < 5; i++) vm.onShot(); // full auto: the kick is at kickMax
-    vm.update(0, 0, 0, 0, 4.2, 0, arm, LOADOUT, false, 1);
-    const [optic] = named(vm, 'optic');
+    vm.update(0, 0, 0, 0, 4.2, 0, arm, false, 1);
+    const [optic] = named(vm, 'optic:redDot');
     optic!.updateWorldMatrix(true, false);
     // The view's centre line (from the eye along -Z) in the optic's own frame.
     const toLocal = optic!.matrixWorld.clone().invert();
@@ -200,10 +263,10 @@ describe('sprint carry', () => {
       const arm = createArmament(LOADOUT);
       arm.active = slot;
       const dt = 1 / 60;
-      for (let i = 0; i < 60; i++) vm.update(dt, 0, 0, 6, 4.2, 1, arm, LOADOUT, false, 0); // sprinting
+      for (let i = 0; i < 60; i++) vm.update(dt, 0, 0, 6, 4.2, 1, arm, false, 0); // sprinting
       const total = 0.2;
       // The lockout runs down a tick a frame; the frame before firing unlocks still has a tick of it left.
-      for (let lockout = total; lockout > dt / 2; lockout -= dt) vm.update(dt, 0, 0, 3, 4.2, sprintCarry(lockout, total), arm, LOADOUT, false, 0);
+      for (let lockout = total; lockout > dt / 2; lockout -= dt) vm.update(dt, 0, 0, 3, 4.2, sprintCarry(lockout, total), arm, false, 0);
       const markers: THREE.Object3D[] = [];
       vm.scene.traverseVisible((o) => o.name === 'muzzle' && markers.push(o));
       vm.scene.updateMatrixWorld(true);
@@ -225,16 +288,16 @@ describe('Viewmodel reduced motion (M18)', () => {
     const rig = vm.scene.children.find((o) => o instanceof THREE.Group)!;
     const walkY: number[] = [];
     const dt = 1 / 60;
-    vm.update(dt, 0, 0, 4.2, 4.2, 0, arm, LOADOUT, false, 0);
+    vm.update(dt, 0, 0, 4.2, 4.2, 0, arm, false, 0);
     for (let i = 0; i < 60; i++) {
-      vm.update(dt, 0, 0, 4.2, 4.2, 0, arm, LOADOUT, false, 0);
+      vm.update(dt, 0, 0, 4.2, 4.2, 0, arm, false, 0);
       walkY.push(rig.position.y);
     }
-    vm.update(dt, 0.3, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+    vm.update(dt, 0.3, 0, 0, 4.2, 0, arm, false, 0);
     const turned = rig.position.x;
     const rest = rig.position.z;
     vm.onShot();
-    vm.update(dt, 0.3, 0, 0, 4.2, 0, arm, LOADOUT, false, 0);
+    vm.update(dt, 0.3, 0, 0, 4.2, 0, arm, false, 0);
     return { walkY, turned, kicked: rig.position.z - rest };
   }
 

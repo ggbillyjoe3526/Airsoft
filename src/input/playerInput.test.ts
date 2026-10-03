@@ -218,7 +218,7 @@ describe('aim toggle (M18)', () => {
     const { keys, input } = toggleSetup();
     const cmd = createCommand();
     keys.press('aim');
-    input.update(1, 2, 0, false);
+    input.update(1, 2, 0, 1, false);
     input.fillCommand(cmd);
     expect(cmd.aim).toBe(false);
   });

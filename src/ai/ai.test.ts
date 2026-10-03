@@ -14,7 +14,7 @@ import { buildNavGrid, isWalkableAt, type NavGrid } from '../nav/navGrid';
 import { DEPOT, DEPOT_LAYOUT } from '../map/depot';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { isInPlay } from '../sim/elimination';
-import { aimDirection, type WorldQuery } from '../sim/armament';
+import { aimDirection, fitParts, type WorldQuery } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import type { CharacterMover } from '../sim/movement';
@@ -536,6 +536,28 @@ describe('bots in a duel', () => {
         if (b.hasLastKnown && !b.targetVisible) heardIt = true;
       });
       expect(heardIt, `${pace} at ${dist} m`).toBe(heard);
+    }
+  });
+
+  it('hear a hi-cap rattle on a walk behind them, but only close by (M17b)', () => {
+    expect(BOTS.footstepHearingRattle).toBeLessThan(BOTS.footstepHearingRun);
+    for (const [dist, heard] of [
+      [5, true],
+      [9, false],
+    ] as const) {
+      const { run, commands, bots, player } = duel(dist, (st) => (st.characters[1]!.yaw += Math.PI));
+      fitParts(player.armament, LOADOUT, [{ grip: 'none', magazine: 'hiCap' }]);
+      player.stepDistance = FOOTSTEPS.strideRun - 0.05; // the first rattle comes at once, before the bot wanders off
+      const cmd = commands.get(0)!;
+      cmd.yaw = -Math.PI / 2;
+      cmd.forward = 1;
+      cmd.walk = true;
+      let heardIt = false;
+      run(0.3, () => {
+        const b = bots.bots[0]!;
+        if (b.hasLastKnown && !b.targetVisible) heardIt = true;
+      });
+      expect(heardIt, `hi-cap walk at ${dist} m`).toBe(heard);
     }
   });
 

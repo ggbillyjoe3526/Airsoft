@@ -8,6 +8,7 @@ import { ROUNDS } from './config/hits';
 import type { CrosshairSettings } from './config/matchInfo';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
+import type { ReplicaParts } from './config/attachments';
 import type { OpticChoice } from './config/optics';
 import { QUALITY, type QualityPreset } from './config/render';
 import { LOADOUT_SLOTS, type ReplicaConfig } from './config/replicas';
@@ -26,7 +27,7 @@ import type { GameState } from './sim/state';
 import { addMatch, loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
 import { loadCrosshair } from './ui/crosshair';
 import { DebugOverlay } from './ui/debugOverlay';
-import { loadBbWeight, loadHopUp, loadoutSummary, loadSlotPick } from './ui/loadoutChoice';
+import { loadBbWeight, loadHopUp, loadoutSummary, loadParts, loadSlotPick } from './ui/loadoutChoice';
 import { browserStorage } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
@@ -102,6 +103,8 @@ export class Game {
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
+  /** Each replica's grip and magazine as picked (M17b), by replica id. */
+  private readonly parts = new Map<string, ReplicaParts>();
   /** Reduced motion (Settings → Accessibility), kept across matches. */
   private reducedMotion = loadReducedMotion();
 
@@ -172,9 +175,16 @@ export class Game {
         optic: { initial: this.optic, onChange: (o) => (this.optic = o) },
         hopUp: { initial: (r) => this.hopUpOf(r), onChange: (r, dial) => this.hopUps.set(r.id, dial) },
         bbWeight: { initial: (r) => this.bbWeightOf(r), onChange: (r, grams) => this.bbWeights.set(r.id, grams) },
+        parts: { initial: (r) => this.partsOf(r), onChange: (r, parts) => this.parts.set(r.id, parts) },
         summary: () => ({
           replicas: this.picked.map((r) => r.name).join('\n'),
-          detail: loadoutSummary(this.picked, this.optic, this.picked.map((r) => this.hopUpOf(r)), this.picked.map((r) => this.bbWeightOf(r))),
+          detail: loadoutSummary(
+            this.picked,
+            this.optic,
+            this.picked.map((r) => this.hopUpOf(r)),
+            this.picked.map((r) => this.bbWeightOf(r)),
+            this.picked.map((r) => this.partsOf(r)),
+          ),
         }),
       },
       onPlay: () => this.play(),
@@ -225,6 +235,10 @@ export class Game {
     this.session?.combat.setCrosshair(crosshair);
   }
 
+  private partsOf(r: ReplicaConfig): ReplicaParts {
+    return this.parts.get(r.id) ?? loadParts(r);
+  }
+
   /** Reduced motion turned on or off: kept for the next match and applied to the one loaded. */
   private changeReducedMotion(on: boolean): void {
     this.reducedMotion = on;
@@ -268,6 +282,7 @@ export class Game {
         optic: this.optic,
         hopUps: this.picked.map((r) => this.hopUpOf(r)),
         bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
+        parts: this.picked.map((r) => this.partsOf(r)),
       }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair);
       this.session.setMotion(motionScale(this.reducedMotion));
     }

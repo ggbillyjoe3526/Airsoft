@@ -147,6 +147,9 @@ export const MOUSE_DPI = {
   step: 50,
 } as const;
 
+/** The cm/360 a player can type (centimetres of mouse travel per full turn). */
+export const TURN_CM = { min: 1, max: 1000 } as const;
+
 /** Degrees of view turn per mouse count at sensitivity 1 in other shooters, for the "same as" line. */
 export const OTHER_SHOOTERS: readonly { name: string; degreesPerCount: number }[] = [
   { name: 'CS2', degreesPerCount: 0.022 },

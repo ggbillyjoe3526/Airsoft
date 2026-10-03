@@ -11,6 +11,7 @@ import type { CrosshairSettings } from './config/matchInfo';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
+import type { ReplicaParts } from './config/attachments';
 import { type OpticChoice, opticOf } from './config/optics';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
@@ -30,7 +31,7 @@ import { MatchPresentation } from './render/matchPresentation';
 import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './render/proceduralTextures';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
-import { fitOptic, setBbWeights, setHopUps } from './sim/armament';
+import { fitOptic, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { placeTeams, restartMatch } from './sim/round';
@@ -50,10 +51,11 @@ export interface MatchSetup {
   difficulty: Difficulty;
   /** The replica in each loadout slot (primary, secondary); everyone in the match carries these (bots with factory setups). */
   loadout: readonly ReplicaConfig[];
-  /** The optic for the replica with a rail, and each slot's hop-up dial and BB weight (grams), from the Loadout screen. */
+  /** The optic for the replica with a rail, and each slot's hop-up dial, BB weight (grams), grip and magazine, from the Loadout screen. */
   optic: OpticChoice;
   hopUps: readonly number[];
   bbWeights: readonly number[];
+  parts: readonly ReplicaParts[];
 }
 
 /**
@@ -154,7 +156,8 @@ export class MatchSession {
    * thinking before each. Returns how many ticks ran.
    */
   advance(dt: number): number {
-    this.input.update(this.player.armament.active, this.loadout.length, this.combat.aimRaised, canAimDownSights(this.player.armament, this.loadout));
+    const p = this.player;
+    this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament, this.loadout));
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
     const ticks = advanceStepper(this.stepper, dt);
     for (let i = 0; i < ticks; i++) {
@@ -257,9 +260,13 @@ export class MatchSession {
     return this.state.characters[0]!;
   }
 
-  /** Fits the picked optic, hop-up dials and BB weights to the player's replicas. A direct sim-state change, between rounds. */
+  /**
+   * Fits the picked optic, hop-up dials, BB weights, grips and magazines to the player's replicas (fresh magazines of
+   * the picked kind). A direct sim-state change, between rounds.
+   */
   private fitPickedLoadout(): void {
     fitOptic(this.player.armament, this.loadout, opticOf(this.setup.optic));
+    fitParts(this.player.armament, this.loadout, this.setup.parts);
     setHopUps(this.player.armament, this.setup.hopUps);
     setBbWeights(this.player.armament, this.setup.bbWeights);
   }

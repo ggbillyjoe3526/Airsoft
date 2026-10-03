@@ -32,7 +32,9 @@ export type SettingField =
   | `volume.${string}`
   | `bbWeight.${string}`
   | `slot.${string}`
-  | `crosshair.${string}`;
+  | `crosshair.${string}`
+  | `grip.${string}`
+  | `mag.${string}`;
 
 /** Where earlier builds kept a setting, before the settings object. */
 const LEGACY_KEYS: Partial<Record<SettingField, string>> = {

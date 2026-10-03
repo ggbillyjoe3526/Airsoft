@@ -55,7 +55,7 @@ describe('BB tracers leave the muzzle in line with the barrel (owner playtest, 2
         arm.active = slot;
         if (aim) fitOptic(arm, LOADOUT, 'redDot');
         if (kicked) for (let i = 0; i < 5; i++) vm.onShot(); // stacked to VIEWMODEL.kickMax
-        vm.update(0, 0, 0, 0, 4.2, 0, arm, LOADOUT, false, aim);
+        vm.update(0, 0, 0, 0, 4.2, 0, arm, false, aim);
         const cam = mainCamera();
         const muzzle = new THREE.Vector3();
         expect(vm.muzzleWorld(cam, muzzle)).toBe(true);

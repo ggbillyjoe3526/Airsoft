@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, GAS_PISTOL, hopUpLift, LOADOUT, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
-import { type ArmamentContext, createArmament, type Muzzle, nextFireMode, nextSpare, setBbWeights, setHopUps, stepArmament, type WorldQuery } from './armament';
+import { type ArmamentContext, createArmament, fitParts, type Muzzle, nextFireMode, nextSpare, rattles, setBbWeights, setHopUps, stepArmament, type WorldQuery } from './armament';
 import { createCharacter, respawnCharacter } from './character';
 import { createBBPool } from './ballistics';
 import { createCommand, type PlayerCommand } from './commands';
@@ -416,5 +416,45 @@ describe('fire selector (owner, 2026-10-03)', () => {
     expect(c.armament.hopUps).toEqual([0.4, 0.8]);
     expect(c.armament.bbWeights).toEqual([0.28, 0.25]);
     expect(c.armament.ammo[0]!.mag).toBe(AEG.magSize);
+  });
+});
+
+describe('attachments on the armament (M17b)', () => {
+  it('fits grips and magazines per replica, with fresh magazines of the new kind', () => {
+    const a = createArmament(LOADOUT);
+    fitParts(a, LOADOUT, [
+      { grip: 'angled', magazine: 'hiCap' },
+      { grip: 'vertical', magazine: 'extended' },
+    ]);
+    expect(a.parts).toEqual([
+      { grip: 'angled', magazine: 'hiCap' },
+      { grip: 'none', magazine: 'extended' }, // the pistol has no rail for a grip
+    ]);
+    expect(a.ammo[0]!.mag).toBe(120);
+    expect(a.ammo[0]!.pouch).toEqual([120]);
+    expect(a.ammo[1]!.mag).toBe(27);
+    expect(a.ammo[1]!.pouch).toHaveLength(GAS_PISTOL.mags - 1);
+  });
+
+  it('reloads and draws in the times the parts give', () => {
+    const { a, run } = setup();
+    fitParts(a, LOADOUT, [{ grip: 'none', magazine: 'lowCap' }, { grip: 'none', magazine: 'extended' }]);
+    a.ammo[0]!.mag = 0;
+    run(1, (c) => (c.reload = true));
+    expect(a.reload).toBeCloseTo(AEG.reloadTime * 0.8, 6);
+    run(Math.ceil((AEG.reloadTime * 0.8) / DT) + 1);
+    expect(a.ammo[0]!.mag).toBe(30);
+    run(1, (c) => (c.switchTo = 1));
+    expect(a.draw).toBeGreaterThan(GAS_PISTOL.drawTime);
+  });
+
+  it('keeps the parts through a respawn, refilling their magazines', () => {
+    const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
+    fitParts(c.armament, LOADOUT, [{ grip: 'vertical', magazine: 'hiCap' }]);
+    c.armament.ammo[0]!.mag = 3;
+    respawnCharacter(c, LOADOUT);
+    expect(c.armament.parts[0]).toEqual({ grip: 'vertical', magazine: 'hiCap' });
+    expect(c.armament.ammo[0]!.mag).toBe(120);
+    expect(rattles(c.armament)).toBe(true);
   });
 });

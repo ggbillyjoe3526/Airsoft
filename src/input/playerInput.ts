@@ -88,12 +88,13 @@ export class PlayerInput {
   /**
    * Call once per render frame, before any ticks run. `activeSlot`/`slotCount` let the
    * mouse wheel cycle replicas; `aimRaised` (how far the sight is raised to the eye, 0..1) blends in the aiming
-   * sensitivity as the view zooms, so the turn rate never jumps. `canAim`: the replica in hand has a sight
+   * sensitivity as the view zooms, so the turn rate never jumps; `aimScale` scales it for the optic in use (a 2× scope
+   * turns slower than the red dot the setting is for). `canAim`: the replica in hand has a sight
    * (sim/aiming.ts canAimDownSights), so a toggled aim doesn't wait, unseen, for a replica that has one.
    */
-  update(activeSlot: number, slotCount: number, aimRaised = 0, canAim = true): void {
+  update(activeSlot: number, slotCount: number, aimRaised = 0, aimScale = 1, canAim = true): void {
     this.pointer.consumeDelta(this.mouseDelta);
-    const k = MOUSE.radiansPerCount * this.sensitivity * (1 + (this.aimSensitivity - 1) * aimRaised);
+    const k = MOUSE.radiansPerCount * this.sensitivity * (1 + (this.aimSensitivity * aimScale - 1) * aimRaised);
     const maxPitch = this.movement.maxPitch;
     this.yaw = wrapAngle(this.yaw - this.mouseDelta.x * k);
     const up = this.invertY ? 1 : -1;

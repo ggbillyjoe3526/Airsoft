@@ -1,3 +1,4 @@
+import { factoryParts, type Handling, handlingOf, partsFor, type ReplicaParts } from '../config/attachments';
 import type { BallisticsConfig } from '../config/ballistics';
 import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
@@ -76,11 +77,23 @@ export interface Armament {
   hopUps: number[];
   /** The BB weight each replica shoots (grams, see ReplicaConfig.bbWeight), by loadout slot. Set before a match, kept between rounds. */
   bbWeights: number[];
+  /** The grip and magazine fitted to each replica (config/attachments.ts), by loadout slot. Set before a match, kept between rounds. */
+  parts: ReplicaParts[];
+  /** What those parts make of each replica (magazine size and count, reload, draw …): read these, not the replica's own. */
+  handling: Handling[];
 }
 
-export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
+/** Full magazines for one replica: the loaded one and the spares. */
+function fullAmmo(h: Handling): ReplicaAmmo {
+  return { mag: h.magSize, pouch: Array.from({ length: Math.max(0, h.mags - 1) }, () => h.magSize) };
+}
+
+/** A fresh armament: full magazines, everything as each replica comes unless `parts` (by slot) says otherwise. */
+export function createArmament(loadout: readonly ReplicaConfig[], parts: readonly ReplicaParts[] = []): Armament {
+  const fitted = loadout.map((r, i) => partsFor(r, parts[i] ?? factoryParts(r)));
+  const handling = loadout.map((r, i) => handlingOf(r, fitted[i]!));
   return {
-    ammo: loadout.map((r) => ({ mag: r.magSize, pouch: Array.from({ length: Math.max(0, r.mags - 1) }, () => r.magSize) })),
+    ammo: handling.map(fullAmmo),
     active: 0,
     cooldown: 0,
     reload: 0,
@@ -94,7 +107,22 @@ export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
     optics: loadout.map(() => null),
     hopUps: loadout.map((r) => r.hopUpDial),
     bbWeights: loadout.map((r) => r.bbWeight),
+    parts: fitted,
+    handling,
   };
+}
+
+/**
+ * Fits each replica's grip and magazine (by loadout slot; parts a replica can't take keep its factory ones) and fills
+ * its magazines for the new parts. Between rounds only: the magazines start full.
+ */
+export function fitParts(a: Armament, loadout: readonly ReplicaConfig[], parts: readonly ReplicaParts[]): void {
+  for (let i = 0; i < loadout.length && i < parts.length; i++) {
+    const r = loadout[i]!;
+    a.parts[i] = partsFor(r, parts[i]!);
+    a.handling[i] = handlingOf(r, a.parts[i]!);
+    a.ammo[i] = fullAmmo(a.handling[i]!);
+  }
 }
 
 /** Sets the BB weight each replica shoots (grams, by loadout slot; missing slots and weights not offered keep theirs). */
@@ -111,6 +139,12 @@ export function setHopUps(a: Armament, dials: readonly number[]): void {
     const d = dials[i]!;
     if (Number.isFinite(d)) a.hopUps[i] = Math.min(HOP_UP.maxDial, Math.max(HOP_UP.minDial, d));
   }
+}
+
+/** True if any magazine carried rattles as you move (a hi-cap): quiet moves aren't silent (sim/footsteps.ts). */
+export function rattles(a: Armament): boolean {
+  for (const h of a.handling) if (h.rattles) return true;
+  return false;
 }
 
 /** Fits `optic` (or nothing) to every replica in the loadout that has an optic mount. */
@@ -204,7 +238,7 @@ export function stepArmament(
     a.reload = 0;
     replica = ctx.loadout[a.active]!;
     ammo = a.ammo[a.active]!;
-    a.draw = replica.drawTime;
+    a.draw = a.handling[a.active]!.drawTime;
     a.dryFiredThisPull = false; // a dry click on the other replica doesn't count for this one
     a.burstShotsLeft = 0;
     ctx.events.push({ type: 'draw', characterId, replicaId: replica.id });
@@ -223,7 +257,7 @@ export function stepArmament(
   if (cmd.reload && ready) {
     if (canReload(ammo)) startReload(characterId, a, replica, ctx);
     // Nothing fuller to swap in: say so, unless the magazine is full anyway (then R obviously does nothing).
-    else if (ammo.mag < replica.magSize) ctx.events.push({ type: 'reloadRefused', characterId, replicaId: replica.id });
+    else if (ammo.mag < a.handling[a.active]!.magSize) ctx.events.push({ type: 'reloadRefused', characterId, replicaId: replica.id });
   }
 
   const pressed = cmd.fire && !a.triggerWasDown;
@@ -266,7 +300,7 @@ export function stepArmament(
 }
 
 function startReload(characterId: number, a: Armament, replica: ReplicaConfig, ctx: ArmamentContext): void {
-  a.reload = replica.reloadTime;
+  a.reload = a.handling[a.active]!.reloadTime;
   ctx.events.push({ type: 'reloadStart', characterId, replicaId: replica.id });
 }
 

@@ -1,4 +1,4 @@
-import { AIM_MODES, CROUCH_MODES, type CrouchMode, type HoldMode, INVERT_MOUSE, MOUSE, MOUSE_DPI, OTHER_SHOOTERS, SPRINT_MODES } from '../config/controls';
+import { AIM_MODES, CROUCH_MODES, type CrouchMode, type HoldMode, INVERT_MOUSE, MOUSE, MOUSE_DPI, OTHER_SHOOTERS, SPRINT_MODES, TURN_CM } from '../config/controls';
 import { AIMING } from '../config/optics';
 import { cmPer360, sameSensitivityAs, sensitivityForCm } from '../input/sensitivity';
 import { saveSetting } from '../settings/storage';
@@ -18,8 +18,17 @@ export interface ControlsSettingsOptions {
 
 const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v));
 
-/** A number box that commits on Enter or leaving it (not on every key, so typing "25" never passes through "2"). */
-function numberBox(label: string, range: { min: number; max: number; step: number | 'any' }, value: string, onCommit: (v: number) => void): HTMLInputElement {
+/**
+ * A number box that commits on Enter or leaving it (not on every key, so typing "25" never passes through "2"). A value
+ * outside [min, max] isn't taken: `onReject` puts the box back to what's in use.
+ */
+function numberBox(
+  label: string,
+  range: { min: number; max: number; step: number | 'any' },
+  value: string,
+  onCommit: (v: number) => void,
+  onReject: () => void,
+): HTMLInputElement {
   const box = el('input', 'menu-number');
   box.type = 'number';
   box.min = String(range.min);
@@ -29,7 +38,8 @@ function numberBox(label: string, range: { min: number; max: number; step: numbe
   box.setAttribute('aria-label', label);
   box.addEventListener('change', () => {
     const v = Number(box.value);
-    if (box.value.trim() !== '' && Number.isFinite(v)) onCommit(v);
+    if (box.value.trim() !== '' && Number.isFinite(v) && v >= range.min && v <= range.max) onCommit(v);
+    else onReject();
   });
   return box;
 }
@@ -54,16 +64,29 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
   const sliderInput = slider.querySelector('input')!;
   const sliderOutput = slider.querySelector('output')!;
 
-  const cm = numberBox('Turn distance, cm per 360°', { min: 1, max: 1000, step: 'any' }, '', (v) => {
-    const fromCm = clamp(sensitivityForCm(v, dpi), MOUSE.minSensitivity, MOUSE.maxSensitivity);
-    saveSetting('sensitivity', fromCm);
-    setSensitivity(fromCm, true);
-  });
-  const dpiBox = numberBox('Mouse DPI', MOUSE_DPI, String(dpi), (v) => {
-    dpi = clamp(Math.round(v), MOUSE_DPI.min, MOUSE_DPI.max);
-    saveSetting('mouseDpi', dpi);
-    refreshTurn();
-  });
+  // A cm/360 beyond the sensitivity range is clamped to it, and the box then shows the cm/360 actually in use.
+  const cm = numberBox(
+    'Turn distance, cm per 360°',
+    { ...TURN_CM, step: 'any' },
+    '',
+    (v) => {
+      const fromCm = clamp(sensitivityForCm(v, dpi), MOUSE.minSensitivity, MOUSE.maxSensitivity);
+      saveSetting('sensitivity', fromCm);
+      setSensitivity(fromCm, true);
+    },
+    () => refreshTurn(),
+  );
+  const dpiBox = numberBox(
+    'Mouse DPI',
+    MOUSE_DPI,
+    String(dpi),
+    (v) => {
+      dpi = Math.round(v);
+      saveSetting('mouseDpi', dpi);
+      refreshTurn();
+    },
+    () => refreshTurn(),
+  );
   const turn = el('div', 'menu-row-control menu-turn');
   turn.append(cm, el('span', '', 'cm at'), dpiBox, el('span', '', 'DPI'));
   const turnRow = menuRow('Turn distance (cm/360)', '', turn);

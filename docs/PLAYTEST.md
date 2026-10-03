@@ -137,6 +137,27 @@ replica per slot for now), then the optic, the **BB weight** (0.20, 0.25 or 0.28
 - [ ] **Back on New game** the Loadout button lists the weights (e.g. "0.28 g / 0.20 g BBs"), and they are still
   picked after reloading the page. Bots always shoot their replicas' standard BBs.
 
+## Loadout: attachments (M17b)
+
+Start, then Loadout, rifle. Under the hop-up: **Grip** (none, vertical, angled) and **Magazine** (standard, hi-cap,
+low-cap), each with a line in numbers; the optic row has a **2× scope**. The pistol has its own Magazine row
+(standard, extended); its optic and grip rows say it has no rail. **Skins** is greyed and marked LATER.
+
+- [ ] **2× scope:** hold the right button. The sight comes up a little slower than the red dot, then only a round
+  eyepiece with a crosshair and a red centre dot shows (check you can find it against a dark wall), and the view is twice as close. Turning feels the same speed across the
+  eyepiece as with the red dot. Is it worth it on Depot's long lanes, and is the blind surround a fair cost?
+- [ ] **Vertical grip:** sprint, stop and fire at once. The crosshair closes up sooner than with no grip. Switching to
+  the rifle is a touch slower.
+- [ ] **Angled grip:** switch to the rifle and raise the sight: both a little quicker. After a sprint the crosshair
+  stays wide a moment longer.
+- [ ] **Hi-cap:** the HUD shows 120 BBs and one spare. Walk (or crouch-walk) near a bot that faces away: it hears a
+  rattle of loose BBs (you hear it too, quieter: is it tolerable over a long walk?) and turns round within about 7 m; with the standard magazine walking stays silent.
+- [ ] **Low-cap:** 30 BBs and four spares; the change is quicker, and the left hand reaches the shorter magazine's base. **Pistol extended:** 27 BBs, slower to draw.
+- [ ] **Each part shows on the rifle** (simple shapes for now): the scope, the grip under the handguard, the hi-cap's
+  winding wheel, the shorter low-cap, the pistol's longer magazine.
+- [ ] **Back on New game** the Loadout button lists the parts that differ from stock (e.g. "2× scope · Angled grip ·
+  Hi-cap mag"), and they are still picked after reloading the page. Bots keep stock parts.
+
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the
@@ -210,9 +231,10 @@ swap ends after round 4.
   the Mode button and the rules underneath change. Open it again and press Esc or ×: it closes with no change.
   Do the same with **Difficulty** (Easy, Normal, Hard).
 - [ ] **Click Loadout.** The AEG rifle (primary) and gas pistol (secondary) are on the left, with "More replicas
-  later" under each. On the right: the replica in that slot, the optic, BB weight and hop-up dial for the rifle, then
-  grip, magazine and power greyed out and marked LATER. Click the pistol: its own BB weight and hop-up dial, and its gas
-  type marked LATER. Back returns to New game, and the Loadout button shows your optic, BB weights and dials.
+  later" under each. On the right: the replica in that slot, the optic, BB weight, hop-up dial, grip and magazine for
+  the rifle, then power and skins greyed out and marked LATER. Click the pistol: its own BB weight, hop-up dial and
+  magazine, and its gas type and skins marked LATER. Back returns to New game, and the Loadout button shows your
+  optic, any parts that differ from stock, BB weights and dials.
 - [ ] **Click Settings.** Tabs on the left: **Controls** (see Comfort and controls below), **Key bindings**,
   **Graphics**, **Crosshair**, **Audio** (volumes, see Sound below) and **Accessibility**. Back returns to New game.
 - [ ] **Graphics.** A **Field of view** slider at 100°, and **Quality** greyed out (High, LATER). No Brightness.

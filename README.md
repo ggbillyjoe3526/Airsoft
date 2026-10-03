@@ -115,11 +115,13 @@ Then open **http://localhost:4173**.
 - **Bot difficulty** (Easy, Normal, Hard) is picked on the New game screen and applies to all bots, teammates too.
   On Normal, a bot's first BBs up close can miss, and
   moving targets are harder for bots to hit.
-- **Loadout, before a match:** the Loadout screen (**Start**, then **Loadout**) fits the rifle's optic (iron sights or a red dot) and
+- **Loadout, before a match:** the Loadout screen (**Start**, then **Loadout**) fits the rifle's optic (iron sights, a red dot or a 2× scope) and
   sets each replica's **hop-up**: the backspin that keeps a BB flying flat. Out of the box the rifle is on target to
   about 38 m and the pistol to about 25 m; turn it up too far and BBs rise and float. It also picks each replica's
-  **BB weight** (0.20 to 0.28 g): heavier BBs leave slower, carry a little further and need more hop. Grips, magazines and gas
-  type are listed there too, marked LATER: they come in later updates.
+  **BB weight** (0.20 to 0.28 g): heavier BBs leave slower, carry a little further and need more hop. The rifle takes a
+  vertical or angled **grip**, and each replica a choice of **magazines** (a hi-cap or low-cap rifle magazine, an
+  extended pistol one): each is a trade-off, spelled out in numbers under it. Gas type and skins are listed too, marked
+  LATER: they come in later updates.
 
 ### Controls
 
@@ -129,7 +131,7 @@ Then open **http://localhost:4173**.
 | Mouse | Aim |
 | Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click). Fire and aim can be moved to any key or mouse button, side buttons included (**Settings**, **Key bindings**). |
 | B | Fire mode: step the AEG rifle through Semi, Burst and Auto (the pistol is semi only) |
-| Right click (hold) | Aim down sights: only with an optic fitted (pick **Red dot** for the rifle on the Loadout screen). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. **Settings**, Controls, can make it a toggle. |
+| Right click (hold, or toggle) | Aim down sights: only with an optic fitted (pick **Red dot** for the rifle on the Loadout screen). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. **Settings**, Controls, can make it a toggle. |
 | Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
 | Left Alt | Sprint (forward only; hold, or a toggle under **Settings**, Controls) |
 | C | Crouch: press to go down, again to stand (sprint or jump also stands you up). **Settings**, Controls, can switch it to hold. |
@@ -170,7 +172,7 @@ the first public release. More modes, maps, replicas, loadouts and customisation
 arrives as a pull request that the owner reviews and merges. Later, development
 moves to an `alpha` branch and testing to a `beta` branch, and `main` only receives tested releases.
 
-**Not yet:** more maps or replicas, real art, and the menu items marked LATER (grips, magazines, gas type,
+**Not yet:** more maps or replicas, real art, and the menu items marked LATER (gas type, skins,
 graphics quality, audio and accessibility settings).
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels and Attack / Defend balance still need

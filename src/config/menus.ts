@@ -15,11 +15,16 @@ export const POWER_LABELS: Readonly<Record<PowerSource, { tag: string; row: stri
   gas: { tag: 'Gas', row: 'Gas type', value: 'Green gas' },
 };
 
-/** Loadout parts not built yet, shown as placeholders (with the replica's current value where it has one). */
-export const LOADOUT_LATER = {
-  grip: 'Standard',
-  /** Shown in the optic row of a replica with no rail. */
+/** Shown greyed in the optic and grip rows of a replica with no rail for one (M17b). */
+export const LOADOUT_FIXED = {
   noOptic: 'Iron sights',
+  noGrip: 'No rail for one',
+} as const;
+
+/** Loadout parts not built yet, shown as placeholders. */
+export const LOADOUT_LATER = {
+  /** Skins come with customisation (v0.5): the row keeps their place (M17b). */
+  skins: 'Replicas and outfit',
 } as const;
 
 export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'audio' | 'accessibility';
