@@ -5,7 +5,7 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-02 · `main` (the code bug pass was committed straight to `main` at the owner's request)._
+_Last updated: 2026-10-03 · `main` (the code bug pass was committed straight to `main` at the owner's request)._
 
 ## Where we are
 
@@ -17,9 +17,9 @@ _Last updated: 2026-10-02 · `main` (the code bug pass was committed straight to
   ROADMAP, Phase 3 bug pass). Smaller leftovers went to KNOWN_ISSUES ("Bug pass 2026-10-02").
 - The Attack / Defend balance guard was re-measured over seeds 1–48 (attackers 53%); its ceiling is now 67% because
   the 16 guard seeds read high (63%). See DECISIONS.
-- **Old branches:** `audit-fixes/ci-smoke-test`, `audit-fixes/now`, `docs/pull-request-workflow`, `docs/roadmap-audit`
-  and `elevation/c05` are fully in `main` and safe to delete. The cloud session couldn't delete them (its GitHub
-  access doesn't allow deleting branches), so the owner deletes them on GitHub's Branches page.
+- **Branches and name (2026-10-03):** the owner deleted the old merged branches, so only `main` is left, and renamed
+  the repository to `Airsoft` (capital A). GitHub redirects the old lowercase links. The cloud session can't delete
+  branches (its GitHub access doesn't allow it), so the owner deletes merged branches on GitHub's Branches page.
 - **The owner playtests next** (`docs/PLAYTEST.md`, all sections, plus its new "Fixed in the code bug pass" list) and
   then decides whether to tag `v0.1-alpha.3`. **Don't tag it**; the owner tags.
 - The critic runs on Opus (`.claude/agents/critic.md`). The owner plays on an RTX 5090 desktop; the iGPU 60 FPS
