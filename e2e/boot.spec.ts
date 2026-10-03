@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Smoke test: the built game boots, starts a match with a red dot fitted, fires, reloads, moves the fire selector,
- * aims down the sight and keeps running without a page error.
+ * Smoke test: the built game boots to the title screen, goes through New game (a pop-up, the Loadout and Settings
+ * screens) and starts a match with a red dot fitted, fires, reloads, moves the fire selector, aims down the sight and
+ * keeps running without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
@@ -18,30 +19,56 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const errorList = () => (errors.length > 0 ? errors.join(' | ') : 'none');
 
   await page.goto('/?nolock&seed=1');
-  // Wait for the start screen or the boot's own failure text, whichever comes first.
+  // Wait for the title screen or the boot's own failure text, whichever comes first.
   await page.waitForFunction(
-    () => document.querySelector('.start-play') !== null || /Failed/.test(document.getElementById('loading')?.textContent ?? ''),
+    () => document.querySelector('.menu-title-start') !== null || /Failed/.test(document.getElementById('loading')?.textContent ?? ''),
     undefined,
     { timeout: 30_000 },
   ).catch(() => undefined);
-  if ((await page.locator('.start-play').count()) === 0) {
+  if ((await page.locator('.menu-title-start').count()) === 0) {
     const loading = (await page.locator('#loading').textContent().catch(() => null)) ?? '(gone)';
-    throw new Error(`The start screen never appeared. Loading text: "${loading}". Page errors: ${errorList()}`);
+    throw new Error(`The title screen never appeared. Loading text: "${loading}". Page errors: ${errorList()}`);
   }
-  await expect(page.locator('.start-play')).toBeVisible();
   await expect(page.locator('#loading')).toHaveCount(0);
-  await expect(page.locator('.start-goal')).not.toBeEmpty();
+  await expect(page.locator('.menu-title-wordmark')).toBeVisible();
 
-  // The loadout is set before the match: the optic and a hop-up dial per replica.
-  await expect(page.locator('.start-loadout')).toBeVisible();
-  await expect(page.locator('.start-hopup input[type=range]')).toHaveCount(2);
+  // Title → Start → New game, with the picked mode's rules under the four buttons.
+  await page.getByRole('button', { name: 'Start' }).click();
+  const setup = page.locator('.menu-setup');
+  await expect(setup).toBeVisible();
+  await expect(page.locator('.setup-rules')).not.toBeEmpty();
 
-  // Fit the red dot before the match (the optic picker on the start screen).
-  await page.getByRole('button', { name: 'Red dot' }).click();
-  await expect(page.getByRole('button', { name: 'Red dot' })).toHaveAttribute('aria-pressed', 'true');
+  // Difficulty opens a pop-up; picking an option closes it and the button shows the choice.
+  await setup.getByRole('button', { name: /Difficulty/i }).click();
+  const dialog = page.getByRole('dialog', { name: 'Bot difficulty' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: /Hard/i }).click();
+  await expect(dialog).toBeHidden();
+  await expect(setup.getByRole('button', { name: /Difficulty/i })).toContainText('Hard');
+  await setup.getByRole('button', { name: /Difficulty/i }).click();
+  await dialog.getByRole('button', { name: /Normal/i }).click();
 
-  await page.locator('.start-play').click();
-  await expect(page.locator('.start-screen')).toBeHidden({ timeout: 10_000 });
+  // The Loadout screen: the optic and a hop-up dial per replica. Fit the red dot before the match.
+  await setup.getByRole('button', { name: /Loadout/i }).click();
+  const loadout = page.locator('.menu-loadout');
+  await expect(loadout).toBeVisible();
+  await expect(loadout.locator('.loadout-hopup input[type=range]')).toHaveCount(2);
+  await loadout.getByRole('button', { name: 'Red dot' }).click();
+  await expect(loadout.getByRole('button', { name: 'Red dot' })).toHaveAttribute('aria-pressed', 'true');
+  await loadout.getByRole('button', { name: 'Back' }).click();
+  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('Red dot');
+
+  // Settings: its own screen with tabs; Back returns to New game.
+  await setup.getByRole('button', { name: /Settings/i }).click();
+  const settings = page.locator('.menu-settings');
+  await expect(settings).toBeVisible();
+  await settings.getByRole('tab', { name: /Key bindings/i }).click();
+  await expect(settings.locator('.key-row').first()).toBeVisible();
+  await settings.getByRole('button', { name: 'Back' }).click();
+  await expect(setup).toBeVisible();
+
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   await expect(page.locator('.hud')).toBeVisible();
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
   const mag = page.locator('.hud-mag');

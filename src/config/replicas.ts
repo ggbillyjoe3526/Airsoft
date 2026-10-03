@@ -4,11 +4,16 @@
  */
 export type FireMode = 'semi' | 'burst' | 'auto';
 
+/** What drives a replica: a battery and motor (an AEG) or gas (green gas for now). Spring and HPA may come later. */
+export type PowerSource = 'electric' | 'gas';
+
 /** Stats for one replica. All weapon behaviour is data; nothing about specific replicas is hardcoded. */
 export interface ReplicaConfig {
   id: string;
   /** Generic, non-brand name shown in the HUD. */
   name: string;
+  /** What drives it: a battery and motor (AEG) or gas. Shown on the loadout screen. */
+  power: PowerSource;
   /**
    * The modes its fire selector offers, in the order the selector key steps through them. Like the real type
    * the replica is modelled on (owner, 2026-10-03): a striker pistol is semi only, a rifle or SMG may offer more.
@@ -77,6 +82,7 @@ export interface ReplicaLook {
 export const AEG: ReplicaConfig = {
   id: 'aeg',
   name: 'AEG rifle',
+  power: 'electric',
   fireModes: ['semi', 'burst', 'auto'],
   defaultFireMode: 'auto',
   fireRate: 13,
@@ -110,6 +116,7 @@ export const AEG: ReplicaConfig = {
 export const GAS_PISTOL: ReplicaConfig = {
   id: 'pistol',
   name: 'Gas pistol',
+  power: 'gas',
   fireModes: ['semi'],
   defaultFireMode: 'semi',
   fireRate: 7,

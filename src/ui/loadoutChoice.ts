@@ -1,23 +1,14 @@
 import { BALLISTICS } from '../config/ballistics';
-import type { OpticChoice } from '../config/optics';
+import { OPTIC_CHOICES, type OpticChoice } from '../config/optics';
 import { HOP_UP, type ReplicaConfig } from '../config/replicas';
 import { loadSetting, numberIn } from '../settings/storage';
 import { hopUpReach } from '../sim/hopUp';
 
 /**
- * The loadout set on the start screen before a match: the rifle's optic and each replica's hop-up. It is the
- * start of the loadout screen to come (roadmap), so it is offered before a match (the title screen and the
- * result screen), never on the pause screen mid-match (owner, 2026-10-03).
- */
-export function loadoutOffered(screen: 'title' | 'pause' | 'result'): boolean {
-  return screen !== 'pause';
-}
-
-/**
  * When a loadout change is fitted. Before the first match and on the result screen it is fitted at once;
  * mid-match it waits for the next round, so a round in progress is never changed (the same rule as the bot
- * difficulty). The mid-match path is dormant while the loadout is only offered before a match (loadoutOffered),
- * and kept (owner: keep the functionality) for when a loadout screen is reachable mid-match.
+ * difficulty). The mid-match path is dormant while the Loadout screen is only reachable before or after a match
+ * (through New game, never from the pause menu: owner, 2026-10-03), and kept for if it ever is reachable mid-match.
  */
 export function loadoutTakesEffect(started: boolean, matchOver: boolean): 'now' | 'nextRound' {
   return started && !matchOver ? 'nextRound' : 'now';
@@ -38,7 +29,7 @@ export function loadHopUps(loadout: readonly ReplicaConfig[]): number[] {
   return loadout.map((r) => loadSetting(hopUpField(r), numberIn(HOP_UP.minDial, HOP_UP.maxDial), r.hopUpDial));
 }
 
-/** The dial as the start screen shows it. */
+/** The dial as the menus show it. */
 export function hopUpLabel(dial: number): string {
   return `${Math.round(dial * 100)}%`;
 }
@@ -50,4 +41,13 @@ export function hopUpReadout(replica: ReplicaConfig, dial: number): string {
   if (peakRise > HOP_UP.onTargetBand) return `Too much: the BB rises ${Math.round(peakRise * 100)} cm over your aim and floats. On target ${reach}.`;
   const factory = Math.abs(dial - replica.hopUpDial) < HOP_UP.dialStep / 2 ? ' (factory setting)' : '';
   return `On target ${reach}, then the BB drops${factory}.`;
+}
+
+/**
+ * The Loadout button's summary on the New game screen: the optic on the replica that takes one (if any) and each
+ * replica's hop-up dial, e.g. "Red dot · hop-up 65% / 55%".
+ */
+export function loadoutSummary(loadout: readonly ReplicaConfig[], optic: OpticChoice, dials: readonly number[]): string {
+  const opticPart = loadout.some((r) => r.opticMount) ? `${OPTIC_CHOICES.find((o) => o.id === optic)?.label ?? optic} · ` : '';
+  return `${opticPart}hop-up ${loadout.map((r, i) => hopUpLabel(dials[i] ?? r.hopUpDial)).join(' / ')}`;
 }
