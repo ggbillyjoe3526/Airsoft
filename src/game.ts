@@ -1,5 +1,6 @@
 import { loadVolumes } from './audio/audioMix';
 import type { SfxSetup } from './audio/sfx';
+import { motionScale } from './config/accessibility';
 import { SoundLibrary } from './audio/soundBank';
 import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
@@ -31,7 +32,21 @@ import { browserStorage } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
-import { loadAimSensitivity, loadCrouchMode, loadDifficulty, loadFov, loadMap, loadMode, loadOptic, loadSensitivity } from './ui/menus/savedChoices';
+import {
+  loadAimMode,
+  loadAimSensitivity,
+  loadCrouchMode,
+  loadDifficulty,
+  loadFov,
+  loadInvertMouse,
+  loadMap,
+  loadMode,
+  loadMouseDpi,
+  loadOptic,
+  loadReducedMotion,
+  loadSensitivity,
+  loadSprintMode,
+} from './ui/menus/savedChoices';
 
 /** The player is the first character, on Blue (see MatchSession). */
 const PLAYER_TEAM = 0;
@@ -90,6 +105,8 @@ export class Game {
   private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
   /** Each replica's grip and magazine as picked (M17b), by replica id. */
   private readonly parts = new Map<string, ReplicaParts>();
+  /** Reduced motion (Settings → Accessibility), kept across matches. */
+  private reducedMotion = loadReducedMotion();
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     await initPhysics();
@@ -110,9 +127,12 @@ export class Game {
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
-    this.pointer = new PointerLock(this.renderer.canvas);
+    this.pointer = new PointerLock(this.renderer.canvas, this.keyboard);
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     this.input.crouchMode = loadCrouchMode();
+    this.input.aimMode = loadAimMode();
+    this.input.sprintMode = loadSprintMode();
+    this.input.invertY = loadInvertMouse();
     this.input.sensitivity = loadSensitivity();
     this.input.aimSensitivity = loadAimSensitivity();
 
@@ -172,13 +192,20 @@ export class Game {
       map: { initial: this.map, onChange: (m) => (this.map = m) },
       mode: { initial: this.mode, onChange: (m) => (this.mode = m) },
       difficulty: { initial: this.difficulty, onChange: (d) => (this.difficulty = d) },
-      sensitivity: { initial: this.input.sensitivity, onChange: (v) => (this.input.sensitivity = v) },
-      aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
-      crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
+      controls: {
+        sensitivity: { initial: this.input.sensitivity, onChange: (v) => (this.input.sensitivity = v) },
+        aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
+        dpi: { initial: loadMouseDpi() },
+        invertMouse: { initial: this.input.invertY, onChange: (on) => (this.input.invertY = on) },
+        crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
+        aim: { initial: this.input.aimMode, onChange: (m) => (this.input.aimMode = m) },
+        sprint: { initial: this.input.sprintMode, onChange: (m) => (this.input.sprintMode = m) },
+      },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
       quality: options.quality,
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
+      accessibility: { reducedMotion: { initial: this.reducedMotion, onChange: (on) => this.changeReducedMotion(on) } },
     });
     this.menus.showTitle();
     this.pointer.onChange((locked) => {
@@ -210,6 +237,12 @@ export class Game {
 
   private partsOf(r: ReplicaConfig): ReplicaParts {
     return this.parts.get(r.id) ?? loadParts(r);
+  }
+
+  /** Reduced motion turned on or off: kept for the next match and applied to the one loaded. */
+  private changeReducedMotion(on: boolean): void {
+    this.reducedMotion = on;
+    this.session?.setMotion(motionScale(on));
   }
 
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
@@ -251,6 +284,7 @@ export class Game {
         bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
         parts: this.picked.map((r) => this.partsOf(r)),
       }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair);
+      this.session.setMotion(motionScale(this.reducedMotion));
     }
     this.session!.combat.unlockAudio();
     if (this.options.allowUnlocked) {

@@ -1,30 +1,47 @@
 import { MOUSE } from '../config/controls';
+import { mouseButtonCode } from './keyBindings';
+
+/** Where mouse buttons go while playing: the keyboard, which maps them through the bindings like keys (M18). */
+export interface ButtonSink {
+  press(code: string): void;
+  release(code: string): void;
+}
 
 /**
- * Pointer Lock plus mouse input: look deltas, the fire button (left), the aim button (right) and wheel steps. Input is ignored
- * unless the pointer is locked to the game canvas (or, for the fire button and wheel only, unlocked
- * play is on: see `setUnlockedButtons`).
+ * The browser's back and forward side buttons (MouseEvent.button 3 and 4): their default navigates away from the game,
+ * so it is blocked while they are game buttons.
+ */
+const NAVIGATION_BUTTONS: ReadonlySet<number> = new Set([3, 4]);
+
+/**
+ * Pointer Lock plus mouse input: look deltas, the mouse buttons (passed on to `buttons` by code, so fire, aim and any
+ * other action can be bound to any of them) and wheel steps. Input is ignored unless the pointer is locked to the game
+ * canvas (or, for the buttons and wheel only, unlocked play is on: see `setUnlockedButtons`).
  */
 export class PointerLock {
   private unlockedButtons = false;
   private dx = 0;
   private dy = 0;
-  private fireHeldState = false;
-  private firePressedState = false;
-  private aimHeldState = false;
+  /** Buttons down while playing, by MouseEvent.button, so they can all be let go when play stops. */
+  private readonly heldButtons = new Set<number>();
   private wheel = 0;
   private readonly changeListeners = new Set<(locked: boolean) => void>();
   private readonly errorListeners = new Set<() => void>();
   /** request() calls under way: a first try may fail and the second succeed, so errors wait for their outcome. */
   private requesting = 0;
 
-  constructor(private readonly element: HTMLElement) {
+  constructor(
+    private readonly element: HTMLElement,
+    private readonly buttons: ButtonSink,
+  ) {
     document.addEventListener('pointerlockchange', this.onLockChange);
     document.addEventListener('pointerlockerror', this.onLockError);
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mousedown', this.onMouseDown);
     document.addEventListener('mouseup', this.onMouseUp);
     document.addEventListener('wheel', this.onWheel, { passive: true });
+    // Chrome navigates on the side buttons' release, Firefox on their auxclick.
+    document.addEventListener('auxclick', this.onAuxClick);
     // The right button aims; never let it open the browser's menu over the game (or its HUD) while playing.
     document.addEventListener('contextmenu', this.onContextMenu);
   }
@@ -56,8 +73,8 @@ export class PointerLock {
   }
 
   /**
-   * Unlocked play (the `?nolock` test path): the fire and aim buttons and the wheel count without the lock. Mouse look
-   * still needs the lock. Turning it off drops any held or pending fire.
+   * Unlocked play (the `?nolock` test path): the mouse buttons and the wheel count without the lock. Mouse look
+   * still needs the lock. Turning it off lets go of any held button.
    */
   setUnlockedButtons(on: boolean): void {
     this.unlockedButtons = on;
@@ -85,22 +102,6 @@ export class PointerLock {
     this.dy = 0;
   }
 
-  get fireHeld(): boolean {
-    return this.fireHeldState;
-  }
-
-  /** The aim button (right) is held. */
-  get aimHeld(): boolean {
-    return this.aimHeldState;
-  }
-
-  /** Returns true once if the fire button went down since the last call (catches sub-frame clicks). */
-  consumeFirePress(): boolean {
-    const p = this.firePressedState;
-    this.firePressedState = false;
-    return p;
-  }
-
   /** Returns one replica step (+1 down, -1 up) once enough wheel travel has built up, else 0. */
   consumeWheelSteps(): number {
     if (Math.abs(this.wheel) < MOUSE.wheelStepPixels) return 0;
@@ -116,6 +117,7 @@ export class PointerLock {
     document.removeEventListener('mousedown', this.onMouseDown);
     document.removeEventListener('mouseup', this.onMouseUp);
     document.removeEventListener('wheel', this.onWheel);
+    document.removeEventListener('auxclick', this.onAuxClick);
     document.removeEventListener('contextmenu', this.onContextMenu);
     this.changeListeners.clear();
     this.errorListeners.clear();
@@ -146,31 +148,39 @@ export class PointerLock {
   };
 
   private releaseButtons(): void {
-    this.fireHeldState = false;
-    this.firePressedState = false;
-    this.aimHeldState = false;
+    for (const button of this.heldButtons) this.buttons.release(mouseButtonCode(button));
+    this.heldButtons.clear();
     this.wheel = 0;
   }
 
+  private get playing(): boolean {
+    return this.locked || this.unlockedButtons;
+  }
+
   private readonly onMouseDown = (e: MouseEvent): void => {
-    if (!(this.locked || this.unlockedButtons)) return;
-    if (e.button === 0) {
-      this.fireHeldState = true;
-      this.firePressedState = true;
-    } else if (e.button === 2) this.aimHeldState = true;
+    if (!this.playing) return;
+    // Middle-click autoscroll and the side buttons' navigation are browser defaults, not wanted in play.
+    if (e.button !== 0) e.preventDefault();
+    this.heldButtons.add(e.button);
+    this.buttons.press(mouseButtonCode(e.button));
   };
 
   private readonly onMouseUp = (e: MouseEvent): void => {
-    if (e.button === 0) this.fireHeldState = false;
-    else if (e.button === 2) this.aimHeldState = false;
+    if (this.playing && NAVIGATION_BUTTONS.has(e.button)) e.preventDefault();
+    if (!this.heldButtons.delete(e.button)) return;
+    this.buttons.release(mouseButtonCode(e.button));
+  };
+
+  private readonly onAuxClick = (e: MouseEvent): void => {
+    if (this.playing && NAVIGATION_BUTTONS.has(e.button)) e.preventDefault();
   };
 
   private readonly onContextMenu = (e: MouseEvent): void => {
-    if (this.locked || this.unlockedButtons) e.preventDefault();
+    if (this.playing) e.preventDefault();
   };
 
   private readonly onWheel = (e: WheelEvent): void => {
-    if (!(this.locked || this.unlockedButtons)) return;
+    if (!this.playing) return;
     // Normalise line/page scrolling to pixels so every device needs about one notch per step.
     const scale = e.deltaMode === 1 ? MOUSE.wheelLinePixels : e.deltaMode === 2 ? MOUSE.wheelPagePixels : 1;
     this.wheel += e.deltaY * scale;

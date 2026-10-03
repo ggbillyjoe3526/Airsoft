@@ -1,6 +1,12 @@
 import type { ReplicaConfig } from '../config/replicas';
+import type { Armament } from './armament';
 import type { Character } from './character';
 import type { PlayerCommand } from './commands';
+
+/** The replica in hand has a sight to aim through (an optic fitted to a replica with a mount). The aim toggle reads it too. */
+export function canAimDownSights(a: Armament, loadout: readonly ReplicaConfig[]): boolean {
+  return a.optics[a.active] != null && loadout[a.active]!.opticMount;
+}
 
 /**
  * Aiming down sights (owner, 2026-10-03): only with an optic fitted to the replica in hand, and not while
@@ -11,5 +17,5 @@ import type { PlayerCommand } from './commands';
 export function stepAiming(c: Character, cmd: PlayerCommand, loadout: readonly ReplicaConfig[]): void {
   const a = c.armament;
   // Reload and draw are as the last tick left them: a reload started this tick drops the sight on the next one.
-  c.aiming = cmd.aim && a.optics[a.active] != null && loadout[a.active]!.opticMount && a.reload <= 0 && a.draw <= 0;
+  c.aiming = cmd.aim && canAimDownSights(a, loadout) && a.reload <= 0 && a.draw <= 0;
 }

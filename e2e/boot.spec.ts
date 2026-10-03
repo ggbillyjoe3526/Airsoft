@@ -96,10 +96,20 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await setup.getByRole('button', { name: /Settings/i }).click();
   const settings = page.locator('.menu-settings');
   await expect(settings).toBeVisible();
+  // Controls (M18): the sensitivity as cm/360 at the mouse's DPI; typing a cm/360 moves the slider to match.
+  const cm = settings.getByRole('spinbutton', { name: /cm per 360/ });
+  await expect(cm).toHaveValue(/^(19\.9|20\.0)$/); // 19.95 cm at sensitivity 1.00 and 800 DPI
+  await cm.fill('40');
+  await cm.press('Enter');
+  await expect(settings.getByRole('slider', { name: 'Mouse sensitivity' })).toHaveValue('0.5');
+  await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
+  await settings.getByRole('tab', { name: /Accessibility/i }).click();
+  await expect(settings.getByRole('group', { name: 'Reduced motion' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('100');
   await settings.getByRole('tab', { name: /Key bindings/i }).click();
-  await expect(settings.locator('.key-row').first()).toBeVisible();
+  // Fire and aim are bindings like the rest (M18), on the mouse buttons by default.
+  await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
   await settings.getByRole('tab', { name: /Audio/i }).click();
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.

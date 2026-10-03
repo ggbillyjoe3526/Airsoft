@@ -1,11 +1,12 @@
 import { type Action, REBINDABLE, UNBINDABLE_KEYS } from '../config/controls';
-import { describeKeys, type KeyBindings, keyLabel } from '../input/keyBindings';
+import { describeKeys, type KeyBindings, keyLabel, mouseButtonCode } from '../input/keyBindings';
 
 const CTRL_WARNING = 'Heads up: some Ctrl combinations (like Ctrl+W, close tab) can\'t be blocked by the browser.';
 
 /**
- * Key-binding settings: one row per rebindable action. Click a key button, then press the new key
- * (Esc cancels). Taking a key another action uses swaps the two. Lives on the Settings screen (Key bindings tab).
+ * Key-binding settings: one row per rebindable action. Click a key button, then press the new key, or click the
+ * button again with the mouse button wanted (left, right, middle or a side button; M18). Esc or a click elsewhere
+ * cancels. Taking a key another action uses swaps the two. Lives on the Settings screen (Key bindings tab).
  */
 export class KeySettings {
   readonly root: HTMLDivElement;
@@ -13,6 +14,11 @@ export class KeySettings {
   private readonly note: HTMLParagraphElement;
   /** The action waiting for a key press, if any. */
   private listening: Action | null = null;
+  /**
+   * The mouse button just bound (until the next press): its click, menu or browser navigation (the side buttons go back
+   * and forward) must not follow.
+   */
+  private boundButton: number | null = null;
 
   constructor(private readonly bindings: KeyBindings) {
     this.root = document.createElement('div');
@@ -30,6 +36,11 @@ export class KeySettings {
       button.className = 'key-button';
       button.addEventListener('click', (e) => {
         e.stopPropagation();
+        // The left click that just bound Left mouse to this action.
+        if (this.boundButton === 0) {
+          this.boundButton = null;
+          return;
+        }
         // Unfocused, so binding Space or Enter doesn't "click" the button again on key release.
         button.blur();
         this.listen(this.listening === action ? null : action);
@@ -53,7 +64,10 @@ export class KeySettings {
     bindings.onChange(() => this.refresh());
     // Capture phase, so the game's keyboard never sees the key being bound.
     window.addEventListener('keydown', this.onKeyDown, true);
-    window.addEventListener('pointerdown', this.onPointerDown, true);
+    window.addEventListener('mousedown', this.onMouseDown, true);
+    window.addEventListener('mouseup', this.onMouseUp, true);
+    window.addEventListener('auxclick', this.swallowBound, true);
+    window.addEventListener('contextmenu', this.swallowBound, true);
     this.refresh();
   }
 
@@ -68,7 +82,10 @@ export class KeySettings {
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown, true);
-    window.removeEventListener('pointerdown', this.onPointerDown, true);
+    window.removeEventListener('mousedown', this.onMouseDown, true);
+    window.removeEventListener('mouseup', this.onMouseUp, true);
+    window.removeEventListener('auxclick', this.swallowBound, true);
+    window.removeEventListener('contextmenu', this.swallowBound, true);
     this.root.remove();
   }
 
@@ -81,11 +98,12 @@ export class KeySettings {
     let ctrl = false;
     for (const [action, button] of this.buttons) {
       const waiting = action === this.listening;
-      button.textContent = waiting ? 'Press a key…' : describeKeys(this.bindings.codes(action));
+      button.textContent = waiting ? 'Press a key or click…' : describeKeys(this.bindings.codes(action));
       button.classList.toggle('listening', waiting);
       if (this.bindings.codes(action).some((c) => c.startsWith('Control'))) ctrl = true;
     }
-    this.note.textContent = message || (this.listening ? 'Press the new key, or Esc to cancel.' : ctrl ? CTRL_WARNING : '');
+    this.note.textContent =
+      message || (this.listening ? 'Press the new key, or click this box with the mouse button you want. Esc cancels.' : ctrl ? CTRL_WARNING : '');
   }
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
@@ -106,8 +124,36 @@ export class KeySettings {
     this.refresh();
   };
 
-  /** Clicking anywhere else stops listening. */
-  private readonly onPointerDown = (e: PointerEvent): void => {
-    if (this.listening && !(e.target instanceof HTMLElement && e.target.classList.contains('key-button'))) this.listen(null);
+  /** A mouse button pressed on the waiting key box binds that button; a press anywhere else stops listening. */
+  private readonly onMouseDown = (e: MouseEvent): void => {
+    this.boundButton = null;
+    const action = this.listening;
+    if (!action) return;
+    const box = this.buttons.get(action);
+    if (!(e.target instanceof Node && box?.contains(e.target))) {
+      this.listen(null);
+      return;
+    }
+    // The second press of a double-click on the box: its click cancels, as clicking the waiting box once more always did.
+    if (e.button === 0 && e.detail >= 2) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.boundButton = e.button;
+    if (!this.bindings.rebind(action, mouseButtonCode(e.button))) {
+      this.refresh(`${keyLabel(mouseButtonCode(e.button))} can't be bound.`);
+      return;
+    }
+    this.listening = null;
+    this.refresh();
+  };
+
+  /** The release of the button just bound: Chrome's back / forward on a side button's release must not follow. */
+  private readonly onMouseUp = (e: MouseEvent): void => {
+    if (e.button === this.boundButton && e.button !== 0) e.preventDefault();
+  };
+
+  /** The menu (right button) and Firefox's back / forward (side buttons) that would follow the button just bound. */
+  private readonly swallowBound = (e: MouseEvent): void => {
+    if (e.button === this.boundButton || this.listening) e.preventDefault();
   };
 }

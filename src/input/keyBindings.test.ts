@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BINDINGS } from '../config/controls';
-import { describeKeys, KeyBindings, type KeyValueStore, keyLabel } from './keyBindings';
+import { describeKeys, KeyBindings, type KeyValueStore, keyLabel, mouseButtonCode } from './keyBindings';
 
 class MemoryStore implements KeyValueStore {
   readonly data = new Map<string, string>();
@@ -27,6 +27,27 @@ describe('KeyBindings', () => {
     expect(b.codes('scoreboard')).toEqual(['Tab']);
     expect(b.rebind('scoreboard', 'KeyX')).toBe(true);
     expect(b.codes('scoreboard')).toEqual(['KeyX']);
+  });
+
+  it('puts fire and aim on the left and right mouse buttons, and either can move to a key or a side button (M18)', () => {
+    const b = new KeyBindings(null);
+    expect(b.primary('fire')).toBe('Mouse0');
+    expect(b.primary('aim')).toBe('Mouse2');
+    expect(b.rebind('reload', 'Mouse3')).toBe(true);
+    expect(b.actionOf('Mouse3')).toBe('reload');
+    // Taking Left mouse for aim swaps: fire gets aim's old button.
+    expect(b.rebind('aim', 'Mouse0')).toBe(true);
+    expect(b.primary('fire')).toBe('Mouse2');
+    expect(b.rebind('fire', 'KeyF')).toBe(true);
+    expect(b.label('fire')).toBe('F');
+  });
+
+  it('keeps an old save\'s keys and gives the new fire and aim actions their mouse buttons', () => {
+    const store = new Map<string, string>([['airsoft.keyBindings', JSON.stringify({ reload: ['KeyT'] })]]);
+    const b = new KeyBindings({ getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) });
+    expect(b.primary('reload')).toBe('KeyT');
+    expect(b.primary('fire')).toBe('Mouse0');
+    expect(b.primary('aim')).toBe('Mouse2');
   });
 
   it('rebinding gives the action only the new key (no hidden extra keys left working)', () => {
@@ -190,5 +211,10 @@ describe('keyLabel', () => {
     expect(keyLabel('AltLeft')).toBe('Left Alt');
     expect(keyLabel('ArrowUp')).toBe('↑');
     expect(keyLabel('')).toBe('—');
+    expect(keyLabel(mouseButtonCode(0))).toBe('Left mouse');
+    expect(keyLabel(mouseButtonCode(2))).toBe('Right mouse');
+    expect(keyLabel(mouseButtonCode(3))).toBe('Mouse 4');
+    expect(keyLabel(mouseButtonCode(4))).toBe('Mouse 5');
+    expect(keyLabel('Mouse7')).toBe('Mouse 8');
   });
 });

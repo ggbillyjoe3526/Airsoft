@@ -36,12 +36,12 @@ export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: bo
   { id: 'graphics', label: 'Graphics', later: false },
   { id: 'crosshair', label: 'Crosshair', later: false },
   { id: 'audio', label: 'Audio', later: false },
-  { id: 'accessibility', label: 'Accessibility', later: true },
+  { id: 'accessibility', label: 'Accessibility', later: false },
 ];
 
 /** Settings not built yet, listed greyed out on their tab (label and a short line on what it will do). */
 export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: string; help: string }[]>> = {
-  controls: [{ label: 'Invert mouse', help: 'Up and down swapped.' }],
+  controls: [],
   keys: [],
   // Quality is listed greyed out too, with the preset in use (settingsScreen.ts).
   graphics: [],
@@ -49,6 +49,6 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   audio: [{ label: 'Voices (hit calls)', help: '' }],
   accessibility: [
     { label: 'Colour-blind team colours', help: '' },
-    { label: 'Reduced motion', help: 'Less camera bob and screen shake.' },
+    { label: 'On-screen sound cues', help: 'Markers at the screen edge for footsteps, shots and hit calls.' },
   ],
 };

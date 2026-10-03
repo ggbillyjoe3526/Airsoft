@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
+import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS } from './config/ballistics';
 import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
@@ -29,6 +30,7 @@ import { buildMapMeshes, disposeMapMeshes } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './render/proceduralTextures';
 import type { Renderer } from './render/renderer';
+import { canAimDownSights } from './sim/aiming';
 import { fitOptic, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
@@ -80,6 +82,8 @@ export class MatchSession {
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
+  /** Reduced motion (Settings → Accessibility): the lean's roll here, the held replica's motion in `combat`. */
+  private motion: MotionScale = FULL_MOTION;
   private readonly ctx: SimContext;
   /** Simulation time the match was decided (NaN while it's on, and once the result screen is due). */
   private matchOverAt = Number.NaN;
@@ -139,7 +143,7 @@ export class MatchSession {
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS, this.stats);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS, this.stats, (action) => input.keyName(action));
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -152,7 +156,8 @@ export class MatchSession {
    * thinking before each. Returns how many ticks ran.
    */
   advance(dt: number): number {
-    this.input.update(this.player.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale);
+    const p = this.player;
+    this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament, this.loadout));
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
     const ticks = advanceStepper(this.stepper, dt);
     for (let i = 0; i < ticks; i++) {
@@ -197,10 +202,16 @@ export class MatchSession {
     const alpha = stepperAlpha(this.stepper); // frozen while paused, so the view holds still
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
-    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch);
+    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.combat.render(!spectating);
+  }
+
+  /** Reduced motion turned on or off (also called once as the match is built). */
+  setMotion(scale: MotionScale): void {
+    this.motion = scale;
+    this.combat.setMotion(scale);
   }
 
   setPlaying(playing: boolean): void {

@@ -21,7 +21,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13) and match info (M19) are done; the Loadout feature (M17, added by the owner) is under way (M17a built, M17b next), then the rest of the owner's feature picks (M18 comfort and accessibility, M20 custom matches, M21 practice range, M22 squad orders), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13), match info (M19) and the Loadout feature (M17a, M17b, added by the owner) are done; comfort and accessibility is half built (M18a controls and comfort; the owner asked to wrap up there on 2026-10-03, so M18b accessibility and browser basics is next), then the rest of the owner's feature picks (M20 custom matches, M21 practice range, M22 squad orders), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -107,9 +107,10 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Done (merged; owner played it: five notes, for M15b and later) | 9.1 |
 | Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Done (merged; owner to play it) | 9.0 |
-| Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Done (pull request; owner to play it) | 9.0 |
+| Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (merged; owner's playtest next) | 9.0 |
-| Alpha · Phase 4 · M18 Comfort, accessibility and browser basics (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, colour-blind options, on-screen sound cues, pause on a hidden tab, fullscreen | Later | |
+| Alpha · Phase 4 · M18a Comfort and controls (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, sensitivity as cm/360 | Done (pull request; owner to play it) | 8.7 (its must-fixes applied; not re-scored, owner's wrap-up) |
+| Alpha · Phase 4 · M18b Accessibility and browser basics (owner's second batch; moved out of M18a at the owner's wrap-up, 2026-10-03): colour-blind options, on-screen sound cues, pause on a hidden tab, a lost graphics context, a hardware acceleration warning, fullscreen | Next | |
 | Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
@@ -269,7 +270,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 6 | Perhaps eventually skins for the replicas and the outfit | Not built in v0.1: a greyed Skins row (LATER) in M17b; the skins themselves in v0.5 |
 
 **Order** (owner picked weapon handling first, 2026-10-03; he pulled the menus forward the same day and added the
-Loadout feature after the M15 notes, then picked M18–M22 from a feature research list and his own gap list): **M12a → M12b → M11 → M15 → M15b → M17a → M17b → M13 → M18 → M19 → M20 → M21 → M22 → M14 → M16.** Weapon handling comes
+Loadout feature after the M15 notes, then picked M18–M22 from a feature research list and his own gap list): **M12a → M12b → M11 → M15 → M15b → M17a → M17b → M13 → M18a → M18b → M19 → M20 → M21 → M22 → M14 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
 the Depot layout sketch. The Depot rework follows once the sketch is approved (approved 2026-10-03). The audio rework comes after it so
 movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
@@ -508,11 +509,15 @@ each one went:**
   - The playtest guide gets a Loadout section for each half.
 - **M18. Comfort, accessibility and browser basics** (the owner's second batch, items 2–5, 7, 14–17, 21 and 23). The
   settings every player looks for first (PCGamingWiki's list, the Game Accessibility Guidelines' basic tier). It fills
-  the Controls and Accessibility tabs' LATER rows; volume comes with M13.
+  the Controls and Accessibility tabs' LATER rows; volume comes with M13. Built in two halves: **M18a** (done) the
+  Controls items and reduced motion; **M18b** (next; the owner wrapped up after M18a) colour-blind options, sound cues
+  and the browser basics. M19 was built before M18; the order of what's left is M18b → M20 → M21 → M22 → M14 → M16.
   - **Controls:** invert mouse; toggle or hold for aiming down sights and for sprint (as crouch already has); fire,
     aim and any other action bindable to mouse buttons, side buttons included; the sensitivity also shown as cm/360
     (worked out from the mouse's DPI, which the player enters), so it can match another shooter.
-  - **Reduced motion:** turns off camera shake and weapon bob (and softens the lean's roll).
+  - **Reduced motion:** turns off camera shake and weapon bob (and softens the lean's roll). Built (M18a): no bob or
+    sway, half the replica's kick, a quarter of the lean's roll; the camera's small recoil climb stays, as it shows
+    where the next BB goes (DECISIONS).
   - **Colour-blind options:** team colour sets that stay apart for the common kinds of colour blindness, and nothing
     told by colour alone: the spare-magazine gauges get a shape or label for "low" and "next" (KNOWN_ISSUES).
   - **On-screen sound cues** (opt-in): a marker at the screen edge pointing to footsteps, shots and hit calls, the way

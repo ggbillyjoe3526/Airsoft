@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FULL_MOTION, type MotionScale } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import type { ReplicaConfig } from '../config/replicas';
 import type { Armament } from '../sim/armament';
@@ -54,7 +55,8 @@ function fittableParts(model: THREE.Object3D): { kind: 'optic' | 'grip' | 'magaz
  * The replica in your hands. Rendered in its own scene on top of the world (so it never clips into
  * walls) and animated purely from presentation state: mouse sway, walk bob, sprint carry, recoil
  * kick, reload dip, draw and raising a fitted optic to your eye. The fitted optic, grip and magazine show on the
- * model (simple shapes until the art pass), and an optic folds the iron sights down.
+ * model (simple shapes until the art pass), and an optic folds the iron sights down. Reduced motion (`setMotion`)
+ * scales the bob, sway and kick down.
  */
 export class Viewmodel {
   readonly scene = new THREE.Scene();
@@ -93,6 +95,8 @@ export class Viewmodel {
   private readonly muzzleView = new THREE.Vector3();
   /** 0 = playing, 1 = hand fully raised calling a hit. */
   private hitBlend = 0;
+  /** What's left of the bob, sway and kick (Settings → Accessibility → Reduced motion). */
+  private motionScale: MotionScale = FULL_MOTION;
 
   constructor(aspect: number, teamColor: number, loadout: readonly ReplicaConfig[]) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, VIEWMODEL.near, VIEWMODEL.far);
@@ -131,6 +135,11 @@ export class Viewmodel {
     if (this.camera.aspect === aspect) return;
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
+  }
+
+  /** Reduced motion on or off: how much of the bob, sway and kick to show. */
+  setMotion(scale: MotionScale): void {
+    this.motionScale = scale;
   }
 
   /**
@@ -196,7 +205,8 @@ export class Viewmodel {
     const holdYaw = slot.hold.yaw * (1 - raised);
     // Steadier on the shoulder: sway and bob shrink while aiming, and the kick only nudges the sight (the dot stays in the glass).
     const motion = 1 - VIEWMODEL.aimSteady * raised;
-    const kick = this.kick * (1 - (1 - VIEWMODEL.aimKick) * raised);
+    const m = this.motionScale;
+    const kick = this.kick * (1 - (1 - VIEWMODEL.aimKick) * raised) * m.kick;
 
     // Sway: the replica lags behind the view a little, then springs back.
     if (this.snapView) {
@@ -214,9 +224,10 @@ export class Viewmodel {
     this.lastPitch = pitch;
     const settle = Math.exp(-VIEWMODEL.returnRate * dt);
     // Aimed, the sway is capped well inside the glass's radius, so even a hard flick keeps the dot in it.
-    const swayMax = VIEWMODEL.swayMax * motion;
-    this.swayX = clampSway(this.swayX * settle + dYaw * VIEWMODEL.swayPerRadian * motion, swayMax);
-    this.swayY = clampSway(this.swayY * settle - dPitch * VIEWMODEL.swayPerRadian * motion, swayMax);
+    const sway = motion * m.sway;
+    const swayMax = VIEWMODEL.swayMax * sway;
+    this.swayX = clampSway(this.swayX * settle + dYaw * VIEWMODEL.swayPerRadian * sway, swayMax);
+    this.swayY = clampSway(this.swayY * settle - dPitch * VIEWMODEL.swayPerRadian * sway, swayMax);
     this.kick *= settle;
 
     const moving = Math.min(1, speed / runSpeed);
@@ -251,7 +262,7 @@ export class Viewmodel {
     }
     const drawP = handling.drawTime > 0 ? armament.draw / handling.drawTime : 0;
 
-    const bob = VIEWMODEL.bobAmount * moving * motion;
+    const bob = VIEWMODEL.bobAmount * moving * motion * m.bob;
     this.hitBlend = Math.max(0, Math.min(1, this.hitBlend + (callingHit ? dt : -dt) / VIEWMODEL.raiseTime));
     const raise = smooth(this.hitBlend);
     const hand = this.replicas.raisedHand;

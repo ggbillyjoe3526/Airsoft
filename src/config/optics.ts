@@ -33,7 +33,7 @@ export type OpticChoice = 'none' | OpticId;
 
 export const OPTIC_CHOICES: readonly { id: OpticChoice; label: string; blurb: string }[] = [
   { id: 'none', label: 'Iron sights', blurb: 'No optic: fire from the hip with the crosshair. Aiming down sights needs an optic.' },
-  { id: 'redDot', label: 'Red dot', blurb: 'A red dot on the rifle: hold the right mouse button to aim through it (walking pace).' },
+  { id: 'redDot', label: 'Red dot', blurb: 'A red dot on the rifle: press the aim button (right mouse by default) to aim through it (walking pace).' },
   {
     id: 'scope2x',
     label: '2× scope',

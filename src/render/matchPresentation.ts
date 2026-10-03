@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
@@ -72,11 +73,13 @@ export class MatchPresentation {
     teamSize: number,
     private readonly rules: RoundRules,
     private readonly stats: MatchStats,
+    /** The key or button the player has on `action` now, for hints on screen. */
+    keyName: (action: Action) => string,
   ) {
     this.characters = new CharacterRenderer(state.characters, TEAM_COLORS, hits);
     this.flag = new FlagRenderer(TEAM_COLORS, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
-    this.feedback = new HitFeedback(container);
+    this.feedback = new HitFeedback(container, () => keyName('fire'));
     this.scoreboard = new Scoreboard(container, teamSize, player.team);
     this.marker = new FlagMarker(container);
     this.spectator = new SpectatorCamera(state.characters, player, body, query);

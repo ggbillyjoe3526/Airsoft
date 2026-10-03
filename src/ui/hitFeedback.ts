@@ -13,12 +13,17 @@ export class HitFeedback {
   private readonly spectating: HTMLDivElement;
   private readonly round: HTMLDivElement;
   private shownSpectating = '';
+  private shownFireKey = '';
   private shownRound = '';
   private shownOut = '';
   private shownCalling = false;
   private shownAngle = Number.NaN;
 
-  constructor(parent: HTMLElement) {
+  /** `fireKey` names the key or button the player has on fire now (the spectating label's "… for next"). */
+  constructor(
+    parent: HTMLElement,
+    private readonly fireKey: () => string,
+  ) {
     this.root = document.createElement('div');
     this.root.className = 'hitfx';
     this.root.hidden = true;
@@ -93,9 +98,12 @@ export class HitFeedback {
 
   /** Name of the player being watched, or '' when not spectating. */
   setSpectating(name: string): void {
-    if (name === this.shownSpectating) return;
+    // The fire key too: it can be rebound mid-match from the pause menu.
+    const key = this.fireKey();
+    if (name === this.shownSpectating && key === this.shownFireKey) return;
     this.shownSpectating = name;
-    this.spectating.textContent = name ? `Spectating ${name} · click for next` : '';
+    this.shownFireKey = key;
+    this.spectating.textContent = name ? `Spectating ${name}${key ? ` · ${key} for next` : ''}` : '';
     this.spectating.classList.toggle('show', name !== '');
   }
 

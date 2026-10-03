@@ -148,9 +148,27 @@ export function describeKeys(codes: readonly string[]): string {
   return labels.length > 0 ? labels.join(' / ') : keyLabel('');
 }
 
-/** A readable name for a KeyboardEvent.code ("KeyW" → "W", "ShiftLeft" → "Left Shift"). */
+/**
+ * The binding code of a mouse button (MouseEvent.button: 0 left, 1 middle/wheel, 2 right, 3 and 4 the side buttons),
+ * so mouse buttons bind like keys (M18).
+ */
+export function mouseButtonCode(button: number): string {
+  return `Mouse${button}`;
+}
+
+/** Mouse buttons by their usual names: the side buttons are "Mouse 4" and "Mouse 5" in most games and mouse software. */
+const MOUSE_LABELS: Readonly<Record<string, string>> = {
+  Mouse0: 'Left mouse',
+  Mouse1: 'Middle mouse',
+  Mouse2: 'Right mouse',
+  Mouse3: 'Mouse 4',
+  Mouse4: 'Mouse 5',
+};
+
+/** A readable name for a KeyboardEvent.code ("KeyW" → "W", "ShiftLeft" → "Left Shift") or a mouse button's code. */
 export function keyLabel(code: string): string {
   if (!code) return '—';
+  if (code.startsWith('Mouse')) return MOUSE_LABELS[code] ?? `Mouse ${Number(code.slice(5)) + 1}`;
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
   if (code.startsWith('Numpad')) return `Num ${code.slice(6)}`;

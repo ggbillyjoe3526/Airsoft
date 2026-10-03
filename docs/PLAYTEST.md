@@ -235,9 +235,8 @@ swap ends after round 4.
   the rifle, then power and skins greyed out and marked LATER. Click the pistol: its own BB weight, hop-up dial and
   magazine, and its gas type and skins marked LATER. Back returns to New game, and the Loadout button shows your
   optic, any parts that differ from stock, BB weights and dials.
-- [ ] **Click Settings.** Tabs on the left: **Controls** (mouse sensitivity, aiming sensitivity, crouch key),
-  **Key bindings**, **Graphics**, **Audio** (volumes, see Sound below) and Accessibility marked LATER. Back
-  returns to New game.
+- [ ] **Click Settings.** Tabs on the left: **Controls** (see Comfort and controls below), **Key bindings**,
+  **Graphics**, **Crosshair**, **Audio** (volumes, see Sound below) and **Accessibility**. Back returns to New game.
 - [ ] **Graphics.** A **Field of view** slider at 100°, and **Quality** greyed out (High, LATER). No Brightness.
 - [ ] **Field of view in a match.** Play, press Esc, Settings, Graphics: drag the slider to 120°. Back and Resume:
   you see more at the sides. Aim down the red dot: it still zooms in. Set it to 80°: a narrower view. Reload the
@@ -294,6 +293,30 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   previews change as you do. In a match the crosshair looks the same and still opens as you move (Dot only stays a
   dot). Change it from the pause menu: it applies on Resume. It's kept after a reload. The default is the crosshair
   you had before.
+
+## Comfort and controls (M18a)
+
+- [ ] **Settings, Controls.** Under the mouse sensitivity: **Turn distance (cm/360)** with a cm box and a DPI box
+  (800 to start), and a line with the same sensitivity for CS2 and Valorant. Drag the slider: the cm figure and the
+  CS2 / Valorant numbers follow. Type your mouse's DPI and press Enter: the cm figure changes, the slider doesn't.
+- [ ] **Match another shooter.** Type the cm/360 you use elsewhere and press Enter: the slider jumps to match, and in a
+  match one sweep of that many centimetres turns you a full circle. Reload the page: both boxes keep their values.
+- [ ] **Invert mouse.** Turn it On: mouse forward looks down. Off again: back to normal.
+- [ ] **Aim button: Toggle.** With the red dot fitted, click right once: the sight stays up without holding. Click
+  again: it drops. Raise it and press sprint: it drops and you sprint. Raise it and switch to the pistol: it drops,
+  and switching back to the rifle doesn't raise it by itself. On Hold (the default) it works as before.
+- [ ] **Sprint key: Toggle.** Hold W and tap Left Alt: you keep sprinting with Alt let go. Let go of W: the sprint
+  ends, and pressing W again just runs. Sprint again, then crouch, aim, walk or click fire: each one ends the sprint.
+- [ ] **Key bindings: mouse buttons.** **Fire** and **Aim** are at the top of the list (Left mouse, Right mouse). Click
+  the Reload box, then click the same box with a side button (Mouse 4 or 5): Reload now shows **Mouse 4**, and the
+  browser does not go back a page. In a match the side button reloads, and pressing it never leaves the game. Click
+  the Aim box and click it with the left button: Aim becomes Left mouse and Fire takes Right mouse (a swap). Reset to
+  defaults puts them back.
+- [ ] **Spectating hint.** Get hit: the label reads "Spectating … · Left mouse for next", or names your fire key.
+- [ ] **Settings, Accessibility: Reduced motion.** Turn it On, then play: the replica no longer bobs as you walk or
+  sways behind turns, each shot kicks it half as much, and leaning tips the view only slightly. The view still climbs a
+  little in full auto (that shows where the BBs go). If your computer's own "reduce motion" setting is on, the game
+  starts with it On until you pick.
 
 ## Pause, menus and tabbing away
 

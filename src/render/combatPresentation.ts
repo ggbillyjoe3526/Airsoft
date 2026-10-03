@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Sfx, type SfxSetup } from '../audio/sfx';
+import type { MotionScale } from '../config/accessibility';
 import type { VolumeChannel } from '../config/audio';
 import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
@@ -90,6 +91,11 @@ export class CombatPresentation {
   /** A volume slider moved on Settings → Audio. */
   setVolume(channel: VolumeChannel, position: number): void {
     this.sfx.setVolume(channel, position);
+  }
+
+  /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
+  setMotion(scale: MotionScale): void {
+    this.viewmodel.setMotion(scale);
   }
 
   /** The crosshair changed on Settings → Crosshair. */
