@@ -5,26 +5,27 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `claude/project-thread-1nyjk6` (Phase 4 M15 menus). The owner stopped work for
-now at the end of this session ("wrap everything up cleanly")._
+_Last updated: 2026-10-03 · branch `claude/roadmap-playtest-feedback-jzijlg` (roadmap only: the owner's M15 notes)._
 
 ## Where we are
 
 - **Phase 3 is done and tagged** (`v0.1-alpha.3`). On `main` since the tag (all merged 2026-10-03): M12a, M12b and
   M12c weapon handling, the pistol's slight left lean (#13) and the **M11 Depot rework** (#14).
-- **M15 menus** (pulled forward by the owner ahead of M13, to his own design; concept sketch approved) is on this
-  branch as pull request #15 for the owner (critic 9.1): title screen → New game (Mode and Difficulty pop-ups, Loadout and Settings
+- **M15 menus** (pulled forward by the owner ahead of M13, to his own design; concept sketch approved) is merged
+  (#15, critic 9.1): title screen → New game (Mode and Difficulty pop-ups, Loadout and Settings
   screens), pause menu (Resume / Settings / Quit to title screen), result (Play Again / Change setup / Title screen),
   headings in capitals, unbuilt items greyed with LATER, render quality as a saved setting. Code in `src/ui/menus/`,
   placeholder data in `src/config/menus.ts`. Concept sketch: https://claude.ai/artifact/R6WwSeS2sXSAdqzzZBGSQt.
 
 ## Next (when the owner comes back)
 
-1. **The owner merges the M15 pull request** (#15, if not done yet).
-2. **The owner's playtest of the new Depot and the new menus** (PLAYTEST.md: "The Depot (M11 rework)" and
-   "Menus (M15)"). His Depot feedback is still awaited; his M12c notes (hop-up good, pistol too straight) are done.
-   Fix what he finds first.
-3. **Then M13, the audio rework** (ROADMAP Phase 4, order M12 → M11 → M15 → M13 → M14 → M16). `ReplicaConfig.power`
+1. **M15 is merged** (#15). The owner played the menus on `main` and sent five notes (2026-10-03); the roadmap has
+   them as **M15b** (ROADMAP Phase 4): no map loaded until Play, a Map pop-up with Depot as the default, opaque
+   menus, the controls list only under Settings, a Field of view slider (100° stays the default), Brightness
+   removed, graphics quality greyed out as LATER. The Esport difficulty is parked in IDEAS.
+2. **Build M15b next.** The hard part is loading the map only on Play and unloading it on Quit / Change setup:
+   today the field is built at start-up and drawn behind the title screen. The owner's Depot feedback is still awaited.
+3. **Then M13, the audio rework** (order M12 → M11 → M15 → M15b → M13 → M14 → M16). `ReplicaConfig.power`
    (electric / gas) is there for sound profiles by power source. Volume settings then fill the Audio tab's LATER rows.
 
 ## Working notes and gotchas
