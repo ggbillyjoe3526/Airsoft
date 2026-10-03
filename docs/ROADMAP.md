@@ -275,7 +275,8 @@ the tutorial come last because they dress and explain everything before them.
     - **BBs drawn from the muzzle:** a fresh BB's streak no longer reaches back past the muzzle (it ran behind the
       camera and showed as a line slanting up from the bottom of the screen), and both replicas are held pointing
       straight ahead, so the BBs fly out along the barrel's line to the crosshair, from the hip and aiming.
-    - **The pistol faces forward:** no inward cant, a little closer and more central.
+    - **The pistol faces forward:** a little closer and more central, with only a slight lean to the left (0.1 rad,
+      down from 0.36; owner after M12c: straight was "slightly too straight").
     - **Hop-up:** a dial per replica (0–100%) scaling the backspin lift; out of the box the rifle is on target to
       about 38 m (Depot's longest sightlines are ~34 m) and the pistol to about 25 m; over-hopped BBs rise and
       float. Bots use the factory setting.

@@ -194,7 +194,7 @@ describe('sprint carry', () => {
   });
 
   for (const [slot, replica] of LOADOUT.entries()) {
-    it(`${replica.id}: a shot straight out of a sprint leaves a replica pointing straight ahead`, () => {
+    it(`${replica.id}: a shot straight out of a sprint leaves a replica back in its hold (level, at its hold yaw)`, () => {
       const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
       const arm = createArmament(LOADOUT);
       arm.active = slot;
@@ -207,7 +207,8 @@ describe('sprint carry', () => {
       vm.scene.traverseVisible((o) => o.name === 'muzzle' && markers.push(o));
       vm.scene.updateMatrixWorld(true);
       const barrel = new THREE.Vector3(0, 0, -1).transformDirection(markers[0]!.matrixWorld);
-      expect(Math.hypot(barrel.x, barrel.y)).toBeLessThan(1e-9);
+      expect(Math.abs(barrel.y)).toBeLessThan(1e-9);
+      expect(Math.atan2(-barrel.x, -barrel.z)).toBeCloseTo(replica.look.hold.yaw, 9);
       vm.dispose();
     });
   }

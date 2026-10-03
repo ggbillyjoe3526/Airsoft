@@ -63,13 +63,15 @@ describe('BB tracers leave the muzzle in line with the barrel (owner playtest, 2
         expect(m.inFront).toBe(true);
         expect(m.y).toBeLessThan(0); // the muzzle is drawn below the crosshair
 
-        // The barrel itself points straight ahead: its far end vanishes at the screen centre, so on screen the
-        // barrel runs from the muzzle towards the crosshair, the way the BB is drawn.
+        // The barrel points the way its hold says, level, whatever the kick: straight ahead for the rifle (its far end
+        // vanishes at the screen centre, so on screen it runs from the muzzle to the crosshair, the way the BB is
+        // drawn), turned slightly left for the pistol (the owner's choice, capped below).
         const markers: THREE.Object3D[] = [];
         vm.scene.traverseVisible((o) => o.name === 'muzzle' && markers.push(o));
         expect(markers).toHaveLength(1); // the replica in hand
         const barrel = new THREE.Vector3(0, 0, -1).transformDirection(markers[0]!.matrixWorld);
-        expect(Math.hypot(barrel.x, barrel.y)).toBeLessThan(1e-9);
+        expect(Math.abs(barrel.y)).toBeLessThan(1e-9);
+        expect(Math.atan2(-barrel.x, -barrel.z)).toBeCloseTo(aim ? 0 : replica.look.hold.yaw, 9);
 
         const pool = createBBPool(1);
         const r = new BBRenderer(pool, DT);
@@ -96,6 +98,18 @@ describe('BB tracers leave the muzzle in line with the barrel (owner playtest, 2
       });
     }
   }
+
+  it('the rifle is held pointing straight ahead; the pistol leans only slightly left (owner playtests, 2026-10-03)', () => {
+    for (const r of LOADOUT) {
+      if (r.look.model === 'rifle') {
+        expect(r.look.hold.yaw).toBe(0);
+      } else {
+        // 0.36 rad looked aimed off to the left, 0 "slightly too straight": a small lean, well short of the old one.
+        expect(r.look.hold.yaw).toBeGreaterThan(0);
+        expect(r.look.hold.yaw).toBeLessThanOrEqual(0.12);
+      }
+    }
+  });
 
   it("a fresh BB's streak starts at the muzzle and grows from there, for anyone's shots", () => {
     const pool = createBBPool(2);
