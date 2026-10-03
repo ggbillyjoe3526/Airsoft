@@ -244,8 +244,9 @@ export class Game {
     const s = this.session;
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
-    if (screen === 'title' || !s || !r) {
-      this.menus.showTitle();
+    if (!this.started || !s || !r) {
+      // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
+      // whichever screen the player went to, so they stay there.
     } else if (screen === 'result') {
       const mine = s.player.team;
       const theirs = 1 - mine;
