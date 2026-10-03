@@ -31,19 +31,19 @@ Go to **https://nodejs.org**, download the **LTS** version (22 or newer), and in
 
 Download v0.1-alpha.2 as a ZIP file:
 
-**https://github.com/ggbillyjoe3526/airsoft/archive/refs/tags/v0.1-alpha.2.zip**
+**https://github.com/ggbillyjoe3526/Airsoft/archive/refs/tags/v0.1-alpha.2.zip**
 
-Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `airsoft-0.1-alpha.2`.
+Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `Airsoft-0.1-alpha.2`.
 (Older versions are on the **Releases / Tags** page of the repository.)
 
-(If that link doesn't work, open **https://github.com/ggbillyjoe3526/airsoft**, click the green **Code**
-button, then **Download ZIP**. The folder will then be called `airsoft-main`; use it the same way.)
+(If that link doesn't work, open **https://github.com/ggbillyjoe3526/Airsoft**, click the green **Code**
+button, then **Download ZIP**. The folder will then be called `Airsoft-main`; use it the same way.)
 
 ### 3. Open a terminal in that folder
 
-- **Windows:** open the unzipped folder (`airsoft-0.1-alpha.2`, or `airsoft-main` if you used the Download ZIP
+- **Windows:** open the unzipped folder (`Airsoft-0.1-alpha.2`, or `Airsoft-main` if you used the Download ZIP
   button), click the address bar at the top of the window, type `cmd` and press Enter.
-- **Mac:** right-click the unzipped folder (`airsoft-0.1-alpha.2` or `airsoft-main`) and choose **New Terminal at Folder**.
+- **Mac:** right-click the unzipped folder (`Airsoft-0.1-alpha.2` or `Airsoft-main`) and choose **New Terminal at Folder**.
 - **Linux:** right-click inside the folder and choose **Open in Terminal**.
 
 ### 4. Install and start the game

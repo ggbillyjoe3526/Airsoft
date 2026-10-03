@@ -11,12 +11,12 @@ Needs a desktop computer with Chrome, Edge or Firefox. Setup takes about 10 minu
 1. **Install Node.js (one time only).** Go to nodejs.org, download the **LTS** version (22 or newer) and
    install it with the default options. Node.js runs a small web server on your own computer; nothing gets
    installed into your browser.
-2. **Download the code.** Sign in to GitHub, open github.com/ggbillyjoe3526/airsoft, click the green **Code**
+2. **Download the code.** Sign in to GitHub, open github.com/ggbillyjoe3526/Airsoft, click the green **Code**
    button, then **Download ZIP**. That gives you `main`, the latest merged version.
    - **To test a pull request before merging it**, first pick its branch: on the repository page, click the
      branch menu (it says `main`), choose the branch named at the top of the pull request, then **Code** →
      **Download ZIP**.
-3. **Unzip it** somewhere easy, like your Desktop. The folder is named after the branch (`airsoft-main` for `main`).
+3. **Unzip it** somewhere easy, like your Desktop. The folder is named after the branch (`Airsoft-main` for `main`).
 4. **Open a terminal in that folder.**
    - Windows: open the folder, click the address bar at the top, type `cmd` and press Enter.
    - Mac: right-click the folder and choose **New Terminal at Folder**.
