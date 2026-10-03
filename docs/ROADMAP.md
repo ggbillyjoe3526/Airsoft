@@ -107,7 +107,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Done (merged; owner played it: five notes, for M15b and later) | 9.1 |
 | Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Done (pull request; owner to play it) | 9.0 |
-| Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Next | |
+| Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Done (pull request; owner to play it) | CRITIC17B |
 | Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M18 Comfort, accessibility and browser basics (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, colour-blind options, on-screen sound cues, pause on a hidden tab, fullscreen | Later | |
 | Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (merged; owner's playtest next) | 9.0 |
@@ -498,6 +498,13 @@ each one went:**
       customisation (v0.5).
     - The power or gas type row stays LATER (the v0.3 platforms).
     - Each part shows on the held replica as simple geometry; the art pass (M14) models them properly.
+    - Built (2026-10-03, `config/attachments.ts`): the **2× scope** (zoom 2, 1.6× slower to raise, the HUD shows only
+      its round eyepiece with a reticle and a lit centre dot, and the mouse turns slower in proportion); the **vertical grip** (the shake
+      of a sprint or landing settles in 0.6× the time; 15% slower to draw and to raise a sight) and the **angled grip**
+      (20% quicker to draw and raise; the shake lasts 1.3×); the rifle's **hi-cap** (120 BBs, two carried: the same 240,
+      and quiet moves rattle, heard by bots within 7 m), **low-cap** (30 BBs, five carried, a 20% quicker reload) and the
+      pistol's **extended** magazine (27 BBs, 35% slower to draw). Each Loadout row says in numbers what the pick does.
+      Bots keep factory parts. A **Skins** row (replicas and outfit) is greyed as LATER.
   - The playtest guide gets a Loadout section for each half.
 - **M18. Comfort, accessibility and browser basics** (the owner's second batch, items 2–5, 7, 14–17, 21 and 23). The
   settings every player looks for first (PCGamingWiki's list, the Game Accessibility Guidelines' basic tier). It fills

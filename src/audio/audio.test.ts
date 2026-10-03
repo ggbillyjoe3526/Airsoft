@@ -117,7 +117,7 @@ describe('sound synthesis (M13)', () => {
     };
     const L = AUDIO.levels;
     const loudness = (v: Float32Array): number => rms(v, 0, 0.1);
-    const steps = (Object.keys(SOUNDS) as SoundCue[]).filter((c) => c.startsWith('step.'));
+    const steps = (Object.keys(SOUNDS) as SoundCue[]).filter((c) => c.startsWith('step.') || c === 'magRattle');
     for (const p of SHOT_PROFILES) {
       for (const step of steps) {
         expect(played(cues.shot(p), L.shot.gain, peak, 'min'), `${p} shot vs ${step} (peak)`).toBeGreaterThan(1.5 * played(step, L.step.gain, peak, 'max'));
@@ -125,6 +125,19 @@ describe('sound synthesis (M13)', () => {
         expect(played(cues.shot(p), L.shot.gain, peak, 'min'), `${p} shot vs your ${step}`).toBeGreaterThan(2.5 * played(step, L.ownStep.gain, peak, 'max'));
       }
     }
+  });
+
+  it("rattles a hi-cap quieter than a step and brighter than a draw, so it doesn't pass for either (M17b)", () => {
+    const loudness = (cue: SoundCue): number => rms(rendered.get(cue)![0]!, 0, 0.1);
+    // Brightness as zero crossings per sample: tiny ticks cross far more often than a sling's swish.
+    const brightness = (cue: SoundCue): number => {
+      const v = rendered.get(cue)![0]!;
+      let crossings = 0;
+      for (let i = 1; i < v.length; i++) if (v[i - 1]! < 0 !== v[i]! < 0) crossings++;
+      return crossings / v.length;
+    };
+    expect(loudness('magRattle')).toBeLessThan(loudness('step.concrete.run'));
+    expect(brightness('magRattle')).toBeGreaterThan(1.5 * brightness('draw'));
   });
 
   it('lands a jump harder than a run, and a sprint louder than a run', () => {

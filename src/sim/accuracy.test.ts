@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MOVEMENT } from '../config/movement';
+import type { GripId } from '../config/attachments';
+import { LOADOUT } from '../config/replicas';
 import { stepAccuracy, targetSpreadScale } from './accuracy';
+import { fitParts } from './armament';
 import { type Character, createCharacter } from './character';
 import { vec3 } from './vec';
 
@@ -136,6 +139,26 @@ describe('accuracy by stance and movement', () => {
     for (let t = 0; t < A.carryTime + 0.2; t += DT) stepAccuracy(c, MOVEMENT, DT);
     expect(c.shakeCarry).toBe(0);
     expect(c.spreadScale).toBeLessThan(A.steady + 0.01);
+  });
+
+  it('settles sooner after a sprint with a vertical grip, later with an angled one (M17b)', () => {
+    const settleAfterSprint = (grip: GripId): number => {
+      const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
+      c.grounded = true;
+      fitParts(c.armament, LOADOUT, [{ grip, magazine: 'standard' }]);
+      c.sprinting = true;
+      stepAccuracy(c, MOVEMENT, DT);
+      c.sprinting = false;
+      let t = 0;
+      while (c.spreadScale > 1.05 && t < 2) {
+        stepAccuracy(c, MOVEMENT, DT);
+        t += DT;
+      }
+      return t;
+    };
+    const none = settleAfterSprint('none');
+    expect(settleAfterSprint('vertical')).toBeLessThan(none - 0.02);
+    expect(settleAfterSprint('angled')).toBeGreaterThan(none + 0.02);
   });
 
   it('makes walking with the walk key only a little shakier than standing (owner, 2026-10-03)', () => {

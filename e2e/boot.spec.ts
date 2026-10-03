@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test';
 
 /**
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map and
- * Difficulty pop-ups, the Loadout and Settings screens, a crosshair picked) and starts a match with a red dot and
- * 0.28 g BBs, holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims down the sight and keeps
- * running without a page error.
+ * Difficulty pop-ups, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2× scope, an
+ * angled grip, a hi-cap and 0.28 g BBs, holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
+ * down the scope and keeps running without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
@@ -78,6 +78,19 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('Red dot');
   await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('0.28 g / 0.20 g BBs');
 
+  // Attachments (M17b): the 2× scope, an angled grip and a hi-cap on the rifle, each with its numbers under it.
+  await setup.getByRole('button', { name: /Loadout/i }).click();
+  await loadout.getByRole('button', { name: '2× scope' }).click();
+  const rifleGrip = loadout.getByRole('group', { name: 'AEG rifle grip' });
+  await expect(rifleGrip.getByRole('button', { name: 'No grip' })).toHaveAttribute('aria-pressed', 'true');
+  await rifleGrip.getByRole('button', { name: 'Angled grip' }).click();
+  await expect(loadout.getByText(/Brings the AEG rifle up in 0\.36 s/)).toBeVisible();
+  await loadout.getByRole('group', { name: 'AEG rifle magazine' }).getByRole('button', { name: 'Hi-cap' }).click();
+  await expect(loadout.getByText('120 BBs each, 2 carried (240 in all). Reload 1.8 s.')).toBeVisible();
+  await expect(loadout.getByText('Replicas and outfit').first()).toBeAttached(); // skins, greyed as LATER
+  await loadout.getByRole('button', { name: 'Back' }).click();
+  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('2× scope · Angled grip · Hi-cap mag');
+
   // Settings: its own screen with tabs; Esc works as Back and returns to New game, with focus back on the Settings tile.
   await setup.getByRole('button', { name: /Settings/i }).click();
   const settings = page.locator('.menu-settings');
@@ -114,6 +127,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const mag = page.locator('.hud-mag');
   await expect(mag).toHaveText(/^\d+$/);
   const full = Number(await mag.textContent());
+  expect(full).toBe(120); // the hi-cap
 
   // Fire: hold the button until the magazine count drops.
   await page.mouse.move(640, 360);
@@ -133,11 +147,12 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
 
   await testInfo.attach('in-match', { body: await page.screenshot(), contentType: 'image/png' });
 
-  // Aim down the red dot: hold the right button and the HUD swaps the crosshair for the dot; let go and it's back.
+  // Aim down the scope: hold the right button and the HUD swaps the crosshair for the eyepiece; let go and it's back.
   const hud = page.locator('.hud');
   await page.mouse.down({ button: 'right' });
-  await expect(hud).toHaveClass(/\baiming\b/, { timeout: 10_000 });
-  await expect(page.locator('.hud-reddot')).toBeVisible();
+  await expect(hud).toHaveClass(/\bscoped\b/, { timeout: 10_000 });
+  await expect(page.locator('.hud-scope')).toBeVisible();
+  await expect(page.locator('.hud-reddot')).toBeHidden();
   await testInfo.attach('aiming', { body: await page.screenshot(), contentType: 'image/png' });
   await page.mouse.up({ button: 'right' });
   await expect(hud).not.toHaveClass(/\baiming\b/, { timeout: 10_000 });

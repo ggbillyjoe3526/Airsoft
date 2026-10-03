@@ -199,7 +199,8 @@ export class BotController {
         if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'footstep') {
         const walker = this.character(state, e.characterId);
-        const range = e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : cfg.footstepHearingRun;
+        const range =
+          e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : e.kind === 'rattle' ? cfg.footstepHearingRattle : cfg.footstepHearingRun;
         if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, time, walker.position, range);
       } else if (e.type === 'bbImpact') {
         // Only enemy fire suppresses: a bot's own BB (or a teammate's) landing near it is no threat.

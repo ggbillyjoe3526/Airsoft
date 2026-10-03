@@ -37,6 +37,8 @@ export type SoundCue =
   | 'foley.crouch'
   | 'foley.stand'
   | 'foley.lean'
+  /** A hi-cap's loose BBs shaking with each step (M17b). */
+  | 'magRattle'
   | `impact.${ImpactMaterial}`
   | 'bodyHit'
   | 'hitTick'
@@ -226,6 +228,22 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
   'foley.crouch': rustle(2400, 1500, 0.22, 0.16),
   'foley.stand': rustle(1500, 2500, 0.18, 0.14),
   'foley.lean': rustle(2100, 2700, 0.14, 0.1),
+  /**
+   * A hi-cap's loose BBs shaking in the magazine: a quick scatter of tiny bright ticks inside a hollow plastic shell,
+   * higher and grittier than the sling sound of a draw.
+   */
+  magRattle: {
+    layers: [
+      click(0, 5200, 0.2, 0.004),
+      click(0.011, 6200, 0.15, 0.004),
+      click(0.02, 4600, 0.17, 0.004),
+      click(0.032, 5700, 0.13, 0.004),
+      click(0.047, 6600, 0.1, 0.004),
+      { kind: 'noise', attack: 0.004, decay: 0.05, gain: 0.07, filter: { type: 'highpass', hz: 4500, q: 0.7 } },
+      { kind: 'modes', at: 0.006, gain: 0.05, modes: [{ hz: 1250, decay: 0.03, gain: 1 }, { hz: 2750, decay: 0.02, gain: 0.5 }] },
+    ],
+    ...LOOSE,
+  },
 
   // ---- Hits ----------------------------------------------------------------------------------
   /** A BB on concrete or blockwork: the dry, bright "tik". */

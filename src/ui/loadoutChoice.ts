@@ -1,5 +1,7 @@
+import { factoryParts, GRIP_CHOICES, GRIPS, type GripId, handlingOf, MAGAZINES, type MagazineId, type ReplicaParts } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
-import { OPTIC_CHOICES, type OpticChoice } from '../config/optics';
+import { MOVEMENT } from '../config/movement';
+import { AIMING, OPTIC_CHOICES, type OpticChoice } from '../config/optics';
 import { BB_WEIGHT, HOP_UP, type LoadoutSlot, muzzleEnergy, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
 import { loadSetting, numberIn } from '../settings/storage';
 import { bestHopUp, flightTime, hopUpReach } from '../sim/hopUp';
@@ -83,12 +85,77 @@ export function hopUpReadout(replica: ReplicaConfig, dial: number, grams = repli
   return `On target ${reach}, then the BB drops${factory}.`;
 }
 
+/** The settings fields a replica's grip and magazine are saved as (M17b). */
+export function gripField(replica: ReplicaConfig): `grip.${string}` {
+  return `grip.${replica.id}`;
+}
+
+export function magazineField(replica: ReplicaConfig): `mag.${string}` {
+  return `mag.${replica.id}`;
+}
+
+/** A replica's saved grip and magazine, or the ones it comes with (anything it can't take falls back to those). */
+export function loadParts(r: ReplicaConfig): ReplicaParts {
+  const factory = factoryParts(r);
+  return {
+    grip: r.gripMount ? loadSetting(gripField(r), (raw) => GRIP_CHOICES.find((g) => g.id === raw)?.id, factory.grip) : factory.grip,
+    magazine: loadSetting(magazineField(r), (raw) => r.magazines.find((m) => m === raw), factory.magazine),
+  };
+}
+
+/** The magazines a replica takes, as the Loadout screen offers them. */
+export function magazineChoices(r: ReplicaConfig): { id: MagazineId; label: string; blurb: string }[] {
+  return r.magazines.map((id) => ({ id, label: MAGAZINES[id].label, blurb: MAGAZINES[id].blurb }));
+}
+
+/** One line under the magazine, in numbers, e.g. "60 BBs each, 4 carried (240 in all). Reload 1.8 s." */
+export function magazineReadout(r: ReplicaConfig, magazine: MagazineId): string {
+  const h = handlingOf(r, { grip: 'none', magazine });
+  const draw = MAGAZINES[magazine].drawScale !== 1 ? ` Draw ${h.drawTime.toFixed(2)} s.` : '';
+  return `${h.magSize} BBs each, ${h.mags} carried (${h.magSize * h.mags} in all). Reload ${h.reloadTime.toFixed(1)} s.${draw}`;
+}
+
 /**
- * The Loadout button's summary on the New game screen: the optic on the replica that takes one (if any), then each
- * replica's BB weight and hop-up dial in slot order, e.g. "Red dot · 0.25 g / 0.20 g BBs · hop-up 65% / 55%".
+ * How long after a sprint ends the aim counts as steady on the grip line: the shake's carry, then two settle time
+ * constants (about 86% of the way back), both scaled by the grip as in sim/accuracy.ts.
  */
-export function loadoutSummary(loadout: readonly ReplicaConfig[], optic: OpticChoice, dials: readonly number[], grams: readonly number[]): string {
+const STEADY_SETTLES = 2;
+
+/**
+ * One line under the grip, in numbers: how quickly the replica comes up (after a switch) and to your eye, and how long
+ * after a sprint the aim is steady, against when it can fire again, e.g. "Brings the AEG rifle up in 0.45 s and to
+ * your eye in 0.15 s. After a sprint it can fire from 0.20 s and is steady in about 0.6 s."
+ */
+export function gripReadout(r: ReplicaConfig, grip: GripId): string {
+  const h = handlingOf(r, { grip, magazine: r.magazines[0]! });
+  const a = MOVEMENT.accuracy;
+  const steady = (a.carryTime + STEADY_SETTLES * a.settleTime) * GRIPS[grip].shakeScale;
+  return (
+    `Brings the ${r.name} up in ${h.drawTime.toFixed(2)} s and to your eye in ${(AIMING.raiseTime * h.raiseScale).toFixed(2)} s. ` +
+    `After a sprint it can fire from ${MOVEMENT.sprintFireLockout.toFixed(2)} s and is steady in about ${steady.toFixed(1)} s.`
+  );
+}
+
+/**
+ * The Loadout button's summary on the New game screen: the optic on the replica that takes one (if any), any grip and
+ * magazine that isn't the one a replica comes with, then each replica's BB weight and hop-up dial in slot order, e.g.
+ * "Red dot · Angled grip · Hi-cap mag · 0.25 g / 0.20 g BBs · hop-up 65% / 55%".
+ */
+export function loadoutSummary(
+  loadout: readonly ReplicaConfig[],
+  optic: OpticChoice,
+  dials: readonly number[],
+  grams: readonly number[],
+  parts: readonly ReplicaParts[] = [],
+): string {
   const opticPart = loadout.some((r) => r.opticMount) ? `${OPTIC_CHOICES.find((o) => o.id === optic)?.label ?? optic} · ` : '';
+  let partsPart = '';
+  loadout.forEach((r, i) => {
+    const p = parts[i];
+    if (!p) return;
+    if (p.grip !== 'none') partsPart += `${GRIPS[p.grip].label} · `;
+    if (p.magazine !== r.magazines[0]) partsPart += `${MAGAZINES[p.magazine].label} mag · `;
+  });
   const weights = loadout.map((r, i) => bbWeightLabel(grams[i] ?? r.bbWeight)).join(' / ');
-  return `${opticPart}${weights} BBs · hop-up ${loadout.map((r, i) => hopUpLabel(dials[i] ?? r.hopUpDial)).join(' / ')}`;
+  return `${opticPart}${partsPart}${weights} BBs · hop-up ${loadout.map((r, i) => hopUpLabel(dials[i] ?? r.hopUpDial)).join(' / ')}`;
 }

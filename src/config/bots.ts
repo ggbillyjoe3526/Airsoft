@@ -20,11 +20,13 @@ export const BOT_BEHAVIOUR = {
   hearingDistance: 22,
   /**
    * How far an enemy's footsteps carry (metres): running, sprinting, and the thud of landing a jump.
-   * Walking and moving crouched are silent (only `closeAwareness` gives those away).
+   * Walking and moving crouched are silent (only `closeAwareness` gives those away), unless a hi-cap magazine
+   * rattles (M17b): heard this far on quiet moves.
    */
   footstepHearingRun: 11,
   footstepHearingSprint: 16,
   footstepHearingLand: 12,
+  footstepHearingRattle: 7,
   /** A heard position is off by up to this fraction of the distance (hearing through walls is vague). */
   hearingError: 0.3,
   /**

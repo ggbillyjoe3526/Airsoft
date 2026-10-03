@@ -1074,6 +1074,57 @@ kbd {
   display: none;
 }
 
+/*
+ * Aiming down a scope (M17b): only the round eyepiece shows, with a crosshair reticle and a lit centre dot in it. The
+ * lines are dark with a pale halo and the dot is red with a dark ring, so both read against dark walls and bright ones.
+ */
+.hud-scope {
+  position: absolute;
+  inset: 0;
+  --eyepiece: 40vmin;
+  background: radial-gradient(circle at center, transparent calc(var(--eyepiece) - 1px), rgba(8, 9, 10, 0.97) var(--eyepiece));
+  display: none;
+}
+
+.hud-scope i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(12, 12, 12, 0.9);
+  box-shadow: 0 0 0 1px rgba(235, 235, 225, 0.55);
+}
+
+.hud-scope i:nth-child(1) {
+  width: calc(2 * var(--eyepiece));
+  height: 2px;
+  margin: -1px 0 0 calc(-1 * var(--eyepiece));
+}
+
+.hud-scope i:nth-child(2) {
+  width: 2px;
+  height: calc(2 * var(--eyepiece));
+  margin: calc(-1 * var(--eyepiece)) 0 0 -1px;
+}
+
+.hud-scope i:nth-child(3) {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #ff2418;
+  box-shadow:
+    0 0 0 1.5px rgba(0, 0, 0, 0.7),
+    0 0 5px 1px rgba(255, 50, 30, 0.8);
+}
+
+.hud.scoped .hud-scope {
+  display: block;
+}
+
+.hud.scoped .hud-reddot {
+  display: none;
+}
+
 .hud-replica {
   position: absolute;
   right: 28px;
@@ -1174,6 +1225,7 @@ kbd {
 
 .hud.out .hud-crosshair,
 .hud.out .hud-reddot,
+.hud.out .hud-scope,
 .hud.out .hud-replica {
   display: none;
 }
