@@ -27,12 +27,13 @@ export function magazineOut(p: number): number {
   return 1 - smooth((p - R.magInStart) / (R.magSeated - R.magInStart));
 }
 
-const clampSway = (v: number): number => Math.max(-VIEWMODEL.swayMax, Math.min(VIEWMODEL.swayMax, v));
+const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
 
 /**
  * The replica in your hands. Rendered in its own scene on top of the world (so it never clips into
  * walls) and animated purely from presentation state: mouse sway, walk bob, sprint carry, recoil
- * kick, reload dip and draw.
+ * kick, reload dip, draw and raising a fitted optic to your eye. A fitted optic shows on the model and
+ * folds the iron sights down.
  */
 export class Viewmodel {
   readonly scene = new THREE.Scene();
@@ -45,6 +46,12 @@ export class Viewmodel {
     mag: THREE.Object3D | undefined;
     hand: THREE.Object3D | undefined;
     hold: ReplicaConfig['look']['hold'];
+    /** Where it sits aiming down a fitted optic (replicas with an optic mount). */
+    aimHold: ReplicaConfig['look']['aimHold'];
+    /** The optic part and the iron sights standing up / folded (replicas with an optic mount). */
+    optic: THREE.Object3D | undefined;
+    sightsUp: THREE.Object3D | undefined;
+    sightsDown: THREE.Object3D | undefined;
   }[] = [];
   /** 0 = support hand on its grip, 1 = on the magazine (reloading). */
   private handBlend = 0;
@@ -78,7 +85,16 @@ export class Viewmodel {
       const model = this.replicas.models.get(r.id)!;
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
-      this.slots.push({ model, mag: model.getObjectByName('magazine'), hand: model.getObjectByName('supportHand'), hold: r.look.hold });
+      this.slots.push({
+        model,
+        mag: model.getObjectByName('magazine'),
+        hand: model.getObjectByName('supportHand'),
+        hold: r.look.hold,
+        aimHold: r.look.aimHold,
+        optic: model.getObjectByName('optic'),
+        sightsUp: model.getObjectByName('sightsUp'),
+        sightsDown: model.getObjectByName('sightsDown'),
+      });
       model.visible = false;
       this.rig.add(model);
     }
@@ -110,7 +126,7 @@ export class Viewmodel {
   /**
    * Called once per frame. `speed` is the player's horizontal speed and `runSpeed` its normal (run) speed;
    * `carried` is true while sprinting or in the post-sprint lockout; `callingHit` lowers the replica
-   * and raises your hand.
+   * and raises your hand. `aim` is how far a fitted optic is raised to your eye (0..1).
    */
   update(
     dt: number,
@@ -122,10 +138,27 @@ export class Viewmodel {
     armament: Armament,
     loadout: readonly ReplicaConfig[],
     callingHit: boolean,
+    aim: number,
   ): void {
     const replica = loadout[armament.active]!;
-    for (let i = 0; i < this.slots.length; i++) this.slots[i]!.model.visible = i === armament.active;
+    for (let i = 0; i < this.slots.length; i++) {
+      const s = this.slots[i]!;
+      s.model.visible = i === armament.active;
+      const fitted = armament.optics[i] != null;
+      if (s.optic) s.optic.visible = fitted;
+      if (s.sightsUp) s.sightsUp.visible = !fitted;
+      if (s.sightsDown) s.sightsDown.visible = fitted;
+    }
     const slot = this.slots[armament.active]!;
+    // Raising the sight: the replica comes in from its hip hold to the aiming hold, square to the view.
+    const raised = slot.aimHold ? smooth(aim) : 0;
+    const h = slot.hold.position;
+    const t = slot.aimHold ?? h;
+    slot.model.position.set(h[0] + (t[0] - h[0]) * raised, h[1] + (t[1] - h[1]) * raised, h[2] + (t[2] - h[2]) * raised);
+    const holdYaw = slot.hold.yaw * (1 - raised);
+    // Steadier on the shoulder: sway and bob shrink while aiming, and the kick only nudges the sight (the dot stays in the glass).
+    const motion = 1 - VIEWMODEL.aimSteady * raised;
+    const kick = this.kick * (1 - (1 - VIEWMODEL.aimKick) * raised);
 
     // Sway: the replica lags behind the view a little, then springs back.
     if (this.snapView) {
@@ -142,8 +175,10 @@ export class Viewmodel {
     this.lastYaw = yaw;
     this.lastPitch = pitch;
     const settle = Math.exp(-VIEWMODEL.returnRate * dt);
-    this.swayX = clampSway(this.swayX * settle + dYaw * VIEWMODEL.swayPerRadian);
-    this.swayY = clampSway(this.swayY * settle - dPitch * VIEWMODEL.swayPerRadian);
+    // Aimed, the sway is capped well inside the glass's radius, so even a hard flick keeps the dot in it.
+    const swayMax = VIEWMODEL.swayMax * motion;
+    this.swayX = clampSway(this.swayX * settle + dYaw * VIEWMODEL.swayPerRadian * motion, swayMax);
+    this.swayY = clampSway(this.swayY * settle - dPitch * VIEWMODEL.swayPerRadian * motion, swayMax);
     this.kick *= settle;
 
     const moving = Math.min(1, speed / runSpeed);
@@ -153,7 +188,7 @@ export class Viewmodel {
     const reloadP = armament.reload > 0 ? 1 - armament.reload / replica.reloadTime : 0;
     const reloadDip = Math.sin(Math.PI * reloadP);
     const R = VIEWMODEL.reload;
-    slot.model.rotation.set(reloadDip * R.tilt, slot.hold.yaw + reloadDip * R.turn, reloadDip * R.roll);
+    slot.model.rotation.set(reloadDip * R.tilt, holdYaw + reloadDip * R.turn, reloadDip * R.roll);
     // Magazine swap: the support hand goes to the magazine, pulls it, stows it out of view, brings a
     // fresh one up and seats it, then returns to its grip once the reload is done.
     const reloading = armament.reload > 0;
@@ -173,7 +208,7 @@ export class Viewmodel {
     }
     const drawP = replica.drawTime > 0 ? armament.draw / replica.drawTime : 0;
 
-    const bob = VIEWMODEL.bobAmount * moving;
+    const bob = VIEWMODEL.bobAmount * moving * motion;
     this.hitBlend = Math.max(0, Math.min(1, this.hitBlend + (callingHit ? dt : -dt) / VIEWMODEL.raiseTime));
     const raise = smooth(this.hitBlend);
     const hand = this.replicas.raisedHand;
@@ -189,9 +224,9 @@ export class Viewmodel {
         drawP * VIEWMODEL.drawDrop -
         this.sprintBlend * VIEWMODEL.sprintDrop -
         raise * VIEWMODEL.hitDrop,
-      this.kick * VIEWMODEL.kickBack,
+      kick * VIEWMODEL.kickBack,
     );
-    this.rig.rotation.set(this.kick * VIEWMODEL.kickUp - drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
+    this.rig.rotation.set(kick * VIEWMODEL.kickUp - drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
   }
 
   /**

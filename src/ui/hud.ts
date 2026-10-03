@@ -4,7 +4,7 @@ import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from 
 import { isLowAmmo } from './ammoStatus';
 
 /**
- * Minimal in-game HUD: crosshair and the replica panel (name and fire mode, BBs in the loaded magazine, a
+ * Minimal in-game HUD: crosshair (or the red dot while aiming down one) and the replica panel (name and fire mode, BBs in the loaded magazine, a
  * gauge per spare magazine showing how full it is, with the one a reload takes marked, and reload progress).
  * DOM is only touched when a displayed value changes.
  */
@@ -27,6 +27,7 @@ export class Hud {
   private readonly reloadBar: HTMLDivElement;
   private readonly reloadFill: HTMLDivElement;
   private shownInPlay = true;
+  private shownAiming = false;
   private readonly crosshair: HTMLDivElement;
   private shownGap = -1;
   /** What is on screen now: the DOM is only written when one of these changes. */
@@ -38,6 +39,7 @@ export class Hud {
     this.root.hidden = true;
     this.root.innerHTML = `
       <div class="hud-crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+      <div class="hud-reddot"></div>
       <div class="hud-replica">
         <div class="hud-replica-name"><span></span><span class="hud-firemode"></span></div>
         <div class="hud-ammo"><span class="hud-mag"></span><span class="hud-mags"></span></div>
@@ -67,10 +69,12 @@ export class Hud {
 
   /**
    * Once per frame (`dt` seconds). `inPlay` is false once you've been hit: the crosshair and ammo panel go
-   * away. `spreadPx` is one standard deviation of where the next BB can go, in screen pixels.
+   * away. `spreadPx` is one standard deviation of where the next BB can go, in screen pixels. `aiming`: the sight
+   * is up at your eye, so the red dot takes the crosshair's place.
    */
-  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, spreadPx: number, dt: number): void {
+  update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, spreadPx: number, aiming: boolean, dt: number): void {
     if (this.shownInPlay !== inPlay) this.root.classList.toggle('out', !(this.shownInPlay = inPlay));
+    if (this.shownAiming !== aiming) this.root.classList.toggle('aiming', (this.shownAiming = aiming));
     const gap = Math.round(Math.max(HUD.crosshairMinGap, HUD.crosshairSpreadSigmas * spreadPx) / HUD.crosshairGapStep) * HUD.crosshairGapStep;
     if (gap !== this.shownGap) this.crosshair.style.setProperty('--gap', `${(this.shownGap = gap)}px`);
     const replica = loadout[armament.active]!;

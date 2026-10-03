@@ -1,4 +1,5 @@
 import type { BallisticsConfig } from '../config/ballistics';
+import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import { bbMass, type FireMode, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
 import { type BBPool, spawnBB } from './ballistics';
@@ -69,6 +70,8 @@ export interface Armament {
   modes: FireMode[];
   /** BBs still to come in the burst under way (0 when none is). */
   burstShotsLeft: number;
+  /** The optic fitted to each replica (null: none, iron sights), by loadout slot. Fitted before a round, kept between rounds. */
+  optics: (OpticId | null)[];
 }
 
 export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
@@ -84,7 +87,13 @@ export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
     recoil: 0,
     modes: loadout.map((r) => r.defaultFireMode),
     burstShotsLeft: 0,
+    optics: loadout.map(() => null),
   };
+}
+
+/** Fits `optic` (or nothing) to every replica in the loadout that has an optic mount. */
+export function fitOptic(a: Armament, loadout: readonly ReplicaConfig[], optic: OpticId | null): void {
+  for (let i = 0; i < loadout.length; i++) a.optics[i] = loadout[i]!.opticMount ? optic : null;
 }
 
 /** The fire selector's next setting for this replica (wrapping round), or `mode` itself if it has only one. */

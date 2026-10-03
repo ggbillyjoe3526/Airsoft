@@ -1,7 +1,7 @@
 import { MOUSE } from '../config/controls';
 
 /**
- * Pointer Lock plus mouse input: look deltas, the fire button and wheel steps. Input is ignored
+ * Pointer Lock plus mouse input: look deltas, the fire button (left), the aim button (right) and wheel steps. Input is ignored
  * unless the pointer is locked to the game canvas (or, for the fire button and wheel only, unlocked
  * play is on: see `setUnlockedButtons`).
  */
@@ -11,6 +11,7 @@ export class PointerLock {
   private dy = 0;
   private fireHeldState = false;
   private firePressedState = false;
+  private aimHeldState = false;
   private wheel = 0;
   private readonly changeListeners = new Set<(locked: boolean) => void>();
   private readonly errorListeners = new Set<() => void>();
@@ -22,6 +23,8 @@ export class PointerLock {
     document.addEventListener('mousedown', this.onMouseDown);
     document.addEventListener('mouseup', this.onMouseUp);
     document.addEventListener('wheel', this.onWheel, { passive: true });
+    // The right button aims; never let it open the browser's menu over the game (or its HUD) while playing.
+    document.addEventListener('contextmenu', this.onContextMenu);
   }
 
   get locked(): boolean {
@@ -46,16 +49,12 @@ export class PointerLock {
   }
 
   /**
-   * Unlocked play (the `?nolock` test path): the fire button and wheel count without the lock. Mouse look
+   * Unlocked play (the `?nolock` test path): the fire and aim buttons and the wheel count without the lock. Mouse look
    * still needs the lock. Turning it off drops any held or pending fire.
    */
   setUnlockedButtons(on: boolean): void {
     this.unlockedButtons = on;
-    if (!on && !this.locked) {
-      this.fireHeldState = false;
-      this.firePressedState = false;
-      this.wheel = 0;
-    }
+    if (!on && !this.locked) this.releaseButtons();
   }
 
   /** Gives the mouse back (e.g. to click a button on the match result screen). */
@@ -83,6 +82,11 @@ export class PointerLock {
     return this.fireHeldState;
   }
 
+  /** The aim button (right) is held. */
+  get aimHeld(): boolean {
+    return this.aimHeldState;
+  }
+
   /** Returns true once if the fire button went down since the last call (catches sub-frame clicks). */
   consumeFirePress(): boolean {
     const p = this.firePressedState;
@@ -105,6 +109,7 @@ export class PointerLock {
     document.removeEventListener('mousedown', this.onMouseDown);
     document.removeEventListener('mouseup', this.onMouseUp);
     document.removeEventListener('wheel', this.onWheel);
+    document.removeEventListener('contextmenu', this.onContextMenu);
     this.changeListeners.clear();
     this.errorListeners.clear();
   }
@@ -114,9 +119,7 @@ export class PointerLock {
     if (!locked) {
       this.dx = 0;
       this.dy = 0;
-      this.fireHeldState = false;
-      this.firePressedState = false;
-      this.wheel = 0;
+      this.releaseButtons();
     }
     for (const fn of this.changeListeners) fn(locked);
   };
@@ -131,14 +134,28 @@ export class PointerLock {
     this.dy += e.movementY;
   };
 
+  private releaseButtons(): void {
+    this.fireHeldState = false;
+    this.firePressedState = false;
+    this.aimHeldState = false;
+    this.wheel = 0;
+  }
+
   private readonly onMouseDown = (e: MouseEvent): void => {
-    if (!(this.locked || this.unlockedButtons) || e.button !== 0) return;
-    this.fireHeldState = true;
-    this.firePressedState = true;
+    if (!(this.locked || this.unlockedButtons)) return;
+    if (e.button === 0) {
+      this.fireHeldState = true;
+      this.firePressedState = true;
+    } else if (e.button === 2) this.aimHeldState = true;
   };
 
   private readonly onMouseUp = (e: MouseEvent): void => {
     if (e.button === 0) this.fireHeldState = false;
+    else if (e.button === 2) this.aimHeldState = false;
+  };
+
+  private readonly onContextMenu = (e: MouseEvent): void => {
+    if (this.locked || this.unlockedButtons) e.preventDefault();
   };
 
   private readonly onWheel = (e: WheelEvent): void => {

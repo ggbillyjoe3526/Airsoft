@@ -120,8 +120,12 @@ body {
   font-size: 14px;
 }
 
+.start-sens.start-aim-sens {
+  margin-top: 0;
+}
+
 .start-sens output {
-  width: 3em;
+  width: 3.5em;
   text-align: left;
   font-family: var(--ui-mono);
 }
@@ -302,6 +306,31 @@ kbd {
   top: var(--gap);
 }
 
+/* Aiming down a red dot: the dot is the aim point, so it takes the crosshair's place. */
+.hud-reddot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: #ff2418;
+  /* A thin dark ring keeps it readable against orange shirts and bright walls. */
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 4px 1px rgba(255, 50, 30, 0.8);
+  display: none;
+}
+
+.hud.aiming .hud-reddot {
+  display: block;
+}
+
+.hud.aiming .hud-crosshair {
+  display: none;
+}
+
 .hud-replica {
   position: absolute;
   right: 28px;
@@ -401,6 +430,7 @@ kbd {
 }
 
 .hud.out .hud-crosshair,
+.hud.out .hud-reddot,
 .hud.out .hud-replica {
   display: none;
 }
@@ -617,7 +647,7 @@ kbd {
   color: #444;
 }
 
-/* Option pickers on the start screen (match mode, bot difficulty) */
+/* Option pickers on the start screen (match mode, bot difficulty, optic, crouch key) */
 .picker {
   margin: 0 0 16px;
 }

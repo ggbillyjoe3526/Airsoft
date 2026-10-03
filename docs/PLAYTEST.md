@@ -3,7 +3,7 @@
 How the owner plays the game to check a change. Each pull request names the sections to play; a bug pass
 before a release plays all of them. Written 2026-10-02 for the game as of M10 (leaning, magazines, BB physics,
 the 2σ crosshair); updated 2026-10-03 for M12a (fire modes, crouch toggle, steadier aim when still, quicker
-reloads). Update a section when a change alters what it describes.
+reloads) and M12b (the red dot as an accessory, aiming down sights, the crosshair's instant lock). Update a section when a change alters what it describes.
 
 ## Get the game running
 
@@ -57,9 +57,9 @@ Tick each box once it behaves as described; anything else is a bug worth noting.
 - [ ] **Press Space.** You do a small hop, not a big jump.
 - [ ] **Watch the crosshair while you move.** It opens up when you run or jump and tightens when you stand still
   or crouch. It does not flash wide when you land or step off something low, only when you jump.
-- [ ] **Stop and stand still for a moment.** The crosshair keeps closing in for about half a second after you stop:
-  the longer you hold still, the more accurate you are. Crouched and still is tightest. Walking with Shift opens it
-  only a little; running opens it a lot.
+- [ ] **Run, then let go of the keys.** The crosshair snaps tight almost as soon as you stop (an "instant lock"),
+  instead of easing in. Crouched and still is tightest. Walking with Shift opens it only a little; running opens it a
+  lot. Straight after a sprint or a jump it still takes a moment to settle.
 - [ ] **Walk into walls, crates and corners.** You slide along them and never get stuck or fall through the floor.
 
 ## Shooting and reloads
@@ -83,6 +83,27 @@ The rifle holds 60 BBs and the pistol 18, and each comes with 4 magazines per ro
 - [ ] **Empty a magazine completely, then pull the trigger.** An empty trigger pull starts a reload by itself.
 - [ ] **Press R with a full magazine loaded.** Nothing swaps and the screen tells you why. That's on purpose: no topping up.
 - [ ] **Use up every magazine.** When all are empty you can't fire any more that round. The next round starts you full again.
+
+## Optics and aiming down sights
+
+The rifle has no optic of its own any more: it comes with flip-up iron sights, and the red dot is an accessory you fit
+on the start screen.
+
+- [ ] **Leave Optic on Iron sights and play.** The rifle has small flip-up sights standing on its rails and no red
+  dot. Holding right click does nothing: aiming down sights needs an optic.
+- [ ] **On the start screen, pick Optic: Red dot, then play.** The red dot sits on the rifle, and the iron sights
+  fold flat under it.
+- [ ] **Hold right click.** The rifle comes up to your eye, the view narrows a little, the crosshair gives way to the
+  red dot, and you move at a quiet walk (sprint does nothing while aiming). Let go and it all goes back.
+- [ ] **Shoot while aiming.** BBs go where the red dot is. Standing still is still what makes you accurate; aiming
+  adds no extra accuracy of its own.
+- [ ] **Move the mouse while aiming.** It turns at the **Aiming sensitivity** set on the start screen (×0.80 of your
+  mouse sensitivity at first, so the world moves across the screen at the same speed as from the hip). Try other
+  values; the game remembers your choice.
+- [ ] **Reload or switch to the pistol while aiming.** The sight drops for the reload and comes back up if you are
+  still holding right click. The pistol has no optic, so it never aims down sights.
+- [ ] **Change the optic during a match (Esc, pick the other one).** The screen says it is fitted from the next
+  round, and it is.
 
 ## Bots and rounds
 

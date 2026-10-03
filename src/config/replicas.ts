@@ -37,6 +37,8 @@ export interface ReplicaConfig {
   spreadDeg: number;
   /** Upward view kick per shot (degrees). Light: these are toys, not firearms. */
   recoilDeg: number;
+  /** Has a rail an optic can be fitted to (config/optics.ts); aiming down sights needs one fitted. */
+  opticMount: boolean;
   /** How it looks and sounds (presentation only; the simulation ignores this). */
   look: ReplicaLook;
 }
@@ -51,6 +53,11 @@ export interface ReplicaLook {
   suppressed: boolean;
   /** Where it sits in the first-person view (camera space, metres) and its inward cant (radians). */
   hold: { position: readonly [number, number, number]; yaw: number };
+  /**
+   * Where it sits while aiming down a fitted optic (camera space, metres, no cant): the optic's axis on the view's
+   * centre line, so the red dot is where your BBs go. Only replicas with an optic mount have one.
+   */
+  aimHold?: readonly [number, number, number];
 }
 
 /** Electric rifle (AR pattern): single, burst and full auto, medium range, medium magazine. */
@@ -71,7 +78,16 @@ export const AEG: ReplicaConfig = {
   hopUp: 0.14,
   spreadDeg: 0.45,
   recoilDeg: 0.18,
-  look: { model: 'rifle', shotSound: 'rifle', suppressed: false, hold: { position: [0.16, -0.17, -0.48], yaw: 0.14 } },
+  opticMount: true,
+  look: {
+    model: 'rifle',
+    shotSound: 'rifle',
+    suppressed: false,
+    hold: { position: [0.16, -0.17, -0.48], yaw: 0.14 },
+    // The optic's axis is RIFLE_OPTIC.axisUp above the model's origin (render/replicaModels.ts); its back end about
+    // 0.2 m in front of the eye, so the tube frames the view without filling it.
+    aimHold: [0, -0.126, -0.205],
+  },
 };
 
 /** Gas pistol: semi auto, shorter range, quick to handle, small magazine. */
@@ -91,6 +107,7 @@ export const GAS_PISTOL: ReplicaConfig = {
   hopUp: 0.13,
   spreadDeg: 0.8,
   recoilDeg: 0.5,
+  opticMount: false,
   look: { model: 'pistol', shotSound: 'pistol', suppressed: false, hold: { position: [0.12, -0.1, -0.55], yaw: 0.36 } },
 };
 

@@ -124,6 +124,7 @@ Then open **http://localhost:4173**.
 | Mouse | Aim |
 | Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click) |
 | B | Fire mode: step the AEG rifle through Semi, Burst and Auto (the pistol is semi only) |
+| Right click (hold) | Aim down sights: only with an optic fitted (pick **Optic: Red dot** on the start screen for the rifle). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. |
 | Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
 | Left Alt | Sprint (forward only) |
 | C | Crouch: press to go down, again to stand (sprint or jump also stands you up). The start screen can switch it to hold. |

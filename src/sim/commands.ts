@@ -21,6 +21,8 @@ export interface PlayerCommand {
   /** Lean (held): -1 left, 1 right, 0 upright. */
   lean: number;
   jump: boolean;
+  /** Aim down sights (held): works only with an optic fitted to the replica in hand (sim/aiming.ts). */
+  aim: boolean;
   /** Trigger held. Semi-auto replicas fire on the press only. */
   fire: boolean;
   reload: boolean;
@@ -41,6 +43,7 @@ export function createCommand(): PlayerCommand {
     crouch: false,
     lean: 0,
     jump: false,
+    aim: false,
     fire: false,
     reload: false,
     switchTo: -1,

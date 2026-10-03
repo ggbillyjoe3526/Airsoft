@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Sfx } from '../audio/sfx';
 import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
+import { AIMING, OPTICS } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
@@ -38,6 +39,15 @@ export class CombatPresentation {
   private playing = false;
   /** The round in play started behind a screen (round 1 of a match, set up before play): whistle on Play. */
   private startWhistleOwed = true;
+  /** How far the player's optic is raised to their eye (0..1): eases over AIMING.raiseTime. */
+  private aimBlend = 0;
+  /** The zoom of the optic the sight was last raised on: switching away eases out of it rather than snapping. */
+  private aimZoom = 1;
+
+  /** How far the player's optic is raised to their eye (0..1); the aiming sensitivity blends in with it. */
+  get aimRaised(): number {
+    return this.aimBlend;
+  }
 
   constructor(
     private readonly renderer: Renderer,
@@ -85,6 +95,8 @@ export class CombatPresentation {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.viewmodel.resetSway(); // the view snaps to the spawn yaw
+        this.aimBlend = 0; // a new round starts with the sight down
+        this.renderer.setZoom(1);
         // A round set up behind the start or result screen gets its whistle when play starts.
         if (!this.playing) {
           this.startWhistleOwed = true;
@@ -115,13 +127,20 @@ export class CombatPresentation {
 
     const p = this.player;
     const carried = p.sprinting || p.sprintLockout > 0;
+    // Aiming down sights: the sight comes up to your eye and the view narrows by the optic's zoom. Straight out of a
+    // sprint the replica is still carried (firing is locked out too), so it rises once that ends.
+    const aiming = p.aiming && p.status === 'alive' && !carried;
+    this.aimBlend = Math.max(0, Math.min(1, this.aimBlend + (aiming ? dt : -dt) / AIMING.raiseTime));
+    const optic = p.armament.optics[p.armament.active];
+    if (aiming && optic) this.aimZoom = OPTICS[optic].zoom;
+    this.renderer.setZoom(1 + (this.aimZoom - 1) * this.aimBlend);
     this.viewmodel.setAspect(this.renderer.camera.aspect);
-    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carried, p.armament, this.loadout, p.status === 'calling');
+    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carried, p.armament, this.loadout, p.status === 'calling', this.aimBlend);
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
     const spread = THREE.MathUtils.degToRad(this.loadout[p.armament.active]!.spreadDeg * p.spreadScale);
     const focalPx = this.renderer.height / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
-    this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, dt);
+    this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, optic != null && this.aimBlend >= AIMING.reticleFrom, dt);
 
     cam.getWorldDirection(this.forward);
     this.listenerPos.x = cam.position.x;

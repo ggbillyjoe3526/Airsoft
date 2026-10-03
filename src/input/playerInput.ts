@@ -1,4 +1,5 @@
 import { type CrouchMode, DEFAULT_CROUCH_MODE, MOUSE } from '../config/controls';
+import { AIMING } from '../config/optics';
 import type { MovementConfig } from '../config/movement';
 import type { PlayerCommand } from '../sim/commands';
 import { wrapAngle } from '../sim/vec';
@@ -9,12 +10,15 @@ import type { PointerLock } from './pointerLock';
  * Turns keyboard/mouse state into PlayerCommands. View angles update every render frame for
  * responsiveness; one-shot actions (jump, reload, switch, fire selector, a trigger click) are latched until
  * a simulation tick consumes them, so none is lost or duplicated when frames and ticks don't line up.
- * The crouch key either toggles crouching (sprint or jump stands you back up) or crouches while held.
+ * The crouch key either toggles crouching (sprint or jump stands you back up) or crouches while held. The right
+ * mouse button aims down sights while held; the mouse turns at `aimSensitivity` times the normal rate once the sight is up.
  */
 export class PlayerInput {
   yaw = 0;
   pitch = 0;
   sensitivity: number = MOUSE.defaultSensitivity;
+  /** Mouse sensitivity while aiming down sights, as a multiple of `sensitivity`. */
+  aimSensitivity: number = AIMING.defaultSensitivity;
   private crouchModeValue: CrouchMode = DEFAULT_CROUCH_MODE;
   /** Toggle mode: crouched until the key is pressed again (or a sprint or jump stands you up). */
   private crouchToggled = false;
@@ -44,11 +48,12 @@ export class PlayerInput {
 
   /**
    * Call once per render frame, before any ticks run. `activeSlot`/`slotCount` let the
-   * mouse wheel cycle replicas.
+   * mouse wheel cycle replicas; `aimRaised` (how far the sight is raised to the eye, 0..1) blends in the aiming
+   * sensitivity as the view zooms, so the turn rate never jumps.
    */
-  update(activeSlot: number, slotCount: number): void {
+  update(activeSlot: number, slotCount: number, aimRaised = 0): void {
     this.pointer.consumeDelta(this.mouseDelta);
-    const k = MOUSE.radiansPerCount * this.sensitivity;
+    const k = MOUSE.radiansPerCount * this.sensitivity * (1 + (this.aimSensitivity - 1) * aimRaised);
     const maxPitch = this.movement.maxPitch;
     this.yaw = wrapAngle(this.yaw - this.mouseDelta.x * k);
     this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch - this.mouseDelta.y * k));
@@ -89,6 +94,7 @@ export class PlayerInput {
     cmd.lean = (kb.isDown('leanRight') ? 1 : 0) - (kb.isDown('leanLeft') ? 1 : 0);
     cmd.jump = this.jumpLatch;
     cmd.reload = this.reloadLatch;
+    cmd.aim = this.pointer.aimHeld;
     cmd.fire = this.pointer.fireHeld || this.fireLatch;
     cmd.switchTo = this.switchLatch;
     cmd.cycleFireMode = this.fireModeLatch;

@@ -77,7 +77,7 @@ function addRifle(b: PartBuilder, x: number, y: number, z0: number): void {
   b.box(C.furniture, 0.04, 0.14, 0.06, x, y - 0.1, z0 - 0.42); // magazine
   b.box(C.furniture, 0.06, 0.07, 0.24, x, y, z0 - 0.66); // handguard
   b.box(C.replica, 0.025, 0.025, 0.2, x, y, z0 - 0.88); // barrel
-  b.box(C.replica, 0.04, 0.05, 0.08, x, y + 0.07, z0 - 0.33); // optic
+  b.box(C.replica, 0.02, 0.04, 0.03, x, y + 0.06, z0 - 0.24); // flip-up rear sight (optics are accessories; bots fit none)
 }
 
 export interface Figure {

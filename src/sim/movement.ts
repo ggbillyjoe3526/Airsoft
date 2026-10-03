@@ -60,11 +60,11 @@ export function stepMovement(
   c.crouchAmount = approach(c.crouchAmount, cmd.crouch ? 1 : 0, dt / cfg.crouchTransitionTime);
   const crouched = c.crouchAmount >= cfg.crouchedThreshold;
 
-  // Walk (slow, quiet) wins over sprint. Sprint: forward only, never crouched. Leaning (the actual lean,
-  // which the key eases in and walls or a jump can stop) slows you towards walking pace, is quiet from
-  // leanQuietFrom of a full lean, and rules out sprinting: no running out of a peek.
+  // Walk (slow, quiet) wins over sprint, and so does aiming down sights (sim/aiming.ts). Sprint: forward only,
+  // never crouched. Leaning (the actual lean, which the key eases in and walls or a jump can stop) slows you
+  // towards walking pace, is quiet from leanQuietFrom of a full lean, and rules out sprinting: no running out of a peek.
   const lean = Math.abs(c.lean);
-  c.walking = (cmd.walk || lean >= cfg.leanQuietFrom) && !crouched;
+  c.walking = (cmd.walk || c.aiming || lean >= cfg.leanQuietFrom) && !crouched;
   c.sprinting = cmd.sprint && !c.walking && lean === 0 && cmd.forward >= cfg.sprintMinForward && !crouched;
   // The replica is carried, not aimed, while sprinting and for a moment after.
   c.sprintLockout = c.sprinting ? cfg.sprintFireLockout : Math.max(0, c.sprintLockout - dt);

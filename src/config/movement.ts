@@ -52,8 +52,8 @@ export interface MovementConfig {
 /**
  * Accuracy by stance and movement: multipliers on a replica's spreadDeg. Standing still is the
  * reference (1); crouching steadies; walking, running, jumping and sprinting shake the aim. The
- * multiplier jumps up at once when you start moving and settles back over settleTime once you stop,
- * so the moments just after a sprint, a run or a landing are still shaky.
+ * multiplier jumps up at once when you start moving. Once you stop walking or running it locks back on
+ * almost at once (lockTime); the moments just after a sprint or a landing stay shaky (settleTime).
  */
 export interface AccuracyConfig {
   /** Below this horizontal speed (m/s) a character counts as still. */
@@ -78,8 +78,17 @@ export interface AccuracyConfig {
   airSpreadDelay: number;
   /** Multiplier for being fully crouched (applied on top of the movement one). */
   crouched: number;
-  /** Seconds for the multiplier to settle back (time constant) once the cause stops. */
+  /**
+   * Seconds for the multiplier to settle back (time constant) after a sprint or time in the air: those shakes
+   * carry into the moments after, for `carryTime` seconds since the sprint or the landing.
+   */
   settleTime: number;
+  carryTime: number;
+  /**
+   * Time constant (s) for settling once walking or running stops: the aim locks on almost at once (owner,
+   * 2026-10-03: "instant lock"), so the crosshair snaps in rather than easing.
+   */
+  lockTime: number;
 }
 
 /** Heights are measured from the character's position (capsule bottom), which rests PHYSICS.groundRestGap above the floor. */
@@ -115,10 +124,11 @@ export const MOVEMENT: MovementConfig = {
   leanQuietFrom: 0.5,
   accuracy: {
     stillBelow: 0.4,
-    // First guesses to tune in play (owner's v0.1-alpha.3 playtest): standing still steadies to ×0.7 in half a
-    // second, and walking with Shift costs ×1.15 (was 1.5). Gentler than CS / Valorant, but the same idea.
+    // Owner's v0.1-alpha.3 playtest: standing still steadies to ×0.7, and walking with Shift costs ×1.15 (was 1.5).
+    // M12a eased to ×0.7 over half a second; the owner found that too slow and smooth and asked for an "instant
+    // lock" (2026-10-03), so it now takes a few ticks. Gentler than CS / Valorant, but the same idea.
     steady: 0.7,
-    steadyTime: 0.5,
+    steadyTime: 0.05,
     walk: 1.15,
     run: 2.6,
     sprint: 3.5,
@@ -126,6 +136,8 @@ export const MOVEMENT: MovementConfig = {
     airSpreadDelay: 0.1,
     crouched: 0.65,
     settleTime: 0.15,
+    carryTime: 0.25,
+    lockTime: 0.015,
   },
 };
 

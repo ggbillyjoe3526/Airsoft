@@ -76,7 +76,13 @@ ends the round). A hit character is eliminated
   bots see and aim at (`ai/perception.ts`) all use it. Leaning slows you towards walking pace (quiet from half a lean) and blocks sprinting.
 - **sim/accuracy.ts**: accuracy by stance and movement. `stepAccuracy` (after leaning) keeps `Character.spreadScale`,
   the multiplier on the replica's spread (`MOVEMENT.accuracy`): steadier crouched, shakier walking, running, sprinting and
-  in the air; it jumps up at once and settles back. The muzzle carries it into `armament.ts`; the HUD crosshair opens to show it.
+  in the air; it jumps up at once and locks back on within a few ticks once you stop (slower for a moment after a sprint or a landing). The muzzle carries it into `armament.ts`; the HUD crosshair opens to show it.
+- **sim/aiming.ts**: aiming down sights (hold right click). `stepAiming` (before movement) sets `Character.aiming` only
+  with an optic fitted to the replica in hand (`Armament.optics`, fitted per slot by `fitOptic` from the start screen's
+  pick at each round start; `config/optics.ts`), and not while reloading or drawing. Aiming moves you at walking pace
+  (quiet, no sprint) and adds no accuracy. Presentation raises the sight (`render/viewmodel.ts`, the replica's `aimHold`
+  puts the optic on the view's centre line), narrows the view (`Renderer.setZoom`) and swaps the crosshair for the red
+  dot; `input/playerInput.ts` turns at the aiming sensitivity meanwhile. Bots never aim down sights.
 - **sim/footsteps.ts**: after movement, emits `footstep` events every stride while running/sprinting and on hard
   landings; walking and crouched movement are silent.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox
@@ -85,8 +91,8 @@ ends the round). A hit character is eliminated
   score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
   also the pole (`flagRenderer.ts`: pole, rippling cloth at the sim's height, ring at the rope's reach) and its
   screen marker (`screenMarker.ts` projects it, pinned to the screen edge when out of view; `ui/flagMarker.ts`).
-- **ui/startScreen.ts**: title/pause/result overlay with the rules for the picked mode and two `OptionPicker`s
-  (match mode, bot difficulty; saved in the browser).
+- **ui/startScreen.ts**: title/pause/result overlay with the rules for the picked mode, `OptionPicker`s (match mode,
+  bot difficulty, the rifle's optic, the crouch key) and the mouse and aiming sensitivity sliders, all saved in the browser.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop. The only place that knows about every layer.
 
