@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Smoke test: the built game boots, starts a match, fires, reloads and keeps running without a page error.
+ * Smoke test: the built game boots, starts a match, fires, reloads, moves the fire selector and keeps running
+ * without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
@@ -48,6 +49,12 @@ test('the game boots, starts a match, fires and reloads without errors', async (
   // Reload: the half-used magazine goes back in the pouch and a full one comes out.
   await page.keyboard.press('r');
   await expect.poll(async () => Number(await mag.textContent()), { timeout: 30_000 }).toBe(full);
+
+  // Fire selector: the AEG starts on auto, and B steps it to single (semi).
+  const fireMode = page.locator('.hud-firemode');
+  await expect(fireMode).toHaveText('Auto');
+  await page.keyboard.press('b');
+  await expect(fireMode).toHaveText('Semi', { timeout: 10_000 });
 
   await testInfo.attach('in-match', { body: await page.screenshot(), contentType: 'image/png' });
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);

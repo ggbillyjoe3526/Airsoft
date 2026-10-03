@@ -18,6 +18,8 @@ export const DEFAULT_BINDINGS = {
   leanRight: ['KeyE'],
   jump: ['Space'],
   reload: ['KeyR'],
+  /** Steps the replica's fire selector (semi / burst / auto, as far as the replica has them). */
+  fireMode: ['KeyB'],
   slot1: ['Digit1'],
   slot2: ['Digit2'],
   debugOverlay: ['Backquote', 'F3'],
@@ -35,11 +37,12 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'right', label: 'Move right' },
   { action: 'walk', label: 'Walk (hold, quiet)' },
   { action: 'sprint', label: 'Sprint (hold)' },
-  { action: 'crouch', label: 'Crouch (hold)' },
+  { action: 'crouch', label: 'Crouch' },
   { action: 'leanLeft', label: 'Lean left (hold)' },
   { action: 'leanRight', label: 'Lean right (hold)' },
   { action: 'jump', label: 'Jump' },
   { action: 'reload', label: 'Reload' },
+  { action: 'fireMode', label: 'Fire mode' },
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
 ];
@@ -63,6 +66,19 @@ export const PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
   // Tab would move keyboard focus off the game to the page's buttons.
   'Tab',
 ]);
+
+/**
+ * How the crouch key works: press to crouch and again to stand (toggle, the default since the owner's
+ * v0.1-alpha.3 playtest), or crouch only while held. In toggle mode, sprinting or jumping stands you up.
+ */
+export type CrouchMode = 'toggle' | 'hold';
+
+export const CROUCH_MODES: readonly { id: CrouchMode; label: string; blurb: string }[] = [
+  { id: 'toggle', label: 'Toggle', blurb: 'Press crouch to go down, press again to stand. Sprint or jump also stands you up.' },
+  { id: 'hold', label: 'Hold', blurb: 'Crouch while the key is held.' },
+];
+
+export const DEFAULT_CROUCH_MODE: CrouchMode = 'toggle';
 
 export const MOUSE = {
   /**

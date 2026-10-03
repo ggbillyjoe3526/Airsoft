@@ -2,7 +2,8 @@
 
 How the owner plays the game to check a change. Each pull request names the sections to play; a bug pass
 before a release plays all of them. Written 2026-10-02 for the game as of M10 (leaning, magazines, BB physics,
-the 2σ crosshair). Update a section when a change alters what it describes.
+the 2σ crosshair); updated 2026-10-03 for M12a (fire modes, crouch toggle, steadier aim when still, quicker
+reloads). Update a section when a change alters what it describes.
 
 ## Get the game running
 
@@ -47,12 +48,18 @@ Tick each box once it behaves as described; anything else is a bug worth noting.
 - [ ] **Hold Shift and move.** You walk slowly and your footsteps go silent.
 - [ ] **Hold Left Alt and run forward.** You sprint, faster than running. Try to shoot while sprinting: nothing
   fires until a moment after you stop.
-- [ ] **Hold C.** You crouch and move slowly and silently. Let go and you stand back up.
+- [ ] **Press C.** You crouch and move slowly and silently, without holding the key. Press C again and you
+  stand up. Crouch again, then press Left Alt or Space: you stand up (the Space press only stands you up).
+- [ ] **On the start screen, set Crouch to Hold.** Now you crouch only while C is held. Set it back to Toggle if
+  you prefer that; the game remembers your choice.
 - [ ] **Hold Q, then E, beside a wall or crate.** Your view leans left or right around it and tilts a little.
   Up against a wall, the lean stops short so you never see through it.
 - [ ] **Press Space.** You do a small hop, not a big jump.
 - [ ] **Watch the crosshair while you move.** It opens up when you run or jump and tightens when you stand still
   or crouch. It does not flash wide when you land or step off something low, only when you jump.
+- [ ] **Stop and stand still for a moment.** The crosshair keeps closing in for about half a second after you stop:
+  the longer you hold still, the more accurate you are. Crouched and still is tightest. Walking with Shift opens it
+  only a little; running opens it a lot.
 - [ ] **Walk into walls, crates and corners.** You slide along them and never get stuck or fall through the floor.
 
 ## Shooting and reloads
@@ -60,11 +67,18 @@ Tick each box once it behaves as described; anything else is a bug worth noting.
 The rifle holds 60 BBs and the pistol 18, and each comes with 4 magazines per round. Nothing refills until the next round.
 
 - [ ] **Hold left click with the rifle.** It fires a steady stream and the BB count at the bottom right drops.
+  The small box next to the rifle's name says **Auto**.
+- [ ] **Press B.** You hear a small click and the box says **Semi**: one BB per click, however long you hold.
+  Press B again for **Burst**: each click fires three BBs. Press B again to get back to **Auto**. The setting stays
+  where you left it in the next round.
+- [ ] **Empty the rifle in Burst.** With fewer than three BBs left, the burst fires what's there, clicks once and
+  starts a reload.
 - [ ] **Press 2, or scroll the mouse wheel.** You switch to the pistol. Each click fires one shot; holding the
   button does not keep firing. Press 1 to switch back.
 - [ ] **Shoot at a wall far away.** You can see the BBs fly, take a moment to arrive, and drop at long range.
   The pistol's BBs drop sooner than the rifle's.
-- [ ] **Fire about half a magazine, then press R.** A magazine swap plays. The small gauges next to the BB count
+- [ ] **Fire about half a magazine, then press R.** A magazine swap plays, a little quicker than in `v0.1-alpha.3`
+  (rifle 1.8 s, pistol 1.2 s). The small gauges next to the BB count
   show your spares, and the half-used one goes back into the pouch.
 - [ ] **Empty a magazine completely, then pull the trigger.** An empty trigger pull starts a reload by itself.
 - [ ] **Press R with a full magazine loaded.** Nothing swaps and the screen tells you why. That's on purpose: no topping up.

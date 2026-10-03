@@ -1,3 +1,4 @@
+import type { FireMode } from '../config/replicas';
 import type { FootstepKind } from './footsteps';
 import type { Vec3 } from './vec';
 
@@ -13,6 +14,8 @@ export type GameEvent =
   /** Reload pressed but no spare magazine has more BBs than the loaded one: nothing happens (the HUD says why). */
   | { type: 'reloadRefused'; characterId: number; replicaId: string }
   | { type: 'draw'; characterId: number; replicaId: string }
+  /** The fire selector moved to `mode`. */
+  | { type: 'fireMode'; characterId: number; replicaId: string; mode: FireMode }
   /** A BB hit level geometry; `ownerId` fired it. */
   | { type: 'bbImpact'; position: Vec3; ownerId: number }
   /** A character's footstep or landing, heard at its feet (walking and crouched moves are silent). */

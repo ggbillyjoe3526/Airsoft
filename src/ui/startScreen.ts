@@ -1,22 +1,24 @@
 import { DIFFICULTIES, DEFAULT_DIFFICULTY, type Difficulty } from '../config/bots';
-import { type Action, MOUSE } from '../config/controls';
+import { type Action, CROUCH_MODES, type CrouchMode, DEFAULT_CROUCH_MODE, MOUSE } from '../config/controls';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../config/modes';
 import { type KeyBindings, keyLabel } from '../input/keyBindings';
+import { loadSetting, numberIn, saveSetting } from '../settings/storage';
 import { KeySettings } from './keySettings';
 import { loadChoice, OptionPicker } from './optionPicker';
 
-const SENSITIVITY_KEY = 'airsoft.sensitivity';
-const DIFFICULTY_KEY = 'airsoft.difficulty';
-const MODE_KEY = 'airsoft.mode';
-
 /** The saved bot difficulty, or the default. */
 export function loadDifficulty(): Difficulty {
-  return loadChoice(DIFFICULTY_KEY, DIFFICULTIES, DEFAULT_DIFFICULTY);
+  return loadChoice('difficulty', DIFFICULTIES, DEFAULT_DIFFICULTY);
 }
 
 /** The saved match mode, or the default. */
 export function loadMode(): MatchMode {
-  return loadChoice(MODE_KEY, MATCH_MODES, DEFAULT_MODE);
+  return loadChoice('mode', MATCH_MODES, DEFAULT_MODE);
+}
+
+/** The saved crouch key behaviour (toggle or hold), or the default. */
+export function loadCrouchMode(): CrouchMode {
+  return loadChoice('crouch', CROUCH_MODES, DEFAULT_CROUCH_MODE);
 }
 
 /** What the start screen needs to explain the match. */
@@ -56,22 +58,7 @@ function escapeHtml(text: string): string {
 }
 
 function loadSensitivity(): number {
-  try {
-    const raw = localStorage.getItem(SENSITIVITY_KEY);
-    const v = raw === null ? NaN : Number(raw);
-    if (Number.isFinite(v) && v >= MOUSE.minSensitivity && v <= MOUSE.maxSensitivity) return v;
-  } catch {
-    // Storage unavailable (private mode etc.): fall back to the default.
-  }
-  return MOUSE.defaultSensitivity;
-}
-
-function saveSensitivity(v: number): void {
-  try {
-    localStorage.setItem(SENSITIVITY_KEY, String(v));
-  } catch {
-    // Non-critical.
-  }
+  return loadSetting('sensitivity', numberIn(MOUSE.minSensitivity, MOUSE.maxSensitivity), MOUSE.defaultSensitivity);
 }
 
 /**
@@ -89,8 +76,10 @@ export class StartScreen {
   private readonly keysButton: HTMLButtonElement;
   private readonly difficultyPicker: OptionPicker<Difficulty>;
   private readonly modePicker: OptionPicker<MatchMode>;
+  private readonly crouchPicker: OptionPicker<CrouchMode>;
   private readonly goal: HTMLParagraphElement;
   private sensitivityValue = loadSensitivity();
+  private crouchMode: CrouchMode;
 
   constructor(
     parent: HTMLElement,
@@ -100,7 +89,9 @@ export class StartScreen {
     onSensitivity: (v: number) => void,
     difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void },
     mode: { initial: MatchMode; onChange: (m: MatchMode) => void },
+    crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void },
   ) {
+    this.crouchMode = crouch.initial;
     this.root = document.createElement('div');
     this.root.className = 'start-screen';
     this.root.innerHTML = `
@@ -125,10 +116,16 @@ export class StartScreen {
     this.result = this.root.querySelector('.start-result') as HTMLDivElement;
     this.goal = this.root.querySelector('.start-goal') as HTMLParagraphElement;
     this.goal.textContent = describeRules(rules, mode.initial);
-    this.modePicker = new OptionPicker('Mode', MATCH_MODES, mode.initial, MODE_KEY, mode.onChange);
-    this.difficultyPicker = new OptionPicker('Bots', DIFFICULTIES, difficulty.initial, DIFFICULTY_KEY, difficulty.onChange);
+    this.modePicker = new OptionPicker('Mode', MATCH_MODES, mode.initial, 'mode', mode.onChange);
+    this.difficultyPicker = new OptionPicker('Bots', DIFFICULTIES, difficulty.initial, 'difficulty', difficulty.onChange);
     this.goal.after(this.modePicker.root, this.difficultyPicker.root);
     const slider = this.root.querySelector('input') as HTMLInputElement;
+    this.crouchPicker = new OptionPicker('Crouch', CROUCH_MODES, crouch.initial, 'crouch', (m) => {
+      this.crouchMode = m;
+      this.renderControls();
+      crouch.onChange(m);
+    });
+    (slider.parentElement as HTMLElement).after(this.crouchPicker.root);
     const output = this.root.querySelector('output') as HTMLOutputElement;
 
     slider.value = String(this.sensitivityValue);
@@ -136,7 +133,7 @@ export class StartScreen {
     slider.addEventListener('input', () => {
       this.sensitivityValue = Number(slider.value);
       output.textContent = this.sensitivityValue.toFixed(2);
-      saveSensitivity(this.sensitivityValue);
+      saveSetting('sensitivity', this.sensitivityValue);
       onSensitivity(this.sensitivityValue);
     });
     this.playButton.addEventListener('click', () => {
@@ -168,10 +165,11 @@ export class StartScreen {
       <div><kbd>Mouse</kbd> aim, <kbd>LMB</kbd> fire</div>
       <div>${k('walk')} walk (quiet)</div>
       <div>${k('sprint')} sprint</div>
-      <div>${k('crouch')} crouch</div>
+      <div>${k('crouch')} crouch (${this.crouchMode === 'toggle' ? 'toggle' : 'hold'})</div>
       <div>${k('leanLeft')} ${k('leanRight')} lean (hold)</div>
       <div>${k('jump')} jump</div>
       <div>${k('reload')} reload</div>
+      <div>${k('fireMode')} fire mode</div>
       <div>${k('slot1')} ${k('slot2')} / wheel: switch</div>
       <div><kbd>Esc</kbd> pause</div>
       <div><kbd>\`</kbd> / <kbd>F3</kbd> debug info</div>`;

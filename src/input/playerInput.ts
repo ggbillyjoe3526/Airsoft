@@ -1,4 +1,4 @@
-import { MOUSE } from '../config/controls';
+import { type CrouchMode, DEFAULT_CROUCH_MODE, MOUSE } from '../config/controls';
 import type { MovementConfig } from '../config/movement';
 import type { PlayerCommand } from '../sim/commands';
 import { wrapAngle } from '../sim/vec';
@@ -7,17 +7,22 @@ import type { PointerLock } from './pointerLock';
 
 /**
  * Turns keyboard/mouse state into PlayerCommands. View angles update every render frame for
- * responsiveness; one-shot actions (jump, reload, switch, a trigger click) are latched until a
- * simulation tick consumes them, so none is lost or duplicated when frames and ticks don't line up.
+ * responsiveness; one-shot actions (jump, reload, switch, fire selector, a trigger click) are latched until
+ * a simulation tick consumes them, so none is lost or duplicated when frames and ticks don't line up.
+ * The crouch key either toggles crouching (sprint or jump stands you back up) or crouches while held.
  */
 export class PlayerInput {
   yaw = 0;
   pitch = 0;
   sensitivity: number = MOUSE.defaultSensitivity;
+  private crouchModeValue: CrouchMode = DEFAULT_CROUCH_MODE;
+  /** Toggle mode: crouched until the key is pressed again (or a sprint or jump stands you up). */
+  private crouchToggled = false;
 
   private jumpLatch = false;
   private reloadLatch = false;
   private fireLatch = false;
+  private fireModeLatch = false;
   private switchLatch = -1;
   private readonly mouseDelta = { x: 0, y: 0 };
 
@@ -26,6 +31,16 @@ export class PlayerInput {
     private readonly pointer: PointerLock,
     private readonly movement: MovementConfig,
   ) {}
+
+  get crouchMode(): CrouchMode {
+    return this.crouchModeValue;
+  }
+
+  /** Switching modes stands you up (a held key in hold mode keeps you down). */
+  set crouchMode(mode: CrouchMode) {
+    this.crouchModeValue = mode;
+    this.crouchToggled = false;
+  }
 
   /**
    * Call once per render frame, before any ticks run. `activeSlot`/`slotCount` let the
@@ -41,6 +56,16 @@ export class PlayerInput {
     const kb = this.keyboard;
     if (kb.wasPressed('jump')) this.jumpLatch = true;
     if (kb.wasPressed('reload')) this.reloadLatch = true;
+    if (kb.wasPressed('fireMode')) this.fireModeLatch = true;
+    if (this.crouchModeValue === 'toggle') {
+      if (kb.wasPressed('crouch')) this.crouchToggled = !this.crouchToggled;
+      // Sprinting or jumping stands you up; that press only stands you up (the jump comes on the next one).
+      if (kb.wasPressed('sprint')) this.crouchToggled = false;
+      if (kb.wasPressed('jump') && this.crouchToggled) {
+        this.crouchToggled = false;
+        this.jumpLatch = false;
+      }
+    }
     if (this.pointer.consumeFirePress()) this.fireLatch = true;
     if (kb.wasPressed('slot1')) this.switchLatch = 0;
     if (kb.wasPressed('slot2')) this.switchLatch = 1;
@@ -60,12 +85,13 @@ export class PlayerInput {
     cmd.pitch = this.pitch;
     cmd.walk = kb.isDown('walk');
     cmd.sprint = kb.isDown('sprint');
-    cmd.crouch = kb.isDown('crouch');
+    cmd.crouch = this.crouchModeValue === 'toggle' ? this.crouchToggled : kb.isDown('crouch');
     cmd.lean = (kb.isDown('leanRight') ? 1 : 0) - (kb.isDown('leanLeft') ? 1 : 0);
     cmd.jump = this.jumpLatch;
     cmd.reload = this.reloadLatch;
     cmd.fire = this.pointer.fireHeld || this.fireLatch;
     cmd.switchTo = this.switchLatch;
+    cmd.cycleFireMode = this.fireModeLatch;
     this.clearLatches();
   }
 
@@ -76,10 +102,11 @@ export class PlayerInput {
     return clicked;
   }
 
-  /** Looks the way a new round starts: along `yaw`, level. */
+  /** Looks the way a new round starts: along `yaw`, level, and standing. */
   resetView(yaw: number): void {
     this.yaw = yaw;
     this.pitch = 0;
+    this.crouchToggled = false;
     this.clearLatches();
   }
 
@@ -88,6 +115,7 @@ export class PlayerInput {
     this.jumpLatch = false;
     this.reloadLatch = false;
     this.fireLatch = false;
+    this.fireModeLatch = false;
     this.switchLatch = -1;
   }
 }

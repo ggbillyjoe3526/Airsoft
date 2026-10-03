@@ -122,10 +122,11 @@ Then open **http://localhost:4173**.
 |---|---|
 | W A S D | Move |
 | Mouse | Aim |
-| Left click | Fire (hold for the AEG rifle, click per shot for the pistol) |
+| Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click) |
+| B | Fire mode: step the AEG rifle through Semi, Burst and Auto (the pistol is semi only) |
 | Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
 | Left Alt | Sprint (forward only) |
-| C | Crouch |
+| C | Crouch: press to go down, again to stand (sprint or jump also stands you up). The start screen can switch it to hold. |
 | Q / E (hold) | Lean left / right: peek around cover (leaning slows you to a quiet walk and stops sprinting) |
 | Space | Jump (small hop) |
 | R | Reload (an empty trigger pull also reloads) |

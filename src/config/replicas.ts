@@ -1,10 +1,22 @@
+/**
+ * How a trigger pull fires: one BB per pull (semi; "single" on a rifle's selector), a short burst per pull
+ * (TRIGGER.burstShots), or for as long as the trigger is held (auto).
+ */
+export type FireMode = 'semi' | 'burst' | 'auto';
+
 /** Stats for one replica. All weapon behaviour is data; nothing about specific replicas is hardcoded. */
 export interface ReplicaConfig {
   id: string;
   /** Generic, non-brand name shown in the HUD. */
   name: string;
-  fireMode: 'auto' | 'semi';
-  /** Shots per second while the trigger is held (auto) or the fastest you can click (semi). */
+  /**
+   * The modes its fire selector offers, in the order the selector key steps through them. Like the real type
+   * the replica is modelled on (owner, 2026-10-03): a striker pistol is semi only, a rifle or SMG may offer more.
+   */
+  fireModes: readonly FireMode[];
+  /** The mode it starts each match in (one of fireModes). */
+  defaultFireMode: FireMode;
+  /** Shots per second while the trigger is held (auto, and within a burst) or the fastest you can click (semi). */
   fireRate: number;
   magSize: number;
   /** Magazines carried per round, the loaded one included; each holds magSize BBs at the start. */
@@ -41,15 +53,17 @@ export interface ReplicaLook {
   hold: { position: readonly [number, number, number]; yaw: number };
 }
 
-/** Electric rifle: full auto, medium range, medium magazine. */
+/** Electric rifle (AR pattern): single, burst and full auto, medium range, medium magazine. */
 export const AEG: ReplicaConfig = {
   id: 'aeg',
   name: 'AEG rifle',
-  fireMode: 'auto',
+  fireModes: ['semi', 'burst', 'auto'],
+  defaultFireMode: 'auto',
   fireRate: 13,
   magSize: 60,
   mags: 4,
-  reloadTime: 2.1,
+  // About 15% quicker than the first 2.1 s (owner's v0.1-alpha.3 playtest: "a tiny bit too slow").
+  reloadTime: 1.8,
   drawTime: 0.45,
   // ~1 J with 0.25 g BBs, like a typical site-legal AEG: 88 m/s. Flat to ~20 m, dropping by 35 m.
   muzzleEnergy: 0.97,
@@ -64,11 +78,12 @@ export const AEG: ReplicaConfig = {
 export const GAS_PISTOL: ReplicaConfig = {
   id: 'pistol',
   name: 'Gas pistol',
-  fireMode: 'semi',
+  fireModes: ['semi'],
+  defaultFireMode: 'semi',
   fireRate: 7,
   magSize: 18,
   mags: 4,
-  reloadTime: 1.4,
+  reloadTime: 1.2,
   drawTime: 0.3,
   // A gas pistol on light 0.20 g BBs: 72 m/s, a close-range sidearm (dropping clearly past 20 m).
   muzzleEnergy: 0.52,
@@ -105,4 +120,9 @@ export const TRIGGER = {
    * if it becomes ready within this many seconds, so fast clicking isn't silently eaten.
    */
   pressBuffer: 0.15,
+  /** BBs a burst-mode trigger pull fires (at the replica's fireRate), unless the magazine runs dry first. */
+  burstShots: 3,
 } as const;
+
+/** How the HUD names each fire mode. */
+export const FIRE_MODE_LABELS: Readonly<Record<FireMode, string>> = { semi: 'Semi', burst: 'Burst', auto: 'Auto' };

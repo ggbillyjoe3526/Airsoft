@@ -92,7 +92,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | Done | 9.1 |
 | Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | Done | 9.0 |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | Done (tagged 2026-10-03; the owner's playtest notes went into Phase 4) | 9.0 |
-| Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Next | |
+| Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Done (pull request; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity | Later | |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later (layout sketch waits for the owner's OK) | |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
@@ -218,7 +218,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 6 | Audio rework: higher quality, movement you can locate by ear, impactful but true-to-airsoft shots, each replica sounding like how it fires | M13 |
 | 7 | Standing still or walking (Shift) tightens the crosshair more than today: the stiller you are, the more accurate; less skill-heavy than CS / Valorant | M12a |
 
-**Proposed order** (the owner picks; 2026-10-03): **M12a → M12b → M11 → M13 → M14 → M15 → M16.** Weapon handling comes
+**Order** (owner picked weapon handling first, 2026-10-03): **M12a → M12b → M11 → M13 → M14 → M15 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
 the Depot layout sketch. The Depot rework follows once the sketch is approved. The audio rework comes after it so
 movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
@@ -227,7 +227,8 @@ the tutorial come last because they dress and explain everything before them.
 - **M12. Weapon handling** (owner's playtest notes 1, 2, 3, 4, 5 and 7). Split in two so the quick changes can be
   played first. Bots play by the same handling rules where they apply.
   - **M12a. Fire modes, reloads, crouch, steadier aim** (notes 1, 2, 5, 7)
-    - **Fire modes:** not every replica has every mode (owner, 2026-10-03). Each replica lists the modes of the
+    - **Fire modes:** not every replica has every mode (owner, 2026-10-03). A burst-mode pull fires three BBs at
+      the fire rate (fewer if the magazine runs dry); each replica's selector stays where you left it between rounds. Each replica lists the modes of the
       real-world type it is modelled on, and a fire selector key (B by default, rebindable) cycles them. A
       Glock-17-style pistol is semi only (one shot per trigger pull); an MP5-style SMG has single, burst and full
       auto. Today's AR-pattern AEG gets single, a 3-round burst and full auto (full auto by default); the gas

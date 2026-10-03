@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
-import { AEG, GAS_PISTOL, LOADOUT, muzzleVelocity, RECOIL } from '../config/replicas';
-import { type ArmamentContext, createArmament, type Muzzle, nextSpare, stepArmament, type WorldQuery } from './armament';
+import { AEG, GAS_PISTOL, LOADOUT, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
+import { type ArmamentContext, createArmament, type Muzzle, nextFireMode, nextSpare, stepArmament, type WorldQuery } from './armament';
+import { createCharacter, respawnCharacter } from './character';
 import { createBBPool } from './ballistics';
 import { createCommand, type PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -35,6 +36,7 @@ function setup(query: WorldQuery = openSky) {
       all.push(...events);
       cmd.reload = false;
       cmd.switchTo = -1;
+      cmd.cycleFireMode = false;
     }
     return all;
   };
@@ -273,5 +275,115 @@ describe('empty AEG with the trigger held', () => {
     const evs = run(Math.ceil(AEG.drawTime / DT) + 2, (c) => (c.fire = true));
     expect(count(evs, 'dryFire')).toBe(1);
     expect(count(evs, 'reloadStart')).toBe(1);
+  });
+});
+
+describe('fire selector (owner, 2026-10-03)', () => {
+  const shotTicks = (evs: { type: string }[][]): number[] => evs.flatMap((e, i) => (e.some((x) => x.type === 'shot') ? [i] : []));
+
+  it('steps the AEG through single, burst and auto (it starts on auto); the pistol has only semi', () => {
+    expect(AEG.fireModes).toEqual(['semi', 'burst', 'auto']);
+    expect(AEG.defaultFireMode).toBe('auto');
+    expect(GAS_PISTOL.fireModes).toEqual(['semi']);
+    expect(nextFireMode(AEG, 'auto')).toBe('semi');
+    expect(nextFireMode(AEG, 'semi')).toBe('burst');
+    expect(nextFireMode(AEG, 'burst')).toBe('auto');
+    expect(nextFireMode(GAS_PISTOL, 'semi')).toBe('semi');
+
+    const { a, run } = setup();
+    expect(a.modes).toEqual(['auto', 'semi']);
+    const evs = run(1, (c) => (c.cycleFireMode = true));
+    expect(a.modes[0]).toBe('semi');
+    expect(evs).toContainEqual({ type: 'fireMode', characterId: 1, replicaId: AEG.id, mode: 'semi' });
+    // One press, one step: the latch is consumed.
+    run(5);
+    expect(a.modes[0]).toBe('semi');
+
+    // The pistol's selector doesn't move, and says nothing.
+    run(1, (c) => (c.switchTo = 1));
+    expect(run(1, (c) => (c.cycleFireMode = true)).some((e) => e.type === 'fireMode')).toBe(false);
+    expect(a.modes).toEqual(['semi', 'semi']);
+  });
+
+  it('fires one BB per pull in single, however long the trigger is held', () => {
+    const { a, run, count } = setup();
+    run(1, (c) => (c.cycleFireMode = true));
+    expect(a.modes[0]).toBe('semi');
+    expect(count(run(60, (c) => (c.fire = true)), 'shot')).toBe(1);
+  });
+
+  it('fires a burst of three per pull at the fire rate, held or tapped', () => {
+    const { a, cmd, muzzle, ctx } = setup();
+    a.modes[0] = 'burst';
+    const ticks: { type: string }[][] = [];
+    const step = (fire: boolean): void => {
+      cmd.fire = fire;
+      ctx.events.length = 0;
+      stepArmament(1, a, cmd, muzzle, true, ctx, DT);
+      ticks.push([...ctx.events]);
+    };
+    for (let i = 0; i < 60; i++) step(true); // held a whole second: still one burst
+    const held = shotTicks(ticks);
+    expect(held.length).toBe(TRIGGER.burstShots);
+    // Spaced by the fire rate, like auto.
+    for (let i = 1; i < held.length; i++) expect((held[i]! - held[i - 1]!) * DT).toBeCloseTo(1 / AEG.fireRate, 1);
+
+    // A tap (one tick) still gets the whole burst.
+    ticks.length = 0;
+    step(false);
+    step(true);
+    for (let i = 0; i < 30; i++) step(false);
+    expect(shotTicks(ticks).length).toBe(TRIGGER.burstShots);
+    expect(a.ammo[0]!.mag).toBe(AEG.magSize - 2 * TRIGGER.burstShots);
+  });
+
+  it('ignores pulls during a burst, and buffers one that comes just after it', () => {
+    const { a, run, count } = setup();
+    a.modes[0] = 'burst';
+    // Clicks on every other tick through the first burst: still one burst while it runs.
+    const during = run(Math.ceil(TRIGGER.burstShots / AEG.fireRate / DT) - 1, (c, i) => (c.fire = i % 2 === 0));
+    expect(count(during, 'shot')).toBe(TRIGGER.burstShots);
+    expect(a.burstShotsLeft).toBe(0);
+    // A pull right after the last shot (while the replica cycles) fires the next burst once it can.
+    const after = run(30, (c, i) => (c.fire = i === 0));
+    expect(count(after, 'shot')).toBe(TRIGGER.burstShots);
+  });
+
+  it('ends a burst early when the magazine runs dry (one click, then the reload starts)', () => {
+    const { a, run, count } = setup();
+    a.modes[0] = 'burst';
+    a.ammo[0]!.mag = TRIGGER.burstShots - 1;
+    const evs = run(30, (c, i) => (c.fire = i === 0));
+    expect(count(evs, 'shot')).toBe(TRIGGER.burstShots - 1);
+    expect(count(evs, 'dryFire')).toBe(1);
+    expect(count(evs, 'reloadStart')).toBe(1);
+    expect(a.burstShotsLeft).toBe(0);
+  });
+
+  it('cuts a burst short on a switch or when the replica can\'t fire (sprinting)', () => {
+    const { a, run, count } = setup();
+    a.modes[0] = 'burst';
+    expect(count(run(1, (c) => (c.fire = true)), 'shot')).toBe(1);
+    expect(a.burstShotsLeft).toBe(TRIGGER.burstShots - 1);
+    run(1, (c) => {
+      c.fire = false;
+      c.switchTo = 1;
+    });
+    expect(a.burstShotsLeft).toBe(0);
+
+    const s = setup();
+    s.a.modes[0] = 'burst';
+    s.run(1, (c) => (c.fire = true));
+    expect(s.count(s.run(30, (c) => (c.fire = false), false), 'shot')).toBe(0);
+    expect(s.a.burstShotsLeft).toBe(0);
+  });
+
+  it('keeps each replica\'s selector where it was across rounds', () => {
+    const c = createCharacter(0, vec3(), 0, LOADOUT);
+    c.armament.modes[0] = 'burst';
+    c.armament.ammo[0]!.mag = 3;
+    respawnCharacter(c, LOADOUT);
+    expect(c.armament.modes).toEqual(['burst', 'semi']);
+    expect(c.armament.ammo[0]!.mag).toBe(AEG.magSize);
   });
 });
