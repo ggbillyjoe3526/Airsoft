@@ -130,7 +130,7 @@ export function stepMovement(
   // probe (a seam on a ramp), and a character dropped that way lands on the next tick instead of floating
   // down until the controller touches the slope (11 ticks seen on a dock ramp).
   let grounded = false;
-  if (onGround || c.velocity.y <= 0) {
+  if (c.velocity.y <= 0) {
     const dy = mover.probeGround(c, cfg.groundSettleDistance);
     grounded = !Number.isNaN(dy);
     if (grounded) {

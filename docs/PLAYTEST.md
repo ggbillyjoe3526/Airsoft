@@ -163,7 +163,10 @@ swap ends after round 4.
 - [ ] **Walk all three lanes from the west yard to the pole.** Each one gets you there without dead ends, and
   you can tell which lane you're in.
 - [ ] **Walk up and down both dock ramps, then walk along the dock's open edge.** No bumps or hops on the ramps.
-  You can step off the edge on purpose (it's a 1.2 m drop), but walking up to it shouldn't push you off.
+  You can step off the edge on purpose (it's a 1.2 m drop), but walking up to it shouldn't push you off. Turn
+  round halfway down a ramp and run back: the crosshair shouldn't jump wide.
+- [ ] **Jump against crates, the ramp kerbs and the dock edge from the road.** You never land on top of them or
+  hang on an edge, and stepping off the dock is one clean drop.
 - [ ] **Stand on the dock and look around.** It's a good spot to watch Dock Road and the Bay, but from most of
   it you can't see down into Container Alley.
 - [ ] **Look for the other team's spawn from yours** (standing and crouched). You shouldn't be able to see it.

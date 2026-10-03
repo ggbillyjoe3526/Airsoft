@@ -226,7 +226,7 @@ describe('a 3v3 bot match on Depot', () => {
     }
     // Measured on the M11 Depot (2026-10-03): the west end wins 40% of the decided rounds here (46 of 114) and
     // 46% over seeds 1-96. The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
-    expect(westWins / decided).toBeGreaterThan(0.3);
+    expect(westWins / decided).toBeGreaterThan(0.35);
     expect(westWins / decided).toBeLessThan(0.6);
   });
 });
