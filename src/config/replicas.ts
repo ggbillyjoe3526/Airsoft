@@ -33,11 +33,14 @@ export interface ReplicaConfig {
   /** Time to bring this replica up after switching to it. */
   drawTime: number;
   /**
-   * Muzzle energy (joules), the way sites rate and chrono replicas. With the BB weight it sets the muzzle
-   * velocity (see muzzleVelocity).
+   * Muzzle energy (joules) with its factory BB weight, the way sites rate and chrono replicas. With the BB weight it
+   * sets the muzzle velocity (see muzzleVelocity; other weights shift the energy a little, BB_WEIGHT.energyExponent).
    */
   muzzleEnergy: number;
-  /** BB weight it shoots (grams: 0.20, 0.25 …). Changes speed, drag and hop-up lift (config/ballistics.ts). */
+  /**
+   * The BB weight it comes set up for (grams, one of BB_WEIGHT.choices): the player's starting choice on the Loadout
+   * screen, and what bots always shoot. Changes speed, drag and hop-up lift (config/ballistics.ts).
+   */
   bbWeight: number;
   /**
    * Hop-up strength with the dial turned all the way up: Magnus lift per unit speed at full spin for a
@@ -155,18 +158,71 @@ export function hopUpLift(r: ReplicaConfig, dial: number): number {
   return r.hopUpMax * Math.min(HOP_UP.maxDial, Math.max(HOP_UP.minDial, dial));
 }
 
-/** Mass of the BBs a replica shoots (kg; the config gives grams). */
-export function bbMass(r: ReplicaConfig): number {
-  return r.bbWeight / 1000;
+/** BB weights the Loadout screen offers (M17a), as sites sell them. */
+export const BB_WEIGHT = {
+  /**
+   * Grams, lightest first. No 0.30 g: on these replicas it only matched 0.28 g's reach while arriving later (each weight
+   * here has something it does best); it comes back with stronger platforms (v0.3).
+   */
+  choices: [0.2, 0.25, 0.28],
+  /**
+   * A replica's muzzle energy grows a little with the BB's weight: a heavier BB stays in the barrel longer and takes
+   * more of the push, as at a chrono (a 1 J AEG gives ~1.03 J on 0.25 g against 0.20 g). Energy scales as
+   * (weight / factory weight) to this power; a first guess from typical chrono readings. Replaces the placeholder
+   * "same energy whatever the weight" (DECISIONS 2026-10-02).
+   */
+  energyExponent: 0.15,
+  /**
+   * The BB weight readout says how long the BB takes to fly this far (m), at its best hop-up: Depot's mid-range, where a
+   * lighter BB's head start still shows.
+   */
+  timeReadoutDistance: 20,
+} as const;
+
+/**
+ * BB weights as the Loadout screen offers them (ids are the grams as text). The flight model decides what each does
+ * (M9: drag, lift and spin all depend on the mass), and the differences are small, as at a real site: a lighter BB gets
+ * to the target a little sooner up close, a heavier one carries a little further if the hop-up can lift it.
+ */
+export const BB_WEIGHT_CHOICES: readonly { id: string; label: string; blurb: string }[] = [
+  { id: '0.2', label: '0.20 g', blurb: 'Light: quickest to the target up close and needs the least hop, but sheds its speed soonest.' },
+  { id: '0.25', label: '0.25 g', blurb: 'The all-rounder most sites sell.' },
+  { id: '0.28', label: '0.28 g', blurb: 'Heavy: slowest out, keeps its speed best; carries furthest if the hop-up can lift it.' },
+];
+
+/** Mass of a BB (kg) of `grams` (the replica's factory weight by default; the config gives grams). */
+export function bbMass(r: ReplicaConfig, grams = r.bbWeight): number {
+  return grams / 1000;
 }
 
-/** Muzzle velocity (m/s) of a replica: from its energy and BB weight, E = ½·m·v². */
-export function muzzleVelocity(r: ReplicaConfig): number {
-  return Math.sqrt((2 * r.muzzleEnergy) / bbMass(r));
+/** Muzzle energy (J) of a replica shooting `grams` BBs: its rated energy at its factory weight, shifted by BB_WEIGHT.energyExponent. */
+export function muzzleEnergy(r: ReplicaConfig, grams = r.bbWeight): number {
+  return r.muzzleEnergy * (grams / r.bbWeight) ** BB_WEIGHT.energyExponent;
 }
 
-/** The loadout everyone carries (v0.1): slot 0 primary, slot 1 sidearm. */
-export const LOADOUT: readonly ReplicaConfig[] = [AEG, GAS_PISTOL];
+/** Muzzle velocity (m/s) of a replica shooting `grams` BBs (its factory weight by default): E = ½·m·v². */
+export function muzzleVelocity(r: ReplicaConfig, grams = r.bbWeight): number {
+  return Math.sqrt((2 * muzzleEnergy(r, grams)) / bbMass(r, grams));
+}
+
+/** A loadout slot: what the Loadout screen calls it and the replicas that fit it, the default first. */
+export interface LoadoutSlot {
+  id: 'primary' | 'secondary';
+  title: string;
+  fits: readonly ReplicaConfig[];
+}
+
+/**
+ * The loadout's slots (M17a): a primary and a secondary, each picked on the Loadout screen from the replicas that fit
+ * it. One each today; the v0.3 platforms (SMGs, DMRs, GBB pistols …) join these lists.
+ */
+export const LOADOUT_SLOTS: readonly LoadoutSlot[] = [
+  { id: 'primary', title: 'Primary', fits: [AEG] },
+  { id: 'secondary', title: 'Secondary', fits: [GAS_PISTOL] },
+];
+
+/** The default loadout (each slot's first replica): slot 0 primary, slot 1 sidearm. Bots and tests carry it. */
+export const LOADOUT: readonly ReplicaConfig[] = LOADOUT_SLOTS.map((s) => s.fits[0]!);
 
 export const RECOIL = {
   /** Recoil kick recovers exponentially with this time constant (s). */

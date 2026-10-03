@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 /**
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map and
- * Difficulty pop-ups, the Loadout and Settings screens) and starts a match with a red dot fitted, fires, reloads,
+ * Difficulty pop-ups, the Loadout and Settings screens) and starts a match with a red dot and 0.28 g BBs, fires, reloads,
  * moves the fire selector, aims down the sight and keeps running without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
@@ -60,15 +60,22 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await setup.getByRole('button', { name: /Difficulty/i }).click();
   await dialog.getByRole('button', { name: /Normal/i }).click();
 
-  // The Loadout screen: the optic and a hop-up dial per replica. Fit the red dot before the match.
+  // The Loadout screen: the replica in each slot, the optic, and a hop-up dial and BB weight per replica. Fit the red
+  // dot and heavier BBs before the match.
   await setup.getByRole('button', { name: /Loadout/i }).click();
   const loadout = page.locator('.menu-loadout');
   await expect(loadout).toBeVisible();
   await expect(loadout.locator('.loadout-hopup input[type=range]')).toHaveCount(2);
+  await expect(loadout.getByRole('group', { name: 'Primary replica' }).getByRole('button', { name: 'AEG rifle' })).toHaveAttribute('aria-pressed', 'true');
   await loadout.getByRole('button', { name: 'Red dot' }).click();
   await expect(loadout.getByRole('button', { name: 'Red dot' })).toHaveAttribute('aria-pressed', 'true');
+  const rifleWeight = loadout.getByRole('group', { name: 'AEG rifle BB weight' });
+  await expect(rifleWeight.getByRole('button', { name: '0.25 g' })).toHaveAttribute('aria-pressed', 'true');
+  await rifleWeight.getByRole('button', { name: '0.28 g' }).click();
+  await expect(loadout.getByText(/Leaves the barrel at \d+ m\/s .* Longest reach at about 75% hop-up/).first()).toBeVisible();
   await loadout.getByRole('button', { name: 'Back' }).click();
   await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('Red dot');
+  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('0.28 g / 0.20 g BBs');
 
   // Settings: its own screen with tabs; Esc works as Back and returns to New game, with focus back on the Settings tile.
   await setup.getByRole('button', { name: /Settings/i }).click();

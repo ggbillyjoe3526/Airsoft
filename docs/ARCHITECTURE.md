@@ -111,9 +111,13 @@ ends the round). A hit character is eliminated
   (Quit to title screen, Change setup, Title screen) calls `onLeaveMatch`, which unloads it. The placeholder lists and
   labels are data in `config/menus.ts`; choices are saved in the browser (`savedChoices.ts` reads them back). Map,
   mode, difficulty and loadout are picked only on New game, with no match loaded, so Play always uses them as they are.
-- **Hop-up:** each replica has a dial (`Armament.hopUps`, 0..1, kept between rounds; `setHopUps`) that scales its
-  `hopUpMax` lift (`hopUpLift` in `config/replicas.ts`); bots keep the factory `hopUpDial`. `sim/hopUp.ts` flies a
-  level shot to word the Loadout screen's readout ("on target to about N m").
+- **Loadout (M17a):** `config/replicas.ts` `LOADOUT_SLOTS` lists the replicas that fit each slot (primary, secondary);
+  the session's loadout is the player's picks, and every character in the match carries those replicas (bots with
+  factory setups). Each replica has a hop-up dial (`Armament.hopUps`, 0..1; `setHopUps`) that scales its `hopUpMax`
+  lift (`hopUpLift`), and a BB weight (`Armament.bbWeights`, grams from `BB_WEIGHT.choices`; `setBbWeights`) that
+  sets the BB's mass and, through `muzzleEnergy` / `muzzleVelocity`, its speed. Both are kept between rounds; bots keep
+  the factory `hopUpDial` and `bbWeight`. `sim/hopUp.ts` flies a level shot to word the Loadout screen's readout
+  ("on target to about N m") for the picked weight and dial.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).

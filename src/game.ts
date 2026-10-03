@@ -8,7 +8,7 @@ import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import type { OpticChoice } from './config/optics';
 import { QUALITY, type QualityPreset } from './config/render';
-import { LOADOUT } from './config/replicas';
+import { LOADOUT_SLOTS, type ReplicaConfig } from './config/replicas';
 import { SIM } from './config/sim';
 import { TEAMS } from './config/teams';
 import { KeyBindings } from './input/keyBindings';
@@ -22,7 +22,7 @@ import { MatchSession } from './matchSession';
 import { attackersInRound } from './sim/round';
 import type { GameState } from './sim/state';
 import { DebugOverlay } from './ui/debugOverlay';
-import { loadHopUps } from './ui/loadoutChoice';
+import { loadBbWeight, loadHopUp, loadoutSummary, loadSlotPick } from './ui/loadoutChoice';
 import { browserStorage } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
@@ -71,7 +71,11 @@ export class Game {
   private mode: MatchMode;
   private difficulty: Difficulty;
   private optic: OpticChoice;
-  private readonly hopUps: number[];
+  /** The replica picked for each loadout slot. */
+  private readonly picked: ReplicaConfig[];
+  /** Each replica's hop-up dial and BB weight as picked on the Loadout screen, by replica id (saved ones until changed). */
+  private readonly hopUps = new Map<string, number>();
+  private readonly bbWeights = new Map<string, number>();
   /** The volume sliders and the synthesised sounds, kept across matches (each match's Sfx plays from them). */
   private readonly audio: SfxSetup = { volumes: loadVolumes(), library: new SoundLibrary() };
 
@@ -90,7 +94,7 @@ export class Game {
     this.mode = loadMode();
     this.difficulty = loadDifficulty();
     this.optic = loadOptic();
-    this.hopUps = loadHopUps(LOADOUT);
+    this.picked = LOADOUT_SLOTS.map(loadSlotPick);
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
@@ -133,14 +137,22 @@ export class Game {
         attackFirst: ROUNDS.flag.firstAttackers === PLAYER_TEAM,
       },
       bindings: this.bindings,
-      loadout: LOADOUT,
+      loadout: {
+        slots: LOADOUT_SLOTS,
+        picked: { initial: this.picked, onChange: (slot, r) => (this.picked[slot] = r) },
+        optic: { initial: this.optic, onChange: (o) => (this.optic = o) },
+        hopUp: { initial: (r) => this.hopUpOf(r), onChange: (r, dial) => this.hopUps.set(r.id, dial) },
+        bbWeight: { initial: (r) => this.bbWeightOf(r), onChange: (r, grams) => this.bbWeights.set(r.id, grams) },
+        summary: () => ({
+          replicas: this.picked.map((r) => r.name).join('\n'),
+          detail: loadoutSummary(this.picked, this.optic, this.picked.map((r) => this.hopUpOf(r)), this.picked.map((r) => this.bbWeightOf(r))),
+        }),
+      },
       onPlay: () => this.play(),
       onLeaveMatch: () => this.leaveMatch(),
       map: { initial: this.map, onChange: (m) => (this.map = m) },
       mode: { initial: this.mode, onChange: (m) => (this.mode = m) },
       difficulty: { initial: this.difficulty, onChange: (d) => (this.difficulty = d) },
-      optic: { initial: this.optic, onChange: (o) => (this.optic = o) },
-      hopUp: { initial: this.hopUps, onChange: (slot, dial) => (this.hopUps[slot] = dial) },
       sensitivity: { initial: this.input.sensitivity, onChange: (v) => (this.input.sensitivity = v) },
       aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
       crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
@@ -160,6 +172,14 @@ export class Game {
   private changeVolume(channel: VolumeChannel, position: number): void {
     this.audio.volumes[channel] = position;
     this.session?.combat.setVolume(channel, position);
+  }
+
+  private hopUpOf(r: ReplicaConfig): number {
+    return this.hopUps.get(r.id) ?? loadHopUp(r);
+  }
+
+  private bbWeightOf(r: ReplicaConfig): number {
+    return this.bbWeights.get(r.id) ?? loadBbWeight(r);
   }
 
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
@@ -195,8 +215,10 @@ export class Game {
         map: mapData(this.map),
         mode: this.mode,
         difficulty: this.difficulty,
+        loadout: [...this.picked],
         optic: this.optic,
-        hopUps: this.hopUps,
+        hopUps: this.picked.map((r) => this.hopUpOf(r)),
+        bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
       }, this.options.seed, QUALITY[this.options.quality], this.audio);
     }
     this.session!.combat.unlockAudio();

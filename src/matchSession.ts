@@ -12,7 +12,7 @@ import { NAV } from './config/nav';
 import { type OpticChoice, opticOf } from './config/optics';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
-import { LOADOUT } from './config/replicas';
+import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
 import { TEAMS } from './config/teams';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
@@ -27,7 +27,7 @@ import { buildMapMeshes, disposeMapMeshes } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './render/proceduralTextures';
 import type { Renderer } from './render/renderer';
-import { fitOptic, setHopUps } from './sim/armament';
+import { fitOptic, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { placeTeams, restartMatch } from './sim/round';
@@ -42,9 +42,12 @@ export interface MatchSetup {
   map: MapData;
   mode: MatchMode;
   difficulty: Difficulty;
-  /** The optic for the replica with a rail, and each replica's hop-up dial, from the Loadout screen. */
+  /** The replica in each loadout slot (primary, secondary); everyone in the match carries these (bots with factory setups). */
+  loadout: readonly ReplicaConfig[];
+  /** The optic for the replica with a rail, and each slot's hop-up dial and BB weight (grams), from the Loadout screen. */
   optic: OpticChoice;
   hopUps: readonly number[];
+  bbWeights: readonly number[];
 }
 
 /**
@@ -59,6 +62,7 @@ export class MatchSession {
   readonly combat: CombatPresentation;
   readonly match: MatchPresentation;
   readonly mode: MatchMode;
+  private readonly loadout: readonly ReplicaConfig[];
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
@@ -82,6 +86,7 @@ export class MatchSession {
     audio: SfxSetup,
   ) {
     const map = setup.map;
+    this.loadout = setup.loadout;
     this.textures = createSurfaceTextures();
     this.mapGroup = buildMapMeshes(map, this.textures);
     renderer.scene.add(this.mapGroup);
@@ -99,7 +104,7 @@ export class MatchSession {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
-      loadout: LOADOUT,
+      loadout: this.loadout,
       killY: map.killY,
       hits: HITS,
       deadZones: map.deadZones,
@@ -117,11 +122,11 @@ export class MatchSession {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: HITS, loadout: LOADOUT, cfg: botConfig(setup.difficulty), seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: HITS, loadout: this.loadout, cfg: botConfig(setup.difficulty), seed },
     );
     input.resetView(this.player.spawnYaw);
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio, (action) => input.keyName(action));
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio, (action) => input.keyName(action));
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS);
   }
 
@@ -135,7 +140,7 @@ export class MatchSession {
    * thinking before each. Returns how many ticks ran.
    */
   advance(dt: number): number {
-    this.input.update(this.player.armament.active, LOADOUT.length, this.combat.aimRaised);
+    this.input.update(this.player.armament.active, this.loadout.length, this.combat.aimRaised);
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
     const ticks = advanceStepper(this.stepper, dt);
     for (let i = 0; i < ticks; i++) {
@@ -199,20 +204,21 @@ export class MatchSession {
     }
     let id = PLAYER_ID;
     for (let team = 0; team < TEAMS.length; team++) {
-      for (let i = 0; i < ROUNDS.teamSize; i++) this.state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
+      for (let i = 0; i < ROUNDS.teamSize; i++) this.state.characters.push(createCharacter(id++, vec3(), 0, this.loadout, team));
     }
     placeTeams(this.state.round, this.state.characters, this.ctx.round);
     for (const c of this.state.characters) {
-      respawnCharacter(c, LOADOUT);
+      respawnCharacter(c, this.loadout);
       this.physics.addCharacter(c);
     }
     return this.state.characters[0]!;
   }
 
-  /** Fits the picked optic and hop-up dials to the player's replicas. A direct sim-state change, between rounds. */
+  /** Fits the picked optic, hop-up dials and BB weights to the player's replicas. A direct sim-state change, between rounds. */
   private fitPickedLoadout(): void {
-    fitOptic(this.player.armament, LOADOUT, opticOf(this.setup.optic));
+    fitOptic(this.player.armament, this.loadout, opticOf(this.setup.optic));
     setHopUps(this.player.armament, this.setup.hopUps);
+    setBbWeights(this.player.armament, this.setup.bbWeights);
   }
 
   /** Everything that reacts to a simulation tick's events. */

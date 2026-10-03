@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
-import { AEG, GAS_PISTOL, HOP_UP, hopUpLift, LOADOUT } from '../config/replicas';
+import { AEG, BB_WEIGHT, GAS_PISTOL, HOP_UP, hopUpLift, LOADOUT } from '../config/replicas';
 import { createArmament, setHopUps } from './armament';
-import { hopUpReach } from './hopUp';
+import { bestHopUp, flightTime, hopUpReach } from './hopUp';
 
 describe('hop-up dial', () => {
   it("out of the box, the rifle reaches Depot's longest sightlines (~34 m) without rising more than a hand's width", () => {
@@ -44,5 +44,31 @@ describe('hop-up dial', () => {
     expect(a.hopUps).toEqual([0.9, GAS_PISTOL.hopUpDial]); // garbage is ignored
     setHopUps(a, [1.5]);
     expect(a.hopUps[0]).toBe(HOP_UP.maxDial);
+  });
+});
+
+describe('BB weight', () => {
+  // Each weight flown with the hop-up set for it, as a player would.
+  const flown = (replica: (typeof LOADOUT)[number]) =>
+    BB_WEIGHT.choices.map((grams) => {
+      const best = bestHopUp(replica, BALLISTICS, grams);
+      return { grams, ...best, t10: flightTime(replica, best.dial, 10, BALLISTICS, grams), t20: flightTime(replica, best.dial, 20, BALLISTICS, grams) };
+    });
+
+  it('is a trade-off: a lighter BB always gets to 10 and 20 m sooner, a heavier one carries at least as far once hopped', () => {
+    for (const replica of LOADOUT) {
+      const w = flown(replica);
+      for (let i = 1; i < w.length; i++) {
+        expect(w[i]!.t10, `${replica.id} ${w[i]!.grams} g`).toBeGreaterThan(w[i - 1]!.t10);
+        expect(w[i]!.t20, `${replica.id} ${w[i]!.grams} g`).toBeGreaterThan(w[i - 1]!.t20);
+      }
+    }
+  });
+
+  it('never offers a weight that a lighter one beats outright: each heavier one carries further, even at full hop', () => {
+    for (const replica of LOADOUT) {
+      const w = flown(replica);
+      for (let i = 1; i < w.length; i++) expect(w[i]!.onTargetTo, `${replica.id} ${w[i]!.grams} g`).toBeGreaterThan(w[i - 1]!.onTargetTo);
+    }
   });
 });

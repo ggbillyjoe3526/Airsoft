@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, GAS_PISTOL, hopUpLift, LOADOUT, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
-import { type ArmamentContext, createArmament, type Muzzle, nextFireMode, nextSpare, setHopUps, stepArmament, type WorldQuery } from './armament';
+import { type ArmamentContext, createArmament, type Muzzle, nextFireMode, nextSpare, setBbWeights, setHopUps, stepArmament, type WorldQuery } from './armament';
 import { createCharacter, respawnCharacter } from './character';
 import { createBBPool } from './ballistics';
 import { createCommand, type PlayerCommand } from './commands';
@@ -205,6 +205,26 @@ describe('replica handling', () => {
     expect(ctx.bbs.bbs.find((b) => b.active)!.hopUp).toBe(AEG.hopUpMax);
   });
 
+  it('fires the BB weight picked for the replica: heavier leaves slower, with a little more energy', () => {
+    const { ctx, a, run } = setup();
+    setBbWeights(a, [0.28, 0.2]);
+    run(1, (c) => (c.fire = true));
+    const bb = ctx.bbs.bbs.find((b) => b.active)!;
+    expect(bb.mass).toBeCloseTo(0.00028, 9);
+    const speed = Math.hypot(bb.velocity.x, bb.velocity.y, bb.velocity.z);
+    expect(speed).toBeCloseTo(muzzleVelocity(AEG, 0.28), 6);
+    expect(speed).toBeLessThan(muzzleVelocity(AEG));
+    expect(0.5 * bb.mass * speed * speed).toBeGreaterThan(AEG.muzzleEnergy);
+  });
+
+  it('only takes BB weights that are offered', () => {
+    const a = createArmament(LOADOUT);
+    setBbWeights(a, [0.31, Number.NaN]);
+    expect(a.bbWeights).toEqual([AEG.bbWeight, GAS_PISTOL.bbWeight]);
+    setBbWeights(a, [0.28]);
+    expect(a.bbWeights).toEqual([0.28, GAS_PISTOL.bbWeight]);
+  });
+
   it('spreads shots around the aim point by roughly the configured amount, deterministically', () => {
     const angles = (seedRuns: number, spreadScale = 1): number[] => {
       const { ctx, a, run, muzzle } = setup();
@@ -385,14 +405,16 @@ describe('fire selector (owner, 2026-10-03)', () => {
     expect(s.a.burstShotsLeft).toBe(0);
   });
 
-  it('keeps each replica\'s selector and hop-up where they were across rounds', () => {
+  it('keeps each replica\'s selector, hop-up and BB weight where they were across rounds', () => {
     const c = createCharacter(0, vec3(), 0, LOADOUT);
     c.armament.modes[0] = 'burst';
     setHopUps(c.armament, [0.4, 0.8]);
+    setBbWeights(c.armament, [0.28, 0.25]);
     c.armament.ammo[0]!.mag = 3;
     respawnCharacter(c, LOADOUT);
     expect(c.armament.modes).toEqual(['burst', 'semi']);
     expect(c.armament.hopUps).toEqual([0.4, 0.8]);
+    expect(c.armament.bbWeights).toEqual([0.28, 0.25]);
     expect(c.armament.ammo[0]!.mag).toBe(AEG.magSize);
   });
 });

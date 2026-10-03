@@ -2,14 +2,11 @@ import { DIFFICULTIES, type Difficulty } from '../../config/bots';
 import type { CrouchMode } from '../../config/controls';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
 import type { QualityPreset } from '../../config/render';
-import type { OpticChoice } from '../../config/optics';
-import type { ReplicaConfig } from '../../config/replicas';
 import type { KeyBindings } from '../../input/keyBindings';
 import { MAPS, type MapId } from '../../map/maps';
-import { loadoutSummary } from '../loadoutChoice';
 import type { AudioSettingsOptions } from '../audioSettings';
 import { ChoiceDialog } from './choiceDialog';
-import { LoadoutScreen } from './loadoutScreen';
+import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
 import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el } from './menuParts';
 import { PauseScreen } from './pauseScreen';
@@ -23,7 +20,8 @@ import { TitleScreen } from './titleScreen';
 export interface MenusOptions {
   rules: MatchRulesText;
   bindings: KeyBindings;
-  loadout: readonly ReplicaConfig[];
+  /** The Loadout screen's slots and choices, and the summary New game's Loadout button shows. */
+  loadout: Omit<LoadoutOptions, 'onBack'> & { summary: () => { replicas: string; detail: string } };
   /** Start (or resume) play: Play on New game, Resume, Play Again. */
   onPlay: () => void;
   /** The player leaves the match (Quit to title screen; Change setup or Title screen after it): it is unloaded. */
@@ -31,8 +29,6 @@ export interface MenusOptions {
   map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
-  optic: { initial: OpticChoice; onChange: (o: OpticChoice) => void };
-  hopUp: { initial: readonly number[]; onChange: (slot: number, dial: number) => void };
   sensitivity: { initial: number; onChange: (v: number) => void };
   aimSensitivity: { initial: number; onChange: (v: number) => void };
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
@@ -59,8 +55,6 @@ export class Menus {
   private readonly modeDialog: ChoiceDialog<MatchMode>;
   private readonly difficultyDialog: ChoiceDialog<Difficulty>;
   private readonly screens: Record<MenuScreen, HTMLElement>;
-  private optic: OpticChoice;
-  private readonly dials: number[];
   private current: MenuScreen = 'title';
   /** What had the focus on each screen when it was left, so Back puts the keyboard where it was. */
   private readonly lastFocus = new Map<MenuScreen, HTMLElement>();
@@ -70,8 +64,6 @@ export class Menus {
     private readonly opts: MenusOptions,
   ) {
     this.root = el('div', 'menus');
-    this.optic = opts.optic.initial;
-    this.dials = [...opts.hopUp.initial];
     this.title = new TitleScreen(() => this.go('setup'));
     this.setup = new SetupScreen({
       onMap: () => this.mapDialog.open(),
@@ -95,24 +87,14 @@ export class Menus {
       opts.difficulty.onChange(d);
       this.refreshSetup();
     });
+    // Every loadout change also refreshes New game's Loadout button.
+    const lo = opts.loadout;
     this.loadout = new LoadoutScreen({
-      loadout: opts.loadout,
-      optic: {
-        initial: opts.optic.initial,
-        onChange: (o) => {
-          this.optic = o;
-          opts.optic.onChange(o);
-          this.refreshSetup();
-        },
-      },
-      hopUp: {
-        initial: opts.hopUp.initial,
-        onChange: (slot, dial) => {
-          this.dials[slot] = dial;
-          opts.hopUp.onChange(slot, dial);
-          this.refreshSetup();
-        },
-      },
+      slots: lo.slots,
+      picked: { initial: lo.picked.initial, onChange: (slot, r) => (lo.picked.onChange(slot, r), this.refreshSetup()) },
+      optic: { initial: lo.optic.initial, onChange: (o) => (lo.optic.onChange(o), this.refreshSetup()) },
+      hopUp: { initial: lo.hopUp.initial, onChange: (r, dial) => (lo.hopUp.onChange(r, dial), this.refreshSetup()) },
+      bbWeight: { initial: lo.bbWeight.initial, onChange: (r, grams) => (lo.bbWeight.onChange(r, grams), this.refreshSetup()) },
       onBack: () => this.back(),
     });
     this.settings = new SettingsScreen({
@@ -250,6 +232,7 @@ export class Menus {
     this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
     this.setup.difficulty.set(this.difficultyDialog.label, this.difficultyDialog.blurb);
-    this.setup.loadout.set(this.opts.loadout.map((r) => r.name).join('\n'), loadoutSummary(this.opts.loadout, this.optic, this.dials));
+    const loadout = this.opts.loadout.summary();
+    this.setup.loadout.set(loadout.replicas, loadout.detail);
   }
 }
