@@ -30,7 +30,7 @@ export const GRIPS: Readonly<Record<GripId, GripConfig>> = {
   vertical: {
     label: 'Vertical grip',
     blurb: 'Steadier: the shake of a sprint or a jump leaves your aim sooner. A little slower to bring up and to aim.',
-    handlingScale: 1.15,
+    handlingScale: 1.25,
     shakeScale: 0.6,
   },
   angled: {

@@ -121,10 +121,10 @@ describe('grip and magazine choice (M17b)', () => {
     expect(magazineReadout(AEG, 'hiCap')).toBe('120 BBs each, 2 carried (240 in all). Reload 1.8 s.');
     expect(magazineReadout(AEG, 'lowCap')).toBe('30 BBs each, 5 carried (150 in all). Reload 1.4 s.');
     expect(magazineReadout(GAS_PISTOL, 'extended')).toBe('27 BBs each, 4 carried (108 in all). Reload 1.2 s. Draw 0.41 s.');
-    expect(gripReadout(AEG, 'none')).toBe('Brings the AEG rifle up in 0.45 s and to your eye in 0.15 s. After a sprint it can fire from 0.20 s and is steady in about 0.6 s.');
+    expect(gripReadout(AEG, 'none')).toBe('Brings the AEG rifle up in 0.45 s. After a sprint it can fire from 0.20 s, steady from 0.27 s.');
     // Steadier and slower with a vertical grip; quicker and shakier with an angled one.
-    expect(gripReadout(AEG, 'vertical')).toMatch(/up in 0\.52 s and to your eye in 0\.17 s\. .* steady in about 0\.3 s\.$/);
-    expect(gripReadout(AEG, 'angled')).toMatch(/up in 0\.36 s and to your eye in 0\.12 s\. .* steady in about 0\.7 s\.$/);
+    expect(gripReadout(AEG, 'vertical')).toBe('Brings the AEG rifle up in 0.56 s. After a sprint it can fire from 0.20 s, already steady.');
+    expect(gripReadout(AEG, 'angled')).toBe('Brings the AEG rifle up in 0.36 s. After a sprint it can fire from 0.20 s, steady from 0.33 s.');
   });
 
   it('lists the parts that differ from the factory ones on the New game button', () => {

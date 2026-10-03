@@ -1,10 +1,15 @@
 import { factoryParts, GRIP_CHOICES, GRIPS, type GripId, handlingOf, MAGAZINES, type MagazineId, type ReplicaParts } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
 import { MOVEMENT } from '../config/movement';
-import { AIMING, OPTIC_CHOICES, type OpticChoice } from '../config/optics';
+import { SIM_DT } from '../config/sim';
+import { OPTIC_CHOICES, type OpticChoice } from '../config/optics';
 import { BB_WEIGHT, HOP_UP, type LoadoutSlot, muzzleEnergy, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
 import { loadSetting, numberIn } from '../settings/storage';
+import { timeToSteady } from '../sim/accuracy';
+import { fitParts } from '../sim/armament';
+import { createCharacter } from '../sim/character';
 import { bestHopUp, flightTime, hopUpReach } from '../sim/hopUp';
+import { vec3 } from '../sim/vec';
 
 /** The settings field a replica's hop-up dial is saved as. */
 export function hopUpField(replica: ReplicaConfig): `hopUp.${string}` {
@@ -115,25 +120,22 @@ export function magazineReadout(r: ReplicaConfig, magazine: MagazineId): string 
   return `${h.magSize} BBs each, ${h.mags} carried (${h.magSize * h.mags} in all). Reload ${h.reloadTime.toFixed(1)} s.${draw}`;
 }
 
-/**
- * How long after a sprint ends the aim counts as steady on the grip line: the shake's carry, then two settle time
- * constants (about 86% of the way back), both scaled by the grip as in sim/accuracy.ts.
- */
-const STEADY_SETTLES = 2;
+/** The Loadout grip line's "steady": the aim back within 10% of standing still (sim/accuracy.ts timeToSteady). */
+const STEADY_MARGIN = 0.1;
 
 /**
- * One line under the grip, in numbers: how quickly the replica comes up (after a switch) and to your eye, and how long
- * after a sprint the aim is steady, against when it can fire again, e.g. "Brings the AEG rifle up in 0.45 s and to
- * your eye in 0.15 s. After a sprint it can fire from 0.20 s and is steady in about 0.6 s."
+ * One line under the grip, in numbers: how quickly the replica comes up after a switch, and after a sprint when it can
+ * fire against when the aim is steady again (from the sim's own accuracy rule), e.g. "Brings the AEG rifle up in
+ * 0.45 s. After a sprint it can fire from 0.20 s and is steady from 0.27 s."
  */
 export function gripReadout(r: ReplicaConfig, grip: GripId): string {
-  const h = handlingOf(r, { grip, magazine: r.magazines[0]! });
-  const a = MOVEMENT.accuracy;
-  const steady = (a.carryTime + STEADY_SETTLES * a.settleTime) * GRIPS[grip].shakeScale;
-  return (
-    `Brings the ${r.name} up in ${h.drawTime.toFixed(2)} s and to your eye in ${(AIMING.raiseTime * h.raiseScale).toFixed(2)} s. ` +
-    `After a sprint it can fire from ${MOVEMENT.sprintFireLockout.toFixed(2)} s and is steady in about ${steady.toFixed(1)} s.`
-  );
+  const parts = { grip, magazine: r.magazines[0]! };
+  const c = createCharacter(0, vec3(), 0, [r]);
+  fitParts(c.armament, [r], [parts]);
+  const steady = timeToSteady(c, MOVEMENT, SIM_DT, STEADY_MARGIN);
+  const lockout = MOVEMENT.sprintFireLockout;
+  const after = steady <= lockout ? 'already steady' : `steady from ${steady.toFixed(2)} s`;
+  return `Brings the ${r.name} up in ${handlingOf(r, parts).drawTime.toFixed(2)} s. After a sprint it can fire from ${lockout.toFixed(2)} s, ${after}.`;
 }
 
 /**

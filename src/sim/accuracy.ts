@@ -47,3 +47,23 @@ export function stepAccuracy(c: Character, cfg: MovementConfig, dt: number): voi
   const settle = c.shakeCarry > 0 ? a.settleTime * grip : a.lockTime;
   c.spreadScale = target >= c.spreadScale ? target : target + (c.spreadScale - target) * Math.exp(-dt / settle);
 }
+
+/**
+ * Seconds from the end of a sprint, standing still, until `c`'s aim is back within `margin` of steady standing
+ * (spreadScale at most 1 + margin), found by running stepAccuracy tick by tick so it follows the sim's own rule (the
+ * grip on the replica in hand included). For the Loadout screen; `c` is changed.
+ */
+export function timeToSteady(c: Character, cfg: MovementConfig, dt: number, margin: number): number {
+  c.grounded = true;
+  c.velocity.x = c.velocity.z = 0;
+  c.sprinting = true;
+  stepAccuracy(c, cfg, dt);
+  c.sprinting = false;
+  let t = 0;
+  // Bounded: settling is exponential, so a margin above zero is always reached.
+  while (c.spreadScale > 1 + margin && t < 10) {
+    stepAccuracy(c, cfg, dt);
+    t += dt;
+  }
+  return t;
+}

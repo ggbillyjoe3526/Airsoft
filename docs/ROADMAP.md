@@ -500,7 +500,7 @@ each one went:**
     - Each part shows on the held replica as simple geometry; the art pass (M14) models them properly.
     - Built (2026-10-03, `config/attachments.ts`): the **2× scope** (zoom 2, 1.6× slower to raise, the HUD shows only
       its round eyepiece with a reticle and a lit centre dot, and the mouse turns slower in proportion); the **vertical grip** (the shake
-      of a sprint or landing settles in 0.6× the time; 15% slower to draw and to raise a sight) and the **angled grip**
+      of a sprint or landing settles in 0.6× the time; 25% slower to draw and to raise a sight) and the **angled grip**
       (20% quicker to draw and raise; the shake lasts 1.3×); the rifle's **hi-cap** (120 BBs, two carried: the same 240,
       and quiet moves rattle, heard by bots within 7 m), **low-cap** (30 BBs, five carried, a 20% quicker reload) and the
       pistol's **extended** magazine (27 BBs, 35% slower to draw). Each Loadout row says in numbers what the pick does.
