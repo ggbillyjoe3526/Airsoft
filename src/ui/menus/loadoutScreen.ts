@@ -1,15 +1,32 @@
-import { LOADOUT_LATER, POWER_LABELS } from '../../config/menus';
+import { GRIP_CHOICES, handlingOf, type ReplicaParts } from '../../config/attachments';
+import { LOADOUT_FIXED, LOADOUT_LATER, POWER_LABELS } from '../../config/menus';
 import { OPTIC_CHOICES, type OpticChoice } from '../../config/optics';
 import { BB_WEIGHT_CHOICES, type FireMode, HOP_UP, type LoadoutSlot, type ReplicaConfig } from '../../config/replicas';
-import { bbWeightField, bbWeightReadout, hopUpField, hopUpLabel, hopUpReadout, slotField } from '../loadoutChoice';
+import {
+  bbWeightField,
+  bbWeightReadout,
+  gripField,
+  gripReadout,
+  hopUpField,
+  hopUpLabel,
+  hopUpReadout,
+  magazineChoices,
+  magazineField,
+  magazineReadout,
+  opticReadout,
+  slotField,
+} from '../loadoutChoice';
 import { OptionPicker } from '../optionPicker';
 import { backButton, el, laterRow, laterTag, menuPage, menuRow, rangeControl } from './menuParts';
 
 const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
 
-/** The line under a replica's name: power, fire modes and magazine, e.g. "Electric · semi, burst, auto · 60-round magazine". */
-export function replicaSummary(r: ReplicaConfig): string {
-  return `${POWER_LABELS[r.power].tag} · ${r.fireModes.map((m) => FIRE_MODE_WORDS[m]).join(', ')} · ${r.magSize}-round magazine`;
+/**
+ * The line under a replica's name: power, fire modes and the fitted magazine, e.g.
+ * "Electric · semi, burst, auto · 60 BBs a magazine".
+ */
+export function replicaSummary(r: ReplicaConfig, parts: ReplicaParts): string {
+  return `${POWER_LABELS[r.power].tag} · ${r.fireModes.map((m) => FIRE_MODE_WORDS[m]).join(', ')} · ${handlingOf(r, parts).magSize} BBs a magazine`;
 }
 
 export interface LoadoutOptions {
@@ -20,7 +37,16 @@ export interface LoadoutOptions {
   /** Each replica's hop-up dial and BB weight (grams), whichever slot it is in. */
   hopUp: { initial: (r: ReplicaConfig) => number; onChange: (r: ReplicaConfig, dial: number) => void };
   bbWeight: { initial: (r: ReplicaConfig) => number; onChange: (r: ReplicaConfig, grams: number) => void };
+  /** Each replica's grip and magazine (M17b). */
+  parts: { initial: (r: ReplicaConfig) => ReplicaParts; onChange: (r: ReplicaConfig, parts: ReplicaParts) => void };
   onBack: () => void;
+}
+
+/** A greyed row for something this replica can't take (no rail for it): its value, no LATER tag. */
+function fixedRow(label: string, value: string): HTMLDivElement {
+  const control = el('div', 'menu-row-control');
+  control.append(el('span', 'menu-later-value', value));
+  return menuRow(label, '', control, true);
 }
 
 /** One slot's button on the left and the replica picker on the right. */
@@ -34,7 +60,8 @@ interface SlotParts {
 /**
  * The Loadout screen (M15, M17a): the slots (primary, secondary) on the left with the replica in each, and on the
  * right the picked slot's replica picker, then what can be set on that replica: the optic (on a replica with a rail),
- * the BB weight and the hop-up dial set for it, with grip, magazine and power or gas listed as coming later. Choices save as they
+ * the BB weight and the hop-up dial set for it, the grip and the magazine (M17b), with power or gas and skins listed as
+ * coming later. Choices save as they
  * are made; the next Play fits them (the screen is reached only through New game, never mid-match).
  */
 export class LoadoutScreen {
@@ -47,8 +74,11 @@ export class LoadoutScreen {
   private readonly headTitle: HTMLHeadingElement;
   private readonly headSummary: HTMLSpanElement;
   private slot = 0;
+  /** Each replica's fitted parts, for the summary line. */
+  private readonly partsOf: (r: ReplicaConfig) => ReplicaParts;
 
   constructor(opts: LoadoutOptions) {
+    this.partsOf = opts.parts.initial;
     const page = menuPage('menu-loadout', 'Loadout');
     this.root = page.root;
     this.picked = [...opts.picked.initial];
@@ -112,17 +142,32 @@ export class LoadoutScreen {
     });
     const shown = this.picked[this.slot]!;
     this.headTitle.textContent = `Customise: ${shown.name}`;
-    this.headSummary.textContent = replicaSummary(shown);
+    this.showSummary();
     for (const [id, panel] of this.panels) panel.hidden = id !== shown.id;
   }
 
-  /** What can be set on `replica`: optic, BB weight, hop-up, and the parts still to come. */
+  private showSummary(): void {
+    const shown = this.picked[this.slot]!;
+    this.headSummary.textContent = replicaSummary(shown, this.partsOf(shown));
+  }
+
+  /** What can be set on `replica`: optic, BB weight, hop-up, grip and magazine, and the parts still to come. */
   private replicaPanel(replica: ReplicaConfig, opts: LoadoutOptions): HTMLDivElement {
     const panel = el('div', 'loadout-replica');
+    // The optic's line depends on the grip too (a grip changes how fast a sight comes up), so both update it.
+    let optic = opts.optic.initial;
+    let parts = opts.parts.initial(replica);
+    const opticLine = el('p', 'menu-readout', opticReadout(replica, optic, parts.grip));
     if (replica.opticMount) {
-      panel.append(menuRow('Optic', '', new OptionPicker('Optic', OPTIC_CHOICES, opts.optic.initial, 'optic', opts.optic.onChange).root));
+      const picker = new OptionPicker('Optic', OPTIC_CHOICES, optic, 'optic', (o) => {
+        optic = o;
+        opticLine.textContent = opticReadout(replica, optic, parts.grip);
+        opts.optic.onChange(o);
+      });
+      picker.root.append(opticLine);
+      panel.append(menuRow('Optic', '', picker.root));
     } else {
-      panel.append(laterRow('Optic', '', LOADOUT_LATER.noOptic));
+      panel.append(fixedRow('Optic', LOADOUT_FIXED.noOptic));
     }
     // The hop-up readout depends on the BB weight too, so both rows share the current values.
     let dial = opts.hopUp.initial(replica);
@@ -151,12 +196,34 @@ export class LoadoutScreen {
     });
     weightPicker.root.append(weightReadout);
     // The weight first: it decides where the hop-up wants to be, as when you set a replica up at a site.
+    panel.append(menuRow('BB weight', '', weightPicker.root), menuRow('Hop-up', '', hopControl));
+
+    // Grip and magazine (M17b), each with its numbers under it.
+    if (replica.gripMount) {
+      const gripLine = el('p', 'menu-readout', gripReadout(replica, parts.grip));
+      const grip = new OptionPicker(`${replica.name} grip`, GRIP_CHOICES, parts.grip, gripField(replica), (id) => {
+        parts = { ...parts, grip: id };
+        gripLine.textContent = gripReadout(replica, id);
+        opticLine.textContent = opticReadout(replica, optic, id);
+        opts.parts.onChange(replica, parts);
+      });
+      grip.root.append(gripLine);
+      panel.append(menuRow('Grip', '', grip.root));
+    } else {
+      panel.append(fixedRow('Grip', LOADOUT_FIXED.noGrip));
+    }
+    const magLine = el('p', 'menu-readout', magazineReadout(replica, parts.magazine));
+    const magazine = new OptionPicker(`${replica.name} magazine`, magazineChoices(replica), parts.magazine, magazineField(replica), (id) => {
+      parts = { ...parts, magazine: id };
+      magLine.textContent = magazineReadout(replica, id);
+      opts.parts.onChange(replica, parts);
+      this.showSummary();
+    });
+    magazine.root.append(magLine);
     panel.append(
-      menuRow('BB weight', '', weightPicker.root),
-      menuRow('Hop-up', '', hopControl),
-      laterRow('Grip', '', LOADOUT_LATER.grip),
-      laterRow('Magazine', '', `${replica.magSize} BBs`),
+      menuRow('Magazine', '', magazine.root),
       laterRow(POWER_LABELS[replica.power].row, '', POWER_LABELS[replica.power].value),
+      laterRow('Skins', '', LOADOUT_LATER.skins),
     );
     return panel;
   }

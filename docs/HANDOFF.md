@@ -5,27 +5,27 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · M17a (Loadout: replica slots and BBs), on top of M15b, M13 and M19._
+_Last updated: 2026-10-03 · M17b (Loadout: attachments), on top of M17a._
 
 ## Where we are
 
-- **Phase 4 so far** (all merged): M12a–c weapon handling, M11 Depot rework, M15 menus, M15b (#18, its last critic
-  round in #21), M13 audio (#19), M19 match info (#24) and the owner's feature picks in the roadmap (#20, #22). The
-  owner asked (2026-10-03) for all remaining Phase 4 milestones to be built.
-- **M17a is built** (critic 9.0): each slot has a Replica picker (`LOADOUT_SLOTS` in `config/replicas.ts`, one replica
-  each for now); BB weight per replica (0.20 / 0.25 / 0.28 g, `BB_WEIGHT`), fired by the player's armament
-  (`Armament.bbWeights`); the weight line and the hop-up line on the Loadout screen come from the flight model
-  (`sim/hopUp.ts`: `hopUpReach`, `bestHopUp`, `flightTime`). The match is built with the picks (`MatchSetup.loadout`,
-  `bbWeights`); bots keep factory setups.
-- **M13 audio:** sounds are data recipes (`config/sounds.ts`) rendered by the pure `audio/dsp.ts`, once per page
-  (`SoundLibrary`, owned by `Game` with the volume sliders as `SfxSetup`); `Sfx` keeps one HRTF channel per character,
-  muffled by rays. A new replica only needs a `power`: its shot, dry-fire and magazine sounds follow from it.
-- **M19 match info:** stats in `stats/matchStats.ts` (from tick events, in `MatchSession.afterTick`), tables from
-  `ui/statsRows.ts` and `ui/statsTable.ts`, the board over the field `ui/matchBoard.ts`; hit feed `ui/hitFeed.ts`,
-  teammate markers `ui/teammateMarkers.ts`; summary screen `ui/menus/summaryScreen.ts`; records `stats/records.ts`;
-  crosshair `ui/crosshair.ts` with its own Settings tab.
-- **Next: M17b** attachments (2× scope, grips, magazines, Skins LATER), then M18 comfort and accessibility, M20 custom
-  matches, M21 practice range, M22 squad orders, M14 art, M16 tutorial (ROADMAP Phase 4 order).
+- **Phase 4 so far** (all merged): M12a–c weapon handling, M11 Depot rework, M15 menus, M15b (#18, #21), M13 audio
+  (#19), M19 match info (#24), M17a Loadout slots and BBs (#25) and the owner's feature picks in the roadmap (#20,
+  #22). The owner asked (2026-10-03) for all remaining Phase 4 milestones to be built.
+- **M17b is built** (critic 9.0 at attempt 3): parts are data in `config/attachments.ts` (`GRIPS`, `MAGAZINES`,
+  `handlingOf` turns a replica and its parts into the numbers the sim reads: magazine size and count, reload, draw,
+  sight raise, shake, rattle). The armament carries `parts` and `handling` per slot (`fitParts` at round start, fresh
+  magazines); read `Armament.handling`, never `replica.magSize` or `reloadTime`, for the fitted numbers. The 2× scope
+  (`config/optics.ts`) shows the HUD's eyepiece (`.hud-scope`) and hides the held replica. A hi-cap's quiet moves emit
+  `footstep` events of kind `rattle` (sound `magRattle`; bots hear it within `footstepHearingRattle`). Models name
+  parts `optic:<id>`, `grip:<id>`, `magazine:<id>`; the viewmodel shows the fitted ones.
+- **Loadout readouts** come from the sim: hop-up and BB weight from `sim/hopUp.ts`, the grip line from
+  `timeToSteady` (runs `stepAccuracy`), the optic line from the raise scales. Keep them computed, not hand-written.
+- **M13 audio:** sounds are data recipes (`config/sounds.ts`) rendered by the pure `audio/dsp.ts`; `Sfx` keeps one HRTF
+  channel per character, muffled by rays. **M19 match info:** stats in `stats/`, the board `ui/matchBoard.ts`, hit
+  feed, teammate markers, summary screen, records, and the crosshair with its own Settings tab.
+- **Next (ROADMAP order):** M18 comfort and accessibility, M20 custom matches, M21 practice range, M22 squad orders,
+  M14 art, M16 tutorial.
 
 ## Working notes and gotchas
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildForearm, buildHand, type FingerCurl } from './handModels';
+import type { MagazineId } from '../config/attachments';
 import type { ReplicaConfig } from '../config/replicas';
 
 /**
@@ -163,6 +164,9 @@ const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
  */
 export const RIFLE_OPTIC = { axisUp: 0.126, from: -0.005, length: 0.07, outer: 0.021, inner: 0.018 } as const;
 
+/** The 2× scope's body on the same axis (M17b): main tube, objective bell in front, eyepiece behind (metres). */
+export const RIFLE_SCOPE = { from: -0.01, length: 0.11, outer: 0.014, inner: 0.012, bellLength: 0.035, bellOuter: 0.022, eyeLength: 0.03 } as const;
+
 /**
  * AR-pattern AEG in two-tone: black upper and lower receiver, tan stock, grip, handguard and magazine.
  * Flat-top rails with flip-up iron sights (folded down when an optic is fitted), birdcage-style flash hider.
@@ -188,10 +192,19 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   );
   b.box('metal', 0.001, 0.008, -0.056, -0.034, 0.006);
   b.profile('furniture', [[-0.012, -0.028], [-0.056, -0.028], [-0.092, -0.13], [-0.06, -0.142], [-0.03, -0.098]], 0.034, 0.012);
-  // Curved polymer magazine with a black base plate (its own part so reloads can drop it out).
+  // Curved polymer magazine with a black base plate (its own part so reloads can drop it out), one look per magazine
+  // the rifle takes (M17b): the standard one; a hi-cap, the same shape with a winding wheel under its base; a low-cap,
+  // short and straight.
   const mag = new ModelBuilder();
   mag.profile('furniture', [[0.03, -0.076], [0.092, -0.076], [0.105, -0.15], [0.127, -0.222], [0.073, -0.236], [0.055, -0.156]], 0.026, 0.008);
   mag.profile('polymer', [[0.071, -0.232], [0.129, -0.219], [0.133, -0.232], [0.074, -0.246]], 0.03, 0.004);
+  const hiCap = new ModelBuilder();
+  hiCap.profile('furniture', [[0.03, -0.076], [0.092, -0.076], [0.105, -0.15], [0.127, -0.222], [0.073, -0.236], [0.055, -0.156]], 0.03, 0.008);
+  hiCap.profile('polymer', [[0.071, -0.232], [0.129, -0.219], [0.133, -0.232], [0.074, -0.246]], 0.034, 0.004);
+  hiCap.tube('metal', 0.088, 0.03, -0.252, 0.014, 12); // the winding wheel
+  const lowCap = new ModelBuilder();
+  lowCap.profile('furniture', [[0.03, -0.076], [0.092, -0.076], [0.1, -0.13], [0.108, -0.168], [0.062, -0.176], [0.052, -0.13]], 0.026, 0.008);
+  lowCap.profile('polymer', [[0.059, -0.172], [0.111, -0.164], [0.113, -0.176], [0.061, -0.186]], 0.03, 0.004);
   // Handguard (tan) with slots and a top rail.
   b.profile('furniture', [[0.15, 0.0], [0.4, 0.0], [0.4, 0.066], [0.15, 0.066]], 0.058, 0.014);
   for (const x of [0.19, 0.245, 0.3, 0.35]) b.box('rubber', x, x + 0.035, 0.026, 0.042, 0.06);
@@ -224,6 +237,25 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   optic.ringTube('polymer', o.from, o.length, o.axisUp, o.outer, o.inner);
   optic.box('polymer', 0.02, 0.04, o.axisUp - 0.008, o.axisUp + 0.008, 0.012, o.outer + 0.004); // brightness dial, right side
   optic.tube('lens', o.from + o.length - 0.004, 0.002, o.axisUp, o.inner, 24);
+  // The 2× scope (M17b): a longer tube on two rings, a wider objective bell at the front, on the same axis as the red
+  // dot so the same aiming hold lines it up. Looking through it, the HUD's eyepiece hides the rest.
+  const scope = new ModelBuilder();
+  const sc = RIFLE_SCOPE;
+  for (const x of [0.0, 0.07]) {
+    scope.box('polymer', x, x + 0.024, 0.074, 0.084, 0.034);
+    scope.box('polymer', x + 0.004, x + 0.02, 0.084, o.axisUp - sc.outer + 0.004, 0.022);
+  }
+  scope.ringTube('polymer', sc.from, sc.length, o.axisUp, sc.outer, sc.inner);
+  scope.ringTube('polymer', sc.from + sc.length, sc.bellLength, o.axisUp, sc.bellOuter, sc.bellOuter - 0.003);
+  scope.ringTube('polymer', sc.from - sc.eyeLength, sc.eyeLength, o.axisUp, sc.outer + 0.004, sc.inner);
+  scope.box('polymer', 0.03, 0.05, o.axisUp + sc.outer - 0.002, o.axisUp + sc.outer + 0.012, 0.016); // turret
+  scope.tube('lens', sc.from + sc.length + sc.bellLength - 0.004, 0.002, o.axisUp, sc.bellOuter - 0.003, 24);
+  // Grips (M17b) on the handguard rail, behind the support hand: a straight vertical grip and a flat angled one.
+  const vertical = new ModelBuilder();
+  vertical.box('polymer', 0.196, 0.244, -0.008, 0.002, 0.03);
+  vertical.profile('polymer', [[0.204, -0.008], [0.236, -0.008], [0.232, -0.088], [0.208, -0.092]], 0.026, 0.008);
+  const angled = new ModelBuilder();
+  angled.profile('polymer', [[0.165, -0.002], [0.262, -0.002], [0.262, -0.014], [0.188, -0.046], [0.172, -0.04]], 0.03, 0.006);
 
   // Right hand on the pistol grip: back of the hand to the right, knuckle row running down the
   // grip, three fingers wrapped round its front, index finger straight along the frame (trigger
@@ -252,10 +284,12 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   buildForearm(support, leftWrist, [-0.3, -0.28, 0.02]);
 
   const group = b.build(m);
-  group.add(magazinePart(mag, m, [0, -0.97, 0.25]));
+  group.add(magazinePart({ standard: mag, hiCap, lowCap }, m, [0, -0.97, 0.25], { lowCap: [0, 0.06, -0.014] }));
   // From the handguard to just under the magazine's base plate (forward 0.1, up -0.26).
   group.add(supportHandPart(support, m, [0.012, -0.242, -0.19]));
-  group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'), namedPart(optic, m, 'optic'));
+  group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'));
+  group.add(namedPart(optic, m, 'optic:redDot'), namedPart(scope, m, 'optic:scope2x'));
+  group.add(namedPart(vertical, m, 'grip:vertical'), namedPart(angled, m, 'grip:angled'));
   group.add(muzzleMarker(0.611, 0.034));
   return group;
 }
@@ -287,6 +321,11 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
   const mag = new ModelBuilder();
   mag.profile('mag', [[-0.058, -0.02], [-0.076, -0.02], [-0.1, -0.118], [-0.078, -0.12]], 0.022, 0.003);
   mag.box('polymer', -0.108, -0.062, -0.13, -0.119, 0.032); // base plate
+  // The extended magazine (M17b): a sleeve sticking out under the grip, its base plate lower down.
+  const extended = new ModelBuilder();
+  extended.profile('mag', [[-0.058, -0.02], [-0.076, -0.02], [-0.1, -0.118], [-0.078, -0.12]], 0.022, 0.003);
+  extended.profile('furniture', [[-0.1, -0.118], [-0.064, -0.12], [-0.058, -0.158], [-0.104, -0.158]], 0.03, 0.004);
+  extended.box('polymer', -0.11, -0.056, -0.168, -0.157, 0.032); // base plate
 
   // Two-handed grip: right hand round the grip, index finger along the frame; the left hand presses
   // against the left of the grip with its fingers wrapped over the right hand's.
@@ -310,7 +349,7 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
   });
   buildForearm(support, leftWrist, [-0.16, -0.26, -0.28]);
   const group = b.build(m);
-  group.add(magazinePart(mag, m, GRIP_DOWN));
+  group.add(magazinePart({ standard: mag, extended }, m, GRIP_DOWN, { extended: [0, -0.038, 0] }));
   // From the side of the grip down to the magazine's base plate.
   group.add(supportHandPart(support, m, [0.004, -0.068, -0.024]));
   group.add(muzzleMarker(0.104, 0.015));
@@ -369,10 +408,24 @@ export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor:
 
 /**
  * The magazine as its own group named 'magazine', so the viewmodel can slide it out along `axis`
- * (the magwell direction, as (across, up, forward)) during reloads.
+ * (the magwell direction, as (across, up, forward)) during reloads. One child per magazine the replica takes, named
+ * 'magazine:<id>'; the viewmodel shows the one fitted.
  */
-function magazinePart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>, axis: readonly [number, number, number]): THREE.Group {
-  const group = builder.build(m);
+function magazinePart(
+  builders: Partial<Record<MagazineId, ModelBuilder>>,
+  m: Record<MaterialKey, THREE.Material>,
+  axis: readonly [number, number, number],
+  baseShift: Partial<Record<MagazineId, readonly [number, number, number]>> = {},
+): THREE.Group {
+  const group = new THREE.Group();
+  for (const [id, builder] of Object.entries(builders)) {
+    const part = namedPart(builder, m, `magazine:${id}`);
+    // Where this magazine's base plate sits against the standard one's, as (across, up, forward): the support hand
+    // reaches there on a reload.
+    const shift = baseShift[id as MagazineId];
+    if (shift) part.userData.toBase = new THREE.Vector3(shift[0], shift[1], -shift[2]);
+    group.add(part);
+  }
   group.name = 'magazine';
   group.userData.axis = new THREE.Vector3(axis[0], axis[1], -axis[2]).normalize();
   return group;
@@ -389,7 +442,7 @@ function supportHandPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Mat
   return group;
 }
 
-/** A part the viewmodel shows or hides by name (the fitted optic, the iron sights up or folded). */
+/** A part the viewmodel shows or hides by name (the fitted optic, grip or magazine, the iron sights up or folded). */
 function namedPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>, name: string): THREE.Group {
   const group = builder.build(m);
   group.name = name;

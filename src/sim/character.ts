@@ -191,8 +191,9 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.statusTime = 0;
   c.hitBy = -1;
   c.walkOffStuck = 0;
-  const { modes, optics, hopUps, bbWeights } = c.armament;
-  c.armament = createArmament(loadout);
+  const { modes, optics, hopUps, bbWeights, parts } = c.armament;
+  // Fresh magazines for the parts fitted (a hi-cap refills as a hi-cap).
+  c.armament = createArmament(loadout, parts.length === loadout.length ? parts : []);
   if (modes.length === c.armament.modes.length) c.armament.modes = modes;
   if (optics.length === c.armament.optics.length) c.armament.optics = optics;
   if (hopUps.length === c.armament.hopUps.length) c.armament.hopUps = hopUps;

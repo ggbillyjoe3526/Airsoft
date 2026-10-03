@@ -128,6 +128,13 @@ ends the round). A hit character is eliminated
   sets the BB's mass and, through `muzzleEnergy` / `muzzleVelocity`, its speed. Both are kept between rounds; bots keep
   the factory `hopUpDial` and `bbWeight`. `sim/hopUp.ts` flies a level shot to word the Loadout screen's readout
   ("on target to about N m") for the picked weight and dial.
+- **Attachments (M17b):** `config/attachments.ts` holds the grips and magazines; a replica says which it takes
+  (`gripMount`, `magazines`). `Armament.parts` (per slot, `fitParts`) and `Armament.handling` (`handlingOf`: magazine
+  size and count, reload, draw, sight raise, shake, rattle) are what the armament, accuracy, footsteps, HUD, viewmodel
+  and bots read instead of the replica's own `magSize` / `mags` / `reloadTime` / `drawTime`. A hi-cap makes quiet moves
+  emit `footstep` events of kind `rattle`. Optics (`config/optics.ts`) carry their zoom, raise time and whether they
+  are a scope (the HUD's eyepiece; the viewmodel hides while looking through one). Parts on the model are named
+  `optic:<id>`, `grip:<id>`, `magazine:<id>` and shown when fitted.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).

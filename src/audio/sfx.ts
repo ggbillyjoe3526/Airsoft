@@ -240,7 +240,8 @@ export class Sfx {
       case 'footstep': {
         const c = characterOf(e.characterId);
         if (!c) return;
-        const cue = cues.step(surfaceUnder(this.blocks, c.position), e.kind);
+        // A hi-cap rattles on a quiet walk where no step is heard (M17b); it plays at a step's level, yours turned down.
+        const cue: SoundCue = e.kind === 'rattle' ? 'magRattle' : cues.step(surfaceUnder(this.blocks, c.position), e.kind);
         // Your own steps always play: they're how you judge your own pace and noise.
         if (c.id === localId) {
           this.play(cue, this.self!, L.ownStep);

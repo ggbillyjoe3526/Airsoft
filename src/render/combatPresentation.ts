@@ -5,7 +5,7 @@ import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
-import { AIMING, OPTICS } from '../config/optics';
+import { AIMING, type OpticId, OPTICS } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import type { MapBlock } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
@@ -43,14 +43,19 @@ export class CombatPresentation {
   private playing = false;
   /** The round in play started behind a screen (round 1 of a match, set up before play): whistle on Play. */
   private startWhistleOwed = true;
-  /** How far the player's optic is raised to their eye (0..1): eases over AIMING.raiseTime. */
+  /** How far the player's optic is raised to their eye (0..1): eases over AIMING.raiseTime (× the optic's and grip's scale). */
   private aimBlend = 0;
-  /** The zoom of the optic the sight was last raised on: switching away eases out of it rather than snapping. */
-  private aimZoom = 1;
+  /** The optic the sight was last raised on: switching away eases out of its zoom rather than snapping. */
+  private aimOptic: OpticId = 'redDot';
 
   /** How far the player's optic is raised to their eye (0..1); the aiming sensitivity blends in with it. */
   get aimRaised(): number {
     return this.aimBlend;
+  }
+
+  /** The aiming sensitivity's scale for the optic in use: a stronger zoom turns slower (AIMING.sensitivityZoom). */
+  get aimSensitivityScale(): number {
+    return AIMING.sensitivityZoom / OPTICS[this.aimOptic].zoom;
   }
 
   constructor(
@@ -149,18 +154,21 @@ export class CombatPresentation {
     // Aiming down sights: the sight comes up to your eye and the view narrows by the optic's zoom. Straight out of a
     // sprint the replica is still carried (firing is locked out too), so it rises once that ends.
     const aiming = p.aiming && p.status === 'alive' && !carried;
-    this.aimBlend = Math.max(0, Math.min(1, this.aimBlend + (aiming ? dt : -dt) / AIMING.raiseTime));
     const optic = p.armament.optics[p.armament.active];
-    if (aiming && optic) this.aimZoom = OPTICS[optic].zoom;
-    this.renderer.setZoom(1 + (this.aimZoom - 1) * this.aimBlend);
+    if (aiming && optic) this.aimOptic = optic;
+    const raiseTime = AIMING.raiseTime * OPTICS[this.aimOptic].raiseScale * p.armament.handling[p.armament.active]!.raiseScale;
+    this.aimBlend = Math.max(0, Math.min(1, this.aimBlend + (aiming ? dt : -dt) / raiseTime));
+    this.renderer.setZoom(1 + (OPTICS[this.aimOptic].zoom - 1) * this.aimBlend);
     this.viewmodel.setAspect(this.renderer.camera.aspect);
     const carry = p.sprinting ? 1 : sprintCarry(p.sprintLockout, this.movement.sprintFireLockout);
-    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carry, p.armament, this.loadout, p.status === 'calling', this.aimBlend);
+    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carry, p.armament, p.status === 'calling', this.aimBlend);
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
     const spread = THREE.MathUtils.degToRad(this.loadout[p.armament.active]!.spreadDeg * p.spreadScale);
     const focalPx = this.renderer.height / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
-    this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, optic != null && this.aimBlend >= AIMING.reticleFrom, dt);
+    const sight = optic != null && this.aimBlend >= AIMING.reticleFrom ? optic : null;
+    this.viewmodel.setScoped(sight !== null && OPTICS[sight].scope);
+    this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, sight, dt);
 
     cam.getWorldDirection(this.forward);
     this.listenerPos.x = cam.position.x;

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { FOOTSTEPS } from '../config/footsteps';
 import { MOVEMENT } from '../config/movement';
+import { LOADOUT } from '../config/replicas';
 import { type Character, createCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
 import type { GameEvent } from './events';
 import { stepFootsteps } from './footsteps';
+import { fitParts } from './armament';
 import { type CharacterMover, createMovementScratch, stepMovement } from './movement';
 import { copy, vec3 } from './vec';
 
@@ -94,5 +96,22 @@ describe('footsteps', () => {
     expect(first.length).toBeGreaterThan(0);
     expect(walked).toEqual([]);
     expect(c.stepDistance).toBeLessThan(FOOTSTEPS.strideRun);
+  });
+
+  it('a hi-cap rattles every stride on quiet moves (walking, crouched) too; standing still stays silent (M17b)', () => {
+    for (const setup of [(cmd: PlayerCommand) => (cmd.walk = true), (cmd: PlayerCommand) => (cmd.crouch = true)]) {
+      const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
+      fitParts(c.armament, LOADOUT, [{ grip: 'none', magazine: 'hiCap' }]);
+      run(c, createCommand(), 0.5);
+      const events = run(c, moving(setup), 4);
+      expect(events.length).toBeGreaterThan(2);
+      expect(kinds(events).every((k) => k === 'rattle')).toBe(true);
+      expect(run(c, createCommand(), 2)).toEqual([]);
+    }
+    // Running, it is the footsteps you hear (as loud as ever).
+    const runner = createCharacter(0, vec3(), 0, LOADOUT, 0);
+    fitParts(runner.armament, LOADOUT, [{ grip: 'none', magazine: 'hiCap' }]);
+    run(runner, createCommand(), 0.5);
+    expect(kinds(run(runner, moving(), 2)).every((k) => k === 'run')).toBe(true);
   });
 });

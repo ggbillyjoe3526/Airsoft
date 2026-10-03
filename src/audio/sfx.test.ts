@@ -211,6 +211,21 @@ describe('the sound engine (M13)', () => {
     expect(ctx.sources.length).toBeGreaterThan(0);
   });
 
+  it("plays a hi-cap's rattle as a step: yours centred at your own step's level, a bot's only within earshot (M17b)", () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    const rattle = (characterId: number): GameEvent => ({ type: 'footstep', characterId, kind: 'rattle' });
+    sfx.onEvent(rattle(PLAYER), PLAYER, characterOf);
+    expect(ctx.panners).toHaveLength(0);
+    expect(ctx.sources).toHaveLength(1);
+    const ownLevel = [...ctx.sources[0]!.outputs][0] as FakeGain;
+    expect(ownLevel.gain.value).toBeGreaterThan(0);
+    sfx.onEvent(step(PLAYER), PLAYER, characterOf);
+    expect(ownLevel.gain.value).toBe(([...ctx.sources[1]!.outputs][0] as FakeGain).gain.value);
+    bot.position.x = AUDIO.footsteps.maxDistance + 1;
+    sfx.onEvent(rattle(bot.id), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(2);
+  });
+
   it("doesn't play other players' steps beyond earshot", () => {
     const { sfx, ctx, bot, characterOf } = setup();
     bot.position.x = AUDIO.footsteps.maxDistance + 1;

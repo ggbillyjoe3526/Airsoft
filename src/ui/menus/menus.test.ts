@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { POWER_LABELS, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { FOV_SETTING, QUALITY, QUALITY_LABELS, RENDER } from '../../config/render';
+import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
 import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
@@ -61,8 +62,10 @@ describe('menu data', () => {
   });
 
   it('sums up each replica under its name on the Loadout screen', () => {
-    expect(replicaSummary(AEG)).toBe(`Electric · ${AEG.fireModes.join(', ')} · ${AEG.magSize}-round magazine`);
-    expect(replicaSummary(GAS_PISTOL)).toBe(`Gas · semi · ${GAS_PISTOL.magSize}-round magazine`);
+    expect(replicaSummary(AEG, factoryParts(AEG))).toBe(`Electric · ${AEG.fireModes.join(', ')} · ${AEG.magSize} BBs a magazine`);
+    expect(replicaSummary(GAS_PISTOL, factoryParts(GAS_PISTOL))).toBe(`Gas · semi · ${GAS_PISTOL.magSize} BBs a magazine`);
+    // The fitted magazine, not the factory one (M17b).
+    expect(replicaSummary(AEG, { ...factoryParts(AEG), magazine: 'hiCap' })).toMatch(new RegExp(`· ${AEG.magSize * 2} BBs a magazine$`));
     expect(POWER_LABELS[GAS_PISTOL.power].row).toBe('Gas type');
   });
 });
