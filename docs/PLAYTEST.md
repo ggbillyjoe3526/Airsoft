@@ -229,6 +229,31 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   reload. Effects at 0 leaves only the interface cues.
 - [ ] **Anything that sounds like a firearm, harsh, or too loud next to the rest?** Say which sound.
 
+## Match info (M19)
+
+- [ ] **Hit feed.** Whenever someone is hit, a line appears in the top-right corner, newest on top: "Orange 2 called
+  HIT · Blue 3" (who called the hit, then whose BB it was), each name in its team's colour. Lines about you say "You"
+  and stand out a little. A teammate hit by a teammate (or by you) says FRIENDLY. Lines fade after about six seconds;
+  a new round clears them.
+- [ ] **Teammate markers.** Your two teammates each have a small name tag with a blue arrow over their head, also
+  through walls, so you know where they are before you fire. When one is hit the tag turns grey and says "hit"; once
+  they reach the dead zone it goes. Enemies never get one. Is it helpful, or too much on screen?
+- [ ] **Hold Tab.** A scoreboard shows the match so far: for every player hits, times hit, friendly hits, BBs fired,
+  accuracy and time alive, your team first with its rounds won, your line highlighted, players hit this round greyed.
+  Let go and it's gone. Tab can be rebound under Settings → Key bindings ("Scoreboard (hold)").
+- [ ] **End a round.** For the few seconds before the next one, the same table shows that round's numbers on its own.
+- [ ] **Finish a match.** A **Match summary** screen comes first: the result, everyone's numbers for the whole match,
+  and **Your records** (wins and losses per difficulty and mode, the one you just played in orange, best accuracy and
+  wins in a row, with NEW RECORD on a best you just beat). **Continue** goes to the result screen, whose new **Match
+  summary** button brings it back.
+- [ ] **Records are kept.** Reload the page and finish another match: the counts carry on. Quitting a match part-way
+  counts as nothing. Best accuracy only counts matches where you fired at least 30 BBs.
+- [ ] **Settings → Crosshair.** Two previews (standing still, and opened up as when moving), then Shape (Cross and dot,
+  Cross, Circle, Dot only), Size, Thickness, Gap, Colour (no blue or orange: those are the teams') and Outline. The
+  previews change as you do. In a match the crosshair looks the same and still opens as you move (Dot only stays a
+  dot). Change it from the pause menu: it applies on Resume. It's kept after a reload. The default is the crosshair
+  you had before.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score

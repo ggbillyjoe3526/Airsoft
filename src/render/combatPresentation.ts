@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Sfx, type SfxSetup } from '../audio/sfx';
 import type { VolumeChannel } from '../config/audio';
+import type { CrosshairSettings } from '../config/matchInfo';
 import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, OPTICS } from '../config/optics';
@@ -63,6 +64,7 @@ export class CombatPresentation {
     tickSeconds: number,
     blocks: readonly MapBlock[],
     audio: SfxSetup,
+    crosshair: CrosshairSettings,
   ) {
     this.sfx = new Sfx(loadout, blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
@@ -70,7 +72,7 @@ export class CombatPresentation {
     renderer.scene.add(this.bbs.object, this.puffs.object, this.hitPuffs.object, this.paths.object);
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
-    this.hud = new Hud(container);
+    this.hud = new Hud(container, crosshair);
   }
 
   /** Browsers only allow audio after a user gesture: call from the Play click. */
@@ -81,6 +83,11 @@ export class CombatPresentation {
   /** A volume slider moved on Settings → Audio. */
   setVolume(channel: VolumeChannel, position: number): void {
     this.sfx.setVolume(channel, position);
+  }
+
+  /** The crosshair changed on Settings → Crosshair. */
+  setCrosshair(crosshair: CrosshairSettings): void {
+    this.hud.setCrosshair(crosshair);
   }
 
   setPlaying(playing: boolean): void {

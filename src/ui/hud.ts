@@ -1,10 +1,12 @@
+import type { CrosshairSettings } from '../config/matchInfo';
 import { FIRE_MODE_LABELS, type ReplicaConfig } from '../config/replicas';
 import { HUD } from '../config/render';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
 import { isLowAmmo } from './ammoStatus';
+import { crosshairElement, setCrosshairGap, styleCrosshair } from './crosshair';
 
 /**
- * Minimal in-game HUD: crosshair (or the red dot while aiming down one) and the replica panel (name and fire mode, BBs in the loaded magazine, a
+ * Minimal in-game HUD: crosshair (the player's own, Settings → Crosshair; or the red dot while aiming down one) and the replica panel (name and fire mode, BBs in the loaded magazine, a
  * gauge per spare magazine showing how full it is, with the one a reload takes marked, and reload progress).
  * DOM is only touched when a displayed value changes.
  */
@@ -29,16 +31,17 @@ export class Hud {
   private shownInPlay = true;
   private shownAiming = false;
   private readonly crosshair: HTMLDivElement;
+  /** The smallest gap the crosshair shows (px, Settings → Crosshair); the spread opens it further. */
+  private minGap: number;
   private shownGap = -1;
   /** What is on screen now: the DOM is only written when one of these changes. */
   private shown = { name: '', fireMode: '', mag: -1, low: false, status: '', reloadPct: -1 };
 
-  constructor(parent: HTMLElement) {
+  constructor(parent: HTMLElement, crosshair: CrosshairSettings) {
     this.root = document.createElement('div');
     this.root.className = 'hud';
     this.root.hidden = true;
     this.root.innerHTML = `
-      <div class="hud-crosshair"><i></i><i></i><i></i><i></i><b></b></div>
       <div class="hud-reddot"></div>
       <div class="hud-replica">
         <div class="hud-replica-name"><span></span><span class="hud-firemode"></span></div>
@@ -54,7 +57,17 @@ export class Hud {
     this.status = this.root.querySelector('.hud-status') as HTMLDivElement;
     this.reloadBar = this.root.querySelector('.hud-reload') as HTMLDivElement;
     this.reloadFill = this.reloadBar.firstElementChild as HTMLDivElement;
-    this.crosshair = this.root.querySelector('.hud-crosshair') as HTMLDivElement;
+    this.crosshair = crosshairElement();
+    this.root.prepend(this.crosshair);
+    this.minGap = crosshair.gap;
+    styleCrosshair(this.crosshair, crosshair);
+  }
+
+  /** The player changed the crosshair on Settings → Crosshair. */
+  setCrosshair(crosshair: CrosshairSettings): void {
+    styleCrosshair(this.crosshair, crosshair);
+    this.minGap = crosshair.gap;
+    this.shownGap = -1;
   }
 
   setVisible(visible: boolean): void {
@@ -75,8 +88,8 @@ export class Hud {
   update(armament: Armament, loadout: readonly ReplicaConfig[], inPlay: boolean, spreadPx: number, aiming: boolean, dt: number): void {
     if (this.shownInPlay !== inPlay) this.root.classList.toggle('out', !(this.shownInPlay = inPlay));
     if (this.shownAiming !== aiming) this.root.classList.toggle('aiming', (this.shownAiming = aiming));
-    const gap = Math.round(Math.max(HUD.crosshairMinGap, HUD.crosshairSpreadSigmas * spreadPx) / HUD.crosshairGapStep) * HUD.crosshairGapStep;
-    if (gap !== this.shownGap) this.crosshair.style.setProperty('--gap', `${(this.shownGap = gap)}px`);
+    const gap = Math.round(Math.max(this.minGap, HUD.crosshairSpreadSigmas * spreadPx) / HUD.crosshairGapStep) * HUD.crosshairGapStep;
+    if (gap !== this.shownGap) setCrosshairGap(this.crosshair, (this.shownGap = gap));
     const replica = loadout[armament.active]!;
     const ammo = armament.ammo[armament.active]!;
     const s = this.shown;

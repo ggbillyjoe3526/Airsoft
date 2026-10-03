@@ -98,3 +98,14 @@ describe('the rules shown on New game', () => {
     expect(describeRules({ ...rules, attackFirst: false }, 'attackDefend')).toContain('Your team defends first');
   });
 });
+
+describe('match info menus (M19)', () => {
+  it('has no Back on the summary (Continue leads on to the result)', () => {
+    expect(backTarget('summary', 'setup')).toBeNull();
+  });
+
+  it('has a Crosshair tab with nothing held back on it', () => {
+    expect(SETTINGS_TABS.find((t) => t.id === 'crosshair')).toMatchObject({ later: false });
+    expect(SETTINGS_LATER.crosshair).toEqual([]);
+  });
+});

@@ -22,6 +22,8 @@ export const DEFAULT_BINDINGS = {
   fireMode: ['KeyB'],
   slot1: ['Digit1'],
   slot2: ['Digit2'],
+  /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
+  scoreboard: ['Tab'],
   debugOverlay: ['Backquote', 'F3'],
   /** Debug: draw the recent flight paths of BBs. */
   debugBbPaths: ['BracketRight'],
@@ -45,6 +47,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'fireMode', label: 'Fire mode' },
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
+  { action: 'scoreboard', label: 'Scoreboard (hold)' },
 ];
 
 /** Keys that can't be bound: Escape pauses (the browser releases the mouse), and Meta/OS keys. */

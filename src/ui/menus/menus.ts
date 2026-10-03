@@ -8,6 +8,7 @@ import type { KeyBindings } from '../../input/keyBindings';
 import { MAPS, type MapId } from '../../map/maps';
 import { loadoutSummary } from '../loadoutChoice';
 import type { AudioSettingsOptions } from '../audioSettings';
+import type { CrosshairSettingsOptions } from '../crosshairSettings';
 import { ChoiceDialog } from './choiceDialog';
 import { LoadoutScreen } from './loadoutScreen';
 import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
@@ -17,6 +18,7 @@ import { ResultScreen } from './resultScreen';
 import { describeRules, type MatchRulesText } from './rulesText';
 import { SettingsScreen } from './settingsScreen';
 import { SetupScreen } from './setupScreen';
+import { type MatchSummary, SummaryScreen } from './summaryScreen';
 import { TitleScreen } from './titleScreen';
 
 /** What the menus show and what they report back to the game. */
@@ -40,11 +42,12 @@ export interface MenusOptions {
   /** The render preset in use, shown on the greyed Quality row. */
   quality: QualityPreset;
   audio: AudioSettingsOptions;
+  crosshair: CrosshairSettingsOptions;
 }
 
 /**
  * The game's menus (M15, M15b): the title screen, New game with its Map, Mode and Difficulty pop-ups, the Loadout and
- * Settings screens, the pause menu and the match result. One opaque screen shows at a time; the game says which one
+ * Settings screens, the pause menu, and the match's end: the summary (M19) and the result. One opaque screen shows at a time; the game says which one
  * when play stops (showTitle / showPause / showResult) and the buttons move between the rest.
  */
 export class Menus {
@@ -54,6 +57,7 @@ export class Menus {
   private readonly loadout: LoadoutScreen;
   private readonly settings: SettingsScreen;
   private readonly pause: PauseScreen;
+  private readonly summary: SummaryScreen;
   private readonly result: ResultScreen;
   private readonly mapDialog: ChoiceDialog<MapId>;
   private readonly modeDialog: ChoiceDialog<MatchMode>;
@@ -123,16 +127,24 @@ export class Menus {
       fov: opts.fov,
       quality: opts.quality,
       audio: opts.audio,
+      crosshair: opts.crosshair,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen({ onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => this.leaveMatch('title') });
-    this.result = new ResultScreen({ onPlayAgain: () => this.play(), onChangeSetup: () => this.leaveMatch('setup'), onTitle: () => this.leaveMatch('title') });
+    this.summary = new SummaryScreen(() => this.go('result'));
+    this.result = new ResultScreen({
+      onPlayAgain: () => this.play(),
+      onSummary: () => this.go('summary'),
+      onChangeSetup: () => this.leaveMatch('setup'),
+      onTitle: () => this.leaveMatch('title'),
+    });
     this.screens = {
       title: this.title.root,
       setup: this.setup.root,
       loadout: this.loadout.root,
       settings: this.settings.root,
       pause: this.pause.root,
+      summary: this.summary.root,
       result: this.result.root,
     };
     this.root.append(...Object.values(this.screens), this.mapDialog.root, this.modeDialog.root, this.difficultyDialog.root);
@@ -157,10 +169,11 @@ export class Menus {
     this.go('pause');
   }
 
-  /** The match result ("You win!" and the score line). */
-  showResult(headline: string, detail: string): void {
+  /** The match's end: the summary first, then (Continue) the result, "You win!" and the score line. */
+  showResult(headline: string, detail: string, summary: MatchSummary): void {
     this.result.set(headline, detail);
-    this.go('result');
+    this.summary.set(summary);
+    this.go('summary');
   }
 
   hide(): void {

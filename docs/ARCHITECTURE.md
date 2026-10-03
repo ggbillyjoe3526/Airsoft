@@ -102,12 +102,22 @@ ends the round). A hit character is eliminated
   score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
   also the pole (`flagRenderer.ts`: pole, rippling cloth at the sim's height, ring at the rope's reach) and its
   screen marker (`screenMarker.ts` projects it, pinned to the screen edge when out of view; `ui/flagMarker.ts`).
+- **Match info (M19):** `stats/matchStats.ts` keeps every player's numbers for the match and the round (hits on
+  opponents, times hit, friendly hits, BBs fired, time in play while live) from each tick's events, in `MatchSession`
+  after every tick; it reads the simulation and never writes it. `ui/statsRows.ts` (pure) turns them into team blocks
+  for `ui/statsTable.ts`, shown over the field by `ui/matchBoard.ts` (Tab held: the match so far; between rounds: the
+  round) and on the summary screen. `MatchPresentation` also feeds the hit feed (`ui/hitFeed.ts`, lines on simulation
+  time) and projects the teammate markers (`ui/teammateMarkers.ts`, through `screenMarker.ts`). `stats/records.ts`
+  keeps the local records under their own browser key (`airsoft.records`); `Game` adds a finished match once
+  (`MatchSession.takeMatchResult`). The crosshair (`ui/crosshair.ts`) is built and styled from Settings → Crosshair
+  (`ui/crosshairSettings.ts`, saved as `crosshair.<part>`); the HUD opens its gap with the spread.
 - **ui/menus/** (M15, M15b): `Menus` shows one opaque screen at a time and reports choices to `game.ts`:
   the title screen, New game (`setupScreen.ts`: Map, Mode, Difficulty, Loadout, Settings, the rules from `rulesText.ts`,
   Back and Play) with `ChoiceDialog` pop-ups (a `<dialog>`: Esc or × closes it) for map, mode and difficulty, the Loadout
   screen (`loadoutScreen.ts`: slots, optic, hop-up dials, LATER rows), the Settings screen (`settingsScreen.ts`: tabs;
-  Key bindings reuses `ui/keySettings.ts`), the pause menu and the result. `menuNav.ts` holds where Back goes and which
-  menu opens when play stops (title before the first match, pause during one, result after it); leaving a match
+  Key bindings reuses `ui/keySettings.ts`), the pause menu, the match summary (`summaryScreen.ts`, M19) and the result.
+  `menuNav.ts` holds where Back goes and which menu opens when play stops (title before the first match, pause during
+  one, the summary and then the result after it); leaving a match
   (Quit to title screen, Change setup, Title screen) calls `onLeaveMatch`, which unloads it. The placeholder lists and
   labels are data in `config/menus.ts`; choices are saved in the browser (`savedChoices.ts` reads them back). Map,
   mode, difficulty and loadout are picked only on New game, with no match loaded, so Play always uses them as they are.

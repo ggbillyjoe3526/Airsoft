@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 
 /**
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map and
- * Difficulty pop-ups, the Loadout and Settings screens) and starts a match with a red dot fitted, fires, reloads,
- * moves the fire selector, aims down the sight and keeps running without a page error.
+ * Difficulty pop-ups, the Loadout and Settings screens, a crosshair picked) and starts a match with a red dot fitted,
+ * holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims down the sight and keeps running without
+ * a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
@@ -80,6 +81,12 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.locator('.key-row').first()).toBeVisible();
   await settings.getByRole('tab', { name: /Audio/i }).click();
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
+  // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
+  await settings.getByRole('tab', { name: /Crosshair/i }).click();
+  const previews = settings.locator('.crosshair-preview .hud-crosshair');
+  await expect(previews).toHaveCount(2);
+  await settings.getByRole('button', { name: 'Circle' }).click();
+  await expect(previews.first()).toHaveClass(/\bshape-circle\b/);
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
   await expect(setup.getByRole('button', { name: /Settings/i })).toBeFocused();
@@ -89,6 +96,14 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   expect(await matchLoaded()).toBe(true);
   await expect(page.locator('.hud')).toBeVisible();
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
+  await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
+  // Holding Tab shows the scoreboard with every player (M19); letting go hides it.
+  const board = page.locator('.match-board');
+  await page.keyboard.down('Tab');
+  await expect(board).toBeVisible({ timeout: 10_000 });
+  await expect(board.locator('tbody tr:not(:first-child)')).toHaveCount(6);
+  await page.keyboard.up('Tab');
+  await expect(board).toBeHidden({ timeout: 10_000 });
   const mag = page.locator('.hud-mag');
   await expect(mag).toHaveText(/^\d+$/);
   const full = Number(await mag.textContent());
