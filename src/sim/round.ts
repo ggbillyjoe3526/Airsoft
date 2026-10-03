@@ -16,6 +16,13 @@ export interface RoundRules {
   resetDelay: number;
   /** Round wins needed to win the match. */
   winsNeeded: number;
+  /**
+   * Half-time: the teams swap ends of the map after this many rounds, in both modes (in Attack / Defend that
+   * swaps attack and defence too).
+   */
+  halfTimeAfter: number;
+  /** Elimination: the end of the map (0 west, 1 east) Blue, the player's team, starts the match at. */
+  eliminationFirstEnd: number;
   flag: FlagRules;
 }
 
@@ -90,25 +97,26 @@ export function createRoundState(rules: RoundRules, mode: MatchMode = 'eliminati
   return round;
 }
 
-/** Flag mode: the team attacking in round `number` (they swap after rules.flag.halfTimeAfter rounds). */
+/** Flag mode: the team attacking in round `number` (they swap after rules.halfTimeAfter rounds). */
 export function attackersInRound(number: number, rules: RoundRules): number {
   const first = rules.flag.firstAttackers;
-  return number <= rules.flag.halfTimeAfter ? first : 1 - first;
+  return number <= rules.halfTimeAfter ? first : 1 - first;
 }
 
 /** True if the round after round `number` starts with the teams at swapped ends (both modes). */
-export function halfTimeAfterRound(number: number, flag: FlagRules): boolean {
-  return number === flag.halfTimeAfter;
+export function halfTimeAfterRound(number: number, rules: RoundRules): boolean {
+  return number === rules.halfTimeAfter;
 }
 
 /**
  * The end of the map (0 or 1) `team` starts from in round `number`. Attack / Defend: the attackers start at
- * end 0 and the defenders at end 1, by the pole. Elimination: Blue starts at end 0. Either way the teams swap
- * ends after rules.flag.halfTimeAfter rounds, so an uneven map is fair over a match.
+ * end 0 and the defenders at end 1, by the pole. Elimination: Blue starts at rules.eliminationFirstEnd. Either
+ * way the teams swap ends after rules.halfTimeAfter rounds, so an uneven map is fair over a match.
  */
 export function teamEnd(team: number, mode: MatchMode, number: number, rules: RoundRules): number {
-  const atEnd0 = mode === 'attackDefend' ? attackersInRound(number, rules) : number <= rules.flag.halfTimeAfter ? 0 : 1;
-  return team === atEnd0 ? 0 : 1;
+  if (mode === 'attackDefend') return team === attackersInRound(number, rules) ? 0 : 1;
+  const blueEnd = number <= rules.halfTimeAfter ? rules.eliminationFirstEnd : 1 - rules.eliminationFirstEnd;
+  return team === 0 ? blueEnd : 1 - blueEnd;
 }
 
 /**

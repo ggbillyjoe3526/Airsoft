@@ -8,7 +8,7 @@ import { attackersInRound, createRoundState, placeTeams, type RoundContext, type
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
-const RULES: RoundRules = { roundTime: 10, resetDelay: 2, winsNeeded: 3, flag: { ...FLAG, halfTimeAfter: 2, firstAttackers: 0 } };
+const RULES: RoundRules = { roundTime: 10, resetDelay: 2, winsNeeded: 3, halfTimeAfter: 2, eliminationFirstEnd: 0, flag: { ...FLAG, firstAttackers: 0 } };
 /** The pole, on the east side: end 1, where the defenders start. */
 const POLE = vec3(10, 0, 0);
 /** Two spawns at each end: west (end 0) and east (end 1). */
@@ -106,7 +106,7 @@ describe('round flow', () => {
 });
 
 describe('ends of the map', () => {
-  it('put Blue at the west end first in elimination and the attackers there in Attack / Defend, swapping at half-time', () => {
+  it('put Blue at its first end in elimination and the attackers at the west end in Attack / Defend, swapping at half-time', () => {
     const ends = (mode: 'elimination' | 'attackDefend', rules: RoundRules) => [1, 2, 3, 4].map((n) => [teamEnd(0, mode, n, rules), teamEnd(1, mode, n, rules)]);
     const swap = [
       [0, 1],
@@ -118,6 +118,10 @@ describe('ends of the map', () => {
     expect(ends('attackDefend', RULES)).toEqual(swap);
     // Orange attacking first starts at the west end.
     expect(ends('attackDefend', { ...RULES, flag: { ...RULES.flag, firstAttackers: 1 } })).toEqual(swap.map(([a, b]) => [b, a]));
+    // Blue starting in the east in elimination; Attack / Defend ignores it.
+    const eastFirst = { ...RULES, eliminationFirstEnd: 1 };
+    expect(ends('elimination', eastFirst)).toEqual(swap.map(([a, b]) => [b, a]));
+    expect(ends('attackDefend', eastFirst)).toEqual(swap);
   });
 
   it('give each character its slot’s spawn at its team’s end, lifted off the floor, and swap ends in elimination too', () => {
@@ -131,8 +135,8 @@ describe('ends of the map', () => {
       [1, 20, 0.05, 3, Math.PI / 2],
     ]);
     const events: GameEvent[] = [];
-    for (let r = 0; r < RULES.flag.halfTimeAfter; r++) run(RULES.roundTime + RULES.resetDelay + 0.1, round, cs, events); // draws
-    expect(round.number).toBe(RULES.flag.halfTimeAfter + 1);
+    for (let r = 0; r < RULES.halfTimeAfter; r++) run(RULES.roundTime + RULES.resetDelay + 0.1, round, cs, events); // draws
+    expect(round.number).toBe(RULES.halfTimeAfter + 1);
     expect(cs.map((c) => [c.end, c.position.x, c.position.z])).toEqual([
       [1, 20, 2],
       [1, 20, 3],

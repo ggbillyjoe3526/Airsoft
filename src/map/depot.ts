@@ -18,7 +18,7 @@ import type { BlockKind, MapBlock, MapData, RampRise, SpawnPoint } from './mapTy
  * - 2 Container Alley (mid): the crate yard, a container across the centre, a ported barricade, then the Main
  *   Gate, watched from inside the Bay by two more barricades.
  * - 3 Office (south, z -16..-7.4): across the car park, in the west door, through three rooms whose doors
- *   never line up, and out of the hall's back door into the Bay 7 m from the pole.
+ *   never line up, and out of the hall's back door into the Bay about 7.5 m from the pole.
  *
  * Cover heights: full (≥ 2.4 m) or crouch cover (1.2 m: hides a crouched player, a standing one can shoot
  * over). The dock's open edge is a 1.2 m drop (bots use the ramps). No line of sight between standable points
@@ -102,9 +102,9 @@ function ramp(x0: number, x1: number, z0: number, z1: number, height: number, ri
 /**
  * A kerb along the open side of a dock ramp (x0..x1, rising towards `rise`), so you walk on and off a ramp at
  * its foot and never off its side: near the foot that side is a small drop the nav grid allows, and it lifts
- * you off the ground for a moment. Two steps, crouch-cover high and then half the rise higher, so each stands
- * well above the ramp (more than the physics autostep) even at its high end: nobody on the ramp is stepped up
- * onto it.
+ * you off the ground for a moment. Two steps, crouch cover beside the low half and full cover beside the high
+ * half, so each stands well above the ramp (more than the physics autostep) even at its high end: nobody on the
+ * ramp is stepped up onto it. Both are the map's two cover heights, so from the road they read as cover.
  */
 function rampKerb(x0: number, x1: number, rise: '+x' | '-x'): MapBlock[] {
   const mid = (x0 + x1) / 2;
@@ -112,7 +112,7 @@ function rampKerb(x0: number, x1: number, rise: '+x' | '-x'): MapBlock[] {
   const z0 = DOCK_Z0 - KERB_THICKNESS;
   return [
     box('barrier', low[0]!, low[1]!, 0, CROUCH_COVER_HEIGHT, z0, DOCK_Z0),
-    box('barrier', high[0]!, high[1]!, 0, DOCK_HEIGHT / 2 + CROUCH_COVER_HEIGHT, z0, DOCK_Z0),
+    box('barrier', high[0]!, high[1]!, 0, BARRICADE_HEIGHT, z0, DOCK_Z0),
   ];
 }
 

@@ -1,11 +1,11 @@
 import type * as THREE from 'three';
 import type { HitConfig } from '../config/hits';
-import type { FlagRules } from '../config/modes';
 import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
 import { TEAM_COLORS, TEAMS } from '../config/teams';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
+import type { RoundRules } from '../sim/round';
 import type { GameState } from '../sim/state';
 import { wrapAngle } from '../sim/vec';
 import { FlagMarker } from '../ui/flagMarker';
@@ -54,10 +54,10 @@ export class MatchPresentation {
     hits: HitConfig,
     query: WorldQuery,
     teamSize: number,
-    private readonly flagRules: FlagRules,
+    private readonly rules: RoundRules,
   ) {
     this.characters = new CharacterRenderer(state.characters, TEAM_COLORS, hits);
-    this.flag = new FlagRenderer(TEAM_COLORS, flagRules.radius);
+    this.flag = new FlagRenderer(TEAM_COLORS, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container);
     this.scoreboard = new Scoreboard(container, teamSize, player.team);
@@ -185,6 +185,6 @@ export class MatchPresentation {
     shown.number = r.number;
     shown.start = showStart;
     shown.mode = r.mode;
-    this.feedback.setRoundMessage(roundBanner(r, this.player.team, showStart, seconds, this.flagRules));
+    this.feedback.setRoundMessage(roundBanner(r, this.player.team, showStart, seconds, this.rules));
   }
 }

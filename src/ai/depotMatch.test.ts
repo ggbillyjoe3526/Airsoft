@@ -84,8 +84,8 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     firstRoundEnd: -1,
     roundEnds: [] as number[],
     farthestFromSpawn: state.characters.map(() => 0),
-    /** Per finished round: who attacked (and from which end), who won and why (flag mode). */
-    results: [] as { attackers: number; attackerEnd: number; winner: number; reason: string; length: number }[],
+    /** Per finished round: who attacked (and from which end), who won (and from which end) and why. */
+    results: [] as { attackers: number; attackerEnd: number; blueEnd: number; winner: number; winnerEnd: number; reason: string; length: number }[],
     /** Most of the flag raised in any round. */
     maxFlag: 0,
     /**
@@ -113,8 +113,8 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     for (const e of state.events) {
       if (e.type === 'roundStart') roundStart = state.time;
       if (e.type === 'roundOver') {
-        const attacker = state.characters.find((c) => c.team === state.round.attackers);
-        stats.results.push({ attackers: state.round.attackers, attackerEnd: attacker ? attacker.end : -1, winner: e.winner, reason: e.reason, length: state.time - roundStart });
+        const endOf = (team: number) => state.characters.find((c) => c.team === team)?.end ?? -1;
+        stats.results.push({ attackers: state.round.attackers, attackerEnd: endOf(state.round.attackers), blueEnd: endOf(0), winner: e.winner, winnerEnd: endOf(e.winner), reason: e.reason, length: state.time - roundStart });
         stats.rounds++;
         stats.roundEnds.push(state.time);
         if (stats.firstRoundEnd < 0) stats.firstRoundEnd = state.time;
@@ -176,7 +176,8 @@ describe('a 3v3 bot match on Depot', () => {
   });
 
   it('plays out rounds: bots leave spawn, find each other, and eliminate a team', { timeout: 30_000 }, () => {
-    const stats = playMatch(150, 11);
+    // 200 s: on the M11 Depot this seed's first round is a long last-man hunt (93 s; KNOWN_ISSUES).
+    const stats = playMatch(200, 11);
     expect(stats.rounds).toBeGreaterThanOrEqual(3);
     expect(stats.hits).toBeGreaterThanOrEqual(stats.rounds * 3);
     // Every bot got well out of its spawn yard in round 1 (nobody stuck at spawn).
@@ -200,13 +201,33 @@ describe('a 3v3 bot match on Depot', () => {
 
   it('hunt down a player hiding off their routes, so a round never stalls', { timeout: 30_000 }, () => {
     const nav = buildNavGrid(DEPOT, NAV);
-    // Deep in the west spawn yard, and behind the car park's container.
+    // Deep in the west spawn yard, and behind the car park's container, with Orange starting in the east.
+    const orangeEast = { ...ROUNDS, eliminationFirstEnd: 0 };
     for (const spot of [vec3(-24.1, 0, -4.3), vec3(-13, 0, 15.4)]) {
       expect(isWalkableAt(nav, spot.x, spot.z), `${spot.x},${spot.z} walkable`).toBe(true);
-      const stats = playMatch(120, 5, spot);
+      const stats = playMatch(120, 5, spot, BOTS, 'elimination', orangeEast);
       expect(stats.firstRoundEnd, `hider at ${spot.x},${spot.z}`).toBeGreaterThan(0);
       expect(stats.firstRoundEnd).toBeLessThan(90);
     }
+  });
+
+  it('keeps the ends close enough: Blue starts in the east, ends swap at half-time, and the west end still wins its share', { timeout: 300_000 }, () => {
+    let decided = 0;
+    let westWins = 0;
+    for (let seed = 1; seed <= 16; seed++) {
+      const stats = playMatch(300, seed);
+      // Blue (team 0) starts at the east end (end 1) for rounds 1-4, then the west.
+      expect(stats.results.map((r) => r.blueEnd)).toEqual(stats.results.map((_, i) => (i < ROUNDS.halfTimeAfter ? 1 : 0)));
+      for (const r of stats.results) {
+        if (r.winner < 0) continue;
+        decided++;
+        if (r.winnerEnd === 0) westWins++;
+      }
+    }
+    // Measured on the M11 Depot (2026-10-03): the west end wins 40% of the decided rounds here (46 of 114) and
+    // 46% over seeds 1-96. The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
+    expect(westWins / decided).toBeGreaterThan(0.3);
+    expect(westWins / decided).toBeLessThan(0.6);
   });
 });
 
@@ -226,7 +247,7 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
       const stats = playMatch(400, seed, undefined, BOTS, 'attackDefend');
       friendlyHits += stats.friendlyHits;
       // Rounds 1-4 Blue attacks, then Orange; the attackers always start at the west end.
-      expect(stats.results.map((r) => r.attackers)).toEqual(stats.results.map((_, i) => (i < ROUNDS.flag.halfTimeAfter ? 0 : 1)));
+      expect(stats.results.map((r) => r.attackers)).toEqual(stats.results.map((_, i) => (i < ROUNDS.halfTimeAfter ? 0 : 1)));
       expect(stats.results.every((r) => r.attackerEnd === 0)).toBe(true);
       for (const r of stats.results) {
         rounds++;
@@ -236,9 +257,9 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
       }
       if (stats.maxFlag >= 1) flagsRaised++;
     }
-    // Measured on the M11 Depot (2026-10-03; 16 seeds): 22 captures in 128 rounds, a flag raised in 12 of 16
-    // matches, attackers winning 52%, no friendly hits. Over seeds 1-96 attackers win 50% (107 captures in 737
-    // rounds); the old mirrored Depot measured 53%. Bots check their line of fire, but a teammate dodging into
+    // Measured on the M11 Depot with M12c's hop-up (2026-10-03; 16 seeds): 15 captures in 126 rounds, a flag
+    // raised in 10 of 16 matches, attackers winning 51%, no friendly hits. Over seeds 1-96 attackers win 50%
+    // (107 captures in 736 rounds); the old mirrored Depot measured 53%. Bots check their line of fire, but a teammate dodging into
     // a BB already in the air can't always be helped (KNOWN_ISSUES).
     // Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);

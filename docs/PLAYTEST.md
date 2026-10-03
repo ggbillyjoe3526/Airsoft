@@ -170,8 +170,8 @@ swap ends after round 4.
 - [ ] **Shoot through a barricade port and a building window.** BBs go through the openings; the walls stop them.
 - [ ] **Play Attack / Defend for a full match.** You attack first (from the west). Note whether attacking or
   defending feels easier, and which lane the bots pick. In bot-only tests the attackers win about half the rounds.
-- [ ] **Play Elimination across half-time.** The banner says ends swap after round 4, and round 5 starts you at
-  the other end. In bot-only tests the east end wins more rounds (about 6 in 10); say if it feels unfair.
+- [ ] **Play Elimination across half-time.** You start in the east (by the Bay). The banner says ends swap
+  after round 4, and round 5 starts you in the west yard. In bot-only tests the east end wins a little more often (about 54%); say if either end feels unfair.
 - [ ] **Watch where hit players walk.** Each end has its own dead zone, away from the fighting.
 
 ## Pause, menus and tabbing away

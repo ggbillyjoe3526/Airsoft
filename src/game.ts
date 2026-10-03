@@ -157,7 +157,7 @@ export class Game {
     this.input.yaw = this.player.spawnYaw;
     // The player is always on Blue.
     this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
-    this.match = new MatchPresentation(this.renderer.scene, container, this.renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS.flag);
+    this.match = new MatchPresentation(this.renderer.scene, container, this.renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS);
 
     this.debug = new DebugOverlay(container, () => ({
       seed: options.seed,
@@ -184,7 +184,7 @@ export class Game {
         playerTeam: TEAMS[this.player.team]!.name,
         enemyTeam: TEAMS[1 - this.player.team]!.name,
         raiseTime: ROUNDS.flag.raiseTime,
-        halfTimeAfter: ROUNDS.flag.halfTimeAfter,
+        halfTimeAfter: ROUNDS.halfTimeAfter,
         attackFirst: ROUNDS.flag.firstAttackers === this.player.team,
       },
       this.bindings,

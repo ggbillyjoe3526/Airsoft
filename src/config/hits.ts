@@ -88,5 +88,12 @@ export const ROUNDS = {
   resetDelay: 4,
   /** Round wins needed to win the match. */
   winsNeeded: 5,
+  /** First to 5 is at most 9 decided rounds: swap ends after 4, so the decider is in the second half. */
+  halfTimeAfter: 4,
+  /**
+   * Elimination: Blue starts in the east. On Depot the east end wins a little over half the rounds in bot-only
+   * matches (54%, DECISIONS 2026-10-03), so the player's team plays its first rounds, the ones that teach the map, there.
+   */
+  eliminationFirstEnd: 1,
   flag: FLAG,
 } as const;
