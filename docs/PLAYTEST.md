@@ -87,7 +87,7 @@ The rifle holds 60 BBs and the pistol 18, and each comes with 4 magazines per ro
 ## Optics and aiming down sights
 
 The rifle has no optic of its own any more: it comes with flip-up iron sights, and the red dot is an accessory you fit
-on the start screen.
+in the **Loadout** box on the start screen (before a match; it is not on the pause screen).
 
 - [ ] **Leave Optic on Iron sights and play.** The rifle has small flip-up sights standing on its rails and no red
   dot. Holding right click does nothing: aiming down sights needs an optic.
@@ -102,8 +102,32 @@ on the start screen.
   values; the game remembers your choice.
 - [ ] **Reload or switch to the pistol while aiming.** The sight drops for the reload and comes back up if you are
   still holding right click. The pistol has no optic, so it never aims down sights.
-- [ ] **Change the optic during a match (Esc, pick the other one).** The screen says it is fitted from the next
-  round, and it is.
+- [ ] **Press Esc during a match.** The pause screen has no Loadout box: the optic and hop-up are set before a
+  match (on the start screen, or on the result screen before the next match).
+
+## BBs leaving the muzzle
+
+- [ ] **Fire the rifle from the hip, a few single shots and a burst.** Each BB and its short streak start at the tip
+  of the barrel and fly out along it towards the crosshair. Nothing streaks up from below the rifle.
+- [ ] **Sprint, let go and fire at once, and spray full auto.** The first BBs out of a sprint and a long burst still
+  leave the barrel in line; the rifle kicks back and up a little rather than tipping up.
+- [ ] **Do the same aiming down the red dot, and with the pistol.** The BBs come out of the muzzle under the sight
+  (or the pistol's barrel) and rise into the dot or crosshair.
+- [ ] **Switch to the pistol (2).** It points straight ahead, its slide square to the view, instead of turned to the
+  left. The rifle points straight ahead too.
+
+## Hop-up
+
+Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the
+**Loadout** box on the start screen (0–100%); the line under it says what the setting does.
+
+- [ ] **Leave both on the factory setting (rifle 65%, pistol 55%) and shoot at a bot or a wall far away (30 m and
+  more).** Rifle BBs rise a little (about a hand's width) around 20 m and are still on target at Depot's longest
+  sightlines (about 34 m). The pistol's BBs drop sooner, from about 25 m.
+- [ ] **Turn the rifle's hop-up right down (0%).** BBs start dropping from about 14 m; far shots land low.
+- [ ] **Turn it right up (90–100%).** The BBs climb about half a metre over your aim and float before they fall.
+  The line under the slider says so.
+- [ ] **Find a setting you like.** The game remembers it. Bots always use the factory setting.
 
 ## Bots and rounds
 

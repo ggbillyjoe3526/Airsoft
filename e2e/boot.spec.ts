@@ -32,6 +32,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('#loading')).toHaveCount(0);
   await expect(page.locator('.start-goal')).not.toBeEmpty();
 
+  // The loadout is set before the match: the optic and a hop-up dial per replica.
+  await expect(page.locator('.start-loadout')).toBeVisible();
+  await expect(page.locator('.start-hopup input[type=range]')).toHaveCount(2);
+
   // Fit the red dot before the match (the optic picker on the start screen).
   await page.getByRole('button', { name: 'Red dot' }).click();
   await expect(page.getByRole('button', { name: 'Red dot' })).toHaveAttribute('aria-pressed', 'true');

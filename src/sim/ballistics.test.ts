@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
-import { AEG, bbMass, GAS_PISTOL, LOADOUT, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
+import { AEG, bbMass, GAS_PISTOL, hopUpLift, LOADOUT, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
 import { type BB, createBBPool, spawnBB, stepBBFlight } from './ballistics';
 import { vec3 } from './vec';
 
@@ -39,10 +39,13 @@ function fly(speed: number, hopUp: number, mass: number): Flight {
   return { dropAt: (d) => at(d).y, timeTo: (d) => at(d).t, speedAt: (d) => at(d).v, speeds };
 }
 
-/** A replica shooting its own BBs, or BBs of another weight (same joules), at the resulting muzzle velocity. */
+/**
+ * A replica with its factory hop-up shooting its own BBs, or BBs of another weight (same joules), at the resulting
+ * muzzle velocity.
+ */
 const shoot = (r: ReplicaConfig, grams = r.bbWeight): Flight => {
   const loaded = { ...r, bbWeight: grams };
-  return fly(muzzleVelocity(loaded), loaded.hopUp, bbMass(loaded));
+  return fly(muzzleVelocity(loaded), hopUpLift(loaded, loaded.hopUpDial), bbMass(loaded));
 };
 
 describe('BB ballistics', () => {
@@ -59,24 +62,22 @@ describe('BB ballistics', () => {
     expect(muzzleVelocity(GAS_PISTOL)).toBeLessThan(muzzleVelocity(AEG));
   });
 
-  it('flies flat over mid-range thanks to hop-up, then visibly drops inside a CQB field', () => {
-    // AEG: within a few centimetres of the aim point out to 20 m...
-    expect(Math.abs(aeg.dropAt(20))).toBeLessThan(0.06);
-    expect(Math.abs(aeg.dropAt(30))).toBeLessThan(0.3);
-    // ...dropping enough by Depot's longest sightline (34 m) to see and aim over...
-    expect(aeg.dropAt(34)).toBeLessThan(-0.3);
-    // ...then clearly falling away.
-    expect(aeg.dropAt(45)).toBeLessThan(-0.9);
+  it("flies flat thanks to hop-up out to Depot's longest sightline (34 m), then visibly drops", () => {
+    // AEG with its factory hop: a gentle rise, within a hand's width of the aim point all the way to 34 m...
+    for (const d of [10, 20, 25, 30, 34]) expect(Math.abs(aeg.dropAt(d)), `${d} m`).toBeLessThan(0.15);
+    expect(aeg.dropAt(20)).toBeGreaterThan(0.03);
+    // ...then falling away past it.
+    expect(aeg.dropAt(45)).toBeLessThan(-0.5);
   });
 
   it('hop-up makes a big difference compared with no hop-up', () => {
-    // Without hop-up the BB drops at least three times as far by 30 m (both drops are negative).
-    expect(Math.abs(noHop.dropAt(30))).toBeGreaterThan(Math.abs(aeg.dropAt(30)) * 3);
+    // Without hop-up the BB has dropped most of a metre by 30 m, where the hopped one is still on target.
+    expect(noHop.dropAt(30)).toBeLessThan(aeg.dropAt(30) - 0.6);
     expect(noHop.dropAt(30)).toBeLessThan(-0.6);
   });
 
   it('gives the pistol a shorter effective range than the AEG', () => {
-    expect(pistol.dropAt(25)).toBeLessThan(aeg.dropAt(25) - 0.15);
+    expect(pistol.dropAt(30)).toBeLessThan(aeg.dropAt(30) - 0.3);
     expect(Math.abs(pistol.dropAt(15))).toBeLessThan(0.1);
   });
 
@@ -141,7 +142,8 @@ describe('replica and BB sanity', () => {
     for (const r of LOADOUT) {
       expect(r.muzzleEnergy, r.id).toBeGreaterThan(0);
       expect(r.bbWeight, r.id).toBeGreaterThan(0);
-      expect(r.hopUp, r.id).toBeGreaterThan(0);
+      expect(hopUpLift(r, r.hopUpDial), r.id).toBeGreaterThan(0);
+      expect(r.hopUpDial, r.id).toBeLessThanOrEqual(1);
       expect(Number.isFinite(muzzleVelocity(r)), r.id).toBe(true);
     }
   });

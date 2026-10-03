@@ -4,6 +4,7 @@ Classified as **fix now / document / can wait**.
 
 | Issue | Class | Notes |
 |---|---|---|
+| Below ~20 fps (or on a hitch), the first shot out of a sprint can be drawn from a still-turning barrel | can wait | Shot visuals use the last rendered viewmodel pose; the sprint carry is gone 50 ms before firing unlocks (`VIEWMODEL.carrySquareAt`), which covers 20 fps and up (M12c critic). |
 | Automated browsers can't take pointer lock | document | Use the `?nolock` URL flag (dev server and the smoke test's `e2e` build only; fire and wheel work without the lock there). The real lock flow, mouse look and Esc to pause stay manual tests. |
 | Ledges 0.2–0.3 m tall are climbable only sometimes (sprinting yes, crouching no) | document | Rapier autostep with capsules; keep map ledges ≤ 0.15 m or ≥ uncrossable cover height (tested for Depot). |
 | Firefox ignores `unadjustedMovement` (raw mouse input) | can wait | Sensitivity may feel different vs Chrome/Edge when OS acceleration is on. |

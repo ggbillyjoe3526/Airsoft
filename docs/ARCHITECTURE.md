@@ -92,7 +92,12 @@ ends the round). A hit character is eliminated
   also the pole (`flagRenderer.ts`: pole, rippling cloth at the sim's height, ring at the rope's reach) and its
   screen marker (`screenMarker.ts` projects it, pinned to the screen edge when out of view; `ui/flagMarker.ts`).
 - **ui/startScreen.ts**: title/pause/result overlay with the rules for the picked mode, `OptionPicker`s (match mode,
-  bot difficulty, the rifle's optic, the crouch key) and the mouse and aiming sensitivity sliders, all saved in the browser.
+  bot difficulty, the crouch key), the mouse and aiming sensitivity sliders and a **Loadout** box (the rifle's optic and
+  a hop-up dial per replica), all saved in the browser. The Loadout box shows on the title and result screens, never
+  on the pause screen (`ui/loadoutChoice.ts`); it grows into the loadout screen later.
+- **Hop-up:** each replica has a dial (`Armament.hopUps`, 0..1, kept between rounds; `setHopUps`) that scales its
+  `hopUpMax` lift (`hopUpLift` in `config/replicas.ts`); bots keep the factory `hopUpDial`. `sim/hopUp.ts` flies a
+  level shot to word the start screen's readout ("on target to about N m").
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
 - **game.ts**: composition root and main loop. The only place that knows about every layer.
 

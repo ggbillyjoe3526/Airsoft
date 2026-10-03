@@ -14,7 +14,7 @@ export interface BallisticsConfig {
    */
   dragArea: number;
   /**
-   * The BB weight replicas' hop-up and spin are tuned against (kg). A replica's hopUp lifts a BB of this
+   * The BB weight replicas' hop-up and spin are tuned against (kg). A replica's hop-up lift lifts a BB of this
    * weight; a lighter BB is lifted harder, a heavier one less (lift force / mass), and spin lasts longer
    * on a heavier BB.
    */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
-import { AEG, GAS_PISTOL, LOADOUT, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
-import { type ArmamentContext, createArmament, type Muzzle, nextFireMode, nextSpare, stepArmament, type WorldQuery } from './armament';
+import { AEG, GAS_PISTOL, hopUpLift, LOADOUT, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
+import { type ArmamentContext, createArmament, type Muzzle, nextFireMode, nextSpare, setHopUps, stepArmament, type WorldQuery } from './armament';
 import { createCharacter, respawnCharacter } from './character';
 import { createBBPool } from './ballistics';
 import { createCommand, type PlayerCommand } from './commands';
@@ -185,7 +185,7 @@ describe('replica handling', () => {
     run(1, (c) => (c.fire = true));
     const rifleBB = ctx.bbs.bbs.find((b) => b.active)!;
     expect(rifleBB.mass).toBeCloseTo(0.00025, 9);
-    expect(rifleBB.hopUp).toBe(AEG.hopUp);
+    expect(rifleBB.hopUp).toBe(hopUpLift(AEG, AEG.hopUpDial)); // the factory hop-up setting
     run(1, (c) => (c.fire = false));
     run(1, (c) => (c.switchTo = 1));
     run(Math.ceil(GAS_PISTOL.drawTime / DT) + 1);
@@ -194,8 +194,15 @@ describe('replica handling', () => {
     run(1, (c) => (c.fire = true));
     const pistolBB = ctx.bbs.bbs.find((b) => b.active && b.serial >= before)!;
     expect(pistolBB.mass).toBeCloseTo(0.0002, 9);
-    expect(pistolBB.hopUp).toBe(GAS_PISTOL.hopUp);
+    expect(pistolBB.hopUp).toBe(hopUpLift(GAS_PISTOL, GAS_PISTOL.hopUpDial));
     expect(Math.hypot(pistolBB.velocity.x, pistolBB.velocity.y, pistolBB.velocity.z)).toBeCloseTo(72, 0);
+  });
+
+  it('gives each BB the hop-up its replica is dialled to', () => {
+    const { ctx, a, run } = setup();
+    setHopUps(a, [1, 0]);
+    run(1, (c) => (c.fire = true));
+    expect(ctx.bbs.bbs.find((b) => b.active)!.hopUp).toBe(AEG.hopUpMax);
   });
 
   it('spreads shots around the aim point by roughly the configured amount, deterministically', () => {
@@ -378,12 +385,14 @@ describe('fire selector (owner, 2026-10-03)', () => {
     expect(s.a.burstShotsLeft).toBe(0);
   });
 
-  it('keeps each replica\'s selector where it was across rounds', () => {
+  it('keeps each replica\'s selector and hop-up where they were across rounds', () => {
     const c = createCharacter(0, vec3(), 0, LOADOUT);
     c.armament.modes[0] = 'burst';
+    setHopUps(c.armament, [0.4, 0.8]);
     c.armament.ammo[0]!.mag = 3;
     respawnCharacter(c, LOADOUT);
     expect(c.armament.modes).toEqual(['burst', 'semi']);
+    expect(c.armament.hopUps).toEqual([0.4, 0.8]);
     expect(c.armament.ammo[0]!.mag).toBe(AEG.magSize);
   });
 });

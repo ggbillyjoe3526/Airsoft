@@ -2,9 +2,11 @@ import { DIFFICULTIES, DEFAULT_DIFFICULTY, type Difficulty } from '../config/bot
 import { type Action, CROUCH_MODES, type CrouchMode, DEFAULT_CROUCH_MODE, MOUSE } from '../config/controls';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../config/modes';
 import { AIMING, DEFAULT_OPTIC, OPTIC_CHOICES, type OpticChoice } from '../config/optics';
+import { HOP_UP, type ReplicaConfig } from '../config/replicas';
 import { type KeyBindings, keyLabel } from '../input/keyBindings';
 import { loadSetting, numberIn, saveSetting, type SettingField } from '../settings/storage';
 import { KeySettings } from './keySettings';
+import { hopUpField, hopUpLabel, hopUpReadout, loadoutOffered } from './loadoutChoice';
 import { loadChoice, OptionPicker } from './optionPicker';
 
 /** The saved bot difficulty, or the default. */
@@ -101,6 +103,28 @@ function settingSlider(
   return root;
 }
 
+/** A replica's hop-up dial, with a line under it saying how far the BB stays on target (saved per replica). */
+function hopUpSlider(replica: ReplicaConfig, initial: number, onChange: (dial: number) => void): HTMLDivElement {
+  const root = document.createElement('div');
+  root.className = 'start-hopup';
+  const readout = document.createElement('p');
+  readout.className = 'picker-blurb';
+  readout.textContent = hopUpReadout(replica, initial);
+  const slider = settingSlider(
+    `${replica.name} hop-up`,
+    { min: HOP_UP.minDial, max: HOP_UP.maxDial, step: HOP_UP.dialStep },
+    initial,
+    hopUpLabel,
+    hopUpField(replica),
+    (dial) => {
+      readout.textContent = hopUpReadout(replica, dial);
+      onChange(dial);
+    },
+  );
+  root.append(slider, readout);
+  return root;
+}
+
 /**
  * Title / pause overlay. The play button asks the game to start (normally by locking the pointer);
  * the overlay hides while playing and returns as a pause screen when the pointer is released.
@@ -118,6 +142,8 @@ export class StartScreen {
   private readonly modePicker: OptionPicker<MatchMode>;
   private readonly crouchPicker: OptionPicker<CrouchMode>;
   private readonly opticPicker: OptionPicker<OpticChoice>;
+  /** The loadout set before a match (optic, hop-up): shown on the title and result screens, not when paused. */
+  private readonly loadout: HTMLDivElement;
   private readonly goal: HTMLParagraphElement;
   private sensitivityValue = loadSensitivity();
   private aimSensitivityValue = loadAimSensitivity();
@@ -134,6 +160,7 @@ export class StartScreen {
     crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void },
     optic: { initial: OpticChoice; onChange: (o: OpticChoice) => void },
     onAimSensitivity: (v: number) => void,
+    hopUp: { loadout: readonly ReplicaConfig[]; initial: readonly number[]; onChange: (slot: number, dial: number) => void },
   ) {
     this.crouchMode = crouch.initial;
     this.root = document.createElement('div');
@@ -159,7 +186,16 @@ export class StartScreen {
     this.modePicker = new OptionPicker('Mode', MATCH_MODES, mode.initial, 'mode', mode.onChange);
     this.difficultyPicker = new OptionPicker('Bots', DIFFICULTIES, difficulty.initial, 'difficulty', difficulty.onChange);
     this.opticPicker = new OptionPicker('Optic', OPTIC_CHOICES, optic.initial, 'optic', optic.onChange);
-    this.goal.after(this.modePicker.root, this.difficultyPicker.root, this.opticPicker.root);
+    this.loadout = document.createElement('div');
+    this.loadout.className = 'start-loadout';
+    const loadoutTitle = document.createElement('h2');
+    loadoutTitle.className = 'start-loadout-title';
+    loadoutTitle.textContent = 'Loadout';
+    this.loadout.append(loadoutTitle, this.opticPicker.root);
+    hopUp.loadout.forEach((replica, slot) => {
+      this.loadout.append(hopUpSlider(replica, hopUp.initial[slot] ?? replica.hopUpDial, (dial) => hopUp.onChange(slot, dial)));
+    });
+    this.goal.after(this.modePicker.root, this.difficultyPicker.root, this.loadout);
     const sensitivity = settingSlider(
       'Mouse sensitivity',
       { min: MOUSE.minSensitivity, max: MOUSE.maxSensitivity, step: MOUSE.sensitivityStep },
@@ -261,6 +297,7 @@ export class StartScreen {
   /** Title screen (`paused` false) or pause screen; `status` (e.g. the score) shows on the pause screen. */
   show(paused: boolean, status = ''): void {
     this.playButton.textContent = paused ? 'Click to resume' : 'Click to play';
+    this.loadout.hidden = !loadoutOffered(paused ? 'pause' : 'title');
     const showStatus = paused && status !== '';
     this.result.hidden = !showStatus;
     if (showStatus) {
@@ -276,6 +313,7 @@ export class StartScreen {
     (this.result.lastElementChild as HTMLElement).textContent = detail;
     this.result.hidden = false;
     this.playButton.textContent = 'Play again';
+    this.loadout.hidden = !loadoutOffered('result');
     this.root.hidden = false;
   }
 

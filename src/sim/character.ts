@@ -151,8 +151,8 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
 }
 
 /**
- * Puts a character back at its spawn for a new round: alive, standing, full magazines, fire selectors and optics
- * left as they were.
+ * Puts a character back at its spawn for a new round: alive, standing, full magazines, fire selectors, optics and
+ * hop-up dials left as they were.
  */
 export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]): void {
   copy(c.position, c.spawnPosition);
@@ -185,8 +185,9 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.statusTime = 0;
   c.hitBy = -1;
   c.walkOffStuck = 0;
-  const { modes, optics } = c.armament;
+  const { modes, optics, hopUps } = c.armament;
   c.armament = createArmament(loadout);
   if (modes.length === c.armament.modes.length) c.armament.modes = modes;
   if (optics.length === c.armament.optics.length) c.armament.optics = optics;
+  if (hopUps.length === c.armament.hopUps.length) c.armament.hopUps = hopUps;
 }

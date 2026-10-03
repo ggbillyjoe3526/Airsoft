@@ -31,8 +31,16 @@ export interface ReplicaConfig {
   muzzleEnergy: number;
   /** BB weight it shoots (grams: 0.20, 0.25 …). Changes speed, drag and hop-up lift (config/ballistics.ts). */
   bbWeight: number;
-  /** Hop-up strength: Magnus lift per unit speed at full spin for a BALLISTICS.referenceMass BB (1/s). */
-  hopUp: number;
+  /**
+   * Hop-up strength with the dial turned all the way up: Magnus lift per unit speed at full spin for a
+   * BALLISTICS.referenceMass BB (1/s). The backspin the dial sets lifts the BB, so it flies flat for longer.
+   */
+  hopUpMax: number;
+  /**
+   * Where its hop-up dial is set out of the box (0..1 of hopUpMax): the player's starting setting, which they
+   * can change before a match, and the setting bots always use.
+   */
+  hopUpDial: number;
   /** Random spread, standard deviation of the shot direction (degrees). */
   spreadDeg: number;
   /** Upward view kick per shot (degrees). Light: these are toys, not firearms. */
@@ -51,7 +59,11 @@ export interface ReplicaLook {
   shotSound: ReplicaModelKind;
   /** Fitted with a suppressor: its shots sound quieter and duller (config/audio.ts suppressed). */
   suppressed: boolean;
-  /** Where it sits in the first-person view (camera space, metres) and its inward cant (radians). */
+  /**
+   * Where it sits in the first-person view (camera space, metres) and its inward cant (radians). Keep the cant at 0:
+   * a barrel pointing straight ahead runs on screen from the muzzle to the crosshair, the line your BBs are drawn
+   * along (owner playtest, 2026-10-03: a canted pistol looked aimed off to the left).
+   */
   hold: { position: readonly [number, number, number]; yaw: number };
   /**
    * Where it sits while aiming down a fitted optic (camera space, metres, no cant): the optic's axis on the view's
@@ -72,10 +84,13 @@ export const AEG: ReplicaConfig = {
   // About 15% quicker than the first 2.1 s (owner's v0.1-alpha.3 playtest: "a tiny bit too slow").
   reloadTime: 1.8,
   drawTime: 0.45,
-  // ~1 J with 0.25 g BBs, like a typical site-legal AEG: 88 m/s. Flat to ~20 m, dropping by 35 m.
+  // ~1 J with 0.25 g BBs, like a typical site-legal AEG: 88 m/s.
   muzzleEnergy: 0.97,
   bbWeight: 0.25,
-  hopUp: 0.14,
+  // Out of the box the hop is set for Depot's longest sightlines: up to ~10 cm above the aim line around 20 m and
+  // back on it by ~34 m (docs/DECISIONS.md). Turned right up, it rises well over half a metre and floats.
+  hopUpMax: 0.3,
+  hopUpDial: 0.65,
   spreadDeg: 0.45,
   recoilDeg: 0.18,
   opticMount: true,
@@ -83,7 +98,7 @@ export const AEG: ReplicaConfig = {
     model: 'rifle',
     shotSound: 'rifle',
     suppressed: false,
-    hold: { position: [0.16, -0.17, -0.48], yaw: 0.14 },
+    hold: { position: [0.16, -0.17, -0.48], yaw: 0 },
     // The optic's axis is RIFLE_OPTIC.axisUp above the model's origin (render/replicaModels.ts); its back end about
     // 0.2 m in front of the eye, so the tube frames the view without filling it.
     aimHold: [0, -0.126, -0.205],
@@ -101,15 +116,36 @@ export const GAS_PISTOL: ReplicaConfig = {
   mags: 4,
   reloadTime: 1.2,
   drawTime: 0.3,
-  // A gas pistol on light 0.20 g BBs: 72 m/s, a close-range sidearm (dropping clearly past 20 m).
+  // A gas pistol on light 0.20 g BBs: 72 m/s, a close-range sidearm.
   muzzleEnergy: 0.52,
   bbWeight: 0.2,
-  hopUp: 0.13,
+  // Set out of the box for sidearm range: on target to about 25 m, then dropping clearly (docs/DECISIONS.md).
+  hopUpMax: 0.3,
+  hopUpDial: 0.55,
   spreadDeg: 0.8,
   recoilDeg: 0.5,
   opticMount: false,
-  look: { model: 'pistol', shotSound: 'pistol', suppressed: false, hold: { position: [0.12, -0.1, -0.55], yaw: 0.36 } },
+  look: { model: 'pistol', shotSound: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0 } },
 };
+
+/** The hop-up dial the player turns before a match (0..1 of a replica's hopUpMax), shown as a percentage. */
+export const HOP_UP = {
+  minDial: 0,
+  maxDial: 1,
+  dialStep: 0.05,
+  /**
+   * For the start screen's readout: a BB counts as on target while it stays within this far (m) above or below
+   * the aim line, about half a torso. "On target to N m" is where it first leaves that band.
+   */
+  onTargetBand: 0.15,
+  /** How far (m) the readout follows a BB; a setting that is still on target there reads "N m+". */
+  readoutRange: 60,
+} as const;
+
+/** The hop-up lift (ReplicaConfig.hopUpMax units) the replica gives with its dial at `dial`, clamped to the dial's range. */
+export function hopUpLift(r: ReplicaConfig, dial: number): number {
+  return r.hopUpMax * Math.min(HOP_UP.maxDial, Math.max(HOP_UP.minDial, dial));
+}
 
 /** Mass of the BBs a replica shoots (kg; the config gives grams). */
 export function bbMass(r: ReplicaConfig): number {

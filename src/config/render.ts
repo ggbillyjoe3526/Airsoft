@@ -75,7 +75,7 @@ export const BB_VISUALS = {
    * visible dot at 10-30 m (radians of view; 0.003 ≈ 5 px wide at 1080p).
    */
   minAngularRadius: 0.003,
-  /** Trail length in seconds of flight (streak = velocity × this). */
+  /** Trail length in seconds of flight (streak = velocity × this, never longer than the flight so far). */
   trailSeconds: 0.022,
   trailColor: 0xfff4cc,
   trailOpacity: 0.75,
@@ -186,16 +186,21 @@ export const VIEWMODEL = {
   returnRate: 14,
   bobAmount: 0.012,
   bobFrequency: 1.7,
-  /** Recoil kick per shot: metres back and radians up. */
+  /**
+   * Recoil kick per shot: metres back and metres up. A lift, not a tilt: the barrel stays parallel to the view, so
+   * BBs drawn from the muzzle to the crosshair stay in line with it through full auto (owner playtest, 2026-10-03).
+   */
   kickBack: 0.028,
-  kickUp: 0.05,
+  kickLift: 0.012,
+  /** The sprint carry is gone once this share of the post-sprint fire lockout is left (render/viewmodel.ts sprintCarry). */
+  carrySquareAt: 0.25,
   /** Recoil kick never stacks beyond this many shots' worth. */
   kickMax: 1.5,
   /** How much of the mouse sway and walk bob goes away with the sight raised to your eye (0..1). */
   aimSteady: 0.75,
   /**
-   * The share of the recoil kick left with the sight raised: the rig pivots at the eye, so a full kick would lift the
-   * optic's glass off the HUD dot. A quarter keeps the dot inside the glass even at kickMax (a viewmodel test pins it).
+   * The share of the recoil kick left with the sight raised: a full kick would lift the optic's glass off the HUD
+   * dot. A quarter keeps the dot inside the glass even at kickMax (a viewmodel test pins it).
    */
   aimKick: 0.25,
   /** Viewmodel camera clip planes (metres); the replica is always within arm's reach. */

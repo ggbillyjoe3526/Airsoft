@@ -5,46 +5,43 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `m12b-optics-ads` (Phase 4 M12b, critic 9.1 on attempt 3)._
+_Last updated: 2026-10-03 · branch `claude/project-thread-vkfuxy` (Phase 4 M12c, the owner's M12b notes; critic 9.0 on attempt 3)._
 
 ## Where we are
 
 - **Phase 3 is done and tagged** (`v0.1-alpha.3`). Phase 4 order (owner): M12a → M12b → M11 → M13 → art → menus and
-  settings → tutorial. M12a is merged (PR #10).
-- **The owner played M12a** and had one note: the crosshair tightened too slowly and smoothly when stopping; he wants an
-  "instant lock". Fixed as the first commit here (`accuracy.steadyTime` 0.05 s, `lockTime` 0.015 s; the slower
-  `settleTime` stays for `carryTime` after a sprint or a landing, tracked by `Character.shakeCarry`).
-- **M12b is built** on `m12b-optics-ads` (pull request open for the owner): `config/optics.ts` (the red dot, zoom 1.25,
-  `AIMING`), `Armament.optics` per slot with `fitOptic` (kept by `respawnCharacter`), `ReplicaConfig.opticMount` and
-  `look.aimHold`, `sim/aiming.ts` (`stepAiming` before movement; aiming counts as walking), right button in
-  `PointerLock.aimHeld`, `PlayerInput.aimSensitivity` (a multiple), `Renderer.setZoom`, the viewmodel's aiming hold and
-  optic / flip-up sight parts (`RIFLE_OPTIC` in `replicaModels.ts`), the HUD red dot, and the Optic picker and Aiming
-  sensitivity slider on the start screen. The game fits the picked optic at each round start (`ui/opticChoice.ts`).
+  settings → tutorial. M12a (PR #10) and M12b (PR #11) are merged.
+- **The owner played M12b** ("red dot works great") and sent six notes; **M12c** answers them on this branch (pull
+  request open for the owner): a **Loadout** box on the start screen (the optic and a hop-up dial per replica), shown on
+  the title and result screens but not the pause screen (`ui/loadoutChoice.ts`); BB streaks that never reach back past
+  the muzzle (`render/bbRenderer.ts`); both replicas held with no inward cant so BBs fly out along the barrel
+  (`render/tracerLine.test.ts` checks it); and hop-up as `ReplicaConfig.hopUpMax` × a dial (`Armament.hopUps`,
+  `setHopUps`, `sim/hopUp.ts` for the readout). Rifle factory 65% (on target to ~38 m), pistol 55% (~25 m); bots use
+  the factory dials. Numbers in DECISIONS.
 
 ## Next
 
-1. **The owner's M12b playtest** (PLAYTEST.md: Movement, Optics and aiming down sights). Tune the zoom, raise time and
-   default aiming sensitivity from his notes.
-2. **M11 Depot rework** once the owner approves the layout sketch (a parallel thread is reworking it to be less
-   symmetrical, with obvious lanes), then **M13** audio.
+1. **The owner's M12c playtest** (PLAYTEST.md: BBs leaving the muzzle, Hop-up). Tune the factory dials from his notes.
+2. **M11 Depot rework** (layout sketch approved by the owner, 2026-10-03: asymmetric, three lanes). A parallel thread
+   ("Depot rework build") is building it on its own branch; it didn't touch replicas or ballistics, this branch didn't
+   touch map files. Then **M13** audio.
 
 ## Working notes and gotchas
 
-- **The aimed view:** the aiming hold puts the optic's axis on the viewmodel camera's axis, and the HUD draws the dot at
-  the screen centre. If the optic or the hold moves, keep `aimHold[1] = -RIFLE_OPTIC.axisUp` (a viewmodel test checks it).
-  The receiver fills the bottom of the aimed view in greybox; the art pass can slim it.
+- **The barrel line:** BBs are drawn from the muzzle, blending onto the eye line, so on screen they run from the muzzle
+  to the crosshair. That matches the barrel only while `look.hold.yaw` is 0 (no cant). Keep it 0, or the BBs look
+  fired off-axis again; `tracerLine.test.ts` fails if not.
+- **Hop-up and bot balance:** the factory dials changed every BB's arc (the AEG was a fixed 0.14 lift, now 0.195).
+  Re-measure the Attack / Defend guard after any hop change (all guards stayed green here).
+- **The aimed view:** keep `aimHold[1] = -RIFLE_OPTIC.axisUp` (a viewmodel test checks it).
 - **Parallel pull requests conflict** in `docs/DECISIONS.md` and `docs/REVIEWS.md` (both append at the end). Merge
   `main` in and keep both sides, `main`'s lines first.
 - **Measuring bots:** copy the top of `src/ai/depotMatch.test.ts` (up to the first `describe`) into a scratch test,
-  add a test that writes JSON with `writeFileSync`, run it with `-t`, then delete it. Never commit it.
-- **Bot-tuning numbers go stale:** re-measure the Attack / Defend guard after every attempt that touches bot behaviour
-  (the instant lock changes bot accuracy too; all guards stayed green).
-- **Checks:** `npm run check` (type check, tests, build). `npm run check:all` adds the browser smoke test (run
-  `npx playwright install chromium` once per machine). In a cloud container with a preinstalled Chromium, run Playwright
-  with a temporary copy of the config whose `launchOptions.executablePath` points at it (don't commit it). The smoke
-  test now fits the red dot and aims; its screenshots (hip and aimed) land in `playwright-report/data/`.
-- **Browser:** `npm run dev`, open `/?nolock` (dev or `build:e2e` only); `window.airsoft` is the Game.
-- **Editing on the owner's PC:** there is no Python there; write small `.cjs` edit scripts with a quoted heredoc, or use
-  the Edit tool.
+  add a test that writes JSON with `writeFileSync` (Vitest hides `console.log` here), run it with `-t`, then delete it.
+- **Checks:** `npm run check` (type check, tests, build). `npm run check:all` adds the browser smoke test. In a cloud
+  container with a preinstalled Chromium, run Playwright with a temporary copy of the config whose
+  `launchOptions.executablePath` points at it (`/opt/pw-browsers/chromium`; don't commit it).
+- **Browser:** `npm run dev`, open `/?nolock` (dev or `build:e2e` only); `window.airsoft` is the Game (private methods
+  such as `pause()` are callable from a script for screenshots).
 - **Git:** new branch from the latest `main`, push, open a pull request; the owner merges. Never push to `main`, merge a
   pull request, or create or move tags. Install with npm 11 (`npx -y npm@11 install`) so the lockfile keeps its `libc` fields.
