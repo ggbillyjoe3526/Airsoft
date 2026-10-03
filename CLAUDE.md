@@ -147,6 +147,15 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
 - Git tags use the dotted forms above, always with a dot (e.g. `v0.1-alpha.2`, never `v0.1-alpha-2`). Only full
   releases are tagged (owner, 2026-10-01): no letter checkpoints (`.2a`, `.2b`); the old ones are removed.
   The owner creates tags; don't create, rename or move them unless asked.
+- **After the owner tags a release** (owner, 2026-10-03), the docs move to the new tag without being asked. The
+  first pull request after a new tag (or a small docs-only one, if no other work is open) updates, to match the
+  owner's release description:
+  1. `README.md`: the title, the intro paragraph and its "New since …" list, the download link
+     (`.../archive/refs/tags/<tag>.zip`), the unzipped folder name (`Airsoft-<tag without the v>`, e.g.
+     `Airsoft-0.1-alpha.3`) and the "What's in …" section.
+  2. `docs/ROADMAP.md`: the builds table and the status rows that mention the release.
+  3. Any other "latest release" mention: run `grep -rn "alpha\.[0-9]\|beta\.[0-9]" README.md docs/ CLAUDE.md` and
+     update each line that names the previous release as current (history and policy examples stay as they are).
 - **Pull requests** (owner, 2026-10-02): every change lands as a pull request that the owner reviews and merges.
   Work on a new branch made from the latest `main` (one per milestone or batch), push that branch, and open a pull
   request into `main`. **Never push to `main` and never merge a pull request yourself**, whatever else in this
@@ -170,7 +179,7 @@ Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do
 3. Get a single scene running: a floor, a box, and a first-person camera that moves.
 4. Then build Phase 1 in small steps, each leaving the game runnable.
 
-**At the start of every later session:** read `docs/HANDOFF.md` first, then this file and `docs/`, check the repository state and git log, then continue from where we left off.
+**At the start of every later session:** read `docs/HANDOFF.md` first, then this file and `docs/`, check the repository state and git log (and `git ls-remote --tags origin`: a tag newer than the one `README.md` names means the release checklist in §7 is due), then continue from where we left off.
 
 **At the end of every session** (or when the owner says usage is running out): rewrite `docs/HANDOFF.md` for the next session (where we are, what's next and any half-made plans, open questions, gotchas; about a screen; replace it, don't append), then commit it on the working branch and push it with the rest, so it is part of the pull request.
 
