@@ -6,7 +6,8 @@ import { DEPOT } from '../map/depot';
 import type { MapBlock } from '../map/mapTypes';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
-import { loadVolumes, saveVolume, volumeGain } from './audioMix';
+import { saveSetting } from '../settings/storage';
+import { loadVolumes, volumeField, volumeGain } from './audioMix';
 import { recipeLength, renderRecipe, seededRandom, type SoundRecipe } from './dsp';
 import { type FoleyMove, FoleyTracker } from './foley';
 import { MotorSound } from './motor';
@@ -107,6 +108,23 @@ describe('sound synthesis (M13)', () => {
     const concrete = rendered.get('step.concrete.run')![0]!;
     const metal = rendered.get('step.metal.run')![0]!;
     expect(rms(metal, 0.08, 0.2)).toBeGreaterThan(rms(concrete, 0.08, 0.2) * 3);
+  });
+
+  it("plays a shot clearly louder than footsteps, a bot's and your own (after the mix levels)", () => {
+    const played = (cue: SoundCue, gain: number, measure: (v: Float32Array) => number, pick: 'min' | 'max'): number => {
+      const levels = rendered.get(cue)!.map((v) => measure(v) * gain);
+      return pick === 'min' ? Math.min(...levels) : Math.max(...levels);
+    };
+    const L = AUDIO.levels;
+    const loudness = (v: Float32Array): number => rms(v, 0, 0.1);
+    const steps = (Object.keys(SOUNDS) as SoundCue[]).filter((c) => c.startsWith('step.'));
+    for (const p of SHOT_PROFILES) {
+      for (const step of steps) {
+        expect(played(cues.shot(p), L.shot.gain, peak, 'min'), `${p} shot vs ${step} (peak)`).toBeGreaterThan(1.5 * played(step, L.step.gain, peak, 'max'));
+        expect(played(cues.shot(p), L.shot.gain, loudness, 'min'), `${p} shot vs ${step} (loudness)`).toBeGreaterThan(1.3 * played(step, L.step.gain, loudness, 'max'));
+        expect(played(cues.shot(p), L.shot.gain, peak, 'min'), `${p} shot vs your ${step}`).toBeGreaterThan(2.5 * played(step, L.ownStep.gain, peak, 'max'));
+      }
+    }
   });
 
   it('lands a jump harder than a run, and a sprint louder than a run', () => {
@@ -268,7 +286,7 @@ describe('volume settings (M13)', () => {
   it('starts at the defaults and keeps what the player sets', () => {
     const storage = memoryStorage();
     expect(loadVolumes(storage)).toEqual(VOLUME.defaults);
-    saveVolume('effects', 0.35, storage);
+    saveSetting(volumeField('effects'), 0.35, storage);
     expect(loadVolumes(storage)).toEqual({ ...VOLUME.defaults, effects: 0.35 });
   });
 

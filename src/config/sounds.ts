@@ -55,7 +55,7 @@ function click(at: number, hz: number, gain: number, decay = 0.006): SoundRecipe
 
 /** A footstep on `surface` at `pace` (run, sprint, or landing a jump). */
 function step(surface: FloorSurface, pace: FootstepPace): SoundRecipe {
-  const loud = pace === 'land' ? 1.35 : pace === 'sprint' ? 1.2 : 1;
+  const loud = pace === 'land' ? 1.2 : pace === 'sprint' ? 1.12 : 1;
   const long = pace === 'land' ? 1.8 : 1;
   const layers: SoundRecipe['layers'][number][] = [
     // Heel strike: a soft low thump, heavier on landing.
@@ -70,7 +70,7 @@ function step(surface: FloorSurface, pace: FootstepPace): SoundRecipe {
   } else {
     // A steel ramp plate: a hollow clank that rings on, and a sharper scuff.
     layers.push(
-      { kind: 'modes', gain: 0.2 * loud, modes: [{ hz: 290, decay: 0.2 * long, gain: 0.8 }, { hz: 705, decay: 0.14 * long, gain: 0.5 }, { hz: 1580, decay: 0.09, gain: 0.35 }, { hz: 2930, decay: 0.05, gain: 0.2 }] },
+      { kind: 'modes', gain: 0.13 * loud, modes: [{ hz: 290, decay: 0.2 * long, gain: 0.8 }, { hz: 705, decay: 0.14 * long, gain: 0.5 }, { hz: 1580, decay: 0.09, gain: 0.35 }, { hz: 2930, decay: 0.05, gain: 0.2 }] },
       { kind: 'noise', attack: 0.002, decay: 0.035 * long, gain: 0.32 * loud, filter: { type: 'bandpass', hz: 1700, q: 1.2 } },
     );
   }
@@ -107,12 +107,12 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
    */
   'shot.electric': {
     layers: [
-      { kind: 'tone', wave: 'saw', attack: 0.004, decay: 0.09, gain: 0.11, hz: 205, hzTo: 175, filter: { type: 'lowpass', hz: 1700, q: 0.8 } },
-      { kind: 'tone', wave: 'square', attack: 0.004, decay: 0.06, gain: 0.035, hz: 620, hzTo: 560, filter: { type: 'lowpass', hz: 2600, q: 0.7 } },
-      { kind: 'tone', wave: 'sine', at: 0.012, attack: 0.002, decay: 0.07, gain: 0.42, hz: 130, hzTo: 58 },
-      { kind: 'modes', at: 0.012, gain: 0.34, modes: [{ hz: 185, decay: 0.05, gain: 0.8 }, { hz: 430, decay: 0.035, gain: 0.55 }, { hz: 1150, decay: 0.022, gain: 0.35 }, { hz: 2700, decay: 0.012, gain: 0.2 }] },
-      { kind: 'noise', at: 0.013, attack: 0.002, decay: 0.055, gain: 0.5, filter: { type: 'bandpass', hz: 1500, hzTo: 650, q: 0.8 } },
-      { kind: 'noise', at: 0.016, attack: 0.0005, decay: 0.014, gain: 0.2, filter: { type: 'highpass', hz: 4800, q: 0.7 } },
+      { kind: 'tone', wave: 'saw', attack: 0.004, decay: 0.09, gain: 0.14, hz: 205, hzTo: 175, filter: { type: 'lowpass', hz: 1700, q: 0.8 } },
+      { kind: 'tone', wave: 'square', attack: 0.004, decay: 0.06, gain: 0.045, hz: 620, hzTo: 560, filter: { type: 'lowpass', hz: 2600, q: 0.7 } },
+      { kind: 'tone', wave: 'sine', at: 0.012, attack: 0.002, decay: 0.07, gain: 0.52, hz: 130, hzTo: 58 },
+      { kind: 'modes', at: 0.012, gain: 0.42, modes: [{ hz: 185, decay: 0.05, gain: 0.8 }, { hz: 430, decay: 0.035, gain: 0.55 }, { hz: 1150, decay: 0.022, gain: 0.35 }, { hz: 2700, decay: 0.012, gain: 0.2 }] },
+      { kind: 'noise', at: 0.013, attack: 0.002, decay: 0.055, gain: 0.62, filter: { type: 'bandpass', hz: 1500, hzTo: 650, q: 0.8 } },
+      { kind: 'noise', at: 0.016, attack: 0.0005, decay: 0.014, gain: 0.25, filter: { type: 'highpass', hz: 4800, q: 0.7 } },
     ],
     ...TIGHT,
     drive: 0.6,

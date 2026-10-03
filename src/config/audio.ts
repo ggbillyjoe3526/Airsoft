@@ -15,13 +15,13 @@ export const AUDIO = {
   synthSeed: 1301,
   /** Playback level of each kind of sound, and how far its pitch varies per play (± fraction). */
   levels: {
-    shot: { gain: 0.6, pitchSpread: 0.03 },
-    motor: { gain: 0.6, pitchSpread: 0.02 },
+    shot: { gain: 1, pitchSpread: 0.03 },
+    motor: { gain: 0.8, pitchSpread: 0.02 },
     mechanism: { gain: 0.8, pitchSpread: 0.04 },
     /** Other players' footsteps. */
-    step: { gain: 0.9, pitchSpread: 0.06 },
+    step: { gain: 0.42, pitchSpread: 0.06 },
     /** Your own: quieter, but always played (they're how you judge your own pace and noise). */
-    ownStep: { gain: 0.6, pitchSpread: 0.06 },
+    ownStep: { gain: 0.25, pitchSpread: 0.06 },
     foley: { gain: 0.8, pitchSpread: 0.08 },
     ownFoley: { gain: 0.45, pitchSpread: 0.08 },
     impact: { gain: 0.9, pitchSpread: 0.1 },
@@ -35,12 +35,16 @@ export const AUDIO = {
    * and the spin-down plays this many cycles after the last shot (cancelled when another shot comes first).
    */
   motor: { spinUpAfterCycles: 1.6, spinDownAfterCycles: 1.25 },
+  /** A sound stopped while it plays (the motor's wind-down cut by the next trigger pull) fades out over this long (s). */
+  cutFade: 0.015,
   /**
    * Positional sounds. HRTF panning gives direction cues in front, behind and above (best on headphones); full
    * volume within refDistance, then an inverse roll-off.
    */
   spatial: {
     panningModel: 'HRTF' as PanningModelType,
+    /** One-off world sounds (BB impacts, the flag's rope): many at once, so the cheaper equal-power panning. */
+    oneShotPanningModel: 'equalpower' as PanningModelType,
     refDistance: 3,
     rolloff: 1.4,
     maxDistance: 60,
@@ -121,7 +125,8 @@ export const VOLUME = {
   min: 0,
   max: 1,
   step: 0.05,
-  defaults: { master: 0.8, effects: 1, interface: 1 } satisfies Record<VolumeChannel, number>,
+  /** Full by default: the master slider's top is AUDIO.masterVolume, the level the game always played at. */
+  defaults: { master: 1, effects: 1, interface: 1 } satisfies Record<VolumeChannel, number>,
   /** A slider's position is raised to this power for its gain, so each step sounds about as big as the last. */
   curve: 2,
   /** Volume changes ease in over this many seconds (no zipper noise while a slider moves). */

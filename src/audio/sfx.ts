@@ -12,9 +12,17 @@ import { blockedShare, lineBlocked, type Muffle, muffleFor, type OcclusionQuery 
 import { renderSounds, suppressedCopies } from './soundBank';
 import { impactMaterialAt, surfaceUnder } from './soundMaterials';
 import { VoiceLimit } from './voiceLimit';
+import { Whistle } from './whistle';
 
 /** A playback level and per-play pitch spread (AUDIO.levels). */
 type Level = { readonly gain: number; readonly pitchSpread: number };
+
+/** A sound playing (or scheduled): its source, its level, and when it starts on the audio clock. */
+interface Voice {
+  src: AudioBufferSourceNode;
+  gain: GainNode;
+  startsAt: number;
+}
 
 /**
  * One other character's sound source: a 3D panner that follows them, then a low-pass and a gain that muffle
@@ -59,7 +67,7 @@ export class Sfx {
   private readonly lastVariant = new Map<SoundCue | string, number>();
   private readonly replicas = new Map<string, ReplicaSound>();
   private readonly channels = new Map<number, Channel>();
-  private readonly motors = new Map<number, { motor: MotorSound; spinDown: AudioBufferSourceNode | null }>();
+  private readonly motors = new Map<number, { motor: MotorSound; spinDown: Voice | null }>();
   private readonly foley = new FoleyTracker();
   private readonly impactLimit = new VoiceLimit(AUDIO.maxImpactsPerWindow, AUDIO.impactWindow);
   private readonly stepLimit = new VoiceLimit(AUDIO.footsteps.maxPerWindow, AUDIO.footsteps.window);
@@ -67,8 +75,7 @@ export class Sfx {
   /** Where the listener is (distance culling of quiet sounds, and muffling). */
   private readonly listener = { x: 0, y: 0, z: 0 };
   private readonly muffle: Muffle = { hz: 0, gain: 0 };
-  /** Whistle oscillators still playing or scheduled (a new round silences them). */
-  private readonly whistles: OscillatorNode[] = [];
+  private whistle: Whistle | null = null;
   private readonly volumes: Volumes;
 
   constructor(
@@ -114,6 +121,7 @@ export class Sfx {
     this.world.connect(reverb).connect(wet).connect(effects);
     this.self = ctx.createGain();
     this.self.connect(this.world);
+    this.whistle = new Whistle(ctx, this.buses.get('interface')!);
 
     const rendered = renderSounds(ctx.sampleRate);
     for (const [cue, variants] of rendered) this.buffers.set(cue, variants.map((v) => this.toBuffer(v)));
@@ -242,11 +250,11 @@ export class Sfx {
         return;
       }
       case 'roundOver':
-        this.whistle(AUDIO.roundOverWhistle, 0);
+        this.whistle?.blast(AUDIO.roundOverWhistle, 0);
         return;
       case 'matchOver':
         // Extra long blasts after the round's: game over.
-        for (let i = 0; i < AUDIO.matchOverBlasts; i++) this.whistle(AUDIO.roundOverWhistle, matchOverBlastStart(i));
+        for (let i = 0; i < AUDIO.matchOverBlasts; i++) this.whistle?.blast(AUDIO.roundOverWhistle, matchOverBlastStart(i));
         return;
       case 'flagRope':
         this.oneShot(e.raising ? 'rope.up' : 'rope.down', e.position, L.rope);
@@ -260,9 +268,10 @@ export class Sfx {
   /** The two short blasts that start a round. False if audio isn't unlocked yet (nothing played). */
   roundStartWhistle(): boolean {
     if (!this.ctx) return false;
-    this.stopWhistles();
-    this.whistle(AUDIO.roundStartWhistle, 0);
-    this.whistle(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
+    const w = this.whistle!;
+    w.stopAll();
+    w.blast(AUDIO.roundStartWhistle, 0);
+    w.blast(AUDIO.roundStartWhistle, AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
     return true;
   }
 
@@ -272,6 +281,7 @@ export class Sfx {
     this.master = null;
     this.world = null;
     this.self = null;
+    this.whistle = null;
     this.buses.clear();
     this.buffers.clear();
     this.replicas.clear();
@@ -298,8 +308,19 @@ export class Sfx {
       this.motors.set(characterId, m);
     }
     if (m.motor.shot(this.ctx!.currentTime, r.fireRate)) this.play('motor.spinUp', out, L.motor);
-    m.spinDown?.stop(); // not started yet: it never sounds
+    if (m.spinDown) this.cancel(m.spinDown);
     m.spinDown = this.play('motor.spinDown', out, L.motor, m.motor.spinDownAt(r.fireRate));
+  }
+
+  /** Stops a voice: one not started yet never sounds; one already playing fades out quickly rather than clicking. */
+  private cancel(v: Voice): void {
+    const now = this.ctx!.currentTime;
+    if (now < v.startsAt) {
+      v.src.stop();
+      return;
+    }
+    v.gain.gain.setTargetAtTime(0, now, AUDIO.cutFade / 4);
+    v.src.stop(now + AUDIO.cutFade);
   }
 
   private foleyMove(c: Character, move: FoleyMove, localId: number): void {
@@ -327,7 +348,8 @@ export class Sfx {
   /** A one-off sound at a point in the world, muffled if level geometry is in the way; its nodes go when it ends. */
   private oneShot(cue: SoundCue, at: Vec3, level: Level): void {
     const ctx = this.ctx!;
-    const panner = this.createPanner();
+    // Equal-power for these (up to 80 BB impacts a second): HRTF is kept for the characters you locate by ear.
+    const panner = this.createPanner(AUDIO.spatial.oneShotPanningModel);
     this.placePanner(panner, at, 0);
     muffleFor(lineBlocked(this.query, this.listener, at, AUDIO.occlusion.surfaceGap) ? 1 : 0, this.muffle);
     const filter = ctx.createBiquadFilter();
@@ -336,26 +358,26 @@ export class Sfx {
     const g = ctx.createGain();
     g.gain.value = this.muffle.gain;
     panner.connect(filter).connect(g).connect(this.world!);
-    const src = this.play(cue, panner, level);
-    if (!src) {
+    const voice = this.play(cue, panner, level);
+    if (!voice) {
       panner.disconnect();
       return;
     }
-    src.addEventListener('ended', () => {
+    voice.src.addEventListener('ended', () => {
       panner.disconnect();
       filter.disconnect();
       g.disconnect();
     });
   }
 
-  /** Plays a variant of `cue` into `out` at `when` (audio clock; now if not given). Returns its source. */
-  private play(cue: SoundCue, out: AudioNode, level: Level, when?: number): AudioBufferSourceNode | null {
+  /** Plays a variant of `cue` into `out` at `when` (audio clock; now if not given). */
+  private play(cue: SoundCue, out: AudioNode, level: Level, when?: number): Voice | null {
     const variants = this.buffers.get(cue);
     return variants ? this.playBuffer(variants, cue, out, level, when) : null;
   }
 
   /** Plays one of `variants` (never the same one twice running) and disconnects its nodes when it ends. */
-  private playBuffer(variants: readonly AudioBuffer[], key: string, out: AudioNode, level: Level, when?: number): AudioBufferSourceNode | null {
+  private playBuffer(variants: readonly AudioBuffer[], key: string, out: AudioNode, level: Level, when?: number): Voice | null {
     const ctx = this.ctx!;
     if (variants.length === 0) return null;
     const last = this.lastVariant.get(key) ?? -1;
@@ -372,8 +394,9 @@ export class Sfx {
       src.disconnect();
       g.disconnect();
     };
-    src.start(when ?? ctx.currentTime);
-    return src;
+    const startsAt = when ?? ctx.currentTime;
+    src.start(startsAt);
+    return { src, gain: g, startsAt };
   }
 
   // ---- Channels and buses -------------------------------------------------------------------
@@ -382,7 +405,7 @@ export class Sfx {
     let ch = this.channels.get(c.id);
     if (ch) return ch;
     const ctx = this.ctx!;
-    const panner = this.createPanner();
+    const panner = this.createPanner(AUDIO.spatial.panningModel);
     this.placePanner(panner, c.position, AUDIO.spatial.sourceHeight);
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
@@ -394,10 +417,10 @@ export class Sfx {
     return ch;
   }
 
-  private createPanner(): PannerNode {
+  private createPanner(model: PanningModelType): PannerNode {
     const s = AUDIO.spatial;
     const p = this.ctx!.createPanner();
-    p.panningModel = s.panningModel;
+    p.panningModel = model;
     p.distanceModel = 'inverse';
     p.refDistance = s.refDistance;
     p.rolloffFactor = s.rolloff;
@@ -424,54 +447,6 @@ export class Sfx {
     const buf = this.ctx!.createBuffer(1, samples.length, this.ctx!.sampleRate);
     buf.copyToChannel(samples as Float32Array<ArrayBuffer>, 0);
     return buf;
-  }
-
-  // ---- The referee's whistle ----------------------------------------------------------------
-
-  private stopWhistles(): void {
-    // Their onended handlers still run and disconnect each blast's nodes.
-    for (const o of this.whistles.splice(0)) {
-      try {
-        o.stop();
-      } catch {
-        // Already stopped.
-      }
-    }
-  }
-
-  /** Referee whistle: a pea whistle's warbling tone (played live: it's long, and a new round cuts it short). */
-  private whistle(duration: number, delay: number): void {
-    const ctx = this.ctx!;
-    const t = ctx.currentTime + delay;
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = AUDIO.whistlePitch;
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = AUDIO.whistleWarble;
-    const depth = ctx.createGain();
-    depth.gain.value = AUDIO.whistlePitch * AUDIO.whistleWarbleDepth;
-    lfo.connect(depth).connect(osc.frequency);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(AUDIO.whistleVolume, t + AUDIO.whistleAttack);
-    g.gain.setValueAtTime(AUDIO.whistleVolume, t + duration - AUDIO.whistleRelease);
-    g.gain.linearRampToValueAtTime(0, t + duration);
-    osc.connect(g).connect(this.buses.get('interface')!);
-    osc.start(t);
-    lfo.start(t);
-    this.whistles.push(osc, lfo);
-    osc.onended = () => {
-      for (const node of [osc, lfo]) {
-        const k = this.whistles.indexOf(node);
-        if (k >= 0) this.whistles.splice(k, 1);
-      }
-      osc.disconnect();
-      lfo.disconnect();
-      depth.disconnect();
-      g.disconnect();
-    };
-    osc.stop(t + duration + AUDIO.stopPadding);
-    lfo.stop(t + duration + AUDIO.stopPadding);
   }
 
   /** Stereo impulse response: noise dying away over `seconds` (a small walled yard, no roof). */
