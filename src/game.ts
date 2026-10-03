@@ -1,8 +1,8 @@
 import type * as THREE from 'three';
 import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
-import { loadVolumes } from './audio/audioMix';
 import { createDifficultyChoice, type DifficultyChoice, difficultyNote, difficultyRoundStarted, pickDifficulty } from './ai/difficultyChoice';
+import { loadVolumes } from './audio/audioMix';
 import { BALLISTICS } from './config/ballistics';
 import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
 import { HITS, ROUNDS } from './config/hits';

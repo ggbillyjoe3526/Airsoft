@@ -9,6 +9,11 @@ import type { ImpactMaterial } from './sounds';
 export const AUDIO = {
   /** Headroom under the player's master volume (several shots and steps at once must not clip). */
   masterVolume: 0.7,
+  /**
+   * A gentle limiter on the master bus: only peaks above the threshold (dBFS) are squeezed, so a firefight next to
+   * several replicas doesn't crackle. Quiet sounds pass untouched.
+   */
+  limiter: { threshold: -4, knee: 4, ratio: 12, attack: 0.002, release: 0.12 },
   /** Variants rendered per sound (each moves pitch, timing and mix a little, so repeats don't sound looped). */
   variants: 5,
   /** Seed of the presentation-only generator the variants are rendered with. */
@@ -19,7 +24,7 @@ export const AUDIO = {
     motor: { gain: 0.8, pitchSpread: 0.02 },
     mechanism: { gain: 0.8, pitchSpread: 0.04 },
     /** Other players' footsteps. */
-    step: { gain: 0.42, pitchSpread: 0.06 },
+    step: { gain: 0.48, pitchSpread: 0.06 },
     /** Your own: quieter, but always played (they're how you judge your own pace and noise). */
     ownStep: { gain: 0.25, pitchSpread: 0.06 },
     foley: { gain: 0.8, pitchSpread: 0.08 },

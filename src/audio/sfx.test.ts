@@ -133,6 +133,9 @@ class FakeContext {
   createOscillator(): FakeSource {
     return new FakeSource();
   }
+  createDynamicsCompressor(): FakeNode & Record<'threshold' | 'knee' | 'ratio' | 'attack' | 'release', FakeParam> {
+    return Object.assign(new FakeNode(), { threshold: new FakeParam(), knee: new FakeParam(), ratio: new FakeParam(), attack: new FakeParam(), release: new FakeParam() });
+  }
   createConvolver(): FakeNode & { buffer: unknown } {
     return Object.assign(new FakeNode(), { buffer: null });
   }

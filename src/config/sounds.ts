@@ -142,7 +142,7 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     drive: 0.5,
   },
   'motor.spinUp': {
-    layers: [{ kind: 'tone', wave: 'saw', attack: 0.01, decay: 0.06, gain: 0.09, hz: 85, hzTo: 205, glide: 0.04, filter: { type: 'lowpass', hz: 1500, q: 0.8 } }],
+    layers: [{ kind: 'tone', wave: 'saw', attack: 0.006, decay: 0.07, gain: 0.22, hz: 85, hzTo: 205, glide: 0.04, filter: { type: 'lowpass', hz: 1500, q: 0.8 } }],
     ...TIGHT,
   },
   /** The motor coasting down after the trigger is let go, with the gears ticking over. */

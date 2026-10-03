@@ -102,7 +102,14 @@ export class Sfx {
     const ctx = new AudioContext();
     this.ctx = ctx;
     this.master = ctx.createGain();
-    this.master.connect(ctx.destination);
+    const lim = AUDIO.limiter;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = lim.threshold;
+    limiter.knee.value = lim.knee;
+    limiter.ratio.value = lim.ratio;
+    limiter.attack.value = lim.attack;
+    limiter.release.value = lim.release;
+    this.master.connect(limiter).connect(ctx.destination);
     for (const ch of ['effects', 'interface'] as const) {
       const bus = ctx.createGain();
       bus.connect(this.master);
