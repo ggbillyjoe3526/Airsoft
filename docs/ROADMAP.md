@@ -81,7 +81,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 2 · M4a Difficulty levels, close-range lethality | Done | 8.7 |
 | Alpha · Phase 2 · M4b Crouch-peeking, team movement, varied routes, walking | Done | 8.2 |
 | Alpha · Phase 2 · M5 Objective mode: Attack / Defend | Done | 8.4 |
-| Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | Done (tagged; owner playtesting) | |
+| Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | Done (tagged 2026-10-01) | |
 | Alpha · Phase 3 · M7a Controls for leaning (swap key removed; Q / E free) | Done (small change, no critic) | |
 | Alpha · Phase 3 · M7b Leaning (peek left / right) | Done | 8.6 |
 | Alpha · Phase 3 · M8 Magazines and reloads | Done | 8.7 |
@@ -111,7 +111,7 @@ numbers are names, not the order.
 The CLAUDE.md §6 slice: Depot greybox, AEG and pistol, BB ballistics, one-hit elimination with hit calling,
 bots, 3v3 rounds to 5, and a minimal HUD.
 
-### Phase 2: Core gameplay on Depot → build `v0.1-alpha.2` (in progress)
+### Phase 2: Core gameplay on Depot → build `v0.1-alpha.2` (done)
 
 - **M1–M4b (done):** controls and a bigger Depot; sound you can play by (footsteps, positional sound);
   reload animation, hit reactions and smooth turning; difficulty levels; smarter bots (crouch-peeking,
