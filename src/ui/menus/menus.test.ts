@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LOADOUT_SLOTS, POWER_LABELS, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
-import { DEFAULT_QUALITY, FOV_SETTING, RENDER } from '../../config/render';
+import { FOV_SETTING, QUALITY, QUALITY_LABELS, RENDER } from '../../config/render';
 import { AEG, GAS_PISTOL, LOADOUT } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
 import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
@@ -45,10 +45,9 @@ describe('menu data', () => {
     }
   });
 
-  it('holds the quality picker back, showing the preset the game runs on, and has no Brightness setting', () => {
-    const graphics = SETTINGS_LATER.graphics;
-    expect(graphics.find((s) => s.label === 'Quality')?.value?.toLowerCase()).toBe(DEFAULT_QUALITY);
-    expect(graphics.some((s) => s.label === 'Brightness' || s.label === 'Field of view')).toBe(false);
+  it('names every quality preset for the greyed Quality row, and has no Brightness setting', () => {
+    expect(Object.keys(QUALITY_LABELS).sort()).toEqual(Object.keys(QUALITY).sort());
+    expect(SETTINGS_LATER.graphics.some((s) => s.label === 'Brightness' || s.label === 'Field of view')).toBe(false);
   });
 
   it('has the field of view slider around the default view', () => {

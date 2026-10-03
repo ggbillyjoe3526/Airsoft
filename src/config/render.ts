@@ -52,6 +52,9 @@ export const QUALITY: Record<QualityPreset, QualitySettings> = {
 
 export const DEFAULT_QUALITY: QualityPreset = 'high';
 
+/** How the presets are named in the menus (Settings → Graphics shows the one in use). */
+export const QUALITY_LABELS: Readonly<Record<QualityPreset, string>> = { low: 'Low', medium: 'Medium', high: 'High' };
+
 
 /** The preset a `?quality=` value names, or null for a missing or unknown value. */
 export function parseQuality(value: string | null): QualityPreset | null {

@@ -1,6 +1,7 @@
 import { DIFFICULTIES, type Difficulty } from '../../config/bots';
 import type { CrouchMode } from '../../config/controls';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
+import type { QualityPreset } from '../../config/render';
 import type { OpticChoice } from '../../config/optics';
 import type { ReplicaConfig } from '../../config/replicas';
 import type { KeyBindings } from '../../input/keyBindings';
@@ -35,6 +36,8 @@ export interface MenusOptions {
   aimSensitivity: { initial: number; onChange: (v: number) => void };
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
   fov: { initial: number; onChange: (v: number) => void };
+  /** The render preset in use, shown on the greyed Quality row. */
+  quality: QualityPreset;
 }
 
 /**
@@ -116,6 +119,7 @@ export class Menus {
       aimSensitivity: opts.aimSensitivity,
       crouch: opts.crouch,
       fov: opts.fov,
+      quality: opts.quality,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen({ onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => this.leaveMatch('title') });

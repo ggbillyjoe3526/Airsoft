@@ -1,7 +1,7 @@
 import { CROUCH_MODES, type CrouchMode, MOUSE } from '../../config/controls';
 import { SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/menus';
 import { AIMING } from '../../config/optics';
-import { FOV_SETTING } from '../../config/render';
+import { FOV_SETTING, QUALITY_LABELS, type QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
@@ -15,6 +15,8 @@ export interface SettingsOptions {
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
   /** Field of view (horizontal degrees on a 16:9 screen), applied at once. */
   fov: { initial: number; onChange: (v: number) => void };
+  /** The render preset in use: the Quality picker is held back (LATER), so its row only shows this. */
+  quality: QualityPreset;
   onBack: () => void;
 }
 
@@ -51,7 +53,7 @@ export class SettingsScreen {
       panel.setAttribute('role', 'tabpanel');
       panel.append(el('h2', 'menu-panel-title', label));
       this.fillTab(id, panel, opts);
-      for (const item of SETTINGS_LATER[id]) panel.append(laterRow(item.label, item.help, item.value));
+      for (const item of SETTINGS_LATER[id]) panel.append(laterRow(item.label, item.help));
       tabList.append(button);
       panels.append(panel);
       this.tabs.set(id, { button, panel });
@@ -136,6 +138,8 @@ export class SettingsScreen {
           'How wide you see, across a 16:9 screen. Aiming through an optic zooms in from it.',
           rangeControl('Field of view', FOV_SETTING, opts.fov.initial, (v) => `${Math.round(v)}°`, 'fov', opts.fov.onChange),
         ),
+        // Held back until there is real graphics work to scale (owner, 2026-10-03): the game runs on High.
+        laterRow('Quality', 'Comes back with the art pass.', QUALITY_LABELS[opts.quality]),
       );
     }
   }

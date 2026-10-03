@@ -139,13 +139,18 @@ export class Game {
       aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
       crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
+      quality: options.quality,
     });
     this.menus.showTitle();
     this.pointer.onChange((locked) => {
       if (locked) this.resume();
       else this.pause();
     });
-    this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
+    this.pointer.onError(() => {
+      this.menus.showHint(LOCK_REFUSED_HINT);
+      // Play built a match that never started: unload it, so no map stays loaded behind New game (the next Play builds it again).
+      if (!this.started) this.leaveMatch();
+    });
   }
 
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
@@ -171,8 +176,8 @@ export class Game {
 
   /**
    * Play on New game, Resume, Play Again. Before play has begun in a match, the match is built here from New game's
-   * choices (again if the mouse lock was refused last time, as the choices may have changed since). Runs in the click,
-   * so audio can be unlocked.
+   * choices (a match left over from a lock request still pending is replaced). Runs in the click, so audio can be
+   * unlocked.
    */
   private play(): void {
     if (!this.started) {
@@ -281,8 +286,8 @@ export class Game {
       this.tickRateTimer -= 1;
     }
 
-    // With no match loaded there is nothing to draw: the menus cover the screen.
-    s?.draw(running ? dt : 0); // presentation is frozen while paused
+    // Only while playing: the menus are opaque, so drawing the paused field under them would be GPU work nobody sees.
+    if (running) s.draw(dt);
     this.debug.frame(dt);
   };
 }
