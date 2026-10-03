@@ -20,7 +20,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12) and the Depot rework (M11) are done, the menus (M15, pulled forward by the owner) are in review, then an audio rework (M13), art and a tutorial. The owner's `v0.1-alpha.3` playtest notes are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11) and the menus (M15, pulled forward by the owner) are done; next are the owner's M15 notes (M15b), then an audio rework (M13), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -96,7 +96,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (merged; owner played it: "red dot works great", six notes for M12c) | 9.1 |
 | Alpha · Phase 4 · M12c The owner's M12b notes: the loadout off the pause screen, BBs drawn from the muzzle, the pistol facing forward, hop-up dials | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (merged; owner's playtest next) | 9.0 |
-| Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Pull request (owner's playtest next) | 9.1 |
+| Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Done (merged; owner played it: five notes, for M15b and later) | 9.1 |
+| Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Next | |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
@@ -231,11 +232,23 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 5 | The pistol is held turned slightly to the left, not facing forward; disorientating | M12c |
 | 6 | Hop-up adjustment, set before a match in the loadout: long shots aren't hitting | M12c |
 
-**Order** (owner picked weapon handling first, 2026-10-03; he pulled the menus forward the same day): **M12a → M12b → M11 → M15 → M13 → M14 → M16.** Weapon handling comes
+**The owner's M15 playtest notes (2026-10-03, on `main` after the menus merged) and where each one went:**
+
+| # | Note | Goes to |
+|---|---|---|
+| 1 | The menu appears without loading a map. A **Map** choice sits beside Mode, Difficulty and the rest, with Depot as the default (more maps come later). The map, difficulty, loadout and settings load only when Play is pressed. The menus are opaque, not see-through onto the field. The controls list shows only under Settings, where the key bindings live | M15b |
+| 2 | A basic **Field of view** slider; today's FOV stays the default, and the player can widen or narrow it | M15b |
+| 3 | Remove the Brightness setting from Graphics | M15b |
+| 4 | Graphics quality is held back for now (still basic geometry and models), but its place is kept for later | M15b (greyed out, LATER); M14 or beta brings it back |
+| 5 | An **Esport** difficulty above Hard that plays almost like a competitive title (Counter-Strike, Valorant). Noted, not built: Easy, Normal and Hard come first | Parked (`docs/IDEAS.md`; [After v0.1](#after-v01-later-versions)) |
+
+**Order** (owner picked weapon handling first, 2026-10-03; he pulled the menus forward the same day): **M12a → M12b → M11 → M15 → M15b → M13 → M14 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
 the Depot layout sketch. The Depot rework follows once the sketch is approved (approved 2026-10-03). The audio rework comes after it so
 movement sounds, echoes and muffling through walls are tuned on the new layout's buildings and floors. Art, menus and
 the tutorial come last because they dress and explain everything before them.
+M15b follows M15 straight away: the owner's playtest notes set the priorities, and it reworks the screens the owner just
+played, before the audio rework adds settings to them.
 
 - **M12. Weapon handling** (owner's playtest notes 1, 2, 3, 4, 5 and 7). Split in two so the quick changes can be
   played first. Bots play by the same handling rules where they apply.
@@ -328,6 +341,27 @@ the tutorial come last because they dress and explain everything before them.
   - **Pause** (Esc): Resume, Settings, Quit to title screen. **Result:** Play Again, Change setup, Title screen.
   - Headings and labels in capitals (owner); descriptions as written.
   - Still to do: the settings and parts marked LATER, as their systems arrive (audio in M13, parts with loadouts).
+- **M15b. The owner's M15 notes** (above, notes 1–4). Not built yet; the next step.
+  - **No map until Play:** the title and New game screens stand on their own, with no field loaded or drawn behind
+    them. Pressing Play builds the picked map with the picked mode, difficulty, loadout and settings, then starts the
+    match. Quit to title screen and Change setup unload it, so the next Play can load a different map (no leaks:
+    GPU memory stays flat across matches, as it does today across restarts).
+  - **A Map button** on New game, beside Mode, Difficulty, Loadout and Settings, opening a pop-up like Mode's. It
+    lists Depot (the default and, for now, the only map), and its choice is saved like the others. Later fields
+    (Woodland in v0.2, the v0.4 list) join this pop-up as they are built.
+  - **Opaque menus:** a solid background on every menu screen, so nothing of the game shows through. The pause menu
+    is opaque too (a default; the owner can ask for it to stay see-through mid-match).
+  - **Controls only under Settings:** the controls list leaves the New game and pause screens; the key bindings stay
+    on Settings → Key bindings.
+  - **Field of view slider** on Settings → Graphics, replacing its LATER row: today's view (100° across a 16:9 screen)
+    is the default, adjustable from about 80° to 120° (a first guess), saved, and applied at once, also from the
+    pause menu. Aiming down sights keeps zooming in from whatever FOV is set; the held replica keeps its own camera.
+  - **Brightness removed** from Graphics.
+  - **Graphics quality held back:** the Quality picker is greyed out and marked LATER, the game runs on the default
+    preset (High), and any saved quality is ignored. `?quality=` stays as a developer switch for measuring frame
+    cost (Phase 3 audit C-04). The picker comes back with the art pass (M14) or the beta performance work, when
+    there is real graphics work to scale.
+  - The playtest guide's "Menus (M15)" section is updated to match.
 - **M16. Onboarding:** a short tutorial.
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
@@ -420,5 +454,6 @@ the bot AI is good enough to follow the calls. It can join whichever version tha
 
 ### Parked ideas
 
-Not approved yet; see `docs/IDEAS.md`: adjustable hop-up, medic revive, dead rag and voiced hit calls,
-bang-bang surrender, BB ricochets, a referee NPC, an end-of-match summary, and Depot variations.
+Not approved yet; see `docs/IDEAS.md`: an Esport difficulty above Hard (owner, 2026-10-03), adjustable hop-up,
+medic revive, dead rag and voiced hit calls, bang-bang surrender, BB ricochets, a referee NPC, an end-of-match summary, and Depot
+variations.
