@@ -194,11 +194,37 @@ swap ends after round 4.
   power greyed out and marked LATER. Click the pistol: its own hop-up dial, and its gas type marked LATER. Back
   returns to New game, and the Loadout button shows your optic and dials.
 - [ ] **Click Settings.** Tabs on the left: **Controls** (mouse sensitivity, aiming sensitivity, crouch key),
-  **Key bindings**, **Graphics** (quality), and Audio and Accessibility marked LATER. Back returns to New game.
+  **Key bindings**, **Graphics** (quality), **Audio** (volumes, see Sound below) and Accessibility marked LATER.
+  Back returns to New game.
 - [ ] **Graphics: pick Low.** A line says it applies when the game reloads, with **Reload now**. Click it: the game
   reloads to the title screen with no shadows. Set it back to High the same way.
 - [ ] **Headings are in capitals** (NEW GAME, LOADOUT, MODE, HOP-UP …); descriptions are in normal writing.
 - [ ] **Click Play.** The match starts as before.
+
+## Sound (M13)
+
+Headphones help: direction (in front, behind, above) comes through best on them.
+
+- [ ] **Fire the rifle on auto, then on single.** Each shot is a gearbox cycle: a whirr, a plastic slap and a puff
+  of air, with more body than before but still a toy, never a gunshot. A burst starts with the motor winding up and
+  ends with it coasting down a moment after you let go; single shots each get a short wind-down.
+- [ ] **Fire the pistol.** A sharp pop of gas, a short hiss and the slide clacking back and home: clearly a different
+  replica from the rifle with your eyes shut.
+- [ ] **Empty a magazine.** The empty rifle still whirrs and slaps (an AEG cycles with no BBs); the empty pistol only
+  clicks. Reloads sound different too: the rifle's plastic mag, the pistol's heavier metal one.
+- [ ] **Shoot a container, a crate and a wall.** A ringing ping off the steel, a hollow knock on the wood, a dry tick
+  off concrete.
+- [ ] **Walk up a dock ramp, then along the dock.** Steps clank on the steel ramp and scuff on concrete. Sprint and
+  land a jump: louder, with kit rattling.
+- [ ] **Crouch, stand and lean (Q / E).** A soft rustle of clothing and kit each time a move starts (quieter for you
+  than for a bot doing it near you).
+- [ ] **Listen for bots.** Close your eyes when you hear one: you should be able to point at it, including behind
+  you. A bot behind a container or wall sounds duller and quieter than one in the open; one behind low cover is
+  in between. Steps further than about 22 m aren't played, as before.
+- [ ] **Settings → Audio.** Three sliders: Master, Effects (the replicas, steps and impacts) and Interface (hit tick,
+  hit marker and whistle). Each changes the sound at once (from the pause menu, on Resume), and they're kept after a
+  reload. Effects at 0 leaves only the interface cues.
+- [ ] **Anything that sounds like a firearm, harsh, or too loud next to the rest?** Say which sound.
 
 ## Pause, menus and tabbing away
 

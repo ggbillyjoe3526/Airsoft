@@ -3,6 +3,7 @@ import { SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/me
 import { AIMING } from '../../config/optics';
 import { QUALITY_CHOICES, type QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
+import { type AudioSettingsOptions, audioSettings } from '../audioSettings';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
 import type { SettingsOrigin } from './menuNav';
@@ -15,11 +16,13 @@ export interface SettingsOptions {
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
   /** The preset the game loaded with, and the one saved for next time. */
   quality: { inUse: QualityPreset; saved: QualityPreset; onReload: () => void };
+  /** The volume sliders on the Audio tab (ui/audioSettings.ts). */
+  audio: AudioSettingsOptions;
   onBack: () => void;
 }
 
 /**
- * The Settings screen: tabs down the left (Controls, Key bindings, Graphics, and Audio and Accessibility still to
+ * The Settings screen: tabs down the left (Controls, Key bindings, Graphics, Audio, and Accessibility still to
  * come), the picked tab's settings on the right. Everything saves as it changes. Reached from New game and from the
  * pause menu; Back returns to whichever opened it.
  */
@@ -145,6 +148,8 @@ export class SettingsScreen {
         this.refreshQuality();
       });
       panel.append(menuRow('Quality', 'Lower is smoother on weaker computers.', picker.root), this.reloadRow);
+    } else if (id === 'audio') {
+      panel.append(...audioSettings(opts.audio));
     }
   }
 

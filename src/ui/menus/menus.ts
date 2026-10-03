@@ -14,6 +14,7 @@ import { el } from './menuParts';
 import { PauseScreen } from './pauseScreen';
 import { ResultScreen } from './resultScreen';
 import { describeRules, type MatchRulesText } from './rulesText';
+import type { AudioSettingsOptions } from '../audioSettings';
 import { SettingsScreen } from './settingsScreen';
 import { SetupScreen } from './setupScreen';
 import { TitleScreen } from './titleScreen';
@@ -35,6 +36,7 @@ export interface MenusOptions {
   aimSensitivity: { initial: number; onChange: (v: number) => void };
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
   quality: { inUse: QualityPreset; saved: QualityPreset; onReload: () => void };
+  audio: AudioSettingsOptions;
 }
 
 /**
@@ -116,6 +118,7 @@ export class Menus {
         },
       },
       quality: opts.quality,
+      audio: opts.audio,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen(

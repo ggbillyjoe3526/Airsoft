@@ -32,7 +32,7 @@ export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: bo
   { id: 'controls', label: 'Controls', later: false },
   { id: 'keys', label: 'Key bindings', later: false },
   { id: 'graphics', label: 'Graphics', later: false },
-  { id: 'audio', label: 'Audio', later: true },
+  { id: 'audio', label: 'Audio', later: false },
   { id: 'accessibility', label: 'Accessibility', later: true },
 ];
 
@@ -44,11 +44,7 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
     { label: 'Field of view', help: 'How wide you see.' },
     { label: 'Brightness', help: '' },
   ],
-  audio: [
-    { label: 'Master volume', help: 'Comes with the audio rework.' },
-    { label: 'Effects volume', help: '' },
-    { label: 'Voices (hit calls)', help: '' },
-  ],
+  audio: [{ label: 'Voices (hit calls)', help: '' }],
   accessibility: [
     { label: 'Colour-blind team colours', help: '' },
     { label: 'Reduced motion', help: 'Less camera bob and screen shake.' },

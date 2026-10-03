@@ -64,6 +64,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings).toBeVisible();
   await settings.getByRole('tab', { name: /Key bindings/i }).click();
   await expect(settings.locator('.key-row').first()).toBeVisible();
+  await settings.getByRole('tab', { name: /Audio/i }).click();
+  await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
   await expect(setup.getByRole('button', { name: /Settings/i })).toBeFocused();

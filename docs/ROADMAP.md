@@ -102,7 +102,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Next | |
 | Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Later (after M15b) | |
 | Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Later | |
-| Alpha · Phase 4 · M13 Audio rework | Later | |
+| Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (pull request open; owner's playtest next) | CRITIC |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
@@ -345,6 +345,11 @@ tutorial can then cover the parts, instead of being redone for them.
   - Higher quality overall: richer synthesis, and CC0 samples where synthesis falls short (assets policy, CLAUDE.md
     §4; every file recorded in `docs/ASSETS.md`).
   - Fix when touched (audit W-03): reuse one panner per character and disconnect one-shot sound chains.
+  - **Built (2026-10-03):** every sound is a recipe (`config/sounds.ts`) rendered once into buffers; electric, gas
+    and spring shot profiles, the AEG motor winding up and down; footsteps by surface (Depot's dock ramps are steel),
+    landings and kit rattle, crouch / stand / lean rustle; BB impacts by material (concrete, steel, wood); HRTF
+    panning and muffling by two rays per character; Master, Effects and Interface volume sliders on Settings → Audio.
+    No CC0 samples were needed yet. Bots hear exactly what they heard before. W-03 done.
 - **M14. Art pass** (CC0 assets only), VFX and lighting for Depot, the replicas and the figures.
 - **M15. Menus and a full settings screen** (pulled forward ahead of M13 by the owner, 2026-10-03, to his own
   design; concept sketch approved the same day). The start screen was too cluttered, so it becomes:

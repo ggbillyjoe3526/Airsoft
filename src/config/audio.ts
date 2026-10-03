@@ -1,79 +1,92 @@
-/** Procedural sound levels and ranges. Replicas sound mechanical and plasticky, never like firearms. */
+import type { BlockKind } from '../map/mapTypes';
+import type { ImpactMaterial } from './sounds';
+
+/**
+ * How sound is mixed and placed (M13). The sounds themselves are recipes in config/sounds.ts; this file sets how
+ * loud each kind plays, how it's positioned in 3D and muffled by walls, the yard's echo and the volume settings.
+ * Replicas sound mechanical and plasticky, never like firearms.
+ */
 export const AUDIO = {
+  /** Headroom under the player's master volume (several shots and steps at once must not clip). */
   masterVolume: 0.7,
-  shotVolume: 0.55,
-  mechanismVolume: 0.35,
-  /** Each shot's pitch varies by up to ± this fraction, so full auto sounds mechanical, not looped. */
-  shotPitchSpread: 0.05,
-  /** AEG gearbox: the motor's short whirr under each cycle (sawtooth sweep, Hz). */
-  aegMotor: { fromHz: 105, toHz: 80, gain: 0.12, time: 0.06 },
-  /** BB impact pitch varies by up to ± this fraction (a hose of BBs doesn't tick on one note). */
-  impactPitchSpread: 0.15,
-  impactVolume: 0.5,
-  /** Positional sounds: full volume within refDistance, then roll off. */
-  refDistance: 3,
-  rolloff: 1.4,
-  maxDistance: 60,
-  /**
-   * Footsteps on concrete: a gritty scuff plus a soft heel thump, pitch varied per step. Sprinting adds
-   * a rattle of kit; landing a jump is a heavier thud. Your own steps are quieter than other players'.
-   */
-  footsteps: {
-    volume: 0.45,
-    sprintVolume: 0.6,
-    selfVolume: 0.35,
-    scuffHz: 900,
-    /** Each step's scuff pitch varies by up to ± this fraction. */
-    scuffSpread: 0.25,
-    scuffQ: 1.2,
-    scuffTime: 0.05,
-    thumpFromHz: 130,
-    thumpToHz: 60,
-    thumpGain: 0.55,
-    thumpTime: 0.06,
-    gearHz: 3200,
-    gearQ: 4,
-    gearGain: 0.25,
-    gearTime: 0.04,
-    landVolume: 0.7,
-    landThumpFromHz: 150,
-    landThumpToHz: 45,
-    landThumpTime: 0.14,
-    /** Other players' steps further than this (m) aren't played: about as far as bots hear a sprint. */
-    maxDistance: 22,
-    /** At most this many other players' steps start within `window` seconds (six sprinters stay readable). */
-    maxPerWindow: 4,
-    window: 0.1,
+  /** Variants rendered per sound (each moves pitch, timing and mix a little, so repeats don't sound looped). */
+  variants: 5,
+  /** Seed of the presentation-only generator the variants are rendered with. */
+  synthSeed: 1301,
+  /** Playback level of each kind of sound, and how far its pitch varies per play (± fraction). */
+  levels: {
+    shot: { gain: 0.6, pitchSpread: 0.03 },
+    motor: { gain: 0.6, pitchSpread: 0.02 },
+    mechanism: { gain: 0.8, pitchSpread: 0.04 },
+    /** Other players' footsteps. */
+    step: { gain: 0.9, pitchSpread: 0.06 },
+    /** Your own: quieter, but always played (they're how you judge your own pace and noise). */
+    ownStep: { gain: 0.6, pitchSpread: 0.06 },
+    foley: { gain: 0.8, pitchSpread: 0.08 },
+    ownFoley: { gain: 0.45, pitchSpread: 0.08 },
+    impact: { gain: 0.9, pitchSpread: 0.1 },
+    bodyHit: { gain: 1, pitchSpread: 0.06 },
+    hitTick: { gain: 1, pitchSpread: 0 },
+    hitMarker: { gain: 0.55, pitchSpread: 0 },
+    rope: { gain: 1, pitchSpread: 0.04 },
   },
   /**
-   * The yard's echo: a short procedural reverb (decaying noise) that every in-world sound feeds, so
-   * shots and steps sound like they're between walls. UI sounds (hit tick, hit marker, whistle) stay dry.
+   * An AEG's motor: the first shot after the trigger has rested this many fire-rate cycles gets the spin-up whine,
+   * and the spin-down plays this many cycles after the last shot (cancelled when another shot comes first).
    */
-  reverb: { seconds: 0.8, decayPower: 3.5, wet: 0.22 },
+  motor: { spinUpAfterCycles: 1.6, spinDownAfterCycles: 1.25 },
+  /**
+   * Positional sounds. HRTF panning gives direction cues in front, behind and above (best on headphones); full
+   * volume within refDistance, then an inverse roll-off.
+   */
+  spatial: {
+    panningModel: 'HRTF' as PanningModelType,
+    refDistance: 3,
+    rolloff: 1.4,
+    maxDistance: 60,
+    /** A character's sounds come from this high above their feet (m). */
+    sourceHeight: 1.2,
+  },
+  /**
+   * Muffling through walls: rays from your ears to a character at these heights above their feet (m) (knees and
+   * head: someone behind low cover is half muffled). The blocked share closes a low-pass filter towards
+   * `muffledHz` and turns the sound down towards `muffledGain`, easing over `smoothing` seconds. A one-off sound
+   * in the world (a BB impact) casts one ray, stopping `surfaceGap` short of the surface it hit.
+   */
+  occlusion: {
+    rayHeights: [0.45, 1.5] as readonly number[],
+    openHz: 18000,
+    muffledHz: 700,
+    muffledGain: 0.55,
+    smoothing: 0.07,
+    surfaceGap: 0.2,
+  },
+  /**
+   * Other players' footsteps further than this (m) aren't played: about as far as bots hear a sprint. At most
+   * `maxPerWindow` of them start within `window` seconds (six sprinters stay readable).
+   */
+  footsteps: { maxDistance: 22, maxPerWindow: 4, window: 0.1 },
+  /** Crouching, standing and leaning rustle: heard this close (m), at most this many per window. */
+  foley: { maxDistance: 9, maxPerWindow: 3, window: 0.15 },
   /** At most this many impact ticks start within `impactWindow` seconds (a hose of BBs stays readable). */
   maxImpactsPerWindow: 8,
   impactWindow: 0.1,
-  /** The sharp "tick" you hear when a BB hits you: a plastic click, a hiss of noise and a small thump. */
-  hitTickVolume: 0.8,
-  hitTick: {
-    clickHz: 3400,
-    clickTime: 0.012,
-    noiseHz: 5200,
-    noiseQ: 2,
-    noiseGain: 0.8,
-    noiseAttack: 0.0005,
-    noiseTime: 0.03,
-    thumpFromHz: 180,
-    thumpToHz: 70,
-    thumpGain: 0.6,
-    thumpTime: 0.08,
-  },
-  /** A BB landing on someone else (positional): a dull smack on fabric. */
-  bodyHitVolume: 0.6,
-  bodyHit: { hz: 2200, q: 1.5, attack: 0.001, time: 0.04 },
-  /** Confirmation that your BB hit someone: a soft wooden "tock". */
-  hitMarkerVolume: 0.35,
-  hitMarker: { fromHz: 1100, toHz: 700, time: 0.07 },
+  /** What a BB sounds like on each kind of block (floors and ramps follow their surface, see audio/soundMaterials.ts). */
+  impactMaterials: {
+    floor: 'concrete',
+    ramp: 'concrete',
+    wall: 'concrete',
+    barrier: 'concrete',
+    crate: 'wood',
+    container: 'metal',
+  } satisfies Record<BlockKind, ImpactMaterial>,
+  /** A BB impact this close to a block's faces (m) counts as on that block. */
+  impactBlockMargin: 0.06,
+  /**
+   * The yard's echo: a short procedural reverb (decaying noise) that every in-world sound feeds, so shots and
+   * steps sound like they're between walls. Interface sounds (hit tick, hit marker, whistle) stay dry.
+   */
+  reverb: { seconds: 0.8, decayPower: 3.5, wet: 0.22 },
   /** Referee whistle at the end and start of a round. */
   whistleVolume: 0.25,
   whistlePitch: 2900,
@@ -97,30 +110,22 @@ export const AUDIO = {
    * replica has a suppressor yet; muzzle devices come with loadouts (after v0.1).
    */
   suppressed: { lowpassHz: 1400, volume: 0.45 },
-  /** Reload pressed with no fuller magazine: a dull pat on the pouch (your own sound only). */
-  reloadRefused: { hz: 600, q: 1, gain: 0.5, attack: 0.002, time: 0.06 },
-  /** The fire selector moving one notch: a short, bright detent click (gain relative to mechanismVolume). */
-  fireSelector: { hz: 2100, time: 0.008, gain: 0.7 },
-  /**
-   * The flagpole's rope ratchet, heard at the pole each time the flag passes a notch: two quick clicks of
-   * the pulley and a squeak of rope, higher going up than coming down.
-   */
-  flagRope: {
-    volume: 0.45,
-    upHz: 1900,
-    downHz: 1250,
-    clickTime: 0.014,
-    /** The second click: this long after the first (s), this much higher and this loud relative to it. */
-    secondClickDelay: 0.07,
-    secondClickPitch: 1.12,
-    secondClickGain: 0.8,
-    squeakUpHz: 2600,
-    squeakDownHz: 2100,
-    squeakQ: 6,
-    squeakGain: 0.5,
-    squeakAttack: 0.01,
-    squeakTime: 0.09,
-  },
+} as const;
+
+/** The player's volume sliders (Settings → Audio): everything, sounds in the world, and the interface's cues. */
+export type VolumeChannel = 'master' | 'effects' | 'interface';
+export const VOLUME_CHANNELS: readonly VolumeChannel[] = ['master', 'effects', 'interface'];
+
+export const VOLUME = {
+  /** Slider range and step (0..1, shown as a percentage), and where each slider starts. */
+  min: 0,
+  max: 1,
+  step: 0.05,
+  defaults: { master: 0.8, effects: 1, interface: 1 } satisfies Record<VolumeChannel, number>,
+  /** A slider's position is raised to this power for its gain, so each step sounds about as big as the last. */
+  curve: 2,
+  /** Volume changes ease in over this many seconds (no zipper noise while a slider moves). */
+  smoothing: 0.03,
 } as const;
 
 /** When extra match-over blast `i` (0-based) starts, in seconds after the deciding hit. */

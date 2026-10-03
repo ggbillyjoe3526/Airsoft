@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
+import { loadVolumes } from './audio/audioMix';
 import { createDifficultyChoice, type DifficultyChoice, difficultyNote, difficultyRoundStarted, pickDifficulty } from './ai/difficultyChoice';
 import { BALLISTICS } from './config/ballistics';
 import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
@@ -165,7 +166,8 @@ export class Game {
     this.input.crouchMode = loadCrouchMode();
     this.input.yaw = this.player.spawnYaw;
     // The player is always on Blue.
-    this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
+    const volumes = loadVolumes();
+    this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, volumes);
     this.match = new MatchPresentation(this.renderer.scene, container, this.renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS);
 
     this.debug = new DebugOverlay(container, () => ({
@@ -209,6 +211,7 @@ export class Game {
       aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
       crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
       quality: { inUse: options.quality, saved: loadQuality(), onReload: reloadWithSavedQuality },
+      audio: { initial: volumes, onChange: (channel, v) => this.combat.setVolume(channel, v) },
     });
     this.menus.showTitle();
     this.pointer.onChange((locked) => {

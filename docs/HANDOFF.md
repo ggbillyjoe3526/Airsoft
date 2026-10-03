@@ -29,8 +29,10 @@ _Last updated: 2026-10-03 · branch `claude/roadmap-loadout-feature-9d8epf` (roa
    slots, BB weight and hop-up; M17b optics, grips and magazines, with skins as a LATER row (skins themselves in v0.5).
    The groundwork is in: BB mass in the physics (M9, `bbMass`), the optic slot (`config/optics.ts`), the hop-up dials
    and the LATER rows (`config/menus.ts`).
-4. **Then M13, the audio rework** (order M12 → M11 → M15 → M15b → M17a → M17b → M13 → M14 → M16). `ReplicaConfig.power`
-   (electric / gas) is there for sound profiles by power source. Volume settings then fill the Audio tab's LATER rows.
+4. **M13, the audio rework, was built in parallel with M15b / M17** (owner's go-ahead for all of Phase 4, 2026-10-03;
+   its own pull request, branch `claude/m13-audio-rework-j2lmeh`). Sounds are data recipes (`config/sounds.ts`)
+   rendered once on Play by `audio/dsp.ts`; `Sfx` keeps one HRTF channel per character, muffled by rays. A new replica
+   (M17, v0.3) only needs a `power`: its shot, dry-fire and magazine sounds follow from it.
 
 ## Working notes and gotchas
 
@@ -40,6 +42,9 @@ _Last updated: 2026-10-03 · branch `claude/roadmap-loadout-feature-9d8epf` (roa
   use case-insensitive matches). `BUILD_LABEL` in `config/menus.ts` moves with each release tag (CLAUDE.md §7).
 - **The barrel line:** BBs are drawn from the muzzle, blending onto the eye line. The rifle keeps hold yaw 0; the
   pistol leans 0.1 rad, and `tracerLine.test.ts` caps it.
+- **Sound:** `npm test -- src/audio` checks every recipe renders (audible, no clipping, no end click) and the profiles
+  differ. To listen offline, render a cue with `renderSounds` in a scratch test and write a WAV (16-bit PCM header).
+  The Audio tab is `ui/audioSettings.ts`, kept separate from `settingsScreen.ts`.
 - **Parallel pull requests conflict** in `docs/DECISIONS.md` and `docs/REVIEWS.md` (both append at the end). Merge
   `main` in and keep both sides, `main`'s lines first.
 - **Measuring bots:** copy the top of `src/ai/depotMatch.test.ts` (up to the first `describe`) into a scratch test,

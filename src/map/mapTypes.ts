@@ -1,3 +1,4 @@
+import type { FloorSurface } from '../config/sounds';
 import type { Vec3 } from '../sim/vec';
 
 /**
@@ -19,6 +20,8 @@ export interface MapBlock {
    * the low edge up to its top at the high edge, the edge this points to.
    */
   rise?: RampRise;
+  /** Floors and ramps: what footsteps on it sound like (concrete if not given). Presentation only. */
+  surface?: FloorSurface;
 }
 
 export interface SpawnPoint {
