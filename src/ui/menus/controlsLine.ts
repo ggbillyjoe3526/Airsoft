@@ -3,7 +3,7 @@ import { type KeyBindings, keyLabel } from '../../input/keyBindings';
 import { el } from './menuParts';
 
 /** The controls a new player needs before pressing Play, in order: the rebindable actions or a fixed key, and what it does. */
-const CONTROLS: readonly { keys: readonly Action[] | string; does: string }[] = [
+const CONTROLS: readonly { keys: readonly Action[] | string; does: string; showsCrouchMode?: true }[] = [
   { keys: ['forward', 'left', 'back', 'right'], does: 'move' },
   { keys: 'Mouse', does: 'aim' },
   { keys: 'Left click', does: 'fire' },
@@ -12,14 +12,12 @@ const CONTROLS: readonly { keys: readonly Action[] | string; does: string }[] = 
   { keys: ['fireMode'], does: 'fire mode' },
   { keys: ['walk'], does: 'walk' },
   { keys: ['sprint'], does: 'sprint' },
-  { keys: ['crouch'], does: 'crouch' },
+  { keys: ['crouch'], does: 'crouch', showsCrouchMode: true },
   { keys: ['leanLeft', 'leanRight'], does: 'lean' },
   { keys: ['jump'], does: 'jump' },
   { keys: ['slot1', 'slot2'], does: 'rifle / pistol' },
   { keys: 'Esc', does: 'pause' },
 ];
-
-const CROUCH_KEYS = CONTROLS.find((c) => c.does === 'crouch')!.keys;
 
 /**
  * A short line of the main controls with the player's current keys (New game and the pause menu), so nobody presses
@@ -45,11 +43,11 @@ export class ControlsLine {
 
   private render(): void {
     // One unbreakable chunk per control, so a line never wraps between a key and what it does.
-    const items = CONTROLS.map(({ keys, does }) => {
+    const items = CONTROLS.map(({ keys, does, showsCrouchMode }) => {
       const item = el('span', 'menu-controls-item');
       if (typeof keys === 'string') item.append(el('kbd', '', keys));
       else for (const action of keys) item.append(el('kbd', '', keyLabel(this.bindings.primary(action))));
-      const text = keys === CROUCH_KEYS ? `${does} (${this.crouchMode})` : does;
+      const text = showsCrouchMode ? `${does} (${this.crouchMode})` : does;
       item.append(` ${text}`);
       return item;
     });

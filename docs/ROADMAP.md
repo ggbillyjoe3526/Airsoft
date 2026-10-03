@@ -96,7 +96,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (merged; owner played it: "red dot works great", six notes for M12c) | 9.1 |
 | Alpha · Phase 4 · M12c The owner's M12b notes: the loadout off the pause screen, BBs drawn from the muzzle, the pistol facing forward, hop-up dials | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (merged; owner's playtest next) | 9.0 |
-| Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Pull request (owner's playtest next) | |
+| Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Pull request (owner's playtest next) | 9.1 |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
