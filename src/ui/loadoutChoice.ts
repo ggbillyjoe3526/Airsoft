@@ -4,21 +4,6 @@ import { HOP_UP, type ReplicaConfig } from '../config/replicas';
 import { loadSetting, numberIn } from '../settings/storage';
 import { hopUpReach } from '../sim/hopUp';
 
-/**
- * When a loadout change is fitted. Before the first match and on the result screen it is fitted at once;
- * mid-match it waits for the next round, so a round in progress is never changed (the same rule as the bot
- * difficulty). The mid-match path is dormant while the Loadout screen is only reachable before or after a match
- * (through New game, never from the pause menu: owner, 2026-10-03), and kept for if it ever is reachable mid-match.
- */
-export function loadoutTakesEffect(started: boolean, matchOver: boolean): 'now' | 'nextRound' {
-  return started && !matchOver ? 'nextRound' : 'now';
-}
-
-/** The note shown with the optic picker: only while a picked optic waits for the next round. */
-export function opticNote(picked: OpticChoice, fitted: OpticChoice, matchOver: boolean): string {
-  return picked !== fitted && !matchOver ? 'Fitted from the next round.' : '';
-}
-
 /** The settings field a replica's hop-up dial is saved as. */
 export function hopUpField(replica: ReplicaConfig): `hopUp.${string}` {
   return `hopUp.${replica.id}`;

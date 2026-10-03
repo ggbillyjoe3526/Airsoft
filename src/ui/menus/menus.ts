@@ -1,13 +1,13 @@
 import { DIFFICULTIES, type Difficulty } from '../../config/bots';
 import type { CrouchMode } from '../../config/controls';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
-import type { OpticChoice } from '../../config/optics';
 import type { QualityPreset } from '../../config/render';
+import type { OpticChoice } from '../../config/optics';
 import type { ReplicaConfig } from '../../config/replicas';
 import type { KeyBindings } from '../../input/keyBindings';
+import { MAPS, type MapId } from '../../map/maps';
 import { loadoutSummary } from '../loadoutChoice';
 import { ChoiceDialog } from './choiceDialog';
-import { ControlsLine } from './controlsLine';
 import { LoadoutScreen } from './loadoutScreen';
 import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el } from './menuParts';
@@ -25,8 +25,9 @@ export interface MenusOptions {
   loadout: readonly ReplicaConfig[];
   /** Start (or resume) play: Play on New game, Resume, Play Again. */
   onPlay: () => void;
-  /** Quit to title screen from the pause menu: the match in progress ends. */
-  onQuit: () => void;
+  /** The player leaves the match (Quit to title screen; Change setup or Title screen after it): it is unloaded. */
+  onLeaveMatch: () => void;
+  map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
   optic: { initial: OpticChoice; onChange: (o: OpticChoice) => void };
@@ -34,13 +35,15 @@ export interface MenusOptions {
   sensitivity: { initial: number; onChange: (v: number) => void };
   aimSensitivity: { initial: number; onChange: (v: number) => void };
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
-  quality: { inUse: QualityPreset; saved: QualityPreset; onReload: () => void };
+  fov: { initial: number; onChange: (v: number) => void };
+  /** The render preset in use, shown on the greyed Quality row. */
+  quality: QualityPreset;
 }
 
 /**
- * The game's menus (M15): the title screen, New game with its Mode and Difficulty pop-ups, the Loadout and Settings
- * screens, the pause menu and the match result. One screen shows at a time over the frozen field; the game says
- * which one when play stops (showTitle / showPause / showResult) and the buttons move between the rest.
+ * The game's menus (M15, M15b): the title screen, New game with its Map, Mode and Difficulty pop-ups, the Loadout and
+ * Settings screens, the pause menu and the match result. One opaque screen shows at a time; the game says which one
+ * when play stops (showTitle / showPause / showResult) and the buttons move between the rest.
  */
 export class Menus {
   private readonly root: HTMLDivElement;
@@ -50,6 +53,7 @@ export class Menus {
   private readonly settings: SettingsScreen;
   private readonly pause: PauseScreen;
   private readonly result: ResultScreen;
+  private readonly mapDialog: ChoiceDialog<MapId>;
   private readonly modeDialog: ChoiceDialog<MatchMode>;
   private readonly difficultyDialog: ChoiceDialog<Difficulty>;
   private readonly screens: Record<MenuScreen, HTMLElement>;
@@ -58,7 +62,6 @@ export class Menus {
   private current: MenuScreen = 'title';
   /** What had the focus on each screen when it was left, so Back puts the keyboard where it was. */
   private readonly lastFocus = new Map<MenuScreen, HTMLElement>();
-  private readonly controls: ControlsLine[] = [];
 
   constructor(
     parent: HTMLElement,
@@ -69,15 +72,21 @@ export class Menus {
     this.dials = [...opts.hopUp.initial];
     this.title = new TitleScreen(() => this.go('setup'));
     this.setup = new SetupScreen({
+      onMap: () => this.mapDialog.open(),
       onMode: () => this.modeDialog.open(),
       onDifficulty: () => this.difficultyDialog.open(),
       onLoadout: () => this.go('loadout'),
       onSettings: () => this.openSettings('setup'),
       onBack: () => this.back(),
       onPlay: () => this.play(),
-    }, this.controlsLine().root);
+    });
+    this.mapDialog = new ChoiceDialog('Map', MAPS, opts.map.initial, 'map', (m) => {
+      opts.map.onChange(m);
+      this.refreshSetup();
+    });
     this.modeDialog = new ChoiceDialog('Game mode', MATCH_MODES, opts.mode.initial, 'mode', (m) => {
       opts.mode.onChange(m);
+      this.describeMode(m);
       this.refreshSetup();
     });
     this.difficultyDialog = new ChoiceDialog('Bot difficulty', DIFFICULTIES, opts.difficulty.initial, 'difficulty', (d) => {
@@ -108,21 +117,13 @@ export class Menus {
       bindings: opts.bindings,
       sensitivity: opts.sensitivity,
       aimSensitivity: opts.aimSensitivity,
-      crouch: {
-        initial: opts.crouch.initial,
-        onChange: (m) => {
-          opts.crouch.onChange(m);
-          for (const line of this.controls) line.setCrouchMode(m);
-        },
-      },
+      crouch: opts.crouch,
+      fov: opts.fov,
       quality: opts.quality,
       onBack: () => this.back(),
     });
-    this.pause = new PauseScreen(
-      { onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => opts.onQuit() },
-      this.controlsLine().root,
-    );
-    this.result = new ResultScreen({ onPlayAgain: () => this.play(), onChangeSetup: () => this.go('setup'), onTitle: () => this.go('title') });
+    this.pause = new PauseScreen({ onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => this.leaveMatch('title') });
+    this.result = new ResultScreen({ onPlayAgain: () => this.play(), onChangeSetup: () => this.leaveMatch('setup'), onTitle: () => this.leaveMatch('title') });
     this.screens = {
       title: this.title.root,
       setup: this.setup.root,
@@ -131,7 +132,7 @@ export class Menus {
       pause: this.pause.root,
       result: this.result.root,
     };
-    this.root.append(...Object.values(this.screens), this.modeDialog.root, this.difficultyDialog.root);
+    this.root.append(...Object.values(this.screens), this.mapDialog.root, this.modeDialog.root, this.difficultyDialog.root);
     parent.appendChild(this.root);
     window.addEventListener('keydown', this.onKeyDown);
     this.describeMode(opts.mode.initial);
@@ -172,27 +173,21 @@ export class Menus {
     this.result.showHint(text);
   }
 
-  /** Explains the rules of `mode` on New game: the next match's (the game decides which mode that is). */
-  describeMode(mode: MatchMode): void {
-    this.setup.setRules(describeRules(this.opts.rules, mode));
-  }
-
-  setModeNote(text: string): void {
-    this.modeDialog.setNote(text);
-  }
-
-  setDifficultyNote(text: string): void {
-    this.difficultyDialog.setNote(text);
-  }
-
-  setOpticNote(text: string): void {
-    this.loadout.setOpticNote(text);
-  }
-
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
     this.settings.dispose();
     this.root.remove();
+  }
+
+  /** Explains the rules of `mode`, the next match's, on New game. */
+  private describeMode(mode: MatchMode): void {
+    this.setup.setRules(describeRules(this.opts.rules, mode));
+  }
+
+  /** Ends the match the player is leaving, then shows `screen`. */
+  private leaveMatch(screen: 'title' | 'setup'): void {
+    this.opts.onLeaveMatch();
+    this.go(screen);
   }
 
   private play(): void {
@@ -207,13 +202,11 @@ export class Menus {
 
   private back(): void {
     const target = backTarget(this.current, this.settings.openedFrom);
-    if (target) this.go(target, true);
-  }
-
-  private controlsLine(): ControlsLine {
-    const line = new ControlsLine(this.opts.bindings, this.opts.crouch.initial);
-    this.controls.push(line);
-    return line;
+    if (!target) return;
+    // No match is ever under way on New game, but a Play whose mouse lock was refused leaves one built and unstarted:
+    // leaving for the title unloads it, so no map stays loaded behind the title screen.
+    if (this.current === 'setup') this.opts.onLeaveMatch();
+    this.go(target, true);
   }
 
   /** Shows `screen`. Going back, the focus returns to where it was on that screen (the tile you opened, say). */
@@ -235,7 +228,7 @@ export class Menus {
    * that cancels a key binding before it gets here.
    */
   private readonly onKeyDown = (e: KeyboardEvent): void => {
-    if (e.code !== 'Escape' || this.root.hidden || this.modeDialog.root.open || this.difficultyDialog.root.open) return;
+    if (e.code !== 'Escape' || this.root.hidden || this.mapDialog.root.open || this.modeDialog.root.open || this.difficultyDialog.root.open) return;
     if (backTarget(this.current, this.settings.openedFrom) === null) return;
     e.preventDefault();
     this.back();
@@ -243,6 +236,7 @@ export class Menus {
 
   /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */
   private leave(): void {
+    this.mapDialog.close();
     this.modeDialog.close();
     this.difficultyDialog.close();
     if (this.current === 'settings') this.settings.closed();
@@ -250,6 +244,7 @@ export class Menus {
 
   /** The New game buttons show what is picked now. */
   private refreshSetup(): void {
+    this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
     this.setup.difficulty.set(this.difficultyDialog.label, this.difficultyDialog.blurb);
     this.setup.loadout.set(this.opts.loadout.map((r) => r.name).join('\n'), loadoutSummary(this.opts.loadout, this.optic, this.dials));

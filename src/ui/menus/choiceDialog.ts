@@ -9,7 +9,6 @@ import { closeButton, el } from './menuParts';
 export class ChoiceDialog<T extends string> {
   readonly root: HTMLDialogElement;
   private readonly buttons = new Map<T, HTMLButtonElement>();
-  private readonly noteLine: HTMLParagraphElement;
   private current: T;
 
   constructor(
@@ -35,7 +34,6 @@ export class ChoiceDialog<T extends string> {
         if (option.id !== this.current) {
           this.current = option.id;
           saveSetting(field, option.id);
-          this.setNote('');
           onChange(option.id);
           this.refresh();
         }
@@ -44,9 +42,7 @@ export class ChoiceDialog<T extends string> {
       list.append(button);
       this.buttons.set(option.id, button);
     }
-    this.noteLine = el('p', 'menu-dialog-note');
-    this.noteLine.hidden = true;
-    this.root.append(head, list, this.noteLine);
+    this.root.append(head, list);
     // A click on the dimmed backdrop (outside the box) closes it, like Esc.
     this.root.addEventListener('click', (e) => {
       const r = this.root.getBoundingClientRect();
@@ -74,12 +70,6 @@ export class ChoiceDialog<T extends string> {
 
   close(): void {
     if (this.root.open) this.root.close();
-  }
-
-  /** A short note under the options, e.g. that a change waits for the next match (empty to clear). */
-  setNote(text: string): void {
-    this.noteLine.textContent = text;
-    this.noteLine.hidden = text.length === 0;
   }
 
   private find(id: T): PickerOption<T> {

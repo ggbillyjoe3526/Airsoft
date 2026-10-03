@@ -21,6 +21,13 @@ export const RENDER = {
   leanCameraRoll: 0.12,
 } as const;
 
+/**
+ * The Field of view setting on Settings, Graphics (M15b): horizontal degrees on a 16:9 screen, as
+ * RENDER.horizontalFov16x9 (the default). The range is a first guess: wide enough for a wider view, narrow enough
+ * that nothing fisheyes or tunnels.
+ */
+export const FOV_SETTING = { min: 80, max: 120, step: 1 } as const;
+
 export type QualityPreset = 'low' | 'medium' | 'high';
 
 /** What a quality preset sets. Read once at start-up (antialiasing needs a new WebGL context to change). */
@@ -33,9 +40,9 @@ export interface QualitySettings {
 }
 
 /**
- * Render quality presets, picked on the Settings screen's Graphics tab (saved, and read when the game loads) or for
- * one visit with `?quality=low|medium|high`. `high` is the game's look so far; the others trade sharpness and
- * shadows for frame time on iGPUs.
+ * Render quality presets. The game runs on `high`, the game's look so far; `?quality=low|medium|high` picks one for a
+ * visit, to measure frame cost. The others trade sharpness and shadows for frame time on iGPUs. The Settings picker
+ * is held back (greyed out, LATER) until there is real graphics work to scale (owner, 2026-10-03; M15b).
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
   low: { maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024 },
@@ -45,12 +52,9 @@ export const QUALITY: Record<QualityPreset, QualitySettings> = {
 
 export const DEFAULT_QUALITY: QualityPreset = 'high';
 
-/** The quality presets as the Settings screen offers them. */
-export const QUALITY_CHOICES: readonly { id: QualityPreset; label: string; blurb: string }[] = [
-  { id: 'low', label: 'Low', blurb: 'No shadows or edge smoothing: runs best on a laptop or an older computer.' },
-  { id: 'medium', label: 'Medium', blurb: 'Shadows and edge smoothing, with less detailed shadows.' },
-  { id: 'high', label: 'High', blurb: 'The full look: detailed shadows, and a sharper picture on high-resolution screens.' },
-];
+/** How the presets are named in the menus (Settings → Graphics shows the one in use). */
+export const QUALITY_LABELS: Readonly<Record<QualityPreset, string>> = { low: 'Low', medium: 'Medium', high: 'High' };
+
 
 /** The preset a `?quality=` value names, or null for a missing or unknown value. */
 export function parseQuality(value: string | null): QualityPreset | null {

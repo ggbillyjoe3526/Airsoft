@@ -1,5 +1,5 @@
 /**
- * How the menus join up (owner's design, 2026-10-03). Before a match: Title → Start → New game, whose Mode and
+ * How the menus join up (owner's design, 2026-10-03). Before a match: Title → Start → New game, whose Map, Mode and
  * Difficulty buttons open a pop-up and whose Loadout and Settings buttons open a screen of their own. Esc in a match
  * opens the pause menu (Resume, Settings, Quit to title screen). After a match: the result (Play Again, Change setup,
  * Title screen). The loadout is reached only through New game, so never mid-match.

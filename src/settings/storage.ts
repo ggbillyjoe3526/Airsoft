@@ -17,7 +17,8 @@ export type SettingField =
   | 'mode'
   | 'crouch'
   | 'optic'
-  | 'quality'
+  | 'map'
+  | 'fov'
   | `hopUp.${string}`;
 
 /** Where earlier builds kept a setting, before the settings object. */
