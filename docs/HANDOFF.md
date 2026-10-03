@@ -13,14 +13,14 @@ now at the end of this session ("wrap everything up cleanly")._
 - **Phase 3 is done and tagged** (`v0.1-alpha.3`). On `main` since the tag (all merged 2026-10-03): M12a, M12b and
   M12c weapon handling, the pistol's slight left lean (#13) and the **M11 Depot rework** (#14).
 - **M15 menus** (pulled forward by the owner ahead of M13, to his own design; concept sketch approved) is on this
-  branch as a pull request for the owner: title screen → New game (Mode and Difficulty pop-ups, Loadout and Settings
+  branch as pull request #15 for the owner (critic 9.1): title screen → New game (Mode and Difficulty pop-ups, Loadout and Settings
   screens), pause menu (Resume / Settings / Quit to title screen), result (Play Again / Change setup / Title screen),
   headings in capitals, unbuilt items greyed with LATER, render quality as a saved setting. Code in `src/ui/menus/`,
   placeholder data in `src/config/menus.ts`. Concept sketch: https://claude.ai/artifact/R6WwSeS2sXSAdqzzZBGSQt.
 
 ## Next (when the owner comes back)
 
-1. **The owner merges the M15 pull request** (if not done yet).
+1. **The owner merges the M15 pull request** (#15, if not done yet).
 2. **The owner's playtest of the new Depot and the new menus** (PLAYTEST.md: "The Depot (M11 rework)" and
    "Menus (M15)"). His Depot feedback is still awaited; his M12c notes (hop-up good, pistol too straight) are done.
    Fix what he finds first.
