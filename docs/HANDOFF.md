@@ -5,7 +5,7 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `claude/feature-research-roadmap-ccty3q` (roadmap only: the owner's feature picks, M18–M20 and later versions)._
+_Last updated: 2026-10-03 · branch `claude/feature-research-roadmap-ccty3q` (roadmap only: the owner's second batch, M18 and M22 added, picks renumbered M19–M21)._
 
 ## Where we are
 
@@ -23,19 +23,17 @@ _Last updated: 2026-10-03 · branch `claude/feature-research-roadmap-ccty3q` (ro
    them as **M15b** (ROADMAP Phase 4): no map loaded until Play, a Map pop-up with Depot as the default, opaque
    menus, the controls list only under Settings, a Field of view slider (100° stays the default), Brightness
    removed, graphics quality greyed out as LATER. The Esport difficulty is parked in IDEAS.
-2. **Build M15b next.** The hard part is loading the map only on Play and unloading it on Quit / Change setup:
-   today the field is built at start-up and drawn behind the title screen. The owner's Depot feedback is still awaited.
-3. **Then M17, the Loadout** (the owner asked for it as an alpha feature, 2026-10-03; ROADMAP Phase 4): M17a replica
+2. **M15b is merged** (#18): the map loads only on Play (`MatchSession`). The owner's Depot feedback is still awaited.
+3. **M17, the Loadout, is next** (the owner asked for it as an alpha feature, 2026-10-03; ROADMAP Phase 4): M17a replica
    slots, BB weight and hop-up; M17b optics, grips and magazines, with skins as a LATER row (skins themselves in v0.5).
    The groundwork is in: BB mass in the physics (M9, `bbMass`), the optic slot (`config/optics.ts`), the hop-up dials
    and the LATER rows (`config/menus.ts`).
-4. **Then M13, the audio rework** (order M12 → M11 → M15 → M15b → M17a → M17b → M13 → M18 → M19 → M20 → M14 → M16). `ReplicaConfig.power`
+4. **Then M13, the audio rework** (order M12 → M11 → M15 → M15b → M17a → M17b → M13 → M18 → M19 → M20 → M21 → M22 → M14 → M16). `ReplicaConfig.power`
    (electric / gas) is there for sound profiles by power source. Volume settings then fill the Audio tab's LATER rows.
-5. **Then the owner's feature picks** (2026-10-03, ROADMAP Phase 4 table): M18 match info (hit feed, teammate markers,
-   end-of-match summary, crosshair options), M19 custom matches (rounds, round time, team size, friendly fire, BB
-   ricochets with a "ricochets count" setting, off by default; BBs stop dead today, so the bounce is new), M20 a
-   practice range. Later-version picks (medic mode, 4v4 / 5v5, tracers, gas simulation, grenades, pouches, day and
-   night) are in ROADMAP "After v0.1".
+5. **Then the owner's feature picks** (2026-10-03, two ROADMAP Phase 4 tables): M18 comfort, accessibility and browser
+   basics, M19 match info (hit feed, teammate markers, scoreboard, summary, records, crosshair options), M20 custom
+   matches (incl. BB ricochets, "ricochets count" off by default; BBs stop dead today, so the bounce is new), M21 a
+   practice range, M22 squad orders (and bots hearing less through walls). Later-version picks are in ROADMAP "After v0.1".
 
 ## Working notes and gotchas
 

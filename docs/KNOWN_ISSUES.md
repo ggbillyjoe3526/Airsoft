@@ -16,7 +16,7 @@ Classified as **fix now / document / can wait**.
 | First-person hand poses are hand-tuned numbers and only checked by screenshot | document | Poses live in replicaModels.ts (palm/across/back + finger curls). Check in the browser that fingers wrap the grip/handguard without clipping; adjust poses rather than the hand builder. |
 | Pistol glove fingers look thick; the pistol armband is off screen | can wait | Slim the finger radii / proportions in handModels.ts during the art pass. |
 | An impact puff is only ~28% of full size in its first frame | can wait | Consider starting puffs at ~50% scale so a close-range hit doesn't show a near-empty frame. |
-| The BB path and near puffs sit on the crosshair's lower arm | can wait | Consider a smaller lower arm or a dot-only crosshair option. |
+| The BB path and near puffs sit on the crosshair's lower arm | can wait | Consider a smaller lower arm or a dot-only crosshair option. Planned: crosshair options in M19 (dot only among them). |
 | Sound recipe numbers are hardcoded in sfx.ts; one vec3 per shot/impact event; per-tick armCtx; `muzzle` looked up by name per shot; viewmodel `setAspect` every frame; untyped `userData.axis` | can wait | Minor code debt; profile before optimising. |
 | Third-person figures are greybox: crouching squashes the legs, the walk cycle is a simple leg swing | can wait | Art pass / Phase 2 animations. |
 | Hit volume is round, so from the side it's deeper than the figure (0.4 m vs ~0.28 m chest): a BB ~6 cm in front of the chest counts | can wait | Playtest flank shots; consider a slimmer lower capsule or an elliptical test. |
@@ -32,7 +32,7 @@ Classified as **fix now / document / can wait**.
 | `sim/testSupport.ts` (test fixture) lives in the source tree | can wait | Harmless (tree-shaken from the build); move under a test folder if more fixtures appear. |
 | No pre-round freeze: everyone can move and fire from the round-start whistle | can wait | Spawns are hidden from each other (tested), so nobody can be shot at spawn; revisit with playtesting. |
 | config/render.ts and config/audio.ts hold small derived helpers (whistle schedule, result-screen delay) and render imports audio | can wait | Fine at this size; move derived timing into a module if config grows more logic. |
-| Bots hear footsteps and gunfire through walls (no occlusion); only range limits it, and the guess is vague (±30% of distance) | document | Deliberate simplification; playtest whether bots feel spooky. Occlusion could halve range through walls later. |
+| Bots hear footsteps and gunfire through walls (no occlusion); only range limits it, and the guess is vague (±30% of distance) | document | Deliberate simplification; playtest whether bots feel spooky. Occlusion could halve range through walls later. Planned: M22 (owner, 2026-10-03), using M13's wall rays. |
 | Bots walk only for the last 12 m of a search; they run (and are heard) everywhere else, and never crouch-move | can wait | Playtest whether bots are too easy to hear coming, or too sneaky (BOTS.searchWalkDistance). |
 | Team pacing ignores the player: bots wait for bot teammates only | document | Deliberate (DECISIONS 2026-10-01); a player who holds back must never stall the bots. |
 | Footstep ranges are first guesses: bots hear run 11 m, sprint 16 m, land 12 m; you hear other players' steps to 22 m | can wait | Tune from playtesting (the player's range is deliberately a bit longer than the bots'). |
@@ -62,8 +62,8 @@ Classified as **fix now / document / can wait**.
 | Movement reads the lean from the previous tick (stepLean runs after stepMovement) | document | One 60 Hz tick; harmless. |
 | The camera's lean offset and roll have no unit test (the roll sign was checked in the browser) | can wait | M7b critic. The figure and simulation geometry are tested. |
 | Bots don't ration BBs or play differently on their last magazine; they only swap a low magazine when nobody is in sight | can wait | M8 critic. The run-dry risk is mostly the player's for now; smarter ammo use belongs with M10 bot work or beta. |
-| The spare-magazine gauges have no numeric mode | can wait | Phase 4 accessibility settings. |
-| The spare-magazine gauges tell low (orange) and next (yellow outline) apart mostly by colour | can wait | Phase 4 accessibility (colour-blind options). Empty is dashed, so that one doesn't rely on colour. |
+| The spare-magazine gauges have no numeric mode | can wait | Phase 4 accessibility settings (M18). |
+| The spare-magazine gauges tell low (orange) and next (yellow outline) apart mostly by colour | can wait | Phase 4 accessibility (colour-blind options, M18). Empty is dashed, so that one doesn't rely on colour. |
 | Reload is refused when no spare is fuller than the loaded magazine (e.g. 30 loaded, spares at 25) | document | Deliberate (no topping up); the HUD notice and a pat sound explain it. Playtest whether players expect a swap anyway. |
 | Bots lead moving targets using the muzzle velocity, not the slower speed a BB has after drag, so they under-lead a little at long range | can wait | Small at Depot's ranges; part of difficulty tuning (beta). |
 | Bots hear suppressed and open shots at the same range | document | No replica is suppressed yet; decide when suppressors arrive (loadouts, after v0.1). |
