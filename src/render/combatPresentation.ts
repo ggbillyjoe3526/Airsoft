@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { Sfx } from '../audio/sfx';
+import { Sfx, type SfxSetup } from '../audio/sfx';
+import type { VolumeChannel } from '../config/audio';
 import type { Action } from '../config/controls';
 import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, OPTICS } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
+import type { MapBlock } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
@@ -60,9 +62,11 @@ export class CombatPresentation {
     private readonly query: WorldQuery,
     teamColor: number,
     tickSeconds: number,
+    blocks: readonly MapBlock[],
+    audio: SfxSetup,
     keyName: (action: Action) => string,
   ) {
-    this.sfx = new Sfx(loadout);
+    this.sfx = new Sfx(loadout, blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.hitPuffs.object, this.paths.object);
@@ -74,6 +78,11 @@ export class CombatPresentation {
   /** Browsers only allow audio after a user gesture: call from the Play click. */
   unlockAudio(): void {
     this.sfx.unlock();
+  }
+
+  /** A volume slider moved on Settings → Audio. */
+  setVolume(channel: VolumeChannel, position: number): void {
+    this.sfx.setVolume(channel, position);
   }
 
   setPlaying(playing: boolean): void {
@@ -94,6 +103,7 @@ export class CombatPresentation {
   /** Call after every simulation tick, while that tick's events are still in the state. */
   afterTick(): void {
     this.paths.recordTick();
+    this.sfx.afterTick(this.state.characters, this.player.id);
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.viewmodel.resetSway(); // the view snaps to the spawn yaw
@@ -116,7 +126,7 @@ export class CombatPresentation {
         if (e.characterId === this.player.id) this.viewmodel.onShot();
         this.drawFromMuzzle(e.characterId);
       }
-      this.sfx.onEvent(e, this.player.id, this.positionOf);
+      this.sfx.onEvent(e, this.player.id, this.characterOf);
     }
   }
 
@@ -150,6 +160,7 @@ export class CombatPresentation {
     this.listenerPos.y = cam.position.y;
     this.listenerPos.z = cam.position.z;
     this.sfx.setListener(this.listenerPos, this.forward.x, this.forward.y, this.forward.z);
+    this.sfx.updateSources(this.state.characters, this.player.id);
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */
@@ -204,6 +215,5 @@ export class CombatPresentation {
     return d < 0 ? Number.POSITIVE_INFINITY : d / speed;
   }
 
-  private readonly positionOf = (id: number): { x: number; y: number; z: number } | undefined =>
-    this.state.characters.find((c) => c.id === id)?.position;
+  private readonly characterOf = (id: number): Character | undefined => this.state.characters.find((c) => c.id === id);
 }

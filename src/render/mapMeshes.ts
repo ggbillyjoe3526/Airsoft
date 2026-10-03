@@ -24,13 +24,20 @@ const STYLES: Record<BlockKind, KindStyle> = {
   barrier: { texture: 'barrier', uv: 'world', tints: [0xe8e4da, 0xd9c04a], castShadow: true },
 };
 
+/** A steel floor or ramp (MapBlock.surface 'metal', which also clanks underfoot): ribbed plate in plain steel grey. */
+const METAL_PLATE: KindStyle = { texture: 'corrugated', uv: 'world', tints: [0x9aa0a6], castShadow: false };
+
+function styleOf(block: MapBlock): KindStyle {
+  return block.surface === 'metal' ? METAL_PLATE : STYLES[block.kind];
+}
+
 
 /**
  * Tint for a block, picked from its kind's palette by a hash of its position. The hash uses |x|, so a
  * block and its mirror twin across x = 0 always match and a symmetric map looks symmetric.
  */
 export function blockTint(block: MapBlock): number {
-  const tints = STYLES[block.kind].tints;
+  const tints = styleOf(block).tints;
   const q = (v: number): number => Math.round(v * 10);
   const h = (Math.imul(q(Math.abs(block.center.x)), 73856093) ^ Math.imul(q(block.center.y), 19349663) ^ Math.imul(q(block.center.z), 83492791)) >>> 0;
   return tints[h % tints.length] ?? 0xffffff;
@@ -146,7 +153,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures): THREE.G
   const byTexture = new Map<keyof SurfaceTextures, { buf: Buffers; castShadow: boolean }>();
 
   for (const block of map.blocks) {
-    const style = STYLES[block.kind];
+    const style = styleOf(block);
     let entry = byTexture.get(style.texture);
     if (!entry) {
       entry = { buf: { positions: [], normals: [], uvs: [], colors: [], indices: [] }, castShadow: false };

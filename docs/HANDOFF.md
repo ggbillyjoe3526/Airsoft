@@ -5,54 +5,43 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `claude/feature-research-roadmap-ccty3q` (roadmap only: the owner's feature picks, M18–M20 and later versions)._
+_Last updated: 2026-10-03 · branch `claude/m15b-menu-fixes-adsroh` (the end of M15b: critic round 3)._
 
 ## Where we are
 
-- **Phase 3 is done and tagged** (`v0.1-alpha.3`). On `main` since the tag (all merged 2026-10-03): M12a, M12b and
-  M12c weapon handling, the pistol's slight left lean (#13) and the **M11 Depot rework** (#14).
-- **M15 menus** (pulled forward by the owner ahead of M13, to his own design; concept sketch approved) is merged
-  (#15, critic 9.1): title screen → New game (Mode and Difficulty pop-ups, Loadout and Settings
-  screens), pause menu (Resume / Settings / Quit to title screen), result (Play Again / Change setup / Title screen),
-  headings in capitals, unbuilt items greyed with LATER, render quality as a saved setting. Code in `src/ui/menus/`,
-  placeholder data in `src/config/menus.ts`. Concept sketch: https://claude.ai/artifact/R6WwSeS2sXSAdqzzZBGSQt.
-
-## Next (when the owner comes back)
-
-1. **M15 is merged** (#15). The owner played the menus on `main` and sent five notes (2026-10-03); the roadmap has
-   them as **M15b** (ROADMAP Phase 4): no map loaded until Play, a Map pop-up with Depot as the default, opaque
-   menus, the controls list only under Settings, a Field of view slider (100° stays the default), Brightness
-   removed, graphics quality greyed out as LATER. The Esport difficulty is parked in IDEAS.
-2. **Build M15b next.** The hard part is loading the map only on Play and unloading it on Quit / Change setup:
-   today the field is built at start-up and drawn behind the title screen. The owner's Depot feedback is still awaited.
-3. **Then M17, the Loadout** (the owner asked for it as an alpha feature, 2026-10-03; ROADMAP Phase 4): M17a replica
-   slots, BB weight and hop-up; M17b optics, grips and magazines, with skins as a LATER row (skins themselves in v0.5).
-   The groundwork is in: BB mass in the physics (M9, `bbMass`), the optic slot (`config/optics.ts`), the hop-up dials
-   and the LATER rows (`config/menus.ts`).
-4. **Then M13, the audio rework** (order M12 → M11 → M15 → M15b → M17a → M17b → M13 → M18 → M19 → M20 → M14 → M16). `ReplicaConfig.power`
-   (electric / gas) is there for sound profiles by power source. Volume settings then fill the Audio tab's LATER rows.
-5. **Then the owner's feature picks** (2026-10-03, ROADMAP Phase 4 table): M18 match info (hit feed, teammate markers,
-   end-of-match summary, crosshair options), M19 custom matches (rounds, round time, team size, friendly fire, BB
-   ricochets with a "ricochets count" setting, off by default; BBs stop dead today, so the bounce is new), M20 a
-   practice range. Later-version picks (medic mode, 4v4 / 5v5, tracers, gas simulation, grenades, pouches, day and
-   night) are in ROADMAP "After v0.1".
+- **Phase 4 so far** (all merged): M12a–c weapon handling, M11 Depot rework, M15 menus, **M15b** (#18) and the
+  owner's feature picks as M18–M20 in the roadmap (#20). The owner asked (2026-10-03) for all remaining Phase 4
+  milestones to be built: M15b → M17a → M17b in one thread, M13 audio in a parallel one.
+- **M15b** (critic 9.0): no map is loaded until Play. `src/matchSession.ts` is one match (meshes, lighting, physics,
+  nav, sim, bots, presentation), built in the Play click from New game's choices and disposed when the player leaves
+  the match; `game.ts` is the app around it. Pull request #18 was merged at round 2; this branch carries round 3
+  (the pointer-lock request counting, `pause()` with no match, the review line and leftovers).
+- **Next: M17a** (replica slots, BB weight per replica; built, in review), then **M17b** attachments, then M13 audio,
+  M18 match info, M19 custom matches, M20 practice range, M14 art, M16 tutorial (ROADMAP Phase 4 order).
+- **M13 audio** (critic 9.0) is built in its own pull request (#19, branch `claude/m13-audio-rework-j2lmeh`). Sounds are
+  data recipes (`config/sounds.ts`) rendered by the pure `audio/dsp.ts`, once per page (`SoundLibrary`, owned by
+  `Game` with the volume sliders as `SfxSetup`); `Sfx` keeps one HRTF channel per character, muffled by rays. A new
+  replica (M17, v0.3) only needs a `power`: its shot, dry-fire and magazine sounds follow from it.
 
 ## Working notes and gotchas
 
-- **Menus:** one screen at a time (`Menus.go`); `menuNav.ts` decides Back and which menu opens when play stops.
-  The loadout is only reachable through New game, so never mid-match; Quit to title screen ends the match
-  (`Game.quitToTitle`). Text is set in capitals by CSS, so the code keeps normal case (and tests' accessible names
-  use case-insensitive matches). `BUILD_LABEL` in `config/menus.ts` moves with each release tag (CLAUDE.md §7).
-- **The barrel line:** BBs are drawn from the muzzle, blending onto the eye line. The rifle keeps hold yaw 0; the
-  pistol leans 0.1 rad, and `tracerLine.test.ts` caps it.
-- **Parallel pull requests conflict** in `docs/DECISIONS.md` and `docs/REVIEWS.md` (both append at the end). Merge
-  `main` in and keep both sides, `main`'s lines first.
-- **Measuring bots:** copy the top of `src/ai/depotMatch.test.ts` (up to the first `describe`) into a scratch test,
-  add a test that writes JSON with `writeFileSync` (Vitest hides `console.log` here), run it with `-t`, then delete it.
-- **Checks:** `npm run check` (type check, tests, build). `npm run check:all` adds the browser smoke test. In a cloud
-  container with a preinstalled Chromium, run Playwright with a temporary copy of the config whose
-  `launchOptions.executablePath` points at it (`/opt/pw-browsers/chromium`; don't commit it).
-- **Browser:** `npm run dev`, open `/?nolock` (dev or `build:e2e` only); `window.airsoft` is the Game (private methods
-  such as `pause()` are callable from a script for screenshots; set `unlockedPlay = false` first).
+- **Lifecycle:** Play builds the session before asking for the mouse lock (audio unlock needs the click). A refused
+  lock leaves it built but never drawn; Back to the title unloads it. Nothing is drawn while a menu is up.
+  `PointerLock.request()` holds back `pointerlockerror` while a request is in flight (the retry without raw input can
+  still lock); `pointerLock.test.ts` covers both event orders.
+- **Picks apply at Play only:** mode, difficulty and loadout are picked with no match loaded, so the old
+  "starts next round" notes are gone.
+- **Menus:** one screen at a time (`Menus.go`); `menuNav.ts` decides Back and which menu opens when play stops. Text
+  is set in capitals by CSS, so the code keeps normal case. `BUILD_LABEL` in `config/menus.ts` moves with each tag.
+- **Sound:** `npm test -- src/audio` checks every recipe renders (audible, no clipping, no end click), the profiles
+  differ, a shot stays louder than steps, and `Sfx` against a fake Web Audio context. To listen offline, render a cue
+  with `renderSounds` in a scratch test and write a WAV. The Audio tab is `ui/audioSettings.ts`.
+- **Parallel pull requests conflict** in `docs/DECISIONS.md`, `docs/REVIEWS.md` and `docs/KNOWN_ISSUES.md` (all
+  append at the end). Merge `main` in and keep both sides, `main`'s lines first.
+- **Checks:** `npm run check` (type check, tests, build). In a cloud container, run the smoke test with a temporary copy
+  of `playwright.config.ts` whose `launchOptions.executablePath` is `/opt/pw-browsers/chromium` (don't commit it); use
+  another port if two run at once. The `e2e` build exposes `window.airsoft` (the Game) like the dev server.
+- **Measuring bots:** copy the top of `src/ai/depotMatch.test.ts` into a scratch test, write JSON with `writeFileSync`
+  (Vitest hides `console.log`), run it with `-t`, then delete it.
 - **Git:** new branch from the latest `main`, push, open a pull request; the owner merges. Never push to `main`, merge a
   pull request, or create or move tags. Install with npm 11 (`npx -y npm@11 install`) so the lockfile keeps its `libc` fields.

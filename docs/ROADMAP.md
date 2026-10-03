@@ -102,10 +102,10 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M12c The owner's M12b notes: the loadout off the pause screen, BBs drawn from the muzzle, the pistol facing forward, hop-up dials | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02): asymmetric layout, one flagpole, a raised loading dock, ends swap at half-time | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M15 Menus and settings (pulled forward by the owner, 2026-10-03, to his design): title screen, New game with Mode and Difficulty pop-ups, a Loadout screen and a Settings screen, pause and result menus | Done (merged; owner played it: five notes, for M15b and later) | 9.1 |
-| Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Done (pull request; owner to play it) | CRITIC |
+| Alpha · Phase 4 · M15b The owner's M15 notes: no map loaded until Play, a Map pop-up (Depot by default), opaque menus, the controls list only under Settings, a Field of view slider, Brightness removed, graphics quality held back as LATER | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M17a Loadout: replica slots and BBs (added by the owner, 2026-10-03): pick the primary and secondary replica, BB weight, hop-up | Next | |
 | Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Later | |
-| Alpha · Phase 4 · M13 Audio rework | Later | |
+| Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (pull request open; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M18 Match info (owner's feature picks, 2026-10-03): hit feed, teammate markers, end-of-match summary, crosshair options | Later | |
 | Alpha · Phase 4 · M19 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
 | Alpha · Phase 4 · M20 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
@@ -381,6 +381,11 @@ each one went:**
   - Higher quality overall: richer synthesis, and CC0 samples where synthesis falls short (assets policy, CLAUDE.md
     §4; every file recorded in `docs/ASSETS.md`).
   - Fix when touched (audit W-03): reuse one panner per character and disconnect one-shot sound chains.
+  - **Built (2026-10-03):** every sound is a recipe (`config/sounds.ts`) rendered once into buffers; electric, gas
+    and spring shot profiles, the AEG motor winding up and down; footsteps by surface (Depot's dock ramps are steel),
+    landings and kit rattle, crouch / stand / lean rustle; BB impacts by material (concrete, steel, wood); HRTF
+    panning and muffling by two rays per character; Master, Effects and Interface volume sliders on Settings → Audio.
+    No CC0 samples were needed yet. Bots hear exactly what they heard before. W-03 done.
 - **M14. Art pass** (CC0 assets only), VFX and lighting for Depot, the replicas and the figures.
 - **M15. Menus and a full settings screen** (pulled forward ahead of M13 by the owner, 2026-10-03, to his own
   design; concept sketch approved the same day). The start screen was too cluttered, so it becomes:

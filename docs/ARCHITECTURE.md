@@ -68,8 +68,17 @@ ends the round). A hit character is eliminated
 - **ui/**: DOM overlays (the menus in `ui/menus/`, debug overlay, ammo HUD).
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
-- **audio/**: synthesised Web Audio effects; positional for everything but the local player's own sounds. In-world
-  sounds feed a short procedural reverb (the yard's echo); UI sounds (hit tick, hit marker, whistle) stay dry.
+- **audio/** (reworked in M13): every effect is a recipe of layers in `config/sounds.ts` (filtered noise, gliding
+  tones, struck resonances), rendered by the pure `audio/dsp.ts` into a few variants each when audio starts (on Play)
+  and played back from buffers. A replica's shots follow its power source (`ReplicaConfig.power`: electric, gas;
+  spring is ready for the v0.3 armoury); an AEG winds its motor up on a fresh trigger pull and down after the last
+  shot (`audio/motor.ts`). `Sfx` keeps one channel per other character (an HRTF panner that follows them, then a
+  low-pass and gain muffling them by how much level geometry blocks two rays from the listener, `audio/occlusion.ts`);
+  one-off world sounds (BB impacts, the flag's rope) get a panner of their own, disconnected when they end. Footsteps
+  sound by the surface underfoot (`MapBlock.surface`), BB impacts by the block they hit (`audio/soundMaterials.ts`),
+  and crouching, standing and leaning rustle (`audio/foley.ts`, presentation only: bots hear what they did before).
+  Buses: master, effects (in-world, with the yard's reverb) and interface (hit tick, hit marker, whistle, dry), set
+  by the Settings → Audio sliders (`audio/audioMix.ts`, saved in the settings store).
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.

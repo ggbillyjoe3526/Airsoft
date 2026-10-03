@@ -7,6 +7,7 @@ import type { ReplicaConfig } from '../../config/replicas';
 import type { KeyBindings } from '../../input/keyBindings';
 import { MAPS, type MapId } from '../../map/maps';
 import { loadoutSummary } from '../loadoutChoice';
+import type { AudioSettingsOptions } from '../audioSettings';
 import { ChoiceDialog } from './choiceDialog';
 import { LoadoutScreen } from './loadoutScreen';
 import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
@@ -38,6 +39,7 @@ export interface MenusOptions {
   fov: { initial: number; onChange: (v: number) => void };
   /** The render preset in use, shown on the greyed Quality row. */
   quality: QualityPreset;
+  audio: AudioSettingsOptions;
 }
 
 /**
@@ -120,6 +122,7 @@ export class Menus {
       crouch: opts.crouch,
       fov: opts.fov,
       quality: opts.quality,
+      audio: opts.audio,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen({ onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => this.leaveMatch('title') });
