@@ -49,7 +49,7 @@ export function crosshairSettings(opts: CrosshairSettingsOptions): HTMLDivElemen
   return [
     menuRow('Preview', 'Your BBs land inside the arms (or the ring): it opens as you move.', preview),
     menuRow('Shape', '', new OptionPicker('Shape', CROSSHAIR_SHAPES, current.shape, 'crosshair.shape', (v) => change('shape', v)).root),
-    menuRow('Size', 'Length of the arms.', rangeControl('Crosshair size', CROSSHAIR_RANGES.size, current.size, px, 'crosshair.size', (v) => change('size', v))),
+    menuRow('Size', 'Length of the arms (the cross shapes).', rangeControl('Crosshair size', CROSSHAIR_RANGES.size, current.size, px, 'crosshair.size', (v) => change('size', v))),
     menuRow(
       'Thickness',
       'Width of the lines and the dot.',

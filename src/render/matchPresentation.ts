@@ -3,7 +3,7 @@ import type { HitConfig } from '../config/hits';
 import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
-import { TEAM_COLORS } from '../config/teams';
+import { TEAM_COLORS, TEAM_CSS } from '../config/teams';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import type { RoundRules } from '../sim/round';
@@ -22,8 +22,6 @@ import { CharacterRenderer } from './characterRenderer';
 import { FlagRenderer } from './flagRenderer';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
-
-const TEAM_CSS = TEAM_COLORS.map((c) => `#${c.toString(16).padStart(6, '0')}`);
 
 /** What the scoreboard over the field shows: nothing, the round just played, or the match so far. */
 type BoardView = 'none' | 'round' | 'match';
@@ -45,7 +43,7 @@ export class MatchPresentation {
   private readonly feed: HitFeed;
   private readonly board: MatchBoard;
   /** What the board shows now, and what its numbers were built from (redrawn only when that changes). */
-  private readonly shownBoard = { view: 'none' as BoardView, version: -1, second: -1, score: -1 };
+  private readonly shownBoard = { view: 'none' as BoardView, version: -1, second: -1, phase: '' };
   private readonly mates: Character[];
   private readonly mateMarkers: TeammateMarkers;
   private readonly mateAnchor = new THREE.Vector3();
@@ -217,24 +215,23 @@ export class MatchPresentation {
 
   /**
    * The scoreboard over the field: the match so far while the key is held, the round just played between rounds,
-   * and the whole match once it's decided (until the summary screen). Its numbers are rebuilt only when a count, the
-   * score or a shown second changes.
+   * and the whole match once it's decided (until the summary screen). Its numbers are rebuilt only when a count or the
+   * phase changes (which is when the score does), or, while a round is live, each second of time alive.
    */
   private updateBoard(held: boolean): void {
     const r = this.state.round;
     const view: BoardView = r.phase === 'matchOver' || held ? 'match' : r.phase === 'over' ? 'round' : 'none';
     this.board.setVisible(view !== 'none');
     const shown = this.shownBoard;
-    const second = Math.floor(this.state.time);
-    const score = r.score[0] * 100 + r.score[1];
-    if (view === 'none' || (view === shown.view && this.stats.version === shown.version && second === shown.second && score === shown.score)) {
+    const second = r.phase === 'live' ? Math.floor(this.state.time) : -1;
+    if (view === 'none' || (view === shown.view && this.stats.version === shown.version && second === shown.second && r.phase === shown.phase)) {
       shown.view = view;
       return;
     }
     shown.view = view;
     shown.version = this.stats.version;
     shown.second = second;
-    shown.score = score;
+    shown.phase = r.phase;
     const match = view === 'match';
     const heading = match ? (r.phase === 'matchOver' ? 'Match' : `Match so far · round ${r.number}`) : `Round ${r.number}`;
     const statsOf = match ? (id: number) => this.stats.matchOf(id) : (id: number) => this.stats.roundOf(id);

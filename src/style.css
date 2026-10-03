@@ -1655,7 +1655,8 @@ kbd {
 .match-board {
   position: absolute;
   left: 50%;
-  top: 150px;
+  /* Under the "HIT!" call stamp (.hitfx-banner), so holding Tab while calling a hit doesn't hide it. */
+  top: calc(max(18%, 124px) + 96px);
   transform: translateX(-50%);
   width: min(760px, calc(100% - 32px));
   padding: 14px 18px 16px;

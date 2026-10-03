@@ -8,3 +8,6 @@ export const TEAMS = [
 ] as const;
 
 export const TEAM_COLORS: readonly number[] = TEAMS.map((t) => t.color);
+
+/** The team colours as CSS (`#3d8bff`), for the HUD and menus. */
+export const TEAM_CSS: readonly string[] = TEAM_COLORS.map((c) => `#${c.toString(16).padStart(6, '0')}`);

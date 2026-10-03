@@ -1,7 +1,5 @@
 import { HIT_FEED } from '../config/matchInfo';
-import { TEAM_COLORS } from '../config/teams';
-
-const TEAM_CSS = TEAM_COLORS.map((c) => `#${c.toString(16).padStart(6, '0')}`);
+import { TEAM_CSS } from '../config/teams';
 
 /** Someone in a hit feed line: their name (which carries the team, or is "You") and team. */
 export interface FeedName {

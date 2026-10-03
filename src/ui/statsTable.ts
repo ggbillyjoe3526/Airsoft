@@ -1,4 +1,4 @@
-import { TEAM_COLORS } from '../config/teams';
+import { TEAM_CSS } from '../config/teams';
 import type { StatsRow, TeamBlock } from './statsRows';
 
 const COLUMNS: readonly { key: Exclude<keyof StatsRow, 'name' | 'you' | 'out'>; label: string; title: string }[] = [
@@ -9,8 +9,6 @@ const COLUMNS: readonly { key: Exclude<keyof StatsRow, 'name' | 'you' | 'out'>; 
   { key: 'accuracy', label: 'Accuracy', title: 'BBs on an opponent, of those fired' },
   { key: 'timeAlive', label: 'Time alive', title: 'Time in play while rounds were live' },
 ];
-
-const hex = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
 
 /**
  * A stats table: a header row, then a block per team (its name and rounds won, in the team's colour) with a row per
@@ -62,7 +60,7 @@ export class StatsTable {
     this.rows = blocks.map((block) => {
       const body = this.root.createTBody();
       body.className = 'stats-team';
-      body.style.setProperty('--team', hex(TEAM_COLORS[block.team] ?? 0xffffff));
+      body.style.setProperty('--team', TEAM_CSS[block.team] ?? '#fff');
       const title = document.createElement('th');
       title.colSpan = COLUMNS.length + 1;
       body.insertRow().append(title);
