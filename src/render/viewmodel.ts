@@ -223,10 +223,12 @@ export class Viewmodel {
         reloadDip * R.lift -
         drawP * VIEWMODEL.drawDrop -
         this.sprintBlend * VIEWMODEL.sprintDrop -
-        raise * VIEWMODEL.hitDrop,
+        raise * VIEWMODEL.hitDrop +
+        kick * VIEWMODEL.kickLift,
       kick * VIEWMODEL.kickBack,
     );
-    this.rig.rotation.set(kick * VIEWMODEL.kickUp - drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
+    // No pitch from the kick: the barrel stays parallel to the view (see VIEWMODEL.kickLift).
+    this.rig.rotation.set(-drawP * VIEWMODEL.drawTilt, this.sprintBlend * VIEWMODEL.sprintTilt, 0);
   }
 
   /**

@@ -46,14 +46,16 @@ function onScreen(p: THREE.Vector3, cam: THREE.PerspectiveCamera): { x: number; 
 
 describe('BB tracers leave the muzzle in line with the barrel (owner playtest, 2026-10-03)', () => {
   for (const [slot, replica] of LOADOUT.entries()) {
-    for (const aim of [0, 1]) {
+    for (const [aim, kicked] of [[0, false], [0, true], [1, false], [1, true]] as const) {
       if (aim === 1 && !replica.opticMount) continue;
-      it(`${replica.id}, ${aim ? 'aiming down the sight' : 'from the hip'}: every frame of the streak lies on the line from the muzzle to the crosshair`, () => {
+      const how = `${aim ? 'aiming down the sight' : 'from the hip'}${kicked ? ' in full auto (full recoil kick)' : ''}`;
+      it(`${replica.id}, ${how}: every frame of the streak lies on the line from the muzzle to the crosshair`, () => {
         const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
         const arm = createArmament(LOADOUT);
         arm.active = slot;
         if (aim) fitOptic(arm, LOADOUT, 'redDot');
-        vm.update(DT, 0, 0, 0, 4.2, false, arm, LOADOUT, false, aim);
+        if (kicked) for (let i = 0; i < 5; i++) vm.onShot(); // stacked to VIEWMODEL.kickMax
+        vm.update(0, 0, 0, 0, 4.2, false, arm, LOADOUT, false, aim);
         const cam = mainCamera();
         const muzzle = new THREE.Vector3();
         expect(vm.muzzleWorld(cam, muzzle)).toBe(true);
@@ -82,8 +84,9 @@ describe('BB tracers leave the muzzle in line with the barrel (owner playtest, 2
           for (const p of streak(r, 0)) {
             const s = onScreen(p, cam);
             expect(s.inFront, `frame ${frame}`).toBe(true); // never reaching back behind the camera
-            // On the muzzle-to-centre line (cross product ~0), between the two ends.
-            expect(Math.abs(s.x * m.y - s.y * m.x) / len, `frame ${frame}`).toBeLessThan(0.002);
+            // On the muzzle-to-centre line (cross product ~0; 0.004 is about 2 px at 1080p, the BB's own small rise from
+            // its hop-up), between the two ends.
+            expect(Math.abs(s.x * m.y - s.y * m.x) / len, `frame ${frame}`).toBeLessThan(0.004);
             expect(Math.hypot(s.x, s.y), `frame ${frame}`).toBeLessThanOrEqual(len + 1e-6);
           }
         }

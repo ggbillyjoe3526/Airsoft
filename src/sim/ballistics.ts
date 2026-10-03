@@ -13,7 +13,7 @@ export interface BB {
   velocity: Vec3;
   /** Seconds since fired. */
   age: number;
-  /** Hop-up strength of the replica that fired it (see ReplicaConfig.hopUp). */
+  /** Hop-up lift it was fired with: its replica's hopUpMax × the shooter's dial (see config/replicas.ts hopUpLift). */
   hopUp: number;
   /** BB mass (kg): drag, hop-up lift and how long the spin lasts all depend on it. */
   mass: number;

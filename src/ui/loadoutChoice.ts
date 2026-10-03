@@ -16,7 +16,8 @@ export function loadoutOffered(screen: 'title' | 'pause' | 'result'): boolean {
 /**
  * When a loadout change is fitted. Before the first match and on the result screen it is fitted at once;
  * mid-match it waits for the next round, so a round in progress is never changed (the same rule as the bot
- * difficulty).
+ * difficulty). The mid-match path is dormant while the loadout is only offered before a match (loadoutOffered),
+ * and kept (owner: keep the functionality) for when a loadout screen is reachable mid-match.
  */
 export function loadoutTakesEffect(started: boolean, matchOver: boolean): 'now' | 'nextRound' {
   return started && !matchOver ? 'nextRound' : 'now';
