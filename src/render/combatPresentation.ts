@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Sfx } from '../audio/sfx';
+import type { Action } from '../config/controls';
 import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, OPTICS } from '../config/optics';
@@ -59,6 +60,7 @@ export class CombatPresentation {
     private readonly query: WorldQuery,
     teamColor: number,
     tickSeconds: number,
+    keyName: (action: Action) => string,
   ) {
     this.sfx = new Sfx(loadout);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
@@ -66,7 +68,7 @@ export class CombatPresentation {
     renderer.scene.add(this.bbs.object, this.puffs.object, this.hitPuffs.object, this.paths.object);
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
-    this.hud = new Hud(container);
+    this.hud = new Hud(container, keyName);
   }
 
   /** Browsers only allow audio after a user gesture: call from the Play click. */

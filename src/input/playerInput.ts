@@ -1,4 +1,4 @@
-import { type CrouchMode, DEFAULT_CROUCH_MODE, MOUSE } from '../config/controls';
+import { type Action, type CrouchMode, DEFAULT_CROUCH_MODE, MOUSE } from '../config/controls';
 import { AIMING } from '../config/optics';
 import type { MovementConfig } from '../config/movement';
 import type { PlayerCommand } from '../sim/commands';
@@ -35,6 +35,11 @@ export class PlayerInput {
     private readonly pointer: PointerLock,
     private readonly movement: MovementConfig,
   ) {}
+
+  /** The readable name of the key the player has bound to `action` ('' if unbound), for hints on screen. */
+  keyName(action: Action): string {
+    return this.keyboard.keyName(action);
+  }
 
   get crouchMode(): CrouchMode {
     return this.crouchModeValue;

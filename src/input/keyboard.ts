@@ -25,6 +25,11 @@ export class Keyboard {
     return false;
   }
 
+  /** The readable name of the action's main key, for hints on screen ('' if unbound). */
+  keyName(action: Action): string {
+    return this.bindings.label(action);
+  }
+
   /** True if the action was pressed since the last `endFrame()`. */
   wasPressed(action: Action): boolean {
     for (const code of this.bindings.codes(action)) if (this.pressedThisFrame.has(code)) return true;

@@ -7,3 +7,8 @@ import { HUD } from '../config/render';
 export function isLowAmmo(count: number, magSize: number): boolean {
   return count <= Math.ceil(magSize * HUD.lowAmmoFraction);
 }
+
+/** The status line for an empty magazine with spares left, naming the player's reload key ('' if it's unbound). */
+export function emptyMagHint(reloadKey: string): string {
+  return reloadKey ? `Empty: pull the trigger or press ${reloadKey} to reload` : 'Empty: pull the trigger to reload';
+}

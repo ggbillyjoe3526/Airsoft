@@ -30,6 +30,14 @@ describe('KeyBindings', () => {
     expect(b.actionOf('ArrowUp')).toBeUndefined();
   });
 
+  it('names the main key for on-screen hints, following a rebind', () => {
+    const b = new KeyBindings(null);
+    expect(b.label('reload')).toBe('R');
+    expect(b.label('walk')).toBe('Left Shift');
+    b.rebind('reload', 'KeyX');
+    expect(b.label('reload')).toBe('X');
+  });
+
   it('swaps keys when the new key is another action\'s main key', () => {
     const b = new KeyBindings(null);
     b.rebind('reload', 'KeyC');
