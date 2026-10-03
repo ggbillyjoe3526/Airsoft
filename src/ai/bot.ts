@@ -215,8 +215,8 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotConfig
   b.burstLeft = 0;
   b.pauseLeft = 0;
   b.lane = lane;
-  // Blue (team 0) advances west → east through lane points, Orange the other way.
-  b.laneDir = c.team === 0 ? 1 : -1;
+  // From end 0 a bot walks the lane points first to last, from end 1 last to first.
+  b.laneDir = c.end === 0 ? 1 : -1;
   b.laneIndex = -1;
   b.hunting = false;
   b.lanePoints = lanePoints;

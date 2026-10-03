@@ -20,8 +20,6 @@ export interface FlagRules {
   raiseTime: number;
   /** Seconds for the defenders to pull it from the top back down to the bottom. */
   lowerTime: number;
-  /** Attack and defence swap after this many rounds (half-time). */
-  halfTimeAfter: number;
   /** Team that attacks first (0 = Blue, the player's team). */
   firstAttackers: number;
   /**
@@ -45,8 +43,6 @@ export const FLAG: FlagRules = {
   raiseTime: 5,
   /** Pulling down is quicker than raising: a retake doesn't need a long stand in the open. */
   lowerTime: 3,
-  /** First to 5 is at most 9 decided rounds: swap after 4, so the decider is in the second half. */
-  halfTimeAfter: 4,
   firstAttackers: 0,
   /** Long enough to finish a raise that is well under way, short enough that it can't drag on. */
   maxOvertime: 15,

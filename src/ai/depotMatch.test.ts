@@ -13,10 +13,10 @@ import type { MapData } from '../map/mapTypes';
 import { RAMP_YARD } from '../map/testYard';
 import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
-import { createCharacter } from '../sim/character';
+import { createCharacter, respawnCharacter } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
-import type { RoundRules } from '../sim/round';
+import { placeTeams, type RoundRules } from '../sim/round';
 import { createGameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
@@ -31,18 +31,7 @@ const DT = 1 / 60;
 function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig = BOTS, mode: MatchMode = 'elimination', rules: RoundRules = ROUNDS, map: MapData = DEPOT) {
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
-  const state = createGameState(seed, BALLISTICS.maxBBs, rules, mode, map.flags);
-  let id = 0;
-  for (let team = 0; team < 2; team++) {
-    for (let i = 0; i < ROUNDS.teamSize; i++) {
-      if (hider && team === 0 && i > 0) continue;
-      const s = map.spawns[team]![i]!;
-      const at = hider && team === 0 ? hider : s.position;
-      const c = createCharacter(id++, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), s.yaw, LOADOUT, team);
-      state.characters.push(c);
-      physics.addCharacter(c);
-    }
-  }
+  const state = createGameState(seed, BALLISTICS.maxBBs, rules, mode, map.flag);
   const ctx = createSimContext({
     mover: physics,
     query: physics,
@@ -54,11 +43,24 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     killY: map.killY,
     hits: HITS,
     deadZones: map.deadZones,
+    spawns: map.spawns,
+    spawnLift: PHYSICS.groundRestGap,
     nav,
     navSnap: NAV.snap,
     rounds: rules,
-    flagSpots: map.flags,
+    pole: map.flag,
   });
+  let id = 0;
+  for (let team = 0; team < 2; team++) {
+    for (let i = 0; i < (hider && team === 0 ? 1 : ROUNDS.teamSize); i++) state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
+  }
+  // Round 1 as the game starts it: each team at its end; a hider stands at its spot instead.
+  placeTeams(state.round, state.characters, ctx.round);
+  for (const c of state.characters) {
+    respawnCharacter(c, LOADOUT);
+    if (hider && c.team === 0) c.position = vec3(hider.x, hider.y + PHYSICS.groundRestGap, hider.z);
+    physics.addCharacter(c);
+  }
   const commands = new Map<number, PlayerCommand>();
   const bots = new BotController(state, hider ? state.characters.filter((c) => c.team === 1) : state.characters, commands, {
     query: physics,
@@ -82,8 +84,8 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     firstRoundEnd: -1,
     roundEnds: [] as number[],
     farthestFromSpawn: state.characters.map(() => 0),
-    /** Per finished round: who attacked, who won and why (flag mode). */
-    results: [] as { attackers: number; winner: number; reason: string; length: number }[],
+    /** Per finished round: who attacked (and from which end), who won (and from which end) and why. */
+    results: [] as { attackers: number; attackerEnd: number; blueEnd: number; winner: number; winnerEnd: number; reason: string; length: number }[],
     /** Most of the flag raised in any round. */
     maxFlag: 0,
     /**
@@ -111,7 +113,8 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     for (const e of state.events) {
       if (e.type === 'roundStart') roundStart = state.time;
       if (e.type === 'roundOver') {
-        stats.results.push({ attackers: state.round.attackers, winner: e.winner, reason: e.reason, length: state.time - roundStart });
+        const endOf = (team: number) => state.characters.find((c) => c.team === team)?.end ?? -1;
+        stats.results.push({ attackers: state.round.attackers, attackerEnd: endOf(state.round.attackers), blueEnd: endOf(0), winner: e.winner, winnerEnd: endOf(e.winner), reason: e.reason, length: state.time - roundStart });
         stats.rounds++;
         stats.roundEnds.push(state.time);
         if (stats.firstRoundEnd < 0) stats.firstRoundEnd = state.time;
@@ -173,7 +176,8 @@ describe('a 3v3 bot match on Depot', () => {
   });
 
   it('plays out rounds: bots leave spawn, find each other, and eliminate a team', { timeout: 30_000 }, () => {
-    const stats = playMatch(150, 11);
+    // 200 s: on the M11 Depot this seed's first round is a long last-man hunt (93 s; KNOWN_ISSUES).
+    const stats = playMatch(200, 11);
     expect(stats.rounds).toBeGreaterThanOrEqual(3);
     expect(stats.hits).toBeGreaterThanOrEqual(stats.rounds * 3);
     // Every bot got well out of its spawn yard in round 1 (nobody stuck at spawn).
@@ -197,13 +201,33 @@ describe('a 3v3 bot match on Depot', () => {
 
   it('hunt down a player hiding off their routes, so a round never stalls', { timeout: 30_000 }, () => {
     const nav = buildNavGrid(DEPOT, NAV);
-    // Deep in the Blue spawn yard, and in the far corner of the Blue office side room.
-    for (const spot of [vec3(-24.1, 0, 4.3), vec3(-13, 0, -15.4)]) {
+    // Deep in the west spawn yard, and behind the car park's container, with Orange starting in the east.
+    const orangeEast = { ...ROUNDS, eliminationFirstEnd: 0 };
+    for (const spot of [vec3(-24.1, 0, -4.3), vec3(-13, 0, 15.4)]) {
       expect(isWalkableAt(nav, spot.x, spot.z), `${spot.x},${spot.z} walkable`).toBe(true);
-      const stats = playMatch(120, 5, spot);
+      const stats = playMatch(120, 5, spot, BOTS, 'elimination', orangeEast);
       expect(stats.firstRoundEnd, `hider at ${spot.x},${spot.z}`).toBeGreaterThan(0);
       expect(stats.firstRoundEnd).toBeLessThan(90);
     }
+  });
+
+  it('keeps the ends close enough: Blue starts in the east, ends swap at half-time, and the west end still wins its share', { timeout: 300_000 }, () => {
+    let decided = 0;
+    let westWins = 0;
+    for (let seed = 1; seed <= 16; seed++) {
+      const stats = playMatch(300, seed);
+      // Blue (team 0) starts at the east end (end 1) for rounds 1-4, then the west.
+      expect(stats.results.map((r) => r.blueEnd)).toEqual(stats.results.map((_, i) => (i < ROUNDS.halfTimeAfter ? 1 : 0)));
+      for (const r of stats.results) {
+        if (r.winner < 0) continue;
+        decided++;
+        if (r.winnerEnd === 0) westWins++;
+      }
+    }
+    // Measured on the M11 Depot (2026-10-03): the west end wins 40% of the decided rounds here (46 of 114) and
+    // 46% over seeds 1-96. The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
+    expect(westWins / decided).toBeGreaterThan(0.35);
+    expect(westWins / decided).toBeLessThan(0.6);
   });
 });
 
@@ -213,7 +237,7 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
     await initPhysics();
   });
 
-  it('plays out rounds where the pole matters: flags go up, some rounds are won by raising one, roles swap at half-time', { timeout: 300_000 }, () => {
+  it('plays out rounds where the pole matters: flags go up, some rounds are won by raising one, roles and ends swap at half-time', { timeout: 300_000 }, () => {
     let rounds = 0;
     let captures = 0;
     let attackWins = 0;
@@ -222,8 +246,9 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
     for (let seed = 1; seed <= 16; seed++) {
       const stats = playMatch(400, seed, undefined, BOTS, 'attackDefend');
       friendlyHits += stats.friendlyHits;
-      // Rounds 1-4 Blue attacks, then Orange.
-      expect(stats.results.map((r) => r.attackers)).toEqual(stats.results.map((_, i) => (i < ROUNDS.flag.halfTimeAfter ? 0 : 1)));
+      // Rounds 1-4 Blue attacks, then Orange; the attackers always start at the west end.
+      expect(stats.results.map((r) => r.attackers)).toEqual(stats.results.map((_, i) => (i < ROUNDS.halfTimeAfter ? 0 : 1)));
+      expect(stats.results.every((r) => r.attackerEnd === 0)).toBe(true);
       for (const r of stats.results) {
         rounds++;
         if (r.reason === 'captured') captures++;
@@ -232,10 +257,10 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
       }
       if (stats.maxFlag >= 1) flagsRaised++;
     }
-    // Measured (after the bug pass, 2026-10-02; 16 seeds): 17 captures in 111 rounds, a flag raised in 10 of
-    // 16 matches, attackers winning 63%, no friendly hits. These 16 seeds run high: over seeds 1-48 attackers
-    // win 53% (55% before the bug pass), so the ceiling has room for that noise. Bots check their line of
-    // fire, but a teammate dodging into a BB already in the air can't always be helped (KNOWN_ISSUES).
+    // Measured on the M11 Depot with M12c's hop-up (2026-10-03; 16 seeds): 15 captures in 126 rounds, a flag
+    // raised in 10 of 16 matches, attackers winning 51%, no friendly hits. Over seeds 1-96 attackers win 50%
+    // (107 captures in 736 rounds); the old mirrored Depot measured 53%. Bots check their line of fire, but a teammate dodging into
+    // a BB already in the air can't always be helped (KNOWN_ISSUES).
     // Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);
     expect(captures).toBeGreaterThanOrEqual(9);
@@ -246,9 +271,9 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
   });
 
   it('attackers raise their flag when nobody stops them', { timeout: 30_000 }, () => {
-    // Orange attacks first; Blue is one player hiding in the spawn yard's corner.
+    // Orange attacks first (from the west end); Blue is one player hiding in the back lot's far corner.
     const rules = { ...ROUNDS, flag: { ...ROUNDS.flag, firstAttackers: 1 } };
-    const stats = playMatch(60, 1, vec3(-24.1, 0, 4.3), BOTS, 'attackDefend', rules);
+    const stats = playMatch(60, 1, vec3(24.4, 0, 15.4), BOTS, 'attackDefend', rules);
     expect(stats.results[0]).toMatchObject({ attackers: 1, winner: 1, reason: 'captured' });
     expect(stats.results[0]!.length).toBeLessThan(35);
   });
@@ -257,7 +282,7 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
     // Blue attacks with one player who stays hidden in the spawn yard's corner, far from the pole: the
     // defending bots hold their posts (it's further than defendSearchRadius) and the clock runs out.
     const rules = { ...ROUNDS, roundTime: 30 };
-    const stats = playMatch(32, 2, vec3(-24.1, 0, 4.3), BOTS, 'attackDefend', rules);
+    const stats = playMatch(32, 2, vec3(-24.1, 0, -4.3), BOTS, 'attackDefend', rules);
     expect(stats.results[0]).toMatchObject({ attackers: 0, winner: 1, reason: 'time' });
   });
 });

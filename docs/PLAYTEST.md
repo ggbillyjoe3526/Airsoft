@@ -3,7 +3,8 @@
 How the owner plays the game to check a change. Each pull request names the sections to play; a bug pass
 before a release plays all of them. Written 2026-10-02 for the game as of M10 (leaning, magazines, BB physics,
 the 2σ crosshair); updated 2026-10-03 for M12a (fire modes, crouch toggle, steadier aim when still, quicker
-reloads) and M12b (the red dot as an accessory, aiming down sights, the crosshair's instant lock). Update a section when a change alters what it describes.
+reloads), M12b (the red dot as an accessory, aiming down sights, the crosshair's instant lock) and M11 (the
+reworked Depot). Update a section when a change alters what it describes.
 
 ## Get the game running
 
@@ -146,10 +147,35 @@ to 2:30, and the first team to win 5 rounds takes the match.
 - [ ] **Play a whole match.** At 5 wins a result screen says "You win!" or "You lose" with the score.
   **Play again** starts a fresh match.
 - [ ] **Try Attack / Defend.** Press Esc, pick **Attack / Defend**, and play the next match. Stand inside the
-  painted ring at the other team's pole for 5 seconds to raise your flag. The strip under the score shows how
-  far up it is, and a marker shows where the pole is. Sides swap after round 4.
+  painted ring at the flagpole for 5 seconds to raise the flag. The strip under the score shows how far up it
+  is, and a marker shows where the pole is. Sides swap after round 4.
 - [ ] **Try Easy and Hard.** Bots on Easy should feel clearly weaker than on Hard. A change made mid-match starts
   with the next round, and the screen says so.
+
+## The Depot (M11 rework)
+
+The map follows the layout sketch approved on 2026-10-03. Attackers start in the west yard and the defenders in
+the north-east corner. There's one flagpole, in the walled loading bay (the Bay) on the defenders' side. Three
+ways lead there: **Dock Road** (north, along a raised loading dock), **Container Alley** (the middle, through the
+Main Gate) and the **Office** (south, close quarters, with a back door near the pole). In both modes the teams
+swap ends after round 4.
+
+- [ ] **Walk all three lanes from the west yard to the pole.** Each one gets you there without dead ends, and
+  you can tell which lane you're in.
+- [ ] **Walk up and down both dock ramps, then walk along the dock's open edge.** No bumps or hops on the ramps.
+  You can step off the edge on purpose (it's a 1.2 m drop), but walking up to it shouldn't push you off. Turn
+  round halfway down a ramp and run back: the crosshair shouldn't jump wide.
+- [ ] **Jump against crates, the ramp kerbs and the dock edge from the road.** You never land on top of them or
+  hang on an edge, and stepping off the dock is one clean drop.
+- [ ] **Stand on the dock and look around.** It's a good spot to watch Dock Road and the Bay, but from most of
+  it you can't see down into Container Alley.
+- [ ] **Look for the other team's spawn from yours** (standing and crouched). You shouldn't be able to see it.
+- [ ] **Shoot through a barricade port and a building window.** BBs go through the openings; the walls stop them.
+- [ ] **Play Attack / Defend for a full match.** You attack first (from the west). Note whether attacking or
+  defending feels easier, and which lane the bots pick. In bot-only tests the attackers win about half the rounds.
+- [ ] **Play Elimination across half-time.** You start in the east (by the Bay). The banner says ends swap
+  after round 4, and round 5 starts you in the west yard. In bot-only tests the east end wins a little more often (about 54%); say if either end feels unfair.
+- [ ] **Watch where hit players walk.** Each end has its own dead zone, away from the fighting.
 
 ## Pause, menus and tabbing away
 

@@ -95,18 +95,12 @@ describe('nav grid', () => {
     expect(path[0]).toBe(first);
   });
 
-  it('puts every Depot lane point on walkable ground, reachable from both spawns', () => {
+  it('puts every Depot lane point on walkable ground, reachable from both ends', () => {
     const search = createNavSearch(depot);
     const path: Vec3[] = [];
     expect(DEPOT.lanes).toHaveLength(3);
     for (const lane of DEPOT.lanes) {
       for (let i = 1; i < lane.length; i++) expect(lane[i]!.x).toBeGreaterThan(lane[i - 1]!.x); // west to east
-      // Mirror-symmetric, like the map: both teams walk the same lane.
-      for (let i = 0; i < lane.length; i++) {
-        const m = lane[lane.length - 1 - i]!;
-        expect(lane[i]!.x).toBeCloseTo(-m.x, 9);
-        expect(lane[i]!.z).toBeCloseTo(m.z, 9);
-      }
       for (const p of lane) {
         expect(isWalkableAt(depot, p.x, p.z), `${p.x},${p.z}`).toBe(true);
         for (const s of [DEPOT.spawns[0][0]!, DEPOT.spawns[1][0]!]) expect(findPath(depot, search, s.position, p, NAV.snap, path)).toBe(true);

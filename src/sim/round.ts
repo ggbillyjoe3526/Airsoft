@@ -1,5 +1,6 @@
 import type { FlagRules, MatchMode } from '../config/modes';
 import type { ReplicaConfig } from '../config/replicas';
+import type { SpawnPoint } from '../map/mapTypes';
 import type { BBPool } from './ballistics';
 import { type Character, respawnCharacter } from './character';
 import { isInPlay } from './elimination';
@@ -15,23 +16,41 @@ export interface RoundRules {
   resetDelay: number;
   /** Round wins needed to win the match. */
   winsNeeded: number;
+  /**
+   * Half-time: the teams swap ends of the map after this many rounds, in both modes (in Attack / Defend that
+   * swaps attack and defence too).
+   */
+  halfTimeAfter: number;
+  /** Elimination: the end of the map (0 west, 1 east) Blue, the player's team, starts the match at. */
+  eliminationFirstEnd: number;
   flag: FlagRules;
 }
 
-/** What round flow needs besides its own state: the rules, the loadout everyone respawns with, and the map's flag spots. */
+/**
+ * What round flow needs besides its own state: the rules, the loadout everyone respawns with, and the map's
+ * spawns and pole.
+ */
 export interface RoundContext {
   rules: RoundRules;
   loadout: readonly ReplicaConfig[];
-  /** Per team, where the pole stands when that team defends (map data). */
-  flagSpots: readonly Vec3[];
+  /** Flag mode: the foot of the pole, at end 1 where the defenders start (map data; absent: no flag mode). */
+  pole?: Vec3;
+  /**
+   * Per end of the map, its spawn points (floor points, map data). Each round every character is given the
+   * spawn of its slot at its team's end (see placeTeams). Without them characters keep their spawns.
+   */
+  spawns: readonly (readonly SpawnPoint[])[];
+  /** Characters stand this far above a spawn's floor point (the physics rest gap). */
+  spawnLift: number;
 }
 
 /**
  * Match flow: rounds against the clock. In both modes a team with nobody left in play loses the round.
  * Elimination: if time runs out first the round is a draw. Attack / Defend: the attackers win by raising
  * their flag on the defenders' pole, the defenders by holding out until time runs out (with overtime
- * while the attackers are still working the rope); attack and defence swap at half-time. After a short pause everyone respawns for the next round, until one team reaches
- * `winsNeeded` wins and the match is over (until restartMatch).
+ * while the attackers are still working the rope). The teams swap ends at half-time in both modes (in
+ * Attack / Defend that swaps attack and defence too). After a short pause everyone respawns for the next
+ * round, until one team reaches `winsNeeded` wins and the match is over (until restartMatch).
  */
 export interface RoundState {
   mode: MatchMode;
@@ -58,8 +77,8 @@ export interface RoundState {
   flag: FlagState;
 }
 
-/** A match ready to play round 1 in `mode` (characters are assumed to be at their spawns already). */
-export function createRoundState(rules: RoundRules, mode: MatchMode = 'elimination', flagSpots: readonly Vec3[] = []): RoundState {
+/** A match ready to play round 1 in `mode` (characters are put at their spawns with placeTeams and respawnCharacter). */
+export function createRoundState(rules: RoundRules, mode: MatchMode = 'elimination', pole?: Vec3): RoundState {
   const round: RoundState = {
     mode,
     number: 1,
@@ -74,19 +93,49 @@ export function createRoundState(rules: RoundRules, mode: MatchMode = 'eliminati
     attackers: -1,
     flag: createFlagState(),
   };
-  setUpObjective(round, rules, flagSpots);
+  setUpObjective(round, rules, pole);
   return round;
 }
 
-/** Flag mode: the team attacking in round `number` (they swap after rules.flag.halfTimeAfter rounds). */
+/** Flag mode: the team attacking in round `number` (they swap after rules.halfTimeAfter rounds). */
 export function attackersInRound(number: number, rules: RoundRules): number {
   const first = rules.flag.firstAttackers;
-  return number <= rules.flag.halfTimeAfter ? first : 1 - first;
+  return number <= rules.halfTimeAfter ? first : 1 - first;
 }
 
-/** Flag mode: true if the round after round `number` starts with the sides swapped. */
-export function halfTimeAfterRound(number: number, flag: FlagRules): boolean {
-  return number === flag.halfTimeAfter;
+/** True if the round after round `number` starts with the teams at swapped ends (both modes). */
+export function halfTimeAfterRound(number: number, rules: RoundRules): boolean {
+  return number === rules.halfTimeAfter;
+}
+
+/**
+ * The end of the map (0 or 1) `team` starts from in round `number`. Attack / Defend: the attackers start at
+ * end 0 and the defenders at end 1, by the pole. Elimination: Blue starts at rules.eliminationFirstEnd. Either
+ * way the teams swap ends after rules.halfTimeAfter rounds, so an uneven map is fair over a match.
+ */
+export function teamEnd(team: number, mode: MatchMode, number: number, rules: RoundRules): number {
+  if (mode === 'attackDefend') return team === attackersInRound(number, rules) ? 0 : 1;
+  const blueEnd = number <= rules.halfTimeAfter ? rules.eliminationFirstEnd : 1 - rules.eliminationFirstEnd;
+  return team === 0 ? blueEnd : 1 - blueEnd;
+}
+
+/**
+ * Gives every character this round's end (its team's, see teamEnd) and, when the map's spawns are known, the
+ * spawn of its slot there (its place among its teammates, in roster order). Call respawnCharacter after it.
+ */
+export function placeTeams(round: RoundState, characters: readonly Character[], ctx: RoundContext): void {
+  const slots = [0, 0];
+  for (const c of characters) {
+    const slot = slots[c.team]!;
+    slots[c.team] = slot + 1;
+    c.end = teamEnd(c.team, round.mode, round.number, ctx.rules);
+    const s = ctx.spawns[c.end]?.[slot];
+    if (!s) continue;
+    c.spawnPosition.x = s.position.x;
+    c.spawnPosition.y = s.position.y + ctx.spawnLift;
+    c.spawnPosition.z = s.position.z;
+    c.spawnYaw = s.yaw;
+  }
 }
 
 export function stepRound(round: RoundState, characters: Character[], bbs: BBPool, ctx: RoundContext, events: GameEvent[], dt: number): void {
@@ -155,25 +204,25 @@ function endRound(round: RoundState, winner: number, reason: RoundEndReason, rul
 }
 
 function startRound(round: RoundState, characters: Character[], bbs: BBPool, ctx: RoundContext, events: GameEvent[], number: number): void {
-  for (const c of characters) respawnCharacter(c, ctx.loadout);
-  for (const bb of bbs.bbs) bb.active = false;
   round.number = number;
   round.phase = 'live';
   round.clock = ctx.rules.roundTime;
   round.timer = 0;
   round.overtime = 0;
-  setUpObjective(round, ctx.rules, ctx.flagSpots);
+  setUpObjective(round, ctx.rules, ctx.pole);
+  placeTeams(round, characters, ctx);
+  for (const c of characters) respawnCharacter(c, ctx.loadout);
+  for (const bb of bbs.bbs) bb.active = false;
   events.push({ type: 'roundStart', round: number });
 }
 
-/** Flag mode: who attacks this round, and the pole on the defenders' side with the flag at the bottom. */
-function setUpObjective(round: RoundState, rules: RoundRules, flagSpots: readonly Vec3[]): void {
+/** Flag mode: who attacks this round, and the pole at the defenders' end with the flag at the bottom. */
+function setUpObjective(round: RoundState, rules: RoundRules, pole: Vec3 | undefined): void {
   if (round.mode !== 'attackDefend') {
     round.attackers = -1;
     return;
   }
   round.attackers = attackersInRound(round.number, rules);
-  const spot = flagSpots[1 - round.attackers];
-  if (!spot) throw new Error('Flag mode needs a flag spot for each team');
-  resetFlag(round.flag, spot);
+  if (!pole) throw new Error('Flag mode needs a flagpole');
+  resetFlag(round.flag, pole);
 }

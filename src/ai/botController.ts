@@ -57,9 +57,17 @@ export class BotController {
   private readonly sectorCols: number;
   private readonly sectorRows: number;
   private readonly visited: Float64Array[];
-  private readonly spawnCentre: Vec3[];
-  /** Per team, the unit direction (x, z) from its spawn towards the enemy's. */
-  private readonly attackDir: { x: number; z: number }[];
+  /** Per team, the middle of its spawns this round (teams swap ends at half-time). */
+  private readonly spawnCentre: Vec3[] = [vec3(), vec3()];
+  /** Per team, the unit direction (x, z) from its spawn towards the enemy's this round. */
+  private readonly attackDir: { x: number; z: number }[] = [
+    { x: 1, z: 0 },
+    { x: -1, z: 0 },
+  ];
+  /** Per team, the way its enemy's spawn is (yaw) this round. */
+  private readonly enemyYaw: number[] = [0, 0];
+  /** Per team, the end of the map it starts from this round. */
+  private readonly ends: number[] = [0, 1];
   /** The team plans' own random stream (separate from each bot's). */
   private readonly planRng: RngState;
   /** Per team, this round's plan. */
@@ -77,21 +85,6 @@ export class BotController {
     this.sectorRows = Math.ceil((nav.rows * nav.cell) / cfg.huntSectorSize);
     this.visited = [0, 1].map(() => new Float64Array(this.sectorCols * this.sectorRows).fill(Number.NEGATIVE_INFINITY));
 
-    // Where each team starts, and which way its enemy is.
-    this.spawnCentre = [0, 1].map((team) => {
-      const members = state.characters.filter((c) => c.team === team);
-      const n = Math.max(1, members.length);
-      return vec3(members.reduce((a, c) => a + c.spawnPosition.x, 0) / n, 0, members.reduce((a, c) => a + c.spawnPosition.z, 0) / n);
-    });
-    const [blue, orange] = this.spawnCentre as [Vec3, Vec3];
-    const enemyYaw = [Math.atan2(-(orange.x - blue.x), -(orange.z - blue.z)), Math.atan2(-(blue.x - orange.x), -(blue.z - orange.z))];
-    const span = Math.max(1e-6, Math.hypot(orange.x - blue.x, orange.z - blue.z));
-    const ux = (orange.x - blue.x) / span;
-    const uz = (orange.z - blue.z) / span;
-    this.attackDir = [
-      { x: ux, z: uz },
-      { x: -ux, z: -uz },
-    ];
     this.planRng = createRng(planSeed(opts.seed));
 
     this.world = {
@@ -106,7 +99,7 @@ export class BotController {
       loadout: opts.loadout,
       cfg,
       round: state.round,
-      enemyYaw,
+      enemyYaw: this.enemyYaw,
       huntPoint: (bot, out) => this.huntPoint(bot, out),
       aheadOfTeam: (bot) => this.aheadOfTeam(bot),
       time: 0,
@@ -261,6 +254,7 @@ export class BotController {
    * the map, then head for the pole.
    */
   private planRound(): void {
+    this.measureEnds();
     const cfg = this.world.cfg;
     const round = this.world.round;
     const objective = round.mode === 'attackDefend' && round.attackers >= 0;
@@ -292,6 +286,36 @@ export class BotController {
     }
   }
 
+  /** Where each team starts this round (its spawns' middle and end), and which way its enemy is. */
+  private measureEnds(): void {
+    const chars = this.world.characters;
+    for (let team = 0; team < 2; team++) {
+      const centre = this.spawnCentre[team]!;
+      let n = 0;
+      centre.x = 0;
+      centre.z = 0;
+      for (const c of chars) {
+        if (c.team !== team) continue;
+        centre.x += c.spawnPosition.x;
+        centre.z += c.spawnPosition.z;
+        this.ends[team] = c.end;
+        n++;
+      }
+      centre.x /= Math.max(1, n);
+      centre.z /= Math.max(1, n);
+    }
+    const [blue, orange] = this.spawnCentre as [Vec3, Vec3];
+    this.enemyYaw[0] = Math.atan2(-(orange.x - blue.x), -(orange.z - blue.z));
+    this.enemyYaw[1] = Math.atan2(-(blue.x - orange.x), -(blue.z - orange.z));
+    const span = Math.max(1e-6, Math.hypot(orange.x - blue.x, orange.z - blue.z));
+    const ux = (orange.x - blue.x) / span;
+    const uz = (orange.z - blue.z) / span;
+    this.attackDir[0]!.x = ux;
+    this.attackDir[0]!.z = uz;
+    this.attackDir[1]!.x = -ux;
+    this.attackDir[1]!.z = -uz;
+  }
+
   /**
    * How many of `lane`'s points `team` walks to reach the first one past the middle of the map (all of
    * them if none is): attackers go for the pole from there.
@@ -305,8 +329,8 @@ export class BotController {
     const half = Math.hypot(enemy.x - home.x, enemy.z - home.z) / 2;
     const n = points.length;
     for (let k = 0; k < n; k++) {
-      // Walking order: Blue goes through the points first to last, Orange last to first (see resetBot).
-      const p = points[team === 0 ? k : n - 1 - k]!;
+      // Walking order: from end 0 the points go first to last, from end 1 last to first (see resetBot).
+      const p = points[this.ends[team] === 0 ? k : n - 1 - k]!;
       if ((p.x - home.x) * dir.x + (p.z - home.z) * dir.z >= half) return k + 1;
     }
     return n;

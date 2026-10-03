@@ -11,7 +11,7 @@ import { LOADOUT } from '../config/replicas';
 import type { MapData } from '../map/mapTypes';
 import { TEST_YARD } from '../map/testYard';
 import { buildNavGrid, isWalkableAt, type NavGrid } from '../nav/navGrid';
-import { DEPOT } from '../map/depot';
+import { DEPOT, DEPOT_LAYOUT } from '../map/depot';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { isInPlay } from '../sim/elimination';
 import { aimDirection, type WorldQuery } from '../sim/armament';
@@ -278,15 +278,16 @@ describe('cover', () => {
     }
   });
 
-  it("treats the map's crate-high blocks standing on the floor as low cover", () => {
+  it("treats the map's crate-high blocks standing on a floor (the ground or the dock) as low cover", () => {
     const low = lowCoverBlocks(DEPOT.blocks, buildNavGrid(DEPOT, NAV), BODY, BOTS.lowCoverFloorGap);
     expect(low.length).toBeGreaterThan(20);
     for (const l of low) {
       const block = DEPOT.blocks.find((b) => b.center.x === l.x && b.center.z === l.z && b.kind !== 'floor')!;
-      const top = block.center.y + block.size.y / 2;
-      expect(top).toBeGreaterThan(BODY.crouchEyeHeight);
-      expect(top).toBeLessThan(BODY.standEyeHeight);
+      expect(block.size.y).toBeGreaterThan(BODY.crouchEyeHeight);
+      expect(block.size.y).toBeLessThan(BODY.standEyeHeight);
     }
+    // Crates on the dock count too.
+    expect(low.some((l) => l.z < DEPOT_LAYOUT.dock.edgeZ)).toBe(true);
   });
 });
 
@@ -820,7 +821,7 @@ describe('difficulty levels', () => {
 describe('bot team play and routes', () => {
   /** Orange bots on Depot (no physics needed: planning only). */
   function depotBots(mode: MatchMode = 'elimination', query: WorldQuery = noWalls, cfg: BotConfig = BOTS) {
-    const state = createGameState(4, 64, ROUNDS, mode, DEPOT.flags);
+    const state = createGameState(4, 64, ROUNDS, mode, DEPOT.flag);
     for (let team = 0; team < 2; team++) {
       for (let i = 0; i < ROUNDS.teamSize; i++) {
         const s = DEPOT.spawns[team]![i]!;
@@ -939,7 +940,7 @@ describe('bot team play and routes', () => {
   describe('in Attack / Defend', () => {
     /** Orange defends (Blue attacks first). Blind bots: nobody is ever seen, only heard. */
     const blind: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 };
-    const pole = DEPOT.flags![1];
+    const pole = DEPOT.flag!;
     const tick = (state: GameState, bots: BotController, seconds: number) => {
       for (let i = 0; i < seconds / DT; i++) {
         state.time += DT;
@@ -1024,20 +1025,28 @@ describe('bot team play and routes', () => {
 
     it('attackers walk their lane only to the first point past the middle of the map, then go for the pole', () => {
       const { state, bots } = depotBots('attackDefend', blind);
-      state.round.attackers = 1; // Orange attacks
+      // Second half: Orange attacks from the west end, Blue defends the east end (as startRound places them).
+      state.round.attackers = 1;
+      for (const c of state.characters) {
+        const s = DEPOT.spawns[1 - c.team]![c.id % ROUNDS.teamSize]!;
+        c.end = 1 - c.team;
+        c.spawnPosition.x = s.position.x;
+        c.spawnPosition.z = s.position.z;
+      }
       for (let round = 5; round < 15; round++) {
         state.events.length = 0;
         state.events.push({ type: 'roundStart', round });
         bots.observe(state);
         for (const b of bots.bots) {
-          // Orange walks east to west: the first point at or past x = 0 is the 3rd on the north and mid lanes, the 4th in the office.
-          expect(b.lanePoints).toBe([3, 3, 4][b.lane]);
+          expect(b.laneDir).toBe(1); // west to east
+          // Past halfway from the west spawns to the east ones: the dock's middle (4th point), just short of the
+          // Main Gate (4th), the hall (5th).
+          expect(b.lanePoints).toBe([4, 4, 5][b.lane]);
         }
       }
       // And once those points are walked, the lane is done and the bot heads for the pole.
       const b = bots.bots[0]!;
-      const lane = DEPOT.lanes[b.lane]!;
-      b.laneIndex = lane.length - b.lanePoints;
+      b.laneIndex = b.lanePoints - 1;
       b.holdLeft = 0;
       b.routeState = 'none';
       tick(state, bots, 0.2);
@@ -1047,10 +1056,7 @@ describe('bot team play and routes', () => {
 
     it('attackers who have swept their lane head for the pole, crouch there and stay', () => {
       const { state, bots, commands } = depotBots('attackDefend', blind);
-      state.round.attackers = 1; // Orange attacks Blue's pole for this test
-      const bluePole = DEPOT.flags![0];
-      state.round.flag.position.x = bluePole.x;
-      state.round.flag.position.z = bluePole.z;
+      state.round.attackers = 1; // Orange attacks for this test
       state.events.length = 0;
       state.events.push({ type: 'roundStart', round: 5 });
       bots.observe(state);

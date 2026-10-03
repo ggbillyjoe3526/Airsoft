@@ -114,7 +114,7 @@ export function stepMovement(
   desired.y = c.velocity.y * dt;
   desired.z = c.velocity.z * dt;
 
-  const controllerGrounded = mover.move(c, desired, corrected);
+  mover.move(c, desired, corrected);
   c.position.x += corrected.x;
   c.position.y += corrected.y;
   c.position.z += corrected.z;
@@ -125,9 +125,12 @@ export function stepMovement(
 
   // Only the ground probe decides whether we stand: the controller also reports "ground" for the
   // rounded capsule touching the top edge of cover, which would let players hang on (and hop over)
-  // barriers. The probe also lands us exactly at rest height.
+  // barriers. The probe also lands us exactly at rest height. It runs on every tick we aren't rising, not
+  // only when the controller feels ground: Rapier's shape cast very rarely misses a floor right under the
+  // probe (a seam on a ramp), and a character dropped that way lands on the next tick instead of floating
+  // down until the controller touches the slope (11 ticks seen on a dock ramp).
   let grounded = false;
-  if (onGround || (controllerGrounded && c.velocity.y <= 0)) {
+  if (c.velocity.y <= 0) {
     const dy = mover.probeGround(c, cfg.groundSettleDistance);
     grounded = !Number.isNaN(dy);
     if (grounded) {

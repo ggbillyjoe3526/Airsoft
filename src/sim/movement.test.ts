@@ -294,6 +294,38 @@ describe('movement', () => {
     expect(c.velocity.y).toBeLessThanOrEqual(0);
   });
 
+  it('stands again on the next tick when the ground probe misses a floor right underneath once', () => {
+    // Walking down a 1:2 slope; the collision layer never reports ground, and the probe misses once (as
+    // Rapier's shape cast can on a ramp seam).
+    const floorAt = (x: number) => -0.5 * x;
+    let probes = 0;
+    const slope: CharacterMover = {
+      move(_c, d, out) {
+        out.x = d.x;
+        out.y = d.y;
+        out.z = d.z;
+        return false;
+      },
+      probeGround(c, maxDrop) {
+        probes++;
+        if (probes === 30) return Number.NaN;
+        const gap = c.position.y - floorAt(c.position.x);
+        return gap <= maxDrop ? -gap : Number.NaN;
+      },
+    };
+    const c = createCharacter(0, vec3(0, 0, 0), -Math.PI / 2); // forward = (-sin, 0, -cos) = +x: down the slope
+    const run = command((cmd) => (cmd.forward = 1));
+    let longestAir = 0;
+    let air = 0;
+    for (let i = 0; i < 60; i++) {
+      step(c, run, 1, slope);
+      air = c.grounded ? 0 : air + 1;
+      longestAir = Math.max(longestAir, air);
+    }
+    expect(probes).toBeGreaterThan(30);
+    expect(longestAir).toBe(1);
+  });
+
   it('caps fall speed', () => {
     const c = createCharacter(0, vec3(0, 100, 0), 0);
     step(c, createCommand(), 300, flatMover(-Infinity, null));

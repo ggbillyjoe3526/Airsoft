@@ -36,7 +36,7 @@ export interface MatchRulesText {
   roundTime: number;
   playerTeam: string;
   enemyTeam: string;
-  /** Flag mode: seconds to raise the flag, rounds before the sides swap, and whether your team attacks first. */
+  /** Seconds to raise the flag (flag mode), rounds before the teams swap ends (both modes), and whether your team attacks first. */
   raiseTime: number;
   halfTimeAfter: number;
   attackFirst: boolean;
@@ -58,7 +58,12 @@ export function describeRules(r: MatchRulesText, mode: MatchMode): string {
       end
     );
   }
-  return teams + `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` + end;
+  return (
+    teams +
+    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` +
+    `Teams swap ends after round ${r.halfTimeAfter}. ` +
+    end
+  );
 }
 
 function escapeHtml(text: string): string {

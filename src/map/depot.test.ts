@@ -4,7 +4,7 @@ import { FLAG } from '../config/modes';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
-import { buildNavGrid, createNavSearch, findPath } from '../nav/navGrid';
+import { buildNavGrid, canStep, cellIndex, cellX, cellZ, createNavSearch, findPath, floorAt, isWalkableAt, type NavGrid } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter } from '../sim/character';
 import { createCommand } from '../sim/commands';
@@ -14,7 +14,8 @@ import { DEPOT, DEPOT_LAYOUT } from './depot';
 import type { MapBlock, SpawnPoint } from './mapTypes';
 
 const EPS = 1e-9;
-const { halfX, halfZ, lanes } = DEPOT_LAYOUT;
+const { halfX, halfZ, lanes, dockHeight, dock: dockPlan } = DEPOT_LAYOUT;
+const NAV_GRID = buildNavGrid(DEPOT, NAV);
 
 // Heights above the floor. Characters stand PHYSICS.groundRestGap above it.
 const STANDING_EYE = PHYSICS.groundRestGap + BODY.standEyeHeight;
@@ -35,7 +36,7 @@ const MAX_LANE_SIGHTLINE = 26;
  * still accurate-ish here but slow and visible; beyond it, engagements would be cheap long-range picks.
  */
 const MAX_ANY_SIGHTLINE = 34;
-/** Players this close to a spawn point count as "at spawn" and must be hidden from the enemy's spawn. */
+/** Players this close to a spawn point count as "at spawn" and must be hidden from the other spawn. */
 const SPAWN_ZONE_RADIUS = 5;
 
 const top = (b: MapBlock): number => b.center.y + b.size.y / 2;
@@ -44,24 +45,36 @@ const minX = (b: MapBlock): number => b.center.x - b.size.x / 2;
 const maxX = (b: MapBlock): number => b.center.x + b.size.x / 2;
 const minZ = (b: MapBlock): number => b.center.z - b.size.z / 2;
 const maxZ = (b: MapBlock): number => b.center.z + b.size.z / 2;
-const props = DEPOT.blocks.filter(
-  (b) => b.kind !== 'floor' && Math.abs(b.center.x) < halfX && Math.abs(b.center.z) < halfZ,
-);
+/** Everything inside the perimeter except the ground floor: props, the dock and its ramps. */
+const props = DEPOT.blocks.filter((b) => !(b.kind === 'floor' && bottom(b) < 0) && Math.abs(b.center.x) < halfX && Math.abs(b.center.z) < halfZ);
+/** Cover and walls: what stands on a floor and isn't walked on. */
+const cover = props.filter((b) => b.kind !== 'floor' && b.kind !== 'ramp');
 
-/** Blocks that stop a walking character: they overlap the body's height and are too tall to step onto. */
-const blocksWalking = (b: MapBlock): boolean =>
-  b.kind !== 'floor' && bottom(b) < BODY.height && top(b) > PHYSICS.maxWalkableLedge;
+/** The dock: the raised floor block. */
+const dock = props.find((b) => b.kind === 'floor')!;
+/** The floor a block stands on, perhaps on top of another block: the dock under its centre, else the ground. */
+const baseOf = (b: MapBlock): number =>
+  bottom(b) >= top(dock) - EPS && b.center.x > minX(dock) && b.center.x < maxX(dock) && b.center.z > minZ(dock) && b.center.z < maxZ(dock) ? top(dock) : 0;
+/** True if `b` stands on a floor, squarely on top of another block (a crate in a stack), or is a window's lintel. */
+const supported = (b: MapBlock): boolean =>
+  Math.abs(bottom(b) - baseOf(b)) < EPS ||
+  (b.kind === 'wall' && props.some((o) => o.kind === 'wall' && bottom(o) < EPS && o.center.x === b.center.x && o.center.z === b.center.z && top(o) < bottom(b))) ||
+  props.some((o) => o !== b && Math.abs(top(o) - bottom(b)) < EPS && minX(o) <= minX(b) + EPS && maxX(o) >= maxX(b) - EPS && minZ(o) <= minZ(b) + EPS && maxZ(o) >= maxZ(b) - EPS);
 
-/** Blocks that stop sight at a given eye height. */
-const blockersAt = (eye: number): MapBlock[] => DEPOT.blocks.filter((b) => b.kind !== 'floor' && bottom(b) < eye && top(b) > eye);
+/**
+ * What stops sight: every solid except the ground floor and the ramps (a ramp is a wedge, its box would
+ * over-block; leaving ramps out only makes lines longer and hiding harder, so the checks stay strict).
+ */
+const sightBlockers = DEPOT.blocks.filter((b) => b.kind !== 'ramp' && !(b.kind === 'floor' && bottom(b) < 0));
 
-/** 2D segment vs axis-aligned rectangle (slab method). */
-function segmentHitsBox(ax: number, az: number, bx: number, bz: number, b: MapBlock): boolean {
+/** 3D segment vs axis-aligned box (slab method). */
+function segmentHitsBox(a: Vec3, b: Vec3, k: MapBlock): boolean {
   let t0 = 0;
   let t1 = 1;
   for (const [p, d, lo, hi] of [
-    [ax, bx - ax, minX(b), maxX(b)],
-    [az, bz - az, minZ(b), maxZ(b)],
+    [a.x, b.x - a.x, minX(k), maxX(k)],
+    [a.y, b.y - a.y, bottom(k), top(k)],
+    [a.z, b.z - a.z, minZ(k), maxZ(k)],
   ] as const) {
     if (Math.abs(d) < EPS) {
       if (p < lo || p > hi) return false;
@@ -77,79 +90,37 @@ function segmentHitsBox(ax: number, az: number, bx: number, bz: number, b: MapBl
   return true;
 }
 
-/** Where a character's centre can stand (clear of walking blockers by its radius). */
-function standable(x: number, z: number): boolean {
-  if (Math.abs(x) > halfX - BODY.radius || Math.abs(z) > halfZ - BODY.radius) return false;
-  return DEPOT.blocks
-    .filter(blocksWalking)
-    .every((b) => x < minX(b) - BODY.radius || x > maxX(b) + BODY.radius || z < minZ(b) - BODY.radius || z > maxZ(b) + BODY.radius);
-}
+const sees = (a: Vec3, b: Vec3): boolean => !sightBlockers.some((k) => segmentHitsBox(a, b, k));
 
-/** Standable points within SPAWN_ZONE_RADIUS of any of the spawns, on a grid. */
-function spawnZone(spawns: SpawnPoint[], step: number): { x: number; z: number }[] {
+/** The eye of someone standing (or crouched) at (x, z) on the floor there. */
+const eyeAt = (x: number, z: number, eye = STANDING_EYE): Vec3 => vec3(x, floorAt(NAV_GRID, x, z) + eye, z);
+
+/** Every place a player can stand on a `step` grid (walkable nav cells, any floor height). */
+function standablePoints(step: number): { x: number; z: number }[] {
   const pts: { x: number; z: number }[] = [];
-  const xs = spawns.map((s) => s.position.x);
-  const zs = spawns.map((s) => s.position.z);
-  for (let x = Math.min(...xs) - SPAWN_ZONE_RADIUS; x <= Math.max(...xs) + SPAWN_ZONE_RADIUS; x += step) {
-    for (let z = Math.min(...zs) - SPAWN_ZONE_RADIUS; z <= Math.max(...zs) + SPAWN_ZONE_RADIUS; z += step) {
-      const near = spawns.some((s) => Math.hypot(x - s.position.x, z - s.position.z) <= SPAWN_ZONE_RADIUS);
-      if (near && standable(x, z)) pts.push({ x, z });
-    }
+  for (let x = -halfX + step / 2; x < halfX; x += step) {
+    for (let z = -halfZ + step / 2; z < halfZ; z += step) if (isWalkableAt(NAV_GRID, x, z)) pts.push({ x, z });
   }
   return pts;
 }
 
-/** Longest stretch along x (inside the walls) at row z with nothing blocking sight at `eye`. */
-function longestClearRun(z: number, eye: number): number {
-  const intervals = blockersAt(eye)
-    .filter((b) => z >= minZ(b) && z <= maxZ(b))
-    .map((b) => [Math.max(-halfX, minX(b)), Math.min(halfX, maxX(b))] as const)
-    .sort((a, b) => a[0] - b[0]);
-  let cursor = -halfX;
-  let longest = 0;
-  for (const [lo, hi] of intervals) {
-    if (lo > cursor) longest = Math.max(longest, lo - cursor);
-    cursor = Math.max(cursor, hi);
-  }
-  return Math.max(longest, halfX - cursor);
+/** Standable points within SPAWN_ZONE_RADIUS of any of the spawns, on a grid. */
+function spawnZone(spawns: SpawnPoint[], step: number): { x: number; z: number }[] {
+  return standablePoints(step).filter((p) => spawns.some((s) => Math.hypot(p.x - s.position.x, p.z - s.position.z) <= SPAWN_ZONE_RADIUS));
 }
 
-// ---- Walkability grid (flood fill) --------------------------------------------------------------
-
-const CELL = 0.2;
-const COLS = Math.ceil((halfX * 2) / CELL);
-const ROWS = Math.ceil((halfZ * 2) / CELL);
-
-function cellCentre(i: number, j: number): { x: number; z: number } {
-  return { x: -halfX + (i + 0.5) * CELL, z: -halfZ + (j + 0.5) * CELL };
-}
-
-function buildWalkable(): Uint8Array {
-  const grid = new Uint8Array(COLS * ROWS);
-  for (let j = 0; j < ROWS; j++) {
-    for (let i = 0; i < COLS; i++) {
-      const { x, z } = cellCentre(i, j);
-      grid[j * COLS + i] = standable(x, z) ? 1 : 0;
-    }
-  }
-  return grid;
-}
-
-function cellOf(p: Vec3): number {
-  return Math.floor((p.z + halfZ) / CELL) * COLS + Math.floor((p.x + halfX) / CELL);
-}
-
-/** Breadth-first search over walkable cells; `allowed` can veto cells (to force a route through one lane). */
-function reachable(grid: Uint8Array, from: Vec3, to: Vec3, allowed: (x: number, z: number) => boolean): boolean {
-  const goal = cellOf(to);
-  const seen = new Uint8Array(grid.length);
-  const queue = [cellOf(from)];
-  seen[queue[0]!] = 1;
+/** Breadth-first search over the nav grid (with its step rule); `allowed` can veto cells (to force a route through one lane). */
+function reachable(g: NavGrid, from: Vec3, to: Vec3, allowed: (x: number, z: number) => boolean): boolean {
+  const goal = cellIndex(g, to.x, to.z);
+  const start = cellIndex(g, from.x, from.z);
+  const seen = new Uint8Array(g.cols * g.rows);
+  const queue = [start];
+  seen[start] = 1;
   for (let head = 0; head < queue.length; head++) {
     const c = queue[head]!;
     if (c === goal) return true;
-    const i = c % COLS;
-    const j = (c - i) / COLS;
+    const i = c % g.cols;
+    const j = (c - i) / g.cols;
     for (const [di, dj] of [
       [1, 0],
       [-1, 0],
@@ -158,11 +129,9 @@ function reachable(grid: Uint8Array, from: Vec3, to: Vec3, allowed: (x: number, 
     ] as const) {
       const ni = i + di;
       const nj = j + dj;
-      if (ni < 0 || nj < 0 || ni >= COLS || nj >= ROWS) continue;
-      const n = nj * COLS + ni;
-      if (seen[n] || !grid[n]) continue;
-      const { x, z } = cellCentre(ni, nj);
-      if (!allowed(x, z)) continue;
+      if (ni < 0 || nj < 0 || ni >= g.cols || nj >= g.rows) continue;
+      const n = nj * g.cols + ni;
+      if (seen[n] || !canStep(g, c, n) || !allowed(cellX(g, ni), cellZ(g, nj))) continue;
       seen[n] = 1;
       queue.push(n);
     }
@@ -170,206 +139,209 @@ function reachable(grid: Uint8Array, from: Vec3, to: Vec3, allowed: (x: number, 
   return false;
 }
 
+/** A route may use any connector, but must cross the centre line (x = 0) inside `lane`'s band. */
+const viaLane =
+  (lane: { minZ: number; maxZ: number }) =>
+  (x: number, z: number): boolean =>
+    Math.abs(x) > 1.6 || (z > lane.minZ && z < lane.maxZ);
+
+/** Walking distance along a nav route. */
+function walk(from: Vec3, to: Vec3): number {
+  const route: Vec3[] = [];
+  expect(findPath(NAV_GRID, createNavSearch(NAV_GRID), from, to, NAV.snap, route), `route ${from.x},${from.z} → ${to.x},${to.z}`).toBe(true);
+  let d = 0;
+  let p = from;
+  for (const q of route) {
+    d += Math.hypot(q.x - p.x, q.y - p.y, q.z - p.z);
+    p = q;
+  }
+  return d;
+}
+
 // ---- Tests -------------------------------------------------------------------------------------
 
 describe('Depot map', () => {
-  const [blue, orange] = DEPOT.spawns;
+  const [west, east] = DEPOT.spawns;
+  const pole = DEPOT.flag!;
 
-  it('is mirror-symmetric across x = 0, so both teams get the same map', () => {
-    for (const b of DEPOT.blocks) {
-      const twin = DEPOT.blocks.find(
-        (o) =>
-          o.kind === b.kind &&
-          Math.abs(o.center.x + b.center.x) < EPS &&
-          Math.abs(o.center.y - b.center.y) < EPS &&
-          Math.abs(o.center.z - b.center.z) < EPS &&
-          Math.abs(o.size.x - b.size.x) < EPS &&
-          Math.abs(o.size.y - b.size.y) < EPS &&
-          Math.abs(o.size.z - b.size.z) < EPS,
-      );
-      expect(twin, `no mirror twin for ${b.kind} at ${JSON.stringify(b.center)}`).toBeDefined();
-    }
-    expect(blue.length).toBe(orange.length);
-    blue.forEach((s, i) => {
-      const o = orange[i]!;
-      expect(o.position.x).toBeCloseTo(-s.position.x, 9);
-      expect(o.position.z).toBeCloseTo(s.position.z, 9);
-      expect(o.yaw).toBeCloseTo(-s.yaw, 9);
-    });
-  });
-
-  it('keeps every prop inside the perimeter', () => {
+  it('keeps every prop inside the perimeter, standing on the ground, on the dock or on another prop', () => {
+    expect(top(dock)).toBe(dockHeight);
     for (const b of props) {
       expect(Math.abs(b.center.x) + b.size.x / 2).toBeLessThanOrEqual(halfX + EPS);
       expect(Math.abs(b.center.z) + b.size.z / 2).toBeLessThanOrEqual(halfZ + EPS);
-      expect(bottom(b)).toBeGreaterThanOrEqual(-EPS);
+      expect(supported(b), `${b.kind} at ${JSON.stringify(b.center)} floats`).toBe(true);
     }
   });
 
   it('uses only cover that is unclimbable, and low cover that hides a crouched player', () => {
     expect(CROUCHED_EYE).toBeLessThan(DEPOT_LAYOUT.crouchCoverHeight - CROUCH_HIDE_MARGIN);
     expect(STANDING_EYE).toBeGreaterThan(DEPOT_LAYOUT.crouchCoverHeight);
-    for (const b of props.filter((p) => bottom(p) < EPS)) {
-      const h = top(b);
+    // The dock's open edge too: you can jump down from it, not up onto it.
+    for (const b of [...cover.filter((c) => Math.abs(bottom(c) - baseOf(c)) < EPS), dock]) {
+      const h = top(b) - baseOf(b);
       const where = `${b.kind} at ${JSON.stringify(b.center)} is ${h} m tall`;
       expect(h <= PHYSICS.maxWalkableLedge || h >= MIN_UNCLIMBABLE_HEIGHT, where).toBe(true);
       // Anything a standing player can see over must hide a crouched one.
-      if (h < STANDING_EYE) expect(h, where).toBeGreaterThan(CROUCHED_EYE + CROUCH_HIDE_MARGIN);
+      if (b.kind !== 'floor' && h < STANDING_EYE) expect(h, where).toBeGreaterThan(CROUCHED_EYE + CROUCH_HIDE_MARGIN);
     }
   });
 
-  it('has no slits: gaps between obstacles are either sealed (< 0.3 m) or clearly walkable (≥ 0.9 m)', () => {
-    const blockers = DEPOT.blocks.filter(blocksWalking);
-    const inside = (x: number, z: number, skip: MapBlock[]): boolean =>
-      blockers.some((b) => !skip.includes(b) && x > minX(b) && x < maxX(b) && z > minZ(b) && z < maxZ(b));
+  it('has no slits: gaps between obstacles on the same floor are either sealed (< 0.3 m) or clearly walkable (≥ 0.9 m)', () => {
+    // Blocks that stop someone walking on their floor.
+    const blockers = cover.filter((b) => top(b) - baseOf(b) > PHYSICS.maxWalkableLedge);
+    const inside = (x: number, z: number, base: number, skip: MapBlock[]): boolean =>
+      blockers.some((b) => !skip.includes(b) && baseOf(b) === base && x > minX(b) && x < maxX(b) && z > minZ(b) && z < maxZ(b));
     for (let i = 0; i < blockers.length; i++) {
       for (let j = i + 1; j < blockers.length; j++) {
         const a = blockers[i]!;
         const b = blockers[j]!;
+        if (baseOf(a) !== baseOf(b)) continue;
         const gx = Math.max(0, Math.max(minX(a), minX(b)) - Math.min(maxX(a), maxX(b)));
         const gz = Math.max(0, Math.max(minZ(a), minZ(b)) - Math.min(maxZ(a), maxZ(b)));
         const gap = Math.hypot(gx, gz);
         if (gap < 0.3 || gap >= 0.9) continue;
         // The middle of the gap: if a third block fills it, there's no slit there.
-        const mx = gx > 0 ? (Math.max(minX(a), minX(b)) + Math.min(maxX(a), maxX(b))) / 2 : (Math.max(minX(a), minX(b)) + Math.min(maxX(a), maxX(b))) / 2;
-        const mz = gz > 0 ? (Math.max(minZ(a), minZ(b)) + Math.min(maxZ(a), maxZ(b))) / 2 : (Math.max(minZ(a), minZ(b)) + Math.min(maxZ(a), maxZ(b))) / 2;
+        const mx = (Math.max(minX(a), minX(b)) + Math.min(maxX(a), maxX(b))) / 2;
+        const mz = (Math.max(minZ(a), minZ(b)) + Math.min(maxZ(a), maxZ(b))) / 2;
         const where = `${gap.toFixed(2)} m between ${a.kind} (${a.center.x}, ${a.center.z}) and ${b.kind} (${b.center.x}, ${b.center.z})`;
-        expect(inside(mx, mz, [a, b]), where).toBe(true);
+        expect(inside(mx, mz, baseOf(a), [a, b]), where).toBe(true);
       }
     }
   });
 
-  it('gives each team three spawns on the floor, clear of geometry, facing the enemy side', () => {
-    for (const [team, spawns] of [
-      [0, blue],
-      [1, orange],
+  it('gives each end three spawns on the ground, clear of geometry, facing the other end', () => {
+    for (const [end, spawns] of [
+      [0, west],
+      [1, east],
     ] as const) {
       expect(spawns.length).toBe(3);
       for (const s of spawns) {
         expect(s.position.y).toBe(0);
-        expect(Math.sign(-Math.sin(s.yaw))).toBe(team === 0 ? 1 : -1);
-        expect(standable(s.position.x, s.position.z), `spawn ${JSON.stringify(s.position)} is blocked`).toBe(true);
+        expect(Math.sign(-Math.sin(s.yaw))).toBe(end === 0 ? 1 : -1);
+        expect(isWalkableAt(NAV_GRID, s.position.x, s.position.z), `spawn ${JSON.stringify(s.position)} is blocked`).toBe(true);
       }
     }
   });
 
-  it('gives each team a dead-zone spot per player on the floor, clear of geometry, a body apart and away from the spawns', () => {
-    for (const [team, spots] of DEPOT.deadZones.entries()) {
+  it('gives each end a dead-zone spot per player on the ground, clear of geometry, a body apart and away from the spawns', () => {
+    for (const [end, spots] of DEPOT.deadZones.entries()) {
       expect(spots.length).toBe(3);
       for (const s of spots) {
-        const where = `team ${team} dead-zone spot ${JSON.stringify(s.position)}`;
+        const where = `end ${end} dead-zone spot ${JSON.stringify(s.position)}`;
         expect(s.position.y).toBe(0);
-        expect(standable(s.position.x, s.position.z), `${where} is blocked`).toBe(true);
-        for (const sp of DEPOT.spawns[team]!) expect(Math.hypot(s.position.x - sp.position.x, s.position.z - sp.position.z), where).toBeGreaterThan(1);
+        expect(isWalkableAt(NAV_GRID, s.position.x, s.position.z), `${where} is blocked`).toBe(true);
+        for (const sp of DEPOT.spawns[end]!) expect(Math.hypot(s.position.x - sp.position.x, s.position.z - sp.position.z), where).toBeGreaterThan(1);
         for (const o of spots) if (o !== s) expect(Math.hypot(s.position.x - o.position.x, s.position.z - o.position.z), where).toBeGreaterThan(2 * BODY.radius); // figures on neighbouring spots don't overlap
       }
     }
   });
 
-  it('connects the spawns through each of the three lanes', () => {
-    const grid = buildWalkable();
+  it('connects the two ends, and the west end to the pole, through each of the three lanes', () => {
     for (const [name, lane] of Object.entries(lanes)) {
-      // A route may use any connector, but must cross the centre line inside this lane.
-      const viaLane = (x: number, z: number): boolean => Math.abs(x) > 1.6 || (z > lane.minZ && z < lane.maxZ);
-      for (const from of blue) {
-        for (const to of orange) {
-          expect(reachable(grid, from.position, to.position, viaLane), `no ${name} route`).toBe(true);
-        }
+      for (const from of west) {
+        expect(reachable(NAV_GRID, from.position, pole, viaLane(lane)), `no ${name} route to the pole`).toBe(true);
+        for (const to of east) expect(reachable(NAV_GRID, from.position, to.position, viaLane(lane)), `no ${name} route between the ends`).toBe(true);
       }
     }
   });
 
-  describe('flagpoles (flag mode)', () => {
-    const flags = DEPOT.flags!;
+  it('runs each bot lane in its own band, from the west end to the east end', () => {
+    const bands = [lanes.north, lanes.mid, lanes.south];
+    expect(DEPOT.lanes).toHaveLength(bands.length);
+    DEPOT.lanes.forEach((points, i) => {
+      // The middle of each lane (where it crosses x = 0) lies in its band.
+      const crossing = points.findIndex((p) => p.x > 0);
+      const [a, b] = [points[crossing - 1]!, points[crossing]!];
+      const z = a.z + ((b.z - a.z) * -a.x) / (b.x - a.x);
+      expect(z, `lane ${i}`).toBeGreaterThan(bands[i]!.minZ);
+      expect(z, `lane ${i}`).toBeLessThan(bands[i]!.maxZ);
+      expect(points[0]!.x).toBeLessThan(points[points.length - 1]!.x);
+    });
+  });
 
-    it('stand one per team in its own half, mirror images, on open ground all round the pole', () => {
-      const [west, east] = flags;
-      expect(west.x).toBeLessThan(-2);
-      expect(east).toEqual(vec3(-west.x, west.y, west.z));
-      for (const f of flags) {
-        expect(f.y).toBe(0);
-        // Most of the ground within reach of the rope is standable, so players can work it from any side.
-        let open = 0;
-        let all = 0;
-        const r = FLAG.radius;
-        for (let dx = -r; dx <= r; dx += 0.2) {
-          for (let dz = -r; dz <= r; dz += 0.2) {
-            if (Math.hypot(dx, dz) > r) continue;
-            all++;
-            if (standable(f.x + dx, f.z + dz)) open++;
-          }
-        }
-        expect(open / all, `open ground at ${f.x}, ${f.z}`).toBeGreaterThan(0.9);
-      }
+  describe('the loading dock', () => {
+    it('is reached by a ramp at each end, and is a drop everywhere else (bots never route off its edge)', () => {
+      const onDock = vec3(4.5, dockHeight, dockPlan.edgeZ - 0.4);
+      expect(floorAt(NAV_GRID, onDock.x, onDock.z)).toBeCloseTo(dockHeight, 6);
+      // Up the west ramp only (east half of the map closed), and up the east ramp only (west half closed).
+      expect(reachable(NAV_GRID, west[0]!.position, onDock, (x) => x < 6)).toBe(true);
+      expect(reachable(NAV_GRID, east[0]!.position, onDock, (x) => x > 3)).toBe(true);
+      // Without the ramps (their cells vetoed), the dock is cut off from the road below.
+      const noRamps = (x: number, z: number) => !(z < dockPlan.edgeZ && dockPlan.ramps.some(([x0, x1]) => x > x0! && x < x1!));
+      expect(reachable(NAV_GRID, west[0]!.position, onDock, noRamps)).toBe(false);
     });
 
-    it('can be reached by the attackers through each of the three lanes', () => {
-      const grid = buildWalkable();
-      for (const [name, lane] of Object.entries(lanes)) {
-        const viaLane = (x: number, z: number): boolean => Math.abs(x) > 1.6 || (z > lane.minZ && z < lane.maxZ);
-        for (const s of orange) expect(reachable(grid, s.position, flags[0], viaLane), `no ${name} route to the Blue pole`).toBe(true);
+    it('overlooks the road, not Container Alley: the containers under it are stacked (only the west ramp looks through the connector)', () => {
+      // On the dock proper (its west end aside, where the ramp comes up from the connector to mid), nothing in
+      // the alley is in sight.
+      const onDock = standablePoints(0.5).filter((p) => floorAt(NAV_GRID, p.x, p.z) > dockHeight - EPS && p.x > 2);
+      const alley = standablePoints(0.5).filter((p) => p.z < lanes.mid.maxZ && p.z > lanes.mid.minZ && p.x < 3.6);
+      expect(onDock.length).toBeGreaterThan(50);
+      const open: string[] = [];
+      for (const a of onDock) for (const b of alley) if (sees(eyeAt(a.x, a.z), eyeAt(b.x, b.z))) open.push(`(${a.x}, ${a.z}) → (${b.x}, ${b.z})`);
+      expect(open.slice(0, 5), `${open.length} lines from the dock into the alley`).toEqual([]);
+    });
+  });
+
+  describe('the flagpole (Attack / Defend)', () => {
+    it('stands in the Bay on the east side, on open ground all round the pole', () => {
+      expect(pole.x).toBeGreaterThan(6);
+      expect(pole.y).toBe(0);
+      // Most of the ground within reach of the rope is standable, so players can work it from any side.
+      let open = 0;
+      let all = 0;
+      const r = FLAG.radius;
+      for (let dx = -r; dx <= r; dx += 0.2) {
+        for (let dz = -r; dz <= r; dz += 0.2) {
+          if (Math.hypot(dx, dz) > r) continue;
+          all++;
+          if (isWalkableAt(NAV_GRID, pole.x + dx, pole.z + dz)) open++;
+        }
       }
+      expect(open / all).toBeGreaterThan(0.9);
     });
 
-    it('stand much closer to the defenders than to the attackers, out of sight of the attackers’ spawn', () => {
-      const nav = buildNavGrid(DEPOT, NAV);
-      const search = createNavSearch(nav);
-      const route: Vec3[] = [];
-      const walk = (from: Vec3, to: Vec3): number => {
-        expect(findPath(nav, search, from, to, NAV.snap, route)).toBe(true);
-        let d = 0;
-        let p = from;
-        for (const q of route) {
-          d += Math.hypot(q.x - p.x, q.z - p.z);
-          p = q;
-        }
-        return d;
-      };
-      const blockers = blockersAt(STANDING_EYE);
-      for (const [team, f] of flags.entries()) {
-        const defenders = DEPOT.spawns[team]!;
-        const attackers = DEPOT.spawns[1 - team]!;
-        const defend = Math.max(...defenders.map((s) => walk(s.position, f)));
-        const attack = Math.min(...attackers.map((s) => walk(s.position, f)));
-        expect(attack, `pole ${team}: attackers ${attack.toFixed(1)} m, defenders ${defend.toFixed(1)} m`).toBeGreaterThan(defend * 1.6);
-        for (const a of spawnZone(attackers, 0.5)) {
-          expect(blockers.some((k) => segmentHitsBox(a.x, a.z, f.x, f.z, k)), `(${a.x}, ${a.z}) sees pole ${team}`).toBe(true);
-        }
-      }
+    it('stands much closer to the defenders’ spawns than to the attackers’, out of sight of the attackers’ spawn', () => {
+      const defend = Math.max(...east.map((s) => walk(s.position, pole)));
+      const attack = Math.min(...west.map((s) => walk(s.position, pole)));
+      expect(attack, `attackers ${attack.toFixed(1)} m, defenders ${defend.toFixed(1)} m`).toBeGreaterThan(defend * 1.6);
+      const target = vec3(pole.x, STANDING_EYE, pole.z);
+      for (const a of spawnZone(west, 0.5)) expect(sees(eyeAt(a.x, a.z), target), `(${a.x}, ${a.z}) sees the pole`).toBe(false);
     });
   });
 
   it('hides everyone near one spawn from everyone near the other, standing or crouched', () => {
-    const blueZone = spawnZone(blue, 0.5);
-    const orangeZone = spawnZone(orange, 0.5);
-    expect(blueZone.length).toBeGreaterThan(50);
+    const westZone = spawnZone(west, 0.5);
+    const eastZone = spawnZone(east, 0.5);
+    expect(westZone.length).toBeGreaterThan(50);
+    expect(eastZone.length).toBeGreaterThan(50);
     for (const eye of [STANDING_EYE, CROUCHED_EYE]) {
-      const blockers = blockersAt(eye);
-      for (const a of blueZone) {
-        for (const b of orangeZone) {
-          const blocked = blockers.some((k) => segmentHitsBox(a.x, a.z, b.x, b.z, k));
-          expect(blocked, `(${a.x}, ${a.z}) sees (${b.x}, ${b.z}) at eye ${eye}`).toBe(true);
-        }
+      for (const a of westZone) {
+        for (const b of eastZone) expect(sees(eyeAt(a.x, a.z, eye), eyeAt(b.x, b.z, eye)), `(${a.x}, ${a.z}) sees (${b.x}, ${b.z}) at eye ${eye}`).toBe(false);
       }
     }
   });
 
-  it(`keeps every straight line along a lane under ${MAX_LANE_SIGHTLINE} m`, () => {
+  it(`keeps every straight west–east line along a lane under ${MAX_LANE_SIGHTLINE} m`, () => {
     for (const [name, lane] of Object.entries(lanes)) {
-      for (let z = lane.minZ + BODY.radius; z <= lane.maxZ - BODY.radius; z += 0.05) {
-        const run = longestClearRun(z, STANDING_EYE);
-        expect(run, `${name} lane, z = ${z.toFixed(2)}: ${run.toFixed(1)} m clear`).toBeLessThanOrEqual(MAX_LANE_SIGHTLINE);
+      for (let z = lane.minZ + BODY.radius; z <= lane.maxZ - BODY.radius; z += 0.25) {
+        const row: Vec3[] = [];
+        for (let x = -halfX + 0.25; x < halfX; x += 0.5) if (isWalkableAt(NAV_GRID, x, z)) row.push(eyeAt(x, z));
+        let longest = 0;
+        for (let i = 0; i < row.length; i++) {
+          for (let j = row.length - 1; j > i; j--) {
+            const d = row[j]!.x - row[i]!.x;
+            if (d <= longest) break;
+            if (Math.abs(row[j]!.y - row[i]!.y) < EPS && sees(row[i]!, row[j]!)) longest = d;
+          }
+        }
+        expect(longest, `${name} lane, z = ${z.toFixed(2)}: ${longest.toFixed(1)} m clear`).toBeLessThanOrEqual(MAX_LANE_SIGHTLINE);
       }
     }
   });
 
-  it(`has no line of sight longer than ${MAX_ANY_SIGHTLINE} m in any direction`, { timeout: 30_000 }, () => {
-    const points: { x: number; z: number }[] = [];
-    // Every standable point on a 0.5 m grid (a 0.25 m scan was also clean when this was written).
-    for (let x = -halfX + 0.5; x < halfX; x += 0.5) {
-      for (let z = -halfZ + 0.5; z < halfZ; z += 0.5) if (standable(x, z)) points.push({ x, z });
-    }
-    const blockers = blockersAt(STANDING_EYE);
+  it(`has no line of sight longer than ${MAX_ANY_SIGHTLINE} m in any direction, from the ground or the dock`, { timeout: 60_000 }, () => {
+    const points = standablePoints(0.5).map((p) => eyeAt(p.x, p.z));
     const limitSq = MAX_ANY_SIGHTLINE * MAX_ANY_SIGHTLINE;
     const open: string[] = [];
     for (let i = 0; i < points.length; i++) {
@@ -377,9 +349,7 @@ describe('Depot map', () => {
       for (let j = i + 1; j < points.length; j++) {
         const b = points[j]!;
         if ((a.x - b.x) ** 2 + (a.z - b.z) ** 2 <= limitSq) continue;
-        if (!blockers.some((k) => segmentHitsBox(a.x, a.z, b.x, b.z, k))) {
-          open.push(`(${a.x}, ${a.z}) → (${b.x}, ${b.z}) ${Math.hypot(a.x - b.x, a.z - b.z).toFixed(1)} m`);
-        }
+        if (sees(a, b)) open.push(`(${a.x}, ${a.y.toFixed(2)}, ${a.z}) → (${b.x}, ${b.y.toFixed(2)}, ${b.z}) ${Math.hypot(a.x - b.x, a.z - b.z).toFixed(1)} m`);
       }
     }
     expect(open.slice(0, 10), `${open.length} long sightlines`).toEqual([]);
@@ -401,7 +371,7 @@ describe('Depot map', () => {
         for (let i = 0; i < 60; i++) stepLean(c, cmd, BODY, HITS, MOVEMENT, world, 1 / 60);
         return { c, eye: leanedEye(c, BODY, HITS, vec3()) };
       };
-      // Beside Blue's spawn wall (x -17.7 .. -17.3), facing -Z: the wall is on the right.
+      // Beside the west spawn wall (x -17.7 .. -17.3), facing -Z: the wall is on the right.
       for (const crouch of [0, 1]) {
         const right = lean(-18.1, 0, 0, 1, crouch);
         expect(right.c.lean).toBeLessThan(1);
@@ -410,29 +380,27 @@ describe('Depot map', () => {
       }
       // Behind the wall near its north end (z 5.5), facing +X: the right is +Z. Upright, the wall hides the
       // ground beyond its end; leaning right puts the eyes past the end, so that line of sight opens.
-      const target = vec3(-16.6, PHYSICS.groundRestGap + BODY.standEyeHeight, 5.6); // in the gap before the crates past the end
-      const sees = (from: Vec3) => {
+      const target = vec3(-16.6, PHYSICS.groundRestGap + BODY.standEyeHeight, 5.6); // on open ground just past the end
+      const clear = (from: Vec3) => {
         const d = vec3(target.x - from.x, target.y - from.y, target.z - from.z);
         const len = Math.hypot(d.x, d.y, d.z);
         return world.raycastStatic(from, vec3(d.x / len, d.y / len, d.z / len), len) < 0;
       };
-      expect(sees(lean(-18.3, 5.1, -Math.PI / 2, 0, 0).eye)).toBe(false);
+      expect(clear(lean(-18.3, 5.1, -Math.PI / 2, 0, 0).eye)).toBe(false);
       const peek = lean(-18.3, 5.1, -Math.PI / 2, 1, 0);
       expect(peek.c.lean).toBe(1);
-      expect(sees(peek.eye)).toBe(true);
+      expect(clear(peek.eye)).toBe(true);
       world.dispose();
     });
 
     it('agrees that the spawn points cannot see each other', () => {
       const world = new PhysicsWorld(DEPOT, BODY, 1 / 60);
-      const dir = vec3();
-      for (const a of blue) {
-        for (const b of orange) {
+      for (const a of west) {
+        for (const b of east) {
           const from = vec3(a.position.x, STANDING_EYE, a.position.z);
-          const dist = Math.hypot(b.position.x - a.position.x, b.position.z - a.position.z);
-          dir.x = (b.position.x - a.position.x) / dist;
-          dir.z = (b.position.z - a.position.z) / dist;
-          expect(world.raycastStatic(from, dir, dist)).toBeGreaterThan(0);
+          const d = vec3(b.position.x - a.position.x, 0, b.position.z - a.position.z);
+          const dist = Math.hypot(d.x, d.z);
+          expect(world.raycastStatic(from, vec3(d.x / dist, 0, d.z / dist), dist)).toBeGreaterThan(0);
         }
       }
       world.dispose();

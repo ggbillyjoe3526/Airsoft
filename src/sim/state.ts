@@ -18,8 +18,8 @@ export interface GameState {
   round: RoundState;
 }
 
-/** A fresh game in `mode` (flag mode needs the map's flag spots, one per defending team). */
-export function createGameState(seed: number, maxBBs: number, rules: RoundRules, mode: MatchMode = 'elimination', flagSpots: readonly Vec3[] = []): GameState {
+/** A fresh game in `mode` (flag mode needs the map's flagpole). */
+export function createGameState(seed: number, maxBBs: number, rules: RoundRules, mode: MatchMode = 'elimination', pole?: Vec3): GameState {
   return {
     tick: 0,
     time: 0,
@@ -27,6 +27,6 @@ export function createGameState(seed: number, maxBBs: number, rules: RoundRules,
     bbs: createBBPool(maxBBs),
     events: [],
     rng: createRng(seed),
-    round: createRoundState(rules, mode, flagSpots),
+    round: createRoundState(rules, mode, pole),
   };
 }
