@@ -210,7 +210,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 
 | # | Note | Goes to |
 |---|---|---|
-| 1 | Fire modes: single shot, semi auto, burst, fully auto | M12a |
+| 1 | Fire modes: single shot, semi auto, burst, fully auto, per replica as on the real type it's based on (a Glock-17-style pistol semi only, an MP5-style SMG single, burst and auto) | M12a |
 | 2 | The reload is a tiny bit too slow | M12a |
 | 3 | Aim down sights only with a scope fitted; a separate sensitivity while aiming | M12b |
 | 4 | Scopes aren't part of the replica models; they're accessories added through customisation | M12b (the optic slot), v0.3 / v0.5 (more optics, full customisation) |
@@ -227,11 +227,12 @@ the tutorial come last because they dress and explain everything before them.
 - **M12. Weapon handling** (owner's playtest notes 1, 2, 3, 4, 5 and 7). Split in two so the quick changes can be
   played first. Bots play by the same handling rules where they apply.
   - **M12a. Fire modes, reloads, crouch, steadier aim** (notes 1, 2, 5, 7)
-    - **Fire modes:** each replica lists the modes it supports, and a fire selector key (B by default, rebindable)
-      cycles them. The AEG gets semi, a 3-round burst and full auto (full auto by default); the gas pistol stays
-      semi only. The HUD shows the current mode next to the ammo. Whether "single shot" means something other
-      than semi (for example one shot per bolt cycle, as spring replicas work) is the owner's call; until then it
-      is treated as semi.
+    - **Fire modes:** not every replica has every mode (owner, 2026-10-03). Each replica lists the modes of the
+      real-world type it is modelled on, and a fire selector key (B by default, rebindable) cycles them. A
+      Glock-17-style pistol is semi only (one shot per trigger pull); an MP5-style SMG has single, burst and full
+      auto. Today's AR-pattern AEG gets single, a 3-round burst and full auto (full auto by default); the gas
+      pistol stays semi only. The HUD shows the current mode next to the ammo. Later platforms (v0.3) follow the
+      same rule. In-game names stay generic (no brand names, CLAUDE.md §4).
     - **Faster reloads:** about 15% quicker (AEG 2.1 → 1.8 s, pistol 1.4 → 1.2 s). The reload animation and its
       sounds already scale with the reload time.
     - **Crouch toggle:** C toggles crouch by default (press to crouch, press again to stand), with a setting to switch

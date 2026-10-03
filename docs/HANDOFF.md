@@ -14,8 +14,8 @@ _Last updated: 2026-10-03 · branch `docs/playtest-feedback-roadmap` (roadmap up
 - **The owner's playtest notes are in the roadmap** (Phase 4 table of notes): M12 Weapon handling (M12a fire modes,
   faster reloads, crouch toggle, steadier aim when still; M12b optics as accessories, aiming down sights, aiming
   sensitivity) and M13 Audio rework. DECISIONS has the first-guess numbers (2026-10-03).
-- Open owner questions: the Phase 4 order (proposed M12a → M12b → M11 → M13 → art → menus → tutorial), whether
-  "single shot" means something other than semi, and the M11 layout sketch
+- Open owner questions: the Phase 4 order (proposed M12a → M12b → M11 → M13 → art → menus → tutorial) and the
+  M11 layout sketch
   (https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD).
 - The critic runs on Opus (`.claude/agents/critic.md`). The owner plays on an RTX 5090 desktop; the iGPU 60 FPS
   target is a Beta item. The owner is new to GitHub: explain in plain words and say exactly what to click.
