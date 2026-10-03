@@ -60,9 +60,10 @@ export interface ReplicaLook {
   /** Fitted with a suppressor: its shots sound quieter and duller (config/audio.ts suppressed). */
   suppressed: boolean;
   /**
-   * Where it sits in the first-person view (camera space, metres) and its inward cant (radians). Keep the cant at 0:
-   * a barrel pointing straight ahead runs on screen from the muzzle to the crosshair, the line your BBs are drawn
-   * along (owner playtest, 2026-10-03: a canted pistol looked aimed off to the left).
+   * Where it sits in the first-person view (camera space, metres) and its inward cant (radians, + turns the muzzle
+   * left). A barrel pointing straight ahead (0) runs on screen from the muzzle to the crosshair, the line your BBs
+   * are drawn along, so the rifle keeps 0. The pistol keeps a slight lean (owner playtests, 2026-10-03: 0.36 looked
+   * aimed off to the left, 0 "slightly too straight"); `render/tracerLine.test.ts` caps how far it may turn.
    */
   hold: { position: readonly [number, number, number]; yaw: number };
   /**
@@ -125,7 +126,7 @@ export const GAS_PISTOL: ReplicaConfig = {
   spreadDeg: 0.8,
   recoilDeg: 0.5,
   opticMount: false,
-  look: { model: 'pistol', shotSound: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0 } },
+  look: { model: 'pistol', shotSound: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
 };
 
 /** The hop-up dial the player turns before a match (0..1 of a replica's hopUpMax), shown as a percentage. */

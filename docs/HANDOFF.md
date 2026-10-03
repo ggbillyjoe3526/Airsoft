@@ -29,8 +29,8 @@ _Last updated: 2026-10-03 · branch `claude/project-thread-vkfuxy` (Phase 4 M12c
 ## Working notes and gotchas
 
 - **The barrel line:** BBs are drawn from the muzzle, blending onto the eye line, so on screen they run from the muzzle
-  to the crosshair. That matches the barrel only while `look.hold.yaw` is 0 (no cant). Keep it 0, or the BBs look
-  fired off-axis again; `tracerLine.test.ts` fails if not.
+  to the crosshair. That matches the barrel only while `look.hold.yaw` is 0 (no cant). The rifle keeps 0; the pistol
+  has a slight 0.1 rad left lean at the owner's request (capped at 0.12 by `tracerLine.test.ts`).
 - **Hop-up and bot balance:** the factory dials changed every BB's arc (the AEG was a fixed 0.14 lift, now 0.195).
   Re-measure the Attack / Defend guard after any hop change (all guards stayed green here).
 - **The aimed view:** keep `aimHold[1] = -RIFLE_OPTIC.axisUp` (a viewmodel test checks it).
