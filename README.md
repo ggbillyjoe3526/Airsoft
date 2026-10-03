@@ -115,6 +115,9 @@ Then open **http://localhost:4173**.
 - **Bot difficulty** (Easy, Normal, Hard) is picked on the start screen and applies to all bots, teammates too.
   Changed mid-match, it starts with the next round. On Normal, a bot's first BBs up close can miss, and
   moving targets are harder for bots to hit.
+- **Loadout, before a match:** the start screen's Loadout box fits the rifle's optic (iron sights or a red dot) and
+  sets each replica's **hop-up**: the backspin that keeps a BB flying flat. Out of the box the rifle is on target to
+  about 38 m and the pistol to about 25 m; turn it up too far and BBs rise and float. It isn't on the pause screen.
 
 ### Controls
 
@@ -124,7 +127,7 @@ Then open **http://localhost:4173**.
 | Mouse | Aim |
 | Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click) |
 | B | Fire mode: step the AEG rifle through Semi, Burst and Auto (the pistol is semi only) |
-| Right click (hold) | Aim down sights: only with an optic fitted (pick **Optic: Red dot** on the start screen for the rifle). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. |
+| Right click (hold) | Aim down sights: only with an optic fitted (pick **Optic: Red dot** in the Loadout box on the start screen for the rifle). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. |
 | Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
 | Left Alt | Sprint (forward only) |
 | C | Crouch: press to go down, again to stand (sprint or jump also stands you up). The start screen can switch it to hold. |

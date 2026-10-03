@@ -14,7 +14,7 @@ import { BBRenderer } from './bbRenderer';
 import { figureMuzzle } from './characterModels';
 import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
-import { Viewmodel } from './viewmodel';
+import { sprintCarry, Viewmodel } from './viewmodel';
 
 /**
  * Everything the player sees and hears about replicas and BBs: BBs in flight, impact puffs, the held
@@ -135,7 +135,8 @@ export class CombatPresentation {
     if (aiming && optic) this.aimZoom = OPTICS[optic].zoom;
     this.renderer.setZoom(1 + (this.aimZoom - 1) * this.aimBlend);
     this.viewmodel.setAspect(this.renderer.camera.aspect);
-    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carried, p.armament, this.loadout, p.status === 'calling', this.aimBlend);
+    const carry = p.sprinting ? 1 : sprintCarry(p.sprintLockout, this.movement.sprintFireLockout);
+    this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carry, p.armament, this.loadout, p.status === 'calling', this.aimBlend);
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
     const spread = THREE.MathUtils.degToRad(this.loadout[p.armament.active]!.spreadDeg * p.spreadScale);

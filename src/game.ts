@@ -32,14 +32,14 @@ import { MatchPresentation } from './render/matchPresentation';
 import { Renderer } from './render/renderer';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
-import { fitOptic } from './sim/armament';
+import { fitOptic, setHopUps } from './sim/armament';
 import { attackersInRound, placeTeams, restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { DebugOverlay } from './ui/debugOverlay';
 import { modeNote, modeTakesEffect, modeToDescribe } from './ui/modeChoice';
-import { opticNote, opticTakesEffect } from './ui/opticChoice';
+import { loadHopUps, loadoutTakesEffect, opticNote } from './ui/loadoutChoice';
 import { browserStorage } from './settings/storage';
 import { loadCrouchMode, loadDifficulty, loadMode, loadOptic, StartScreen } from './ui/startScreen';
 
@@ -92,9 +92,11 @@ export class Game {
   private readonly difficulty: DifficultyChoice;
   /** The mode picked on the start screen: the next match is played in it (the one in play is state.round.mode). */
   private mode: MatchMode;
-  /** The rifle optic picked on the start screen, and the one fitted to the player's replica now (see ui/opticChoice.ts). */
+  /** The rifle optic picked on the start screen, and the one fitted to the player's replica now (see ui/loadoutChoice.ts). */
   private optic: OpticChoice;
   private fittedOptic: OpticChoice;
+  /** Each replica's hop-up dial as picked on the start screen (fitted with the optic). */
+  private readonly hopUps: number[];
   /** Simulation time the match was decided (NaN while it's on). */
   private matchOverAt = Number.NaN;
 
@@ -136,7 +138,8 @@ export class Game {
     this.player = this.spawnRoster(map);
     this.optic = loadOptic();
     this.fittedOptic = this.optic;
-    fitOptic(this.player.armament, LOADOUT, opticOf(this.optic));
+    this.hopUps = loadHopUps(LOADOUT);
+    this.fitPickedLoadout();
     this.difficulty = createDifficultyChoice(loadDifficulty());
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.bots = new BotController(
@@ -192,6 +195,7 @@ export class Game {
       { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
       { initial: this.optic, onChange: (o) => this.changeOptic(o) },
       (v) => (this.input.aimSensitivity = v),
+      { loadout: LOADOUT, initial: this.hopUps, onChange: (slot, dial) => this.changeHopUp(slot, dial) },
     );
     this.input.sensitivity = this.startScreen.sensitivity;
     this.input.aimSensitivity = this.startScreen.aimSensitivity;
@@ -296,19 +300,29 @@ export class Game {
   }
 
   /**
-   * The player picked a rifle optic on the start/pause/result screen: fitted at once before the first match and
+   * The player picked a rifle optic on the start or result screen: fitted at once before the first match and
    * on the result screen, otherwise at the next round start (a round in progress is never changed).
    */
   private changeOptic(o: OpticChoice): void {
     this.optic = o;
-    if (opticTakesEffect(this.started, this.state.round.phase === 'matchOver') === 'now') this.fitPickedOptic();
+    if (loadoutTakesEffect(this.started, this.state.round.phase === 'matchOver') === 'now') this.fitPickedLoadout();
     this.startScreen.setOpticNote(opticNote(this.optic, this.fittedOptic, this.state.round.phase === 'matchOver'));
   }
 
-  /** Fits the picked optic to the player's replicas. A direct sim-state change from the composition root, between rounds. */
-  private fitPickedOptic(): void {
+  /** The player turned a replica's hop-up dial on the start or result screen: fitted like the optic. */
+  private changeHopUp(slot: number, dial: number): void {
+    this.hopUps[slot] = dial;
+    if (loadoutTakesEffect(this.started, this.state.round.phase === 'matchOver') === 'now') this.fitPickedLoadout();
+  }
+
+  /**
+   * Fits the picked optic and hop-up dials to the player's replicas. A direct sim-state change from the
+   * composition root, between rounds.
+   */
+  private fitPickedLoadout(): void {
     this.fittedOptic = this.optic;
     fitOptic(this.player.armament, LOADOUT, opticOf(this.optic));
+    setHopUps(this.player.armament, this.hopUps);
   }
 
   /** Everything that reacts to a simulation tick's events. */
@@ -319,7 +333,7 @@ export class Game {
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.input.resetView(this.player.spawnYaw);
-        this.fitPickedOptic();
+        this.fitPickedLoadout();
         this.startScreen.setOpticNote('');
         if (e.round === 1) this.refreshModeText();
         difficultyRoundStarted(this.difficulty); // the bots switched to a waiting level at this event too

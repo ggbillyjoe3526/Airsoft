@@ -72,15 +72,19 @@ export class BBRenderer {
       let x = bb.prevPosition.x + (bb.position.x - bb.prevPosition.x) * alpha;
       let y = bb.prevPosition.y + (bb.position.y - bb.prevPosition.y) * alpha;
       let z = bb.prevPosition.z + (bb.position.z - bb.prevPosition.z) * alpha;
-      let tx = x - bb.velocity.x * trail;
-      let ty = y - bb.velocity.y * trail;
-      let tz = z - bb.velocity.z * trail;
+      // The streak never reaches back past where the BB was fired: a fresh BB's full-length streak would run
+      // behind the shooter (for your own shots, behind the camera, drawn as a line slanting up from the bottom
+      // of the screen to the muzzle).
+      const age = Math.max(0, bb.age - (1 - alpha) * this.tickSeconds);
+      const streak = Math.min(trail, age);
+      let tx = x - bb.velocity.x * streak;
+      let ty = y - bb.velocity.y * streak;
+      let tz = z - bb.velocity.z * streak;
       // Own shots: start at the muzzle, blend onto the true path (head and tail blend separately).
       if (this.offsetSerial[i] === bb.serial) {
-        const age = bb.age - (1 - alpha) * this.tickSeconds;
         const converge = this.convergeTimes[i]!;
         const head = Math.max(0, 1 - age / converge);
-        const tail = Math.min(1, Math.max(0, 1 - (age - trail) / converge));
+        const tail = Math.min(1, Math.max(0, 1 - (age - streak) / converge));
         const o = i * 3;
         x += this.offsets[o]! * head;
         y += this.offsets[o + 1]! * head;
