@@ -99,6 +99,8 @@ export const AUDIO = {
   suppressed: { lowpassHz: 1400, volume: 0.45 },
   /** Reload pressed with no fuller magazine: a dull pat on the pouch (your own sound only). */
   reloadRefused: { hz: 600, q: 1, gain: 0.5, attack: 0.002, time: 0.06 },
+  /** The fire selector moving one notch: a short, bright detent click (gain relative to mechanismVolume). */
+  fireSelector: { hz: 2100, time: 0.008, gain: 0.7 },
   /**
    * The flagpole's rope ratchet, heard at the pole each time the flag passes a notch: two quick clicks of
    * the pulley and a squeak of rope, higher going up than coming down.

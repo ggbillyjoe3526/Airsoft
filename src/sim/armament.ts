@@ -1,6 +1,6 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { ReplicaConfig } from '../config/replicas';
-import { bbMass, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
+import { bbMass, type FireMode, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -65,6 +65,10 @@ export interface Armament {
   triggerWasDown: boolean;
   /** Current upward aim kick from recoil (radians). */
   recoil: number;
+  /** Each replica's fire selector setting (one of its fireModes), by loadout slot. */
+  modes: FireMode[];
+  /** BBs still to come in the burst under way (0 when none is). */
+  burstShotsLeft: number;
 }
 
 export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
@@ -78,7 +82,16 @@ export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
     dryFiredThisPull: false,
     triggerWasDown: false,
     recoil: 0,
+    modes: loadout.map((r) => r.defaultFireMode),
+    burstShotsLeft: 0,
   };
+}
+
+/** The fire selector's next setting for this replica (wrapping round), or `mode` itself if it has only one. */
+export function nextFireMode(replica: ReplicaConfig, mode: FireMode): FireMode {
+  const modes = replica.fireModes;
+  const i = modes.indexOf(mode);
+  return modes[(i + 1) % modes.length] ?? replica.defaultFireMode;
 }
 
 /** Where a shot starts and which way it's aimed, before spread. Supplied by the caller. */
@@ -162,8 +175,18 @@ export function stepArmament(
     ammo = a.ammo[a.active]!;
     a.draw = replica.drawTime;
     a.dryFiredThisPull = false; // a dry click on the other replica doesn't count for this one
+    a.burstShotsLeft = 0;
     ctx.events.push({ type: 'draw', characterId, replicaId: replica.id });
   }
+
+  // The fire selector: steps through the replica's modes (a single-mode replica has nothing to change).
+  if (cmd.cycleFireMode && replica.fireModes.length > 1) {
+    const mode = nextFireMode(replica, a.modes[a.active]!);
+    a.modes[a.active] = mode;
+    a.burstShotsLeft = 0;
+    ctx.events.push({ type: 'fireMode', characterId, replicaId: replica.id, mode });
+  }
+  const mode = a.modes[a.active]!;
 
   const ready = a.draw <= 0 && a.reload <= 0;
   if (cmd.reload && ready) {
@@ -175,15 +198,26 @@ export function stepArmament(
   const pressed = cmd.fire && !a.triggerWasDown;
   a.triggerWasDown = cmd.fire;
   if (!cmd.fire) a.dryFiredThisPull = false;
-  // Semi-auto presses are buffered briefly so a click during the cooldown still fires when ready.
+  // Semi-auto and burst presses are buffered briefly so a click during the cooldown still fires when ready.
   if (pressed) a.pendingPress = TRIGGER.pressBuffer;
-  const wantsShot = replica.fireMode === 'auto' ? cmd.fire : a.pendingPress > 0;
+  // A burst runs to the end once started (one pull, several BBs), unless the replica can't fire.
+  if (a.burstShotsLeft > 0 && (!canFire || a.draw > 0 || a.reload > 0)) a.burstShotsLeft = 0;
+  if (mode === 'burst') {
+    // A pull during a burst doesn't queue another: one pull, one burst (a pull just after it ends is buffered).
+    if (a.burstShotsLeft > 0) a.pendingPress = 0;
+    else if (a.pendingPress > 0 && canFire && a.draw <= 0 && a.reload <= 0 && a.cooldown <= 0) {
+      a.burstShotsLeft = TRIGGER.burstShots;
+      a.pendingPress = 0;
+    }
+  }
+  const wantsShot = mode === 'auto' ? cmd.fire : mode === 'burst' ? a.burstShotsLeft > 0 : a.pendingPress > 0;
   if (!wantsShot || !canFire || a.draw > 0 || a.reload > 0 || a.cooldown > 0) return;
 
   if (ammo.mag <= 0) {
-    // Empty: one dry click per trigger pull (a held AEG trigger clicks when the mag runs dry), then
-    // reload automatically if a spare has BBs in it.
-    const click = replica.fireMode === 'auto' ? !a.dryFiredThisPull : pressed || a.pendingPress > 0;
+    // Empty: one dry click per trigger pull (a held AEG trigger clicks when the mag runs dry; a burst that
+    // runs dry clicks once and ends), then reload automatically if a spare has BBs in it.
+    const click = mode === 'auto' ? !a.dryFiredThisPull : mode === 'burst' || pressed || a.pendingPress > 0;
+    a.burstShotsLeft = 0;
     if (click) {
       a.dryFiredThisPull = true;
       a.pendingPress = 0;
@@ -194,6 +228,7 @@ export function stepArmament(
   }
 
   a.pendingPress = 0;
+  if (a.burstShotsLeft > 0) a.burstShotsLeft--;
   ammo.mag--;
   a.cooldown += 1 / replica.fireRate;
   fire(characterId, a, replica, muzzle, ctx);

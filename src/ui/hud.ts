@@ -1,16 +1,17 @@
-import type { ReplicaConfig } from '../config/replicas';
+import { FIRE_MODE_LABELS, type ReplicaConfig } from '../config/replicas';
 import { HUD } from '../config/render';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
 import { isLowAmmo } from './ammoStatus';
 
 /**
- * Minimal in-game HUD: crosshair and the replica panel (name, BBs in the loaded magazine, a gauge per
- * spare magazine showing how full it is, with the one a reload takes marked, and reload progress).
+ * Minimal in-game HUD: crosshair and the replica panel (name and fire mode, BBs in the loaded magazine, a
+ * gauge per spare magazine showing how full it is, with the one a reload takes marked, and reload progress).
  * DOM is only touched when a displayed value changes.
  */
 export class Hud {
   private readonly root: HTMLDivElement;
-  private readonly name: HTMLDivElement;
+  private readonly name: HTMLSpanElement;
+  private readonly fireMode: HTMLSpanElement;
   private readonly mag: HTMLSpanElement;
   private readonly mags: HTMLSpanElement;
   /** One fill element per spare magazine gauge, and what each shows (percent full). */
@@ -29,7 +30,7 @@ export class Hud {
   private readonly crosshair: HTMLDivElement;
   private shownGap = -1;
   /** What is on screen now: the DOM is only written when one of these changes. */
-  private shown = { name: '', mag: -1, low: false, status: '', reloadPct: -1 };
+  private shown = { name: '', fireMode: '', mag: -1, low: false, status: '', reloadPct: -1 };
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -38,13 +39,14 @@ export class Hud {
     this.root.innerHTML = `
       <div class="hud-crosshair"><i></i><i></i><i></i><i></i><b></b></div>
       <div class="hud-replica">
-        <div class="hud-replica-name"></div>
+        <div class="hud-replica-name"><span></span><span class="hud-firemode"></span></div>
         <div class="hud-ammo"><span class="hud-mag"></span><span class="hud-mags"></span></div>
         <div class="hud-reload"><div></div></div>
         <div class="hud-status"></div>
       </div>`;
     parent.appendChild(this.root);
-    this.name = this.root.querySelector('.hud-replica-name') as HTMLDivElement;
+    this.name = this.root.querySelector('.hud-replica-name > span') as HTMLSpanElement;
+    this.fireMode = this.root.querySelector('.hud-firemode') as HTMLSpanElement;
     this.mag = this.root.querySelector('.hud-mag') as HTMLSpanElement;
     this.mags = this.root.querySelector('.hud-mags') as HTMLSpanElement;
     this.status = this.root.querySelector('.hud-status') as HTMLDivElement;
@@ -75,6 +77,8 @@ export class Hud {
     const ammo = armament.ammo[armament.active]!;
     const s = this.shown;
     if (s.name !== replica.name) this.name.textContent = s.name = replica.name;
+    const fireMode = FIRE_MODE_LABELS[armament.modes[armament.active]!];
+    if (s.fireMode !== fireMode) this.fireMode.textContent = s.fireMode = fireMode;
     if (s.mag !== ammo.mag) this.mag.textContent = String((s.mag = ammo.mag));
     // Compared on its own: switching replicas can change it with the count unchanged.
     const low = isLowAmmo(ammo.mag, replica.magSize);

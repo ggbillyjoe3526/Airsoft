@@ -5,27 +5,28 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · branch `docs/playtest-feedback-roadmap` (roadmap update after the `v0.1-alpha.3` playtest)._
+_Last updated: 2026-10-03 · branch `m12a-weapon-handling` (Phase 4 M12a, critic 9.0 on attempt 1)._
 
 ## Where we are
 
-- **Phase 3 is done and tagged** (`v0.1-alpha.3`, 2026-10-03, by the owner). Ramp Yard (`src/map/testYard.ts`) is the
-  elevation test map; no shipped map uses elevation yet.
-- **The owner's playtest notes are in the roadmap** (Phase 4 table of notes): M12 Weapon handling (M12a fire modes,
-  faster reloads, crouch toggle, steadier aim when still; M12b optics as accessories, aiming down sights, aiming
-  sensitivity) and M13 Audio rework. DECISIONS has the first-guess numbers (2026-10-03).
-- Open owner questions: the Phase 4 order (proposed M12a → M12b → M11 → M13 → art → menus → tutorial) and the
-  M11 layout sketch
-  (https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD).
+- **Phase 3 is done and tagged** (`v0.1-alpha.3`, 2026-10-03). The owner's playtest notes became M12 (weapon
+  handling) and M13 (audio) in Phase 4; the owner picked weapon handling first: M12a → M12b → M11 → M13 → art →
+  menus and settings → tutorial.
+- **M12a is built** on `m12a-weapon-handling` (pull request open for the owner): fire selector (`fireModes`,
+  `defaultFireMode`, B key, `fireMode` event, HUD box), burst of 3 per pull, reloads 1.8 s / 1.2 s, toggle crouch in
+  `PlayerInput` with a Toggle / Hold picker on the start screen, `Character.stillTime` steadying the spread to ×0.7,
+  walk ×1.15, and `src/settings/storage.ts` (one versioned `airsoft.settings` object, audit W-02).
 - The critic runs on Opus (`.claude/agents/critic.md`). The owner plays on an RTX 5090 desktop; the iGPU 60 FPS
   target is a Beta item. The owner is new to GitHub: explain in plain words and say exactly what to click.
 
 ## Next
 
-1. **M12a** (unless the owner picks another order): fire selector, reload times, crouch toggle setting, the stillness
-   spread. The spread lives in `MOVEMENT.accuracy` / `sim/accuracy.ts`; reload times and `fireMode` in
-   `config/replicas.ts`; crouch input in `input/playerInput.ts`. Add a playtest section for it.
-2. **M12b**, then **M11 Depot rework** once the owner approves the sketch, then **M13 Audio rework**.
+1. **The owner's M12a playtest** (PLAYTEST.md: Movement, Shooting and reloads). Watch for Normal bots feeling deadlier
+   (they get the steadier aim too; KNOWN_ISSUES).
+2. **M12b:** the red dot comes off the AEG model (flip-up iron sights instead), an optic slot fitted from a simple
+   pre-match option, aiming down sights only with an optic (right mouse held), and an aiming sensitivity setting
+   (add a `SettingField` in `src/settings/storage.ts`).
+3. **M11 Depot rework** once the owner approves the sketch (https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD), then **M13**.
 
 ## Working notes and gotchas
 

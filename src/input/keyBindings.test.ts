@@ -110,6 +110,21 @@ describe('KeyBindings', () => {
     expect(b.codes('crouch')).toEqual(['KeyC']);
   });
 
+  it('keeps the player\'s own keys when a newly added action\'s default clashes with one (the new action stays unbound)', () => {
+    const store = new MemoryStore();
+    // Saved before the fire selector existed: B on the pistol, and a custom jump.
+    store.setItem('airsoft.keyBindings', JSON.stringify({ slot2: ['KeyB'], jump: ['KeyJ'] }));
+    const b = new KeyBindings(store);
+    expect(b.codes('slot2')).toEqual(['KeyB']);
+    expect(b.codes('jump')).toEqual(['KeyJ']);
+    expect(b.codes('fireMode')).toEqual([]);
+    expect(b.primary('fireMode')).toBe('');
+    // The player can give it a key afterwards.
+    expect(b.rebind('fireMode', 'KeyV')).toBe(true);
+    expect(b.codes('fireMode')).toEqual(['KeyV']);
+    expect(b.codes('slot2')).toEqual(['KeyB']);
+  });
+
   it('gives reserved debug keys priority over old saves that used them', () => {
     const store = new MemoryStore();
     store.setItem('airsoft.keyBindings', JSON.stringify({ jump: ['Backquote', 'KeyJ'] }));

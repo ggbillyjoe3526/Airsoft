@@ -58,6 +58,12 @@ export interface MovementConfig {
 export interface AccuracyConfig {
   /** Below this horizontal speed (m/s) a character counts as still. */
   stillBelow: number;
+  /**
+   * Holding still steadies the aim further: the multiplier eases from 1 down to `steady` over `steadyTime`
+   * seconds of standing still on the ground (owner, 2026-10-03: the stiller you are, the more accurate).
+   */
+  steady: number;
+  steadyTime: number;
   /** At walking pace (walkSpeed) and at the normal pace (runSpeed); in between it blends linearly. */
   walk: number;
   run: number;
@@ -109,7 +115,11 @@ export const MOVEMENT: MovementConfig = {
   leanQuietFrom: 0.5,
   accuracy: {
     stillBelow: 0.4,
-    walk: 1.5,
+    // First guesses to tune in play (owner's v0.1-alpha.3 playtest): standing still steadies to ×0.7 in half a
+    // second, and walking with Shift costs ×1.15 (was 1.5). Gentler than CS / Valorant, but the same idea.
+    steady: 0.7,
+    steadyTime: 0.5,
+    walk: 1.15,
     run: 2.6,
     sprint: 3.5,
     air: 4.5,

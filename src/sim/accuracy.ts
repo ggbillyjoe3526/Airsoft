@@ -3,8 +3,8 @@ import type { Character } from './character';
 
 /**
  * Accuracy by stance and movement: how much a character's current state scales its replica's spread
- * (cfg.accuracy). Holding still, and crouching above all, is steady; moving, jumping and coming out of
- * a sprint are not. Bots and the player follow the same rule.
+ * (cfg.accuracy). Holding still, and crouching above all, is steady, and the longer you hold still the
+ * steadier it gets; moving, jumping and coming out of a sprint are not. Bots and the player follow the same rule.
  */
 
 /** Summed tick lengths drift below round numbers (6 × 1/60 < 0.1); this keeps the delay a whole number of ticks. */
@@ -21,7 +21,7 @@ export function targetSpreadScale(c: Character, cfg: MovementConfig): number {
   else if (c.sprinting) move = a.sprint;
   else {
     const speed = Math.hypot(c.velocity.x, c.velocity.z);
-    if (speed <= a.stillBelow) move = 1;
+    if (speed <= a.stillBelow) move = 1 + (a.steady - 1) * Math.min(1, c.stillTime / a.steadyTime);
     else if (speed <= cfg.walkSpeed) move = 1 + ((a.walk - 1) * (speed - a.stillBelow)) / (cfg.walkSpeed - a.stillBelow);
     else move = a.walk + ((a.run - a.walk) * Math.min(1, (speed - cfg.walkSpeed) / (cfg.runSpeed - cfg.walkSpeed)));
   }
@@ -34,6 +34,8 @@ export function targetSpreadScale(c: Character, cfg: MovementConfig): number {
  */
 export function stepAccuracy(c: Character, cfg: MovementConfig, dt: number): void {
   c.airTime = c.grounded ? 0 : c.airTime + dt;
+  const still = c.grounded && Math.hypot(c.velocity.x, c.velocity.z) <= cfg.accuracy.stillBelow;
+  c.stillTime = still ? c.stillTime + dt : 0;
   const target = targetSpreadScale(c, cfg);
   c.spreadScale = target >= c.spreadScale ? target : target + (c.spreadScale - target) * Math.exp(-dt / cfg.accuracy.settleTime);
 }

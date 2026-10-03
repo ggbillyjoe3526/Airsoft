@@ -26,6 +26,8 @@ export interface PlayerCommand {
   reload: boolean;
   /** Loadout slot to switch to, or -1 for no switch. */
   switchTo: number;
+  /** Step the active replica's fire selector to its next mode (one-shot). */
+  cycleFireMode: boolean;
 }
 
 export function createCommand(): PlayerCommand {
@@ -42,5 +44,6 @@ export function createCommand(): PlayerCommand {
     fire: false,
     reload: false,
     switchTo: -1,
+    cycleFireMode: false,
   };
 }

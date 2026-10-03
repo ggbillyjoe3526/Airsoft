@@ -66,6 +66,8 @@ export interface Character {
   spreadScale: number;
   /** Seconds off the ground so far (0 while grounded); a jump starts it at the in-air spread delay (sim/accuracy.ts). */
   airTime: number;
+  /** Seconds standing still on the ground so far (0 while moving or in the air); steadies the aim (sim/accuracy.ts). */
+  stillTime: number;
   armament: Armament;
 }
 
@@ -110,6 +112,7 @@ export function createCharacter(
     sprintLockout: 0,
     spreadScale: 1,
     airTime: 0,
+    stillTime: 0,
     armament: createArmament(loadout),
   };
 }
@@ -138,7 +141,7 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
   return true;
 }
 
-/** Puts a character back at its spawn for a new round: alive, standing, full magazines. */
+/** Puts a character back at its spawn for a new round: alive, standing, full magazines, fire selectors left where they were. */
 export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]): void {
   copy(c.position, c.spawnPosition);
   copy(c.prevPosition, c.spawnPosition);
@@ -163,9 +166,12 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.sprintLockout = 0;
   c.spreadScale = 1;
   c.airTime = 0;
+  c.stillTime = 0;
   c.status = 'alive';
   c.statusTime = 0;
   c.hitBy = -1;
   c.walkOffStuck = 0;
+  const modes = c.armament.modes;
   c.armament = createArmament(loadout);
+  if (modes.length === c.armament.modes.length) c.armament.modes = modes;
 }

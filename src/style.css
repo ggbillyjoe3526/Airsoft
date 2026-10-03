@@ -317,6 +317,13 @@ kbd {
   opacity: 0.85;
 }
 
+.hud-firemode {
+  margin-left: 0.6em;
+  padding: 0 0.35em;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}
+
 .hud-ammo {
   font: 700 38px/1 var(--ui-mono);
 }

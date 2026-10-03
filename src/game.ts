@@ -37,19 +37,11 @@ import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { DebugOverlay } from './ui/debugOverlay';
 import { modeNote, modeTakesEffect, modeToDescribe } from './ui/modeChoice';
-import { loadDifficulty, loadMode, StartScreen } from './ui/startScreen';
+import { browserStorage } from './settings/storage';
+import { loadCrouchMode, loadDifficulty, loadMode, StartScreen } from './ui/startScreen';
 
 const PLAYER_ID = 0;
 const LOCK_REFUSED_HINT = 'The browser needs a moment before re-capturing the mouse. Click again.';
-
-/** localStorage, or null where the browser blocks it (settings then last for the session only). */
-function browserStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
 
 export interface GameOptions {
   /**
@@ -147,6 +139,7 @@ export class Game {
     this.keyboard = new Keyboard(window, this.bindings);
     this.pointer = new PointerLock(this.renderer.canvas);
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
+    this.input.crouchMode = loadCrouchMode();
     this.input.yaw = this.player.spawnYaw;
     // The player is always on Blue.
     this.combat = new CombatPresentation(this.renderer, container, this.state, this.player, LOADOUT, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT);
@@ -185,6 +178,7 @@ export class Game {
       (v) => (this.input.sensitivity = v),
       { initial: this.difficulty.inPlay, onChange: (d) => this.changeDifficulty(d) },
       { initial: this.mode, onChange: (m) => this.changeMode(m) },
+      { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
     );
     this.input.sensitivity = this.startScreen.sensitivity;
     this.pointer.onChange((locked) => {

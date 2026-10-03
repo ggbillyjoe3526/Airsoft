@@ -1,3 +1,5 @@
+import { loadSetting, oneOf, type SettingField, saveSetting } from '../settings/storage';
+
 /** One choice in an OptionPicker. */
 export interface PickerOption<T extends string> {
   id: T;
@@ -6,30 +8,15 @@ export interface PickerOption<T extends string> {
   blurb: string;
 }
 
-/** The choice saved under `key`, or `fallback` if nothing valid is saved (or storage is blocked). */
-export function loadChoice<T extends string>(key: string, options: readonly PickerOption<T>[], fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    const found = options.find((o) => o.id === raw);
-    if (found) return found.id;
-  } catch {
-    // Storage unavailable (private mode etc.): fall back to the default.
-  }
-  return fallback;
-}
-
-function saveChoice(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Non-critical: the choice still applies for this session.
-  }
+/** The choice saved as `field`, or `fallback` if nothing valid is saved (or storage is blocked). */
+export function loadChoice<T extends string>(field: SettingField, options: readonly PickerOption<T>[], fallback: T): T {
+  return loadSetting(field, oneOf(options.map((o) => o.id)), fallback);
 }
 
 /**
  * A labelled row of buttons, one per option, and a line describing the picked one (plus an optional
- * note, e.g. that a change made mid-match waits). The choice is saved in the browser under
- * `storageKey`. Lives inside the start screen (bot difficulty, match mode).
+ * note, e.g. that a change made mid-match waits). The choice is saved in the browser's settings as
+ * `field`. Lives inside the start screen (bot difficulty, match mode, crouch key).
  */
 export class OptionPicker<T extends string> {
   readonly root: HTMLDivElement;
@@ -38,12 +25,12 @@ export class OptionPicker<T extends string> {
   private current: T;
   private note = '';
 
-  /** `initial`: the option shown as picked (normally loadChoice(storageKey, ...)). */
+  /** `initial`: the option shown as picked (normally loadChoice(field, ...)). */
   constructor(
     label: string,
     private readonly options: readonly PickerOption<T>[],
     initial: T,
-    storageKey: string,
+    field: SettingField,
     onChange: (value: T) => void,
   ) {
     this.current = initial;
@@ -65,7 +52,7 @@ export class OptionPicker<T extends string> {
       button.addEventListener('click', () => {
         if (id === this.current) return;
         this.current = id;
-        saveChoice(storageKey, id);
+        saveSetting(field, id);
         this.note = '';
         onChange(id);
         this.refresh();

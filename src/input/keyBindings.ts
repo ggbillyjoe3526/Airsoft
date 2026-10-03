@@ -13,7 +13,9 @@ export interface KeyValueStore {
 /**
  * The player's key bindings: defaults plus their changes, saved in the browser. Each action has an
  * ordered list of keys (defaults give some a second key, e.g. arrow keys); the settings show them all.
- * A key belongs to at most one action, and every action always has at least one key.
+ * A key belongs to at most one action, and every action has at least one key, except an action added after
+ * the player saved their bindings whose default key they already use for something else: it stays unbound
+ * (shown as "—" in the settings) until they pick a key, and their own bindings are kept.
  */
 export class KeyBindings {
   private map = new Map<Action, string[]>();
@@ -89,28 +91,35 @@ export class KeyBindings {
       return;
     }
     if (!raw) return;
+    /** Actions whose keys came from the saved set (the rest are on their defaults). */
+    const fromSave = new Set<Action>();
     try {
       const saved = JSON.parse(raw) as Record<string, unknown>;
       for (const action of Object.keys(DEFAULT_BINDINGS) as Action[]) {
         if (!REBINDABLE_ACTIONS.has(action)) continue; // debug keys always keep their defaults
         const codes = saved[action];
-        if (Array.isArray(codes) && codes.length > 0 && codes.every((c) => typeof c === 'string' && !UNBINDABLE_KEYS.has(c))) this.map.set(action, codes as string[]);
+        if (Array.isArray(codes) && codes.length > 0 && codes.every((c) => typeof c === 'string' && !UNBINDABLE_KEYS.has(c))) {
+          this.map.set(action, codes as string[]);
+          fromSave.add(action);
+        }
       }
     } catch {
       // Corrupt entry: keep the defaults.
     }
-    // A key belongs to one action: if saved keys clash with a default (e.g. a newly added action), the
-    // reserved debug keys win, then the first action in the table.
+    // A key belongs to one action. On a clash the reserved debug keys win, then the player's saved choices
+    // (so a newly added action's default never takes a key they bound), then the first action in the table.
+    const rank = (a: Action): number => (!REBINDABLE_ACTIONS.has(a) ? 0 : fromSave.has(a) ? 1 : 2);
     const seen = new Set<string>();
-    const order = [...this.map.keys()].sort((a, b) => Number(REBINDABLE_ACTIONS.has(a)) - Number(REBINDABLE_ACTIONS.has(b)));
+    const order = [...this.map.keys()].sort((a, b) => rank(a) - rank(b));
     for (const action of order) {
       const codes = this.map.get(action)!;
       this.map.set(action, codes.filter((c) => !seen.has(c)));
       for (const c of codes) seen.add(c);
     }
-    // An action left with no key can't be used or even seen: the saved set is unusable, start over.
-    for (const codes of this.map.values()) {
-      if (codes.length === 0) {
+    // A saved action left with no key means the saved set is unusable: start over. An action on its
+    // defaults that lost its key to the player's own bindings just stays unbound until they pick one.
+    for (const action of fromSave) {
+      if (this.map.get(action)!.length === 0) {
         this.reset(false);
         return;
       }
@@ -130,7 +139,7 @@ export function describeKeys(codes: readonly string[]): string {
       labels.push(keyLabel(code));
     }
   }
-  return labels.join(' / ');
+  return labels.length > 0 ? labels.join(' / ') : keyLabel('');
 }
 
 /** A readable name for a KeyboardEvent.code ("KeyW" → "W", "ShiftLeft" → "Left Shift"). */

@@ -119,6 +119,11 @@ export class Sfx {
         this.noise(this.output(null), 'lowpass', r.hz, r.q, AUDIO.mechanismVolume * r.gain, r.attack, r.time);
         return;
       }
+      case 'fireMode': {
+        const f = AUDIO.fireSelector;
+        this.click(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null), f.hz, f.time, AUDIO.mechanismVolume * f.gain);
+        return;
+      }
       case 'draw':
         this.rattle(this.output(e.characterId === localId ? null : positionOf(e.characterId) ?? null));
         return;

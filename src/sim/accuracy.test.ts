@@ -51,7 +51,8 @@ describe('accuracy by stance and movement', () => {
   it('shakes at once when you move, and settles back over a moment once you stop', () => {
     const c = at();
     stepAccuracy(c, MOVEMENT, DT);
-    expect(c.spreadScale).toBe(1);
+    expect(c.spreadScale).toBeLessThanOrEqual(1);
+    expect(c.spreadScale).toBeGreaterThan(0.99); // just stopped: hardly steadied yet
     c.sprinting = true;
     c.velocity.x = MOVEMENT.sprintSpeed;
     stepAccuracy(c, MOVEMENT, DT);
@@ -65,10 +66,52 @@ describe('accuracy by stance and movement', () => {
       t += DT;
     }
     expect(c.spreadScale).toBeGreaterThan(1.5);
-    // ...and steady again within about a second.
+    // ...and steady again within about a second (steadier than at first, having held still that long).
     for (let i = 0; i < 60; i++) stepAccuracy(c, MOVEMENT, DT);
-    expect(c.spreadScale).toBeLessThan(1.02);
-    expect(c.spreadScale).toBeGreaterThanOrEqual(1);
+    expect(c.spreadScale).toBeLessThan(A.steady + 0.02);
+    expect(c.spreadScale).toBeGreaterThanOrEqual(A.steady);
+  });
+
+  it('steadies the longer you hold still, and moving or leaving the ground starts it over', () => {
+    const c = at();
+    let last = Infinity;
+    for (let t = 0; t < A.steadyTime - 1e-9; t += DT) {
+      stepAccuracy(c, MOVEMENT, DT);
+      expect(c.spreadScale).toBeLessThan(last); // tightens every tick while you hold still
+      last = c.spreadScale;
+    }
+    for (let i = 0; i < 60; i++) stepAccuracy(c, MOVEMENT, DT);
+    expect(c.spreadScale).toBeCloseTo(A.steady, 3);
+    expect(A.steady).toBeLessThan(1);
+    expect(c.stillTime).toBeGreaterThan(A.steadyTime);
+
+    // Crouched and still: both steadying effects stack.
+    const crouched = at(0, 1);
+    for (let i = 0; i < 90; i++) stepAccuracy(crouched, MOVEMENT, DT);
+    expect(crouched.spreadScale).toBeCloseTo(A.steady * A.crouched, 3);
+
+    // A step at walking pace starts it over: the shake is the walking one, and so is the wait afterwards.
+    c.velocity.x = MOVEMENT.walkSpeed;
+    stepAccuracy(c, MOVEMENT, DT);
+    expect(c.stillTime).toBe(0);
+    expect(c.spreadScale).toBeCloseTo(A.walk, 9);
+    c.velocity.x = 0;
+    stepAccuracy(c, MOVEMENT, DT);
+    expect(targetSpreadScale(c, MOVEMENT)).toBeGreaterThan(0.98); // one tick still: barely steadied
+
+    // Drifting below the still threshold counts as still; being off the ground doesn't.
+    const drift = at(A.stillBelow * 0.9);
+    for (let i = 0; i < 60; i++) stepAccuracy(drift, MOVEMENT, DT);
+    expect(drift.stillTime).toBeGreaterThan(A.steadyTime);
+    drift.grounded = false;
+    stepAccuracy(drift, MOVEMENT, DT);
+    expect(drift.stillTime).toBe(0);
+  });
+
+  it('makes walking with the walk key only a little shakier than standing (owner, 2026-10-03)', () => {
+    expect(A.walk).toBeGreaterThan(1);
+    expect(A.walk).toBeLessThanOrEqual(1.2);
+    expect(A.walk).toBeLessThan(A.run);
   });
 
   it('settles after a landing too', () => {
