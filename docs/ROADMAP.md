@@ -93,7 +93,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | Done | 9.0 |
 | Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | Done (tagged 2026-10-03; the owner's playtest notes went into Phase 4) | 9.0 |
 | Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Done (merged; owner played it: the crosshair should lock on faster, fixed in M12b) | 9.0 |
-| Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (pull request; owner's playtest next) | 9.1 |
+| Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (merged; owner played it: "red dot works great", six notes for M12c) | 9.1 |
+| Alpha · Phase 4 · M12c The owner's M12b notes: the loadout off the pause screen, BBs drawn from the muzzle, the pistol facing forward, hop-up dials | Done (pull request; owner's playtest next) | see REVIEWS |
 | Alpha · Phase 4 · M11 Depot rework (moved from Phase 3, owner, 2026-10-02) | Later (layout sketch waits for the owner's OK) | |
 | Alpha · Phase 4 · M13 Audio rework | Later | |
 | Alpha · Phase 4 · M14 Art pass, M15 Menus and settings, M16 Tutorial → feature complete | Later | |
@@ -218,6 +219,17 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 6 | Audio rework: higher quality, movement you can locate by ear, impactful but true-to-airsoft shots, each replica sounding like how it fires | M13 |
 | 7 | Standing still or walking (Shift) tightens the crosshair more than today: the stiller you are, the more accurate; less skill-heavy than CS / Valorant | M12a |
 
+**The owner's M12b playtest notes (2026-10-03, second playtest that day) and where each one went:**
+
+| # | Note | Goes to |
+|---|---|---|
+| 1 | Take the optic picker off the pause menu (keep the feature): optics are picked in a loadout before the match | M12c |
+| 2 | The rifle has iron sights by default | Already so since M12b (Optic: Iron sights is the default) |
+| 3 | The red dot works great | — |
+| 4 | BB tracers start about 45° under the rifle instead of at the muzzle; any BB visual should be in line with the muzzle | M12c |
+| 5 | The pistol is held turned slightly to the left, not facing forward; disorientating | M12c |
+| 6 | Hop-up adjustment, set before a match in the loadout: long shots aren't hitting | M12c |
+
 **Order** (owner picked weapon handling first, 2026-10-03): **M12a → M12b → M11 → M13 → M14 → M15 → M16.** Weapon handling comes
 first because it changes what the owner just played and gives something new to play quickly, and it doesn't wait on
 the Depot layout sketch. The Depot rework follows once the sketch is approved. The audio rework comes after it so
@@ -255,6 +267,18 @@ the tutorial come last because they dress and explain everything before them.
       eye. It narrows the view slightly, hides the crosshair (the dot is the aim point) and slows you to walking
       pace. A first guess: no extra accuracy beyond what standing still gives, so stillness stays the accuracy rule.
     - **Aiming sensitivity:** a separate mouse sensitivity while aiming down sights, as its own setting.
+  - **M12c. The owner's M12b notes** (above)
+    - **A Loadout box on the start screen:** the optic and a hop-up dial per replica, set before a match (the title
+      and result screens), not on the pause screen. These start-screen settings are the beginning of the **loadout
+      screen**: it takes them over when loadouts arrive (more optics and parts in v0.3), and M15 moves them into
+      the proper menus.
+    - **BBs drawn from the muzzle:** a fresh BB's streak no longer reaches back past the muzzle (it ran behind the
+      camera and showed as a line slanting up from the bottom of the screen), and both replicas are held pointing
+      straight ahead, so the BBs fly out along the barrel's line to the crosshair, from the hip and aiming.
+    - **The pistol faces forward:** no inward cant, a little closer and more central.
+    - **Hop-up:** a dial per replica (0–100%) scaling the backspin lift; out of the box the rifle is on target to
+      about 38 m (Depot's longest sightlines are ~34 m) and the pistol to about 25 m; over-hopped BBs rise and
+      float. Bots use the factory setting.
 - **M11. Depot rework** to the field checklist (moved from Phase 3, owner, 2026-10-02; before the art pass, since the
   art pass dresses its layout). A layout sketch is ready for the owner's approval: https://claude.ai/artifact/L3rfDSHNN6SN2YyZTFLKdD
   - Purpose-built airsoft barricades (walls with shooting ports).
@@ -284,7 +308,7 @@ the tutorial come last because they dress and explain everything before them.
 - **M14. Art pass** (CC0 assets only), VFX and lighting for Depot, the replicas and the figures.
 - **M15. Menus and a full settings screen:** FOV, volume, colour-blind team colours, reduced motion and
   other accessibility options. It gathers the M12 settings (crouch toggle or hold, aiming sensitivity) and the
-  render quality presets.
+  render quality presets, and gives the pre-match Loadout box (optic, hop-up) its own loadout screen.
 - **M16. Onboarding:** a short tutorial.
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05), one versioned settings store for the new settings (W-02,
@@ -347,7 +371,8 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
 - **Loadout building**, free from the start:
   - Weapon parts: receivers, handguards, stocks, optics, grips, muzzle devices, suppressors,
     lasers/lights and bipods. The optic slot and aiming down sights already exist from M12b (one red dot);
-    this adds more optics, such as magnified scopes.
+    this adds more optics, such as magnified scopes. It builds on the start screen's Loadout box (optic and
+    hop-up, M12c), which becomes the loadout screen.
   - Gear: plate carriers, chest rigs, belts, helmets, comms, backpacks, gloves, eye protection, face
     protection and boots. Gear decides what you carry, e.g. how many magazines.
 - **Chrono before a match:** check your loadout's muzzle velocity, and pick the BB weight and tracers.

@@ -1,7 +1,7 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
-import { bbMass, type FireMode, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
+import { bbMass, type FireMode, HOP_UP, hopUpLift, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -72,6 +72,8 @@ export interface Armament {
   burstShotsLeft: number;
   /** The optic fitted to each replica (null: none, iron sights), by loadout slot. Fitted before a round, kept between rounds. */
   optics: (OpticId | null)[];
+  /** Each replica's hop-up dial (0..1, see ReplicaConfig.hopUpDial), by loadout slot. Set before a round, kept between rounds. */
+  hopUps: number[];
 }
 
 export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
@@ -88,7 +90,16 @@ export function createArmament(loadout: readonly ReplicaConfig[]): Armament {
     modes: loadout.map((r) => r.defaultFireMode),
     burstShotsLeft: 0,
     optics: loadout.map(() => null),
+    hopUps: loadout.map((r) => r.hopUpDial),
   };
+}
+
+/** Sets each replica's hop-up dial (by loadout slot; missing slots keep theirs), kept within the dial's range. */
+export function setHopUps(a: Armament, dials: readonly number[]): void {
+  for (let i = 0; i < a.hopUps.length && i < dials.length; i++) {
+    const d = dials[i]!;
+    if (Number.isFinite(d)) a.hopUps[i] = Math.min(HOP_UP.maxDial, Math.max(HOP_UP.minDial, d));
+  }
 }
 
 /** Fits `optic` (or nothing) to every replica in the loadout that has an optic mount. */
@@ -259,5 +270,5 @@ function fire(characterId: number, a: Armament, replica: ReplicaConfig, muzzle: 
   // The BB's path starts at the eye: its first step then catches cover right in front of the shooter
   // and anyone standing point-blank (even overlapping the shooter), and it never hits its owner.
   // Presentation draws it leaving the replica's muzzle.
-  spawnBB(ctx.bbs, characterId, muzzle.eye, dir, muzzleVelocity(replica), replica.hopUp, bbMass(replica));
+  spawnBB(ctx.bbs, characterId, muzzle.eye, dir, muzzleVelocity(replica), hopUpLift(replica, a.hopUps[a.active] ?? replica.hopUpDial), bbMass(replica));
 }

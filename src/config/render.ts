@@ -75,7 +75,7 @@ export const BB_VISUALS = {
    * visible dot at 10-30 m (radians of view; 0.003 ≈ 5 px wide at 1080p).
    */
   minAngularRadius: 0.003,
-  /** Trail length in seconds of flight (streak = velocity × this). */
+  /** Trail length in seconds of flight (streak = velocity × this, never longer than the flight so far). */
   trailSeconds: 0.022,
   trailColor: 0xfff4cc,
   trailOpacity: 0.75,

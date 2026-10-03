@@ -647,6 +647,35 @@ kbd {
   color: #444;
 }
 
+/* The loadout set before a match (optic, hop-up): the start of the loadout screen; hidden on the pause screen */
+.start-loadout {
+  margin: 0 0 16px;
+  padding: 10px 12px 2px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+.start-loadout-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.start-hopup {
+  margin: 0 0 12px;
+}
+
+.start-hopup .start-sens {
+  margin: 0;
+}
+
+.start-hopup .picker-blurb {
+  margin-top: 2px;
+}
+
 /* Option pickers on the start screen (match mode, bot difficulty, optic, crouch key) */
 .picker {
   margin: 0 0 16px;
