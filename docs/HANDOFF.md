@@ -28,6 +28,7 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
   wanted: glTF animations for rigged models, props and surface textures from files.
 - **M25b (Depot rework, minor):** the owner approved concept v2 (sketches in the project's shared files,
   `concepts/depot-rework-*-v2.*`). New prop kinds in `map/mapTypes.ts` and `render/mapMeshes.ts`; layout in `map/depot.ts`.
+  The west end now wins slightly more bot rounds (KNOWN_ISSUES); the owner's playtest decides whether it needs tuning.
 
 ## Bug pass in short (what changed under you)
 

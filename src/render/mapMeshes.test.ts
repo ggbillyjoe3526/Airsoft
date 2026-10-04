@@ -98,7 +98,7 @@ describe('the art pass on the map (M14)', () => {
 
   it('builds the whole of Depot in a handful of draw calls', () => {
     const group = buildMapMeshes(DEPOT, textures, true);
-    expect(group.children.length).toBeLessThanOrEqual(8);
+    expect(group.children.length).toBeLessThanOrEqual(10);
     disposeMapMeshes(group);
   });
 

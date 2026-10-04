@@ -122,7 +122,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 batch · M23 Minimap and order wheel (items 2 and 3): a minimap with your teammates and the other team where last heard; hold Z for a squad order wheel (hover or click) | Done (owner to play it) | 9.0 |
 | Alpha · M24 Menus and settings polish (owner's Phase 4 playtest notes 5–10, 13, 14, 2026-10-04): shorter button labels, the build's version from git, 90° field of view, short map blurbs, sound cue size and colour, a hit feed that keeps its lines, a larger scoreboard with a size setting, hidden Dev settings | Done (owner to play it) | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M25a CC0 assets: a guide (`docs/CC0_ASSETS.md`: sources, formats, folders, licences, size limits) and a loader that draws a dropped-in glTF player model, the built-in figures as fallback | Done | 9.0 |
-| Alpha · Owner's 2026-10-04 batch · M25b Depot rework (minor): fewer stacked crates, less clutter, more kinds of objects, sightlines and balance kept (owner approved concept v2) | In progress | |
+| Alpha · Owner's 2026-10-04 batch · M25b Depot rework (minor): fewer stacked crates, less clutter, more kinds of objects, sightlines and balance kept (owner approved concept v2) | Done (owner to play it) | |
 | Alpha · Owner's 2026-10-04 batch · M26a Asset pool: `pool.md` (the asset register the game reads, with its guide), rarity tiers, the economy's numbers, the player's collection | Done | 9.1 |
 | Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Done | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Planned | |
@@ -694,6 +694,10 @@ pool, items 11, 12 and part of 14).
     full-height objects of new kinds (portable toilets, pallet racking, HESCO barriers, wrapped pallet loads, IBC
     tanks, sandbags, a generator, a skip), six spots drop to waist height where the sightline cost is lowest, and
     two crate stacks stay. Collision stays boxes; the layout tests still pass.
+  - **Built (M25b, 2026-10-04):** eight new block kinds with code-built looks and two new surface textures (sandbag
+    cloth, HESCO mesh), still 10 draw calls for the map. Steel props bounce BBs (ricochets), sandbags and HESCO soak
+    them up. Against the M11 Depot: 3,039 more standing sightline pairs of 77,318 (none longer than 32.9 m), the
+    layout and bot tests pass, and the west end now wins about 54% of bot-only Elimination rounds (45% before).
 - **M26. Loadout, Armory and asset pool** (items 11, 12 and the Armory's Dev settings from 14).
   - **M26a. Asset pool.** Every replica and part is a single asset with a six-digit ID (`000001` Gas Pistol, `000002`
     AEG Rifle …) in `pool.md` at the repository's root: a hand-editable register the game reads at start, with a guide

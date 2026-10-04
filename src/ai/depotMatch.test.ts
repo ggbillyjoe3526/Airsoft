@@ -45,8 +45,10 @@ describe('a 3v3 bot match on Depot', () => {
       // leader all the time, at worst 5.3-6.9 m away (a sprinting leader round corners: a sprint can't catch a
       // sprint), and standing still 0.7-1.8% of the time the leader moves (one that got ahead of its spot waiting for
       // it; 1.0-2.6% before the bug pass let spots lie along the dock ramps). Before M-05, a follower sent round a wall
-      // to a spot on its far side ended up to 10.9 m away.
-      expect(counted, `seed ${seed}`).toBeGreaterThan(1000);
+      // to a spot on its far side ended up to 10.9 m away. The M25b props (re-measured 2026-10-04: at worst 4.3-6.6 m,
+      // standing 0.5-1.4%) end seed 4's leader's rounds sooner: 900 ticks judged, 1,772 before, so the floor on how
+      // much is judged is 800.
+      expect(counted, `seed ${seed}`).toBeGreaterThan(800);
       expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.95);
       expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp);
       expect(standing / counted, `seed ${seed}`).toBeLessThan(0.04);

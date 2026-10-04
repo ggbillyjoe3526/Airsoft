@@ -43,7 +43,7 @@ export function impactMaterialAt(blocks: readonly MapBlock[], p: Vec3): ImpactMa
   for (const b of blocks) {
     if (!nearBlock(b, p, AUDIO.impactBlockMargin)) continue;
     const m = blockMaterial(b);
-    if (b.kind === 'crate' || b.kind === 'container') return m;
+    if (b.kind !== 'floor' && b.kind !== 'ramp' && b.kind !== 'wall') return m;
     found ??= m;
   }
   return found ?? 'concrete';
