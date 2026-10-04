@@ -1,4 +1,4 @@
-import { GRIPS, handlingOf, MAGAZINES, type ReplicaParts } from '../../config/attachments';
+import { BARRELS, GRIPS, handlingOf, MAGAZINES, MUZZLES, type ReplicaParts } from '../../config/attachments';
 import { LASERS } from '../../config/lasers';
 import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
@@ -13,12 +13,14 @@ import {
   gripReadout,
   hopUpLabel,
   hopUpReadout,
+  barrelReadout,
   laserReadout,
   magazineReadout,
+  muzzleReadout,
   opticReadout,
   powerReadout,
 } from '../loadoutChoice';
-import { gearLine, performanceOf, type SheetRow, sheetRows } from '../performanceSheet';
+import { gearLine, performanceOf, type SheetRow, sheetRows, tierBlurb } from '../performanceSheet';
 import { backButton, el, laterRow, menuButton, menuPage, menuRow, rangeControl } from './menuParts';
 
 const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
@@ -48,6 +50,8 @@ const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[]
   { slot: 'optic', label: 'Optic', none: 'Iron Sights' },
   { slot: 'grip', label: 'Grip', none: 'No Grip' },
   { slot: 'laser', label: 'Laser', none: 'No Laser' },
+  { slot: 'barrel', label: 'Barrel', none: 'Standard' },
+  { slot: 'muzzle', label: 'Muzzle', none: 'None' },
   { slot: 'magazine', label: 'Magazine', none: 'Standard' },
   // Every replica needs a power source: no "none".
   { slot: 'power', label: 'Power Source', none: null },
@@ -160,7 +164,7 @@ export class LoadoutScreen {
       const ref = slot === 'grenades' ? null : (equipped[GEAR_SLOTS.indexOf(slot)] ?? null);
       parts.name.textContent = ref ? m.pool.byId.get(ref.asset)!.name : LOADOUT_TEXT.empty;
       parts.tier.textContent = ref ? this.tierLabel(ref) : '';
-      parts.line.textContent = ref ? gearLine(m.slotKit(ref), m.bbWeight(replicaOf(m.pool.byId.get(ref.asset)!))) : '';
+      parts.line.textContent = ref ? gearLine(m.slotKit(ref), m.bbWeight(ref.asset)) : '';
       setTier(parts.button, ref);
       parts.button.classList.toggle('empty', !ref);
       parts.button.setAttribute('aria-label', `${LOADOUT_TEXT.slots[slot]}: ${ref ? `${parts.name.textContent}, ${parts.tier.textContent}` : LOADOUT_TEXT.empty}`);
@@ -226,7 +230,8 @@ export class LoadoutScreen {
     const close = menuButton(LOADOUT_TEXT.backToGear, 'secondary', () => this.closeCustomise());
     close.classList.add('loadout-close');
     head.append(title, close);
-    this.panel.append(head, el('p', 'loadout-replica-summary', replicaSummary(kit.replica, kit.parts)));
+    // What the replica's tier does (audit POOL-10): rarity is handling, never "damage".
+    this.panel.append(head, el('p', 'loadout-replica-summary', replicaSummary(kit.replica, kit.parts)), el('p', 'menu-readout tier-blurb', tierBlurb(m.pool, ref)));
     // The parts on the left, the Performance sheet beside them (above them on a narrow window).
     const body = el('div', 'customise-body');
     const rows = el('div', 'customise-rows');
@@ -238,8 +243,8 @@ export class LoadoutScreen {
     this.panel.append(body);
 
     const fit = m.fitOf(asset.id);
-    let grams = m.bbWeight(base);
-    let dial = m.hopUp(base);
+    let grams = m.bbWeight(asset.id);
+    let dial = m.hopUp(asset.id);
     const factory = performanceOf(m.asItComes(asset.id), base.bbWeight, base.hopUpDial);
     const capped = m.capped(ref);
     // Readouts that follow the sliders without a full redraw (that would drop the slider being dragged).
@@ -251,8 +256,8 @@ export class LoadoutScreen {
     for (const row of FIT_ROWS) {
       // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power always have a choice.
       if (row.none !== null && row.slot !== 'magazine' && !m.hasSlot(asset.id, row.slot)) {
-        rows.append(fixedRow(row.label, LOADOUT_TEXT.noMount));
-        if (row.slot === 'optic') this.appendBbRows(rows, base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
+        rows.append(fixedRow(row.label, row.slot === 'barrel' ? LOADOUT_TEXT.fixedBarrel : row.slot === 'muzzle' ? LOADOUT_TEXT.noThread : LOADOUT_TEXT.noMount));
+        if (row.slot === 'optic') this.appendBbRows(rows, asset.id, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
         continue;
       }
       const choices = m.fitChoices(asset.id, row.slot);
@@ -276,6 +281,7 @@ export class LoadoutScreen {
         const on = !!fit[row.slot] && sameItem(fit[row.slot]!, item);
         const tile = smallTile(m.pool.byId.get(item.asset)!.name, this.tierLabel(item), on);
         tile.dataset.item = key(item);
+        tile.title = tierBlurb(m.pool, item);
         setTier(tile, item);
         tile.addEventListener('click', () => pick(item));
         tiles.append(tile);
@@ -286,14 +292,14 @@ export class LoadoutScreen {
       if (choices.length === 0 && row.none !== null) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.armoryHint));
       rows.append(menuRow(row.label, '', control));
       // BB weight and hop-up go after the optic, before the parts that change handling: as you set a replica up at a site.
-      if (row.slot === 'optic') this.appendBbRows(rows, base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
+      if (row.slot === 'optic') this.appendBbRows(rows, asset.id, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
     }
     live();
     rows.append(laterRow('Skins', '', LOADOUT_TEXT.skinsLater));
   }
 
   /** The BB weight slider (free, never pooled) and the hop-up dial, their readouts following each other. */
-  private appendBbRows(into: HTMLElement, base: ReplicaConfig, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
+  private appendBbRows(into: HTMLElement, replicaId: string, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
     let grams = grams0;
     let dial = dial0;
     const weightLine = el('p', 'menu-readout', bbWeightReadout(carried, grams));
@@ -311,12 +317,12 @@ export class LoadoutScreen {
         this.opts.onChange();
       });
     };
-    const weight = rangeControl(`${carried.name} BB weight`, { min: BB_WEIGHT.min, max: BB_WEIGHT.max, step: BB_WEIGHT.step }, grams, bbWeightLabel, `bbWeight.${base.id}`, (v) => {
+    const weight = rangeControl(`${carried.name} BB weight`, { min: BB_WEIGHT.min, max: BB_WEIGHT.max, step: BB_WEIGHT.step }, grams, bbWeightLabel, this.opts.model.dialField('bbWeight', replicaId), (v) => {
       grams = Math.round(v * 100) / 100;
       update();
     });
     weight.append(weightLine);
-    const hop = rangeControl(`${carried.name} hop-up`, { min: HOP_UP.minDial, max: HOP_UP.maxDial, step: HOP_UP.dialStep }, dial, hopUpLabel, `hopUp.${base.id}`, (v) => {
+    const hop = rangeControl(`${carried.name} hop-up`, { min: HOP_UP.minDial, max: HOP_UP.maxDial, step: HOP_UP.dialStep }, dial, hopUpLabel, this.opts.model.dialField('hopUp', replicaId), (v) => {
       dial = v;
       update();
     });
@@ -331,6 +337,8 @@ export class LoadoutScreen {
     if (slot === 'grip') return GRIPS[kit.parts.grip].blurb;
     if (slot === 'magazine') return MAGAZINES[kit.parts.magazine].blurb;
     if (slot === 'laser') return kit.parts.laser ? LASERS[kit.parts.laser].blurb : 'No laser: the spread as it comes.';
+    if (slot === 'barrel') return kit.parts.barrel ? BARRELS[kit.parts.barrel].blurb : LOADOUT_TEXT.standardBarrel;
+    if (slot === 'muzzle') return kit.parts.muzzle ? MUZZLES[kit.parts.muzzle].blurb : LOADOUT_TEXT.noMuzzle;
     const type = power ? this.opts.model.pool.byId.get(power.asset)?.power?.type : undefined;
     return type ? LOADOUT_TEXT.powerBlurb[type] : '';
   }
@@ -340,6 +348,8 @@ export class LoadoutScreen {
     if (slot === 'grip') return gripReadout(kit);
     if (slot === 'magazine') return magazineReadout(kit);
     if (slot === 'laser') return laserReadout(kit);
+    if (slot === 'barrel') return barrelReadout(kit);
+    if (slot === 'muzzle') return muzzleReadout(kit);
     return '';
   }
 
@@ -352,6 +362,7 @@ export class LoadoutScreen {
     const tile = el('button', 'item-tile');
     tile.type = 'button';
     tile.dataset.item = key(ref);
+    tile.title = tierBlurb(this.opts.model.pool, ref);
     setTier(tile, ref);
     tile.classList.toggle('selected', selected);
     tile.setAttribute('aria-pressed', String(selected));

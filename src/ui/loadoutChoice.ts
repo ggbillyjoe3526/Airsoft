@@ -1,5 +1,6 @@
 import { GRIPS, handlingOf, MAGAZINES } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
+import { BOT_BEHAVIOUR } from '../config/bots';
 import { MOVEMENT } from '../config/movement';
 import { SIM_DT } from '../config/sim';
 import { AIMING, OPTICS } from '../config/optics';
@@ -100,6 +101,18 @@ export function magazineReadout(slot: KitSlot): string {
 export function powerReadout(slot: KitSlot, grams: number): string {
   const r = slot.replica;
   return `${muzzleEnergy(r, grams).toFixed(2)} J: leaves the barrel at ${Math.round(muzzleVelocity(r, grams))} m/s with ${bbWeightLabel(grams)} BBs. ${formatRate(r.fireRate)} BBs a second at most.`;
+}
+
+/** One line under the barrel (M29b): the energy and spread it gives, and the draw. */
+export function barrelReadout(slot: KitSlot): string {
+  const r = slot.replica;
+  return `${r.muzzleEnergy.toFixed(2)} J with ${bbWeightLabel(r.bbWeight)} BBs, spread ${r.spreadDeg.toFixed(2)}°. Brings it up in ${handlingOf(r, slot.parts).drawTime.toFixed(2)} s.`;
+}
+
+/** One line under the muzzle part (M29b): how far away bots hear its shots. */
+export function muzzleReadout(slot: KitSlot): string {
+  const heard = BOT_BEHAVIOUR.hearingDistance * handlingOf(slot.replica, slot.parts).heardScale;
+  return `Bots hear your shots from ${Math.round(heard)} m (${BOT_BEHAVIOUR.hearingDistance} m without a silencer).`;
 }
 
 /** One line under the laser: the spread from the hip, as the crosshair shows it. */

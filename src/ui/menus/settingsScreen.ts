@@ -13,6 +13,9 @@ import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscree
 import { type HudSettingsOptions, hudSettings } from '../hudSettings';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
+import { SaveSettings } from '../saveSettings';
+import type { SaveManager } from '../../save/saveManager';
+import { SETTINGS_TAB_ICONS } from './icons';
 import { type SettingsOrigin, tabAfterKey } from './menuNav';
 import { backButton, el, laterRow, laterTag, menuPage, menuRow, rangeControl } from './menuParts';
 
@@ -34,18 +37,21 @@ export interface SettingsOptions {
   hud: HudSettingsOptions;
   /** The hidden Dev tab (ui/devSettings.ts, M24): `enabled`, the box under the tabs is ticked and the tab shown. */
   dev: DevSettingsOptions & { enabled: boolean; onEnabled: (on: boolean) => void };
+  /** The save (M31), for the Save tab: download, load, restore points. */
+  save: SaveManager;
   onBack: () => void;
 }
 
 /**
- * The Settings screen: tabs down the left (Controls, Key Bindings, Graphics, Crosshair, HUD, Audio, Accessibility, and
- * Dev once the box under them is ticked), the picked tab's settings on the right. Everything saves as it changes.
+ * The Settings screen: tabs down the left (Controls, Key Bindings, Graphics, Crosshair, HUD, Audio, Accessibility, Save,
+ * and Dev once the box under them is ticked), the picked tab's settings on the right. Everything saves as it changes.
  * Reached from New game and from the pause menu; Back returns to whichever opened it.
  */
 export class SettingsScreen {
   readonly root: HTMLDivElement;
   private readonly tabs = new Map<SettingsTab, { button: HTMLButtonElement; panel: HTMLDivElement }>();
   private readonly keySettings: KeySettings;
+  private readonly saveSettings: SaveSettings;
   private tab: SettingsTab = 'controls';
   private origin: SettingsOrigin = 'setup';
   /** Stops the Fullscreen button following the page's fullscreen state. */
@@ -55,6 +61,7 @@ export class SettingsScreen {
     const page = menuPage('menu-settings', 'Settings');
     this.root = page.root;
     this.keySettings = new KeySettings(opts.bindings);
+    this.saveSettings = new SaveSettings(opts.save);
 
     // The WAI-ARIA tabs pattern (audit L-31): only the picked tab is in the Tab order; the arrows, Home and End move
     // between tabs (each shows its panel as it takes the focus).
@@ -70,6 +77,8 @@ export class SettingsScreen {
       button.id = `settings-tab-${id}`;
       button.setAttribute('role', 'tab');
       button.setAttribute('aria-controls', `settings-panel-${id}`);
+      // The tab's icon (audit section 6, item 19), decoration beside its name.
+      button.insertAdjacentHTML('afterbegin', SETTINGS_TAB_ICONS[id]);
       button.append(el('span', '', label));
       if (later) button.append(laterTag());
       button.hidden = hidden === true && !opts.dev.enabled;
@@ -91,6 +100,8 @@ export class SettingsScreen {
     columns.append(side, panels);
     page.body.append(columns);
     page.footer.append(backButton(opts.onBack));
+    // The Save tab's pop-up lives in the page: a dialog inside a hidden tab panel can't show.
+    this.root.append(this.saveSettings.dialog.root);
     this.showTab('controls');
   }
 
@@ -98,6 +109,8 @@ export class SettingsScreen {
   openFrom(origin: SettingsOrigin): void {
     this.origin = origin;
     this.keySettings.setVisible(this.tab === 'keys');
+    // A save can't be loaded mid-match (owner's default, 2026-10-04).
+    this.saveSettings.setInMatch(origin === 'pause');
   }
 
   get openedFrom(): SettingsOrigin {
@@ -111,6 +124,7 @@ export class SettingsScreen {
 
   dispose(): void {
     this.keySettings.dispose();
+    this.saveSettings.dispose();
     this.unwatchFullscreen();
   }
 
@@ -162,6 +176,8 @@ export class SettingsScreen {
       panel.hidden = !on;
     }
     this.keySettings.setVisible(id === 'keys');
+    // "Last saved 5 min ago" is worked out as the tab shows.
+    if (id === 'save') this.saveSettings.refresh();
   }
 
   /** Arrow Up / Down, Home and End on the tab list move to another tab (of those shown) and show it. */
@@ -180,7 +196,7 @@ export class SettingsScreen {
       panel.append(...controlsSettings(opts.controls));
     } else if (id === 'keys') {
       const mouse = el('p', 'menu-readout settings-mouse');
-      mouse.innerHTML = '<kbd>Wheel</kbd> switch replica · <kbd>Esc</kbd> pause · <kbd>`</kbd> / <kbd>F3</kbd> debug info';
+      mouse.innerHTML = '<kbd>Wheel</kbd> switch replica (a direction bound above does that instead) · <kbd>Esc</kbd> pause and resume · <kbd>`</kbd> / <kbd>F3</kbd> debug info';
       panel.append(this.keySettings.root, mouse);
     } else if (id === 'graphics') {
       panel.append(
@@ -204,6 +220,9 @@ export class SettingsScreen {
       panel.append(...hudSettings(opts.hud));
     } else if (id === 'accessibility') {
       panel.append(...accessibilitySettings(opts.accessibility));
+    } else if (id === 'save') {
+      panel.append(...this.saveSettings.rows);
+      this.saveSettings.acceptDrops(panel);
     } else if (id === 'dev') {
       panel.append(el('p', 'menu-readout', devIntro()), ...devSettings(opts.dev));
     }

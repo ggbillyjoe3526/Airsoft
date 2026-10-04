@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SOUND_CUES } from '../config/accessibility';
+import { MUZZLES, type ReplicaParts } from '../config/attachments';
+import { LOADOUT } from '../config/replicas';
+import { createArmament } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { vec3 } from '../sim/vec';
 import { cueAngle, cueOpacity, type HeardSound, SoundCues, soundCueOf } from './soundCues';
 
-const person = (id: number, team: number, x = 0, z = 0): Character => ({ id, team, position: vec3(x, 0, z) }) as Character;
+const person = (id: number, team: number, x = 0, z = 0, parts: ReplicaParts[] = []): Character =>
+  ({ id, team, position: vec3(x, 0, z), armament: createArmament(LOADOUT, parts) }) as Character;
 
 describe('soundCueOf (M18b)', () => {
   const you = person(0, 0);
@@ -17,7 +21,7 @@ describe('soundCueOf (M18b)', () => {
   const cue = (e: GameEvent) => (soundCueOf(e, you, of, out) ? { ...out } : null);
 
   it("gives enemies' footsteps a cue at where they stand, and not your team's or your own", () => {
-    expect(cue({ type: 'footstep', characterId: 3, kind: 'run' } as GameEvent)).toEqual({ kind: 'step', sourceId: 3, x: -4, z: 9 });
+    expect(cue({ type: 'footstep', characterId: 3, kind: 'run' } as GameEvent)).toEqual({ kind: 'step', sourceId: 3, x: -4, z: 9, reach: 1 });
     expect(cue({ type: 'footstep', characterId: 1, kind: 'run' } as GameEvent)).toBeNull();
     expect(cue({ type: 'footstep', characterId: 0, kind: 'run' } as GameEvent)).toBeNull();
   });
@@ -28,9 +32,17 @@ describe('soundCueOf (M18b)', () => {
     expect(cue({ type: 'shot', characterId: 0, replicaId: 'aeg', position: vec3() })).toBeNull();
   });
 
+  it("carries a silenced shot only the silencer's share of the way (M29b)", () => {
+    const silenced = person(4, 1, 5, 5, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+    const heard = (c: Character) => (soundCueOf({ type: 'shot', characterId: c.id, replicaId: 'aeg', position: vec3() }, you, () => c, out) ? out.reach : null);
+    expect(heard(enemy)).toBe(1);
+    expect(heard(silenced)).toBeCloseTo(MUZZLES.silencer.heardScale);
+    expect(MUZZLES.silencer.heardScale).toBeLessThan(1);
+  });
+
   it('puts a hit call where the hit player is, and none for your own', () => {
     const hit = (victimId: number, shooterId: number): GameEvent => ({ type: 'characterHit', victimId, shooterId, position: vec3(9, 1, 9), direction: vec3(0, 0, 1), ricochet: false });
-    expect(cue(hit(3, 0))).toEqual({ kind: 'hit', sourceId: 3, x: -4, z: 9 });
+    expect(cue(hit(3, 0))).toEqual({ kind: 'hit', sourceId: 3, x: -4, z: 9, reach: 1 });
     expect(cue(hit(0, 3))).toBeNull();
   });
 

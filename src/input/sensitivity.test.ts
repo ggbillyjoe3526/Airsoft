@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOUSE } from '../config/controls';
-import { cmPer360, roundToStep, sameSensitivityAs, sensitivityForCm, sensitivityFromTypedCm } from './sensitivity';
+import { cmPer360, sameSensitivityAs, sensitivityForCm, sensitivityFromTypedCm } from './sensitivity';
 
 describe('sensitivity as cm/360 (M18)', () => {
   it('works out the mouse travel for a full turn from the DPI', () => {
@@ -19,24 +19,19 @@ describe('sensitivity as cm/360 (M18)', () => {
     }
   });
 
-  it('rounds to a step exactly', () => {
-    expect(roundToStep(1.2345, 0.05)).toBe(1.25);
-    expect(roundToStep(1.224, 0.05)).toBe(1.2);
-    expect(roundToStep(0.4988, 0.05)).toBe(0.5);
-    expect(roundToStep(3, 0.05)).toBe(3);
-  });
-
-  it('sets a typed cm/360 as the nearest sensitivity the slider can show, within its range (audit L-32)', () => {
-    // 40 cm at 800 DPI is 0.4988: the slider shows 0.50, so the game turns at 0.50 too.
-    expect(sensitivityFromTypedCm(40, 800)).toBe(0.5);
-    for (const cm of [3, 7.7, 19.95, 33.3, 61, 150]) {
-      const v = sensitivityFromTypedCm(cm, 800);
-      expect(v).toBe(roundToStep(v, MOUSE.sensitivityStep));
-      expect(v).toBeGreaterThanOrEqual(MOUSE.minSensitivity);
-      expect(v).toBeLessThanOrEqual(MOUSE.maxSensitivity);
+  it('keeps a typed cm/360 exactly, so the box shows what was typed, within the slider\'s range (audit UI-24)', () => {
+    // 36.4 cm at 800 DPI is about 0.548: rounded to the old 0.05 step it became 0.55 and the box read 36.3.
+    for (const dpi of [400, 800, 1600]) {
+      for (const cm of [7.7, 19.95, 33.3, 36.4, 61, 99.7]) {
+        const v = sensitivityFromTypedCm(cm, dpi);
+        if (v <= MOUSE.minSensitivity || v >= MOUSE.maxSensitivity) continue;
+        expect(Math.abs(cmPer360(v, dpi) - cm)).toBeLessThan(0.05);
+      }
     }
     expect(sensitivityFromTypedCm(1, 800)).toBe(MOUSE.maxSensitivity);
     expect(sensitivityFromTypedCm(500, 800)).toBe(MOUSE.minSensitivity);
+    // The slider's finer step: 0.20 → 0.21 is a 5 % change, not 25 %.
+    expect(MOUSE.sensitivityStep).toBeLessThanOrEqual(0.01);
   });
 
   it('gives the same feel in another shooter from its turn per count', () => {

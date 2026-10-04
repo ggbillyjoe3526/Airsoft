@@ -37,6 +37,13 @@ describe('match stats (M19)', () => {
     expect(stats.roundOf(0)).toEqual(stats.matchOf(0));
   });
 
+  it('counts your own ricochet as a time you were hit, not as a hit on anyone (audit SIM-07)', () => {
+    const state = match();
+    const stats = new MatchStats(state.characters);
+    tick(stats, state, [shot(0), { ...hit(0, 0), ricochet: true } as GameEvent]);
+    expect(stats.matchOf(0)).toMatchObject({ bbsFired: 1, hits: 0, friendlyHits: 0, timesHit: 1 });
+  });
+
   it('measures accuracy as opponents hit per BB fired (friendly hits do not count), none before a BB', () => {
     const state = match();
     const stats = new MatchStats(state.characters);
@@ -71,5 +78,24 @@ describe('match stats (M19)', () => {
     expect(stats.roundOf(0).timeAlive).toBe(0);
     stats.reset();
     expect(stats.matchOf(1)).toMatchObject({ bbsFired: 0, hits: 0, timeAlive: 0 });
+  });
+
+  it('counts a round won for a player who hit an opponent in it or was still in play at its end, not one sat out (audit POOL-08)', () => {
+    const state = match();
+    const stats = new MatchStats(state.characters);
+    const won = { type: 'roundOver', winner: 0, reason: 'eliminated' } as const;
+    // Round 1: everyone on Blue still in play.
+    tick(stats, state, [won]);
+    // Round 2: player 0 out early with no hit, player 1 hit an opponent and was then hit too.
+    tick(stats, state, [{ type: 'roundStart', round: 2 }]);
+    state.characters[0]!.status = 'out';
+    tick(stats, state, [hit(2, 1)]);
+    state.characters[1]!.status = 'out';
+    tick(stats, state, [won]);
+    // Round 3, lost: nobody on Blue is paid for it.
+    tick(stats, state, [{ type: 'roundStart', round: 3 }, { type: 'roundOver', winner: 1, reason: 'eliminated' }]);
+    expect([stats.roundsContributed(0), stats.roundsContributed(1), stats.roundsContributed(2)]).toEqual([1, 2, 1]);
+    stats.reset();
+    expect(stats.roundsContributed(1)).toBe(0);
   });
 });

@@ -46,6 +46,9 @@ export function gameOwnership(pool: Pool, collection: () => Collection, unlockAl
 
 const NONE = 'none';
 
+/** The two dials every replica has (never pooled). */
+type Dial = 'hopUp' | 'bbWeight';
+
 type Pick = `equip.${string}` | `fit.${string}`;
 
 /** `equip.primary` → `equip.dev.primary`: where a pick made with everything unlocked is kept. */
@@ -86,7 +89,9 @@ export class LoadoutModel {
       const raw = this.readPick(`equip.${slot}`);
       const saved = raw ? parseItemKey(raw) : null;
       if (saved && this.isReplica(saved) && this.ownership.owns(saved) && !used.has(saved.asset)) return void out.push(saved);
-      out.push(this.defaultReplica(LOADOUT[i], used));
+      // The picked copy scrapped (audit POOL-05: a lower tier goes once a rarer one is owned): the best copy left of it.
+      const same = saved && this.isReplica(saved) && !used.has(saved.asset) ? this.bestOwned(saved.asset) : null;
+      out.push(same ?? this.defaultReplica(LOADOUT[i], used));
     });
     return out;
   }
@@ -111,7 +116,12 @@ export class LoadoutModel {
     for (const slot of FIT_SLOTS) {
       const raw = this.readPick(`fit.${replicaId}.${slot}`);
       const saved = raw && raw !== NONE ? parseItemKey(raw) : null;
-      fit[slot] = saved && this.canFit(replica, slot, saved) ? saved : this.defaultFit(replica, slot);
+      if (saved && this.canFit(replica, slot, saved)) fit[slot] = saved;
+      else {
+        // A fitted copy scrapped (audit POOL-05): the best copy left of the same part, else the slot's default.
+        const same = saved ? this.bestOwned(saved.asset) : null;
+        fit[slot] = same && this.canFit(replica, slot, same) ? same : this.defaultFit(replica, slot);
+      }
     }
     return fit;
   }
@@ -134,23 +144,49 @@ export class LoadoutModel {
     return !!replica && this.pool.assets.some((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
   }
 
-  /** A replica's hop-up dial (by its config id, whichever tier), or its factory setting. */
-  hopUp(r: ReplicaConfig): number {
-    return loadSetting(`hopUp.${r.id}`, numberIn(HOP_UP.minDial, HOP_UP.maxDial), r.hopUpDial);
+  /**
+   * Where the replica asset `replicaId`'s dial is saved (audit POOL-17): by asset id, whichever tier, so two pool.md
+   * rows sharing a Key keep their own; `hopUp.dev.<id>` while everything is unlocked, so a dial turned with borrowed
+   * gear doesn't stay on the real replica.
+   */
+  dialField(kind: Dial, replicaId: string): `${Dial}.${string}` {
+    return this.ownership.sandboxed?.() ? `${kind}.dev.${replicaId}` : `${kind}.${replicaId}`;
   }
 
-  setHopUp(r: ReplicaConfig, dial: number): void {
-    saveSetting(`hopUp.${r.id}`, dial);
+  /** A replica asset's hop-up dial, or its factory setting. */
+  hopUp(replicaId: string): number {
+    const r = this.replicaConfig(replicaId);
+    return r ? this.readDial('hopUp', replicaId, r, numberIn(HOP_UP.minDial, HOP_UP.maxDial), r.hopUpDial) : HOP_UP.minDial;
   }
 
-  /** A replica's BB weight (grams), or the one it comes set up for. */
-  bbWeight(r: ReplicaConfig): number {
-    return loadSetting(`bbWeight.${r.id}`, (raw) => validBbWeight(typeof raw === 'number' ? raw : Number(raw)), r.bbWeight);
+  setHopUp(replicaId: string, dial: number): void {
+    saveSetting(this.dialField('hopUp', replicaId), dial);
   }
 
-  setBbWeight(r: ReplicaConfig, grams: number): void {
+  /** A replica asset's BB weight (grams), or the one it comes set up for. */
+  bbWeight(replicaId: string): number {
+    const r = this.replicaConfig(replicaId);
+    return r ? this.readDial('bbWeight', replicaId, r, (raw) => validBbWeight(typeof raw === 'number' ? raw : Number(raw)), r.bbWeight) : 0;
+  }
+
+  setBbWeight(replicaId: string, grams: number): void {
     const g = validBbWeight(grams);
-    if (g !== undefined) saveSetting(`bbWeight.${r.id}`, g);
+    if (g !== undefined) saveSetting(this.dialField('bbWeight', replicaId), g);
+  }
+
+  /**
+   * A dial: the sandboxed one while everything is unlocked, else the asset's own, else the one saved by replica config
+   * id before audit POOL-17 (`hopUp.aeg`), else the factory setting.
+   */
+  private readDial(kind: Dial, replicaId: string, r: ReplicaConfig, parse: (raw: unknown) => number | undefined, factory: number): number {
+    const read = (field: `${Dial}.${string}`, fallback: number): number => loadSetting(field, parse, fallback);
+    const own = read(`${kind}.${replicaId}`, read(`${kind}.${r.id}`, factory));
+    return this.ownership.sandboxed?.() ? read(`${kind}.dev.${replicaId}`, own) : own;
+  }
+
+  private replicaConfig(replicaId: string): ReplicaConfig | undefined {
+    const a = this.pool.byId.get(replicaId);
+    return a?.category === 'replica' ? replicaOf(a) : undefined;
   }
 
   /** The kit slot for a replica item with its current fit: what the Customise screen's numbers describe. */
@@ -176,13 +212,11 @@ export class LoadoutModel {
 
   /** The player's kit for the next match or range visit. */
   kit(): PlayerKit {
-    const slots = this.equipped()
-      .filter((r): r is ItemRef => r !== null)
-      .map((r) => this.slotKit(r));
+    const refs = this.equipped().filter((r): r is ItemRef => r !== null);
     return {
-      slots,
-      hopUps: slots.map((s) => this.hopUp(s.replica)),
-      bbWeights: slots.map((s) => this.bbWeight(s.replica)),
+      slots: refs.map((r) => this.slotKit(r)),
+      hopUps: refs.map((r) => this.hopUp(r.asset)),
+      bbWeights: refs.map((r) => this.bbWeight(r.asset)),
     };
   }
 
@@ -194,6 +228,15 @@ export class LoadoutModel {
 
   private savePick(field: Pick, value: string): void {
     saveSetting(this.ownership.sandboxed?.() ? sandboxField(field) : field, value);
+  }
+
+  /** The rarest owned copy of an asset, or null. */
+  private bestOwned(assetId: string): ItemRef | null {
+    for (let t = this.pool.tiers.length - 1; t >= 0; t--) {
+      const ref = { asset: assetId, tier: this.pool.tiers[t]!.id };
+      if (this.ownership.owns(ref)) return ref;
+    }
+    return null;
   }
 
   private isReplica(ref: ItemRef): boolean {

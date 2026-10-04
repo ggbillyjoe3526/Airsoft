@@ -1,4 +1,13 @@
-import { ORDER_WHEEL, type SquadOrderKind, type WheelSelect } from '../config/squad';
+import type { Action } from '../config/controls';
+import { ORDER_WHEEL, type SquadCommand, type SquadOrderKind, type WheelSelect } from '../config/squad';
+
+/** The key that gives each wheel order directly (audit UI-22); the team plan has none (an order's own key cancels it). */
+export const ORDER_KEYS: Readonly<Record<SquadCommand, Action | null>> = {
+  follow: 'orderFollow',
+  hold: 'orderHold',
+  regroup: 'orderRegroup',
+  cancel: null,
+};
 
 /** The line in the wheel's middle: how to give the order pointed at, or how to leave. */
 export function wheelHint(select: WheelSelect, pick: number, keyName: string): string {
@@ -14,12 +23,21 @@ export function wheelHint(select: WheelSelect, pick: number, keyName: string): s
 export class OrderWheel {
   private readonly root: HTMLDivElement;
   private readonly items: HTMLDivElement[];
+  /** Under each order, its direct key (audit UI-22): the wheel teaches the keys it stands in for. */
+  private readonly keys: (HTMLElement | null)[];
   private readonly dot: HTMLElement;
   private readonly hint: HTMLDivElement;
   private shown = { open: false, pick: -2, current: '', hint: '', x: Number.NaN, y: Number.NaN };
 
-  /** `team`: your team's CSS colour, which lights the order pointed at. */
-  constructor(parent: HTMLElement, team: string) {
+  /**
+   * `team`: your team's CSS colour, which lights the order pointed at; `keyName`: the key bound to an action ('' if
+   * none), read as the wheel opens since keys can be rebound on the pause menu.
+   */
+  constructor(
+    parent: HTMLElement,
+    team: string,
+    private readonly keyName: (action: Action) => string,
+  ) {
     this.root = document.createElement('div');
     this.root.className = 'order-wheel';
     this.root.hidden = true;
@@ -37,6 +55,13 @@ export class OrderWheel {
       this.root.append(el);
       return el;
     });
+    this.keys = ORDER_WHEEL.items.map((item, i) => {
+      if (!ORDER_KEYS[item.command]) return null;
+      const kbd = document.createElement('kbd');
+      kbd.className = 'order-wheel-key';
+      this.items[i]!.append(kbd);
+      return kbd;
+    });
     this.dot = document.createElement('i');
     this.dot.className = 'order-wheel-pointer';
     this.hint = document.createElement('div');
@@ -51,7 +76,10 @@ export class OrderWheel {
    */
   update(open: boolean, pick: number, x: number, y: number, current: SquadOrderKind | 'none', hint: string): void {
     const s = this.shown;
-    if (open !== s.open) this.root.hidden = !(s.open = open);
+    if (open !== s.open) {
+      this.root.hidden = !(s.open = open);
+      if (open) this.showKeys();
+    }
     if (!open) return;
     if (pick !== s.pick) {
       this.items.forEach((el, i) => el.classList.toggle('picked', i === pick));
@@ -71,6 +99,18 @@ export class OrderWheel {
       s.y = ry;
       this.dot.style.transform = `translate(${rx}px, ${ry}px)`;
     }
+  }
+
+  /** Each order's direct key as bound now; hidden for one with no key. */
+  private showKeys(): void {
+    ORDER_WHEEL.items.forEach((item, i) => {
+      const kbd = this.keys[i];
+      const action = ORDER_KEYS[item.command];
+      if (!kbd || !action) return;
+      const name = this.keyName(action);
+      kbd.textContent = name;
+      kbd.hidden = name === '';
+    });
   }
 
   hide(): void {

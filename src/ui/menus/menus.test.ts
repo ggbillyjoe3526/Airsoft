@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
-import { SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
+import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
+import { unpaidLine } from './summaryScreen';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
@@ -8,7 +9,7 @@ import { DEPOT } from '../../map/depot';
 import { TEAM_COLOUR_CHOICES } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
-import { backTarget, screenWhenStopped, tabAfterKey } from './menuNav';
+import { backTarget, escResumes, moreBelow, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
 import { loadFov, loadMap, loadSavedQuality } from './savedChoices';
 
@@ -41,6 +42,24 @@ describe('menu navigation', () => {
     expect(backTarget('title', 'setup')).toBeNull();
     expect(backTarget('pause', 'pause')).toBeNull();
     expect(backTarget('result', 'setup')).toBeNull();
+  });
+});
+
+describe('Esc on the pause menu (audit UI-09)', () => {
+  it('resumes from the pause menu only, not on a held key\'s repeats nor straight after the pause came up', () => {
+    expect(escResumes('pause', 1000, false, 400)).toBe(true);
+    expect(escResumes('pause', 100, false, 400)).toBe(false); // the Esc that released the mouse
+    expect(escResumes('pause', 1000, true, 400)).toBe(false);
+    for (const screen of ['title', 'setup', 'settings', 'loadout', 'result', 'summary'] as const) expect(escResumes(screen, 1000, false, 400)).toBe(false);
+  });
+});
+
+describe('the scroll hint on long pages (audit UI-18)', () => {
+  it('says there is more below until the page is scrolled to its end', () => {
+    expect(moreBelow(0, 720, 911)).toBe(true); // Controls at 1280 × 720 before the fix measured 191 px more
+    expect(moreBelow(191, 720, 911)).toBe(false);
+    expect(moreBelow(0, 720, 721)).toBe(false); // a pixel of rounding is not "more"
+    expect(moreBelow(0, 720, 600)).toBe(false);
   });
 });
 
@@ -181,5 +200,14 @@ describe('HUD settings (M24)', () => {
     expect(at1280).toBeLessThan(SCOREBOARD_SIZE.max);
     expect(1280 / 2 - SCOREBOARD_SIZE.halfWidth * at1280).toBeCloseTo(SCOREBOARD_SIZE.feedRoom, 5);
     expect(scoreboardScale(SCOREBOARD_SIZE.max, 800)).toBe(1);
+  });
+});
+
+describe('the summary when a match paid nothing (audit POOL-22)', () => {
+  it('says why: Dev settings changed the match, or the Armory is off; nothing when it paid', () => {
+    expect(unpaidLine(null, 'dev')).toBe(ARMORY_TEXT.unpaidDev);
+    expect(unpaidLine(null, 'off')).toBe(ARMORY_TEXT.unpaidOff);
+    expect(unpaidLine(null, null)).toBe('');
+    expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'dev')).toBe('');
   });
 });

@@ -113,9 +113,33 @@ Each replica's standard magazine is how it comes (its Magazine and Magazines abo
 - **Carried**: magazines carried, added to the replica's own (at least one is always carried).
 - **Rattles**: the loose BBs rattle as you move, so bots close by hear you even walking.
 
+## Barrels
+
+Only replicas tagged `barrel-mount` in pool.md take a barrel (the AEG Rifle); as it comes, a replica has its standard
+barrel.
+
+| Key | Name | Energy % | Spread (×) | Handling (×) |
+|---|---|---|---|---|
+| tightBore | Tight-Bore Barrel | 3 | 0.85 | 1 |
+| long | Long Barrel | 8 | 1 | 1.15 |
+
+- **Handling**: the time to bring the replica up after a switch and to raise a fitted optic (a long barrel is
+  front-heavy).
+
+## Muzzle parts
+
+Screwed onto a replica tagged `muzzle-thread` in pool.md (both replicas).
+
+| Key | Name | Energy % | Handling (×) | Heard from (×) |
+|---|---|---|---|---|
+| silencer | Silencer | -5 | 1.1 | 0.5 |
+
+- **Heard from**: how far away its shots are heard, by bots, on the minimap and in the sound cues (0.5 is half as
+  far). A silencer's shots also sound muffled.
+
 ## Tier scaling
 
-Categories: Replica, Battery, Gas, Spring, Optic, Grip, Laser, Magazine. Stats: Energy, Fire rate, Spread, Reload,
+Categories: Replica, Battery, Gas, Spring, Optic, Grip, Laser, Magazine, Barrel, Muzzle. Stats: Energy, Fire rate, Spread, Reload,
 Draw, Raise, Shake (which category takes which is in the table; a pairing the code has no use for is flagged by the test).
 
 | Category | Stat | Share % |
@@ -134,6 +158,11 @@ Draw, Raise, Shake (which category takes which is in the table; a pairing the co
 | Grip | Shake | 50 |
 | Laser | Spread | 50 |
 | Magazine | Reload | 100 |
+| Barrel | Spread | 50 |
+| Barrel | Draw | 50 |
+| Barrel | Raise | 50 |
+| Muzzle | Draw | 50 |
+| Muzzle | Raise | 50 |
 
 ## Site limits
 

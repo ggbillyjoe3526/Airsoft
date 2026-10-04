@@ -36,4 +36,10 @@ export const PHYSICS = {
    * slope a 0.2 m nav cell rises 0.1 m, under maxWalkableLedge. Checked for every map in mapData.test.ts.
    */
   maxRampSlope: 0.5,
+  /**
+   * Level ray casts (sim/levelRay.ts, audit SIM-01) look blocks up in a grid of square columns this wide (m) over the
+   * map's footprint, so a BB's 1.5 m tick segment tests a handful of blocks, not all of them. Depot's smallest blocks
+   * are 0.6–1.2 m across.
+   */
+  rayGridCell: 1,
 } as const;

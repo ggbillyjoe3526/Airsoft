@@ -22,6 +22,18 @@ export function toMinimap(yaw: number, cx: number, cz: number, x: number, z: num
   return out;
 }
 
+/** Whether (x, y) lies inside the circle at (cx, cy) of radius `r` (a marker under the minimap; audit UI-13). */
+export function insideCircle(x: number, y: number, cx: number, cy: number, r: number): boolean {
+  const dx = x - cx;
+  const dy = y - cy;
+  return r > 0 && dx * dx + dy * dy <= r * r;
+}
+
+/** The minimap canvas's pixels per CSS pixel on a screen of `devicePixelRatio`: 1 to MINIMAP.maxPixelRatio. */
+export function minimapPixelRatio(devicePixelRatio: number | undefined): number {
+  return Math.min(MINIMAP.maxPixelRatio, Math.max(1, devicePixelRatio || 1));
+}
+
 /** Pulls `p` back onto a circle of `radius` round the middle if it's further out; true if it was. */
 export function clampToRim(p: MapPoint, radius: number): boolean {
   const d = Math.hypot(p.x, p.y);
@@ -81,7 +93,7 @@ export class HeardPlayers {
     if (sound.kind === 'hit') return;
     const kind: NoiseKind = sound.kind;
     const metres = Math.hypot(sound.x - fromX, sound.z - fromZ);
-    if (metres > MINIMAP.hearing[kind]) return;
+    if (metres > MINIMAP.hearing[kind] * (sound.reach ?? 1)) return;
     let p = this.players.find((h) => h.sourceId === sound.sourceId) ?? this.players.find((h) => Number.isNaN(h.at));
     if (!p) {
       p = { sourceId: -1, kind, x: 0, z: 0, radius: 0, at: Number.NaN };

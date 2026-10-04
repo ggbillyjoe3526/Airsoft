@@ -8,7 +8,7 @@ import type { ReplicaConfig } from '../config/replicas';
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { botSeed, planSeed } from '../core/seed';
 import { cellX, cellZ, createNavSearch, findPath, floorAt, type NavGrid, type NavSearch } from '../nav/navGrid';
-import type { WorldQuery } from '../sim/armament';
+import { shotHeardScale, type WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
@@ -346,7 +346,8 @@ export class BotController {
         this.planRound();
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
-        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance, shooter.id);
+        // A silencer (M29b) shortens how far the shot carries.
+        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance * shotHeardScale(shooter), shooter.id);
       } else if (e.type === 'characterHit') {
         // Teammates near someone who calls a hit turn towards where it came from; not from a BB fired by someone hit
         // since (they are walking off, not where the threat is). A "HIT!" tells them which way the BB came, not how far
@@ -363,7 +364,8 @@ export class BotController {
           this.hear(shooter.team, victim.position, victim.position, time, g, cfg.hearingDistance, shooter.id);
         }
       } else if (e.type === 'ricochetTick') {
-        // A ricochet that doesn't count still tells its victim they're under fire.
+        // A ricochet that doesn't count still tells its victim they're under fire, unless it was their own (SIM-07).
+        if (e.victimId === e.shooterId) continue;
         for (const b of this.bots) {
           if (b.character.id !== e.victimId) continue;
           b.suppressedAt = time;

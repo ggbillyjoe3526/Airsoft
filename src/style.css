@@ -1,12 +1,77 @@
 :root {
+  /* The design tokens (FA9, audit section 6): one type scale, three letter-spacings, one spacing scale, four control
+     heights, three radii, the colours and the motion. Every rule below takes its values from here. */
   --ui-font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --ui-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --fs-2xs: 11px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --fs-3xl: clamp(32px, 4vw, 44px);
+  --fs-display: clamp(56px, 10vw, 132px);
+  /* Headings and display type; labels in capitals; kickers */
+  --ls-tight: 0.03em;
+  --ls-caps: 0.06em;
+  --ls-wide: 0.12em;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-8: 48px;
+  /* Control heights: big buttons and tabs, pop-up controls, pickers and number boxes, key boxes; the primary button */
+  --control-lg: 48px;
+  --control-md: 40px;
+  --control-sm: 36px;
+  --control-xs: 32px;
+  --control-xl: 56px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --orange: #ff8a2a;
+  --orange-hover: #ff9b47;
   /* The team colours (config/teams.ts): the standard set until a match sets the picked one on the game's container */
   --team-0: #3d8bff;
   --team-1: #ff8a2a;
   --ink: #16181d;
   --paper: #f7f3ea;
+  /* The menus: the page, panels and their raised state, control borders and the softer row and table dividers */
+  --menu-bg: #16181d;
+  --menu-panel: #20232a;
+  --menu-panel-hi: #2a2e37;
+  --menu-line: #3a3f4a;
+  --menu-line-soft: #2f333c;
+  /* Secondary text: muted 7.7:1, faint 4.7:1 on the page; soft for tile actions */
+  --menu-soft: #d8d4c9;
+  --menu-muted: #b9b5aa;
+  --menu-faint: #8f8b82;
+  --menu-gutter: clamp(20px, 5vw, 64px);
+  --hint: #ffb27a;
+  --danger: #ff5a4f;
+  --warning: #ffd84d;
+  --success: #5fbf6a;
+  /* The HUD (audit section 6, PR 2): one foreground, one shadow, two panel strengths, one radius, three levels of
+     emphasis (crosshair and hit marker at full, ammo and scoreboard, then the minimap, feed, markers and squad line). */
+  --hud-fg: #fff;
+  --hud-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  --hud-panel: rgba(12, 14, 18, 0.6);
+  --hud-panel-solid: rgba(12, 14, 18, 0.85);
+  --hud-radius: 6px;
+  --hud-l2: 0.92;
+  --hud-l3: 0.8;
+  /* Corners keep this far in, and inside the middle 16:9 of an ultrawide screen (21:9: 320 px in at 2560 × 1080). */
+  --hud-margin: clamp(16px, 1.5vw, 32px);
+  --hud-safe-x: max(0px, calc((100vw - 177.8vh) / 2));
+  --hud-edge-x: calc(var(--hud-safe-x) + var(--hud-margin));
+  /* Motion: off under reduced motion (the durations go to 0 below). */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 120ms;
+  --t-med: 200ms;
+  color-scheme: dark;
 }
 
 * {
@@ -18,7 +83,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #1b1d22;
+  background: var(--menu-bg);
   color: var(--paper);
   font-family: var(--ui-font);
 }
@@ -28,19 +93,24 @@ body {
   inset: 0;
 }
 
+/* Reduced motion (Settings → Accessibility, or the system's unless the player picked full motion): menu transitions and
+   entrances take no time. */
+#app.reduced-motion {
+  --t-fast: 0ms;
+  --t-med: 0ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) {
+    --t-fast: 0ms;
+    --t-med: 0ms;
+  }
+}
+
 .game-canvas {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-#loading {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 20px;
-  letter-spacing: 0.1em;
 }
 
 .debug-overlay {
@@ -59,20 +129,12 @@ body {
 
 /* Below the minimap (M23) while it shows, so the panel doesn't hide your arrow and the markers round you (bug pass). */
 :has(> .minimap:not([hidden])) > .debug-overlay {
-  top: calc(16px + var(--minimap-size, 0px) + 8px);
+  top: calc(var(--hud-margin) + var(--minimap-size, 0px) + var(--sp-2));
 }
 
 /* Menus (M15, M15b): title, New game and its pop-ups, Loadout, Settings, pause, result. One opaque screen at a time:
    nothing of the field shows through (owner, 2026-10-03), and before Play no field is loaded at all. Headings and labels are in capitals (owner, 2026-10-03); descriptions stay as written. */
-/* The crash pane (ui/crashScreen.ts) shares the menus' tokens and buttons. */
-.menus,
-.crash-screen {
-  --menu-panel: #20232a;
-  --menu-panel-hi: #2a2e37;
-  --menu-line: #3a3f4a;
-  --menu-muted: #b9b5aa;
-  --menu-faint: #8f8b82;
-  --menu-gutter: clamp(20px, 5vw, 64px);
+.menus {
   position: absolute;
   inset: 0;
   z-index: 20;
@@ -89,7 +151,22 @@ body {
   position: absolute;
   inset: 0;
   overflow-y: auto;
-  background: #16181d;
+  background: var(--menu-bg);
+  /* A thin scrollbar in the menus' line colour (audit section 6, item 11): the long Settings pages scroll on purpose. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+/* A screen coming up fades its content in (audit section 6, item 9): the page itself stays opaque, so nothing of the
+   field shows through. The animation restarts each time the screen is shown (it leaves display: none). */
+.menu-screen > * {
+  animation: menu-enter var(--t-med) var(--ease) both;
+}
+
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+  }
 }
 
 .menu-heading,
@@ -98,56 +175,113 @@ body {
 .menu-kicker,
 .setup-tile-label,
 .setup-tile-value,
+.setup-tile-action,
 .choice-name,
 .settings-tab,
 .menu-row-label,
 .menu-result-headline,
-.menu-later {
+.menu-later,
+.menu-button,
+.key-reset {
   text-transform: uppercase;
 }
 
 .menu-kicker,
 .setup-tile-label {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-wide);
   color: var(--orange);
 }
 
-/* Buttons: orange moves you on, outlined does everything else */
+/* Buttons (audit section 6, item 5): orange (primary) moves you on, outlined (secondary) does everything else, ghost
+   (tertiary: close, Reset All, the Dev box) stays quiet. Each has hover, pressed, focus and disabled states. */
+.menu-button,
+.picker-button,
+.key-button,
+.key-reset,
+.menu-close,
+.setup-tile,
+.choice-option,
+.settings-tab,
+.gear-slot,
+.item-tile,
+.item-chip {
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease),
+    translate var(--t-fast) var(--ease);
+}
+
 .menu-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 52px;
-  padding: 0 24px;
-  font: 700 18px var(--ui-font);
+  gap: var(--sp-3);
+  min-height: var(--control-lg);
+  padding: 0 var(--sp-5);
+  font: 700 var(--fs-md) var(--ui-font);
+  letter-spacing: var(--ls-caps);
   color: var(--paper);
   background: transparent;
   border: 1px solid var(--menu-line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .menu-button:hover {
+  background: var(--menu-panel-hi);
   border-color: var(--menu-muted);
 }
 
+.menu-button:active {
+  background: var(--menu-panel);
+}
+
 .menu-button-primary {
-  min-height: 60px;
-  padding: 0 34px;
-  font-size: 24px;
+  min-height: var(--control-xl);
+  padding: 0 var(--sp-6);
+  font-size: var(--fs-xl);
   font-weight: 800;
-  letter-spacing: 0.03em;
   color: var(--ink);
   background: var(--orange);
   border-color: var(--orange);
 }
 
 .menu-button-primary:hover {
-  filter: brightness(1.08);
+  background: var(--orange-hover);
+  border-color: var(--orange-hover);
+  translate: 0 -1px;
+}
+
+.menu-button-primary:active {
+  background: var(--orange);
+  translate: 0;
+  filter: brightness(0.95);
+}
+
+/* Disabled, whichever kind */
+.menu-button:disabled,
+.picker-button:disabled,
+.key-reset:disabled,
+.menu-close:disabled,
+.setup-tile:disabled {
+  cursor: default;
+  opacity: 0.45;
+  translate: 0;
+  filter: none;
+}
+
+.menu-button:disabled:hover {
+  background: transparent;
+  border-color: var(--menu-line);
+}
+
+.menu-button-primary:disabled:hover {
+  background: var(--orange);
   border-color: var(--orange);
 }
 
@@ -163,42 +297,38 @@ body {
   stroke-linejoin: round;
 }
 
-.menu-button:focus-visible,
-.menu-close:focus-visible,
-.setup-tile:focus-visible,
-.choice-option:focus-visible,
-.gear-slot:focus-visible,
-.item-tile:focus-visible,
-.item-chip:focus-visible,
-.settings-tab:focus-visible,
-.picker-button:focus-visible,
-.key-button:focus-visible {
+/* Keyboard focus, one rule for every control (audit section 6, item 6): the orange ring, with a page-coloured gap
+   under it so the ring reads on the orange buttons too. */
+.menus :is(button, [role='tab'], input, select, a, .setup-tile, .gear-slot, .item-tile, .item-chip):focus-visible,
+.menu-dialog :is(button, input):focus-visible,
+.crash-screen :is(button, textarea):focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--menu-bg);
 }
 
 .menu-hint {
   margin: 0;
   max-width: 28em;
-  font-size: 14px;
-  color: #ffb27a;
+  font-size: var(--fs-md);
+  color: var(--hint);
 }
 
 .menu-footer-note {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-md);
   line-height: 1.5;
   color: var(--menu-faint);
 }
 
 .menu-later {
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--ls-wide);
   color: var(--menu-muted);
   background: var(--menu-panel-hi);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .menu-title-centre {
@@ -208,17 +338,17 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: var(--sp-3);
   padding: 0 var(--menu-gutter);
   text-align: center;
 }
 
 .menu-title-wordmark {
   margin: 0;
-  font-size: clamp(56px, 10vw, 132px);
+  font-size: var(--fs-display);
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--ls-caps);
 }
 
 .menu-title-wordmark span,
@@ -228,8 +358,8 @@ body {
 
 .menu-title-tagline {
   margin: 0;
-  font-size: 20px;
-  color: var(--menu-muted);
+  font-size: var(--fs-lg);
+  color: var(--menu-faint);
 }
 
 .menu-title-actions {
@@ -239,7 +369,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 
 /* The title's hint (a refused mouse lock) takes a line of its own over the buttons. */
@@ -252,7 +382,9 @@ body {
   right: var(--menu-gutter);
   bottom: var(--menu-gutter);
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-caps);
   color: var(--menu-faint);
 }
 
@@ -261,22 +393,22 @@ body {
   --page-bottom: var(--menu-gutter);
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 40px var(--menu-gutter) var(--page-bottom);
+  gap: var(--sp-5);
+  padding: var(--sp-6) var(--menu-gutter) var(--page-bottom);
 }
 
 .menu-wordmark {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-xl);
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--ls-caps);
 }
 
 .menu-heading {
   margin: 0;
-  font-size: clamp(32px, 4vw, 44px);
+  font-size: var(--fs-3xl);
   font-weight: 800;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--ls-tight);
 }
 
 .menu-page-body {
@@ -290,7 +422,7 @@ body {
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--sp-4);
   max-width: 1200px;
   /* Back and Play stay on screen however long the page (bug pass: Loadout and Settings scroll at 1280 × 720). */
   /* Pinned to the window's bottom edge, over the page's bottom padding (sticky keeps to inside the padding otherwise). */
@@ -298,8 +430,26 @@ body {
   bottom: calc(-1 * var(--page-bottom));
   z-index: 1;
   margin-bottom: calc(-1 * var(--page-bottom));
-  padding: 12px 0 var(--page-bottom);
-  background: #16181d;
+  padding: var(--sp-3) 0 var(--page-bottom);
+  background: var(--menu-bg);
+}
+
+/* More of the page below the pinned footer (audit UI-18): a fade over the last row says so (menuParts.ts sets the class). */
+.menu-footer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 56px;
+  background: linear-gradient(to bottom, rgba(22, 24, 29, 0), var(--menu-bg) 85%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-med) var(--ease);
+}
+
+.menu-screen.more-below .menu-footer::before {
+  opacity: 1;
 }
 
 .menu-footer-end {
@@ -307,21 +457,23 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 
 .menu-panel {
-  padding: 24px 28px;
+  padding: var(--sp-5) var(--sp-6);
   background: var(--menu-panel);
   border: 1px solid var(--menu-line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
+  /* A 1 px highlight along the top edge lifts the panel off the page. */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .menu-panel-title {
-  margin: 0 0 8px;
-  font-size: 24px;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-2xl);
   font-weight: 800;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--ls-tight);
 }
 
 /* New game: six big buttons in a row (three, then two, on narrower screens) */
@@ -333,40 +485,73 @@ body {
   display: grid;
   /* Seven tiles: Map, Mode, Match, Difficulty, Loadout, Armory (M26c), Settings */
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 18px;
+  gap: var(--sp-4);
 }
 
 .setup-tile {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
   min-height: 230px;
-  padding: 22px 20px;
+  padding: var(--sp-5) var(--sp-4);
   font: inherit;
   color: var(--paper);
   text-align: left;
   background: var(--menu-panel);
   border: 1px solid var(--menu-line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   cursor: pointer;
 }
 
 .setup-tile:hover {
   border-color: var(--orange);
   background: var(--menu-panel-hi);
+  translate: 0 -2px;
+}
+
+.setup-tile:active {
+  translate: 0;
+}
+
+/* The tile's label with its icon (audit section 6, item 19); the icon is decoration, the label names the button. */
+.setup-tile-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.setup-tile-label svg,
+.settings-tab svg,
+.menu-pause-panel .menu-button svg.icon {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.setup-tile-label svg {
+  width: 14px;
+  height: 14px;
 }
 
 .setup-tile-value {
-  /* Six tiles to a row from 1180 px wide: the type shrinks with the window so "Elimination" fits its tile. */
-  font-size: clamp(16px, 1.25vw, 24px);
+  /* Seven tiles to a row from 1180 px wide: the type shrinks with the window so "Elimination" fits its tile. The page
+     stops widening at 1400 px, so the type stops growing there too (audit UI-03: at 24 px it ran out of its tile on
+     1920 × 1080); a longer name than any today wraps rather than spilling over the tile's edge. */
+  font-size: clamp(15px, 1.14vw, 18px);
   font-weight: 800;
   line-height: 1.15;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--ls-tight);
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .setup-tile-detail {
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1.45;
   color: var(--menu-muted);
 }
@@ -376,15 +561,20 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-top: auto;
-  font-size: 15px;
-  font-weight: 600;
-  color: #d8d4c9;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: var(--ls-caps);
+  color: var(--menu-soft);
+}
+
+.setup-tile:hover .setup-tile-action {
+  color: var(--paper);
 }
 
 .setup-rules {
   max-width: 60em;
-  margin: 24px 0 0;
-  font-size: 16px;
+  margin: var(--sp-5) 0 0;
+  font-size: var(--fs-md);
   line-height: 1.5;
   color: var(--menu-muted);
 }
@@ -392,69 +582,98 @@ body {
 /* Pop-ups (mode, difficulty) */
 .menu-dialog {
   width: min(560px, calc(100vw - 32px));
-  padding: 28px 32px 32px;
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
   color: var(--paper);
   font-family: var(--ui-font);
   background: var(--menu-panel);
   border: 1px solid var(--menu-line);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
+/* The box lifts off the page (audit section 6, item 10): a soft shadow and a 1 px highlight on its top edge. */
+.menu-dialog {
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.menu-dialog[open] {
+  animation: dialog-enter var(--t-med) var(--ease) both;
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+/* The backdrop takes literal colours: older browsers don't pass custom properties into ::backdrop. */
 .menu-dialog::backdrop {
   background: rgba(10, 11, 14, 0.74);
+}
+
+@supports (backdrop-filter: blur(6px)) {
+  .menu-dialog::backdrop {
+    background: rgba(10, 11, 14, 0.6);
+    backdrop-filter: blur(6px);
+  }
 }
 
 .menu-dialog-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-3);
 }
 
 .menu-dialog-title {
   margin: 0;
-  font-size: 26px;
+  font-size: var(--fs-2xl);
   font-weight: 800;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--ls-tight);
 }
 
+/* Ghost buttons (tertiary): no box until hovered. */
 .menu-close {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: var(--control-md);
+  height: var(--control-md);
   color: var(--menu-muted);
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .menu-close:hover {
   color: var(--paper);
+  background: var(--menu-panel-hi);
 }
 
 .menu-dialog-options {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 .choice-option {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  padding: 18px 20px;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
   font: inherit;
   color: var(--paper);
   text-align: left;
   background: transparent;
   border: 2px solid var(--menu-line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .choice-option:hover {
+  background: var(--menu-panel-hi);
   border-color: var(--menu-muted);
 }
 
@@ -483,13 +702,13 @@ body {
 }
 
 .choice-name {
-  font-size: 19px;
+  font-size: var(--fs-lg);
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--ls-tight);
 }
 
 .choice-blurb {
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1.45;
   color: var(--menu-muted);
 }
@@ -498,19 +717,20 @@ body {
 .rows-dialog {
   width: min(680px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
-  padding: 20px 28px 24px;
+  padding: var(--sp-5) var(--sp-6);
 }
 
 .rows-dialog .menu-dialog-head {
-  margin-bottom: 4px;
+  margin-bottom: var(--sp-1);
 }
 
 .rows-dialog .menu-row {
-  padding: 8px 0;
+  padding: var(--sp-2) 0;
 }
 
+/* The same label column as Settings (200 px), so the pop-ups and Settings read as one family. */
 .rows-dialog .menu-row-name {
-  flex-basis: 170px;
+  flex-basis: 200px;
 }
 
 .rows-dialog .menu-row > .picker {
@@ -523,27 +743,27 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 24px;
-  min-height: 56px;
-  padding: 10px 0;
-  border-top: 1px solid #2f333c;
+  gap: var(--sp-2) var(--sp-5);
+  min-height: calc(var(--control-lg) + var(--sp-2));
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--menu-line-soft);
 }
 
 .menu-row-name {
   display: flex;
   flex: 0 0 200px;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--sp-1);
 }
 
 .menu-row-label {
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-caps);
 }
 
 .menu-row-help {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--menu-faint);
 }
@@ -556,13 +776,20 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
   flex: 1 1 280px;
   min-width: 0;
 }
 
+/* A secondary button in a row (Dev › Copy diagnostics) is as tall as the row's pickers and number boxes. */
+.menu-row-control .menu-button {
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
 .menu-later-value {
-  font-size: 15px;
+  font-size: var(--fs-md);
   color: var(--menu-faint);
 }
 
@@ -573,35 +800,34 @@ body {
 
 .menu-range output {
   min-width: 3.5em;
-  font: 700 15px var(--ui-mono);
+  font: 700 var(--fs-md) var(--ui-mono);
 }
 
 /* Number boxes (cm/360 and the mouse's DPI on Settings → Controls) */
 .menu-turn {
-  font-size: 14px;
+  font-size: var(--fs-md);
   color: var(--menu-muted);
+}
+
+.menu-number:hover {
+  border-color: var(--menu-muted);
 }
 
 .menu-number {
   width: 6.5em;
-  min-height: 36px;
-  padding: 0 10px;
-  font: 700 15px var(--ui-mono);
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-3);
+  font: 700 var(--fs-md) var(--ui-mono);
   color: var(--paper);
   background: var(--menu-panel-hi);
   border: 1px solid var(--menu-line);
-  border-radius: 6px;
-}
-
-.menu-number:focus-visible {
-  outline: 2px solid var(--orange);
-  outline-offset: 1px;
+  border-radius: var(--radius-sm);
 }
 
 .menu-readout {
   flex-basis: 100%;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
   color: var(--menu-muted);
 }
@@ -611,7 +837,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .menu-row .picker-label {
@@ -619,17 +845,18 @@ body {
 }
 
 .picker-button {
-  min-height: 36px;
-  padding: 0 16px;
-  font: 700 14px var(--ui-font);
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-4);
+  font: 700 var(--fs-md) var(--ui-font);
   color: var(--paper);
   background: transparent;
   border: 1px solid var(--menu-line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .picker-button:hover {
+  background: var(--menu-panel-hi);
   border-color: var(--menu-muted);
 }
 
@@ -642,7 +869,7 @@ body {
 .picker-blurb {
   margin: 6px 0 0;
   min-height: 1.4em;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
   color: var(--menu-muted);
 }
@@ -653,7 +880,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 32px;
+  gap: var(--sp-6);
 }
 
 /* The gear column (M26b): three square slots, Primary, Secondary and Grenades, like a character screen's weapons */
@@ -684,8 +911,9 @@ body {
   background: linear-gradient(160deg, var(--menu-panel-hi), var(--menu-panel) 70%);
   border: 2px solid var(--menu-line);
   border-bottom: 6px solid var(--tier, var(--menu-line));
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
+  position: relative;
 }
 
 .gear-slot:hover {
@@ -698,6 +926,18 @@ body {
   border-bottom-color: var(--tier, var(--orange));
 }
 
+/* "The current place" (audit section 6, item 7): a 3 px orange bar on the left, as on the picked Settings tab. */
+.gear-slot.selected::before,
+.settings-tab.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--orange);
+}
+
 .gear-slot.empty {
   border-style: dashed;
   border-bottom-width: 2px;
@@ -705,7 +945,7 @@ body {
 }
 
 .gear-name {
-  font-size: 18px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   line-height: 1.15;
 }
@@ -717,16 +957,16 @@ body {
 .gear-tier,
 .item-tier,
 .tier-tag {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
   color: var(--tier, var(--menu-faint));
 }
 
 .gear-hint {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.4;
   color: var(--menu-faint);
 }
@@ -773,7 +1013,7 @@ body {
   background: var(--menu-panel-hi);
   border: 2px solid var(--menu-line);
   border-bottom: 6px solid var(--tier, var(--menu-line));
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
@@ -793,13 +1033,13 @@ body {
 }
 
 .item-name {
-  font-size: 16px;
+  font-size: var(--fs-md);
   font-weight: 700;
   line-height: 1.2;
 }
 
 .item-note {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--menu-muted);
 }
@@ -826,7 +1066,7 @@ body {
   background: var(--menu-panel-hi);
   border: 1px solid var(--menu-line);
   border-left: 5px solid var(--tier, var(--menu-line));
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -836,7 +1076,7 @@ body {
 }
 
 .item-chip .item-name {
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .item-row + .picker-blurb {
@@ -874,7 +1114,7 @@ body {
 }
 
 .loadout-replica-summary {
-  font-size: 14px;
+  font-size: var(--fs-md);
   color: var(--menu-muted);
 }
 
@@ -884,37 +1124,37 @@ body {
 
 /* A gear slot's short stat line (M29): energy, rate of fire, magazine */
 .gear-stats {
-  font: 12px var(--ui-mono);
+  font: var(--fs-xs) var(--ui-mono);
   color: var(--menu-muted);
 }
 
 /* Customise (M29): the parts on the left, the Performance sheet beside them; above them on a narrow window */
 .customise-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   align-items: start;
-  gap: 24px;
+  gap: var(--sp-5);
 }
 
 .perf-sheet {
   position: sticky;
   top: 0;
-  padding: 14px 16px;
+  padding: var(--sp-3) var(--sp-4);
   background: var(--menu-panel-hi);
   border: 1px solid var(--menu-line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .perf-title {
-  margin: 0 0 10px;
+  margin: 0 0 var(--sp-3);
 }
 
 .perf-rows {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 6px 12px;
+  gap: var(--sp-2) var(--sp-3);
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .perf-label {
@@ -923,7 +1163,7 @@ body {
 
 .perf-value {
   margin: 0;
-  font: 600 13px var(--ui-mono);
+  font: 600 var(--fs-sm) var(--ui-mono);
   text-align: right;
 }
 
@@ -933,16 +1173,16 @@ body {
 }
 
 .perf-better {
-  color: #4cc35a;
+  color: var(--success);
 }
 
 .perf-worse {
-  color: #ff6b5f;
+  color: var(--danger);
 }
 
 .perf-note {
-  margin: 10px 0 0;
-  font-size: 12px;
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-xs);
   line-height: 1.4;
   color: var(--menu-faint);
 }
@@ -958,46 +1198,36 @@ body {
   }
 }
 
-/* Read by a screen reader, not shown */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 /* Settings: tabs on the left */
 .settings-side {
   display: flex;
   flex: 1 1 240px;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--sp-4);
   max-width: 290px;
 }
 
 .settings-tabs {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-1);
 }
 
 /* The box that shows the hidden Dev tab (M24): small and quiet under the tabs. */
 .settings-dev-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 18px;
-  font: 600 14px var(--ui-font);
-  color: var(--paper);
-  opacity: 0.7;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+  font: 600 var(--fs-sm) var(--ui-font);
+  color: var(--menu-muted);
   cursor: pointer;
+  transition: color var(--t-fast) var(--ease);
 }
 
 .settings-dev-toggle:hover,
 .settings-dev-toggle:focus-within {
-  opacity: 1;
+  color: var(--paper);
 }
 
 .settings-dev-toggle input {
@@ -1009,43 +1239,65 @@ body {
 }
 
 .settings-tab {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 52px;
-  padding: 0 18px;
-  font: 700 17px var(--ui-font);
-  letter-spacing: 0.04em;
-  color: var(--paper);
+  gap: var(--sp-3);
+  min-height: var(--control-lg);
+  padding: 0 var(--sp-4);
+  font: 700 var(--fs-md) var(--ui-font);
+  letter-spacing: var(--ls-caps);
+  color: var(--menu-soft);
   text-align: left;
   background: transparent;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
   cursor: pointer;
 }
 
+.settings-tab svg {
+  width: 18px;
+  height: 18px;
+  color: var(--menu-faint);
+  transition: color var(--t-fast) var(--ease);
+}
+
+.settings-tab .menu-later {
+  margin-left: auto;
+}
+
 .settings-tab:hover {
+  color: var(--paper);
   background: var(--menu-panel);
 }
 
+.settings-tab:hover svg {
+  color: var(--menu-muted);
+}
+
+/* The tab you're on: orange text and a bar on the left ("the current place", audit section 6, item 7). */
 .settings-tab.selected {
   color: var(--orange);
   background: var(--menu-panel-hi);
+}
+
+.settings-tab.selected svg {
+  color: var(--orange);
 }
 
 .settings-reload {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 20px;
-  padding: 4px 0 12px;
+  gap: var(--sp-3) var(--sp-5);
+  padding: var(--sp-1) 0 var(--sp-3);
 }
 
 .settings-reload .menu-readout {
   flex-basis: auto;
-  font-size: 14px;
-  color: #ffb27a;
+  font-size: var(--fs-md);
+  color: var(--hint);
 }
 
 .settings-mouse {
@@ -1057,33 +1309,73 @@ body {
 .key-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 40px;
+  column-gap: var(--sp-6);
 }
 
 .key-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  min-height: 40px;
-  font-size: 15px;
-  border-top: 1px solid #2f333c;
+  gap: var(--sp-2);
+  min-height: var(--control-md);
+  font-size: var(--fs-md);
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.key-slots {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--sp-2);
 }
 
 .key-button {
-  min-width: 7.5em;
-  min-height: 32px;
-  padding: 0 10px;
-  font: 700 13px var(--ui-mono);
+  min-width: 6.5em;
+  max-width: 9.5em;
+  min-height: var(--control-xs);
+  padding: 0 var(--sp-3);
+  font: 700 var(--fs-sm) var(--ui-mono);
   color: var(--paper);
   background: var(--menu-panel-hi);
   border: 1px solid var(--menu-line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .key-button:hover {
   border-color: var(--menu-muted);
+}
+
+.key-button.empty {
+  color: var(--menu-faint);
+}
+
+/* A row whose key another action just took (audit UI-05): a short flash, so the player sees what moved. */
+.key-row.moved {
+  animation: key-moved 1.4s ease-out;
+}
+
+@keyframes key-moved {
+  from {
+    background: rgba(255, 138, 42, 0.32);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.reduced-motion .key-row.moved {
+  animation: none;
+  background: rgba(255, 138, 42, 0.18);
+}
+
+.key-layout-note {
+  margin: 4px 0 0;
+}
+
+.key-reset.armed {
+  color: var(--ink);
+  background: var(--orange);
+  border-color: var(--orange);
 }
 
 .key-button.listening {
@@ -1094,39 +1386,68 @@ body {
 
 .key-note {
   min-height: 1.3em;
-  margin: 8px 0 0;
-  font-size: 14px;
-  color: #ffb27a;
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-md);
+  color: var(--hint);
 }
 
+/* Reset All: a ghost button (tertiary) until it is armed. */
 .key-reset {
-  min-height: 40px;
-  margin-top: 6px;
-  padding: 0 16px;
-  font: 600 15px var(--ui-font);
-  color: var(--paper);
+  min-height: var(--control-md);
+  margin-top: var(--sp-2);
+  padding: 0 var(--sp-4);
+  font: 700 var(--fs-sm) var(--ui-font);
+  letter-spacing: var(--ls-caps);
+  color: var(--menu-muted);
   background: transparent;
-  border: 1px solid var(--menu-line);
-  border-radius: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .key-reset:hover {
-  border-color: var(--menu-muted);
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+}
+
+.key-reset.armed:hover {
+  color: var(--ink);
+  background: var(--orange-hover);
 }
 
 kbd {
   display: inline-block;
   min-width: 1.6em;
   padding: 1px 6px;
-  font: 600 12px var(--ui-mono);
+  font: 600 var(--fs-xs) var(--ui-mono);
   line-height: 1.6;
   text-align: center;
   color: var(--paper);
   background: var(--menu-panel-hi);
   border: 1px solid var(--menu-line);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
+}
+
+/* Read by screen readers only (audit UI-15). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The custom crosshair colour's box (audit UI-21), at the end of the colour buttons. */
+.crosshair-custom {
+  width: 40px;
+  height: 32px;
+  padding: 2px;
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
 /* Pause menu: a column on the left */
@@ -1134,27 +1455,34 @@ kbd {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 14px;
+  gap: var(--sp-3);
   width: min(440px, 100%);
   min-height: 100%;
-  padding: 40px var(--menu-gutter);
+  padding: var(--sp-6) var(--menu-gutter);
 }
 
 .menu-pause-panel .menu-button {
   justify-content: flex-start;
-  padding: 0 24px;
+  padding: 0 var(--sp-5);
+}
+
+.menu-pause-panel .menu-button svg.icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
 }
 
 .menu-pause-status {
-  margin: 0 0 18px;
-  font-size: 17px;
+  margin: 0 0 var(--sp-4);
+  font-size: var(--fs-lg);
   line-height: 1.45;
   color: var(--menu-muted);
 }
 
 .menu-pause-seed {
-  margin: 14px 0 0;
-  font-size: 13px;
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
   color: var(--menu-muted);
   user-select: text;
 }
@@ -1167,7 +1495,7 @@ kbd {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: var(--sp-3);
   padding: 0 var(--menu-gutter);
   text-align: center;
 }
@@ -1176,12 +1504,12 @@ kbd {
   margin: 0;
   font-size: clamp(48px, 7vw, 84px);
   font-weight: 900;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--ls-tight);
 }
 
 .menu-result-detail {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-xl);
   color: var(--menu-muted);
 }
 
@@ -1193,21 +1521,21 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 .menu-result-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: var(--sp-3);
 }
 
 /* Short windows (a laptop with the browser's bars): tighter pages, so Play and Back stay on screen. */
 @media (max-height: 800px) {
   .menu-page {
-    --page-bottom: 24px;
-    gap: 12px;
-    padding-top: 24px;
+    --page-bottom: var(--sp-5);
+    gap: var(--sp-3);
+    padding-top: var(--sp-5);
   }
 
   .menu-heading {
@@ -1216,33 +1544,33 @@ kbd {
 
   .setup-tile {
     min-height: 0;
-    padding: 20px 22px;
+    padding: var(--sp-4);
   }
 
   .setup-tile-value {
-    font-size: clamp(16px, 1.25vw, 22px);
+    font-size: clamp(15px, 1.14vw, 18px);
   }
 
   .setup-rules {
-    margin-top: 14px;
-    font-size: 15px;
+    margin-top: var(--sp-3);
+    font-size: var(--fs-md);
   }
 
   .menu-pause-panel {
-    gap: 10px;
+    gap: var(--sp-2);
   }
 
   .menu-panel {
-    padding: 18px 24px;
+    padding: var(--sp-4) var(--sp-5);
   }
 
   .menu-row {
-    min-height: 48px;
-    padding: 6px 0;
+    min-height: var(--control-lg);
+    padding: var(--sp-1) 0;
   }
 
   .key-row {
-    min-height: 36px;
+    min-height: var(--control-sm);
   }
 }
 
@@ -1260,20 +1588,20 @@ kbd {
 /* Small laptop windows (1024 × 640): two rows of tiles, packed tighter so Play stays on screen. */
 @media (max-width: 1180px) and (max-height: 800px) {
   .setup-tiles {
-    gap: 12px;
+    gap: var(--sp-3);
   }
 
   .setup-tile {
-    gap: 6px;
-    padding: 14px 18px;
+    gap: var(--sp-1);
+    padding: var(--sp-3) var(--sp-4);
   }
 
   .setup-tile-value {
-    font-size: 20px;
+    font-size: var(--fs-xl);
   }
 
   .setup-tile-detail {
-    font-size: 14px;
+    font-size: var(--fs-sm);
   }
 }
 
@@ -1293,8 +1621,8 @@ kbd {
   inset: 0;
   pointer-events: none;
   z-index: 10;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  color: var(--hud-fg);
+  text-shadow: var(--hud-shadow);
 }
 
 .hud[hidden] {
@@ -1475,26 +1803,39 @@ kbd {
   display: none;
 }
 
+/* Level 2 of the HUD (audit section 6, item 14): the ammo block, a touch under full strength. */
 .hud-replica {
   position: absolute;
-  right: 28px;
-  bottom: 24px;
+  right: var(--hud-edge-x);
+  bottom: var(--hud-margin);
+  opacity: var(--hud-l2);
+  /* The HUD's size (Settings → HUD, audit UI-04): --hud-scale is set on the game's container. */
+  scale: var(--hud-scale, 1);
+  transform-origin: 100% 100%;
   min-width: 170px;
   text-align: right;
 }
 
 .hud-replica-name {
-  font-size: 14px;
-  letter-spacing: 0.06em;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  opacity: 0.85;
 }
 
+/* AUTO / SEMI as a key cap, the Key Bindings' kbd look (audit section 6, item 20). */
 .hud-firemode {
+  display: inline-block;
   margin-left: 0.6em;
-  padding: 0 0.35em;
-  border: 1px solid currentColor;
-  border-radius: 3px;
+  padding: 0 0.45em;
+  font: 600 var(--fs-2xs) / 1.6 var(--ui-mono);
+  color: var(--paper);
+  text-shadow: none;
+  vertical-align: 1px;
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .hud-ammo {
@@ -1537,7 +1878,7 @@ kbd {
 
 /* The magazine a reload takes: outlined in yellow, with a caret under it (a shape, so colour isn't the only cue) */
 .hud-mags i.next {
-  border: 2px solid #ffd84d;
+  border: 2px solid var(--warning);
 }
 
 .hud-mags i.next::after {
@@ -1548,7 +1889,7 @@ kbd {
   translate: -50% 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-bottom: 5px solid #ffd84d;
+  border-bottom: 5px solid var(--warning);
 }
 
 /* Low: orange and striped */
@@ -1575,14 +1916,15 @@ kbd {
 .hud-reload div {
   height: 100%;
   width: 0;
-  background: #fff;
+  background: var(--hud-fg);
 }
 
 .hud-status {
   min-height: 18px;
-  margin-top: 4px;
-  font-size: 13px;
-  letter-spacing: 0.05em;
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--ls-caps);
 }
 
 .hud.out .hud-crosshair,
@@ -1598,9 +1940,9 @@ kbd {
   inset: 0;
   pointer-events: none;
   z-index: 11;
-  color: #fff;
+  color: var(--hud-fg);
   font-family: var(--ui-font);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+  text-shadow: var(--hud-shadow);
 }
 
 .hitfx[hidden] {
@@ -1639,7 +1981,7 @@ kbd {
   position: absolute;
   width: 9px;
   height: 2px;
-  background: #fff;
+  background: var(--hud-fg);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
@@ -1684,6 +2026,8 @@ kbd {
   width: 0;
   height: 0;
   opacity: 0;
+  scale: var(--hud-scale, 1);
+  transform-origin: 0 0;
 }
 
 .hitfx-direction b {
@@ -1705,11 +2049,13 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  /* Clear of the scoreboard and the OUT tag under it at any scoreboard size (M24): 124 px at size 1. */
-  top: max(18%, calc(54px + 70px * var(--sb-scale, 1)));
+  /* Clear of the scoreboard and the OUT tag under it at any scoreboard size (M24): 44 px under the board's 70 px at size 1. */
+  top: max(18%, calc(var(--hud-margin) + 44px + 70px * var(--sb-scale, 1)));
   text-align: center;
   opacity: 0;
   transition: opacity 0.15s;
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 0;
 }
 
 .hitfx-banner.show {
@@ -1720,7 +2066,7 @@ kbd {
   display: block;
   font-size: 54px;
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-caps);
   color: #ff3b30;
   text-shadow:
     0 2px 0 rgba(0, 0, 0, 0.55),
@@ -1728,8 +2074,8 @@ kbd {
 }
 
 .hitfx-banner span {
-  font-size: 16px;
-  letter-spacing: 0.04em;
+  font-size: var(--fs-md);
+  letter-spacing: var(--ls-caps);
   opacity: 0.9;
 }
 
@@ -1737,10 +2083,12 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 28px;
+  bottom: calc(var(--hud-margin) + var(--sp-3));
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 100%;
   text-align: center;
-  font-size: 15px;
-  letter-spacing: 0.05em;
+  font-size: var(--fs-md);
+  letter-spacing: var(--ls-caps);
   opacity: 0;
 }
 
@@ -1752,15 +2100,17 @@ kbd {
 .hitfx-out {
   position: absolute;
   left: 50%;
-  /* Under the scoreboard, whatever its size (Settings → HUD, M24): 80 px at size 1. */
-  top: calc(10px + 70px * var(--sb-scale, 1));
-  transform: translateX(-50%);
+  /* Under the scoreboard, whatever its size (Settings → HUD, M24). */
+  top: calc(var(--hud-margin) + 70px * var(--sb-scale, 1));
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 0;
   padding: 4px 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: rgba(216, 38, 46, 0.85);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--ls-caps);
   opacity: 0;
 }
 
@@ -1772,20 +2122,25 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(42px + 70px * var(--sb-scale, 1));
+  top: calc(var(--hud-margin) + 32px + 70px * var(--sb-scale, 1));
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 0;
   text-align: center;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+  /* One line at 1280 px (audit section 6, item 17; KNOWN_ISSUES row 138): it shrinks with a narrow window. */
+  font-size: min(22px, 1.8vw);
+  font-weight: 700;
+  letter-spacing: var(--ls-caps);
   opacity: 0;
 }
 
 /* Scoreboard: Blue score · clock · Orange score, with a pip per player. --sb-scale is its size from Settings → HUD (M24),
    grown from its top centre. */
+/* Level 2 of the HUD, like the ammo block. */
 .scoreboard {
   position: absolute;
   left: 50%;
-  top: 10px;
+  top: var(--hud-margin);
+  opacity: var(--hud-l2);
   translate: -50% 0;
   scale: var(--sb-scale, 1);
   transform-origin: 50% 0;
@@ -1794,9 +2149,9 @@ kbd {
   align-items: center;
   gap: 5px;
   padding: 6px 14px;
-  border-radius: 8px;
-  background: rgba(16, 18, 22, 0.55);
-  color: #fff;
+  border-radius: var(--hud-radius);
+  background: var(--hud-panel);
+  color: var(--hud-fg);
   font-family: var(--ui-font);
   pointer-events: none;
   z-index: 12;
@@ -1823,9 +2178,9 @@ kbd {
 }
 
 .sb-name {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
   color: var(--team);
 }
@@ -1839,20 +2194,22 @@ kbd {
 
 .sb-pips {
   display: flex;
-  gap: 3px;
+  gap: var(--sp-1);
 }
 
+/* A thin dark ring round each pip, so an "out" (hollow) pip still reads against a bright sky. */
 .sb-pips i {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--team);
   border: 1px solid var(--team);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
 .sb-pips i.out {
-  background: transparent;
-  opacity: 0.6;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0.7;
 }
 
 .sb-clock {
@@ -1862,25 +2219,24 @@ kbd {
 }
 
 .sb-clock.low {
-  color: #ff5a4f;
+  color: var(--danger);
 }
 
 .sb-name em {
   margin-left: 4px;
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: var(--team);
-  color: #10131a;
+  color: var(--ink);
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
 }
 
 /* Flag mode: ATK / DEF tags, and the strip under the scoreboard showing how far up the flag is */
 .sb-role {
   margin-left: 6px;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  opacity: 0.85;
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--ls-wide);
 }
 
 .sb-role:empty {
@@ -1891,7 +2247,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
 }
 
@@ -1902,8 +2258,8 @@ kbd {
 .sb-flag-bar {
   position: relative;
   width: 90px;
-  height: 7px;
-  border-radius: 4px;
+  height: 3px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.18);
   overflow: hidden;
 }
@@ -1918,7 +2274,7 @@ kbd {
 }
 
 .sb-flag.urgent .sb-flag-text {
-  color: #ffd84d;
+  color: var(--warning);
   animation: sb-flag-pulse 0.8s ease-in-out infinite alternate;
 }
 
@@ -1982,14 +2338,16 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  margin: -14px 0 0 -20px;
-  width: 40px;
-  color: #fff;
-  font: 700 11px var(--ui-font);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  gap: calc(2px * var(--hud-scale, 1));
+  /* Sized by the HUD's scale in place, not with `scale` (that would scale the position the game sets too). */
+  margin: calc(-14px * var(--hud-scale, 1)) 0 0 calc(-20px * var(--hud-scale, 1));
+  width: calc(40px * var(--hud-scale, 1));
+  color: var(--hud-fg);
+  font: 700 calc(11px * var(--hud-scale, 1)) var(--ui-font);
+  text-shadow: var(--hud-shadow);
   pointer-events: none;
   z-index: 11;
+  opacity: var(--hud-l3);
 }
 
 .flag-marker[hidden] {
@@ -1998,32 +2356,36 @@ kbd {
 
 /* A little flag: the pole is the left border, the cloth a clipped block in the attackers' colour. */
 .flag-marker-icon {
-  width: 14px;
-  height: 16px;
-  border-left: 2px solid #fff;
-  background: linear-gradient(var(--flag), var(--flag)) left top / 12px 9px no-repeat;
+  width: calc(14px * var(--hud-scale, 1));
+  height: calc(16px * var(--hud-scale, 1));
+  border-left: 2px solid var(--hud-fg);
+  background: linear-gradient(var(--flag), var(--flag)) left top / calc(12px * var(--hud-scale, 1)) calc(9px * var(--hud-scale, 1)) no-repeat;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
 }
 
-.flag-marker.edge {
-  opacity: 0.75;
+.flag-marker.edge,
+.hold-marker.edge {
+  opacity: calc(0.9 * var(--hud-l3));
 }
 
 /* Squad orders (M22): the order your bot teammates carry out, bottom left. */
 .squad-order {
   position: absolute;
-  left: 28px;
-  bottom: 24px;
+  left: var(--hud-edge-x);
+  bottom: var(--hud-margin);
+  opacity: var(--hud-l3);
+  scale: var(--hud-scale, 1);
+  transform-origin: 0 100%;
   padding: 4px 10px;
   border-left: 3px solid var(--team);
-  border-radius: 2px;
-  background: rgba(12, 14, 18, 0.6);
-  font-size: 14px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--hud-panel);
+  font-size: var(--fs-sm);
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
   color: var(--paper);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  text-shadow: var(--hud-shadow);
   pointer-events: none;
   z-index: 11;
 }
@@ -2035,8 +2397,9 @@ kbd {
 /* The minimap (M23), top left: the field round you, turned with your view (drawn on a canvas, ui/minimap.ts) */
 .minimap {
   position: absolute;
-  left: 16px;
-  top: 16px;
+  left: var(--hud-edge-x);
+  top: var(--hud-margin);
+  opacity: var(--hud-l3);
   width: var(--minimap-size);
   height: var(--minimap-size);
   pointer-events: none;
@@ -2058,6 +2421,8 @@ kbd {
   z-index: 14;
   color: var(--paper);
   font-family: var(--ui-font);
+  scale: var(--hud-scale, 1);
+  transform-origin: 0 0;
 }
 
 .order-wheel[hidden] {
@@ -2083,25 +2448,39 @@ kbd {
   min-width: 104px;
   padding: 8px 12px;
   border: 2px solid rgba(255, 255, 255, 0.25);
-  border-radius: 6px;
+  border-radius: var(--hud-radius);
   background: rgba(16, 18, 22, 0.8);
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-caps);
   text-align: center;
   white-space: nowrap;
 }
 
 /* The order your teammates carry out now: an underline in your team's colour */
+/* An order's own key under its name (audit UI-22). */
+.order-wheel-key {
+  display: block;
+  width: fit-content;
+  margin: 5px auto 0;
+  font-size: var(--fs-2xs);
+}
+
+.order-wheel-item.picked .order-wheel-key {
+  color: var(--paper);
+  border-color: rgba(16, 20, 26, 0.6);
+  background: rgba(16, 20, 26, 0.75);
+}
+
 .order-wheel-item.current {
   box-shadow: inset 0 -3px 0 var(--team);
 }
 
 /* The order pointed at: lit in your team's colour and a little bigger (not colour alone) */
 .order-wheel-item.picked {
-  border-color: #fff;
+  border-color: var(--hud-fg);
   background: var(--team);
-  color: #10141a;
+  color: var(--ink);
   scale: 1.08;
 }
 
@@ -2112,9 +2491,9 @@ kbd {
   translate: -50% 0;
   width: 170px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-caps);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   opacity: 0.85;
 }
@@ -2125,7 +2504,7 @@ kbd {
   top: -5px;
   width: 10px;
   height: 10px;
-  border: 2px solid #fff;
+  border: 2px solid var(--hud-fg);
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
@@ -2139,15 +2518,16 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  margin: -8px 0 0 -40px;
-  width: 80px;
-  color: #fff;
-  font: 700 11px var(--ui-font);
+  gap: calc(3px * var(--hud-scale, 1));
+  margin: calc(-8px * var(--hud-scale, 1)) 0 0 calc(-40px * var(--hud-scale, 1));
+  width: calc(80px * var(--hud-scale, 1));
+  color: var(--hud-fg);
+  font: 700 calc(11px * var(--hud-scale, 1)) var(--ui-font);
   text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  text-shadow: var(--hud-shadow);
   pointer-events: none;
   z-index: 11;
+  opacity: var(--hud-l3);
 }
 
 .hold-marker[hidden] {
@@ -2155,31 +2535,33 @@ kbd {
 }
 
 .hold-marker i {
-  width: 10px;
-  height: 10px;
-  border: 2px solid #fff;
+  width: calc(10px * var(--hud-scale, 1));
+  height: calc(10px * var(--hud-scale, 1));
+  border: 2px solid var(--hud-fg);
   background: var(--team);
   transform: rotate(45deg);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
 }
 
-.hold-marker.edge {
-  opacity: 0.75;
-}
+
 
 /* Match info (M19): the hit feed, teammate markers, the scoreboard over the field and the stats tables */
+/* Level 3 of the HUD, with the minimap, the markers and the squad line. */
 .hit-feed {
   position: absolute;
-  top: 12px;
-  right: 16px;
+  top: var(--hud-margin);
+  right: var(--hud-edge-x);
+  opacity: var(--hud-l3);
+  scale: var(--hud-scale, 1);
+  transform-origin: 100% 0;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
-  font-size: 14px;
+  gap: var(--sp-1);
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--paper);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  text-shadow: var(--hud-shadow);
   pointer-events: none;
   z-index: 11;
 }
@@ -2191,7 +2573,8 @@ kbd {
 /* Never under the scoreboard (bug pass: at 1024 px a friendly-fire line ran beneath it): the feed keeps to the right
    of its widest form (Attack and Defend, about 444 px at size 1, scaled by --sb-scale) and a long line wraps. */
 .hit-feed {
-  max-width: calc(50% - 28px - 222px * var(--sb-scale, 1));
+  /* Before the HUD's scale, so the scaled feed still keeps to that room. */
+  max-width: calc((50% - var(--hud-edge-x) - 12px - 222px * var(--sb-scale, 1)) / var(--hud-scale, 1));
 }
 
 /* Where the round banner could reach the feed's column, it keeps to the middle and wraps instead. */
@@ -2202,17 +2585,22 @@ kbd {
   }
 }
 
+/* Each line has a 2 px bar in the colour of the team whose BB it was (audit section 6, item 17); the names are in their
+   own team's colour and say the team too, so colour isn't the only cue. */
 .hit-feed-line {
   padding: 3px 10px;
-  border-radius: 4px;
-  background: rgba(12, 14, 18, 0.6);
+  border-radius: var(--radius-sm);
+  background: var(--hud-panel);
+  box-shadow: inset 2px 0 0 var(--hitter, transparent);
   text-align: right;
   transition: opacity var(--feed-fade, 1s) linear;
 }
 
 .hit-feed-line.you {
-  background: rgba(12, 14, 18, 0.82);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  background: var(--hud-panel-solid);
+  box-shadow:
+    inset 2px 0 0 var(--hitter, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 .hit-feed-line.fading {
@@ -2222,22 +2610,35 @@ kbd {
 /* Each name in its team's colour, with a bar of it in front (the name says the team too). */
 .hit-feed-name {
   white-space: nowrap;
-  padding-left: 6px;
-  border-left: 3px solid var(--team);
   color: var(--team);
   font-weight: 800;
 }
 
+/* The friendly and ricochet tags: a 12 px glyph and the word (audit section 6, item 19). */
 .hit-feed-line em {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   white-space: nowrap;
-  margin-left: 8px;
+  margin-left: var(--sp-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.2);
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-style: normal;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
+  vertical-align: 1px;
+}
+
+.hit-feed-line em svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* Teammate markers: a name tag and a team-coloured arrow whose tip is just over the head. */
@@ -2249,11 +2650,12 @@ kbd {
   flex-direction: column;
   align-items: center;
   translate: -50% -100%;
-  color: #fff;
-  font: 700 12px var(--ui-font);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  color: var(--hud-fg);
+  font: 700 calc(12px * var(--hud-scale, 1)) var(--ui-font);
+  text-shadow: var(--hud-shadow);
   pointer-events: none;
   z-index: 9;
+  opacity: var(--hud-l3);
 }
 
 .mate-marker[hidden] {
@@ -2261,20 +2663,20 @@ kbd {
 }
 
 .mate-marker span {
-  padding: 1px 6px;
+  padding: 0.08em 0.5em;
   border-bottom: 2px solid var(--team);
-  border-radius: 3px;
-  background: rgba(12, 14, 18, 0.5);
+  border-radius: var(--radius-sm);
+  background: var(--hud-panel);
   white-space: nowrap;
 }
 
 .mate-marker i {
   width: 0;
   height: 0;
-  margin-top: 2px;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 8px solid var(--team);
+  margin-top: 0.17em;
+  border-left: 0.5em solid transparent;
+  border-right: 0.5em solid transparent;
+  border-top: 0.67em solid var(--team);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
 }
 
@@ -2292,12 +2694,14 @@ kbd {
   position: absolute;
   left: 50%;
   /* Under the "HIT!" call stamp (.hitfx-banner), so holding Tab while calling a hit doesn't hide it. */
-  top: calc(max(18%, calc(54px + 70px * var(--sb-scale, 1))) + 96px);
-  transform: translateX(-50%);
-  width: min(760px, calc(100% - 32px));
-  padding: 14px 18px 16px;
-  border-radius: 8px;
-  background: rgba(14, 16, 20, 0.85);
+  top: calc(max(18%, calc(var(--hud-margin) + 44px + 70px * var(--sb-scale, 1))) + 96px * var(--hud-scale, 1));
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 0;
+  width: min(760px, calc((100% - 32px) / var(--hud-scale, 1)));
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-radius: var(--hud-radius);
+  background: var(--hud-panel-solid);
   color: var(--paper);
   pointer-events: none;
   z-index: 12;
@@ -2309,28 +2713,29 @@ kbd {
 
 .match-board-heading {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--ls-wide);
   text-transform: uppercase;
-  color: rgba(247, 243, 234, 0.7);
+  color: var(--menu-muted);
 }
 
 .stats-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
 }
 
+/* Tables (audit section 6, item 18): one head style, zebra rows instead of lines, numbers right-aligned with room. */
 .stats-table thead th {
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-2);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-caps);
   text-align: right;
   text-transform: uppercase;
-  color: rgba(247, 243, 234, 0.6);
+  color: var(--menu-faint);
 }
 
 .stats-table td:first-child {
@@ -2338,9 +2743,13 @@ kbd {
 }
 
 .stats-table td {
-  padding: 4px 8px;
+  padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-2);
   text-align: right;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Every other player's row (the team's title row comes first in each block). */
+.stats-team tr:nth-child(2n + 3) td {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .stats-table thead th:first-child,
@@ -2349,10 +2758,10 @@ kbd {
 }
 
 .stats-team th {
-  padding: 12px 8px 4px;
-  font-size: 12px;
+  padding: var(--sp-3) var(--sp-2) var(--sp-1);
+  font-size: var(--fs-xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ls-caps);
   text-align: left;
   text-transform: uppercase;
   color: var(--team);
@@ -2381,15 +2790,15 @@ kbd {
 .summary-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 24px;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
 }
 
 .summary-result {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-xl);
   font-weight: 800;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--ls-tight);
   text-transform: uppercase;
 }
 
@@ -2406,12 +2815,16 @@ kbd {
   display: none;
 }
 
+/* The total on the right, over the table's last column (the cells' padding). */
 .summary-credits-total {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  justify-content: space-between;
+  gap: var(--sp-3);
   margin: 0;
-  font-size: 22px;
+  padding: 0 var(--sp-3) 0 var(--sp-2);
+  font-size: var(--fs-xl);
+  font-variant-numeric: tabular-nums;
 }
 
 .summary-credits-total strong {
@@ -2421,27 +2834,28 @@ kbd {
 .summary-records {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .records-grid {
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
 }
 
+/* The stats table's cell padding on the left, so the summary's two tables line up. */
 .records-grid th,
 .records-grid td {
-  padding: 3px 28px 3px 0;
+  padding: 3px var(--sp-6) 3px var(--sp-2);
   text-align: left;
 }
 
 .records-grid thead th {
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--menu-muted);
+  color: var(--menu-faint);
 }
 
 .records-grid thead th:first-child {
@@ -2458,19 +2872,19 @@ kbd {
 }
 
 .records-not-counted {
-  margin: 0 0 10px;
+  margin: 0 0 var(--sp-2);
   color: var(--menu-muted);
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .records-bests {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 28px;
+  gap: var(--sp-2) var(--sp-6);
   margin: 0;
-  padding: 0;
+  padding: 0 var(--sp-2);
   list-style: none;
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .records-best-label {
@@ -2481,13 +2895,13 @@ kbd {
 .records-new {
   margin-left: 8px;
   padding: 2px 7px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: var(--orange);
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-style: normal;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
 }
 
@@ -2501,7 +2915,7 @@ kbd {
   flex: 0 0 140px;
   height: 110px;
   border: 1px solid var(--menu-line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: linear-gradient(135deg, #6f7a6a 0%, #8c8a7c 50%, #c9c4b3 100%);
   overflow: hidden;
 }
@@ -2510,12 +2924,12 @@ kbd {
   position: absolute;
   left: 8px;
   bottom: 6px;
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  color: var(--hud-fg);
+  text-shadow: var(--hud-shadow);
 }
 
 .crosshair-swatch {
@@ -2589,10 +3003,10 @@ kbd {
   rotate: calc(-1 * var(--a, 0rad));
   padding: 0 4px;
   border: 1.5px solid var(--cue-colour, #fff);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   color: var(--cue-colour, #fff);
-  font: 800 10px/14px var(--ui-font);
-  letter-spacing: 0.04em;
+  font: 800 var(--fs-2xs) / 14px var(--ui-font);
+  letter-spacing: var(--ls-caps);
 }
 
 .cue-hit b::before {
@@ -2610,7 +3024,7 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font: 600 13px var(--ui-font);
+  font: 600 var(--fs-sm) var(--ui-font);
 }
 
 .team-swatch::before {
@@ -2618,25 +3032,41 @@ kbd {
   width: 28px;
   height: 14px;
   border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   background: var(--swatch);
 }
 
 /* Title screen: the browser draws without hardware acceleration (M18b) */
+/* A slim banner (audit section 6, item 12): warning-yellow text with an icon on a panel, two lines at most from 1280 px. */
 .menu-title-warning {
   position: absolute;
   left: 50%;
   top: var(--menu-gutter);
   translate: -50% 0;
-  width: min(640px, calc(100% - 2 * var(--menu-gutter)));
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  width: min(1080px, calc(100% - 2 * var(--menu-gutter)));
   margin: 0;
-  padding: 10px 14px;
-  border: 1px solid var(--orange);
-  border-left-width: 6px;
-  border-radius: 4px;
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--radius-sm);
   background: var(--menu-panel);
-  font-size: 15px;
-  line-height: 1.4;
+  color: var(--warning);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  text-align: left;
+}
+
+.menu-title-warning svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .menu-title-warning[hidden] {
@@ -2650,10 +3080,10 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 24px;
-  background: #16181d;
+  padding: 0 var(--sp-5);
+  background: var(--menu-bg);
   color: var(--paper);
-  font: 600 18px/1.4 var(--ui-font);
+  font: 600 var(--fs-lg) / 1.4 var(--ui-font);
   text-align: center;
   z-index: 40;
 }
@@ -2671,61 +3101,63 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px var(--menu-gutter);
+  padding: var(--sp-6) var(--menu-gutter);
   overflow-y: auto;
-  background: #16181d;
+  color: var(--paper);
+  background: var(--menu-bg);
   font-family: var(--ui-font);
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
 }
 
+/* Fades in as a menu screen does (FA9); no time under reduced motion. */
 .crash-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-4);
   width: min(760px, 100%);
+  animation: menu-enter var(--t-med) var(--ease) both;
 }
 
 .crash-body,
 .crash-advice {
   margin: 0;
   max-width: 40em;
-  font-size: 17px;
+  font-size: var(--fs-lg);
   line-height: 1.45;
   color: var(--menu-muted);
 }
 
 .crash-advice {
-  color: #ffb27a;
+  color: var(--hint);
 }
 
 .crash-report {
   width: 100%;
   min-height: 220px;
   max-height: 45vh;
-  padding: 12px 14px;
+  padding: var(--sp-3) var(--sp-4);
   resize: vertical;
-  font: 12px/1.45 var(--ui-mono);
+  font: var(--fs-xs) / 1.45 var(--ui-mono);
   color: var(--paper);
   white-space: pre;
   background: var(--menu-panel);
   border: 1px solid var(--menu-line);
-  border-radius: 6px;
-}
-
-.crash-report:focus-visible {
-  outline: 2px solid var(--orange);
-  outline-offset: 2px;
+  border-radius: var(--radius-md);
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
 }
 
 .crash-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 
 .crash-status {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--menu-muted);
 }
 
@@ -2733,14 +3165,14 @@ kbd {
 .range-readout {
   position: absolute;
   left: 50%;
-  top: 18px;
+  top: var(--hud-margin);
   transform: translateX(-50%);
   max-width: calc(100% - 32px);
   padding: 8px 16px;
-  border-radius: 6px;
-  background: rgba(14, 16, 20, 0.7);
+  border-radius: var(--hud-radius);
+  background: var(--hud-panel);
   color: var(--paper);
-  font-size: 17px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -2757,13 +3189,15 @@ kbd {
 .coach {
   position: absolute;
   left: 50%;
-  top: 18px;
-  transform: translateX(-50%);
-  width: min(640px, calc(100% - 32px));
+  top: var(--hud-margin);
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 0;
+  width: min(640px, calc((100% - 32px) / var(--hud-scale, 1)));
   padding: 10px 16px 12px;
-  border-radius: 8px;
+  border-radius: var(--hud-radius);
   border-left: 4px solid var(--orange);
-  background: rgba(14, 16, 20, 0.82);
+  background: var(--hud-panel-solid);
   color: var(--paper);
   pointer-events: none;
   z-index: 11;
@@ -2774,21 +3208,21 @@ kbd {
 }
 
 .coach.done {
-  border-left-color: #5fbf6a;
+  border-left-color: var(--success);
 }
 
 .coach-head {
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: rgba(247, 243, 234, 0.75);
+  color: var(--menu-muted);
 }
 
 .coach-body {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--fs-lg);
   line-height: 1.4;
 }
 
@@ -2796,22 +3230,23 @@ kbd {
   display: inline-block;
   padding: 0 6px;
   border: 1px solid rgba(247, 243, 234, 0.5);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font: inherit;
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 /* "New? Start here" on the title's Tutorial button until the tutorial has been played through (M16). */
+/* The same tag as the tiles' BETA (audit section 6, item 12). */
 .menu-title-new {
-  margin-right: 10px;
-  padding: 2px 8px;
-  border-radius: 3px;
+  margin-right: var(--sp-1);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
   background: var(--orange);
-  color: #14161a;
-  font-size: 12px;
+  color: var(--ink);
+  font-size: var(--fs-2xs);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--ls-wide);
   text-transform: uppercase;
 }
 
@@ -2822,7 +3257,7 @@ kbd {
 /* The coach's last-BB line on the steps that ask for a hit (M16) */
 .coach-shot {
   margin: 6px 0 0;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   opacity: 0.85;
 }
@@ -2835,29 +3270,24 @@ kbd {
 /* The Armory (M26c, beta): balance, exchange, Shots and odds on the left; the last Shot and the collection on the right */
 .beta-tag {
   display: inline-block;
-  padding: 2px 7px;
+  padding: 2px 6px;
   font-size: 0.45em;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ls-wide);
   vertical-align: middle;
   color: var(--ink);
   background: var(--orange);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .setup-tile-label .beta-tag {
-  font-size: 10px;
-}
-
-.setup-tile:disabled {
-  cursor: default;
-  opacity: 0.45;
+  font-size: var(--fs-2xs);
 }
 
 .armory-free {
   margin: 0 0 16px;
   max-width: 60em;
-  font-size: 15px;
+  font-size: var(--fs-md);
   color: var(--menu-muted);
 }
 
@@ -2887,7 +3317,7 @@ kbd {
 }
 
 .armory-figure-value {
-  font-size: 30px;
+  font-size: var(--fs-2xl);
   font-weight: 800;
   white-space: nowrap;
 }
@@ -2918,14 +3348,14 @@ kbd {
 .armory-odds {
   margin-top: 12px;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--fs-md);
 }
 
 .armory-odds caption {
   padding-bottom: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--ls-wide);
   text-align: left;
   text-transform: uppercase;
   color: var(--orange);
@@ -2966,7 +3396,7 @@ kbd {
   color: var(--orange);
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ls-caps);
 }
 
 .armory-list {
@@ -2985,7 +3415,7 @@ kbd {
   gap: 6px 14px;
   min-height: 44px;
   padding: 4px 0 4px 12px;
-  border-top: 1px solid #2f333c;
+  border-top: 1px solid var(--menu-line-soft);
   border-left: 4px solid var(--tier, var(--menu-line));
 }
 
@@ -3002,14 +3432,14 @@ kbd {
 /* What the copy's tier adds (M29), on a line of its own under the name */
 .armory-row-adds {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--menu-muted);
 }
 
 .armory-tile .tier-adds {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   line-height: 1.3;
   color: var(--menu-muted);
   -webkit-box-orient: vertical;
@@ -3020,20 +3450,275 @@ kbd {
 .armory-row .menu-button {
   min-height: 36px;
   padding: 0 14px;
-  font-size: 14px;
+  font-size: var(--fs-md);
+}
+
+/* The catalogue (audit POOL-04): an asset not owned at any tier is dimmed; a pip per tier, coloured when owned */
+.armory-row.is-unowned {
+  color: var(--menu-faint);
+}
+
+.armory-completion {
+  margin-left: 8px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--menu-muted);
+}
+
+.armory-pips {
+  display: flex;
+  gap: 4px;
+}
+
+.armory-pip {
+  min-width: 2.6em;
+  padding: 2px 4px;
+  font-size: var(--fs-xs);
+  text-align: center;
+  color: var(--menu-faint);
+  border: 1px solid var(--menu-line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.armory-pip.is-owned {
+  font-weight: 700;
+  color: var(--paper);
+  border-color: var(--tier);
+  box-shadow: inset 0 -2px 0 var(--tier);
+}
+
+/* Pity (audit POOL-01): each rule's countdown, edged in its tier's colour */
+.armory-pity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.armory-pity li {
+  padding-left: 10px;
+  border-left: 3px solid var(--tier);
+}
+
+.armory-per-asset {
+  margin-top: 4px;
+}
+
+/* The reveal (audit POOL-11): tiles come in one after another, rarest first; at once with reduced motion */
+.armory-reveal-grid .armory-tile {
+  animation: armory-tile-in var(--t-med) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.reduced-motion .armory-reveal-grid .armory-tile {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .armory-reveal-grid .armory-tile {
+    animation: none;
+  }
+}
+
+@keyframes armory-tile-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+.armory-reveal-grid .armory-tile:is([data-tier='epic'], [data-tier='legendary']) {
+  box-shadow: 0 0 0 1px var(--tier), 0 0 18px -4px var(--tier);
+}
+
+.armory-reveal-summary {
+  margin: 0 0 4px;
+}
+
+/* Asking before a big spend (audit POOL-03) */
+.confirm-text {
+  margin: var(--sp-3) 0 var(--sp-5);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--menu-muted);
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
 }
 
 /* Seven New game tiles on a laptop screen (1180–1400 px wide): tighter, so the longest words fit */
 @media (min-width: 1181px) and (max-width: 1400px) {
   .setup-tiles {
-    gap: 12px;
+    gap: var(--sp-3);
   }
 
   .setup-tile {
-    padding: 18px 14px;
+    padding: var(--sp-4) var(--sp-3);
   }
 
   .setup-tile-value {
-    font-size: 17px;
+    /* With the window, so "Elimination" fits from 1181 px (it ran ~9 px short of clipping at 1280 px, row 145). */
+    font-size: clamp(14px, 1.22vw, 17px);
   }
+}
+
+/* Windows High Contrast / forced colours (audit UI-16): the browser would strip the HUD's colours and backgrounds, so
+   the crosshair, team pips, the hit wedge and the sound cues would vanish or all turn one colour. The game's overlays
+   keep their own colours (they are drawn for contrast against the field already); the menus follow the system's. */
+@media (forced-colors: active) {
+  .hud,
+  .hitfx,
+  .scoreboard,
+  .sound-cues,
+  .minimap,
+  .mate-marker,
+  .flag-marker,
+  .hold-marker,
+  .order-wheel,
+  .hit-feed,
+  .squad-order,
+  .match-board,
+  .crosshair-preview,
+  .crosshair-swatch,
+  .team-swatch {
+    forced-color-adjust: none;
+  }
+
+  /* The bar on the picked Settings tab and Loadout slot (FA9) in the system's highlight colour, so "the current place"
+     still shows when the system forces its colours. */
+  .settings-tab.selected::before,
+  .gear-slot.selected::before {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+}
+
+/* The system asks for more contrast: the menus' muted and faint text and their lines get lighter (audit UI-16). */
+@media (prefers-contrast: more) {
+  :root {
+    --menu-muted: #e4e0d6;
+    --menu-faint: #c9c5bb;
+    --menu-line: #6b7180;
+    --menu-line-soft: #565b67;
+  }
+}
+
+/* Settings → Save (M31) */
+.save-problem {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--warning);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--radius-sm);
+}
+
+.save-problem[hidden] {
+  display: none;
+}
+
+.save-status {
+  font-size: var(--fs-md);
+  color: var(--menu-soft);
+}
+
+.save-line {
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--menu-muted);
+}
+
+.save-message:not(:empty) {
+  color: var(--hint);
+}
+
+.save-restore-list {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+
+.save-restore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.save-restore .menu-button {
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
+.menu-row-control .menu-button.save-danger:not(:disabled) {
+  color: var(--danger);
+}
+
+/* A file dragged over the Save tab: the panel shows it can take it. */
+.settings-tab-panel.save-drop {
+  outline: 2px dashed var(--orange);
+  outline-offset: var(--sp-2);
+  border-radius: var(--radius-md);
+}
+
+.save-compare {
+  width: 100%;
+  margin: 0 0 var(--sp-4);
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+
+.save-compare th,
+.save-compare td {
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.save-compare tr:first-child th {
+  border-top: 0;
+  color: var(--menu-muted);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+}
+
+.save-compare tr th:first-child {
+  color: var(--menu-muted);
+  font-weight: 600;
+}
+
+.save-dialog-note {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.save-dialog-note.warn {
+  color: var(--warning);
+}
+
+.save-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+.save-dialog-actions .menu-button {
+  min-height: var(--control-md);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
 }

@@ -31,6 +31,15 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
     const owned = ['000001', '000002', '000003', '000004', '000007', '000010', '000012'].map((id) => [`${id}@common`, 1]);
     localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000011@rare', 1]]), fc: 400, tokens: 0, seed: 1 }));
   });
+  // The loading bar (audit CORE-10): the furthest it got, read as the page changes it.
+  await page.addInitScript(() => {
+    const w = window as unknown as { loadingMax: number };
+    w.loadingMax = -1;
+    new MutationObserver(() => {
+      const now = Number(document.querySelector('.loading-bar')?.getAttribute('aria-valuenow') ?? -1);
+      w.loadingMax = Math.max(w.loadingMax, now);
+    }).observe(document, { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'] });
+  });
   await page.goto('/?nolock&seed=1');
   // Wait for the title screen or the start-up failure pane (audit CORE-28), whichever comes first.
   await page.waitForFunction(
@@ -45,6 +54,24 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   }
   await expect(page.locator('#loading')).toHaveCount(0);
   await expect(page.locator('.menu-title-wordmark')).toBeVisible();
+  // Release basics (audit CORE-19, FA9): the built page carries its Content-Security-Policy (a violation would be a
+  // console error above), an icon and a manifest. The loading bar showed the physics chunk's download (CORE-10): the
+  // chunk is fetched once with progress and the module import that follows is answered by the cache, not a second
+  // download (no modulepreload of it either).
+  await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', /'wasm-unsafe-eval'/);
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /icon\.svg$/);
+  await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
+  const physicsChunk = (await page.locator('meta[name="airsoft-physics-chunk"]').getAttribute('content')) ?? '';
+  expect(physicsChunk).toMatch(/rapier-.*\.js$/);
+  await expect(page.locator('link[rel="modulepreload"][href*="rapier-"]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { loadingMax: number }).loadingMax)).toBeGreaterThanOrEqual(85);
+  const chunkLoads = await page.evaluate(() =>
+    performance
+      .getEntriesByType('resource')
+      .filter((e) => /rapier-/.test(e.name))
+      .map((e) => (e as PerformanceResourceTiming).transferSize > (e as PerformanceResourceTiming).encodedBodySize / 2),
+  );
+  expect(chunkLoads.filter((full) => full)).toHaveLength(1);
   // SwiftShader is a software renderer: the title screen warns that the game will run slowly (M18b), and that it picked
   // Low for this visit as nothing was saved (audit M-02).
   await expect(page.locator('.menu-title-warning')).toContainText('without hardware acceleration');
@@ -119,7 +146,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(sheet.locator('dd', { hasText: /^13 BBs\/s/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^60 × 4 \(240\)/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^no optic/ })).toBeVisible();
-  for (const label of ['Muzzle speed', 'BB weight', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Reload', 'Draw', 'Aim raise']) await expect(sheet.getByText(label, { exact: true })).toBeVisible();
+  for (const label of ['Muzzle speed', 'BB weight', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Reload', 'Draw', 'Aim raise', 'Shots heard from']) await expect(sheet.getByText(label, { exact: true })).toBeVisible();
   await expect(primary.locator('.gear-stats')).toHaveText('0.97 J · 13 BBs/s · 60 BBs');
   const optic = loadout.getByRole('group', { name: 'Optic' });
   await expect(optic.getByRole('button', { name: 'Iron Sights' })).toHaveAttribute('aria-pressed', 'true');
@@ -224,10 +251,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
   // A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T, is saved,
   // and the match below reloads on T.
-  await settings.getByRole('button', { name: 'Reload: R' }).click();
-  await expect(settings.getByRole('button', { name: /^Reload: Press a key/ })).toBeVisible();
+  await settings.getByRole('button', { name: 'Reload, main key: R' }).click();
+  await expect(settings.getByRole('button', { name: 'Reload, main key: waiting for a key' })).toBeVisible();
   await page.keyboard.press('KeyT');
-  await expect(settings.getByRole('button', { name: 'Reload: T' })).toHaveText('T');
+  await expect(settings.getByRole('button', { name: 'Reload, main key: T' })).toHaveText('T');
   const savedReload = await page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.keyBindings') ?? '{}') as { reload?: string[] }).reload);
   expect(savedReload).toEqual(['KeyT']);
   await settings.getByRole('tab', { name: /Audio/i }).click();
@@ -291,7 +318,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const wheel = page.locator('.order-wheel');
   await page.keyboard.down('z');
   await expect(wheel.locator('.order-wheel-item').first()).toBeVisible({ timeout: 10_000 });
-  await expect(wheel.locator('.order-wheel-item')).toHaveText(['Follow Me', 'Hold Here', 'Regroup', 'Team Plan']);
+  // Each direct order shows its key (FA5, UI-03); the Team Plan has none.
+  await expect(wheel.locator('.order-wheel-item')).toHaveText([/^Follow Me/, /^Hold Here/, /^Regroup/, 'Team Plan']);
+  await expect(wheel.locator('.order-wheel-key')).toHaveText(['F', 'X', 'V']);
   await page.keyboard.up('z');
   await expect(wheel).toHaveAttribute('hidden', '', { timeout: 10_000 });
   // Squad orders (M22): F has the bot teammates follow you and the HUD says so; F again sends them back to the plan.
@@ -478,6 +507,71 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
  * The High preset (the default on a real GPU) still boots in a browser: `?quality=high` overrides the software fallback,
  * so its renderer setup runs once here, to the title screen only (a match on High is too slow in software).
  */
+/** Barrels and the silencer (M29b): Customise's Barrel and Muzzle rows, what they offer, and the sheet's "Shots heard from". */
+for (const withParts of [false, true]) {
+  test(`Customise has Barrel and Muzzle rows (${withParts ? 'owning the barrels and silencer' : 'starters only'})`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+    });
+    // The Tight-Bore Barrel (000016), Long Barrel (000017) and Silencer (000018) come from Shots: saved as a returning
+    // player's collection, or left out for a new player.
+    await page.addInitScript((extra) => {
+      const ids = ['000001', '000002', '000003', '000004', ...(extra ? ['000016', '000017', '000018'] : [])];
+      localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries(ids.map((id) => [`${id}@common`, 1])), fc: 0, tokens: 0, seed: 1 }));
+    }, withParts);
+    await page.goto('/?nolock&seed=1&quality=low');
+    await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+    await page.getByRole('button', { name: 'Start' }).click();
+    const setup = page.locator('.menu-setup');
+    await setup.getByRole('button', { name: /Loadout/i }).click();
+    const loadout = page.locator('.menu-loadout');
+    await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
+    await expect(loadout.getByRole('heading', { name: /Customise: AEG Rifle/ })).toBeVisible();
+    const sheet = loadout.getByLabel('Performance');
+    const heardFrom = sheet.locator('dt', { hasText: 'Shots heard from' }).locator('xpath=following-sibling::dd[1]');
+    const barrel = loadout.getByRole('group', { name: 'Barrel', exact: true });
+    const muzzle = loadout.getByRole('group', { name: 'Muzzle', exact: true });
+    // The AEG takes both: "as it comes" is picked, and shots carry 22 m.
+    await expect(barrel.getByRole('button', { name: 'Standard' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(muzzle.getByRole('button', { name: 'None' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(heardFrom).toHaveText(/^22 m/);
+    if (!withParts) {
+      // Nothing is offered that the player does not own; the Armory hint says where to get them.
+      await expect(barrel.getByRole('button')).toHaveCount(1);
+      await expect(muzzle.getByRole('button')).toHaveCount(1);
+      await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Barrel', exact: true }) }).getByText('Unlock more in the Armory.')).toBeVisible();
+      await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Muzzle', exact: true }) }).getByText('Unlock more in the Armory.')).toBeVisible();
+    } else {
+      await expect(barrel.getByRole('button')).toHaveCount(3);
+      await expect(barrel.getByRole('button', { name: /Tight-Bore Barrel/ })).toBeVisible();
+      await expect(muzzle.getByRole('button')).toHaveCount(2);
+      await barrel.getByRole('button', { name: /Long Barrel/ }).click();
+      await expect(barrel.getByRole('button', { name: /Long Barrel/ })).toHaveAttribute('aria-pressed', 'true');
+      await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Barrel', exact: true }) }).getByText(/Brings it up in [\d.]+ s\./)).toBeVisible();
+      // A long barrel is front-heavy: a slower draw is marked worse, the extra energy better.
+      await expect(sheet.locator('dt', { hasText: /^Draw$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-worse')).toHaveText(/^\+15%/);
+      await expect(sheet.locator('dt', { hasText: /^Energy$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-better')).toHaveText(/^\+8%/);
+      // The silencer halves how far shots are heard, which the sheet marks as better, and says it to the player.
+      await muzzle.getByRole('button', { name: /Silencer/ }).click();
+      await expect(heardFrom).toHaveText(/^11 m/);
+      await expect(heardFrom.locator('.perf-better')).toHaveText(/^−50%/);
+      await expect(loadout.getByText('Bots hear your shots from 11 m (22 m without a silencer).')).toBeVisible();
+    }
+    // The pistol's barrel is fixed (a greyed row), and its muzzle is threaded: owned, it offers the silencer.
+    await page.keyboard.press('Escape');
+    await loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ }).click({ button: 'right' });
+    await expect(loadout.getByRole('heading', { name: /Customise: Gas Pistol/ })).toBeVisible();
+    await expect(loadout.locator('.menu-row.later', { hasText: 'Barrel' })).toContainText('Fixed barrel');
+    await expect(loadout.getByRole('group', { name: 'Barrel', exact: true })).toHaveCount(0);
+    const pistolMuzzle = loadout.getByRole('group', { name: 'Muzzle', exact: true });
+    await expect(pistolMuzzle.getByRole('button', { name: 'None' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pistolMuzzle.getByRole('button')).toHaveCount(withParts ? 2 : 1);
+    expect(errors).toEqual([]);
+  });
+}
+
 test('the game boots to the title screen on High', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));

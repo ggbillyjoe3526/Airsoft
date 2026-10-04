@@ -29,6 +29,14 @@ export function backTarget(screen: MenuScreen, settingsFrom: SettingsOrigin, loa
 }
 
 /**
+ * Whether Esc resumes play (audit UI-09): on the pause menu, as Esc toggles pause in most shooters, but not a held key's
+ * repeats nor within `guardMs` of the pause menu showing (the Esc that released the mouse, where a browser passes it on).
+ */
+export function escResumes(screen: MenuScreen, msSinceShown: number, repeat: boolean, guardMs: number): boolean {
+  return screen === 'pause' && !repeat && msSinceShown >= guardMs;
+}
+
+/**
  * The menu shown when play stops: the title before the first match, the match's end once it is decided (the summary,
  * then the result), else the pause menu.
  */
@@ -54,4 +62,9 @@ export function tabAfterKey(key: string, index: number, count: number): number |
     default:
       return null;
   }
+}
+
+/** A page has more below what shows (audit UI-18): more than a couple of pixels (rounding) left to scroll. */
+export function moreBelow(scrollTop: number, clientHeight: number, scrollHeight: number): boolean {
+  return scrollTop + clientHeight < scrollHeight - 2;
 }

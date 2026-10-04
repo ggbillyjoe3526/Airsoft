@@ -198,6 +198,26 @@ The numbers live in `stats.md` beside `pool.md`. Start, then Loadout; right-clic
   says 20 BBs/s and the rifle (and the bots' rifles) fire faster. Put it back. A typo (`2O`) shows in the console and
   `npm run test` names its line.
 
+## Barrels, silencer and Hard opponents' kit (M29b)
+
+Turn on Dev settings → Unlock all gear, then Loadout; right-click the rifle to customise it.
+
+- [ ] **Rows.** The rifle has Barrel and Muzzle rows; the pistol's Barrel row says it has a fixed barrel and its
+  Muzzle row offers the Silencer.
+- [ ] **Tight-Bore Barrel.** Spread −15 % and energy +3 % on the sheet; the first-person rifle looks the same length.
+- [ ] **Long Barrel.** Energy +8 %, Draw and Aim raise +15 % (red); the rifle's barrel is visibly longer in first
+  person and BBs leave from its new end.
+- [ ] **Silencer.** On both replicas: a can on the muzzle, energy −5 %, Draw slower, "Shots heard from" 22 m → 11 m
+  (green). In a match the shots sound duller and quieter.
+- [ ] **Bots hear less.** In a Normal match with the silenced rifle, fire from about 15 m behind a bot that can't see
+  you: it shouldn't turn round (unsilenced it does). On the minimap (Sound cues on too) a silenced bot shows up only
+  within half the usual range.
+- [ ] **Hard opponents.** Start a Hard match and play a few rounds: opponents' rifles differ (some faster, some with a
+  silencer you hear muffled, some longer-ranged). Play Again rolls new kits. Easy and Normal opponents, and your
+  teammates on any level, are as before.
+- [ ] **Shots.** A ten-Shot can dispense the Tight-Bore Barrel, Long Barrel or Silencer; the Armory lists them under
+  Barrels and Muzzle parts.
+
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the
@@ -231,6 +251,23 @@ that pushes BBs, never players. The dust floating in the air (Medium and High qu
 - [ ] **Bots:** they hit you as often as before at short range and lead you better when you run across their aim at
   range. In a strong breeze their long shots miss downwind as yours do. Say if bots feel too weak or too strong.
 - [ ] **Frame rate:** a full-auto firefight on Low feels as smooth as before.
+
+## BB hot path and own ricochets (FA12)
+
+BBs now find walls with the game's own ray test instead of the physics engine's (the same answer, much cheaper), and a
+ricochet can come back and hit whoever fired it.
+
+- [ ] **BBs still stop on everything.** On Depot, shoot crates, container sides and ends, wall tops and corners, the
+  dock and its steel ramps, a gabion, the toilets: every BB stops or bounces where it meets the surface, never inside or
+  through it, and steel and concrete still ricochet as before. Dev tab › BB paths makes it easy to see.
+- [ ] **Your own ricochet, ricochets on.** Custom match with "Ricochets count" on: stand 2 m from a container's side
+  and fire one shot square at it. The BB comes back and you're hit: the hit feed says you called a hit off yourself,
+  tagged "ricochet" (not "friendly"); the scoreboard counts you hit once and no hit for you.
+- [ ] **Your own ricochet, ricochets off (the default).** Same shot: the "Ricochet · doesn't count, play on" notice, and you
+  play on.
+- [ ] **Practice range, 60 m plate:** a level shot on the factory hop lands short (about 53 m); aiming about 3° high (some
+  3.5 m above the plate) rings it.
+- [ ] **Frame rate:** a long full-auto firefight on Low (Dev tab FPS) is as smooth as before or smoother.
 
 ## Bots and rounds
 
@@ -544,6 +581,36 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   summary says Dev settings kept it out of your records. Untick the box and Play Again: everything is back to normal
   and that match counts. Disable Armory and Unlock all gear: see "Loadout and Armory (M26)".
 
+## Save (M31)
+
+Settings → **Save**, the tab before Dev. Nothing to press for saving itself: everything saves as it changes.
+
+- [ ] **Saved automatically.** Change the field of view, open the Save tab: "Last saved just now". Reload the page:
+  the setting, your Loadout, Armory items, FC and records are all as you left them.
+- [ ] **Download.** Press Download: `airsoft-save-<today>.json` lands in your Downloads folder. Open it in a text
+  editor: readable, with the game, version, date, a summary (FC, Tokens, items, matches) and the stores. The tab now
+  says "Last downloaded just now".
+- [ ] **Load in another browser.** Open the game in a second browser (or a private window), Settings → Save → Load
+  file, pick the download (or drag it onto the tab). The pop-up shows both saves side by side; Replace reloads the
+  game with your settings, Loadout, Armory and records. Undo on the Save tab brings back what was there.
+- [ ] **Clear and restore.** Clear the site's data (browser settings, or F12 → Application → Clear site data), reload:
+  a fresh game. Load your file: everything is back.
+- [ ] **Edited file.** Change the `fc` number in a downloaded file and load it: the pop-up warns the file was changed
+  or damaged and the button reads **Load anyway**. Cancel changes nothing.
+- [ ] **Not a save.** Load any other JSON or text file: "That file isn't an Airsoft save", nothing changes.
+- [ ] **Mid-match.** Pause a match, Settings → Save: Download works, Load, Restore, Undo and Delete are greyed with
+  "Leave the match to load a save."
+- [ ] **Restore points.** Open the game on two different days: the Save tab lists one restore point per day (three at
+  most). Restore one: same side-by-side pop-up, and Undo works after it.
+- [ ] **Delete.** Delete save → the pop-up offers Download first; Delete reloads a fresh game (tutorial tagged
+  "New? Start here" again). Undo on the Save tab brings it all back.
+- [ ] **Two tabs.** Open the game in a second tab: it shows "Airsoft is open in another tab" and doesn't start. Play
+  here: that tab loads the game and the first one shows the notice instead. Earn FC in one, switch: nothing is lost.
+- [ ] **Protect.** Press Protect: Chrome and Edge answer straight away (often "said no for now" on a site you rarely
+  visit); Firefox asks with its own prompt. Once allowed, the button reads Protected.
+- [ ] **Firefox and Edge** (the automated tests run Chromium only): do Download, Load (button and drag and drop), the
+  two-tab notice and Protect once in each. Firefox: the download prompt or Downloads list shows the `.json` file.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
@@ -658,6 +725,121 @@ Headphones help. Every sound is still generated by the game (nothing downloaded)
 - [ ] **Walk-off from the far quarter of Depot.** Get hit at one end; you walk all the way to your dead zone instead of
   fading out on the way.
 - [ ] **A slow machine** (or DevTools CPU throttling 6×): the game keeps real-time pace down to about 6 frames a second.
+
+## Input, key bindings and HUD fixes (FA5)
+
+- [ ] **Chrome or Edge with a French (AZERTY) or German (QWERTZ) keyboard layout.** Settings → Key Bindings shows
+  Move forward as **Z** (AZERTY) and the order wheel as **W** (AZERTY) or **Y** (QWERTZ); the tutorial's hints and
+  the "press R to reload" hint use the same letters. Switch the system layout while the game is open, click back
+  into the window: the names follow.
+- [ ] **Firefox:** Key Bindings shows a line saying names follow a US keyboard; the keys still work by position.
+- [ ] **Key Bindings:** each row has a main and a second key box. Rebind Move forward's main key: ↑ stays as its
+  second key. Bind Jump to R: the line under the list says "R was Reload: Reload is now Space" and Reload's row
+  flashes. Click a box and press Backspace: it clears (Move forward's last key refuses, saying it needs a key).
+  Click a box and turn the mouse wheel: it binds "Wheel up" / "Wheel down", and in a match that direction no longer
+  switches replicas. F5, F11 and F12 are refused ("the browser uses it").
+- [ ] **Keyboard only:** Tab to a key box, press Enter, press a key: the focus stays on that box (Tab moves on to the
+  next one). Bind Space and Enter this way: the box doesn't start waiting again.
+- [ ] **Reset All** asks "Click Again To Reset" and resets only on a second click within 3 s.
+- [ ] **Esc on the pause menu resumes** (with the mouse lock: right after pausing, Chrome may need a moment and
+  shows "click again"; a second Esc a second later resumes).
+- [ ] **F10 mid-match (Chrome, Edge, Firefox):** the page goes fullscreen and play carries on without the pause menu
+  (if the browser keeps the pause menu up, Resume works as before). Same leaving fullscreen with F10. Then strike
+  KNOWN_ISSUES "The fullscreen key drops the mouse lock".
+- [ ] **Raw mouse input** (Settings → Controls): after the first Play the line under it says "Raw input is active"
+  in Chrome/Edge, "no raw input" in Firefox. Turn it off, Resume: the system's acceleration applies.
+- [ ] **Turn distance:** type 36.4 in the cm/360 box and press Enter: it still says 36.4. The sensitivity slider
+  moves in 0.01 steps with the arrow keys.
+- [ ] **HUD size** (Settings → HUD): 150 % makes the replica panel, scoreboard, minimap, hit feed, squad line, round
+  messages, order wheel and teammate markers bigger, nothing overlaps at 1280×720; the crosshair keeps its size. On a
+  1440p or 4K screen (without system scaling) 100 % is already larger than on 1080p.
+- [ ] **Minimap on a second screen:** drag the window to a screen with another scaling mid-match (or zoom the
+  browser), pause and resume: the minimap is sharp and the right size.
+- [ ] **Teammate markers:** a teammate whose marker would sit inside the minimap circle has none there; holding Tab
+  hides every marker over the field (teammates, the flag, the hold spot).
+- [ ] **Crosshair:** Custom colour (the colour box at the end of the colour buttons), Opacity and Spread (Static keeps
+  the gap while moving and firing) show in the preview and in a match.
+- [ ] **Order wheel:** each order shows its own key (F, X, V) under its name; rebind one and open the wheel again.
+- [ ] **New game at 1920×1080 and 2560×1440:** "Elimination" stays inside its tile.
+- [ ] **Settings at 1280×720:** Controls, Key Bindings and Crosshair fade out above the Back button while there is
+  more below; scrolled to the end, the fade goes.
+- [ ] **Windows High Contrast** (or Chrome DevTools → Rendering → forced-colors: active): the crosshair, team pips,
+  hit wedge and sound cues keep their colours in a match.
+- [ ] **Screen reader (NVDA/VoiceOver):** being hit is read out ("Hit! You called your hit"), the round result once
+  (not the countdown), and a squad order as it is given.
+
+## UI polish (FA9)
+
+- [ ] **Loading screen** (production build, `npm run build` then `npm run preview`; DevTools → Network → Slow 4G,
+  cache disabled): the dark page with "AIRSOFT." and a thin orange bar shows at once, with no white flash; the bar
+  fills while "Loading physics…" downloads, then "Starting physics…", "Starting the game…", and the title appears.
+  In the Network tab the `rapier-….js` file is downloaded once (the second request is from the cache).
+- [ ] **Tab and favicon:** the tab shows the orange-dot "A" icon; the address bar / tab strip takes the dark theme
+  colour where the browser supports it.
+- [ ] **Firefox and Edge, production build:** the game boots and plays a round; the console shows no
+  "Content-Security-Policy" errors. `npm run dev` still boots and hot-reloads.
+- [ ] **JavaScript off** (DevTools → Settings → Debugger → Disable JavaScript, reload): the loading page says the
+  game needs JavaScript, with no sliding bar.
+- [ ] **Menus at 1280×720 and 1920×1080:** title, New game, the Mode / Match / Difficulty dialogs, Loadout, Armory,
+  every Settings tab, pause, summary and result look tidy: one type scale, square-ish corners, buttons in capitals,
+  the same order and wording as before. Hover a button and a New game tile: a quick lift/brighten. Tab through a
+  screen: an orange ring with a dark gap around every focused control, also on the orange Play button.
+- [ ] **Settings tabs and Loadout columns:** the current tab / column has an orange 3 px bar on its left; each tab
+  has a small icon beside its name; New game tiles and pause buttons have icons too.
+- [ ] **Dialogs:** opening Mode or Match blurs the page behind (Chrome, Edge, Firefox 103+) and the box scales in;
+  the Match dialog's labels line up like Settings' rows.
+- [ ] **Reduced motion** (Settings → Accessibility, or the system setting): screens and dialogs appear with no
+  fade or scale, buttons change with no transition.
+- [ ] **Windows High Contrast / forced-colors:** the selected tab's bar and the loading bar still show (system
+  highlight colour).
+- [ ] **HUD at 1920×1080 and on a 21:9 window (e.g. 2560×1080):** the four corners keep the same margin; on 21:9
+  the ammo and minimap sit inside a 16:9 area, not at the screen's edges. The scoreboard's "out" pips read
+  against a bright sky.
+- [ ] **Hit feed:** each line has a thin bar on its left in the shooter's team colour (try a colour-blind option in
+  Accessibility: the bar follows); friendly-fire and ricochet tags show a small glyph beside the word.
+- [ ] **Summary and result tables:** striped rows, numbers aligned, your row keeps its team bar.
+
+## Build, tests and pipeline (FA11a)
+
+- [ ] **Firefox, production build** (`npm run build`, `npm run preview`, open it in Firefox): the game boots to the
+  title with no console errors; Play takes the mouse (Settings → Controls says raw input is unavailable, as expected);
+  Esc pauses and Resume takes the mouse again; sounds come from the right side when a bot shoots to your left or right
+  (the listener fallback); the back / forward side buttons don't leave the page while playing.
+- [ ] **Edge, production build:** the same boot, Play, Esc and Resume.
+- [ ] **Mouse look** in Chrome on the production build: smooth, no jump on the first move after Play or Resume.
+- [ ] **Precompressed files** (only when the game is put on a host that serves them, README › Hosting): in DevTools →
+  Network the `rapier-….js` response has `content-encoding: br` and a transfer of about 1.2 MB.
+
+## Armory, economy, records and tutorial (FA10)
+
+- [ ] **Armory, Shots:** the buttons read "1 Shot · 160 FC" and "10 Shots · 1,600 FC", with "Paid in FC" or "Paid with
+  2 Tokens + …" under them. 10 Shots opens "Take 10 Shots?" with the keyboard on Cancel; Enter there cancels. Hold
+  Enter on 1 Shot for a second: exactly one Shot is taken.
+- [ ] **Reveal:** after a ten-Shot the tiles come in one after another, rarest first, an Epic or Legendary glowing in
+  its colour, with a line like "1 Epic, 4 Rare, 25 others · 3 new" above; the keyboard sits on "Last Shot". With
+  Reduced motion on, the tiles appear at once. A screen reader reads the first Shot too.
+- [ ] **Pity:** under the Shots, "Epic or rarer within 20 more Shots" and "Legendary or rarer within 100 more Shots"
+  count down a Shot at a time and survive a reload of the page.
+- [ ] **Catalogue:** "Your collection" lists every asset Shots can give, owned or not (dimmed), with a pip per tier
+  and "N / 84 items" in the heading. Own a part at Common and Rare: "Scrap 1" scraps the Common; fit the Common on
+  Customise first, scrap it, and Customise shows the Rare fitted. "Scrap all spares" asks first and keeps the best
+  copy of everything.
+- [ ] **Two tabs** (M31's tab lock): open the game in a second tab: it waits behind the "Airsoft is open in another tab"
+  notice. Take a Shot in the first, then let the second take over: its Armory shows the Shot (balance and items).
+- [ ] **Customise:** under the replica's name a line says what its tier adds ("Legendary: +7.5% energy · …", or
+  "Common: no tier bonus"); hovering any item tile shows the same.
+- [ ] **Summary after a Dev-assisted match** (Dev settings → Bottomless magazines on, play a match to the end): "No
+  Field Credits: Dev settings changed how this match played." With Disable Armory on: "…the Armory is switched off…".
+- [ ] **Pay:** a first-to-5 3v3 on Normal pays as before when you play; a round your team won while you were out
+  with no hit isn't in the "rounds won" line. Hard opponents with Easy teammates show "difficulty ×0.5".
+- [ ] **Tutorial:** press Esc during it: Skip step and Skip tutorial are there (not on the practice range alone or in
+  a match). Skip step moves the pause line to the next step. Quit at step 5, start the tutorial again from the title:
+  it picks up at step 5. Skip tutorial: free practice, and the title stops tagging the Tutorial "New?". The new steps
+  (fire selector, sprint then shoot, "In a match") each finish by doing what they say.
+- [ ] **Spread looking up:** on the range, aim the rifle steeply up (about 60°) and fire a magazine: the BBs spread
+  as wide sideways as up and down (before FA10 they bunched into a vertical line).
+- [ ] **AEG spin-up** (KNOWN_ISSUES): on a fresh trigger pull, is the motor's wind-up heard before or under the first
+  shot? If not, say so: it can be raised or the shot led by a few milliseconds now that M29 has merged.
 
 ## Reporting what you find
 

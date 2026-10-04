@@ -48,6 +48,29 @@ export function scoreboardScale(picked: number, viewportWidth: number): number {
   return Math.min(picked, Math.max(1, fits));
 }
 
+/**
+ * Settings → HUD → HUD size (audit UI-04): a scale on the whole HUD (the replica panel, the scoreboard, the minimap,
+ * the hit feed, the squad line, the round messages, the order wheel and the markers over the field; the crosshair keeps
+ * its own size). 100 % fits the screen: the HUD grows with a window taller than `referenceHeight` (1440p, 4K without
+ * the system's scaling) up to `maxAuto` times, so its type doesn't shrink to a sliver there.
+ */
+export const HUD_SIZE = {
+  min: 0.8,
+  max: 1.5,
+  step: 0.05,
+  default: 1,
+  /** The window height (CSS px) the HUD is drawn for at 100 %. */
+  referenceHeight: 1080,
+  /** The most a tall window grows it on its own. */
+  maxAuto: 1.5,
+} as const;
+
+/** The HUD's scale on a `viewportHeight` px tall window for the size picked (1 = as drawn at 1080 px high). */
+export function hudScale(picked: number, viewportHeight: number): number {
+  const auto = Math.min(HUD_SIZE.maxAuto, Math.max(1, viewportHeight / HUD_SIZE.referenceHeight));
+  return Math.round(picked * auto * 1000) / 1000;
+}
+
 /** The marker with the name over each teammate (never over an enemy). */
 export const TEAMMATE_MARKERS = {
   /** Metres above the teammate's eyes the marker's tip sits. */
@@ -64,8 +87,10 @@ export const STATS = {
 export const RECORDS_KEY = 'airsoft.records';
 
 export type CrosshairShape = 'cross' | 'crossDot' | 'dot' | 'circle';
-export type CrosshairColor = 'white' | 'green' | 'yellow' | 'cyan' | 'pink' | 'red';
+export type CrosshairColor = 'white' | 'green' | 'yellow' | 'cyan' | 'pink' | 'red' | 'custom';
 export type CrosshairOutline = 'on' | 'off';
+/** Whether the crosshair opens with the spread (`on`) or keeps its gap (`off`, static; audit UI-21). */
+export type CrosshairDynamic = 'on' | 'off';
 
 /** The crosshair as the player set it up on Settings → Crosshair. */
 export interface CrosshairSettings {
@@ -77,6 +102,11 @@ export interface CrosshairSettings {
   /** The smallest gap between the centre and the arms or the circle (px): the spread opens it further. */
   gap: number;
   color: CrosshairColor;
+  /** The colour when `color` is `custom` (#rrggbb, from the colour box; audit UI-21). */
+  customColor: string;
+  /** 0.2 (faint) to 1 (solid). */
+  opacity: number;
+  dynamic: CrosshairDynamic;
   outline: CrosshairOutline;
 }
 
@@ -87,6 +117,9 @@ export const DEFAULT_CROSSHAIR: CrosshairSettings = {
   thickness: 2,
   gap: 4,
   color: 'white',
+  customColor: '#5cff6e',
+  opacity: 1,
+  dynamic: 'on',
   outline: 'on',
 };
 
@@ -105,6 +138,16 @@ export const CROSSHAIR_COLORS: readonly { id: CrosshairColor; label: string; blu
   { id: 'cyan', label: 'Cyan', blurb: '', css: '#4af2ff' },
   { id: 'pink', label: 'Pink', blurb: '', css: '#ff6ee6' },
   { id: 'red', label: 'Red', blurb: '', css: '#ff3b30' },
+  // Any colour (audit UI-21): its swatch shows the colour picked in the box beside it.
+  { id: 'custom', label: 'Custom', blurb: 'The colour in the box: click it to pick any.', css: '' },
+];
+
+/** A custom crosshair colour as saved: #rrggbb only (it goes into a style). */
+export const CROSSHAIR_HEX = /^#[0-9a-f]{6}$/i;
+
+export const CROSSHAIR_DYNAMIC: readonly { id: CrosshairDynamic; label: string; blurb: string }[] = [
+  { id: 'on', label: 'Dynamic', blurb: 'Opens as you move and fire, to show where your BBs can go.' },
+  { id: 'off', label: 'Static', blurb: 'Keeps its gap whatever your spread.' },
 ];
 
 export const CROSSHAIR_OUTLINES: readonly { id: CrosshairOutline; label: string; blurb: string }[] = [
@@ -117,6 +160,7 @@ export const CROSSHAIR_RANGES = {
   size: { min: 2, max: 16, step: 1 },
   thickness: { min: 1, max: 4, step: 1 },
   gap: { min: 0, max: 12, step: 1 },
+  opacity: { min: 0.2, max: 1, step: 0.05 },
 } as const;
 
 /** The Settings preview's second crosshair: as if moving, this many pixels wider than standing still. */

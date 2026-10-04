@@ -13,6 +13,7 @@ import {
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
+import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
 import { MAPS, type MapId } from '../../map/maps';
@@ -24,7 +25,7 @@ import type { HudSettingsOptions } from '../hudSettings';
 import { ChoiceDialog } from './choiceDialog';
 import { type ArmoryOptions, ArmoryScreen } from './armoryScreen';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
-import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
+import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el, menuRow, rangeControl } from './menuParts';
 import { OptionPicker } from '../optionPicker';
 import { RowsDialog } from './rowsDialog';
@@ -56,6 +57,9 @@ export interface MenusOptions {
   /** The title screen's Tutorial (M16): the range with the coach. `tutorialDone`: it was played through before. */
   onTutorial: () => void;
   tutorialDone: boolean;
+  /** The pause menu during the tutorial (audit POOL-14): skip the step under way, or the rest of it. */
+  onSkipTutorialStep: () => void;
+  onSkipTutorial: () => void;
   map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
@@ -74,6 +78,8 @@ export interface MenusOptions {
   hud: HudSettingsOptions;
   /** The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. */
   dev: SettingsOptions['dev'] & { cheating: () => boolean };
+  /** The save, for Settings → Save (M31). */
+  save: SettingsOptions['save'];
 }
 
 /**
@@ -105,6 +111,8 @@ export class Menus {
   private loadoutFrom: SettingsOrigin = 'setup';
   /** What had the focus on each screen when it was left, so Back puts the keyboard where it was. */
   private readonly lastFocus = new Map<MenuScreen, HTMLElement>();
+  /** When the pause menu last came up (performance.now()), so the Esc that brought it doesn't resume too. */
+  private pauseShownAt = 0;
 
   constructor(
     parent: HTMLElement,
@@ -190,6 +198,7 @@ export class Menus {
         onChange: (id, value) => (opts.dev.onChange(id, value), this.refreshSetup()),
         onEnabled: (on) => (opts.dev.onEnabled(on), this.refreshSetup()),
       },
+      save: opts.save,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen({
@@ -197,6 +206,8 @@ export class Menus {
       onLoadout: () => this.openLoadout('pause'),
       onSettings: () => this.openSettings('pause'),
       onQuit: () => this.leaveMatch('title'),
+      onSkipStep: () => opts.onSkipTutorialStep(),
+      onSkipTutorial: () => opts.onSkipTutorial(),
     });
     this.summary = new SummaryScreen(() => this.go('result'));
     this.result = new ResultScreen({
@@ -230,11 +241,15 @@ export class Menus {
     this.go('title');
   }
 
-  /** The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21). */
-  showPause(status: string, seed: number, range = false): void {
+  /**
+   * The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21);
+   * `tutorial`: its coach is running there (Skip step, Skip tutorial).
+   */
+  showPause(status: string, seed: number, range = false, tutorial = false): void {
     this.pause.setStatus(status);
     this.pause.setSeed(seed);
-    this.pause.setRange(range);
+    this.pause.setRange(range, tutorial);
+    this.pauseShownAt = performance.now();
     this.go('pause');
   }
 
@@ -395,11 +410,17 @@ export class Menus {
   }
 
   /**
-   * Esc on Loadout, Settings or New game acts as Back. A pop-up closes itself on Esc, and Settings swallows the Esc
-   * that cancels a key binding before it gets here.
+   * Esc on Loadout, Settings or New game acts as Back, and on the pause menu resumes like its Resume button (audit
+   * UI-09; a refused mouse lock shows the usual "click again" hint). A pop-up closes itself on Esc, and Settings swallows
+   * the Esc that cancels a key binding before it gets here.
    */
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.code !== 'Escape' || this.root.hidden || this.dialogOpen()) return;
+    if (escResumes(this.current, performance.now() - this.pauseShownAt, e.repeat, PAUSE_ESC_GUARD_MS)) {
+      e.preventDefault();
+      this.play();
+      return;
+    }
     // On the Loadout, Esc first closes a replica's Customise view (M26b).
     if (this.current === 'loadout' && this.loadout.handleEscape()) {
       e.preventDefault();
@@ -410,8 +431,9 @@ export class Menus {
     this.back();
   };
 
+  /** Any pop-up open (New game's, or the Save tab's, M31): Esc is its own. */
   private dialogOpen(): boolean {
-    return this.mapDialog.root.open || this.modeDialog.root.open || this.matchDialog.root.open || this.difficultyDialog.root.open;
+    return this.root.querySelector('dialog[open]') !== null;
   }
 
   private closeDialogs(): void {
@@ -419,6 +441,7 @@ export class Menus {
     this.modeDialog.close();
     this.matchDialog.close();
     this.difficultyDialog.close();
+    for (const d of this.root.querySelectorAll('dialog[open]')) (d as HTMLDialogElement).close();
   }
 
   /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */

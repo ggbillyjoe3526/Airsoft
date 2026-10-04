@@ -1,12 +1,11 @@
-import RAPIER from '@dimforge/rapier3d-compat';
-import { blockMaterial } from '../config/materials';
+import type * as Rapier from '@dimforge/rapier3d-compat';
 import type { BodyConfig } from '../config/movement';
-import type { ImpactMaterial } from '../config/sounds';
 import { PHYSICS } from '../config/physics';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import type { SurfaceHit } from '../sim/armament';
 import type { Character } from '../sim/character';
+import { buildLevelRay, castLevelRay, type LevelRay } from '../sim/levelRay';
 import type { CharacterMover } from '../sim/movement';
 import type { Vec3 } from '../sim/vec';
 
@@ -47,7 +46,7 @@ const RAMP_TRIANGLES = new Uint32Array(RAMP_FACES.flatMap((f) => f.slice(2).flat
  * to walls and climb crates by spamming jump (see physicsWorld.test.ts regression tests). A ramp is a
  * closed 8-triangle wedge built the same way.
  */
-function blockCollider(b: MapBlock): RAPIER.ColliderDesc {
+export function blockCollider(b: MapBlock): Rapier.ColliderDesc {
   if (b.kind === 'ramp') {
     const corners = new Float32Array(18);
     rampCorners(b, corners);
@@ -63,11 +62,20 @@ function blockCollider(b: MapBlock): RAPIER.ColliderDesc {
   return RAPIER.ColliderDesc.trimesh(corners, BOX_TRIANGLES, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES);
 }
 
+/**
+ * Rapier, once `initPhysics()` has loaded it. Imported on demand (audit CORE-10), so its 4 MB chunk is no part of the
+ * page's first script: the game's own code runs first and the loading screen can show the chunk's download
+ * (main.ts, ui/loadingProgress.ts).
+ */
+let RAPIER: typeof Rapier.default;
 let rapierReady: Promise<void> | null = null;
 
-/** Loads the Rapier WASM module once. */
+/** Loads the Rapier module and its WASM once. */
 export function initPhysics(): Promise<void> {
-  rapierReady ??= RAPIER.init();
+  rapierReady ??= import('@dimforge/rapier3d-compat').then(async (module) => {
+    RAPIER = module.default;
+    await RAPIER.init();
+  });
   return rapierReady;
 }
 
@@ -76,23 +84,22 @@ export function initPhysics(): Promise<void> {
  * volume but not the movement capsule; Depot has no crawl spaces.
  */
 export class PhysicsWorld implements CharacterMover {
-  private readonly world: RAPIER.World;
-  private readonly controller: RAPIER.KinematicCharacterController;
-  private readonly characterColliders = new Map<number, RAPIER.Collider>();
+  private readonly world: Rapier.World;
+  private readonly controller: Rapier.KinematicCharacterController;
+  private readonly characterColliders = new Map<number, Rapier.Collider>();
   private readonly capsuleHalfHeight: number;
   private readonly capsuleCenterOffset: number;
   private readonly scratch = { x: 0, y: 0, z: 0 };
   /** The controller's corrected movement, filled in place each move (audit SIM-04: no Vector3 per call). */
   private readonly moved = { x: 0, y: 0, z: 0 };
-  private readonly groundProbe: RAPIER.Ball;
+  private readonly groundProbe: Rapier.Ball;
   /**
    * The ground probe's hit, filled in place (Rapier's broad-phase cast takes a target; World.castShape doesn't), so a
    * probe no longer allocates a hit object and its four vectors per standing character per tick.
    */
-  private readonly probeHit = new RAPIER.ColliderShapeCastHit(null as unknown as RAPIER.Collider, 0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
-  private readonly ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
-  /** What each level block's collider is made of, by collider handle (ricochets). */
-  private readonly materials = new Map<number, ImpactMaterial>();
+  private readonly probeHit = new RAPIER.ColliderShapeCastHit(null as unknown as Rapier.Collider, 0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+  /** Ray casts against the level (sim/levelRay.ts, audit SIM-01): no Rapier query, nothing allocated per cast. */
+  private readonly level: LevelRay;
 
   /** Call `initPhysics()` first. */
   constructor(
@@ -110,8 +117,9 @@ export class PhysicsWorld implements CharacterMover {
     for (const b of map.blocks) {
       const desc = blockCollider(b);
       desc.setTranslation(b.center.x, b.center.y, b.center.z).setCollisionGroups(STATIC_GROUPS);
-      this.materials.set(this.world.createCollider(desc).handle, blockMaterial(b));
+      this.world.createCollider(desc);
     }
+    this.level = buildLevelRay(map.blocks);
 
     this.controller = this.world.createCharacterController(PHYSICS.controllerOffset);
     this.controller.setUp({ x: 0, y: 1, z: 0 });
@@ -189,42 +197,19 @@ export class PhysicsWorld implements CharacterMover {
 
   /**
    * Distance along a normalised direction to the first level surface, or -1 if nothing is hit
-   * within `maxDist`. Characters are ignored.
+   * within `maxDist`. Characters are ignored. Cast against the level's blocks directly (sim/levelRay.ts), with the
+   * same answer as a Rapier ray against their colliders (levelRay.rapier.test.ts checks every Depot block).
    */
   raycastStatic(origin: Vec3, dir: Vec3, maxDist: number): number {
-    const r = this.ray;
-    r.origin.x = origin.x;
-    r.origin.y = origin.y;
-    r.origin.z = origin.z;
-    r.dir.x = dir.x;
-    r.dir.y = dir.y;
-    r.dir.z = dir.z;
-    const hit = this.world.castRay(r, maxDist, true, undefined, QUERY_STATIC_ONLY);
-    return hit ? hit.timeOfImpact : -1;
+    return castLevelRay(this.level, origin, dir, maxDist);
   }
 
   /** raycastStatic, also giving the surface's normal (facing back along the ray) and material (BB ricochets). */
   raycastSurface(origin: Vec3, dir: Vec3, maxDist: number, out: SurfaceHit): number {
-    const r = this.ray;
-    r.origin.x = origin.x;
-    r.origin.y = origin.y;
-    r.origin.z = origin.z;
-    r.dir.x = dir.x;
-    r.dir.y = dir.y;
-    r.dir.z = dir.z;
-    const hit = this.world.castRayAndGetNormal(r, maxDist, true, undefined, QUERY_STATIC_ONLY);
-    if (!hit) return -1;
-    // A closed mesh's faces point outwards; flip one met from behind so the normal always faces the ray.
-    const facing = hit.normal.x * dir.x + hit.normal.y * dir.y + hit.normal.z * dir.z > 0 ? -1 : 1;
-    out.normal.x = hit.normal.x * facing;
-    out.normal.y = hit.normal.y * facing;
-    out.normal.z = hit.normal.z * facing;
-    out.material = this.materials.get(hit.collider.handle) ?? 'concrete';
-    return hit.timeOfImpact;
+    return castLevelRay(this.level, origin, dir, maxDist, out);
   }
 
   dispose(): void {
-    this.materials.clear();
     this.controller.free();
     this.world.free();
     this.characterColliders.clear();

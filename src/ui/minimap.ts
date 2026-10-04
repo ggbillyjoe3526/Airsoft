@@ -1,6 +1,6 @@
 import { MINIMAP } from '../config/minimap';
 import type { MapBlock } from '../map/mapTypes';
-import { clampToRim, coverHeight, type HeardPlayer, type MapPoint, noiseAlpha, toMinimap } from './minimapView';
+import { clampToRim, coverHeight, type HeardPlayer, insideCircle, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
 
 /** A teammate as the minimap shows them: where they are, and whether they've called a hit (greyed). */
 export interface MinimapMate {
@@ -48,13 +48,17 @@ export class Minimap {
   private readonly root: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D | null;
   private readonly field: FieldLayer | null;
-  private readonly pixelRatio: number;
+  /** The backing canvas's pixels per CSS pixel, and the HUD's scale (style.css --hud-scale), as last laid out. */
+  private pixelRatio = 0;
+  private scale = 0;
+  /** Where the minimap's circle is on the screen (px from the game's top left), for the markers it hides (audit UI-13). */
+  private readonly circle = { x: 0, y: 0, r: 0 };
   private readonly at: MapPoint = { x: 0, y: 0 };
   private visible = false;
 
   /** `blocks`: the map's; `mine` / `theirs`: the two teams' HUD colours (CSS). */
   constructor(
-    parent: HTMLElement,
+    private readonly parent: HTMLElement,
     blocks: readonly MapBlock[],
     private readonly mine: string,
     private readonly theirs: string,
@@ -63,23 +67,52 @@ export class Minimap {
     this.root.className = 'minimap';
     this.root.hidden = true;
     this.root.setAttribute('aria-hidden', 'true');
-    // Read once per match (a match is built for the screen it starts on); at most 2, matching the field drawing's detail.
-    this.pixelRatio = Math.min(2, Math.max(1, globalThis.devicePixelRatio || 1));
-    const px = Math.round(MINIMAP.size * this.pixelRatio);
-    this.root.width = px;
-    this.root.height = px;
-    // On the container, so the debug panel can move clear of the minimap too (style.css, bug pass).
-    parent.style.setProperty('--minimap-size', `${MINIMAP.size}px`);
     this.ctx = this.root.getContext('2d');
     this.field = drawField(blocks);
     parent.appendChild(this.root);
+    this.layout();
+    // The window moved to a screen of another pixel ratio, browser zoom, or the HUD's size changed (audit UI-14).
+    globalThis.addEventListener?.('resize', this.layout);
   }
 
-  /** False while a menu is up. */
+  /** False while a menu is up. Shown again, it is laid out afresh (the HUD's size may have changed on the menus). */
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.root.hidden = !visible;
+    if (visible) this.layout();
   }
+
+  /**
+   * Whether (x, y), px from the game's top left, is under the minimap's circle while it shows: a teammate marker there
+   * would read through it (audit UI-13).
+   */
+  covers(x: number, y: number): boolean {
+    return this.visible && insideCircle(x, y, this.circle.x, this.circle.y, this.circle.r);
+  }
+
+  /**
+   * Sizes the canvas for the HUD's scale and the screen's pixel ratio, re-read each time (audit UI-14: once per match
+   * left it blurry or oversized after a move to another screen), and notes where its circle is.
+   */
+  private readonly layout = (): void => {
+    const scale = Number(this.parent.style.getPropertyValue('--hud-scale')) || 1;
+    const ratio = minimapPixelRatio(globalThis.devicePixelRatio);
+    if (scale !== this.scale || ratio !== this.pixelRatio) {
+      this.scale = scale;
+      this.pixelRatio = ratio;
+      const px = Math.round(MINIMAP.size * scale * ratio);
+      this.root.width = px;
+      this.root.height = px;
+      // On the container, so the debug panel can move clear of the minimap too (style.css, bug pass).
+      this.parent.style.setProperty('--minimap-size', `${MINIMAP.size * scale}px`);
+    }
+    if (!this.visible) return;
+    const box = this.root.getBoundingClientRect();
+    const origin = this.parent.getBoundingClientRect();
+    this.circle.r = box.width / 2;
+    this.circle.x = box.left - origin.left + this.circle.r;
+    this.circle.y = box.top - origin.top + this.circle.r;
+  };
 
   /** Once per frame while playing. */
   update(f: MinimapFrame, heard: readonly HeardPlayer[]): void {
@@ -88,14 +121,15 @@ export class Minimap {
     const half = MINIMAP.size / 2;
     const rim = half - 3;
     const scale = rim / MINIMAP.viewRadius;
-    ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+    const k = this.pixelRatio * this.scale;
+    ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.clearRect(0, 0, MINIMAP.size, MINIMAP.size);
 
     // The field, turned with the view, inside the circle.
     ctx.save();
     ctx.beginPath();
     ctx.arc(half, half, rim, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(14, 16, 20, 0.72)';
+    ctx.fillStyle = MINIMAP.colours.backdrop;
     ctx.fill();
     ctx.clip();
     if (this.field) {
@@ -159,6 +193,7 @@ export class Minimap {
   }
 
   dispose(): void {
+    globalThis.removeEventListener?.('resize', this.layout);
     this.root.remove();
   }
 

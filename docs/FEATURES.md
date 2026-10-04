@@ -20,7 +20,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Optics: iron sights, a red dot or a 2× scope; aiming down sights with right click, at its own sensitivity (M12b, M17b)
 - Grips (vertical, angled) and magazines (hi-cap, low-cap, the pistol's extended one) trade handling for noise and sway (M17b)
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
-- BBs can ricochet off concrete and steel; whether a ricochet counts as a hit is a match setting, off by default (M20)
+- BBs can ricochet off concrete and steel; own ricochets can hit you; whether ricochets count as hits is a match setting, off by default (M20, FA12)
 
 ## Hits and elimination
 
@@ -55,31 +55,36 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - A Customise view per replica: optic, BB weight, hop-up, grip, laser, magazine, power source (M26b)
 - Every replica's and part's numbers in a hand-editable `stats.md`; a Performance sheet in Customise compares your setup with the replica as it comes (M29a)
 - Higher tiers add energy and rate of fire; batteries set the rate of fire (11.1 V LiPo battery); stronger gas kicks harder; a site energy limit (M29a)
+- Barrel and Muzzle parts: a Tight-Bore Barrel and a Long Barrel for the AEG, a Silencer for both replicas that halves how far bots, the minimap and sound cues hear your shots (M29b)
+- On Hard, each opponent carries its own kit rolled from the pool by the match's seed (M29b)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start (M26a)
 - Your collection is saved apart from the settings (M26a)
-- Armory, beta and free: earn Field Credits from matches, buy Tokens, draw assets from the pool at rarity odds (M26c)
+- Armory, free to play: earn Field Credits (scaled by participation and match length), buy Tokens, draw with pity (an Epic or better within 20 Shots, a Legendary within 100); catalogue shows all items by rarity tier (M26c, FA10)
 
 ## Menus and settings
 
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons too), Crosshair, HUD, Accessibility (M15, M18a, M19, M24)
-- Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle (M18a)
+- Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA5)
+- Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison, restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if the save is from a newer version (M31)
+- Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
+- Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
+- HUD size slider (0.8–1.5) in Settings > HUD (FA5)
 - A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy (M24, M26d, FA1)
 - The build's version on the title screen (M24)
 
 ## HUD and match info
 
-- Crosshair with the spread gap; shape, size, thickness, gap, outline and colour from Settings (Phase 1, M19)
+- Crosshair with the spread gap; shape, size, thickness, gap, outline, colour, opacity and static gap option from Settings (Phase 1, M19, FA5)
 - Ammo and magazine gauges; the empty-magazine hint names your reload key (Phase 1, M8)
 - Round clock, score, round banners worded from your side (Phase 1)
-- Hit feed, teammate markers, the scoreboard on Tab, round stats between rounds (M19)
+- Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
 - End-of-match summary with your stats and local records (wins, accuracy, streaks) (M19)
 
 ## Squad orders and minimap
 
-- Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan; a HUD line shows the order (M22, M23)
+- Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan showing each order's key; a HUD line shows the order (M22, M23, FA5)
 - A minimap: the field, teammates always, the other team where last heard (M23)
 
 ## Audio
@@ -94,6 +99,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Graphics and art
 
+- Dark loading screen with a progress bar for the physics module; favicon and web manifest (FA9)
 - Procedural daylight with a sky, haze and trees; dressed Depot surfaces and props; figures in airsoft kit with team tape (M14)
 - Gas puffs, impact dust by material, dust in the sunlight (M3, M14)
 - Quality presets Low, Medium and High, switchable mid-match; Low is picked on its own for software rendering (M14)
@@ -102,11 +108,12 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Practice range and tutorial
 
 - A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
-- A tutorial of ten coached steps on the range, with your own key bindings (M16)
+- A tutorial of ten coached steps on the range, with your own key bindings; skip and resume from pause (M16, FA10)
 
 ## Accessibility and comfort
 
 - Team colour sets checked for colour blindness, patterns on the gauges, on-screen sound cues round the crosshair (M18b)
+- High-contrast styling; hit, out and round messages read by screen readers (FA5)
 - Reduced motion, pause on a hidden tab or when the window loses focus, recovery from a lost graphics context, fullscreen on F10 (M18a, M18b, FA6)
 
 ## Developer and debug

@@ -203,7 +203,7 @@ Requirements: Node.js 22.12+ (or 24 LTS; the test runner needs 22.12+).
 npm install
 npm run dev        # development server with hot reload
 npm run check      # type check + unit tests + production build
-npm run build      # static site in dist/ (relative paths; any static host)
+npm run build      # static site in dist/ (relative paths; any static host; see Hosting)
 npm run preview    # serve dist/ locally
 npm run test:browser  # browser smoke test of a production build (Chromium)
 npm run check:all  # check, then the browser smoke test
@@ -211,10 +211,30 @@ npm run gate -- --task M27   # the pipeline's gates (pipeline/README.md): build,
 npm run perf -- --env laptop # the perf harness: a scripted 60 s Depot match, frame times, draw calls, memory
 ```
 
-The browser smoke test (`e2e/boot.spec.ts`) needs Playwright's Chromium once per machine:
-`npx playwright install chromium`. It builds its own copy of the game into `dist-e2e/` and serves it on port 4180.
-GitHub runs `npm run check` and the smoke test on every pull request and every push to `main`
-(`.github/workflows/check.yml`).
+The browser smoke test needs Playwright's Chromium once per machine: `npx playwright install chromium`. It builds its
+own copy of the game into `dist-e2e/` and serves it on port 4180 (`e2e/boot.spec.ts`, `e2e/crash.spec.ts`), and serves
+the release build in `dist/` on port 4182 (`e2e/release.spec.ts`: no test flags, the real pointer lock). Each build is
+made once per source and reused (`pipeline/build-cached.mjs`). GitHub runs the pipeline's gate script (build, unit
+tests, smoke test, and on a pull request titled with its task id the scope and changelog checks) on every pull request
+and every push to `main` (`.github/workflows/check.yml`, `pipeline/README.md`).
+
+### Hosting
+
+`npm run build` writes a static site to `dist/` with relative paths, so any static host serves it from any folder.
+Next to every compressible file it also writes a Brotli copy (`.br`) and a gzip copy (`.gz`), made at the strongest
+settings when the game is built (the physics chunk: 4.3 MB as is, about 1.2 MB Brotli, 1.6 MB gzip). A host that
+serves precompressed files sends the `.br` to a browser that accepts Brotli (all current Chrome, Firefox and Edge do
+over HTTPS) and the `.gz` to one that only takes gzip, with `Content-Encoding` set and the original file's
+`Content-Type`; Netlify, Cloudflare Pages and Vercel compress on their own instead, and GitHub Pages serves gzip only.
+On a server you run yourself:
+
+- **nginx:** `brotli_static on;` (the `ngx_brotli` module) and `gzip_static on;` in the game's `location`.
+- **Caddy:** `file_server { precompressed br gzip }`.
+- **Apache:** `mod_rewrite` rules that serve `file.js.br` for `file.js` when `Accept-Encoding` has `br`, with
+  `AddEncoding br .br` and the `.js` type kept (the same for `.gz`).
+
+Hosts that ignore the copies still serve the plain files; uploading them costs only disk space. The source maps
+(`*.js.map`) can be left off a public upload.
 
 ### URL flags and diagnostics
 
