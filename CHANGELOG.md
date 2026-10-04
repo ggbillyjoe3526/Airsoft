@@ -48,6 +48,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **BP1** · Pallet racks soak BBs up instead of bouncing them; turning Dev settings off before a match starts lets it count for records (#53)
 - **BP1** · A double-click on Play no longer shows the "needs a moment" hint; Key bindings says why two quick clicks cancel (#53)
 - **FA6** · Pause fades audio in 30 ms instead of clicking; pauses when the window loses focus; hint when the browser blocks audio (#55)
+- **M28** · Impact puffs start at half size
 
 ### Internal
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)

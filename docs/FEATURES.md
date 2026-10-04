@@ -27,7 +27,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - One hit and you're out: a tick, a hit marker, hand up, walk to the dead zone, then spectate your team (Phase 1)
 - Bots always call their hits (Phase 1)
 - Friendly fire, on by default, as a match setting (Phase 1, M20)
-- Hit flinch, impact puffs and a crosshair that opens with your real spread (M3, M10)
+- Hit flinch, impact puffs that show at once and a crosshair that opens with your real spread (M3, M10, M28)
 
 ## Bots
 
