@@ -133,6 +133,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
 | Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up. M33b: glowing BBs. M33c: sloping ground. M33d: the layout, behind Dev settings | In progress (M33a done #64, M33b done #65, M33c done; sketches approved) | M33a 7/8 |
 | Alpha · Owner's 2026-10-04 requests · M32 Cyber Pistol, a third replica (owner's design): a Legendary-only chase pistol from the Armory (1 in 400 Shot items), rifle power with pistol handling and almost no kick, Semi / Burst / Auto, no parts, a quiet futuristic sound; now and then an opponent on Hard carries it once you own one | Done (owner to play it) | 7/8 |
+| Alpha · Owner's 2026-10-04 requests · M34 Neon Heights, a third field (owner's concept v1, all defaults, 2026-10-04): a small, vertical futuristic city block, three playable floors, Day or Night picked on the map's tile, tagged dev until he calls it done. M34b: bot navigation for floors over floors | In progress (M34b done; M34c greybox next) | M34b 8/8 |
 | Alpha · Final alpha chain · Final alpha audit implemented (FA1–FA12, Fable audit of 2026-10-04: 148 findings, 0 critical, 4 high; the owner confirmed all twelve decisions): crash handling and sim fixes (#57), audio (#55), input, HUD and UI polish (#59), BB hot path (#60), build and pipeline hygiene (#61), Armory and economy (#63), bots and difficulty (#66), quality presets with Custom graphics and render cost (#67), the visual overhaul of figures, replicas and effects (#69) and of lighting, sky, map, flag and range (#71), the tab lock (#69), session plan, faster tests and map reuse (#73), screenshot pass fixes (#76) | Done (owner's playtest next; then the step 3 polish pass) | 7–8/8 per task |
 | Alpha · Owner's 2026-10-04 requests · M35 Public and dev content tags: every map, mode, difficulty and pooled asset tagged public or dev; dev content shown only with the Dev tab's Dev content switch, never in Shots, carried by bots only with it on, and kept out of the records and Field Credits | Done (owner to play it) | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | Planned (starts after the final alpha pass) | |
@@ -771,12 +772,29 @@ pool, items 11, 12 and part of 14).
     players and bots see at night, glow sticks and the hit light (M33g), the weapon torch (M33h), the woodland look
     and sounds (M33i).
 
+- **M34. Neon Heights, a third field** (owner, 2026-10-04: "a vibrant futuristic cyberpunk city … highly vertical
+  with multiple floors"; concept v1 approved with all twelve defaults). Pulled forward from v0.4 (more fields, day and
+  night); the reason is in DECISIONS. Concept sketches in the project's shared files (`concepts/neon-heights-plans-v1.png`,
+  `neon-heights-side-mood-v1.png`, notes in `research/neon-heights-concept-v1.md`).
+  - **The field:** 46 × 30 m, split by a street (Neon Avenue). Three playable floors (street, +3 m, +6 m) linked by
+    stairs only; a Sky Bridge at +6 m over the street; roofs not playable. Windows are open frames with a 1.2 m sill
+    (see and shoot through, not climbable); a 3 m drop from Level 1 balconies (bots use the stairs). 4v4 (Custom up
+    to 5v5), Elimination and Attack / Defend with the flag on the Tower's atrium floor under two galleries.
+  - **Day or Night:** a switch on the map's tile in the Map pop-up, remembered, Night the first time; built for any map.
+    Night uses Woodland's night systems (M33f, M33g). Neon, interior light and the per-floor minimap are engine
+    features any map can use (the owner's engine-level graphics rule).
+  - **Access:** tagged dev (M35): shown only with the Dev switch on, until the owner calls it done.
+  - **Build order, one pull request each:** M34b floors over floors for the bots (a layered nav grid and a test
+    building); M34c the greybox city by Day; M34d the Day / Night switch; M34e night neon and interior light; M34f
+    art and sound.
+
 - **M35. Public and dev content tags** (owner, 2026-10-04: "use Dev setting as a way to test development of new
   features/weapons/maps"). Every map, mode, difficulty and pooled asset (and any Match pop-up choice that needs it) is
   tagged `public` or `dev` (`config/content.ts`; pool.md's Access column for gear). One Dev tab switch, Dev content,
   shows dev content; with it off, dev content is not shown anywhere (Woodland's Coming soon tile included). Dev gear
   never drops from Shots, bots carry it only with the switch on, and a match that uses dev content stays out of the
   records and pays no Field Credits. Woodland, the city map and Esports are dev until the owner makes them public.
+
 - **M32. Cyber Pistol, a third replica** (owner, 2026-10-04: "an extremely rare and powerful pistol … a chase
   replica"; his design and colours, spec approved 2026-10-04). Pulled forward from the v0.3 armoury; the reason is in
   DECISIONS. Spec sheet in the project's shared files (`plans/cyber-pistol-spec.md`).
