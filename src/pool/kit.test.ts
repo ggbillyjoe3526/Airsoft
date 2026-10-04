@@ -273,3 +273,36 @@ describe('barrels and muzzle parts (M29b)', () => {
     expect(muzzleDraw).toBeLessThan(1);
   });
 });
+
+describe('barrels and muzzle parts, acceptance 2: the site limit still holds (M29b)', () => {
+  it('stacks a barrel, a silencer and the replica tier on the energy, and stays under the AEG limit as shipped', () => {
+    const slot = kitSlot(pool, item('AEG Rifle', 'legendary'), fit({ ...STARTER_AEG, barrel: item('Long Barrel'), muzzle: item('Silencer') }));
+    const tier = 1 + bonusOf(pool, item('AEG Rifle', 'legendary'), 'energy');
+    expect(slot.replica.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * tier * (1 + BARRELS.long.energy) * (1 + MUZZLES.silencer.energy));
+    expect(slot.replica.muzzleEnergy).toBeLessThanOrEqual(AEG.energyLimit);
+    expect(energyCapped(pool, item('AEG Rifle', 'legendary'), fit({ ...STARTER_AEG, barrel: item('Long Barrel') }))).toBe(false);
+  });
+
+  it("caps a barrel's energy at the site limit, and says so, when a looser stats.md pushes it past", () => {
+    const saved = { ...BARRELS.long };
+    try {
+      Object.assign(BARRELS.long, { energy: 0.5 }); // 0.97 J * 1.5 is past the rifle's 1.20 J
+      const longFit = fit({ ...STARTER_AEG, barrel: item('Long Barrel') });
+      expect(energyCapped(pool, item('AEG Rifle'), longFit)).toBe(true);
+      expect(kitReplica(pool, item('AEG Rifle'), longFit).muzzleEnergy).toBe(AEG.energyLimit);
+      // The silencer on the same replica pulls it back under: nothing is capped without the barrel.
+      expect(energyCapped(pool, item('AEG Rifle'), STARTER_AEG)).toBe(false);
+    } finally {
+      Object.assign(BARRELS.long, saved);
+    }
+    expect(kitReplica(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Long Barrel') })).muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * 1.08);
+  });
+
+  it('leaves a barrel the pistol cannot take out of the pistol, and never fits one the kit does not name', () => {
+    const none = kitSlot(pool, item('Gas Pistol'), STARTER_PISTOL);
+    expect(none.parts.barrel).toBeNull();
+    expect(none.parts.muzzle).toBeNull();
+    expect(handlingOf(none.replica, none.parts).heardScale).toBe(1);
+    expect(handlingOf(none.replica, none.parts).muffled).toBe(false);
+  });
+});

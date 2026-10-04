@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import poolText from '../../pool.md?raw';
 import { addItem, type Collection, grantStarters, itemKey, loadCollection, newCollection, ownedItems, parseItemKey, saveCollection } from './collection';
+import { shotAssets } from './armory';
 import { assetOfReplica, DEFAULT_ECONOMY, fcPerToken, fits, loadPool, replicaOf, tierId } from './pool';
 import { readTables } from './poolFile';
 import { MemoryStorage } from './testStorage';
@@ -186,5 +187,46 @@ describe('collection', () => {
   it('reads item keys', () => {
     expect(parseItemKey('000002@veryRare')).toEqual({ asset: '000002', tier: 'veryRare' });
     expect(parseItemKey('2@epic')).toBeNull();
+  });
+});
+
+describe('pool.md, barrels and muzzle parts (M29b)', () => {
+  it('lists the Tight-Bore Barrel (000016), Long Barrel (000017) and Silencer (000018) under their own sections, from Shots and not starters', () => {
+    const expected = [
+      ['000016', 'Tight-Bore Barrel', 'barrel', 'tightBore'],
+      ['000017', 'Long Barrel', 'barrel', 'long'],
+      ['000018', 'Silencer', 'muzzle', 'silencer'],
+    ] as const;
+    const inShots = new Set(shotAssets(pool).map((a) => a.id));
+    for (const [id, name, category, key] of expected) {
+      const a = pool.byId.get(id)!;
+      expect(a, id).toBeDefined();
+      expect([a.name, a.category, a.key], id).toEqual([name, category, key]);
+      expect(a.starter, name).toBe(false);
+      expect(a.inShots, name).toBe(true);
+      expect(inShots.has(id), name).toBe(true);
+    }
+  });
+
+  it('tags the AEG for a swappable barrel and both replicas for a muzzle thread, and fits by those tags', () => {
+    const aeg = byName('AEG Rifle');
+    const pistol = byName('Gas Pistol');
+    expect(aeg.tags).toEqual(expect.arrayContaining(['barrel-mount', 'muzzle-thread']));
+    expect(pistol.tags).toContain('muzzle-thread');
+    expect(pistol.tags).not.toContain('barrel-mount');
+    for (const barrel of ['Tight-Bore Barrel', 'Long Barrel']) {
+      expect(byName(barrel).tags).toEqual(['barrel-mount']);
+      expect(fits(byName(barrel), aeg)).toBe(true);
+      expect(fits(byName(barrel), pistol)).toBe(false);
+    }
+    expect(byName('Silencer').tags).toEqual(['muzzle-thread']);
+    expect(fits(byName('Silencer'), aeg) && fits(byName('Silencer'), pistol)).toBe(true);
+  });
+
+  it('reads Barrels and Muzzle parts sections from a file and rejects a Key the code has no behaviour for there', () => {
+    const p = loadPool(mini('| 000002 | AEG Rifle | aeg | rifle, electric, barrel-mount, muzzle-thread | yes | yes |\n### Barrels\n| ID | Name | Key | Fits | Starter | In Shots |\n|---|---|---|---|---|---|\n| 000016 | Tight | tightBore | barrel-mount | no | yes |\n| 000019 | Wobbly | wobbly | barrel-mount | no | yes |\n### Muzzle parts\n| ID | Name | Key | Fits | Starter | In Shots |\n|---|---|---|---|---|---|\n| 000018 | Silencer | silencer | muzzle-thread | no | yes |'));
+    expect(p.assets.filter((a) => a.category === 'barrel').map((a) => a.id)).toEqual(['000016']);
+    expect(p.assets.filter((a) => a.category === 'muzzle').map((a) => a.id)).toEqual(['000018']);
+    expect(p.errors.some((e) => /wobbly/.test(e))).toBe(true);
   });
 });
