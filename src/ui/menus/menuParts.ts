@@ -1,4 +1,5 @@
-import { saveSetting, type SettingField } from '../../settings/storage';
+import { saveSettingSoon, type SettingField } from '../../settings/storage';
+import { moreBelow } from './menuNav';
 
 /** Small DOM builders the menu screens share. Headings and labels are set in capitals by the stylesheet (owner, 2026-10-03). */
 
@@ -65,7 +66,24 @@ export function menuPage(className: string, heading: string): MenuPage {
   const body = el('div', 'menu-page-body');
   const footer = el('div', 'menu-footer');
   root.append(wordmark('menu-wordmark'), el('h1', 'menu-heading', heading), body, footer);
+  watchScroll(root, body);
   return { root, body, footer };
+}
+
+/**
+ * Marks a page `more-below` while some of it is out of sight under the pinned footer (audit UI-18): the stylesheet
+ * fades the last row, so a page that scrolls doesn't read as ending there. Checked as it scrolls and whenever the page
+ * or its content changes size (a window resize, another Settings tab, the screen shown).
+ */
+function watchScroll(root: HTMLElement, body: HTMLElement): void {
+  const update = (): void => {
+    root.classList.toggle('more-below', moreBelow(root.scrollTop, root.clientHeight, root.scrollHeight));
+  };
+  root.addEventListener('scroll', update, { passive: true });
+  if (typeof ResizeObserver === 'undefined') return;
+  const observer = new ResizeObserver(update);
+  observer.observe(root);
+  observer.observe(body);
 }
 
 /** The "LATER" tag on things not built yet. */
@@ -92,7 +110,10 @@ export function laterRow(label: string, help: string, value = ''): HTMLDivElemen
   return menuRow(label, help, control, true);
 }
 
-/** A slider for a number setting, saved as `field` on every change, with its value shown beside it. */
+/**
+ * A slider for a number setting, with its value shown beside it: applied (`onChange`) as it moves, and saved as `field`
+ * once it settles (saveSettingSoon, audit UI-11), not on every pixel of a drag.
+ */
 export function rangeControl(
   label: string,
   range: { min: number; max: number; step: number },
@@ -116,7 +137,7 @@ export function rangeControl(
     const v = Number(slider.value);
     output.textContent = format(v);
     slider.setAttribute('aria-valuetext', format(v));
-    saveSetting(field, v);
+    saveSettingSoon(field, v);
     onChange(v);
   });
   root.append(slider, output);

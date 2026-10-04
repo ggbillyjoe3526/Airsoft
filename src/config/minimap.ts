@@ -6,8 +6,10 @@ import { SOUND_CUES } from './accessibility';
  * sound plays: the sound cue ranges), as a patch rather than a point, wider the further off it was, fading out.
  */
 export const MINIMAP = {
-  /** On-screen size (CSS px, square; the field is drawn in a circle inside it). */
+  /** On-screen size (CSS px, square; the field is drawn in a circle inside it), before the HUD's scale. */
   size: 200,
+  /** The canvas never draws finer than this many pixels per CSS pixel: the field drawing's detail (layerScale). */
+  maxPixelRatio: 2,
   /** Metres from the middle to the edge of the circle. */
   viewRadius: 20,
   /**

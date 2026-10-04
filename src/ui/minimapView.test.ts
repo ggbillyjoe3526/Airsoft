@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
 import { DEPOT } from '../map/depot';
-import { clampToRim, coverHeight, HeardPlayers, noiseAlpha, noiseBlur, toMinimap } from './minimapView';
+import { clampToRim, coverHeight, HeardPlayers, insideCircle, minimapPixelRatio, noiseAlpha, noiseBlur, toMinimap } from './minimapView';
 import type { HeardSound } from './soundCues';
 
 const at = { x: 0, y: 0 };
@@ -96,5 +96,21 @@ describe('coverHeight (bug pass)', () => {
     const dock = blocks.find((b) => b.kind === 'floor' && top(b) > MINIMAP.raisedFloor)!;
     const onDock = { kind: 'crate' as const, center: { x: dock.center.x, y: top(dock) + 0.5, z: dock.center.z }, size: { x: 1, y: 1, z: 1 } };
     expect(coverHeight(onDock, blocks)).toBeCloseTo(1);
+  });
+});
+
+describe('the minimap on screen (audit UI-13, UI-14)', () => {
+  it('finds a point inside its circle', () => {
+    expect(insideCircle(116, 116, 116, 116, 100)).toBe(true);
+    expect(insideCircle(186, 186, 116, 116, 100)).toBe(true);
+    expect(insideCircle(200, 200, 116, 116, 100)).toBe(false);
+    expect(insideCircle(0, 0, 0, 0, 0)).toBe(false); // not laid out yet
+  });
+
+  it('draws 1 to 2 canvas pixels per CSS pixel', () => {
+    expect(minimapPixelRatio(undefined)).toBe(1);
+    expect(minimapPixelRatio(0.8)).toBe(1);
+    expect(minimapPixelRatio(1.5)).toBe(1.5);
+    expect(minimapPixelRatio(3)).toBe(MINIMAP.maxPixelRatio);
   });
 });
