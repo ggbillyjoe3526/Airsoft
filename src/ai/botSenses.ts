@@ -26,7 +26,7 @@ export function perceive(b: Bot, w: BotWorld): void {
     if (other.team === me.team || !isInPlay(other)) continue;
     const d = Math.hypot(other.position.x - me.position.x, other.position.z - me.position.z);
     if (d >= bestD) continue;
-    const part = visiblePart(me, other, w.query, cfg, w.body, w.hits, w.foliage);
+    const part = visiblePart(me, other, w.query, cfg, w.body, w.hits, w.sight);
     if (part > 0) {
       best = other;
       bestPart = part;
@@ -39,7 +39,7 @@ export function perceive(b: Bot, w: BotWorld): void {
       if (cur.id !== b.targetId || !isInPlay(cur)) continue;
       const d = Math.hypot(cur.position.x - me.position.x, cur.position.z - me.position.z);
       if (d - bestD >= cfg.targetSwitchMargin) break;
-      const part = visiblePart(me, cur, w.query, cfg, w.body, w.hits, w.foliage);
+      const part = visiblePart(me, cur, w.query, cfg, w.body, w.hits, w.sight);
       if (part > 0) {
         best = cur;
         bestPart = part;

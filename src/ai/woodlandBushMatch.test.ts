@@ -44,7 +44,7 @@ describe('a 4v4 bot match on Woodland with its bushes (M33e, acceptances 1 and 5
           if (dist > BOTS.viewDistance) continue;
           sampled++;
           const without = visiblePart(me, other, world.query, BOTS, BODY, HITS);
-          const withLeaves = visiblePart(me, other, world.query, BOTS, BODY, HITS, bushes);
+          const withLeaves = visiblePart(me, other, world.query, BOTS, BODY, HITS, { foliage: bushes, night: null });
           if (without > 0 && withLeaves === 0) hiddenByBush++;
           if (withLeaves > 0 && dist > BOTS.closeAwareness) {
             // What it sees, it sees through at most foliageSeeThrough of leaves.
