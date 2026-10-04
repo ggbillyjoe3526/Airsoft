@@ -20,6 +20,7 @@ import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
 import type { CrosshairSettingsOptions } from '../crosshairSettings';
+import type { HudSettingsOptions } from '../hudSettings';
 import { ChoiceDialog } from './choiceDialog';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
 import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
@@ -29,7 +30,7 @@ import { RowsDialog } from './rowsDialog';
 import { PauseScreen } from './pauseScreen';
 import { ResultScreen } from './resultScreen';
 import { describeRules, type MatchRulesText } from './rulesText';
-import { SettingsScreen } from './settingsScreen';
+import { type SettingsOptions, SettingsScreen } from './settingsScreen';
 import { SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
 import { TitleScreen } from './titleScreen';
@@ -45,7 +46,7 @@ export interface MenusOptions {
   loadout: Omit<LoadoutOptions, 'onBack'> & { summary: () => { replicas: string; detail: string } };
   /** Start (or resume) play: Play on New game, Resume, Play Again. */
   onPlay: () => void;
-  /** The player leaves the match (Quit to title screen; Change setup or Title screen after it): it is unloaded. */
+  /** The player leaves the match (Quit; New Game or Quit after it): it is unloaded. */
   onLeaveMatch: () => void;
   /** The title screen's Practice range (M21): open the range and play. */
   onRange: () => void;
@@ -67,6 +68,9 @@ export interface MenusOptions {
   audio: AudioSettingsOptions;
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;
+  hud: HudSettingsOptions;
+  /** The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. */
+  dev: SettingsOptions['dev'] & { cheating: () => boolean };
 }
 
 /**
@@ -170,6 +174,13 @@ export class Menus {
       audio: opts.audio,
       crosshair: opts.crosshair,
       accessibility: opts.accessibility,
+      hud: opts.hud,
+      // New game's note on the records follows the Dev settings.
+      dev: {
+        ...opts.dev,
+        onChange: (id, value) => (opts.dev.onChange(id, value), this.refreshSetup()),
+        onEnabled: (on) => (opts.dev.onEnabled(on), this.refreshSetup()),
+      },
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen({
@@ -408,12 +419,19 @@ export class Menus {
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
     const recorded = countsForRecords(m, this.difficulty, this.teammateDifficulty);
     const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value);
-    // Said before the match, not only on its summary: custom rules don't go into the records (M20).
-    this.setup.setRules(recorded ? rules : `${rules} ${NOT_RECORDED_NOTE}`);
+    // Said before the match, not only on its summary: custom rules don't go into the records (M20), nor does a match
+    // played with Dev settings that change play (M24).
+    const notes = [rules];
+    if (!recorded) notes.push(NOT_RECORDED_NOTE);
+    else if (this.opts.dev.cheating()) notes.push(DEV_NOT_RECORDED_NOTE);
+    this.setup.setRules(notes.join(' '));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);
   }
 }
+
+/** Under New game's rules while Dev settings that change play are on (M24). */
+export const DEV_NOT_RECORDED_NOTE = "Dev settings are on, so this match won't go into your records.";
 
 /** Under New game's rules when the setup isn't the standard match. */
 export const NOT_RECORDED_NOTE = `This match won't go into your records, which count only the standard match: ${standardMatchText()}`;

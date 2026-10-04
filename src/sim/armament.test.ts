@@ -52,6 +52,19 @@ describe('replica handling', () => {
     expect(a.ammo[0]!.mag).toBe(AEG.magSize - count(evs, 'shot'));
   });
 
+  it('never uses up a bottomless magazine (the Dev settings, M24), and keeps it so through a respawn', () => {
+    const { a, run, count } = setup();
+    a.bottomless = true;
+    // Long enough for more shots than a magazine holds.
+    const evs = run(Math.ceil(((AEG.magSize + 10) / AEG.fireRate) * 60), (c) => (c.fire = true));
+    expect(count(evs, 'shot')).toBeGreaterThan(AEG.magSize);
+    expect(a.ammo[0]!.mag).toBe(AEG.magSize);
+    const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    c.armament.bottomless = true;
+    respawnCharacter(c, LOADOUT);
+    expect(c.armament.bottomless).toBe(true);
+  });
+
   it('fires the pistol once per trigger press, never faster than its fire rate', () => {
     const { a, run, count } = setup();
     run(1, (c) => (c.switchTo = 1));

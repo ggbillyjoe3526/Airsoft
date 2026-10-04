@@ -63,6 +63,17 @@ export class OptionPicker<T extends string> {
     this.refresh();
   }
 
+  /** A swatch of each option's colour in front of its button (the crosshair's colours, the sound cues'). */
+  addSwatches(colours: readonly { css: string }[]): void {
+    let i = 0;
+    for (const button of this.buttons.values()) {
+      const swatch = document.createElement('span');
+      swatch.className = 'crosshair-swatch';
+      swatch.style.background = colours[i++]!.css;
+      button.prepend(swatch);
+    }
+  }
+
   /** Shows `value` as picked without saving it or reporting a change (another choice set it, e.g. M20's teammates). */
   show(value: T): void {
     this.current = value;

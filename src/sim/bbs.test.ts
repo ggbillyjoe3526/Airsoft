@@ -163,6 +163,18 @@ describe('stepBBs hitting characters', () => {
     expect(events.filter((e) => e.type === 'characterHit')).toHaveLength(1);
   });
 
+  it('passes through a Ghost (the Dev settings, M24) and hits whoever is behind', () => {
+    const { characters, run, events } = setup([
+      { id: 2, team: 1, z: -10 },
+      { id: 3, team: 1, z: -20 },
+    ]);
+    characters[1]!.ghost = true;
+    run();
+    expect(characters[1]!.status).toBe('alive');
+    expect(characters[2]!.status).toBe('calling');
+    expect(events.filter((e) => e.type === 'characterHit')).toHaveLength(1);
+  });
+
   it('stops at a wall in front of a character', () => {
     const { characters, events, run } = setup([{ id: 2, team: 1, z: -10 }]);
     run(wallAt(-6));

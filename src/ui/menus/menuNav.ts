@@ -1,8 +1,8 @@
 /**
  * How the menus join up (owner's design, 2026-10-03). Before a match: Title → Start → New game, whose Map, Mode and
  * Difficulty buttons open a pop-up and whose Loadout and Settings buttons open a screen of their own. Esc in a match
- * opens the pause menu (Resume, Settings, Quit to title screen). After a match: the summary (M19: everyone's numbers
- * and your records; Continue), then the result (Play Again, Change setup, Title screen, and Match summary to look
+ * opens the pause menu (Resume, Settings, Quit). After a match: the summary (M19: everyone's numbers
+ * and your records; Continue), then the result (Play Again, New Game, Summary to look
  * again). The loadout is reached only through New game, so never mid-match; the practice range (M21, from the title)
  * opens it from its pause menu too, since nothing is at stake there.
  */

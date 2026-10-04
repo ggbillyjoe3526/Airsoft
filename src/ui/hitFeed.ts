@@ -1,4 +1,4 @@
-import { HIT_FEED } from '../config/matchInfo';
+import { HIT_FEED, type HitFeedMode } from '../config/matchInfo';
 import { teamCss } from '../config/teams';
 
 /** Someone in a hit feed line: their name (which carries the team, or is "You") and team. */
@@ -9,19 +9,23 @@ export interface FeedName {
 
 interface Line {
   node: HTMLDivElement;
-  /** Simulation time the line goes away, and whether it has started fading. */
-  until: number;
+  /** Simulation time the line came in, and whether it has started fading. */
+  at: number;
   fading: boolean;
 }
 
 /**
  * The hit feed in the top-right corner, in airsoft words: "Orange 2 called HIT · Blue 1" (who called the hit, then
  * whose BB it was), newest at the top. Friendly hits say so. Each name is in its team's colour and its text carries
- * the team as well, so colour isn't the only cue. Lines live on simulation time, so a pause holds them.
+ * the team as well, so colour isn't the only cue. Lines live on simulation time, so a pause holds them. Set to Keep
+ * (Settings → HUD, M24), the match's last few lines stay up instead, through every round.
  */
 export class HitFeed {
   private readonly root: HTMLDivElement;
   private readonly lines: Line[] = [];
+  private keep = false;
+  /** Simulation time at the last update, so lines kept until now start their fade from it when Keep goes. */
+  private now = 0;
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -34,6 +38,19 @@ export class HitFeed {
 
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
+  }
+
+  /** Fade (lines go after a few seconds) or Keep (the last few stay for the match). */
+  setMode(mode: HitFeedMode): void {
+    // Lines kept until now don't all vanish at once when Keep goes: each gets its full time from here.
+    if (this.keep && mode === 'fade') for (const line of this.lines) line.at = this.now;
+    this.keep = mode === 'keep';
+    this.trim();
+  }
+
+  /** A round started: the feed starts empty, unless it keeps lines, which go only with the match (its round 1). */
+  roundStarted(round: number): void {
+    if (!this.keep || round <= 1) this.clear();
   }
 
   /**
@@ -54,22 +71,30 @@ export class HitFeed {
       node.append(tag);
     }
     this.root.prepend(node);
-    this.lines.unshift({ node, until: time + HIT_FEED.lineTime, fading: false });
-    while (this.lines.length > HIT_FEED.maxLines) this.lines.pop()!.node.remove();
+    this.lines.unshift({ node, at: time, fading: false });
+    this.trim();
   }
 
-  /** Once per frame with the simulation time: fades lines near their end and drops expired ones. */
+  /** Once per frame with the simulation time: fades lines near their end and drops expired ones (none when kept). */
   update(time: number): void {
+    this.now = time;
     for (let i = this.lines.length - 1; i >= 0; i--) {
       const line = this.lines[i]!;
-      if (time >= line.until) {
+      const age = this.keep ? 0 : time - line.at;
+      if (age >= HIT_FEED.lineTime) {
         line.node.remove();
         this.lines.splice(i, 1);
-      } else if (!line.fading && time >= line.until - HIT_FEED.fadeTime) {
-        line.fading = true;
-        line.node.classList.add('fading');
+        continue;
       }
+      const fading = age >= HIT_FEED.lineTime - HIT_FEED.fadeTime;
+      if (fading !== line.fading) line.node.classList.toggle('fading', (line.fading = fading));
     }
+  }
+
+  /** Drops the oldest lines beyond what the mode shows. */
+  private trim(): void {
+    const max = this.keep ? HIT_FEED.keptLines : HIT_FEED.maxLines;
+    while (this.lines.length > max) this.lines.pop()!.node.remove();
   }
 
   clear(): void {
