@@ -505,12 +505,14 @@ export class MatchSession {
 
   /**
    * Fits the picked optic, hop-up dials, BB weights, grips and magazines to the player's replicas (fresh magazines of
-   * the picked kind). A direct sim-state change, between rounds.
+   * the picked kind), and the weapon light only on a night preset (M33h). A direct sim-state change, between rounds.
    */
   private fitPickedLoadout(): void {
     const kit = this.kit;
     fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
-    fitParts(this.player.armament, kit.slots.map((s) => s.parts));
+    // A weapon light does nothing by day (M33h): it is left off by day, so the day builds nothing for it.
+    const night = this.lighting.night;
+    fitParts(this.player.armament, kit.slots.map((s) => (night || !s.parts.light ? s.parts : { ...s.parts, light: null })));
     setHopUps(this.player.armament, kit.hopUps);
     setBbWeights(this.player.armament, kit.bbWeights);
   }
