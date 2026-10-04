@@ -5,9 +5,9 @@
  * (the tab builds its rows from it), and whatever reads it (Game.applyDev).
  */
 export interface DevSettings {
-  /** Turns the Armory's pulls and currencies off and greys out its button (read by the Armory once it is built). */
+  /** Turns the Armory off (M26d): its button greyed out on New game, and matches pay no Field Credits. */
   disableArmory: boolean;
-  /** Every item in the gear pool unlocked (read by the Loadout's pool once it is built). */
+  /** Every asset in pool.md owned at every tier, for the Loadout (M26d); the collection itself is left as it is. */
   unlockAllGear: boolean;
   /** The debug panel (FPS, frame time, position …) on from the start; ` or F3 still toggle it. */
   showDebug: boolean;
@@ -41,7 +41,7 @@ export type DevEntry =
 /** The Dev tab's rows, top to bottom. */
 export const DEV_ENTRIES: readonly DevEntry[] = [
   { kind: 'switch', id: 'disableArmory', label: 'Disable Armory', help: 'Turns off every Armory mechanic and greys out the Armory in the menu.', cheat: false },
-  { kind: 'switch', id: 'unlockAllGear', label: 'Unlock all gear', help: 'Every replica and part in the pool is yours to equip.', cheat: false },
+  { kind: 'switch', id: 'unlockAllGear', label: 'Unlock all gear', help: 'Every replica and part in the pool, at every rarity, is yours to equip. Your own collection stays as it is.', cheat: true },
   { kind: 'switch', id: 'showDebug', label: 'Debug info', help: 'Frame rate, position and other numbers in the top-left corner.', cheat: false },
   { kind: 'switch', id: 'showBbPaths', label: 'BB paths', help: 'Draws the flight of every BB, to watch hop-up lift it and drop take over.', cheat: false },
   { kind: 'range', id: 'gameSpeed', label: 'Game speed', help: 'Below 100% everything slows down, BBs too; above it, everything speeds up.', cheat: true, min: 0.25, max: 2, step: 0.25 },

@@ -44,6 +44,11 @@ export function matchEarnings(e: Economy, o: MatchOutcome): Earnings {
   return { lines, multiplier, total };
 }
 
+/** What a decided match pays: its earnings, or nothing with the Armory switched off (Dev settings, M26d). */
+export function matchPay(e: Economy, o: MatchOutcome, armoryOff: boolean): Earnings | null {
+  return armoryOff ? null : matchEarnings(e, o);
+}
+
 /** Adds a match's Field Credits to the collection. */
 export function earn(c: Collection, fc: number): void {
   c.fc += Math.max(0, Math.round(fc));

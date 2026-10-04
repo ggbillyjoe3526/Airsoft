@@ -4,6 +4,7 @@ import {
   canTakeShots,
   earn,
   matchEarnings,
+  matchPay,
   scrapAllSpares,
   scrapSpares,
   shotAssets,
@@ -43,6 +44,12 @@ describe('Field Credits (M26c)', () => {
       { label: '1 hit on an opponent', fc: 5 },
     ]);
     expect(matchEarnings(e, { won: false, roundsWon: 0, hits: 0, winsNeeded: 9, difficulty: 'normal' }).total).toBe(40);
+  });
+
+  it('pay nothing while Dev settings → Disable Armory is on (M26d)', () => {
+    const o = { won: true, roundsWon: 5, hits: 6, winsNeeded: 5, difficulty: 'normal' } as const;
+    expect(matchPay(e, o, true)).toBeNull();
+    expect(matchPay(e, o, false)).toEqual(matchEarnings(e, o));
   });
 });
 

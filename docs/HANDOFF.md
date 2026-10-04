@@ -66,8 +66,7 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
   (`ui/hudSettings.ts`: scoreboard size as `--sb-scale`, hit feed Fade / Keep in `ui/hitFeed.ts`), sound cue size and
   colour (`--cue-scale`, `--cue-colour`; all three set by `Game.showHudLook`). **Dev settings:** `config/dev.ts` lists
   them (add one there, then read it in `Game.applyDev`); `Game.dev` holds what applies (the defaults while the box is
-  unticked). `dev.disableArmory` and `dev.unlockAllGear` are saved but read by nothing until the Armory and the gear
-  pool (M26) do.
+  unticked). `dev.disableArmory` and `dev.unlockAllGear` are read by the Armory and the Loadout (M26d).
 - **M22 squad orders:** `ai/squadOrders.ts` (spots), `BotController.giveOrder`, mode `order` in `botBrain.chooseMode`;
   tuning in `config/squad.ts`; keys F (Z before M23), X, V.
 - **M23 minimap and order wheel:** `config/minimap.ts`, `ui/minimap.ts` (canvas; the field drawn once per match from
@@ -79,7 +78,8 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
   reads (`src/pool/`). The Loadout is `pool/loadoutModel.ts` (what is equipped and fitted, saved) over `pool/kit.ts`
   (what the items make of a replica); each character carries its own `Armament.replicas` (bots `LOADOUT` as it comes).
   A new asset is a pool.md row; a new behaviour (a key) needs code in `config/` first. The Armory (M26c) is
-  `pool/armory.ts` (rules) and `ui/menus/armoryScreen.ts`; M26d (Dev toggles on M24's Dev panel) follows; the owner chose "Claude merges" for this batch.
+  `pool/armory.ts` (rules) and `ui/menus/armoryScreen.ts`; the Dev tab's Disable Armory and Unlock all gear (M26d) are
+  read in `Game` (`gameOwnership`, the Armory tile's summary, the match's pay); the owner chose "Claude merges" for this batch.
 
 ## Working notes and gotchas
 

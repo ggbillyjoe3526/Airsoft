@@ -10,10 +10,11 @@ function saved(fields: Record<string, unknown>): Storage {
 }
 
 describe('Dev settings (M24)', () => {
-  it('has a row for every setting, and only the Armory and gear switches stubbed for the Loadout to read', () => {
+  it('has a row for every setting, and Unlock all gear (not Disable Armory) counting as Dev help', () => {
     expect(DEV_ENTRIES.map((e) => e.id).sort()).toEqual(Object.keys(DEV_DEFAULTS).sort());
     expect(DEV_ENTRIES.find((e) => e.id === 'disableArmory')).toMatchObject({ kind: 'switch', cheat: false });
-    expect(DEV_ENTRIES.find((e) => e.id === 'unlockAllGear')).toMatchObject({ kind: 'switch', cheat: false });
+    // Free Legendary gear changes play (M26d): such a match pays no Field Credits and stays out of the records.
+    expect(DEV_ENTRIES.find((e) => e.id === 'unlockAllGear')).toMatchObject({ kind: 'switch', cheat: true });
     for (const e of DEV_ENTRIES) if (e.kind === 'range') expect(DEV_DEFAULTS[e.id]).toBeGreaterThanOrEqual(e.min);
   });
 
@@ -36,10 +37,11 @@ describe('Dev settings (M24)', () => {
 
   it('keeps a match out of the records only for settings that change play', () => {
     expect(devCheating(DEV_DEFAULTS)).toBe(false);
-    expect(devCheating({ ...DEV_DEFAULTS, showDebug: true, showBbPaths: true, unlockAllGear: true, disableArmory: true })).toBe(false);
+    expect(devCheating({ ...DEV_DEFAULTS, showDebug: true, showBbPaths: true, disableArmory: true })).toBe(false);
+    expect(devCheating({ ...DEV_DEFAULTS, unlockAllGear: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, ghost: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, bottomlessMags: true })).toBe(true);
     expect(devCheating({ ...DEV_DEFAULTS, gameSpeed: 0.5 })).toBe(true);
-    expect(devIntro()).toBe("For trying things out. With Game speed, Bottomless magazines or Ghost changed, matches don't go into your records.");
+    expect(devIntro()).toBe("For trying things out. With Unlock all gear, Game speed, Bottomless magazines or Ghost changed, matches don't go into your records.");
   });
 });

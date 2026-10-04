@@ -158,6 +158,24 @@ low-cap), each with a line in numbers; the optic row has a **2× scope**. The pi
 - [ ] **Back on New game** the Loadout button lists the parts that differ from stock (e.g. "2× scope · Angled grip ·
   Hi-cap mag"), and they are still picked after reloading the page. Bots keep stock parts.
 
+## Loadout and Armory (M26)
+
+The Loadout (M26b) has replaced the M17 screens above: three square slots (Primary, Secondary, Grenades); click one
+for the replicas you own, right-click an equipped replica to customise it. The Armory (M26c, beta) sits next to it.
+
+- [ ] **Click Primary, pick the Gas Pistol.** It moves to Primary and the AEG rifle to Secondary. Grenades is greyed
+  (none yet).
+- [ ] **Right-click Primary.** Optic, BB weight, hop-up, grip, laser, magazine and power source, each offering only
+  owned parts that fit; Skins says LATER. Esc goes back to the slots.
+- [ ] **Win a standard match.** The summary lists Field Credits earned (match played, match won, rounds, hits). The
+  Armory tile on New game shows the new total. Lose one: it pays less.
+- [ ] **Armory: buy a Token, take 1 Shot.** Three assets come out with their rarity; the first copy says New, a repeat
+  says Spare. With 10 Tokens, 10 Shots always hold a Rare or better. Scrap all spares pays FC and keeps one of each.
+- [ ] **Dev settings → Disable Armory On.** The Armory tile reads Off, greyed, and won't open. Finish a match: no Field
+  Credits on the summary and the total is unchanged. Turn it off: the next match pays.
+- [ ] **Dev settings → Unlock all gear On.** The Loadout offers every replica and part at every rarity, and the match
+  stays out of your records. Fit a Legendary optic, then turn it off: your own picks are back as they were.
+
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the
@@ -482,7 +500,7 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   match; BB paths draws the BBs' flight; Game speed at 25% and 200% slows and speeds the round (mouse look stays
   normal); Bottomless magazines never empties; Ghost lets BBs pass through you. With Ghost on, finish a match: the
   summary says Dev settings kept it out of your records. Untick the box and Play Again: everything is back to normal
-  and that match counts. Disable Armory and Unlock all gear do nothing until the Armory and gear pool arrive.
+  and that match counts. Disable Armory and Unlock all gear: see "Loadout and Armory (M26)".
 
 ## Pause, menus and tabbing away
 
