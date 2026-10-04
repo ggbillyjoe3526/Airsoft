@@ -610,6 +610,52 @@ Settings → **Save**, the tab before Dev. Nothing to press for saving itself: e
   visit); Firefox asks with its own prompt. Once allowed, the button reads Protected.
 - [ ] **Firefox and Edge** (the automated tests run Chromium only): do Download, Load (button and drag and drop), the
   two-tab notice and Protect once in each. Firefox: the download prompt or Downloads list shows the `.json` file.
+## Graphics presets and Custom (FA2)
+
+- [ ] **First start.** Clear the site's data (or use a private window) and load the game. On a laptop with Intel or AMD
+  integrated graphics, Settings → Graphics shows **Medium**; on a desktop with an NVIDIA or AMD RX card, **High**. Press
+  `` ` `` in a match: the debug panel's quality line ends with "(auto)".
+- [ ] **The ladder.** In a match, switch Low → Medium → High and back. Low: softer picture (80 % resolution), no
+  shadows, plain surfaces, jagged edges. Medium: shadows, players darker inside a container's shade, relief, smooth
+  edges. High: sharper floor textures up close and into the distance, finer shadow edges, the replica's sheen, dust.
+  Each switch applies at once with at most a short pause (edge smoothing makes a new graphics context), and the game
+  keeps the mouse captured after Resume.
+- [ ] **Custom.** Pick Medium, then set Shadows Off: the picker jumps to **Custom**. Set it back On: **Medium** again.
+  Pick Custom, move Render scale to 60 %: the picture softens at once; the HUD and menus stay sharp. Reload the page:
+  Custom and 60 % are still picked. Each row's help ends with what it costs.
+- [ ] **Edge smoothing in Firefox on Linux.** Set Edge smoothing On: if the line under it says "Not available in this
+  browser", the game draws without it (that browser refuses multisampling), as the debug panel's antialias line says.
+- [ ] **Frame-rate limit.** On a 120 Hz or faster screen set it to 60: Show FPS reads about 60, the laptop runs cooler;
+  the game plays the same (movement and BBs at the same speed). Off returns to the screen's rate.
+- [ ] **Show FPS.** On: a small "NN FPS · N.N ms" counter in the top-left corner while you play; Off hides it.
+- [ ] **Automatic step-down.** Only with nothing saved (clear the site's data) on a machine that struggles: after a few
+  seconds of slow frames, at the end of the round, the HUD says "Graphics set to Low to keep the game smooth" and the
+  picker shows Low. It is not saved: a reload starts on the GPU's preset again. It never happens once you pick a preset.
+- [ ] **Debug panel.** `` ` `` in a match shows "frame ms (sim / draw / GPU)" (GPU is "n/a" in Firefox) and the
+  antialias line ("on asked, on given (4 samples)" on Chrome).
+
+## Render cost fixes (FA3)
+
+- [ ] **Shadows near you on High.** On High, walk Depot: rails, container posts, the IBC cage bars and players' arms
+  throw crisp shadows close by. Walk and turn slowly: shadow edges stay still (no crawling or shimmer). About 25 m ahead
+  the shadows stop: look down the long sightlines for a hard line on the floor where they end, and say if it bothers
+  you (Custom → Shadow range → Whole field keeps them everywhere, softer). No dark speckle (acne) on the floor or
+  walls, and no shadow floating off a wall's foot.
+- [ ] **The sky.** On every preset the sky looks as before: a pale haze at the horizon, blue above, warm towards the
+  sun; no sky colour showing through wall edges or corners (edge smoothing on).
+- [ ] **The dock.** The raised dock and its ramps throw a shadow on the yard on Medium and High.
+- [ ] **BB streaks.** Fire across the field: each BB's streak reads as a thin bright line at 20–30 m, the same
+  thickness on a high-DPI laptop as on a desktop monitor, and fades towards its tail; your own shots still leave the
+  muzzle in line with the barrel.
+- [ ] **Hands.** Look at the gloved hands on the rifle and the pistol: fingers and thumb look as round as before.
+- [ ] **First Play.** From the title screen, wait a couple of seconds, then Play: the match starts with no longer
+  hitch than before (the surface textures are made while the title screen waits).
+- [ ] **Sheen.** On High the held replica has its soft reflections from the first match; switch to Low (none) and back
+  to High: they return.
+- [ ] **Dust on high-DPI.** On High with dust, near motes look the same size on a 150 % or 200 % scaled screen as on a
+  100 % one.
+- [ ] **The laptop baseline.** Once, on the target laptop (pipeline/README.md, "The laptop run"):
+  `node pipeline/perf-run.mjs --env laptop --preset all --baseline`, then commit `pipeline/baseline/laptop*.json`.
 
 ## Pause, menus and tabbing away
 

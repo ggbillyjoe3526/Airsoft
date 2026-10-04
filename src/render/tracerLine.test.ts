@@ -21,12 +21,13 @@ function tick(bb: BB): void {
   stepBBFlight(bb, BALLISTICS, DT);
 }
 
-/** The streak's head and tail (world space) of drawn BB `i`. */
+/** The streak's head and tail (world space) of drawn BB `i`: the middles of its quad's head and tail edges. */
 function streak(r: BBRenderer, i: number): [THREE.Vector3, THREE.Vector3] {
-  const trails = r.object.children[1] as THREE.LineSegments;
+  const trails = r.object.children[1] as THREE.Mesh;
   const p = (trails.geometry.getAttribute('position') as THREE.BufferAttribute).array;
-  const o = i * 6;
-  return [new THREE.Vector3(p[o], p[o + 1], p[o + 2]), new THREE.Vector3(p[o + 3], p[o + 4], p[o + 5])];
+  const o = i * 12;
+  const mid = (a: number, b: number) => new THREE.Vector3((p[a]! + p[b]!) / 2, (p[a + 1]! + p[b + 1]!) / 2, (p[a + 2]! + p[b + 2]!) / 2);
+  return [mid(o, o + 3), mid(o + 6, o + 9)];
 }
 
 /** The main camera at the eye, looking down -Z, as the game sets it (16:9). */

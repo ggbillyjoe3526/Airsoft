@@ -3,6 +3,7 @@ import type { HitConfig } from '../config/hits';
 import { RANGE, RANGE_VISUALS } from '../config/range';
 import type { GameEvent } from '../sim/events';
 import type { RangeTarget } from '../sim/rangeTargets';
+import { setReceiveShadows } from './characterModels';
 
 const V = RANGE_VISUALS;
 
@@ -95,6 +96,11 @@ export class RangeTargetsRenderer {
       this.object.add(stand);
     }
     this.addMarkers();
+  }
+
+  /** Plates and figures shaded by the range's walls, or lit as if in full sun (QualitySettings.figureShadows, REN-07). */
+  setReceiveShadows(on: boolean): void {
+    for (const mover of this.movers) setReceiveShadows(mover, on);
   }
 
   /** After each simulation tick: steel plates that were hit start swinging. */
