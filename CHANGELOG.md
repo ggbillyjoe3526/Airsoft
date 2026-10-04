@@ -29,7 +29,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M26b** · Loadout screen: Primary, Secondary and Grenades slots; Customise view per replica (#42)
 - **M26c** · Armory, beta and free: earn Field Credits from matches, buy Tokens, draw from the pool (#44)
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
-- **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own
+- **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
 
 ### Changed
 - Pistol leans slightly left again, much less than before (#13)
