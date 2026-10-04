@@ -164,7 +164,6 @@ export const LIGHTING = {
   shadowNormalBias: 0.03,
 } as const;
 
-/** The surface textures (render/proceduralTextures.ts), drawn on canvases as each match loads. */
 /**
  * The ground of a map with terrain (M33c, render/terrainMeshes.ts): greybox grass, a darker green low down to a lighter
  * one at the top of the terrain, each vertex varied by up to `jitter` either way. The art pass gives it a texture.
@@ -175,6 +174,7 @@ export const TERRAIN_LOOK = {
   jitter: 0.06,
 } as const;
 
+/** The surface textures (render/proceduralTextures.ts), drawn on canvases as each match loads. */
 export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier' | 'sandbag' | 'gabion';
 
 /**

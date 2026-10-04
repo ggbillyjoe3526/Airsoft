@@ -131,7 +131,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M29a Weapon performance data: `stats.md` (every replica's and part's numbers, hand-editable), tiers that add energy and rate of fire, batteries that set the rate of fire, an 11.1 V LiPo battery, a site energy limit, a Performance sheet on Customise | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
-| Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up. M33b: glowing BBs | In progress (M33a done #64, M33b done; sketches approved) | M33a 7/8 |
+| Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up. M33b: glowing BBs. M33c: sloping ground | In progress (M33a done #64, M33b done #65, M33c done; sketches approved) | M33a 7/8 |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -759,6 +759,8 @@ pool, items 11, 12 and part of 14).
   - **M33b. Glowing BBs:** each replica's Customise screen has a Glowing BBs row (At Night, the default; Always; Off).
     A glowing BB is green, a little larger far away and leaves a longer streak; its flight is unchanged. Bots load
     them on night fields.
+  - **M33c. Sloping ground:** maps can have ground that rises and falls (a heightfield), shared by physics, BBs,
+    sight lines, bot routes, the shadows and the minimap; BBs land in earth with no bounce. Depot is unchanged.
 
 When the owner calls the game feature complete, alpha ends.
 
