@@ -103,6 +103,11 @@ describe('range targets with map detail (audit section 5)', () => {
       return { meshes, mapped };
     };
     const plain = visible();
+    const plainMaps: THREE.Texture[] = [];
+    r.object.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+      for (const t of [m?.map, m?.roughnessMap]) if (t) plainMaps.push(t);
+    });
     r.setDetail(true);
     const detailed = visible();
     expect(detailed.meshes).toBeGreaterThan(plain.meshes);
@@ -110,7 +115,22 @@ describe('range targets with map detail (audit section 5)', () => {
     const plates = createRangeTargets().filter((t) => t.kind === 'steel').length;
     expect(detailed.meshes - plain.meshes).toBeLessThanOrEqual(plates + 1);
     expect(detailed.mapped).toBeGreaterThan(plain.mapped);
+    // Detail off frees the paint's GPU copies (the canvases stay for the next time it is on).
+    const maps = (): Set<THREE.Texture> => {
+      const found = new Set<THREE.Texture>();
+      r.object.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+        for (const t of [m?.map, m?.roughnessMap]) if (t) found.add(t);
+      });
+      return found;
+    };
+    const paint = maps();
+    for (const t of plainMaps) paint.delete(t);
+    expect(paint.size).toBeGreaterThan(0);
+    const freed = vi.fn();
+    for (const t of paint) t.addEventListener('dispose', freed);
     r.setDetail(false);
+    expect(freed).toHaveBeenCalledTimes(paint.size);
     expect(visible()).toEqual(plain);
     r.dispose();
   });

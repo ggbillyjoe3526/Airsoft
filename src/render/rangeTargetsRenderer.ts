@@ -233,6 +233,8 @@ export class RangeTargetsRenderer {
   setDetail(on: boolean): void {
     for (const part of this.detailParts) part.visible = on;
     const p = on ? (this.painted ??= this.paint()) : null;
+    // Off: the cached paint lets go of its GPU copies (it keeps its canvases and uploads again when detail comes back).
+    if (!on && this.painted) for (const t of Object.values(this.painted)) t.dispose();
     const set = (m: THREE.MeshStandardMaterial, map: THREE.Texture | null, roughnessMap: THREE.Texture | null = null): void => {
       if (m.map === map && m.roughnessMap === roughnessMap) return;
       m.map = map;

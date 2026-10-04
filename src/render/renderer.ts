@@ -442,7 +442,10 @@ export class Renderer {
     if (this.overlayScene) roots.push(this.overlayScene);
     const figure = this.figureModel;
     if (figure) for (const part of [...Object.values(figure.parts), figure.whole]) if (part) roots.push(part);
-    if (this.surfaces) for (const t of Object.values(this.surfaces)) t.texture.dispose();
+    if (this.surfaces) for (const t of Object.values(this.surfaces)) {
+      t.texture.dispose();
+      t.normal?.dispose();
+    }
     handOverRenderer(old, next, roots);
     this.gl = next;
     this.contextAntialias = antialias;
