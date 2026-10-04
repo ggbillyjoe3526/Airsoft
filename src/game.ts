@@ -48,7 +48,7 @@ import { loadoutTile } from './ui/loadoutChoice';
 import { type Collection, type ItemRef, loadCollection, saveCollection, syncCollection } from './pool/collection';
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
-import { matchUsesDev, type NewGamePicks, playedPicks } from './newGamePicks';
+import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
@@ -300,7 +300,7 @@ export class Game {
       const p = s?.player;
       return {
         seed: s instanceof RangeSession ? options.seed : this.matchSeed,
-        map: s instanceof RangeSession ? 'range' : this.map,
+        map: s instanceof RangeSession ? 'range' : this.playedPicks().map,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
         characters: s?.characterCount ?? 0,
@@ -756,7 +756,7 @@ export class Game {
         mode: picks.mode,
         difficulty: picks.difficulty,
         teammateDifficulty: picks.teammateDifficulty,
-        rules: { ...picks.rules },
+        rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
         chaseOwned: this.loadout.ownedChase(),
         devContent: this.dev.devContent,

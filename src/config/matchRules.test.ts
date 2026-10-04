@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hasSavedTeammateDifficulty, loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
-import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor, runRulesSummary } from './matchRules';
+import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, TEAM_SIZE_CHOICES, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor, runRulesSummary } from './matchRules';
 
 /** A browser store holding `fields` in the settings object. */
 function storageWith(fields: Record<string, unknown>): Storage {
@@ -62,6 +62,20 @@ describe('custom match rules (M20)', () => {
     const m = { winsNeeded: 3, roundTime: 90, teamSize: 1, friendlyFire: false, ricochetsCount: true };
     expect(hitRulesFor(m)).toMatchObject({ friendlyFire: false, ricochetsCount: true, bodyRadius: HITS.bodyRadius });
     expect(roundRulesFor(m)).toMatchObject({ winsNeeded: 3, roundTime: 90, teamSize: 1, resetDelay: ROUNDS.resetDelay });
+  });
+
+  it('offer team sizes up to 5v5 and load a saved 4v4 or 5v5 (M33d); a size nobody offers falls back to 3v3', () => {
+    expect(TEAM_SIZE_CHOICES.map((c) => c.id)).toEqual(['1', '2', '3', '4', '5']);
+    expect(TEAM_SIZE_CHOICES.map((c) => c.label)).toEqual(['1v1', '2v2', '3v3', '4v4', '5v5']);
+    for (const size of [4, 5]) {
+      vi.stubGlobal('localStorage', storageWith({ teamSize: String(size) }));
+      expect(loadMatchRules().teamSize).toBe(size);
+      expect(roundRulesFor({ ...DEFAULT_MATCH_RULES, teamSize: size }).teamSize).toBe(size);
+      // A 4v4 or 5v5 is not the standard match the records count.
+      expect(countsForRecords({ ...DEFAULT_MATCH_RULES, teamSize: size }, 'normal', 'normal')).toBe(false);
+    }
+    vi.stubGlobal('localStorage', storageWith({ teamSize: '6' }));
+    expect(loadMatchRules().teamSize).toBe(3);
   });
 
   it('sum the rules up for New game', () => {

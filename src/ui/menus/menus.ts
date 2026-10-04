@@ -13,13 +13,15 @@ import {
   TEAM_SIZE_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
+import { squadSize } from '../../config/extraction';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
-import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapData } from '../../map/maps';
-import { playedPicks } from '../../newGamePicks';
+import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapEntry } from '../../map/maps';
+import { playedPicks, playedTeamSize } from '../../newGamePicks';
+import { saveSetting } from '../../settings/storage';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
@@ -107,6 +109,8 @@ export class Menus {
   private readonly mapDialog: ChoiceDialog<MapId>;
   private readonly modeDialog: ChoiceDialog<MatchMode>;
   private readonly matchDialog: RowsDialog;
+  /** The Match pop-up's team sizes: each map offers as many as it has room for (M33). */
+  private teamSizePicker!: OptionPicker<string>;
   private readonly difficultyDialog: RowsDialog;
   /** The pickers whose options may be dev content (M35), with the pick each shows as it plays. */
   private readonly taggedPickers: { picker: OptionPicker<string>; played: (p: ReturnType<typeof playedPicks>) => string }[] = [];
@@ -150,6 +154,7 @@ export class Menus {
       'map',
       (m) => {
         opts.map.onChange(m);
+        this.mapPicked(m);
         this.refreshSetup();
       },
       { soon: COMING_MAPS, soonTag: COMING_SOON_TAG, fallback: DEFAULT_MAP },
@@ -340,12 +345,13 @@ export class Menus {
       m.winsNeeded = Number(v);
       changed();
     });
-    const teamSize = new OptionPicker('Team size', TEAM_SIZE_CHOICES, String(m.teamSize), 'teamSize', (v) => {
+    const teamSize = (this.teamSizePicker = new OptionPicker('Team size', TEAM_SIZE_CHOICES, String(m.teamSize), 'teamSize', (v) => {
       m.teamSize = Number(v);
       changed();
-    });
+    }));
     this.tagPicker(winsNeeded, (p) => String(p.rules.winsNeeded));
-    this.tagPicker(teamSize, (p) => String(p.rules.teamSize));
+    // The size played: no more than the map in force has room for (M33).
+    this.tagPicker(teamSize, (p) => String(playedTeamSize(p)));
     return [
       menuRow('Rounds to win', '', winsNeeded.root),
       menuRow(
@@ -479,6 +485,15 @@ export class Menus {
     if (this.current === 'settings') this.settings.closed();
   }
 
+  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
+  private mapPicked(id: MapId): void {
+    const size = mapEntry(id).teamSize.standard;
+    if (this.matchRules.teamSize === size) return;
+    this.matchRules.teamSize = size;
+    saveSetting('teamSize', String(size));
+    this.opts.matchRules.onChange({ ...this.matchRules });
+  }
+
   /** The New game buttons and the rules under them show what is picked now. */
   private refreshSetup(): void {
     // What is picked, as it plays: dev content's picks play as their defaults while Dev content is off (M35).
@@ -489,11 +504,16 @@ export class Menus {
       { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, rules: this.matchRules },
       devContent,
     );
+    // Each map offers as many players a side as it has room for (Depot 3v3, Woodland up to 5v5, M33).
+    // An Extraction run takes a squad of at most three (M43).
+    const map = mapEntry(played.map);
+    const run = played.mode === 'extraction' ? map.data.extraction : undefined;
+    const sizeMax = run ? squadSize(map.teamSize.max) : map.teamSize.max;
+    this.teamSizePicker.limit((id) => Number(id) <= sizeMax);
     for (const t of this.taggedPickers) t.picker.setDevContent(devContent, t.played(played));
-    const m = played.rules;
+    const m = { ...played.rules, teamSize: playedTeamSize(played) };
     this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
-    const run = played.mode === 'extraction' ? mapData(played.map).extraction : undefined;
     const match = run ? runRulesSummary(m, run) : matchRulesSummary(m);
     this.setup.match.set(match.value, match.detail);
     const opponents = difficultyLabel(played.difficulty);

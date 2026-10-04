@@ -1,9 +1,10 @@
 import { BOT_LOADOUTS, DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
 import { availableChoice, type ContentTag, tagOf } from './config/content';
+import { squadSize } from './config/extraction';
 import { DEFAULT_MATCH_RULES, type MatchRules, TEAM_SIZE_CHOICES, WINS_NEEDED_CHOICES } from './config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from './config/modes';
 import { LOADOUT } from './config/replicas';
-import { DEFAULT_MAP, MAPS, type MapId } from './map/maps';
+import { DEFAULT_MAP, MAPS, type MapId, mapData, teamSizeOn } from './map/maps';
 import { rolledKitMayHoldDev } from './pool/botKit';
 import type { ItemRef } from './pool/collection';
 import { itemsUseDev } from './pool/contentPool';
@@ -35,6 +36,15 @@ export function playedPicks(p: NewGamePicks, devContent: boolean): NewGamePicks 
       teamSize: Number(availableChoice(TEAM_SIZE_CHOICES, String(p.rules.teamSize), devContent, String(d.teamSize))),
     },
   };
+}
+
+/**
+ * Players a side the picks play with: the team size, at most what the map has room for (M33), and in an Extraction run
+ * on a map with its data at most a trio (M43).
+ */
+export function playedTeamSize(p: Pick<NewGamePicks, 'map' | 'mode' | 'rules'>): number {
+  const size = teamSizeOn(p.map, p.rules.teamSize);
+  return p.mode === 'extraction' && mapData(p.map).extraction ? squadSize(size) : size;
 }
 
 /** The content tags of what the picks play: the map, the mode, both difficulties and the tagged Match pop-up choices. */

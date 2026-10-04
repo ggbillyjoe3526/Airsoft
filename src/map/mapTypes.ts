@@ -11,6 +11,9 @@ import type { Terrain } from './terrain';
  * - full height (2.4 m): `toilet` (a portable site toilet), `rack` (pallet racking loaded with stock, or shelving
  *   indoors), `gabion` (a wire-mesh barrier filled with sand), `wrapped` (a pallet load shrink-wrapped in film);
  * - crouch height (1.2 m): `ibc` (a water tank in a steel cage), `sandbags`, `generator`, `skip`.
+ *
+ * The woods (M33, Woodland): `tree` (a trunk; canopies come with Woodland's look), `boulder`, `log` (fallen trees,
+ * log piles, log walls and the cabin) and `fence` (the field's edge).
  */
 export type BlockKind =
   | 'floor'
@@ -26,7 +29,11 @@ export type BlockKind =
   | 'ibc'
   | 'sandbags'
   | 'generator'
-  | 'skip';
+  | 'skip'
+  | 'tree'
+  | 'boulder'
+  | 'log'
+  | 'fence';
 
 /** The way a ramp's top goes up: towards +x, -x, +z or -z. */
 export type RampRise = '+x' | '-x' | '+z' | '-z';

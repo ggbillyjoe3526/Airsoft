@@ -17,6 +17,8 @@ export interface ExtractionRules {
   respawns: number;
   /** The exit count pings every this many seconds while it runs (an 'exitCount' event; the HUD and sound). */
   countStep: number;
+  /** The biggest squad (solo, duo or trio): a map's insertions have this many spawns each. */
+  maxSquad: number;
 }
 
 export const EXTRACTION: ExtractionRules = {
@@ -28,4 +30,10 @@ export const EXTRACTION: ExtractionRules = {
   warnAt: 60,
   respawns: 1,
   countStep: 1,
+  maxSquad: 3,
 };
+
+/** The squad a run plays with for the picked team size: the team size, at most `maxSquad` (a map may allow bigger teams). */
+export function squadSize(picked: number, rules: ExtractionRules = EXTRACTION): number {
+  return Math.min(picked, rules.maxSquad);
+}
