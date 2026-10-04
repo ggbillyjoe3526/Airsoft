@@ -2,12 +2,13 @@ import { aimDirection, canReload } from '../sim/armament';
 import { BALLISTICS } from '../config/ballistics';
 import { bbMass, muzzleVelocity } from '../config/replicas';
 import { flightTimeEstimate } from '../sim/ballistics';
-import type { Character } from '../sim/character';
+import { type Character, eyeHeight } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from '../sim/hitbox';
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, lookAngles, stepAim } from './aim';
+import { findHeldAngles } from './angles';
 import { type Bot, type BotWorld, pick } from './bot';
 import { hasReacted } from './botSenses';
 import { bodyPoint, lineClear } from './perception';
@@ -17,6 +18,7 @@ const DEG = Math.PI / 180;
 // Scratch, each used only within one call of the function that fills it.
 const look = { yaw: 0, pitch: 0 };
 const aimLine = vec3();
+const standEye = vec3();
 const raisedPoint = vec3();
 const mateVolume: HitVolume = createHitVolume();
 
@@ -69,10 +71,39 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // Holding a point, or walking back along the lane: face the enemy side rather than turn our back. Holding, sweep
     // the view slowly across it (AI-02) rather than stare one way.
     look.yaw = enemyYaw;
-    if (b.holding) look.yaw += Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
+    // Pro (M37) aims at the corners someone would come round instead of sweeping.
+    if (b.holding && !(b.skill.holdsAngles && heldAngleLook(b, w, eye, enemyYaw))) {
+      look.yaw += Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
+    }
   }
   stepAim(b.aim, look.yaw, look.pitch, 0, cfg, b.skill, b.rng, dt);
   return Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Holding with held angles (M37): looks for the corners in view of where it stands (again every angleRefresh, or once it
+ * has moved), then sets `look` on one of them, switching every angleSwitchTime. False if it found none (it sweeps).
+ */
+function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, enemyYaw: number): boolean {
+  const cfg = w.cfg;
+  const p = b.character.position;
+  const from = b.heldAnglesFrom;
+  if (w.time - b.heldAnglesAt > cfg.angleRefresh || Math.hypot(p.x - from.x, p.z - from.z) > cfg.angleMoveRefresh) {
+    b.heldAnglesAt = w.time;
+    from.x = p.x;
+    from.y = p.y;
+    from.z = p.z;
+    // The fan runs at standing eye height (over low cover), whatever the bot's own crouch; heads are at the same.
+    const head = p.y + eyeHeight(0, w.body);
+    standEye.x = p.x;
+    standEye.y = head;
+    standEye.z = p.z;
+    b.heldAngleCount = findHeldAngles(w.query, standEye, head, enemyYaw, cfg, b.heldAngles);
+  }
+  if (b.heldAngleCount === 0) return false;
+  const a = b.heldAngles[Math.floor(b.teamWait / cfg.angleSwitchTime) % b.heldAngleCount]!;
+  lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, look);
+  return true;
 }
 
 /** True if a teammate stands in (or right next to) the line of fire within `dist` metres. */

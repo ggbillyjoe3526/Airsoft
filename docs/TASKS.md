@@ -28,12 +28,12 @@ tier: core
 perf: required
 touches: src/ai/, src/nav/, src/map/, src/config/bots.ts
 acceptance:
-  1. Angles (doorways, wall corners, stair tops; bush edges and tree gaps where a map has them) are worked out per map from its navigation, not hand-placed, and tested per map.
+  1. Angles (doorways, wall corners) are worked out from each map's own geometry where the bot stands, not hand-placed, and tested on Depot. Stair tops (the city's layered floors, M34b) and bush edges (Woodland's foliage, M33e) are added in M40 once those land on main.
   2. A Pro bot that stops holds an angle, aimed at head height where someone would appear.
   3. Reaction about 0.18–0.28 s to someone appearing within a few degrees of where the bot aims; Hard speed or slower elsewhere.
   4. A headless test fails if any bot, at any difficulty, aims at someone it hasn't seen or heard.
   5. Easy, Normal and Hard play as before (their guards unchanged).
-status: open
+status: building
 attempts: 0
 
 ## M38 · Pro bots clear corners and play as a team
@@ -65,11 +65,12 @@ attempts: 0
 ## M40 · Map balance for Pro
 tier: core
 perf: skip
-touches: src/ai/, src/map/
+touches: src/ai/, src/map/, src/config/bots.ts
 acceptance:
   1. Headless Pro guards per playable map: Attack / Defend attackers 40–60 %, each end 40–60 % of decided Elimination rounds, under 1 round in 10 on time.
   2. Depot unchanged unless its Office lane puts attackers under 40 %; then a window or second door between two rooms, layout tests still passing.
   3. Woodland and the city are checked against the same guards once their navigation lands.
+  4. Held angles (M37) also cover stair tops on layered floors and bush edges and tree gaps where a map has foliage, tested on the maps that have them.
 status: open
 attempts: 0
 
