@@ -312,8 +312,8 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 - [ ] **Key Bindings: mouse buttons.** **Fire** and **Aim** are at the top of the list (Left mouse, Right mouse). Click
   the Reload box, then click the same box with a side button (Mouse 4 or 5): Reload now shows **Mouse 4**, and the
   browser does not go back a page. In a match the side button reloads, and pressing it never leaves the game. Click
-  the Aim box and click it with the left button: Aim becomes Left mouse and Fire takes Right mouse (a swap). Reset to
-  defaults puts them back.
+  the Aim box and click it with the left button: Aim becomes Left mouse and Fire takes Right mouse (a swap). **Reset
+  All** puts them back.
 - [ ] **Spectating hint.** Get hit: the label reads "Spectating … · Left mouse for next", or names your fire key.
 - [ ] **Settings, Accessibility: Reduced motion.** Turn it On, then play: the replica no longer bobs as you walk or
   sways behind turns, each shot kicks it half as much, and leaning tips the view only slightly. The view still climbs a

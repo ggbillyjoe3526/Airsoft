@@ -815,7 +815,7 @@ body {
   line-height: 1.9;
 }
 
-/* Key bindings (the Settings tab) */
+/* Key Bindings (the Settings tab) */
 .key-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
