@@ -45,7 +45,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Maps
 
-- Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps and one flagpole (M1, M11)
+- Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole (M1, M11, M25b)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
@@ -54,6 +54,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - A Customise view per replica: optic, BB weight, hop-up, grip, laser, magazine, power source (M26b)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start (M26a)
 - Your collection is saved apart from the settings (M26a)
+- Armory, beta and free: earn Field Credits from matches, buy Tokens, draw assets from the pool at rarity odds (M26c)
 
 ## Menus and settings
 
@@ -61,7 +62,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - No map is loaded until Play (M15b)
 - Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons too), Crosshair, HUD, Accessibility (M15, M18a, M19, M24)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle (M18a)
-- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost (M24)
+- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear (M24, M26d)
 - The build's version on the title screen (M24)
 
 ## HUD and match info

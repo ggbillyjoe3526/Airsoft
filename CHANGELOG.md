@@ -27,9 +27,11 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M25a** · CC0 assets guide and optional glTF player model with built-in fallback (#43)
 - **M26a** · Asset pool: pool.md register, rarity tiers, economy numbers, player's collection saved (#39)
 - **M26b** · Loadout screen: Primary, Secondary and Grenades slots; Customise view per replica (#42)
+- **M26c** · Armory, beta and free: earn Field Credits from matches, buy Tokens, draw from the pool (#44)
 
 ### Changed
 - Pistol leans slightly left again, much less than before (#13)
+- **M25b** · Depot: site props instead of most two-high crate stacks (#45)
 
 ### Fixed
 - Empty magazine hint names your reload key (#23)
@@ -38,6 +40,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
 - Audit fixes: graphics quality, audio, simulation, bots, menus, accessibility, tooling (#34, #35, #36)
 - Bug pass: game flow, replica handling, sound, menus, HUD, squad orders on ramps and platforms (#37, #38)
+- Roadmap: the owner's third feature picks (#46)
+- **M26d** · Dev settings: Disable Armory and Unlock all gear for testing (#48)
 
 ## v0.1-alpha.3 · 2026-10-03
 
