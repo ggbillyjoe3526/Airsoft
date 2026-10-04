@@ -470,7 +470,8 @@ export class MatchSession {
     const a = c.armament;
     for (let i = 0; i < a.replicas.length; i++) {
       a.replicas[i] = replicaUnderRules(a.replicas[i]!, rules);
-      a.modes[i] = a.replicas[i]!.defaultFireMode;
+      // Semi only resets the selector; realcap alone keeps it (a chase carrier stays on auto, chaseReady).
+      if (rules.semiAutoOnly) a.modes[i] = a.replicas[i]!.defaultFireMode;
     }
     if (rules.realcap) fitParts(a, a.parts.map((p) => ({ ...p, magazine: REALCAP.magazine })));
     return c;
