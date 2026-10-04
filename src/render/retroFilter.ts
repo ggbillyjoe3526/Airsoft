@@ -6,6 +6,14 @@ export function retroTargetSize(width: number, height: number, pixelSize: number
   return { width: Math.max(1, Math.ceil(width / pixelSize)), height: Math.max(1, Math.ceil(height / pixelSize)) };
 }
 
+/**
+ * How wide one retro pixel is at the middle of a view `fovDegrees` high over `height` CSS pixels, as a tangent of the
+ * view (the units BBRenderer sizes its balls and streaks in): 0 for an empty view.
+ */
+export function retroPixelAngle(fovDegrees: number, height: number, pixelSize: number): number {
+  return height > 0 ? (2 * Math.tan((fovDegrees * Math.PI) / 360) * pixelSize) / height : 0;
+}
+
 /** The 2×2 Bayer matrix's cell (x, y in 0..1): [[0, 2], [3, 1]], rows by y. */
 function bayer2(x: number, y: number): number {
   return 2 * Math.abs(x - y) + y;

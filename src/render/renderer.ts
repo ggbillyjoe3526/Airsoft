@@ -17,7 +17,7 @@ import { MapMeshCache } from './mapMeshCache';
 import { mapLookOf } from './mapMeshes';
 import { createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
-import { RetroFilter } from './retroFilter';
+import { RetroFilter, retroPixelAngle } from './retroFilter';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 
 const REFERENCE_ASPECT = 16 / 9;
@@ -391,9 +391,7 @@ export class Renderer {
    * the filter is off. BBs are kept at least a couple of these wide (RETRO.bbMinPixels).
    */
   get retroPixelAngle(): number {
-    const look = this.retroLook;
-    if (!look || this.height <= 0) return 0;
-    return (2 * Math.tan((this.camera.fov * DEG) / 2) * look.pixelSize) / this.height;
+    return this.retroLook ? retroPixelAngle(this.camera.fov, this.height, this.retroLook.pixelSize) : 0;
   }
 
   /** Narrows the main camera's view by `zoom` (1 = the normal view), e.g. while aiming down an optic. */

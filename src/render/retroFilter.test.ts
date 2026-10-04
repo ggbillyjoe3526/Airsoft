@@ -1,8 +1,17 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bayerThreshold, quantize, RetroFilter, retroTargetSize } from './retroFilter';
+import { bayerThreshold, quantize, RetroFilter, retroPixelAngle, retroTargetSize } from './retroFilter';
 
 describe('retro pixel filter maths (M42)', () => {
+  it('gives the width of one retro pixel as a tangent of the view, so BBs can be kept a couple of them wide', () => {
+    // A 90° view 1000 px high spans 2 tangent units: a 4 px retro pixel is 4 / 500 of them.
+    expect(retroPixelAngle(90, 1000, 4)).toBeCloseTo(0.008, 12);
+    // Zoomed in (a narrower view), a pixel covers less of the world; a bigger pixel covers more.
+    expect(retroPixelAngle(45, 1000, 4)).toBeLessThan(retroPixelAngle(90, 1000, 4));
+    expect(retroPixelAngle(90, 1000, 8)).toBeCloseTo(2 * retroPixelAngle(90, 1000, 4), 12);
+    expect(retroPixelAngle(90, 0, 4)).toBe(0);
+  });
+
   it('sizes the low-resolution view a texel per retro pixel, rounding up so the page is covered', () => {
     expect(retroTargetSize(1920, 1080, 4)).toEqual({ width: 480, height: 270 });
     expect(retroTargetSize(1366, 768, 4)).toEqual({ width: 342, height: 192 }); // 341.5 up
