@@ -503,8 +503,8 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
 
 /**
  * Light pools on a night field (M33f, render/lightPools.ts; MapLight in map/nightSight.ts). Every pool glows on every
- * preset: a bright core (`core` of the pool's radius) inside a faint additive halo (`halo` times the core, at `haloAlpha`),
- * one mesh for all. The ground under a pool is lit by one additive mesh for all pools (a disc of `rings` × `segments`,
+ * preset: a bright core (`core` of the pool's radius, its colour `coreWhite` of the way to white) inside faint additive halos (`size` times the core, at `alpha`; they
+ * add up towards the middle, so the glow fades out in steps), one mesh for all. The ground under a pool is lit by one additive mesh for all pools (a disc of `rings` × `segments`,
  * `strength` at the middle fading to nothing at the radius, `lift` off the ground), unless a real point light
  * (QualitySettings.poolLights) shines on it: those take the nearest pools to the eye, by distance to the pool's edge, and
  * one moves to another pool only when that is `hysteresis` metres nearer, fading out and in over `fadeSeconds`. Each
@@ -513,12 +513,15 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
  */
 export const POOL_LIGHTS = {
   core: 0.03,
-  halo: 3,
-  haloAlpha: 0.16,
+  coreWhite: 0.5,
+  halos: [
+    { size: 2, alpha: 0.1 },
+    { size: 3.5, alpha: 0.06 },
+  ],
   glowDetail: 1,
   rings: 6,
   segments: 16,
-  strength: 0.35,
+  strength: 0.18,
   lift: 0.04,
   hysteresis: 3,
   fadeSeconds: 0.3,

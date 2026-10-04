@@ -4,7 +4,7 @@ import { POOL_LIGHTS, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
 import type { MapLight } from '../map/nightSight';
 import { surfaceHeightAt } from '../map/surfaces';
-import { terrainHeightAt } from '../map/terrain';
+import { terrainHeightAt, terrainMaxX, terrainMaxZ } from '../map/terrain';
 import { withoutEnvironment } from './surfaceMaterials';
 
 /**
@@ -100,12 +100,13 @@ export function poolFalloff(t: number): number {
 }
 
 /**
- * The walkable ground's height at (x, z) for a pool whose light hangs at `below` (m): the terrain's, or the highest
- * floor or ramp top under the light; undefined where there is none.
+ * The walkable ground's height at (x, z) for a pool whose light hangs at `below` (m): the terrain's (past its edge, the
+ * edge's, so a pool by the fence stays flat behind it), or the highest floor or ramp top under the light; undefined where
+ * there is none.
  */
 export function groundUnder(map: MapData, x: number, z: number, below: number): number | undefined {
-  const onTerrain = map.terrain ? terrainHeightAt(map.terrain, x, z) : undefined;
-  if (onTerrain !== undefined) return onTerrain;
+  const t = map.terrain;
+  if (t) return terrainHeightAt(t, Math.min(terrainMaxX(t), Math.max(t.minX, x)), Math.min(terrainMaxZ(t), Math.max(t.minZ, z)));
   let best: number | undefined;
   for (const b of map.blocks) {
     const h = surfaceHeightAt(b, x, z);
@@ -117,15 +118,14 @@ export function groundUnder(map: MapData, x: number, z: number, below: number): 
 const glowColour = new THREE.Color();
 const WHITE = new THREE.Color(0xffffff);
 
-/** Every pool's glow (M33f): a bright core at the light inside a faint halo, additive and unlit, one mesh for all. */
+/** Every pool's glow (M33f): a bright core at the light inside faint halos, additive and unlit, one mesh for all. */
 export function buildPoolGlow(pools: readonly MapLight[], cfg: PoolConfig = POOL_LIGHTS): THREE.Mesh {
   const parts: THREE.BufferGeometry[] = [];
   for (const l of pools) {
     const core = cfg.core * l.radius;
-    for (const [radius, alpha, white] of [
-      [core, 1, 0.5],
-      [core * cfg.halo, cfg.haloAlpha, 0],
-    ] as const) {
+    const shells = [{ size: 1, alpha: 1, white: cfg.coreWhite }, ...cfg.halos.map((h) => ({ ...h, white: 0 }))];
+    for (const { size, alpha, white } of shells) {
+      const radius = core * size;
       const g = new THREE.IcosahedronGeometry(radius, cfg.glowDetail).translate(l.position.x, l.position.y, l.position.z);
       g.deleteAttribute('uv');
       g.deleteAttribute('normal');

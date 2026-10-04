@@ -4,7 +4,7 @@ import { POOL_LIGHTS, QUALITY } from '../config/render';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
 import type { MapLight } from '../map/nightSight';
-import { terrainHeightAt } from '../map/terrain';
+import { terrainHeightAt, terrainMaxX, terrainMaxZ } from '../map/terrain';
 import { TEST_YARD } from '../map/testYard';
 import { WOODLAND } from '../map/woodland';
 import { vec3 } from '../sim/vec';
@@ -162,19 +162,20 @@ describe('light pools in the scene (M33f, acceptance 3)', () => {
 });
 
 describe('the ground under a pool', () => {
-  it('follows Woodland’s terrain (and keeps the middle’s height past its edge)', () => {
+  it('follows Woodland’s terrain, and its edge’s height past the fence', () => {
     const lights = WOODLAND.lights!;
+    const t = WOODLAND.terrain!;
     const decal = buildPoolDecal(WOODLAND, lights);
     const pos = decal.mesh.geometry.getAttribute('position');
-    let checked = 0;
+    let outside = 0;
     for (let v = 0; v < pos.count; v++) {
-      const ground = terrainHeightAt(WOODLAND.terrain!, pos.getX(v), pos.getZ(v));
-      if (ground === undefined) continue;
-      expect(pos.getY(v)).toBeCloseTo(ground + POOL_LIGHTS.lift, 4);
-      checked++;
+      const [x, z] = [pos.getX(v), pos.getZ(v)];
+      const cx = Math.min(terrainMaxX(t), Math.max(t.minX, x));
+      const cz = Math.min(terrainMaxZ(t), Math.max(t.minZ, z));
+      if (cx !== x || cz !== z) outside++;
+      expect(pos.getY(v)).toBeCloseTo(terrainHeightAt(t, cx, cz)! + POOL_LIGHTS.lift, 4);
     }
-    expect(checked).toBeGreaterThan(pos.count / 2);
-    for (let v = 0; v < pos.count; v++) expect(Number.isFinite(pos.getY(v))).toBe(true);
+    expect(outside).toBeGreaterThan(0); // the camp fires stand within a radius of the fence
     expect(decal.mesh.geometry.index!.count / 3 / lights.length).toBeLessThanOrEqual(200);
     decal.mesh.geometry.dispose();
     (decal.mesh.material as THREE.Material).dispose();
