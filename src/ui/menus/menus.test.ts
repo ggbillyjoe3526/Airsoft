@@ -225,6 +225,9 @@ describe('the summary when a match paid nothing (audit POOL-22)', () => {
   it('says why: Dev settings changed the match, or the Armory is off; nothing when it paid', () => {
     expect(unpaidLine(null, 'dev')).toBe(ARMORY_TEXT.unpaidDev);
     expect(unpaidLine(null, 'off')).toBe(ARMORY_TEXT.unpaidOff);
+    expect(unpaidLine(null, 'devContent')).toBe(ARMORY_TEXT.unpaidDevContent);
+    expect(ARMORY_TEXT.unpaidDevContent).not.toBe(ARMORY_TEXT.unpaidDev);
+    expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'devContent')).toBe('');
     expect(unpaidLine(null, null)).toBe('');
     expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'dev')).toBe('');
   });

@@ -3,7 +3,9 @@ import { BOT_LOADOUTS } from '../config/bots';
 import { AEG, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { createRng } from '../sim/rng';
 import { respawnCharacter } from '../sim/character';
-import { botKitSeed, kittedCharacter, randomFit, randomKit } from './botKit';
+import { botKitSeed, kittedCharacter, randomFit, randomKit, rolledKit } from './botKit';
+import { contentPool } from './contentPool';
+import { withTags } from './testSupport';
 import { GAME_POOL } from './gamePool';
 import { FIT_CATEGORY, FIT_SLOTS } from './kit';
 import { assetOfReplica, fits } from './pool';
@@ -93,5 +95,48 @@ describe('bot kits (M29b)', () => {
     respawnCharacter(bot);
     expect(fitted()).toEqual(expected);
     expect(bot.armament.replicas).toEqual(kit.map((s) => s.replica));
+  });
+});
+
+describe('rolled bot kits and dev gear (M35)', () => {
+  it('rolls the same kit as randomKit for the same seed, with the replicas and parts it rolled listed as items', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const rolled = rolledKit(pool, LOADOUT, seed, 1);
+      expect(rolled.kit).toEqual(randomKit(pool, LOADOUT, seed, 1));
+      expect(rolledKit(pool, LOADOUT, seed)).toEqual(rolledKit(pool, LOADOUT, seed));
+      const replicaItems = rolled.items.filter((r) => pool.byId.get(r.asset)!.category === 'replica');
+      expect(replicaItems.map((r) => pool.byId.get(r.asset)!.name).sort()).toEqual(['AEG Rifle', 'Gas Pistol']);
+      for (const r of rolled.items) expect(tierIds).toContain(r.tier);
+      // At a part chance of 1 every slot a replica has a part for is filled, so the items list the power source and parts.
+      expect(rolled.items.length).toBeGreaterThan(LOADOUT.length * 2);
+      expect(rolled.items.filter((r) => pool.byId.get(r.asset)!.category === 'power')).toHaveLength(LOADOUT.length);
+    }
+  });
+
+  it('lists no parts at a part chance of 0 beyond the replica and its power source', () => {
+    const { items } = rolledKit(pool, LOADOUT, 3, 0);
+    expect(items.map((r) => pool.byId.get(r.asset)!.category).sort()).toEqual(['power', 'power', 'replica', 'replica']);
+  });
+
+  it('never rolls a dev part when the bots see contentPool(pool, false), and does roll it from the full pool', () => {
+    const devPool = withTags(pool, { 'Red Dot': 'dev', '2x Scope': 'dev', 'Vertical Grip': 'dev', 'Red Laser': 'dev' });
+    const devIds = new Set(devPool.assets.filter((a) => a.tag === 'dev').map((a) => a.id));
+    const seen = (p: typeof pool): Set<string> => {
+      const out = new Set<string>();
+      for (let seed = 1; seed <= 150; seed++) for (const r of rolledKit(p, LOADOUT, seed, 1).items) if (devIds.has(r.asset)) out.add(r.asset);
+      return out;
+    };
+    expect(seen(devPool).size).toBeGreaterThan(0);
+    const shown = contentPool(devPool, false);
+    expect(seen(shown).size).toBe(0);
+  });
+
+  it('never rolls a dev replica for a bot either', () => {
+    const devPool = withTags(pool, { 'Gas Pistol': 'dev' });
+    const shown = contentPool(devPool, false);
+    for (let seed = 1; seed <= 30; seed++) {
+      const { items } = rolledKit(shown, LOADOUT, seed, 1);
+      expect(items.map((r) => r.asset)).not.toContain(devPool.assets.find((a) => a.name === 'Gas Pistol')!.id);
+    }
   });
 });

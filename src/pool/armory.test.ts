@@ -4,6 +4,7 @@ import {
   canTakeShots,
   cheapestSpare,
   collectionRows,
+  dispensable,
   earn,
   pityLeft,
   rarestFirst,
@@ -24,6 +25,8 @@ import { addItem, type ItemRef, loadCollection, newCollection, ownedCount, saveC
 import { MemoryStorage } from './testStorage';
 import { GAME_POOL } from './gamePool';
 import { loadPool, type Pool } from './pool';
+import { contentPool } from './contentPool';
+import { withTags } from './testSupport';
 
 const pool = GAME_POOL;
 const e = pool.economy;
@@ -355,5 +358,69 @@ describe('Round won pay (audit POOL-08, POOL-09)', () => {
   it('scales Round won by the match length like the match lines', () => {
     const short = matchEarnings(e, { won: true, roundsWon: 3, hits: 0, winsNeeded: 3, difficulty: 'normal' });
     expect(short.lines.find((l) => l.label === '3 rounds won')!.fc).toBe(18);
+  });
+});
+
+describe('dev gear and Shots (M35)', () => {
+  const devPool = withTags(pool, { 'Red Dot': 'dev', 'Silencer': 'dev' });
+  const dev = (name: string) => devPool.assets.find((a) => a.name === name)!;
+
+  it('never lists a dev asset as dispensable, even one marked In Shots', () => {
+    expect(dev('Red Dot').inShots).toBe(true);
+    expect(dispensable(dev('Red Dot'))).toBe(false);
+    expect(dispensable(pool.assets.find((a) => a.name === 'Red Dot')!)).toBe(true);
+    const names = shotAssets(devPool).map((a) => a.name);
+    expect(names).not.toContain('Red Dot');
+    expect(names).not.toContain('Silencer');
+    expect(names).toHaveLength(shotAssets(pool).length - 2);
+  });
+
+  it('never dispenses a dev asset over many seeded draws, which do give it when it is public', () => {
+    const drawn = (p: Pool): Set<string> => {
+      const seen = new Set<string>();
+      const c = newCollection(p, 11);
+      for (let i = 0; i < 150; i++) {
+        c.tokens = 10;
+        for (const d of takeShots(p, c, 10, i)!) seen.add(d.item.asset);
+      }
+      return seen;
+    };
+    const publicSeen = drawn(pool);
+    expect(publicSeen.has(id('Red Dot'))).toBe(true);
+    expect(publicSeen.has(id('Silencer'))).toBe(true);
+    const devSeen = drawn(devPool);
+    expect(devSeen.has(id('Red Dot'))).toBe(false);
+    expect(devSeen.has(id('Silencer'))).toBe(false);
+    expect(devSeen.size).toBeGreaterThan(5);
+  });
+
+  it('shows no Shots at all when every asset is dev', () => {
+    const allDev = withTags(pool, Object.fromEntries(pool.assets.map((a) => [a.name, 'dev' as const])));
+    const c = newCollection(allDev, 1);
+    c.tokens = 5;
+    expect(takeShots(allDev, c, 1)).toBeNull();
+    expect(c.tokens).toBe(5);
+  });
+
+  it('leaves an owned dev asset out of the collection while Dev content is off', () => {
+    const c = newCollection(devPool, 1);
+    addItem(c, { asset: dev('Red Dot').id, tier: 'epic' }, 2);
+    const hidden = collectionRows(contentPool(devPool, false), c);
+    expect(hidden.rows.map((r) => r.asset.name)).not.toContain('Red Dot');
+    expect(hidden.owned).toBe(collectionRows(contentPool(devPool, false), newCollection(devPool, 1)).owned);
+    expect(c.owned[`${dev('Red Dot').id}@epic`]).toBe(2); // kept in the save
+  });
+
+  it('shows a dev asset in the collection over the full pool only when it is owned', () => {
+    const none = newCollection(devPool, 1);
+    expect(collectionRows(devPool, none).rows.map((r) => r.asset.name)).not.toContain('Red Dot');
+    const c = newCollection(devPool, 1);
+    addItem(c, { asset: dev('Red Dot').id, tier: 'epic' }, 2);
+    const cat = collectionRows(devPool, c);
+    const row = cat.rows.find((r) => r.asset.name === 'Red Dot')!;
+    expect(row.counts).toEqual([0, 0, 0, 0, 2, 0]);
+    expect(cat.total).toBe((shotAssets(devPool).length + 1) * devPool.tiers.length);
+    // an unowned dev asset stays out beside it
+    expect(cat.rows.map((r) => r.asset.name)).not.toContain('Silencer');
   });
 });

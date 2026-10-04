@@ -8,6 +8,7 @@ import { EMPTY_FIT } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
 import { saveSetting } from '../settings/storage';
+import { withTags } from './testSupport';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -263,5 +264,78 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     own.items.delete(itemKey(id('Red Dot'), 'common'));
     expect(model.equipped()[0]).toEqual(item('AEG Rifle', 'rare'));
     expect(model.fitOf(id('AEG Rifle')).optic).toEqual(item('Red Dot', 'epic'));
+  });
+});
+
+describe('Loadout model with dev gear (M35)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+
+  const devPool = withTags(pool, { 'Red Dot': 'dev', 'Gas Pistol': 'dev' });
+  const devId = (name: string) => devPool.assets.find((a) => a.name === name)!.id;
+  const dref = (name: string, tier = 'common'): ItemRef => ({ asset: devId(name), tier });
+
+  /** A collection owning the starters plus the given items. */
+  function collecting(...items: ItemRef[]) {
+    const c = newCollection(devPool, 1);
+    for (const r of items) c.owned[itemKey(r.asset, r.tier)] = 1;
+    return c;
+  }
+
+  it('offers an owned dev part only while Dev content is on, and keeps the saved pick for when it comes back', () => {
+    let devContent = false;
+    const c = collecting(dref('Red Dot', 'rare'));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false, () => devContent));
+    const aeg = devId('AEG Rifle');
+    expect(model.fitChoices(aeg, 'optic')).toEqual([]);
+    devContent = true;
+    expect(model.fitChoices(aeg, 'optic')).toEqual([dref('Red Dot', 'rare')]);
+    model.setFit(aeg, 'optic', dref('Red Dot', 'rare'));
+    expect(model.fitOf(aeg).optic).toEqual(dref('Red Dot', 'rare'));
+    devContent = false;
+    expect(model.fitChoices(aeg, 'optic')).toEqual([]);
+    expect(model.fitOf(aeg).optic).toBeNull(); // plays as the default (nothing)
+    devContent = true;
+    expect(model.fitOf(aeg).optic).toEqual(dref('Red Dot', 'rare')); // the same saved pick is back
+    expect(c.owned[itemKey(devId('Red Dot'), 'rare')]).toBe(1); // never lost from the save
+  });
+
+  it('offers an owned dev replica only while Dev content is on, and an equipped one plays as the default until then', () => {
+    let devContent = true;
+    const c = collecting(dref('Gas Pistol', 'rare'));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false, () => devContent));
+    expect(model.replicaChoices()).toContainEqual(dref('Gas Pistol', 'rare'));
+    model.equip('primary', dref('Gas Pistol', 'rare'));
+    expect(model.equipped()[0]).toEqual(dref('Gas Pistol', 'rare'));
+    devContent = false;
+    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('Gas Pistol'));
+    expect(model.replicaChoices().map((r) => r.asset)).toContain(devId('AEG Rifle'));
+    expect(model.equipped()[0]).toEqual(dref('AEG Rifle'));
+    expect(model.equipped().map((r) => r?.asset)).not.toContain(devId('Gas Pistol'));
+    devContent = true;
+    expect(model.equipped()[0]).toEqual(dref('Gas Pistol', 'rare')); // the same pick, back
+  });
+
+  it('hides owned dev gear when no devContent switch is given (the default is off)', () => {
+    const c = collecting(dref('Red Dot', 'rare'));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false));
+    expect(model.fitChoices(devId('AEG Rifle'), 'optic')).toEqual([]);
+  });
+
+  it('lends no dev gear with Unlock all gear while Dev content is off, and all of it while on', () => {
+    let devContent = false;
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => true, () => devContent));
+    const aeg = devId('AEG Rifle');
+    const tiers = devPool.tiers.length;
+    // The rifle takes the Red Dot (dev) and the 2x Scope (public), at every tier.
+    expect(model.fitChoices(aeg, 'optic').map((r) => r.asset)).not.toContain(devId('Red Dot'));
+    expect(model.fitChoices(aeg, 'optic')).toHaveLength(tiers);
+    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('Gas Pistol'));
+    expect(model.replicaChoices()).toHaveLength(tiers);
+    devContent = true;
+    expect(model.fitChoices(aeg, 'optic')).toHaveLength(2 * tiers);
+    expect(model.fitChoices(aeg, 'optic').map((r) => r.asset)).toContain(devId('Red Dot'));
+    expect(model.replicaChoices()).toHaveLength(2 * tiers);
   });
 });
