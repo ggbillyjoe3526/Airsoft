@@ -413,8 +413,10 @@ export interface BotSkill {
   readonly preAimSettled: number;
   // Clearing corners and team play (M38): Pro does these; the levels below don't.
   /**
-   * Near the enemy (past the middle of the map, or with a threat still in mind) it walks, aims at each corner ahead as
-   * it opens instead of where it walks, and with a threat in mind tops up its magazine only from cover.
+   * Near the enemy (past the middle of the map, or with a threat still in mind) it walks and slices corners: on its
+   * lane it aims at each corner ahead as it opens instead of where it walks; closing in on someone heard or lost, at the
+   * corner they are behind until the spot is in view; leaning out past a corner close by. With a threat in mind it tops
+   * up its magazine only from cover.
    */
   readonly slicesCorners: boolean;
   /** Having lost sight of someone, how long it stays and watches where they were before going after them (s). */

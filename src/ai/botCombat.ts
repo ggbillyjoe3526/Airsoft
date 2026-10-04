@@ -6,7 +6,7 @@ import { type Character, eyeHeight } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from '../sim/hitbox';
-import { type Vec3, vec3 } from '../sim/vec';
+import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { aimErrorSize, lookAngles, stepAim } from './aim';
 import { findHeldAngles, type HeldAngle } from './angles';
 import { type Bot, type BotWorld, pick, threatInMind } from './bot';
@@ -21,8 +21,7 @@ const aimLine = vec3();
 const standEye = vec3();
 const raisedPoint = vec3();
 const mateVolume: HitVolume = createHitVolume();
-/** The held angle heldAngleLook last aimed at (read right after it returns true). */
-let lookedAt: HeldAngle | null = null;
+const lastKnownHead = vec3();
 
 /** How long a bot's BB takes to fly `dist` metres (its primary replica, its factory BBs). */
 function bbFlightTime(w: BotWorld, dist: number): number {
@@ -60,6 +59,8 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // At the end of a search (AI-14): look round, one way then the other, from the way it arrived.
     const t = 1 - b.searchLookLeft / b.searchLookTime;
     look.yaw = b.searchLookYaw + Math.sin(2 * Math.PI * t) * cfg.searchLookDeg * DEG;
+  } else if (walking && b.careful && b.mode === 'search' && b.hasLastKnown && sliceTowardsLastKnown(b, w, eye, cmd)) {
+    // Slicing towards someone heard or lost (M38): while the spot is round a corner, aim at that corner and lean out.
   } else if (b.hasLastKnown && (b.mode === 'search' || b.mode === 'cover' || !walking)) {
     // Watch where the threat was, even while moving there; slicing corners (M38), at head height there.
     const y = b.skill.slicesCorners ? b.lastKnown.y + w.body.standEyeHeight : eye.y;
@@ -68,11 +69,9 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // A squad order (M22): at its spot, look the way the order says; keeping up behind a leader, keep covering their
     // back on the move too (only hurrying, it looks where it runs).
     look.yaw = b.orderYaw;
-  } else if (walking && b.careful && b.mode === 'advance' && heldAngleLook(b, w, eye, walkYaw)) {
+  } else if (walking && b.careful && b.mode === 'advance' && slice(b, w, heldAngleLook(b, w, eye, walkYaw, false), cmd)) {
     // Slicing (M38): walking near the enemy, aim at the corner ahead someone could step out of, not where it walks,
     // and lean out past a near one to see round it a slice at a time.
-    const a = lookedAt!;
-    if (Math.hypot(a.point.x - me.position.x, a.point.z - me.position.z) <= cfg.sliceLeanDistance) cmd.lean = a.side;
   } else if (walking && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
     look.yaw = walkYaw;
   } else {
@@ -80,7 +79,7 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // the view slowly across it (AI-02) rather than stare one way.
     look.yaw = enemyYaw;
     // Pro (M37) aims at the corners someone would come round instead of sweeping.
-    if (b.holding && !(b.skill.holdsAngles && heldAngleLook(b, w, eye, enemyYaw))) {
+    if (b.holding && !(b.skill.holdsAngles && heldAngleLook(b, w, eye, enemyYaw, false))) {
       look.yaw += Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
     }
   }
@@ -89,11 +88,35 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
 }
 
 /**
- * Holding with held angles (M37), or slicing on the move (M38): looks for the corners in view of where it stands, facing
- * about `facingYaw` (again every angleRefresh, or once it has moved), then sets `look` on one of them, switching every
- * angleSwitchTime. False if it found none.
+ * Slicing (M38): leans out past `a`, the corner aimed at, once it is within sliceLeanDistance (towards its open side).
+ * False if there is no corner to slice.
  */
-function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number): boolean {
+function slice(b: Bot, w: BotWorld, a: HeldAngle | null, cmd: PlayerCommand): boolean {
+  if (!a) return false;
+  const p = b.character.position;
+  if (Math.hypot(a.point.x - p.x, a.point.z - p.z) <= w.cfg.sliceLeanDistance) cmd.lean = a.side;
+  return true;
+}
+
+/**
+ * Closing in on where someone was heard or last seen (M38): while that spot, at head height, is out of view round a
+ * corner, slice the corner nearest its bearing. False once the spot is in plain view (then it watches the spot itself).
+ */
+function sliceTowardsLastKnown(b: Bot, w: BotWorld, eye: Vec3, cmd: PlayerCommand): boolean {
+  lastKnownHead.x = b.lastKnown.x;
+  lastKnownHead.y = b.lastKnown.y + w.body.standEyeHeight;
+  lastKnownHead.z = b.lastKnown.z;
+  if (lineClear(w.query, eye, lastKnownHead)) return false;
+  lookAngles(eye.x, eye.y, eye.z, lastKnownHead.x, lastKnownHead.y, lastKnownHead.z, look);
+  return slice(b, w, heldAngleLook(b, w, eye, look.yaw, true), cmd);
+}
+
+/**
+ * Holding with held angles (M37), or slicing on the move (M38): looks for the corners in view of where it stands, facing
+ * about `facingYaw` (again every angleRefresh, or once it has moved), then sets `look` on one of them: the one nearest
+ * `facingYaw` if `nearest`, else switching every angleSwitchTime. Returns it, or null if it found none.
+ */
+function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number, nearest: boolean): HeldAngle | null {
   const cfg = w.cfg;
   const p = b.character.position;
   const from = b.heldAnglesFrom;
@@ -109,11 +132,16 @@ function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number): boole
     standEye.z = p.z;
     b.heldAngleCount = findHeldAngles(w.query, standEye, head, facingYaw, cfg, b.heldAngles);
   }
-  if (b.heldAngleCount === 0) return false;
-  const a = b.heldAngles[Math.floor(b.teamWait / cfg.angleSwitchTime) % b.heldAngleCount]!;
-  lookedAt = a;
+  if (b.heldAngleCount === 0) return null;
+  let a = b.heldAngles[Math.floor(b.teamWait / cfg.angleSwitchTime) % b.heldAngleCount]!;
+  if (nearest) {
+    for (let i = 0; i < b.heldAngleCount; i++) {
+      const o = b.heldAngles[i]!;
+      if (Math.abs(wrapAngle(o.yaw - facingYaw)) < Math.abs(wrapAngle(a.yaw - facingYaw))) a = o;
+    }
+  }
   lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, look);
-  return true;
+  return a;
 }
 
 /** True if a teammate stands in (or right next to) the line of fire within `dist` metres. */

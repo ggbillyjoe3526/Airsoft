@@ -34,7 +34,7 @@ acceptance:
   4. A spot someone peeked from stays pre-aimed for a few seconds; heard positions are shared with teammates (no better than the player's minimap).
   5. Late in an Elimination round the side behind on players pushes; Pro bots reload behind cover.
 status: building
-attempts: 1
+attempts: 2
 
 ## M39 · Rules picker: Skirmish, Tournament, Pro CQB, Custom
 tier: core
