@@ -23,7 +23,6 @@ import { PointerLock } from './input/pointerLock';
 import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
-import { deriveSeed } from './core/seed';
 import { loadFigureModel } from './render/externalModels';
 import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
