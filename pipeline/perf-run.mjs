@@ -53,7 +53,10 @@ if (!presets.every((p) => PRESETS.includes(p))) throw new Error(`--preset must b
 const ticksFor = (preset) => Number(value('--ticks', budget.presetTicks?.[options.env]?.[preset] ?? budget.ticks?.[options.env] ?? 3600));
 const laptop = options.env === 'laptop';
 /** Software rendering in the container and on CI; the real GPU on the laptop (REN-15). */
-const browserArgs = laptop ? ['--enable-precise-memory-info'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info'];
+// `--expose-gc` gives the page `gc()`, so heap growth is measured between two full collections, not between whatever
+// garbage happened to be waiting at the first and last sample (that swung ±10 MB between runs of one head).
+const heapArgs = ['--enable-precise-memory-info', '--js-flags=--expose-gc'];
+const browserArgs = laptop ? heapArgs : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...heapArgs];
 const channel = options.chromium ? undefined : value('--channel', laptop ? 'chrome' : undefined);
 
 mkdirSync(OUT, { recursive: true });
@@ -120,7 +123,14 @@ async function measure(preset) {
     let calls = 0, callsMax = 0, tris = 0, trisMax = 0;
     const tick0 = g.state.tick;
     const heapNow = () => performance.memory?.usedJSHeapSize ?? 0;
-    heap.push(heapNow());
+    // The live heap: what is left after full collections (twice, so objects freed by the first one's finalizers go too).
+    const heapGc = typeof globalThis.gc === 'function';
+    const liveHeap = () => {
+      if (heapGc) for (let i = 0; i < 2; i++) globalThis.gc();
+      return heapNow();
+    };
+    const heapStart = liveHeap();
+    heap.push(heapStart);
     await new Promise((done) => {
       const t0 = performance.now();
       let last = t0;
@@ -135,6 +145,7 @@ async function measure(preset) {
       };
       requestAnimationFrame(f);
     });
+    const heapEnd = liveHeap();
     const secs = frames.reduce((s, v) => s + v, 0) / 1000;
     // GPU memory, estimated: every geometry attribute's bytes and every texture at 4 bytes a texel (mip chain +33 %).
     let geometryBytes = 0, textureBytes = 0;
@@ -169,7 +180,8 @@ async function measure(preset) {
       drawCalls: calls / n, drawCallsMax: callsMax, triangles: tris / n, trianglesMax: trisMax,
       geometries: info.memory.geometries, textures: info.memory.textures, programs: info.programs?.length ?? 0,
       gpuMemoryMB: (geometryBytes + textureBytes) / 1e6,
-      heapStartMB: heap[0] / 1e6, heapEndMB: heap.at(-1) / 1e6, heapGrowthMB: (heap.at(-1) - heap[0]) / 1e6, heapMaxMB: Math.max(...heap) / 1e6,
+      // Start and end are the live heap (after a full GC); the max and the GC drops are the samples taken during play.
+      heapStartMB: heapStart / 1e6, heapEndMB: heapEnd / 1e6, heapGrowthMB: (heapEnd - heapStart) / 1e6, heapMaxMB: Math.max(...heap) / 1e6, heapGc,
       gcSpikes,
       seconds: secs, ticks: g.state.tick - tick0, simTicksPerSecond: (g.state.tick - tick0) / secs,
       pixelRatio: g.renderer.renderer.getPixelRatio(), characters: g.session.characterCount,
@@ -192,7 +204,7 @@ for (const result of results) {
   console.log(`perf: ${relative(ROOT, out)}`);
   const m = result.metrics;
   console.log(`  ${result.preset}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
-  console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (+${m.heapGrowthMB}), ${m.gcSpikes} GC drops`);
+  console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (${m.heapGrowthMB >= 0 ? "+" : ""}${m.heapGrowthMB}${m.heapGc ? ', live after GC' : ', NO forced GC: noisy'}), ${m.gcSpikes} GC drops`);
   if (result.errors.length) console.log(`  page errors: ${result.errors.length} (${result.errors[0]})`);
   if (options.baseline) {
     const dir = join(ROOT, 'pipeline', 'baseline');
