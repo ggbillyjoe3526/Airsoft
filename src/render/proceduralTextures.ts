@@ -1,17 +1,22 @@
 import * as THREE from 'three';
-import { RENDER } from '../config/render';
+import { RENDER, SURFACES, type SurfaceTextureId } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 
 /**
- * Small canvas-generated textures so greybox surfaces read clearly without downloaded assets.
- * `worldSize` is how many metres one texture repeat covers (see mapMeshes world-space UVs).
+ * The field's surface textures, drawn on canvases as each match loads (M14 art pass: no downloaded assets, see
+ * docs/ASSETS.md): poured concrete with saw-cut joints, oil stains and hairline cracks; painted breeze blocks; plank
+ * crates with a braced frame and nails; ribbed container steel with dirt streaks; diamond tread plate; moulded
+ * plastic. Each tiles seamlessly; `worldSize` is how many metres one repeat covers (see mapMeshes' world-space UVs).
+ * Light and dark also read as height, so each texture doubles as its own bump map when surface relief is on.
  */
 export interface ProceduralTexture {
   texture: THREE.CanvasTexture;
   worldSize: number;
 }
 
-const SIZE = 256;
+const SIZE = SURFACES.textureSize;
+/** Pixels per unit of the textures' original 256-pixel drawings: line widths and sizes scale with it. */
+const PX = SIZE / 256;
 
 function makeCanvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const canvas = document.createElement('canvas');
@@ -22,96 +27,209 @@ function makeCanvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   return [canvas, ctx];
 }
 
+const rgba = (r: number, g: number, b: number, a: number): string => `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
+
+/** Calls `draw` at (x, y) and again shifted by a tile wherever the shape (radius `r`) crosses an edge, so it tiles. */
+function wrapped(x: number, y: number, r: number, draw: (x: number, y: number) => void): void {
+  for (const dx of [-SIZE, 0, SIZE]) {
+    if (x + dx + r < 0 || x + dx - r > SIZE) continue;
+    for (const dy of [-SIZE, 0, SIZE]) {
+      if (y + dy + r < 0 || y + dy - r > SIZE) continue;
+      draw(x + dx, y + dy);
+    }
+  }
+}
+
 function speckle(ctx: CanvasRenderingContext2D, rng: RngState, count: number, alpha: number, light: boolean): void {
   const v = light ? 255 : 0;
   for (let i = 0; i < count; i++) {
-    ctx.fillStyle = `rgba(${v},${v},${v},${alpha * rngNext(rng)})`;
-    const s = 1 + rngNext(rng) * 2;
+    ctx.fillStyle = rgba(v, v, v, alpha * rngNext(rng));
+    const s = (1 + rngNext(rng) * 2) * PX * 0.75;
     ctx.fillRect(rngNext(rng) * SIZE, rngNext(rng) * SIZE, s, s);
   }
 }
 
-function finish(canvas: HTMLCanvasElement, worldSize: number): ProceduralTexture {
+/** Soft round blotches of `[r, g, b]` up to `alpha`, `minR`..`maxR` pixels across: mottling, stains, dirt. */
+function blotches(ctx: CanvasRenderingContext2D, rng: RngState, count: number, minR: number, maxR: number, color: readonly [number, number, number], alpha: number): void {
+  const [r, g, b] = color;
+  for (let i = 0; i < count; i++) {
+    const radius = (minR + rngNext(rng) * (maxR - minR)) * PX;
+    const a = alpha * (0.4 + 0.6 * rngNext(rng));
+    wrapped(rngNext(rng) * SIZE, rngNext(rng) * SIZE, radius, (x, y) => {
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      grad.addColorStop(0, rgba(r, g, b, a));
+      grad.addColorStop(1, rgba(r, g, b, 0));
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    });
+  }
+}
+
+/** A thin wandering crack from a random point. */
+function crack(ctx: CanvasRenderingContext2D, rng: RngState, steps: number, alpha: number): void {
+  let x = rngNext(rng) * SIZE;
+  let y = rngNext(rng) * SIZE;
+  let heading = rngNext(rng) * Math.PI * 2;
+  ctx.strokeStyle = rgba(45, 43, 40, alpha);
+  ctx.lineWidth = 0.6 * PX;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  for (let i = 0; i < steps; i++) {
+    heading += (rngNext(rng) - 0.5) * 0.9;
+    x += Math.cos(heading) * 5 * PX;
+    y += Math.sin(heading) * 5 * PX;
+    ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function finish(canvas: HTMLCanvasElement, id: SurfaceTextureId): ProceduralTexture {
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = RENDER.textureAnisotropy;
-  return { texture, worldSize };
+  texture.name = id;
+  return { texture, worldSize: SURFACES.worldSize[id] };
 }
 
-/** Warehouse concrete slab with expansion joints every 4 m. */
+/** Poured warehouse slab: mottled, speckled, a few oil stains and hairline cracks, saw-cut joints every repeat (4 m). */
 function concrete(): ProceduralTexture {
   const [canvas, ctx] = makeCanvas();
   const rng = createRng(11);
-  ctx.fillStyle = '#9a9a96';
+  ctx.fillStyle = '#a4a29c';
   ctx.fillRect(0, 0, SIZE, SIZE);
-  speckle(ctx, rng, 2500, 0.18, false);
-  speckle(ctx, rng, 1500, 0.15, true);
-  ctx.strokeStyle = 'rgba(40,40,40,0.55)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, SIZE - 2, SIZE - 2);
-  return finish(canvas, 4);
+  blotches(ctx, rng, 26, 30, 110, [255, 252, 240], 0.1);
+  blotches(ctx, rng, 26, 30, 110, [70, 66, 58], 0.09);
+  speckle(ctx, rng, 9000, 0.16, false);
+  speckle(ctx, rng, 6000, 0.14, true);
+  // Oil and tyre stains: dark, slightly brown, soft.
+  blotches(ctx, rng, 4, 10, 34, [48, 40, 30], 0.28);
+  for (let i = 0; i < 3; i++) crack(ctx, rng, 14 + Math.floor(rngNext(rng) * 18), 0.4);
+  // Saw-cut joints along the tile's edges (they meet the next tile's), with a lighter worn lip beside each.
+  ctx.fillStyle = 'rgba(38,37,35,0.7)';
+  ctx.fillRect(0, 0, SIZE, 1.5 * PX);
+  ctx.fillRect(0, 0, 1.5 * PX, SIZE);
+  ctx.fillStyle = 'rgba(255,255,250,0.18)';
+  ctx.fillRect(0, 1.5 * PX, SIZE, PX);
+  ctx.fillRect(1.5 * PX, 0, PX, SIZE);
+  return finish(canvas, 'concrete');
 }
 
-/** Painted breeze-block wall, 4 courses per repeat. */
+/** Painted breeze-block wall in running bond, four courses per repeat: each block a touch different, chips and scuffs. */
 function blockWall(): ProceduralTexture {
   const [canvas, ctx] = makeCanvas();
   const rng = createRng(23);
-  ctx.fillStyle = '#c9c3b5';
+  ctx.fillStyle = '#8c877b'; // mortar
   ctx.fillRect(0, 0, SIZE, SIZE);
-  speckle(ctx, rng, 1500, 0.1, false);
-  ctx.strokeStyle = 'rgba(90,85,75,0.6)';
-  ctx.lineWidth = 3;
   const rows = 4;
   const rowH = SIZE / rows;
-  for (let r = 0; r <= rows; r++) {
-    ctx.beginPath();
-    ctx.moveTo(0, r * rowH);
-    ctx.lineTo(SIZE, r * rowH);
-    ctx.stroke();
-  }
+  const blockW = SIZE / 2;
+  const mortar = 2 * PX;
   for (let r = 0; r < rows; r++) {
-    const offset = r % 2 === 0 ? 0 : SIZE / 4;
-    for (let x = offset; x <= SIZE; x += SIZE / 2) {
-      ctx.beginPath();
-      ctx.moveTo(x, r * rowH);
-      ctx.lineTo(x, (r + 1) * rowH);
-      ctx.stroke();
+    const offset = r % 2 === 0 ? 0 : blockW / 2;
+    for (let k = -1; k < 2; k++) {
+      const x = offset + k * blockW + mortar / 2;
+      const y = r * rowH + mortar / 2;
+      const w = blockW - mortar;
+      const h = rowH - mortar;
+      const shade = 0.95 + rngNext(rng) * 0.08;
+      ctx.fillStyle = rgba(206 * shade, 199 * shade, 184 * shade, 1);
+      ctx.fillRect(x, y, w, h);
+      // Light from above: a brighter top edge, a darker bottom one, so each block reads as standing proud of the mortar.
+      const grad = ctx.createLinearGradient(0, y, 0, y + h);
+      grad.addColorStop(0, 'rgba(255,255,255,0.12)');
+      grad.addColorStop(0.2, 'rgba(255,255,255,0)');
+      grad.addColorStop(0.85, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.1)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w, h);
     }
   }
-  return finish(canvas, 1.6);
+  speckle(ctx, rng, 4000, 0.12, false);
+  speckle(ctx, rng, 2000, 0.1, true);
+  blotches(ctx, rng, 10, 12, 40, [90, 84, 70], 0.08); // scuffs and dirty handprints
+  blotches(ctx, rng, 8, 3, 7, [120, 112, 98], 0.5); // chips in the paint
+  return finish(canvas, 'blockWall');
 }
 
-/** Plywood crate planks with a dark frame; mapped once per face. */
+/** Draws one wooden board from (x0, y0) to (x1, y1) (a rotated rectangle `width` wide) with grain along it. */
+function board(ctx: CanvasRenderingContext2D, rng: RngState, x0: number, y0: number, x1: number, y1: number, width: number, tone: number): void {
+  const length = Math.hypot(x1 - x0, y1 - y0);
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.rotate(Math.atan2(y1 - y0, x1 - x0));
+  ctx.fillStyle = rgba(184 * tone, 138 * tone, 86 * tone, 1);
+  ctx.fillRect(0, -width / 2, length, width);
+  for (let g = 0; g < width / (2.2 * PX); g++) {
+    ctx.strokeStyle = rgba(95, 62, 30, 0.12 + rngNext(rng) * 0.2);
+    ctx.lineWidth = (0.5 + rngNext(rng)) * PX * 0.6;
+    const y = -width / 2 + rngNext(rng) * width;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.quadraticCurveTo(length / 2, y + (rngNext(rng) - 0.5) * 4 * PX, length, y + (rngNext(rng) - 0.5) * 3 * PX);
+    ctx.stroke();
+  }
+  // Dark edges where boards meet.
+  ctx.fillStyle = 'rgba(60,38,18,0.55)';
+  ctx.fillRect(0, -width / 2, length, PX);
+  ctx.fillRect(0, width / 2 - PX, length, PX);
+  ctx.restore();
+}
+
+/** A nail head: a dark dot with a glint. */
+function nail(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.fillStyle = 'rgba(40,36,32,0.85)';
+  ctx.beginPath();
+  ctx.arc(x, y, 1.6 * PX, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,250,235,0.45)';
+  ctx.fillRect(x - 0.8 * PX, y - 0.8 * PX, 0.8 * PX, 0.8 * PX);
+}
+
+/** A plank crate face, mapped once per face: five planks, a frame of boards, a diagonal brace and nails at the joints. */
 function crate(): ProceduralTexture {
   const [canvas, ctx] = makeCanvas();
   const rng = createRng(37);
-  ctx.fillStyle = '#b48a55';
+  ctx.fillStyle = '#5a3d20'; // the gaps between planks
   ctx.fillRect(0, 0, SIZE, SIZE);
   const planks = 5;
   const ph = SIZE / planks;
-  for (let p = 0; p < planks; p++) {
-    const shade = 0.85 + rngNext(rng) * 0.3;
-    ctx.fillStyle = `rgb(${Math.round(170 * shade)},${Math.round(125 * shade)},${Math.round(75 * shade)})`;
-    ctx.fillRect(0, p * ph + 2, SIZE, ph - 4);
-    for (let g = 0; g < 14; g++) {
-      ctx.strokeStyle = `rgba(90,60,30,${0.15 + rngNext(rng) * 0.2})`;
-      ctx.lineWidth = 1;
-      const y = p * ph + 4 + rngNext(rng) * (ph - 8);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(SIZE, y + (rngNext(rng) - 0.5) * 6);
-      ctx.stroke();
-    }
+  for (let p = 0; p < planks; p++) board(ctx, rng, 0, p * ph + ph / 2, SIZE, p * ph + ph / 2, ph - 1.5 * PX, 0.85 + rngNext(rng) * 0.25);
+  // Knots in the planks.
+  for (let i = 0; i < 5; i++) {
+    const x = rngNext(rng) * SIZE;
+    const y = rngNext(rng) * SIZE;
+    ctx.fillStyle = 'rgba(90,55,25,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 4 * PX, 2 * PX, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
-  ctx.strokeStyle = 'rgba(70,45,20,0.9)';
-  ctx.lineWidth = 10;
-  ctx.strokeRect(5, 5, SIZE - 10, SIZE - 10);
-  return finish(canvas, 1.2);
+  const frame = 20 * PX;
+  const tone = (): number => 0.95 + rngNext(rng) * 0.15;
+  // The brace first, so the frame boards cover its ends.
+  board(ctx, rng, frame / 2, SIZE - frame / 2, SIZE - frame / 2, frame / 2, frame * 0.9, tone());
+  board(ctx, rng, 0, frame / 2, SIZE, frame / 2, frame, tone());
+  board(ctx, rng, 0, SIZE - frame / 2, SIZE, SIZE - frame / 2, frame, tone());
+  board(ctx, rng, frame / 2, frame, frame / 2, SIZE - frame, frame, tone());
+  board(ctx, rng, SIZE - frame / 2, frame, SIZE - frame / 2, SIZE - frame, frame, tone());
+  for (const x of [frame / 2, SIZE - frame / 2]) {
+    for (const y of [frame * 0.3, frame * 0.7, SIZE - frame * 0.3, SIZE - frame * 0.7]) nail(ctx, x + (rngNext(rng) - 0.5) * 4 * PX, y);
+  }
+  for (let p = 1; p < planks - 1; p++) {
+    nail(ctx, frame / 2, p * ph + ph / 2);
+    nail(ctx, SIZE - frame / 2, p * ph + ph / 2);
+  }
+  // Weathering: darker towards the bottom where the ground splashes it.
+  const grad = ctx.createLinearGradient(0, SIZE * 0.6, 0, SIZE);
+  grad.addColorStop(0, 'rgba(40,28,15,0)');
+  grad.addColorStop(1, 'rgba(40,28,15,0.22)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  return finish(canvas, 'crate');
 }
 
-/** Corrugated shipping-container steel; white so per-container tints show through. */
+/** Ribbed container steel, white so each container's tint shows through: rib shading, dirt streaks, rust and scratches. */
 function corrugated(): ProceduralTexture {
   const [canvas, ctx] = makeCanvas();
   const rng = createRng(41);
@@ -120,35 +238,104 @@ function corrugated(): ProceduralTexture {
   const ribs = 8;
   const ribW = SIZE / ribs;
   for (let i = 0; i < ribs; i++) {
+    // A trapezoid rib: flat face, shaded flank, dark valley, lit flank.
     const grad = ctx.createLinearGradient(i * ribW, 0, (i + 1) * ribW, 0);
-    grad.addColorStop(0, 'rgba(0,0,0,0.28)');
-    grad.addColorStop(0.5, 'rgba(255,255,255,0.12)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.28)');
+    grad.addColorStop(0, 'rgba(0,0,0,0.34)');
+    grad.addColorStop(0.15, 'rgba(0,0,0,0.12)');
+    grad.addColorStop(0.25, 'rgba(255,255,255,0.14)');
+    grad.addColorStop(0.6, 'rgba(255,255,255,0.1)');
+    grad.addColorStop(0.72, 'rgba(0,0,0,0.12)');
+    grad.addColorStop(0.88, 'rgba(0,0,0,0.3)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.34)');
     ctx.fillStyle = grad;
     ctx.fillRect(i * ribW, 0, ribW, SIZE);
   }
-  speckle(ctx, rng, 600, 0.18, false);
-  return finish(canvas, 2);
+  // Rain streaks running down from the top, seamless top to bottom (they run the whole tile).
+  for (let i = 0; i < 26; i++) {
+    const x = rngNext(rng) * SIZE;
+    const w = (1 + rngNext(rng) * 3) * PX;
+    ctx.fillStyle = rgba(40, 36, 30, 0.04 + rngNext(rng) * 0.08);
+    ctx.fillRect(x, 0, w, SIZE);
+  }
+  blotches(ctx, rng, 12, 4, 16, [120, 72, 34], 0.32); // rust spots
+  blotches(ctx, rng, 10, 20, 60, [60, 55, 48], 0.1); // grime
+  for (let i = 0; i < 14; i++) {
+    ctx.strokeStyle = rgba(255, 255, 255, 0.15 + rngNext(rng) * 0.2);
+    ctx.lineWidth = 0.6 * PX;
+    const x = rngNext(rng) * SIZE;
+    const y = rngNext(rng) * SIZE;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + (rngNext(rng) - 0.5) * 40 * PX, y + (rngNext(rng) - 0.5) * 10 * PX);
+    ctx.stroke();
+  }
+  speckle(ctx, rng, 900, 0.1, false);
+  return finish(canvas, 'corrugated');
 }
 
-/** Moulded plastic site barrier: light, slightly scuffed, darker kick strip at the base. */
+/** Diamond tread plate for steel ramps and floors: raised lozenges in alternating directions, worn shiny in places. */
+function steelPlate(): ProceduralTexture {
+  const [canvas, ctx] = makeCanvas();
+  const rng = createRng(47);
+  ctx.fillStyle = '#b4b8bc';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  blotches(ctx, rng, 14, 20, 70, [255, 255, 255], 0.14); // polished by boots
+  blotches(ctx, rng, 14, 20, 70, [70, 66, 60], 0.12);
+  const cells = 12;
+  const cell = SIZE / cells;
+  for (let i = 0; i < cells; i++) {
+    for (let j = 0; j < cells; j++) {
+      const x = (i + 0.5) * cell;
+      const y = (j + 0.5) * cell;
+      const angle = (i + j) % 2 === 0 ? Math.PI / 4 : -Math.PI / 4;
+      // A lit top edge and a shadowed lower one, so the lozenge reads as raised.
+      for (const [dx, dy, style] of [
+        [0.8, 0.8, 'rgba(40,40,42,0.45)'],
+        [-0.5, -0.5, 'rgba(255,255,255,0.55)'],
+        [0, 0, 'rgba(196,200,204,1)'],
+      ] as const) {
+        ctx.fillStyle = style;
+        ctx.beginPath();
+        ctx.ellipse(x + dx * PX, y + dy * PX, cell * 0.38, cell * 0.09, angle, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  speckle(ctx, rng, 3000, 0.14, false);
+  // A weld seam along the edge where plates meet.
+  ctx.fillStyle = 'rgba(50,50,52,0.6)';
+  ctx.fillRect(0, 0, SIZE, 1.5 * PX);
+  return finish(canvas, 'steelPlate');
+}
+
+/** Moulded plastic site barrier: white for its tint, faint moulding ridges and scuffs (the grime at its foot is shading). */
 function barrier(): ProceduralTexture {
   const [canvas, ctx] = makeCanvas();
   const rng = createRng(53);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, SIZE, SIZE);
-  speckle(ctx, rng, 900, 0.12, false);
-  ctx.fillStyle = 'rgba(0,0,0,0.14)';
-  ctx.fillRect(0, SIZE - 24, SIZE, 24);
-  return finish(canvas, 1);
+  for (let r = 0; r < 4; r++) {
+    const y = (r + 0.5) * (SIZE / 4);
+    const grad = ctx.createLinearGradient(0, y - 8 * PX, 0, y + 8 * PX);
+    grad.addColorStop(0, 'rgba(255,255,255,0)');
+    grad.addColorStop(0.45, 'rgba(255,255,255,0.25)');
+    grad.addColorStop(0.55, 'rgba(0,0,0,0.12)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y - 8 * PX, SIZE, 16 * PX);
+  }
+  speckle(ctx, rng, 2400, 0.1, false);
+  blotches(ctx, rng, 12, 8, 30, [80, 74, 64], 0.12);
+  return finish(canvas, 'barrier');
 }
 
-export type SurfaceTextures = Record<'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'barrier', ProceduralTexture>;
+export type SurfaceTextures = Record<SurfaceTextureId, ProceduralTexture>;
 
+/** Draws every surface texture (once per match). */
 export function createSurfaceTextures(): SurfaceTextures {
-  return { concrete: concrete(), blockWall: blockWall(), crate: crate(), corrugated: corrugated(), barrier: barrier() };
+  return { concrete: concrete(), blockWall: blockWall(), crate: crate(), corrugated: corrugated(), steelPlate: steelPlate(), barrier: barrier() };
 }
 
 export function disposeSurfaceTextures(t: SurfaceTextures): void {
-  for (const key of Object.keys(t) as (keyof SurfaceTextures)[]) t[key].texture.dispose();
+  for (const key of Object.keys(t) as SurfaceTextureId[]) t[key].texture.dispose();
 }

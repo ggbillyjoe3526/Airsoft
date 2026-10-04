@@ -21,8 +21,8 @@ import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
-import { addLighting } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes } from './render/mapMeshes';
+import { addLighting, type Daylight } from './render/lighting';
+import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
 import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './render/proceduralTextures';
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
 import type { Renderer } from './render/renderer';
@@ -69,7 +69,7 @@ export class RangeSession {
   private readonly mapGroup: THREE.Group;
   private readonly targets: RangeTargetsRenderer;
   private readonly readout: RangeReadout;
-  private readonly disposeLighting: () => void;
+  private readonly daylight: Daylight;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
@@ -100,9 +100,9 @@ export class RangeSession {
     const map = RANGE_MAP;
     this.loadout = setup.loadout;
     this.textures = createSurfaceTextures();
-    this.mapGroup = buildMapMeshes(map, this.textures);
+    this.mapGroup = buildMapMeshes(map, this.textures, quality.surfaceRelief);
     renderer.scene.add(this.mapGroup);
-    this.disposeLighting = addLighting(renderer.scene, map, quality);
+    this.daylight = addLighting(renderer.scene, map, quality);
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     const nav = buildNavGrid(map, NAV);
@@ -137,7 +137,7 @@ export class RangeSession {
     input.resetView(pose?.yaw ?? spawn.yaw);
     if (pose) input.pitch = pose.pitch;
 
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality);
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
     renderer.scene.add(this.targets.object);
@@ -210,6 +210,13 @@ export class RangeSession {
     this.combat.setMotion(scale);
   }
 
+  /** A new quality preset (Settings → Graphics, M14): as MatchSession.setQuality. */
+  setQuality(quality: QualitySettings): void {
+    this.daylight.setQuality(quality);
+    setMapRelief(this.mapGroup, quality.surfaceRelief);
+    this.combat.setQuality(quality);
+  }
+
   setPlaying(playing: boolean): void {
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;
@@ -226,7 +233,7 @@ export class RangeSession {
     this.renderer.scene.remove(this.mapGroup);
     disposeMapMeshes(this.mapGroup);
     disposeSurfaceTextures(this.textures);
-    this.disposeLighting();
+    this.daylight.dispose();
     this.physics.dispose();
     this.renderer.setZoom(1);
   }

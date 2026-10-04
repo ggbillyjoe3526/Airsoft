@@ -46,7 +46,8 @@ const SEGMENTS = [
   [0.043, 0.027, 0.021],
   [0.034, 0.021, 0.018],
 ];
-const FINGER_RADIUS = [0.0098, 0.0101, 0.0095, 0.0085];
+/** Finger radii (gloved), slimmed in the art pass (M14): the fuller ones read as thick on the pistol's grip. */
+const FINGER_RADIUS = [0.0087, 0.009, 0.0085, 0.0076];
 
 const toVec = (p: V3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], -p[2]);
 

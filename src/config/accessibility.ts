@@ -5,7 +5,7 @@ import { AUDIO } from './audio';
 
 export const REDUCED_MOTION_CHOICES: readonly { id: Switch; label: string; blurb: string }[] = [
   { id: 'off', label: 'Off', blurb: 'The replica bobs as you walk and sways as you turn, and the view tips as you lean.' },
-  { id: 'on', label: 'On', blurb: 'No weapon bob or sway, half the recoil kick and hit jolt, and a gentler tip as you lean.' },
+  { id: 'on', label: 'On', blurb: 'No weapon bob or sway, half the recoil kick and hit jolt, a gentler tip as you lean, and no drifting dust.' },
 ];
 
 /**
@@ -20,10 +20,12 @@ export const REDUCED_MOTION = {
   kick: 0.5,
   /** The view's roll as you lean (render/cameraRig.ts). */
   leanRoll: 0.25,
+  /** The dust motes drifting in the sunlight (render/dustMotes.ts, M14): shown at all (1) or not (0). */
+  dust: 0,
 } as const;
 
 /** Every movement at full size: reduced motion off. */
-export const FULL_MOTION: MotionScale = { bob: 1, sway: 1, kick: 1, leanRoll: 1 };
+export const FULL_MOTION: MotionScale = { bob: 1, sway: 1, kick: 1, leanRoll: 1, dust: 1 };
 
 export type MotionScale = { readonly [K in keyof typeof REDUCED_MOTION]: number };
 

@@ -4,12 +4,13 @@ import { expect, test } from '@playwright/test';
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
  * Difficulty pop-ups, a 2v2 picked, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2× scope, an
  * angled grip, a hi-cap and 0.28 g BBs, holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
- * down the scope and keeps running without a page error.
+ * down the scope, switches the graphics quality to Medium and back to Low mid-match and keeps running without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
  * a few frames a second, so the simulation runs slower than real time: assert on page text, never on frames,
- * and poll rather than wait fixed times.
+ * and poll rather than wait fixed times. It starts on Low (`?quality=low`): the art pass (M14) on Medium or High draws
+ * too slowly in software on a CI runner for the reload and range steps to finish in time.
  */
 test('the game boots, starts a match, fires, reloads and aims without errors', async ({ page }, testInfo) => {
   const errors: string[] = [];
@@ -19,7 +20,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   });
   const errorList = () => (errors.length > 0 ? errors.join(' | ') : 'none');
 
-  await page.goto('/?nolock&seed=1');
+  await page.goto('/?nolock&seed=1&quality=low');
   // Wait for the title screen or the boot's own failure text, whichever comes first.
   await page.waitForFunction(
     () => document.querySelector('.menu-title-start') !== null || /Failed/.test(document.getElementById('loading')?.textContent ?? ''),
@@ -226,6 +227,22 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
   });
+  // Graphics quality (M14): a saved picker on Settings → Graphics that applies at once (this visit started on Low).
+  // Medium turns the sun's shadows on in the match loaded and Low off again (the screenshots after this one show Low).
+  await pauseMenu.getByRole('button', { name: 'Settings' }).click();
+  await settings.getByRole('tab', { name: /Graphics/i }).click();
+  const quality = settings.getByRole('group', { name: 'Quality' });
+  const shadowsOn = () => page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
+  await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await shadowsOn()).toBe(false);
+  await quality.getByRole('button', { name: 'Medium' }).click();
+  await expect(quality.getByRole('button', { name: 'Medium' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await shadowsOn()).toBe(true);
+  await quality.getByRole('button', { name: 'Low' }).click();
+  await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await shadowsOn()).toBe(false);
+  await page.keyboard.press('Escape');
+  await expect(pauseMenu).toBeVisible();
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
 
@@ -294,7 +311,8 @@ test('the practice range opens from the title screen and reads out the last BB',
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
-  await page.goto('/?nolock&seed=1');
+  // Low, so the range draws fast enough in software on a CI runner (as the first test).
+  await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   await page.getByRole('button', { name: 'Practice range' }).click();
   const readout = page.locator('.range-readout');
@@ -381,7 +399,8 @@ test('the practice range opens from the title screen and reads out the last BB',
 test('the tutorial opens on the range with the coach', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
-  await page.goto('/?nolock&seed=1');
+  // Low, so the range draws fast enough in software on a CI runner (as the first test).
+  await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   const tutorial = page.getByRole('button', { name: /Tutorial/ });
   await expect(tutorial.locator('.menu-title-new')).toBeVisible();

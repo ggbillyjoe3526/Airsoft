@@ -74,13 +74,21 @@ export class FlagRenderer {
             : F.ringColor;
     this.ring.material.color.setHex(ringColor);
 
-    // Ripple: a travelling wave, growing from nothing at the pole to full at the free edge.
+    // Ripple: a travelling wave, growing from nothing at the pole to full at the free edge. The normals follow the
+    // wave's slope (M14), so the folds catch the sun.
     const pos = this.cloth.geometry.attributes.position!;
+    const normal = this.cloth.geometry.attributes.normal!;
+    const k = F.waveAmplitude / F.clothWidth;
     for (let i = 0; i < pos.count; i++) {
       const x = this.clothX[i]!;
-      pos.setZ(i, Math.sin(x * F.waveNumber - time * F.waveSpeed) * F.waveAmplitude * (x / F.clothWidth));
+      const phase = x * F.waveNumber - time * F.waveSpeed;
+      pos.setZ(i, Math.sin(phase) * k * x);
+      const slope = k * (Math.sin(phase) + x * F.waveNumber * Math.cos(phase));
+      const inv = 1 / Math.hypot(slope, 1);
+      normal.setXYZ(i, -slope * inv, 0, inv);
     }
     pos.needsUpdate = true;
+    normal.needsUpdate = true;
   }
 
   dispose(): void {

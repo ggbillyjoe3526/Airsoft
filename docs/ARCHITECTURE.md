@@ -64,9 +64,16 @@ ends the round). A hit character is eliminated
 - **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
   streams made from it (the bots' plans, each bot).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
-  `Renderer` and the sun's shadow take a quality preset (`config/render.ts` `QUALITY`: `high`, or
-  `?quality=low|medium|high` for a visit; fixed until the page reloads; the Settings picker is held back since M15b);
-  the debug overlay shows the preset, pixel ratio, draw calls and GPU object counts. `Renderer.setFov` applies the
+  Quality presets (`config/render.ts` `QUALITY`, picked on Settings → Graphics and saved, or `?quality=` for a visit)
+  scale the pixel ratio, shadows, surface relief, dust motes and the replica's sheen: `Game.changeQuality` applies a
+  new one at once through `Renderer.setQuality` and `MatchSession.setQuality` (the daylight, `setMapRelief`, and
+  `CombatPresentation.setQuality`); only antialiasing waits for the next load. The art pass (M14) is procedural:
+  `lighting.ts` (sun and sky fill) adds `atmosphere.ts` (the sky dome and the trees; the renderer's fog matches the
+  horizon); `proceduralTextures.ts` draws the surface textures; `mapMeshes.ts` turns each block into pieces (container
+  frames, wall copings, pallets, all inside the block's bounds) merged per texture, with grime shading near the ground.
+  Effects are pooled: `impactPuffs.ts` (impact dust tinted by material, hit puffs, a gas pistol's puffs; soft dots from
+  `softDot.ts`) and `dustMotes.ts` (faded out near the camera, size-capped, hidden with Reduced motion).
+  The debug overlay shows the preset, pixel ratio, draw calls and GPU object counts. `Renderer.setFov` applies the
   Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input (mouse buttons go into the keyboard as binding codes, `Mouse0` …, so every action binds to a key or a button); `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them, and runs the hold or toggle modes of crouch, aim and sprint. `sensitivity.ts` converts the sensitivity to cm/360.
@@ -105,8 +112,9 @@ ends the round). A hit character is eliminated
   dot; `input/playerInput.ts` turns at the aiming sensitivity meanwhile. Bots never aim down sights.
 - **sim/footsteps.ts**: after movement, emits `footstep` events every stride while running/sprinting and on hard
   landings; walking and crouched movement are silent.
-- **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured greybox
-  figures, a few meshes each on one material per figure), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
+- **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured
+  figures in casual airsoft kit with the team colour as tape, six looks by id (`FIGURE.looks`), six merged meshes
+  each on one material per figure, four drawn at once: legs, body, and the rifle, pistol or hit-call arms), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
   you're out, round messages (`ui/roundBanner.ts`, worded from your side) and the scoreboard (`ui/scoreboard.ts`:
   score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
   also the pole (`flagRenderer.ts`: pole, rippling cloth at the sim's height, ring at the rope's reach) and its
@@ -144,7 +152,7 @@ ends the round). A hit character is eliminated
   emit `footstep` events of kind `rattle`. Optics (`config/optics.ts`) carry their zoom, raise time and whether they
   are a scope (the HUD's eyepiece; the viewmodel hides while looking through one). Parts on the model are named
   `optic:<id>`, `grip:<id>`, `magazine:<id>` and shown when fitted.
-- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data.
+- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).
 - **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,

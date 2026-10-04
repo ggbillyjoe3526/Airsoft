@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FIGURE } from '../config/characters';
 import type { HitConfig } from '../config/hits';
+import type { ReplicaConfig } from '../config/replicas';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
 import { buildFigure, createCalloutTexture, disposeFigure, type Figure } from './characterModels';
@@ -52,6 +53,11 @@ export function flinchEnvelope(t: number): number {
   return k * k;
 }
 
+/** True if `c`'s active replica is a pistol (the figure holds it out in both hands; BBs and gas leave its muzzle). */
+export function holdsPistol(c: Character, loadout: readonly ReplicaConfig[]): boolean {
+  return loadout[c.armament.active]?.look.model === 'pistol';
+}
+
 /**
  * Draws every character as a third-person figure, interpolated between ticks: walk cycle, crouch,
  * aim pitch, and the hit-calling look (hand up, replica down, "HIT!" sign while calling).
@@ -59,7 +65,7 @@ export function flinchEnvelope(t: number): number {
  */
 export class CharacterRenderer {
   readonly object = new THREE.Group();
-  private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0 });
+  private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: FIGURE.roughness, metalness: 0 });
   private readonly calloutTexture = createCalloutTexture();
   private readonly calloutMaterial = new THREE.SpriteMaterial({ map: this.calloutTexture, transparent: true });
   private readonly figures: FigureState[] = [];
@@ -69,10 +75,12 @@ export class CharacterRenderer {
     private readonly characters: readonly Character[],
     teamColors: readonly number[],
     private readonly hits: HitConfig,
+    /** The replica in each loadout slot: a figure holds its active one (rifle or pistol pose). */
+    private readonly loadout: readonly ReplicaConfig[],
   ) {
     for (const c of characters) {
       const material = this.material.clone();
-      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial);
+      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id);
       this.object.add(figure.root);
       this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0 });
     }
@@ -137,6 +145,9 @@ export class CharacterRenderer {
       // In play: aiming. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
       const handUp = c.status === 'calling' || c.status === 'walkingOff' || c.status === 'leaving';
       f.aim.visible = !handUp;
+      const pistol = holdsPistol(c, this.loadout);
+      f.aimRifle.visible = !pistol;
+      f.aimPistol.visible = pistol;
       f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.prevPitch + (c.pitch - c.prevPitch) * alpha;
       f.hitPose.visible = handUp;
       f.callout.visible = c.status === 'calling';

@@ -5,20 +5,28 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-04 · M16 (tutorial), after M22 (squad orders)._
+_Last updated: 2026-10-04 · M14 (art pass), the last of Phase 4, after M16 (tutorial)._
 
 ## Where we are
 
 - **Phase 4 merged on `main`:** M12a–c, M11, M15, M15b, M13 audio, M19 match info, M17a and M17b Loadout, M18a and
-  M18b, M20 custom matches, M21 practice range, M22 squad orders and now **M16 tutorial** (see REVIEWS). Only **M14 art
-  pass** is left in Phase 4. The owner asked
-  (2026-10-04) for every remaining Phase 4 milestone, then a full code audit (Fable), its fixes (Opus), a bug pass, and
-  a note when Phase 4 is ready to playtest. For this run the owner chose "Claude merges": build threads merge their own
-  pull request once CI is green and the critic has accepted it (never tag, never push to `main` directly).
-- **Two build threads run side by side:** one does M22 squad orders → **M14 art pass** (built, in critic rework); the
-  other has done M20, M21 and M16 (finished). They conflict in docs and in
-  `matchSession.ts`, `game.ts`, `settings/storage.ts`, `config/controls.ts`, `sim/events.ts`: merge `main` in before
-  every push and keep both sides.
+  M18b, M20 custom matches, M21 practice range, M22 squad orders, M16 tutorial and now **M14 art pass** (see REVIEWS):
+  **Phase 4 is feature complete.** The owner asked (2026-10-04) for every remaining Phase 4 milestone, then a full
+  code audit (Fable), its fixes (Opus), a bug pass, and a note when Phase 4 is ready to playtest; the audit is next.
+  For this run the owner chose "Claude merges": threads merge their own pull request once CI is green and the critic
+  has accepted it (never tag, never push to `main` directly).
+- **Two build threads ran side by side** (M18b, M22, M14 in one; M20, M21, M16 in the other). They conflicted in docs
+  and in `matchSession.ts`, `game.ts`, `settings/storage.ts`, `config/controls.ts`, `sim/events.ts`: whoever works in
+  parallel next, merge `main` in before every push and keep both sides.
+
+## M14 in short
+
+- **All procedural** (the CC0 sites are blocked by the cloud environment's network policy): `render/lighting.ts`
+  (sun, sky dome, trees; `Daylight.setQuality`), `render/atmosphere.ts` (haze), `render/proceduralTextures.ts` and
+  `render/mapMeshes.ts` (surfaces, relief per quality), `render/characterModels.ts` with the six looks in
+  `config/characters.ts` (a torso team band, tested to read at range), `render/replicaModels.ts`, `render/impactPuffs.ts`
+  (gas puffs, dust by material), `render/dustMotes.ts` (hidden with reduced motion). Quality presets in
+  `config/render.ts` `QUALITY`; `MatchSession` and `RangeSession` both have `setQuality`.
 
 ## M16 in short
 

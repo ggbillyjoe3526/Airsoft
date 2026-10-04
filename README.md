@@ -183,8 +183,8 @@ the first public release. More modes, maps, replicas, loadouts and customisation
 arrives as a pull request that the owner reviews and merges. Later, development
 moves to an `alpha` branch and testing to a `beta` branch, and `main` only receives tested releases.
 
-**Not yet:** more maps or replicas, real art, and the menu items marked LATER (gas type, skins,
-graphics quality, voices for hit calls and squad orders).
+**Not yet:** more maps or replicas, downloaded (CC0) art (the art so far is generated in code), and the menu items
+marked LATER (gas type, skins, voices for hit calls and squad orders).
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels and Attack / Defend balance still need
 tuning from playtesting.
@@ -213,9 +213,9 @@ GitHub runs `npm run check` and the smoke test on every pull request and every p
 URL flag `?nolock` plays without pointer lock (for automated browsers; fire and wheel work, mouse look doesn't). It works only on the
 dev server and in the smoke test's build (`npm run build:e2e`), never in a normal release build.
 Each page load picks a fresh random seed (shown in the debug overlay); `?seed=N` (0 to 4294967295) replays one.
-The game runs on the `high` render preset; `?quality=low|medium|high` picks another for one visit (`medium` renders at
-standard resolution with smaller shadows, `low` also drops shadows and antialiasing). The Settings picker for it is
-held back until the art pass. The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
+The render preset is picked on Settings → Graphics → Quality (High by default, saved); `?quality=low|medium|high`
+overrides it for one visit (`medium` renders at standard resolution with smaller, harder shadows and less dust; `low`
+also drops shadows, antialiasing, surface relief, dust and the replica's sheen). The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
 On the dev server and in the smoke test's build, `window.airsoft` exposes the running game.
 
 ### Layout
