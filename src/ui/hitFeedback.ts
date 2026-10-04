@@ -1,4 +1,6 @@
 import { HITS } from '../config/hits';
+import { restartAnimation } from './restartAnimation';
+import { spokenRoundMessage } from './roundBanner';
 
 /**
  * Hit feedback and round messages over the game view: the hit marker when your BB lands, the "you're
@@ -14,6 +16,10 @@ export class HitFeedback {
   private readonly out: HTMLDivElement;
   private readonly spectating: HTMLDivElement;
   private readonly round: HTMLDivElement;
+  /** Read out by a screen reader (audit UI-15): your hit call at once, the round's news when the player can listen. */
+  private readonly urgent: HTMLDivElement;
+  private readonly news: HTMLDivElement;
+  private spokenRound = '';
   private shownSpectating = '';
   private shownFireKey = '';
   private shownRound = '';
@@ -36,7 +42,9 @@ export class HitFeedback {
       <div class="hitfx-banner"><strong>HIT!</strong><span>You called your hit</span></div>
       <div class="hitfx-out"></div>
       <div class="hitfx-spectating"></div>
-      <div class="hitfx-round"></div>`;
+      <div class="hitfx-round"></div>
+      <div class="sr-only" aria-live="assertive"></div>
+      <div class="sr-only" aria-live="polite"></div>`;
     // The hit-direction wedge fades over the hit call, so it's gone just as calling ends (setCalling) rather than cut off.
     this.root.style.setProperty('--hit-call', `${HITS.callTime}s`);
     parent.appendChild(this.root);
@@ -48,6 +56,7 @@ export class HitFeedback {
     this.out = q('.hitfx-out');
     this.spectating = q('.hitfx-spectating');
     this.round = q('.hitfx-round');
+    [this.urgent, this.news] = [...this.root.querySelectorAll<HTMLDivElement>('.sr-only')] as [HTMLDivElement, HTMLDivElement];
   }
 
   setVisible(visible: boolean): void {
@@ -64,14 +73,14 @@ export class HitFeedback {
   /** Your BB hit someone. `friendly` marks a teammate (friendly fire counts, as at a real site). */
   showHitMarker(friendly: boolean): void {
     this.marker.classList.toggle('friendly', friendly);
-    restart(this.marker, 'show');
+    restartAnimation(this.marker, 'show');
   }
 
   /** You've been hit: flash, and show where it came from (see setHitDirection). */
   showHit(fromAngle: number): void {
     this.setHitDirection(fromAngle);
-    restart(this.flash, 'show');
-    restart(this.direction, 'show');
+    restartAnimation(this.flash, 'show');
+    restartAnimation(this.direction, 'show');
   }
 
   /**
@@ -90,6 +99,7 @@ export class HitFeedback {
     if (calling === this.shownCalling) return;
     this.shownCalling = calling;
     this.banner.classList.toggle('show', calling);
+    this.urgent.textContent = calling ? 'Hit! You called your hit.' : '';
     if (!calling) this.direction.classList.remove('show'); // it points relative to a view you no longer have
   }
 
@@ -98,6 +108,7 @@ export class HitFeedback {
     if (text === this.shownOut) return;
     this.shownOut = text;
     this.out.textContent = text;
+    if (text) this.news.textContent = text;
     this.out.classList.toggle('show', text !== '');
   }
 
@@ -118,6 +129,10 @@ export class HitFeedback {
     this.shownRound = text;
     this.round.textContent = text;
     this.round.classList.toggle('show', text !== '');
+    // Without the countdown, so the reader says the result once rather than every second.
+    const spoken = spokenRoundMessage(text);
+    if (spoken && spoken !== this.spokenRound) this.news.textContent = spoken;
+    this.spokenRound = spoken;
   }
 
   dispose(): void {
@@ -125,9 +140,3 @@ export class HitFeedback {
   }
 }
 
-/** Restarts a CSS animation by toggling its class across a reflow. */
-function restart(el: HTMLElement, cls: string): void {
-  el.classList.remove(cls);
-  void el.offsetWidth;
-  el.classList.add(cls);
-}

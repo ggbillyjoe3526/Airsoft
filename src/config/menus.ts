@@ -15,6 +15,8 @@ export const BROWSER_NOTES = {
   graphicsLost: 'Graphics reset. The graphics card dropped the game for a moment; waiting for it to come back…',
   /** On the pause menu once it's back. */
   graphicsBack: 'Graphics are back. Resume when you’re ready.',
+  /** Under the menus' buttons when the browser won't let the game's sound start (audit CORE-21). */
+  audioBlocked: 'Sound is blocked by the browser. Allow audio (autoplay) for this site in its settings to hear the game.',
 } as const;
 
 /** The Loadout screen's words (M26b). */
@@ -145,3 +147,9 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   accessibility: [],
   dev: [],
 };
+
+/**
+ * A slider's change is written to the browser's storage this long (ms) after the last step, not on every step (audit
+ * UI-11 / CORE-12): a drag writes the settings once. It applies at once either way.
+ */
+export const SETTINGS_WRITE_DELAY_MS = 400;

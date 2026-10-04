@@ -1,5 +1,5 @@
 import { TEAMS } from '../config/teams';
-import { halfTimeAfterRound, type RoundRules, type RoundState } from '../sim/round';
+import { halfTimeAfterRound, roundDrawn, type RoundRules, type RoundState } from '../sim/round';
 
 /**
  * The round message in the middle of the screen, worded from your side: the result of the round just
@@ -17,10 +17,22 @@ export function roundBanner(r: RoundState, playerTeam: number, showStart: boolea
     else if (flagMode && r.reason === 'time') result = mine ? "Time's up · your team held the pole" : `Time's up · ${winner} held the pole`;
     else if (r.winner < 0) result = r.reason === 'time' ? "Time's up · draw" : 'Draw';
     else result = mine ? 'Your team wins the round' : `Your team loses the round (${winner} wins)`;
+    // A draw is played again (audit SIM-19): same round, same ends, so no half-time after it.
+    if (roundDrawn(r)) return `${result} · round ${r.number} again in ${secondsToNext}`;
     const halfTime = halfTimeAfterRound(r.number, rules) ? (flagMode ? ' · half-time, sides swap' : ' · half-time, ends swap') : '';
-    return `${result}${halfTime} · next round in ${secondsToNext}`;
+    return `${result}${halfTime}${NEXT_ROUND}${secondsToNext}`;
   }
   if (!showStart) return '';
   if (!flagMode) return `Round ${r.number}`;
-  return r.attackers === playerTeam ? `Round ${r.number} · Attack: raise your flag on their pole` : `Round ${r.number} · Defend your pole`;
+  // Short, so it fits on one line beside the hit feed at 1280 px (KNOWN_ISSUES row 138): the scoreboard says the rest.
+  return r.attackers === playerTeam ? `Round ${r.number} · Attack` : `Round ${r.number} · Defend`;
+}
+
+/** Before the countdown in the between-rounds message. */
+const NEXT_ROUND = ' · next round in ';
+
+/** The round message as a screen reader says it (audit UI-15): without the countdown, which changes every second. */
+export function spokenRoundMessage(text: string): string {
+  const at = text.indexOf(NEXT_ROUND);
+  return at < 0 ? text : text.slice(0, at);
 }

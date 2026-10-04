@@ -9,7 +9,7 @@ import type { Vec3 } from './vec';
 
 /** How a match is played (config/hits.ts ROUNDS). */
 export interface RoundRules {
-  /** Round length (s). Elimination: a round that runs out of time is a draw. Flag: the defenders win. */
+  /** Round length (s). Elimination: a round that runs out of time is a draw, played again. Flag: the defenders win. */
   roundTime: number;
   /** Seconds between a round ending and the next one starting. */
   resetDelay: number;
@@ -44,7 +44,8 @@ export interface RoundContext {
 
 /**
  * Match flow: rounds against the clock. In both modes a team with nobody left in play loses the round.
- * Elimination: if time runs out first the round is a draw. Attack / Defend: the attackers win by raising
+ * Elimination: if time runs out first the round is a draw. A draw (both teams out at once, in either mode) is played
+ * again under the same number. Attack / Defend: the attackers win by raising
  * their flag on the defenders' pole, the defenders by holding out until time runs out (with overtime
  * while the attackers are still working the rope). The teams swap ends at half-time in both modes (in
  * Attack / Defend that swaps attack and defence too). After a short pause everyone respawns for the next
@@ -52,7 +53,10 @@ export interface RoundContext {
  */
 export interface RoundState {
   mode: MatchMode;
+  /** The round being played (from 1). A drawn round is played again under the same number (owner, audit SIM-19). */
   number: number;
+  /** Rounds drawn so far this match (each replayed, so not counted in `number`). */
+  draws: number;
   /** 'live': playing; 'over': between rounds; 'matchOver': a team has won the match. */
   phase: 'live' | 'over' | 'matchOver';
   /** Seconds left in the live round. */
@@ -80,6 +84,7 @@ export function createRoundState(rules: RoundRules, mode: MatchMode = 'eliminati
   const round: RoundState = {
     mode,
     number: 1,
+    draws: 0,
     phase: 'live',
     clock: rules.roundTime,
     overtime: 0,
@@ -93,6 +98,11 @@ export function createRoundState(rules: RoundRules, mode: MatchMode = 'eliminati
   };
   setUpObjective(round, rules, pole);
   return round;
+}
+
+/** The last finished round was a draw (time out in elimination, or both teams out at once): it is played again. */
+export function roundDrawn(round: RoundState): boolean {
+  return round.winner !== 0 && round.winner !== 1;
 }
 
 /** Flag mode: the team attacking in round `number` (they swap after rules.halfTimeAfter rounds). */
@@ -146,7 +156,9 @@ export function stepRound(round: RoundState, characters: Character[], bbs: BBPoo
   if (round.phase === 'matchOver') return;
   if (round.phase === 'over') {
     round.timer -= dt;
-    if (round.timer <= 0) startRound(round, characters, bbs, ctx, events, round.number + 1);
+    // A drawn round is played again (owner, 2026-10-04, audit SIM-19): same number, same ends, so draws never use up
+    // the match's rounds or move half-time, and the decider stays in the second half.
+    if (round.timer <= 0) startRound(round, characters, bbs, ctx, events, roundDrawn(round) ? round.number : round.number + 1);
     return;
   }
 
@@ -194,6 +206,7 @@ export function restartMatch(round: RoundState, characters: Character[], bbs: BB
   round.mode = mode;
   round.score[0] = 0;
   round.score[1] = 0;
+  round.draws = 0;
   round.matchWinner = -1;
   round.winner = -1;
   round.reason = 'eliminated';
@@ -204,7 +217,8 @@ function endRound(round: RoundState, winner: number, reason: RoundEndReason, rul
   round.winner = winner;
   round.reason = reason;
   events.push({ type: 'roundOver', winner, reason });
-  if (winner === 0 || winner === 1) {
+  if (winner !== 0 && winner !== 1) round.draws++;
+  else {
     round.score[winner]++;
     if (round.score[winner] >= rules.winsNeeded) {
       round.phase = 'matchOver';

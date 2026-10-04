@@ -28,6 +28,15 @@ export function isInPlay(c: Character): boolean {
 }
 
 /**
+ * Out of play and standing in the dead zone since before this tick (audit SIM-15): nothing moves it until the next
+ * round, so the simulation skips its movement, lean and accuracy steps (two Rapier calls a tick each). The tick it
+ * arrives (statusTime still 0) runs as usual, so a character placed on its spot after leaving the field settles there.
+ */
+export function isParked(c: Character): boolean {
+  return c.status === 'out' && c.grounded && c.statusTime > 0;
+}
+
+/**
  * Eliminates `victim` (no-op if already out of play) and picks its dead-zone spot (the next free one for
  * its team, in the order teammates were hit). The route there is searched by `planWalkOffRoutes` over the
  * following ticks, never inside the hit (M27): a route search is the one costly thing a hit could do in a tick.
@@ -85,6 +94,11 @@ export function fillEliminatedCommand(c: Character, cfg: HitConfig, out: PlayerC
   out.fire = false;
   out.reload = false;
   out.switchTo = -1;
+  // Every field, so a reused command (a test, a replay) never leaves a hit character leaning, aiming or cycling its
+  // selector (audit SIM-11).
+  out.lean = 0;
+  out.aim = false;
+  out.cycleFireMode = false;
   out.yaw = c.yaw;
   out.forward = 0;
   if (c.status !== 'walkingOff') return out;

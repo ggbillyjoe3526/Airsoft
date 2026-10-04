@@ -50,12 +50,50 @@ describe('KeyBindings', () => {
     expect(b.primary('aim')).toBe('Mouse2');
   });
 
-  it('rebinding gives the action only the new key (no hidden extra keys left working)', () => {
+  it('rebinding the main key keeps the second one, shown in its own column (audit UI-05)', () => {
     const b = new KeyBindings(null);
     expect(b.rebind('forward', 'KeyI')).toBe(true);
-    expect(b.codes('forward')).toEqual(['KeyI']);
+    expect(b.codes('forward')).toEqual(['KeyI', 'ArrowUp']);
     expect(b.actionOf('KeyW')).toBeUndefined();
-    expect(b.actionOf('ArrowUp')).toBeUndefined();
+    expect(b.actionOf('ArrowUp')).toBe('forward');
+  });
+
+  it('binds a second key in slot 1, and an action\'s own second key swaps places with its main key (audit UI-05)', () => {
+    const b = new KeyBindings(null);
+    expect(b.rebind('reload', 'KeyT', 1)).toBe(true);
+    expect(b.codes('reload')).toEqual(['KeyR', 'KeyT']);
+    expect(b.rebind('reload', 'KeyT', 0)).toBe(true);
+    expect(b.codes('reload')).toEqual(['KeyT', 'KeyR']);
+    expect(b.rebind('reload', 'KeyY', 2)).toBe(false); // two slots only
+  });
+
+  it('a second key taken from another action\'s only key leaves that action unbound, unless it is essential', () => {
+    const b = new KeyBindings(null);
+    expect(b.rebind('jump', 'KeyC', 1)).toBe(true);
+    expect(b.codes('jump')).toEqual(['Space', 'KeyC']);
+    expect(b.codes('crouch')).toEqual([]);
+    // Fire's only button can't go to an empty second slot: fire would have none.
+    expect(b.strands('aim', 'Mouse0', 1)).toBe('fire');
+    expect(b.rebind('aim', 'Mouse0', 1)).toBe(false);
+    expect(b.primary('fire')).toBe('Mouse0');
+    // Into the main slot it swaps as always, so fire keeps a button.
+    expect(b.strands('aim', 'Mouse0', 0)).toBeNull();
+  });
+
+  it('clears a key with unbind; the second key moves up; an essential action keeps its last key (audit UI-05)', () => {
+    const store = new MemoryStore();
+    const b = new KeyBindings(store);
+    expect(b.unbind('forward', 0)).toBe(true);
+    expect(b.codes('forward')).toEqual(['ArrowUp']);
+    expect(b.unbind('forward', 0)).toBe(false); // the last key of Move forward
+    expect(b.unbind('jump', 0)).toBe(true);
+    expect(b.codes('jump')).toEqual([]);
+    expect(b.unbind('jump', 0)).toBe(false); // nothing to clear
+    expect(b.unbind('debugOverlay', 0)).toBe(false);
+    // Kept so in a new session.
+    const again = new KeyBindings(store);
+    expect(again.codes('jump')).toEqual([]);
+    expect(again.codes('forward')).toEqual(['ArrowUp']);
   });
 
   it('names the main key for on-screen hints, following a rebind', () => {
@@ -114,7 +152,7 @@ describe('KeyBindings', () => {
     a.rebind('walk', 'ControlLeft');
     const b = new KeyBindings(store);
     expect(b.primary('walk')).toBe('ControlLeft');
-    expect(b.actionOf('ShiftRight')).toBeUndefined();
+    expect(b.codes('walk')).toEqual(['ControlLeft', 'ShiftRight']); // the second key stays (audit UI-05)
   });
 
   it('resets to the defaults and notifies listeners', () => {
@@ -145,8 +183,10 @@ describe('KeyBindings', () => {
 
   it('falls back to the defaults when saved data would leave an action without a key', () => {
     const store = new MemoryStore();
-    store.setItem('airsoft.keyBindings', JSON.stringify({ jump: [] }));
-    expect(new KeyBindings(store).codes('jump')).toEqual(['Space']);
+    // A cleared action stays cleared (audit UI-05), but an essential one never loads with no key.
+    store.setItem('airsoft.keyBindings', JSON.stringify({ jump: [], forward: [] }));
+    expect(new KeyBindings(store).codes('jump')).toEqual([]);
+    expect(new KeyBindings(store).codes('forward')).toEqual(['KeyW', 'ArrowUp']);
     // Forward takes Crouch's only key: Crouch would end up with none.
     store.setItem('airsoft.keyBindings', JSON.stringify({ forward: ['KeyC'], crouch: ['KeyC'] }));
     const b = new KeyBindings(store);
@@ -228,6 +268,19 @@ describe('bindable', () => {
     expect(bindable('Mouse3')).toBe(true);
     for (const code of ['', 'Unidentified', 'Escape', 'MetaLeft', 'ContextMenu']) expect(bindable(code)).toBe(false);
   });
+
+  it('refuses the browser\'s own keys: reload, fullscreen, developer tools, navigation (audit UI-07)', () => {
+    for (const code of ['F5', 'F11', 'F12', 'BrowserBack', 'BrowserForward', 'BrowserRefresh', 'PrintScreen', 'Pause']) expect(bindable(code)).toBe(false);
+    expect(bindable('F10')).toBe(true);
+    expect(bindable('WheelUp')).toBe(true);
+    expect(new KeyBindings(null).rebind('reload', 'F5')).toBe(false);
+  });
+
+  it('drops a saved binding on a key that is no longer bindable, keeping the default', () => {
+    const store = new MemoryStore();
+    store.setItem('airsoft.keyBindings', JSON.stringify({ reload: ['F5'] }));
+    expect(new KeyBindings(store).codes('reload')).toEqual(['KeyR']);
+  });
 });
 
 describe('describeKeys', () => {
@@ -254,5 +307,38 @@ describe('keyLabel', () => {
     expect(keyLabel(mouseButtonCode(3))).toBe('Mouse 4');
     expect(keyLabel(mouseButtonCode(4))).toBe('Mouse 5');
     expect(keyLabel('Mouse7')).toBe('Mouse 8');
+    expect(keyLabel('WheelUp')).toBe('Wheel up');
+    expect(keyLabel('WheelDown')).toBe('Wheel down');
+  });
+
+  it('names a key by what the player\'s layout prints on it, keeping digits, arrows and named keys (audit UI-01)', () => {
+    const azerty = new Map([
+      ['KeyW', 'z'],
+      ['KeyA', 'q'],
+      ['KeyZ', 'w'],
+      ['Digit1', '&'],
+      ['BracketRight', '$'],
+    ]);
+    expect(keyLabel('KeyW', azerty)).toBe('Z');
+    expect(keyLabel('KeyZ', azerty)).toBe('W');
+    expect(keyLabel('BracketRight', azerty)).toBe('$');
+    expect(keyLabel('Digit1', azerty)).toBe('1');
+    expect(keyLabel('KeyR', azerty)).toBe('R'); // not in the map: by code
+    expect(keyLabel('ShiftLeft', azerty)).toBe('Left Shift');
+    expect(keyLabel('KeyW')).toBe('W'); // no layout (Firefox): US names
+    expect(describeKeys(['KeyW', 'ArrowUp'], azerty)).toBe('Z / ↑');
+  });
+
+  it('follows a layout set on the bindings, telling listeners so hints rename', () => {
+    const b = new KeyBindings(null);
+    let changes = 0;
+    b.onChange(() => changes++);
+    expect(b.hasLayout).toBe(false);
+    b.setLayout(new Map([['KeyZ', 'y']]));
+    expect(b.label('orderWheel')).toBe('Y');
+    expect(b.keyName('KeyZ')).toBe('Y');
+    expect(b.hasLayout).toBe(true);
+    b.setLayout(new Map([['KeyZ', 'y']])); // the same layout read again: no change
+    expect(changes).toBe(1);
   });
 });

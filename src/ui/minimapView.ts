@@ -22,6 +22,18 @@ export function toMinimap(yaw: number, cx: number, cz: number, x: number, z: num
   return out;
 }
 
+/** Whether (x, y) lies inside the circle at (cx, cy) of radius `r` (a marker under the minimap; audit UI-13). */
+export function insideCircle(x: number, y: number, cx: number, cy: number, r: number): boolean {
+  const dx = x - cx;
+  const dy = y - cy;
+  return r > 0 && dx * dx + dy * dy <= r * r;
+}
+
+/** The minimap canvas's pixels per CSS pixel on a screen of `devicePixelRatio`: 1 to MINIMAP.maxPixelRatio. */
+export function minimapPixelRatio(devicePixelRatio: number | undefined): number {
+  return Math.min(MINIMAP.maxPixelRatio, Math.max(1, devicePixelRatio || 1));
+}
+
 /** Pulls `p` back onto a circle of `radius` round the middle if it's further out; true if it was. */
 export function clampToRim(p: MapPoint, radius: number): boolean {
   const d = Math.hypot(p.x, p.y);

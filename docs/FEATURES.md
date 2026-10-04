@@ -8,7 +8,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Walk (hold Shift, quiet), run, sprint (Alt, no shooting for a moment) and a small jump (Phase 1, M1)
 - Crouch, as a hold or a toggle (Phase 1, M12a)
 - Lean left and right with Q and E to peek round cover; leaning slows you to walking pace (M7b)
-- Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air (M10)
+- Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air; crouch-walking is slightly less accurate than standing still (M10, FA1)
 
 ## Replicas and BBs
 
@@ -27,7 +27,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - One hit and you're out: a tick, a hit marker, hand up, walk to the dead zone, then spectate your team (Phase 1)
 - Bots always call their hits (Phase 1)
 - Friendly fire, on by default, as a match setting (Phase 1, M20)
-- Hit flinch, impact puffs and a crosshair that opens with your real spread (M3, M10)
+- Hit flinch, impact puffs that show at once and a crosshair that opens with your real spread (M3, M10, M28)
 
 ## Bots
 
@@ -64,34 +64,41 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Menus and settings
 
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
+- Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons too), Crosshair, HUD, Accessibility (M15, M18a, M19, M24)
-- Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle (M18a)
-- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear (M24, M26d)
+- Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA5)
+- Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
+- Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
+- HUD size slider (0.8–1.5) in Settings > HUD (FA5)
+- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy (M24, M26d, FA1)
 - The build's version on the title screen (M24)
 
 ## HUD and match info
 
-- Crosshair with the spread gap; shape, size, thickness, gap, outline and colour from Settings (Phase 1, M19)
+- Crosshair with the spread gap; shape, size, thickness, gap, outline, colour, opacity and static gap option from Settings (Phase 1, M19, FA5)
 - Ammo and magazine gauges; the empty-magazine hint names your reload key (Phase 1, M8)
 - Round clock, score, round banners worded from your side (Phase 1)
-- Hit feed, teammate markers, the scoreboard on Tab, round stats between rounds (M19)
+- Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
 - End-of-match summary with your stats and local records (wins, accuracy, streaks) (M19)
 
 ## Squad orders and minimap
 
-- Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan; a HUD line shows the order (M22, M23)
+- Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan showing each order's key; a HUD line shows the order (M22, M23, FA5)
 - A minimap: the field, teammates always, the other team where last heard (M23)
 
 ## Audio
 
 - Every sound is synthesised: replica shots by power source (electric, gas), the AEG motor winding up and down (M2, M13)
 - Footsteps by surface, landing thuds, kit rustle when you crouch, stand or lean (M2, M13)
-- Sounds you can locate by ear, muffled through walls; BB impacts sound by material (M13)
+- Sounds you can locate by ear, muffled through walls and when eliminated; BB impacts sound by material; world sounds carry further (M13, FA6)
+- Getting hit and the round and match whistles briefly dip the rest of the mix (FA6)
+- Outdoor ambience with distant birds plays during play (FA6)
+- Pause fades audio in 30 ms; hint when the browser blocks audio (FA6)
 - Master, effects and interface volume sliders (M13)
 
 ## Graphics and art
 
+- Dark loading screen with a progress bar for the physics module; favicon and web manifest (FA9)
 - Procedural daylight with a sky, haze and trees; dressed Depot surfaces and props; figures in airsoft kit with team tape (M14)
 - Gas puffs, impact dust by material, dust in the sunlight (M3, M14)
 - Quality presets Low, Medium and High, switchable mid-match; Low is picked on its own for software rendering (M14)
@@ -99,13 +106,14 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Practice range and tutorial
 
-- A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB (M21)
+- A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
 - A tutorial of ten coached steps on the range, with your own key bindings (M16)
 
 ## Accessibility and comfort
 
 - Team colour sets checked for colour blindness, patterns on the gauges, on-screen sound cues round the crosshair (M18b)
-- Reduced motion, pause on a hidden tab, recovery from a lost graphics context, fullscreen on F10 (M18a, M18b)
+- High-contrast styling; hit, out and round messages read by screen readers (FA5)
+- Reduced motion, pause on a hidden tab or when the window loses focus, recovery from a lost graphics context, fullscreen on F10 (M18a, M18b, FA6)
 
 ## Developer and debug
 

@@ -5,7 +5,8 @@ import { cues, type ImpactMaterial, type ShotProfile, type SoundCue } from '../c
 import type { MapBlock } from '../map/mapTypes';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
-import type { Vec3 } from '../sim/vec';
+import { vec3, type Vec3 } from '../sim/vec';
+import { Birdsong } from './ambience';
 import type { AudioEngine } from './audioEngine';
 import { FoleyTracker, type FoleyMove } from './foley';
 import { MotorSound } from './motor';
@@ -34,6 +35,10 @@ interface Channel {
   gain: GainNode;
   /** The blocked share last applied (-1 before the first update). */
   share: number;
+  /** Where the panner was last put (the character's feet), so a character standing still costs no writes (CORE-35). */
+  x: number;
+  y: number;
+  z: number;
 }
 
 interface ReplicaSound {
@@ -64,8 +69,17 @@ function jitter(spread: number): number {
 export class Sfx {
   /** The engine's context, once this match's graph is built on it (null before unlock, without audio, and after dispose). */
   private ctx: AudioContext | null = null;
-  /** In-world sounds go here: straight to the effects bus plus a send to the yard's reverb. */
+  /** In-world sounds go here, then through the "you're out" muffling to the effects bus and the yard's reverb. */
   private world: GainNode | null = null;
+  /** The world heard from the side line while you're out (AUDIO.out; audit CORE-30/34): a low-pass and a level. */
+  private outFilter: BiquadFilterNode | null = null;
+  private outLevel: GainNode | null = null;
+  /** You were out when the last tick looked. */
+  private playerOut = false;
+  /** The outdoor bed's two looping copies, once play has started (audit CORE-34). */
+  private readonly bed: AudioBufferSourceNode[] = [];
+  private readonly birds = new Birdsong();
+  private readonly birdAt = vec3();
   /** Your own sounds: centred, into the world (so they echo too). */
   private self: GainNode | null = null;
   /** Interface cues and the whistle: dry, into the interface bus. */
@@ -110,8 +124,12 @@ export class Sfx {
    */
   setPaused(paused: boolean): void {
     if (!this.ctx) return;
-    for (const outlet of this.outlets) outlet.gain.value = paused ? 0 : 1;
-    this.engine.setRunning(!paused);
+    // Eased, not jumped, so Esc and Resume don't click mid-sound (audit CORE-02); paused, the context is suspended
+    // once the fade is done.
+    const t = this.ctx.currentTime;
+    for (const outlet of this.outlets) outlet.gain.setTargetAtTime(paused ? 0 : 1, t, AUDIO.pauseFade / 4);
+    if (!paused) this.startAmbience();
+    this.engine.setRunning(!paused, paused ? AUDIO.pauseFade : 0);
   }
 
   /**
@@ -140,14 +158,18 @@ export class Sfx {
     const effects = ctx.createGain();
     effects.connect(this.engine.bus('effects')!);
     this.world = ctx.createGain();
-    this.graph.push(effects, this.world);
-    this.world.connect(effects);
+    this.outFilter = ctx.createBiquadFilter();
+    this.outFilter.type = 'lowpass';
+    this.outFilter.frequency.value = AUDIO.occlusion.openHz;
+    this.outLevel = ctx.createGain();
+    this.graph.push(effects, this.world, this.outFilter, this.outLevel);
+    this.world.connect(this.outFilter).connect(this.outLevel).connect(effects);
     const reverb = ctx.createConvolver();
     reverb.buffer = this.engine.reverbImpulse();
     const wet = ctx.createGain();
     wet.gain.value = AUDIO.reverb.wet;
     this.graph.push(reverb, wet);
-    this.world.connect(reverb).connect(wet).connect(effects);
+    this.outLevel.connect(reverb).connect(wet).connect(effects);
     this.self = ctx.createGain();
     this.self.connect(this.world);
     this.ui = ctx.createGain();
@@ -194,15 +216,24 @@ export class Sfx {
     l.upZ.value = 0;
   }
 
-  /** Once per rendered frame, after setListener: moves every other character's channel to them. */
+  /**
+   * Once per rendered frame, after setListener: moves every other character's channel to them. Their channels are
+   * made on the first frame; after that one is moved only when its character has moved, and not at all while they're
+   * out of earshot or out in the dead zone (audit CORE-35): their next sound puts the channel where they are.
+   */
   placeSources(characters: readonly Character[], localId: number): void {
     if (!this.ctx) return;
     for (const c of characters) {
-      if (c.id !== localId) this.placePanner(this.channel(c).panner, c.position, AUDIO.spatial.sourceHeight);
+      if (c.id === localId) continue;
+      const ch = this.channelOf(c);
+      if (c.status !== 'out' && this.distanceTo(c.position) <= AUDIO.spatial.maxDistance) this.follow(ch, c.position);
     }
   }
 
-  /** After every simulation tick: muffling, and the rustle of anyone starting to crouch, stand or lean. */
+  /**
+   * After every simulation tick: muffling, the world muffled while you're out, the ambience's birds, and the rustle of
+   * anyone starting to crouch, stand or lean.
+   */
   afterTick(characters: readonly Character[], localId: number): void {
     this.simTime += SIM_DT;
     if (!this.ctx) return;
@@ -214,6 +245,8 @@ export class Sfx {
       m.spinDown = this.play('motor.spinDown', m.out, AUDIO.levels.motor);
     }
     this.updateMuffling(characters, localId);
+    this.updateOut(characters, localId);
+    if (this.listenerPlaced && this.birds.due(this.simTime, this.listener, this.birdAt)) this.oneShot('ambience.bird', this.birdAt, AUDIO.levels.bird);
     this.foley.update(characters, (c, move) => this.foleyMove(c, move, localId));
   }
 
@@ -262,6 +295,8 @@ export class Sfx {
       case 'characterHit': {
         if (e.victimId === localId) {
           this.play('hitTick', this.ui!, L.hitTick);
+          // The one cue that must be read: the world dips under it (audit CORE-30).
+          this.engine.duck(AUDIO.duck.hit);
           return;
         }
         // On the victim's own channel: muffled with them if they're behind cover.
@@ -284,16 +319,18 @@ export class Sfx {
       }
       case 'targetHit':
         // The practice range (M21): steel rings, a plywood figure knocks; your own hit gets the hit marker's "tock".
-        if (e.kind === 'steel') this.oneShot('steelRing', e.position, L.steelRing);
-        else this.oneShot(cues.impact('wood'), e.position, L.impact);
+        if (e.kind === 'steel') this.oneShot('steelRing', e.position, L.steelRing, AUDIO.spatial.targetMaxDistance);
+        else this.oneShot(cues.impact('wood'), e.position, L.impact, AUDIO.spatial.targetMaxDistance);
         if (e.shooterId === localId) this.play('hitMarker', this.ui!, L.hitMarker);
         return;
       case 'roundOver':
         this.whistle?.blast(AUDIO.roundOverWhistle, 0);
+        this.engine.duck(AUDIO.duck.whistle);
         return;
       case 'matchOver':
         // Extra long blasts after the round's: game over.
         for (let i = 0; i < AUDIO.matchOverBlasts; i++) this.whistle?.blast(AUDIO.roundOverWhistle, matchOverBlastStart(i));
+        this.engine.duck(AUDIO.duck.whistle);
         return;
       case 'flagRope':
         this.oneShot(e.raising ? 'rope.up' : 'rope.down', e.position, L.rope);
@@ -309,7 +346,9 @@ export class Sfx {
    * audit L-15). Rate-limited so full auto doesn't become a hiss.
    */
   impact(at: Vec3, material: ImpactMaterial): void {
-    if (this.ctx && this.impactLimit.take(this.ctx.currentTime)) this.oneShot(cues.impact(material), at, AUDIO.levels.impact);
+    // Beyond earshot it isn't played, and doesn't use up the window either (audit CORE-01).
+    if (!this.ctx || this.distanceTo(at) > AUDIO.spatial.maxDistance) return;
+    if (this.impactLimit.take(this.ctx.currentTime)) this.oneShot(cues.impact(material), at, AUDIO.levels.impact);
   }
 
   /** A teammate's radio keyed twice: the squad order you gave was heard (M22). */
@@ -330,6 +369,7 @@ export class Sfx {
   /** Disconnects this match's nodes from the engine's buses (the context lives on for the next match). */
   dispose(): void {
     this.whistle?.stopAll();
+    for (const src of this.bed.splice(0)) src.stop();
     for (const node of this.graph.splice(0)) node.disconnect();
     this.outlets.length = 0;
     for (const ch of this.channels.values()) {
@@ -339,6 +379,9 @@ export class Sfx {
     }
     this.ctx = null;
     this.world = null;
+    this.outFilter = null;
+    this.outLevel = null;
+    this.playerOut = false;
     this.self = null;
     this.ui = null;
     this.whistle = null;
@@ -414,8 +457,12 @@ export class Sfx {
     return c ? this.channel(c).panner : null;
   }
 
-  /** A one-off sound at a point in the world, muffled if level geometry is in the way; its nodes go when it ends. */
-  private oneShot(cue: SoundCue, at: Vec3, level: Level): void {
+  /**
+   * A one-off sound at a point in the world, muffled if level geometry is in the way; its nodes go when it ends. Not
+   * played at all beyond `range` (the inverse roll-off never reaches silence; audit CORE-01).
+   */
+  private oneShot(cue: SoundCue, at: Vec3, level: Level, range: number = AUDIO.spatial.maxDistance): void {
+    if (this.distanceTo(at) > range) return;
     const ctx = this.ctx!;
     // Equal-power for these (up to 80 BB impacts a second): HRTF is kept for the characters you locate by ear.
     const panner = this.createPanner(AUDIO.spatial.oneShotPanningModel);
@@ -475,9 +522,11 @@ export class Sfx {
     if (!this.listenerPlaced) return;
     const t = this.ctx!.currentTime;
     for (const c of characters) {
-      if (c.id === localId) continue;
-      const ch = this.channel(c);
-      const share = blockedShare(this.query, this.listener, c.position);
+      // Out in the dead zone: nothing to hear, so no rays (audit CORE-35).
+      if (c.id === localId || c.status === 'out') continue;
+      const ch = this.channelOf(c);
+      // Beyond earshot: taken as fully muffled without casting a ray.
+      const share = this.distanceTo(c.position) > AUDIO.spatial.maxDistance ? 1 : blockedShare(this.query, this.listener, c.position);
       if (share === ch.share) continue;
       muffleFor(share, this.muffle);
       if (ch.share < 0) {
@@ -491,9 +540,63 @@ export class Sfx {
     }
   }
 
+  /**
+   * The world muffled while you're out (hit, walking off, in the dead zone) and clear again when the next round starts;
+   * eased (audit CORE-30/34).
+   */
+  private updateOut(characters: readonly Character[], localId: number): void {
+    let out = false;
+    for (const c of characters) {
+      if (c.id !== localId) continue;
+      out = c.status !== 'alive';
+      break;
+    }
+    if (out === this.playerOut) return;
+    this.playerOut = out;
+    const t = this.ctx!.currentTime;
+    const o = AUDIO.out;
+    this.outFilter!.frequency.setTargetAtTime(out ? o.hz : AUDIO.occlusion.openHz, t, o.ease);
+    this.outLevel!.gain.setTargetAtTime(out ? o.gain : 1, t, o.ease);
+  }
+
+  /**
+   * The yard's outdoor bed, from the first moment of play (audit CORE-34): two copies of the loop half a loop apart,
+   * panned apart for width, into the world (so the effects slider sets it and it's muffled with the rest while you're
+   * out). Stopped when the match is disposed.
+   */
+  private startAmbience(): void {
+    const ctx = this.ctx!;
+    const buffer = this.bed.length === 0 ? this.engine.ambienceBed() : null;
+    if (!buffer) return;
+    const a = AUDIO.ambience;
+    const level = ctx.createGain();
+    level.gain.value = a.gain;
+    level.connect(this.world!);
+    this.graph.push(level);
+    for (const side of [-1, 1]) {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      const pan = ctx.createStereoPanner();
+      pan.pan.value = side * a.width;
+      src.connect(pan).connect(level);
+      this.graph.push(src, pan);
+      src.start(ctx.currentTime, side > 0 ? buffer.duration / 2 : 0);
+      this.bed.push(src);
+    }
+  }
+
   // ---- Channels and buses -------------------------------------------------------------------
 
+  /** A character's channel, put where they are now (for a sound of theirs). */
   private channel(c: Character): Channel {
+    const ch = this.channelOf(c);
+    this.follow(ch, c.position);
+    return ch;
+  }
+
+  /** A character's channel, made (where they stand) the first time it's asked for. */
+  private channelOf(c: Character): Channel {
     let ch = this.channels.get(c.id);
     if (ch) return ch;
     const ctx = this.ctx!;
@@ -504,9 +607,19 @@ export class Sfx {
     filter.frequency.value = AUDIO.occlusion.openHz;
     const gain = ctx.createGain();
     panner.connect(filter).connect(gain).connect(this.world!);
-    ch = { panner, filter, gain, share: -1 };
+    ch = { panner, filter, gain, share: -1, x: c.position.x, y: c.position.y, z: c.position.z };
     this.channels.set(c.id, ch);
     return ch;
+  }
+
+  /** Moves a channel to `at` if it has moved more than AUDIO.spatial.moveEpsilon on any axis since it was last put. */
+  private follow(ch: Channel, at: Vec3): void {
+    const e = AUDIO.spatial.moveEpsilon;
+    if (Math.abs(at.x - ch.x) <= e && Math.abs(at.y - ch.y) <= e && Math.abs(at.z - ch.z) <= e) return;
+    ch.x = at.x;
+    ch.y = at.y;
+    ch.z = at.z;
+    this.placePanner(ch.panner, at, AUDIO.spatial.sourceHeight);
   }
 
   private createPanner(model: PanningModelType): PannerNode {
