@@ -5,11 +5,11 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
-- **FA7** · Environment lighting on Medium and High: sky reflects in players, the flag, range targets and steel; contact shadows under every player on all presets (#PR)
-- **FA7** · Settings → Graphics: tone mapping choice (Neutral, AgX, ACES) and relief maps option (Normal, Bump) (#PR)
-- **FA7** · Map detail on Medium and High, on every map: bevelled edges with lighter rims, corner shading, ground variation, prop detail and signs; Low looks as before (#PR)
-- **FA7** · Trees round the field: None, Simple or Detailed with layered crowns and a hedge; clouds and sun disc on Medium and High (#PR)
-- **FA7** · The flag gets a finial, rope, cleat and painted cloth; the practice range gets chains, bands, brackets, a BB shelf, scuffed plates and painted figures, drawing fewer calls than before (#PR)
+- **FA7** · Environment lighting on Medium and High: sky reflects in players, the flag, range targets and steel; contact shadows under every player on all presets (#71)
+- **FA7** · Settings → Graphics: tone mapping choice (Neutral, AgX, ACES) and relief maps option (Normal, Bump) (#71)
+- **FA7** · Map detail on Medium and High, on every map: bevelled edges with lighter rims, corner shading, ground variation, prop detail and signs; Low looks as before (#71)
+- **FA7** · Trees round the field: None, Simple or Detailed with layered crowns and a hedge; clouds and sun disc on Medium and High (#71)
+- **FA7** · The flag gets a finial, rope, cleat and painted cloth; the practice range gets chains, bands, brackets, a BB shelf, scuffed plates and painted figures, drawing fewer calls than before (#71)
 - **FA2** · Settings → Graphics: Custom option to pick a preset and modify any row; changes show Custom, setting back shows the preset again; Custom is saved (#67)
 - **FA2** · Graphics Settings has a frame-rate limit and Show FPS counter (#67)
 - **FA2** · The first start picks a preset from the graphics card: Medium on integrated graphics (Intel, AMD Ryzen), High on a discrete card (#67)
