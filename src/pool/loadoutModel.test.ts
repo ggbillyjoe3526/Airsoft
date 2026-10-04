@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_STATS } from '../config/gameStats';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
@@ -19,6 +19,9 @@ function owning(items: ItemRef[]): Ownership & { items: Set<string> } {
   const set = new Set(items.map((r) => itemKey(r.asset, r.tier)));
   return { items: set, owns: (r) => set.has(itemKey(r.asset, r.tier)) };
 }
+
+// Test files share a worker (isolate: false): the stand-in storage goes with this file.
+afterAll(() => vi.unstubAllGlobals());
 
 describe('Loadout model (M26b)', () => {
   beforeEach(() => {

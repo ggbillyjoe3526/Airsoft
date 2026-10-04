@@ -31,10 +31,11 @@ import { loadFigureModel } from './render/externalModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
-import { buildsNewMatch, matchSeed } from './matchFlow';
+import { matchSeed } from './matchFlow';
+import { nextSessionAction } from './core/sessionPlan';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
-import { attackersInRound, teamEnd } from './sim/round';
+import { teamEnd } from './sim/round';
 import type { GameState } from './sim/state';
 import { loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
@@ -120,6 +121,8 @@ export interface GameOptions {
   scriptedPlayer?: boolean;
   /** The save (M31, save/saveManager.ts): Settings → Save, and the title screen's warning when saving doesn't work. */
   save: SaveManager;
+  /** `?perf`: each match build logs how long its parts took (audit CORE-33, MatchSession.build), in any build. */
+  perfLog?: boolean;
 }
 
 /**
@@ -700,23 +703,26 @@ export class Game {
    * replaced otherwise. Runs in the click, so audio can be unlocked.
    */
   private play(): void {
-    if (this.graphicsLost) return;
     const s = this.session;
-    if (!this.started && this.practice) {
+    // What Play does is decided from these flags alone (core/sessionPlan.ts, audit CORE-05).
+    const action = nextSessionAction({
+      graphicsLost: this.graphicsLost,
+      started: this.started,
+      practice: this.practice,
+      loaded: s instanceof MatchSession ? 'match' : s ? 'range' : null,
+      matchOver: s instanceof MatchSession && s.state.round.phase === 'matchOver',
+      setupChanged: this.setupChanged,
+      loadoutChanged: this.loadoutChanged,
+    });
+    if (action === 'none') return;
+    if (action === 'buildRange') {
       // The tutorial resumes at the step it was left at (audit POOL-14).
       this.openRange(undefined, this.tutorial ? loadTutorialStep() : undefined);
-    } else if (this.started && s instanceof RangeSession && this.loadoutChanged) {
+    } else if (action === 'rebuildRange' && s instanceof RangeSession) {
       // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
       // same tutorial step).
       this.openRange(s.pose, s.tutorialStep);
-    } else if (
-      buildsNewMatch({
-        started: this.started,
-        loaded: s instanceof MatchSession ? 'match' : s ? 'range' : null,
-        matchOver: s instanceof MatchSession && s.state.round.phase === 'matchOver',
-        setupChanged: this.setupChanged,
-      })
-    ) {
+    } else if (action === 'buildMatch') {
       this.session?.dispose();
       this.setupChanged = false;
       // The first match plays the visit's seed (?seed=N replays it); each later one its own, or every match in a visit
@@ -733,6 +739,7 @@ export class Game {
         chaseOwned: this.loadout.ownedChase(),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
       }, this.matchSeed, this.quality, this.audio, this.crosshair);
+      if (this.options.perfLog) console.info(this.session.build.line());
       this.steppedDown = false;
       this.session.setMotion(motionScale(this.reducedMotion));
       this.session.setSoundCues(this.soundCues);
@@ -821,31 +828,18 @@ export class Game {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
     } else if (screen === 'result') {
-      const mine = s.player.team;
-      const theirs = 1 - mine;
-      const draws = r.draws;
-      const played = r.score[0] + r.score[1] + draws;
-      const headline = r.matchWinner === mine ? 'You win!' : 'You lose';
-      const score = `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name}`;
+      const view = s.resultView();
       // Settled the moment it was decided (frame); again here in case that frame never came (it does nothing twice).
       this.settleMatch(s);
-      this.menus.showResult(headline, `${score} · ${played} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
-        result: `${headline} · ${score}`,
-        blocks: s.summaryBlocks(),
+      this.menus.showResult(view.headline, view.scoreLine, {
+        result: view.result,
+        blocks: view.summaryBlocks,
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
         fieldCredits: this.lastEarnings,
         unpaid: this.unpaidReason,
       });
     } else {
-      const mine = s.player.team;
-      const theirs = 1 - mine;
-      // Between rounds, the role you'll have next round (it swaps at half-time).
-      const attackers = r.phase === 'over' ? attackersInRound(r.number + 1, s.rounds) : r.attackers;
-      const role = r.mode === 'attackDefend' ? ` · attack / defend, you ${attackers === mine ? 'attack' : 'defend'}${r.phase === 'over' ? ' next' : ''}` : '';
-      this.menus.showPause(
-        `${r.phase === 'over' ? `After round ${r.number}` : `Round ${r.number}`}${role} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${s.rounds.winsNeeded}`,
-        this.matchSeed,
-      );
+      this.menus.showPause(s.pauseLine(), this.matchSeed);
     }
     s?.setPlaying(false);
     // The screen just shown starts without a hint: say again why the match was silent.
