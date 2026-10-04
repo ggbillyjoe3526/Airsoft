@@ -33,6 +33,7 @@ import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { ContactShadows } from './render/contactShadows';
 import { addLighting, type Daylight } from './render/lighting';
+import { resolveLighting } from './render/lightingPreset';
 import { mapLookOf } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import type { Renderer } from './render/renderer';
@@ -153,7 +154,11 @@ export class MatchSession {
     renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTextures, mapLookOf(quality)));
     this.build.phase('map meshes');
     if (renderer.mapMeshes.reused) this.build.notes.push('map meshes reused');
-    this.daylight = addLighting(renderer.scene, map, quality);
+    // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
+    // last map's; its lights, sky and light pools in the scene.
+    const lighting = resolveLighting(map);
+    renderer.setLighting(lighting);
+    this.daylight = addLighting(renderer.scene, map, quality, lighting);
     this.build.phase('lighting');
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
@@ -315,7 +320,7 @@ export class MatchSession {
     this.match.showMinimap(holding ? this.holdSpot : null);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     // High's shadow map follows the view (REN-08), the spectator's too.
-    this.daylight.follow(this.renderer.camera);
+    this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(!spectating);
   }
 

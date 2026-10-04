@@ -1,9 +1,14 @@
 import * as THREE from 'three';
 import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping } from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import { TONE_MAPPING } from '../config/render';
+import { ATMOSPHERE, LIGHTING_PRESETS, TONE_MAPPING } from '../config/render';
+import { DEPOT } from '../map/depot';
+import { RANGE_MAP } from '../map/range';
+import { WOODLAND } from '../map/woodland';
+import { resolveLighting } from './lightingPreset';
 import type { SurfaceTextures } from './proceduralTextures';
-import { handOverRenderer, releaseGpuResources, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
+import { handOverRenderer, releaseGpuResources, Renderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
+import { defaultEnvironmentLook, type EnvironmentLook, environmentKey } from './replicaSheen';
 
 describe('verticalFovFor', () => {
   it('converts a 16:9 horizontal FOV to the matching vertical FOV', () => {
@@ -170,5 +175,60 @@ describe('handOverRenderer (REN-24)', () => {
     releaseGpuResources(scene);
     expect(freed).toHaveBeenCalledTimes(1);
     expect(sun.shadow.map).toBeNull();
+  });
+});
+
+describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
+  /** A Renderer without WebGL: only what setLighting and setToneMapping touch. */
+  function bareRenderer(): Renderer {
+    const r = Object.create(Renderer.prototype) as Renderer;
+    const fields = r as unknown as Record<string, unknown>;
+    Object.assign(fields, {
+      scene: new THREE.Scene(),
+      gl: { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 },
+      toneMapping: TONE_MAPPING.default,
+      lighting: LIGHTING_PRESETS.day,
+      environmentLook: defaultEnvironmentLook(),
+      environmentDirty: false,
+    });
+    r.scene.background = new THREE.Color();
+    r.scene.fog = new THREE.Fog(0xffffff);
+    return r;
+  }
+  const look = (r: Renderer) => {
+    const fog = r.scene.fog as THREE.Fog;
+    const gl = (r as unknown as { gl: { toneMappingExposure: number } }).gl;
+    return { fog: [fog.color.getHex(), fog.near, fog.far], background: (r.scene.background as THREE.Color).getHex(), exposure: gl.toneMappingExposure, env: environmentKey((r as unknown as { environmentLook: EnvironmentLook }).environmentLook) };
+  };
+
+  it('scales the exposure by the preset', () => {
+    expect(toneMappingOf('agx', 1.15).exposure).toBeCloseTo(TONE_MAPPING.exposure.agx * 1.15);
+    expect(toneMappingOf('neutral')).toEqual(toneMappingOf('neutral', 1));
+  });
+
+  it('sets the night’s haze, exposure and environment, and gives the day’s back on the next day map', () => {
+    const r = bareRenderer();
+    r.setLighting(LIGHTING_PRESETS.day);
+    const day = look(r);
+    expect(day).toEqual({ fog: [ATMOSPHERE.horizon, ATMOSPHERE.fogNear, ATMOSPHERE.fogFar], background: ATMOSPHERE.horizon, exposure: TONE_MAPPING.exposure[TONE_MAPPING.default], env: environmentKey(defaultEnvironmentLook()) });
+    const fog = r.scene.fog;
+    r.setLighting(resolveLighting(WOODLAND));
+    const night = LIGHTING_PRESETS.night;
+    expect(look(r).fog).toEqual([night.fog.colour, night.fog.near, night.fog.far]);
+    expect(look(r).background).toBe(night.fog.colour);
+    expect(look(r).exposure).toBeCloseTo(TONE_MAPPING.exposure[TONE_MAPPING.default] * night.exposureScale);
+    expect(look(r).env).not.toBe(day.env);
+    expect(r.scene.fog).toBe(fog); // changed in place, never a new object
+    r.setLighting(resolveLighting(DEPOT));
+    expect(look(r)).toEqual(day);
+    r.setLighting(resolveLighting(RANGE_MAP));
+    expect(look(r)).toEqual(day);
+  });
+
+  it('keeps the preset’s exposure when the tone mapping row changes', () => {
+    const r = bareRenderer();
+    r.setLighting(LIGHTING_PRESETS.night);
+    r.setToneMapping('aces');
+    expect(look(r).exposure).toBeCloseTo(TONE_MAPPING.exposure.aces * LIGHTING_PRESETS.night.exposureScale);
   });
 });

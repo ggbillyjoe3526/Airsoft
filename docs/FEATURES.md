@@ -53,6 +53,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Woodland's layout: 120 × 80 m on a gentle slope up to the Knoll and its log fort, three lanes (Pine Belt, Meadow, Creek with the cabin), trees, boulders and logs; 4v4 by default, up to 5v5; dev content, playable with the Dev content switch on, and its matches aren't recorded or paid (M33d)
 - Bushes on any map that lists them: bots can't see someone deep in or behind one, BBs and people pass through, drawn on the minimap; Woodland has 70 (M33e)
 - Night sight on any night map: bots see 40 m into a light pool, 25 m in the open, 10 m under the trees (M33g)
+- Night lighting on any map that asks for it: a dark sky and haze, a low moon as the key light, light pools that glow and light the ground on every preset and light players on Medium and High (Graphics › Night lights: Off, Nearest 2, Nearest 4); Depot stays day (M33f)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory

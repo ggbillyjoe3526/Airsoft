@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, graphicsRow, parseStored, rowEnabled, storedValue, TONE_MAPPING_CHOICES } from './graphics';
-import { FRAME_RATE_CAPS, QUALITY, QUALITY_CHOICES, QUALITY_FIELDS, QUALITY_PRESETS, TONE_MAPPING } from './render';
+import { FRAME_RATE_CAPS, QUALITY, QUALITY_CHOICES, QUALITY_FIELDS, QUALITY_PRESETS, resolveQuality, TONE_MAPPING } from './render';
 
 describe('the Custom graphics rows (final alpha audit section 4, UI-06)', () => {
   it('has one row for every quality setting, each with help and a cost', () => {
@@ -79,5 +79,24 @@ describe('the shadow rows', () => {
     expect(GRAPHICS_ROWS.filter((r) => r.needs === 'shadows').map((r) => r.field)).toEqual(['shadowMapSize', 'shadowRadius', 'shadowFollowsView', 'figureShadows']);
     expect(GRAPHICS_ROWS.filter((r) => !rowEnabled(r, QUALITY.low)).map((r) => r.field)).toEqual(['shadowMapSize', 'shadowRadius', 'shadowFollowsView', 'figureShadows']);
     for (const r of GRAPHICS_ROWS) expect(rowEnabled(r, QUALITY.medium), r.field).toBe(true);
+  });
+});
+
+describe('the Night lights row (M33f)', () => {
+  it('comes after Clouds and offers off, the nearest 2 and the nearest 4, saved by name', () => {
+    const fields = GRAPHICS_ROWS.map((r) => r.field);
+    expect(fields[fields.indexOf('clouds') + 1]).toBe('poolLights');
+    const row = graphicsRow('poolLights')!;
+    if (row.kind !== 'choice') throw new Error('Night lights is a choice row');
+    expect(row.label).toBe('Night lights');
+    expect(row.options.map((o) => [o.label, o.value])).toEqual([['Off', 0], ['Nearest 2', 2], ['Nearest 4', 4]]);
+    expect(parseStored(row, storedValue(row, 2))).toBe(2);
+    expect(parseStored(row, '3')).toBeUndefined();
+  });
+
+  it('is no real lights on Low, two on Medium and four on High; Custom is High’s unless saved otherwise', () => {
+    expect([QUALITY.low.poolLights, QUALITY.medium.poolLights, QUALITY.high.poolLights]).toEqual([0, 2, 4]);
+    expect(resolveQuality('custom', {}).poolLights).toBe(4);
+    expect(resolveQuality('custom', { poolLights: 0 })).toEqual({ ...QUALITY.high, poolLights: 0 });
   });
 });
