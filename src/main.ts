@@ -1,5 +1,6 @@
 import './style.css';
 import { CRASH_TEXT, WEBGL_ERROR } from './config/crash';
+import { TAB_LOCK } from './config/save';
 import { LOADING } from './config/loading';
 import { parseQuality, startingQuality } from './config/render';
 import { crashReport } from './core/crashReport';
@@ -95,7 +96,7 @@ async function startSave(): Promise<SaveManager | null> {
       waitBehindNotice(lock);
     },
   });
-  if (!(await lock.claim())) {
+  if (!(await lock.claim(takeTookSave()))) {
     storage.freeze('otherTab');
     waitBehindNotice(lock);
     return null;
@@ -113,8 +114,27 @@ async function startSave(): Promise<SaveManager | null> {
 /** "Airsoft is open in another tab": Play here takes the save from the other tab and reloads, to read it fresh. */
 function waitBehindNotice(lock: TabLock): void {
   new OtherTabNotice(document.body, () => {
-    void lock.take().then(() => window.location.reload());
+    void lock.take().then(() => {
+      // The reloaded tab waits its turn for the lock, which the other tab's browser frees a moment after it lets go.
+      try {
+        sessionStorage.setItem(TAB_LOCK.tookSaveKey, '1');
+      } catch {
+        // No session storage: the reloaded tab checks the lock at once, as any start does.
+      }
+      window.location.reload();
+    });
   });
+}
+
+/** True once after this tab's own Play here reloaded it (the mark is cleared as it is read). */
+function takeTookSave(): boolean {
+  try {
+    const took = sessionStorage.getItem(TAB_LOCK.tookSaveKey) === '1';
+    sessionStorage.removeItem(TAB_LOCK.tookSaveKey);
+    return took;
+  } catch {
+    return false;
+  }
 }
 
 /**
