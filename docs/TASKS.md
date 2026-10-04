@@ -10,6 +10,19 @@ files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged de
 owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
 first (M33 changes both).
 
+## M42 · Retro pixel filter (Dev tab)
+tier: core
+perf: required
+touches: src/config/dev.ts, src/ui/devSettings.ts, src/config/render.ts, src/render/renderer.ts, src/render/retroFilter.ts, src/render/bbRenderer.ts, src/render/combatPresentation.ts, src/game.ts
+acceptance:
+  1. A Dev tab switch "Retro pixels" (off by default, not a cheat) and two sliders beside it, Pixel size and Colours, saved as `dev.<id>`; like every Dev entry it applies only while the Dev tab is shown.
+  2. With it on, the 3D view (the field and the held replica) is drawn at a low resolution and shown with no smoothing, then one full-screen pass crushes colours to a few levels per channel with ordered (Bayer) dithering; the HUD, menus and crosshair (page elements) stay sharp.
+  3. BBs and their streaks never draw smaller than about two retro pixels and one, so they stay visible at the biggest pixel size.
+  4. Engine-wide: it works on every map and the range, reads nothing per map; off during the perf harness (`?script=perf`) and with the Dev tab hidden (the smoke tests).
+  5. The render target and the pass's material and geometry are freed when the filter goes off, on the antialiasing context swap and on dispose; nothing is allocated per frame.
+status: building
+attempts: 0
+
 ## M36 · The Pro difficulty level
 tier: core
 perf: skip

@@ -369,6 +369,27 @@ export const TONE_MAPPING = {
 } as const;
 
 /**
+ * The retro pixel filter (M42, Settings → Dev, render/retroFilter.ts): the 3D view drawn at 1 / pixel size of the page's
+ * size and shown with no smoothing, then crushed to a few levels per channel with a 4×4 ordered dither. Engine-wide.
+ */
+/** The look the retro pixel filter draws with (Settings → Dev, M42). */
+export interface RetroLook {
+  /** CSS pixels per retro pixel, each way. */
+  pixelSize: number;
+  /** Shades of each of red, green and blue (2 or more): 5 gives 125 colours. */
+  levels: number;
+}
+
+export const RETRO = {
+  /**
+   * A BB's ball is never drawn narrower than this many retro pixels, nor its streak thinner than `trailMinPixels`: at
+   * 8 px a pixel, the normal 5 px dot would fall between the low-resolution view's samples and blink out.
+   */
+  bbMinPixels: 2,
+  trailMinPixels: 1,
+} as const;
+
+/**
  * Contact shadows (F5, render/contactShadows.ts): a soft dark disc on the floor under every player, one draw call for
  * all of them, on every preset (free: a few dozen triangles). It grounds a figure on Low, where there are no shadow
  * maps, and under a wall's shade on every preset. Radius (m) standing and fully crouched (a crouch hugs the floor),

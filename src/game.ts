@@ -3,7 +3,7 @@ import { loadVolumes } from './audio/audioMix';
 import { motionScale, type SoundCueColour, soundCueCss } from './config/accessibility';
 import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
-import { activeDev, type DevSettings, devCheating } from './config/dev';
+import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules } from './config/matchRules';
@@ -221,6 +221,8 @@ export class Game {
   private devEnabled = loadDevEnabled();
   private readonly devPicked: DevSettings = loadDevSettings();
   private dev: DevSettings = activeDev(this.devEnabled, this.devPicked);
+  /** The perf harness drives the player (`?script=perf`): the retro filter stays off so its budgets compare (M42). */
+  private readonly scripted: boolean;
   /** The render quality in use (Settings → Graphics, M14; Custom since the final alpha audit) and what it resolves to. */
   private qualityChoice: QualityChoice;
   private quality: QualitySettings;
@@ -282,6 +284,8 @@ export class Game {
     this.unwatchLayout = watchKeyboardLayout(browserKeyboardMap(), window, (layout) => this.bindings.setLayout(layout));
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     if (options.scriptedPlayer) this.input.script = PERF_SCRIPT;
+    this.scripted = options.scriptedPlayer === true;
+    this.renderer.setRetro(retroLookOf(this.dev, this.scripted));
     this.input.crouchMode = loadCrouchMode();
     this.input.aimMode = loadAimMode();
     this.input.sprintMode = loadSprintMode();
@@ -655,6 +659,7 @@ export class Game {
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
     this.session?.setDevCheats(this.dev);
+    this.renderer.setRetro(retroLookOf(this.dev, this.scripted));
     // Unlock all gear changes what the Loadout offers and carries; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear) this.loadoutChanged = this.setupChanged = true;
   }
