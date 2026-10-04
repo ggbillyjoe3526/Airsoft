@@ -68,6 +68,8 @@ async function main(): Promise<void> {
     automaticQuality: quality.automatic,
     softwareRendering,
     save,
+    // ?perf logs each match build's parts to the console (audit CORE-33), so a real machine shows where the time goes.
+    perfLog: params.has('perf'),
   });
   running = game;
   game.start();
