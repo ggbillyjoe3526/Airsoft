@@ -28,12 +28,13 @@ tier: core
 perf: required
 touches: src/ai/, src/config/bots.ts
 acceptance:
-  1. Near the enemy, or after hearing someone, Pro bots walk and slice corners through lean spots instead of running the lane.
-  2. A bot whose teammate is hit looks at, and when it can pushes or peeks, where the shot came from within a few seconds.
-  3. Two defenders cover one choke from different sides where the map allows (crossfire); bots move in pairs with one covering.
-  4. A spot someone peeked from stays pre-aimed for a few seconds; heard positions are shared with teammates (no better than the player's minimap).
-  5. Late in an Elimination round the side behind on players pushes; Pro bots reload behind cover.
-status: open
+  1. Near the enemy (a threat in mind, or walking its lane in the enemy's half), Pro bots walk instead of running the lane and slice corners: they aim at each corner ahead as it opens (M37's held angles, on the move), not where they walk. Hunting with nothing heard, they hurry.
+  2. A Pro bot that hears a teammate call a hit goes for where the shot came from within a few seconds: to a spot nearby it can peek that way from when there is one, otherwise straight there at a run.
+  3. Two Pro defenders sharing a lane hold its forward point together, the second in a crossfire on the choke where the map allows; Pro bots on one lane move in pairs (one sets off only while the other holds).
+  4. A spot someone ducked out of stays watched (pre-aimed, at head height) for a few seconds before the bot goes after them. Bots share no more than the player's own screen would show: a teammate's hit call, heard by those near it, and nothing heard by someone else.
+  5. Late in an Elimination round the Pro side behind on players pushes; Pro bots top up a low magazine from cover while a threat is in mind.
+  6. Easy, Normal and Hard play as before (their guards unchanged).
+status: building
 attempts: 0
 
 ## M39 · Rules picker: Skirmish, Tournament, Pro CQB, Custom

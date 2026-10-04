@@ -129,6 +129,7 @@ export class BotController {
       enemyYaw: this.enemyYaw,
       huntPoint: (bot, out) => this.huntPoint(bot, out),
       aheadOfTeam: (bot) => this.aheadOfTeam(bot),
+      inEnemyHalf: (bot) => this.inEnemyHalf(bot),
       markVisited: (bot, point) => {
         this.visited[bot.character.team]![this.sectorOf(point.x, point.z)] = this.world.time;
       },
@@ -362,6 +363,12 @@ export class BotController {
           g.y = victim.position.y;
           g.z = victim.position.z - (flat > 1e-6 ? (e.direction.z / flat) * back : 0);
           this.hear(shooter.team, victim.position, victim.position, time, g, cfg.hearingDistance, shooter.id);
+          // Those who heard it and play as a team (M38) go to trade the hit: see tradeTime.
+          for (const b of this.bots) {
+            if (!b.skill.teamPlay || b.character.team !== victim.team || b.heardAt !== time) continue;
+            b.tradeAt = time;
+            b.tradeTried = false;
+          }
         }
       } else if (e.type === 'ricochetTick') {
         // A ricochet that doesn't count still tells its victim they're under fire, unless it was their own (SIM-07).
@@ -477,7 +484,8 @@ export class BotController {
         if (defending) {
           const shared = lanes.filter((l) => l === lane).length > 1;
           const forward = ahead === 0 && (shared || rngNext(this.planRng) < cfg.defendForwardChance);
-          points = forward ? 2 : 1;
+          // Bots that play as a team (M38) both hold a shared lane's forward point, in a crossfire (see crossfireSpot).
+          points = forward || (shared && b.skill.teamPlay) ? 2 : 1;
         } else if (attacking) {
           points = this.pointsToMidfield(team, lane);
         }
@@ -541,6 +549,14 @@ export class BotController {
     const home = this.spawnCentre[c.team]!;
     const dir = this.attackDir[c.team]!;
     return (c.position.x - home.x) * dir.x + (c.position.z - home.z) * dir.z;
+  }
+
+  /** True if `bot` stands more than halfway from its spawns to the enemy's. */
+  private inEnemyHalf(bot: Bot): boolean {
+    const team = bot.character.team;
+    const home = this.spawnCentre[team]!;
+    const enemy = this.spawnCentre[1 - team]!;
+    return this.progress(bot.character) > Math.hypot(enemy.x - home.x, enemy.z - home.z) / 2;
   }
 
   /** True if `bot` is more than teamSpread ahead of its rearmost teammate bot in play (players don't hold bots back). */

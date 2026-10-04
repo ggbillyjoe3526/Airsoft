@@ -9,7 +9,7 @@ import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } fro
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, lookAngles, stepAim } from './aim';
 import { findHeldAngles } from './angles';
-import { type Bot, type BotWorld, pick } from './bot';
+import { type Bot, type BotWorld, pick, threatInMind } from './bot';
 import { hasReacted } from './botSenses';
 import { bodyPoint, lineClear } from './perception';
 
@@ -59,12 +59,15 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     const t = 1 - b.searchLookLeft / b.searchLookTime;
     look.yaw = b.searchLookYaw + Math.sin(2 * Math.PI * t) * cfg.searchLookDeg * DEG;
   } else if (b.hasLastKnown && (b.mode === 'search' || b.mode === 'cover' || !walking)) {
-    // Watch where the threat was, even while moving there.
-    lookAngles(eye.x, eye.y, eye.z, b.lastKnown.x, eye.y, b.lastKnown.z, look);
+    // Watch where the threat was, even while moving there; slicing corners (M38), at head height there.
+    const y = b.skill.slicesCorners ? b.lastKnown.y + w.body.standEyeHeight : eye.y;
+    lookAngles(eye.x, eye.y, eye.z, b.lastKnown.x, y, b.lastKnown.z, look);
   } else if (b.mode === 'order' && (!walking || (b.order === 'follow' && !b.orderRush))) {
     // A squad order (M22): at its spot, look the way the order says; keeping up behind a leader, keep covering their
     // back on the move too (only hurrying, it looks where it runs).
     look.yaw = b.orderYaw;
+  } else if (walking && b.careful && b.mode === 'advance' && heldAngleLook(b, w, eye, walkYaw)) {
+    // Slicing (M38): walking near the enemy, aim at the corner ahead someone could step out of, not where it walks.
   } else if (walking && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
     look.yaw = walkYaw;
   } else {
@@ -81,10 +84,11 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
 }
 
 /**
- * Holding with held angles (M37): looks for the corners in view of where it stands (again every angleRefresh, or once it
- * has moved), then sets `look` on one of them, switching every angleSwitchTime. False if it found none (it sweeps).
+ * Holding with held angles (M37), or slicing on the move (M38): looks for the corners in view of where it stands, facing
+ * about `facingYaw` (again every angleRefresh, or once it has moved), then sets `look` on one of them, switching every
+ * angleSwitchTime. False if it found none.
  */
-function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, enemyYaw: number): boolean {
+function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number): boolean {
   const cfg = w.cfg;
   const p = b.character.position;
   const from = b.heldAnglesFrom;
@@ -98,7 +102,7 @@ function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, enemyYaw: number): boolea
     standEye.x = p.x;
     standEye.y = head;
     standEye.z = p.z;
-    b.heldAngleCount = findHeldAngles(w.query, standEye, head, enemyYaw, cfg, b.heldAngles);
+    b.heldAngleCount = findHeldAngles(w.query, standEye, head, facingYaw, cfg, b.heldAngles);
   }
   if (b.heldAngleCount === 0) return false;
   const a = b.heldAngles[Math.floor(b.teamWait / cfg.angleSwitchTime) % b.heldAngleCount]!;
@@ -202,11 +206,29 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
 
 /**
  * Reloads when empty, or swaps a low magazine for a fuller spare when nobody is in sight (the low one goes
- * back in the pouch as it is).
+ * back in the pouch as it is). With slicesCorners and a threat in mind (M38), a swap on the way to cover waits till
+ * it's there (reloadFromCover sends it; with no cover near, it swaps where it stands).
  */
 export function reloadBot(b: Bot, w: BotWorld, cmd: PlayerCommand): void {
   const ammo = b.character.armament.ammo[0]!;
-  const magSize = b.character.armament.handling[0]!.magSize;
   if (!canReload(ammo)) return;
-  if (ammo.mag === 0 || (!b.targetVisible && ammo.mag < magSize * w.cfg.tacticalReloadFraction)) cmd.reload = true;
+  if (ammo.mag === 0) {
+    cmd.reload = true;
+    return;
+  }
+  if (b.targetVisible || !lowOnBBs(b, w.cfg.tacticalReloadFraction)) return;
+  if (b.skill.slicesCorners && threatInMind(b, w) && headingForCover(b, w)) return;
+  cmd.reload = true;
+}
+
+/** True if the magazine holds less than `fraction` of a full one and a spare can top it up. */
+export function lowOnBBs(b: Bot, fraction: number): boolean {
+  const ammo = b.character.armament.ammo[0]!;
+  return canReload(ammo) && ammo.mag < b.character.armament.handling[0]!.magSize * fraction;
+}
+
+/** In cover mode and not yet at the spot. */
+function headingForCover(b: Bot, w: BotWorld): boolean {
+  const p = b.character.position;
+  return b.mode === 'cover' && Math.hypot(b.cover.position.x - p.x, b.cover.position.z - p.z) >= w.cfg.coverArrive;
 }
