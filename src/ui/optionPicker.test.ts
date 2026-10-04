@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryStorage } from '../pool/testStorage';
 import { OptionPicker, type PickerOption } from './optionPicker';
 import { fakeDocument, type FakeElement } from './testSupport';
@@ -18,6 +18,8 @@ describe('OptionPicker and dev options (M35)', () => {
     vi.stubGlobal('document', fakeDocument());
     vi.stubGlobal('localStorage', new MemoryStorage());
   });
+  // Test files share a worker's modules (isolate: false), so the fake DOM goes when each test ends.
+  afterEach(() => vi.unstubAllGlobals());
 
   it('hides a dev option while Dev content is off, and shows the public and untagged ones', () => {
     const p = new OptionPicker('Pick', OPTIONS, 'a', 'matchMode' as never, () => {});

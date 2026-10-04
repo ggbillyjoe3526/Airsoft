@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { saveSetting } from '../settings/storage';
 import { addItem, type ItemRef, newCollection, ownedCount } from './collection';
 import { GAME_POOL } from './gamePool';
@@ -14,6 +14,8 @@ describe("a returning player's M17b picks (M26b)", () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', new MemoryStorage());
   });
+  // Test files share a worker (isolate: false): the stand-in storage goes with this file.
+  afterAll(() => vi.unstubAllGlobals());
 
   it('are given to them and fitted where they were, once', () => {
     saveSetting('optic', 'scope2x');

@@ -1,4 +1,3 @@
-import type * as THREE from 'three';
 import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
@@ -23,6 +22,7 @@ import type { PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
+import { BuildTiming } from './core/buildTiming';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MapData } from './map/mapTypes';
@@ -32,7 +32,7 @@ import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { ContactShadows } from './render/contactShadows';
 import { addLighting, type Daylight } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, restyleMap } from './render/mapMeshes';
+import { mapLookOf } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -50,6 +50,7 @@ import { matchStanding, MatchTakes } from './stats/settleMatch';
 import type { MatchResult } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import type { NotCounted } from './ui/recordsView';
+import { pauseText, resultText, type ResultText } from './ui/matchStopText';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
@@ -99,10 +100,6 @@ export class MatchSession {
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
-  private mapGroup: THREE.Group;
-  /** The map's drawing as built (map detail, relief…) and the map itself, to restyle it (Settings → Graphics). */
-  private mapLook: MapLook;
-  private readonly mapData: MapData;
   private readonly daylight: Daylight;
   /** A soft dark disc on the floor under every player (audit section 5, F5), on every preset. */
   private readonly contact: ContactShadows;
@@ -127,6 +124,11 @@ export class MatchSession {
   private devAssisted = false;
   /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
   private played = false;
+  /**
+   * How long each part of building this match took (audit CORE-33): `performance.measure` entries, and one line Game logs
+   * with `?perf`. Started as the session is made, so it counts everything the constructor does.
+   */
+  readonly build = new BuildTiming('match build');
 
   constructor(
     private readonly renderer: Renderer,
@@ -140,15 +142,18 @@ export class MatchSession {
   ) {
     const map = setup.map;
     this.loadout = setup.kit.slots.map((s) => s.replica);
-    // The surface textures are the renderer's, shared by every session (audit L-04).
-    this.mapData = map;
-    this.mapLook = mapLookOf(quality);
-    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, this.mapLook);
-    renderer.scene.add(this.mapGroup);
+    // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
+    // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
+    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTextures, mapLookOf(quality)));
+    this.build.phase('map meshes');
+    if (renderer.mapMeshes.reused) this.build.notes.push('map meshes reused');
     this.daylight = addLighting(renderer.scene, map, quality);
+    this.build.phase('lighting');
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
+    this.build.phase('physics');
     this.nav = buildNavGrid(map, NAV);
+    this.build.phase('navigation');
     // Maps without a flagpole can only be played in elimination.
     this.mode = map.flag ? setup.mode : 'elimination';
     this.rounds = roundRulesFor(setup.rules);
@@ -182,10 +187,12 @@ export class MatchSession {
       this.commands,
       { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: this.hits, loadout: LOADOUT, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
     );
+    this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
     input.restartScript();
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, this.hits);
+    this.build.phase('replica, effects and sound');
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map.blocks, renderer.figureModel, quality.figureDetail);
     this.match.setFigureShadows(quality.figureShadows);
@@ -193,6 +200,7 @@ export class MatchSession {
     this.contact = new ContactShadows(this.state.characters, this.hits.vanishTime);
     renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
+    this.build.phase('figures, flag and HUD');
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -273,6 +281,16 @@ export class MatchSession {
     return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false);
   }
 
+  /** The result screen for the decided match (audit CORE-05): its lines and every player's numbers, for Game to show. */
+  resultView(): ResultText & { summaryBlocks: TeamBlock[] } {
+    return { ...resultText(this.state.round, this.player.team), summaryBlocks: this.summaryBlocks() };
+  }
+
+  /** The pause screen's line about the match (the round, your role, the score; ui/matchStopText.ts). */
+  pauseLine(): string {
+    return pauseText(this.state.round, this.player.team, this.rounds);
+  }
+
   /**
    * Places the camera and draws the frame; `dt` is 0 while paused, so presentation holds still. `boardHeld`: the
    * scoreboard key is held.
@@ -308,9 +326,7 @@ export class MatchSession {
    */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    const look = mapLookOf(quality);
-    this.mapGroup = restyleMap(this.mapGroup, this.mapData, this.renderer.surfaceTextures, this.mapLook, look);
-    this.mapLook = look;
+    this.renderer.mapMeshes.restyle(this.renderer.surfaceTextures, mapLookOf(quality));
     this.match.setFigureShadows(quality.figureShadows);
     this.match.setFlagQuality(quality);
     this.match.setFigureDetail(quality.figureDetail);
@@ -371,8 +387,8 @@ export class MatchSession {
     this.combat.dispose();
     this.match.dispose();
     this.contact.dispose();
-    this.renderer.scene.remove(this.mapGroup);
-    disposeMapMeshes(this.mapGroup);
+    // Out of the scene, kept by the renderer for the next session on this map (freed there, CORE-33).
+    this.renderer.mapMeshes.release();
     this.daylight.dispose();
     this.physics.dispose();
     this.renderer.setZoom(1);

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryStorage } from '../../pool/testStorage';
 import type { PickerOption } from '../optionPicker';
 import { fakeDocument, type FakeElement } from '../testSupport';
@@ -27,6 +27,8 @@ describe('ChoiceDialog and dev content (M35)', () => {
     vi.stubGlobal('document', fakeDocument());
     vi.stubGlobal('localStorage', new MemoryStorage());
   });
+  // Test files share a worker's modules (isolate: false), so the fake DOM goes when each test ends.
+  afterEach(() => vi.unstubAllGlobals());
 
   const make = (initial: Id = 'normal', fallback?: Id) =>
     new ChoiceDialog<Id>('Difficulty', OPTIONS, initial, 'difficulty' as never, () => {}, { soon: SOON, soonTag: 'Coming soon', ...(fallback ? { fallback } : {}) });
