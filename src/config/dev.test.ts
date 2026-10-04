@@ -35,6 +35,17 @@ describe('Dev settings (M24)', () => {
     expect(activeDev(false, picked)).toEqual(DEV_DEFAULTS);
   });
 
+  it('keeps Access maps in development off by default and apart from the cheats: the map keeps the match out of the records, not the switch (M33d)', () => {
+    expect(DEV_DEFAULTS.mapsInDevelopment).toBe(false);
+    expect(DEV_ENTRIES.find((e) => e.id === 'mapsInDevelopment')).toMatchObject({ kind: 'switch', label: 'Access maps in development', cheat: false });
+    expect(devCheating({ ...DEV_DEFAULTS, mapsInDevelopment: true })).toBe(false);
+    expect(loadDevSettings(saved({ 'dev.mapsInDevelopment': 'on' })).mapsInDevelopment).toBe(true);
+    expect(loadDevSettings(saved({})).mapsInDevelopment).toBe(false);
+    // Like every Dev setting it applies only while the Dev tab is shown.
+    expect(activeDev(false, { ...DEV_DEFAULTS, mapsInDevelopment: true }).mapsInDevelopment).toBe(false);
+    expect(activeDev(true, { ...DEV_DEFAULTS, mapsInDevelopment: true }).mapsInDevelopment).toBe(true);
+  });
+
   it('keeps a match out of the records only for settings that change play', () => {
     expect(devCheating(DEV_DEFAULTS)).toBe(false);
     expect(devCheating({ ...DEV_DEFAULTS, showDebug: true, showBbPaths: true, disableArmory: true })).toBe(false);

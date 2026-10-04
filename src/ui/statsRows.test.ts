@@ -80,4 +80,15 @@ describe('records view (M19)', () => {
     expect(view.notCounted).toContain('Dev settings');
     expect(view.bests.every((b) => !b.isNew)).toBe(true);
   });
+
+  it('says the map is still being built when a match on a map in development was kept out of the records (M33d)', () => {
+    const r = emptyRecords();
+    const news = addMatch(r, { difficulty: 'hard', mode: 'attackDefend', won: true, hits: 12, bbsFired: 40 });
+    const view = recordsView(r, news, 'hard', 'attackDefend', 'map');
+    expect(view.notCounted).toContain('map is still being built');
+    expect(view.notCounted).not.toContain('Dev settings');
+    expect(view.notCounted).not.toContain('Custom rules');
+    expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);
+    expect(view.bests.every((b) => !b.isNew)).toBe(true);
+  });
 });
