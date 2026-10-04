@@ -758,6 +758,27 @@ describe('a volume slider let go plays a cue at its new level (audit L-17)', () 
     expect(ctx.state).toBe('running');
   });
 
+  it("from the pause menu: the match's own sounds stay muted while the cue plays (bug pass)", () => {
+    const engine = engineFor();
+    const { sfx, ctx } = setup(OPEN, engine);
+    sfx.setPaused(false);
+    sfx.roundStartWhistle(); // a whistle the match had queued
+    sfx.setPaused(true);
+    engine.preview('master');
+    expect(ctx.state).toBe('running');
+    // The engine's buses are its first three gains; the match leaves for them through its own outlets.
+    const buses = ctx.gains.slice(0, 3);
+    const preview = [...ctx.sources.at(-1)!.outputs][0] as FakeGain;
+    const outlets = ctx.gains.filter((g) => !buses.includes(g) && g !== preview && [...g.outputs].some((o) => buses.includes(o as FakeGain)));
+    expect(outlets).toHaveLength(2); // effects (dry and echo) and interface
+    const whistle = ctx.oscillators[0]!;
+    expect(outlets.some((o) => downstream(whistle).has(o))).toBe(true);
+    for (const o of outlets) expect(o.gain.value).toBe(0);
+    expect(preview.gain.value).toBeGreaterThan(0);
+    sfx.setPaused(false);
+    for (const o of outlets) expect(o.gain.value).toBe(1);
+  });
+
   it('is silent, and harmless, without Web Audio', () => {
     vi.stubGlobal('AudioContext', undefined);
     const engine = engineFor();

@@ -70,6 +70,8 @@ export class Sfx {
   private ui: GainNode | null = null;
   /** This match's nodes between the engine's buses and the sounds, disconnected on dispose. */
   private readonly graph: AudioNode[] = [];
+  /** Where this match's sound leaves for the engine's buses (effects, interface): muted while paused. */
+  private readonly outlets: GainNode[] = [];
   private buffers: ReadonlyMap<SoundCue, readonly AudioBuffer[]> = new Map();
   private readonly lastVariant = new Map<SoundCue | string, number>();
   private readonly replicas = new Map<string, ReplicaSound>();
@@ -92,9 +94,13 @@ export class Sfx {
     private readonly engine: AudioEngine,
   ) {}
 
-  /** Pauses all sound with the game (and resumes it). */
+  /**
+   * Pauses all sound with the game (and resumes it). Paused, this match's outlets are muted too, so a volume slider's
+   * preview, which runs the shared context for its cue, doesn't let the match's queued sounds through with it.
+   */
   setPaused(paused: boolean): void {
     if (!this.ctx) return;
+    for (const outlet of this.outlets) outlet.gain.value = paused ? 0 : 1;
     this.engine.setRunning(!paused);
   }
 
@@ -120,9 +126,11 @@ export class Sfx {
   /** This match's graph (the world's reverb send, your own sounds, the interface's cues and whistle) on `ctx`. */
   private build(ctx: AudioContext): void {
     this.ctx = ctx;
-    const effects = this.engine.bus('effects')!;
+    // The match's own way into the effects bus (dry and echo alike), so pausing can mute it in one place.
+    const effects = ctx.createGain();
+    effects.connect(this.engine.bus('effects')!);
     this.world = ctx.createGain();
-    this.graph.push(this.world);
+    this.graph.push(effects, this.world);
     this.world.connect(effects);
     const reverb = ctx.createConvolver();
     reverb.buffer = this.engine.reverbImpulse();
@@ -135,6 +143,9 @@ export class Sfx {
     this.ui = ctx.createGain();
     this.ui.connect(this.engine.bus('interface')!);
     this.graph.push(this.self, this.ui);
+    this.outlets.push(effects, this.ui);
+    // Silent until play starts (setPaused(false)).
+    for (const outlet of this.outlets) outlet.gain.value = 0;
     this.whistle = new Whistle(ctx, this.ui);
 
     this.buffers = this.engine.cueBuffers();
@@ -301,6 +312,7 @@ export class Sfx {
   dispose(): void {
     this.whistle?.stopAll();
     for (const node of this.graph.splice(0)) node.disconnect();
+    this.outlets.length = 0;
     for (const ch of this.channels.values()) {
       ch.panner.disconnect();
       ch.filter.disconnect();
