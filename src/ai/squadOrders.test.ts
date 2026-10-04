@@ -363,12 +363,12 @@ describe('squad orders (M22)', () => {
     for (const z of [20, 19.3]) {
       // 19.3: you touching the wall, inside the margin the nav grid keeps from it.
       leader.position = vec3(0, 0, z);
-      expect(isWalkableAt(THIN_WALL_NAV, 0, 17.9), 'floor beyond the wall').toBe(true);
+      expect(isWalkableAt(THIN_WALL_NAV, 0, 0, 17.9), 'floor beyond the wall').toBe(true);
       for (const slot of [0, 1]) {
         const out = followSpot(leader, EAST, slot, w, vec3());
         expect(out.z, `slot ${slot} at z ${z}`).toBeGreaterThan(19);
         expect(out.x, `slot ${slot} at z ${z}`).toBeLessThan(-1); // still behind you, not at you
-        expect(clearLine(THIN_WALL_NAV, 0, 20, out.x, out.z)).toBe(true);
+        expect(clearLine(THIN_WALL_NAV, 0, 0, 20, out.x, out.z)).toBe(true);
       }
     }
     // Walking east along the wall: both followers stay on your side of it and never take a long way round.
@@ -404,13 +404,13 @@ describe('squad orders (M22)', () => {
     const leader = createCharacter(0, vec3(), EAST, LOADOUT, 0);
     leader.yaw = EAST;
     const point = vec3(0, 0, 18.1);
-    expect(isWalkableAt(THIN_WALL_NAV, point.x, point.z)).toBe(true);
-    expect(isWalkableAt(THIN_WALL_NAV, point.x, point.z + SQUAD_ORDERS.holdSpacing)).toBe(true); // beyond the wall
+    expect(isWalkableAt(THIN_WALL_NAV, point.x, point.y, point.z)).toBe(true);
+    expect(isWalkableAt(THIN_WALL_NAV, point.x, point.y, point.z + SQUAD_ORDERS.holdSpacing)).toBe(true); // beyond the wall
     const holders = [0, 1, 2].map(() => ({ orderGoal: vec3(), character: leader }) as unknown as Bot);
     placeHold(holders, leader, point, w);
     for (const b of holders) {
       expect(b.orderGoal.z).toBeLessThan(18.6);
-      expect(clearLine(THIN_WALL_NAV, point.x, point.z, b.orderGoal.x, b.orderGoal.z)).toBe(true);
+      expect(clearLine(THIN_WALL_NAV, point.x, point.y, point.z, b.orderGoal.x, b.orderGoal.z)).toBe(true);
     }
     // In the open the same spots spread out on both sides.
     placeHold(holders, leader, point, { nav: OPEN_NAV } as unknown as BotWorld);
@@ -423,12 +423,12 @@ describe('squad orders (M22)', () => {
     const w = { nav } as unknown as BotWorld;
     const leader = createCharacter(0, vec3(), EAST, LOADOUT, 0);
     for (const x of [-3.6, -3.2, -2.6]) {
-      leader.position = vec3(x, floorAt(nav, x, -14), -14);
+      leader.position = vec3(x, floorAt(nav, x, 0, -14), -14);
       expect(leader.position.y, 'on the slope').toBeGreaterThan(0.1);
       for (const slot of [0, 1]) {
         const out = followSpot(leader, EAST, slot, w, vec3());
         expect(flat(out, leader.position), `slot ${slot} at x ${x}`).toBeGreaterThan(2);
-        expect(out.y).toBeCloseTo(floorAt(nav, out.x, out.z), 5); // on the floor there, not at your height
+        expect(out.y).toBeCloseTo(floorAt(nav, out.x, out.y, out.z), 5); // on the floor there, not at your height
       }
     }
     // In the air over open ground: the same spots as standing there.
@@ -440,11 +440,11 @@ describe('squad orders (M22)', () => {
     expect(jumping).toEqual(standing);
     // Hold here at a point on the ramp, looking north across the slope: two spots apart, each on the floor there.
     leader.yaw = 0;
-    const point = vec3(-3.2, floorAt(nav, -3.2, -14.4), -14.4);
+    const point = vec3(-3.2, floorAt(nav, -3.2, 0, -14.4), -14.4);
     const holders = [0, 1].map(() => ({ orderGoal: vec3(), character: leader }) as unknown as Bot);
     placeHold(holders, leader, point, w);
     expect(flat(holders[0]!.orderGoal, holders[1]!.orderGoal)).toBeCloseTo(SQUAD_ORDERS.holdSpacing, 5);
-    for (const b of holders) expect(b.orderGoal.y).toBeCloseTo(floorAt(nav, b.orderGoal.x, b.orderGoal.z), 5);
+    for (const b of holders) expect(b.orderGoal.y).toBeCloseTo(floorAt(nav, b.orderGoal.x, b.orderGoal.y, b.orderGoal.z), 5);
   });
 
   it('follow me at a platform lip: spots stay up on your level or on you, never on the ground below (bug pass)', () => {
@@ -458,11 +458,11 @@ describe('squad orders (M22)', () => {
     // cell, which at the lip can be on the ground, they were down there.
     for (const heading of [EAST, -EAST, 0, Math.PI]) for (const x of [5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3]) {
       leader.position = vec3(x, 1, 5);
-      if (!isWalkableAt(nav, x, 5)) snapped++;
+      if (!isWalkableAt(nav, x, 0, 5)) snapped++;
       for (const slot of [0, 1, 2, 3]) {
         const out = followSpot(leader, heading, slot, w, vec3());
         const onYou = out.x === leader.position.x && out.y === leader.position.y && out.z === leader.position.z;
-        if (!onYou) expect(floorAt(nav, out.x, out.z), `slot ${slot} at x ${x} heading ${heading}`).toBeGreaterThan(0.9);
+        if (!onYou) expect(floorAt(nav, out.x, out.y, out.z), `slot ${slot} at x ${x} heading ${heading}`).toBeGreaterThan(0.9);
       }
     }
     expect(snapped, 'the lip is inside the margin the nav grid keeps from the drop').toBeGreaterThan(0);
@@ -494,7 +494,7 @@ describe('squad orders (M22)', () => {
       expect(b.orderGoal.z).toBeCloseTo(g.z, 5);
       return { ...b.moveDir };
     };
-    const drops = (d: { x: number; z: number }) => dropOnLine(pitNav, start.x, start.z, start.x + d.x * BOTS.edgeLookahead, start.z + d.z * BOTS.edgeLookahead);
+    const drops = (d: { x: number; z: number }) => dropOnLine(pitNav, start.x, start.y, start.z, start.x + d.x * BOTS.edgeLookahead, start.z + d.z * BOTS.edgeLookahead);
     // In the open: mostly your way, which here runs into the pit.
     const open = steer(OPEN_NAV);
     expect(open.x).toBeGreaterThan(0.8);

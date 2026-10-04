@@ -1,7 +1,8 @@
+import { isAvailable, type Tagged } from '../config/content';
 import { loadSetting, oneOf, type SettingField, saveSetting } from '../settings/storage';
 
-/** One choice in an OptionPicker. */
-export interface PickerOption<T extends string> {
+/** One choice in an OptionPicker; a `dev` one (M35) is offered only while Dev content is on. */
+export interface PickerOption<T extends string> extends Tagged {
   id: T;
   label: string;
   /** One line describing the option, shown under the buttons while it's picked. */
@@ -22,6 +23,11 @@ export class OptionPicker<T extends string> {
   private readonly buttons = new Map<T, HTMLButtonElement>();
   private readonly blurb: HTMLParagraphElement;
   private current: T;
+  /**
+   * What shows as picked instead of `current` while that is dev content and Dev content is off (M35, setDevContent):
+   * the option it plays as. Null when the pick itself shows.
+   */
+  private standIn: T | null = null;
 
   /** `initial`: the option shown as picked (normally loadChoice(field, ...)). */
   constructor(
@@ -42,14 +48,19 @@ export class OptionPicker<T extends string> {
     name.className = 'picker-label';
     name.textContent = label;
     row.appendChild(name);
-    for (const { id, label: text } of options) {
+    for (const option of options) {
+      const { id, label: text } = option;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'picker-button';
       button.textContent = text;
+      // A dev option is offered only once Dev content is on (setDevContent).
+      button.hidden = !isAvailable(option.tag, false);
       button.addEventListener('click', () => {
-        if (id === this.current) return;
+        // A click on the stand-in for a hidden dev pick picks it for real.
+        if (id === this.current && this.standIn === null) return;
         this.current = id;
+        this.standIn = null;
         saveSetting(field, id);
         onChange(id);
         this.refresh();
@@ -74,18 +85,30 @@ export class OptionPicker<T extends string> {
     }
   }
 
+  /**
+   * Dev content on or off (M35): the `dev` options offered (looking like the rest) or hidden, and `value` shown as picked
+   * (what the pick plays as now). Nothing is saved: the pick stays, and shows again once it is offered.
+   */
+  setDevContent(on: boolean, value: T): void {
+    for (const o of this.options) this.buttons.get(o.id)!.hidden = !isAvailable(o.tag, on);
+    this.standIn = value === this.current ? null : value;
+    this.refresh();
+  }
+
   /** Shows `value` as picked without saving it or reporting a change (another choice set it, e.g. M20's teammates). */
   show(value: T): void {
     this.current = value;
+    this.standIn = null;
     this.refresh();
   }
 
   private refresh(): void {
+    const shown = this.standIn ?? this.current;
     for (const [id, button] of this.buttons) {
-      const on = id === this.current;
+      const on = id === shown;
       button.classList.toggle('selected', on);
       button.setAttribute('aria-pressed', String(on));
     }
-    this.blurb.textContent = this.options.find((o) => o.id === this.current)?.blurb ?? '';
+    this.blurb.textContent = this.options.find((o) => o.id === shown)?.blurb ?? '';
   }
 }

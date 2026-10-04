@@ -35,11 +35,14 @@ ends the round). A hit character is eliminated
   through a 1 m column grid, allocation-free, held to Rapier's answer by `physics/levelRay.rapier.test.ts`.
   The sim returns anything below `killY` to its spawn.
 - **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
-  routes (8-neighbour A*, string-pulled into straight legs). Each cell stores one floor height (`floorY`, the floor or
-  ramp top under its centre); blocks are judged against it, neighbours connect only if their floors differ by at most
-  `maxStep` (0.15 m), drops get the same clearance as walls, and waypoints carry the floor height. One height per cell
-  is enough because maps never put one walkable surface over another (DECISIONS 2026-10-02), and it keeps the grid
-  2D: a layered grid or recast would be the upgrade if that rule goes. `dropOnLine` tells bots' off-route steps (combat
+  routes (8-neighbour A*, string-pulled into straight legs). The grid is layered (M34b): each cell holds one node per
+  floor over it (the floor and ramp tops at its centre, and a terrain's ground (M33c), with body height clear above), stored flat (`cellStart`,
+  `nodeCell`, `walkable`, `floorY`). Blocks are judged per node against its floor, neighbouring nodes connect only if
+  their floors differ by at most `maxStep` (0.15 m), drops get the same clearance as walls on the floor they edge, and
+  waypoints carry the floor height. Every query takes a height (`nodeAt`, `floorAt`, `isWalkableAt`,
+  `nearestWalkable`, `clearLine`, `dropOnLine`): it picks the highest floor at most `NODE_PICK_ABOVE` above that
+  height, so a character on a balcony and one in the hall under it get different answers. A map with one floor per
+  cell builds the same grid as before. `dropOnLine` tells bots' off-route steps (combat
   sidesteps, the last step to a lean spot) where a floor ends, so they never walk off an open edge. Pure; used by bots
   and by the sim for walk-offs.
 - **ai/**: bots. `BotController` runs before each tick (fills every bot's `PlayerCommand`, rations route searches to one
@@ -255,7 +258,8 @@ ends the round). A hit character is eliminated
 ## Map data
 
 Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind (a `ramp` is a wedge sloping up
-along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramps), spawns and dead-zone spots
+along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramps; walkable surfaces may stack
+when body height is clear between them), spawns and dead-zone spots
 per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
 without one are elimination only). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
 at an end every round start (in Attack / Defend the attackers start at end 0; in Elimination Blue starts at
@@ -304,10 +308,18 @@ request. Each line names where it lives and what pins it.
   the stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per
   format); a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`).
   Pinned by `save/saveFile.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). An Access column on every asset table, `public` or `dev` (M35; blank reads as public, any other word leaves the row out). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
   power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
   over their built-in ones. Pinned by
   `config/stats.test.ts`.
+- **Content tags** (`config/content.ts`, M35): every map, mode, difficulty (`tag` on `MAPS`, `MATCH_MODES`,
+  `DIFFICULTIES`) and pooled asset (`Asset.tag`, pool.md's Access) is `public` or `dev`; Match pop-up choices may carry
+  one (untagged is public). `isAvailable(tag, devContent)` is the one check; `devContent` is the Dev tab's Dev content
+  switch (`dev.devContent`, applying only while Dev settings is ticked). Dev content is not shown anywhere while it is
+  off (`contentPool`, `playedPicks`, `ChoiceDialog`/`OptionPicker.setDevContent`), never drops from Shots
+  (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
+  player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
+  `NotCounted` 'devContent'). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`.

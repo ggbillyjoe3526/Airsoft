@@ -6,7 +6,7 @@ import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { emptyStats, type PlayerStats } from '../stats/matchStats';
 import { addMatch, emptyRecords } from '../stats/records';
-import { recordsView } from './recordsView';
+import { DEV_CONTENT_NOT_RECORDED, recordsView } from './recordsView';
 import { formatAccuracy, formatTime, rosterNames, statsBlocks } from './statsRows';
 
 /** You (0) and Blue 2 (1) against Orange 1 (2) and Orange 2 (3). */
@@ -79,5 +79,20 @@ describe('records view (M19)', () => {
     const view = recordsView(emptyRecords(), { bestAccuracy: true, bestStreak: false }, 'hard', 'attackDefend', 'dev');
     expect(view.notCounted).toContain('Dev settings');
     expect(view.bests.every((b) => !b.isNew)).toBe(true);
+  });
+
+  it('says dev content kept the match out of the records, with its own line and nothing marked (M35)', () => {
+    const r = emptyRecords();
+    const news = addMatch(r, { difficulty: 'hard', mode: 'attackDefend', won: true, hits: 12, bbsFired: 40 });
+    const view = recordsView(r, news, 'hard', 'attackDefend', 'devContent');
+    expect(view.notCounted).toBe(DEV_CONTENT_NOT_RECORDED);
+    expect(view.notCounted).toContain('content still being built');
+    expect(view.notCounted).not.toContain('Dev');
+    expect(view.notCounted).not.toContain('Custom rules');
+    expect(view.notCounted).not.toContain('Dev settings');
+    expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);
+    expect(view.bests.every((b) => !b.isNew)).toBe(true);
+    expect(recordsView(r, news, 'hard', 'attackDefend', 'dev').notCounted).not.toBe(DEV_CONTENT_NOT_RECORDED);
+    expect(recordsView(r, news, 'hard', 'attackDefend').notCounted).toBe('');
   });
 });

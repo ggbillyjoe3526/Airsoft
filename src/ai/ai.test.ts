@@ -179,7 +179,7 @@ describe('cover', () => {
       const toBlock = Math.hypot(block.x - threat.x, block.z - threat.z);
       expect(Math.hypot(p.x - threat.x, p.z - threat.z)).toBeGreaterThan(toBlock);
       // ...on walkable ground, hidden when crouched, and able to see (shoot) over it standing.
-      expect(isWalkableAt(OPEN_NAV, p.x, p.z)).toBe(true);
+      expect(isWalkableAt(OPEN_NAV, p.x, p.y, p.z)).toBe(true);
       expect(lineClear(crate, threatEye, vec3(p.x, BODY.crouchEyeHeight, p.z))).toBe(false);
       expect(lineClear(crate, threatEye, vec3(p.x, BODY.standEyeHeight, p.z))).toBe(true);
       expect(out.crouchOnly).toBe(true);
@@ -1021,7 +1021,7 @@ describe('bot team play and routes', () => {
         expect(walked + 1).toBe(b.lanePoints);
         expect(b.hunting).toBe(false);
         expect(b.mode).toBe('advance');
-        expect(isWalkableAt(nav, b.character.position.x, b.character.position.z)).toBe(true);
+        expect(isWalkableAt(nav, b.character.position.x, b.character.position.y, b.character.position.z)).toBe(true);
         // Holding on its own side of the map, within reach of the pole.
         expect(b.character.position.x).toBeGreaterThan(0);
         expect(Math.hypot(b.character.position.x - pole.x, b.character.position.z - pole.z)).toBeLessThan(16);
@@ -1145,7 +1145,7 @@ describe('bot team play and routes', () => {
         const p = DEPOT.lanes[b.lane]![b.laneIndex]!;
         const off = Math.hypot(b.laneGoal.x - p.x, b.laneGoal.z - p.z);
         expect(off).toBeLessThanOrEqual(BOTS.laneJitter + 1e-9);
-        expect(isWalkableAt(nav, b.laneGoal.x, b.laneGoal.z)).toBe(true);
+        expect(isWalkableAt(nav, b.laneGoal.x, b.laneGoal.y, b.laneGoal.z)).toBe(true);
         offsets.push(off);
       }
     }
