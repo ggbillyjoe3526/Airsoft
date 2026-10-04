@@ -17,9 +17,9 @@ export function figureTilt(down: number): number {
   return V.downAngle * Math.min(fallen, rising);
 }
 
-/** How far a steel plate swings back (rad), `t` seconds after it was hit. */
+/** How far a steel plate swings back (rad), `t` seconds after it was hit: out from hanging straight, back, and settling. */
 export function plateSwing(t: number): number {
-  return V.swingAngle * Math.exp(-V.swingDamping * t) * Math.abs(Math.sin(V.swingRate * t + Math.PI / 2));
+  return V.swingAngle * Math.exp(-V.swingDamping * t) * Math.abs(Math.sin(V.swingRate * t));
 }
 
 /** A hit plate's hanger turn about x (rad): positive, since the plate hangs below the hanger and swings back. */

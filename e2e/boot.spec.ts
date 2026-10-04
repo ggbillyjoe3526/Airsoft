@@ -313,8 +313,17 @@ test('the practice range opens from the title screen and reads out the last BB',
     game.input.yaw = Math.atan2(-dx, -dz); // facing -z at yaw 0
     game.input.pitch = Math.atan2(1.2 - 1.62, Math.hypot(dx, dz)); // eye height to the chest
   });
+  // Full auto: the next BB flies past the fallen figure and says "miss", so remember every text the readout showed.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { readoutSeen: string[] }).readoutSeen = seen;
+    const el = document.querySelector('.range-readout')!;
+    new MutationObserver(() => seen.push(el.textContent ?? '')).observe(el, { childList: true, characterData: true, subtree: true });
+  });
   await page.mouse.down();
-  await expect(readout).toContainText('hit Figure 10 m', { timeout: 30_000 });
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { readoutSeen: string[] }).readoutSeen.some((t) => t.includes('hit Figure 10 m'))), { timeout: 30_000 })
+    .toBe(true);
   await page.mouse.up();
 
   // Esc (here: tabbing away) on the range offers the Loadout; heavier BBs, Back, Resume: the range is rebuilt where you

@@ -50,7 +50,7 @@ function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { v
  * it off instead (a ricochet, M20; it flies on from there next tick). A ricochet only knocks someone out when the
  * match counts ricochets (HitConfig.ricochetsCount); otherwise it ticks them and stops (ricochetTick event), and they
  * play on. On the practice range a BB also stops at the first target it reaches (targetHit event, M21). BBs that fall
- * out of the world or get too old just vanish. A BB never hits whoever fired it, nor anyone
+ * out of the world or get too old are removed (bbLost event). A BB never hits whoever fired it, nor anyone
  * already hit. `rng` scatters bounces (the simulation's seeded stream).
  */
 export function stepBBs(

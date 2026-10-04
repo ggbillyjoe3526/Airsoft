@@ -3,7 +3,7 @@ export const RANGE_INTRO = 'Practice range · spare magazines refill · Esc for 
 
 /** What the practice range's readout shows about your last BB (M21). */
 export interface LastShot {
-  /** How far from you it landed (m), along the ground. */
+  /** How far downrange of the firing line it landed (m), as the markers count. */
   distance: number;
   /** The target it hit ("Steel", "Figure" …) and that target's marked distance, or null for a miss. */
   target: { label: string; distance: number } | null;

@@ -14,7 +14,9 @@ describe('practice range presentation (M21)', () => {
   });
 
   it('swings a plate back when hit, and lets it settle', () => {
-    expect(plateSwing(0)).toBeCloseTo(RANGE_VISUALS.swingAngle, 6);
+    expect(plateSwing(0)).toBe(0); // hanging straight when the BB lands
+    const peak = Math.PI / 2 / RANGE_VISUALS.swingRate;
+    expect(plateSwing(peak)).toBeGreaterThan(0.5 * RANGE_VISUALS.swingAngle); // then swings well out
     expect(plateSwing(1)).toBeLessThan(0.01 * RANGE_VISUALS.swingAngle);
     for (let t = 0; t < 1; t += 0.01) expect(plateSwing(t)).toBeGreaterThanOrEqual(0);
   });
@@ -29,7 +31,7 @@ describe('practice range presentation (M21)', () => {
       pivot.updateMatrixWorld(true);
       return part.getWorldPosition(new THREE.Vector3());
     };
-    expect(turned(plateRotation(0), -0.3).z).toBeLessThan(-0.05); // a plate hangs below its hanger
+    expect(turned(plateRotation(Math.PI / 2 / RANGE_VISUALS.swingRate), -0.3).z).toBeLessThan(-0.05); // a plate hangs below its hanger
     expect(turned(figureRotation(RANGE.figureDownTime / 2), 1.5).z).toBeLessThan(-1); // a figure stands above its hinge
   });
 

@@ -9,6 +9,7 @@ import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
 import { opticOf } from './config/optics';
 import { PHYSICS } from './config/physics';
+import { RANGE } from './config/range';
 import type { QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
@@ -201,17 +202,26 @@ export class RangeSession {
     this.targets.afterTick(this.state.events);
     for (const e of this.state.events) {
       // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall.
-      if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: this.groundDistance(e.position), target: null };
-      else if (e.type === 'bbLost' && e.ownerId === PLAYER_ID) this.lastShot = { distance: 0, target: null, lost: true };
+      if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: downrange(e.position), target: null };
+      else if (e.type === 'bbLost' && e.ownerId === PLAYER_ID) {
+        // Out over a wall or the backstop; one that just ran out of time inside the range counts where it was.
+        this.lastShot = insideRange(e.position) ? { distance: downrange(e.position), target: null } : { distance: 0, target: null, lost: true };
+      }
       else if (e.type === 'targetHit' && e.shooterId === PLAYER_ID) {
         const t = this.state.targets.find((x) => x.id === e.targetId);
-        this.lastShot = { distance: this.groundDistance(e.position), target: t ? { label: t.label, distance: t.distance } : null };
+        this.lastShot = { distance: downrange(e.position), target: t ? { label: t.label, distance: t.distance } : null };
       } else continue;
       this.readout.set(lastShotText(this.lastShot));
     }
   }
+}
 
-  private groundDistance(p: { x: number; z: number }): number {
-    return Math.hypot(p.x - this.player.position.x, p.z - this.player.position.z);
-  }
+/** How far downrange of the firing line (m), the way the markers and target labels count. */
+function downrange(p: { z: number }): number {
+  return Math.max(0, -p.z);
+}
+
+/** Within the range's walls and backstop (at any height). */
+function insideRange(p: { x: number; y: number; z: number }): boolean {
+  return Math.abs(p.x) <= RANGE.halfWidth && p.z >= -RANGE.backstop && p.z <= RANGE.behindLine && p.y >= 0;
 }
