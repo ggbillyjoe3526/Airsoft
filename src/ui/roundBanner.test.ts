@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ROUNDS } from '../config/hits';
 import { createRoundState, type RoundState } from '../sim/round';
 import { vec3 } from '../sim/vec';
-import { RESPAWN_BANNER, roundBanner, spokenRoundMessage } from './roundBanner';
+import { respawnBanner, roundBanner, spokenRoundMessage } from './roundBanner';
 
 const POLE = vec3(10, 0, 0);
 
@@ -73,7 +73,9 @@ describe('the run banner (M43 acceptance 5)', () => {
     expect(roundBanner(round('attackDefend', { phase: 'matchOver', matchWinner: 1 }), 0, false, 0, ROUNDS)).toBe('You lose the match');
   });
 
-  it('says your respawn is spent when you are back at the insertion', () => {
-    expect(RESPAWN_BANNER).toBe('Back in at the insertion · no respawn left');
+  it('says how many respawns you have left when you are back at the insertion', () => {
+    expect(respawnBanner(0)).toBe('Back in at the insertion · no respawn left');
+    expect(respawnBanner(1)).toBe('Back in at the insertion · 1 respawn left');
+    expect(respawnBanner(2)).toBe('Back in at the insertion · 2 respawns left');
   });
 });

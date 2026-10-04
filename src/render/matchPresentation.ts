@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Action } from '../config/controls';
+import { EXTRACTION } from '../config/extraction';
 import type { HitConfig } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
@@ -22,7 +23,7 @@ import { MatchBoard } from '../ui/matchBoard';
 import { Minimap, type MinimapFrame } from '../ui/minimap';
 import { HeardPlayers } from '../ui/minimapView';
 import { OrderWheel, wheelHint } from '../ui/orderWheel';
-import { RESPAWN_BANNER, roundBanner } from '../ui/roundBanner';
+import { respawnBanner, roundBanner } from '../ui/roundBanner';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
 import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
@@ -36,7 +37,7 @@ import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 
 /** The exit markers' colour (EXIT_VISUALS.openColor as CSS). */
-const EXIT_CSS = `#${EXIT_VISUALS.openColor.toString(16).padStart(6, '0')}`;
+const EXIT_CSS = cssColor(EXIT_VISUALS.openColor);
 
 /** What the scoreboard over the field shows: nothing, the round just played, or the match so far. */
 type BoardView = 'none' | 'round' | 'match';
@@ -100,7 +101,7 @@ export class MatchPresentation {
   /** The respawn's fade from black, and when you were last back in (the banner says so for a moment). */
   private readonly respawnFade: HTMLDivElement | null = null;
   private respawnedAt = Number.NEGATIVE_INFINITY;
-  private readonly runInfo = { rules: undefined as unknown as ExtractionContext['rules'], respawnsLeft: 0 };
+  private readonly runInfo = { rules: EXTRACTION, respawnsLeft: 0 };
 
   constructor(
     scene: THREE.Scene,
@@ -389,9 +390,10 @@ export class MatchPresentation {
     this.feedback.setCalling(status === 'calling');
     if (status === 'calling') this.feedback.setHitDirection(wrapAngle(cameraYaw - this.hitFromYaw));
     this.feedback.setOutLabel(spectating ? this.outLabel() : '');
+    // Extraction: respawns left first, as the banner says them on the frame you're back.
+    if (this.extraction) this.runInfo.respawnsLeft = respawnsLeft(this.state.round.run, this.player, this.extraction);
     this.updateRoundMessage();
     if (this.extraction) {
-      this.runInfo.respawnsLeft = respawnsLeft(this.state.round.run, this.player, this.extraction);
       this.scoreboard.update(this.state.round, this.state.characters, this.runInfo);
     } else this.scoreboard.update(this.state.round, this.state.characters);
     return spectating;
@@ -552,7 +554,7 @@ export class MatchPresentation {
   private updateRoundMessage(): void {
     const r = this.state.round;
     const showStart = r.phase === 'live' && this.state.time - this.roundStartedAt < HUD.roundStartMessageTime;
-    // Extraction: for a moment after you're back from a hit, the banner says your respawn is spent.
+    // Extraction: for a moment after you're back from a hit, the banner says how many respawns you have left.
     const respawned = r.phase === 'live' && this.state.time - this.respawnedAt < HUD.respawnMessageTime;
     const seconds = Math.max(1, Math.ceil(r.timer));
     const shown = this.shownRound;
@@ -564,6 +566,6 @@ export class MatchPresentation {
     shown.number = r.number;
     shown.start = showStart;
     shown.mode = r.mode;
-    this.feedback.setRoundMessage(respawned ? RESPAWN_BANNER : roundBanner(r, this.player.team, showStart, seconds, this.rules));
+    this.feedback.setRoundMessage(respawned ? respawnBanner(this.runInfo.respawnsLeft) : roundBanner(r, this.player.team, showStart, seconds, this.rules));
   }
 }

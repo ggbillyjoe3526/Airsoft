@@ -5,6 +5,7 @@ import { DEFAULT_MATCH_RULES, type MatchRules, TEAM_SIZE_CHOICES, WINS_NEEDED_CH
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from './config/modes';
 import { LOADOUT } from './config/replicas';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, teamSizeOn } from './map/maps';
+import { modeOffered } from './map/playableMode';
 import { rolledKitMayHoldDev } from './pool/botKit';
 import type { ItemRef } from './pool/collection';
 import { itemsUseDev } from './pool/contentPool';
@@ -21,13 +22,16 @@ export interface NewGamePicks {
 
 /**
  * The picks as they play (M35): while Dev content is off, each pick of dev content plays as its list's default (the
- * saved pick is kept, so it comes back when Dev content is on again). Pure.
+ * saved pick is kept, so it comes back when Dev content is on again); so does a mode the map doesn't offer (M43). Pure.
  */
 export function playedPicks(p: NewGamePicks, devContent: boolean): NewGamePicks {
   const d = DEFAULT_MATCH_RULES;
+  const map = availableChoice(MAPS, p.map, devContent, DEFAULT_MAP);
+  const mode = availableChoice(MATCH_MODES, p.mode, devContent, DEFAULT_MODE);
   return {
-    map: availableChoice(MAPS, p.map, devContent, DEFAULT_MAP),
-    mode: availableChoice(MATCH_MODES, p.mode, devContent, DEFAULT_MODE),
+    map,
+    // A mode the map doesn't offer (Extraction without its data, M43) plays as the default, like a dev pick.
+    mode: modeOffered(mapData(map), mode) ? mode : DEFAULT_MODE,
     difficulty: availableChoice(DIFFICULTIES, p.difficulty, devContent, DEFAULT_DIFFICULTY),
     teammateDifficulty: availableChoice(TEAMMATE_DIFFICULTIES, p.teammateDifficulty, devContent, DEFAULT_DIFFICULTY),
     rules: {

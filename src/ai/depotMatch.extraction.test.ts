@@ -23,7 +23,7 @@ import { createWind } from '../sim/wind';
 import { BotController } from './botController';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
 import { DT } from './depotMatchSupport';
-import { keepSquadFollowing } from './squadFollow';
+import { SquadFollow } from './squadFollow';
 
 /**
  * Extraction on Depot (M43), headless with real physics and bots: you (not a bot: you stand where the test puts you)
@@ -77,12 +77,13 @@ function setUpRun(seed: number) {
     teamCfg: [botConfig('normal'), botConfig('normal')],
     seed,
   });
+  const follow = new SquadFollow();
   const play = (seconds: number, onTick: () => void = () => {}) => {
     for (let i = 0; i < seconds / DT && state.round.phase === 'live'; i++) {
       bots.think(state, DT);
       stepSimulation(state, commands, ctx, DT);
       bots.observe(state);
-      keepSquadFollowing(bots, you, state.events, state.round.phase === 'live');
+      follow.update(bots, you, state.characters, state.events, state.round.phase === 'live');
       onTick();
     }
   };

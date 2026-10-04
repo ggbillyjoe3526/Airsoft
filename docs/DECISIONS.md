@@ -640,6 +640,6 @@ One line each: decision, then why.
 - **2026-10-04 · M43 · Exits within 30 m of the run's insertion are closed for that run, and not drawn.** Otherwise a squad could count out from its own spawn; 30 m keeps two exits open on Depot from either yard.
 - **2026-10-04 · M43 · The home team starts at the map's opponent starts farthest from the insertion.** Nobody starts on top of the squad; M45's waves and regen points take over from there.
 - **2026-10-04 · M43 · Bot teammates get one respawn each, like you, and follow you by default and after every respawn.** The owner's answer to the plan's question 3 (one respawn per run) holds for the whole squad; following is the simplest team plan until M46 and the Pro thread's team play.
-- **2026-10-04 · M43 · The exit zone reaches 1 m up and down from its floor.** A dock or walkway above an exit isn't in it.
+- **2026-10-04 · M43 · The exit zone reaches 1 m up and down from its floor (`EXTRACTION.exitHeightReach`).** A dock or walkway above an exit isn't in it.
 - **2026-10-04 · M43 · A run's squad is at most three (`EXTRACTION.maxSquad`), whatever team size a map allows.** The plan's solo, duo or trio; a map's insertions have three spawns each, and bigger maps (Woodland up to 5v5) still play Extraction as a trio.
 - **2026-10-04 · M43 · Records and pay for Extraction come in M47; until then the mode's dev tag keeps runs out of the records and unpaid (M35).** The records table has no column for a dev mode, as M36 did for dev levels: its matches never enter the records.

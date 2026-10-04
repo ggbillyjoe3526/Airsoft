@@ -19,6 +19,8 @@ export interface ExtractionRules {
   countStep: number;
   /** The biggest squad (solo, duo or trio): a map's insertions have this many spawns each. */
   maxSquad: number;
+  /** An exit zone reaches this far up and down from its floor (m): about a storey, so a dock above an exit isn't in it. */
+  exitHeightReach: number;
 }
 
 export const EXTRACTION: ExtractionRules = {
@@ -31,6 +33,7 @@ export const EXTRACTION: ExtractionRules = {
   respawns: 1,
   countStep: 1,
   maxSquad: 3,
+  exitHeightReach: 1,
 };
 
 /** The squad a run plays with for the picked team size: the team size, at most `maxSquad` (a map may allow bigger teams). */

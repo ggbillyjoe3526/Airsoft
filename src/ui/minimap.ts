@@ -1,5 +1,6 @@
 import { EXIT_VISUALS } from '../config/render';
 import { MINIMAP } from '../config/minimap';
+import { cssColor } from '../config/teams';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
 import { clampToRim, coverHeight, type HeardPlayer, insideCircle, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
@@ -47,9 +48,8 @@ interface FieldLayer {
 }
 
 /** Exit icons' colours (config/render.ts EXIT_VISUALS, as CSS). */
-const hex = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
-const EXIT_OPEN = hex(EXIT_VISUALS.openColor);
-const EXIT_SHUT = hex(EXIT_VISUALS.shutColor);
+const EXIT_OPEN = cssColor(EXIT_VISUALS.openColor);
+const EXIT_SHUT = cssColor(EXIT_VISUALS.shutColor);
 
 /** The step patch's dashed outline (made once). */
 const STEP_DASH: readonly number[] = [3, 3];

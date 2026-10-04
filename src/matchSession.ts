@@ -1,5 +1,5 @@
 import { BotController } from './ai/botController';
-import { keepSquadFollowing } from './ai/squadFollow';
+import { SquadFollow } from './ai/squadFollow';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
@@ -220,6 +220,8 @@ export class MatchSession {
 
   /** Extraction's run context (the insertion, the home team's starts, the exits); undefined in the other modes. */
   readonly extraction: ExtractionContext | undefined;
+  /** Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts). */
+  private readonly squadFollow = new SquadFollow();
 
   /** Characters in the match (for the debug overlay). */
   get characterCount(): number {
@@ -507,7 +509,7 @@ export class MatchSession {
       if (e.type === 'respawned' && e.characterId === this.player.id) this.input.resetView(this.player.spawnYaw);
     }
     // Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts).
-    if (this.extraction) keepSquadFollowing(this.bots, this.player, this.state.events, this.state.round.phase === 'live');
+    if (this.extraction) this.squadFollow.update(this.bots, this.player, this.state.characters, this.state.events, this.state.round.phase === 'live');
   }
 
 }

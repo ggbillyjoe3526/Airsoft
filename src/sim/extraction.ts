@@ -170,9 +170,6 @@ export function exitAt(run: RunState, c: Character, heightReach: number): number
   return -1;
 }
 
-/** Vertical reach of an exit zone (m): about a storey, so a dock above an exit isn't in it. */
-const EXIT_HEIGHT_REACH = 1;
-
 /**
  * One tick of the run, after the round clock has moved (`clock`: seconds left): the late exits, the one-minute
  * whistle, squad respawns, the runner's exit count. Returns how the run ended this tick, or 'none'.
@@ -237,7 +234,8 @@ function clearCount(run: RunState): void {
 
 /** The runner's count at the exit they stand in: reset on leaving it, paused while an opponent in play is in it too. */
 function stepCount(run: RunState, runner: Character, characters: readonly Character[], ctx: ExtractionContext, events: GameEvent[], dt: number): void {
-  const at = exitAt(run, runner, EXIT_HEIGHT_REACH);
+  const reach = ctx.rules.exitHeightReach;
+  const at = exitAt(run, runner, reach);
   if (at < 0) {
     clearCount(run);
     return;
@@ -250,7 +248,7 @@ function stepCount(run: RunState, runner: Character, characters: readonly Charac
   let contested = false;
   for (const c of characters) {
     if (c.team === ctx.squadTeam || !isInPlay(c)) continue;
-    if (flat(c.position, exit.position) <= exit.radius && Math.abs(c.position.y - exit.position.y) <= EXIT_HEIGHT_REACH) {
+    if (flat(c.position, exit.position) <= exit.radius && Math.abs(c.position.y - exit.position.y) <= reach) {
       contested = true;
       break;
     }

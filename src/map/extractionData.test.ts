@@ -4,10 +4,10 @@ import { NAV } from '../config/nav';
 import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
 import { exitClosedFor, pickOpponentStarts } from '../sim/extraction';
 import { MAPS } from './maps';
-import { playableMode } from './playableMode';
+import { modeOffered, playableMode } from './playableMode';
 
-/** The biggest squad (the Match pop-up's 3v3). */
-const MAX_SQUAD = 3;
+/** The biggest squad (a trio). */
+const MAX_SQUAD = EXTRACTION.maxSquad;
 /** Share of an exit's disc that must be walkable, so you can stand anywhere in it, give or take a corner. */
 const EXIT_WALKABLE = 0.7;
 
@@ -57,6 +57,7 @@ describe('Extraction map data (M43)', () => {
 
       it('is offered Extraction', () => {
         expect(playableMode(map, 'extraction')).toBe('extraction');
+        expect(modeOffered(map, 'extraction')).toBe(true);
       });
     });
   }
@@ -65,5 +66,9 @@ describe('Extraction map data (M43)', () => {
     expect(playableMode({}, 'extraction')).toBe('elimination');
     expect(playableMode({}, 'attackDefend')).toBe('elimination');
     expect(playableMode({}, 'elimination')).toBe('elimination');
+    // New game doesn't offer Extraction there at all; the other modes it offers on every map, as before.
+    expect(modeOffered({}, 'extraction')).toBe(false);
+    expect(modeOffered({}, 'attackDefend')).toBe(true);
+    expect(modeOffered({}, 'elimination')).toBe(true);
   });
 });

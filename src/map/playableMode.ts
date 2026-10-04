@@ -10,3 +10,11 @@ export function playableMode(map: Pick<MapData, 'flag' | 'extraction'>, wanted: 
   if (wanted === 'extraction') return map.extraction ? wanted : 'elimination';
   return wanted;
 }
+
+/**
+ * Whether New game offers `mode` on `map`: Extraction only where the map has its data (M43); the others everywhere,
+ * as before (Attack / Defend on a map without a flagpole still plays as Elimination, above).
+ */
+export function modeOffered(map: Pick<MapData, 'extraction'>, mode: MatchMode): boolean {
+  return mode !== 'extraction' || map.extraction !== undefined;
+}

@@ -39,8 +39,10 @@ function runBanner(r: RoundState, showStart: boolean): string {
   return showStart ? 'Extraction · get to an exit' : '';
 }
 
-/** Said for a moment after you're back at the insertion from a hit (M43): your respawn is spent. */
-export const RESPAWN_BANNER = 'Back in at the insertion · no respawn left';
+/** Said for a moment after you're back at the insertion from a hit (M43), with the respawns you have `left`. */
+export function respawnBanner(left: number): string {
+  return `Back in at the insertion · ${left === 0 ? 'no' : left} respawn${left > 1 ? 's' : ''} left`;
+}
 
 /** Before the countdown in the between-rounds message. */
 const NEXT_ROUND = ' · next round in ';

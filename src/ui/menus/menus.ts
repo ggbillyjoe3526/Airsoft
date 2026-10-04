@@ -20,6 +20,7 @@ import type { QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
 import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapEntry } from '../../map/maps';
+import { modeOffered } from '../../map/playableMode';
 import { playedPicks, playedTeamSize } from '../../newGamePicks';
 import { saveSetting } from '../../settings/storage';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
@@ -500,6 +501,8 @@ export class Menus {
     const devContent = this.opts.dev.devContent();
     this.mapDialog.setDevContent(devContent);
     this.modeDialog.setDevContent(devContent);
+    const offeredOn = mapEntry(this.mapDialog.value).data;
+    this.modeDialog.limit((id) => modeOffered(offeredOn, id));
     const played = playedPicks(
       { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, rules: this.matchRules },
       devContent,

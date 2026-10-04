@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EXIT_VISUALS } from '../config/render';
+import { cssColor } from '../config/teams';
 import type { RunExit, RunState } from '../sim/extraction';
 
 const V = EXIT_VISUALS;
@@ -21,7 +22,7 @@ function drawBoard(text: string, color: number): THREE.CanvasTexture {
   canvas.height = height;
   const g = canvas.getContext('2d');
   if (g) {
-    g.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+    g.fillStyle = cssColor(color);
     g.fillRect(0, 0, width, height);
     g.strokeStyle = '#ffffff';
     g.lineWidth = height * 0.06;

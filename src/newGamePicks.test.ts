@@ -49,7 +49,9 @@ describe('New game picks and dev content (M35)', () => {
   it('plays every real option as picked with Dev content on, and a dev one as its default with it off', () => {
     for (const map of MAPS) for (const mode of MATCH_MODES) {
       const p = picks({ map: map.id, mode: mode.id });
-      expect(playedPicks(p, true)).toEqual(p);
+      // Extraction plays only on a map with its data (M43); elsewhere it plays as the default mode.
+      const offered = mode.id !== 'extraction' || map.data.extraction !== undefined;
+      expect(playedPicks(p, true)).toEqual(offered ? p : { ...p, mode: DEFAULT_MODE });
       expect(playedPicks(p, false).map).toBe(map.tag === 'dev' ? DEFAULT_MAP : map.id);
       expect(playedPicks(p, false).mode).toBe(mode.tag === 'dev' ? DEFAULT_MODE : mode.id);
       expect(picksUseDev(playedPicks(p, false))).toBe(false);
@@ -127,7 +129,9 @@ describe('New game picks and dev content (M35)', () => {
     expect([1, 2, 3, 4, 5].map((n) => squadSize(n))).toEqual([1, 2, 3, 3, 3]);
     expect(playedTeamSize(picks({ mode: 'extraction' }, { teamSize: 2 }))).toBe(2);
     expect(playedTeamSize(picks({ mode: 'extraction' }, { teamSize: 3 }))).toBe(3);
-    // Woodland has room for 5v5 but no Extraction data yet: it plays Elimination, so its team size stands.
+    // Woodland has room for 5v5 but no Extraction data yet: it plays Elimination (not offered there), so its team size stands.
+    expect(playedPicks(picks({ map: 'woodland', mode: 'extraction' }), true).mode).toBe(DEFAULT_MODE);
+    expect(playedPicks(picks({ map: 'depot', mode: 'extraction' }), true).mode).toBe('extraction');
     expect(playedTeamSize(picks({ map: 'woodland', mode: 'extraction' }, { teamSize: 5 }))).toBe(5);
     expect(playedTeamSize(picks({ map: 'woodland' }, { teamSize: 5 }))).toBe(5);
   });
