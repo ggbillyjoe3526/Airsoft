@@ -125,10 +125,10 @@ export class CombatPresentation {
 
   /**
    * The graphics context is back after a loss (audit L-02). Three.js uploads geometry and textures again from their
-   * copies, but a render target comes back empty, so the sheen is rendered again.
+   * copies, but a render target comes back empty, so the sheen is rendered again. The old target is dropped, not
+   * disposed: its GL objects went with the lost context, and freeing them on the new one only logs WebGL warnings.
    */
   contextRestored(): void {
-    this.sheen?.dispose();
     this.sheen = null;
     this.setQuality(this.quality);
   }
