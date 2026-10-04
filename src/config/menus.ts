@@ -63,7 +63,7 @@ export const ARMORY_TEXT = {
   new: 'New',
   spare: 'Spare',
   /** The setup tile's line under the balance. */
-  tileDetail: 'Free. Earn Field Credits in matches and take Shots for gear.',
+  tileDetail: 'Free gear for playing.',
   /** Dev settings → Disable Armory (M26d). */
   off: 'The Armory is switched off in the Dev settings.',
   /** The match summary's line. */

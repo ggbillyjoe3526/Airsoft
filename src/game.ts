@@ -258,7 +258,7 @@ export class Game {
           saveCollection(this.collection);
           this.loadoutChanged = this.setupChanged = true;
         },
-        summary: () => ({ value: fcText(this.collection.fc), detail: `${this.collection.tokens} Tokens. ${ARMORY_TEXT.tileDetail}`, disabled: false }),
+        summary: () => ({ value: fcText(this.collection.fc), detail: `${this.collection.tokens} ${this.collection.tokens === 1 ? 'Token' : 'Tokens'}. ${ARMORY_TEXT.tileDetail}`, disabled: false }),
       },
       onPlay: () => {
         // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
