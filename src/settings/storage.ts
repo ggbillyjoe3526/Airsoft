@@ -51,7 +51,6 @@ export type SettingField =
   | `mag.${string}`
   /** Those picks were carried into the asset pool (M26b). */
   | 'oldPicksCarried'
-
   /** Settings → Accessibility, the sound cues' look (M24). */
   | 'soundCueSize'
   | 'soundCueColour'

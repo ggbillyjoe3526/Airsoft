@@ -128,7 +128,8 @@ export class LoadoutScreen {
     this.selected = slot;
     this.customising = slot;
     this.render();
-    this.panel.querySelector<HTMLElement>('.item-chip, .loadout-close')?.focus({ preventScroll: true });
+    // The first part to pick, not Back To Gear (which comes first in the page).
+    (this.panel.querySelector<HTMLElement>('.item-chip') ?? this.panel.querySelector<HTMLElement>('.loadout-close'))?.focus({ preventScroll: true });
   }
 
   private closeCustomise(): void {
@@ -183,12 +184,13 @@ export class LoadoutScreen {
         this.render();
         this.panel.querySelector<HTMLElement>(`[data-item="${key(ref)}"]`)?.focus({ preventScroll: true });
       });
-      tile.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        m.equip(slot, ref);
-        this.opts.onChange();
-        this.customise(slot);
-      });
+      // Right-click customises the equipped replica only: a misplaced right-click never swaps what you carry.
+      if (isCurrent) {
+        tile.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          this.customise(slot);
+        });
+      }
       grid.append(tile);
     }
     this.panel.append(grid);

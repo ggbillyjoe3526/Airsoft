@@ -202,7 +202,7 @@ export class Game {
     this.matchRules = loadMatchRules();
     this.collection = loadCollection(GAME_POOL, options.seed);
     this.loadout = new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection));
-    if (carryOverOldPicks(this.loadout, this.collection)) saveCollection(this.collection);
+    carryOverOldPicks(this.loadout, this.collection, (c) => saveCollection(c));
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);

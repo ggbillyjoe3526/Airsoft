@@ -112,6 +112,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(loadout.getByRole('heading', { name: /Customise: AEG Rifle/ })).toBeVisible();
   const optic = loadout.getByRole('group', { name: 'Optic' });
   await expect(optic.getByRole('button', { name: 'Iron Sights' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(optic.getByRole('button', { name: 'Iron Sights' })).toBeFocused(); // the first part, for the keyboard
   await optic.getByRole('button', { name: /Red Dot/ }).click();
   await expect(optic.getByRole('button', { name: /Red Dot/ })).toHaveAttribute('aria-pressed', 'true');
   const rifleWeight = loadout.getByRole('slider', { name: 'AEG Rifle BB weight' });

@@ -8,9 +8,10 @@ import { type Asset, fits, replicaOf } from './pool';
  * A returning player's M17b picks, carried into the asset pool once (M26b). Before M26 every optic, grip and magazine
  * was free, saved as `optic` (the rifle's), `grip.<replica>` and `mag.<replica>`; now they are assets to own. Each part
  * a player had picked is given to them (at the lowest tier, unless they own a copy already) and fitted where it was,
- * so nobody loses what they played with. Runs once (`oldPicksCarried`); returns true if the collection changed.
+ * so nobody loses what they played with. Runs once (`oldPicksCarried`, saved only after `save` has stored the collection
+ * with them); returns true if the collection changed.
  */
-export function carryOverOldPicks(model: LoadoutModel, c: Collection): boolean {
+export function carryOverOldPicks(model: LoadoutModel, c: Collection, save: (c: Collection) => void = () => undefined): boolean {
   if (loadSetting('oldPicksCarried', (v) => (typeof v === 'boolean' ? v : undefined), false)) return false;
   const pool = model.pool;
   const lowest = pool.tiers[0];
@@ -35,6 +36,7 @@ export function carryOverOldPicks(model: LoadoutModel, c: Collection): boolean {
       model.setFit(replica.id, slot, { asset: part.id, tier: (owned ?? lowest).id });
     }
   }
+  if (changed) save(c);
   saveSetting('oldPicksCarried', true);
   return changed;
 }
