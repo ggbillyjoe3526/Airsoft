@@ -2,6 +2,7 @@ import { ARMORY_TEXT } from '../../config/menus';
 import { canTakeShots, type Dispensed, scrapAllSpares, scrapSpares, scrapValue, shotPrice, type ShotCount, spares, takeShots, tierChances, buyTokens } from '../../pool/armory';
 import { type Collection, type ItemRef, ownedItems } from '../../pool/collection';
 import { type Asset, fcPerToken, type Pool } from '../../pool/pool';
+import { tierLine } from '../performanceSheet';
 import { backButton, el, menuButton, menuPage } from './menuParts';
 
 export interface ArmoryOptions {
@@ -214,6 +215,8 @@ export class ArmoryScreen {
     const n = spares(c, item) + 1;
     const name = el('span', 'armory-row-name', asset.name);
     row.append(name, el('span', 'item-tier', this.tierLabel(item)), el('span', 'armory-row-count', `×${n}`));
+    const adds = tierLine(this.pool, item);
+    if (adds) row.append(el('span', 'armory-row-adds', adds));
     const extra = n - 1;
     if (extra > 0) {
       const key = `scrap-${item.asset}-${item.tier}`;
@@ -248,7 +251,15 @@ export class ArmoryScreen {
     const asset = this.pool.byId.get(item.asset)!;
     const tile = el('div', 'item-tile armory-tile');
     tile.dataset.tier = item.tier;
-    tile.append(el('span', 'item-note', CATEGORY_LABELS[asset.category]), el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(item)), el('span', 'item-note', note));
+    tile.append(el('span', 'item-note', CATEGORY_LABELS[asset.category]), el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(item)));
+    const adds = tierLine(this.pool, item);
+    if (adds) {
+      // A square tile holds three lines of it; the whole line is on hover and in the collection list.
+      const line = el('span', 'item-note tier-adds', adds);
+      line.title = adds;
+      tile.append(line);
+    }
+    tile.append(el('span', 'item-note', note));
     return tile;
   }
 

@@ -128,6 +128,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Done | 9.1 |
 | Alpha · Owner's 2026-10-04 batch · M26d Dev settings for the Armory: switch the gacha off, unlock all gear; docs | Done | 9.1 |
 | Alpha · Owner's 2026-10-04 batch · M30 BB physics pass 2 (owner, 2026-10-04): a flight model from fluid dynamics: real drag by Reynolds number, Magnus lift from the hop-up's decaying backspin, a per-match breeze with gusts that drifts BBs (the dust shows it) | Done (owner to play it) | |
+| Alpha · Owner's 2026-10-04 requests · M29a Weapon performance data: `stats.md` (every replica's and part's numbers, hand-editable), tiers that add energy and rate of fire, batteries that set the rate of fire, an 11.1 V LiPo battery, a site energy limit, a Performance sheet on Customise | In progress | |
+| Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Planned (after M29a) | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -719,6 +721,21 @@ pool, items 11, 12 and part of 14).
     for Tokens at 0.00625 Tokens per FC (160 FC a Token), one Token a Shot or ten for a ten-Shot, three random assets
     per Shot, spare copies scrapped for FC. Marked beta, completely free, can be switched off.
   - **M26d. Dev settings** (on M24's hidden Dev panel): switch all gacha off (greys out the Armory), unlock all gear.
+
+- **M29. Weapon performance data, barrels and silencers** (owner, 2026-10-04: "each weapon and loadout has its own
+  performance data … energy, BB weights, fire rate … scale with higher tier versions"; then barrels and silencers;
+  plan with 14 questions answered the same day: defaults, except opponents' loadouts on Hard).
+  - **M29a. Stats.** `stats.md` beside `pool.md`: the AEG Rifle's and Gas Pistol's numbers (energy, factory BB,
+    rate of fire, magazines, reload, draw, spread, recoil), each power source's energy, rate of fire and recoil, the
+    optics', grips', lasers' and magazines' numbers, the Tier scaling and the site limits. A tier adds energy and rate
+    of fire at half its Bonus; batteries set the rate of fire (an 11.1 V LiPo Battery, 000015); Red and Black Gas kick
+    harder; rifles stop at 1.20 J, pistols at 1.00 J. The Customise screen's Performance sheet, the gear slots' stat
+    line and the Armory's "what this tier adds".
+  - **M29b. Barrels, silencers and opponents' loadouts.** Barrel and Muzzle rows: a Tight-Bore Barrel (tighter, a
+    little stronger) and a Long Barrel (stronger, slower to handle) for the AEG; one Silencer for both (bots hear the
+    shot from half as far, muffled sound, a smaller minimap range; a little less energy, a slower draw). On Hard (and
+    the Esports difficulty when it comes) each opponent rolls random parts that fit, at Armory odds, seeded by the
+    match. Later: pistol barrels, more barrel lengths, a tracer unit on the muzzle (v0.3).
 
 When the owner calls the game feature complete, alpha ends.
 

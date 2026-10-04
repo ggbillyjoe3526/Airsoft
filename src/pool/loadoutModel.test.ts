@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GAME_STATS } from '../config/gameStats';
 import { AEG, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
@@ -129,5 +130,55 @@ describe('Loadout model (M26b)', () => {
     expect(model.fitOf(aeg).optic).toEqual(item('Red Dot'));
     unlocked = true; // and the sandboxed picks are still there next time
     expect(model.fitOf(aeg).optic).toEqual(item('2x Scope', 'legendary'));
+  });
+
+  describe('the replica as it comes and the site limit (M29)', () => {
+    const ALL = [...STARTERS, item('AEG Rifle', 'legendary'), item('Gas Pistol', 'legendary'), item('Black Gas', 'legendary'), item('11.1 V LiPo Battery'), item('Red Dot', 'legendary'), item('Red Laser', 'legendary'), item('Hi-Cap Magazine')];
+
+    it('builds asItComes at the lowest tier on the starter power source, whatever the player owns, equips or fits', () => {
+      const model = new LoadoutModel(pool, owning(ALL));
+      model.equip('primary', item('AEG Rifle', 'legendary'));
+      model.setFit(id('AEG Rifle'), 'power', item('11.1 V LiPo Battery'));
+      model.setFit(id('AEG Rifle'), 'optic', item('Red Dot', 'legendary'));
+      model.setFit(id('AEG Rifle'), 'magazine', item('Hi-Cap Magazine'));
+      model.setFit(id('Gas Pistol'), 'power', item('Black Gas', 'legendary'));
+      const aeg = model.asItComes(id('AEG Rifle'));
+      expect(aeg.replica).toEqual({ ...AEG, name: 'AEG Rifle' });
+      expect(aeg.optic).toBeNull();
+      expect(aeg.parts.grip).toBe('none');
+      expect(aeg.parts.laser).toBeNull();
+      expect(aeg.parts.magazine).toBe(AEG.magazines[0]);
+      // The player's own slot is better than it comes; the factory one is untouched by the picks.
+      const carried = model.slotKit(item('AEG Rifle', 'legendary'));
+      expect(carried.replica.fireRate).toBeGreaterThan(aeg.replica.fireRate);
+      expect(carried.replica.spreadDeg).toBeLessThan(aeg.replica.spreadDeg);
+      const pistol = model.asItComes(id('Gas Pistol'));
+      expect(pistol.replica).toEqual({ ...GAS_PISTOL, name: 'Gas Pistol' });
+      expect(model.slotKit(item('Gas Pistol')).replica.muzzleEnergy).toBeGreaterThan(pistol.replica.muzzleEnergy);
+    });
+
+    it("is the same slot the bots carry: the shared config's numbers", () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      expect(model.asItComes(id('AEG Rifle')).replica.muzzleEnergy).toBe(AEG.muzzleEnergy);
+      expect(model.asItComes(id('Gas Pistol')).replica.fireRate).toBe(GAS_PISTOL.fireRate);
+    });
+
+    it('says capped only when the site limit stops the energy of that replica with its current fit', () => {
+      const model = new LoadoutModel(pool, owning(ALL));
+      const legendaryPistol = item('Gas Pistol', 'legendary');
+      model.setFit(id('Gas Pistol'), 'power', item('Black Gas', 'legendary'));
+      expect(model.capped(legendaryPistol)).toBe(false); // 0.52 J · 1.075 · 1.275 is under 1.00 J as shipped
+      const black = GAME_STATS.power[id('Black Gas')]!;
+      const saved = { ...black };
+      try {
+        Object.assign(black, { energy: 2 }); // a looser file: the same fit now runs past the limit
+        expect(model.capped(legendaryPistol)).toBe(true);
+        expect(model.capped(item('Gas Pistol'))).toBe(true);
+        model.setFit(id('Gas Pistol'), 'power', item('Green Gas'));
+        expect(model.capped(legendaryPistol)).toBe(false); // the fit decides, not the replica
+      } finally {
+        Object.assign(black, saved);
+      }
+    });
   });
 });
