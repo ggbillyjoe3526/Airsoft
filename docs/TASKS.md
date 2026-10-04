@@ -10,30 +10,6 @@ files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged de
 owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
 first (M33 changes both).
 
-## M36 · The Pro difficulty level
-tier: core
-perf: skip
-touches: src/config/bots.ts, src/config/content.ts, src/pool/, pool.md, src/stats/, src/settings/storage.ts, src/ui/menus/, src/config/menus.ts, src/matchSession.ts
-acceptance:
-  1. A fourth difficulty `pro` ("Pro") for opponents and teammates, tagged dev: listed only with the Dev content switch on.
-  2. Its BOT_SKILL row: settled aim tighter than Hard, lead about 0.85, `aimErrorStartMetres` above zero, short bursts.
-  3. Opponents roll kits as on Hard with partChance about 0.8; the Cyber Pistol rule applies as on Hard.
-  4. pool.md's Difficulty table has a Pro row ×2, read by the game; a pool.md without the row still loads.
-  5. Records keep `pro.<mode>` rows; saves from before load unchanged (no SAVE_FORMAT change, or an upgrade step if one is needed).
-status: open
-attempts: 0
-
-## M37 · Pro bots hold angles
-tier: core
-perf: required
-touches: src/ai/, src/nav/, src/map/, src/config/bots.ts
-acceptance:
-  1. Angles (doorways, wall corners, stair tops; bush edges and tree gaps where a map has them) are worked out per map from its navigation, not hand-placed, and tested per map.
-  2. A Pro bot that stops holds an angle, aimed at head height where someone would appear.
-  3. Reaction about 0.18–0.28 s to someone appearing within a few degrees of where the bot aims; Hard speed or slower elsewhere.
-  4. A headless test fails if any bot, at any difficulty, aims at someone it hasn't seen or heard.
-  5. Easy, Normal and Hard play as before (their guards unchanged).
-status: open
 attempts: 0
 
 ## M38 · Pro bots clear corners and play as a team
@@ -65,11 +41,12 @@ attempts: 0
 ## M40 · Map balance for Pro
 tier: core
 perf: skip
-touches: src/ai/, src/map/
+touches: src/ai/, src/map/, src/config/bots.ts
 acceptance:
   1. Headless Pro guards per playable map: Attack / Defend attackers 40–60 %, each end 40–60 % of decided Elimination rounds, under 1 round in 10 on time.
   2. Depot unchanged unless its Office lane puts attackers under 40 %; then a window or second door between two rooms, layout tests still passing.
   3. Woodland and the city are checked against the same guards once their navigation lands.
+  4. Held angles (M37) also cover stair tops on layered floors and bush edges and tree gaps where a map has foliage, tested on the maps that have them.
 status: open
 attempts: 0
 

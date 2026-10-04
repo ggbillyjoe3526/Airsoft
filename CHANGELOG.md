@@ -64,10 +64,13 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
 - **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
 - **M35** · pool.md has an Access column: public or dev for each asset (#70)
+- **M36** · Pro difficulty level: a fourth bot level above Hard, shown only with Dev content on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted
+- **M42** · Dev tab Retro pixels: 1990s shooter look with chunky pixels, dithering and crushed palette; Pixel size and Colours sliders; HUD and menus stay sharp (#78)
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
+- **M37** · Pro bots holding still aim at the corners and doorways you'd step out of, and answer a peek there faster; anywhere else no faster than Hard
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
 - **FA2** · Low has 80 % resolution with no shadows; Medium adds shadows and relief; High adds sharp textures, finer shadows, sheen and dust (#67)
 - **FA3** · Low draws the same frame about 18 % faster in our test, with 20 % fewer triangles and a quarter of the texture memory (#67)
@@ -116,6 +119,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M28** · Impact puffs start at half size
 
 ### Internal
+- **FA14** · The browser smoke test waits for a match to draw before trying its keys, and gives the scoreboard, order wheel and squad order steps the same wait as firing and reloading, so slow frames on a CI runner no longer fail it (#80)
 - **M34b** · Multi-floor navigation: map cells hold multiple walkable levels, enabling buildings with stairs and balconies
 - **FA11b** · What Play does next and the pause and result text are pure, unit-tested functions; `?perf` logs how long each part of a match build takes (#73)
 - **FA11b** · Unit tests share a worker's modules and split into fast and slow projects (`npx vitest run --project fast` for quick feedback); the gate's browser-test failures show the test, the locator and the expected and received values (#73)

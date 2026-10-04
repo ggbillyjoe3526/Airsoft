@@ -1,5 +1,6 @@
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { standardMatchText } from '../config/matchRules';
+import { isAvailable } from '../config/content';
 import { MATCH_MODES, type MatchMode } from '../config/modes';
 import { type RecordNews, type Records, resultKey } from '../stats/records';
 
@@ -41,7 +42,8 @@ export function recordsView(records: Records, news: RecordNews, difficulty: Diff
   if (!counted) news = NO_NEWS;
   return {
     modes: MATCH_MODES.map((m) => m.label),
-    rows: DIFFICULTIES.map((d) => ({
+    // A dev level (Pro, M36) never enters the records (M35), so its row would stay empty: only public levels get one.
+    rows: DIFFICULTIES.filter((d) => isAvailable(d.tag, false)).map((d) => ({
       label: d.label,
       cells: MATCH_MODES.map((m) => {
         const wl = records.results[resultKey(d.id, m.id)];
