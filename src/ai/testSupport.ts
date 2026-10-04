@@ -4,12 +4,13 @@ import { FOOTSTEPS } from '../config/footsteps';
 import { HITS, ROUNDS } from '../config/hits';
 import { BODY, MOVEMENT } from '../config/movement';
 import type { MatchMode } from '../config/modes';
+import type { MapData } from '../map/mapTypes';
 import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
 import { DEPOT } from '../map/depot';
 import { buildNavGrid, type NavGrid } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
-import { createCharacter } from '../sim/character';
+import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import type { CharacterMover } from '../sim/movement';
 import { createSimContext, stepSimulation } from '../sim/simulation';
@@ -103,9 +104,53 @@ export function duel(
   bot.yaw = facing(bot.position, player.position);
   state.characters.push(player, bot);
   extra(state);
+  const world = playOnFloor(state, [bot], { query, cfg, seed, lowCover, tallCover, nav, lanes: OPEN_FIELD.lanes });
+  // The player stands still facing the bot.
+  world.commands.get(0)!.yaw = facing(player.position, bot.position);
+  return { state, player, bot, ...world };
+}
+
+/**
+ * A skirmish on `map` (a flat floor with boxes; no ramps), played without physics on a flat floor: Blue's character 0
+ * stands still where `chars` puts it, and every other character (`[x, z, team]` each) is a bot. The map's blocks are the
+ * walls, its lanes the bots' lanes, its low and tall blocks their cover.
+ */
+export function skirmish(map: MapData, chars: readonly (readonly [number, number, number])[], cfg: BotConfig = BOTS, seed = 7) {
+  const state = createGameState(seed, 64, ROUNDS);
+  chars.forEach(([x, z, team], id) => state.characters.push(createCharacter(id, vec3(x, 0, z), 0, LOADOUT, team)));
+  const nav = buildNavGrid(map, NAV);
+  const walls = map.blocks.filter((k) => k.kind !== 'floor').map((k) => boxQuery(k.center.x, k.center.z, k.size.x / 2, k.size.z / 2, k.center.y + k.size.y / 2));
+  const query: WorldQuery = {
+    raycastStatic(o, d, max) {
+      let best = -1;
+      for (const q of walls) {
+        const t = q.raycastStatic(o, d, max);
+        if (t >= 0 && (best < 0 || t < best)) best = t;
+      }
+      return best;
+    },
+  };
+  const world = playOnFloor(state, state.characters.slice(1), {
+    query,
+    cfg,
+    seed,
+    lowCover: lowCoverBlocks(map.blocks, nav, BODY, cfg.lowCoverFloorGap),
+    tallCover: tallCoverBlocks(map.blocks, nav, BODY, cfg.lowCoverFloorGap),
+    nav,
+    lanes: map.lanes,
+  });
+  return { state, player: state.characters[0]!, query, nav, ...world };
+}
+
+/** Bots for `botChars` in `state` on a flat floor, and a run loop stepping bots and simulation together. */
+function playOnFloor(
+  state: GameState,
+  botChars: Character[],
+  o: { query: WorldQuery; cfg: BotConfig; seed: number; lowCover: readonly CoverBlock[]; tallCover: readonly CoverBlock[]; nav: NavGrid; lanes: MapData['lanes'] },
+) {
   const ctx = createSimContext({
     mover: flatFloor,
-    query,
+    query: o.query,
     movement: MOVEMENT,
     footsteps: FOOTSTEPS,
     body: BODY,
@@ -113,26 +158,24 @@ export function duel(
     killY: -10,
     hits: HITS,
     deadZones: [[{ position: vec3(-40, 0, 0), yaw: 0 }], [{ position: vec3(40, 0, 0), yaw: 0 }]],
-    nav,
+    nav: o.nav,
     navSnap: NAV.snap,
     rounds: ROUNDS,
   });
   const commands = new Map<number, PlayerCommand>([[0, createCommand()]]);
-  const bots = new BotController(state, [bot], commands, {
-    query,
-    nav,
+  const bots = new BotController(state, botChars, commands, {
+    query: o.query,
+    nav: o.nav,
     navSnap: NAV.snap,
-    lanes: OPEN_FIELD.lanes,
-    lowCover,
-    tallCover,
+    lanes: o.lanes,
+    lowCover: o.lowCover,
+    tallCover: o.tallCover,
     body: BODY,
     hits: HITS,
     loadout: LOADOUT,
-    cfg,
-    seed,
+    cfg: o.cfg,
+    seed: o.seed,
   });
-  // The player stands still facing the bot.
-  commands.get(0)!.yaw = facing(player.position, bot.position);
   const run = (seconds: number, onTick: () => void = () => {}) => {
     for (let i = 0; i < seconds / DT; i++) {
       bots.think(state, DT);
@@ -141,7 +184,7 @@ export function duel(
       onTick();
     }
   };
-  return { state, player, bot, run, commands, bots };
+  return { run, commands, bots };
 }
 
 

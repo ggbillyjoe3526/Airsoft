@@ -16,11 +16,13 @@ export interface HeldAngle {
   pitch: number;
   /** The aim point: just past the edge, at head height. */
   point: Vec3;
+  /** The open side of the edge (-1 left, 1 right, as a lean): leaning that way shows a little more past it (M38). */
+  side: number;
   score: number;
 }
 
 export function createHeldAngle(): HeldAngle {
-  return { yaw: 0, pitch: 0, point: vec3(), score: Number.NEGATIVE_INFINITY };
+  return { yaw: 0, pitch: 0, point: vec3(), side: 0, score: Number.NEGATIVE_INFINITY };
 }
 
 /** The ray fan's tuning, from BOT_BEHAVIOUR. */
@@ -68,6 +70,8 @@ export function findHeldAngles(query: WorldQuery, eye: Readonly<Vec3>, headY: nu
     lookAngles(eye.x, eye.y, eye.z, candidate.point.x, candidate.point.y, candidate.point.z, look);
     candidate.yaw = look.yaw;
     candidate.pitch = look.pitch;
+    // Rays turn left as the index grows: an open ray after the near one lies to its left.
+    candidate.side = openAt > nearAt ? -1 : 1;
     // Towards the enemy side first, then at a middle distance (a corner at arm's length or across the map is less use).
     candidate.score = Math.cos(wrapAngle(yaw - facingYaw)) - Math.abs(dist - cfg.angleBestDist) / cfg.angleMaxDist;
     found = keepBest(candidate, out, cfg.angleSeparationDeg * DEG, found);
@@ -100,6 +104,7 @@ function copyAngle(from: HeldAngle, to: HeldAngle): void {
   to.point.x = from.point.x;
   to.point.y = from.point.y;
   to.point.z = from.point.z;
+  to.side = from.side;
   to.score = from.score;
 }
 

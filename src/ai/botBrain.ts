@@ -3,9 +3,9 @@ import { canReload } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
-import { vec3 } from '../sim/vec';
-import { type Bot, type BotWorld, flagRole, lastSeenAt, pick, wantsFlag } from './bot';
-import { aimBot, reloadBot, shootBot } from './botCombat';
+import { type Vec3, vec3 } from '../sim/vec';
+import { type Bot, type BotWorld, flagRole, pick, threatInMind, wantsFlag } from './bot';
+import { aimBot, lowOnBBs, reloadBot, shootBot } from './botCombat';
 import { enterFlagMode, keepApart, moveBot, startSearch, teammateSpots, wantRoute } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
 import { type CoverSearch, findCover, hidesFrom, leanSideToSee } from './cover';
@@ -24,16 +24,23 @@ const threatEye = vec3();
 
 /** Narrowed cover search for a fresh contact: close cover to peek from only, no random tries (filled per call). */
 const contactSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
+/** The same for trading a teammate's hit (M38): a spot to peek from towards where the shot came from. */
+const tradeSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
 
 /**
  * Looks for cover from `threat` and heads there (`search` narrows the search, see findCover); false
  * if no spot nearby hides the bot. Ducks for `down` seconds once there before looking again.
  */
 function takeCover(b: Bot, w: BotWorld, threat: Character, down: number, search?: CoverSearch): boolean {
-  const cfg = w.cfg;
   eyeOf(threat, w.body, w.hits, threatEye);
+  return takeCoverFrom(b, w, threatEye, down, search);
+}
+
+/** takeCover from a threat whose eye is at `eye` (seen, or only known: knownThreatEye). */
+function takeCoverFrom(b: Bot, w: BotWorld, eye: Vec3, down: number, search?: CoverSearch): boolean {
+  const cfg = w.cfg;
   // Never the spot a teammate is at or heading for (AI-01).
-  if (!findCover(b.character.position, threatEye, w, b.rng, b.cover, search, teammateSpots(b, w))) return false;
+  if (!findCover(b.character.position, eye, w, b.rng, b.cover, search, teammateSpots(b, w))) return false;
   b.mode = 'cover';
   b.coverPhase = 'down';
   b.coverLeft = down;
@@ -164,7 +171,7 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   // What the bot still remembers of an enemy it saw or heard (memoryTime). Attack / Defend defenders
   // only go after what is near their pole; anything further off they hold their post for, and keep
   // watching that way (aimBot looks at lastKnown) until it is old news.
-  const fresh = b.hasLastKnown && w.time - Math.max(lastSeenAt(b), b.heardAt) < cfg.memoryTime;
+  const fresh = threatInMind(b, w);
   const defending = flagRole(b, w) === 'defend';
   const pole = w.round.flag.position;
   const watchFromPost = fresh && defending && Math.hypot(b.lastKnown.x - pole.x, b.lastKnown.z - pole.z) > cfg.defendSearchRadius;
@@ -192,8 +199,12 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   } else if (wantsFlag(b, w)) {
     // Attack / Defend: the pole comes before chasing noises.
     if (b.mode !== 'flag') enterFlagMode(b, w);
+  } else if (fresh && (tradeHit(b, w) || reloadFromCover(b, w))) {
+    return;
   } else if (remembered) {
     if (b.mode !== 'search') {
+      // Lost sight of someone still in play (M38): a bot with peekWatchTime first watches where they ducked out.
+      if (b.mode === 'fight' && b.contact && b.skill.peekWatchTime[1] > 0) b.watchUntil = w.time + pick(b.rng, b.skill.peekWatchTime);
       b.routeState = 'none';
       b.mode = 'search';
       startSearch(b, w);
@@ -210,6 +221,48 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   } else if (defending && !fresh) {
     b.hasLastKnown = false; // holding a post: stop watching where a noise was once it's old news
   }
+  if (b.mode === 'advance' && !b.hunting && pushingLate(b, w)) {
+    // Behind on players late in the round (M38): stop holding the lane and go looking for them.
+    b.hunting = true;
+    b.routeState = 'none';
+    b.route.length = 0;
+    b.holdLeft = 0;
+    b.waitForTeam = false;
+    b.holdCover = false;
+  }
+}
+
+/** A teammate's hit call heard moments ago (M38, teamPlay): head for a spot to peek where it came from, once per call. */
+function tradeHit(b: Bot, w: BotWorld): boolean {
+  const cfg = w.cfg;
+  if (!b.skill.teamPlay || b.tradeTried || w.time - b.tradeAt > cfg.tradeTime || b.coverCooldown > 0) return false;
+  b.tradeTried = true;
+  knownThreatEye(b, w);
+  tradeSearch.radius = cfg.tradeCoverRadius;
+  if (!takeCoverFrom(b, w, threatEye, 0, tradeSearch)) return false; // nowhere to peek from: straight there (search)
+  b.coverCooldown = cfg.coverCooldown;
+  return true;
+}
+
+/**
+ * A low magazine with a threat in mind (M38, slicesCorners): to cover from where it is known to be, to top up there
+ * (reloadBot waits for the spot). False if it needn't or no spot hides it.
+ */
+function reloadFromCover(b: Bot, w: BotWorld): boolean {
+  const cfg = w.cfg;
+  if (!b.skill.slicesCorners || b.coverCooldown > 0 || !lowOnBBs(b, cfg.tacticalReloadFraction)) return false;
+  // Cooled down whether or not a spot is found, as for ducking under fire: no search every tick while none is near.
+  b.coverCooldown = cfg.coverCooldown;
+  knownThreatEye(b, w);
+  return takeCoverFrom(b, w, threatEye, pick(b.rng, cfg.coverTime));
+}
+
+/** Elimination (M38, teamPlay): latePushTime or less left, and fewer of its team in play than of the other. */
+export function pushingLate(b: Bot, w: BotWorld): boolean {
+  if (!b.skill.teamPlay || w.round.mode !== 'elimination' || w.round.clock > w.cfg.latePushTime) return false;
+  let balance = 0;
+  for (const c of w.characters) if (isInPlay(c)) balance += c.team === b.character.team ? 1 : -1;
+  return balance < 0;
 }
 
 /**
@@ -250,6 +303,11 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   b.coverCooldown -= dt;
 
   chooseMode(b, w, target, dt);
+  // With a threat in mind, or walking its lane in the enemy's half (M38, slicesCorners): walk and slice each corner
+  // ahead. Hunting with nothing heard, trading a hit teammate or pushing late, it hurries.
+  const trading = w.time - b.tradeAt < cfg.tradeTime;
+  const near = b.skill.slicesCorners && (threatInMind(b, w) || (!b.hunting && w.inEnemyHalf(b)));
+  b.careful = near && !trading && (b.mode === 'advance' || b.mode === 'search') && !pushingLate(b, w);
   // Steer clear of anyone close by, or step out of their way (AI-01).
   const moving = keepApart(b, w, moveBot(b, w, cmd, dt, target), cmd);
   // Holding a lane point or a post: crouch once settled, where crouched eyes still see the enemy side (AI-02).
@@ -271,8 +329,12 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     // following someone (a looser forward gate), so it doesn't flick between run and sprint at each one.
     const hurry = b.mode === 'order' && b.orderRush;
     cmd.sprint = hurry ? cmd.forward > SQUAD_ORDERS.sprintForward : (b.mode === 'advance' || b.mode === 'flag') && calm && cmd.forward > cfg.sprintForward;
-    // Closing in on where someone was seen or heard: walk, so footsteps don't give us away.
-    cmd.walk ||= b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < b.skill.searchWalkDistance;
+    // Closing in on where someone was seen or heard: walk, so footsteps don't give us away (not while trading, M38).
+    cmd.walk ||= b.mode === 'search' && !trading && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < b.skill.searchWalkDistance;
+    if (b.careful) {
+      cmd.walk = true;
+      cmd.sprint = false;
+    }
   }
   shootBot(b, w, target, myEye, aimAt, offAim, cmd, dt);
   reloadBot(b, w, cmd);
