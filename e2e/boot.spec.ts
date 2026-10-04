@@ -285,17 +285,19 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const armoryTileEl = page.locator('.menu-setup .setup-tile', { hasText: 'Armory' });
   await settings.getByRole('group', { name: 'Disable Armory' }).getByRole('button', { name: 'On' }).click();
   await expect(armoryTileEl).toBeDisabled();
-  // M35: Dev content lists Woodland under Depot, greyed out with a "Coming soon" tag (M33a), and it can't be picked.
+  // M35: Dev content lists Woodland under Depot, greyed out with a "Coming soon" tag (M33a): disabled, so it can't be
+  // picked (no forced click on it: choiceDialog.test.ts covers that it never becomes the pick).
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
+  await expect(setup, 'M35: Esc leaves Settings for New game').toBeVisible();
   await setup.getByRole('button', { name: /Map/i }).click();
+  await expect(mapDialog, 'M35: the Map pop-up opens with Dev content on').toBeVisible();
+  await expect(mapDialog.getByRole('button', { name: /Depot/i }), 'M35: Depot stays picked').toHaveAttribute('aria-pressed', 'true');
   const woodland = mapDialog.getByRole('button', { name: /Woodland/i });
-  await expect(woodland).toBeDisabled();
-  await expect(woodland).toContainText('Coming soon');
-  await woodland.click({ force: true });
-  await expect(mapDialog).toBeVisible();
-  await expect(mapDialog.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
+  await expect(woodland, 'M35: Woodland is listed, disabled').toBeDisabled();
+  await expect(woodland, 'M35: Woodland says Coming soon').toContainText('Coming soon');
   await page.keyboard.press('Escape');
+  await expect(mapDialog, 'M35: Esc closes the Map pop-up').toBeHidden();
   await setup.getByRole('button', { name: /^Settings/ }).click();
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'Off' }).click();
   await devBox.uncheck();
