@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
 import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { unpaidLine } from './summaryScreen';
-import { DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE } from './menus';
+import { DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE, setupNotes } from './menus';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
@@ -247,5 +247,15 @@ describe('New game notes on dev content (M35)', () => {
     expect(DEV_CONTENT_PAY_NOTE).not.toBe(DEV_CONTENT_NOTE);
     expect(NOT_RECORDED_NOTE).toContain("won't go into your records");
     expect(DEV_NOT_RECORDED_NOTE).toContain("won't go into your records");
+  });
+
+  it('warns before a match that uses dev content (a dev pick, dev gear in the Loadout, or the opponents\' possible gear)', () => {
+    const clean = { recorded: true, cheating: false, devContentUsed: false };
+    expect(setupNotes('Rules.', clean)).toBe('Rules.');
+    expect(setupNotes('Rules.', { ...clean, devContentUsed: true })).toBe(`Rules. ${DEV_CONTENT_NOTE}`);
+    // Custom rules or Dev settings already say it won't be recorded: dev content adds only that it won't pay.
+    expect(setupNotes('Rules.', { ...clean, recorded: false, devContentUsed: true })).toBe(`Rules. ${NOT_RECORDED_NOTE} ${DEV_CONTENT_PAY_NOTE}`);
+    expect(setupNotes('Rules.', { ...clean, cheating: true, devContentUsed: true })).toBe(`Rules. ${DEV_NOT_RECORDED_NOTE} ${DEV_CONTENT_PAY_NOTE}`);
+    expect(setupNotes('Rules.', { ...clean, recorded: false, cheating: true })).toBe(`Rules. ${NOT_RECORDED_NOTE}`);
   });
 });

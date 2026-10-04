@@ -502,15 +502,7 @@ export class Menus {
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
     const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty);
     const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value);
-    // Said before the match, not only on its summary: custom rules don't go into the records (M20), nor does a match
-    // played with Dev settings that change play (M24).
-    const notes = [rules];
-    if (!recorded) notes.push(NOT_RECORDED_NOTE);
-    else if (this.opts.dev.cheating()) notes.push(DEV_NOT_RECORDED_NOTE);
-    // Dev content (M35) keeps the match out of the records and unpaid: said in full, or only the pay when a note above
-    // already said it won't be recorded.
-    if (this.opts.dev.devContentUsed()) notes.push(notes.length > 1 ? DEV_CONTENT_PAY_NOTE : DEV_CONTENT_NOTE);
-    this.setup.setRules(notes.join(' '));
+    this.setup.setRules(setupNotes(rules, { recorded, cheating: this.opts.dev.cheating(), devContentUsed: this.opts.dev.devContentUsed() }));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);
     const armory = this.opts.armory.summary();
@@ -522,6 +514,19 @@ export class Menus {
   refresh(): void {
     this.refreshSetup();
   }
+}
+
+/**
+ * New game's text under its buttons: the rules, then why the match won't count, said before it is played: custom rules
+ * (M20, not `recorded`), Dev settings that change play (M24, `cheating`), or dev content (M35, `devContentUsed`: in full,
+ * or only that it won't pay when a note before it already says it won't be recorded). Pure.
+ */
+export function setupNotes(rules: string, why: { recorded: boolean; cheating: boolean; devContentUsed: boolean }): string {
+  const notes = [rules];
+  if (!why.recorded) notes.push(NOT_RECORDED_NOTE);
+  else if (why.cheating) notes.push(DEV_NOT_RECORDED_NOTE);
+  if (why.devContentUsed) notes.push(notes.length > 1 ? DEV_CONTENT_PAY_NOTE : DEV_CONTENT_NOTE);
+  return notes.join(' ');
 }
 
 /** Under New game's rules while Dev settings that change play are on (M24). */
