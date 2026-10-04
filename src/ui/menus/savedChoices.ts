@@ -6,7 +6,7 @@ import {
   SOUND_CUE_SIZE,
   type SoundCueColour,
 } from '../../config/accessibility';
-import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   AIM_MODES,
   CROUCH_MODES,
@@ -49,12 +49,13 @@ export function loadDifficulty(): Difficulty {
 }
 
 /**
- * Your bot teammates' difficulty (M20). Until one is saved it is the opponents' (`opponents`, the saved `difficulty`):
- * before M20 every bot played at that one level, so a returning player's teammates stay as they were and their
- * standard matches still count for the records.
+ * Your bot teammates' difficulty (M20). Until one is saved it follows the opponents' (`opponents`, the saved
+ * `difficulty`) through defaultTeammateDifficulty: the same level, as every bot had before M20, except that Easy
+ * opponents give Normal teammates (audit AI-03). Either way a returning player's standard matches still count for the
+ * records (countsForRecords treats that default pair as standard).
  */
 export function loadTeammateDifficulty(opponents: Difficulty = loadDifficulty()): Difficulty {
-  return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, opponents);
+  return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, defaultTeammateDifficulty(opponents));
 }
 
 /** Whether a teammate difficulty has been picked and saved (until then it follows the opponents', M20). */

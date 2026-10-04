@@ -48,8 +48,12 @@ describe('a 3v3 bot match on Depot', () => {
   });
 
   it('has bot teammates follow a leader round Depot without being left behind (squad orders, M22)', { timeout: 60_000 }, () => {
+    let allCounted = 0;
+    let allStanding = 0;
     for (const seed of [1, 2, 3, 4]) {
       const { counted, near, worst, standing } = playFollowMatch(90, seed);
+      allCounted += counted;
+      allStanding += standing;
       // Measured 2026-10-04 (seeds 1-4, after M-05/M-08: no follow spot behind a wall): within a few metres of the
       // leader all the time, at worst 5.3-6.9 m away (a sprinting leader round corners: a sprint can't catch a
       // sprint), and standing still 0.7-1.8% of the time the leader moves (one that got ahead of its spot waiting for
@@ -59,8 +63,12 @@ describe('a 3v3 bot match on Depot', () => {
       expect(counted, `seed ${seed}`).toBeGreaterThan(1000);
       expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.95);
       expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp);
-      expect(standing / counted, `seed ${seed}`).toBeLessThan(0.04);
     }
+    // Standing still is judged over the four seeds together (FA4, 2026-10-04; DECISIONS): one seed's share swings with
+    // a single long wait (over seeds 1-16 single seeds reach 4.8 % before FA4 and 5.0 % after it, while the mean fell
+    // from 1.8 to 1.6 %). Seeds 1-4 together: 2.5 % before FA4, 2.1 % after, 1.1 % with the east spawns moved back
+    // (FA4 attempt 2), so the limit is 3 %.
+    expect(allStanding / allCounted).toBeLessThan(0.03);
   });
 
   it('plays out rounds with the other team on rolled kits of their own, every part fitted (Hard, M29b)', { timeout: 60_000 }, () => {
