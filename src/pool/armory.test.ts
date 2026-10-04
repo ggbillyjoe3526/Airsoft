@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buyTokens,
   canTakeShots,
+  chaseChances,
   cheapestSpare,
   collectionRows,
   earn,
@@ -23,7 +24,8 @@ import {
 import { addItem, type ItemRef, loadCollection, newCollection, ownedCount, saveCollection } from './collection';
 import { MemoryStorage } from './testStorage';
 import { GAME_POOL } from './gamePool';
-import { loadPool, type Pool } from './pool';
+import poolText from '../../pool.md?raw';
+import { isChase, loadPool, type Pool, tiersOf } from './pool';
 
 const pool = GAME_POOL;
 const e = pool.economy;
@@ -297,7 +299,8 @@ describe('the Armory catalogue and reveal (audit POOL-04, POOL-11, POOL-13)', ()
     addItem(c, item('Red Dot', 'epic'), 2);
     const cat = collectionRows(pool, c);
     expect(cat.rows.map((r) => r.asset.id)).toEqual(shotAssets(pool).map((a) => a.id));
-    expect(cat.total).toBe(shotAssets(pool).length * pool.tiers.length);
+    // Every asset at every tier, but the Cyber Pistol (M32) at Legendary only.
+    expect(cat.total).toBe((shotAssets(pool).length - 1) * pool.tiers.length + 1);
     expect(cat.owned).toBe(5);
     const dot = cat.rows.find((r) => r.asset.name === 'Red Dot')!;
     expect(dot.counts).toEqual([0, 0, 0, 0, 2, 0]);
@@ -355,5 +358,124 @@ describe('Round won pay (audit POOL-08, POOL-09)', () => {
   it('scales Round won by the match length like the match lines', () => {
     const short = matchEarnings(e, { won: true, roundsWon: 3, hits: 0, winsNeeded: 3, difficulty: 'normal' });
     expect(short.lines.find((l) => l.label === '3 rounds won')!.fc).toBe(18);
+  });
+});
+
+describe('M32 acceptance 3: Shots and the chase item', () => {
+  const CYBER = '000019';
+  const CYBER_ROW = '| 000019 | Cyber Pistol | cyber | pistol, built-in-power | no | yes | Legendary | 0.25 |';
+  expect(poolText).toContain(CYBER_ROW);
+  /** pool.md with the Cyber Pistol's Drop % set to `percent` (a bigger one keeps the statistics fast and tight). */
+  const withDrop = (percent: number): Pool => loadPool(poolText.replace(CYBER_ROW, CYBER_ROW.replace('| 0.25 |', `| ${percent} |`)));
+  /** pool.md without any chase row: the Cyber Pistol's row is simply not there. */
+  const noChase: Pool = loadPool(poolText.replace(`${CYBER_ROW}\n`, ''));
+
+  /** Every item of `n` ten-Shots (a fresh Token supply each time), from a collection seeded `seed`. */
+  function draws(p: Pool, seed: number, n: number, count: 1 | 10 = 10) {
+    const c = newCollection(p, seed);
+    const out: { asset: string; tier: string }[] = [];
+    for (let i = 0; i < n; i++) {
+      c.tokens = 10;
+      for (const d of takeShots(p, c, count)!) out.push(d.item);
+    }
+    return out;
+  }
+
+  it('has the Cyber Pistol as the only chase item, in Shots, and a pool without its row has none', () => {
+    expect(pool.assets.filter(isChase).map((a) => a.id)).toEqual([CYBER]);
+    expect(shotAssets(pool).map((a) => a.id)).toContain(CYBER);
+    expect(noChase.errors).toEqual(pool.errors);
+    expect(noChase.byId.has(CYBER)).toBe(false);
+    expect(noChase.assets.filter(isChase)).toEqual([]);
+  });
+
+  it('draws a pool with no chase rows exactly as before (FA10\'s tier-then-asset draw, no chase roll)', () => {
+    // The same collection, seed and entropy: the draws match a pool whose chase row is in the file but out of Shots,
+    // so the chase roll is the only difference there can be, and with no chase item in Shots there is none.
+    const outOfShots = loadPool(poolText.replace(CYBER_ROW, CYBER_ROW.replace('| no | yes |', '| no | no |')));
+    expect(shotAssets(outOfShots).filter(isChase)).toEqual([]);
+    for (let seed = 1; seed <= 40; seed++) {
+      for (const count of [1, 10] as const) {
+        const a = newCollection(noChase, seed);
+        const b = newCollection(outOfShots, seed);
+        a.tokens = b.tokens = 10;
+        expect(takeShots(noChase, a, count, 1234)!.map((d) => d.item), `seed ${seed} x${count}`).toEqual(takeShots(outOfShots, b, count, 1234)!.map((d) => d.item));
+        expect(a.seed).toBe(b.seed);
+      }
+    }
+  });
+
+  it('gives the Cyber Pistol at about 0.25 % of the items, always at Legendary', () => {
+    const items = draws(pool, 11, 2000); // 60,000 items: about 150 of them
+    const cyber = items.filter((d) => d.asset === CYBER);
+    expect(items).toHaveLength(60000);
+    expect(cyber.length).toBeGreaterThan(100);
+    expect(cyber.length).toBeLessThan(205);
+    for (const d of cyber) expect(d.tier).toBe('legendary');
+  });
+
+  it('gives a chase item its Drop % of the items (tight at 20 %), always Legendary, and the rest equally likely', () => {
+    const p = withDrop(20);
+    expect(p.byId.get(CYBER)!.dropChance).toBeCloseTo(0.2, 10);
+    const items = draws(p, 5, 300); // 9,000 items
+    const total = items.length;
+    const cyber = items.filter((d) => d.asset === CYBER);
+    expect(cyber.length / total).toBeGreaterThan(0.18);
+    expect(cyber.length / total).toBeLessThan(0.22);
+    for (const d of cyber) expect(d.tier).toBe('legendary');
+    // The other assets share the other 80 % equally, in every tier.
+    const others = shotAssets(p).filter((a) => !isChase(a));
+    const expected = (total * 0.8) / others.length;
+    for (const a of others) {
+      const n = items.filter((d) => d.asset === a.id).length;
+      expect(n, a.name).toBeGreaterThan(expected * 0.75);
+      expect(n, a.name).toBeLessThan(expected * 1.25);
+    }
+    expect(items.some((d) => d.asset !== CYBER && d.tier === 'common')).toBe(true);
+    // Tiers of the Cyber Pistol come only from those it comes in.
+    expect(tiersOf(p, p.byId.get(CYBER)!).map((t) => t.id)).toEqual(['legendary']);
+  });
+
+  it('adds Cyber Pistols to the collection only at Legendary, and keeps the ten-Shot guarantee', () => {
+    const p = withDrop(20);
+    const c = newCollection(p, 21);
+    for (let i = 0; i < 300; i++) {
+      c.tokens = 10;
+      const got = takeShots(p, c, 10)!;
+      expect(got.some((d) => ['rare', 'veryRare', 'epic', 'legendary'].includes(d.item.tier)), `ten-Shot ${i}`).toBe(true);
+    }
+    for (const key of Object.keys(c.owned)) if (key.startsWith(`${CYBER}@`)) expect(key).toBe(`${CYBER}@legendary`);
+    expect(c.owned[`${CYBER}@legendary`]).toBeGreaterThan(100);
+  });
+
+  it('lifts the last item of a ten-Shot to the guaranteed tier even when chase items are in the draw', () => {
+    // Only Common can come up by the odds, so every ten-Shot that has no Legendary falls back on the guarantee.
+    const text = [
+      '### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', '| Common | 100 | 0 | 5 |', '| Rare | 0 | 6 | 20 |', '| Legendary | 0 | 15 | 160 |',
+      '### Replicas', '| ID | Name | Key | Tags | Starter | In Shots | Tiers | Drop % |', '|---|---|---|---|---|---|---|---|',
+      '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes | | |',
+      '| 000019 | Cyber Pistol | cyber | pistol, built-in-power | no | yes | Legendary | 30 |',
+    ].join('\n');
+    const rigged = loadPool(text);
+    expect(rigged.economy.tenShotGuarantee).toBe('rare');
+    for (let seed = 1; seed <= 80; seed++) {
+      const c = newCollection(rigged, seed);
+      c.tokens = 10;
+      const ten = takeShots(rigged, c, 10)!.map((d) => d.item);
+      expect(ten.some((d) => d.tier !== 'common'), `seed ${seed}`).toBe(true);
+      for (const d of ten) if (d.asset === '000019') expect(d.tier).toBe('legendary');
+    }
+  });
+});
+
+describe('M32 acceptance 8: the Armory shows the chase item', () => {
+  it('lists the Cyber Pistol as a chase item at 0.25 %, Legendary only, and leads the reveal line with it', () => {
+    expect(chaseChances(pool).map((c) => [c.asset.name, c.chance, c.tiers.map((t) => t.id)])).toEqual([['Cyber Pistol', 0.0025, ['legendary']]]);
+    const got = [
+      { item: { asset: '000007', tier: 'common' }, isNew: false },
+      { item: { asset: '000019', tier: 'legendary' }, isNew: true },
+    ];
+    expect(revealSummary(pool, got)).toMatch(/^Chase item: Cyber Pistol! · 1 Legendary/);
+    expect(revealSummary(pool, got.slice(0, 1))).not.toMatch(/Chase/);
   });
 });

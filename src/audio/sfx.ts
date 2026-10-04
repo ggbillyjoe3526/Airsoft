@@ -182,11 +182,12 @@ export class Sfx {
 
     this.buffers = this.engine.cueBuffers();
     for (const r of this.loadout) {
-      const cue = cues.shot(r.power);
+      const profile = r.look.sound ?? r.power;
+      const cue = cues.shot(profile);
       // A replica built suppressed always sounds muffled; one with a silencer fitted (M29b) chooses per shooter.
       const muffled = this.engine.muffledBuffers(cue);
       const shots = r.look.suppressed ? muffled : this.buffers.get(cue)!;
-      this.replicas.set(r.id, { profile: r.power, fireRate: r.fireRate, shots, muffled });
+      this.replicas.set(r.id, { profile, fireRate: r.fireRate, shots, muffled });
     }
   }
 

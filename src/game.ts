@@ -736,6 +736,7 @@ export class Game {
         teammateDifficulty: this.teammateDifficulty,
         rules: { ...this.matchRules },
         kit: this.loadout.kit(),
+        chaseOwned: this.loadout.ownedChase(),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
       }, this.matchSeed, this.quality, this.audio, this.crosshair);
       if (this.options.perfLog) console.info(this.session.build.line());

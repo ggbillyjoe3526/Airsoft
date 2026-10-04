@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { BOT_LOADOUTS } from '../config/bots';
-import { AEG, GAS_PISTOL, LOADOUT } from '../config/replicas';
+import { BOT_LOADOUTS, RANDOM_LOADOUT } from '../config/bots';
+import { AEG, CYBER_PISTOL, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { createRng } from '../sim/rng';
 import { respawnCharacter } from '../sim/character';
-import { botKitSeed, kittedCharacter, randomFit, randomKit } from './botKit';
+import { botKitSeed, carriedLoadout, chaseCarrier, chaseReady, kittedCharacter, randomFit, randomKit } from './botKit';
 import { GAME_POOL } from './gamePool';
-import { FIT_CATEGORY, FIT_SLOTS } from './kit';
+import { EMPTY_FIT, FIT_CATEGORY, FIT_SLOTS, kitReplica } from './kit';
 import { assetOfReplica, fits } from './pool';
 
 const pool = GAME_POOL;
@@ -93,5 +93,95 @@ describe('bot kits (M29b)', () => {
     respawnCharacter(bot);
     expect(fitted()).toEqual(expected);
     expect(bot.armament.replicas).toEqual(kit.map((s) => s.replica));
+  });
+});
+
+describe('M32 acceptance 4 and 6: bots and the Cyber Pistol', () => {
+  const CYBER = '000019';
+  const cyberAsset = pool.byId.get(CYBER)!;
+  const legendary = kitReplica(pool, { asset: CYBER, tier: 'legendary' }, EMPTY_FIT);
+  const opponents = [3, 4, 5];
+  const carriers = (owned: readonly string[], seeds: number, ids: readonly number[] = opponents) => {
+    const out: ({ id: number } | null)[] = [];
+    for (let seed = 1; seed <= seeds; seed++) out.push(chaseCarrier(pool, owned, seed, ids));
+    return out;
+  };
+
+  it('gives a match a carrier on 5 % of seeds (0.05 in the bot config), and never without a chase replica owned', () => {
+    expect(RANDOM_LOADOUT.chaseChance).toBe(0.05);
+    const some = carriers([CYBER], 4000).filter((c) => c !== null);
+    expect(some.length).toBeGreaterThan(140);
+    expect(some.length).toBeLessThan(260);
+    // The player does not own it, owns only ordinary replicas, or the id is no asset at all: nobody carries one.
+    expect(carriers([], 500).every((c) => c === null)).toBe(true);
+    expect(carriers([aeg.id, pistol.id], 500).every((c) => c === null)).toBe(true);
+    expect(carriers(['999999'], 500).every((c) => c === null)).toBe(true);
+  });
+
+  it('has no carrier with no opponents, and a carrier is always one of the opponents', () => {
+    expect(carriers([CYBER], 500, []).every((c) => c === null)).toBe(true);
+    const seen = new Set<number>();
+    for (const c of carriers([CYBER], 4000)) if (c) seen.add(c.id);
+    expect([...seen].sort()).toEqual(opponents);
+    for (const c of carriers([CYBER], 2000, [7])) expect(c === null || c.id === 7).toBe(true);
+  });
+
+  it('picks the same carrier for the same match seed, and follows the chance it is given', () => {
+    for (let seed = 1; seed <= 300; seed++) expect(chaseCarrier(pool, [CYBER], seed, opponents)).toEqual(chaseCarrier(pool, [CYBER], seed, opponents));
+    for (let seed = 1; seed <= 50; seed++) {
+      expect(chaseCarrier(pool, [CYBER], seed, opponents, 1)).not.toBeNull();
+      expect(chaseCarrier(pool, [CYBER], seed, opponents, 0)).toBeNull();
+    }
+  });
+
+  it("carries the Cyber Pistol in the carrier's primary slot, keeping its secondary, and nobody else's loadout changes", () => {
+    const carrier = chaseCarrier(pool, [CYBER], 1, opponents, 1)!;
+    expect(carrier.replica.id).toBe(CYBER_PISTOL.id);
+    const loadout = carriedLoadout(LOADOUT, carrier.id, carrier);
+    expect(loadout.map((r) => r.id)).toEqual([CYBER_PISTOL.id, GAS_PISTOL.id]);
+    const other = opponents.find((o) => o !== carrier.id)!;
+    expect(carriedLoadout(LOADOUT, other, carrier)).toBe(LOADOUT);
+    expect(carriedLoadout(LOADOUT, carrier.id, null)).toBe(LOADOUT);
+  });
+
+  it('rolls the carrier a Legendary Cyber Pistol with nothing fitted, every time, and the secondary as usual', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const carrier = chaseCarrier(pool, [CYBER], seed, opponents, 1)!;
+      const kit = randomKit(pool, carriedLoadout(LOADOUT, carrier.id, carrier), botKitSeed(seed, carrier.id));
+      expect(kit.map((s) => s.replica.id), `seed ${seed}`).toEqual(['cyber', 'pistol']);
+      expect(kit[0]!.replica).toEqual(legendary);
+      expect(kit[0]!.replica.muzzleEnergy).toBeCloseTo(1.0, 2);
+      expect(kit[0]!.optic).toBeNull();
+      expect(kit[0]!.parts.grip).toBe('none');
+      expect(kit[0]!.parts.laser).toBeNull();
+      expect(kit[0]!.parts.barrel).toBeNull();
+      expect(kit[0]!.parts.muzzle).toBeNull();
+    }
+    // Nothing fits it, so a full roll of parts is still nothing.
+    const fit = randomFit(pool, cyberAsset, createRng(1), 1);
+    for (const slot of FIT_SLOTS) expect(fit[slot], slot).toBeNull();
+  });
+
+  it("puts the carrier's Cyber Pistol on full auto and leaves its secondary and every other bot as they are", () => {
+    const carrier = chaseCarrier(pool, [CYBER], 1, opponents, 1)!;
+    const build = (id: number) => kittedCharacter(id, 1, randomKit(pool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(1, id)));
+    const bot = chaseReady(build(carrier.id), carrier);
+    expect(bot.armament.replicas[0]!.id).toBe('cyber');
+    expect(bot.armament.modes).toEqual(['auto', GAS_PISTOL.defaultFireMode]);
+    // Without the call it is on its semi default: the bots' held bursts would fire once.
+    expect(build(carrier.id).armament.modes[0]).toBe('semi');
+    const other = opponents.find((o) => o !== carrier.id)!;
+    expect(chaseReady(build(other), carrier).armament.modes).toEqual([AEG.defaultFireMode, GAS_PISTOL.defaultFireMode]);
+    expect(chaseReady(build(carrier.id), null).armament.modes[0]).toBe('semi');
+    // A carrier replica that has no auto mode is left alone.
+    const semiOnly = { id: carrier.id, replica: { ...CYBER_PISTOL, fireModes: ['semi' as const] } };
+    expect(chaseReady(build(carrier.id), semiOnly).armament.modes[0]).toBe('semi');
+  });
+
+  it('rolls the Cyber Pistol at Legendary only, whatever the odds, wherever a bot kit draws it', () => {
+    for (let seed = 1; seed <= 400; seed++) {
+      const [slot] = randomKit(pool, [CYBER_PISTOL], seed);
+      expect(slot!.replica, `seed ${seed}`).toEqual(legendary);
+    }
   });
 });

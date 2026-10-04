@@ -6,7 +6,7 @@ import { BARREL_KEYS, GRIP_KEYS, LASER_KEYS, MAGAZINE_KEYS, MUZZLE_KEYS, OPTIC_K
 import { BARRELS, GRIPS, MAGAZINES, MUZZLES } from './attachments';
 import { LASERS } from './lasers';
 import { OPTICS } from './optics';
-import { AEG, GAS_PISTOL, withStats } from './replicas';
+import { AEG, CYBER_PISTOL, GAS_PISTOL, withStats } from './replicas';
 import { DEFAULT_TIER_SHARES, loadStats, overlay } from './statsFile';
 
 const stats = loadStats(statsText);
@@ -317,5 +317,29 @@ describe('stats.md, barrels and muzzle parts (M29b)', () => {
     const file = loadStats(mini('## Muzzle parts\n| Key | Name | Energy % | Handling (×) |\n|---|---|---|---|\n| silencer | Silencer | -5 | 1.1 |'));
     expect(file.errors.filter((e) => e.includes('Heard from'))).toHaveLength(1);
     expect(overlay(MUZZLES, file.muzzles).silencer!.heardScale).toBe(MUZZLES.silencer.heardScale);
+  });
+});
+
+describe('stats.md, M32: the Cyber Pistol row', () => {
+  it('has a cyber row in the Replicas table that the replica takes its numbers from, as a pistol', () => {
+    const row = stats.replicas.cyber!;
+    expect(row).toBeDefined();
+    expect(Object.keys(REPLICA_KEYS)).toContain('cyber');
+    expect(CYBER_PISTOL.muzzleEnergy).toBe(row.muzzleEnergy);
+    expect(CYBER_PISTOL.fireRate).toBe(row.fireRate);
+    expect([CYBER_PISTOL.magSize, CYBER_PISTOL.mags]).toEqual([50, 3]);
+    expect(CYBER_PISTOL.energyLimit).toBe(stats.siteLimits.pistol);
+    expect(stats.errors).toEqual([]);
+  });
+
+  it('is set so that the Legendary tier, the only one it comes in, lands on the approved numbers', () => {
+    const legendary = DEFAULT_TIER_SHARES.replica;
+    const bonus = 0.15; // pool.md's Legendary Bonus %
+    expect(CYBER_PISTOL.muzzleEnergy * (1 + bonus * legendary.energy!)).toBeCloseTo(1.0, 2);
+    expect(CYBER_PISTOL.fireRate * (1 + bonus * legendary.fireRate!)).toBeCloseTo(14, 1);
+    expect(CYBER_PISTOL.spreadDeg * (1 - bonus * legendary.spread!)).toBeCloseTo(0.3, 2);
+    expect(CYBER_PISTOL.reloadTime * (1 - bonus * legendary.reload!)).toBeCloseTo(1.1, 2);
+    expect(CYBER_PISTOL.drawTime * (1 - bonus * legendary.draw!)).toBeCloseTo(0.28, 2);
+    expect(CYBER_PISTOL.recoilDeg).toBeCloseTo(0.06, 5);
   });
 });

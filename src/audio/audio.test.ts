@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AUDIO, VOLUME } from '../config/audio';
-import { LOADOUT } from '../config/replicas';
+import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import { cues, SHOT_PROFILES, SOUNDS, type SoundCue } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import type { MapBlock } from '../map/mapTypes';
@@ -415,5 +415,31 @@ describe('volume settings (M13)', () => {
     expect(volumeGain(1)).toBe(1);
     expect(volumeGain(0.5)).toBeLessThan(0.5);
     expect(volumeGain(2)).toBe(1);
+  });
+});
+
+describe('M32 acceptance 7: the Cyber Pistol sounds its own', () => {
+  const rendered = renderSounds(RATE, 3);
+
+  it("has a profile of its own with a shot, dry fire and both magazine sounds, and the replica says which it makes", () => {
+    expect(CYBER_PISTOL.look.sound).toBe('cyber');
+    expect(CYBER_PISTOL.power).toBe('electric');
+    expect(SHOT_PROFILES).toContain('cyber');
+    for (const cue of [cues.shot('cyber'), cues.dryFire('cyber'), cues.magOut('cyber'), cues.magIn('cyber')]) {
+      expect(SOUNDS[cue], cue).toBeDefined();
+      expect(rendered.get(cue), cue).toHaveLength(3);
+    }
+    // The other replicas keep their power's sounds.
+    for (const r of LOADOUT) expect(r.look.sound).toBeUndefined();
+  });
+
+  it("has sounds that are none of another profile's", () => {
+    for (const make of [cues.shot, cues.dryFire, cues.magOut, cues.magIn]) {
+      const mine = rendered.get(make('cyber'))![0]!;
+      for (const other of SHOT_PROFILES.filter((p) => p !== 'cyber')) {
+        const theirs = rendered.get(make(other))![0]!;
+        expect(mine.length === theirs.length && mine.every((x, i) => x === theirs[i]), `${make('cyber')} vs ${make(other)}`).toBe(false);
+      }
+    }
   });
 });
