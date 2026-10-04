@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { ROUNDS } from '../config/hits';
 import { createRoundState, type RoundState } from '../sim/round';
 import { vec3 } from '../sim/vec';
-import { roundBanner, spokenRoundMessage } from './roundBanner';
+import { RESPAWN_BANNER, roundBanner, spokenRoundMessage } from './roundBanner';
 
 const POLE = vec3(10, 0, 0);
 
-function round(mode: 'elimination' | 'attackDefend', patch: Partial<RoundState>): RoundState {
+function round(mode: 'elimination' | 'attackDefend' | 'extraction', patch: Partial<RoundState>): RoundState {
   return Object.assign(createRoundState(ROUNDS, mode, POLE), patch);
 }
 
@@ -46,5 +46,34 @@ describe('the round message for a screen reader (audit UI-15)', () => {
     expect(spokenRoundMessage('Your team wins the round · next round in 4')).toBe('Your team wins the round');
     expect(spokenRoundMessage('Round 2 · Attack')).toBe('Round 2 · Attack');
     expect(spokenRoundMessage('')).toBe('');
+  });
+});
+
+describe('the run banner (M43 acceptance 5)', () => {
+  it('tells you the job at the start and goes quiet while the run is on', () => {
+    expect(roundBanner(round('extraction', {}), 0, true, 0, ROUNDS)).toBe('Extraction · get to an exit');
+    expect(roundBanner(round('extraction', {}), 0, false, 0, ROUNDS)).toBe('');
+  });
+
+  it('words how the run ended, whatever the countdown to a next round says (there is none)', () => {
+    const over = (reason: RoundState['reason'], winner: number): RoundState => round('extraction', { phase: 'matchOver', matchWinner: winner, winner, reason });
+    expect(roundBanner(over('extracted', 0), 0, false, 5, ROUNDS)).toBe('Counted out · you made it!');
+    expect(roundBanner(over('time', 1), 0, false, 5, ROUNDS)).toBe("Caught out · time's up");
+    expect(roundBanner(over('out', 1), 0, false, 5, ROUNDS)).toBe('Out of the run');
+    expect(roundBanner(over('out', 1), 0, true, 5, ROUNDS)).toBe('Out of the run');
+  });
+
+  it('has no Elimination or flag wording in it', () => {
+    const banners = [roundBanner(round('extraction', {}), 0, true, 0, ROUNDS), roundBanner(round('extraction', { phase: 'matchOver', reason: 'out' }), 0, false, 0, ROUNDS)];
+    for (const b of banners) expect(b).not.toMatch(/round|match|win|lose/i);
+  });
+
+  it('keeps the other modes\' banners as they were', () => {
+    expect(roundBanner(round('elimination', { phase: 'matchOver', matchWinner: 0 }), 0, false, 0, ROUNDS)).toBe('You win the match!');
+    expect(roundBanner(round('attackDefend', { phase: 'matchOver', matchWinner: 1 }), 0, false, 0, ROUNDS)).toBe('You lose the match');
+  });
+
+  it('says your respawn is spent when you are back at the insertion', () => {
+    expect(RESPAWN_BANNER).toBe('Back in at the insertion · no respawn left');
   });
 });

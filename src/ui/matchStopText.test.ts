@@ -39,3 +39,53 @@ describe('the pause screen line', () => {
     expect(pauseText(before, 0, ROUNDS)).toBe(`After round ${ROUNDS.halfTimeAfter} · attack / defend, you ${you(first !== 0)} next · Blue (you) 0 – 0 Orange · first to 5`);
   });
 });
+
+describe('Extraction result and pause text (M43 acceptance 5)', () => {
+  const RUN_TIME = 480;
+  const over = (reason: RoundState['reason'], clock: number): RoundState => round('extraction', { phase: 'matchOver', reason, clock, matchWinner: reason === 'extracted' ? 0 : 1 });
+
+  it('says extracted with how long the run took', () => {
+    expect(resultText(over('extracted', 125), 0, RUN_TIME)).toEqual({
+      headline: 'Extracted!',
+      scoreLine: 'Extraction · Counted out after 5:55',
+      result: 'Extracted! · Counted out after 5:55',
+    });
+  });
+
+  it('says caught out with the run time when the clock ran out', () => {
+    expect(resultText(over('time', 0), 0, RUN_TIME)).toEqual({
+      headline: 'Caught out',
+      scoreLine: 'Extraction · Still in when time ran out (8:00)',
+      result: 'Caught out · Still in when time ran out (8:00)',
+    });
+  });
+
+  it('says out of the run after the hit with no respawn left', () => {
+    const r = resultText(over('out', 300), 0, RUN_TIME);
+    expect(r.headline).toBe('Out of the run');
+    expect(r.scoreLine).toBe('Extraction · Hit with no respawn left after 3:00');
+  });
+
+  it('never shows a score or a round count for a run, and reads the same from either team', () => {
+    for (const reason of ['extracted', 'time', 'out'] as const) {
+      const text = resultText(over(reason, 100), 0, RUN_TIME);
+      expect(text.result).not.toMatch(/–|rounds|You win|You lose/);
+      expect(resultText(over(reason, 100), 1, RUN_TIME)).toEqual(text);
+    }
+  });
+
+  it('does not report a negative time if the clock is above the run time', () => {
+    expect(resultText(over('extracted', RUN_TIME + 5), 0, RUN_TIME).scoreLine).toBe('Extraction · Counted out after 0:00');
+  });
+
+  it('pauses with the time left, rounded up, instead of rounds and score', () => {
+    expect(pauseText(round('extraction', { clock: 215.2 }), 0, ROUNDS)).toBe('Extraction · 3:36 left');
+    expect(pauseText(round('extraction', { clock: 60 }), 0, ROUNDS)).toBe('Extraction · 1:00 left');
+  });
+
+  it('leaves Elimination results alone when the run time is passed or not', () => {
+    const r = round('elimination', { phase: 'matchOver', score: [5, 3], matchWinner: 0 });
+    expect(resultText(r, 0, 480)).toEqual(resultText(r, 0));
+    expect(resultText(r, 0).headline).toBe('You win!');
+  });
+});
