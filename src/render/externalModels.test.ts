@@ -128,6 +128,25 @@ describe('a rigged figure model', () => {
   });
 });
 
+describe('a figure model with all its parts', () => {
+  it('is sized by its body and legs, not the raised hand, and takes out arms nested in the body', () => {
+    const s = 2;
+    const scene = riggedScene();
+    scene.add(boxMesh('hitPose', 0.2 * s, 1.2 * s, 0, 1.0 * s)); // a hand up to 2.2 m: above the head
+    const arms = boxMesh('aimRifle', 0, FIGURE.shoulderHeight * s, -0.3 * s, 0.1 * s);
+    scene.add(arms);
+    scene.updateMatrixWorld(true);
+    scene.getObjectByName('body')!.attach(arms); // parented to the body in Blender, where it was
+    const model = prepareFigureModel(scene);
+    expect(Object.keys(model.parts).sort()).toEqual(['aimRifle', 'body', 'hitPose', 'legL', 'legR']);
+    expect(boundsOf(model.parts.body!).max.y).toBeCloseTo(FIGURE_MODEL.height, 6);
+    expect(boundsOf(model.parts.legL!).max.y).toBeCloseTo(FIGURE.hipHeight, 6);
+    expect(model.parts.body!.getObjectByName('aimRifle')).toBeUndefined();
+    expect(boundsOf(model.parts.aimRifle!).min.y).toBeCloseTo(FIGURE.shoulderHeight, 6);
+    model.dispose();
+  });
+});
+
 describe('buildFigure with a figure model', () => {
   it('draws the parts the model has where the built-in ones go, and the built-in parts for the rest', () => {
     const model = prepareFigureModel(riggedScene());

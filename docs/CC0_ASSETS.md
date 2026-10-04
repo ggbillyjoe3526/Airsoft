@@ -59,11 +59,13 @@ src/assets/textures/                      loose surface textures (not wired up y
   built-in figures are drawn, exactly as today. With it, the model loads once at start and every player and bot
   uses it. A broken or unsupported file logs a warning and the built-in figures are drawn instead.
 - **Scale and facing are automatic:** the model is scaled so it stands as tall as the hit volume (1.73 m, feet to
-  the top of the head; the hitbox doesn't change), its feet are put on the ground, and it is turned a half turn
+  the top of the head; the hitbox doesn't change; measured on `body` and the legs when it has them, so a raised
+  hand doesn't shrink it), its feet are put on the ground, and it is turned a half turn
   (glTF models face +Z, the figures face -Z; set `FIGURE_MODEL.yaw` to 0 for a model that already faces -Z).
 - **Team colours:** any material whose name starts with `team` (for example `TeamTape`, `team_vest`) is painted
   in each figure's team colour (including the colour-blind palettes). Name the armband, vest or tape that way in
-  Blender.
+  Blender. The colour multiplies the material's texture, so give a team material a white or light grey base colour
+  map (or none), or the team colour comes out dark and muddy.
 - **Two levels of fit:**
   1. **Whole model** (straight from a pack, nothing renamed): a preview. It is drawn as one static body that
      turns and moves with the figure and squashes down when crouching (to the hit volume's height), but doesn't
@@ -81,6 +83,7 @@ src/assets/textures/                      loose surface textures (not wired up y
 | `hitPose` | Hit calling: one hand up, the replica hanging | Hips |
 
 Author the parts in place, in one scene, standing as they would on the figure: metres, feet at the origin, +Y up.
+Parts can be nested (arms parented to the body in Blender is fine): each is taken out on its own.
 The game cuts them at those pivots itself. Skinned (rigged) meshes load and are turned into plain meshes in the pose
 the rig is saved in (its rest pose), so a part can be cut from a rigged character and its bones are left behind:
 the game doesn't play glTF animations yet (a later step: a walk cycle and the hit-call animation from a rigged pack).

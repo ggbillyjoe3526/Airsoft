@@ -60,7 +60,22 @@ export function prepareFigureModel(scene: THREE.Object3D): FigureModel {
   fit.add(scene);
   fit.updateMatrixWorld(true);
   bakeSkinnedMeshes(scene);
-  const box = new THREE.Box3().setFromObject(fit);
+
+  // The named parts: each the first node of that name with a mesh in it (a rig's bone can share a part's name). Each
+  // is lifted out to sit straight under the fit, keeping its place, so a part nested in another (arms under the body)
+  // comes out on its own.
+  const nodes: Partial<Record<FigurePart, THREE.Object3D>> = {};
+  for (const name of FIGURE_PARTS) {
+    const node = scene.getObjectsByProperty('name', name).find(hasMesh);
+    if (node) nodes[name] = node;
+  }
+  for (const node of Object.values(nodes)) fit.attach(node);
+
+  // Sized by the standing figure: the body and legs if it has them (a raised hand in the hit pose would shrink the
+  // rest), else everything.
+  const standing = (['body', 'legL', 'legR'] as const).flatMap((name) => nodes[name] ?? []);
+  const box = new THREE.Box3();
+  for (const o of standing.length > 0 ? standing : [fit]) box.expandByObject(o);
   const tall = box.max.y - box.min.y;
   if (!(tall > 0)) throw new Error('the model has no size');
   const scale = FIGURE_MODEL.height / tall;
@@ -70,8 +85,7 @@ export function prepareFigureModel(scene: THREE.Object3D): FigureModel {
 
   const parts: Partial<Record<FigurePart, THREE.Object3D>> = {};
   for (const name of FIGURE_PARTS) {
-    // The first node of that name with a mesh in it (a rig's bone can share a part's name).
-    const node = scene.getObjectsByProperty('name', name).find(hasMesh);
+    const node = nodes[name];
     if (!node) continue;
     // A holder at the figure's origin, with the node attached under it at the same place in the figure.
     const holder = new THREE.Group();
