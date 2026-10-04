@@ -12,6 +12,7 @@ import { type Vec3, vec3 } from '../sim/vec';
 import { type AimState, createAim } from './aim';
 import { createHeldAngle, type HeldAngle } from './angles';
 import { type CoverBlock, type CoverSpot, createCoverSpot } from './cover';
+import type { SightConditions } from './perception';
 
 /**
  * A bot's modes:
@@ -181,6 +182,8 @@ export interface BotWorld {
   /** The map's low and full-height blocks, tried as cover spots (see findCover). */
   lowCover: readonly CoverBlock[];
   tallCover: readonly CoverBlock[];
+  /** What hides people besides walls: the map's bushes (M33e) and its dark (M33g); see visiblePart. Absent: daylight, no bushes. */
+  sight?: SightConditions;
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];

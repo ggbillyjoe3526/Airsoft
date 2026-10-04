@@ -1,6 +1,7 @@
 import { BotController } from './ai/botController';
 import { SquadFollow } from './ai/squadFollow';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
+import { sightConditionsOf } from './ai/perception';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
@@ -35,6 +36,7 @@ import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { ContactShadows } from './render/contactShadows';
 import { addLighting, type Daylight } from './render/lighting';
+import { resolveLighting } from './render/lightingPreset';
 import { mapLookOf } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import type { Renderer } from './render/renderer';
@@ -156,7 +158,11 @@ export class MatchSession {
     renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTextures, mapLookOf(quality)));
     this.build.phase('map meshes');
     if (renderer.mapMeshes.reused) this.build.notes.push('map meshes reused');
-    this.daylight = addLighting(renderer.scene, map, quality);
+    // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
+    // last map's; its lights, sky and light pools in the scene.
+    const lighting = resolveLighting(map);
+    renderer.setLighting(lighting);
+    this.daylight = addLighting(renderer.scene, map, quality, lighting);
     this.build.phase('lighting');
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
@@ -200,7 +206,7 @@ export class MatchSession {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: this.hits, loadout: LOADOUT, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map), body: BODY, hits: this.hits, loadout: LOADOUT, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
@@ -329,7 +335,7 @@ export class MatchSession {
     this.match.showMinimap(holding ? this.holdSpot : null);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     // High's shadow map follows the view (REN-08), the spectator's too.
-    this.daylight.follow(this.renderer.camera);
+    this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(!spectating);
   }
 

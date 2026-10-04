@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import { LIGHTING, QUALITY, type QualitySettings } from '../config/render';
+import { LIGHTING, LIGHTING_PRESETS, QUALITY, type QualitySettings } from '../config/render';
 import { terrainMaxX, terrainMaxZ, terrainRange } from '../map/terrain';
 import { SLOPE_YARD, SLOPE_YARD_TERRAIN, terrainOnly } from '../map/testSupport';
 import { DEPOT } from '../map/depot';
@@ -96,7 +96,7 @@ describe('the sun\'s shadow and the quality preset', () => {
 
   function lit(quality: QualitySettings) {
     const scene = new THREE.Scene();
-    const daylight = addLighting(scene, TEST_YARD, quality);
+    const daylight = addLighting(scene, TEST_YARD, quality, LIGHTING_PRESETS.day);
     const sun = scene.children.find((o): o is THREE.DirectionalLight => o instanceof THREE.DirectionalLight)!;
     return { scene, daylight, sun };
   }
@@ -138,7 +138,7 @@ describe('the sun\'s shadow and the quality preset', () => {
 describe('the view-fitted shadow map on High (REN-08)', () => {
   function lit(quality: QualitySettings) {
     const scene = new THREE.Scene();
-    const daylight = addLighting(scene, DEPOT, quality);
+    const daylight = addLighting(scene, DEPOT, quality, LIGHTING_PRESETS.day);
     const sun = scene.children.find((o): o is THREE.DirectionalLight => o instanceof THREE.DirectionalLight)!;
     return { daylight, sun, cam: sun.shadow.camera };
   }
@@ -155,7 +155,7 @@ describe('the view-fitted shadow map on High (REN-08)', () => {
   it('fits a smaller map than the whole field: on Depot at 2048² a texel is under 2 cm (the field fit: 2.9 cm)', () => {
     const field = lit({ ...QUALITY.high, shadowFollowsView: false });
     const view = lit(QUALITY.high);
-    view.daylight.follow(eye(0, 0, 0));
+    view.daylight.follow(eye(0, 0, 0), 0);
     expect(shadowTexel(field.cam, 2048)).toBeGreaterThan(0.028);
     expect(shadowTexel(view.cam, QUALITY.high.shadowMapSize)).toBeLessThan(0.02);
     expect(width(view.cam)).toBeLessThan(width(field.cam));
@@ -167,7 +167,7 @@ describe('the view-fitted shadow map on High (REN-08)', () => {
     const { daylight, cam } = lit(QUALITY.high);
     for (const [x, z, yaw] of [[-12, 4, 0], [10, -6, Math.PI / 2], [0, 0, Math.PI]] as const) {
       const c = eye(x, z, yaw);
-      daylight.follow(c);
+      daylight.follow(c, 0);
       cam.updateMatrixWorld(true);
       const ahead = new THREE.Vector3(0, 0, -1).applyQuaternion(c.quaternion);
       // From under your feet to 20 m ahead (inside the field), and 8 m to either side.
@@ -187,10 +187,10 @@ describe('the view-fitted shadow map on High (REN-08)', () => {
   it('moves in whole texels, so a small step of the view does not shift the shadows a fraction of a texel', () => {
     const { daylight, cam } = lit(QUALITY.high);
     const texel = shadowTexel(cam, QUALITY.high.shadowMapSize);
-    daylight.follow(eye(-3, 2, 0.3));
+    daylight.follow(eye(-3, 2, 0.3), 0);
     const first = cam.left;
     for (let i = 1; i < 40; i++) {
-      daylight.follow(eye(-3 + i * 0.013, 2 + i * 0.007, 0.3));
+      daylight.follow(eye(-3 + i * 0.013, 2 + i * 0.007, 0.3), 0);
       const steps = (cam.left - first) / texel;
       expect(Math.abs(steps - Math.round(steps)), `step ${i}`).toBeLessThan(1e-6);
     }
@@ -199,12 +199,12 @@ describe('the view-fitted shadow map on High (REN-08)', () => {
 
   it('scales the normal bias with the texel, and goes back to the whole field when turned off', () => {
     const { daylight, sun, cam } = lit(QUALITY.high);
-    daylight.follow(eye(0, 0, 0));
+    daylight.follow(eye(0, 0, 0), 0);
     const near = sun.shadow.normalBias;
     expect(near).toBeCloseTo(LIGHTING.shadowNormalBiasTexels * shadowTexel(cam, 2048), 9);
     daylight.setQuality(QUALITY.medium);
     const fieldWidth = width(cam);
-    daylight.follow(eye(10, 5, 1)); // nothing to follow on Medium
+    daylight.follow(eye(10, 5, 1), 0); // nothing to follow on Medium
     expect(width(cam)).toBe(fieldWidth);
     expect(sun.shadow.normalBias).toBeCloseTo(LIGHTING.shadowNormalBiasTexels * shadowTexel(cam, 1024), 9);
     expect(sun.shadow.normalBias).toBeGreaterThan(near * 2);

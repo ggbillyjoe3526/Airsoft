@@ -1,5 +1,7 @@
 import { createRng, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
+import type { Bush } from './foliage';
+import type { MapLight } from './nightSight';
 import type { BlockKind, MapBlock, MapData, SpawnPoint } from './mapTypes';
 import { buildTerrain, type Terrain, terrainHeightAt } from './terrain';
 
@@ -22,9 +24,9 @@ import { buildTerrain, type Terrain, terrainHeightAt } from './terrain';
  * - End 0 camp (west, ±0 m) and end 1 camp (east, about +3.5 m, behind the Knoll's crest): log barricades as spawn
  *   walls.
  *
- * Every slope stays walkable (no steeper than a ramp, PHYSICS.maxRampSlope), checked in the tests. Bushes (they hide
- * you, BBs pass through), night lighting, the camp fires and lanterns, tree canopies and the woodland look come in
- * later M33 tasks; this is the playable layout.
+ * Every slope stays walkable (no steeper than a ramp, PHYSICS.maxRampSlope), checked in the tests. Bushes (M33e) hide
+ * you from sight, but BBs and people pass through them. Night lighting, the camp fires and lanterns, tree canopies and
+ * the woodland look come in later M33 tasks.
  */
 
 /** The field's extent in plan coordinates (m). */
@@ -385,6 +387,53 @@ function woods(lanes: readonly (readonly (readonly [number, number])[])[], block
   return out;
 }
 
+/** A bush's size (m): radius across, height from its foot. Most hide a crouched player; a standing one shows a head. */
+const BUSH_RADIUS = [0.8, 1.4] as const;
+const BUSH_HEIGHT = [1.2, 1.8] as const;
+/** How close (m) a bush's edge may come to a lane's line, another bush's edge, or a block; how deep its foot sits. */
+const BUSH_LANE_GAP = 0.8;
+const BUSH_GAP = 0.4;
+const BUSH_BLOCK_GAP = 0.2;
+const BUSH_SINK = 0.1;
+
+/**
+ * The bushes (M33e): along the Pine Belt's edge, scattered on the meadow, on the creek's banks and round the Knoll's
+ * shoulders, for hiding in and ambushing from. Scattered by a fixed seed; none on a lane, in the creek bed, in a camp,
+ * by the cabin or in the fort, nor inside a block or another bush.
+ */
+function bushes(lanes: readonly (readonly (readonly [number, number])[])[], blocks: readonly MapBlock[]): Bush[] {
+  const rng = createRng(34);
+  const out: Bush[] = [];
+  const laneDistance = (x: number, z: number): number =>
+    Math.min(...lanes.flatMap((lane) => lane.slice(1).map((p, i) => segmentDistance(x, z, { x: lane[i]![0], z: lane[i]![1] }, { x: p[0], z: p[1] }))));
+  const nearBlock = (x: number, z: number, r: number): boolean =>
+    blocks.some((b) => Math.abs(worldX(x) - b.center.x) < b.size.x / 2 + r + BUSH_BLOCK_GAP && Math.abs(worldZ(z) - b.center.z) < b.size.z / 2 + r + BUSH_BLOCK_GAP);
+  const areas: readonly { x0: number; x1: number; z0: number; z1: number; count: number }[] = [
+    { x0: 12, x1: 108, z0: 58, z1: 66, count: 22 },
+    { x0: 14, x1: 88, z0: 26, z1: 58, count: 16 },
+    { x0: 14, x1: 90, z0: 6, z1: 24, count: 20 },
+    { x0: 84, x1: 110, z0: 28, z1: 38, count: 6 },
+    { x0: 84, x1: 110, z0: 56, z1: 64, count: 6 },
+  ];
+  for (const a of areas) {
+    for (let tries = 0, n = 0; n < a.count && tries < a.count * 40; tries++) {
+      const x = a.x0 + rngNext(rng) * (a.x1 - a.x0);
+      const z = a.z0 + rngNext(rng) * (a.z1 - a.z0);
+      const radius = BUSH_RADIUS[0] + rngNext(rng) * (BUSH_RADIUS[1] - BUSH_RADIUS[0]);
+      const height = BUSH_HEIGHT[0] + rngNext(rng) * (BUSH_HEIGHT[1] - BUSH_HEIGHT[0]);
+      if (CLEAR.some((c) => x >= c.x0 - radius && x <= c.x1 + radius && z >= c.z0 - radius && z <= c.z1 + radius)) continue;
+      if (Math.abs(z - creekZ(x)) < CREEK_BED + radius) continue;
+      if (laneDistance(x, z) < radius + BUSH_LANE_GAP || nearBlock(x, z, radius)) continue;
+      if (out.some((b) => Math.hypot(worldX(x) - b.x, worldZ(z) - b.z) < b.radius + radius + BUSH_GAP)) continue;
+      // Its foot at the lowest ground under its rim, so a bush on a slope doesn't hang over the downhill side.
+      const foot = Math.min(ground(x, z), ground(x + radius, z), ground(x - radius, z), ground(x, z + radius), ground(x, z - radius));
+      out.push({ x: worldX(x), y: foot - BUSH_SINK, z: worldZ(z), radius, height });
+      n++;
+    }
+  }
+  return out;
+}
+
 /** The fence round the field, in sections that follow the ground. */
 function fence(): MapBlock[] {
   const out: MapBlock[] = [];
@@ -418,18 +467,37 @@ function fenceSection(x0: number, x1: number, z0: number, z1: number): MapBlock 
   return { kind: 'fence', center: vec3(worldX((x0 + x1) / 2), (y0 + y1) / 2, worldZ((z0 + z1) / 2)), size: vec3(x1 - x0, y1 - y0, z1 - z0) };
 }
 
+/** Fire and lantern light (hex RGB) and how far each lights the ground (m). */
+const FIRE = { colour: 0xff9a4a, radius: 7, height: 0.5 };
+const LANTERN = { colour: 0xffd27a, radius: 5.5, height: 2.2 };
+
+/**
+ * The light pools (M33g): a camp fire behind each end's spawns, a lantern on the fort's north and south baffles and one
+ * by the cabin's north door. Anyone in one is seen from as far as by day; the rest of the field is moonlit or, under the
+ * trees, dark.
+ */
+const LIGHTS: readonly MapLight[] = [
+  ...[[4.5, 52], [115.5, 52]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + FIRE.height, worldZ(z!)), radius: FIRE.radius, colour: FIRE.colour })),
+  ...[[101, 52], [101, 42], [66, 27.5]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + LANTERN.height, worldZ(z!)), radius: LANTERN.radius, colour: LANTERN.colour })),
+];
+
 const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...BOULDERS, ...LOGS, ...APPROACH_COVER, OAK];
+const BLOCKS: MapBlock[] = [...fence(), ...COVER, ...woods(LANE_POINTS, COVER)];
 
 export const WOODLAND: MapData = {
   name: 'Woodland',
-  blocks: [...fence(), ...COVER, ...woods(LANE_POINTS, COVER)],
+  blocks: BLOCKS,
   killY: -10,
   spawns: [END0_SPAWNS.map(spawnAt), END1_SPAWNS.map(spawnAt)],
   deadZones: [END0_DEAD.map(spawnAt), END1_DEAD.map(spawnAt)],
   lanes: LANE_POINTS.map((lane) => lane.map(([x, z]) => onGround(x, z))),
   flag: onGround(FLAG.x, FLAG.z),
   night: true,
+  // Lit by night (M33f): the moon low over the Knoll, so it rims the hill's top while the face towards end 0 stays dark.
+  lighting: { presets: ['night'], moonOver: { x: worldX(KNOLL.x), z: worldZ(KNOLL.z) } },
   terrain: TERRAIN,
+  foliage: bushes(LANE_POINTS, BLOCKS),
+  lights: LIGHTS,
 };
 
 /** Layout facts the tests check against (world coordinates), exported so they can't drift from the geometry. */
