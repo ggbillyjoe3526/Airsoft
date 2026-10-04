@@ -44,8 +44,13 @@ export type SettingField =
   | `bbWeight.${string}`
   | `equip.${string}`
   | `fit.${string}`
-  | `crosshair.${string}`;
-
+  | `crosshair.${string}`
+  /** Before M26 (read once by pool/oldPicks.ts): the rifle's optic and each replica's grip and magazine. */
+  | 'optic'
+  | `grip.${string}`
+  | `mag.${string}`
+  /** Those picks were carried into the asset pool (M26b). */
+  | 'oldPicksCarried';
 
 /** Where earlier builds kept a setting, before the settings object. */
 const LEGACY_KEYS: Partial<Record<SettingField, string>> = {

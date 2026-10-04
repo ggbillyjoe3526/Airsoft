@@ -61,12 +61,18 @@ function fitted(pool: Pool, fit: ReplicaFit, slot: FitSlot): Asset | undefined {
   return asset?.category === FIT_CATEGORY[slot] ? asset : undefined;
 }
 
+/** The fitted laser's config, if its key is one the code knows (pool.ts checks keys, but a stale save could differ). */
+function fittedLaser(pool: Pool, fit: ReplicaFit): LaserId | null {
+  const key = fitted(pool, fit, 'laser')?.key;
+  return key && key in LASERS ? (key as LaserId) : null;
+}
+
 /** The replica `item` (a replica asset at a tier) as carried with `fit`: tighter, quicker and stronger as its items say. */
 export function kitReplica(pool: Pool, item: ItemRef, fit: ReplicaFit): ReplicaConfig {
   const base = replicaOf(pool.byId.get(item.asset)!);
   const b = bonusOf(pool, item);
-  const laser = fitted(pool, fit, 'laser');
-  const laserScale = laser ? LASERS[laser.key as LaserId].spreadScale * (1 - bonusOf(pool, fit.laser)) : 1;
+  const laser = fittedLaser(pool, fit);
+  const laserScale = laser ? LASERS[laser].spreadScale * (1 - bonusOf(pool, fit.laser)) : 1;
   const power = fitted(pool, fit, 'power');
   const boost = power?.power ? 1 + power.power.boost + bonusOf(pool, fit.power) : 1;
   return {
@@ -95,14 +101,14 @@ export function kitSlot(pool: Pool, item: ItemRef, fit: ReplicaFit): KitSlot {
   const optic = fitted(pool, fit, 'optic');
   const grip = fitted(pool, fit, 'grip');
   const mag = fitted(pool, fit, 'magazine');
-  const laser = fitted(pool, fit, 'laser');
+  const laser = fittedLaser(pool, fit);
   return {
     replica,
     optic: optic && optic.key in OPTICS ? (optic.key as OpticId) : null,
     parts: {
       grip: grip && grip.key in GRIPS ? (grip.key as GripId) : 'none',
       magazine: mag && mag.key in MAGAZINES ? (mag.key as MagazineId) : replica.magazines[0]!,
-      laser: laser ? (laser.key as LaserId) : null,
+      laser,
       tune: partTune(pool, fit),
     },
   };

@@ -784,13 +784,6 @@ body {
   border-bottom-color: var(--tier, var(--orange));
 }
 
-.item-tile.locked {
-  color: var(--menu-faint);
-  background: transparent;
-  border-style: dashed;
-  cursor: default;
-}
-
 .item-name {
   font-size: 16px;
   font-weight: 700;

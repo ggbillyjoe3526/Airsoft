@@ -30,9 +30,10 @@ import { DebugOverlay } from './ui/debugOverlay';
 import { toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
-import { type Collection, loadCollection } from './pool/collection';
+import { type Collection, loadCollection, saveCollection } from './pool/collection';
 import { GAME_POOL } from './pool/gamePool';
 import { collectionOwnership, LoadoutModel } from './pool/loadoutModel';
+import { carryOverOldPicks } from './pool/oldPicks';
 import { browserStorage, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
@@ -179,6 +180,7 @@ export class Game {
     this.matchRules = loadMatchRules();
     this.collection = loadCollection(GAME_POOL, options.seed);
     this.loadout = new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection));
+    if (carryOverOldPicks(this.loadout, this.collection)) saveCollection(this.collection);
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);

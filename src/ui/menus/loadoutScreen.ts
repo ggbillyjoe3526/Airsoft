@@ -96,6 +96,8 @@ export class LoadoutScreen {
     columns.append(gear, this.panel);
     page.body.append(columns);
     page.footer.append(backButton(() => this.back()));
+    // Right-click means Customise here: never the browser's menu, even off a replica.
+    this.root.addEventListener('contextmenu', (e) => e.preventDefault());
     this.refresh();
   }
 
@@ -126,7 +128,7 @@ export class LoadoutScreen {
     this.selected = slot;
     this.customising = slot;
     this.render();
-    this.panel.querySelector<HTMLElement>('.item-tile, .loadout-close')?.focus({ preventScroll: true });
+    this.panel.querySelector<HTMLElement>('.item-chip, .loadout-close')?.focus({ preventScroll: true });
   }
 
   private closeCustomise(): void {
@@ -161,7 +163,7 @@ export class LoadoutScreen {
     }
   }
 
-  /** The replicas you own for `slot`, the equipped one marked, and the ones in the pool you don't own yet, locked. */
+  /** The replicas you own for `slot` (any replica goes in either slot), the equipped one marked. */
   private renderChoices(slot: GearSlot): void {
     const m = this.opts.model;
     const i = GEAR_SLOTS.indexOf(slot);
@@ -188,12 +190,6 @@ export class LoadoutScreen {
         this.customise(slot);
       });
       grid.append(tile);
-    }
-    // Replicas in the pool you own no copy of: shown locked, so you know what the Armory can give.
-    const owned = new Set(m.replicaChoices().map((r) => r.asset));
-    for (const a of m.pool.assets) {
-      if (a.category !== 'replica' || owned.has(a.id)) continue;
-      grid.append(lockedTile(a.name));
     }
     this.panel.append(grid);
     if (current) {
@@ -285,19 +281,27 @@ export class LoadoutScreen {
     let dial = dial0;
     const weightLine = el('p', 'menu-readout', bbWeightReadout(carried, grams));
     const hopLine = el('p', 'menu-readout', hopUpReadout(carried, dial, grams));
+    // A slider fires an input event for every step dragged over: the readouts (each a few flight simulations) and the
+    // New game tile follow once a frame at most.
+    let queued = 0;
+    const update = (): void => {
+      if (queued) return;
+      queued = requestAnimationFrame(() => {
+        queued = 0;
+        weightLine.textContent = bbWeightReadout(carried, grams);
+        hopLine.textContent = hopUpReadout(carried, dial, grams);
+        changed(grams, dial);
+        this.opts.onChange();
+      });
+    };
     const weight = rangeControl(`${carried.name} BB weight`, { min: BB_WEIGHT.min, max: BB_WEIGHT.max, step: BB_WEIGHT.step }, grams, bbWeightLabel, `bbWeight.${base.id}`, (v) => {
       grams = Math.round(v * 100) / 100;
-      weightLine.textContent = bbWeightReadout(carried, grams);
-      hopLine.textContent = hopUpReadout(carried, dial, grams);
-      changed(grams, dial);
-      this.opts.onChange();
+      update();
     });
     weight.append(weightLine);
     const hop = rangeControl(`${carried.name} hop-up`, { min: HOP_UP.minDial, max: HOP_UP.maxDial, step: HOP_UP.dialStep }, dial, hopUpLabel, `hopUp.${base.id}`, (v) => {
       dial = v;
-      hopLine.textContent = hopUpReadout(carried, dial, grams);
-      changed(grams, dial);
-      this.opts.onChange();
+      update();
     });
     hop.classList.add('loadout-hopup');
     hop.append(hopLine);
@@ -362,12 +366,6 @@ function smallTile(name: string, tier: string, selected: boolean): HTMLButtonEle
   tile.setAttribute('aria-pressed', String(selected));
   tile.append(el('span', 'item-name', name));
   if (tier) tile.append(el('span', 'item-tier', tier));
-  return tile;
-}
-
-function lockedTile(name: string): HTMLDivElement {
-  const tile = el('div', 'item-tile locked');
-  tile.append(el('span', 'item-name', name), el('span', 'item-note', LOADOUT_TEXT.locked));
   return tile;
 }
 
