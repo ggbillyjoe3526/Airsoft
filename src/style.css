@@ -2711,7 +2711,8 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  translate: -50% -100%;
+  /* The tip a few pixels over its anchor (TEAMMATE_MARKERS.aboveEyes, just over the head): clear of it at any range. */
+  translate: -50% calc(-100% - 4px * var(--hud-scale, 1));
   color: var(--hud-fg);
   font: 700 calc(12px * var(--hud-scale, 1)) var(--ui-font);
   text-shadow: var(--hud-shadow);
