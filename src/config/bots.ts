@@ -377,9 +377,10 @@ export const TEAMMATE_DIFFICULTIES: readonly { id: Difficulty; label: string; bl
 
 /** True when `d` is `min` or above, in the Difficulty pop-up's order (Easy, Normal, Hard, Pro). */
 export function difficultyAtLeast(d: Difficulty, min: Difficulty): boolean {
-  const rank = (id: Difficulty) => DIFFICULTIES.findIndex((o) => o.id === id);
-  return rank(d) >= rank(min);
+  return DIFFICULTY_RANK[d] >= DIFFICULTY_RANK[min];
 }
+
+const DIFFICULTY_RANK = Object.fromEntries(DIFFICULTIES.map((o, i) => [o.id, i])) as Readonly<Record<Difficulty, number>>;
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
 
