@@ -5,6 +5,10 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
+- **FA4** · Bots keep apart and never take a teammate's cover or lane spot; their routes keep a body's width from walls (#66)
+- **FA4** · A BB landing close by tells a bot roughly where the shot came from; a teammate's "HIT!" gives only the direction. Fighting bots sidestep only onto open ground that keeps you in sight; a search that finds nobody ends with a crouched look round (#66)
+- **FA4** · Difficulty changes how bots play, not only how they aim: Hard uses cover and flanks more, Easy less; Easy reacts slower (0.6–1.0 s) with wider first shots but settles its aim nearer Normal (#66)
+- **FA4** · Against Easy opponents your teammates start on Normal, and that default pair counts for your records under Easy (#66)
 - **FA10** · Armory pity: an Epic or better within 20 Shots, a Legendary within 100; items you don't own are twice as likely; the catalogue lists every item by rarity tier (#63)
 - **FA10** · Tutorial: skip it or resume it from the pause screen; new steps for the fire selector and shooting after a sprint (#63)
 - **M31** · Settings → Save: download your save as a file and load it back (Undo after), daily restore points; a second tab waits instead of overwriting
@@ -42,6 +46,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33a** · Woodland shown as Coming soon in the Map pop-up
 
 ### Changed
+- **FA4** · Bots holding a spot crouch where they can still see and sweep their view; a defender at its post decides once on arrival (#66)
+- **FA4** · Attack / Defend: one attacking bot raises the flag while the others guard the pole from cover. Depot: the east spawns sit at the north end of their yard and its north exit is closed, so both ends are about as far from the dock and the Main Gate; in bot-only matches the west wins 48 % of rounds (#66)
+- **FA4** · Bots plan at most one route per tick in all, so big fights don't hitch (#66)
 - **FA10** · Field Credits: a won round pays only if you took part, pay scales with match length, and the difficulty bonus follows the lower of your teammates' and opponents' levels; Armory: 10 Shots and Scrap ask to confirm, holding Enter takes one Shot, the reveal shows rarest first with prices (#63)
 - **FA10** · The match summary says why a round paid nothing (#63)
 - **FA5** · Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell (#59)
