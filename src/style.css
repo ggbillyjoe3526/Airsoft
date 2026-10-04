@@ -324,7 +324,8 @@ body {
 
 .setup-tiles {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  /* Seven tiles: Map, Mode, Match, Difficulty, Loadout, Armory (M26c), Settings */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -1147,7 +1148,7 @@ kbd {
 
 @media (max-width: 1180px) {
   .setup-tiles {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -2197,6 +2198,22 @@ kbd {
   padding-top: 8px;
 }
 
+.summary-credits:empty {
+  display: none;
+}
+
+.summary-credits-total {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0;
+  font-size: 22px;
+}
+
+.summary-credits-total strong {
+  color: var(--orange);
+}
+
 .summary-records {
   display: flex;
   flex-direction: column;
@@ -2542,4 +2559,167 @@ kbd {
 .coach-shot[hidden],
 .coach-shot:empty {
   display: none;
+}
+
+/* The Armory (M26c, beta): balance, exchange, Shots and odds on the left; the last Shot and the collection on the right */
+.beta-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  font-size: 0.45em;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  vertical-align: middle;
+  color: var(--ink);
+  background: var(--orange);
+  border-radius: 4px;
+}
+
+.setup-tile-label .beta-tag {
+  font-size: 10px;
+}
+
+.setup-tile:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.armory-free {
+  margin: 0 0 16px;
+  max-width: 60em;
+  font-size: 15px;
+  color: var(--menu-muted);
+}
+
+.armory-side {
+  display: flex;
+  flex: 1 1 300px;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 380px;
+}
+
+.armory-main {
+  flex: 999 1 480px;
+  min-width: 0;
+}
+
+.armory-balance {
+  display: flex;
+  gap: 28px;
+  padding-bottom: 8px;
+}
+
+.armory-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.armory-figure-value {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.armory-side .menu-kicker {
+  margin-top: 10px;
+}
+
+.armory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.armory-action {
+  flex: 1 1 140px;
+}
+
+.armory-action.armory-shot {
+  border-left-color: var(--orange);
+}
+
+.armory-action:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.armory-odds {
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.armory-odds caption {
+  padding-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+
+.armory-odds th,
+.armory-odds td {
+  padding: 3px 14px 3px 0;
+  text-align: left;
+}
+
+.armory-odds-scrap {
+  color: var(--menu-faint);
+}
+
+.armory-reveal:empty {
+  display: none;
+}
+
+.armory-reveal {
+  margin-bottom: 18px;
+}
+
+.armory-tile {
+  cursor: default;
+}
+
+.armory-tile.is-new .item-note:last-child {
+  color: var(--orange);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.armory-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.armory-category {
+  margin: 14px 0 4px;
+}
+
+.armory-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-height: 44px;
+  padding: 4px 0 4px 12px;
+  border-top: 1px solid #2f333c;
+  border-left: 4px solid var(--tier, var(--menu-line));
+}
+
+.armory-row-name {
+  flex: 1 1 160px;
+  font-weight: 700;
+}
+
+.armory-row-count {
+  min-width: 2.5em;
+  color: var(--menu-muted);
+}
+
+.armory-row .menu-button {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
 }

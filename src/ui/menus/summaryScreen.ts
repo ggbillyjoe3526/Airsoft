@@ -1,5 +1,8 @@
 import { STATS } from '../../config/matchInfo';
+import { ARMORY_TEXT } from '../../config/menus';
+import type { Earnings } from '../../pool/armory';
 import type { RecordsView } from '../recordsView';
+import { fcText } from './armoryScreen';
 import type { TeamBlock } from '../statsRows';
 import { StatsTable } from '../statsTable';
 import { el, menuButton, menuPage } from './menuParts';
@@ -11,6 +14,8 @@ export interface MatchSummary {
   /** Every player's numbers over the match, your team first. */
   blocks: TeamBlock[];
   records: RecordsView;
+  /** What the match paid in Field Credits (M26c), or null (Dev settings on, the Armory off). */
+  fieldCredits?: Earnings | null;
 }
 
 /**
@@ -23,14 +28,16 @@ export class SummaryScreen {
   private readonly result: HTMLParagraphElement;
   private readonly table = new StatsTable('summary-table');
   private readonly records: HTMLDivElement;
+  private readonly credits: HTMLDivElement;
 
   constructor(onContinue: () => void) {
     const page = menuPage('menu-summary', 'Match summary');
     this.root = page.root;
     this.result = el('p', 'summary-result');
     this.records = el('div', 'summary-records');
+    this.credits = el('div', 'summary-credits');
     const panel = el('div', 'menu-panel summary-panel');
-    panel.append(this.result, this.table.root, this.records);
+    panel.append(this.result, this.credits, this.table.root, this.records);
     page.body.append(panel);
     const next = menuButton('Continue', 'primary', onContinue, true);
     next.dataset.autofocus = '';
@@ -41,7 +48,18 @@ export class SummaryScreen {
     this.result.textContent = summary.result;
     this.table.set(summary.blocks);
     this.records.replaceChildren(...recordsBlock(summary.records));
+    this.credits.replaceChildren(...creditsBlock(summary.fieldCredits ?? null));
   }
+}
+
+/** "Field Credits earned +180 FC", then what paid them: "Match played 40 · Match won 60 … · Hard ×1.5". */
+function creditsBlock(e: Earnings | null): HTMLElement[] {
+  if (!e) return [];
+  const head = el('p', 'summary-credits-total');
+  head.append(el('span', 'menu-kicker', ARMORY_TEXT.earned), el('strong', '', `+${fcText(e.total)}`));
+  const parts = e.lines.map((l) => `${l.label} ${l.fc}`);
+  if (e.multiplier !== 1) parts.push(`difficulty ×${e.multiplier}`);
+  return [head, el('p', 'menu-readout', parts.join(' · '))];
 }
 
 /** The records: a wins and losses grid (the mode and difficulty just played marked), then the bests. */

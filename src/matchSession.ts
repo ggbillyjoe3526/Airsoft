@@ -42,6 +42,7 @@ import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
 import type { MatchResult } from './stats/records';
+import type { MatchOutcome } from './pool/armory';
 import type { NotCounted } from './ui/recordsView';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
@@ -100,6 +101,8 @@ export class MatchSession {
   private matchOverAt = Number.NaN;
   /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
   private resultTaken = false;
+  /** The decided match has been paid its Field Credits (takeOutcome, M26c), so it is paid once. */
+  private outcomeTaken = false;
   /** The standard match, so its result could go into the records (custom rules don't, M20). */
   private readonly standardRules: boolean;
   /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
@@ -211,6 +214,24 @@ export class MatchSession {
     return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
   }
 
+  /**
+   * The decided match for its Field Credits (M26c), once per match: custom rules pay too (scaled by pool.md), but a
+   * match played with Dev settings that change play (M24) pays nothing, so null then.
+   */
+  takeOutcome(): MatchOutcome | null {
+    const r = this.state.round;
+    if (r.phase !== 'matchOver' || this.outcomeTaken) return null;
+    this.outcomeTaken = true;
+    if (this.devAssisted) return null;
+    return {
+      won: r.matchWinner === this.player.team,
+      roundsWon: r.score[this.player.team] ?? 0,
+      hits: this.stats.matchOf(this.player.id).hits,
+      winsNeeded: this.rounds.winsNeeded,
+      difficulty: this.setup.difficulty,
+    };
+  }
+
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
   summaryBlocks(): TeamBlock[] {
     const names = rosterNames(this.state.characters, this.player.id);
@@ -296,6 +317,7 @@ export class MatchSession {
     restartMatch(this.state.round, this.state.characters, this.state.bbs, this.ctx.round, this.state.events, this.mode);
     this.matchOverAt = Number.NaN;
     this.resultTaken = false;
+    this.outcomeTaken = false;
     this.stats.reset();
     // A new match: it stays out of the records only if Dev help is still on.
     this.devAssisted = devCheating(this.cheats);

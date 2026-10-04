@@ -7,7 +7,7 @@ import { activeDev, type DevSettings, devCheating } from './config/dev';
 import { ROUNDS } from './config/hits';
 import type { MatchRules } from './config/matchRules';
 import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './config/matchInfo';
-import { BROWSER_NOTES } from './config/menus';
+import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { QUALITY, type QualityPreset } from './config/render';
@@ -35,6 +35,8 @@ import { type Collection, loadCollection, saveCollection } from './pool/collecti
 import { GAME_POOL } from './pool/gamePool';
 import { collectionOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
+import { earn, type Earnings, matchEarnings } from './pool/armory';
+import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
@@ -158,6 +160,8 @@ export class Game {
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
+  /** What the last match paid in Field Credits (M26c), for its summary. */
+  private lastEarnings: Earnings | null = null;
   /** Reduced motion (Settings → Accessibility), kept across matches. */
   private reducedMotion = loadReducedMotion();
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
@@ -244,6 +248,15 @@ export class Game {
         model: this.loadout,
         onChange: () => (this.loadoutChanged = this.setupChanged = true),
         summary: () => loadoutTile(this.loadout),
+      },
+      armory: {
+        pool: GAME_POOL,
+        collection: () => this.collection,
+        onChange: () => {
+          saveCollection(this.collection);
+          this.loadoutChanged = this.setupChanged = true;
+        },
+        summary: () => ({ value: fcText(this.collection.fc), detail: `${this.collection.tokens} Tokens. ${ARMORY_TEXT.tileDetail}`, disabled: false }),
       },
       onPlay: () => {
         // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
@@ -590,10 +603,21 @@ export class Game {
         this.recordNews = addMatch(this.records, result);
         saveRecords(this.records, browserStorage());
       }
+      // And it pays its Field Credits once (M26c); a second stop on the same result shows the same pay.
+      const outcome = s.takeOutcome();
+      if (outcome) {
+        this.lastEarnings = matchEarnings(GAME_POOL.economy, outcome);
+        earn(this.collection, this.lastEarnings.total);
+        saveCollection(this.collection);
+        this.menus.refresh();
+      } else if (s.notCountedReason === 'dev') {
+        this.lastEarnings = null;
+      }
       this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
         result: `${headline} · ${score}`,
         blocks: s.summaryBlocks(),
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
+        fieldCredits: this.lastEarnings,
       });
     } else {
       const mine = s.player.team;

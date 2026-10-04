@@ -29,7 +29,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // the starters. Saved before the page loads, as a returning player's collection.
   await page.addInitScript(() => {
     const owned = ['000001', '000002', '000003', '000004', '000007', '000010', '000012'].map((id) => [`${id}@common`, 1]);
-    localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000011@rare', 1]]), fc: 0, tokens: 0, seed: 1 }));
+    localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000011@rare', 1]]), fc: 400, tokens: 0, seed: 1 }));
   });
   await page.goto('/?nolock&seed=1');
   // Wait for the title screen or the boot's own failure text, whichever comes first.
@@ -149,6 +149,24 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await page.keyboard.press('Escape');
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('2x Scope · Angled Grip · Hi-Cap Magazine');
+
+  // The Armory (M26c), next to the Loadout: beta and free. The saved 400 FC buy a Token (160 FC), and a Shot dispenses
+  // three assets into the collection.
+  const armoryTile = setup.getByRole('button', { name: /Armory/i });
+  await expect(armoryTile).toContainText('400 FC');
+  await armoryTile.click();
+  const armory = page.locator('.menu-armory');
+  await expect(armory).toBeVisible();
+  await expect(armory.locator('.menu-heading .beta-tag')).toHaveText(/beta/i);
+  await expect(armory.getByText(/^Completely free/)).toBeVisible();
+  await armory.getByRole('button', { name: /^Buy 1 Token/ }).click();
+  await expect(armory.locator('.armory-balance')).toContainText('240 FC');
+  await armory.getByRole('button', { name: /^1 Shot/ }).click();
+  await expect(armory.locator('.armory-reveal .item-tile')).toHaveCount(3);
+  await expect(armory.locator('.armory-balance')).toContainText('240 FC'); // paid with the Token
+  await page.keyboard.press('Escape');
+  await expect(setup).toBeVisible();
+  await expect(armoryTile).toContainText('240 FC');
 
   // Settings: its own screen with tabs; Esc works as Back and returns to New game, with focus back on the Settings tile.
   await setup.getByRole('button', { name: /Settings/i }).click();
@@ -407,6 +425,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(summary.locator('.summary-result')).toContainText('You win!');
   await expect(summary.locator('.records-not-counted')).toContainText('Custom rules');
   await expect(summary.locator('.records-grid td').first()).toHaveText('–');
+  // Custom rules still pay Field Credits (M26c), scaled to the shorter match.
+  await expect(summary.locator('.summary-credits')).toContainText(/Field Credits earned\s*\+\d+ FC/i);
   await summary.getByRole('button', { name: 'Continue' }).click();
   const result = page.locator('.menu-result');
   await expect(result).toBeVisible();

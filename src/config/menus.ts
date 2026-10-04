@@ -40,6 +40,36 @@ export const LOADOUT_TEXT = {
   skinsLater: 'Replicas and outfit',
 } as const;
 
+/** The Armory's words (M26c): completely free, beta. Numbers come from pool.md. */
+export const ARMORY_TEXT = {
+  beta: 'Beta',
+  free: 'Completely free: Field Credits are earned by playing matches (more for a win, less for a loss), and nothing here is ever sold.',
+  fc: 'Field Credits',
+  tokens: 'Tokens',
+  exchange: 'Exchange',
+  rate: (fcPerToken: number) => `${fcPerToken} FC buys one Token.`,
+  buy: 'Buy',
+  shots: 'Shots',
+  oneShot: '1 Shot',
+  tenShots: '10 Shots',
+  perShot: (n: number) => `Each Shot dispenses ${n} random ${n === 1 ? 'asset' : 'assets'}.`,
+  guarantee: (tier: string) => `Ten Shots always hold a ${tier} or rarer.`,
+  odds: 'Odds per asset',
+  scrap: 'Scrap',
+  scrapAll: 'Scrap all spares',
+  keepOne: 'Scrapping keeps one copy of everything, so nothing equipped is ever lost.',
+  dispensed: 'Last Shot',
+  collection: 'Your collection',
+  new: 'New',
+  spare: 'Spare',
+  /** The setup tile's line under the balance. */
+  tileDetail: 'Free. Earn Field Credits in matches and take Shots for gear.',
+  /** Dev settings → Disable Armory (M26d). */
+  off: 'The Armory is switched off in the Dev settings.',
+  /** The match summary's line. */
+  earned: 'Field Credits earned',
+} as const;
+
 export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'dev';
 
 /**
