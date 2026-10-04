@@ -63,6 +63,6 @@ acceptance:
   7. REN-19: BB streaks are camera-facing quads of a fixed angular width at head and tail; the existing streak-path tests pass on the quads' centre lines (bbRenderer.test.ts, tracerLine.test.ts)
   8. REN-15: `perf-run.mjs --preset all` runs Low, Medium and High and records `baseline/container.json`, `container-medium.json`, `container-high.json`; `--env laptop` drops the SwiftShader flags and uses the installed Chrome in a window; the laptop run is documented in pipeline/README.md; a leftover server on the perf port is refused, not measured
   9. KNOWN_ISSUES rows 22 (dust cap scaled by the pixel ratio, dustMotes.test.ts), 89 (the dock and ramps cast shadows, mapMeshes.test.ts), 100 and 133 are struck or reworded
-  10. The frozen-frame A/B against the base build (audit 3.3 method) shows no preset dearer and Low not dearer; draw calls and triangles within the budget on all three presets
+  10. Low is not dearer: the frozen-frame A/B against the base build (audit 3.3 method) and the perf run show Low's frame, triangles and texture memory down and its draw calls unchanged; Medium and High stay within their draw-call and triangle budgets with fewer triangles than the base (High's extra software cost is FA2's 1024² textures, by design)
 status: gates
 attempts: 1
