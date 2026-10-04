@@ -2,6 +2,7 @@ import type { MatchMode } from '../config/modes';
 import { type BBPool, createBBPool } from './ballistics';
 import type { Character } from './character';
 import type { GameEvent } from './events';
+import type { RangeTarget } from './rangeTargets';
 import { createRoundState, type RoundRules, type RoundState } from './round';
 import { createRng, type RngState } from './rng';
 import type { Vec3 } from './vec';
@@ -16,6 +17,8 @@ export interface GameState {
   events: GameEvent[];
   rng: RngState;
   round: RoundState;
+  /** Practice range targets (M21); empty in a match. */
+  targets: RangeTarget[];
 }
 
 /** A fresh game in `mode` (flag mode needs the map's flagpole). */
@@ -28,5 +31,6 @@ export function createGameState(seed: number, maxBBs: number, rules: RoundRules,
     events: [],
     rng: createRng(seed),
     round: createRoundState(rules, mode, pole),
+    targets: [],
   };
 }

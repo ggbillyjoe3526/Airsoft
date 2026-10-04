@@ -103,6 +103,11 @@ export class CombatPresentation {
     this.hud.setCrosshair(crosshair);
   }
 
+  /** No rounds here (the practice range, M21): no start whistle when play starts. */
+  skipStartWhistle(): void {
+    this.startWhistleOwed = false;
+  }
+
   setPlaying(playing: boolean): void {
     this.hud.setVisible(playing);
     this.sfx.setPaused(!playing);
@@ -132,7 +137,7 @@ export class CombatPresentation {
           this.startWhistleOwed = true;
           continue;
         }
-      } else if (e.type === 'bbImpact') this.puffs.spawn(e.position);
+      } else if (e.type === 'bbImpact' || e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
         if (e.victimId === this.player.id) this.viewmodel.onHit();

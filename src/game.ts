@@ -24,6 +24,7 @@ import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { Renderer } from './render/renderer';
 import { MatchSession } from './matchSession';
+import { type RangePose, RangeSession } from './rangeSession';
 import { attackersInRound } from './sim/round';
 import type { GameState } from './sim/state';
 import { addMatch, loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
@@ -90,7 +91,12 @@ export class Game {
   /** True while the graphics context is lost: nothing can be drawn, so play can't start or resume. */
   private graphicsLost = false;
   /** The match being played (or paused, or just decided); null on the title and New game screens. */
-  private session: MatchSession | null = null;
+  /** The match in play, or the practice range (M21); null on the menus with nothing loaded. */
+  private session: MatchSession | RangeSession | null = null;
+  /** The next Play opens the practice range rather than a match (the title's Practice range button). */
+  private practice = false;
+  /** The loadout changed since the range was built: Resume rebuilds it with the new one. */
+  private loadoutChanged = false;
   private rafId = 0;
   private lastTime = 0;
   private ticksThisSecond = 0;
@@ -163,7 +169,7 @@ export class Game {
       const p = s?.player;
       return {
         seed: options.seed,
-        map: this.map,
+        map: s instanceof RangeSession ? 'range' : this.map,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
         characters: s?.characterCount ?? 0,
@@ -189,11 +195,11 @@ export class Game {
       bindings: this.bindings,
       loadout: {
         slots: LOADOUT_SLOTS,
-        picked: { initial: this.picked, onChange: (slot, r) => (this.picked[slot] = r) },
-        optic: { initial: this.optic, onChange: (o) => (this.optic = o) },
-        hopUp: { initial: (r) => this.hopUpOf(r), onChange: (r, dial) => this.hopUps.set(r.id, dial) },
-        bbWeight: { initial: (r) => this.bbWeightOf(r), onChange: (r, grams) => this.bbWeights.set(r.id, grams) },
-        parts: { initial: (r) => this.partsOf(r), onChange: (r, parts) => this.parts.set(r.id, parts) },
+        picked: { initial: this.picked, onChange: (slot, r) => ((this.picked[slot] = r), (this.loadoutChanged = true)) },
+        optic: { initial: this.optic, onChange: (o) => ((this.optic = o), (this.loadoutChanged = true)) },
+        hopUp: { initial: (r) => this.hopUpOf(r), onChange: (r, dial) => (this.hopUps.set(r.id, dial), (this.loadoutChanged = true)) },
+        bbWeight: { initial: (r) => this.bbWeightOf(r), onChange: (r, grams) => (this.bbWeights.set(r.id, grams), (this.loadoutChanged = true)) },
+        parts: { initial: (r) => this.partsOf(r), onChange: (r, parts) => (this.parts.set(r.id, parts), (this.loadoutChanged = true)) },
         summary: () => ({
           replicas: this.picked.map((r) => r.name).join('\n'),
           detail: loadoutSummary(
@@ -205,8 +211,16 @@ export class Game {
           ),
         }),
       },
-      onPlay: () => this.play(),
+      onPlay: () => {
+        // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
+        if (!this.started) this.practice = false;
+        this.play();
+      },
       onLeaveMatch: () => this.leaveMatch(),
+      onRange: () => {
+        this.practice = true;
+        this.play();
+      },
       map: { initial: this.map, onChange: (m) => (this.map = m) },
       mode: { initial: this.mode, onChange: (m) => (this.mode = m) },
       difficulty: { initial: this.difficulty, onChange: (d) => (this.difficulty = d) },
@@ -307,7 +321,8 @@ export class Game {
   /** On-screen sound cues turned on or off: kept for the next match and applied to the one loaded. */
   private changeSoundCues(on: boolean): void {
     this.soundCues = on;
-    this.session?.setSoundCues(on);
+    // The range has nobody else to hear, so only a match takes them.
+    if (this.session instanceof MatchSession) this.session.setSoundCues(on);
   }
 
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
@@ -340,7 +355,13 @@ export class Game {
    */
   private play(): void {
     if (this.graphicsLost) return;
-    if (!this.started) {
+    const s = this.session;
+    if (!this.started && this.practice) {
+      this.openRange();
+    } else if (this.started && s instanceof RangeSession && this.loadoutChanged) {
+      // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood.
+      this.openRange(s.pose);
+    } else if (!this.started) {
       this.session?.dispose();
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         map: mapData(this.map),
@@ -369,6 +390,22 @@ export class Game {
     void this.pointer.request();
   }
 
+  /** Builds the practice range (M21) with the picked loadout, at `pose` if given (else at the firing line). */
+  private openRange(pose?: RangePose): void {
+    this.session?.dispose();
+    this.loadoutChanged = false;
+    this.session = new RangeSession(this.renderer, this.container, this.input, {
+      loadout: [...this.picked],
+      optic: this.optic,
+      hopUps: this.picked.map((r) => this.hopUpOf(r)),
+      bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
+      parts: this.picked.map((r) => this.partsOf(r)),
+      teamColours: TEAM_COLOUR_SETS[this.teamColours],
+    }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair, pose);
+    this.session.setMotion(motionScale(this.reducedMotion));
+    applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
+  }
+
   private resume(): void {
     const s = this.session;
     if (!s) {
@@ -377,7 +414,7 @@ export class Game {
       return;
     }
     // "Play Again" on the result screen: the new match starts only once play really resumes.
-    if (s.state.round.phase === 'matchOver') s.restart();
+    if (s instanceof MatchSession && s.state.round.phase === 'matchOver') s.restart();
     this.started = true;
     this.keyboard.capturing = true;
     this.menus.hide();
@@ -391,6 +428,7 @@ export class Game {
    */
   private leaveMatch(): void {
     this.started = false;
+    this.practice = false;
     this.unlockedPlay = false;
     this.pointer.setUnlockedButtons(false);
     this.session?.dispose();
@@ -404,7 +442,9 @@ export class Game {
     const s = this.session;
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
-    if (!this.started || !s || !r) {
+    if (this.started && s instanceof RangeSession) {
+      this.menus.showPause('Practice range', true);
+    } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
     } else if (screen === 'result') {

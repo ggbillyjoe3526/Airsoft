@@ -47,6 +47,8 @@ export interface MenusOptions {
   onPlay: () => void;
   /** The player leaves the match (Quit to title screen; Change setup or Title screen after it): it is unloaded. */
   onLeaveMatch: () => void;
+  /** The title screen's Practice range (M21): open the range and play. */
+  onRange: () => void;
   map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
@@ -88,6 +90,8 @@ export class Menus {
   private teammateDifficulty: Difficulty;
   private readonly screens: Record<MenuScreen, HTMLElement>;
   private current: MenuScreen = 'title';
+  /** Where the Loadout was opened from: New game, or the practice range's pause menu (M21). */
+  private loadoutFrom: SettingsOrigin = 'setup';
   /** What had the focus on each screen when it was left, so Back puts the keyboard where it was. */
   private readonly lastFocus = new Map<MenuScreen, HTMLElement>();
 
@@ -99,13 +103,13 @@ export class Menus {
     this.matchRules = { ...opts.matchRules.initial };
     this.difficulty = opts.difficulty.initial;
     this.teammateDifficulty = opts.teammateDifficulty.initial;
-    this.title = new TitleScreen(() => this.go('setup'));
+    this.title = new TitleScreen(() => this.go('setup'), () => this.openRange());
     this.setup = new SetupScreen({
       onMap: () => this.mapDialog.open(),
       onMode: () => this.modeDialog.open(),
       onMatch: () => this.matchDialog.open(),
       onDifficulty: () => this.difficultyDialog.open(),
-      onLoadout: () => this.go('loadout'),
+      onLoadout: () => this.openLoadout('setup'),
       onSettings: () => this.openSettings('setup'),
       onBack: () => this.back(),
       onPlay: () => this.play(),
@@ -165,7 +169,12 @@ export class Menus {
       accessibility: opts.accessibility,
       onBack: () => this.back(),
     });
-    this.pause = new PauseScreen({ onResume: () => this.play(), onSettings: () => this.openSettings('pause'), onQuit: () => this.leaveMatch('title') });
+    this.pause = new PauseScreen({
+      onResume: () => this.play(),
+      onLoadout: () => this.openLoadout('pause'),
+      onSettings: () => this.openSettings('pause'),
+      onQuit: () => this.leaveMatch('title'),
+    });
     this.summary = new SummaryScreen(() => this.go('result'));
     this.result = new ResultScreen({
       onPlayAgain: () => this.play(),
@@ -197,9 +206,10 @@ export class Menus {
     this.go('title');
   }
 
-  /** The pause menu, with `status` (round and score) under the heading. */
-  showPause(status: string): void {
+  /** The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21). */
+  showPause(status: string, range = false): void {
     this.pause.setStatus(status);
+    this.pause.setRange(range);
     this.go('pause');
   }
 
@@ -305,13 +315,23 @@ export class Menus {
     this.opts.onPlay();
   }
 
+  private openRange(): void {
+    this.showHint('');
+    this.opts.onRange();
+  }
+
+  private openLoadout(from: SettingsOrigin): void {
+    this.loadoutFrom = from;
+    this.go('loadout');
+  }
+
   private openSettings(from: SettingsOrigin): void {
     this.settings.openFrom(from);
     this.go('settings');
   }
 
   private back(): void {
-    const target = backTarget(this.current, this.settings.openedFrom);
+    const target = backTarget(this.current, this.settings.openedFrom, this.loadoutFrom);
     if (!target) return;
     // No match is ever under way on New game, but a Play whose mouse lock was refused leaves one built and unstarted:
     // leaving for the title unloads it, so no map stays loaded behind the title screen.
@@ -339,7 +359,7 @@ export class Menus {
    */
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.code !== 'Escape' || this.root.hidden || this.dialogOpen()) return;
-    if (backTarget(this.current, this.settings.openedFrom) === null) return;
+    if (backTarget(this.current, this.settings.openedFrom, this.loadoutFrom) === null) return;
     e.preventDefault();
     this.back();
   };
