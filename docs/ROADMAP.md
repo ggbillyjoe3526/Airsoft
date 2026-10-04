@@ -131,7 +131,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M29a Weapon performance data: `stats.md` (every replica's and part's numbers, hand-editable), tiers that add energy and rate of fire, batteries that set the rate of fire, an 11.1 V LiPo battery, a site energy limit, a Performance sheet on Customise | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
-| Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up | In progress (concept sketch v1 with the owner) | |
+| Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up | In progress (M33a done; concept sketch v1 with the owner) | M33a 7/8 |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -480,8 +480,8 @@ each one went:**
     match. Quit to title screen and Change setup unload it, so the next Play can load a different map (no leaks:
     GPU memory stays flat across matches, as it does today across restarts).
   - **A Map button** on New game, beside Mode, Difficulty, Loadout and Settings, opening a pop-up like Mode's. It
-    lists Depot (the default and, for now, the only map), and its choice is saved like the others. Later fields
-    (Woodland in v0.2, the v0.4 list) join this pop-up as they are built.
+    lists Depot (the default), and its choice is saved like the others. Later fields join this pop-up as they are built
+    (Woodland, M33, shows there greyed out as Coming soon until it is playable).
   - **Opaque menus:** a solid background on every menu screen, so nothing of the game shows through. The pause menu
     is opaque too (a default; the owner can ask for it to stay see-through mid-match).
   - **Controls only under Settings:** the controls list leaves the New game and pause screens; the key bindings stay
