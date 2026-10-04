@@ -1,5 +1,3 @@
-import type { BlockKind } from '../map/mapTypes';
-import type { ImpactMaterial } from './sounds';
 
 /**
  * How sound is mixed and placed (M13). The sounds themselves are recipes in config/sounds.ts; this file sets how
@@ -82,15 +80,6 @@ export const AUDIO = {
   /** At most this many impact ticks start within `impactWindow` seconds (a hose of BBs stays readable). */
   maxImpactsPerWindow: 8,
   impactWindow: 0.1,
-  /** What a BB sounds like on each kind of block (floors and ramps follow their surface, see audio/soundMaterials.ts). */
-  impactMaterials: {
-    floor: 'concrete',
-    ramp: 'concrete',
-    wall: 'concrete',
-    barrier: 'concrete',
-    crate: 'wood',
-    container: 'metal',
-  } satisfies Record<BlockKind, ImpactMaterial>,
   /** A BB impact this close to a block's faces (m) counts as on that block. */
   impactBlockMargin: 0.06,
   /**

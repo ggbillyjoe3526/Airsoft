@@ -138,7 +138,7 @@ export class MatchPresentation {
     for (const e of this.state.events) {
       if (e.type === 'characterHit') {
         this.characters.flinch(e.victimId, e.direction);
-        this.addFeedLine(e.victimId, e.shooterId);
+        this.addFeedLine(e.victimId, e.shooterId, e.ricochet);
         if (e.victimId === this.player.id) {
           // It came from the opposite of the BB's flight direction.
           this.hitFromYaw = Math.atan2(e.direction.x, e.direction.z);
@@ -237,7 +237,7 @@ export class MatchPresentation {
   };
 
   /** A hit feed line for `victimId` calling a hit from `shooterId`'s BB. */
-  private addFeedLine(victimId: number, shooterId: number): void {
+  private addFeedLine(victimId: number, shooterId: number, ricochet: boolean): void {
     const victim = this.state.characters.find((c) => c.id === victimId);
     const shooter = this.state.characters.find((c) => c.id === shooterId);
     if (!victim || !shooter) return;
@@ -248,6 +248,7 @@ export class MatchPresentation {
       victim.team === shooter.team,
       you,
       this.state.time,
+      ricochet,
     );
   }
 

@@ -143,7 +143,7 @@ export function stepSimulation(
     stepArmament(c.id, c.armament, cmd, m, canFire, armCtx, dt);
   }
 
-  stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, live ? ctx.targets : undefined);
+  stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, live ? ctx.targets : undefined, state.rng);
   stepRound(state.round, state.characters, state.bbs, ctx.round, state.events, dt);
   state.tick++;
   state.time += dt;

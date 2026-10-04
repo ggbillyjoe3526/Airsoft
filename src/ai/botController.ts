@@ -36,7 +36,13 @@ export interface BotControllerOptions {
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
+  /** The bots' tuning: every bot's, unless `teamCfg` gives a team its own. */
   cfg: BotConfig;
+  /**
+   * Per team (Blue, Orange), the tuning its bots play by: a difficulty for your teammates and one for your opponents
+   * (M20). Only the skill differs between levels (BOT_SKILL); the shared behaviour is `cfg`'s.
+   */
+  teamCfg?: readonly BotConfig[];
   seed: number;
 }
 
@@ -63,8 +69,8 @@ export class BotController {
    */
   private readonly given = new Map<Character, { kind: SquadOrderKind; ownSpot: boolean }>();
   private plannerCursor = 0;
-  /** Tuning to switch to at the next round start (a difficulty change made mid-match). */
-  private pendingCfg: BotConfig | undefined;
+  /** Per team, the tuning its bots play by (BotControllerOptions.teamCfg). */
+  private readonly teamCfg: readonly BotConfig[];
   /** Hunt sectors: per team, the last time a player of that team stood in each sector. */
   private readonly sectorCols: number;
   private readonly sectorRows: number;
@@ -98,6 +104,7 @@ export class BotController {
     this.visited = [0, 1].map(() => new Float64Array(this.sectorCols * this.sectorRows).fill(Number.NEGATIVE_INFINITY));
 
     this.planRng = createRng(planSeed(opts.seed));
+    this.teamCfg = opts.teamCfg ?? [cfg, cfg];
 
     this.world = {
       characters: state.characters,
@@ -125,22 +132,9 @@ export class BotController {
     this.planRound();
   }
 
-  /** The tuning bots play by now. */
-  get cfg(): BotConfig {
-    return this.world.cfg;
-  }
-
-  /**
-   * Changes the bots' tuning (a difficulty level): right away, or from the next round so a fight in
-   * progress isn't changed under the player.
-   */
-  setConfig(cfg: BotConfig, when: 'now' | 'nextRound'): void {
-    if (when === 'now') {
-      this.world.cfg = cfg;
-      this.pendingCfg = undefined;
-    } else {
-      this.pendingCfg = cfg;
-    }
+  /** The tuning `team`'s bots play by. */
+  cfgOf(team: number): BotConfig {
+    return this.teamCfg[team] ?? this.opts.cfg;
   }
 
   private commandFor(id: number): PlayerCommand {
@@ -163,7 +157,12 @@ export class BotController {
     this.planRoutes();
     this.updateOrders();
     this.pickRetakers();
-    for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
+    // Each bot decides with its own team's skill; everything outside thinkBot reads only the shared behaviour.
+    for (const b of this.bots) {
+      w.cfg = this.cfgOf(b.character.team);
+      thinkBot(b, w, this.commandFor(b.character.id), dt);
+    }
+    w.cfg = this.opts.cfg;
   }
 
   /**
@@ -284,10 +283,6 @@ export class BotController {
     for (const e of state.events) {
       const cfg = this.world.cfg;
       if (e.type === 'roundStart') {
-        if (this.pendingCfg) {
-          this.world.cfg = this.pendingCfg;
-          this.pendingCfg = undefined;
-        }
         for (const v of this.visited) v.fill(Number.NEGATIVE_INFINITY);
         this.given.clear(); // resetBot ends every bot's order
         this.planRound();
@@ -299,6 +294,13 @@ export class BotController {
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
         if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
+      } else if (e.type === 'ricochetTick') {
+        // A ricochet that doesn't count still tells its victim they're under fire.
+        for (const b of this.bots) {
+          if (b.character.id !== e.victimId) continue;
+          b.suppressedAt = time;
+          b.lastThreatAt = time;
+        }
       } else if (e.type === 'footstep') {
         const walker = this.character(state, e.characterId);
         const range =

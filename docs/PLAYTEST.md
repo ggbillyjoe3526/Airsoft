@@ -318,6 +318,29 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   little in full auto (that shows where the BBs go). If your computer's own "reduce motion" setting is on, the game
   starts with it On until you pick.
 
+## Custom matches (M20)
+
+- [ ] **New game, Match.** A sixth button, **Match**, reads "3V3 · FIRST TO 5" with "2:30 rounds. Friendly fire on;
+  ricochets don't count." Click it: a pop-up with **Rounds to win** (3, 5, 7, 10), **Round time** (a slider, 1:30 to
+  5:00), **Team size** (1v1, 2v2, 3v3), **Friendly fire** and **Ricochets count**. Each change shows on the button and
+  in the rules under the buttons straight away, and is kept after a reload. Esc or × closes it.
+- [ ] **Play a 1v1 and a 2v2.** You start with no teammates (or one), against one bot (or two); the scoreboard (Tab)
+  and the pips at the top have that many players. Do the rounds feel too long or too quick on Depot at that size?
+- [ ] **First to 3.** The score line on the pause menu says "first to 3", teams swap ends after round 2, and the match
+  ends at 3 wins. Try a 1:30 round time: the clock starts at 1:30.
+- [ ] **Difficulty: Opponents and Teammates.** The pop-up has a row for each. Put Opponents on Easy and Teammates on
+  Hard: the button reads "EASY / HARD", and your teammates should win their fights clearly more often than the
+  enemy. The rules under the buttons now end with "This match won't go into your records". Finish
+  that match: the summary says custom rules aren't in your records (only the standard 3v3, first to 5,
+  with both teams at one difficulty counts), and marks no cell.
+- [ ] **Friendly fire off.** Shoot a teammate in the back: nothing happens (the BB goes past). Your bot teammates also
+  stop holding fire when you're in their line.
+- [ ] **Ricochets.** Fire at a concrete wall or a container at an angle: BBs glance off and fly on, slower (watch with
+  ] for BB paths). Into a crate: they stop. When a bounced BB hits you, you hear a knock and see "Ricochet · doesn't
+  count, play on". A bounced BB of yours that reaches a bot shows a small grey puff (not the bigger hit puff) and "Your
+  BB ricocheted · doesn't count". With **Ricochets count** on, the same BB knocks you out, and the hit feed line says
+  RICOCHET. Is the ricochet notice useful, or does it come up too often in a 3v3?
+
 ## Accessibility and browser basics (M18b)
 
 - [ ] **Team colours.** Settings → Accessibility → **Team colours: High contrast**. The swatches show light blue and

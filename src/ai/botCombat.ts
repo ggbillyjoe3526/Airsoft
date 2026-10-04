@@ -61,6 +61,8 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
 
 /** True if a teammate stands in (or right next to) the line of fire within `dist` metres. */
 function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number): boolean {
+  // With friendly fire off (M20) BBs pass teammates by, so there's nothing to hold fire for.
+  if (!w.hits.friendlyFire) return false;
   const me = b.character;
   // A teammate on the move can run into the BBs' path while they fly: check where they'll be too.
   const flight = dist / muzzleVelocity(w.loadout[0]!);

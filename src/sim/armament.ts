@@ -2,6 +2,7 @@ import { factoryParts, type Handling, handlingOf, partsFor, type ReplicaParts } 
 import type { BallisticsConfig } from '../config/ballistics';
 import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
+import type { ImpactMaterial } from '../config/sounds';
 import { BB_WEIGHT, bbMass, type FireMode, HOP_UP, hopUpLift, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
@@ -168,10 +169,21 @@ export interface Muzzle {
   spreadScale: number;
 }
 
+/** What a ray met (raycastSurface): the surface's unit normal, facing back along the ray, and what it is made of. */
+export interface SurfaceHit {
+  normal: Vec3;
+  material: ImpactMaterial;
+}
+
 /** Level geometry queries the armament needs. */
 export interface WorldQuery {
   /** Distance to the first static surface along unit `dir`, or -1 if none within `maxDist`. */
   raycastStatic(origin: Vec3, dir: Vec3, maxDist: number): number;
+  /**
+   * The same, also filling `out` with the surface met (BB ricochets, M20). Optional: a query without it (test doubles)
+   * has BBs stop dead where they land, as before ricochets.
+   */
+  raycastSurface?(origin: Vec3, dir: Vec3, maxDist: number, out: SurfaceHit): number;
 }
 
 export interface ArmamentContext {

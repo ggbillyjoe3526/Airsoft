@@ -29,7 +29,7 @@ describe('soundCueOf (M18b)', () => {
   });
 
   it('puts a hit call where the hit player is, and none for your own', () => {
-    const hit = (victimId: number, shooterId: number): GameEvent => ({ type: 'characterHit', victimId, shooterId, position: vec3(9, 1, 9), direction: vec3(0, 0, 1) });
+    const hit = (victimId: number, shooterId: number): GameEvent => ({ type: 'characterHit', victimId, shooterId, position: vec3(9, 1, 9), direction: vec3(0, 0, 1), ricochet: false });
     expect(cue(hit(3, 0))).toEqual({ kind: 'hit', sourceId: 3, x: -4, z: 9 });
     expect(cue(hit(0, 3))).toBeNull();
   });

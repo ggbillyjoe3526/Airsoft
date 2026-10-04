@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { type HitConfig, HITS } from '../config/hits';
 import { LOADOUT } from '../config/replicas';
-import type { WorldQuery } from './armament';
+import type { SurfaceHit, WorldQuery } from './armament';
 import { createBBPool, spawnBB } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
 import { createCharacter } from './character';
@@ -20,6 +20,21 @@ function wallAt(wallZ: number): WorldQuery {
       if (d.z >= 0) return -1;
       const t = (wallZ - o.z) / d.z;
       return t >= 0 && t <= max ? t : -1;
+    },
+  };
+}
+
+/** wallAt, also telling what the wall is made of (so BBs can ricochet off it). */
+function hardWallAt(wallZ: number, material: SurfaceHit['material'] = 'concrete'): WorldQuery {
+  const plane = wallAt(wallZ);
+  return {
+    raycastStatic: plane.raycastStatic,
+    raycastSurface(o, d, max, out) {
+      out.normal.x = 0;
+      out.normal.y = 0;
+      out.normal.z = 1;
+      out.material = material;
+      return plane.raycastStatic(o, d, max);
     },
   };
 }
@@ -45,6 +60,22 @@ describe('stepBBs', () => {
     stepBBs(pool, BALLISTICS, wallAt(-1.4), KILL_Y, events, DT);
     expect(bb.active).toBe(false);
     expect(events).toHaveLength(1);
+  });
+
+  it('bounces a BB off a hard surface and lets it fly on from there (a ricochet, M20), but stops it in wood', () => {
+    const pool = createBBPool(1);
+    const bb = spawnBB(pool, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 80, 0.12, 0.25e-3);
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 20 && bb.bounces === 0; i++) stepBBs(pool, BALLISTICS, hardWallAt(-12), KILL_Y, events, DT);
+    expect(bb.active).toBe(true);
+    expect(bb.bounces).toBe(1);
+    expect(events.filter((e) => e.type === 'bbImpact')).toHaveLength(1);
+    stepBBs(pool, BALLISTICS, hardWallAt(-12), KILL_Y, events, DT);
+    expect(bb.position.z).toBeGreaterThan(-12); // coming back
+    const soft = createBBPool(1);
+    const stuck = spawnBB(soft, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 80, 0.12, 0.25e-3);
+    for (let i = 0; i < 20 && stuck.active; i++) stepBBs(soft, BALLISTICS, hardWallAt(-12, 'wood'), KILL_Y, [], DT);
+    expect(stuck.active).toBe(false);
   });
 
   it('removes BBs that fly too long or fall out of the world, silently', () => {
@@ -152,6 +183,26 @@ describe('stepBBs hitting characters', () => {
     const noFf = setup([{ id: 2, team: 0, z: -10 }], { ...HITS, friendlyFire: false });
     noFf.run();
     expect(noFf.characters[1]!.status).toBe('alive');
+  });
+
+  it('ticks a character with a ricochet without knocking them out, unless the match counts ricochets (M20)', () => {
+    // A BB fired at an angle at a concrete wall 10 m away comes back off it towards a target standing beside the line out.
+    for (const counts of [false, true]) {
+      const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
+      const target = createCharacter(2, vec3(5.2, 0, -6), 0, LOADOUT, 1);
+      const characters = [shooter, target];
+      const pool = createBBPool(1);
+      const dir = vec3(0.3 / Math.hypot(0.3, 1), 0, -1 / Math.hypot(0.3, 1));
+      const bb = spawnBB(pool, 1, vec3(0, 1.2, 0), dir, 80, 0.12, 0.25e-3);
+      const events: GameEvent[] = [];
+      const targets: BBTargets = { characters, hits: { ...HITS, ricochetsCount: counts }, elimination: openFieldElimination(deadZones) };
+      for (let i = 0; i < 60 && bb.active; i++) stepBBs(pool, BALLISTICS, hardWallAt(-10), KILL_Y, events, DT, targets);
+      expect(target.status, `ricochets count: ${counts}`).toBe(counts ? 'calling' : 'alive');
+      const ev = events.find((e) => e.type === 'ricochetTick' || e.type === 'characterHit');
+      expect(ev).toMatchObject({ type: counts ? 'characterHit' : 'ricochetTick', victimId: 2, shooterId: 1 });
+      if (ev?.type === 'characterHit') expect(ev.ricochet).toBe(true);
+      expect(bb.active).toBe(false);
+    }
   });
 
   it('flies over a crouched character that a standing one would have caught in the chest', () => {

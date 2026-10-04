@@ -36,14 +36,21 @@ export class HitFeed {
     this.root.hidden = !visible;
   }
 
-  /** `victim` called a hit from `shooter`'s BB, at simulation time `time`. `you`: the line involves you. */
-  add(victim: FeedName, shooter: FeedName, friendly: boolean, you: boolean, time: number): void {
+  /**
+   * `victim` called a hit from `shooter`'s BB, at simulation time `time`. `you`: the line involves you. `ricochet`: the
+   * BB had bounced first (in a match where ricochets count, M20).
+   */
+  add(victim: FeedName, shooter: FeedName, friendly: boolean, you: boolean, time: number, ricochet = false): void {
     const node = document.createElement('div');
     node.className = `hit-feed-line${you ? ' you' : ''}${friendly ? ' friendly' : ''}`;
     node.append(name(victim), document.createTextNode(' called HIT · '), name(shooter));
-    if (friendly) {
+    for (const [on, text] of [
+      [friendly, 'friendly'],
+      [ricochet, 'ricochet'],
+    ] as const) {
+      if (!on) continue;
       const tag = document.createElement('em');
-      tag.textContent = 'friendly';
+      tag.textContent = text;
       node.append(tag);
     }
     this.root.prepend(node);

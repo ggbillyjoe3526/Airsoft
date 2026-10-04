@@ -287,6 +287,13 @@ export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: stri
   { id: 'hard', label: 'Hard', blurb: 'Quick and steady. Get seen first and you\'re out.' },
 ];
 
+/** The same levels as the Difficulty pop-up's Teammates row describes them (M20). */
+export const TEAMMATE_DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string }[] = [
+  { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim: you carry the team.' },
+  { id: 'normal', label: 'Normal', blurb: 'They hold their own in a fair fight.' },
+  { id: 'hard', label: 'Hard', blurb: 'Quick and steady: they win fights for you.' },
+];
+
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
 
 /** Skill per difficulty level (see BotSkill). Tuned with measured time-to-hit (docs/DECISIONS.md). */
