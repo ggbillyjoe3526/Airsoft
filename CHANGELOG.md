@@ -12,6 +12,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA4** · A BB landing close by tells a bot roughly where the shot came from; a teammate's "HIT!" gives only the direction. Fighting bots sidestep only onto open ground that keeps you in sight; a search that finds nobody ends with a crouched look round (#66)
 - **FA4** · Difficulty changes how bots play, not only how they aim: Hard uses cover and flanks more, Easy less; Easy reacts slower (0.6–1.0 s) with wider first shots but settles its aim nearer Normal (#66)
 - **FA4** · Against Easy opponents your teammates start on Normal, and that default pair counts for your records under Easy (#66)
+- **FA8** · Players, replicas, their parts and your gloved hands are rebuilt in a clean, stylised look with more detail on Medium and High; Low looks and costs the same (#69)
+- **FA8** · Barrels and silencer have proper models on High (fluted barrels, a coupling collar, silencer end caps and rubber bands) (#69)
+- **FA8** · New Custom graphics rows: Player detail, Replica detail, Hand detail, BB glow, Impact grit, Laser beam (#69)
 - **FA10** · Armory pity: an Epic or better within 20 Shots, a Legendary within 100; items you don't own are twice as likely; the catalogue lists every item by rarity tier (#63)
 - **FA10** · Tutorial: skip it or resume it from the pause screen; new steps for the fire selector and shooting after a sprint (#63)
 - **M31** · Settings → Save: download your save as a file and load it back (Undo after), daily restore points; a second tab waits instead of overwriting
@@ -55,6 +58,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA3** · High has crisp, steady shadows fitted to the view (about 25 m range) with fewer draw calls and triangles (#67)
 - **FA3** · Raised dock and ramps cast shadows; BB streaks have consistent thickness on any screen; replica sheen returns after switching presets (#67)
 - **FA4** · Bots holding a spot crouch where they can still see and sweep their view; a defender at its post decides once on arrival (#66)
+- **FA8** · Third-person rifles on High show a silencer when one is fitted (#69)
 - **FA4** · Attack / Defend: one attacking bot raises the flag while the others guard the pole from cover. Depot: the east spawns sit at the north end of their yard and its north exit is closed, so both ends are about as far from the dock and the Main Gate; in bot-only matches the west wins 48 % of rounds (#66)
 - **FA4** · Bots plan at most one route per tick in all, so big fights don't hitch (#66)
 - **FA10** · Field Credits: a won round pays only if you took part, pay scales with match length, and the difficulty bonus follows the lower of your teammates' and opponents' levels; Armory: 10 Shots and Scrap ask to confirm, holding Enter takes one Shot, the reveal shows rarest first with prices (#63)
@@ -70,6 +74,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 
 ### Fixed
+- **FA11c** · A second tab now always waits behind the "open in another tab" notice, even when the first is busy loading (#69)
 - **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
 - **FA2** · Turning Edge smoothing on or off no longer causes graphics memory to leak (#67)
 - **FA3** · The first Play no longer hitches as surface textures are built during the title screen (#67)
