@@ -20,10 +20,10 @@ describe('Extraction map data (M43)', () => {
       it('has walkable insertions for a full squad, starts for the most opponents, and exits you can stand in', () => {
         for (const ins of x.insertions) {
           expect(ins.spawns.length, ins.name).toBeGreaterThanOrEqual(MAX_SQUAD);
-          for (const s of ins.spawns) expect(isWalkableAt(nav, s.position.x, s.position.z), ins.name).toBe(true);
+          for (const s of ins.spawns) expect(isWalkableAt(nav, s.position.x, s.position.y, s.position.z), ins.name).toBe(true);
         }
         expect(x.opponentStarts.length).toBeGreaterThanOrEqual(x.baseOpponents + MAX_SQUAD);
-        for (const s of x.opponentStarts) expect(isWalkableAt(nav, s.position.x, s.position.z), JSON.stringify(s.position)).toBe(true);
+        for (const s of x.opponentStarts) expect(isWalkableAt(nav, s.position.x, s.position.y, s.position.z), JSON.stringify(s.position)).toBe(true);
         for (const e of x.exits) {
           let ok = 0;
           let all = 0;
@@ -31,10 +31,10 @@ describe('Extraction map data (M43)', () => {
             for (let dz = -e.radius; dz <= e.radius; dz += 0.5) {
               if (Math.hypot(dx, dz) > e.radius) continue;
               all++;
-              if (isWalkableAt(nav, e.position.x + dx, e.position.z + dz)) ok++;
+              if (isWalkableAt(nav, e.position.x + dx, e.position.y, e.position.z + dz)) ok++;
             }
           }
-          expect(isWalkableAt(nav, e.position.x, e.position.z), e.name).toBe(true);
+          expect(isWalkableAt(nav, e.position.x, e.position.y, e.position.z), e.name).toBe(true);
           expect(ok / all, e.name).toBeGreaterThanOrEqual(EXIT_WALKABLE);
         }
       });
