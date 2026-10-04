@@ -28,6 +28,10 @@ export const DEFAULT_BINDINGS = {
   fire: ['Mouse0'],
   /** Aims down sights (needs an optic); hold or toggle, see AIM_MODES. */
   aim: ['Mouse2'],
+  /** Squad orders for your bot teammates (M22, config/squad.ts); the same key again cancels. */
+  orderFollow: ['KeyZ'],
+  orderHold: ['KeyX'],
+  orderRegroup: ['KeyV'],
   /** Fullscreen on and off while playing (M18b). F11 is the browser's own and would leave the page's fullscreen; F10 is free once the game takes it. */
   fullscreen: ['F10'],
   debugOverlay: ['Backquote', 'F3'],
@@ -56,6 +60,9 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },
+  { action: 'orderFollow', label: 'Squad: follow me' },
+  { action: 'orderHold', label: 'Squad: hold here' },
+  { action: 'orderRegroup', label: 'Squad: regroup' },
   { action: 'fullscreen', label: 'Fullscreen' },
 ];
 

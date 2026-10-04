@@ -373,6 +373,23 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   screen and start a normal match: it plays as before.
 - [ ] **Walk downrange.** Nothing stops you walking among the targets; BBs fired from there still hit them.
 
+## Squad orders and hearing (M22)
+
+- [ ] **Follow me (Z).** Start a match and press **Z**: a radio double-click answers and the HUD's bottom-left line
+  reads SQUAD · FOLLOW ME. Walk round Depot: your two teammates keep up a few metres behind you, either side, sprinting
+  to catch up if left behind; stop and one looks back the way you came, the other to a side. Walk (Shift) or crouch
+  and they walk too. They still fight anyone they see, then come back. Press **Z** again: "Back to the team plan".
+- [ ] **Hold here (X).** Look at a spot (a doorway, a crate's corner) and press **X**: both go there side by side and
+  watch the way you looked, and stay when you walk off. A diamond marker with the distance shows the held spot (none when each holds where it stands).
+  Look somewhere else and press X: the hold moves; at the sky: each holds where it stands; press X again on the same
+  spot (or at the sky again): back to the team plan.
+- [ ] **Regroup (V).** With teammates far off, press **V**: they sprint back to you, then follow (the line changes to
+  FOLLOW ME once both are back). Get hit: the order ends and they play their plan; order keys then say "Orders wait for
+  the next round". A new round starts with no order.
+- [ ] **Rebind.** Settings → Controls → Key bindings has the three squad keys.
+- [ ] **Hearing through walls.** Sneak up to Orange behind a wall (running, not walking): they should notice you
+  later than in the open. Do bots still seem to hear you through walls like a wallhack, or now too little?
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score

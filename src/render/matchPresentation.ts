@@ -4,20 +4,23 @@ import type { HitConfig } from '../config/hits';
 import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
+import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { teamCss, type TeamColours } from '../config/teams';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import type { RoundRules } from '../sim/round';
 import type { GameState } from '../sim/state';
-import { wrapAngle } from '../sim/vec';
+import { type Vec3, wrapAngle } from '../sim/vec';
 import type { MatchStats } from '../stats/matchStats';
 import { FlagMarker } from '../ui/flagMarker';
 import { HitFeed } from '../ui/hitFeed';
 import { HitFeedback } from '../ui/hitFeedback';
+import { HoldMarker } from '../ui/holdMarker';
 import { MatchBoard } from '../ui/matchBoard';
 import { roundBanner } from '../ui/roundBanner';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
+import { SquadOrderLine } from '../ui/squadOrderLine';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { CharacterRenderer } from './characterRenderer';
@@ -52,6 +55,10 @@ export class MatchPresentation {
   private readonly mateAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   /** On-screen sound cues (Settings → Accessibility, M18b; off unless turned on). */
   private readonly soundCues: SoundCues;
+  private readonly squadLine: SquadOrderLine;
+  private readonly holdMarker: HoldMarker;
+  private readonly holdAnchor = new THREE.Vector3();
+  private readonly holdAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0 };
   private readonly viewDir = new THREE.Vector3();
   /** Display names by character id ("Blue 2", "You"). */
@@ -96,6 +103,8 @@ export class MatchPresentation {
     this.feed = new HitFeed(container);
     this.board = new MatchBoard(container);
     this.soundCues = new SoundCues(container);
+    this.squadLine = new SquadOrderLine(container, player.team);
+    this.holdMarker = new HoldMarker(container, teamCss(player.team));
   }
 
   /** On-screen sound cues turned on or off (also called once as the match is built). */
@@ -108,6 +117,7 @@ export class MatchPresentation {
     this.scoreboard.setVisible(playing);
     this.feed.setVisible(playing);
     this.soundCues.setVisible(playing);
+    this.squadLine.setVisible(playing);
     this.playing = playing;
     if (!playing) {
       this.marker.hide();
@@ -142,9 +152,31 @@ export class MatchPresentation {
         this.spectator.reset();
         this.feed.clear();
         this.soundCues.clear();
+        this.squadLine.clear();
       }
       if (soundCueOf(e, this.player, this.characterOf, this.heard)) this.soundCues.add(this.heard, this.state.time);
     }
+  }
+
+  /** You pressed a squad order key and `result` is now in force (`why`: the reason if none is); see SquadOrderLine. */
+  orderGiven(result: SquadOrderKind | 'none', why: 'cancelled' | 'nobody' | 'notNow'): void {
+    this.squadLine.ordered(result, why);
+  }
+
+  /**
+   * Once per frame, after `frame`: the squad order your bot teammates are carrying out, and where they hold (null if
+   * they don't), marked while you play.
+   */
+  showSquadOrder(order: SquadOrderKind | 'none', hold: Vec3 | null, camera: THREE.PerspectiveCamera, dt: number): void {
+    this.squadLine.update(order, dt);
+    if (!hold || !this.playing || this.spectating) {
+      this.holdMarker.hide();
+      return;
+    }
+    this.holdAnchor.set(hold.x, hold.y + SQUAD_ORDERS.markerHeight, hold.z);
+    const m = projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt);
+    const p = this.player.position;
+    this.holdMarker.show(m.x, m.y, Math.hypot(hold.x - p.x, hold.z - p.z), !m.onScreen);
   }
 
   /** Clicking while spectating watches the next player. */
@@ -195,6 +227,8 @@ export class MatchPresentation {
     this.board.dispose();
     this.mateMarkers.dispose();
     this.soundCues.dispose();
+    this.squadLine.dispose();
+    this.holdMarker.dispose();
   }
 
   private readonly characterOf = (id: number): Character | undefined => {

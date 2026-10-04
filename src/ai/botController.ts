@@ -1,7 +1,9 @@
+import { AUDIO } from '../config/audio';
 import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
+import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { botSeed, planSeed } from '../core/seed';
 import { cellX, cellZ, createNavSearch, findPath, type NavGrid, type NavSearch } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
@@ -9,12 +11,14 @@ import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { createRng, type RngState, rngNext } from '../sim/rng';
+import { blockedShare } from '../sim/soundPath';
 import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, createBot, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
-import { bodyPoint } from './perception';
+import { bodyPoint, eyeOf } from './perception';
+import { endOrder, heldCentre, holdPoint, placeHold, startOrder } from './squadOrders';
 import { assignLanes, pickTeamPlan, shuffledLanes, type TeamPlan } from './teamPlan';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
@@ -56,6 +60,14 @@ export class BotController {
   private readonly search: NavSearch;
   private readonly commandsById = new Map<number, PlayerCommand>();
   private readonly chest = vec3();
+  private readonly ear = vec3();
+  private readonly held = vec3();
+  private readonly lookedAt = vec3();
+  /**
+   * Per player who gave one, the squad order in force (one source for the HUD and for giving it again). `ownSpot`: a
+   * Hold here given looking at nothing, so each holds where it stood.
+   */
+  private readonly given = new Map<Character, { kind: SquadOrderKind; ownSpot: boolean }>();
   private plannerCursor = 0;
   /** Per team, the tuning its bots play by (BotControllerOptions.teamCfg). */
   private readonly teamCfg: readonly BotConfig[];
@@ -143,6 +155,7 @@ export class BotController {
       if (isInPlay(c)) this.visited[c.team]![this.sectorOf(c.position.x, c.position.z)] = state.time;
     }
     this.planRoutes();
+    this.updateOrders();
     this.pickRetakers();
     // Each bot decides with its own team's skill; everything outside thinkBot reads only the shared behaviour.
     for (const b of this.bots) {
@@ -150,6 +163,93 @@ export class BotController {
       thinkBot(b, w, this.commandFor(b.character.id), dt);
     }
     w.cfg = this.opts.cfg;
+  }
+
+  /**
+   * A squad order from `leader` (a player) to the bot teammates in play (M22). Giving the order already in force
+   * cancels it, except Hold here aimed somewhere else (at least holdMove from the held spot, or at nothing while they
+   * hold a spot you looked at, which holds where they stand), which moves it. Returns the order in force afterwards
+   * ('none' also when no teammate is in play to take it).
+   */
+  giveOrder(leader: Character, kind: SquadOrderKind): SquadOrderKind | 'none' {
+    const w = this.world;
+    const team = this.bots.filter((b) => b.character !== leader && b.character.team === leader.team && isInPlay(b.character));
+    if (!isInPlay(leader) || team.length === 0) {
+      this.dropOrder(leader);
+      return 'none';
+    }
+    const current = this.given.get(leader);
+    const point = holdPoint(leader, w, this.lookedAt) ? this.lookedAt : undefined;
+    if (current?.kind === kind) {
+      const same =
+        kind !== 'hold' ||
+        (point ? !current.ownSpot && heldCentre(this.bots, leader, this.held) && Math.hypot(point.x - this.held.x, point.z - this.held.z) < SQUAD_ORDERS.holdMove : current.ownSpot);
+      if (same) {
+        this.dropOrder(leader);
+        return 'none';
+      }
+    }
+    if (kind === 'hold') {
+      // Left to right across the leader's view, so nobody crosses another's path to their spot.
+      const rx = Math.cos(leader.yaw);
+      const rz = -Math.sin(leader.yaw);
+      team.sort((a, b) => a.character.position.x * rx + a.character.position.z * rz - (b.character.position.x * rx + b.character.position.z * rz));
+    }
+    for (const b of this.bots) if (b.orderLeader === leader && !team.includes(b)) endOrder(b, w);
+    team.forEach((b, slot) => startOrder(b, leader, kind, slot));
+    if (kind === 'hold') placeHold(team, leader, point, w);
+    this.given.set(leader, { kind, ownSpot: kind === 'hold' && !point });
+    return kind;
+  }
+
+  /** The order `leader`'s bot teammates are carrying out ('none': they play the team plan). */
+  orderOf(leader: Character): SquadOrderKind | 'none' {
+    return this.given.get(leader)?.kind ?? 'none';
+  }
+
+  /**
+   * While `leader`'s teammates hold a spot they looked at: the middle of the held spots into `out`, and true. False
+   * for a hold where each stood (they may be far apart: no one spot to mark).
+   */
+  holdSpot(leader: Character, out: Vec3): boolean {
+    const given = this.given.get(leader);
+    return given?.kind === 'hold' && !given.ownSpot && heldCentre(this.bots, leader, out);
+  }
+
+  /** Everyone given `leader`'s order goes back to the team plan. */
+  private dropOrder(leader: Character): void {
+    for (const b of this.bots) if (b.orderLeader === leader) endOrder(b, this.world);
+    this.given.delete(leader);
+  }
+
+  /**
+   * Before the bots think: an order ends when whoever gave it is out of play (hit, or the round over), and for a bot
+   * that is out itself; Regroup becomes Follow me for each bot that has got back, and for the order once all have.
+   */
+  private updateOrders(): void {
+    for (const b of this.bots) if (b.order !== 'none' && !isInPlay(b.character)) endOrder(b, this.world);
+    for (const [leader, given] of this.given) {
+      if (!isInPlay(leader)) {
+        this.dropOrder(leader);
+        continue;
+      }
+      let carried = 0;
+      let regrouping = 0;
+      for (const b of this.bots) {
+        if (b.orderLeader !== leader) continue;
+        carried++;
+        if (b.order !== 'regroup') continue;
+        const p = b.character.position;
+        if (Math.hypot(leader.position.x - p.x, leader.position.z - p.z) <= SQUAD_ORDERS.regroupArrive) {
+          b.order = 'follow';
+          b.orderHeading = leader.yaw;
+        } else {
+          regrouping++;
+        }
+      }
+      if (carried === 0) this.given.delete(leader);
+      else if (given.kind === 'regroup' && regrouping === 0) given.kind = 'follow';
+    }
   }
 
   /**
@@ -163,12 +263,13 @@ export class BotController {
     for (const b of this.bots) {
       const c = b.character;
       b.retake = false;
-      if (r.mode !== 'attackDefend' || r.attackers < 0 || c.team === r.attackers || !isInPlay(c)) continue;
+      // A bot under a squad order isn't picked: it does what it was told, and the next nearest goes.
+      if (r.mode !== 'attackDefend' || r.attackers < 0 || c.team === r.attackers || !isInPlay(c) || b.order !== 'none') continue;
       const d = Math.hypot(c.position.x - pole.x, c.position.z - pole.z);
       let closer = 0;
       for (const o of this.bots) {
         const oc = o.character;
-        if (o === b || oc.team !== c.team || !isInPlay(oc)) continue;
+        if (o === b || oc.team !== c.team || !isInPlay(oc) || o.order !== 'none') continue;
         const od = Math.hypot(oc.position.x - pole.x, oc.position.z - pole.z);
         if (od < d || (od === d && oc.id < c.id)) closer++;
       }
@@ -183,15 +284,16 @@ export class BotController {
       const cfg = this.world.cfg;
       if (e.type === 'roundStart') {
         for (const v of this.visited) v.fill(Number.NEGATIVE_INFINITY);
+        this.given.clear(); // resetBot ends every bot's order
         this.planRound();
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
-        if (shooter) this.hear(shooter.team, e.position, time, shooter.position, cfg.hearingDistance);
+        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'characterHit') {
         // Teammates near someone who calls a hit turn towards where it came from.
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
-        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, time, shooter.position, cfg.hearingDistance);
+        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'ricochetTick') {
         // A ricochet that doesn't count still tells its victim they're under fire.
         for (const b of this.bots) {
@@ -203,7 +305,7 @@ export class BotController {
         const walker = this.character(state, e.characterId);
         const range =
           e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : e.kind === 'rattle' ? cfg.footstepHearingRattle : cfg.footstepHearingRun;
-        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, time, walker.position, range);
+        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range);
       } else if (e.type === 'bbImpact') {
         // Only enemy fire suppresses: a bot's own BB (or a teammate's) landing near it is no threat.
         const shooter = this.character(state, e.ownerId);
@@ -223,14 +325,21 @@ export class BotController {
    * Bots not on `shooterTeam` within `range` of `heardAt` (gunfire, a hit call, footsteps) learn roughly where the source is,
    * unless they can already see someone. The guess is off by up to hearingError × distance and is kept
    * while the noise keeps coming from about there (bursts and nearby shooters don't make it jump).
-   * Hearing is not sight: it never skips a bot's reaction when the shooter then appears.
+   * Hearing is not sight: it never skips a bot's reaction when the shooter then appears. Walls between the bot and
+   * whoever made the sound (standing at `sourceFeet`) shorten the range (wallHearing, M22).
    */
-  private hear(shooterTeam: number, heardAt: Vec3, time: number, shooterPos: Vec3, range: number): void {
+  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number): void {
     const cfg = this.world.cfg;
     for (const b of this.bots) {
       const c = b.character;
       if (c.team === shooterTeam || !isInPlay(c) || b.targetVisible) continue;
-      if (Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z) > range) continue;
+      const heard = Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z);
+      if (heard > range) continue;
+      // Within the range a wall leaves, nothing to check; beyond it, cast the rays.
+      if (heard > range * cfg.wallHearing) {
+        const share = blockedShare(this.opts.query, eyeOf(c, this.opts.body, this.opts.hits, this.ear), sourceFeet, AUDIO.occlusion.rayHeights);
+        if (heard > range * (1 - share * (1 - cfg.wallHearing))) continue;
+      }
       // Gunfire from within the current guess's margin of error (any shooter) is the same noise: keep
       // the guess. Only a clearly different source makes a new one; the guess never tracks anyone.
       const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);
@@ -352,7 +461,8 @@ export class BotController {
     let rear = Number.POSITIVE_INFINITY;
     for (const b of this.bots) {
       const c = b.character;
-      if (c === me || c.team !== me.team || !isInPlay(c)) continue;
+      // Bots under a squad order go their own way: nobody waits for them.
+      if (c === me || c.team !== me.team || !isInPlay(c) || b.order !== 'none') continue;
       rear = Math.min(rear, this.progress(c));
     }
     return this.progress(me) - rear > this.world.cfg.teamSpread;

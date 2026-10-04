@@ -287,3 +287,20 @@ describe('sprint toggle (M18)', () => {
     expect(frame().sprint).toBe(false);
   });
 });
+
+describe('squad order keys (M22)', () => {
+  it('hand over the order pressed, once, and nothing after a pause', () => {
+    const keys = fakeKeyboard();
+    const input = new PlayerInput(keys.kb, pointer, MOVEMENT);
+    expect(input.takeOrder()).toBeNull();
+    keys.press('orderHold');
+    input.update(0, 2);
+    keys.endFrame();
+    expect(input.takeOrder()).toBe('hold');
+    expect(input.takeOrder()).toBeNull();
+    keys.press('orderRegroup');
+    input.update(0, 2);
+    input.clearLatches(); // the game paused before it was taken
+    expect(input.takeOrder()).toBeNull();
+  });
+});

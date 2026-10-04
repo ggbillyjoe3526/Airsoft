@@ -33,6 +33,8 @@ export const AUDIO = {
     steelRing: { gain: 1.4, pitchSpread: 0.03 },
     hitTick: { gain: 1, pitchSpread: 0 },
     hitMarker: { gain: 0.55, pitchSpread: 0 },
+    /** A teammate's radio answering a squad order (M22). */
+    radioAck: { gain: 0.5, pitchSpread: 0.02 },
     rope: { gain: 1, pitchSpread: 0.04 },
   },
   /**

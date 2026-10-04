@@ -45,6 +45,10 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   if (b.hasLastKnown && (b.mode === 'search' || b.mode === 'cover' || !walking)) {
     // Watch where the threat was, even while moving there.
     lookAngles(eye.x, eye.y, eye.z, b.lastKnown.x, eye.y, b.lastKnown.z, look);
+  } else if (b.mode === 'order' && (!walking || (b.order === 'follow' && !b.orderRush))) {
+    // A squad order (M22): at its spot, look the way the order says; keeping up behind a leader, keep covering their
+    // back on the move too (only hurrying, it looks where it runs).
+    look.yaw = b.orderYaw;
   } else if (walking && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
     look.yaw = walkYaw;
   } else {

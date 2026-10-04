@@ -166,6 +166,22 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(board.locator('tbody tr:not(:first-child)')).toHaveCount(4); // the 2v2 picked on Match
   await page.keyboard.up('Tab');
   await expect(board).toBeHidden({ timeout: 10_000 });
+  // Squad orders (M22): Z has the bot teammates follow you and the HUD says so; Z again sends them back to the plan.
+  const squadLine = page.locator('.squad-order');
+  await expect(squadLine).toBeHidden();
+  await page.keyboard.press('z');
+  await expect(squadLine).toHaveText(/Follow me/i, { timeout: 10_000 });
+  await page.keyboard.press('z');
+  await expect(squadLine).toHaveText(/Back to the team plan/i, { timeout: 10_000 });
+  // X: they hold, and a marker shows where; X again on the same spot lets them go.
+  const holdMarker = page.locator('.hold-marker');
+  await page.keyboard.press('x');
+  await expect(squadLine).toHaveText(/Hold here/i, { timeout: 10_000 });
+  await expect(holdMarker).not.toHaveAttribute('hidden', { timeout: 10_000 });
+  await expect(holdMarker).toContainText(/Hold · \d+ m/);
+  await page.keyboard.press('x');
+  await expect(squadLine).toHaveText(/Back to the team plan/i, { timeout: 10_000 });
+  await expect(holdMarker).toHaveAttribute('hidden', '', { timeout: 10_000 });
   const mag = page.locator('.hud-mag');
   await expect(mag).toHaveText(/^\d+$/);
   const full = Number(await mag.textContent());
