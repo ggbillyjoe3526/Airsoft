@@ -22,7 +22,7 @@ const SAMPLE_EVERY = 4;
 
 describe('a 4v4 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', () => {
   // Test files share a worker's modules (isolate: false): another file may already have loaded the bots with the real
-  // night field, so this file loads its own copies, with the mock, and leaves a clean registry behind (M33f).
+  // night field, so this file loads its own copies, with the mock, and leaves a clean registry behind.
   let nightSight: typeof NightSight;
   let WOODLAND: MapData;
   let playMatch: typeof PlayMatch;

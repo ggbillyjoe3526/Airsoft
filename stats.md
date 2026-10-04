@@ -58,11 +58,15 @@ pistol). Stacked bonuses (a rare replica on a strong gas, say) stop at the limit
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | aeg | AEG Rifle | rifle | 0.97 | 0.25 | 13 | 60 | 4 | 1.8 | 0.45 | 0.45 | 0.18 |
 | pistol | Gas Pistol | pistol | 0.52 | 0.2 | 7 | 18 | 4 | 1.2 | 0.3 | 0.8 | 0.5 |
+| cyber | Cyber Pistol | pistol | 0.93 | 0.25 | 13.03 | 50 | 3 | 1.294 | 0.329 | 0.353 | 0.06 |
 
 - **Fire rate**: BBs a second with the trigger held (auto, and within a burst), or the fastest you can click (semi).
 - **Magazines**: carried per round, the loaded one included.
 - **Spread**: the random scatter of the shots from the hip (degrees), before stance and movement.
 - **Recoil**: the upward kick of each shot (degrees). Light: these are toys, not firearms.
+- **Cyber Pistol** (M32): it only comes at Legendary (pool.md's Tiers column), so its row is set for the Legendary
+  bonus to land on what you get: 1.00 J (the pistol limit), 14 BBs/s, 0.30° spread, 50 BBs × 3, 1.1 s reload,
+  0.28 s draw, 0.06° kick. Its battery is built in (no power source fits it), and nothing else fits it either.
 
 ## Power sources
 
