@@ -12,19 +12,6 @@ first (M33 changes both).
 
 attempts: 0
 
-## M38 · Pro bots clear corners and play as a team
-tier: core
-perf: required
-touches: src/ai/, src/config/bots.ts
-acceptance:
-  1. Near the enemy, or after hearing someone, Pro bots walk and slice corners through lean spots instead of running the lane.
-  2. A bot whose teammate is hit looks at, and when it can pushes or peeks, where the shot came from within a few seconds.
-  3. Two defenders cover one choke from different sides where the map allows (crossfire); bots move in pairs with one covering.
-  4. A spot someone peeked from stays pre-aimed for a few seconds; heard positions are shared with teammates (no better than the player's minimap).
-  5. Late in an Elimination round the side behind on players pushes; Pro bots reload behind cover.
-status: open
-attempts: 0
-
 ## M39 · Rules picker: Skirmish, Tournament, Pro CQB, Custom
 tier: core
 perf: skip
