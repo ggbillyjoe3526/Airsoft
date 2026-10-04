@@ -322,6 +322,21 @@ describe('the sound engine (M13)', () => {
     for (const node of [src, levelGain, panner!, filter, muffleGain]) expect(node.disconnected).toBe(true);
   });
 
+  it('leaves no one-shot nodes connected for a cue with nothing to play (audit L-16)', () => {
+    const library = new SoundLibrary(function* (rate) {
+      const all = yield* renderSoundsGradually(rate, 1);
+      all.delete('rope.up');
+      return all;
+    });
+    const { sfx, ctx, characterOf } = setup(OPEN, engineFor(library));
+    const gains = ctx.gains.length;
+    sfx.onEvent({ type: 'flagRope', position: vec3(0, 2, 10), raising: true }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(0);
+    expect(ctx.filters).toHaveLength(0);
+    expect(ctx.gains).toHaveLength(gains);
+    for (const p of ctx.panners) expect(p.outputs.size).toBe(0);
+  });
+
   it('winds an AEG up on a fresh trigger pull and reschedules the wind-down on every shot', () => {
     const { sfx, ctx, bot, characterOf } = setup();
     const rate = LOADOUT[0]!.fireRate;

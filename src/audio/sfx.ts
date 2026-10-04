@@ -379,6 +379,9 @@ export class Sfx {
     // Equal-power for these (up to 80 BB impacts a second): HRTF is kept for the characters you locate by ear.
     const panner = this.createPanner(AUDIO.spatial.oneShotPanningModel);
     this.placePanner(panner, at, 0);
+    // The chain is built only once a voice has started, so a cue with nothing to play leaves no nodes behind (audit L-16).
+    const voice = this.play(cue, panner, level);
+    if (!voice) return;
     muffleFor(lineBlocked(this.query, this.listener, at, AUDIO.occlusion.surfaceGap) ? 1 : 0, this.muffle);
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
@@ -386,11 +389,6 @@ export class Sfx {
     const g = ctx.createGain();
     g.gain.value = this.muffle.gain;
     panner.connect(filter).connect(g).connect(this.world!);
-    const voice = this.play(cue, panner, level);
-    if (!voice) {
-      panner.disconnect();
-      return;
-    }
     voice.src.addEventListener('ended', () => {
       panner.disconnect();
       filter.disconnect();
