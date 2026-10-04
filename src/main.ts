@@ -2,6 +2,8 @@ import './style.css';
 import { parseQuality, startingQuality } from './config/render';
 import { parseSeed, randomSeed } from './core/seed';
 import { Game } from './game';
+// Reads pool.md at start (M26a), so a row it can't read is reported in the console straight away.
+import './pool/gamePool';
 import { lacksHardwareAcceleration } from './render/gpuCheck';
 import { loadSavedQuality } from './ui/menus/savedChoices';
 
