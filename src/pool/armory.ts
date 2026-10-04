@@ -72,7 +72,7 @@ export function buyTokens(e: Economy, c: Collection, tokens: number): boolean {
 export type ShotCount = 1 | 10;
 
 /** Tokens `count` Shots cost. */
-export function shotTokens(e: Economy, count: ShotCount): number {
+function shotTokens(e: Economy, count: ShotCount): number {
   return count === 10 ? e.tokensPerTenShots : e.tokensPerShot * count;
 }
 
