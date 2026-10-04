@@ -1,13 +1,13 @@
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import { TORCHES } from '../config/torches';
-import type { WorldQuery } from '../sim/armament';
+import { aimDirection, type WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
 import { hitTop } from '../sim/hitbox';
 import { leanedEye } from '../sim/lean';
 import { lightInHand, torchLit } from '../sim/torch';
-import { type Vec3, vec3 } from '../sim/vec';
+import { vec3 } from '../sim/vec';
 import type { NightField } from './nightSight';
 
 /**
@@ -33,15 +33,6 @@ const aim = vec3();
 const point = vec3();
 const ray = vec3();
 
-/** The unit direction a character looks (and its torch shines), from its yaw and pitch, into `out`. */
-export function aimDirection(c: Character, out: Vec3): Vec3 {
-  const cp = Math.cos(c.pitch);
-  out.x = -Math.sin(c.yaw) * cp;
-  out.y = Math.sin(c.pitch);
-  out.z = -Math.cos(c.yaw) * cp;
-  return out;
-}
-
 /**
  * Works out who the lit torches shine on at simulation time `time` (once per tick: a second call at the same time does
  * nothing). `height` is the share of a target's height the beam must reach (the bots' chest aim).
@@ -58,7 +49,7 @@ export function updateTorchLight(field: TorchLight, characters: readonly Charact
     const light = TORCHES[lightInHand(h)!];
     const cosHalf = Math.cos(((light.spillDeg / 2) * Math.PI) / 180);
     leanedEye(h, body, hits, eye);
-    aimDirection(h, aim);
+    aimDirection(aim, h.yaw, h.pitch);
     for (const t of characters) {
       if (t === h || field.lit[t.id] === 1 || !isInPlay(t)) continue;
       point.x = t.position.x;
@@ -85,7 +76,7 @@ export function updateTorchLight(field: TorchLight, characters: readonly Charact
 export function torchSightRange(field: TorchLight, night: NightField, viewer: Character, target: Character): number {
   if (field.lit[target.id] === 1) return night.sight.lit;
   if (!torchLit(target)) return 0;
-  aimDirection(target, aim);
+  aimDirection(aim, target.yaw, target.pitch);
   const dx = viewer.position.x - target.position.x;
   const dz = viewer.position.z - target.position.z;
   const flat = Math.hypot(dx, dz);

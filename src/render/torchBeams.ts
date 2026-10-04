@@ -6,6 +6,7 @@ import { TORCHES } from '../config/torches';
 import type { SurfaceHit, WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
+import { hitTop } from '../sim/hitbox';
 import { lightInHand, torchLit } from '../sim/torch';
 import { lerpAngle, vec3 } from '../sim/vec';
 import { withoutEnvironment } from './surfaceMaterials';
@@ -308,7 +309,7 @@ export class TorchBeams {
     for (let j = 0; j < this.characters.length; j++) {
       const f = this.characters[j]!;
       if (f === holder || !isInPlay(f)) continue;
-      toFig.set(f.position.x - lens.x, f.position.y + this.hits.headHeight / 2 - lens.y, f.position.z - lens.z);
+      toFig.set(f.position.x - lens.x, f.position.y + hitTop(f.crouchAmount, this.hits) / 2 - lens.y, f.position.z - lens.z);
       const dist = toFig.length();
       if (dist > end || dist < 1e-6) continue;
       if (toFig.dot(dir) / dist < cosSpill) continue;

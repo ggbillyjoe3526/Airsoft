@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_BINDINGS } from '../config/controls';
+import { DEFAULT_BINDINGS, REBINDABLE } from '../config/controls';
 import { bindable, describeKeys, KeyBindings, type KeyValueStore, keyLabel, mouseButtonCode } from './keyBindings';
 
 class MemoryStore implements KeyValueStore {
@@ -20,6 +20,14 @@ describe('KeyBindings', () => {
     expect(b.actionOf('KeyW')).toBe('forward');
     expect(b.actionOf('ArrowUp')).toBe('forward');
     expect(b.actionOf('KeyP')).toBeUndefined();
+  });
+
+  it('switches the weapon torch on T by default, a key no other action has, and it can be rebound (M33h)', () => {
+    const b = new KeyBindings(null);
+    expect(b.codes('torch')).toEqual(['KeyT']);
+    expect(b.actionOf('KeyT')).toBe('torch');
+    expect(bindable('KeyT')).toBe(true);
+    expect(REBINDABLE.some((r) => r.action === 'torch')).toBe(true);
   });
 
   it('holds the scoreboard on Tab by default, and it can be rebound (M19)', () => {

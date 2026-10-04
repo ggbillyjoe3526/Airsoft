@@ -124,9 +124,10 @@ export const FIGURE = {
   /**
    * A weapon torch on a figure's replica (M33h): a box `size` square and `length` long on the right of the rifle's
    * handguard (`rifleSide` out, its middle `rifleAt` ahead of the butt), or `pistolLength` long under the pistol's slide
-   * (`pistolBelow` down), its front at the muzzle.
+   * (`pistolBelow` down, `pistolSize` of the rifle's thickness), its front at the muzzle; its lens `lensSize` of the body
+   * square and `lensDepth` deep.
    */
-  torch: { size: 0.032, length: 0.11, rifleSide: 0.045, rifleAt: 0.72, pistolBelow: 0.035, pistolLength: 0.07 },
+  torch: { size: 0.032, length: 0.11, rifleSide: 0.045, rifleAt: 0.72, pistolBelow: 0.035, pistolLength: 0.07, pistolSize: 0.8, lensSize: 0.8, lensDepth: 0.008 },
   headRadius: 0.11,
   headHeight: HITS.headHeight,
   /** Crouched, the upper body drops this far and the legs fold to fit. */

@@ -480,3 +480,14 @@ describe('scripted player (perf harness, bug pass)', () => {
     expect(tick().forward).toBe(1);
   });
 });
+
+describe('weapon torch key (M33h)', () => {
+  it('sends one toggle per press, never while held', () => {
+    const { keys, frame } = setup('toggle');
+    expect(frame().toggleTorch).toBe(false);
+    expect(frame(() => keys.press('torch')).toggleTorch).toBe(true);
+    expect(frame().toggleTorch).toBe(false); // still held: no second switch
+    keys.release('torch');
+    expect(frame(() => keys.press('torch')).toggleTorch).toBe(true);
+  });
+});

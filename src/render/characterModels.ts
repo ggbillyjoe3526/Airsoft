@@ -211,7 +211,8 @@ export const BARE_KIT: FigureKit = { rifleSilencer: false };
 function addTorch(b: PartBuilder, x: number, y: number, z: number, size: number, length: number): void {
   const polymer: PartLook = { finish: FIN.polymer };
   b.box(C.replica, size, size, length, x, y, z, polymer);
-  b.box(C.torchLens, size * 0.8, size * 0.8, 0.008, x, y, z - length / 2 - 0.004);
+  const T = FIGURE.torch;
+  b.box(C.torchLens, size * T.lensSize, size * T.lensSize, T.lensDepth, x, y, z - length / 2 - T.lensDepth / 2);
 }
 
 /** A simple two-tone toy rifle along -Z from `z0` (butt) with its bore at height y; `kit` (detailed only): its silencer. */
@@ -242,7 +243,7 @@ function addPistol(b: PartBuilder, x: number, y: number, z0: number, kit: Figure
   b.rounded(C.replica, 0.032, 0.038, FIGURE.pistol.length, x, y, z0 - FIGURE.pistol.length / 2, 0.008, polymer); // slide
   b.box(C.replica, 0.028, 0.1, 0.04, x, y - 0.06, z0 - 0.035, polymer); // grip
   const T = FIGURE.torch;
-  if (kit.pistolTorch) addTorch(b, x, y - T.pistolBelow, z0 - FIGURE.pistol.length + T.pistolLength / 2, T.size * 0.8, T.pistolLength);
+  if (kit.pistolTorch) addTorch(b, x, y - T.pistolBelow, z0 - FIGURE.pistol.length + T.pistolLength / 2, T.size * T.pistolSize, T.pistolLength);
   if (!b.overhaul) return;
   // Detailed: the tan frame under the slide and its trigger guard.
   b.rounded(C.furniture, 0.03, 0.014, FIGURE.pistol.length * 0.8, x, y - 0.024, z0 - FIGURE.pistol.length * 0.45, 0.005, polymer);
