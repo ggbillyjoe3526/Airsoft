@@ -179,6 +179,17 @@ ends the round). A hit character is eliminated
   `MatchSession` gives the player those replicas (`createCharacter(..., kit replicas)`) and bots `LOADOUT`. Every
   character's `Armament.replicas` is what it carries, and the sim, renderer and HUD read that, never `LOADOUT`.
   `ui/menus/loadoutScreen.ts` draws the gear column and Customise view; `ui/loadoutChoice.ts` holds its readouts.
+- **Performance numbers (M29):** `stats.md` beside `pool.md` holds every replica's and part's numbers (energy, BB
+  weight, rate of fire, magazines, handling), what each power source adds, the Tier scaling (which stats a tier's
+  Bonus improves, and by what share) and the site's energy limits. `config/statsFile.ts` reads it (pure, by Key or
+  pool ID, every unreadable cell listed by line) and `config/gameStats.ts` holds `GAME_STATS`; `config/replicas.ts`
+  (`withStats`, which also sets `ReplicaConfig.energyLimit`), `attachments.ts`, `optics.ts` and `lasers.ts` lay it over
+  their built-in numbers when they load, so bots and the sim see the file's numbers too. `pool/kit.ts` applies the
+  power stats and tier shares (`KitStats`, injectable for tests) and caps the energy at the limit (`energyCapped`).
+  The muzzle is the boundary: `muzzleEnergy` / `muzzleVelocity` / `bbMass` (config/replicas.ts) are what leaves the
+  barrel; everything after it is `config/ballistics.ts` and `sim/ballistics.ts`. `ui/performanceSheet.ts` builds the
+  Customise screen's Performance sheet (against `LoadoutModel.asItComes`), the gear slots' line and the Armory's
+  tier line.
 - **Armory (M26c):** `pool/armory.ts` holds its rules, pure, over a `Collection`: `matchEarnings` (the FC a finished
   match pays, from `MatchSession.takeOutcome`), `buyTokens`, `takeShots` (paid in Tokens, then FC; the draws carry on
   from the collection's saved `sim/rng.ts` state, so they are seeded and replayable) and `scrapSpares`. `Game` adds a
@@ -241,6 +252,9 @@ request. Each line names where it lives and what pins it.
   `MatchSession.setQuality` apply it at once. Pinned by `config/render.test.ts`, `render/renderer.test.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`): saved under `airsoft.*`, versioned;
   renaming a key needs a migration. Pinned by `settings/storage.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
+- **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
+  power sources by pool ID, Tier scaling, Site limits) the config modules lay over their built-in ones. Pinned by
+  `config/stats.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`.

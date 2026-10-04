@@ -176,6 +176,28 @@ for the replicas you own, right-click an equipped replica to customise it. The A
 - [ ] **Dev settings → Unlock all gear On.** The Loadout offers every replica and part at every rarity, and the match
   stays out of your records. Fit a Legendary optic, then turn it off: your own picks are back as they were.
 
+## Weapon performance (M29a)
+
+The numbers live in `stats.md` beside `pool.md`. Start, then Loadout; right-click the rifle to customise it.
+
+- [ ] **Gear slots.** Each replica's slot shows a line under its tier, e.g. "0.97 J · 13 BBs/s · 60 BBs" for the
+  AEG as it comes and "0.52 J · 7 BBs/s · 18 BBs" for the pistol.
+- [ ] **Performance sheet.** Customise shows a Performance panel beside the parts (above them in a narrow window):
+  energy, muzzle speed (m/s, and fps on 0.20 g), BB weight, rate of fire, on-target range, time to 20 m, spread,
+  recoil, magazines, reload, draw, aim raise. As it comes, nothing is coloured.
+- [ ] **It follows you.** Drag the BB weight to 0.28 g and the hop-up about: the energy, speed, range and time change
+  as you drag, marked green (better) or red (worse) with a percentage. Fit the vertical grip: Draw goes red. Fit the
+  hi-cap: Magazines shows "120 × 2 (240)" without a colour (a trade-off).
+- [ ] **Tiers scale.** With Dev settings → Unlock all gear, equip a Legendary AEG Rifle: 1.04 J, 14 BBs/s, spread
+  −15 %. A Legendary pistol on Legendary Black Gas: about 0.71 J, recoil +20 %.
+- [ ] **Batteries.** Fit the 11.1 V LiPo Battery to the rifle: rate of fire +15 %, energy unchanged; a match with it
+  sounds and empties the magazine faster.
+- [ ] **Armory.** A Rare or better copy lists what its tier adds (e.g. "+6% energy" on an Epic gas) on its tile and in
+  the collection list; Common copies list nothing.
+- [ ] **Edit the file.** Change the AEG's `Fire rate (BBs/s)` in `stats.md` to 20 and run `npm run dev`: the sheet
+  says 20 BBs/s and the rifle (and the bots' rifles) fire faster. Put it back. A typo (`2O`) shows in the console and
+  `npm run test` names its line.
+
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the

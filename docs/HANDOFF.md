@@ -76,6 +76,12 @@ touches movement or materials can fail one seed; re-measure over 16 seeds before
   `pool/armory.ts` (rules) and `ui/menus/armoryScreen.ts`; the Dev tab's Disable Armory and Unlock all gear (M26d) are
   read in `Game` (`gameOwnership`, the Armory tile's summary, the match's pay); the owner chose "Claude merges" for this batch.
 
+- **M29 weapon performance (owner's 2026-10-04 request):** `stats.md` at the root holds every replica's and part's
+  numbers; `config/statsFile.ts` reads it, the config modules lay it over their built-in numbers (`withStats`,
+  `overlay`). Tier shares and power stats are applied in `pool/kit.ts`; the Performance sheet is
+  `ui/performanceSheet.ts`. A new number for a replica or part is a stats.md column plus a `Column` in statsFile.ts.
+  The muzzle is the boundary with the BB physics pass (M30): `muzzleEnergy` / `muzzleVelocity` / `bbMass`.
+
 ## Working notes and gotchas
 
 - **Checks:** `npm run check` (about 75 s; the headless match guards run in parallel files). In a cloud container set

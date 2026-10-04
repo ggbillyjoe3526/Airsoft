@@ -148,7 +148,7 @@ export class AudioEngine {
   }
 
   /**
-   * A cue's rendered samples at the context's rate (for a match's own variants of a sound), read from its buffers: the
+   * A cue's rendered samples at `AUDIO.renderRate` (for a match's own variants of a sound), read from its buffers: the
    * library lets go of its copy once the buffers are made. Empty without a context.
    */
   samples(cue: SoundCue): readonly Float32Array[] {
