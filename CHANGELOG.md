@@ -56,7 +56,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
 - **M33a** · Woodland shown as Coming soon in the Map pop-up
 - **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound
-- **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot; on Hard, bots carry it about 1 in 20 matches
+- **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches
 
 ### Changed
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
