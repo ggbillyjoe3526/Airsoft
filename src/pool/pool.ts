@@ -48,7 +48,7 @@ export interface RarityTier {
   label: string;
   /** Chance (0..1) that a dispensed asset comes in this tier. */
   odds: number;
-  /** How much it improves its asset (0.15 = 15%; src/pool/kit.ts says what each category improves). */
+  /** How much it improves its asset (0.15 = 15%; what each category improves is set in code, from M26b). */
   bonus: number;
   /** FC one spare copy scraps for. */
   scrapFc: number;
@@ -128,8 +128,9 @@ export function loadPool(text: string): Pool {
   // A table by its first column's header (the Difficulty table shares the Field Credits heading), else by its heading.
   const table = (name: string): PoolTable | undefined => tables.find((t) => t.headers[0] === name) ?? tables.find((t) => t.heading === name);
 
-  const tiers = readTiers(table('Rarity'), fail, errors);
-  const economy = readEconomy(table('Field Credits'), table('Difficulty'), table('Tokens and Shots'), tiers, fail, errors);
+  // By first column, so another table under the same heading (the Rarity section's Bonus table) is never misread.
+  const tiers = readTiers(table('Tier'), fail, errors);
+  const economy = readEconomy(table('Event'), table('Difficulty'), table('Setting'), tiers, fail, errors);
   const assets: Asset[] = [];
   const byId = new Map<string, Asset>();
   for (const t of tables) {
@@ -206,7 +207,10 @@ function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m
   return { id, name, category, key, tags, starter, inShots };
 }
 
-/** Every Fits entry names a tag some replica has (or a power type's tag), or a replica's ID. */
+/**
+ * Every Fits entry names a tag some replica has (or a power type's tag), or a replica's ID; a power source fits only
+ * replicas driven its way (a battery's Fits holds `electric`, or names replicas by ID).
+ */
 function checkFits(assets: readonly Asset[], tables: readonly PoolTable[], fail: (line: number, m: string) => void): void {
   const replicas = assets.filter((a) => a.category === 'replica');
   const known = new Set<string>([...Object.values(POWER_TAGS), ...replicas.flatMap((r) => r.tags)]);
@@ -216,6 +220,11 @@ function checkFits(assets: readonly Asset[], tables: readonly PoolTable[], fail:
     const row = tables.flatMap((t) => t.rows).find((r) => r.cells.ID === a.id);
     for (const f of a.tags) {
       if (ID_PATTERN.test(f) ? !ids.has(f) : !known.has(f)) fail(row?.line ?? 0, `${a.name} fits "${f}", which no replica has`);
+    }
+    if (a.power) {
+      const own = POWER_TAGS[a.power.type];
+      const wrong = a.tags.find((f) => !ID_PATTERN.test(f) && f !== own);
+      if (wrong !== undefined) fail(row?.line ?? 0, `${a.name} is a ${a.power.type}, so it fits "${own}" replicas, not "${wrong}"`);
     }
   }
 }
@@ -261,6 +270,10 @@ function labelled<K extends string>(
     const field = labels[label.toLowerCase()];
     if (!field) {
       fail(row.line, `"${label}" isn't one of ${Object.keys(labels).map((l) => `"${l}"`).join(', ')}`);
+      continue;
+    }
+    if (field in out) {
+      fail(row.line, `"${label}" is listed twice in "${name}"`);
       continue;
     }
     const v = read(row);

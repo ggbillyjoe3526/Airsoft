@@ -5,7 +5,8 @@ and (later) grenade the player can own. It also holds the numbers behind the Arm
 what Tokens and Shots cost, the rarity tiers and their odds, and what scrapping pays.
 
 **The game reads this file.** It is bundled into the build, and the tables below are parsed when the game starts
-(`src/pool/poolFile.ts`, `src/pool/pool.ts`). Change a number or a row here, run the game, and it changes. Run
+(`src/pool/poolFile.ts`, `src/pool/pool.ts`). Change a number or a row here, run the game, and it changes (the Loadout
+screen uses the assets from M26b, the Armory the economy from M26c). Run
 `npm run test` after editing: `src/pool/pool.test.ts` reads this file and fails with the line number of anything it
 can't understand (a typo in a tag, a duplicate ID, a missing column). A row the game can't read is skipped, with a
 warning in the browser console, so a typo never stops the game from starting.
@@ -85,6 +86,8 @@ category improves). One hit is still one hit: rarity improves handling, never "d
 - **Scrap FC** is what one spare copy pays back when you scrap it in the Armory (you always keep one).
 - The tiers are read from the table top to bottom, rarest last. **Adding a tier is just a new row**, wherever it
   belongs in the order; give it odds and take those odds from the others so they still add up to 100.
+- **Never rename a tier.** Saves remember copies by tier name, so renaming one (say "Very Rare" to "Super Rare") hides
+  every copy players own in it. Odds, Bonus % and Scrap FC can change freely.
 
 Tiers planned for later, in order after Legendary (not in the game yet; add a row to switch one on):
 Mythic, Relic, Fabled, Artifact, Divine, Immortal, Godlike, Transcendent, Ascended, Ultimate.
@@ -140,7 +143,8 @@ Token), and a Shot you can't cover in Tokens can be paid for in FC at the same r
 | Epic | 4 | 12 | 80 |
 | Legendary | 1 | 15 | 160 |
 
-What the Bonus % improves, by category (set in code, `src/pool/kit.ts`):
+What the Bonus % improves, by category. This table explains what the code does; the game doesn't read it, so editing
+it changes nothing (the halving for power sources, grips and lasers is set in code):
 
 | Category | A Bonus of 15% means |
 |---|---|

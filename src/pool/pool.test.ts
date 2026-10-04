@@ -137,6 +137,32 @@ describe('reading pool.md', () => {
     expect(p.errors.some((e) => e.includes('"Field Credits"'))).toBe(true);
   });
 
+  it('flags a power source that fits replicas driven another way, and a row listed twice', () => {
+    const p = loadPool(
+      mini(
+        [
+          '### Power sources',
+          '| ID | Name | Type | Power % | Fits | Starter | In Shots |',
+          '|---|---|---|---|---|---|---|',
+          '| 000002 | Odd Battery | battery | 0 | gas | no | yes |',
+          '### Field Credits',
+          '| Event | FC |',
+          '|---|---|',
+          '| Hit on an opponent | 5 |',
+          '| Hit on an opponent | 50 |',
+        ].join('\n'),
+      ),
+    );
+    expect(p.errors.some((e) => e.includes('Odd Battery is a battery, so it fits "electric" replicas, not "gas"'))).toBe(true);
+    expect(p.errors.some((e) => e.includes('"Hit on an opponent" is listed twice'))).toBe(true);
+    expect(p.economy.earn.hit).toBe(5);
+  });
+
+  it('reads the tiers from the Tier table even with another table above it under Rarity', () => {
+    const p = loadPool(mini('').replace('### Rarity', '### Rarity\n| Category | Means |\n|---|---|\n| Replica | tighter |\n'));
+    expect(p.tiers.map((t) => t.id)).toEqual(['common', 'veryRare']);
+  });
+
   it('rejects a Key the code has no behaviour for', () => {
     const p = loadPool(mini('### Optics\n| ID | Name | Key | Fits | Starter | In Shots |\n|---|---|---|---|---|---|\n| 000009 | Holo | holo | pistol | no | yes |'));
     expect(p.errors.some((e) => e.includes('"holo" isn\'t a optic Key'))).toBe(true);
