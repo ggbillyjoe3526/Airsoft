@@ -142,6 +142,13 @@ describe('Extraction on Depot, headless (M43)', () => {
     r.play(HITS.callTime + 0.2);
     expect(isInPlay(r.you)).toBe(true);
     expect(Math.hypot(r.you.position.x - r.run.insertion[0]!.position.x, r.you.position.z - r.run.insertion[0]!.position.z)).toBeLessThan(3);
+    // Your bot teammates follow you again once you're back (the hit dropped the order), and close in.
+    r.play(0.2);
+    expect(r.bots.orderOf(r.you)).toBe('follow');
+    r.play(8);
+    for (const m of mates(r.state.characters).filter(isInPlay)) {
+      expect(Math.hypot(m.position.x - r.you.position.x, m.position.z - r.you.position.z), `Blue ${m.id + 1}`).toBeLessThan(8);
+    }
     r.hitYou();
     r.play(HITS.callTime + 0.2);
     expect(r.state.round.reason).toBe('out');

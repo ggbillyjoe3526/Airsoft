@@ -38,7 +38,7 @@ function squad() {
   const follow = new SquadFollow();
   /** One tick's update, with that tick's events. */
   const tick = (events: GameEvent[] = [], live = true) => follow.update(bots, you, characters, events, live);
-  return { you, mates, foe, bots, tick };
+  return { state, you, mates, foe, bots, tick };
 }
 
 const respawned = (characterId: number): GameEvent => ({ type: 'respawned', characterId, respawnsLeft: 0 });
@@ -89,11 +89,20 @@ describe('the squad follows you in Extraction (M43 acceptance 4)', () => {
     expect(bots.orderOf(you)).toBe('follow');
   });
 
-  it("does not reset the order for the runner's own respawn event", () => {
-    const { you, bots, tick } = squad();
+  it('gives Follow me again once you are back from a hit, which dropped your order', () => {
+    const { state, you, bots, tick } = squad();
+    tick();
     bots.giveOrder(you, 'hold');
-    tick([respawned(you.id)]);
     expect(bots.orderOf(you)).toBe('hold');
+    // Hit: the bots see you out of play and drop your order.
+    you.status = 'calling';
+    bots.think(state, 1 / 60);
+    tick();
+    expect(bots.orderOf(you)).toBe('none');
+    // Back at the insertion (the run respawns you): Follow me, not the team plan.
+    you.status = 'alive';
+    tick([respawned(you.id)]);
+    expect(bots.orderOf(you)).toBe('follow');
   });
 
   it('waits while the run is not live or you are out of play, then gives Follow me', () => {
