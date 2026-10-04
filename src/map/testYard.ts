@@ -163,7 +163,6 @@ export const STACK_HOUSE: MapData = {
     // no line runs through both), four pillars holding the slab, and crate cover.
     ...hallEndWall(-UPPER_HALF_X + WALL_THICKNESS / 2, 1, 3),
     ...hallEndWall(UPPER_HALF_X - WALL_THICKNESS / 2, -3, -1),
-    // Downstairs: four pillars holding the slab, and crate cover.
     ...[-3, 3].flatMap((x) =>
       [-4, 4].map((z): MapBlock => ({ kind: 'wall', center: vec3(x, (STOREY - SLAB) / 2, z), size: vec3(PILLAR, STOREY - SLAB, PILLAR) })),
     ),

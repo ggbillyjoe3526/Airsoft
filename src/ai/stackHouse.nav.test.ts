@@ -121,6 +121,17 @@ describe('squad orders on stacked floors (M34b)', () => {
     expect(out.y).toBe(0);
   });
 
+  it('hold here looking up in the hall stays in the hall, never on the floor over its ceiling', () => {
+    const world = { nav, query: physics, body: BODY, hits: HITS } as unknown as BotWorld;
+    const out = vec3();
+    for (const pitch of [0.1, 0.15, 0.2, 0.3]) {
+      const looker = leader(-4.5, 0, 2, -Math.PI / 2); // facing east down the hall, under the slab
+      looker.pitch = pitch;
+      expect(holdPoint(looker, world, out), `pitch ${pitch}`).toBe(true);
+      expect(out.y, `pitch ${pitch}`).toBe(0);
+    }
+  });
+
   it('hold here looking down off the balcony marks the street below, not the balcony', () => {
     const world = { nav, query: physics, body: BODY, hits: HITS } as unknown as BotWorld;
     const looker = leader(-5.4, STOREY, 2.5, Math.PI / 2); // facing west, over the open edge
