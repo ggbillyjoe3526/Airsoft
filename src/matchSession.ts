@@ -1,4 +1,5 @@
 import { BotController } from './ai/botController';
+import { SquadFollow } from './ai/squadFollow';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import { sightConditionsOf } from './ai/perception';
 import type { SfxSetup } from './audio/sfx';
@@ -24,9 +25,11 @@ import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
+import { runSeed } from './core/seed';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MapData } from './map/mapTypes';
+import { playableMode } from './map/playableMode';
 import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
@@ -42,7 +45,8 @@ import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
-import { placeTeams } from './sim/round';
+import { createRunContext, type ExtractionContext } from './sim/extraction';
+import { placeTeams, startRun } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
@@ -178,9 +182,14 @@ export class MatchSession {
     this.build.phase('physics');
     this.nav = buildNavGrid(map, NAV);
     this.build.phase('navigation');
-    // Maps without a flagpole can only be played in elimination.
-    this.mode = map.flag ? setup.mode : 'elimination';
-    this.rounds = roundRulesFor(setup.rules);
+    // Maps without a flagpole can only be played in elimination, and those without Extraction data not in Extraction.
+    this.mode = playableMode(map, setup.mode);
+    this.extraction =
+      this.mode === 'extraction' && map.extraction
+        ? createRunContext(map.extraction, { squad: setup.rules.teamSize, seed: runSeed(seed), runner: PLAYER_ID, squadTeam: PLAYER_TEAM, respawnAfter: hitRulesFor(setup.rules).callTime, spawnLift: PHYSICS.groundRestGap })
+        : undefined;
+    // An Extraction run is one "round" of the map's run time (sim/round.ts); there is nothing to win twice.
+    this.rounds = this.extraction && map.extraction ? { ...roundRulesFor(setup.rules), roundTime: map.extraction.runTime, winsNeeded: 1, winBy: 1 } : roundRulesFor(setup.rules);
     this.hits = hitRulesFor(setup.rules);
     this.standardRules = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty, setup.ruleset);
     this.customRules = !standardRules(setup.ruleset, setup.rules);
@@ -202,6 +211,7 @@ export class MatchSession {
       navSnap: NAV.snap,
       rounds: this.rounds,
       pole: map.flag,
+      extraction: this.extraction,
     });
     this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
@@ -219,7 +229,7 @@ export class MatchSession {
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, map.night ?? false));
     this.build.phase('replica, effects and sound');
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction);
     this.match.setFigureShadows(quality.figureShadows);
     this.match.setFlagQuality(quality);
     // Teammates only on the minimap, with no heard patches, under rules that say so (M39).
@@ -229,6 +239,11 @@ export class MatchSession {
     input.ordersEnabled = true;
     this.build.phase('figures, flag and HUD');
   }
+
+  /** Extraction's run context (the insertion, the home team's starts, the exits); undefined in the other modes. */
+  readonly extraction: ExtractionContext | undefined;
+  /** Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts). */
+  private readonly squadFollow = new SquadFollow();
 
   /** Characters in the match (for the debug overlay). */
   get characterCount(): number {
@@ -309,12 +324,12 @@ export class MatchSession {
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
   summaryBlocks(): TeamBlock[] {
     const names = rosterNames(this.state.characters, this.player.id);
-    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false);
+    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false, this.extraction !== undefined);
   }
 
   /** The result screen for the decided match (audit CORE-05): its lines and every player's numbers, for Game to show. */
   resultView(): ResultText & { summaryBlocks: TeamBlock[] } {
-    return { ...resultText(this.state.round, this.player.team), summaryBlocks: this.summaryBlocks() };
+    return { ...resultText(this.state.round, this.player.team, this.rounds.roundTime), summaryBlocks: this.summaryBlocks() };
   }
 
   /** The pause screen's line about the match (the round, your role, the score; ui/matchStopText.ts). */
@@ -430,9 +445,11 @@ export class MatchSession {
    * plus bot teammates on Blue, and Orange bots. Returns the player.
    */
   private spawnRoster(map: MapData, seed: number): Character {
-    const size = this.setup.rules.teamSize;
-    for (const [end, spawns] of map.spawns.entries()) {
-      if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
+    const [size, opposing] = this.teamSizes();
+    if (!this.extraction) {
+      for (const [end, spawns] of map.spawns.entries()) {
+        if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
+      }
     }
     let id = PLAYER_ID;
     // Bots roll only from what is offered: dev gear only with Dev content on (M35).
@@ -440,24 +457,33 @@ export class MatchSession {
     // Under the factory kit rule (M39) nobody rolls a kit: everyone carries LOADOUT as it comes.
     const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random' && !this.setup.rules.factoryKit;
     // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
-    const opponents = TEAMS.flatMap((_, team) => (team === PLAYER_TEAM ? [] : Array.from({ length: size }, (_, i) => PLAYER_ID + team * size + i)));
+    const opponents = TEAMS.flatMap((_, team) => (team === PLAYER_TEAM ? [] : Array.from({ length: opposing }, (_, i) => PLAYER_ID + team * size + i)));
     const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
     for (let team = 0; team < TEAMS.length; team++) {
       // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
       // their difficulty rolls each one a kit of its own (M29b).
       const rolled = team !== PLAYER_TEAM && rolls;
-      for (let i = 0; i < size; i++, id++) {
+      const members = team === PLAYER_TEAM ? size : opposing;
+      for (let i = 0; i < members; i++, id++) {
         if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
         else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
         else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
       }
     }
-    placeTeams(this.state.round, this.state.characters, this.ctx.round);
-    for (const c of this.state.characters) {
-      respawnCharacter(c);
-      this.physics.addCharacter(c);
+    if (this.extraction) startRun(this.state.round, this.state.characters, this.ctx.round);
+    else {
+      placeTeams(this.state.round, this.state.characters, this.ctx.round);
+      for (const c of this.state.characters) respawnCharacter(c);
     }
+    for (const c of this.state.characters) this.physics.addCharacter(c);
     return this.state.characters[0]!;
+  }
+
+  /** Players per team, yours first: equal sides, or in Extraction your squad against the map's opponents in play. */
+  private teamSizes(): [number, number] {
+    const size = this.setup.rules.teamSize;
+    const x = this.setup.map.extraction;
+    return this.mode === 'extraction' && x ? [size, x.baseOpponents + size] : [size, size];
   }
 
   /**
@@ -523,8 +549,13 @@ export class MatchSession {
         this.fitPickedLoadout();
       }
       if (e.type === 'matchOver') this.matchOverAt = this.state.time;
+      // Back at the insertion after a hit (Extraction): looking the way its spawn faces.
+      if (e.type === 'respawned' && e.characterId === this.player.id) this.input.resetView(this.player.spawnYaw);
     }
+    // Extraction: your bot teammates follow you unless you order otherwise (ai/squadFollow.ts).
+    if (this.extraction) this.squadFollow.update(this.bots, this.player, this.state.characters, this.state.events, this.state.round.phase === 'live');
   }
+
 }
 
 /** Per team, the bots' tuning: your team's bots at the teammates' difficulty, the other team's at the opponents' (M20). */

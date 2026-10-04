@@ -942,6 +942,8 @@ export const HUD = {
   ricochetShooterNotice: "Your BB ricocheted · doesn't count",
   /** How long "Round N" stays up after a round starts (seconds). */
   roundStartMessageTime: 1.8,
+  /** Extraction (M43): how long the banner says you're back in, after a respawn (seconds). */
+  respawnMessageTime: 2.4,
   /** The round clock turns to a warning colour at or below this many seconds. */
   lowClockSeconds: 20,
   /** The result screen appears this long after the match-over whistles end (see matchOverScreenDelay). */
@@ -1055,6 +1057,43 @@ export function matchOverScreenDelay(): number {
  * Flag mode's pole: a site's flagpole on a weighted base, with the attackers' flag climbing it as
  * they raise it, and a painted ring on the floor marking how close you must be to work the rope.
  */
+/**
+ * Extraction's exits (M43, render/exitRenderer.ts): a ring painted on the floor, site cones round it and a sign on a
+ * post, green while the exit is open, grey while a late exit is still shut. Closed exits aren't drawn.
+ */
+export const EXIT_VISUALS = {
+  openColor: 0x3fcf6a,
+  shutColor: 0x8a8a84,
+  /** The painted ring: its width (m), how far it floats over the floor (no z-fighting) and how see-through it is. */
+  ringWidth: 0.18,
+  ringLift: 0.02,
+  ringOpacity: 0.85,
+  /** The inside of the ring: a faint wash so the zone reads from a distance. */
+  fillOpacity: 0.14,
+  ringSegments: 40,
+  /** Site cones round the ring: how many, and their size (m). */
+  cones: 6,
+  coneRadius: 0.13,
+  coneHeight: 0.42,
+  coneColor: 0xf08a24,
+  coneSegments: 8,
+  /** The sign's post and board (m), and the board's text. */
+  postHeight: 2.1,
+  postRadius: 0.04,
+  postColor: 0xd9d6cc,
+  boardWidth: 0.9,
+  boardHeight: 0.42,
+  openText: 'EXIT',
+  shutText: 'LATE EXIT',
+  /** The board's canvas (pixels). */
+  boardPixels: { width: 256, height: 120 },
+  /** Screen markers (ui/flagMarker.ts): kept this far inside the screen edge (px), hidden within this distance (m). */
+  markerEdge: 36,
+  markerHideWithin: 4,
+  /** The marker's anchor above the exit's floor (m): about the top of the sign. */
+  markerHeight: 2.4,
+} as const;
+
 export const FLAG_VISUALS = {
   poleHeight: 3.4,
   poleRadius: 0.035,

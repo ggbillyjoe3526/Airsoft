@@ -20,7 +20,8 @@ import { resultKey } from './stats/records';
 import { matchStanding } from './stats/settleMatch';
 import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
 import { DEFAULT_MAP, MAPS } from './map/maps';
-import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks } from './newGamePicks';
+import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks, playedTeamSize } from './newGamePicks';
+import { EXTRACTION, squadSize } from './config/extraction';
 import { BOT_LOADOUTS } from './config/bots';
 import { LOADOUT } from './config/replicas';
 import { GAME_POOL } from './pool/gamePool';
@@ -52,9 +53,10 @@ afterEach(() => {
 const devIds = (list: readonly Taggable[]): string[] => list.filter((o) => o.tag === 'dev').map((o) => o.id);
 
 describe('New game picks and dev content (M35)', () => {
-  it('tags only Woodland, 4v4, 5v5 (M33d), Pro (M36) and Neon Heights (M34c) dev today, so the default picks use no dev content', () => {
+  it('tags only Woodland, 4v4, 5v5 (M33d), Pro (M36), Neon Heights (M34c) and Extraction (M43) dev today, so the default picks use no dev content', () => {
     expect(devIds(MAPS)).toEqual(['woodland', 'neonHeights']);
-    for (const list of [MATCH_MODES, WINS_NEEDED_CHOICES]) expect(devIds(list)).toEqual([]);
+    expect(devIds(MATCH_MODES)).toEqual(['extraction']);
+    expect(devIds(WINS_NEEDED_CHOICES)).toEqual([]);
     for (const list of [DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual(['pro']);
     expect(devIds(TEAM_SIZE_CHOICES)).toEqual(['4', '5']);
     expect(pickTags(picks()).every((t) => t === 'public')).toBe(true);
@@ -64,8 +66,11 @@ describe('New game picks and dev content (M35)', () => {
   it('plays every real option as picked with Dev content on, and a dev one as its default with it off', () => {
     for (const map of MAPS) for (const mode of MATCH_MODES) {
       const p = picks({ map: map.id, mode: mode.id });
-      expect(playedPicks(p, true)).toEqual(p);
+      // Extraction plays only on a map with its data (M43); elsewhere it plays as the default mode.
+      const offered = mode.id !== 'extraction' || map.data.extraction !== undefined;
+      expect(playedPicks(p, true)).toEqual(offered ? p : { ...p, mode: DEFAULT_MODE });
       expect(playedPicks(p, false).map).toBe(map.tag === 'dev' ? DEFAULT_MAP : map.id);
+      expect(playedPicks(p, false).mode).toBe(mode.tag === 'dev' ? DEFAULT_MODE : mode.id);
       expect(picksUseDev(playedPicks(p, false))).toBe(false);
     }
     // Pro (dev, M36) plays as the default level with Dev content off.
@@ -132,8 +137,27 @@ describe('New game picks and dev content (M35)', () => {
 
   it('restores the lists after a test tagged an entry (only the real dev entries stay dev)', () => {
     expect(devIds(MAPS)).toEqual(['woodland', 'neonHeights']);
-    expect(devIds(MATCH_MODES)).toEqual([]);
+    expect(devIds(MATCH_MODES)).toEqual(['extraction']);
     for (const list of [DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual(['pro']);
+  });
+
+  it('plays an Extraction run with at most a trio, on a map with its data only (M43)', () => {
+    expect(EXTRACTION.maxSquad).toBe(3);
+    expect([1, 2, 3, 4, 5].map((n) => squadSize(n))).toEqual([1, 2, 3, 3, 3]);
+    expect(playedTeamSize(picks({ mode: 'extraction' }, { teamSize: 2 }))).toBe(2);
+    expect(playedTeamSize(picks({ mode: 'extraction' }, { teamSize: 3 }))).toBe(3);
+    // Woodland has room for 5v5 but no Extraction data yet: it plays Elimination (not offered there), so its team size stands.
+    expect(playedPicks(picks({ map: 'woodland', mode: 'extraction' }), true).mode).toBe(DEFAULT_MODE);
+    expect(playedPicks(picks({ map: 'depot', mode: 'extraction' }), true).mode).toBe('extraction');
+    expect(playedTeamSize(picks({ map: 'woodland', mode: 'extraction' }, { teamSize: 5 }))).toBe(5);
+    expect(playedTeamSize(picks({ map: 'woodland' }, { teamSize: 5 }))).toBe(5);
+  });
+
+  it('plays Extraction (dev, M43) only with Dev content on, and counts it as dev content', () => {
+    const p = picks({ mode: 'extraction' });
+    expect(playedPicks(p, false).mode).toBe(DEFAULT_MODE);
+    expect(playedPicks(p, true).mode).toBe('extraction');
+    expect(picksUseDev(playedPicks(p, true))).toBe(true);
   });
 });
 

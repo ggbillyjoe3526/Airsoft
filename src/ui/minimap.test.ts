@@ -246,6 +246,8 @@ describe('the minimap on other storeys (M34c)', () => {
     count: mates.length,
     hold: null,
     flag: null,
+    exits: [],
+    exitCount: 0,
     time: 0,
   });
   const floor = (y: number): MapBlock => ({ kind: 'floor', center: vec3(0, y - 0.15, 0), size: vec3(10, 0.3, 10) });

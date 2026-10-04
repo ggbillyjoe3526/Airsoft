@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 import type { Action } from '../config/controls';
+import { EXTRACTION } from '../config/extraction';
 import type { HitConfig } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
-import { type DetailLevel, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
+import { type DetailLevel, EXIT_VISUALS, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
 import { SQUAD_ORDERS, type SquadOrderKind, type WheelSelect } from '../config/squad';
 import { cssColor, teamCss, type TeamColours } from '../config/teams';
 import type { MapData } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
+import { type ExtractionContext, respawnsLeft } from '../sim/extraction';
 import type { RoundRules } from '../sim/round';
 import type { GameState } from '../sim/state';
 import { type Vec3, wrapAngle } from '../sim/vec';
@@ -21,17 +23,21 @@ import { MatchBoard } from '../ui/matchBoard';
 import { Minimap, type MinimapFrame } from '../ui/minimap';
 import { HeardPlayers } from '../ui/minimapView';
 import { OrderWheel, wheelHint } from '../ui/orderWheel';
-import { roundBanner } from '../ui/roundBanner';
+import { respawnBanner, roundBanner } from '../ui/roundBanner';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
 import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { CharacterRenderer } from './characterRenderer';
+import { ExitRenderer } from './exitRenderer';
 import type { FigureModel } from './externalModels';
 import { FlagRenderer } from './flagRenderer';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
+
+/** The exit markers' colour (EXIT_VISUALS.openColor as CSS). */
+const EXIT_CSS = cssColor(EXIT_VISUALS.openColor);
 
 /** What the scoreboard over the field shows: nothing, the round just played, or the match so far. */
 type BoardView = 'none' | 'round' | 'match';
@@ -82,11 +88,20 @@ export class MatchPresentation {
   /** World yaw the BB that hit you came from (see showHit), and when. */
   private hitFromYaw = 0;
   /** What the round message on screen was built from, so its text is only rebuilt when that changes. */
-  private readonly shownRound = { phase: '', winner: -2, seconds: -1, number: -1, start: false, mode: '' };
+  private readonly shownRound = { phase: '', winner: -2, seconds: -1, number: -1, start: false, mode: '', respawned: false };
   private outLabelFor = Number.NaN;
   private outLabelText = '';
   /** False while the start/pause screen or the result screen is up: the pole marker stays hidden then. */
   private playing = false;
+  /** Extraction (M43): the exits in the world and their screen markers (null for an exit closed this run). */
+  private readonly exits: ExitRenderer | null = null;
+  private readonly exitMarkers: (FlagMarker | null)[] = [];
+  private readonly exitAnchor = new THREE.Vector3();
+  private readonly exitAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
+  /** The respawn's fade from black, and when you were last back in (the banner says so for a moment). */
+  private readonly respawnFade: HTMLDivElement | null = null;
+  private respawnedAt = Number.NEGATIVE_INFINITY;
+  private readonly runInfo = { rules: EXTRACTION, respawnsLeft: 0 };
 
   constructor(
     scene: THREE.Scene,
@@ -97,7 +112,8 @@ export class MatchPresentation {
     private readonly body: BodyConfig,
     hits: HitConfig,
     query: WorldQuery,
-    teamSize: number,
+    /** Players per team (Extraction's sides differ). */
+    teamSizes: readonly number[],
     private readonly rules: RoundRules,
     private readonly stats: MatchStats,
     /** The key or button the player has on `action` now, for hints on screen. */
@@ -110,6 +126,8 @@ export class MatchPresentation {
     figureModel: FigureModel | null = null,
     /** Player detail (QualitySettings.figureDetail, FA8); setFigureDetail changes it. */
     figureDetail: DetailLevel = 'low',
+    /** Extraction's run context (M43): its exits are drawn and marked; undefined in the other modes. */
+    private readonly extraction?: ExtractionContext,
   ) {
     this.keyName = keyName;
     // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
@@ -117,7 +135,7 @@ export class MatchPresentation {
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));
-    this.scoreboard = new Scoreboard(container, teamSize, player.team);
+    this.scoreboard = new Scoreboard(container, teamSizes, player.team);
     this.marker = new FlagMarker(container);
     this.spectator = new SpectatorCamera(state.characters, player, body, query);
     this.names = rosterNames(state.characters, player.id);
@@ -129,8 +147,30 @@ export class MatchPresentation {
     this.squadLine = new SquadOrderLine(container, player.team);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
     this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys);
-    this.minimapFrame = { x: 0, y: 0, z: 0, yaw: 0, mates: this.mates.map(() => ({ x: 0, y: 0, z: 0, hit: false })), count: 0, hold: null, flag: null, time: 0 };
+    const run = state.round.run;
+    this.minimapFrame = {
+      x: 0,
+      y: 0,
+      z: 0,
+      yaw: 0,
+      mates: this.mates.map(() => ({ x: 0, y: 0, z: 0, hit: false })),
+      count: 0,
+      hold: null,
+      flag: null,
+      exits: run.exits.map((e) => ({ x: e.position.x, z: e.position.z, open: false })),
+      exitCount: 0,
+      time: 0,
+    };
     this.orderWheel = new OrderWheel(container, teamCss(player.team), keyName);
+    if (extraction) {
+      this.exits = new ExitRenderer(run);
+      scene.add(this.exits.object);
+      this.exitMarkers = run.exits.map((e) => (e.closed ? null : new FlagMarker(container, 'exit-marker')));
+      this.respawnFade = document.createElement('div');
+      this.respawnFade.className = 'respawn-fade';
+      container.appendChild(this.respawnFade);
+      this.runInfo.rules = extraction.rules;
+    }
   }
 
   private readonly keyName: (action: Action) => string;
@@ -181,6 +221,7 @@ export class MatchPresentation {
       // The wheel key may be rebound on the pause menu: the hint names it afresh.
       this.wheelHintSelect = '';
       this.marker.hide();
+      for (const m of this.exitMarkers) m?.hide();
       this.mateMarkers.hideAll();
       this.board.setVisible(false);
       this.shownBoard.view = 'none';
@@ -206,6 +247,16 @@ export class MatchPresentation {
         } else if (e.shooterId === this.player.id) {
           const victim = this.state.characters.find((c) => c.id === e.victimId);
           this.feedback.showHitMarker(victim?.team === this.player.team);
+        }
+      } else if (e.type === 'respawned' && e.characterId === this.player.id) {
+        this.respawnedAt = this.state.time;
+        this.feedback.setCalling(false);
+        const fade = this.respawnFade;
+        if (fade) {
+          // Restarted each time: off, a reflow, on.
+          fade.classList.remove('on');
+          void fade.offsetWidth;
+          fade.classList.add('on');
         }
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
@@ -294,6 +345,16 @@ export class MatchPresentation {
     f.hold = hold;
     const r = this.state.round;
     f.flag = this.flag.object.visible && r.mode === 'attackDefend' ? r.flag.position : null;
+    f.exitCount = 0;
+    if (this.extraction) {
+      for (const e of r.run.exits) {
+        if (e.closed) continue;
+        const m = f.exits[f.exitCount++]!;
+        m.x = e.position.x;
+        m.z = e.position.z;
+        m.open = e.open;
+      }
+    }
     this.heardPlayers.expire(this.state.time);
     this.minimap.update(f, this.heardPlayers.players);
   }
@@ -323,6 +384,8 @@ export class MatchPresentation {
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position);
     this.flag.update(this.state.round, this.state.time);
     this.updateMarker(camera, spectating);
+    this.exits?.update(this.state.round.run);
+    this.updateExitMarkers(camera, spectating);
     this.updateMateMarkers(camera, alpha, watched);
     this.feed.update(this.state.time);
     // The cues are placed for wherever the camera is (your eyes, or the player you watch), as the ears are.
@@ -336,14 +399,21 @@ export class MatchPresentation {
     this.feedback.setCalling(status === 'calling');
     if (status === 'calling') this.feedback.setHitDirection(wrapAngle(cameraYaw - this.hitFromYaw));
     this.feedback.setOutLabel(spectating ? this.outLabel() : '');
+    // Extraction: respawns left first, as the banner says them on the frame you're back.
+    if (this.extraction) this.runInfo.respawnsLeft = respawnsLeft(this.state.round.run, this.player, this.extraction);
     this.updateRoundMessage();
-    this.scoreboard.update(this.state.round, this.state.characters);
+    if (this.extraction) {
+      this.scoreboard.update(this.state.round, this.state.characters, this.runInfo);
+    } else this.scoreboard.update(this.state.round, this.state.characters);
     return spectating;
   }
 
   dispose(): void {
     this.characters.dispose();
     this.flag.dispose();
+    this.exits?.dispose();
+    for (const m of this.exitMarkers) m?.dispose();
+    this.respawnFade?.remove();
     this.feedback.dispose();
     this.scoreboard.dispose();
     this.marker.dispose();
@@ -426,7 +496,7 @@ export class MatchPresentation {
     const match = view === 'match';
     const heading = match ? (r.phase === 'matchOver' ? 'Match' : `Match so far · round ${r.number}`) : `Round ${r.number}`;
     const statsOf = match ? (id: number) => this.stats.matchOf(id) : (id: number) => this.stats.roundOf(id);
-    this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live'));
+    this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live', this.extraction !== undefined));
   }
 
   /** What the board over the field shows: the match while the key is held or once decided, the round between rounds. */
@@ -454,6 +524,30 @@ export class MatchPresentation {
     this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), teamCss(r.attackers), !m.onScreen);
   }
 
+  /**
+   * Extraction: a marker over each open exit (pinned to the screen edge when it's out of view) with the distance to it,
+   * in green; hidden while the run isn't live, while you stand at that exit and under the board.
+   */
+  private updateExitMarkers(camera: THREE.PerspectiveCamera, spectating: boolean): void {
+    if (this.exitMarkers.length === 0) return;
+    const r = this.state.round;
+    const p = this.player.position;
+    const from = camera.position;
+    for (let i = 0; i < this.exitMarkers.length; i++) {
+      const marker = this.exitMarkers[i];
+      const e = r.run.exits[i];
+      if (!marker || !e) continue;
+      const near = !spectating && Math.hypot(e.position.x - p.x, e.position.z - p.z) <= EXIT_VISUALS.markerHideWithin;
+      if (!this.playing || !e.open || r.phase !== 'live' || near || this.boardUp) {
+        marker.hide();
+        continue;
+      }
+      this.exitAnchor.set(e.position.x, e.position.y + EXIT_VISUALS.markerHeight, e.position.z);
+      const m = projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt);
+      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen);
+    }
+  }
+
   /** "OUT · hit by Orange 2", rebuilt only when who hit you changes. */
   private outLabel(): string {
     const hitBy = this.player.hitBy;
@@ -469,15 +563,18 @@ export class MatchPresentation {
   private updateRoundMessage(): void {
     const r = this.state.round;
     const showStart = r.phase === 'live' && this.state.time - this.roundStartedAt < HUD.roundStartMessageTime;
+    // Extraction: for a moment after you're back from a hit, the banner says how many respawns you have left.
+    const respawned = r.phase === 'live' && this.state.time - this.respawnedAt < HUD.respawnMessageTime;
     const seconds = Math.max(1, Math.ceil(r.timer));
     const shown = this.shownRound;
-    if (shown.phase === r.phase && shown.winner === r.winner && shown.seconds === seconds && shown.number === r.number && shown.start === showStart && shown.mode === r.mode) return;
+    if (shown.phase === r.phase && shown.winner === r.winner && shown.seconds === seconds && shown.number === r.number && shown.start === showStart && shown.mode === r.mode && shown.respawned === respawned) return;
+    shown.respawned = respawned;
     shown.phase = r.phase;
     shown.winner = r.winner;
     shown.seconds = seconds;
     shown.number = r.number;
     shown.start = showStart;
     shown.mode = r.mode;
-    this.feedback.setRoundMessage(roundBanner(r, this.player.team, showStart, seconds, this.rules));
+    this.feedback.setRoundMessage(respawned ? respawnBanner(this.runInfo.respawnsLeft) : roundBanner(r, this.player.team, showStart, seconds, this.rules));
   }
 }

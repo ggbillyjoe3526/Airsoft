@@ -41,7 +41,7 @@ function recordingDom() {
 const realDocument = globalThis.document;
 afterEach(() => void ((globalThis as { document?: unknown }).document = realDocument));
 
-const frame: MinimapFrame = { x: 0, y: 0, z: 0, yaw: 0, mates: [{ x: 3, y: 0, z: 3, hit: false }], count: 1, hold: null, flag: null, time: 1 };
+const frame: MinimapFrame = { x: 0, y: 0, z: 0, yaw: 0, mates: [{ x: 3, y: 0, z: 3, hit: false }], count: 1, hold: null, flag: null, exits: [], exitCount: 0, time: 1 };
 /** Two players heard a moment ago, close by. */
 const heard: HeardPlayer[] = [
   { sourceId: 4, kind: 'shot', x: 5, z: -5, radius: 3, at: 0.9 },

@@ -615,6 +615,29 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     expect(ctx.oscillators[4]!.startAt).toBeCloseTo(AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
   });
 
+  it('blows one long blast a minute before the run ends, like the round-over whistle (M43)', () => {
+    const { sfx, ctx, characterOf } = setup();
+    sfx.onEvent({ type: 'runWarning', secondsLeft: 60 }, PLAYER, characterOf);
+    // One blast: a tone and its warble, started at once, dry like the other whistles.
+    expect(ctx.oscillators).toHaveLength(2);
+    expect(ctx.oscillators[0]!.startAt).toBe(0);
+    expect(playsDry(ctx.oscillators[0]!, ctx)).toBe(true);
+    expect(ctx.sources).toHaveLength(0);
+  });
+
+  it("beeps the exit's count each second on the interface channel, and the last second is left to the whistle (M43)", () => {
+    const { sfx, ctx, characterOf } = setup();
+    sfx.onEvent({ type: 'exitCount', exit: 0, secondsLeft: 9 }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(1);
+    expect(plays(ctx.sources[0]!, 'count.beep')).toBe(true);
+    expect(playsDry(ctx.sources[0]!, ctx)).toBe(true);
+    sfx.onEvent({ type: 'exitCount', exit: 0, secondsLeft: 1 }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(2);
+    sfx.onEvent({ type: 'exitCount', exit: 0, secondsLeft: 0 }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(2);
+    expect(ctx.oscillators).toHaveLength(0);
+  });
+
   it("disconnects a blast's nodes when it ends", () => {
     const { sfx, ctx, characterOf } = setup();
     sfx.onEvent(roundOver, PLAYER, characterOf);

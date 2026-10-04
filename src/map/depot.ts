@@ -1,5 +1,5 @@
 import { type Vec3, vec3 } from '../sim/vec';
-import type { BlockKind, MapBlock, MapData, RampRise, SpawnPoint } from './mapTypes';
+import type { BlockKind, ExitZone, MapBlock, MapData, RampRise, SpawnPoint } from './mapTypes';
 
 /**
  * "Depot": a roofless warehouse yard, 50 × 32 m inside the walls, built around three lanes to one flagpole
@@ -307,6 +307,34 @@ const LANES: Vec3[][] = [
 const POLE = vec3(11.5, 0, -1.0);
 
 /**
+ * Extraction (M43), in plan coordinates like the rest. The squad goes in at either spawn yard; the exits are the yard's
+ * four corner gates, and the two by the insertion's yard stay closed for the run (EXTRACTION.minExitDistance), so a
+ * run from the west leaves by the back lot or, late, the North Gate road, and one from the east by the car park or,
+ * late, the staging yard. The home team starts on the lanes' middle points, the farthest from the insertion first.
+ */
+const EXITS: ExitZone[] = [
+  { name: 'Car park gate', position: vec3(-21.5, 0, -13.0), radius: 2.5 },
+  { name: 'Staging yard gate', position: vec3(-21.5, 0, 12.5), radius: 2.5, late: true },
+  { name: 'Back lot gate', position: vec3(21.5, 0, -13.0), radius: 2.5 },
+  { name: 'North Gate road', position: vec3(17.0, 0, 12.8), radius: 2.5, late: true },
+];
+const OPPONENT_STARTS: SpawnPoint[] = [
+  [0.4, DOCK_HEIGHT, 14.6],
+  [9.9, DOCK_HEIGHT, 14.4],
+  [-3.0, 0, -1.2],
+  [2.6, 0, 0.0],
+  [15.0, 0, 2.6],
+  [-1.0, 0, -9.3],
+  [7.2, 0, -9.0],
+  [-7.0, 0, -2.4],
+  [-11.8, 0, 11.4],
+  [-15.0, 0, -6.6],
+].map(([x, y, z]) => ({ position: vec3(x!, y!, z!), yaw: 0 }));
+/** A run on Depot: 8 minutes (plan, section 5), two opponents more than the squad (3 / 4 / 5). */
+const RUN_TIME = 480;
+const BASE_OPPONENTS = 2;
+
+/**
  * Everything above is written in plan coordinates, as drawn on the approved sketch: x to the east, z to the
  * north. In the game's world north is -z (seen from above with east to the right, three.js has -z at the top),
  * so the map is built with z negated. In play the layout then matches the sketch, not its mirror image: from
@@ -331,6 +359,16 @@ export const DEPOT: MapData = {
   deadZones: [WEST_DEAD_ZONE.map(spawnToWorld), EAST_DEAD_ZONE.map(spawnToWorld)],
   lanes: LANES.map((lane) => lane.map(toWorld)),
   flag: toWorld(POLE),
+  extraction: {
+    runTime: RUN_TIME,
+    baseOpponents: BASE_OPPONENTS,
+    insertions: [
+      { name: 'West yard', spawns: WEST_SPAWNS.map(spawnToWorld), end: 0 },
+      { name: 'East yard', spawns: EAST_SPAWNS.map(spawnToWorld), end: 1 },
+    ],
+    exits: EXITS.map((e) => ({ ...e, position: toWorld(e.position) })),
+    opponentStarts: OPPONENT_STARTS.map(spawnToWorld),
+  },
 };
 
 /** Layout facts the tests check against (in world coordinates), exported so they can't drift from the geometry. */
