@@ -1,5 +1,6 @@
 import { AUDIO, matchOverBlastStart } from '../config/audio';
 import type { ReplicaConfig } from '../config/replicas';
+import { SIM_DT } from '../config/sim';
 import { cues, type ImpactMaterial, type ShotProfile, type SoundCue } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
 import type { Character } from '../sim/character';
@@ -76,7 +77,13 @@ export class Sfx {
   private readonly lastVariant = new Map<SoundCue | string, number>();
   private readonly replicas = new Map<string, ReplicaSound>();
   private readonly channels = new Map<number, Channel>();
-  private readonly motors = new Map<number, { motor: MotorSound; spinDown: Voice | null }>();
+  /**
+   * Each AEG's motor. Timed on the simulation's clock, not the audio clock: shots reach the audio a frame at a time, so
+   * at 30–50 fps the audio clock saw gaps between shots long enough to start a wind-down mid-burst (bug pass).
+   */
+  private readonly motors = new Map<number, { motor: MotorSound; fireRate: number; out: AudioNode; spinDown: Voice | null; spinDownDue: boolean }>();
+  /** Simulation time this match has run (s), counted in afterTick. */
+  private simTime = 0;
   private readonly foley = new FoleyTracker();
   private readonly impactLimit = new VoiceLimit(AUDIO.maxImpactsPerWindow, AUDIO.impactWindow);
   private readonly stepLimit = new VoiceLimit(AUDIO.footsteps.maxPerWindow, AUDIO.footsteps.window);
@@ -193,7 +200,14 @@ export class Sfx {
 
   /** After every simulation tick: muffling, and the rustle of anyone starting to crouch, stand or lean. */
   afterTick(characters: readonly Character[], localId: number): void {
+    this.simTime += SIM_DT;
     if (!this.ctx) return;
+    // A motor whose trigger was let go long enough ago coasts down now.
+    for (const m of this.motors.values()) {
+      if (!m.spinDownDue || this.simTime < m.motor.spinDownAt(m.fireRate)) continue;
+      m.spinDownDue = false;
+      m.spinDown = this.play('motor.spinDown', m.out, AUDIO.levels.motor);
+    }
     this.updateMuffling(characters, localId);
     this.foley.update(characters, (c, move) => this.foleyMove(c, move, localId));
   }
@@ -333,7 +347,7 @@ export class Sfx {
 
   /**
    * A shot. An AEG winds its motor up on the first shot of a trigger pull and coasts down after the last: each
-   * shot reschedules the wind-down, so it only sounds once the trigger is let go.
+   * shot puts the wind-down off (afterTick plays it), so it only sounds once the trigger is let go.
    */
   private shot(characterId: number, replicaId: string, localId: number, characterOf: (id: number) => Character | undefined): void {
     const r = this.replicas.get(replicaId);
@@ -344,12 +358,16 @@ export class Sfx {
     if (r.profile !== 'electric') return;
     let m = this.motors.get(characterId);
     if (!m) {
-      m = { motor: new MotorSound(), spinDown: null };
+      m = { motor: new MotorSound(), fireRate: r.fireRate, out, spinDown: null, spinDownDue: false };
       this.motors.set(characterId, m);
     }
-    if (m.motor.shot(this.ctx!.currentTime, r.fireRate)) this.play('motor.spinUp', out, L.motor);
+    m.fireRate = r.fireRate;
+    m.out = out;
+    if (m.motor.shot(this.simTime, r.fireRate)) this.play('motor.spinUp', out, L.motor);
+    // A wind-down still sounding from the last pull fades out under the new one.
     if (m.spinDown) this.cancel(m.spinDown);
-    m.spinDown = this.play('motor.spinDown', out, L.motor, m.motor.spinDownAt(r.fireRate));
+    m.spinDown = null;
+    m.spinDownDue = true;
   }
 
   /** Stops a voice: one not started yet never sounds; one already playing fades out quickly rather than clicking. */

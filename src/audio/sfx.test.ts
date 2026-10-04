@@ -337,32 +337,49 @@ describe('the sound engine (M13)', () => {
     for (const p of ctx.panners) expect(p.outputs.size).toBe(0);
   });
 
-  it('winds an AEG up on a fresh trigger pull and reschedules the wind-down on every shot', () => {
-    const { sfx, ctx, bot, characterOf } = setup();
+  it('winds an AEG up on a fresh trigger pull and coasts it down only once the trigger is let go', () => {
+    const { sfx, ctx, player, bot, characterOf } = setup();
     const rate = LOADOUT[0]!.fireRate;
+    const tick = (n: number) => {
+      for (let i = 0; i < n; i++) sfx.afterTick([player, bot], PLAYER);
+    };
+    tick(1);
     sfx.onEvent(shot(bot.id), PLAYER, characterOf);
-    // Shot, spin-up, and the wind-down scheduled after the last shot.
-    expect(ctx.sources).toHaveLength(3);
-    const firstDown = ctx.sources[2]!;
-    expect(firstDown.startAt).toBeCloseTo(AUDIO.motor.spinDownAfterCycles / rate);
-    ctx.currentTime = 1 / rate;
-    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
-    // Mid-burst: no spin-up, the pending wind-down is cancelled before it starts and a new one scheduled.
-    expect(ctx.sources).toHaveLength(5);
-    expect(firstDown.stopAt).toBe(0);
-    expect(ctx.sources[4]!.startAt).toBeCloseTo((1 + AUDIO.motor.spinDownAfterCycles) / rate);
+    // Shot and spin-up; the wind-down waits for the trigger.
+    expect(ctx.sources).toHaveLength(2);
+    // A full-auto burst: shots 4 or 5 ticks apart (the cooldown at 60 Hz), with no wind-down in between, whatever
+    // the frame rate the audio sees them at (bug pass: the audio clock let wind-downs through at 30–50 fps).
+    for (const gap of [5, 4, 5, 5, 4, 5]) {
+      tick(gap);
+      sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    }
+    expect(ctx.sources).toHaveLength(2 + 6); // the six shots only
+    // Let go: the wind-down plays once spinDownAfterCycles have passed on the simulation's clock.
+    const ticksToDown = Math.ceil((AUDIO.motor.spinDownAfterCycles / rate) * 60 - 1e-9);
+    tick(ticksToDown - 1);
+    expect(ctx.sources).toHaveLength(8);
+    tick(1);
+    expect(ctx.sources).toHaveLength(9);
+    expect(plays(ctx.sources[8]!, 'motor.spinDown')).toBe(true);
+    tick(30);
+    expect(ctx.sources).toHaveLength(9); // once
   });
 
   it('fades a wind-down already playing instead of cutting it with a click', () => {
-    const { sfx, ctx, bot, characterOf } = setup();
+    const { sfx, ctx, player, bot, characterOf } = setup();
     const rate = LOADOUT[0]!.fireRate;
     sfx.onEvent(shot(bot.id), PLAYER, characterOf);
-    const down = ctx.sources[2]!;
-    const downGain = [...down.outputs][0] as FakeGain;
-    ctx.currentTime = 1.4 / rate; // the wind-down has started, the motor hasn't rested long enough for a spin-up
+    // Ticks until the wind-down has started, but the motor hasn't rested long enough for a spin-up.
+    const down = Math.ceil((AUDIO.motor.spinDownAfterCycles / rate) * 60);
+    for (let i = 0; i < down; i++) sfx.afterTick([player, bot], PLAYER);
+    expect(down).toBeLessThan((AUDIO.motor.spinUpAfterCycles / rate) * 60);
+    const wind = ctx.sources.at(-1)!;
+    expect(plays(wind, 'motor.spinDown')).toBe(true);
+    const windGain = [...wind.outputs][0] as FakeGain;
+    ctx.currentTime = 0.5;
     sfx.onEvent(shot(bot.id), PLAYER, characterOf);
-    expect(downGain.gain.targets.at(-1)).toEqual({ value: 0, at: ctx.currentTime });
-    expect(down.stopAt).toBeCloseTo(ctx.currentTime + AUDIO.cutFade);
+    expect(windGain.gain.targets.at(-1)).toEqual({ value: 0, at: ctx.currentTime });
+    expect(wind.stopAt).toBeCloseTo(ctx.currentTime + AUDIO.cutFade);
   });
 
   it('muffles a character behind a wall and leaves one in the open clear', () => {

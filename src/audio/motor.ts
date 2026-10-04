@@ -2,7 +2,7 @@ import { AUDIO } from '../config/audio';
 
 /**
  * An AEG's motor for sound: whether a shot starts a fresh trigger pull (the motor winds up from rest) and when
- * its wind-down should play if no further shot follows. Times in seconds of the audio clock.
+ * its wind-down should play if no further shot follows. Times in seconds of the simulation's clock (audio/sfx.ts).
  */
 export class MotorSound {
   private lastShot = Number.NEGATIVE_INFINITY;

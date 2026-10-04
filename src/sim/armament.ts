@@ -62,6 +62,8 @@ export interface Armament {
   draw: number;
   /** Seconds left to honour a semi-auto trigger press that came in while the replica wasn't ready. */
   pendingPress: number;
+  /** A reload pressed while the replica was still coming up: it starts once the draw is over (bug pass). */
+  reloadQueued: boolean;
   /** True once this trigger pull has clicked dry, so a held trigger clicks only once per pull. */
   dryFiredThisPull: boolean;
   /** Trigger state last tick, for semi-auto press detection. */
@@ -100,6 +102,7 @@ export function createArmament(loadout: readonly ReplicaConfig[], parts: readonl
     reload: 0,
     draw: 0,
     pendingPress: 0,
+    reloadQueued: false,
     dryFiredThisPull: false,
     triggerWasDown: false,
     recoil: 0,
@@ -253,6 +256,7 @@ export function stepArmament(
     a.draw = a.handling[a.active]!.drawTime;
     a.dryFiredThisPull = false; // a dry click on the other replica doesn't count for this one
     a.burstShotsLeft = 0;
+    a.reloadQueued = false; // a reload asked for on the other replica
     ctx.events.push({ type: 'draw', characterId, replicaId: replica.id });
   }
 
@@ -266,7 +270,11 @@ export function stepArmament(
   const mode = a.modes[a.active]!;
 
   const ready = a.draw <= 0 && a.reload <= 0;
-  if (cmd.reload && ready) {
+  // Reload pressed while the replica is still coming up (switch, then R straight away): kept until it's up.
+  if (cmd.reload && a.draw > 0 && a.reload <= 0) a.reloadQueued = true;
+  const reloadAsked = (cmd.reload || a.reloadQueued) && ready;
+  if (ready) a.reloadQueued = false;
+  if (reloadAsked) {
     if (canReload(ammo)) startReload(characterId, a, replica, ctx);
     // Nothing fuller to swap in: say so, unless the magazine is full anyway (then R obviously does nothing).
     else if (ammo.mag < a.handling[a.active]!.magSize) ctx.events.push({ type: 'reloadRefused', characterId, replicaId: replica.id });
