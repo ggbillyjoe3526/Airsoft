@@ -13,6 +13,7 @@ import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscree
 import { type HudSettingsOptions, hudSettings } from '../hudSettings';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
+import { SETTINGS_TAB_ICONS } from './icons';
 import { type SettingsOrigin, tabAfterKey } from './menuNav';
 import { backButton, el, laterRow, laterTag, menuPage, menuRow, rangeControl } from './menuParts';
 
@@ -70,6 +71,8 @@ export class SettingsScreen {
       button.id = `settings-tab-${id}`;
       button.setAttribute('role', 'tab');
       button.setAttribute('aria-controls', `settings-panel-${id}`);
+      // The tab's icon (audit section 6, item 19), decoration beside its name.
+      button.insertAdjacentHTML('afterbegin', SETTINGS_TAB_ICONS[id]);
       button.append(el('span', '', label));
       if (later) button.append(laterTag());
       button.hidden = hidden === true && !opts.dev.enabled;

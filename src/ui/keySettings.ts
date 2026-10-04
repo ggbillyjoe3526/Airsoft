@@ -19,7 +19,7 @@ interface Box {
   slot: number;
 }
 
-const RESET_LABEL = 'Reset All';
+const RESET_LABEL = 'Reset all';
 const SLOT_NAMES = ['main key', 'second key'] as const;
 
 /**

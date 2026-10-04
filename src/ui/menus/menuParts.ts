@@ -26,6 +26,12 @@ export function menuButton(label: string, kind: MenuButtonKind, onClick: () => v
   return button;
 }
 
+/** Puts a static icon (menus/icons.ts) in front of a button's label; the label stays its name. */
+export function withIcon(button: HTMLButtonElement, icon: string): HTMLButtonElement {
+  button.insertAdjacentHTML('afterbegin', icon);
+  return button;
+}
+
 export function backButton(onClick: () => void): HTMLButtonElement {
   const button = menuButton('Back', 'secondary', onClick);
   button.insertAdjacentHTML('afterbegin', ARROW_LEFT);

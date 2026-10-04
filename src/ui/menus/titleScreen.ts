@@ -1,3 +1,4 @@
+import { WARNING_ICON } from './icons';
 import { el, hintLine, menuButton, setHint, wordmark } from './menuParts';
 
 /**
@@ -7,6 +8,7 @@ import { el, hintLine, menuButton, setHint, wordmark } from './menuParts';
 export class TitleScreen {
   readonly root: HTMLDivElement;
   private readonly warning: HTMLParagraphElement;
+  private readonly warningText: HTMLSpanElement;
   private readonly tutorialTag: HTMLElement;
   /** Over the buttons: e.g. the browser refused the mouse lock for the range or the tutorial (audit L-29). */
   private readonly hint = hintLine();
@@ -25,11 +27,15 @@ export class TitleScreen {
     // The tag is a visual nudge; the button's name stays "Tutorial" (and Start stays the only "Start").
     this.tutorialTag.setAttribute('aria-hidden', 'true');
     tutorial.prepend(this.tutorialTag);
-    actions.append(this.hint, start, tutorial, menuButton('Practice Range', 'secondary', onRange, true));
+    actions.append(this.hint, start, tutorial, menuButton('Practice range', 'secondary', onRange, true));
     this.setTutorialDone(tutorialDone);
     this.warning = el('p', 'menu-title-warning');
     this.warning.setAttribute('role', 'alert');
     this.warning.hidden = true;
+    // A slim banner with a warning sign (audit section 6, item 12); the text beside it is what's read out.
+    this.warning.insertAdjacentHTML('afterbegin', WARNING_ICON);
+    this.warningText = el('span');
+    this.warning.append(this.warningText);
     // Which build this is, worked out from git as the game is built (config/buildVersion.ts).
     const build = el('p', 'menu-title-build', __BUILD_VERSION__.label);
     build.title = __BUILD_VERSION__.title;
@@ -38,7 +44,7 @@ export class TitleScreen {
 
   /** A warning over the field, e.g. that the browser runs without hardware acceleration ('' hides it). */
   setWarning(text: string): void {
-    this.warning.textContent = text;
+    this.warningText.textContent = text;
     this.warning.hidden = text === '';
   }
 

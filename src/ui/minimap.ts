@@ -129,7 +129,7 @@ export class Minimap {
     ctx.save();
     ctx.beginPath();
     ctx.arc(half, half, rim, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(14, 16, 20, 0.72)';
+    ctx.fillStyle = MINIMAP.colours.backdrop;
     ctx.fill();
     ctx.clip();
     if (this.field) {

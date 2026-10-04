@@ -27,11 +27,11 @@ export class ResultScreen {
     this.detail = el('p', 'menu-result-detail');
     centre.append(el('p', 'menu-kicker', 'Match over'), this.headline, this.detail);
     const buttons = el('div', 'menu-result-buttons');
-    const playAgain = menuButton('Play Again', 'primary', actions.onPlayAgain);
+    const playAgain = menuButton('Play again', 'primary', actions.onPlayAgain);
     playAgain.dataset.autofocus = '';
     buttons.append(
       playAgain,
-      menuButton('New Game', 'secondary', actions.onChangeSetup),
+      menuButton('New game', 'secondary', actions.onChangeSetup),
       menuButton('Summary', 'secondary', actions.onSummary),
       menuButton('Quit', 'secondary', actions.onTitle),
     );

@@ -44,6 +44,8 @@ export const MINIMAP = {
   raisedFloor: 0.3,
   /** Colours of the field drawing (CSS). */
   colours: {
+    /** The circle under the field: the HUD's panel colour (style.css --hud-panel, audit section 6, item 14). */
+    backdrop: 'rgba(12, 14, 18, 0.6)',
     ground: 'rgba(72, 80, 88, 0.92)',
     raised: 'rgba(96, 104, 110, 0.95)',
     ramp: 'rgba(80, 88, 94, 0.95)',
