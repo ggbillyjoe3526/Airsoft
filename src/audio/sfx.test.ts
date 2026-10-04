@@ -663,3 +663,60 @@ describe("the shared audio engine: one context and one render for the page's mat
     expect(ctx.closed).toBe(1);
   });
 });
+
+describe('a volume slider let go plays a cue at its new level (audit L-17)', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('on the title screen: runs the context just for a dry cue through that bus, then suspends it again', () => {
+    const engine = engineFor();
+    engine.warmUp(); // as the Game does at start: the context exists, suspended
+    const ctx = FakeContext.last;
+    engine.setVolume('effects', 0.4);
+    engine.preview('effects');
+    expect(ctx.resumed).toBe(1);
+    expect(ctx.state).toBe('running');
+    const [src] = ctx.sources;
+    expect(plays(src!, AUDIO.volumePreview.cue)).toBe(true);
+    expect(playsDry(src!, ctx)).toBe(true);
+    // Through the effects bus: the gain the slider just eased.
+    const effects = ctx.gains.find((g) => g.gain.targets.some((t) => t.value === volumeGain(0.4)));
+    expect(downstream(src!).has(effects)).toBe(true);
+    src!.end();
+    expect(ctx.state).toBe('suspended');
+    expect(src!.disconnected).toBe(true);
+  });
+
+  it("from the pause menu: leaves the match's audio paused after the cue, but running if play resumed meanwhile", () => {
+    const engine = engineFor();
+    const { sfx, ctx } = setup(OPEN, engine);
+    sfx.setPaused(true);
+    engine.preview('master');
+    engine.preview('interface');
+    const [first, second] = ctx.sources;
+    first!.end();
+    // The second cue is still sounding.
+    expect(ctx.state).toBe('running');
+    second!.end();
+    expect(ctx.state).toBe('suspended');
+
+    engine.preview('master');
+    sfx.setPaused(false); // Resume clicked before the cue ended
+    ctx.sources[2]!.end();
+    expect(ctx.state).toBe('running');
+  });
+
+  it('is silent, and harmless, without Web Audio', () => {
+    vi.stubGlobal('AudioContext', undefined);
+    const engine = engineFor();
+    expect(() => engine.preview('master')).not.toThrow();
+    expect(FakeContext.made).toBe(0);
+  });
+});

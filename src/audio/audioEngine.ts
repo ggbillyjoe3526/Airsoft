@@ -134,6 +134,37 @@ export class AudioEngine {
     if (this.ctx && bus) bus.gain.setTargetAtTime(busGain(channel, position), this.ctx.currentTime, VOLUME.smoothing);
   }
 
+  /**
+   * A volume slider was let go (Settings → Audio, audit L-17): a short dry cue through that slider's bus, so its level
+   * can be heard from the pause menu or the title screen. The context runs just for the cue, then suspends again
+   * unless a match is being played by then.
+   */
+  preview(channel: VolumeChannel): void {
+    const ctx = this.context();
+    const bus = this.buses.get(channel);
+    const variants = this.cueBuffers().get(AUDIO.volumePreview.cue);
+    if (!ctx || !bus || !variants?.length) return;
+    const src = ctx.createBufferSource();
+    src.buffer = variants[0]!;
+    const g = ctx.createGain();
+    g.gain.value = AUDIO.volumePreview.gain;
+    src.connect(g).connect(bus);
+    this.previews++;
+    let over = false;
+    const done = (): void => {
+      if (over) return;
+      over = true;
+      src.disconnect();
+      g.disconnect();
+      this.previews--;
+      if (this.previews === 0 && !this.running && this.ctx === ctx) settle(ctx.suspend());
+    };
+    src.onended = done;
+    src.start(ctx.currentTime);
+    // A context that won't run never ends the cue: count it as over.
+    if (!this.running) ctx.resume().catch(done);
+  }
+
   /** A match is played (true) or paused (false): the context runs only while it is played. */
   setRunning(running: boolean): void {
     this.running = running;

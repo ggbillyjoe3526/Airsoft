@@ -255,7 +255,7 @@ export class Game {
       },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
       quality: { initial: this.quality, onChange: (q) => this.changeQuality(q) },
-      audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v) },
+      audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
       accessibility: {
         reducedMotion: { initial: this.reducedMotion, onChange: (on) => this.changeReducedMotion(on) },
