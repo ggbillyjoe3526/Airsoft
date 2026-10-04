@@ -10,14 +10,14 @@ import { expectCustomMatchesFair } from './depotMatchSupport';
  * 1v1 is judged over 32 seeds since FA4 (2026-10-04; DECISIONS): with one bot a side a 16-seed set has only ~50
  * rounds, and after the M30 / FA1 merge seeds 1-16 gave the west 33% of 1v1 Elimination rounds (17 of 51) while
  * seeds 17-32 gave 53% and 33-48 60% (49% over all 48; 55% before FA4). The two modes were one file until FA11b
- * (audit CORE-15: at about 42 s it was the suite's longest); the other mode is in depotMatch.customFlag.test.ts.
+ * (audit CORE-15: at about 42 s it was the suite's longest); the other mode is in depotMatch.custom.test.ts.
  */
-describe('custom matches on Depot (M20): Elimination', () => {
+describe('custom matches on Depot (M20): Attack / Defend', () => {
   beforeAll(async () => {
     await initPhysics();
   });
 
-  it('plays fair 1v1 and 2v2 matches: rounds get decided, neither end is favoured, nobody stays at spawn', { timeout: 600_000 }, () => {
-    expectCustomMatchesFair('elimination');
+  it('plays fair 1v1 and 2v2 matches: rounds get decided, neither side is favoured, nobody stays at spawn', { timeout: 600_000 }, () => {
+    expectCustomMatchesFair('attackDefend');
   });
 });

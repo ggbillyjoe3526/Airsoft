@@ -59,6 +59,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33d** · Woodland's layout, playable with Dev settings › Access maps in development (its matches aren't recorded); 4v4 and 5v5 on maps with room
 
 ### Changed
+- **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
 - **FA2** · Low has 80 % resolution with no shadows; Medium adds shadows and relief; High adds sharp textures, finer shadows, sheen and dust (#67)
 - **FA3** · Low draws the same frame about 18 % faster in our test, with 20 % fewer triangles and a quarter of the texture memory (#67)
@@ -102,6 +103,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M28** · Impact puffs start at half size
 
 ### Internal
+- **FA11b** · What Play does next and the pause and result text are pure, unit-tested functions; `?perf` logs how long each part of a match build takes (#73)
+- **FA11b** · Unit tests share a worker's modules and split into fast and slow projects (`npx vitest run --project fast` for quick feedback); the gate's browser-test failures show the test, the locator and the expected and received values (#73)
 - **FA3** · The perf harness measures Low, Medium and High with `--preset all` (#67)
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
 - Audit fixes: graphics quality, audio, simulation, bots, menus, accessibility, tooling (#34, #35, #36)

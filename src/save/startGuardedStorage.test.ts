@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryStorage } from '../pool/testStorage';
 
 /**
@@ -15,6 +15,8 @@ async function modules() {
 describe('the visit\'s guarded storage (M31)', () => {
   beforeEach(() => vi.unstubAllGlobals());
   afterEach(() => vi.unstubAllGlobals());
+  // Test files share a worker's modules (isolate: false, CORE-15): the copies this file started must not reach the next.
+  afterAll(() => vi.resetModules());
 
   it('browserStorage is plain localStorage before the save system starts, the guarded storage after', async () => {
     const local = new MemoryStorage();
