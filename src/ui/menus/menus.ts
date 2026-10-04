@@ -57,6 +57,9 @@ export interface MenusOptions {
   /** The title screen's Tutorial (M16): the range with the coach. `tutorialDone`: it was played through before. */
   onTutorial: () => void;
   tutorialDone: boolean;
+  /** The pause menu during the tutorial (audit POOL-14): skip the step under way, or the rest of it. */
+  onSkipTutorialStep: () => void;
+  onSkipTutorial: () => void;
   map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
@@ -200,6 +203,8 @@ export class Menus {
       onLoadout: () => this.openLoadout('pause'),
       onSettings: () => this.openSettings('pause'),
       onQuit: () => this.leaveMatch('title'),
+      onSkipStep: () => opts.onSkipTutorialStep(),
+      onSkipTutorial: () => opts.onSkipTutorial(),
     });
     this.summary = new SummaryScreen(() => this.go('result'));
     this.result = new ResultScreen({
@@ -233,11 +238,14 @@ export class Menus {
     this.go('title');
   }
 
-  /** The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21). */
-  showPause(status: string, seed: number, range = false): void {
+  /**
+   * The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21);
+   * `tutorial`: its coach is running there (Skip step, Skip tutorial).
+   */
+  showPause(status: string, seed: number, range = false, tutorial = false): void {
     this.pause.setStatus(status);
     this.pause.setSeed(seed);
-    this.pause.setRange(range);
+    this.pause.setRange(range, tutorial);
     this.pauseShownAt = performance.now();
     this.go('pause');
   }

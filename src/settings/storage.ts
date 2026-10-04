@@ -48,6 +48,8 @@ export type SettingField =
   | 'quality'
   /** The tutorial was played to the end (M16): the title stops pointing new players at it. */
   | 'tutorialDone'
+  /** The tutorial's step still to do, to resume there next time (audit POOL-14); 0 once it is over. */
+  | 'tutorialStep'
   | `hopUp.${string}`
   | `volume.${string}`
   | `bbWeight.${string}`

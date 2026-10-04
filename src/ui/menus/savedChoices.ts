@@ -170,6 +170,11 @@ export function loadTutorialDone(): boolean {
   return loadSetting('tutorialDone', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);
 }
 
+/** The tutorial's step to resume at (audit POOL-14): 0 to start from the beginning. */
+export function loadTutorialStep(): number {
+  return loadSetting('tutorialStep', (raw) => (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0 ? raw : undefined), 0);
+}
+
 /** The sound cues' size (Settings → Accessibility, M24): a scale, 1 = as before. */
 export function loadSoundCueSize(): number {
   return loadSetting('soundCueSize', numberIn(SOUND_CUE_SIZE.min, SOUND_CUE_SIZE.max), SOUND_CUE_SIZE.default);

@@ -80,6 +80,12 @@ export class RangeSession {
   private coach: CoachPanel | null = null;
   private tutorialFinishedOwed = false;
   private tutorialFinishedSeen = false;
+  /** Told the tutorial's step still to do whenever it moves on (audit POOL-14: the game saves it, to resume there). */
+  onTutorialStep: ((goalIndex: number) => void) | null = null;
+  /** Play is running (not paused). */
+  private playing = false;
+  /** The step still to do last reported to onTutorialStep. */
+  private savedStep = -1;
   /** What the tutorial reads after each tick, reused rather than made anew. */
   private readonly tutorialView: TutorialView;
 
@@ -145,7 +151,7 @@ export class RangeSession {
     this.readout = new RangeReadout(container);
     this.readout.set(lastShotText(null));
     if (tutorialFrom !== undefined) {
-      this.tutorial = new TutorialTracker(TUTORIAL_STEPS, canAimDownSights(this.player.armament), tutorialFrom);
+      this.tutorial = new TutorialTracker(TUTORIAL_STEPS, canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
       this.coach.show(this.tutorial);
     }
@@ -161,6 +167,27 @@ export class RangeSession {
   get status(): string {
     const t = this.tutorial;
     return t && !t.finished ? `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}` : 'Practice range';
+  }
+
+  /** The tutorial is running (its coach up): the pause menu offers Skip step and Skip tutorial (audit POOL-14). */
+  get coaching(): boolean {
+    return this.tutorial !== null && !this.tutorial.finished;
+  }
+
+  /** The pause menu's Skip step: the next step starts (the last skipped ends the tutorial). */
+  skipTutorialStep(): void {
+    const t = this.tutorial;
+    if (!t || t.finished) return;
+    t.skip();
+    this.tutorialMoved(t);
+  }
+
+  /** The pause menu's Skip tutorial: free practice from here, and the tutorial counts as done. */
+  endTutorial(): void {
+    const t = this.tutorial;
+    if (!t || t.finished) return;
+    while (!t.finished) t.skip();
+    this.tutorialMoved(t);
   }
 
   /** True once, when the tutorial's last step is done (so the game can remember it was finished). */
@@ -232,6 +259,7 @@ export class RangeSession {
   }
 
   setPlaying(playing: boolean): void {
+    this.playing = playing;
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;
     this.readout.setVisible(playing && !coaching);
@@ -260,6 +288,22 @@ export class RangeSession {
     setBbWeights(this.player.armament, kit.bbWeights);
   }
 
+  /** The tutorial's step shown or still to do changed (a step done, or skipped). */
+  private tutorialMoved(t: TutorialTracker): void {
+    this.coach!.show(t);
+    if (t.goalIndex !== this.savedStep) {
+      this.savedStep = t.goalIndex;
+      this.onTutorialStep?.(t.goalIndex);
+    }
+    // Done as soon as the last step is (its tick still shows), so a rebuild in that moment can't lose it.
+    if (t.goalIndex >= t.steps.length && !this.tutorialFinishedSeen) this.tutorialFinishedOwed = this.tutorialFinishedSeen = true;
+    if (t.finished && this.playing) {
+      // Free practice from here: the readout takes the coach's place (on Resume, after a skip from the pause menu).
+      this.coach!.setVisible(false);
+      this.readout.setVisible(true);
+    }
+  }
+
   private afterTick(): void {
     this.combat.afterTick();
     this.targets.afterTick(this.state.events);
@@ -268,16 +312,7 @@ export class RangeSession {
     v.player = this.player;
     v.events = this.state.events;
     v.targets = this.state.targets;
-    if (t && !t.finished && t.observe(v)) {
-      this.coach!.show(t);
-      // Done as soon as the last step is (its tick still shows), so a rebuild in that moment can't lose it.
-      if (t.goalIndex >= t.steps.length && !this.tutorialFinishedSeen) this.tutorialFinishedOwed = this.tutorialFinishedSeen = true;
-      if (t.finished) {
-        // Free practice from here: the readout takes the coach's place.
-        this.coach!.setVisible(false);
-        this.readout.setVisible(true);
-      }
-    }
+    if (t && !t.finished && t.observe(v)) this.tutorialMoved(t);
     for (const e of this.state.events) {
       // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall.
       if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: downrange(e.position), target: null };

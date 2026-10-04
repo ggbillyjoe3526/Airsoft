@@ -20,7 +20,7 @@ import {
   opticReadout,
   powerReadout,
 } from '../loadoutChoice';
-import { gearLine, performanceOf, type SheetRow, sheetRows } from '../performanceSheet';
+import { gearLine, performanceOf, type SheetRow, sheetRows, tierBlurb } from '../performanceSheet';
 import { backButton, el, laterRow, menuButton, menuPage, menuRow, rangeControl } from './menuParts';
 
 const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
@@ -230,7 +230,8 @@ export class LoadoutScreen {
     const close = menuButton(LOADOUT_TEXT.backToGear, 'secondary', () => this.closeCustomise());
     close.classList.add('loadout-close');
     head.append(title, close);
-    this.panel.append(head, el('p', 'loadout-replica-summary', replicaSummary(kit.replica, kit.parts)));
+    // What the replica's tier does (audit POOL-10): rarity is handling, never "damage".
+    this.panel.append(head, el('p', 'loadout-replica-summary', replicaSummary(kit.replica, kit.parts)), el('p', 'menu-readout tier-blurb', tierBlurb(m.pool, ref)));
     // The parts on the left, the Performance sheet beside them (above them on a narrow window).
     const body = el('div', 'customise-body');
     const rows = el('div', 'customise-rows');
@@ -280,6 +281,7 @@ export class LoadoutScreen {
         const on = !!fit[row.slot] && sameItem(fit[row.slot]!, item);
         const tile = smallTile(m.pool.byId.get(item.asset)!.name, this.tierLabel(item), on);
         tile.dataset.item = key(item);
+        tile.title = tierBlurb(m.pool, item);
         setTier(tile, item);
         tile.addEventListener('click', () => pick(item));
         tiles.append(tile);
@@ -360,6 +362,7 @@ export class LoadoutScreen {
     const tile = el('button', 'item-tile');
     tile.type = 'button';
     tile.dataset.item = key(ref);
+    tile.title = tierBlurb(this.opts.model.pool, ref);
     setTier(tile, ref);
     tile.classList.toggle('selected', selected);
     tile.setAttribute('aria-pressed', String(selected));

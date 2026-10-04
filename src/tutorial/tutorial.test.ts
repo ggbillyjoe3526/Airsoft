@@ -70,6 +70,12 @@ describe('the tutorial (M16)', () => {
     tick([{ type: 'reloadEnd', characterId: 0, replicaId: 'aeg' }]);
     finishStep();
 
+    expectStep('selector');
+    tick([{ type: 'fireMode', characterId: 3, replicaId: 'aeg', mode: 'semi' }]); // not yours
+    expect(t.showingDone).toBe(false);
+    tick([{ type: 'fireMode', characterId: 0, replicaId: 'aeg', mode: 'semi' }]);
+    finishStep();
+
     expectStep('aim');
     player.aiming = true;
     for (let i = 0; i < 1.1 / DT; i++) tick();
@@ -84,6 +90,24 @@ describe('the tutorial (M16)', () => {
     expectStep('lean');
     player.lean = -0.9;
     tick();
+    player.lean = 0;
+    finishStep();
+
+    expectStep('sprint');
+    const fired: GameEvent = { type: 'shot', characterId: 0, replicaId: 'aeg', position: vec3() };
+    tick([fired]); // no sprint yet
+    player.sprinting = true;
+    tick();
+    player.sprinting = false;
+    for (let i = 0; i < 1.6 / DT; i++) tick();
+    tick([fired]); // too long after the sprint
+    expect(t.showingDone).toBe(false);
+    player.sprinting = true;
+    tick();
+    player.sprinting = false;
+    for (let i = 0; i < 0.3 / DT; i++) tick();
+    tick([fired]);
+    expect(t.showingDone).toBe(true);
     finishStep();
 
     expectStep('secondary');
@@ -98,7 +122,11 @@ describe('the tutorial (M16)', () => {
     finishStep();
 
     expectStep('hits');
-    for (let i = 0; i < 12.1 / DT; i++) tick();
+    for (let i = 0; i < 8.1 / DT; i++) tick();
+    finishStep();
+
+    expectStep('match');
+    for (let i = 0; i < 14.1 / DT; i++) tick();
     finishStep();
     expect(t.finished).toBe(true);
     expect(t.step).toBeNull();
@@ -182,5 +210,29 @@ describe('the tutorial (M16)', () => {
     for (const s of TUTORIAL_STEPS.flatMap((x) => (x.withoutOptic ? [x, x.withoutOptic] : [x]))) {
       for (const m of s.text.matchAll(/\{(\w+)\}/g)) expect(Object.keys(DEFAULT_BINDINGS), s.id).toContain(m[1]);
     }
+  });
+});
+
+describe('skipping and resuming the tutorial (audit POOL-14, POOL-16)', () => {
+  it('skips the step under way straight to the next, and past the last ends it', () => {
+    const t = new TutorialTracker(TUTORIAL_STEPS, true);
+    t.skip();
+    expect(t.step?.id).toBe('walk');
+    expect(t.showingDone).toBe(false);
+    expect(t.goalIndex).toBe(1);
+    for (let i = 1; i < TUTORIAL_STEPS.length; i++) t.skip();
+    expect(t.finished).toBe(true);
+    t.skip();
+    expect(t.goalIndex).toBe(TUTORIAL_STEPS.length);
+  });
+
+  it('resumes at a saved step', () => {
+    const t = new TutorialTracker(TUTORIAL_STEPS, true, TUTORIAL_STEPS.findIndex((s) => s.id === 'far'));
+    expect(t.step?.id).toBe('far');
+  });
+
+  it('leaves out the switch-replica step for a player carrying one replica', () => {
+    expect(new TutorialTracker(TUTORIAL_STEPS, true, 0, 1).steps.map((s) => s.id)).not.toContain('secondary');
+    expect(new TutorialTracker(TUTORIAL_STEPS, true, 0, 2).steps.map((s) => s.id)).toContain('secondary');
   });
 });

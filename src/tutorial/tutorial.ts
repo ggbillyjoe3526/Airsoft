@@ -22,8 +22,10 @@ export class TutorialTracker {
   readonly steps: readonly TutorialStep[];
   /** The step whose goal is being checked (steps.length once all are done). */
   private index: number;
-  /** The current goal so far: view turned (rad), or time aiming or reading (s). */
+  /** The current goal so far: view turned (rad), time aiming or reading, or time since a sprint ended (s). */
   private amount = 0;
+  /** The current goal so far: the player sprinted during this step (sprintShot goals). */
+  private sprinted = false;
   /** The current goal so far: whether the player fired the replica in the goal's slot (hit goals with a slot). */
   private firedSlot = false;
   private lastYaw = Number.NaN;
@@ -31,8 +33,12 @@ export class TutorialTracker {
   private doneIndex = -1;
   private doneLeft = 0;
 
-  constructor(steps: readonly TutorialStep[], canAim: boolean, start = 0) {
-    this.steps = steps.map((s) => (!canAim && s.withoutOptic ? s.withoutOptic : s));
+  /**
+   * `slots`: the replicas carried; a step asking for a slot the player doesn't have is left out (audit POOL-16), so a
+   * one-replica kit can still finish.
+   */
+  constructor(steps: readonly TutorialStep[], canAim: boolean, start = 0, slots = Number.POSITIVE_INFINITY) {
+    this.steps = steps.filter((s) => !(s.goal.kind === 'hit' && s.goal.slot !== undefined && s.goal.slot >= slots)).map((s) => (!canAim && s.withoutOptic ? s.withoutOptic : s));
     this.index = Math.min(Math.max(0, start), this.steps.length);
   }
 
@@ -61,15 +67,28 @@ export class TutorialTracker {
   }
 
   /**
+   * Skips the step under way (audit POOL-14: the pause menu's Skip step): the next one starts at once, no tick shown.
+   * Past the last step, the tutorial is over.
+   */
+  skip(): void {
+    this.jump(this.index + 1);
+  }
+
+  /**
    * Dev server and the smoke test's `e2e` build only (a no-op elsewhere; audit L-09): jumps to step `index` with `amount`
    * of its goal already done (radians turned, or seconds aiming or reading), so a test can reach the end without playing
    * every step. The next tick shows the new step.
    */
   debugJumpTo(index: number, amount = 0): void {
     if (!import.meta.env.DEV && import.meta.env.MODE !== 'e2e') return;
+    this.jump(index, amount);
+  }
+
+  private jump(index: number, amount = 0): void {
     this.index = Math.min(Math.max(0, index), this.steps.length);
     this.amount = amount;
     this.firedSlot = false;
+    this.sprinted = false;
     this.doneIndex = -1;
     this.doneLeft = 0;
   }
@@ -89,6 +108,7 @@ export class TutorialTracker {
     this.doneLeft = TUTORIAL.doneTime;
     this.amount = 0;
     this.firedSlot = false;
+    this.sprinted = false;
     return true;
   }
 
@@ -114,6 +134,16 @@ export class TutorialTracker {
         return this.amount >= g.seconds;
       case 'reload':
         return v.events.some((e) => e.type === 'reloadEnd' && e.characterId === p.id);
+      case 'fireMode':
+        return v.events.some((e) => e.type === 'fireMode' && e.characterId === p.id);
+      case 'sprintShot':
+        if (p.sprinting) {
+          this.sprinted = true;
+          this.amount = 0;
+          return false;
+        }
+        this.amount += v.dt;
+        return this.sprinted && this.amount <= g.within && v.events.some((e) => e.type === 'shot' && e.characterId === p.id);
       case 'hit':
         // A replica's BBs aren't told apart in flight: a hit counts once you've fired the asked-for replica this step.
         if (g.slot !== undefined && !this.firedSlot) {

@@ -78,6 +78,7 @@ import {
   loadTeammateDifficulty,
   loadTeamColours,
   loadTutorialDone,
+  loadTutorialStep,
   loadWheelSelect,
 } from './ui/menus/savedChoices';
 
@@ -324,6 +325,8 @@ export class Game {
         this.play();
       },
       tutorialDone: loadTutorialDone(),
+      onSkipTutorialStep: () => this.skipTutorial(false),
+      onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true)) },
       mode: { initial: this.mode, onChange: (m) => ((this.mode = m), (this.setupChanged = true)) },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
@@ -586,7 +589,8 @@ export class Game {
     if (this.graphicsLost) return;
     const s = this.session;
     if (!this.started && this.practice) {
-      this.openRange(undefined, this.tutorial ? 0 : undefined);
+      // The tutorial resumes at the step it was left at (audit POOL-14).
+      this.openRange(undefined, this.tutorial ? loadTutorialStep() : undefined);
     } else if (this.started && s instanceof RangeSession && this.loadoutChanged) {
       // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
       // same tutorial step).
@@ -641,6 +645,7 @@ export class Game {
       kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
     }, this.options.seed, QUALITY[this.quality], this.audio, this.crosshair, pose, tutorialFrom);
+    this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     this.session.setMotion(motionScale(this.reducedMotion));
     this.applyDevTo(this.session);
     applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
@@ -692,7 +697,7 @@ export class Game {
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
     if (this.started && s instanceof RangeSession) {
-      this.menus.showPause(s.status, this.options.seed, true);
+      this.menus.showPause(s.status, this.options.seed, true, s.coaching);
     } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
@@ -726,6 +731,24 @@ export class Game {
     s?.setPlaying(false);
     // The screen just shown starts without a hint: say again why the match was silent.
     if (this.audioBlocked) this.menus.showHint(BROWSER_NOTES.audioBlocked);
+  }
+
+  /** The pause menu's Skip step or Skip tutorial (audit POOL-14): the range carries on, the pause menu says where. */
+  private skipTutorial(all: boolean): void {
+    const s = this.session;
+    if (!(s instanceof RangeSession)) return;
+    if (all) s.endTutorial();
+    else s.skipTutorialStep();
+    this.takeTutorialFinished(s);
+    this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+  }
+
+  /** The tutorial was played (or skipped) to its end: remembered, and the next one starts from the beginning. */
+  private takeTutorialFinished(s: RangeSession): void {
+    if (!s.takeTutorialFinished()) return;
+    saveSetting('tutorialDone', true);
+    saveSetting('tutorialStep', 0);
+    this.menus.markTutorialDone();
   }
 
   /**
@@ -868,10 +891,7 @@ export class Game {
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
       if (s instanceof MatchSession) this.settleMatch(s);
-      if (s instanceof RangeSession && s.takeTutorialFinished()) {
-        saveSetting('tutorialDone', true);
-        this.menus.markTutorialDone();
-      }
+      if (s instanceof RangeSession) this.takeTutorialFinished(s);
       // A little after the match is decided, give the mouse back and show the result screen.
       if (s.takeResultDue()) {
         if (this.unlockedPlay) {
