@@ -21,6 +21,8 @@ export class TitleScreen {
     const actions = el('div', 'menu-title-actions');
     const tutorial = menuButton('Tutorial', 'secondary', onTutorial, true);
     this.tutorialTag = el('span', 'menu-title-new', 'New? Start here');
+    // The tag is a visual nudge; the button's name stays "Tutorial" (and Start stays the only "Start").
+    this.tutorialTag.setAttribute('aria-hidden', 'true');
     tutorial.prepend(this.tutorialTag);
     actions.append(start, tutorial, menuButton('Practice range', 'secondary', onRange, true));
     this.setTutorialDone(tutorialDone);
