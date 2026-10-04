@@ -30,7 +30,6 @@ import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
 import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
-import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './render/proceduralTextures';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
 import { fitOptic, fitParts, setBbWeights, setHopUps } from './sim/armament';
@@ -85,7 +84,6 @@ export class MatchSession {
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
-  private readonly textures: SurfaceTextures;
   private readonly mapGroup: THREE.Group;
   private readonly daylight: Daylight;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
@@ -118,8 +116,8 @@ export class MatchSession {
   ) {
     const map = setup.map;
     this.loadout = setup.loadout;
-    this.textures = createSurfaceTextures();
-    this.mapGroup = buildMapMeshes(map, this.textures, quality.surfaceRelief);
+    // The surface textures are the renderer's, shared by every session (audit L-04).
+    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
     renderer.scene.add(this.mapGroup);
     this.daylight = addLighting(renderer.scene, map, quality);
 
@@ -279,7 +277,6 @@ export class MatchSession {
     this.match.dispose();
     this.renderer.scene.remove(this.mapGroup);
     disposeMapMeshes(this.mapGroup);
-    disposeSurfaceTextures(this.textures);
     this.daylight.dispose();
     this.physics.dispose();
     this.renderer.setZoom(1);

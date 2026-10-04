@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATMOSPHERE, RENDER, type QualitySettings } from '../config/render';
+import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './proceduralTextures';
 
 const REFERENCE_ASPECT = 16 / 9;
 const DEG = Math.PI / 180;
@@ -27,6 +28,8 @@ export class Renderer {
   /** View size in CSS pixels (kept up to date on resize, so HUD code never has to read layout). */
   width = 0;
   height = 0;
+  /** The map surfaces' textures, drawn the first time a session asks (surfaceTextures). */
+  private surfaces: SurfaceTextures | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
 
@@ -69,6 +72,15 @@ export class Renderer {
    */
   onContextChange(listener: (lost: boolean) => void): void {
     this.contextListener = listener;
+  }
+
+  /**
+   * The map surfaces' textures (render/proceduralTextures.ts), shared by every match and range: they are the same each
+   * time (fixed seeds), so they are drawn and uploaded once, the first time they are wanted, and freed with the renderer
+   * (audit L-04). Sessions must not dispose them.
+   */
+  get surfaceTextures(): SurfaceTextures {
+    return (this.surfaces ??= createSurfaceTextures());
   }
 
   get canvas(): HTMLCanvasElement {
@@ -126,6 +138,8 @@ export class Renderer {
     window.removeEventListener('resize', this.resize);
     this.canvas.removeEventListener('webglcontextlost', this.contextLost);
     this.canvas.removeEventListener('webglcontextrestored', this.contextRestored);
+    if (this.surfaces) disposeSurfaceTextures(this.surfaces);
+    this.surfaces = null;
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
