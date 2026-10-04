@@ -3,6 +3,7 @@ import { SURFACES, type SurfaceTextureId } from '../config/render';
 import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import type { ProceduralTexture, SurfaceTextures } from './proceduralTextures';
+import { buildTerrainMesh } from './terrainMeshes';
 
 type UvMode = 'world' | 'perFace';
 
@@ -666,6 +667,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, relief: 
     mesh.updateMatrix();
     group.add(mesh);
   }
+  if (map.terrain) group.add(buildTerrainMesh(map.terrain));
   return group;
 }
 

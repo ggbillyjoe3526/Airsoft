@@ -6,7 +6,7 @@ import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
 import { SQUAD_ORDERS, type SquadOrderKind, type WheelSelect } from '../config/squad';
 import { cssColor, teamCss, type TeamColours } from '../config/teams';
-import type { MapBlock } from '../map/mapTypes';
+import type { MapData } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import type { RoundRules } from '../sim/round';
@@ -104,8 +104,8 @@ export class MatchPresentation {
     keyName: (action: Action) => string,
     /** The team colours picked on Settings → Accessibility (the HUD's follow the container's CSS, see Game.play). */
     teamColours: TeamColours,
-    /** The map's blocks, for the minimap's drawing of the field. */
-    blocks: readonly MapBlock[],
+    /** The map's blocks and sloping ground, for the minimap's drawing of the field. */
+    field: Pick<MapData, 'blocks' | 'terrain'>,
     /** The figure model, if the build has one (M25a); null draws the built-in figures. */
     figureModel: FigureModel | null = null,
   ) {
@@ -126,7 +126,7 @@ export class MatchPresentation {
     this.soundCues = new SoundCues(container);
     this.squadLine = new SquadOrderLine(container, player.team);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
-    this.minimap = new Minimap(container, blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!));
+    this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null);
     this.minimapFrame = { x: 0, z: 0, yaw: 0, mates: this.mates.map(() => ({ x: 0, z: 0, hit: false })), count: 0, hold: null, flag: null, time: 0 };
     this.orderWheel = new OrderWheel(container, teamCss(player.team), keyName);
   }

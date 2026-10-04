@@ -1,5 +1,6 @@
 import { MINIMAP } from '../config/minimap';
 import type { MapBlock } from '../map/mapTypes';
+import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
 import { clampToRim, coverHeight, type HeardPlayer, insideCircle, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
 
 /** A teammate as the minimap shows them: where they are, and whether they've called a hit (greyed). */
@@ -56,19 +57,21 @@ export class Minimap {
   private readonly at: MapPoint = { x: 0, y: 0 };
   private visible = false;
 
-  /** `blocks`: the map's; `mine` / `theirs`: the two teams' HUD colours (CSS). */
+  /** `blocks`: the map's; `mine` / `theirs`: the two teams' HUD colours (CSS); `terrain`: the map's ground, if any. */
   constructor(
     private readonly parent: HTMLElement,
     blocks: readonly MapBlock[],
     private readonly mine: string,
     private readonly theirs: string,
+    /** The map's sloping ground, if it has one (M33c): drawn under the blocks, lighter where it is higher. */
+    terrain: Terrain | null = null,
   ) {
     this.root = document.createElement('canvas');
     this.root.className = 'minimap';
     this.root.hidden = true;
     this.root.setAttribute('aria-hidden', 'true');
     this.ctx = this.root.getContext('2d');
-    this.field = drawField(blocks);
+    this.field = drawField(blocks, terrain);
     parent.appendChild(this.root);
     this.layout();
     // The window moved to a screen of another pixel ratio, browser zoom, or the HUD's size changed (audit UI-14).
@@ -270,12 +273,12 @@ export class Minimap {
  * The field from above, drawn once: the ground, raised floors and ramps, then low cover and walls, lowest first so a
  * crate on the dock shows over the dock. Null where the browser gives no 2D canvas (the minimap then shows only markers).
  */
-function drawField(blocks: readonly MapBlock[]): FieldLayer | null {
-  if (blocks.length === 0) return null;
-  let x0 = Infinity;
-  let z0 = Infinity;
-  let x1 = -Infinity;
-  let z1 = -Infinity;
+function drawField(blocks: readonly MapBlock[], terrain: Terrain | null): FieldLayer | null {
+  if (blocks.length === 0 && !terrain) return null;
+  let x0 = terrain ? terrain.minX : Infinity;
+  let z0 = terrain ? terrain.minZ : Infinity;
+  let x1 = terrain ? terrainMaxX(terrain) : -Infinity;
+  let z1 = terrain ? terrainMaxZ(terrain) : -Infinity;
   for (const b of blocks) {
     x0 = Math.min(x0, b.center.x - b.size.x / 2);
     x1 = Math.max(x1, b.center.x + b.size.x / 2);
@@ -293,10 +296,29 @@ function drawField(blocks: readonly MapBlock[]): FieldLayer | null {
   // Ground first, then everything else from the lowest top up.
   const order = [...blocks].sort((a, b) => Number(!walkable(a)) - Number(!walkable(b)) || top(a) - top(b));
   const c = MINIMAP.colours;
+  if (terrain) drawTerrain(ctx, terrain, x0, z0, s);
   for (const b of order) {
     ctx.fillStyle =
       b.kind === 'floor' ? (top(b) > MINIMAP.raisedFloor ? c.raised : c.ground) : b.kind === 'ramp' ? c.ramp : coverHeight(b, blocks) <= MINIMAP.lowCoverTop ? c.low : c.tall;
     ctx.fillRect((b.center.x - b.size.x / 2 - x0) * s, (b.center.z - b.size.z / 2 - z0) * s, b.size.x * s, b.size.z * s);
   }
   return { canvas, x: x0, z: z0, width: x1 - x0, depth: z1 - z0 };
+}
+
+/** Sloping ground (M33c): the ground colour, lightened cell by cell by height, so a hill reads as a lighter patch. */
+function drawTerrain(ctx: CanvasRenderingContext2D, t: Terrain, x0: number, z0: number, s: number): void {
+  ctx.fillStyle = MINIMAP.colours.ground;
+  ctx.fillRect((t.minX - x0) * s, (t.minZ - z0) * s, t.cols * t.cell * s, t.rows * t.cell * s);
+  const { min, max } = terrainRange(t);
+  if (max - min < 1e-3) return;
+  for (let j = 0; j < t.rows; j++) {
+    for (let i = 0; i < t.cols; i++) {
+      const h = (vertexHeight(t, i, j) + vertexHeight(t, i + 1, j) + vertexHeight(t, i, j + 1) + vertexHeight(t, i + 1, j + 1)) / 4;
+      const a = (MINIMAP.terrainShade * (h - min)) / (max - min);
+      if (a < 0.005) continue;
+      ctx.fillStyle = `rgba(255, 255, 255, ${a.toFixed(3)})`;
+      // A hair over a cell each way, so neighbouring cells leave no seam.
+      ctx.fillRect((t.minX + i * t.cell - x0) * s, (t.minZ + j * t.cell - z0) * s, t.cell * s + 0.5, t.cell * s + 0.5);
+    }
+  }
 }

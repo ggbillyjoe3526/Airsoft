@@ -27,6 +27,9 @@ export const BLOCK_MATERIALS = {
 } as const satisfies Record<BlockKind, ImpactMaterial>;
 
 /** The material of block `b`. */
+/** What the ground of a map with terrain (M33c, map/terrain.ts) is to a BB: soil. */
+export const TERRAIN_MATERIAL: ImpactMaterial = 'earth';
+
 export function blockMaterial(b: MapBlock): ImpactMaterial {
   return b.surface ?? BLOCK_MATERIALS[b.kind];
 }
