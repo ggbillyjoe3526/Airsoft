@@ -313,3 +313,5 @@ One line each: decision, then why.
 - **2026-10-04 · Pipeline · Frame times are judged only on hardware rendering.** The cloud container draws with SwiftShader at a few frames a second, so its p95 says nothing about a laptop; counts, memory and the relative check are what the container gate judges. CPU throttling stays at 1× there (software rasterisation is already the bottleneck) and 4× on the laptop.
 
 - **2026-10-04 · M27 · A hit no longer searches the victim's walk-off route inside the hit; `planWalkOffRoutes` searches at most one route per tick, first victim first.** A route search is the one costly thing a hit could do in a tick (about 2 ms worst case on Depot); the victim stands calling for 1.4 s before it walks, so a wait of a few ticks is never seen. A victim whose spot is off the grid still heads straight for it.
+
+- **2026-10-04 · M28 · Impact puffs appear at half size (`PuffConfig.startScale`, 0.5 for `IMPACT_PUFFS`) and grow from there over the same `growTime`; their full size and lifetime are unchanged, and the hit and gas puffs keep `startScale: 0` so this change stays with the task.*

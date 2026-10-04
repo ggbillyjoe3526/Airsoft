@@ -26,5 +26,5 @@ acceptance:
   1. A puff's first drawn frame is at least 50 % of its full size (today about 28 %), so a close-range hit shows a puff at once
   2. The puff's full size and lifetime are unchanged (its tuning values stay in config)
   3. The KNOWN_ISSUES row about the first frame of a puff is removed
-status: open
-attempts: 0
+status: gates
+attempts: 1

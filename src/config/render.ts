@@ -259,6 +259,8 @@ export interface PuffConfig {
   max: number;
   lifetime: number;
   growTime: number;
+  /** Size on the first frame as a share of full size (0..1): growth over `growTime` starts here, not at nothing. */
+  startScale: number;
   radius: number;
   minAngularRadius: number;
   color: number;
@@ -271,6 +273,8 @@ export const IMPACT_PUFFS: PuffConfig = {
   lifetime: 0.35,
   /** Seconds to reach full size. */
   growTime: 0.06,
+  /** Half size at once, so a close-range hit shows a puff on its first frame rather than a near-empty one (M28). */
+  startScale: 0.5,
   radius: 0.06,
   /**
    * Never smaller than this on screen (radians of view; 0.013 ≈ 20 px wide at 1080p), so a puff reads
@@ -304,6 +308,7 @@ export const GAS_PUFFS: PuffConfig & { muzzleSpeed: number; portScale: number; p
   max: 16,
   lifetime: 0.5,
   growTime: 0.07,
+  startScale: 0,
   radius: 0.045,
   /** Small even far away: a hint, not a marker (0.004 ≈ 6 px wide at 1080p). */
   minAngularRadius: 0.004,
@@ -352,6 +357,7 @@ export const HIT_PUFFS: PuffConfig = {
   max: 8,
   lifetime: 0.6,
   growTime: 0.05,
+  startScale: 0,
   radius: 0.16,
   minAngularRadius: 0.03,
   color: 0xffffff,
