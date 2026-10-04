@@ -1,0 +1,85 @@
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { BOTS, NIGHT_SIGHT } from '../config/bots';
+import { HITS, ROUNDS } from '../config/hits';
+import * as nightSight from '../map/nightSight';
+import { WOODLAND } from '../map/woodland';
+import { initPhysics } from '../physics/physicsWorld';
+import { isInPlay } from '../sim/elimination';
+import { playMatch } from './depotMatchSupport';
+
+// Count the night fields built: the canopy grid must be made once as a match loads, never while it runs.
+vi.mock('../map/nightSight', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../map/nightSight')>();
+  return { ...real, buildNightField: vi.fn(real.buildNightField) };
+});
+
+/**
+ * M33g QA, acceptances 1, 2 and 5 together: a 4v4 bot match on the real Woodland with its night field and its bushes.
+ * Every few ticks each bot's sight of each enemy is checked against the range of the spot the enemy stands on; the
+ * dark must matter (someone within viewDistance was hidden by it), and the canopy grid is built exactly once.
+ */
+const TEAM_SIZE = 4;
+const SAMPLE_EVERY = 4;
+
+describe('a 4v4 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', () => {
+  beforeAll(async () => {
+    await initPhysics();
+  });
+
+  it('keeps every sighting inside the target\'s light range, hides people in the dark, builds the canopy grid once, and finishes rounds', { timeout: 45_000 }, () => {
+    const build = vi.mocked(nightSight.buildNightField);
+    build.mockClear();
+    let sampled = 0;
+    let hiddenByDark = 0;
+    let seenLit = 0;
+    let seenDark = 0;
+    let visibleBeyond = 0;
+    let buildsAtFirstTick = -1;
+    let sightRef: unknown;
+    let gridRef: unknown;
+    let sightChanged = false;
+    const stats = playMatch(150, 3, undefined, BOTS, 'elimination', ROUNDS, WOODLAND, TEAM_SIZE, HITS, (state, controller) => {
+      const world = controller.worldForTests;
+      if (buildsAtFirstTick < 0) {
+        buildsAtFirstTick = build.mock.calls.length;
+        sightRef = world.sight;
+        gridRef = world.sight?.night?.canopy;
+      }
+      if (world.sight !== sightRef || world.sight?.night?.canopy !== gridRef) sightChanged = true;
+      if (state.tick % SAMPLE_EVERY !== 0 || state.round.phase !== 'live') return;
+      const field = world.sight!.night!;
+      for (const b of controller.bots) {
+        const me = b.character;
+        if (!isInPlay(me)) continue;
+        for (const other of state.characters) {
+          if (other.team === me.team || !isInPlay(other)) continue;
+          const dist = Math.hypot(other.position.x - me.position.x, other.position.z - me.position.z);
+          const range = Math.min(BOTS.viewDistance, nightSight.nightSightRange(field, other.position));
+          if (dist > BOTS.viewDistance) continue;
+          sampled++;
+          if (dist > range && dist > BOTS.closeAwareness) hiddenByDark++;
+          // What a bot has in view as its target, it has within the range of the spot the target stands on.
+          if (b.targetVisible && b.targetId === other.id) {
+            if (dist > range + 0.6 && dist > BOTS.closeAwareness) visibleBeyond++;
+            if (nightSight.inLight(field, other.position)) seenLit++;
+            else seenDark++;
+          }
+        }
+      }
+    });
+    expect(sampled).toBeGreaterThan(300);
+    expect(visibleBeyond, 'no bot ever had a target in view beyond that target\'s night range').toBe(0);
+    expect(hiddenByDark, 'the dark hides enemies from bots in play').toBeGreaterThan(0);
+    expect(seenDark + seenLit, 'bots do still see each other').toBeGreaterThan(0);
+    // The grid is made as the match loads (once, by playMatch's controller) and nothing rebuilds it while it plays.
+    expect(buildsAtFirstTick).toBe(1);
+    expect(build.mock.calls.length).toBe(1);
+    expect(build.mock.calls[0]![0]).toBe(WOODLAND);
+    expect(build.mock.calls[0]![1]).toBe(NIGHT_SIGHT);
+    expect(sightChanged).toBe(false);
+    // Bots still play: rounds end, BBs fly and hit.
+    expect(stats.rounds).toBeGreaterThanOrEqual(1);
+    expect(stats.shots).toBeGreaterThan(50);
+    expect(stats.hits).toBeGreaterThan(0);
+  });
+});
