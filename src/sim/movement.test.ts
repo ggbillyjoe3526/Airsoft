@@ -372,6 +372,14 @@ describe('moving while leaning', () => {
     expect(speed(slight)).toBeLessThan(MOVEMENT.runSpeed - 0.3);
   });
 
+  it('sprints again as soon as the lean key is let go, while the lean eases back under the quiet line', () => {
+    const easing = running(MOVEMENT.leanQuietFrom / 2, 0); // key released, lean on its way back upright
+    expect(easing.sprinting).toBe(true);
+    expect(speed(easing)).toBeGreaterThan(MOVEMENT.runSpeed);
+    const stillOut = running(MOVEMENT.leanQuietFrom, 0); // too far out yet: quiet walking pace until it eases back
+    expect(stillOut.sprinting).toBe(false);
+  });
+
   it('follows the actual lean, not the key: holding a lean that a jump or a wall stops costs no speed', () => {
     const c = running(0, 1); // key held, but no lean (in the air, or flush against a wall)
     expect(c.sprinting).toBe(true);

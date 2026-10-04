@@ -58,7 +58,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Menus and settings
 
-- Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24)
+- Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - No map is loaded until Play (M15b)
 - Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons too), Crosshair, HUD, Accessibility (M15, M18a, M19, M24)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle (M18a)

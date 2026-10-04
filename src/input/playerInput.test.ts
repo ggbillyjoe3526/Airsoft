@@ -459,3 +459,24 @@ describe('order wheel (M23)', () => {
     expect(input.orderFromWheel).toBe(false);
   });
 });
+
+describe('scripted player (perf harness, bug pass)', () => {
+  it('starts the script again from its first tick on a new match, and ignores the mouse', () => {
+    const keys = fakeKeyboard();
+    const moving = { consumeDelta: (d: { x: number; y: number }) => ((d.x = 50), (d.y = 20)), consumeWheelSteps: () => 0 } as unknown as PointerLock;
+    const input = new PlayerInput(keys.kb, moving, MOVEMENT);
+    input.script = [{ fromTick: 0, forward: 1 }, { fromTick: 3, right: 1 }];
+    const cmd = createCommand();
+    const tick = () => {
+      input.update(0, 2);
+      input.fillCommand(cmd);
+      return { ...cmd };
+    };
+    input.resetView(0);
+    for (let i = 0; i < 4; i++) tick();
+    expect(cmd.right).toBe(1);
+    expect(cmd.yaw).toBe(0); // the mouse moved every frame, the script didn't turn
+    input.restartScript();
+    expect(tick().forward).toBe(1);
+  });
+});

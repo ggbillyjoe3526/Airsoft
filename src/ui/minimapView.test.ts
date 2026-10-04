@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
-import { clampToRim, HeardPlayers, noiseAlpha, noiseBlur, toMinimap } from './minimapView';
+import { DEPOT } from '../map/depot';
+import { clampToRim, coverHeight, HeardPlayers, noiseAlpha, noiseBlur, toMinimap } from './minimapView';
 import type { HeardSound } from './soundCues';
 
 const at = { x: 0, y: 0 };
@@ -77,5 +78,23 @@ describe('heard players on the minimap (M23)', () => {
     expect(h.players).toHaveLength(2); // a free patch is reused
     h.clear();
     expect(h.players.every((p) => Number.isNaN(p.at))).toBe(true);
+  });
+});
+
+describe('coverHeight (bug pass)', () => {
+  const blocks = DEPOT.blocks;
+  const crates = blocks.filter((b) => b.kind === 'crate');
+  const top = (b: (typeof blocks)[number]) => b.center.y + b.size.y / 2;
+
+  it('reads a crate stacked on another crate as tall cover, as tall as the whole stack', () => {
+    const upper = crates.filter((b) => crates.some((o) => o !== b && Math.abs(top(o) - (b.center.y - b.size.y / 2)) < 1e-6 && Math.abs(o.center.x - b.center.x) < 1e-6 && Math.abs(o.center.z - b.center.z) < 1e-6));
+    expect(upper.length).toBeGreaterThan(0); // Depot has crate stacks
+    for (const b of upper) expect(coverHeight(b, blocks)).toBeGreaterThan(MINIMAP.lowCoverTop);
+  });
+
+  it('measures a block on a raised floor from that floor, not from the ground', () => {
+    const dock = blocks.find((b) => b.kind === 'floor' && top(b) > MINIMAP.raisedFloor)!;
+    const onDock = { kind: 'crate' as const, center: { x: dock.center.x, y: top(dock) + 0.5, z: dock.center.z }, size: { x: 1, y: 1, z: 1 } };
+    expect(coverHeight(onDock, blocks)).toBeCloseTo(1);
   });
 });

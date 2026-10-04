@@ -130,6 +130,8 @@ export class PlayerInput {
     this.updateWheel();
     const k = MOUSE.radiansPerCount * this.sensitivity * (1 + (this.aimSensitivity * aimScale - 1) * aimRaised);
     const maxPitch = this.movement.maxPitch;
+    // A scripted run (`?script=`) looks where its script says; the mouse would make it unrepeatable (bug pass).
+    if (this.script) this.mouseDelta.x = this.mouseDelta.y = 0;
     this.yaw = wrapAngle(this.yaw - this.mouseDelta.x * k);
     const up = this.invertY ? 1 : -1;
     this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch + up * this.mouseDelta.y * k));
@@ -275,6 +277,11 @@ export class PlayerInput {
     this.aimToggled = false;
     this.sprintToggled = false;
     this.clearLatches();
+  }
+
+  /** A scripted run (`?script=`) starts again from its first tick: a new match, or Play Again (bug pass). */
+  restartScript(): void {
+    this.scriptTick = 0;
   }
 
   /** Drops pending one-shot actions and closes the order wheel without an order (e.g. when the game pauses). */

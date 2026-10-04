@@ -202,6 +202,11 @@ Then implement, then **verify**: run the type checker, tests, and build, and rep
 - Take screenshots only when you need to see something; prefer reading values with page text or JS.
 - Keep agent reports short: QA, performance and the critic return at most about 30 lines, triage 15 (`.claude/agents/`).
 
+**Regular bug pass** (owner, 2026-10-04): after each batch of feature pull requests merges and before the owner's
+playtest, a full bug pass and `docs/KNOWN_ISSUES.md` sweep is due: play every mode in the browser, review the code added
+since the last pass, fix what can be fixed (a test for each), keep the rest logged with why. Remind the owner then; start
+it only when he says go. It runs as a pipeline task (`BP<n>`); how in `docs/HANDOFF.md`.
+
 **Design decisions:** if you're unsure about something, ask me before acting (owner, 2026-10-02). For small details that are easy to change later, choose a sensible default, note it in `docs/DECISIONS.md` with a one-line reason, say which you chose, and keep going.
 
 ## 9. Code Standards

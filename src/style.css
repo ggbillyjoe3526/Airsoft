@@ -57,6 +57,11 @@ body {
   z-index: 19;
 }
 
+/* Below the minimap (M23) while it shows, so the panel doesn't hide your arrow and the markers round you (bug pass). */
+:has(> .minimap:not([hidden])) > .debug-overlay {
+  top: calc(16px + var(--minimap-size, 0px) + 8px);
+}
+
 /* Menus (M15, M15b): title, New game and its pop-ups, Loadout, Settings, pause, result. One opaque screen at a time:
    nothing of the field shows through (owner, 2026-10-03), and before Play no field is loaded at all. Headings and labels are in capitals (owner, 2026-10-03); descriptions stay as written. */
 .menus {
@@ -1059,6 +1064,13 @@ kbd {
   color: var(--menu-muted);
 }
 
+.menu-pause-seed {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--menu-muted);
+  user-select: text;
+}
+
 /* Match result */
 .menu-result-centre {
   position: absolute;
@@ -1598,7 +1610,7 @@ kbd {
 }
 
 .hitfx-direction.show {
-  animation: hitfx-fade 2.2s ease-in forwards;
+  animation: hitfx-fade var(--hit-call, 1.4s) ease-in forwards;
 }
 
 .hitfx-banner {

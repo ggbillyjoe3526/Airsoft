@@ -232,7 +232,11 @@ export function stepArmament(
   dt: number,
 ): void {
   a.recoil *= Math.exp(-dt / RECOIL.recoveryTime);
-  a.cooldown = Math.max(-dt, a.cooldown - dt);
+  // The tick the cooldown runs out keeps the overshoot (down to -dt), so a held trigger or fast clicking fires at the
+  // exact rate on average. In single and burst a replica that sat ready a whole tick rests at 0, so a fresh pull's next
+  // shot isn't a tick early (bug pass); a held auto trigger keeps the old rest, which the bots' headless guards are
+  // measured with.
+  a.cooldown = a.cooldown <= 0 && a.modes[a.active] !== 'auto' ? 0 : Math.max(-dt, a.cooldown - dt);
   a.pendingPress = Math.max(0, a.pendingPress - dt);
   if (a.draw > 0) a.draw = Math.max(0, a.draw - dt);
 
@@ -335,7 +339,8 @@ function startReload(characterId: number, a: Armament, replica: ReplicaConfig, c
 function fire(characterId: number, a: Armament, replica: ReplicaConfig, muzzle: Muzzle, ctx: ArmamentContext): void {
   const spread = replica.spreadDeg * muzzle.spreadScale * DEG;
   const yaw = muzzle.yaw + rngGaussian(ctx.rng) * spread;
-  const pitch = muzzle.pitch + a.recoil + rngGaussian(ctx.rng) * spread;
+  const pitchLimit = RECOIL.maxShotPitchDeg * DEG;
+  const pitch = Math.max(-pitchLimit, Math.min(pitchLimit, muzzle.pitch + a.recoil + rngGaussian(ctx.rng) * spread));
   aimDirection(dir, yaw, pitch);
   a.recoil = Math.min(RECOIL.maxDeg * DEG, a.recoil + replica.recoilDeg * DEG);
   ctx.events.push({ type: 'shot', characterId, replicaId: replica.id, position: vec3(muzzle.eye.x, muzzle.eye.y, muzzle.eye.z) });

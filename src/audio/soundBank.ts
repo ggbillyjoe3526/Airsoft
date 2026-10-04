@@ -78,4 +78,14 @@ export class SoundLibrary {
     while (!this.step(sampleRate));
     return this.bySampleRate.get(sampleRate)!;
   }
+
+  /** Whether the sounds at `sampleRate` are rendered and held. */
+  holds(sampleRate: number): boolean {
+    return this.bySampleRate.has(sampleRate);
+  }
+
+  /** Lets go of the samples at `sampleRate` once they live elsewhere (the engine's AudioBuffers), so they aren't held twice. */
+  release(sampleRate: number): void {
+    this.bySampleRate.delete(sampleRate);
+  }
 }

@@ -20,8 +20,10 @@ describe('a 3v3 bot match on Depot', () => {
   it('plays out rounds: bots leave spawn, find each other, and eliminate a team', { timeout: 30_000 }, () => {
     // 260 s: on the M11 Depot this seed's first round is a long last-man hunt (93 s; KNOWN_ISSUES), and since bots
     // hear less through walls (M22) rounds run about a quarter longer (normal: 27 s → 34 s on average over seeds 1-6).
+    // Since the 2026-10-04 bug pass (sprinting as soon as a lean key is let go; racks soak BBs up) this seed has two
+    // long hunts and plays 2 rounds; over seeds 1-16 matches play more rounds than before it (74 vs 67 in 260 s).
     const stats = playMatch(260, 11);
-    expect(stats.rounds).toBeGreaterThanOrEqual(3);
+    expect(stats.rounds).toBeGreaterThanOrEqual(2);
     expect(stats.hits).toBeGreaterThanOrEqual(stats.rounds * 3);
     // Every bot got well out of its spawn yard in round 1 (nobody stuck at spawn).
     for (const d of stats.farthestFromSpawn) expect(d).toBeGreaterThan(8);
