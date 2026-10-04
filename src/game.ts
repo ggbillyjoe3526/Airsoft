@@ -145,6 +145,8 @@ export class Game {
   private matchCounted = false;
   /** The seed of the match loaded (the URL's or the visit's for the first match; see play). */
   private matchSeed: number;
+  /** The match session already recorded and paid (settleMatch runs once per session). */
+  private settledSession: MatchSession | null = null;
   private rafId = 0;
   private lastTime = 0;
   private ticksThisSecond = 0;
@@ -368,7 +370,11 @@ export class Game {
       this.menus.showHint(BROWSER_NOTES.audioBlocked);
     };
     this.pointer.onChange((locked) => {
-      if (this.crashScreen) return; // stopped on an error: the crash pane stays on top, nothing resumes
+      // Stopped on an error: the crash pane stays on top and nothing resumes; a lock granted late is given back.
+      if (this.crashScreen) {
+        if (locked) this.pointer.release();
+        return;
+      }
       if (locked) this.resume();
       else this.pause();
     });
@@ -668,7 +674,9 @@ export class Game {
    * release, lost it. Once per match (the session's take latches); the result screen only shows what this saved.
    */
   private settleMatch(s: MatchSession): void {
-    if (s.state.round.phase !== 'matchOver') return;
+    // Once per session, on the first frame the match is over: nothing is built on the frames after (CLAUDE.md §9).
+    if (s.state.round.phase !== 'matchOver' || this.settledSession === s) return;
+    this.settledSession = s;
     const settled = settleMatch(this.records, this.collection, s.takeMatchResult(), s.takeOutcome(), GAME_POOL.economy, this.dev.disableArmory);
     if (settled.news) {
       this.recordNews = settled.news;
