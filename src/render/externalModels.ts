@@ -60,6 +60,12 @@ export function prepareFigureModel(scene: THREE.Object3D): FigureModel {
   fit.add(scene);
   fit.updateMatrixWorld(true);
   bakeSkinnedMeshes(scene);
+  // Lights and cameras in the file would be copied onto every figure: the game has its own.
+  const extras: THREE.Object3D[] = [];
+  scene.traverse((o) => {
+    if (o instanceof THREE.Light || o instanceof THREE.Camera) extras.push(o);
+  });
+  for (const o of extras) o.removeFromParent();
 
   // The named parts: each the first node of that name with a mesh in it (a rig's bone can share a part's name). Each
   // is lifted out to sit straight under the fit, keeping its place, so a part nested in another (arms under the body)
@@ -91,6 +97,20 @@ export function prepareFigureModel(scene: THREE.Object3D): FigureModel {
     const holder = new THREE.Group();
     holder.attach(node);
     parts[name] = holder;
+  }
+  // Meshes in no named part (a head, hair or eyes left as separate objects) would never be drawn: they go with the body.
+  if (Object.keys(parts).length > 0) {
+    const leftovers: THREE.Mesh[] = [];
+    const collect = (o: THREE.Object3D): void => {
+      if (o instanceof THREE.Mesh) leftovers.push(o);
+      else for (const child of o.children) collect(child);
+    };
+    collect(fit);
+    if (leftovers.length > 0) {
+      const body = (parts.body ??= new THREE.Group());
+      for (const mesh of leftovers) body.attach(mesh);
+      console.warn(`The figure model's ${leftovers.map((m) => m.name || '(unnamed)').join(', ')} belong to no named part, so they move with the body (docs/CC0_ASSETS.md).`);
+    }
   }
   const whole = Object.keys(parts).length === 0 ? fit : null;
   const all = [...Object.values(parts), ...(whole ? [whole] : [])];

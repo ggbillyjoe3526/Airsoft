@@ -83,7 +83,10 @@ src/assets/textures/                      loose surface textures (not wired up y
 | `hitPose` | Hit calling: one hand up, the replica hanging | Hips |
 
 Author the parts in place, in one scene, standing as they would on the figure: metres, feet at the origin, +Y up.
-Parts can be nested (arms parented to the body in Blender is fine): each is taken out on its own.
+Parts can be nested (arms parented to the body in Blender is fine): each is taken out on its own. Any mesh left
+in no named part (a head, hair or eyes kept as separate objects) is drawn with `body`, and the console names it,
+so join it into the right part if it should move with the legs or arms instead. Lights and cameras in the file are
+ignored.
 The game cuts them at those pivots itself. Skinned (rigged) meshes load and are turned into plain meshes in the pose
 the rig is saved in (its rest pose), so a part can be cut from a rigged character and its bones are left behind:
 the game doesn't play glTF animations yet (a later step: a walk cycle and the hit-call animation from a rigged pack).

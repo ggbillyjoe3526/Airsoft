@@ -147,6 +147,29 @@ describe('a figure model with all its parts', () => {
   });
 });
 
+describe('a figure model with only some meshes named', () => {
+  it('draws the rest with the body, says which, and leaves out the file’s lights and cameras', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const scene = riggedScene();
+    scene.add(boxMesh('hair', 0, 3.3, 0, 0.2));
+    scene.add(new THREE.PointLight(), new THREE.PerspectiveCamera());
+    const model = prepareFigureModel(scene);
+    const hair = model.parts.body!.getObjectByName('hair')!;
+    expect(hair).toBeDefined();
+    expect(boundsOf(hair).max.y).toBeCloseTo(3.5 / 2, 6); // where it was, at the model's scale of 1/2
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]![0])).toContain('hair');
+    let extras = 0;
+    for (const part of Object.values(model.parts)) {
+      part.traverse((o) => {
+        if (o instanceof THREE.Light || o instanceof THREE.Camera) extras++;
+      });
+    }
+    expect(extras).toBe(0);
+    model.dispose();
+  });
+});
+
 describe('buildFigure with a figure model', () => {
   it('draws the parts the model has where the built-in ones go, and the built-in parts for the rest', () => {
     const model = prepareFigureModel(riggedScene());
