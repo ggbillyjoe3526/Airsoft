@@ -137,6 +137,10 @@ export class CombatPresentation {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
         if (e.victimId === this.player.id) this.viewmodel.onHit();
         else this.hitPuffs.spawn(e.position);
+      } else if (e.type === 'ricochetTick') {
+        // A ricochet that doesn't count (M20): you feel the tick and play on; on anyone else it's a small puff.
+        if (e.victimId === this.player.id) this.hud.showNotice(HUD.ricochetNotice, HUD.noticeTime);
+        else this.hitPuffs.spawn(e.position);
       } else if (e.type === 'reloadRefused' && e.characterId === this.player.id) {
         this.hud.showNotice('No fuller magazine', HUD.noticeTime);
       }

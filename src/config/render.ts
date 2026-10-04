@@ -170,6 +170,8 @@ export const HUD = {
   lowAmmoFraction: 0.2,
   /** How long a short HUD notice (e.g. "No fuller magazine" after a reload that can't help) stays up (s). */
   noticeTime: 1.4,
+  /** Said when a ricochet ticks you in a match where ricochets don't count (M20). */
+  ricochetNotice: "Ricochet · doesn't count, play on",
   /** How long "Round N" stays up after a round starts (seconds). */
   roundStartMessageTime: 1.8,
   /** The round clock turns to a warning colour at or below this many seconds. */

@@ -28,7 +28,7 @@ const DT = 1 / 60;
  * A 3v3 on Depot (or `map`) with real physics, headless. By default all six are bots; with `hider`, Blue
  * is a single non-bot player standing still at that spot (hiding) against three Orange bots.
  */
-function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig = BOTS, mode: MatchMode = 'elimination', rules: RoundRules = ROUNDS, map: MapData = DEPOT) {
+function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig = BOTS, mode: MatchMode = 'elimination', rules: RoundRules = ROUNDS, map: MapData = DEPOT, teamSize: number = ROUNDS.teamSize) {
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
   const state = createGameState(seed, BALLISTICS.maxBBs, rules, mode, map.flag);
@@ -52,7 +52,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
   });
   let id = 0;
   for (let team = 0; team < 2; team++) {
-    for (let i = 0; i < (hider && team === 0 ? 1 : ROUNDS.teamSize); i++) state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
+    for (let i = 0; i < (hider && team === 0 ? 1 : teamSize); i++) state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
   }
   // Round 1 as the game starts it: each team at its end; a hider stands at its spot instead.
   placeTeams(state.round, state.characters, ctx.round);
@@ -225,7 +225,7 @@ describe('a 3v3 bot match on Depot', () => {
       }
     }
     // Measured on the M11 Depot (2026-10-03): the west end wins 40% of the decided rounds here (46 of 114) and
-    // 46% over seeds 1-96. The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
+    // 46% over seeds 1-96; with M20's ricochets, 39% (45 of 116). The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
     expect(westWins / decided).toBeGreaterThan(0.35);
     expect(westWins / decided).toBeLessThan(0.6);
   });
@@ -259,7 +259,8 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
     }
     // Measured on the M11 Depot with M12c's hop-up (2026-10-03; 16 seeds): 15 captures in 126 rounds, a flag
     // raised in 10 of 16 matches, attackers winning 51%, no friendly hits. Over seeds 1-96 attackers win 50%
-    // (107 captures in 736 rounds); the old mirrored Depot measured 53%. Bots check their line of fire, but a teammate dodging into
+    // (107 captures in 736 rounds); the old mirrored Depot measured 53%. With M20's ricochets (not counting): 18 captures in
+    // 125 rounds, flags raised in 11 of 16, attackers 53%, 1 friendly hit, 193 ricochet ticks. Bots check their line of fire, but a teammate dodging into
     // a BB already in the air can't always be helped (KNOWN_ISSUES).
     // Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);
@@ -284,6 +285,29 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
     const rules = { ...ROUNDS, roundTime: 30 };
     const stats = playMatch(32, 2, vec3(-24.1, 0, -4.3), BOTS, 'attackDefend', rules);
     expect(stats.results[0]).toMatchObject({ attackers: 0, winner: 1, reason: 'time' });
+  });
+});
+
+describe('custom team sizes on Depot (M20)', () => {
+  beforeAll(async () => {
+    await initPhysics();
+  });
+
+  it('plays out 1v1 and 2v2 matches in both modes: rounds get decided, nobody stays stuck at spawn', { timeout: 120_000 }, () => {
+    for (const size of [1, 2]) {
+      for (const mode of ['elimination', 'attackDefend'] as const) {
+        const label = `${size}v${size} ${mode}`;
+        const rules = { ...ROUNDS, winsNeeded: 3, halfTimeAfter: 2 };
+        const stats = playMatch(200, 3, undefined, BOTS, mode, rules, DEPOT, size);
+        expect(stats.farthestFromSpawn, label).toHaveLength(2 * size);
+        expect(stats.rounds, label).toBeGreaterThanOrEqual(2);
+        // Most rounds end with a team knocked out or the flag up, not on the clock.
+        expect(stats.results.filter((r) => r.winner >= 0).length, label).toBeGreaterThanOrEqual(1);
+        for (const d of stats.farthestFromSpawn) expect(d, label).toBeGreaterThan(8);
+        expect(stats.friendlyHits, label).toBe(0);
+        expectGrounded(stats, DEPOT);
+      }
+    }
   });
 });
 

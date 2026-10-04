@@ -827,16 +827,38 @@ describe('difficulty levels', () => {
     expect(medianTimeToHit('normal', 4, true)).toBeGreaterThan(medianTimeToHit('normal', 4, false) + 0.2);
   });
 
-  it('switch from the next round when asked to, so a fight in progress is not changed', () => {
-    const { state, bots } = duel(14);
+  it('play each team at its own level: your teammates at one difficulty, your opponents at another (M20)', () => {
+    const { state, player, bot } = duel(12);
     const easy = botConfig('easy');
-    bots.setConfig(easy, 'nextRound');
-    expect(bots.cfg).toBe(BOTS);
-    state.events.push({ type: 'roundStart', round: 2 });
-    bots.observe(state);
-    expect(bots.cfg).toBe(easy);
-    bots.setConfig(BOTS, 'now');
-    expect(bots.cfg).toBe(BOTS);
+    const hard = botConfig('hard');
+    // Both duellists as bots, Blue on Easy and Orange on Hard.
+    const both = new BotController(state, [player, bot], new Map(), {
+      query: noWalls,
+      nav: OPEN_NAV,
+      navSnap: NAV.snap,
+      lanes: OPEN_FIELD.lanes,
+      lowCover: [],
+      tallCover: [],
+      body: BODY,
+      hits: HITS,
+      loadout: LOADOUT,
+      cfg: BOTS,
+      teamCfg: [easy, hard],
+      seed: 3,
+    });
+    expect(both.cfgOf(0)).toBe(easy);
+    expect(both.cfgOf(1)).toBe(hard);
+    for (let i = 0; i < 30; i++) {
+      both.think(state, DT);
+      state.time += DT;
+    }
+    // Each saw the other and reacts after its own level's reaction time.
+    for (const b of both.bots) {
+      const skill = b.character.team === 0 ? easy : hard;
+      const delay = b.contact!.reactAt - b.contact!.acquiredAt;
+      expect(delay).toBeGreaterThanOrEqual(skill.reactionTime[0]);
+      expect(delay).toBeLessThanOrEqual(skill.reactionTime[1]);
+    }
   });
 });
 

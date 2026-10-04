@@ -8,6 +8,8 @@ export interface HitConfig {
   headRadius: number;
   crouchDrop: number;
   friendlyFire: boolean;
+  /** A BB that has bounced (a ricochet) knocks out whoever it hits; when false it only ticks them (M20, Match pop-up). */
+  ricochetsCount: boolean;
   callTime: number;
   walkOffSpeed: number;
   walkOffTime: number;
@@ -48,8 +50,10 @@ export const HITS: HitConfig = {
    * 1.2 m crouch cover hides you completely.
    */
   crouchDrop: 0.62,
-  /** Friendly hits count, as they do at a real site. */
+  /** Friendly hits count, as they do at a real site. A match can turn it off (config/matchRules.ts). */
   friendlyFire: true,
+  /** Ricochets don't count unless the match says so (owner, M20): a bounced BB ticks you, but you play on. */
+  ricochetsCount: false,
   /** Seconds a hit player stands still with a hand up calling the hit. */
   callTime: 1.4,
   /** Walk-off pace as a fraction of the normal (run) speed: a brisk walk-off, so it fits in walkOffTime. */
@@ -78,7 +82,10 @@ export const HITS: HitConfig = {
   lean: { maxAngle: 0.6, pivotHeight: 0.92 },
 };
 
-/** Match flow: 3v3 rounds against the clock (elimination or flag, see config/modes.ts), first to 5 round wins. */
+/**
+ * Match flow: 3v3 rounds against the clock (elimination or flag, see config/modes.ts), first to 5 round wins. These are
+ * the defaults; the Match pop-up changes team size, rounds to win and round time (config/matchRules.ts).
+ */
 export const ROUNDS = {
   /** Players per team, including the local player on team 0. */
   teamSize: 3,

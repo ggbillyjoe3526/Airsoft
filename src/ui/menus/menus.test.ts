@@ -80,6 +80,8 @@ describe('the rules shown on New game', () => {
     raiseTime: 5,
     halfTimeAfter: 4,
     attackFirst: true,
+    friendlyFire: true,
+    ricochetsCount: false,
   };
 
   it('explain elimination: teams, the clock, the swap of ends and the win condition', () => {
@@ -95,6 +97,18 @@ describe('the rules shown on New game', () => {
     expect(text).toContain('stand by it for 5 s to raise your flag');
     expect(text).toContain('Your team attacks first; sides swap after round 4.');
     expect(describeRules({ ...rules, attackFirst: false }, 'attackDefend')).toContain('Your team defends first');
+  });
+
+  it('follow the Match pop-up: team size, rounds, the clock, friendly fire and ricochets (M20)', () => {
+    const duel = describeRules({ ...rules, teamSize: 1, winsNeeded: 3, roundTime: 90, halfTimeAfter: 2 }, 'elimination');
+    expect(duel).toContain('1v1: you (Blue) against one Orange bot.');
+    expect(duel).toContain('1:30 on the clock');
+    expect(duel).toContain('Teams swap ends after round 2.');
+    expect(duel).toContain('First to 3 rounds');
+    expect(duel).not.toContain('Friendly fire'); // nobody to hit in a 1v1
+    expect(describeRules({ ...rules, teamSize: 2 }, 'elimination')).toContain('you and 1 bot teammate (Blue)');
+    expect(describeRules(rules, 'elimination')).toContain("Friendly fire counts. Ricochets don't count.");
+    expect(describeRules({ ...rules, friendlyFire: false, ricochetsCount: true }, 'elimination')).toContain('Friendly fire is off. Ricochets count.');
   });
 });
 

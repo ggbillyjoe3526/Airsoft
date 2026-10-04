@@ -1,5 +1,5 @@
 import { REDUCED_MOTION_CHOICES } from '../../config/accessibility';
-import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty } from '../../config/bots';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   AIM_MODES,
   CROUCH_MODES,
@@ -13,6 +13,15 @@ import {
   MOUSE_DPI,
   SPRINT_MODES,
 } from '../../config/controls';
+import {
+  DEFAULT_MATCH_RULES,
+  FRIENDLY_FIRE_CHOICES,
+  type MatchRules,
+  RICOCHETS_COUNT_CHOICES,
+  ROUND_TIME_SETTING,
+  TEAM_SIZE_CHOICES,
+  WINS_NEEDED_CHOICES,
+} from '../../config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING, DEFAULT_OPTIC, OPTIC_CHOICES, type OpticChoice } from '../../config/optics';
 import { FOV_SETTING, RENDER } from '../../config/render';
@@ -22,8 +31,32 @@ import { loadChoice } from '../optionPicker';
 
 /** The choices the menus save in the browser, each read back here with its default. */
 
+/** The opponents' bot difficulty (saved as `difficulty`, the one level every bot had before M20). */
 export function loadDifficulty(): Difficulty {
   return loadChoice('difficulty', DIFFICULTIES, DEFAULT_DIFFICULTY);
+}
+
+/** Your bot teammates' difficulty (M20). */
+export function loadTeammateDifficulty(): Difficulty {
+  return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, DEFAULT_DIFFICULTY);
+}
+
+/** The Match pop-up's rules (M20), each with its default. */
+export function loadMatchRules(): MatchRules {
+  const d = DEFAULT_MATCH_RULES;
+  return {
+    winsNeeded: Number(loadChoice('winsNeeded', WINS_NEEDED_CHOICES, String(d.winsNeeded))),
+    roundTime: loadSetting('roundTime', roundTimeIn, d.roundTime),
+    teamSize: Number(loadChoice('teamSize', TEAM_SIZE_CHOICES, String(d.teamSize))),
+    friendlyFire: loadChoice('friendlyFire', FRIENDLY_FIRE_CHOICES, d.friendlyFire ? 'on' : 'off') === 'on',
+    ricochetsCount: loadChoice('ricochets', RICOCHETS_COUNT_CHOICES, d.ricochetsCount ? 'on' : 'off') === 'on',
+  };
+}
+
+/** A saved round time: in range and on the slider's half-minute steps. */
+function roundTimeIn(raw: unknown): number | undefined {
+  const v = numberIn(ROUND_TIME_SETTING.min, ROUND_TIME_SETTING.max)(raw);
+  return v !== undefined && (v - ROUND_TIME_SETTING.min) % ROUND_TIME_SETTING.step === 0 ? v : undefined;
 }
 
 export function loadMode(): MatchMode {

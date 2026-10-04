@@ -23,7 +23,7 @@ function tick(stats: MatchStats, state: GameState, events: GameEvent[]): void {
 }
 
 const shot = (id: number): GameEvent => ({ type: 'shot', characterId: id, replicaId: 'aeg', position: vec3() });
-const hit = (victimId: number, shooterId: number): GameEvent => ({ type: 'characterHit', victimId, shooterId, position: vec3(), direction: vec3(1, 0, 0) });
+const hit = (victimId: number, shooterId: number): GameEvent => ({ type: 'characterHit', victimId, shooterId, position: vec3(), direction: vec3(1, 0, 0), ricochet: false });
 
 describe('match stats (M19)', () => {
   it('counts BBs fired, hits on opponents, friendly hits and times hit, for the round and the match', () => {

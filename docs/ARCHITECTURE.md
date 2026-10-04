@@ -15,7 +15,8 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 - **sim/**: all gameplay rules. Plain data (`GameState`, `Character`, the BB pool), no Three.js, no DOM, no `Math.random`.
   Each tick: move characters, handle replicas (`armament.ts`: fire, switch, reload by magazine swap; spawns BBs), then fly BBs
   (`ballistics.ts` flight model: gravity, drag and hop-up lift by BB mass; replicas are rated in joules and BB weight, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
-  characters via `hitbox.ts` capsules), then match flow (`round.ts`: the match mode, round clock, wipe-out or time-out, score, first to
+  characters via `hitbox.ts` capsules; `ricochet.ts` bounces a BB off a hard surface, using the normal and material
+  `WorldQuery.raycastSurface` reports, and a ricochet only knocks someone out if `HitConfig.ricochetsCount`), then match flow (`round.ts`: the match mode, round clock, wipe-out or time-out, score, first to
 `winsNeeded`, `restartMatch(mode)`; in Attack / Defend also who attacks (swapping at half-time) and the pole, stepped by
 `flag.ts`: attackers in play at the pole raise the flag, defenders pull it down, both hold it still; a raised flag
 ends the round). A hit character is eliminated
@@ -140,7 +141,9 @@ ends the round). A hit character is eliminated
   and New game's choices. No map is loaded on the title and New game screens (M15b).
 - **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,
   navigation, the simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it
-  when the player leaves the match, so the next Play can load another map; Play Again restarts it in place.
+  when the player leaves the match, so the next Play can load another map; Play Again restarts it in place. Its
+  `MatchSetup` carries New game's Match rules (M20, `config/matchRules.ts`: team size, rounds to win, round time,
+  friendly fire, ricochets), turned into the match's own round and hit rules, and a bot difficulty per team.
 
 ## Map data
 

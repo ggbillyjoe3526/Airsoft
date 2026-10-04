@@ -263,6 +263,17 @@ export class Sfx {
         if (e.shooterId === localId) this.play('hitMarker', this.buses.get('interface')!, L.hitMarker);
         return;
       }
+      case 'ricochetTick': {
+        // A ricochet that doesn't count (M20): the knock of a spent BB on the body, never the "you're hit" tick.
+        if (e.victimId === localId) {
+          this.play('bodyHit', this.self!, L.bodyHit);
+          return;
+        }
+        const victim = characterOf(e.victimId);
+        if (victim) this.play('bodyHit', this.channel(victim).panner, L.bodyHit);
+        else this.oneShot('bodyHit', e.position, L.bodyHit);
+        return;
+      }
       case 'roundOver':
         this.whistle?.blast(AUDIO.roundOverWhistle, 0);
         return;

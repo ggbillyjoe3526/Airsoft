@@ -1,4 +1,15 @@
-import { DIFFICULTIES, type Difficulty } from '../../config/bots';
+import { DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
+import {
+  FRIENDLY_FIRE_CHOICES,
+  formatRoundTime,
+  type MatchRules,
+  matchRulesSummary,
+  RICOCHETS_COUNT_CHOICES,
+  ROUND_TIME_SETTING,
+  roundRulesFor,
+  TEAM_SIZE_CHOICES,
+  WINS_NEEDED_CHOICES,
+} from '../../config/matchRules';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
 import type { QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
@@ -10,7 +21,9 @@ import type { CrosshairSettingsOptions } from '../crosshairSettings';
 import { ChoiceDialog } from './choiceDialog';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
 import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
-import { el } from './menuParts';
+import { el, menuRow, rangeControl } from './menuParts';
+import { OptionPicker } from '../optionPicker';
+import { RowsDialog } from './rowsDialog';
 import { PauseScreen } from './pauseScreen';
 import { ResultScreen } from './resultScreen';
 import { describeRules, type MatchRulesText } from './rulesText';
@@ -19,9 +32,12 @@ import { SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
 import { TitleScreen } from './titleScreen';
 
+/** The parts of the rules text that the Match pop-up doesn't change (team names, the flag, who attacks first). */
+export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount'>;
+
 /** What the menus show and what they report back to the game. */
 export interface MenusOptions {
-  rules: MatchRulesText;
+  rules: FixedRulesText;
   bindings: KeyBindings;
   /** The Loadout screen's slots and choices, and the summary New game's Loadout button shows. */
   loadout: Omit<LoadoutOptions, 'onBack'> & { summary: () => { replicas: string; detail: string } };
@@ -31,7 +47,11 @@ export interface MenusOptions {
   onLeaveMatch: () => void;
   map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
+  /** The opponents' bot difficulty and your bot teammates' (M20). */
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
+  teammateDifficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
+  /** The Match pop-up's rules (M20). */
+  matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   controls: ControlsSettingsOptions;
   fov: { initial: number; onChange: (v: number) => void };
   /** The render preset in use, shown on the greyed Quality row. */
@@ -57,7 +77,12 @@ export class Menus {
   private readonly result: ResultScreen;
   private readonly mapDialog: ChoiceDialog<MapId>;
   private readonly modeDialog: ChoiceDialog<MatchMode>;
-  private readonly difficultyDialog: ChoiceDialog<Difficulty>;
+  private readonly matchDialog: RowsDialog;
+  private readonly difficultyDialog: RowsDialog;
+  /** What the Match and Difficulty pop-ups have picked. */
+  private readonly matchRules: MatchRules;
+  private difficulty: Difficulty;
+  private teammateDifficulty: Difficulty;
   private readonly screens: Record<MenuScreen, HTMLElement>;
   private current: MenuScreen = 'title';
   /** What had the focus on each screen when it was left, so Back puts the keyboard where it was. */
@@ -68,10 +93,14 @@ export class Menus {
     private readonly opts: MenusOptions,
   ) {
     this.root = el('div', 'menus');
+    this.matchRules = { ...opts.matchRules.initial };
+    this.difficulty = opts.difficulty.initial;
+    this.teammateDifficulty = opts.teammateDifficulty.initial;
     this.title = new TitleScreen(() => this.go('setup'));
     this.setup = new SetupScreen({
       onMap: () => this.mapDialog.open(),
       onMode: () => this.modeDialog.open(),
+      onMatch: () => this.matchDialog.open(),
       onDifficulty: () => this.difficultyDialog.open(),
       onLoadout: () => this.go('loadout'),
       onSettings: () => this.openSettings('setup'),
@@ -84,13 +113,29 @@ export class Menus {
     });
     this.modeDialog = new ChoiceDialog('Game mode', MATCH_MODES, opts.mode.initial, 'mode', (m) => {
       opts.mode.onChange(m);
-      this.describeMode(m);
       this.refreshSetup();
     });
-    this.difficultyDialog = new ChoiceDialog('Bot difficulty', DIFFICULTIES, opts.difficulty.initial, 'difficulty', (d) => {
-      opts.difficulty.onChange(d);
-      this.refreshSetup();
-    });
+    this.matchDialog = new RowsDialog('Match', this.matchRows());
+    this.difficultyDialog = new RowsDialog('Bot difficulty', [
+      menuRow(
+        'Opponents',
+        'The other team\'s bots.',
+        new OptionPicker('Opponents', DIFFICULTIES, this.difficulty, 'difficulty', (d) => {
+          this.difficulty = d;
+          opts.difficulty.onChange(d);
+          this.refreshSetup();
+        }).root,
+      ),
+      menuRow(
+        'Teammates',
+        'Your bot teammates (none in a 1v1).',
+        new OptionPicker('Teammates', TEAMMATE_DIFFICULTIES, this.teammateDifficulty, 'teammateDifficulty', (d) => {
+          this.teammateDifficulty = d;
+          opts.teammateDifficulty.onChange(d);
+          this.refreshSetup();
+        }).root,
+      ),
+    ]);
     // Every loadout change also refreshes New game's Loadout button.
     const lo = opts.loadout;
     this.loadout = new LoadoutScreen({
@@ -129,10 +174,9 @@ export class Menus {
       summary: this.summary.root,
       result: this.result.root,
     };
-    this.root.append(...Object.values(this.screens), this.mapDialog.root, this.modeDialog.root, this.difficultyDialog.root);
+    this.root.append(...Object.values(this.screens), this.mapDialog.root, this.modeDialog.root, this.matchDialog.root, this.difficultyDialog.root);
     parent.appendChild(this.root);
     window.addEventListener('keydown', this.onKeyDown);
-    this.describeMode(opts.mode.initial);
     this.refreshSetup();
   }
 
@@ -177,9 +221,55 @@ export class Menus {
     this.root.remove();
   }
 
-  /** Explains the rules of `mode`, the next match's, on New game. */
-  private describeMode(mode: MatchMode): void {
-    this.setup.setRules(describeRules(this.opts.rules, mode));
+  /** The Match pop-up's rows: rounds to win, round time, team size, friendly fire and whether ricochets count. */
+  private matchRows(): HTMLElement[] {
+    const m = this.matchRules;
+    const changed = (): void => {
+      this.opts.matchRules.onChange({ ...m });
+      this.refreshSetup();
+    };
+    return [
+      menuRow(
+        'Rounds to win',
+        '',
+        new OptionPicker('Rounds to win', WINS_NEEDED_CHOICES, String(m.winsNeeded), 'winsNeeded', (v) => {
+          m.winsNeeded = Number(v);
+          changed();
+        }).root,
+      ),
+      menuRow(
+        'Round time',
+        'Out of time: a draw in Elimination, the defenders\' round in Attack and Defend.',
+        rangeControl('Round time', ROUND_TIME_SETTING, m.roundTime, formatRoundTime, 'roundTime', (v) => {
+          m.roundTime = v;
+          changed();
+        }),
+      ),
+      menuRow(
+        'Team size',
+        'Bigger teams come with bigger fields.',
+        new OptionPicker('Team size', TEAM_SIZE_CHOICES, String(m.teamSize), 'teamSize', (v) => {
+          m.teamSize = Number(v);
+          changed();
+        }).root,
+      ),
+      menuRow(
+        'Friendly fire',
+        '',
+        new OptionPicker('Friendly fire', FRIENDLY_FIRE_CHOICES, m.friendlyFire ? 'on' : 'off', 'friendlyFire', (v) => {
+          m.friendlyFire = v === 'on';
+          changed();
+        }).root,
+      ),
+      menuRow(
+        'Ricochets count',
+        'BBs bounce off concrete and steel either way.',
+        new OptionPicker('Ricochets count', RICOCHETS_COUNT_CHOICES, m.ricochetsCount ? 'on' : 'off', 'ricochets', (v) => {
+          m.ricochetsCount = v === 'on';
+          changed();
+        }).root,
+      ),
+    ];
   }
 
   /** Ends the match the player is leaving, then shows `screen`. */
@@ -226,26 +316,45 @@ export class Menus {
    * that cancels a key binding before it gets here.
    */
   private readonly onKeyDown = (e: KeyboardEvent): void => {
-    if (e.code !== 'Escape' || this.root.hidden || this.mapDialog.root.open || this.modeDialog.root.open || this.difficultyDialog.root.open) return;
+    if (e.code !== 'Escape' || this.root.hidden || this.dialogOpen()) return;
     if (backTarget(this.current, this.settings.openedFrom) === null) return;
     e.preventDefault();
     this.back();
   };
 
+  private dialogOpen(): boolean {
+    return this.mapDialog.root.open || this.modeDialog.root.open || this.matchDialog.root.open || this.difficultyDialog.root.open;
+  }
+
   /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */
   private leave(): void {
     this.mapDialog.close();
     this.modeDialog.close();
+    this.matchDialog.close();
     this.difficultyDialog.close();
     if (this.current === 'settings') this.settings.closed();
   }
 
-  /** The New game buttons show what is picked now. */
+  /** The New game buttons and the rules under them show what is picked now. */
   private refreshSetup(): void {
+    const m = this.matchRules;
     this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
-    this.setup.difficulty.set(this.difficultyDialog.label, this.difficultyDialog.blurb);
+    const match = matchRulesSummary(m);
+    this.setup.match.set(match.value, match.detail);
+    const opponents = difficultyLabel(this.difficulty);
+    const mates = difficultyLabel(this.teammateDifficulty);
+    this.setup.difficulty.set(
+      m.teamSize === 1 || this.difficulty === this.teammateDifficulty ? opponents : `${opponents} / ${mates}`,
+      m.teamSize === 1 ? `Your opponent: ${opponents}. No teammates in a 1v1.` : `Opponents ${opponents}, teammates ${mates}.`,
+    );
+    const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
+    this.setup.setRules(describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);
   }
+}
+
+function difficultyLabel(d: Difficulty): string {
+  return DIFFICULTIES.find((o) => o.id === d)?.label ?? d;
 }

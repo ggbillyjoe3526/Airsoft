@@ -5,6 +5,7 @@ import { SoundLibrary } from './audio/soundBank';
 import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
 import { ROUNDS } from './config/hits';
+import type { MatchRules } from './config/matchRules';
 import type { CrosshairSettings } from './config/matchInfo';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
@@ -40,12 +41,14 @@ import {
   loadFov,
   loadInvertMouse,
   loadMap,
+  loadMatchRules,
   loadMode,
   loadMouseDpi,
   loadOptic,
   loadReducedMotion,
   loadSensitivity,
   loadSprintMode,
+  loadTeammateDifficulty,
 } from './ui/menus/savedChoices';
 
 /** The player is the first character, on Blue (see MatchSession). */
@@ -89,7 +92,11 @@ export class Game {
   /** New game's choices: the next Play builds the match from them. */
   private map: MapId;
   private mode: MatchMode;
+  /** The opponents' bot difficulty and your bot teammates' (M20). */
   private difficulty: Difficulty;
+  private teammateDifficulty: Difficulty;
+  /** The Match pop-up's rules (M20). */
+  private matchRules: MatchRules;
   private optic: OpticChoice;
   /** The replica picked for each loadout slot. */
   private readonly picked: ReplicaConfig[];
@@ -122,6 +129,8 @@ export class Game {
     this.map = loadMap();
     this.mode = loadMode();
     this.difficulty = loadDifficulty();
+    this.teammateDifficulty = loadTeammateDifficulty();
+    this.matchRules = loadMatchRules();
     this.optic = loadOptic();
     this.picked = LOADOUT_SLOTS.map(loadSlotPick);
 
@@ -159,13 +168,9 @@ export class Game {
 
     this.menus = new Menus(container, {
       rules: {
-        teamSize: ROUNDS.teamSize,
-        winsNeeded: ROUNDS.winsNeeded,
-        roundTime: ROUNDS.roundTime,
         playerTeam: TEAMS[PLAYER_TEAM]!.name,
         enemyTeam: TEAMS[1 - PLAYER_TEAM]!.name,
         raiseTime: ROUNDS.flag.raiseTime,
-        halfTimeAfter: ROUNDS.halfTimeAfter,
         attackFirst: ROUNDS.flag.firstAttackers === PLAYER_TEAM,
       },
       bindings: this.bindings,
@@ -192,6 +197,8 @@ export class Game {
       map: { initial: this.map, onChange: (m) => (this.map = m) },
       mode: { initial: this.mode, onChange: (m) => (this.mode = m) },
       difficulty: { initial: this.difficulty, onChange: (d) => (this.difficulty = d) },
+      teammateDifficulty: { initial: this.teammateDifficulty, onChange: (d) => (this.teammateDifficulty = d) },
+      matchRules: { initial: this.matchRules, onChange: (m) => (this.matchRules = m) },
       controls: {
         sensitivity: { initial: this.input.sensitivity, onChange: (v) => (this.input.sensitivity = v) },
         aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
@@ -278,6 +285,8 @@ export class Game {
         map: mapData(this.map),
         mode: this.mode,
         difficulty: this.difficulty,
+        teammateDifficulty: this.teammateDifficulty,
+        rules: { ...this.matchRules },
         loadout: [...this.picked],
         optic: this.optic,
         hopUps: this.picked.map((r) => this.hopUpOf(r)),
@@ -355,10 +364,10 @@ export class Game {
       const mine = s.player.team;
       const theirs = 1 - mine;
       // Between rounds, the role you'll have next round (it swaps at half-time).
-      const attackers = r.phase === 'over' ? attackersInRound(r.number + 1, ROUNDS) : r.attackers;
+      const attackers = r.phase === 'over' ? attackersInRound(r.number + 1, s.rounds) : r.attackers;
       const role = r.mode === 'attackDefend' ? ` · attack / defend, you ${attackers === mine ? 'attack' : 'defend'}${r.phase === 'over' ? ' next' : ''}` : '';
       this.menus.showPause(
-        `${r.phase === 'over' ? `After round ${r.number}` : `Round ${r.number}`}${role} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${ROUNDS.winsNeeded}`,
+        `${r.phase === 'over' ? `After round ${r.number}` : `Round ${r.number}`}${role} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${s.rounds.winsNeeded}`,
       );
     }
     s?.setPlaying(false);

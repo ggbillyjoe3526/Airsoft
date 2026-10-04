@@ -90,7 +90,8 @@ Then open **http://localhost:4173**.
 
 ## How to play
 
-- **Goal:** pick a mode on the New game screen (**Start**, then **Mode**). First team to 5 round wins takes the match.
+- **Goal:** pick a mode on the New game screen (**Start**, then **Mode**). First team to 5 round wins takes the match
+  (the **Match** button changes that: rounds to win, round time, 1v1 to 3v3, friendly fire and whether ricochets count).
   - **Elimination:** knock out every player on the other team. If the clock runs out, the round is a draw.
   - **Attack / Defend:** each team has a flagpole in its half. Each round one team attacks the other's pole: stand by it
     (inside the painted ring) for 5 s to raise your flag and win the round. Defenders standing by the pole pull
@@ -98,7 +99,7 @@ Then open **http://localhost:4173**.
     out (if attackers are still at the pole then, play goes on in overtime, up to 15 s, until they leave or
     finish), and knocking out the whole other team wins in either role. Your team attacks first; sides swap after
     round 4. The strip under the scoreboard shows how far up the flag is, and a marker shows where the pole is.
-    The mode, the bot difficulty and your loadout are picked between matches, on the New game screen.
+    The mode, the match rules, the bot difficulty and your loadout are picked between matches, on the New game screen.
 - **One hit = out.** When a BB hits you, you hear a sharp "tick", see where it came from, raise your hand
   and walk off to the dead zone. While out, you watch your teammates (click to switch).
 - **BBs are real projectiles:** they take time to fly (about half a second across the map), slow down and drop at
@@ -108,12 +109,14 @@ Then open **http://localhost:4173**.
   the old one goes back in the pouch with whatever is left in it, so reloading early has a cost. The small
   gauges next to your BB count show each spare magazine (the yellow one is next); nothing refills until the next
   round. Pressing R when no spare has more BBs does nothing, and the HUD says so.
-- **Friendly fire counts,** like at a real site, so watch your teammates.
+- **Friendly fire counts,** like at a real site, so watch your teammates (unless you turn it off under **Match**).
+- **BBs bounce** off concrete and steel (crates soak them up). By default a ricochet that hits you only ticks you and you
+  play on; **Match**, **Ricochets count** makes it knock you out, as some fields rule.
 - **Sprinting** carries your replica: you can't shoot until a moment after you stop.
 - **Footsteps give you away.** Running and sprinting are heard by you and the bots (sprinting from further away);
   walking (Shift) and moving crouched are silent. Listen for enemies the same way.
-- **Bot difficulty** (Easy, Normal, Hard) is picked on the New game screen and applies to all bots, teammates too.
-  On Normal, a bot's first BBs up close can miss, and
+- **Bot difficulty** (Easy, Normal, Hard) is picked on the New game screen, one level for your opponents and one for
+  your bot teammates. On Normal, a bot's first BBs up close can miss, and
   moving targets are harder for bots to hit.
 - **Loadout, before a match:** the Loadout screen (**Start**, then **Loadout**) fits the rifle's optic (iron sights, a red dot or a 2× scope) and
   sets each replica's **hop-up**: the backspin that keeps a BB flying flat. Out of the box the rifle is on target to

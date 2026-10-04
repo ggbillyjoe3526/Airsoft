@@ -112,7 +112,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M18a Comfort and controls (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, sensitivity as cm/360 | Done (pull request; owner to play it) | 8.7 (its must-fixes applied; not re-scored, owner's wrap-up) |
 | Alpha · Phase 4 · M18b Accessibility and browser basics (owner's second batch; moved out of M18a at the owner's wrap-up, 2026-10-03): colour-blind options, on-screen sound cues, pause on a hidden tab, a lost graphics context, a hardware acceleration warning, fullscreen | Next | |
 | Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (merged; owner's playtest next) | 9.0 |
-| Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
+| Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Done (owner to play it) | CRITIC_SCORE |
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Later | |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
@@ -554,6 +554,15 @@ each one went:**
     out, the way fields set their own rule. **Off by default** (owner): a ricochet that hits you ticks but you stay in.
     Bots follow the same rule.
   - Layout and headless match tests cover every team size.
+  - **Built (2026-10-04):** a **Match** button on New game (after Mode) opens a pop-up with Rounds to win (3, 5, 7, 10),
+    Round time (1:30 to 5:00 in half minutes), Team size (1v1, 2v2, 3v3), Friendly fire and Ricochets count, each saved
+    and shown on the button and in the rules text; half-time follows the rounds to win (after `winsNeeded - 1`). The
+    Difficulty pop-up has an Opponents and a Teammates row; each team's bots think with their own level's skill, and
+    records count the opponents' level. BBs bounce off concrete (40% of the speed into it back out) and steel containers
+    (55%), keep 75% along the surface, lose their backspin, scatter a little, at most twice and never below 12 m/s;
+    crates stop them. A ricochet that doesn't count makes a knock and a "Ricochet · doesn't count, play on" notice; one
+    that counts knocks you out and the hit feed tags it RICOCHET. With friendly fire off, bots no longer hold fire for
+    teammates in their line (`config/matchRules.ts`, `sim/ricochet.ts`).
 - **M21. Practice range** (the owner's feature pick 17; moved up from v0.3)
   - A small range of its own, opened from the title screen: lanes with distance markers out past Depot's longest
     sightlines, steel targets that ring when hit and standing and crouched figure targets.
