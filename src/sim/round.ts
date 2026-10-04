@@ -16,6 +16,16 @@ export interface RoundRules {
   /** Round wins needed to win the match. */
   winsNeeded: number;
   /**
+   * The lead a team also needs to take the match (M39): 1, the first to `winsNeeded` wins; 2, win by two, so a match
+   * level one round short of the win plays on (overtime, no further swap) until one team is two ahead.
+   */
+  winBy: number;
+  /**
+   * Elimination (M39): a round that runs out of time goes to the team with more players left in play; level, it is a
+   * draw (played again) as without this rule.
+   */
+  timeOutToMorePlayers: boolean;
+  /**
    * Half-time: the teams swap ends of the map after this many rounds, in both modes (in Attack / Defend that
    * swaps attack and defence too).
    */
@@ -44,8 +54,8 @@ export interface RoundContext {
 
 /**
  * Match flow: rounds against the clock. In both modes a team with nobody left in play loses the round.
- * Elimination: if time runs out first the round is a draw. A draw (both teams out at once, in either mode) is played
- * again under the same number. Attack / Defend: the attackers win by raising
+ * Elimination: if time runs out first the round is a draw (or, by M39's rule, goes to the team with more players
+ * left). A draw (both teams out at once, in either mode) is played again under the same number. Attack / Defend: the attackers win by raising
  * their flag on the defenders' pole, the defenders by holding out until time runs out (with overtime
  * while the attackers are still working the rope). The teams swap ends at half-time in both modes (in
  * Attack / Defend that swaps attack and defence too). After a short pause everyone respawns for the next
@@ -187,7 +197,7 @@ export function stepRound(round: RoundState, characters: Character[], bbs: BBPoo
     // Overtime: attackers still working the rope (alone or contested) when time runs out get to finish.
     const ropeWorked = flagMode && (round.flag.status === 'raising' || round.flag.status === 'contested');
     if (ropeWorked && round.overtime < ctx.rules.flag.maxOvertime) round.overtime += dt;
-    else endRound(round, flagMode ? 1 - round.attackers : -1, 'time', ctx.rules, events);
+    else endRound(round, flagMode ? 1 - round.attackers : timeOutWinner(blueInPlay, orangeInPlay, ctx.rules), 'time', ctx.rules, events);
   }
 }
 
@@ -213,6 +223,21 @@ export function restartMatch(round: RoundState, characters: Character[], bbs: BB
   startRound(round, characters, bbs, ctx, events, 1);
 }
 
+/**
+ * Elimination: who takes a round that ran out of time (`blue` and `orange` players in play): nobody (-1, a draw) unless
+ * rules.timeOutToMorePlayers, then the team with more players left, still nobody if level (M39).
+ */
+export function timeOutWinner(blue: number, orange: number, rules: RoundRules): number {
+  if (!rules.timeOutToMorePlayers || blue === orange) return -1;
+  return blue > orange ? 0 : 1;
+}
+
+/** Whether `winner`, with `score`, has taken the match: `winsNeeded` round wins and a lead of at least `winBy` (M39). */
+export function matchWon(score: readonly [number, number], winner: number, rules: RoundRules): boolean {
+  const mine = score[winner]!;
+  return mine >= rules.winsNeeded && mine - score[1 - winner]! >= rules.winBy;
+}
+
 function endRound(round: RoundState, winner: number, reason: RoundEndReason, rules: RoundRules, events: GameEvent[]): void {
   round.winner = winner;
   round.reason = reason;
@@ -220,7 +245,7 @@ function endRound(round: RoundState, winner: number, reason: RoundEndReason, rul
   if (winner !== 0 && winner !== 1) round.draws++;
   else {
     round.score[winner]++;
-    if (round.score[winner] >= rules.winsNeeded) {
+    if (matchWon(round.score, winner, rules)) {
       round.phase = 'matchOver';
       round.matchWinner = winner;
       events.push({ type: 'matchOver', winner });

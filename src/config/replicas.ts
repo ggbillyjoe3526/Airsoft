@@ -272,6 +272,26 @@ export function muzzleVelocity(r: ReplicaConfig, grams = r.bbWeight): number {
 /** The default loadout, primary then secondary: what bots and tests carry, and a new player's picks. */
 export const LOADOUT: readonly ReplicaConfig[] = [AEG, GAS_PISTOL];
 
+/**
+ * Realcap magazines (M39, the Pro CQB ruleset and a Custom switch): every magazine holds at most `magSize` BBs (a
+ * smaller one, a pistol's, keeps its own size) and `mags` are carried, the loaded one included. The standard magazine is
+ * fitted (`magazine`), so a hi-cap or extended one can't lift it.
+ */
+export const REALCAP = { magSize: 30, mags: 3, magazine: 'standard' } as const satisfies { magSize: number; mags: number; magazine: MagazineId };
+
+/**
+ * `r` under the match's replica rules (M39): semi-auto only holds its selector on semi; realcap sets its magazines
+ * (REALCAP). `r` itself when neither applies. Pure: made once per replica as a match is built, never per tick.
+ */
+export function replicaUnderRules(r: ReplicaConfig, rules: { semiAutoOnly: boolean; realcap: boolean }): ReplicaConfig {
+  if (!rules.semiAutoOnly && !rules.realcap) return r;
+  return {
+    ...r,
+    ...(rules.semiAutoOnly ? { fireModes: ['semi'] as const, defaultFireMode: 'semi' as const } : {}),
+    ...(rules.realcap ? { magSize: Math.min(r.magSize, REALCAP.magSize), mags: REALCAP.mags } : {}),
+  };
+}
+
 export const RECOIL = {
   /** Recoil kick recovers exponentially with this time constant (s). */
   recoveryTime: 0.12,

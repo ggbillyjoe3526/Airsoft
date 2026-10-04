@@ -6,7 +6,7 @@ import type { Difficulty } from './config/bots';
 import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
-import type { MatchRules } from './config/matchRules';
+import type { MatchRules, RulesetId } from './config/matchRules';
 import { type CrosshairSettings, type HitFeedMode, hudScale, scoreboardScale } from './config/matchInfo';
 import { FULLSCREEN_RELOCK_MS } from './config/controls';
 import { CRASH_TEXT } from './config/crash';
@@ -74,6 +74,7 @@ import {
   loadMatchRules,
   loadMode,
   loadMouseDpi,
+  loadRuleset,
   loadReducedMotion,
   loadSensitivity,
   loadShowFps,
@@ -183,8 +184,9 @@ export class Game {
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   private difficulty: Difficulty;
   private teammateDifficulty: Difficulty;
-  /** The Match pop-up's rules (M20). */
+  /** The Match pop-up's rules (M20), and its Rules row's ruleset (M39). */
   private matchRules: MatchRules;
+  private ruleset: RulesetId;
   /** What the player owns from the asset pool (M26a), and their loadout built from it (M26b). */
   private readonly collection: Collection;
   private readonly loadout: LoadoutModel;
@@ -275,6 +277,7 @@ export class Game {
     this.difficulty = loadDifficulty();
     this.teammateDifficulty = loadTeammateDifficulty();
     this.matchRules = loadMatchRules();
+    this.ruleset = loadRuleset();
     this.collection = loadCollection(GAME_POOL, options.seed);
     this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear, () => this.dev.devContent));
     // Against what is really owned, so the picks land in the real loadout even with Unlock all gear on (M26d).
@@ -377,6 +380,7 @@ export class Game {
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
       matchRules: { initial: this.matchRules, onChange: (m) => ((this.matchRules = m), (this.setupChanged = true)) },
+      ruleset: { initial: this.ruleset, onChange: (r) => ((this.ruleset = r), (this.setupChanged = true)) },
       controls: {
         sensitivity: { initial: this.input.sensitivity, onChange: (v) => (this.input.sensitivity = v) },
         aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
@@ -675,7 +679,10 @@ export class Game {
 
   /** New game's picks as they play now (M35: a dev pick plays as its list's default while Dev content is off). */
   private playedPicks(): NewGamePicks {
-    return playedPicks({ map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, rules: this.matchRules }, this.dev.devContent);
+    return playedPicks(
+      { map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, ruleset: this.ruleset, rules: this.matchRules },
+      this.dev.devContent,
+    );
   }
 
   /** Every item in the Loadout: each gear slot's replica and what is fitted to it (null for an empty slot). */
@@ -761,6 +768,7 @@ export class Game {
         mode: picks.mode,
         difficulty: picks.difficulty,
         teammateDifficulty: picks.teammateDifficulty,
+        ruleset: picks.ruleset,
         rules: { ...picks.rules, teamSize: teamSizeOn(picks.map, picks.rules.teamSize) },
         kit: this.loadout.kit(),
         chaseOwned: this.loadout.ownedChase(),

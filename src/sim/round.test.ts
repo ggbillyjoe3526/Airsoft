@@ -4,11 +4,11 @@ import { LOADOUT } from '../config/replicas';
 import { createBBPool, spawnBB } from './ballistics';
 import { type Character, createCharacter } from './character';
 import type { GameEvent } from './events';
-import { attackersInRound, createRoundState, placeTeams, type RoundContext, type RoundRules, type RoundState, restartMatch, stepRound, teamEnd } from './round';
+import { attackersInRound, createRoundState, matchWon, placeTeams, type RoundContext, type RoundRules, type RoundState, restartMatch, stepRound, teamEnd, timeOutWinner } from './round';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
-const RULES: RoundRules = { roundTime: 10, resetDelay: 2, winsNeeded: 3, halfTimeAfter: 2, eliminationFirstEnd: 0, flag: { ...FLAG, firstAttackers: 0 } };
+const RULES: RoundRules = { roundTime: 10, resetDelay: 2, winsNeeded: 3, winBy: 1, timeOutToMorePlayers: false, halfTimeAfter: 2, eliminationFirstEnd: 0, flag: { ...FLAG, firstAttackers: 0 } };
 /** The pole, on the east side: end 1, where the defenders start. */
 const POLE = vec3(10, 0, 0);
 /** Two spawns at each end: west (end 0) and east (end 1). */
@@ -323,5 +323,83 @@ describe('flag rounds', () => {
     expect(cs[0]!.armament.modes[rifle]).toBe(other);
     restartMatch(round, cs, createBBPool(1), CTX, [], 'elimination');
     expect(cs[0]!.armament.modes).toEqual(LOADOUT.map((r) => r.defaultFireMode));
+  });
+});
+
+describe('Tournament round rules (M39)', () => {
+  const TOURNAMENT: RoundRules = { ...RULES, winsNeeded: 3, winBy: 2, timeOutToMorePlayers: true };
+  const ctx: RoundContext = { ...CTX, rules: TOURNAMENT };
+  const step = (seconds: number, round: RoundState, cs: Character[], events: GameEvent[]): void => {
+    const bbs = createBBPool(4);
+    for (let i = 0; i < seconds / DT; i++) stepRound(round, cs, bbs, ctx, events, DT);
+  };
+  /** Plays one round won by `team` (the other wiped out) and waits for the next to start. */
+  const winRound = (team: number, round: RoundState, cs: Character[], events: GameEvent[]): void => {
+    for (const c of cs) if (c.team !== team) c.status = 'out';
+    step(DT, round, cs, events);
+    if (round.phase !== 'matchOver') step(TOURNAMENT.resetDelay + 0.1, round, cs, events);
+  };
+
+  it('needs a two-round lead once a team has the wins needed: level one short, it plays on (overtime)', () => {
+    const round = createRoundState(TOURNAMENT);
+    const cs = teams();
+    const events: GameEvent[] = [];
+    for (const team of [0, 1, 0, 1]) winRound(team, round, cs, events); // 2-2
+    winRound(0, round, cs, events); // 3-2: the wins needed, but only one ahead
+    expect(round.score).toEqual([3, 2]);
+    expect(round.phase).toBe('live');
+    winRound(1, round, cs, events); // 3-3
+    winRound(1, round, cs, events); // 3-4
+    expect(round.phase).toBe('live');
+    winRound(1, round, cs, events); // 3-5
+    expect(round.phase).toBe('matchOver');
+    expect(round.matchWinner).toBe(1);
+    // A clear run still ends at the wins needed.
+    const quick = createRoundState(TOURNAMENT);
+    for (let r = 0; r < 3; r++) winRound(0, quick, teams(), []);
+    expect(quick.score).toEqual([3, 0]);
+    expect(quick.phase).toBe('matchOver');
+  });
+
+  it('swaps ends once, at half-time, and not again in overtime', () => {
+    expect(teamEnd(0, 'elimination', TOURNAMENT.halfTimeAfter, TOURNAMENT)).toBe(0);
+    for (let n = TOURNAMENT.halfTimeAfter + 1; n < 20; n++) expect(teamEnd(0, 'elimination', n, TOURNAMENT)).toBe(1);
+  });
+
+  it('gives an Elimination time-out to the team with more players left, and a level one is a draw played again', () => {
+    const round = createRoundState(TOURNAMENT);
+    const cs = teams();
+    const events: GameEvent[] = [];
+    cs[3]!.status = 'out';
+    step(TOURNAMENT.roundTime + 0.1, round, cs, events);
+    expect(events).toContainEqual({ type: 'roundOver', winner: 0, reason: 'time' });
+    expect(round.score).toEqual([1, 0]);
+    step(TOURNAMENT.resetDelay + 0.1, round, cs, events);
+    expect(round.number).toBe(2);
+    const level: GameEvent[] = [];
+    step(TOURNAMENT.roundTime + 0.1, round, cs, level);
+    expect(level).toContainEqual({ type: 'roundOver', winner: -1, reason: 'time' });
+    step(TOURNAMENT.resetDelay + 0.1, round, cs, level);
+    expect(round.number).toBe(2); // replayed
+  });
+
+  it('decides time-outs and match wins as pure rules, unchanged without them', () => {
+    expect(timeOutWinner(2, 1, TOURNAMENT)).toBe(0);
+    expect(timeOutWinner(1, 3, TOURNAMENT)).toBe(1);
+    expect(timeOutWinner(2, 2, TOURNAMENT)).toBe(-1);
+    expect(timeOutWinner(3, 1, RULES)).toBe(-1); // Skirmish: always a draw
+    expect(matchWon([3, 2], 0, RULES)).toBe(true);
+    expect(matchWon([3, 2], 0, TOURNAMENT)).toBe(false);
+    expect(matchWon([4, 2], 0, TOURNAMENT)).toBe(true);
+    expect(matchWon([2, 0], 0, TOURNAMENT)).toBe(false);
+  });
+
+  it('leaves Attack / Defend time-outs to the defenders', () => {
+    const round = createRoundState(TOURNAMENT, 'attackDefend', POLE);
+    const cs = teams();
+    const events: GameEvent[] = [];
+    cs[0]!.status = 'out'; // the attackers (team 0) are a player down
+    step(TOURNAMENT.roundTime + TOURNAMENT.flag.maxOvertime + 0.2, round, cs, events);
+    expect(events).toContainEqual({ type: 'roundOver', winner: 1, reason: 'time' });
   });
 });
