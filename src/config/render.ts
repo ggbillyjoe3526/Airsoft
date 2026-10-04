@@ -123,6 +123,13 @@ export type ShadowMapSize = 1024 | 2048 | 4096;
 export type TextureSize = 256 | 512 | 1024;
 /** Anisotropic filtering levels (1 = off); the browser clamps to what the graphics card offers. */
 export type Anisotropy = 1 | 2 | 4 | 8 | 16;
+/**
+ * How much modelled detail an asset group carries (FA8, final alpha audit section 5): `low` is the mesh as it was before
+ * the visual overhaul (Low's cost), `high` adds the overhaul's shapes, finishes and edge highlights.
+ */
+export type DetailLevel = 'low' | 'high';
+/** The detail levels, cheapest first. */
+export const DETAIL_LEVELS: readonly DetailLevel[] = ['low', 'high'];
 
 /**
  * What a quality preset or the Custom rows set (Settings → Graphics; final alpha audit section 4). Every field applies
@@ -185,6 +192,25 @@ export interface QualitySettings {
   trees: TreeDetail;
   /** Clouds and the sun's disc in the sky (row 21): one merged mesh of soft discs, no texture. */
   clouds: boolean;
+  // FA8 (visual overhaul: figures, replicas, attachments, hands and effects; audit section 5 rows 17-20, 23).
+  /**
+   * Players' detail (row 17): `high` models the head, goggles, gloves, kit and clothing folds, with glossy goggles, helmet
+   * shells and replicas from a per-vertex finish on the figure's one material (no extra draw call; render/figureFinish.ts).
+   */
+  figureDetail: DetailLevel;
+  /**
+   * The held replica and its parts (FA8): `high` adds bevelled edges with a lighter edge highlight, real rail slots,
+   * ring sights, a moulded speckle finish (two 128² textures), glass lenses and an emissive laser lens.
+   */
+  replicaDetail: DetailLevel;
+  /** The first-person gloves and sleeves (row 18): `high` adds knuckle pads, wrist straps, joint seams and sleeve folds. */
+  handDetail: DetailLevel;
+  /** A soft warm glow round every BB in flight (row 19), so a BB at 25 m is a warm dot, not a grey pixel. */
+  bbGlow: boolean;
+  /** Impact grit (row 20): a BB hitting a surface throws a few chips of it and a faint ring of dust round the puff. */
+  impactGrit: boolean;
+  /** A faint beam from the laser module's lens (row 23): off on every preset (a toy cue; real ones are invisible by day). */
+  laserBeam: boolean;
 }
 
 /** Trees round the field (QualitySettings.trees). */
@@ -199,11 +225,11 @@ export type TreeDetail = 0 | 1 | 2;
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
   low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false,
-    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false },
+    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false },
   medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true },
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false },
   high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true },
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false },
 };
 
 /** The fields of a QualitySettings, in the order the Custom rows show them. */
@@ -527,6 +553,11 @@ export const BB_VISUALS = {
   radius: 0.018,
   color: 0xfffbe8,
   /**
+   * The ball is two-toned (FA8): lit cream (`color`) on top, this warm grey underneath, blended over the sphere's
+   * middle, so a BB reads as a ball in the sun rather than a flat disc. Free: a colour per vertex.
+   */
+  shadeColor: 0xc8bba0,
+  /**
    * A BB is never drawn smaller than this on screen: its radius grows with distance so it stays a
    * visible dot at 10-30 m (radians of view; 0.003 ≈ 5 px wide at 1080p).
    */
@@ -549,6 +580,11 @@ export const BB_VISUALS = {
   convergeBeforeImpact: 0.7,
   /** Point-blank shots still blend over at least this long (s) instead of snapping. */
   minConvergeTime: 0.01,
+  /**
+   * The glow round each BB (QualitySettings.bbGlow, FA8): a soft warm dot `scale` times the ball's size, added (not
+   * blended) at `opacity`, so a BB at 25 m is a warm dot and not a grey pixel. One more instanced draw while BBs fly.
+   */
+  glow: { scale: 2.6, opacity: 0.35, color: 0xffe2a8 },
   /** Debug BB-path overlay: how many recent paths, and points per path. */
   debugPaths: 48,
   debugPathPoints: 150,
@@ -601,19 +637,56 @@ export const IMPACT_DUST: Readonly<Record<ImpactMaterial, { tint: number; scale:
 };
 
 /**
+ * Impact grit (QualitySettings.impactGrit, FA8): with each impact puff, a fainter, wider ring of dust (IMPACT_RINGS) and
+ * `perImpact` chips of the surface (in its dust tint) thrown out at `speed` m/s, falling under `gravity` and gone after
+ * `lifetime` s. Each chip is a small square `size` metres across (never under `minAngularSize` radians on screen),
+ * spinning. Dust and splinters, never sparks. A pool of `max` chips (the oldest reused), one draw call.
+ */
+export const IMPACT_GRIT = {
+  max: 256,
+  perImpact: [4, 6] as const,
+  speed: [2, 4] as const,
+  gravity: 9.8,
+  lifetime: 0.35,
+  size: [0.006, 0.012] as const,
+  minAngularSize: 0.0016,
+  /** Thrown out towards the side the BB came from (its shooter's): this much of the direction, the rest random and up. */
+  toward: 0.6,
+  up: 0.5,
+  spin: 18,
+  /** Chips are a touch darker than the dust's tint, so they read against the puff. */
+  shade: 0.75,
+  seed: 4413,
+} as const;
+
+/** The faint ring of dust round an impact puff with impact grit on (FA8): wider, fainter and slower than the puff. */
+export const IMPACT_RINGS: PuffConfig = {
+  ...IMPACT_PUFFS,
+  max: 32,
+  lifetime: 0.5,
+  growTime: 0.12,
+  startScale: 0.4,
+  radius: IMPACT_PUFFS.radius * 1.8,
+  minAngularRadius: IMPACT_PUFFS.minAngularRadius * 1.8,
+  opacity: 0.25,
+  drift: 0.08,
+};
+
+/**
  * A gas replica's breath (M14): each shot of a gas pistol puffs a little propellant from the muzzle, pushed forward
  * (`muzzleSpeed`, m/s), and a smaller one out of the ejection port to the right as the slide cycles. No flash, no
  * casings: a toy's puff of gas.
  */
 export const GAS_PUFFS: PuffConfig & { muzzleSpeed: number; portScale: number; portSpeed: number; portBack: number } = {
   max: 16,
-  lifetime: 0.5,
+  lifetime: 0.35,
   growTime: 0.07,
   startScale: 0,
   radius: 0.045,
   /** Small even far away: a hint, not a marker (0.004 ≈ 6 px wide at 1080p). */
   minAngularRadius: 0.004,
-  color: 0xf2f6fa,
+  // A cool, short breath (FA8): gas, not smoke.
+  color: 0xe8f0ff,
   opacity: 0.45,
   drift: 0.12,
   muzzleSpeed: 1.6,
