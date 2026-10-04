@@ -245,6 +245,7 @@ export class Menus {
 
   /** A short message under the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */
   showHint(text: string): void {
+    this.title.showHint(text);
     this.setup.showHint(text);
     this.pause.showHint(text);
     this.result.showHint(text);

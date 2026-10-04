@@ -1,6 +1,6 @@
 import { AIM_MODES, CROUCH_MODES, type CrouchMode, type HoldMode, INVERT_MOUSE, MOUSE, MOUSE_DPI, OTHER_SHOOTERS, SPRINT_MODES, TURN_CM } from '../config/controls';
 import { AIMING } from '../config/optics';
-import { cmPer360, sameSensitivityAs, sensitivityForCm } from '../input/sensitivity';
+import { cmPer360, sameSensitivityAs, sensitivityFromTypedCm } from '../input/sensitivity';
 import { saveSetting } from '../settings/storage';
 import { el, menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
@@ -15,8 +15,6 @@ export interface ControlsSettingsOptions {
   aim: { initial: HoldMode; onChange: (m: HoldMode) => void };
   sprint: { initial: HoldMode; onChange: (m: HoldMode) => void };
 }
-
-const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v));
 
 /**
  * A number box that commits on Enter or leaving it (not on every key, so typing "25" never passes through "2"). A value
@@ -64,13 +62,14 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
   const sliderInput = slider.querySelector('input')!;
   const sliderOutput = slider.querySelector('output')!;
 
-  // A cm/360 beyond the sensitivity range is clamped to it, and the box then shows the cm/360 actually in use.
+  // A cm/360 sets the nearest sensitivity the slider can show (clamped to its range), and the box then shows the
+  // cm/360 actually in use.
   const cm = numberBox(
     'Turn distance, cm per 360°',
     { ...TURN_CM, step: 'any' },
     '',
     (v) => {
-      const fromCm = clamp(sensitivityForCm(v, dpi), MOUSE.minSensitivity, MOUSE.maxSensitivity);
+      const fromCm = sensitivityFromTypedCm(v, dpi);
       saveSetting('sensitivity', fromCm);
       setSensitivity(fromCm, true);
     },

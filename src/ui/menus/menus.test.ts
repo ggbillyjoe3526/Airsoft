@@ -6,7 +6,7 @@ import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
 import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
-import { backTarget, screenWhenStopped } from './menuNav';
+import { backTarget, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
 import { loadFov, loadMap, loadSavedQuality } from './savedChoices';
 
@@ -36,6 +36,19 @@ describe('menu navigation', () => {
     expect(backTarget('title', 'setup')).toBeNull();
     expect(backTarget('pause', 'pause')).toBeNull();
     expect(backTarget('result', 'setup')).toBeNull();
+  });
+});
+
+describe('settings tabs', () => {
+  it('moves between tabs with the arrows (wrapping round), Home and End, and ignores other keys (audit L-31)', () => {
+    expect(tabAfterKey('ArrowDown', 0, 6)).toBe(1);
+    expect(tabAfterKey('ArrowDown', 5, 6)).toBe(0);
+    expect(tabAfterKey('ArrowUp', 0, 6)).toBe(5);
+    expect(tabAfterKey('ArrowUp', 3, 6)).toBe(2);
+    expect(tabAfterKey('Home', 4, 6)).toBe(0);
+    expect(tabAfterKey('End', 1, 6)).toBe(5);
+    expect(tabAfterKey('Tab', 1, 6)).toBeNull();
+    expect(tabAfterKey('ArrowRight', 1, 6)).toBeNull();
   });
 });
 

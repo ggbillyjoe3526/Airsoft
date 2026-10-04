@@ -1,5 +1,5 @@
-import { type Action, REBINDABLE, UNBINDABLE_KEYS } from '../config/controls';
-import { describeKeys, type KeyBindings, keyLabel, mouseButtonCode } from '../input/keyBindings';
+import { type Action, REBINDABLE } from '../config/controls';
+import { bindable, describeKeys, type KeyBindings, keyLabel, mouseButtonCode } from '../input/keyBindings';
 
 const CTRL_WARNING = 'Heads up: some Ctrl combinations (like Ctrl+W, close tab) can\'t be blocked by the browser.';
 
@@ -10,7 +10,7 @@ const CTRL_WARNING = 'Heads up: some Ctrl combinations (like Ctrl+W, close tab) 
  */
 export class KeySettings {
   readonly root: HTMLDivElement;
-  private readonly buttons = new Map<Action, HTMLButtonElement>();
+  private readonly buttons = new Map<Action, { button: HTMLButtonElement; label: string }>();
   private readonly note: HTMLParagraphElement;
   /** The action waiting for a key press, if any. */
   private listening: Action | null = null;
@@ -47,7 +47,7 @@ export class KeySettings {
       });
       row.append(name, button);
       list.appendChild(row);
-      this.buttons.set(action, button);
+      this.buttons.set(action, { button, label });
     }
     this.note = document.createElement('p');
     this.note.className = 'key-note';
@@ -96,9 +96,11 @@ export class KeySettings {
 
   private refresh(message = ''): void {
     let ctrl = false;
-    for (const [action, button] of this.buttons) {
+    for (const [action, { button, label }] of this.buttons) {
       const waiting = action === this.listening;
       button.textContent = waiting ? 'Press a key or click…' : describeKeys(this.bindings.codes(action));
+      // Named for its action too (audit L-31): a screen reader would otherwise say only "W, button".
+      button.setAttribute('aria-label', `${label}: ${button.textContent}`);
       button.classList.toggle('listening', waiting);
       if (this.bindings.codes(action).some((c) => c.startsWith('Control'))) ctrl = true;
     }
@@ -115,9 +117,11 @@ export class KeySettings {
       this.listen(null);
       return;
     }
-    if (UNBINDABLE_KEYS.has(e.code) || !this.bindings.rebind(action, e.code)) {
+    if (!bindable(e.code) || !this.bindings.rebind(action, e.code)) {
       const reserved = this.bindings.actionOf(e.code)?.startsWith('debug');
-      this.refresh(`${keyLabel(e.code)} can't be bound${reserved ? ' (it shows debug info)' : ''}.`);
+      // A key the browser can't name (an unmapped media or Fn key) has no label worth showing.
+      const name = e.code && e.code !== 'Unidentified' ? keyLabel(e.code) : 'That key';
+      this.refresh(`${name} can't be bound${reserved ? ' (it shows debug info)' : ''}.`);
       return;
     }
     this.listening = null;
@@ -129,7 +133,7 @@ export class KeySettings {
     this.boundButton = null;
     const action = this.listening;
     if (!action) return;
-    const box = this.buttons.get(action);
+    const box = this.buttons.get(action)?.button;
     if (!(e.target instanceof Node && box?.contains(e.target))) {
       this.listen(null);
       return;

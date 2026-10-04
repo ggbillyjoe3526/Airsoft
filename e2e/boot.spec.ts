@@ -4,7 +4,8 @@ import { expect, test } from '@playwright/test';
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
  * Difficulty pop-ups, a 2v2 picked, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2× scope, an
  * angled grip, a hi-cap and 0.28 g BBs, holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
- * down the scope, switches the graphics quality to Medium and back to Low mid-match and keeps running without a page error.
+ * down the scope, switches the graphics quality to Medium and back to Low mid-match, ends the match (summary, result, Play
+ * Again) and keeps running without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
@@ -111,10 +112,15 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const rifleGrip = loadout.getByRole('group', { name: 'AEG rifle grip' });
   await expect(rifleGrip.getByRole('button', { name: 'No grip' })).toHaveAttribute('aria-pressed', 'true');
   await rifleGrip.getByRole('button', { name: 'Angled grip' }).click();
-  await expect(loadout.getByText(/Brings the AEG rifle up in 0\.36 s/)).toBeVisible();
-  await expect(loadout.getByText('Up to your eye in 0.19 s with the angled grip.')).toBeVisible();
-  await loadout.getByRole('group', { name: 'AEG rifle magazine' }).getByRole('button', { name: 'Hi-cap' }).click();
-  await expect(loadout.getByText('120 BBs each, 2 carried (240 in all). Reload 1.8 s.')).toBeVisible();
+  // The numbers themselves are the unit tests' (loadoutChoice.test.ts); here only that they show (audit L-10).
+  await expect(loadout.getByText(/Brings the AEG rifle up in [\d.]+ s/)).toBeVisible();
+  await expect(loadout.getByText(/Up to your eye in [\d.]+ s with the angled grip\./)).toBeVisible();
+  const rifleMag = loadout.getByRole('group', { name: 'AEG rifle magazine' });
+  await rifleMag.getByRole('button', { name: 'Hi-cap' }).click();
+  // The magazine's line sits under its buttons, in the picker around the group (the pistol has one too).
+  const hiCapLine = loadout.locator('.picker', { has: page.getByRole('group', { name: 'AEG rifle magazine' }) }).getByText(/\d+ BBs each, \d+ carried \(\d+ in all\)\. Reload [\d.]+ s\./);
+  await expect(hiCapLine).toBeVisible();
+  const hiCap = Number((await hiCapLine.textContent())!.match(/(\d+) BBs each/)![1]); // checked in the match below
   await expect(loadout.getByText('Replicas and outfit').first()).toBeAttached(); // skins, greyed as LATER
   await loadout.getByRole('button', { name: 'Back' }).click();
   await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('2× scope · Angled grip · Hi-cap mag');
@@ -125,13 +131,19 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings).toBeVisible();
   // Controls (M18): the sensitivity as cm/360 at the mouse's DPI; typing a cm/360 moves the slider to match.
   const cm = settings.getByRole('spinbutton', { name: /cm per 360/ });
-  await expect(cm).toHaveValue(/^(19\.9|20\.0)$/); // 19.95 cm at sensitivity 1.00 and 800 DPI
+  await expect(cm).toHaveValue(/^\d+\.\d$/); // worked out from the sensitivity and DPI (sensitivity.test.ts has the sums)
   await cm.fill('40');
   await cm.press('Enter');
   await expect(settings.getByRole('slider', { name: 'Mouse sensitivity' })).toHaveValue('0.5');
   await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
   await settings.getByRole('tab', { name: /Accessibility/i }).click();
   await expect(settings.getByRole('group', { name: 'Reduced motion' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  // Reduced motion reaches the HUD's CSS animations through a class on the container (audit M-03); back off for the match.
+  const reducedMotion = settings.getByRole('group', { name: 'Reduced motion' });
+  await reducedMotion.getByRole('button', { name: 'On' }).click();
+  await expect(page.locator('#app')).toHaveClass(/\breduced-motion\b/);
+  await reducedMotion.getByRole('button', { name: 'Off' }).click();
+  await expect(page.locator('#app')).not.toHaveClass(/\breduced-motion\b/);
   // M18b: High contrast team colours and the on-screen sound cues, both for the match below.
   await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'High contrast' }).click();
   await expect(settings.locator('.team-swatch')).toHaveCount(2);
@@ -143,10 +155,21 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await settings.getByRole('tab', { name: /Key bindings/i }).click();
   // Fire and aim are bindings like the rest (M18), on the mouse buttons by default.
   await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
+  // A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T, is saved,
+  // and the match below reloads on T.
+  await settings.getByRole('button', { name: 'Reload: R' }).click();
+  await expect(settings.getByRole('button', { name: /^Reload: Press a key/ })).toBeVisible();
+  await page.keyboard.press('KeyT');
+  await expect(settings.getByRole('button', { name: 'Reload: T' })).toHaveText('T');
+  const savedReload = await page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.keyBindings') ?? '{}') as { reload?: string[] }).reload);
+  expect(savedReload).toEqual(['KeyT']);
   await settings.getByRole('tab', { name: /Audio/i }).click();
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
-  await settings.getByRole('tab', { name: /Crosshair/i }).click();
+  // The tabs follow the tabs pattern (audit L-31): Arrow Up from Audio picks Crosshair and moves the focus there.
+  await page.keyboard.press('ArrowUp');
+  await expect(settings.getByRole('tab', { name: /Crosshair/i })).toHaveAttribute('aria-selected', 'true');
+  await expect(settings.getByRole('tab', { name: /Crosshair/i })).toBeFocused();
   const previews = settings.locator('.crosshair-preview .hud-crosshair');
   await expect(previews).toHaveCount(2);
   await settings.getByRole('button', { name: 'Circle' }).click();
@@ -155,6 +178,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(setup).toBeVisible();
   await expect(setup.getByRole('button', { name: /Settings/i })).toBeFocused();
 
+  const teamCss = () => page.evaluate(() => getComputedStyle(document.getElementById('app')!).getPropertyValue('--team-1').trim());
+  const standardOrange = await teamCss(); // the stylesheet's until a match applies the picked set
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   expect(await matchLoaded()).toBe(true);
@@ -162,7 +187,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
   await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
   // The match wears the High contrast colours on the HUD, and the sound cue ring is up.
-  expect(await page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--team-1'))).toBe('#e0601a');
+  const matchOrange = await teamCss();
+  expect(matchOrange).toMatch(/^#[0-9a-f]{6}$/);
+  expect(matchOrange).not.toBe(standardOrange);
   await expect(page.locator('.sound-cues')).not.toHaveAttribute('hidden');
   // Holding Tab shows the scoreboard with every player (M19); letting go hides it.
   const board = page.locator('.match-board');
@@ -190,7 +217,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const mag = page.locator('.hud-mag');
   await expect(mag).toHaveText(/^\d+$/);
   const full = Number(await mag.textContent());
-  expect(full).toBe(120); // the hi-cap
+  expect(full).toBe(hiCap); // the hi-cap, as the Loadout said
 
   // Fire: hold the button until the magazine count drops.
   await page.mouse.move(640, 360);
@@ -198,8 +225,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect.poll(async () => Number(await mag.textContent()), { timeout: 20_000 }).toBeLessThan(full);
   await page.mouse.up();
 
-  // Reload: the half-used magazine goes back in the pouch and a full one comes out.
-  await page.keyboard.press('r');
+  // Reload (on T, rebound in Settings): the half-used magazine goes back in the pouch and a full one comes out.
+  await page.keyboard.press('t');
   await expect.poll(async () => Number(await mag.textContent()), { timeout: 30_000 }).toBe(full);
 
   // Fire selector: the AEG starts on auto, and B steps it to single (semi).
@@ -306,6 +333,41 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.sound-cue.cue-shot:not([hidden])').first()).toBeAttached({ timeout: 10_000 });
   await page.evaluate(() => (window as unknown as { stopShots: () => void }).stopShots());
   await testInfo.attach('sound-cue', { body: await page.screenshot(), contentType: 'image/png' });
+
+  // The match's end (audit L-27): in a live round with Blue one win short, the Orange team is put out of play, so the
+  // simulation ends the round and the match with it (a round between rounds, or a draw, gets another go). The summary
+  // comes up with the records (custom rules, so not counted), then the result, and Play Again starts the match over.
+  type End = { airsoft: { state: { round: { phase: string; score: number[] }; characters: { team: number; status: string }[] }; session: { rounds: { winsNeeded: number } } } };
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const game = (window as unknown as End).airsoft;
+          const r = game.state.round;
+          if (r.phase === 'matchOver') return true;
+          if (r.phase === 'live') {
+            r.score[0] = game.session.rounds.winsNeeded - 1;
+            for (const c of game.state.characters) if (c.team === 1) c.status = 'out';
+          }
+          return false;
+        }),
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+  const summary = page.locator('.menu-summary');
+  await expect(summary).toBeVisible({ timeout: 30_000 });
+  await expect(summary.locator('.summary-result')).toContainText('You win!');
+  await expect(summary.locator('.records-not-counted')).toContainText('Custom rules');
+  await expect(summary.locator('.records-grid td').first()).toHaveText('–');
+  await summary.getByRole('button', { name: 'Continue' }).click();
+  const result = page.locator('.menu-result');
+  await expect(result).toBeVisible();
+  await expect(result.locator('.menu-result-headline')).toHaveText('You win!');
+  await result.getByRole('button', { name: 'Play Again' }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
+  const round = () => page.evaluate(() => (window as unknown as End).airsoft.state.round);
+  await expect.poll(async () => (await round()).phase, { timeout: 10_000 }).toBe('live');
+  expect((await round()).score).toEqual([0, 0]);
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });
 
@@ -347,6 +409,9 @@ test('the practice range opens from the title screen and reads out the last BB',
   await settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' }).click();
   await page.keyboard.press('Escape');
   await page.locator('.menu-setup').getByRole('button', { name: 'Back' }).click();
+  // A refused mouse lock (Practice range or Tutorial clicked too soon after Esc) says so on the title too (audit L-29).
+  await page.evaluate(() => document.dispatchEvent(new Event('pointerlockerror')));
+  await expect(page.locator('.menu-title .menu-hint')).toContainText('Click again');
   await page.getByRole('button', { name: 'Practice range' }).click();
   const readout = page.locator('.range-readout');
   await expect(readout).toBeVisible();
@@ -435,6 +500,9 @@ test('the practice range opens from the title screen and reads out the last BB',
 test('the tutorial opens on the range with the coach', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
   // Low, so the range draws fast enough in software on a CI runner (as the first test).
   await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
@@ -448,22 +516,32 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await expect(coach).toContainText(/1 of \d+/);
   await expect(page.locator('.range-readout')).toBeHidden(); // the coach takes its place until the last step
 
-  // Doing it moves it on: turn the view, and after the tick the coach asks you to move.
-  type Tut = { airsoft: { input: { yaw: number }; session: { tutorial: { index: number; amount: number } } } };
-  for (let i = 0; i < 8; i++) {
-    await page.evaluate(() => {
-      (window as unknown as Tut).airsoft.input.yaw += 0.3;
-    });
-    await page.waitForTimeout(50);
-  }
-  await expect(coach).toContainText(/2 of \d+/, { timeout: 10_000 });
+  // Doing it moves it on: turn the view (a little more on each poll, so the ticks see it), and the coach asks you to move.
+  type Tut = {
+    airsoft: {
+      input: { yaw: number };
+      session: { tutorial: { steps: { goal: { seconds?: number } }[]; debugJumpTo: (index: number, amount: number) => void } };
+    };
+  };
+  await expect
+    .poll(
+      async () => {
+        await page.evaluate(() => {
+          (window as unknown as Tut).airsoft.input.yaw += 0.3;
+        });
+        return coach.textContent();
+      },
+      { timeout: 10_000 },
+    )
+    .toMatch(/2 of \d+/);
   await expect(coach).toContainText('Move');
 
-  // The last card read to its end: the coach gives way to the range readout, and the title stops tagging the button.
+  // The last card read to its end (the tracker's debug jump, e2e build only): the coach gives way to the range readout,
+  // and the title stops tagging the button.
   await page.evaluate(() => {
     const t = (window as unknown as Tut).airsoft.session.tutorial;
-    t.index = 9;
-    t.amount = 11.9;
+    const last = t.steps.length - 1;
+    t.debugJumpTo(last, (t.steps[last]!.goal.seconds ?? 0) - 0.1);
   });
   await expect(page.locator('.range-readout')).toBeVisible({ timeout: 10_000 });
   await expect(coach).toBeHidden();

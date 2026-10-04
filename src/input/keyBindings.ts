@@ -54,7 +54,7 @@ export class KeyBindings {
    * reserved by actions the settings don't list (the debug keys), which never swap.
    */
   rebind(action: Action, code: string): boolean {
-    if (UNBINDABLE_KEYS.has(code) || !REBINDABLE_ACTIONS.has(action)) return false;
+    if (!bindable(code) || !REBINDABLE_ACTIONS.has(action)) return false;
     const other = this.actionOf(code);
     if (other && !REBINDABLE_ACTIONS.has(other)) return false;
     const mine = this.map.get(action) ?? [];
@@ -104,7 +104,7 @@ export class KeyBindings {
       for (const action of Object.keys(DEFAULT_BINDINGS) as Action[]) {
         if (!REBINDABLE_ACTIONS.has(action)) continue; // debug keys always keep their defaults
         const codes = saved[action];
-        if (Array.isArray(codes) && codes.length > 0 && codes.every((c) => typeof c === 'string' && !UNBINDABLE_KEYS.has(c))) {
+        if (Array.isArray(codes) && codes.length > 0 && codes.every((c) => typeof c === 'string' && bindable(c))) {
           this.map.set(action, codes as string[]);
           fromSave.add(action);
         }
@@ -131,6 +131,11 @@ export class KeyBindings {
       }
     }
   }
+}
+
+/** Whether `code` can be bound: not empty (a key the browser couldn't name) and not one of UNBINDABLE_KEYS. */
+export function bindable(code: string): boolean {
+  return code.length > 0 && !UNBINDABLE_KEYS.has(code);
 }
 
 /** An action's keys for display; a Left+Right pair of one modifier shows as just "Shift" etc. */
