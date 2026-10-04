@@ -378,6 +378,8 @@ export interface PuffConfig {
   max: number;
   lifetime: number;
   growTime: number;
+  /** Size on the first frame as a share of full size (0..1): growth over `growTime` starts here, not at nothing. */
+  startScale: number;
   radius: number;
   minAngularRadius: number;
   color: number;
@@ -390,6 +392,8 @@ export const IMPACT_PUFFS: PuffConfig = {
   lifetime: 0.35,
   /** Seconds to reach full size. */
   growTime: 0.06,
+  /** Half size at once, so a close-range hit shows a puff on its first frame rather than a near-empty one (M28). */
+  startScale: 0.5,
   radius: 0.06,
   /**
    * Never smaller than this on screen (radians of view; 0.013 ≈ 20 px wide at 1080p), so a puff reads
@@ -423,6 +427,7 @@ export const GAS_PUFFS: PuffConfig & { muzzleSpeed: number; portScale: number; p
   max: 16,
   lifetime: 0.5,
   growTime: 0.07,
+  startScale: 0,
   radius: 0.045,
   /** Small even far away: a hint, not a marker (0.004 ≈ 6 px wide at 1080p). */
   minAngularRadius: 0.004,
@@ -457,8 +462,13 @@ export const DUST_MOTES = {
   edgeFade: 1.5,
   color: 0xfff4dc,
   opacity: 0.65,
-  /** A slow breeze (m/s), and each mote's own wander round it: amplitude (m) and rate (rad/s). */
-  breeze: { x: 0.12, y: 0.02, z: 0.05 },
+  /**
+   * The motes ride the match's wind (M30), the one that drifts the BBs, so it can be read from them: `windShare` of its
+   * speed (1: dust moves with the air). `breeze` (m/s) is a faint stir on top, so they drift even on a calm day, and each
+   * mote wanders round that: amplitude (m) and rate (rad/s).
+   */
+  windShare: 1,
+  breeze: { x: 0.04, y: 0.02, z: 0.02 },
   wander: 0.25,
   wanderRate: 0.35,
   seed: 707,
@@ -472,6 +482,7 @@ export const HIT_PUFFS: PuffConfig = {
   max: 8,
   lifetime: 0.6,
   growTime: 0.05,
+  startScale: 0,
   radius: 0.16,
   minAngularRadius: 0.03,
   color: 0xffffff,

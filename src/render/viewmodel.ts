@@ -302,7 +302,8 @@ export class Viewmodel {
     let marker: THREE.Object3D | undefined;
     for (const s of this.slots) if (s.model.visible) marker = s.muzzle;
     if (!marker) return false;
-    this.rig.updateMatrixWorld(true);
+    // getWorldPosition brings the marker's own chain (rig → model → marker) up to date, nothing else under the rig
+    // (audit REN-11: a full rig update recomposed ~60 matrices on every shot).
     marker.getWorldPosition(this.muzzleView); // viewmodel camera sits at the origin, so this is camera space
     const distance = this.muzzleView.length();
     this.muzzleView.project(this.camera);

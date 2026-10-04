@@ -125,14 +125,14 @@ replica per slot for now), then the optic, the **BB weight** (0.20, 0.25 or 0.28
 
 - [ ] **The BB weight starts where each replica comes set up:** 0.25 g on the rifle, 0.20 g on the pistol. The line
   under it gives both sides: how fast the BB leaves and reaches 20 m, and the hop-up that gives it the longest reach and how far it then
-  stays on target (rifle: 88 m/s, 20 m in 0.28 s, best about 65%, ~38 m).
+  stays on target (rifle: 88 m/s, 20 m in 0.30 s, best about 65%, ~39 m).
 - [ ] **Pick 0.28 g on the rifle.** It leaves slower (about 84 m/s) and the hop-up line now says it is on target to
-  about 34 m: heavy BBs need more hop. Turn the dial up to the 75% the weight line suggests: on target to about 40 m.
+  about 35 m: heavy BBs need more hop. Turn the dial up to the 75% the weight line suggests: on target to about 41 m.
 - [ ] **Pick 0.20 g on the rifle with the dial at 65%.** The hop-up line warns it's too much (light BBs rise more on
-  the same hop). In a match, far shots fly high and float; turn the dial down to about 55% and they fly flat.
+  the same hop). In a match, far shots fly high and float; turn the dial down to about 50% and they fly flat.
 - [ ] **Is the choice worth having?** The differences are small on purpose, as at a real site (DECISIONS): 0.28 g
   carries a couple of metres further past Depot's longest sightlines (~34 m), 0.20 g gets to 10–20 m a hundredth of a
-  second sooner (by ~30 m they arrive together). On the pistol the gap is bigger (25 → 34 m of reach on full hop). If you can't feel
+  second sooner (by ~30 m they arrive together). On the pistol the gap is bigger (about 31 → 35 m of best reach). If you can't feel
   it on Depot, say so and it can be widened (for example, light BBs scattering more).
 - [ ] **Back on New game** the Loadout button lists the weights (e.g. "0.28 g / 0.20 g BBs"), and they are still
   picked after reloading the page. Bots always shoot their replicas' standard BBs.
@@ -176,6 +176,28 @@ for the replicas you own, right-click an equipped replica to customise it. The A
 - [ ] **Dev settings → Unlock all gear On.** The Loadout offers every replica and part at every rarity, and the match
   stays out of your records. Fit a Legendary optic, then turn it off: your own picks are back as they were.
 
+## Weapon performance (M29a)
+
+The numbers live in `stats.md` beside `pool.md`. Start, then Loadout; right-click the rifle to customise it.
+
+- [ ] **Gear slots.** Each replica's slot shows a line under its tier, e.g. "0.97 J · 13 BBs/s · 60 BBs" for the
+  AEG as it comes and "0.52 J · 7 BBs/s · 18 BBs" for the pistol.
+- [ ] **Performance sheet.** Customise shows a Performance panel beside the parts (above them in a narrow window):
+  energy, muzzle speed (m/s, and fps on 0.20 g), BB weight, rate of fire, on-target range, time to 20 m, spread,
+  recoil, magazines, reload, draw, aim raise. As it comes, nothing is coloured.
+- [ ] **It follows you.** Drag the BB weight to 0.28 g and the hop-up about: the energy, speed, range and time change
+  as you drag, marked green (better) or red (worse) with a percentage. Fit the vertical grip: Draw goes red. Fit the
+  hi-cap: Magazines shows "120 × 2 (240)" without a colour (a trade-off).
+- [ ] **Tiers scale.** With Dev settings → Unlock all gear, equip a Legendary AEG Rifle: 1.04 J, 14 BBs/s, spread
+  −15 %. A Legendary pistol on Legendary Black Gas: about 0.71 J, recoil +20 %.
+- [ ] **Batteries.** Fit the 11.1 V LiPo Battery to the rifle: rate of fire +15 %, energy unchanged; a match with it
+  sounds and empties the magazine faster.
+- [ ] **Armory.** A Rare or better copy lists what its tier adds (e.g. "+6% energy" on an Epic gas) on its tile and in
+  the collection list; Common copies list nothing.
+- [ ] **Edit the file.** Change the AEG's `Fire rate (BBs/s)` in `stats.md` to 20 and run `npm run dev`: the sheet
+  says 20 BBs/s and the rifle (and the bots' rifles) fire faster. Put it back. A typo (`2O`) shows in the console and
+  `npm run test` names its line.
+
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the
@@ -184,11 +206,31 @@ setting does.
 
 - [ ] **Leave both on the factory setting (rifle 65%, pistol 55%) and shoot at a bot or a wall far away (30 m and
   more).** Rifle BBs rise a little (about a hand's width) around 20 m and are still on target at Depot's longest
-  sightlines (about 34 m). The pistol's BBs drop sooner, from about 25 m.
+  sightlines (about 34 m), on target to about 39 m. The pistol's BBs drop sooner, from about 27 m.
 - [ ] **Turn the rifle's hop-up right down (0%).** BBs start dropping from about 14 m; far shots land low.
 - [ ] **Turn it right up (90–100%).** The BBs climb about half a metre over your aim and float before they fall.
   The line under the slider says so.
 - [ ] **Find a setting you like.** The game remembers it. Bots always use the factory setting.
+
+## BB flight and wind (M30)
+
+BBs now fly by real air physics: drag slows them the way air slows a real 6 mm BB, the hop-up's backspin holds them up
+until it wears off and the BB slows, and each match has its own light breeze (calm to about 2 m/s, gusting a little)
+that pushes BBs, never players. The dust floating in the air (Medium and High quality) drifts with it.
+
+- [ ] **Shoot the rifle at a wall 30 m or more away, on the factory hop.** The BBs take about half a second to get there,
+  fly flat and then drop away past about 40 m, slowing visibly at the end.
+- [ ] **Look at the dust in the air for a few seconds on Medium or High.** It drifts one way: that's the wind. Start a
+  few matches: the strength and direction change from match to match.
+- [ ] **Fire a long burst across the wind at 30 m or more.** The BBs curve gently downwind, more and more towards the
+  end (in the strongest breeze up to about half a metre at 34 m); at 10 m you can't see it. Aiming a little upwind
+  brings them back on. Dev tab › BB paths shows the curve from above.
+- [ ] **Shoot with the wind and into it.** Into the wind BBs arrive a touch later and drop a little sooner.
+- [ ] **On the practice range** every target out to 60 m can still be hit: from 40 m out aim high (or turn the hop-up up)
+  and a little upwind. The readout's miss line shows where the last BB landed.
+- [ ] **Bots:** they hit you as often as before at short range and lead you better when you run across their aim at
+  range. In a strong breeze their long shots miss downwind as yours do. Say if bots feel too weak or too strong.
+- [ ] **Frame rate:** a full-auto firefight on Low feels as smooth as before.
 
 ## Bots and rounds
 
@@ -585,6 +627,125 @@ Quick checks that these stay fixed:
 - [ ] **Empty the AEG with the trigger held, press 2 then 1 while still holding.** It clicks dry and starts a reload.
 - [ ] **Watch bots fighting near door frames.** They shouldn't fire into the frame right beside them, or dive for
   cover after their own BB hits the wall next to them.
+
+## Audio pass (FA6)
+
+Headphones help. Every sound is still generated by the game (nothing downloaded).
+
+- [ ] **Stand still in the yard between rounds.** A very quiet outdoor bed (distant air and traffic hum, slow gusts)
+  sits under everything, with no audible loop point; now and then a small bird chirps somewhere round you. It should
+  be barely there, never a hiss. The Effects slider turns it down with the rest.
+- [ ] **Press Esc while a burst or a reverb tail is sounding, then Resume.** No click either way: the sound fades out
+  and back in.
+- [ ] **Get hit.** The hit tick stands out clearly: the world dips for a moment under it and comes back.
+- [ ] **While you walk off and wait in the dead zone,** the field sounds muffled and quieter (as from the side line);
+  the whistle stays clear. At the next round it's clear again.
+- [ ] **Listen for a bot sprinting at you from about 20 m** (Depot, behind the containers). You should hear it
+  coming from most of the way, quieter than any shot. Distant firefights are a little louder than before.
+- [ ] **At the end of a round,** the whistle sits a little above the field instead of fighting it.
+- [ ] **Practice range:** the steel plates at 50 and 60 m still ring when you hit them.
+- [ ] **Click on another window on a second monitor (or open an overlay such as Discord's) while playing.** The game
+  pauses as it does for Alt+Tab.
+- [ ] **Firefox: Settings › Privacy & Security › Autoplay › Block Audio and Video,** then play. A short line under
+  Resume says sound is blocked by the browser. Allow it for the site and the next Resume has sound.
+- [ ] **F3:** the box shows `audio latency (ms)` (about 10–40 depending on the system).
+- [ ] **On a 44.1 kHz or 96 kHz output device** (many USB headsets, HDMI receivers), shots and clicks sound as crisp
+  as on 48 kHz.
+## Crash handling, movement and match flow (FA1)
+
+- [ ] **Crash pane with the real mouse lock (dev server).** Start a match, click in to lock the mouse, then in the
+  console run `airsoft.session.advance = () => { throw new Error('test') }`. The game stops, the cursor comes back,
+  and a "Something went wrong" pane matching the menus shows the seed; **Copy Report** puts it on the clipboard
+  (try Chrome and Firefox) and **Reload** starts again.
+- [ ] **Settings › Dev › Diagnostics › Copy** pastes a report starting "Airsoft diagnostics" with your GPU and settings.
+- [ ] **Jump buffer.** Press jump just before landing from a crate, and while standing up from a crouch: the jump
+  happens, never twice. Does it feel right or too forgiving?
+- [ ] **Ramps.** Sprint up and down Depot's dock ramps: uphill still loses about a quarter of a sprint's pace (unchanged). A fix is built but off (`rampPace` 0 in `config/movement.ts`; 1 keeps the pace both ways): say whether you want it, knowing it lets attackers reach the pole sooner.
+- [ ] **Crouch-walking accuracy.** Crouch-walk and fire at a range figure: the crosshair is a little wider than when
+  crouched still, a little tighter than walking upright. Is the cost noticeable but fair?
+- [ ] **Stepping off a kerb** (a 0.15 m step) while aiming: the crosshair doesn't flash wide.
+- [ ] **Pistol out of a sprint.** Let go of sprint and click at once: the shot fires a moment later instead of being lost.
+- [ ] **A drawn Elimination round** (both last players out together) replays the same round number; the summary
+  counts it under rounds played.
+- [ ] **Play again** shows a new seed in the F3 box, and that seed in a new page reproduces the match's start.
+- [ ] **A finished match is recorded at once:** finish a match, go straight to Stats without pausing; it is counted
+  and paid.
+- [ ] **Walk-off from the far quarter of Depot.** Get hit at one end; you walk all the way to your dead zone instead of
+  fading out on the way.
+- [ ] **A slow machine** (or DevTools CPU throttling 6×): the game keeps real-time pace down to about 6 frames a second.
+
+## Input, key bindings and HUD fixes (FA5)
+
+- [ ] **Chrome or Edge with a French (AZERTY) or German (QWERTZ) keyboard layout.** Settings → Key Bindings shows
+  Move forward as **Z** (AZERTY) and the order wheel as **W** (AZERTY) or **Y** (QWERTZ); the tutorial's hints and
+  the "press R to reload" hint use the same letters. Switch the system layout while the game is open, click back
+  into the window: the names follow.
+- [ ] **Firefox:** Key Bindings shows a line saying names follow a US keyboard; the keys still work by position.
+- [ ] **Key Bindings:** each row has a main and a second key box. Rebind Move forward's main key: ↑ stays as its
+  second key. Bind Jump to R: the line under the list says "R was Reload: Reload is now Space" and Reload's row
+  flashes. Click a box and press Backspace: it clears (Move forward's last key refuses, saying it needs a key).
+  Click a box and turn the mouse wheel: it binds "Wheel up" / "Wheel down", and in a match that direction no longer
+  switches replicas. F5, F11 and F12 are refused ("the browser uses it").
+- [ ] **Keyboard only:** Tab to a key box, press Enter, press a key: the focus stays on that box (Tab moves on to the
+  next one). Bind Space and Enter this way: the box doesn't start waiting again.
+- [ ] **Reset All** asks "Click Again To Reset" and resets only on a second click within 3 s.
+- [ ] **Esc on the pause menu resumes** (with the mouse lock: right after pausing, Chrome may need a moment and
+  shows "click again"; a second Esc a second later resumes).
+- [ ] **F10 mid-match (Chrome, Edge, Firefox):** the page goes fullscreen and play carries on without the pause menu
+  (if the browser keeps the pause menu up, Resume works as before). Same leaving fullscreen with F10. Then strike
+  KNOWN_ISSUES "The fullscreen key drops the mouse lock".
+- [ ] **Raw mouse input** (Settings → Controls): after the first Play the line under it says "Raw input is active"
+  in Chrome/Edge, "no raw input" in Firefox. Turn it off, Resume: the system's acceleration applies.
+- [ ] **Turn distance:** type 36.4 in the cm/360 box and press Enter: it still says 36.4. The sensitivity slider
+  moves in 0.01 steps with the arrow keys.
+- [ ] **HUD size** (Settings → HUD): 150 % makes the replica panel, scoreboard, minimap, hit feed, squad line, round
+  messages, order wheel and teammate markers bigger, nothing overlaps at 1280×720; the crosshair keeps its size. On a
+  1440p or 4K screen (without system scaling) 100 % is already larger than on 1080p.
+- [ ] **Minimap on a second screen:** drag the window to a screen with another scaling mid-match (or zoom the
+  browser), pause and resume: the minimap is sharp and the right size.
+- [ ] **Teammate markers:** a teammate whose marker would sit inside the minimap circle has none there; holding Tab
+  hides every marker over the field (teammates, the flag, the hold spot).
+- [ ] **Crosshair:** Custom colour (the colour box at the end of the colour buttons), Opacity and Spread (Static keeps
+  the gap while moving and firing) show in the preview and in a match.
+- [ ] **Order wheel:** each order shows its own key (F, X, V) under its name; rebind one and open the wheel again.
+- [ ] **New game at 1920×1080 and 2560×1440:** "Elimination" stays inside its tile.
+- [ ] **Settings at 1280×720:** Controls, Key Bindings and Crosshair fade out above the Back button while there is
+  more below; scrolled to the end, the fade goes.
+- [ ] **Windows High Contrast** (or Chrome DevTools → Rendering → forced-colors: active): the crosshair, team pips,
+  hit wedge and sound cues keep their colours in a match.
+- [ ] **Screen reader (NVDA/VoiceOver):** being hit is read out ("Hit! You called your hit"), the round result once
+  (not the countdown), and a squad order as it is given.
+
+## UI polish (FA9)
+
+- [ ] **Loading screen** (production build, `npm run build` then `npm run preview`; DevTools → Network → Slow 4G,
+  cache disabled): the dark page with "AIRSOFT." and a thin orange bar shows at once, with no white flash; the bar
+  fills while "Loading physics…" downloads, then "Starting physics…", "Starting the game…", and the title appears.
+  In the Network tab the `rapier-….js` file is downloaded once (the second request is from the cache).
+- [ ] **Tab and favicon:** the tab shows the orange-dot "A" icon; the address bar / tab strip takes the dark theme
+  colour where the browser supports it.
+- [ ] **Firefox and Edge, production build:** the game boots and plays a round; the console shows no
+  "Content-Security-Policy" errors. `npm run dev` still boots and hot-reloads.
+- [ ] **JavaScript off** (DevTools → Settings → Debugger → Disable JavaScript, reload): the loading page says the
+  game needs JavaScript, with no sliding bar.
+- [ ] **Menus at 1280×720 and 1920×1080:** title, New game, the Mode / Match / Difficulty dialogs, Loadout, Armory,
+  every Settings tab, pause, summary and result look tidy: one type scale, square-ish corners, buttons in capitals,
+  the same order and wording as before. Hover a button and a New game tile: a quick lift/brighten. Tab through a
+  screen: an orange ring with a dark gap around every focused control, also on the orange Play button.
+- [ ] **Settings tabs and Loadout columns:** the current tab / column has an orange 3 px bar on its left; each tab
+  has a small icon beside its name; New game tiles and pause buttons have icons too.
+- [ ] **Dialogs:** opening Mode or Match blurs the page behind (Chrome, Edge, Firefox 103+) and the box scales in;
+  the Match dialog's labels line up like Settings' rows.
+- [ ] **Reduced motion** (Settings → Accessibility, or the system setting): screens and dialogs appear with no
+  fade or scale, buttons change with no transition.
+- [ ] **Windows High Contrast / forced-colors:** the selected tab's bar and the loading bar still show (system
+  highlight colour).
+- [ ] **HUD at 1920×1080 and on a 21:9 window (e.g. 2560×1080):** the four corners keep the same margin; on 21:9
+  the ammo and minimap sit inside a 16:9 area, not at the screen's edges. The scoreboard's "out" pips read
+  against a bright sky.
+- [ ] **Hit feed:** each line has a thin bar on its left in the shooter's team colour (try a colour-blind option in
+  Accessibility: the bar follows); friendly-fire and ricochet tags show a small glyph beside the word.
+- [ ] **Summary and result tables:** striped rows, numbers aligned, your row keeps its team bar.
 
 ## Reporting what you find
 

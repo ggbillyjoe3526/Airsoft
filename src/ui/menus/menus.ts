@@ -13,6 +13,7 @@ import {
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
+import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
@@ -25,7 +26,7 @@ import type { HudSettingsOptions } from '../hudSettings';
 import { ChoiceDialog } from './choiceDialog';
 import { type ArmoryOptions, ArmoryScreen } from './armoryScreen';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
-import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
+import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el, menuRow, rangeControl } from './menuParts';
 import { OptionPicker } from '../optionPicker';
 import { RowsDialog } from './rowsDialog';
@@ -106,6 +107,8 @@ export class Menus {
   private loadoutFrom: SettingsOrigin = 'setup';
   /** What had the focus on each screen when it was left, so Back puts the keyboard where it was. */
   private readonly lastFocus = new Map<MenuScreen, HTMLElement>();
+  /** When the pause menu last came up (performance.now()), so the Esc that brought it doesn't resume too. */
+  private pauseShownAt = 0;
 
   constructor(
     parent: HTMLElement,
@@ -236,6 +239,7 @@ export class Menus {
     this.pause.setStatus(status);
     this.pause.setSeed(seed);
     this.pause.setRange(range);
+    this.pauseShownAt = performance.now();
     this.go('pause');
   }
 
@@ -401,11 +405,17 @@ export class Menus {
   }
 
   /**
-   * Esc on Loadout, Settings or New game acts as Back. A pop-up closes itself on Esc, and Settings swallows the Esc
-   * that cancels a key binding before it gets here.
+   * Esc on Loadout, Settings or New game acts as Back, and on the pause menu resumes like its Resume button (audit
+   * UI-09; a refused mouse lock shows the usual "click again" hint). A pop-up closes itself on Esc, and Settings swallows
+   * the Esc that cancels a key binding before it gets here.
    */
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.code !== 'Escape' || this.root.hidden || this.dialogOpen()) return;
+    if (escResumes(this.current, performance.now() - this.pauseShownAt, e.repeat, PAUSE_ESC_GUARD_MS)) {
+      e.preventDefault();
+      this.play();
+      return;
+    }
     // On the Loadout, Esc first closes a replica's Customise view (M26b).
     if (this.current === 'loadout' && this.loadout.handleEscape()) {
       e.preventDefault();

@@ -31,6 +31,8 @@ export class SquadOrderLine {
   constructor(parent: HTMLElement, team: number) {
     this.root = document.createElement('div');
     this.root.className = 'squad-order';
+    // Read out as an order is given or refused (audit UI-15); it changes only on those.
+    this.root.setAttribute('role', 'status');
     this.root.style.setProperty('--team', teamCss(team));
     this.root.hidden = true;
     parent.appendChild(this.root);

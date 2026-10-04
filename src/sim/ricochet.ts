@@ -43,7 +43,7 @@ export function ricochet(bb: BB, hit: SurfaceHit, cfg: RicochetConfig, rng?: Rng
   bb.position.x += n.x * cfg.liftOff;
   bb.position.y += n.y * cfg.liftOff;
   bb.position.z += n.z * cfg.liftOff;
-  bb.hopUp *= cfg.spinKept;
+  bb.spin *= cfg.spinKept;
   bb.bounces++;
   return true;
 }

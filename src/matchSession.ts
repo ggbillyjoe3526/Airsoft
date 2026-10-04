@@ -3,11 +3,11 @@ import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
-import { BALLISTICS } from './config/ballistics';
+import { BALLISTICS, WIND } from './config/ballistics';
 import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
-import { DEV_DEFAULTS, type DevSettings, devCheating } from './config/dev';
+import { type DevSettings, devCheating } from './config/dev';
 import type { CrosshairSettings, HitFeedMode } from './config/matchInfo';
 import { countsForRecords, hitRulesFor, type MatchRules, roundRulesFor } from './config/matchRules';
 import type { MatchMode } from './config/modes';
@@ -36,8 +36,9 @@ import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
-import { placeTeams, restartMatch } from './sim/round';
+import { placeTeams } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
+import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
@@ -107,10 +108,8 @@ export class MatchSession {
   private readonly standardRules: boolean;
   /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
   private devAssisted = false;
-  /** Play has begun in this match (since it was built or restarted): Dev help switched off before then doesn't count. */
+  /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
   private played = false;
-  /** The Dev settings that change play, as last set. */
-  private cheats: DevSettings = { ...DEV_DEFAULTS };
 
   constructor(
     private readonly renderer: Renderer,
@@ -144,6 +143,7 @@ export class MatchSession {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
+      wind: createWind(seed, WIND),
       killY: map.killY,
       hits: this.hits,
       deadZones: map.deadZones,
@@ -303,7 +303,6 @@ export class MatchSession {
    * it out of the records.
    */
   setDevCheats(cheats: DevSettings): void {
-    this.cheats = cheats;
     this.player.armament.bottomless = cheats.bottomlessMags;
     this.player.ghost = cheats.ghost;
     // Before play begins (a match built by a Play whose mouse lock was refused) only what applies now counts (bug pass).
@@ -330,21 +329,6 @@ export class MatchSession {
     if (playing) this.played = true;
     this.combat.setPlaying(playing);
     this.match.setPlaying(playing);
-  }
-
-  /** A fresh match from round 1 with the same setup ("Play Again" on the result screen). A direct sim-state change. */
-  restart(): void {
-    this.state.events.length = 0;
-    restartMatch(this.state.round, this.state.characters, this.state.bbs, this.ctx.round, this.state.events, this.mode);
-    this.matchOverAt = Number.NaN;
-    this.resultTaken = false;
-    this.outcomeTaken = false;
-    this.stats.reset();
-    // A new match: it stays out of the records only if Dev help is still on.
-    this.devAssisted = devCheating(this.cheats);
-    this.played = false;
-    this.input.restartScript();
-    this.afterTick();
   }
 
   dispose(): void {

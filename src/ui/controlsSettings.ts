@@ -1,4 +1,18 @@
-import { AIM_MODES, CROUCH_MODES, type CrouchMode, type HoldMode, INVERT_MOUSE, MOUSE, MOUSE_DPI, OTHER_SHOOTERS, SPRINT_MODES, TURN_CM } from '../config/controls';
+import {
+  AIM_MODES,
+  CROUCH_MODES,
+  type CrouchMode,
+  type HoldMode,
+  INVERT_MOUSE,
+  MOUSE,
+  MOUSE_DPI,
+  OTHER_SHOOTERS,
+  RAW_INPUT,
+  RAW_INPUT_STATUS,
+  type RawInputStatus,
+  SPRINT_MODES,
+  TURN_CM,
+} from '../config/controls';
 import { AIMING } from '../config/optics';
 import { WHEEL_SELECT_MODES, type WheelSelect } from '../config/squad';
 import { cmPer360, sameSensitivityAs, sensitivityFromTypedCm } from '../input/sensitivity';
@@ -12,6 +26,11 @@ export interface ControlsSettingsOptions {
   /** The mouse's DPI as the player entered it (only used for the cm/360 figure). */
   dpi: { initial: number };
   invertMouse: { initial: boolean; onChange: (on: boolean) => void };
+  /**
+   * Raw mouse input (audit UI-20), from the next mouse lock; `status`: how the last lock went, `watch`: called when
+   * that changes.
+   */
+  rawInput: { initial: boolean; onChange: (on: boolean) => void; status: () => RawInputStatus; watch: (fn: (status: RawInputStatus) => void) => void };
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
   aim: { initial: HoldMode; onChange: (m: HoldMode) => void };
   sprint: { initial: HoldMode; onChange: (m: HoldMode) => void };
@@ -65,8 +84,8 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
   const sliderInput = slider.querySelector('input')!;
   const sliderOutput = slider.querySelector('output')!;
 
-  // A cm/360 sets the nearest sensitivity the slider can show (clamped to its range), and the box then shows the
-  // cm/360 actually in use.
+  // A cm/360 sets that sensitivity exactly (clamped to the slider's range, audit UI-24); the slider sits at the nearest
+  // step and the box shows the cm/360 in use, which is what was typed.
   const cm = numberBox(
     'Turn distance, cm per 360°',
     { ...TURN_CM, step: 'any' },
@@ -114,6 +133,15 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
   }
   refreshTurn();
 
+  const rawRow = menuRow(
+    'Raw mouse input',
+    '',
+    new OptionPicker('Raw mouse input', RAW_INPUT, opts.rawInput.initial ? 'on' : 'off', 'rawInput', (v) => opts.rawInput.onChange(v === 'on')).root,
+  );
+  const rawStatus = el('span', 'menu-row-help', RAW_INPUT_STATUS[opts.rawInput.status()]);
+  rawRow.querySelector('.menu-row-name')!.append(rawStatus);
+  opts.rawInput.watch((status) => (rawStatus.textContent = RAW_INPUT_STATUS[status]));
+
   return [
     menuRow('Mouse sensitivity', '', slider),
     turnRow,
@@ -135,6 +163,7 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
       '',
       new OptionPicker('Invert mouse', INVERT_MOUSE, opts.invertMouse.initial ? 'on' : 'off', 'invertMouse', (v) => opts.invertMouse.onChange(v === 'on')).root,
     ),
+    rawRow,
     menuRow('Crouch key', '', new OptionPicker('Crouch key', CROUCH_MODES, opts.crouch.initial, 'crouch', opts.crouch.onChange).root),
     menuRow('Aim button', '', new OptionPicker('Aim button', AIM_MODES, opts.aim.initial, 'aimMode', opts.aim.onChange).root),
     menuRow('Sprint key', '', new OptionPicker('Sprint key', SPRINT_MODES, opts.sprint.initial, 'sprintMode', opts.sprint.onChange).root),

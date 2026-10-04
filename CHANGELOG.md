@@ -5,6 +5,10 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
+- **FA5** · Second key per action; mouse wheel binding; HUD size (0.8–1.5); crosshair custom; raw mouse input; cm/360 kept; order wheel shows keys (#59)
+- **FA5** · High-contrast styles; hit, out, round messages read by screen readers (#59)
+- **FA9** · Dark loading screen with physics module progress bar; favicon and web manifest (#59)
+- **FA1** · Crash handling: "Something went wrong" screen with seed, Reload and Copy Report; Settings > Dev has Diagnostics Copy (#57)
 - **M12a** · Fire selector with single, burst and auto; faster reloads; crouch toggle; steadier aim when still (#10)
 - **M12b** · Red dot as an accessory; aiming down sights with separate sensitivity (#11)
 - **M12c** · Loadout off the pause screen; BB streaks from muzzle; pistol faces forward; hop-up dials (#12)
@@ -18,6 +22,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M18a** · Invert mouse; reduced motion; aim and sprint toggles; mouse button rebinding; cm/360 sensitivity (#27)
 - **M18b** · Colour-blind options; sound cues; pause on hidden tab; graphics recovery; fullscreen (#29)
 - **M20** · Custom matches: rounds to win, round time, team size, friendly fire, ricochets (#28)
+- **FA1** · Play Again starts new matches with their own seed; finished matches record and pay Field Credits immediately (#57)
 - **M21** · Practice range: steel and figure targets at 10–60 m; distance markers; spare mags stay full (#30)
 - **M22** · Squad orders on Z, X, V: Follow me, Hold here, Regroup; bots hear less through walls (#31)
 - **M16** · Tutorial: ten coached steps on the practice range for new players (#32)
@@ -28,19 +33,33 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M26a** · Asset pool: pool.md register, rarity tiers, economy numbers, player's collection saved (#39)
 - **M26b** · Loadout screen: Primary, Secondary and Grenades slots; Customise view per replica (#42)
 - **M26c** · Armory, beta and free: earn Field Credits from matches, buy Tokens, draw from the pool (#44)
+- **FA6** · Outdoor ambience bed with distant birds; world sounds muffled when eliminated (#55)
+- **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 
 ### Changed
+- **FA5** · Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell (#59)
+- **FA9** · Cleaner menus and HUD: consistent style, button states, focus ring, marked tabs, dialogs, fade-in, hit-feed colours (#59)
 - Pistol leans slightly left again, much less than before (#13)
 - **M25b** · Depot: site props instead of most two-high crate stacks (#45)
+- **FA6** · World sounds carry further; getting hit and the whistles briefly dip the rest of the mix (#55)
+- **M30** · BBs fly by real air physics: full drag (0.52 s to 30 m, was 0.47 s), hop-up spin that wears off, factory reach unchanged
+- **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 
 ### Fixed
+- **FA5** · Esc resumes from the pause screen; the first mouse jump after the lock is ignored; teammate markers hide behind the minimap and while the scoreboard is up (#59)
+- **FA1** · Jump pressed up to 0.1 s before landing still happens; click after sprint fires as soon as lockout ends (#57)
+- **FA1** · Stepping down a kerb no longer widens the crosshair; drawn Elimination rounds replay (#57)
+- **FA1** · A hit player always reaches the dead zone, even from the far end of Depot; crouch-walking is slightly less accurate; practice range figures match character height (#57)
 - Empty magazine hint names your reload key (#23)
+- **M30** · Bots lead moving targets at range by the BB's real, slower flight time under drag
 - **BP1** · The hit-direction marker fades over the hit call instead of being cut off; sprint picks up as soon as you let go of Q / E (#53)
 - **BP1** · A semi or burst double-tap never fires a tick early; a BB fired straight up never goes backwards (#53)
 - **BP1** · The pause screen shows the match's seed; New game says which end you start at (#53)
 - **BP1** · Minimap: stacked crates show as tall cover; the debug panel sits below the minimap (#53)
 - **BP1** · Pallet racks soak BBs up instead of bouncing them; turning Dev settings off before a match starts lets it count for records (#53)
 - **BP1** · A double-click on Play no longer shows the "needs a moment" hint; Key bindings says why two quick clicks cancel (#53)
+- **FA6** · Pause fades audio in 30 ms instead of clicking; pauses when the window loses focus; hint when the browser blocks audio (#55)
+- **M28** · Impact puffs start at half size
 
 ### Internal
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
@@ -49,7 +68,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - Roadmap: the owner's third feature picks (#46)
 - **M26d** · Dev settings: Disable Armory and Unlock all gear for testing (#48)
 - **M27** · Walk-off route searches rationed to one per tick (pull request to follow)
+- **M30** · One midpoint integrator step per tick replaces two Euler sub-steps; drag from a lookup table; BB streak follows its mean velocity, not its end-of-tick velocity
 - **BP1** · The rendered sounds are held once (about 9 MB less); the perf script restarts with each match (#53)
+- **FA6** · Audio renders at 48 kHz with seeded reverb; debug overlay shows latency (#55)
 
 ## v0.1-alpha.3 · 2026-10-03
 

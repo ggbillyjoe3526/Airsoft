@@ -210,8 +210,12 @@ export class CombatPresentation {
       }
       if (e.type === 'shot') {
         if (e.characterId === this.player.id) this.viewmodel.onShot();
-        this.drawFromMuzzle(e.characterId);
-        this.gasBreath(e.characterId);
+        const shooter = this.characterOf(e.characterId);
+        // The drawn muzzle once per shot, for the BB and the gas breath both (audit REN-11).
+        if (shooter && this.shooterMuzzle(shooter, this.muzzle)) {
+          this.drawFromMuzzle(shooter.id, this.muzzle);
+          this.gasBreath(shooter, this.muzzle);
+        }
       }
       this.sfx.onEvent(e, this.player.id, this.characterOf);
     }
@@ -224,7 +228,7 @@ export class CombatPresentation {
     this.hitPuffs.update(dt, this.renderer.camera);
     this.gasPuffs.update(dt, this.renderer.camera);
     this.motes.setPixelRatio(this.renderer.renderer.getPixelRatio());
-    this.motes.update(dt, this.renderer.camera.position);
+    this.motes.update(dt, this.renderer.camera.position, this.state.wind);
     this.paths.update();
 
     const p = this.player;
@@ -275,11 +279,20 @@ export class CombatPresentation {
   }
 
   /**
-   * Starts a shooter's newest BB (if the shot spawned one) visually at their replica's muzzle: the
-   * held replica for you, the third-person figure's rifle or pistol for everyone else (BBs really leave from the
-   * eyes, which would look like they come out of faces).
+   * Where `shooter`'s replica muzzle is drawn: the held replica for you, the third-person figure's rifle or pistol for
+   * everyone else. False if it can't be placed (no replica shown).
    */
-  private drawFromMuzzle(shooterId: number): void {
+  private shooterMuzzle(shooter: Character, out: THREE.Vector3): boolean {
+    if (shooter === this.player) return this.viewmodel.muzzleWorld(this.renderer.camera, out);
+    figureMuzzle(shooter, out, this.holdOf(shooter), this.hits);
+    return true;
+  }
+
+  /**
+   * Starts a shooter's newest BB (if the shot spawned one) visually at their replica's drawn muzzle `at` (BBs really
+   * leave from the eyes, which would look like they come out of faces).
+   */
+  private drawFromMuzzle(shooterId: number, at: THREE.Vector3): void {
     const last = this.lastSerialByOwner.get(shooterId) ?? 0;
     let newest: BB | undefined;
     for (const bb of this.state.bbs.bbs) {
@@ -287,30 +300,17 @@ export class CombatPresentation {
     }
     if (!newest) return; // blocked muzzle: the shot hit cover immediately
     this.lastSerialByOwner.set(shooterId, newest.serial);
-    let ok: boolean;
-    if (shooterId === this.player.id) {
-      ok = this.viewmodel.muzzleWorld(this.renderer.camera, this.muzzle);
-    } else {
-      const shooter = this.state.characters.find((c) => c.id === shooterId);
-      ok = shooter !== undefined;
-      if (shooter) figureMuzzle(shooter, this.muzzle, this.holdOf(shooter), this.hits);
-    }
-    if (ok) this.bbs.startFromMuzzle(newest, this.muzzle, this.estimateFlightTime(newest));
+    this.bbs.startFromMuzzle(newest, at, this.estimateFlightTime(newest));
   }
 
   /**
-   * A gas replica's breath on a shot (M14): a puff pushed forward out of the muzzle, and for your own pistol a smaller
-   * one out of the ejection port to the right. Electric replicas only whirr.
+   * A gas replica's breath on a shot (M14): a puff pushed forward out of the muzzle `muzzle`, and for your own pistol a
+   * smaller one out of the ejection port to the right. Electric replicas only whirr.
    */
-  private gasBreath(shooterId: number): void {
-    const shooter = shooterId === this.player.id ? this.player : this.characterOf(shooterId);
-    if (!shooter || shooter.armament.replicas[shooter.armament.active]?.power !== 'gas') return;
+  private gasBreath(shooter: Character, muzzle: THREE.Vector3): void {
+    if (shooter.armament.replicas[shooter.armament.active]?.power !== 'gas') return;
     const cam = this.renderer.camera;
-    const at = this.puffAt;
-    let ok = true;
-    if (shooter === this.player) ok = this.viewmodel.muzzleWorld(cam, at);
-    else figureMuzzle(shooter, at, this.holdOf(shooter), this.hits);
-    if (!ok) return;
+    const at = this.puffAt.copy(muzzle);
     // Forward along the shooter's view (yaw and pitch: the replica points where they look).
     const v = this.puffVelocity;
     const cp = Math.cos(shooter.pitch);
@@ -344,5 +344,9 @@ export class CombatPresentation {
     return holdsPistol(c) ? FIGURE.pistol : FIGURE.rifle;
   }
 
-  private readonly characterOf = (id: number): Character | undefined => this.state.characters.find((c) => c.id === id);
+  /** The character with `id` (a plain loop: no closure per call on the shot and sound paths, audit REN-11). */
+  private readonly characterOf = (id: number): Character | undefined => {
+    for (const c of this.state.characters) if (c.id === id) return c;
+    return undefined;
+  };
 }

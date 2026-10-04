@@ -1,5 +1,7 @@
 import { aimDirection, canReload } from '../sim/armament';
-import { muzzleVelocity } from '../config/replicas';
+import { BALLISTICS } from '../config/ballistics';
+import { bbMass, muzzleVelocity } from '../config/replicas';
+import { flightTimeEstimate } from '../sim/ballistics';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
@@ -16,6 +18,12 @@ const aimLine = vec3();
 const raisedPoint = vec3();
 const mateVolume: HitVolume = createHitVolume();
 
+/** How long a bot's BB takes to fly `dist` metres (its primary replica, its factory BBs). */
+function bbFlightTime(w: BotWorld, dist: number): number {
+  const replica = w.loadout[0]!;
+  return flightTimeEstimate(dist, muzzleVelocity(replica), bbMass(replica), BALLISTICS);
+}
+
 /**
  * Turns the view from `eye`: at the target (with lead and aim error; the point aimed at is written to
  * `aimPoint`), towards where a threat was, or along the route (`walking`: following `b.moveDir`).
@@ -27,10 +35,10 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   const cfg = w.cfg;
   const enemyYaw = w.enemyYaw[me.team] ?? 0;
   if (b.targetVisible && target && b.contact) {
-    // Aim at the part of the body it can see, leading the target by part of the BB's flight time.
+    // Aim at the part of the body it can see, leading the target by part of the BB's flight time (slowed by drag, M30).
     bodyPoint(target, w.hits, b.targetPart, aimPoint);
     const dist = Math.hypot(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
-    const flight = dist / muzzleVelocity(w.loadout[0]!);
+    const flight = bbFlightTime(w, dist);
     aimPoint.x += target.velocity.x * flight * b.skill.leadFactor;
     aimPoint.z += target.velocity.z * flight * b.skill.leadFactor;
     lookAngles(eye.x, eye.y, eye.z, aimPoint.x, aimPoint.y, aimPoint.z, look);
@@ -65,7 +73,7 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
   if (!w.hits.friendlyFire) return false;
   const me = b.character;
   // A teammate on the move can run into the BBs' path while they fly: check where they'll be too.
-  const flight = dist / muzzleVelocity(w.loadout[0]!);
+  const flight = bbFlightTime(w, dist);
   for (const mate of w.characters) {
     if (mate === me || mate.team !== me.team || !isInPlay(mate)) continue;
     const v = mateVolume;

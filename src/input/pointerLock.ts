@@ -1,11 +1,16 @@
-import { MOUSE } from '../config/controls';
+import { MOUSE, type RawInputStatus, WHEEL_CODES } from '../config/controls';
 import { mouseButtonCode } from './keyBindings';
 
-/** Where mouse buttons go while playing: the keyboard, which maps them through the bindings like keys (M18). */
+/**
+ * Where mouse buttons and wheel notches go while playing: the keyboard, which maps them through the bindings like keys
+ * (M18, audit UI-05). `bound`: whether a code is bound to an action (a bound wheel direction doesn't switch replicas).
+ */
 export interface ButtonSink {
   press(code: string): void;
   release(code: string): void;
+  bound(code: string): boolean;
 }
+
 
 /**
  * The browser's back and forward side buttons (MouseEvent.button 3 and 4): their default navigates away from the game,
@@ -25,6 +30,14 @@ export class PointerLock {
   /** Buttons down while playing, by MouseEvent.button, so they can all be let go when play stops. */
   private readonly heldButtons = new Set<number>();
   private wheel = 0;
+  /** A replica switch from the wheel waiting for consumeWheelSteps (+1 down, -1 up, 0 none). */
+  private wheelStep = 0;
+  /** The first mouse move after the lock is taken is skipped (it can carry a jump; audit UI-10). */
+  private skipNextMove = false;
+  /** Ask for raw (unaccelerated) movement when locking (Settings → Controls; audit UI-20). */
+  rawInput = true;
+  private raw: RawInputStatus = 'unknown';
+  private readonly rawListeners = new Set<(status: RawInputStatus) => void>();
   private readonly changeListeners = new Set<(locked: boolean) => void>();
   private readonly errorListeners = new Set<() => void>();
   /** request() calls under way: a first try may fail and the second succeed, so errors wait for their outcome. */
@@ -62,16 +75,40 @@ export class PointerLock {
     if (this.requesting > 0) return;
     this.requesting++;
     try {
+      if (!this.rawInput) {
+        await this.element.requestPointerLock();
+        this.setRaw('off');
+        return;
+      }
       await this.element.requestPointerLock({ unadjustedMovement: true });
+      // Firefox takes the lock but ignores the option (known issue): it never gives raw movement.
+      this.setRaw(ignoresRawInput() ? 'unavailable' : 'active');
     } catch {
       try {
         await this.element.requestPointerLock();
+        this.setRaw(this.rawInput ? 'unavailable' : 'off');
       } catch {
         this.reportError();
       }
     } finally {
       this.requesting--;
     }
+  }
+
+  /** How the last lock went for raw input (Settings → Controls shows it). */
+  get rawStatus(): RawInputStatus {
+    return this.raw;
+  }
+
+  /** Calls `fn` whenever rawStatus changes. */
+  onRawStatus(fn: (status: RawInputStatus) => void): void {
+    this.rawListeners.add(fn);
+  }
+
+  private setRaw(status: RawInputStatus): void {
+    if (status === this.raw) return;
+    this.raw = status;
+    for (const fn of this.rawListeners) fn(status);
   }
 
   /**
@@ -104,11 +141,13 @@ export class PointerLock {
     this.dy = 0;
   }
 
-  /** Returns one replica step (+1 down, -1 up) once enough wheel travel has built up, else 0. */
+  /**
+   * Returns one replica step (+1 down, -1 up) if the wheel turned a notch since the last call in a direction not bound
+   * to an action, else 0.
+   */
   consumeWheelSteps(): number {
-    if (Math.abs(this.wheel) < MOUSE.wheelStepPixels) return 0;
-    const w = Math.sign(this.wheel);
-    this.wheel = 0;
+    const w = this.wheelStep;
+    this.wheelStep = 0;
     return w;
   }
 
@@ -123,15 +162,15 @@ export class PointerLock {
     document.removeEventListener('contextmenu', this.onContextMenu);
     this.changeListeners.clear();
     this.errorListeners.clear();
+    this.rawListeners.clear();
   }
 
   private readonly onLockChange = (): void => {
     const locked = this.locked;
-    if (!locked) {
-      this.dx = 0;
-      this.dy = 0;
-      this.releaseButtons();
-    }
+    this.dx = 0;
+    this.dy = 0;
+    this.skipNextMove = locked;
+    if (!locked) this.releaseButtons();
     for (const fn of this.changeListeners) fn(locked);
   };
 
@@ -145,6 +184,12 @@ export class PointerLock {
 
   private readonly onMouseMove = (e: MouseEvent): void => {
     if (!this.locked) return;
+    // A glitch, not a hand (audit UI-10): the first move after locking, or one implausibly large jump.
+    if (this.skipNextMove) {
+      this.skipNextMove = false;
+      return;
+    }
+    if (Math.abs(e.movementX) > MOUSE.maxEventCounts || Math.abs(e.movementY) > MOUSE.maxEventCounts) return;
     this.dx += e.movementX;
     this.dy += e.movementY;
   };
@@ -153,6 +198,7 @@ export class PointerLock {
     for (const button of this.heldButtons) this.buttons.release(mouseButtonCode(button));
     this.heldButtons.clear();
     this.wheel = 0;
+    this.wheelStep = 0;
   }
 
   private get playing(): boolean {
@@ -186,5 +232,18 @@ export class PointerLock {
     // Normalise line/page scrolling to pixels so every device needs about one notch per step.
     const scale = e.deltaMode === 1 ? MOUSE.wheelLinePixels : e.deltaMode === 2 ? MOUSE.wheelPagePixels : 1;
     this.wheel += e.deltaY * scale;
+    if (Math.abs(this.wheel) < MOUSE.wheelStepPixels) return;
+    // A notch: a tap of its binding code, and a replica switch unless that direction is bound to an action.
+    const step = Math.sign(this.wheel);
+    this.wheel = 0;
+    const code = step < 0 ? WHEEL_CODES.up : WHEEL_CODES.down;
+    this.buttons.press(code);
+    this.buttons.release(code);
+    if (!this.buttons.bound(code)) this.wheelStep = step;
   };
+}
+
+/** Firefox takes a lock asked for with `unadjustedMovement` but ignores the option (KNOWN_ISSUES). */
+function ignoresRawInput(): boolean {
+  return typeof navigator !== 'undefined' && /\bFirefox\//.test(navigator.userAgent);
 }

@@ -93,10 +93,13 @@ export class BBRenderer {
       // behind the shooter (for your own shots, behind the camera, drawn as a line slanting up from the bottom
       // of the screen to the muzzle).
       const age = Math.max(0, bb.age - (1 - alpha) * this.tickSeconds);
+      // Back along the tick's own path (its mean velocity, the line the head is interpolated on), not the BB's speed at
+      // the tick's end: drag slows a BB by a few m/s within a tick (M30), which would lift the tail off the path.
       const streak = Math.min(trail, age);
-      let tx = x - bb.velocity.x * streak;
-      let ty = y - bb.velocity.y * streak;
-      let tz = z - bb.velocity.z * streak;
+      const back = streak / this.tickSeconds;
+      let tx = x - (bb.position.x - bb.prevPosition.x) * back;
+      let ty = y - (bb.position.y - bb.prevPosition.y) * back;
+      let tz = z - (bb.position.z - bb.prevPosition.z) * back;
       // Own shots: start at the muzzle, blend onto the true path (head and tail blend separately).
       if (this.offsetSerial[i] === bb.serial) {
         const converge = this.convergeTimes[i]!;

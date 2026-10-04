@@ -3,13 +3,149 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Dark pages, so the browser's own parts (scrollbars, pop-up backdrops, number spinners) are drawn dark too. -->
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#16181d" />
+    <meta name="description" content="Airsoft: a first-person airsoft shooter in the browser. One BB, you're hit. Call it, walk off, go again." />
     <title>Airsoft</title>
-    <!-- No icon file yet: an empty inline icon stops the browser logging a 404 for /favicon.ico. -->
-    <link rel="icon" href="data:," />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!--
+      The loading screen (audit UI-12, section 6 item 13), styled here so it is right from the first paint, before
+      style.css: the menus' colours (style.css :root), the wordmark, and a 2 px bar that slides until the game's code
+      runs and fills it with the real progress (ui/loadingScreen.ts).
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        color-scheme: dark;
+        background: #16181d;
+        color: #f7f3ea;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      #loading {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #16181d;
+      }
+
+      .loading-wordmark {
+        margin: 0;
+        font-size: clamp(40px, 6vw, 72px);
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 0.06em;
+      }
+
+      .loading-wordmark span {
+        color: #ff8a2a;
+      }
+
+      .loading-bar {
+        position: relative;
+        width: min(320px, 60vw);
+        height: 2px;
+        overflow: hidden;
+        background: #3a3f4a;
+      }
+
+      .loading-bar div {
+        position: absolute;
+        inset: 0;
+        background: #ff8a2a;
+        transform: scaleX(0);
+        transform-origin: 0 50%;
+        transition: transform 0.2s ease-out;
+      }
+
+      .loading-bar.indeterminate div {
+        width: 30%;
+        transform: none;
+        animation: loading-slide 1.2s ease-in-out infinite;
+      }
+
+      @keyframes loading-slide {
+        from {
+          translate: -100% 0;
+        }
+        to {
+          translate: 340% 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .loading-bar.indeterminate div {
+          animation: none;
+          translate: 117% 0;
+        }
+
+        .loading-bar div {
+          transition: none;
+        }
+      }
+
+      .loading-text,
+      .loading-noscript {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        color: #8f8b82;
+      }
+
+      .loading-noscript {
+        max-width: 32em;
+        padding: 0 16px;
+        text-align: center;
+        font-size: 15px;
+        color: #ffd84d;
+      }
+
+      @media (forced-colors: active) {
+        .loading-bar {
+          outline: 1px solid CanvasText;
+        }
+
+        .loading-bar div {
+          forced-color-adjust: none;
+          background: Highlight;
+        }
+      }
+
+      #loading.failed .loading-bar {
+        display: none;
+      }
+
+      #loading.failed .loading-text {
+        color: #ff5a4f;
+      }
+    </style>
+    <noscript>
+      <style>
+        .loading-bar,
+        .loading-text {
+          display: none;
+        }
+      </style>
+    </noscript>
   </head>
   <body>
     <div id="app"></div>
-    <div id="loading">Loading…</div>
+    <div id="loading">
+      <p class="loading-wordmark">AIRSOFT<span>.</span></p>
+      <div class="loading-bar indeterminate" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"><div></div></div>
+      <p class="loading-text" aria-live="polite">Loading…</p>
+      <noscript><p class="loading-noscript">Airsoft runs on JavaScript. Turn it on for this site in your browser's settings, then reload the page.</p></noscript>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

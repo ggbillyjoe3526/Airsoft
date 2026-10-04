@@ -1,5 +1,6 @@
 import { HIT_FEED, type HitFeedMode } from '../config/matchInfo';
 import { teamCss } from '../config/teams';
+import { FEED_ICONS } from './menus/icons';
 
 /** Someone in a hit feed line: their name (which carries the team, or is "You") and team. */
 export interface FeedName {
@@ -17,7 +18,8 @@ interface Line {
 /**
  * The hit feed in the top-right corner, in airsoft words: "Orange 2 called HIT · Blue 1" (who called the hit, then
  * whose BB it was), newest at the top. Friendly hits say so. Each name is in its team's colour and its text carries
- * the team as well, so colour isn't the only cue. Lines live on simulation time, so a pause holds them. Set to Keep
+ * the team as well, so colour isn't the only cue; a bar down the line's edge is in the colour of the team whose BB it was.
+ * The friendly and ricochet tags carry a glyph beside the word. Lines live on simulation time, so a pause holds them. Set to Keep
  * (Settings → HUD, M24), the match's last few lines stay up instead, through every round.
  */
 export class HitFeed {
@@ -60,6 +62,7 @@ export class HitFeed {
   add(victim: FeedName, shooter: FeedName, friendly: boolean, you: boolean, time: number, ricochet = false): void {
     const node = document.createElement('div');
     node.className = `hit-feed-line${you ? ' you' : ''}${friendly ? ' friendly' : ''}`;
+    node.style.setProperty('--hitter', teamCss(shooter.team));
     node.append(name(victim), document.createTextNode(' called HIT · '), name(shooter));
     for (const [on, text] of [
       [friendly, 'friendly'],
@@ -68,6 +71,7 @@ export class HitFeed {
       if (!on) continue;
       const tag = document.createElement('em');
       tag.textContent = text;
+      tag.insertAdjacentHTML('afterbegin', FEED_ICONS[text]);
       node.append(tag);
     }
     this.root.prepend(node);

@@ -29,7 +29,7 @@ const SOFT_EDGE = 1.4;
 
 /**
  * Soft puffs: BB impact dust, hit puffs on players, a gas pistol's breath at the muzzle. Each is a soft round dot
- * turned to face the camera; it grows fast, then shrinks away while drifting, and can have its own tint, size and
+ * turned to face the camera; it appears at `startScale`, grows fast, then shrinks away while drifting, and can have its own tint, size and
  * push. Pooled (the oldest is reused when all are busy), one draw call per pool, nothing allocated per frame.
  */
 export class ImpactPuffs {
@@ -92,7 +92,7 @@ export class ImpactPuffs {
       if (p.age >= P.lifetime) continue;
       p.age += dt;
       const t = p.age;
-      const grow = Math.min(1, t / P.growTime);
+      const grow = P.startScale + (1 - P.startScale) * Math.min(1, t / P.growTime);
       const fade = 1 - Math.max(0, (t - P.growTime) / (P.lifetime - P.growTime));
       const dist = Math.hypot(p.x - eye.x, p.y - eye.y, p.z - eye.z);
       const s = Math.max(0, grow * fade) * Math.max(p.scale, dist * minScale);

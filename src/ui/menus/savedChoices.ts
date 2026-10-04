@@ -13,11 +13,13 @@ import {
   type CrouchMode,
   DEFAULT_AIM_MODE,
   DEFAULT_CROUCH_MODE,
+  DEFAULT_RAW_INPUT,
   DEFAULT_SPRINT_MODE,
   type HoldMode,
   INVERT_MOUSE,
   MOUSE,
   MOUSE_DPI,
+  RAW_INPUT,
   SPRINT_MODES,
 } from '../../config/controls';
 import {
@@ -29,7 +31,7 @@ import {
   TEAM_SIZE_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
-import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, SCOREBOARD_SIZE } from '../../config/matchInfo';
+import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES } from '../../config/graphics';
@@ -211,4 +213,14 @@ export function loadScoreboardSize(): number {
 /** Whether the hit feed's lines fade or stay (Settings → HUD, M24). */
 export function loadHitFeedMode(): HitFeedMode {
   return loadChoice('hitFeed', HIT_FEED_MODES, DEFAULT_HIT_FEED_MODE);
+}
+
+/** The HUD's size as picked (Settings → HUD, audit UI-04): a scale, 1 = sized for the screen. */
+export function loadHudSize(): number {
+  return loadSetting('hudSize', numberIn(HUD_SIZE.min, HUD_SIZE.max), HUD_SIZE.default);
+}
+
+/** Raw mouse input (Settings → Controls, audit UI-20): on unless the player turned it off. */
+export function loadRawInput(): boolean {
+  return loadChoice('rawInput', RAW_INPUT, DEFAULT_RAW_INPUT) === 'on';
 }

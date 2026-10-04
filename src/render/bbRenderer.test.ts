@@ -19,6 +19,20 @@ function drawn(r: BBRenderer, i: number): { pos: THREE.Vector3; scale: number } 
   return { pos, scale: scale.x };
 }
 
+/** Corner `c` (0, 1 at the head; 2, 3 at the tail) of drawn BB `i`'s streak quad. */
+function corner(r: BBRenderer, i: number, c: number): THREE.Vector3 {
+  const trails = r.object.children[1] as THREE.Mesh;
+  return new THREE.Vector3().fromBufferAttribute(trails.geometry.getAttribute('position') as THREE.BufferAttribute, i * 4 + c);
+}
+
+/** Head and tail of drawn BB `i`'s streak: the centre line of its quad (REN-19). */
+function streakEnds(r: BBRenderer, i: number): { head: THREE.Vector3; tail: THREE.Vector3 } {
+  return {
+    head: corner(r, i, 0).add(corner(r, i, 1)).multiplyScalar(0.5),
+    tail: corner(r, i, 2).add(corner(r, i, 3)).multiplyScalar(0.5),
+  };
+}
+
 describe('BBRenderer', () => {
   const eye = { x: 0, y: 1.6, z: 0 };
 
@@ -62,16 +76,57 @@ describe('BBRenderer', () => {
     expect(drawn(r, 1).scale).toBe(1); // near BBs keep their real drawn size
     r.dispose();
   });
+
+  it("draws the streak back along the tick's own path, not along the speed the BB ends the tick at (drag, M30)", () => {
+    const pool = createBBPool(1);
+    const r = new BBRenderer(pool, DT);
+    const bb = spawnBB(pool, 1, vec3(0, 1.6, -3), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    // A tick that carried the BB 1.4 m (84 m/s on average) while drag and gravity bent its end-of-tick velocity to
+    // 70 m/s with a downward part: far from the mean velocity of the tick.
+    bb.prevPosition.x = 0;
+    bb.prevPosition.y = 1.6;
+    bb.prevPosition.z = -3;
+    bb.position.x = 0;
+    bb.position.y = 1.6;
+    bb.position.z = -4.4;
+    bb.velocity.x = 0;
+    bb.velocity.y = -5;
+    bb.velocity.z = -70;
+    bb.age = 1;
+    r.update(0.5, eye);
+    const { head, tail } = streakEnds(r, 0);
+    expect(head.distanceTo(new THREE.Vector3(0, 1.6, -3.7))).toBeLessThan(1e-5); // half way along the tick
+    // The tail is on the line prevPosition -> position: level here, and no further back than the tick's mean speed says.
+    expect(tail.y).toBeCloseTo(1.6, 5);
+    expect(tail.x).toBeCloseTo(0, 5);
+    expect(tail.z - head.z).toBeCloseTo((1.4 / DT) * BB_VISUALS.trailSeconds, 4);
+    r.dispose();
+  });
+
+  it('keeps the streak on the segment of a BB flying through real drag, whichever way it is drawn between ticks', () => {
+    const pool = createBBPool(1);
+    const r = new BBRenderer(pool, DT);
+    const bb = spawnBB(pool, 1, vec3(0, 1.6, 0), vec3(0.6, 0.1, -0.8), 88, 0.12, 0.25e-3);
+    for (let i = 0; i < 90; i++) {
+      bb.prevPosition.x = bb.position.x;
+      bb.prevPosition.y = bb.position.y;
+      bb.prevPosition.z = bb.position.z;
+      stepBBFlight(bb, BALLISTICS, DT);
+    }
+    const dir = new THREE.Vector3(bb.position.x - bb.prevPosition.x, bb.position.y - bb.prevPosition.y, bb.position.z - bb.prevPosition.z).normalize();
+    for (const alpha of [0, 0.5, 1]) {
+      r.update(alpha, eye);
+      const { head, tail } = streakEnds(r, 0);
+      const along = tail.clone().sub(head);
+      const off = along.clone().sub(dir.clone().multiplyScalar(along.dot(dir)));
+      expect(off.length(), `alpha ${alpha}`).toBeLessThan(2e-4);
+    }
+    r.dispose();
+  });
 });
 
 describe('BBRenderer streaks (REN-19)', () => {
   const eye = { x: 0, y: 1.6, z: 0 };
-
-  /** Corner `c` (0, 1 at the head; 2, 3 at the tail) of drawn BB `i`'s streak quad. */
-  function corner(r: BBRenderer, i: number, c: number): THREE.Vector3 {
-    const trails = r.object.children[1] as THREE.Mesh;
-    return new THREE.Vector3().fromBufferAttribute(trails.geometry.getAttribute('position') as THREE.BufferAttribute, i * 4 + c);
-  }
 
   it('draws each streak as a camera-facing quad as wide on screen at its head as at its tail, near or far', () => {
     const pool = createBBPool(2);
@@ -80,6 +135,7 @@ describe('BBRenderer streaks (REN-19)', () => {
     for (const z of [-3, -30]) {
       const bb = spawnBB(pool, 1, vec3(-1, 1.6, z), vec3(1, 0, 0), 88, 0, 0.25e-3);
       bb.age = 1;
+      bb.prevPosition.x = bb.position.x - bb.velocity.x * DT; // the streak runs back along the last tick's path (M30)
     }
     r.update(1, eye);
     const trails = r.object.children[1] as THREE.Mesh;

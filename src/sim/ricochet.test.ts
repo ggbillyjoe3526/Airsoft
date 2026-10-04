@@ -22,7 +22,7 @@ describe('BB ricochets (M20)', () => {
     expect(bb.velocity.z).toBeCloseTo(80 * CFG.restitution.concrete, 6);
     expect(bb.velocity.x).toBeCloseTo(0, 6);
     expect(bb.bounces).toBe(1);
-    expect(bb.hopUp).toBe(0); // the backspin is scrubbed off
+    expect(bb.spin).toBe(0); // the backspin is scrubbed off
     expect(bb.position.z).toBeGreaterThan(-5); // lifted off the surface
   });
 

@@ -2,10 +2,9 @@ import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { type OpticId, OPTICS } from '../config/optics';
 import { FIRE_MODE_LABELS, type ReplicaConfig } from '../config/replicas';
-import { HUD } from '../config/render';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
 import { emptyMagHint, isLowAmmo } from './ammoStatus';
-import { crosshairElement, setCrosshairGap, styleCrosshair } from './crosshair';
+import { crosshairElement, crosshairGap, setCrosshairGap, styleCrosshair } from './crosshair';
 
 /**
  * Minimal in-game HUD: crosshair (the player's own, Settings → Crosshair; or the red dot, or a scope's eyepiece and reticle, while aiming down one) and the replica panel (name and fire mode, BBs in the loaded magazine, a
@@ -39,6 +38,8 @@ export class Hud {
   private readonly crosshair: HTMLDivElement;
   /** The smallest gap the crosshair shows (px, Settings → Crosshair); the spread opens it further. */
   private minGap: number;
+  /** The crosshair opens with the spread (Settings → Crosshair, audit UI-21: off is static). */
+  private dynamic: boolean;
   private shownGap = -1;
   /** What is on screen now: the DOM is only written when one of these changes. */
   private shown = { name: '', fireMode: '', mag: -1, low: false, status: '', reloadPct: -1 };
@@ -72,6 +73,7 @@ export class Hud {
     this.crosshair = crosshairElement();
     this.root.prepend(this.crosshair);
     this.minGap = crosshair.gap;
+    this.dynamic = crosshair.dynamic === 'on';
     styleCrosshair(this.crosshair, crosshair);
   }
 
@@ -79,6 +81,7 @@ export class Hud {
   setCrosshair(crosshair: CrosshairSettings): void {
     styleCrosshair(this.crosshair, crosshair);
     this.minGap = crosshair.gap;
+    this.dynamic = crosshair.dynamic === 'on';
     this.shownGap = -1;
   }
 
@@ -109,7 +112,7 @@ export class Hud {
     if (this.shownAiming !== aiming) this.root.classList.toggle('aiming', (this.shownAiming = aiming));
     const scoped = sight !== null && OPTICS[sight].scope;
     if (this.shownScoped !== scoped) this.root.classList.toggle('scoped', (this.shownScoped = scoped));
-    const gap = Math.round(Math.max(this.minGap, HUD.crosshairSpreadSigmas * spreadPx) / HUD.crosshairGapStep) * HUD.crosshairGapStep;
+    const gap = crosshairGap(this.minGap, spreadPx, this.dynamic);
     if (gap !== this.shownGap) setCrosshairGap(this.crosshair, (this.shownGap = gap));
     const replica = loadout[armament.active]!;
     const ammo = armament.ammo[armament.active]!;

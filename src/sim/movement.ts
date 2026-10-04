@@ -96,12 +96,15 @@ export function stepMovement(
     c.velocity.z += (dvz / dvLen) * stepLen;
   }
 
-  // Jump: limited by cooldown, not while crouched.
+  // Jump: limited by cooldown, not while crouched. A press is kept for jumpBuffer, so one made a tick or two before
+  // landing, or while standing up from a crouch, still jumps once it can (audit SIM-05).
   c.jumpCooldown = Math.max(0, c.jumpCooldown - dt);
-  if (cmd.jump && c.grounded && c.jumpCooldown <= 0 && !crouched) {
+  c.jumpWanted = cmd.jump ? cfg.jumpBuffer : Math.max(0, c.jumpWanted - dt);
+  if (c.jumpWanted > 0 && c.grounded && c.jumpCooldown <= 0 && !crouched) {
     c.velocity.y = cfg.jumpSpeed;
     c.grounded = false;
     c.jumpCooldown = cfg.jumpCooldown;
+    c.jumpWanted = 0;
     c.airTime = cfg.accuracy.airSpreadDelay; // a deliberate jump gets the in-air spread at once
   }
 
@@ -111,19 +114,31 @@ export function stepMovement(
   const onGround = c.grounded && c.velocity.y <= 0;
   c.velocity.y = onGround ? 0 : Math.max(-cfg.maxFallSpeed, c.velocity.y - cfg.gravity * dt);
 
+  // Climbing a ramp: lengthen the move by what the controller's slide up the slope takes off it (audit SIM-17), from the
+  // slope climbed last tick (a tick late at the foot of a ramp; never on the flat, downhill or in the air).
+  const climb = onGround && c.groundRise > 0 ? 1 + cfg.rampPace * c.groundRise * c.groundRise : 1;
   const { desired, corrected } = scratch;
-  desired.x = c.velocity.x * dt;
+  desired.x = c.velocity.x * dt * climb;
   desired.y = c.velocity.y * dt;
-  desired.z = c.velocity.z * dt;
+  desired.z = c.velocity.z * dt * climb;
 
   mover.move(c, desired, corrected);
   c.position.x += corrected.x;
   c.position.y += corrected.y;
   c.position.z += corrected.z;
 
-  // Velocity follows what actually happened, so walls absorb speed instead of storing it.
+  // Velocity follows what actually happened, so walls absorb speed instead of storing it. A lengthened move never adds
+  // speed (the tick that reaches the top of a ramp is on the flat already).
+  const paceBefore = Math.hypot(c.velocity.x, c.velocity.z);
   c.velocity.x = corrected.x / dt;
   c.velocity.z = corrected.z / dt;
+  if (climb > 1) {
+    const pace = Math.hypot(c.velocity.x, c.velocity.z);
+    if (pace > paceBefore) {
+      c.velocity.x *= paceBefore / pace;
+      c.velocity.z *= paceBefore / pace;
+    }
+  }
 
   // Only the ground probe decides whether we stand: the controller also reports "ground" for the
   // rounded capsule touching the top edge of cover, which would let players hang on (and hop over)
@@ -132,17 +147,23 @@ export function stepMovement(
   // probe (a seam on a ramp), and a character dropped that way lands on the next tick instead of floating
   // down until the controller touches the slope (11 ticks seen on a dock ramp).
   let grounded = false;
+  let settle = 0;
   if (c.velocity.y <= 0) {
     const dy = mover.probeGround(c, cfg.groundSettleDistance);
     grounded = !Number.isNaN(dy);
     if (grounded) {
       c.position.y += dy;
       c.velocity.y = 0;
+      settle = dy;
     }
     // No ground under the probe: walked off an edge, or caught on one. Keep falling (and sliding off).
   } else if (desired.y > 0 && corrected.y < desired.y * cfg.ceilingBlockFraction) {
     c.velocity.y = 0; // bumped a ceiling
   }
+  // The slope climbed this tick, for the next one: on the ground before and after, uphill, no steeper than a ramp.
+  const moved = Math.hypot(corrected.x, corrected.z);
+  const rise = onGround && grounded && moved > 0 ? (corrected.y + settle) / moved : 0;
+  c.groundRise = rise > 0 && rise <= cfg.rampMaxRise ? rise : 0;
   // Held up while falling (caught on an edge): fall only as fast as we actually moved, so speed doesn't
   // build up invisibly and fire us downward when we slip off.
   // Clamped to <= 0: when Rapier pushes a wedged capsule out of geometry, corrected.y can be positive,

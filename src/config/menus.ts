@@ -15,6 +15,8 @@ export const BROWSER_NOTES = {
   graphicsLost: 'Graphics reset. The graphics card dropped the game for a moment; waiting for it to come back…',
   /** On the pause menu once it's back. */
   graphicsBack: 'Graphics are back. Resume when you’re ready.',
+  /** Under the menus' buttons when the browser won't let the game's sound start (audit CORE-21). */
+  audioBlocked: 'Sound is blocked by the browser. Allow audio (autoplay) for this site in its settings to hear the game.',
 } as const;
 
 /** The Loadout screen's words (M26b). */
@@ -31,13 +33,48 @@ export const LOADOUT_TEXT = {
   noMount: 'No rail for one',
   /** Under the power sources, by the fitted one's type. */
   powerBlurb: {
-    battery: 'A higher-capacity battery shoots harder and cycles faster.',
-    gas: 'A stronger gas (red, then black) shoots harder.',
+    battery: 'A higher-voltage battery cycles faster: more BBs a second. The energy is the replica\'s own.',
+    gas: 'A stronger gas (red, then black) shoots harder, and kicks harder.',
     spring: 'A stiffer spring shoots harder.',
   },
   grenadesLater: 'Grenades, smoke and flash bombs come in a later version.',
   /** Skins come with customisation (v0.5): the row keeps their place (M17b). */
   skinsLater: 'Replicas and outfit',
+} as const;
+
+/**
+ * The Loadout's Performance sheet (M29, ui/performanceSheet.ts): each stat of the replica as carried, against the same
+ * replica as it comes.
+ */
+export const PERFORMANCE_SHEET = {
+  title: 'Performance',
+  /** Under the title. */
+  against: (chronoGrams: number) => `Changes are against the replica as it comes. Feet per second (fps) as a site's chrono reads it, on ${chronoGrams.toFixed(2)} g BBs.`,
+  /** The BB weight a speed in feet per second is quoted on, as a site's chrono reads it. */
+  chronoGrams: 0.2,
+  /** A change smaller than this (percent) shows as none. */
+  minChangePercent: 0.5,
+  labels: {
+    energy: 'Energy',
+    siteLimit: 'site limit',
+    speed: 'Muzzle speed',
+    bbWeight: 'BB weight',
+    fireRate: 'Rate of fire',
+    upTo: 'up to',
+    onTarget: 'On target to',
+    timeTo: (m: number) => `Time to ${m} m`,
+    neverGets: 'never gets there',
+    spread: 'Spread',
+    recoil: 'Recoil',
+    magazines: 'Magazines',
+    reload: 'Reload',
+    draw: 'Draw',
+    raise: 'Aim raise',
+    noOptic: 'no optic',
+  },
+  /** Read out on a change, for a screen reader and for anyone who can't tell the colours apart. */
+  better: 'better than as it comes',
+  worse: 'worse than as it comes',
 } as const;
 
 /** The Armory's words (M26c): completely free, beta. Numbers come from pool.md. */
@@ -103,3 +140,9 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   accessibility: [],
   dev: [],
 };
+
+/**
+ * A slider's change is written to the browser's storage this long (ms) after the last step, not on every step (audit
+ * UI-11 / CORE-12): a drag writes the settings once. It applies at once either way.
+ */
+export const SETTINGS_WRITE_DELAY_MS = 400;

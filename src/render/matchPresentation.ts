@@ -54,6 +54,8 @@ export class MatchPresentation {
   private readonly board: MatchBoard;
   /** What the board shows now, and what its numbers were built from (redrawn only when that changes). */
   private readonly shownBoard = { view: 'none' as BoardView, version: -1, second: -1, phase: '' };
+  /** The board over the field is up this frame: the markers over the field hide under it (audit UI-13). */
+  private boardUp = false;
   private readonly mates: Character[];
   private readonly mateMarkers: TeammateMarkers;
   private readonly mateAnchor = new THREE.Vector3();
@@ -126,7 +128,7 @@ export class MatchPresentation {
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
     this.minimap = new Minimap(container, blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!));
     this.minimapFrame = { x: 0, z: 0, yaw: 0, mates: this.mates.map(() => ({ x: 0, z: 0, hit: false })), count: 0, hold: null, flag: null, time: 0 };
-    this.orderWheel = new OrderWheel(container, teamCss(player.team));
+    this.orderWheel = new OrderWheel(container, teamCss(player.team), keyName);
   }
 
   private readonly keyName: (action: Action) => string;
@@ -216,7 +218,7 @@ export class MatchPresentation {
    */
   showSquadOrder(order: SquadOrderKind | 'none', hold: Vec3 | null, camera: THREE.PerspectiveCamera, dt: number): void {
     this.squadLine.update(order, dt);
-    if (!hold || !this.playing || this.spectating) {
+    if (!hold || !this.playing || this.spectating || this.boardUp) {
       this.holdMarker.hide();
       return;
     }
@@ -293,6 +295,7 @@ export class MatchPresentation {
       this.feedback.setSpectating('');
     }
     this.watched = watched;
+    this.boardUp = this.boardView(boardHeld) !== 'none';
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id);
     this.flag.update(this.state.round, this.state.time);
     this.updateMarker(camera, spectating);
@@ -359,7 +362,7 @@ export class MatchPresentation {
   private updateMateMarkers(camera: THREE.PerspectiveCamera, alpha: number, watched: Character | undefined): void {
     for (let i = 0; i < this.mates.length; i++) {
       const c = this.mates[i]!;
-      if (!this.playing || c.status === 'out' || c === watched) {
+      if (!this.playing || c.status === 'out' || c === watched || this.boardUp) {
         this.mateMarkers.hide(i);
         continue;
       }
@@ -370,7 +373,8 @@ export class MatchPresentation {
         c.prevPosition.z + (c.position.z - c.prevPosition.z) * alpha,
       );
       const m = projectMarker(this.mateAnchor, camera, this.view.width, this.view.height, 0, this.mateAt);
-      if (m.onScreen) this.mateMarkers.show(i, m.x, m.y, c.status !== 'alive');
+      // Not under the minimap either, where the label would read through its translucent field (audit UI-13).
+      if (m.onScreen && !this.minimap.covers(m.x, m.y)) this.mateMarkers.show(i, m.x, m.y, c.status !== 'alive');
       else this.mateMarkers.hide(i);
     }
   }
@@ -382,7 +386,7 @@ export class MatchPresentation {
    */
   private updateBoard(held: boolean): void {
     const r = this.state.round;
-    const view: BoardView = r.phase === 'matchOver' || held ? 'match' : r.phase === 'over' ? 'round' : 'none';
+    const view = this.boardView(held);
     this.board.setVisible(view !== 'none');
     const shown = this.shownBoard;
     const second = r.phase === 'live' ? Math.floor(this.state.time) : -1;
@@ -400,6 +404,12 @@ export class MatchPresentation {
     this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live'));
   }
 
+  /** What the board over the field shows: the match while the key is held or once decided, the round between rounds. */
+  private boardView(held: boolean): BoardView {
+    const phase = this.state.round.phase;
+    return phase === 'matchOver' || held ? 'match' : phase === 'over' ? 'round' : 'none';
+  }
+
   /**
    * Flag mode: the marker over the pole (pinned to the screen edge when it's out of view), in the colour
    * of the team whose flag it is. Hidden between rounds and while you are close to the pole yourself.
@@ -410,7 +420,7 @@ export class MatchPresentation {
     const pole = r.flag.position;
     const metres = Math.hypot(pole.x - p.x, pole.z - p.z);
     const near = !spectating && metres <= FLAG_VISUALS.markerHideWithin;
-    if (!this.playing || !this.flag.object.visible || r.phase !== 'live' || near) {
+    if (!this.playing || !this.flag.object.visible || r.phase !== 'live' || near || this.boardUp) {
       this.marker.hide();
       return;
     }

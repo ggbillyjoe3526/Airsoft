@@ -1,14 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SETTINGS_WRITE_DELAY_MS } from '../config/menus';
 import { QUALITY, resolveQuality } from '../config/render';
 import { loadCustomQuality, loadSavedQuality } from '../ui/menus/savedChoices';
-import { loadSetting, migrateSettings, numberIn, oneOf, saveSetting, SETTINGS_KEY, SETTINGS_VERSION } from './storage';
+import { flushSettings, loadSetting, numberIn, oneOf, saveSetting, saveSettingSoon, SETTINGS_KEY, SETTINGS_VERSION } from './storage';
 
-/** A Storage backed by a Map (only the calls the settings use). */
-function memoryStorage(initial: Record<string, string> = {}): Storage {
+/** A Storage backed by a Map (only the calls the settings use); `writes` and `parses` count the work done. */
+function memoryStorage(initial: Record<string, string> = {}): Storage & { writes: number } {
   const m = new Map(Object.entries(initial));
   return {
+    writes: 0,
     getItem: (k: string) => m.get(k) ?? null,
-    setItem: (k: string, v: string) => void m.set(k, String(v)),
+    setItem(k: string, v: string) {
+      this.writes++;
+      m.set(k, String(v));
+    },
     removeItem: (k: string) => void m.delete(k),
     clear: () => m.clear(),
     key: (i: number) => [...m.keys()][i] ?? null,
@@ -94,16 +99,77 @@ describe('settings migration and the Custom graphics fields (final alpha audit s
     expect(loadSavedQuality(s)).toBeNull();
   });
 
-  it('runs an older object through the migrations in order, and refuses one it cannot bring up to date', () => {
-    const migrations = {
-      1: (o: Record<string, unknown>) => ({ ...o, fieldOfView: undefined, fov: o.fieldOfView }),
-      2: (o: Record<string, unknown>) => ({ ...o, quality: o.quality === 'ultra' ? 'high' : o.quality }),
-    };
-    expect(migrateSettings({ version: 1, fieldOfView: 100, quality: 'ultra' }, migrations, 3)).toEqual({ version: 3, fov: 100, fieldOfView: undefined, quality: 'high' });
-    expect(migrateSettings({ version: 3, fov: 90 }, migrations, 3)).toEqual({ version: 3, fov: 90 });
-    expect(migrateSettings({ version: 4 }, migrations, 3)).toBeNull(); // from a newer build
-    expect(migrateSettings({ version: 0 }, migrations, 3)).toBeNull(); // no step from 0
-    expect(migrateSettings({ fov: 90 }, migrations, 3)).toBeNull();
-    expect(migrateSettings('junk', migrations, 3)).toBeNull();
+  it('keeps the Custom rows through the store\'s one migrate path, and drops them with a newer build\'s object', () => {
+    const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, quality: 'custom', 'graphics.renderScale': 60 }), 'airsoft.mode': 'attackDefend' });
+    saveSetting('graphics.shadows', 'off', s);
+    expect(JSON.parse(s.getItem(SETTINGS_KEY)!)).toEqual({ version: 1, quality: 'custom', 'graphics.renderScale': 60, 'graphics.shadows': 'off', mode: 'attackDefend' });
+    expect(loadCustomQuality(s)).toEqual({ renderScale: 0.6, shadows: false });
+    const newer = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: SETTINGS_VERSION + 1, quality: 'custom', 'graphics.renderScale': 60 }) });
+    expect(loadSavedQuality(newer)).toBeNull();
+    expect(loadCustomQuality(newer)).toEqual({});
+  });
+});
+
+describe('settings store: migration, newer builds, one parse (audit UI-25)', () => {
+  it('carries the old per-setting keys ("version 0") into the object, and drops them all with the next save', () => {
+    const s = memoryStorage({ 'airsoft.sensitivity': '2.5', 'airsoft.mode': 'attackDefend' });
+    saveSetting('crouch', 'hold', s);
+    expect(JSON.parse(s.getItem(SETTINGS_KEY)!)).toEqual({ version: 1, sensitivity: '2.5', mode: 'attackDefend', crouch: 'hold' });
+    expect(s.getItem('airsoft.sensitivity')).toBeNull();
+    expect(s.getItem('airsoft.mode')).toBeNull();
+    expect(loadSetting('sensitivity', sens, 1, s)).toBe(2.5);
+  });
+
+  it('never overwrites settings saved by a newer build (KNOWN_ISSUES row 99): changes last for the session', () => {
+    const newer = JSON.stringify({ version: 2, crouch: { mode: 'hold' } });
+    const s = memoryStorage({ [SETTINGS_KEY]: newer });
+    expect(loadSetting('crouch', crouch, 'toggle', s)).toBe('toggle');
+    saveSetting('crouch', 'hold', s);
+    expect(s.getItem(SETTINGS_KEY)).toBe(newer);
+  });
+
+  it('parses the stored object once for many reads, and again only when its text changes', () => {
+    const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, crouch: 'hold' }) });
+    const parse = vi.spyOn(JSON, 'parse');
+    for (let i = 0; i < 20; i++) loadSetting('crouch', crouch, 'toggle', s);
+    expect(parse).toHaveBeenCalledTimes(1);
+    s.setItem(SETTINGS_KEY, JSON.stringify({ version: 1, crouch: 'toggle' }));
+    expect(loadSetting('crouch', crouch, 'hold', s)).toBe('toggle');
+    expect(parse).toHaveBeenCalledTimes(2);
+    parse.mockRestore();
+  });
+});
+
+describe('settings written once a slider settles (audit UI-11 / CORE-12)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('holds a run of slider steps and writes once, while reads see each step at once', () => {
+    vi.useFakeTimers();
+    const s = memoryStorage();
+    for (let i = 1; i <= 10; i++) {
+      saveSettingSoon('sensitivity', 1 + i / 10, s);
+      vi.advanceTimersByTime(SETTINGS_WRITE_DELAY_MS / 4);
+    }
+    expect(s.writes).toBe(0);
+    expect(loadSetting('sensitivity', sens, 1, s)).toBe(2);
+    vi.advanceTimersByTime(SETTINGS_WRITE_DELAY_MS);
+    expect(s.writes).toBe(1);
+    expect(JSON.parse(s.getItem(SETTINGS_KEY)!)).toEqual({ version: 1, sensitivity: 2 });
+  });
+
+  it('writes what is waiting at once when flushed (the page hidden or closed), and a direct save takes it along', () => {
+    vi.useFakeTimers();
+    const s = memoryStorage();
+    saveSettingSoon('fov', 90, s);
+    flushSettings(s);
+    expect(s.writes).toBe(1);
+    expect(JSON.parse(s.getItem(SETTINGS_KEY)!).fov).toBe(90);
+    saveSettingSoon('fov', 95, s);
+    saveSetting('crouch', 'hold', s);
+    expect(JSON.parse(s.getItem(SETTINGS_KEY)!)).toEqual({ version: 1, fov: 95, crouch: 'hold' });
+    vi.advanceTimersByTime(SETTINGS_WRITE_DELAY_MS * 2);
+    expect(s.writes).toBe(2); // nothing left waiting
   });
 });

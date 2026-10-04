@@ -1,12 +1,14 @@
 import {
   CROSSHAIR_COLORS,
+  CROSSHAIR_DYNAMIC,
   CROSSHAIR_OUTLINES,
   CROSSHAIR_PREVIEW_SPREAD,
   CROSSHAIR_RANGES,
   CROSSHAIR_SHAPES,
   type CrosshairSettings,
 } from '../config/matchInfo';
-import { crosshairElement, setCrosshairGap, styleCrosshair } from './crosshair';
+import { crosshairElement, hexColour, setCrosshairGap, styleCrosshair } from './crosshair';
+import { saveSetting, saveSettingSoon } from '../settings/storage';
 import { el, menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
@@ -17,7 +19,8 @@ export interface CrosshairSettingsOptions {
 
 /**
  * The Crosshair tab's rows (Settings → Crosshair, M19): a live preview (standing still, and opened up as when moving),
- * then shape, size, thickness, gap, colour and outline. Each saves and applies as it changes.
+ * then shape, size, thickness, gap, colour (any colour too, audit UI-21), opacity, dynamic or static, and outline. Each
+ * saves and applies as it changes.
  */
 export function crosshairSettings(opts: CrosshairSettingsOptions): HTMLDivElement[] {
   const current: CrosshairSettings = { ...opts.initial };
@@ -35,7 +38,7 @@ export function crosshairSettings(opts: CrosshairSettingsOptions): HTMLDivElemen
   const refresh = (): void => {
     for (const { crosshair, spread } of samples) {
       styleCrosshair(crosshair, current);
-      setCrosshairGap(crosshair, current.gap + spread);
+      setCrosshairGap(crosshair, current.gap + (current.dynamic === 'on' ? spread : 0));
     }
   };
   const change = <K extends keyof CrosshairSettings>(key: K, value: CrosshairSettings[K]): void => {
@@ -60,14 +63,41 @@ export function crosshairSettings(opts: CrosshairSettingsOptions): HTMLDivElemen
       'Space in the middle when your aim is steady.',
       rangeControl('Crosshair gap', CROSSHAIR_RANGES.gap, current.gap, px, 'crosshair.gap', (v) => change('gap', v)),
     ),
-    menuRow('Colour', '', colourPicker(current, (v) => change('color', v))),
+    menuRow('Colour', '', colourPicker(current, change)),
+    menuRow(
+      'Opacity',
+      '',
+      rangeControl('Crosshair opacity', CROSSHAIR_RANGES.opacity, current.opacity, (v) => `${Math.round(v * 100)}%`, 'crosshair.opacity', (v) => change('opacity', v)),
+    ),
+    menuRow('Spread', '', new OptionPicker('Spread', CROSSHAIR_DYNAMIC, current.dynamic, 'crosshair.dynamic', (v) => change('dynamic', v)).root),
     menuRow('Outline', '', new OptionPicker('Outline', CROSSHAIR_OUTLINES, current.outline, 'crosshair.outline', (v) => change('outline', v)).root),
   ];
 }
 
-/** The colour picker, each button with a swatch of its colour. */
-function colourPicker(current: CrosshairSettings, onChange: (color: CrosshairSettings['color']) => void): HTMLDivElement {
-  const picker = new OptionPicker('Colour', CROSSHAIR_COLORS, current.color, 'crosshair.color', onChange);
-  picker.addSwatches(CROSSHAIR_COLORS);
+/**
+ * The colour picker, each button with a swatch of its colour, and a colour box for Custom (audit UI-21): picking in the
+ * box makes Custom the colour.
+ */
+function colourPicker(current: CrosshairSettings, change: <K extends keyof CrosshairSettings>(key: K, value: CrosshairSettings[K]) => void): HTMLDivElement {
+  const picker = new OptionPicker('Colour', CROSSHAIR_COLORS, current.color, 'crosshair.color', (v) => change('color', v));
+  picker.addSwatches(CROSSHAIR_COLORS.map((c) => (c.id === 'custom' ? { css: current.customColor } : c)));
+  const customSwatch = [...picker.root.querySelectorAll<HTMLElement>('.crosshair-swatch')][CROSSHAIR_COLORS.findIndex((c) => c.id === 'custom')];
+  const box = el('input', 'crosshair-custom');
+  box.type = 'color';
+  box.value = current.customColor;
+  box.setAttribute('aria-label', 'Custom crosshair colour');
+  box.addEventListener('input', () => {
+    const hex = hexColour(box.value);
+    if (!hex) return;
+    if (customSwatch) customSwatch.style.background = hex;
+    saveSettingSoon('crosshair.customColor', hex);
+    change('customColor', hex);
+    if (current.color !== 'custom') {
+      picker.show('custom');
+      saveSetting('crosshair.color', 'custom');
+      change('color', 'custom');
+    }
+  });
+  picker.root.querySelector('.picker-row')!.append(box);
   return picker.root;
 }

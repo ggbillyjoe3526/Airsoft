@@ -83,6 +83,35 @@ describe('round flow', () => {
     expect(bbs.bbs.every((b) => !b.active)).toBe(true);
   });
 
+  it('plays a drawn round again under the same number, at the same ends, and counts the draw (owner, audit SIM-19)', () => {
+    const round = createRoundState(RULES);
+    const cs = teams();
+    const events: GameEvent[] = [];
+    // Round 1 decided, then round 2 (the last before half-time) runs out of time twice.
+    cs[2]!.status = 'out';
+    cs[3]!.status = 'out';
+    run(RULES.resetDelay + 0.2, round, cs, events);
+    expect(round.number).toBe(2);
+    for (let k = 0; k < 2; k++) {
+      run(RULES.roundTime + RULES.resetDelay + 0.1, round, cs, events);
+      expect(round.number).toBe(2);
+      expect(round.phase).toBe('live');
+      expect(cs[0]!.end).toBe(RULES.eliminationFirstEnd); // no half-time swap after a draw
+    }
+    expect(events.filter((e) => e.type === 'roundStart').map((e) => (e.type === 'roundStart' ? e.round : 0))).toEqual([2, 2, 2]);
+    expect(round.draws).toBe(2);
+    expect(round.score).toEqual([1, 0]);
+    // A decided round moves on, and half-time follows it.
+    cs[2]!.status = 'out';
+    cs[3]!.status = 'out';
+    run(RULES.resetDelay + 0.2, round, cs, events);
+    expect(round.number).toBe(3);
+    expect(cs[0]!.end).toBe(1 - RULES.eliminationFirstEnd);
+    // A new match clears the count.
+    restartMatch(round, cs, createBBPool(1), CTX, [], 'elimination');
+    expect(round.draws).toBe(0);
+  });
+
   it('calls it a draw when both teams are out at once', () => {
     const round = createRoundState(RULES);
     const cs = teams();
@@ -135,7 +164,11 @@ describe('ends of the map', () => {
       [1, 20, 0.05, 3, Math.PI / 2],
     ]);
     const events: GameEvent[] = [];
-    for (let r = 0; r < RULES.halfTimeAfter; r++) run(RULES.roundTime + RULES.resetDelay + 0.1, round, cs, events); // draws
+    // Decided rounds (a draw is played again under the same number): each team wins one, so nobody reaches winsNeeded.
+    for (let r = 0; r < RULES.halfTimeAfter; r++) {
+      for (const c of cs) if (c.team === r % 2) c.status = 'out';
+      run(RULES.resetDelay + 0.2, round, cs, events);
+    }
     expect(round.number).toBe(RULES.halfTimeAfter + 1);
     expect(cs.map((c) => [c.end, c.position.x, c.position.z])).toEqual([
       [1, 20, 2],

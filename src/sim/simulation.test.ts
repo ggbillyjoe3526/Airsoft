@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BALLISTICS } from '../config/ballistics';
+import { BALLISTICS, WIND } from '../config/ballistics';
 import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { HITS, ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
-import { LOADOUT } from '../config/replicas';
+import { LOADOUT, TRIGGER } from '../config/replicas';
 import { RANGE } from '../config/range';
 import { createCharacter, eyeHeight, respawnCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
@@ -17,6 +17,7 @@ import { createRangeTargets } from './rangeTargets';
 import { placeTeams } from './round';
 import { createGameState } from './state';
 import { OPEN_NAV, openFieldElimination } from './testSupport';
+import { createWind, windAt } from './wind';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
@@ -176,6 +177,74 @@ describe('stepSimulation', () => {
     expect(fired).toBeGreaterThan(0);
   });
 
+  it("hands each tick's spreadScale to the muzzle that fires the shot (KNOWN_ISSUES accuracy wiring)", () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0);
+    state.characters.push(c);
+    const cmd = createCommand();
+    const ctx = testContext(floor, KILL_Y);
+    for (let i = 0; i < 10; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(ctx.muzzle.spreadScale).toBe(c.spreadScale);
+    const still = ctx.muzzle.spreadScale;
+    cmd.forward = 1;
+    for (let i = 0; i < 30; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      expect(ctx.muzzle.spreadScale).toBe(c.spreadScale);
+    }
+    expect(ctx.muzzle.spreadScale).toBeGreaterThan(still);
+  });
+
+  it('fires a semi click made in the first moment after a sprint once the lockout ends, exactly once (audit SIM-03)', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0);
+    c.armament.modes[c.armament.active] = 'semi';
+    state.characters.push(c);
+    const cmd = createCommand();
+    cmd.forward = 1;
+    cmd.sprint = true;
+    const ctx = testContext(floor, KILL_Y);
+    for (let i = 0; i < 30; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.sprinting).toBe(true);
+    // Let go of sprint and click on the first lockout tick (one tick of trigger).
+    cmd.sprint = false;
+    cmd.forward = 0;
+    cmd.fire = true;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.sprinting).toBe(false);
+    expect(c.sprintLockout).toBeGreaterThan(TRIGGER.pressBuffer); // the lockout outlasts the plain press buffer
+    expect(state.events.filter((e) => e.type === 'shot')).toHaveLength(0);
+    cmd.fire = false;
+    let shots = 0;
+    for (let i = 0; i < 60; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      shots += state.events.filter((e) => e.type === 'shot').length;
+    }
+    expect(shots).toBe(1);
+  });
+
+  it('still drops a click made while sprinting, as before (the sprint itself is a choice; KNOWN_ISSUES)', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0);
+    c.armament.modes[c.armament.active] = 'semi';
+    state.characters.push(c);
+    const cmd = createCommand();
+    cmd.forward = 1;
+    cmd.sprint = true;
+    const ctx = testContext(floor, KILL_Y);
+    for (let i = 0; i < 30; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    cmd.fire = true;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT); // clicked while still sprinting
+    cmd.fire = false;
+    cmd.sprint = false;
+    cmd.forward = 0;
+    let shots = 0;
+    for (let i = 0; i < 60; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      shots += state.events.filter((e) => e.type === 'shot').length;
+    }
+    expect(shots).toBe(0);
+  });
+
   it('leans while Q / E is held, records the previous lean for smooth rendering, and fires from the leaned eye', () => {
     const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0); // facing -Z: its right is +X
@@ -198,6 +267,56 @@ describe('stepSimulation', () => {
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
     expect(c.prevLean).toBe(1);
     expect(c.lean).toBeLessThan(1);
+  });
+
+  it("flies BBs through the match's wind (M30): state.wind follows it every tick, and a BB drifts downwind", () => {
+    const run = (wind: boolean) => {
+      const state = createGameState(1, 16, ROUNDS);
+      const c = createCharacter(0, vec3(0, 0, 0), 0);
+      state.characters.push(c);
+      const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, wind: wind ? { ...createWind(5, WIND), yaw: -Math.PI / 2, speed: 1.5 } : undefined, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
+      const fire = createCommand();
+      fire.fire = true;
+      stepSimulation(state, new Map([[0, fire]]), ctx, DT);
+      const bb = state.bbs.bbs.find((b) => b.active)!;
+      const idle = createCommand();
+      for (let i = 0; i < 20; i++) stepSimulation(state, new Map([[0, idle]]), ctx, DT);
+      return { state, ctx, bb };
+    };
+    const calm = run(false);
+    expect(calm.state.wind).toEqual({ x: 0, y: 0, z: 0 });
+    const windy = run(true);
+    // The wind as it blows at this moment of the match...
+    expect(windy.state.wind).toEqual(windAt(windy.ctx.wind!, windy.state.time - DT, vec3()));
+    expect(windy.state.wind.x).toBeGreaterThan(1); // yaw −90°: blowing towards +x
+    // ...carries the BB that way, where the calm one flies straight on.
+    expect(windy.bb.position.x - calm.bb.position.x).toBeGreaterThan(0.01);
+  });
+
+  it("does not push characters about, and leaves the seeded rng alone, however hard the wind blows (M30)", () => {
+    const run = (wind: boolean) => {
+      const state = createGameState(11, 16, ROUNDS);
+      const still = createCharacter(0, vec3(2, 0, 3), 0);
+      const walker = createCharacter(1, vec3(-4, 0, 0), 0);
+      state.characters.push(still, walker);
+      const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, wind: wind ? { ...createWind(11, WIND), speed: 1.8, gust: 0 } : undefined, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
+      const go = createCommand();
+      go.forward = 1;
+      const commands = new Map([[1, go]]);
+      for (let i = 0; i < 120; i++) stepSimulation(state, commands, ctx, DT);
+      return state;
+    };
+    const calm = run(false);
+    const windy = run(true);
+    expect(Math.hypot(windy.wind.x, windy.wind.z)).toBeGreaterThan(1); // it really blew
+    expect(windy.characters[0]!.position).toEqual(calm.characters[0]!.position);
+    expect(windy.characters[0]!.position).toEqual({ x: 2, y: 0, z: 3 });
+    expect(windy.characters[0]!.velocity).toEqual(calm.characters[0]!.velocity);
+    expect(windy.characters[1]!.position).toEqual(calm.characters[1]!.position);
+    expect(windy.characters[1]!.velocity).toEqual(calm.characters[1]!.velocity);
+    // No draw from the simulation's stream (a shot-free match, with and without a breeze, ends on the same rng state).
+    expect(windy.rng).toEqual(calm.rng);
+    expect(windy.rng).toEqual(createGameState(11, 16, ROUNDS).rng);
   });
 
   it('clears last tick\'s events at the start of every tick', () => {
@@ -260,6 +379,41 @@ describe('hit calling and round flow', () => {
     const parked = { ...target.position };
     for (let i = 0; i < 30; i++) stepSimulation(state, commands, ctx, DT);
     expect(Math.hypot(target.position.x - parked.x, target.position.z - parked.z)).toBeLessThan(0.01);
+  });
+
+  it('a character standing in the dead zone costs no movement step: no mover calls, and it stays put (audit SIM-15)', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const keeper = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
+    const out = createCharacter(1, vec3(30, 0, 0), 0, LOADOUT, 1);
+    const other = createCharacter(2, vec3(-20, 0, 0), 0, LOADOUT, 1); // keeps the round live
+    state.characters.push(keeper, out, other);
+    const calls = new Map<number, number>();
+    const counting: CharacterMover = {
+      move(c, d, o) {
+        calls.set(c.id, (calls.get(c.id) ?? 0) + 1);
+        return floor.move(c, d, o);
+      },
+      probeGround(c, maxDrop) {
+        calls.set(c.id, (calls.get(c.id) ?? 0) + 1);
+        return floor.probeGround(c, maxDrop);
+      },
+    };
+    const ctx = testContext(counting, KILL_Y);
+    out.status = 'out';
+    out.statusTime = 0;
+    out.yaw = 1.2;
+    stepSimulation(state, new Map(), ctx, DT); // the tick it arrives: settled as usual
+    expect(out.grounded).toBe(true);
+    const before = calls.get(out.id)!;
+    expect(before).toBeGreaterThan(0);
+    const parked = { ...out.position };
+    for (let i = 0; i < 60; i++) stepSimulation(state, new Map(), ctx, DT);
+    expect(calls.get(out.id)).toBe(before);
+    expect(calls.get(keeper.id)).toBeGreaterThan(60); // everyone else still moves
+    expect(out.position).toEqual(parked);
+    expect(out.prevPosition).toEqual(parked);
+    expect(out.yaw).toBe(1.2);
+    expect(out.statusTime).toBeCloseTo(61 * DT, 9); // its clock still runs (the arrival tick, then 60 more)
   });
 
   it('a hit character cannot shoot', () => {

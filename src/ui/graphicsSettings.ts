@@ -85,7 +85,7 @@ export class GraphicsSettings {
     this.showFpsRow = menuRow('Show FPS', GRAPHICS_TEXT.showFpsHelp, fps.root);
 
     this.customBlock = el('div', 'graphics-custom');
-    this.customBlock.append(el('h3', 'graphics-subhead', GRAPHICS_TEXT.customHeading), el('p', 'menu-readout', GRAPHICS_TEXT.customIntro));
+    this.customBlock.append(el('h3', 'menu-kicker graphics-subhead', GRAPHICS_TEXT.customHeading), el('p', 'menu-readout', GRAPHICS_TEXT.customIntro));
     for (const row of GRAPHICS_ROWS) this.customBlock.append(this.buildRow(row));
     this.refreshNotes();
   }
