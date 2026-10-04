@@ -33,7 +33,7 @@ import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
 import { type Collection, loadCollection, saveCollection } from './pool/collection';
 import { GAME_POOL } from './pool/gamePool';
-import { gameOwnership, LoadoutModel } from './pool/loadoutModel';
+import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import { earn, type Earnings, matchPay } from './pool/armory';
 import { fcText } from './ui/menus/armoryScreen';
@@ -203,7 +203,8 @@ export class Game {
     this.matchRules = loadMatchRules();
     this.collection = loadCollection(GAME_POOL, options.seed);
     this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear));
-    carryOverOldPicks(this.loadout, this.collection, saveCollection);
+    // Against what is really owned, so the picks land in the real loadout even with Unlock all gear on (M26d).
+    carryOverOldPicks(new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection)), this.collection, saveCollection);
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
