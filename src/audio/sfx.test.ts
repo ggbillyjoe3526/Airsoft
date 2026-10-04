@@ -844,4 +844,13 @@ describe('a silenced shot sounds muffled (M29b)', () => {
     sfx2.onEvent(shot(PLAYER), PLAYER, of2);
     expect(muffled.some((v) => same(v, bufferOf(ctx2.sources[0]!)))).toBe(true);
   });
+
+  it('has its muffled copies ready before the match: the first silenced shot makes no buffer', () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    fitParts(bot.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+    const made = ctx.buffersMade;
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    expect(ctx.sources.length).toBeGreaterThan(0);
+    expect(ctx.buffersMade).toBe(made);
+  });
 });

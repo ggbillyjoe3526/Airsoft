@@ -6,11 +6,10 @@ import type { MapBlock } from '../map/mapTypes';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import type { Vec3 } from '../sim/vec';
-import { type AudioEngine, toBuffer } from './audioEngine';
+import type { AudioEngine } from './audioEngine';
 import { FoleyTracker, type FoleyMove } from './foley';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, type Muffle, muffleFor, type OcclusionQuery } from './occlusion';
-import { suppressedCopies } from './soundBank';
 import { surfaceUnder } from './soundMaterials';
 import { VoiceLimit } from './voiceLimit';
 import { Whistle } from './whistle';
@@ -42,10 +41,8 @@ interface ReplicaSound {
   fireRate: number;
   /** Its shot variants (muffled copies for a suppressed replica). */
   shots: readonly AudioBuffer[];
-  /** Muffled copies for a shooter with a silencer fitted (M29b), made the first time one fires. */
-  muffled: readonly AudioBuffer[] | null;
-  /** The sample cue its shots come from. */
-  cue: SoundCue;
+  /** Muffled copies, for a shooter with a silencer fitted (M29b): the engine's, made once for every match. */
+  muffled: readonly AudioBuffer[];
 }
 
 /** What every match's sound shares: the Game's audio engine (context, volume buses, every sound's buffers). */
@@ -165,8 +162,9 @@ export class Sfx {
     for (const r of this.loadout) {
       const cue = cues.shot(r.power);
       // A replica built suppressed always sounds muffled; one with a silencer fitted (M29b) chooses per shooter.
-      const shots = r.look.suppressed ? suppressedCopies(this.engine.samples(cue), ctx.sampleRate).map((v) => toBuffer(ctx, v)) : this.buffers.get(cue)!;
-      this.replicas.set(r.id, { profile: r.power, fireRate: r.fireRate, shots, muffled: r.look.suppressed ? shots : null, cue });
+      const muffled = this.engine.muffledBuffers(cue);
+      const shots = r.look.suppressed ? muffled : this.buffers.get(cue)!;
+      this.replicas.set(r.id, { profile: r.power, fireRate: r.fireRate, shots, muffled });
     }
   }
 
@@ -353,15 +351,6 @@ export class Sfx {
 
   // ---- What plays ---------------------------------------------------------------------------
 
-  /** A replica's muffled shot variants, made once per match the first time a silenced one fires. */
-  private muffledShots(r: ReplicaSound): readonly AudioBuffer[] {
-    if (!r.muffled && this.ctx) {
-      const ctx = this.ctx;
-      r.muffled = suppressedCopies(this.engine.samples(r.cue), ctx.sampleRate).map((v) => toBuffer(ctx, v));
-    }
-    return r.muffled ?? r.shots;
-  }
-
   /**
    * A shot. An AEG winds its motor up on the first shot of a trigger pull and coasts down after the last: each
    * shot puts the wind-down off (afterTick plays it), so it only sounds once the trigger is let go.
@@ -374,7 +363,7 @@ export class Sfx {
     // The shooter's own replica as carried (its silencer and battery, M29b), not the local player's copy of it.
     const shooter = characterOf(characterId)?.armament;
     const muffled = shooter?.handling[shooter.active]?.muffled ?? false;
-    this.playBuffer(muffled ? this.muffledShots(r) : r.shots, replicaId, out, L.shot);
+    this.playBuffer(muffled ? r.muffled : r.shots, replicaId, out, L.shot);
     if (r.profile !== 'electric') return;
     const fireRate = shooter?.replicas[shooter.active]?.fireRate ?? r.fireRate;
     let m = this.motors.get(characterId);
