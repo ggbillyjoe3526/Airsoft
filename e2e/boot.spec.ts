@@ -320,6 +320,9 @@ test('the practice range opens from the title screen and reads out the last BB',
   // Low, so the range draws fast enough in software on a CI runner (as the first test).
   await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  // A refused mouse lock (Practice range or Tutorial clicked too soon after Esc) says so on the title too (audit L-29).
+  await page.evaluate(() => document.dispatchEvent(new Event('pointerlockerror')));
+  await expect(page.locator('.menu-title .menu-hint')).toContainText('Click again');
   await page.getByRole('button', { name: 'Practice range' }).click();
   const readout = page.locator('.range-readout');
   await expect(readout).toBeVisible();

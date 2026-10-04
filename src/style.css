@@ -233,6 +233,11 @@ body {
   gap: 16px;
 }
 
+/* The title's hint (a refused mouse lock) takes a line of its own over the buttons. */
+.menu-title-actions .menu-hint {
+  flex-basis: 100%;
+}
+
 .menu-title-build {
   position: absolute;
   right: var(--menu-gutter);
