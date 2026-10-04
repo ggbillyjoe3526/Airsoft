@@ -164,6 +164,28 @@ describe('replica handling', () => {
     expect(count(run(1, (c) => (c.fire = true)), 'shot')).toBe(1);
   });
 
+  it('keeps a reload pressed while the replica comes up, and starts it once it is up (bug pass)', () => {
+    const { a, run, count } = setup();
+    a.ammo[1]!.mag = 5;
+    run(1, (c) => (c.switchTo = 1));
+    // R three ticks into the draw: nothing yet, then the reload starts as the pistol is up.
+    const during = run(Math.ceil(GAS_PISTOL.drawTime / DT) + 1, (c, i) => (c.reload = i === 3));
+    expect(count(during, 'reloadStart')).toBe(1);
+    expect(a.reload).toBeGreaterThan(0);
+    run(Math.ceil(GAS_PISTOL.reloadTime / DT) + 1);
+    expect(a.ammo[1]!.mag).toBe(GAS_PISTOL.magSize);
+  });
+
+  it('drops a reload asked for during a draw when the player switches again', () => {
+    const { a, run, count } = setup();
+    a.ammo[0]!.mag = 5;
+    run(1, (c) => (c.switchTo = 1));
+    run(3, (c, i) => (c.reload = i === 1));
+    run(1, (c) => (c.switchTo = 0));
+    expect(count(run(Math.ceil(AEG.drawTime / DT) + 5), 'reloadStart')).toBe(0);
+    expect(a.ammo[0]!.mag).toBe(5);
+  });
+
   it('does not fire when the character cannot (sprinting)', () => {
     const { run, count } = setup();
     expect(count(run(30, (c) => (c.fire = true), false), 'shot')).toBe(0);
@@ -416,6 +438,18 @@ describe('fire selector (owner, 2026-10-03)', () => {
     expect(c.armament.hopUps).toEqual([0.4, 0.8]);
     expect(c.armament.bbWeights).toEqual([0.28, 0.25]);
     expect(c.armament.ammo[0]!.mag).toBe(AEG.magSize);
+  });
+
+  it('needs a fresh pull for a semi shot when the trigger is still held as a round starts (bug pass)', () => {
+    const c = createCharacter(0, vec3(), 0, LOADOUT);
+    c.armament.modes[0] = 'semi';
+    c.armament.triggerWasDown = true; // held through the end of the last round
+    respawnCharacter(c, LOADOUT);
+    const s = setup();
+    Object.assign(s.a, c.armament);
+    expect(s.count(s.run(10, (cmd) => (cmd.fire = true)), 'shot')).toBe(0);
+    expect(s.count(s.run(1, (cmd) => (cmd.fire = false)), 'shot')).toBe(0);
+    expect(s.count(s.run(1, (cmd) => (cmd.fire = true)), 'shot')).toBe(1);
   });
 });
 

@@ -235,6 +235,8 @@ export class Menus {
    */
   setBlocked(blocked: boolean): void {
     this.root.inert = blocked;
+    // A pop-up is a modal dialog, drawn above everything (the notice too) and closed by Esc even while inert (bug pass).
+    if (blocked) this.closeDialogs();
     if (!blocked && !this.root.hidden) this.screens[this.current].querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true });
   }
 
@@ -377,12 +379,16 @@ export class Menus {
     return this.mapDialog.root.open || this.modeDialog.root.open || this.matchDialog.root.open || this.difficultyDialog.root.open;
   }
 
-  /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */
-  private leave(): void {
+  private closeDialogs(): void {
     this.mapDialog.close();
     this.modeDialog.close();
     this.matchDialog.close();
     this.difficultyDialog.close();
+  }
+
+  /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */
+  private leave(): void {
+    this.closeDialogs();
     if (this.current === 'settings') this.settings.closed();
   }
 

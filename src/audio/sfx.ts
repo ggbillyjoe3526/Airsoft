@@ -1,5 +1,6 @@
 import { AUDIO, matchOverBlastStart } from '../config/audio';
 import type { ReplicaConfig } from '../config/replicas';
+import { SIM_DT } from '../config/sim';
 import { cues, type ImpactMaterial, type ShotProfile, type SoundCue } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
 import type { Character } from '../sim/character';
@@ -70,11 +71,21 @@ export class Sfx {
   private ui: GainNode | null = null;
   /** This match's nodes between the engine's buses and the sounds, disconnected on dispose. */
   private readonly graph: AudioNode[] = [];
+  /** Where this match's sound leaves for the engine's buses (effects, interface): muted while paused. */
+  private readonly outlets: GainNode[] = [];
   private buffers: ReadonlyMap<SoundCue, readonly AudioBuffer[]> = new Map();
   private readonly lastVariant = new Map<SoundCue | string, number>();
   private readonly replicas = new Map<string, ReplicaSound>();
   private readonly channels = new Map<number, Channel>();
-  private readonly motors = new Map<number, { motor: MotorSound; spinDown: Voice | null }>();
+  /**
+   * Each AEG's motor. Timed on the simulation's clock, not the audio clock: shots reach the audio a frame at a time, so
+   * at 30–50 fps the audio clock saw gaps between shots long enough to start a wind-down mid-burst (bug pass).
+   */
+  private readonly motors = new Map<number, { motor: MotorSound; fireRate: number; out: AudioNode; spinDown: Voice | null; spinDownDue: boolean }>();
+  /** Simulation time this match has run (s), counted in afterTick. */
+  private simTime = 0;
+  /** Motors whose wind-down is still to come (afterTick looks at them only then). */
+  private spinDownsDue = 0;
   private readonly foley = new FoleyTracker();
   private readonly impactLimit = new VoiceLimit(AUDIO.maxImpactsPerWindow, AUDIO.impactWindow);
   private readonly stepLimit = new VoiceLimit(AUDIO.footsteps.maxPerWindow, AUDIO.footsteps.window);
@@ -92,9 +103,13 @@ export class Sfx {
     private readonly engine: AudioEngine,
   ) {}
 
-  /** Pauses all sound with the game (and resumes it). */
+  /**
+   * Pauses all sound with the game (and resumes it). Paused, this match's outlets are muted too, so a volume slider's
+   * preview, which runs the shared context for its cue, doesn't let the match's queued sounds through with it.
+   */
   setPaused(paused: boolean): void {
     if (!this.ctx) return;
+    for (const outlet of this.outlets) outlet.gain.value = paused ? 0 : 1;
     this.engine.setRunning(!paused);
   }
 
@@ -120,9 +135,11 @@ export class Sfx {
   /** This match's graph (the world's reverb send, your own sounds, the interface's cues and whistle) on `ctx`. */
   private build(ctx: AudioContext): void {
     this.ctx = ctx;
-    const effects = this.engine.bus('effects')!;
+    // The match's own way into the effects bus (dry and echo alike), so pausing can mute it in one place.
+    const effects = ctx.createGain();
+    effects.connect(this.engine.bus('effects')!);
     this.world = ctx.createGain();
-    this.graph.push(this.world);
+    this.graph.push(effects, this.world);
     this.world.connect(effects);
     const reverb = ctx.createConvolver();
     reverb.buffer = this.engine.reverbImpulse();
@@ -135,6 +152,9 @@ export class Sfx {
     this.ui = ctx.createGain();
     this.ui.connect(this.engine.bus('interface')!);
     this.graph.push(this.self, this.ui);
+    this.outlets.push(effects, this.ui);
+    // Silent until play starts (setPaused(false)).
+    for (const outlet of this.outlets) outlet.gain.value = 0;
     this.whistle = new Whistle(ctx, this.ui);
 
     this.buffers = this.engine.cueBuffers();
@@ -182,7 +202,15 @@ export class Sfx {
 
   /** After every simulation tick: muffling, and the rustle of anyone starting to crouch, stand or lean. */
   afterTick(characters: readonly Character[], localId: number): void {
+    this.simTime += SIM_DT;
     if (!this.ctx) return;
+    // A motor whose trigger was let go long enough ago coasts down now.
+    if (this.spinDownsDue > 0) for (const m of this.motors.values()) {
+      if (!m.spinDownDue || this.simTime < m.motor.spinDownAt(m.fireRate)) continue;
+      m.spinDownDue = false;
+      this.spinDownsDue--;
+      m.spinDown = this.play('motor.spinDown', m.out, AUDIO.levels.motor);
+    }
     this.updateMuffling(characters, localId);
     this.foley.update(characters, (c, move) => this.foleyMove(c, move, localId));
   }
@@ -301,6 +329,7 @@ export class Sfx {
   dispose(): void {
     this.whistle?.stopAll();
     for (const node of this.graph.splice(0)) node.disconnect();
+    this.outlets.length = 0;
     for (const ch of this.channels.values()) {
       ch.panner.disconnect();
       ch.filter.disconnect();
@@ -315,13 +344,14 @@ export class Sfx {
     this.replicas.clear();
     this.channels.clear();
     this.motors.clear();
+    this.spinDownsDue = 0;
   }
 
   // ---- What plays ---------------------------------------------------------------------------
 
   /**
    * A shot. An AEG winds its motor up on the first shot of a trigger pull and coasts down after the last: each
-   * shot reschedules the wind-down, so it only sounds once the trigger is let go.
+   * shot puts the wind-down off (afterTick plays it), so it only sounds once the trigger is let go.
    */
   private shot(characterId: number, replicaId: string, localId: number, characterOf: (id: number) => Character | undefined): void {
     const r = this.replicas.get(replicaId);
@@ -332,12 +362,17 @@ export class Sfx {
     if (r.profile !== 'electric') return;
     let m = this.motors.get(characterId);
     if (!m) {
-      m = { motor: new MotorSound(), spinDown: null };
+      m = { motor: new MotorSound(), fireRate: r.fireRate, out, spinDown: null, spinDownDue: false };
       this.motors.set(characterId, m);
     }
-    if (m.motor.shot(this.ctx!.currentTime, r.fireRate)) this.play('motor.spinUp', out, L.motor);
+    m.fireRate = r.fireRate;
+    m.out = out;
+    if (m.motor.shot(this.simTime, r.fireRate)) this.play('motor.spinUp', out, L.motor);
+    // A wind-down still sounding from the last pull fades out under the new one.
     if (m.spinDown) this.cancel(m.spinDown);
-    m.spinDown = this.play('motor.spinDown', out, L.motor, m.motor.spinDownAt(r.fireRate));
+    m.spinDown = null;
+    if (!m.spinDownDue) this.spinDownsDue++;
+    m.spinDownDue = true;
   }
 
   /** Stops a voice: one not started yet never sounds; one already playing fades out quickly rather than clicking. */

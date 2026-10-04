@@ -191,9 +191,11 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.statusTime = 0;
   c.hitBy = -1;
   c.walkOffStuck = 0;
-  const { modes, optics, hopUps, bbWeights, parts } = c.armament;
+  const { modes, optics, hopUps, bbWeights, parts, triggerWasDown } = c.armament;
   // Fresh magazines for the parts fitted (a hi-cap refills as a hi-cap).
   c.armament = createArmament(loadout, parts.length === loadout.length ? parts : []);
+  // A trigger still held from before the round needs letting go and pulling again (no semi shot at the whistle).
+  c.armament.triggerWasDown = triggerWasDown;
   if (modes.length === c.armament.modes.length) c.armament.modes = modes;
   if (optics.length === c.armament.optics.length) c.armament.optics = optics;
   if (hopUps.length === c.armament.hopUps.length) c.armament.hopUps = hopUps;

@@ -276,6 +276,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await quality.getByRole('button', { name: 'Low' }).click();
   await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(false);
+  // Team colours picked mid-match show from the next match, Play Again included (bug pass): back to Standard here.
+  await settings.getByRole('tab', { name: /Accessibility/i }).click();
+  await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'Standard' }).click();
+  expect(await teamCss()).toBe(matchOrange);
   await page.keyboard.press('Escape');
   await expect(pauseMenu).toBeVisible();
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
@@ -371,6 +375,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const round = () => page.evaluate(() => (window as unknown as End).airsoft.state.round);
   await expect.poll(async () => (await round()).phase, { timeout: 10_000 }).toBe('live');
   expect((await round()).score).toEqual([0, 0]);
+  expect(await teamCss()).toBe(standardOrange); // the Standard set picked mid-match
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });
 
@@ -391,6 +396,19 @@ test('the game boots to the title screen on High', async ({ page }) => {
   await expect(page.locator('.menu-title-warning')).not.toContainText('set to Low');
   const shadows = await page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
   expect(shadows).toBe(true);
+  // A pop-up open when the graphics context is lost closes, so the notice isn't under it (bug pass).
+  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-setup').getByRole('button', { name: /Difficulty/i }).click();
+  await expect(page.getByRole('dialog', { name: 'Bot difficulty' })).toBeVisible();
+  await page.evaluate(() => {
+    const lose = document.querySelector('canvas')!.getContext('webgl2')!.getExtension('WEBGL_lose_context')!;
+    (window as unknown as { lose: WEBGL_lose_context }).lose = lose;
+    lose.loseContext();
+  });
+  await expect(page.locator('.graphics-notice')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('dialog', { name: 'Bot difficulty' })).toBeHidden();
+  await page.evaluate(() => (window as unknown as { lose: WEBGL_lose_context }).lose.restoreContext());
+  await expect(page.locator('.graphics-notice')).toBeHidden({ timeout: 10_000 });
   expect(errors).toEqual([]);
 });
 

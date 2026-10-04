@@ -53,7 +53,8 @@ body {
   font: 12px/1.35 var(--ui-mono);
   white-space: pre;
   pointer-events: none;
-  z-index: 30;
+  /* Under the menus (z-index 20): its keys only work in play, so over them it couldn't be put away (bug pass). */
+  z-index: 19;
 }
 
 /* Menus (M15, M15b): title, New game and its pop-ups, Loadout, Settings, pause, result. One opaque screen at a time:
@@ -249,10 +250,11 @@ body {
 
 /* Full pages (New game, Loadout, Settings): wordmark and heading, body, footer with Back on the left */
 .menu-page {
+  --page-bottom: var(--menu-gutter);
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 40px var(--menu-gutter) var(--menu-gutter);
+  padding: 40px var(--menu-gutter) var(--page-bottom);
 }
 
 .menu-wordmark {
@@ -282,6 +284,14 @@ body {
   justify-content: space-between;
   gap: 16px;
   max-width: 1200px;
+  /* Back and Play stay on screen however long the page (bug pass: Loadout and Settings scroll at 1280 × 720). */
+  /* Pinned to the window's bottom edge, over the page's bottom padding (sticky keeps to inside the padding otherwise). */
+  position: sticky;
+  bottom: calc(-1 * var(--page-bottom));
+  z-index: 1;
+  margin-bottom: calc(-1 * var(--page-bottom));
+  padding: 12px 0 var(--page-bottom);
+  background: #16181d;
 }
 
 .menu-footer-end {
@@ -919,9 +929,9 @@ kbd {
 /* Short windows (a laptop with the browser's bars): tighter pages, so Play and Back stay on screen. */
 @media (max-height: 800px) {
   .menu-page {
+    --page-bottom: 24px;
     gap: 12px;
     padding-top: 24px;
-    padding-bottom: 24px;
   }
 
   .menu-heading {
@@ -1793,11 +1803,25 @@ kbd {
   display: none;
 }
 
+/* Never under the scoreboard (bug pass: at 1024 px a friendly-fire line ran beneath it): the feed keeps to the right
+   of its widest form (Attack and Defend, about 444 px) and a long line wraps. */
+.hit-feed {
+  max-width: calc(50% - 250px);
+}
+
+/* Where the round banner could reach the feed's column, it keeps to the middle and wraps instead. */
+@media (max-width: 1400px) {
+  .hitfx-round {
+    left: calc(50% - 230px);
+    right: calc(50% - 230px);
+  }
+}
+
 .hit-feed-line {
   padding: 3px 10px;
   border-radius: 4px;
   background: rgba(12, 14, 18, 0.6);
-  white-space: nowrap;
+  text-align: right;
   transition: opacity var(--feed-fade, 1s) linear;
 }
 
@@ -1812,6 +1836,7 @@ kbd {
 
 /* Each name in its team's colour, with a bar of it in front (the name says the team too). */
 .hit-feed-name {
+  white-space: nowrap;
   padding-left: 6px;
   border-left: 3px solid var(--team);
   color: var(--team);
@@ -1819,6 +1844,7 @@ kbd {
 }
 
 .hit-feed-line em {
+  white-space: nowrap;
   margin-left: 8px;
   padding: 1px 6px;
   border-radius: 3px;

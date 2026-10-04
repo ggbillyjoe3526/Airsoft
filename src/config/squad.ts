@@ -67,7 +67,7 @@ export const SQUAD_ORDERS = {
   labels: { follow: 'Follow me', hold: 'Hold here', regroup: 'Regroup' } satisfies Record<SquadOrderKind, string>,
   /** The HUD line after an order is cancelled, or given with no teammate left to take it, for `noticeTime` seconds. */
   cancelled: 'Back to the team plan',
-  nobody: 'No teammates left to order',
+  nobody: 'No teammates in play to order',
   /** An order key pressed while you are out, or between rounds: ignored, with this notice. */
   notNow: 'Orders wait for the next round',
   noticeTime: 2,
