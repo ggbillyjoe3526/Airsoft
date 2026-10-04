@@ -127,8 +127,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Done | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Done | 9.1 |
 | Alpha · Owner's 2026-10-04 batch · M26d Dev settings for the Armory: switch the gacha off, unlock all gear; docs | Done | 9.1 |
-| Alpha · Owner's 2026-10-04 requests · M29a Weapon performance data: `stats.md` (every replica's and part's numbers, hand-editable), tiers that add energy and rate of fire, batteries that set the rate of fire, an 11.1 V LiPo battery, a site energy limit, a Performance sheet on Customise | In progress | |
-| Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | In progress | |
+| Alpha · Owner's 2026-10-04 requests · M29a Weapon performance data: `stats.md` (every replica's and part's numbers, hand-editable), tiers that add energy and rate of fire, batteries that set the rate of fire, an 11.1 V LiPo battery, a site energy limit, a Performance sheet on Customise | Done | 8/8 |
+| Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 

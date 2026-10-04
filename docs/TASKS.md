@@ -42,5 +42,5 @@ acceptance:
   5. The Performance sheet shows "Shots heard from" and marks the barrel's and silencer's changes better or worse
   6. On Hard, each of the other team's bots carries its own kit, rolled from the pool by the match's seed: a tier for each replica and each part by the Armory's odds, a power source always, any part slot filled or left empty, only parts that fit; BB weight and hop-up as the replica comes; your teammates, and Easy and Normal opponents, carry the replicas as they come
   7. The headless match guards pass unchanged and Low still holds its frame budget
-status: building
-attempts: 0
+status: accepted
+attempts: 1
