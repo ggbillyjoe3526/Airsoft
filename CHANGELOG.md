@@ -40,6 +40,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
 - **M33a** · Woodland shown as Coming soon in the Map pop-up
+- **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots
+- **M35** · pool.md has an Access column: public or dev for each asset
 
 ### Changed
 - **FA10** · Field Credits: a won round pays only if you took part, pay scales with match length, and the difficulty bonus follows the lower of your teammates' and opponents' levels; Armory: 10 Shots and Scrap ask to confirm, holding Enter takes one Shot, the reveal shows rarest first with prices (#63)
@@ -53,6 +55,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 - **FA12** · With ricochets set to count, a BB that bounces can hit whoever fired it (not with friendly fire off) (#60)
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
+- **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits
 
 ### Fixed
 - **FA10** · Shot spread is the same sideways and up-down when aiming steeply up or down (#63)
