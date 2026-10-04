@@ -811,11 +811,14 @@ describe('difficulty levels', () => {
     return times[Math.floor(times.length / 2)]!;
   }
 
-  it('get deadlier from easy to hard', { timeout: 30_000 }, () => {
+  it('get deadlier from easy to hard, and Pro at least as deadly as Hard', { timeout: 30_000 }, () => {
     for (const dist of [4, 12]) {
-      const [easy, normal, hard] = DIFFICULTIES.map((d) => medianTimeToHit(d.id, dist, false));
+      const [easy, normal, hard, pro] = DIFFICULTIES.map((d) => medianTimeToHit(d.id, dist, false));
       expect(easy, `${dist} m`).toBeGreaterThan(normal!);
       expect(normal, `${dist} m`).toBeGreaterThan(hard!);
+      // Pro (M36) is no slower than Hard, and still not instant: its reaction alone is a quarter of a second.
+      expect(pro, `${dist} m`).toBeLessThanOrEqual(hard!);
+      expect(pro, `${dist} m`).toBeGreaterThan(0.25);
     }
   });
 
