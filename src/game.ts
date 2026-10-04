@@ -74,6 +74,7 @@ import {
   loadReducedMotion,
   loadSensitivity,
   loadShowFps,
+  loadToneMapping,
   loadHitFeedMode,
   loadHudSize,
   loadRawInput,
@@ -261,6 +262,7 @@ export class Game {
     this.matchSeed = options.seed;
     this.renderer = new Renderer(container, this.quality);
     this.renderer.setFov(loadFov());
+    this.renderer.setToneMapping(loadToneMapping());
     this.map = loadMap();
     this.mode = loadMode();
     this.difficulty = loadDifficulty();
@@ -391,6 +393,7 @@ export class Game {
         },
         frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
         showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
+        toneMapping: { initial: this.renderer.toneMappingId, onChange: (id) => this.renderer.setToneMapping(id) },
       },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },

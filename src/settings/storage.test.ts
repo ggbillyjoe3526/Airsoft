@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SETTINGS_WRITE_DELAY_MS } from '../config/menus';
 import { QUALITY, resolveQuality } from '../config/render';
-import { loadCustomQuality, loadSavedQuality } from '../ui/menus/savedChoices';
+import { loadCustomQuality, loadSavedQuality, loadToneMapping } from '../ui/menus/savedChoices';
 import { flushSettings, loadSetting, numberIn, oneOf, saveSetting, saveSettingSoon, SETTINGS_KEY, SETTINGS_VERSION } from './storage';
 
 /** A Storage backed by a Map (only the calls the settings use); `writes` and `parses` count the work done. */
@@ -107,6 +107,29 @@ describe('settings migration and the Custom graphics fields (final alpha audit s
     const newer = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: SETTINGS_VERSION + 1, quality: 'custom', 'graphics.renderScale': 60 }) });
     expect(loadSavedQuality(newer)).toBeNull();
     expect(loadCustomQuality(newer)).toEqual({});
+  });
+});
+
+describe('the visual overhaul’s settings (FA7)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('reads its Custom rows as additions to the version 1 object', () => {
+    const s = memoryStorage();
+    saveSetting('quality', 'custom', s);
+    saveSetting('graphics.trees', 'none', s);
+    saveSetting('graphics.normalMaps', 'bump', s);
+    saveSetting('graphics.clouds', 'maybe', s); // not an option
+    expect(loadCustomQuality(s)).toEqual({ trees: 0, normalMaps: false });
+    expect(resolveQuality('custom', loadCustomQuality(s))).toEqual({ ...QUALITY.high, trees: 0, normalMaps: false });
+  });
+
+  it('maps tones with Neutral until the player picks another, and ignores a value it does not offer', () => {
+    vi.stubGlobal('localStorage', memoryStorage());
+    expect(loadToneMapping()).toBe('neutral');
+    vi.stubGlobal('localStorage', memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, toneMapping: 'agx' }) }));
+    expect(loadToneMapping()).toBe('agx');
+    vi.stubGlobal('localStorage', memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, toneMapping: 'sepia' }) }));
+    expect(loadToneMapping()).toBe('neutral');
   });
 });
 
