@@ -1029,8 +1029,8 @@ Turn on Settings › Dev settings › Dev content, then New game › Mode › Ex
   no respawn left", and the strip says "No respawn left". Hit again: "Out of the run".
 - [ ] **Teammates:** both bots follow you from the start and again after they respawn; Z wheel orders still work.
 - [ ] **Clock:** a whistle at 1:00 left; the late exit opens at 3:00 (its sign turns green); at 0:00 "Caught out".
-- [ ] **Summary:** the teams read "your squad" and "home team"; no Field Credits; the records table shows the
-  Extraction column only while Dev content is on.
+- [ ] **Summary:** the teams read "your squad" and "home team"; no Field Credits; the records table has no
+  Extraction column.
 
 ## Reporting what you find
 

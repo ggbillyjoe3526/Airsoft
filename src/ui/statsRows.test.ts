@@ -76,12 +76,23 @@ describe('records view (M19)', () => {
     expect(view.notCounted).toBe('');
   });
 
-  it('shows dev modes (Extraction, M43) only with Dev content on (M35)', () => {
+  it('has no Extraction column while it is dev content, since a dev match never enters the records (M43, M35)', () => {
     const r = emptyRecords();
-    expect(recordsView(r, NO_NEWS_FOR_TEST, 'normal', 'elimination').modes).not.toContain('Extraction');
-    const on = recordsView(r, NO_NEWS_FOR_TEST, 'normal', 'elimination', '', true);
-    expect(on.modes).toEqual(MATCH_MODES.map((m) => m.label));
-    expect(on.rows.every((row) => row.cells.length === MATCH_MODES.length)).toBe(true);
+    expect(MATCH_MODES.find((m) => m.id === 'extraction')?.tag).toBe('dev');
+    const view = recordsView(r, NO_NEWS_FOR_TEST, 'normal', 'extraction', 'devContent');
+    expect(view.modes).toEqual(['Elimination', 'Attack and Defend']);
+    expect(view.rows.every((row) => row.cells.length === 2)).toBe(true);
+    expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);
+  });
+
+  it('has no Pro row while Pro is dev content, since a dev match never enters the records (M36, M35)', () => {
+    const r = emptyRecords();
+    const news = addMatch(r, { difficulty: 'hard', mode: 'elimination', won: true, hits: 3, bbsFired: 40 });
+    const view = recordsView(r, news, 'pro', 'elimination', 'devContent');
+    expect(DIFFICULTIES.find((d) => d.id === 'pro')?.tag).toBe('dev');
+    expect(view.rows.map((row) => row.label)).toEqual(['Easy', 'Normal', 'Hard']);
+    expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);
+    expect(view.notCounted).toContain('still being built');
   });
 
   it('marks nothing and says why after a custom match (M20)', () => {

@@ -35,16 +35,17 @@ function notCountedLine(why: NotCounted): string {
 
 /**
  * The records, with the match just played (`difficulty`, `mode`) marked and `news` flagging the bests it beat. A match
- * that didn't count (`notCounted` says why) marks nothing and says why instead. Dev modes and difficulties (M35) get a
- * column or row only with Dev content on (`devContent`), so with it off nothing of them shows.
+ * that didn't count (`notCounted` says why) marks nothing and says why instead.
  */
-export function recordsView(records: Records, news: RecordNews, difficulty: Difficulty, mode: MatchMode, notCounted: NotCounted = '', devContent = false): RecordsView {
+export function recordsView(records: Records, news: RecordNews, difficulty: Difficulty, mode: MatchMode, notCounted: NotCounted = ''): RecordsView {
   const counted = notCounted === '';
   if (!counted) news = NO_NEWS;
-  const modes = MATCH_MODES.filter((m) => isAvailable(m.tag, devContent));
+  const modes = MATCH_MODES.filter((m) => isAvailable(m.tag, false));
   return {
     modes: modes.map((m) => m.label),
-    rows: DIFFICULTIES.filter((d) => isAvailable(d.tag, devContent)).map((d) => ({
+    // A dev level (Pro, M36) or mode (Extraction, M43) never enters the records (M35), so its row or column would stay
+    // empty: only public ones get one.
+    rows: DIFFICULTIES.filter((d) => isAvailable(d.tag, false)).map((d) => ({
       label: d.label,
       cells: modes.map((m) => {
         const wl = records.results[resultKey(d.id, m.id)];
