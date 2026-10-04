@@ -17,7 +17,8 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # The headless bot-match tests take ~45 s locally; CI runners are slower.
+    # The headless bot-match tests (src/ai/depotMatch*.test.ts, ~175 s of work in all) are split into files of at
+    # most ~40 s each (measured locally 2026-10-04) that vitest runs in parallel; CI runners are slower.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

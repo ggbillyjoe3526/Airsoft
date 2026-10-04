@@ -36,11 +36,11 @@ export interface BotControllerOptions {
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
-  /** The bots' tuning: every bot's, unless `teamCfg` gives a team its own. */
+  /** The bots' tuning: the behaviour every bot shares (BotWorld.cfg), and the skill of each, unless `teamCfg` gives a team its own. */
   cfg: BotConfig;
   /**
-   * Per team (Blue, Orange), the tuning its bots play by: a difficulty for your teammates and one for your opponents
-   * (M20). Only the skill differs between levels (BOT_SKILL); the shared behaviour is `cfg`'s.
+   * Per team (Blue, Orange), the difficulty its bots play at: one for your teammates and one for your opponents
+   * (M20). Only each one's skill is used (Bot.skill, BOT_SKILL); the behaviour is always `cfg`'s.
    */
   teamCfg?: readonly BotConfig[];
   seed: number;
@@ -126,10 +126,15 @@ export class BotController {
     };
     this.search = createNavSearch(nav);
     for (const c of botCharacters) {
-      this.bots.push(createBot(c, botSeed(opts.seed, c.id), cfg));
+      this.bots.push(createBot(c, botSeed(opts.seed, c.id), cfg, this.cfgOf(c.team)));
       commands.set(c.id, this.commandFor(c.id));
     }
     this.planRound();
+  }
+
+  /** @internal For tests that drive one bot step (shootBot, reloadBot) by hand: the world the bots think in. */
+  get worldForTests(): BotWorld {
+    return this.world;
   }
 
   /** The tuning `team`'s bots play by. */
@@ -157,12 +162,8 @@ export class BotController {
     this.planRoutes();
     this.updateOrders();
     this.pickRetakers();
-    // Each bot decides with its own team's skill; everything outside thinkBot reads only the shared behaviour.
-    for (const b of this.bots) {
-      w.cfg = this.cfgOf(b.character.team);
-      thinkBot(b, w, this.commandFor(b.character.id), dt);
-    }
-    w.cfg = this.opts.cfg;
+    // Each bot decides with its own team's skill (Bot.skill, set at creation); w.cfg is the shared behaviour.
+    for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
   }
 
   /**
@@ -290,10 +291,11 @@ export class BotController {
         const shooter = this.character(state, e.characterId);
         if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'characterHit') {
-        // Teammates near someone who calls a hit turn towards where it came from.
+        // Teammates near someone who calls a hit turn towards where it came from; not from a BB fired by someone hit
+        // since (they are walking off, not where the threat is).
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
-        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
+        if (victim && shooter && isInPlay(shooter) && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'ricochetTick') {
         // A ricochet that doesn't count still tells its victim they're under fire.
         for (const b of this.bots) {

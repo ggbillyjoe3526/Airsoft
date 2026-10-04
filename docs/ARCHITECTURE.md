@@ -49,9 +49,9 @@ ends the round). A hit character is eliminated
   ducking (leaning back) again. `cover.ts` also tries the spot behind each low block (`lowCoverBlocks`) and just round each outline corner of each full-height block (`tallCoverBlocks`) as cover; a fresh contact at
   range sends a bot to close cover it can peek from first (a narrowed `CoverSearch`). Each round the controller deals each team's bots onto lanes by a plan (`teamPlan.ts`: split, pair or stack). These build on
   `perception.ts` (view cone + static ray casts), `aim.ts` (turn rate, settling aim error, hasty first aim, tracking error)
-  and `cover.ts` (random nearby spots hidden from the threat). Tuning is `BotConfig` = shared behaviour + one difficulty's
-  skill (config/bots.ts), fixed for a match: the session builds the controller with the level picked on New game
-  (`BotController.setConfig` can swap it now or at the next round start).
+  and `cover.ts` (random nearby spots hidden from the threat). Tuning is shared behaviour (`BotWorld.cfg`) + one difficulty's
+  skill per bot (`Bot.skill`; config/bots.ts), fixed for a match: the session builds the controller with the levels picked
+  for each team on New game (`BotControllerOptions.teamCfg`: one `BotConfig` per team).
   Bots read game state, never write it; their randomness is seeded per bot. In Attack / Defend (`BotWorld.round`, `flagRole`
   / `wantsFlag` in `bot.ts`) defenders walk only the first one or two points of their lane and hold there, chase
   noises only near the pole, and the two nearest it run to the pole (mode `flag`) once the flag is off the bottom; attackers go to

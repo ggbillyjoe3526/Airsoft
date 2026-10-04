@@ -221,6 +221,8 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.crouch = false;
   cmd.lean = 0;
   cmd.jump = false;
+  cmd.aim = false; // bots aim from the hip and keep the fire mode their replica starts in
+  cmd.cycleFireMode = false;
   cmd.fire = false;
   cmd.reload = false;
   cmd.switchTo = 0; // bots use their primary
