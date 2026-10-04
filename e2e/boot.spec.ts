@@ -64,6 +64,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(setup).toBeVisible(); // Esc closed the pop-up only
   await expect(setup.getByRole('button', { name: /Match/i })).toContainText('2v2 · first to 3');
   await expect(page.locator('.setup-rules')).toContainText('you and 1 bot teammate');
+  await expect(page.locator('.setup-rules')).toContainText("won't go into your records"); // custom rules, said before Play
 
   // Difficulty opens a pop-up with a level for the opponents and one for your teammates; the button shows both.
   await setup.getByRole('button', { name: /Difficulty/i }).click();

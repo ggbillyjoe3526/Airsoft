@@ -1,5 +1,7 @@
 import { DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
+  countsForRecords,
+  DEFAULT_MATCH_RULES,
   FRIENDLY_FIRE_CHOICES,
   formatRoundTime,
   type MatchRules,
@@ -349,11 +351,17 @@ export class Menus {
       m.teamSize === 1 ? `Your opponent: ${opponents}. No teammates in a 1v1.` : `Opponents ${opponents}, teammates ${mates}.`,
     );
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
-    this.setup.setRules(describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value));
+    const recorded = countsForRecords(m, this.difficulty, this.teammateDifficulty);
+    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value);
+    // Said before the match, not only on its summary: custom rules don't go into the records (M20).
+    this.setup.setRules(recorded ? rules : `${rules} ${NOT_RECORDED_NOTE}`);
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);
   }
 }
+
+/** Under New game's rules when the setup isn't the standard match. */
+export const NOT_RECORDED_NOTE = `Custom rules: this match won't go into your records (they count ${matchRulesSummary(DEFAULT_MATCH_RULES).value}, with both teams at one difficulty).`;
 
 function difficultyLabel(d: Difficulty): string {
   return DIFFICULTIES.find((o) => o.id === d)?.label ?? d;

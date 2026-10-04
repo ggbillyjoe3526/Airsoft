@@ -36,9 +36,13 @@ export function loadDifficulty(): Difficulty {
   return loadChoice('difficulty', DIFFICULTIES, DEFAULT_DIFFICULTY);
 }
 
-/** Your bot teammates' difficulty (M20). */
-export function loadTeammateDifficulty(): Difficulty {
-  return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, DEFAULT_DIFFICULTY);
+/**
+ * Your bot teammates' difficulty (M20). Until one is saved it is the opponents' (`opponents`, the saved `difficulty`):
+ * before M20 every bot played at that one level, so a returning player's teammates stay as they were and their
+ * standard matches still count for the records.
+ */
+export function loadTeammateDifficulty(opponents: Difficulty = loadDifficulty()): Difficulty {
+  return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, opponents);
 }
 
 /** The Match pop-up's rules (M20), each with its default. */

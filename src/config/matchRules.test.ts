@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadMatchRules } from '../ui/menus/savedChoices';
+import { loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
 import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, hitRulesFor, matchRulesSummary, roundRulesFor } from './matchRules';
@@ -65,5 +65,15 @@ describe('custom match rules (M20)', () => {
     expect(loadMatchRules()).toEqual({ winsNeeded: 7, roundTime: 210, teamSize: 2, friendlyFire: false, ricochetsCount: true });
     vi.stubGlobal('localStorage', storageWith({ winsNeeded: '4', roundTime: 200, teamSize: '6', friendlyFire: 'maybe' }));
     expect(loadMatchRules()).toEqual(DEFAULT_MATCH_RULES);
+  });
+
+  it('give teammates the saved opponents\' level until one of their own is saved (a save from before M20)', () => {
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'hard' }));
+    expect(loadTeammateDifficulty()).toBe('hard');
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'hard', loadTeammateDifficulty())).toBe(true);
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'hard', teammateDifficulty: 'easy' }));
+    expect(loadTeammateDifficulty()).toBe('easy');
+    vi.stubGlobal('localStorage', storageWith({}));
+    expect(loadTeammateDifficulty()).toBe('normal');
   });
 });

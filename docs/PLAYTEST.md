@@ -330,7 +330,8 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   ends at 3 wins. Try a 1:30 round time: the clock starts at 1:30.
 - [ ] **Difficulty: Opponents and Teammates.** The pop-up has a row for each. Put Opponents on Easy and Teammates on
   Hard: the button reads "EASY / HARD", and your teammates should win their fights clearly more often than the
-  enemy. Finish that match: the summary says custom rules aren't in your records (only the standard 3v3, first to 5,
+  enemy. The rules under the buttons now end with "Custom rules: this match won't go into your records". Finish
+  that match: the summary says custom rules aren't in your records (only the standard 3v3, first to 5,
   with both teams at one difficulty counts), and marks no cell.
 - [ ] **Friendly fire off.** Shoot a teammate in the back: nothing happens (the BB goes past). Your bot teammates also
   stop holding fire when you're in their line.

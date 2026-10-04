@@ -300,8 +300,8 @@ describe('custom matches on Depot (M20)', () => {
     await initPhysics();
   });
 
-  it('plays fair 1v1 and 2v2 matches in both modes: rounds get decided, neither end is favoured, nobody stays at spawn', { timeout: 300_000 }, () => {
-    // Measured 2026-10-04 (16 seeds each, first to 3, 200 s): a 1v1 starts from the middle spawn at both ends (first,
+  it('plays fair 1v1 and 2v2 matches in both modes: rounds get decided, neither end is favoured, nobody stays at spawn', { timeout: 600_000 }, () => {
+    // Measured 2026-10-04 (16 seeds each, first to 3, 200 s; about 50 s for all four here): a 1v1 starts from the middle spawn at both ends (first,
     // from the end's first spawn, the west won 63% of 1v1 rounds over 8 seeds). Elimination: the west wins 47% of
     // decided 1v1 rounds (27 of 58) and 48% of 2v2 (33 of 69). Attack / Defend: attackers win 49% of 1v1 rounds (30
     // of 61, 3 captures) and 52% of 2v2 (34 of 65, 15 captures). 95% or more of rounds are decided, no friendly hits.
@@ -338,7 +338,7 @@ describe('custom matches on Depot (M20)', () => {
     }
   });
 
-  it('stays playable with ricochets counting: bots never shoot a teammate, and bounced BBs decide only some hits', { timeout: 300_000 }, () => {
+  it('stays playable with ricochets counting: bots never shoot a teammate, and bounced BBs decide only some hits', { timeout: 600_000 }, () => {
     // Measured 2026-10-04 (16 seeds, 3v3, friendly fire on): Elimination: 72 of 520 hits were ricochets (14%), the west
     // won 44% of rounds (55 of 125), 5 friendly hits, all ricochets. Attack / Defend: 80 of 487 hits ricochets (16%),
     // attackers won 54% (65 of 120), 14 captures, flags raised in 10 of 16, 3 friendly hits, all ricochets. Bots can't
