@@ -13,8 +13,9 @@ import { createCharacter, respawnCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
+import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
-import { buildNavGrid, clearLine, dropOnLine, isWalkableAt, type NavGrid } from '../nav/navGrid';
+import { buildNavGrid, clearLine, dropOnLine, floorAt, isWalkableAt, type NavGrid } from '../nav/navGrid';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { vec3, wrapAngle } from '../sim/vec';
 import { BotController } from './botController';
@@ -402,6 +403,36 @@ describe('squad orders (M22)', () => {
     // In the open the same spots spread out on both sides.
     placeHold(holders, leader, point, { nav: OPEN_NAV } as unknown as BotWorld);
     expect(Math.max(...holders.map((b) => b.orderGoal.z))).toBeCloseTo(point.z + SQUAD_ORDERS.holdSpacing, 5);
+  });
+
+  it('follow me and hold here on a ramp, and while you jump: spots along the slope, never at you (bug pass)', () => {
+    // Depot's west dock ramp runs up east from x -4.4 to -2 at z about -14 (a 1:2 slope).
+    const nav = buildNavGrid(DEPOT, NAV);
+    const w = { nav } as unknown as BotWorld;
+    const leader = createCharacter(0, vec3(), EAST, LOADOUT, 0);
+    for (const x of [-3.6, -3.2, -2.6]) {
+      leader.position = vec3(x, floorAt(nav, x, -14), -14);
+      expect(leader.position.y, 'on the slope').toBeGreaterThan(0.1);
+      for (const slot of [0, 1]) {
+        const out = followSpot(leader, EAST, slot, w, vec3());
+        expect(flat(out, leader.position), `slot ${slot} at x ${x}`).toBeGreaterThan(2);
+        expect(out.y).toBeCloseTo(floorAt(nav, out.x, out.z), 5); // on the floor there, not at your height
+      }
+    }
+    // In the air over open ground: the same spots as standing there.
+    leader.position = vec3(10, 0, 0);
+    const standing = followSpot(leader, EAST, 0, w, vec3());
+    leader.position.y = 0.4;
+    const jumping = followSpot(leader, EAST, 0, w, vec3());
+    expect(flat(standing, leader.position)).toBeGreaterThan(2);
+    expect(jumping).toEqual(standing);
+    // Hold here at a point on the ramp, looking north across the slope: two spots apart, each on the floor there.
+    leader.yaw = 0;
+    const point = vec3(-3.2, floorAt(nav, -3.2, -14.4), -14.4);
+    const holders = [0, 1].map(() => ({ orderGoal: vec3(), character: leader }) as unknown as Bot);
+    placeHold(holders, leader, point, w);
+    expect(flat(holders[0]!.orderGoal, holders[1]!.orderGoal)).toBeCloseTo(SQUAD_ORDERS.holdSpacing, 5);
+    for (const b of holders) expect(b.orderGoal.y).toBeCloseTo(floorAt(nav, b.orderGoal.x, b.orderGoal.z), 5);
   });
 
   it('follow me steers by the line it checked when the blended direction runs off a drop (M-08)', () => {

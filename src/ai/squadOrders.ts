@@ -92,11 +92,12 @@ export function placeHold(bots: readonly Bot[], leader: Character, point: Vec3 |
     const across = (k - (bots.length - 1) / 2) * SQUAD_ORDERS.holdSpacing;
     const x = point.x + rightX * across;
     const z = point.z + rightZ * across;
-    // A side spot must be walkable at the point's height and in a straight walkable line from it (M-05: not on the
-    // far side of a thin wall, which would send the bot round by the next doorway).
-    const walkable = isWalkableAt(w.nav, x, z) && Math.abs(floorAt(w.nav, x, z) - point.y) <= w.nav.maxStep && clearLine(w.nav, point.x, point.z, x, z);
+    // A side spot must be walkable and in a straight walkable line from the point (M-05: not on the far side of a thin
+    // wall, which would send the bot round by the next doorway). The line checks every step's height, so a spot along
+    // a ramp passes and one on another level fails (bug pass: a height test against the point put both bots on it).
+    const walkable = isWalkableAt(w.nav, x, z) && clearLine(w.nav, point.x, point.z, x, z);
     g.x = walkable ? x : point.x;
-    g.y = point.y;
+    g.y = walkable ? floorAt(w.nav, x, z) : point.y;
     g.z = walkable ? z : point.z;
   });
 }
@@ -153,15 +154,18 @@ export function followSpot(leader: Character, heading: number, slot: number, w: 
 }
 
 /**
- * Writes the spot `dist` from `from` along `angle` into `out` if it is walkable at about `from`'s height and in a
- * straight walkable line from it; returns whether.
+ * Writes the spot `dist` from `from` along `angle` into `out` if it is walkable and in a straight walkable line from
+ * `from`; returns whether. The line checks the height of every step, so a spot down a ramp counts and one past a drop
+ * or on another level doesn't (bug pass: a height test against the leader's own height failed every spot on a ramp,
+ * and every spot while the leader was in the air, and sent the followers into the leader).
  */
 function tryFollowSpot(from: Vec3, angle: number, dist: number, w: BotWorld, out: Vec3): boolean {
   const x = from.x - Math.sin(angle) * dist;
   const z = from.z - Math.cos(angle) * dist;
-  if (!isWalkableAt(w.nav, x, z) || Math.abs(floorAt(w.nav, x, z) - from.y) > w.nav.maxStep) return false;
+  if (!isWalkableAt(w.nav, x, z)) return false;
   if (!clearLine(w.nav, from.x, from.z, x, z)) return false;
   out.x = x;
+  out.y = floorAt(w.nav, x, z);
   out.z = z;
   return true;
 }

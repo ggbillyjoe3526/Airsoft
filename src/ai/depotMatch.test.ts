@@ -43,8 +43,9 @@ describe('a 3v3 bot match on Depot', () => {
       const { counted, near, worst, standing } = playFollowMatch(90, seed);
       // Measured 2026-10-04 (seeds 1-4, after M-05/M-08: no follow spot behind a wall): within a few metres of the
       // leader all the time, at worst 5.3-6.9 m away (a sprinting leader round corners: a sprint can't catch a
-      // sprint), and standing still 1.0-2.6% of the time the leader moves (one that got ahead of its spot waiting for
-      // it). Before, a follower sent round a wall to a spot on its far side ended up to 10.9 m away.
+      // sprint), and standing still 0.7-1.8% of the time the leader moves (one that got ahead of its spot waiting for
+      // it; 1.0-2.6% before the bug pass let spots lie along the dock ramps). Before M-05, a follower sent round a wall
+      // to a spot on its far side ended up to 10.9 m away.
       expect(counted, `seed ${seed}`).toBeGreaterThan(1000);
       expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.95);
       expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp);
