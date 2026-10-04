@@ -49,6 +49,11 @@ export interface SfxSetup {
   library: SoundLibrary;
 }
 
+/** Lets an audio context's promise (resume, suspend, close) settle quietly: a refusal changes nothing we rely on. */
+function settle(p: Promise<void>): void {
+  p.catch(() => {});
+}
+
 /** A random pitch factor within ± `spread` (presentation-only randomness, not the simulation's RNG). */
 function jitter(spread: number): number {
   return 1 + (Math.random() * 2 - 1) * spread;
@@ -96,16 +101,29 @@ export class Sfx {
   /** Pauses all sound with the game (and resumes it). */
   setPaused(paused: boolean): void {
     if (!this.ctx) return;
-    void (paused ? this.ctx.suspend() : this.ctx.resume());
+    settle(paused ? this.ctx.suspend() : this.ctx.resume());
   }
 
-  /** Must be called from a user gesture (browsers keep audio suspended until then). Builds every sound the first time. */
+  /**
+   * Must be called from a user gesture (browsers keep audio suspended until then). Builds every sound the first time.
+   * Where the browser has no Web Audio (or refuses a context) the game carries on without sound (audit M-04).
+   */
   unlock(): void {
     if (this.ctx) {
-      void this.ctx.resume();
+      settle(this.ctx.resume());
       return;
     }
-    const ctx = new AudioContext();
+    if (typeof AudioContext === 'undefined') return;
+    try {
+      this.build(new AudioContext());
+    } catch (e) {
+      console.warn('Audio unavailable, playing without sound', e);
+      this.dispose();
+    }
+  }
+
+  /** The output graph (buses, limiter, the yard's reverb, the whistle) and every sound's buffers, on `ctx`. */
+  private build(ctx: AudioContext): void {
     this.ctx = ctx;
     this.master = ctx.createGain();
     const lim = AUDIO.limiter;
@@ -312,7 +330,7 @@ export class Sfx {
   }
 
   dispose(): void {
-    void this.ctx?.close();
+    if (this.ctx) settle(this.ctx.close());
     this.ctx = null;
     this.master = null;
     this.world = null;

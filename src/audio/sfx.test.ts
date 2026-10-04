@@ -356,6 +356,43 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
   const matchOver: GameEvent = { type: 'matchOver', winner: 0 };
   const roundStart: GameEvent = { type: 'roundStart', round: 2 };
 
+  it('plays silent, without throwing, where the browser has no Web Audio or refuses a context (audit M-04)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    class Refused {
+      constructor() {
+        throw new DOMException('no audio device', 'NotSupportedError');
+      }
+    }
+    for (const AudioContextStub of [undefined, Refused]) {
+      vi.stubGlobal('AudioContext', AudioContextStub);
+      const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
+      const sfx = new Sfx(LOADOUT, FLOOR, OPEN, { volumes: VOLUMES, library: LIBRARY });
+      expect(() => {
+        sfx.unlock();
+        sfx.onEvent(shot(PLAYER), PLAYER, () => player);
+        sfx.setPaused(false);
+        sfx.setListener(vec3(0, 1.6, 0), 0, 0, -1);
+        sfx.updateSources([player], PLAYER);
+        sfx.unlock();
+        sfx.dispose();
+      }).not.toThrow();
+      expect(sfx.roundStartWhistle()).toBe(false);
+    }
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets a context's refused resume, suspend or close settle quietly (audit M-04)", async () => {
+    const { sfx, ctx } = setup();
+    const refuse = (): Promise<void> => Promise.reject(new DOMException('refused', 'InvalidStateError'));
+    Object.assign(ctx, { resume: refuse, suspend: refuse, close: refuse });
+    sfx.setPaused(false);
+    sfx.setPaused(true);
+    sfx.unlock();
+    sfx.dispose();
+    // An unhandled rejection would fail the run once the microtasks have run.
+    await new Promise((r) => setTimeout(r, 0));
+  });
+
   it('builds one audio context however often it is unlocked', () => {
     const { sfx } = setup();
     sfx.unlock();
