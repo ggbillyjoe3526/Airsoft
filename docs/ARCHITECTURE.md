@@ -49,9 +49,9 @@ ends the round). A hit character is eliminated
   ducking (leaning back) again. `cover.ts` also tries the spot behind each low block (`lowCoverBlocks`) and just round each outline corner of each full-height block (`tallCoverBlocks`) as cover; a fresh contact at
   range sends a bot to close cover it can peek from first (a narrowed `CoverSearch`). Each round the controller deals each team's bots onto lanes by a plan (`teamPlan.ts`: split, pair or stack). These build on
   `perception.ts` (view cone + static ray casts), `aim.ts` (turn rate, settling aim error, hasty first aim, tracking error)
-  and `cover.ts` (random nearby spots hidden from the threat). Tuning is `BotConfig` = shared behaviour + one difficulty's
-  skill (config/bots.ts), fixed for a match: the session builds the controller with the level picked on New game
-  (`BotController.setConfig` can swap it now or at the next round start).
+  and `cover.ts` (random nearby spots hidden from the threat). Tuning is shared behaviour (`BotWorld.cfg`) + one difficulty's
+  skill per bot (`Bot.skill`; config/bots.ts), fixed for a match: the session builds the controller with the levels picked
+  for each team on New game (`BotControllerOptions.teamCfg`: one `BotConfig` per team).
   Bots read game state, never write it; their randomness is seeded per bot. In Attack / Defend (`BotWorld.round`, `flagRole`
   / `wantsFlag` in `bot.ts`) defenders walk only the first one or two points of their lane and hold there, chase
   noises only near the pole, and the two nearest it run to the pole (mode `flag`) once the flag is off the bottom; attackers go to
@@ -101,7 +101,7 @@ ends the round). A hit character is eliminated
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
-  The eye and BB origin (`leanedEye`), the hit volume (`hitbox.ts`: body plus a head and shoulder sphere that
+  The eye and BB origin (`leanedEye`), the hit volume (`hitbox.ts`: body, a head and shoulder sphere and a hips-to-shoulder torso capsule that
   swing out), the camera (`render/cameraRig.ts`, plus a small roll), the drawn figure (`figureLeanRoll`) and what
   bots see and aim at (`ai/perception.ts`) all use it. Leaning slows you towards walking pace (quiet from half a lean) and blocks sprinting.
 - **sim/accuracy.ts**: accuracy by stance and movement. `stepAccuracy` (after leaning) keeps `Character.spreadScale`,

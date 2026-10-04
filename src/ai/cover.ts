@@ -1,4 +1,4 @@
-import type { BotConfig } from '../config/bots';
+import type { BotBehaviour } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { MapBlock } from '../map/mapTypes';
@@ -102,7 +102,7 @@ export interface CoverSearch {
 export interface CoverWorld {
   nav: NavGrid;
   query: WorldQuery;
-  cfg: BotConfig;
+  cfg: BotBehaviour;
   body: BodyConfig;
   hits: HitConfig;
   /** The map's low blocks (lowCoverBlocks) and full-height blocks (tallCoverBlocks). */

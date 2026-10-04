@@ -79,5 +79,6 @@ _Last updated: 2026-10-04 · M14 (art pass), the last of Phase 4, after M16 (tut
   makes them inert (graphics reset).
 - **Ending a match quickly in a scratch script:** set `airsoft.state.round.score` to 4–4 and one team's characters'
   `status` to `'out'`.
-- **Git:** a new branch from the latest `main`, push, open a pull request. Install with npm 11 (`npx -y npm@11 install`)
-  so the lockfile keeps its `libc` fields.
+- **Git:** a new branch from the latest `main`, push, open a pull request. Re-lock with npm 11 (`npx -y npm@11 install`)
+  so the lockfile keeps its `libc` fields (otherwise Linux installs both the glibc and musl binaries); CI's npm 10
+  installs either lockfile (audit L-13).

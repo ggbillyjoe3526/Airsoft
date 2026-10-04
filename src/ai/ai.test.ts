@@ -24,7 +24,7 @@ import { createGameState, type GameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
-import type { Bot, BotWorld } from './bot';
+import type { Bot } from './bot';
 import { reloadBot, shootBot } from './botCombat';
 import { BotController } from './botController';
 import { type CoverBlock, type CoverWorld, createCoverSpot, findCover, hidesFrom, lowCoverBlocks, tallCoverBlocks } from './cover';
@@ -128,9 +128,9 @@ describe('aim', () => {
   it('turns no faster than the turn rate and then settles on the target', () => {
     const a = createAim(0);
     const rng = createRng(1);
-    stepAim(a, Math.PI / 2, 0, 0, BOTS, rng, DT);
+    stepAim(a, Math.PI / 2, 0, 0, BOTS, BOTS, rng, DT);
     expect(a.yaw).toBeCloseTo(BOTS.turnRate * DT, 6);
-    for (let i = 0; i < 60; i++) stepAim(a, Math.PI / 2, 0, 0, BOTS, rng, DT);
+    for (let i = 0; i < 60; i++) stepAim(a, Math.PI / 2, 0, 0, BOTS, BOTS, rng, DT);
     expect(a.yaw).toBeCloseTo(Math.PI / 2, 6);
   });
   it('starts with a large error that settles, and is worse on the move', () => {
@@ -166,7 +166,7 @@ describe('aim', () => {
     const rng = createRng(3);
     const size = 2 * DEG;
     for (let i = 0; i < 600; i++) {
-      stepAim(a, 0.3, -0.1, size, BOTS, rng, DT);
+      stepAim(a, 0.3, -0.1, size, BOTS, BOTS, rng, DT);
       if (i > 60) expect(Math.hypot(a.yaw - 0.3, a.pitch + 0.1)).toBeLessThanOrEqual(size + 1e-6);
     }
   });
@@ -662,7 +662,7 @@ describe('bot modes', () => {
 describe('bot hearing and targets', () => {
   it('keep one steady guess of an unseen shooter during a long burst', () => {
     const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // can't see anyone
-    const { state, bots, run, commands } = duel(18, () => {}, walls);
+    const { bots, run, commands } = duel(18, () => {}, walls);
     const b = bots.bots[0]!;
     Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 }); // a long burst into the air
     let jumps = 0;
@@ -677,7 +677,6 @@ describe('bot hearing and targets', () => {
       turned += Math.abs(Math.atan2(Math.sin(b.aim.yaw - prevYaw), Math.cos(b.aim.yaw - prevYaw)));
       prevYaw = b.aim.yaw;
     });
-    expect(state.events).toBeDefined();
     expect(last).toBeDefined();
     // At most one re-guess: when the bot gets to its guess and the noise is clearly elsewhere.
     expect(jumps).toBeLessThanOrEqual(1);
@@ -720,6 +719,34 @@ describe('bot hearing and targets', () => {
     // A switch is fine once someone is hit (they're out); flip-flopping isn't.
     expect(switches).toBeLessThanOrEqual(1);
   });
+
+  it('turn towards a teammate\'s hit only while its shooter is still in play (L-21)', () => {
+    const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // can't see anyone
+    const { state, player, bots } = duel(18, (s) => s.characters.push(createCharacter(2, vec3(3, 0, -14), 0, LOADOUT, 1)), walls);
+    const b = bots.bots[0]!;
+    const hit = () => {
+      state.events.length = 0;
+      state.events.push({ type: 'characterHit', victimId: 2, shooterId: 0, position: vec3(3, 1.2, -14), direction: vec3(0, 0, -1), ricochet: false });
+      bots.observe(state);
+    };
+    // A BB fired by someone hit since: they are walking off, nothing to look for there.
+    player.status = 'walkingOff';
+    hit();
+    expect(b.hasLastKnown).toBe(false);
+    player.status = 'alive';
+    hit();
+    expect(b.hasLastKnown).toBe(true);
+  });
+});
+
+describe('bot commands', () => {
+  it('clear every input each tick, aiming down sights and the fire selector too (L-21)', () => {
+    const { state, bots, commands } = duel(18);
+    const cmd = commands.get(bots.bots[0]!.character.id)!;
+    Object.assign(cmd, { aim: true, cycleFireMode: true, fire: true, jump: true });
+    bots.think(state, DT);
+    expect(cmd).toMatchObject({ aim: false, cycleFireMode: false, jump: false });
+  });
 });
 
 
@@ -748,7 +775,7 @@ describe('bot line of fire', () => {
     // origin): sight to the player is clear, but an aim drifting that way runs into it.
     const { state, bot, player, bots } = duel(14, () => {}, boxQuery(0.12, -12, 0.05, 2, 3));
     const b = bots.bots[0]!;
-    const w = (bots as unknown as { world: BotWorld }).world;
+    const w = bots.worldForTests;
     b.targetVisible = true;
     b.contact = { seenAt: state.time, acquiredAt: 0, reactAt: 0 };
     w.live = true;
@@ -878,6 +905,23 @@ describe('difficulty levels', () => {
       expect(delay).toBeLessThanOrEqual(skill.reactionTime[1]);
     }
   });
+
+  it('hear the same whatever level each team plays at: hearing is shared behaviour, not skill (L-19)', () => {
+    const { state, player } = duel(12, (s) => s.characters.push(createCharacter(2, vec3(5, 0, -10), 0, LOADOUT, 1)));
+    const options = { query: noWalls, nav: OPEN_NAV, navSnap: NAV.snap, lanes: OPEN_FIELD.lanes, lowCover: [], tallCover: [], body: BODY, hits: HITS, loadout: LOADOUT, cfg: BOTS, seed: 3 };
+    const heard = (teamCfg?: BotConfig[]) => {
+      const bots = new BotController(state, state.characters, new Map(), { ...options, teamCfg });
+      state.events.length = 0;
+      // Blue's player fires (Orange hears it), and one of Orange (Blue's bot hears that).
+      state.events.push({ type: 'shot', characterId: 0, replicaId: LOADOUT[0]!.id, position: vec3(player.position.x, 1.5, player.position.z) });
+      state.events.push({ type: 'shot', characterId: 2, replicaId: LOADOUT[0]!.id, position: vec3(5, 1.5, -10) });
+      bots.observe(state);
+      return bots.bots.map((b) => ({ heardAt: b.heardAt, known: b.hasLastKnown, x: b.lastKnown.x, z: b.lastKnown.z }));
+    };
+    const same = heard();
+    expect(same.every((h) => h.known)).toBe(true);
+    expect(heard([botConfig('easy'), botConfig('hard')])).toEqual(same);
+  });
 });
 
 describe('bot team play and routes', () => {
@@ -954,7 +998,7 @@ describe('bot team play and routes', () => {
   describe('managing magazines', () => {
     function oneBot() {
       const { bots } = depotBots();
-      const world = (bots as unknown as { world: BotWorld }).world;
+      const world = bots.worldForTests;
       const b = bots.bots[0]!;
       const ammo = b.character.armament.ammo[0]!;
       const wantsReload = () => {

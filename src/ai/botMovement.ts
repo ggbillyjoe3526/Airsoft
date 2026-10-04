@@ -1,4 +1,4 @@
-import type { BotConfig } from '../config/bots';
+import type { BotBehaviour } from '../config/bots';
 import { dropOnLine, isWalkableAt } from '../nav/navGrid';
 import type { PlayerCommand } from '../sim/commands';
 import { rngNext } from '../sim/rng';
@@ -7,7 +7,7 @@ import { type Bot, type BotWorld, flagRole, pick } from './bot';
 import { moveOrder } from './squadOrders';
 
 /** Asks the planner for a route to `goal`, unless the current (or failed) one already goes about there. */
-export function wantRoute(b: Bot, goal: Vec3, cfg: BotConfig): void {
+export function wantRoute(b: Bot, goal: Vec3, cfg: BotBehaviour): void {
   const moved = Math.hypot(goal.x - b.routeGoal.x, goal.z - b.routeGoal.z);
   if (b.routeState === 'wanted') {
     b.routeGoal.x = goal.x;

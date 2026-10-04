@@ -31,14 +31,14 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     bodyPoint(target, w.hits, b.targetPart, aimPoint);
     const dist = Math.hypot(aimPoint.x - eye.x, aimPoint.y - eye.y, aimPoint.z - eye.z);
     const flight = dist / muzzleVelocity(w.loadout[0]!);
-    aimPoint.x += target.velocity.x * flight * cfg.leadFactor;
-    aimPoint.z += target.velocity.z * flight * cfg.leadFactor;
+    aimPoint.x += target.velocity.x * flight * b.skill.leadFactor;
+    aimPoint.z += target.velocity.z * flight * b.skill.leadFactor;
     lookAngles(eye.x, eye.y, eye.z, aimPoint.x, aimPoint.y, aimPoint.z, look);
     // The target's own speed across the line of sight (the bot's movement is aimErrorMovingDeg).
     const v = target.velocity;
     const sideways = (v.x * (aimPoint.z - eye.z) - v.z * (aimPoint.x - eye.x)) / Math.max(Math.hypot(aimPoint.x - eye.x, aimPoint.z - eye.z), 1e-3);
-    const error = aimErrorSize(w.time - b.contact.acquiredAt, walking || cmd.right !== 0, dist, sideways, cfg);
-    return stepAim(b.aim, look.yaw, look.pitch, error, cfg, b.rng, dt);
+    const error = aimErrorSize(w.time - b.contact.acquiredAt, walking || cmd.right !== 0, dist, sideways, b.skill);
+    return stepAim(b.aim, look.yaw, look.pitch, error, cfg, b.skill, b.rng, dt);
   }
   look.pitch = 0;
   const walkYaw = Math.atan2(-b.moveDir.x, -b.moveDir.z);
@@ -55,7 +55,7 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // Holding a point, or walking back along the lane: face the enemy side rather than turn our back.
     look.yaw = enemyYaw;
   }
-  stepAim(b.aim, look.yaw, look.pitch, 0, cfg, b.rng, dt);
+  stepAim(b.aim, look.yaw, look.pitch, 0, cfg, b.skill, b.rng, dt);
   return Number.POSITIVE_INFINITY;
 }
 
@@ -73,6 +73,8 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
     v.body.r += w.cfg.friendlyMargin;
     v.head.r += w.cfg.friendlyMargin;
     v.shoulder.r += w.cfg.friendlyMargin;
+    // A leaning mate's tilted torso (audit M-06); radius 0 means upright, with no torso part to widen.
+    if (v.torso.r > 0) v.torso.r += w.cfg.friendlyMargin;
     if (rayCharacter(from, dir, dist, v) >= 0) return true;
     const dx = mate.velocity.x * flight;
     const dz = mate.velocity.z * flight;
@@ -82,6 +84,10 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
     v.head.z += dz;
     v.shoulder.x += dx;
     v.shoulder.z += dz;
+    v.torso.ax += dx;
+    v.torso.bx += dx;
+    v.torso.az += dz;
+    v.torso.bz += dz;
     if (rayCharacter(from, dir, dist, v) >= 0) return true;
   }
   return false;
@@ -131,11 +137,11 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
   aimDirection(aimLine, b.aim.yaw, b.aim.pitch);
   const dist = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
   if (lineOfFireBlocked(b, w, eye, aimPoint, aimLine, dist)) return;
-  if (b.burstLeft <= 0 && b.pauseLeft <= 0) b.burstLeft = pick(b.rng, cfg.burst);
+  if (b.burstLeft <= 0 && b.pauseLeft <= 0) b.burstLeft = pick(b.rng, b.skill.burst);
   if (b.burstLeft > 0) {
     cmd.fire = true;
     b.burstLeft -= dt;
-    if (b.burstLeft <= 0) b.pauseLeft = pick(b.rng, cfg.burstPause);
+    if (b.burstLeft <= 0) b.pauseLeft = pick(b.rng, b.skill.burstPause);
   } else {
     b.pauseLeft -= dt;
   }

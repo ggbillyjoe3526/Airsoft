@@ -1,4 +1,4 @@
-import type { BotConfig } from '../config/bots';
+import type { BotBehaviour, BotSkill } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
@@ -41,6 +41,8 @@ export interface Contact {
 
 export interface Bot {
   character: Character;
+  /** How good this bot is: its team's difficulty level (M20). Everything else it is tuned by is `BotWorld.cfg`. */
+  readonly skill: BotSkill;
   rng: RngState;
   aim: AimState;
   mode: BotMode;
@@ -148,7 +150,8 @@ export interface BotWorld {
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
-  cfg: BotConfig;
+  /** The behaviour tuning every bot shares, whatever its level; each bot's skill is its own (`Bot.skill`). */
+  cfg: BotBehaviour;
   /** The match: mode, who attacks the flag, and the pole (read only). */
   round: RoundState;
   /** Per team, the yaw that faces the enemy's side of the map. */
@@ -163,10 +166,11 @@ export interface BotWorld {
   live: boolean;
 }
 
-/** A bot for `character`, with no lane until the controller plans the round (resetBot). */
-export function createBot(character: Character, seed: number, cfg: BotConfig): Bot {
+/** A bot for `character` playing at `skill`, with no lane until the controller plans the round (resetBot). */
+export function createBot(character: Character, seed: number, cfg: BotBehaviour, skill: BotSkill): Bot {
   const bot: Bot = {
     character,
+    skill,
     rng: createRng(seed),
     aim: createAim(character.yaw),
     mode: 'advance',
@@ -235,7 +239,7 @@ export function createBot(character: Character, seed: number, cfg: BotConfig): B
  * to the enemy, after waiting `startHold` seconds (bots sharing a lane set off apart). `lanePoints`:
  * how many of the lane's points to walk (flag-mode defenders hold the last one).
  */
-export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotConfig, lanePoints = Number.POSITIVE_INFINITY): void {
+export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehaviour, lanePoints = Number.POSITIVE_INFINITY): void {
   const c = b.character;
   b.aim = createAim(c.yaw);
   b.mode = 'advance';
