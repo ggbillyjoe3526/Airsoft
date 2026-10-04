@@ -581,6 +581,37 @@ Quick checks that these stay fixed:
 - [ ] **Screen reader (NVDA/VoiceOver):** being hit is read out ("Hit! You called your hit"), the round result once
   (not the countdown), and a squad order as it is given.
 
+## UI polish (FA9)
+
+- [ ] **Loading screen** (production build, `npm run build` then `npm run preview`; DevTools → Network → Slow 4G,
+  cache disabled): the dark page with "AIRSOFT." and a thin orange bar shows at once, with no white flash; the bar
+  fills while "Loading physics…" downloads, then "Starting physics…", "Starting the game…", and the title appears.
+  In the Network tab the `rapier-….js` file is downloaded once (the second request is from the cache).
+- [ ] **Tab and favicon:** the tab shows the orange-dot "A" icon; the address bar / tab strip takes the dark theme
+  colour where the browser supports it.
+- [ ] **Firefox and Edge, production build:** the game boots and plays a round; the console shows no
+  "Content-Security-Policy" errors. `npm run dev` still boots and hot-reloads.
+- [ ] **JavaScript off** (DevTools → Settings → Debugger → Disable JavaScript, reload): the loading page says the
+  game needs JavaScript, with no sliding bar.
+- [ ] **Menus at 1280×720 and 1920×1080:** title, New game, the Mode / Match / Difficulty dialogs, Loadout, Armory,
+  every Settings tab, pause, summary and result look tidy: one type scale, square-ish corners, buttons in capitals,
+  the same order and wording as before. Hover a button and a New game tile: a quick lift/brighten. Tab through a
+  screen: an orange ring with a dark gap around every focused control, also on the orange Play button.
+- [ ] **Settings tabs and Loadout columns:** the current tab / column has an orange 3 px bar on its left; each tab
+  has a small icon beside its name; New game tiles and pause buttons have icons too.
+- [ ] **Dialogs:** opening Mode or Match blurs the page behind (Chrome, Edge, Firefox 103+) and the box scales in;
+  the Match dialog's labels line up like Settings' rows.
+- [ ] **Reduced motion** (Settings → Accessibility, or the system setting): screens and dialogs appear with no
+  fade or scale, buttons change with no transition.
+- [ ] **Windows High Contrast / forced-colors:** the selected tab's bar and the loading bar still show (system
+  highlight colour).
+- [ ] **HUD at 1920×1080 and on a 21:9 window (e.g. 2560×1080):** the four corners keep the same margin; on 21:9
+  the ammo and minimap sit inside a 16:9 area, not at the screen's edges. The scoreboard's "out" pips read
+  against a bright sky.
+- [ ] **Hit feed:** each line has a thin bar on its left in the shooter's team colour (try a colour-blind option in
+  Accessibility: the bar follows); friendly-fire and ricochet tags show a small glyph beside the word.
+- [ ] **Summary and result tables:** striped rows, numbers aligned, your row keeps its team bar.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:
