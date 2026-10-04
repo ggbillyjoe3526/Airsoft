@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
 import { SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
+import { TEAM_COLOUR_CHOICES } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
 import { backTarget, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
 import { loadFov, loadMap, loadSavedQuality } from './savedChoices';
+
+/** Joining words that stay lower case in a title-case label ("Cross and Dot"). */
+const SMALL_WORDS = new Set(['and', 'or', 'to', 'of']);
 
 describe('menu navigation', () => {
   it('opens the title before the first match, the pause menu during one and the result after it', () => {
@@ -67,11 +72,29 @@ describe('menu data', () => {
     expect(loadSavedQuality()).toBeNull();
   });
 
-  it('has the field of view slider around the default view', () => {
+  it('has the field of view slider around the default view, 90° (owner, 2026-10-04)', () => {
+    expect(RENDER.horizontalFov16x9).toBe(90);
     expect(FOV_SETTING.min).toBeLessThan(RENDER.horizontalFov16x9);
     expect(FOV_SETTING.max).toBeGreaterThan(RENDER.horizontalFov16x9);
     // No browser storage in the tests: nothing saved, so the default view.
     expect(loadFov()).toBe(RENDER.horizontalFov16x9);
+  });
+
+  it('describes each map in a few words (owner, 2026-10-04)', () => {
+    expect(MAPS.find((m) => m.id === 'depot')!.blurb).toBe('An abandoned warehouse yard.');
+    for (const m of MAPS) expect(m.blurb.split(' ').length).toBeLessThanOrEqual(8);
+  });
+
+  it('starts every word of a two-word button with a capital (owner, 2026-10-04)', () => {
+    const labels = [...CROSSHAIR_SHAPES, ...CROSSHAIR_COLORS, ...TEAM_COLOUR_CHOICES, ...HIT_FEED_MODES, ...QUALITY_CHOICES].map((o) => o.label);
+    for (const label of labels) {
+      for (const word of label.split(' ')) if (!SMALL_WORDS.has(word)) expect(word[0], label).toBe(word[0]!.toUpperCase());
+    }
+  });
+
+  it('keeps the Dev tab hidden until its box is ticked, and lists placeholders for it like every tab (M24)', () => {
+    expect(SETTINGS_TABS.filter((t) => t.hidden).map((t) => t.id)).toEqual(['dev']);
+    expect(SETTINGS_TABS.at(-1)!.id).toBe('dev');
   });
 
   it('offers Depot as the default map', () => {
@@ -139,5 +162,21 @@ describe('match info menus (M19)', () => {
   it('has a Crosshair tab with nothing held back on it', () => {
     expect(SETTINGS_TABS.find((t) => t.id === 'crosshair')).toMatchObject({ later: false });
     expect(SETTINGS_LATER.crosshair).toEqual([]);
+  });
+});
+
+describe('HUD settings (M24)', () => {
+  it('makes the scoreboard larger by default, as picked on a wide screen', () => {
+    expect(SCOREBOARD_SIZE.default).toBeGreaterThan(1);
+    expect(scoreboardScale(SCOREBOARD_SIZE.default, 1920)).toBe(SCOREBOARD_SIZE.default);
+    expect(scoreboardScale(SCOREBOARD_SIZE.max, 2560)).toBe(SCOREBOARD_SIZE.max);
+    expect(scoreboardScale(0.8, 1024)).toBe(0.8);
+  });
+
+  it('holds it back in a narrow window so the hit feed keeps its room, never below its old size', () => {
+    const at1280 = scoreboardScale(SCOREBOARD_SIZE.max, 1280);
+    expect(at1280).toBeLessThan(SCOREBOARD_SIZE.max);
+    expect(1280 / 2 - SCOREBOARD_SIZE.halfWidth * at1280).toBeCloseTo(SCOREBOARD_SIZE.feedRoom, 5);
+    expect(scoreboardScale(SCOREBOARD_SIZE.max, 800)).toBe(1);
   });
 });

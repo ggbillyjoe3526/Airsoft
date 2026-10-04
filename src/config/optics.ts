@@ -22,10 +22,10 @@ export interface OpticConfig {
 
 export const OPTICS: Readonly<Record<OpticId, OpticConfig>> = {
   // "Narrows the view slightly" (roadmap): about 100° → 84° across a 16:9 screen. A first guess to tune in play.
-  redDot: { name: 'Red dot', zoom: 1.25, raiseScale: 1, scope: false },
+  redDot: { name: 'Red Dot', zoom: 1.25, raiseScale: 1, scope: false },
   // A closer look down Depot's long lanes (about 100° → 56° across a 16:9 screen), paid for with a slower raise and
   // nothing seen around the eyepiece. First guesses to tune in play.
-  scope2x: { name: '2× scope', zoom: 2, raiseScale: 1.6, scope: true },
+  scope2x: { name: '2x Scope', zoom: 2, raiseScale: 1.6, scope: true },
 };
 
 /** One line for each optic choice on the Loadout's Customise screen ('none': iron sights). */

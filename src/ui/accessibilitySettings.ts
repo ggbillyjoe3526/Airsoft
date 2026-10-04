@@ -1,12 +1,15 @@
-import { REDUCED_MOTION_CHOICES, SOUND_CUE_CHOICES } from '../config/accessibility';
+import { REDUCED_MOTION_CHOICES, SOUND_CUE_CHOICES, SOUND_CUE_COLOURS, SOUND_CUE_SIZE, type SoundCueColour } from '../config/accessibility';
 import { cssColor, TEAM_COLOUR_CHOICES, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from '../config/teams';
-import { el, menuRow } from './menus/menuParts';
+import { el, menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
 export interface AccessibilitySettingsOptions {
   reducedMotion: { initial: boolean; onChange: (on: boolean) => void };
   teamColours: { initial: TeamColourSetId; onChange: (set: TeamColourSetId) => void };
   soundCues: { initial: boolean; onChange: (on: boolean) => void };
+  /** The markers' size (a scale, 1 = as before M24) and colour. */
+  soundCueSize: { initial: number; onChange: (scale: number) => void };
+  soundCueColour: { initial: SoundCueColour; onChange: (colour: SoundCueColour) => void };
 }
 
 /** The Accessibility tab's rows (Settings → Accessibility, M18), each saved and applied as it changes. */
@@ -27,6 +30,8 @@ export function accessibilitySettings(opts: AccessibilitySettingsOptions): HTMLD
     );
   };
   showSwatches(opts.teamColours.initial);
+  const cueColours = new OptionPicker('Sound cue colour', SOUND_CUE_COLOURS, opts.soundCueColour.initial, 'soundCueColour', opts.soundCueColour.onChange);
+  cueColours.addSwatches(SOUND_CUE_COLOURS);
   teams.root.append(swatches);
   return [
     menuRow(
@@ -42,5 +47,11 @@ export function accessibilitySettings(opts: AccessibilitySettingsOptions): HTMLD
       'Markers round the crosshair for footsteps, shots and hit calls, for playing without sound.',
       new OptionPicker('Sound cues', SOUND_CUE_CHOICES, opts.soundCues.initial ? 'on' : 'off', 'soundCues', (v) => opts.soundCues.onChange(v === 'on')).root,
     ),
+    menuRow(
+      'Sound cue size',
+      'How big the markers round the crosshair are.',
+      rangeControl('Sound cue size', SOUND_CUE_SIZE, opts.soundCueSize.initial, (v) => `${Math.round(v * 100)}%`, 'soundCueSize', opts.soundCueSize.onChange),
+    ),
+    menuRow('Sound cue colour', 'One colour for every marker.', cueColours.root),
   ];
 }

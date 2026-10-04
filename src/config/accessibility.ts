@@ -1,5 +1,6 @@
 import type { Switch } from './controls';
 import { AUDIO } from './audio';
+import { CROSSHAIR_COLORS, type CrosshairColor } from './matchInfo';
 
 /** Settings → Accessibility (M18): reduced motion so far. */
 
@@ -66,3 +67,19 @@ export const SOUND_CUES = {
 } as const;
 
 export type SoundCueKind = keyof typeof SOUND_CUES.range;
+
+/** Settings → Accessibility → Sound cue size (M24): a scale on the markers, 1 = their size before M24. */
+export const SOUND_CUE_SIZE = { min: 0.6, max: 2, step: 0.1, default: 1 } as const;
+
+/**
+ * Settings → Accessibility → Sound cue colour (M24): one colour for every marker, from the crosshair's list (no team
+ * colours). White was their colour before M24.
+ */
+export const SOUND_CUE_COLOURS = CROSSHAIR_COLORS;
+export type SoundCueColour = CrosshairColor;
+export const DEFAULT_SOUND_CUE_COLOUR: SoundCueColour = 'white';
+
+/** The CSS colour for a sound cue colour id. */
+export function soundCueCss(id: SoundCueColour): string {
+  return (SOUND_CUE_COLOURS.find((c) => c.id === id) ?? SOUND_CUE_COLOURS[0]!).css;
+}

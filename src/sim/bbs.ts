@@ -55,7 +55,7 @@ function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { v
   const characters = t.characters;
   for (let i = 0; i < characters.length; i++) {
     const c = characters[i]!;
-    if (c.id === bb.ownerId || !isInPlay(c)) continue;
+    if (c.id === bb.ownerId || c.ghost || !isInPlay(c)) continue;
     if (!t.hits.friendlyFire && c.team === ownerTeam) continue;
     const d = rayCharacter(bb.prevPosition, segmentDir, best, volumes[i]!);
     if (d >= 0 && d <= best) {

@@ -69,9 +69,15 @@ describe('records view (M19)', () => {
   it('marks nothing and says why after a custom match (M20)', () => {
     const r = emptyRecords();
     const news = addMatch(r, { difficulty: 'hard', mode: 'attackDefend', won: true, hits: 12, bbsFired: 40 });
-    const view = recordsView(r, news, 'hard', 'attackDefend', false);
+    const view = recordsView(r, news, 'hard', 'attackDefend', 'rules');
     expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);
     expect(view.bests.every((b) => !b.isNew)).toBe(true);
     expect(view.notCounted).toContain('3v3 · first to 5');
+  });
+
+  it('says Dev settings kept the match out of the records when they did (M24)', () => {
+    const view = recordsView(emptyRecords(), { bestAccuracy: true, bestStreak: false }, 'hard', 'attackDefend', 'dev');
+    expect(view.notCounted).toContain('Dev settings');
+    expect(view.bests.every((b) => !b.isNew)).toBe(true);
   });
 });

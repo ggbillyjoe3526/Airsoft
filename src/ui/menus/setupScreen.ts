@@ -52,9 +52,9 @@ export class SetupScreen {
     this.mode = new SetupTile('Mode', 'Change', actions.onMode);
     this.match = new SetupTile('Match', 'Change', actions.onMatch);
     this.difficulty = new SetupTile('Difficulty', 'Change', actions.onDifficulty);
-    this.loadout = new SetupTile('Loadout', 'Open loadout', actions.onLoadout);
-    const settings = new SetupTile('Settings', 'Open settings', actions.onSettings);
-    settings.set('Settings', 'Sensitivity, key bindings, controls, field of view.');
+    this.loadout = new SetupTile('Loadout', 'Open', actions.onLoadout);
+    const settings = new SetupTile('Settings', 'Open', actions.onSettings);
+    settings.set('Settings', '');
     const tiles = el('div', 'setup-tiles');
     tiles.append(this.map.root, this.mode.root, this.match.root, this.difficulty.root, this.loadout.root, settings.root);
     this.rules = el('p', 'setup-rules');

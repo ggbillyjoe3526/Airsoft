@@ -165,6 +165,11 @@ export class CombatPresentation {
     this.paths.toggle();
   }
 
+  /** BB paths drawn or not (the Dev settings' BB paths, M24). */
+  setBbPaths(on: boolean): void {
+    if (this.paths.enabled !== on) this.paths.toggle();
+  }
+
   get bbsInFlight(): number {
     return this.bbs.visibleCount;
   }

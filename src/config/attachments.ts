@@ -27,15 +27,15 @@ export interface GripConfig {
 
 /** Small, opposite strengths: the vertical grip steadies, the angled grip handles quicker. */
 export const GRIPS: Readonly<Record<GripId, GripConfig>> = {
-  none: { label: 'No grip', blurb: 'Hand on the handguard, as it comes.', handlingScale: 1, shakeScale: 1 },
+  none: { label: 'No Grip', blurb: 'Hand on the handguard, as it comes.', handlingScale: 1, shakeScale: 1 },
   vertical: {
-    label: 'Vertical grip',
+    label: 'Vertical Grip',
     blurb: 'Steadier: the shake of a sprint or a jump leaves your aim sooner. A little slower to bring up and to aim.',
     handlingScale: 1.25,
     shakeScale: 0.6,
   },
   angled: {
-    label: 'Angled grip',
+    label: 'Angled Grip',
     blurb: 'Quicker: brings the rifle up and raises the sight faster. The shake of a sprint or a jump lasts a little longer.',
     handlingScale: 0.8,
     shakeScale: 1.3,
@@ -66,7 +66,7 @@ export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = {
   standard: { label: 'Standard', blurb: 'As it comes.', capacity: 1, carried: 0, reloadScale: 1, drawScale: 1, rattles: false },
   // Rifle: 120 BBs but two carried (the same 240), fewer reloads, and it gives you away when you sneak.
   hiCap: {
-    label: 'Hi-cap',
+    label: 'Hi-Cap',
     blurb: 'Twice the BBs in each, but only two carried, and the loose BBs rattle: bots close by hear you even walking.',
     capacity: 2,
     carried: -2,
@@ -76,7 +76,7 @@ export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = {
   },
   // Rifle: 30 BBs, one more carried (150 in all), and a quicker change.
   lowCap: {
-    label: 'Low-cap',
+    label: 'Low-Cap',
     blurb: 'Half the BBs in each and one more carried: fewer BBs in all, but quicker to change. Silent.',
     capacity: 0.5,
     carried: 1,

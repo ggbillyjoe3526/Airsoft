@@ -50,7 +50,16 @@ export type SettingField =
   | `grip.${string}`
   | `mag.${string}`
   /** Those picks were carried into the asset pool (M26b). */
-  | 'oldPicksCarried';
+  | 'oldPicksCarried'
+
+  /** Settings → Accessibility, the sound cues' look (M24). */
+  | 'soundCueSize'
+  | 'soundCueColour'
+  /** Settings → HUD (M24). */
+  | 'scoreboardSize'
+  | 'hitFeed'
+  /** The Dev settings (M24, settings/dev.ts): `dev.enabled` and one per entry in config/dev.ts. */
+  | `dev.${string}`;
 
 /** Where earlier builds kept a setting, before the settings object. */
 const LEGACY_KEYS: Partial<Record<SettingField, string>> = {

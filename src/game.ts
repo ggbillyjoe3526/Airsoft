@@ -1,11 +1,12 @@
 import { AudioEngine } from './audio/audioEngine';
 import { loadVolumes } from './audio/audioMix';
-import { motionScale } from './config/accessibility';
+import { motionScale, type SoundCueColour, soundCueCss } from './config/accessibility';
 import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
+import { activeDev, type DevSettings, devCheating } from './config/dev';
 import { ROUNDS } from './config/hits';
 import type { MatchRules } from './config/matchRules';
-import type { CrosshairSettings } from './config/matchInfo';
+import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './config/matchInfo';
 import { BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
@@ -34,6 +35,7 @@ import { type Collection, loadCollection, saveCollection } from './pool/collecti
 import { GAME_POOL } from './pool/gamePool';
 import { collectionOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
+import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
@@ -52,7 +54,11 @@ import {
   loadMouseDpi,
   loadReducedMotion,
   loadSensitivity,
+  loadHitFeedMode,
+  loadScoreboardSize,
+  loadSoundCueColour,
   loadSoundCues,
+  loadSoundCueSize,
   loadSprintMode,
   loadTeammateDifficulty,
   loadTeamColours,
@@ -157,6 +163,18 @@ export class Game {
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
   private teamColours: TeamColourSetId = loadTeamColours();
   private soundCues = loadSoundCues();
+  /** The sound cues' size and colour (Settings → Accessibility) and the scoreboard's size and hit feed (Settings → HUD), M24. */
+  private soundCueSize = loadSoundCueSize();
+  private soundCueColour: SoundCueColour = loadSoundCueColour();
+  private scoreboardSize = loadScoreboardSize();
+  private hitFeedMode: HitFeedMode = loadHitFeedMode();
+  /**
+   * The Dev settings (M24): whether their tab is shown, the values picked on it, and what applies (the picked values
+   * while the tab is shown, else the defaults).
+   */
+  private devEnabled = loadDevEnabled();
+  private readonly devPicked: DevSettings = loadDevSettings();
+  private dev: DevSettings = activeDev(this.devEnabled, this.devPicked);
   /** The render quality preset in use (Settings → Graphics, M14). */
   private quality: QualityPreset;
 
@@ -268,9 +286,31 @@ export class Game {
         // On the range they show from Resume (it's rebuilt where you stood, as after a loadout change).
         teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = this.loadoutChanged = true)) },
         soundCues: { initial: this.soundCues, onChange: (on) => this.changeSoundCues(on) },
+        soundCueSize: { initial: this.soundCueSize, onChange: (v) => ((this.soundCueSize = v), this.showHudLook()) },
+        soundCueColour: { initial: this.soundCueColour, onChange: (c) => ((this.soundCueColour = c), this.showHudLook()) },
+      },
+      hud: {
+        scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
+        hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
+      },
+      dev: {
+        initial: this.devPicked,
+        enabled: this.devEnabled,
+        onChange: (id, value) => {
+          this.devPicked[id] = value;
+          this.applyDev();
+        },
+        onEnabled: (on) => {
+          this.devEnabled = on;
+          this.applyDev();
+        },
+        cheating: () => devCheating(this.dev),
       },
     });
     this.menus.showTitle();
+    this.showHudLook();
+    window.addEventListener('resize', this.showHudLook);
+    this.debug.setVisible(this.dev.showDebug);
     this.showMotion();
     if (options.softwareRendering) {
       const note = BROWSER_NOTES.noHardwareAcceleration;
@@ -363,6 +403,39 @@ export class Game {
     if (this.session instanceof MatchSession) this.session.setSoundCues(on);
   }
 
+  /** Hit feed lines fade or stay (Settings → HUD, M24): kept for the next match and applied to the one loaded. */
+  private changeHitFeed(mode: HitFeedMode): void {
+    this.hitFeedMode = mode;
+    if (this.session instanceof MatchSession) this.session.setHitFeedMode(mode);
+  }
+
+  /**
+   * The HUD's look from the settings (M24), as CSS variables on the game's container (style.css): the sound cues' size
+   * and colour, and the scoreboard's size (held back in a narrow window so the hit feed keeps its room). Again on resize.
+   */
+  private readonly showHudLook = (): void => {
+    const style = this.container.style;
+    style.setProperty('--cue-scale', String(this.soundCueSize));
+    style.setProperty('--cue-colour', soundCueCss(this.soundCueColour));
+    style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize, this.container.clientWidth || window.innerWidth).toFixed(3));
+  };
+
+  /** A Dev setting changed, or the Dev tab was shown or hidden (M24): what applies now goes to the game and the session. */
+  private applyDev(): void {
+    const before = this.dev;
+    this.dev = activeDev(this.devEnabled, this.devPicked);
+    // Only on a change, so the debug keys (` / F3, ]) keep working as toggles.
+    if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
+    if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
+    this.session?.setDevCheats(this.dev);
+  }
+
+  /** A new session takes the Dev settings in force (M24). */
+  private applyDevTo(session: MatchSession | RangeSession): void {
+    session.combat.setBbPaths(this.dev.showBbPaths);
+    session.setDevCheats(this.dev);
+  }
+
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
   get state(): GameState | null {
     return this.session?.state ?? null;
@@ -376,6 +449,7 @@ export class Game {
   dispose(): void {
     cancelAnimationFrame(this.rafId);
     document.removeEventListener('visibilitychange', this.visibilityChanged);
+    window.removeEventListener('resize', this.showHudLook);
     this.graphicsNotice.dispose();
     this.session?.dispose();
     this.session = null;
@@ -423,6 +497,8 @@ export class Game {
       }, this.matchSeed, QUALITY[this.quality], this.audio, this.crosshair);
       this.session.setMotion(motionScale(this.reducedMotion));
       this.session.setSoundCues(this.soundCues);
+      this.session.setHitFeedMode(this.hitFeedMode);
+      this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
     }
     this.session!.combat.unlockAudio();
@@ -447,6 +523,7 @@ export class Game {
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
     }, this.options.seed, QUALITY[this.quality], this.audio, this.crosshair, pose, tutorialFrom);
     this.session.setMotion(motionScale(this.reducedMotion));
+    this.applyDevTo(this.session);
     applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
   }
 
@@ -475,7 +552,7 @@ export class Game {
   }
 
   /**
-   * The player left the match (Quit to title screen on the pause menu, Change setup or Title screen on the result), or
+   * The player left the match (Quit on the pause menu, New Game or Quit on the result), or
    * went Back from New game after a Play whose mouse lock was refused: the match is unloaded, and the next Play builds a
    * new one from New game, where everything can change again.
    */
@@ -516,7 +593,7 @@ export class Game {
       this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
         result: `${headline} · ${score}`,
         blocks: s.summaryBlocks(),
-        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.countsForRecords),
+        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
       });
     } else {
       const mine = s.player.team;
@@ -545,7 +622,8 @@ export class Game {
       if (this.keyboard.wasPressed('debugBbPaths')) s.combat.toggleBbPaths();
       // Still within the key press's user activation, which the browser needs for fullscreen.
       if (this.keyboard.wasPressed('fullscreen')) toggleFullscreen();
-      this.ticksThisSecond += s.advance(dt);
+      // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
+      this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
       if (s instanceof RangeSession && s.takeTutorialFinished()) {
         saveSetting('tutorialDone', true);
         this.menus.markTutorialDone();

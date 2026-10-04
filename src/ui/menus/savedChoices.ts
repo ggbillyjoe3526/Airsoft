@@ -1,4 +1,11 @@
-import { REDUCED_MOTION_CHOICES, SOUND_CUE_CHOICES } from '../../config/accessibility';
+import {
+  DEFAULT_SOUND_CUE_COLOUR,
+  REDUCED_MOTION_CHOICES,
+  SOUND_CUE_CHOICES,
+  SOUND_CUE_COLOURS,
+  SOUND_CUE_SIZE,
+  type SoundCueColour,
+} from '../../config/accessibility';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   AIM_MODES,
@@ -22,6 +29,7 @@ import {
   TEAM_SIZE_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
+import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, SCOREBOARD_SIZE } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset, RENDER } from '../../config/render';
@@ -152,4 +160,24 @@ export function loadSoundCues(): boolean {
 /** Whether the tutorial was played to the end (M16). */
 export function loadTutorialDone(): boolean {
   return loadSetting('tutorialDone', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);
+}
+
+/** The sound cues' size (Settings → Accessibility, M24): a scale, 1 = as before. */
+export function loadSoundCueSize(): number {
+  return loadSetting('soundCueSize', numberIn(SOUND_CUE_SIZE.min, SOUND_CUE_SIZE.max), SOUND_CUE_SIZE.default);
+}
+
+/** The sound cues' colour (Settings → Accessibility, M24). */
+export function loadSoundCueColour(): SoundCueColour {
+  return loadChoice('soundCueColour', SOUND_CUE_COLOURS, DEFAULT_SOUND_CUE_COLOUR);
+}
+
+/** The scoreboard's size as picked (Settings → HUD, M24): a scale, 1 = its size before M24. */
+export function loadScoreboardSize(): number {
+  return loadSetting('scoreboardSize', numberIn(SCOREBOARD_SIZE.min, SCOREBOARD_SIZE.max), SCOREBOARD_SIZE.default);
+}
+
+/** Whether the hit feed's lines fade or stay (Settings → HUD, M24). */
+export function loadHitFeedMode(): HitFeedMode {
+  return loadChoice('hitFeed', HIT_FEED_MODES, DEFAULT_HIT_FEED_MODE);
 }

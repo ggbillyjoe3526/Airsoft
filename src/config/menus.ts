@@ -4,9 +4,6 @@
  * listed greyed out and marked "Later" so the layout already has their place.
  */
 
-/** Shown in the title screen's corner: the release this build belongs to (moves with each tag, CLAUDE.md §7). */
-export const BUILD_LABEL = 'v0.1-alpha.3';
-
 /** Browser basics (M18b): what the game says when the browser gets in the way. */
 export const BROWSER_NOTES = {
   /** On the title screen when the browser draws without hardware acceleration (render/gpuCheck.ts). */
@@ -43,17 +40,25 @@ export const LOADOUT_TEXT = {
   skinsLater: 'Replicas and outfit',
 } as const;
 
-export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'audio' | 'accessibility';
+export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'dev';
 
-/** The Settings screen's tabs, top to bottom. `later`: nothing on it is built yet. */
-export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: boolean }[] = [
+/**
+ * The Settings screen's tabs, top to bottom. `later`: nothing on it is built yet. `hidden`: shown only once the
+ * "Dev settings" box under the tabs is ticked (M24).
+ */
+export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: boolean; hidden?: boolean }[] = [
   { id: 'controls', label: 'Controls', later: false },
-  { id: 'keys', label: 'Key bindings', later: false },
+  { id: 'keys', label: 'Key Bindings', later: false },
   { id: 'graphics', label: 'Graphics', later: false },
   { id: 'crosshair', label: 'Crosshair', later: false },
+  { id: 'hud', label: 'HUD', later: false },
   { id: 'audio', label: 'Audio', later: false },
   { id: 'accessibility', label: 'Accessibility', later: false },
+  { id: 'dev', label: 'Dev', later: false, hidden: true },
 ];
+
+/** The box under the Settings tabs that shows the Dev tab (M24). */
+export const DEV_TOGGLE_LABEL = 'Dev settings';
 
 /** Settings not built yet, listed greyed out on their tab (label and a short line on what it will do). */
 export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: string; help: string }[]>> = {
@@ -61,6 +66,8 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   keys: [],
   graphics: [],
   crosshair: [],
+  hud: [],
   audio: [{ label: 'Voices (hit calls)', help: '' }],
   accessibility: [],
+  dev: [],
 };

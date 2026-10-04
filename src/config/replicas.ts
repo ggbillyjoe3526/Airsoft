@@ -90,7 +90,7 @@ export interface ReplicaLook {
 /** Electric rifle (AR pattern): single, burst and full auto, medium range, medium magazine. */
 export const AEG: ReplicaConfig = {
   id: 'aeg',
-  name: 'AEG rifle',
+  name: 'AEG Rifle',
   power: 'electric',
   fireModes: ['semi', 'burst', 'auto'],
   defaultFireMode: 'auto',
@@ -123,7 +123,7 @@ export const AEG: ReplicaConfig = {
 /** Gas pistol: semi auto, shorter range, quick to handle, small magazine. */
 export const GAS_PISTOL: ReplicaConfig = {
   id: 'pistol',
-  name: 'Gas pistol',
+  name: 'Gas Pistol',
   power: 'gas',
   fireModes: ['semi'],
   defaultFireMode: 'semi',
