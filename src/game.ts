@@ -8,12 +8,14 @@ import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules } from './config/matchRules';
 import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './config/matchInfo';
+import { CRASH_TEXT } from './config/crash';
 import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { QUALITY, type QualityPreset } from './config/render';
 import { SIM } from './config/sim';
 import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
+import { crashReport, type ReportField } from './core/crashReport';
 import { KeyBindings } from './input/keyBindings';
 import { Keyboard } from './input/keyboard';
 import { PlayerInput } from './input/playerInput';
@@ -21,6 +23,7 @@ import { PointerLock } from './input/pointerLock';
 import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { loadFigureModel } from './render/externalModels';
+import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
 import { buildsNewMatch, matchSeed } from './matchFlow';
 import { MatchSession } from './matchSession';
@@ -30,6 +33,7 @@ import type { GameState } from './sim/state';
 import { loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
+import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
@@ -41,7 +45,7 @@ import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
-import { browserStorage, saveSetting } from './settings/storage';
+import { browserStorage, SETTINGS_KEY, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
@@ -190,6 +194,8 @@ export class Game {
   private dev: DevSettings = activeDev(this.devEnabled, this.devPicked);
   /** The render quality preset in use (Settings → Graphics, M14). */
   private quality: QualityPreset;
+  /** Up once the game has stopped on an error (crash); the loop never runs again. */
+  private crashScreen: CrashScreen | null = null;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once.
@@ -340,6 +346,7 @@ export class Game {
           this.applyDev();
         },
         cheating: () => devCheating(this.dev),
+        diagnostics: () => this.diagnostics(),
       },
     });
     this.menus.showTitle();
@@ -355,6 +362,7 @@ export class Game {
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
     document.addEventListener('visibilitychange', this.visibilityChanged);
     this.pointer.onChange((locked) => {
+      if (this.crashScreen) return; // stopped on an error: the crash pane stays on top, nothing resumes
       if (locked) this.resume();
       else this.pause();
     });
@@ -667,8 +675,97 @@ export class Game {
     }
   }
 
+  /**
+   * The game's state for a crash or diagnostics report (audit CORE-04, CORE-32), read defensively: it may run after an
+   * error left things half-done, so each value falls back to '-' rather than throwing.
+   */
+  private reportFields(): ReportField[] {
+    const read = <T>(f: () => T): T | '-' => {
+      try {
+        return f();
+      } catch {
+        return '-';
+      }
+    };
+    const s = this.session;
+    const range = s instanceof RangeSession;
+    const match = s instanceof MatchSession ? s : null;
+    const r = match?.state.round;
+    const info = this.renderer.renderer.info;
+    return [
+      ['Seed', range ? this.options.seed : this.matchSeed],
+      ['Map', read(() => (range ? 'range' : match ? match.setup.map.name : '-'))],
+      ['Mode', read(() => (match ? `${match.mode}, ${match.setup.difficulty} (teammates ${match.setup.teammateDifficulty})` : range ? 'practice' : '-'))],
+      ['Round', read(() => (r ? `${r.number} (${r.phase}), score ${r.score[0]}–${r.score[1]}, draws ${r.draws}` : '-'))],
+      ['Tick', read(() => s?.state.tick ?? '-')],
+      ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay) && s ? 'in play' : `menus: ${this.menus.screen}`))],
+      ['Quality', `${this.quality}${this.options.automaticQuality ? ' (automatic)' : ''}`],
+      ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
+      ['GPU', read(() => rendererName(this.renderer.renderer.getContext()))],
+      ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
+      ['Sim ticks/s', this.tickRate],
+      ['Draw calls / triangles', read(() => `${info.render.calls} / ${info.render.triangles}`)],
+      ['Dev settings', this.devEnabled ? JSON.stringify(this.dev) : 'off'],
+      ['Settings', read(() => browserStorage()?.getItem(SETTINGS_KEY) ?? '-')],
+    ];
+  }
+
+  /** The diagnostics report (Settings → Dev → Copy diagnostics; audit CORE-32): the crash report's fields, no error. */
+  diagnostics(): string {
+    return crashReport({ title: 'Airsoft diagnostics', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: this.reportFields() });
+  }
+
+  /**
+   * The game stopped on an error (audit CORE-04, UI-02): from the loop, or an uncaught error or rejection (main.ts). The
+   * loop stops for good, the mouse and keys are given back, the sound stops, and the crash pane shows what happened with
+   * a report to copy. Each step is guarded: whatever broke may break them too. A later error only adds to the report.
+   */
+  crash(error: unknown): void {
+    console.error(error);
+    let report: string;
+    try {
+      report = crashReport({ title: 'Airsoft crash report', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: this.reportFields(), error });
+    } catch {
+      report = crashReport({ title: 'Airsoft crash report', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: [], error });
+    }
+    if (this.crashScreen) {
+      this.crashScreen.append(report);
+      return;
+    }
+    const steps = [
+      () => cancelAnimationFrame(this.rafId),
+      () => (this.keyboard.capturing = false),
+      () => this.keyboard.releaseAll(),
+      () => this.pointer.setUnlockedButtons(false),
+      () => this.pointer.release(),
+      () => this.session?.setPlaying(false),
+      () => this.audio.setRunning(false),
+      () => this.menus.setBlocked(true),
+    ];
+    for (const step of steps) {
+      try {
+        step();
+      } catch {
+        // Keep going: the pane matters more than any one of these.
+      }
+    }
+    this.unlockedPlay = false;
+    this.crashScreen = new CrashScreen(this.container, { heading: CRASH_TEXT.heading, body: CRASH_TEXT.body, advice: '', report });
+  }
+
   private readonly frame = (now: number): void => {
+    if (this.crashScreen) return;
     this.rafId = requestAnimationFrame(this.frame);
+    try {
+      this.step(now);
+    } catch (error) {
+      // Once, then stop: an error here would otherwise repeat every frame with the mouse locked and no word on screen.
+      this.crash(error);
+    }
+  };
+
+  /** One frame of the loop: input, the simulation ticks due, and the drawing. */
+  private step(now: number): void {
     // rAF timestamps can precede the performance.now() taken in start(); clamp to [0, MAX].
     const dt = Math.min(SIM.maxFrameDt, Math.max(0, (now - this.lastTime) / 1000));
     this.lastTime = now;
@@ -711,5 +808,5 @@ export class Game {
     // Only while playing: the menus are opaque, so drawing the paused field under them would be GPU work nobody sees.
     if (running) s.draw(dt, this.keyboard.isDown('scoreboard'));
     this.debug.frame(dt);
-  };
+  }
 }

@@ -64,7 +64,9 @@ body {
 
 /* Menus (M15, M15b): title, New game and its pop-ups, Loadout, Settings, pause, result. One opaque screen at a time:
    nothing of the field shows through (owner, 2026-10-03), and before Play no field is loaded at all. Headings and labels are in capitals (owner, 2026-10-03); descriptions stay as written. */
-.menus {
+/* The crash pane (ui/crashScreen.ts) shares the menus' tokens and buttons. */
+.menus,
+.crash-screen {
   --menu-panel: #20232a;
   --menu-panel-hi: #2a2e37;
   --menu-line: #3a3f4a;
@@ -2572,6 +2574,73 @@ kbd {
 
 .graphics-notice[hidden] {
   display: none;
+}
+
+/* Something went wrong (audit CORE-04, UI-02, CORE-28): over everything, the graphics notice included; a menu screen's
+   look, with the report in a mono box to copy. */
+.crash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px var(--menu-gutter);
+  overflow-y: auto;
+  background: #16181d;
+  font-family: var(--ui-font);
+}
+
+.crash-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(760px, 100%);
+}
+
+.crash-body,
+.crash-advice {
+  margin: 0;
+  max-width: 40em;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.crash-advice {
+  color: #ffb27a;
+}
+
+.crash-report {
+  width: 100%;
+  min-height: 220px;
+  max-height: 45vh;
+  padding: 12px 14px;
+  resize: vertical;
+  font: 12px/1.45 var(--ui-mono);
+  color: var(--paper);
+  white-space: pre;
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+  border-radius: 6px;
+}
+
+.crash-report:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.crash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.crash-status {
+  margin: 0;
+  font-size: 14px;
+  color: var(--menu-muted);
 }
 
 /* The practice range's readout (M21): your last BB, top centre where a match shows its clock. */
