@@ -71,4 +71,16 @@ describe('ChoiceDialog and dev content (M35)', () => {
     d.setDevContent(true);
     expect(d.value).toBe('easy');
   });
+
+  it('hides the options a context does not offer, playing a saved one as the fallback, and keeps it saved (M43)', () => {
+    const d = make('easy', 'normal');
+    d.setDevContent(true);
+    d.limit((id) => id !== 'easy');
+    expect(shown(d)).toEqual(['Normal', 'Hard', 'Woodland', 'Quarry']);
+    expect(entries(d).find((e) => e.name === 'Easy')!.button.disabled).toBe(true);
+    expect(d.value).toBe('normal');
+    d.limit(() => true);
+    expect(shown(d)).toEqual(['Easy', 'Normal', 'Hard', 'Woodland', 'Quarry']);
+    expect(d.value).toBe('easy');
+  });
 });

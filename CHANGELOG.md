@@ -69,6 +69,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M39** · New game → Match: a Rules row first: Skirmish (as before), Tournament and Pro CQB (Dev content only), or Custom with its own switches
 - **M39** · Tournament: first to 7, win by two, 2:00 rounds, time-outs to the team with more left, minimap teammates only; Pro CQB adds semi only, realcap
 - **M39** · Custom adds Overtime, Time-out, Minimap, Fire modes, Magazines and Kit rows; never counts for records, pays at most ×1.5
+- **M43** · Extraction (dev content, Depot): an 8:00 run against a home team; stand 10 s in an open exit to get out; one automatic respawn at the insertion (#83)
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
@@ -96,6 +97,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · With ricochets set to count, a BB that bounces can hit whoever fired it (not with friendly fire off) (#60)
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 - **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits (#70)
+- **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
 - **FA16** · Play here in a second tab no longer sometimes lands back on the "open in another tab" notice: the reloaded tab waits a moment for the other tab's save lock to be freed (#89)

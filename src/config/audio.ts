@@ -91,6 +91,8 @@ export const AUDIO = {
     hitMarker: { gain: 0.55, pitchSpread: 0 },
     /** A teammate's radio answering a squad order (M22). */
     radioAck: { gain: 0.5, pitchSpread: 0.02 },
+    /** Extraction's exit count (M43): the timer box's beeps, on the interface bus. */
+    countBeep: { gain: 0.45, pitchSpread: 0 },
     rope: { gain: 1, pitchSpread: 0.04 },
     /** A bird somewhere round the yard (the ambience). */
     bird: { gain: 0.35, pitchSpread: 0.08 },

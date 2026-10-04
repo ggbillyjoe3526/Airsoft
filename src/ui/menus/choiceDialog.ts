@@ -35,6 +35,8 @@ export class ChoiceDialog<T extends string> {
   private readonly fallback: T;
   private current: T;
   private devContent = false;
+  /** Which options the current context offers (`limit`); the others are hidden and play as the fallback. */
+  private offered: (id: T) => boolean = () => true;
 
   constructor(
     title: string,
@@ -98,9 +100,19 @@ export class ChoiceDialog<T extends string> {
     this.refresh();
   }
 
-  /** What is picked, as it plays: a dev pick is the fallback while Dev content is off. */
+  /**
+   * Offers only the options `offered` allows (Extraction only on a map with its data, M43), like OptionPicker.limit:
+   * the others are hidden, and a saved pick among them plays as the fallback but stays saved.
+   */
+  limit(offered: (id: T) => boolean): void {
+    this.offered = offered;
+    this.refresh();
+  }
+
+  /** What is picked, as it plays: a dev pick is the fallback while Dev content is off, as is one not offered here. */
   get value(): T {
-    return availableChoice(this.options, this.current, this.devContent, this.fallback);
+    const v = availableChoice(this.options, this.current, this.devContent, this.fallback);
+    return this.offered(v) ? v : this.fallback;
   }
 
   get label(): string {
@@ -131,7 +143,7 @@ export class ChoiceDialog<T extends string> {
       const on = option.id === picked;
       button.classList.toggle('selected', on);
       button.setAttribute('aria-pressed', String(on));
-      button.hidden = button.disabled = !isAvailable(option.tag, this.devContent);
+      button.hidden = button.disabled = !isAvailable(option.tag, this.devContent) || !this.offered(option.id);
     }
     for (const { entry, button } of this.soonButtons) button.hidden = !isAvailable(entry.tag, this.devContent);
   }

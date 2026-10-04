@@ -274,7 +274,8 @@ Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind 
 along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramps; walkable surfaces may stack
 when body height is clear between them), spawns and dead-zone spots
 per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
-without one are elimination only). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
+without one are elimination only) and an Extraction block (M43: insertions, exits, home-team starts, run time and base
+opponents; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
 at an end every round start (in Attack / Defend the attackers start at end 0; in Elimination Blue starts at
 `RoundRules.eliminationFirstEnd`, the east on Depot)
 and swaps them at half-time, and `Character.end` says where a character started, for its dead zone and its bot's
@@ -297,7 +298,9 @@ request. Each line names where it lives and what pins it.
 - **`PlayerCommand`** (`sim/commands.ts`): one command per character per tick, absolute view angles; the only way
   input or bots drive the simulation. Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`.
 - **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`): plain data, no Three.js or DOM; events are
-  the only channel to presentation and are cleared each tick. Pinned by `sim/simulation.test.ts`.
+  the only channel to presentation and are cleared each tick. Since M43 `RoundState.run` holds an Extraction run
+  (`sim/extraction.ts`: exits, respawns used, the exit count, its outcome), and the events `respawned`, `exitCount`,
+  `exitOpened` and `runWarning` report it. Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step, FA1); randomness only from `state.rng`. Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/`, implemented by `physics/physicsWorld.ts`): ray and shape casts and
@@ -334,5 +337,5 @@ request. Each line names where it lives and what pins it.
   (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
   player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
   `NotCounted` 'devContent'). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`.
-- **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
-  `map/mapData.test.ts`, `nav/navGrid.test.ts`.
+- **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Optional blocks
+  are only added (M43 `extraction`). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/extractionData.test.ts`.

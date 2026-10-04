@@ -4,6 +4,7 @@ import { LOADOUT } from '../config/replicas';
 import { createBBPool, spawnBB } from './ballistics';
 import { type Character, createCharacter } from './character';
 import type { GameEvent } from './events';
+import { createRunState } from './extraction';
 import { attackersInRound, createRoundState, matchWon, placeTeams, type RoundContext, type RoundRules, type RoundState, restartMatch, stepRound, teamEnd, timeOutWinner } from './round';
 import { vec3 } from './vec';
 
@@ -323,6 +324,61 @@ describe('flag rounds', () => {
     expect(cs[0]!.armament.modes[rifle]).toBe(other);
     restartMatch(round, cs, createBBPool(1), CTX, [], 'elimination');
     expect(cs[0]!.armament.modes).toEqual(LOADOUT.map((r) => r.defaultFireMode));
+  });
+});
+
+describe('Elimination and Attack / Defend stay as they were beside Extraction (M43 acceptance 6)', () => {
+  it('leave the run inert through a drawn round, a wipe-out and the next round starting, with or without the run context', () => {
+    const X = { rules: { extractTime: 10 } } as unknown as RoundContext['extraction'];
+    for (const ctx of [CTX, { ...CTX, extraction: X }]) {
+      for (const mode of ['elimination', 'attackDefend'] as const) {
+        const round = createRoundState(RULES, mode, POLE);
+        expect(round.run).toEqual(createRunState());
+        const cs = teams();
+        const events: GameEvent[] = [];
+        const bbs = createBBPool(4);
+        // A timed-out round, then a wipe-out, then the next round's start.
+        for (let i = 0; i < (RULES.roundTime + RULES.resetDelay + 0.5) / DT; i++) stepRound(round, cs, bbs, ctx, events, DT);
+        expect(events.filter((e) => e.type === 'roundOver')[0]).toMatchObject({ reason: 'time' });
+        expect(events.some((e) => e.type === 'roundStart')).toBe(true);
+        cs[2]!.status = 'out';
+        cs[3]!.status = 'out';
+        for (let i = 0; i < 3 / DT; i++) stepRound(round, cs, bbs, ctx, events, DT);
+        expect(events).toContainEqual({ type: 'roundOver', winner: 0, reason: 'eliminated' });
+        expect(round.mode).toBe(mode);
+        expect(round.run).toEqual(createRunState());
+        expect(events.some((e) => e.type === 'respawned' || e.type === 'exitCount' || e.type === 'exitOpened' || e.type === 'runWarning')).toBe(false);
+        expect(round.reason).not.toBe('extracted');
+      }
+    }
+  });
+
+  it('keep ending a round on the clock with a draw, as before, when a map has Extraction data', () => {
+    const round = createRoundState(RULES);
+    const events: GameEvent[] = [];
+    const ctx: RoundContext = { ...CTX, extraction: { rules: { extractTime: 1 } } as unknown as RoundContext['extraction'] };
+    const cs = teams();
+    const bbs = createBBPool(1);
+    for (let i = 0; i < (RULES.roundTime + 0.2) / DT; i++) stepRound(round, cs, bbs, ctx, events, DT);
+    expect(events).toContainEqual({ type: 'roundOver', winner: -1, reason: 'time' });
+    expect(round.phase).toBe('over');
+    expect(round.score).toEqual([0, 0]);
+  });
+
+  it('an Extraction round without its run context is a programming error, not a quiet Elimination', () => {
+    const round = createRoundState(RULES, 'extraction');
+    expect(() => stepRound(round, teams(), createBBPool(1), CTX, [], DT)).toThrow(/Extraction needs the run context/);
+  });
+
+  it('restarting from Extraction into Elimination puts the teams at their ends and the run is not stepped', () => {
+    const cs = teams();
+    const round = createRoundState(RULES, 'elimination');
+    round.mode = 'extraction';
+    round.run.outcome = 'out';
+    restartMatch(round, cs, createBBPool(1), CTX, [], 'elimination');
+    expect(round).toMatchObject({ mode: 'elimination', number: 1, phase: 'live', matchWinner: -1 });
+    expect(cs[0]!.position.x).toBeCloseTo(-20);
+    expect(cs[2]!.position.x).toBeCloseTo(20);
   });
 });
 
