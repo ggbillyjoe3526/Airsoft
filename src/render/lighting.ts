@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { LIGHTING, type QualitySettings } from '../config/render';
+import { LIGHTING, type LightingPreset, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
 import { terrainMaxX, terrainMaxZ, terrainRange } from '../map/terrain';
 import { addAtmosphere } from './atmosphere';
+import { addLightPools } from './lightPools';
 
 /** World-space bounding box of every block in the map (walls, floor, props) and its sloping ground (M33c), if any. */
 export function mapBoundingBox(map: MapData): THREE.Box3 {
@@ -93,14 +94,30 @@ export function shadowTexel(cam: THREE.OrthographicCamera, mapSize: number): num
   return Math.max(cam.right - cam.left, cam.top - cam.bottom) / mapSize;
 }
 
-/** The match's daylight: change it with a new quality preset, follow the view each frame, dispose it with the match. */
+/** The match's light: change it with a new quality preset, follow the view each frame, dispose it with the match. */
 export interface Daylight {
-  /** Shadows on or off, their map size, softness and reach; the trees and clouds (Settings → Graphics → Quality). */
+  /** Shadows on or off, their map size, softness and reach; the trees and clouds; the night lights (Settings → Graphics). */
   setQuality(quality: QualitySettings): void;
-  /** Moves a view-fitted shadow map to the ground ahead of `camera` (High; nothing otherwise). Call before drawing. */
-  follow(camera: THREE.Camera): void;
-  /** Removes the lights, sky, trees and clouds and frees the shadow map. */
+  /**
+   * Moves a view-fitted shadow map to the ground ahead of `camera` (High) and the light pools' real lights to the pools
+   * nearest it (M33f), fading over this frame's `dt` seconds. Call before drawing.
+   */
+  follow(camera: THREE.Camera, dt: number): void;
+  /** Removes the lights, sky, trees, clouds and light pools and frees the shadow map. */
   dispose(): void;
+}
+
+/**
+ * Where the key light stands relative to the field's centre: the preset's offset, moved out along it when the level's
+ * bounds reach past it, so the shadow camera has the whole field in front of it (a low moon over a large field). Exactly
+ * the preset's offset otherwise (Depot by day: as before).
+ */
+export function keyLightOffset(offset: LightingPreset['key']['offset'], box: THREE.Box3, margin: number, out = new THREE.Vector3()): THREE.Vector3 {
+  out.set(offset.x, offset.y, offset.z);
+  const reach = box.isEmpty() ? 0 : box.getBoundingSphere(new THREE.Sphere()).radius + margin;
+  const length = out.length();
+  if (length < reach) out.multiplyScalar(reach / length);
+  return out;
 }
 
 /**
@@ -123,17 +140,19 @@ function applyNormalBias(sun: THREE.DirectionalLight): void {
 }
 
 /**
- * Adds daylight sized to the map (a sky fill, one warm shadow-casting sun) and the world round it (render/atmosphere.ts:
- * the sky dome and the trees), and returns its handle.
+ * Adds the map's light under `preset` (render/lightingPreset.ts resolveLighting; M33f), sized to the map: a sky fill, one
+ * shadow-casting key light (the sun, or the moon at night), the world round it (render/atmosphere.ts: the sky dome, the
+ * trees and clouds) and the map's light pools (render/lightPools.ts), and returns its handle.
  */
-export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings): Daylight {
-  const hemi = new THREE.HemisphereLight(LIGHTING.hemiSky, LIGHTING.hemiGround, LIGHTING.hemiIntensity);
+export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings, preset: LightingPreset): Daylight {
+  const hemi = new THREE.HemisphereLight(preset.hemi.sky, preset.hemi.ground, preset.hemi.intensity);
 
-  const sun = new THREE.DirectionalLight(LIGHTING.sunColor, LIGHTING.sunIntensity);
+  const sun = new THREE.DirectionalLight(preset.key.colour, preset.key.intensity);
   const box = mapBoundingBox(map);
   const centre = box.getCenter(new THREE.Vector3());
   sun.target.position.set(centre.x, 0, centre.z);
-  sun.position.set(centre.x + LIGHTING.sunOffset.x, LIGHTING.sunOffset.y, centre.z + LIGHTING.sunOffset.z);
+  const offset = keyLightOffset(preset.key.offset, box, LIGHTING.shadowMargin);
+  sun.position.set(centre.x + offset.x, offset.y, centre.z + offset.z);
   const cam = sun.shadow.camera;
   fitShadowCamera(cam, sun.position, sun.target.position, box, LIGHTING.shadowMargin);
   const level: ShadowBounds = { left: cam.left, right: cam.right, bottom: cam.bottom, top: cam.top };
@@ -159,13 +178,16 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
 
   scene.add(hemi, sun, sun.target);
   const sunDirection = sun.position.clone().sub(sun.target.position).normalize();
-  const atmosphere = addAtmosphere(scene, sun.target.position, sunDirection, quality, box);
+  const atmosphere = addAtmosphere(scene, sun.target.position, sunDirection, quality, box, preset);
+  const pools = addLightPools(scene, map, quality);
   return {
     setQuality: (q) => {
       setQuality(q);
       atmosphere.setQuality(q);
+      pools.setQuality(q);
     },
-    follow: (camera) => {
+    follow: (camera, dt) => {
+      pools.follow(camera.position, dt);
       if (!following) return;
       // The ground ahead: the view's heading, flattened, `ahead` metres out from the eye.
       forward.set(0, 0, -1).applyQuaternion(camera.quaternion).setY(0);
@@ -176,6 +198,7 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
       fitShadowToView(cam, level, focus, viewHalf, sun.shadow.mapSize.x);
     },
     dispose: () => {
+      pools.dispose();
       atmosphere.dispose();
       scene.remove(hemi, sun, sun.target);
       sun.dispose();

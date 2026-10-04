@@ -22,6 +22,7 @@ import { createGameState, type GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
+import { sightConditionsOf } from './perception';
 
 /**
  * Test-only (like sim/testSupport.ts): the headless bot-match harness shared by the depotMatch*.test.ts files. The
@@ -93,6 +94,7 @@ export function playMatch(
     lanes: map.lanes,
     lowCover: lowCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap),
     tallCover: tallCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap),
+    sight: sightConditionsOf(map),
     body: BODY,
     hits,
     loadout: LOADOUT,

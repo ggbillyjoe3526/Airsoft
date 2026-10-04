@@ -53,6 +53,8 @@ export const MINIMAP = {
     ramp: 'rgba(80, 88, 94, 0.95)',
     low: 'rgba(150, 156, 160, 0.95)',
     tall: 'rgba(214, 218, 220, 0.98)',
+    /** Bushes (M33e): a soft green, darker than cover, as they hide you but stop nothing. */
+    bush: 'rgba(70, 120, 70, 0.75)',
     you: '#ffffff',
     out: 'rgba(170, 170, 170, 0.8)',
   },

@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import {
-  ATMOSPHERE,
   effectivePixelRatio,
-  ENVIRONMENT,
   FRAME_TIMING,
+  type LightingPreset,
+  LIGHTING_PRESETS,
   RENDER,
   TONE_MAPPING,
   type QualitySettings,
@@ -13,6 +13,7 @@ import {
 } from '../config/render';
 import type { FigureModel } from './externalModels';
 import { GpuTimer } from './gpuTimer';
+import { environmentLookOf } from './lightingPreset';
 import { MapMeshCache } from './mapMeshCache';
 import { mapLookOf } from './mapMeshes';
 import { createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
@@ -40,9 +41,9 @@ const TONE_MAPPERS: Readonly<Record<ToneMappingId, THREE.ToneMapping>> = {
   neutral: THREE.NeutralToneMapping,
 };
 
-/** The renderer's tone mapping and exposure for a choice. */
-export function toneMappingOf(id: ToneMappingId): { mapping: THREE.ToneMapping; exposure: number } {
-  return { mapping: TONE_MAPPERS[id], exposure: TONE_MAPPING.exposure[id] };
+/** The renderer's tone mapping and exposure for a choice, the exposure times a lighting preset's `scale` (M33f). */
+export function toneMappingOf(id: ToneMappingId, scale = 1): { mapping: THREE.ToneMapping; exposure: number } {
+  return { mapping: TONE_MAPPERS[id], exposure: TONE_MAPPING.exposure[id] * scale };
 }
 
 /** Runs `work` in a spare moment. */
@@ -176,6 +177,8 @@ export class Renderer {
   private environmentDirty = true;
   /** Settings → Graphics → Tone mapping (F2): not part of a preset. */
   private toneMapping: ToneMappingId = TONE_MAPPING.default;
+  /** The lighting preset in force (M33f, setLighting): its haze, exposure and environment. Day until a session sets one. */
+  private lighting: LightingPreset = LIGHTING_PRESETS.day;
   /** GPU time per frame (REN-17), made while `gpuTiming` is on; null without it. */
   private gpuTimer: GpuTimer | null = null;
   /** Time the GPU's work each frame (the debug overlay, while shown). */
@@ -213,8 +216,10 @@ export class Renderer {
     this.camera.rotation.order = 'YXZ';
 
     // The match's sky dome covers this (render/atmosphere.ts); the haze fades far things into the horizon's colour.
-    this.scene.background = new THREE.Color(ATMOSPHERE.horizon);
-    this.scene.fog = new THREE.Fog(ATMOSPHERE.horizon, ATMOSPHERE.fogNear, ATMOSPHERE.fogFar);
+    // Both follow the lighting preset (setLighting).
+    this.scene.background = new THREE.Color();
+    this.scene.fog = new THREE.Fog(0xffffff);
+    this.applyHaze();
 
     this.resize();
     window.addEventListener('resize', this.resize);
@@ -290,6 +295,32 @@ export class Renderer {
     this.environmentDirty = true;
   }
 
+  /**
+   * The map's light (M33f, render/lightingPreset.ts resolveLighting): the haze and background, the exposure, and the
+   * environment map's sky, ground and strength. Every session sets it as it is built, so a map never keeps the last one's.
+   */
+  setLighting(preset: LightingPreset): void {
+    this.lighting = preset;
+    this.applyHaze();
+    this.setToneMapping(this.toneMapping);
+    this.setEnvironmentLook(environmentLookOf(preset));
+  }
+
+  /** The lighting preset in force (setLighting). */
+  get lightingPreset(): LightingPreset {
+    return this.lighting;
+  }
+
+  /** The haze and the background in the preset's colour (the scene's own Fog and Color, changed in place). */
+  private applyHaze(): void {
+    const { colour, near, far } = this.lighting.fog;
+    (this.scene.background as THREE.Color).setHex(colour);
+    const fog = this.scene.fog as THREE.Fog;
+    fog.color.setHex(colour);
+    fog.near = near;
+    fog.far = far;
+  }
+
   /** The tone mapping in use (Settings → Graphics). */
   get toneMappingId(): ToneMappingId {
     return this.toneMapping;
@@ -301,7 +332,7 @@ export class Renderer {
    */
   setToneMapping(id: ToneMappingId): void {
     this.toneMapping = id;
-    const { mapping, exposure } = toneMappingOf(id);
+    const { mapping, exposure } = toneMappingOf(id, this.lighting.exposureScale);
     this.gl.toneMapping = mapping;
     this.gl.toneMappingExposure = exposure;
   }
@@ -447,7 +478,7 @@ export class Renderer {
   private applyEnvironment(): void {
     this.environmentDirty = false;
     this.scene.environment = this.sheen.texture(this.gl, this.quality.environment, this.environmentLook);
-    this.scene.environmentIntensity = ENVIRONMENT.intensity;
+    this.scene.environmentIntensity = this.lighting.environment.intensity;
   }
 
   /**
@@ -463,7 +494,7 @@ export class Renderer {
   private makeWebGL(antialias: boolean): THREE.WebGLRenderer {
     const gl = new THREE.WebGLRenderer({ antialias, powerPreference: 'high-performance' });
     gl.outputColorSpace = THREE.SRGBColorSpace;
-    const { mapping, exposure } = toneMappingOf(this.toneMapping);
+    const { mapping, exposure } = toneMappingOf(this.toneMapping, this.lighting.exposureScale);
     gl.toneMapping = mapping;
     gl.toneMappingExposure = exposure;
     gl.shadowMap.enabled = this.quality.shadows;

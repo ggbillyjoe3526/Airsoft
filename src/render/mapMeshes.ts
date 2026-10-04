@@ -3,6 +3,7 @@ import { type QualitySettings, SURFACES, type SurfaceTextureId } from '../config
 import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import { appendCuboid, type Buffers, type Cuboid, type CuboidShape, emptyBuffers, FACES, PLAIN, type UvMode } from './cuboidMesh';
+import { buildFoliageMesh } from './foliageMeshes';
 import { buildMapDecals, disposeMapDecals, drawDecalAtlas } from './mapDecals';
 import type { ProceduralTexture, SurfaceTextures } from './proceduralTextures';
 import { isSurfaceMaterial, setReliefMaps, type SurfaceMaterial, withoutEnvironment } from './surfaceMaterials';
@@ -770,6 +771,8 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     group.add(mesh);
   }
   if (map.terrain) group.add(buildTerrainMesh(map.terrain));
+  const foliage = buildFoliageMesh(map.foliage ?? []);
+  if (foliage) group.add(foliage);
   if (look.detail && decalAtlas) {
     const decals = buildMapDecals(map, decalAtlas);
     if (decals) group.add(decals);

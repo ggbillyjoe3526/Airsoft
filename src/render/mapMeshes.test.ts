@@ -4,7 +4,7 @@ import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
 import { terrainHeightAt, terrainMesh, terrainRange } from '../map/terrain';
 import { SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
-import { TERRAIN_LOOK } from '../config/render';
+import { FOLIAGE_LOOK, TERRAIN_LOOK } from '../config/render';
 import { vec3 } from '../sim/vec';
 import { QUALITY, SURFACES, type SurfaceTextureId } from '../config/render';
 import {
@@ -426,5 +426,38 @@ describe('the ground of a map with terrain (M33c)', () => {
     // Same height, same mesh: the mesh's heights are the ground's.
     expect(pos.getY(0)).toBeCloseTo(terrainHeightAt(SLOPE_YARD_TERRAIN, pos.getX(0), pos.getZ(0))!, 5);
     disposeMapMeshes(group);
+  });
+});
+
+describe('bushes (M33e)', () => {
+  const textures = Object.fromEntries(
+    (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => [id, { texture: new THREE.Texture() as THREE.CanvasTexture, worldSize: SURFACES.worldSize[id] }]),
+  ) as SurfaceTextures;
+  const bushes = [
+    { x: 0, y: 0, z: 0, radius: 1, height: 1.6 },
+    { x: 5, y: 0.5, z: -2, radius: 1.3, height: 1.2 },
+  ];
+
+  it('are one more mesh, map-foliage, holding every bush, casting and receiving shadows; none on a map without them', () => {
+    const withBushes = buildMapMeshes({ ...SLOPE_YARD, foliage: bushes }, textures, { relief: true, normalMaps: false, detail: false, steelSheen: false });
+    const without = buildMapMeshes(SLOPE_YARD, textures, { relief: true, normalMaps: false, detail: false, steelSheen: false });
+    expect(withBushes.children.length).toBe(without.children.length + 1);
+    expect(without.children.find((c) => c.name === 'map-foliage')).toBeUndefined();
+    const mesh = withBushes.children.find((c) => c.name === 'map-foliage') as THREE.Mesh;
+    expect(mesh.castShadow).toBe(true);
+    expect(mesh.receiveShadow).toBe(true);
+    // Every bush's leaves stay within its ellipsoid, give or take the lumps.
+    const pos = mesh.geometry.getAttribute('position');
+    const perBush = pos.count / bushes.length;
+    for (const [b, bush] of bushes.entries()) {
+      for (let v = b * perBush; v < (b + 1) * perBush; v++) {
+        const y = pos.getY(v);
+        expect(Math.hypot(pos.getX(v) - bush.x, pos.getZ(v) - bush.z)).toBeLessThanOrEqual(bush.radius * (1 + FOLIAGE_LOOK.lump) + 1e-6);
+        expect(y).toBeGreaterThanOrEqual(bush.y - (bush.height / 2) * FOLIAGE_LOOK.lump - 1e-6);
+        expect(y).toBeLessThanOrEqual(bush.y + bush.height * (1 + FOLIAGE_LOOK.lump / 2) + 1e-6);
+      }
+    }
+    disposeMapMeshes(withBushes);
+    disposeMapMeshes(without);
   });
 });

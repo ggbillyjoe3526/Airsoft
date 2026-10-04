@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
 import { Minimap } from './minimap';
+import type { Bush } from '../map/foliage';
 import { terrainMaxX, terrainMaxZ } from '../map/terrain';
 import { planeTerrain, SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
 
@@ -59,9 +60,12 @@ describe('Minimap layout (audit UI-14, UI-04, UI-13)', () => {
   });
 });
 
-/** A fake DOM whose canvases draw into a recording context: every fillRect with the fillStyle it was drawn in. */
+/**
+ * A fake DOM whose canvases draw into a recording context: every fillRect with the fillStyle it was drawn in, and every
+ * arc (M33e's bushes) with the fillStyle then in force.
+ */
 function recordingDom() {
-  const canvases: { width: number; height: number; fills: { style: string; x: number; y: number; w: number; h: number }[] }[] = [];
+  const canvases: { width: number; height: number; fills: { style: string; x: number; y: number; w: number; h: number }[]; arcs: { style: string; x: number; y: number; r: number; after: number }[] }[] = [];
   const parent = {
     style: { setProperty: () => undefined, getPropertyValue: () => '' },
     appendChild: () => undefined,
@@ -70,15 +74,23 @@ function recordingDom() {
   (globalThis as { document?: unknown }).document = {
     createElement: () => {
       const fills: { style: string; x: number; y: number; w: number; h: number }[] = [];
+      const arcs: { style: string; x: number; y: number; r: number; after: number }[] = [];
       let fillStyle = '';
       const ctx = new Proxy({} as Record<string, unknown>, {
-        get: (_t, key) => (key === 'fillStyle' ? fillStyle : key === 'fillRect' ? (x: number, y: number, w: number, h: number) => fills.push({ style: fillStyle, x, y, w, h }) : () => undefined),
+        get: (_t, key) =>
+          key === 'fillStyle'
+            ? fillStyle
+            : key === 'fillRect'
+              ? (x: number, y: number, w: number, h: number) => fills.push({ style: fillStyle, x, y, w, h })
+              : key === 'arc'
+                ? (x: number, y: number, r: number) => arcs.push({ style: fillStyle, x, y, r, after: fills.length })
+                : () => undefined,
         set: (_t, key, value) => {
           if (key === 'fillStyle') fillStyle = String(value);
           return true;
         },
       });
-      const canvas = { width: 0, height: 0, fills, hidden: false, className: '', setAttribute: () => undefined, getContext: () => ctx, remove: () => undefined, getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }) };
+      const canvas = { width: 0, height: 0, fills, arcs, hidden: false, className: '', setAttribute: () => undefined, getContext: () => ctx, remove: () => undefined, getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }) };
       canvases.push(canvas);
       return canvas;
     },
@@ -127,5 +139,35 @@ describe('the minimap on sloping ground (M33c)', () => {
     const none = recordingDom();
     new Minimap(none.parent, [], '#00f', '#f80');
     expect(none.canvases).toHaveLength(1); // no field layer at all, as before
+  });
+});
+
+describe('bushes on the minimap (M33e)', () => {
+  it('draws each bush as a round of its footprint in the bush colour, over the ground and under the cover', () => {
+    const bushes: Bush[] = [
+      { x: 2, y: 0, z: 3, radius: 1, height: 1.5 },
+      { x: -4, y: 0, z: -1, radius: 1.4, height: 1.5 },
+    ];
+    const dom = recordingDom();
+    new Minimap(dom.parent, SLOPE_YARD.blocks, '#00f', '#f80', SLOPE_YARD_TERRAIN, bushes);
+    const field = dom.canvases[1]!;
+    expect(field.arcs).toHaveLength(2);
+    const s = MINIMAP.layerScale;
+    for (const [i, b] of bushes.entries()) {
+      expect(field.arcs[i]!.style).toBe(MINIMAP.colours.bush);
+      expect(field.arcs[i]!.r).toBeCloseTo(b.radius * s, 6);
+    }
+    // Placed to scale: the second bush sits where the first one's position says it should.
+    expect(field.arcs[1]!.x - field.arcs[0]!.x).toBeCloseTo((bushes[1]!.x - bushes[0]!.x) * s, 6);
+    expect(field.arcs[1]!.y - field.arcs[0]!.y).toBeCloseTo((bushes[1]!.z - bushes[0]!.z) * s, 6);
+    // Drawn after the ground's cells and before the first block that is cover.
+    const walkable = SLOPE_YARD.blocks.filter((b) => b.kind === 'floor' || b.kind === 'ramp').length;
+    expect(field.arcs[0]!.after).toBe(field.fills.length - (SLOPE_YARD.blocks.length - walkable));
+  });
+
+  it('draws no bush on a map without them', () => {
+    const dom = recordingDom();
+    new Minimap(dom.parent, SLOPE_YARD.blocks, '#00f', '#f80', SLOPE_YARD_TERRAIN);
+    expect(dom.canvases[1]!.arcs).toHaveLength(0);
   });
 });

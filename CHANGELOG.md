@@ -57,6 +57,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33a** · Woodland shown as Coming soon in the Map pop-up (#64)
 - **M33b** · Glowing BBs: a per-replica Customise option (At Night by default, Always or Off); bots load them on night fields
 - **M33d** · Woodland's layout, playable with the Dev content switch on (dev content: its matches aren't recorded or paid); 4v4 and 5v5 on maps with room
+- **M33e** · Bushes: they hide you from bots (BBs and people pass through), on any map that has them; Woodland has 70, shown on the minimap
+- **M33g** · Night sight: on night maps bots see less far in the dark (40 m by a fire or lantern, 25 m in the open, 10 m under the trees); Woodland's fires and lanterns give you away
+- **M33f** · Night lighting: any map picks a day or night look in its data; Woodland is dark under a low moon over the Knoll, its fires and lanterns glow and light the ground, and on Medium and High the nearest ones light players too (Graphics › Night lights)
 - **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound (#75)
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
 - **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
@@ -119,6 +122,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M28** · Impact puffs start at half size
 
 ### Internal
+- **FA15** · The perf harness measures heap growth between two forced full garbage collections, so repeated runs agree (+0.9 MB on four of five runs, −3.4 on one, against swings of ±10 MB before) (#88)
 - **FA14** · The browser smoke test waits for a match to draw before trying its keys, and gives the scoreboard, order wheel and squad order steps the same wait as firing and reloading, so slow frames on a CI runner no longer fail it (#80)
 - **M34b** · Multi-floor navigation: map cells hold multiple walkable levels, enabling buildings with stairs and balconies
 - **FA11b** · What Play does next and the pause and result text are pure, unit-tested functions; `?perf` logs how long each part of a match build takes (#73)
