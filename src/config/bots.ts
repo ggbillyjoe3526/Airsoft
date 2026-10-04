@@ -357,13 +357,14 @@ export interface BotSkill {
   readonly flankChance: number;
 }
 
-export type Difficulty = 'easy' | 'normal' | 'hard';
+export type Difficulty = 'easy' | 'normal' | 'hard' | 'pro';
 
 /** Difficulty levels in the order the Difficulty pop-up lists them, with their labels. */
 export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string }[] = [
   { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim. Learn the map.' },
   { id: 'normal', label: 'Normal', blurb: 'A fair fight: their first BBs up close can miss.' },
   { id: 'hard', label: 'Hard', blurb: 'Quick and steady, each on kit of its own. Get seen first and you\'re out.' },
+  { id: 'pro', label: 'Pro', blurb: 'Tournament-sharp: patient, accurate and well kitted. Slow down and slice every corner.' },
 ];
 
 /** The same levels as the Difficulty pop-up's Teammates row describes them (M20). */
@@ -371,7 +372,14 @@ export const TEAMMATE_DIFFICULTIES: readonly { id: Difficulty; label: string; bl
   { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim: you carry the team.' },
   { id: 'normal', label: 'Normal', blurb: 'They hold their own in a fair fight.' },
   { id: 'hard', label: 'Hard', blurb: 'Quick and steady: they win fights for you.' },
+  { id: 'pro', label: 'Pro', blurb: 'Patient and accurate: they hold their angles and win their duels.' },
 ];
+
+/** True when `d` is `min` or above, in the Difficulty pop-up's order (Easy, Normal, Hard, Pro). */
+export function difficultyAtLeast(d: Difficulty, min: Difficulty): boolean {
+  const rank = (id: Difficulty) => DIFFICULTIES.findIndex((o) => o.id === id);
+  return rank(d) >= rank(min);
+}
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
 
@@ -443,16 +451,41 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     searchWalkDistance: 20,
     flankChance: 0.7,
   },
+  // Pro (M36, owner 2026-10-04): above Hard in every number, but its first BBs are still never dead on
+  // (aimErrorStartMetres above zero) and it reacts no faster than Hard to someone it wasn't already aiming at. It plays
+  // slower than Hard: longer holds at lane points, nearly always from cover, and a walk (silent) for the last 30 m to
+  // a contact. Holding and pre-aiming angles comes with M37, clearing corners and team play with M38.
+  pro: {
+    reactionTime: [0.25, 0.45],
+    turnRate: 6,
+    aimErrorStartDeg: 3.5,
+    aimErrorSettledDeg: 0.75,
+    aimSettleTime: 0.7,
+    aimErrorStartMetres: 0.2,
+    aimErrorMovingDeg: 1.0,
+    aimErrorTracking: 0.05,
+    leadFactor: 0.85,
+    burst: [0.15, 0.35],
+    burstPause: [0.2, 0.4],
+    holdTime: [1.2, 3],
+    holdCoverChance: 0.9,
+    contactCoverMinDistance: 4,
+    searchWalkDistance: 30,
+    flankChance: 0.7,
+  },
 };
 
 /**
  * What the other team's bots carry, per difficulty (M29b, owner 2026-10-04): 'factory' is each replica as it comes;
  * 'random' rolls every bot its own compatible kit from the pool (pool/botKit.ts). Your teammates always carry factory.
  */
-export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = { easy: 'factory', normal: 'factory', hard: 'random' };
+export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = { easy: 'factory', normal: 'factory', hard: 'random', pro: 'random' };
 
 /** How a random loadout is rolled: the chance each part slot (optic, grip, laser, barrel, muzzle, magazine) gets a part. */
 export const RANDOM_LOADOUT = { partChance: 0.6 } as const;
+
+/** That chance per difficulty that rolls kits (BOT_LOADOUTS): Hard's as above, Pro's higher (M36: better kitted). */
+export const BOT_PART_CHANCE: Readonly<Record<Difficulty, number>> = { easy: 0, normal: 0, hard: RANDOM_LOADOUT.partChance, pro: 0.8 };
 
 /** The behaviour tuning every bot shares, whatever its level (BOT_BEHAVIOUR's shape). */
 export type BotBehaviour = Widen<typeof BOT_BEHAVIOUR>;

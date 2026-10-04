@@ -352,6 +352,14 @@ describe('Round won pay (audit POOL-08, POOL-09)', () => {
     expect(matchEarnings(e, { ...o, difficulty: 'easy', teammateDifficulty: 'hard' }).multiplier).toBe(0.5);
   });
 
+  it('pays Pro (M36) twice Normal, read from pool.md, and Pro opponents with Hard teammates at Hard\'s rate', () => {
+    expect(e.difficulty.pro).toBe(2);
+    const o = { won: true, roundsWon: 5, hits: 6, winsNeeded: 5, difficulty: 'pro' } as const;
+    expect(matchEarnings(e, o).total).toBe(2 * (40 + 60 + 50 + 30));
+    expect(matchEarnings(e, { ...o, teammateDifficulty: 'pro' }).multiplier).toBe(2);
+    expect(matchEarnings(e, { ...o, teammateDifficulty: 'hard' }).multiplier).toBe(1.5);
+  });
+
   it('scales Round won by the match length like the match lines', () => {
     const short = matchEarnings(e, { won: true, roundsWon: 3, hits: 0, winsNeeded: 3, difficulty: 'normal' });
     expect(short.lines.find((l) => l.label === '3 rounds won')!.fc).toBe(18);

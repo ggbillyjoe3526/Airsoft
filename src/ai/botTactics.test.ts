@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BOTS, botConfig, DIFFICULTIES } from '../config/bots';
+import { BOTS, botConfig, DIFFICULTIES, difficultyAtLeast } from '../config/bots';
 import { HITS } from '../config/hits';
 import { FLAG } from '../config/modes';
 import { BODY } from '../config/movement';
@@ -417,8 +417,8 @@ describe('search (audit AI-14, AI-17)', () => {
   });
 
   it('play the tactics by level: Hard takes cover sooner, holds less and flanks more than Easy', () => {
-    const [easy, normal, hard] = (['easy', 'normal', 'hard'] as const).map((l) => botConfig(l));
-    expect(DIFFICULTIES.map((d) => d.id)).toEqual(['easy', 'normal', 'hard']);
+    const [easy, normal, hard, pro] = (['easy', 'normal', 'hard', 'pro'] as const).map((l) => botConfig(l));
+    expect(DIFFICULTIES.map((d) => d.id)).toEqual(['easy', 'normal', 'hard', 'pro']);
     for (const [lo, hi] of [
       [easy!, normal!],
       [normal!, hard!],
@@ -429,6 +429,24 @@ describe('search (audit AI-14, AI-17)', () => {
       expect(hi.contactCoverMinDistance).toBeLessThan(lo.contactCoverMinDistance);
       expect(hi.holdTime[1]).toBeLessThanOrEqual(lo.holdTime[1]);
     }
+    // Pro (M36) is Hard played patiently: more cover, a longer silent walk-in and no less flanking, but longer holds.
+    expect(pro!.holdCoverChance).toBeGreaterThan(hard!.holdCoverChance);
+    expect(pro!.searchWalkDistance).toBeGreaterThan(hard!.searchWalkDistance);
+    expect(pro!.contactCoverMinDistance).toBeLessThan(hard!.contactCoverMinDistance);
+    expect(pro!.flankChance).toBeGreaterThanOrEqual(hard!.flankChance);
+    expect(pro!.holdTime[1]).toBeGreaterThan(hard!.holdTime[1]);
+  });
+
+  it('ranks Pro above Hard: sharper aim, but never dead on and no faster to react to a surprise (M36)', () => {
+    const [hard, pro] = (['hard', 'pro'] as const).map((l) => botConfig(l));
+    expect(pro!.aimErrorSettledDeg).toBeLessThan(hard!.aimErrorSettledDeg);
+    expect(pro!.aimSettleTime).toBeLessThan(hard!.aimSettleTime);
+    expect(pro!.leadFactor).toBeGreaterThan(hard!.leadFactor);
+    expect(pro!.aimErrorStartMetres).toBeGreaterThan(0);
+    expect(pro!.reactionTime[0]).toBeGreaterThanOrEqual(hard!.reactionTime[0]);
+    expect(difficultyAtLeast('pro', 'hard')).toBe(true);
+    expect(difficultyAtLeast('hard', 'hard')).toBe(true);
+    expect(difficultyAtLeast('normal', 'hard')).toBe(false);
   });
 });
 

@@ -99,7 +99,7 @@ export interface Pool {
 /** pool.md's numbers as shipped: used for any the file is missing. */
 export const DEFAULT_ECONOMY: Economy = {
   earn: { matchPlayed: 40, matchWon: 60, roundWon: 10, hit: 5 },
-  difficulty: { easy: 0.5, normal: 1, hard: 1.5 },
+  difficulty: { easy: 0.5, normal: 1, hard: 1.5, pro: 2 },
   tokensPerFc: 0.00625,
   tokensPerShot: 1,
   tokensPerTenShots: 10,
@@ -359,7 +359,7 @@ function readEconomy(
   const earn = labelled(fc, 'Field Credits', { 'match played': 'matchPlayed', 'match won': 'matchWon', 'round won': 'roundWon', 'hit on an opponent': 'hit' } as const, 'FC', fail, errors, (row) =>
     numberCell(row, 'FC', fail, 0, MAX_FC_CELL),
   );
-  const diff = labelled(difficulty, 'Difficulty', { easy: 'easy', normal: 'normal', hard: 'hard' } as const, 'Multiplier', fail, errors, (row) => numberCell(row, 'Multiplier', fail));
+  const diff = labelled(difficulty, 'Difficulty', { easy: 'easy', normal: 'normal', hard: 'hard', pro: 'pro' } as const, 'Multiplier', fail, errors, (row) => numberCell(row, 'Multiplier', fail));
   const s = labelled(
     shots,
     'Tokens and Shots',
@@ -396,7 +396,7 @@ function readEconomy(
       roundWon: num(earn.roundWon, d.earn.roundWon),
       hit: num(earn.hit, d.earn.hit),
     },
-    difficulty: { easy: num(diff.easy, d.difficulty.easy), normal: num(diff.normal, d.difficulty.normal), hard: num(diff.hard, d.difficulty.hard) },
+    difficulty: { easy: num(diff.easy, d.difficulty.easy), normal: num(diff.normal, d.difficulty.normal), hard: num(diff.hard, d.difficulty.hard), pro: num(diff.pro, d.difficulty.pro) },
     tokensPerFc: num(s.tokensPerFc, d.tokensPerFc),
     tokensPerShot: Math.round(num(s.tokensPerShot, d.tokensPerShot)),
     tokensPerTenShots: Math.round(num(s.tokensPerTenShots, d.tokensPerTenShots)),

@@ -126,6 +126,7 @@ when you have none):
 | Easy | 0.5 |
 | Normal | 1 |
 | Hard | 1.5 |
+| Pro | 2 |
 
 ### Tokens and Shots
 
