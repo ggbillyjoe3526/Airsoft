@@ -7,7 +7,8 @@ keeps `status` and `attempts` current.
 
 The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
 files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged dev with M35's content tag until the
-owner says it's done. Any change under `src/ai/` is announced to the coordinator first (FA4 and M33 touch bots).
+owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
+first (M33 changes both).
 
 ## M36 · The Pro difficulty level
 tier: core
