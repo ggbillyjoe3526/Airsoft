@@ -13,6 +13,11 @@ import { CrashScreen } from './ui/crashScreen';
 import { chunkInfo, prefetchWithProgress } from './ui/loadingProgress';
 import { LoadingScreen } from './ui/loadingScreen';
 import { loadSavedQuality } from './ui/menus/savedChoices';
+import { OtherTabNotice } from './ui/otherTabNotice';
+import { startGuardedStorage } from './save/guardedStorage';
+import { SaveManager } from './save/saveManager';
+import { browserLockChannel, TabLock } from './save/tabLock';
+import { flushSettings } from './settings/storage';
 
 /** The game once it has started; until then an error is a start-up failure. */
 let running: Game | null = null;
@@ -24,6 +29,12 @@ let bootSeed: number | null = null;
 async function main(): Promise<void> {
   const container = document.getElementById('app');
   if (!container) throw new Error('#app container missing');
+  // The save (M31) before anything reads it: one tab plays at a time, so a second waits here behind a notice.
+  const save = await startSave();
+  if (!save) {
+    LoadingScreen.find()?.remove();
+    return;
+  }
   // The loading bar (audit CORE-10): the physics chunk's download as it arrives, then starting physics and the game.
   const loading = LoadingScreen.find();
   const chunk = chunkInfo(document.querySelector(`meta[name="${LOADING.chunkMeta}"]`));
@@ -53,12 +64,51 @@ async function main(): Promise<void> {
     quality: quality.preset,
     automaticQuality: quality.automatic,
     softwareRendering,
+    save,
   });
   running = game;
   game.start();
   loading?.remove();
   // The console handle (and the smoke test's): dev server and the `e2e` build only.
   if (import.meta.env.DEV || import.meta.env.MODE === 'e2e') (window as unknown as { airsoft: Game }).airsoft = game;
+}
+
+/**
+ * Starts the save system (M31): the guarded storage every store writes through, the tab lock and the save manager,
+ * and keeps today's restore point. Null when another tab is playing: this tab shows the notice and doesn't start.
+ */
+async function startSave(): Promise<SaveManager | null> {
+  const storage = startGuardedStorage();
+  const lock = new TabLock({
+    channel: browserLockChannel(),
+    // Another tab took the save: write what's waiting, stop saving, and wait behind the notice.
+    onLost: () => {
+      flushSettings();
+      storage.freeze('otherTab');
+      running?.yieldToOtherTab();
+      waitBehindNotice(lock);
+    },
+  });
+  if (!(await lock.claim())) {
+    storage.freeze('otherTab');
+    waitBehindNotice(lock);
+    return null;
+  }
+  const manager = new SaveManager({
+    storage,
+    build: __BUILD_VERSION__.label,
+    reload: () => window.location.reload(),
+    persist: navigator.storage && 'persist' in navigator.storage ? navigator.storage : null,
+  });
+  manager.keepRestorePoint();
+  return manager;
+}
+
+/** "Airsoft is open in another tab": Play here takes the save from the other tab and reloads, to read it fresh. */
+function waitBehindNotice(lock: TabLock): void {
+  new OtherTabNotice(document.body, () => {
+    void lock.take().then(() => window.location.reload());
+  });
 }
 
 /**

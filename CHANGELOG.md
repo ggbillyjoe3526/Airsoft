@@ -5,6 +5,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
+- **M31** · Settings → Save: download your save as a file and load it back (Undo after), daily restore points; a second tab waits instead of overwriting
 - **FA5** · Second key per action; mouse wheel binding; HUD size (0.8–1.5); crosshair custom; raw mouse input; cm/360 kept; order wheel shows keys (#59)
 - **FA5** · High-contrast styles; hit, out, round messages read by screen readers (#59)
 - **FA9** · Dark loading screen with physics module progress bar; favicon and web manifest (#59)

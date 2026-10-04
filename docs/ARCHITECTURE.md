@@ -219,6 +219,15 @@ ends the round). A hit character is eliminated
   With a tutorial (M16) it also holds a `tutorial/tutorial.ts` `TutorialTracker`, which watches the player and the
   tick's events against the steps of `config/tutorial.ts`, and a `ui/coachPanel.ts` panel that shows the current step
   (the range readout takes over once it's finished); `Game` saves `tutorialDone` when it reports the end.
+- **The save (M31), `src/save/`:** every store (the settings object, key bindings, records, the collection; listed in
+  `save/stores.ts`) keeps its own key and module, and writes through `browserStorage()`, which after start-up is the
+  visit's `GuardedStorage` (`save/guardedStorage.ts`): it notices writes (the Save tab's "Last saved"), keeps refused
+  writes in memory for the visit (a full or blocked browser store, warned on the Save tab and the title) and can be
+  frozen (another tab, a newer build's save, a load about to reload). `main.ts` starts it first, then the tab lock
+  (`save/tabLock.ts`, a BroadcastChannel: one tab plays, a second waits behind `ui/otherTabNotice.ts`), then the
+  `SaveManager` (`save/saveManager.ts`: today's restore point, the Undo slot, load, delete), handed to `Game` for
+  Settings → Save (`ui/saveSettings.ts`, `ui/saveDialog.ts`). The file format and migrations are pure, in
+  `save/saveFile.ts`. Stores keep fields they don't know when they save (`save/overStored.ts`).
 
 ## Map data
 
@@ -260,7 +269,12 @@ request. Each line names where it lives and what pins it.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`): saved under `airsoft.*`, versioned;
   renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
   "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added. Pinned by
-  `settings/storage.test.ts`.
+  `settings/storage.test.ts`. Since M31 `browserStorage()` returns the save system's guarded storage once it has
+  started (same keys, same values).
+- **The save file format** (`save/saveFile.ts`, M31): `{ game, format, build, savedAt, summary, stores, checksum }`,
+  the stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per
+  format); a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`).
+  Pinned by `save/saveFile.test.ts`.
 - **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
   power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
