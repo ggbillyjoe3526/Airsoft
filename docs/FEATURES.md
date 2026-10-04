@@ -33,7 +33,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Bots
 
 - Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover, keep apart from teammates and search (Phase 1, FA4)
-- Four difficulty levels (Easy, Normal, Hard, Pro), picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking); Pro shown only with Dev content on (M4a, M20, FA4, M36)
+- Four difficulty levels (Easy, Normal, Hard, Pro), picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking); Pro holds angles at corners and answers pre-aimed peeks faster, shown only with Dev content on (M4a, M20, FA4, M36, M37)
 - Bots crouch-peek over low cover, lean round corners, move as a team on varied routes and walk when it pays (M4b, M10)
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from cover (M5, FA4)
@@ -79,7 +79,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
 - HUD size slider (0.8–1.5) in Settings > HUD (FA5)
-- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy, Dev content switch (M24, M26d, FA1, M35)
+- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42)
 - The build's version on the title screen (M24)
 
 ## HUD and match info

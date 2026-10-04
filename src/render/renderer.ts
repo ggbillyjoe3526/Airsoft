@@ -7,6 +7,7 @@ import {
   RENDER,
   TONE_MAPPING,
   type QualitySettings,
+  type RetroLook,
   type TextureSize,
   type ToneMappingId,
 } from '../config/render';
@@ -16,6 +17,7 @@ import { MapMeshCache } from './mapMeshCache';
 import { mapLookOf } from './mapMeshes';
 import { createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
+import { RetroFilter, retroPixelAngle } from './retroFilter';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 
 const REFERENCE_ASPECT = 16 / 9;
@@ -190,6 +192,10 @@ export class Renderer {
   readonly mapMeshes = new MapMeshCache();
   /** The overlay scene drawn last frame (the held replica), released with the world when the context is swapped. */
   private overlayScene: THREE.Scene | null = null;
+  /** The retro pixel filter's look while it is on (Settings → Dev, M42); null while off. */
+  private retroLook: RetroLook | null = null;
+  /** The filter's target and pass for the context in use, made while the filter is on. */
+  private retro: RetroFilter | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
 
@@ -359,6 +365,30 @@ export class Renderer {
     return replaced;
   }
 
+  /**
+   * The retro pixel filter (Settings → Dev, M42): `look` turns it on (or changes its pixel size and colours), null turns
+   * it off and frees its render target and pass. Applies from the next frame, on every map and the range.
+   */
+  setRetro(look: RetroLook | null): void {
+    this.retroLook = look ? { ...look } : null;
+    if (!look) {
+      this.retro?.dispose();
+      this.retro = null;
+      return;
+    }
+    if (this.retro) this.retro.setLook(look);
+    else this.retro = this.makeRetro(look);
+    this.retro.resize(this.width, this.height, this.gl.getPixelRatio());
+  }
+
+  /**
+   * How wide one retro pixel is at the middle of the view (radians of the main camera's view, zoom included); 0 while
+   * the filter is off. BBs are kept at least a couple of these wide (RETRO.bbMinPixels).
+   */
+  get retroPixelAngle(): number {
+    return this.retroLook ? retroPixelAngle(this.camera.fov, this.height, this.retroLook.pixelSize) : 0;
+  }
+
   /** Narrows the main camera's view by `zoom` (1 = the normal view), e.g. while aiming down an optic. */
   setZoom(zoom: number): void {
     if (zoom === this.zoom) return;
@@ -376,6 +406,9 @@ export class Renderer {
     // Count both passes in renderer.info (the debug overlay reads it).
     gl.info.autoReset = false;
     gl.info.reset();
+    // The retro filter (M42): both passes draw into its small target, then its pass shows that on the canvas.
+    const retro = this.retro;
+    if (retro) gl.setRenderTarget(retro.renderTarget);
     gl.autoClear = true;
     gl.render(this.scene, this.camera);
     this.overlayScene = overlay?.scene ?? null;
@@ -384,6 +417,7 @@ export class Renderer {
       gl.clearDepth();
       gl.render(overlay.scene, overlay.camera);
     }
+    retro?.present(gl);
     timer?.end();
   }
 
@@ -394,6 +428,8 @@ export class Renderer {
     if (this.surfaces) disposeSurfaceTextures(this.surfaces);
     this.surfaces = null;
     this.sheen.dispose();
+    this.retro?.dispose();
+    this.retro = null;
     this.figureModel?.dispose();
     this.figureModel = null;
     this.dropTimer();
@@ -412,6 +448,15 @@ export class Renderer {
     this.environmentDirty = false;
     this.scene.environment = this.sheen.texture(this.gl, this.quality.environment, this.environmentLook);
     this.scene.environmentIntensity = ENVIRONMENT.intensity;
+  }
+
+  /**
+   * The retro filter for the context in use: a half-float target where the context can draw into one (WebGL 2 with
+   * EXT_color_buffer_half_float or _float, near universal), else 8-bit.
+   */
+  private makeRetro(look: RetroLook): RetroFilter {
+    const ext = this.gl.extensions;
+    return new RetroFilter(look, ext.has('EXT_color_buffer_half_float') || ext.has('EXT_color_buffer_float'));
   }
 
   /** A WebGL renderer with the game's output settings, on a canvas of its own. Throws if the browser refuses a context. */
@@ -447,6 +492,9 @@ export class Renderer {
     // the scene's environment is made again on the next frame.
     this.sheen.dispose();
     this.environmentDirty = true;
+    // The retro filter's target belongs to the old context: freed with it, and made again on the new one below.
+    this.retro?.dispose();
+    this.retro = null;
     // Kept map meshes outside the scene are freed rather than handed over (CORE-33); a held map is in the scene.
     this.mapMeshes.contextReplaced();
     // Everything the old renderer has drawn (or uploaded ahead, the surface textures) lets go of it (REN-24).
@@ -462,6 +510,7 @@ export class Renderer {
     this.gl = next;
     this.contextAntialias = antialias;
     this.listen(next.domElement);
+    if (this.retroLook) this.retro = this.makeRetro(this.retroLook);
     return true;
   }
 
@@ -514,6 +563,7 @@ export class Renderer {
     // the canvas keeps its size on the page and the browser scales the picture up.
     this.gl.setPixelRatio(effectivePixelRatio(window.devicePixelRatio, this.quality));
     this.gl.setSize(w, h, false);
+    this.retro?.resize(w, h, this.gl.getPixelRatio());
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   };

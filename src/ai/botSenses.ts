@@ -1,8 +1,15 @@
 import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
+import { vec3, wrapAngle } from '../sim/vec';
 import { type Bot, type BotWorld, type Contact, forgetTarget, lastSeenAt, pick, recallHeardOther } from './bot';
-import { freshAimError } from './aim';
-import { visiblePart } from './perception';
+import { freshAimError, lookAngles } from './aim';
+import { bodyPoint, eyeOf, visiblePart } from './perception';
+
+const DEG = Math.PI / 180;
+// Scratch for aimedAt (used only within one call).
+const eye = vec3();
+const seen = vec3();
+const look = { yaw: 0, pitch: 0 };
 
 /**
  * Updates what the bot sees: the closest enemy in sight becomes its target. Someone not seen within
@@ -46,8 +53,10 @@ export function perceive(b: Bot, w: BotWorld): void {
   }
   const contact = contactFor(b, best.id);
   if (w.time - contact.seenAt > cfg.contactGrace) {
-    contact.reactAt = w.time + pick(b.rng, b.skill.reactionTime);
-    contact.acquiredAt = w.time;
+    // Someone stepping out where the bot already aims (a held angle, M37) is answered sooner and with a steadier aim.
+    const preAimed = aimedAt(b, w, best, bestPart);
+    contact.reactAt = w.time + pick(b.rng, preAimed ? b.skill.preAimReactionTime : b.skill.reactionTime);
+    contact.acquiredAt = w.time - (preAimed ? b.skill.preAimSettled * b.skill.aimSettleTime : 0);
     freshAimError(b.aim, cfg, b.rng);
   } else if (contact !== b.contact) {
     // Back on someone seen moments ago: no new reaction delay, but the aim error is this target's, not the last one's.
@@ -67,6 +76,14 @@ export function perceive(b: Bot, w: BotWorld): void {
   b.lastKnown.y = best.position.y;
   b.lastKnown.z = best.position.z;
   b.hasLastKnown = true;
+}
+
+/** True if the bot's view already points within preAimConeDeg of the part of `target` it sees. */
+function aimedAt(b: Bot, w: BotWorld, target: Character, part: number): boolean {
+  eyeOf(b.character, w.body, w.hits, eye);
+  bodyPoint(target, w.hits, part, seen);
+  lookAngles(eye.x, eye.y, eye.z, seen.x, seen.y, seen.z, look);
+  return Math.hypot(wrapAngle(look.yaw - b.aim.yaw), look.pitch - b.aim.pitch) <= w.cfg.preAimConeDeg * DEG;
 }
 
 /** The bot's record of enemy `id` (created on first sight, then reused for the rest of the match). */
