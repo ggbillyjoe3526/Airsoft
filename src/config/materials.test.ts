@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from './ballistics';
 import { BLOCK_MATERIALS, TERRAIN_MATERIAL } from './materials';
 import { IMPACT_DUST } from './render';
-import { cues, IMPACT_MATERIALS, SOUNDS } from './sounds';
+import { cues, type ImpactMaterial, SOUNDS } from './sounds';
+
+/** Every impact material: the ricochet table is a Record over them, so it lists each one. */
+const IMPACT_MATERIALS = Object.keys(BALLISTICS.ricochet.restitution) as ImpactMaterial[];
 
 describe('block materials', () => {
   it('lets a pallet rack soak BBs up like the wrapped loads beside it: its faces are cardboard and film (bug pass)', () => {

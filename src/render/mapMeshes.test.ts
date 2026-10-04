@@ -154,7 +154,8 @@ describe('the ground of a map with terrain (M33c)', () => {
 
   it('adds one mesh named map-terrain, one more draw call than the same map without it, and none on Depot', () => {
     const withGround = buildMapMeshes(SLOPE_YARD, textures, true);
-    const without = buildMapMeshes({ ...SLOPE_YARD, terrain: undefined }, textures, true);
+    const { terrain: _ground, ...flat } = SLOPE_YARD;
+    const without = buildMapMeshes(flat, textures, true);
     expect(withGround.children.filter((c) => c.name === 'map-terrain')).toHaveLength(1);
     expect(withGround.children.length).toBe(without.children.length + 1);
     expect(terrainMeshOf(without)).toBeUndefined();
