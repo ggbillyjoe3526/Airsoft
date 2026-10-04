@@ -271,6 +271,100 @@ describe('leaning while slicing a corner (Pro, M38)', () => {
   });
 });
 
+describe('slicing towards a heard spot (Pro, M38 attempt 3)', () => {
+  // A wall across the way with a 6 m doorway straight ahead (two held angles, one each side of it); a spot behind
+  // either half of the wall is hidden from the bot at the origin.
+  const DOORWAY = boxes(boxQuery(-23, -10, 20, 0.5, 3), boxQuery(23, -10, 20, 0.5, 3));
+
+  /**
+   * A bot standing at (x, z) facing -z, walking and careful in search mode towards a spot (`spot`, on the floor), with
+   * `teamWait` where the held angles' time switch is; aims for 2 s, returns what it aimed at and how it leaned.
+   */
+  function search(query: WorldQuery, at: { x: number; z: number }, spot: { x: number; z: number }, teamWait = 0, level: 'hard' | 'pro' = 'pro') {
+    const { bot, bots, player } = duel(12, () => {}, query);
+    const b = bots.bots[0]!;
+    (b as { skill: unknown }).skill = botConfig(level);
+    const w = bots.worldForTests;
+    bot.position.x = at.x;
+    bot.position.z = at.z;
+    player.position.x = 30;
+    player.position.z = 30;
+    (w.enemyYaw as number[])[bot.team] = 0;
+    b.mode = 'search';
+    b.careful = level === 'pro';
+    b.hunting = false;
+    b.hasLastKnown = true;
+    b.lastKnown.x = spot.x;
+    b.lastKnown.y = 0;
+    b.lastKnown.z = spot.z;
+    b.moveDir.x = 0;
+    b.moveDir.z = -1;
+    b.teamWait = teamWait;
+    const eye = vec3();
+    const cmd = createCommand();
+    for (let i = 0; i < 2 / DT; i++) {
+      eyeOf(bot, w.body, w.hits, eye);
+      aimBot(b, w, undefined, eye, vec3(), true, cmd, DT);
+    }
+    const toSpot = { yaw: 0, pitch: 0 };
+    lookAngles(eye.x, eye.y, eye.z, spot.x, BODY.standEyeHeight, spot.z, toSpot);
+    /** How far (degrees) the aim is from a held angle. */
+    const offAngle = (a: { point: { x: number; y: number; z: number } }) => {
+      const look = { yaw: 0, pitch: 0 };
+      lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, look);
+      return Math.abs(wrapAngle(b.aim.yaw - look.yaw)) / DEG;
+    };
+    const offSpot = Math.abs(wrapAngle(b.aim.yaw - toSpot.yaw)) / DEG;
+    return { b, w, cmd, eye, offAngle, offSpot, toSpot, hidden: !clear(query, eye, vec3(spot.x, BODY.standEyeHeight, spot.z)) };
+  }
+
+  it('aims at the held angle nearest the spot, even when the time-based switch would pick the other', () => {
+    // Which angle is first, which second (best first, fixed by the doorway), seen with nothing hidden to slice.
+    const probe = search(DOORWAY, { x: 0, z: 0 }, { x: 8, z: -12 });
+    expect(probe.b.heldAngleCount).toBe(2);
+    const [first, second] = probe.b.heldAngles as [typeof probe.b.heldAngles[0], typeof probe.b.heldAngles[0]];
+    expect(Math.abs(wrapAngle(first.yaw - second.yaw))).toBeGreaterThan(BOTS.angleSeparationDeg * DEG);
+    // A spot behind the wall on the second angle's side, and on the first's, hidden either way.
+    for (const [near, far, teamWait] of [
+      [second, first, 0], // the time switch is on the first
+      [first, second, BOTS.angleSwitchTime + 0.01], // ... and on the second
+    ] as const) {
+      const spot = { x: Math.sign(near.point.x) * 8, z: -12 };
+      const r = search(DOORWAY, { x: 0, z: 0 }, spot, teamWait);
+      expect(r.hidden, 'the spot is hidden').toBe(true);
+      expect(r.b.heldAngleCount).toBe(2);
+      expect(r.offAngle(near), `on the angle nearest the spot, ${near.point.x.toFixed(1)}`).toBeLessThan(4);
+      expect(r.offAngle(far), 'and not on the other').toBeGreaterThan(BOTS.angleSeparationDeg);
+      // The corner it aims at is not the spot itself either.
+      expect(r.offSpot).toBeGreaterThan(5);
+    }
+  });
+
+  it('with the spot in plain view it watches the spot at head height and does not lean, however close the corner', () => {
+    // The corner wall (x from -30 to 0 at z = -8): standing 4 m from its end, a spot ahead and to the right is in view,
+    // one behind the wall is not.
+    const at = { x: 0, z: -4 };
+    const visible = search(CORNER, at, { x: 6, z: -20 });
+    expect(visible.hidden).toBe(false);
+    expect(visible.cmd.lean).toBe(0);
+    expect(Math.abs(wrapAngle(visible.b.aim.yaw - visible.toSpot.yaw))).toBeLessThan(1 * DEG);
+    expect(Math.abs(visible.b.aim.pitch - visible.toSpot.pitch)).toBeLessThan(1 * DEG);
+    expect(visible.b.heldAngleCount, 'looked for no corner').toBe(0);
+    // The same bot, the spot just hidden behind the wall: it slices the corner and leans out past it instead.
+    const hidden = search(CORNER, at, { x: -6, z: -20 });
+    expect(hidden.hidden).toBe(true);
+    expect(hidden.b.heldAngleCount).toBeGreaterThan(0);
+    expect(hidden.cmd.lean).toBe(1);
+    expect(hidden.offSpot).toBeGreaterThan(5);
+    expect(hidden.offAngle(hidden.b.heldAngles[0]!)).toBeLessThan(4);
+    // Hard watches the hidden spot as it always did.
+    const hard = search(CORNER, at, { x: -6, z: -20 }, 0, 'hard');
+    expect(hard.cmd.lean).toBe(0);
+    expect(hard.b.heldAngleCount).toBe(0);
+    expect(hard.offSpot).toBeLessThan(1);
+  });
+});
+
 describe('reacting from a held angle', () => {
   /** A fresh sighting at 12 m on `level`, the bot's view on the player or `off` degrees away. */
   function sighting(level: 'hard' | 'pro', off: number, seed: number) {

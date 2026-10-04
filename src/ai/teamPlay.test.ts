@@ -137,6 +137,147 @@ describe('clearing corners near the enemy', () => {
   });
 });
 
+describe('slicing the corner that hides someone heard (Pro)', () => {
+  // A wall across the way, its right-hand end at (0, -10) a corner. Blue's player fires from 5 m behind it (z = -4). Two
+  // Pro bots hear it: a mate just south of the wall, and the one we follow, 7 m back and walking north (the mate shares
+  // where the shot came from, as the bot itself is out of earshot). Blue then slips off, so there is nobody at the spot.
+  const WALL = box('wall', -7, -10, 14, 3, 0.5);
+  const map = field([HUT, WALL]);
+  const MATE = [-10, -12, 1] as const;
+
+  /** Walks the bot at (3, -17) towards the heard spot for 9 s, sampling what it aims at and how it leans each tick. */
+  function approach(level: 'hard' | 'pro') {
+    const { state, player, bots, run, commands } = skirmish(map, [
+      [-5, -4, 0],
+      [3, -17, 1],
+      MATE,
+    ]);
+    unarmed(state.characters);
+    const [b, mate] = bots.bots as [Bot, Bot];
+    setSkill(mate, 'pro');
+    setSkill(b, 'pro');
+    state.events.push({ type: 'shot', characterId: player.id, replicaId: 'aeg', position: vec3(player.position.x, 1.4, player.position.z) });
+    bots.observe(state);
+    player.position.x = 30;
+    player.position.z = 40;
+    // The bot has learnt of the spot (the mate's guess of where the shot was).
+    expect(b.hasLastKnown).toBe(true);
+    // Hard: the same spot, as news of its own (a Hard bot is told nothing by a Pro one).
+    setSkill(b, level);
+    if (level === 'hard') {
+      b.hasLastKnown = true;
+      b.heardAt = state.time;
+      b.lastThreatAt = state.time;
+    }
+    const w = bots.worldForTests;
+    const cmd = commands.get(b.character.id)!;
+    const eye = vec3();
+    const head = vec3();
+    const spot = { yaw: 0, pitch: 0 };
+    const held = { yaw: 0, pitch: 0 };
+    const hiddenAtStart = (() => {
+      eyeOf(b.character, w.body, w.hits, eye);
+      head.x = b.lastKnown.x;
+      head.y = b.lastKnown.y + w.body.standEyeHeight;
+      head.z = b.lastKnown.z;
+      return !lineClear(w.query, eye, head);
+    })();
+    const seen = {
+      hiddenAtStart,
+      hidden: 0, // ticks searching with the spot out of view
+      sliced: 0, // ... of which it had a corner in mind
+      onCorner: 0, // ... aiming within 5 degrees of the held angle nearest the spot's bearing
+      atSpotHidden: 0, // ... aiming within 5 degrees of the spot itself
+      leans: 0,
+      leanWrong: 0, // leaning to anything but the open side of the corner it aims at
+      leanFar: 0, // leaning with that corner further off than sliceLeanDistance
+      nearCornerTicks: 0, // south of the wall, within 5 m of its end
+      nearCornerLeaning: 0, // ... of which leaning to the left (the open side walking north)
+      visible: 0, // ticks searching with the spot in view, settled for a quarter of a second
+      atSpotVisible: 0, // ... aiming at the spot, at head height (2 degrees)
+      leanVisible: 0,
+    };
+    let visibleSince = Number.NaN;
+    run(9, () => {
+      if (b.mode !== 'search' || !b.hasLastKnown || (cmd.forward === 0 && cmd.right === 0)) return;
+      eyeOf(b.character, w.body, w.hits, eye);
+      head.x = b.lastKnown.x;
+      head.y = b.lastKnown.y + w.body.standEyeHeight;
+      head.z = b.lastKnown.z;
+      lookAngles(eye.x, eye.y, eye.z, head.x, head.y, head.z, spot);
+      const me = b.character.position;
+      if (lineClear(w.query, eye, head)) {
+        if (Number.isNaN(visibleSince)) visibleSince = state.time;
+        if (state.time - visibleSince < 0.25) return;
+        seen.visible++;
+        if (Math.abs(wrapAngle(b.aim.yaw - spot.yaw)) < 2 * DEG && Math.abs(b.aim.pitch - spot.pitch) < 2 * DEG) seen.atSpotVisible++;
+        if (cmd.lean !== 0) seen.leanVisible++;
+        return;
+      }
+      visibleSince = Number.NaN;
+      // Past its first half second the view has turned to wherever it means to look.
+      if (state.time < 1) return;
+      seen.hidden++;
+      if (Math.abs(wrapAngle(b.aim.yaw - spot.yaw)) < 5 * DEG) seen.atSpotHidden++;
+      const nearCorner = me.z < -11 && Math.hypot(me.x, me.z + 10) <= 5;
+      if (nearCorner) {
+        seen.nearCornerTicks++;
+        if (cmd.lean === -1) seen.nearCornerLeaning++;
+      }
+      if (b.heldAngleCount === 0) return;
+      seen.sliced++;
+      // The held angle nearest the spot's bearing is the one it aims at.
+      let a = b.heldAngles[0]!;
+      for (let i = 1; i < b.heldAngleCount; i++) {
+        const o = b.heldAngles[i]!;
+        if (Math.abs(wrapAngle(o.yaw - spot.yaw)) < Math.abs(wrapAngle(a.yaw - spot.yaw))) a = o;
+      }
+      lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, held);
+      if (Math.abs(wrapAngle(b.aim.yaw - held.yaw)) < 5 * DEG) seen.onCorner++;
+      if (cmd.lean !== 0) {
+        seen.leans++;
+        if (cmd.lean !== a.side) seen.leanWrong++;
+        if (Math.hypot(a.point.x - me.x, a.point.z - me.z) > BOTS.sliceLeanDistance + 0.1) seen.leanFar++;
+      }
+    });
+    return { b, ...seen };
+  }
+
+  it('aims at the corner the spot is behind, not at the spot, and leans out to its open side as it walks up to it; once the spot is in view it watches that', () => {
+    const pro = approach('pro');
+    expect(pro.hiddenAtStart).toBe(true);
+    // A good while walking with the spot hidden, a corner in mind most of it, and the view on that corner, not the spot.
+    expect(pro.hidden).toBeGreaterThan(100);
+    expect(pro.sliced).toBeGreaterThan(pro.hidden * 0.6);
+    expect(pro.onCorner).toBeGreaterThan(pro.sliced * 0.8);
+    expect(pro.atSpotHidden).toBeLessThan(pro.hidden * 0.25);
+    // Close to the corner it leans out, left of its walk north (the wall is on its right), to that angle's open side only.
+    expect(pro.nearCornerTicks).toBeGreaterThan(15);
+    expect(pro.nearCornerLeaning).toBeGreaterThan(pro.nearCornerTicks * 0.8);
+    expect(pro.leans).toBeGreaterThan(15);
+    expect(pro.leanWrong).toBe(0);
+    expect(pro.leanFar).toBe(0);
+    // Round the corner the spot is in view: it looks at it (at head height), upright.
+    expect(pro.visible).toBeGreaterThan(30);
+    expect(pro.atSpotVisible).toBeGreaterThan(pro.visible * 0.9);
+    expect(pro.leanVisible).toBe(0);
+  });
+
+  it('Hard walking the same way never leans and looks at the spot, hidden or not', () => {
+    const hard = approach('hard');
+    expect(hard.hiddenAtStart).toBe(true);
+    expect(hard.hidden).toBeGreaterThan(100);
+    expect(hard.b.heldAngleCount).toBe(0);
+    expect(hard.sliced).toBe(0);
+    expect(hard.leans).toBe(0);
+    expect(hard.nearCornerLeaning).toBe(0);
+    expect(hard.leanVisible).toBe(0);
+    expect(hard.atSpotHidden).toBeGreaterThan(hard.hidden * 0.9);
+    expect(hard.visible).toBeGreaterThan(30);
+    expect(hard.atSpotVisible).toBeGreaterThan(hard.visible * 0.9);
+  });
+});
+
 describe('watching where someone ducked out of sight', () => {
   // Blue's player stands in the open 12 m off, then steps into the hut.
   const map = field([HUT]);
