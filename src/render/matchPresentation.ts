@@ -3,7 +3,7 @@ import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
-import { type DetailLevel, FLAG_VISUALS, HUD } from '../config/render';
+import { type DetailLevel, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
 import { SQUAD_ORDERS, type SquadOrderKind, type WheelSelect } from '../config/squad';
 import { cssColor, teamCss, type TeamColours } from '../config/teams';
 import type { MapBlock } from '../map/mapTypes';
@@ -142,6 +142,15 @@ export class MatchPresentation {
   setFigureShadows(on: boolean): void {
     this.characters.setReceiveShadows(on);
     this.flag.setReceiveShadows(on);
+  }
+
+  /**
+   * The flagpole's look for the quality settings: its finer detail (mapDetail; audit section 5, "Flagpole and cloth")
+   * and its brushed metal while the sky lights it (environment).
+   */
+  setFlagQuality(quality: Pick<QualitySettings, 'mapDetail' | 'environment'>): void {
+    this.flag.setDetail(quality.mapDetail);
+    this.flag.setEnvironmentLit(quality.environment);
   }
 
   /** Player detail (QualitySettings.figureDetail, FA8): the figures are built again at the new level. */
