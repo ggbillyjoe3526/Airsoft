@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import poolText from '../../pool.md?raw';
-import { addItem, type Collection, grantStarters, itemKey, loadCollection, newCollection, ownedItems, parseItemKey, saveCollection } from './collection';
+import { addItem, type Collection, grantStarters, inPool, itemKey, loadCollection, newCollection, ownedItems, parseItemKey, saveCollection } from './collection';
 import { shotAssets } from './armory';
-import { assetOfReplica, DEFAULT_ECONOMY, fcPerToken, fits, hasBuiltInPower, loadPool, replicaOf, tierId } from './pool';
+import { assetOfReplica, comesIn, DEFAULT_ECONOMY, fcPerToken, fits, hasBuiltInPower, isChase, loadPool, replicaOf, tierId, tiersOf } from './pool';
 import { readTables } from './poolFile';
 import { MemoryStorage } from './testStorage';
-import { AEG, GAS_PISTOL } from '../config/replicas';
+import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
 
 const pool = loadPool(poolText);
 const byName = (name: string) => pool.assets.find((a) => a.name === name)!;
@@ -230,5 +230,110 @@ describe('pool.md, barrels and muzzle parts (M29b)', () => {
     expect(p.assets.filter((a) => a.category === 'barrel').map((a) => a.id)).toEqual(['000016']);
     expect(p.assets.filter((a) => a.category === 'muzzle').map((a) => a.id)).toEqual(['000018']);
     expect(p.errors.some((e) => /wobbly/.test(e))).toBe(true);
+  });
+});
+
+describe('M32 acceptance 1: the Cyber Pistol row and the Tiers and Drop % columns', () => {
+  /** A pool.md with a Replicas table that has the two new columns, one row per entry (line 11 is the first extra row). */
+  const chaseText = (...rows: string[]): string =>
+    [
+      '### Rarity',
+      '| Tier | Odds % | Bonus % | Scrap FC |',
+      '|---|---|---|---|',
+      '| Common | 60 | 0 | 5 |',
+      '| Very Rare | 30 | 9 | 40 |',
+      '| Legendary | 10 | 15 | 160 |',
+      '### Replicas',
+      '| ID | Name | Key | Tags | Starter | In Shots | Tiers | Drop % |',
+      '|---|---|---|---|---|---|---|---|',
+      '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes | | |',
+      ...rows,
+    ].join('\n');
+  const FIRST_ROW_LINE = 11;
+  /** Only the row errors (a fixture without the other tables gets a note for each of those). */
+  const rowErrors = (p: { errors: readonly string[] }): string[] => p.errors.filter((e) => e.startsWith('line '));
+
+  it('lists the Cyber Pistol as 000019, key cyber, at Legendary only, on a 0.25 % drop, with its battery built in', () => {
+    const cyber = byName('Cyber Pistol');
+    expect(cyber.id).toBe('000019');
+    expect(cyber.key).toBe('cyber');
+    expect(cyber.category).toBe('replica');
+    expect(cyber.tiers).toEqual(['legendary']);
+    expect(cyber.dropChance).toBeCloseTo(0.0025, 10);
+    expect(cyber.starter).toBe(false);
+    expect(cyber.inShots).toBe(true);
+    expect(isChase(cyber)).toBe(true);
+    expect(hasBuiltInPower(cyber)).toBe(true);
+    expect(replicaOf(cyber)).toBe(CYBER_PISTOL);
+    expect(assetOfReplica(pool, CYBER_PISTOL)).toBe(cyber);
+    // No power source fits it, and no other asset is a chase item or has tiers of its own.
+    expect(pool.assets.filter((a) => a.category === 'power' && fits(a, cyber))).toEqual([]);
+    for (const a of pool.assets.filter((x) => x !== cyber)) {
+      expect(a.tiers, a.name).toBeUndefined();
+      expect(a.dropChance, a.name).toBeUndefined();
+      expect(isChase(a), a.name).toBe(false);
+    }
+    expect(pool.errors).toEqual([]);
+  });
+
+  it('reads Tiers (in the Rarity order, whatever order they are typed in) and Drop % into the asset', () => {
+    const p = loadPool(chaseText('| 000002 | Chase | aeg | rifle, electric | no | yes | Legendary, Very Rare | 2.5 |'));
+    expect(rowErrors(p)).toEqual([]);
+    const a = p.byId.get('000002')!;
+    expect(a.tiers).toEqual(['veryRare', 'legendary']);
+    expect(a.dropChance).toBeCloseTo(0.025, 10);
+    expect(tiersOf(p, a).map((t) => t.id)).toEqual(['veryRare', 'legendary']);
+    expect(comesIn(a, 'veryRare')).toBe(true);
+    expect(comesIn(a, 'common')).toBe(false);
+  });
+
+  it('changes nothing for blank Tiers and Drop % cells: every tier, no chase, the even draw', () => {
+    const p = loadPool(chaseText());
+    const gas = p.byId.get('000001')!;
+    expect(rowErrors(p)).toEqual([]);
+    expect('tiers' in gas).toBe(false);
+    expect('dropChance' in gas).toBe(false);
+    expect(isChase(gas)).toBe(false);
+    expect(tiersOf(p, gas)).toBe(p.tiers);
+    for (const t of p.tiers) expect(comesIn(gas, t.id)).toBe(true);
+    // A table without the two columns at all reads the same.
+    const plain = loadPool(chaseText().replace(' | Tiers | Drop % |', ' |').replace('|---|---|---|---|---|---|---|---|', '|---|---|---|---|---|---|').replace(' | | |', ' |'));
+    expect(rowErrors(plain)).toEqual([]);
+    expect(plain.byId.get('000001')).toEqual(gas);
+  });
+
+  it('reports a tier name not in the Rarity table with its line, and leaves that row out', () => {
+    const p = loadPool(chaseText('| 000002 | Typo | aeg | rifle, electric | no | yes | Mythic | |', '| 000003 | Half | aeg | rifle, electric | no | yes | Legendary, Mythic | 1 |', '| 000004 | Fine | aeg | rifle, electric | no | yes | Legendary | 1 |'));
+    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Fine']);
+    const errors = rowErrors(p);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toMatch(new RegExp(`^line ${FIRST_ROW_LINE}: .*Mythic`));
+    expect(errors[1]).toMatch(new RegExp(`^line ${FIRST_ROW_LINE + 1}: .*Mythic`));
+  });
+
+  it('reports a Drop % that is not a number from 0 to 100 with its line, and leaves that row out', () => {
+    const p = loadPool(chaseText('| 000002 | Words | aeg | rifle, electric | no | yes | Legendary | lots |', '| 000003 | Over | aeg | rifle, electric | no | yes | Legendary | 150 |', '| 000004 | Under | aeg | rifle, electric | no | yes | Legendary | -1 |', '| 000005 | Fine | aeg | rifle, electric | no | yes | Legendary | 0.25 |'));
+    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Fine']);
+    const errors = rowErrors(p);
+    expect(errors).toHaveLength(3);
+    for (const [i, e] of errors.entries()) expect(e).toMatch(new RegExp(`^line ${FIRST_ROW_LINE + i}: .*Drop %`));
+  });
+
+  it('keeps an asset that is in the pool only in a tier it comes in, and gives a chase starter its lowest tier', () => {
+    const p = loadPool(chaseText('| 000002 | Chase | aeg | rifle, electric | yes | yes | Legendary | 1 |'));
+    const chase = '000002';
+    expect(inPool(p, { asset: chase, tier: 'legendary' })).toBe(true);
+    expect(inPool(p, { asset: chase, tier: 'common' })).toBe(false);
+    expect(inPool(p, { asset: chase, tier: 'veryRare' })).toBe(false);
+    expect(inPool(p, { asset: '000001', tier: 'common' })).toBe(true);
+    expect(inPool(p, { asset: '000001', tier: 'nope' })).toBe(false);
+    const c = newCollection(p, 1);
+    expect(c.owned[itemKey(chase, 'legendary')]).toBe(1);
+    expect(c.owned[itemKey(chase, 'common')]).toBeUndefined();
+    // An existing save that already holds one at a tier it comes in is not given a second.
+    const save: Collection = { owned: { [itemKey(chase, 'legendary')]: 1 }, fc: 0, tokens: 0, seed: 0 };
+    grantStarters(save, p);
+    expect(save.owned[itemKey(chase, 'legendary')]).toBe(1);
+    expect(save.owned[itemKey('000001', 'common')]).toBe(1);
   });
 });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUDIO, matchOverBlastStart } from '../config/audio';
 import { SIM_DT } from '../config/sim';
-import { LOADOUT } from '../config/replicas';
+import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import type { SoundCue } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
 import { type Character, createCharacter } from '../sim/character';
@@ -1233,5 +1233,63 @@ describe('a silenced shot sounds muffled (M29b)', () => {
     sfx.onEvent(shot(bot.id), PLAYER, characterOf);
     expect(ctx.sources.length).toBeGreaterThan(0);
     expect(ctx.buffersMade).toBe(made);
+  });
+});
+
+describe('M32 acceptance 7: the Cyber Pistol sounds its own in a match', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** A match whose sounds cover `heard`, with the player carrying LOADOUT and a bot carrying `bot`. */
+  function match(heard: typeof LOADOUT, botLoadout: typeof LOADOUT) {
+    const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
+    const bot = createCharacter(1, vec3(6, 0, 0), 0, botLoadout, 1);
+    const sfx = new Sfx(heard, FLOOR, OPEN, engineFor());
+    sfx.unlock();
+    sfx.setListener(vec3(0, 1.6, 0), 0, 0, -1);
+    const all = [player, bot];
+    return { sfx, ctx: FakeContext.last, player, bot, characterOf: (id: number) => all.find((c) => c.id === id) };
+  }
+  const cyberShot = (id: number): GameEvent => ({ type: 'shot', characterId: id, replicaId: 'cyber', position: vec3(0, 1.6, 0) });
+
+  it("plays the Cyber Pistol's own shot, with no AEG motor winding up around it", () => {
+    const { sfx, ctx, player, bot, characterOf } = match([...LOADOUT, CYBER_PISTOL], [CYBER_PISTOL, ...LOADOUT.slice(1)]);
+    sfx.afterTick([player, bot], PLAYER);
+    sfx.onEvent(cyberShot(bot.id), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(1); // the shot only: an AEG would add its motor's spin-up
+    expect(plays(ctx.sources[0]!, 'shot.cyber')).toBe(true);
+    expect(plays(ctx.sources[0]!, 'shot.electric')).toBe(false);
+    for (let i = 0; i < 5; i++) {
+      for (let t = 0; t < 4; t++) sfx.afterTick([player, bot], PLAYER);
+      sfx.onEvent(cyberShot(bot.id), PLAYER, characterOf);
+    }
+    for (let t = 0; t < 120; t++) sfx.afterTick([player, bot], PLAYER);
+    expect(ctx.sources).toHaveLength(6); // never a spin-up or a wind-down
+  });
+
+  it('plays its own dry fire and magazine sounds', () => {
+    const { sfx, ctx, bot, characterOf } = match([...LOADOUT, CYBER_PISTOL], [CYBER_PISTOL]);
+    sfx.onEvent({ type: 'dryFire', characterId: bot.id, replicaId: 'cyber' }, PLAYER, characterOf);
+    sfx.onEvent({ type: 'reloadStart', characterId: bot.id, replicaId: 'cyber' }, PLAYER, characterOf);
+    sfx.onEvent({ type: 'reloadEnd', characterId: bot.id, replicaId: 'cyber' }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(3);
+    expect(plays(ctx.sources[0]!, 'dryFire.cyber')).toBe(true);
+    expect(plays(ctx.sources[1]!, 'magOut.cyber')).toBe(true);
+    expect(plays(ctx.sources[2]!, 'magIn.cyber')).toBe(true);
+  });
+
+  it("still gives an AEG its motor, and the Gas Pistol its pop, beside it", () => {
+    const { sfx, ctx, bot, characterOf } = match([...LOADOUT, CYBER_PISTOL], LOADOUT);
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(2);
+    expect(plays(ctx.sources[1]!, 'motor.spinUp')).toBe(true);
   });
 });
