@@ -109,10 +109,12 @@ export function barrelReadout(slot: KitSlot): string {
   return `${r.muzzleEnergy.toFixed(2)} J with ${bbWeightLabel(r.bbWeight)} BBs, spread ${r.spreadDeg.toFixed(2)}°. Brings it up in ${handlingOf(r, slot.parts).drawTime.toFixed(2)} s.`;
 }
 
-/** One line under the muzzle part (M29b): how far away bots hear its shots. */
+/** One line under the muzzle part (M29b): how far away bots hear its shots, and with a silencer how far without it. */
 export function muzzleReadout(slot: KitSlot): string {
-  const heard = BOT_BEHAVIOUR.hearingDistance * handlingOf(slot.replica, slot.parts).heardScale;
-  return `Bots hear your shots from ${Math.round(heard)} m (${BOT_BEHAVIOUR.hearingDistance} m without a silencer).`;
+  const base = BOT_BEHAVIOUR.hearingDistance;
+  const heard = Math.round(base * handlingOf(slot.replica, slot.parts).heardScale);
+  // The comparison only means something with a device fitted that changes it (FA13: "22 m (22 m without a silencer)").
+  return slot.parts.muzzle && heard !== Math.round(base) ? `Bots hear your shots from ${heard} m (${base} m without a silencer).` : `Bots hear your shots from ${heard} m.`;
 }
 
 /** One line under the laser: the spread from the hip, as the crosshair shows it. */
