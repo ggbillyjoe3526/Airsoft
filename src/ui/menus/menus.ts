@@ -456,7 +456,6 @@ export class Menus {
     if (this.current === 'settings') this.settings.closed();
   }
 
-  /** The New game buttons and the rules under them show what is picked now. */
   /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
   private mapPicked(id: MapId): void {
     const size = mapEntry(id).teamSize.standard;
@@ -466,6 +465,7 @@ export class Menus {
     this.opts.matchRules.onChange({ ...this.matchRules });
   }
 
+  /** The New game buttons and the rules under them show what is picked now. */
   private refreshSetup(): void {
     // A map still being built can be picked only with Dev settings › Access maps in development; while it is locked,
     // the map in force is Depot, with no more players a side than Depot has room for.
