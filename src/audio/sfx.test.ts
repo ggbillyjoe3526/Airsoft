@@ -665,6 +665,14 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     for (const p of ctx.panners) expect(p.panningModel).toBe('equalpower');
   });
 
+  it('ticks a BB into the ground with the earth cue (M33c)', () => {
+    const { sfx, ctx } = setup();
+    sfx.impact(vec3(3, 0, 0), 'earth');
+    expect(ctx.sources).toHaveLength(1);
+    expect(plays(ctx.sources[0]!, 'impact.earth')).toBe(true);
+    expect(plays(ctx.sources[0]!, 'impact.concrete')).toBe(false);
+  });
+
   it("caps other players' footsteps and BB impacts per window, and lets them through again after it", () => {
     const { sfx, ctx, bot, characterOf } = setup();
     for (let i = 0; i < AUDIO.footsteps.maxPerWindow + 3; i++) sfx.onEvent(step(bot.id), PLAYER, characterOf);

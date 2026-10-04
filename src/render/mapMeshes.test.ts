@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
+import { terrainHeightAt, terrainMesh, terrainRange } from '../map/terrain';
+import { SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
+import { TERRAIN_LOOK } from '../config/render';
 import { vec3 } from '../sim/vec';
 import { SURFACES, type SurfaceTextureId } from '../config/render';
 import { blockPieces, blockShade, blockTint, buildMapMeshes, disposeMapMeshes, setMapRelief } from './mapMeshes';
@@ -139,6 +142,71 @@ describe('the art pass on the map (M14)', () => {
     expect(materials.every((m) => m.bumpMap === null)).toBe(true);
     setMapRelief(group, true);
     expect(materials.every((m) => m.bumpMap === m.map)).toBe(true);
+    disposeMapMeshes(group);
+  });
+});
+
+describe('the ground of a map with terrain (M33c)', () => {
+  const textures = Object.fromEntries(
+    (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => [id, { texture: new THREE.Texture() as THREE.CanvasTexture, worldSize: SURFACES.worldSize[id] }]),
+  ) as SurfaceTextures;
+  const terrainMeshOf = (group: THREE.Group): THREE.Mesh | undefined => group.children.find((c) => c.name === 'map-terrain') as THREE.Mesh | undefined;
+
+  it('adds one mesh named map-terrain, one more draw call than the same map without it, and none on Depot', () => {
+    const withGround = buildMapMeshes(SLOPE_YARD, textures, true);
+    const without = buildMapMeshes({ ...SLOPE_YARD, terrain: undefined }, textures, true);
+    expect(withGround.children.filter((c) => c.name === 'map-terrain')).toHaveLength(1);
+    expect(withGround.children.length).toBe(without.children.length + 1);
+    expect(terrainMeshOf(without)).toBeUndefined();
+    const depot = buildMapMeshes(DEPOT, textures, true);
+    expect(terrainMeshOf(depot)).toBeUndefined();
+    for (const g of [withGround, without, depot]) disposeMapMeshes(g);
+  });
+
+  it('is one vertex-coloured mesh of the terrain\'s own triangles that receives shadows and casts none', () => {
+    const group = buildMapMeshes(SLOPE_YARD, textures, false);
+    const mesh = terrainMeshOf(group)!;
+    expect(mesh.receiveShadow).toBe(true);
+    expect(mesh.castShadow).toBe(false);
+    expect((mesh.material as THREE.MeshLambertMaterial).vertexColors).toBe(true);
+    const { positions, indices } = terrainMesh(SLOPE_YARD_TERRAIN);
+    const geo = mesh.geometry;
+    expect(Array.from(geo.getAttribute('position').array)).toEqual(Array.from(positions));
+    expect(Array.from(geo.getIndex()!.array)).toEqual(Array.from(indices));
+    expect(geo.getAttribute('color').count).toBe(geo.getAttribute('position').count);
+    // Smooth normals pointing up.
+    for (let v = 0; v < geo.getAttribute('normal').count; v++) expect(geo.getAttribute('normal').getY(v)).toBeGreaterThan(0.5);
+    // Turning surface relief on leaves the ground alone (it has no texture to take relief from).
+    setMapRelief(group, true);
+    expect((mesh.material as THREE.MeshLambertMaterial).bumpMap).toBeNull();
+    disposeMapMeshes(group);
+  });
+
+  it('colours the ground lighter where it is higher (a greybox grass, darker low and lighter high)', () => {
+    const group = buildMapMeshes(SLOPE_YARD, textures, false);
+    const geo = terrainMeshOf(group)!.geometry;
+    const pos = geo.getAttribute('position');
+    const col = geo.getAttribute('color');
+    const { min, max } = terrainRange(SLOPE_YARD_TERRAIN);
+    // Mean brightness of the lowest tenth of the vertices by height against the highest tenth.
+    const order = Array.from({ length: pos.count }, (_, i) => i).sort((a, b) => pos.getY(a) - pos.getY(b));
+    const tenth = Math.floor(order.length / 10);
+    const grey = (i: number): number => (col.getX(i) + col.getY(i) + col.getZ(i)) / 3;
+    const avg = (ids: number[]): number => ids.reduce((s, i) => s + grey(i), 0) / ids.length;
+    const lowest = avg(order.slice(0, tenth));
+    const highest = avg(order.slice(-tenth));
+    expect(highest).toBeGreaterThan(lowest * 1.15);
+    // The very lowest and highest vertices are the TERRAIN_LOOK greens (within its jitter).
+    const low = new THREE.Color().setHex(TERRAIN_LOOK.low, THREE.SRGBColorSpace);
+    const high = new THREE.Color().setHex(TERRAIN_LOOK.high, THREE.SRGBColorSpace);
+    const bottom = order[0]!;
+    const top = order[order.length - 1]!;
+    expect(pos.getY(bottom)).toBeCloseTo(min, 5);
+    expect(pos.getY(top)).toBeCloseTo(max, 5);
+    expect(Math.abs(col.getY(bottom) / low.g - 1)).toBeLessThanOrEqual(TERRAIN_LOOK.jitter + 1e-6);
+    expect(Math.abs(col.getY(top) / high.g - 1)).toBeLessThanOrEqual(TERRAIN_LOOK.jitter + 1e-6);
+    // Same height, same mesh: the mesh's heights are the ground's.
+    expect(pos.getY(0)).toBeCloseTo(terrainHeightAt(SLOPE_YARD_TERRAIN, pos.getX(0), pos.getZ(0))!, 5);
     disposeMapMeshes(group);
   });
 });

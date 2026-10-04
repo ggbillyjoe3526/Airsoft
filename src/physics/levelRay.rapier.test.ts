@@ -8,6 +8,8 @@ import type { ImpactMaterial } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { RANGE_MAP } from '../map/range';
+import { SLOPE_YARD } from '../map/testSupport';
+import { terrainHeightAt, terrainMesh } from '../map/terrain';
 import type { SurfaceHit, WorldQuery } from '../sim/armament';
 import { createBBPool, spawnBB } from '../sim/ballistics';
 import { stepBBs } from '../sim/bbs';
@@ -30,6 +32,11 @@ function rapierQuery(map: MapData): Required<WorldQuery> & { free(): void } {
   for (const b of map.blocks) {
     const desc = blockCollider(b).setTranslation(b.center.x, b.center.y, b.center.z);
     materials.set(world.createCollider(desc).handle, blockMaterial(b));
+  }
+  if (map.terrain) {
+    // The ground (M33c) as the trimesh collider PhysicsWorld builds from the same triangles.
+    const { positions, indices } = terrainMesh(map.terrain);
+    materials.set(world.createCollider(RAPIER.ColliderDesc.trimesh(positions, indices)).handle, 'earth');
   }
   world.step();
   const ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
@@ -139,6 +146,51 @@ describe('level ray casts (sim/levelRay.ts) against Rapier (audit SIM-01, SIM-18
       rapier.free();
       world.dispose();
     }
+  });
+
+  it('agrees with a Rapier ray on a map with sloping ground: seeded rays over a yard with a slope, a hill and a few blocks (M33c)', () => {
+    const map = SLOPE_YARD;
+    const terrain = map.terrain!;
+    const world = new PhysicsWorld(map, BODY, DT);
+    const rapier = rapierQuery(map);
+    const rng = createRng(33);
+    const a: SurfaceHit = { normal: vec3(), material: 'concrete' };
+    const b: SurfaceHit = { normal: vec3(), material: 'concrete' };
+    const dir = vec3();
+    const origin = vec3();
+    let rays = 0;
+    let earth = 0;
+    let blocks = 0;
+    for (let n = 0; n < 8_000; n++) {
+      // Anywhere over the yard and a little beyond its edge, from a little under the ground to well above it.
+      origin.x = -17 + rngNext(rng) * 34;
+      origin.z = -17 + rngNext(rng) * 34;
+      const g = terrainHeightAt(terrain, origin.x, origin.z) ?? 0;
+      origin.y = g - 0.5 + rngNext(rng) * 6;
+      if (map.blocks.some((k) => insideBox(k, origin, 1e-3))) continue;
+      randomDir(rng, dir);
+      // Every fourth is a long sight line; the rest are BB-sized tick segments.
+      const maxDist = n % 4 === 0 ? rngNext(rng) * 45 : 1.6;
+      rays++;
+      const t = world.raycastSurface(origin, dir, maxDist, a);
+      const want = rapier.raycastSurface(origin, dir, maxDist, b);
+      const where = `ray ${n}: from (${origin.x}, ${origin.y}, ${origin.z}) along (${dir.x}, ${dir.y}, ${dir.z}) max ${maxDist}`;
+      if (want < 0) {
+        expect(t, where).toBe(-1);
+        continue;
+      }
+      expect(Math.abs(t - want), where).toBeLessThan(5e-4);
+      expect(a.material, where).toBe(b.material);
+      expect(a.normal.x * b.normal.x + a.normal.y * b.normal.y + a.normal.z * b.normal.z, where).toBeGreaterThan(0.99);
+      expect(world.raycastStatic(origin, dir, maxDist), where).toBe(t);
+      if (a.material === 'earth') earth++;
+      else blocks++;
+    }
+    expect(rays).toBeGreaterThan(6_000);
+    expect(earth).toBeGreaterThan(500);
+    expect(blocks).toBeGreaterThan(20);
+    rapier.free();
+    world.dispose();
   });
 
   /** A floor, a concrete wall `thickness` m thick whose near face is 10 m out along -z, and a crate in front of it. */
