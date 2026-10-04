@@ -4,7 +4,8 @@ import { expect, test } from '@playwright/test';
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
  * Difficulty pop-ups, a 2v2 picked, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2× scope, an
  * angled grip, a hi-cap and 0.28 g BBs, holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
- * down the scope, switches the graphics quality to Medium and back to Low mid-match and keeps running without a page error.
+ * down the scope, switches the graphics quality to Medium and back to Low mid-match, ends the match (summary, result, Play
+ * Again) and keeps running without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
@@ -145,6 +146,14 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await settings.getByRole('tab', { name: /Key bindings/i }).click();
   // Fire and aim are bindings like the rest (M18), on the mouse buttons by default.
   await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
+  // A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T, is saved,
+  // and the match below reloads on T.
+  await settings.getByRole('button', { name: 'Reload: R' }).click();
+  await expect(settings.getByRole('button', { name: /^Reload: Press a key/ })).toBeVisible();
+  await page.keyboard.press('KeyT');
+  await expect(settings.getByRole('button', { name: 'Reload: T' })).toHaveText('T');
+  const savedReload = await page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.keyBindings') ?? '{}') as { reload?: string[] }).reload);
+  expect(savedReload).toEqual(['KeyT']);
   await settings.getByRole('tab', { name: /Audio/i }).click();
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
@@ -203,8 +212,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect.poll(async () => Number(await mag.textContent()), { timeout: 20_000 }).toBeLessThan(full);
   await page.mouse.up();
 
-  // Reload: the half-used magazine goes back in the pouch and a full one comes out.
-  await page.keyboard.press('r');
+  // Reload (on T, rebound in Settings): the half-used magazine goes back in the pouch and a full one comes out.
+  await page.keyboard.press('t');
   await expect.poll(async () => Number(await mag.textContent()), { timeout: 30_000 }).toBe(full);
 
   // Fire selector: the AEG starts on auto, and B steps it to single (semi).
@@ -310,6 +319,41 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.sound-cue.cue-shot:not([hidden])').first()).toBeAttached({ timeout: 10_000 });
   await page.evaluate(() => (window as unknown as { stopShots: () => void }).stopShots());
   await testInfo.attach('sound-cue', { body: await page.screenshot(), contentType: 'image/png' });
+
+  // The match's end (audit L-27): in a live round with Blue one win short, the Orange team is put out of play, so the
+  // simulation ends the round and the match with it (a round between rounds, or a draw, gets another go). The summary
+  // comes up with the records (custom rules, so not counted), then the result, and Play Again starts the match over.
+  type End = { airsoft: { state: { round: { phase: string; score: number[] }; characters: { team: number; status: string }[] }; session: { rounds: { winsNeeded: number } } } };
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const game = (window as unknown as End).airsoft;
+          const r = game.state.round;
+          if (r.phase === 'matchOver') return true;
+          if (r.phase === 'live') {
+            r.score[0] = game.session.rounds.winsNeeded - 1;
+            for (const c of game.state.characters) if (c.team === 1) c.status = 'out';
+          }
+          return false;
+        }),
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+  const summary = page.locator('.menu-summary');
+  await expect(summary).toBeVisible({ timeout: 30_000 });
+  await expect(summary.locator('.summary-result')).toContainText('You win!');
+  await expect(summary.locator('.records-not-counted')).toContainText('Custom rules');
+  await expect(summary.locator('.records-grid td').first()).toHaveText('–');
+  await summary.getByRole('button', { name: 'Continue' }).click();
+  const result = page.locator('.menu-result');
+  await expect(result).toBeVisible();
+  await expect(result.locator('.menu-result-headline')).toHaveText('You win!');
+  await result.getByRole('button', { name: 'Play Again' }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
+  const round = () => page.evaluate(() => (window as unknown as End).airsoft.state.round);
+  await expect.poll(async () => (await round()).phase, { timeout: 10_000 }).toBe('live');
+  expect((await round()).score).toEqual([0, 0]);
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });
 
