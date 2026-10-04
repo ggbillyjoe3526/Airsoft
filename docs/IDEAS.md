@@ -25,6 +25,8 @@ Parking lot for future features. Do not implement unless asked.
   milestones in pool.md (`| Milestone | Needs | Gives |`: "Every optic owned → +1 Token", "Every asset Rare+ → a
   Legendary Shot"); more assets before tuning odds (grenades, suppressors, tracers); Legendary 1 → 1.5 % now that pity
   caps the wait; Easy ×0.5 → ×0.7, since Easy players most need their first unlocks.
+- **Hit players light up** (M33h plan, 2026-10-04): at night a hit player switches on a light as they call the hit,
+  as at real night games, so the walk-off reads in the dark and nobody shoots a player already out.
 - **Bots with gear for Beta** (audit POOL-24, owner 2026-10-04: an idea for Beta): the player's kit outgrows bots that
   carry factory gear for ever on Easy and Normal (M29b gave Hard opponents rolled kits). Either give bots a tier dial by
   difficulty (read from `botConfig`), or make higher tiers lateral (Legendary: tighter spread, a touch more recoil or a
