@@ -1,5 +1,6 @@
 import type { BotBehaviour } from '../config/bots';
 import type { HitConfig } from '../config/hits';
+import { type Bush, foliageDepth } from '../map/foliage';
 import type { BodyConfig } from '../config/movement';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
@@ -42,13 +43,29 @@ export function lineClear(query: WorldQuery, a: Vec3, b: Vec3): boolean {
   return query.raycastStatic(a, dir, d) < 0;
 }
 
+/** True if the line from `a` to `b` is clear of static surfaces and runs through no more than `seeThrough` m of bush. */
+function sightClear(query: WorldQuery, a: Vec3, b: Vec3, foliage: readonly Bush[], seeThrough: number): boolean {
+  return lineClear(query, a, b) && (foliage.length === 0 || foliageDepth(foliage, a, b, seeThrough) <= seeThrough);
+}
+
+const NO_FOLIAGE: readonly Bush[] = [];
+
 /**
  * Which part of `target` `viewer` can see right now, as a fraction of the target's height: the chest
  * (bots.aimHeightFraction) if it's in view, else the head (bots.headHeightFraction), else 0 (not seen).
  * Seeing needs the target within view distance, inside the field of view (unless very close), and a
- * clear line from the viewer's eyes.
+ * clear line from the viewer's eyes: nothing static in the way, and no more than `bots.foliageSeeThrough` of bush
+ * (M33e; within `closeAwareness` a bush hides no one).
  */
-export function visiblePart(viewer: Character, target: Character, query: WorldQuery, bots: BotBehaviour, body: BodyConfig, hits: HitConfig): number {
+export function visiblePart(
+  viewer: Character,
+  target: Character,
+  query: WorldQuery,
+  bots: BotBehaviour,
+  body: BodyConfig,
+  hits: HitConfig,
+  foliage: readonly Bush[] = NO_FOLIAGE,
+): number {
   const dx = target.position.x - viewer.position.x;
   const dz = target.position.z - viewer.position.z;
   const dist = Math.hypot(dx, dz);
@@ -58,9 +75,10 @@ export function visiblePart(viewer: Character, target: Character, query: WorldQu
     const cos = (-Math.sin(viewer.yaw) * dx - Math.cos(viewer.yaw) * dz) / dist;
     if (cos < Math.cos(((bots.fovDeg / 2) * Math.PI) / 180)) return 0;
   }
+  const leaves = dist > bots.closeAwareness ? foliage : NO_FOLIAGE;
   eyeOf(viewer, body, hits, eye);
-  if (lineClear(query, eye, bodyPoint(target, hits, bots.aimHeightFraction, point))) return bots.aimHeightFraction;
-  if (lineClear(query, eye, bodyPoint(target, hits, bots.headHeightFraction, point))) return bots.headHeightFraction;
+  if (sightClear(query, eye, bodyPoint(target, hits, bots.aimHeightFraction, point), leaves, bots.foliageSeeThrough)) return bots.aimHeightFraction;
+  if (sightClear(query, eye, bodyPoint(target, hits, bots.headHeightFraction, point), leaves, bots.foliageSeeThrough)) return bots.headHeightFraction;
   return 0;
 }
 

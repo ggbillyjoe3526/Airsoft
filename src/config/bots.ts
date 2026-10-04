@@ -17,6 +17,11 @@ export const BOT_BEHAVIOUR = {
   viewDistance: 40,
   /** Anyone this close is noticed whatever way the bot faces (footsteps, rustling). */
   closeAwareness: 2.5,
+  /**
+   * How much bush (M33e, map/foliage.ts) a bot can see someone through (metres of leaves along the sight line): someone
+   * at the edge of a bush is seen, someone deeper in or behind one is not. `closeAwareness` still notices them.
+   */
+  foliageSeeThrough: 0.6,
   /** Gunfire within this distance gives away roughly where the shooter is (metres). */
   hearingDistance: 22,
   /**
