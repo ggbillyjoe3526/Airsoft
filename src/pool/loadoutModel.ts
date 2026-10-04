@@ -1,5 +1,6 @@
+import { BOT_GLOW_BBS, bbsGlow, DEFAULT_GLOW_BBS, GLOW_BB_CHOICES, type GlowBBs } from '../config/glowBBs';
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
-import { loadSetting, numberIn, saveSetting } from '../settings/storage';
+import { loadSetting, numberIn, oneOf, saveSetting } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { EMPTY_FIT, energyCapped, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
 import { type Asset, fits, type Pool, replicaOf } from './pool';
@@ -22,6 +23,16 @@ export interface PlayerKit {
   /** Each slot's hop-up dial and BB weight (grams). */
   hopUps: readonly number[];
   bbWeights: readonly number[];
+  /** Each slot's Glowing BBs choice (M33b); the session resolves it against the field's day or night. */
+  glowBBs: readonly GlowBBs[];
+}
+
+/**
+ * Whose BBs glow on a field played at night (`night`) or by day (M33b): the player's by gear slot from their kit, and
+ * the bots' the default way (BOT_GLOW_BBS).
+ */
+export function bbGlowFor(kit: PlayerKit, night: boolean): { player: boolean[]; others: boolean } {
+  return { player: kit.glowBBs.map((g) => bbsGlow(g, night)), others: bbsGlow(BOT_GLOW_BBS, night) };
 }
 
 /** What the player can equip: the collection's items, or (Dev settings, M26d) everything. */
@@ -189,6 +200,22 @@ export class LoadoutModel {
     return a?.category === 'replica' ? replicaOf(a) : undefined;
   }
 
+  /** Where the replica asset's Glowing BBs choice is saved (M33b): by asset id, sandboxed like the dials. */
+  glowField(replicaId: string): `glowBBs.${string}` {
+    return this.ownership.sandboxed?.() ? `glowBBs.dev.${replicaId}` : `glowBBs.${replicaId}`;
+  }
+
+  /** A replica asset's Glowing BBs choice (M33b), or the default: on night fields only. */
+  glowBBs(replicaId: string): GlowBBs {
+    const parse = oneOf(GLOW_BB_CHOICES.map((c) => c.id));
+    const own = loadSetting(`glowBBs.${replicaId}`, parse, DEFAULT_GLOW_BBS);
+    return this.ownership.sandboxed?.() ? loadSetting(`glowBBs.dev.${replicaId}`, parse, own) : own;
+  }
+
+  setGlowBBs(replicaId: string, choice: GlowBBs): void {
+    saveSetting(this.glowField(replicaId), choice);
+  }
+
   /** The kit slot for a replica item with its current fit: what the Customise screen's numbers describe. */
   slotKit(ref: ItemRef): KitSlot {
     return kitSlot(this.pool, ref, this.fitOf(ref.asset));
@@ -217,6 +244,7 @@ export class LoadoutModel {
       slots: refs.map((r) => this.slotKit(r)),
       hopUps: refs.map((r) => this.hopUp(r.asset)),
       bbWeights: refs.map((r) => this.bbWeight(r.asset)),
+      glowBBs: refs.map((r) => this.glowBBs(r.asset)),
     };
   }
 
