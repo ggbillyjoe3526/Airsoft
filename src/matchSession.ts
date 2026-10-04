@@ -17,6 +17,7 @@ import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, type ReplicaConfig } from './config/replicas';
 import { botKitSeed, carriedLoadout, chaseCarrier, chaseReady, kittedCharacter, randomKit } from './pool/botKit';
+import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { bbGlowFor, type PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
@@ -46,10 +47,10 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
-import { MatchTakes } from './stats/settleMatch';
+import { matchStanding, MatchTakes } from './stats/settleMatch';
 import type { MatchResult } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
-import { type NotCounted, notCountedFor } from './ui/recordsView';
+import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
@@ -71,6 +72,13 @@ export interface MatchSetup {
    * worked in), its optic, parts, hop-up dial and BB weight. Bots carry config/replicas.ts LOADOUT as it comes.
    */
   kit: PlayerKit;
+  /** Dev content is on (M35): bots may roll dev gear (config/content.ts). */
+  devContent: boolean;
+  /**
+   * The match uses dev content (M35, newGamePicks.ts matchUsesDev: its picks, the player's kit, or gear the opponents
+   * may roll): it stays out of the records and pays no Field Credits.
+   */
+  devContentUsed: boolean;
   /**
    * The chase replicas the player owns (pool asset ids, M32): on a difficulty that rolls kits, one opponent now and then
    * carries one (pool/botKit.ts chaseCarrier). Absent: none.
@@ -118,8 +126,6 @@ export class MatchSession {
   private readonly takes = new MatchTakes();
   /** The standard match, so its result could go into the records (custom rules don't, M20). */
   private readonly standardRules: boolean;
-  /** Played on a map still being built (M33): never in the records. */
-  private readonly mapInDevelopment: boolean;
   /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
   private devAssisted = false;
   /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
@@ -159,7 +165,6 @@ export class MatchSession {
     this.rounds = roundRulesFor(setup.rules);
     this.hits = hitRulesFor(setup.rules);
     this.standardRules = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty);
-    this.mapInDevelopment = map.inDevelopment ?? false;
     this.state = createGameState(seed, BALLISTICS.maxBBs, this.rounds, this.mode, map.flag);
     this.ctx = createSimContext({
       mover: this.physics,
@@ -249,9 +254,14 @@ export class MatchSession {
     });
   }
 
-  /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24). */
+  /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24), nor with dev content (M35). */
   get paysFieldCredits(): boolean {
-    return !this.devAssisted;
+    return this.unpaidReason === null;
+  }
+
+  /** Why it pays nothing: Dev settings that change play, dev content, or null when it pays. */
+  get unpaidReason(): 'dev' | 'devContent' | null {
+    return this.standing().unpaid;
   }
 
   /**
@@ -351,14 +361,21 @@ export class MatchSession {
     else if (devCheating(cheats)) this.devAssisted = true;
   }
 
-  /** Whether this match's result goes into the records: the standard match (M20), without Dev help (M24), on a finished map (M33). */
+  /**
+   * Whether this match's result goes into the records: the standard match (M20), played without Dev help (M24) and
+   * without dev content (M35).
+   */
   get countsForRecords(): boolean {
     return this.notCountedReason === '';
   }
 
-  /** Why it doesn't, for the summary: custom rules, Dev settings, or '' when it counts. */
+  /** Why it doesn't, for the summary: custom rules, Dev settings, dev content, or '' when it counts. */
   get notCountedReason(): NotCounted {
-    return notCountedFor(this.standardRules, this.devAssisted, this.mapInDevelopment);
+    return this.standing().notCounted;
+  }
+
+  private standing(): ReturnType<typeof matchStanding> {
+    return matchStanding({ standardRules: this.standardRules, devAssisted: this.devAssisted, devContentUsed: this.setup.devContentUsed });
   }
 
   /** Settings → HUD → Hit feed (M24). */
@@ -393,17 +410,19 @@ export class MatchSession {
       if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
     }
     let id = PLAYER_ID;
+    // Bots roll only from what is offered: dev gear only with Dev content on (M35).
+    const botPool = contentPool(GAME_POOL, this.setup.devContent);
     const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random';
     // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
     const opponents = TEAMS.flatMap((_, team) => (team === PLAYER_TEAM ? [] : Array.from({ length: size }, (_, i) => PLAYER_ID + team * size + i)));
-    const carrier = rolls ? chaseCarrier(GAME_POOL, this.setup.chaseOwned ?? [], seed, opponents) : null;
+    const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
     for (let team = 0; team < TEAMS.length; team++) {
       // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
       // their difficulty rolls each one a kit of its own (M29b).
       const rolled = team !== PLAYER_TEAM && rolls;
       for (let i = 0; i < size; i++, id++) {
         if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-        else if (rolled) this.state.characters.push(chaseReady(kittedCharacter(id, team, randomKit(GAME_POOL, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id))), carrier));
+        else if (rolled) this.state.characters.push(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id))), carrier));
         else this.state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, team));
       }
     }

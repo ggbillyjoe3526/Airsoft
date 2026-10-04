@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newCollection } from '../pool/collection';
 import { GAME_POOL } from '../pool/gamePool';
 import { emptyRecords, resultKey } from './records';
-import { MatchTakes, settleMatch } from './settleMatch';
+import { MatchTakes, matchStanding, settleMatch } from './settleMatch';
 
 const RESULT = { difficulty: 'normal', mode: 'elimination', won: true, hits: 7, bbsFired: 40 } as const;
 const OUTCOME = { won: true, roundsWon: 5, hits: 7, winsNeeded: 5, difficulty: 'normal' } as const;
@@ -64,5 +64,42 @@ describe('a match taken once for the records and once for pay (audit POOL-25)', 
     expect(settleMatch(emptyRecords(), collection, null, t.outcome(true, true, () => OUTCOME), GAME_POOL.economy, true).pay).toBeNull();
     expect(settleMatch(emptyRecords(), collection, null, t.outcome(true, true, () => OUTCOME), GAME_POOL.economy, false).pay).toBeNull();
     expect(collection.fc).toBe(0);
+  });
+});
+
+describe('what keeps a match out of the records and what pays (M35 matchStanding)', () => {
+  const bools = [true, false];
+  const expected = (standardRules: boolean, devAssisted: boolean, devContentUsed: boolean) => {
+    const unpaid = devAssisted ? 'dev' : devContentUsed ? 'devContent' : null;
+    // Custom rules come first for the records; the pay never looks at them.
+    return { notCounted: !standardRules ? 'rules' : (unpaid ?? ''), unpaid };
+  };
+
+  it('counts and pays a standard match with nothing dev about it', () => {
+    expect(matchStanding({ standardRules: true, devAssisted: false, devContentUsed: false })).toEqual({ notCounted: '', unpaid: null });
+  });
+
+  it('gives each of the eight combinations the reasons the rule names', () => {
+    for (const standardRules of bools) for (const devAssisted of bools) for (const devContentUsed of bools) {
+      expect(matchStanding({ standardRules, devAssisted, devContentUsed }), JSON.stringify({ standardRules, devAssisted, devContentUsed })).toEqual(
+        expected(standardRules, devAssisted, devContentUsed),
+      );
+    }
+  });
+
+  it('keeps custom rules out of the records but still pays them', () => {
+    expect(matchStanding({ standardRules: false, devAssisted: false, devContentUsed: false })).toEqual({ notCounted: 'rules', unpaid: null });
+  });
+
+  it('names Dev settings before dev content, for the records and for the pay', () => {
+    expect(matchStanding({ standardRules: true, devAssisted: true, devContentUsed: true })).toEqual({ notCounted: 'dev', unpaid: 'dev' });
+    expect(matchStanding({ standardRules: true, devAssisted: false, devContentUsed: true })).toEqual({ notCounted: 'devContent', unpaid: 'devContent' });
+    expect(matchStanding({ standardRules: true, devAssisted: true, devContentUsed: false })).toEqual({ notCounted: 'dev', unpaid: 'dev' });
+  });
+
+  it('names custom rules first for the records while the pay still names the dev reason', () => {
+    expect(matchStanding({ standardRules: false, devAssisted: true, devContentUsed: true })).toEqual({ notCounted: 'rules', unpaid: 'dev' });
+    expect(matchStanding({ standardRules: false, devAssisted: false, devContentUsed: true })).toEqual({ notCounted: 'rules', unpaid: 'devContent' });
+    expect(matchStanding({ standardRules: false, devAssisted: true, devContentUsed: false })).toEqual({ notCounted: 'rules', unpaid: 'dev' });
   });
 });

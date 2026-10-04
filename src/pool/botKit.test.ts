@@ -3,7 +3,9 @@ import { BOT_LOADOUTS, RANDOM_LOADOUT } from '../config/bots';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { createRng } from '../sim/rng';
 import { respawnCharacter } from '../sim/character';
-import { botKitSeed, carriedLoadout, chaseCarrier, chaseReady, kittedCharacter, randomFit, randomKit } from './botKit';
+import { botKitSeed, carriedLoadout, chaseCarrier, chaseReady, kittedCharacter, randomFit, randomKit, rolledKit, rolledKitMayHoldDev } from './botKit';
+import { contentPool } from './contentPool';
+import { strayDevPart, withAssets, withTags } from './testSupport';
 import { GAME_POOL } from './gamePool';
 import { EMPTY_FIT, FIT_CATEGORY, FIT_SLOTS, kitReplica } from './kit';
 import { assetOfReplica, fits } from './pool';
@@ -96,6 +98,81 @@ describe('bot kits (M29b)', () => {
   });
 });
 
+describe('rolled bot kits and dev gear (M35)', () => {
+  it('rolls the same kit as randomKit for the same seed, with the replicas and parts it rolled listed as items', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const rolled = rolledKit(pool, LOADOUT, seed, 1);
+      expect(rolled.kit).toEqual(randomKit(pool, LOADOUT, seed, 1));
+      expect(rolledKit(pool, LOADOUT, seed)).toEqual(rolledKit(pool, LOADOUT, seed));
+      const replicaItems = rolled.items.filter((r) => pool.byId.get(r.asset)!.category === 'replica');
+      expect(replicaItems.map((r) => pool.byId.get(r.asset)!.name).sort()).toEqual(['AEG Rifle', 'Gas Pistol']);
+      for (const r of rolled.items) expect(tierIds).toContain(r.tier);
+      // At a part chance of 1 every slot a replica has a part for is filled, so the items list the power source and parts.
+      expect(rolled.items.length).toBeGreaterThan(LOADOUT.length * 2);
+      expect(rolled.items.filter((r) => pool.byId.get(r.asset)!.category === 'power')).toHaveLength(LOADOUT.length);
+    }
+  });
+
+  it('lists no parts at a part chance of 0 beyond the replica and its power source', () => {
+    const { items } = rolledKit(pool, LOADOUT, 3, 0);
+    expect(items.map((r) => pool.byId.get(r.asset)!.category).sort()).toEqual(['power', 'power', 'replica', 'replica']);
+  });
+
+  it('never rolls a dev part when the bots see contentPool(pool, false), and does roll it from the full pool', () => {
+    const devPool = withTags(pool, { 'Red Dot': 'dev', '2x Scope': 'dev', 'Vertical Grip': 'dev', 'Red Laser': 'dev' });
+    const devIds = new Set(devPool.assets.filter((a) => a.tag === 'dev').map((a) => a.id));
+    const seen = (p: typeof pool): Set<string> => {
+      const out = new Set<string>();
+      for (let seed = 1; seed <= 150; seed++) for (const r of rolledKit(p, LOADOUT, seed, 1).items) if (devIds.has(r.asset)) out.add(r.asset);
+      return out;
+    };
+    expect(seen(devPool).size).toBeGreaterThan(0);
+    const shown = contentPool(devPool, false);
+    expect(seen(shown).size).toBe(0);
+  });
+
+  it('never rolls a dev replica for a bot either', () => {
+    const devPool = withTags(pool, { 'Gas Pistol': 'dev' });
+    const shown = contentPool(devPool, false);
+    for (let seed = 1; seed <= 30; seed++) {
+      const { items } = rolledKit(shown, LOADOUT, seed, 1);
+      expect(items.map((r) => r.asset)).not.toContain(devPool.assets.find((a) => a.name === 'Gas Pistol')!.id);
+    }
+  });
+});
+
+describe('whether a rolled kit may hold dev gear (M35 rolledKitMayHoldDev)', () => {
+  it('is false for the real pool, whose every asset is public', () => {
+    expect(pool.assets.every((a) => a.tag === 'public')).toBe(true);
+    expect(rolledKitMayHoldDev(pool, LOADOUT)).toBe(false);
+  });
+
+  it('is true when a part that fits a LOADOUT replica is dev, a power source and a muzzle part included', () => {
+    for (const name of ['Red Dot', 'Vertical Grip', 'Red Laser', 'Hi-Cap Magazine', 'Red Gas', '11.1 V LiPo Battery']) {
+      expect(rolledKitMayHoldDev(withTags(pool, { [name]: 'dev' }), LOADOUT), name).toBe(true);
+    }
+  });
+
+  it("is true when a LOADOUT replica's own row is dev", () => {
+    expect(rolledKitMayHoldDev(withTags(pool, { 'Gas Pistol': 'dev' }), LOADOUT)).toBe(true);
+    expect(rolledKitMayHoldDev(withTags(pool, { 'AEG Rifle': 'dev' }), LOADOUT)).toBe(true);
+  });
+
+  it('is false when the only dev asset fits no LOADOUT replica', () => {
+    const stray = strayDevPart(pool);
+    const devPool = withAssets(pool, [stray]);
+    expect(devPool.assets.filter((a) => a.tag === 'dev')).toEqual([stray]);
+    expect(LOADOUT.every((r) => !fits(stray, assetOfReplica(devPool, r)!))).toBe(true);
+    expect(rolledKitMayHoldDev(devPool, LOADOUT)).toBe(false);
+  });
+
+  it('only looks at the replicas it is given', () => {
+    const devPool = withTags(pool, { 'Red Laser': 'dev' }); // fits the pistol only
+    expect(rolledKitMayHoldDev(devPool, [GAS_PISTOL])).toBe(true);
+    expect(rolledKitMayHoldDev(devPool, [AEG])).toBe(false);
+  });
+});
+
 describe('M32 acceptance 4 and 6: bots and the Cyber Pistol', () => {
   const CYBER = '000019';
   const cyberAsset = pool.byId.get(CYBER)!;
@@ -183,5 +260,15 @@ describe('M32 acceptance 4 and 6: bots and the Cyber Pistol', () => {
       const [slot] = randomKit(pool, [CYBER_PISTOL], seed);
       expect(slot!.replica, `seed ${seed}`).toEqual(legendary);
     }
+  });
+});
+
+describe('the chase carrier and dev content (M35 with M32)', () => {
+  it('never picks a dev chase replica from the pool the bots roll from while Dev content is off', () => {
+    const cyber = pool.assets.find((a) => a.name === 'Cyber Pistol')!.id;
+    const devCyber = withTags(pool, { 'Cyber Pistol': 'dev' });
+    const opponents = [4, 5, 6];
+    for (let seed = 1; seed <= 400; seed++) expect(chaseCarrier(contentPool(devCyber, false), [cyber], seed, opponents, 1)).toBeNull();
+    expect(chaseCarrier(contentPool(devCyber, true), [cyber], 1, opponents, 1)).not.toBeNull();
   });
 });

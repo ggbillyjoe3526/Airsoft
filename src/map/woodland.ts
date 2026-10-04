@@ -7,8 +7,8 @@ import { buildTerrain, type Terrain, terrainHeightAt } from './terrain';
 
 /**
  * "Woodland" (M33, the owner's pick, 2026-10-04; concept sketch v1 approved at 18:07 with its defaults): a wide wood at
- * night, 120 × 80 m (six Depots), mostly open, with sparse cover: trees, boulders and logs. Still being built: the
- * Map pop-up shows it as Coming soon, and only Dev settings › Access maps in development opens it.
+ * night, 120 × 80 m (six Depots), mostly open, with sparse cover: trees, boulders and logs. Still being built: dev
+ * content (M35, map/maps.ts), listed only while the Dev tab's Dev content switch is on.
  *
  * The ground (map/terrain.ts) rises gently from end 0 to the Knoll, so one team starts downhill and the other uphill;
  * the ends swap at half-time. Three lanes run west to east (plan coordinates, as on the sketch: x 0–120 to the east,
@@ -496,7 +496,6 @@ export const WOODLAND: MapData = {
   terrain: TERRAIN,
   foliage: bushes(LANE_POINTS, BLOCKS),
   lights: LIGHTS,
-  inDevelopment: true,
 };
 
 /** Layout facts the tests check against (world coordinates), exported so they can't drift from the geometry. */

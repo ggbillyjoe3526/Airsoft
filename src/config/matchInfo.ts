@@ -73,8 +73,13 @@ export function hudScale(picked: number, viewportHeight: number): number {
 
 /** The marker with the name over each teammate (never over an enemy). */
 export const TEAMMATE_MARKERS = {
-  /** Metres above the teammate's eyes the marker's tip sits. */
-  aboveEyes: 0.45,
+  /**
+   * Metres above the teammate's eyes the marker's tip is anchored: just clear of the tallest headgear (the figures' heads
+   * top out about 0.15 m above the eyes). A fixed world offset grows on screen as they come closer, so it is kept this
+   * small (FA13: 0.45 m floated the tag a hand's width over a teammate's head up close); style.css adds a few pixels on
+   * screen so a far-off tag still clears the head.
+   */
+  aboveEyes: 0.2,
 } as const;
 
 /** The stats tables (hold-Tab scoreboard, between rounds, end-of-match summary) and the local records. */

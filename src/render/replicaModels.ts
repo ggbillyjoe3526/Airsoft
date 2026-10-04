@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { buildForearm, buildHand, type FingerCurl } from './handModels';
+import { buildForearm, buildHand, type FingerCurl, type HandPose } from './handModels';
 import type { MagazineId } from '../config/attachments';
 import type { DetailLevel } from '../config/render';
 import { REPLICA_FINISH } from '../config/replicaFinish';
@@ -322,8 +322,28 @@ const GRIP_DOWN = [0, -0.93, -0.37] as const;
 const STRAIGHT_INDEX: FingerCurl = [0.12, 0.08, 0.04];
 /** Fingers wrapped round a pistol grip. */
 const WRAP: FingerCurl = [1.15, 1.25, 0.7];
-/** Fingers curled up the side of a handguard. */
-const CRADLE: FingerCurl = [0.85, 1.05, 0.6];
+/**
+ * The rifle's support hand (FA13): palm up under the handguard, the four fingers up its far (right) side, and the thumb
+ * set against them up the near (left) side, where you see it holding the rifle. Before, the thumb followed the fingers
+ * under the handguard, so all you saw was a glove below it. Each finger's bends are the closest it lies along the side
+ * without going into it (`handPoses.test.ts` measures it).
+ */
+export const AEG_SUPPORT_POSE: HandPose = {
+  side: 'left',
+  palm: [-0.016, -0.016, 0.29],
+  across: [0, 0, -1],
+  back: [0, -1, 0],
+  fingers: [
+    [1.0, 0.6, 0.2],
+    [1.1, 0.6, 0.5],
+    [1.0, 0.6, 0.2],
+    [0.8, 0.6, 0.4],
+  ],
+  thumb: { swing: 0.2, curl: [0, -0.2], aim: [-1.1, 1, 0.3] },
+};
+
+/** The AEG's handguard (the rifle's own numbers, below): across ±halfWidth, from bottom to top, forward from → to. */
+export const AEG_HANDGUARD = { from: 0.15, to: 0.4, bottom: 0, top: 0.066, halfWidth: 0.029 } as const;
 /** Support-hand fingers wrapped over the shooting hand. */
 const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
 
@@ -677,7 +697,8 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
     b.crossTube('polymer', -0.03, 0.0, 0.006, 0.006, -0.026, 10);
   }
   // Handguard (tan) with slots and a top rail.
-  b.profile('furniture', [[0.15, 0.0], [0.4, 0.0], [0.4, 0.066], [0.15, 0.066]], 0.058, 0.014);
+  const H = AEG_HANDGUARD;
+  b.profile('furniture', [[H.from, H.bottom], [H.to, H.bottom], [H.to, H.top], [H.from, H.top]], H.halfWidth * 2, 0.014);
   for (const x of [0.19, 0.245, 0.3, 0.35]) b.box('rubber', x, x + 0.035, 0.026, 0.042, 0.06);
   b.rail(0.155, 0.395, 0.066, 0.02);
   if (b.high) for (const side of [-1, 1]) b.sideRail(0.27, 0.39, 0.034, side, 0.029);
@@ -719,20 +740,17 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   buildForearm(b, rightWrist, [0.2, -0.3, -0.42], undefined, detail.hands);
 
   // Left hand cradling the handguard: palm underneath, index finger forward, fingers curling up the
-  // right side, thumb along the left side. Its own part: on reloads it cups the magazine's base plate.
+  // right side, thumb up the left side. Its own part: on reloads it cups the magazine's base plate.
   const support = new ModelBuilder(detail);
-  const leftWrist = buildHand(
-    support,
-    { side: 'left', palm: [-0.012, -0.018, 0.29], across: [0, 0, -1], back: [0, -1, 0], fingers: [CRADLE, CRADLE, CRADLE, CRADLE], thumb: { swing: 0.2, curl: [0.2, 0.2] } },
-    detail.hands,
-  );
+  const leftWrist = buildHand(support, AEG_SUPPORT_POSE, detail.hands);
   buildForearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
 
   const group = b.build(m);
   const magazine = magazinePart(AEG_MAGAZINES, m, detail, [0, -0.97, 0.25], { lowCap: [0, 0.06, -0.014] });
   group.add(magazine.group);
-  // From the handguard to just under the magazine's base plate (forward 0.1, up -0.26).
-  const supportHand = supportHandPart(support, m, [0.012, -0.242, -0.19]);
+  // From the handguard to just under the magazine's base plate (forward 0.1, up -0.26): where it was before FA13 moved the
+  // palm 4 mm left and 2 mm up on the handguard.
+  const supportHand = supportHandPart(support, m, [0.016, -0.244, -0.19]);
   group.add(supportHand.group);
   group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'));
   for (const [name, draw] of Object.entries(AEG_PARTS)) group.add(drawnPart(draw, m, detail, name));
@@ -953,12 +971,22 @@ export interface ReplicaModels {
 /** Fingers held straight and together. */
 const OPEN: FingerCurl = [0.06, 0.05, 0.03];
 
+/** The hand raised to call a hit: palm forward, fingers up. */
+export const RAISED_HAND_POSE: HandPose = {
+  side: 'left',
+  palm: [0, 0, 0],
+  across: [-1, 0, 0],
+  back: [0, 0, -1],
+  fingers: [OPEN, OPEN, OPEN, OPEN],
+  thumb: { swing: 0.1, curl: [0.1, 0.05] },
+};
+
 /** Left hand raised to call a hit: palm facing forward, fingers up, forearm dropping out of view. */
 function buildRaisedHand(m: Record<MaterialKey, THREE.Material>, detail: ReplicaDetail): THREE.Group {
   const b = new ModelBuilder(detail);
   const wrist = buildHand(
     b,
-    { side: 'left', palm: [0, 0, 0], across: [-1, 0, 0], back: [0, 0, -1], fingers: [OPEN, OPEN, OPEN, OPEN], thumb: { swing: 0.1, curl: [0.1, 0.05] } },
+    RAISED_HAND_POSE,
     detail.hands,
   );
   buildForearm(b, wrist, [wrist[0] + 0.03, wrist[1] - 0.3, wrist[2] - 0.08], undefined, detail.hands);

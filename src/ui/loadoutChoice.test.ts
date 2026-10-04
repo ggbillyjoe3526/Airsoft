@@ -148,7 +148,9 @@ describe('barrel and muzzle readouts (M29b)', () => {
     const tight = barrelReadout(aeg({ barrel: item('Tight-Bore Barrel') }));
     expect(Number(/spread ([\d.]+)°/.exec(tight)![1])).toBeLessThan(AEG.spreadDeg);
     expect(Number(/Brings it up in ([\d.]+) s/.exec(barrelReadout(aeg({ barrel: item('Long Barrel') })))![1])).toBeCloseTo(AEG.drawTime * 1.15, 1);
-    expect(muzzleReadout(aeg())).toBe('Bots hear your shots from 22 m (22 m without a silencer).');
+    // Nothing fitted: no comparison with itself (FA13; it read "22 m (22 m without a silencer)").
+    expect(muzzleReadout(aeg())).toBe('Bots hear your shots from 22 m.');
+    expect(muzzleReadout(pistol())).toBe('Bots hear your shots from 22 m.');
     expect(muzzleReadout(aeg({ muzzle: item('Silencer') }))).toBe('Bots hear your shots from 11 m (22 m without a silencer).');
     expect(muzzleReadout(pistol({ muzzle: item('Silencer') }))).toMatch(/from 11 m/);
   });

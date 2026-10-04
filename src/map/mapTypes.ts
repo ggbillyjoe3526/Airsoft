@@ -103,9 +103,4 @@ export interface MapData {
    * as far as in daylight. Absent: none.
    */
   lights?: readonly MapLight[];
-  /**
-   * Still being built (M33, owner): the Map pop-up shows it greyed out as Coming soon, and only Dev settings › Access
-   * maps in development opens it; its matches don't go into the records.
-   */
-  inDevelopment?: boolean;
 }
