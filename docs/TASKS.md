@@ -103,7 +103,7 @@ acceptance:
   4. A hit squad member respawns at the insertion automatically once the hit call ends, once per run; the second hit is out (the player's ends the run "out"); bot teammates follow you by default and after a respawn.
   5. HUD: the run clock, the exit line (count, paused, closed), whether your respawn is spent, exit markers and minimap icons; banner and result screen worded for the run; runs stay out of the records and pay nothing until M47.
   6. Elimination and Attack / Defend play as before (their guards unchanged); a headless run test covers extract, time out, respawn and out.
-status: building
+status: gates
 attempts: 0
 
 ## M44 · Extraction: cases and loot
