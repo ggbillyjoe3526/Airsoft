@@ -129,6 +129,12 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
   await settings.getByRole('tab', { name: /Accessibility/i }).click();
   await expect(settings.getByRole('group', { name: 'Reduced motion' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  // Reduced motion reaches the HUD's CSS animations through a class on the container (audit M-03); back off for the match.
+  const reducedMotion = settings.getByRole('group', { name: 'Reduced motion' });
+  await reducedMotion.getByRole('button', { name: 'On' }).click();
+  await expect(page.locator('#app')).toHaveClass(/\breduced-motion\b/);
+  await reducedMotion.getByRole('button', { name: 'Off' }).click();
+  await expect(page.locator('#app')).not.toHaveClass(/\breduced-motion\b/);
   // M18b: High contrast team colours and the on-screen sound cues, both for the match below.
   await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'High contrast' }).click();
   await expect(settings.locator('.team-swatch')).toHaveCount(2);

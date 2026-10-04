@@ -263,6 +263,7 @@ export class Game {
       },
     });
     this.menus.showTitle();
+    this.showMotion();
     if (this.renderer.softwareRendering) this.menus.showTitleWarning(BROWSER_NOTES.noHardwareAcceleration);
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
@@ -332,6 +333,16 @@ export class Game {
   private changeReducedMotion(on: boolean): void {
     this.reducedMotion = on;
     this.session?.setMotion(motionScale(on));
+    this.showMotion();
+  }
+
+  /**
+   * Reduced motion for the HUD's CSS animations (style.css, audit M-03): `reduced-motion` calms them; `full-motion`
+   * marks an explicit Off, so the stylesheet's `prefers-reduced-motion` fallback doesn't override the player's choice.
+   */
+  private showMotion(): void {
+    this.container.classList.toggle('reduced-motion', this.reducedMotion);
+    this.container.classList.toggle('full-motion', !this.reducedMotion);
   }
 
   /** A quality preset picked on Settings → Graphics: applied at once to the renderer and the match loaded. */

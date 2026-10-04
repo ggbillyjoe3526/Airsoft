@@ -1630,6 +1630,49 @@ kbd {
   }
 }
 
+/*
+ * Reduced motion (Settings → Accessibility, audit M-03): Game sets `reduced-motion` on #app. The flag warning stops
+ * pulsing (its colour and text carry it), the hit flash is a soft fade rather than a full-screen flash, and the hit
+ * direction wedge holds still while you call your hit. The same rules follow the system's preference unless the player
+ * turned the setting off (`full-motion`).
+ */
+.reduced-motion .sb-flag.urgent .sb-flag-text {
+  animation: none;
+}
+
+.reduced-motion .hitfx-flash.show {
+  animation-name: hitfx-flash-soft;
+}
+
+.reduced-motion .hitfx-direction.show {
+  animation: none;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .sb-flag.urgent .sb-flag-text {
+    animation: none;
+  }
+
+  #app:not(.full-motion) .hitfx-flash.show {
+    animation-name: hitfx-flash-soft;
+  }
+
+  #app:not(.full-motion) .hitfx-direction.show {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@keyframes hitfx-flash-soft {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 /* Marker over the flagpole (pinned to the screen edge when the pole is out of view) */
 .flag-marker {
   position: absolute;
