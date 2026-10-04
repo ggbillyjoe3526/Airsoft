@@ -3,7 +3,7 @@ import { FULL_MOTION, type MotionScale } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import type { ReplicaConfig } from '../config/replicas';
 import type { Armament } from '../sim/armament';
-import { buildReplicaModels, type ReplicaModels } from './replicaModels';
+import { buildReplicaModels, type MagazinePart, type ReplicaModels, type SupportHandPart } from './replicaModels';
 
 const smooth = (t: number): number => {
   const c = Math.max(0, Math.min(1, t));
@@ -63,11 +63,12 @@ export class Viewmodel {
   readonly camera: THREE.PerspectiveCamera;
   private readonly rig = new THREE.Group();
   private readonly replicas: ReplicaModels;
-  /** Per loadout slot: the model, its magazine and support-hand parts (if any) and hold pose. */
+  /** Per loadout slot: the model, its magazine, support-hand and muzzle parts and hold pose. */
   private readonly slots: {
     model: THREE.Group;
-    mag: THREE.Object3D | undefined;
-    hand: THREE.Object3D | undefined;
+    mag: MagazinePart;
+    hand: SupportHandPart;
+    muzzle: THREE.Object3D;
     hold: ReplicaConfig['look']['hold'];
     /** Where it sits aiming down a fitted optic (replicas with an optic mount). */
     aimHold: ReplicaConfig['look']['aimHold'];
@@ -110,13 +111,14 @@ export class Viewmodel {
 
     this.replicas = buildReplicaModels(loadout, teamColor, VIEWMODEL.orangeTips);
     for (const r of loadout) {
-      const model = this.replicas.models.get(r.id)!;
+      const { group: model, magazine, supportHand, muzzle } = this.replicas.models.get(r.id)!;
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
       this.slots.push({
         model,
-        mag: model.getObjectByName('magazine'),
-        hand: model.getObjectByName('supportHand'),
+        mag: magazine,
+        hand: supportHand,
+        muzzle,
         hold: r.look.hold,
         aimHold: r.look.aimHold,
         parts: fittableParts(model),
@@ -199,7 +201,7 @@ export class Viewmodel {
       for (const p of s.parts) {
         const fitted = p.kind === 'optic' ? optic : p.kind === 'grip' ? parts?.grip : parts?.magazine;
         p.object.visible = p.id === fitted;
-        if (p.kind === 'magazine' && p.object.visible) s.magBase = p.object.userData.toBase as THREE.Vector3 | undefined;
+        if (p.kind === 'magazine' && p.object.visible) s.magBase = s.mag.bases.get(p.object);
       }
       const fitted = optic != null;
       if (s.sightsUp) s.sightsUp.visible = !fitted;
@@ -259,16 +261,13 @@ export class Viewmodel {
     }
     this.handBlend = Math.max(0, Math.min(1, this.handBlend + (reloading ? dt : -dt) / R.handMoveTime));
     const magDistance = reloading ? magazineOut(reloadP) * R.magTravel + magazineSwap(reloadP) * R.swapTravel : 0;
-    const magAxis = slot.mag?.userData.axis as THREE.Vector3 | undefined;
-    if (slot.mag && magAxis) slot.mag.position.copy(magAxis).multiplyScalar(magDistance);
-    for (const s of this.slots) if (s !== slot && s.hand) s.hand.position.set(0, 0, 0);
-    if (slot.hand) {
-      const grab = smooth(this.handBlend);
-      slot.hand.position.copy(slot.hand.userData.toMag as THREE.Vector3);
-      if (slot.magBase) slot.hand.position.add(slot.magBase);
-      slot.hand.position.multiplyScalar(grab);
-      if (magAxis) slot.hand.position.addScaledVector(magAxis, magDistance * grab);
-    }
+    const magAxis = slot.mag.axis;
+    slot.mag.group.position.copy(magAxis).multiplyScalar(magDistance);
+    for (const s of this.slots) if (s !== slot) s.hand.group.position.set(0, 0, 0);
+    const grab = smooth(this.handBlend);
+    const handAt = slot.hand.group.position.copy(slot.hand.toMag);
+    if (slot.magBase) handAt.add(slot.magBase);
+    handAt.multiplyScalar(grab).addScaledVector(magAxis, magDistance * grab);
     const drawP = handling.drawTime > 0 ? armament.draw / handling.drawTime : 0;
 
     const bob = VIEWMODEL.bobAmount * moving * motion * m.bob;
@@ -301,7 +300,7 @@ export class Viewmodel {
    */
   muzzleWorld(mainCamera: THREE.PerspectiveCamera, out: THREE.Vector3): boolean {
     let marker: THREE.Object3D | undefined;
-    for (const s of this.slots) if (s.model.visible) marker = s.model.getObjectByName('muzzle');
+    for (const s of this.slots) if (s.model.visible) marker = s.muzzle;
     if (!marker) return false;
     this.rig.updateMatrixWorld(true);
     marker.getWorldPosition(this.muzzleView); // viewmodel camera sits at the origin, so this is camera space

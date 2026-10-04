@@ -338,20 +338,20 @@ export function blockPieces(block: MapBlock, blocks: readonly MapBlock[]): Piece
   return out;
 }
 
-/** The material for a merged surface mesh: its texture, doubled as a bump map when surface relief is on. */
+/**
+ * The material for a merged surface mesh: its texture, doubled as a bump map when surface relief is on (the bump
+ * scale is set once; it does nothing while there is no bump map).
+ */
 function surfaceMaterial(tex: ProceduralTexture, id: SurfaceTextureId, relief: boolean): THREE.MeshLambertMaterial {
-  const mat = new THREE.MeshLambertMaterial({ map: tex.texture, vertexColors: true });
-  mat.userData.relief = { texture: tex.texture, scale: SURFACES.relief[id] };
+  const mat = new THREE.MeshLambertMaterial({ map: tex.texture, vertexColors: true, bumpScale: SURFACES.relief[id] });
   setMaterialRelief(mat, relief);
   return mat;
 }
 
 function setMaterialRelief(mat: THREE.MeshLambertMaterial, on: boolean): void {
-  const relief = mat.userData.relief as { texture: THREE.Texture; scale: number };
-  const map = on ? relief.texture : null;
+  const map = on ? mat.map : null;
   if (mat.bumpMap === map) return;
   mat.bumpMap = map;
-  mat.bumpScale = relief.scale;
   mat.needsUpdate = true;
 }
 
