@@ -428,7 +428,7 @@ export class Game {
       bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
       parts: this.picked.map((r) => this.partsOf(r)),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
-    }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair, pose, tutorialFrom);
+    }, this.options.seed, QUALITY[this.quality], this.audio, this.crosshair, pose, tutorialFrom);
     this.session.setMotion(motionScale(this.reducedMotion));
     applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
   }
