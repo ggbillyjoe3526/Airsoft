@@ -180,7 +180,6 @@ export class CombatPresentation {
         // Dust by what the BB hit (the material its tick sounds by).
         const material = impactMaterialAt(this.blocks, e.position);
         this.puffs.spawn(e.position, this.dustTints.get(material), IMPACT_DUST[material].scale);
-      }
       } else if (e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
