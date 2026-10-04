@@ -9,15 +9,14 @@ import type { SoundRecipe } from '../audio/dsp';
 
 /** What powers a replica's shot sound (ReplicaConfig.power picks it; spring replicas come with the v0.3 armoury). */
 export type ShotProfile = 'electric' | 'gas' | 'spring';
+/** Every shot profile, for the audio tests that walk them all (test only). */
 export const SHOT_PROFILES: readonly ShotProfile[] = ['electric', 'gas', 'spring'];
 
 /** What a footstep lands on (MapBlock.surface; floors and ramps without one are concrete). */
 export type FloorSurface = 'concrete' | 'metal';
-export const FLOOR_SURFACES: readonly FloorSurface[] = ['concrete', 'metal'];
 
 /** What a BB ticks off (from the kind of block it hit; see audio/soundMaterials.ts). */
 export type ImpactMaterial = 'concrete' | 'metal' | 'wood';
-export const IMPACT_MATERIALS: readonly ImpactMaterial[] = ['concrete', 'metal', 'wood'];
 
 export type FootstepPace = 'run' | 'sprint' | 'land';
 
