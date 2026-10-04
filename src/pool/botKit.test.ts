@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BOT_LOADOUTS, RANDOM_LOADOUT } from '../config/bots';
+import { BOT_LOADOUTS, BOT_PART_CHANCE, RANDOM_LOADOUT } from '../config/bots';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { createRng } from '../sim/rng';
 import { respawnCharacter } from '../sim/character';
@@ -16,8 +16,19 @@ const pistol = assetOfReplica(pool, GAS_PISTOL)!;
 const tierIds = pool.tiers.map((t) => t.id);
 
 describe('bot kits (M29b)', () => {
-  it('rolls kits only for opponents on Hard; Easy and Normal carry the replicas as they come', () => {
-    expect(BOT_LOADOUTS).toEqual({ easy: 'factory', normal: 'factory', hard: 'random' });
+  it('rolls kits only for opponents on Hard and Pro; Easy and Normal carry the replicas as they come', () => {
+    expect(BOT_LOADOUTS).toEqual({ easy: 'factory', normal: 'factory', hard: 'random', pro: 'random' });
+  });
+
+  it('kits Pro opponents better than Hard ones: more part slots filled (M36)', () => {
+    expect(BOT_PART_CHANCE.hard).toBe(RANDOM_LOADOUT.partChance);
+    expect(BOT_PART_CHANCE.pro).toBeGreaterThan(BOT_PART_CHANCE.hard);
+    const parts = (chance: number) => {
+      let n = 0;
+      for (let id = 1; id <= 60; id++) for (const k of randomKit(pool, LOADOUT, botKitSeed(11, id), chance)) n += [k.optic, k.parts.laser, k.parts.barrel, k.parts.muzzle].filter((p) => p != null).length;
+      return n;
+    };
+    expect(parts(BOT_PART_CHANCE.pro)).toBeGreaterThan(parts(BOT_PART_CHANCE.hard));
   });
 
   it('rolls the same kit for the same match seed and bot, and different kits for different bots', () => {
