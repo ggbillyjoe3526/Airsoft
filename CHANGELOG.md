@@ -39,6 +39,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
 - **M33a** · Woodland shown as Coming soon in the Map pop-up (#64)
 - **M33b** · Glowing BBs: a per-replica Customise option (At Night by default, Always or Off); bots load them on night fields
+- **M33d** · Woodland's layout, playable with Dev settings › Access maps in development (its matches aren't recorded); 4v4 and 5v5 on maps with room
 
 ### Changed
 - **FA5** · Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell (#59)
