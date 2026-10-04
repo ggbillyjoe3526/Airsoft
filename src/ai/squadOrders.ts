@@ -65,8 +65,9 @@ export function holdPoint(leader: Character, w: BotWorld, out: Vec3): boolean {
     const x = leader.position.x + (view.x / flat) * d;
     const z = leader.position.z + (view.z / flat) * d;
     // The floor under the line of sight there (M34b): the street below when the leader looks down off a balcony, but
-    // never a storey above the leader's own (looking up under a ceiling passes the floor over it).
-    const y = Math.min(eye.y + (view.y / flat) * d, leader.position.y);
+    // never one above eye height (looking up under a ceiling passes the floor over it; from high on a stair the floor
+    // ahead is still found).
+    const y = Math.min(eye.y + (view.y / flat) * d, eye.y);
     if (!isWalkableAt(w.nav, x, y, z)) continue;
     out.x = x;
     out.y = floorAt(w.nav, x, y, z);

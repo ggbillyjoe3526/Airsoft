@@ -132,6 +132,21 @@ describe('squad orders on stacked floors (M34b)', () => {
     }
   });
 
+  it('hold here from high on a stair, looking across the upper floor, marks the upper floor', () => {
+    const world = { nav, query: physics, body: BODY, hits: HITS } as unknown as BotWorld;
+    const out = vec3();
+    for (const x of [-8, -7.5, -7]) {
+      const feet = floorAt(nav, x, STOREY, 6);
+      expect(feet, `the stair at x ${x}`).toBeGreaterThan(1.5);
+      for (const pitch of [0, -0.1]) {
+        const looker = leader(x, feet, 6, -Math.PI / 2); // on the north-west stair, facing east
+        looker.pitch = pitch;
+        expect(holdPoint(looker, world, out), `x ${x} pitch ${pitch}`).toBe(true);
+        expect(out.y, `x ${x} pitch ${pitch}`).toBe(STOREY);
+      }
+    }
+  });
+
   it('hold here looking down off the balcony marks the street below, not the balcony', () => {
     const world = { nav, query: physics, body: BODY, hits: HITS } as unknown as BotWorld;
     const looker = leader(-5.4, STOREY, 2.5, Math.PI / 2); // facing west, over the open edge

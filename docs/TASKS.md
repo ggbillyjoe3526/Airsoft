@@ -16,8 +16,8 @@ acceptance:
   4. Stack House (two storeys, two stairs, balcony edges) as a fixture: seeded 3v3 bot matches climb, fight upstairs and walk off down the stairs, nobody falls off an edge.
   5. Depot's seeded match guards unchanged; no per-tick allocation added to route search.
   6. ARCHITECTURE, ROADMAP and DECISIONS describe the layered grid.
-status: retry 1
-attempts: 2
+status: retry 2
+attempts: 3
 
 The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
 files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged dev with M35's content tag until the
