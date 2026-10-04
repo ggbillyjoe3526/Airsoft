@@ -202,7 +202,7 @@ describe('Woodland: the fort can be attacked (the Pro difficulty plan, owner 19:
     }
   });
 
-  it('has no spot inside from which one defender, standing, sees more than two of the ways in', () => {
+  it('has no spot inside from which one defender, standing, sees more than two of the ways in (by their middles), so none sees all four', () => {
     let spots = 0;
     for (let x = inside.x0 + 0.25; x < inside.x1; x += 0.5) {
       for (let z = inside.z0 + 0.25; z < inside.z1; z += 0.5) {
@@ -236,4 +236,3 @@ describe('Woodland: the fort can be attacked (the Pro difficulty plan, owner 19:
     }
   });
 });
-

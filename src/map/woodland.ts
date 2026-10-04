@@ -194,9 +194,9 @@ const END1_CAMP: MapBlock[] = [
 
 /**
  * The log fort round the flag, open on all four sides. Just inside the west, north and south gaps a full-height log
- * baffle turns whoever comes in left or right, and the hut stands behind the east gap, so no one spot inside sees more
- * than two ways in (the Pro difficulty plan's rule, owner 19:08: holding a hill is the most defender-friendly setup
- * there is).
+ * baffle turns whoever comes in left or right, and the hut stands behind the east gap, so no one spot inside sees all
+ * four ways in (at most two of the gaps' middles; the Pro difficulty plan's rule, owner 19:08: holding a hill is the
+ * most defender-friendly setup there is).
  */
 const FORT: MapBlock[] = [
   // North-west corner.
