@@ -139,7 +139,7 @@ export const ARMORY_TEXT = {
   unpaidOff: 'No Field Credits: the Armory is switched off in the Dev settings.',
 } as const;
 
-export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'dev';
+export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'save' | 'dev';
 
 /**
  * The Settings screen's tabs, top to bottom. `later`: nothing on it is built yet. `hidden`: shown only once the
@@ -153,6 +153,8 @@ export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: bo
   { id: 'hud', label: 'HUD', later: false },
   { id: 'audio', label: 'Audio', later: false },
   { id: 'accessibility', label: 'Accessibility', later: false },
+  /** The save: download, load, restore points (M31). */
+  { id: 'save', label: 'Save', later: false },
   { id: 'dev', label: 'Dev', later: false, hidden: true },
 ];
 
@@ -168,6 +170,7 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   hud: [],
   audio: [{ label: 'Voices (hit calls)', help: '' }],
   accessibility: [],
+  save: [],
   dev: [],
 };
 

@@ -1,3 +1,4 @@
+import { overStored } from '../save/overStored';
 import { browserStorage } from '../settings/storage';
 import type { Pool } from './pool';
 
@@ -166,7 +167,8 @@ export function saveCollection(c: Collection, storage = browserStorage()): boole
   try {
     if ((readStored(storage, c.seed)?.rev ?? 0) > (c.rev ?? 0)) return false;
     c.rev = (c.rev ?? 0) + 1;
-    storage.setItem(COLLECTION_KEY, JSON.stringify({ version: COLLECTION_VERSION, ...c }));
+    // Fields a newer build added stay (M31).
+    storage.setItem(COLLECTION_KEY, JSON.stringify(overStored(storage, COLLECTION_KEY, { version: COLLECTION_VERSION, ...c })));
     return true;
   } catch {
     // Full or blocked: kept for this visit.

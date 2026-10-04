@@ -90,6 +90,9 @@ touches movement or materials can fail one seed; re-measure over 16 seeds before
   The muzzle is the boundary with the BB physics pass (M30): `muzzleEnergy` / `muzzleVelocity` / `bbMass`.
   M29b adds barrels and the silencer (`BARRELS` / `MUZZLES`, a shot's reach via `shotHeardScale`, the muzzle mount in
   `render/replicaModels.ts`) and Hard opponents' rolled kits (`pool/botKit.ts`, `BOT_LOADOUTS`).
+- **M31 save system:** `src/save/` (stores bundle, guarded storage, file format and migrations, tab lock, manager),
+  Settings → Save in `ui/saveSettings.ts`. A new store goes in `save/stores.ts`; a store's version bump needs
+  `SAVE_FORMAT`, `STORES_BY_FORMAT` and a `MIGRATIONS` step (the test says so).
 
 ## Working notes and gotchas
 

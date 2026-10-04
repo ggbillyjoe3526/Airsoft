@@ -50,6 +50,8 @@ import type { Unpaid } from './ui/menus/summaryScreen';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
+import type { SaveManager } from './save/saveManager';
+import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
@@ -109,6 +111,8 @@ export interface GameOptions {
    * from a table by tick, never from the keyboard or mouse. Dev server and the e2e build only (`?script=perf`).
    */
   scriptedPlayer?: boolean;
+  /** The save (M31, save/saveManager.ts): Settings → Save, and the title screen's warning when saving doesn't work. */
+  save: SaveManager;
 }
 
 /**
@@ -380,16 +384,15 @@ export class Game {
         cheating: () => devCheating(this.dev),
         diagnostics: () => this.diagnostics(),
       },
+      save: options.save,
     });
     this.menus.showTitle();
     this.showHudLook();
     window.addEventListener('resize', this.showHudLook);
     this.debug.setVisible(this.dev.showDebug);
     this.showMotion();
-    if (options.softwareRendering) {
-      const note = BROWSER_NOTES.noHardwareAcceleration;
-      this.menus.showTitleWarning(options.automaticQuality ? `${note} ${BROWSER_NOTES.qualitySetLow}` : note);
-    }
+    this.showTitleWarning();
+    options.save.onChange(() => this.showTitleWarning());
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
     this.stopWatchingAway = awayWatch({ doc: document, win: window }, this.goneAway);
@@ -450,7 +453,7 @@ export class Game {
     this.graphicsLost = lost;
     this.graphicsNotice.setVisible(lost);
     // The menus can't be used under the notice (not even Resume by Enter or Space on the focused button).
-    this.menus.setBlocked(lost);
+    this.menus.setBlocked(lost || this.yielded);
     if (lost) {
       this.stopPlay();
     } else {
@@ -459,6 +462,32 @@ export class Game {
       if (this.started && this.menus.screen === 'pause') this.menus.showHint(BROWSER_NOTES.graphicsBack);
     }
   }
+
+  /**
+   * The title screen's warning: the browser draws without hardware acceleration, and saving doesn't work (blocked or
+   * full storage, a save from a newer build; M31).
+   */
+  private showTitleWarning(): void {
+    const notes: string[] = [];
+    if (this.options.softwareRendering) {
+      notes.push(BROWSER_NOTES.noHardwareAcceleration);
+      if (this.options.automaticQuality) notes.push(BROWSER_NOTES.qualitySetLow);
+    }
+    const save = this.options.save;
+    if (save.newerBuild) notes.push(SAVE_TEXT.newer(save.newerBuild));
+    else if (save.blocked) notes.push(SAVE_TEXT.blocked);
+    this.menus.showTitleWarning(notes.join(' '));
+  }
+
+  /** Another tab took the save (M31, save/tabLock.ts): play stops and the menus can't be used under its notice. */
+  yieldToOtherTab(): void {
+    this.yielded = true;
+    this.stopPlay();
+    this.menus.setBlocked(true);
+  }
+
+  /** Another tab has the save (yieldToOtherTab): the menus stay blocked for the rest of the visit. */
+  private yielded = false;
 
   /** Stops play as if the player had pressed Esc: the mouse is given back, and the pause menu comes up. */
   private stopPlay(): void {

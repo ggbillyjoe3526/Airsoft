@@ -1,6 +1,7 @@
 import type { Difficulty } from '../config/bots';
 import { RECORDS_KEY, STATS } from '../config/matchInfo';
 import type { MatchMode } from '../config/modes';
+import { overStored } from '../save/overStored';
 
 /**
  * Local records, kept in the browser between sessions (M19): wins and losses per difficulty and mode, the best match
@@ -91,7 +92,8 @@ export function loadRecords(store: RecordStore | null): Records {
 export function saveRecords(records: Records, store: RecordStore | null): void {
   if (!store) return;
   try {
-    store.setItem(RECORDS_KEY, JSON.stringify({ version: RECORDS_VERSION, ...records }));
+    // Fields a newer build added stay (M31).
+    store.setItem(RECORDS_KEY, JSON.stringify(overStored(store, RECORDS_KEY, { version: RECORDS_VERSION, ...records })));
   } catch {
     // Non-critical.
   }
