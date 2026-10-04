@@ -1,3 +1,4 @@
+import type { LightingPreset, LightingPresetId } from '../config/render';
 import type { FloorSurface } from '../config/sounds';
 import type { Vec3 } from '../sim/vec';
 import type { Bush } from './foliage';
@@ -104,8 +105,25 @@ export interface MapData {
    */
   lights?: readonly MapLight[];
   /**
+   * How the map is lit (M33f, render/lightingPreset.ts): the lighting presets it can be played under, the first by
+   * default (later a match-start choice picks among them, M34), and `moonOver`, a world point (x, z) the key light is
+   * turned towards from the field's centre (keeping its height), so a low moon rims that hill's top. `overrides` tweaks a
+   * preset's values for this map only. Absent: day.
+   */
+  lighting?: MapLighting;
+  /**
    * Still being built (M33, owner): the Map pop-up shows it greyed out as Coming soon, and only Dev settings › Access
    * maps in development opens it; its matches don't go into the records.
    */
   inDevelopment?: boolean;
+}
+
+/** A tweak of a lighting preset for one map: any group's values (MapData.lighting.overrides). */
+export type LightingOverride = { [K in keyof LightingPreset]?: LightingPreset[K] extends object ? Partial<LightingPreset[K]> : LightingPreset[K] };
+
+/** How a map is lit (MapData.lighting, M33f). */
+export interface MapLighting {
+  presets: readonly [LightingPresetId, ...LightingPresetId[]];
+  moonOver?: { x: number; z: number };
+  overrides?: Partial<Record<LightingPresetId, LightingOverride>>;
 }

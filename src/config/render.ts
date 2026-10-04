@@ -211,7 +211,17 @@ export interface QualitySettings {
   impactGrit: boolean;
   /** A faint beam from the laser module's lens (row 23): off on every preset (a toy cue; real ones are invisible by day). */
   laserBeam: boolean;
+  // M33f: night lighting.
+  /**
+   * Night lights (M33f): how many of a map's light pools (MapData.lights, fires and lanterns) light the scene with a real
+   * point light, the nearest to you; the rest, and every pool on 0, light only the ground under them (one additive mesh).
+   * A fixed number for the match, so no shader is rebuilt as you move. Nothing on a map without light pools.
+   */
+  poolLights: PoolLightCount;
 }
+
+/** Night lights (QualitySettings.poolLights): real point lights on the nearest light pools. */
+export type PoolLightCount = 0 | 2 | 4;
 
 /** Trees round the field (QualitySettings.trees). */
 export type TreeDetail = 0 | 1 | 2;
@@ -225,11 +235,11 @@ export type TreeDetail = 0 | 1 | 2;
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
   low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false,
-    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false },
+    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0 },
   medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false },
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2 },
   high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false },
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4 },
 };
 
 /** The fields of a QualitySettings, in the order the Custom rows show them. */
@@ -412,6 +422,109 @@ export const LIGHTING = {
    * texels are 1.9 cm, against 2.9 cm for the whole of Depot. The disc moves in whole texels, so edges don't crawl.
    */
   shadowView: { radius: 18, ahead: 8 },
+} as const;
+
+/** The values a sky is painted from (sRGB hex colours; render/atmosphere.ts skyColour). */
+export interface SkyPalette {
+  zenith: number;
+  horizon: number;
+  below: number;
+  /** A glow round the key light's direction (the sun's warmth, the moon's halo) and how tightly it gathers. */
+  sunGlow: number;
+  sunGlowPower: number;
+  horizonFalloff: number;
+}
+
+/** The looks a map can be lit with (M33f): its data lists the ones it offers (MapData.lighting), the first by default. */
+export type LightingPresetId = 'day' | 'night';
+
+/**
+ * Everything that makes a map's light (M33f, render/lightingPreset.ts): the sky, the haze, the hemisphere fill, the key
+ * light (the sun or the moon) and its disc in the sky, the clouds' colours, the environment map's ground and strength
+ * and a factor on the tone mapping's exposure. Any map can use any preset; Renderer.setLighting and addLighting apply it.
+ */
+export interface LightingPreset {
+  /** A night look: the play cues of the dark (glowing BBs, night sight) go with it. */
+  night: boolean;
+  sky: SkyPalette;
+  /** Linear haze (Renderer's fog and background), metres from the camera. */
+  fog: { colour: number; near: number; far: number };
+  hemi: { sky: number; ground: number; intensity: number };
+  /**
+   * The shadow-casting key light: colour, intensity and its place relative to the field's centre (metres). A map's
+   * `moonOver` turns it towards a point, keeping its height above the horizon. `disc` is its disc in the sky (Clouds on).
+   */
+  key: { colour: number; intensity: number; offset: { x: number; y: number; z: number }; disc: { colour: number; size: number } };
+  /** The clouds' underside and top colours and their opacity at the middle. */
+  clouds: { shade: number; top: number; opacity: number };
+  /** The environment map's ground (sRGB) and scene.environmentIntensity. */
+  environment: { ground: number; intensity: number };
+  /** Times the tone mapping's own exposure (TONE_MAPPING.exposure). */
+  exposureScale: number;
+}
+
+/** The night key light's height above the horizon (degrees) and distance from the field's centre (m). */
+const MOON = { elevationDeg: 18, distance: 48 } as const;
+const MOON_ELEVATION = (MOON.elevationDeg * Math.PI) / 180;
+
+/**
+ * The lighting presets (M33f). `day` is the look every map had before (M14 and FA7), built from the constants above
+ * field by field, so Depot, the range and the test maps draw exactly as before. `night`: a dark blue sky with a pale
+ * moon halo, haze from 20 m, a dim cool fill and a low moon (18°) as the key light, so it rims the tops of hills facing
+ * it while the faces turned away stay dark; first guesses, tuned in the browser.
+ */
+export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>> = {
+  day: {
+    night: false,
+    sky: { zenith: ATMOSPHERE.zenith, horizon: ATMOSPHERE.horizon, below: ATMOSPHERE.below, sunGlow: ATMOSPHERE.sunGlow, sunGlowPower: ATMOSPHERE.sunGlowPower, horizonFalloff: ATMOSPHERE.horizonFalloff },
+    fog: { colour: ATMOSPHERE.horizon, near: ATMOSPHERE.fogNear, far: ATMOSPHERE.fogFar },
+    hemi: { sky: LIGHTING.hemiSky, ground: LIGHTING.hemiGround, intensity: LIGHTING.hemiIntensity },
+    key: { colour: LIGHTING.sunColor, intensity: LIGHTING.sunIntensity, offset: LIGHTING.sunOffset, disc: { colour: ATMOSPHERE.clouds.sunColour, size: ATMOSPHERE.clouds.sunSize } },
+    clouds: { shade: ATMOSPHERE.clouds.shade, top: 0xffffff, opacity: ATMOSPHERE.clouds.opacity },
+    environment: { ground: ENVIRONMENT.ground, intensity: ENVIRONMENT.intensity },
+    exposureScale: 1,
+  },
+  night: {
+    night: true,
+    sky: { zenith: 0x0a1224, horizon: 0x1d2b46, below: 0x0e1218, sunGlow: 0x9fb4d6, sunGlowPower: 10, horizonFalloff: 1.6 },
+    fog: { colour: 0x1d2b46, near: 20, far: 140 },
+    hemi: { sky: 0x3a4c78, ground: 0x1a1c22, intensity: 0.4 },
+    key: {
+      colour: 0xb8c8ff,
+      intensity: 0.6,
+      offset: { x: Math.cos(MOON_ELEVATION) * MOON.distance, y: Math.sin(MOON_ELEVATION) * MOON.distance, z: 0 },
+      disc: { colour: 0xe8eeff, size: 0.045 },
+    },
+    clouds: { shade: 0x121826, top: 0x3c475e, opacity: 0.5 },
+    environment: { ground: 0x1c1f26, intensity: 0.2 },
+    exposureScale: 1.15,
+  },
+};
+
+/**
+ * Light pools on a night field (M33f, render/lightPools.ts; MapLight in map/nightSight.ts). Every pool glows on every
+ * preset: a bright core (`core` of the pool's radius) inside a faint additive halo (`halo` times the core, at `haloAlpha`),
+ * one mesh for all. The ground under a pool is lit by one additive mesh for all pools (a disc of `rings` × `segments`,
+ * `strength` at the middle fading to nothing at the radius, `lift` off the ground), unless a real point light
+ * (QualitySettings.poolLights) shines on it: those take the nearest pools to the eye, by distance to the pool's edge, and
+ * one moves to another pool only when that is `hysteresis` metres nearer, fading out and in over `fadeSeconds`. Each
+ * reaches `reach` times the pool's radius with physical falloff (decay 2), `intensityPerArea` candela per square metre of
+ * the pool's radius, and casts no shadow.
+ */
+export const POOL_LIGHTS = {
+  core: 0.03,
+  halo: 3,
+  haloAlpha: 0.16,
+  glowDetail: 1,
+  rings: 6,
+  segments: 16,
+  strength: 0.35,
+  lift: 0.04,
+  hysteresis: 3,
+  fadeSeconds: 0.3,
+  reach: 1.5,
+  decay: 2,
+  intensityPerArea: 0.5,
 } as const;
 
 /**

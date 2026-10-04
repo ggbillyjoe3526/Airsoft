@@ -21,6 +21,7 @@ import { bbGlowFor } from './pool/loadoutModel';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
+import { resolveLighting } from './render/lightingPreset';
 import { mapLookOf } from './render/mapMeshes';
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
 import type { Renderer } from './render/renderer';
@@ -109,7 +110,11 @@ export class RangeSession {
     // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
     // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
     renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTextures, mapLookOf(quality)));
-    this.daylight = addLighting(renderer.scene, map, quality);
+    // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
+    // last map's; its lights, sky and light pools in the scene.
+    const lighting = resolveLighting(map);
+    renderer.setLighting(lighting);
+    this.daylight = addLighting(renderer.scene, map, quality, lighting);
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     const nav = buildNavGrid(map, NAV);
@@ -234,7 +239,7 @@ export class RangeSession {
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     this.targets.update(dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
-    this.daylight.follow(this.renderer.camera);
+    this.daylight.follow(this.renderer.camera, dt);
     this.combat.render(true);
   }
 

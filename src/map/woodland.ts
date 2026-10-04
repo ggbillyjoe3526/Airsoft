@@ -493,6 +493,8 @@ export const WOODLAND: MapData = {
   lanes: LANE_POINTS.map((lane) => lane.map(([x, z]) => onGround(x, z))),
   flag: onGround(FLAG.x, FLAG.z),
   night: true,
+  // Lit by night (M33f): the moon low over the Knoll, so it rims the hill's top while the face towards end 0 stays dark.
+  lighting: { presets: ['night'], moonOver: { x: worldX(KNOLL.x), z: worldZ(KNOLL.z) } },
   terrain: TERRAIN,
   foliage: bushes(LANE_POINTS, BLOCKS),
   lights: LIGHTS,

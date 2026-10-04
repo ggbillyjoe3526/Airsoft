@@ -1,11 +1,10 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { BOTS, NIGHT_SIGHT } from '../config/bots';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import type * as BotsConfig from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
-import * as nightSight from '../map/nightSight';
-import { WOODLAND } from '../map/woodland';
-import { initPhysics } from '../physics/physicsWorld';
+import type * as NightSight from '../map/nightSight';
+import type { MapData } from '../map/mapTypes';
 import { isInPlay } from '../sim/elimination';
-import { playMatch } from './depotMatchSupport';
+import type { playMatch as PlayMatch } from './depotMatchSupport';
 
 // Count the night fields built: the canopy grid must be made once as a match loads, never while it runs.
 vi.mock('../map/nightSight', async (importOriginal) => {
@@ -22,9 +21,22 @@ const TEAM_SIZE = 4;
 const SAMPLE_EVERY = 4;
 
 describe('a 4v4 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', () => {
+  // Test files share a worker's modules (isolate: false): another file may already have loaded the bots with the real
+  // night field, so this file loads its own copies, with the mock, and leaves a clean registry behind (M33f).
+  let nightSight: typeof NightSight;
+  let WOODLAND: MapData;
+  let playMatch: typeof PlayMatch;
+  let BOTS: typeof BotsConfig.BOTS;
+  let NIGHT_SIGHT: typeof BotsConfig.NIGHT_SIGHT;
   beforeAll(async () => {
-    await initPhysics();
+    vi.resetModules();
+    ({ BOTS, NIGHT_SIGHT } = await import('../config/bots'));
+    nightSight = await import('../map/nightSight');
+    ({ WOODLAND } = await import('../map/woodland'));
+    ({ playMatch } = await import('./depotMatchSupport'));
+    await (await import('../physics/physicsWorld')).initPhysics();
   });
+  afterAll(() => vi.resetModules());
 
   it('keeps every sighting inside the target\'s light range, hides people in the dark, builds the canopy grid once, and finishes rounds', { timeout: 45_000 }, () => {
     const build = vi.mocked(nightSight.buildNightField);
