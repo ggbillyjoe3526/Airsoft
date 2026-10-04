@@ -123,6 +123,7 @@ describe('the rules shown on New game', () => {
     halfTimeAfter: 4,
     attackFirst: true,
     eliminationStartEnd: 1,
+    attackDefendStartEnd: 0,
     friendlyFire: true,
     ricochetsCount: false,
   };
@@ -140,7 +141,7 @@ describe('the rules shown on New game', () => {
     const text = describeRules(rules, 'attackDefend');
     expect(text).toContain('stand by it for 5 s to raise your flag');
     expect(text).toContain('Your team attacks first, from the west end; sides swap after round 4.');
-    expect(describeRules({ ...rules, attackFirst: false }, 'attackDefend')).toContain('Your team defends first, from the east end');
+    expect(describeRules({ ...rules, attackFirst: false, attackDefendStartEnd: 1 }, 'attackDefend')).toContain('Your team defends first, from the east end');
   });
 
   it('follow the Match pop-up: team size, rounds, the clock, friendly fire and ricochets (M20)', () => {

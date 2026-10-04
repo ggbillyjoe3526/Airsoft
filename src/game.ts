@@ -257,6 +257,7 @@ export class Game {
         raiseTime: ROUNDS.flag.raiseTime,
         attackFirst: ROUNDS.flag.firstAttackers === PLAYER_TEAM,
         eliminationStartEnd: teamEnd(PLAYER_TEAM, 'elimination', 1, ROUNDS),
+        attackDefendStartEnd: teamEnd(PLAYER_TEAM, 'attackDefend', 1, ROUNDS),
       },
       bindings: this.bindings,
       loadout: {
