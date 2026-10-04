@@ -1006,6 +1006,58 @@ body {
   background: transparent;
 }
 
+/* What the tile holds, drawn at its top (FA13: the space there was left for an item picture there isn't); the text stays
+   at the bottom. Line art in the text's muted colour, as the menus' other icons. */
+.item-art {
+  display: flex;
+  margin-bottom: auto;
+  color: var(--menu-muted);
+}
+
+.item-art svg,
+.item-kind svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.item-art svg {
+  width: 56px;
+  height: 56px;
+  stroke-width: 1.25;
+  margin: -6px 0 0 -4px; /* the drawings leave a margin in their 24-unit box: line them up with the text */
+}
+
+.gear-slot.empty .item-art {
+  color: var(--menu-faint);
+}
+
+/* The Armory's tile: its category with a small drawing, at the top of the tile. */
+.item-kind {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin-bottom: auto;
+}
+
+/* One line, so every tile's head lines up ("Power sources" at the narrowest tile ends in an ellipsis). */
+.item-kind span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-kind svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.75;
+}
+
 .gear-name {
   font-size: var(--fs-lg);
   font-weight: 700;

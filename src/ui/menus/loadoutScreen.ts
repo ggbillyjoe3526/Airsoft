@@ -21,6 +21,7 @@ import {
   powerReadout,
 } from '../loadoutChoice';
 import { gearLine, performanceOf, type SheetRow, sheetRows, tierBlurb } from '../performanceSheet';
+import { ITEM_ICONS, itemIcon } from './icons';
 import { backButton, el, laterRow, menuButton, menuPage, menuRow, rangeControl } from './menuParts';
 
 const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
@@ -67,7 +68,7 @@ const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[]
  */
 export class LoadoutScreen {
   readonly root: HTMLDivElement;
-  private readonly column = new Map<ColumnSlot, { button: HTMLButtonElement; name: HTMLSpanElement; tier: HTMLSpanElement; line: HTMLSpanElement }>();
+  private readonly column = new Map<ColumnSlot, { button: HTMLButtonElement; art: HTMLSpanElement; name: HTMLSpanElement; tier: HTMLSpanElement; line: HTMLSpanElement }>();
   private readonly panel: HTMLDivElement;
   private selected: ColumnSlot = 'primary';
   /** The gear slot whose replica is being customised, or null on the item list. */
@@ -81,10 +82,11 @@ export class LoadoutScreen {
       const label = el('p', 'menu-kicker gear-label', LOADOUT_TEXT.slots[slot]);
       const button = el('button', 'gear-slot');
       button.type = 'button';
+      const art = el('span', 'item-art');
       const name = el('span', 'gear-name');
       const tier = el('span', 'gear-tier');
       const line = el('span', 'gear-stats');
-      button.append(name, tier, line);
+      button.append(art, name, tier, line);
       button.addEventListener('click', () => this.select(slot));
       if (slot !== 'grenades') {
         button.addEventListener('contextmenu', (e) => {
@@ -94,7 +96,7 @@ export class LoadoutScreen {
       }
       if (slot === 'primary') button.dataset.autofocus = '';
       gear.append(label, button);
-      this.column.set(slot, { button, name, tier, line });
+      this.column.set(slot, { button, art, name, tier, line });
     }
     gear.append(el('p', 'gear-hint', LOADOUT_TEXT.rightClickHint));
     this.panel = el('div', 'menu-panel loadout-panel');
@@ -162,6 +164,9 @@ export class LoadoutScreen {
       parts.button.classList.toggle('selected', on);
       parts.button.setAttribute('aria-pressed', String(on));
       const ref = slot === 'grenades' ? null : (equipped[GEAR_SLOTS.indexOf(slot)] ?? null);
+      // What goes in the slot, drawn (FA13): the equipped replica, or a grenade's outline on the empty Grenades slot.
+      const art = ref ? itemIcon(m.pool.byId.get(ref.asset)!) : slot === 'grenades' ? ITEM_ICONS.grenade : '';
+      if (parts.art.innerHTML !== art) parts.art.innerHTML = art;
       parts.name.textContent = ref ? m.pool.byId.get(ref.asset)!.name : LOADOUT_TEXT.empty;
       parts.tier.textContent = ref ? this.tierLabel(ref) : '';
       parts.line.textContent = ref ? gearLine(m.slotKit(ref), m.bbWeight(ref.asset)) : '';
@@ -366,8 +371,10 @@ export class LoadoutScreen {
     setTier(tile, ref);
     tile.classList.toggle('selected', selected);
     tile.setAttribute('aria-pressed', String(selected));
-    const name = this.opts.model.pool.byId.get(ref.asset)!.name;
-    tile.append(el('span', 'item-name', name), el('span', 'item-tier', this.tierLabel(ref)));
+    const asset = this.opts.model.pool.byId.get(ref.asset)!;
+    const art = el('span', 'item-art');
+    art.innerHTML = itemIcon(asset);
+    tile.append(art, el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(ref)));
     if (note) tile.append(el('span', 'item-note', note));
     return tile;
   }
