@@ -396,6 +396,19 @@ test('the game boots to the title screen on High', async ({ page }) => {
   await expect(page.locator('.menu-title-warning')).not.toContainText('set to Low');
   const shadows = await page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
   expect(shadows).toBe(true);
+  // A pop-up open when the graphics context is lost closes, so the notice isn't under it (bug pass).
+  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-setup').getByRole('button', { name: /Difficulty/i }).click();
+  await expect(page.getByRole('dialog', { name: 'Bot difficulty' })).toBeVisible();
+  await page.evaluate(() => {
+    const lose = document.querySelector('canvas')!.getContext('webgl2')!.getExtension('WEBGL_lose_context')!;
+    (window as unknown as { lose: WEBGL_lose_context }).lose = lose;
+    lose.loseContext();
+  });
+  await expect(page.locator('.graphics-notice')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('dialog', { name: 'Bot difficulty' })).toBeHidden();
+  await page.evaluate(() => (window as unknown as { lose: WEBGL_lose_context }).lose.restoreContext());
+  await expect(page.locator('.graphics-notice')).toBeHidden({ timeout: 10_000 });
   expect(errors).toEqual([]);
 });
 

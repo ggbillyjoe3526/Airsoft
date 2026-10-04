@@ -98,6 +98,7 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
     if (moveSlider) {
       sliderInput.value = String(v);
       sliderOutput.textContent = v.toFixed(2);
+      sliderInput.setAttribute('aria-valuetext', sliderOutput.textContent);
     }
     opts.sensitivity.onChange(v);
     refreshTurn();

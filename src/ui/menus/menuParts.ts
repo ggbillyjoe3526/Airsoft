@@ -109,10 +109,13 @@ export function rangeControl(
   slider.step = String(range.step);
   slider.value = String(initial);
   slider.setAttribute('aria-label', label);
+  // A screen reader reads the value as shown ("65%", "2:30"), not the raw number (bug pass).
+  slider.setAttribute('aria-valuetext', format(initial));
   const output = el('output', '', format(initial));
   slider.addEventListener('input', () => {
     const v = Number(slider.value);
     output.textContent = format(v);
+    slider.setAttribute('aria-valuetext', format(v));
     saveSetting(field, v);
     onChange(v);
   });
