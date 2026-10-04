@@ -60,7 +60,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
 - **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
 - **M35** · pool.md has an Access column: public or dev for each asset (#70)
-- **M42** · Dev tab Retro pixels: 1990s shooter look with chunky pixels, dithering and crushed palette; Pixel size and Colours sliders; HUD and menus stay sharp
+- **M42** · Dev tab Retro pixels: 1990s shooter look with chunky pixels, dithering and crushed palette; Pixel size and Colours sliders; HUD and menus stay sharp (#78)
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
