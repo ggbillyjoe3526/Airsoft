@@ -81,7 +81,7 @@ export class HeardPlayers {
     if (sound.kind === 'hit') return;
     const kind: NoiseKind = sound.kind;
     const metres = Math.hypot(sound.x - fromX, sound.z - fromZ);
-    if (metres > MINIMAP.hearing[kind]) return;
+    if (metres > MINIMAP.hearing[kind] * (sound.reach ?? 1)) return;
     let p = this.players.find((h) => h.sourceId === sound.sourceId) ?? this.players.find((h) => Number.isNaN(h.at));
     if (!p) {
       p = { sourceId: -1, kind, x: 0, z: 0, radius: 0, at: Number.NaN };

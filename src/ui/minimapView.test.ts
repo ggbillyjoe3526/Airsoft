@@ -63,6 +63,16 @@ describe('heard players on the minimap (M23)', () => {
     expect(h.players.filter((p) => !Number.isNaN(p.at))).toHaveLength(0);
   });
 
+  it("places a silenced shot only within the silencer's share of the range (M29b)", () => {
+    const h = new HeardPlayers();
+    const far = MINIMAP.hearing.shot * 0.75;
+    h.add({ ...sound(4, 'shot', far, 0), reach: 0.5 }, 0, 0, 1);
+    expect(h.players.filter((p) => !Number.isNaN(p.at))).toHaveLength(0);
+    h.add({ ...sound(5, 'shot', far, 0), reach: 1 }, 0, 0, 1);
+    h.add({ ...sound(6, 'shot', MINIMAP.hearing.shot * 0.4, 0), reach: 0.5 }, 0, 0, 1);
+    expect(h.players.filter((p) => !Number.isNaN(p.at)).map((p) => p.sourceId).sort()).toEqual([5, 6]);
+  });
+
   it('fades a patch out and frees it; forgets a player who is hit; a new round clears all', () => {
     expect(noiseAlpha(0)).toBe(1);
     expect(noiseAlpha(MINIMAP.noiseLife - MINIMAP.noiseFade / 2)).toBeCloseTo(0.5);

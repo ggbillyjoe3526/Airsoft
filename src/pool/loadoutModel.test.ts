@@ -4,6 +4,7 @@ import { AEG, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
 import { gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { EMPTY_FIT } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
 
@@ -26,7 +27,7 @@ describe('Loadout model (M26b)', () => {
   it('starts a new player on the AEG Rifle and Gas Pistol with their starter power sources and nothing else fitted', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
     expect(model.equipped()).toEqual([item('AEG Rifle'), item('Gas Pistol')]);
-    expect(model.fitOf(id('AEG Rifle'))).toEqual({ optic: null, grip: null, laser: null, magazine: null, power: item('Standard Battery') });
+    expect(model.fitOf(id('AEG Rifle'))).toEqual({ ...EMPTY_FIT, power: item('Standard Battery') });
     expect(model.fitOf(id('Gas Pistol')).power).toEqual(item('Green Gas'));
     const kit = model.kit();
     expect(kit.slots.map((s) => s.replica.id)).toEqual([AEG.id, GAS_PISTOL.id]);

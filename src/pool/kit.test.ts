@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { NO_TUNE } from '../config/attachments';
+import { BARRELS, factoryParts, handlingOf, MUZZLES, NO_TUNE } from '../config/attachments';
 import { LASERS } from '../config/lasers';
 import { GAME_STATS } from '../config/gameStats';
 import { AEG, GAS_PISTOL } from '../config/replicas';
 import type { ItemRef } from './collection';
 import { GAME_POOL } from './gamePool';
 import { bonusOf, EMPTY_FIT, energyCapped, kitReplica, kitSlot, partTune, type ReplicaFit } from './kit';
+import { fits } from './pool';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -21,7 +22,7 @@ describe('kit (M26b)', () => {
     expect(r.name).toBe('AEG Rifle');
     const slot = kitSlot(pool, item('Gas Pistol'), STARTER_PISTOL);
     expect(slot.optic).toBeNull();
-    expect(slot.parts).toEqual({ grip: 'none', magazine: GAS_PISTOL.magazines[0], laser: null, tune: NO_TUNE });
+    expect(slot.parts).toEqual({ grip: 'none', magazine: GAS_PISTOL.magazines[0], laser: null, barrel: null, muzzle: null, tune: NO_TUNE });
   });
 
   it("gives a rarer replica its tier's Bonus % off spread, reload and draw, and half of it on energy and rate of fire (M29)", () => {
@@ -218,5 +219,57 @@ describe('kit, acceptance 2: what a tier improves, from the Tier scaling', () =>
     const r = kitReplica(pool, item('Gas Pistol', 'legendary'), STARTER_PISTOL);
     expect(r.muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.075);
     expect(r.muzzleEnergy).toBeLessThanOrEqual(r.energyLimit);
+  });
+});
+
+describe('barrels and muzzle parts (M29b)', () => {
+  it('tightens spread with a Tight-Bore Barrel and adds a little energy; a Long Barrel adds more energy but handles slower', () => {
+    const tight = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Tight-Bore Barrel') }));
+    expect(tight.parts.barrel).toBe('tightBore');
+    expect(tight.replica.spreadDeg).toBeCloseTo(AEG.spreadDeg * BARRELS.tightBore.spreadScale);
+    expect(tight.replica.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * (1 + BARRELS.tightBore.energy));
+    const long = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Long Barrel') }));
+    expect(long.replica.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * (1 + BARRELS.long.energy));
+    expect(long.replica.muzzleEnergy).toBeGreaterThan(tight.replica.muzzleEnergy);
+    const stock = handlingOf(AEG, factoryParts(AEG));
+    const h = handlingOf(long.replica, long.parts);
+    expect(h.drawTime).toBeCloseTo(stock.drawTime * BARRELS.long.handlingScale);
+    expect(h.raiseScale).toBeCloseTo(BARRELS.long.handlingScale);
+  });
+
+  it('costs a silencer energy and handling, and halves how far its shots carry, on either replica', () => {
+    for (const [name, base, starter] of [['AEG Rifle', AEG, STARTER_AEG], ['Gas Pistol', GAS_PISTOL, STARTER_PISTOL]] as const) {
+      const s = kitSlot(pool, item(name), fit({ ...starter, muzzle: item('Silencer') }));
+      expect(s.parts.muzzle, name).toBe('silencer');
+      expect(s.replica.muzzleEnergy).toBeCloseTo(base.muzzleEnergy * (1 + MUZZLES.silencer.energy));
+      expect(s.replica.muzzleEnergy).toBeLessThan(base.muzzleEnergy);
+      const h = handlingOf(s.replica, s.parts);
+      expect(h.drawTime).toBeCloseTo(base.drawTime * MUZZLES.silencer.handlingScale);
+      expect(h.heardScale).toBe(MUZZLES.silencer.heardScale);
+      expect(h.muffled).toBe(true);
+    }
+    expect(MUZZLES.silencer.heardScale).toBe(0.5);
+  });
+
+  it('fits barrels to the AEG only and the silencer to both (pool.md tags)', () => {
+    const asset = (name: string) => pool.byId.get(id(name))!;
+    for (const barrel of ['Tight-Bore Barrel', 'Long Barrel']) {
+      expect(fits(asset(barrel), asset('AEG Rifle')), barrel).toBe(true);
+      expect(fits(asset(barrel), asset('Gas Pistol')), barrel).toBe(false);
+    }
+    expect(fits(asset('Silencer'), asset('AEG Rifle'))).toBe(true);
+    expect(fits(asset('Silencer'), asset('Gas Pistol'))).toBe(true);
+  });
+
+  it("scales a barrel's and a silencer's handling with their tier, and a barrel's spread", () => {
+    const common = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Tight-Bore Barrel'), muzzle: item('Silencer') }));
+    const legendary = kitSlot(pool, item('AEG Rifle'), fit({ ...STARTER_AEG, barrel: item('Tight-Bore Barrel', 'legendary'), muzzle: item('Silencer', 'legendary') }));
+    expect(legendary.replica.spreadDeg).toBeCloseTo(common.replica.spreadDeg * (1 - bonusOf(pool, item('Tight-Bore Barrel', 'legendary'), 'spread')));
+    const draw = (s: typeof common) => handlingOf(s.replica, s.parts).drawTime;
+    const barrelDraw = 1 - bonusOf(pool, item('Tight-Bore Barrel', 'legendary'), 'draw');
+    const muzzleDraw = 1 - bonusOf(pool, item('Silencer', 'legendary'), 'draw');
+    expect(draw(legendary)).toBeCloseTo(draw(common) * barrelDraw * muzzleDraw);
+    expect(barrelDraw).toBeLessThan(1);
+    expect(muzzleDraw).toBeLessThan(1);
   });
 });

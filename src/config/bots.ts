@@ -284,7 +284,7 @@ export type Difficulty = 'easy' | 'normal' | 'hard';
 export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string }[] = [
   { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim. Learn the map.' },
   { id: 'normal', label: 'Normal', blurb: 'A fair fight: their first BBs up close can miss.' },
-  { id: 'hard', label: 'Hard', blurb: 'Quick and steady. Get seen first and you\'re out.' },
+  { id: 'hard', label: 'Hard', blurb: 'Quick and steady, each on kit of its own. Get seen first and you\'re out.' },
 ];
 
 /** The same levels as the Difficulty pop-up's Teammates row describes them (M20). */
@@ -338,6 +338,15 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     burstPause: [0.2, 0.5],
   },
 };
+
+/**
+ * What the other team's bots carry, per difficulty (M29b, owner 2026-10-04): 'factory' is each replica as it comes;
+ * 'random' rolls every bot its own compatible kit from the pool (pool/botKit.ts). Your teammates always carry factory.
+ */
+export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = { easy: 'factory', normal: 'factory', hard: 'random' };
+
+/** How a random loadout is rolled: the chance each part slot (optic, grip, laser, barrel, muzzle, magazine) gets a part. */
+export const RANDOM_LOADOUT = { partChance: 0.6 } as const;
 
 /** The behaviour tuning every bot shares, whatever its level (BOT_BEHAVIOUR's shape). */
 export type BotBehaviour = Widen<typeof BOT_BEHAVIOUR>;

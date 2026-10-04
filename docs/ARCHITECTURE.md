@@ -183,6 +183,10 @@ ends the round). A hit character is eliminated
   (`withStats`, which also sets `ReplicaConfig.energyLimit`), `attachments.ts`, `optics.ts` and `lasers.ts` lay it over
   their built-in numbers when they load, so bots and the sim see the file's numbers too. `pool/kit.ts` applies the
   power stats and tier shares (`KitStats`, injectable for tests) and caps the energy at the limit (`energyCapped`).
+  Barrels and muzzle parts (M29b, `BARRELS` / `MUZZLES` in `config/attachments.ts`) add to the energy and spread in
+  `kitReplica` and to the handling in `handlingOf` (`heardScale`, `muffled`); `sim/armament.ts` `shotHeardScale` is
+  the one place bots (`ai/botController.ts`), the minimap and sound cues read a shot's reach. On Hard,
+  `pool/botKit.ts` rolls each opponent a seeded kit (`randomKit`, `kittedCharacter`; `BOT_LOADOUTS` in config/bots.ts).
   The muzzle is the boundary: `muzzleEnergy` / `muzzleVelocity` / `bbMass` (config/replicas.ts) are what leaves the
   barrel; everything after it is `config/ballistics.ts` and `sim/ballistics.ts`. `ui/performanceSheet.ts` builds the
   Customise screen's Performance sheet (against `LoadoutModel.asItComes`), the gear slots' line and the Armory's
@@ -249,9 +253,10 @@ request. Each line names where it lives and what pins it.
   `MatchSession.setQuality` apply it at once. Pinned by `config/render.test.ts`, `render/renderer.test.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`): saved under `airsoft.*`, versioned;
   renaming a key needs a migration. Pinned by `settings/storage.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Barrels and Muzzle parts sections, and the `barrel-mount` / `muzzle-thread` tags (M29b). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
-  power sources by pool ID, Tier scaling, Site limits) the config modules lay over their built-in ones. Pinned by
+  power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
+  over their built-in ones. Pinned by
   `config/stats.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`.

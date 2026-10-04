@@ -64,7 +64,7 @@ export class MatchPresentation {
   private readonly holdMarker: HoldMarker;
   private readonly holdAnchor = new THREE.Vector3();
   private readonly holdAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
-  private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0 };
+  private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0, reach: 1 };
   /** The minimap (M23): the other team where last heard, from where the camera was at the last frame. */
   private readonly minimap: Minimap;
   private readonly heardPlayers = new HeardPlayers();

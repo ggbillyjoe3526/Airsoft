@@ -118,7 +118,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(sheet.locator('dd', { hasText: /^13 BBs\/s/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^60 × 4 \(240\)/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^no optic/ })).toBeVisible();
-  for (const label of ['Muzzle speed', 'BB weight', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Reload', 'Draw', 'Aim raise']) await expect(sheet.getByText(label, { exact: true })).toBeVisible();
+  for (const label of ['Muzzle speed', 'BB weight', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Reload', 'Draw', 'Aim raise', 'Shots heard from']) await expect(sheet.getByText(label, { exact: true })).toBeVisible();
   await expect(primary.locator('.gear-stats')).toHaveText('0.97 J · 13 BBs/s · 60 BBs');
   const optic = loadout.getByRole('group', { name: 'Optic' });
   await expect(optic.getByRole('button', { name: 'Iron Sights' })).toHaveAttribute('aria-pressed', 'true');

@@ -42,6 +42,10 @@ interface ReplicaSound {
   fireRate: number;
   /** Its shot variants (muffled copies for a suppressed replica). */
   shots: readonly AudioBuffer[];
+  /** Muffled copies for a shooter with a silencer fitted (M29b), made the first time one fires. */
+  muffled: readonly AudioBuffer[] | null;
+  /** The sample cue its shots come from. */
+  cue: SoundCue;
 }
 
 /** What every match's sound shares: the Game's audio engine (context, volume buses, every sound's buffers). */
@@ -160,9 +164,9 @@ export class Sfx {
     this.buffers = this.engine.cueBuffers();
     for (const r of this.loadout) {
       const cue = cues.shot(r.power);
-      // A suppressed replica's muffled copies are this match's own (no replica has a suppressor yet).
+      // A replica built suppressed always sounds muffled; one with a silencer fitted (M29b) chooses per shooter.
       const shots = r.look.suppressed ? suppressedCopies(this.engine.samples(cue), ctx.sampleRate).map((v) => toBuffer(ctx, v)) : this.buffers.get(cue)!;
-      this.replicas.set(r.id, { profile: r.power, fireRate: r.fireRate, shots });
+      this.replicas.set(r.id, { profile: r.power, fireRate: r.fireRate, shots, muffled: r.look.suppressed ? shots : null, cue });
     }
   }
 
@@ -349,6 +353,15 @@ export class Sfx {
 
   // ---- What plays ---------------------------------------------------------------------------
 
+  /** A replica's muffled shot variants, made once per match the first time a silenced one fires. */
+  private muffledShots(r: ReplicaSound): readonly AudioBuffer[] {
+    if (!r.muffled && this.ctx) {
+      const ctx = this.ctx;
+      r.muffled = suppressedCopies(this.engine.samples(r.cue), ctx.sampleRate).map((v) => toBuffer(ctx, v));
+    }
+    return r.muffled ?? r.shots;
+  }
+
   /**
    * A shot. An AEG winds its motor up on the first shot of a trigger pull and coasts down after the last: each
    * shot puts the wind-down off (afterTick plays it), so it only sounds once the trigger is let go.
@@ -358,16 +371,20 @@ export class Sfx {
     const out = this.outputFor(characterId, localId, characterOf);
     if (!r || !out) return;
     const L = AUDIO.levels;
-    this.playBuffer(r.shots, replicaId, out, L.shot);
+    // The shooter's own replica as carried (its silencer and battery, M29b), not the local player's copy of it.
+    const shooter = characterOf(characterId)?.armament;
+    const muffled = shooter?.handling[shooter.active]?.muffled ?? false;
+    this.playBuffer(muffled ? this.muffledShots(r) : r.shots, replicaId, out, L.shot);
     if (r.profile !== 'electric') return;
+    const fireRate = shooter?.replicas[shooter.active]?.fireRate ?? r.fireRate;
     let m = this.motors.get(characterId);
     if (!m) {
-      m = { motor: new MotorSound(), fireRate: r.fireRate, out, spinDown: null, spinDownDue: false };
+      m = { motor: new MotorSound(), fireRate, out, spinDown: null, spinDownDue: false };
       this.motors.set(characterId, m);
     }
-    m.fireRate = r.fireRate;
+    m.fireRate = fireRate;
     m.out = out;
-    if (m.motor.shot(this.simTime, r.fireRate)) this.play('motor.spinUp', out, L.motor);
+    if (m.motor.shot(this.simTime, fireRate)) this.play('motor.spinUp', out, L.motor);
     // A wind-down still sounding from the last pull fades out under the new one.
     if (m.spinDown) this.cancel(m.spinDown);
     m.spinDown = null;

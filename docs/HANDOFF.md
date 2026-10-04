@@ -81,6 +81,8 @@ touches movement or materials can fail one seed; re-measure over 16 seeds before
   `overlay`). Tier shares and power stats are applied in `pool/kit.ts`; the Performance sheet is
   `ui/performanceSheet.ts`. A new number for a replica or part is a stats.md column plus a `Column` in statsFile.ts.
   The muzzle is the boundary with the BB physics pass (M30): `muzzleEnergy` / `muzzleVelocity` / `bbMass`.
+  M29b adds barrels and the silencer (`BARRELS` / `MUZZLES`, a shot's reach via `shotHeardScale`, the muzzle mount in
+  `render/replicaModels.ts`) and Hard opponents' rolled kits (`pool/botKit.ts`, `BOT_LOADOUTS`).
 
 ## Working notes and gotchas
 

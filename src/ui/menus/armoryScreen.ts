@@ -24,6 +24,8 @@ const CATEGORY_LABELS: Readonly<Record<Asset['category'], string>> = {
   grip: 'Grips',
   laser: 'Lasers',
   magazine: 'Magazines',
+  barrel: 'Barrels',
+  muzzle: 'Muzzle parts',
   grenade: 'Grenades',
 };
 

@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { MUZZLES } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
 import { BOTS, type BotConfig, botConfig, DIFFICULTIES, type Difficulty } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
@@ -576,6 +577,21 @@ describe('bots in a duel', () => {
     expect(heardShots(behindWall + 3, BOTS)).toBe(false);
     // Without the wall rule (before M22) the same shot carried its full range.
     expect(heardShots(behindWall + 3, HEAR_THROUGH_WALLS)).toBe(true);
+  });
+
+  it("hear a silenced shot only the silencer's share as far (M29b)", () => {
+    const wall: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 };
+    const heardShots = (dist: number, silenced: boolean) => {
+      const { bots, run, commands, player } = duel(dist, () => {}, wall);
+      if (silenced) fitParts(player.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+      Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 });
+      run(0.3);
+      return bots.bots[0]!.hasLastKnown;
+    };
+    const silencedReach = BOTS.hearingDistance * BOTS.wallHearing * MUZZLES.silencer.heardScale;
+    expect(heardShots(silencedReach - 1.5, true)).toBe(true);
+    expect(heardShots(silencedReach + 1.5, true)).toBe(false);
+    expect(heardShots(silencedReach + 1.5, false)).toBe(true);
   });
 
   it('still need their full reaction time on re-sighting someone after only hearing them', () => {

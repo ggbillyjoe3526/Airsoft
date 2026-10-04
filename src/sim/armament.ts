@@ -154,6 +154,11 @@ export function setHopUps(a: Armament, dials: readonly number[]): void {
   }
 }
 
+/** How far the active replica's shots carry, as a share of the usual (a silencer, M29b: below 1). */
+export function shotHeardScale(c: { armament: Armament }): number {
+  return c.armament.handling[c.armament.active]?.heardScale ?? 1;
+}
+
 /** True if any magazine carried rattles as you move (a hi-cap): quiet moves aren't silent (sim/footsteps.ts). */
 export function rattles(a: Armament): boolean {
   for (const h of a.handling) if (h.rattles) return true;

@@ -4,7 +4,7 @@ import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS } from './config/ballistics';
-import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
+import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
 import { DEV_DEFAULTS, type DevSettings, devCheating } from './config/dev';
@@ -16,6 +16,8 @@ import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, type ReplicaConfig } from './config/replicas';
+import { botKitSeed, kittedCharacter, randomKit } from './pool/botKit';
+import { GAME_POOL } from './pool/gamePool';
 import type { PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
@@ -47,6 +49,8 @@ import type { NotCounted } from './ui/recordsView';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
+/** The team the player is on at the start (Blue); the other team is the opponents. */
+const PLAYER_TEAM = 0;
 
 /** What New game sets up, read when Play is pressed (M15b: nothing is loaded before that). */
 export interface MatchSetup {
@@ -154,7 +158,7 @@ export class MatchSession {
       rounds: this.rounds,
       pole: map.flag,
     });
-    this.player = this.spawnRoster(map);
+    this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.bots = new BotController(
@@ -355,15 +359,21 @@ export class MatchSession {
    * Creates both teams at the map's spawns for round 1 (each team at its end, see placeTeams): the local player
    * plus bot teammates on Blue, and Orange bots. Returns the player.
    */
-  private spawnRoster(map: MapData): Character {
+  private spawnRoster(map: MapData, seed: number): Character {
     const size = this.setup.rules.teamSize;
     for (const [end, spawns] of map.spawns.entries()) {
       if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
     }
     let id = PLAYER_ID;
     for (let team = 0; team < TEAMS.length; team++) {
-      // You carry your kit; every bot carries the default loadout as it comes.
-      for (let i = 0; i < size; i++, id++) this.state.characters.push(createCharacter(id, vec3(), 0, id === PLAYER_ID ? this.loadout : LOADOUT, team));
+      // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
+      // their difficulty rolls each one a kit of its own (M29b).
+      const rolled = team !== PLAYER_TEAM && BOT_LOADOUTS[this.setup.difficulty] === 'random';
+      for (let i = 0; i < size; i++, id++) {
+        if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
+        else if (rolled) this.state.characters.push(kittedCharacter(id, team, randomKit(GAME_POOL, LOADOUT, botKitSeed(seed, id))));
+        else this.state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, team));
+      }
     }
     placeTeams(this.state.round, this.state.characters, this.ctx.round);
     for (const c of this.state.characters) {
