@@ -1,4 +1,4 @@
-import { FRAME_RATE_CAPS, type FrameRateCap, type QualitySettings } from './render';
+import { FRAME_RATE_CAPS, type FrameRateCap, type QualitySettings, type ToneMappingId } from './render';
 
 /**
  * Settings → Graphics (final alpha audit section 4, UI-06): the Custom rows, one per QualitySettings field, and the two
@@ -118,7 +118,44 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
     ],
   }),
   range({ field: 'dustMotes', label: 'Dust in the air', help: 'Specks of dust drifting in the sunlight round you.', cost: 'Free', min: 0, max: 300, step: 30, perUnit: 1, format: (v) => String(Math.round(v)) }),
-  choice({ field: 'replicaSheen', label: 'Replica sheen', help: 'Soft reflections in the held replica’s plastic.', cost: 'GPU: small; memory 6 MB', options: onOff }),
+  choice({ field: 'replicaSheen', label: 'Replica sheen', help: 'Soft reflections of the sky in the held replica.', cost: 'GPU: small; memory 6 MB (shared)', options: onOff }),
+  // The visual overhaul's rows (audit section 5, FA7).
+  choice({
+    field: 'environment',
+    label: 'Environment lighting',
+    help: 'The sky lights and reflects in players, the flag, targets and steel floors.',
+    cost: 'GPU: small; memory 6 MB (shared)',
+    options: onOff,
+  }),
+  choice({
+    field: 'normalMaps',
+    label: 'Relief maps',
+    help: 'How surface relief is drawn: normal maps are sharper and cheaper than the older bump maps.',
+    cost: 'Normal: a second texture per surface, at most 512²',
+    options: [
+      { id: 'bump', label: 'Bump', value: false },
+      { id: 'normal', label: 'Normal', value: true },
+    ],
+  }),
+  choice({
+    field: 'mapDetail',
+    label: 'Map detail',
+    help: 'Bevelled edges, soft shade in corners, painted signs and finer props, flag and range targets.',
+    cost: 'Free: rebuilds the map',
+    options: onOff,
+  }),
+  choice({
+    field: 'trees',
+    label: 'Trees',
+    help: 'The trees round the field: none, a simple ring, or layered trees and a hedge.',
+    cost: 'Small',
+    options: [
+      { id: 'none', label: 'None', value: 0 },
+      { id: 'simple', label: 'Simple', value: 1 },
+      { id: 'detailed', label: 'Detailed', value: 2 },
+    ],
+  }),
+  choice({ field: 'clouds', label: 'Clouds', help: 'Clouds and the sun’s disc in the sky.', cost: 'Small', options: onOff }),
 ];
 
 /** The row for a field (every QualitySettings field has one: config/graphics.test.ts). */
@@ -156,6 +193,13 @@ export const FRAME_RATE_CAP_CHOICES: readonly { id: string; label: string; blurb
   value: cap,
 }));
 
+/** The tone mapping row (not part of a preset; audit section 5 F2, owner: Neutral by default). */
+export const TONE_MAPPING_CHOICES: readonly { id: ToneMappingId; label: string; blurb: string }[] = [
+  { id: 'neutral', label: 'Neutral', blurb: 'Clean, saturated colour: the team colours and the sky as painted.' },
+  { id: 'agx', label: 'AgX', blurb: 'Softer highlights, a little less saturation.' },
+  { id: 'aces', label: 'ACES', blurb: 'Filmic contrast, as before the visual overhaul: duller colours.' },
+];
+
 /** The FPS readout (a small counter in the top-left corner while playing). */
 export const SHOW_FPS_CHOICES = [
   { id: 'off', label: 'Off', blurb: '' },
@@ -169,6 +213,7 @@ export const GRAPHICS_TEXT = {
   customIntro: 'Each row applies at once. The cost after each one says what it takes from your graphics card.',
   frameRateHelp: 'A cap on frames a second. Off follows the screen.',
   showFpsHelp: 'A frame counter while you play.',
+  toneMappingHelp: 'How bright colours roll off to the screen. Free.',
   /** Under Edge smoothing when the browser gave no multisampling (Firefox on Linux, some drivers; REN-21). */
   antialiasRefused: 'Not available in this browser: the picture is drawn without edge smoothing.',
   /** Under Edge smoothing when a new graphics context could not be made: the change waits for the next load (REN-04). */

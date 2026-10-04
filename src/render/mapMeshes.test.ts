@@ -1,10 +1,24 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
 import { vec3 } from '../sim/vec';
-import { SURFACES, type SurfaceTextureId } from '../config/render';
-import { blockPieces, blockShade, blockTint, buildMapMeshes, castsShadow, disposeMapMeshes, setMapRelief, setMapTextures } from './mapMeshes';
+import { QUALITY, SURFACES, type SurfaceTextureId } from '../config/render';
+import {
+  blockPieces,
+  blockShade,
+  blockTint,
+  buildMapMeshes,
+  castsShadow,
+  disposeMapMeshes,
+  groundNoise,
+  type MapLook,
+  mapLookOf,
+  mapNeedsRebuild,
+  restyleMap,
+  setMapRelief,
+  setMapTextures,
+} from './mapMeshes';
 import type { SurfaceTextures } from './proceduralTextures';
 
 /** Every team colour of every set (Settings → Accessibility, M18b). */
@@ -60,16 +74,24 @@ describe('blockTint', () => {
 });
 
 describe('the art pass on the map (M14)', () => {
-  /** Stand-in textures (canvases need a browser): only their world size matters to the geometry. */
+  /**
+   * Stand-in textures (canvases need a browser): their world size matters to the geometry, their name (the surface)
+   * to restyling, and each has a stand-in normal map (worked out from a canvas in the game).
+   */
   const textures = Object.fromEntries(
-    (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => [id, { texture: new THREE.Texture() as THREE.CanvasTexture, worldSize: SURFACES.worldSize[id] }]),
+    (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => [
+      id,
+      { texture: Object.assign(new THREE.Texture(), { name: id }) as THREE.CanvasTexture, worldSize: SURFACES.worldSize[id], normal: new THREE.Texture() },
+    ]),
   ) as SurfaceTextures;
   const EPS = 1e-9;
+  /** The look before map detail, with bump-mapped relief on or off. */
+  const plain = (relief: boolean): MapLook => ({ relief, normalMaps: false, detail: false, steelSheen: false });
 
-  it('draws every detail inside its own block, so what you see is exactly what collides', () => {
+  it('draws every detail inside its own block, so what you see is exactly what collides (with map detail too)', () => {
     for (const b of DEPOT.blocks) {
       if (b.kind === 'ramp') continue;
-      for (const p of blockPieces(b, DEPOT.blocks)) {
+      for (const p of [...blockPieces(b, DEPOT.blocks), ...blockPieces(b, DEPOT.blocks, true)]) {
         for (let axis = 0; axis < 3; axis++) {
           const key = (['x', 'y', 'z'] as const)[axis]!;
           expect(p.box.min[axis]!).toBeGreaterThanOrEqual(b.center[key] - b.size[key] / 2 - EPS);
@@ -117,7 +139,7 @@ describe('the art pass on the map (M14)', () => {
   });
 
   it('builds the whole of Depot in a handful of draw calls', () => {
-    const group = buildMapMeshes(DEPOT, textures, true);
+    const group = buildMapMeshes(DEPOT, textures, plain(true));
     // One mesh per texture (and shadow setting): 8 before M25b's sandbag and gabion textures.
     expect(group.children.length).toBeLessThanOrEqual(10);
     disposeMapMeshes(group);
@@ -132,7 +154,7 @@ describe('the art pass on the map (M14)', () => {
     for (const b of ground) expect(castsShadow(b)).toBe(false);
     for (const b of raised) expect(castsShadow(b), `${b.kind} at ${b.center.x}`).toBe(true);
     // No part of the deck is left in a mesh that casts nothing (it shared the ground's), and no new mesh is needed.
-    const group = buildMapMeshes(DEPOT, textures, true);
+    const group = buildMapMeshes(DEPOT, textures, plain(true));
     const deck = raised.find((b) => b.kind === 'floor')!;
     const top = deck.center.y + deck.size.y / 2;
     const flat = group.children.filter((m): m is THREE.Mesh => m instanceof THREE.Mesh && !m.castShadow);
@@ -160,10 +182,10 @@ describe('the art pass on the map (M14)', () => {
   });
 
   it('turns surface relief on and off on a built map', () => {
-    const group = buildMapMeshes(DEPOT, textures, false);
+    const group = buildMapMeshes(DEPOT, textures, plain(false));
     const materials = group.children.map((m) => (m as THREE.Mesh).material as THREE.MeshLambertMaterial);
     expect(materials.every((m) => m.bumpMap === null)).toBe(true);
-    setMapRelief(group, true);
+    setMapRelief(group, textures, { relief: true, normalMaps: false });
     expect(materials.every((m) => m.bumpMap === m.map)).toBe(true);
     disposeMapMeshes(group);
   });
@@ -179,7 +201,7 @@ describe('the art pass on the map (M14)', () => {
         }),
       ) as SurfaceTextures;
     const [small, large] = [named(), named()];
-    const group = buildMapMeshes(DEPOT, small, true);
+    const group = buildMapMeshes(DEPOT, small, plain(true));
     const materials = group.children.map((m) => (m as THREE.Mesh).material as THREE.MeshLambertMaterial);
     const surfaces = materials.map((m) => m.map!.name);
     setMapTextures(group, large);
@@ -189,9 +211,122 @@ describe('the art pass on the map (M14)', () => {
       expect(m.bumpMap).toBe(m.map);
     }
     // Relief off stays off.
-    setMapRelief(group, false);
+    setMapRelief(group, large, { relief: false, normalMaps: false });
     setMapTextures(group, small);
     expect(materials.every((m) => m.bumpMap === null && m.map === small[m.map!.name as SurfaceTextureId].texture)).toBe(true);
     disposeMapMeshes(group);
+  });
+
+  /** Map detail as Medium has it, with a stand-in for the signs' texture. */
+  const detailed: MapLook = { relief: true, normalMaps: true, detail: true, steelSheen: true };
+  const atlas = () => Object.assign(new THREE.Texture(), { name: 'decals' });
+  const triangles = (group: THREE.Group): number =>
+    group.children.reduce((n, m) => n + Math.min((m as THREE.Mesh).geometry.index!.count, (m as THREE.Mesh).geometry.drawRange.count) / 3, 0);
+
+  it('reads its look from the quality settings: Low is the look before map detail', () => {
+    expect(mapLookOf(QUALITY.low)).toEqual({ relief: false, normalMaps: false, detail: false, steelSheen: false });
+    expect(mapLookOf(QUALITY.medium)).toEqual(detailed);
+    expect(mapNeedsRebuild(mapLookOf(QUALITY.medium), mapLookOf(QUALITY.high))).toBe(false);
+    expect(mapNeedsRebuild(mapLookOf(QUALITY.low), mapLookOf(QUALITY.medium))).toBe(true);
+    expect(mapNeedsRebuild(plain(true), plain(false))).toBe(false);
+  });
+
+  it('adds prop detail with map detail: lock boxes, deck boards, a fuel cap, rubble and a barrier’s recessed top', () => {
+    for (const kind of ['container', 'crate', 'generator', 'skip', 'barrier'] as const) {
+      const b = DEPOT.blocks.find((o) => o.kind === kind && blockPieces(o, DEPOT.blocks).length >= 1 && o.surface !== 'metal' && (kind !== 'crate' || blockPieces(o, DEPOT.blocks).length > 1))!;
+      expect(blockPieces(b, DEPOT.blocks, true).length, kind).toBeGreaterThan(blockPieces(b, DEPOT.blocks).length);
+    }
+  });
+
+  it('with map detail: bevels, tiles and baked shade on Depot, the signs, and steel that takes the sky', () => {
+    const before = buildMapMeshes(DEPOT, textures, plain(true));
+    const group = buildMapMeshes(DEPOT, textures, detailed, atlas);
+    expect(group.getObjectByName('map-decals')).toBeDefined();
+    expect(before.getObjectByName('map-decals')).toBeUndefined();
+    expect(triangles(group)).toBeGreaterThan(2 * triangles(before));
+    // The ground's vertex colours vary (occlusion along wall feet, ground variation); without detail it is one colour.
+    const shades = (g: THREE.Group) => {
+      const m = g.getObjectByName('map-concrete-flat') as THREE.Mesh;
+      const c = m.geometry.getAttribute('color');
+      const values = Array.from({ length: c.count }, (_, i) => c.getY(i));
+      return { min: Math.min(...values), max: Math.max(...values) };
+    };
+    expect(shades(before).max - shades(before).min).toBeLessThan(0.05);
+    expect(shades(group).max - shades(group).min).toBeGreaterThan(0.1);
+    const steel = group.getObjectByName('map-steelPlate-flat') ?? group.getObjectByName('map-steelPlate');
+    expect((steel as THREE.Mesh).material).toBeInstanceOf(THREE.MeshStandardMaterial);
+    expect(group.children.length).toBeLessThanOrEqual(11);
+    disposeMapMeshes(before);
+    disposeMapMeshes(group);
+  });
+
+  it('draws plain boxes into the shadow map in place of the detailed ones (the same mesh, another index range)', () => {
+    const group = buildMapMeshes(DEPOT, textures, detailed, atlas);
+    const casters = group.children.filter((m): m is THREE.Mesh => m instanceof THREE.Mesh && m.castShadow && m.name !== 'map-decals');
+    expect(casters.length).toBeGreaterThan(3);
+    for (const m of casters) {
+      const geo = m.geometry;
+      const all = geo.index!.count;
+      const drawn = geo.drawRange.count;
+      expect(geo.drawRange.start).toBe(0);
+      expect(drawn).toBeLessThan(all);
+      m.onBeforeShadow({} as never, {} as never, {} as never, {} as never, geo, {} as never, null as never);
+      expect(geo.drawRange.start).toBe(drawn);
+      expect(geo.drawRange.count).toBe(all - drawn);
+      expect(geo.drawRange.count).toBeLessThan(drawn);
+      m.onAfterShadow({} as never, {} as never, {} as never, {} as never, geo, {} as never, null as never);
+      expect(geo.drawRange.start).toBe(0);
+      expect(geo.drawRange.count).toBe(drawn);
+    }
+    // Without map detail every mesh draws all of itself everywhere.
+    const before = buildMapMeshes(DEPOT, textures, plain(true));
+    for (const m of before.children as THREE.Mesh[]) expect(m.geometry.drawRange.count).toBe(Number.POSITIVE_INFINITY);
+    disposeMapMeshes(before);
+    disposeMapMeshes(group);
+  });
+
+  it('restyles a built map in place, or builds it again (freeing the old one) when map detail or the steel changes', () => {
+    const scene = new THREE.Scene();
+    const low = buildMapMeshes(DEPOT, textures, mapLookOf(QUALITY.low));
+    scene.add(low);
+    const dispose = vi.spyOn(THREE.BufferGeometry.prototype, 'dispose');
+    const medium = restyleMap(low, DEPOT, textures, mapLookOf(QUALITY.low), mapLookOf(QUALITY.medium), atlas);
+    expect(medium).not.toBe(low);
+    expect(low.parent).toBeNull();
+    expect(medium.parent).toBe(scene);
+    expect(dispose).toHaveBeenCalled();
+    dispose.mockClear();
+    const high = restyleMap(medium, DEPOT, textures, mapLookOf(QUALITY.medium), mapLookOf(QUALITY.high));
+    expect(high).toBe(medium);
+    expect(dispose).not.toHaveBeenCalled();
+    dispose.mockRestore();
+    disposeMapMeshes(high);
+    expect(scene.children).toHaveLength(0);
+  });
+
+  it('frees the signs’ texture with the map', () => {
+    const texture = atlas();
+    const dispose = vi.spyOn(texture, 'dispose');
+    disposeMapMeshes(buildMapMeshes(DEPOT, textures, detailed, () => texture));
+    expect(dispose).toHaveBeenCalled();
+  });
+});
+
+describe('groundNoise', () => {
+  it('is a smooth, repeatable variation between -1 and 1', () => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let x = -20; x < 20; x += 0.37) {
+      for (let z = -15; z < 15; z += 0.41) {
+        const n = groundNoise(x, z);
+        lo = Math.min(lo, n);
+        hi = Math.max(hi, n);
+        expect(Math.abs(groundNoise(x + 0.01, z) - n)).toBeLessThan(0.05);
+      }
+    }
+    expect(lo).toBeGreaterThanOrEqual(-1);
+    expect(hi).toBeLessThanOrEqual(1);
+    expect(hi - lo).toBeGreaterThan(0.8);
+    expect(groundNoise(3.3, -2.1)).toBe(groundNoise(3.3, -2.1));
   });
 });

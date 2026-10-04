@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, graphicsRow, parseStored, storedValue } from './graphics';
-import { FRAME_RATE_CAPS, QUALITY, QUALITY_FIELDS, QUALITY_PRESETS } from './render';
+import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, graphicsRow, parseStored, storedValue, TONE_MAPPING_CHOICES } from './graphics';
+import { FRAME_RATE_CAPS, QUALITY, QUALITY_FIELDS, QUALITY_PRESETS, TONE_MAPPING } from './render';
 
 describe('the Custom graphics rows (final alpha audit section 4, UI-06)', () => {
   it('has one row for every quality setting, each with help and a cost', () => {
@@ -38,5 +38,27 @@ describe('the Custom graphics rows (final alpha audit section 4, UI-06)', () => 
   it('offers no cap first, then each frame-rate cap', () => {
     expect(FRAME_RATE_CAP_CHOICES.map((c) => c.value)).toEqual([...FRAME_RATE_CAPS]);
     expect(FRAME_RATE_CAP_CHOICES[0]).toMatchObject({ id: 'off', value: 0 });
+  });
+});
+
+describe('the visual overhaul’s rows (FA7)', () => {
+  it('adds its rows after the existing ones, in one block', () => {
+    const fields = GRAPHICS_ROWS.map((r) => r.field);
+    expect(fields.slice(-5)).toEqual(['environment', 'normalMaps', 'mapDetail', 'trees', 'clouds']);
+  });
+
+  it('stores trees and relief maps by name and reads them back', () => {
+    const trees = graphicsRow('trees')!;
+    expect([0, 1, 2].map((v) => storedValue(trees, v))).toEqual(['none', 'simple', 'detailed']);
+    expect(parseStored(trees, 'detailed')).toBe(2);
+    const relief = graphicsRow('normalMaps')!;
+    expect(storedValue(relief, false)).toBe('bump');
+    expect(parseStored(relief, 'normal')).toBe(true);
+    expect(parseStored(relief, 'off')).toBeUndefined();
+  });
+
+  it('offers Neutral first (the default), then AgX and ACES', () => {
+    expect(TONE_MAPPING_CHOICES.map((c) => c.id)).toEqual(['neutral', 'agx', 'aces']);
+    expect(TONE_MAPPING_CHOICES[0]!.id).toBe(TONE_MAPPING.default);
   });
 });

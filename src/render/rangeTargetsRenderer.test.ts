@@ -1,8 +1,10 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RANGE, RANGE_VISUALS } from '../config/range';
 import { lastShotText } from '../ui/rangeReadout';
-import { figureRotation, figureTilt, plateRotation, plateSwing } from './rangeTargetsRenderer';
+import { createRangeTargets } from '../sim/rangeTargets';
+import { HITS } from '../config/hits';
+import { figureRotation, figureTilt, plateRotation, plateScuffs, plateSwing, RangeTargetsRenderer } from './rangeTargetsRenderer';
 
 describe('practice range presentation (M21)', () => {
   it('drops a figure back quickly, keeps it down, and stands it up at the end of its time down', () => {
@@ -40,5 +42,48 @@ describe('practice range presentation (M21)', () => {
     expect(lastShotText({ distance: 30.6, target: { label: 'Steel', distance: 30 } })).toBe('Last BB: 31 m · hit Steel 30 m');
     expect(lastShotText({ distance: 44.2, target: null })).toBe('Last BB: 44 m · miss');
     expect(lastShotText({ distance: 0, target: null, lost: true })).toContain('flew out of the range');
+  });
+});
+
+describe('range targets with map detail (audit section 5)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('scatters the same BB scuffs for a seed, inside the plate, bunched round its middle', () => {
+    const D = RANGE_VISUALS.detail;
+    const a = plateScuffs(7);
+    expect(plateScuffs(7)).toEqual(a);
+    expect(plateScuffs(8)).not.toEqual(a);
+    expect(a.length).toBeGreaterThanOrEqual(D.scuffs[0]);
+    expect(a.length).toBeLessThanOrEqual(D.scuffs[1]);
+    const half = D.textureSize / 2;
+    let near = 0;
+    for (const s of a) {
+      expect(Math.hypot(s.x - half, s.y - half)).toBeLessThan(half);
+      if (Math.hypot(s.x - half, s.y - half) < half / 2) near++;
+    }
+    expect(near).toBeGreaterThan(a.length / 2);
+  });
+
+  it('shows its chains, arms, bands, brackets and shelf and paints its plates only with map detail', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
+    const r = new RangeTargetsRenderer(createRangeTargets(), HITS);
+    const visible = (): { meshes: number; mapped: number } => {
+      let meshes = 0;
+      let mapped = 0;
+      r.object.traverseVisible((o) => {
+        if (!(o instanceof THREE.Mesh)) return;
+        meshes++;
+        if ((o.material as THREE.MeshStandardMaterial).map) mapped++;
+      });
+      return { meshes, mapped };
+    };
+    const plain = visible();
+    r.setDetail(true);
+    const detailed = visible();
+    expect(detailed.meshes).toBeGreaterThan(plain.meshes);
+    expect(detailed.mapped).toBeGreaterThan(plain.mapped);
+    r.setDetail(false);
+    expect(visible()).toEqual(plain);
+    r.dispose();
   });
 });

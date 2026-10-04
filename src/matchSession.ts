@@ -27,8 +27,9 @@ import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
+import { ContactShadows } from './render/contactShadows';
 import { addLighting, type Daylight } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes, setMapRelief, setMapTextures } from './render/mapMeshes';
+import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, restyleMap } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -85,8 +86,13 @@ export class MatchSession {
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
-  private readonly mapGroup: THREE.Group;
+  private mapGroup: THREE.Group;
+  /** The map's drawing as built (map detail, relief…) and the map itself, to restyle it (Settings → Graphics). */
+  private mapLook: MapLook;
+  private readonly mapData: MapData;
   private readonly daylight: Daylight;
+  /** A soft dark disc on the floor under every player (audit section 5, F5), on every preset. */
+  private readonly contact: ContactShadows;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
@@ -124,7 +130,9 @@ export class MatchSession {
     const map = setup.map;
     this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04).
-    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
+    this.mapData = map;
+    this.mapLook = mapLookOf(quality);
+    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, this.mapLook);
     renderer.scene.add(this.mapGroup);
     this.daylight = addLighting(renderer.scene, map, quality);
 
@@ -170,6 +178,9 @@ export class MatchSession {
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map.blocks, renderer.figureModel);
     this.match.setFigureShadows(quality.figureShadows);
+    this.match.setFlagDetail(quality.mapDetail);
+    this.contact = new ContactShadows(this.state.characters, this.hits.vanishTime);
+    renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
   }
 
@@ -258,6 +269,7 @@ export class MatchSession {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
+    this.contact.update(alpha, spectating ? -1 : PLAYER_ID);
     const holding = this.bots.holdSpot(this.player, this.holdSpot);
     const order = this.bots.orderOf(this.player);
     this.match.showSquadOrder(order, holding ? this.holdSpot : null, this.renderer.camera, dt);
@@ -282,9 +294,11 @@ export class MatchSession {
    */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    setMapTextures(this.mapGroup, this.renderer.surfaceTextures);
-    setMapRelief(this.mapGroup, quality.surfaceRelief);
+    const look = mapLookOf(quality);
+    this.mapGroup = restyleMap(this.mapGroup, this.mapData, this.renderer.surfaceTextures, this.mapLook, look);
+    this.mapLook = look;
     this.match.setFigureShadows(quality.figureShadows);
+    this.match.setFlagDetail(quality.mapDetail);
     this.combat.setQuality(quality);
   }
 
@@ -334,6 +348,7 @@ export class MatchSession {
   dispose(): void {
     this.combat.dispose();
     this.match.dispose();
+    this.contact.dispose();
     this.renderer.scene.remove(this.mapGroup);
     disposeMapMeshes(this.mapGroup);
     this.daylight.dispose();

@@ -142,6 +142,11 @@ export class MatchPresentation {
     this.flag.setReceiveShadows(on);
   }
 
+  /** The flagpole's finer detail (QualitySettings.mapDetail; audit section 5, "Flagpole and cloth"). */
+  setFlagDetail(on: boolean): void {
+    this.flag.setDetail(on);
+  }
+
   /** On-screen sound cues turned on or off (also called once as the match is built). */
   setSoundCues(on: boolean): void {
     this.soundCues.setEnabled(on);

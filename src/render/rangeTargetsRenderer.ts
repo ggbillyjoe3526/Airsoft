@@ -3,9 +3,42 @@ import type { HitConfig } from '../config/hits';
 import { RANGE, RANGE_VISUALS } from '../config/range';
 import type { GameEvent } from '../sim/events';
 import type { RangeTarget } from '../sim/rangeTargets';
+import { createRng, rngNext } from '../sim/rng';
 import { setReceiveShadows } from './characterModels';
 
 const V = RANGE_VISUALS;
+const VD = V.detail;
+
+/** A canvas of `w` × `h` drawn by `draw` (nothing where the browser gives no 2D context), as an sRGB texture. */
+function canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, colour = true): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const g = canvas.getContext('2d');
+  if (g) draw(g);
+  const tex = new THREE.CanvasTexture(canvas);
+  if (colour) tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/**
+ * Where a plate's BB scuffs are, in its texture's pixels (map detail): `count` discs bunched round the middle (a
+ * normal spread of `scuffSpread` of the radius), each `scuffRadius` px. Seeded, so every plate of a size matches.
+ */
+export function plateScuffs(seed: number): { x: number; y: number; r: number }[] {
+  const size = VD.textureSize;
+  const rng = createRng(seed);
+  const count = VD.scuffs[0] + Math.floor(rngNext(rng) * (VD.scuffs[1] - VD.scuffs[0] + 1));
+  const out: { x: number; y: number; r: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    // Box–Muller: hits bunch round the plate's middle.
+    const a = rngNext(rng) * Math.PI * 2;
+    const d = Math.sqrt(-2 * Math.log(1 - rngNext(rng) * 0.999)) * VD.scuffSpread * (size / 2) * 0.5;
+    const r = VD.scuffRadius[0] + rngNext(rng) * (VD.scuffRadius[1] - VD.scuffRadius[0]);
+    out.push({ x: size / 2 + Math.cos(a) * d, y: size / 2 + Math.sin(a) * d, r });
+  }
+  return out;
+}
 
 /**
  * How far back a figure lies (rad) with `down` seconds left before it stands up (0: standing): it falls over
@@ -47,14 +80,28 @@ export class RangeTargetsRenderer {
   private readonly geometries: THREE.BufferGeometry[] = [];
   private readonly materials: THREE.Material[] = [];
   private readonly textures: THREE.Texture[] = [];
+  /** Map detail (setDetail): the parts shown only with it, the materials that take a painted texture, and those textures. */
+  private readonly detailParts: THREE.Object3D[] = [];
+  private readonly steel: THREE.MeshStandardMaterial;
+  private readonly ply: THREE.MeshStandardMaterial;
+  private readonly plyHead: THREE.MeshStandardMaterial;
+  private painted: { steel: THREE.Texture; steelRough: THREE.Texture; ply: THREE.Texture; head: THREE.Texture } | null = null;
 
   constructor(
     private readonly targets: readonly RangeTarget[],
     hits: HitConfig,
   ) {
-    const steel = this.track(new THREE.MeshStandardMaterial({ color: V.steelColor, metalness: V.steelMetalness, roughness: V.steelRoughness }));
+    const steel = (this.steel = this.track(new THREE.MeshStandardMaterial({ color: V.steelColor, metalness: V.steelMetalness, roughness: V.steelRoughness })));
     const post = this.track(new THREE.MeshStandardMaterial({ color: V.postColor, roughness: 0.8 }));
-    const ply = this.track(new THREE.MeshStandardMaterial({ color: V.figureColor, roughness: V.figureRoughness }));
+    const ply = (this.ply = this.track(new THREE.MeshStandardMaterial({ color: V.figureColor, roughness: V.figureRoughness })));
+    const plyHead = (this.plyHead = this.track(new THREE.MeshStandardMaterial({ color: V.figureColor, roughness: V.figureRoughness })));
+    // Map detail's parts: chain links, the arm the chains hang from, a safety band on each post, hinge brackets.
+    const metal = this.track(new THREE.MeshStandardMaterial({ color: VD.metal, metalness: 0.7, roughness: 0.4 }));
+    const band = this.track(new THREE.MeshStandardMaterial({ color: VD.band.colour, roughness: 0.6 }));
+    const linkGeo = this.trackGeo(new THREE.TorusGeometry(VD.linkRadius, VD.linkTube, 5, 10));
+    const armGeo = this.trackGeo(new THREE.BoxGeometry(2 * VD.chainSpread + RANGE.postWidth, VD.armDepth, RANGE.postBehind + RANGE.postWidth / 2));
+    const bandGeo = this.trackGeo(new THREE.BoxGeometry(RANGE.postWidth * 1.15, VD.band.height, RANGE.postWidth * 1.15));
+    const hingeGeo = this.trackGeo(new THREE.BoxGeometry(VD.hinge.width, VD.hinge.height, VD.hinge.depth));
     const plateGeo = this.trackGeo(new THREE.CylinderGeometry(RANGE.plateRadius, RANGE.plateRadius, V.plateThickness, V.plateSegments));
     plateGeo.rotateX(Math.PI / 2); // face the firing line (+z)
     const headGeo = this.trackGeo(new THREE.CylinderGeometry(hits.headRadius, hits.headRadius, V.figureThickness, 16));
@@ -77,6 +124,24 @@ export class RangeTargetsRenderer {
         hanger.add(plate);
         stand.add(upright, hanger);
         mover = hanger;
+        // Detail: the plate on two short chains from an arm off the post's top, and a safety band on the post.
+        const arm = new THREE.Mesh(armGeo, metal);
+        arm.position.set(0, top + VD.armDepth / 2, -RANGE.postBehind / 2);
+        const bandMesh = new THREE.Mesh(bandGeo, band);
+        bandMesh.position.set(0, VD.band.at, -RANGE.postBehind);
+        const chains = new THREE.Group();
+        const step = RANGE.postAbovePlate / VD.links;
+        for (const side of [-1, 1]) {
+          for (let k = 0; k < VD.links; k++) {
+            const link = new THREE.Mesh(linkGeo, metal);
+            link.position.set(side * VD.chainSpread, -(k + 0.5) * step, 0);
+            link.rotation.set(0, k % 2 === 0 ? 0 : Math.PI / 2, Math.PI / 2);
+            chains.add(link);
+          }
+        }
+        hanger.add(chains);
+        stand.add(arm, bandMesh);
+        this.detailParts.push(arm, bandMesh, chains);
       } else {
         // A plywood cut-out the size of a player's hit volume, standing or crouched, hinged at its feet.
         const drop = t.crouched ? hits.crouchDrop : 0;
@@ -84,18 +149,50 @@ export class RangeTargetsRenderer {
         const hinge = new THREE.Group();
         const torso = new THREE.Mesh(this.trackGeo(new THREE.BoxGeometry(V.figureWidth, bodyTop - hits.bodyBottom, V.figureThickness)), ply);
         torso.position.y = (bodyTop + hits.bodyBottom) / 2;
-        const head = new THREE.Mesh(headGeo, ply);
+        const head = new THREE.Mesh(headGeo, plyHead);
         head.position.y = hits.headHeight - drop;
         torso.castShadow = head.castShadow = true;
         hinge.add(torso, head);
         stand.add(hinge);
         mover = hinge;
+        // Detail: the hinge brackets the figure stands on.
+        for (const side of [-1, 1]) {
+          const bracket = new THREE.Mesh(hingeGeo, metal);
+          bracket.position.set(side * (V.figureWidth / 2 - VD.hinge.inset), VD.hinge.height / 2, 0);
+          stand.add(bracket);
+          this.detailParts.push(bracket);
+        }
       }
       this.movers.push(mover);
       this.swingT.push(Number.POSITIVE_INFINITY);
       this.object.add(stand);
     }
     this.addMarkers();
+    this.addShelf(metal);
+    this.setDetail(false);
+  }
+
+  /**
+   * Map detail on or off (QualitySettings.mapDetail): the chains, arms, bands, brackets and shelf, and the painted
+   * plates (BB scuffs, rougher than the paint) and figures (scoring zones), drawn the first time detail is on.
+   */
+  setDetail(on: boolean): void {
+    for (const part of this.detailParts) part.visible = on;
+    const p = on ? (this.painted ??= this.paint()) : null;
+    const set = (m: THREE.MeshStandardMaterial, map: THREE.Texture | null, roughnessMap: THREE.Texture | null = null): void => {
+      if (m.map === map && m.roughnessMap === roughnessMap) return;
+      m.map = map;
+      m.roughnessMap = roughnessMap;
+      m.needsUpdate = true;
+    };
+    set(this.steel, p?.steel ?? null, p?.steelRough ?? null);
+    // White paint under the scuffs: the map carries the colour, the roughness map the scuffs' roughness.
+    this.steel.color.setHex(p ? 0xffffff : V.steelColor);
+    this.steel.roughness = p ? 1 : V.steelRoughness;
+    set(this.ply, p?.ply ?? null);
+    set(this.plyHead, p?.head ?? null);
+    this.ply.color.setHex(p ? 0xffffff : V.figureColor);
+    this.plyHead.color.setHex(p ? 0xffffff : V.figureColor);
   }
 
   /** Plates and figures shaded by the range's walls, or lit as if in full sun (QualitySettings.figureShadows, REN-07). */
@@ -154,6 +251,105 @@ export class RangeTargetsRenderer {
         this.object.add(sign);
       }
     }
+  }
+
+  /** A shelf of BB bottles by the firing line (map detail). */
+  private addShelf(metal: THREE.Material): void {
+    const S = VD.shelf;
+    const B = VD.bottles;
+    const shelf = new THREE.Group();
+    shelf.position.set(S.x, 0, S.z);
+    const top = new THREE.Mesh(this.trackGeo(new THREE.BoxGeometry(S.width, S.top, S.depth)), this.track(new THREE.MeshStandardMaterial({ color: S.colour, roughness: 0.7 })));
+    top.position.y = S.height - S.top / 2;
+    const legGeo = this.trackGeo(new THREE.BoxGeometry(S.top, S.height - S.top, S.top));
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const leg = new THREE.Mesh(legGeo, metal);
+        leg.position.set(sx * (S.width / 2 - S.top), (S.height - S.top) / 2, sz * (S.depth / 2 - S.top));
+        shelf.add(leg);
+      }
+    }
+    const bottleGeo = this.trackGeo(new THREE.CylinderGeometry(B.radius, B.radius, B.height, 10));
+    const capGeo = this.trackGeo(new THREE.CylinderGeometry(B.radius * 0.45, B.radius * 0.45, B.height * 0.15, 8));
+    const bottleMat = this.track(new THREE.MeshStandardMaterial({ color: B.colour, roughness: 0.5 }));
+    const capMat = this.track(new THREE.MeshStandardMaterial({ color: B.capColour, roughness: 0.6 }));
+    for (let i = 0; i < B.count; i++) {
+      const x = (i - (B.count - 1) / 2) * B.radius * 3;
+      const bottle = new THREE.Mesh(bottleGeo, bottleMat);
+      bottle.position.set(x, S.height + B.height / 2, 0);
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.set(x, S.height + B.height * 1.075, 0);
+      shelf.add(bottle, cap);
+    }
+    shelf.add(top);
+    shelf.traverse((o) => (o.castShadow = o instanceof THREE.Mesh));
+    this.object.add(shelf);
+    this.detailParts.push(shelf);
+  }
+
+  /** The painted textures (map detail): the plates' paint and scuffs, the figures' scoring zones and head ring. */
+  private paint(): { steel: THREE.Texture; steelRough: THREE.Texture; ply: THREE.Texture; head: THREE.Texture } {
+    const size = VD.textureSize;
+    const scuffs = plateScuffs(V.plateSegments);
+    const steel = canvasTexture(size, size, (g) => {
+      g.fillStyle = `#${V.steelColor.toString(16).padStart(6, '0')}`;
+      g.fillRect(0, 0, size, size);
+      for (const s of scuffs) {
+        g.fillStyle = 'rgba(150,146,138,0.9)';
+        g.beginPath();
+        g.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = 'rgba(110,106,100,0.8)';
+        g.lineWidth = 1;
+        g.stroke();
+      }
+    });
+    const level = (r: number): string => {
+      const v = Math.round(r * 255);
+      return `rgb(${v},${v},${v})`;
+    };
+    const steelRough = canvasTexture(
+      size,
+      size,
+      (g) => {
+        g.fillStyle = level(VD.paintRoughness);
+        g.fillRect(0, 0, size, size);
+        g.fillStyle = level(VD.scuffRoughness);
+        for (const s of scuffs) {
+          g.beginPath();
+          g.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          g.fill();
+        }
+      },
+      false,
+    );
+    const ply = canvasTexture(size / 2, size, (g) => {
+      const w = size / 2;
+      g.fillStyle = VD.plywood;
+      g.fillRect(0, 0, w, size);
+      g.strokeStyle = VD.zoneInk;
+      g.lineWidth = 3;
+      g.strokeRect(6, 6, w - 12, size - 12);
+      g.beginPath();
+      g.arc(w / 2, size * 0.45, w * 0.22, 0, Math.PI * 2);
+      g.stroke();
+      g.beginPath();
+      g.arc(w / 2, size * 0.45, w * 0.06, 0, Math.PI * 2);
+      g.fillStyle = VD.zoneInk;
+      g.fill();
+    });
+    const head = canvasTexture(size / 2, size / 2, (g) => {
+      const w = size / 2;
+      g.fillStyle = VD.plywood;
+      g.fillRect(0, 0, w, w);
+      g.strokeStyle = VD.zoneInk;
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(w / 2, w / 2, w * 0.38, 0, Math.PI * 2);
+      g.stroke();
+    });
+    this.textures.push(steel, steelRough, ply, head);
+    return { steel, steelRough, ply, head };
   }
 
   private signTexture(text: string): THREE.Texture {

@@ -1,5 +1,15 @@
 import * as THREE from 'three';
-import { ATMOSPHERE, effectivePixelRatio, FRAME_TIMING, RENDER, type QualitySettings, type TextureSize } from '../config/render';
+import {
+  ATMOSPHERE,
+  effectivePixelRatio,
+  ENVIRONMENT,
+  FRAME_TIMING,
+  RENDER,
+  TONE_MAPPING,
+  type QualitySettings,
+  type TextureSize,
+  type ToneMappingId,
+} from '../config/render';
 import type { FigureModel } from './externalModels';
 import { GpuTimer } from './gpuTimer';
 import { createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
@@ -16,6 +26,18 @@ export function verticalFovFor(horizontalFov16x9: number): number {
 /** The vertical FOV (degrees) that magnifies a `fov` view by `zoom`. */
 export function zoomedFov(fov: number, zoom: number): number {
   return (2 * Math.atan(Math.tan((fov * DEG) / 2) / zoom)) / DEG;
+}
+
+/** Three.js's tone mapping for each choice on the Tone mapping row (audit section 5, F2). */
+const TONE_MAPPERS: Readonly<Record<ToneMappingId, THREE.ToneMapping>> = {
+  aces: THREE.ACESFilmicToneMapping,
+  agx: THREE.AgXToneMapping,
+  neutral: THREE.NeutralToneMapping,
+};
+
+/** The renderer's tone mapping and exposure for a choice. */
+export function toneMappingOf(id: ToneMappingId): { mapping: THREE.ToneMapping; exposure: number } {
+  return { mapping: TONE_MAPPERS[id], exposure: TONE_MAPPING.exposure[id] };
 }
 
 /** Runs `work` in a spare moment. */
@@ -70,8 +92,15 @@ export class Renderer {
   /** The map surfaces' textures, drawn the first time a session asks (surfaceTextures), and the size they were drawn at. */
   private surfaces: SurfaceTextures | null = null;
   private surfacesSize: TextureSize | null = null;
-  /** The held replica's sheen, prefiltered once per context and freed while the setting is off (REN-06). */
+  /**
+   * The prefiltered sky: the held replica's sheen and the scene's environment lighting (F1), made once per context and
+   * freed while neither setting wants it (REN-06).
+   */
   private readonly sheen = new ReplicaSheen();
+  /** The scene's environment must be set again before the next frame (settings changed, a new or restored context). */
+  private environmentDirty = true;
+  /** Settings → Graphics → Tone mapping (F2): not part of a preset. */
+  private toneMapping: ToneMappingId = TONE_MAPPING.default;
   /** GPU time per frame (REN-17), made while `gpuTiming` is on; null without it. */
   private gpuTimer: GpuTimer | null = null;
   /** Time the GPU's work each frame (the debug overlay, while shown). */
@@ -165,6 +194,22 @@ export class Renderer {
     return this.sheen.texture(this.gl, this.quality.replicaSheen);
   }
 
+  /** The tone mapping in use (Settings → Graphics). */
+  get toneMappingId(): ToneMappingId {
+    return this.toneMapping;
+  }
+
+  /**
+   * Tone mapping (Settings → Graphics, F2): applies at once; Three.js rebuilds each shader once on its next draw. The
+   * exposure goes with it (TONE_MAPPING.exposure), so the field stays about as bright under each.
+   */
+  setToneMapping(id: ToneMappingId): void {
+    this.toneMapping = id;
+    const { mapping, exposure } = toneMappingOf(id);
+    this.gl.toneMapping = mapping;
+    this.gl.toneMappingExposure = exposure;
+  }
+
   /**
    * Draws and uploads the surface textures in the title screen's idle time (REN-14), so the first Play only builds the
    * map. Harmless if Play comes first: the set is drawn once either way and an uploaded texture isn't uploaded again.
@@ -212,7 +257,8 @@ export class Renderer {
       this.surfaces = null;
     }
     if (this.surfaces) setSurfaceAnisotropy(this.surfaces, quality.anisotropy);
-    this.sheen.trim(quality.replicaSheen);
+    this.sheen.trim(quality.replicaSheen || quality.environment);
+    this.environmentDirty = true;
     const replaced = quality.antialias !== this.contextAntialias && this.replaceContext(quality.antialias);
     this.gl.shadowMap.enabled = quality.shadows;
     this.resize();
@@ -229,6 +275,7 @@ export class Renderer {
 
   /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */
   render(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
+    if (this.environmentDirty) this.applyEnvironment();
     const gl = this.gl;
     const timer = this.timer();
     timer?.begin();
@@ -260,12 +307,24 @@ export class Renderer {
     this.gl.domElement.remove();
   }
 
+  /**
+   * Environment lighting (F1): the prefiltered sky as the scene's environment while the setting is on, made on the
+   * first frame that wants it (the sheen's prefilter, shared), none otherwise. Materials that must not take it (the
+   * map's painted surfaces) opt out themselves (render/surfaceMaterials.ts).
+   */
+  private applyEnvironment(): void {
+    this.environmentDirty = false;
+    this.scene.environment = this.sheen.texture(this.gl, this.quality.environment);
+    this.scene.environmentIntensity = ENVIRONMENT.intensity;
+  }
+
   /** A WebGL renderer with the game's output settings, on a canvas of its own. Throws if the browser refuses a context. */
   private makeWebGL(antialias: boolean): THREE.WebGLRenderer {
     const gl = new THREE.WebGLRenderer({ antialias, powerPreference: 'high-performance' });
     gl.outputColorSpace = THREE.SRGBColorSpace;
-    gl.toneMapping = THREE.ACESFilmicToneMapping;
-    gl.toneMappingExposure = RENDER.toneMappingExposure;
+    const { mapping, exposure } = toneMappingOf(this.toneMapping);
+    gl.toneMapping = mapping;
+    gl.toneMappingExposure = exposure;
     gl.shadowMap.enabled = this.quality.shadows;
     gl.shadowMap.type = THREE.PCFShadowMap;
     gl.domElement.className = 'game-canvas';
@@ -288,8 +347,10 @@ export class Renderer {
     const old = this.gl;
     this.dropTimer();
     this.unlisten(old.domElement);
-    // The sheen's target is freed by the context that made it; the session asks for a new one (contextRestored).
+    // The sheen's target is freed by the context that made it; the session asks for a new one (contextRestored), and
+    // the scene's environment is made again on the next frame.
     this.sheen.dispose();
+    this.environmentDirty = true;
     old.domElement.replaceWith(next.domElement);
     old.dispose();
     old.forceContextLoss();
@@ -332,8 +393,10 @@ export class Renderer {
   };
 
   private readonly contextRestored = (): void => {
-    // A render target comes back empty: the sheen is prefiltered again when the session next asks.
+    // A render target comes back empty: the sheen is prefiltered again when the session next asks (and the scene's
+    // environment on the next frame).
     this.sheen.forget();
+    this.environmentDirty = true;
     this.contextListener(false);
   };
 

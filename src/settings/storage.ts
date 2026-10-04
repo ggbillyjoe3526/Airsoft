@@ -52,6 +52,8 @@ export type SettingField =
   /** Settings → Graphics: the frame-rate cap and the FPS readout (not part of a preset). */
   | 'frameRateCap'
   | 'showFps'
+  /** Settings → Graphics → Tone mapping (audit section 5 F2; not part of a preset). */
+  | 'toneMapping'
   /** The tutorial was played to the end (M16): the title stops pointing new players at it. */
   | 'tutorialDone'
   | `hopUp.${string}`

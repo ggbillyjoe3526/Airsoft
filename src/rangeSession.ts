@@ -16,12 +16,13 @@ import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper
 import type { PlayerInput } from './input/playerInput';
 import type { MatchSetup } from './matchSession';
 import { RANGE_MAP } from './map/range';
+import type { MapData } from './map/mapTypes';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes, setMapRelief, setMapTextures } from './render/mapMeshes';
+import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, restyleMap } from './render/mapMeshes';
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -65,7 +66,10 @@ export class RangeSession {
   readonly combat: CombatPresentation;
   private readonly loadout: readonly ReplicaConfig[];
   private readonly physics: PhysicsWorld;
-  private readonly mapGroup: THREE.Group;
+  private mapGroup: THREE.Group;
+  /** The map's drawing as built (map detail, relief…) and the map itself, to restyle it (Settings → Graphics). */
+  private mapLook: MapLook;
+  private readonly mapData: MapData;
   private readonly targets: RangeTargetsRenderer;
   private readonly readout: RangeReadout;
   private readonly daylight: Daylight;
@@ -99,7 +103,9 @@ export class RangeSession {
     const map = RANGE_MAP;
     this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04).
-    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
+    this.mapData = map;
+    this.mapLook = mapLookOf(quality);
+    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, this.mapLook);
     renderer.scene.add(this.mapGroup);
     this.daylight = addLighting(renderer.scene, map, quality);
 
@@ -142,6 +148,7 @@ export class RangeSession {
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
     this.targets.setReceiveShadows(quality.figureShadows);
+    this.targets.setDetail(quality.mapDetail);
     renderer.scene.add(this.targets.object);
     this.readout = new RangeReadout(container);
     this.readout.set(lastShotText(null));
@@ -224,9 +231,11 @@ export class RangeSession {
   /** New quality settings (Settings → Graphics): as MatchSession.setQuality. */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    setMapTextures(this.mapGroup, this.renderer.surfaceTextures);
-    setMapRelief(this.mapGroup, quality.surfaceRelief);
+    const look = mapLookOf(quality);
+    this.mapGroup = restyleMap(this.mapGroup, this.mapData, this.renderer.surfaceTextures, this.mapLook, look);
+    this.mapLook = look;
     this.targets.setReceiveShadows(quality.figureShadows);
+    this.targets.setDetail(quality.mapDetail);
     this.combat.setQuality(quality);
   }
 

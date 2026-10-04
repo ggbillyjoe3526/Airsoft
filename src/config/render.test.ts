@@ -13,6 +13,7 @@ import {
   startingQuality,
   SURFACES,
   TIER_QUALITY,
+  TONE_MAPPING,
 } from './render';
 
 /** Fields whose change shows on a screen at 100 % scaling (devicePixelRatio 1): all but the high-DPI cap. */
@@ -56,6 +57,18 @@ describe('render quality presets (final alpha audit section 4)', () => {
     expect(low.textureSize).toBeLessThanOrEqual(512);
     expect(low.anisotropy).toBeLessThanOrEqual(4);
     expect(low.dustMotes).toBe(0);
+  });
+
+  it('keeps every visual-overhaul feature off or at today’s value on Low, and turns them on for Medium and High (FA7)', () => {
+    expect(QUALITY.low).toMatchObject({ environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, replicaSheen: false });
+    for (const p of ['medium', 'high'] as const) {
+      expect(QUALITY[p], p).toMatchObject({ environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, replicaSheen: true });
+    }
+  });
+
+  it('maps tones with Neutral by default at exposure 1 (audit F2)', () => {
+    expect(TONE_MAPPING.default).toBe('neutral');
+    expect(TONE_MAPPING.exposure.neutral).toBe(1);
   });
 
   it('resolves a choice: a preset is its row whatever the custom fields; Custom is High overlaid with them (REN-20)', () => {
