@@ -35,6 +35,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 
 ### Fixed
 - Empty magazine hint names your reload key (#23)
+- **M28** · Impact puffs start at half size
 
 ### Internal
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
