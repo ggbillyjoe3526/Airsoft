@@ -1,4 +1,4 @@
-import { GRIPS, type GripId, MAGAZINES, type MagazineId, NO_TUNE, type PartTune, type ReplicaParts } from '../config/attachments';
+import { BARRELS, type BarrelId, GRIPS, type GripId, MAGAZINES, type MagazineId, MUZZLES, type MuzzleId, NO_TUNE, type PartTune, type ReplicaParts } from '../config/attachments';
 import { GAME_STATS } from '../config/gameStats';
 import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
@@ -21,16 +21,24 @@ export interface KitStats {
 }
 
 /** The customisable places on a replica, besides its BB weight and hop-up (which aren't pooled). */
-export type FitSlot = 'optic' | 'grip' | 'laser' | 'magazine' | 'power';
-export const FIT_SLOTS: readonly FitSlot[] = ['optic', 'grip', 'laser', 'magazine', 'power'];
+export type FitSlot = 'optic' | 'grip' | 'laser' | 'barrel' | 'muzzle' | 'magazine' | 'power';
+export const FIT_SLOTS: readonly FitSlot[] = ['optic', 'grip', 'laser', 'barrel', 'muzzle', 'magazine', 'power'];
 
 /** The asset category each fit slot takes. */
-export const FIT_CATEGORY = { optic: 'optic', grip: 'grip', laser: 'laser', magazine: 'magazine', power: 'power' } as const satisfies Record<FitSlot, Asset['category']>;
+export const FIT_CATEGORY = {
+  optic: 'optic',
+  grip: 'grip',
+  laser: 'laser',
+  barrel: 'barrel',
+  muzzle: 'muzzle',
+  magazine: 'magazine',
+  power: 'power',
+} as const satisfies Record<FitSlot, Asset['category']>;
 
 /** What is fitted to one replica: an item in each slot, or null for "as it comes" (the power slot is never empty in use). */
 export type ReplicaFit = Record<FitSlot, ItemRef | null>;
 
-export const EMPTY_FIT: ReplicaFit = { optic: null, grip: null, laser: null, magazine: null, power: null };
+export const EMPTY_FIT: ReplicaFit = { optic: null, grip: null, laser: null, barrel: null, muzzle: null, magazine: null, power: null };
 
 /** One slot of the player's kit: the replica as carried, and what goes on it. */
 export interface KitSlot {
@@ -69,10 +77,28 @@ function fittedLaser(pool: Pool, fit: ReplicaFit): LaserId | null {
   return key && key in LASERS ? (key as LaserId) : null;
 }
 
+/** The fitted power source's stats.md numbers (none: no change) and its item, for its tier. */
+function powerOf(pool: Pool, fit: ReplicaFit, stats: KitStats): { p: PowerStats; ref: ItemRef | null } {
+  const power = fitted(pool, fit, 'power');
+  return { p: (power && stats.power[power.id]) || NO_POWER_STATS, ref: power ? fit.power : null };
+}
+
+/** The fitted barrel's and muzzle part's keys, if the code knows them. */
+function fittedBarrel(pool: Pool, fit: ReplicaFit): BarrelId | null {
+  const key = fitted(pool, fit, 'barrel')?.key;
+  return key && key in BARRELS ? (key as BarrelId) : null;
+}
+
+function fittedMuzzle(pool: Pool, fit: ReplicaFit): MuzzleId | null {
+  const key = fitted(pool, fit, 'muzzle')?.key;
+  return key && key in MUZZLES ? (key as MuzzleId) : null;
+}
+
 /**
  * The replica `item` (a replica asset at a tier) as carried with `fit`: tighter, quicker and stronger as its items say.
- * Energy: the replica's tier and its power source (its own Energy % and its tier), capped at the site limit. Rate of
- * fire: the replica's tier and the power source's Fire rate % and tier. Kick: the power source's Recoil %.
+ * Energy: the replica's tier, its power source (its own Energy % and its tier), its barrel and muzzle part (M29b),
+ * capped at the site limit. Rate of fire: the replica's tier and the power source's Fire rate % and tier. Kick: the
+ * power source's Recoil %. Spread: the replica's tier, the laser and the barrel (each with its tier).
  */
 export function kitReplica(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: KitStats = GAME_STATS): ReplicaConfig {
   const base = replicaOf(pool.byId.get(item.asset)!);
@@ -80,15 +106,15 @@ export function kitReplica(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: Ki
   const more = (stat: ScaledStat, ref: ItemRef | null = item): number => 1 + bonusOf(pool, ref, stat, stats);
   const laser = fittedLaser(pool, fit);
   const laserScale = laser ? LASERS[laser].spreadScale * better('spread', fit.laser) : 1;
-  const power = fitted(pool, fit, 'power');
-  const p = (power && stats.power[power.id]) || NO_POWER_STATS;
-  const ref = power ? fit.power : null;
+  const barrel = fittedBarrel(pool, fit);
+  const barrelScale = barrel ? BARRELS[barrel].spreadScale * better('spread', fit.barrel) : 1;
+  const { p, ref } = powerOf(pool, fit, stats);
   const energy = energyFactor(pool, item, fit, stats);
   const rate = more('fireRate') * (1 + p.fireRate + bonusOf(pool, ref, 'fireRate', stats));
   return {
     ...base,
     name: pool.byId.get(item.asset)!.name,
-    spreadDeg: base.spreadDeg * better('spread') * laserScale,
+    spreadDeg: base.spreadDeg * better('spread') * laserScale * barrelScale,
     reloadTime: base.reloadTime * better('reload'),
     drawTime: base.drawTime * better('draw'),
     muzzleEnergy: Math.min(base.energyLimit, base.muzzleEnergy * energy),
@@ -103,19 +129,25 @@ export function energyCapped(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: 
   return base.muzzleEnergy * energyFactor(pool, item, fit, stats) > base.energyLimit;
 }
 
-/** What the replica's tier and its power source multiply its energy by, before the site limit. */
+/** What the replica's tier, its power source, barrel and muzzle part multiply its energy by, before the site limit. */
 function energyFactor(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: KitStats): number {
-  const power = fitted(pool, fit, 'power');
-  const p = (power && stats.power[power.id]) || NO_POWER_STATS;
-  return (1 + bonusOf(pool, item, 'energy', stats)) * (1 + p.energy + bonusOf(pool, power ? fit.power : null, 'energy', stats));
+  const { p, ref } = powerOf(pool, fit, stats);
+  const barrel = fittedBarrel(pool, fit);
+  const muzzle = fittedMuzzle(pool, fit);
+  return (
+    (1 + bonusOf(pool, item, 'energy', stats)) *
+    (1 + p.energy + bonusOf(pool, ref, 'energy', stats)) *
+    (1 + (barrel ? BARRELS[barrel].energy : 0)) *
+    (1 + (muzzle ? MUZZLES[muzzle].energy : 0))
+  );
 }
 
-/** The tuning the fitted optic's, grip's and magazine's tiers bring. */
+/** The tuning the fitted optic's, grip's, barrel's, muzzle part's and magazine's tiers bring. */
 export function partTune(pool: Pool, fit: ReplicaFit, stats: KitStats = GAME_STATS): PartTune {
   const better = (slot: FitSlot, stat: ScaledStat): number => (fitted(pool, fit, slot) ? 1 - bonusOf(pool, fit[slot], stat, stats) : 1);
-  const raise = better('optic', 'raise') * better('grip', 'raise');
+  const raise = better('optic', 'raise') * better('grip', 'raise') * better('barrel', 'raise') * better('muzzle', 'raise');
   const shake = better('grip', 'shake');
-  const draw = better('grip', 'draw');
+  const draw = better('grip', 'draw') * better('barrel', 'draw') * better('muzzle', 'draw');
   const reload = better('magazine', 'reload');
   if (raise === 1 && shake === 1 && draw === 1 && reload === 1) return NO_TUNE;
   return { raiseScale: raise, shakeScale: shake, drawScale: draw, reloadScale: reload };
@@ -135,6 +167,8 @@ export function kitSlot(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: KitSt
       grip: grip && grip.key in GRIPS ? (grip.key as GripId) : 'none',
       magazine: mag && mag.key in MAGAZINES ? (mag.key as MagazineId) : replica.magazines[0]!,
       laser,
+      barrel: fittedBarrel(pool, fit),
+      muzzle: fittedMuzzle(pool, fit),
       tune: partTune(pool, fit, stats),
     },
   };

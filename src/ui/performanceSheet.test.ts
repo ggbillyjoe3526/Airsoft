@@ -4,7 +4,7 @@ import { HOP_UP } from '../config/replicas';
 import type { ItemRef } from '../pool/collection';
 import { GAME_POOL } from '../pool/gamePool';
 import { EMPTY_FIT, energyCapped, kitSlot, type ReplicaFit } from '../pool/kit';
-import { gearLine, performanceOf, sheetRows, tierLine } from './performanceSheet';
+import { gearLine, performanceOf, sheetRows, tierBlurb, tierLine } from './performanceSheet';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -67,10 +67,15 @@ describe('Performance sheet (M29)', () => {
     expect(tierLine(pool, item('Vertical Grip', 'rare'))).toBe('−3% draw · −3% aim raise · −3% sprint shake');
     expect(tierLine(pool, item('AEG Rifle'))).toBe('');
   });
+
+  it('says what a tier means on the Loadout, Common included (audit POOL-10)', () => {
+    expect(tierBlurb(pool, item('Standard Battery', 'legendary'))).toBe('Legendary: +7.5% rate of fire');
+    expect(tierBlurb(pool, item('AEG Rifle'))).toBe('Common: no tier bonus');
+  });
 });
 
 describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
-  const LABELS = ['Energy', 'Muzzle speed', 'BB weight', 'Rate of fire', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Magazines', 'Reload', 'Draw', 'Aim raise'];
+  const LABELS = ['Energy', 'Muzzle speed', 'BB weight', 'Rate of fire', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Magazines', 'Reload', 'Draw', 'Aim raise', 'Shots heard from'];
 
   it('lists energy, speed (m/s and fps), BB weight, rate, reach, time to 20 m, spread, recoil, magazines, reload, draw and aim raise, in that order', () => {
     expect(rowsOf(aeg(), aeg()).map((r) => r.label)).toEqual(LABELS);
@@ -190,5 +195,24 @@ describe('Performance sheet, acceptance 6: the gear slot and the Armory line', (
 
   it('says nothing for an item that is not in the pool', () => {
     expect(tierLine(pool, { asset: '999999', tier: 'legendary' })).toBe('');
+  });
+});
+
+describe('Performance sheet, barrels and muzzle parts (M29b)', () => {
+  it('shows how far shots are heard, and a silencer halving it as better, with its energy cost as worse', () => {
+    const rows = rowsOf(aeg('common', { muzzle: item('Silencer') }), aeg());
+    expect(find(rowsOf(aeg(), aeg()), 'Shots heard from').value).toBe('22 m');
+    expect(find(rows, 'Shots heard from')).toMatchObject({ value: '11 m', delta: '−50%', change: 'better' });
+    expect(find(rows, 'Energy')).toMatchObject({ delta: '−5%', change: 'worse' });
+    expect(find(rows, 'Draw').change).toBe('worse');
+  });
+
+  it('marks a Tight-Bore Barrel tighter and stronger, and a Long Barrel stronger but slower to draw', () => {
+    const tight = rowsOf(aeg('common', { barrel: item('Tight-Bore Barrel') }), aeg());
+    expect(find(tight, 'Spread')).toMatchObject({ delta: '−15%', change: 'better' });
+    expect(find(tight, 'Energy')).toMatchObject({ delta: '+3%', change: 'better' });
+    const long = rowsOf(aeg('common', { barrel: item('Long Barrel') }), aeg());
+    expect(find(long, 'Energy')).toMatchObject({ delta: '+8%', change: 'better' });
+    expect(find(long, 'Draw')).toMatchObject({ delta: '+15%', change: 'worse' });
   });
 });

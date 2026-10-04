@@ -31,6 +31,12 @@ export const LOADOUT_TEXT = {
   armoryHint: 'Unlock more in the Armory.',
   /** A part the replica has no rail or mount for. */
   noMount: 'No rail for one',
+  /** A replica whose barrel can't be swapped, or whose muzzle isn't threaded (M29b). */
+  fixedBarrel: 'Fixed barrel',
+  noThread: 'No thread for one',
+  /** The Barrel and Muzzle rows as it comes (M29b). */
+  standardBarrel: 'The standard barrel, as it comes.',
+  noMuzzle: 'Nothing on the muzzle: your shots carry as usual.',
   /** Under the power sources, by the fitted one's type. */
   powerBlurb: {
     battery: 'A higher-voltage battery cycles faster: more BBs a second. The energy is the replica\'s own.',
@@ -71,6 +77,7 @@ export const PERFORMANCE_SHEET = {
     draw: 'Draw',
     raise: 'Aim raise',
     noOptic: 'no optic',
+    heardFrom: 'Shots heard from',
   },
   /** Read out on a change, for a screen reader and for anyone who can't tell the colours apart. */
   better: 'better than as it comes',
@@ -91,12 +98,32 @@ export const ARMORY_TEXT = {
   tenShots: '10 Shots',
   perShot: (n: number) => `Each Shot dispenses ${n} random ${n === 1 ? 'asset' : 'assets'}.`,
   guarantee: (tier: string) => `Ten Shots always hold a ${tier} or rarer.`,
-  odds: 'Odds per asset',
+  /** The Shot buttons' note when Tokens pay some of it (audit POOL-13: the FC price is on the button itself). */
+  paidWith: (parts: string) => `Paid with ${parts}`,
+  paidInFc: 'Paid in FC',
+  /** Pity (audit POOL-01), one line per rule: "Legendary or rarer within 63 more Shots". */
+  pity: (tier: string, shots: number) => `${tier} or rarer within ${shots} more ${shots === 1 ? 'Shot' : 'Shots'}`,
+  pityKicker: 'Guaranteed',
+  odds: 'Rarity odds (each item drawn)',
+  /** Under the odds (audit POOL-04, POOL-05, POOL-26): how an asset is picked once its tier is drawn. */
+  perAsset: (n: number, weight: number, rarest: string, oneIn: number) =>
+    `Then one of ${n} assets is picked${weight > 1 ? `, one you don't own at that tier ${weight === 2 ? 'twice' : `${weight} times`} as likely as one you do` : ', each equally likely'}. A given asset at ${rarest} is about 1 in ${oneIn.toLocaleString('en-GB')} draws.`,
   scrap: 'Scrap',
+  scrapOne: 'Scrap 1',
   scrapAll: 'Scrap all spares',
-  keepOne: 'Scrapping keeps one copy of everything, so nothing equipped is ever lost.',
+  keepOne: 'Scrapping keeps your best copy of every asset, so nothing equipped is ever lost: a part fitted at a lower tier moves to the best one.',
   dispensed: 'Last Shot',
   collection: 'Your collection',
+  /** The catalogue's completion: items owned of every asset at every tier. */
+  completion: (owned: number, total: number) => `${owned} / ${total} items`,
+  notOwned: 'Not owned yet',
+  /** The confirmation pop-ups (audit POOL-03). */
+  confirmTenTitle: 'Take 10 Shots?',
+  confirmTen: (price: string) => `Take 10 Shots for ${price}?`,
+  confirmTenYes: 'Take 10 Shots',
+  confirmScrapTitle: 'Scrap all spares?',
+  confirmScrap: (n: number, fc: string) => `Scrap ${n} spare ${n === 1 ? 'copy' : 'copies'} for ${fc}? Your best copy of every asset stays. This can't be undone.`,
+  confirmScrapYes: 'Scrap all spares',
   new: 'New',
   spare: 'Spare',
   /** A rarer copy of a replica you never picked goes straight into its Loadout slot. */
@@ -107,9 +134,12 @@ export const ARMORY_TEXT = {
   off: 'The Armory is switched off in the Dev settings.',
   /** The match summary's line. */
   earned: 'Field Credits earned',
+  /** The summary's line for a match that paid nothing (audit POOL-22). */
+  unpaidDev: 'No Field Credits: Dev settings changed how this match played.',
+  unpaidOff: 'No Field Credits: the Armory is switched off in the Dev settings.',
 } as const;
 
-export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'dev';
+export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'save' | 'dev';
 
 /**
  * The Settings screen's tabs, top to bottom. `later`: nothing on it is built yet. `hidden`: shown only once the
@@ -123,6 +153,8 @@ export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: bo
   { id: 'hud', label: 'HUD', later: false },
   { id: 'audio', label: 'Audio', later: false },
   { id: 'accessibility', label: 'Accessibility', later: false },
+  /** The save: download, load, restore points (M31). */
+  { id: 'save', label: 'Save', later: false },
   { id: 'dev', label: 'Dev', later: false, hidden: true },
 ];
 
@@ -138,6 +170,7 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   hud: [],
   audio: [{ label: 'Voices (hit calls)', help: '' }],
   accessibility: [],
+  save: [],
   dev: [],
 };
 

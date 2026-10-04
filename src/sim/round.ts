@@ -32,7 +32,7 @@ export interface RoundRules {
 export interface RoundContext {
   rules: RoundRules;
   /** Flag mode: the foot of the pole, at end 1 where the defenders start (map data; absent: no flag mode). */
-  pole?: Vec3;
+  pole?: Vec3 | undefined;
   /**
    * Per end of the map, its spawn points (floor points, map data). Each round every character is given the
    * spawn of its slot at its team's end (see placeTeams). Without them characters keep their spawns.

@@ -44,14 +44,17 @@ import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
-import { type Collection, loadCollection, saveCollection } from './pool/collection';
+import { type Collection, loadCollection, saveCollection, syncCollection } from './pool/collection';
 import { GAME_POOL } from './pool/gamePool';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
+import type { Unpaid } from './ui/menus/summaryScreen';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
+import type { SaveManager } from './save/saveManager';
+import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
@@ -83,6 +86,7 @@ import {
   loadTeammateDifficulty,
   loadTeamColours,
   loadTutorialDone,
+  loadTutorialStep,
   loadWheelSelect,
 } from './ui/menus/savedChoices';
 
@@ -114,6 +118,8 @@ export interface GameOptions {
    * from a table by tick, never from the keyboard or mouse. Dev server and the e2e build only (`?script=perf`).
    */
   scriptedPlayer?: boolean;
+  /** The save (M31, save/saveManager.ts): Settings → Save, and the title screen's warning when saving doesn't work. */
+  save: SaveManager;
 }
 
 /**
@@ -189,6 +195,8 @@ export class Game {
   private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
   /** What the last match paid in Field Credits (M26c), for its summary. */
   private lastEarnings: Earnings | null = null;
+  /** Why the last match paid nothing, for the summary (audit POOL-22), or null when it paid. */
+  private unpaidReason: Unpaid | null = null;
   /** Reduced motion (Settings → Accessibility), kept across matches. */
   private reducedMotion = loadReducedMotion();
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
@@ -323,7 +331,8 @@ export class Game {
       },
       armory: {
         pool: GAME_POOL,
-        collection: () => this.collection,
+        // Another tab's save since this one read it is taken first, so a Shot here never undoes it (audit POOL-02).
+        collection: () => (syncCollection(this.collection, GAME_POOL), this.collection),
         equipped: () => this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : [])),
         onChange: () => {
           saveCollection(this.collection);
@@ -351,6 +360,8 @@ export class Game {
         this.play();
       },
       tutorialDone: loadTutorialDone(),
+      onSkipTutorialStep: () => this.skipTutorial(false),
+      onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true)) },
       mode: { initial: this.mode, onChange: (m) => ((this.mode = m), (this.setupChanged = true)) },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
@@ -414,6 +425,7 @@ export class Game {
         cheating: () => devCheating(this.dev),
         diagnostics: () => this.diagnostics(),
       },
+      save: options.save,
     });
     this.menus.showTitle();
     this.showHudLook();
@@ -421,10 +433,8 @@ export class Game {
     this.debug.setVisible(this.dev.showDebug);
     this.debug.setFpsReadout(loadShowFps());
     this.showMotion();
-    if (options.softwareRendering) {
-      const note = BROWSER_NOTES.noHardwareAcceleration;
-      this.menus.showTitleWarning(options.automaticQuality ? `${note} ${BROWSER_NOTES.qualitySetLow}` : note);
-    }
+    this.showTitleWarning();
+    options.save.onChange(() => this.showTitleWarning());
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
     this.stopWatchingAway = awayWatch({ doc: document, win: window }, this.goneAway);
@@ -486,7 +496,7 @@ export class Game {
     this.graphicsLost = lost;
     this.graphicsNotice.setVisible(lost);
     // The menus can't be used under the notice (not even Resume by Enter or Space on the focused button).
-    this.menus.setBlocked(lost);
+    this.menus.setBlocked(lost || this.yielded);
     if (lost) {
       this.stopPlay();
     } else {
@@ -495,6 +505,32 @@ export class Game {
       if (this.started && this.menus.screen === 'pause') this.menus.showHint(BROWSER_NOTES.graphicsBack);
     }
   }
+
+  /**
+   * The title screen's warning: the browser draws without hardware acceleration, and saving doesn't work (blocked or
+   * full storage, a save from a newer build; M31).
+   */
+  private showTitleWarning(): void {
+    const notes: string[] = [];
+    if (this.options.softwareRendering) {
+      notes.push(BROWSER_NOTES.noHardwareAcceleration);
+      if (this.options.automaticQuality) notes.push(BROWSER_NOTES.qualitySetLow);
+    }
+    const save = this.options.save;
+    if (save.newerBuild) notes.push(SAVE_TEXT.newer(save.newerBuild));
+    else if (save.blocked) notes.push(SAVE_TEXT.blocked);
+    this.menus.showTitleWarning(notes.join(' '));
+  }
+
+  /** Another tab took the save (M31, save/tabLock.ts): play stops and the menus can't be used under its notice. */
+  yieldToOtherTab(): void {
+    this.yielded = true;
+    this.stopPlay();
+    this.menus.setBlocked(true);
+  }
+
+  /** Another tab has the save (yieldToOtherTab): the menus stay blocked for the rest of the visit. */
+  private yielded = false;
 
   /** Stops play as if the player had pressed Esc: the mouse is given back, and the pause menu comes up. */
   private stopPlay(): void {
@@ -667,7 +703,8 @@ export class Game {
     if (this.graphicsLost) return;
     const s = this.session;
     if (!this.started && this.practice) {
-      this.openRange(undefined, this.tutorial ? 0 : undefined);
+      // The tutorial resumes at the step it was left at (audit POOL-14).
+      this.openRange(undefined, this.tutorial ? loadTutorialStep() : undefined);
     } else if (this.started && s instanceof RangeSession && this.loadoutChanged) {
       // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
       // same tutorial step).
@@ -716,13 +753,14 @@ export class Game {
    * Builds the practice range (M21) with the picked loadout, at `pose` if given (else behind the firing line), with the
    * tutorial from step `tutorialFrom` if given (M16).
    */
-  private openRange(pose?: RangePose, tutorialFrom?: number): void {
+  private openRange(pose?: RangePose, tutorialFrom?: number | string): void {
     this.session?.dispose();
     this.loadoutChanged = false;
     this.session = new RangeSession(this.renderer, this.container, this.input, {
       kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
+    this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     this.steppedDown = false;
     this.session.setMotion(motionScale(this.reducedMotion));
     this.applyDevTo(this.session);
@@ -777,7 +815,7 @@ export class Game {
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
     if (this.started && s instanceof RangeSession) {
-      this.menus.showPause(s.status, this.options.seed, true);
+      this.menus.showPause(s.status, this.options.seed, true, s.coaching);
     } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
@@ -795,6 +833,7 @@ export class Game {
         blocks: s.summaryBlocks(),
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
         fieldCredits: this.lastEarnings,
+        unpaid: this.unpaidReason,
       });
     } else {
       const mine = s.player.team;
@@ -812,6 +851,24 @@ export class Game {
     if (this.audioBlocked) this.menus.showHint(BROWSER_NOTES.audioBlocked);
   }
 
+  /** The pause menu's Skip step or Skip tutorial (audit POOL-14): the range carries on, the pause menu says where. */
+  private skipTutorial(all: boolean): void {
+    const s = this.session;
+    if (!(s instanceof RangeSession)) return;
+    if (all) s.endTutorial();
+    else s.skipTutorialStep();
+    this.takeTutorialFinished(s);
+    this.menus.showPause(s.status, this.options.seed, true, s.coaching);
+  }
+
+  /** The tutorial was played (or skipped) to its end: remembered, and the next one starts from the beginning. */
+  private takeTutorialFinished(s: RangeSession): void {
+    if (!s.takeTutorialFinished()) return;
+    saveSetting('tutorialDone', true);
+    saveSetting('tutorialStep', '');
+    this.menus.markTutorialDone();
+  }
+
   /**
    * A decided match goes into the records and pays its Field Credits as soon as it is decided (audit CORE-06), not when
    * the mouse is given back for the result screen: a tab closed in between, or a browser that never reports the lock's
@@ -821,6 +878,7 @@ export class Game {
     // Once per session, on the first frame the match is over: nothing is built on the frames after (CLAUDE.md §9).
     if (s.state.round.phase !== 'matchOver' || this.settledSession === s) return;
     this.settledSession = s;
+    syncCollection(this.collection, GAME_POOL);
     const settled = settleMatch(this.records, this.collection, s.takeMatchResult(), s.takeOutcome(), GAME_POOL.economy, this.dev.disableArmory);
     if (settled.news) {
       this.recordNews = settled.news;
@@ -828,11 +886,13 @@ export class Game {
     }
     if (settled.pay) {
       this.lastEarnings = settled.pay;
+      this.unpaidReason = null;
       saveCollection(this.collection);
       this.menus.refresh();
     } else if (!s.paysFieldCredits || this.dev.disableArmory) {
-      // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
+      // Not paid (Dev settings, or the Armory off): the summary says why (audit POOL-22), not what an earlier match paid.
       this.lastEarnings = null;
+      this.unpaidReason = this.dev.disableArmory ? 'off' : 'dev';
     }
   }
 
@@ -951,10 +1011,7 @@ export class Game {
       this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
       this.simMs += (performance.now() - simStart - this.simMs) * FRAME_TIMING.smoothing;
       if (s instanceof MatchSession) this.settleMatch(s);
-      if (s instanceof RangeSession && s.takeTutorialFinished()) {
-        saveSetting('tutorialDone', true);
-        this.menus.markTutorialDone();
-      }
+      if (s instanceof RangeSession) this.takeTutorialFinished(s);
       // A little after the match is decided, give the mouse back and show the result screen.
       if (s.takeResultDue()) {
         if (this.unlockedPlay) {

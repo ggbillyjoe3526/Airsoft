@@ -20,15 +20,22 @@ describe('the match wind (M30)', () => {
       expect(w.speed).toBeLessThanOrEqual(WIND.maxSpeed);
       yaws.push(w.yaw);
       let sum = 0;
+      // Plain maxima and minima, asserted once per seed: 128,000 expect() calls timed this test out on a loaded machine.
+      let maxAbsY = 0;
+      let maxSpeed = 0;
+      let minSpeed = Infinity;
       const samples = 2_000;
       for (let i = 0; i < samples; i++) {
         windAt(w, i * 0.25, out);
-        expect(out.y).toBe(0);
+        maxAbsY = Math.max(maxAbsY, Math.abs(out.y));
         const speed = Math.hypot(out.x, out.z);
-        expect(speed).toBeLessThanOrEqual(w.speed * (1 + WIND.gust) + 1e-9);
-        expect(speed).toBeGreaterThanOrEqual(w.speed * (1 - WIND.gust) - 1e-9);
+        maxSpeed = Math.max(maxSpeed, speed);
+        minSpeed = Math.min(minSpeed, speed);
         sum += speed;
       }
+      expect(maxAbsY).toBe(0);
+      expect(maxSpeed).toBeLessThanOrEqual(w.speed * (1 + WIND.gust) + 1e-9);
+      expect(minSpeed).toBeGreaterThanOrEqual(w.speed * (1 - WIND.gust) - 1e-9);
       expect(sum / samples / w.speed).toBeCloseTo(1, 1); // the gusts average out
     }
     // Directions spread round the compass (every quarter gets some).

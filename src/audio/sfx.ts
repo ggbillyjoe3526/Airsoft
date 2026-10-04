@@ -7,11 +7,10 @@ import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { vec3, type Vec3 } from '../sim/vec';
 import { Birdsong } from './ambience';
-import { type AudioEngine, toBuffer } from './audioEngine';
+import type { AudioEngine } from './audioEngine';
 import { FoleyTracker, type FoleyMove } from './foley';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, type Muffle, muffleFor, type OcclusionQuery } from './occlusion';
-import { suppressedCopies } from './soundBank';
 import { surfaceUnder } from './soundMaterials';
 import { VoiceLimit } from './voiceLimit';
 import { Whistle } from './whistle';
@@ -47,6 +46,8 @@ interface ReplicaSound {
   fireRate: number;
   /** Its shot variants (muffled copies for a suppressed replica). */
   shots: readonly AudioBuffer[];
+  /** Muffled copies, for a shooter with a silencer fitted (M29b): the engine's, made once for every match. */
+  muffled: readonly AudioBuffer[];
 }
 
 /** What every match's sound shares: the Game's audio engine (context, volume buses, every sound's buffers). */
@@ -182,9 +183,10 @@ export class Sfx {
     this.buffers = this.engine.cueBuffers();
     for (const r of this.loadout) {
       const cue = cues.shot(r.power);
-      // A suppressed replica's muffled copies are this match's own (no replica has a suppressor yet).
-      const shots = r.look.suppressed ? suppressedCopies(this.engine.samples(cue), ctx.sampleRate).map((v) => toBuffer(ctx, v)) : this.buffers.get(cue)!;
-      this.replicas.set(r.id, { profile: r.power, fireRate: r.fireRate, shots });
+      // A replica built suppressed always sounds muffled; one with a silencer fitted (M29b) chooses per shooter.
+      const muffled = this.engine.muffledBuffers(cue);
+      const shots = r.look.suppressed ? muffled : this.buffers.get(cue)!;
+      this.replicas.set(r.id, { profile: r.power, fireRate: r.fireRate, shots, muffled });
     }
   }
 
@@ -401,16 +403,20 @@ export class Sfx {
     const out = this.outputFor(characterId, localId, characterOf);
     if (!r || !out) return;
     const L = AUDIO.levels;
-    this.playBuffer(r.shots, replicaId, out, L.shot);
+    // The shooter's own replica as carried (its silencer and battery, M29b), not the local player's copy of it.
+    const shooter = characterOf(characterId)?.armament;
+    const muffled = shooter?.handling[shooter.active]?.muffled ?? false;
+    this.playBuffer(muffled ? r.muffled : r.shots, replicaId, out, L.shot);
     if (r.profile !== 'electric') return;
+    const fireRate = shooter?.replicas[shooter.active]?.fireRate ?? r.fireRate;
     let m = this.motors.get(characterId);
     if (!m) {
-      m = { motor: new MotorSound(), fireRate: r.fireRate, out, spinDown: null, spinDownDue: false };
+      m = { motor: new MotorSound(), fireRate, out, spinDown: null, spinDownDue: false };
       this.motors.set(characterId, m);
     }
-    m.fireRate = r.fireRate;
+    m.fireRate = fireRate;
     m.out = out;
-    if (m.motor.shot(this.simTime, r.fireRate)) this.play('motor.spinUp', out, L.motor);
+    if (m.motor.shot(this.simTime, fireRate)) this.play('motor.spinUp', out, L.motor);
     // A wind-down still sounding from the last pull fades out under the new one.
     if (m.spinDown) this.cancel(m.spinDown);
     m.spinDown = null;

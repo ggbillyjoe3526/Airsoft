@@ -75,7 +75,8 @@ describe('render quality presets (final alpha audit section 4)', () => {
     expect(resolveQuality('medium', { shadows: false, renderScale: 0.5 })).toEqual(QUALITY.medium);
     expect(resolveQuality('custom', {})).toEqual(QUALITY.high);
     expect(resolveQuality('custom', { shadows: false, renderScale: 0.65 })).toEqual({ ...QUALITY.high, shadows: false, renderScale: 0.65 });
-    expect(resolveQuality('custom', { shadows: undefined })).toEqual(QUALITY.high);
+    // A stored object can hold an explicit undefined even though the type can't (exactOptionalPropertyTypes).
+    expect(resolveQuality('custom', { shadows: undefined } as unknown as Parameters<typeof resolveQuality>[1])).toEqual(QUALITY.high);
     // Not the preset's own object: changing the result can't change the table.
     expect(resolveQuality('custom', {})).not.toBe(QUALITY.high);
   });

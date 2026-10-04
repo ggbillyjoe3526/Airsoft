@@ -1,7 +1,7 @@
 # Pool: every asset you can own
 
-This file is the game's register of **pooled assets**: every replica, power source, optic, grip, laser, magazine
-and (later) grenade the player can own. It also holds the numbers behind the Armory: what Field Credits you earn,
+This file is the game's register of **pooled assets**: every replica, power source, optic, grip, laser, magazine,
+barrel, muzzle part and (later) grenade the player can own. It also holds the numbers behind the Armory: what Field Credits you earn,
 what Tokens and Shots cost, the rarity tiers and their odds, and what scrapping pays.
 
 **The game reads this file.** It is bundled into the build, and the tables below are parsed when the game starts
@@ -34,8 +34,9 @@ Rifle, and so on. The ID is what the player's save remembers, so:
 Compatibility works by **tags**, not by naming replicas, so a part is never tied to one replica:
 
 - Each **replica** lists the **Tags** that describe it: what drives it (`electric`, `gas`, `spring`), what rails it
-  has (`top-rail` for an optic, `under-rail` for a grip, `pistol-rail` for a laser) and what magazines it takes
-  (`aeg-mag`, `pistol-mag`).
+  has (`top-rail` for an optic, `under-rail` for a grip, `pistol-rail` for a laser), what magazines it takes
+  (`aeg-mag`, `pistol-mag`), whether its barrel can be swapped (`barrel-mount`) and whether its muzzle is threaded for
+  a silencer (`muzzle-thread`).
 - Each **part** lists in **Fits** the tags it needs. It fits every replica that has **any one** of those tags.
 - Fits can also name a replica by its ID, for a part that should go on one replica only (for example `000002`).
 
@@ -114,8 +115,11 @@ never bought with money: the whole Armory is free. A match you lose still pays, 
 | Round won | 10 |
 | Hit on an opponent | 5 |
 
-A shorter custom match pays less: Match played and Match won are scaled by the match's rounds to win ÷ 5 (at most 1),
-so a first-to-5 match pays them in full. The total is then multiplied by the opponents' difficulty:
+A shorter custom match pays less: Match played, Match won and each Round won are scaled by the match's rounds to win
+÷ 5 (at most 1), so a first-to-5 match pays them in full. A Round won pays only for a round you played a part in (you
+hit an opponent in it, or were still in when it ended), so sitting a match out earns no more than taking part. The
+total is then multiplied by the difficulty, the lower of the opponents' and your teammates' (the opponents' alone
+when you have none):
 
 | Difficulty | Multiplier |
 |---|---|
@@ -135,8 +139,25 @@ Token), and a Shot you can't cover in Tokens can be paid for in FC at the same r
 | Tokens per 10 Shots | 10 |
 | Assets per Shot | 3 |
 | Ten Shots guarantee | Rare |
+| Unowned item weight | 2 |
 
 "Ten Shots guarantee" is the lowest tier a ten-Shot always holds at least one of (`none` to switch it off).
+
+Each dispensed asset first gets its tier by the Rarity odds below, then one of the assets in Shots: "Unowned item
+weight" makes an asset you don't own yet at that tier that many times likelier than one you do (1: all equally likely).
+The tier odds are never changed by it.
+
+### Pity
+
+However the draws fall, you never go more Shots than this without an asset of the tier or rarer: the Shot that
+reaches the count holds one. The count carries on between visits; a single Shot and each Shot of a ten-Shot count
+alike. Add a row for another tier
+(`| Very Rare or rarer within | 10 |`), or take one out to switch it off.
+
+| Guarantee | Shots |
+|---|---|
+| Epic or rarer within | 20 |
+| Legendary or rarer within | 100 |
 
 ### Rarity
 
@@ -151,7 +172,8 @@ Token), and a Shot you can't cover in Tokens can be paid for in FC at the same r
 
 What the Bonus % improves is stats.md's **Tier scaling** table: with the numbers as shipped, a Legendary (15 %) replica
 has 15 % less spread, a 15 % quicker reload and draw, and 7.5 % more energy and rate of fire; a Legendary battery 7.5 %
-more rate of fire; a Legendary gas 7.5 % more energy; optics, grips, lasers and magazines handle better.
+more rate of fire; a Legendary gas 7.5 % more energy; optics, grips, lasers, magazines, barrels and muzzle parts
+handle better (and a barrel shoots a little tighter).
 
 ---
 
@@ -161,8 +183,8 @@ more rate of fire; a Legendary gas 7.5 % more energy; optics, grips, lasers and 
 
 | ID | Name | Key | Tags | Starter | In Shots |
 |---|---|---|---|---|---|
-| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail | yes | yes |
-| 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail | yes | yes |
+| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail, muzzle-thread | yes | yes |
+| 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail, barrel-mount, muzzle-thread | yes | yes |
 
 ### Power sources
 
@@ -207,6 +229,23 @@ Each replica's standard magazine is built in (as are iron sights and no grip): t
 | 000012 | Hi-Cap Magazine | hiCap | aeg-mag | no | yes |
 | 000013 | Low-Cap Magazine | lowCap | aeg-mag | no | yes |
 | 000014 | Extended Magazine | extended | pistol-mag | no | yes |
+
+### Barrels
+
+Each replica's standard barrel is built in: these are the alternatives. Later: barrels for the pistol, more lengths.
+
+| ID | Name | Key | Fits | Starter | In Shots |
+|---|---|---|---|---|---|
+| 000016 | Tight-Bore Barrel | tightBore | barrel-mount | no | yes |
+| 000017 | Long Barrel | long | barrel-mount | no | yes |
+
+### Muzzle parts
+
+Later: a tracer unit (with tracer BBs, v0.3).
+
+| ID | Name | Key | Fits | Starter | In Shots |
+|---|---|---|---|---|---|
+| 000018 | Silencer | silencer | muzzle-thread | no | yes |
 
 ### Grenades
 

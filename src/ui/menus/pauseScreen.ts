@@ -7,6 +7,9 @@ export interface PauseActions {
   onLoadout: () => void;
   onSettings: () => void;
   onQuit: () => void;
+  /** The tutorial only (audit POOL-14): skip the step under way, or the rest of the tutorial. */
+  onSkipStep: () => void;
+  onSkipTutorial: () => void;
 }
 
 /**
@@ -19,6 +22,8 @@ export class PauseScreen {
   private readonly status: HTMLParagraphElement;
   private readonly hint = hintLine();
   private readonly loadout: HTMLButtonElement;
+  private readonly skipStep: HTMLButtonElement;
+  private readonly skipTutorial: HTMLButtonElement;
   private readonly seed: HTMLParagraphElement;
 
   constructor(actions: PauseActions) {
@@ -29,6 +34,8 @@ export class PauseScreen {
     resume.dataset.autofocus = '';
     this.status = el('p', 'menu-pause-status');
     this.loadout = withIcon(menuButton('Loadout', 'secondary', actions.onLoadout), PAUSE_ICONS.loadout);
+    this.skipStep = menuButton('Skip step', 'secondary', actions.onSkipStep);
+    this.skipTutorial = menuButton('Skip tutorial', 'secondary', actions.onSkipTutorial);
     // The match's seed, small at the bottom, so a bug seen in play can be reported and replayed (bug pass).
     this.seed = el('p', 'menu-pause-seed');
     panel.append(
@@ -37,6 +44,8 @@ export class PauseScreen {
       resume,
       this.hint,
       this.loadout,
+      this.skipStep,
+      this.skipTutorial,
       withIcon(menuButton('Settings', 'secondary', actions.onSettings), PAUSE_ICONS.settings),
       withIcon(menuButton('Quit', 'secondary', actions.onQuit), PAUSE_ICONS.quit),
       this.seed,
@@ -45,9 +54,10 @@ export class PauseScreen {
     this.root.append(panel);
   }
 
-  /** On the practice range (M21): the Loadout button shows. */
-  setRange(range: boolean): void {
+  /** On the practice range (M21): the Loadout button shows; with the tutorial running, Skip step and Skip tutorial. */
+  setRange(range: boolean, tutorial = false): void {
     this.loadout.hidden = !range;
+    this.skipStep.hidden = this.skipTutorial.hidden = !(range && tutorial);
   }
 
   setStatus(text: string): void {

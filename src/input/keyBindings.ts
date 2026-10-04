@@ -1,8 +1,10 @@
 import { type Action, BROWSER_KEYS, DEFAULT_BINDINGS, ESSENTIAL_ACTIONS, KEY_SLOTS, MOVED_DEFAULTS, REBINDABLE, UNBINDABLE_KEYS, WHEEL_CODES } from '../config/controls';
+import { overStored } from '../save/overStored';
 
 const REBINDABLE_ACTIONS: ReadonlySet<Action> = new Set(REBINDABLE.map((r) => r.action));
 
-const STORAGE_KEY = 'airsoft.keyBindings';
+/** Where the bindings are saved (one of the stores a save file carries, save/stores.ts). */
+export const KEY_BINDINGS_KEY = 'airsoft.keyBindings';
 
 /**
  * What each physical key prints on the player's keyboard layout, by KeyboardEvent.code (`KeyW` → "z" on AZERTY), as
@@ -149,7 +151,8 @@ export class KeyBindings {
 
   private save(): void {
     try {
-      this.store?.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(this.map)));
+      // Actions a newer build added (or a loaded save carried in) keep their keys (M31).
+      if (this.store) this.store.setItem(KEY_BINDINGS_KEY, JSON.stringify(overStored(this.store, KEY_BINDINGS_KEY, Object.fromEntries(this.map))));
     } catch {
       // Storage unavailable: the change still applies for this session.
     }
@@ -160,7 +163,7 @@ export class KeyBindings {
   private load(): void {
     let raw: string | null = null;
     try {
-      raw = this.store?.getItem(STORAGE_KEY) ?? null;
+      raw = this.store?.getItem(KEY_BINDINGS_KEY) ?? null;
     } catch {
       return;
     }

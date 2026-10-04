@@ -4,7 +4,7 @@ import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
-import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
+import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
@@ -16,6 +16,8 @@ import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, type ReplicaConfig } from './config/replicas';
+import { botKitSeed, kittedCharacter, randomKit } from './pool/botKit';
+import { GAME_POOL } from './pool/gamePool';
 import type { PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
@@ -43,12 +45,15 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
+import { MatchTakes } from './stats/settleMatch';
 import type { MatchResult } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import type { NotCounted } from './ui/recordsView';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
+/** The team the player is on at the start (Blue); the other team is the opponents. */
+const PLAYER_TEAM = 0;
 
 /** What New game sets up, read when Play is pressed (M15b: nothing is loaded before that). */
 export interface MatchSetup {
@@ -106,10 +111,8 @@ export class MatchSession {
   private readonly hits: HitConfig;
   /** Simulation time the match was decided (NaN while it's on, and once the result screen is due). */
   private matchOverAt = Number.NaN;
-  /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
-  private resultTaken = false;
-  /** The decided match has been paid its Field Credits (takeOutcome, M26c), so it is paid once. */
-  private outcomeTaken = false;
+  /** The decided match goes to the records (takeMatchResult) and is paid (takeOutcome, M26c) once each. */
+  private readonly takes = new MatchTakes();
   /** The standard match, so its result could go into the records (custom rules don't, M20). */
   private readonly standardRules: boolean;
   /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
@@ -162,7 +165,7 @@ export class MatchSession {
       rounds: this.rounds,
       pole: map.flag,
     });
-    this.player = this.spawnRoster(map);
+    this.player = this.spawnRoster(map, seed);
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
     this.bots = new BotController(
@@ -223,11 +226,10 @@ export class MatchSession {
    */
   takeMatchResult(): MatchResult | null {
     const r = this.state.round;
-    if (r.phase !== 'matchOver' || this.resultTaken) return null;
-    this.resultTaken = true;
-    if (!this.countsForRecords) return null;
-    const mine = this.stats.matchOf(this.player.id);
-    return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+    return this.takes.result(r.phase === 'matchOver', this.countsForRecords, () => {
+      const mine = this.stats.matchOf(this.player.id);
+      return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+    });
   }
 
   /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24). */
@@ -241,16 +243,15 @@ export class MatchSession {
    */
   takeOutcome(): MatchOutcome | null {
     const r = this.state.round;
-    if (r.phase !== 'matchOver' || this.outcomeTaken) return null;
-    this.outcomeTaken = true;
-    if (!this.paysFieldCredits) return null;
-    return {
+    return this.takes.outcome(r.phase === 'matchOver', this.paysFieldCredits, () => ({
       won: r.matchWinner === this.player.team,
-      roundsWon: r.score[this.player.team] ?? 0,
+      // Rounds won with you in them (audit POOL-08), and the teammates' difficulty when you have any.
+      roundsWon: this.stats.roundsContributed(this.player.id),
       hits: this.stats.matchOf(this.player.id).hits,
       winsNeeded: this.rounds.winsNeeded,
       difficulty: this.setup.difficulty,
-    };
+      ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
+    }));
   }
 
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
@@ -360,15 +361,21 @@ export class MatchSession {
    * Creates both teams at the map's spawns for round 1 (each team at its end, see placeTeams): the local player
    * plus bot teammates on Blue, and Orange bots. Returns the player.
    */
-  private spawnRoster(map: MapData): Character {
+  private spawnRoster(map: MapData, seed: number): Character {
     const size = this.setup.rules.teamSize;
     for (const [end, spawns] of map.spawns.entries()) {
       if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
     }
     let id = PLAYER_ID;
     for (let team = 0; team < TEAMS.length; team++) {
-      // You carry your kit; every bot carries the default loadout as it comes.
-      for (let i = 0; i < size; i++, id++) this.state.characters.push(createCharacter(id, vec3(), 0, id === PLAYER_ID ? this.loadout : LOADOUT, team));
+      // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
+      // their difficulty rolls each one a kit of its own (M29b).
+      const rolled = team !== PLAYER_TEAM && BOT_LOADOUTS[this.setup.difficulty] === 'random';
+      for (let i = 0; i < size; i++, id++) {
+        if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
+        else if (rolled) this.state.characters.push(kittedCharacter(id, team, randomKit(GAME_POOL, LOADOUT, botKitSeed(seed, id))));
+        else this.state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, team));
+      }
     }
     placeTeams(this.state.round, this.state.characters, this.ctx.round);
     for (const c of this.state.characters) {

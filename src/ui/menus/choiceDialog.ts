@@ -2,9 +2,16 @@ import { saveSetting, type SettingField } from '../../settings/storage';
 import type { PickerOption } from '../optionPicker';
 import { closeButton, el } from './menuParts';
 
+/** An entry shown greyed out under a dialog's options with a tag (a map still being built): never picked. */
+export interface SoonEntry {
+  label: string;
+  blurb: string;
+}
+
 /**
  * A pop-up that offers one choice (match mode, bot difficulty): each option with its own line of description.
- * Picking one saves it as `field`, reports it and closes; Esc or × closes without a change.
+ * Picking one saves it as `field`, reports it and closes; Esc or × closes without a change. `soon` entries follow the
+ * options, greyed out and disabled, each with `soonTag` beside its name.
  */
 export class ChoiceDialog<T extends string> {
   readonly root: HTMLDialogElement;
@@ -17,6 +24,8 @@ export class ChoiceDialog<T extends string> {
     initial: T,
     field: SettingField,
     onChange: (value: T) => void,
+    soon: readonly SoonEntry[] = [],
+    soonTag = '',
   ) {
     this.current = initial;
     this.root = el('dialog', 'menu-dialog');
@@ -41,6 +50,17 @@ export class ChoiceDialog<T extends string> {
       });
       list.append(button);
       this.buttons.set(option.id, button);
+    }
+    for (const entry of soon) {
+      const button = el('button', 'choice-option soon');
+      button.type = 'button';
+      button.disabled = true;
+      const name = el('span', 'choice-name', entry.label);
+      name.append(el('span', 'menu-later', soonTag));
+      const text = el('span', 'choice-text');
+      text.append(name, el('span', 'choice-blurb', entry.blurb));
+      button.append(el('span', 'choice-dot'), text);
+      list.append(button);
     }
     this.root.append(head, list);
     // A click on the dimmed backdrop (outside the box) closes it, like Esc.

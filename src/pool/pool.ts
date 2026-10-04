@@ -1,4 +1,4 @@
-import { GRIPS, type GripId, MAGAZINES, type MagazineId } from '../config/attachments';
+import { BARRELS, type BarrelId, GRIPS, type GripId, MAGAZINES, type MagazineId, MUZZLES, type MuzzleId } from '../config/attachments';
 import type { Difficulty } from '../config/bots';
 import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
@@ -11,7 +11,7 @@ import { type PoolRow, type PoolTable, readTables } from './poolFile';
  * file's text into plain data and lists what it couldn't read, and src/pool/gamePool.ts loads the bundled file.
  */
 
-export type AssetCategory = 'replica' | 'power' | 'optic' | 'grip' | 'laser' | 'magazine' | 'grenade';
+export type AssetCategory = 'replica' | 'power' | 'optic' | 'grip' | 'laser' | 'magazine' | 'barrel' | 'muzzle' | 'grenade';
 export type PowerType = 'battery' | 'gas' | 'spring';
 
 /** The replica behind each replica Key (pool.md's Key column). */
@@ -21,9 +21,11 @@ export const OPTIC_KEYS = Object.keys(OPTICS) as OpticId[];
 export const GRIP_KEYS = (Object.keys(GRIPS) as GripId[]).filter((g) => g !== 'none');
 export const LASER_KEYS = Object.keys(LASERS) as LaserId[];
 export const MAGAZINE_KEYS = (Object.keys(MAGAZINES) as MagazineId[]).filter((m) => m !== 'standard');
+export const BARREL_KEYS = Object.keys(BARRELS) as BarrelId[];
+export const MUZZLE_KEYS = Object.keys(MUZZLES) as MuzzleId[];
 
 /** The power type each replica tag stands for: a battery drives an `electric` replica. */
-export const POWER_TAGS: Readonly<Record<PowerType, string>> = { battery: 'electric', gas: 'gas', spring: 'spring' };
+const POWER_TAGS: Readonly<Record<PowerType, string>> = { battery: 'electric', gas: 'gas', spring: 'spring' };
 
 export interface Asset {
   /** Six digits, never reused (the player's save remembers it). */
@@ -65,6 +67,23 @@ export interface Economy {
   assetsPerShot: number;
   /** The lowest tier a ten-Shot always holds one of (a tier id), or null for none. */
   tenShotGuarantee: string | null;
+  /**
+   * How much likelier a draw picks an asset you don't own at the tier drawn than one you do (1: no difference; audit
+   * POOL-05). The tier odds stay exactly as listed: this only chooses between assets.
+   */
+  unownedWeight: number;
+  /**
+   * Pity (audit POOL-01): a tier (id) or rarer is guaranteed within this many Shots, counted from the last Shot that
+   * held one, across visits. Rarest first.
+   */
+  pity: readonly PityRule[];
+}
+
+export interface PityRule {
+  /** The tier (id) the rule guarantees, or rarer. */
+  tier: string;
+  /** Within this many Shots. */
+  shots: number;
 }
 
 export interface Pool {
@@ -86,7 +105,17 @@ export const DEFAULT_ECONOMY: Economy = {
   tokensPerTenShots: 10,
   assetsPerShot: 3,
   tenShotGuarantee: 'rare',
+  unownedWeight: 2,
+  pity: [
+    { tier: 'legendary', shots: 100 },
+    { tier: 'epic', shots: 20 },
+  ],
 };
+
+/** The most FC a single pool.md number (Scrap FC, a match's FC) may be (audit POOL-19): far beyond any sane value. */
+const MAX_FC_CELL = 1e6;
+/** The most Shots a pity rule may wait. */
+const MAX_PITY_SHOTS = 10000;
 
 /** Used if pool.md has no readable Rarity table: one tier, so the game still runs. */
 const FALLBACK_TIER: RarityTier = { id: 'common', label: 'Common', odds: 1, bonus: 0, scrapFc: 5 };
@@ -99,6 +128,8 @@ const ASSET_SECTIONS: Readonly<Record<string, AssetCategory>> = {
   Grips: 'grip',
   Lasers: 'laser',
   Magazines: 'magazine',
+  Barrels: 'barrel',
+  'Muzzle parts': 'muzzle',
   Grenades: 'grenade',
 };
 
@@ -108,6 +139,8 @@ const KEYS_BY_CATEGORY: Readonly<Record<Exclude<AssetCategory, 'power'>, readonl
   grip: GRIP_KEYS,
   laser: LASER_KEYS,
   magazine: MAGAZINE_KEYS,
+  barrel: BARREL_KEYS,
+  muzzle: MUZZLE_KEYS,
   grenade: [],
 };
 
@@ -125,17 +158,26 @@ export function loadPool(text: string): Pool {
   const tables = readTables(text);
   const errors: string[] = [];
   const fail = (line: number, message: string): void => void errors.push(`line ${line}: ${message}`);
+  for (const t of tables) for (const p of t.problems) fail(p.line, p.message);
   // A table by its first column's header (the Difficulty table shares the Field Credits heading), else by its heading.
   const table = (name: string): PoolTable | undefined => tables.find((t) => t.headers[0] === name) ?? tables.find((t) => t.heading === name);
 
   // By first column, so another table under the same heading (the Rarity section's Bonus table) is never misread.
   const tiers = readTiers(table('Tier'), fail, errors);
-  const economy = readEconomy(table('Event'), table('Difficulty'), table('Setting'), tiers, fail, errors);
+  const economy = readEconomy(table('Event'), table('Difficulty'), table('Setting'), table('Guarantee'), tiers, fail, errors);
   const assets: Asset[] = [];
   const byId = new Map<string, Asset>();
+  // Each asset's pool.md line, for the fits check's messages (audit POOL-20: no scan of every row per asset).
+  const lines = new Map<string, number>();
+  const names = new Map<string, string>();
   for (const t of tables) {
     const category = ASSET_SECTIONS[t.heading];
-    if (!category) continue;
+    if (!category) {
+      // "### Power Sources" would drop the whole table with only "no Power sources table" to go on (audit POOL-18).
+      const section = Object.keys(ASSET_SECTIONS).find((h) => h.toLowerCase() === t.heading.toLowerCase());
+      if (section) fail(t.line, `"${t.heading}" should be "${section}" (headings are read exactly)`);
+      continue;
+    }
     for (const row of t.rows) {
       const asset = readAsset(row, category, fail);
       if (!asset) continue;
@@ -143,13 +185,18 @@ export function loadPool(text: string): Pool {
         fail(row.line, `ID ${asset.id} is already used by ${byId.get(asset.id)!.name}`);
         continue;
       }
+      // Two rows with one Name read fine but can't be told apart on screen: kept, and reported.
+      const same = names.get(asset.name.toLowerCase());
+      if (same) fail(row.line, `the Name "${asset.name}" is already used by ${same}`);
+      names.set(asset.name.toLowerCase(), asset.id);
       byId.set(asset.id, asset);
+      lines.set(asset.id, row.line);
       assets.push(asset);
     }
   }
   for (const heading of Object.keys(ASSET_SECTIONS)) if (!table(heading)) errors.push(`no "${heading}" table (it may be empty, but keep its header)`);
   // A part that fits nothing it should is left out like any other unreadable row.
-  const misfits = checkFits(assets, tables, fail);
+  const misfits = checkFits(assets, lines, fail);
   const kept = assets.filter((a) => !misfits.has(a.id));
   for (const id of misfits) byId.delete(id);
   return { assets: kept, byId, tiers, economy, errors };
@@ -212,17 +259,17 @@ function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m
  * Every Fits entry names a tag some replica has (or a power type's tag), or a replica's ID; a power source fits only
  * replicas driven its way (a battery's Fits holds `electric`, or names replicas by ID).
  */
-function checkFits(assets: readonly Asset[], tables: readonly PoolTable[], fail: (line: number, m: string) => void): Set<string> {
+function checkFits(assets: readonly Asset[], lines: ReadonlyMap<string, number>, fail: (line: number, m: string) => void): Set<string> {
   const misfits = new Set<string>();
   const replicas = assets.filter((a) => a.category === 'replica');
   const known = new Set<string>([...Object.values(POWER_TAGS), ...replicas.flatMap((r) => r.tags)]);
   const ids = new Set(replicas.map((r) => r.id));
   for (const a of assets) {
     if (a.category === 'replica') continue;
-    const row = tables.flatMap((t) => t.rows).find((r) => r.cells.ID === a.id);
+    const line = lines.get(a.id) ?? 0;
     for (const f of a.tags) {
       if (ID_PATTERN.test(f) ? !ids.has(f) : !known.has(f)) {
-        fail(row?.line ?? 0, `${a.name} fits "${f}", which no replica has`);
+        fail(line, `${a.name} fits "${f}", which no replica has`);
         misfits.add(a.id);
       }
     }
@@ -230,7 +277,7 @@ function checkFits(assets: readonly Asset[], tables: readonly PoolTable[], fail:
       const own = POWER_TAGS[a.power.type];
       const wrong = a.tags.find((f) => !ID_PATTERN.test(f) && f !== own);
       if (wrong !== undefined) {
-        fail(row?.line ?? 0, `${a.name} is a ${a.power.type}, so it fits "${own}" replicas, not "${wrong}"`);
+        fail(line, `${a.name} is a ${a.power.type}, so it fits "${own}" replicas, not "${wrong}"`);
         misfits.add(a.id);
       }
     }
@@ -245,7 +292,7 @@ function readTiers(t: PoolTable | undefined, fail: (line: number, m: string) => 
     const label = cell(row, 'Tier');
     const odds = numberCell(row, 'Odds %', fail, 0, 100);
     const bonus = numberCell(row, 'Bonus %', fail, 0, 100);
-    const scrapFc = numberCell(row, 'Scrap FC', fail);
+    const scrapFc = numberCell(row, 'Scrap FC', fail, 0, MAX_FC_CELL);
     if (!label) fail(row.line, 'a tier needs a name');
     if (!label || odds === undefined || bonus === undefined || scrapFc === undefined) continue;
     const id = tierId(label);
@@ -256,6 +303,13 @@ function readTiers(t: PoolTable | undefined, fail: (line: number, m: string) => 
     tiers.push({ id, label, odds: odds / 100, bonus: bonus / 100, scrapFc: Math.round(scrapFc) });
   }
   if (tiers.length === 0) return errors.push('the Rarity table has no readable tiers: every asset is Common'), [FALLBACK_TIER];
+  // Commonest first (audit POOL-06): starters come at the first tier and guarantees count up the table, so a table
+  // listed rarest-first would hand every player Legendary starters. A tier's Bonus and Scrap FC never fall down it.
+  const outOfOrder = tiers.some((x, i) => i > 0 && (x.bonus < tiers[i - 1]!.bonus || x.scrapFc < tiers[i - 1]!.scrapFc));
+  if (outOfOrder) {
+    fail(t.line, 'tiers must be listed commonest first: Bonus % and Scrap FC may not fall down the table (read in Bonus order instead)');
+    tiers.sort((a, b) => a.bonus - b.bonus || a.scrapFc - b.scrapFc);
+  }
   const sum = tiers.reduce((s, x) => s + x.odds, 0);
   if (Math.abs(sum - 1) > 1e-6) fail(t.line, `the Odds % add up to ${Math.round(sum * 1000) / 10}, not 100`);
   return tiers;
@@ -296,13 +350,14 @@ function readEconomy(
   fc: PoolTable | undefined,
   difficulty: PoolTable | undefined,
   shots: PoolTable | undefined,
+  pityTable: PoolTable | undefined,
   tiers: readonly RarityTier[],
   fail: (line: number, m: string) => void,
   errors: string[],
 ): Economy {
   const d = DEFAULT_ECONOMY;
   const earn = labelled(fc, 'Field Credits', { 'match played': 'matchPlayed', 'match won': 'matchWon', 'round won': 'roundWon', 'hit on an opponent': 'hit' } as const, 'FC', fail, errors, (row) =>
-    numberCell(row, 'FC', fail),
+    numberCell(row, 'FC', fail, 0, MAX_FC_CELL),
   );
   const diff = labelled(difficulty, 'Difficulty', { easy: 'easy', normal: 'normal', hard: 'hard' } as const, 'Multiplier', fail, errors, (row) => numberCell(row, 'Multiplier', fail));
   const s = labelled(
@@ -314,6 +369,7 @@ function readEconomy(
       'tokens per 10 shots': 'tokensPerTenShots',
       'assets per shot': 'assetsPerShot',
       'ten shots guarantee': 'tenShotGuarantee',
+      'unowned item weight': 'unownedWeight',
     } as const,
     'Value',
     fail,
@@ -327,6 +383,7 @@ function readEconomy(
         return fail(row.line, `"${v}" isn't a tier in the Rarity table (or none)`), undefined;
       }
       if (label === 'tokens per fc') return numberCell(row, 'Value', fail, 1e-6, 1);
+      if (label === 'unowned item weight') return numberCell(row, 'Value', fail, 1, 10);
       return numberCell(row, 'Value', fail, 1, label === 'assets per shot' ? 10 : 1000);
     },
   );
@@ -345,7 +402,39 @@ function readEconomy(
     tokensPerTenShots: Math.round(num(s.tokensPerTenShots, d.tokensPerTenShots)),
     assetsPerShot: Math.round(num(s.assetsPerShot, d.assetsPerShot)),
     tenShotGuarantee: guarantee === undefined ? (tiers.some((t) => t.id === d.tenShotGuarantee) ? d.tenShotGuarantee : null) : guarantee === 'none' ? null : String(guarantee),
+    unownedWeight: num(s.unownedWeight, d.unownedWeight),
+    pity: readPity(pityTable, tiers, fail, errors),
   };
+}
+
+/**
+ * The Pity table (audit POOL-01): `| Epic or rarer within | 20 |` guarantees an Epic or rarer within 20 Shots. Rarest
+ * tier first; a tier listed twice keeps its first row. Without the table, the built-in rules for the tiers there are.
+ */
+function readPity(t: PoolTable | undefined, tiers: readonly RarityTier[], fail: (line: number, m: string) => void, errors: string[]): PityRule[] {
+  const rank = (id: string): number => tiers.findIndex((x) => x.id === id);
+  const sorted = (rules: PityRule[]): PityRule[] => rules.sort((a, b) => rank(b.tier) - rank(a.tier));
+  if (!t) {
+    errors.push('no "Pity" table: using the built-in guarantees');
+    return sorted(DEFAULT_ECONOMY.pity.filter((r) => rank(r.tier) >= 0).map((r) => ({ ...r })));
+  }
+  const rules: PityRule[] = [];
+  for (const row of t.rows) {
+    const label = cell(row, t.headers[0]!);
+    const m = /^(.+?)(\s+or rarer)?\s+within$/i.exec(label);
+    const tier = m ? tierId(m[1]!) : '';
+    if (!m || rank(tier) < 0) {
+      fail(row.line, `"${label}" should read "<tier> or rarer within" with a tier from the Rarity table`);
+      continue;
+    }
+    if (rules.some((r) => r.tier === tier)) {
+      fail(row.line, `${m[1]} is listed twice in "Pity"`);
+      continue;
+    }
+    const shots = numberCell(row, 'Shots', fail, 1, MAX_PITY_SHOTS);
+    if (shots !== undefined) rules.push({ tier, shots: Math.round(shots) });
+  }
+  return sorted(rules);
 }
 
 /** FC one Token costs (the exchange rate's inverse: 160 FC at 0.00625 Tokens per FC). */

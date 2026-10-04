@@ -16,7 +16,12 @@ export interface MatchSummary {
   records: RecordsView;
   /** What the match paid in Field Credits (M26c), or null (Dev settings on, the Armory off). */
   fieldCredits?: Earnings | null;
+  /** Why it paid nothing, when it didn't (audit POOL-22). */
+  unpaid?: Unpaid | null;
 }
+
+/** Why a match paid no Field Credits: Dev settings changed how it played, or the Armory is switched off. */
+export type Unpaid = 'dev' | 'off';
 
 /**
  * The end-of-match summary (M19): every player's hits, times hit, friendly hits, BBs fired, accuracy and time alive
@@ -48,18 +53,26 @@ export class SummaryScreen {
     this.result.textContent = summary.result;
     this.table.set(summary.blocks);
     this.records.replaceChildren(...recordsBlock(summary.records));
-    this.credits.replaceChildren(...creditsBlock(summary.fieldCredits ?? null));
+    this.credits.replaceChildren(...creditsBlock(summary.fieldCredits ?? null, summary.unpaid ?? null));
   }
 }
 
 /** "Field Credits earned +180 FC", then what paid them: "Match played 40 · Match won 60 … · Hard ×1.5". */
-function creditsBlock(e: Earnings | null): HTMLElement[] {
+function creditsBlock(e: Earnings | null, unpaid: Unpaid | null): HTMLElement[] {
+  const none = unpaidLine(e, unpaid);
+  if (none) return [el('p', 'menu-readout', none)];
   if (!e) return [];
   const head = el('p', 'summary-credits-total');
   head.append(el('span', 'menu-kicker', ARMORY_TEXT.earned), el('strong', '', `+${fcText(e.total)}`));
   const parts = e.lines.map((l) => `${l.label} ${l.fc}`);
   if (e.multiplier !== 1) parts.push(`difficulty ×${e.multiplier}`);
   return [head, el('p', 'menu-readout', parts.join(' · '))];
+}
+
+/** The summary's line when a match paid nothing and why (audit POOL-22), or '' when it paid (or there is no reason). */
+export function unpaidLine(e: Earnings | null, unpaid: Unpaid | null): string {
+  if (e || !unpaid) return '';
+  return unpaid === 'off' ? ARMORY_TEXT.unpaidOff : ARMORY_TEXT.unpaidDev;
 }
 
 /** The records: a wins and losses grid (the mode and difficulty just played marked), then the bests. */
