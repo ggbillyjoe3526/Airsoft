@@ -73,6 +73,8 @@ export class MatchStats {
         this.add(e.characterId, 'bbsFired');
       } else if (e.type === 'characterHit') {
         this.add(e.victimId, 'timesHit');
+        // Your own ricochet (audit SIM-07) is a time you were hit, not a hit you scored on anyone.
+        if (e.shooterId === e.victimId) continue;
         const friendly = this.teamOf.get(e.shooterId) === this.teamOf.get(e.victimId);
         this.add(e.shooterId, friendly ? 'friendlyHits' : 'hits');
       }
