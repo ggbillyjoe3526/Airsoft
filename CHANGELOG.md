@@ -58,9 +58,12 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33b** · Glowing BBs: a per-replica Customise option (At Night by default, Always or Off); bots load them on night fields
 - **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound (#75)
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
-- **M36** · Pro difficulty level: a fourth bot level above Hard, visible only with Dev settings on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted
+- **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
+- **M35** · pool.md has an Access column: public or dev for each asset (#70)
+- **M36** · Pro difficulty level: a fourth bot level above Hard, shown only with Dev content on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted
 
 ### Changed
+- **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
 - **FA2** · Low has 80 % resolution with no shadows; Medium adds shadows and relief; High adds sharp textures, finer shadows, sheen and dust (#67)
@@ -82,8 +85,12 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 - **FA12** · With ricochets set to count, a BB that bounces can hit whoever fired it (not with friendly fire off) (#60)
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
+- **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits (#70)
 
 ### Fixed
+- **FA13** · Your left hand holds the rifle's handguard, thumb up the near side, instead of sitting under it; the raised hand when you're hit is one glove again (#76)
+- **FA13** · Teammates' name tags sit just above their heads up close instead of floating high (#76)
+- **FA13** · Customise's Muzzle line mentions a silencer only when one is fitted (#76)
 - **M32** · All carried replicas now have their sounds in the match; hear bots' AEG shots even without an equipped AEG (#75)
 - **FA11c** · A second tab now always waits behind the "open in another tab" notice, even when the first is busy loading (#69)
 - **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
@@ -120,6 +127,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA6** · Audio renders at 48 kHz with seeded reverb; debug overlay shows latency (#55)
 - **FA11a** · Production build compresses with Brotli and gzip; browser test plays real production build with mouse lock (#61)
 - **FA11a** · TypeScript stricter (exactOptionalPropertyTypes); GitHub checks verify scope and changelog; dead code removed (#61)
+- **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 
 ## v0.1-alpha.3 · 2026-10-03
 

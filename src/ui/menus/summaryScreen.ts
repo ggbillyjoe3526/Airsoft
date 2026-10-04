@@ -20,8 +20,8 @@ export interface MatchSummary {
   unpaid?: Unpaid | null;
 }
 
-/** Why a match paid no Field Credits: Dev settings changed how it played, or the Armory is switched off. */
-export type Unpaid = 'dev' | 'off';
+/** Why a match paid no Field Credits: Dev settings changed how it played, the Armory is switched off, or it used dev content (M35). */
+export type Unpaid = 'dev' | 'off' | 'devContent';
 
 /**
  * The end-of-match summary (M19): every player's hits, times hit, friendly hits, BBs fired, accuracy and time alive
@@ -72,7 +72,7 @@ function creditsBlock(e: Earnings | null, unpaid: Unpaid | null): HTMLElement[] 
 /** The summary's line when a match paid nothing and why (audit POOL-22), or '' when it paid (or there is no reason). */
 export function unpaidLine(e: Earnings | null, unpaid: Unpaid | null): string {
   if (e || !unpaid) return '';
-  return unpaid === 'off' ? ARMORY_TEXT.unpaidOff : ARMORY_TEXT.unpaidDev;
+  return unpaid === 'off' ? ARMORY_TEXT.unpaidOff : unpaid === 'devContent' ? ARMORY_TEXT.unpaidDevContent : ARMORY_TEXT.unpaidDev;
 }
 
 /** The records: a wins and losses grid (the mode and difficulty just played marked), then the bests. */

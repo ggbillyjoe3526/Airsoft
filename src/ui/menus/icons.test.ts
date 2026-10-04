@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { SETTINGS_TABS } from '../../config/menus';
-import { FEED_ICONS, PAUSE_ICONS, SETTINGS_TAB_ICONS, SETUP_ICONS, WARNING_ICON } from './icons';
+import { GAME_POOL } from '../../pool/gamePool';
+import { FEED_ICONS, ITEM_ICONS, itemIcon, PAUSE_ICONS, SETTINGS_TAB_ICONS, SETUP_ICONS, WARNING_ICON } from './icons';
 
-const ALL = [...Object.values(SETUP_ICONS), ...Object.values(SETTINGS_TAB_ICONS), ...Object.values(PAUSE_ICONS), ...Object.values(FEED_ICONS), WARNING_ICON];
+const ALL = [
+  ...Object.values(SETUP_ICONS),
+  ...Object.values(SETTINGS_TAB_ICONS),
+  ...Object.values(PAUSE_ICONS),
+  ...Object.values(FEED_ICONS),
+  ...Object.values(ITEM_ICONS),
+  WARNING_ICON,
+];
 
 describe('menu icons (audit section 6, item 19)', () => {
   it('gives every Settings tab an icon', () => {
@@ -18,5 +26,25 @@ describe('menu icons (audit section 6, item 19)', () => {
 
   it('are plain shapes, safe to insert as HTML (no script, handlers or links)', () => {
     for (const svg of ALL) expect(svg).not.toMatch(/<script|\son\w+=|href|<text|<foreignObject/i);
+  });
+});
+
+describe('item tiles draw what they hold (FA13: the top of each Loadout and Armory tile was empty)', () => {
+  const named = (name: string) => GAME_POOL.assets.find((a) => a.name === name)!;
+
+  it('gives every asset in pool.md a drawing', () => {
+    for (const asset of GAME_POOL.assets) expect(Object.values(ITEM_ICONS)).toContain(itemIcon(asset));
+  });
+
+  it('draws a replica by its model, a power source by its type and a part by its category', () => {
+    expect(itemIcon(named('AEG Rifle'))).toBe(ITEM_ICONS.aeg);
+    expect(itemIcon(named('Gas Pistol'))).toBe(ITEM_ICONS.pistol);
+    expect(itemIcon(named('Standard Battery'))).toBe(ITEM_ICONS.battery);
+    expect(itemIcon(named('Green Gas'))).toBe(ITEM_ICONS.gas);
+    expect(itemIcon(named('Red Dot'))).toBe(ITEM_ICONS.optic);
+    expect(itemIcon(named('Silencer'))).toBe(ITEM_ICONS.muzzle);
+    expect(itemIcon({ category: 'power', key: '', power: { type: 'spring' } })).toBe(ITEM_ICONS.spring);
+    expect(itemIcon({ category: 'grenade', key: '' })).toBe(ITEM_ICONS.grenade);
+    expect(new Set(Object.values(ITEM_ICONS)).size).toBe(Object.keys(ITEM_ICONS).length);
   });
 });

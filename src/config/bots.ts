@@ -1,3 +1,4 @@
+import type { ContentTag } from './content';
 import { MOVEMENT } from './movement';
 
 /**
@@ -359,20 +360,23 @@ export interface BotSkill {
 
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'pro';
 
-/** Difficulty levels in the order the Difficulty pop-up lists them, with their labels. */
-export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string }[] = [
-  { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim. Learn the map.' },
-  { id: 'normal', label: 'Normal', blurb: 'A fair fight: their first BBs up close can miss.' },
-  { id: 'hard', label: 'Hard', blurb: 'Quick and steady, each on kit of its own. Get seen first and you\'re out.' },
-  { id: 'pro', label: 'Pro', blurb: 'Tournament-sharp: patient, accurate and well kitted. Slow down and slice every corner.' },
+/**
+ * Difficulty levels in the order the Difficulty pop-up lists them, with their labels and content tags (M35,
+ * config/content.ts: a `dev` level, as Pro is while it is built, is offered only with Dev content on).
+ */
+export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string; tag: ContentTag }[] = [
+  { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim. Learn the map.', tag: 'public' },
+  { id: 'normal', label: 'Normal', blurb: 'A fair fight: their first BBs up close can miss.', tag: 'public' },
+  { id: 'hard', label: 'Hard', blurb: 'Quick and steady, each on kit of its own. Get seen first and you\'re out.', tag: 'public' },
+  { id: 'pro', label: 'Pro', blurb: 'Tournament-sharp: patient, accurate and well kitted. Slow down and slice every corner.', tag: 'dev' },
 ];
 
-/** The same levels as the Difficulty pop-up's Teammates row describes them (M20). */
-export const TEAMMATE_DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string }[] = [
-  { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim: you carry the team.' },
-  { id: 'normal', label: 'Normal', blurb: 'They hold their own in a fair fight.' },
-  { id: 'hard', label: 'Hard', blurb: 'Quick and steady: they win fights for you.' },
-  { id: 'pro', label: 'Pro', blurb: 'Patient and accurate: they hold their angles and win their duels.' },
+/** The same levels as the Difficulty pop-up's Teammates row describes them (M20), with the same tags. */
+export const TEAMMATE_DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string; tag: ContentTag }[] = [
+  { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim: you carry the team.', tag: 'public' },
+  { id: 'normal', label: 'Normal', blurb: 'They hold their own in a fair fight.', tag: 'public' },
+  { id: 'hard', label: 'Hard', blurb: 'Quick and steady: they win fights for you.', tag: 'public' },
+  { id: 'pro', label: 'Pro', blurb: 'Patient and accurate: they hold their angles and win their duels.', tag: 'dev' },
 ];
 
 /** True when `d` is `min` or above, in the Difficulty pop-up's order (Easy, Normal, Hard, Pro). */

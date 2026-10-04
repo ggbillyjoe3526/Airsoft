@@ -33,7 +33,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Bots
 
 - Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover, keep apart from teammates and search (Phase 1, FA4)
-- Four difficulty levels (Easy, Normal, Hard, Pro), picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking); Pro visible only with Dev settings on (M4a, M20, FA4, M36)
+- Four difficulty levels (Easy, Normal, Hard, Pro), picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking); Pro shown only with Dev content on (M4a, M20, FA4, M36)
 - Bots crouch-peek over low cover, lean round corners, move as a team on varied routes and walk when it pays (M4b, M10)
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from cover (M5, FA4)
@@ -48,7 +48,8 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Maps
 
 - Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole; both ends about as far from the dock and the Main Gate (M1, M11, M25b, FA4)
-- Woodland: a second field coming soon, shown as disabled in the Map pop-up (M33a)
+- Woodland: a second field coming soon, shown as disabled in the Map pop-up only with Dev content on (M33a, M35)
+- Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland (M33c)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
@@ -75,7 +76,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
 - HUD size slider (0.8–1.5) in Settings > HUD (FA5)
-- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy (M24, M26d, FA1)
+- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy, Dev content switch (M24, M26d, FA1, M35)
 - The build's version on the title screen (M24)
 
 ## HUD and match info

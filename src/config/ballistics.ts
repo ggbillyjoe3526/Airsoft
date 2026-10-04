@@ -100,8 +100,8 @@ export const BALLISTICS: BallisticsConfig = {
   maxLifetime: 2.5,
   maxBBs: 256,
   ricochet: {
-    // Concrete gives back a little under half, steel containers more; crates (wood) soak a BB up.
-    restitution: { concrete: 0.4, metal: 0.55, wood: 0 },
+    // Concrete gives back a little under half, steel containers more; crates (wood) and the ground (earth) soak a BB up.
+    restitution: { concrete: 0.4, metal: 0.55, wood: 0, earth: 0 },
     slide: 0.75,
     minSpeed: 12,
     maxBounces: 2,

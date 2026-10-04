@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { FIGURE } from '../config/characters';
+import { TEAMMATE_MARKERS } from '../config/matchInfo';
+import { BODY } from '../config/movement';
+import { FOV_SETTING } from '../config/render';
+import { buildFigure, disposeFigure } from './characterModels';
+import { verticalFovFor } from './renderer';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 
 const W = 1600;
@@ -50,5 +56,42 @@ describe('screen markers after the camera moves', () => {
     expect(m.onScreen).toBe(true);
     expect(m.x).toBeCloseTo(W / 2, 6);
     expect(m.y).toBeCloseTo(H / 2, 6);
+  });
+});
+
+describe("teammates' name markers (FA13)", () => {
+  // The figures' visible heads, tallest headgear included (the hit pose's raised arm is hidden while playing).
+  const headTop = Math.max(
+    ...[0, 1, 2, 3, 4, 5].map((id) => {
+      const f = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), id, null, FIGURE.detail.high);
+      f.root.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      f.root.traverseVisible((o) => {
+        if (o instanceof THREE.Mesh) box.expandByObject(o);
+      });
+      disposeFigure(f);
+      return box.max.y;
+    }),
+  );
+  const eye = BODY.standEyeHeight;
+  const HEIGHT = 1080;
+  /** Pixels between the top of a standing teammate's head and the marker's anchor, `distance` m ahead at eye level. */
+  function gapPx(distance: number, horizontalFov: number): number {
+    const cam = new THREE.PerspectiveCamera(verticalFovFor(horizontalFov), 16 / 9, 0.05, 500);
+    cam.position.set(0, eye, 0);
+    cam.updateMatrixWorld();
+    const out = { x: 0, y: 0, onScreen: false };
+    const head = projectMarker(new THREE.Vector3(0, headTop, -distance), cam, (HEIGHT * 16) / 9, HEIGHT, 0, out).y;
+    return head - projectMarker(new THREE.Vector3(0, eye + TEAMMATE_MARKERS.aboveEyes, -distance), cam, (HEIGHT * 16) / 9, HEIGHT, 0, out).y;
+  }
+
+  it('anchors over the head, never inside it, at any range', () => {
+    expect(eye + TEAMMATE_MARKERS.aboveEyes).toBeGreaterThan(headTop);
+    expect(gapPx(60, FOV_SETTING.max)).toBeGreaterThan(0);
+  });
+
+  it('sits just over the head up close, not a hand above it (it was 0.45 m over the eyes: 170 px at 2 m)', () => {
+    // The narrowest field of view magnifies most. Within about 4% of the screen's height at 1.5 m and 2 m.
+    for (const d of [1.5, 2]) expect(gapPx(d, FOV_SETTING.min)).toBeLessThan(HEIGHT * 0.045);
   });
 });

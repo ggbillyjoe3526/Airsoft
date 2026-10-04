@@ -70,17 +70,29 @@ Every replica needs one, picked on its Customise screen from the ones you own th
 - **In Shots** `yes`: Shots in the Armory can dispense it. Set it to `no` to keep an asset in the file (and in the
   saves of players who already own it) without giving out any more.
 
+### Access: public or dev
+
+Every asset has an **Access** tag, `public` or `dev` (the same tag maps, modes and difficulties carry in the game's
+config; owner, 2026-10-04).
+
+- `public`: there for everyone. Shots can dispense it (if In Shots says so), bots can carry it, the Loadout offers it.
+- `dev`: still being built. It shows only while **Dev content** is on (Settings, ticking "Dev settings", then the Dev
+  tab), and then looks like any other asset. Shots never dispense it, even then: try it with Unlock all gear. A copy someone already owns stays
+  in their save, hidden while Dev content is off. A match that uses it doesn't go into the records or pay Field Credits.
+- Making a finished asset available to everyone is changing `dev` to `public`. A blank cell reads as `public`; any
+  other word leaves the row out (so a typo never hands out something unfinished).
+
 ### Adding an asset: an example
 
 To add a higher spec battery for every electric replica, take the next free ID and add a row to Power sources:
 
 ```
-| 000021 | High Output Battery | battery | electric | no | yes |
+| 000021 | High Output Battery | battery | electric | no | yes | dev |
 ```
 
 and a row to stats.md's Power sources table saying what it does (say `| 000021 | High Output Battery | 0 | 25 | 0 |`
-for 25 % more rate of fire). It then drops from Shots, and once owned it shows in the Power row of every replica tagged
-`electric`.
+for 25 % more rate of fire). Its Access says `dev`, so it shows only with Dev content on while you try it out; change it
+to `public` and it drops from Shots, and once owned it shows in the Power row of every replica tagged `electric`.
 
 ### Chase items: Tiers and Drop %
 
@@ -199,21 +211,21 @@ handle better (and a barrel shoots a little tighter).
 
 ### Replicas
 
-| ID | Name | Key | Tags | Starter | In Shots | Tiers | Drop % |
-|---|---|---|---|---|---|---|---|
-| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail, muzzle-thread | yes | yes | | |
-| 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail, barrel-mount, muzzle-thread | yes | yes | | |
-| 000019 | Cyber Pistol | cyber | pistol, built-in-power | no | yes | Legendary | 0.25 |
+| ID | Name | Key | Tags | Starter | In Shots | Tiers | Drop % | Access |
+|---|---|---|---|---|---|---|---|---|
+| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail, muzzle-thread | yes | yes | | | public |
+| 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail, barrel-mount, muzzle-thread | yes | yes | | | public |
+| 000019 | Cyber Pistol | cyber | pistol, built-in-power | no | yes | Legendary | 0.25 | public |
 
 ### Power sources
 
-| ID | Name | Type | Fits | Starter | In Shots |
-|---|---|---|---|---|---|
-| 000003 | Standard Battery | battery | electric | yes | yes |
-| 000015 | 11.1 V LiPo Battery | battery | electric | no | yes |
-| 000004 | Green Gas | gas | gas | yes | yes |
-| 000008 | Red Gas | gas | gas | no | yes |
-| 000009 | Black Gas | gas | gas | no | yes |
+| ID | Name | Type | Fits | Starter | In Shots | Access |
+|---|---|---|---|---|---|---|
+| 000003 | Standard Battery | battery | electric | yes | yes | public |
+| 000015 | 11.1 V LiPo Battery | battery | electric | no | yes | public |
+| 000004 | Green Gas | gas | gas | yes | yes | public |
+| 000008 | Red Gas | gas | gas | no | yes | public |
+| 000009 | Black Gas | gas | gas | no | yes | public |
 
 ### Springs
 
@@ -221,54 +233,54 @@ Spring replicas aren't in the game yet. Springs go in Power sources above, with 
 
 ### Optics
 
-| ID | Name | Key | Fits | Starter | In Shots |
-|---|---|---|---|---|---|
-| 000007 | Red Dot | redDot | top-rail | no | yes |
-| 000010 | 2x Scope | scope2x | top-rail | no | yes |
+| ID | Name | Key | Fits | Starter | In Shots | Access |
+|---|---|---|---|---|---|---|
+| 000007 | Red Dot | redDot | top-rail | no | yes | public |
+| 000010 | 2x Scope | scope2x | top-rail | no | yes | public |
 
 ### Grips
 
-| ID | Name | Key | Fits | Starter | In Shots |
-|---|---|---|---|---|---|
-| 000006 | Vertical Grip | vertical | under-rail | no | yes |
-| 000011 | Angled Grip | angled | under-rail | no | yes |
+| ID | Name | Key | Fits | Starter | In Shots | Access |
+|---|---|---|---|---|---|---|
+| 000006 | Vertical Grip | vertical | under-rail | no | yes | public |
+| 000011 | Angled Grip | angled | under-rail | no | yes | public |
 
 ### Lasers
 
-| ID | Name | Key | Fits | Starter | In Shots |
-|---|---|---|---|---|---|
-| 000005 | Red Laser | redLaser | pistol-rail | no | yes |
+| ID | Name | Key | Fits | Starter | In Shots | Access |
+|---|---|---|---|---|---|---|
+| 000005 | Red Laser | redLaser | pistol-rail | no | yes | public |
 
 ### Magazines
 
 Each replica's standard magazine is built in (as are iron sights and no grip): these are the alternatives.
 
-| ID | Name | Key | Fits | Starter | In Shots |
-|---|---|---|---|---|---|
-| 000012 | Hi-Cap Magazine | hiCap | aeg-mag | no | yes |
-| 000013 | Low-Cap Magazine | lowCap | aeg-mag | no | yes |
-| 000014 | Extended Magazine | extended | pistol-mag | no | yes |
+| ID | Name | Key | Fits | Starter | In Shots | Access |
+|---|---|---|---|---|---|---|
+| 000012 | Hi-Cap Magazine | hiCap | aeg-mag | no | yes | public |
+| 000013 | Low-Cap Magazine | lowCap | aeg-mag | no | yes | public |
+| 000014 | Extended Magazine | extended | pistol-mag | no | yes | public |
 
 ### Barrels
 
 Each replica's standard barrel is built in: these are the alternatives. Later: barrels for the pistol, more lengths.
 
-| ID | Name | Key | Fits | Starter | In Shots |
-|---|---|---|---|---|---|
-| 000016 | Tight-Bore Barrel | tightBore | barrel-mount | no | yes |
-| 000017 | Long Barrel | long | barrel-mount | no | yes |
+| ID | Name | Key | Fits | Starter | In Shots | Access |
+|---|---|---|---|---|---|---|
+| 000016 | Tight-Bore Barrel | tightBore | barrel-mount | no | yes | public |
+| 000017 | Long Barrel | long | barrel-mount | no | yes | public |
 
 ### Muzzle parts
 
 Later: a tracer unit (with tracer BBs, v0.3).
 
-| ID | Name | Key | Fits | Starter | In Shots |
-|---|---|---|---|---|---|
-| 000018 | Silencer | silencer | muzzle-thread | no | yes |
+| ID | Name | Key | Fits | Starter | In Shots | Access |
+|---|---|---|---|---|---|---|
+| 000018 | Silencer | silencer | muzzle-thread | no | yes | public |
 
 ### Grenades
 
 Grenades, smoke and flash bombs come in a later version (v0.3). The Loadout's Grenades slot waits for them.
 
-| ID | Name | Key | Fits | Starter | In Shots |
-|---|---|---|---|---|---|
+| ID | Name | Key | Fits | Starter | In Shots | Access |
+|---|---|---|---|---|---|---|

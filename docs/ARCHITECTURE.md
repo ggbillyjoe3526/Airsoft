@@ -304,10 +304,18 @@ request. Each line names where it lives and what pins it.
   the stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per
   format); a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`).
   Pinned by `save/saveFile.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). An Access column on every asset table, `public` or `dev` (M35; blank reads as public, any other word leaves the row out). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
   power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
   over their built-in ones. Pinned by
   `config/stats.test.ts`.
+- **Content tags** (`config/content.ts`, M35): every map, mode, difficulty (`tag` on `MAPS`, `MATCH_MODES`,
+  `DIFFICULTIES`) and pooled asset (`Asset.tag`, pool.md's Access) is `public` or `dev`; Match pop-up choices may carry
+  one (untagged is public). `isAvailable(tag, devContent)` is the one check; `devContent` is the Dev tab's Dev content
+  switch (`dev.devContent`, applying only while Dev settings is ticked). Dev content is not shown anywhere while it is
+  off (`contentPool`, `playedPicks`, `ChoiceDialog`/`OptionPicker.setDevContent`), never drops from Shots
+  (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
+  player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
+  `NotCounted` 'devContent'). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`.

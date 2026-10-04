@@ -1,5 +1,6 @@
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { standardMatchText } from '../config/matchRules';
+import { isAvailable } from '../config/content';
 import { MATCH_MODES, type MatchMode } from '../config/modes';
 import { type RecordNews, type Records, resultKey } from '../stats/records';
 
@@ -14,14 +15,21 @@ export interface RecordsView {
   notCounted: string;
 }
 
+/** After a match that used dev content (M35); the Field Credits line says it paid nothing. */
+export const DEV_CONTENT_NOT_RECORDED = "This match used content still being built, so it isn't in your records.";
+
 const NO_NEWS: RecordNews = { bestAccuracy: false, bestStreak: false };
 
-/** Why a match isn't in the records: custom rules (M20; config/matchRules countsForRecords), or Dev settings (M24). */
-export type NotCounted = '' | 'rules' | 'dev';
+/**
+ * Why a match isn't in the records: custom rules (M20; config/matchRules countsForRecords), Dev settings (M24), or
+ * content still being built (M35, config/content.ts).
+ */
+export type NotCounted = '' | 'rules' | 'dev' | 'devContent';
 
 /** The line over the records after a match that didn't count. */
 function notCountedLine(why: NotCounted): string {
   if (why === 'dev') return "Dev settings changed how this match played, so it isn't in your records.";
+  if (why === 'devContent') return DEV_CONTENT_NOT_RECORDED;
   return `Custom rules, so this match isn't in your records. They count the standard match: ${standardMatchText()}`;
 }
 
@@ -34,7 +42,8 @@ export function recordsView(records: Records, news: RecordNews, difficulty: Diff
   if (!counted) news = NO_NEWS;
   return {
     modes: MATCH_MODES.map((m) => m.label),
-    rows: DIFFICULTIES.map((d) => ({
+    // A dev level (Pro, M36) never enters the records (M35), so its row would stay empty: only public levels get one.
+    rows: DIFFICULTIES.filter((d) => isAvailable(d.tag, false)).map((d) => ({
       label: d.label,
       cells: MATCH_MODES.map((m) => {
         const wl = records.results[resultKey(d.id, m.id)];

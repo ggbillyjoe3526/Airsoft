@@ -42,6 +42,8 @@ export const MINIMAP = {
   floorContact: 0.05,
   /** Floors whose top is above this (m) draw as raised ground (docks, platforms). */
   raisedFloor: 0.3,
+  /** Sloping ground (M33c) is lightened by up to this much white at its highest point, so hills read on the minimap. */
+  terrainShade: 0.22,
   /** Colours of the field drawing (CSS). */
   colours: {
     /** The circle under the field: the HUD's panel colour (style.css --hud-panel, audit section 6, item 14). */

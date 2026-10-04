@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { LIGHTING, QUALITY, type QualitySettings } from '../config/render';
+import { terrainMaxX, terrainMaxZ, terrainRange } from '../map/terrain';
+import { SLOPE_YARD, SLOPE_YARD_TERRAIN, terrainOnly } from '../map/testSupport';
 import { DEPOT } from '../map/depot';
 import { TEST_YARD, TEST_YARD_HALF_SIZE } from '../map/testYard';
 import { addLighting, fitShadowCamera, mapBoundingBox, shadowTexel } from './lighting';
@@ -36,6 +38,51 @@ describe('shadow camera fitting', () => {
     expect(box.max.z).toBeGreaterThan(TEST_YARD_HALF_SIZE);
     expect(box.max.y).toBeGreaterThanOrEqual(3);
     expect(box.min.y).toBeLessThan(0);
+  });
+});
+
+describe('the level box with sloping ground (M33c)', () => {
+  it('spans a terrain\'s footprint and its lowest and highest heights, with or without blocks', () => {
+    const t = SLOPE_YARD_TERRAIN;
+    const { min, max } = terrainRange(t);
+    const bare = mapBoundingBox(terrainOnly(t));
+    expect([bare.min.x, bare.min.z, bare.max.x, bare.max.z]).toEqual([t.minX, t.minZ, terrainMaxX(t), terrainMaxZ(t)]);
+    expect(bare.min.y).toBeCloseTo(min, 6);
+    expect(bare.max.y).toBeCloseTo(max, 6);
+    expect(max).toBeGreaterThan(2); // the slope's top and the hill: well above, and min well below, a flat floor at 0
+    expect(min).toBeLessThan(-2);
+    // With the blocks: still covers the ground (the crate and walls sit within it), and the walls' tops if higher.
+    const box = mapBoundingBox(SLOPE_YARD);
+    expect(box.min.y).toBeCloseTo(Math.min(min, -2.5), 6); // the end wall reaches down to -2.5
+    expect(box.max.y).toBeCloseTo(Math.max(max, 2.5), 6);
+    expect(box.min.x).toBeLessThanOrEqual(t.minX);
+    expect(box.max.x).toBeGreaterThanOrEqual(terrainMaxX(t));
+  });
+
+  it('is unchanged on a map without terrain', () => {
+    const box = mapBoundingBox(TEST_YARD);
+    const { terrain: _terrain, ...bare } = { ...TEST_YARD, terrain: undefined };
+    expect(mapBoundingBox(bare).equals(box)).toBe(true);
+    expect(mapBoundingBox({ ...TEST_YARD, terrain: SLOPE_YARD_TERRAIN }).max.y).toBeGreaterThan(box.max.y - 1e-9);
+  });
+
+  it('is covered by the fitted shadow camera, corner to corner, so the whole ground can receive shadows', () => {
+    const box = mapBoundingBox(SLOPE_YARD);
+    const centre = box.getCenter(new THREE.Vector3());
+    const light = new THREE.Vector3(centre.x + LIGHTING.sunOffset.x, LIGHTING.sunOffset.y, centre.z + LIGHTING.sunOffset.z);
+    const cam = new THREE.OrthographicCamera();
+    fitShadowCamera(cam, light, new THREE.Vector3(centre.x, 0, centre.z), box, 0);
+    const t = SLOPE_YARD_TERRAIN;
+    const v = new THREE.Vector3();
+    for (const [x, z] of [[t.minX, t.minZ], [terrainMaxX(t), t.minZ], [t.minX, terrainMaxZ(t)], [terrainMaxX(t), terrainMaxZ(t)]] as const) {
+      const { min, max } = terrainRange(t);
+      for (const y of [min, max]) {
+        v.set(x, y, z).project(cam);
+        expect(Math.abs(v.x)).toBeLessThanOrEqual(1 + 1e-6);
+        expect(Math.abs(v.y)).toBeLessThanOrEqual(1 + 1e-6);
+        expect(Math.abs(v.z)).toBeLessThanOrEqual(1 + 1e-6);
+      }
+    }
   });
 });
 
