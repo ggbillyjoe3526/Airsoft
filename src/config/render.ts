@@ -368,10 +368,6 @@ export const TONE_MAPPING = {
   exposure: { aces: 1.08, agx: 1.15, neutral: 1 } satisfies Record<ToneMappingId, number>,
 } as const;
 
-/**
- * The retro pixel filter (M42, Settings → Dev, render/retroFilter.ts): the 3D view drawn at 1 / pixel size of the page's
- * size and shown with no smoothing, then crushed to a few levels per channel with a 4×4 ordered dither. Engine-wide.
- */
 /** The look the retro pixel filter draws with (Settings → Dev, M42). */
 export interface RetroLook {
   /** CSS pixels per retro pixel, each way. */
@@ -380,6 +376,10 @@ export interface RetroLook {
   levels: number;
 }
 
+/**
+ * The retro pixel filter (M42, Settings → Dev, render/retroFilter.ts): the 3D view drawn at 1 / pixel size of the page's
+ * size and shown with no smoothing, then crushed to a few levels per channel with a 4×4 ordered dither. Engine-wide.
+ */
 export const RETRO = {
   /**
    * A BB's ball is never drawn narrower than this many retro pixels, nor its streak thinner than `trailMinPixels`: at

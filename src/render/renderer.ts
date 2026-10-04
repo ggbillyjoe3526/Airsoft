@@ -381,11 +381,6 @@ export class Renderer {
     this.retro.resize(this.width, this.height, this.gl.getPixelRatio());
   }
 
-  /** Whether the retro pixel filter is drawing. */
-  get retroOn(): boolean {
-    return this.retro !== null;
-  }
-
   /**
    * How wide one retro pixel is at the middle of the view (radians of the main camera's view, zoom included); 0 while
    * the filter is off. BBs are kept at least a couple of these wide (RETRO.bbMinPixels).
