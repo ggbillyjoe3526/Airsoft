@@ -171,6 +171,7 @@ export class Menus {
     this.armory = new ArmoryScreen({
       pool: opts.armory.pool,
       collection: opts.armory.collection,
+      equipped: opts.armory.equipped,
       onChange: () => (opts.armory.onChange(), this.refreshSetup()),
       onBack: () => this.back(),
     });

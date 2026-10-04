@@ -8,6 +8,8 @@ export interface ArmoryOptions {
   pool: Pool;
   /** The player's collection, changed in place. */
   collection: () => Collection;
+  /** The replica item in each Loadout slot, to say when a Shot's item became what you carry. */
+  equipped: () => readonly (ItemRef | null)[];
   /** Something was bought, dispensed or scrapped: save the collection, and the Loadout follows it. */
   onChange: () => void;
   onBack: () => void;
@@ -45,6 +47,9 @@ export class ArmoryScreen {
   private readonly reveal: HTMLDivElement;
   private readonly owned: HTMLDivElement;
   private last: Dispensed[] = [];
+  /** The last Shot's items that went straight into a Loadout slot (a rarer copy of a replica you never picked). */
+  private nowEquipped = new Set<string>();
+  private readonly back: HTMLButtonElement;
 
   constructor(private readonly opts: ArmoryOptions) {
     const page = menuPage('menu-armory', 'Armory');
@@ -59,13 +64,15 @@ export class ArmoryScreen {
     const columns = el('div', 'loadout-columns armory-columns');
     columns.append(this.side, main);
     page.body.append(columns);
-    page.footer.append(backButton(opts.onBack));
+    this.back = backButton(opts.onBack);
+    page.footer.append(this.back);
     this.refresh();
   }
 
   /** Re-reads the collection (after a match paid FC, say), forgetting the last Shot. */
   refresh(): void {
     this.last = [];
+    this.nowEquipped.clear();
     this.render();
   }
 
@@ -73,20 +80,29 @@ export class ArmoryScreen {
     return this.opts.pool;
   }
 
-  /** Saves and redraws; the focus goes to the first of `focus` (data-action names) still there and enabled. */
+  /** Saves and redraws; the focus goes to the first of `focus` (data-action names) still there and enabled, else Back. */
   private changed(...focus: string[]): void {
     this.opts.onChange();
     this.render();
-    for (const action of [...focus, 'shot-1']) {
+    this.firstEnabled([...focus, 'shot-1', 'buy-1']).focus({ preventScroll: true });
+  }
+
+  /** The first of these actions on screen and enabled, else Back (always there). */
+  private firstEnabled(actions: readonly string[]): HTMLButtonElement {
+    for (const action of actions) {
       const b = this.root.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
-      if (b && !b.disabled) return void b.focus({ preventScroll: true });
+      if (b && !b.disabled) return b;
     }
+    return this.back;
   }
 
   private render(): void {
     this.renderSide();
     this.renderReveal();
     this.renderOwned();
+    // Opening the screen puts the keyboard on a Shot (or a Token to buy, or Back when there is nothing to afford).
+    for (const node of this.root.querySelectorAll<HTMLElement>('[data-autofocus]')) delete node.dataset.autofocus;
+    this.firstEnabled(['shot-1', 'buy-1']).dataset.autofocus = '';
   }
 
   private renderSide(): void {
@@ -110,9 +126,11 @@ export class ArmoryScreen {
       const price = shotPrice(e, c, n);
       const cost = [price.tokens > 0 ? tokensText(price.tokens) : '', price.fc > 0 ? fcText(price.fc) : ''].filter(Boolean).join(' + ');
       const b = this.actionButton(`shot-${n}`, n === 1 ? ARMORY_TEXT.oneShot : ARMORY_TEXT.tenShots, cost, canTakeShots(e, c, n), () => {
+        const before = new Set(this.opts.equipped().map((r) => r && `${r.asset}@${r.tier}`));
         const got = takeShots(this.pool, this.opts.collection(), n);
         if (!got) return;
         this.last = got;
+        this.nowEquipped = new Set(this.opts.equipped().flatMap((r) => (r && !before.has(`${r.asset}@${r.tier}`) ? [`${r.asset}@${r.tier}`] : [])));
         this.changed(`shot-${n}`);
       });
       b.classList.add('armory-shot');
@@ -150,7 +168,8 @@ export class ArmoryScreen {
     if (this.last.length === 0) return;
     const grid = el('div', 'item-grid armory-reveal-grid');
     for (const d of this.last) {
-      const tile = this.tile(d.item, d.isNew ? ARMORY_TEXT.new : ARMORY_TEXT.spare);
+      const equipped = this.nowEquipped.has(`${d.item.asset}@${d.item.tier}`);
+      const tile = this.tile(d.item, d.isNew ? (equipped ? `${ARMORY_TEXT.new} · ${ARMORY_TEXT.nowEquipped}` : ARMORY_TEXT.new) : ARMORY_TEXT.spare);
       tile.classList.toggle('is-new', d.isNew);
       grid.append(tile);
     }

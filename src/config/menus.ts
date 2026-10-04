@@ -62,6 +62,8 @@ export const ARMORY_TEXT = {
   collection: 'Your collection',
   new: 'New',
   spare: 'Spare',
+  /** A rarer copy of a replica you never picked goes straight into its Loadout slot. */
+  nowEquipped: 'Now equipped',
   /** The setup tile's line under the balance. */
   tileDetail: 'Free gear for playing.',
   /** Dev settings → Disable Armory (M26d). */
