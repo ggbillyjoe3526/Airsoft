@@ -8,7 +8,7 @@ import { isInPlay } from '../sim/elimination';
 import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from '../sim/hitbox';
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, lookAngles, stepAim } from './aim';
-import { findHeldAngles } from './angles';
+import { findHeldAngles, type HeldAngle } from './angles';
 import { type Bot, type BotWorld, pick, threatInMind } from './bot';
 import { hasReacted } from './botSenses';
 import { bodyPoint, lineClear } from './perception';
@@ -21,6 +21,8 @@ const aimLine = vec3();
 const standEye = vec3();
 const raisedPoint = vec3();
 const mateVolume: HitVolume = createHitVolume();
+/** The held angle heldAngleLook last aimed at (read right after it returns true). */
+let lookedAt: HeldAngle | null = null;
 
 /** How long a bot's BB takes to fly `dist` metres (its primary replica, its factory BBs). */
 function bbFlightTime(w: BotWorld, dist: number): number {
@@ -67,7 +69,10 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     // back on the move too (only hurrying, it looks where it runs).
     look.yaw = b.orderYaw;
   } else if (walking && b.careful && b.mode === 'advance' && heldAngleLook(b, w, eye, walkYaw)) {
-    // Slicing (M38): walking near the enemy, aim at the corner ahead someone could step out of, not where it walks.
+    // Slicing (M38): walking near the enemy, aim at the corner ahead someone could step out of, not where it walks,
+    // and lean out past a near one to see round it a slice at a time.
+    const a = lookedAt!;
+    if (Math.hypot(a.point.x - me.position.x, a.point.z - me.position.z) <= cfg.sliceLeanDistance) cmd.lean = a.side;
   } else if (walking && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
     look.yaw = walkYaw;
   } else {
@@ -106,6 +111,7 @@ function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number): boole
   }
   if (b.heldAngleCount === 0) return false;
   const a = b.heldAngles[Math.floor(b.teamWait / cfg.angleSwitchTime) % b.heldAngleCount]!;
+  lookedAt = a;
   lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, look);
   return true;
 }

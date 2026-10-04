@@ -141,11 +141,15 @@ export const BOT_BEHAVIOUR = {
    */
   tradeTime: 4,
   tradeCoverRadius: 6,
+  /** Slicing a corner (slicesCorners): leans out past the corner it aims at once it is this near (metres). */
+  sliceLeanDistance: 6,
   /**
    * Moving in pairs: a bot sharing a lane with a teammate within boundDistance (metres) doesn't set off from a lane
-   * point while that teammate is on the move, so one always holds while the other moves (for at most teamWaitMax s).
+   * point while that teammate is on the move, so one always holds while the other moves (for at most boundWaitMax s
+   * at a point, counting its hold there; a partner slicing corners at a walk takes longer than teamWaitMax).
    */
   boundDistance: 15,
+  boundWaitMax: 8,
   /**
    * Crossfire: of two defenders on one lane, the second holds as far from the lane's next point (the choke) as its own
    * point, but swung round the choke by between these many degrees (the smaller end, the middle, then the larger, either

@@ -333,7 +333,8 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.retake = false;
   b.holdLeft = startHold;
   b.teamWait = 0;
-  b.waitForTeam = false;
+  // Moving in pairs (M38, teamPlay) starts at the spawn: of two on one lane, one sets off first.
+  b.waitForTeam = b.skill.teamPlay;
   b.holding = false;
   b.heldAngleCount = 0;
   b.heldAnglesAt = Number.NEGATIVE_INFINITY;

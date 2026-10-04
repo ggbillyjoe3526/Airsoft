@@ -16,7 +16,7 @@ import { createRng, type RngState, rngNext } from '../sim/rng';
 import { blockedShare } from '../sim/soundPath';
 import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
-import { type Bot, type BotWorld, createBot, pick, resetBot } from './bot';
+import { type Bot, type BotWorld, createBot, lastSeenAt, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
 import { bodyPoint, eyeOf } from './perception';
@@ -362,13 +362,7 @@ export class BotController {
           g.x = victim.position.x - (flat > 1e-6 ? (e.direction.x / flat) * back : 0);
           g.y = victim.position.y;
           g.z = victim.position.z - (flat > 1e-6 ? (e.direction.z / flat) * back : 0);
-          this.hear(shooter.team, victim.position, victim.position, time, g, cfg.hearingDistance, shooter.id);
-          // Those who heard it and play as a team (M38) go to trade the hit: see tradeTime.
-          for (const b of this.bots) {
-            if (!b.skill.teamPlay || b.character.team !== victim.team || b.heardAt !== time) continue;
-            b.tradeAt = time;
-            b.tradeTried = false;
-          }
+          this.hear(shooter.team, victim.position, victim.position, time, g, cfg.hearingDistance, shooter.id, undefined, true);
         }
       } else if (e.type === 'ricochetTick') {
         // A ricochet that doesn't count still tells its victim they're under fire, unless it was their own (SIM-07).
@@ -409,7 +403,12 @@ export class BotController {
    * learns nothing. Hearing is not sight: it never skips a bot's reaction when the shooter then appears. Walls between
    * the bot and whoever made the sound (standing at `sourceFeet`) shorten the range (wallHearing, M22).
    */
-  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number, sourceId: number, only?: Bot): void {
+  /**
+   * Those of the other team within `range` of `heardAt` (walls muffle it) hear a noise from `shooterPos`. `only` limits
+   * it to one bot; `call` marks a teammate's hit call, which a bot that heard it and plays as a team (M38) goes to trade
+   * (see tradeTime). A teamPlay bot shares where it heard someone with its teamPlay teammates (M38).
+   */
+  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number, sourceId: number, only?: Bot, call = false): void {
     const cfg = this.world.cfg;
     for (const b of this.bots) {
       if (only && b !== only) continue;
@@ -437,6 +436,30 @@ export class BotController {
       b.hasLastKnown = true;
       b.heardAt = time;
       b.lastThreatAt = time;
+      if (!b.skill.teamPlay) continue;
+      if (call) {
+        b.tradeAt = time;
+        b.tradeTried = false;
+      }
+      this.shareHeard(b, time);
+    }
+  }
+
+  /**
+   * Teamplay (M38): bot `b` tells its teamPlay teammates where it heard someone, the bots' version of the player's
+   * minimap patches. A teammate fighting, or with fresher news of its own, keeps its own; nobody trades on hearsay.
+   */
+  private shareHeard(b: Bot, time: number): void {
+    const cfg = this.world.cfg;
+    for (const m of this.bots) {
+      if (m === b || !m.skill.teamPlay || m.character.team !== b.character.team || !isInPlay(m.character) || m.targetVisible) continue;
+      if (m.hasLastKnown && time - Math.max(lastSeenAt(m), m.heardAt) < cfg.hearingContactTime) continue;
+      m.lastKnown.x = b.lastKnown.x;
+      m.lastKnown.y = b.lastKnown.y;
+      m.lastKnown.z = b.lastKnown.z;
+      m.hasLastKnown = true;
+      m.heardAt = time;
+      m.lastThreatAt = time;
     }
   }
 

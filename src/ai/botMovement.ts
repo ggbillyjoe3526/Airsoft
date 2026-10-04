@@ -364,8 +364,9 @@ function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
   }
   // At a lane point well ahead of the team: wait for them to catch up. The hold counts towards
   // teamWaitMax, so a bot stands still at a point for at most max(hold, teamWaitMax). Moving in pairs (M38, teamPlay):
-  // also while a lane partner nearby is on the move, so one covers while the other moves.
-  if (b.waitForTeam && b.teamWait < cfg.teamWaitMax && (w.aheadOfTeam(b) || (b.skill.teamPlay && partnerMoving(b, w)))) {
+  // also while a lane partner nearby is on the move (for up to boundWaitMax), so one covers while the other moves.
+  const waiting = (b.teamWait < cfg.teamWaitMax && w.aheadOfTeam(b)) || (b.skill.teamPlay && b.teamWait < cfg.boundWaitMax && partnerMoving(b, w));
+  if (b.waitForTeam && waiting) {
     b.teamWait += dt;
     b.holding = true;
     return false;
@@ -430,7 +431,8 @@ function partnerMoving(b: Bot, w: BotWorld): boolean {
   const p = b.character.position;
   for (const o of w.bots) {
     if (o === b || o.character.team !== b.character.team || o.lane !== b.lane || !isInPlay(o.character)) continue;
-    if (o.mode !== 'advance' || o.hunting || o.holding || o.order !== 'none' || o.routeState !== 'ok') continue;
+    // Set off this tick (its route still wanted) counts: bots think in turn, and two at their points must not both go.
+    if (o.mode !== 'advance' || o.hunting || o.holding || o.order !== 'none' || (o.routeState !== 'ok' && o.routeState !== 'wanted')) continue;
     const q = o.character.position;
     if (Math.hypot(q.x - p.x, q.z - p.z) <= w.cfg.boundDistance) return true;
   }
