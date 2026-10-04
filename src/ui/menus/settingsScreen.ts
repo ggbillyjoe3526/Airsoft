@@ -1,10 +1,15 @@
-import { SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/menus';
+import { devIntro } from '../../config/dev';
+import { DEV_TOGGLE_LABEL, SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/menus';
+import { saveSetting } from '../../settings/storage';
+import { DEV_ENABLED_FIELD } from '../../settings/dev';
 import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
 import { type AccessibilitySettingsOptions, accessibilitySettings } from '../accessibilitySettings';
 import { type AudioSettingsOptions, audioSettings } from '../audioSettings';
 import { type ControlsSettingsOptions, controlsSettings } from '../controlsSettings';
 import { type CrosshairSettingsOptions, crosshairSettings } from '../crosshairSettings';
+import { type DevSettingsOptions, devSettings } from '../devSettings';
+import { type HudSettingsOptions, hudSettings } from '../hudSettings';
 import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscreen';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
@@ -25,13 +30,17 @@ export interface SettingsOptions {
   crosshair: CrosshairSettingsOptions;
   /** The Accessibility tab (ui/accessibilitySettings.ts). */
   accessibility: AccessibilitySettingsOptions;
+  /** The HUD tab (ui/hudSettings.ts, M24). */
+  hud: HudSettingsOptions;
+  /** The hidden Dev tab (ui/devSettings.ts, M24): `enabled`, the box under the tabs is ticked and the tab shown. */
+  dev: DevSettingsOptions & { enabled: boolean; onEnabled: (on: boolean) => void };
   onBack: () => void;
 }
 
 /**
- * The Settings screen: tabs down the left (Controls, Key bindings, Graphics, Crosshair, Audio, Accessibility), the
- * picked tab's settings on the right. Everything saves as it changes. Reached from New game and from the
- * pause menu; Back returns to whichever opened it.
+ * The Settings screen: tabs down the left (Controls, Key Bindings, Graphics, Crosshair, HUD, Audio, Accessibility, and
+ * Dev once the box under them is ticked), the picked tab's settings on the right. Everything saves as it changes.
+ * Reached from New game and from the pause menu; Back returns to whichever opened it.
  */
 export class SettingsScreen {
   readonly root: HTMLDivElement;
@@ -55,7 +64,7 @@ export class SettingsScreen {
     tabList.setAttribute('aria-orientation', 'vertical');
     tabList.addEventListener('keydown', (e) => this.onTabKey(e));
     const panels = el('div', 'menu-panel settings-panel');
-    for (const { id, label, later } of SETTINGS_TABS) {
+    for (const { id, label, later, hidden } of SETTINGS_TABS) {
       const button = el('button', 'settings-tab');
       button.type = 'button';
       button.id = `settings-tab-${id}`;
@@ -63,6 +72,7 @@ export class SettingsScreen {
       button.setAttribute('aria-controls', `settings-panel-${id}`);
       button.append(el('span', '', label));
       if (later) button.append(laterTag());
+      button.hidden = hidden === true && !opts.dev.enabled;
       button.addEventListener('click', () => this.showTab(id));
       const panel = el('div', 'settings-tab-panel');
       panel.id = `settings-panel-${id}`;
@@ -75,10 +85,12 @@ export class SettingsScreen {
       panels.append(panel);
       this.tabs.set(id, { button, panel });
     }
+    const side = el('div', 'settings-side');
+    side.append(tabList, this.devToggle(opts.dev));
     const columns = el('div', 'settings-columns');
-    columns.append(tabList, panels);
+    columns.append(side, panels);
     page.body.append(columns);
-    page.footer.append(backButton(opts.onBack), el('p', 'menu-footer-note', 'Changes save as you make them.'));
+    page.footer.append(backButton(opts.onBack));
     this.showTab('controls');
   }
 
@@ -102,12 +114,33 @@ export class SettingsScreen {
     this.unwatchFullscreen();
   }
 
+  /**
+   * The "Dev settings" box under the tabs (owner, 2026-10-04: one click to reach them): ticked, the Dev tab shows and its
+   * settings apply; unticked, it hides and they all go back to normal (kept for next time).
+   */
+  private devToggle(dev: SettingsOptions['dev']): HTMLLabelElement {
+    const label = el('label', 'settings-dev-toggle');
+    const box = el('input');
+    box.type = 'checkbox';
+    box.checked = dev.enabled;
+    box.addEventListener('change', () => {
+      const tab = this.tabs.get('dev')!;
+      tab.button.hidden = !box.checked;
+      saveSetting(DEV_ENABLED_FIELD, box.checked);
+      dev.onEnabled(box.checked);
+      if (box.checked) this.showTab('dev');
+      else if (this.tab === 'dev') this.showTab('controls');
+    });
+    label.append(box, el('span', '', DEV_TOGGLE_LABEL));
+    return label;
+  }
+
   /** One button that enters or leaves fullscreen, saying which it will do. */
   private fullscreenButton(): HTMLButtonElement {
     const button = el('button', 'picker-button settings-fullscreen');
     button.type = 'button';
     const show = (on: boolean): void => {
-      button.textContent = on ? 'Leave fullscreen' : 'Go fullscreen';
+      button.textContent = on ? 'Exit Fullscreen' : 'Enter Fullscreen';
       button.setAttribute('aria-pressed', String(on));
     };
     show(isFullscreen());
@@ -131,9 +164,9 @@ export class SettingsScreen {
     this.keySettings.setVisible(id === 'keys');
   }
 
-  /** Arrow Up / Down, Home and End on the tab list move to another tab and show it. */
+  /** Arrow Up / Down, Home and End on the tab list move to another tab (of those shown) and show it. */
   private onTabKey(e: KeyboardEvent): void {
-    const ids = [...this.tabs.keys()];
+    const ids = [...this.tabs].filter(([, t]) => !t.button.hidden).map(([id]) => id);
     const next = tabAfterKey(e.key, ids.indexOf(this.tab), ids.length);
     if (next === null) return;
     e.preventDefault();
@@ -167,8 +200,12 @@ export class SettingsScreen {
       panel.append(...crosshairSettings(opts.crosshair));
     } else if (id === 'audio') {
       panel.append(...audioSettings(opts.audio));
+    } else if (id === 'hud') {
+      panel.append(...hudSettings(opts.hud));
     } else if (id === 'accessibility') {
       panel.append(...accessibilitySettings(opts.accessibility));
+    } else if (id === 'dev') {
+      panel.append(el('p', 'menu-readout', devIntro()), ...devSettings(opts.dev));
     }
   }
 

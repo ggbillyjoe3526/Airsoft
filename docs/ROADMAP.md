@@ -117,6 +117,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Done (owner to play it) | 8.8 (auto-accepted, 4 of 4) |
 | Alpha · Phase 4 · M14 Art pass, VFX and lighting (procedural: the CC0 asset sites were unreachable): daylight with a sky and trees, dressed Depot surfaces and props, figures in airsoft kit, toy-like replicas, gas puffs and impact dust, the Graphics quality picker back | Done (owner to play it) | 9.0 |
 | Alpha · Phase 4 · M16 Tutorial: a coached first session on the practice range | Done (merged; owner to play it) | 9.0 |
+| Alpha · M24 Menus and settings polish (owner's Phase 4 playtest notes 5–10, 13, 14, 2026-10-04): shorter button labels, the build's version from git, 90° field of view, short map blurbs, sound cue size and colour, a hit feed that keeps its lines, a larger scoreboard with a size setting, hidden Dev settings | In review | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -623,6 +624,23 @@ each one went:**
     moment; after the last one the coach gives way to the range readout and you keep practising. Pausing shows which
     step you're on, and changing the loadout from the pause menu keeps your place (`config/tutorial.ts`,
     `tutorial/tutorial.ts`, `ui/coachPanel.ts`).
+- **M24. Menus and settings polish** (the owner's Phase 4 playtest notes, 2026-10-04, items 5–10, 13 and 14; the
+  minimap and order wheel, the Depot rework and the Loadout, Armory and pool are milestones of their own).
+  - **Labels:** menu buttons kept to a word or two, each word capitalised: Quit (was Quit to title screen), Practice
+    Range, New Game, Summary, Open, Enter Fullscreen, Reset All. Footer notes that only repeat the obvious are gone
+    ("Changes save as you make them.", the pause menu's notes, the Settings tile's list); help lines on settings stay.
+  - **Version:** the title screen shows the build being played, worked out from `git describe` as the game is built
+    (`v0.1-alpha.3` on a release, `v0.1-alpha.3+12 · abc1234` after it), or from `.git_archival.txt` in a release zip.
+    Nothing to bump at a release (`config/buildVersion.ts`, `vite.config.ts`).
+  - **Field of view** defaults to 90° (was 100°). **Maps** get a one-line blurb: Depot is "An abandoned warehouse yard."
+  - **Sound cues** (Settings → Accessibility): a size slider (60–200%) and a colour from the crosshair's list.
+  - **Settings → HUD** (a new tab): Scoreboard size (80–200%, 130% by default, so larger than before; held back in a
+    narrow window so the hit feed keeps its room) and Hit feed: Fade (as before) or Keep (the match's last 10 hits
+    stay up through every round).
+  - **Dev settings:** a "Dev settings" box under the Settings tabs shows a Dev tab: Disable Armory and Unlock all gear
+    (saved settings the Armory and the Loadout's pool will read), Debug info, BB paths, Game speed (25–200%), Bottomless
+    magazines and Ghost (BBs pass through you). They apply only while the box is ticked; the three that change play
+    keep a match out of the records (`config/dev.ts`, `settings/dev.ts`, `ui/devSettings.ts`).
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
   in M12a), a "graphics reset" message on a lost WebGL context (W-01, now in M18), shader warm-up if the overlay shows a hitch

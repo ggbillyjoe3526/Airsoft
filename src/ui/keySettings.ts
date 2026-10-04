@@ -54,7 +54,7 @@ export class KeySettings {
     const reset = document.createElement('button');
     reset.type = 'button';
     reset.className = 'key-reset';
-    reset.textContent = 'Reset to defaults';
+    reset.textContent = 'Reset All';
     reset.addEventListener('click', () => {
       this.listen(null);
       bindings.reset();

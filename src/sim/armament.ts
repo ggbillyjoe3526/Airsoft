@@ -68,6 +68,8 @@ export interface Armament {
   dryFiredThisPull: boolean;
   /** Trigger state last tick, for semi-auto press detection. */
   triggerWasDown: boolean;
+  /** Shots never use up the magazine: the Dev settings' Bottomless magazines (M24). Kept between rounds. */
+  bottomless: boolean;
   /** Current upward aim kick from recoil (radians). */
   recoil: number;
   /** Each replica's fire selector setting (one of its fireModes), by loadout slot. */
@@ -105,6 +107,7 @@ export function createArmament(loadout: readonly ReplicaConfig[], parts: readonl
     reloadQueued: false,
     dryFiredThisPull: false,
     triggerWasDown: false,
+    bottomless: false,
     recoil: 0,
     modes: loadout.map((r) => r.defaultFireMode),
     burstShotsLeft: 0,
@@ -314,7 +317,7 @@ export function stepArmament(
 
   a.pendingPress = 0;
   if (a.burstShotsLeft > 0) a.burstShotsLeft--;
-  ammo.mag--;
+  if (!a.bottomless) ammo.mag--;
   a.cooldown += 1 / replica.fireRate;
   fire(characterId, a, replica, muzzle, ctx);
 }

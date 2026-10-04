@@ -1,1 +1,4 @@
 * text=auto eol=lf
+
+# GitHub fills in the version as it zips a release (vite.config.ts reads it; config/buildVersion.ts).
+.git_archival.txt export-subst

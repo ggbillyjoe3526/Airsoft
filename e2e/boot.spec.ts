@@ -148,14 +148,18 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await reducedMotion.getByRole('button', { name: 'Off' }).click();
   await expect(page.locator('#app')).not.toHaveClass(/\breduced-motion\b/);
   // M18b: High contrast team colours and the on-screen sound cues, both for the match below.
-  await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'High contrast' }).click();
+  await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'High Contrast' }).click();
   await expect(settings.locator('.team-swatch')).toHaveCount(2);
   await settings.getByRole('group', { name: 'Sound cues' }).getByRole('button', { name: 'On' }).click();
+  // M24: the cues' colour and size reach the HUD as CSS variables on the container.
+  await settings.getByRole('group', { name: 'Sound cue colour' }).getByRole('button', { name: 'Yellow' }).click();
+  await expect.poll(() => page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--cue-colour'))).toBe('#ffe94a');
+  await expect(settings.getByRole('slider', { name: 'Sound cue size' })).toHaveValue('1');
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   await expect(settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('100');
-  await expect(settings.getByRole('button', { name: 'Go fullscreen' })).toBeVisible();
-  await settings.getByRole('tab', { name: /Key bindings/i }).click();
+  await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('90');
+  await expect(settings.getByRole('button', { name: 'Enter Fullscreen' })).toBeVisible();
+  await settings.getByRole('tab', { name: /Key Bindings/i }).click();
   // Fire and aim are bindings like the rest (M18), on the mouse buttons by default.
   await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
   // A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T, is saved,
@@ -168,8 +172,12 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   expect(savedReload).toEqual(['KeyT']);
   await settings.getByRole('tab', { name: /Audio/i }).click();
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
+  // The tabs follow the tabs pattern (audit L-31): Arrow Up from Audio picks HUD (M24) and moves the focus there.
+  await page.keyboard.press('ArrowUp');
+  await expect(settings.getByRole('tab', { name: /HUD/i })).toHaveAttribute('aria-selected', 'true');
+  await expect(settings.getByRole('slider', { name: 'Scoreboard size' })).toHaveValue('1.3');
+  await expect(settings.getByRole('group', { name: 'Hit feed' }).getByRole('button', { name: 'Fade' })).toHaveAttribute('aria-pressed', 'true');
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
-  // The tabs follow the tabs pattern (audit L-31): Arrow Up from Audio picks Crosshair and moves the focus there.
   await page.keyboard.press('ArrowUp');
   await expect(settings.getByRole('tab', { name: /Crosshair/i })).toHaveAttribute('aria-selected', 'true');
   await expect(settings.getByRole('tab', { name: /Crosshair/i })).toBeFocused();
@@ -177,6 +185,17 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(previews).toHaveCount(2);
   await settings.getByRole('button', { name: 'Circle' }).click();
   await expect(previews.first()).toHaveClass(/\bshape-circle\b/);
+  // M24: the Dev tab is hidden until its box is ticked; its settings apply only while it is (Debug info shows the panel).
+  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toBeHidden();
+  const devBox = settings.getByRole('checkbox', { name: 'Dev settings' });
+  await devBox.check();
+  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toHaveAttribute('aria-selected', 'true');
+  await settings.getByRole('group', { name: 'Debug info' }).getByRole('button', { name: 'On' }).click();
+  await expect(page.locator('.debug-overlay')).toBeVisible();
+  await devBox.uncheck();
+  await expect(page.locator('.debug-overlay')).toBeHidden();
+  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toBeHidden();
+  await expect(settings.getByRole('tab', { name: /Controls/i })).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
   await expect(setup.getByRole('button', { name: /Settings/i })).toBeFocused();

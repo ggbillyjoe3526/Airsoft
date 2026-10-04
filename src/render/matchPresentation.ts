@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
-import { TEAMMATE_MARKERS } from '../config/matchInfo';
+import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
 import type { ReplicaConfig } from '../config/replicas';
@@ -115,6 +115,11 @@ export class MatchPresentation {
     this.soundCues.setEnabled(on);
   }
 
+  /** The hit feed fades or keeps its lines (Settings → HUD, M24; also called once as the match is built). */
+  setHitFeedMode(mode: HitFeedMode): void {
+    this.feed.setMode(mode);
+  }
+
   setPlaying(playing: boolean): void {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
@@ -153,7 +158,7 @@ export class MatchPresentation {
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
         this.spectator.reset();
-        this.feed.clear();
+        this.feed.roundStarted(e.round);
         this.soundCues.clear();
         this.squadLine.clear();
       }

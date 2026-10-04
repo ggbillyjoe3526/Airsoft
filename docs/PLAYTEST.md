@@ -105,7 +105,7 @@ on the **Loadout** screen (**Start**, then **Loadout**; between matches only, it
 - [ ] **Reload or switch to the pistol while aiming.** The sight drops for the reload and comes back up if you are
   still holding right click. The pistol has no optic, so it never aims down sights.
 - [ ] **Press Esc during a match.** The pause menu has no Loadout: the optic and hop-up are set between matches
-  (Start, then Loadout; or Change setup on the result screen before the next match).
+  (Start, then Loadout; or New Game on the result screen before the next match).
 
 ## BBs leaving the muzzle
 
@@ -237,7 +237,7 @@ swap ends after round 4.
   optic, any parts that differ from stock, BB weights and dials.
 - [ ] **Click Settings.** Tabs on the left: **Controls** (see Comfort and controls below), **Key bindings**,
   **Graphics**, **Crosshair**, **Audio** (volumes, see Sound below) and **Accessibility**. Back returns to New game.
-- [ ] **Graphics.** A **Field of view** slider at 100°, and the **Quality** picker (High; see the M14 section). No
+- [ ] **Graphics.** A **Field of view** slider at 90°, and the **Quality** picker (High; see the M14 section). No
   Brightness.
 - [ ] **Field of view in a match.** Play, press Esc, Settings, Graphics: drag the slider to 120°. Back and Resume:
   you see more at the sides. Aim down the red dot: it still zooms in. Set it to 80°: a narrower view. Reload the
@@ -353,14 +353,14 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   points to enemy footsteps (two dots), shots (an arrowhead) and hit calls (a HIT tag), fainter further away; turn
   towards one and it moves to the top. Your own steps and shots and your teammates' steps show nothing. Off by default.
 - [ ] **Tab away.** Mid-round, switch to another tab (Ctrl+Tab) and back: the match is paused on the pause menu.
-- [ ] **Fullscreen.** Settings → Graphics → **Go fullscreen**; the button then reads Leave fullscreen. In a match press
+- [ ] **Fullscreen.** Settings → Graphics → **Enter Fullscreen**; the button then reads Exit Fullscreen. In a match press
   **F10**: fullscreen on and off. Esc leaves fullscreen (and pauses). Rebind it under Key bindings.
 - [ ] **Hardware acceleration.** Turn off the browser's graphics acceleration and restart it: the title screen warns
   that the game will run slowly and says where to turn it back on. With it on, no warning.
 
 ## Practice range (M21)
 
-- [ ] **Title screen, Practice range.** You're alone behind a painted line on a long concrete range, facing three
+- [ ] **Title screen, Practice Range.** You're alone behind a painted line on a long concrete range, facing three
   lanes of targets: white steel plates on the left, standing plywood figures in the middle, crouched ones on the
   right. Boards on both walls and lines on the floor say 10 m to 60 m. No whistle, no clock, no score.
 - [ ] **Shoot each kind.** A plate rings (you should still hear it at 60 m) and swings back, away from you; a figure falls back and
@@ -370,8 +370,8 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   under a plate: the BB stops on it and reads as a miss at that distance (the plate doesn't ring).
 - [ ] **Reload.** Empty a magazine and reload: the spare gauges never run down.
 - [ ] **Esc, Loadout.** The pause menu has a Loadout button. Change the BB weight or the hop-up, go Back and Resume:
-  you're where you stood, with the new setup (the HUD's replica name and the readout follow it). Then Quit to title
-  screen and start a normal match: it plays as before.
+  you're where you stood, with the new setup (the HUD's replica name and the readout follow it). Then Quit
+  and start a normal match: it plays as before.
 - [ ] **Walk downrange.** Nothing stops you walking among the targets; BBs fired from there still hit them.
 
 ## Squad orders and hearing (M22)
@@ -393,7 +393,7 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 
 ## Tutorial (M16)
 
-- [ ] **Title screen.** A **Tutorial** button sits next to Start and Practice range, tagged "New? Start here" (until
+- [ ] **Title screen.** A **Tutorial** button sits next to Start and Practice Range, tagged "New? Start here" (until
   you've finished it once).
 - [ ] **Play it through.** The coach at the top says "Tutorial · 1 of 10 · Look around" and moves on when you've done
   each thing: look around, walk to the line, ring a plate, knock down a figure at 50 m or more (past the stock hop-up's reach; the coach shows where your last BB landed), reload, aim (or, with
@@ -435,18 +435,18 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
-  with **Resume**, **Settings** and **Quit to title screen** on a solid background (the match doesn't show
+  with **Resume**, **Settings** and **Quit** on a solid background (the match doesn't show
   through). Resume puts you back exactly where you were.
 - [ ] **Change keys.** In the pause menu click **Settings**, then **Key bindings**, click an action and press a new
-  key. **Back** returns to the pause menu; back in the game the new key works. **Reset to defaults** puts
+  key. **Back** returns to the pause menu; back in the game the new key works. **Reset All** puts
   everything back.
 - [ ] **Change the mouse sensitivity** (Settings, Controls) from the pause menu. Mouse look feels faster or slower
   straight away, and the setting is still there after you reload the page.
-- [ ] **Quit to title screen.** The title screen comes back with nothing behind it. Start, change the mode or
+- [ ] **Quit.** The title screen comes back with nothing behind it. Start, change the mode or
   difficulty, then Play: a fresh match from round 1, 0–0, in what you picked. Do this a few times: it loads just as
   quickly each time (nothing piles up).
 - [ ] **Win or lose a match.** The result screen shows MATCH OVER, YOU WIN! (or YOU LOSE) and the score, with
-  **Play Again** (same setup), **Change setup** (back to New game) and **Title screen**.
+  **Play Again** (same setup), **New Game** (back to New game), **Summary** and **Quit**.
 - [ ] **Switch to another browser tab, then come back.** The game pauses by itself and nothing happened while you
   were away: no surprise hits, the round clock didn't run.
 - [ ] **Alt+Tab to another program, then come back.** Same as above: paused and frozen until you click to resume.

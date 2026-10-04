@@ -151,7 +151,7 @@ Then open **http://localhost:4173**.
 | R | Reload (an empty trigger pull also reloads) |
 | 1 / 2 or mouse wheel | Switch between AEG rifle and gas pistol |
 | Left click while out | Watch the next player still in play (the fire button) |
-| Esc | Pause (releases the mouse): Resume, Settings (keys are under **Key bindings**) or Quit to title screen. |
+| Esc | Pause (releases the mouse): Resume, Settings (keys are under **Key bindings**) or Quit. |
 | `` ` `` or F3 | Frame rate and debug info |
 | ] | Debug: show BB flight paths |
 
