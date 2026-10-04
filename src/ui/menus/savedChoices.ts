@@ -26,7 +26,7 @@ import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING, DEFAULT_OPTIC, OPTIC_CHOICES, type OpticChoice } from '../../config/optics';
 import { FOV_SETTING, RENDER } from '../../config/render';
 import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
-import { loadSetting, numberIn } from '../../settings/storage';
+import { loadSetting, numberIn, oneOf } from '../../settings/storage';
 import { loadChoice } from '../optionPicker';
 
 /** The choices the menus save in the browser, each read back here with its default. */
@@ -43,6 +43,11 @@ export function loadDifficulty(): Difficulty {
  */
 export function loadTeammateDifficulty(opponents: Difficulty = loadDifficulty()): Difficulty {
   return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, opponents);
+}
+
+/** Whether a teammate difficulty has been picked and saved (until then it follows the opponents', M20). */
+export function hasSavedTeammateDifficulty(): boolean {
+  return loadSetting<Difficulty | null>('teammateDifficulty', oneOf(TEAMMATE_DIFFICULTIES.map((d) => d.id)), null) !== null;
 }
 
 /** The Match pop-up's rules (M20), each with its default. */

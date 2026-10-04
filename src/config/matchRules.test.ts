@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
+import { hasSavedTeammateDifficulty, loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
-import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, hitRulesFor, matchRulesSummary, roundRulesFor } from './matchRules';
+import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor } from './matchRules';
 
 /** A browser store holding `fields` in the settings object. */
 function storageWith(fields: Record<string, unknown>): Storage {
@@ -27,6 +27,10 @@ describe('custom match rules (M20)', () => {
     const rounds = roundRulesFor(DEFAULT_MATCH_RULES);
     expect(rounds).toMatchObject({ winsNeeded: ROUNDS.winsNeeded, roundTime: ROUNDS.roundTime, halfTimeAfter: ROUNDS.halfTimeAfter, teamSize: ROUNDS.teamSize });
     expect(hitRulesFor(DEFAULT_MATCH_RULES)).toEqual(HITS);
+  });
+
+  it('describe the standard match in full, once, for New game\'s note and the summary', () => {
+    expect(standardMatchText()).toBe("3v3 · first to 5, 2:30 rounds. Friendly fire on; ricochets don't count. Both teams' bots at one difficulty.");
   });
 
   it('count for the records only as the standard match with both teams at one difficulty', () => {
@@ -70,9 +74,11 @@ describe('custom match rules (M20)', () => {
   it('give teammates the saved opponents\' level until one of their own is saved (a save from before M20)', () => {
     vi.stubGlobal('localStorage', storageWith({ difficulty: 'hard' }));
     expect(loadTeammateDifficulty()).toBe('hard');
+    expect(hasSavedTeammateDifficulty()).toBe(false); // so New game keeps them following the opponents' picks
     expect(countsForRecords(DEFAULT_MATCH_RULES, 'hard', loadTeammateDifficulty())).toBe(true);
     vi.stubGlobal('localStorage', storageWith({ difficulty: 'hard', teammateDifficulty: 'easy' }));
     expect(loadTeammateDifficulty()).toBe('easy');
+    expect(hasSavedTeammateDifficulty()).toBe(true);
     vi.stubGlobal('localStorage', storageWith({}));
     expect(loadTeammateDifficulty()).toBe('normal');
   });

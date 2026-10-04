@@ -34,6 +34,7 @@ import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
 import {
+  hasSavedTeammateDifficulty,
   loadAimMode,
   loadAimSensitivity,
   loadCrouchMode,
@@ -197,7 +198,7 @@ export class Game {
       map: { initial: this.map, onChange: (m) => (this.map = m) },
       mode: { initial: this.mode, onChange: (m) => (this.mode = m) },
       difficulty: { initial: this.difficulty, onChange: (d) => (this.difficulty = d) },
-      teammateDifficulty: { initial: this.teammateDifficulty, onChange: (d) => (this.teammateDifficulty = d) },
+      teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => (this.teammateDifficulty = d) },
       matchRules: { initial: this.matchRules, onChange: (m) => (this.matchRules = m) },
       controls: {
         sensitivity: { initial: this.input.sensitivity, onChange: (v) => (this.input.sensitivity = v) },

@@ -85,6 +85,15 @@ export function countsForRecords(rules: MatchRules, opponents: string, teammates
   );
 }
 
+/**
+ * The match the records count, in words (countsForRecords): "3v3 · first to 5, 2:30 rounds. Friendly fire on;
+ * ricochets don't count. Both teams' bots at one difficulty." One text for New game's note and the summary's.
+ */
+export function standardMatchText(): string {
+  const std = matchRulesSummary(DEFAULT_MATCH_RULES);
+  return `${std.value}, ${std.detail} Both teams' bots at one difficulty.`;
+}
+
 /** "2:30". */
 export function formatRoundTime(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;

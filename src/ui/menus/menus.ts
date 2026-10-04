@@ -1,7 +1,6 @@
 import { DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   countsForRecords,
-  DEFAULT_MATCH_RULES,
   FRIENDLY_FIRE_CHOICES,
   formatRoundTime,
   type MatchRules,
@@ -9,6 +8,7 @@ import {
   RICOCHETS_COUNT_CHOICES,
   ROUND_TIME_SETTING,
   roundRulesFor,
+  standardMatchText,
   TEAM_SIZE_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
@@ -51,7 +51,8 @@ export interface MenusOptions {
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
-  teammateDifficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
+  /** `follows`: no teammate level is saved yet, so it follows the opponents' picks until one is chosen. */
+  teammateDifficulty: { initial: Difficulty; follows: boolean; onChange: (d: Difficulty) => void };
   /** The Match pop-up's rules (M20). */
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   controls: ControlsSettingsOptions;
@@ -118,6 +119,14 @@ export class Menus {
       this.refreshSetup();
     });
     this.matchDialog = new RowsDialog('Match', this.matchRows());
+    // Until a teammate level is picked (and saved), teammates follow the opponents' level, as every bot did before M20.
+    let teammatesFollow = opts.teammateDifficulty.follows;
+    const teammates = new OptionPicker('Teammates', TEAMMATE_DIFFICULTIES, this.teammateDifficulty, 'teammateDifficulty', (d) => {
+      teammatesFollow = false;
+      this.teammateDifficulty = d;
+      opts.teammateDifficulty.onChange(d);
+      this.refreshSetup();
+    });
     this.difficultyDialog = new RowsDialog('Bot difficulty', [
       menuRow(
         'Opponents',
@@ -125,18 +134,15 @@ export class Menus {
         new OptionPicker('Opponents', DIFFICULTIES, this.difficulty, 'difficulty', (d) => {
           this.difficulty = d;
           opts.difficulty.onChange(d);
+          if (teammatesFollow) {
+            this.teammateDifficulty = d;
+            teammates.show(d);
+            opts.teammateDifficulty.onChange(d);
+          }
           this.refreshSetup();
         }).root,
       ),
-      menuRow(
-        'Teammates',
-        'Your bot teammates (none in a 1v1).',
-        new OptionPicker('Teammates', TEAMMATE_DIFFICULTIES, this.teammateDifficulty, 'teammateDifficulty', (d) => {
-          this.teammateDifficulty = d;
-          opts.teammateDifficulty.onChange(d);
-          this.refreshSetup();
-        }).root,
-      ),
+      menuRow('Teammates', 'Your bot teammates (none in a 1v1). Until you pick, they play at the opponents\' level.', teammates.root),
     ]);
     // Every loadout change also refreshes New game's Loadout button.
     const lo = opts.loadout;
@@ -361,7 +367,7 @@ export class Menus {
 }
 
 /** Under New game's rules when the setup isn't the standard match. */
-export const NOT_RECORDED_NOTE = `Custom rules: this match won't go into your records (they count ${matchRulesSummary(DEFAULT_MATCH_RULES).value}, with both teams at one difficulty).`;
+export const NOT_RECORDED_NOTE = `Custom rules: this match won't go into your records. They count the standard match: ${standardMatchText()}`;
 
 function difficultyLabel(d: Difficulty): string {
   return DIFFICULTIES.find((o) => o.id === d)?.label ?? d;

@@ -1,5 +1,5 @@
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
-import { DEFAULT_MATCH_RULES, matchRulesSummary } from '../config/matchRules';
+import { standardMatchText } from '../config/matchRules';
 import { MATCH_MODES, type MatchMode } from '../config/modes';
 import { type RecordNews, type Records, resultKey } from '../stats/records';
 
@@ -18,8 +18,7 @@ const NO_NEWS: RecordNews = { bestAccuracy: false, bestStreak: false };
 
 /** The line over the records after a custom match: only the standard match counts (M20; config/matchRules countsForRecords). */
 function notCountedLine(): string {
-  const std = matchRulesSummary(DEFAULT_MATCH_RULES);
-  return `Custom rules, so this match isn't in your records. They count the standard match: ${std.value}, ${std.detail} Both teams at one difficulty.`;
+  return `Custom rules, so this match isn't in your records. They count the standard match: ${standardMatchText()}`;
 }
 
 /**

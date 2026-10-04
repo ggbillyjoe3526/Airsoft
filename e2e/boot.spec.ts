@@ -70,10 +70,14 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await setup.getByRole('button', { name: /Difficulty/i }).click();
   const dialog = page.getByRole('dialog', { name: 'Bot difficulty' });
   await expect(dialog).toBeVisible();
+  // Nothing saved for the teammates yet: they follow the opponents' level until picked.
   await dialog.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Hard' }).click();
+  await expect(dialog.getByRole('group', { name: 'Teammates' }).getByRole('button', { name: 'Hard' })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('group', { name: 'Teammates' }).getByRole('button', { name: 'Normal' }).click();
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
   await expect(setup.getByRole('button', { name: /Difficulty/i })).toContainText('Hard / Normal');
+  await expect(page.locator('.setup-rules')).toContainText('2:30 rounds'); // the custom-rules note names the whole standard
   await setup.getByRole('button', { name: /Difficulty/i }).click();
   await dialog.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Normal' }).click();
   await dialog.getByRole('button', { name: 'Close' }).click();
