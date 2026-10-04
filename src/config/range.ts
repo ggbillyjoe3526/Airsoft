@@ -102,4 +102,31 @@ export const RANGE_VISUALS = {
   signTurn: 0.35,
   signColor: '#e8e4d8',
   signText: '#22262a',
+  /**
+   * Detail with QualitySettings.mapDetail (audit section 5, "Range targets"): white paint with grey BB scuffs near the
+   * plate's middle (`scuffs` of them, `scuffRadius` px on a `textureSize` canvas, rougher than the paint), the plate on
+   * two short chains of `links` links from an arm off the post, a painted plywood figure (outline, head ring and centre
+   * circle in `zoneInk`) on two hinge brackets, a safety-orange band on each steel post (the range has no teams, so the
+   * one place orange is fine) and a shelf of BB bottles by the firing line.
+   */
+  detail: {
+    textureSize: 256,
+    scuffs: [24, 40],
+    scuffRadius: [3, 9],
+    scuffSpread: 0.45,
+    scuffRoughness: 0.85,
+    paintRoughness: 0.5,
+    links: 3,
+    linkRadius: 0.014,
+    linkTube: 0.0035,
+    chainSpread: 0.07,
+    armDepth: 0.03,
+    zoneInk: '#5a3f22',
+    plywood: '#c4a072',
+    hinge: { width: 0.06, height: 0.05, depth: 0.04, inset: 0.08 },
+    metal: 0x8c939a,
+    band: { colour: 0xf07a22, height: 0.12, at: 1.55 },
+    shelf: { x: 9.6, z: 1.6, width: 0.9, depth: 0.4, height: 0.9, top: 0.04, colour: 0x6f7a6a },
+    bottles: { count: 3, radius: 0.035, height: 0.18, colour: 0xf4f2ea, capColour: 0x3c4247 },
+  },
 } as const;

@@ -7,6 +7,7 @@ import {
   rowEnabled,
   SHOW_FPS_CHOICES,
   storedValue,
+  TONE_MAPPING_CHOICES,
 } from '../config/graphics';
 import {
   type FrameRateCap,
@@ -16,6 +17,7 @@ import {
   qualityChoiceOf,
   type QualitySettings,
   resolveQuality,
+  type ToneMappingId,
 } from '../config/render';
 import { saveSetting } from '../settings/storage';
 import { el, menuRow, rangeControl } from './menus/menuParts';
@@ -43,6 +45,8 @@ export interface GraphicsSettingsOptions {
   };
   frameRateCap: { initial: FrameRateCap; onChange: (cap: FrameRateCap) => void };
   showFps: { initial: boolean; onChange: (on: boolean) => void };
+  /** Tone mapping (F2): not part of a preset; the picker saves it. */
+  toneMapping: { initial: ToneMappingId; onChange: (id: ToneMappingId) => void };
 }
 
 /** One Custom row's control, and how to show a value on it without saving. */
@@ -67,6 +71,7 @@ export class GraphicsSettings {
   readonly qualityRow: HTMLDivElement;
   readonly frameRateRow: HTMLDivElement;
   readonly showFpsRow: HTMLDivElement;
+  readonly toneMappingRow: HTMLDivElement;
   /** The "Custom settings" heading and its rows. */
   readonly customBlock: HTMLDivElement;
   private readonly picker: OptionPicker<QualityChoice>;
@@ -87,6 +92,8 @@ export class GraphicsSettings {
     this.frameRateRow = menuRow('Frame-rate limit', GRAPHICS_TEXT.frameRateHelp, capPicker.root);
     const fps = new OptionPicker('Show FPS', SHOW_FPS_CHOICES, opts.showFps.initial ? 'on' : 'off', 'showFps', (id) => opts.showFps.onChange(id === 'on'));
     this.showFpsRow = menuRow('Show FPS', GRAPHICS_TEXT.showFpsHelp, fps.root);
+    const tone = new OptionPicker('Tone mapping', TONE_MAPPING_CHOICES, opts.toneMapping.initial, 'toneMapping', (id) => opts.toneMapping.onChange(id));
+    this.toneMappingRow = menuRow('Tone mapping', GRAPHICS_TEXT.toneMappingHelp, tone.root);
 
     this.customBlock = el('div', 'graphics-custom');
     this.customBlock.append(el('h3', 'menu-kicker graphics-subhead', GRAPHICS_TEXT.customHeading), el('p', 'menu-readout', GRAPHICS_TEXT.customIntro));
@@ -96,7 +103,7 @@ export class GraphicsSettings {
 
   /** The tab's rows below Field of view, in order. */
   rows(fullscreen: HTMLElement): HTMLElement[] {
-    return [this.qualityRow, fullscreen, this.frameRateRow, this.showFpsRow, this.customBlock];
+    return [this.qualityRow, fullscreen, this.frameRateRow, this.showFpsRow, this.toneMappingRow, this.customBlock];
   }
 
   /** Shows a choice and its settings without saving them (the game's own step-down, REN-03). */

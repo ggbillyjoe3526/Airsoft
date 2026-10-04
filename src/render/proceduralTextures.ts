@@ -12,6 +12,8 @@ import { createRng, rngNext, type RngState } from '../sim/rng';
 export interface ProceduralTexture {
   texture: THREE.CanvasTexture;
   worldSize: number;
+  /** Its normal map, worked out the first time Relief maps: Normal wants it (render/surfaceNormals.ts ensureNormalMap). */
+  normal?: THREE.Texture;
 }
 
 export type SurfaceTextures = Record<SurfaceTextureId, ProceduralTexture>;
@@ -92,7 +94,27 @@ export function createSurfaceTextures(size: TextureSize, anisotropy: Anisotropy)
     ctx.stroke();
   }
 
+  /**
+   * Fine grain at the largest size (audit section 5: at 1024 the drawings need detail at the new frequency, or they only
+   * look smoother): every pixel's brightness nudged by up to SURFACES.fineGrain.amount, from a hash of its position.
+   */
+  function fineGrain(canvas: HTMLCanvasElement, seed: number): void {
+    if (SIZE < SURFACES.fineGrain.fromSize) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const image = ctx.getImageData(0, 0, SIZE, SIZE);
+    const d = image.data;
+    for (let i = 0; i < SIZE * SIZE; i++) {
+      const n = ((Math.imul(i ^ seed, 2654435761) >>> 0) / 4294967296 - 0.5) * 2 * SURFACES.fineGrain.amount;
+      d[i * 4] = d[i * 4]! + n;
+      d[i * 4 + 1] = d[i * 4 + 1]! + n;
+      d[i * 4 + 2] = d[i * 4 + 2]! + n;
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
   function finish(canvas: HTMLCanvasElement, id: SurfaceTextureId): ProceduralTexture {
+    fineGrain(canvas, id.length * 7919 + SIZE);
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
@@ -279,6 +301,15 @@ export function createSurfaceTextures(size: TextureSize, anisotropy: Anisotropy)
       ctx.stroke();
     }
     speckle(ctx, rng, 900, 0.1, false);
+    // At the largest size, a hairline row of paint chips along each rib's crest (lighter: worn paint, never rust).
+    if (SIZE >= SURFACES.fineGrain.fromSize) {
+      for (let i = 0; i < ribs; i++) {
+        for (let k = 0; k < SURFACES.fineGrain.ribChips; k++) {
+          ctx.fillStyle = rgba(255, 255, 255, 0.2 + rngNext(rng) * 0.25);
+          ctx.fillRect((i + 0.4 + rngNext(rng) * 0.15) * ribW, rngNext(rng) * SIZE, PX * 0.5, PX * (0.5 + rngNext(rng)));
+        }
+      }
+    }
     return finish(canvas, 'corrugated');
   }
 
@@ -438,7 +469,10 @@ export function createSurfaceTextures(size: TextureSize, anisotropy: Anisotropy)
 }
 
 export function disposeSurfaceTextures(t: SurfaceTextures): void {
-  for (const key of Object.keys(t) as SurfaceTextureId[]) t[key].texture.dispose();
+  for (const key of Object.keys(t) as SurfaceTextureId[]) {
+    t[key].texture.dispose();
+    t[key].normal?.dispose();
+  }
 }
 
 /**
@@ -447,9 +481,10 @@ export function disposeSurfaceTextures(t: SurfaceTextures): void {
  */
 export function setSurfaceAnisotropy(t: SurfaceTextures, anisotropy: Anisotropy): void {
   for (const key of Object.keys(t) as SurfaceTextureId[]) {
-    const texture = t[key].texture;
-    if (texture.anisotropy === anisotropy) continue;
-    texture.anisotropy = anisotropy;
-    texture.needsUpdate = true;
+    for (const texture of [t[key].texture, t[key].normal]) {
+      if (!texture || texture.anisotropy === anisotropy) continue;
+      texture.anisotropy = anisotropy;
+      texture.needsUpdate = true;
+    }
   }
 }
