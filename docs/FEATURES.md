@@ -48,6 +48,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole (M1, M11, M25b)
 - Woodland: a second field coming soon, shown as disabled in the Map pop-up (M33a)
+- Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland (M33c)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory

@@ -79,6 +79,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA6** · Audio renders at 48 kHz with seeded reverb; debug overlay shows latency (#55)
 - **FA11a** · Production build compresses with Brotli and gzip; browser test plays real production build with mouse lock (#61)
 - **FA11a** · TypeScript stricter (exactOptionalPropertyTypes); GitHub checks verify scope and changelog; dead code removed (#61)
+- **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 
 ## v0.1-alpha.3 · 2026-10-03
 
