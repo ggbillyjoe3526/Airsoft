@@ -1,8 +1,10 @@
 import { type Action, type CrouchMode, DEFAULT_AIM_MODE, DEFAULT_CROUCH_MODE, DEFAULT_SPRINT_MODE, type HoldMode, MOUSE } from '../config/controls';
 import { AIMING } from '../config/optics';
 import type { MovementConfig } from '../config/movement';
+import { SIM_DT } from '../config/sim';
 import { DEFAULT_WHEEL_SELECT, ORDER_WHEEL, type SquadCommand, type WheelSelect } from '../config/squad';
 import type { PlayerCommand } from '../sim/commands';
+import { fillScriptedCommand, type ScriptStep } from './scriptedInput';
 import { wrapAngle } from '../sim/vec';
 import type { Keyboard } from './keyboard';
 import { WheelPointer } from './orderWheel';
@@ -67,6 +69,13 @@ export class PlayerInput {
   private orderLatch: SquadCommand | null = null;
   private switchLatch = -1;
   private readonly mouseDelta = { x: 0, y: 0 };
+
+  /**
+   * A scripted player (input/scriptedInput.ts) for the perf harness: while set, `fillCommand` takes the command from
+   * the script by tick instead of the keyboard and mouse. The dev server and the e2e build only (`?script=perf`).
+   */
+  script: readonly ScriptStep[] | null = null;
+  private scriptTick = 0;
 
   constructor(
     private readonly keyboard: Keyboard,
@@ -219,6 +228,12 @@ export class PlayerInput {
 
   /** Writes the command for the next tick and clears consumed one-shot actions. */
   fillCommand(cmd: PlayerCommand): void {
+    if (this.script) {
+      this.yaw = wrapAngle(fillScriptedCommand(this.script, this.scriptTick++, this.yaw, SIM_DT, cmd));
+      this.pitch = cmd.pitch;
+      this.clearOneShots();
+      return;
+    }
     const kb = this.keyboard;
     cmd.forward = (kb.isDown('forward') ? 1 : 0) - (kb.isDown('back') ? 1 : 0);
     cmd.right = (kb.isDown('right') ? 1 : 0) - (kb.isDown('left') ? 1 : 0);

@@ -4,6 +4,7 @@ import { motionScale, type SoundCueColour, soundCueCss } from './config/accessib
 import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
 import { activeDev, type DevSettings, devCheating } from './config/dev';
+import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules } from './config/matchRules';
 import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './config/matchInfo';
@@ -91,6 +92,11 @@ export interface GameOptions {
   automaticQuality: boolean;
   /** The browser draws without hardware acceleration (render/gpuCheck.ts): the title screen warns. */
   softwareRendering: boolean;
+  /**
+   * The perf harness's scripted player (config/perfScript.ts, input/scriptedInput.ts): the player's command comes
+   * from a table by tick, never from the keyboard or mouse. Dev server and the e2e build only (`?script=perf`).
+   */
+  scriptedPlayer?: boolean;
 }
 
 /**
@@ -214,6 +220,7 @@ export class Game {
     this.keyboard = new Keyboard(window, this.bindings);
     this.pointer = new PointerLock(this.renderer.canvas, this.keyboard);
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
+    if (options.scriptedPlayer) this.input.script = PERF_SCRIPT;
     this.input.crouchMode = loadCrouchMode();
     this.input.aimMode = loadAimMode();
     this.input.sprintMode = loadSprintMode();

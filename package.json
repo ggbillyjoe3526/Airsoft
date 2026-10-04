@@ -15,7 +15,9 @@
     "check": "npm run test && npm run build",
     "build:e2e": "vite build --mode e2e --outDir dist-e2e --emptyOutDir",
     "test:browser": "playwright test",
-    "check:all": "npm run check && npm run test:browser"
+    "check:all": "npm run check && npm run test:browser",
+    "gate": "node pipeline/gate.mjs",
+    "perf": "node pipeline/perf-run.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
