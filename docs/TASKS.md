@@ -8,7 +8,7 @@ keeps `status` and `attempts` current.
 ## FA11a · Build, tests and pipeline hygiene
 tier: core
 perf: skip
-touches: pipeline/gate.mjs, pipeline/scope.mjs, pipeline/build-cached.mjs, pipeline/perf-run.mjs, pipeline/README.md, .github/workflows/check.yml, .claude/agents/qa.md, .claude/agents/worker.md, .claude/skills/pipeline/SKILL.md, playwright.config.ts, vite.config.ts, tsconfig.json, package.json, src/config/precompress.ts, src/config/sounds.ts, src/audio/soundBank.ts, src/pool/pool.ts, src/pool/armory.ts, src/pool/collection.ts, src/sim/simulation.ts, src/sim/round.ts
+touches: pipeline/gate.mjs, pipeline/scope.mjs, pipeline/scope.test.mjs, pipeline/build-cached.mjs, pipeline/perf-run.mjs, pipeline/README.md, .github/workflows/check.yml, .claude/agents/qa.md, .claude/agents/worker.md, .claude/skills/pipeline/SKILL.md, playwright.config.ts, vite.config.ts, tsconfig.json, package.json, src/config/precompress.ts, src/config/sounds.ts, src/audio/soundBank.ts, src/pool/pool.ts, src/pool/armory.ts, src/pool/collection.ts, src/sim/simulation.ts, src/sim/round.ts
 contract: none
 acceptance:
   1. CORE-07: the scope gate no longer lets a task change `pool.md` or `CLAUDE.md` outside its `touches`; the rules live in `pipeline/scope.mjs` with tests
@@ -22,4 +22,4 @@ acceptance:
   9. CORE-27: pipeline/README.md and the agents' timings match the scripts (re-measured), and the laptop frame-time gate is named as a manual owner step
   10. CORE-29: the production build writes Brotli and gzip copies of its compressible files with node:zlib (no new dependency), and README says how a static host serves them
 status: gates
-attempts: 0
+attempts: 2

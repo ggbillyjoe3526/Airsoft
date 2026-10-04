@@ -17,12 +17,13 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTitle } from './scope.mjs';
+import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTitle, tasksVersions } from './scope.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
 const ARTIFACTS = join(OUT, 'qa-artifacts');
 const REPORT = join(OUT, 'gate-report.json');
+const TASKS = join(ROOT, 'docs', 'TASKS.md');
 
 /** Paths whose change makes the perf gate required (the proposal's "render loop, physics, entities, assets"). */
 const PERF_PATHS = ['src/sim/', 'src/physics/', 'src/render/', 'src/ai/', 'src/nav/', 'src/audio/', 'src/core/', 'src/map/', 'src/assets/', 'vite.config.ts'];
@@ -193,27 +194,10 @@ if (!perfRequired) {
 }
 
 // 5. scope: the diff stays inside the task's `touches` (plus tests and docs), and QA commits touch only tests.
-/**
- * docs/TASKS.md as it is now, then as each commit since the merge base left it (newest first), then at the merge base:
- * a branch clears its block before its pull request merges, so the block is looked for where it last was.
- */
-function* tasksVersions() {
-  const path = join(ROOT, 'docs', 'TASKS.md');
-  yield { where: 'working tree', text: existsSync(path) ? readFileSync(path, 'utf8') : null };
-  const show = (sha) => {
-    try {
-      return git('show', `${sha}:docs/TASKS.md`);
-    } catch {
-      return null;
-    }
-  };
-  for (const sha of git('rev-list', `${mergeBase}..HEAD`, '--', 'docs/TASKS.md').split('\n').filter(Boolean)) yield { where: sha.slice(0, 7), text: show(sha) };
-  yield { where: `merge base ${mergeBase.slice(0, 7)}`, text: show(mergeBase) };
-}
 if (options.tasks.length === 0) {
   record('scope', { pass: null, reason: 'skipped (no --task)' });
 } else {
-  const blocks = options.tasks.map((id) => ({ id, block: findTaskBlock(tasksVersions(), id) }));
+  const blocks = options.tasks.map((id) => ({ id, block: findTaskBlock(tasksVersions(git, mergeBase, existsSync(TASKS) ? readFileSync(TASKS, 'utf8') : null), id) }));
   const missing = blocks.filter((b) => !b.block).map((b) => b.id);
   if (missing.length > 0) record('scope', { pass: false, reason: `no block ${missing.map((id) => `"## ${id}"`).join(', ')} in docs/TASKS.md or its history since ${mergeBase.slice(0, 7)}` });
   else {

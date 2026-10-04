@@ -9,6 +9,8 @@ on:
   push:
     branches: [main]
   pull_request:
+    # `edited` too, so renaming a pull request's title (its task ids) runs the scope and changelog gates again.
+    types: [opened, synchronize, reopened, edited]
 
 # A newer push to a pull request cancels its older run. Pushes to main are grouped by commit, so no run on main is
 # cancelled (GitHub drops a pending run in the same group whatever cancel-in-progress says) and every merge shows

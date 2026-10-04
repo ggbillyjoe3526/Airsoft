@@ -9,10 +9,10 @@
  * `pool.md` (game data the game reads at start) and `CLAUDE.md` (the rules every agent works under) are not on it
  * (audit CORE-07): a task that changes them lists them in `touches`.
  */
-export const ALWAYS_ALLOWED = [/\.test\.(ts|mjs)$/, /^e2e\//, /^docs\//, /^CHANGELOG\.md$/, /^README\.md$/];
+export const ALWAYS_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^docs\//, /^CHANGELOG\.md$/, /^README\.md$/];
 
 /** What a QA commit (trailer `Agent: qa`) may touch: tests and their support only. */
-export const QA_ALLOWED = [/\.test\.(ts|mjs)$/, /^e2e\//, /^src\/.*\/testSupport\.ts$/, /^src\/ai\/depotMatchSupport\.ts$/, /^src\/pool\/testStorage\.ts$/];
+export const QA_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^src\/.*\/testSupport\.ts$/, /^src\/ai\/depotMatchSupport\.ts$/, /^src\/pool\/testStorage\.ts$/];
 
 /** A task id as the pipeline writes them: M27, M29a, FA11a, BP1. */
 const TASK_ID = /[A-Z]{1,3}\d+[a-z]?/;
@@ -49,6 +49,34 @@ export function findTaskBlock(versions, id) {
     if (block) return { ...block, where };
   }
   return null;
+}
+
+/**
+ * docs/TASKS.md as `workingTree` holds it, then as every commit in `base..HEAD` left it (newest first, each distinct
+ * version once), then at `base`; `git(...args)` runs git and returns its output, throwing on failure. Every commit is
+ * read, not only those git's path filter keeps: once a branch has cleared its block and merged main in, its file
+ * equals main's, and history simplification would skip the side where the block was (CI's merge ref, audit CORE-08).
+ */
+export function* tasksVersions(git, base, workingTree) {
+  yield { where: 'working tree', text: workingTree };
+  const seen = new Set();
+  const show = (rev) => {
+    let blob;
+    try {
+      blob = git('rev-parse', '--verify', '--quiet', `${rev}:docs/TASKS.md`);
+    } catch {
+      return null;
+    }
+    if (!blob || seen.has(blob)) return null;
+    seen.add(blob);
+    return git('cat-file', 'blob', blob);
+  };
+  for (const sha of git('rev-list', `${base}..HEAD`).split('\n').filter(Boolean)) {
+    const text = show(sha);
+    if (text !== null) yield { where: sha.slice(0, 7), text };
+  }
+  const text = show(base);
+  if (text !== null) yield { where: `base ${base.slice(0, 7)}`, text };
 }
 
 /**
