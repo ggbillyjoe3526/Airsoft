@@ -38,26 +38,46 @@ config, asset loading, docs; `trivial` is a one-constant change, a wording fix, 
 ## `gate.mjs`
 
 ```
-node pipeline/gate.mjs [--task M27] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
+node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
 ```
 
 | Gate | Runs | Passes when |
 |---|---|---|
-| `build` | `npm run build` (tsc, Vite, chunk budgets) | exit 0 |
-| `tests` | `vitest run --reporter=json` | no failures |
-| `smoke` | `playwright test` (`e2e/boot.spec.ts`, which asserts zero console and page errors) | no failures |
+| `build` | `build-cached.mjs --mode production --force`: `npm run build` (tsc, Vite, chunk budgets, the `.br`/`.gz` copies) | exit 0 |
+| `tests` | `vitest run --reporter=json` (`src/**/*.test.ts` and the pipeline's own `pipeline/**/*.test.mjs`) | no failures |
+| `smoke` | `playwright test`: project `chromium` runs `e2e/boot.spec.ts` and `e2e/crash.spec.ts` on the e2e build (`?nolock`, `window.airsoft`); project `release` runs `e2e/release.spec.ts` on `dist/` without test flags, with the real pointer lock. Every test asserts zero console and page errors | no failures |
 | `perf` | `perf-run.mjs`, only when required | every budget line for the env within `perf-budget.json`, nothing more than 10 % worse than `baseline/<env>.json` |
-| `scope` | the diff vs the task's `touches` | every changed file is in `touches`, a test, a doc, CHANGELOG, README or pool.md; `Agent: qa` commits touch only tests |
-| `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` |
+| `scope` | the diff vs the task's `touches` (`scope.mjs`) | every changed file is in `touches`, a test, under `e2e/` or `docs/`, CHANGELOG or README (`pool.md` and `CLAUDE.md` only when listed); `Agent: qa` commits touch only tests |
+| `changelog` | `CHANGELOG.md` › Unreleased | a line names `**<task>**` (each task, when several) |
 
-`--quick` is build and tests (about 90 s). The full gate in a cloud container is about five minutes; set
-`PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. CI runs `--ci` (no perf: a runner has no baseline). The
-report is `pipeline/out/gate-report.json`; logs and reports under `pipeline/out/qa-artifacts/`; all git-ignored.
+`--task` takes one id or several (`FA5,FA9`) for a pull request that carries more than one task; the scope is the union
+of their `touches`. A block the branch has already cleared from `docs/TASKS.md` is looked for in the branch's history
+since the base.
+
+`--quick` is build and tests: about QUICK_TIME. The full gate in a cloud container is about five minutes plus the perf run
+when it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
+`pipeline/out/gate-report.json`; logs and reports under `pipeline/out/qa-artifacts/`; all git-ignored.
+
+**Builds.** `build-cached.mjs` builds the production bundle (`dist/`) or the e2e bundle (`dist-e2e/`, `--mode e2e`) and
+skips the build when the output is already that of the same source (a hash of `src/` without tests, `public/`,
+`index.html`, `pool.md`, `stats.md`, the Vite, TypeScript and npm files, and `git describe`). The gate's build step always
+builds; the smoke test's two servers and the perf harness then reuse what is there, so one gate run makes each bundle
+once. Two bundles stay necessary: the e2e one has the test hooks, the production one is what players get.
+
+**CI** (`.github/workflows/check.yml`) runs `--ci`: build, tests and smoke on every pull request and push to `main`.
+On a pull request whose title starts with its task id(s) (`FA12: …`, `FA5 + FA9: …`), `--ci` reads the ids from the
+title (`GATE_PR_TITLE`) and also runs `scope` and `changelog`, diffing the merge commit against its first parent (the
+base it merges into). A title without an id, and a push to `main`, skip those two. **What runs only off CI:** the
+`perf` gate (a runner has no baseline and no GPU; the worker's full gate runs it in the container), the frame-time
+budget (below), and the critic. Playwright's system libraries are installed on a runner only when the cached Chromium
+can't start without them.
 
 Perf environments: `container` (SwiftShader, no GPU; frame times are noise, counts and memory are real), `laptop`
-(the owner's low-spec laptop with CPU throttled 4×; the only place the frame-time budget is gated), `ci` (no
-baseline). `pipeline/baseline/<env>.json` is written by `perf-run.mjs --baseline` on `main` after a merge that
-changed perf-relevant code, and committed.
+(the owner's low-spec laptop with CPU throttled 4×; the only environment whose frame times are judged), `ci` (no
+baseline). **Frame-time gating is a manual owner step**: no automation runs `laptop`; the owner runs
+`node pipeline/perf-run.mjs --env laptop` before a release tag (and with `--baseline` at milestones, committed).
+`pipeline/baseline/<env>.json` is written by `perf-run.mjs --baseline` on `main` after a merge that changed
+perf-relevant code, and committed.
 
 ## Task block (`docs/TASKS.md`)
 
@@ -75,7 +95,11 @@ attempts: 0
 ```
 
 `touches` lists files, or folders with a trailing slash. `perf` is `required` or `skip` (the gate still decides from
-the diff; `skip` only documents the intent). `status`: open · building · gates · critic · retry n · done · escalated.
+the diff; `skip` only documents the intent). `status`: open · building · gates · critic · retry n · escalated. A task
+that lands leaves the file: the records step deletes its block (no `done` blocks stay behind).
+
+The pull request's title starts with the task id(s), `<id>: …` or `<id> + <id>: …`, so CI can run the scope and
+changelog gates.
 
 ## Pull request description
 
