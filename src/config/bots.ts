@@ -385,12 +385,13 @@ export function defaultTeammateDifficulty(opponents: Difficulty): Difficulty {
 /** Skill per difficulty level (see BotSkill). Tuned with measured time-to-hit (docs/DECISIONS.md). */
 export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
   // Easy (audit AI-03): forgiving to the player where the player feels it (slow reactions, wide first BBs), but its
-  // settled aim is closer to Normal's so bot-against-bot fights still end and rounds don't drag on.
+  // settled aim is closer to Normal's so bot-against-bot fights still end and rounds don't drag on (1.7°, not the audit's
+  // 1.4°: with M30's BB flight that made Easy bots as good shots as Normal ones; DECISIONS).
   easy: {
     reactionTime: [0.6, 1.0],
     turnRate: 3.2,
     aimErrorStartDeg: 8,
-    aimErrorSettledDeg: 1.4,
+    aimErrorSettledDeg: 1.7,
     aimSettleTime: 1.3,
     aimErrorStartMetres: 1.0,
     aimErrorMovingDeg: 2.0,

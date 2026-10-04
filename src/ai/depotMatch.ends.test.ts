@@ -25,7 +25,8 @@ describe('a 3v3 bot match on Depot: the ends', () => {
     // 46% over seeds 1-96; with M20's ricochets, 39% (45 of 116). The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
     // With M25b's props (2026-10-04): 49% here (38 of 77) and 48% over seeds 1-64 (155 of 322; 45% on the M11 Depot).
     // FA4 (2026-10-04: the east spawns moved so neither end reaches the dock or the Main Gate first, and the bot
-    // changes): 53% here (42 of 80) and 49% over seeds 1-64 (165 of 339; 53% on the build before it).
+    // changes): 53% here (42 of 80) and 49% over seeds 1-64 (165 of 339; 53% on the build before it). After merging
+    // M30 and FA1: 56% here (48 of 86), 45% over seeds 1-64 (152 of 336; 50% without FA4).
     expect(westWins / decided).toBeGreaterThan(0.35);
     expect(westWins / decided).toBeLessThan(0.6);
   });

@@ -15,6 +15,9 @@ describe('custom matches on Depot (M20)', () => {
     // from the end's first spawn, the west won 63% of 1v1 rounds over 8 seeds). Elimination: the west wins 47% of
     // decided 1v1 rounds (27 of 58) and 48% of 2v2 (33 of 69). Attack / Defend: attackers win 49% of 1v1 rounds (30
     // of 61, 3 captures) and 52% of 2v2 (34 of 65, 15 captures). 95% or more of rounds are decided, no friendly hits.
+    // 1v1 is judged over 32 seeds since FA4 (2026-10-04; DECISIONS): with one bot a side a 16-seed set has only ~50
+    // rounds, and after the M30 / FA1 merge seeds 1-16 gave the west 33% of 1v1 Elimination rounds (17 of 51) while
+    // seeds 17-32 gave 53% and 33-48 60% (49% over all 48; 55% before FA4).
     const rules = { ...ROUNDS, winsNeeded: 3, halfTimeAfter: 2 };
     for (const size of [1, 2]) {
       for (const mode of ['elimination', 'attackDefend'] as const) {
@@ -23,7 +26,8 @@ describe('custom matches on Depot (M20)', () => {
         let decided = 0;
         let favoured = 0; // elimination: rounds the west end won; attack / defend: rounds the attackers won
         let friendlyHits = 0;
-        for (let seed = 1; seed <= 16; seed++) {
+        const seeds = size === 1 ? 32 : 16;
+        for (let seed = 1; seed <= seeds; seed++) {
           const stats = playMatch(200, seed, undefined, BOTS, mode, rules, DEPOT, size);
           expect(stats.farthestFromSpawn, label).toHaveLength(2 * size);
           friendlyHits += stats.friendlyHits;
@@ -39,7 +43,7 @@ describe('custom matches on Depot (M20)', () => {
           });
           expectGrounded(stats, DEPOT);
         }
-        expect(rounds, label).toBeGreaterThanOrEqual(16 * 3);
+        expect(rounds, label).toBeGreaterThanOrEqual(seeds * 3);
         expect(decided / rounds, label).toBeGreaterThan(0.9);
         expect(favoured / decided, label).toBeGreaterThan(0.35);
         expect(favoured / decided, label).toBeLessThan(0.65);

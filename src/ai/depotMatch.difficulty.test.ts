@@ -10,7 +10,8 @@ beforeAll(async () => {
 it('keeps Easy rounds about as long as Normal ones, and Easy bots the worse shots (audit AI-03)', { timeout: 120_000 }, () => {
   // Bot against bot, seeds 1-4, 150 s each. Mean round length, not the median: round lengths are bimodal (quick wipes
   // and long last-man hunts), so the median jumps between the two humps from seed set to seed set. Measured 2026-10-04
-  // (FA4): Easy 42.8 s vs Normal 36.7 s, hit rate 10.0 vs 13.7 % (16 seeds: 42.3 vs 44.4 s; before FA4 45.4 vs 50.9 s).
+  // (FA4, after the M30 / FA1 merge): Easy 40.3 s vs Normal 26.4 s, hit rate 9.3 vs 11.3 % (16 seeds: 50.2 vs 40.7 s,
+  // 9.2 vs 10.9 %).
   const play = (level: 'easy' | 'normal') => {
     let total = 0;
     let rounds = 0;
