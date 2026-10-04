@@ -18,6 +18,7 @@ import type { MatchSetup } from './matchSession';
 import { RANGE_MAP } from './map/range';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
+import { bbGlowFor } from './pool/loadoutModel';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
@@ -38,7 +39,6 @@ import { TUTORIAL_STEPS } from './config/tutorial';
 import { TutorialTracker, type TutorialView } from './tutorial/tutorial';
 import { CoachPanel } from './ui/coachPanel';
 import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
-import { bbGlowFor } from './pool/loadoutModel';
 
 const PLAYER_ID = 0;
 
