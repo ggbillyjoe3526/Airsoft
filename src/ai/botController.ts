@@ -16,9 +16,8 @@ import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, createBot, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
-import type { Bush } from '../map/foliage';
 import type { CoverBlock } from './cover';
-import { bodyPoint, eyeOf } from './perception';
+import { bodyPoint, eyeOf, OPEN_SIGHT, type SightConditions } from './perception';
 import { endOrder, heldCentre, holdPoint, placeHold, startOrder } from './squadOrders';
 import { assignLanes, pickTeamPlan, shuffledLanes, type TeamPlan } from './teamPlan';
 
@@ -34,8 +33,8 @@ export interface BotControllerOptions {
   /** The map's low and full-height cover (lowCoverBlocks / tallCoverBlocks of map.blocks); empty if none. */
   lowCover: readonly CoverBlock[];
   tallCover: readonly CoverBlock[];
-  /** The map's bushes (M33e, MapData.foliage): bots can't see through them. Absent: none. */
-  foliage?: readonly Bush[];
+  /** What hides people besides walls (sightConditionsOf the map: bushes, M33e, and night, M33g). Absent: daylight, no bushes. */
+  sight?: SightConditions;
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
@@ -116,7 +115,7 @@ export class BotController {
       lanes: opts.lanes,
       lowCover: opts.lowCover,
       tallCover: opts.tallCover,
-      foliage: opts.foliage ?? [],
+      sight: opts.sight ?? OPEN_SIGHT,
       body: opts.body,
       hits: opts.hits,
       loadout: opts.loadout,

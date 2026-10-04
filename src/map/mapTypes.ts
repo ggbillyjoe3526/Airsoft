@@ -1,6 +1,7 @@
 import type { FloorSurface } from '../config/sounds';
 import type { Vec3 } from '../sim/vec';
 import type { Bush } from './foliage';
+import type { MapLight } from './nightSight';
 import type { Terrain } from './terrain';
 
 /**
@@ -84,8 +85,8 @@ export interface MapData {
    */
   flag?: Vec3;
   /**
-   * The field is played at night (M33): glowing BBs by default (config/glowBBs.ts), and later night lighting. Absent
-   * or false: daylight.
+   * The field is played at night (M33): glowing BBs by default (config/glowBBs.ts), bots see less far in the dark
+   * (map/nightSight.ts), and later night lighting. Absent or false: daylight.
    */
   night?: boolean;
   /**
@@ -97,6 +98,11 @@ export interface MapData {
    * Bushes (M33e, map/foliage.ts): they hide whoever is in or behind them, but BBs and people pass through. Absent: none.
    */
   foliage?: readonly Bush[];
+  /**
+   * Pools of light on a night field (M33g, map/nightSight.ts): camp fires and lanterns. Anyone standing in one is seen from
+   * as far as in daylight. Absent: none.
+   */
+  lights?: readonly MapLight[];
   /**
    * Still being built (M33, owner): the Map pop-up shows it greyed out as Coming soon, and only Dev settings › Access
    * maps in development opens it; its matches don't go into the records.
