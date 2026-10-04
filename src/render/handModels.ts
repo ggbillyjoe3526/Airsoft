@@ -33,8 +33,12 @@ export interface HandPose {
   back: V3;
   /** Index, middle, ring, pinky. */
   fingers: readonly [FingerCurl, FingerCurl, FingerCurl, FingerCurl];
-  /** Thumb: how far it swings across the palm (0 = alongside, 1 = fully across) and its two bends. */
-  thumb: { swing: number; curl: readonly [number, number] };
+  /**
+   * Thumb: how far it swings across the palm (0 = alongside, 1 = fully across) and its two bends. `aim` (optional)
+   * points its first segment there instead, for a thumb set against the fingers rather than over them: a support hand
+   * under a handguard, its thumb up the near side while the fingers curl up the far one (FA13).
+   */
+  thumb: { swing: number; curl: readonly [number, number]; aim?: V3 };
 }
 
 // Proportions (metres, gloved).
@@ -120,7 +124,11 @@ export function buildHand(sink: GeometrySink, pose: HandPose, detail: DetailLeve
 
   // Palm: a padded, slightly thicker pad towards the heel of the hand.
   const palm = new RoundedBoxGeometry(PALM.width, PALM.length, PALM.thickness, DETAIL.palmSegments, PALM.radius);
-  const basis = new THREE.Matrix4().makeBasis(a, d, nn);
+  // The left hand's (across, fingers, back) frame is a mirror image (that is how it mirrors the right hand), and a part
+  // placed by a mirroring matrix is drawn inside out: its near faces culled, its far ones lit from behind (FA13: the
+  // left hands' palms showed grey-blue with the fingers' roots seen through them). The parts placed this way are
+  // symmetric across the knuckle row, so the left hand places them with that axis reversed: a rotation.
+  const basis = new THREE.Matrix4().makeBasis(pose.side === 'left' ? a.clone().negate() : a, d, nn);
   palm.applyMatrix4(basis);
   palm.translate(centre.x, centre.y, centre.z);
   sink.addGeometry('glove', palm);
@@ -154,12 +162,15 @@ export function buildHand(sink: GeometrySink, pose: HandPose, detail: DetailLeve
   sink.addGeometry('glove', thenar);
 
   const swing = pose.thumb.swing;
-  const tDir = a
-    .clone()
-    .multiplyScalar(-0.55 * (1 - swing))
-    .addScaledVector(d, 0.65)
-    .addScaledVector(nn, -0.5 - 0.4 * swing)
-    .normalize();
+  const aim = pose.thumb.aim;
+  const tDir = aim
+    ? toVec(aim).normalize()
+    : a
+        .clone()
+        .multiplyScalar(-0.55 * (1 - swing))
+        .addScaledVector(d, 0.65)
+        .addScaledVector(nn, -0.5 - 0.4 * swing)
+        .normalize();
   let tpos = local(-0.034, 0.004, -0.01);
   const tAxis = tDir.clone().cross(nn).normalize();
   for (let s = 0; s < 2; s++) {
@@ -175,7 +186,7 @@ export function buildHand(sink: GeometrySink, pose: HandPose, detail: DetailLeve
   const wristB = local(midAcross, -PALM.length / 2 - 0.03, 0);
   sink.addGeometry('glove', capsule(wristA, wristB, 0.025, DETAIL.wrist));
   const cuff = new THREE.CylinderGeometry(0.03, 0.028, 0.03, DETAIL.cuffSides);
-  cuff.applyMatrix4(new THREE.Matrix4().makeBasis(a, d, nn));
+  cuff.applyMatrix4(basis);
   const cuffAt = local(midAcross, -PALM.length / 2 - 0.022, 0);
   cuff.translate(cuffAt.x, cuffAt.y, cuffAt.z);
   sink.addGeometry('glove', cuff);
