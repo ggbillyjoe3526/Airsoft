@@ -14,7 +14,7 @@ describe('the round banner', () => {
   it('words elimination results from your side', () => {
     expect(roundBanner(round('elimination', { phase: 'over', winner: 0, reason: 'eliminated' }), 0, false, 3, ROUNDS)).toBe('Your team wins the round · next round in 3');
     expect(roundBanner(round('elimination', { phase: 'over', winner: 1, reason: 'eliminated' }), 0, false, 2, ROUNDS)).toBe('Your team loses the round (Orange wins) · next round in 2');
-    expect(roundBanner(round('elimination', { phase: 'over', winner: -1, reason: 'time' }), 0, false, 1, ROUNDS)).toBe("Time's up · draw · next round in 1");
+    expect(roundBanner(round('elimination', { phase: 'over', winner: -1, reason: 'time', number: 2 }), 0, false, 1, ROUNDS)).toBe("Time's up · draw · round 2 again in 1");
     expect(roundBanner(round('elimination', { number: 3 }), 0, true, 0, ROUNDS)).toBe('Round 3');
   });
 
@@ -34,6 +34,10 @@ describe('the round banner', () => {
       'Your team wins the round · half-time, ends swap · next round in 4',
     );
     expect(roundBanner(round('elimination', { phase: 'over', number: ROUNDS.halfTimeAfter + 1, winner: 0 }), 0, false, 4, ROUNDS)).not.toContain('half-time');
+    // A draw in the last round before half-time is played again: no swap yet (audit SIM-19).
+    expect(roundBanner(round('elimination', { phase: 'over', number: ROUNDS.halfTimeAfter, winner: -1, reason: 'time' }), 0, false, 4, ROUNDS)).toBe(
+      `Time's up · draw · round ${ROUNDS.halfTimeAfter} again in 4`,
+    );
   });
 });
 

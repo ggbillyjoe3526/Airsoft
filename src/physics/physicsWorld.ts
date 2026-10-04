@@ -91,7 +91,14 @@ export class PhysicsWorld implements CharacterMover {
   private readonly capsuleHalfHeight: number;
   private readonly capsuleCenterOffset: number;
   private readonly scratch = { x: 0, y: 0, z: 0 };
+  /** The controller's corrected movement, filled in place each move (audit SIM-04: no Vector3 per call). */
+  private readonly moved = { x: 0, y: 0, z: 0 };
   private readonly groundProbe: Rapier.Ball;
+  /**
+   * The ground probe's hit, filled in place (Rapier's broad-phase cast takes a target; World.castShape doesn't), so a
+   * probe no longer allocates a hit object and its four vectors per standing character per tick.
+   */
+  private readonly probeHit = new RAPIER.ColliderShapeCastHit(null as unknown as Rapier.Collider, 0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
   private readonly ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
   /** What each level block's collider is made of, by collider handle (ricochets). */
   private readonly materials = new Map<number, ImpactMaterial>();
@@ -143,7 +150,7 @@ export class PhysicsWorld implements CharacterMover {
     col.setTranslation(s);
 
     this.controller.computeColliderMovement(col, desired, undefined, CHARACTER_GROUPS);
-    const m = this.controller.computedMovement();
+    const m = this.controller.computedMovement(this.moved);
     out.x = m.x;
     out.y = m.y;
     out.z = m.z;
@@ -161,7 +168,12 @@ export class PhysicsWorld implements CharacterMover {
     s.x = c.position.x;
     s.y = c.position.y + lift + this.groundProbe.radius;
     s.z = c.position.z;
-    const hit = this.world.castShape(
+    const w = this.world;
+    // World.castShape with the hit written into probeHit (the same call World.castShape makes, plus its target).
+    const hit = w.broadPhase.castShape(
+      w.narrowPhase,
+      w.bodies,
+      w.colliders,
       s,
       IDENTITY_ROTATION,
       DOWN,
@@ -171,6 +183,10 @@ export class PhysicsWorld implements CharacterMover {
       true,
       undefined,
       QUERY_STATIC_ONLY,
+      undefined,
+      undefined,
+      undefined,
+      this.probeHit,
     );
     // Starting inside geometry (toi 0) gives no usable height; let the character fall and land normally.
     if (!hit || hit.time_of_impact <= 0) return Number.NaN;

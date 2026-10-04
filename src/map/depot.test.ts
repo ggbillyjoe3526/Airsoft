@@ -4,7 +4,7 @@ import { FLAG } from '../config/modes';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
-import { buildNavGrid, canStep, cellIndex, cellX, cellZ, createNavSearch, findPath, floorAt, isWalkableAt, type NavGrid } from '../nav/navGrid';
+import { buildNavGrid, canStep, cellIndex, cellX, cellZ, createNavSearch, findPath, floorAt, isWalkableAt, type NavGrid, nearestWalkable } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter } from '../sim/character';
 import { createCommand } from '../sim/commands';
@@ -158,6 +158,71 @@ function walk(from: Vec3, to: Vec3): number {
   return d;
 }
 
+/**
+ * Route length (metres) from every nav cell to cell `goal` over the same 8-neighbour moves findPath searches (no
+ * squeezing diagonally past a blocked cell or a drop); Infinity where there's no route. A string-pulled route is never
+ * longer, so this is an upper bound on the walk.
+ */
+function routeLengths(g: NavGrid, goal: number): Float64Array {
+  const dist = new Float64Array(g.cols * g.rows).fill(Number.POSITIVE_INFINITY);
+  const heap: [number, number][] = [];
+  const push = (d: number, c: number): void => {
+    heap.push([d, c]);
+    for (let i = heap.length - 1; i > 0; ) {
+      const p = (i - 1) >> 1;
+      if (heap[p]![0] <= heap[i]![0]) break;
+      [heap[p], heap[i]] = [heap[i]!, heap[p]!];
+      i = p;
+    }
+  };
+  const pop = (): [number, number] => {
+    const top = heap[0]!;
+    const last = heap.pop()!;
+    if (heap.length > 0) {
+      heap[0] = last;
+      for (let i = 0; ; ) {
+        const l = 2 * i + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < heap.length && heap[l]![0] < heap[m]![0]) m = l;
+        if (r < heap.length && heap[r]![0] < heap[m]![0]) m = r;
+        if (m === i) break;
+        [heap[m], heap[i]] = [heap[i]!, heap[m]!];
+        i = m;
+      }
+    }
+    return top;
+  };
+  dist[goal] = 0;
+  push(0, goal);
+  while (heap.length > 0) {
+    const [d, c] = pop();
+    if (d > dist[c]!) continue;
+    const ci = c % g.cols;
+    const cj = (c - ci) / g.cols;
+    for (let di = -1; di <= 1; di++) {
+      for (let dj = -1; dj <= 1; dj++) {
+        if (di === 0 && dj === 0) continue;
+        const ni = ci + di;
+        const nj = cj + dj;
+        if (ni < 0 || nj < 0 || ni >= g.cols || nj >= g.rows) continue;
+        const n = nj * g.cols + ni;
+        if (!canStep(g, c, n)) continue;
+        if (di !== 0 && dj !== 0 && !(canStep(g, c, cj * g.cols + ni) && canStep(g, c, nj * g.cols + ci))) continue;
+        const nd = d + (di !== 0 && dj !== 0 ? Math.SQRT2 : 1) * g.cell;
+        if (nd < dist[n]!) {
+          dist[n] = nd;
+          push(nd, n);
+        }
+      }
+    }
+  }
+  return dist;
+}
+
+/** Seconds of walk-off time kept spare for the corners (each string-pulled turn re-accelerates) and waypoint reach. */
+const WALK_OFF_SLACK = 2;
+
 // ---- Tests -------------------------------------------------------------------------------------
 
 describe('Depot map', () => {
@@ -234,6 +299,30 @@ describe('Depot map', () => {
         for (const o of spots) if (o !== s) expect(Math.hypot(s.position.x - o.position.x, s.position.z - o.position.z), where).toBeGreaterThan(2 * BODY.radius); // figures on neighbouring spots don't overlap
       }
     }
+  });
+
+  it(`lets a walk-off from anywhere on the map reach its dead-zone spot with ${WALK_OFF_SLACK} s of walkOffTime to spare (audit SIM-06)`, { timeout: 30_000 }, () => {
+    const pace = HITS.walkOffSpeed * MOVEMENT.runSpeed;
+    const budget = HITS.walkOffTime - WALK_OFF_SLACK;
+    let worst = 0;
+    for (const spots of DEPOT.deadZones) {
+      for (const spot of spots) {
+        const lengths = routeLengths(NAV_GRID, nearestWalkable(NAV_GRID, spot.position.x, spot.position.z, NAV.snap));
+        // Every walkable point on a 1 m grid (either end's victims can be hit anywhere, half-time swaps the ends).
+        for (let x = -halfX + 0.5; x < halfX; x += 1) {
+          for (let z = -halfZ + 0.5; z < halfZ; z += 1) {
+            const c = cellIndex(NAV_GRID, x, z);
+            if (c < 0 || NAV_GRID.walkable[c] !== 1 || !Number.isFinite(lengths[c]!)) continue;
+            let metres = lengths[c]!;
+            // Over budget on the grid: measure the real (string-pulled) route the walk-off would follow.
+            if (metres / pace > budget) metres = walk(vec3(x, floorAt(NAV_GRID, x, z), z), spot.position);
+            worst = Math.max(worst, metres / pace);
+            expect(metres / pace, `walk-off from ${x}, ${z} to ${spot.position.x}, ${spot.position.z}`).toBeLessThanOrEqual(budget);
+          }
+        }
+      }
+    }
+    expect(worst).toBeGreaterThan(HITS.walkOffTime / 2); // the check really covered the far quarter
   });
 
   it('connects the two ends, and the west end to the pole, through each of the three lanes', () => {

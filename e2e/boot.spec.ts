@@ -41,15 +41,16 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
     }).observe(document, { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'] });
   });
   await page.goto('/?nolock&seed=1');
-  // Wait for the title screen or the boot's own failure text, whichever comes first.
+  // Wait for the title screen or the start-up failure pane (audit CORE-28), whichever comes first.
   await page.waitForFunction(
-    () => document.querySelector('.menu-title-start') !== null || /Failed/.test(document.getElementById('loading')?.textContent ?? ''),
+    () => document.querySelector('.menu-title-start') !== null || document.querySelector('.crash-screen') !== null,
     undefined,
     { timeout: 30_000 },
   ).catch(() => undefined);
   if ((await page.locator('.menu-title-start').count()) === 0) {
     const loading = (await page.locator('#loading').textContent().catch(() => null)) ?? '(gone)';
-    throw new Error(`The title screen never appeared. Loading text: "${loading}". Page errors: ${errorList()}`);
+    const report = (await page.locator('.crash-report').inputValue().catch(() => null)) ?? '(no crash pane)';
+    throw new Error(`The title screen never appeared. Loading text: "${loading}". Report: ${report}. Page errors: ${errorList()}`);
   }
   await expect(page.locator('#loading')).toHaveCount(0);
   await expect(page.locator('.menu-title-wordmark')).toBeVisible();

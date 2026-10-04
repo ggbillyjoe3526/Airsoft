@@ -59,6 +59,10 @@ export interface Character {
   prevPitch: number;
   grounded: boolean;
   jumpCooldown: number;
+  /** Seconds a jump press is still kept for (MovementConfig.jumpBuffer); 0 = none pending. */
+  jumpWanted: number;
+  /** Slope climbed on the last tick on the ground (rise per metre moved; 0 on the flat, going down, or in the air). */
+  groundRise: number;
   sprinting: boolean;
   /** Walking slowly and quietly (walk key held, not crouched). */
   walking: boolean;
@@ -122,6 +126,8 @@ export function createCharacter(
     prevPitch: 0,
     grounded: false,
     jumpCooldown: 0,
+    jumpWanted: 0,
+    groundRise: 0,
     sprinting: false,
     walking: false,
     stepDistance: 0,
@@ -182,6 +188,8 @@ export function respawnCharacter(c: Character): void {
   c.prevLean = 0;
   c.grounded = false;
   c.jumpCooldown = 0;
+  c.jumpWanted = 0;
+  c.groundRise = 0;
   c.sprinting = false;
   c.walking = false;
   c.stepDistance = 0;

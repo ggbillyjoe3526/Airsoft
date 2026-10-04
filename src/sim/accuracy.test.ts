@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { MOVEMENT } from '../config/movement';
+import { PHYSICS } from '../config/physics';
 import type { GripId } from '../config/attachments';
 import { LOADOUT } from '../config/replicas';
 import { stepAccuracy, targetSpreadScale, timeToSteady } from './accuracy';
 import { fitParts } from './armament';
 import { type Character, createCharacter } from './character';
+import { createCommand } from './commands';
+import { type CharacterMover, createMovementScratch, stepMovement } from './movement';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
@@ -37,6 +40,9 @@ describe('accuracy by stance and movement', () => {
     const crouchWalk = targetSpreadScale(at(MOVEMENT.crouchSpeed, 1), MOVEMENT);
     expect(crouchWalk).toBeLessThan(targetSpreadScale(at(MOVEMENT.crouchSpeed), MOVEMENT));
     expect(crouchWalk).toBeGreaterThan(A.crouched);
+    // ... and moving crouched at full crouch pace is less accurate than standing still (audit SIM-10).
+    expect(crouchWalk).toBeGreaterThan(targetSpreadScale(at(), MOVEMENT));
+    expect(crouchWalk).toBeCloseTo(targetSpreadScale(at(MOVEMENT.crouchSpeed), MOVEMENT) * A.crouchedMoving, 9);
   });
 
   it('is worst in the air and while sprinting', () => {
@@ -197,6 +203,44 @@ describe('accuracy by stance and movement', () => {
       expect(c.spreadScale).toBe(1);
       stepAccuracy(c, MOVEMENT, DT); // exactly airSpreadDelay, despite float drift in the summed ticks
       expect(c.spreadScale).toBe(A.air);
+    });
+
+    it('never flashes the in-air spread running down a step of the tallest walkable ledge (audit SIM-02)', () => {
+      // Floor at maxWalkableLedge for x < 0, at 0 beyond: the character runs off the edge along +x.
+      const ledge = PHYSICS.maxWalkableLedge;
+      const floorAt = (x: number) => (x < 0 ? ledge : 0);
+      const step: CharacterMover = {
+        move(c, d, out) {
+          out.x = d.x;
+          out.z = d.z;
+          const floor = floorAt(c.position.x + d.x);
+          out.y = c.position.y + d.y < floor ? floor - c.position.y : d.y;
+          return false;
+        },
+        probeGround(c, maxDrop) {
+          const below = c.position.y - floorAt(c.position.x);
+          return below <= maxDrop ? -below : Number.NaN;
+        },
+      };
+      const c = createCharacter(0, vec3(-1, ledge, 0), -Math.PI / 2); // yaw −90° faces +x
+      c.grounded = true;
+      c.velocity.x = MOVEMENT.runSpeed;
+      const cmd = createCommand();
+      cmd.yaw = c.yaw;
+      cmd.forward = 1;
+      const scratch = createMovementScratch();
+      let airborne = 0;
+      let worst = 0;
+      for (let i = 0; i < 40; i++) {
+        stepMovement(c, cmd, MOVEMENT, DT, step, scratch);
+        stepAccuracy(c, MOVEMENT, DT);
+        if (!c.grounded) airborne++;
+        worst = Math.max(worst, c.spreadScale);
+      }
+      expect(airborne).toBeGreaterThan(1); // it really dropped off the step
+      expect(c.grounded).toBe(true);
+      expect(c.position.y).toBeCloseTo(0, 9);
+      expect(worst).toBeLessThanOrEqual(A.run + 1e-9);
     });
 
     it('applies the in-air spread at once on a jump', () => {

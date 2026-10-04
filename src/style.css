@@ -300,7 +300,8 @@ body {
 /* Keyboard focus, one rule for every control (audit section 6, item 6): the orange ring, with a page-coloured gap
    under it so the ring reads on the orange buttons too. */
 .menus :is(button, [role='tab'], input, select, a, .setup-tile, .gear-slot, .item-tile, .item-chip):focus-visible,
-.menu-dialog :is(button, input):focus-visible {
+.menu-dialog :is(button, input):focus-visible,
+.crash-screen :is(button, textarea):focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--menu-bg);
@@ -780,6 +781,13 @@ body {
   min-width: 0;
 }
 
+/* A secondary button in a row (Dev › Copy diagnostics) is as tall as the row's pickers and number boxes. */
+.menu-row-control .menu-button {
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
 .menu-later-value {
   font-size: var(--fs-md);
   color: var(--menu-faint);
@@ -1116,7 +1124,7 @@ body {
 
 /* A gear slot's short stat line (M29): energy, rate of fire, magazine */
 .gear-stats {
-  font: 12px var(--ui-mono);
+  font: var(--fs-xs) var(--ui-mono);
   color: var(--menu-muted);
 }
 
@@ -1125,28 +1133,28 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
   align-items: start;
-  gap: 24px;
+  gap: var(--sp-5);
 }
 
 .perf-sheet {
   position: sticky;
   top: 0;
-  padding: 14px 16px;
+  padding: var(--sp-3) var(--sp-4);
   background: var(--menu-panel-hi);
   border: 1px solid var(--menu-line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .perf-title {
-  margin: 0 0 10px;
+  margin: 0 0 var(--sp-3);
 }
 
 .perf-rows {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 6px 12px;
+  gap: var(--sp-2) var(--sp-3);
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 .perf-label {
@@ -1155,7 +1163,7 @@ body {
 
 .perf-value {
   margin: 0;
-  font: 600 13px var(--ui-mono);
+  font: 600 var(--fs-sm) var(--ui-mono);
   text-align: right;
 }
 
@@ -1165,16 +1173,16 @@ body {
 }
 
 .perf-better {
-  color: #4cc35a;
+  color: var(--success);
 }
 
 .perf-worse {
-  color: #ff6b5f;
+  color: var(--danger);
 }
 
 .perf-note {
-  margin: 10px 0 0;
-  font-size: 12px;
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-xs);
   line-height: 1.4;
   color: var(--menu-faint);
 }
@@ -1188,16 +1196,6 @@ body {
     position: static;
     order: -1;
   }
-}
-
-/* Read by a screen reader, not shown */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 /* Settings: tabs on the left */
@@ -3094,6 +3092,75 @@ kbd {
   display: none;
 }
 
+/* Something went wrong (audit CORE-04, UI-02, CORE-28): over everything, the graphics notice included; a menu screen's
+   look, with the report in a mono box to copy. */
+.crash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6) var(--menu-gutter);
+  overflow-y: auto;
+  color: var(--paper);
+  background: var(--menu-bg);
+  font-family: var(--ui-font);
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+/* Fades in as a menu screen does (FA9); no time under reduced motion. */
+.crash-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  width: min(760px, 100%);
+  animation: menu-enter var(--t-med) var(--ease) both;
+}
+
+.crash-body,
+.crash-advice {
+  margin: 0;
+  max-width: 40em;
+  font-size: var(--fs-lg);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.crash-advice {
+  color: var(--hint);
+}
+
+.crash-report {
+  width: 100%;
+  min-height: 220px;
+  max-height: 45vh;
+  padding: var(--sp-3) var(--sp-4);
+  resize: vertical;
+  font: var(--fs-xs) / 1.45 var(--ui-mono);
+  color: var(--paper);
+  white-space: pre;
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--radius-md);
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+.crash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.crash-status {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
 /* The practice range's readout (M21): your last BB, top centre where a match shows its clock. */
 .range-readout {
   position: absolute;
@@ -3365,14 +3432,14 @@ kbd {
 /* What the copy's tier adds (M29), on a line of its own under the name */
 .armory-row-adds {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--menu-muted);
 }
 
 .armory-tile .tier-adds {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   line-height: 1.3;
   color: var(--menu-muted);
   -webkit-box-orient: vertical;

@@ -204,6 +204,12 @@ export interface ArmamentContext {
   rng: RngState;
   query: WorldQuery;
   events: GameEvent[];
+  /**
+   * Seconds until the shooter may fire again after a sprint (the post-sprint lockout; 0 or absent: none). A semi or
+   * burst press made then is kept that much longer, so it fires when the lockout ends instead of expiring first
+   * (audit SIM-03: the press buffer is shorter than the lockout).
+   */
+  fireHoldOff?: number;
 }
 
 const DEG = Math.PI / 180;
@@ -296,7 +302,7 @@ export function stepArmament(
   a.triggerWasDown = cmd.fire;
   if (!cmd.fire) a.dryFiredThisPull = false;
   // Semi-auto and burst presses are buffered briefly so a click during the cooldown still fires when ready.
-  if (pressed) a.pendingPress = TRIGGER.pressBuffer;
+  if (pressed) a.pendingPress = TRIGGER.pressBuffer + (ctx.fireHoldOff ?? 0);
   // A burst runs to the end once started (one pull, several BBs), unless the replica can't fire.
   if (a.burstShotsLeft > 0 && (!canFire || a.draw > 0 || a.reload > 0)) a.burstShotsLeft = 0;
   if (mode === 'burst') {
