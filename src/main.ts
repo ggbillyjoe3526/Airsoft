@@ -22,6 +22,8 @@ async function main(): Promise<void> {
   const game = await Game.create(container, {
     // ?nolock works on the dev server and in the smoke test's `e2e` build, never in a normal release build.
     allowUnlocked: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('nolock'),
+    // ?script=perf drives the player from config/perfScript.ts for the perf harness (pipeline/perf-run.mjs).
+    scriptedPlayer: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.get('script') === 'perf',
     seed,
     quality: quality.preset,
     automaticQuality: quality.automatic,

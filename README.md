@@ -206,6 +206,8 @@ npm run build      # static site in dist/ (relative paths; any static host)
 npm run preview    # serve dist/ locally
 npm run test:browser  # browser smoke test of a production build (Chromium)
 npm run check:all  # check, then the browser smoke test
+npm run gate -- --task M27   # the pipeline's gates (pipeline/README.md): build, tests, smoke, perf, scope, changelog
+npm run perf -- --env laptop # the perf harness: a scripted 60 s Depot match, frame times, draw calls, memory
 ```
 
 The browser smoke test (`e2e/boot.spec.ts`) needs Playwright's Chromium once per machine:
@@ -219,7 +221,15 @@ Each page load picks a fresh random seed (shown in the debug overlay); `?seed=N`
 The render preset is picked on Settings → Graphics → Quality (High by default, saved); `?quality=low|medium|high`
 overrides it for one visit (`medium` renders at standard resolution with smaller, harder shadows and less dust; `low`
 also drops shadows, antialiasing, surface relief, dust and the replica's sheen). The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
-On the dev server and in the smoke test's build, `window.airsoft` exposes the running game.
+On the dev server and in the smoke test's build, `window.airsoft` exposes the running game, and `?script=perf` replaces
+the player with the perf harness's scripted one (`src/config/perfScript.ts`).
+
+**Performance budget and baselines** (`pipeline/perf-budget.json`, `pipeline/baseline/`): the harness plays a fixed
+Depot match (seed 1, the scripted player, 1920 × 1080 at pixel ratio 1, CPU throttled 4× on a laptop) for 60 s and
+records frame times, draw calls, triangles, GPU memory and heap growth. Frame-time lines are judged only on a real
+GPU (`--env laptop`); the cloud container and CI draw in software, so there only counts and memory are judged, and
+every environment is compared with its own baseline (more than 10 % worse fails). The owner records the laptop
+baseline at milestones with `npm run perf -- --env laptop --baseline` and commits it.
 
 ### Layout
 
