@@ -14,8 +14,8 @@ acceptance:
   2. A victim reaches its dead zone as before (the existing elimination and depot match tests pass unchanged); while its route is not found yet it stands calling, which the 1.4 s call already covers
   3. No new per-tick allocation: the route array and the pending flag live on the character and are reused
   4. The KNOWN_ISSUES row about the walk-off route search inside the tick is removed
-status: open
-attempts: 0
+status: done
+attempts: 1
 
 ## M28 · Impact puffs start at half size
 tier: trivial

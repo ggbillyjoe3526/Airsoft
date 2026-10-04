@@ -11,7 +11,7 @@ import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
 import { rescueIfOutOfWorld } from './character';
 import { createCommand, type PlayerCommand } from './commands';
-import { fillEliminatedCommand, isInPlay, stepElimination } from './elimination';
+import { fillEliminatedCommand, isInPlay, planWalkOffRoutes, stepElimination } from './elimination';
 import { stepFootsteps } from './footsteps';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { leanedEye, stepLean } from './lean';
@@ -113,6 +113,8 @@ export function stepSimulation(
   // Once the round is decided it's a cease-fire, as after the end whistle at a site: nobody can fire,
   // and BBs still in the air can't hit anyone.
   const live = state.round.phase === 'live';
+  // One walk-off route search a tick at most (M27): a victim hit last tick gets its route before it is stepped.
+  planWalkOffRoutes(state.characters, ctx.targets.elimination);
 
   for (const c of state.characters) {
     copy(c.prevPosition, c.position);

@@ -31,7 +31,6 @@ Classified as **fix now / document / can wait**.
 | Bots only use the AEG, never switch to the pistol, and don't jump | can wait | Fine for Phase 1. |
 | Bots hear gunfire through walls within 22 m and know roughly where it came from (off by up to 30% of the distance) | document | Deliberate simplification; hearing never skips a bot's reaction delay. |
 | A walk-off that can't reach the dead zone within 14 s, or gets stuck, fades out where it is and reappears in the dead zone | document | Rare now that walk-offs follow nav routes. |
-| Each hit runs one route search for the victim's walk-off inside the simulation tick (~2 ms worst case on Depot, not rationed) | can wait | Hits are rare (a few per round); profile before rationing. |
 | Bots don't push to close distance, and they peek only from cover they've taken (crouch cover or a wall corner), never by stepping out | can wait | M4b (crouch-peeking) and M10 (leaning round corners). Stepping out to peek would be a later bot task. |
 | Difficulty numbers are first guesses tuned against headless duels (measured, not tested: Normal bots hit with ~13% of BBs in bot-only matches, was ~30%) | can wait | Playtest each level; tune BOT_SKILL in config/bots.ts. |
 | At 10–16 m, a strafing target is still hit about as fast as a standing one (the BB stream sweeps across it) | can wait | Up close strafing clearly helps; raise aimErrorTracking if mid-range strafing should help more. |

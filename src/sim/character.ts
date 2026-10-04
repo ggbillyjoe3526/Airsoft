@@ -32,6 +32,8 @@ export interface Character {
   /** Planned walk to the dead zone (waypoints) and the one currently being walked to. */
   walkOffRoute: Vec3[];
   walkOffLeg: number;
+  /** The walk-off route is still to be searched (the elimination step rations searches to one per tick, M27). */
+  walkOffRoutePending: boolean;
   /** Seconds this character has made no real progress while walking off. */
   walkOffStuck: number;
   /** Feet position (bottom of the collision capsule). */
@@ -103,6 +105,7 @@ export function createCharacter(
     deadZoneYaw: 0,
     walkOffRoute: [],
     walkOffLeg: 0,
+    walkOffRoutePending: false,
     walkOffStuck: 0,
     position: vec3(spawn.x, spawn.y, spawn.z),
     prevPosition: vec3(spawn.x, spawn.y, spawn.z),
@@ -194,6 +197,7 @@ export function respawnCharacter(c: Character): void {
   c.statusTime = 0;
   c.hitBy = -1;
   c.walkOffStuck = 0;
+  c.walkOffRoutePending = false;
   const { replicas, modes, optics, hopUps, bbWeights, parts, triggerWasDown, bottomless } = c.armament;
   // The same replicas, with fresh magazines for the parts fitted (a hi-cap refills as a hi-cap).
   c.armament = createArmament(replicas, parts);

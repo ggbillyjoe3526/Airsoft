@@ -42,6 +42,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - Bug pass: game flow, replica handling, sound, menus, HUD, squad orders on ramps and platforms (#37, #38)
 - Roadmap: the owner's third feature picks (#46)
 - **M26d** · Dev settings: Disable Armory and Unlock all gear for testing (#48)
+- **M27** · Walk-off route searches rationed to one per tick (pull request to follow)
 
 ## v0.1-alpha.3 · 2026-10-03
 
