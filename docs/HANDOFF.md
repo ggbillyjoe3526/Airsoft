@@ -36,68 +36,23 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
   padding); the hit feed is capped at `50% - 250px` and wraps, and below 1400 px the round banner keeps to the middle;
   `Menus.setBlocked(true)` closes the pop-ups; sliders carry `aria-valuetext`.
 - **Squad orders:** follow and hold spots no longer compare heights with the leader (a ramp, or the leader in the air,
-  failed every spot and sent the followers into you); `clearLine` already checks every step, and the spot's `y` is the
-  floor there.
+  failed every spot and sent the followers into you); `clearLine` checks every step, and the spot's `y` is the floor
+  there. At a platform's lip, where the nearest walkable cell can be on the ground below, `followSpot` stays on you.
 
-## Audit fixes in short
+## Where to look for each milestone
 
-- **Graphics:** `config/render.ts` `startingQuality` (`?quality=`, the saved pick, else Low in software, not saved);
-  surface textures are `Renderer.surfaceTextures`; `contextRestored()` re-renders the replica sheen.
-- **Audio:** `audio/audioEngine.ts` owns the page's one `AudioContext`, the buses, the buffers and the reverb, rendered
-  in idle time from the title; each match's `Sfx` builds only its own graph. Nothing plays until `setPlaying(true)`.
-- **Sim and bots:** `HitVolume.torso` covers a leaning torso; bots carry their own skill (`Bot.skill`; `BotWorld.cfg` is
-  shared behaviour only). Follow me / Hold here need a clear line from you to the spot.
-- **Menus and tests:** `#app` carries `reduced-motion` / `full-motion`; Settings tabs are an ARIA tab pattern. The match
-  guards are seven `src/ai/depotMatch*.test.ts` files over `depotMatchSupport.ts` (`npm run test` ~75 s on 4 cores).
-
-## M14 in short
-
-- **All procedural** (the CC0 sites are blocked by the cloud environment's network policy): `render/lighting.ts`
-  (sun, sky dome, trees; `Daylight.setQuality`), `render/atmosphere.ts` (haze), `render/proceduralTextures.ts` and
-  `render/mapMeshes.ts` (surfaces, relief per quality), `render/characterModels.ts` with the six looks in
-  `config/characters.ts` (a torso team band, tested to read at range), `render/replicaModels.ts`, `render/impactPuffs.ts`
-  (gas puffs, dust by material), `render/dustMotes.ts` (hidden with reduced motion). Quality presets in
-  `config/render.ts` `QUALITY`; `MatchSession` and `RangeSession` both have `setQuality`.
-
-## M16 in short
-
-- **Tutorial:** steps as data in `config/tutorial.ts`; `tutorial/tutorial.ts` `TutorialTracker` reads the player and
-  each tick's events (never writes); `goalIndex` is the step being checked, `stepIndex` the one shown (a finished step's
-  tick shows while the next is already checked). `ui/coachPanel.ts` draws it (with the last-BB line on hit steps).
-  `RangeSession` takes `tutorialFrom`; `Game` rebuilds at `tutorialStep` after a loadout change and saves `tutorialDone`.
-
-## M22 in short
-
-- **Orders:** `ai/squadOrders.ts` (where each bot goes: follow spots behind the leader's heading, hold spots across
-  their view, regroup), `BotController.giveOrder` / `orderOf`, mode `order` in `botBrain.chooseMode` (after fights and
-  cover, before the pole and noises). Tuning in `config/squad.ts`. Keys `orderFollow` / `orderHold` / `orderRegroup`
-  (Z, X, V), read once per frame by `PlayerInput.takeOrder` in `MatchSession.advance`. The controller's `given` map is
-  the one record of the order in force (Regroup turns into Follow me there). HUD: `ui/squadOrderLine.ts`, `ui/holdMarker.ts`;
-  sound: `radio.ack` in `config/sounds.ts`. Tests: `ai/squadOrders.test.ts` (open field) and the Depot follow guard.
-- **Hearing:** `BotController.hear` casts `sim/soundPath.ts` rays beyond `wallHearing` × range (shared with the
-  audio's muffling). Depot rounds run longer since; `playMatch` takes an `onTick` hook for guards like the follow one.
-
-## M21 in short (what to know when touching it)
-
-- **Range:** `map/range.ts` from `config/range.ts`; `Game` holds a `MatchSession` or a `RangeSession`
-  (`rangeSession.ts`). `SimServices.practice` skips the round flow and keeps spares full. Targets are sim data
-  (`GameState.targets`, `sim/rangeTargets.ts`) tested in `stepBBs` (`targetHit`; a plate's post stops a BB as a
-  `bbImpact`). Every BB that falls out or times out now emits `bbLost` (matches ignore it; the readout uses it).
-- **Loadout from the range:** the pause menu's Loadout; `Game.play` rebuilds the range at `RangeSession.pose`
-  (position, yaw, pitch) when `loadoutChanged`. Sound cues are match-only; team colours apply on the range too.
-
-## M20 in short (what to know when touching it)
-
-- **Rules:** `config/matchRules.ts` (`MatchRules`, saved as one setting; `roundRulesFor`, `hitRulesFor` turn them into
-  the match's own round and hit rules, so read `MatchSession.rounds` / `.hits`, never `ROUNDS` / `HITS`, in match code).
-  `countsForRecords` decides whether a match goes into the records; `standardMatchText()` is the one wording of it.
-- **Per-team difficulty:** each bot carries its team's skill (`Bot.skill`, since the audit fixes). Teammates follow the
-  opponents' level until one is saved (`hasSavedTeammateDifficulty`).
-- **Ricochets:** `sim/ricochet.ts` with materials from `config/materials.ts`; a `characterHit` carries `ricochet`, and a
-  ricochet that doesn't count is a `ricochetTick` event (knock, notice, never a hit). Small teams spawn mid-line
-  (`sim/round.ts` `placeTeams`). The headless guards in `ai/depotMatch.test.ts` cover 1v1, 2v2 and ricochets counting.
-- **M18b, briefly:** team colours via `teamCss(team)` (never hard-code one in the HUD), sound cues in `ui/soundCues.ts`,
-  `Game.stopPlay()` is "as if Esc" for a hidden tab and a lost context.
+- **Audit fixes:** `audio/audioEngine.ts` (the page's one `AudioContext`, buses, buffers, reverb; each match's `Sfx`
+  builds only its own graph), `config/render.ts` `startingQuality`, `HitVolume.torso` for a leaning torso, `Bot.skill`
+  per bot. The match guards are seven `src/ai/depotMatch*.test.ts` files over `depotMatchSupport.ts`.
+- **M14 art:** all procedural (the CC0 sites are blocked by the cloud network policy), under `src/render/`; quality
+  presets in `config/render.ts` `QUALITY`, the six character looks in `config/characters.ts`.
+- **M16 tutorial:** steps in `config/tutorial.ts`, `tutorial/tutorial.ts` `TutorialTracker` (reads, never writes),
+  `ui/coachPanel.ts`; `Game` saves `tutorialDone`.
+- **M20 custom matches:** `config/matchRules.ts`; match code reads `MatchSession.rounds` / `.hits`, never `ROUNDS` /
+  `HITS`. Ricochets in `sim/ricochet.ts`. Team colours via `teamCss(team)`, never hard-coded.
+- **M21 range:** `map/range.ts`, `rangeSession.ts`; targets are sim data (`sim/rangeTargets.ts`).
+- **M22 squad orders:** `ai/squadOrders.ts` (spots), `BotController.giveOrder`, mode `order` in `botBrain.chooseMode`;
+  tuning in `config/squad.ts`; keys Z, X, V.
 
 ## Working notes and gotchas
 

@@ -138,13 +138,19 @@ export function followSpot(leader: Character, heading: number, slot: number, w: 
   // Spots are measured from where the leader stands or, inside the margin the nav grid keeps from walls and edges (a
   // body touching a wall stands in it), from the nearest walkable cell: on the leader's side of that wall.
   anchor.x = p.x;
-  anchor.y = p.y;
   anchor.z = p.z;
   if (!isWalkableAt(w.nav, p.x, p.z)) {
     const c = nearestWalkable(w.nav, p.x, p.z, SQUAD_ORDERS.followLineSnap);
     if (c >= 0) {
       anchor.x = cellX(w.nav, c % w.nav.cols);
       anchor.z = cellZ(w.nav, Math.floor(c / w.nav.cols));
+    }
+    // A leader standing at a platform's lip can be nearest a cell on the ground below: measured from there, the spots
+    // would be down a level with no way up nearby, so stay on the leader instead. A cell along a ramp is fine however
+    // much higher or lower, as long as no drop lies between (in the air, the floor below is the level that counts).
+    if (leader.grounded && Math.abs(floorAt(w.nav, anchor.x, anchor.z) - p.y) > w.nav.maxStep) {
+      const ownLevel = Math.abs(floorAt(w.nav, p.x, p.z) - p.y) <= w.nav.maxStep;
+      if (!ownLevel || dropOnLine(w.nav, p.x, p.z, anchor.x, anchor.z)) return out;
     }
   }
   if (tryFollowSpot(anchor, heading + Math.PI + side * SQUAD_ORDERS.followSpreadDeg * DEG, dist, w, out)) return out;
@@ -156,8 +162,9 @@ export function followSpot(leader: Character, heading: number, slot: number, w: 
 /**
  * Writes the spot `dist` from `from` along `angle` into `out` if it is walkable and in a straight walkable line from
  * `from`; returns whether. The line checks the height of every step, so a spot down a ramp counts and one past a drop
- * or on another level doesn't (bug pass: a height test against the leader's own height failed every spot on a ramp,
- * and every spot while the leader was in the air, and sent the followers into the leader).
+ * or a step up doesn't: from an anchor on the leader's level (followSpot sees to that), another level fails (bug pass:
+ * a height test against the leader's own height failed every spot on a ramp, and every spot while the leader was in
+ * the air, and sent the followers into the leader).
  */
 function tryFollowSpot(from: Vec3, angle: number, dist: number, w: BotWorld, out: Vec3): boolean {
   const x = from.x - Math.sin(angle) * dist;
