@@ -54,7 +54,10 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA6** · Outdoor ambience bed with distant birds; world sounds muffled when eliminated (#55)
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
-- **M33a** · Woodland shown as Coming soon in the Map pop-up
+- **M33a** · Woodland shown as Coming soon in the Map pop-up (#64)
+- **M33b** · Glowing BBs: a per-replica Customise option (At Night by default, Always or Off); bots load them on night fields
+- **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound (#75)
+- **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
 - **M36** · Pro difficulty level: a fourth bot level above Hard, visible only with Dev settings on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted
 
 ### Changed
@@ -81,6 +84,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 
 ### Fixed
+- **M32** · All carried replicas now have their sounds in the match; hear bots' AEG shots even without an equipped AEG (#75)
 - **FA11c** · A second tab now always waits behind the "open in another tab" notice, even when the first is busy loading (#69)
 - **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
 - **FA2** · Turning Edge smoothing on or off no longer causes graphics memory to leak (#67)

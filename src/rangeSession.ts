@@ -17,6 +17,7 @@ import type { MatchSetup } from './matchSession';
 import { RANGE_MAP } from './map/range';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
+import { bbGlowFor } from './pool/loadoutModel';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
@@ -145,7 +146,7 @@ export class RangeSession {
     input.ordersEnabled = false;
     if (pose) input.pitch = pose.pitch;
 
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, HITS);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false));
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
     this.targets.setReceiveShadows(quality.figureShadows);
