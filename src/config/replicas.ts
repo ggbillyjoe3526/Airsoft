@@ -52,8 +52,8 @@ export interface ReplicaConfig {
    */
   bbWeight: number;
   /**
-   * Hop-up strength with the dial turned all the way up: Magnus lift per unit speed at full spin for a
-   * BALLISTICS.referenceMass BB (1/s). The backspin the dial sets lifts the BB, so it flies flat for longer.
+   * Hop-up strength with the dial turned all the way up: the backspin it gives a BB is this × the dial ×
+   * BALLISTICS.spinPerHop (rad/s). The backspin lifts the BB (Magnus), so it flies flat for longer.
    */
   hopUpMax: number;
   /**

@@ -17,7 +17,7 @@ export interface HopUpReach {
  * reports how far it stays on target and how high it rises. Cheap enough to run on every slider move.
  */
 export function hopUpReach(replica: ReplicaConfig, dial: number, cfg: BallisticsConfig, grams = replica.bbWeight): HopUpReach {
-  const bb = spawnBB(createBBPool(1), 0, vec3(), vec3(0, 0, -1), muzzleVelocity(replica, grams), hopUpLift(replica, dial), bbMass(replica, grams));
+  const bb = spawnBB(createBBPool(1), 0, vec3(), vec3(0, 0, -1), muzzleVelocity(replica, grams), hopUpLift(replica, dial), bbMass(replica, grams), cfg);
   let peakRise = 0;
   let onTargetTo: number = HOP_UP.readoutRange;
   while (bb.age < cfg.maxLifetime) {
@@ -43,7 +43,7 @@ export function hopUpReach(replica: ReplicaConfig, dial: number, cfg: Ballistics
  * between ticks, so weights a tick apart still compare), or Infinity if it never gets there.
  */
 export function flightTime(replica: ReplicaConfig, dial: number, distance: number, cfg: BallisticsConfig, grams = replica.bbWeight): number {
-  const bb = spawnBB(createBBPool(1), 0, vec3(), vec3(0, 0, -1), muzzleVelocity(replica, grams), hopUpLift(replica, dial), bbMass(replica, grams));
+  const bb = spawnBB(createBBPool(1), 0, vec3(), vec3(0, 0, -1), muzzleVelocity(replica, grams), hopUpLift(replica, dial), bbMass(replica, grams), cfg);
   let before = 0;
   while (bb.age < cfg.maxLifetime) {
     const t = bb.age;
