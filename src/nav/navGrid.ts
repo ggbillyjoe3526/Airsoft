@@ -4,11 +4,17 @@ import { terrainHeightAt, terrainMaxX, terrainMaxZ } from '../map/terrain';
 import type { Vec3 } from '../sim/vec';
 
 /**
- * Walkability grid built from map blocks: each cell has one floor height (the walkable surface under its
- * centre; maps never put one walkable surface over another), and is walkable if a character standing
- * there keeps `clearance` from every block that stops walking and from every drop. Neighbouring cells
- * connect only if their floors differ by at most `maxStep`. Pure data, shared by bots (routes) and the
- * simulation (walk-off to the dead zone).
+ * Walkability grid built from map blocks, in layers (M34b): each cell holds a node per floor over it (the walkable
+ * surfaces under its centre with headroom above them, lowest first), so a hall under an upper floor and the floor above
+ * it are two nodes of the same cells. A node is walkable if a character standing on it keeps `clearance` from every
+ * block that stops walking and from every drop on its own floor. A node connects to the node of a neighbouring cell
+ * whose floor is within `maxStep` of its own (at most one: floors in a cell are a body's height apart). Pure data,
+ * shared by bots (routes) and the simulation (walk-off to the dead zone). On a map with no floor over another every cell
+ * has at most one node and the grid is the flat one it always was.
+ *
+ * Every query that names a point takes its height too, and answers for the floor at that height: the highest floor
+ * at most `NODE_PICK_ABOVE` above it (the floor someone standing, crouching or jumping there is over), or the cell's
+ * lowest floor if they are below them all.
  */
 export interface NavGrid {
   cell: number;
@@ -16,12 +22,20 @@ export interface NavGrid {
   rows: number;
   minX: number;
   minZ: number;
-  /** 1 = walkable, 0 = blocked; index = row * cols + col. */
+  /** Cell c's floors are nodes cellStart[c] .. cellStart[c + 1] - 1, lowest first; index = row * cols + col. */
+  cellStart: Int32Array;
+  /** The cell each node is in. */
+  nodeCell: Int32Array;
+  /** Per node: 1 = walkable, 0 = blocked. */
   walkable: Uint8Array;
-  /** Height of the walkable surface at each cell's centre; NaN where there is none. */
+  /** Per node: height of its floor at the cell's centre. */
   floorY: Float32Array;
-  /** Largest floor height difference between neighbouring cells that a character walks across. */
+  /** Most floors any one cell has: 1 on a map without a floor over another. */
+  layers: number;
+  /** Largest floor height difference between neighbouring nodes that a character walks across. */
   maxStep: number;
+  /** The headroom a floor needs (the body's height): a route end never snaps to a floor further below it than this. */
+  headroom: number;
 }
 
 export interface NavGridConfig {
@@ -29,13 +43,19 @@ export interface NavGridConfig {
   cell: number;
   /** Distance kept from blocks: the body radius plus a margin so routes don't scrape walls. */
   clearance: number;
-  /** Blocks whose top is less than this above a cell's floor can be walked onto (don't block). */
+  /** Blocks whose top is less than this above a node's floor can be walked onto (don't block). */
   maxLedge: number;
-  /** Blocks whose bottom is this far or more above a cell's floor pass overhead (don't block). */
+  /** Blocks whose bottom is this far or more above a node's floor pass overhead (don't block); also the headroom a floor needs. */
   bodyHeight: number;
-  /** Neighbouring cells whose floors differ by more than this are not connected (a drop, or a platform's side). */
+  /** Neighbouring nodes whose floors differ by more than this are not connected (a drop, or a platform's side). */
   maxStep: number;
 }
+
+/**
+ * How far above a point (m) a floor still counts as the one under it. Less than any storey (floors in a cell are at
+ * least a body's height apart) and more than a jump lifts the feet off the floor below.
+ */
+export const NODE_PICK_ABOVE = 0.5;
 
 const top = (b: MapBlock): number => b.center.y + b.size.y / 2;
 const bottom = (b: MapBlock): number => b.center.y - b.size.y / 2;
@@ -58,37 +78,108 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
   if (!Number.isFinite(minX)) throw new Error(`Map ${map.name} has no floor`);
   const cols = Math.ceil((maxX - minX) / cfg.cell);
   const rows = Math.ceil((maxZ - minZ) / cfg.cell);
-  const walkable = new Uint8Array(cols * rows);
-  const floorY = new Float32Array(cols * rows).fill(Number.NaN);
-  const grid: NavGrid = { cell: cfg.cell, cols, rows, minX, minZ, walkable, floorY, maxStep: cfg.maxStep };
+  const n = cols * rows;
+  const frame = { cell: cfg.cell, cols, rows, minX, minZ };
 
-  // Floor heights: the highest walkable surface under each cell's centre (the terrain's ground first, M33c). A cell
-  // without one is not walkable.
-  if (terrain) {
+  // Every walkable surface over each cell's centre, as (height there, the bottom of the solid under it) pairs, packed
+  // per cell (counted first, then filled): the terrain's ground (M33c), with nothing under it, then the floor and ramp
+  // tops.
+  const surfStart = new Int32Array(n + 1);
+  const ground = terrain ? new Float64Array(n).fill(Number.NaN) : undefined;
+  if (terrain && ground) {
     for (let j = 0; j < rows; j++) {
       for (let i = 0; i < cols; i++) {
-        const y = terrainHeightAt(terrain, cellX(grid, i), cellZ(grid, j));
-        if (y !== undefined) floorY[j * cols + i] = y;
+        const y = terrainHeightAt(terrain, cellX(frame, i), cellZ(frame, j));
+        if (y === undefined) continue;
+        ground[j * cols + i] = y;
+        surfStart[j * cols + i + 1]!++;
       }
     }
   }
   for (const b of map.blocks) {
     if (!isSurface(b)) continue;
-    forCellsUnder(grid, b, 0, (c, x, z) => {
-      const y = surfaceHeightAt(b, x, z);
-      if (y !== undefined && !(y <= floorY[c]!)) floorY[c] = y;
+    forCellsUnder(frame, b, 0, (c, x, z) => {
+      if (surfaceHeightAt(b, x, z) !== undefined) surfStart[c + 1]!++;
     });
   }
-  for (let c = 0; c < walkable.length; c++) walkable[c] = Number.isNaN(floorY[c]!) ? 0 : 1;
+  for (let c = 0; c < n; c++) surfStart[c + 1]! += surfStart[c]!;
+  const total = surfStart[n]!;
+  const surfY = new Float64Array(total);
+  const surfBottom = new Float64Array(total);
+  const fill = surfStart.slice(0, n);
+  if (ground) {
+    for (let c = 0; c < n; c++) {
+      if (Number.isNaN(ground[c]!)) continue;
+      const k = fill[c]!++;
+      surfY[k] = ground[c]!;
+      surfBottom[k] = Number.NEGATIVE_INFINITY;
+    }
+  }
+  for (const b of map.blocks) {
+    if (!isSurface(b)) continue;
+    forCellsUnder(frame, b, 0, (c, x, z) => {
+      const y = surfaceHeightAt(b, x, z);
+      if (y === undefined) return;
+      const k = fill[c]!++;
+      surfY[k] = y;
+      surfBottom[k] = bottom(b);
+    });
+  }
 
-  // Stamp every blocking box, grown by the clearance, onto the cells it stops walking on: those whose floor
-  // it stands on or above (higher than a walkable ledge) without passing overhead.
+  // A cell's floors: each surface with headroom over it (no other surface's solid within a body's height above it, at
+  // the centre), lowest first; of two floors closer than a body's height (one surface just over another) the higher.
+  const cellStart = new Int32Array(n + 1);
+  const floors = new Float32Array(total);
+  const cellOf = new Int32Array(total);
+  let count = 0;
+  let layers = 0;
+  const kept: number[] = [];
+  for (let c = 0; c < n; c++) {
+    cellStart[c] = count;
+    const s0 = surfStart[c]!;
+    const s1 = surfStart[c + 1]!;
+    if (s0 === s1) continue;
+    kept.length = 0;
+    for (let k = s0; k < s1; k++) {
+      const f = surfY[k]!;
+      let free = true;
+      for (let o = s0; o < s1 && free; o++) {
+        if (o !== k && surfBottom[o]! < f + cfg.bodyHeight && surfY[o]! > f + cfg.maxLedge) free = false;
+      }
+      if (free) kept.push(f);
+    }
+    if (kept.length > 1) kept.sort((a, b) => a - b);
+    const first = count;
+    for (let k = 0; k < kept.length; k++) {
+      if (k + 1 < kept.length && kept[k + 1]! - kept[k]! < cfg.bodyHeight) continue;
+      floors[count] = kept[k]!;
+      cellOf[count] = c;
+      count++;
+    }
+    layers = Math.max(layers, count - first);
+  }
+  cellStart[n] = count;
+  const grid: NavGrid = {
+    ...frame,
+    cellStart,
+    nodeCell: cellOf.slice(0, count),
+    walkable: new Uint8Array(count).fill(1),
+    floorY: floors.slice(0, count),
+    layers,
+    maxStep: cfg.maxStep,
+    headroom: cfg.bodyHeight,
+  };
+
+  // Stamp every blocking box, grown by the clearance, onto the nodes it stops walking on: those whose floor it stands
+  // on or above (higher than a walkable ledge) without passing overhead.
   const r = cfg.clearance;
   for (const b of map.blocks) {
     if (isSurface(b)) continue;
     forCellsUnder(grid, b, r, (c) => {
-      const f = floorY[c]!;
-      if (bottom(b) < f + cfg.bodyHeight && top(b) > f + cfg.maxLedge) walkable[c] = 0;
+      for (let k = cellStart[c]!; k < cellStart[c + 1]!; k++) {
+        const f = grid.floorY[k]!;
+        if (bottom(b) < f + cfg.bodyHeight && top(b) > f + cfg.maxLedge) grid.walkable[k] = 0;
+      }
     });
   }
   // Drops inside the level (a platform's edge, a gap between floors): keep the clearance from them on both
@@ -98,8 +189,8 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
   for (let j = 0; j < rows; j++) {
     for (let i = 0; i < cols; i++) {
       if (!inside(i, j)) continue;
-      if (i + 1 < cols && inside(i + 1, j)) blockNearDrop(grid, r, j * cols + i, j * cols + i + 1);
-      if (j + 1 < rows && inside(i, j + 1)) blockNearDrop(grid, r, j * cols + i, (j + 1) * cols + i);
+      if (i + 1 < cols && inside(i + 1, j)) blockNearDrops(grid, r, j * cols + i, j * cols + i + 1, cfg.bodyHeight / 2);
+      if (j + 1 < rows && inside(i, j + 1)) blockNearDrops(grid, r, j * cols + i, (j + 1) * cols + i, cfg.bodyHeight / 2);
     }
   }
   // The floor's own edge.
@@ -107,17 +198,26 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
     for (let i = 0; i < cols; i++) {
       const x = cellX(grid, i);
       const z = cellZ(grid, j);
-      if (x - minX < r || maxX - x < r || z - minZ < r || maxZ - z < r) walkable[j * cols + i] = 0;
+      if (x - minX < r || maxX - x < r || z - minZ < r || maxZ - z < r) {
+        const c = j * cols + i;
+        grid.walkable.fill(0, cellStart[c]!, cellStart[c + 1]!);
+      }
     }
   }
   return grid;
 }
 
-export const cellX = (g: NavGrid, i: number): number => g.minX + (i + 0.5) * g.cell;
-export const cellZ = (g: NavGrid, j: number): number => g.minZ + (j + 0.5) * g.cell;
+/** The grid's frame: what cell positions need. */
+type GridFrame = Pick<NavGrid, 'cell' | 'cols' | 'rows' | 'minX' | 'minZ'>;
+
+export const cellX = (g: GridFrame, i: number): number => g.minX + (i + 0.5) * g.cell;
+export const cellZ = (g: GridFrame, j: number): number => g.minZ + (j + 0.5) * g.cell;
+/** Position of node `k`'s cell centre on the ground plane. */
+export const nodeX = (g: NavGrid, k: number): number => cellX(g, g.nodeCell[k]! % g.cols);
+export const nodeZ = (g: NavGrid, k: number): number => cellZ(g, Math.floor(g.nodeCell[k]! / g.cols));
 
 /** Calls `fn` for every cell whose centre lies within block `b`'s footprint grown by `grow`. */
-function forCellsUnder(g: NavGrid, b: MapBlock, grow: number, fn: (c: number, x: number, z: number) => void): void {
+function forCellsUnder(g: GridFrame, b: MapBlock, grow: number, fn: (c: number, x: number, z: number) => void): void {
   const i0 = Math.max(0, Math.ceil((b.center.x - b.size.x / 2 - grow - g.minX) / g.cell - 0.5));
   const i1 = Math.min(g.cols - 1, Math.floor((b.center.x + b.size.x / 2 + grow - g.minX) / g.cell - 0.5));
   const j0 = Math.max(0, Math.ceil((b.center.z - b.size.z / 2 - grow - g.minZ) / g.cell - 0.5));
@@ -126,55 +226,103 @@ function forCellsUnder(g: NavGrid, b: MapBlock, grow: number, fn: (c: number, x:
 }
 
 /**
- * If neighbouring cells `a` and `b` are split by a drop (floors more than maxStep apart, or one without a
- * floor), blocks every cell within `r` of the edge between them.
+ * Neighbouring cells `a` and `b`: every floor of either with no floor within maxStep across the edge between them
+ * (a platform's edge, a balcony's, a ramp's side, the end of a floor) is a drop at that floor's height. Blocks, within
+ * `r` of the edge, each cell's floor nearest that height (if it is within `level` of it: the same storey).
  */
-function blockNearDrop(g: NavGrid, r: number, a: number, b: number): void {
-  const fa = g.floorY[a]!;
-  const fb = g.floorY[b]!;
-  if (Math.abs(fa - fb) <= g.maxStep || (Number.isNaN(fa) && Number.isNaN(fb))) return;
+function blockNearDrops(g: NavGrid, r: number, a: number, b: number, level: number): void {
+  for (let k = g.cellStart[a]!; k < g.cellStart[a + 1]!; k++) if (stepNode(g, k, b) < 0) blockNearEdge(g, r, a, b, g.floorY[k]!, level);
+  for (let k = g.cellStart[b]!; k < g.cellStart[b + 1]!; k++) if (stepNode(g, k, a) < 0) blockNearEdge(g, r, a, b, g.floorY[k]!, level);
+}
+
+function blockNearEdge(g: NavGrid, r: number, a: number, b: number, y: number, level: number): void {
   const ai = a % g.cols;
   const bi = b % g.cols;
+  const aj = (a - ai) / g.cols;
   const ex = (cellX(g, ai) + cellX(g, bi)) / 2;
-  const ez = (cellZ(g, (a - ai) / g.cols) + cellZ(g, (b - bi) / g.cols)) / 2;
+  const ez = (cellZ(g, aj) + cellZ(g, (b - bi) / g.cols)) / 2;
   const reach = Math.ceil(r / g.cell);
   const i0 = Math.max(0, ai - reach);
   const i1 = Math.min(g.cols - 1, ai + reach);
-  const j0 = Math.max(0, (a - ai) / g.cols - reach);
-  const j1 = Math.min(g.rows - 1, (a - ai) / g.cols + reach);
+  const j0 = Math.max(0, aj - reach);
+  const j1 = Math.min(g.rows - 1, aj + reach);
   for (let j = j0; j <= j1; j++) {
     for (let i = i0; i <= i1; i++) {
-      if (Math.hypot(cellX(g, i) - ex, cellZ(g, j) - ez) < r) g.walkable[j * g.cols + i] = 0;
+      if (Math.hypot(cellX(g, i) - ex, cellZ(g, j) - ez) >= r) continue;
+      const k = nearestNode(g, j * g.cols + i, y);
+      if (k >= 0 && Math.abs(g.floorY[k]! - y) < level) g.walkable[k] = 0;
     }
   }
 }
 
-/** True if a character can walk from cell `a` to its neighbour `b`: both walkable, floors at most maxStep apart. */
+/** The node of cell `c` whose floor is nearest height `y`, or -1 if the cell has none. */
+function nearestNode(g: NavGrid, c: number, y: number): number {
+  let best = -1;
+  let bestD = Number.POSITIVE_INFINITY;
+  for (let k = g.cellStart[c]!; k < g.cellStart[c + 1]!; k++) {
+    const d = Math.abs(g.floorY[k]! - y);
+    if (d < bestD) {
+      bestD = d;
+      best = k;
+    }
+  }
+  return best;
+}
+
+/** The node of cell `c` a character on node `k` steps onto (floors at most maxStep apart, walkable or not), or -1. */
+export function stepNode(g: NavGrid, k: number, c: number): number {
+  const s = g.cellStart[c]!;
+  // One floor (most cells): no search.
+  const n = g.cellStart[c + 1]! - s === 1 ? s : nearestNode(g, c, g.floorY[k]!);
+  return n >= 0 && Math.abs(g.floorY[n]! - g.floorY[k]!) <= g.maxStep ? n : -1;
+}
+
+/** True if a character can walk from node `a` to node `b` of a neighbouring cell: both walkable, floors at most maxStep apart. */
 export function canStep(g: NavGrid, a: number, b: number): boolean {
   return g.walkable[a] === 1 && g.walkable[b] === 1 && Math.abs(g.floorY[a]! - g.floorY[b]!) <= g.maxStep;
 }
 
-/** Floor height of the cell containing (x, z): NaN outside the grid or where there is no walkable surface. */
-export function floorAt(g: NavGrid, x: number, z: number): number {
-  const c = cellIndex(g, x, z);
-  return c >= 0 ? g.floorY[c]! : Number.NaN;
-}
-
 /** Cell index containing (x, z), or -1 outside the grid. */
-export function cellIndex(g: NavGrid, x: number, z: number): number {
+export function cellIndex(g: GridFrame, x: number, z: number): number {
   const i = Math.floor((x - g.minX) / g.cell);
   const j = Math.floor((z - g.minZ) / g.cell);
   if (i < 0 || j < 0 || i >= g.cols || j >= g.rows) return -1;
   return j * g.cols + i;
 }
 
-export function isWalkableAt(g: NavGrid, x: number, z: number): boolean {
-  const c = cellIndex(g, x, z);
-  return c >= 0 && g.walkable[c] === 1;
+/** The floor of cell `c` under height `y` (see NavGrid), or -1 if the cell has none. */
+function pickNode(g: NavGrid, c: number, y: number): number {
+  const s = g.cellStart[c]!;
+  const e = g.cellStart[c + 1]!;
+  if (s === e) return -1;
+  for (let k = e - 1; k > s; k--) if (g.floorY[k]! <= y + NODE_PICK_ABOVE) return k;
+  return s;
 }
 
-/** Nearest walkable cell to (x, z) within `maxRadius` metres (ring search), or -1. */
-export function nearestWalkable(g: NavGrid, x: number, z: number, maxRadius: number): number {
+/** The node under the point (x, y, z): its cell's floor under that height, or -1 outside the grid or where there is none. */
+export function nodeAt(g: NavGrid, x: number, y: number, z: number): number {
+  const c = cellIndex(g, x, z);
+  return c >= 0 ? pickNode(g, c, y) : -1;
+}
+
+/** Floor height under the point (x, y, z): NaN outside the grid or where there is no walkable surface. */
+export function floorAt(g: NavGrid, x: number, y: number, z: number): number {
+  const k = nodeAt(g, x, y, z);
+  return k >= 0 ? g.floorY[k]! : Number.NaN;
+}
+
+/** True if the floor under the point (x, y, z) is walkable there. */
+export function isWalkableAt(g: NavGrid, x: number, y: number, z: number): boolean {
+  const k = nodeAt(g, x, y, z);
+  return k >= 0 && g.walkable[k] === 1;
+}
+
+/**
+ * Nearest walkable node to (x, z) within `maxRadius` metres (ring search), each cell judged at its floor under `y`; or
+ * -1. A floor more than a storey's headroom below `y` doesn't count: from a balcony's edge, the nearest spot is on the
+ * balcony, not in the street under it.
+ */
+export function nearestWalkable(g: NavGrid, x: number, y: number, z: number, maxRadius: number): number {
   const ci = Math.min(g.cols - 1, Math.max(0, Math.floor((x - g.minX) / g.cell)));
   const cj = Math.min(g.rows - 1, Math.max(0, Math.floor((z - g.minZ) / g.cell)));
   const maxRing = Math.ceil(maxRadius / g.cell);
@@ -185,12 +333,12 @@ export function nearestWalkable(g: NavGrid, x: number, z: number, maxRadius: num
       for (let i = ci - ring; i <= ci + ring; i++) {
         if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== ring) continue;
         if (i < 0 || j < 0 || i >= g.cols || j >= g.rows) continue;
-        const c = j * g.cols + i;
-        if (!g.walkable[c]) continue;
+        const k = pickNode(g, j * g.cols + i, y);
+        if (k < 0 || !g.walkable[k] || g.floorY[k]! < y - g.headroom) continue;
         const d = Math.hypot(cellX(g, i) - x, cellZ(g, j) - z);
         if (d < bestD) {
           bestD = d;
-          best = c;
+          best = k;
         }
       }
     }
@@ -200,69 +348,88 @@ export function nearestWalkable(g: NavGrid, x: number, z: number, maxRadius: num
   return bestD <= maxRadius ? best : -1;
 }
 
-/**
- * True if a character can walk the straight line a → b: every cell under it (sampled finely) is walkable,
- * and each step from one of those cells to the next is one a character can take (canStep).
- */
-export function clearLine(g: NavGrid, ax: number, az: number, bx: number, bz: number): boolean {
-  const len = Math.hypot(bx - ax, bz - az);
-  const steps = Math.max(1, Math.ceil(len / (g.cell * 0.5)));
-  let prev = -1;
-  for (let s = 0; s <= steps; s++) {
-    const t = s / steps;
-    const c = cellIndex(g, ax + (bx - ax) * t, az + (bz - az) * t);
-    if (c < 0 || g.walkable[c] !== 1) return false;
-    if (prev >= 0 && c !== prev && !canStep(g, prev, c)) return false;
-    prev = c;
-  }
-  return true;
-}
-
-/** Eight unit directions (x, z) round a point, for clearLineFor's probes. */
+/** Eight unit directions (x, z) round a point, for the leg probes. */
 const PROBE_X = [1, -1, 0, 0, Math.SQRT1_2, Math.SQRT1_2, -Math.SQRT1_2, -Math.SQRT1_2];
 const PROBE_Z = [0, 0, 1, -1, Math.SQRT1_2, -Math.SQRT1_2, Math.SQRT1_2, -Math.SQRT1_2];
 
 /**
- * clearLine that also keeps a body clear of corners (audit AI-12): every sample of the line must have walkable cells
- * `probe` metres away from it in eight directions. A walkable cell's centre keeps the grid's clearance from blocks,
- * but a point inside the cell can be up to half a cell's diagonal nearer, so a plain clearLine leg can pass ~8 cm
- * inside the body at a corner. A probe's cell is blocked whenever the probe point is within clearance minus half a
- * cell diagonal of a block (or drop), so with `probe` = radius + half a cell diagonal − clearance (NAV.legProbe) a
- * passing line keeps at least `radius` from every block. Only the bots' route string-pulling uses it: a leg it
- * refuses costs a waypoint, never the route. `probe` 0 is plain clearLine.
+ * Walks the straight line from the point (ax, ay, az) to (bx, bz) on foot, from the floor under the start, stepping from
+ * floor to floor (stepNode) as it crosses cells. Returns the node it ends on, or -1 if a step is not one a character can
+ * take (no floor within maxStep, or a blocked node). With `probe` > 0 every sample must also have walkable nodes on its
+ * own floor `probe` metres away in eight directions (see clearLineFor).
  */
-export function clearLineFor(g: NavGrid, ax: number, az: number, bx: number, bz: number, probe: number): boolean {
-  if (!clearLine(g, ax, az, bx, bz)) return false;
-  if (probe <= 0) return true;
+function walkLine(g: NavGrid, ax: number, ay: number, az: number, bx: number, bz: number, probe: number): number {
   const len = Math.hypot(bx - ax, bz - az);
   const steps = Math.max(1, Math.ceil(len / (g.cell * 0.5)));
+  let node = nodeAt(g, ax, ay, az);
+  if (node < 0 || g.walkable[node] !== 1) return -1;
+  let cell = g.nodeCell[node]!;
   for (let s = 0; s <= steps; s++) {
     const t = s / steps;
     const x = ax + (bx - ax) * t;
     const z = az + (bz - az) * t;
-    for (let k = 0; k < PROBE_X.length; k++) {
-      const c = cellIndex(g, x + PROBE_X[k]! * probe, z + PROBE_Z[k]! * probe);
-      if (c < 0 || g.walkable[c] !== 1) return false;
+    const c = cellIndex(g, x, z);
+    if (c < 0) return -1;
+    if (c !== cell) {
+      const next = stepNode(g, node, c);
+      if (next < 0 || g.walkable[next] !== 1) return -1;
+      node = next;
+      cell = c;
+    }
+    if (probe > 0) {
+      for (let k = 0; k < PROBE_X.length; k++) {
+        const pc = cellIndex(g, x + PROBE_X[k]! * probe, z + PROBE_Z[k]! * probe);
+        if (pc < 0) return -1;
+        if (pc === cell) continue;
+        const p = stepNode(g, node, pc);
+        if (p < 0 || g.walkable[p] !== 1) return -1;
+      }
     }
   }
-  return true;
+  return node;
 }
 
 /**
- * True if walking the straight line a → b would step off a floor: some cell under it has no floor, or its
- * floor differs from the one before by more than maxStep (a platform's edge, a ramp's side). Walls and
- * other blocks don't count, only drops; past the grid's edge counts as a drop. Flat maps never have one.
+ * True if a character can walk the straight line from the point (ax, ay, az) to (bx, bz): every cell under it (sampled
+ * finely) has a walkable floor, and each step from one of those floors to the next is one a character can take.
  */
-export function dropOnLine(g: NavGrid, ax: number, az: number, bx: number, bz: number): boolean {
+export function clearLine(g: NavGrid, ax: number, ay: number, az: number, bx: number, bz: number): boolean {
+  return walkLine(g, ax, ay, az, bx, bz, 0) >= 0;
+}
+
+/**
+ * clearLine that also keeps a body clear of corners (audit AI-12): every sample of the line must have walkable nodes
+ * `probe` metres away from it in eight directions. A walkable cell's centre keeps the grid's clearance from blocks,
+ * but a point inside the cell can be up to half a cell's diagonal nearer, so a plain clearLine leg can pass ~8 cm
+ * inside the body at a corner. A probe's node is blocked whenever the probe point is within clearance minus half a
+ * cell diagonal of a block (or drop), so with `probe` = radius + half a cell diagonal − clearance (NAV.legProbe) a
+ * passing line keeps at least `radius` from every block. Only the bots' route string-pulling uses it: a leg it
+ * refuses costs a waypoint, never the route. `probe` 0 is plain clearLine.
+ */
+export function clearLineFor(g: NavGrid, ax: number, ay: number, az: number, bx: number, bz: number, probe: number): boolean {
+  return walkLine(g, ax, ay, az, bx, bz, probe) >= 0;
+}
+
+/**
+ * True if walking the straight line from the point (ax, ay, az) to (bx, bz) would step off a floor: some cell under it
+ * has no floor within maxStep of the one before (a platform's edge, a balcony's, a ramp's side). Walls and other blocks
+ * don't count, only drops; past the grid's edge counts as a drop. Flat maps never have one.
+ */
+export function dropOnLine(g: NavGrid, ax: number, ay: number, az: number, bx: number, bz: number): boolean {
   const len = Math.hypot(bx - ax, bz - az);
   const steps = Math.max(1, Math.ceil(len / (g.cell * 0.5)));
-  let prev = cellIndex(g, ax, az);
+  let node = nodeAt(g, ax, ay, az);
+  let cell = cellIndex(g, ax, az);
   for (let s = 1; s <= steps; s++) {
     const t = s / steps;
     const c = cellIndex(g, ax + (bx - ax) * t, az + (bz - az) * t);
-    if (c < 0 || Number.isNaN(g.floorY[c]!)) return true;
-    if (prev >= 0 && Math.abs(g.floorY[c]! - g.floorY[prev]!) > g.maxStep) return true;
-    prev = c;
+    if (c < 0 || g.cellStart[c] === g.cellStart[c + 1]) return true;
+    if (c === cell) continue;
+    // Starting off any floor, the first floor met is where the line is.
+    const next = node >= 0 ? stepNode(g, node, c) : pickNode(g, c, ay);
+    if (next < 0) return true;
+    node = next;
+    cell = c;
   }
   return false;
 }
@@ -271,33 +438,33 @@ export function dropOnLine(g: NavGrid, ax: number, az: number, bx: number, bz: n
 export interface NavSearch {
   g: Float32Array;
   from: Int32Array;
-  /** Search generation per cell: a cell's g/from are valid only if stamp === current generation. */
+  /** Search generation per node: a node's g/from are valid only if stamp === current generation. */
   stamp: Uint32Array;
   closed: Uint32Array;
   generation: number;
   heap: Int32Array;
   heapF: Float32Array;
-  cells: number[];
+  nodes: number[];
 }
 
 export function createNavSearch(grid: NavGrid): NavSearch {
-  const n = grid.cols * grid.rows;
+  const n = grid.floorY.length;
   return {
     g: new Float32Array(n),
     from: new Int32Array(n),
     stamp: new Uint32Array(n),
     closed: new Uint32Array(n),
     generation: 0,
-    // The open list holds a cell again each time a shorter route to it is found, but on a real map it peaks far
-    // below the cell count (audit AI-11: low thousands on Depot's 42k cells); twice the cells is ample, and a search
+    // The open list holds a node again each time a shorter route to it is found, but on a real map it peaks far
+    // below the node count (audit AI-11: low thousands on Depot's 42k cells); twice the nodes is ample, and a search
     // that ever needs more grows it once (astar) rather than failing.
     heap: new Int32Array(n * NAV_HEAP_PER_CELL),
     heapF: new Float32Array(n * NAV_HEAP_PER_CELL),
-    cells: [],
+    nodes: [],
   };
 }
 
-/** Open-list slots per grid cell a NavSearch starts with (see createNavSearch). */
+/** Open-list slots per grid node a NavSearch starts with (see createNavSearch). */
 export const NAV_HEAP_PER_CELL = 2;
 
 /** Doubles a search's open list, keeping its first `size` entries (only when a search outgrows it). */
@@ -317,72 +484,75 @@ const NDJ = [0, 0, 1, -1, 1, -1, 1, -1];
 const NCOST = [1, 1, 1, 1, SQRT2, SQRT2, SQRT2, SQRT2];
 
 /**
- * Shortest walkable route from `start` to `goal` (both snapped to the nearest walkable cell within
- * `snap` metres), smoothed into straight segments, written into `out` as waypoints (excluding the
- * start, ending at the goal, or the nearest walkable cell to it). Returns false if there is no route. `legProbe`
+ * Shortest walkable route from `start` to `goal` (both snapped to the nearest walkable node within `snap` metres, on
+ * the floor under each), smoothed into straight segments, written into `out` as waypoints (excluding the start, ending
+ * at the goal, or the nearest walkable node to it), each on its floor. Returns false if there is no route. `legProbe`
  * (> 0) keeps the straight legs a body's width from corners (see clearLineFor).
  */
 export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap: number, out: Vec3[], legProbe = 0): boolean {
-  const a = nearestWalkable(g, start.x, start.z, snap);
-  const b = nearestWalkable(g, goal.x, goal.z, snap);
+  const a = nearestWalkable(g, start.x, start.y, start.z, snap);
+  const b = nearestWalkable(g, goal.x, goal.y, goal.z, snap);
   if (a < 0 || b < 0 || !astar(g, s, a, b)) {
     out.length = 0;
     return false;
   }
   let n = 0;
 
-  // Cells from goal back to start, reversed.
-  const cells = s.cells;
-  cells.length = 0;
-  for (let c = b; c !== a; c = s.from[c]!) cells.push(c);
-  cells.push(a);
-  cells.reverse();
+  // Nodes from goal back to start, reversed.
+  const nodes = s.nodes;
+  nodes.length = 0;
+  for (let k = b; k !== a; k = s.from[k]!) nodes.push(k);
+  nodes.push(a);
+  nodes.reverse();
 
-  // String-pull: from the current anchor, jump to the furthest cell still in a clear straight line.
+  // String-pull: from the current anchor, jump to the furthest node still in a clear straight line on foot.
   let ax = start.x;
+  let ay = start.y;
   let az = start.z;
-  if (!isWalkableAt(g, ax, az)) {
-    ax = cellX(g, a % g.cols);
-    az = cellZ(g, Math.floor(a / g.cols));
+  if (!isWalkableAt(g, ax, ay, az)) {
+    ax = nodeX(g, a);
+    ay = g.floorY[a]!;
+    az = nodeZ(g, a);
   }
   let k = 0;
-  while (k < cells.length - 1) {
-    // Walk forward while the straight line from the anchor stays clear (checking every few cells).
+  while (k < nodes.length - 1) {
+    // Walk forward while the straight line from the anchor stays clear (checking every few nodes).
     let next = k + 1;
-    for (let m = Math.min(cells.length - 1, k + 2); ; m = Math.min(cells.length - 1, m + 2)) {
-      const c = cells[m]!;
-      if (!clearLineFor(g, ax, az, cellX(g, c % g.cols), cellZ(g, Math.floor(c / g.cols)), legProbe)) break;
+    for (let m = Math.min(nodes.length - 1, k + 2); ; m = Math.min(nodes.length - 1, m + 2)) {
+      const c = nodes[m]!;
+      if (walkLine(g, ax, ay, az, nodeX(g, c), nodeZ(g, c), legProbe) !== c) break;
       next = m;
-      if (m === cells.length - 1) break;
+      if (m === nodes.length - 1) break;
     }
-    const c = cells[next]!;
-    ax = cellX(g, c % g.cols);
-    az = cellZ(g, Math.floor(c / g.cols));
-    n = emitCell(g, out, n, c);
+    const c = nodes[next]!;
+    ax = nodeX(g, c);
+    ay = g.floorY[c]!;
+    az = nodeZ(g, c);
+    n = emitNode(g, out, n, c);
     k = next;
   }
-  if (n === 0) n = emitCell(g, out, n, b);
+  if (n === 0) n = emitNode(g, out, n, b);
   out.length = n;
-  // End exactly on the goal when it's walkable (the search works in cell centres).
+  // End exactly on the goal when it's walkable and in a straight line on foot (the search works in cell centres).
   const end = out[n - 1]!;
-  const fromX = n > 1 ? out[n - 2]!.x : start.x;
-  const fromZ = n > 1 ? out[n - 2]!.z : start.z;
-  if (isWalkableAt(g, goal.x, goal.z) && clearLineFor(g, fromX, fromZ, goal.x, goal.z, legProbe)) {
+  const from = n > 1 ? out[n - 2]! : start;
+  const goalNode = nodeAt(g, goal.x, goal.y, goal.z);
+  if (goalNode >= 0 && g.walkable[goalNode] === 1 && walkLine(g, from.x, from.y, from.z, goal.x, goal.z, legProbe) === goalNode) {
     end.x = goal.x;
-    end.y = floorAt(g, goal.x, goal.z);
+    end.y = g.floorY[goalNode]!;
     end.z = goal.z;
   }
   return true;
 }
 
 /**
- * Writes cell `c` (on its cell's floor) as waypoint `n` of `out`, reusing the object already there so re-planning a
- * route doesn't allocate (audit AI-11: a module function, not a closure made per search). Returns n + 1.
+ * Writes node `k` (on its floor) as waypoint `n` of `out`, reusing the object already there so re-planning a route
+ * doesn't allocate (audit AI-11: a module function, not a closure made per search). Returns n + 1.
  */
-function emitCell(g: NavGrid, out: Vec3[], n: number, c: number): number {
-  const x = cellX(g, c % g.cols);
-  const y = g.floorY[c]!;
-  const z = cellZ(g, Math.floor(c / g.cols));
+function emitNode(g: NavGrid, out: Vec3[], n: number, k: number): number {
+  const x = nodeX(g, k);
+  const y = g.floorY[k]!;
+  const z = nodeZ(g, k);
   const p = out[n];
   if (p) {
     p.x = x;
@@ -394,18 +564,17 @@ function emitCell(g: NavGrid, out: Vec3[], n: number, c: number): number {
   return n + 1;
 }
 
-/** 8-neighbour A* without corner cutting (octile heuristic). Fills s.from; returns false if `b` is unreachable. */
+/** 8-neighbour A* over nodes without corner cutting (octile heuristic). Fills s.from; returns false if `b` is unreachable. */
 function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
   const gen = ++s.generation;
   const cols = g.cols;
   const rows = g.rows;
   const walk = g.walkable;
-  const floorY = g.floorY;
-  const maxStep = g.maxStep;
   let heap = s.heap;
   let heapF = s.heapF;
-  const bi = b % cols;
-  const bj = (b - bi) / cols;
+  const bc = g.nodeCell[b]!;
+  const bi = bc % cols;
+  const bj = (bc - bi) / cols;
   let size = 0;
 
   s.stamp[a] = gen;
@@ -438,23 +607,28 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
     if (s.closed[c] === gen) continue;
     s.closed[c] = gen;
     if (c === b) return true;
-    const ci = c % cols;
-    const cj: number = (c - ci) / cols;
+    const cc: number = g.nodeCell[c]!;
+    const ci: number = cc % cols;
+    const cj: number = (cc - ci) / cols;
     const gc = s.g[c]!;
-    const fc = floorY[c]!;
+    // The four straight neighbours' nodes, looked up once: each diagonal checks two of them.
+    const o0: number = ci + 1 < cols ? stepNode(g, c, cc + 1) : -1;
+    const o1: number = ci > 0 ? stepNode(g, c, cc - 1) : -1;
+    const o2: number = cj + 1 < rows ? stepNode(g, c, cc + cols) : -1;
+    const o3: number = cj > 0 ? stepNode(g, c, cc - cols) : -1;
+    const w0 = o0 >= 0 && walk[o0] === 1;
+    const w1 = o1 >= 0 && walk[o1] === 1;
+    const w2 = o2 >= 0 && walk[o2] === 1;
+    const w3 = o3 >= 0 && walk[o3] === 1;
     for (let k = 0; k < 8; k++) {
       const ni = ci + NDI[k]!;
       const nj: number = cj + NDJ[k]!;
       if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) continue;
-      const n = nj * cols + ni;
+      // No squeezing diagonally past a blocked node (or a drop).
+      if (k >= 4 && !(k === 4 ? w0 && w2 : k === 5 ? w0 && w3 : k === 6 ? w1 && w2 : w1 && w3)) continue;
       // canStep(c, n), inlined (c is walkable).
-      if (!walk[n] || s.closed[n] === gen || Math.abs(floorY[n]! - fc) > maxStep) continue;
-      // No squeezing diagonally past a blocked cell (or a drop).
-      if (k >= 4) {
-        const sa = cj * cols + ni;
-        const sb = nj * cols + ci;
-        if (!walk[sa] || !walk[sb] || Math.abs(floorY[sa]! - fc) > maxStep || Math.abs(floorY[sb]! - fc) > maxStep) continue;
-      }
+      const n = k === 0 ? o0 : k === 1 ? o1 : k === 2 ? o2 : k === 3 ? o3 : stepNode(g, c, nj * cols + ni);
+      if (n < 0 || !walk[n] || s.closed[n] === gen) continue;
       const ng = gc + NCOST[k]!;
       if (s.stamp[n] === gen && s.g[n]! <= ng) continue;
       s.stamp[n] = gen;

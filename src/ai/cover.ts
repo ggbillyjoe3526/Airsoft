@@ -27,8 +27,8 @@ export interface CoverBlock {
 }
 
 /**
- * The nav floor a block stands on: of the floor heights under its footprint and one cell around it, the
- * one nearest its bottom (NaN if there are none). Reading the whole footprint, not just the centre, finds
+ * The nav floor a block stands on: of the floor heights under its footprint and one cell around it (every floor of
+ * each cell), the one nearest its bottom (NaN if there are none). Reading the whole footprint, not just the centre, finds
  * the floor of a block on a platform's edge, or one whose centre is past the grid (a perimeter wall).
  */
 function floorUnder(nav: NavGrid, b: MapBlock): number {
@@ -40,9 +40,11 @@ function floorUnder(nav: NavGrid, b: MapBlock): number {
   let best = Number.NaN;
   for (let j = j0; j <= j1; j++) {
     for (let i = i0; i <= i1; i++) {
-      const f = nav.floorY[j * nav.cols + i]!;
-      if (Number.isNaN(f)) continue;
-      if (Number.isNaN(best) || Math.abs(bottom - f) < Math.abs(bottom - best)) best = f;
+      const c = j * nav.cols + i;
+      for (let k = nav.cellStart[c]!; k < nav.cellStart[c + 1]!; k++) {
+        const f = nav.floorY[k]!;
+        if (Number.isNaN(best) || Math.abs(bottom - f) < Math.abs(bottom - best)) best = f;
+      }
     }
   }
   return best;
@@ -190,7 +192,7 @@ export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngSt
   const s = searchState;
   s.taken = taken;
   copy(s.from, from);
-  const fromFloor = floorAt(w.nav, from.x, from.z);
+  const fromFloor = floorAt(w.nav, from.x, from.y, from.z);
   s.fromAboveFloor = Number.isNaN(fromFloor) ? 0 : from.y - fromFloor;
   copy(s.threatEye, threatEye);
   s.radius = search ? search.radius : cfg.coverRadius;
@@ -218,7 +220,7 @@ export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngSt
       const gap = tryFar === 0 ? cfg.lowCoverGap : cfg.lowCoverGapFar;
       const x = b.x + ux * (edge + gap);
       const z = b.z + uz * (edge + gap);
-      if (!isWalkableAt(w.nav, x, z)) continue;
+      if (!isWalkableAt(w.nav, x, s.from.y, z)) continue;
       consider(s, w, out, x, z);
       break;
     }
@@ -240,7 +242,7 @@ function consider(s: SearchState, w: CoverWorld, out: CoverSpot, x: number, z: n
   const body = w.body;
   const from = s.from;
   const threatEye = s.threatEye;
-  if (!isWalkableAt(w.nav, x, z)) return;
+  if (!isWalkableAt(w.nav, x, s.from.y, z)) return;
   const r = Math.hypot(x - from.x, z - from.z);
   if (r > s.radius) return;
   const taken = s.taken;
@@ -254,7 +256,7 @@ function consider(s: SearchState, w: CoverWorld, out: CoverSpot, x: number, z: n
   const toThreat = Math.hypot(threatEye.x - x, threatEye.z - z);
   if (toThreat < Math.min(s.threatDist * cfg.coverTowardThreatFraction, s.threatDist - cfg.coverTowardThreatMetres)) return;
 
-  const y = floorAt(w.nav, x, z) + s.fromAboveFloor;
+  const y = floorAt(w.nav, x, s.from.y, z) + s.fromAboveFloor;
   crouchedEye.x = x;
   crouchedEye.z = z;
   crouchedEye.y = y + body.crouchEyeHeight;
