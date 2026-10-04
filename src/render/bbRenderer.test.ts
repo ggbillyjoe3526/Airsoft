@@ -155,14 +155,14 @@ describe('BBRenderer', () => {
       const r = new BBRenderer(pool, DT);
       const a = spawnBB(pool, 1, vec3(0, 1.6, -5), vec3(0, 0, -1), 88, 0, 0.25e-3);
       spawnBB(pool, 1, vec3(0, 1.6, -6), vec3(0, 0, -1), 88, 0, 0.25e-3);
-      r.setGlow(a, true);
+      r.setGlowInDark(a, true);
       r.update(0, eye);
       expect((r.object.children[0] as THREE.InstancedMesh).count).toBe(2);
-      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glow.color).getHex());
-      expect(colorOf(r, 1).getHex()).toBe(new THREE.Color(BB_VISUALS.color).getHex());
-      expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glow.trailColor).getHex());
+      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.color).getHex());
+      expect(colorOf(r, 1).getHex()).toBe(0xffffff);
+      expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.trailColor).getHex());
       expect(headColor(r, 1).getHex()).toBe(new THREE.Color(BB_VISUALS.trailColor).getHex());
-      expect(r.object.children).toHaveLength(2); // still the one mesh and the one line buffer
+      expect(r.object.children).toHaveLength(3); // still the balls, the streaks and FA8's halo: no mesh added
       r.dispose();
     });
 
@@ -171,11 +171,11 @@ describe('BBRenderer', () => {
       const r = new BBRenderer(pool, DT);
       const glowing = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
       spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
-      r.setGlow(glowing, true);
+      r.setGlowInDark(glowing, true);
       r.update(0, eye);
       const g = drawn(r, 0);
       const n = drawn(r, 1);
-      expect((g.scale * BB_VISUALS.radius) / 30).toBeGreaterThanOrEqual(BB_VISUALS.glow.minAngularRadius - 1e-9);
+      expect((g.scale * BB_VISUALS.radius) / 30).toBeGreaterThanOrEqual(BB_VISUALS.glowInDark.minAngularRadius - 1e-9);
       expect((n.scale * BB_VISUALS.radius) / 30).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);
       expect(g.scale).toBeGreaterThan(n.scale);
       r.dispose();
@@ -186,10 +186,10 @@ describe('BBRenderer', () => {
       const r = new BBRenderer(pool, DT);
       const a = farBB(pool, -10);
       farBB(pool, -10);
-      r.setGlow(a, true);
+      r.setGlowInDark(a, true);
       r.update(0, eye);
       expect(streak(r, 1)).toBeCloseTo((1.4 / DT) * BB_VISUALS.trailSeconds, 4);
-      expect(streak(r, 0)).toBeCloseTo((1.4 / DT) * BB_VISUALS.glow.trailSeconds, 4);
+      expect(streak(r, 0)).toBeCloseTo((1.4 / DT) * BB_VISUALS.glowInDark.trailSeconds, 4);
       expect(streak(r, 0)).toBeGreaterThan(streak(r, 1));
       r.dispose();
     });
@@ -199,7 +199,7 @@ describe('BBRenderer', () => {
       const r = new BBRenderer(pool, DT);
       const a = farBB(pool, -10);
       farBB(pool, -10);
-      r.setGlow(a, true);
+      r.setGlowInDark(a, true);
       r.update(0.5, eye);
       expect(drawn(r, 0).pos.distanceTo(drawn(r, 1).pos)).toBeLessThan(1e-6);
       r.dispose();
@@ -209,16 +209,16 @@ describe('BBRenderer', () => {
       const pool = createBBPool(1);
       const r = new BBRenderer(pool, DT);
       const first = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
-      r.setGlow(first, true);
+      r.setGlowInDark(first, true);
       r.update(0, eye);
-      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glow.color).getHex());
+      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.color).getHex());
       const serial = first.serial;
       first.active = false; // it hit something; its slot is free
       const second = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
       expect(second).toBe(first);
       expect(second.serial).not.toBe(serial);
       r.update(0, eye);
-      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.color).getHex());
+      expect(colorOf(r, 0).getHex()).toBe(0xffffff);
       expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.trailColor).getHex());
       expect((drawn(r, 0).scale * BB_VISUALS.radius) / 30).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);
       r.dispose();
@@ -228,10 +228,10 @@ describe('BBRenderer', () => {
       const pool = createBBPool(1);
       const r = new BBRenderer(pool, DT);
       const a = spawnBB(pool, 1, vec3(0, 1.6, -5), vec3(0, 0, -1), 88, 0, 0.25e-3);
-      r.setGlow(a, true);
-      r.setGlow(a, false);
+      r.setGlowInDark(a, true);
+      r.setGlowInDark(a, false);
       r.update(0, eye);
-      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.color).getHex());
+      expect(colorOf(r, 0).getHex()).toBe(0xffffff);
       r.dispose();
     });
   });

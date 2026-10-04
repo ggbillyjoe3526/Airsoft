@@ -16,7 +16,7 @@ import { loadCustomQuality, loadSavedQuality } from './ui/menus/savedChoices';
 import { OtherTabNotice } from './ui/otherTabNotice';
 import { startGuardedStorage } from './save/guardedStorage';
 import { SaveManager } from './save/saveManager';
-import { browserLockChannel, TabLock } from './save/tabLock';
+import { browserLockChannel, browserSaveLocks, TabLock } from './save/tabLock';
 import { flushSettings } from './settings/storage';
 
 /** The game once it has started; until then an error is a start-up failure. */
@@ -83,6 +83,7 @@ async function main(): Promise<void> {
 async function startSave(): Promise<SaveManager | null> {
   const storage = startGuardedStorage();
   const lock = new TabLock({
+    locks: browserSaveLocks(),
     channel: browserLockChannel(),
     // Another tab took the save: write what's waiting, stop saving, and wait behind the notice.
     onLost: () => {
