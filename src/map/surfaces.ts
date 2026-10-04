@@ -2,7 +2,8 @@ import type { MapBlock } from './mapTypes';
 
 /**
  * Walkable surfaces: the tops of `floor` blocks (at any height) and of `ramp` blocks. Nothing else is
- * walkable by design. Maps keep one floor height per point (x, z): no walkable surface over another.
+ * walkable by design. Walkable surfaces may stack (a floor over a floor, M34b) as long as the upper one leaves
+ * body height above the lower; the nav grid keeps one node per floor.
  */
 
 const RISE_PX = { x: 1, z: 0 };

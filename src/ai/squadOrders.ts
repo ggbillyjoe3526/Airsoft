@@ -1,5 +1,5 @@
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
-import { cellX, cellZ, clearLine, dropOnLine, floorAt, isWalkableAt, nearestWalkable } from '../nav/navGrid';
+import { clearLine, dropOnLine, floorAt, isWalkableAt, NODE_PICK_ABOVE, nearestWalkable, nodeX, nodeZ } from '../nav/navGrid';
 import { aimDirection } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
@@ -64,9 +64,14 @@ export function holdPoint(leader: Character, w: BotWorld, out: Vec3): boolean {
     const d = reach - back;
     const x = leader.position.x + (view.x / flat) * d;
     const z = leader.position.z + (view.z / flat) * d;
-    if (!isWalkableAt(w.nav, x, z)) continue;
+    // The floor the line of sight passes over there (M34b): the street below when the leader looks down off a balcony,
+    // the floor upstairs when they look up at it from below, the hall when they look up under its ceiling. A rising
+    // line takes the highest floor under it (never lower than the eye's own reach); a falling one keeps nodeAt's reach.
+    const lineY = eye.y + (view.y / flat) * d;
+    const y = Math.min(lineY, Math.max(eye.y, lineY - NODE_PICK_ABOVE));
+    if (!isWalkableAt(w.nav, x, y, z)) continue;
     out.x = x;
-    out.y = floorAt(w.nav, x, z);
+    out.y = floorAt(w.nav, x, y, z);
     out.z = z;
     return true;
   }
@@ -95,9 +100,9 @@ export function placeHold(bots: readonly Bot[], leader: Character, point: Vec3 |
     // A side spot must be walkable and in a straight walkable line from the point (M-05: not on the far side of a thin
     // wall, which would send the bot round by the next doorway). The line checks every step's height, so a spot along
     // a ramp passes and one on another level fails (bug pass: a height test against the point put both bots on it).
-    const walkable = isWalkableAt(w.nav, x, z) && clearLine(w.nav, point.x, point.z, x, z);
+    const walkable = isWalkableAt(w.nav, x, point.y, z) && clearLine(w.nav, point.x, point.y, point.z, x, z);
     g.x = walkable ? x : point.x;
-    g.y = walkable ? floorAt(w.nav, x, z) : point.y;
+    g.y = walkable ? floorAt(w.nav, x, point.y, z) : point.y;
     g.z = walkable ? z : point.z;
   });
 }
@@ -138,19 +143,22 @@ export function followSpot(leader: Character, heading: number, slot: number, w: 
   // Spots are measured from where the leader stands or, inside the margin the nav grid keeps from walls and edges (a
   // body touching a wall stands in it), from the nearest walkable cell: on the leader's side of that wall.
   anchor.x = p.x;
+  anchor.y = p.y;
   anchor.z = p.z;
-  if (!isWalkableAt(w.nav, p.x, p.z)) {
-    const c = nearestWalkable(w.nav, p.x, p.z, SQUAD_ORDERS.followLineSnap);
+  if (!isWalkableAt(w.nav, p.x, p.y, p.z)) {
+    const c = nearestWalkable(w.nav, p.x, p.y, p.z, SQUAD_ORDERS.followLineSnap);
     if (c >= 0) {
-      anchor.x = cellX(w.nav, c % w.nav.cols);
-      anchor.z = cellZ(w.nav, Math.floor(c / w.nav.cols));
+      anchor.x = nodeX(w.nav, c);
+      anchor.y = w.nav.floorY[c]!;
+      anchor.z = nodeZ(w.nav, c);
     }
     // A leader standing at a platform's lip can be nearest a cell on the ground below: measured from there, the spots
     // would be down a level with no way up nearby, so stay on the leader instead. A cell along a ramp is fine however
     // much higher or lower, as long as no drop lies between (in the air, the floor below is the level that counts).
-    if (leader.grounded && Math.abs(floorAt(w.nav, anchor.x, anchor.z) - p.y) > w.nav.maxStep) {
-      const ownLevel = Math.abs(floorAt(w.nav, p.x, p.z) - p.y) <= w.nav.maxStep;
-      if (!ownLevel || dropOnLine(w.nav, p.x, p.z, anchor.x, anchor.z)) return out;
+    const anchorFloor = c >= 0 ? anchor.y : floorAt(w.nav, p.x, p.y, p.z);
+    if (leader.grounded && Math.abs(anchorFloor - p.y) > w.nav.maxStep) {
+      const ownLevel = Math.abs(floorAt(w.nav, p.x, p.y, p.z) - p.y) <= w.nav.maxStep;
+      if (!ownLevel || dropOnLine(w.nav, p.x, p.y, p.z, anchor.x, anchor.z)) return out;
     }
   }
   if (tryFollowSpot(anchor, heading + Math.PI + side * SQUAD_ORDERS.followSpreadDeg * DEG, dist, w, out)) return out;
@@ -169,10 +177,10 @@ export function followSpot(leader: Character, heading: number, slot: number, w: 
 function tryFollowSpot(from: Vec3, angle: number, dist: number, w: BotWorld, out: Vec3): boolean {
   const x = from.x - Math.sin(angle) * dist;
   const z = from.z - Math.cos(angle) * dist;
-  if (!isWalkableAt(w.nav, x, z)) return false;
-  if (!clearLine(w.nav, from.x, from.z, x, z)) return false;
+  if (!isWalkableAt(w.nav, x, from.y, z)) return false;
+  if (!clearLine(w.nav, from.x, from.y, from.z, x, z)) return false;
   out.x = x;
-  out.y = floorAt(w.nav, x, z);
+  out.y = floorAt(w.nav, x, from.y, z);
   out.z = z;
   return true;
 }
@@ -233,7 +241,7 @@ function followMove(b: Bot, w: BotWorld, leader: Character, away: number, wasRus
   if (away > o.catchUp - (wasRushing ? o.rushEase : 0)) pace = 2;
   b.orderRush = pace === 2;
   cmd.walk = pace === 0;
-  if (clearLine(w.nav, p.x, p.z, g.x, g.z)) {
+  if (clearLine(w.nav, p.x, p.y, p.z, g.x, g.z)) {
     b.routeState = 'none';
     b.route.length = 0;
     // Straight at the spot while the leader stands; with the leader on the move, go their way and close on the spot
@@ -247,7 +255,7 @@ function followMove(b: Bot, w: BotWorld, leader: Character, away: number, wasRus
     // flipped the way back and forth beside every wall (followers stood still more than twice as often on Depot).
     if (leaderMoving && len >= 1e-6) {
       const look = w.cfg.edgeLookahead / len;
-      if (dropOnLine(w.nav, p.x, p.z, p.x + dx * look, p.z + dz * look)) {
+      if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * look, p.z + dz * look)) {
         dx = g.x - p.x;
         dz = g.z - p.z;
         len = d;

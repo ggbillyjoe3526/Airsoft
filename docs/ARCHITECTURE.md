@@ -35,11 +35,14 @@ ends the round). A hit character is eliminated
   through a 1 m column grid, allocation-free, held to Rapier's answer by `physics/levelRay.rapier.test.ts`.
   The sim returns anything below `killY` to its spawn.
 - **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
-  routes (8-neighbour A*, string-pulled into straight legs). Each cell stores one floor height (`floorY`, the floor or
-  ramp top under its centre); blocks are judged against it, neighbours connect only if their floors differ by at most
-  `maxStep` (0.15 m), drops get the same clearance as walls, and waypoints carry the floor height. One height per cell
-  is enough because maps never put one walkable surface over another (DECISIONS 2026-10-02), and it keeps the grid
-  2D: a layered grid or recast would be the upgrade if that rule goes. `dropOnLine` tells bots' off-route steps (combat
+  routes (8-neighbour A*, string-pulled into straight legs). The grid is layered (M34b): each cell holds one node per
+  floor over it (the floor and ramp tops at its centre, and a terrain's ground (M33c), with body height clear above), stored flat (`cellStart`,
+  `nodeCell`, `walkable`, `floorY`). Blocks are judged per node against its floor, neighbouring nodes connect only if
+  their floors differ by at most `maxStep` (0.15 m), drops get the same clearance as walls on the floor they edge, and
+  waypoints carry the floor height. Every query takes a height (`nodeAt`, `floorAt`, `isWalkableAt`,
+  `nearestWalkable`, `clearLine`, `dropOnLine`): it picks the highest floor at most `NODE_PICK_ABOVE` above that
+  height, so a character on a balcony and one in the hall under it get different answers. A map with one floor per
+  cell builds the same grid as before. `dropOnLine` tells bots' off-route steps (combat
   sidesteps, the last step to a lean spot) where a floor ends, so they never walk off an open edge. Pure; used by bots
   and by the sim for walk-offs.
 - **ai/**: bots. `BotController` runs before each tick (fills every bot's `PlayerCommand`, rations route searches to one
@@ -255,7 +258,8 @@ ends the round). A hit character is eliminated
 ## Map data
 
 Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind (a `ramp` is a wedge sloping up
-along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramps), spawns and dead-zone spots
+along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramps; walkable surfaces may stack
+when body height is clear between them), spawns and dead-zone spots
 per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
 without one are elimination only) and an Extraction block (M43: insertions, exits, home-team starts, run time and base
 opponents; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team

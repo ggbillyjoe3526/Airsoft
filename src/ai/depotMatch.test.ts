@@ -103,7 +103,7 @@ describe('a 3v3 bot match on Depot', () => {
     // Deep in the west spawn yard, and behind the car park's container, with Orange starting in the east.
     const orangeEast = { ...ROUNDS, eliminationFirstEnd: 0 };
     for (const spot of [vec3(-24.1, 0, -4.3), vec3(-13, 0, 15.4)]) {
-      expect(isWalkableAt(nav, spot.x, spot.z), `${spot.x},${spot.z} walkable`).toBe(true);
+      expect(isWalkableAt(nav, spot.x, spot.y, spot.z), `${spot.x},${spot.z} walkable`).toBe(true);
       const stats = playMatch(120, 5, spot, BOTS, 'elimination', orangeEast);
       expect(stats.firstRoundEnd, `hider at ${spot.x},${spot.z}`).toBeGreaterThan(0);
       expect(stats.firstRoundEnd).toBeLessThan(90);
