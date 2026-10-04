@@ -5,69 +5,44 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-04 · the build pipeline landed (#47, #49, #50) and its dry run (M27 #51, M28) merged; the owner playtests next._
+_Last updated: 2026-10-04 · the second bug pass (BP1, #53) after the pipeline and the owner's batch; **main is ready for the owner's playtest**._
 
 ## Where we are
 
-- **The build pipeline is in (2026-10-04, owner's design):** `pipeline/gate.mjs` runs build, tests, smoke, perf,
-  scope and changelog gates and writes `pipeline/out/gate-report.json`; CI runs the same script. Agents live in
-  `.claude/agents/` (critic with eight binary checks, qa, performance, triage, worker, changelog), the build thread's
-  step list in `.claude/skills/pipeline/SKILL.md`, the protocol in `pipeline/README.md`, open tasks with acceptance
-  criteria in `docs/TASKS.md` (empty now), one row per attempt in `docs/METRICS.md`. `npm run perf` plays a scripted
-  Depot match; the container baseline is committed, **the laptop one is not**: run
-  `npm run perf -- --env laptop --baseline` on the owner's machine and commit `pipeline/baseline/laptop.json` before
-  frame-time budgets gate anything. The dry run (M27 walk-off route rationing, M28 puff first frame) is in REVIEWS and
-  METRICS; the report with token costs and what to change is in the project's shared files
-  (`pipeline/dry-run-report-2026-10-04.md`). The owner stopped the planned bug pass over KNOWN_ISSUES on 2026-10-04
-  (usage); it is still the next step after his playtest.
-- **Phase 4 is feature complete on `main`** (M11–M22, see REVIEWS), audited (Fable, report in the project's shared files:
-  `audits/phase4-audit-2026-10-04.md`), the audit fixed (#34–#36, all but L-07: no LICENSE, owner 2026-10-02), and
-  bug-passed (#37 and the bots-and-docs pull request after it). **Next: the owner playtests Phase 4.** His notes go into
-  the roadmap first (a draft pull request), as before; until then nothing is planned. For the 2026-10-04 run the owner
-  chose "Claude merges" (threads merged their own pull requests once CI was green and the critic accepted); that was for
-  that run only, so from here on the owner merges again unless he says otherwise (CLAUDE.md §7).
-- **The bug pass** played every mode in the browser (Elimination, Attack and Defend and a 1v1 custom match to the
-  result screen, the range, all ten tutorial steps, settings across a reload) and reviewed all code by area. What it
-  fixed is in DECISIONS (2026-10-04 · Bug pass) and REVIEWS; what it left is in KNOWN_ISSUES (search "bug pass").
-  Nothing it found in rounds, scoring, ballistics, records, leaks or navigation needed a change.
+- **Next: the owner playtests `main`.** Phase 4 (M11–M22) and the owner's 2026-10-04 batch (M23 minimap and order wheel,
+  M24 menus and Dev tab, M25 Depot props and CC0 loader, M26 Loadout, Armory and pool.md) are in, plus the build
+  pipeline and its dry run (M27, M28). His notes go into the roadmap first, as before. **Merges:** "Claude merges" is the
+  standing default (owner, 2026-10-04): a pipeline pull request is merged by its thread once CI is green and the critic
+  accepted (CLAUDE.md §7).
+- **The build pipeline** (owner's design): `pipeline/gate.mjs` runs build, tests, smoke, perf, scope and changelog
+  gates (`pipeline/out/gate-report.json`; CI runs the same script); agents in `.claude/agents/`; the step list in
+  `.claude/skills/pipeline/SKILL.md`; open tasks in `docs/TASKS.md`; one row per attempt in `docs/METRICS.md`. The
+  container perf baseline was re-recorded on main in BP1 (the old one predated merges that raised GPU memory to
+  16.38 MB). **The laptop baseline is still missing:** run `npm run perf -- --env laptop --baseline` on the owner's
+  machine and commit `pipeline/baseline/laptop.json` before frame-time budgets gate anything. Dry-run report with token
+  costs: the project's shared files, `pipeline/dry-run-report-2026-10-04.md`.
+- **BP1, the second bug pass (#53):** played every mode in the browser (Elimination to the result screen, Attack and
+  Defend, the tutorial, the range and its Loadout, the Armory with 10 Shots and scrapping, the Dev tab, Play Again,
+  scoreboard at 200%) with no page errors, reviewed all code added since the first bug pass, and swept KNOWN_ISSUES.
+  Fixed: stacked crates showed as low cover on the minimap (`coverHeight`), Dev help switched off before play still kept
+  a match out of the records (`MatchSession.played`), the debug panel covered the minimap, pallet racks bounced BBs, the
+  perf script didn't restart per match; and 11 KNOWN_ISSUES rows (hit-direction wedge fade, sprint on lean release, shot
+  pitch past vertical, early semi/burst double-tap, seed on the pause screen, the start end on New game, double-click
+  on Play, double-click on a key box, sounds held twice, the 200% scoreboard, dot-only crosshair). Decisions in
+  DECISIONS (2026-10-04 · Bug pass (BP1)). What is left in KNOWN_ISSUES is design calls for the playtest ("playtest"),
+  beta balance and tuning, or needs hardware or browsers this container doesn't have (Firefox, a real GPU).
 
-## Standing practice: the full bug pass and KNOWN_ISSUES sweep (owner, 2026-10-04)
+## The regular bug pass (owner, 2026-10-04)
 
-Deferred on 2026-10-04 (usage), not cancelled. The owner wants it done regularly: **after each batch of feature pull
-requests has merged and before a playtest**, one thread plays every mode in the browser, reviews all code by area,
-works through `docs/KNOWN_ISSUES.md` fixing and verifying what can be fixed, keeps the rest logged there, and wraps
-up (HANDOFF, KNOWN_ISSUES, docs) before telling the owner main is ready. **The next one is due now, on current
-`main`** (the pipeline batch, #47–#52, merged without it); remind the owner when a batch lands, and run it before
-each playtest from then on.
-
-## The owner's 2026-10-04 batch: M25 (Depot rework and CC0 assets)
-
-- **M25a (CC0 assets):** guide in `docs/CC0_ASSETS.md`; `src/render/externalModels.ts` loads an optional
-  `src/assets/models/characters/figure.glb` (settings in `config/assets.ts`) and `buildFigure` takes its parts. The
-  asset sites are blocked by the cloud network policy: the owner commits models, or allows the hosts. Next steps when
-  wanted: glTF animations for rigged models, props and surface textures from files.
-- **M25b (Depot rework, minor):** the owner approved concept v2 (sketches in the project's shared files,
-  `concepts/depot-rework-*-v2.*`). New prop kinds in `map/mapTypes.ts` and `render/mapMeshes.ts`; layout in `map/depot.ts`.
-  Two of v2's lowered stacks stayed full height (wrapped loads) to keep the ends' balance (DECISIONS).
-
-## Bug pass in short (what changed under you)
-
-- **Seeds:** each match played in a visit has its own seed (`Game.matchSeed`: the visit's seed + matches played before
-  it; a match built but never played doesn't count). `?seed=N` replays the first match played; the overlay shows the one
-  in play (the range keeps the visit's).
-- **Play Again** rebuilds the match when New game's choices or the team colours changed since it was built
-  (`Game.play`); otherwise it restarts it as before. `Game.resume` refuses play while the graphics context is lost.
-- **Armament:** `Armament.reloadQueued` keeps a reload pressed during a draw; `respawnCharacter` carries
-  `triggerWasDown` over, so a held trigger needs a new pull at the whistle.
-- **Sound:** `Sfx` counts simulation time in `afterTick`; the AEG motor's spin-up and wind-down follow it (the wind-down
-  plays from `afterTick`, never scheduled ahead). A match's sound reaches the engine's buses through two outlets
-  (effects, interface) muted while paused, so a slider preview can't let it through.
-- **Menus and HUD:** `.menu-footer` is sticky (Back and Play always on screen; `--page-bottom` is the page's bottom
-  padding); the hit feed is capped at `50% - 250px` and wraps, and below 1400 px the round banner keeps to the middle;
-  `Menus.setBlocked(true)` closes the pop-ups; sliders carry `aria-valuetext`.
-- **Squad orders:** follow and hold spots no longer compare heights with the leader (a ramp, or the leader in the air,
-  failed every spot and sent the followers into you); `clearLine` checks every step, and the spot's `y` is the floor
-  there. At a platform's lip, where the nearest walkable cell can be on the ground below, `followSpot` stays on you.
+A full bug pass plus a KNOWN_ISSUES sweep is a **standing practice**, not a one-off: play every mode in the browser, review
+the code added since the last pass, fix what can be fixed with a test for each, and leave the rest logged in
+KNOWN_ISSUES with why. **Best time: after each batch of feature pull requests merges and before the owner's playtest**
+(fresh features have had no browser play yet, and the playtest then starts on a clean build). The coordinator reminds
+the owner at that point with one line in the project chat; it starts only when he says go (it costs usage). Run it as a
+pipeline task (`BP<n>` in TASKS, `tier: core`, gates and the Opus critic). How it went last time: two parallel review
+agents (UI and input; pool, Loadout, map) found 5 small bugs the browser didn't show; a scripted Playwright player
+(`?nolock`, the e2e build served by `vite preview`) played the modes. Headless bot guards are seed-sensitive: a fix that
+touches movement or materials can fail one seed; re-measure over 16 seeds before changing a threshold (DECISIONS).
 
 ## Where to look for each milestone
 
@@ -101,10 +76,23 @@ each playtest from then on.
   `pool/armory.ts` (rules) and `ui/menus/armoryScreen.ts`; the Dev tab's Disable Armory and Unlock all gear (M26d) are
   read in `Game` (`gameOwnership`, the Armory tile's summary, the match's pay); the owner chose "Claude merges" for this batch.
 
+- **M30 BB flight model (fluid dynamics):** `sim/air.ts` (air density and viscosity, Morrison's sphere Cd by Reynolds
+  number, a drag table by airspeed built once per config), `sim/ballistics.ts` `stepFlight` (drag and Magnus lift against
+  the airflow, backspin decaying, one midpoint step a tick), `sim/wind.ts` (the match's breeze from its seed, into
+  `GameState.wind` each tick; the dust motes ride it). **Tunables are in `config/ballistics.ts`, not pool.md or
+  stats.md:** `air` (temperature, pressure), `spinPerHop` (hop to backspin), `spinFriction`, the lift fit, and `WIND`
+  (strength range, gusts, veer). Retuning `spinPerHop` moves the tutorial's "about 39 m" (its test says so). M29 owns what
+  leaves the muzzle (`muzzleVelocity`, `bbMass`); the flight model only reads them. Bots lead with `flightTimeEstimate`.
+- **M29 weapon performance (owner's 2026-10-04 request):** `stats.md` at the root holds every replica's and part's
+  numbers; `config/statsFile.ts` reads it, the config modules lay it over their built-in numbers (`withStats`,
+  `overlay`). Tier shares and power stats are applied in `pool/kit.ts`; the Performance sheet is
+  `ui/performanceSheet.ts`. A new number for a replica or part is a stats.md column plus a `Column` in statsFile.ts.
+  The muzzle is the boundary with the BB physics pass (M30): `muzzleEnergy` / `muzzleVelocity` / `bbMass`.
+
 ## Working notes and gotchas
 
-- **Checks:** `npm run check` (about 75 s; the headless match guards run in parallel files). In a cloud container run the smoke test with a temporary copy of
-  `playwright.config.ts` whose `launchOptions.executablePath` is `/opt/pw-browsers/chromium` (keep it out of git). The
+- **Checks:** `npm run check` (about 75 s; the headless match guards run in parallel files). In a cloud container set
+  `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` for the smoke test and the gate (no config copy needed). The
   smoke test also loses and restores the WebGL context, adds a shot after each tick to get a sound cue (it patches
   `airsoft.session.match.afterTick`, `e2e` build only) opens and closes the order wheel (Z), and presses F twice for the squad line.
 - **Input:** read fire and aim through the bindings, never the mouse. A toggled sprint pressed before forward waits for

@@ -219,7 +219,7 @@ describe('replica handling', () => {
     run(1, (c) => (c.fire = true));
     const rifleBB = ctx.bbs.bbs.find((b) => b.active)!;
     expect(rifleBB.mass).toBeCloseTo(0.00025, 9);
-    expect(rifleBB.hopUp).toBe(hopUpLift(AEG, AEG.hopUpDial)); // the factory hop-up setting
+    expect(rifleBB.spin).toBe(hopUpLift(AEG, AEG.hopUpDial) * BALLISTICS.spinPerHop); // the factory hop-up setting's backspin
     run(1, (c) => (c.fire = false));
     run(1, (c) => (c.switchTo = 1));
     run(Math.ceil(GAS_PISTOL.drawTime / DT) + 1);
@@ -228,7 +228,7 @@ describe('replica handling', () => {
     run(1, (c) => (c.fire = true));
     const pistolBB = ctx.bbs.bbs.find((b) => b.active && b.serial >= before)!;
     expect(pistolBB.mass).toBeCloseTo(0.0002, 9);
-    expect(pistolBB.hopUp).toBe(hopUpLift(GAS_PISTOL, GAS_PISTOL.hopUpDial));
+    expect(pistolBB.spin).toBe(hopUpLift(GAS_PISTOL, GAS_PISTOL.hopUpDial) * BALLISTICS.spinPerHop);
     expect(Math.hypot(pistolBB.velocity.x, pistolBB.velocity.y, pistolBB.velocity.z)).toBeCloseTo(72, 0);
   });
 
@@ -236,7 +236,7 @@ describe('replica handling', () => {
     const { ctx, a, run } = setup();
     setHopUps(a, [1, 0]);
     run(1, (c) => (c.fire = true));
-    expect(ctx.bbs.bbs.find((b) => b.active)!.hopUp).toBe(AEG.hopUpMax);
+    expect(ctx.bbs.bbs.find((b) => b.active)!.spin).toBe(AEG.hopUpMax * BALLISTICS.spinPerHop);
   });
 
   it('fires the BB weight picked for the replica: heavier leaves slower, with a little more energy', () => {
@@ -285,6 +285,16 @@ describe('replica handling', () => {
     for (let i = 0; i < 20; i++) expect(shaky[i]).toBeCloseTo(xs[i]! * 2.6, 9);
   });
 
+  it('never sends a BB past vertical, even fired straight up with full kick and spread (bug pass)', () => {
+    const { ctx, muzzle, run } = setup();
+    muzzle.pitch = Math.PI / 2 - 0.02; // the top of the look range (MOVEMENT.maxPitch)
+    run(60, (c) => (c.fire = true));
+    const fired = ctx.bbs.bbs.filter((b) => b.active);
+    expect(fired.length).toBeGreaterThan(5);
+    // Past vertical, a BB aimed down -Z would head +Z (backwards).
+    for (const bb of fired) expect(bb.velocity.z).toBeLessThanOrEqual(0);
+  });
+
   it('kicks the aim up a little per shot, caps it, and recovers quickly', () => {
     const { a, run } = setup();
     run(1, (c) => (c.fire = true));
@@ -298,6 +308,20 @@ describe('replica handling', () => {
 });
 
 describe('semi-auto trigger buffering', () => {
+  it('never fires a double-tap faster than the fire rate after the replica sat ready (bug pass)', () => {
+    const { run } = setup();
+    run(1, (c) => (c.switchTo = 1));
+    run(Math.ceil(GAS_PISTOL.drawTime / DT) + 30); // drawn, then idle
+    // Two quick pulls, the second buffered during the cooldown; one tick at a time to see when each fires.
+    const shotTicks: number[] = [];
+    for (let tick = 0; tick < 40; tick++) {
+      const evs = run(1, (c) => (c.fire = tick === 0 || tick === 2));
+      if (evs.some((e) => e.type === 'shot')) shotTicks.push(tick);
+    }
+    expect(shotTicks.length).toBe(2);
+    expect((shotTicks[1]! - shotTicks[0]!) * DT).toBeGreaterThanOrEqual(1 / GAS_PISTOL.fireRate - 1e-9);
+  });
+
   it('turns fast clicking into shots at the full fire rate instead of dropping clicks', () => {
     for (const hz of [7.5, 8.6, 10]) {
       const { run, count } = setup();

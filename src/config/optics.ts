@@ -1,3 +1,6 @@
+import { GAME_STATS } from './gameStats';
+import { overlay } from './statsFile';
+
 /**
  * Optics: accessories fitted to a replica, never part of its model (owner, 2026-10-03), picked for the rifle on the
  * Loadout screen before a match: the red dot, or a low-power 2× scope (M17b). Aiming down sights (the aim button, right
@@ -20,13 +23,14 @@ export interface OpticConfig {
   scope: boolean;
 }
 
-export const OPTICS: Readonly<Record<OpticId, OpticConfig>> = {
+/** Built-in numbers; stats.md's Optics table is what the game uses (M29). */
+export const OPTICS: Readonly<Record<OpticId, OpticConfig>> = overlay<OpticConfig>({
   // "Narrows the view slightly" (roadmap): about 100° → 84° across a 16:9 screen. A first guess to tune in play.
   redDot: { name: 'Red Dot', zoom: 1.25, raiseScale: 1, scope: false },
   // A closer look down Depot's long lanes (about 100° → 56° across a 16:9 screen), paid for with a slower raise and
   // nothing seen around the eyepiece. First guesses to tune in play.
   scope2x: { name: '2x Scope', zoom: 2, raiseScale: 1.6, scope: true },
-};
+}, GAME_STATS.optics) as Record<OpticId, OpticConfig>;
 
 /** One line for each optic choice on the Loadout's Customise screen ('none': iron sights). */
 export const OPTIC_BLURBS: Readonly<Record<'none' | OpticId, string>> = {

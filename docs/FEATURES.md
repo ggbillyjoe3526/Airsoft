@@ -13,8 +13,9 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Replicas and BBs
 
 - An AEG rifle (single, burst or auto on the fire selector) and a gas pistol, switched with the wheel or keys (Phase 1, M12a)
-- BBs are real projectiles: visible flight, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c)
+- BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c, M30)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
+- Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
 - A limited set of magazines each round; a reload swaps in the fullest spare, no topping up (M8)
 - Optics: iron sights, a red dot or a 2× scope; aiming down sights with right click, at its own sensitivity (M12b, M17b)
 - Grips (vertical, angled) and magazines (hi-cap, low-cap, the pistol's extended one) trade handling for noise and sway (M17b)
@@ -52,13 +53,15 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - Loadout screen: Primary, Secondary and Grenades slots, listing what you own (M17a, M26b)
 - A Customise view per replica: optic, BB weight, hop-up, grip, laser, magazine, power source (M26b)
+- Every replica's and part's numbers in a hand-editable `stats.md`; a Performance sheet in Customise compares your setup with the replica as it comes (M29a)
+- Higher tiers add energy and rate of fire; batteries set the rate of fire (11.1 V LiPo battery); stronger gas kicks harder; a site energy limit (M29a)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start (M26a)
 - Your collection is saved apart from the settings (M26a)
 - Armory, beta and free: earn Field Credits from matches, buy Tokens, draw assets from the pool at rarity odds (M26c)
 
 ## Menus and settings
 
-- Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24)
+- Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - No map is loaded until Play (M15b)
 - Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons too), Crosshair, HUD, Accessibility (M15, M18a, M19, M24)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle (M18a)
@@ -82,7 +85,10 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - Every sound is synthesised: replica shots by power source (electric, gas), the AEG motor winding up and down (M2, M13)
 - Footsteps by surface, landing thuds, kit rustle when you crouch, stand or lean (M2, M13)
-- Sounds you can locate by ear, muffled through walls; BB impacts sound by material (M13)
+- Sounds you can locate by ear, muffled through walls and when eliminated; BB impacts sound by material; world sounds carry further (M13, FA6)
+- Getting hit and the round and match whistles briefly dip the rest of the mix (FA6)
+- Outdoor ambience with distant birds plays during play (FA6)
+- Pause fades audio in 30 ms; hint when the browser blocks audio (FA6)
 - Master, effects and interface volume sliders (M13)
 
 ## Graphics and art
@@ -100,7 +106,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Accessibility and comfort
 
 - Team colour sets checked for colour blindness, patterns on the gauges, on-screen sound cues round the crosshair (M18b)
-- Reduced motion, pause on a hidden tab, recovery from a lost graphics context, fullscreen on F10 (M18a, M18b)
+- Reduced motion, pause on a hidden tab or when the window loses focus, recovery from a lost graphics context, fullscreen on F10 (M18a, M18b, FA6)
 
 ## Developer and debug
 

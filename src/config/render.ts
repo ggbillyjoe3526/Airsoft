@@ -342,8 +342,13 @@ export const DUST_MOTES = {
   edgeFade: 1.5,
   color: 0xfff4dc,
   opacity: 0.65,
-  /** A slow breeze (m/s), and each mote's own wander round it: amplitude (m) and rate (rad/s). */
-  breeze: { x: 0.12, y: 0.02, z: 0.05 },
+  /**
+   * The motes ride the match's wind (M30), the one that drifts the BBs, so it can be read from them: `windShare` of its
+   * speed (1: dust moves with the air). `breeze` (m/s) is a faint stir on top, so they drift even on a calm day, and each
+   * mote wanders round that: amplitude (m) and rate (rad/s).
+   */
+  windShare: 1,
+  breeze: { x: 0.04, y: 0.02, z: 0.02 },
   wander: 0.25,
   wanderRate: 0.35,
   seed: 707,

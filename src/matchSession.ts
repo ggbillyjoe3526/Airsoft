@@ -3,7 +3,7 @@ import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
-import { BALLISTICS } from './config/ballistics';
+import { BALLISTICS, WIND } from './config/ballistics';
 import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
@@ -38,6 +38,7 @@ import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
 import { placeTeams, restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
+import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
@@ -107,6 +108,8 @@ export class MatchSession {
   private readonly standardRules: boolean;
   /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
   private devAssisted = false;
+  /** Play has begun in this match (since it was built or restarted): Dev help switched off before then doesn't count. */
+  private played = false;
   /** The Dev settings that change play, as last set. */
   private cheats: DevSettings = { ...DEV_DEFAULTS };
 
@@ -142,6 +145,7 @@ export class MatchSession {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
+      wind: createWind(seed, WIND),
       killY: map.killY,
       hits: this.hits,
       deadZones: map.deadZones,
@@ -162,6 +166,7 @@ export class MatchSession {
       { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: this.hits, loadout: LOADOUT, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
     );
     input.resetView(this.player.spawnYaw);
+    input.restartScript();
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, this.hits);
     this.stats = new MatchStats(this.state.characters);
@@ -297,7 +302,9 @@ export class MatchSession {
     this.cheats = cheats;
     this.player.armament.bottomless = cheats.bottomlessMags;
     this.player.ghost = cheats.ghost;
-    if (devCheating(cheats)) this.devAssisted = true;
+    // Before play begins (a match built by a Play whose mouse lock was refused) only what applies now counts (bug pass).
+    if (!this.played) this.devAssisted = devCheating(cheats);
+    else if (devCheating(cheats)) this.devAssisted = true;
   }
 
   /** Whether this match's result goes into the records: the standard match (M20), played without Dev help (M24). */
@@ -316,6 +323,7 @@ export class MatchSession {
   }
 
   setPlaying(playing: boolean): void {
+    if (playing) this.played = true;
     this.combat.setPlaying(playing);
     this.match.setPlaying(playing);
   }
@@ -330,6 +338,8 @@ export class MatchSession {
     this.stats.reset();
     // A new match: it stays out of the records only if Dev help is still on.
     this.devAssisted = devCheating(this.cheats);
+    this.played = false;
+    this.input.restartScript();
     this.afterTick();
   }
 

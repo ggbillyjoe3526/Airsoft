@@ -1,4 +1,6 @@
 import type { MagazineId } from './attachments';
+import { GAME_STATS } from './gameStats';
+import { DEFAULT_SITE_LIMITS, type StatsFile } from './statsFile';
 
 /**
  * How a trigger pull fires: one BB per pull (semi; "single" on a rifle's selector), a short burst per pull
@@ -40,13 +42,18 @@ export interface ReplicaConfig {
    */
   muzzleEnergy: number;
   /**
+   * The most muzzle energy (J) the site's chrono lets it shoot with (stats.md's Site limits, by its class, M29): what
+   * the player's items add stops here. Bots carry the replica as it comes, below it.
+   */
+  energyLimit: number;
+  /**
    * The BB weight it comes set up for (grams, within BB_WEIGHT's range): the player's starting choice on the Loadout
    * screen, and what bots always shoot. Changes speed, drag and hop-up lift (config/ballistics.ts).
    */
   bbWeight: number;
   /**
-   * Hop-up strength with the dial turned all the way up: Magnus lift per unit speed at full spin for a
-   * BALLISTICS.referenceMass BB (1/s). The backspin the dial sets lifts the BB, so it flies flat for longer.
+   * Hop-up strength with the dial turned all the way up: the backspin it gives a BB is this × the dial ×
+   * BALLISTICS.spinPerHop (rad/s). The backspin lifts the BB (Magnus), so it flies flat for longer.
    */
   hopUpMax: number;
   /**
@@ -87,8 +94,22 @@ export interface ReplicaLook {
   aimHold?: readonly [number, number, number];
 }
 
-/** Electric rifle (AR pattern): single, burst and full auto, medium range, medium magazine. */
-export const AEG: ReplicaConfig = {
+/**
+ * `base` (the built-in numbers) with the performance numbers stats.md gives its key (M29), and the energy limit of the
+ * class it names. The built-in numbers are only used where the file can't be read.
+ */
+export function withStats(base: Omit<ReplicaConfig, 'energyLimit'> & { siteClass: string }, stats: StatsFile = GAME_STATS): ReplicaConfig {
+  const { siteClass: builtInClass, ...rest } = base;
+  const { siteClass = builtInClass, ...numbers } = stats.replicas[base.id] ?? {};
+  const energyLimit = stats.siteLimits[siteClass] ?? DEFAULT_SITE_LIMITS[siteClass] ?? Number.POSITIVE_INFINITY;
+  return { ...rest, ...numbers, energyLimit };
+}
+
+/**
+ * Electric rifle (AR pattern): single, burst and full auto, medium range, medium magazine. The numbers below are the
+ * built-in ones; stats.md's are what the game uses (withStats).
+ */
+export const AEG: ReplicaConfig = withStats({
   id: 'aeg',
   name: 'AEG Rifle',
   power: 'electric',
@@ -110,6 +131,7 @@ export const AEG: ReplicaConfig = {
   spreadDeg: 0.45,
   recoilDeg: 0.18,
   magazines: ['standard', 'hiCap', 'lowCap'],
+  siteClass: 'rifle',
   look: {
     model: 'rifle',
     suppressed: false,
@@ -118,10 +140,10 @@ export const AEG: ReplicaConfig = {
     // 0.2 m in front of the eye, so the tube frames the view without filling it.
     aimHold: [0, -0.126, -0.205],
   },
-};
+});
 
-/** Gas pistol: semi auto, shorter range, quick to handle, small magazine. */
-export const GAS_PISTOL: ReplicaConfig = {
+/** Gas pistol: semi auto, shorter range, quick to handle, small magazine. Built-in numbers; stats.md's win (withStats). */
+export const GAS_PISTOL: ReplicaConfig = withStats({
   id: 'pistol',
   name: 'Gas Pistol',
   power: 'gas',
@@ -141,8 +163,9 @@ export const GAS_PISTOL: ReplicaConfig = {
   spreadDeg: 0.8,
   recoilDeg: 0.5,
   magazines: ['standard', 'extended'],
+  siteClass: 'pistol',
   look: { model: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
-};
+});
 
 /** The hop-up dial the player turns before a match (0..1 of a replica's hopUpMax), shown as a percentage. */
 export const HOP_UP = {
@@ -217,6 +240,11 @@ export const RECOIL = {
   recoveryTime: 0.12,
   /** Kick never accumulates past this (degrees). */
   maxDeg: 2,
+  /**
+   * A shot's pitch, kick and spread included, stays within this of straight up or down (degrees), so a BB fired at the
+   * top of the look range never goes past vertical and backwards.
+   */
+  maxShotPitchDeg: 89.9,
 } as const;
 
 export const TRIGGER = {

@@ -3,6 +3,9 @@ import { bindable, describeKeys, type KeyBindings, keyLabel, mouseButtonCode } f
 
 const CTRL_WARNING = 'Heads up: some Ctrl combinations (like Ctrl+W, close tab) can\'t be blocked by the browser.';
 
+/** Shown when a quick second click on a waiting key box cancelled instead of binding Left mouse. */
+const DOUBLE_CLICK_NOTE = 'Two quick clicks cancel. To bind Left mouse, click the box, wait a moment, then click it again.';
+
 /**
  * Key-binding settings: one row per rebindable action. Click a key button, then press the new key, or click the
  * button again with the mouse button wanted (left, right, middle or a side button; M18). Esc or a click elsewhere
@@ -43,6 +46,12 @@ export class KeySettings {
         }
         // Unfocused, so binding Space or Enter doesn't "click" the button again on key release.
         button.blur();
+        // The second click of a quick double-click on the waiting box cancels (onMouseDown); say why (bug pass).
+        if (this.listening === action && e.detail >= 2) {
+          this.listening = null;
+          this.refresh(DOUBLE_CLICK_NOTE);
+          return;
+        }
         this.listen(this.listening === action ? null : action);
       });
       row.append(name, button);

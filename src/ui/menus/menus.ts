@@ -231,8 +231,9 @@ export class Menus {
   }
 
   /** The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21). */
-  showPause(status: string, range = false): void {
+  showPause(status: string, seed: number, range = false): void {
     this.pause.setStatus(status);
+    this.pause.setSeed(seed);
     this.pause.setRange(range);
     this.go('pause');
   }

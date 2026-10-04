@@ -80,6 +80,13 @@ describe('pointer lock requests', () => {
     expect(log).toEqual(['error']);
   });
 
+  it('drops a second request while the first is under way (a double-click on Play), so no refusal shows', async () => {
+    const { lock, log } = setup(['lock', 'refuse', 'refuse']);
+    await Promise.all([lock.request(), lock.request()]);
+    expect(log).toEqual(['change:true']);
+    expect(lock.locked).toBe(true);
+  });
+
   it('still reports a refusal the browser only signals by event, outside a request', () => {
     const { log } = setup([]);
     globalThis.document.dispatchEvent(new Event('pointerlockerror'));

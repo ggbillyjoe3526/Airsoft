@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUDIO, matchOverBlastStart } from '../config/audio';
+import { SIM_DT } from '../config/sim';
 import { LOADOUT } from '../config/replicas';
 import type { SoundCue } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
@@ -15,13 +16,32 @@ import { renderSoundsGradually, SoundLibrary } from './soundBank';
 // ---- A minimal stand-in for the Web Audio API (records what Sfx builds and connects) --------------
 
 class FakeParam {
-  value = 0;
+  private v = 0;
+  /** Plain `value` writes (audit CORE-35 counts them). */
+  writes = 0;
   targets: { value: number; at: number }[] = [];
+  /** Every automation event in order (the whistle's envelope, CORE-31). */
+  events: { kind: 'set' | 'ramp' | 'target' | 'cancel'; value: number; at: number }[] = [];
+  get value(): number {
+    return this.v;
+  }
+  set value(v: number) {
+    this.v = v;
+    this.writes++;
+  }
   setTargetAtTime(value: number, at: number): void {
     this.targets.push({ value, at });
+    this.events.push({ kind: 'target', value, at });
   }
-  setValueAtTime(): void {}
-  linearRampToValueAtTime(): void {}
+  setValueAtTime(value: number, at: number): void {
+    this.events.push({ kind: 'set', value, at });
+  }
+  linearRampToValueAtTime(value: number, at: number): void {
+    this.events.push({ kind: 'ramp', value, at });
+  }
+  cancelScheduledValues(at: number): void {
+    this.events.push({ kind: 'cancel', value: Number.NaN, at });
+  }
 }
 
 class FakeNode {
@@ -60,6 +80,8 @@ class FakePanner extends FakeNode {
 
 class FakeSource extends FakeNode {
   buffer: unknown = null;
+  loop = false;
+  offset = 0;
   playbackRate = new FakeParam();
   frequency = new FakeParam();
   type = '';
@@ -67,8 +89,9 @@ class FakeSource extends FakeNode {
   private readonly endedListeners: (() => void)[] = [];
   startAt = Number.NaN;
   stopAt: number | null = null;
-  start(at = 0): void {
+  start(at = 0, offset = 0): void {
     this.startAt = at;
+    this.offset = offset;
   }
   stop(at = 0): void {
     this.stopAt = at;
@@ -92,6 +115,9 @@ class FakeBuffer {
   ) {
     this.data = Array.from({ length: numberOfChannels }, () => new Float32Array(length));
   }
+  get duration(): number {
+    return this.length / this.sampleRate;
+  }
   getChannelData(ch: number): Float32Array {
     return this.data[ch]!;
   }
@@ -104,6 +130,10 @@ class FakeConvolver extends FakeNode {
   buffer: unknown = null;
 }
 
+class FakeStereoPanner extends FakeNode {
+  pan = new FakeParam();
+}
+
 class FakeContext {
   static last: FakeContext;
   /** Contexts constructed since the test began. */
@@ -114,7 +144,11 @@ class FakeContext {
   closed = 0;
   buffersMade = 0;
   currentTime = 0;
-  sampleRate = 48000;
+  /** The next contexts' rate (a test can make a 44.1 kHz device). */
+  static rate = 48000;
+  sampleRate = FakeContext.rate;
+  baseLatency = 0.01;
+  outputLatency = 0.02;
   readonly destination = new FakeNode();
   readonly listener = Object.fromEntries(['positionX', 'positionY', 'positionZ', 'forwardX', 'forwardY', 'forwardZ', 'upX', 'upY', 'upZ'].map((k) => [k, new FakeParam()]));
   readonly gains: FakeGain[] = [];
@@ -122,6 +156,9 @@ class FakeContext {
   readonly filters: FakeFilter[] = [];
   readonly sources: FakeSource[] = [];
   readonly oscillators: FakeSource[] = [];
+  readonly compressors: FakeNode[] = [];
+  readonly stereoPanners: FakeStereoPanner[] = [];
+  readonly convolvers: FakeConvolver[] = [];
   constructor() {
     FakeContext.last = this;
     FakeContext.made++;
@@ -152,10 +189,19 @@ class FakeContext {
     return o;
   }
   createDynamicsCompressor(): FakeNode & Record<'threshold' | 'knee' | 'ratio' | 'attack' | 'release', FakeParam> {
-    return Object.assign(new FakeNode(), { threshold: new FakeParam(), knee: new FakeParam(), ratio: new FakeParam(), attack: new FakeParam(), release: new FakeParam() });
+    const c = Object.assign(new FakeNode(), { threshold: new FakeParam(), knee: new FakeParam(), ratio: new FakeParam(), attack: new FakeParam(), release: new FakeParam() });
+    this.compressors.push(c);
+    return c;
   }
   createConvolver(): FakeConvolver {
-    return new FakeConvolver();
+    const c = new FakeConvolver();
+    this.convolvers.push(c);
+    return c;
+  }
+  createStereoPanner(): FakeStereoPanner {
+    const p = new FakeStereoPanner();
+    this.stereoPanners.push(p);
+    return p;
   }
   createBuffer(channels: number, length: number, rate: number): FakeBuffer {
     this.buffersMade++;
@@ -220,6 +266,12 @@ function setup(
   return { sfx, ctx: FakeContext.last, engine, player, bot, characterOf: (id) => all.find((c) => c.id === id) };
 }
 
+/** The muffling low-pass of the first character channel (after its HRTF panner), if one is made. */
+function channelFilter(ctx: FakeContext): FakeFilter | undefined {
+  const hrtf = ctx.panners.find((p) => p.panningModel === 'HRTF');
+  return hrtf ? ([...hrtf.outputs][0] as FakeFilter) : undefined;
+}
+
 /** The node a source plays into (through its level gain). */
 function destinationOf(src: FakeSource): unknown {
   const [gain] = [...src.outputs] as FakeGain[];
@@ -261,6 +313,7 @@ describe('the sound engine (M13)', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -330,9 +383,10 @@ describe('the sound engine (M13)', () => {
     });
     const { sfx, ctx, characterOf } = setup(OPEN, engineFor(library));
     const gains = ctx.gains.length;
+    const filters = ctx.filters.length;
     sfx.onEvent({ type: 'flagRope', position: vec3(0, 2, 10), raising: true }, PLAYER, characterOf);
     expect(ctx.sources).toHaveLength(0);
-    expect(ctx.filters).toHaveLength(0);
+    expect(ctx.filters).toHaveLength(filters);
     expect(ctx.gains).toHaveLength(gains);
     for (const p of ctx.panners) expect(p.outputs.size).toBe(0);
   });
@@ -385,12 +439,12 @@ describe('the sound engine (M13)', () => {
   it('muffles a character behind a wall and leaves one in the open clear', () => {
     const open = setup(OPEN);
     open.sfx.afterTick([open.player, open.bot], PLAYER);
-    const clear = open.ctx.filters.find((f) => f.type === 'lowpass')!;
+    const clear = channelFilter(open.ctx)!;
     expect(clear.frequency.value).toBe(AUDIO.occlusion.openHz);
 
     const walled = setup(WALLED);
     walled.sfx.afterTick([walled.player, walled.bot], PLAYER);
-    const muffled = walled.ctx.filters.find((f) => f.type === 'lowpass')!;
+    const muffled = channelFilter(walled.ctx)!;
     expect(muffled.frequency.value).toBeCloseTo(AUDIO.occlusion.muffledHz);
   });
 
@@ -415,7 +469,7 @@ describe('the sound engine (M13)', () => {
     const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
     const bot = createCharacter(1, vec3(6, 0, 0), 0, LOADOUT, 1);
     sfx.afterTick([player, bot], PLAYER);
-    expect(FakeContext.last.filters.find((f) => f.type === 'lowpass')?.frequency.value ?? AUDIO.occlusion.openHz).toBe(AUDIO.occlusion.openHz);
+    expect(channelFilter(FakeContext.last)?.frequency.value ?? AUDIO.occlusion.openHz).toBe(AUDIO.occlusion.openHz);
   });
 
   it('eases a volume bus to its slider', () => {
@@ -433,6 +487,7 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -492,6 +547,7 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
   });
 
   it('keeps a new match silent until play starts: unlocking never resumes the audio (audit M-07)', () => {
+    vi.useFakeTimers();
     const { sfx, ctx } = setup();
     sfx.unlock();
     expect(ctx.resumed).toBe(0);
@@ -501,16 +557,20 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     expect(ctx.state).toBe('running');
     // Play again after Esc (the click comes before the mouse is captured again): still silent until the capture.
     sfx.setPaused(true);
+    vi.advanceTimersByTime(AUDIO.pauseFade * 1000);
     sfx.unlock();
     expect(ctx.resumed).toBe(1);
     expect(ctx.state).toBe('suspended');
   });
 
   it('suspends the audio with the game and resumes it', () => {
+    vi.useFakeTimers();
     const { sfx, ctx } = setup();
     const resumed = ctx.resumed;
+    const suspended = ctx.suspended;
     sfx.setPaused(true);
-    expect(ctx.suspended).toBeGreaterThan(0);
+    vi.advanceTimersByTime(AUDIO.pauseFade * 1000);
+    expect(ctx.suspended).toBe(suspended + 1);
     expect(ctx.state).toBe('suspended');
     sfx.setPaused(false);
     expect(ctx.resumed).toBe(resumed + 1);
@@ -629,6 +689,7 @@ describe("the shared audio engine: one context and one render for the page's mat
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -653,10 +714,16 @@ describe("the shared audio engine: one context and one render for the page's mat
     expect(second.ctx).toBe(first.ctx);
     expect(FakeContext.made).toBe(1);
     expect(first.ctx.buffersMade).toBe(made);
-    // Another engine (another context at the same rate) shares the rendered samples too.
-    setup(OPEN, engineFor(library));
-    expect(FakeContext.made).toBe(2);
     expect(renders).toEqual([48000]);
+  });
+
+  it('holds the sounds once: the library lets go of its samples once the engine has made its buffers (bug pass)', () => {
+    const { library } = countingLibrary();
+    const { engine, ctx } = setup(OPEN, engineFor(library));
+    expect(library.holds(ctx.sampleRate)).toBe(false);
+    // A match's own variants (a suppressed replica's) still get the samples, from the buffers.
+    const [cue, buffers] = [...engine.cueBuffers()][0]!;
+    expect(engine.samples(cue)[0]).toBe(buffers[0]!.getChannelData(0));
   });
 
   it("renders in the title screen's spare time, a cue at a time, so Play has nothing left to do", () => {
@@ -695,6 +762,7 @@ describe("the shared audio engine: one context and one render for the page's mat
   });
 
   it('makes the context suspended, and runs it only while a match is played', () => {
+    vi.useFakeTimers();
     const engine = engineFor();
     const ctx = engine.context() as unknown as FakeContext;
     expect(ctx.state).toBe('suspended');
@@ -704,6 +772,7 @@ describe("the shared audio engine: one context and one render for the page's mat
     sfx.setPaused(false);
     expect(ctx.state).toBe('running');
     sfx.setPaused(true);
+    vi.advanceTimersByTime(AUDIO.pauseFade * 1000);
     expect(ctx.state).toBe('suspended');
   });
 
@@ -712,8 +781,9 @@ describe("the shared audio engine: one context and one render for the page's mat
     const { sfx, ctx, characterOf } = setup(OPEN, engine);
     sfx.onEvent({ type: 'roundOver', winner: 0, reason: 'time' }, PLAYER, characterOf);
     sfx.onEvent(step(1), PLAYER, characterOf);
-    // The engine's buses are the first three gains; the match's world, echo, own-sound and interface gains follow.
-    const ownNodes = [...ctx.gains.slice(3, 7), ...ctx.panners, ...ctx.filters];
+    // The engine's buses and its ducking are the first four gains; the match's outlet, world, out-level, echo,
+    // own-sound and interface gains follow.
+    const ownNodes = [...ctx.gains.slice(4, 10), ...ctx.panners, ...ctx.filters];
     sfx.dispose();
     expect(ctx.oscillators[0]!.stopAt).toBe(0);
     for (const node of ownNodes) expect(node.outputs.size, 'a node still connected').toBe(0);
@@ -733,6 +803,7 @@ describe('a volume slider let go plays a cue at its new level (audit L-17)', () 
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -790,10 +861,11 @@ describe('a volume slider let go plays a cue at its new level (audit L-17)', () 
     expect(outlets).toHaveLength(2); // effects (dry and echo) and interface
     const whistle = ctx.oscillators[0]!;
     expect(outlets.some((o) => downstream(whistle).has(o))).toBe(true);
-    for (const o of outlets) expect(o.gain.value).toBe(0);
+    // Eased down (audit CORE-02): the last thing each outlet was told is silence.
+    for (const o of outlets) expect(o.gain.targets.at(-1)!.value).toBe(0);
     expect(preview.gain.value).toBeGreaterThan(0);
     sfx.setPaused(false);
-    for (const o of outlets) expect(o.gain.value).toBe(1);
+    for (const o of outlets) expect(o.gain.targets.at(-1)!.value).toBe(1);
   });
 
   it('is silent, and harmless, without Web Audio', () => {
@@ -801,5 +873,319 @@ describe('a volume slider let go plays a cue at its new level (audit L-17)', () 
     const engine = engineFor();
     expect(() => engine.preview('master')).not.toThrow();
     expect(FakeContext.made).toBe(0);
+  });
+});
+
+describe('the final alpha audit: range, pause, mix and ambience (FA6)', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    FakeContext.rate = 48000;
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** The engine's ducking gain: between the effects bus (its second gain) and the limiter. */
+  const ducker = (ctx: FakeContext): FakeGain => [...ctx.gains[1]!.outputs][0] as FakeGain;
+  /** The match's "you're out" low-pass: the filter whose level feeds the yard's echo directly. */
+  const outFilter = (ctx: FakeContext): FakeFilter =>
+    ctx.filters.find((f) => [...([...f.outputs][0] as FakeGain).outputs].some((n) => n instanceof FakeConvolver))!;
+
+  it("doesn't play (or build nodes for) a one-off sound beyond earshot, but the range's targets carry (CORE-01)", () => {
+    const { sfx, ctx, characterOf } = setup();
+    sfx.impact(vec3(AUDIO.spatial.maxDistance + 1, 0, 0), 'concrete');
+    expect(ctx.sources).toHaveLength(0);
+    expect(ctx.panners).toHaveLength(0);
+    sfx.impact(vec3(AUDIO.spatial.maxDistance - 1, 0, 0), 'concrete');
+    expect(ctx.sources).toHaveLength(1);
+    expect(ctx.panners).toHaveLength(1);
+    // A far impact doesn't use up the window: a full window of near ones still plays after a hose of far ones.
+    for (let i = 0; i < 20; i++) sfx.impact(vec3(0, 0, -(AUDIO.spatial.maxDistance + 5)), 'metal');
+    for (let i = 0; i < AUDIO.maxImpactsPerWindow; i++) sfx.impact(vec3(3, 0, 0), 'metal');
+    expect(ctx.sources).toHaveLength(AUDIO.maxImpactsPerWindow);
+    // Someone else's hit far away: no body hit.
+    const hit: GameEvent = { type: 'characterHit', victimId: 7, shooterId: 1, position: vec3(0, 1, -70), direction: vec3(0, 0, -1), ricochet: false };
+    const before = ctx.sources.length;
+    sfx.onEvent(hit, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(before);
+    // A steel plate at the back of the practice range still rings.
+    sfx.onEvent({ type: 'targetHit', targetId: 0, kind: 'steel', shooterId: 1, position: vec3(-7, 1, -68), ricochet: false }, PLAYER, characterOf);
+    expect(plays(ctx.sources.at(-1)!, 'steelRing')).toBe(true);
+  });
+
+  it('eases the match out on pause and in on resume, and suspends only once the fade is done (CORE-02)', () => {
+    vi.useFakeTimers();
+    const { sfx, ctx } = setup();
+    sfx.setPaused(false);
+    const outlets = ctx.gains.filter((g) => [...g.outputs].some((o) => o === ctx.gains[1] || o === ctx.gains[2]));
+    expect(outlets).toHaveLength(2);
+    for (const o of outlets) expect(o.gain.targets.at(-1)).toEqual({ value: 1, at: ctx.currentTime });
+    ctx.currentTime = 2;
+    sfx.setPaused(true);
+    for (const o of outlets) expect(o.gain.targets.at(-1)).toEqual({ value: 0, at: 2 });
+    // Still running while the fade plays...
+    expect(ctx.state).toBe('running');
+    vi.advanceTimersByTime(AUDIO.pauseFade * 1000 - 1);
+    expect(ctx.state).toBe('running');
+    vi.advanceTimersByTime(1);
+    expect(ctx.state).toBe('suspended');
+    // ...and a Resume within the fade keeps it running.
+    sfx.setPaused(false);
+    sfx.setPaused(true);
+    sfx.setPaused(false);
+    vi.advanceTimersByTime(AUDIO.pauseFade * 1000 * 2);
+    expect(ctx.state).toBe('running');
+  });
+
+  it('renders at its own rate on a 44.1 kHz device, once, and lets the sources resample (CORE-03, CORE-31)', () => {
+    FakeContext.rate = 44100;
+    const renders: number[] = [];
+    const library = new SoundLibrary((rate) => {
+      renders.push(rate);
+      return renderSoundsGradually(rate, 1);
+    });
+    const { ctx, engine } = setup(OPEN, engineFor(library));
+    expect(ctx.sampleRate).toBe(44100);
+    expect(renders).toEqual([AUDIO.renderRate]);
+    for (const variants of engine.cueBuffers().values()) for (const b of variants) expect(b.sampleRate).toBe(AUDIO.renderRate);
+    expect(engine.ambienceBed()!.sampleRate).toBe(AUDIO.renderRate);
+    // The convolver takes only the context's own rate.
+    expect((ctx.convolvers[0]!.buffer as FakeBuffer).sampleRate).toBe(44100);
+  });
+
+  it('keeps the limiter off the interface: the hit tick goes straight to master; the world is limited (CORE-16)', () => {
+    const { ctx, engine } = setup();
+    const [limiter] = ctx.compressors;
+    const [master, effects, ui] = ctx.gains;
+    expect(downstream(ui!).has(ctx.destination)).toBe(true);
+    expect(downstream(ui!).has(limiter)).toBe(false);
+    expect([...ui!.outputs]).toEqual([master]);
+    expect(downstream(effects!).has(limiter)).toBe(true);
+    expect(engine.latencyMs()).toBeCloseTo(30);
+    expect(engineFor().latencyMs()).toBeNull();
+  });
+
+  it('renders the echo from a seed, the same every time, a channel per step (CORE-17)', () => {
+    const a = engineFor().reverbImpulse() as unknown as FakeBuffer;
+    vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    const b = engineFor().reverbImpulse() as unknown as FakeBuffer;
+    expect(a.data[0]!.some((x) => x !== 0)).toBe(true);
+    expect(b.data).toEqual(a.data);
+    expect(a.data[0]).not.toEqual(a.data[1]);
+  });
+
+  it("tells the game when the browser won't let the sound start (CORE-21)", async () => {
+    vi.useFakeTimers();
+    const { sfx, ctx, engine } = setup();
+    const blocked = vi.fn();
+    engine.onBlocked = blocked;
+    // Refused outright (Firefox's "Block audio and video", a policy).
+    ctx.resume = () => Promise.reject(new DOMException('not allowed', 'NotAllowedError'));
+    sfx.setPaused(false);
+    await vi.advanceTimersByTimeAsync(AUDIO.blockedCheck * 1000);
+    expect(blocked).toHaveBeenCalledTimes(1);
+    // Left pending (the spec's "not allowed to start"): noticed a moment later.
+    sfx.setPaused(true);
+    ctx.state = 'suspended';
+    ctx.resume = () => new Promise<void>(() => {});
+    sfx.setPaused(false);
+    await vi.advanceTimersByTimeAsync(AUDIO.blockedCheck * 1000 - 10);
+    expect(blocked).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(blocked).toHaveBeenCalledTimes(2);
+    // A volume slider's cue refused too.
+    sfx.setPaused(true);
+    ctx.resume = () => Promise.reject(new DOMException('not allowed', 'NotAllowedError'));
+    engine.preview('master');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(blocked).toHaveBeenCalledTimes(3);
+    // Allowed: nothing to say.
+    ctx.resume = FakeContext.prototype.resume.bind(ctx);
+    sfx.setPaused(false);
+    await vi.advanceTimersByTimeAsync(AUDIO.blockedCheck * 1000 * 2);
+    expect(blocked).toHaveBeenCalledTimes(3);
+  });
+
+  it('dips the world, never the interface, under your own hit and the whistle; the deeper dip wins (CORE-30)', () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    const duck = ducker(ctx);
+    expect(downstream(ctx.gains[2]!).has(duck)).toBe(false);
+    const hit = (victimId: number, shooterId: number): GameEvent => ({ type: 'characterHit', victimId, shooterId, position: vec3(6, 1.2, 0), direction: vec3(1, 0, 0), ricochet: false });
+    // Someone else hit: no dip.
+    sfx.onEvent(hit(bot.id, PLAYER), PLAYER, characterOf);
+    expect(duck.gain.targets).toHaveLength(0);
+    ctx.currentTime = 1;
+    sfx.onEvent(hit(PLAYER, bot.id), PLAYER, characterOf);
+    const h = AUDIO.duck.hit;
+    expect(duck.gain.targets).toEqual([
+      { value: h.depth, at: 1 },
+      { value: 1, at: 1 + h.hold },
+    ]);
+    // The round's whistle while the hit's dip is on: it stays as deep, and lasts as long as the longer hold.
+    ctx.currentTime = 1.1;
+    sfx.onEvent({ type: 'roundOver', winner: 1, reason: 'eliminated' }, PLAYER, characterOf);
+    expect(duck.gain.events.filter((e) => e.kind === 'cancel').at(-1)!.at).toBe(1.1);
+    expect(duck.gain.targets.slice(-2)).toEqual([
+      { value: h.depth, at: 1.1 },
+      { value: 1, at: 1.1 + AUDIO.duck.whistle.hold },
+    ]);
+    // Later, on its own, the whistle's gentler dip.
+    ctx.currentTime = 5;
+    sfx.onEvent({ type: 'matchOver', winner: 1 }, PLAYER, characterOf);
+    expect(duck.gain.targets.at(-2)).toEqual({ value: AUDIO.duck.whistle.depth, at: 5 });
+  });
+
+  it("muffles the world while you're out and clears it when you're back in play (CORE-30, CORE-34)", () => {
+    const { sfx, ctx, player, bot } = setup();
+    const filter = outFilter(ctx);
+    const level = [...filter.outputs][0] as FakeGain;
+    sfx.afterTick([player, bot], PLAYER);
+    expect(filter.frequency.targets).toHaveLength(0);
+    player.status = 'calling';
+    ctx.currentTime = 3;
+    sfx.afterTick([player, bot], PLAYER);
+    expect(filter.frequency.targets).toEqual([{ value: AUDIO.out.hz, at: 3 }]);
+    expect(level.gain.targets).toEqual([{ value: AUDIO.out.gain, at: 3 }]);
+    player.status = 'out';
+    sfx.afterTick([player, bot], PLAYER);
+    expect(filter.frequency.targets).toHaveLength(1);
+    player.status = 'alive';
+    sfx.afterTick([player, bot], PLAYER);
+    expect(filter.frequency.targets.at(-1)!.value).toBe(AUDIO.occlusion.openHz);
+    expect(level.gain.targets.at(-1)!.value).toBe(1);
+    // The interface (the whistle, the hit tick) is never behind it.
+    expect(downstream(ctx.gains[2]!).has(filter)).toBe(false);
+  });
+
+  it('plays the outdoor bed from the first moment of play, two copies apart, into the world, until disposed (CORE-34)', () => {
+    const { sfx, ctx, engine } = setup();
+    expect(ctx.sources).toHaveLength(0);
+    sfx.setPaused(false);
+    const bed = ctx.sources.filter((s) => s.loop);
+    expect(bed).toHaveLength(2);
+    const buffer = engine.ambienceBed() as unknown as FakeBuffer;
+    for (const s of bed) expect(s.buffer).toBe(buffer);
+    expect(bed.map((s) => s.offset)).toEqual([0, buffer.duration / 2]);
+    expect(ctx.stereoPanners.map((p) => p.pan.value)).toEqual([-AUDIO.ambience.width, AUDIO.ambience.width]);
+    // Through the world: the echo, the "out" muffling and the effects slider (with its dip and limiter).
+    for (const s of bed) {
+      const after = downstream(s);
+      expect(after.has(outFilter(ctx))).toBe(true);
+      expect(after.has(ctx.gains[1])).toBe(true);
+      expect(after.has(ctx.destination)).toBe(true);
+    }
+    sfx.setPaused(true);
+    sfx.setPaused(false);
+    expect(ctx.sources.filter((s) => s.loop)).toHaveLength(2);
+    sfx.dispose();
+    for (const s of bed) {
+      expect(s.stopAt).toBe(0);
+      expect(downstream(s).has(ctx.destination)).toBe(false);
+    }
+  });
+
+  it('lets a bird sing now and then, somewhere round you, timed on the simulation clock (CORE-34)', () => {
+    const { sfx, ctx, player, bot } = setup();
+    const [least, most] = AUDIO.ambience.birdEvery;
+    const ticks = (s: number): number => Math.round(s / SIM_DT);
+    for (let i = 0; i < ticks(least) - 1; i++) sfx.afterTick([player, bot], PLAYER);
+    expect(ctx.sources).toHaveLength(0);
+    for (let i = 0; i < ticks(most - least) + 1; i++) sfx.afterTick([player, bot], PLAYER);
+    const birds = ctx.sources.filter((s) => plays(s, 'ambience.bird'));
+    expect(birds.length).toBeGreaterThanOrEqual(1);
+    const panner = destinationOf(birds[0]!) as FakePanner;
+    expect(panner.panningModel).toBe('equalpower');
+    const d = Math.hypot(panner.positionX.value, panner.positionZ.value);
+    expect(d).toBeGreaterThanOrEqual(AUDIO.ambience.birdDistance[0] - 1e-9);
+    expect(d).toBeLessThanOrEqual(AUDIO.ambience.birdDistance[1] + 1e-9);
+  });
+
+  it('does no channel work for a still, far-off or out character, and places it again for its next sound (CORE-35)', () => {
+    let casts = 0;
+    const counting: OcclusionQuery = { raycastStatic: () => (casts++, -1) };
+    const { sfx, ctx, player, bot, characterOf } = setup(counting);
+    const all = [player, bot];
+    sfx.placeSources(all, PLAYER);
+    const panner = ctx.panners.find((p) => p.panningModel === 'HRTF')!;
+    const writes = (): number => panner.positionX.writes + panner.positionY.writes + panner.positionZ.writes;
+    const made = writes();
+    expect(made).toBe(3);
+    // Standing still (or shuffling under 5 cm): no writes.
+    sfx.placeSources(all, PLAYER);
+    bot.position.x += AUDIO.spatial.moveEpsilon / 2;
+    sfx.placeSources(all, PLAYER);
+    expect(writes()).toBe(made);
+    bot.position.x += AUDIO.spatial.moveEpsilon;
+    sfx.placeSources(all, PLAYER);
+    expect(writes()).toBe(made + 3);
+    // Beyond earshot: the channel isn't moved, no ray is cast and it counts as muffled...
+    bot.position.x = AUDIO.spatial.maxDistance + 10;
+    sfx.placeSources(all, PLAYER);
+    sfx.afterTick(all, PLAYER);
+    expect(writes()).toBe(made + 3);
+    expect(casts).toBe(0);
+    expect(channelFilter(ctx)!.frequency.value).toBeCloseTo(AUDIO.occlusion.muffledHz);
+    // ...until it has a sound to play: then it's put where its character is.
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    expect(panner.positionX.value).toBe(bot.position.x);
+    // Out in the dead zone, near or far: no rays and no moves.
+    bot.status = 'out';
+    bot.position.x = 5;
+    sfx.placeSources(all, PLAYER);
+    sfx.afterTick(all, PLAYER);
+    expect(casts).toBe(0);
+    expect(panner.positionX.value).toBe(AUDIO.spatial.maxDistance + 10);
+    bot.status = 'alive';
+    sfx.afterTick(all, PLAYER);
+    expect(casts).toBe(AUDIO.occlusion.rayHeights.length);
+  });
+
+  it('renders several cues in a long spare moment and stops once the moment runs short (CORE-31)', () => {
+    let steps = 0;
+    const library = new SoundLibrary(function* (rate) {
+      const job = renderSoundsGradually(rate, 1);
+      for (;;) {
+        const r = job.next();
+        if (r.done) return r.value;
+        steps++;
+        yield;
+      }
+    });
+    // Each cue "takes" 4 ms of a 50 ms moment.
+    let jobs: ((timeLeft: () => number) => void)[] = [];
+    const engine = new AudioEngine({ ...VOLUMES }, library, (work) => void jobs.push(work));
+    engine.warmUp();
+    const [first] = jobs;
+    jobs = [];
+    let left = 50;
+    first!(() => (left -= 4));
+    // Rendering stopped once no more than warmUpSliceMs were left: (50 - 5) / 4 cues, give or take the first.
+    expect(steps).toBeGreaterThanOrEqual(5);
+    expect(steps).toBe(Math.ceil((50 - AUDIO.warmUpSliceMs) / 4));
+    expect(left).toBeLessThanOrEqual(AUDIO.warmUpSliceMs);
+    expect(jobs).toHaveLength(1); // the rest waits for the next moment
+  });
+
+  it("shapes each whistle blast: a fade in, a hold, a fade out, then stops just after (CORE-31)", () => {
+    const { sfx, ctx, characterOf } = setup();
+    ctx.currentTime = 10;
+    sfx.onEvent({ type: 'roundOver', winner: 0, reason: 'time' }, PLAYER, characterOf);
+    const [tone] = ctx.oscillators;
+    const level = [...tone!.outputs][0] as FakeGain;
+    const d = AUDIO.roundOverWhistle;
+    expect(level.gain.events).toEqual([
+      { kind: 'set', value: 0, at: 10 },
+      { kind: 'ramp', value: AUDIO.whistleVolume, at: 10 + AUDIO.whistleAttack },
+      { kind: 'set', value: AUDIO.whistleVolume, at: 10 + d - AUDIO.whistleRelease },
+      { kind: 'ramp', value: 0, at: 10 + d },
+    ]);
+    const times = level.gain.events.map((e) => e.at);
+    expect([...times].sort((a, b) => a - b)).toEqual(times);
+    expect(tone!.stopAt).toBeCloseTo(10 + d + AUDIO.stopPadding);
   });
 });

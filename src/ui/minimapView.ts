@@ -1,4 +1,5 @@
 import { MINIMAP } from '../config/minimap';
+import type { MapBlock } from '../map/mapTypes';
 import type { HeardSound } from './soundCues';
 
 /** A point on the minimap, in pixels from its middle (x right, y down). */
@@ -118,4 +119,23 @@ export class HeardPlayers {
     p.at = Number.NaN;
     p.sourceId = -1;
   }
+}
+
+/**
+ * How tall `b` stands above the floor it is on: its top less the top of the highest floor or ramp under its middle
+ * (the ground, 0, if none). A crate stacked on another crate stands on the ground, so the stack reads as one tall piece
+ * of cover, while a crate on the dock is only as tall as itself (bug pass).
+ */
+export function coverHeight(b: MapBlock, blocks: readonly MapBlock[]): number {
+  const top = b.center.y + b.size.y / 2;
+  const bottom = b.center.y - b.size.y / 2;
+  let floor = 0;
+  for (const f of blocks) {
+    if (f.kind !== 'floor' && f.kind !== 'ramp') continue;
+    const fTop = f.center.y + f.size.y / 2;
+    if (fTop > bottom + MINIMAP.floorContact || fTop <= floor) continue;
+    if (Math.abs(b.center.x - f.center.x) > f.size.x / 2 || Math.abs(b.center.z - f.center.z) > f.size.z / 2) continue;
+    floor = fTop;
+  }
+  return top - floor;
 }

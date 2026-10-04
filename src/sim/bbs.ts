@@ -1,7 +1,8 @@
 import type { BallisticsConfig } from '../config/ballistics';
 import type { HitConfig } from '../config/hits';
 import type { SurfaceHit, WorldQuery } from './armament';
-import { type BB, type BBPool, stepBBFlight } from './ballistics';
+import { airModel } from './air';
+import { type BB, type BBPool, stepFlight } from './ballistics';
 import type { Character } from './character';
 import { type EliminationContext, eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
@@ -9,7 +10,7 @@ import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } fro
 import { firstRangeTargetHit, hitRangeTarget, type RangeTarget, type RangeTargetHit } from './rangeTargets';
 import { ricochet } from './ricochet';
 import type { RngState } from './rng';
-import { copy, vec3 } from './vec';
+import { copy, type Vec3, vec3 } from './vec';
 
 const segmentDir = vec3();
 /**
@@ -73,7 +74,7 @@ function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { v
  * match counts ricochets (HitConfig.ricochetsCount); otherwise it ticks them and stops (ricochetTick event), and they
  * play on. On the practice range a BB also stops at the first target it reaches (targetHit event, M21). BBs that fall
  * out of the world or get too old are removed (bbLost event). A BB never hits whoever fired it, nor anyone
- * already hit. `rng` scatters bounces (the simulation's seeded stream).
+ * already hit. `rng` scatters bounces (the simulation's seeded stream); `wind` (m/s) drifts every BB (M30).
  */
 export function stepBBs(
   pool: BBPool,
@@ -84,12 +85,14 @@ export function stepBBs(
   dt: number,
   targets?: BBTargets,
   rng?: RngState,
+  wind?: Readonly<Vec3>,
 ): void {
   let prepared = false;
+  const air = airModel(cfg);
   for (const bb of pool.bbs) {
     if (!bb.active) continue;
     copy(bb.prevPosition, bb.position);
-    stepBBFlight(bb, cfg, dt);
+    stepFlight(bb, air, dt, wind);
 
     const dx = bb.position.x - bb.prevPosition.x;
     const dy = bb.position.y - bb.prevPosition.y;

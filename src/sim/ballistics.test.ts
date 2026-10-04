@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, bbMass, GAS_PISTOL, hopUpLift, LOADOUT, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
-import { type BB, createBBPool, spawnBB, stepBBFlight } from './ballistics';
-import { vec3 } from './vec';
+import { flightTime as hopFlightTime } from './hopUp';
+import { type BB, createBBPool, flightTimeEstimate, spawnBB, stepBBFlight } from './ballistics';
+import { type Vec3, vec3 } from './vec';
 
 const DT = 1 / 60;
 const MUZZLE_HEIGHT = 1.6;
@@ -82,8 +83,9 @@ describe('BB ballistics', () => {
   });
 
   it('has visible travel time: about half a second across the map', () => {
-    expect(aeg.timeTo(30)).toBeGreaterThan(0.42);
-    expect(aeg.timeTo(30)).toBeLessThan(0.52);
+    // Real air drag since M30 (it was ~60% of real, ~0.47 s): a 1 J rifle's BB takes about 0.52 s to 30 m.
+    expect(aeg.timeTo(30)).toBeGreaterThan(0.48);
+    expect(aeg.timeTo(30)).toBeLessThan(0.56);
     expect(pistol.timeTo(20)).toBeGreaterThan(aeg.timeTo(20));
   });
 
@@ -108,6 +110,111 @@ describe('BB ballistics', () => {
 
   it('is deterministic', () => {
     expect(shoot(AEG).dropAt(37)).toBe(aeg.dropAt(37));
+  });
+});
+
+/** The factory rifle's BB fired level along `dir` from 1.6 m, in `wind`, stepped `steps` times a 60 Hz tick. */
+function rifleBB(dir: Vec3 = vec3(0, 0, -1), wind?: Vec3, steps = 1) {
+  const bb = spawnBB(createBBPool(1), 0, vec3(0, MUZZLE_HEIGHT, 0), dir, muzzleVelocity(AEG), hopUpLift(AEG, AEG.hopUpDial), bbMass(AEG), BALLISTICS);
+  /** Flies on until `distance` m from the start along the ground, then returns where it is (interpolated). */
+  const flyTo = (distance: number): Vec3 & { t: number } => {
+    let last = { x: bb.position.x, y: bb.position.y, z: bb.position.z, t: bb.age };
+    for (;;) {
+      for (let i = 0; i < steps; i++) stepBBFlight(bb, BALLISTICS, DT / steps, wind);
+      const reached = Math.hypot(bb.position.x, bb.position.z);
+      if (reached >= distance) {
+        const before = Math.hypot(last.x, last.z);
+        const f = (distance - before) / (reached - before);
+        return { x: last.x + (bb.position.x - last.x) * f, y: last.y + (bb.position.y - last.y) * f, z: last.z + (bb.position.z - last.z) * f, t: last.t + (bb.age - last.t) * f };
+      }
+      last = { x: bb.position.x, y: bb.position.y, z: bb.position.z, t: bb.age };
+      if (bb.age > BALLISTICS.maxLifetime) throw new Error(`never reached ${distance} m`);
+    }
+  };
+  return { bb, flyTo };
+}
+
+describe('BB fluid dynamics (M30)', () => {
+  it('slows a BB as real air does: a 1 J rifle keeps under half its speed by 30 m', () => {
+    const aeg = shoot(AEG);
+    // Real drag (Cd ~0.4 from the Reynolds number): 88 m/s at the muzzle, about 39 m/s at 30 m.
+    expect(aeg.speedAt(30) / aeg.speeds[0]!).toBeGreaterThan(0.38);
+    expect(aeg.speedAt(30) / aeg.speeds[0]!).toBeLessThan(0.5);
+  });
+
+  it('steps accurately: one step a tick lands within a centimetre of a 100-substep flight at 50 m', () => {
+    const wind = vec3(1.5, 0, 0.5);
+    const tick = rifleBB(undefined, wind).flyTo(50);
+    const fine = rifleBB(undefined, wind, 100).flyTo(50);
+    expect(Math.abs(tick.y - fine.y)).toBeLessThan(0.01);
+    expect(Math.abs(tick.x - fine.x)).toBeLessThan(0.01);
+    expect(Math.abs(tick.t - fine.t)).toBeLessThan(0.005);
+  });
+
+  it('lifts a hopped BB the same whichever way it is fired (the backspin axis follows the barrel)', () => {
+    const north = rifleBB(vec3(0, 0, -1)).flyTo(30);
+    const s = Math.SQRT1_2;
+    const diagonal = rifleBB(vec3(s, 0, s)).flyTo(30);
+    expect(diagonal.y).toBeCloseTo(north.y, 6);
+    expect(Math.abs(north.x)).toBeLessThan(1e-9); // and no sideways curl in still air
+    expect(diagonal.x).toBeCloseTo(diagonal.z, 6);
+  });
+
+  it('keeps the spin axis level and square to the barrel, even on a shot aimed up', () => {
+    const up = vec3(0, Math.sin(0.3), -Math.cos(0.3));
+    const { bb } = rifleBB(up);
+    expect(bb.spinAxis.y).toBe(0);
+    expect(bb.spinAxis.x * up.x + bb.spinAxis.z * up.z).toBeCloseTo(0, 12);
+    expect(Math.hypot(bb.spinAxis.x, bb.spinAxis.z)).toBeCloseTo(1, 12);
+    const straightUp = spawnBB(createBBPool(1), 0, vec3(), vec3(0, 1, 0), 80, 0.2, 0.25e-3);
+    expect(Math.hypot(straightUp.spinAxis.x, straightUp.spinAxis.y, straightUp.spinAxis.z)).toBeCloseTo(1, 12);
+  });
+
+  it("loses its backspin to the air's friction, faster on a lighter BB", () => {
+    const spinLeftAfter = (grams: number) => {
+      const loaded = { ...AEG, bbWeight: grams };
+      const bb = spawnBB(createBBPool(1), 0, vec3(), vec3(0, 0, -1), muzzleVelocity(loaded), hopUpLift(AEG, AEG.hopUpDial), bbMass(loaded));
+      const start = bb.spin;
+      for (let i = 0; i < 30; i++) stepBBFlight(bb, BALLISTICS, DT);
+      return bb.spin / start;
+    };
+    expect(spinLeftAfter(0.25)).toBeLessThan(0.9);
+    expect(spinLeftAfter(0.25)).toBeGreaterThan(0.4);
+    expect(spinLeftAfter(0.2)).toBeLessThan(spinLeftAfter(0.28));
+  });
+
+  it('drifts a BB downwind in a crosswind, little at close range and more and more with distance', () => {
+    const breeze = vec3(1.5, 0, 0); // 1.5 m/s blowing across a shot fired towards −z
+    const flight = rifleBB(undefined, breeze);
+    const at = [10, 20, 34].map((d) => flight.flyTo(d).x);
+    expect(at[0]!).toBeGreaterThan(0);
+    expect(at[0]!).toBeLessThan(0.05); // a few centimetres at 10 m
+    expect(at[1]!).toBeGreaterThan(0.08); // a hand's width by 20 m
+    expect(at[2]!).toBeGreaterThan(0.3); // a torso's width at Depot's longest lines
+    expect(at[2]!).toBeLessThan(0.5);
+    expect(at[2]! / at[1]!).toBeGreaterThan(34 / 20); // the drift grows faster than the distance: it builds as the BB slows
+    // Calm air: none.
+    expect(rifleBB().flyTo(34).x).toBe(0);
+  });
+
+  it('carries a BB a little further on a tailwind and a little shorter into a headwind', () => {
+    const tail = rifleBB(undefined, vec3(0, 0, -1.5)).flyTo(40);
+    const calm = rifleBB().flyTo(40);
+    const head = rifleBB(undefined, vec3(0, 0, 1.5)).flyTo(40);
+    expect(tail.t).toBeLessThan(calm.t);
+    expect(head.t).toBeGreaterThan(calm.t);
+  });
+
+  it("estimates the flight time a bot leads with to within 5% of the full model's, and well over distance / muzzle speed", () => {
+    for (const r of LOADOUT) {
+      for (const d of [10, 20, 30]) {
+        const exact = hopFlightTime(r, r.hopUpDial, d, BALLISTICS);
+        const estimate = flightTimeEstimate(d, muzzleVelocity(r), bbMass(r), BALLISTICS);
+        expect(Math.abs(estimate / exact - 1), `${r.id} ${d} m`).toBeLessThan(0.05);
+      }
+      expect(flightTimeEstimate(30, muzzleVelocity(r), bbMass(r), BALLISTICS)).toBeGreaterThan((30 / muzzleVelocity(r)) * 1.3);
+    }
+    expect(flightTimeEstimate(10, 0, 0.25e-3, BALLISTICS)).toBe(Number.POSITIVE_INFINITY);
   });
 });
 

@@ -15,7 +15,9 @@ export const BLOCK_MATERIALS = {
   // Site props (M25b). Moulded plastic ticks hollow, nearest to wood; sand-filled bags and gabions soak BBs up as wood
   // does (no ricochet) with the dullest of the three ticks.
   toilet: 'wood',
-  rack: 'metal',
+  // A pallet rack's faces are its cardboard and film-wrapped load (the steel uprights are thin posts), so BBs land
+  // on it as on the wrapped loads: no ricochet (bug pass).
+  rack: 'wood',
   gabion: 'wood',
   wrapped: 'wood',
   ibc: 'metal',

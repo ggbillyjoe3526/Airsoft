@@ -126,10 +126,6 @@ shotgun, DMR, LMG …), bigger loadouts (gear, pouches and more parts, free from
 simulation, grenades, smoke and flash bombs, a medic mode, bigger teams (4v4 / 5v5), day and night maps, customisation,
 unlock-based progression (never levels), and team communication (wheel, pings, hand signals) once the bots are good enough. Don't build these during v0.1.
 
-**Bug passes:** after each batch of feature pull requests merges and before a playtest, run a full bug pass that also
-works through `docs/KNOWN_ISSUES.md` (fix and verify what can be fixed, keep the rest logged); remind the owner when one is
-due (owner, 2026-10-04).
-
 **Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
 performance, stability, UX/QoL, polish and final tuning are beta. During alpha, note beta-type work in
 `docs/ROADMAP.md` (Beta) or `docs/KNOWN_ISSUES.md` unless it blocks alpha work.
@@ -205,6 +201,11 @@ Then implement, then **verify**: run the type checker, tests, and build, and rep
 - Read files in ranges (grep first, then only the lines you need), and filter command and test output (e.g. only failures and totals).
 - Take screenshots only when you need to see something; prefer reading values with page text or JS.
 - Keep agent reports short: QA, performance and the critic return at most about 30 lines, triage 15 (`.claude/agents/`).
+
+**Regular bug pass** (owner, 2026-10-04): after each batch of feature pull requests merges and before the owner's
+playtest, a full bug pass and `docs/KNOWN_ISSUES.md` sweep is due: play every mode in the browser, review the code added
+since the last pass, fix what can be fixed (a test for each), keep the rest logged with why. Remind the owner then; start
+it only when he says go. It runs as a pipeline task (`BP<n>`); how in `docs/HANDOFF.md`.
 
 **Design decisions:** if you're unsure about something, ask me before acting (owner, 2026-10-02). For small details that are easy to change later, choose a sensible default, note it in `docs/DECISIONS.md` with a one-line reason, say which you chose, and keep going.
 

@@ -7,6 +7,7 @@ import type { MapBlock } from '../map/mapTypes';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { saveSetting } from '../settings/storage';
+import { Birdsong, renderAmbienceBed } from './ambience';
 import { loadVolumes, volumeField, volumeGain } from './audioMix';
 import { recipeLength, renderRecipe, seededRandom, type SoundRecipe } from './dsp';
 import { type FoleyMove, FoleyTracker } from './foley';
@@ -132,6 +133,20 @@ describe('sound synthesis (M13)', () => {
         expect(played(cues.shot(p), L.shot.gain, peak, 'min'), `${p} shot vs your ${step}`).toBeGreaterThan(2.5 * played(step, L.ownStep.gain, peak, 'max'));
       }
     }
+  });
+
+  it("keeps a bot's sprint heard near the edge of earshot: within 28 dB of your own shot at 20 m (audit CORE-26)", () => {
+    // The panner's inverse model (Web Audio spec), as Sfx sets it up for every positional sound.
+    const s = AUDIO.spatial;
+    const distanceGain = (d: number): number => s.refDistance / (s.refDistance + s.rolloff * (Math.max(d, s.refDistance) - s.refDistance));
+    const loudness = (v: Float32Array): number => rms(v, 0, 0.1);
+    const L = AUDIO.levels;
+    const quietestSprint = Math.min(...(['concrete', 'metal'] as const).flatMap((f) => rendered.get(cues.step(f, 'sprint'))!.map(loudness))) * L.step.gain;
+    const loudestShot = Math.max(...SHOT_PROFILES.flatMap((p) => rendered.get(cues.shot(p))!.map(loudness))) * L.shot.gain;
+    const at20 = 20 * Math.log10((quietestSprint * distanceGain(20)) / loudestShot);
+    expect(at20, 'dB under your own shot').toBeGreaterThan(-28);
+    // The same curve for shots and steps: at any distance a shot stays the louder of the two.
+    for (const d of [5, 10, 20]) expect(loudestShot * distanceGain(d)).toBeGreaterThan(quietestSprint * distanceGain(d));
   });
 
   it("rattles a hi-cap quieter than a step and brighter than a draw, so it doesn't pass for either (M17b)", () => {
@@ -299,6 +314,63 @@ describe('what things sound like underfoot and under a BB (M13)', () => {
     expect(impactMaterialAt(blocks, vec3(10, 0, 3))).toBe('concrete');
     // A BB at the foot of a container, touching the floor too: the container.
     expect(impactMaterialAt(blocks, vec3(3.8, 0.01, 0))).toBe('metal');
+  });
+});
+
+describe("the yard's outdoor bed (audit CORE-34)", () => {
+  const render = (rand?: () => number): { bed: Float32Array; steps: number } => {
+    const job = renderAmbienceBed(RATE, rand);
+    let steps = 0;
+    for (;;) {
+      const r = job.next();
+      if (r.done) return { bed: r.value, steps };
+      steps++;
+    }
+  };
+  const { bed, steps } = render();
+
+  it('is a loop of the configured length at a loudness of 1, rendered a second at a time', () => {
+    expect(bed.length).toBe(Math.round(AUDIO.ambience.seconds * RATE));
+    expect(bed.every(Number.isFinite)).toBe(true);
+    expect(rms(bed, 0, AUDIO.ambience.seconds)).toBeCloseTo(1, 3);
+    expect(steps).toBeGreaterThanOrEqual(AUDIO.ambience.seconds);
+  });
+
+  it('loops without a click: the step from its end back to its start is an ordinary one', () => {
+    let biggest = 0;
+    for (let i = 1; i < bed.length; i++) biggest = Math.max(biggest, Math.abs(bed[i]! - bed[i - 1]!));
+    const wrap = Math.abs(bed[0]! - bed[bed.length - 1]!);
+    expect(wrap).toBeLessThan(biggest * 0.5);
+  });
+
+  it('is low and dull (no hiss): mostly below 1 kHz', () => {
+    expect(brightness(bed)).toBeLessThan(1200);
+  });
+
+  it('is the same for a seed', () => {
+    expect(render(seededRandom(AUDIO.ambience.seed)).bed).toEqual(bed);
+  });
+
+  it('lets a bird sing between the configured gaps, round the listener at the configured distance', () => {
+    const birds = new Birdsong(5);
+    const at = vec3();
+    const listener = vec3(3, 1.6, -4);
+    const [least, most] = AUDIO.ambience.birdEvery;
+    let last = 0;
+    let sung = 0;
+    for (let t = 0; t < 300; t += 0.1) {
+      if (!birds.due(t, listener, at)) continue;
+      if (sung > 0) {
+        expect(t - last).toBeGreaterThanOrEqual(least - 0.11);
+        expect(t - last).toBeLessThanOrEqual(most + 0.11);
+      }
+      const d = Math.hypot(at.x - listener.x, at.z - listener.z);
+      expect(d).toBeGreaterThanOrEqual(AUDIO.ambience.birdDistance[0] - 1e-9);
+      expect(d).toBeLessThanOrEqual(AUDIO.ambience.birdDistance[1] + 1e-9);
+      last = t;
+      sung++;
+    }
+    expect(sung).toBeGreaterThan(300 / most - 1);
   });
 });
 

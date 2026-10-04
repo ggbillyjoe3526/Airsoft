@@ -34,8 +34,8 @@ export interface Asset {
   key: string;
   /** A replica's own tags; a part's Fits (tags or replica IDs, any one of which it needs). */
   tags: readonly string[];
-  /** Power sources only: battery, gas or spring, and how much harder it shoots (0.1 = 10%). */
-  power?: { type: PowerType; boost: number };
+  /** Power sources only: battery, gas or spring (what it does is in stats.md's Power sources table, by ID, M29). */
+  power?: { type: PowerType };
   /** Owned from the start, at the lowest tier. */
   starter: boolean;
   /** Shots can dispense it. */
@@ -48,7 +48,7 @@ export interface RarityTier {
   label: string;
   /** Chance (0..1) that a dispensed asset comes in this tier. */
   odds: number;
-  /** How much it improves its asset (0.15 = 15%; what each category improves is set in code, from M26b). */
+  /** How much it improves its asset (0.15 = 15%; which stats and by how much is stats.md's Tier scaling, M29). */
   bonus: number;
   /** FC one spare copy scraps for. */
   scrapFc: number;
@@ -198,9 +198,7 @@ function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m
   if (category === 'power') {
     const type = cell(row, 'Type').toLowerCase();
     if (!(type in POWER_TAGS)) return fail(row.line, `Type must be battery, gas or spring, not "${cell(row, 'Type')}"`), null;
-    const pct = numberCell(row, 'Power %', fail, -50, 100);
-    if (pct === undefined) return null;
-    return { id, name, category, key: '', tags, power: { type: type as PowerType, boost: pct / 100 }, starter, inShots };
+    return { id, name, category, key: '', tags, power: { type: type as PowerType }, starter, inShots };
   }
   const key = cell(row, 'Key');
   const keys = KEYS_BY_CATEGORY[category];

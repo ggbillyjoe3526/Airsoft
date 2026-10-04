@@ -11,10 +11,16 @@ export interface MatchRulesText {
   raiseTime: number;
   halfTimeAfter: number;
   attackFirst: boolean;
+  /** The map end (0 west, 1 east) your team starts each mode's match at (sim/round.ts teamEnd). */
+  eliminationStartEnd: number;
+  attackDefendStartEnd: number;
   /** The match's friendly fire and ricochet rules (M20). */
   friendlyFire: boolean;
   ricochetsCount: boolean;
 }
+
+/** A map end's name (0 is west, MapData.spawns). */
+const END_NAMES = ['west', 'east'] as const;
 
 /** The goal paragraph for `mode`. */
 export function describeRules(r: MatchRulesText, mode: MatchMode): string {
@@ -34,14 +40,14 @@ export function describeRules(r: MatchRulesText, mode: MatchMode): string {
       teams +
       `Each round one team attacks the other's flagpole: stand by it for ${r.raiseTime} s to raise your flag and win the round. ` +
       `Defenders by the pole pull it back down, and win if the clock (${minutes}:${seconds}) runs out. Knocking out the whole other team also wins. ` +
-      `Your team ${r.attackFirst ? 'attacks' : 'defends'} first; sides swap after round ${r.halfTimeAfter}. ` +
+      `Your team ${r.attackFirst ? 'attacks' : 'defends'} first, from the ${END_NAMES[r.attackDefendStartEnd === 0 ? 0 : 1]} end; sides swap after round ${r.halfTimeAfter}. ` +
       end
     );
   }
   return (
     teams +
     `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` +
-    `Teams swap ends after round ${r.halfTimeAfter}. ` +
+    `You start at the ${END_NAMES[r.eliminationStartEnd === 0 ? 0 : 1]} end; teams swap ends after round ${r.halfTimeAfter}. ` +
     end
   );
 }
