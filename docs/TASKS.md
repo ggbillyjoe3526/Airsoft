@@ -32,7 +32,7 @@ attempts: 0
 ## BP1 · Bug pass and KNOWN_ISSUES sweep (2026-10-04, before the owner's playtest)
 tier: core
 perf: required
-touches: src/sim/armament.ts, src/sim/movement.ts, src/config/replicas.ts, src/config/materials.ts, src/config/minimap.ts, src/audio/audioEngine.ts, src/audio/soundBank.ts, src/input/pointerLock.ts, src/input/playerInput.ts, src/matchSession.ts, src/game.ts, src/style.css, src/ui/hitFeedback.ts, src/ui/keySettings.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/ui/menus/menus.ts, src/ui/menus/pauseScreen.ts, src/ui/menus/rulesText.ts, docs/
+touches: src/sim/armament.ts, src/sim/movement.ts, src/config/replicas.ts, src/config/materials.ts, src/config/minimap.ts, src/audio/audioEngine.ts, src/audio/soundBank.ts, src/input/pointerLock.ts, src/input/playerInput.ts, src/matchSession.ts, src/game.ts, src/style.css, src/ui/hitFeedback.ts, src/ui/keySettings.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/ui/menus/menus.ts, src/ui/menus/pauseScreen.ts, src/ui/menus/rulesText.ts, pipeline/baseline/container.json, docs/
 contract: none
 acceptance:
   1. The bugs found by playing every mode and reviewing the code added since the last bug pass are fixed, each with a test where the code allows one: stacked crates draw as tall cover on the minimap; Dev help switched off before play begins no longer keeps a match out of the records; the debug panel sits below the minimap; pallet racks soak BBs up; the perf script restarts with each match and ignores the mouse
