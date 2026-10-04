@@ -5,7 +5,7 @@ import { HITS } from '../config/hits';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { TEAM_COLOUR_SETS } from '../config/teams';
-import { buildFigure, disposeFigure, figureLeanRoll, figureLooks, figureMuzzle } from './characterModels';
+import { buildFigure, disposeFigure, figureLeanRoll, figureLooks, figureMuzzle, setReceiveShadows } from './characterModels';
 
 describe('figureMuzzle', () => {
   it('matches the muzzle of the built figure for any position, yaw, pitch, crouch and lean', () => {
@@ -162,5 +162,22 @@ describe('buildFigure (M14 art pass)', () => {
         }
       }
     }
+  });
+});
+
+describe('figures in shadow (REN-07)', () => {
+  it('makes every built mesh receive shadows when asked, and none when not', () => {
+    const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial());
+    const meshes: THREE.Mesh[] = [];
+    figure.root.traverse((o) => {
+      if (o instanceof THREE.Mesh) meshes.push(o);
+    });
+    expect(meshes.length).toBeGreaterThan(3);
+    expect(meshes.some((m) => m.receiveShadow)).toBe(false); // Three.js' default, as built
+    setReceiveShadows(figure.root, true);
+    expect(meshes.every((m) => m.receiveShadow)).toBe(true);
+    setReceiveShadows(figure.root, false);
+    expect(meshes.some((m) => m.receiveShadow)).toBe(false);
+    disposeFigure(figure);
   });
 });

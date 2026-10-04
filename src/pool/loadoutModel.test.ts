@@ -7,6 +7,7 @@ import { bbGlowFor, gameOwnership, LoadoutModel, type Ownership } from './loadou
 import { EMPTY_FIT } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
+import { saveSetting } from '../settings/storage';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -89,9 +90,9 @@ describe('Loadout model (M26b)', () => {
 
   it('keeps each replica its own BB weight (any 0.01 g step from 0.20 to 0.30 g) and hop-up dial', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
-    model.setBbWeight(AEG, 0.3);
-    model.setBbWeight(GAS_PISTOL, 0.305); // between steps: ignored
-    model.setHopUp(GAS_PISTOL, 0.4);
+    model.setBbWeight(id('AEG Rifle'), 0.3);
+    model.setBbWeight(id('Gas Pistol'), 0.305); // between steps: ignored
+    model.setHopUp(id('Gas Pistol'), 0.4);
     expect(model.kit().bbWeights).toEqual([0.3, GAS_PISTOL.bbWeight]);
     expect(model.kit().hopUps).toEqual([AEG.hopUpDial, 0.4]);
   });
@@ -99,34 +100,48 @@ describe('Loadout model (M26b)', () => {
   describe('Glowing BBs (M33b)', () => {
     it('defaults every replica to At Night and keeps each replica its own choice', () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
-      expect(model.glowBBs(AEG)).toBe('night');
-      expect(model.glowBBs(GAS_PISTOL)).toBe('night');
-      model.setGlowBBs(AEG, 'always');
-      expect(model.glowBBs(AEG)).toBe('always');
-      expect(model.glowBBs(GAS_PISTOL)).toBe('night');
-      model.setGlowBBs(GAS_PISTOL, 'off');
-      expect(model.glowBBs(GAS_PISTOL)).toBe('off');
-      expect(model.glowBBs(AEG)).toBe('always');
+      expect(model.glowBBs(id('AEG Rifle'))).toBe('night');
+      expect(model.glowBBs(id('Gas Pistol'))).toBe('night');
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      expect(model.glowBBs(id('AEG Rifle'))).toBe('always');
+      expect(model.glowBBs(id('Gas Pistol'))).toBe('night');
+      model.setGlowBBs(id('Gas Pistol'), 'off');
+      expect(model.glowBBs(id('Gas Pistol'))).toBe('off');
+      expect(model.glowBBs(id('AEG Rifle'))).toBe('always');
+    });
+
+    it('is saved by replica asset id, and kept apart while everything is unlocked (as FA10 keeps the dials)', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      expect(model.glowField(id('AEG Rifle'))).toBe(`glowBBs.${id('AEG Rifle')}`);
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      let sandboxed = true;
+      const dev = new LoadoutModel(pool, { ...owning(STARTERS), sandboxed: () => sandboxed });
+      expect(dev.glowField(id('AEG Rifle'))).toBe(`glowBBs.dev.${id('AEG Rifle')}`);
+      expect(dev.glowBBs(id('AEG Rifle'))).toBe('always');
+      dev.setGlowBBs(id('AEG Rifle'), 'off');
+      expect(dev.glowBBs(id('AEG Rifle'))).toBe('off');
+      sandboxed = false;
+      expect(dev.glowBBs(id('AEG Rifle'))).toBe('always');
     });
 
     it('is saved: a new model over the same storage reads the pick back', () => {
-      new LoadoutModel(pool, owning(STARTERS)).setGlowBBs(AEG, 'off');
-      expect(new LoadoutModel(pool, owning(STARTERS)).glowBBs(AEG)).toBe('off');
+      new LoadoutModel(pool, owning(STARTERS)).setGlowBBs(id('AEG Rifle'), 'off');
+      expect(new LoadoutModel(pool, owning(STARTERS)).glowBBs(id('AEG Rifle'))).toBe('off');
     });
 
     it('falls back to At Night for a stored value that is not a choice', () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
-      model.setGlowBBs(AEG, 'always');
+      model.setGlowBBs(id('AEG Rifle'), 'always');
       const raw = JSON.parse(localStorage.getItem(localStorage.key(0)!)!);
-      raw[`glowBBs.${AEG.id}`] = 'sparkly';
+      raw[`glowBBs.${id('AEG Rifle')}`] = 'sparkly';
       localStorage.setItem(localStorage.key(0)!, JSON.stringify(raw));
-      expect(model.glowBBs(AEG)).toBe('night');
+      expect(model.glowBBs(id('AEG Rifle'))).toBe('night');
     });
 
     it("puts each slot's choice in the kit, following the slots when they swap", () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
-      model.setGlowBBs(AEG, 'always');
-      model.setGlowBBs(GAS_PISTOL, 'off');
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      model.setGlowBBs(id('Gas Pistol'), 'off');
       expect(model.kit().glowBBs).toEqual(['always', 'off']);
       model.equip('primary', item('Gas Pistol'));
       expect(model.kit().glowBBs).toEqual(['off', 'always']);
@@ -134,12 +149,12 @@ describe('Loadout model (M26b)', () => {
 
     it('resolves the kit against the field: yours by slot, the bots the default way', () => {
       const model = new LoadoutModel(pool, owning(STARTERS));
-      model.setGlowBBs(AEG, 'always');
-      model.setGlowBBs(GAS_PISTOL, 'off');
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      model.setGlowBBs(id('Gas Pistol'), 'off');
       expect(bbGlowFor(model.kit(), false)).toEqual({ player: [true, false], others: false });
       expect(bbGlowFor(model.kit(), true)).toEqual({ player: [true, false], others: true });
-      model.setGlowBBs(AEG, 'night');
-      model.setGlowBBs(GAS_PISTOL, 'night');
+      model.setGlowBBs(id('AEG Rifle'), 'night');
+      model.setGlowBBs(id('Gas Pistol'), 'night');
       expect(bbGlowFor(model.kit(), true)).toEqual({ player: [true, true], others: true });
       expect(bbGlowFor(model.kit(), false)).toEqual({ player: [false, false], others: false });
     });
@@ -281,5 +296,35 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     expect(model.fitChoices(id('Gas Pistol'), 'barrel')).toEqual([]);
     unlocked = false;
     expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toEqual([]);
+  });
+
+  it('keys the dials by replica asset, reads a dial saved by config id before, and sandboxes them under Unlock all gear (audit POOL-17)', () => {
+    saveSetting('hopUp.aeg', 0.7);
+    let unlocked = false;
+    const model = new LoadoutModel(pool, gameOwnership(pool, () => newCollection(pool, 1), () => unlocked));
+    expect(model.hopUp(id('AEG Rifle'))).toBe(0.7);
+    expect(model.dialField('hopUp', id('AEG Rifle'))).toBe(`hopUp.${id('AEG Rifle')}`);
+    model.setHopUp(id('AEG Rifle'), 0.5);
+    unlocked = true;
+    expect(model.dialField('hopUp', id('AEG Rifle'))).toBe(`hopUp.dev.${id('AEG Rifle')}`);
+    expect(model.hopUp(id('AEG Rifle'))).toBe(0.5);
+    model.setHopUp(id('AEG Rifle'), 0.9);
+    model.setBbWeight(id('AEG Rifle'), 0.3);
+    expect(model.kit().hopUps[0]).toBe(0.9);
+    unlocked = false;
+    expect(model.hopUp(id('AEG Rifle'))).toBe(0.5);
+    expect(model.bbWeight(id('AEG Rifle'))).toBe(AEG.bbWeight);
+  });
+
+  it('moves a pick to the best copy left of the same item when the picked copy is scrapped (audit POOL-05)', () => {
+    const own = owning([...STARTERS, item('AEG Rifle', 'rare'), item('Red Dot'), item('Red Dot', 'epic')]);
+    const model = new LoadoutModel(pool, own);
+    model.equip('primary', item('AEG Rifle'));
+    model.setFit(id('AEG Rifle'), 'optic', item('Red Dot'));
+    // The Common AEG and the Common Red Dot scrapped: the rarer copies take their places, not the defaults.
+    own.items.delete(itemKey(id('AEG Rifle'), 'common'));
+    own.items.delete(itemKey(id('Red Dot'), 'common'));
+    expect(model.equipped()[0]).toEqual(item('AEG Rifle', 'rare'));
+    expect(model.fitOf(id('AEG Rifle')).optic).toEqual(item('Red Dot', 'epic'));
   });
 });

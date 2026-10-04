@@ -1,4 +1,4 @@
-import { DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
+import { DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   countsForRecords,
   FRIENDLY_FIRE_CHOICES,
@@ -14,7 +14,8 @@ import {
 } from '../../config/matchRules';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
-import type { QualityPreset } from '../../config/render';
+import type { QualityChoice, QualitySettings } from '../../config/render';
+import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
 import { COMING_MAPS, COMING_SOON_TAG, MAPS, type MapId } from '../../map/maps';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
@@ -57,6 +58,9 @@ export interface MenusOptions {
   /** The title screen's Tutorial (M16): the range with the coach. `tutorialDone`: it was played through before. */
   onTutorial: () => void;
   tutorialDone: boolean;
+  /** The pause menu during the tutorial (audit POOL-14): skip the step under way, or the rest of it. */
+  onSkipTutorialStep: () => void;
+  onSkipTutorial: () => void;
   map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
@@ -67,8 +71,8 @@ export interface MenusOptions {
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   controls: ControlsSettingsOptions;
   fov: { initial: number; onChange: (v: number) => void };
-  /** The render quality preset (Settings → Graphics). */
-  quality: { initial: QualityPreset; onChange: (q: QualityPreset) => void };
+  /** The quality rows on Settings → Graphics (ui/graphicsSettings.ts). */
+  graphics: GraphicsSettingsOptions;
   audio: AudioSettingsOptions;
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;
@@ -164,9 +168,9 @@ export class Menus {
           this.difficulty = d;
           opts.difficulty.onChange(d);
           if (teammatesFollow) {
-            this.teammateDifficulty = d;
-            teammates.show(d);
-            opts.teammateDifficulty.onChange(d);
+            this.teammateDifficulty = defaultTeammateDifficulty(d);
+            teammates.show(this.teammateDifficulty);
+            opts.teammateDifficulty.onChange(this.teammateDifficulty);
           }
           this.refreshSetup();
         }).root,
@@ -192,7 +196,7 @@ export class Menus {
       bindings: opts.bindings,
       controls: opts.controls,
       fov: opts.fov,
-      quality: opts.quality,
+      graphics: opts.graphics,
       audio: opts.audio,
       crosshair: opts.crosshair,
       accessibility: opts.accessibility,
@@ -211,6 +215,8 @@ export class Menus {
       onLoadout: () => this.openLoadout('pause'),
       onSettings: () => this.openSettings('pause'),
       onQuit: () => this.leaveMatch('title'),
+      onSkipStep: () => opts.onSkipTutorialStep(),
+      onSkipTutorial: () => opts.onSkipTutorial(),
     });
     this.summary = new SummaryScreen(() => this.go('result'));
     this.result = new ResultScreen({
@@ -244,11 +250,14 @@ export class Menus {
     this.go('title');
   }
 
-  /** The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21). */
-  showPause(status: string, seed: number, range = false): void {
+  /**
+   * The pause menu, with `status` (round and score) under the heading; `range`: on the practice range (M21);
+   * `tutorial`: its coach is running there (Skip step, Skip tutorial).
+   */
+  showPause(status: string, seed: number, range = false, tutorial = false): void {
     this.pause.setStatus(status);
     this.pause.setSeed(seed);
-    this.pause.setRange(range);
+    this.pause.setRange(range, tutorial);
     this.pauseShownAt = performance.now();
     this.go('pause');
   }
@@ -280,6 +289,11 @@ export class Menus {
   /** A warning on the title screen ('' hides it): the browser runs without hardware acceleration. */
   showTitleWarning(text: string): void {
     this.title.setWarning(text);
+  }
+
+  /** Shows a quality choice on Settings → Graphics without saving it (the game's own step-down, REN-03). */
+  showQuality(choice: QualityChoice, settings: QualitySettings): void {
+    this.settings.showQuality(choice, settings);
   }
 
   /** A short message under the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */

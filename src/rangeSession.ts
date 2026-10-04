@@ -16,13 +16,14 @@ import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper
 import type { PlayerInput } from './input/playerInput';
 import type { MatchSetup } from './matchSession';
 import { RANGE_MAP } from './map/range';
+import type { MapData } from './map/mapTypes';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { bbGlowFor } from './pool/loadoutModel';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
+import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, restyleMap } from './render/mapMeshes';
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -66,7 +67,10 @@ export class RangeSession {
   readonly combat: CombatPresentation;
   private readonly loadout: readonly ReplicaConfig[];
   private readonly physics: PhysicsWorld;
-  private readonly mapGroup: THREE.Group;
+  private mapGroup: THREE.Group;
+  /** The map's drawing as built (map detail, relief…) and the map itself, to restyle it (Settings → Graphics). */
+  private mapLook: MapLook;
+  private readonly mapData: MapData;
   private readonly targets: RangeTargetsRenderer;
   private readonly readout: RangeReadout;
   private readonly daylight: Daylight;
@@ -81,6 +85,15 @@ export class RangeSession {
   private coach: CoachPanel | null = null;
   private tutorialFinishedOwed = false;
   private tutorialFinishedSeen = false;
+  /**
+   * Told the id of the tutorial's step still to do ('' once all are done) whenever it moves on (audit POOL-14: the game
+   * saves it, to resume there).
+   */
+  onTutorialStep: ((stepId: string) => void) | null = null;
+  /** Play is running (not paused). */
+  private playing = false;
+  /** The step still to do last reported to onTutorialStep. */
+  private savedStep: string | null = null;
   /** What the tutorial reads after each tick, reused rather than made anew. */
   private readonly tutorialView: TutorialView;
 
@@ -94,13 +107,15 @@ export class RangeSession {
     audio: SfxSetup,
     crosshair: CrosshairSettings,
     pose?: RangePose,
-    /** Run the tutorial (M16) from this step (0: the start); leave out for free practice. */
-    tutorialFrom?: number,
+    /** Run the tutorial (M16) from this step, by index or id (0: the start); leave out for free practice. */
+    tutorialFrom?: number | string,
   ) {
     const map = RANGE_MAP;
     this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04).
-    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
+    this.mapData = map;
+    this.mapLook = mapLookOf(quality);
+    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, this.mapLook);
     renderer.scene.add(this.mapGroup);
     this.daylight = addLighting(renderer.scene, map, quality);
 
@@ -142,11 +157,13 @@ export class RangeSession {
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false));
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
+    this.targets.setReceiveShadows(quality.figureShadows);
+    this.targets.setDetail(quality.mapDetail);
     renderer.scene.add(this.targets.object);
     this.readout = new RangeReadout(container);
     this.readout.set(lastShotText(null));
     if (tutorialFrom !== undefined) {
-      this.tutorial = new TutorialTracker(TUTORIAL_STEPS, canAimDownSights(this.player.armament), tutorialFrom);
+      this.tutorial = new TutorialTracker(TUTORIAL_STEPS, canAimDownSights(this.player.armament), tutorialFrom, this.loadout.length);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
       this.coach.show(this.tutorial);
     }
@@ -162,6 +179,27 @@ export class RangeSession {
   get status(): string {
     const t = this.tutorial;
     return t && !t.finished ? `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}` : 'Practice range';
+  }
+
+  /** The tutorial is running (its coach up): the pause menu offers Skip step and Skip tutorial (audit POOL-14). */
+  get coaching(): boolean {
+    return this.tutorial !== null && !this.tutorial.finished;
+  }
+
+  /** The pause menu's Skip step: the next step starts (the last skipped ends the tutorial). */
+  skipTutorialStep(): void {
+    const t = this.tutorial;
+    if (!t || t.finished) return;
+    t.skip();
+    this.tutorialMoved(t);
+  }
+
+  /** The pause menu's Skip tutorial: free practice from here, and the tutorial counts as done. */
+  endTutorial(): void {
+    const t = this.tutorial;
+    if (!t || t.finished) return;
+    while (!t.finished) t.skip();
+    this.tutorialMoved(t);
   }
 
   /** True once, when the tutorial's last step is done (so the game can remember it was finished). */
@@ -204,6 +242,7 @@ export class RangeSession {
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     this.targets.update(dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    this.daylight.follow(this.renderer.camera);
     this.combat.render(true);
   }
 
@@ -220,10 +259,14 @@ export class RangeSession {
     this.player.armament.bottomless = cheats.bottomlessMags && !this.tutorial;
   }
 
-  /** A new quality preset (Settings → Graphics, M14): as MatchSession.setQuality. */
+  /** New quality settings (Settings → Graphics): as MatchSession.setQuality. */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    setMapRelief(this.mapGroup, quality.surfaceRelief);
+    const look = mapLookOf(quality);
+    this.mapGroup = restyleMap(this.mapGroup, this.mapData, this.renderer.surfaceTextures, this.mapLook, look);
+    this.mapLook = look;
+    this.targets.setReceiveShadows(quality.figureShadows);
+    this.targets.setDetail(quality.mapDetail);
     this.combat.setQuality(quality);
   }
 
@@ -233,6 +276,7 @@ export class RangeSession {
   }
 
   setPlaying(playing: boolean): void {
+    this.playing = playing;
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;
     this.readout.setVisible(playing && !coaching);
@@ -261,6 +305,22 @@ export class RangeSession {
     setBbWeights(this.player.armament, kit.bbWeights);
   }
 
+  /** The tutorial's step shown or still to do changed (a step done, or skipped). */
+  private tutorialMoved(t: TutorialTracker): void {
+    this.coach!.show(t);
+    if (t.goalId !== this.savedStep) {
+      this.savedStep = t.goalId;
+      this.onTutorialStep?.(t.goalId);
+    }
+    // Done as soon as the last step is (its tick still shows), so a rebuild in that moment can't lose it.
+    if (t.goalIndex >= t.steps.length && !this.tutorialFinishedSeen) this.tutorialFinishedOwed = this.tutorialFinishedSeen = true;
+    if (t.finished && this.playing) {
+      // Free practice from here: the readout takes the coach's place (on Resume, after a skip from the pause menu).
+      this.coach!.setVisible(false);
+      this.readout.setVisible(true);
+    }
+  }
+
   private afterTick(): void {
     this.combat.afterTick();
     this.targets.afterTick(this.state.events);
@@ -269,16 +329,7 @@ export class RangeSession {
     v.player = this.player;
     v.events = this.state.events;
     v.targets = this.state.targets;
-    if (t && !t.finished && t.observe(v)) {
-      this.coach!.show(t);
-      // Done as soon as the last step is (its tick still shows), so a rebuild in that moment can't lose it.
-      if (t.goalIndex >= t.steps.length && !this.tutorialFinishedSeen) this.tutorialFinishedOwed = this.tutorialFinishedSeen = true;
-      if (t.finished) {
-        // Free practice from here: the readout takes the coach's place.
-        this.coach!.setVisible(false);
-        this.readout.setVisible(true);
-      }
-    }
+    if (t && !t.finished && t.observe(v)) this.tutorialMoved(t);
     for (const e of this.state.events) {
       // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall.
       if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: downrange(e.position), target: null };

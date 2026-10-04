@@ -13,12 +13,13 @@ import { vec3 } from '../sim/vec';
 import { addAtmosphere } from './atmosphere';
 import { BBPathsDebug } from './bbPathsDebug';
 import { BBRenderer } from './bbRenderer';
+import { ContactShadows } from './contactShadows';
 import { CharacterRenderer } from './characterRenderer';
 import { DustMotes } from './dustMotes';
 import { FlagRenderer } from './flagRenderer';
 import { ImpactPuffs } from './impactPuffs';
 import { addLighting } from './lighting';
-import { buildMapMeshes, disposeMapMeshes } from './mapMeshes';
+import { buildMapMeshes, disposeMapMeshes, mapLookOf } from './mapMeshes';
 import type { SurfaceTextures } from './proceduralTextures';
 import { RangeTargetsRenderer } from './rangeTargetsRenderer';
 
@@ -97,13 +98,23 @@ describe('disposal', () => {
       scene.add(r.object);
       return () => r.dispose();
     });
-    expectClean('FlagRenderer', (scene) => {
-      const r = new FlagRenderer(colours, 2);
-      scene.add(r.object);
-      return () => r.dispose();
-    });
-    expectClean('RangeTargetsRenderer', (scene) => {
-      const r = new RangeTargetsRenderer(createRangeTargets(), HITS);
+    for (const detail of [false, true]) {
+      expectClean('FlagRenderer', (scene) => {
+        const r = new FlagRenderer(colours, 2);
+        r.setDetail(detail);
+        scene.add(r.object);
+        return () => r.dispose();
+      });
+      expectClean('RangeTargetsRenderer', (scene) => {
+        const r = new RangeTargetsRenderer(createRangeTargets(), HITS);
+        r.setDetail(detail);
+        scene.add(r.object);
+        return () => r.dispose();
+      });
+    }
+    expectClean('ContactShadows', (scene) => {
+      const r = new ContactShadows(characters, HITS.vanishTime);
+      r.update(0, -1);
       scene.add(r.object);
       return () => r.dispose();
     });
@@ -111,16 +122,31 @@ describe('disposal', () => {
 
   it('the map, the sky and trees, and the daylight with its shadow map', () => {
     for (const map of [DEPOT, RANGE_MAP]) {
-      expectClean('buildMapMeshes', (scene) => {
-        const group = buildMapMeshes(map, textures, true);
-        scene.add(group);
-        return () => disposeMapMeshes(group);
+      for (const q of [QUALITY.low, QUALITY.high]) {
+        const atlas = new THREE.Texture();
+        const freed = vi.fn();
+        atlas.addEventListener('dispose', freed);
+        expectClean('buildMapMeshes', (scene) => {
+          const group = buildMapMeshes(map, textures, { ...mapLookOf(q), normalMaps: false }, () => atlas);
+          scene.add(group);
+          return () => disposeMapMeshes(group);
+        });
+        // The signs' texture is the map's own (the surfaces' are shared): it goes with the map.
+        if (q.mapDetail && map === DEPOT) expect(freed).toHaveBeenCalled();
+      }
+    }
+    for (const q of [QUALITY.low, QUALITY.high]) {
+      expectClean('addAtmosphere', (scene) => {
+        const atmosphere = addAtmosphere(scene, new THREE.Vector3(), new THREE.Vector3(0, 1, 0), q, new THREE.Box3(new THREE.Vector3(-20, 0, -10), new THREE.Vector3(20, 3, 10)));
+        // A change of setting rebuilds a mesh: the one it replaces is freed too.
+        atmosphere.setQuality({ trees: q.trees === 2 ? 1 : 2, clouds: !q.clouds });
+        return () => atmosphere.dispose();
       });
     }
-    expectClean('addAtmosphere', (scene) => addAtmosphere(scene, new THREE.Vector3(), new THREE.Vector3(0, 1, 0)));
     const shadowMap = vi.fn();
     expectClean('addLighting', (scene) => {
       const daylight = addLighting(scene, DEPOT, QUALITY.high);
+      daylight.setQuality(QUALITY.low);
       const sun = scene.children.find((o): o is THREE.DirectionalLight => o instanceof THREE.DirectionalLight)!;
       sun.shadow.map = { dispose: shadowMap } as unknown as THREE.WebGLRenderTarget; // as Three.js makes at the first shadow pass
       return () => daylight.dispose();

@@ -6,7 +6,7 @@ import {
   SOUND_CUE_SIZE,
   type SoundCueColour,
 } from '../../config/accessibility';
-import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   AIM_MODES,
   CROUCH_MODES,
@@ -34,11 +34,12 @@ import {
 import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
-import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset, RENDER } from '../../config/render';
+import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
+import { FOV_SETTING, type FrameRateCap, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER, TONE_MAPPING, type ToneMappingId } from '../../config/render';
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
-import { loadSetting, numberIn, oneOf } from '../../settings/storage';
+import { browserStorage, loadSetting, numberIn, oneOf } from '../../settings/storage';
 import { loadChoice } from '../optionPicker';
 
 /** The choices the menus save in the browser, each read back here with its default. */
@@ -49,12 +50,13 @@ export function loadDifficulty(): Difficulty {
 }
 
 /**
- * Your bot teammates' difficulty (M20). Until one is saved it is the opponents' (`opponents`, the saved `difficulty`):
- * before M20 every bot played at that one level, so a returning player's teammates stay as they were and their
- * standard matches still count for the records.
+ * Your bot teammates' difficulty (M20). Until one is saved it follows the opponents' (`opponents`, the saved
+ * `difficulty`) through defaultTeammateDifficulty: the same level, as every bot had before M20, except that Easy
+ * opponents give Normal teammates (audit AI-03). Either way a returning player's standard matches still count for the
+ * records (countsForRecords treats that default pair as standard).
  */
 export function loadTeammateDifficulty(opponents: Difficulty = loadDifficulty()): Difficulty {
-  return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, opponents);
+  return loadChoice('teammateDifficulty', TEAMMATE_DIFFICULTIES, defaultTeammateDifficulty(opponents));
 }
 
 /** Whether a teammate difficulty has been picked and saved (until then it follows the opponents', M20). */
@@ -125,11 +127,40 @@ export function loadFov(): number {
 }
 
 /**
- * The render quality preset picked on Settings → Graphics → Quality (M14), or null if none has been saved: then the
- * game picks one for the visit (config/render.ts startingQuality).
+ * The render quality picked on Settings → Graphics → Quality (M14): a preset or 'custom', or null if none has been
+ * saved: then the game picks one for the visit (config/render.ts startingQuality).
  */
-export function loadSavedQuality(): QualityPreset | null {
-  return loadSetting<QualityPreset | null>('quality', oneOf(QUALITY_CHOICES.map((q) => q.id)), null);
+export function loadSavedQuality(storage = browserStorage()): QualityChoice | null {
+  return loadSetting<QualityChoice | null>('quality', oneOf(QUALITY_CHOICES.map((q) => q.id)), null, storage);
+}
+
+/**
+ * The Custom rows as saved (`graphics.<field>`, config/graphics.ts): only the fields saved with a value their row
+ * offers; config/render.ts resolveQuality fills the rest from High.
+ */
+export function loadCustomQuality(storage = browserStorage()): Partial<QualitySettings> {
+  const custom: Record<string, unknown> = {};
+  for (const row of GRAPHICS_ROWS) {
+    const v = loadSetting(graphicsKey(row.field), (raw) => parseStored(row, raw), undefined, storage);
+    if (v !== undefined) custom[row.field] = v;
+  }
+  return custom as Partial<QualitySettings>;
+}
+
+/** The frame-rate cap (Settings → Graphics; 0 = none, the default). */
+export function loadFrameRateCap(): FrameRateCap {
+  const id = loadChoice('frameRateCap', FRAME_RATE_CAP_CHOICES, 'off');
+  return FRAME_RATE_CAP_CHOICES.find((c) => c.id === id)!.value;
+}
+
+/** Tone mapping (Settings → Graphics; F2): Neutral unless the player picked another (owner decision). */
+export function loadToneMapping(): ToneMappingId {
+  return loadChoice('toneMapping', TONE_MAPPING_CHOICES, TONE_MAPPING.default);
+}
+
+/** The FPS readout (Settings → Graphics): off unless the player turned it on. */
+export function loadShowFps(): boolean {
+  return loadChoice('showFps', SHOW_FPS_CHOICES, 'off') === 'on';
 }
 
 export function loadSensitivity(): number {
@@ -168,6 +199,14 @@ export function loadSoundCues(): boolean {
 /** Whether the tutorial was played to the end (M16). */
 export function loadTutorialDone(): boolean {
   return loadSetting('tutorialDone', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);
+}
+
+/**
+ * The tutorial's step to resume at (audit POOL-14): its id ('' or nothing saved: from the beginning). A step index
+ * saved by the first build of this (a number) is still read, as an index.
+ */
+export function loadTutorialStep(): string | number {
+  return loadSetting<string | number>('tutorialStep', (raw) => (typeof raw === 'string' || (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) ? raw : undefined), '');
 }
 
 /** The sound cues' size (Settings → Accessibility, M24): a scale, 1 = as before. */

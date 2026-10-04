@@ -18,7 +18,11 @@ export type TutorialGoal =
   /** Lean out this far (0..1) either way. */
   | { kind: 'lean'; amount: number }
   /** Nothing to do: the step reads for this long (s). */
-  | { kind: 'read'; seconds: number };
+  | { kind: 'read'; seconds: number }
+  /** Change the fire mode (audit POOL-15). */
+  | { kind: 'fireMode' }
+  /** Fire within `within` seconds of a sprint ending (audit POOL-15: the sprint lockout). */
+  | { kind: 'sprintShot'; within: number };
 
 export interface TutorialStep {
   id: string;
@@ -58,6 +62,12 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     goal: { kind: 'reload' },
   },
   {
+    id: 'selector',
+    title: 'Fire selector',
+    text: 'Press {fireMode} to switch the rifle between full auto and single shots. Single shots save BBs at range; auto wins a close fight.',
+    goal: { kind: 'fireMode' },
+  },
+  {
     id: 'aim',
     title: 'Aim down the sight',
     text: 'Aim with {aim} to look through your sight: zoomed in and steadier. Stay on a target for a moment.',
@@ -82,6 +92,12 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     goal: { kind: 'lean', amount: 0.8 },
   },
   {
+    id: 'sprint',
+    title: 'Sprint, then shoot',
+    text: 'Sprint with {sprint}, then fire straight after. A replica needs a moment after a sprint before it shoots, so slow down a step before you peek a corner.',
+    goal: { kind: 'sprintShot', within: 1.5 },
+  },
+  {
     id: 'secondary',
     title: 'Switch replica',
     text: 'Press {slot2} for your second replica and hit any target with it. {slot1} brings the first one back.',
@@ -90,8 +106,14 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: 'hits',
     title: 'One hit, you\'re out',
-    text: "In a match one BB knocks you out: you hear a tick, raise your hand and walk off. Bots call their hits too, and friendly fire counts. That's the basics: keep practising here, or press Esc and quit to the title screen to start a match.",
-    goal: { kind: 'read', seconds: 12 },
+    text: 'In a match one BB knocks you out: you hear a tick, raise your hand and walk off. Bots call their hits too, and friendly fire counts.',
+    goal: { kind: 'read', seconds: 8 },
+  },
+  {
+    id: 'match',
+    title: 'In a match',
+    text: "Hold {scoreboard} for the scoreboard; the minimap shows your team and the shots you hear. Hold {orderWheel} to give your bot squad an order. Attack / Defend is won by raising the flag. Matches pay Field Credits: spend them in the Armory for new gear, free. That's the basics: keep practising here, or press Esc and quit to start a match.",
+    goal: { kind: 'read', seconds: 14 },
   },
 ];
 
