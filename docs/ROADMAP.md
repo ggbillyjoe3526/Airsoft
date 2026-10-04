@@ -131,6 +131,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M29a Weapon performance data: `stats.md` (every replica's and part's numbers, hand-editable), tiers that add energy and rate of fire, batteries that set the rate of fire, an 11.1 V LiPo battery, a site energy limit, a Performance sheet on Customise | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
+| Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up | In progress (concept sketch v1 with the owner) | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -737,6 +738,22 @@ pool, items 11, 12 and part of 14).
     shot from half as far, muffled sound, a smaller minimap range; a little less energy, a slower draw). On Hard (and
     the Esports difficulty when it comes) each opponent rolls random parts that fit, at Armory odds, seeded by the
     match. Later: pistol barrels, more barrel lengths, a tracer unit on the muzzle (v0.3).
+
+- **M33. Woodland, a second field at night** (owner, 2026-10-04: "much more open and larger than Depot … set at night
+  time"; from five concepts he picked the woodland, night only, no prone yet). Pulled forward from v0.2 (Woodland) and
+  v0.4 (night); the reason is in DECISIONS.
+  - **The field:** large, wide and open with sparse cover (trees, bushes, rocks and boulders), mostly flat. A gentle
+    slope runs end to end, so one team starts downhill and the other uphill, and the ends swap at half-time; one end is
+    much higher (a hill), where Attack / Defend's flag stands. Concept sketches in the project's shared files
+    (`concepts/woodland-night-plan-v1.png`, `woodland-night-mood-v1.png`); the layout is built once the owner has
+    commented on them.
+  - **Night:** the field is played at night only. Light comes from the moon, camp fires and lanterns; how far players
+    and bots see depends on the light where you stand.
+  - **Torch:** a weapon light, free for every player from the start (a starter in `pool.md`, so existing saves get it
+    too), switched on and off with a key.
+  - **Glowing BBs:** a Loadout option on any field, on by default on night fields.
+  - **M33a. Coming soon:** Woodland shows in the Map pop-up under Depot, greyed out with a Coming soon tag, and can't
+    be picked until it is playable.
 
 When the owner calls the game feature complete, alpha ends.
 

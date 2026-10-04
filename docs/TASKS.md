@@ -34,3 +34,16 @@ acceptance:
   7. The headless match guards pass unchanged and Low still holds its frame budget
 status: accepted
 attempts: 1
+
+## M33a · Woodland shown as Coming soon in the Map pop-up
+tier: ui
+perf: skip
+touches: src/map/maps.ts, src/ui/menus/choiceDialog.ts, src/ui/menus/menus.ts, src/style.css, e2e/boot.spec.ts, docs/
+contract: none
+acceptance:
+  1. New game's Map pop-up lists Woodland under Depot, greyed out, with a "Coming soon" tag and a short blurb
+  2. Woodland can't be picked: its entry is disabled, it is not a MapId, and nothing can save or load it as the map
+  3. Depot stays the default and picking it works as before
+  4. ROADMAP has the M33 entry and status row; DECISIONS has the owner's decision
+status: building
+attempts: 1
