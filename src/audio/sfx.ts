@@ -1,6 +1,6 @@
 import { AUDIO, matchOverBlastStart } from '../config/audio';
 import type { ReplicaConfig } from '../config/replicas';
-import { cues, type ShotProfile, type SoundCue } from '../config/sounds';
+import { cues, type ImpactMaterial, type ShotProfile, type SoundCue } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
@@ -10,7 +10,7 @@ import { FoleyTracker, type FoleyMove } from './foley';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, type Muffle, muffleFor, type OcclusionQuery } from './occlusion';
 import { suppressedCopies } from './soundBank';
-import { impactMaterialAt, surfaceUnder } from './soundMaterials';
+import { surfaceUnder } from './soundMaterials';
 import { VoiceLimit } from './voiceLimit';
 import { Whistle } from './whistle';
 
@@ -213,8 +213,7 @@ export class Sfx {
         this.playFrom(e.characterId, localId, characterOf, 'draw', L.mechanism);
         return;
       case 'bbImpact':
-        // Rate-limited so full auto doesn't become a hiss.
-        if (this.impactLimit.take(this.ctx.currentTime)) this.oneShot(cues.impact(impactMaterialAt(this.blocks, e.position)), e.position, L.impact);
+        // Played by impact(), with the material the caller already worked out for the dust (audit L-15).
         return;
       case 'footstep': {
         const c = characterOf(e.characterId);
@@ -273,6 +272,14 @@ export class Sfx {
         this.roundStartWhistle();
         return;
     }
+  }
+
+  /**
+   * A BB hit the level at `at`: the tick of the `material` it hit (the caller works it out once, for the dust as well;
+   * audit L-15). Rate-limited so full auto doesn't become a hiss.
+   */
+  impact(at: Vec3, material: ImpactMaterial): void {
+    if (this.ctx && this.impactLimit.take(this.ctx.currentTime)) this.oneShot(cues.impact(material), at, AUDIO.levels.impact);
   }
 
   /** A teammate's radio keyed twice: the squad order you gave was heard (M22). */

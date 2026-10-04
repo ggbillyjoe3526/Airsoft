@@ -307,7 +307,11 @@ describe('the sound engine (M13)', () => {
 
   it('gives a BB impact its own equal-power panner and disconnects the whole chain when it ends', () => {
     const { sfx, ctx, characterOf } = setup();
+    // The event itself plays nothing: CombatPresentation passes the material it worked out for the dust (audit L-15).
     sfx.onEvent({ type: 'bbImpact', position: vec3(3, 0, 0), ownerId: 1 }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(0);
+    sfx.impact(vec3(3, 0, 0), 'concrete');
+    expect(plays(ctx.sources[0]!, 'impact.concrete')).toBe(true);
     const [panner] = ctx.panners;
     expect(panner!.panningModel).toBe('equalpower');
     const src = ctx.sources[0]!;
@@ -580,7 +584,8 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     expect(ctx.sources).toHaveLength(AUDIO.footsteps.maxPerWindow + 2);
 
     const before = ctx.sources.length;
-    for (let i = 0; i < AUDIO.maxImpactsPerWindow + 3; i++) sfx.onEvent({ type: 'bbImpact', position: vec3(3, 0, 0), ownerId: 1 }, PLAYER, characterOf);
+    for (let i = 0; i < AUDIO.maxImpactsPerWindow + 3; i++) sfx.impact(vec3(3, 0, 0), 'metal');
+    expect(plays(ctx.sources.at(-1)!, 'impact.metal')).toBe(true);
     expect(ctx.sources.length - before).toBe(AUDIO.maxImpactsPerWindow);
   });
 });
