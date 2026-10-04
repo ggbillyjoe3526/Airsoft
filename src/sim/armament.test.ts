@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, GAS_PISTOL, hopUpLift, LOADOUT, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
-import { type ArmamentContext, createArmament, fitParts, type Muzzle, nextFireMode, nextSpare, rattles, setBbWeights, setHopUps, stepArmament, type WorldQuery } from './armament';
+import { type ArmamentContext, createArmament, fitParts, type Muzzle, nextFireMode, nextSpare, rattles, setBbWeights, setHopUps, shotHeardScale, stepArmament, type WorldQuery } from './armament';
 import { createCharacter, respawnCharacter } from './character';
 import { createBBPool } from './ballistics';
 import { createCommand, type PlayerCommand } from './commands';
@@ -526,5 +526,20 @@ describe('attachments on the armament (M17b)', () => {
     expect(c.armament.parts[0]).toMatchObject({ grip: 'vertical', magazine: 'hiCap' });
     expect(c.armament.ammo[0]!.mag).toBe(120);
     expect(rattles(c.armament)).toBe(true);
+  });
+});
+
+describe('how far a shot carries (M29b)', () => {
+  it("is the usual 1 as it comes, the silencer's share when one is fitted on the active replica, and follows a switch", () => {
+    const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    expect(shotHeardScale(c)).toBe(1);
+    fitParts(c.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }, { grip: 'none', magazine: 'standard' }]);
+    expect(shotHeardScale(c)).toBe(0.5);
+    c.armament.active = 1;
+    expect(shotHeardScale(c)).toBe(1);
+    // Kept through a respawn, like the other fitted parts.
+    c.armament.active = 0;
+    respawnCharacter(c);
+    expect(shotHeardScale(c)).toBe(0.5);
   });
 });

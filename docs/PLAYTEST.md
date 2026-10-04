@@ -198,6 +198,26 @@ The numbers live in `stats.md` beside `pool.md`. Start, then Loadout; right-clic
   says 20 BBs/s and the rifle (and the bots' rifles) fire faster. Put it back. A typo (`2O`) shows in the console and
   `npm run test` names its line.
 
+## Barrels, silencer and Hard opponents' kit (M29b)
+
+Turn on Dev settings → Unlock all gear, then Loadout; right-click the rifle to customise it.
+
+- [ ] **Rows.** The rifle has Barrel and Muzzle rows; the pistol's Barrel row says it has a fixed barrel and its
+  Muzzle row offers the Silencer.
+- [ ] **Tight-Bore Barrel.** Spread −15 % and energy +3 % on the sheet; the first-person rifle looks the same length.
+- [ ] **Long Barrel.** Energy +8 %, Draw and Aim raise +15 % (red); the rifle's barrel is visibly longer in first
+  person and BBs leave from its new end.
+- [ ] **Silencer.** On both replicas: a can on the muzzle, energy −5 %, Draw slower, "Shots heard from" 22 m → 11 m
+  (green). In a match the shots sound duller and quieter.
+- [ ] **Bots hear less.** In a Normal match with the silenced rifle, fire from about 15 m behind a bot that can't see
+  you: it shouldn't turn round (unsilenced it does). On the minimap (Sound cues on too) a silenced bot shows up only
+  within half the usual range.
+- [ ] **Hard opponents.** Start a Hard match and play a few rounds: opponents' rifles differ (some faster, some with a
+  silencer you hear muffled, some longer-ranged). Play Again rolls new kits. Easy and Normal opponents, and your
+  teammates on any level, are as before.
+- [ ] **Shots.** A ten-Shot can dispense the Tight-Bore Barrel, Long Barrel or Silencer; the Armory lists them under
+  Barrels and Muzzle parts.
+
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the

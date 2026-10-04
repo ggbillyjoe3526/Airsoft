@@ -6,7 +6,7 @@ import type { ReplicaConfig } from '../config/replicas';
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { botSeed, planSeed } from '../core/seed';
 import { cellX, cellZ, createNavSearch, findPath, type NavGrid, type NavSearch } from '../nav/navGrid';
-import type { WorldQuery } from '../sim/armament';
+import { shotHeardScale, type WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
@@ -296,7 +296,8 @@ export class BotController {
         this.planRound();
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
-        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance);
+        // A silencer (M29b) shortens how far the shot carries.
+        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance * shotHeardScale(shooter));
       } else if (e.type === 'characterHit') {
         // Teammates near someone who calls a hit turn towards where it came from; not from a BB fired by someone hit
         // since (they are walking off, not where the threat is).

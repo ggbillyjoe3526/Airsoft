@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { MUZZLES } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
 import { BOTS, type BotConfig, botConfig, DIFFICULTIES, type Difficulty } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
@@ -577,6 +578,36 @@ describe('bots in a duel', () => {
     expect(heardShots(behindWall + 3, BOTS)).toBe(false);
     // Without the wall rule (before M22) the same shot carried its full range.
     expect(heardShots(behindWall + 3, HEAR_THROUGH_WALLS)).toBe(true);
+  });
+
+  it("hear a silenced shot only the silencer's share as far (M29b)", () => {
+    const wall: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 };
+    const heardShots = (dist: number, silenced: boolean) => {
+      const { bots, run, commands, player } = duel(dist, () => {}, wall);
+      if (silenced) fitParts(player.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+      Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 });
+      run(0.3);
+      return bots.bots[0]!.hasLastKnown;
+    };
+    const silencedReach = BOTS.hearingDistance * BOTS.wallHearing * MUZZLES.silencer.heardScale;
+    expect(heardShots(silencedReach - 1.5, true)).toBe(true);
+    expect(heardShots(silencedReach + 1.5, true)).toBe(false);
+    expect(heardShots(silencedReach + 1.5, false)).toBe(true);
+  });
+
+  it('hear a silenced shot at half the range with no wall rule in play: 11 m rather than 22 m (M29b)', () => {
+    const heardShots = (dist: number, silenced: boolean) => {
+      const { bots, run, commands, player } = duel(dist, () => {}, { raycastStatic: (_o, _d, max) => max * 0.5 }, HEAR_THROUGH_WALLS); // never seen, no wall shortening
+      if (silenced) fitParts(player.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+      Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 });
+      run(0.3);
+      return bots.bots[0]!.hasLastKnown;
+    };
+    expect(BOTS.hearingDistance).toBe(22);
+    expect(heardShots(BOTS.hearingDistance - 2, false)).toBe(true);
+    expect(heardShots(BOTS.hearingDistance - 2, true)).toBe(false); // 20 m: heard as usual, not through a silencer
+    expect(heardShots(BOTS.hearingDistance / 2 - 1.5, true)).toBe(true);
+    expect(heardShots(BOTS.hearingDistance / 2 + 1.5, true)).toBe(false);
   });
 
   it('still need their full reaction time on re-sighting someone after only hearing them', () => {
