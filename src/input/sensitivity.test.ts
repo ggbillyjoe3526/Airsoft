@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOUSE } from '../config/controls';
-import { cmPer360, sameSensitivityAs, sensitivityForCm } from './sensitivity';
+import { cmPer360, roundToStep, sameSensitivityAs, sensitivityForCm, sensitivityFromTypedCm } from './sensitivity';
 
 describe('sensitivity as cm/360 (M18)', () => {
   it('works out the mouse travel for a full turn from the DPI', () => {
@@ -17,6 +17,26 @@ describe('sensitivity as cm/360 (M18)', () => {
         expect(sensitivityForCm(cmPer360(sens, dpi), dpi)).toBeCloseTo(sens, 9);
       }
     }
+  });
+
+  it('rounds to a step exactly', () => {
+    expect(roundToStep(1.2345, 0.05)).toBe(1.25);
+    expect(roundToStep(1.224, 0.05)).toBe(1.2);
+    expect(roundToStep(0.4988, 0.05)).toBe(0.5);
+    expect(roundToStep(3, 0.05)).toBe(3);
+  });
+
+  it('sets a typed cm/360 as the nearest sensitivity the slider can show, within its range (audit L-32)', () => {
+    // 40 cm at 800 DPI is 0.4988: the slider shows 0.50, so the game turns at 0.50 too.
+    expect(sensitivityFromTypedCm(40, 800)).toBe(0.5);
+    for (const cm of [3, 7.7, 19.95, 33.3, 61, 150]) {
+      const v = sensitivityFromTypedCm(cm, 800);
+      expect(v).toBe(roundToStep(v, MOUSE.sensitivityStep));
+      expect(v).toBeGreaterThanOrEqual(MOUSE.minSensitivity);
+      expect(v).toBeLessThanOrEqual(MOUSE.maxSensitivity);
+    }
+    expect(sensitivityFromTypedCm(1, 800)).toBe(MOUSE.maxSensitivity);
+    expect(sensitivityFromTypedCm(500, 800)).toBe(MOUSE.minSensitivity);
   });
 
   it('gives the same feel in another shooter from its turn per count', () => {

@@ -5,7 +5,7 @@ import { AUDIO } from './audio';
 
 export const REDUCED_MOTION_CHOICES: readonly { id: Switch; label: string; blurb: string }[] = [
   { id: 'off', label: 'Off', blurb: 'The replica bobs as you walk and sways as you turn, and the view tips as you lean.' },
-  { id: 'on', label: 'On', blurb: 'No weapon bob or sway, half the recoil kick and hit jolt, a gentler tip as you lean, and no drifting dust.' },
+  { id: 'on', label: 'On', blurb: 'No weapon bob or sway, half the recoil kick and hit jolt, a gentler tip as you lean, no drifting dust, and no pulsing or flashing on the HUD.' },
 ];
 
 /**

@@ -53,6 +53,7 @@ export class HitFeedback {
     if (!visible) {
       this.flash.classList.remove('show');
       this.marker.classList.remove('show');
+      this.direction.classList.remove('show');
     }
   }
 

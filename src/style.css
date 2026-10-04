@@ -233,6 +233,11 @@ body {
   gap: 16px;
 }
 
+/* The title's hint (a refused mouse lock) takes a line of its own over the buttons. */
+.menu-title-actions .menu-hint {
+  flex-basis: 100%;
+}
+
 .menu-title-build {
   position: absolute;
   right: var(--menu-gutter);
@@ -1627,6 +1632,49 @@ kbd {
   }
   to {
     opacity: 0.55;
+  }
+}
+
+/*
+ * Reduced motion (Settings → Accessibility, audit M-03): Game sets `reduced-motion` on #app. The flag warning stops
+ * pulsing (its colour and text carry it), the hit flash is a soft fade rather than a full-screen flash, and the hit
+ * direction wedge holds still while you call your hit. The same rules follow the system's preference unless the player
+ * turned the setting off (`full-motion`).
+ */
+.reduced-motion .sb-flag.urgent .sb-flag-text {
+  animation: none;
+}
+
+.reduced-motion .hitfx-flash.show {
+  animation-name: hitfx-flash-soft;
+}
+
+.reduced-motion .hitfx-direction.show {
+  animation: none;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .sb-flag.urgent .sb-flag-text {
+    animation: none;
+  }
+
+  #app:not(.full-motion) .hitfx-flash.show {
+    animation-name: hitfx-flash-soft;
+  }
+
+  #app:not(.full-motion) .hitfx-direction.show {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+@keyframes hitfx-flash-soft {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0;
   }
 }
 

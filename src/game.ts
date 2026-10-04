@@ -107,6 +107,11 @@ export class Game {
   private tutorial = false;
   /** The loadout changed since the range was built: Resume rebuilds it with the new one. */
   private loadoutChanged = false;
+  /**
+   * New game's choices (or the team colours) changed since the match was built: Play builds it again. Unchanged, a Play
+   * clicked again after a refused mouse lock reuses the match already built (audit L-33).
+   */
+  private setupChanged = false;
   private rafId = 0;
   private lastTime = 0;
   private ticksThisSecond = 0;
@@ -211,11 +216,11 @@ export class Game {
       bindings: this.bindings,
       loadout: {
         slots: LOADOUT_SLOTS,
-        picked: { initial: this.picked, onChange: (slot, r) => ((this.picked[slot] = r), (this.loadoutChanged = true)) },
-        optic: { initial: this.optic, onChange: (o) => ((this.optic = o), (this.loadoutChanged = true)) },
-        hopUp: { initial: (r) => this.hopUpOf(r), onChange: (r, dial) => (this.hopUps.set(r.id, dial), (this.loadoutChanged = true)) },
-        bbWeight: { initial: (r) => this.bbWeightOf(r), onChange: (r, grams) => (this.bbWeights.set(r.id, grams), (this.loadoutChanged = true)) },
-        parts: { initial: (r) => this.partsOf(r), onChange: (r, parts) => (this.parts.set(r.id, parts), (this.loadoutChanged = true)) },
+        picked: { initial: this.picked, onChange: (slot, r) => ((this.picked[slot] = r), (this.loadoutChanged = this.setupChanged = true)) },
+        optic: { initial: this.optic, onChange: (o) => ((this.optic = o), (this.loadoutChanged = this.setupChanged = true)) },
+        hopUp: { initial: (r) => this.hopUpOf(r), onChange: (r, dial) => (this.hopUps.set(r.id, dial), (this.loadoutChanged = this.setupChanged = true)) },
+        bbWeight: { initial: (r) => this.bbWeightOf(r), onChange: (r, grams) => (this.bbWeights.set(r.id, grams), (this.loadoutChanged = this.setupChanged = true)) },
+        parts: { initial: (r) => this.partsOf(r), onChange: (r, parts) => (this.parts.set(r.id, parts), (this.loadoutChanged = this.setupChanged = true)) },
         summary: () => ({
           replicas: this.picked.map((r) => r.name).join('\n'),
           detail: loadoutSummary(
@@ -244,11 +249,11 @@ export class Game {
         this.play();
       },
       tutorialDone: loadTutorialDone(),
-      map: { initial: this.map, onChange: (m) => (this.map = m) },
-      mode: { initial: this.mode, onChange: (m) => (this.mode = m) },
-      difficulty: { initial: this.difficulty, onChange: (d) => (this.difficulty = d) },
-      teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => (this.teammateDifficulty = d) },
-      matchRules: { initial: this.matchRules, onChange: (m) => (this.matchRules = m) },
+      map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true)) },
+      mode: { initial: this.mode, onChange: (m) => ((this.mode = m), (this.setupChanged = true)) },
+      difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
+      teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
+      matchRules: { initial: this.matchRules, onChange: (m) => ((this.matchRules = m), (this.setupChanged = true)) },
       controls: {
         sensitivity: { initial: this.input.sensitivity, onChange: (v) => (this.input.sensitivity = v) },
         aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
@@ -265,11 +270,12 @@ export class Game {
       accessibility: {
         reducedMotion: { initial: this.reducedMotion, onChange: (on) => this.changeReducedMotion(on) },
         // The figures are built with their colours, so a new set shows from the next match.
-        teamColours: { initial: this.teamColours, onChange: (set) => (this.teamColours = set) },
+        teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = true)) },
         soundCues: { initial: this.soundCues, onChange: (on) => this.changeSoundCues(on) },
       },
     });
     this.menus.showTitle();
+    this.showMotion();
     if (options.softwareRendering) {
       const note = BROWSER_NOTES.noHardwareAcceleration;
       this.menus.showTitleWarning(options.automaticQuality ? `${note} ${BROWSER_NOTES.qualitySetLow}` : note);
@@ -346,6 +352,16 @@ export class Game {
   private changeReducedMotion(on: boolean): void {
     this.reducedMotion = on;
     this.session?.setMotion(motionScale(on));
+    this.showMotion();
+  }
+
+  /**
+   * Reduced motion for the HUD's CSS animations (style.css, audit M-03): `reduced-motion` calms them; `full-motion`
+   * marks an explicit Off, so the stylesheet's `prefers-reduced-motion` fallback doesn't override the player's choice.
+   */
+  private showMotion(): void {
+    this.container.classList.toggle('reduced-motion', this.reducedMotion);
+    this.container.classList.toggle('full-motion', !this.reducedMotion);
   }
 
   /** A quality preset picked on Settings → Graphics: applied at once to the renderer and the match loaded. */
@@ -388,8 +404,8 @@ export class Game {
 
   /**
    * Play on New game, Resume, Play Again. Before play has begun in a match, the match is built here from New game's
-   * choices (a match left over from a lock request still pending is replaced). Runs in the click, so audio can be
-   * unlocked.
+   * choices; a match left over from a lock request still pending (or refused) is reused if nothing changed since, and
+   * replaced otherwise. Runs in the click, so audio can be unlocked.
    */
   private play(): void {
     if (this.graphicsLost) return;
@@ -400,8 +416,9 @@ export class Game {
       // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
       // same tutorial step).
       this.openRange(s.pose, s.tutorialStep);
-    } else if (!this.started) {
+    } else if (!this.started && (this.setupChanged || !(s instanceof MatchSession))) {
       this.session?.dispose();
+      this.setupChanged = false;
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         map: mapData(this.map),
         mode: this.mode,
