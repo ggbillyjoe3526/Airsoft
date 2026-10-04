@@ -183,7 +183,8 @@ export class ArmoryScreen {
     const notes = [ARMORY_TEXT.perShot(e.assetsPerShot)];
     if (guarantee) notes.push(ARMORY_TEXT.guarantee(guarantee.label));
     const pity = el('ul', 'armory-pity');
-    for (const p of pityLeft(this.pool, c)) {
+    // The nearest guarantee first.
+    for (const p of pityLeft(this.pool, c).sort((x, y) => x.shots - y.shots)) {
       const line = el('li', '', ARMORY_TEXT.pity(p.tier.label, p.shots));
       line.dataset.tier = p.tier.id;
       pity.append(line);

@@ -199,9 +199,11 @@ ends the round). A hit character is eliminated
   tier line.
 - **Armory (M26c):** `pool/armory.ts` holds its rules, pure, over a `Collection`: `matchEarnings` (the FC a finished
   match pays, from `MatchSession.takeOutcome`), `buyTokens`, `takeShots` (paid in Tokens, then FC; the draws carry on
-  from the collection's saved `sim/rng.ts` state, so they are seeded and replayable) and `scrapSpares`. `Game` adds a
-  match's FC at the result and saves the collection; `ui/menus/armoryScreen.ts` is the screen, opened from New game's
-  Armory tile.
+  from the collection's saved `sim/rng.ts` state mixed with fresh entropy per Shot, replayable with a fixed one; pity
+  counts kept in the collection, FA10) and `scrapSpares` (one copy kept per asset, its best tier). `stats/settleMatch.ts`
+  pays and records a decided match once (`MatchTakes`); `Game` syncs the collection with storage before changing it
+  (`syncCollection`: another tab's newer revision wins) and saves it; `ui/menus/armoryScreen.ts` is the screen, opened
+  from New game's Armory tile, with `confirmDialog.ts` before big spends.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).
@@ -261,7 +263,7 @@ request. Each line names where it lives and what pins it.
   renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
   "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added. Pinned by
   `settings/storage.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
   power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
   over their built-in ones. Pinned by

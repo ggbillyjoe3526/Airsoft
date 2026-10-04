@@ -3495,7 +3495,8 @@ kbd {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
 }
 
 .armory-pity li {
