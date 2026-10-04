@@ -411,7 +411,8 @@ function rackPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
       add(out, min, max, 'barrier', beam, false);
     }
   }
-  const [dMin, dMax] = span(along, inner[0], inner[1], b.min[across] + r.post, b.max[across] - r.post, deckY, deckY + r.beam);
+  // The deck runs out to the beams' backs, leaving no slit between them.
+  const [dMin, dMax] = span(along, inner[0], inner[1], b.min[across] + r.post - r.beamSet, b.max[across] - r.post + r.beamSet, deckY, deckY + r.beam);
   add(out, dMin, dMax, 'steelPlate', beam, false);
   const [sMin, sMax] = span(along, inner[0], inner[1], mid - r.spine / 2, mid + r.spine / 2, b.min[1] + r.beam, b.max[1] - r.beam);
   add(out, sMin, sMax, 'steelPlate', shade(color, 0.55), false);
