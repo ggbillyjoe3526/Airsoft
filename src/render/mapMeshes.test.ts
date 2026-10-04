@@ -96,9 +96,30 @@ describe('the art pass on the map (M14)', () => {
     for (const b of stacked) expect(blockPieces(b, DEPOT.blocks)).toHaveLength(1);
   });
 
+  it('draws each site prop (M25b) with its details, out to every side of its block, so a BB stops on what you see', () => {
+    const details = { toilet: 5, rack: 20, gabion: 2, wrapped: 4, ibc: 20, sandbags: 4, generator: 10, skip: 6 } as const;
+    for (const [kind, least] of Object.entries(details)) {
+      const blocks = DEPOT.blocks.filter((b) => b.kind === kind);
+      expect(blocks.length, kind).toBeGreaterThan(0);
+      for (const b of blocks) {
+        const pieces = blockPieces(b, DEPOT.blocks);
+        expect(pieces.length, kind).toBeGreaterThanOrEqual(least);
+        // Some piece comes within a few centimetres of each side face.
+        for (const [axis, key] of [[0, 'x'], [2, 'z']] as const) {
+          const lo = b.center[key] - b.size[key] / 2;
+          const hi = b.center[key] + b.size[key] / 2;
+          expect(Math.min(...pieces.map((p) => p.box.min[axis]!)) - lo, `${kind} ${key}`).toBeLessThan(0.06);
+          expect(hi - Math.max(...pieces.map((p) => p.box.max[axis]!)), `${kind} ${key}`).toBeLessThan(0.06);
+        }
+        expect(Math.max(...pieces.map((p) => p.box.max[1]!)), kind).toBeCloseTo(b.center.y + b.size.y / 2, 6);
+      }
+    }
+  });
+
   it('builds the whole of Depot in a handful of draw calls', () => {
     const group = buildMapMeshes(DEPOT, textures, true);
-    expect(group.children.length).toBeLessThanOrEqual(8);
+    // One mesh per texture (and shadow setting): 8 before M25b's sandbag and gabion textures.
+    expect(group.children.length).toBeLessThanOrEqual(10);
     disposeMapMeshes(group);
   });
 

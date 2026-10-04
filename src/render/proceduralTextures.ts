@@ -6,7 +6,7 @@ import { createRng, rngNext, type RngState } from '../sim/rng';
  * The field's surface textures, drawn on canvases as each match loads (M14 art pass: no downloaded assets, see
  * docs/ASSETS.md): poured concrete with saw-cut joints, oil stains and hairline cracks; painted breeze blocks; plank
  * crates with a braced frame and nails; ribbed container steel with dirt streaks; diamond tread plate; moulded
- * plastic. Each tiles seamlessly; `worldSize` is how many metres one repeat covers (see mapMeshes' world-space UVs).
+ * plastic; sandbags and sand-filled wire mesh (M25b). Each tiles seamlessly; `worldSize` is how many metres one repeat covers (see mapMeshes' world-space UVs).
  * Light and dark also read as height, so each texture doubles as its own bump map when surface relief is on.
  */
 export interface ProceduralTexture {
@@ -329,11 +329,107 @@ function barrier(): ProceduralTexture {
   return finish(canvas, 'barrier');
 }
 
+/**
+ * Sandbags laid in running bond (M25b), six courses of two bags per repeat: each bag a rounded, slightly different tan
+ * with a woven speckle, lit from above, dark gaps between them.
+ */
+function sandbag(): ProceduralTexture {
+  const [canvas, ctx] = makeCanvas();
+  const rng = createRng(61);
+  ctx.fillStyle = '#4a4134'; // the shadowed gaps between bags
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  const courses = 6;
+  const ch = SIZE / courses;
+  const bw = SIZE / 2;
+  for (let c = 0; c < courses; c++) {
+    const offset = c % 2 === 0 ? 0 : bw / 2;
+    for (let i = 0; i < 2; i++) {
+      const tone = 0.88 + rngNext(rng) * 0.18;
+      const cx = offset + i * bw + bw / 2;
+      const cy = c * ch + ch / 2;
+      wrapped(cx, cy, bw / 2, (x, y) => {
+        const grad = ctx.createLinearGradient(0, y - ch / 2, 0, y + ch / 2);
+        grad.addColorStop(0, rgba(214 * tone, 194 * tone, 150 * tone, 1));
+        grad.addColorStop(0.55, rgba(190 * tone, 168 * tone, 124 * tone, 1));
+        grad.addColorStop(1, rgba(132 * tone, 114 * tone, 82 * tone, 1));
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(x - bw / 2 + 2 * PX, y - ch / 2 + 2 * PX, bw - 4 * PX, ch - 4 * PX, ch * 0.42);
+        ctx.fill();
+        // The tied end of the bag: a crease near one end.
+        ctx.strokeStyle = 'rgba(90,76,52,0.45)';
+        ctx.lineWidth = 1.2 * PX;
+        ctx.beginPath();
+        ctx.moveTo(x + bw * 0.36, y - ch * 0.3);
+        ctx.quadraticCurveTo(x + bw * 0.4, y, x + bw * 0.36, y + ch * 0.3);
+        ctx.stroke();
+      });
+    }
+  }
+  speckle(ctx, rng, 9000, 0.12, false); // the weave
+  speckle(ctx, rng, 4000, 0.1, true);
+  blotches(ctx, rng, 10, 10, 34, [96, 82, 58], 0.12); // mud
+  return finish(canvas, 'sandbag');
+}
+
+/**
+ * A wire-mesh gabion lined with geotextile and filled with sand (M25b, the field-build barrier): beige fabric bulging
+ * between the welded square mesh, a thicker coil joint down the edge of each cell (one per repeat).
+ */
+function gabion(): ProceduralTexture {
+  const [canvas, ctx] = makeCanvas();
+  const rng = createRng(67);
+  ctx.fillStyle = '#c9b892';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  blotches(ctx, rng, 30, 20, 70, [235, 222, 190], 0.12);
+  blotches(ctx, rng, 24, 20, 70, [120, 104, 74], 0.1);
+  speckle(ctx, rng, 7000, 0.1, false);
+  const squares = 16;
+  const sq = SIZE / squares;
+  // The fabric bulges a little in each square of mesh: lighter in the middle.
+  for (let i = 0; i < squares; i++) {
+    for (let j = 0; j < squares; j++) {
+      const g = ctx.createRadialGradient((i + 0.5) * sq, (j + 0.4) * sq, 0, (i + 0.5) * sq, (j + 0.5) * sq, sq * 0.7);
+      g.addColorStop(0, 'rgba(255,248,225,0.16)');
+      g.addColorStop(1, 'rgba(60,50,32,0.12)');
+      ctx.fillStyle = g;
+      ctx.fillRect(i * sq, j * sq, sq, sq);
+    }
+  }
+  // The mesh: dark galvanised wire with a light glint along one side.
+  for (let k = 0; k < squares; k++) {
+    ctx.fillStyle = 'rgba(70,72,74,0.85)';
+    ctx.fillRect(k * sq, 0, 1.4 * PX, SIZE);
+    ctx.fillRect(0, k * sq, SIZE, 1.4 * PX);
+    ctx.fillStyle = 'rgba(235,238,240,0.45)';
+    ctx.fillRect(k * sq + 1.4 * PX, 0, 0.6 * PX, SIZE);
+    ctx.fillRect(0, k * sq + 1.4 * PX, SIZE, 0.6 * PX);
+  }
+  // The coil joint where one cell meets the next.
+  ctx.fillStyle = 'rgba(60,62,64,0.9)';
+  ctx.fillRect(0, 0, 3 * PX, SIZE);
+  for (let y = 0; y < SIZE; y += 4 * PX) {
+    ctx.fillStyle = 'rgba(225,228,230,0.5)';
+    ctx.fillRect(0, y, 3 * PX, 1.2 * PX);
+  }
+  blotches(ctx, rng, 8, 8, 26, [96, 82, 58], 0.14); // dirt splashed up the fabric
+  return finish(canvas, 'gabion');
+}
+
 export type SurfaceTextures = Record<SurfaceTextureId, ProceduralTexture>;
 
 /** Draws every surface texture (once per game: Renderer.surfaceTextures shares them between sessions). */
 export function createSurfaceTextures(): SurfaceTextures {
-  return { concrete: concrete(), blockWall: blockWall(), crate: crate(), corrugated: corrugated(), steelPlate: steelPlate(), barrier: barrier() };
+  return {
+    concrete: concrete(),
+    blockWall: blockWall(),
+    crate: crate(),
+    corrugated: corrugated(),
+    steelPlate: steelPlate(),
+    barrier: barrier(),
+    sandbag: sandbag(),
+    gabion: gabion(),
+  };
 }
 
 export function disposeSurfaceTextures(t: SurfaceTextures): void {

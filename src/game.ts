@@ -7,7 +7,7 @@ import { activeDev, type DevSettings, devCheating } from './config/dev';
 import { ROUNDS } from './config/hits';
 import type { MatchRules } from './config/matchRules';
 import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './config/matchInfo';
-import { BROWSER_NOTES } from './config/menus';
+import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { QUALITY, type QualityPreset } from './config/render';
@@ -34,8 +34,10 @@ import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
 import { type Collection, loadCollection, saveCollection } from './pool/collection';
 import { GAME_POOL } from './pool/gamePool';
-import { collectionOwnership, LoadoutModel } from './pool/loadoutModel';
+import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
+import { earn, type Earnings, matchPay } from './pool/armory';
+import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
@@ -160,6 +162,8 @@ export class Game {
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
+  /** What the last match paid in Field Credits (M26c), for its summary. */
+  private lastEarnings: Earnings | null = null;
   /** Reduced motion (Settings → Accessibility), kept across matches. */
   private reducedMotion = loadReducedMotion();
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
@@ -202,8 +206,9 @@ export class Game {
     this.teammateDifficulty = loadTeammateDifficulty();
     this.matchRules = loadMatchRules();
     this.collection = loadCollection(GAME_POOL, options.seed);
-    this.loadout = new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection));
-    carryOverOldPicks(this.loadout, this.collection, saveCollection);
+    this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear));
+    // Against what is really owned, so the picks land in the real loadout even with Unlock all gear on (M26d).
+    carryOverOldPicks(new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection)), this.collection, saveCollection);
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
@@ -250,6 +255,19 @@ export class Game {
         model: this.loadout,
         onChange: () => (this.loadoutChanged = this.setupChanged = true),
         summary: () => loadoutTile(this.loadout),
+      },
+      armory: {
+        pool: GAME_POOL,
+        collection: () => this.collection,
+        equipped: () => this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : [])),
+        onChange: () => {
+          saveCollection(this.collection);
+          this.loadoutChanged = this.setupChanged = true;
+        },
+        summary: () =>
+          this.dev.disableArmory
+            ? { value: 'Off', detail: ARMORY_TEXT.off, disabled: true }
+            : { value: fcText(this.collection.fc), detail: `${this.collection.tokens} ${this.collection.tokens === 1 ? 'Token' : 'Tokens'}. ${ARMORY_TEXT.tileDetail}`, disabled: false },
       },
       onPlay: () => {
         // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
@@ -435,6 +453,8 @@ export class Game {
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
     this.session?.setDevCheats(this.dev);
+    // Unlock all gear changes what the Loadout offers and carries; the next Play rebuilds the match with it.
+    if (this.dev.unlockAllGear !== before.unlockAllGear) this.loadoutChanged = this.setupChanged = true;
   }
 
   /** A new session takes the Dev settings in force (M24). */
@@ -597,10 +617,24 @@ export class Game {
         this.recordNews = addMatch(this.records, result);
         saveRecords(this.records, browserStorage());
       }
+      // And it pays its Field Credits once (M26c); a second stop on the same result shows the same pay.
+      // With the Armory switched off (Dev settings, M26d) nothing is paid.
+      const outcome = s.takeOutcome();
+      const pay = outcome && matchPay(GAME_POOL.economy, outcome, this.dev.disableArmory);
+      if (pay) {
+        this.lastEarnings = pay;
+        earn(this.collection, this.lastEarnings.total);
+        saveCollection(this.collection);
+        this.menus.refresh();
+      } else if (!s.paysFieldCredits || this.dev.disableArmory) {
+        // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
+        this.lastEarnings = null;
+      }
       this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
         result: `${headline} · ${score}`,
         blocks: s.summaryBlocks(),
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
+        fieldCredits: this.lastEarnings,
       });
     } else {
       const mine = s.player.team;

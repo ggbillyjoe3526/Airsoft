@@ -6,7 +6,7 @@
  * again). The loadout is reached only through New game, so never mid-match; the practice range (M21, from the title)
  * opens it from its pause menu too, since nothing is at stake there.
  */
-export type MenuScreen = 'title' | 'setup' | 'loadout' | 'settings' | 'pause' | 'summary' | 'result';
+export type MenuScreen = 'title' | 'setup' | 'loadout' | 'armory' | 'settings' | 'pause' | 'summary' | 'result';
 
 /** Where Settings (or, on the practice range, the Loadout) was opened from, and so where its Back button returns. */
 export type SettingsOrigin = 'setup' | 'pause';
@@ -18,6 +18,9 @@ export function backTarget(screen: MenuScreen, settingsFrom: SettingsOrigin, loa
       return 'title';
     case 'loadout':
       return loadoutFrom;
+    // The Armory (M26c) is reached only from New game.
+    case 'armory':
+      return 'setup';
     case 'settings':
       return settingsFrom;
     default:

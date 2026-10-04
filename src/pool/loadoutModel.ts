@@ -1,6 +1,6 @@
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
 import { loadSetting, numberIn, saveSetting } from '../settings/storage';
-import { type Collection, type ItemRef, itemKey, parseItemKey } from './collection';
+import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { EMPTY_FIT, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
 import { type Asset, fits, type Pool, replicaOf } from './pool';
 
@@ -27,13 +27,32 @@ export interface PlayerKit {
 /** What the player can equip: the collection's items, or (Dev settings, M26d) everything. */
 export interface Ownership {
   owns(ref: ItemRef): boolean;
+  /**
+   * True while everything is unlocked (M26d): picks are then saved apart from the real ones (under `equip.dev.` and
+   * `fit.dev.`), starting from them, so turning Unlock all gear off brings back the loadout the player owns.
+   */
+  sandboxed?(): boolean;
 }
 
 export function collectionOwnership(collection: () => Collection): Ownership {
   return { owns: (ref) => (collection().owned[itemKey(ref.asset, ref.tier)] ?? 0) > 0 };
 }
 
+/** The collection's items, or, while `unlockAll()` (Dev settings → Unlock all gear, M26d), every asset at every tier. */
+export function gameOwnership(pool: Pool, collection: () => Collection, unlockAll: () => boolean): Ownership {
+  const owned = collectionOwnership(collection);
+  return { owns: (ref) => (unlockAll() ? inPool(pool, ref) : owned.owns(ref)), sandboxed: unlockAll };
+}
+
 const NONE = 'none';
+
+type Pick = `equip.${string}` | `fit.${string}`;
+
+/** `equip.primary` → `equip.dev.primary`: where a pick made with everything unlocked is kept. */
+function sandboxField(field: Pick): Pick {
+  const dot = field.indexOf('.');
+  return `${field.slice(0, dot)}.dev.${field.slice(dot + 1)}` as Pick;
+}
 
 export class LoadoutModel {
   constructor(
@@ -64,7 +83,8 @@ export class LoadoutModel {
     const out: (ItemRef | null)[] = [];
     GEAR_SLOTS.forEach((slot, i) => {
       const used = new Set(out.map((r) => r?.asset));
-      const saved = this.readItem(`equip.${slot}`);
+      const raw = this.readPick(`equip.${slot}`);
+      const saved = raw ? parseItemKey(raw) : null;
       if (saved && this.isReplica(saved) && this.ownership.owns(saved) && !used.has(saved.asset)) return void out.push(saved);
       out.push(this.defaultReplica(LOADOUT[i], used));
     });
@@ -79,8 +99,8 @@ export class LoadoutModel {
     const now = this.equipped();
     const i = GEAR_SLOTS.indexOf(slot);
     const other = now.findIndex((r, j) => j !== i && r?.asset === ref.asset);
-    if (other >= 0 && now[i]) saveSetting(`equip.${GEAR_SLOTS[other]!}`, itemKey(now[i]!.asset, now[i]!.tier));
-    saveSetting(`equip.${slot}`, itemKey(ref.asset, ref.tier));
+    if (other >= 0 && now[i]) this.savePick(`equip.${GEAR_SLOTS[other]!}`, itemKey(now[i]!.asset, now[i]!.tier));
+    this.savePick(`equip.${slot}`, itemKey(ref.asset, ref.tier));
   }
 
   /** What is fitted to the replica asset `replicaId`: each slot's item if still owned and fitting, else its default. */
@@ -89,7 +109,7 @@ export class LoadoutModel {
     const fit: ReplicaFit = { ...EMPTY_FIT };
     if (!replica) return fit;
     for (const slot of FIT_SLOTS) {
-      const raw = loadSetting<string | null>(`fit.${replicaId}.${slot}`, (v) => (typeof v === 'string' ? v : undefined), null);
+      const raw = this.readPick(`fit.${replicaId}.${slot}`);
       const saved = raw && raw !== NONE ? parseItemKey(raw) : null;
       fit[slot] = saved && this.canFit(replica, slot, saved) ? saved : this.defaultFit(replica, slot);
     }
@@ -98,7 +118,7 @@ export class LoadoutModel {
 
   /** Fits `ref` (or nothing: as it comes) to `replicaId`'s `slot`. */
   setFit(replicaId: string, slot: FitSlot, ref: ItemRef | null): void {
-    saveSetting(`fit.${replicaId}.${slot}`, ref ? itemKey(ref.asset, ref.tier) : NONE);
+    this.savePick(`fit.${replicaId}.${slot}`, ref ? itemKey(ref.asset, ref.tier) : NONE);
   }
 
   /** The owned items that can go in `slot` on the replica asset `replicaId`, rarest first. */
@@ -150,9 +170,14 @@ export class LoadoutModel {
     };
   }
 
-  private readItem(field: `equip.${string}`): ItemRef | null {
-    const raw = loadSetting<string | null>(field, (v) => (typeof v === 'string' ? v : undefined), null);
-    return raw ? parseItemKey(raw) : null;
+  /** A saved pick (`equip.<slot>` or `fit.<asset>.<slot>`): the sandboxed one while everything is unlocked, else the real one. */
+  private readPick(field: Pick): string | null {
+    const read = (f: `equip.${string}` | `fit.${string}`) => loadSetting<string | null>(f, (v) => (typeof v === 'string' ? v : undefined), null);
+    return (this.ownership.sandboxed?.() ? read(sandboxField(field)) : null) ?? read(field);
+  }
+
+  private savePick(field: Pick, value: string): void {
+    saveSetting(this.ownership.sandboxed?.() ? sandboxField(field) : field, value);
   }
 
   private isReplica(ref: ItemRef): boolean {

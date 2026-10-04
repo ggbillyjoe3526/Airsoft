@@ -122,11 +122,11 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 batch · M23 Minimap and order wheel (items 2 and 3): a minimap with your teammates and the other team where last heard; hold Z for a squad order wheel (hover or click) | Done (owner to play it) | 9.0 |
 | Alpha · M24 Menus and settings polish (owner's Phase 4 playtest notes 5–10, 13, 14, 2026-10-04): shorter button labels, the build's version from git, 90° field of view, short map blurbs, sound cue size and colour, a hit feed that keeps its lines, a larger scoreboard with a size setting, hidden Dev settings | Done (owner to play it) | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M25a CC0 assets: a guide (`docs/CC0_ASSETS.md`: sources, formats, folders, licences, size limits) and a loader that draws a dropped-in glTF player model, the built-in figures as fallback | Done | 9.0 |
-| Alpha · Owner's 2026-10-04 batch · M25b Depot rework (minor): fewer stacked crates, less clutter, more kinds of objects, sightlines and balance kept (owner approved concept v2) | In progress | |
+| Alpha · Owner's 2026-10-04 batch · M25b Depot rework (minor): fewer stacked crates, less clutter, more kinds of objects, sightlines and balance kept (owner approved concept v2) | Done (owner to play it) | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M26a Asset pool: `pool.md` (the asset register the game reads, with its guide), rarity tiers, the economy's numbers, the player's collection | Done | 9.1 |
 | Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Done | 9.0 |
-| Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Planned | |
-| Alpha · Owner's 2026-10-04 batch · M26d Dev settings for the Armory: switch the gacha off, unlock all gear; docs | Planned | |
+| Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Done | 9.1 |
+| Alpha · Owner's 2026-10-04 batch · M26d Dev settings for the Armory: switch the gacha off, unlock all gear; docs | Done | 9.1 |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -691,9 +691,15 @@ pool, items 11, 12 and part of 14).
   - **M25b. Depot rework, minor** (item 4: fewer crates stacked two high and close together, less verticality and
     clutter, more variety but nothing major, sightlines and balance kept). Concept sketches and mock screenshots first;
     the owner chose "open it up more" on the first and approved the second (v2). Most double stacks become single
-    full-height objects of new kinds (portable toilets, pallet racking, HESCO barriers, wrapped pallet loads, IBC
-    tanks, sandbags, a generator, a skip), six spots drop to waist height where the sightline cost is lowest, and
-    two crate stacks stay. Collision stays boxes; the layout tests still pass.
+    full-height objects of new kinds (portable toilets, pallet racking, gabion barriers, wrapped pallet loads), a
+    skip, sandbags, IBC tanks and generators join, four stacks drop to waist height where the sightline cost is
+    lowest, and two crate stacks stay. Collision stays boxes; the layout tests still pass.
+  - **Built (M25b, 2026-10-04):** eight new block kinds with code-built looks and two new surface textures (sandbag
+    cloth, gabion mesh), 10 draw calls for the map (8 before, one per texture). Steel props bounce BBs (ricochets),
+    sandbags and gabions soak them up. Against the M11 Depot: 1,928 more standing sightline pairs of 77,318 (none
+    longer than 32.9 m), the layout and bot tests pass, and the west end wins 48% of bot-only Elimination rounds over
+    64 seeds (45% before). v2 lowered two more stacks (the staging yard's east end and the dock), which tipped the
+    west end to 54%; those two are full-height wrapped loads instead.
 - **M26. Loadout, Armory and asset pool** (items 11, 12 and the Armory's Dev settings from 14).
   - **M26a. Asset pool.** Every replica and part is a single asset with a six-digit ID (`000001` Gas Pistol, `000002`
     AEG Rifle …) in `pool.md` at the repository's root: a hand-editable register the game reads at start, with a guide
@@ -728,6 +734,11 @@ phases stay focused:
 - **Final tuning** of values that are first guesses today: footstep ranges, hop-up arcs, difficulty numbers.
 - **Bug fixing and stability.**
 - **UX/QoL, polish and accessibility.**
+- **Two small additions** (owner's feature picks, 2026-10-04):
+  - **Saved loadouts:** several named loadouts (e.g. "CQB", "Long range") to switch between, picked from the Map
+    pop-up as well as the Loadout screen.
+  - **Briefing tips:** loading and round-start lines in the voice of a site safety briefing ("Goggles on in the
+    field", "Call your hits loud").
 
 ## Release: v0.1
 
@@ -739,6 +750,28 @@ Everything below is approved as a direction and deliberately not part of v0.1. T
 versions is a proposal. The owner decides what goes into each version, and each one must be a
 substantially bigger game (CLAUDE.md §7). Within a version, the work is again alpha (build), then beta
 (balance, fixes, QoL, performance), then release.
+
+**The owner's third feature picks (2026-10-04, from a researched list of 32; numbers as in that list) and where each
+went.** The ones he said yes to "but maybe implement later" are placed in the version they need and marked so.
+
+| # | Pick | Goes to |
+|---|---|---|
+| 1 | Prone, kept for a later map | v0.4, with a field built for it |
+| 2 | Location callouts | v0.2 |
+| 3 | Bot names, personalities and loadouts | v0.2 |
+| 4 | Field rules presets, for a later update | v0.3 |
+| 5 | Overshooting rule | v0.2 |
+| 6 | Rubber-knife tag, maybe later | IDEAS |
+| 7 | Slide into cover, maybe later beside prone | IDEAS |
+| 12–15 | Survival, Rush, Intel grab, Free-for-all (yes, later) | v0.3, v0.4, v0.4, v0.2 |
+| 17 | The chrono enforces the field's limit (yes, later) | v0.3, with the chrono |
+| 18 | Saved loadouts | Beta (v0.1) |
+| 22 | A speedsoft arena that changes (yes, later) | v0.4 |
+| 24 | Rain and fog (yes, later) | v0.4 |
+| 25 | More field ideas: hospital, trenches, quarry (yes, later) | v0.4 |
+| 26 | Challenges and badges (yes, later) | v0.5 |
+| 31 | Briefing tips | Beta (v0.1) |
+| 8–11, 16, 19–21, 23, 27–30, 32 | Declined | Listed in IDEAS so they aren't proposed again |
 
 ### Proposed v0.2: More ways to play
 
@@ -753,6 +786,16 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
   reworked Depot or fields built for it.
 - **Medic mode** (owner, 2026-10-03; was the parked "medic revive"): a hit player goes down and calls for a medic,
   who can bring them back before a bleed-out timer runs out (real events use 5–10 minutes; the game, seconds).
+- **Location callouts** (owner, 2026-10-04): named areas on each field ("Dock", "Main Gate", "Back Lot") shown under
+  the minimap and in the hit feed, and bot teammates telling you what they know: "Contact, Dock!", "Reloading", "Two
+  left". Text first, a voice later. This is bots telling you; the team communication below is you telling bots.
+- **Bot names, personalities and loadouts** (owner, 2026-10-04): bots get names and a play style (rusher, anchor,
+  flanker, careful), like Counter-Strike's bot profiles, and carry real loadouts from the asset pool: the pistol,
+  hi-caps that rattle, different BB weights. Today they're numbered, play alike and only use the AEG (KNOWN_ISSUES).
+- **Overshooting rule** (owner, 2026-10-04): firing at a player who has already called hit gets a marshal's warning
+  (a whistle and a line in the hit feed); a second one sits you out the next round. Bots never overshoot.
+- **Free-for-all** (owner, 2026-10-04: yes, may come later): everyone for themselves, an FPS staple that works well
+  with bots. Rare at real sites, so figures need their own colours or numbers in place of the two team colours.
 
 ### Proposed v0.3: The armoury
 
@@ -779,6 +822,10 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
     2026-10-03), such as another magazine or a grenade.
 - **Chrono before a match** (kept, owner, 2026-10-03): check your loadout's muzzle velocity (BB weight is picked on
   the Loadout screen from M17a).
+  - **The chrono enforces the field's limit** (owner, 2026-10-04: yes, may come later): each field and replica class
+    has a limit, as at real sites (UK fields use about 1.3 J for full-auto and 2.5 J for DMRs and bolt-action rifles;
+    US fields about 350–400 fps), and a replica over it doesn't pass. This caps the Armory's Power % batteries and gas
+    so upgrades can't snowball, and it is where the DMR's minimum engagement distance comes from.
 - **Tracer BBs as a loadout option** (owner, 2026-10-03): a row on the Loadout screen beside BB weight. They glow
   brightest on night maps (v0.4).
 - **Gas simulation** (owner, 2026-10-03): fast shooting means less power. Gas cools in the magazine as it is used, so
@@ -789,6 +836,13 @@ substantially bigger game (CLAUDE.md §7). Within a version, the work is again a
   carry and how bots use them are designed when they come.
 - The practice range moved up into v0.1 (M21).
 - **Suppressors** with their own sound, built on the M9 groundwork.
+- **Field rules presets** (owner, 2026-10-04: for a later update): one picker beside Mode that sets a whole rule set
+  the way real sites do: *Skirmish* (today's rules, the default), *CQB* (semi auto only, a bang rule), *Speedsoft*
+  (semi only, no minimum distance, short rounds) and *Milsim* (realcap 30-BB magazines, a BB allowance per round, no
+  hi-caps, a bleed-out instead of an instant out). Builds on M20's custom match settings; Milsim needs the pouches and
+  the medic mode first, which is why it sits here.
+- **Survival** (owner, 2026-10-04: yes, may come later): you and your teammates hold a building against waves of bots
+  that grow each wave, as in Insurgency: Sandstorm's Survival. Needs bots that push, which they don't yet (KNOWN_ISSUES).
 
 ### Proposed v0.4: More fields
 
@@ -798,6 +852,20 @@ covers part of "CQB warehouse / industrial". Which fields, and in what order, is
 
 - **Day and night** (owner, 2026-10-03): a Day / Night choice before a match, beside the Map choice. At night BBs glow
   (tracer BBs most of all) and lights stand out, such as weapon lights fitted as attachments.
+- **Rain and fog** (owner, 2026-10-04: yes, may come later): picked like Day / Night. Rain masks footsteps and drops
+  BBs a little sooner; fog shortens how far you can see.
+- **More field ideas** (owner, 2026-10-04: yes, may come later): an abandoned hospital (multi-floor CQB), a trench line
+  with forts, and a quarry (elevation), all common real airsoft sites.
+- **A speedsoft arena that changes** (owner, 2026-10-04: yes, may come later): its bunkers are re-placed from a seed
+  each match, as real speedsoft fields move their inflatables between events; every layout still passes the field
+  checklist tests.
+- **Prone** (owner, 2026-10-04: kept for a later map): lie down behind low cover or in long grass: slow to get up, a
+  small target. Comes with a field built for it (Depot is CQB), and bots use it too. A slide into cover may come
+  beside it (IDEAS).
+- **Rush** (owner, 2026-10-04: yes, may come later): Attack / Defend in stages: attackers take point A, then the front
+  moves to B, as Battlefield's mode, which real fields recreate with timer boxes. Needs a field bigger than Depot.
+- **Intel grab** (owner, 2026-10-04: yes, may come later): find documents or a laptop and carry it to an extraction
+  point, a milsim staple. Close to the parked hostage rescue; the two could share one mode. Suits the milsim compound.
 
 ### Proposed v0.5: Kit, looks and progression
 
@@ -805,7 +873,11 @@ covers part of "CQB warehouse / industrial". Which fields, and in what order, is
   row from M17b): colour, furniture, optic, handguard, stock, grip, magazine, muzzle device, tape and markings.
 - **Kit customisation (outfit skins):** camouflage, plate carrier, pouches, helmet, goggles, gloves, patches and armbands.
 - **Progression:** not level-based. You earn it by unlocking replicas and gear; how you earn unlocks is
-  still open. Until this exists, everything is free from the start.
+  still open. Until this exists, everything is free from the start. (From M26, the Armory unlocks pool assets with
+  Field Credits earned by playing.)
+- **Challenges and badges** (owner, 2026-10-04: yes, may come later): tasks that pay Field Credits ("win a round in
+  under 45 s", "3 hits with the pistol", "win on Hard") and a badge list kept in the browser, like Counter-Strike:
+  Condition Zero's Tour of Duty tasks. A daily challenge could come from a date seed (offline, no online board).
 - No real brand names or trademarked designs, ever (CLAUDE.md §4).
 
 ### When the bots are ready: team communication
@@ -819,4 +891,4 @@ the bot AI is good enough to follow the calls. It can join whichever version tha
 
 Not approved yet; see `docs/IDEAS.md`: an Esport difficulty above Hard (owner, 2026-10-03), VIP escort and hostage
 rescue modes (owner, 2026-10-03), adjustable hop-up, dead rag and voiced hit calls, bang-bang surrender, a referee NPC,
-a who-hit-you view and Depot variations.
+a who-hit-you view, Depot variations, a rubber-knife tag and a slide into cover (owner, 2026-10-04).

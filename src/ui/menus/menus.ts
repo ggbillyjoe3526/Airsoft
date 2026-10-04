@@ -22,6 +22,7 @@ import type { ControlsSettingsOptions } from '../controlsSettings';
 import type { CrosshairSettingsOptions } from '../crosshairSettings';
 import type { HudSettingsOptions } from '../hudSettings';
 import { ChoiceDialog } from './choiceDialog';
+import { type ArmoryOptions, ArmoryScreen } from './armoryScreen';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
 import { backTarget, type MenuScreen, type SettingsOrigin } from './menuNav';
 import { el, menuRow, rangeControl } from './menuParts';
@@ -44,6 +45,8 @@ export interface MenusOptions {
   bindings: KeyBindings;
   /** The Loadout screen's model and change hook, and the summary New game's Loadout button shows. */
   loadout: Omit<LoadoutOptions, 'onBack'> & { summary: () => { replicas: string; detail: string } };
+  /** The Armory (M26c): its pool and the collection it changes, and New game's Armory button (balance and line). */
+  armory: Omit<ArmoryOptions, 'onBack'> & { summary: () => { value: string; detail: string; disabled: boolean } };
   /** Start (or resume) play: Play on New game, Resume, Play Again. */
   onPlay: () => void;
   /** The player leaves the match (Quit; New Game or Quit after it): it is unloaded. */
@@ -83,6 +86,7 @@ export class Menus {
   private readonly title: TitleScreen;
   private readonly setup: SetupScreen;
   private readonly loadout: LoadoutScreen;
+  private readonly armory: ArmoryScreen;
   private readonly settings: SettingsScreen;
   private readonly pause: PauseScreen;
   private readonly summary: SummaryScreen;
@@ -117,6 +121,7 @@ export class Menus {
       onMatch: () => this.matchDialog.open(),
       onDifficulty: () => this.difficultyDialog.open(),
       onLoadout: () => this.openLoadout('setup'),
+      onArmory: () => this.openArmory(),
       onSettings: () => this.openSettings('setup'),
       onBack: () => this.back(),
       onPlay: () => this.play(),
@@ -162,6 +167,14 @@ export class Menus {
       onChange: () => (lo.onChange(), this.refreshSetup()),
       onBack: () => this.back(),
     });
+    // What the Armory gives can change the Loadout's picks and New game's buttons.
+    this.armory = new ArmoryScreen({
+      pool: opts.armory.pool,
+      collection: opts.armory.collection,
+      equipped: opts.armory.equipped,
+      onChange: () => (opts.armory.onChange(), this.refreshSetup()),
+      onBack: () => this.back(),
+    });
     this.settings = new SettingsScreen({
       bindings: opts.bindings,
       controls: opts.controls,
@@ -196,6 +209,7 @@ export class Menus {
       title: this.title.root,
       setup: this.setup.root,
       loadout: this.loadout.root,
+      armory: this.armory.root,
       settings: this.settings.root,
       pause: this.pause.root,
       summary: this.summary.root,
@@ -345,6 +359,12 @@ export class Menus {
     this.go('loadout');
   }
 
+  private openArmory(): void {
+    if (this.opts.armory.summary().disabled) return;
+    this.armory.refresh();
+    this.go('armory');
+  }
+
   private openSettings(from: SettingsOrigin): void {
     this.settings.openFrom(from);
     this.go('settings');
@@ -430,6 +450,14 @@ export class Menus {
     this.setup.setRules(notes.join(' '));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);
+    const armory = this.opts.armory.summary();
+    this.setup.armory.set(armory.value, armory.detail);
+    this.setup.armory.setDisabled(armory.disabled);
+  }
+
+  /** New game's buttons again, after something outside the menus changed them (a match paid Field Credits). */
+  refresh(): void {
+    this.refreshSetup();
   }
 }
 
