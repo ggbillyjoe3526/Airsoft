@@ -28,8 +28,9 @@ export function isInPlay(c: Character): boolean {
 }
 
 /**
- * Eliminates `victim` (no-op if already out of play), picks its dead-zone spot (the next free one for
- * its team, in the order teammates were hit) and plans the walk there.
+ * Eliminates `victim` (no-op if already out of play) and picks its dead-zone spot (the next free one for
+ * its team, in the order teammates were hit). The route there is searched by `planWalkOffRoutes` over the
+ * following ticks, never inside the hit (M27): a route search is the one costly thing a hit could do in a tick.
  */
 export function eliminate(victim: Character, shooterId: number, characters: readonly Character[], ctx: EliminationContext): void {
   if (!isInPlay(victim)) return;
@@ -44,12 +45,29 @@ export function eliminate(victim: Character, shooterId: number, characters: read
   const spot = spots && spots.length > 0 ? spots[alreadyOut % spots.length]! : undefined;
   copy(victim.deadZoneTarget, spot ? spot.position : victim.spawnPosition);
   victim.deadZoneYaw = spot ? spot.yaw : victim.spawnYaw;
-  // Walk the route if there is one; otherwise head straight for the spot.
   victim.walkOffLeg = 0;
-  if (!findPath(ctx.nav, ctx.navSearch, victim.position, victim.deadZoneTarget, ctx.snap, victim.walkOffRoute)) {
-    victim.walkOffRoute.length = 0;
-    victim.walkOffRoute.push({ x: victim.deadZoneTarget.x, y: victim.deadZoneTarget.y, z: victim.deadZoneTarget.z });
+  victim.walkOffRoute.length = 0;
+  victim.walkOffRoutePending = true;
+}
+
+/**
+ * Searches the walk-off route of at most one victim per tick (the first still waiting, in character order), so two
+ * hits in one tick cost one search that tick and one the next. A victim stands calling for `callTime` before it
+ * walks, which covers the wait many times over. With no route (the spot is off the grid) it heads straight for the
+ * spot, as before. Returns whether a search ran.
+ */
+export function planWalkOffRoutes(characters: readonly Character[], ctx: EliminationContext): boolean {
+  for (const c of characters) {
+    if (!c.walkOffRoutePending) continue;
+    c.walkOffRoutePending = false;
+    c.walkOffLeg = 0;
+    if (!findPath(ctx.nav, ctx.navSearch, c.position, c.deadZoneTarget, ctx.snap, c.walkOffRoute)) {
+      c.walkOffRoute.length = 0;
+      c.walkOffRoute.push({ x: c.deadZoneTarget.x, y: c.deadZoneTarget.y, z: c.deadZoneTarget.z });
+    }
+    return true;
   }
+  return false;
 }
 
 /**
