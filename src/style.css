@@ -3509,3 +3509,116 @@ kbd {
     --menu-line-soft: #565b67;
   }
 }
+
+/* Settings → Save (M31) */
+.save-problem {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--warning);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--radius-sm);
+}
+
+.save-problem[hidden] {
+  display: none;
+}
+
+.save-status {
+  font-size: var(--fs-md);
+  color: var(--menu-soft);
+}
+
+.save-line {
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--menu-muted);
+}
+
+.save-message:not(:empty) {
+  color: var(--hint);
+}
+
+.save-restore-list {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+
+.save-restore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.save-restore .menu-button {
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
+.menu-row-control .menu-button.save-danger:not(:disabled) {
+  color: var(--danger);
+}
+
+/* A file dragged over the Save tab: the panel shows it can take it. */
+.settings-tab-panel.save-drop {
+  outline: 2px dashed var(--orange);
+  outline-offset: var(--sp-2);
+  border-radius: var(--radius-md);
+}
+
+.save-compare {
+  width: 100%;
+  margin: 0 0 var(--sp-4);
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+
+.save-compare th,
+.save-compare td {
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.save-compare tr:first-child th {
+  border-top: 0;
+  color: var(--menu-muted);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+}
+
+.save-compare tr th:first-child {
+  color: var(--menu-muted);
+  font-weight: 600;
+}
+
+.save-dialog-note {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.save-dialog-note.warn {
+  color: var(--warning);
+}
+
+.save-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+.save-dialog-actions .menu-button {
+  min-height: var(--control-md);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+}

@@ -75,6 +75,8 @@ export interface MenusOptions {
   hud: HudSettingsOptions;
   /** The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. */
   dev: SettingsOptions['dev'] & { cheating: () => boolean };
+  /** The save, for Settings → Save (M31). */
+  save: SettingsOptions['save'];
 }
 
 /**
@@ -193,6 +195,7 @@ export class Menus {
         onChange: (id, value) => (opts.dev.onChange(id, value), this.refreshSetup()),
         onEnabled: (on) => (opts.dev.onEnabled(on), this.refreshSetup()),
       },
+      save: opts.save,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen({
@@ -420,8 +423,9 @@ export class Menus {
     this.back();
   };
 
+  /** Any pop-up open (New game's, or the Save tab's, M31): Esc is its own. */
   private dialogOpen(): boolean {
-    return this.mapDialog.root.open || this.modeDialog.root.open || this.matchDialog.root.open || this.difficultyDialog.root.open;
+    return this.root.querySelector('dialog[open]') !== null;
   }
 
   private closeDialogs(): void {
@@ -429,6 +433,7 @@ export class Menus {
     this.modeDialog.close();
     this.matchDialog.close();
     this.difficultyDialog.close();
+    for (const d of this.root.querySelectorAll('dialog[open]')) (d as HTMLDialogElement).close();
   }
 
   /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */
