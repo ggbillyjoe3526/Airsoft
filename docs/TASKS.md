@@ -5,6 +5,17 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
 keeps `status` and `attempts` current.
 
+## FA11c · Tab lock on Web Locks (CI smoke race)
+tier: trivial
+perf: skip
+touches: src/save/tabLock.ts, src/config/save.ts, src/main.ts
+acceptance:
+  1. Where the browser has Web Locks, a second tab waits behind the notice however long the playing tab takes to answer (tabLock.test.ts, busy-tab case)
+  2. Play here still hands the save over: the playing tab lets go of the lock and the reloaded tab plays (tabLock.test.ts)
+  3. Without Web Locks the channel decides as before; e2e/save.spec.ts passes
+status: gates
+attempts: 1
+
 The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
 files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged dev with M35's content tag until the
 owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator

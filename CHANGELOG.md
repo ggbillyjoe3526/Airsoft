@@ -74,6 +74,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 
 ### Fixed
+- **FA11c** · A second tab now always waits behind the "open in another tab" notice, even when the first is busy loading (#69)
 - **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
 - **FA2** · Turning Edge smoothing on or off no longer causes graphics memory to leak (#67)
 - **FA3** · The first Play no longer hitches as surface textures are built during the title screen (#67)

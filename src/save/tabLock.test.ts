@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type LockChannel, TabLock } from './tabLock';
+import { type LockChannel, type SaveLocks, TabLock } from './tabLock';
 
 /** Channels on one in-memory bus, delivering to every other channel as BroadcastChannel does (synchronously here). */
 function bus() {
@@ -18,6 +18,27 @@ function bus() {
 }
 
 const instant = () => Promise.resolve();
+
+/** One exclusive Web Lock, as navigator.locks grants it: held until the holder's promise settles. */
+function webLocks(): SaveLocks & { held: () => boolean } {
+  let held = false;
+  return {
+    held: () => held,
+    async request(_name, _options, callback) {
+      if (held) return callback(null);
+      held = true;
+      try {
+        await callback({});
+      } finally {
+        held = false;
+      }
+      return undefined;
+    },
+  };
+}
+
+/** A channel on which nothing is ever heard: a playing tab too busy to answer in time. */
+const silent = (): LockChannel => ({ onmessage: null, postMessage: () => undefined, close: () => undefined });
 
 describe('tab lock (M31)', () => {
   it('the first tab plays; a second waits', async () => {
@@ -69,6 +90,33 @@ describe('tab lock (M31)', () => {
     expect([x.owns, y.owns]).toEqual([true, false]);
     expect(lostY).toHaveBeenCalledTimes(1);
     expect(lostX).not.toHaveBeenCalled();
+  });
+
+  it('with Web Locks, a second tab waits even when the playing tab is too busy to answer (the CI smoke race)', async () => {
+    const locks = webLocks();
+    const a = new TabLock({ channel: silent, locks, onLost: vi.fn(), id: 'b', wait: instant });
+    expect(await a.claim()).toBe(true);
+    // The second tab hears nobody on the channel, and its id is lower: without the lock it would have played.
+    const b = new TabLock({ channel: silent, locks, onLost: vi.fn(), id: 'a', wait: instant });
+    expect(await b.claim()).toBe(false);
+    expect([a.owns, b.owns]).toEqual([true, false]);
+  });
+
+  it('with Web Locks, Play here makes the playing tab let go of the lock, so the reloaded tab plays', async () => {
+    const channel = bus();
+    const locks = webLocks();
+    const lostA = vi.fn();
+    const a = new TabLock({ channel, locks, onLost: lostA, id: 'a', wait: instant });
+    expect(await a.claim()).toBe(true);
+    const b = new TabLock({ channel, locks, onLost: vi.fn(), id: 'b', wait: instant });
+    expect(await b.claim()).toBe(false);
+    await b.take();
+    await Promise.resolve(); // the lock goes once the holder's promise settles
+    expect(lostA).toHaveBeenCalledTimes(1);
+    expect(a.owns).toBe(false);
+    expect(locks.held()).toBe(false);
+    const b2 = new TabLock({ channel, locks, onLost: vi.fn(), id: 'b2', wait: instant });
+    expect(await b2.claim()).toBe(true);
   });
 
   it('plays alone where the browser has no BroadcastChannel', async () => {

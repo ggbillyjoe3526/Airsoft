@@ -554,3 +554,7 @@ One line each: decision, then why.
 - **2026-10-04 · M36 · A "what got you" card on every difficulty, on by default only on Pro.** A hard game feels fair when you can see why you were hit.
 - **2026-10-04 · M36 · Starts after the final alpha pass, tagged dev until the owner says it's done (his public / dev content tag, 2026-10-04 18:46).** Held angles and team play are tuned on Depot first and checked on Woodland and the city once their navigation lands.
 - **2026-10-04 · M36 · Maps: no rework. Depot stays as it is unless the Pro guards put attackers under 40 % because of the Office lane (then a window or second door between two rooms); Woodland and the city take the plan's requirements while they are designed.** The owner asked that the difficulty be balanced with the maps and to be told of any rework (2026-10-04).
+
+## FA11c · Tab lock on Web Locks
+
+- **2026-10-04 · FA11c · The save's tab lock is an exclusive Web Lock (`navigator.locks`, held until the tab lets go) where the browser has one; the BroadcastChannel stays for Play here and as the fallback.** The channel's 300 ms question lost to a playing tab busy on its title screen (CI's slow runners): the second tab claimed the save too and showed the menu (main's CI went red on `save.spec`). A held lock can't lose that race however busy the first tab is. Root cause and patch by the Woodland thread, landed with FA8 so main's CI turns green at once.
