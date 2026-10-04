@@ -133,7 +133,7 @@ function staggerHold(b: Bot, w: BotWorld): void {
 
 /** True if (x, z) is walkable and on the floor `point` stands on (within a step of its height). */
 function onSameFloor(w: BotWorld, point: Vec3, x: number, z: number): boolean {
-  return isWalkableAt(w.nav, x, z) && Math.abs(floorAt(w.nav, x, z) - point.y) <= w.nav.maxStep;
+  return isWalkableAt(w.nav, x, point.y, z) && Math.abs(floorAt(w.nav, x, point.y, z) - point.y) <= w.nav.maxStep;
 }
 
 /**
@@ -151,7 +151,7 @@ export function jitterPoint(b: Bot, w: BotWorld, point: Vec3, radius: number, ou
     const z = point.z + Math.sin(angle) * r;
     if (!onSameFloor(w, point, x, z)) continue;
     out.x = x;
-    out.y = floorAt(w.nav, x, z);
+    out.y = floorAt(w.nav, x, point.y, z);
     out.z = z;
     return;
   }
@@ -163,7 +163,7 @@ export function jitterPoint(b: Bot, w: BotWorld, point: Vec3, radius: number, ou
  */
 function crouchedViewClear(b: Bot, w: BotWorld, at: Vec3): boolean {
   const yaw = w.enemyYaw[b.character.team] ?? 0;
-  const floor = floorAt(w.nav, at.x, at.z);
+  const floor = floorAt(w.nav, at.x, at.y, at.z);
   holdEye.x = at.x;
   holdEye.y = (Number.isNaN(floor) ? at.y : floor) + w.body.crouchEyeHeight;
   holdEye.z = at.z;
@@ -259,7 +259,7 @@ export function startSearch(b: Bot, w: BotWorld): void {
     const z = k.z - uz * cfg.flankBack + ux * cfg.flankOffset * side;
     if (!onSameFloor(w, k, x, z)) continue;
     b.flankGoal.x = x;
-    b.flankGoal.y = floorAt(w.nav, x, z);
+    b.flankGoal.y = floorAt(w.nav, x, k.y, z);
     b.flankGoal.z = z;
     b.flanking = true;
     return;
@@ -463,7 +463,7 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
       const d = Math.hypot(dx, dz);
       if (b.routeState !== 'none' || d <= cfg.leanSpotReach || d > cfg.leanSpotApproachMax) return false;
       const reach = Math.min(d, cfg.edgeLookahead) / d;
-      if (dropOnLine(w.nav, p.x, p.z, p.x + dx * reach, p.z + dz * reach)) return false;
+      if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach)) return false;
       b.moveDir.x = dx / d;
       b.moveDir.z = dz / d;
       cmd.walk = true;
@@ -559,7 +559,7 @@ function stepBlocked(b: Bot, w: BotWorld, right: number, forward: number, target
   const dz = -Math.sin(yaw) * right - Math.cos(yaw) * forward;
   const p = b.character.position;
   const reach = w.cfg.edgeLookahead;
-  if (dropOnLine(w.nav, p.x, p.z, p.x + dx * reach, p.z + dz * reach) || !isWalkableAt(w.nav, p.x + dx * reach, p.z + dz * reach)) return true;
+  if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach) || !isWalkableAt(w.nav, p.x + dx * reach, p.y, p.z + dz * reach)) return true;
   if (!target || !b.targetVisible) return false;
   eyeOf(b.character, w.body, w.hits, sideEye);
   sideEye.x += dx * w.cfg.strafeSightOffset;
