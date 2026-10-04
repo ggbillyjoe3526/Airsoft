@@ -42,7 +42,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 
 ### Fixed
 - **FA1** · Jump pressed up to 0.1 s before landing still happens; click after sprint fires as soon as lockout ends (#57)
-- **FA1** · Stepping down a kerb no longer widens the crosshair; drawn Elimination rounds replay; running up ramps is as fast as down (#57)
+- **FA1** · Stepping down a kerb no longer widens the crosshair; drawn Elimination rounds replay (#57)
 - **FA1** · A hit player always reaches the dead zone, even from the far end of Depot; crouch-walking is slightly less accurate; practice range figures match character height (#57)
 - Empty magazine hint names your reload key (#23)
 - **M30** · Bots lead moving targets at range by the BB's real, slower flight time under drag

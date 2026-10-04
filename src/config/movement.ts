@@ -155,7 +155,7 @@ export const MOVEMENT: MovementConfig = {
   ceilingBlockFraction: 0.5,
   groundSettleDistance: 0.06,
   inputDeadzone: 0.01,
-  rampPace: 1,
+  rampPace: 0,
   rampMaxRise: PHYSICS.maxRampSlope * 1.2,
   maxPitch: Math.PI / 2 - 0.02,
   leanTime: 0.18,

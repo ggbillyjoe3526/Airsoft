@@ -359,6 +359,7 @@ describe('PhysicsWorld (Rapier)', () => {
       lanes: [],
     };
     const world = new PhysicsWorld(map, BODY, DT);
+    const RAMP_PACE = { ...MOVEMENT, rampPace: 1 };
     for (const pace of ['walk', 'run', 'sprint', 'crouch'] as const) {
       for (const up of [true, false]) {
         const c = createCharacter(0, vec3(up ? -2 : run + 2, (up ? 0 : 1) + REST, 0.3), up ? -Math.PI / 2 : Math.PI / 2);
@@ -374,14 +375,15 @@ describe('PhysicsWorld (Rapier)', () => {
         // Pace on the ramp, past its first and before its last half metre (the slope is felt a tick late at the foot).
         let slowest = Infinity;
         for (let t = 0; t < 600 && (up ? c.position.x < run + 1.5 : c.position.x > -1.5); t++) {
-          stepMovement(c, cmd, MOVEMENT, DT, world, scratch);
+          stepMovement(c, cmd, RAMP_PACE, DT, world, scratch);
           streak = c.grounded ? 0 : streak + 1;
           longest = Math.max(longest, streak);
           if (c.position.x > 0.5 && c.position.x < run - 0.5) slowest = Math.min(slowest, Math.hypot(c.velocity.x, c.velocity.z));
         }
         const label = `${pace} ${up ? 'up' : 'down'}`;
         expect(longest, label).toBe(0);
-        // Up or down, the ramp keeps the pace (audit SIM-17: a sprint up the dock ramp lost a quarter of it).
+        // Up or down, the ramp keeps the pace with `rampPace` 1 (audit SIM-17: a sprint up the dock ramp lost a quarter
+        // of it). The game ships with it at 0 until the owner's playtest (DECISIONS FA1), so the test sets it.
         const full = pace === 'walk' ? MOVEMENT.walkSpeed : pace === 'sprint' ? MOVEMENT.sprintSpeed : pace === 'crouch' ? MOVEMENT.crouchSpeed : MOVEMENT.runSpeed;
         expect(slowest, label).toBeGreaterThanOrEqual(0.95 * full);
         expect(c.position.y, label).toBeCloseTo((up ? 1 : 0) + REST, 2);
