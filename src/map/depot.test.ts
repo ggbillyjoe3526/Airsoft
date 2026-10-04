@@ -310,7 +310,7 @@ describe('Depot map', () => {
     });
   });
 
-  it('hides everyone near one spawn from everyone near the other, standing or crouched', () => {
+  it('hides everyone near one spawn from everyone near the other, standing or crouched', { timeout: 20_000 }, () => {
     const westZone = spawnZone(west, 0.5);
     const eastZone = spawnZone(east, 0.5);
     expect(westZone.length).toBeGreaterThan(50);

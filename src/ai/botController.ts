@@ -132,6 +132,11 @@ export class BotController {
     this.planRound();
   }
 
+  /** @internal For tests that drive one bot step (shootBot, reloadBot) by hand: the world the bots think in. */
+  get worldForTests(): BotWorld {
+    return this.world;
+  }
+
   /** The tuning `team`'s bots play by. */
   cfgOf(team: number): BotConfig {
     return this.teamCfg[team] ?? this.opts.cfg;

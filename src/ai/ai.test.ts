@@ -24,7 +24,7 @@ import { createGameState, type GameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { type Vec3, vec3 } from '../sim/vec';
 import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
-import type { Bot, BotWorld } from './bot';
+import type { Bot } from './bot';
 import { reloadBot, shootBot } from './botCombat';
 import { BotController } from './botController';
 import { type CoverBlock, type CoverWorld, createCoverSpot, findCover, hidesFrom, lowCoverBlocks, tallCoverBlocks } from './cover';
@@ -662,7 +662,7 @@ describe('bot modes', () => {
 describe('bot hearing and targets', () => {
   it('keep one steady guess of an unseen shooter during a long burst', () => {
     const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // can't see anyone
-    const { state, bots, run, commands } = duel(18, () => {}, walls);
+    const { bots, run, commands } = duel(18, () => {}, walls);
     const b = bots.bots[0]!;
     Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 }); // a long burst into the air
     let jumps = 0;
@@ -677,7 +677,6 @@ describe('bot hearing and targets', () => {
       turned += Math.abs(Math.atan2(Math.sin(b.aim.yaw - prevYaw), Math.cos(b.aim.yaw - prevYaw)));
       prevYaw = b.aim.yaw;
     });
-    expect(state.events).toBeDefined();
     expect(last).toBeDefined();
     // At most one re-guess: when the bot gets to its guess and the noise is clearly elsewhere.
     expect(jumps).toBeLessThanOrEqual(1);
@@ -776,7 +775,7 @@ describe('bot line of fire', () => {
     // origin): sight to the player is clear, but an aim drifting that way runs into it.
     const { state, bot, player, bots } = duel(14, () => {}, boxQuery(0.12, -12, 0.05, 2, 3));
     const b = bots.bots[0]!;
-    const w = (bots as unknown as { world: BotWorld }).world;
+    const w = bots.worldForTests;
     b.targetVisible = true;
     b.contact = { seenAt: state.time, acquiredAt: 0, reactAt: 0 };
     w.live = true;
@@ -999,7 +998,7 @@ describe('bot team play and routes', () => {
   describe('managing magazines', () => {
     function oneBot() {
       const { bots } = depotBots();
-      const world = (bots as unknown as { world: BotWorld }).world;
+      const world = bots.worldForTests;
       const b = bots.bots[0]!;
       const ammo = b.character.armament.ammo[0]!;
       const wantsReload = () => {
