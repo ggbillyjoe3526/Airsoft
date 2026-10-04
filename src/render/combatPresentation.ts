@@ -270,6 +270,7 @@ export class CombatPresentation {
 
   /** Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. */
   frame(dt: number, alpha: number, yaw: number, pitch: number): void {
+    this.bbs.setPixelAngle(this.renderer.retroPixelAngle);
     this.bbs.update(alpha, this.renderer.camera.position, this.renderer.camera.quaternion);
     this.puffs.update(dt, this.renderer.camera);
     this.rings?.update(dt, this.renderer.camera);
