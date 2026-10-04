@@ -99,9 +99,14 @@ export interface Dispensed {
   isNew: boolean;
 }
 
-/** The assets Shots can dispense: every pool.md row marked In Shots. */
+/** The assets Shots can dispense: every public pool.md row marked In Shots. */
 export function shotAssets(pool: Pool): Asset[] {
-  return pool.assets.filter((a) => a.inShots);
+  return pool.assets.filter(dispensable);
+}
+
+/** Whether Shots can give `a`: marked In Shots and public (M35: dev gear never drops, even with Dev content on). */
+export function dispensable(a: Asset): boolean {
+  return a.inShots && a.tag === 'public';
 }
 
 /** A tier drawn by the odds (normalised, so odds that don't add up to 100 still work), from `from` (index) up. */
@@ -288,7 +293,7 @@ export function collectionRows(pool: Pool, c: Collection): { rows: CollectionRow
   let owned = 0;
   for (const asset of pool.assets) {
     const counts = pool.tiers.map((t) => ownedCount(c, { asset: asset.id, tier: t.id }));
-    if (!asset.inShots && counts.every((n) => n === 0)) continue;
+    if (!dispensable(asset) && counts.every((n) => n === 0)) continue;
     let n = 0;
     let fc = 0;
     pool.tiers.forEach((t) => {

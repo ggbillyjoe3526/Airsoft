@@ -12,12 +12,13 @@ import {
   TEAM_SIZE_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
-import { MATCH_MODES, type MatchMode } from '../../config/modes';
+import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
-import { COMING_MAPS, COMING_SOON_TAG, MAPS, type MapId } from '../../map/maps';
+import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
+import { playedPicks } from '../../newGamePicks';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
@@ -77,8 +78,12 @@ export interface MenusOptions {
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;
   hud: HudSettingsOptions;
-  /** The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. */
-  dev: SettingsOptions['dev'] & { cheating: () => boolean };
+  /**
+   * The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. `devContent`:
+   * dev content is offered (M35); `devContentUsed`: New game's picks, the Loadout or the opponents' possible gear use
+   * some, so the match won't count or pay.
+   */
+  dev: SettingsOptions['dev'] & { cheating: () => boolean; devContent: () => boolean; devContentUsed: () => boolean };
   /** The save, for Settings → Save (M31). */
   save: SettingsOptions['save'];
 }
@@ -102,6 +107,8 @@ export class Menus {
   private readonly modeDialog: ChoiceDialog<MatchMode>;
   private readonly matchDialog: RowsDialog;
   private readonly difficultyDialog: RowsDialog;
+  /** The pickers whose options may be dev content (M35), with the pick each shows as it plays. */
+  private readonly taggedPickers: { picker: OptionPicker<string>; played: (p: ReturnType<typeof playedPicks>) => string }[] = [];
   /** What the Match and Difficulty pop-ups have picked. */
   private readonly matchRules: MatchRules;
   private difficulty: Difficulty;
@@ -144,13 +151,19 @@ export class Menus {
         opts.map.onChange(m);
         this.refreshSetup();
       },
-      COMING_MAPS,
-      COMING_SOON_TAG,
+      { soon: COMING_MAPS, soonTag: COMING_SOON_TAG, fallback: DEFAULT_MAP },
     );
-    this.modeDialog = new ChoiceDialog('Game mode', MATCH_MODES, opts.mode.initial, 'mode', (m) => {
-      opts.mode.onChange(m);
-      this.refreshSetup();
-    });
+    this.modeDialog = new ChoiceDialog(
+      'Game mode',
+      MATCH_MODES,
+      opts.mode.initial,
+      'mode',
+      (m) => {
+        opts.mode.onChange(m);
+        this.refreshSetup();
+      },
+      { fallback: DEFAULT_MODE },
+    );
     this.matchDialog = new RowsDialog('Match', this.matchRows());
     // Until a teammate level is picked (and saved), teammates follow the opponents' level, as every bot did before M20.
     let teammatesFollow = opts.teammateDifficulty.follows;
@@ -160,21 +173,20 @@ export class Menus {
       opts.teammateDifficulty.onChange(d);
       this.refreshSetup();
     });
+    const opponents = new OptionPicker('Opponents', DIFFICULTIES, this.difficulty, 'difficulty', (d) => {
+      this.difficulty = d;
+      opts.difficulty.onChange(d);
+      if (teammatesFollow) {
+        this.teammateDifficulty = defaultTeammateDifficulty(d);
+        teammates.show(this.teammateDifficulty);
+        opts.teammateDifficulty.onChange(this.teammateDifficulty);
+      }
+      this.refreshSetup();
+    });
+    this.tagPicker(opponents, (p) => p.difficulty);
+    this.tagPicker(teammates, (p) => p.teammateDifficulty);
     this.difficultyDialog = new RowsDialog('Bot difficulty', [
-      menuRow(
-        'Opponents',
-        'The other team\'s bots.',
-        new OptionPicker('Opponents', DIFFICULTIES, this.difficulty, 'difficulty', (d) => {
-          this.difficulty = d;
-          opts.difficulty.onChange(d);
-          if (teammatesFollow) {
-            this.teammateDifficulty = defaultTeammateDifficulty(d);
-            teammates.show(this.teammateDifficulty);
-            opts.teammateDifficulty.onChange(this.teammateDifficulty);
-          }
-          this.refreshSetup();
-        }).root,
-      ),
+      menuRow('Opponents', 'The other team\'s bots.', opponents.root),
       menuRow('Teammates', 'Your bot teammates (none in a 1v1).', teammates.root),
     ]);
     // Every loadout change also refreshes New game's Loadout button.
@@ -310,6 +322,12 @@ export class Menus {
     this.root.remove();
   }
 
+  /** A picker whose options may be dev content (M35): refreshSetup offers or hides them and shows `played`. */
+  private tagPicker<T extends string>(picker: OptionPicker<T>, played: (p: ReturnType<typeof playedPicks>) => T): OptionPicker<T> {
+    this.taggedPickers.push({ picker: picker as unknown as OptionPicker<string>, played });
+    return picker;
+  }
+
   /** The Match pop-up's rows: rounds to win, round time, team size, friendly fire and whether ricochets count. */
   private matchRows(): HTMLElement[] {
     const m = this.matchRules;
@@ -317,15 +335,18 @@ export class Menus {
       this.opts.matchRules.onChange({ ...m });
       this.refreshSetup();
     };
+    const winsNeeded = new OptionPicker('Rounds to win', WINS_NEEDED_CHOICES, String(m.winsNeeded), 'winsNeeded', (v) => {
+      m.winsNeeded = Number(v);
+      changed();
+    });
+    const teamSize = new OptionPicker('Team size', TEAM_SIZE_CHOICES, String(m.teamSize), 'teamSize', (v) => {
+      m.teamSize = Number(v);
+      changed();
+    });
+    this.tagPicker(winsNeeded, (p) => String(p.rules.winsNeeded));
+    this.tagPicker(teamSize, (p) => String(p.rules.teamSize));
     return [
-      menuRow(
-        'Rounds to win',
-        '',
-        new OptionPicker('Rounds to win', WINS_NEEDED_CHOICES, String(m.winsNeeded), 'winsNeeded', (v) => {
-          m.winsNeeded = Number(v);
-          changed();
-        }).root,
-      ),
+      menuRow('Rounds to win', '', winsNeeded.root),
       menuRow(
         'Round time',
         'Out of time: a draw in Elimination, the defenders\' round in Attack and Defend.',
@@ -334,14 +355,7 @@ export class Menus {
           changed();
         }),
       ),
-      menuRow(
-        'Team size',
-        'Bigger teams come with bigger fields.',
-        new OptionPicker('Team size', TEAM_SIZE_CHOICES, String(m.teamSize), 'teamSize', (v) => {
-          m.teamSize = Number(v);
-          changed();
-        }).root,
-      ),
+      menuRow('Team size', 'Bigger teams come with bigger fields.', teamSize.root),
       menuRow(
         'Friendly fire',
         '',
@@ -466,26 +480,30 @@ export class Menus {
 
   /** The New game buttons and the rules under them show what is picked now. */
   private refreshSetup(): void {
-    const m = this.matchRules;
+    // What is picked, as it plays: dev content's picks play as their defaults while Dev content is off (M35).
+    const devContent = this.opts.dev.devContent();
+    this.mapDialog.setDevContent(devContent);
+    this.modeDialog.setDevContent(devContent);
+    const played = playedPicks(
+      { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, rules: this.matchRules },
+      devContent,
+    );
+    for (const t of this.taggedPickers) t.picker.setDevContent(devContent, t.played(played));
+    const m = played.rules;
     this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
     const match = matchRulesSummary(m);
     this.setup.match.set(match.value, match.detail);
-    const opponents = difficultyLabel(this.difficulty);
-    const mates = difficultyLabel(this.teammateDifficulty);
+    const opponents = difficultyLabel(played.difficulty);
+    const mates = difficultyLabel(played.teammateDifficulty);
     this.setup.difficulty.set(
-      m.teamSize === 1 || this.difficulty === this.teammateDifficulty ? opponents : `${opponents} / ${mates}`,
+      m.teamSize === 1 || played.difficulty === played.teammateDifficulty ? opponents : `${opponents} / ${mates}`,
       m.teamSize === 1 ? `Your opponent: ${opponents}. No teammates in a 1v1.` : `Opponents ${opponents}, teammates ${mates}.`,
     );
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
-    const recorded = countsForRecords(m, this.difficulty, this.teammateDifficulty);
+    const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty);
     const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value);
-    // Said before the match, not only on its summary: custom rules don't go into the records (M20), nor does a match
-    // played with Dev settings that change play (M24).
-    const notes = [rules];
-    if (!recorded) notes.push(NOT_RECORDED_NOTE);
-    else if (this.opts.dev.cheating()) notes.push(DEV_NOT_RECORDED_NOTE);
-    this.setup.setRules(notes.join(' '));
+    this.setup.setRules(setupNotes(rules, { recorded, cheating: this.opts.dev.cheating(), devContentUsed: this.opts.dev.devContentUsed() }));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);
     const armory = this.opts.armory.summary();
@@ -499,8 +517,28 @@ export class Menus {
   }
 }
 
+/**
+ * New game's text under its buttons: the rules, then why the match won't count, said before it is played: custom rules
+ * (M20, not `recorded`), Dev settings that change play (M24, `cheating`), or dev content (M35, `devContentUsed`: in full,
+ * or only that it won't pay when a note before it already says it won't be recorded). Pure.
+ */
+export function setupNotes(rules: string, why: { recorded: boolean; cheating: boolean; devContentUsed: boolean }): string {
+  const notes = [rules];
+  if (!why.recorded) notes.push(NOT_RECORDED_NOTE);
+  else if (why.cheating) notes.push(DEV_NOT_RECORDED_NOTE);
+  if (why.devContentUsed) notes.push(notes.length > 1 ? DEV_CONTENT_PAY_NOTE : DEV_CONTENT_NOTE);
+  return notes.join(' ');
+}
+
 /** Under New game's rules while Dev settings that change play are on (M24). */
 export const DEV_NOT_RECORDED_NOTE = "Dev settings are on, so this match won't go into your records.";
+
+/**
+ * Under New game's rules when the picks, the Loadout or the opponents' possible gear use dev content (M35); the second
+ * when another note already says the match won't be recorded.
+ */
+export const DEV_CONTENT_NOTE = "This match uses content still being built, so it won't go into your records or pay Field Credits.";
+export const DEV_CONTENT_PAY_NOTE = "It uses content still being built, so it won't pay Field Credits either.";
 
 /** Under New game's rules when the setup isn't the standard match. */
 export const NOT_RECORDED_NOTE = `This match won't go into your records, which count only the standard match: ${standardMatchText()}`;

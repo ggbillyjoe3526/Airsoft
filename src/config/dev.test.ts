@@ -44,6 +44,49 @@ describe('Dev settings (M24)', () => {
     expect(devCheating({ ...DEV_DEFAULTS, gameSpeed: 0.5 })).toBe(true);
     expect(devIntro()).toBe("For trying things out. With Unlock all gear, Game speed, Bottomless magazines or Ghost changed, matches don't go into your records.");
   });
+
+  describe('Dev content (M35)', () => {
+    it('is a switch row, off by default, and not a cheat', () => {
+      expect(DEV_ENTRIES.find((e) => e.id === 'devContent')).toMatchObject({ kind: 'switch', label: 'Dev content', cheat: false });
+      expect(DEV_DEFAULTS.devContent).toBe(false);
+      expect(loadDevSettings(saved({})).devContent).toBe(false);
+    });
+
+    it('does not count as cheating with it on, on its own or with the other harmless switches', () => {
+      expect(devCheating({ ...DEV_DEFAULTS, devContent: true })).toBe(false);
+      expect(devCheating({ ...DEV_DEFAULTS, devContent: true, showDebug: true, disableArmory: true })).toBe(false);
+      expect(devCheating({ ...DEV_DEFAULTS, devContent: true, ghost: true })).toBe(true);
+    });
+
+    it('applies only while the tab is shown', () => {
+      const picked = { ...DEV_DEFAULTS, devContent: true };
+      expect(activeDev(true, picked).devContent).toBe(true);
+      expect(activeDev(false, picked).devContent).toBe(false);
+    });
+
+    it('reads dev.devContent as saved, and junk as off', () => {
+      expect(loadDevSettings(saved({ 'dev.devContent': 'on' })).devContent).toBe(true);
+      expect(loadDevSettings(saved({ 'dev.devContent': 'off' })).devContent).toBe(false);
+      expect(loadDevSettings(saved({ 'dev.devContent': 'yes' })).devContent).toBe(false);
+      expect(loadDevSettings(saved({ 'dev.devContent': 'on', 'dev.ghost': 'on' }))).toEqual({ ...DEV_DEFAULTS, devContent: true, ghost: true });
+    });
+
+    it("carries over a save holding the Woodland thread's dev.mapsInDevelopment while nothing is saved under dev.devContent", () => {
+      expect(loadDevSettings(saved({ 'dev.mapsInDevelopment': 'on' })).devContent).toBe(true);
+      expect(loadDevSettings(saved({ 'dev.mapsInDevelopment': 'off' })).devContent).toBe(false);
+      expect(loadDevSettings(saved({ 'dev.mapsInDevelopment': 'on' }))).toEqual({ ...DEV_DEFAULTS, devContent: true });
+    });
+
+    it('lets a saved dev.devContent win over dev.mapsInDevelopment', () => {
+      expect(loadDevSettings(saved({ 'dev.devContent': 'off', 'dev.mapsInDevelopment': 'on' })).devContent).toBe(false);
+      expect(loadDevSettings(saved({ 'dev.devContent': 'on', 'dev.mapsInDevelopment': 'off' })).devContent).toBe(true);
+    });
+
+    it('does not read dev.mapsInDevelopment into any other switch', () => {
+      const d = loadDevSettings(saved({ 'dev.mapsInDevelopment': 'on' }));
+      expect({ ...d, devContent: false }).toEqual(DEV_DEFAULTS);
+    });
+  });
 });
 
 describe('Retro pixel filter rows (M42)', () => {
