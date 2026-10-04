@@ -111,11 +111,6 @@ export interface MapData {
    * preset's values for this map only. Absent: day.
    */
   lighting?: MapLighting;
-  /**
-   * Still being built (M33, owner): the Map pop-up shows it greyed out as Coming soon, and only Dev settings › Access
-   * maps in development opens it; its matches don't go into the records.
-   */
-  inDevelopment?: boolean;
 }
 
 /** A tweak of a lighting preset for one map: any group's values (MapData.lighting.overrides). */

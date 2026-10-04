@@ -1,3 +1,4 @@
+import type { ContentTag } from '../config/content';
 import { DEPOT } from './depot';
 import type { MapData } from './mapTypes';
 import { WOODLAND } from './woodland';
@@ -10,6 +11,8 @@ export interface MapEntry {
   id: MapId;
   label: string;
   blurb: string;
+  /** Public or dev (M35): a `dev` map is listed only while the Dev content switch is on. */
+  tag: ContentTag;
   data: MapData;
   /**
    * Players per team: picking the map sets `standard`, and the Match pop-up offers up to `max` (the map's spawns per
@@ -18,34 +21,27 @@ export interface MapEntry {
   teamSize: { standard: number; max: number };
 }
 
-/**
- * The maps in the order the Map pop-up lists them. One still being built (`data.inDevelopment`, owner, 2026-10-04) is
- * listed too: greyed out as Coming soon, unless Dev settings › Access maps in development is on.
- */
+/** The maps in the order New game's Map pop-up lists them. Woodland is dev content until the owner makes it public. */
 export const MAPS: readonly MapEntry[] = [
-  { id: 'depot', label: 'Depot', blurb: 'An abandoned warehouse yard.', data: DEPOT, teamSize: { standard: 3, max: 3 } },
-  { id: 'woodland', label: 'Woodland', blurb: 'A wide wood with a hill, at night.', data: WOODLAND, teamSize: { standard: 4, max: 5 } },
+  { id: 'depot', label: 'Depot', blurb: 'An abandoned warehouse yard.', tag: 'public', data: DEPOT, teamSize: { standard: 3, max: 3 } },
+  { id: 'woodland', label: 'Woodland', blurb: 'A wide wood with a hill, at night.', tag: 'dev', data: WOODLAND, teamSize: { standard: 4, max: 5 } },
 ];
 
-/** The tag on a map still being built: while it is locked, and once Dev settings open it. */
+/**
+ * Fields still being built (owner, 2026-10-04): listed under the playable maps in the Map pop-up, greyed out with a
+ * "Coming soon" tag, and never picked or saved. Dev content (M35): listed only while Dev content is on. A map moves up
+ * to MAPS when it is playable (tagged dev until the owner makes it public), as Woodland did (M33d).
+ */
+export const COMING_MAPS: readonly { label: string; blurb: string; tag: ContentTag }[] = [];
+
+/** The tag on a map that is still being built. */
 export const COMING_SOON_TAG = 'Coming soon';
-export const IN_DEVELOPMENT_TAG = 'In development';
 
 export const DEFAULT_MAP: MapId = 'depot';
 
 /** The entry for `id` (the default map's for an id no longer offered). */
 export function mapEntry(id: MapId): MapEntry {
   return MAPS.find((m) => m.id === id) ?? MAPS.find((m) => m.id === DEFAULT_MAP)!;
-}
-
-/** Whether `id` can be played now: every finished map, and a map in development only with `devAccess`. */
-export function mapOpen(id: MapId, devAccess: boolean): boolean {
-  return devAccess || !mapEntry(id).data.inDevelopment;
-}
-
-/** The map that is played for the picked `id`: itself if it is open, else the default map. */
-export function playableMap(id: MapId, devAccess: boolean): MapId {
-  return mapOpen(id, devAccess) ? mapEntry(id).id : DEFAULT_MAP;
 }
 
 /** The map data for `id` (the default map for an id no longer offered). */

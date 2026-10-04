@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * M33e QA: Woodland (a map still being built, so Dev settings > Access maps in development) loads with its bushes
+ * M33e QA: Woodland (dev content, so Dev settings > Dev content) loads with its bushes
  * drawn as one shadow-casting mesh and the bots of its match given the same bushes, with no console error. Values are
  * read through the e2e build's `window.airsoft`, no screenshot.
  */
@@ -22,11 +22,11 @@ test('Woodland loads with its bushes drawn, in one mesh that casts and receives 
   await page.getByRole('button', { name: 'Start' }).click();
   const setup = page.locator('.menu-setup');
 
-  // Dev settings > Access maps in development opens Woodland.
+  // Dev settings > Dev content lists Woodland (M35).
   await setup.getByRole('button', { name: /Settings/i }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
-  await settings.getByRole('group', { name: 'Access maps in development' }).getByRole('button', { name: 'On' }).click();
+  await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await setup.getByRole('button', { name: /Map/i }).click();
   const mapDialog = page.getByRole('dialog', { name: 'Map' });
@@ -94,7 +94,7 @@ test('Woodland is lit by night and the practice range after it by day again', as
   await setup.getByRole('button', { name: /Settings/i }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
-  await settings.getByRole('group', { name: 'Access maps in development' }).getByRole('button', { name: 'On' }).click();
+  await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await setup.getByRole('button', { name: /Map/i }).click();
   await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Woodland/i }).click();

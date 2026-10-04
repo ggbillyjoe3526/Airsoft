@@ -1,3 +1,5 @@
+import type { ContentTag } from './content';
+
 /**
  * Match modes. Elimination: knock out the whole other team. Attack / Defend: one team attacks a flagpole in the
  * other team's half and wins by raising its flag to the top; the defenders win by holding out until
@@ -5,10 +7,10 @@
  */
 export type MatchMode = 'elimination' | 'attackDefend';
 
-/** Modes in the order the Mode pop-up lists them, with their labels. */
-export const MATCH_MODES: readonly { id: MatchMode; label: string; blurb: string }[] = [
-  { id: 'elimination', label: 'Elimination', blurb: 'Last team with someone in play wins the round.' },
-  { id: 'attackDefend', label: 'Attack and Defend', blurb: "Raise your flag on the other team's pole, or keep yours down." },
+/** Modes in the order the Mode pop-up lists them, with their labels and content tags (M35, config/content.ts). */
+export const MATCH_MODES: readonly { id: MatchMode; label: string; blurb: string; tag: ContentTag }[] = [
+  { id: 'elimination', label: 'Elimination', blurb: 'Last team with someone in play wins the round.', tag: 'public' },
+  { id: 'attackDefend', label: 'Attack and Defend', blurb: "Raise your flag on the other team's pole, or keep yours down.", tag: 'public' },
 ];
 
 export const DEFAULT_MODE: MatchMode = 'elimination';
