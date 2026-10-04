@@ -1,52 +1,16 @@
-import { factoryParts, GRIP_CHOICES, GRIPS, type GripId, handlingOf, MAGAZINES, type MagazineId, type ReplicaParts } from '../config/attachments';
+import { GRIPS, handlingOf, MAGAZINES } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
 import { MOVEMENT } from '../config/movement';
 import { SIM_DT } from '../config/sim';
-import { AIMING, OPTIC_CHOICES, type OpticChoice, opticOf, OPTICS } from '../config/optics';
-import { BB_WEIGHT, HOP_UP, type LoadoutSlot, muzzleEnergy, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
-import { loadSetting, numberIn } from '../settings/storage';
+import { AIMING, OPTICS } from '../config/optics';
+import { BB_WEIGHT, HOP_UP, muzzleEnergy, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
+import type { KitSlot } from '../pool/kit';
+import type { LoadoutModel, PlayerKit } from '../pool/loadoutModel';
 import { timeToSteady } from '../sim/accuracy';
 import { fitParts } from '../sim/armament';
 import { createCharacter } from '../sim/character';
 import { bestHopUp, flightTime, hopUpReach } from '../sim/hopUp';
 import { vec3 } from '../sim/vec';
-
-/** The settings field a replica's hop-up dial is saved as. */
-export function hopUpField(replica: ReplicaConfig): `hopUp.${string}` {
-  return `hopUp.${replica.id}`;
-}
-
-/** A replica's saved hop-up dial, or its out-of-the-box setting. */
-export function loadHopUp(r: ReplicaConfig): number {
-  return loadSetting(hopUpField(r), numberIn(HOP_UP.minDial, HOP_UP.maxDial), r.hopUpDial);
-}
-
-/** The settings field a replica's BB weight is saved as. */
-export function bbWeightField(replica: ReplicaConfig): `bbWeight.${string}` {
-  return `bbWeight.${replica.id}`;
-}
-
-/** A BB weight offered on the Loadout screen, from a stored value (a number, or its text from the picker). */
-function bbWeightIn(raw: unknown): number | undefined {
-  const g = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : Number.NaN;
-  return (BB_WEIGHT.choices as readonly number[]).includes(g) ? g : undefined;
-}
-
-/** A replica's saved BB weight (grams), or the one it comes set up for. */
-export function loadBbWeight(r: ReplicaConfig): number {
-  return loadSetting(bbWeightField(r), bbWeightIn, r.bbWeight);
-}
-
-/** The settings field a loadout slot's replica is saved as. */
-export function slotField(slot: LoadoutSlot): `slot.${string}` {
-  return `slot.${slot.id}`;
-}
-
-/** The replica saved for `slot`, or the slot's default (its first) if nothing that fits is saved. */
-export function loadSlotPick(slot: LoadoutSlot): ReplicaConfig {
-  const id = loadSetting(slotField(slot), (raw) => slot.fits.find((r) => r.id === raw)?.id, slot.fits[0]!.id);
-  return slot.fits.find((r) => r.id === id)!;
-}
 
 /** A BB weight as the menus show it, e.g. "0.25 g". */
 export function bbWeightLabel(grams: number): string {
@@ -90,45 +54,15 @@ export function hopUpReadout(replica: ReplicaConfig, dial: number, grams = repli
   return `On target ${reach}, then the BB drops${factory}.`;
 }
 
-/** The settings fields a replica's grip and magazine are saved as (M17b). */
-export function gripField(replica: ReplicaConfig): `grip.${string}` {
-  return `grip.${replica.id}`;
-}
-
-export function magazineField(replica: ReplicaConfig): `mag.${string}` {
-  return `mag.${replica.id}`;
-}
-
-/** A replica's saved grip and magazine, or the ones it comes with (anything it can't take falls back to those). */
-export function loadParts(r: ReplicaConfig): ReplicaParts {
-  const factory = factoryParts(r);
-  return {
-    grip: r.gripMount ? loadSetting(gripField(r), (raw) => GRIP_CHOICES.find((g) => g.id === raw)?.id, factory.grip) : factory.grip,
-    magazine: loadSetting(magazineField(r), (raw) => r.magazines.find((m) => m === raw), factory.magazine),
-  };
-}
-
-/** The magazines a replica takes, as the Loadout screen offers them. */
-export function magazineChoices(r: ReplicaConfig): { id: MagazineId; label: string; blurb: string }[] {
-  return r.magazines.map((id) => ({ id, label: MAGAZINES[id].label, blurb: MAGAZINES[id].blurb }));
-}
-
-/** One line under the magazine, in numbers, e.g. "60 BBs each, 4 carried (240 in all). Reload 1.8 s." */
-export function magazineReadout(r: ReplicaConfig, magazine: MagazineId): string {
-  const h = handlingOf(r, { grip: 'none', magazine });
-  const draw = MAGAZINES[magazine].drawScale !== 1 ? ` Draw ${h.drawTime.toFixed(2)} s.` : '';
-  return `${h.magSize} BBs each, ${h.mags} carried (${h.magSize * h.mags} in all). Reload ${h.reloadTime.toFixed(1)} s.${draw}`;
-}
-
 /**
- * One line under the optic: how quickly the fitted optic comes up to your eye with this replica's grip, e.g. "Up to
- * your eye in 0.30 s with the vertical grip.", or that iron sights fire from the hip.
+ * One line under the optic: how quickly the fitted optic comes up to your eye with this replica's grip and tiers, e.g.
+ * "Up to your eye in 0.30 s with the vertical grip.", or that iron sights fire from the hip.
  */
-export function opticReadout(r: ReplicaConfig, optic: OpticChoice, grip: GripId): string {
-  const id = opticOf(optic);
-  if (id === null) return 'Fired from the hip: no sight to raise.';
-  const h = handlingOf(r, { grip, magazine: r.magazines[0]! });
-  const time = (AIMING.raiseTime * OPTICS[id].raiseScale * h.raiseScale).toFixed(2);
+export function opticReadout(slot: KitSlot): string {
+  if (slot.optic === null) return 'Fired from the hip: no sight to raise.';
+  const h = handlingOf(slot.replica, slot.parts);
+  const time = (AIMING.raiseTime * OPTICS[slot.optic].raiseScale * h.raiseScale).toFixed(2);
+  const grip = slot.parts.grip;
   return `Up to your eye in ${time} s${grip === 'none' ? '' : ` with the ${GRIPS[grip].label.toLowerCase()}`}.`;
 }
 
@@ -140,39 +74,75 @@ const STEADY_MARGIN = 0.1;
 
 /**
  * One line under the grip, in numbers: how quickly the replica comes up after a switch, and after a sprint when it can
- * fire against when the aim is steady again (from the sim's own accuracy rule), e.g. "Brings the AEG rifle up in
+ * fire against when the aim is steady again (from the sim's own accuracy rule), e.g. "Brings the AEG Rifle up in
  * 0.45 s. After a sprint it can fire from 0.20 s, steady from 0.27 s."
  */
-export function gripReadout(r: ReplicaConfig, grip: GripId): string {
-  const parts = { grip, magazine: r.magazines[0]! };
-  const c = createCharacter(0, vec3(), 0, [r]);
-  fitParts(c.armament, [r], [parts]);
+export function gripReadout(slot: KitSlot): string {
+  const c = createCharacter(0, vec3(), 0, [slot.replica]);
+  fitParts(c.armament, [slot.parts]);
   const steady = timeToSteady(c, MOVEMENT, SIM_DT, STEADY_MARGIN);
   const lockout = MOVEMENT.sprintFireLockout;
   const after = steady <= lockout ? 'already steady' : `steady from ${steady.toFixed(2)} s`;
-  return `Brings the ${r.name} up in ${handlingOf(r, parts).drawTime.toFixed(2)} s. After a sprint it can fire from ${lockout.toFixed(2)} s, ${after}.`;
+  return `Brings the ${slot.replica.name} up in ${handlingOf(slot.replica, slot.parts).drawTime.toFixed(2)} s. After a sprint it can fire from ${lockout.toFixed(2)} s, ${after}.`;
+}
+
+/** One line under the magazine, in numbers, e.g. "60 BBs each, 4 carried (240 in all). Reload 1.8 s." */
+export function magazineReadout(slot: KitSlot): string {
+  const h = handlingOf(slot.replica, slot.parts);
+  const draw = MAGAZINES[slot.parts.magazine].drawScale !== 1 ? ` Draw ${h.drawTime.toFixed(2)} s.` : '';
+  return `${h.magSize} BBs each, ${h.mags} carried (${h.magSize * h.mags} in all). Reload ${h.reloadTime.toFixed(1)} s.${draw}`;
 }
 
 /**
- * The Loadout button's summary on the New game screen: the optic on the replica that takes one (if any), any grip and
- * magazine that isn't the one a replica comes with, then each replica's BB weight and hop-up dial in slot order, e.g.
- * "Red dot · Angled grip · Hi-cap mag · 0.25 g / 0.20 g BBs · hop-up 65% / 55%".
+ * One line under the power source: the muzzle energy and speed it gives with the replica's BB weight, and the rate of
+ * fire, e.g. "1.04 J: leaves the barrel at 91 m/s with 0.25 g BBs. 14 BBs a second."
  */
-export function loadoutSummary(
-  loadout: readonly ReplicaConfig[],
-  optic: OpticChoice,
-  dials: readonly number[],
-  grams: readonly number[],
-  parts: readonly ReplicaParts[] = [],
-): string {
-  const opticPart = loadout.some((r) => r.opticMount) ? `${OPTIC_CHOICES.find((o) => o.id === optic)?.label ?? optic} · ` : '';
-  let partsPart = '';
-  loadout.forEach((r, i) => {
-    const p = parts[i];
-    if (!p) return;
-    if (p.grip !== 'none') partsPart += `${GRIPS[p.grip].label} · `;
-    if (p.magazine !== r.magazines[0]) partsPart += `${MAGAZINES[p.magazine].label} mag · `;
-  });
-  const weights = loadout.map((r, i) => bbWeightLabel(grams[i] ?? r.bbWeight)).join(' / ');
-  return `${opticPart}${partsPart}${weights} BBs · hop-up ${loadout.map((r, i) => hopUpLabel(dials[i] ?? r.hopUpDial)).join(' / ')}`;
+export function powerReadout(slot: KitSlot, grams: number): string {
+  const r = slot.replica;
+  return `${muzzleEnergy(r, grams).toFixed(2)} J: leaves the barrel at ${Math.round(muzzleVelocity(r, grams))} m/s with ${bbWeightLabel(grams)} BBs. ${formatRate(r.fireRate)} BBs a second at most.`;
+}
+
+/** One line under the laser: the spread from the hip, as the crosshair shows it. */
+export function laserReadout(slot: KitSlot): string {
+  return `Spread ${slot.replica.spreadDeg.toFixed(2)}° from the hip, before stance and movement.`;
+}
+
+function formatRate(rate: number): string {
+  return Number.isInteger(Math.round(rate * 10) / 10) ? String(Math.round(rate)) : rate.toFixed(1);
+}
+
+/**
+ * The Loadout tile's summary on the New game screen: any optic, grip, laser or magazine that isn't how a replica comes,
+ * then each replica's BB weight and hop-up dial in slot order, e.g. "Red Dot · Vertical Grip · 0.25 g / 0.20 g BBs ·
+ * hop-up 65% / 55%". `names`: each slot's fitted item names (as it comes: none).
+ */
+export function loadoutSummary(kit: PlayerKit, names: readonly string[]): string {
+  const parts = names.map((n) => `${n} · `).join('');
+  const weights = kit.slots.map((s, i) => bbWeightLabel(kit.bbWeights[i] ?? s.replica.bbWeight)).join(' / ');
+  return `${parts}${weights} BBs · hop-up ${kit.slots.map((s, i) => hopUpLabel(kit.hopUps[i] ?? s.replica.hopUpDial)).join(' / ')}`;
+}
+
+/**
+ * New game's Loadout tile: each equipped replica on its own line (its tier after it unless Common), and the summary
+ * line of the parts fitted that aren't how the replica comes, BB weights and hop-up dials.
+ */
+export function loadoutTile(model: LoadoutModel): { replicas: string; detail: string } {
+  const pool = model.pool;
+  const lowest = pool.tiers[0]?.id;
+  const equipped = model.equipped().filter((r) => r !== null);
+  const replicas = equipped
+    .map((r) => {
+      const name = pool.byId.get(r.asset)!.name;
+      return r.tier === lowest ? name : `${name} (${pool.tiers.find((t) => t.id === r.tier)?.label ?? r.tier})`;
+    })
+    .join('\n');
+  const names: string[] = [];
+  for (const r of equipped) {
+    const fit = model.fitOf(r.asset);
+    for (const slot of ['optic', 'grip', 'laser', 'magazine'] as const) {
+      const item = fit[slot];
+      if (item) names.push(pool.byId.get(item.asset)!.name);
+    }
+  }
+  return { replicas, detail: loadoutSummary(model.kit(), names) };
 }

@@ -145,7 +145,7 @@ describe('accuracy by stance and movement', () => {
     const settleAfterSprint = (grip: GripId): number => {
       const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
       c.grounded = true;
-      fitParts(c.armament, LOADOUT, [{ grip, magazine: 'standard' }]);
+      fitParts(c.armament, [{ grip, magazine: 'standard' }]);
       c.sprinting = true;
       stepAccuracy(c, MOVEMENT, DT);
       c.sprinting = false;
@@ -223,12 +223,12 @@ describe('time to steady after a sprint (the Loadout grip line)', () => {
   it('follows stepAccuracy itself: the spread is above the margin a tick before and within it at the time', () => {
     for (const grip of ['none', 'vertical', 'angled'] as GripId[]) {
       const c = createCharacter(0, vec3(), 0);
-      fitParts(c.armament, LOADOUT, [{ grip, magazine: 'standard' }]);
+      fitParts(c.armament, [{ grip, magazine: 'standard' }]);
       const t = timeToSteady(c, MOVEMENT, DT, 0.1);
       expect(c.spreadScale).toBeLessThanOrEqual(1.1);
       // Replay by hand: one tick short of t the aim is still shaky.
       const d = createCharacter(0, vec3(), 0);
-      fitParts(d.armament, LOADOUT, [{ grip, magazine: 'standard' }]);
+      fitParts(d.armament, [{ grip, magazine: 'standard' }]);
       d.grounded = true;
       d.sprinting = true;
       stepAccuracy(d, MOVEMENT, DT);

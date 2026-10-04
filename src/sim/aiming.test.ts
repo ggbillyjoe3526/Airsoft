@@ -6,7 +6,7 @@ import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
 import { stepAiming } from './aiming';
-import { fitOptic } from './armament';
+import { fitOptics } from './armament';
 import { createCharacter, respawnCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
 import { eliminate } from './elimination';
@@ -17,8 +17,8 @@ import { OPEN_NAV, openFieldElimination } from './testSupport';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
-const RIFLE = LOADOUT.findIndex((r) => r.opticMount);
-const PISTOL = LOADOUT.findIndex((r) => !r.opticMount);
+const RIFLE = LOADOUT.findIndex((r) => r.look.aimHold !== undefined);
+const PISTOL = LOADOUT.findIndex((r) => r.look.aimHold === undefined);
 
 const floor: CharacterMover = {
   move(c, d, out) {
@@ -36,7 +36,7 @@ const floor: CharacterMover = {
 const DEAD_ZONES = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }]];
 
 function testContext(): SimContext {
-  return createSimContext({ mover: floor, query: { raycastStatic: () => -1 }, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY: -10, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
+  return createSimContext({ mover: floor, query: { raycastStatic: () => -1 }, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, killY: -10, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
 }
 
 function aimCommand(): PlayerCommand {
@@ -51,12 +51,12 @@ describe('fitting an optic', () => {
     expect(PISTOL).toBeGreaterThanOrEqual(0);
     const c = createCharacter(0, vec3(), 0);
     expect(c.armament.optics.every((o) => o === null)).toBe(true); // bare replicas by default
-    fitOptic(c.armament, LOADOUT, 'redDot');
+    fitOptics(c.armament, ['redDot', null]);
     expect(c.armament.optics[RIFLE]).toBe('redDot');
     expect(c.armament.optics[PISTOL]).toBeNull();
-    respawnCharacter(c, LOADOUT);
+    respawnCharacter(c);
     expect(c.armament.optics[RIFLE]).toBe('redDot');
-    fitOptic(c.armament, LOADOUT, null);
+    fitOptics(c.armament, [null, null]);
     expect(c.armament.optics[RIFLE]).toBeNull();
   });
 });
@@ -65,28 +65,28 @@ describe('aiming down sights (owner, 2026-10-03)', () => {
   it('works only with an optic fitted to the replica in hand', () => {
     const c = createCharacter(0, vec3(), 0);
     const cmd = aimCommand();
-    stepAiming(c, cmd, LOADOUT);
+    stepAiming(c, cmd);
     expect(c.aiming).toBe(false); // iron sights only: no aiming down sights
-    fitOptic(c.armament, LOADOUT, 'redDot');
-    stepAiming(c, cmd, LOADOUT);
+    fitOptics(c.armament, ['redDot', null]);
+    stepAiming(c, cmd);
     expect(c.aiming).toBe(true);
     c.armament.active = PISTOL;
-    stepAiming(c, cmd, LOADOUT);
+    stepAiming(c, cmd);
     expect(c.aiming).toBe(false);
     c.armament.active = RIFLE;
-    stepAiming(c, createCommand(), LOADOUT);
+    stepAiming(c, createCommand());
     expect(c.aiming).toBe(false); // button released
   });
 
   it('drops the sight while reloading or bringing the replica up', () => {
     const c = createCharacter(0, vec3(), 0);
-    fitOptic(c.armament, LOADOUT, 'redDot');
+    fitOptics(c.armament, ['redDot', null]);
     c.armament.reload = 1;
-    stepAiming(c, aimCommand(), LOADOUT);
+    stepAiming(c, aimCommand());
     expect(c.aiming).toBe(false);
     c.armament.reload = 0;
     c.armament.draw = 0.2;
-    stepAiming(c, aimCommand(), LOADOUT);
+    stepAiming(c, aimCommand());
     expect(c.aiming).toBe(false);
   });
 
@@ -94,7 +94,7 @@ describe('aiming down sights (owner, 2026-10-03)', () => {
     const run = (optic: boolean) => {
       const state = createGameState(1, 16, ROUNDS);
       const c = createCharacter(0, vec3(), 0);
-      if (optic) fitOptic(c.armament, LOADOUT, 'redDot');
+      if (optic) fitOptics(c.armament, ['redDot', null]);
       state.characters.push(c);
       const cmd = aimCommand();
       cmd.forward = 1;
@@ -124,7 +124,7 @@ describe('aiming down sights (owner, 2026-10-03)', () => {
     const state = createGameState(1, 16, ROUNDS);
     const aimer = createCharacter(0, vec3(), 0);
     const hip = createCharacter(1, vec3(5, 0, 0), 0);
-    fitOptic(aimer.armament, LOADOUT, 'redDot');
+    fitOptics(aimer.armament, ['redDot', null]);
     state.characters.push(aimer, hip);
     const ctx = testContext();
     const commands = new Map([
@@ -138,7 +138,7 @@ describe('aiming down sights (owner, 2026-10-03)', () => {
 
   it('stops once you are hit', () => {
     const c = createCharacter(0, vec3(), 0);
-    fitOptic(c.armament, LOADOUT, 'redDot');
+    fitOptics(c.armament, ['redDot', null]);
     c.aiming = true;
     const state = createGameState(1, 16, ROUNDS);
     state.characters.push(c);

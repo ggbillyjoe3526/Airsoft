@@ -2,7 +2,6 @@ import type { BallisticsConfig } from '../config/ballistics';
 import type { FootstepConfig } from '../config/footsteps';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig, MovementConfig } from '../config/movement';
-import type { ReplicaConfig } from '../config/replicas';
 import type { SpawnPoint } from '../map/mapTypes';
 import { createNavSearch, type NavGrid } from '../nav/navGrid';
 import { stepAccuracy } from './accuracy';
@@ -29,7 +28,6 @@ export interface SimServices {
   footsteps: FootstepConfig;
   body: BodyConfig;
   ballistics: BallisticsConfig;
-  loadout: readonly ReplicaConfig[];
   /** Anything below this height has left the level (map data). */
   killY: number;
   hits: HitConfig;
@@ -76,7 +74,6 @@ export function createSimContext(services: SimServices): SimContext {
     eliminatedCommand: createCommand(),
     muzzle: { eye: vec3(), yaw: 0, pitch: 0, spreadScale: 1 },
     armament: {
-      loadout: services.loadout,
       ballistics: services.ballistics,
       bbs: createBBPool(0), // replaced by the state's pool and RNG each tick
       rng: createRng(0),
@@ -89,7 +86,7 @@ export function createSimContext(services: SimServices): SimContext {
       rangeTargets: [],
       elimination: { deadZones: services.deadZones, nav: services.nav, navSearch: createNavSearch(services.nav), snap: services.navSnap },
     },
-    round: { rules: services.rounds, loadout: services.loadout, pole: services.pole, spawns: services.spawns ?? [], spawnLift: services.spawnLift ?? 0 },
+    round: { rules: services.rounds, pole: services.pole, spawns: services.spawns ?? [], spawnLift: services.spawnLift ?? 0 },
   };
 }
 
@@ -130,7 +127,7 @@ export function stepSimulation(
       cmd.yaw = c.yaw;
       cmd.pitch = c.pitch;
     }
-    if (inPlay) stepAiming(c, cmd, armCtx.loadout);
+    if (inPlay) stepAiming(c, cmd);
     else c.aiming = false;
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);

@@ -22,32 +22,18 @@ export interface OpticConfig {
 
 export const OPTICS: Readonly<Record<OpticId, OpticConfig>> = {
   // "Narrows the view slightly" (roadmap): about 100° → 84° across a 16:9 screen. A first guess to tune in play.
-  redDot: { name: 'Red dot', zoom: 1.25, raiseScale: 1, scope: false },
+  redDot: { name: 'Red Dot', zoom: 1.25, raiseScale: 1, scope: false },
   // A closer look down Depot's long lanes (about 100° → 56° across a 16:9 screen), paid for with a slower raise and
   // nothing seen around the eyepiece. First guesses to tune in play.
-  scope2x: { name: '2× scope', zoom: 2, raiseScale: 1.6, scope: true },
+  scope2x: { name: '2x Scope', zoom: 2, raiseScale: 1.6, scope: true },
 };
 
-/** What the Loadout screen offers for the rifle's optic slot: nothing (iron sights) or an optic. */
-export type OpticChoice = 'none' | OpticId;
-
-export const OPTIC_CHOICES: readonly { id: OpticChoice; label: string; blurb: string }[] = [
-  { id: 'none', label: 'Iron sights', blurb: 'No optic: fire from the hip with the crosshair. Aiming down sights needs an optic.' },
-  { id: 'redDot', label: 'Red dot', blurb: 'A red dot on the rifle: press the aim button (right mouse by default) to aim through it (walking pace).' },
-  {
-    id: 'scope2x',
-    label: '2× scope',
-    blurb: 'A low-power scope: a closer view down the long lanes, but slower to raise and you see nothing around it.',
-  },
-];
-
-/** Off by default (roadmap M12b): the bare rifle, as the owner played it so far. */
-export const DEFAULT_OPTIC: OpticChoice = 'none';
-
-/** The optic a choice fits, or null for none. */
-export function opticOf(choice: OpticChoice): OpticId | null {
-  return choice === 'none' ? null : choice;
-}
+/** One line for each optic choice on the Loadout's Customise screen ('none': iron sights). */
+export const OPTIC_BLURBS: Readonly<Record<'none' | OpticId, string>> = {
+  none: 'No optic: fire from the hip with the crosshair. Aiming down sights needs an optic.',
+  redDot: 'A red dot: press the aim button (right mouse by default) to aim through it (walking pace).',
+  scope2x: 'A low-power scope: a closer view down the long lanes, but slower to raise and you see nothing around it.',
+};
 
 export const AIMING = {
   /** Seconds to raise the sight to your eye (and to lower it): the view zoom, the replica and the HUD follow it. */

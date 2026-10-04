@@ -163,7 +163,7 @@ export function rescueIfOutOfWorld(c: Character, killY: number): boolean {
  * Puts a character back at its spawn for a new round: alive, standing, full magazines, fire selectors, optics,
  * hop-up dials and BB weights left as they were.
  */
-export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]): void {
+export function respawnCharacter(c: Character): void {
   copy(c.position, c.spawnPosition);
   copy(c.prevPosition, c.spawnPosition);
   c.velocity.x = 0;
@@ -194,9 +194,9 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.statusTime = 0;
   c.hitBy = -1;
   c.walkOffStuck = 0;
-  const { modes, optics, hopUps, bbWeights, parts, triggerWasDown, bottomless } = c.armament;
-  // Fresh magazines for the parts fitted (a hi-cap refills as a hi-cap).
-  c.armament = createArmament(loadout, parts.length === loadout.length ? parts : []);
+  const { replicas, modes, optics, hopUps, bbWeights, parts, triggerWasDown, bottomless } = c.armament;
+  // The same replicas, with fresh magazines for the parts fitted (a hi-cap refills as a hi-cap).
+  c.armament = createArmament(replicas, parts);
   // A trigger still held from before the round needs letting go and pulling again (no semi shot at the whistle).
   c.armament.triggerWasDown = triggerWasDown;
   c.armament.bottomless = bottomless;

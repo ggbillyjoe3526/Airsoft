@@ -40,7 +40,7 @@ export interface ReplicaConfig {
    */
   muzzleEnergy: number;
   /**
-   * The BB weight it comes set up for (grams, one of BB_WEIGHT.choices): the player's starting choice on the Loadout
+   * The BB weight it comes set up for (grams, within BB_WEIGHT's range): the player's starting choice on the Loadout
    * screen, and what bots always shoot. Changes speed, drag and hop-up lift (config/ballistics.ts).
    */
   bbWeight: number;
@@ -58,11 +58,10 @@ export interface ReplicaConfig {
   spreadDeg: number;
   /** Upward view kick per shot (degrees). Light: these are toys, not firearms. */
   recoilDeg: number;
-  /** Has a rail an optic can be fitted to (config/optics.ts); aiming down sights needs one fitted. */
-  opticMount: boolean;
-  /** Has a rail under the handguard a grip can be fitted to (config/attachments.ts). */
-  gripMount: boolean;
-  /** The magazines made for it (config/attachments.ts), the one it comes with first. */
+  /**
+   * The magazines its model shows (config/attachments.ts), the one it comes with first. Which rails and magazines a
+   * replica takes is the asset pool's call (pool.md tags, M26a); bots carry the factory parts.
+   */
   magazines: readonly MagazineId[];
   /** How it looks and sounds (presentation only; the simulation ignores this). */
   look: ReplicaLook;
@@ -83,7 +82,7 @@ export interface ReplicaLook {
   hold: { position: readonly [number, number, number]; yaw: number };
   /**
    * Where it sits while aiming down a fitted optic (camera space, metres, no cant): the optic's axis on the view's
-   * centre line, so the red dot is where your BBs go. Only replicas with an optic mount have one.
+   * centre line, so the red dot is where your BBs go. A replica without one aims through an optic from its hold.
    */
   aimHold?: readonly [number, number, number];
 }
@@ -91,7 +90,7 @@ export interface ReplicaLook {
 /** Electric rifle (AR pattern): single, burst and full auto, medium range, medium magazine. */
 export const AEG: ReplicaConfig = {
   id: 'aeg',
-  name: 'AEG rifle',
+  name: 'AEG Rifle',
   power: 'electric',
   fireModes: ['semi', 'burst', 'auto'],
   defaultFireMode: 'auto',
@@ -110,8 +109,6 @@ export const AEG: ReplicaConfig = {
   hopUpDial: 0.65,
   spreadDeg: 0.45,
   recoilDeg: 0.18,
-  opticMount: true,
-  gripMount: true,
   magazines: ['standard', 'hiCap', 'lowCap'],
   look: {
     model: 'rifle',
@@ -126,7 +123,7 @@ export const AEG: ReplicaConfig = {
 /** Gas pistol: semi auto, shorter range, quick to handle, small magazine. */
 export const GAS_PISTOL: ReplicaConfig = {
   id: 'pistol',
-  name: 'Gas pistol',
+  name: 'Gas Pistol',
   power: 'gas',
   fireModes: ['semi'],
   defaultFireMode: 'semi',
@@ -143,8 +140,6 @@ export const GAS_PISTOL: ReplicaConfig = {
   hopUpDial: 0.55,
   spreadDeg: 0.8,
   recoilDeg: 0.5,
-  opticMount: false,
-  gripMount: false,
   magazines: ['standard', 'extended'],
   look: { model: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
 };
@@ -168,13 +163,15 @@ export function hopUpLift(r: ReplicaConfig, dial: number): number {
   return r.hopUpMax * Math.min(HOP_UP.maxDial, Math.max(HOP_UP.minDial, dial));
 }
 
-/** BB weights the Loadout screen offers (M17a), as sites sell them. */
+/** BB weights (M17a): free and unlimited, never pooled (owner, 2026-10-04), picked on a slider in 0.01 g steps. */
 export const BB_WEIGHT = {
   /**
-   * Grams, lightest first. No 0.30 g: on these replicas it only matched 0.28 g's reach while arriving later (each weight
-   * here has something it does best); it comes back with stronger platforms (v0.3).
+   * Grams. 0.30 g is back on the slider (M26b): it only matched 0.28 g's reach on a factory replica while arriving
+   * later, but a stronger power source (red or black gas, a better battery) can lift it.
    */
-  choices: [0.2, 0.25, 0.28],
+  min: 0.2,
+  max: 0.3,
+  step: 0.01,
   /**
    * A replica's muzzle energy grows a little with the BB's weight: a heavier BB stays in the barrel longer and takes
    * more of the push, as at a chrono (a 1 J AEG gives ~1.03 J on 0.25 g against 0.20 g). Energy scales as
@@ -189,16 +186,13 @@ export const BB_WEIGHT = {
   timeReadoutDistance: 20,
 } as const;
 
-/**
- * BB weights as the Loadout screen offers them (ids are the grams as text). The flight model decides what each does
- * (M9: drag, lift and spin all depend on the mass), and the differences are small, as at a real site: a lighter BB gets
- * to the target a little sooner up close, a heavier one carries a little further if the hop-up can lift it.
- */
-export const BB_WEIGHT_CHOICES: readonly { id: string; label: string; blurb: string }[] = [
-  { id: '0.2', label: '0.20 g', blurb: 'Light: quickest to the target up close and needs the least hop, but sheds its speed soonest.' },
-  { id: '0.25', label: '0.25 g', blurb: 'The all-rounder most sites sell.' },
-  { id: '0.28', label: '0.28 g', blurb: 'Heavy: slowest out, keeps its speed best; carries furthest if the hop-up can lift it.' },
-];
+/** `grams` as a BB weight the slider offers (in range, on its 0.01 g steps), or undefined. */
+export function validBbWeight(grams: number): number | undefined {
+  if (!Number.isFinite(grams) || grams < BB_WEIGHT.min - 1e-9 || grams > BB_WEIGHT.max + 1e-9) return undefined;
+  const steps = Math.round((grams - BB_WEIGHT.min) / BB_WEIGHT.step);
+  const snapped = Math.round((BB_WEIGHT.min + steps * BB_WEIGHT.step) * 100) / 100;
+  return Math.abs(snapped - grams) < 1e-6 ? snapped : undefined;
+}
 
 /** Mass of a BB (kg) of `grams` (the replica's factory weight by default; the config gives grams). */
 export function bbMass(r: ReplicaConfig, grams = r.bbWeight): number {
@@ -215,24 +209,8 @@ export function muzzleVelocity(r: ReplicaConfig, grams = r.bbWeight): number {
   return Math.sqrt((2 * muzzleEnergy(r, grams)) / bbMass(r, grams));
 }
 
-/** A loadout slot: what the Loadout screen calls it and the replicas that fit it, the default first. */
-export interface LoadoutSlot {
-  id: 'primary' | 'secondary';
-  title: string;
-  fits: readonly ReplicaConfig[];
-}
-
-/**
- * The loadout's slots (M17a): a primary and a secondary, each picked on the Loadout screen from the replicas that fit
- * it. One each today; the v0.3 platforms (SMGs, DMRs, GBB pistols …) join these lists.
- */
-export const LOADOUT_SLOTS: readonly LoadoutSlot[] = [
-  { id: 'primary', title: 'Primary', fits: [AEG] },
-  { id: 'secondary', title: 'Secondary', fits: [GAS_PISTOL] },
-];
-
-/** The default loadout (each slot's first replica): slot 0 primary, slot 1 sidearm. Bots and tests carry it. */
-export const LOADOUT: readonly ReplicaConfig[] = LOADOUT_SLOTS.map((s) => s.fits[0]!);
+/** The default loadout, primary then secondary: what bots and tests carry, and a new player's picks. */
+export const LOADOUT: readonly ReplicaConfig[] = [AEG, GAS_PISTOL];
 
 export const RECOIL = {
   /** Recoil kick recovers exponentially with this time constant (s). */

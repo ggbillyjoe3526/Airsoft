@@ -225,7 +225,7 @@ describe('buildFigure with a figure model', () => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) }); // the "HIT!" sign's canvas
     const model = prepareFigureModel(riggedScene());
     const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
-    const renderer = new CharacterRenderer([c], [0x3d8bff, 0xff8a2a], HITS, LOADOUT, model);
+    const renderer = new CharacterRenderer([c], [0x3d8bff, 0xff8a2a], HITS, model);
     c.status = 'leaving';
     c.statusTime = HITS.vanishTime / 2;
     renderer.update(1, 0, -1);
@@ -270,7 +270,7 @@ describe('buildFigure with a figure model', () => {
     const model = prepareFigureModel(scene);
     const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
     c.crouchAmount = c.prevCrouchAmount = 1;
-    const renderer = new CharacterRenderer([c], [0x3d8bff, 0xff8a2a], HITS, LOADOUT, model);
+    const renderer = new CharacterRenderer([c], [0x3d8bff, 0xff8a2a], HITS, model);
     renderer.update(1, 0, -1);
     const figure = (renderer as unknown as { figures: { figure: { whole: THREE.Object3D } }[] }).figures[0]!.figure;
     expect(boundsOf(figure.whole).max.y).toBeCloseTo(FIGURE_MODEL.height - FIGURE.crouchDrop, 6);

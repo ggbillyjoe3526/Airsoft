@@ -16,7 +16,7 @@ const SPAWNS = [
   [0, 1].map((z) => ({ position: vec3(-20, 0, z), yaw: -Math.PI / 2 })),
   [2, 3].map((z) => ({ position: vec3(20, 0, z), yaw: Math.PI / 2 })),
 ];
-const CTX: RoundContext = { rules: RULES, loadout: LOADOUT, pole: POLE, spawns: SPAWNS, spawnLift: 0.05 };
+const CTX: RoundContext = { rules: RULES, pole: POLE, spawns: SPAWNS, spawnLift: 0.05 };
 
 function teams(): Character[] {
   return [0, 1, 2, 3].map((id) => createCharacter(id, vec3(id < 2 ? -20 : 20, 0, id), 0, LOADOUT, id < 2 ? 0 : 1));

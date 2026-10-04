@@ -10,10 +10,7 @@ import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './con
 import { BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
-import type { ReplicaParts } from './config/attachments';
-import type { OpticChoice } from './config/optics';
 import { QUALITY, type QualityPreset } from './config/render';
-import { LOADOUT_SLOTS, type ReplicaConfig } from './config/replicas';
 import { SIM } from './config/sim';
 import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
 import { KeyBindings } from './input/keyBindings';
@@ -34,7 +31,11 @@ import { loadCrosshair } from './ui/crosshair';
 import { DebugOverlay } from './ui/debugOverlay';
 import { toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
-import { loadBbWeight, loadHopUp, loadoutSummary, loadParts, loadSlotPick } from './ui/loadoutChoice';
+import { loadoutTile } from './ui/loadoutChoice';
+import { type Collection, loadCollection, saveCollection } from './pool/collection';
+import { GAME_POOL } from './pool/gamePool';
+import { collectionOwnership, LoadoutModel } from './pool/loadoutModel';
+import { carryOverOldPicks } from './pool/oldPicks';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
@@ -52,7 +53,6 @@ import {
   loadMatchRules,
   loadMode,
   loadMouseDpi,
-  loadOptic,
   loadReducedMotion,
   loadSensitivity,
   loadHitFeedMode,
@@ -147,12 +147,9 @@ export class Game {
   private teammateDifficulty: Difficulty;
   /** The Match pop-up's rules (M20). */
   private matchRules: MatchRules;
-  private optic: OpticChoice;
-  /** The replica picked for each loadout slot. */
-  private readonly picked: ReplicaConfig[];
-  /** Each replica's hop-up dial and BB weight as picked on the Loadout screen, by replica id (saved ones until changed). */
-  private readonly hopUps = new Map<string, number>();
-  private readonly bbWeights = new Map<string, number>();
+  /** What the player owns from the asset pool (M26a), and their loadout built from it (M26b). */
+  private readonly collection: Collection;
+  private readonly loadout: LoadoutModel;
   /**
    * The audio context, volume buses and synthesised sounds, kept across matches (each match's Sfx plays through
    * them). Made suspended at start; the sounds render in the title screen's spare time (audit M-09).
@@ -163,8 +160,6 @@ export class Game {
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
   private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
-  /** Each replica's grip and magazine as picked (M17b), by replica id. */
-  private readonly parts = new Map<string, ReplicaParts>();
   /** Reduced motion (Settings → Accessibility), kept across matches. */
   private reducedMotion = loadReducedMotion();
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
@@ -206,8 +201,9 @@ export class Game {
     this.difficulty = loadDifficulty();
     this.teammateDifficulty = loadTeammateDifficulty();
     this.matchRules = loadMatchRules();
-    this.optic = loadOptic();
-    this.picked = LOADOUT_SLOTS.map(loadSlotPick);
+    this.collection = loadCollection(GAME_POOL, options.seed);
+    this.loadout = new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection));
+    carryOverOldPicks(this.loadout, this.collection, saveCollection);
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
@@ -251,22 +247,9 @@ export class Game {
       },
       bindings: this.bindings,
       loadout: {
-        slots: LOADOUT_SLOTS,
-        picked: { initial: this.picked, onChange: (slot, r) => ((this.picked[slot] = r), (this.loadoutChanged = this.setupChanged = true)) },
-        optic: { initial: this.optic, onChange: (o) => ((this.optic = o), (this.loadoutChanged = this.setupChanged = true)) },
-        hopUp: { initial: (r) => this.hopUpOf(r), onChange: (r, dial) => (this.hopUps.set(r.id, dial), (this.loadoutChanged = this.setupChanged = true)) },
-        bbWeight: { initial: (r) => this.bbWeightOf(r), onChange: (r, grams) => (this.bbWeights.set(r.id, grams), (this.loadoutChanged = this.setupChanged = true)) },
-        parts: { initial: (r) => this.partsOf(r), onChange: (r, parts) => (this.parts.set(r.id, parts), (this.loadoutChanged = this.setupChanged = true)) },
-        summary: () => ({
-          replicas: this.picked.map((r) => r.name).join('\n'),
-          detail: loadoutSummary(
-            this.picked,
-            this.optic,
-            this.picked.map((r) => this.hopUpOf(r)),
-            this.picked.map((r) => this.bbWeightOf(r)),
-            this.picked.map((r) => this.partsOf(r)),
-          ),
-        }),
+        model: this.loadout,
+        onChange: () => (this.loadoutChanged = this.setupChanged = true),
+        summary: () => loadoutTile(this.loadout),
       },
       onPlay: () => {
         // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
@@ -391,22 +374,10 @@ export class Game {
     this.audio.setVolume(channel, position);
   }
 
-  private hopUpOf(r: ReplicaConfig): number {
-    return this.hopUps.get(r.id) ?? loadHopUp(r);
-  }
-
-  private bbWeightOf(r: ReplicaConfig): number {
-    return this.bbWeights.get(r.id) ?? loadBbWeight(r);
-  }
-
   /** The crosshair changed on Settings → Crosshair: kept for the next match and applied to the one loaded. */
   private changeCrosshair(crosshair: CrosshairSettings): void {
     this.crosshair = crosshair;
     this.session?.combat.setCrosshair(crosshair);
-  }
-
-  private partsOf(r: ReplicaConfig): ReplicaParts {
-    return this.parts.get(r.id) ?? loadParts(r);
   }
 
   /** Reduced motion turned on or off: kept for the next match and applied to the one loaded. */
@@ -528,11 +499,7 @@ export class Game {
         difficulty: this.difficulty,
         teammateDifficulty: this.teammateDifficulty,
         rules: { ...this.matchRules },
-        loadout: [...this.picked],
-        optic: this.optic,
-        hopUps: this.picked.map((r) => this.hopUpOf(r)),
-        bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
-        parts: this.picked.map((r) => this.partsOf(r)),
+        kit: this.loadout.kit(),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
       }, this.matchSeed, QUALITY[this.quality], this.audio, this.crosshair);
       this.session.setMotion(motionScale(this.reducedMotion));
@@ -559,11 +526,7 @@ export class Game {
     this.session?.dispose();
     this.loadoutChanged = false;
     this.session = new RangeSession(this.renderer, this.container, this.input, {
-      loadout: [...this.picked],
-      optic: this.optic,
-      hopUps: this.picked.map((r) => this.hopUpOf(r)),
-      bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
-      parts: this.picked.map((r) => this.partsOf(r)),
+      kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
     }, this.options.seed, QUALITY[this.quality], this.audio, this.crosshair, pose, tutorialFrom);
     this.session.setMotion(motionScale(this.reducedMotion));

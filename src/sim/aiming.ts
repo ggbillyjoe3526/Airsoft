@@ -1,11 +1,10 @@
-import type { ReplicaConfig } from '../config/replicas';
 import type { Armament } from './armament';
 import type { Character } from './character';
 import type { PlayerCommand } from './commands';
 
 /** The replica in hand has a sight to aim through (an optic fitted to a replica with a mount). The aim toggle reads it too. */
-export function canAimDownSights(a: Armament, loadout: readonly ReplicaConfig[]): boolean {
-  return a.optics[a.active] != null && loadout[a.active]!.opticMount;
+export function canAimDownSights(a: Armament): boolean {
+  return a.optics[a.active] != null;
 }
 
 /**
@@ -14,8 +13,8 @@ export function canAimDownSights(a: Armament, loadout: readonly ReplicaConfig[])
  * slows you to walking pace, quietly, and rules out sprinting, as the walk key does (sim/movement.ts). It gives
  * no accuracy bonus of its own: standing still stays the accuracy rule. Call before the movement step, for characters in play.
  */
-export function stepAiming(c: Character, cmd: PlayerCommand, loadout: readonly ReplicaConfig[]): void {
+export function stepAiming(c: Character, cmd: PlayerCommand): void {
   const a = c.armament;
   // Reload and draw are as the last tick left them: a reload started this tick drops the sight on the next one.
-  c.aiming = cmd.aim && canAimDownSights(a, loadout) && a.reload <= 0 && a.draw <= 0;
+  c.aiming = cmd.aim && canAimDownSights(a) && a.reload <= 0 && a.draw <= 0;
 }

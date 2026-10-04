@@ -57,7 +57,6 @@ export function playMatch(
     footsteps: FOOTSTEPS,
     body: BODY,
     ballistics: BALLISTICS,
-    loadout: LOADOUT,
     killY: map.killY,
     hits,
     deadZones: map.deadZones,
@@ -75,7 +74,7 @@ export function playMatch(
   // Round 1 as the game starts it: each team at its end; a hider stands at its spot instead.
   placeTeams(state.round, state.characters, ctx.round);
   for (const c of state.characters) {
-    respawnCharacter(c, LOADOUT);
+    respawnCharacter(c);
     if (hider && c.team === 0) c.position = vec3(hider.x, hider.y + PHYSICS.groundRestGap, hider.z);
     physics.addCharacter(c);
   }

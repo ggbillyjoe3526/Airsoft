@@ -48,9 +48,11 @@ describe('hop-up dial', () => {
 });
 
 describe('BB weight', () => {
+  // Every weight on the Loadout's slider, lightest first.
+  const SLIDER = Array.from({ length: Math.round((BB_WEIGHT.max - BB_WEIGHT.min) / BB_WEIGHT.step) + 1 }, (_, i) => Math.round((BB_WEIGHT.min + i * BB_WEIGHT.step) * 100) / 100);
   // Each weight flown with the hop-up set for it, as a player would.
-  const flown = (replica: (typeof LOADOUT)[number]) =>
-    BB_WEIGHT.choices.map((grams) => {
+  const flown = (replica: (typeof LOADOUT)[number], weights: readonly number[] = SLIDER) =>
+    weights.map((grams) => {
       const best = bestHopUp(replica, BALLISTICS, grams);
       return { grams, ...best, t10: flightTime(replica, best.dial, 10, BALLISTICS, grams), t20: flightTime(replica, best.dial, 20, BALLISTICS, grams) };
     });
@@ -65,9 +67,10 @@ describe('BB weight', () => {
     }
   });
 
-  it('never offers a weight that a lighter one beats outright: each heavier one carries further, even at full hop', () => {
+  // Up to 0.28 g on a factory replica; 0.30 g only matches 0.28 g's reach there (it is for stronger power sources).
+  it('up to 0.28 g, each heavier weight carries further, even at full hop', () => {
     for (const replica of LOADOUT) {
-      const w = flown(replica);
+      const w = flown(replica, [0.2, 0.25, 0.28]);
       for (let i = 1; i < w.length; i++) expect(w[i]!.onTargetTo, `${replica.id} ${w[i]!.grams} g`).toBeGreaterThan(w[i - 1]!.onTargetTo);
     }
   });

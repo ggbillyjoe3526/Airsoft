@@ -382,7 +382,6 @@ function duel(
     footsteps: FOOTSTEPS,
     body: BODY,
     ballistics: BALLISTICS,
-    loadout: LOADOUT,
     killY: -10,
     hits: HITS,
     deadZones: [[{ position: vec3(-40, 0, 0), yaw: 0 }], [{ position: vec3(40, 0, 0), yaw: 0 }]],
@@ -549,7 +548,7 @@ describe('bots in a duel', () => {
       [9, false],
     ] as const) {
       const { run, commands, bots, player } = duel(dist, (st) => (st.characters[1]!.yaw += Math.PI));
-      fitParts(player.armament, LOADOUT, [{ grip: 'none', magazine: 'hiCap' }]);
+      fitParts(player.armament, [{ grip: 'none', magazine: 'hiCap' }]);
       player.stepDistance = FOOTSTEPS.strideRun - 0.05; // the first rattle comes at once, before the bot wanders off
       const cmd = commands.get(0)!;
       cmd.yaw = -Math.PI / 2;
@@ -1240,7 +1239,6 @@ describe('bot team play and routes', () => {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
-      loadout: LOADOUT,
       killY: -10,
       hits: HITS,
       deadZones: [[{ position: vec3(-40, 0, 0), yaw: 0 }], [{ position: vec3(40, 0, 0), yaw: 0 }]],
@@ -1334,7 +1332,6 @@ describe('bot team play and routes', () => {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
-      loadout: LOADOUT,
       killY: -10,
       hits: HITS,
       deadZones: [[{ position: vec3(-40, 0, 20), yaw: 0 }], [{ position: vec3(40, 0, 20), yaw: 0 }]],

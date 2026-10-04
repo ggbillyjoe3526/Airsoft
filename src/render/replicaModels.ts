@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { buildForearm, buildHand, type FingerCurl } from './handModels';
 import type { MagazineId } from '../config/attachments';
 import type { ReplicaConfig } from '../config/replicas';
+import { LASERS } from '../config/lasers';
 
 /**
  * First-person replica models built in code. They resemble real-world replica types (an AR-pattern
@@ -17,7 +18,7 @@ import type { ReplicaConfig } from '../config/replicas';
 
 type Pt = readonly [forward: number, up: number];
 
-type MaterialKey = 'polymer' | 'furniture' | 'mag' | 'metal' | 'rubber' | 'orange' | 'lens' | 'glove' | 'sleeve' | 'armband';
+type MaterialKey = 'polymer' | 'furniture' | 'mag' | 'metal' | 'rubber' | 'orange' | 'lens' | 'laserLens' | 'glove' | 'sleeve' | 'armband';
 
 /**
  * The replicas' materials (M14 polish): moulded polymer with a soft satin sheen (it catches the viewmodel's environment
@@ -32,6 +33,8 @@ function createMaterials(teamColor: number): Record<MaterialKey, THREE.Material>
     rubber: new THREE.MeshStandardMaterial({ color: 0x17181a, roughness: 0.95, metalness: 0 }),
     orange: new THREE.MeshStandardMaterial({ color: 0xff6a13, roughness: 0.5, metalness: 0 }),
     lens: new THREE.MeshBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.12, depthWrite: false }),
+    // The red laser's lens glows its beam's colour (config/lasers.ts), unlit, so it reads in any light.
+    laserLens: new THREE.MeshBasicMaterial({ color: LASERS.redLaser.colour }),
     // Olive gloves: clearly separate from the black polymer and tan furniture.
     glove: new THREE.MeshStandardMaterial({ color: 0x5d6146, roughness: 0.9, metalness: 0 }),
     sleeve: new THREE.MeshStandardMaterial({ color: 0x4a525c, roughness: 1, metalness: 0 }),
@@ -355,7 +358,12 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
     thumb: { swing: 0.3, curl: [0.1, 0.1] },
   });
   buildForearm(support, leftWrist, [-0.16, -0.26, -0.28]);
+  // The red laser (M26b): a module clipped to the dust cover's rail, its lens at the front.
+  const laser = new ModelBuilder();
+  laser.box('polymer', 0.046, 0.09, -0.042, -0.024, 0.022);
+  laser.box('laserLens', 0.09, 0.093, -0.038, -0.03, 0.009);
   const group = b.build(m);
+  group.add(namedPart(laser, m, 'laser:redLaser'));
   const magazine = magazinePart({ standard: mag, extended }, m, GRIP_DOWN, { extended: [0, -0.038, 0] });
   group.add(magazine.group);
   // From the side of the grip down to the magazine's base plate.

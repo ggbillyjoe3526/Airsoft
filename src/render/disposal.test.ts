@@ -93,7 +93,7 @@ describe('disposal', () => {
   it('the figures, the flag and the range targets', () => {
     const characters = [createCharacter(0, vec3(), 0, LOADOUT, 0), createCharacter(1, vec3(2, 0, 0), 1, LOADOUT, 1)];
     expectClean('CharacterRenderer', (scene) => {
-      const r = new CharacterRenderer(characters, colours, HITS, LOADOUT);
+      const r = new CharacterRenderer(characters, colours, HITS);
       scene.add(r.object);
       return () => r.dispose();
     });
