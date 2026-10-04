@@ -1,3 +1,4 @@
+import type { NightSightConfig } from '../map/nightSight';
 import type { ContentTag } from './content';
 import { MOVEMENT } from './movement';
 
@@ -609,3 +610,10 @@ export function botConfig(difficulty: Difficulty): BotConfig {
 
 /** Bots at the default difficulty: the reference bot for tests and tuning docs. */
 export const BOTS: BotConfig = botConfig(DEFAULT_DIFFICULTY);
+
+/**
+ * How far bots make someone out on a night field (M33g, map/nightSight.ts; the concept's first guesses, the same as
+ * players by eye): 40 m in a light pool (as by day), 25 m in the moonlit open, 10 m under the trees. The target's light
+ * decides; `viewDistance` still caps it. Ground is under the trees where 3 trunks stand within 4 m (on a 1 m grid).
+ */
+export const NIGHT_SIGHT: NightSightConfig = { lit: 40, open: 25, canopy: 10, canopyTrees: 3, canopyRadius: 4, canopyCell: 1 };
