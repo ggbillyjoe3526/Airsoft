@@ -201,15 +201,21 @@ ends the round). A hit character is eliminated
   (`withStats`, which also sets `ReplicaConfig.energyLimit`), `attachments.ts`, `optics.ts` and `lasers.ts` lay it over
   their built-in numbers when they load, so bots and the sim see the file's numbers too. `pool/kit.ts` applies the
   power stats and tier shares (`KitStats`, injectable for tests) and caps the energy at the limit (`energyCapped`).
+  Barrels and muzzle parts (M29b, `BARRELS` / `MUZZLES` in `config/attachments.ts`) add to the energy and spread in
+  `kitReplica` and to the handling in `handlingOf` (`heardScale`, `muffled`); `sim/armament.ts` `shotHeardScale` is
+  the one place bots (`ai/botController.ts`), the minimap and sound cues read a shot's reach. On Hard,
+  `pool/botKit.ts` rolls each opponent a seeded kit (`randomKit`, `kittedCharacter`; `BOT_LOADOUTS` in config/bots.ts).
   The muzzle is the boundary: `muzzleEnergy` / `muzzleVelocity` / `bbMass` (config/replicas.ts) are what leaves the
   barrel; everything after it is `config/ballistics.ts` and `sim/ballistics.ts`. `ui/performanceSheet.ts` builds the
   Customise screen's Performance sheet (against `LoadoutModel.asItComes`), the gear slots' line and the Armory's
   tier line.
 - **Armory (M26c):** `pool/armory.ts` holds its rules, pure, over a `Collection`: `matchEarnings` (the FC a finished
   match pays, from `MatchSession.takeOutcome`), `buyTokens`, `takeShots` (paid in Tokens, then FC; the draws carry on
-  from the collection's saved `sim/rng.ts` state, so they are seeded and replayable) and `scrapSpares`. `Game` adds a
-  match's FC at the result and saves the collection; `ui/menus/armoryScreen.ts` is the screen, opened from New game's
-  Armory tile.
+  from the collection's saved `sim/rng.ts` state mixed with fresh entropy per Shot, replayable with a fixed one; pity
+  counts kept in the collection, FA10) and `scrapSpares` (one copy kept per asset, its best tier). `stats/settleMatch.ts`
+  pays and records a decided match once (`MatchTakes`); `Game` syncs the collection with storage before changing it
+  (`syncCollection`: another tab's newer revision wins) and saves it; `ui/menus/armoryScreen.ts` is the screen, opened
+  from New game's Armory tile, with `confirmDialog.ts` before big spends.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).
@@ -227,6 +233,15 @@ ends the round). A hit character is eliminated
   With a tutorial (M16) it also holds a `tutorial/tutorial.ts` `TutorialTracker`, which watches the player and the
   tick's events against the steps of `config/tutorial.ts`, and a `ui/coachPanel.ts` panel that shows the current step
   (the range readout takes over once it's finished); `Game` saves `tutorialDone` when it reports the end.
+- **The save (M31), `src/save/`:** every store (the settings object, key bindings, records, the collection; listed in
+  `save/stores.ts`) keeps its own key and module, and writes through `browserStorage()`, which after start-up is the
+  visit's `GuardedStorage` (`save/guardedStorage.ts`): it notices writes (the Save tab's "Last saved"), keeps refused
+  writes in memory for the visit (a full or blocked browser store, warned on the Save tab and the title) and can be
+  frozen (another tab, a newer build's save, a load about to reload). `main.ts` starts it first, then the tab lock
+  (`save/tabLock.ts`, a BroadcastChannel: one tab plays, a second waits behind `ui/otherTabNotice.ts`), then the
+  `SaveManager` (`save/saveManager.ts`: today's restore point, the Undo slot, load, delete), handed to `Game` for
+  Settings → Save (`ui/saveSettings.ts`, `ui/saveDialog.ts`). The file format and migrations are pure, in
+  `save/saveFile.ts`. Stores keep fields they don't know when they save (`save/overStored.ts`).
 
 ## Map data
 
@@ -274,10 +289,16 @@ request. Each line names where it lives and what pins it.
   "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added: `quality`
   holds a `QualityChoice`; `graphics.<field>` holds a Custom row (an option id or a slider position), `frameRateCap`
   and `showFps` the two Graphics rows outside the presets (FA2), all read with a fallback, so version 1 stands. Pinned
-  by `settings/storage.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
+  by `settings/storage.test.ts`. Since M31 `browserStorage()` returns the save system's guarded storage once it has
+  started (same keys, same values).
+- **The save file format** (`save/saveFile.ts`, M31): `{ game, format, build, savedAt, summary, stores, checksum }`,
+  the stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per
+  format); a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`).
+  Pinned by `save/saveFile.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
-  power sources by pool ID, Tier scaling, Site limits) the config modules lay over their built-in ones. Pinned by
+  power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
+  over their built-in ones. Pinned by
   `config/stats.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`.

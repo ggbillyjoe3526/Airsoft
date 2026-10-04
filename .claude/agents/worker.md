@@ -17,7 +17,7 @@ stated reason, no multiplayer, CC0 assets only, nothing grimdark.
    `docs/ARCHITECTURE.md` › Contracts, and the files you will touch. Grep first, read in ranges.
 2. Build the smallest change that meets every acceptance criterion. Stay inside `touches` (tests, docs and
    CHANGELOG are always allowed); if you must touch another file, say so in the report rather than doing it quietly.
-3. Run `node pipeline/gate.mjs --quick` (type check, build, unit tests; about 90 s) before you report; fix what it
+3. Run `node pipeline/gate.mjs --quick` (type check, build, unit tests; about two minutes) before you report; fix what it
    finds. Don't run the smoke test or the perf harness: the thread's full gate does.
 4. Update the docs CLAUDE.md asks for: a DECISIONS line for each default you chose, a KNOWN_ISSUES row for what you
    left, the ROADMAP row's status.

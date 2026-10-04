@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { AEG, GAS_PISTOL, hopUpLift, LOADOUT, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
-import { type ArmamentContext, createArmament, fitParts, type Muzzle, nextFireMode, nextSpare, rattles, setBbWeights, setHopUps, stepArmament, type WorldQuery } from './armament';
+import { aimDirection, type ArmamentContext, createArmament, fitParts, type Muzzle, nextFireMode, nextSpare, rattles, setBbWeights, setHopUps, shotHeardScale, spreadDirection, stepArmament, type WorldQuery } from './armament';
 import { createCharacter, respawnCharacter } from './character';
 import { createBBPool } from './ballistics';
 import { createCommand, type PlayerCommand } from './commands';
 import type { GameEvent } from './events';
-import { createRng } from './rng';
+import { createRng, rngGaussian } from './rng';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
@@ -271,7 +271,8 @@ describe('replica handling', () => {
         run(1, (c) => (c.fire = true));
         run(1, (c) => (c.fire = false));
         const bb = ctx.bbs.bbs.filter((b) => b.active).sort((x, y) => y.serial - x.serial)[0]!;
-        out.push(Math.atan2(bb.velocity.x, -bb.velocity.z)); // horizontal deviation
+        // Sideways deviation: the angle off the aim towards its right (+X facing -Z), square to the line of sight (SIM-09).
+        out.push(Math.asin(bb.velocity.x / Math.hypot(bb.velocity.x, bb.velocity.y, bb.velocity.z)));
       }
       return out;
     };
@@ -283,6 +284,32 @@ describe('replica handling', () => {
     // The shooter's stance and movement multiplier scales the spread (same seed: exactly).
     const shaky = angles(20, 2.6);
     for (let i = 0; i < 20; i++) expect(shaky[i]).toBeCloseTo(xs[i]! * 2.6, 9);
+  });
+
+  it('spreads as much sideways as up and down whatever the pitch (audit SIM-09)', () => {
+    const rng = createRng(11);
+    const out = vec3();
+    const f = vec3();
+    for (const pitchDeg of [0, 70]) {
+      const yaw = 0.4;
+      const pitch = pitchDeg * DEG;
+      aimDirection(f, yaw, pitch);
+      const right = vec3(Math.cos(yaw), 0, -Math.sin(yaw));
+      const up = vec3(right.y * f.z - right.z * f.y, right.z * f.x - right.x * f.z, right.x * f.y - right.y * f.x);
+      let h = 0;
+      let v = 0;
+      const n = 4000;
+      for (let i = 0; i < n; i++) {
+        spreadDirection(out, yaw, pitch, AEG.spreadDeg * DEG, rngGaussian(rng), rngGaussian(rng));
+        h += Math.asin(out.x * right.x + out.y * right.y + out.z * right.z) ** 2;
+        v += Math.asin(out.x * up.x + out.y * up.y + out.z * up.z) ** 2;
+      }
+      const sh = Math.sqrt(h / n);
+      const sv = Math.sqrt(v / n);
+      expect(sh / sv).toBeGreaterThan(0.93);
+      expect(sh / sv).toBeLessThan(1.07);
+      expect(sh).toBeGreaterThan(AEG.spreadDeg * DEG * 0.9);
+    }
   });
 
   it('never sends a BB past vertical, even fired straight up with full kick and spread (bug pass)', () => {
@@ -526,5 +553,20 @@ describe('attachments on the armament (M17b)', () => {
     expect(c.armament.parts[0]).toMatchObject({ grip: 'vertical', magazine: 'hiCap' });
     expect(c.armament.ammo[0]!.mag).toBe(120);
     expect(rattles(c.armament)).toBe(true);
+  });
+});
+
+describe('how far a shot carries (M29b)', () => {
+  it("is the usual 1 as it comes, the silencer's share when one is fitted on the active replica, and follows a switch", () => {
+    const c = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    expect(shotHeardScale(c)).toBe(1);
+    fitParts(c.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }, { grip: 'none', magazine: 'standard' }]);
+    expect(shotHeardScale(c)).toBe(0.5);
+    c.armament.active = 1;
+    expect(shotHeardScale(c)).toBe(1);
+    // Kept through a respawn, like the other fitted parts.
+    c.armament.active = 0;
+    respawnCharacter(c);
+    expect(shotHeardScale(c)).toBe(0.5);
   });
 });

@@ -6,12 +6,12 @@ describe('attachments', () => {
   it('leave a replica as it comes with its factory parts (no grip, standard magazine)', () => {
     for (const r of LOADOUT) {
       const h = handlingOf(r, factoryParts(r));
-      expect(h).toEqual({ magSize: r.magSize, mags: r.mags, reloadTime: r.reloadTime, drawTime: r.drawTime, raiseScale: 1, shakeScale: 1, rattles: false });
+      expect(h).toEqual({ magSize: r.magSize, mags: r.mags, reloadTime: r.reloadTime, drawTime: r.drawTime, raiseScale: 1, shakeScale: 1, rattles: false, heardScale: 1, muffled: false });
     }
   });
 
   it("keep only parts the game knows; which replica takes what is pool.md's call (M26b)", () => {
-    expect(partsFor(GAS_PISTOL, { magazine: 'extended', laser: 'redLaser' })).toEqual({ grip: 'none', magazine: 'extended', laser: 'redLaser', tune: NO_TUNE });
+    expect(partsFor(GAS_PISTOL, { magazine: 'extended', laser: 'redLaser' })).toEqual({ grip: 'none', magazine: 'extended', laser: 'redLaser', barrel: null, muzzle: null, tune: NO_TUNE });
     expect(partsFor(AEG, { grip: 'angled', magazine: 'hiCap' })).toMatchObject({ grip: 'angled', magazine: 'hiCap', laser: null });
     expect(partsFor(AEG, { grip: 'bogus' as GripId, magazine: 'bogus' as MagazineId })).toMatchObject(factoryParts(AEG));
   });

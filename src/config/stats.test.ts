@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import statsText from '../../stats.md?raw';
 import { GAME_POOL } from '../pool/gamePool';
 import { createCharacter } from '../sim/character';
-import { GRIP_KEYS, LASER_KEYS, MAGAZINE_KEYS, OPTIC_KEYS, REPLICA_KEYS } from '../pool/pool';
-import { GRIPS, MAGAZINES } from './attachments';
+import { BARREL_KEYS, GRIP_KEYS, LASER_KEYS, MAGAZINE_KEYS, MUZZLE_KEYS, OPTIC_KEYS, REPLICA_KEYS } from '../pool/pool';
+import { BARRELS, GRIPS, MAGAZINES, MUZZLES } from './attachments';
 import { LASERS } from './lasers';
 import { OPTICS } from './optics';
 import { AEG, GAS_PISTOL, withStats } from './replicas';
@@ -244,5 +244,78 @@ describe('stats.md, acceptance 7: bots carry each replica as it comes', () => {
     const [aegAmmo, pistolAmmo] = bot.armament.ammo;
     expect([aegAmmo!.mag, aegAmmo!.pouch.length + 1]).toEqual([stats.replicas.aeg!.magSize, stats.replicas.aeg!.mags]);
     expect([pistolAmmo!.mag, pistolAmmo!.pouch.length + 1]).toEqual([stats.replicas.pistol!.magSize, stats.replicas.pistol!.mags]);
+  });
+});
+
+describe('stats.md, barrels and muzzle parts (M29b)', () => {
+  const twoRows = (header: string, sep: string, ...rows: string[]) => [header, sep, ...rows].join('\n');
+
+  it('gives every pooled barrel and muzzle part a row, and the file holds nothing the pool does not know', () => {
+    for (const a of GAME_POOL.assets.filter((x) => x.category === 'barrel')) expect(stats.barrels[a.key], a.name).toBeDefined();
+    for (const a of GAME_POOL.assets.filter((x) => x.category === 'muzzle')) expect(stats.muzzles[a.key], a.name).toBeDefined();
+    for (const key of Object.keys(stats.barrels)) expect(BARREL_KEYS).toContain(key);
+    for (const key of Object.keys(stats.muzzles)) expect(MUZZLE_KEYS).toContain(key);
+    expect(Object.keys(stats.barrels).sort()).toEqual(['long', 'tightBore']);
+    expect(Object.keys(stats.muzzles)).toEqual(['silencer']);
+  });
+
+  it('ships the numbers: Tight-Bore 3 % energy and 15 % tighter, Long 8 % energy and 15 % slower, Silencer -5 % energy, 10 % slower, heard from half as far', () => {
+    expect(stats.barrels.tightBore).toEqual({ energy: 0.03, spreadScale: 0.85, handlingScale: 1 });
+    expect(stats.barrels.long).toEqual({ energy: 0.08, spreadScale: 1, handlingScale: 1.15 });
+    expect(stats.muzzles.silencer).toEqual({ energy: -0.05, handlingScale: 1.1, heardScale: 0.5 });
+  });
+
+  it("is what the game's barrels and muzzle parts carry, and keeps the code's names and blurbs", () => {
+    expect([BARRELS.tightBore.energy, BARRELS.tightBore.spreadScale, BARRELS.tightBore.handlingScale]).toEqual([0.03, 0.85, 1]);
+    expect([BARRELS.long.energy, BARRELS.long.spreadScale, BARRELS.long.handlingScale]).toEqual([0.08, 1, 1.15]);
+    expect([MUZZLES.silencer.energy, MUZZLES.silencer.handlingScale, MUZZLES.silencer.heardScale]).toEqual([-0.05, 1.1, 0.5]);
+    expect(MUZZLES.silencer.muffled).toBe(true);
+    expect(BARRELS.long.label).toBe('Long Barrel');
+  });
+
+  it('ships the Tier scaling shares for a barrel (spread, draw, raise) and a muzzle part (draw, raise)', () => {
+    expect(stats.tierShares.barrel).toEqual({ spread: 0.5, draw: 0.5, raise: 0.5 });
+    expect(stats.tierShares.muzzle).toEqual({ draw: 0.5, raise: 0.5 });
+  });
+
+  it('flags a tier share for a stat a barrel or muzzle part cannot improve, and one listed twice, and keeps going', () => {
+    const file = loadStats(mini('## Tier scaling\n| Category | Stat | Share % |\n|---|---|---|\n| Barrel | Reload | 50 |\n| Muzzle | Spread | 50 |\n| Muzzle | Draw | 40 |\n| Muzzle | Draw | 30 |'));
+    expect(file.errors.filter((e) => /^line \d+: /.test(e))).toHaveLength(3);
+    expect(file.tierShares.muzzle).toEqual({ draw: 0.4 });
+    expect(file.tierShares.barrel).toEqual({});
+  });
+
+  it('reads a barrel and muzzle cell it can read and leaves the one it cannot, with its line', () => {
+    const file = loadStats(
+      mini(
+        twoRows('## Barrels\n| Key | Name | Energy % | Spread (×) | Handling (×) |', '|---|---|---|---|---|', '| tightBore | Tight-Bore Barrel | lots | 0.7 | 1 |', '| long | Long Barrel | 8 | 1 | 99 |'),
+        twoRows('## Muzzle parts\n| Key | Name | Energy % | Handling (×) | Heard from (×) |', '|---|---|---|---|---|', '| silencer | Silencer | -5 | 1.2 | quiet |'),
+      ),
+    );
+    expect(file.barrels.tightBore).toEqual({ spreadScale: 0.7, handlingScale: 1 });
+    expect(file.barrels.long).toEqual({ energy: 0.08, spreadScale: 1 });
+    expect(file.muzzles.silencer).toEqual({ energy: -0.05, handlingScale: 1.2 });
+    expect(file.errors.some((e) => /^line \d+: Energy % must be a number/.test(e))).toBe(true);
+    expect(file.errors.some((e) => /^line \d+: Handling \(×\) must be a number/.test(e))).toBe(true);
+    expect(file.errors.some((e) => /^line \d+: Heard from \(×\) must be a number/.test(e))).toBe(true);
+    // Overlaid on the built-in numbers: the broken cell keeps the code's value.
+    expect(overlay(BARRELS, file.barrels).tightBore).toMatchObject({ energy: BARRELS.tightBore.energy, spreadScale: 0.7 });
+    expect(overlay(BARRELS, file.barrels).long).toMatchObject({ handlingScale: BARRELS.long.handlingScale, energy: 0.08 });
+    expect(overlay(MUZZLES, file.muzzles).silencer).toMatchObject({ heardScale: MUZZLES.silencer.heardScale, handlingScale: 1.2 });
+  });
+
+  it('reports a missing Barrels or Muzzle parts table once and keeps the built-in numbers', () => {
+    const none = loadStats('# nothing here');
+    for (const name of ['Barrels', 'Muzzle parts']) expect(none.errors.filter((e) => e.includes(`"${name}"`)), name).toHaveLength(1);
+    expect(overlay(BARRELS, none.barrels)).toEqual(BARRELS);
+    expect(overlay(MUZZLES, none.muzzles)).toEqual(MUZZLES);
+    expect(none.tierShares.barrel).toEqual({ spread: 0.5, draw: 0.5, raise: 0.5 });
+    expect(none.tierShares.muzzle).toEqual({ draw: 0.5, raise: 0.5 });
+  });
+
+  it('reports a missing column once, however many rows, and keeps the built-in number for it', () => {
+    const file = loadStats(mini('## Muzzle parts\n| Key | Name | Energy % | Handling (×) |\n|---|---|---|---|\n| silencer | Silencer | -5 | 1.1 |'));
+    expect(file.errors.filter((e) => e.includes('Heard from'))).toHaveLength(1);
+    expect(overlay(MUZZLES, file.muzzles).silencer!.heardScale).toBe(MUZZLES.silencer.heardScale);
   });
 });

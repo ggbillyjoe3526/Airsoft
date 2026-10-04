@@ -31,11 +31,11 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Bots
 
-- Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover and search (Phase 1)
-- Three difficulty levels, picked for your teammates and the other team separately (M4a, M20)
+- Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover, keep apart from teammates and search (Phase 1, FA4)
+- Three difficulty levels, picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking) (M4a, M20, FA4)
 - Bots crouch-peek over low cover, lean round corners, move as a team on varied routes and walk when it pays (M4b, M10)
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
-- In Attack / Defend defenders hold near the pole and attackers push to it (M5)
+- In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from cover (M5, FA4)
 
 ## Modes and matches
 
@@ -46,7 +46,8 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Maps
 
-- Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole (M1, M11, M25b)
+- Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole; both ends about as far from the dock and the Main Gate (M1, M11, M25b, FA4)
+- Woodland: a second field coming soon, shown as disabled in the Map pop-up (M33a)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
@@ -55,9 +56,11 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - A Customise view per replica: optic, BB weight, hop-up, grip, laser, magazine, power source (M26b)
 - Every replica's and part's numbers in a hand-editable `stats.md`; a Performance sheet in Customise compares your setup with the replica as it comes (M29a)
 - Higher tiers add energy and rate of fire; batteries set the rate of fire (11.1 V LiPo battery); stronger gas kicks harder; a site energy limit (M29a)
+- Barrel and Muzzle parts: a Tight-Bore Barrel and a Long Barrel for the AEG, a Silencer for both replicas that halves how far bots, the minimap and sound cues hear your shots (M29b)
+- On Hard, each opponent carries its own kit rolled from the pool by the match's seed (M29b)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start (M26a)
 - Your collection is saved apart from the settings (M26a)
-- Armory, beta and free: earn Field Credits from matches, buy Tokens, draw assets from the pool at rarity odds (M26c)
+- Armory, free to play: earn Field Credits (scaled by participation and match length), buy Tokens, draw with pity (an Epic or better within 20 Shots, a Legendary within 100); catalogue shows all items by rarity tier (M26c, FA10)
 
 ## Menus and settings
 
@@ -65,6 +68,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
 - Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA5)
+- Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison, restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if the save is from a newer version (M31)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
 - HUD size slider (0.8–1.5) in Settings > HUD (FA5)
@@ -105,7 +109,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Practice range and tutorial
 
 - A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
-- A tutorial of ten coached steps on the range, with your own key bindings (M16)
+- A tutorial of ten coached steps on the range, with your own key bindings; skip and resume from pause (M16, FA10)
 
 ## Accessibility and comfort
 

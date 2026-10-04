@@ -102,6 +102,71 @@ export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = overlay<M
   },
 }, GAME_STATS.magazines) as Record<MagazineId, MagazineConfig>;
 
+export type BarrelId = 'tightBore' | 'long';
+
+/**
+ * A barrel swapped into a replica (M29b): a quality or a length, each changing how hard and how tightly it shoots. Only
+ * replicas tagged `barrel-mount` in pool.md take one (the AEG Rifle); "as it comes" is its standard barrel.
+ */
+export interface BarrelConfig {
+  label: string;
+  blurb: string;
+  /** Muzzle energy added, as a share (0.08 = 8 % more). */
+  energy: number;
+  /** Multiplies the replica's spread (below 1 is tighter). */
+  spreadScale: number;
+  /** Multiplies the time to bring the replica up and to raise a fitted optic (above 1 is slower). */
+  handlingScale: number;
+}
+
+/** Built-in numbers; stats.md's Barrels table is what the game uses. First guesses for the owner's playtest. */
+export const BARRELS: Readonly<Record<BarrelId, BarrelConfig>> = overlay<BarrelConfig>(
+  {
+    // A tight bore seals the BB better: it groups tighter and pushes a little harder. A quality part with no downside
+    // (owner, 2026-10-04: "a higher quality barrel could give better performance").
+    tightBore: { label: 'Tight-Bore Barrel', blurb: 'A precision inner barrel: tighter groups and a little more energy.', energy: 0.03, spreadScale: 0.85, handlingScale: 1 },
+    // A longer barrel gives the BB more push, paid for with a front-heavy replica.
+    long: { label: 'Long Barrel', blurb: 'More energy for a flatter, longer flight, but front-heavy: slower to bring up and to aim.', energy: 0.08, spreadScale: 1, handlingScale: 1.15 },
+  },
+  GAME_STATS.barrels,
+) as Record<BarrelId, BarrelConfig>;
+
+export type MuzzleId = 'silencer';
+
+/**
+ * A muzzle device (M29b): screwed onto a replica tagged `muzzle-thread` in pool.md (both replicas). A silencer makes a
+ * shot quieter and harder to place, at a cost in energy and handling. Later: a tracer unit (v0.3).
+ */
+export interface MuzzleConfig {
+  label: string;
+  blurb: string;
+  /** Muzzle energy added, as a share (negative: lost). */
+  energy: number;
+  /** Multiplies the time to bring the replica up and to raise a fitted optic. */
+  handlingScale: number;
+  /**
+   * Multiplies how far a shot is heard: by bots (BOT_BEHAVIOUR.hearingDistance), on the minimap and in the sound cues.
+   */
+  heardScale: number;
+  /** Its shots sound muffled and quieter (AUDIO.suppressed). */
+  muffled: boolean;
+}
+
+/** Built-in numbers; stats.md's Muzzle parts table is what the game uses. First guesses for the owner's playtest. */
+export const MUZZLES: Readonly<Record<MuzzleId, MuzzleConfig>> = overlay<MuzzleConfig>(
+  {
+    silencer: {
+      label: 'Silencer',
+      blurb: 'Quieter shots: bots hear them from half as far, and they show on a minimap only close by. A little less energy, slower to bring up.',
+      energy: -0.05,
+      handlingScale: 1.1,
+      heardScale: 0.5,
+      muffled: true,
+    },
+  },
+  GAME_STATS.muzzles,
+) as Record<MuzzleId, MuzzleConfig>;
+
 /**
  * Multipliers a part's rarity tier brings (M26b, pool/kit.ts), on top of what the parts themselves do: below 1 is
  * quicker or steadier.
@@ -121,6 +186,12 @@ export interface ReplicaParts {
   magazine: MagazineId;
   /** A laser on its rail (M26b; config/lasers.ts): shown on the model. Its tighter spread is in the player's replica. */
   laser?: LaserId | null;
+  /**
+   * A swapped barrel and a muzzle device (M29b): their handling here, their energy and spread in the carried replica
+   * (pool/kit.ts). Null: as it comes.
+   */
+  barrel?: BarrelId | null;
+  muzzle?: MuzzleId | null;
   /** What the parts' rarity tiers add (M26b); none for bots. */
   tune?: PartTune;
 }
@@ -140,6 +211,8 @@ export function partsFor(r: ReplicaConfig, parts: Partial<ReplicaParts>): Replic
     grip: parts.grip && parts.grip in GRIPS ? parts.grip : factory.grip,
     magazine: parts.magazine && parts.magazine in MAGAZINES ? parts.magazine : factory.magazine,
     laser: parts.laser ?? null,
+    barrel: parts.barrel && parts.barrel in BARRELS ? parts.barrel : null,
+    muzzle: parts.muzzle && parts.muzzle in MUZZLES ? parts.muzzle : null,
     tune: parts.tune ?? NO_TUNE,
   };
 }
@@ -157,19 +230,28 @@ export interface Handling {
   shakeScale: number;
   /** Its magazines rattle as you move (MagazineConfig.rattles). */
   rattles: boolean;
+  /** Multiplies how far its shots are heard (a silencer, M29b; 1 as it comes). */
+  heardScale: number;
+  /** Its shots sound muffled (a silencer, M29b). */
+  muffled: boolean;
 }
 
 export function handlingOf(r: ReplicaConfig, parts: ReplicaParts): Handling {
   const grip = GRIPS[parts.grip];
   const mag = MAGAZINES[parts.magazine];
   const tune = parts.tune ?? NO_TUNE;
+  const muzzle = parts.muzzle ? MUZZLES[parts.muzzle] : undefined;
+  // A front-heavy barrel or muzzle device is slower to bring up and to raise to your eye, like a heavier grip.
+  const front = (parts.barrel ? BARRELS[parts.barrel].handlingScale : 1) * (muzzle?.handlingScale ?? 1);
   return {
     magSize: Math.max(1, Math.round(r.magSize * mag.capacity)),
     mags: Math.max(1, r.mags + mag.carried),
     reloadTime: r.reloadTime * mag.reloadScale * tune.reloadScale,
-    drawTime: r.drawTime * mag.drawScale * grip.handlingScale * tune.drawScale,
-    raiseScale: grip.handlingScale * tune.raiseScale,
+    drawTime: r.drawTime * mag.drawScale * grip.handlingScale * front * tune.drawScale,
+    raiseScale: grip.handlingScale * front * tune.raiseScale,
     shakeScale: grip.shakeScale * tune.shakeScale,
     rattles: mag.rattles,
+    heardScale: muzzle?.heardScale ?? 1,
+    muffled: muzzle?.muffled ?? false,
   };
 }

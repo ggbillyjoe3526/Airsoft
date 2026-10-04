@@ -3,7 +3,7 @@ import { FULL_MOTION, type MotionScale } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import type { ReplicaConfig } from '../config/replicas';
 import type { Armament } from '../sim/armament';
-import { buildReplicaModels, type MagazinePart, type ReplicaModels, type SupportHandPart } from './replicaModels';
+import { buildReplicaModels, fitMuzzle, type MagazinePart, type MuzzleMount, type ReplicaModels, type SupportHandPart } from './replicaModels';
 
 const smooth = (t: number): number => {
   const c = Math.max(0, Math.min(1, t));
@@ -41,12 +41,18 @@ export function sprintCarry(lockout: number, total: number): number {
 
 const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
 
-/** The parts a model can be fitted with: its objects named 'optic:<id>', 'grip:<id>', 'magazine:<id>' or 'laser:<id>'. */
-function fittableParts(model: THREE.Object3D): { kind: 'optic' | 'grip' | 'magazine' | 'laser'; id: string; object: THREE.Object3D }[] {
-  const parts: { kind: 'optic' | 'grip' | 'magazine' | 'laser'; id: string; object: THREE.Object3D }[] = [];
+type PartKind = 'optic' | 'grip' | 'magazine' | 'laser' | 'barrel' | 'muzzle';
+const PART_KINDS: readonly string[] = ['optic', 'grip', 'magazine', 'laser', 'barrel', 'muzzle'];
+
+/**
+ * The parts a model can be fitted with: its objects named 'optic:<id>', 'grip:<id>', 'magazine:<id>', 'laser:<id>',
+ * 'barrel:<id>' or 'muzzle:<id>' ('muzzle:none' is the bare muzzle's own device, shown with nothing fitted).
+ */
+function fittableParts(model: THREE.Object3D): { kind: PartKind; id: string; object: THREE.Object3D }[] {
+  const parts: { kind: PartKind; id: string; object: THREE.Object3D }[] = [];
   model.traverse((o) => {
     const [kind, id] = o.name.split(':');
-    if (id && (kind === 'optic' || kind === 'grip' || kind === 'magazine' || kind === 'laser')) parts.push({ kind, id, object: o });
+    if (id && kind && PART_KINDS.includes(kind)) parts.push({ kind: kind as PartKind, id, object: o });
   });
   return parts;
 }
@@ -73,7 +79,9 @@ export class Viewmodel {
     /** Where it sits aiming down a fitted optic (replicas with an optic mount). */
     aimHold: ReplicaConfig['look']['aimHold'];
     /** The optics, grips and magazines it can be fitted with ('optic:<id>' …), each shown only while fitted. */
-    parts: { kind: 'optic' | 'grip' | 'magazine' | 'laser'; id: string; object: THREE.Object3D }[];
+    parts: { kind: PartKind; id: string; object: THREE.Object3D }[];
+    /** The muzzle mount, moved to the fitted barrel's and device's end (M29b). */
+    mount: MuzzleMount;
     /** The fitted magazine's base plate against the standard one's (replicaModels.ts), where the support hand reaches. */
     magBase: THREE.Vector3 | undefined;
     /** The iron sights standing up / folded (replicas with an optic mount). */
@@ -111,7 +119,7 @@ export class Viewmodel {
 
     this.replicas = buildReplicaModels(loadout, teamColor, VIEWMODEL.orangeTips);
     for (const r of loadout) {
-      const { group: model, magazine, supportHand, muzzle } = this.replicas.models.get(r.id)!;
+      const { group: model, magazine, supportHand, muzzle, mount } = this.replicas.models.get(r.id)!;
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
       this.slots.push({
@@ -122,6 +130,7 @@ export class Viewmodel {
         hold: r.look.hold,
         aimHold: r.look.aimHold,
         parts: fittableParts(model),
+        mount,
         magBase: undefined,
         sightsUp: model.getObjectByName('sightsUp'),
         sightsDown: model.getObjectByName('sightsDown'),
@@ -198,11 +207,15 @@ export class Viewmodel {
       s.model.visible = i === armament.active;
       const optic = armament.optics[i] ?? null;
       const parts = armament.parts[i];
+      const barrel = parts?.barrel ?? null;
+      const muzzle = parts?.muzzle ?? null;
       for (const p of s.parts) {
-        const fitted = p.kind === 'optic' ? optic : p.kind === 'grip' ? parts?.grip : p.kind === 'laser' ? parts?.laser : parts?.magazine;
+        const fitted =
+          p.kind === 'optic' ? optic : p.kind === 'grip' ? parts?.grip : p.kind === 'laser' ? parts?.laser : p.kind === 'barrel' ? barrel : p.kind === 'muzzle' ? (muzzle ?? 'none') : parts?.magazine;
         p.object.visible = p.id === fitted;
         if (p.kind === 'magazine' && p.object.visible) s.magBase = s.mag.bases.get(p.object);
       }
+      fitMuzzle(s.mount, barrel, muzzle);
       const fitted = optic != null;
       if (s.sightsUp) s.sightsUp.visible = !fitted;
       if (s.sightsDown) s.sightsDown.visible = fitted;

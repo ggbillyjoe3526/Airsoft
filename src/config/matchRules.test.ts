@@ -30,12 +30,18 @@ describe('custom match rules (M20)', () => {
   });
 
   it('describe the standard match in full, once, for New game\'s note and the summary', () => {
-    expect(standardMatchText()).toBe("3v3 · first to 5, 2:30 rounds. Friendly fire on; ricochets don't count. Both teams' bots at one difficulty.");
+    expect(standardMatchText()).toBe("3v3 · first to 5, 2:30 rounds. Friendly fire on; ricochets don't count. Your teammates at the opponents' level, or Normal against Easy.");
   });
 
-  it('count for the records only as the standard match with both teams at one difficulty', () => {
+  it('count for the records only as the standard match with teammates at the opponents\' level or their default', () => {
     expect(countsForRecords(DEFAULT_MATCH_RULES, 'hard', 'hard')).toBe(true);
     expect(countsForRecords(DEFAULT_MATCH_RULES, 'hard', 'normal')).toBe(false);
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'easy', 'easy')).toBe(true);
+    // The game's own default against Easy (Normal teammates, audit AI-03) is the standard match, not custom (FA4).
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'easy', 'normal')).toBe(true);
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'easy', 'hard')).toBe(false);
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'normal', 'easy')).toBe(false);
+    expect(countsForRecords({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, 'easy', 'normal')).toBe(false);
     expect(countsForRecords({ ...DEFAULT_MATCH_RULES, teamSize: 1 }, 'normal', 'normal')).toBe(false);
     expect(countsForRecords({ ...DEFAULT_MATCH_RULES, winsNeeded: 3 }, 'normal', 'normal')).toBe(false);
     expect(countsForRecords({ ...DEFAULT_MATCH_RULES, roundTime: 180 }, 'normal', 'normal')).toBe(false);
@@ -81,5 +87,15 @@ describe('custom match rules (M20)', () => {
     expect(hasSavedTeammateDifficulty()).toBe(true);
     vi.stubGlobal('localStorage', storageWith({}));
     expect(loadTeammateDifficulty()).toBe('normal');
+  });
+
+  it('give Normal teammates, not Easy ones, against Easy opponents until a teammate level is saved (audit AI-03)', () => {
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'easy' }));
+    expect(loadTeammateDifficulty()).toBe('normal');
+    expect(hasSavedTeammateDifficulty()).toBe(false);
+    // and that default match still counts for the records, filed under Easy (the opponents' level)
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'easy', loadTeammateDifficulty())).toBe(true);
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'easy', teammateDifficulty: 'easy' }));
+    expect(loadTeammateDifficulty()).toBe('easy'); // a level the player picked stands
   });
 });

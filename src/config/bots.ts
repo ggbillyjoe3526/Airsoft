@@ -72,6 +72,11 @@ export const BOT_BEHAVIOUR = {
   /** Never fire if a teammate is this close to the line of fire (metres, beyond their hit volume). */
   friendlyMargin: 0.3,
   /**
+   * ...widened with the distance to them by this many standard deviations of the replica's spread: a BB strays further
+   * from the aim line the further it flies, so a teammate 20 m down the line needs more room than one 2 m away.
+   */
+  friendlySpreadSigmas: 2,
+  /**
    * ...and this far (metres) past the target too: a BB that misses keeps flying, so a teammate just
    * behind the target in the line of fire is as much in the way as one in front.
    */
@@ -85,14 +90,49 @@ export const BOT_BEHAVIOUR = {
   /** The raised check looks for the wall from this far (metres) before the point the aim line meets it, to as far past it. */
   friendlyWallProbe: 0.2,
   /**
+   * ...and a teammate up to this far (metres) past where the aim line meets a wall still counts: a line that only grazes
+   * a wall's corner lets BBs (spread, aim error) past it, onto a teammate stepping out from behind that corner.
+   */
+  friendlyPastWall: 0.8,
+  /**
    * Hold fire when the aim line itself (aim error included) meets a wall within this fraction of the
    * distance to the target: the clear line to the target doesn't help if the BB would go into the door frame.
    */
   aimWallFraction: 0.5,
 
   // ---- Movement and cover -----------------------------------------------------------------------
-  /** Pause at each lane point, looking ahead (s). */
-  holdTime: [0.8, 2.5] as const,
+  // How long a bot pauses at each lane point is its skill's holdTime (BOT_SKILL).
+  /**
+   * Holding at a lane point (audit AI-02): after this long (s) the bot crouches, if its crouched eyes still see this
+   * far (metres) towards the enemy side (one ray per hold; behind crouch cover it stays up to see over it), and it
+   * sweeps its view this far (degrees) either side of the enemy side over a period of this many seconds.
+   */
+  holdCrouchDelay: 0.4,
+  holdLookDistance: 8,
+  holdSweepDeg: 35,
+  holdSweepPeriod: 4,
+  /**
+   * At a lane point, a bot may first step into cover (its skill's holdCoverChance): the best spot within this radius
+   * (metres) that hides it from a point this far (metres) towards the enemy side and that it can peek from.
+   */
+  holdCoverRadius: 3,
+  holdCoverThreatDistance: 10,
+  /**
+   * Bots sharing a lane (audit AI-01): a lane point with a teammate holding (or heading for a hold) within this distance
+   * (metres) of it is moved this far (metres) to one side, across the way to the enemy.
+   */
+  laneHoldSpacing: 1.5,
+  laneHoldOffset: 1,
+  /**
+   * Keeping apart (audit AI-01): characters don't collide with each other in the physics, so a bot steers away from
+   * anyone in play whose centre is closer than this (metres; two bodies touch at twice BODY.radius), harder the
+   * closer they are; standing still, it walks out of the way. Cover spots are never picked within two body radii plus
+   * coverSpacingMargin (metres) of where a teammate is or is heading for cover.
+   */
+  separationDistance: 0.8,
+  coverSpacingMargin: 0.1,
+  /** A route search that finds no way to a goal isn't asked for again (or for the next goal) within this long (s; AI-07). */
+  routeRetryDelay: 1,
   /** Cover search: candidate spots within this radius, how many to test, and the least time between searches (s). */
   coverRadius: 8,
   coverMinRadius: 1,
@@ -150,11 +190,10 @@ export const BOT_BEHAVIOUR = {
   /** Give up on reaching cover after this long (s), e.g. if the route there is blocked. */
   coverMaxTime: 5,
   /**
-   * On spotting someone at least contactCoverMinDistance away (metres) while advancing or searching, a
+   * On spotting someone at least its skill's contactCoverMinDistance away while advancing or searching, a
    * bot first moves to crouch cover within contactCoverRadius (metres), if there is any, and fights
    * from it: the way players at a site get behind a barricade before trading BBs.
    */
-  contactCoverMinDistance: 8,
   contactCoverRadius: 3.5,
   /** A whole cover episode (getting there, ducking, peeking, fighting from it) ends after this long (s). */
   coverEpisodeMax: 12,
@@ -175,13 +214,30 @@ export const BOT_BEHAVIOUR = {
   /** Strafing speed as a fraction of full input. */
   strafeInput: 0.6,
   /**
+   * A sidestep must keep the target in sight (audit AI-05): from eyes moved this far (metres) to that side, the line to
+   * the target must be clear, or the bot steps the other way (or forward or back, or stands).
+   */
+  strafeSightOffset: 0.6,
+  /**
    * Steps off the route (sidesteps, the last few centimetres to a lean spot) look this far ahead for a
    * drop (a platform's edge, a ramp's side) and don't take it (metres): more than the body's radius, so
    * the bot turns back before its feet leave the floor.
    */
   edgeLookahead: 0.6,
-  /** Walk (silent) for the last this-many metres to where someone was seen or heard. */
-  searchWalkDistance: 12,
+  /**
+   * At the end of a search (audit AI-14), a bot that found nobody crouches and looks round for this long (s), sweeping
+   * its view this far (degrees) either side of the way it arrived, before it moves on.
+   */
+  searchLook: [1, 2] as const,
+  searchLookDeg: 90,
+  /**
+   * Flanking (audit AI-17, the skill's flankChance): a search of a spot at least flankMinDistance (metres) away first
+   * goes to a point flankOffset (metres) to one side of the straight way there.
+   */
+  flankMinDistance: 8,
+  flankOffset: 4,
+  /** How far short of the searched spot (metres, along the straight way) the flank point lies: it comes in from the side. */
+  flankBack: 2,
   /** Sprint along routes when nobody has been seen or heard for this long (s), if heading mostly forward. */
   sprintWhenCalmFor: 3,
   sprintForward: 0.9,
@@ -224,6 +280,18 @@ export const BOT_BEHAVIOUR = {
   flagStand: 0.8,
   /** Close enough to that spot to stop, crouch and work the rope (metres). */
   flagArrive: 0.5,
+  /**
+   * Attackers at the pole (audit AI-06): one raises the flag; each other attacker who has swept its lane holds cover
+   * within flagGuardRadius (metres) of the pole, hidden from a point flagGuardThreatDistance (metres) from the pole
+   * towards the defenders' end (or from where an enemy was last seen or heard), and watches from there.
+   */
+  flagGuardRadius: 6,
+  flagGuardThreatDistance: 10,
+  /**
+   * The raiser keeps the rope unless another attacker in flag mode is this much nearer the pole (metres): close enough
+   * that a guard by the pole takes over from a raiser still on its way, far enough that two bots don't swap every tick.
+   */
+  raiserSwitchMargin: 3,
   /**
    * Defenders hold the first point of their lane (nearest home). The first bot on a shared lane holds
    * the next one, and a bot alone on its lane does so this often: a forward hold.
@@ -276,6 +344,17 @@ export interface BotSkill {
   /** Trigger held per burst and pause between bursts (s). */
   readonly burst: readonly [number, number];
   readonly burstPause: readonly [number, number];
+  // How it plays (audit AI-17): difficulty is behaviour too, not only aim. Hard uses cover and flanks more, Easy less.
+  /** Pause at each lane point, looking ahead (s). */
+  readonly holdTime: readonly [number, number];
+  /** Chance of stepping into cover by a lane point before holding there (see holdCoverRadius). */
+  readonly holdCoverChance: number;
+  /** On a fresh contact at least this far away (metres), get behind close cover before fighting (see contactCoverRadius). */
+  readonly contactCoverMinDistance: number;
+  /** Walk (silent) for the last this-many metres to where someone was seen or heard. */
+  readonly searchWalkDistance: number;
+  /** Chance a search of a far spot goes round to one side of it first (see flankOffset). */
+  readonly flankChance: number;
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -284,7 +363,7 @@ export type Difficulty = 'easy' | 'normal' | 'hard';
 export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string }[] = [
   { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim. Learn the map.' },
   { id: 'normal', label: 'Normal', blurb: 'A fair fight: their first BBs up close can miss.' },
-  { id: 'hard', label: 'Hard', blurb: 'Quick and steady. Get seen first and you\'re out.' },
+  { id: 'hard', label: 'Hard', blurb: 'Quick and steady, each on kit of its own. Get seen first and you\'re out.' },
 ];
 
 /** The same levels as the Difficulty pop-up's Teammates row describes them (M20). */
@@ -296,20 +375,37 @@ export const TEAMMATE_DIFFICULTIES: readonly { id: Difficulty; label: string; bl
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
 
+/**
+ * Your bot teammates' level until you pick one (audit AI-03): the opponents' level, as every bot had before M20, except
+ * that Easy opponents give you Normal teammates. A new player on Easy needs teammates who win their fights, and Easy
+ * against Easy plays the longest rounds.
+ */
+export function defaultTeammateDifficulty(opponents: Difficulty): Difficulty {
+  return opponents === 'easy' ? DEFAULT_DIFFICULTY : opponents;
+}
+
 /** Skill per difficulty level (see BotSkill). Tuned with measured time-to-hit (docs/DECISIONS.md). */
 export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
+  // Easy (audit AI-03): forgiving to the player where the player feels it (slow reactions, wide first BBs), but its
+  // settled aim is closer to Normal's so bot-against-bot fights still end and rounds don't drag on (1.7°, not the audit's
+  // 1.4°: with M30's BB flight that made Easy bots as good shots as Normal ones; DECISIONS).
   easy: {
-    reactionTime: [0.55, 0.9],
+    reactionTime: [0.6, 1.0],
     turnRate: 3.2,
-    aimErrorStartDeg: 7,
-    aimErrorSettledDeg: 1.9,
-    aimSettleTime: 1.6,
-    aimErrorStartMetres: 0.9,
-    aimErrorMovingDeg: 2.5,
+    aimErrorStartDeg: 8,
+    aimErrorSettledDeg: 1.7,
+    aimSettleTime: 1.3,
+    aimErrorStartMetres: 1.0,
+    aimErrorMovingDeg: 2.0,
     aimErrorTracking: 0.12,
     leadFactor: 0.25,
     burst: [0.15, 0.35],
     burstPause: [0.45, 0.9],
+    holdTime: [1.0, 2.5],
+    holdCoverChance: 0.2,
+    contactCoverMinDistance: 12,
+    searchWalkDistance: 4,
+    flankChance: 0,
   },
   normal: {
     reactionTime: [0.35, 0.6],
@@ -323,6 +419,11 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     leadFactor: 0.5,
     burst: [0.2, 0.45],
     burstPause: [0.3, 0.65],
+    holdTime: [0.8, 2.5],
+    holdCoverChance: 0.5,
+    contactCoverMinDistance: 8,
+    searchWalkDistance: 12,
+    flankChance: 0.25,
   },
   hard: {
     reactionTime: [0.25, 0.45],
@@ -336,8 +437,22 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     leadFactor: 0.7,
     burst: [0.25, 0.55],
     burstPause: [0.2, 0.5],
+    holdTime: [0.4, 1.2],
+    holdCoverChance: 0.8,
+    contactCoverMinDistance: 5,
+    searchWalkDistance: 20,
+    flankChance: 0.7,
   },
 };
+
+/**
+ * What the other team's bots carry, per difficulty (M29b, owner 2026-10-04): 'factory' is each replica as it comes;
+ * 'random' rolls every bot its own compatible kit from the pool (pool/botKit.ts). Your teammates always carry factory.
+ */
+export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = { easy: 'factory', normal: 'factory', hard: 'random' };
+
+/** How a random loadout is rolled: the chance each part slot (optic, grip, laser, barrel, muzzle, magazine) gets a part. */
+export const RANDOM_LOADOUT = { partChance: 0.6 } as const;
 
 /** The behaviour tuning every bot shares, whatever its level (BOT_BEHAVIOUR's shape). */
 export type BotBehaviour = Widen<typeof BOT_BEHAVIOUR>;

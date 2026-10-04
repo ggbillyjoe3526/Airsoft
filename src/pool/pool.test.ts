@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import poolText from '../../pool.md?raw';
-import { addItem, type Collection, grantStarters, itemKey, loadCollection, newCollection, ownedItems, parseItemKey, saveCollection } from './collection';
+import { addItem, type Collection, grantStarters, itemKey, loadCollection, newCollection, ownedItems, parseItemKey, saveCollection, syncCollection } from './collection';
+import { shotAssets } from './armory';
 import { assetOfReplica, DEFAULT_ECONOMY, fcPerToken, fits, loadPool, replicaOf, tierId } from './pool';
 import { readTables } from './poolFile';
 import { MemoryStorage } from './testStorage';
@@ -186,5 +187,125 @@ describe('collection', () => {
   it('reads item keys', () => {
     expect(parseItemKey('000002@veryRare')).toEqual({ asset: '000002', tier: 'veryRare' });
     expect(parseItemKey('2@epic')).toBeNull();
+  });
+});
+
+describe('pool.md, barrels and muzzle parts (M29b)', () => {
+  it('lists the Tight-Bore Barrel (000016), Long Barrel (000017) and Silencer (000018) under their own sections, from Shots and not starters', () => {
+    const expected = [
+      ['000016', 'Tight-Bore Barrel', 'barrel', 'tightBore'],
+      ['000017', 'Long Barrel', 'barrel', 'long'],
+      ['000018', 'Silencer', 'muzzle', 'silencer'],
+    ] as const;
+    const inShots = new Set(shotAssets(pool).map((a) => a.id));
+    for (const [id, name, category, key] of expected) {
+      const a = pool.byId.get(id)!;
+      expect(a, id).toBeDefined();
+      expect([a.name, a.category, a.key], id).toEqual([name, category, key]);
+      expect(a.starter, name).toBe(false);
+      expect(a.inShots, name).toBe(true);
+      expect(inShots.has(id), name).toBe(true);
+    }
+  });
+
+  it('tags the AEG for a swappable barrel and both replicas for a muzzle thread, and fits by those tags', () => {
+    const aeg = byName('AEG Rifle');
+    const pistol = byName('Gas Pistol');
+    expect(aeg.tags).toEqual(expect.arrayContaining(['barrel-mount', 'muzzle-thread']));
+    expect(pistol.tags).toContain('muzzle-thread');
+    expect(pistol.tags).not.toContain('barrel-mount');
+    for (const barrel of ['Tight-Bore Barrel', 'Long Barrel']) {
+      expect(byName(barrel).tags).toEqual(['barrel-mount']);
+      expect(fits(byName(barrel), aeg)).toBe(true);
+      expect(fits(byName(barrel), pistol)).toBe(false);
+    }
+    expect(byName('Silencer').tags).toEqual(['muzzle-thread']);
+    expect(fits(byName('Silencer'), aeg) && fits(byName('Silencer'), pistol)).toBe(true);
+  });
+
+  it('reads Barrels and Muzzle parts sections from a file and rejects a Key the code has no behaviour for there', () => {
+    const p = loadPool(mini('| 000002 | AEG Rifle | aeg | rifle, electric, barrel-mount, muzzle-thread | yes | yes |\n### Barrels\n| ID | Name | Key | Fits | Starter | In Shots |\n|---|---|---|---|---|---|\n| 000016 | Tight | tightBore | barrel-mount | no | yes |\n| 000019 | Wobbly | wobbly | barrel-mount | no | yes |\n### Muzzle parts\n| ID | Name | Key | Fits | Starter | In Shots |\n|---|---|---|---|---|---|\n| 000018 | Silencer | silencer | muzzle-thread | no | yes |'));
+    expect(p.assets.filter((a) => a.category === 'barrel').map((a) => a.id)).toEqual(['000016']);
+    expect(p.assets.filter((a) => a.category === 'muzzle').map((a) => a.id)).toEqual(['000018']);
+    expect(p.errors.some((e) => /wobbly/.test(e))).toBe(true);
+  });
+});
+
+describe('pool.md, mistakes the owner could make by hand (audit POOL-06, POOL-18, POOL-19)', () => {
+  it('flags a Rarity table listed rarest first and still reads it commonest first, so starters stay Common', () => {
+    const reversed = mini('').replace('| Common | 70 | 0 | 5 |\n| Very Rare | 30 | 9 | 40 |', '| Very Rare | 30 | 9 | 40 |\n| Common | 70 | 0 | 5 |');
+    const p = loadPool(reversed);
+    expect(p.errors.some((e) => e.includes('tiers must be listed commonest first'))).toBe(true);
+    expect(p.tiers.map((t) => t.id)).toEqual(['common', 'veryRare']);
+    expect(newCollection(p, 1).owned).toEqual({ '000001@common': 1 });
+  });
+
+  it('names a column header used twice, a row with too many cells, a mis-cased heading and a Name used twice', () => {
+    const p = loadPool(
+      mini(
+        [
+          '### Power Sources',
+          '| ID | Name | Type | Fits | Starter | In Shots |',
+          '|---|---|---|---|---|---|',
+          '| 000002 | Green Gas | gas | gas | yes | yes |',
+          '### Optics',
+          '| ID | Name | Key | Fits | Starter | In Shots | In Shots |',
+          '|---|---|---|---|---|---|---|',
+          '| 000007 | Red Dot | redDot | pistol | no | yes | yes |',
+          '| 000010 | Red Dot | scope2x | pistol | no | yes | yes | extra |',
+        ].join('\n'),
+      ),
+    );
+    expect(p.errors).toContain('line 11: "Power Sources" should be "Power sources" (headings are read exactly)');
+    expect(p.errors).toContain('line 15: column "In Shots" appears twice');
+    expect(p.errors).toContain('line 18: row has 8 cells, the header 7');
+    expect(p.errors).toContain('line 18: the Name "Red Dot" is already used by 000007');
+  });
+
+  it('reads an escaped pipe as part of a cell', () => {
+    const t = readTables('| a | b |\n|---|---|\n| x \\| y | z |')[0]!;
+    expect(t.rows[0]!.cells).toEqual({ a: 'x | y', b: 'z' });
+    expect(t.problems).toEqual([]);
+  });
+
+  it('bounds Scrap FC and match FC, and keeps an over-large saved balance at the largest exact one instead of 0', () => {
+    const p = loadPool(mini('### Field Credits\n| Event | FC |\n|---|---|\n| Hit on an opponent | 1e308 |').replace('| 40 |', '| 1e308 |'));
+    expect(p.errors.some((e) => e.includes('Scrap FC must be a number from 0 to 1000000'))).toBe(true);
+    expect(p.errors.some((e) => e.includes('FC must be a number from 0 to 1000000'))).toBe(true);
+    const storage = new MemoryStorage();
+    storage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: {}, fc: 1e308, tokens: 2, seed: 4 }));
+    expect(loadCollection(pool, 1, storage).fc).toBe(Number.MAX_SAFE_INTEGER);
+  });
+});
+
+describe('two tabs on one collection (audit POOL-02)', () => {
+  it('keeps both a spend in one tab and an earning in the other', () => {
+    const storage = new MemoryStorage();
+    saveCollection({ ...newCollection(pool, 1), fc: 2000 }, storage);
+    const a = loadCollection(pool, 1, storage);
+    const b = loadCollection(pool, 1, storage);
+    // Tab A spends 1,600 FC on items; tab B, still holding 2,000 FC, then finishes a match worth 150.
+    syncCollection(a, pool, storage);
+    a.fc -= 1600;
+    addItem(a, { asset: '000007', tier: 'legendary' });
+    expect(saveCollection(a, storage)).toBe(true);
+    expect(syncCollection(b, pool, storage)).toBe(true);
+    b.fc += 150;
+    expect(saveCollection(b, storage)).toBe(true);
+    const back = loadCollection(pool, 1, storage);
+    expect(back.fc).toBe(550);
+    expect(back.owned['000007@legendary']).toBe(1);
+  });
+
+  it('never saves an unsynced copy over a newer save, and loads an old save without a revision', () => {
+    const storage = new MemoryStorage();
+    storage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: { '000007@rare': 1 }, fc: 10, tokens: 0, seed: 3 }));
+    const a = loadCollection(pool, 1, storage);
+    const b = loadCollection(pool, 1, storage);
+    expect([a.rev, a.pity, a.owned['000007@rare']]).toEqual([0, {}, 1]);
+    expect(saveCollection(a, storage)).toBe(true);
+    b.fc = 999_999;
+    expect(saveCollection(b, storage)).toBe(false);
+    expect(loadCollection(pool, 1, storage).fc).toBe(10);
   });
 });

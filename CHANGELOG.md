@@ -5,6 +5,13 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
+- **FA4** · Bots keep apart and never take a teammate's cover or lane spot; their routes keep a body's width from walls (#66)
+- **FA4** · A BB landing close by tells a bot roughly where the shot came from; a teammate's "HIT!" gives only the direction. Fighting bots sidestep only onto open ground that keeps you in sight; a search that finds nobody ends with a crouched look round (#66)
+- **FA4** · Difficulty changes how bots play, not only how they aim: Hard uses cover and flanks more, Easy less; Easy reacts slower (0.6–1.0 s) with wider first shots but settles its aim nearer Normal (#66)
+- **FA4** · Against Easy opponents your teammates start on Normal, and that default pair counts for your records under Easy (#66)
+- **FA10** · Armory pity: an Epic or better within 20 Shots, a Legendary within 100; items you don't own are twice as likely; the catalogue lists every item by rarity tier (#63)
+- **FA10** · Tutorial: skip it or resume it from the pause screen; new steps for the fire selector and shooting after a sprint (#63)
+- **M31** · Settings → Save: download your save as a file and load it back (Undo after), daily restore points; a second tab waits instead of overwriting
 - **FA5** · Second key per action; mouse wheel binding; HUD size (0.8–1.5); crosshair custom; raw mouse input; cm/360 kept; order wheel shows keys (#59)
 - **FA5** · High-contrast styles; hit, out, round messages read by screen readers (#59)
 - **FA9** · Dark loading screen with physics module progress bar; favicon and web manifest (#59)
@@ -35,8 +42,15 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M26c** · Armory, beta and free: earn Field Credits from matches, buy Tokens, draw from the pool (#44)
 - **FA6** · Outdoor ambience bed with distant birds; world sounds muffled when eliminated (#55)
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
+- **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
+- **M33a** · Woodland shown as Coming soon in the Map pop-up
 
 ### Changed
+- **FA4** · Bots holding a spot crouch where they can still see and sweep their view; a defender at its post decides once on arrival (#66)
+- **FA4** · Attack / Defend: one attacking bot raises the flag while the others guard the pole from cover. Depot: the east spawns sit at the north end of their yard and its north exit is closed, so both ends are about as far from the dock and the Main Gate; in bot-only matches the west wins 48 % of rounds (#66)
+- **FA4** · Bots plan at most one route per tick in all, so big fights don't hitch (#66)
+- **FA10** · Field Credits: a won round pays only if you took part, pay scales with match length, and the difficulty bonus follows the lower of your teammates' and opponents' levels; Armory: 10 Shots and Scrap ask to confirm, holding Enter takes one Shot, the reveal shows rarest first with prices (#63)
+- **FA10** · The match summary says why a round paid nothing (#63)
 - **FA5** · Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell (#59)
 - **FA9** · Cleaner menus and HUD: consistent style, button states, focus ring, marked tabs, dialogs, fade-in, hit-feed colours (#59)
 - Pistol leans slightly left again, much less than before (#13)
@@ -48,6 +62,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 
 ### Fixed
+- **FA10** · Shot spread is the same sideways and up-down when aiming steeply up or down (#63)
 - **FA5** · Esc resumes from the pause screen; the first mouse jump after the lock is ignored; teammate markers hide behind the minimap and while the scoreboard is up (#59)
 - **FA1** · Jump pressed up to 0.1 s before landing still happens; click after sprint fires as soon as lockout ends (#57)
 - **FA1** · Stepping down a kerb no longer widens the crosshair; drawn Elimination rounds replay (#57)
@@ -73,6 +88,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M30** · One midpoint integrator step per tick replaces two Euler sub-steps; drag from a lookup table; BB streak follows its mean velocity, not its end-of-tick velocity
 - **BP1** · The rendered sounds are held once (about 9 MB less); the perf script restarts with each match (#53)
 - **FA6** · Audio renders at 48 kHz with seeded reverb; debug overlay shows latency (#55)
+- **FA11a** · Production build compresses with Brotli and gzip; browser test plays real production build with mouse lock (#61)
+- **FA11a** · TypeScript stricter (exactOptionalPropertyTypes); GitHub checks verify scope and changelog; dead code removed (#61)
 
 ## v0.1-alpha.3 · 2026-10-03
 
