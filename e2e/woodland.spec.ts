@@ -138,3 +138,74 @@ test('Woodland is lit by night and the practice range after it by day again', as
   expect(day.pointLights).toBe(0);
   expect(errors).toEqual([]);
 });
+
+type TorchView = {
+  airsoft: {
+    state: { tick: number; characters: { id: number; torchOn: boolean }[] } | null;
+    renderer: {
+      scene: { traverse: (f: (o: { name: string; isPointLight?: boolean; isSpotLight?: boolean; intensity: number }) => void) => void };
+      renderer: { info: { programs: unknown[] | null } };
+    };
+  };
+};
+
+/**
+ * M33h QA: on Woodland with Dev content on, T switches your weapon torch (a starter, fitted by default), on Medium
+ * your torch is one real spot light that takes one of the two night lights, and switching it builds no shader.
+ */
+test('Woodland: T switches your weapon torch, one real spot light in place of a pool light, no shader built', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  const look = () =>
+    page.evaluate(() => {
+      const g = (window as unknown as TorchView).airsoft;
+      let points = 0;
+      let spots = 0;
+      let spotIntensity = 0;
+      g.renderer.scene.traverse((o) => {
+        if (o.isPointLight) points++;
+        if (o.isSpotLight && o.name === 'torch-spot') {
+          spots++;
+          spotIntensity = o.intensity;
+        }
+      });
+      return { torchOn: g.state!.characters.find((c) => c.id === 0)!.torchOn, points, spots, spotIntensity, programs: g.renderer.renderer.info.programs?.length ?? 0 };
+    });
+  await page.goto('/?nolock&seed=3&quality=medium');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start' }).click();
+  const setup = page.locator('.menu-setup');
+  await setup.getByRole('button', { name: /Settings/i }).click();
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
+  await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
+  await page.keyboard.press('Escape');
+  await setup.getByRole('button', { name: /Map/i }).click();
+  await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Woodland/i }).click();
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
+  await expect.poll(() => page.evaluate(() => (window as unknown as TorchView).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
+
+  const off = await look();
+  expect(off.torchOn).toBe(false); // off at spawn
+  expect(off.spots).toBe(1);
+  expect(off.spotIntensity).toBe(0);
+  expect(off.points + off.spots).toBe(2); // Medium's two night lights, one of them the torch's
+
+  await page.keyboard.press('t');
+  await expect.poll(async () => (await look()).torchOn, { timeout: 10_000 }).toBe(true);
+  await expect.poll(async () => (await look()).spotIntensity, { timeout: 10_000 }).toBeGreaterThan(0);
+  const on = await look();
+  expect(on.points + on.spots).toBe(2);
+  expect(on.programs).toBe(off.programs);
+
+  await page.keyboard.press('t');
+  await expect.poll(async () => (await look()).torchOn, { timeout: 10_000 }).toBe(false);
+  await expect.poll(async () => (await look()).spotIntensity, { timeout: 10_000 }).toBe(0);
+  expect((await look()).points).toBe(off.points);
+  expect(errors).toEqual([]);
+});

@@ -70,3 +70,43 @@ test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked
 
   expect(errors, errors.join(' | ')).toEqual([]);
 });
+
+/**
+ * M33h: the Weapon Torch is dev content. With Dev content off (the default) the Loadout has no Light row, a Depot match
+ * builds nothing for torches, and the Weapon torch key does nothing.
+ */
+test('with Dev content off there is no Light row, no torch in the match, and T does nothing', async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=1');
+  await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start' }).click();
+  const setup = page.locator('.menu-setup');
+  await setup.getByRole('button', { name: /Loadout/i }).click();
+  const loadout = page.locator('.menu-loadout');
+  await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
+  await expect(loadout.getByRole('group', { name: 'Optic' })).toBeVisible();
+  await expect(loadout.getByRole('group', { name: 'Light' })).toHaveCount(0);
+  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
+  type View = { airsoft: { state: { tick: number; characters: { id: number; torchOn: boolean }[] } | null; renderer: { scene: { traverse: (f: (o: { name: string }) => void) => void } } } };
+  await expect.poll(() => page.evaluate(() => (window as unknown as View).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
+  await page.keyboard.press('t');
+  await page.waitForTimeout(500);
+  const seen = await page.evaluate(() => {
+    const g = (window as unknown as View).airsoft;
+    const torchObjects: string[] = [];
+    g.renderer.scene.traverse((o) => {
+      if (o.name.startsWith('torch-') && o.name !== 'torch-beams') torchObjects.push(o.name);
+    });
+    return { torchOn: g.state!.characters.some((c) => c.torchOn), torchObjects };
+  });
+  expect(seen).toEqual({ torchOn: false, torchObjects: [] });
+  expect(errors, errors.join(' | ')).toEqual([]);
+});
