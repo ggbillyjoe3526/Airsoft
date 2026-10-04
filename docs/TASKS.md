@@ -4,16 +4,16 @@ Open tasks only, one block each (format in `pipeline/README.md`). A task that la
 line, its ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
 keeps `status` and `attempts` current.
 
-## M27 · probeGround without a per-tick allocation
+## M27 · Walk-off route searches rationed to one per tick
 tier: core
 perf: required
-touches: src/physics/physicsWorld.ts, src/physics/physicsWorld.test.ts, docs/KNOWN_ISSUES.md
-contract: CharacterMover
+touches: src/sim/elimination.ts, src/sim/elimination.test.ts, src/sim/character.ts, src/sim/simulation.ts, docs/KNOWN_ISSUES.md
+contract: GameState (a field on Character is allowed), stepSimulation (its phase order is unchanged)
 acceptance:
-  1. `probeGround` allocates no object per call in steady state: a test steps six standing characters for 600 ticks and the heap (after a forced collection) grows by less than 1 MB, and the hit result is read into a reused object
-  2. Standing characters still rest 0.04 m above the floor and `probeGround` returns the same heights as before (existing physicsWorld tests pass unchanged)
-  3. The perf gate passes: draw calls, triangles and heap growth within budget and not more than 10 % worse than the container baseline
-  4. The KNOWN_ISSUES row about `probeGround` is removed
+  1. A hit no longer runs the victim's walk-off route search inside the hit itself: the search happens in the elimination step over the following ticks, at most one route search per tick across all victims (two hits in one tick: one search that tick, one the next; a test counts the searches)
+  2. A victim reaches its dead zone as before (the existing elimination and depot match tests pass unchanged); while its route is not found yet it stands calling, which the 1.4 s call already covers
+  3. No new per-tick allocation: the route array and the pending flag live on the character and are reused
+  4. The KNOWN_ISSUES row about the walk-off route search inside the tick is removed
 status: open
 attempts: 0
 
