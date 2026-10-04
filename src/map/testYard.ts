@@ -129,7 +129,8 @@ const PILLAR = 0.4;
  * wall, whose roof is an upper floor 3 m up. One stair (a 1:2 ramp, 6 m long) climbs to it at the north-west corner,
  * another at the south-east, so the upper floor has two ways up. A wall splits the upper floor into a north and a south
  * half joined at both ends; rails run along its east and west edges except a 3 m open stretch each side, the drop a
- * balcony has. The hall below has pillars and crates, so fights happen on both floors and across them. Teams spawn and
+ * balcony has. The hall below is closed at its ends but for a door each, with pillars and a crate inside, so fights
+ * happen on both floors and across them. Teams spawn and
  * wait out on the ground at the ends; walk-offs from upstairs come down a stair.
  */
 export const STACK_HOUSE: MapData = {
@@ -158,12 +159,15 @@ export const STACK_HOUSE: MapData = {
     { kind: 'crate', center: vec3(-3, STOREY + 0.6, 4), size: vec3(1.2, 1.2, 1.2) },
     { kind: 'crate', center: vec3(3, STOREY + 0.6, -4), size: vec3(1.2, 1.2, 1.2) },
     ...stackRails(),
+    // Downstairs: the hall's end walls, each with a 2 m door (the west one north of the middle, the east one south, so
+    // no line runs through both), four pillars holding the slab, and crate cover.
+    ...hallEndWall(-UPPER_HALF_X + WALL_THICKNESS / 2, 1, 3),
+    ...hallEndWall(UPPER_HALF_X - WALL_THICKNESS / 2, -3, -1),
     // Downstairs: four pillars holding the slab, and crate cover.
     ...[-3, 3].flatMap((x) =>
       [-4, 4].map((z): MapBlock => ({ kind: 'wall', center: vec3(x, (STOREY - SLAB) / 2, z), size: vec3(PILLAR, STOREY - SLAB, PILLAR) })),
     ),
-    { kind: 'crate', center: vec3(0, 0.6, 2.5), size: vec3(1.2, 1.2, 1.2) },
-    { kind: 'crate', center: vec3(0, 0.6, -2.5), size: vec3(1.2, 1.2, 1.2) },
+    { kind: 'crate', center: vec3(0, 0.6, 0), size: vec3(1.2, 1.2, 1.2) },
     // Crate cover in the yards between the ends and the hall.
     { kind: 'crate', center: vec3(-11, 0.6, -3), size: vec3(1.2, 1.2, 1.2) },
     { kind: 'crate', center: vec3(11, 0.6, 3), size: vec3(1.2, 1.2, 1.2) },
@@ -180,7 +184,7 @@ export const STACK_HOUSE: MapData = {
   ],
   lanes: [
     // Through the hall, under the upper floor.
-    [vec3(-12, 0, 0), vec3(-4.5, 0, 0), vec3(4.5, 0, 0), vec3(12, 0, 0)],
+    [vec3(-12, 0, 2), vec3(-4.5, 0, 2), vec3(4.5, 0, -2), vec3(12, 0, -2)],
     // Up the north-west stair, across the upper floor round the wall, down the south-east stair.
     [vec3(-13.5, 0, 6), vec3(-4, STOREY, 6), vec3(4, STOREY, -6), vec3(13.5, 0, -6)],
   ],
@@ -201,6 +205,32 @@ function stackRails(): MapBlock[] {
   const e = UPPER_HALF_X - t / 2;
   const stairEdge = STACK_HALF_Z - 1 - STAIR_WIDTH;
   return [rail(w, -STACK_HALF_Z, 1), rail(w, 4, stairEdge), rail(e, -stairEdge, -4), rail(e, -1, STACK_HALF_Z)];
+}
+
+/**
+ * A hall end wall at `x`, under the upper floor and wall to wall except a door from `doorZ0` to `doorZ1` and where a
+ * stair's solid end already closes it.
+ */
+function hallEndWall(x: number, doorZ0: number, doorZ1: number): MapBlock[] {
+  const h = STOREY - SLAB;
+  const stairZ = STACK_HALF_Z - 1 - STAIR_WIDTH;
+  // The stair landing at this end: north-west for the west wall, south-east for the east.
+  const [z0, z1] = x < 0 ? [stairZ, STACK_HALF_Z - 1] : [-STACK_HALF_Z + 1, -stairZ];
+  const segments: [number, number][] = [
+    [-STACK_HALF_Z, doorZ0],
+    [doorZ1, STACK_HALF_Z],
+  ];
+  const out: MapBlock[] = [];
+  for (const [a, b] of segments) {
+    // Leave out the stretch the stair's 3 m end closes.
+    for (const [s0, s1] of [
+      [a, Math.min(b, z0)],
+      [Math.max(a, z1), b],
+    ] as const) {
+      if (s1 - s0 > 1e-6) out.push({ kind: 'wall', center: vec3(x, h / 2, (s0 + s1) / 2), size: vec3(WALL_THICKNESS, h, s1 - s0) });
+    }
+  }
+  return out;
 }
 
 function stackPerimeter(): MapBlock[] {

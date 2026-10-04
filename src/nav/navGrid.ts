@@ -33,6 +33,8 @@ export interface NavGrid {
   layers: number;
   /** Largest floor height difference between neighbouring nodes that a character walks across. */
   maxStep: number;
+  /** The headroom a floor needs (the body's height): a route end never snaps to a floor further below it than this. */
+  headroom: number;
 }
 
 export interface NavGridConfig {
@@ -128,6 +130,7 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
     floorY: Float32Array.from(floors),
     layers,
     maxStep: cfg.maxStep,
+    headroom: cfg.bodyHeight,
   };
 
   // Stamp every blocking box, grown by the clearance, onto the nodes it stops walking on: those whose floor it stands
@@ -275,7 +278,11 @@ export function isWalkableAt(g: NavGrid, x: number, y: number, z: number): boole
   return k >= 0 && g.walkable[k] === 1;
 }
 
-/** Nearest walkable node to (x, z) within `maxRadius` metres (ring search), each cell judged at its floor under `y`; or -1. */
+/**
+ * Nearest walkable node to (x, z) within `maxRadius` metres (ring search), each cell judged at its floor under `y`; or
+ * -1. A floor more than a storey's headroom below `y` doesn't count: from a balcony's edge, the nearest spot is on the
+ * balcony, not in the street under it.
+ */
 export function nearestWalkable(g: NavGrid, x: number, y: number, z: number, maxRadius: number): number {
   const ci = Math.min(g.cols - 1, Math.max(0, Math.floor((x - g.minX) / g.cell)));
   const cj = Math.min(g.rows - 1, Math.max(0, Math.floor((z - g.minZ) / g.cell)));
@@ -288,7 +295,7 @@ export function nearestWalkable(g: NavGrid, x: number, y: number, z: number, max
         if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== ring) continue;
         if (i < 0 || j < 0 || i >= g.cols || j >= g.rows) continue;
         const k = pickNode(g, j * g.cols + i, y);
-        if (k < 0 || !g.walkable[k]) continue;
+        if (k < 0 || !g.walkable[k] || g.floorY[k]! < y - g.headroom) continue;
         const d = Math.hypot(cellX(g, i) - x, cellZ(g, j) - z);
         if (d < bestD) {
           bestD = d;

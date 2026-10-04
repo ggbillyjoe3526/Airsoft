@@ -9,8 +9,8 @@ import type { Vec3 } from '../sim/vec';
 const UNDERFOOT_REACH = 0.35;
 
 /**
- * The surface under a character's feet at `feet`: the highest floor or ramp top at or just below them (maps keep
- * one walkable surface per point, see map/surfaces.ts). Concrete where nothing says otherwise.
+ * The surface under a character's feet at `feet`: the highest floor or ramp top within reach of them, so a floor
+ * overhead or one storey down never counts (map/surfaces.ts). Concrete where nothing says otherwise.
  */
 export function surfaceUnder(blocks: readonly MapBlock[], feet: Vec3): FloorSurface {
   let best: MapBlock | undefined;

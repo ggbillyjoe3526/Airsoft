@@ -132,6 +132,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
 | Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up | In progress (M33a done; concept sketch v1 with the owner) | M33a 7/8 |
+| Alpha · Owner's 2026-10-04 requests · M34 Neon Heights, a third field (owner's concept v1, all defaults, 2026-10-04): a small, vertical futuristic city block, three playable floors, Day or Night picked on the map's tile, tagged dev until he calls it done. M34b: bot navigation for floors over floors | In progress (M34b building) | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -754,6 +755,22 @@ pool, items 11, 12 and part of 14).
   - **Glowing BBs:** a Loadout option on any field, on by default on night fields.
   - **M33a. Coming soon:** Woodland shows in the Map pop-up under Depot, greyed out with a Coming soon tag, and can't
     be picked until it is playable.
+
+- **M34. Neon Heights, a third field** (owner, 2026-10-04: "a vibrant futuristic cyberpunk city … highly vertical
+  with multiple floors"; concept v1 approved with all twelve defaults). Pulled forward from v0.4 (more fields, day and
+  night); the reason is in DECISIONS. Concept sketches in the project's shared files (`concepts/neon-heights-plans-v1.png`,
+  `neon-heights-side-mood-v1.png`, notes in `research/neon-heights-concept-v1.md`).
+  - **The field:** 46 × 30 m, split by a street (Neon Avenue). Three playable floors (street, +3 m, +6 m) linked by
+    stairs only; a Sky Bridge at +6 m over the street; roofs not playable. Windows are open frames with a 1.2 m sill
+    (see and shoot through, not climbable); a 3 m drop from Level 1 balconies (bots use the stairs). 4v4 (Custom up
+    to 5v5), Elimination and Attack / Defend with the flag on the Tower's atrium floor under two galleries.
+  - **Day or Night:** a switch on the map's tile in the Map pop-up, remembered, Night the first time; built for any map.
+    Night uses Woodland's night systems (M33f, M33g). Neon, interior light and the per-floor minimap are engine
+    features any map can use (the owner's engine-level graphics rule).
+  - **Access:** tagged dev (M35): shown only with the Dev switch on, until the owner calls it done.
+  - **Build order, one pull request each:** M34b floors over floors for the bots (a layered nav grid and a test
+    building); M34c the greybox city by Day; M34d the Day / Night switch; M34e night neon and interior light; M34f
+    art and sound.
 
 When the owner calls the game feature complete, alpha ends.
 
