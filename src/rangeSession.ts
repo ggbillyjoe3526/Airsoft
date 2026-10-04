@@ -202,6 +202,7 @@ export class RangeSession {
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     this.targets.update(dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    this.daylight.follow(this.renderer.camera);
     this.combat.render(true);
   }
 

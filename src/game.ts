@@ -398,6 +398,7 @@ export class Game {
     });
     this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
     this.audio.warmUp();
+    this.renderer.warmUp();
   }
 
   /** The tab was hidden (another tab, the window minimised): the match pauses, as Esc would (M18b). */

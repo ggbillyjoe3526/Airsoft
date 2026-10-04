@@ -167,7 +167,9 @@ if (!perfRequired) {
       if (FRAME_METRICS.includes(metric) && !frameTimesGated) continue;
       if (typeof result.metrics[metric] === 'number' && result.metrics[metric] > limit) over.push({ metric, limit, now: result.metrics[metric] });
     }
-    const baselinePath = join(ROOT, 'pipeline', 'baseline', `${options.env}.json`);
+    // The budget preset's baseline is <env>.json; the others' <env>-<preset>.json (perf-run.mjs --preset all --baseline).
+    const baselineName = result.preset === budgets.budgetPreset ? `${options.env}.json` : `${options.env}-${result.preset}.json`;
+    const baselinePath = join(ROOT, 'pipeline', 'baseline', baselineName);
     const worse = [];
     let baselineNote;
     if (existsSync(baselinePath)) {
@@ -182,7 +184,7 @@ if (!perfRequired) {
           if (pct > RELATIVE_TOLERANCE * 100) worse.push({ metric, baseline: was, now, pct: Math.round(pct) });
         }
       }
-    } else baselineNote = `no baseline for ${options.env} (pipeline/baseline/${options.env}.json); relative check skipped`;
+    } else baselineNote = `no baseline for ${options.env} (pipeline/baseline/${baselineName}); relative check skipped`;
     summary = { ...summary, pass: r.ok && over.length === 0 && worse.length === 0, preset: result.preset, run: relative(ROOT, runFile), metrics: result.metrics, frameTimesGated, ...(over.length ? { overBudget: over } : {}), ...(worse.length ? { worse } : {}), ...(baselineNote ? { reason: baselineNote } : {}) };
   } catch (e) {
     summary = { ...summary, pass: false, reason: `no readable perf run (${e.message})`, evidence: tail(r.output) };

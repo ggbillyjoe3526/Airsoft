@@ -81,6 +81,16 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
     ],
   }),
   range({ field: 'shadowRadius', label: 'Shadow softness', help: 'How soft shadow edges are, in shadow-map texels.', cost: 'Free', min: 1, max: 4, step: 0.5, perUnit: 1, format: (v) => v.toFixed(1) }),
+  choice({
+    field: 'shadowFollowsView',
+    label: 'Shadow range',
+    help: 'Near you: sharper shadows for about 25 m ahead, none beyond. Whole field: every shadow, softer edges.',
+    cost: 'Free',
+    options: [
+      { id: 'field', label: 'Whole field', value: false },
+      { id: 'near', label: 'Near you', value: true },
+    ],
+  }),
   choice({ field: 'figureShadows', label: 'Players in shadow', help: 'Players and the flag are shaded by walls and containers, not lit as if in full sun.', cost: 'GPU: small', options: onOff }),
   choice({ field: 'surfaceRelief', label: 'Surface relief', help: 'Slab joints, mortar, planks and container ribs catch the sun.', cost: 'GPU: medium', options: onOff }),
   choice({

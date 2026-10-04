@@ -42,6 +42,11 @@ export const ATMOSPHERE = {
   skyRadius: 200,
   skyWidthSegments: 32,
   skyHeightSegments: 16,
+  /**
+   * The dome's draw order (audit REN-05): after every opaque object (order 0), so the depth test leaves only the sky's
+   * own pixels to shade; drawn first it filled the whole screen under the field, about 9 % of a Low frame.
+   */
+  skyRenderOrder: 1,
   /** Linear haze in the horizon colour (metres from the camera). */
   fogNear: 32,
   fogFar: 210,
@@ -104,6 +109,12 @@ export interface QualitySettings {
    * (Three.js r186 PCFShadowMap), so it costs nothing (audit REN-09).
    */
   shadowRadius: number;
+  /**
+   * The sun's shadow map follows the view (REN-08): it covers a disc round the ground ahead of you
+   * (LIGHTING.shadowView), not the whole field, so each texel is about a third of the ground and shadows of rails, posts
+   * and limbs are sharp; past it nothing casts a shadow. Off, one map covers the whole field.
+   */
+  shadowFollowsView: boolean;
   /** Figures, the flag's cloth and the range targets are shaded by walls and containers, not only cast shadows (REN-07). */
   figureShadows: boolean;
   /**
@@ -129,9 +140,9 @@ export interface QualitySettings {
  * (Phase 3 audit C-04).
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
-  low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false },
-  medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: false },
-  high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true },
+  low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false },
+  medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: false },
+  high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true },
 };
 
 /** The fields of a QualitySettings, in the order the Custom rows show them. */
@@ -231,6 +242,12 @@ export const FRAME_PACING = { slackMs: 1, resetFrames: 2 } as const;
 export const FRAME_TIMING = { smoothing: 0.1 } as const;
 
 /**
+ * The held replica's sheen (render/replicaSheen.ts): a room environment prefiltered once into a half-float target
+ * (768 × 1024, about 6.3 MB), blurred by `blur` (PMREM sigma, radians) so the plastic reads moulded, not mirrored.
+ */
+export const REPLICA_SHEEN = { blur: 0.04 } as const;
+
+/**
  * Bright, friendly daylight: a warm late-morning sun and a cool sky fill (M14). The hemisphere's ground colour is the
  * sunlit concrete's bounce, so shaded sides stay warm and readable, never murky.
  */
@@ -245,7 +262,17 @@ export const LIGHTING = {
   /** Extra margin around the level box for the shadow camera (metres). */
   shadowMargin: 2,
   shadowBias: -0.0004,
-  shadowNormalBias: 0.03,
+  /**
+   * Normal bias in shadow-map texels (REN-08): acne hides behind about half a texel whatever the texel's size, so the
+   * bias follows it (0.03 m at Medium's 5.9 cm texels on Depot; a third of that on High's view-fitted map).
+   */
+  shadowNormalBiasTexels: 0.5,
+  /**
+   * The view-fitted shadow map (QualitySettings.shadowFollowsView, High): a disc of `radius` metres centred `ahead`
+   * metres in front of the camera along the ground (so 26 m ahead and 10 m behind are shadowed). At 2048² the
+   * texels are 1.9 cm, against 2.9 cm for the whole of Depot. The disc moves in whole texels, so edges don't crawl.
+   */
+  shadowView: { radius: 18, ahead: 8 },
 } as const;
 
 /** The surface textures (render/proceduralTextures.ts), drawn on canvases as each match loads. */
@@ -268,6 +295,11 @@ export const SURFACES = {
   grimeShade: 0.72,
   /** Each block's brightness varies by up to this share (by its position), so neighbouring props don't look cloned. */
   shadeJitter: 0.07,
+  /**
+   * A floor or ramp whose top is this far above the ground (metres) casts a shadow (a dock, its ramps, a walkway);
+   * the ground's own slab doesn't (KNOWN_ISSUES: a platform's height read only from its lit sides).
+   */
+  raisedFrom: 0.01,
   /**
    * Purely visual detail drawn inside each block's own bounds (metres). Containers: the corrugated box sits `inset` in
    * from a steel frame of corner posts and top and bottom rails, darker than the walls, with locking bars on one end;
@@ -321,6 +353,11 @@ export const BB_VISUALS = {
   trailSeconds: 0.022,
   trailColor: 0xfff4cc,
   trailOpacity: 0.75,
+  /**
+   * The streak's width as an angle (radians of view; 0.0018 ≈ 1.8 px at 1080p, 2.3 px at 1440p): a camera-facing ribbon
+   * (audit REN-19), the same on screen at any pixel ratio, where a WebGL line is one device pixel (fainter on high-DPI).
+   */
+  trailAngularWidth: 0.0018,
   /**
    * Your own BBs are drawn leaving the replica's muzzle and blend onto their true (eye-line) path over
    * this many seconds (~10 m), so you can see them fly instead of edge-on along your line of sight.

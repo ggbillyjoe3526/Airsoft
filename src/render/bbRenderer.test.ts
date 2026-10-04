@@ -63,3 +63,59 @@ describe('BBRenderer', () => {
     r.dispose();
   });
 });
+
+describe('BBRenderer streaks (REN-19)', () => {
+  const eye = { x: 0, y: 1.6, z: 0 };
+
+  /** Corner `c` (0, 1 at the head; 2, 3 at the tail) of drawn BB `i`'s streak quad. */
+  function corner(r: BBRenderer, i: number, c: number): THREE.Vector3 {
+    const trails = r.object.children[1] as THREE.Mesh;
+    return new THREE.Vector3().fromBufferAttribute(trails.geometry.getAttribute('position') as THREE.BufferAttribute, i * 4 + c);
+  }
+
+  it('draws each streak as a camera-facing quad as wide on screen at its head as at its tail, near or far', () => {
+    const pool = createBBPool(2);
+    const r = new BBRenderer(pool, DT);
+    // Crossing the view at 3 m and at 30 m, old enough for a full-length streak.
+    for (const z of [-3, -30]) {
+      const bb = spawnBB(pool, 1, vec3(-1, 1.6, z), vec3(1, 0, 0), 88, 0, 0.25e-3);
+      bb.age = 1;
+    }
+    r.update(1, eye);
+    const trails = r.object.children[1] as THREE.Mesh;
+    expect(trails.geometry.drawRange.count).toBe(2 * 6);
+    const e = new THREE.Vector3(eye.x, eye.y, eye.z);
+    for (const i of [0, 1]) {
+      for (const [a, b] of [[0, 1], [2, 3]] as const) {
+        const p = corner(r, i, a);
+        const q = corner(r, i, b);
+        const mid = p.clone().add(q).multiplyScalar(0.5);
+        // Width over distance: the angle the streak spans across the line of sight.
+        expect(p.distanceTo(q) / mid.distanceTo(e)).toBeCloseTo(BB_VISUALS.trailAngularWidth, 6);
+        // Widened across the line of sight, not along it.
+        expect(Math.abs(p.clone().sub(q).normalize().dot(mid.clone().sub(e).normalize()))).toBeLessThan(1e-6);
+      }
+    }
+    r.dispose();
+  });
+
+  it('uploads nothing while no BB is in flight, and clears the last streak once (REN-22)', () => {
+    const pool = createBBPool(2);
+    const r = new BBRenderer(pool, DT);
+    const balls = r.object.children[0] as THREE.InstancedMesh;
+    const trails = (r.object.children[1] as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute;
+    r.update(0, eye);
+    const idle = [balls.instanceMatrix.version, trails.version];
+    r.update(0, eye);
+    expect([balls.instanceMatrix.version, trails.version]).toEqual(idle);
+    const bb = spawnBB(pool, 1, vec3(0, 1.6, -5), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    r.update(0, eye);
+    expect(balls.instanceMatrix.version).toBeGreaterThan(idle[0]!);
+    bb.active = false;
+    r.update(0, eye); // the frame it goes: one upload with nothing drawn
+    const after = [balls.instanceMatrix.version, trails.version];
+    r.update(0, eye);
+    expect([balls.instanceMatrix.version, trails.version]).toEqual(after);
+    r.dispose();
+  });
+});

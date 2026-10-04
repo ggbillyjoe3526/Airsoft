@@ -3,6 +3,7 @@ import { ATMOSPHERE, effectivePixelRatio, FRAME_TIMING, RENDER, type QualitySett
 import type { FigureModel } from './externalModels';
 import { GpuTimer } from './gpuTimer';
 import { createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
+import { ReplicaSheen } from './replicaSheen';
 
 const REFERENCE_ASPECT = 16 / 9;
 const DEG = Math.PI / 180;
@@ -15,6 +16,39 @@ export function verticalFovFor(horizontalFov16x9: number): number {
 /** The vertical FOV (degrees) that magnifies a `fov` view by `zoom`. */
 export function zoomedFov(fov: number, zoom: number): number {
   return (2 * Math.atan(Math.tan((fov * DEG) / 2) / zoom)) / DEG;
+}
+
+/** Runs `work` in a spare moment. */
+export type IdleScheduler = (work: () => void) => void;
+
+/** The browser's idle callback (a timeout where it has none). */
+const browserIdle: IdleScheduler = (work) => {
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(() => work());
+  else setTimeout(work, 0);
+};
+
+/**
+ * Draws the surface textures and uploads them in idle moments (audit REN-14), so the first Play doesn't: one moment
+ * draws the set (`draw`), then each following moment uploads one texture, until every one is on the GPU or `current()`
+ * no longer gives that set (a texture-size change dropped it; the new size is drawn when a session asks).
+ */
+export function warmSurfacesInIdle(
+  draw: () => SurfaceTextures,
+  current: () => SurfaceTextures | null,
+  upload: (texture: THREE.Texture) => void,
+  idle: IdleScheduler,
+): void {
+  idle(() => {
+    const set = draw();
+    const textures = Object.values(set).map((t) => t.texture);
+    let next = 0;
+    const step = (): void => {
+      if (current() !== set || next >= textures.length) return;
+      upload(textures[next++]!);
+      idle(step);
+    };
+    idle(step);
+  });
 }
 
 /** Owns the WebGL renderer, main camera and scene. Handles resizing. */
@@ -36,6 +70,8 @@ export class Renderer {
   /** The map surfaces' textures, drawn the first time a session asks (surfaceTextures), and the size they were drawn at. */
   private surfaces: SurfaceTextures | null = null;
   private surfacesSize: TextureSize | null = null;
+  /** The held replica's sheen, prefiltered once per context and freed while the setting is off (REN-06). */
+  private readonly sheen = new ReplicaSheen();
   /** GPU time per frame (REN-17), made while `gpuTiming` is on; null without it. */
   private gpuTimer: GpuTimer | null = null;
   /** Time the GPU's work each frame (the debug overlay, while shown). */
@@ -121,6 +157,27 @@ export class Renderer {
     return this.surfaces;
   }
 
+  /**
+   * The held replica's sheen for the settings in force (render/replicaSheen.ts): made the first time it is wanted and
+   * shared by every match and range; null while Replica sheen is off. Sessions must not dispose it.
+   */
+  get replicaSheen(): THREE.Texture | null {
+    return this.sheen.texture(this.gl, this.quality.replicaSheen);
+  }
+
+  /**
+   * Draws and uploads the surface textures in the title screen's idle time (REN-14), so the first Play only builds the
+   * map. Harmless if Play comes first: the set is drawn once either way and an uploaded texture isn't uploaded again.
+   */
+  warmUp(idle: IdleScheduler = browserIdle): void {
+    warmSurfacesInIdle(
+      () => this.surfaceTextures,
+      () => this.surfaces,
+      (texture) => this.gl.initTexture(texture),
+      idle,
+    );
+  }
+
   get canvas(): HTMLCanvasElement {
     return this.gl.domElement;
   }
@@ -155,6 +212,7 @@ export class Renderer {
       this.surfaces = null;
     }
     if (this.surfaces) setSurfaceAnisotropy(this.surfaces, quality.anisotropy);
+    this.sheen.trim(quality.replicaSheen);
     const replaced = quality.antialias !== this.contextAntialias && this.replaceContext(quality.antialias);
     this.gl.shadowMap.enabled = quality.shadows;
     this.resize();
@@ -192,6 +250,7 @@ export class Renderer {
     this.unlisten(this.canvas);
     if (this.surfaces) disposeSurfaceTextures(this.surfaces);
     this.surfaces = null;
+    this.sheen.dispose();
     this.figureModel?.dispose();
     this.figureModel = null;
     this.dropTimer();
@@ -229,6 +288,8 @@ export class Renderer {
     const old = this.gl;
     this.dropTimer();
     this.unlisten(old.domElement);
+    // The sheen's target is freed by the context that made it; the session asks for a new one (contextRestored).
+    this.sheen.dispose();
     old.domElement.replaceWith(next.domElement);
     old.dispose();
     old.forceContextLoss();
@@ -271,6 +332,8 @@ export class Renderer {
   };
 
   private readonly contextRestored = (): void => {
+    // A render target comes back empty: the sheen is prefiltered again when the session next asks.
+    this.sheen.forget();
     this.contextListener(false);
   };
 

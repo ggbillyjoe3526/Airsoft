@@ -264,6 +264,8 @@ export class MatchSession {
     this.match.showOrderWheel(this.input.wheelOpen, this.input.wheelPointer, order, this.input.wheelSelect);
     this.match.showMinimap(holding ? this.holdSpot : null);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    // High's shadow map follows the view (REN-08), the spectator's too.
+    this.daylight.follow(this.renderer.camera);
     this.combat.render(!spectating);
   }
 

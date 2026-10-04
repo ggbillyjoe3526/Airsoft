@@ -43,6 +43,12 @@ function styleOf(block: MapBlock): KindStyle {
   return block.surface === 'metal' ? METAL_PLATE : STYLES[block.kind];
 }
 
+/** Whether a block's mesh casts the sun's shadow: its kind's rule, and every floor or ramp that rises above the ground (a dock). */
+export function castsShadow(block: MapBlock): boolean {
+  if (styleOf(block).castShadow) return true;
+  return (block.kind === 'floor' || block.kind === 'ramp') && block.center.y + block.size.y / 2 > SURFACES.raisedFrom;
+}
+
 /** A hash of a block's position. It uses |x|, so a block and its mirror twin across x = 0 always hash the same. */
 function blockHash(block: MapBlock): number {
   const q = (v: number): number => Math.round(v * 10);
@@ -594,7 +600,7 @@ export function blockPieces(block: MapBlock, blocks: readonly MapBlock[]): Piece
   else if (block.kind === 'sandbags') sandbagPieces(block, color, out);
   else if (block.kind === 'generator') generatorPieces(block, color, out);
   else if (block.kind === 'skip') skipPieces(block, color, out);
-  else out.push({ box: boundsOf(block), texture: style.texture, uv: style.uv, color, grime: style.grime, castShadow: style.castShadow });
+  else out.push({ box: boundsOf(block), texture: style.texture, uv: style.uv, color, grime: style.grime, castShadow: castsShadow(block) });
   return out;
 }
 
@@ -656,7 +662,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, relief: 
     if (block.kind === 'ramp') {
       const style = styleOf(block);
       const color = new THREE.Color().setHex(blockTint(block), THREE.SRGBColorSpace).multiplyScalar(blockShade(block));
-      appendRamp(entry(style.texture, style.castShadow), block, textures[style.texture], color);
+      appendRamp(entry(style.texture, castsShadow(block)), block, textures[style.texture], color);
       continue;
     }
     const bottom = block.center.y - block.size.y / 2;

@@ -2,16 +2,27 @@ import * as THREE from 'three';
 import { BB_VISUALS } from '../config/render';
 import type { BB, BBPool } from '../sim/ballistics';
 
+/** Vertices and indices of one streak: a quad, two corners at the head and two at the tail. */
+const QUAD_VERTICES = 4;
+const QUAD_INDICES = 6;
+
 /**
- * Draws every BB in flight as a small bright ball with a short streak behind it (one instanced
- * mesh + one line-segment buffer, sized to the pool, so nothing is allocated per frame).
+ * Draws every BB in flight as a small bright ball with a short streak behind it (one instanced mesh + one ribbon
+ * buffer, sized to the pool, so nothing is allocated per frame). Each streak is a quad facing the camera, as wide on
+ * screen at its head and its tail (BB_VISUALS.trailAngularWidth, audit REN-19), not a one-device-pixel line.
  */
 export class BBRenderer {
   readonly object = new THREE.Group();
   private readonly balls: THREE.InstancedMesh;
-  private readonly trails: THREE.LineSegments;
+  private readonly trails: THREE.Mesh;
   private readonly trailPositions: Float32Array;
   private readonly matrix = new THREE.Matrix4();
+  /** Scratch for a streak's camera-facing side. */
+  private readonly along = new THREE.Vector3();
+  private readonly toEye = new THREE.Vector3();
+  private readonly side = new THREE.Vector3();
+  /** BBs drawn last frame: with none then and none now there is nothing to upload (REN-22). */
+  private lastCount = 0;
   /** Per pool slot: visual offset (muzzle minus true spawn point) for your own BBs, and which BB it belongs to. */
   private readonly offsets: Float32Array;
   private readonly offsetSerial: Float64Array;
@@ -34,25 +45,32 @@ export class BBRenderer {
     this.balls.count = 0;
     this.balls.frustumCulled = false;
 
-    this.trailPositions = new Float32Array(n * 2 * 3);
-    const colors = new Float32Array(n * 2 * 3);
+    this.trailPositions = new Float32Array(n * QUAD_VERTICES * 3);
+    const colors = new Float32Array(n * QUAD_VERTICES * 3);
+    const index = new Uint16Array(n * QUAD_INDICES);
     const head = new THREE.Color(BB_VISUALS.trailColor);
     for (let i = 0; i < n; i++) {
-      // Bright at the BB, fading to black (invisible with additive blending) at the tail.
-      colors.set([head.r, head.g, head.b, 0, 0, 0], i * 6);
+      // Bright at the BB (corners 0, 1), fading to black (invisible with additive blending) at the tail (2, 3).
+      colors.set([head.r, head.g, head.b, head.r, head.g, head.b, 0, 0, 0, 0, 0, 0], i * QUAD_VERTICES * 3);
+      const v = i * QUAD_VERTICES;
+      index.set([v, v + 1, v + 2, v + 2, v + 1, v + 3], i * QUAD_INDICES);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.trailPositions, 3).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setIndex(new THREE.BufferAttribute(index, 1));
     geo.setDrawRange(0, 0);
-    this.trails = new THREE.LineSegments(
+    this.trails = new THREE.Mesh(
       geo,
-      new THREE.LineBasicMaterial({
+      new THREE.MeshBasicMaterial({
         vertexColors: true,
         transparent: true,
         opacity: BB_VISUALS.trailOpacity,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
+        // The quad faces the camera either way round, whichever way the BB flies.
+        side: THREE.DoubleSide,
+        fog: false,
       }),
     );
     this.trails.frustumCulled = false;
@@ -62,7 +80,6 @@ export class BBRenderer {
   /** `alpha` interpolates between the last two simulation ticks. */
   update(alpha: number, camera: { x: number; y: number; z: number }): void {
     let count = 0;
-    const tp = this.trailPositions;
     const bbs = this.pool.bbs;
     const trail = BB_VISUALS.trailSeconds;
     const minScale = BB_VISUALS.minAngularRadius / BB_VISUALS.radius;
@@ -98,20 +115,49 @@ export class BBRenderer {
       const s = Math.max(1, dist * minScale);
       this.matrix.makeScale(s, s, s).setPosition(x, y, z);
       this.balls.setMatrixAt(count, this.matrix);
-      const o = count * 6;
-      tp[o] = x;
-      tp[o + 1] = y;
-      tp[o + 2] = z;
-      tp[o + 3] = tx;
-      tp[o + 4] = ty;
-      tp[o + 5] = tz;
+      this.writeStreak(count * QUAD_VERTICES * 3, x, y, z, tx, ty, tz, camera);
       count++;
     }
     this.balls.count = count;
-    this.balls.instanceMatrix.needsUpdate = true;
     const geo = this.trails.geometry;
-    geo.setDrawRange(0, count * 2);
-    (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+    geo.setDrawRange(0, count * QUAD_INDICES);
+    // Nothing in flight now or last frame: the buffers already say so (REN-22).
+    if (count > 0 || this.lastCount > 0) {
+      this.balls.instanceMatrix.needsUpdate = true;
+      (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+    }
+    this.lastCount = count;
+  }
+
+  /**
+   * One streak's quad at float offset `o`: the head (x, y, z) and tail (tx, ty, tz) each widened sideways, across the
+   * line of sight, by their own distance × trailAngularWidth, so the ribbon is the same width on screen end to end.
+   * A streak seen exactly end-on has no side: its quad is a line, drawn as nothing (the ball covers it).
+   */
+  private writeStreak(o: number, x: number, y: number, z: number, tx: number, ty: number, tz: number, eye: { x: number; y: number; z: number }): void {
+    const tp = this.trailPositions;
+    const halfAngle = BB_VISUALS.trailAngularWidth / 2;
+    this.along.set(x - tx, y - ty, z - tz);
+    this.toEye.set(eye.x - x, eye.y - y, eye.z - z);
+    this.side.crossVectors(this.along, this.toEye);
+    const len = this.side.length();
+    if (len > 1e-9) this.side.multiplyScalar(1 / len);
+    else this.side.set(0, 0, 0);
+    const s = this.side;
+    const headHalf = Math.hypot(x - eye.x, y - eye.y, z - eye.z) * halfAngle;
+    const tailHalf = Math.hypot(tx - eye.x, ty - eye.y, tz - eye.z) * halfAngle;
+    tp[o] = x + s.x * headHalf;
+    tp[o + 1] = y + s.y * headHalf;
+    tp[o + 2] = z + s.z * headHalf;
+    tp[o + 3] = x - s.x * headHalf;
+    tp[o + 4] = y - s.y * headHalf;
+    tp[o + 5] = z - s.z * headHalf;
+    tp[o + 6] = tx + s.x * tailHalf;
+    tp[o + 7] = ty + s.y * tailHalf;
+    tp[o + 8] = tz + s.z * tailHalf;
+    tp[o + 9] = tx - s.x * tailHalf;
+    tp[o + 10] = ty - s.y * tailHalf;
+    tp[o + 11] = tz - s.z * tailHalf;
   }
 
   /**

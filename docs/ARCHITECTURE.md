@@ -78,11 +78,16 @@ ends the round). A hit character is eliminated
   when antialiasing changes; the pointer lock is on the container, so it survives) and `MatchSession.setQuality` (the
   daylight, `setMapTextures`, `setMapRelief`, the figures and `CombatPresentation.setQuality`). The frame-rate cap
   (`core/framePacer.ts`) skips draws, never ticks. The art pass (M14) is procedural:
-  `lighting.ts` (sun and sky fill) adds `atmosphere.ts` (the sky dome and the trees; the renderer's fog matches the
-  horizon); `proceduralTextures.ts` draws the surface textures; `mapMeshes.ts` turns each block into pieces (container
+  `lighting.ts` (sun and sky fill; on High the sun's shadow map follows the view, `Daylight.follow` each frame, moved
+  in whole texels, normal bias in texels) adds `atmosphere.ts` (the sky dome and the trees; the dome is drawn after
+  the opaque field so only sky pixels shade it; the renderer's fog matches the horizon); `proceduralTextures.ts` draws
+  the surface textures, owned by the `Renderer` and drawn and uploaded in the title screen's idle time
+  (`Renderer.warmUp`), like the replica's sheen (`replicaSheen.ts`, prefiltered once per context, freed while off); `mapMeshes.ts` turns each block into pieces (container
   frames, wall copings, pallets, all inside the block's bounds) merged per texture, with grime shading near the ground.
   Effects are pooled: `impactPuffs.ts` (impact dust tinted by material, hit puffs, a gas pistol's puffs; soft dots from
-  `softDot.ts`) and `dustMotes.ts` (faded out near the camera, size-capped, hidden with Reduced motion).
+  `softDot.ts`), `bbRenderer.ts` (balls and camera-facing streak quads of a fixed on-screen width) and `dustMotes.ts`
+  (faded out near the camera, size-capped in device pixels times the pixel ratio, hidden with Reduced motion); a pool
+  with nothing in flight uploads nothing.
   The debug overlay shows the quality in force, pixel ratio, sim / draw / GPU milliseconds (`gpuTimer.ts`), the
   multisampling granted, draw calls and GPU object counts; Show FPS keeps its first line on screen. `Renderer.setFov` applies the
   Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.

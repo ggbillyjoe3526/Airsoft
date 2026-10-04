@@ -42,6 +42,8 @@ export class ImpactPuffs {
   private readonly rot = new THREE.Quaternion();
   private readonly color = new THREE.Color();
   private readonly sprite = softDotTexture();
+  /** Puffs drawn last frame: with none then and none now there is nothing to upload (REN-22). */
+  private lastCount = 0;
 
   constructor(private readonly cfg: PuffConfig) {
     for (let i = 0; i < cfg.max; i++) this.puffs.push({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, scale: 1, r: 1, g: 1, b: 1, age: cfg.lifetime });
@@ -103,8 +105,12 @@ export class ImpactPuffs {
       this.object.setColorAt(count++, this.color.setRGB(p.r, p.g, p.b));
     }
     this.object.count = count;
-    this.object.instanceMatrix.needsUpdate = true;
-    if (this.object.instanceColor) this.object.instanceColor.needsUpdate = true;
+    // Nothing alive now or last frame: the buffers already say so (REN-22).
+    if (count > 0 || this.lastCount > 0) {
+      this.object.instanceMatrix.needsUpdate = true;
+      if (this.object.instanceColor) this.object.instanceColor.needsUpdate = true;
+    }
+    this.lastCount = count;
   }
 
   dispose(): void {

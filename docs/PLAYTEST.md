@@ -526,6 +526,29 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 - [ ] **Debug panel.** `` ` `` in a match shows "frame ms (sim / draw / GPU)" (GPU is "n/a" in Firefox) and the
   antialias line ("on asked, on given (4 samples)" on Chrome).
 
+## Render cost fixes (FA3)
+
+- [ ] **Shadows near you on High.** On High, walk Depot: rails, container posts, the IBC cage bars and players' arms
+  throw crisp shadows close by. Walk and turn slowly: shadow edges stay still (no crawling or shimmer). About 25 m ahead
+  the shadows stop: look down the long sightlines for a hard line on the floor where they end, and say if it bothers
+  you (Custom → Shadow range → Whole field keeps them everywhere, softer). No dark speckle (acne) on the floor or
+  walls, and no shadow floating off a wall's foot.
+- [ ] **The sky.** On every preset the sky looks as before: a pale haze at the horizon, blue above, warm towards the
+  sun; no sky colour showing through wall edges or corners (edge smoothing on).
+- [ ] **The dock.** The raised dock and its ramps throw a shadow on the yard on Medium and High.
+- [ ] **BB streaks.** Fire across the field: each BB's streak reads as a thin bright line at 20–30 m, the same
+  thickness on a high-DPI laptop as on a desktop monitor, and fades towards its tail; your own shots still leave the
+  muzzle in line with the barrel.
+- [ ] **Hands.** Look at the gloved hands on the rifle and the pistol: fingers and thumb look as round as before.
+- [ ] **First Play.** From the title screen, wait a couple of seconds, then Play: the match starts with no longer
+  hitch than before (the surface textures are made while the title screen waits).
+- [ ] **Sheen.** On High the held replica has its soft reflections from the first match; switch to Low (none) and back
+  to High: they return.
+- [ ] **Dust on high-DPI.** On High with dust, near motes look the same size on a 150 % or 200 % scaled screen as on a
+  100 % one.
+- [ ] **The laptop baseline.** Once, on the target laptop (pipeline/README.md, "The laptop run"):
+  `node pipeline/perf-run.mjs --env laptop --preset all --baseline`, then commit `pipeline/baseline/laptop*.json`.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score

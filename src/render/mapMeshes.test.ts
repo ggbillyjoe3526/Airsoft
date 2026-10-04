@@ -4,7 +4,7 @@ import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
 import { vec3 } from '../sim/vec';
 import { SURFACES, type SurfaceTextureId } from '../config/render';
-import { blockPieces, blockShade, blockTint, buildMapMeshes, disposeMapMeshes, setMapRelief, setMapTextures } from './mapMeshes';
+import { blockPieces, blockShade, blockTint, buildMapMeshes, castsShadow, disposeMapMeshes, setMapRelief, setMapTextures } from './mapMeshes';
 import type { SurfaceTextures } from './proceduralTextures';
 
 /** Every team colour of every set (Settings → Accessibility, M18b). */
@@ -119,6 +119,32 @@ describe('the art pass on the map (M14)', () => {
   it('builds the whole of Depot in a handful of draw calls', () => {
     const group = buildMapMeshes(DEPOT, textures, true);
     // One mesh per texture (and shadow setting): 8 before M25b's sandbag and gabion textures.
+    expect(group.children.length).toBeLessThanOrEqual(10);
+    disposeMapMeshes(group);
+  });
+
+  it('makes the dock and its ramps cast shadows, and not the ground (KNOWN_ISSUES: raised floors cast none)', () => {
+    const floors = DEPOT.blocks.filter((b) => b.kind === 'floor' || b.kind === 'ramp');
+    const ground = floors.filter((b) => b.center.y + b.size.y / 2 <= 0);
+    const raised = floors.filter((b) => b.center.y + b.size.y / 2 > 0.1);
+    expect(ground.length).toBeGreaterThan(0);
+    expect(raised.length).toBeGreaterThanOrEqual(3); // the dock's deck and its two ramps
+    for (const b of ground) expect(castsShadow(b)).toBe(false);
+    for (const b of raised) expect(castsShadow(b), `${b.kind} at ${b.center.x}`).toBe(true);
+    // No part of the deck is left in a mesh that casts nothing (it shared the ground's), and no new mesh is needed.
+    const group = buildMapMeshes(DEPOT, textures, true);
+    const deck = raised.find((b) => b.kind === 'floor')!;
+    const top = deck.center.y + deck.size.y / 2;
+    const flat = group.children.filter((m): m is THREE.Mesh => m instanceof THREE.Mesh && !m.castShadow);
+    const deckInFlat = flat.some((m) => {
+      const pos = m.geometry.getAttribute('position');
+      for (let i = 0; i < pos.count; i++) {
+        const inside = Math.abs(pos.getX(i) - deck.center.x) <= deck.size.x / 2 + 1e-6 && Math.abs(pos.getZ(i) - deck.center.z) <= deck.size.z / 2 + 1e-6;
+        if (inside && Math.abs(pos.getY(i) - top) < 1e-6) return true;
+      }
+      return false;
+    });
+    expect(deckInFlat).toBe(false);
     expect(group.children.length).toBeLessThanOrEqual(10);
     disposeMapMeshes(group);
   });
