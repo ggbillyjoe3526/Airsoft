@@ -34,6 +34,9 @@ import { createRangeTargets } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
+import { TUTORIAL_STEPS } from './config/tutorial';
+import { TutorialTracker } from './tutorial/tutorial';
+import { CoachPanel } from './ui/coachPanel';
 import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 
 const PLAYER_ID = 0;
@@ -51,7 +54,8 @@ export interface RangePose {
 
 /**
  * The practice range (M21): you alone on the range map with the targets, no rounds, the spare magazines always full,
- * and a readout of where your last BB landed. Built from the title screen's Practice range button and disposed when
+ * and a readout of where your last BB landed. The tutorial (M16) runs here too, its coach in the readout's place
+ * until the last step, then free practice. Built from the title screen's Practice range button and disposed when
  * you leave it; changing the loadout (from the pause menu) rebuilds it where you stood. The app around it (renderer,
  * input, menus) outlives it, as it does a match (see MatchSession, whose pieces it shares).
  */
@@ -72,6 +76,10 @@ export class RangeSession {
   private motion: MotionScale = FULL_MOTION;
   private readonly ctx: SimContext;
   private lastShot: LastShot | null = null;
+  /** The tutorial (M16), when the range was opened for it, and its coach. */
+  private tutorial: TutorialTracker | null = null;
+  private coach: CoachPanel | null = null;
+  private tutorialFinishedOwed = false;
 
   constructor(
     private readonly renderer: Renderer,
@@ -83,6 +91,8 @@ export class RangeSession {
     audio: SfxSetup,
     crosshair: CrosshairSettings,
     pose?: RangePose,
+    /** Run the tutorial (M16) from this step (0: the start); leave out for free practice. */
+    tutorialFrom?: number,
   ) {
     const map = RANGE_MAP;
     this.loadout = setup.loadout;
@@ -129,6 +139,29 @@ export class RangeSession {
     renderer.scene.add(this.targets.object);
     this.readout = new RangeReadout(container);
     this.readout.set(lastShotText(null));
+    if (tutorialFrom !== undefined) {
+      this.tutorial = new TutorialTracker(TUTORIAL_STEPS, canAimDownSights(this.player.armament, this.loadout), tutorialFrom);
+      this.coach = new CoachPanel(container, (action) => input.keyName(action));
+      this.coach.show(this.tutorial);
+    }
+  }
+
+  /** The tutorial's step to rebuild the range at (undefined: free practice, or the tutorial is over). */
+  get tutorialStep(): number | undefined {
+    return this.tutorial && !this.tutorial.finished ? this.tutorial.stepIndex : undefined;
+  }
+
+  /** "Tutorial · step 3 of 10", or "Practice range". */
+  get status(): string {
+    const t = this.tutorial;
+    return t && !t.finished ? `Tutorial · step ${t.stepIndex + 1} of ${t.steps.length}: ${t.step!.title}` : 'Practice range';
+  }
+
+  /** True once, when the tutorial's last step is done (so the game can remember it was finished). */
+  takeTutorialFinished(): boolean {
+    if (!this.tutorialFinishedOwed) return false;
+    this.tutorialFinishedOwed = false;
+    return true;
   }
 
   /** Where you stand and look now, to rebuild the range there. */
@@ -174,13 +207,17 @@ export class RangeSession {
 
   setPlaying(playing: boolean): void {
     this.combat.setPlaying(playing);
-    this.readout.setVisible(playing);
+    const coaching = this.tutorial !== null && !this.tutorial.finished;
+    this.readout.setVisible(playing && !coaching);
+    this.coach?.setVisible(playing && coaching);
+    if (playing && coaching) this.coach!.show(this.tutorial!); // a key may have been rebound while paused
   }
 
   dispose(): void {
     this.combat.dispose();
     this.targets.dispose();
     this.readout.dispose();
+    this.coach?.dispose();
     this.renderer.scene.remove(this.mapGroup);
     disposeMapMeshes(this.mapGroup);
     disposeSurfaceTextures(this.textures);
@@ -200,6 +237,16 @@ export class RangeSession {
   private afterTick(): void {
     this.combat.afterTick();
     this.targets.afterTick(this.state.events);
+    const t = this.tutorial;
+    if (t && !t.finished && t.observe({ dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets })) {
+      this.coach!.show(t);
+      if (t.finished) {
+        // Free practice from here: the readout takes the coach's place.
+        this.coach!.setVisible(false);
+        this.readout.setVisible(true);
+        this.tutorialFinishedOwed = true;
+      }
+    }
     for (const e of this.state.events) {
       // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall.
       if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: downrange(e.position), target: null };

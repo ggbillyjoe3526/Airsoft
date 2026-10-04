@@ -2,14 +2,15 @@ import { BUILD_LABEL } from '../../config/menus';
 import { el, menuButton, wordmark } from './menuParts';
 
 /**
- * The first thing a player sees: "AIRSOFT." in the middle over the field, Start at the bottom left and the practice
- * range (M21) beside it.
+ * The first thing a player sees: "AIRSOFT." in the middle over the field, Start at the bottom left, then the tutorial
+ * (M16; tagged for new players until it's been played through) and the practice range (M21).
  */
 export class TitleScreen {
   readonly root: HTMLDivElement;
   private readonly warning: HTMLParagraphElement;
+  private readonly tutorialTag: HTMLElement;
 
-  constructor(onStart: () => void, onRange: () => void) {
+  constructor(onStart: () => void, onRange: () => void, onTutorial: () => void, tutorialDone: boolean) {
     this.root = el('div', 'menu-screen menu-title');
     this.root.hidden = true;
     const centre = el('div', 'menu-title-centre');
@@ -18,7 +19,11 @@ export class TitleScreen {
     start.classList.add('menu-title-start');
     start.dataset.autofocus = '';
     const actions = el('div', 'menu-title-actions');
-    actions.append(start, menuButton('Practice range', 'secondary', onRange, true));
+    const tutorial = menuButton('Tutorial', 'secondary', onTutorial, true);
+    this.tutorialTag = el('span', 'menu-title-new', 'New? Start here');
+    tutorial.prepend(this.tutorialTag);
+    actions.append(start, tutorial, menuButton('Practice range', 'secondary', onRange, true));
+    this.setTutorialDone(tutorialDone);
     this.warning = el('p', 'menu-title-warning');
     this.warning.setAttribute('role', 'alert');
     this.warning.hidden = true;
@@ -29,5 +34,10 @@ export class TitleScreen {
   setWarning(text: string): void {
     this.warning.textContent = text;
     this.warning.hidden = text === '';
+  }
+
+  /** Once the tutorial has been played through, it stops calling for new players. */
+  setTutorialDone(done: boolean): void {
+    this.tutorialTag.hidden = done;
   }
 }

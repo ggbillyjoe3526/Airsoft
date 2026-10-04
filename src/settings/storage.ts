@@ -36,6 +36,8 @@ export type SettingField =
   | 'optic'
   | 'map'
   | 'fov'
+  /** The tutorial was played to the end (M16): the title stops pointing new players at it. */
+  | 'tutorialDone'
   | `hopUp.${string}`
   | `volume.${string}`
   | `bbWeight.${string}`

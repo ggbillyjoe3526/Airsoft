@@ -33,7 +33,7 @@ import { DebugOverlay } from './ui/debugOverlay';
 import { toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadBbWeight, loadHopUp, loadoutSummary, loadParts, loadSlotPick } from './ui/loadoutChoice';
-import { browserStorage } from './settings/storage';
+import { browserStorage, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
@@ -56,6 +56,7 @@ import {
   loadSprintMode,
   loadTeammateDifficulty,
   loadTeamColours,
+  loadTutorialDone,
 } from './ui/menus/savedChoices';
 
 /** The player is the first character, on Blue (see MatchSession). */
@@ -95,6 +96,8 @@ export class Game {
   private session: MatchSession | RangeSession | null = null;
   /** The next Play opens the practice range rather than a match (the title's Practice range button). */
   private practice = false;
+  /** ... with the tutorial's coach (the title's Tutorial button, M16). */
+  private tutorial = false;
   /** The loadout changed since the range was built: Resume rebuilds it with the new one. */
   private loadoutChanged = false;
   private rafId = 0;
@@ -213,14 +216,21 @@ export class Game {
       },
       onPlay: () => {
         // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
-        if (!this.started) this.practice = false;
+        if (!this.started) this.practice = this.tutorial = false;
         this.play();
       },
       onLeaveMatch: () => this.leaveMatch(),
       onRange: () => {
         this.practice = true;
+        this.tutorial = false;
         this.play();
       },
+      onTutorial: () => {
+        this.practice = true;
+        this.tutorial = true;
+        this.play();
+      },
+      tutorialDone: loadTutorialDone(),
       map: { initial: this.map, onChange: (m) => (this.map = m) },
       mode: { initial: this.mode, onChange: (m) => (this.mode = m) },
       difficulty: { initial: this.difficulty, onChange: (d) => (this.difficulty = d) },
@@ -357,10 +367,11 @@ export class Game {
     if (this.graphicsLost) return;
     const s = this.session;
     if (!this.started && this.practice) {
-      this.openRange();
+      this.openRange(undefined, this.tutorial ? 0 : undefined);
     } else if (this.started && s instanceof RangeSession && this.loadoutChanged) {
-      // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood.
-      this.openRange(s.pose);
+      // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
+      // same tutorial step).
+      this.openRange(s.pose, s.tutorialStep);
     } else if (!this.started) {
       this.session?.dispose();
       this.session = new MatchSession(this.renderer, this.container, this.input, {
@@ -390,8 +401,11 @@ export class Game {
     void this.pointer.request();
   }
 
-  /** Builds the practice range (M21) with the picked loadout, at `pose` if given (else at the firing line). */
-  private openRange(pose?: RangePose): void {
+  /**
+   * Builds the practice range (M21) with the picked loadout, at `pose` if given (else behind the firing line), with the
+   * tutorial from step `tutorialFrom` if given (M16).
+   */
+  private openRange(pose?: RangePose, tutorialFrom?: number): void {
     this.session?.dispose();
     this.loadoutChanged = false;
     this.session = new RangeSession(this.renderer, this.container, this.input, {
@@ -401,7 +415,7 @@ export class Game {
       bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
       parts: this.picked.map((r) => this.partsOf(r)),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
-    }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair, pose);
+    }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair, pose, tutorialFrom);
     this.session.setMotion(motionScale(this.reducedMotion));
     applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
   }
@@ -429,6 +443,7 @@ export class Game {
   private leaveMatch(): void {
     this.started = false;
     this.practice = false;
+    this.tutorial = false;
     this.unlockedPlay = false;
     this.pointer.setUnlockedButtons(false);
     this.session?.dispose();
@@ -443,7 +458,7 @@ export class Game {
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
     if (this.started && s instanceof RangeSession) {
-      this.menus.showPause('Practice range', true);
+      this.menus.showPause(s.status, true);
     } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
@@ -492,6 +507,10 @@ export class Game {
       // Still within the key press's user activation, which the browser needs for fullscreen.
       if (this.keyboard.wasPressed('fullscreen')) toggleFullscreen();
       this.ticksThisSecond += s.advance(dt);
+      if (s instanceof RangeSession && s.takeTutorialFinished()) {
+        saveSetting('tutorialDone', true);
+        this.menus.markTutorialDone();
+      }
       // A little after the match is decided, give the mouse back and show the result screen.
       if (s.takeResultDue()) {
         if (this.unlockedPlay) {
