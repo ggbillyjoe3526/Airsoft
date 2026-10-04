@@ -14,6 +14,7 @@ import type { GameEvent } from './events';
 import { spawnBB } from './ballistics';
 import { eliminate } from './elimination';
 import { createRangeTargets } from './rangeTargets';
+import { placeTeams } from './round';
 import { createGameState } from './state';
 import { OPEN_NAV, openFieldElimination } from './testSupport';
 import { vec3 } from './vec';
@@ -394,6 +395,36 @@ describe('hit calling and round flow', () => {
       for (let i = 0; i < 3 && target.status === 'alive'; i++) stepSimulation(state, new Map([[0, fire]]), ctx, DT);
       expect(target.status, `target ${gap} m away`).toBe('calling');
     }
+  });
+
+  it('after half-time a hit character walks off to the dead zone at its new end', () => {
+    const rules = { ...ROUNDS, halfTimeAfter: 1 };
+    const state = createGameState(1, 16, rules);
+    const blue = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
+    const orange = createCharacter(1, vec3(0, 0, -8), 0, LOADOUT, 1);
+    state.characters.push(blue, orange);
+    const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: rules, nav: OPEN_NAV, navSnap: NAV.snap });
+    placeTeams(state.round, state.characters, ctx.round); // as a match does before round 1
+    const first = rules.eliminationFirstEnd;
+    expect(blue.end).toBe(first);
+
+    // Round 1: Orange (at the other end) is wiped out and walks off to that end's dead zone.
+    eliminate(orange, 0, state.characters, ctx.targets.elimination);
+    expect(orange.deadZoneTarget).toEqual(DEAD_ZONES[1 - first]![0]!.position);
+    let started = false;
+    for (let i = 0; i < ticksFor(ROUNDS.resetDelay) + 1 && !started; i++) {
+      stepSimulation(state, new Map(), ctx, DT);
+      started = state.events.some((e) => e.type === 'roundStart');
+    }
+    expect(state.round.number).toBe(2);
+
+    // Round 2, ends swapped: a BB hits Blue, who heads for the dead zone at the end it now plays from.
+    expect(blue.end).toBe(1 - first);
+    spawnBB(state.bbs, orange.id, vec3(0, 1.2, -1), vec3(0, 0, 1), 88, 0, 0.25e-3);
+    stepSimulation(state, new Map(), ctx, DT);
+    expect(blue.status).toBe('calling');
+    expect(blue.deadZoneTarget).toEqual(DEAD_ZONES[1 - first]![0]!.position);
+    expect(blue.deadZoneYaw).toBe(DEAD_ZONES[1 - first]![0]!.yaw);
   });
 });
 
