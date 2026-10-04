@@ -304,3 +304,158 @@ describe('squad order keys (M22)', () => {
     expect(input.takeOrder()).toBeNull();
   });
 });
+
+describe('order wheel (M23)', () => {
+  function wheelSetup(select: 'hover' | 'click' = 'hover') {
+    const keys = fakeKeyboard();
+    const delta = { x: 0, y: 0 };
+    let wheelSteps = 0;
+    const mouse = {
+      consumeDelta: (out: { x: number; y: number }) => {
+        out.x = delta.x;
+        out.y = delta.y;
+        delta.x = delta.y = 0;
+      },
+      consumeWheelSteps: () => {
+        const w = wheelSteps;
+        wheelSteps = 0;
+        return w;
+      },
+    } as unknown as PointerLock;
+    const input = new PlayerInput(keys.kb, mouse, MOVEMENT);
+    input.ordersEnabled = true;
+    input.wheelSelect = select;
+    const cmd = createCommand();
+    /** Orders handed over, frame by frame, as the match takes them (before the tick's command). */
+    const given: (string | null)[] = [];
+    const frame = (act?: () => void) => {
+      act?.();
+      input.update(0, 2);
+      given.push(input.takeOrder());
+      input.fillCommand(cmd);
+      keys.endFrame();
+      return { ...cmd };
+    };
+    /** Moves the mouse by (x, y) counts before the next frame. */
+    const move = (x: number, y: number) => {
+      delta.x += x;
+      delta.y += y;
+    };
+    return { keys, input, frame, move, scroll: (n: number) => (wheelSteps = n), lastOrder: () => given[given.length - 1] };
+  }
+
+  it('opens while its key is held, and the mouse moves its pointer, never the view', () => {
+    const { keys, input, frame, move } = wheelSetup();
+    frame(() => keys.press('orderWheel'));
+    expect(input.wheelOpen).toBe(true);
+    move(300, -400);
+    frame();
+    expect(input.yaw).toBe(0);
+    expect(input.pitch).toBe(0);
+    expect(input.wheelPointer.pick).toBeGreaterThanOrEqual(0);
+  });
+
+  it('hover: letting go on an order gives it; letting go in the middle gives nothing', () => {
+    const { keys, input, frame, move, lastOrder } = wheelSetup('hover');
+    frame(() => keys.press('orderWheel'));
+    move(400, 0); // right: Hold here
+    frame();
+    keys.release('orderWheel');
+    frame();
+    expect(input.wheelOpen).toBe(false);
+    expect(lastOrder()).toBe('hold');
+
+    frame(() => keys.press('orderWheel'));
+    keys.release('orderWheel');
+    frame();
+    expect(lastOrder()).toBeNull();
+  });
+
+  it('click: a click on an order gives it; letting go without one gives nothing', () => {
+    const { keys, input, frame, move, lastOrder } = wheelSetup('click');
+    frame(() => keys.press('orderWheel'));
+    move(0, 400); // down: Regroup
+    frame();
+    keys.release('orderWheel');
+    frame();
+    expect(lastOrder()).toBeNull();
+
+    frame(() => keys.press('orderWheel'));
+    move(-400, 0); // left: Team plan
+    frame();
+    frame(() => keys.press('fire'));
+    expect(input.wheelOpen).toBe(false);
+    expect(lastOrder()).toBe('cancel');
+  });
+
+  it('never fires: not the click that picks, nor a trigger held through it until it is pulled again', () => {
+    const { keys, frame, move } = wheelSetup('click');
+    keys.press('fire');
+    expect(frame().fire).toBe(true);
+    expect(frame(() => keys.press('orderWheel')).fire).toBe(false); // held trigger, wheel open
+    keys.release('fire');
+    move(0, -400);
+    frame();
+    expect(frame(() => keys.press('fire')).fire).toBe(false); // the picking click
+    expect(frame().fire).toBe(false); // still held after the wheel closed
+    keys.release('fire');
+    frame();
+    expect(frame(() => keys.press('fire')).fire).toBe(true); // a new pull
+  });
+
+  it('keeps the keyboard moving you, and the mouse wheel off the replicas, while open', () => {
+    const { keys, frame, scroll } = wheelSetup();
+    keys.press('forward');
+    frame(() => keys.press('orderWheel'));
+    scroll(1);
+    const cmd = frame();
+    expect(cmd.forward).toBe(1);
+    expect(cmd.switchTo).toBe(-1);
+  });
+
+  it('stays shut where orders are off (the range), and a pause closes it with no order', () => {
+    const { keys, input, frame, move } = wheelSetup();
+    input.ordersEnabled = false;
+    frame(() => keys.press('orderWheel'));
+    expect(input.wheelOpen).toBe(false);
+    move(100, 0);
+    frame();
+    expect(input.yaw).not.toBe(0); // the mouse still turns the view
+
+    input.ordersEnabled = true;
+    keys.release('orderWheel');
+    frame(() => keys.press('orderWheel'));
+    move(400, 0);
+    frame();
+    input.clearLatches();
+    expect(input.wheelOpen).toBe(false);
+    expect(input.takeOrder()).toBeNull();
+  });
+
+  it('never raises the sight from under the wheel, by a held or a toggled aim button, until it is let go of', () => {
+    for (const mode of ['hold', 'toggle'] as const) {
+      const { keys, input, frame } = wheelSetup();
+      input.aimMode = mode;
+      frame(() => keys.press('orderWheel'));
+      expect(frame(() => keys.press('aim')).aim, mode).toBe(false);
+      expect(input.wheelOpen, mode).toBe(true);
+      keys.release('orderWheel');
+      expect(frame().aim, mode).toBe(false); // wheel closed, aim still held
+      keys.release('aim');
+      frame();
+      expect(frame(() => keys.press('aim')).aim, mode).toBe(true);
+    }
+  });
+
+  it('says whether the order handed over came from the wheel or a key', () => {
+    const { keys, input, frame, move } = wheelSetup();
+    frame(() => keys.press('orderWheel'));
+    move(0, -400);
+    frame();
+    keys.release('orderWheel');
+    frame();
+    expect(input.orderFromWheel).toBe(true);
+    frame(() => keys.press('orderHold'));
+    expect(input.orderFromWheel).toBe(false);
+  });
+});

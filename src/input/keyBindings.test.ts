@@ -169,6 +169,28 @@ describe('KeyBindings', () => {
     expect(b.codes('slot2')).toEqual(['KeyB']);
   });
 
+  it('gives the order wheel Z in a set saved while Follow me was on Z; Follow me takes its new default (M23)', () => {
+    const store = new MemoryStore();
+    // A whole set saved before the wheel existed (every save writes every action), with one change: jump on J.
+    const old: Record<string, readonly string[]> = { ...DEFAULT_BINDINGS, orderFollow: ['KeyZ'], jump: ['KeyJ'] };
+    delete old.orderWheel;
+    store.setItem('airsoft.keyBindings', JSON.stringify(old));
+    const b = new KeyBindings(store);
+    expect(b.codes('orderWheel')).toEqual(['KeyZ']);
+    expect(b.codes('orderFollow')).toEqual(['KeyF']);
+    expect(b.codes('jump')).toEqual(['KeyJ']);
+  });
+
+  it('keeps Follow me on Z once the player has bound it there themselves after the wheel came (M23)', () => {
+    const store = new MemoryStore();
+    const b = new KeyBindings(store);
+    expect(b.rebind('orderFollow', 'KeyZ')).toBe(true);
+    expect(b.codes('orderWheel')).toEqual(['KeyF']); // swapped
+    const again = new KeyBindings(store);
+    expect(again.codes('orderFollow')).toEqual(['KeyZ']);
+    expect(again.codes('orderWheel')).toEqual(['KeyF']);
+  });
+
   it('gives reserved debug keys priority over old saves that used them', () => {
     const store = new MemoryStore();
     store.setItem('airsoft.keyBindings', JSON.stringify({ jump: ['Backquote', 'KeyJ'] }));

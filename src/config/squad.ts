@@ -67,8 +67,48 @@ export const SQUAD_ORDERS = {
   labels: { follow: 'Follow me', hold: 'Hold here', regroup: 'Regroup' } satisfies Record<SquadOrderKind, string>,
   /** The HUD line after an order is cancelled, or given with no teammate left to take it, for `noticeTime` seconds. */
   cancelled: 'Back to the team plan',
+  /** Team plan picked on the order wheel (M23) with no order in force. */
+  onPlan: 'Squad already on the team plan',
   nobody: 'No teammates in play to order',
   /** An order key pressed while you are out, or between rounds: ignored, with this notice. */
   notNow: 'Orders wait for the next round',
   noticeTime: 2,
+} as const;
+
+/** What the order wheel (M23) gives: one of the orders, or `cancel`, back to the team plan. */
+export type SquadCommand = SquadOrderKind | 'cancel';
+
+/**
+ * How an order on the wheel is picked (Settings → Controls, M23): `hover` points at it and lets go of the wheel key;
+ * `click` points at it and clicks (letting go without a click gives nothing).
+ */
+export type WheelSelect = 'hover' | 'click';
+
+export const WHEEL_SELECT_MODES: readonly { id: WheelSelect; label: string; blurb: string }[] = [
+  { id: 'hover', label: 'Hover', blurb: 'Point at an order and let go of the key to give it. Let go in the middle to give nothing.' },
+  { id: 'click', label: 'Click', blurb: 'Point at an order and click to give it. Letting go of the key closes the wheel.' },
+];
+
+export const DEFAULT_WHEEL_SELECT: WheelSelect = 'hover';
+
+/**
+ * The order wheel (M23): hold its key and the mouse moves a pointer on the wheel instead of the view, so turning,
+ * aiming and the replica stay as they were; your feet still move. The wheel's pointer is its own, not the view's.
+ */
+export const ORDER_WHEEL = {
+  /** Clockwise from the top. Each order is a button on the wheel, so its label is in title case (owner, 2026-10-04). */
+  items: [
+    { command: 'follow', label: 'Follow Me' },
+    { command: 'hold', label: 'Hold Here' },
+    { command: 'regroup', label: 'Regroup' },
+    { command: 'cancel', label: 'Team Plan' },
+  ] as readonly { command: SquadCommand; label: string }[],
+  /** Pixels the wheel's pointer moves per mouse count, times the mouse sensitivity. */
+  pointerGain: 0.5,
+  /** The pointer stays this close to the middle (px). */
+  pointerReach: 90,
+  /** Within this of the middle the pointer is on no order (px). */
+  deadZone: 24,
+  /** Distance of the orders from the wheel's middle on screen (px). */
+  radius: 112,
 } as const;
