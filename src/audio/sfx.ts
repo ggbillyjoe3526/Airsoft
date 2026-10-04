@@ -84,6 +84,8 @@ export class Sfx {
   private readonly motors = new Map<number, { motor: MotorSound; fireRate: number; out: AudioNode; spinDown: Voice | null; spinDownDue: boolean }>();
   /** Simulation time this match has run (s), counted in afterTick. */
   private simTime = 0;
+  /** Motors whose wind-down is still to come (afterTick looks at them only then). */
+  private spinDownsDue = 0;
   private readonly foley = new FoleyTracker();
   private readonly impactLimit = new VoiceLimit(AUDIO.maxImpactsPerWindow, AUDIO.impactWindow);
   private readonly stepLimit = new VoiceLimit(AUDIO.footsteps.maxPerWindow, AUDIO.footsteps.window);
@@ -203,9 +205,10 @@ export class Sfx {
     this.simTime += SIM_DT;
     if (!this.ctx) return;
     // A motor whose trigger was let go long enough ago coasts down now.
-    for (const m of this.motors.values()) {
+    if (this.spinDownsDue > 0) for (const m of this.motors.values()) {
       if (!m.spinDownDue || this.simTime < m.motor.spinDownAt(m.fireRate)) continue;
       m.spinDownDue = false;
+      this.spinDownsDue--;
       m.spinDown = this.play('motor.spinDown', m.out, AUDIO.levels.motor);
     }
     this.updateMuffling(characters, localId);
@@ -341,6 +344,7 @@ export class Sfx {
     this.replicas.clear();
     this.channels.clear();
     this.motors.clear();
+    this.spinDownsDue = 0;
   }
 
   // ---- What plays ---------------------------------------------------------------------------
@@ -367,6 +371,7 @@ export class Sfx {
     // A wind-down still sounding from the last pull fades out under the new one.
     if (m.spinDown) this.cancel(m.spinDown);
     m.spinDown = null;
+    if (!m.spinDownDue) this.spinDownsDue++;
     m.spinDownDue = true;
   }
 

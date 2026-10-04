@@ -113,8 +113,14 @@ export class Game {
    * clicked again after a refused mouse lock reuses the match already built (audit L-33).
    */
   private setupChanged = false;
-  /** Matches built so far this visit: each gets its own seed (matchSeed), so the bots' plans differ match to match. */
-  private matchesBuilt = 0;
+  /**
+   * Matches played so far this visit: each gets its own seed (matchSeed), so the bots' plans differ match to match. A
+   * match built but never played (a refused mouse lock, then a new setup) doesn't count, so `?seed=N` replays the first
+   * match played.
+   */
+  private matchesPlayed = 0;
+  /** The match loaded has started play (and counted in matchesPlayed). */
+  private matchCounted = false;
   /** The seed of the match loaded (the URL's or the visit's for the first match; see play). */
   private matchSeed: number;
   private rafId = 0;
@@ -195,7 +201,7 @@ export class Game {
       const s = this.session;
       const p = s?.player;
       return {
-        seed: this.matchSeed,
+        seed: s instanceof RangeSession ? options.seed : this.matchSeed,
         map: s instanceof RangeSession ? 'range' : this.map,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
@@ -433,7 +439,8 @@ export class Game {
       this.setupChanged = false;
       // The first match plays the visit's seed (?seed=N replays it); each later one its own, or every match in a visit
       // would open with the same bot plans, round by round (bug pass).
-      this.matchSeed = deriveSeed(this.options.seed, 1, this.matchesBuilt++);
+      this.matchSeed = deriveSeed(this.options.seed, 1, this.matchesPlayed);
+      this.matchCounted = false;
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         map: mapData(this.map),
         mode: this.mode,
@@ -494,6 +501,10 @@ export class Game {
     }
     // "Play Again" on the result screen: the new match starts only once play really resumes.
     if (s instanceof MatchSession && s.state.round.phase === 'matchOver') s.restart();
+    if (s instanceof MatchSession && !this.matchCounted) {
+      this.matchCounted = true;
+      this.matchesPlayed++;
+    }
     this.started = true;
     this.keyboard.capturing = true;
     this.menus.hide();
