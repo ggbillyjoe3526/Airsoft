@@ -109,6 +109,12 @@ export const ARMORY_TEXT = {
   pityKicker: 'Guaranteed',
   odds: 'Rarity odds (each item drawn)',
   /** Under the odds (audit POOL-04, POOL-05, POOL-26): how an asset is picked once its tier is drawn. */
+  /** A chase item's own line under the odds (M32), e.g. the Cyber Pistol's. */
+  chase: (name: string, tiers: string, percent: string, oneIn: number) =>
+    `Chase item: the ${name}, ${tiers} only. Each item drawn has its own ${percent}% chance of being it (about 1 in ${oneIn.toLocaleString('en-GB')}), before the rest are drawn.`,
+  chaseKicker: 'Chase',
+  /** A catalogue pip for a tier the asset doesn't come in (M32). */
+  notInTier: 'Does not come in this tier',
   perAsset: (n: number, weight: number, rarest: string, oneIn: number) =>
     `Then one of ${n} assets is picked${weight > 1 ? `, one you don't own at that tier ${weight === 2 ? 'twice' : `${weight} times`} as likely as one you do` : ', each equally likely'}. A given asset at ${rarest} is about 1 in ${oneIn.toLocaleString('en-GB')} draws.`,
   scrap: 'Scrap',

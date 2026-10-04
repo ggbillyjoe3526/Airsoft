@@ -299,13 +299,21 @@ export function collectionRows(pool: Pool, c: Collection): { rows: CollectionRow
     owned += counts.filter((k) => k > 0).length;
     rows.push({ asset, counts, spares: n, spareFc: fc });
   }
-  return { rows, owned, total: rows.length * pool.tiers.length };
+  // Each asset counts the tiers it comes in (a chase replica: Legendary only, M32).
+  return { rows, owned, total: rows.reduce((sum, r) => sum + tiersOf(pool, r.asset).length, 0) };
 }
 
 /** The commonest item of an asset that has a spare (what "Scrap 1" scraps), or null. */
 export function cheapestSpare(pool: Pool, c: Collection, asset: string): ItemRef | null {
   for (const t of pool.tiers) if (spares(pool, c, { asset, tier: t.id }) > 0) return { asset, tier: t.id };
   return null;
+}
+
+/** The chase items Shots can give (M32), each with its chance per item drawn (0..1) and the tiers it comes in. */
+export function chaseChances(pool: Pool): { asset: Asset; chance: number; tiers: readonly RarityTier[] }[] {
+  return shotAssets(pool)
+    .filter(isChase)
+    .map((asset) => ({ asset, chance: asset.dropChance ?? 0, tiers: tiersOf(pool, asset) }));
 }
 
 /** Each tier's chance, normalised to 100 (as the Armory shows and draws them). */
@@ -340,5 +348,11 @@ export function revealSummary(pool: Pool, got: readonly Dispensed[]): string {
   const rest = got.filter((d) => pool.tiers.findIndex((t) => t.id === d.item.tier) < named).length;
   if (rest > 0) parts.push(parts.length > 0 ? `${rest} ${rest === 1 ? 'other' : 'others'}` : `${rest} ${rest === 1 ? 'item' : 'items'}`);
   const fresh = got.filter((d) => d.isNew).length;
-  return fresh > 0 ? `${parts.join(', ')} · ${fresh} new` : parts.join(', ');
+  const summary = fresh > 0 ? `${parts.join(', ')} · ${fresh} new` : parts.join(', ');
+  // A chase item (M32) leads the line.
+  const chased = got.flatMap((d) => {
+    const a = pool.byId.get(d.item.asset);
+    return a && isChase(a) ? [a.name] : [];
+  });
+  return chased.length > 0 ? `Chase item: ${[...new Set(chased)].join(', ')}! · ${summary}` : summary;
 }

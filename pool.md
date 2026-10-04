@@ -75,10 +75,10 @@ Every replica needs one, picked on its Customise screen from the ones you own th
 To add a higher spec battery for every electric replica, take the next free ID and add a row to Power sources:
 
 ```
-| 000019 | High Output Battery | battery | electric | no | yes |
+| 000021 | High Output Battery | battery | electric | no | yes |
 ```
 
-and a row to stats.md's Power sources table saying what it does (say `| 000019 | High Output Battery | 0 | 25 | 0 |`
+and a row to stats.md's Power sources table saying what it does (say `| 000021 | High Output Battery | 0 | 25 | 0 |`
 for 25 % more rate of fire). It then drops from Shots, and once owned it shows in the Power row of every replica tagged
 `electric`.
 

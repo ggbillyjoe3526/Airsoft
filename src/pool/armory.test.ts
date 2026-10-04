@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buyTokens,
   canTakeShots,
+  chaseChances,
   cheapestSpare,
   collectionRows,
   earn,
@@ -298,7 +299,8 @@ describe('the Armory catalogue and reveal (audit POOL-04, POOL-11, POOL-13)', ()
     addItem(c, item('Red Dot', 'epic'), 2);
     const cat = collectionRows(pool, c);
     expect(cat.rows.map((r) => r.asset.id)).toEqual(shotAssets(pool).map((a) => a.id));
-    expect(cat.total).toBe(shotAssets(pool).length * pool.tiers.length);
+    // Every asset at every tier, but the Cyber Pistol (M32) at Legendary only.
+    expect(cat.total).toBe((shotAssets(pool).length - 1) * pool.tiers.length + 1);
     expect(cat.owned).toBe(5);
     const dot = cat.rows.find((r) => r.asset.name === 'Red Dot')!;
     expect(dot.counts).toEqual([0, 0, 0, 0, 2, 0]);
@@ -463,5 +465,17 @@ describe('M32 acceptance 3: Shots and the chase item', () => {
       expect(ten.some((d) => d.tier !== 'common'), `seed ${seed}`).toBe(true);
       for (const d of ten) if (d.asset === '000019') expect(d.tier).toBe('legendary');
     }
+  });
+});
+
+describe('M32 acceptance 8: the Armory shows the chase item', () => {
+  it('lists the Cyber Pistol as a chase item at 0.25 %, Legendary only, and leads the reveal line with it', () => {
+    expect(chaseChances(pool).map((c) => [c.asset.name, c.chance, c.tiers.map((t) => t.id)])).toEqual([['Cyber Pistol', 0.0025, ['legendary']]]);
+    const got = [
+      { item: { asset: '000007', tier: 'common' }, isNew: false },
+      { item: { asset: '000019', tier: 'legendary' }, isNew: true },
+    ];
+    expect(revealSummary(pool, got)).toMatch(/^Chase item: Cyber Pistol! · 1 Legendary/);
+    expect(revealSummary(pool, got.slice(0, 1))).not.toMatch(/Chase/);
   });
 });
