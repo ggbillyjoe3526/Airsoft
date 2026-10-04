@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { REPLICA_FINISH } from '../config/replicaFinish';
-import { LOADOUT } from '../config/replicas';
+import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import { createArmament, fitParts } from '../sim/armament';
 import { buildHand, type GeometrySink, type HandPose } from './handModels';
 import { heightToNormal, projectSpeckleUvs, speckleHeights, speckleTextures } from './replicaFinish';
-import { AEG_MUZZLE, buildReplicaModels, fitMuzzle, LOW_DETAIL, PISTOL_MUZZLE, REPLICA_PART_TABLES, type ReplicaModels } from './replicaModels';
+import { AEG_MUZZLE, buildReplicaModels, CYBER_MUZZLE, fitMuzzle, LOW_DETAIL, PISTOL_MUZZLE, REPLICA_PART_TABLES, type ReplicaModels } from './replicaModels';
 import { Viewmodel } from './viewmodel';
 
 const HIGH = { replica: 'high', hands: 'high' } as const;
+/** The two factory replicas and the Cyber Pistol (M32), whose model is its own. */
+const WITH_CYBER = [...LOADOUT, CYBER_PISTOL];
 const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
   const out: THREE.Mesh[] = [];
   root.traverse((o) => {
@@ -78,10 +80,9 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
   });
 
   it('draws every part in each replica\'s table, by name, on both levels, the high one with more to it', () => {
-    for (const [kind, table] of Object.entries(REPLICA_PART_TABLES)) {
-      const id = kind === 'aeg' ? 'aeg' : 'pistol';
-      const low = buildReplicaModels(LOADOUT, 0x3a7bd5, false);
-      const high = buildReplicaModels(LOADOUT, 0x3a7bd5, false, HIGH);
+    for (const [id, table] of Object.entries(REPLICA_PART_TABLES)) {
+      const low = buildReplicaModels(WITH_CYBER, 0x3a7bd5, false);
+      const high = buildReplicaModels(WITH_CYBER, 0x3a7bd5, false, HIGH);
       const names = [...Object.keys(table.parts), ...Object.keys(table.magazines).map((m) => `magazine:${m}`), ...Object.keys(table.muzzles).map((m) => `muzzle:${m}`)];
       for (const name of names) {
         const lo = low.models.get(id)!.group.getObjectByName(name)!;
@@ -285,6 +286,66 @@ describe('the viewmodel at each detail (FA8)', () => {
     expect(beam!.visible).toBe(true);
     vm.setDetail(LOW_DETAIL);
     expect(named('laserBeam')[0]!.visible).toBe(true); // the setting survives a rebuild
+    vm.dispose();
+  });
+});
+
+describe('the Cyber Pistol\'s model (M32)', () => {
+  const mat = (models: ReplicaModels, key: string) =>
+    ((models.models.get('cyber')!.group.children.find((c) => c.name === key) as THREE.Mesh).material as THREE.MeshStandardMaterial).color;
+
+  it('is its own chunky pistol in mint, hot pink and black, the same on either team', () => {
+    const blue = buildReplicaModels(WITH_CYBER, 0x3a7bd5, false);
+    const red = buildReplicaModels(WITH_CYBER, 0xd54a3a, false);
+    // Its own mesh, about as dear as the Gas Pistol's (7,944 at once on Low; 9,140): pinned so a change to it is seen.
+    expect(drawn(blue, 'cyber')).toBe(9140);
+    expect(mat(blue, 'mint').getHex()).toBe(REPLICA_FINISH.cyber.mint);
+    expect(mat(blue, 'pink').getHex()).toBe(REPLICA_FINISH.cyber.pink);
+    expect(mat(blue, 'polymer').getHex()).toBe(0x2a2c31);
+    for (const key of ['mint', 'pink', 'polymer']) expect(mat(red, key).getHex(), key).toBe(mat(blue, key).getHex());
+    // Slab-sided: its slide is wider and taller than the Gas Pistol's.
+    const box = (models: ReplicaModels, id: string) => new THREE.Box3().setFromObject(models.models.get(id)!.group.children.find((c) => c.name === (id === 'cyber' ? 'mint' : 'polymer'))!);
+    expect(box(blue, 'cyber').max.y).toBeGreaterThan(box(blue, 'pistol').max.y);
+    blue.dispose();
+    red.dispose();
+  });
+
+  it('builds the plain mesh on Low and more on High, with nothing to fit but its own magazine', () => {
+    const low = buildReplicaModels(WITH_CYBER, 0x3a7bd5, true);
+    const high = buildReplicaModels(WITH_CYBER, 0x3a7bd5, true, HIGH);
+    for (const m of meshesOf(low.models.get('cyber')!.group)) {
+      expect(m.geometry.getAttribute('uv'), m.name).toBeUndefined();
+      expect(m.geometry.getAttribute('color'), m.name).toBeUndefined();
+      expect((m.material as THREE.MeshStandardMaterial).roughnessMap ?? null).toBeNull();
+    }
+    expect(drawn(high, 'cyber')).toBeGreaterThan(drawn(low, 'cyber'));
+    expect(drawn(high, 'cyber')).toBeLessThan(drawn(low, 'cyber') * 1.35);
+    // High's flat mint is the colour as on Low (brightened by as much as the vertex colour darkens it).
+    expect(mat(high, 'mint').r / REPLICA_FINISH.wearLight).toBeCloseTo(mat(low, 'mint').r, 6);
+    for (const models of [low, high]) {
+      const { group, muzzle } = models.models.get('cyber')!;
+      const fittable: string[] = [];
+      group.traverse((o) => /^(optic|grip|laser|barrel|muzzle|magazine):/.test(o.name) && fittable.push(o.name));
+      expect(fittable).toEqual(['magazine:standard']);
+      group.updateMatrixWorld(true);
+      const at = muzzle.getWorldPosition(new THREE.Vector3());
+      expect(at.z).toBeCloseTo(-CYBER_MUZZLE.barrelEnd, 6);
+      expect(at.y).toBeCloseTo(CYBER_MUZZLE.up, 6);
+      // The orange tip ends at the muzzle (the Orange tips setting still applies).
+      const orange = group.children.find((c) => c.name === 'orange')!;
+      expect(new THREE.Box3().setFromObject(orange).min.z).toBeCloseTo(-CYBER_MUZZLE.barrelEnd, 6);
+    }
+    low.dispose();
+    high.dispose();
+  });
+
+  it('is what the viewmodel holds when the Cyber Pistol is carried', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, [CYBER_PISTOL, LOADOUT[1]!]);
+    const arm = createArmament([CYBER_PISTOL, LOADOUT[1]!]);
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
+    const pink: THREE.Object3D[] = [];
+    vm.scene.traverseVisible((o) => o.name === 'pink' && pink.push(o));
+    expect(pink.length).toBeGreaterThan(0);
     vm.dispose();
   });
 });

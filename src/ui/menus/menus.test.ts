@@ -8,7 +8,9 @@ import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
 import { TEAM_COLOUR_CHOICES } from '../../config/teams';
 import { COMING_SOON_TAG, DEFAULT_MAP, IN_DEVELOPMENT_TAG, MAPS, mapData, mapEntry, mapOpen, playableMap, teamSizeOn } from '../../map/maps';
-import { replicaSummary } from './loadoutScreen';
+import { fixedValue, replicaSummary } from './loadoutScreen';
+import { GAME_POOL } from '../../pool/gamePool';
+import { EMPTY_FIT, kitSlot } from '../../pool/kit';
 import { backTarget, escResumes, moreBelow, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
 import { loadFov, loadMap, loadSavedQuality } from './savedChoices';
@@ -234,5 +236,17 @@ describe('the summary when a match paid nothing (audit POOL-22)', () => {
     expect(unpaidLine(null, 'off')).toBe(ARMORY_TEXT.unpaidOff);
     expect(unpaidLine(null, null)).toBe('');
     expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'dev')).toBe('');
+  });
+});
+
+describe('M32 acceptance 5: the Cyber Pistol on Customise', () => {
+  it('reads Built-in battery and its own 50-BB magazine, and greys the part rows', () => {
+    const kit = kitSlot(GAME_POOL, { asset: '000019', tier: 'legendary' }, EMPTY_FIT);
+    expect(fixedValue('power', kit)).toBe('Built-in battery');
+    expect(fixedValue('magazine', kit)).toBe('Its own, 50 BBs');
+    expect(fixedValue('barrel', kit)).toBe('Fixed barrel');
+    expect(fixedValue('muzzle', kit)).toBe('No thread for one');
+    expect(fixedValue('optic', kit)).toBe('No rail for one');
+    expect(replicaSummary(kit.replica, kit.parts)).toBe('Electric · semi, burst, auto · 50 BBs a magazine');
   });
 });

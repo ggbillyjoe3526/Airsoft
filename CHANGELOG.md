@@ -57,6 +57,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33a** · Woodland shown as Coming soon in the Map pop-up (#64)
 - **M33b** · Glowing BBs: a per-replica Customise option (At Night by default, Always or Off); bots load them on night fields
 - **M33d** · Woodland's layout, playable with Dev settings › Access maps in development (its matches aren't recorded); 4v4 and 5v5 on maps with room
+- **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound (#75)
+- **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
 
 ### Changed
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
@@ -82,6 +84,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 
 ### Fixed
+- **M32** · All carried replicas now have their sounds in the match; hear bots' AEG shots even without an equipped AEG (#75)
 - **FA11c** · A second tab now always waits behind the "open in another tab" notice, even when the first is busy loading (#69)
 - **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
 - **FA2** · Turning Edge smoothing on or off no longer causes graphics memory to leak (#67)
