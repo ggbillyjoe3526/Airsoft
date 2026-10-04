@@ -5,6 +5,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
+- **FA1** · Crash handling: "Something went wrong" screen with seed, Reload and Copy Report; Settings > Dev has Diagnostics Copy (#57)
 - **M12a** · Fire selector with single, burst and auto; faster reloads; crouch toggle; steadier aim when still (#10)
 - **M12b** · Red dot as an accessory; aiming down sights with separate sensitivity (#11)
 - **M12c** · Loadout off the pause screen; BB streaks from muzzle; pistol faces forward; hop-up dials (#12)
@@ -18,6 +19,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M18a** · Invert mouse; reduced motion; aim and sprint toggles; mouse button rebinding; cm/360 sensitivity (#27)
 - **M18b** · Colour-blind options; sound cues; pause on hidden tab; graphics recovery; fullscreen (#29)
 - **M20** · Custom matches: rounds to win, round time, team size, friendly fire, ricochets (#28)
+- **FA1** · Play Again starts new matches with their own seed; finished matches record and pay Field Credits immediately (#57)
 - **M21** · Practice range: steel and figure targets at 10–60 m; distance markers; spare mags stay full (#30)
 - **M22** · Squad orders on Z, X, V: Follow me, Hold here, Regroup; bots hear less through walls (#31)
 - **M16** · Tutorial: ten coached steps on the practice range for new players (#32)
@@ -39,6 +41,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 
 ### Fixed
+- **FA1** · Jump pressed up to 0.1 s before landing still happens; click after sprint fires as soon as lockout ends (#57)
+- **FA1** · Stepping down a kerb no longer widens the crosshair; drawn Elimination rounds replay (#57)
+- **FA1** · A hit player always reaches the dead zone, even from the far end of Depot; crouch-walking is slightly less accurate; practice range figures match character height (#57)
 - Empty magazine hint names your reload key (#23)
 - **M30** · Bots lead moving targets at range by the BB's real, slower flight time under drag
 - **BP1** · The hit-direction marker fades over the hit call instead of being cut off; sprint picks up as soon as you let go of Q / E (#53)
