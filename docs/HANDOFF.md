@@ -5,37 +5,50 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-04 · the Phase 4 audit fixes (three pull requests), before the bug pass._
+_Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last step before the owner's playtest._
 
 ## Where we are
 
-- **Phase 4 is feature complete on `main`** (M11–M22, see REVIEWS). The owner asked (2026-10-04) for every remaining
-  Phase 4 milestone, a full code audit (Fable), its fixes (Opus), then a full bug pass, and a note when Phase 4 is ready
-  to playtest. **The audit fixes are merged; the bug pass is next.** For this run the owner chose "Claude merges":
-  threads merge their own pull request once CI is green and the critic has accepted it (never tag, never push to `main`).
-- **The audit** (`main` at 020f689, report in the project's shared files: `audits/phase4-audit-2026-10-04.md`) found
-  0 critical, 0 high, 11 medium and 35 low. All were actioned in three pull requests except **L-07** (no LICENSE: the
-  owner said on 2026-10-02 to leave it undeclared unless the repo is made public on purpose). The fixes' leftovers are
-  in KNOWN_ISSUES (search "audit").
+- **Phase 4 is feature complete on `main`** (M11–M22, see REVIEWS), audited (Fable, report in the project's shared files:
+  `audits/phase4-audit-2026-10-04.md`), the audit fixed (#34–#36, all but L-07: no LICENSE, owner 2026-10-02), and
+  bug-passed (#37 and the bots-and-docs pull request after it). **Next: the owner playtests Phase 4.** His notes go into
+  the roadmap first (a draft pull request), as before; until then nothing is planned. For the 2026-10-04 run the owner
+  chose "Claude merges" (threads merged their own pull requests once CI was green and the critic accepted); that was for
+  that run only, so from here on the owner merges again unless he says otherwise (CLAUDE.md §7).
+- **The bug pass** played every mode in the browser (Elimination, Attack and Defend and a 1v1 custom match to the
+  result screen, the range, all ten tutorial steps, settings across a reload) and reviewed all code by area. What it
+  fixed is in DECISIONS (2026-10-04 · Bug pass) and REVIEWS; what it left is in KNOWN_ISSUES (search "bug pass").
+  Nothing it found in rounds, scoring, ballistics, records, leaks or navigation needed a change.
 
-## Audit fixes in short (what changed under you)
+## Bug pass in short (what changed under you)
 
-- **Graphics:** `main.ts` picks the preset before the renderer exists (`config/render.ts` `startingQuality`): `?quality=`,
-  else the saved pick (`loadSavedQuality`, null when none), else Low in a browser drawing in software (not saved).
-  Surface textures belong to `Renderer.surfaceTextures` (drawn once per page). `session.contextRestored()` re-renders
-  the replica sheen. Replica model parts are typed (`ReplicaModel`), no `userData`.
-- **Audio:** `audio/audioEngine.ts` owns the page's one `AudioContext` (made suspended at start), the buses, all
-  buffers and the reverb; sounds render a cue at a time in idle callbacks from the title. Each match's `Sfx` only builds
-  its own graph and disconnects on dispose; `Game.dispose` closes the context. Nothing plays until `setPlaying(true)`.
-- **Sim and bots:** `HitVolume.torso` (a segment capsule, radius 0 upright) covers a leaning torso; `stepBBs` builds
-  the volumes once per tick. Bots carry their own skill (`Bot.skill`); `BotWorld.cfg` is shared behaviour only.
-  Follow me / Hold here require a clear line from you to the spot (`SQUAD_ORDERS.followLineSnap`).
-- **Menus and input:** `#app` carries `reduced-motion` or `full-motion` (CSS keys off them and the OS preference);
-  Settings tabs are a full ARIA tab pattern (arrows, Home, End); New game reuses the built match when nothing changed.
-- **Tests and CI:** the headless match guards are seven `src/ai/depotMatch*.test.ts` files over `depotMatchSupport.ts`,
-  so `npm run test` takes about 70 s on 4 cores. `npm run check` is test + build (the build type-checks). On CI the
-  chunk budgets fail the build. The smoke test's first boot has no `?quality=` (so it covers the software fallback),
-  rebinds a key, and plays a short custom match to the result screen.
+- **Seeds:** each match played in a visit has its own seed (`Game.matchSeed`: the visit's seed + matches played before
+  it; a match built but never played doesn't count). `?seed=N` replays the first match played; the overlay shows the one
+  in play (the range keeps the visit's).
+- **Play Again** rebuilds the match when New game's choices or the team colours changed since it was built
+  (`Game.play`); otherwise it restarts it as before. `Game.resume` refuses play while the graphics context is lost.
+- **Armament:** `Armament.reloadQueued` keeps a reload pressed during a draw; `respawnCharacter` carries
+  `triggerWasDown` over, so a held trigger needs a new pull at the whistle.
+- **Sound:** `Sfx` counts simulation time in `afterTick`; the AEG motor's spin-up and wind-down follow it (the wind-down
+  plays from `afterTick`, never scheduled ahead). A match's sound reaches the engine's buses through two outlets
+  (effects, interface) muted while paused, so a slider preview can't let it through.
+- **Menus and HUD:** `.menu-footer` is sticky (Back and Play always on screen; `--page-bottom` is the page's bottom
+  padding); the hit feed is capped at `50% - 250px` and wraps, and below 1400 px the round banner keeps to the middle;
+  `Menus.setBlocked(true)` closes the pop-ups; sliders carry `aria-valuetext`.
+- **Squad orders:** follow and hold spots no longer compare heights with the leader (a ramp, or the leader in the air,
+  failed every spot and sent the followers into you); `clearLine` already checks every step, and the spot's `y` is the
+  floor there.
+
+## Audit fixes in short
+
+- **Graphics:** `config/render.ts` `startingQuality` (`?quality=`, the saved pick, else Low in software, not saved);
+  surface textures are `Renderer.surfaceTextures`; `contextRestored()` re-renders the replica sheen.
+- **Audio:** `audio/audioEngine.ts` owns the page's one `AudioContext`, the buses, the buffers and the reverb, rendered
+  in idle time from the title; each match's `Sfx` builds only its own graph. Nothing plays until `setPlaying(true)`.
+- **Sim and bots:** `HitVolume.torso` covers a leaning torso; bots carry their own skill (`Bot.skill`; `BotWorld.cfg` is
+  shared behaviour only). Follow me / Hold here need a clear line from you to the spot.
+- **Menus and tests:** `#app` carries `reduced-motion` / `full-motion`; Settings tabs are an ARIA tab pattern. The match
+  guards are seven `src/ai/depotMatch*.test.ts` files over `depotMatchSupport.ts` (`npm run test` ~75 s on 4 cores).
 
 ## M14 in short
 
@@ -78,8 +91,8 @@ _Last updated: 2026-10-04 · the Phase 4 audit fixes (three pull requests), befo
 - **Rules:** `config/matchRules.ts` (`MatchRules`, saved as one setting; `roundRulesFor`, `hitRulesFor` turn them into
   the match's own round and hit rules, so read `MatchSession.rounds` / `.hits`, never `ROUNDS` / `HITS`, in match code).
   `countsForRecords` decides whether a match goes into the records; `standardMatchText()` is the one wording of it.
-- **Per-team difficulty:** `BotController.update` swaps the bot's team's skill into the shared `w.cfg` (KNOWN_ISSUES).
-  Teammates follow the opponents' level until one is saved (`hasSavedTeammateDifficulty`).
+- **Per-team difficulty:** each bot carries its team's skill (`Bot.skill`, since the audit fixes). Teammates follow the
+  opponents' level until one is saved (`hasSavedTeammateDifficulty`).
 - **Ricochets:** `sim/ricochet.ts` with materials from `config/materials.ts`; a `characterHit` carries `ricochet`, and a
   ricochet that doesn't count is a `ricochetTick` event (knock, notice, never a hit). Small teams spawn mid-line
   (`sim/round.ts` `placeTeams`). The headless guards in `ai/depotMatch.test.ts` cover 1v1, 2v2 and ricochets counting.
@@ -88,7 +101,7 @@ _Last updated: 2026-10-04 · the Phase 4 audit fixes (three pull requests), befo
 
 ## Working notes and gotchas
 
-- **Checks:** `npm run check` (about 70 s; the headless match guards run in parallel files). In a cloud container run the smoke test with a temporary copy of
+- **Checks:** `npm run check` (about 75 s; the headless match guards run in parallel files). In a cloud container run the smoke test with a temporary copy of
   `playwright.config.ts` whose `launchOptions.executablePath` is `/opt/pw-browsers/chromium` (keep it out of git). The
   smoke test also loses and restores the WebGL context, adds a shot after each tick to get a sound cue (it patches
   `airsoft.session.match.afterTick`, `e2e` build only) and presses Z twice for the squad line.
