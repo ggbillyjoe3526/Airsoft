@@ -52,7 +52,7 @@ export function randomKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: n
   return rolledKit(pool, loadout, seed, partChance).kit;
 }
 
-/** randomKit, with the pool items it rolled (each replica and part), so a match can tell if a bot carries dev gear (M35). */
+/** randomKit, with the pool items it rolled (each replica and part). */
 export function rolledKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: number, partChance: number = RANDOM_LOADOUT.partChance): { kit: KitSlot[]; items: ItemRef[] } {
   const rng = createRng(seed);
   const items: ItemRef[] = [];
@@ -65,6 +65,16 @@ export function rolledKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: n
     return kitSlot(pool, item, fit);
   });
   return { kit, items };
+}
+
+/**
+ * Whether a rolled kit for `loadout` could hold dev gear (M35): a dev row for one of its replicas, or a dev part or
+ * power source that fits one. New game's note and the match's records rule both use it, so they agree without
+ * predicting the rolls.
+ */
+export function rolledKitMayHoldDev(pool: Pool, loadout: readonly ReplicaConfig[]): boolean {
+  const replicas = loadout.flatMap((r) => assetOfReplica(pool, r) ?? []);
+  return pool.assets.some((a) => a.tag === 'dev' && replicas.some((r) => a === r || (a.category !== 'replica' && fits(a, r))));
 }
 
 /** A character carrying `kit`: its replicas as the kit makes them, with the kit's optics and parts fitted. */

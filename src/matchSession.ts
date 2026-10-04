@@ -16,8 +16,8 @@ import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, type ReplicaConfig } from './config/replicas';
-import { botKitSeed, kittedCharacter, rolledKit } from './pool/botKit';
-import { contentPool, itemsUseDev } from './pool/contentPool';
+import { botKitSeed, kittedCharacter, randomKit } from './pool/botKit';
+import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import type { PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
@@ -45,7 +45,7 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
-import { MatchTakes } from './stats/settleMatch';
+import { matchStanding, MatchTakes } from './stats/settleMatch';
 import type { MatchResult } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import type { NotCounted } from './ui/recordsView';
@@ -72,8 +72,8 @@ export interface MatchSetup {
   /** Dev content is on (M35): bots may roll dev gear (config/content.ts). */
   devContent: boolean;
   /**
-   * The match's map, mode, either difficulty or the player's kit is dev content (M35): it stays out of the records and
-   * pays no Field Credits, as it does when a bot rolls dev gear.
+   * The match uses dev content (M35, newGamePicks.ts matchUsesDev: its picks, the player's kit, or gear the opponents
+   * may roll): it stays out of the records and pays no Field Credits.
    */
   devContentUsed: boolean;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
@@ -121,8 +121,6 @@ export class MatchSession {
   private devAssisted = false;
   /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
   private played = false;
-  /** An opponent rolled dev gear (M35, only with Dev content on). */
-  private botsCarryDev = false;
 
   constructor(
     private readonly renderer: Renderer,
@@ -238,12 +236,7 @@ export class MatchSession {
 
   /** Why it pays nothing: Dev settings that change play, dev content, or null when it pays. */
   get unpaidReason(): 'dev' | 'devContent' | null {
-    return this.devAssisted ? 'dev' : this.usesDevContent ? 'devContent' : null;
-  }
-
-  /** The match uses dev content (M35): its setup, or a bot's rolled gear. */
-  get usesDevContent(): boolean {
-    return this.setup.devContentUsed || this.botsCarryDev;
+    return this.standing().unpaid;
   }
 
   /**
@@ -341,7 +334,11 @@ export class MatchSession {
 
   /** Why it doesn't, for the summary: custom rules, Dev settings, dev content, or '' when it counts. */
   get notCountedReason(): NotCounted {
-    return !this.standardRules ? 'rules' : this.devAssisted ? 'dev' : this.usesDevContent ? 'devContent' : '';
+    return this.standing().notCounted;
+  }
+
+  private standing(): ReturnType<typeof matchStanding> {
+    return matchStanding({ standardRules: this.standardRules, devAssisted: this.devAssisted, devContentUsed: this.setup.devContentUsed });
   }
 
   /** Settings → HUD → Hit feed (M24). */
@@ -383,11 +380,7 @@ export class MatchSession {
       const rolled = team !== PLAYER_TEAM && BOT_LOADOUTS[this.setup.difficulty] === 'random';
       for (let i = 0; i < size; i++, id++) {
         if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-        else if (rolled) {
-          const { kit, items } = rolledKit(botPool, LOADOUT, botKitSeed(seed, id));
-          if (itemsUseDev(botPool, items)) this.botsCarryDev = true;
-          this.state.characters.push(kittedCharacter(id, team, kit));
-        }
+        else if (rolled) this.state.characters.push(kittedCharacter(id, team, randomKit(botPool, LOADOUT, botKitSeed(seed, id))));
         else this.state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, team));
       }
     }

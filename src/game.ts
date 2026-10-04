@@ -45,9 +45,9 @@ import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './u
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
 import { type Collection, type ItemRef, loadCollection, saveCollection, syncCollection } from './pool/collection';
-import { contentPool, itemsUseDev } from './pool/contentPool';
+import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
-import { type NewGamePicks, picksUseDev, playedPicks } from './newGamePicks';
+import { matchUsesDev, type NewGamePicks, playedPicks } from './newGamePicks';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
@@ -674,7 +674,7 @@ export class Game {
 
   /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or pay. */
   private devContentUsed(picks: NewGamePicks): boolean {
-    return picksUseDev(picks) || itemsUseDev(GAME_POOL, this.equippedItems());
+    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent);
   }
 
   /** A new session takes the Dev settings in force (M24). */

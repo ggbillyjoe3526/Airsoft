@@ -77,7 +77,7 @@ config; owner, 2026-10-04).
 
 - `public`: there for everyone. Shots can dispense it (if In Shots says so), bots can carry it, the Loadout offers it.
 - `dev`: still being built. It shows only while **Dev content** is on (Settings, ticking "Dev settings", then the Dev
-  tab), marked Dev. Shots never dispense it, even then: try it with Unlock all gear. A copy someone already owns stays
+  tab), and then looks like any other asset. Shots never dispense it, even then: try it with Unlock all gear. A copy someone already owns stays
   in their save, hidden while Dev content is off. A match that uses it doesn't go into the records or pay Field Credits.
 - Making a finished asset available to everyone is changing `dev` to `public`. A blank cell reads as `public`; any
   other word leaves the row out (so a typo never hands out something unfinished).

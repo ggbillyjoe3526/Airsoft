@@ -6,8 +6,8 @@
  */
 export interface DevSettings {
   /**
-   * Content tagged dev (M35, config/content.ts): maps, modes, difficulties and gear still being built are offered, each
-   * with a Dev tag. A match that uses any of it stays out of the records and pays no FC (that is decided by what the
+   * Content tagged dev (M35, config/content.ts): maps, modes, difficulties and gear still being built are offered,
+   * looking like the rest. A match that uses any of it stays out of the records and pays no FC (that is decided by what the
    * match uses, not by the switch, so it isn't a `cheat`).
    */
   devContent: boolean;
@@ -51,7 +51,7 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
     kind: 'switch',
     id: 'devContent',
     label: 'Dev content',
-    help: "Maps, modes, difficulties and gear still being built, each tagged Dev. Matches that use any of it don't go into your records or pay Field Credits.",
+    help: "Shows maps, modes, difficulties and gear still being built. Matches that use any of it don't go into your records or pay Field Credits.",
     cheat: false,
   },
   { kind: 'switch', id: 'disableArmory', label: 'Disable Armory', help: 'Turns off every Armory mechanic and greys out the Armory in the menu.', cheat: false },

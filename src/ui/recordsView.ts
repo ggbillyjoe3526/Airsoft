@@ -14,8 +14,8 @@ export interface RecordsView {
   notCounted: string;
 }
 
-/** After a match that used dev content (M35); it paid no Field Credits either. */
-export const DEV_CONTENT_NOT_RECORDED = "This match used content still being built (tagged Dev), so it isn't in your records and paid no Field Credits.";
+/** After a match that used dev content (M35); the Field Credits line says it paid nothing. */
+export const DEV_CONTENT_NOT_RECORDED = "This match used content still being built, so it isn't in your records.";
 
 const NO_NEWS: RecordNews = { bestAccuracy: false, bestStreak: false };
 

@@ -1,6 +1,7 @@
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
 import { loadSetting, numberIn, saveSetting } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
+import { isAvailable } from '../config/content';
 import { isDevItem } from './contentPool';
 import { EMPTY_FIT, energyCapped, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
 import { type Asset, fits, type Pool, replicaOf } from './pool';
@@ -28,6 +29,8 @@ export interface PlayerKit {
 /** What the player can equip: the collection's items, or (Dev settings, M26d) everything. */
 export interface Ownership {
   owns(ref: ItemRef): boolean;
+  /** Whether `asset` is offered at all (M35: dev gear only with Dev content on); every asset when absent. */
+  offers?(asset: Asset): boolean;
   /**
    * True while everything is unlocked (M26d): picks are then saved apart from the real ones (under `equip.dev.` and
    * `fit.dev.`), starting from them, so turning Unlock all gear off brings back the loadout the player owns.
@@ -48,6 +51,7 @@ export function gameOwnership(pool: Pool, collection: () => Collection, unlockAl
   const owned = collectionOwnership(collection);
   return {
     owns: (ref) => (devContent() || !isDevItem(pool, ref)) && (unlockAll() ? inPool(pool, ref) : owned.owns(ref)),
+    offers: (asset) => isAvailable(asset.tag, devContent()),
     sandboxed: unlockAll,
   };
 }
@@ -146,10 +150,10 @@ export class LoadoutModel {
     return this.ownedItems((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
   }
 
-  /** Any asset in the pool (owned or not) fits `slot` on this replica: the slot exists for it. */
+  /** Any asset offered (owned or not; M35: dev gear only with Dev content on) fits `slot` on this replica: the slot exists for it. */
   hasSlot(replicaId: string, slot: FitSlot): boolean {
     const replica = this.pool.byId.get(replicaId);
-    return !!replica && this.pool.assets.some((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
+    return !!replica && this.pool.assets.some((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica) && (this.ownership.offers?.(a) ?? true));
   }
 
   /**

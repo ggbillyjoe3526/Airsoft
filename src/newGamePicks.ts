@@ -1,8 +1,13 @@
-import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
+import { BOT_LOADOUTS, DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
 import { availableChoice, type ContentTag, tagOf } from './config/content';
 import { DEFAULT_MATCH_RULES, type MatchRules, TEAM_SIZE_CHOICES, WINS_NEEDED_CHOICES } from './config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from './config/modes';
+import { LOADOUT } from './config/replicas';
 import { DEFAULT_MAP, MAPS, type MapId } from './map/maps';
+import { rolledKitMayHoldDev } from './pool/botKit';
+import type { ItemRef } from './pool/collection';
+import { itemsUseDev } from './pool/contentPool';
+import type { Pool } from './pool/pool';
 
 /** New game's picks: the Map, Mode, Match and Difficulty pop-ups. */
 export interface NewGamePicks {
@@ -48,4 +53,21 @@ export function pickTags(p: NewGamePicks): ContentTag[] {
 /** Whether the picks (as played) use dev content: such a match stays out of the records and pays no Field Credits. */
 export function picksUseDev(p: NewGamePicks): boolean {
   return pickTags(p).includes('dev');
+}
+
+/**
+ * Whether the opponents may carry dev gear (M35): only with Dev content on, on a difficulty that rolls their kits
+ * (config/bots.ts BOT_LOADOUTS), when the pool has dev gear such a kit could hold. Counted whether or not a bot rolls
+ * it, so New game can say so before the match. Teammates carry LOADOUT as it comes, which is public.
+ */
+export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Difficulty): boolean {
+  return devContent && BOT_LOADOUTS[difficulty] === 'random' && rolledKitMayHoldDev(pool, LOADOUT);
+}
+
+/**
+ * Whether a match uses dev content (M35): its picks (as played), the player's kit (`kit`: the Loadout's items) or the
+ * opponents' possible gear. Such a match stays out of the records and pays no Field Credits.
+ */
+export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean): boolean {
+  return picksUseDev(picks) || itemsUseDev(pool, kit) || botsMayCarryDev(pool, devContent, picks.difficulty);
 }

@@ -507,7 +507,9 @@ export class Menus {
     const notes = [rules];
     if (!recorded) notes.push(NOT_RECORDED_NOTE);
     else if (this.opts.dev.cheating()) notes.push(DEV_NOT_RECORDED_NOTE);
-    else if (this.opts.dev.devContentUsed()) notes.push(DEV_CONTENT_NOTE);
+    // Dev content (M35) keeps the match out of the records and unpaid: said in full, or only the pay when a note above
+    // already said it won't be recorded.
+    if (this.opts.dev.devContentUsed()) notes.push(notes.length > 1 ? DEV_CONTENT_PAY_NOTE : DEV_CONTENT_NOTE);
     this.setup.setRules(notes.join(' '));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);
@@ -525,8 +527,12 @@ export class Menus {
 /** Under New game's rules while Dev settings that change play are on (M24). */
 export const DEV_NOT_RECORDED_NOTE = "Dev settings are on, so this match won't go into your records.";
 
-/** Under New game's rules when the picks or the Loadout use dev content (M35). */
-export const DEV_CONTENT_NOTE = "This match uses content still being built (tagged Dev), so it won't go into your records or pay Field Credits.";
+/**
+ * Under New game's rules when the picks, the Loadout or the opponents' possible gear use dev content (M35); the second
+ * when another note already says the match won't be recorded.
+ */
+export const DEV_CONTENT_NOTE = "This match uses content still being built, so it won't go into your records or pay Field Credits.";
+export const DEV_CONTENT_PAY_NOTE = "It uses content still being built, so it won't pay Field Credits either.";
 
 /** Under New game's rules when the setup isn't the standard match. */
 export const NOT_RECORDED_NOTE = `This match won't go into your records, which count only the standard match: ${standardMatchText()}`;
