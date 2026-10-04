@@ -118,6 +118,29 @@ export const BOT_BEHAVIOUR = {
   holdSweepDeg: 35,
   holdSweepPeriod: 4,
   /**
+   * Held angles (M37, for skills with holdsAngles): holding still, the bot fans this many rays at eye height across
+   * this wide a view (degrees) of the enemy side and aims where a ray that stops at a wall sits beside one that runs on
+   * at least angleJump (metres) further than the wall itself would reach (so a long wall seen at a slant is no corner): a
+   * corner or doorway someone would step out of. It aims anglePast (metres) past
+   * the wall's distance, at head height. Edges nearer than angleMinDist or beyond angleMaxDist (metres) are skipped,
+   * those near angleBestDist (metres) preferred; it keeps two at least angleSeparationDeg apart, switches between them
+   * every angleSwitchTime (s) and looks again every angleRefresh (s).
+   */
+  angleFanDeg: 140,
+  angleRays: 29,
+  angleJump: 2.5,
+  anglePast: 0.6,
+  angleMinDist: 2,
+  angleMaxDist: 30,
+  angleBestDist: 10,
+  angleSeparationDeg: 15,
+  angleSwitchTime: 3,
+  angleRefresh: 2,
+  /** ...or as soon as it has moved this far (metres) since it last looked. */
+  angleMoveRefresh: 0.5,
+  /** Someone appearing within this angle (degrees) of where a bot already aims counts as pre-aimed (the skill's preAim*). */
+  preAimConeDeg: 6,
+  /**
    * At a lane point, a bot may first step into cover (its skill's holdCoverChance): the best spot within this radius
    * (metres) that hides it from a point this far (metres) towards the enemy side and that it can peek from.
    */
@@ -361,6 +384,13 @@ export interface BotSkill {
   readonly searchWalkDistance: number;
   /** Chance a search of a far spot goes round to one side of it first (see flankOffset). */
   readonly flankChance: number;
+  // Held angles (M37): Pro holds and pre-aims the corners someone would come round; the levels below don't.
+  /** Holding still, aim at the corners and doorways someone would step out of (see angleFanDeg). */
+  readonly holdsAngles: boolean;
+  /** Reaction to someone appearing where the bot already aims (within preAimConeDeg), instead of reactionTime (s). */
+  readonly preAimReactionTime: readonly [number, number];
+  /** ...and how much of its aim settling (0..1 of aimSettleTime) is already done then. */
+  readonly preAimSettled: number;
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'pro';
@@ -424,6 +454,9 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     contactCoverMinDistance: 12,
     searchWalkDistance: 4,
     flankChance: 0,
+    holdsAngles: false,
+    preAimReactionTime: [0.6, 1.0],
+    preAimSettled: 0,
   },
   normal: {
     reactionTime: [0.35, 0.6],
@@ -442,6 +475,9 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     contactCoverMinDistance: 8,
     searchWalkDistance: 12,
     flankChance: 0.25,
+    holdsAngles: false,
+    preAimReactionTime: [0.35, 0.6],
+    preAimSettled: 0,
   },
   hard: {
     reactionTime: [0.25, 0.45],
@@ -460,11 +496,15 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     contactCoverMinDistance: 5,
     searchWalkDistance: 20,
     flankChance: 0.7,
+    holdsAngles: false,
+    preAimReactionTime: [0.25, 0.45],
+    preAimSettled: 0,
   },
   // Pro (M36, owner 2026-10-04): above Hard in every number, but its first BBs are still never dead on
   // (aimErrorStartMetres above zero) and it reacts no faster than Hard to someone it wasn't already aiming at. It plays
   // slower than Hard: longer holds at lane points, nearly always from cover, and a walk (silent) for the last 30 m to
-  // a contact. Holding and pre-aiming angles comes with M37, clearing corners and team play with M38.
+  // a contact. Holding still it aims at the corners someone would step out of and answers someone appearing there in
+  // 0.18–0.28 s with its aim half settled (M37); clearing corners and team play come with M38.
   pro: {
     reactionTime: [0.25, 0.45],
     turnRate: 6,
@@ -482,6 +522,9 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     contactCoverMinDistance: 4,
     searchWalkDistance: 30,
     flankChance: 0.7,
+    holdsAngles: true,
+    preAimReactionTime: [0.18, 0.28],
+    preAimSettled: 0.5,
   },
 };
 
