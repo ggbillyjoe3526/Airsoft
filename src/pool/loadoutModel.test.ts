@@ -3,11 +3,12 @@ import { GAME_STATS } from '../config/gameStats';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
-import { bbGlowFor, gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { bbGlowFor, collectionOwnership, gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
 import { EMPTY_FIT, FIT_SLOTS } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
 import { saveSetting } from '../settings/storage';
+import { withTags } from './testSupport';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -329,6 +330,125 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     own.items.delete(itemKey(id('Red Dot'), 'common'));
     expect(model.equipped()[0]).toEqual(item('AEG Rifle', 'rare'));
     expect(model.fitOf(id('AEG Rifle')).optic).toEqual(item('Red Dot', 'epic'));
+  });
+});
+
+describe('Loadout model with dev gear (M35)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+
+  const devPool = withTags(pool, { 'Red Dot': 'dev', 'Gas Pistol': 'dev' });
+  const devId = (name: string) => devPool.assets.find((a) => a.name === name)!.id;
+  const dref = (name: string, tier = 'common'): ItemRef => ({ asset: devId(name), tier });
+
+  /** A collection owning the starters plus the given items. */
+  function collecting(...items: ItemRef[]) {
+    const c = newCollection(devPool, 1);
+    for (const r of items) c.owned[itemKey(r.asset, r.tier)] = 1;
+    return c;
+  }
+
+  it('offers an owned dev part only while Dev content is on, and keeps the saved pick for when it comes back', () => {
+    let devContent = false;
+    const c = collecting(dref('Red Dot', 'rare'));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false, () => devContent));
+    const aeg = devId('AEG Rifle');
+    expect(model.fitChoices(aeg, 'optic')).toEqual([]);
+    devContent = true;
+    expect(model.fitChoices(aeg, 'optic')).toEqual([dref('Red Dot', 'rare')]);
+    model.setFit(aeg, 'optic', dref('Red Dot', 'rare'));
+    expect(model.fitOf(aeg).optic).toEqual(dref('Red Dot', 'rare'));
+    devContent = false;
+    expect(model.fitChoices(aeg, 'optic')).toEqual([]);
+    expect(model.fitOf(aeg).optic).toBeNull(); // plays as the default (nothing)
+    devContent = true;
+    expect(model.fitOf(aeg).optic).toEqual(dref('Red Dot', 'rare')); // the same saved pick is back
+    expect(c.owned[itemKey(devId('Red Dot'), 'rare')]).toBe(1); // never lost from the save
+  });
+
+  it('offers an owned dev replica only while Dev content is on, and an equipped one plays as the default until then', () => {
+    let devContent = true;
+    const c = collecting(dref('Gas Pistol', 'rare'));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false, () => devContent));
+    expect(model.replicaChoices()).toContainEqual(dref('Gas Pistol', 'rare'));
+    model.equip('primary', dref('Gas Pistol', 'rare'));
+    expect(model.equipped()[0]).toEqual(dref('Gas Pistol', 'rare'));
+    devContent = false;
+    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('Gas Pistol'));
+    expect(model.replicaChoices().map((r) => r.asset)).toContain(devId('AEG Rifle'));
+    expect(model.equipped()[0]).toEqual(dref('AEG Rifle'));
+    expect(model.equipped().map((r) => r?.asset)).not.toContain(devId('Gas Pistol'));
+    devContent = true;
+    expect(model.equipped()[0]).toEqual(dref('Gas Pistol', 'rare')); // the same pick, back
+  });
+
+  it('hides owned dev gear when no devContent switch is given (the default is off)', () => {
+    const c = collecting(dref('Red Dot', 'rare'));
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => c, () => false));
+    expect(model.fitChoices(devId('AEG Rifle'), 'optic')).toEqual([]);
+  });
+
+  it('lends no dev gear with Unlock all gear while Dev content is off, and all of it while on', () => {
+    let devContent = false;
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => true, () => devContent));
+    const aeg = devId('AEG Rifle');
+    const tiers = devPool.tiers.length;
+    // The rifle takes the Red Dot (dev) and the 2x Scope (public), at every tier.
+    expect(model.fitChoices(aeg, 'optic').map((r) => r.asset)).not.toContain(devId('Red Dot'));
+    expect(model.fitChoices(aeg, 'optic')).toHaveLength(tiers);
+    expect(model.replicaChoices().map((r) => r.asset)).not.toContain(devId('Gas Pistol'));
+    // The rifle at every tier, and the Cyber Pistol (public) at Legendary only (M32).
+    expect(model.replicaChoices()).toHaveLength(tiers + 1);
+    devContent = true;
+    expect(model.fitChoices(aeg, 'optic')).toHaveLength(2 * tiers);
+    expect(model.fitChoices(aeg, 'optic').map((r) => r.asset)).toContain(devId('Red Dot'));
+    expect(model.replicaChoices()).toHaveLength(2 * tiers + 1);
+  });
+});
+
+describe('Loadout slots and dev gear (M35 hasSlot)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+
+  // The Red Laser is the only laser, and it fits the pistol: tagging it dev leaves the pistol's laser slot with dev parts only.
+  const devPool = withTags(pool, { 'Red Laser': 'dev' });
+  const pistol = devPool.assets.find((a) => a.name === 'Gas Pistol')!.id;
+  const aeg = devPool.assets.find((a) => a.name === 'AEG Rifle')!.id;
+
+  it('has no slot for a part that is only dev while Dev content is off, and has it once on', () => {
+    let devContent = false;
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => false, () => devContent));
+    expect(model.hasSlot(pistol, 'laser')).toBe(false);
+    devContent = true;
+    expect(model.hasSlot(pistol, 'laser')).toBe(true);
+    devContent = false;
+    expect(model.hasSlot(pistol, 'laser')).toBe(false);
+  });
+
+  it('does the same with Unlock all gear on, and still has the slots that have a public part', () => {
+    let devContent = false;
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => true, () => devContent));
+    expect(model.hasSlot(pistol, 'laser')).toBe(false);
+    expect(model.hasSlot(pistol, 'muzzle')).toBe(true);
+    expect(model.hasSlot(aeg, 'optic')).toBe(true);
+    devContent = true;
+    expect(model.hasSlot(pistol, 'laser')).toBe(true);
+  });
+
+  it('keeps a slot with at least one public part while Dev content is off', () => {
+    const mixed = withTags(pool, { 'Red Dot': 'dev' }); // the 2x Scope stays public
+    const model = new LoadoutModel(mixed, gameOwnership(mixed, () => newCollection(mixed, 1), () => false, () => false));
+    expect(model.hasSlot(aeg, 'optic')).toBe(true);
+  });
+
+  it('has the slot with plain collection ownership, which offers no filter', () => {
+    const c = newCollection(devPool, 1);
+    const model = new LoadoutModel(devPool, collectionOwnership(() => c));
+    expect(collectionOwnership(() => c).offers).toBeUndefined();
+    expect(model.hasSlot(pistol, 'laser')).toBe(true);
+    expect(new LoadoutModel(devPool, owning([])).hasSlot(pistol, 'laser')).toBe(true);
   });
 });
 

@@ -24,10 +24,12 @@ import type { Collection, ItemRef } from '../../pool/collection';
 import { type Asset, comesIn, fcPerToken, isChase, type Pool } from '../../pool/pool';
 import { tierLine } from '../performanceSheet';
 import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
+import { itemIcon } from './icons';
 import { backButton, el, menuButton, menuPage } from './menuParts';
 
 export interface ArmoryOptions {
-  pool: Pool;
+  /** The pool as offered now (M35: dev gear only with Dev content on). */
+  pool: () => Pool;
   /** The player's collection, changed in place. */
   collection: () => Collection;
   /** Every item you carry (the replicas and what is fitted to them), to say when a Shot's item became one of them. */
@@ -108,7 +110,7 @@ export class ArmoryScreen {
   }
 
   private get pool(): Pool {
-    return this.opts.pool;
+    return this.opts.pool();
   }
 
   /**
@@ -350,7 +352,11 @@ export class ArmoryScreen {
     const asset = this.pool.byId.get(item.asset)!;
     const tile = el('div', 'item-tile armory-tile');
     tile.dataset.tier = item.tier;
-    tile.append(el('span', 'item-note', CATEGORY_LABELS[asset.category]), el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(item)));
+    // The category with its drawing at the top (FA13), what it is at the bottom: tiles with a one-line name keep the same head.
+    const kind = el('span', 'item-note item-kind');
+    kind.innerHTML = itemIcon(asset);
+    kind.append(el('span', '', CATEGORY_LABELS[asset.category]));
+    tile.append(kind, el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(item)));
     const adds = tierLine(this.pool, item);
     if (adds) {
       // A square tile holds three lines of it; the whole line is on hover and in the collection list.

@@ -1,12 +1,32 @@
 import { earn, type Earnings, type MatchOutcome, matchPay } from '../pool/armory';
 import type { Collection } from '../pool/collection';
 import type { Economy } from '../pool/pool';
+import type { NotCounted } from '../ui/recordsView';
 import { addMatch, type MatchResult, type RecordNews, type Records } from './records';
 
 /** What settling a finished match changed: the records' news (null: nothing recorded) and its pay (null: none). */
 export interface SettledMatch {
   news: RecordNews | null;
   pay: Earnings | null;
+}
+
+/** What decides whether a match counts and pays. */
+export interface MatchStanding {
+  /** The standard match (M20): custom rules never go into the records (they still pay). */
+  standardRules: boolean;
+  /** Dev settings that change play were on (M24). */
+  devAssisted: boolean;
+  /** The match uses dev content (M35, newGamePicks.ts matchUsesDev). */
+  devContentUsed: boolean;
+}
+
+/**
+ * Why a match stays out of the records (custom rules first, then Dev settings, then dev content; '' when it counts) and
+ * why it pays nothing (Dev settings, then dev content; null when it pays). Pure.
+ */
+export function matchStanding(m: MatchStanding): { notCounted: NotCounted; unpaid: 'dev' | 'devContent' | null } {
+  const unpaid = m.devAssisted ? 'dev' : m.devContentUsed ? 'devContent' : null;
+  return { notCounted: !m.standardRules ? 'rules' : (unpaid ?? ''), unpaid };
 }
 
 /**
