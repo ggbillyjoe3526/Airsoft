@@ -6,6 +6,9 @@ import { FRAME_RATE_CAPS, type FrameRateCap, type QualitySettings } from './rend
  * here (and a value on every preset); the tab and the settings store (`graphics.<field>`) follow from this table.
  */
 
+/** The on/off settings: a row can depend on one (`needs`). */
+export type OnOffField = { [F in keyof QualitySettings]: QualitySettings[F] extends boolean ? F : never }[keyof QualitySettings];
+
 /** A row with a few fixed values: each saved by its `id`. */
 export interface ChoiceRow<K extends keyof QualitySettings = keyof QualitySettings> {
   kind: 'choice';
@@ -14,6 +17,8 @@ export interface ChoiceRow<K extends keyof QualitySettings = keyof QualitySettin
   help: string;
   /** What the row costs, shown after its help so a player can trade knowingly. */
   cost: string;
+  /** The on/off setting this row only matters with: while it is off the row is greyed out and can't be changed. */
+  needs?: OnOffField;
   options: readonly { id: string; label: string; value: QualitySettings[K] }[];
 }
 
@@ -24,6 +29,7 @@ export interface RangeRow<K extends keyof QualitySettings = keyof QualitySetting
   label: string;
   help: string;
   cost: string;
+  needs?: OnOffField;
   min: number;
   max: number;
   step: number;
@@ -74,24 +80,26 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
     label: 'Shadow detail',
     help: 'The shadow map’s size: sharper shadow edges on thin props.',
     cost: 'GPU: high; memory 4 / 16 / 64 MB',
+    needs: 'shadows',
     options: [
-      { id: '1024', label: 'Low', value: 1024 },
+      { id: '1024', label: 'Medium', value: 1024 },
       { id: '2048', label: 'High', value: 2048 },
       { id: '4096', label: 'Ultra', value: 4096 },
     ],
   }),
-  range({ field: 'shadowRadius', label: 'Shadow softness', help: 'How soft shadow edges are, in shadow-map texels.', cost: 'Free', min: 1, max: 4, step: 0.5, perUnit: 1, format: (v) => v.toFixed(1) }),
+  range({ field: 'shadowRadius', label: 'Shadow softness', help: 'How soft shadow edges are, in shadow-map texels.', cost: 'Free', needs: 'shadows', min: 1, max: 4, step: 0.5, perUnit: 1, format: (v) => v.toFixed(1) }),
   choice({
     field: 'shadowFollowsView',
     label: 'Shadow range',
     help: 'Near you: sharper shadows for about 25 m ahead, none beyond. Whole field: every shadow, softer edges.',
     cost: 'Free',
+    needs: 'shadows',
     options: [
       { id: 'field', label: 'Whole field', value: false },
       { id: 'near', label: 'Near you', value: true },
     ],
   }),
-  choice({ field: 'figureShadows', label: 'Players in shadow', help: 'Players and the flag are shaded by walls and containers, not lit as if in full sun.', cost: 'GPU: small', options: onOff }),
+  choice({ field: 'figureShadows', label: 'Players in shadow', help: 'Players and the flag are shaded by walls and containers, not lit as if in full sun.', cost: 'GPU: small', needs: 'shadows', options: onOff }),
   choice({ field: 'surfaceRelief', label: 'Surface relief', help: 'Slab joints, mortar, planks and container ribs catch the sun.', cost: 'GPU: medium', options: onOff }),
   choice({
     field: 'textureSize',
@@ -124,6 +132,11 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
 /** The row for a field (every QualitySettings field has one: config/graphics.test.ts). */
 export function graphicsRow(field: keyof QualitySettings): GraphicsRow | undefined {
   return GRAPHICS_ROWS.find((r) => r.field === field);
+}
+
+/** Whether a row can be changed with `settings` in force: not while the setting it `needs` is off (Shadows, for its rows). */
+export function rowEnabled(row: GraphicsRow, settings: QualitySettings): boolean {
+  return row.needs === undefined || settings[row.needs];
 }
 
 /** The settings store's key for a Custom row (settings/storage.ts `graphics.${string}`). */

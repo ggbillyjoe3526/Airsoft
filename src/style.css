@@ -778,6 +778,16 @@ body {
   color: var(--menu-faint);
 }
 
+/* A Custom graphics row that does nothing with a setting off (the shadow rows while Shadows is Off) */
+.menu-row.menu-row-off .menu-row-label {
+  color: var(--menu-faint);
+}
+
+.menu-range input:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
 /* What a Custom graphics row costs (final alpha audit, UI-06): a quiet tag under its help */
 .menu-row-cost {
   font-size: var(--fs-xs);

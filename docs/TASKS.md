@@ -52,7 +52,7 @@ acceptance:
   9. REN-17: the debug overlay shows the quality in force, the frame split into simulation, draw and GPU time (EXT_disjoint_timer_query_webgl2, one query reused), and the antialiasing asked and given (gpuTimer.test.ts)
   10. Low's perf (draw calls, triangles, GPU memory) is no worse than its baseline; the KNOWN_ISSUES rows FA2 closes are reworded or removed
 status: gates
-attempts: 1
+attempts: 2
 
 ## FA3 · Render cost fixes and per-preset perf baselines
 tier: core
@@ -72,4 +72,4 @@ acceptance:
   9. KNOWN_ISSUES rows 22 (dust cap scaled by the pixel ratio, dustMotes.test.ts), 89 (the dock and ramps cast shadows, mapMeshes.test.ts), 100 and 133 are struck or reworded
   10. Low is not dearer: the frozen-frame A/B against the base build (audit 3.3 method) and the perf run show Low's frame, triangles and texture memory down and its draw calls unchanged; Medium and High stay within their draw-call and triangle budgets with fewer triangles than the base (High's extra software cost is FA2's 1024² textures, by design)
 status: gates
-attempts: 1
+attempts: 2
