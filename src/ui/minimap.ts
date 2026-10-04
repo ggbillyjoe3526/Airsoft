@@ -1,4 +1,5 @@
 import { MINIMAP } from '../config/minimap';
+import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
 import { clampToRim, coverHeight, type HeardPlayer, insideCircle, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
@@ -76,6 +77,9 @@ export class Minimap {
     private readonly theirs: string,
     /** The map's sloping ground, if it has one (M33c): drawn under the blocks, lighter where it is higher. */
     terrain: Terrain | null = null,
+    /** The map's bushes (M33e): drawn as soft green rounds over the ground, under the blocks. */
+    foliage: readonly Bush[] = [],
+    /** The map's storeys (M34c, MapData.storeys): one drawing of the field per storey. */
     storeys: readonly number[] = [],
   ) {
     this.root = document.createElement('canvas');
@@ -84,7 +88,7 @@ export class Minimap {
     this.root.setAttribute('aria-hidden', 'true');
     this.ctx = this.root.getContext('2d');
     this.storeys = storeys.length > 1 ? storeys : [];
-    this.fields = this.storeys.length > 0 ? this.storeys.map((_, i) => drawField(blocks, terrain, this.storeys, i)) : [drawField(blocks, terrain)];
+    this.fields = this.storeys.length > 0 ? this.storeys.map((_, i) => drawField(blocks, terrain, foliage, this.storeys, i)) : [drawField(blocks, terrain, foliage)];
     parent.appendChild(this.root);
     this.layout();
     // The window moved to a screen of another pixel ratio, browser zoom, or the HUD's size changed (audit UI-14).
@@ -313,7 +317,7 @@ export function storeyOf(storeys: readonly number[], y: number): number {
  * than a body's height over its floor), with everything below its floor shaded darker, so the floor you're on and its
  * walls read plainly over the street seen through a stairwell or an atrium.
  */
-function drawField(blocks: readonly MapBlock[], terrain: Terrain | null, storeys: readonly number[] = [], level = 0): FieldLayer | null {
+function drawField(blocks: readonly MapBlock[], terrain: Terrain | null, foliage: readonly Bush[], storeys: readonly number[] = [], level = 0): FieldLayer | null {
   if (blocks.length === 0 && !terrain) return null;
   let x0 = terrain ? terrain.minX : Infinity;
   let z0 = terrain ? terrain.minZ : Infinity;
@@ -347,7 +351,13 @@ function drawField(blocks: readonly MapBlock[], terrain: Terrain | null, storeys
   const c = MINIMAP.colours;
   if (terrain) drawTerrain(ctx, terrain, x0, z0, s);
   let shaded = level === 0;
+  let bushesDrawn = foliage.length === 0;
   for (const b of order) {
+    // Bushes go over the ground (floors come first in `order`) and under the cover, and under a storey's shading.
+    if (!bushesDrawn && (!walkable(b) || (!shaded && !under(b)))) {
+      drawBushes(ctx, foliage, x0, z0, s);
+      bushesDrawn = true;
+    }
     if (!shaded && !under(b)) {
       ctx.fillStyle = c.belowStorey;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -357,7 +367,18 @@ function drawField(blocks: readonly MapBlock[], terrain: Terrain | null, storeys
     ctx.fillStyle = b.kind === 'floor' ? (top(b) > MINIMAP.raisedFloor + base ? c.raised : c.ground) : b.kind === 'ramp' ? c.ramp : cover <= MINIMAP.lowCoverTop ? c.low : c.tall;
     ctx.fillRect((b.center.x - b.size.x / 2 - x0) * s, (b.center.z - b.size.z / 2 - z0) * s, b.size.x * s, b.size.z * s);
   }
+  if (!bushesDrawn) drawBushes(ctx, foliage, x0, z0, s);
   return { canvas, x: x0, z: z0, width: x1 - x0, depth: z1 - z0 };
+}
+
+/** Bushes (M33e): a filled round each, the bush's footprint. */
+function drawBushes(ctx: CanvasRenderingContext2D, bushes: readonly Bush[], x0: number, z0: number, s: number): void {
+  ctx.fillStyle = MINIMAP.colours.bush;
+  for (const b of bushes) {
+    ctx.beginPath();
+    ctx.arc((b.x - x0) * s, (b.z - z0) * s, b.radius * s, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 /** Sloping ground (M33c): the ground colour, lightened cell by cell by height, so a hill reads as a lighter patch. */

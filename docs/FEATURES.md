@@ -51,6 +51,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Woodland: a second field coming soon, shown as disabled in the Map pop-up only with Dev content on (M33a, M35)
 - Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland (M33c)
 - Woodland's layout: 120 × 80 m on a gentle slope up to the Knoll and its log fort, three lanes (Pine Belt, Meadow, Creek with the cabin), trees, boulders and logs; 4v4 by default, up to 5v5; dev content, playable with the Dev content switch on, and its matches aren't recorded or paid (M33d)
+- Bushes on any map that lists them: bots can't see someone deep in or behind one, BBs and people pass through, drawn on the minimap; Woodland has 70 (M33e)
 - Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend (M34c)
 - Ramps and raised floors that players and bots use (Phase 3)
 

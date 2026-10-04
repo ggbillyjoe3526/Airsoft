@@ -3,6 +3,7 @@ import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
 import type { SquadOrderKind } from '../config/squad';
+import type { Bush } from '../map/foliage';
 import type { NavGrid } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
@@ -181,6 +182,8 @@ export interface BotWorld {
   /** The map's low and full-height blocks, tried as cover spots (see findCover). */
   lowCover: readonly CoverBlock[];
   tallCover: readonly CoverBlock[];
+  /** The map's bushes (M33e): bots can't see through them (see visiblePart). Absent: none. */
+  foliage?: readonly Bush[];
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];

@@ -62,6 +62,8 @@ export const MINIMAP = {
     tall: 'rgba(214, 218, 220, 0.98)',
     /** Laid over everything under the storey drawn (M34c), so the street through a stairwell reads as below you. */
     belowStorey: 'rgba(8, 10, 14, 0.55)',
+    /** Bushes (M33e): a soft green, darker than cover, as they hide you but stop nothing. */
+    bush: 'rgba(70, 120, 70, 0.75)',
     you: '#ffffff',
     out: 'rgba(170, 170, 170, 0.8)',
   },

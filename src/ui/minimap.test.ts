@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
 import { Minimap, storeyOf } from './minimap';
+import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { vec3 } from '../sim/vec';
 import { terrainMaxX, terrainMaxZ } from '../map/terrain';
@@ -61,9 +62,12 @@ describe('Minimap layout (audit UI-14, UI-04, UI-13)', () => {
   });
 });
 
-/** A fake DOM whose canvases draw into a recording context: every fillRect with the fillStyle it was drawn in. */
+/**
+ * A fake DOM whose canvases draw into a recording context: every fillRect with the fillStyle it was drawn in, and every
+ * arc (M33e's bushes) with the fillStyle then in force.
+ */
 function recordingDom() {
-  const canvases: { width: number; height: number; fills: { style: string; x: number; y: number; w: number; h: number }[] }[] = [];
+  const canvases: { width: number; height: number; fills: { style: string; x: number; y: number; w: number; h: number }[]; arcs: { style: string; x: number; y: number; r: number; after: number }[] }[] = [];
   const parent = {
     style: { setProperty: () => undefined, getPropertyValue: () => '' },
     appendChild: () => undefined,
@@ -72,15 +76,23 @@ function recordingDom() {
   (globalThis as { document?: unknown }).document = {
     createElement: () => {
       const fills: { style: string; x: number; y: number; w: number; h: number }[] = [];
+      const arcs: { style: string; x: number; y: number; r: number; after: number }[] = [];
       let fillStyle = '';
       const ctx = new Proxy({} as Record<string, unknown>, {
-        get: (_t, key) => (key === 'fillStyle' ? fillStyle : key === 'fillRect' ? (x: number, y: number, w: number, h: number) => fills.push({ style: fillStyle, x, y, w, h }) : () => undefined),
+        get: (_t, key) =>
+          key === 'fillStyle'
+            ? fillStyle
+            : key === 'fillRect'
+              ? (x: number, y: number, w: number, h: number) => fills.push({ style: fillStyle, x, y, w, h })
+              : key === 'arc'
+                ? (x: number, y: number, r: number) => arcs.push({ style: fillStyle, x, y, r, after: fills.length })
+                : () => undefined,
         set: (_t, key, value) => {
           if (key === 'fillStyle') fillStyle = String(value);
           return true;
         },
       });
-      const canvas = { width: 0, height: 0, fills, hidden: false, className: '', setAttribute: () => undefined, getContext: () => ctx, remove: () => undefined, getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }) };
+      const canvas = { width: 0, height: 0, fills, arcs, hidden: false, className: '', setAttribute: () => undefined, getContext: () => ctx, remove: () => undefined, getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }) };
       canvases.push(canvas);
       return canvas;
     },
@@ -158,7 +170,7 @@ describe('the minimap on a map with storeys (M34c)', () => {
 
   it('draws one field per storey: the street without the floor over it, the upper floor over the street shaded darker', () => {
     const dom = recordingDom();
-    new Minimap(dom.parent, blocks, '#00f', '#f80', null, [0, 3]);
+    new Minimap(dom.parent, blocks, '#00f', '#f80', null, [], [0, 3]);
     expect(dom.canvases).toHaveLength(3); // the minimap, then a field per storey
     const [streetLayer, upperLayer] = [dom.canvases[1]!.fills, dom.canvases[2]!.fills];
     // The street: its ground and wall only (everything upstairs starts over a body's height up).
@@ -180,7 +192,7 @@ describe('the minimap on a map with storeys (M34c)', () => {
 
   it('keeps one field on a map with one storey', () => {
     const dom = recordingDom();
-    new Minimap(dom.parent, blocks, '#00f', '#f80', null, [0]);
+    new Minimap(dom.parent, blocks, '#00f', '#f80', null, [], [0]);
     expect(dom.canvases).toHaveLength(2);
     expect(dom.canvases[1]!.fills).toHaveLength(blocks.length);
   });
@@ -240,7 +252,7 @@ describe('the minimap on other storeys (M34c)', () => {
   const blocks = [floor(0), floor(3), floor(6)];
   const show = (storeys: number[] | undefined, f: ReturnType<typeof frame>) => {
     const dom = pathDom();
-    const minimap = new Minimap(dom.parent, blocks, '#00f', '#f80', null, storeys);
+    const minimap = new Minimap(dom.parent, blocks, '#00f', '#f80', null, [], storeys);
     minimap.setVisible(true);
     minimap.update(f, []);
     return dom;
@@ -283,5 +295,35 @@ describe('the minimap on other storeys (M34c)', () => {
 
   it('draws no arrows on a map with one storey, whatever the heights', () => {
     for (const storeys of [undefined, [], [0]]) expect(show(storeys, frame(0, [{ y: 3 }, { y: -2 }])).triangles(), String(storeys)).toHaveLength(0);
+  });
+});
+
+describe('bushes on the minimap (M33e)', () => {
+  it('draws each bush as a round of its footprint in the bush colour, over the ground and under the cover', () => {
+    const bushes: Bush[] = [
+      { x: 2, y: 0, z: 3, radius: 1, height: 1.5 },
+      { x: -4, y: 0, z: -1, radius: 1.4, height: 1.5 },
+    ];
+    const dom = recordingDom();
+    new Minimap(dom.parent, SLOPE_YARD.blocks, '#00f', '#f80', SLOPE_YARD_TERRAIN, bushes);
+    const field = dom.canvases[1]!;
+    expect(field.arcs).toHaveLength(2);
+    const s = MINIMAP.layerScale;
+    for (const [i, b] of bushes.entries()) {
+      expect(field.arcs[i]!.style).toBe(MINIMAP.colours.bush);
+      expect(field.arcs[i]!.r).toBeCloseTo(b.radius * s, 6);
+    }
+    // Placed to scale: the second bush sits where the first one's position says it should.
+    expect(field.arcs[1]!.x - field.arcs[0]!.x).toBeCloseTo((bushes[1]!.x - bushes[0]!.x) * s, 6);
+    expect(field.arcs[1]!.y - field.arcs[0]!.y).toBeCloseTo((bushes[1]!.z - bushes[0]!.z) * s, 6);
+    // Drawn after the ground's cells and before the first block that is cover.
+    const walkable = SLOPE_YARD.blocks.filter((b) => b.kind === 'floor' || b.kind === 'ramp').length;
+    expect(field.arcs[0]!.after).toBe(field.fills.length - (SLOPE_YARD.blocks.length - walkable));
+  });
+
+  it('draws no bush on a map without them', () => {
+    const dom = recordingDom();
+    new Minimap(dom.parent, SLOPE_YARD.blocks, '#00f', '#f80', SLOPE_YARD_TERRAIN);
+    expect(dom.canvases[1]!.arcs).toHaveLength(0);
   });
 });
