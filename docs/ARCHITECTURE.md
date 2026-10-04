@@ -79,14 +79,22 @@ ends the round). A hit character is eliminated
   shadows, the figures' shading, surface relief, texture size and filtering, dust and the replica's sheen:
   `Game.changeQuality` applies new settings at once through `Renderer.setQuality` (a new WebGL context on a new canvas
   when antialiasing changes; the pointer lock is on the container, so it survives) and `MatchSession.setQuality` (the
-  daylight, `setMapTextures`, `setMapRelief`, the figures and `CombatPresentation.setQuality`). The frame-rate cap
+  daylight, `restyleMap`, the figures and `CombatPresentation.setQuality`). The frame-rate cap
   (`core/framePacer.ts`) skips draws, never ticks. The art pass (M14) is procedural:
   `lighting.ts` (sun and sky fill; on High the sun's shadow map follows the view, `Daylight.follow` each frame, moved
-  in whole texels, normal bias in texels) adds `atmosphere.ts` (the sky dome and the trees; the dome is drawn after
-  the opaque field so only sky pixels shade it; the renderer's fog matches the horizon); `proceduralTextures.ts` draws
-  the surface textures, owned by the `Renderer` and drawn and uploaded in the title screen's idle time
-  (`Renderer.warmUp`), like the replica's sheen (`replicaSheen.ts`, prefiltered once per context, freed while off); `mapMeshes.ts` turns each block into pieces (container
-  frames, wall copings, pallets, all inside the block's bounds) merged per texture, with grime shading near the ground.
+  in whole texels, normal bias in texels) adds `atmosphere.ts` (the sky dome, the tree ring at the Trees setting, the
+  clouds and sun disc; the dome is drawn after the opaque field so only sky pixels shade it; the renderer's fog matches
+  the horizon); `proceduralTextures.ts` draws the surface textures, owned by the `Renderer` and drawn and uploaded in
+  the title screen's idle time (`Renderer.warmUp`), with normal maps worked out from them on demand
+  (`surfaceNormals.ts`). The visual overhaul (FA7, `docs/ART.md`) adds the sky-derived environment map
+  (`replicaSheen.ts`: the dome's own colours over a concrete disc, prefiltered once per context, freed while off; the
+  `Renderer` sets it as `scene.environment` with Environment lighting, and the map's and trees' Lambert materials opt
+  out, `surfaceMaterials.ts`) and the tone mapping choice (`Renderer.setToneMapping`). `mapMeshes.ts` turns each block
+  into pieces (container frames, wall copings, pallets, all inside the block's bounds) merged per texture by
+  `cuboidMesh.ts`, with grime shading near the ground; with Map detail the boxes are bevelled with a lighter edge,
+  tiled, shaded by baked vertex occlusion (`vertexOcclusion.ts`) and ground noise, the props get extra pieces, the signs
+  are one alpha-tested mesh (`mapDecals.ts`), and the shadow map draws each mesh's plain boxes from a second index range
+  of the same geometry. `contactShadows.ts` lays a soft disc under every figure on every preset (one instanced draw).
   Effects are pooled: `impactPuffs.ts` (impact dust tinted by material, hit puffs, a gas pistol's puffs; soft dots from
   `softDot.ts`), `bbRenderer.ts` (balls and camera-facing streak quads of a fixed on-screen width) and `dustMotes.ts`
   (faded out near the camera, size-capped in device pixels times the pixel ratio, hidden with Reduced motion); a pool
