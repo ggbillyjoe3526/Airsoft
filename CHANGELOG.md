@@ -35,6 +35,12 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 
 ### Fixed
 - Empty magazine hint names your reload key (#23)
+- **BP1** · The hit-direction marker fades over the hit call instead of being cut off; sprint picks up as soon as you let go of Q / E (#53)
+- **BP1** · A semi or burst double-tap never fires a tick early; a BB fired straight up never goes backwards (#53)
+- **BP1** · The pause screen shows the match's seed; New game says which end you start at (#53)
+- **BP1** · Minimap: stacked crates show as tall cover; the debug panel sits below the minimap (#53)
+- **BP1** · Pallet racks soak BBs up instead of bouncing them; turning Dev settings off before a match starts lets it count for records (#53)
+- **BP1** · A double-click on Play no longer shows the "needs a moment" hint; Key bindings says why two quick clicks cancel (#53)
 
 ### Internal
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
@@ -43,6 +49,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - Roadmap: the owner's third feature picks (#46)
 - **M26d** · Dev settings: Disable Armory and Unlock all gear for testing (#48)
 - **M27** · Walk-off route searches rationed to one per tick (pull request to follow)
+- **BP1** · The rendered sounds are held once (about 9 MB less); the perf script restarts with each match (#53)
 
 ## v0.1-alpha.3 · 2026-10-03
 
