@@ -61,7 +61,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Glowing BBs per replica in Customise: At Night (the default, glowing only on night fields), Always or Off; a glowing BB is green, a little larger at range and leaves a longer streak; bots load them on night fields (M33b)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start (M26a)
 - Your collection is saved apart from the settings (M26a)
-- Armory, beta and free: earn Field Credits from matches, buy Tokens, draw assets from the pool at rarity odds (M26c)
+- Armory, free to play: earn Field Credits (scaled by participation and match length), buy Tokens, draw with pity (an Epic or better within 20 Shots, a Legendary within 100); catalogue shows all items by rarity tier (M26c, FA10)
 
 ## Menus and settings
 
@@ -110,7 +110,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Practice range and tutorial
 
 - A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
-- A tutorial of ten coached steps on the range, with your own key bindings (M16)
+- A tutorial of ten coached steps on the range, with your own key bindings; skip and resume from pause (M16, FA10)
 
 ## Accessibility and comfort
 

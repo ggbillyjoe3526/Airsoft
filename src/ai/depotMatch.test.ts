@@ -37,8 +37,11 @@ describe('a 3v3 bot match on Depot', () => {
   });
 
   it('plays out rounds at every difficulty', { timeout: 60_000 }, () => {
+    // Seed 2 since FA10 (audit SIM-09: spread square to the line of sight moved every shot a little, and seed 4's Easy
+    // match now plays one long hunt). Over seeds 1-32 at 120 s: Easy 61 rounds (65 before), Hard 73 (68); the least
+    // any seed plays is 1 round, before and after (DECISIONS, FA10).
     for (const level of ['easy', 'hard'] as const) {
-      const stats = playMatch(120, 4, undefined, botConfig(level));
+      const stats = playMatch(120, 2, undefined, botConfig(level));
       expect(stats.rounds, level).toBeGreaterThanOrEqual(2);
       expect(stats.friendlyHits, level).toBe(0);
     }
