@@ -158,6 +158,9 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
   3. Any other "latest release" mention: run `grep -rn "alpha\.[0-9]\|beta\.[0-9]" README.md docs/ CLAUDE.md src/config/`
      and update each line that names the previous release as current (history and policy examples stay as they are).
      The title screen's version needs nothing: it comes from `git describe` as the game is built (M24).
+  4. The change records (owner, 2026-10-04): run the changelog agent (`.claude/agents/changelog.md`) with
+     `--release <tag>`. It closes the `Unreleased` section of `CHANGELOG.md` under the tag, writes the player-facing
+     `docs/patch-notes/<tag>.md` and the README's "New since …" paragraph.
 - **Pull requests** (owner, 2026-10-02): every change lands as a pull request that the owner reviews and merges.
   Work on a new branch made from the latest `main` (one per milestone or batch), push that branch, and open a pull
   request into `main`. **Never push to `main` and never merge a pull request yourself**, whatever else in this
@@ -224,6 +227,10 @@ Then implement, then **verify**: run the type checker, tests, and build, and rep
   - `docs/IDEAS.md` — future features, not yet approved
   - `docs/KNOWN_ISSUES.md`
   - `docs/HANDOFF.md` — where the last session left off (rewritten each session)
+  - `CHANGELOG.md`, `docs/FEATURES.md`, `docs/patch-notes/` — kept by the changelog agent
+    (`.claude/agents/changelog.md`, owner, 2026-10-04): run it in every pull request once the change is final, with
+    the task id, the pull request title, a short diff summary and any new DECISIONS lines; it adds the `Unreleased`
+    line(s) and the feature list's line. Don't edit those three by hand except to fix a mistake.
 
 ## 11. Tone Check
 
