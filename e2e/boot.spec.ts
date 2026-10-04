@@ -139,6 +139,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await cm.press('Enter');
   await expect(settings.getByRole('slider', { name: 'Mouse sensitivity' })).toHaveValue('0.5');
   await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(settings.getByRole('group', { name: 'Order wheel' }).getByRole('button', { name: 'Hover' })).toHaveAttribute('aria-pressed', 'true');
   await settings.getByRole('tab', { name: /Accessibility/i }).click();
   await expect(settings.getByRole('group', { name: 'Reduced motion' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
   // Reduced motion reaches the HUD's CSS animations through a class on the container (audit M-03); back off for the match.
@@ -148,14 +149,18 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await reducedMotion.getByRole('button', { name: 'Off' }).click();
   await expect(page.locator('#app')).not.toHaveClass(/\breduced-motion\b/);
   // M18b: High contrast team colours and the on-screen sound cues, both for the match below.
-  await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'High contrast' }).click();
+  await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'High Contrast' }).click();
   await expect(settings.locator('.team-swatch')).toHaveCount(2);
   await settings.getByRole('group', { name: 'Sound cues' }).getByRole('button', { name: 'On' }).click();
+  // M24: the cues' colour and size reach the HUD as CSS variables on the container.
+  await settings.getByRole('group', { name: 'Sound cue colour' }).getByRole('button', { name: 'Yellow' }).click();
+  await expect.poll(() => page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--cue-colour'))).toBe('#ffe94a');
+  await expect(settings.getByRole('slider', { name: 'Sound cue size' })).toHaveValue('1');
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   await expect(settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('100');
-  await expect(settings.getByRole('button', { name: 'Go fullscreen' })).toBeVisible();
-  await settings.getByRole('tab', { name: /Key bindings/i }).click();
+  await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('90');
+  await expect(settings.getByRole('button', { name: 'Enter Fullscreen' })).toBeVisible();
+  await settings.getByRole('tab', { name: /Key Bindings/i }).click();
   // Fire and aim are bindings like the rest (M18), on the mouse buttons by default.
   await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
   // A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T, is saved,
@@ -168,8 +173,12 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   expect(savedReload).toEqual(['KeyT']);
   await settings.getByRole('tab', { name: /Audio/i }).click();
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
+  // The tabs follow the tabs pattern (audit L-31): Arrow Up from Audio picks HUD (M24) and moves the focus there.
+  await page.keyboard.press('ArrowUp');
+  await expect(settings.getByRole('tab', { name: /HUD/i })).toHaveAttribute('aria-selected', 'true');
+  await expect(settings.getByRole('slider', { name: 'Scoreboard size' })).toHaveValue('1.3');
+  await expect(settings.getByRole('group', { name: 'Hit feed' }).getByRole('button', { name: 'Fade' })).toHaveAttribute('aria-pressed', 'true');
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
-  // The tabs follow the tabs pattern (audit L-31): Arrow Up from Audio picks Crosshair and moves the focus there.
   await page.keyboard.press('ArrowUp');
   await expect(settings.getByRole('tab', { name: /Crosshair/i })).toHaveAttribute('aria-selected', 'true');
   await expect(settings.getByRole('tab', { name: /Crosshair/i })).toBeFocused();
@@ -177,6 +186,17 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(previews).toHaveCount(2);
   await settings.getByRole('button', { name: 'Circle' }).click();
   await expect(previews.first()).toHaveClass(/\bshape-circle\b/);
+  // M24: the Dev tab is hidden until its box is ticked; its settings apply only while it is (Debug info shows the panel).
+  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toBeHidden();
+  const devBox = settings.getByRole('checkbox', { name: 'Dev settings' });
+  await devBox.check();
+  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toHaveAttribute('aria-selected', 'true');
+  await settings.getByRole('group', { name: 'Debug info' }).getByRole('button', { name: 'On' }).click();
+  await expect(page.locator('.debug-overlay')).toBeVisible();
+  await devBox.uncheck();
+  await expect(page.locator('.debug-overlay')).toBeHidden();
+  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toBeHidden();
+  await expect(settings.getByRole('tab', { name: /Controls/i })).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
   await expect(setup.getByRole('button', { name: /Settings/i })).toBeFocused();
@@ -201,12 +221,21 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(board.locator('tbody tr:not(:first-child)')).toHaveCount(4); // the 2v2 picked on Match
   await page.keyboard.up('Tab');
   await expect(board).toBeHidden({ timeout: 10_000 });
-  // Squad orders (M22): Z has the bot teammates follow you and the HUD says so; Z again sends them back to the plan.
+  // The minimap (M23) is up while playing.
+  await expect(page.locator('.minimap')).toBeVisible();
+  // The order wheel (M23) shows while Z is held; let go in the middle, it closes with no order given.
+  const wheel = page.locator('.order-wheel');
+  await page.keyboard.down('z');
+  await expect(wheel.locator('.order-wheel-item').first()).toBeVisible({ timeout: 10_000 });
+  await expect(wheel.locator('.order-wheel-item')).toHaveText(['Follow Me', 'Hold Here', 'Regroup', 'Team Plan']);
+  await page.keyboard.up('z');
+  await expect(wheel).toHaveAttribute('hidden', '', { timeout: 10_000 });
+  // Squad orders (M22): F has the bot teammates follow you and the HUD says so; F again sends them back to the plan.
   const squadLine = page.locator('.squad-order');
   await expect(squadLine).toBeHidden();
-  await page.keyboard.press('z');
+  await page.keyboard.press('f');
   await expect(squadLine).toHaveText(/Follow me/i, { timeout: 10_000 });
-  await page.keyboard.press('z');
+  await page.keyboard.press('f');
   await expect(squadLine).toHaveText(/Back to the team plan/i, { timeout: 10_000 });
   // X: they hold, and a marker shows where; X again on the same spot lets them go.
   const holdMarker = page.locator('.hold-marker');
@@ -430,10 +459,10 @@ test('the practice range opens from the title screen and reads out the last BB',
   await settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' }).click();
   await page.keyboard.press('Escape');
   await page.locator('.menu-setup').getByRole('button', { name: 'Back' }).click();
-  // A refused mouse lock (Practice range or Tutorial clicked too soon after Esc) says so on the title too (audit L-29).
+  // A refused mouse lock (Practice Range or Tutorial clicked too soon after Esc) says so on the title too (audit L-29).
   await page.evaluate(() => document.dispatchEvent(new Event('pointerlockerror')));
   await expect(page.locator('.menu-title .menu-hint')).toContainText('Click again');
-  await page.getByRole('button', { name: 'Practice range' }).click();
+  await page.getByRole('button', { name: 'Practice Range' }).click();
   const readout = page.locator('.range-readout');
   await expect(readout).toBeVisible();
   await expect(readout).toContainText('Practice range');

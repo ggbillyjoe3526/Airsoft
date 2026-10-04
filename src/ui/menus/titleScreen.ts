@@ -1,4 +1,3 @@
-import { BUILD_LABEL } from '../../config/menus';
 import { el, hintLine, menuButton, setHint, wordmark } from './menuParts';
 
 /**
@@ -26,12 +25,15 @@ export class TitleScreen {
     // The tag is a visual nudge; the button's name stays "Tutorial" (and Start stays the only "Start").
     this.tutorialTag.setAttribute('aria-hidden', 'true');
     tutorial.prepend(this.tutorialTag);
-    actions.append(this.hint, start, tutorial, menuButton('Practice range', 'secondary', onRange, true));
+    actions.append(this.hint, start, tutorial, menuButton('Practice Range', 'secondary', onRange, true));
     this.setTutorialDone(tutorialDone);
     this.warning = el('p', 'menu-title-warning');
     this.warning.setAttribute('role', 'alert');
     this.warning.hidden = true;
-    this.root.append(centre, this.warning, actions, el('p', 'menu-title-build', BUILD_LABEL));
+    // Which build this is, worked out from git as the game is built (config/buildVersion.ts).
+    const build = el('p', 'menu-title-build', __BUILD_VERSION__.label);
+    build.title = __BUILD_VERSION__.title;
+    this.root.append(centre, this.warning, actions, build);
   }
 
   /** A warning over the field, e.g. that the browser runs without hardware acceleration ('' hides it). */

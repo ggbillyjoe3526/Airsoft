@@ -25,8 +25,12 @@ export class DebugOverlay {
   }
 
   toggle(): void {
-    this.visible = !this.visible;
-    this.el.hidden = !this.visible;
+    this.setVisible(!this.visible);
+  }
+
+  setVisible(visible: boolean): void {
+    this.visible = visible;
+    this.el.hidden = !visible;
   }
 
   /** Call every rendered frame with the real frame time in seconds. */

@@ -105,7 +105,7 @@ on the **Loadout** screen (**Start**, then **Loadout**; between matches only, it
 - [ ] **Reload or switch to the pistol while aiming.** The sight drops for the reload and comes back up if you are
   still holding right click. The pistol has no optic, so it never aims down sights.
 - [ ] **Press Esc during a match.** The pause menu has no Loadout: the optic and hop-up are set between matches
-  (Start, then Loadout; or Change setup on the result screen before the next match).
+  (Start, then Loadout; or New Game on the result screen before the next match).
 
 ## BBs leaving the muzzle
 
@@ -225,7 +225,7 @@ swap ends after round 4.
   it: no map is loaded yet), and **Start** at the bottom left. Nothing else.
 - [ ] **Click Start.** The New game screen has five big buttons: **Map**, **Mode**, **Difficulty**, **Loadout** and
   **Settings**, each showing what is picked now, the rules of the picked mode under them, **Back** (to the title)
-  and **Play**. No controls list here any more: the keys are under Settings, Key bindings.
+  and **Play**. No controls list here any more: the keys are under Settings, Key Bindings.
 - [ ] **Click Map.** A pop-up lists Depot (picked, the only map for now). Esc or × closes it.
 - [ ] **Click Mode, then Attack and Defend.** A pop-up lists both modes with a line each; picking one closes it, and
   the Mode button and the rules underneath change. Open it again and press Esc or ×: it closes with no change.
@@ -235,9 +235,10 @@ swap ends after round 4.
   the rifle, then power and skins greyed out and marked LATER. Click the pistol: its own BB weight, hop-up dial and
   magazine, and its gas type and skins marked LATER. Back returns to New game, and the Loadout button shows your
   optic, any parts that differ from stock, BB weights and dials.
-- [ ] **Click Settings.** Tabs on the left: **Controls** (see Comfort and controls below), **Key bindings**,
-  **Graphics**, **Crosshair**, **Audio** (volumes, see Sound below) and **Accessibility**. Back returns to New game.
-- [ ] **Graphics.** A **Field of view** slider at 100°, and the **Quality** picker (High; see the M14 section). No
+- [ ] **Click Settings.** Tabs on the left: **Controls** (see Comfort and controls below), **Key Bindings**,
+  **Graphics**, **Crosshair**, **HUD** (M24), **Audio** (volumes, see Sound below) and **Accessibility**, with a
+  **Dev settings** box under them (M24). Back returns to New game.
+- [ ] **Graphics.** A **Field of view** slider at 90°, and the **Quality** picker (High; see the M14 section). No
   Brightness.
 - [ ] **Field of view in a match.** Play, press Esc, Settings, Graphics: drag the slider to 120°. Back and Resume:
   you see more at the sides. Aim down the red dot: it still zooms in. Set it to 80°: a narrower view. Reload the
@@ -281,7 +282,7 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   they reach the dead zone it goes. Enemies never get one. Is it helpful, or too much on screen?
 - [ ] **Hold Tab.** A scoreboard shows the match so far: for every player hits, times hit, friendly hits, BBs fired,
   accuracy and time alive, your team first with its rounds won, your line highlighted, players hit this round greyed.
-  Let go and it's gone. Tab can be rebound under Settings → Key bindings ("Scoreboard (hold)").
+  Let go and it's gone. Tab can be rebound under Settings → Key Bindings ("Scoreboard (hold)").
 - [ ] **End a round.** For the few seconds before the next one, the same table shows that round's numbers on its own.
 - [ ] **Finish a match.** A **Match summary** screen comes first: the result, everyone's numbers for the whole match,
   and **Your records** (wins and losses per difficulty and mode, the one you just played in orange, best accuracy and
@@ -308,11 +309,11 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   and switching back to the rifle doesn't raise it by itself. On Hold (the default) it works as before.
 - [ ] **Sprint key: Toggle.** Hold W and tap Left Alt: you keep sprinting with Alt let go. Let go of W: the sprint
   ends, and pressing W again just runs. Sprint again, then crouch, aim, walk or click fire: each one ends the sprint.
-- [ ] **Key bindings: mouse buttons.** **Fire** and **Aim** are at the top of the list (Left mouse, Right mouse). Click
+- [ ] **Key Bindings: mouse buttons.** **Fire** and **Aim** are at the top of the list (Left mouse, Right mouse). Click
   the Reload box, then click the same box with a side button (Mouse 4 or 5): Reload now shows **Mouse 4**, and the
   browser does not go back a page. In a match the side button reloads, and pressing it never leaves the game. Click
-  the Aim box and click it with the left button: Aim becomes Left mouse and Fire takes Right mouse (a swap). Reset to
-  defaults puts them back.
+  the Aim box and click it with the left button: Aim becomes Left mouse and Fire takes Right mouse (a swap). **Reset
+  All** puts them back.
 - [ ] **Spectating hint.** Get hit: the label reads "Spectating … · Left mouse for next", or names your fire key.
 - [ ] **Settings, Accessibility: Reduced motion.** Turn it On, then play: the replica no longer bobs as you walk or
   sways behind turns, each shot kicks it half as much, and leaning tips the view only slightly. The view still climbs a
@@ -353,14 +354,14 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   points to enemy footsteps (two dots), shots (an arrowhead) and hit calls (a HIT tag), fainter further away; turn
   towards one and it moves to the top. Your own steps and shots and your teammates' steps show nothing. Off by default.
 - [ ] **Tab away.** Mid-round, switch to another tab (Ctrl+Tab) and back: the match is paused on the pause menu.
-- [ ] **Fullscreen.** Settings → Graphics → **Go fullscreen**; the button then reads Leave fullscreen. In a match press
-  **F10**: fullscreen on and off. Esc leaves fullscreen (and pauses). Rebind it under Key bindings.
+- [ ] **Fullscreen.** Settings → Graphics → **Enter Fullscreen**; the button then reads Exit Fullscreen. In a match press
+  **F10**: fullscreen on and off. Esc leaves fullscreen (and pauses). Rebind it under Key Bindings.
 - [ ] **Hardware acceleration.** Turn off the browser's graphics acceleration and restart it: the title screen warns
   that the game will run slowly and says where to turn it back on. With it on, no warning.
 
 ## Practice range (M21)
 
-- [ ] **Title screen, Practice range.** You're alone behind a painted line on a long concrete range, facing three
+- [ ] **Title screen, Practice Range.** You're alone behind a painted line on a long concrete range, facing three
   lanes of targets: white steel plates on the left, standing plywood figures in the middle, crouched ones on the
   right. Boards on both walls and lines on the floor say 10 m to 60 m. No whistle, no clock, no score.
 - [ ] **Shoot each kind.** A plate rings (you should still hear it at 60 m) and swings back, away from you; a figure falls back and
@@ -370,16 +371,32 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   under a plate: the BB stops on it and reads as a miss at that distance (the plate doesn't ring).
 - [ ] **Reload.** Empty a magazine and reload: the spare gauges never run down.
 - [ ] **Esc, Loadout.** The pause menu has a Loadout button. Change the BB weight or the hop-up, go Back and Resume:
-  you're where you stood, with the new setup (the HUD's replica name and the readout follow it). Then Quit to title
-  screen and start a normal match: it plays as before.
+  you're where you stood, with the new setup (the HUD's replica name and the readout follow it). Then Quit
+  and start a normal match: it plays as before.
 - [ ] **Walk downrange.** Nothing stops you walking among the targets; BBs fired from there still hit them.
+
+## Minimap and order wheel (M23)
+
+- [ ] **Minimap.** Start a match: a round map top left, the way you look always up, you the white arrow in the middle.
+  Your teammates are blue dots wherever they are (on the rim when off the map's edge), grey once hit.
+- [ ] **Hearing the other team.** Stand still and listen: when an opponent's footsteps or shots reach you, an orange
+  patch shows roughly where (dashed for steps, with a dot for a shot), fading after a few seconds. Far-off sounds give a
+  wider patch. Nothing shows for opponents you can't hear, and a patch goes once that player is hit.
+- [ ] **Order wheel (hover).** Hold **Z**: four orders round the crosshair. Move the mouse: the view and replica stay
+  still, a small pointer moves and lights the order it's on. Let go of Z on Follow Me: they follow (the bottom-left
+  line says so). Hold Z and let go without moving: nothing changes. Team Plan sends them back to the plan.
+- [ ] **Walk while choosing.** Hold Z and W together: you keep walking. Hold the trigger, then Z: firing stops, and
+  after the wheel closes it needs a new pull.
+- [ ] **Order wheel (click).** Settings → Controls → Order wheel → Click. Now letting go of Z gives nothing; point and
+  click instead. No BB is fired by that click.
+- [ ] **Keys.** F is Follow me now (X and V as before); Key bindings lists "Squad: order wheel (hold)".
 
 ## Squad orders and hearing (M22)
 
-- [ ] **Follow me (Z).** Start a match and press **Z**: a radio double-click answers and the HUD's bottom-left line
+- [ ] **Follow me (F; Z until the order wheel, M23).** Start a match and press **F**: a radio double-click answers and the HUD's bottom-left line
   reads SQUAD · FOLLOW ME. Walk round Depot: your two teammates keep up a few metres behind you, either side, sprinting
   to catch up if left behind; stop and one looks back the way you came, the other to a side. Walk (Shift) or crouch
-  and they walk too. They still fight anyone they see, then come back. Press **Z** again: "Back to the team plan".
+  and they walk too. They still fight anyone they see, then come back. Press **F** again: "Back to the team plan".
 - [ ] **Hold here (X).** Look at a spot (a doorway, a crate's corner) and press **X**: both go there side by side and
   watch the way you looked, and stay when you walk off. A diamond marker with the distance shows the held spot (none when each holds where it stands).
   Look somewhere else and press X: the hold moves; at the sky: each holds where it stands; press X again on the same
@@ -387,13 +404,13 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 - [ ] **Regroup (V).** With teammates far off, press **V**: they sprint back to you, then follow (the line changes to
   FOLLOW ME once both are back). Get hit: the order ends and they play their plan; order keys then say "Orders wait for
   the next round". A new round starts with no order.
-- [ ] **Rebind.** Settings → Controls → Key bindings has the three squad keys.
+- [ ] **Rebind.** Settings → Controls → Key Bindings has the three squad keys.
 - [ ] **Hearing through walls.** Sneak up to Orange behind a wall (running, not walking): they should notice you
   later than in the open. Do bots still seem to hear you through walls like a wallhack, or now too little?
 
 ## Tutorial (M16)
 
-- [ ] **Title screen.** A **Tutorial** button sits next to Start and Practice range, tagged "New? Start here" (until
+- [ ] **Title screen.** A **Tutorial** button sits next to Start and Practice Range, tagged "New? Start here" (until
   you've finished it once).
 - [ ] **Play it through.** The coach at the top says "Tutorial · 1 of 10 · Look around" and moves on when you've done
   each thing: look around, walk to the line, ring a plate, knock down a figure at 50 m or more (past the stock hop-up's reach; the coach shows where your last BB landed), reload, aim (or, with
@@ -432,21 +449,41 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 - [ ] **Frame rate.** Open the debug overlay (`` ` `` or F3) on each preset: note the frame rate and draw calls on your
   machine, in the open yard and in the office.
 
+## Menus and settings polish (M24)
+
+- [ ] **Labels.** Title: Start, Tutorial, **Practice Range**. Pause: Resume, Settings, **Quit**, with no note under
+  them. Result: Play Again, **New Game**, **Summary**, **Quit**. Settings has no "Changes save as you make them." line.
+- [ ] **Version.** The title screen's bottom-right corner names this build (`v0.1-alpha.3+N · commit` on `main`, just
+  the tag on a release download); hover it for how many commits after the release it is.
+- [ ] **Field of view** starts at 90° (unless you'd moved the slider before: then it keeps yours). New game's Map tile
+  says "An abandoned warehouse yard."
+- [ ] **Sound cues.** Settings → Accessibility, cues On: set **Sound cue size** to 200% and the colour to Yellow. In a
+  match the markers round the crosshair are big and yellow, and a HIT tag never sits on top of a shot arrow.
+- [ ] **Scoreboard size.** Settings → HUD: the scoreboard is bigger than before at 130%. Try 200% in a window about
+  1366 wide: it stops growing where the hit feed needs room, and when you're hit, HIT! and the OUT tag stay readable.
+- [ ] **Hit feed Keep.** Settings → HUD → Hit feed **Keep**: play three rounds; the last 10 hits stay up through every
+  round, and Play Again starts with none. Switch back to Fade mid-match: the lines fade over the next few seconds.
+- [ ] **Dev settings.** Tick **Dev settings** under the tabs: a Dev tab opens. Debug info On shows the panel in the
+  match; BB paths draws the BBs' flight; Game speed at 25% and 200% slows and speeds the round (mouse look stays
+  normal); Bottomless magazines never empties; Ghost lets BBs pass through you. With Ghost on, finish a match: the
+  summary says Dev settings kept it out of your records. Untick the box and Play Again: everything is back to normal
+  and that match counts. Disable Armory and Unlock all gear do nothing until the Armory and gear pool arrive.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
-  with **Resume**, **Settings** and **Quit to title screen** on a solid background (the match doesn't show
+  with **Resume**, **Settings** and **Quit** on a solid background (the match doesn't show
   through). Resume puts you back exactly where you were.
-- [ ] **Change keys.** In the pause menu click **Settings**, then **Key bindings**, click an action and press a new
-  key. **Back** returns to the pause menu; back in the game the new key works. **Reset to defaults** puts
+- [ ] **Change keys.** In the pause menu click **Settings**, then **Key Bindings**, click an action and press a new
+  key. **Back** returns to the pause menu; back in the game the new key works. **Reset All** puts
   everything back.
 - [ ] **Change the mouse sensitivity** (Settings, Controls) from the pause menu. Mouse look feels faster or slower
   straight away, and the setting is still there after you reload the page.
-- [ ] **Quit to title screen.** The title screen comes back with nothing behind it. Start, change the mode or
+- [ ] **Quit.** The title screen comes back with nothing behind it. Start, change the mode or
   difficulty, then Play: a fresh match from round 1, 0–0, in what you picked. Do this a few times: it loads just as
   quickly each time (nothing piles up).
 - [ ] **Win or lose a match.** The result screen shows MATCH OVER, YOU WIN! (or YOU LOSE) and the score, with
-  **Play Again** (same setup), **Change setup** (back to New game) and **Title screen**.
+  **Play Again** (same setup), **New Game** (back to New game), **Summary** and **Quit**.
 - [ ] **Switch to another browser tab, then come back.** The game pauses by itself and nothing happened while you
   were away: no surprise hits, the round clock didn't run.
 - [ ] **Alt+Tab to another program, then come back.** Same as above: paused and frozen until you click to resume.

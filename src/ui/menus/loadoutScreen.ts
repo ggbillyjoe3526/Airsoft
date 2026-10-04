@@ -125,7 +125,7 @@ export class LoadoutScreen {
     const columns = el('div', 'loadout-columns');
     columns.append(slotList, panelBox);
     page.body.append(columns);
-    page.footer.append(backButton(opts.onBack), el('p', 'menu-footer-note', 'Changes save as you make them.'));
+    page.footer.append(backButton(opts.onBack));
     this.pick(0);
   }
 

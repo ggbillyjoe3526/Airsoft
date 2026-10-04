@@ -97,6 +97,18 @@ const flat = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.
 const EAST = -Math.PI / 2;
 
 describe('squad orders (M22)', () => {
+  it('the order wheel (M23) picking the order in force keeps it; its key again cancels it; cancelOrder ends it', () => {
+    const { you, bots, run } = squad();
+    run(0.1);
+    expect(bots.giveOrder(you, 'follow')).toBe('follow');
+    expect(bots.giveOrder(you, 'follow', false)).toBe('follow');
+    expect(bots.orderOf(you)).toBe('follow');
+    expect(bots.giveOrder(you, 'follow')).toBe('none');
+    expect(bots.giveOrder(you, 'regroup')).toBe('regroup');
+    bots.cancelOrder(you);
+    expect(bots.orderOf(you)).toBe('none');
+  });
+
   it('follow me: teammates keep up behind you as you move, then stop and cover your back', () => {
     const { you, bots, mates, cmd, run } = squad();
     cmd.yaw = EAST;

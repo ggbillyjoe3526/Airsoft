@@ -33,6 +33,7 @@ import { createRangeTargets } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
+import type { DevSettings } from './config/dev';
 import { TUTORIAL_STEPS } from './config/tutorial';
 import { TutorialTracker, type TutorialView } from './tutorial/tutorial';
 import { CoachPanel } from './ui/coachPanel';
@@ -133,6 +134,8 @@ export class RangeSession {
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
     input.resetView(pose?.yaw ?? spawn.yaw);
+    // Nobody to order on the range: the order wheel's key does nothing.
+    input.ordersEnabled = false;
     if (pose) input.pitch = pose.pitch;
 
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, HITS);
@@ -206,6 +209,14 @@ export class RangeSession {
   setMotion(scale: MotionScale): void {
     this.motion = scale;
     this.combat.setMotion(scale);
+  }
+
+  /**
+   * The Dev settings that change play (M24). Nobody shoots at you here, so only Bottomless magazines applies, and not
+   * in the tutorial: its reload steps need a magazine to run down.
+   */
+  setDevCheats(cheats: DevSettings): void {
+    this.player.armament.bottomless = cheats.bottomlessMags && !this.tutorial;
   }
 
   /** A new quality preset (Settings → Graphics, M14): as MatchSession.setQuality. */

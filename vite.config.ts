@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { archivalDescribe, versionLabel } from './src/config/buildVersion.ts';
 
 /**
  * Size budgets in kB (minified, before gzip). Rapier inlines its WASM, so it gets its own budget: 4,333 kB measured at
@@ -32,8 +33,34 @@ function chunkBudget(): Plugin {
   };
 }
 
-export default defineConfig({
+/** The two Node calls the version needs, typed here: the project doesn't load Node's types. */
+interface NodeCalls {
+  execFileSync(file: string, args: string[], options: { encoding: 'utf8'; stdio: string[] }): string;
+  readFileSync(path: URL, encoding: 'utf8'): string;
+}
+
+/**
+ * Which build this is, for the title screen (config/buildVersion.ts): `git describe` in a checkout, else the
+ * `.git_archival.txt` GitHub fills in when it zips a release, else nothing.
+ */
+async function buildDescribe(): Promise<string> {
+  const node = { ...(await import('node:child_process' as string)), ...(await import('node:fs' as string)) } as NodeCalls;
+  try {
+    return node.execFileSync('git', ['describe', '--tags', '--always'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch {
+    try {
+      return archivalDescribe(node.readFileSync(new URL('./.git_archival.txt', import.meta.url), 'utf8'));
+    } catch {
+      return '';
+    }
+  }
+}
+
+export default defineConfig(async () => ({
   base: './',
+  define: {
+    __BUILD_VERSION__: JSON.stringify(versionLabel(await buildDescribe())),
+  },
   plugins: [chunkBudget()],
   build: {
     target: 'es2022',
@@ -56,4 +83,4 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     environment: 'node',
   },
-});
+}));

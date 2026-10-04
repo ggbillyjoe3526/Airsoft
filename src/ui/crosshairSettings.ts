@@ -68,10 +68,6 @@ export function crosshairSettings(opts: CrosshairSettingsOptions): HTMLDivElemen
 /** The colour picker, each button with a swatch of its colour. */
 function colourPicker(current: CrosshairSettings, onChange: (color: CrosshairSettings['color']) => void): HTMLDivElement {
   const picker = new OptionPicker('Colour', CROSSHAIR_COLORS, current.color, 'crosshair.color', onChange);
-  picker.root.querySelectorAll('.picker-button').forEach((button, i) => {
-    const swatch = el('span', 'crosshair-swatch');
-    swatch.style.background = CROSSHAIR_COLORS[i]!.css;
-    button.prepend(swatch);
-  });
+  picker.addSwatches(CROSSHAIR_COLORS);
   return picker.root;
 }

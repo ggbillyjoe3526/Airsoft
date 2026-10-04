@@ -81,6 +81,8 @@ export interface Character {
   /** Seconds left in which a sprint's or a jump's shake still settles slowly (sim/accuracy.ts); 0 = locks on fast. */
   shakeCarry: number;
   armament: Armament;
+  /** BBs pass through: the Dev settings' Ghost (M24), for the player only. Kept between rounds. */
+  ghost: boolean;
 }
 
 export function createCharacter(
@@ -129,6 +131,7 @@ export function createCharacter(
     shakeCarry: 0,
     aiming: false,
     armament: createArmament(loadout),
+    ghost: false,
   };
 }
 
@@ -191,11 +194,12 @@ export function respawnCharacter(c: Character, loadout: readonly ReplicaConfig[]
   c.statusTime = 0;
   c.hitBy = -1;
   c.walkOffStuck = 0;
-  const { modes, optics, hopUps, bbWeights, parts, triggerWasDown } = c.armament;
+  const { modes, optics, hopUps, bbWeights, parts, triggerWasDown, bottomless } = c.armament;
   // Fresh magazines for the parts fitted (a hi-cap refills as a hi-cap).
   c.armament = createArmament(loadout, parts.length === loadout.length ? parts : []);
   // A trigger still held from before the round needs letting go and pulling again (no semi shot at the whistle).
   c.armament.triggerWasDown = triggerWasDown;
+  c.armament.bottomless = bottomless;
   if (modes.length === c.armament.modes.length) c.armament.modes = modes;
   if (optics.length === c.armament.optics.length) c.armament.optics = optics;
   if (hopUps.length === c.armament.hopUps.length) c.armament.hopUps = hopUps;

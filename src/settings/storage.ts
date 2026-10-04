@@ -28,6 +28,8 @@ export type SettingField =
   | 'crouch'
   | 'aimMode'
   | 'sprintMode'
+  /** How the order wheel gives an order (M23): hover or click. */
+  | 'orderWheel'
   | 'invertMouse'
   | 'mouseDpi'
   | 'reducedMotion'
@@ -45,7 +47,15 @@ export type SettingField =
   | `slot.${string}`
   | `crosshair.${string}`
   | `grip.${string}`
-  | `mag.${string}`;
+  | `mag.${string}`
+  /** Settings → Accessibility, the sound cues' look (M24). */
+  | 'soundCueSize'
+  | 'soundCueColour'
+  /** Settings → HUD (M24). */
+  | 'scoreboardSize'
+  | 'hitFeed'
+  /** The Dev settings (M24, settings/dev.ts): `dev.enabled` and one per entry in config/dev.ts. */
+  | `dev.${string}`;
 
 /** Where earlier builds kept a setting, before the settings object. */
 const LEGACY_KEYS: Partial<Record<SettingField, string>> = {
