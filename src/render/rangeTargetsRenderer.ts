@@ -22,6 +22,16 @@ export function plateSwing(t: number): number {
   return V.swingAngle * Math.exp(-V.swingDamping * t) * Math.abs(Math.sin(V.swingRate * t + Math.PI / 2));
 }
 
+/** A hit plate's hanger turn about x (rad): positive, since the plate hangs below the hanger and swings back. */
+export function plateRotation(t: number): number {
+  return plateSwing(t);
+}
+
+/** A figure's hinge turn about x (rad): negative, since the figure stands above its hinge and falls back. */
+export function figureRotation(down: number): number {
+  return -figureTilt(down);
+}
+
 /**
  * The practice range's targets (M21): steel plates on posts that swing back when hit, plywood figures that fall back
  * on their hinge and stand up again, and the distance markers (a painted line across the floor and a board on each
@@ -55,9 +65,9 @@ export class RangeTargetsRenderer {
       let mover: THREE.Object3D;
       if (t.kind === 'steel') {
         // The plate hangs from the top of a post frame; it swings about the hanger.
-        const top = t.position.y + RANGE.plateRadius + 0.1;
-        const upright = new THREE.Mesh(this.trackGeo(new THREE.BoxGeometry(V.postWidth, top, V.postWidth)), post);
-        upright.position.set(0, top / 2, -0.06);
+        const top = t.position.y + RANGE.plateRadius + RANGE.postAbovePlate;
+        const upright = new THREE.Mesh(this.trackGeo(new THREE.BoxGeometry(RANGE.postWidth, top, RANGE.postWidth)), post);
+        upright.position.set(0, top / 2, -RANGE.postBehind);
         const hanger = new THREE.Group();
         hanger.position.set(0, top, 0);
         const plate = new THREE.Mesh(plateGeo, steel);
@@ -98,13 +108,14 @@ export class RangeTargetsRenderer {
 
   /** Once per frame: figures follow their time down, plates swing and settle. */
   update(dt: number): void {
-    for (const [i, t] of this.targets.entries()) {
+    for (let i = 0; i < this.targets.length; i++) {
+      const t = this.targets[i]!;
       const mover = this.movers[i]!;
       if (t.kind === 'figure') {
-        mover.rotation.x = -figureTilt(t.down); // falls back, away from the firing line
+        mover.rotation.x = figureRotation(t.down);
       } else {
         const s = (this.swingT[i]! += dt);
-        mover.rotation.x = Number.isFinite(s) ? -plateSwing(s) : 0;
+        mover.rotation.x = Number.isFinite(s) ? plateRotation(s) : 0;
       }
     }
   }

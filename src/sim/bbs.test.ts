@@ -78,14 +78,14 @@ describe('stepBBs', () => {
     expect(stuck.active).toBe(false);
   });
 
-  it('removes BBs that fly too long or fall out of the world, silently', () => {
+  it('removes BBs that fly too long or fall out of the world, with no impact (only a bbLost for the range readout)', () => {
     const pool = createBBPool(2);
     const up = spawnBB(pool, 0, vec3(0, 1.5, 0), vec3(0, 1, 0), 40, 0, 0.25e-3);
     const events: GameEvent[] = [];
     const ticks = Math.ceil(BALLISTICS.maxLifetime / DT) + 2;
     for (let i = 0; i < ticks; i++) stepBBs(pool, BALLISTICS, { raycastStatic: () => -1 }, KILL_Y, events, DT);
     expect(up.active).toBe(false);
-    expect(events).toHaveLength(0);
+    expect(events).toEqual([{ type: 'bbLost', position: expect.anything(), ownerId: 0 }]);
   });
 
   it('records the previous position for the collision segment and interpolation', () => {
@@ -107,7 +107,7 @@ describe('stepBBs out-of-world removal', () => {
     for (let i = 0; i < 5; i++) stepBBs(pool, BALLISTICS, { raycastStatic: () => -1 }, KILL_Y, events, DT);
     expect(bb.active).toBe(false);
     expect(bb.age).toBeLessThan(BALLISTICS.maxLifetime);
-    expect(events).toHaveLength(0);
+    expect(events.map((e) => e.type)).toEqual(['bbLost']);
   });
 });
 

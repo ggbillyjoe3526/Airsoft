@@ -37,7 +37,7 @@ describe('practice range targets (M21)', () => {
   it('never hides one target behind another from where you start', () => {
     const targets = createRangeTargets();
     const eye = vec3(0, BODY.standEyeHeight, RANGE.spawnBack);
-    const hit = { index: -1, at: 0 };
+    const hit = { index: -1, at: 0, post: false };
     for (const [i, t] of targets.entries()) {
       // Aim at the middle of what can be hit: the plate's centre, a figure's chest (or a crouched one's).
       const aim = vec3(t.position.x, t.kind === 'steel' ? t.position.y : t.crouched ? 0.7 : 1.2, t.position.z);
@@ -55,6 +55,21 @@ describe('practice range targets (M21)', () => {
     expect(rayRangeTarget(vec3(p.x + RANGE.plateRadius + 0.01, p.y, p.z + 5), vec3(0, 0, -1), 10, plate, HITS)).toBe(-1);
     expect(rayRangeTarget(vec3(p.x, p.y, p.z - 5), vec3(0, 0, 1), 10, plate, HITS)).toBe(-1);
     expect(rayRangeTarget(front, vec3(0, 0, -1), 4, plate, HITS)).toBe(-1); // out of reach this tick
+  });
+
+  it("stops a BB on a plate's post as a miss, without ringing the plate", () => {
+    const targets = createRangeTargets();
+    const plate = targets.find((t) => t.kind === 'steel')!;
+    const from = vec3(plate.position.x, 0.5, plate.position.z + 5); // under the plate, at the post
+    const pool = createBBPool(2);
+    spawnBB(pool, 0, from, vec3(0, 0, -1), 80, 0, 0.25e-3);
+    const events: GameEvent[] = [];
+    const ctx = { characters: [], hits: HITS, elimination: openFieldElimination([[], []]), rangeTargets: targets };
+    for (let i = 0; i < 10; i++) stepBBs(pool, BALLISTICS, open, -10, events, DT, ctx);
+    expect(events.filter((e) => e.type === 'targetHit')).toHaveLength(0);
+    const impacts = events.filter((e) => e.type === 'bbImpact');
+    expect(impacts).toHaveLength(1);
+    expect(impacts[0]!.type === 'bbImpact' && impacts[0]!.position.z).toBeCloseTo(plate.position.z - RANGE.postBehind + RANGE.postWidth / 2, 2);
   });
 
   it('knocks a figure down for a while, then stands it up again', () => {

@@ -7,8 +7,9 @@ const WALL_THICKNESS = 0.4;
 
 /**
  * The practice range (M21): a long concrete floor between two walls, a tall backstop downrange and a wall behind the
- * firing line, so no BB leaves it. Downrange is -z; the firing line runs across z = 0. The targets aren't blocks: they
- * are simulated on their own (sim/rangeTargets.ts) and never stop you walking.
+ * firing line. It has no roof: a BB fired high can sail out over a wall, and the readout says so. Downrange is -z;
+ * the firing line runs across z = 0. The targets aren't blocks: they are simulated on their own
+ * (sim/rangeTargets.ts) and never stop you walking.
  */
 function rangeBlocks(): MapBlock[] {
   const w = RANGE.halfWidth;

@@ -301,5 +301,53 @@ test('the practice range opens from the title screen and reads out the last BB',
   const ammo = s1.characters[0]!.armament.ammo[0]!;
   expect(ammo.mag).toBeLessThan(s1.characters[0]!.armament.handling[0]!.magSize);
   expect(ammo.pouch.every((m) => m === s1.characters[0]!.armament.handling[0]!.magSize)).toBe(true);
+
+  // Aim at the standing figure 10 m out (the middle lane's nearest) and knock it down: the readout names it.
+  type Aim = { airsoft: { input: { yaw: number; pitch: number }; state: { targets: { kind: string; crouched: boolean; distance: number; position: { x: number; z: number } }[]; characters: { position: { x: number; z: number } }[] } } };
+  await page.evaluate(() => {
+    const game = (window as unknown as Aim).airsoft;
+    const me = game.state.characters[0]!.position;
+    const figure = game.state.targets.find((t) => t.kind === 'figure' && !t.crouched && t.distance === 10)!;
+    const dx = figure.position.x - me.x;
+    const dz = figure.position.z - me.z;
+    game.input.yaw = Math.atan2(-dx, -dz); // facing -z at yaw 0
+    game.input.pitch = Math.atan2(1.2 - 1.62, Math.hypot(dx, dz)); // eye height to the chest
+  });
+  await page.mouse.down();
+  await expect(readout).toContainText('hit Figure 10 m', { timeout: 30_000 });
+  await page.mouse.up();
+
+  // Esc (here: tabbing away) on the range offers the Loadout; heavier BBs, Back, Resume: the range is rebuilt where you
+  // stood and looked, with the new BBs in the rifle.
+  const before = await page.evaluate(() => {
+    const game = (window as unknown as Aim).airsoft;
+    return { ...game.state.characters[0]!.position, yaw: game.input.yaw, pitch: game.input.pitch };
+  });
+  const pauseMenu = page.locator('.menu-pause');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(pauseMenu).toBeVisible({ timeout: 10_000 });
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await pauseMenu.getByRole('button', { name: 'Loadout' }).click();
+  const loadout = page.locator('.menu-loadout');
+  await loadout.getByRole('group', { name: 'AEG rifle BB weight' }).getByRole('button', { name: '0.28 g' }).click();
+  await loadout.getByRole('button', { name: 'Back' }).click();
+  await pauseMenu.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
+  await expect(readout).toContainText('Practice range'); // a new range: no last shot yet
+  const after = await page.evaluate(() => {
+    const game = (window as unknown as Aim & { airsoft: { state: { characters: { armament: { bbWeights: number[] } }[] } } }).airsoft;
+    return { ...game.state.characters[0]!.position, yaw: game.input.yaw, pitch: game.input.pitch, bb: game.state.characters[0]!.armament.bbWeights[0] };
+  });
+  expect(after.x).toBeCloseTo(before.x, 1);
+  expect(after.z).toBeCloseTo(before.z, 1);
+  expect(after.yaw).toBeCloseTo(before.yaw, 3);
+  expect(after.pitch).toBeCloseTo(before.pitch, 3);
+  expect(after.bb).toBe(0.28);
   expect(errors).toEqual([]);
 });

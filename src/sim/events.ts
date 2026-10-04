@@ -28,6 +28,8 @@ export type GameEvent =
   | { type: 'characterHit'; victimId: number; shooterId: number; position: Vec3; direction: Vec3; ricochet: boolean }
   /** A ricochet ticked a character, in a match where ricochets don't count (M20): they feel it and play on. */
   | { type: 'ricochetTick'; victimId: number; shooterId: number; position: Vec3; direction: Vec3 }
+  /** A BB went without hitting anything: it fell out of the level or flew past its lifetime (M21: the range's readout). */
+  | { type: 'bbLost'; position: Vec3; ownerId: number }
   /** A BB hit a practice range target (M21; sim/rangeTargets.ts). `ricochet`: it had bounced on the way. */
   | { type: 'targetHit'; targetId: number; kind: RangeTargetKind; shooterId: number; position: Vec3; ricochet: boolean }
   /**

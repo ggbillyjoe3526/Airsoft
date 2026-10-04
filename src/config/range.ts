@@ -36,6 +36,13 @@ export const RANGE = {
   /** Steel plates: radius (m) and the plate centre's height (chest height, m). The plate faces the firing line. */
   plateRadius: 0.2,
   plateHeight: 1.25,
+  /**
+   * Each plate hangs from a square post just behind it (m): its width, how far behind the plate it stands and how far
+   * above the plate's top the hanger is. BBs stop on the post (a miss) as on a wall.
+   */
+  postWidth: 0.05,
+  postBehind: 0.06,
+  postAbovePlate: 0.1,
   /** A figure that's hit goes down and stands up again after this long (s). */
   figureDownTime: 1.5,
   /** Range size (m): half the width, the backstop's distance and height, the walls' height, the space behind the line. */
@@ -68,7 +75,6 @@ export const RANGE_VISUALS = {
   plateThickness: 0.025,
   plateSegments: 24,
   postColor: 0x4b5157,
-  postWidth: 0.05,
   /** A plate that's hit swings back on its hanger and settles: angle (rad), wobble (rad/s), settling (1/s). */
   swingAngle: 0.35,
   swingRate: 16,

@@ -69,15 +69,47 @@ export function rayRangeTarget(o: Vec3, d: Vec3, maxT: number, target: RangeTarg
   return h >= 0 ? h : b;
 }
 
-/** The nearest target along the ray within `maxT`: its index in `targets` and the distance, or index -1. */
-export function firstRangeTargetHit(o: Vec3, d: Vec3, maxT: number, targets: readonly RangeTarget[], hits: HitConfig, out: { index: number; at: number }): void {
+const post: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
+
+/** Distance along the unit ray to a steel plate's post (from the floor to its hanger, just behind the plate), or -1. */
+export function rayRangePost(o: Vec3, d: Vec3, maxT: number, target: RangeTarget): number {
+  if (target.kind !== 'steel') return -1;
+  post.x = target.position.x;
+  post.z = target.position.z - RANGE.postBehind;
+  post.r = RANGE.postWidth / 2;
+  post.y0 = post.r;
+  post.y1 = target.position.y + RANGE.plateRadius + RANGE.postAbovePlate - post.r;
+  return rayCapsule(o, d, maxT, post);
+}
+
+/** What a BB's path meets first among the range's targets. */
+export interface RangeTargetHit {
+  /** Index in `targets`, or -1 for none. */
+  index: number;
+  /** Distance along the ray (maxT when nothing is hit). */
+  at: number;
+  /** It met a plate's post, not the target itself: the BB stops there, a miss. */
+  post: boolean;
+}
+
+/** The nearest target (or plate post) along the ray within `maxT`. */
+export function firstRangeTargetHit(o: Vec3, d: Vec3, maxT: number, targets: readonly RangeTarget[], hits: HitConfig, out: RangeTargetHit): void {
   out.index = -1;
   out.at = maxT;
+  out.post = false;
   for (let i = 0; i < targets.length; i++) {
-    const t = rayRangeTarget(o, d, out.at, targets[i]!, hits);
+    const target = targets[i]!;
+    const t = rayRangeTarget(o, d, out.at, target, hits);
     if (t >= 0 && t <= out.at) {
       out.index = i;
       out.at = t;
+      out.post = false;
+    }
+    const p = rayRangePost(o, d, out.at, target);
+    if (p >= 0 && p < out.at) {
+      out.index = i;
+      out.at = p;
+      out.post = true;
     }
   }
 }

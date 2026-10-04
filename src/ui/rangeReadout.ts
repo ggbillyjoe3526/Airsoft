@@ -7,11 +7,14 @@ export interface LastShot {
   distance: number;
   /** The target it hit ("Steel", "Figure" …) and that target's marked distance, or null for a miss. */
   target: { label: string; distance: number } | null;
+  /** It left the range (over a wall or the backstop) without landing anywhere. */
+  lost?: boolean;
 }
 
-/** "Last BB: 31 m · hit Steel 30 m", or "Last BB: 44 m · miss"; before the first shot, how the range works. */
+/** "Last BB: 31 m · hit Steel 30 m", "Last BB: 44 m · miss" or that it flew out; before the first shot, how the range works. */
 export function lastShotText(shot: LastShot | null): string {
   if (!shot) return RANGE_INTRO;
+  if (shot.lost) return 'Last BB: flew out of the range · aim lower or turn the hop-up down';
   const d = `${Math.round(shot.distance)} m`;
   return shot.target ? `Last BB: ${d} · hit ${shot.target.label} ${shot.target.distance} m` : `Last BB: ${d} · miss`;
 }

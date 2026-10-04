@@ -6,7 +6,7 @@ import type { Character } from './character';
 import { type EliminationContext, eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
 import { characterHitVolume, createHitVolume, rayCharacter } from './hitbox';
-import { firstRangeTargetHit, hitRangeTarget, type RangeTarget } from './rangeTargets';
+import { firstRangeTargetHit, hitRangeTarget, type RangeTarget, type RangeTargetHit } from './rangeTargets';
 import { ricochet } from './ricochet';
 import type { RngState } from './rng';
 import { copy, vec3 } from './vec';
@@ -14,7 +14,7 @@ import { copy, vec3 } from './vec';
 const segmentDir = vec3();
 const volume = createHitVolume();
 const surface: SurfaceHit = { normal: vec3(), material: 'concrete' };
-const targetHit = { index: -1, at: 0 };
+const targetHit: RangeTargetHit = { index: -1, at: 0, post: false };
 
 /** Who BBs can hit this tick, and what happens to them. */
 export interface BBTargets {
@@ -86,6 +86,11 @@ export function stepBBs(
           bb.position.y = bb.prevPosition.y + segmentDir.y * targetHit.at;
           bb.position.z = bb.prevPosition.z + segmentDir.z * targetHit.at;
           bb.active = false;
+          if (targetHit.post) {
+            // A plate's post: the BB stops on it, as on a wall (a miss where it stopped).
+            events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+            continue;
+          }
           hitRangeTarget(target);
           events.push({ type: 'targetHit', targetId: target.id, kind: target.kind, shooterId: bb.ownerId, position: vec3(bb.position.x, bb.position.y, bb.position.z), ricochet: bb.bounces > 0 });
           continue;
@@ -119,6 +124,9 @@ export function stepBBs(
         continue;
       }
     }
-    if (bb.age > cfg.maxLifetime || bb.position.y < killY) bb.active = false;
+    if (bb.age > cfg.maxLifetime || bb.position.y < killY) {
+      bb.active = false;
+      events.push({ type: 'bbLost', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+    }
   }
 }

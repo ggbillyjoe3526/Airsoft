@@ -45,6 +45,7 @@ export interface RangePose {
   x: number;
   z: number;
   yaw: number;
+  pitch: number;
 }
 
 /**
@@ -119,6 +120,7 @@ export class RangeSession {
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
     input.resetView(pose?.yaw ?? spawn.yaw);
+    if (pose) input.pitch = pose.pitch;
 
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
     this.combat.skipStartWhistle();
@@ -130,7 +132,7 @@ export class RangeSession {
 
   /** Where you stand and look now, to rebuild the range there. */
   get pose(): RangePose {
-    return { x: this.player.position.x, z: this.player.position.z, yaw: this.input.yaw };
+    return { x: this.player.position.x, z: this.player.position.z, yaw: this.input.yaw, pitch: this.input.pitch };
   }
 
   get characterCount(): number {
@@ -198,8 +200,9 @@ export class RangeSession {
     this.combat.afterTick();
     this.targets.afterTick(this.state.events);
     for (const e of this.state.events) {
-      // Your BB came down (a ricochet's last stop wins), or hit a target.
+      // Your BB came down (a ricochet's last stop wins), hit a target, or flew out over a wall.
       if (e.type === 'bbImpact' && e.ownerId === PLAYER_ID) this.lastShot = { distance: this.groundDistance(e.position), target: null };
+      else if (e.type === 'bbLost' && e.ownerId === PLAYER_ID) this.lastShot = { distance: 0, target: null, lost: true };
       else if (e.type === 'targetHit' && e.shooterId === PLAYER_ID) {
         const t = this.state.targets.find((x) => x.id === e.targetId);
         this.lastShot = { distance: this.groundDistance(e.position), target: t ? { label: t.label, distance: t.distance } : null };
