@@ -15,6 +15,9 @@ import { expect, test } from '@playwright/test';
  * in software on a CI runner for the reload and range steps to finish in time.
  */
 test('the game boots, starts a match, fires, reloads and aims without errors', async ({ page }, testInfo) => {
+  // The longest test (since the audit fixes it also rebinds a key and plays to the result screen): about 30 s here,
+  // three to four times that on a CI runner in software, so it gets twice the default budget.
+  test.setTimeout(180_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
