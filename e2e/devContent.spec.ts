@@ -2,11 +2,12 @@ import { expect, test } from '@playwright/test';
 
 /**
  * Dev content (M35): the Dev tab's Dev content switch shows content still being built and hides it again. Woodland is
- * dev content today: with the switch off the Map pop-up doesn't list it at all; on, it is listed under Depot, greyed out
- * with its "Coming soon" tag (M33a) and disabled. A test of its own, so the long match test in boot.spec.ts plays the
- * same way as before. Uses `?nolock` like the other smoke tests.
+ * dev content today: with the switch off the Map pop-up doesn't list it at all; on, it is listed under Depot like any
+ * other map and can be picked (M33d); off again, it is hidden and Depot plays, while the pick stays saved. A test of
+ * its own, so the long match test in boot.spec.ts plays the same way as before. Uses `?nolock` like the other smoke
+ * tests.
  */
-test('the Dev content switch lists Woodland in the Map pop-up and hides it again', async ({ page }) => {
+test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked, and hides it again', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
@@ -48,20 +49,24 @@ test('the Dev content switch lists Woodland in the Map pop-up and hides it again
   await expect(woodland).toBeHidden();
   await closeMap();
 
-  // On: listed under Depot like any other entry, greyed out as Coming soon and disabled, so it can't be picked.
+  // On: listed under Depot like any other map, no tag, and it can be picked (M33d).
   await devContent(true);
   await openMap();
   await expect(woodland).toBeVisible();
-  await expect(woodland).toBeDisabled();
-  await expect(woodland).toContainText('Coming soon');
-  await closeMap();
-  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Depot');
+  await expect(woodland).toBeEnabled();
+  await expect(woodland).not.toContainText('Coming soon');
+  await woodland.click();
+  await expect(mapDialog).toBeHidden();
+  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Woodland');
 
-  // Off again: gone.
+  // Off again: gone, and Depot plays; the pick stays saved, so turning the switch on brings Woodland back.
   await devContent(false);
+  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Depot');
   await openMap();
   await expect(woodland).toBeHidden();
   await closeMap();
+  await devContent(true);
+  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Woodland');
 
   expect(errors, errors.join(' | ')).toEqual([]);
 });

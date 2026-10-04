@@ -32,35 +32,37 @@ function tagDev(list: readonly Taggable[], id: string): void {
 afterEach(() => {
   while (undo.length) undo.pop()!();
 });
-/** The tag each entry ships with: everything public except the Pro difficulty while it is built (M36). */
-const shipped = (o: Taggable) => (o.id === 'pro' ? 'dev' : 'public');
+const devIds = (list: readonly Taggable[]): string[] => list.filter((o) => o.tag === 'dev').map((o) => o.id);
 
 describe('New game picks and dev content (M35)', () => {
-  it('has every real option public today except Pro (M36), so no other pick uses dev content', () => {
-    for (const map of MAPS) expect(map.tag).toBe('public');
-    for (const list of [MATCH_MODES, DIFFICULTIES, TEAMMATE_DIFFICULTIES]) for (const o of list) expect(o.tag).toBe(shipped(o));
-    for (const list of [WINS_NEEDED_CHOICES, TEAM_SIZE_CHOICES]) for (const o of list) expect(o.tag ?? 'public').toBe('public');
+  it('tags only Woodland, 4v4, 5v5 (M33d) and Pro (M36) dev today, so the default picks use no dev content', () => {
+    expect(devIds(MAPS)).toEqual(['woodland']);
+    for (const list of [MATCH_MODES, WINS_NEEDED_CHOICES]) expect(devIds(list)).toEqual([]);
+    for (const list of [DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual(['pro']);
+    expect(devIds(TEAM_SIZE_CHOICES)).toEqual(['4', '5']);
     expect(pickTags(picks()).every((t) => t === 'public')).toBe(true);
     expect(picksUseDev(picks())).toBe(false);
   });
 
-  it('plays every real option as picked, with Dev content off or on', () => {
-    for (const devContent of [false, true]) {
-      for (const map of MAPS) for (const mode of MATCH_MODES) {
-        const p = picks({ map: map.id, mode: mode.id });
-        expect(playedPicks(p, devContent)).toEqual(p);
-      }
-      // Pro (dev, M36) plays as the default level with Dev content off.
+  it('plays every real option as picked with Dev content on, and a dev one as its default with it off', () => {
+    for (const map of MAPS) for (const mode of MATCH_MODES) {
+      const p = picks({ map: map.id, mode: mode.id });
+      expect(playedPicks(p, true)).toEqual(p);
+      expect(playedPicks(p, false).map).toBe(map.tag === 'dev' ? DEFAULT_MAP : map.id);
+      expect(picksUseDev(playedPicks(p, false))).toBe(false);
+    }
+    // Pro (dev, M36) plays as the default level with Dev content off.
+    for (const devContent of [false, true]) for (const d of DIFFICULTIES) for (const t of TEAMMATE_DIFFICULTIES) {
       const plays = (o: { id: Difficulty; tag: string }) => (devContent || o.tag === 'public' ? o.id : DEFAULT_DIFFICULTY);
-      for (const d of DIFFICULTIES) for (const t of TEAMMATE_DIFFICULTIES) {
-        const p = picks({ difficulty: d.id, teammateDifficulty: t.id });
-        expect(playedPicks(p, devContent)).toEqual(picks({ difficulty: plays(d), teammateDifficulty: plays(t) }));
-      }
-      for (const w of WINS_NEEDED_CHOICES) for (const s of TEAM_SIZE_CHOICES) {
-        const p = picks({}, { winsNeeded: Number(w.id), teamSize: Number(s.id) });
-        expect(playedPicks(p, devContent)).toEqual(p);
-        expect(picksUseDev(playedPicks(p, devContent))).toBe(false);
-      }
+      const p = picks({ difficulty: d.id, teammateDifficulty: t.id });
+      expect(playedPicks(p, devContent)).toEqual(picks({ difficulty: plays(d), teammateDifficulty: plays(t) }));
+    }
+    for (const w of WINS_NEEDED_CHOICES) for (const s of TEAM_SIZE_CHOICES) {
+      const p = picks({}, { winsNeeded: Number(w.id), teamSize: Number(s.id) });
+      expect(playedPicks(p, true)).toEqual(p);
+      expect(picksUseDev(playedPicks(p, true))).toBe(s.tag === 'dev');
+      expect(playedPicks(p, false).rules.teamSize).toBe(s.tag === 'dev' ? DEFAULT_MATCH_RULES.teamSize : Number(s.id));
+      expect(picksUseDev(playedPicks(p, false))).toBe(false);
     }
   });
 
@@ -111,8 +113,10 @@ describe('New game picks and dev content (M35)', () => {
     expect(picksUseDev(picks({ difficulty: 'hard' }, { teamSize: 1 }))).toBe(false);
   });
 
-  it('restores the lists after a test tagged an entry (the real lists keep their shipped tags)', () => {
-    for (const o of [...MAPS, ...MATCH_MODES, ...DIFFICULTIES, ...TEAMMATE_DIFFICULTIES]) expect(o.tag).toBe(shipped(o));
+  it('restores the lists after a test tagged an entry (only the real dev entries stay dev)', () => {
+    expect(devIds(MAPS)).toEqual(['woodland']);
+    expect(devIds(MATCH_MODES)).toEqual([]);
+    for (const list of [DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual(['pro']);
   });
 });
 

@@ -28,6 +28,9 @@ export class OptionPicker<T extends string> {
    * the option it plays as. Null when the pick itself shows.
    */
   private standIn: T | null = null;
+  /** Whether Dev content is on (setDevContent), and which options the current context has room for (limit). */
+  private devContent = false;
+  private allowed: (id: T) => boolean = () => true;
 
   /** `initial`: the option shown as picked (normally loadChoice(field, ...)). */
   constructor(
@@ -90,9 +93,16 @@ export class OptionPicker<T extends string> {
    * (what the pick plays as now). Nothing is saved: the pick stays, and shows again once it is offered.
    */
   setDevContent(on: boolean, value: T): void {
-    for (const o of this.options) this.buttons.get(o.id)!.hidden = !isAvailable(o.tag, on);
+    this.devContent = on;
+    this.applyHidden();
     this.standIn = value === this.current ? null : value;
     this.refresh();
+  }
+
+  /** Offers only the options `allowed` says yes to (the team sizes a map has room for, M33); the rest are hidden. */
+  limit(allowed: (id: T) => boolean): void {
+    this.allowed = allowed;
+    this.applyHidden();
   }
 
   /** Shows `value` as picked without saving it or reporting a change (another choice set it, e.g. M20's teammates). */
@@ -100,6 +110,11 @@ export class OptionPicker<T extends string> {
     this.current = value;
     this.standIn = null;
     this.refresh();
+  }
+
+  /** An option shows when it is available (M35) and allowed (limit). */
+  private applyHidden(): void {
+    for (const o of this.options) this.buttons.get(o.id)!.hidden = !isAvailable(o.tag, this.devContent) || !this.allowed(o.id);
   }
 
   private refresh(): void {
