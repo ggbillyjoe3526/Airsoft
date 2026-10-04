@@ -121,6 +121,8 @@ describe('gpuTier (REN-03)', () => {
       ['ANGLE (AMD, AMD Radeon(TM) 680M (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)', 'integrated'],
       ['ANGLE (AMD, AMD Radeon RX Vega 56 (0x0000687F) Direct3D11 vs_5_0 ps_5_0, D3D11)', 'discrete'],
       ['ANGLE (AMD, Radeon RX Vega 64 Direct3D11 vs_5_0 ps_5_0, D3D11)', 'discrete'],
+      ['ANGLE (AMD, AMD Radeon Pro Vega 20, OpenGL 4.1)', 'discrete'],
+      ['ANGLE (AMD, AMD Radeon Pro Vega 48, OpenGL 4.1)', 'discrete'],
       ['ANGLE (AMD, AMD Radeon RX 7600M XT (0x00007480) Direct3D11 vs_5_0 ps_5_0, D3D11)', 'discrete'],
       ['ANGLE (AMD, AMD Radeon RX 6800 XT (0x000073BF) Direct3D11 vs_5_0 ps_5_0, D3D11)', 'discrete'],
       ['ANGLE (NVIDIA, NVIDIA GeForce RTX 5090 (0x00002B85) Direct3D11 vs_5_0 ps_5_0, D3D11)', 'discrete'],

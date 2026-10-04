@@ -82,9 +82,10 @@ const ENTRY_DISCRETE = /geforce\s*mx\s*\d/i;
 /**
  * AMD's laptop and desktop APUs that the driver names like a card: "Radeon(TM) RX Vega 10 Graphics" (Ryzen 2000 and
  * 3000 U), "Radeon Vega 8 Graphics", "Radeon 680M" / "780M" (the RX 7xxM cards are discrete and keep their "RX"). The
- * Vega cards (RX Vega 56 and 64) are discrete; Mesa may name an APU only by its code name ("AMD RAVEN").
+ * Vega cards (RX Vega 56 and 64, and the Radeon Pro Vega 16, 20 and 48 in Macs) are discrete; Mesa may name an APU only by
+ * its code name ("AMD RAVEN").
  */
-const APU = /radeon\b.*\bvega\s+(?!56\b|64\b)\d{1,2}\b|radeon(\s*\(tm\))?\s*\d{3}m\b|\bamd\s+(raven2?|picasso|renoir|lucienne|cezanne|barcelo|rembrandt|mendocino|phoenix|vangogh)\b/i;
+const APU = /radeon\b(?!\s*pro\b).*\bvega\s+(?!56\b|64\b)\d{1,2}\b|radeon(\s*\(tm\))?\s*\d{3}m\b|\bamd\s+(raven2?|picasso|renoir|lucienne|cezanne|barcelo|rembrandt|mendocino|phoenix|vangogh)\b/i;
 /**
  * Integrated graphics by name: Intel's UHD, Iris, HD Graphics and the Arc in Core Ultra chips, AMD's APUs (Vega,
  * "Radeon Graphics", the 600M and 700M parts), Apple silicon, and the Arm laptops' Adreno, Mali and PowerVR.
