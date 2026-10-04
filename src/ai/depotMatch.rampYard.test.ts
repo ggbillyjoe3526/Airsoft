@@ -1,9 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
+import { SQUAD_ORDERS } from '../config/squad';
 import { RAMP_YARD } from '../map/testYard';
 import { initPhysics } from '../physics/physicsWorld';
-import { expectGrounded, playMatch } from './depotMatchSupport';
+import { expectGrounded, playFollowMatch, playMatch } from './depotMatchSupport';
 
 describe('a 3v3 bot match on the Ramp Yard', () => {
   beforeAll(async () => {
@@ -27,5 +28,18 @@ describe('a 3v3 bot match on the Ramp Yard', () => {
       expectGrounded(stats, RAMP_YARD);
     }
     expect(walkedDown).toBeGreaterThan(0);
+  });
+
+  it('has bot teammates follow a leader over the ramp and along the platform without stepping off an edge (M-08)', { timeout: 60_000 }, () => {
+    // Measured 2026-10-04 (seeds 1-3, 60 s): within a few metres of the leader all the time, at worst about 4.4 m
+    // behind, never in the air.
+    for (const seed of [1, 2, 3]) {
+      const { stats, counted, near, worst } = playFollowMatch(60, seed, RAMP_YARD);
+      expect(counted, `seed ${seed}`).toBeGreaterThan(500);
+      expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.9);
+      expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp);
+      expect(stats.maxAliveY, `seed ${seed}`).toBeGreaterThan(1); // someone went up on the platform
+      expectGrounded(stats, RAMP_YARD);
+    }
   });
 });
