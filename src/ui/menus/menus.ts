@@ -5,6 +5,7 @@ import {
   formatRoundTime,
   type MatchRules,
   matchRulesSummary,
+  runRulesSummary,
   RICOCHETS_COUNT_CHOICES,
   ROUND_TIME_SETTING,
   roundRulesFor,
@@ -492,7 +493,8 @@ export class Menus {
     const m = played.rules;
     this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
-    const match = matchRulesSummary(m);
+    const run = played.mode === 'extraction' ? mapData(played.map).extraction : undefined;
+    const match = run ? runRulesSummary(m, run) : matchRulesSummary(m);
     this.setup.match.set(match.value, match.detail);
     const opponents = difficultyLabel(played.difficulty);
     const mates = difficultyLabel(played.teammateDifficulty);
@@ -502,7 +504,7 @@ export class Menus {
     );
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
     const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty);
-    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, played.mode, mapData(played.map).extraction);
+    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, played.mode, run);
     this.setup.setRules(setupNotes(rules, { recorded, cheating: this.opts.dev.cheating(), devContentUsed: this.opts.dev.devContentUsed() }));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);

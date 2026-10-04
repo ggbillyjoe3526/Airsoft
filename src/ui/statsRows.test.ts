@@ -37,6 +37,12 @@ describe('stats tables (M19)', () => {
     expect(blocks[1]!.rows.map((r) => r.name)).toEqual(['Orange 2', 'Orange 1']);
   });
 
+  it('names the teams by side in an Extraction run, not by rounds won (M43)', () => {
+    const cs = roster();
+    const blocks = statsBlocks(cs, rosterNames(cs, 0), () => emptyStats(), [1, 0], cs[0]!, false, true);
+    expect(blocks.map((b) => b.title)).toEqual(['Blue (you) · your squad', 'Orange · home team']);
+  });
+
   it('marks players hit this round only when asked (the live scoreboard)', () => {
     const cs = roster();
     cs[2]!.status = 'walkingOff';
@@ -47,15 +53,19 @@ describe('stats tables (M19)', () => {
   });
 });
 
+const NO_NEWS_FOR_TEST = { bestAccuracy: false, bestStreak: false };
+
 describe('records view (M19)', () => {
   it('lists wins and losses per difficulty and mode, marks the one just played, and flags new bests', () => {
     const r = emptyRecords();
     const news = addMatch(r, { difficulty: 'hard', mode: 'attackDefend', won: true, hits: 12, bbsFired: 40 });
     const view = recordsView(r, news, 'hard', 'attackDefend');
-    expect(view.modes).toEqual(MATCH_MODES.map((m) => m.label));
-    expect(view.rows.map((row) => row.label)).toEqual(DIFFICULTIES.map((d) => d.label));
-    const hard = view.rows[DIFFICULTIES.findIndex((d) => d.id === 'hard')]!;
-    const cell = hard.cells[MATCH_MODES.findIndex((m) => m.id === 'attackDefend')]!;
+    const modes = MATCH_MODES.filter((m) => m.tag === 'public');
+    const difficulties = DIFFICULTIES.filter((d) => d.tag === 'public');
+    expect(view.modes).toEqual(modes.map((m) => m.label));
+    expect(view.rows.map((row) => row.label)).toEqual(difficulties.map((d) => d.label));
+    const hard = view.rows[difficulties.findIndex((d) => d.id === 'hard')]!;
+    const cell = hard.cells[modes.findIndex((m) => m.id === 'attackDefend')]!;
     expect(cell).toEqual({ text: '1 W · 0 L', current: true });
     expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(1);
     expect(view.rows[0]!.cells[0]!.text).toBe('–');
@@ -64,6 +74,14 @@ describe('records view (M19)', () => {
       { label: 'Wins in a row', value: '1 now · best 1', isNew: true },
     ]);
     expect(view.notCounted).toBe('');
+  });
+
+  it('shows dev modes (Extraction, M43) only with Dev content on (M35)', () => {
+    const r = emptyRecords();
+    expect(recordsView(r, NO_NEWS_FOR_TEST, 'normal', 'elimination').modes).not.toContain('Extraction');
+    const on = recordsView(r, NO_NEWS_FOR_TEST, 'normal', 'elimination', '', true);
+    expect(on.modes).toEqual(MATCH_MODES.map((m) => m.label));
+    expect(on.rows.every((row) => row.cells.length === MATCH_MODES.length)).toBe(true);
   });
 
   it('marks nothing and says why after a custom match (M20)', () => {

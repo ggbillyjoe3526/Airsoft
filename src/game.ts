@@ -858,7 +858,7 @@ export class Game {
       this.menus.showResult(view.headline, view.scoreLine, {
         result: view.result,
         blocks: view.summaryBlocks,
-        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
+        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason, this.dev.devContent),
         fieldCredits: this.lastEarnings,
         unpaid: this.unpaidReason,
       });

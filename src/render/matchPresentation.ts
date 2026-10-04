@@ -485,7 +485,7 @@ export class MatchPresentation {
     const match = view === 'match';
     const heading = match ? (r.phase === 'matchOver' ? 'Match' : `Match so far · round ${r.number}`) : `Round ${r.number}`;
     const statsOf = match ? (id: number) => this.stats.matchOf(id) : (id: number) => this.stats.roundOf(id);
-    this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live'));
+    this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live', this.extraction !== undefined));
   }
 
   /** What the board over the field shows: the match while the key is held or once decided, the round between rounds. */

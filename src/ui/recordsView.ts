@@ -1,5 +1,6 @@
 import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { standardMatchText } from '../config/matchRules';
+import { isAvailable } from '../config/content';
 import { MATCH_MODES, type MatchMode } from '../config/modes';
 import { type RecordNews, type Records, resultKey } from '../stats/records';
 
@@ -34,16 +35,18 @@ function notCountedLine(why: NotCounted): string {
 
 /**
  * The records, with the match just played (`difficulty`, `mode`) marked and `news` flagging the bests it beat. A match
- * that didn't count (`notCounted` says why) marks nothing and says why instead.
+ * that didn't count (`notCounted` says why) marks nothing and says why instead. Dev modes and difficulties (M35) get a
+ * column or row only with Dev content on (`devContent`), so with it off nothing of them shows.
  */
-export function recordsView(records: Records, news: RecordNews, difficulty: Difficulty, mode: MatchMode, notCounted: NotCounted = ''): RecordsView {
+export function recordsView(records: Records, news: RecordNews, difficulty: Difficulty, mode: MatchMode, notCounted: NotCounted = '', devContent = false): RecordsView {
   const counted = notCounted === '';
   if (!counted) news = NO_NEWS;
+  const modes = MATCH_MODES.filter((m) => isAvailable(m.tag, devContent));
   return {
-    modes: MATCH_MODES.map((m) => m.label),
-    rows: DIFFICULTIES.map((d) => ({
+    modes: modes.map((m) => m.label),
+    rows: DIFFICULTIES.filter((d) => isAvailable(d.tag, devContent)).map((d) => ({
       label: d.label,
-      cells: MATCH_MODES.map((m) => {
+      cells: modes.map((m) => {
         const wl = records.results[resultKey(d.id, m.id)];
         return { text: wl ? `${wl.wins} W · ${wl.losses} L` : '–', current: counted && d.id === difficulty && m.id === mode };
       }),

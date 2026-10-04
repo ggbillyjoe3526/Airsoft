@@ -122,3 +122,14 @@ export function matchRulesSummary(m: MatchRules): { value: string; detail: strin
     detail: `${formatRoundTime(m.roundTime)} rounds. Friendly fire ${m.friendlyFire ? 'on' : 'off'}; ricochets ${m.ricochetsCount ? 'count' : "don't count"}.`,
   };
 }
+
+/**
+ * New game's Match button in Extraction (M43): the squad against the map's home team, and the run's time, since a run
+ * is one long round (the wins and round time picked don't apply).
+ */
+export function runRulesSummary(m: MatchRules, run: { baseOpponents: number; runTime: number }): { value: string; detail: string } {
+  return {
+    value: `Squad of ${m.teamSize} · ${run.baseOpponents + m.teamSize} in the home team`,
+    detail: `One ${formatRoundTime(run.runTime)} run. Friendly fire ${m.friendlyFire ? 'on' : 'off'}; ricochets ${m.ricochetsCount ? 'count' : "don't count"}.`,
+  };
+}

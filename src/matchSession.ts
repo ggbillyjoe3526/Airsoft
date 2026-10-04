@@ -296,7 +296,7 @@ export class MatchSession {
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
   summaryBlocks(): TeamBlock[] {
     const names = rosterNames(this.state.characters, this.player.id);
-    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false);
+    return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false, this.extraction !== undefined);
   }
 
   /** The result screen for the decided match (audit CORE-05): its lines and every player's numbers, for Game to show. */
