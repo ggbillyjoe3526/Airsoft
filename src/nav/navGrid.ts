@@ -207,6 +207,36 @@ export function clearLine(g: NavGrid, ax: number, az: number, bx: number, bz: nu
   return true;
 }
 
+/** Eight unit directions (x, z) round a point, for clearLineFor's probes. */
+const PROBE_X = [1, -1, 0, 0, Math.SQRT1_2, Math.SQRT1_2, -Math.SQRT1_2, -Math.SQRT1_2];
+const PROBE_Z = [0, 0, 1, -1, Math.SQRT1_2, -Math.SQRT1_2, Math.SQRT1_2, -Math.SQRT1_2];
+
+/**
+ * clearLine that also keeps a body clear of corners (audit AI-12): every sample of the line must have walkable cells
+ * `probe` metres away from it in eight directions. A walkable cell's centre keeps the grid's clearance from blocks,
+ * but a point inside the cell can be up to half a cell's diagonal nearer, so a plain clearLine leg can pass ~8 cm
+ * inside the body at a corner. A probe's cell is blocked whenever the probe point is within clearance minus half a
+ * cell diagonal of a block (or drop), so with `probe` = radius + half a cell diagonal − clearance (NAV.legProbe) a
+ * passing line keeps at least `radius` from every block. Only the bots' route string-pulling uses it: a leg it
+ * refuses costs a waypoint, never the route. `probe` 0 is plain clearLine.
+ */
+export function clearLineFor(g: NavGrid, ax: number, az: number, bx: number, bz: number, probe: number): boolean {
+  if (!clearLine(g, ax, az, bx, bz)) return false;
+  if (probe <= 0) return true;
+  const len = Math.hypot(bx - ax, bz - az);
+  const steps = Math.max(1, Math.ceil(len / (g.cell * 0.5)));
+  for (let s = 0; s <= steps; s++) {
+    const t = s / steps;
+    const x = ax + (bx - ax) * t;
+    const z = az + (bz - az) * t;
+    for (let k = 0; k < PROBE_X.length; k++) {
+      const c = cellIndex(g, x + PROBE_X[k]! * probe, z + PROBE_Z[k]! * probe);
+      if (c < 0 || g.walkable[c] !== 1) return false;
+    }
+  }
+  return true;
+}
+
 /**
  * True if walking the straight line a → b would step off a floor: some cell under it has no floor, or its
  * floor differs from the one before by more than maxStep (a platform's edge, a ramp's side). Walls and
@@ -247,11 +277,26 @@ export function createNavSearch(grid: NavGrid): NavSearch {
     stamp: new Uint32Array(n),
     closed: new Uint32Array(n),
     generation: 0,
-    // A cell can be pushed again each time a shorter route to it is found (at most once per neighbour).
-    heap: new Int32Array(n * 8),
-    heapF: new Float32Array(n * 8),
+    // The open list holds a cell again each time a shorter route to it is found, but on a real map it peaks far
+    // below the cell count (audit AI-11: low thousands on Depot's 42k cells); twice the cells is ample, and a search
+    // that ever needs more grows it once (astar) rather than failing.
+    heap: new Int32Array(n * NAV_HEAP_PER_CELL),
+    heapF: new Float32Array(n * NAV_HEAP_PER_CELL),
     cells: [],
   };
+}
+
+/** Open-list slots per grid cell a NavSearch starts with (see createNavSearch). */
+export const NAV_HEAP_PER_CELL = 2;
+
+/** Doubles a search's open list, keeping its first `size` entries (only when a search outgrows it). */
+function growHeap(s: NavSearch, size: number): void {
+  const heap = new Int32Array(s.heap.length * 2);
+  const heapF = new Float32Array(s.heapF.length * 2);
+  heap.set(s.heap.subarray(0, size));
+  heapF.set(s.heapF.subarray(0, size));
+  s.heap = heap;
+  s.heapF = heapF;
 }
 
 const SQRT2 = Math.SQRT2;
@@ -263,32 +308,17 @@ const NCOST = [1, 1, 1, 1, SQRT2, SQRT2, SQRT2, SQRT2];
 /**
  * Shortest walkable route from `start` to `goal` (both snapped to the nearest walkable cell within
  * `snap` metres), smoothed into straight segments, written into `out` as waypoints (excluding the
- * start, ending at the goal, or the nearest walkable cell to it). Returns false if there is no route.
+ * start, ending at the goal, or the nearest walkable cell to it). Returns false if there is no route. `legProbe`
+ * (> 0) keeps the straight legs a body's width from corners (see clearLineFor).
  */
-export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap: number, out: Vec3[]): boolean {
+export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap: number, out: Vec3[], legProbe = 0): boolean {
   const a = nearestWalkable(g, start.x, start.z, snap);
   const b = nearestWalkable(g, goal.x, goal.z, snap);
   if (a < 0 || b < 0 || !astar(g, s, a, b)) {
     out.length = 0;
     return false;
   }
-  // Waypoints reuse the objects already in `out`, so re-planning a route doesn't allocate new ones. Each
-  // stands on its cell's floor.
   let n = 0;
-  const emit = (c: number): void => {
-    const x = cellX(g, c % g.cols);
-    const y = g.floorY[c]!;
-    const z = cellZ(g, Math.floor(c / g.cols));
-    const p = out[n];
-    if (p) {
-      p.x = x;
-      p.y = y;
-      p.z = z;
-    } else {
-      out.push({ x, y, z });
-    }
-    n++;
-  };
 
   // Cells from goal back to start, reversed.
   const cells = s.cells;
@@ -310,28 +340,47 @@ export function findPath(g: NavGrid, s: NavSearch, start: Vec3, goal: Vec3, snap
     let next = k + 1;
     for (let m = Math.min(cells.length - 1, k + 2); ; m = Math.min(cells.length - 1, m + 2)) {
       const c = cells[m]!;
-      if (!clearLine(g, ax, az, cellX(g, c % g.cols), cellZ(g, Math.floor(c / g.cols)))) break;
+      if (!clearLineFor(g, ax, az, cellX(g, c % g.cols), cellZ(g, Math.floor(c / g.cols)), legProbe)) break;
       next = m;
       if (m === cells.length - 1) break;
     }
     const c = cells[next]!;
     ax = cellX(g, c % g.cols);
     az = cellZ(g, Math.floor(c / g.cols));
-    emit(c);
+    n = emitCell(g, out, n, c);
     k = next;
   }
-  if (n === 0) emit(b);
+  if (n === 0) n = emitCell(g, out, n, b);
   out.length = n;
   // End exactly on the goal when it's walkable (the search works in cell centres).
   const end = out[n - 1]!;
   const fromX = n > 1 ? out[n - 2]!.x : start.x;
   const fromZ = n > 1 ? out[n - 2]!.z : start.z;
-  if (isWalkableAt(g, goal.x, goal.z) && clearLine(g, fromX, fromZ, goal.x, goal.z)) {
+  if (isWalkableAt(g, goal.x, goal.z) && clearLineFor(g, fromX, fromZ, goal.x, goal.z, legProbe)) {
     end.x = goal.x;
     end.y = floorAt(g, goal.x, goal.z);
     end.z = goal.z;
   }
   return true;
+}
+
+/**
+ * Writes cell `c` (on its cell's floor) as waypoint `n` of `out`, reusing the object already there so re-planning a
+ * route doesn't allocate (audit AI-11: a module function, not a closure made per search). Returns n + 1.
+ */
+function emitCell(g: NavGrid, out: Vec3[], n: number, c: number): number {
+  const x = cellX(g, c % g.cols);
+  const y = g.floorY[c]!;
+  const z = cellZ(g, Math.floor(c / g.cols));
+  const p = out[n];
+  if (p) {
+    p.x = x;
+    p.y = y;
+    p.z = z;
+  } else {
+    out.push({ x, y, z });
+  }
+  return n + 1;
 }
 
 /** 8-neighbour A* without corner cutting (octile heuristic). Fills s.from; returns false if `b` is unreachable. */
@@ -342,8 +391,8 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
   const walk = g.walkable;
   const floorY = g.floorY;
   const maxStep = g.maxStep;
-  const heap = s.heap;
-  const heapF = s.heapF;
+  let heap = s.heap;
+  let heapF = s.heapF;
   const bi = b % cols;
   const bj = (b - bi) / cols;
   let size = 0;
@@ -400,7 +449,11 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
       s.stamp[n] = gen;
       s.g[n] = ng;
       s.from[n] = c;
-      if (size >= heap.length) return false;
+      if (size >= heap.length) {
+        growHeap(s, size);
+        heap = s.heap;
+        heapF = s.heapF;
+      }
       const di = Math.abs(ni - bi);
       const dj = Math.abs(nj - bj);
       const f = ng + (di > dj ? di + (SQRT2 - 1) * dj : dj + (SQRT2 - 1) * di);

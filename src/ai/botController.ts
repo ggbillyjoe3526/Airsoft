@@ -1,11 +1,13 @@
 import { AUDIO } from '../config/audio';
 import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
+import { FLAG } from '../config/modes';
 import type { BodyConfig } from '../config/movement';
+import { NAV } from '../config/nav';
 import type { ReplicaConfig } from '../config/replicas';
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { botSeed, planSeed } from '../core/seed';
-import { cellX, cellZ, createNavSearch, findPath, type NavGrid, type NavSearch } from '../nav/navGrid';
+import { cellX, cellZ, createNavSearch, findPath, floorAt, type NavGrid, type NavSearch } from '../nav/navGrid';
 import { shotHeardScale, type WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
@@ -29,6 +31,8 @@ export interface BotControllerOptions {
   nav: NavGrid;
   /** Route ends snap to the nearest walkable cell within this distance. */
   navSnap: number;
+  /** How far round a route's straight legs the ground must be walkable, so they keep clear of corners (default NAV.legProbe, AI-12). */
+  legProbe?: number;
   lanes: readonly (readonly Vec3[])[];
   /** The map's low and full-height cover (lowCoverBlocks / tallCoverBlocks of map.blocks); empty if none. */
   lowCover: readonly CoverBlock[];
@@ -56,6 +60,8 @@ export interface BotControllerOptions {
  */
 export class BotController {
   readonly bots: Bot[] = [];
+  /** The characters the bots drive (players are the rest). */
+  private readonly botCharacters = new Set<Character>();
   private readonly world: BotWorld;
   private readonly search: NavSearch;
   private readonly commandsById = new Map<number, PlayerCommand>();
@@ -63,6 +69,8 @@ export class BotController {
   private readonly ear = vec3();
   private readonly held = vec3();
   private readonly lookedAt = vec3();
+  /** Where a hit call points to (AI-09). */
+  private readonly callGuess = vec3();
   /**
    * Per player who gave one, the squad order in force (one source for the HUD and for giving it again). `ownSpot`: a
    * Hold here given looking at nothing, so each holds where it stood.
@@ -121,12 +129,17 @@ export class BotController {
       enemyYaw: this.enemyYaw,
       huntPoint: (bot, out) => this.huntPoint(bot, out),
       aheadOfTeam: (bot) => this.aheadOfTeam(bot),
+      markVisited: (bot, point) => {
+        this.visited[bot.character.team]![this.sectorOf(point.x, point.z)] = this.world.time;
+      },
+      bots: this.bots,
       time: 0,
       live: true,
     };
     this.search = createNavSearch(nav);
     for (const c of botCharacters) {
       this.bots.push(createBot(c, botSeed(opts.seed, c.id), cfg, this.cfgOf(c.team)));
+      this.botCharacters.add(c);
       commands.set(c.id, this.commandFor(c.id));
     }
     this.planRound();
@@ -159,9 +172,12 @@ export class BotController {
     for (const c of state.characters) {
       if (isInPlay(c)) this.visited[c.team]![this.sectorOf(c.position.x, c.position.z)] = state.time;
     }
-    this.planRoutes();
+    // One route search a tick in all (AI-10): a walk-off search runs in this tick's simulation step when someone was hit
+    // last tick, so the bots wait a tick.
+    if (!walkOffSearchDue(state.characters)) this.planRoutes();
     this.updateOrders();
     this.pickRetakers();
+    this.pickRaiser();
     // Each bot decides with its own team's skill (Bot.skill, set at creation); w.cfg is the shared behaviour.
     for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
   }
@@ -285,6 +301,40 @@ export class BotController {
     }
   }
 
+  /**
+   * Attack / Defend (audit AI-06): of the attacking bots in play that have swept their lane, one raises the flag and the
+   * others guard the pole from cover; a second raiser adds nothing (the rope goes up no faster). The raiser is the bot
+   * in flag mode nearest the pole, the current one kept unless another is raiserSwitchMargin nearer; one drawn into a
+   * fight or into cover elsewhere hands the rope over, so a guard never waits on a raiser that is busy or far off.
+   * Nobody raises while a teammate who isn't a bot (the player) is already at the pole.
+   */
+  private pickRaiser(): void {
+    const r = this.world.round;
+    let raiser: Bot | undefined;
+    // Bots in flag mode first, then anyone else; then the nearest to the pole, the raiser counted raiserSwitchMargin nearer.
+    let bestRank = Number.POSITIVE_INFINITY;
+    let best = Number.POSITIVE_INFINITY;
+    for (const b of this.bots) {
+      const keep = b.raiser;
+      b.raiser = false;
+      const c = b.character;
+      if (r.mode !== 'attackDefend' || c.team !== r.attackers || !isInPlay(c) || !b.laneDone || b.order !== 'none') continue;
+      const rank = b.mode === 'flag' ? 0 : 1;
+      const d = Math.hypot(c.position.x - r.flag.position.x, c.position.z - r.flag.position.z) - (keep ? this.world.cfg.raiserSwitchMargin : 0);
+      if (rank < bestRank || (rank === bestRank && d < best)) {
+        bestRank = rank;
+        best = d;
+        raiser = b;
+      }
+    }
+    if (!raiser) return;
+    for (const c of this.world.characters) {
+      if (c.team !== r.attackers || !isInPlay(c) || this.botCharacters.has(c)) continue;
+      if (Math.hypot(c.position.x - r.flag.position.x, c.position.z - r.flag.position.z) <= FLAG.radius) return;
+    }
+    raiser.raiser = true;
+  }
+
   /** After a simulation tick, while its events are still in the state. */
   observe(state: GameState): void {
     const time = state.time;
@@ -297,13 +347,22 @@ export class BotController {
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
         // A silencer (M29b) shortens how far the shot carries.
-        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance * shotHeardScale(shooter));
+        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance * shotHeardScale(shooter), shooter.id);
       } else if (e.type === 'characterHit') {
         // Teammates near someone who calls a hit turn towards where it came from; not from a BB fired by someone hit
-        // since (they are walking off, not where the threat is).
+        // since (they are walking off, not where the threat is). A "HIT!" tells them which way the BB came, not how far
+        // (AI-09): the guess is back along the BB's path from the victim, no further than gunfire carries.
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
-        if (victim && shooter && isInPlay(shooter) && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
+        if (victim && shooter && isInPlay(shooter) && victim.team !== shooter.team) {
+          const g = this.callGuess;
+          const flat = Math.hypot(e.direction.x, e.direction.z);
+          const back = Math.min(cfg.hearingDistance, Math.hypot(shooter.position.x - victim.position.x, shooter.position.z - victim.position.z));
+          g.x = victim.position.x - (flat > 1e-6 ? (e.direction.x / flat) * back : 0);
+          g.y = victim.position.y;
+          g.z = victim.position.z - (flat > 1e-6 ? (e.direction.z / flat) * back : 0);
+          this.hear(shooter.team, victim.position, victim.position, time, g, cfg.hearingDistance, shooter.id);
+        }
       } else if (e.type === 'ricochetTick') {
         // A ricochet that doesn't count still tells its victim they're under fire, unless it was their own (SIM-07).
         if (e.victimId === e.shooterId) continue;
@@ -316,7 +375,7 @@ export class BotController {
         const walker = this.character(state, e.characterId);
         const range =
           e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : e.kind === 'rattle' ? cfg.footstepHearingRattle : cfg.footstepHearingRun;
-        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range);
+        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range, walker.id);
       } else if (e.type === 'bbImpact') {
         // Only enemy fire suppresses: a bot's own BB (or a teammate's) landing near it is no threat.
         const shooter = this.character(state, e.ownerId);
@@ -326,6 +385,9 @@ export class BotController {
           if (Math.hypot(e.position.x - p.x, e.position.y - p.y, e.position.z - p.z) <= cfg.suppressionRadius) {
             b.suppressedAt = time;
             b.lastThreatAt = time;
+            // A near miss gives away roughly where it came from, however far off the shot was (AI-04): the bot hears the
+            // BB land by its own feet, so the range test always passes.
+            if (shooter && isInPlay(shooter)) this.hear(shooter.team, b.character.position, shooter.position, time, shooter.position, Number.POSITIVE_INFINITY, shooter.id, b);
           }
         }
       }
@@ -333,17 +395,19 @@ export class BotController {
   }
 
   /**
-   * Bots not on `shooterTeam` within `range` of `heardAt` (gunfire, a hit call, footsteps) learn roughly where the source is,
-   * unless they can already see someone. The guess is off by up to hearingError × distance and is kept
-   * while the noise keeps coming from about there (bursts and nearby shooters don't make it jump).
-   * Hearing is not sight: it never skips a bot's reaction when the shooter then appears. Walls between the bot and
-   * whoever made the sound (standing at `sourceFeet`) shorten the range (wallHearing, M22).
+   * Bots not on `shooterTeam` within `range` of `heardAt` (gunfire, a hit call, footsteps, a near miss) learn roughly
+   * where the source (character `sourceId`) is; `only`: just that bot. The guess is off by up to hearingError ×
+   * distance and is kept while the noise keeps coming from about there (bursts and nearby shooters don't make it jump).
+   * A bot fighting someone else keeps it aside for when that fight is over (AI-15); one already watching the source
+   * learns nothing. Hearing is not sight: it never skips a bot's reaction when the shooter then appears. Walls between
+   * the bot and whoever made the sound (standing at `sourceFeet`) shorten the range (wallHearing, M22).
    */
-  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number): void {
+  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number, sourceId: number, only?: Bot): void {
     const cfg = this.world.cfg;
     for (const b of this.bots) {
+      if (only && b !== only) continue;
       const c = b.character;
-      if (c.team === shooterTeam || !isInPlay(c) || b.targetVisible) continue;
+      if (c.team === shooterTeam || !isInPlay(c) || (b.targetVisible && b.targetId === sourceId)) continue;
       const heard = Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z);
       if (heard > range) continue;
       // Within the range a wall leaves, nothing to check; beyond it, cast the rays.
@@ -351,22 +415,35 @@ export class BotController {
         const share = blockedShare(this.opts.query, eyeOf(c, this.opts.body, this.opts.hits, this.ear), sourceFeet, AUDIO.occlusion.rayHeights);
         if (heard > range * (1 - share * (1 - cfg.wallHearing))) continue;
       }
+      const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);
+      if (b.targetVisible) {
+        // Busy with someone else: remember this one for later (a flanker), but keep fighting.
+        this.guess(b, shooterPos, dist, b.heardOther);
+        b.heardOtherAt = time;
+        continue;
+      }
       // Gunfire from within the current guess's margin of error (any shooter) is the same noise: keep
       // the guess. Only a clearly different source makes a new one; the guess never tracks anyone.
-      const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);
       const margin = dist * cfg.hearingError + cfg.replanDistance;
       const sameNoise = b.hasLastKnown && time - b.heardAt < cfg.hearingContactTime && Math.hypot(shooterPos.x - b.lastKnown.x, shooterPos.z - b.lastKnown.z) <= margin;
-      if (!sameNoise) {
-        const angle = rngNext(b.rng) * Math.PI * 2;
-        const off = Math.sqrt(rngNext(b.rng)) * dist * cfg.hearingError;
-        b.lastKnown.x = shooterPos.x + Math.cos(angle) * off;
-        b.lastKnown.y = c.position.y;
-        b.lastKnown.z = shooterPos.z + Math.sin(angle) * off;
-      }
+      if (!sameNoise) this.guess(b, shooterPos, dist, b.lastKnown);
       b.hasLastKnown = true;
       b.heardAt = time;
       b.lastThreatAt = time;
     }
+  }
+
+  /**
+   * A heard guess of `source` (`dist` metres from bot `b`) into `out`: off by up to hearingError × dist, on the floor
+   * there (another level's floor if the noise came from one; the bot's own height off the grid).
+   */
+  private guess(b: Bot, source: Vec3, dist: number, out: Vec3): void {
+    const angle = rngNext(b.rng) * Math.PI * 2;
+    const off = Math.sqrt(rngNext(b.rng)) * dist * this.world.cfg.hearingError;
+    out.x = source.x + Math.cos(angle) * off;
+    out.z = source.z + Math.sin(angle) * off;
+    const floor = floorAt(this.opts.nav, out.x, out.z);
+    out.y = Number.isNaN(floor) ? b.character.position.y : floor;
   }
 
   /**
@@ -533,10 +610,17 @@ export class BotController {
       if (b.routeState !== 'wanted') continue;
       budget--;
       this.plannerCursor = (i + 1) % n; // the next tick starts after the last bot served
-      const ok = findPath(this.opts.nav, this.search, b.character.position, b.routeGoal, this.opts.navSnap, b.route);
+      const ok = findPath(this.opts.nav, this.search, b.character.position, b.routeGoal, this.opts.navSnap, b.route, this.opts.legProbe ?? NAV.legProbe);
       b.routeLeg = 0;
       b.stuckFor = 0;
       b.routeState = ok ? 'ok' : 'failed';
+      if (!ok) b.routeRetryAt = this.world.time + this.world.cfg.routeRetryDelay;
     }
   }
+}
+
+/** True if a walk-off route search will run in the coming simulation step (a victim hit last tick, M27). */
+function walkOffSearchDue(characters: readonly Character[]): boolean {
+  for (const c of characters) if (c.walkOffRoutePending) return true;
+  return false;
 }

@@ -31,11 +31,11 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Bots
 
-- Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover and search (Phase 1)
-- Three difficulty levels, picked for your teammates and the other team separately (M4a, M20)
+- Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover, keep apart from teammates and search (Phase 1, FA4)
+- Three difficulty levels, picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking) (M4a, M20, FA4)
 - Bots crouch-peek over low cover, lean round corners, move as a team on varied routes and walk when it pays (M4b, M10)
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
-- In Attack / Defend defenders hold near the pole and attackers push to it (M5)
+- In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from cover (M5, FA4)
 
 ## Modes and matches
 
@@ -46,7 +46,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Maps
 
-- Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole (M1, M11, M25b)
+- Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole; both ends about as far from the dock and the Main Gate (M1, M11, M25b, FA4)
 - Woodland: a second field coming soon, shown as disabled in the Map pop-up (M33a)
 - Ramps and raised floors that players and bots use (Phase 3)
 

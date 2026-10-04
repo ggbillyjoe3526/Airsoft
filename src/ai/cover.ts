@@ -98,6 +98,17 @@ export interface CoverSearch {
   peekable: boolean;
 }
 
+/**
+ * Spots a cover search must keep away from (audit AI-01): where teammates stand or are heading for cover. The first
+ * `count` of `points` count; a candidate closer than `minGap` (metres) to any of them is skipped, so two bots never
+ * pick the same crate corner. Filled by the caller per search, reusing its points.
+ */
+export interface TakenSpots {
+  points: Vec3[];
+  count: number;
+  minGap: number;
+}
+
 /** What a cover search needs to know about the world (a BotWorld has all of it). */
 export interface CoverWorld {
   nav: NavGrid;
@@ -148,6 +159,8 @@ interface SearchState {
   radius: number;
   threatDist: number;
   peekable: boolean;
+  /** Spots to keep away from (undefined: none). */
+  taken: TakenSpots | undefined;
   bestScore: number;
 }
 
@@ -158,6 +171,7 @@ const searchState: SearchState = {
   radius: 0,
   threatDist: 0,
   peekable: false,
+  taken: undefined,
   bestScore: 0,
 };
 const candidateSpot = vec3();
@@ -168,12 +182,13 @@ const candidateSpot = vec3();
  * block in reach (as seen from the threat; random points rarely land in a crate's small shadow or a
  * hand's width from a corner). Keeps the closest that hides a crouched player, preferring spots you can
  * fight from (stand up over crouch cover, or lean out of full cover), and that doesn't mean running
- * towards the threat. `search` narrows it (default: the config's radius and candidates, any cover).
- * Returns false if nothing works.
+ * towards the threat. `search` narrows it (default: the config's radius and candidates, any cover); no spot is
+ * picked near a `taken` one. Returns false if nothing works.
  */
-export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngState, out: CoverSpot, search?: CoverSearch): boolean {
+export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngState, out: CoverSpot, search?: CoverSearch, taken?: TakenSpots): boolean {
   const cfg = w.cfg;
   const s = searchState;
+  s.taken = taken;
   copy(s.from, from);
   const fromFloor = floorAt(w.nav, from.x, from.z);
   s.fromAboveFloor = Number.isNaN(fromFloor) ? 0 : from.y - fromFloor;
@@ -217,7 +232,7 @@ export function findCover(from: Vec3, threatEye: Vec3, w: CoverWorld, rng: RngSt
 
 /**
  * Tests the spot (x, z) for the search `s` and keeps it in `out` if it beats the best so far: it must be
- * walkable, in reach, not towards the threat, and hide a crouched player. The spot stands on its cell's
+ * walkable, in reach, clear of taken spots, not towards the threat, and hide a crouched player. The spot stands on its cell's
  * floor, as high above it as the searcher is above its own (so eye heights are a standing player's).
  */
 function consider(s: SearchState, w: CoverWorld, out: CoverSpot, x: number, z: number): void {
@@ -228,6 +243,13 @@ function consider(s: SearchState, w: CoverWorld, out: CoverSpot, x: number, z: n
   if (!isWalkableAt(w.nav, x, z)) return;
   const r = Math.hypot(x - from.x, z - from.z);
   if (r > s.radius) return;
+  const taken = s.taken;
+  if (taken) {
+    for (let i = 0; i < taken.count; i++) {
+      const p = taken.points[i]!;
+      if (Math.hypot(p.x - x, p.z - z) < taken.minGap) return;
+    }
+  }
   // Don't pick cover that means running at the threat.
   const toThreat = Math.hypot(threatEye.x - x, threatEye.z - z);
   if (toThreat < Math.min(s.threatDist * cfg.coverTowardThreatFraction, s.threatDist - cfg.coverTowardThreatMetres)) return;

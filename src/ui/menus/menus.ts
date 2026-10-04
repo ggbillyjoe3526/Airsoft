@@ -1,4 +1,4 @@
-import { DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
+import { DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   countsForRecords,
   FRIENDLY_FIRE_CHOICES,
@@ -167,9 +167,9 @@ export class Menus {
           this.difficulty = d;
           opts.difficulty.onChange(d);
           if (teammatesFollow) {
-            this.teammateDifficulty = d;
-            teammates.show(d);
-            opts.teammateDifficulty.onChange(d);
+            this.teammateDifficulty = defaultTeammateDifficulty(d);
+            teammates.show(this.teammateDifficulty);
+            opts.teammateDifficulty.onChange(this.teammateDifficulty);
           }
           this.refreshSetup();
         }).root,
