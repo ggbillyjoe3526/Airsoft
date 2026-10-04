@@ -4,7 +4,7 @@ import { HOP_UP } from '../config/replicas';
 import type { ItemRef } from '../pool/collection';
 import { GAME_POOL } from '../pool/gamePool';
 import { EMPTY_FIT, energyCapped, kitSlot, type ReplicaFit } from '../pool/kit';
-import { gearLine, performanceOf, sheetRows, tierLine } from './performanceSheet';
+import { gearLine, performanceOf, sheetRows, tierBlurb, tierLine } from './performanceSheet';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -66,6 +66,11 @@ describe('Performance sheet (M29)', () => {
     expect(tierLine(pool, item('Red Gas', 'epic'))).toBe('+6% energy');
     expect(tierLine(pool, item('Vertical Grip', 'rare'))).toBe('−3% draw · −3% aim raise · −3% sprint shake');
     expect(tierLine(pool, item('AEG Rifle'))).toBe('');
+  });
+
+  it('says what a tier means on the Loadout, Common included (audit POOL-10)', () => {
+    expect(tierBlurb(pool, item('Standard Battery', 'legendary'))).toBe('Legendary: +7.5% rate of fire');
+    expect(tierBlurb(pool, item('AEG Rifle'))).toBe('Common: no tier bonus');
   });
 });
 

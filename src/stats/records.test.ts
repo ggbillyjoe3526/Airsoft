@@ -62,4 +62,10 @@ describe('local records (M19)', () => {
     expect(r.bestAccuracy).toBeNull();
     expect(r).toMatchObject({ streak: 0, bestStreak: 4 });
   });
+
+  it('drops results under keys that are no difficulty and mode, keeping a newer build’s well-formed ones (audit POOL-21)', () => {
+    const raw = { version: 1, results: { 'normal.elimination': { wins: 1, losses: 0 }, junk: { wins: 3, losses: 0 }, 'a.b.c': { wins: 1, losses: 1 }, 'insane.capture': { wins: 1, losses: 0 } } };
+    const r = loadRecords(memory({ [RECORDS_KEY]: JSON.stringify(raw) }));
+    expect(Object.keys(r.results).sort()).toEqual(['insane.capture', 'normal.elimination']);
+  });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
-import { SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
+import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
+import { unpaidLine } from './summaryScreen';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
@@ -199,5 +200,14 @@ describe('HUD settings (M24)', () => {
     expect(at1280).toBeLessThan(SCOREBOARD_SIZE.max);
     expect(1280 / 2 - SCOREBOARD_SIZE.halfWidth * at1280).toBeCloseTo(SCOREBOARD_SIZE.feedRoom, 5);
     expect(scoreboardScale(SCOREBOARD_SIZE.max, 800)).toBe(1);
+  });
+});
+
+describe('the summary when a match paid nothing (audit POOL-22)', () => {
+  it('says why: Dev settings changed the match, or the Armory is off; nothing when it paid', () => {
+    expect(unpaidLine(null, 'dev')).toBe(ARMORY_TEXT.unpaidDev);
+    expect(unpaidLine(null, 'off')).toBe(ARMORY_TEXT.unpaidOff);
+    expect(unpaidLine(null, null)).toBe('');
+    expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'dev')).toBe('');
   });
 });

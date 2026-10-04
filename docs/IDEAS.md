@@ -19,6 +19,16 @@ Parking lot for future features. Do not implement unless asked.
   house-rule toggle as at many sites. An alternative to the bang-bang surrender above; one of the two, not both.
 - **Slide into cover** (owner, 2026-10-04: maybe later, beside prone): a short sprint slide that ends crouched behind
   a bunker, as speedsoft players do. Prone is on the roadmap (v0.4, with a field built for it).
+- **Progression curve for Beta** (audit POOL-23, owner 2026-10-04: an idea for Beta): today everything is owned at
+  some tier in ~20 Shots (~2 h), every asset at Rare or better in ~58 Shots (~6 h), then ~1,500 Shots (~100 h) of
+  +3 %-per-tier handling with no milestones. Ideas: completion on the Armory tile ("23 / 84 · 3 Legendary");
+  milestones in pool.md (`| Milestone | Needs | Gives |`: "Every optic owned → +1 Token", "Every asset Rare+ → a
+  Legendary Shot"); more assets before tuning odds (grenades, suppressors, tracers); Legendary 1 → 1.5 % now that pity
+  caps the wait; Easy ×0.5 → ×0.7, since Easy players most need their first unlocks.
+- **Bots with gear for Beta** (audit POOL-24, owner 2026-10-04: an idea for Beta): the player's kit outgrows bots that
+  carry factory gear for ever on Easy and Normal (M29b gave Hard opponents rolled kits). Either give bots a tier dial by
+  difficulty (read from `botConfig`), or make higher tiers lateral (Legendary: tighter spread, a touch more recoil or a
+  slower draw), as the attachments already are. Decide after a playtest.
 
 ## Declined (owner, 2026-10-04)
 
