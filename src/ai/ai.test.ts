@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { BOTS, type BotConfig, botConfig, DIFFICULTIES, type Difficulty } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
-import { FLAG, type MatchMode } from '../config/modes';
+import { FLAG } from '../config/modes';
 import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
@@ -17,78 +17,21 @@ import { isInPlay } from '../sim/elimination';
 import { aimDirection, fitParts, type WorldQuery } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
-import type { CharacterMover } from '../sim/movement';
 import { createRng } from '../sim/rng';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState, type GameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
-import { type Vec3, vec3 } from '../sim/vec';
+import { vec3 } from '../sim/vec';
 import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
 import type { Bot } from './bot';
 import { reloadBot, shootBot } from './botCombat';
 import { BotController } from './botController';
 import { type CoverBlock, type CoverWorld, createCoverSpot, findCover, hidesFrom, lowCoverBlocks, tallCoverBlocks } from './cover';
 import { bodyPoint, canSee, eyeOf, lineClear, visiblePart } from './perception';
+import { boxQuery, depotBots, duel, facing, flatFloor, HEAR_THROUGH_WALLS, noWalls, wallAcrossX } from './testSupport';
 
 const DT = 1 / 60;
 const DEG = Math.PI / 180;
-const noWalls: WorldQuery = { raycastStatic: () => -1 };
-
-/** An infinite wall across x at `x = wallX` from the floor up to `height`. */
-function wallAcrossX(wallX: number, height = 3): WorldQuery {
-  return {
-    raycastStatic(o, d, max) {
-      if (Math.abs(d.x) < 1e-9) return -1;
-      const t = (wallX - o.x) / d.x;
-      if (t < 0 || t > max) return -1;
-      return o.y + d.y * t <= height ? t : -1;
-    },
-  };
-}
-
-/** A solid box from the floor up to `height`, centred at (cx, cz) with half extents (hx, hz). */
-function boxQuery(cx: number, cz: number, hx: number, hz: number, height: number): WorldQuery {
-  return {
-    raycastStatic(o, d, max) {
-      let t0 = 0;
-      let t1 = max;
-      for (const [p, v, lo, hi] of [
-        [o.x, d.x, cx - hx, cx + hx],
-        [o.y, d.y, 0, height],
-        [o.z, d.z, cz - hz, cz + hz],
-      ] as const) {
-        if (Math.abs(v) < 1e-9) {
-          if (p < lo || p > hi) return -1;
-          continue;
-        }
-        let a = (lo - p) / v;
-        let b = (hi - p) / v;
-        if (a > b) [a, b] = [b, a];
-        t0 = Math.max(t0, a);
-        t1 = Math.min(t1, b);
-        if (t0 > t1) return -1;
-      }
-      return t0;
-    },
-  };
-}
-
-const flatFloor: CharacterMover = {
-  move(c, d, out) {
-    out.x = d.x;
-    out.z = d.z;
-    const y = c.position.y + d.y;
-    out.y = y <= 0 ? -c.position.y : d.y;
-    return y <= 0;
-  },
-  probeGround(c, maxDrop) {
-    return c.position.y <= maxDrop ? -c.position.y : Number.NaN;
-  },
-};
-
-/** Yaw that faces from a to b. */
-const facing = (a: Vec3, b: Vec3): number => Math.atan2(-(b.x - a.x), -(b.z - a.z));
-
 describe('perception', () => {
   const viewer = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0); // faces -Z
   it('sees someone ahead in the open', () => {
@@ -355,66 +298,6 @@ describe('cover on a raised floor', () => {
     ]);
   });
 });
-
-/** Bots that hear through walls as if they weren't there (before M22): for tests that use walls only to blind them. */
-const HEAR_THROUGH_WALLS: BotConfig = { ...BOTS, wallHearing: 1 };
-
-/** A duel on an open floor: one Orange bot facing a Blue character `dist` metres away. */
-function duel(
-  dist: number,
-  extra: (state: GameState) => void = () => {},
-  query: WorldQuery = noWalls,
-  cfg: BotConfig = BOTS,
-  seed = 7,
-  lowCover: readonly CoverBlock[] = [],
-  tallCover: readonly CoverBlock[] = [],
-) {
-  const state = createGameState(seed, 64, ROUNDS);
-  const player = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
-  const bot = createCharacter(1, vec3(0, 0, -dist), 0, LOADOUT, 1);
-  bot.yaw = facing(bot.position, player.position);
-  state.characters.push(player, bot);
-  extra(state);
-  const ctx = createSimContext({
-    mover: flatFloor,
-    query,
-    movement: MOVEMENT,
-    footsteps: FOOTSTEPS,
-    body: BODY,
-    ballistics: BALLISTICS,
-    killY: -10,
-    hits: HITS,
-    deadZones: [[{ position: vec3(-40, 0, 0), yaw: 0 }], [{ position: vec3(40, 0, 0), yaw: 0 }]],
-    nav: OPEN_NAV,
-    navSnap: NAV.snap,
-    rounds: ROUNDS,
-  });
-  const commands = new Map<number, PlayerCommand>([[0, createCommand()]]);
-  const bots = new BotController(state, [bot], commands, {
-    query,
-    nav: OPEN_NAV,
-    navSnap: NAV.snap,
-    lanes: OPEN_FIELD.lanes,
-    lowCover,
-    tallCover,
-    body: BODY,
-    hits: HITS,
-    loadout: LOADOUT,
-    cfg,
-    seed,
-  });
-  // The player stands still facing the bot.
-  commands.get(0)!.yaw = facing(player.position, bot.position);
-  const run = (seconds: number, onTick: () => void = () => {}) => {
-    for (let i = 0; i < seconds / DT; i++) {
-      bots.think(state, DT);
-      stepSimulation(state, commands, ctx, DT);
-      bots.observe(state);
-      onTick();
-    }
-  };
-  return { state, player, bot, run, commands, bots };
-}
 
 describe('bots in a duel', () => {
   it('wait out their reaction time before firing, then hit a standing target at 12 m within a few seconds', () => {
@@ -924,33 +807,6 @@ describe('difficulty levels', () => {
 });
 
 describe('bot team play and routes', () => {
-  /** Orange bots on Depot (no physics needed: planning only). */
-  function depotBots(mode: MatchMode = 'elimination', query: WorldQuery = noWalls, cfg: BotConfig = BOTS) {
-    const state = createGameState(4, 64, ROUNDS, mode, DEPOT.flag);
-    for (let team = 0; team < 2; team++) {
-      for (let i = 0; i < ROUNDS.teamSize; i++) {
-        const s = DEPOT.spawns[team]![i]!;
-        state.characters.push(createCharacter(state.characters.length, vec3(s.position.x, 0, s.position.z), s.yaw, LOADOUT, team));
-      }
-    }
-    const nav = buildNavGrid(DEPOT, NAV);
-    const commands = new Map<number, PlayerCommand>();
-    const bots = new BotController(state, state.characters.filter((c) => c.team === 1), commands, {
-      query,
-      nav,
-      navSnap: NAV.snap,
-      lanes: DEPOT.lanes,
-      lowCover: lowCoverBlocks(DEPOT.blocks, nav, BODY, BOTS.lowCoverFloorGap),
-      tallCover: tallCoverBlocks(DEPOT.blocks, nav, BODY, BOTS.lowCoverFloorGap),
-      body: BODY,
-      hits: HITS,
-      loadout: LOADOUT,
-      cfg,
-      seed: 4,
-    });
-    return { state, bots, nav, commands };
-  }
-
   it('vary the plan and the lanes from round to round, and split means one bot per lane', () => {
     const { state, bots } = depotBots();
     const plans = new Set<string>();

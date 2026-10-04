@@ -6,7 +6,7 @@ import { isInPlay } from '../sim/elimination';
 import { vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, lastSeenAt, pick, wantsFlag } from './bot';
 import { aimBot, reloadBot, shootBot } from './botCombat';
-import { enterFlagMode, moveBot, wantRoute } from './botMovement';
+import { enterFlagMode, keepApart, moveBot, startSearch, teammateSpots, wantRoute } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
 import { type CoverSearch, findCover, hidesFrom, leanSideToSee } from './cover';
 import { eyeOf } from './perception';
@@ -32,7 +32,8 @@ const contactSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: t
 function takeCover(b: Bot, w: BotWorld, threat: Character, down: number, search?: CoverSearch): boolean {
   const cfg = w.cfg;
   eyeOf(threat, w.body, w.hits, threatEye);
-  if (!findCover(b.character.position, threatEye, w, b.rng, b.cover, search)) return false;
+  // Never the spot a teammate is at or heading for (AI-01).
+  if (!findCover(b.character.position, threatEye, w, b.rng, b.cover, search, teammateSpots(b, w))) return false;
   b.mode = 'cover';
   b.coverPhase = 'down';
   b.coverLeft = down;
@@ -173,7 +174,7 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     if ((b.mode === 'advance' || b.mode === 'search' || b.mode === 'order') && b.coverCooldown <= 0) {
       const d = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
       contactSearch.radius = cfg.contactCoverRadius;
-      if (d >= cfg.contactCoverMinDistance && takeCover(b, w, target, 0, contactSearch)) {
+      if (d >= b.skill.contactCoverMinDistance && takeCover(b, w, target, 0, contactSearch)) {
         b.coverCooldown = cfg.coverCooldown;
         return;
       }
@@ -192,8 +193,11 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     // Attack / Defend: the pole comes before chasing noises.
     if (b.mode !== 'flag') enterFlagMode(b, w);
   } else if (remembered) {
-    if (b.mode !== 'search') b.routeState = 'none';
-    b.mode = 'search';
+    if (b.mode !== 'search') {
+      b.routeState = 'none';
+      b.mode = 'search';
+      startSearch(b, w);
+    }
   } else if (b.mode !== 'advance') {
     b.hasLastKnown = watchFromPost; // back to the post (or lane), still watching that way if holding
     b.mode = 'advance';
@@ -201,6 +205,7 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     b.route.length = 0; // not "arrived" anywhere: the old route was for another mode
     b.waitForTeam = false;
     b.holdLeft = 0; // a pause cut short by a fight doesn't resume somewhere else
+    b.holdCover = false;
     if (!b.hunting && b.laneIndex >= 0) b.laneIndex -= b.laneDir; // re-take the lane point we left
   } else if (defending && !fresh) {
     b.hasLastKnown = false; // holding a post: stop watching where a noise was once it's old news
@@ -244,9 +249,19 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   b.coverCooldown -= dt;
 
   chooseMode(b, w, target, dt);
-  const moving = moveBot(b, w, cmd, dt);
+  // Steer clear of anyone close by, or step out of their way (AI-01).
+  const moving = keepApart(b, w, moveBot(b, w, cmd, dt, target), cmd);
+  // Holding a lane point or a post: crouch once settled, where crouched eyes still see the enemy side (AI-02).
+  if (b.holding && b.holdCrouch && b.teamWait >= cfg.holdCrouchDelay) cmd.crouch = true;
+  // Round a corner of full cover: lean out to look and fight, back in to hide.
+  if (leaningOut(b)) cmd.lean = b.cover.lean;
+  eyeOf(me, w.body, w.hits, myEye);
+  const offAim = aimBot(b, w, target, myEye, aimAt, moving, cmd, dt);
+  cmd.yaw = b.aim.yaw;
+  cmd.pitch = b.aim.pitch;
   if (moving) {
-    // World direction → command axes relative to the current view.
+    // World direction → command axes relative to the view as this tick's turn left it (AI-16: not last tick's view,
+    // which walked a few degrees off while turning and judged the sprint gate late).
     const dir = b.moveDir;
     cmd.forward = -Math.sin(b.aim.yaw) * dir.x - Math.cos(b.aim.yaw) * dir.z;
     cmd.right = Math.cos(b.aim.yaw) * dir.x - Math.sin(b.aim.yaw) * dir.z;
@@ -256,14 +271,8 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     const hurry = b.mode === 'order' && b.orderRush;
     cmd.sprint = hurry ? cmd.forward > SQUAD_ORDERS.sprintForward : (b.mode === 'advance' || b.mode === 'flag') && calm && cmd.forward > cfg.sprintForward;
     // Closing in on where someone was seen or heard: walk, so footsteps don't give us away.
-    cmd.walk ||= b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < cfg.searchWalkDistance;
+    cmd.walk ||= b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < b.skill.searchWalkDistance;
   }
-  // Round a corner of full cover: lean out to look and fight, back in to hide.
-  if (leaningOut(b)) cmd.lean = b.cover.lean;
-  eyeOf(me, w.body, w.hits, myEye);
-  const offAim = aimBot(b, w, target, myEye, aimAt, moving, cmd, dt);
-  cmd.yaw = b.aim.yaw;
-  cmd.pitch = b.aim.pitch;
   shootBot(b, w, target, myEye, aimAt, offAim, cmd, dt);
   reloadBot(b, w, cmd);
 }
