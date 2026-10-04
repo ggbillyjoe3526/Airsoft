@@ -23,6 +23,7 @@ describe('a 3v3 bot match on Depot: the ends', () => {
     }
     // Measured on the M11 Depot (2026-10-03): the west end wins 40% of the decided rounds here (46 of 114) and
     // 46% over seeds 1-96; with M20's ricochets, 39% (45 of 116). The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
+    // With M25b's props (2026-10-04): 49% here (38 of 77) and 48% over seeds 1-64 (155 of 322; 45% on the M11 Depot).
     expect(westWins / decided).toBeGreaterThan(0.35);
     expect(westWins / decided).toBeLessThan(0.6);
   });

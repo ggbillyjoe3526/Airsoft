@@ -4,8 +4,28 @@ import type { Vec3 } from '../sim/vec';
 /**
  * Visual family of a greybox block. Every kind collides as a solid box, except `ramp`: a wedge whose top
  * slopes up along `rise`. Only the tops of floors and ramps are walkable (see map/surfaces.ts).
+ *
+ * The site props (M25b) are drawn as more than a box (render/mapMeshes.ts), always inside their bounds, so what
+ * you see is what stops you and your BBs:
+ * - full height (2.4 m): `toilet` (a portable site toilet), `rack` (pallet racking loaded with stock, or shelving
+ *   indoors), `gabion` (a wire-mesh barrier filled with sand), `wrapped` (a pallet load shrink-wrapped in film);
+ * - crouch height (1.2 m): `ibc` (a water tank in a steel cage), `sandbags`, `generator`, `skip`.
  */
-export type BlockKind = 'floor' | 'ramp' | 'wall' | 'crate' | 'container' | 'barrier';
+export type BlockKind =
+  | 'floor'
+  | 'ramp'
+  | 'wall'
+  | 'crate'
+  | 'container'
+  | 'barrier'
+  | 'toilet'
+  | 'rack'
+  | 'gabion'
+  | 'wrapped'
+  | 'ibc'
+  | 'sandbags'
+  | 'generator'
+  | 'skip';
 
 /** The way a ramp's top goes up: towards +x, -x, +z or -z. */
 export type RampRise = '+x' | '-x' | '+z' | '-z';
