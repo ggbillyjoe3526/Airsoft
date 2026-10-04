@@ -148,7 +148,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await settings.getByRole('tab', { name: /Audio/i }).click();
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
-  await settings.getByRole('tab', { name: /Crosshair/i }).click();
+  // The tabs follow the tabs pattern (audit L-31): Arrow Up from Audio picks Crosshair and moves the focus there.
+  await page.keyboard.press('ArrowUp');
+  await expect(settings.getByRole('tab', { name: /Crosshair/i })).toHaveAttribute('aria-selected', 'true');
+  await expect(settings.getByRole('tab', { name: /Crosshair/i })).toBeFocused();
   const previews = settings.locator('.crosshair-preview .hud-crosshair');
   await expect(previews).toHaveCount(2);
   await settings.getByRole('button', { name: 'Circle' }).click();

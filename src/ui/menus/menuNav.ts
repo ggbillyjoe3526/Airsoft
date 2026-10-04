@@ -33,3 +33,22 @@ export function screenWhenStopped(started: boolean, matchOver: boolean): 'title'
   if (matchOver) return 'result';
   return started ? 'pause' : 'title';
 }
+
+/**
+ * The tab a key moves to in a vertical tab list (WAI-ARIA tabs pattern, audit L-31): Arrow Down / Up to the next or
+ * previous one (wrapping round), Home and End to the first and last; null for any other key.
+ */
+export function tabAfterKey(key: string, index: number, count: number): number | null {
+  switch (key) {
+    case 'ArrowDown':
+      return (index + 1) % count;
+    case 'ArrowUp':
+      return (index - 1 + count) % count;
+    case 'Home':
+      return 0;
+    case 'End':
+      return count - 1;
+    default:
+      return null;
+  }
+}
