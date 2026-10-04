@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import { FIGURE_MODEL } from '../config/assets';
 import { FIGURE } from '../config/characters';
 import type { HitConfig } from '../config/hits';
 import type { ReplicaConfig } from '../config/replicas';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
 import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll } from './characterModels';
-import type { FigureModel } from './externalModels';
+import { type FigureModel, fadeModelMaterials } from './externalModels';
 
 interface FigureState {
   figure: Figure;
@@ -136,6 +137,8 @@ export class CharacterRenderer {
       f.legR.scale.y = legScale;
       f.legL.rotation.x = swing;
       f.legR.rotation.x = -swing;
+      // A model drawn whole has no hips to bend: it sinks as far as the head does.
+      if (f.whole) f.whole.scale.y = 1 - (crouch * FIGURE.crouchDrop) / FIGURE_MODEL.height;
 
       // In play: aiming. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
       const handUp = c.status === 'calling' || c.status === 'walkingOff' || c.status === 'leaving';
@@ -153,13 +156,12 @@ export class CharacterRenderer {
       if (opacity !== s.material.opacity) {
         const fading = opacity < 1;
         const changed = s.material.transparent !== fading;
-        for (const m of [s.material, ...f.modelMaterials]) {
-          m.opacity = opacity;
-          if (changed) {
-            m.transparent = fading;
-            m.needsUpdate = true;
-          }
+        s.material.opacity = opacity;
+        if (changed) {
+          s.material.transparent = fading;
+          s.material.needsUpdate = true;
         }
+        fadeModelMaterials(f.modelMaterials, opacity, changed);
         if (changed) {
           // Shadow maps ignore opacity: a fading figure would leave a solid shadow behind.
           f.root.traverse((o) => {

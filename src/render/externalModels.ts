@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { clone as cloneWithSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { FIGURE_MODEL, FIGURE_PARTS, type FigurePart } from '../config/assets';
 
 /**
@@ -60,6 +59,7 @@ export function prepareFigureModel(scene: THREE.Object3D): FigureModel {
   fit.rotation.y = FIGURE_MODEL.yaw;
   fit.add(scene);
   fit.updateMatrixWorld(true);
+  bakeSkinnedMeshes(scene);
   const box = new THREE.Box3().setFromObject(fit);
   const tall = box.max.y - box.min.y;
   if (!(tall > 0)) throw new Error('the model has no size');
@@ -70,7 +70,8 @@ export function prepareFigureModel(scene: THREE.Object3D): FigureModel {
 
   const parts: Partial<Record<FigurePart, THREE.Object3D>> = {};
   for (const name of FIGURE_PARTS) {
-    const node = scene.getObjectByName(name);
+    // The first node of that name with a mesh in it (a rig's bone can share a part's name).
+    const node = scene.getObjectsByProperty('name', name).find(hasMesh);
     if (!node) continue;
     // A holder at the figure's origin, with the node attached under it at the same place in the figure.
     const holder = new THREE.Group();
@@ -99,6 +100,63 @@ export function prepareFigureModel(scene: THREE.Object3D): FigureModel {
   };
 }
 
+/** Whether `root` is or holds a mesh. */
+function hasMesh(root: THREE.Object3D): boolean {
+  let found = false;
+  root.traverse((o) => {
+    if (o instanceof THREE.Mesh) found = true;
+  });
+  return found;
+}
+
+/**
+ * Replaces every skinned mesh under `root` with a plain mesh of the same shape in the pose its rig is in now (the
+ * rest pose, for a model straight from a file). The game doesn't play glTF animations yet; a static mesh can be
+ * moved anywhere by the figure's parts without its bones, which stay behind in the rig.
+ */
+function bakeSkinnedMeshes(root: THREE.Object3D): void {
+  const skinned: THREE.SkinnedMesh[] = [];
+  root.traverse((o) => {
+    if (o instanceof THREE.SkinnedMesh) skinned.push(o);
+  });
+  const v = new THREE.Vector3();
+  const d = new THREE.Vector4();
+  for (const mesh of skinned) {
+    const geometry = mesh.geometry.clone();
+    const position = geometry.getAttribute('position');
+    for (let i = 0; i < position.count; i++) {
+      mesh.applyBoneTransform(i, v.fromBufferAttribute(position, i));
+      position.setXYZ(i, v.x, v.y, v.z);
+    }
+    for (const name of ['normal', 'tangent'] as const) {
+      const attr = geometry.getAttribute(name);
+      if (!attr) continue;
+      for (let i = 0; i < attr.count; i++) {
+        mesh.applyBoneTransform(i, d.set(attr.getX(i), attr.getY(i), attr.getZ(i), 0));
+        v.set(d.x, d.y, d.z).normalize();
+        attr.setXYZ(i, v.x, v.y, v.z);
+      }
+    }
+    geometry.deleteAttribute('skinIndex');
+    geometry.deleteAttribute('skinWeight');
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    const baked = new THREE.Mesh(geometry, mesh.material);
+    baked.name = mesh.name;
+    baked.position.copy(mesh.position);
+    baked.quaternion.copy(mesh.quaternion);
+    baked.scale.copy(mesh.scale);
+    for (const child of [...mesh.children]) baked.add(child);
+    const parent = mesh.parent!;
+    parent.children[parent.children.indexOf(mesh)] = baked;
+    baked.parent = parent;
+    mesh.parent = null;
+    mesh.geometry.dispose();
+    mesh.skeleton.dispose();
+  }
+  root.updateMatrixWorld(true);
+}
+
 /** Disposes a material and every texture it holds. */
 function disposeMaterial(m: THREE.Material): void {
   for (const value of Object.values(m)) if (value instanceof THREE.Texture) value.dispose();
@@ -108,16 +166,17 @@ function disposeMaterial(m: THREE.Material): void {
 /**
  * A copy of model part `part` for one figure: the geometry is shared (marked so disposeFigure leaves it), every
  * material is its own copy (so one figure can fade on its own), and team materials are painted `teamColor`. Pushes the
- * copied materials to `materials`. A skinned mesh gets its own skeleton, so each figure stands where it is drawn.
+ * copied materials to `materials`, each with its authored opacity kept in `userData` (see fadeModelMaterials).
  */
 export function instanceModelPart(part: THREE.Object3D, teamColor: number, materials: THREE.Material[]): THREE.Object3D {
-  const copy = cloneWithSkeleton(part);
+  const copy = part.clone();
   const prefix = FIGURE_MODEL.teamMaterialPrefix.toLowerCase();
   copy.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return;
     o.userData.sharedGeometry = true;
     const own = (m: THREE.Material): THREE.Material => {
       const c = m.clone();
+      c.userData.authored = { opacity: c.opacity, transparent: c.transparent };
       if (c.name.toLowerCase().startsWith(prefix) && 'color' in c && c.color instanceof THREE.Color) c.color.setHex(teamColor);
       materials.push(c);
       return c;
@@ -125,4 +184,19 @@ export function instanceModelPart(part: THREE.Object3D, teamColor: number, mater
     o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material);
   });
   return copy;
+}
+
+/**
+ * Fades a figure's copies of the model materials to `opacity` (1: as authored), keeping any see-through material the
+ * model was authored with. `switched` says the figure has just started or stopped fading.
+ */
+export function fadeModelMaterials(materials: readonly THREE.Material[], opacity: number, switched: boolean): void {
+  for (const m of materials) {
+    const authored = m.userData.authored as { opacity: number; transparent: boolean };
+    m.opacity = authored.opacity * opacity;
+    if (switched) {
+      m.transparent = authored.transparent || opacity < 1;
+      m.needsUpdate = true;
+    }
+  }
 }

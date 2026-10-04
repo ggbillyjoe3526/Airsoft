@@ -65,9 +65,10 @@ src/assets/textures/                      loose surface textures (not wired up y
   in each figure's team colour (including the colour-blind palettes). Name the armband, vest or tape that way in
   Blender.
 - **Two levels of fit:**
-  1. **Whole model** (straight from a pack, nothing renamed): drawn as one static body, with the built-in arms
-     and replica. It turns, slides and crouches with the figure but doesn't walk, lean or animate. A quick way to
-     see a model in game.
+  1. **Whole model** (straight from a pack, nothing renamed): a preview. It is drawn as one static body that
+     turns and moves with the figure and squashes down when crouching (to the hit volume's height), but doesn't
+     walk or lean. The built-in arms and replica are drawn as well, so the model's own arms show beside them (in a
+     T-pose, for most rigged pack models). A quick way to see a model in game, not one to play with.
   2. **Named parts** (the proper way): split the model in Blender into objects named exactly as below. Each one is
      moved like the built-in part it replaces; any part left out is drawn by the built-in figure.
 
@@ -80,8 +81,9 @@ src/assets/textures/                      loose surface textures (not wired up y
 | `hitPose` | Hit calling: one hand up, the replica hanging | Hips |
 
 Author the parts in place, in one scene, standing as they would on the figure: metres, feet at the origin, +Y up.
-The game cuts them at those pivots itself. Skinned (rigged) meshes load, but show their rest pose: the game
-doesn't play glTF animations yet (a later step: a walk cycle and the hit-call animation from a rigged pack).
+The game cuts them at those pivots itself. Skinned (rigged) meshes load and are turned into plain meshes in the pose
+the rig is saved in (its rest pose), so a part can be cut from a rigged character and its bones are left behind:
+the game doesn't play glTF animations yet (a later step: a walk cycle and the hit-call animation from a rigged pack).
 
 ## 5. Blender, step by step (a Quaternius or Kenney character)
 

@@ -8,7 +8,7 @@ import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { buildFigure, disposeFigure } from './characterModels';
 import { CharacterRenderer } from './characterRenderer';
-import { figureModelUrl, loadFigureModel, prepareFigureModel } from './externalModels';
+import { fadeModelMaterials, figureModelUrl, loadFigureModel, prepareFigureModel } from './externalModels';
 
 /** A box mesh named `name`, `h` tall, standing on y = `y0`, centred at (x, z), with a material called `material`. */
 function boxMesh(name: string, x: number, y0: number, z: number, h: number, material = 'cloth'): THREE.Mesh {
@@ -40,7 +40,8 @@ afterEach(() => {
 });
 
 describe('the figure model (M25a)', () => {
-  it('is absent from the repository, so a normal build fetches nothing and draws the built-in figures', async () => {
+  // Only while the repository has no model: once one is committed (docs/CC0_ASSETS.md), this checks nothing.
+  it.skipIf(figureModelUrl() !== null)('when absent from the repository, is never fetched: the built-in figures are drawn', async () => {
     expect(figureModelUrl()).toBeNull();
     const fetch = vi.fn();
     vi.stubGlobal('fetch', fetch);
@@ -79,6 +80,50 @@ describe('the figure model (M25a)', () => {
     expect(leg.max.y).toBeCloseTo(FIGURE.hipHeight, 6);
     // Turned to face -Z, the model's left leg (+X when facing +Z) is on the figure's left (-X when facing -Z).
     expect((leg.min.x + leg.max.x) / 2).toBeCloseTo(-FIGURE.hipSpread, 6);
+    model.dispose();
+  });
+});
+
+/**
+ * A rigged model: a plain body, and a skinned left leg bound to a bone (named like the part, as rigs often are) that
+ * is then moved down to the hip, so the leg is only where it should be in the rig's pose.
+ */
+function skinnedScene(): THREE.Group {
+  const scene = new THREE.Group();
+  scene.add(boxMesh('body', 0, FIGURE.hipHeight, 0, FIGURE_MODEL.height - FIGURE.hipHeight));
+  const armature = new THREE.Group();
+  const bone = new THREE.Bone();
+  bone.name = 'legL';
+  armature.add(bone);
+  const geometry = new THREE.BoxGeometry(0.2, FIGURE.hipHeight, 0.2);
+  const count = geometry.getAttribute('position').count;
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Array(count * 4).fill(0), 4));
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(new Array(count * 4).fill(0).map((_, i) => (i % 4 === 0 ? 1 : 0)), 4));
+  const leg = new THREE.SkinnedMesh(geometry, new THREE.MeshStandardMaterial());
+  leg.name = 'legL';
+  armature.add(leg);
+  scene.add(armature);
+  armature.updateMatrixWorld(true);
+  leg.bind(new THREE.Skeleton([bone]));
+  bone.position.set(FIGURE.hipSpread, FIGURE.hipHeight / 2, 0);
+  return scene;
+}
+
+describe('a rigged figure model', () => {
+  it('is drawn in its rig’s pose as plain meshes, so a part moves without the bones it leaves behind', () => {
+    const model = prepareFigureModel(skinnedScene());
+    const leg = model.parts.legL!;
+    leg.traverse((o) => expect(o).not.toBeInstanceOf(THREE.SkinnedMesh));
+    expect(leg.getObjectByName('legL')).toBeInstanceOf(THREE.Mesh);
+    const box = boundsOf(leg);
+    expect(box.min.y).toBeCloseTo(0, 6);
+    expect(box.max.y).toBeCloseTo(FIGURE.hipHeight, 6);
+    expect((box.min.x + box.max.x) / 2).toBeCloseTo(-FIGURE.hipSpread, 6);
+    // A figure built from it draws the leg where the built-in one goes.
+    const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 0, model);
+    figure.root.updateMatrixWorld(true);
+    expect(boundsOf(figure.legL).max.y).toBeCloseTo(FIGURE.hipHeight, 6);
+    disposeFigure(figure);
     model.dispose();
   });
 });
@@ -148,6 +193,45 @@ describe('buildFigure with a figure model', () => {
       expect(m.opacity).toBeCloseTo(0.5, 6);
       expect(m.transparent).toBe(true);
     }
+    // Back in play, the materials are as the model was authored.
+    c.status = 'alive';
+    renderer.update(1, 0, -1);
+    for (const m of figure.modelMaterials) {
+      expect(m.opacity).toBe(1);
+      expect(m.transparent).toBe(false);
+    }
+    renderer.dispose();
+    model.dispose();
+  });
+
+  it('keeps a see-through material see-through after a fade', () => {
+    const scene = riggedScene();
+    const visor = boxMesh('visor', 0, 1.6, -0.1, 0.1);
+    Object.assign(visor.material as THREE.Material, { transparent: true, opacity: 0.4 });
+    scene.getObjectByName('body')!.add(visor);
+    const model = prepareFigureModel(scene);
+    const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 0, model);
+    const glass = figure.modelMaterials.find((m) => m.opacity < 1)!;
+    fadeModelMaterials(figure.modelMaterials, 0.5, true);
+    expect(glass.opacity).toBeCloseTo(0.2, 6);
+    fadeModelMaterials(figure.modelMaterials, 1, true);
+    expect(glass.opacity).toBeCloseTo(0.4, 6);
+    expect(glass.transparent).toBe(true);
+    disposeFigure(figure);
+    model.dispose();
+  });
+
+  it('sinks a whole model as far as the head drops when crouching', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
+    const scene = new THREE.Group();
+    scene.add(boxMesh('anything', 0, 0, 0, 1.8));
+    const model = prepareFigureModel(scene);
+    const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
+    c.crouchAmount = c.prevCrouchAmount = 1;
+    const renderer = new CharacterRenderer([c], [0x3d8bff, 0xff8a2a], HITS, LOADOUT, model);
+    renderer.update(1, 0, -1);
+    const figure = (renderer as unknown as { figures: { figure: { whole: THREE.Object3D } }[] }).figures[0]!.figure;
+    expect(boundsOf(figure.whole).max.y).toBeCloseTo(FIGURE_MODEL.height - FIGURE.crouchDrop, 6);
     renderer.dispose();
     model.dispose();
   });

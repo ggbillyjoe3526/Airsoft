@@ -175,6 +175,8 @@ export interface Figure {
   callout: THREE.Sprite;
   /** This figure's own copies of a figure model's materials (none for a built-in figure): they fade with it. */
   modelMaterials: THREE.Material[];
+  /** A figure model drawn whole (no named parts), standing on the root; null otherwise. */
+  whole: THREE.Object3D | null;
 }
 
 /**
@@ -288,9 +290,11 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   callout.position.y = F.callout.height;
   callout.visible = false;
 
-  if (model?.whole) root.add(instanceModelPart(model.whole, teamColor, modelMaterials));
+  // In a holder of its own, so crouching can scale it without touching the model's fit.
+  const whole = model?.whole ? new THREE.Group().add(instanceModelPart(model.whole, teamColor, modelMaterials)) : null;
+  if (whole) root.add(whole);
   root.add(legL, legR, upper, callout);
-  return { root, upper, legL, legR, aim, aimRifle, aimPistol, hitPose, callout, modelMaterials };
+  return { root, upper, legL, legR, aim, aimRifle, aimPistol, hitPose, callout, modelMaterials, whole };
 }
 
 /** The built-in body: torso with the team tape, vest, pouches, neck and head, in upper-body space (`hy`: see buildFigure). */
