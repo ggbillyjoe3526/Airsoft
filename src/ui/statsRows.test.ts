@@ -66,6 +66,18 @@ describe('records view (M19)', () => {
     expect(view.notCounted).toBe('');
   });
 
+  it('has a Pro row labelled "Pro" last, filled from pro.<mode> and marked when a Pro match was just played (M36)', () => {
+    const r = emptyRecords();
+    const news = addMatch(r, { difficulty: 'pro', mode: 'elimination', won: false, hits: 3, bbsFired: 40 });
+    const view = recordsView(r, news, 'pro', 'elimination');
+    expect(view.rows.map((row) => row.label)).toEqual(['Easy', 'Normal', 'Hard', 'Pro']);
+    const pro = view.rows[3]!;
+    const col = MATCH_MODES.findIndex((m) => m.id === 'elimination');
+    expect(pro.cells[col]).toEqual({ text: '0 W · 1 L', current: true });
+    expect(pro.cells.filter((c) => c.current)).toHaveLength(1);
+    expect(view.rows.slice(0, 3).flatMap((row) => row.cells).every((c) => c.text === '–' && !c.current)).toBe(true);
+  });
+
   it('marks nothing and says why after a custom match (M20)', () => {
     const r = emptyRecords();
     const news = addMatch(r, { difficulty: 'hard', mode: 'attackDefend', won: true, hits: 12, bbsFired: 40 });

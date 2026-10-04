@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { hasSavedTeammateDifficulty, loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
+import { defaultTeammateDifficulty } from './bots';
+import { hasSavedTeammateDifficulty, loadDifficulty, loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
 import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor } from './matchRules';
@@ -47,6 +48,36 @@ describe('custom match rules (M20)', () => {
     expect(countsForRecords({ ...DEFAULT_MATCH_RULES, roundTime: 180 }, 'normal', 'normal')).toBe(false);
     expect(countsForRecords({ ...DEFAULT_MATCH_RULES, friendlyFire: false }, 'normal', 'normal')).toBe(false);
     expect(countsForRecords({ ...DEFAULT_MATCH_RULES, ricochetsCount: true }, 'normal', 'normal')).toBe(false);
+  });
+
+  it('count Pro opponents with Pro teammates (its default pair) and no other pairing (M36)', () => {
+    expect(defaultTeammateDifficulty('pro')).toBe('pro');
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'pro', 'pro')).toBe(true);
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'pro', 'hard')).toBe(false);
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'hard', 'pro')).toBe(false);
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'pro', 'easy')).toBe(false);
+    expect(countsForRecords({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, 'pro', 'pro')).toBe(false);
+    expect(countsForRecords({ ...DEFAULT_MATCH_RULES, friendlyFire: false }, 'pro', 'pro')).toBe(false);
+  });
+
+  it('read a saved Pro difficulty back as Pro, teammates following it until their own is saved (M36)', () => {
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'pro' }));
+    expect(loadDifficulty()).toBe('pro');
+    expect(loadTeammateDifficulty()).toBe('pro');
+    expect(hasSavedTeammateDifficulty()).toBe(false);
+    expect(countsForRecords(DEFAULT_MATCH_RULES, loadDifficulty(), loadTeammateDifficulty())).toBe(true);
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'hard', teammateDifficulty: 'pro' }));
+    expect(loadTeammateDifficulty()).toBe('pro');
+    expect(hasSavedTeammateDifficulty()).toBe(true);
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'pro', teammateDifficulty: 'easy' }));
+    expect(loadTeammateDifficulty()).toBe('easy');
+    // an id this build doesn't know (a newer build's level) still falls back to the defaults
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'legend', teammateDifficulty: 'legend' }));
+    expect(loadDifficulty()).toBe('normal');
+    expect(loadTeammateDifficulty()).toBe('normal');
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'pro', teammateDifficulty: 'legend' }));
+    expect(loadTeammateDifficulty()).toBe('pro');
+    expect(hasSavedTeammateDifficulty()).toBe(false);
   });
 
   it('swap ends one round before a team could first win: the decider is always in the second half', () => {

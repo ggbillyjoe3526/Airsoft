@@ -111,6 +111,27 @@ describe('reading pool.md', () => {
     expect(bad.errors.some((e) => e.includes('add up to 90'))).toBe(true);
   });
 
+  it("reads Pro's multiplier from the shipped pool.md as 2, with no errors (M36)", () => {
+    expect(pool.errors).toEqual([]);
+    expect(pool.economy.difficulty).toEqual({ easy: 0.5, normal: 1, hard: 1.5, pro: 2 });
+  });
+
+  it('reads a Pro row from the file, and falls back to the built-in 2 when the Difficulty table has none (M36)', () => {
+    const text = (rows: string[]) => {
+      const out = poolText.replace(/\| Easy \| 0\.5 \|\n\| Normal \| 1 \|\n\| Hard \| 1\.5 \|\n\| Pro \| 2 \|/, rows.join('\n'));
+      expect(out).not.toBe(poolText); // the shipped table was found and swapped
+      return out;
+    };
+    const withPro = loadPool(text(['| Easy | 0.5 |', '| Normal | 1 |', '| Hard | 1.5 |', '| Pro | 3 |']));
+    expect(withPro.errors).toEqual([]);
+    expect(withPro.economy.difficulty.pro).toBe(3);
+    const without = loadPool(text(['| Easy | 0.5 |', '| Normal | 1 |', '| Hard | 1.5 |']));
+    expect(without.economy.difficulty).toEqual({ easy: 0.5, normal: 1, hard: 1.5, pro: 2 });
+    expect(DEFAULT_ECONOMY.difficulty.pro).toBe(2);
+    // the older tables around it are read as before
+    expect(without.economy.earn).toEqual(pool.economy.earn);
+  });
+
   it('falls back to the built-in economy when its tables are missing, and says so', () => {
     const p = loadPool(mini(''));
     expect(p.economy.earn).toEqual(DEFAULT_ECONOMY.earn);
