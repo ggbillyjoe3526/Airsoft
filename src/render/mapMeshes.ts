@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SURFACES, type SurfaceTextureId } from '../config/render';
 import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
+import { buildFoliageMesh } from './foliageMeshes';
 import type { ProceduralTexture, SurfaceTextures } from './proceduralTextures';
 import { buildTerrainMesh } from './terrainMeshes';
 
@@ -673,6 +674,8 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, relief: 
     group.add(mesh);
   }
   if (map.terrain) group.add(buildTerrainMesh(map.terrain));
+  const foliage = buildFoliageMesh(map.foliage ?? []);
+  if (foliage) group.add(foliage);
   return group;
 }
 

@@ -1,5 +1,6 @@
 import type { FloorSurface } from '../config/sounds';
 import type { Vec3 } from '../sim/vec';
+import type { Bush } from './foliage';
 import type { Terrain } from './terrain';
 
 /**
@@ -92,6 +93,10 @@ export interface MapData {
    * over it. Absent: the map's ground is its floor blocks, as on Depot.
    */
   terrain?: Terrain;
+  /**
+   * Bushes (M33e, map/foliage.ts): they hide whoever is in or behind them, but BBs and people pass through. Absent: none.
+   */
+  foliage?: readonly Bush[];
   /**
    * Still being built (M33, owner): the Map pop-up shows it greyed out as Coming soon, and only Dev settings › Access
    * maps in development opens it; its matches don't go into the records.

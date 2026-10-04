@@ -93,6 +93,7 @@ export function playMatch(
     lanes: map.lanes,
     lowCover: lowCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap),
     tallCover: tallCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap),
+    foliage: map.foliage ?? [],
     body: BODY,
     hits,
     loadout: LOADOUT,

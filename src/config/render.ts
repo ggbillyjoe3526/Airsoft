@@ -174,6 +174,18 @@ export const TERRAIN_LOOK = {
   jitter: 0.06,
 } as const;
 
+/**
+ * Bushes (M33e, render/foliageMeshes.ts): greybox clumps of leaves, a dark green that varies from vertex to vertex, each
+ * vertex pushed in or out by up to `lump` of the radius so no two bushes have the same outline. `detail` is the
+ * icosphere's subdivision (1: 80 triangles a bush). The art pass gives them leaves.
+ */
+export const FOLIAGE_LOOK = {
+  colour: 0x2f5a2a,
+  jitter: 0.12,
+  lump: 0.14,
+  detail: 1,
+} as const;
+
 /** The surface textures (render/proceduralTextures.ts), drawn on canvases as each match loads. */
 export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier' | 'sandbag' | 'gabion';
 
