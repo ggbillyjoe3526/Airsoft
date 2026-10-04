@@ -58,7 +58,9 @@ export class OrderWheel {
       s.pick = pick;
     }
     if (current !== s.current) {
-      this.items.forEach((el, i) => el.classList.toggle('current', ORDER_WHEEL.items[i]!.command === current));
+      // With no order in force, the team plan is what they follow.
+      const now = current === 'none' ? 'cancel' : current;
+      this.items.forEach((el, i) => el.classList.toggle('current', ORDER_WHEEL.items[i]!.command === now));
       s.current = current;
     }
     if (hint !== s.hint) this.hint.textContent = s.hint = hint;

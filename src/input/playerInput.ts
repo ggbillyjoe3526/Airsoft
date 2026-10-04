@@ -163,7 +163,7 @@ export class PlayerInput {
       // Pressed before forward, it waits for forward (M18a review); once you've run, letting go of forward ends it.
       if (this.sprintToggled && kb.isDown('forward')) this.sprintRunning = true;
       else if (this.sprintRunning) this.sprintToggled = false;
-      for (const a of SPRINT_STOPPERS) if (kb.wasPressed(a) && !(a === 'fire' && this.fireBlocked)) this.sprintToggled = false;
+      for (const a of SPRINT_STOPPERS) if (kb.wasPressed(a) && !(a === 'fire' && this.fireBlocked) && !(a === 'aim' && this.aimBlocked)) this.sprintToggled = false;
     }
     if (this.fireBlocked && !this.wheel.open && !kb.isDown('fire')) this.fireBlocked = false;
     if (this.aimBlocked && !this.wheel.open && !kb.isDown('aim')) this.aimBlocked = false;

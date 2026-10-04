@@ -438,6 +438,7 @@ describe('order wheel (M23)', () => {
       input.aimMode = mode;
       frame(() => keys.press('orderWheel'));
       expect(frame(() => keys.press('aim')).aim, mode).toBe(false);
+      expect(input.wheelOpen, mode).toBe(true);
       keys.release('orderWheel');
       expect(frame().aim, mode).toBe(false); // wheel closed, aim still held
       keys.release('aim');

@@ -110,7 +110,8 @@ export class Minimap {
     ctx.save();
     ctx.translate(half, half);
     // The other team where they were heard: a patch as wide as the guess is vague, dashed for a footstep, kept inside
-    // the circle. Heard beyond the map's edge (a shot carries further than it shows), a small patch on the rim.
+    // the circle. Heard beyond the map's edge (a shot carries further than it shows), a small patch on the rim towards
+    // them.
     ctx.beginPath();
     ctx.arc(0, 0, rim, 0, Math.PI * 2);
     ctx.save();
@@ -120,7 +121,8 @@ export class Minimap {
       const alpha = noiseAlpha(f.time - h.at);
       if (alpha <= 0) continue;
       const p = toMinimap(f.yaw, f.x, f.z, h.x, h.z, scale, this.at);
-      const pinned = clampToRim(p, rim - MINIMAP.rimPatch);
+      // Pinned only once its middle is off the map: a patch reaching past the rim is just clipped by it.
+      const pinned = clampToRim(p, rim);
       ctx.beginPath();
       ctx.arc(p.x, p.y, pinned ? MINIMAP.rimPatch : Math.max(4, h.radius * scale), 0, Math.PI * 2);
       ctx.fillStyle = this.theirs;
