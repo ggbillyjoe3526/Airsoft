@@ -73,6 +73,8 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
     v.body.r += w.cfg.friendlyMargin;
     v.head.r += w.cfg.friendlyMargin;
     v.shoulder.r += w.cfg.friendlyMargin;
+    // A leaning mate's tilted torso (audit M-06); radius 0 means upright, with no torso part to widen.
+    if (v.torso.r > 0) v.torso.r += w.cfg.friendlyMargin;
     if (rayCharacter(from, dir, dist, v) >= 0) return true;
     const dx = mate.velocity.x * flight;
     const dz = mate.velocity.z * flight;
@@ -82,6 +84,10 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
     v.head.z += dz;
     v.shoulder.x += dx;
     v.shoulder.z += dz;
+    v.torso.ax += dx;
+    v.torso.bx += dx;
+    v.torso.az += dz;
+    v.torso.bz += dz;
     if (rayCharacter(from, dir, dist, v) >= 0) return true;
   }
   return false;
