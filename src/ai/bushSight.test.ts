@@ -34,7 +34,7 @@ describe('a bot looking through bushes, with the real level query (M33e, accepta
     const viewer = standing(0, 0, 0, 0); // faces -Z
     for (const z of [-15, -16.4, -19]) {
       const target = standing(1, 1, 0, z);
-      expect(visiblePart(viewer, target, physics, BOTS, BODY, HITS, map.foliage), `target at z=${z}`).toBe(0);
+      expect(visiblePart(viewer, target, physics, BOTS, BODY, HITS, { foliage: map.foliage ?? [], night: null }), `target at z=${z}`).toBe(0);
       expect(visiblePart(viewer, target, physics, BOTS, BODY, HITS), `target at z=${z}, no bushes`).toBeGreaterThan(0);
     }
     physics.dispose();
@@ -44,8 +44,8 @@ describe('a bot looking through bushes, with the real level query (M33e, accepta
     const map = world([{ ...HIDING, z: -15 }]);
     const physics = new PhysicsWorld(map, BODY, DT);
     const viewer = standing(0, 0, 0, 0);
-    expect(visiblePart(viewer, standing(1, 1, 0, -12), physics, BOTS, BODY, HITS, map.foliage)).toBeGreaterThan(0);
-    expect(visiblePart(viewer, standing(1, 1, 3.5, -15), physics, BOTS, BODY, HITS, map.foliage)).toBeGreaterThan(0);
+    expect(visiblePart(viewer, standing(1, 1, 0, -12), physics, BOTS, BODY, HITS, { foliage: map.foliage ?? [], night: null })).toBeGreaterThan(0);
+    expect(visiblePart(viewer, standing(1, 1, 3.5, -15), physics, BOTS, BODY, HITS, { foliage: map.foliage ?? [], night: null })).toBeGreaterThan(0);
     physics.dispose();
   });
 
@@ -61,7 +61,7 @@ describe('a bot looking through bushes, with the real level query (M33e, accepta
       const physics = new PhysicsWorld(map, BODY, DT);
       // Target standing just behind the bush on its centre line: the line crosses the bush's whole diameter.
       const target = standing(1, 1, 0, -15 - bush.radius - 0.05);
-      const part = visiblePart(viewer, target, physics, BOTS, BODY, HITS, map.foliage);
+      const part = visiblePart(viewer, target, physics, BOTS, BODY, HITS, { foliage: map.foliage ?? [], night: null });
       expect(part > 0, `diameter ${(bush.radius * 2).toFixed(2)} m`).toBe(seen);
       physics.dispose();
     }
@@ -73,9 +73,9 @@ describe('a bot looking through bushes, with the real level query (M33e, accepta
     const physics = new PhysicsWorld(map, BODY, DT);
     const viewer = standing(0, 0, 0, 0);
     const target = standing(1, 1, 0, -15);
-    expect(visiblePart(viewer, target, physics, BOTS, BODY, HITS, map.foliage)).toBe(0);
+    expect(visiblePart(viewer, target, physics, BOTS, BODY, HITS, { foliage: map.foliage ?? [], night: null })).toBe(0);
     // Off to the side of the wall the same bush (not in the way) hides nobody.
-    expect(visiblePart(viewer, standing(1, 1, 10, -15), physics, BOTS, BODY, HITS, map.foliage)).toBeGreaterThan(0);
+    expect(visiblePart(viewer, standing(1, 1, 10, -15), physics, BOTS, BODY, HITS, { foliage: map.foliage ?? [], night: null })).toBeGreaterThan(0);
     physics.dispose();
   });
 
@@ -83,11 +83,11 @@ describe('a bot looking through bushes, with the real level query (M33e, accepta
     const z = -(BOTS.closeAwareness - 0.3);
     const map = world([{ ...HIDING, z }]);
     const physics = new PhysicsWorld(map, BODY, DT);
-    expect(visiblePart(standing(0, 0, 0, 0), standing(1, 1, 0, z), physics, BOTS, BODY, HITS, map.foliage)).toBeGreaterThan(0);
+    expect(visiblePart(standing(0, 0, 0, 0), standing(1, 1, 0, z), physics, BOTS, BODY, HITS, { foliage: map.foliage ?? [], night: null })).toBeGreaterThan(0);
     // Just past closeAwareness the same bush hides them.
     const far = -(BOTS.closeAwareness + 0.3);
     const farMap = world([{ ...HIDING, z: far }]);
-    expect(visiblePart(standing(0, 0, 0, 0), standing(1, 1, 0, far), physics, BOTS, BODY, HITS, farMap.foliage)).toBe(0);
+    expect(visiblePart(standing(0, 0, 0, 0), standing(1, 1, 0, far), physics, BOTS, BODY, HITS, { foliage: farMap.foliage ?? [], night: null })).toBe(0);
     physics.dispose();
   });
 
@@ -96,7 +96,7 @@ describe('a bot looking through bushes, with the real level query (M33e, accepta
     const viewer = standing(0, 0, 0, 0);
     for (let i = 0; i < 40; i++) {
       const target = standing(1, 1, -20 + i, -4 - i * 0.7);
-      expect(visiblePart(viewer, target, physics, BOTS, BODY, HITS, [])).toBe(visiblePart(viewer, target, physics, BOTS, BODY, HITS));
+      expect(visiblePart(viewer, target, physics, BOTS, BODY, HITS, { foliage: [], night: null })).toBe(visiblePart(viewer, target, physics, BOTS, BODY, HITS));
     }
     physics.dispose();
   });

@@ -1,6 +1,8 @@
-import type { BotBehaviour } from '../config/bots';
+import { type BotBehaviour, NIGHT_SIGHT } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import { type Bush, foliageDepth } from '../map/foliage';
+import type { MapData } from '../map/mapTypes';
+import { buildNightField, type NightField, nightSightRange } from '../map/nightSight';
 import type { BodyConfig } from '../config/movement';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
@@ -50,12 +52,27 @@ function sightClear(query: WorldQuery, a: Vec3, b: Vec3, foliage: readonly Bush[
 
 const NO_FOLIAGE: readonly Bush[] = [];
 
+/** What on the map hides people from bots besides walls: bushes (M33e) and the dark of a night field (M33g). */
+export interface SightConditions {
+  foliage: readonly Bush[];
+  night: NightField | null;
+}
+
+/** Daylight with no bushes: walls are all that hide anyone. */
+export const OPEN_SIGHT: SightConditions = { foliage: NO_FOLIAGE, night: null };
+
+/** The sight conditions of `map`, worked out once as a match loads. */
+export function sightConditionsOf(map: MapData): SightConditions {
+  return { foliage: map.foliage ?? NO_FOLIAGE, night: buildNightField(map, NIGHT_SIGHT) };
+}
+
 /**
  * Which part of `target` `viewer` can see right now, as a fraction of the target's height: the chest
  * (bots.aimHeightFraction) if it's in view, else the head (bots.headHeightFraction), else 0 (not seen).
  * Seeing needs the target within view distance, inside the field of view (unless very close), and a
  * clear line from the viewer's eyes: nothing static in the way, and no more than `bots.foliageSeeThrough` of bush
- * (M33e; within `closeAwareness` a bush hides no one).
+ * (M33e; within `closeAwareness` a bush hides no one). On a night field (M33g) the view distance is how far the
+ * target's light lets them be made out: lit, in the moonlit open, or under the trees (map/nightSight.ts).
  */
 export function visiblePart(
   viewer: Character,
@@ -64,18 +81,19 @@ export function visiblePart(
   bots: BotBehaviour,
   body: BodyConfig,
   hits: HitConfig,
-  foliage: readonly Bush[] = NO_FOLIAGE,
+  sight: SightConditions = OPEN_SIGHT,
 ): number {
   const dx = target.position.x - viewer.position.x;
   const dz = target.position.z - viewer.position.z;
   const dist = Math.hypot(dx, dz);
-  if (dist > bots.viewDistance) return 0;
+  const range = sight.night ? Math.min(bots.viewDistance, nightSightRange(sight.night, target.position)) : bots.viewDistance;
+  if (dist > range) return 0;
   if (dist > bots.closeAwareness) {
     // Facing (-sin yaw, -cos yaw); compare with the direction to the target.
     const cos = (-Math.sin(viewer.yaw) * dx - Math.cos(viewer.yaw) * dz) / dist;
     if (cos < Math.cos(((bots.fovDeg / 2) * Math.PI) / 180)) return 0;
   }
-  const leaves = dist > bots.closeAwareness ? foliage : NO_FOLIAGE;
+  const leaves = dist > bots.closeAwareness ? sight.foliage : NO_FOLIAGE;
   eyeOf(viewer, body, hits, eye);
   if (sightClear(query, eye, bodyPoint(target, hits, bots.aimHeightFraction, point), leaves, bots.foliageSeeThrough)) return bots.aimHeightFraction;
   if (sightClear(query, eye, bodyPoint(target, hits, bots.headHeightFraction, point), leaves, bots.foliageSeeThrough)) return bots.headHeightFraction;
