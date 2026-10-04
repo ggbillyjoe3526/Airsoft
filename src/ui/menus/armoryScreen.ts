@@ -2,6 +2,7 @@ import { ARMORY_TEXT } from '../../config/menus';
 import {
   buyTokens,
   canTakeShots,
+  chaseChances,
   cheapestSpare,
   collectionRows,
   type CollectionRow,
@@ -20,9 +21,10 @@ import {
   tierChances,
 } from '../../pool/armory';
 import type { Collection, ItemRef } from '../../pool/collection';
-import { type Asset, fcPerToken, type Pool } from '../../pool/pool';
+import { type Asset, comesIn, fcPerToken, isChase, type Pool } from '../../pool/pool';
 import { tierLine } from '../performanceSheet';
 import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
+import { itemIcon } from './icons';
 import { backButton, el, menuButton, menuPage } from './menuParts';
 
 export interface ArmoryOptions {
@@ -190,7 +192,13 @@ export class ArmoryScreen {
       line.dataset.tier = p.tier.id;
       pity.append(line);
     }
-    const n = shotAssets(this.pool).length;
+    // Chase items (M32) are drawn apart, each on its own chance: a line each, and the rest are picked among themselves.
+    const chase = chaseChances(this.pool).map(({ asset, chance, tiers }) => {
+      const line = el('p', 'menu-readout armory-chase', ARMORY_TEXT.chase(asset.name, tiers.map((t) => t.label).join(', '), String(Math.round(chance * 10000) / 100), Math.round(1 / Math.max(chance, 1e-9))));
+      line.dataset.tier = tiers.at(-1)!.id;
+      return line;
+    });
+    const n = shotAssets(this.pool).filter((a) => !isChase(a)).length;
     const rarest = tierChances(this.pool).filter((t) => t.percent > 0).at(-1);
     const perAsset = n > 0 && rarest ? el('p', 'menu-readout armory-per-asset', ARMORY_TEXT.perAsset(n, e.unownedWeight, rarest.tier.label, Math.round((n * 100) / rarest.percent))) : null;
 
@@ -205,6 +213,7 @@ export class ArmoryScreen {
       ...(pity.childElementCount > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.pityKicker), pity] : []),
       odds,
       perAsset,
+      ...(chase.length > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.chaseKicker), ...chase] : []),
     ];
     this.side.replaceChildren(...parts.filter((x): x is HTMLElement => x !== null));
   }
@@ -227,6 +236,8 @@ export class ArmoryScreen {
       const equipped = this.nowEquipped.has(`${d.item.asset}@${d.item.tier}`);
       const tile = this.tile(d.item, d.isNew ? (equipped ? `${ARMORY_TEXT.new} · ${ARMORY_TEXT.nowEquipped}` : ARMORY_TEXT.new) : ARMORY_TEXT.spare);
       tile.classList.toggle('is-new', d.isNew);
+      // A chase item (M32) gets a reveal of its own.
+      tile.classList.toggle('is-chase', isChase(this.pool.byId.get(d.item.asset)!));
       // Staggered in (style.css; none with reduced motion), the rarest first.
       tile.style.setProperty('--i', String(i));
       grid.append(tile);
@@ -279,9 +290,11 @@ export class ArmoryScreen {
     const pips = el('span', 'armory-pips');
     r.counts.forEach((n, t) => {
       const tier = this.pool.tiers[t]!;
-      const pip = el('span', `armory-pip${n > 0 ? ' is-owned' : ''}`, n > 0 ? `×${n}` : '–');
+      // A tier it never comes in (M32: the Cyber Pistol below Legendary) keeps its column, empty.
+      const comes = comesIn(r.asset, tier.id) || n > 0;
+      const pip = el('span', `armory-pip${n > 0 ? ' is-owned' : ''}${comes ? '' : ' is-na'}`, n > 0 ? `×${n}` : comes ? '–' : '');
       pip.dataset.tier = tier.id;
-      pip.title = `${tier.label}: ${n > 0 ? `×${n}` : ARMORY_TEXT.notOwned}`;
+      pip.title = `${tier.label}: ${n > 0 ? `×${n}` : comes ? ARMORY_TEXT.notOwned : ARMORY_TEXT.notInTier}`;
       pip.setAttribute('aria-label', pip.title);
       pips.append(pip);
     });
@@ -338,7 +351,11 @@ export class ArmoryScreen {
     const asset = this.pool.byId.get(item.asset)!;
     const tile = el('div', 'item-tile armory-tile');
     tile.dataset.tier = item.tier;
-    tile.append(el('span', 'item-note', CATEGORY_LABELS[asset.category]), el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(item)));
+    // The category with its drawing at the top (FA13), what it is at the bottom: tiles with a one-line name keep the same head.
+    const kind = el('span', 'item-note item-kind');
+    kind.innerHTML = itemIcon(asset);
+    kind.append(el('span', '', CATEGORY_LABELS[asset.category]));
+    tile.append(kind, el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(item)));
     const adds = tierLine(this.pool, item);
     if (adds) {
       // A square tile holds three lines of it; the whole line is on hover and in the collection list.

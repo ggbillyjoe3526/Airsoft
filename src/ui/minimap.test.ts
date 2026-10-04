@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
 import { Minimap } from './minimap';
+import { terrainMaxX, terrainMaxZ } from '../map/terrain';
+import { planeTerrain, SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
 
 /** Just enough DOM for the minimap without a browser: canvases without a 2D context, a container with inline style. */
 function fakeDom() {
@@ -54,5 +56,76 @@ describe('Minimap layout (audit UI-14, UI-04, UI-13)', () => {
     expect(minimap.covers(16 + 2 * r + 5, 16 + r)).toBe(false);
     minimap.setVisible(false);
     expect(minimap.covers(16 + r, 16 + r)).toBe(false);
+  });
+});
+
+/** A fake DOM whose canvases draw into a recording context: every fillRect with the fillStyle it was drawn in. */
+function recordingDom() {
+  const canvases: { width: number; height: number; fills: { style: string; x: number; y: number; w: number; h: number }[] }[] = [];
+  const parent = {
+    style: { setProperty: () => undefined, getPropertyValue: () => '' },
+    appendChild: () => undefined,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
+  };
+  (globalThis as { document?: unknown }).document = {
+    createElement: () => {
+      const fills: { style: string; x: number; y: number; w: number; h: number }[] = [];
+      let fillStyle = '';
+      const ctx = new Proxy({} as Record<string, unknown>, {
+        get: (_t, key) => (key === 'fillStyle' ? fillStyle : key === 'fillRect' ? (x: number, y: number, w: number, h: number) => fills.push({ style: fillStyle, x, y, w, h }) : () => undefined),
+        set: (_t, key, value) => {
+          if (key === 'fillStyle') fillStyle = String(value);
+          return true;
+        },
+      });
+      const canvas = { width: 0, height: 0, fills, hidden: false, className: '', setAttribute: () => undefined, getContext: () => ctx, remove: () => undefined, getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }) };
+      canvases.push(canvas);
+      return canvas;
+    },
+  };
+  return { canvases, parent: parent as unknown as HTMLElement };
+}
+
+describe('the minimap on sloping ground (M33c)', () => {
+  const alphaOf = (style: string): number => Number(/rgba\(255, 255, 255, ([\d.]+)\)/.exec(style)?.[1] ?? Number.NaN);
+
+  it('draws the terrain\'s whole footprint in the ground colour, lighter cell by cell where it is higher', () => {
+    const dom = recordingDom();
+    new Minimap(dom.parent, [], '#00f', '#f80', SLOPE_YARD_TERRAIN);
+    const field = dom.canvases[1]!; // the first canvas is the minimap itself
+    const t = SLOPE_YARD_TERRAIN;
+    const s = MINIMAP.layerScale;
+    expect(field.width).toBe(Math.ceil((terrainMaxX(t) - t.minX) * s));
+    expect(field.height).toBe(Math.ceil((terrainMaxZ(t) - t.minZ) * s));
+    const ground = field.fills[0]!;
+    expect(ground.style).toBe(MINIMAP.colours.ground);
+    expect([ground.x, ground.y, ground.w, ground.h]).toEqual([0, 0, t.cols * t.cell * s, t.rows * t.cell * s]);
+    const shades = field.fills.slice(1).filter((f) => Number.isFinite(alphaOf(f.style)));
+    expect(shades.length).toBeGreaterThan(100);
+    // Lighter where higher: the slope rises along +x, so the right side's cells carry more white than the left's.
+    const meanAlpha = (pick: (f: (typeof shades)[number]) => boolean): number => {
+      const sel = shades.filter(pick);
+      return sel.reduce((a, f) => a + alphaOf(f.style), 0) / Math.max(1, sel.length);
+    };
+    expect(meanAlpha((f) => f.x > field.width * 0.75)).toBeGreaterThan(meanAlpha((f) => f.x < field.width * 0.25) + 0.05);
+    // Never lighter than the configured shade.
+    expect(Math.max(...shades.map((f) => alphaOf(f.style)))).toBeLessThanOrEqual(MINIMAP.terrainShade + 1e-3);
+    expect(Math.max(...shades.map((f) => alphaOf(f.style)))).toBeGreaterThan(MINIMAP.terrainShade * 0.8);
+  });
+
+  it('draws level ground flat, a map\'s blocks over the terrain, and still nothing for a map with neither', () => {
+    const flat = recordingDom();
+    new Minimap(flat.parent, [], '#00f', '#f80', planeTerrain(0));
+    expect(flat.canvases[1]!.fills).toHaveLength(1); // just the ground colour: no height to shade by
+    const withBlocks = recordingDom();
+    new Minimap(withBlocks.parent, SLOPE_YARD.blocks, '#00f', '#f80', SLOPE_YARD_TERRAIN);
+    const fills = withBlocks.canvases[1]!.fills;
+    expect(fills[0]!.style).toBe(MINIMAP.colours.ground);
+    // The blocks come after all of the ground's cells.
+    const lastShade = fills.map((f) => Number.isFinite(alphaOf(f.style))).lastIndexOf(true);
+    expect(fills.slice(lastShade + 1).length).toBe(SLOPE_YARD.blocks.length);
+    const none = recordingDom();
+    new Minimap(none.parent, [], '#00f', '#f80');
+    expect(none.canvases).toHaveLength(1); // no field layer at all, as before
   });
 });

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { AUDIO, VOLUME } from '../config/audio';
-import { LOADOUT } from '../config/replicas';
+import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import { cues, SHOT_PROFILES, SOUNDS, type SoundCue } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import type { MapBlock } from '../map/mapTypes';
+import { terrainHeightAt } from '../map/terrain';
+import { SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { saveSetting } from '../settings/storage';
@@ -317,6 +319,32 @@ describe('what things sound like underfoot and under a BB (M13)', () => {
   });
 });
 
+describe('what a BB ticks off on sloping ground (M33c)', () => {
+  const { blocks, terrain } = SLOPE_YARD;
+  const ground = (x: number, z: number): number => terrainHeightAt(SLOPE_YARD_TERRAIN, x, z)!;
+
+  it('is earth on the ground, wherever the ground is, and the old answers without terrain', () => {
+    for (const [x, z] of [[0, 8], [-10, -10], [10, 10], [6, -6]] as const) {
+      expect(impactMaterialAt(blocks, vec3(x, ground(x, z), z), terrain), `${x}, ${z}`).toBe('earth');
+      expect(impactMaterialAt(blocks, vec3(x, ground(x, z) + 0.02, z), terrain)).toBe('earth');
+      expect(impactMaterialAt(blocks, vec3(x, ground(x, z) - 0.02, z), terrain)).toBe('earth');
+      // The same point on a map without terrain: nothing is that close, so concrete, as before.
+      expect(impactMaterialAt(blocks, vec3(x, ground(x, z), z))).toBe('concrete');
+      expect(impactMaterialAt(blocks, vec3(x, ground(x, z), z), null)).toBe('concrete');
+    }
+  });
+
+  it('is not earth in mid-air or off the terrain, and a prop on the ground still sounds like itself', () => {
+    expect(impactMaterialAt(blocks, vec3(0, ground(0, 8) + 2, 8), terrain)).toBe('concrete');
+    expect(impactMaterialAt(blocks, vec3(20, 0, 8), terrain)).toBe('concrete');
+    // The crate's side, a little above the ground at its foot: wood, not earth.
+    const crate = blocks[0]!;
+    expect(impactMaterialAt(blocks, vec3(crate.center.x - 0.6, ground(crate.center.x, crate.center.z) + 0.2, crate.center.z), terrain)).toBe('wood');
+    // The old answers keep their values with terrain passed (blocks away from the ground).
+    expect(impactMaterialAt(blocks, vec3(crate.center.x, crate.center.y + 0.6, crate.center.z), terrain)).toBe('wood');
+  });
+});
+
 describe("the yard's outdoor bed (audit CORE-34)", () => {
   const render = (rand?: () => number): { bed: Float32Array; steps: number } => {
     const job = renderAmbienceBed(RATE, rand);
@@ -387,5 +415,31 @@ describe('volume settings (M13)', () => {
     expect(volumeGain(1)).toBe(1);
     expect(volumeGain(0.5)).toBeLessThan(0.5);
     expect(volumeGain(2)).toBe(1);
+  });
+});
+
+describe('M32 acceptance 7: the Cyber Pistol sounds its own', () => {
+  const rendered = renderSounds(RATE, 3);
+
+  it("has a profile of its own with a shot, dry fire and both magazine sounds, and the replica says which it makes", () => {
+    expect(CYBER_PISTOL.look.sound).toBe('cyber');
+    expect(CYBER_PISTOL.power).toBe('electric');
+    expect(SHOT_PROFILES).toContain('cyber');
+    for (const cue of [cues.shot('cyber'), cues.dryFire('cyber'), cues.magOut('cyber'), cues.magIn('cyber')]) {
+      expect(SOUNDS[cue], cue).toBeDefined();
+      expect(rendered.get(cue), cue).toHaveLength(3);
+    }
+    // The other replicas keep their power's sounds.
+    for (const r of LOADOUT) expect(r.look.sound).toBeUndefined();
+  });
+
+  it("has sounds that are none of another profile's", () => {
+    for (const make of [cues.shot, cues.dryFire, cues.magOut, cues.magIn]) {
+      const mine = rendered.get(make('cyber'))![0]!;
+      for (const other of SHOT_PROFILES.filter((p) => p !== 'cyber')) {
+        const theirs = rendered.get(make(other))![0]!;
+        expect(mine.length === theirs.length && mine.every((x, i) => x === theirs[i]), `${make('cyber')} vs ${make(other)}`).toBe(false);
+      }
+    }
   });
 });

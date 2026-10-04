@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { type HitConfig, HITS } from '../config/hits';
 import { LOADOUT } from '../config/replicas';
+import { impactMaterialAt } from '../audio/soundMaterials';
+import type { MapBlock } from '../map/mapTypes';
+import { type Terrain, terrainHeightAt } from '../map/terrain';
+import { SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
+import { buildLevelRay, castLevelRay } from './levelRay';
 import type { SurfaceHit, WorldQuery } from './armament';
 import { createBBPool, spawnBB } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
@@ -396,5 +401,55 @@ describe('stepBBs in the wind (M30)', () => {
       stepBBs(unspunPool, BALLISTICS, open, KILL_Y, [], DT);
     }
     expect(spun.position.y - unspun.position.y).toBeGreaterThan(0.1);
+  });
+});
+
+describe('BBs into sloping ground (M33c)', () => {
+  /** The level ray as a world query, the way PhysicsWorld hands it to stepBBs. */
+  function queryOf(blocks: readonly MapBlock[], terrain: Terrain | null = SLOPE_YARD_TERRAIN): WorldQuery {
+    const level = buildLevelRay(blocks, 1, terrain);
+    return {
+      raycastStatic: (o, d, max) => castLevelRay(level, o, d, max),
+      raycastSurface: (o, d, max, out) => castLevelRay(level, o, d, max, out),
+    };
+  }
+
+  /** Fires one BB at 80 m/s from (x, y, z) at `pitch` degrees below the horizon along `yaw`, and flies it out. */
+  function fire(query: WorldQuery, from: [number, number, number], yawDeg: number, pitchDeg: number) {
+    const pool = createBBPool(1);
+    const yaw = (yawDeg * Math.PI) / 180;
+    const pitch = (pitchDeg * Math.PI) / 180;
+    const bb = spawnBB(pool, 0, vec3(...from), vec3(Math.cos(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.sin(yaw) * Math.cos(pitch)), 80, 0.12, 0.25e-3);
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 300 && bb.active; i++) stepBBs(pool, BALLISTICS, query, KILL_Y, events, DT);
+    return { bb, impacts: events.filter((e) => e.type === 'bbImpact'), lost: events.filter((e) => e.type === 'bbLost') };
+  }
+
+  it('stops a BB where it meets the ground, even grazing, with no ricochet, and the impact is earth', () => {
+    const query = queryOf(SLOPE_YARD.blocks);
+    // Steeply down, grazing shots up the slope (1 to 3 degrees) that would skip off concrete, and one across it.
+    for (const [from, yaw, pitch] of [
+      [[-10, 1.5, 9], 0, 40],
+      [[-10, 1.5, 9], 0, 3],
+      [[-10, 1.5, 9], -20, 1],
+      [[-12, -1, 12], -45, 2],
+    ] as const) {
+      const r = fire(query, [...from], yaw, pitch);
+      const label = `from ${from} yaw ${yaw} pitch ${pitch}`;
+      expect(r.bb.active, label).toBe(false);
+      expect(r.bb.bounces, label).toBe(0);
+      expect(r.lost, label).toHaveLength(0);
+      expect(r.impacts, label).toHaveLength(1);
+      const p = r.impacts[0]!.type === 'bbImpact' ? r.impacts[0]!.position : vec3();
+      // It stopped on the ground itself, and what it hit sounds like earth.
+      expect(p.y, label).toBeCloseTo(terrainHeightAt(SLOPE_YARD_TERRAIN, p.x, p.z)!, 3);
+      expect(impactMaterialAt(SLOPE_YARD.blocks, p, SLOPE_YARD_TERRAIN), label).toBe('earth');
+    }
+  });
+
+  it('is the ground that stops it: the same grazing shot skips off a concrete floor', () => {
+    const floor: MapBlock = { kind: 'floor', center: vec3(0, -0.25, 0), size: vec3(40, 0.5, 40) };
+    const r = fire(queryOf([floor], null), [-10, 0.2, 9], 0, 3);
+    expect(r.bb.bounces).toBeGreaterThan(0);
   });
 });

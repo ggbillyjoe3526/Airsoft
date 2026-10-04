@@ -11,7 +11,7 @@ import type { ImpactMaterial } from '../config/sounds';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, type OpticId, OPTICS } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
-import type { MapBlock } from '../map/mapTypes';
+import type { MapData } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
@@ -34,6 +34,16 @@ export interface BBGlow {
 }
 
 const NO_GLOW: BBGlow = { player: [], others: false };
+
+/**
+ * Every replica whose sounds the match needs: yours first (as you carry them), then any other a character carries. Bots
+ * needn't carry what you do (you may leave the AEG at home, M32), and a replica without sounds would shoot silently.
+ */
+export function heardReplicas(loadout: readonly ReplicaConfig[], characters: readonly Character[]): ReplicaConfig[] {
+  const out = [...loadout];
+  for (const c of characters) for (const r of c.armament.replicas) if (!out.some((o) => o.id === r.id)) out.push(r);
+  return out;
+}
 
 /**
  * Everything the player sees and hears about replicas and BBs: BBs in flight, impact puffs, the held
@@ -102,7 +112,8 @@ export class CombatPresentation {
     private readonly query: WorldQuery,
     teamColor: number,
     tickSeconds: number,
-    private readonly blocks: readonly MapBlock[],
+    /** The map's blocks and sloping ground (M33c): what a BB's impact sounds and puffs like, and what you walk on. */
+    private readonly field: Pick<MapData, 'blocks' | 'terrain'>,
     audio: SfxSetup,
     keyName: (action: Action) => string,
     crosshair: CrosshairSettings,
@@ -112,7 +123,7 @@ export class CombatPresentation {
     /** Whose BBs glow (M33b): yours by gear slot (your Loadout's choice on this field), and everyone else's. */
     private readonly glow: BBGlow = NO_GLOW,
   ) {
-    this.sfx = new Sfx(loadout, blocks, query, audio);
+    this.sfx = new Sfx(heardReplicas(loadout, state.characters), field.blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
@@ -220,7 +231,7 @@ export class CombatPresentation {
         }
       } else if (e.type === 'bbImpact') {
         // Dust by what the BB hit, and its tick: one lookup for both (audit L-15).
-        const material = impactMaterialAt(this.blocks, e.position);
+        const material = impactMaterialAt(this.field.blocks, e.position, this.field.terrain ?? null);
         const tint = this.dustTints.get(material);
         this.puffs.spawn(e.position, tint, IMPACT_DUST[material].scale);
         if (this.grit.active && tint) {
