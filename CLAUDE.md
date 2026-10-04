@@ -126,6 +126,10 @@ shotgun, DMR, LMG …), bigger loadouts (gear, pouches and more parts, free from
 simulation, grenades, smoke and flash bombs, a medic mode, bigger teams (4v4 / 5v5), day and night maps, customisation,
 unlock-based progression (never levels), and team communication (wheel, pings, hand signals) once the bots are good enough. Don't build these during v0.1.
 
+**Bug passes:** after each batch of feature pull requests merges and before a playtest, run a full bug pass that also
+works through `docs/KNOWN_ISSUES.md` (fix and verify what can be fixed, keep the rest logged); remind the owner when one is
+due (owner, 2026-10-04).
+
 **Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
 performance, stability, UX/QoL, polish and final tuning are beta. During alpha, note beta-type work in
 `docs/ROADMAP.md` (Beta) or `docs/KNOWN_ISSUES.md` unless it blocks alpha work.

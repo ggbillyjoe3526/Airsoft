@@ -31,6 +31,15 @@ _Last updated: 2026-10-04 · the build pipeline landed (#47, #49, #50) and its d
   fixed is in DECISIONS (2026-10-04 · Bug pass) and REVIEWS; what it left is in KNOWN_ISSUES (search "bug pass").
   Nothing it found in rounds, scoring, ballistics, records, leaks or navigation needed a change.
 
+## Standing practice: the full bug pass and KNOWN_ISSUES sweep (owner, 2026-10-04)
+
+Deferred on 2026-10-04 (usage), not cancelled. The owner wants it done regularly: **after each batch of feature pull
+requests has merged and before a playtest**, one thread plays every mode in the browser, reviews all code by area,
+works through `docs/KNOWN_ISSUES.md` fixing and verifying what can be fixed, keeps the rest logged there, and wraps
+up (HANDOFF, KNOWN_ISSUES, docs) before telling the owner main is ready. **The next one is due now, on current
+`main`** (the pipeline batch, #47–#52, merged without it); remind the owner when a batch lands, and run it before
+each playtest from then on.
+
 ## The owner's 2026-10-04 batch: M25 (Depot rework and CC0 assets)
 
 - **M25a (CC0 assets):** guide in `docs/CC0_ASSETS.md`; `src/render/externalModels.ts` loads an optional
