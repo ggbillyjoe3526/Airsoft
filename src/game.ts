@@ -321,7 +321,8 @@ export class Game {
   /** On-screen sound cues turned on or off: kept for the next match and applied to the one loaded. */
   private changeSoundCues(on: boolean): void {
     this.soundCues = on;
-    this.session?.setSoundCues(on);
+    // The range has nobody else to hear, so only a match takes them.
+    if (this.session instanceof MatchSession) this.session.setSoundCues(on);
   }
 
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
@@ -399,8 +400,10 @@ export class Game {
       hopUps: this.picked.map((r) => this.hopUpOf(r)),
       bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
       parts: this.picked.map((r) => this.partsOf(r)),
+      teamColours: TEAM_COLOUR_SETS[this.teamColours],
     }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair, pose);
     this.session.setMotion(motionScale(this.reducedMotion));
+    applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
   }
 
   private resume(): void {

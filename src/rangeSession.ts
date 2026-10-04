@@ -12,7 +12,6 @@ import { PHYSICS } from './config/physics';
 import type { QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
-import { TEAMS } from './config/teams';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MatchSetup } from './matchSession';
@@ -39,7 +38,7 @@ import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 const PLAYER_ID = 0;
 
 /** What the range needs from New game's choices: the loadout (the match rules don't apply). */
-export type RangeSetup = Pick<MatchSetup, 'loadout' | 'optic' | 'hopUps' | 'bbWeights' | 'parts'>;
+export type RangeSetup = Pick<MatchSetup, 'loadout' | 'optic' | 'hopUps' | 'bbWeights' | 'parts' | 'teamColours'>;
 
 /** Where you stand and which way you face: kept when the range is rebuilt for a new loadout. */
 export interface RangePose {
@@ -121,7 +120,7 @@ export class RangeSession {
     this.commands.set(PLAYER_ID, this.playerCommand);
     input.resetView(pose?.yaw ?? spawn.yaw);
 
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, TEAMS[0]!.color, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
     renderer.scene.add(this.targets.object);
