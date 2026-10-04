@@ -1,10 +1,13 @@
 import * as THREE from 'three';
-import { SURFACES, type SurfaceTextureId } from '../config/render';
+import { type QualitySettings, SURFACES, type SurfaceTextureId } from '../config/render';
 import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
+import { appendCuboid, type Buffers, type Cuboid, type CuboidShape, emptyBuffers, FACES, PLAIN, type UvMode } from './cuboidMesh';
+import { buildMapDecals, disposeMapDecals, drawDecalAtlas } from './mapDecals';
 import type { ProceduralTexture, SurfaceTextures } from './proceduralTextures';
-
-type UvMode = 'world' | 'perFace';
+import { isSurfaceMaterial, setReliefMaps, type SurfaceMaterial, withoutEnvironment } from './surfaceMaterials';
+import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
+import { buildOccluders, type Occluders, occlusionAt, occlusionShade } from './vertexOcclusion';
 
 interface KindStyle {
   texture: SurfaceTextureId;
@@ -66,97 +69,6 @@ export function blockTint(block: MapBlock): number {
 /** A block's brightness (1 - SURFACES.shadeJitter .. 1), from other bits of the same hash: tint stays its hue. */
 export function blockShade(block: MapBlock): number {
   return 1 - SURFACES.shadeJitter * (((blockHash(block) >>> 8) % 101) / 100);
-}
-
-interface Buffers {
-  positions: number[];
-  normals: number[];
-  uvs: number[];
-  colors: number[];
-  indices: number[];
-}
-
-// Face definitions: normal, and the two axes used for U and V (V is up on every side face).
-const FACES = [
-  { n: [1, 0, 0], u: [0, 0, -1], v: [0, 1, 0] },
-  { n: [-1, 0, 0], u: [0, 0, 1], v: [0, 1, 0] },
-  { n: [0, 1, 0], u: [1, 0, 0], v: [0, 0, -1] },
-  { n: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1] },
-  { n: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0] },
-  { n: [0, 0, -1], u: [-1, 0, 0], v: [0, 1, 0] },
-] as const;
-
-/** An axis-aligned box to draw: its corners (world metres). */
-interface Cuboid {
-  min: [number, number, number];
-  max: [number, number, number];
-}
-
-/** How a cuboid is painted: its texture mapping, colour, and where its grime band starts (the ground under it), if any. */
-interface Paint {
-  uv: UvMode;
-  tex: ProceduralTexture;
-  color: THREE.Color;
-  /** Height of the ground at its foot: side faces darken from here up over SURFACES.grimeHeight. Null: no grime. */
-  grimeFrom: number | null;
-}
-
-const vertexColor = new THREE.Color();
-
-/** The colour at height `y` for `paint`: its colour, darkened in the grime band near its foot. */
-function shadeAt(paint: Paint, y: number): THREE.Color {
-  vertexColor.copy(paint.color);
-  if (paint.grimeFrom === null) return vertexColor;
-  const t = (y - paint.grimeFrom) / SURFACES.grimeHeight;
-  if (t >= 1) return vertexColor;
-  return vertexColor.multiplyScalar(SURFACES.grimeShade + (1 - SURFACES.grimeShade) * Math.max(0, t));
-}
-
-/** Rows along a side face's height (in -1..1 of its half height): split at the top of the grime band if it crosses it. */
-const rows: number[] = [];
-
-function appendCuboid(buf: Buffers, box: Cuboid, paint: Paint): void {
-  const half = [(box.max[0] - box.min[0]) / 2, (box.max[1] - box.min[1]) / 2, (box.max[2] - box.min[2]) / 2] as const;
-  const centre = [(box.max[0] + box.min[0]) / 2, (box.max[1] + box.min[1]) / 2, (box.max[2] + box.min[2]) / 2] as const;
-
-  for (const f of FACES) {
-    // Half extents along the face's u and v axes.
-    const hu = Math.abs(f.u[0]) * half[0] + Math.abs(f.u[1]) * half[1] + Math.abs(f.u[2]) * half[2];
-    const hv = Math.abs(f.v[0]) * half[0] + Math.abs(f.v[1]) * half[1] + Math.abs(f.v[2]) * half[2];
-    const hn = Math.abs(f.n[0]) * half[0] + Math.abs(f.n[1]) * half[1] + Math.abs(f.n[2]) * half[2];
-    rows.length = 0;
-    rows.push(-1);
-    const side = f.n[1] === 0;
-    if (side && paint.grimeFrom !== null && hv > 0) {
-      const split = (paint.grimeFrom + SURFACES.grimeHeight - centre[1]) / hv;
-      if (split > -1 && split < 1) rows.push(split);
-    }
-    rows.push(1);
-
-    for (let r = 0; r + 1 < rows.length; r++) {
-      const base = buf.positions.length / 3;
-      for (const [su, sv] of [
-        [-1, rows[r]!],
-        [1, rows[r]!],
-        [1, rows[r + 1]!],
-        [-1, rows[r + 1]!],
-      ] as const) {
-        const px = centre[0] + f.n[0] * hn + f.u[0] * hu * su + f.v[0] * hv * sv;
-        const py = centre[1] + f.n[1] * hn + f.u[1] * hu * su + f.v[1] * hv * sv;
-        const pz = centre[2] + f.n[2] * hn + f.u[2] * hu * su + f.v[2] * hv * sv;
-        buf.positions.push(px, py, pz);
-        buf.normals.push(f.n[0], f.n[1], f.n[2]);
-        const c = side ? shadeAt(paint, py) : paint.color;
-        buf.colors.push(c.r, c.g, c.b);
-        if (paint.uv === 'world') {
-          buf.uvs.push((px * f.u[0] + py * f.u[1] + pz * f.u[2]) / paint.tex.worldSize, (px * f.v[0] + py * f.v[1] + pz * f.v[2]) / paint.tex.worldSize);
-        } else {
-          buf.uvs.push((su + 1) / 2, (sv + 1) / 2);
-        }
-      }
-      buf.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
-    }
-  }
 }
 
 const rampCorner = new Float32Array(18);
@@ -221,6 +133,7 @@ const C = SURFACES.container;
 const COPING = SURFACES.wallCoping;
 const PALLET = SURFACES.pallet;
 const PROP = SURFACES.siteProps;
+const DETAIL = SURFACES.propDetail;
 /** Two blocks touch top to bottom within this (metres). */
 const TOUCH = 0.01;
 
@@ -229,7 +142,7 @@ const TOUCH = 0.01;
  * frame of corner posts and rails at the top, bottom and between stacked containers, posts between containers in a
  * row, and locking bars on one end. Every piece stays inside the block.
  */
-function containerPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+function containerPieces(block: MapBlock, color: THREE.Color, out: Piece[], detail: boolean): void {
   const b = boundsOf(block);
   const frame = color.clone().multiplyScalar(C.frameShade);
   const bars = color.clone().multiplyScalar(C.barShade);
@@ -288,6 +201,14 @@ function containerPieces(block: MapBlock, color: THREE.Color, out: Piece[]): voi
       const [min, max] = span(long, doorAt, doorAt + C.inset, at - C.bar / 2, at + C.bar / 2, y0, y1);
       piece(min, max, bars, false);
     }
+    // Map detail: a lock box between the middle two bars, at handle height.
+    if (detail) {
+      const mid = b.min[across] + width / 2;
+      const yLock = y0 + (y1 - y0) * 0.45;
+      const L = DETAIL.lockBox;
+      const [min, max] = span(long, doorAt, doorAt + Math.min(C.inset, L.depth + C.inset / 2), mid - L.width / 2, mid + L.width / 2, yLock, yLock + L.height);
+      piece(min, max, bars, false);
+    }
   }
 }
 
@@ -315,7 +236,7 @@ interface PalletLoad {
  * A crate standing on the ground: the crate on a pallet (top and bottom decks on three runners), inside its bounds.
  * `load` paints the load as something else (a wrapped pallet).
  */
-function palletPieces(block: MapBlock, color: THREE.Color, out: Piece[], load?: PalletLoad): void {
+function palletPieces(block: MapBlock, color: THREE.Color, out: Piece[], detail: boolean, load?: PalletLoad): void {
   const b = boundsOf(block);
   const deck = PALLET.height;
   out.push({
@@ -334,7 +255,15 @@ function palletPieces(block: MapBlock, color: THREE.Color, out: Piece[], load?: 
   const add = (min: Cuboid['min'], max: Cuboid['max']): void => {
     out.push({ box: { min, max }, texture: 'crate', uv: 'perFace', color: wood, grime: true, castShadow: true });
   };
-  add([b.min[0], b.min[1] + deck - board, b.min[2]], [b.max[0], b.min[1] + deck, b.max[2]]);
+  if (detail) {
+    // Map detail: the top deck as separate boards with gaps between them, the runners showing through.
+    const n = DETAIL.pallet.boards;
+    const w = (b.max[2] - b.min[2] - (n - 1) * DETAIL.pallet.gap) / n;
+    for (let k = 0; k < n; k++) {
+      const z0 = b.min[2] + k * (w + DETAIL.pallet.gap);
+      add([b.min[0], b.min[1] + deck - board, z0], [b.max[0], b.min[1] + deck, z0 + w]);
+    }
+  } else add([b.min[0], b.min[1] + deck - board, b.min[2]], [b.max[0], b.min[1] + deck, b.max[2]]);
   add([b.min[0], b.min[1], b.min[2]], [b.max[0], b.min[1] + board, b.max[2]]);
   const depth = b.max[2] - b.min[2];
   for (const at of [0, 0.5, 1]) {
@@ -469,9 +398,9 @@ function gabionPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
 }
 
 /** A pallet load shrink-wrapped in film, on its pallet, with two straps round it. */
-function wrappedPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+function wrappedPieces(block: MapBlock, color: THREE.Color, out: Piece[], detail: boolean): void {
   const b = boundsOf(block);
-  palletPieces(block, new THREE.Color(PROP.palletWood), out, { texture: 'barrier', uv: 'world', color, topGap: PROP.strapThickness });
+  palletPieces(block, new THREE.Color(PROP.palletWood), out, detail, { texture: 'barrier', uv: 'world', color, topGap: PROP.strapThickness });
   const strap = new THREE.Color(PROP.strap);
   const [along, across] = axes(block);
   for (const t of [0.3, 0.7]) {
@@ -527,13 +456,22 @@ function sandbagPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void 
 }
 
 /** A site generator: a painted canopy on a dark skid, with louvred panels down its sides and a control panel. */
-function generatorPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+function generatorPieces(block: MapBlock, color: THREE.Color, out: Piece[], detail: boolean): void {
   const b = boundsOf(block);
   const g = PROP.generator;
   const dark = shade(color, 0.4);
+  // Map detail: a fuel cap stands on the canopy, which is lowered by its height to keep it inside the block.
+  const cap = detail ? DETAIL.fuelCap : null;
+  const canopyTop = b.max[1] - (cap?.height ?? 0);
   add(out, b.min, [b.max[0], b.min[1] + g.skid, b.max[2]], 'barrier', dark);
-  add(out, [b.min[0] + g.inset, b.min[1] + g.skid, b.min[2] + g.inset], [b.max[0] - g.inset, b.max[1], b.max[2] - g.inset], 'barrier', color);
+  add(out, [b.min[0] + g.inset, b.min[1] + g.skid, b.min[2] + g.inset], [b.max[0] - g.inset, canopyTop, b.max[2] - g.inset], 'barrier', color);
   const [along, across] = axes(block);
+  if (cap) {
+    const at = b.min[along] + (b.max[along] - b.min[along]) * 0.25;
+    const mid = (b.min[across] + b.max[across]) / 2;
+    const [min, max] = span(along, at - cap.size / 2, at + cap.size / 2, mid - cap.size / 2, mid + cap.size / 2, canopyTop, b.max[1]);
+    add(out, min, max, 'barrier', new THREE.Color(PROP.latch), false);
+  }
   const louvre = shade(color, 0.6);
   for (const at of [b.min[across], b.max[across] - g.inset]) {
     for (let k = 0; k < g.louvres; k++) {
@@ -548,7 +486,7 @@ function generatorPieces(block: MapBlock, color: THREE.Color, out: Piece[]): voi
 }
 
 /** A skip: a ribbed steel bin narrower at its foot, a rim round its open top, and rubble inside. */
-function skipPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+function skipPieces(block: MapBlock, color: THREE.Color, out: Piece[], detail: boolean): void {
   const b = boundsOf(block);
   const s = PROP.skip;
   const [along, across] = axes(block);
@@ -569,6 +507,19 @@ function skipPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
   }
   const [rMin, rMax] = span(along, b.min[along] + s.rimWidth, b.max[along] - s.rimWidth, b.min[across] + s.rimWidth, b.max[across] - s.rimWidth, y0, b.max[1] - s.rubbleDrop);
   add(out, rMin, rMax, 'concrete', new THREE.Color(PROP.rubble), false);
+  if (!detail) return;
+  // Map detail: a heap of broken blocks on the rubble, up to the rim's top (never above the block).
+  const H = DETAIL.skipHeap;
+  let bits = blockHash(block);
+  const free = [b.max[along] - b.min[along] - 2 * s.rimWidth - H.size, b.max[across] - b.min[across] - 2 * s.rimWidth - H.size];
+  for (let k = 0; k < H.blocks; k++) {
+    const a0 = b.min[along] + s.rimWidth + ((bits & 255) / 255) * free[0]!;
+    const c0 = b.min[across] + s.rimWidth + (((bits >>> 8) & 255) / 255) * free[1]!;
+    const top = Math.min(b.max[1], b.max[1] - s.rubbleDrop + H.heap * (0.5 + ((bits >>> 16) & 127) / 254));
+    bits = Math.imul(bits ^ (bits >>> 13), 0x5bd1e995) >>> 0;
+    const [min, max] = span(along, a0, a0 + H.size, c0, c0 + H.size * 0.7, b.max[1] - s.rubbleDrop - H.heap, top);
+    add(out, min, max, 'concrete', shade(new THREE.Color(PROP.rubble), 0.85 + 0.1 * k), false);
+  }
 }
 
 /** True if `block` stands on a crate (stacked crates share one pallet, under the bottom one). */
@@ -584,47 +535,98 @@ function onCrate(block: MapBlock, blocks: readonly MapBlock[]): boolean {
   );
 }
 
-/** Every piece a block is drawn as (most are just the block itself). Exported for the tests. */
-export function blockPieces(block: MapBlock, blocks: readonly MapBlock[]): Piece[] {
+/**
+ * A barrier with map detail: its top recessed `recess` deep inside a rim `rim` wide (moulded plastic barriers are
+ * hollow), the recess shaded by the baked occlusion.
+ */
+function barrierPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+  const b = boundsOf(block);
+  const R = DETAIL.barrier;
+  const floor = b.max[1] - R.recess;
+  add(out, b.min, [b.max[0], floor, b.max[2]], 'barrier', color);
+  const rim = shade(color, R.shade);
+  for (const [min, max] of [
+    [[b.min[0], floor, b.min[2]], [b.max[0], b.max[1], b.min[2] + R.rim]],
+    [[b.min[0], floor, b.max[2] - R.rim], [b.max[0], b.max[1], b.max[2]]],
+    [[b.min[0], floor, b.min[2] + R.rim], [b.min[0] + R.rim, b.max[1], b.max[2] - R.rim]],
+    [[b.max[0] - R.rim, floor, b.min[2] + R.rim], [b.max[0], b.max[1], b.max[2] - R.rim]],
+  ] as [Cuboid['min'], Cuboid['max']][]) {
+    add(out, min, max, 'barrier', rim, false);
+  }
+}
+
+/**
+ * Every piece a block is drawn as (most are just the block itself); `detail` (QualitySettings.mapDetail) adds the
+ * finer prop detail. Every piece stays inside its block either way. Exported for the tests.
+ */
+export function blockPieces(block: MapBlock, blocks: readonly MapBlock[], detail = false): Piece[] {
   const style = styleOf(block);
   const color = new THREE.Color().setHex(blockTint(block), THREE.SRGBColorSpace).multiplyScalar(blockShade(block));
   const out: Piece[] = [];
-  if (block.kind === 'container') containerPieces(block, color, out);
+  if (block.kind === 'container') containerPieces(block, color, out, detail);
   else if (block.kind === 'wall') wallPieces(block, color, out);
-  else if (block.kind === 'crate' && !onCrate(block, blocks)) palletPieces(block, color, out);
+  else if (block.kind === 'crate' && !onCrate(block, blocks)) palletPieces(block, color, out, detail);
   else if (block.kind === 'toilet') toiletPieces(block, color, out);
   else if (block.kind === 'rack') rackPieces(block, color, out);
   else if (block.kind === 'gabion') gabionPieces(block, color, out);
-  else if (block.kind === 'wrapped') wrappedPieces(block, color, out);
+  else if (block.kind === 'wrapped') wrappedPieces(block, color, out, detail);
   else if (block.kind === 'ibc') ibcPieces(block, color, out);
   else if (block.kind === 'sandbags') sandbagPieces(block, color, out);
-  else if (block.kind === 'generator') generatorPieces(block, color, out);
-  else if (block.kind === 'skip') skipPieces(block, color, out);
+  else if (block.kind === 'generator') generatorPieces(block, color, out, detail);
+  else if (block.kind === 'skip') skipPieces(block, color, out, detail);
+  else if (block.kind === 'barrier' && detail && block.surface !== 'metal') barrierPieces(block, color, out);
   else out.push({ box: boundsOf(block), texture: style.texture, uv: style.uv, color, grime: style.grime, castShadow: castsShadow(block) });
   return out;
 }
 
+/** What a built map looks like (from QualitySettings): rebuilt when `detail` or `steelSheen` changes (mapNeedsRebuild). */
+export interface MapLook {
+  /** Surface relief on, drawn as normal maps (else bump maps). */
+  relief: boolean;
+  normalMaps: boolean;
+  /** Map detail: bevels, baked occlusion on finer tiles, ground variation, prop detail, signs (render/mapDecals.ts). */
+  detail: boolean;
+  /** Steel tread plate as painted steel that picks up the sky (with Environment lighting). */
+  steelSheen: boolean;
+}
+
+export function mapLookOf(q: QualitySettings): MapLook {
+  return { relief: q.surfaceRelief, normalMaps: q.normalMaps, detail: q.mapDetail, steelSheen: q.environment };
+}
+
+/** Whether going from one look to another needs the map built again (geometry or material kind changes). */
+export function mapNeedsRebuild(from: MapLook, to: MapLook): boolean {
+  return from.detail !== to.detail || from.steelSheen !== to.steelSheen;
+}
+
 /**
- * The material for a merged surface mesh: its texture, doubled as a bump map when surface relief is on (the bump
- * scale is set once; it does nothing while there is no bump map).
+ * The material for a merged surface mesh: its texture, with relief (a normal map worked out from it, or the texture
+ * itself as a bump map) when surface relief is on. Painted surfaces are Lambert and never take the environment map
+ * (the largest part of the screen; DECISIONS 2026-09-28); the steel tread plate is painted steel under environment
+ * lighting (audit section 5, "Map props and surfaces").
  */
-function surfaceMaterial(tex: ProceduralTexture, id: SurfaceTextureId, relief: boolean): THREE.MeshLambertMaterial {
-  const mat = new THREE.MeshLambertMaterial({ map: tex.texture, vertexColors: true, bumpScale: SURFACES.relief[id] });
-  setMaterialRelief(mat, relief);
+function surfaceMaterial(surface: ProceduralTexture, id: SurfaceTextureId, look: MapLook): SurfaceMaterial {
+  const base = { map: surface.texture, vertexColors: true, bumpScale: SURFACES.relief[id] };
+  const mat: SurfaceMaterial =
+    look.steelSheen && id === 'steelPlate'
+      ? new THREE.MeshStandardMaterial({ ...base, ...SURFACES.steelSheen })
+      : withoutEnvironment(new THREE.MeshLambertMaterial(base));
+  setReliefMaps(mat, surface, look.relief, look.normalMaps);
   return mat;
 }
 
-function setMaterialRelief(mat: THREE.MeshLambertMaterial, on: boolean): void {
-  const map = on ? mat.map : null;
-  if (mat.bumpMap === map) return;
-  mat.bumpMap = map;
-  mat.needsUpdate = true;
+/** The surface a material paints (by its texture's name, a SurfaceTextureId), or null for one that isn't a surface. */
+function surfaceOf(mat: THREE.Material, textures: SurfaceTextures): ProceduralTexture | null {
+  if (!isSurfaceMaterial(mat) || !mat.map || !Object.hasOwn(textures, mat.map.name)) return null;
+  return textures[mat.map.name as SurfaceTextureId];
 }
 
-/** Surface relief on or off for a built map (Settings → Graphics → Quality): the shaders rebuild once. */
-export function setMapRelief(group: THREE.Group, on: boolean): void {
+/** Surface relief on or off, as normal or bump maps, for a built map (Settings → Graphics): the shaders rebuild once. */
+export function setMapRelief(group: THREE.Group, textures: SurfaceTextures, look: Pick<MapLook, 'relief' | 'normalMaps'>): void {
   group.traverse((obj) => {
-    if (obj instanceof THREE.Mesh && obj.material instanceof THREE.MeshLambertMaterial) setMaterialRelief(obj.material, on);
+    if (!(obj instanceof THREE.Mesh)) return;
+    const surface = surfaceOf(obj.material as THREE.Material, textures);
+    if (surface) setReliefMaps(obj.material as SurfaceMaterial, surface, look.relief, look.normalMaps);
   });
 }
 
@@ -634,44 +636,117 @@ export function setMapRelief(group: THREE.Group, on: boolean): void {
  */
 export function setMapTextures(group: THREE.Group, textures: SurfaceTextures): void {
   group.traverse((obj) => {
-    if (!(obj instanceof THREE.Mesh) || !(obj.material instanceof THREE.MeshLambertMaterial)) return;
-    const mat = obj.material;
-    const next = mat.map && Object.hasOwn(textures, mat.map.name) ? textures[mat.map.name as SurfaceTextureId].texture : null;
-    if (!next || next === mat.map) return;
-    if (mat.bumpMap) mat.bumpMap = next;
-    mat.map = next;
+    if (!(obj instanceof THREE.Mesh)) return;
+    const mat = obj.material as THREE.Material;
+    const surface = surfaceOf(mat, textures);
+    if (!surface || surface.texture === (mat as SurfaceMaterial).map) return;
+    const m = mat as SurfaceMaterial;
+    const relief = m.bumpMap !== null || m.normalMap !== null;
+    const normal = m.normalMap !== null;
+    m.map = surface.texture;
+    m.bumpMap = null;
+    m.normalMap = null;
+    setReliefMaps(m, surface, relief, normal);
   });
+}
+
+/** What map detail adds to a piece: its bevel, its tiles and its baked shade (or the plain box without detail). */
+function pieceShape(piece: Piece, block: MapBlock, index: number, occ: Occluders | null): CuboidShape {
+  if (!occ) return PLAIN;
+  const O = SURFACES.occlusion;
+  const B = SURFACES.bevel;
+  const flat = block.kind === 'floor' || block.kind === 'ramp';
+  const thinnest = Math.min(piece.box.max[0] - piece.box.min[0], piece.box.max[1] - piece.box.min[1], piece.box.max[2] - piece.box.min[2]);
+  const bevel = flat || thinnest < B.minPiece ? 0 : Math.min(B.size, B.maxShare * thinnest);
+  const ground = block.kind === 'floor';
+  return {
+    bevel,
+    cell: O.cell,
+    shade: (x, y, z, nx, ny, nz) => {
+      const k = occlusionShade(occlusionAt(occ, x, y, z, nx, ny, nz, O.lift, index), O.strength);
+      return ground && ny > 0.9 ? k * (1 + SURFACES.groundNoise.amount * groundNoise(x, z)) : k;
+    },
+  };
+}
+
+/** A smooth value noise over the ground (-1..1), about SURFACES.groundNoise.period metres from light to dark. */
+export function groundNoise(x: number, z: number): number {
+  const G = SURFACES.groundNoise;
+  const fx = x / G.period;
+  const fz = z / G.period;
+  const ix = Math.floor(fx);
+  const iz = Math.floor(fz);
+  const hash = (a: number, b: number): number => ((Math.imul(a * 73856093 ^ b * 19349663 ^ G.seed, 0x5bd1e995) >>> 0) / 4294967295) * 2 - 1;
+  const smooth = (t: number): number => t * t * (3 - 2 * t);
+  const tx = smooth(fx - ix);
+  const tz = smooth(fz - iz);
+  const top = hash(ix, iz) + (hash(ix + 1, iz) - hash(ix, iz)) * tx;
+  const bottom = hash(ix, iz + 1) + (hash(ix + 1, iz + 1) - hash(ix, iz + 1)) * tx;
+  return top + (bottom - top) * tz;
+}
+
+/** Appends `from`'s vertices and triangles to `into` (its indices moved past `into`'s vertices). */
+function appendBuffers(into: Buffers, from: Buffers): void {
+  const base = into.positions.length / 3;
+  for (const key of ['positions', 'normals', 'uvs', 'colors'] as const) for (const v of from[key]) into[key].push(v);
+  for (const i of from.indices) into.indices.push(base + i);
+}
+
+/**
+ * A detailed map mesh's own shadow proxy: its first `drawn` indices are what the camera sees (bevels, tiles), the rest
+ * the same boxes plain, drawn into the shadow map in their place (the same silhouette, a fraction of the triangles).
+ * Exported for the tests.
+ */
+export function shadowProxy(mesh: THREE.Mesh, drawn: number): void {
+  const geo = mesh.geometry;
+  const total = geo.index?.count ?? 0;
+  geo.setDrawRange(0, drawn);
+  mesh.onBeforeShadow = () => geo.setDrawRange(drawn, total - drawn);
+  mesh.onAfterShadow = () => geo.setDrawRange(0, drawn);
 }
 
 /**
  * Builds the static level as one merged mesh per surface texture (and whether it casts shadows): a handful of draw
- * calls for the whole map, details included. Returns a group; call `disposeMapMeshes` to free GPU resources.
+ * calls for the whole map, details included; with map detail, the signs as one more (render/mapDecals.ts; `decalAtlas`
+ * draws their texture, null leaves them out). Returns a group; call `disposeMapMeshes` to free GPU resources.
  */
-export function buildMapMeshes(map: MapData, textures: SurfaceTextures, relief: boolean): THREE.Group {
+export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: MapLook, decalAtlas: (() => THREE.Texture) | null = drawDecalAtlas): THREE.Group {
   const group = new THREE.Group();
   group.name = 'map';
-  const meshes = new Map<string, { buf: Buffers; texture: SurfaceTextureId; castShadow: boolean }>();
-  const entry = (texture: SurfaceTextureId, castShadow: boolean): Buffers => {
+  // With map detail a shadow-casting mesh also holds its plain boxes, drawn into the shadow map instead (shadowProxy).
+  const meshes = new Map<string, { buf: Buffers; shadow: Buffers | null; texture: SurfaceTextureId; castShadow: boolean }>();
+  const entry = (texture: SurfaceTextureId, castShadow: boolean) => {
     const key = `${texture}${castShadow ? '' : '-flat'}`;
     let e = meshes.get(key);
-    if (!e) meshes.set(key, (e = { buf: { positions: [], normals: [], uvs: [], colors: [], indices: [] }, texture, castShadow }));
-    return e.buf;
+    if (!e) meshes.set(key, (e = { buf: emptyBuffers(), shadow: look.detail && castShadow ? emptyBuffers() : null, texture, castShadow }));
+    return e;
   };
 
+  const pieces: { piece: Piece; block: MapBlock }[] = [];
   for (const block of map.blocks) {
     if (block.kind === 'ramp') {
       const style = styleOf(block);
       const color = new THREE.Color().setHex(blockTint(block), THREE.SRGBColorSpace).multiplyScalar(blockShade(block));
-      appendRamp(entry(style.texture, castsShadow(block)), block, textures[style.texture], color);
+      const e = entry(style.texture, castsShadow(block));
+      appendRamp(e.buf, block, textures[style.texture], color);
+      if (e.shadow) appendRamp(e.shadow, block, textures[style.texture], color);
       continue;
     }
-    const bottom = block.center.y - block.size.y / 2;
-    for (const p of blockPieces(block, map.blocks)) {
-      appendCuboid(entry(p.texture, p.castShadow), p.box, { uv: p.uv, tex: textures[p.texture], color: p.color, grimeFrom: p.grime ? bottom : null });
-    }
+    for (const piece of blockPieces(block, map.blocks, look.detail)) pieces.push({ piece, block });
   }
+  // Map detail: every piece's box shades the others' vertices (the ramps, being wedges, don't).
+  const occ = look.detail ? buildOccluders(pieces.map(({ piece: p }) => [...p.box.min, ...p.box.max] as const), SURFACES.occlusion.reach) : null;
+  pieces.forEach(({ piece: p, block }, i) => {
+    const bottom = block.center.y - block.size.y / 2;
+    const e = entry(p.texture, p.castShadow);
+    const paint = { uv: p.uv, worldSize: textures[p.texture].worldSize, color: p.color, grimeFrom: p.grime ? bottom : null };
+    appendCuboid(e.buf, p.box, paint, pieceShape(p, block, i, occ));
+    if (e.shadow) appendCuboid(e.shadow, p.box, paint, PLAIN);
+  });
 
-  for (const [key, { buf, texture, castShadow }] of meshes) {
+  for (const [key, { buf, shadow, texture, castShadow }] of meshes) {
+    const drawn = buf.indices.length;
+    if (shadow) appendBuffers(buf, shadow);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(buf.positions, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normals, 3));
@@ -679,15 +754,51 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, relief: 
     geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.colors, 3));
     geo.setIndex(buf.indices);
     geo.computeBoundingSphere();
-    const mesh = new THREE.Mesh(geo, surfaceMaterial(textures[texture], texture, relief));
+    const mesh = new THREE.Mesh(geo, surfaceMaterial(textures[texture], texture, look));
     mesh.name = `map-${key}`;
     mesh.castShadow = castShadow;
+    if (shadow) shadowProxy(mesh, drawn);
     mesh.receiveShadow = true;
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();
     group.add(mesh);
   }
+  if (look.detail && decalAtlas) {
+    const decals = buildMapDecals(map, decalAtlas);
+    if (decals) group.add(decals);
+  }
   return group;
+}
+
+/**
+ * A new look for a built map (Settings → Graphics): built again (a new group in the old one's place, the old one freed)
+ * when its geometry or materials change (map detail, the steel's sheen), else its textures and relief follow in place.
+ * Returns the map's group. `decalAtlas` as for buildMapMeshes. Normal maps the new look doesn't draw are freed.
+ */
+export function restyleMap(
+  group: THREE.Group,
+  map: MapData,
+  textures: SurfaceTextures,
+  from: MapLook,
+  to: MapLook,
+  decalAtlas: (() => THREE.Texture) | null = drawDecalAtlas,
+): THREE.Group {
+  // Normal maps nothing draws with any more are freed (they are made again when wanted).
+  const trim = (): void => {
+    if (!usesNormalMaps({ surfaceRelief: to.relief, normalMaps: to.normalMaps })) releaseNormalMaps(textures);
+  };
+  if (!mapNeedsRebuild(from, to)) {
+    setMapTextures(group, textures);
+    setMapRelief(group, textures, to);
+    trim();
+    return group;
+  }
+  const parent = group.parent;
+  disposeMapMeshes(group);
+  const next = buildMapMeshes(map, textures, to, decalAtlas);
+  parent?.add(next);
+  trim();
+  return next;
 }
 
 export function disposeMapMeshes(group: THREE.Group): void {
@@ -697,5 +808,6 @@ export function disposeMapMeshes(group: THREE.Group): void {
       (obj.material as THREE.Material).dispose();
     }
   });
+  disposeMapDecals(group);
   group.removeFromParent();
 }
