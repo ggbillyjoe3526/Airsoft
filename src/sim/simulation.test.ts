@@ -262,6 +262,41 @@ describe('hit calling and round flow', () => {
     expect(Math.hypot(target.position.x - parked.x, target.position.z - parked.z)).toBeLessThan(0.01);
   });
 
+  it('a character standing in the dead zone costs no movement step: no mover calls, and it stays put (audit SIM-15)', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const keeper = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
+    const out = createCharacter(1, vec3(30, 0, 0), 0, LOADOUT, 1);
+    const other = createCharacter(2, vec3(-20, 0, 0), 0, LOADOUT, 1); // keeps the round live
+    state.characters.push(keeper, out, other);
+    const calls = new Map<number, number>();
+    const counting: CharacterMover = {
+      move(c, d, o) {
+        calls.set(c.id, (calls.get(c.id) ?? 0) + 1);
+        return floor.move(c, d, o);
+      },
+      probeGround(c, maxDrop) {
+        calls.set(c.id, (calls.get(c.id) ?? 0) + 1);
+        return floor.probeGround(c, maxDrop);
+      },
+    };
+    const ctx = testContext(counting, KILL_Y);
+    out.status = 'out';
+    out.statusTime = 0;
+    out.yaw = 1.2;
+    stepSimulation(state, new Map(), ctx, DT); // the tick it arrives: settled as usual
+    expect(out.grounded).toBe(true);
+    const before = calls.get(out.id)!;
+    expect(before).toBeGreaterThan(0);
+    const parked = { ...out.position };
+    for (let i = 0; i < 60; i++) stepSimulation(state, new Map(), ctx, DT);
+    expect(calls.get(out.id)).toBe(before);
+    expect(calls.get(keeper.id)).toBeGreaterThan(60); // everyone else still moves
+    expect(out.position).toEqual(parked);
+    expect(out.prevPosition).toEqual(parked);
+    expect(out.yaw).toBe(1.2);
+    expect(out.statusTime).toBeCloseTo(61 * DT, 9); // its clock still runs (the arrival tick, then 60 more)
+  });
+
   it('a hit character cannot shoot', () => {
     const { state, target, ctx, commands } = duel();
     for (let i = 0; i < 30 && target.status === 'alive'; i++) stepSimulation(state, commands, ctx, DT);
