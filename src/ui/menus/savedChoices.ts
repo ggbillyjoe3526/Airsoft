@@ -24,7 +24,7 @@ import {
 } from '../../config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING, DEFAULT_OPTIC, OPTIC_CHOICES, type OpticChoice } from '../../config/optics';
-import { DEFAULT_QUALITY, FOV_SETTING, QUALITY_CHOICES, type QualityPreset, RENDER } from '../../config/render';
+import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset, RENDER } from '../../config/render';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
 import { loadSetting, numberIn, oneOf } from '../../settings/storage';
@@ -113,9 +113,12 @@ export function loadFov(): number {
   return loadSetting('fov', numberIn(FOV_SETTING.min, FOV_SETTING.max), RENDER.horizontalFov16x9);
 }
 
-/** The render quality preset (Settings → Graphics → Quality, M14). */
-export function loadQuality(): QualityPreset {
-  return loadChoice('quality', QUALITY_CHOICES, DEFAULT_QUALITY);
+/**
+ * The render quality preset picked on Settings → Graphics → Quality (M14), or null if none has been saved: then the
+ * game picks one for the visit (config/render.ts startingQuality).
+ */
+export function loadSavedQuality(): QualityPreset | null {
+  return loadSetting<QualityPreset | null>('quality', oneOf(QUALITY_CHOICES.map((q) => q.id)), null);
 }
 
 export function loadSensitivity(): number {

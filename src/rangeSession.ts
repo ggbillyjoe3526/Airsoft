@@ -23,7 +23,6 @@ import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
 import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
-import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './render/proceduralTextures';
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -65,7 +64,6 @@ export class RangeSession {
   readonly combat: CombatPresentation;
   private readonly loadout: readonly ReplicaConfig[];
   private readonly physics: PhysicsWorld;
-  private readonly textures: SurfaceTextures;
   private readonly mapGroup: THREE.Group;
   private readonly targets: RangeTargetsRenderer;
   private readonly readout: RangeReadout;
@@ -99,8 +97,8 @@ export class RangeSession {
   ) {
     const map = RANGE_MAP;
     this.loadout = setup.loadout;
-    this.textures = createSurfaceTextures();
-    this.mapGroup = buildMapMeshes(map, this.textures, quality.surfaceRelief);
+    // The surface textures are the renderer's, shared by every session (audit L-04).
+    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
     renderer.scene.add(this.mapGroup);
     this.daylight = addLighting(renderer.scene, map, quality);
 
@@ -137,7 +135,7 @@ export class RangeSession {
     input.resetView(pose?.yaw ?? spawn.yaw);
     if (pose) input.pitch = pose.pitch;
 
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, HITS);
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
     renderer.scene.add(this.targets.object);
@@ -217,6 +215,11 @@ export class RangeSession {
     this.combat.setQuality(quality);
   }
 
+  /** The graphics context is back after a loss: as MatchSession.contextRestored. */
+  contextRestored(): void {
+    this.combat.contextRestored();
+  }
+
   setPlaying(playing: boolean): void {
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;
@@ -232,7 +235,6 @@ export class RangeSession {
     this.coach?.dispose();
     this.renderer.scene.remove(this.mapGroup);
     disposeMapMeshes(this.mapGroup);
-    disposeSurfaceTextures(this.textures);
     this.daylight.dispose();
     this.physics.dispose();
     this.renderer.setZoom(1);

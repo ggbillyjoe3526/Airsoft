@@ -1,8 +1,9 @@
 import './style.css';
-import { parseQuality } from './config/render';
+import { parseQuality, startingQuality } from './config/render';
 import { parseSeed, randomSeed } from './core/seed';
 import { Game } from './game';
-import { loadQuality } from './ui/menus/savedChoices';
+import { lacksHardwareAcceleration } from './render/gpuCheck';
+import { loadSavedQuality } from './ui/menus/savedChoices';
 
 async function main(): Promise<void> {
   const container = document.getElementById('app');
@@ -12,13 +13,17 @@ async function main(): Promise<void> {
   // (the debug overlay shows the seed in use). An unreadable ?seed= value is ignored.
   const seed = parseSeed(params.get('seed')) ?? randomSeed();
   // The saved render preset (Settings → Graphics); ?quality=low|medium|high picks another for this visit, to measure
-  // frame cost (the debug overlay shows which).
-  const quality = parseQuality(params.get('quality')) ?? loadQuality();
+  // frame cost (the debug overlay shows which). With neither, a browser drawing in software starts on Low (audit
+  // M-02). Decided before the renderer is made, so its antialiasing matches.
+  const softwareRendering = lacksHardwareAcceleration();
+  const quality = startingQuality(parseQuality(params.get('quality')), loadSavedQuality(), softwareRendering);
   const game = await Game.create(container, {
     // ?nolock works on the dev server and in the smoke test's `e2e` build, never in a normal release build.
     allowUnlocked: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('nolock'),
     seed,
-    quality,
+    quality: quality.preset,
+    automaticQuality: quality.automatic,
+    softwareRendering,
   });
   game.start();
   document.getElementById('loading')?.remove();

@@ -9,8 +9,9 @@ import { expect, test } from '@playwright/test';
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
  * a few frames a second, so the simulation runs slower than real time: assert on page text, never on frames,
- * and poll rather than wait fixed times. It starts on Low (`?quality=low`): the art pass (M14) on Medium or High draws
- * too slowly in software on a CI runner for the reload and range steps to finish in time.
+ * and poll rather than wait fixed times. It loads with no `?quality=`, as a player would: the game sees SwiftShader
+ * draws in software and starts on Low itself (audit M-02), since the art pass (M14) on Medium or High draws too slowly
+ * in software on a CI runner for the reload and range steps to finish in time.
  */
 test('the game boots, starts a match, fires, reloads and aims without errors', async ({ page }, testInfo) => {
   const errors: string[] = [];
@@ -20,7 +21,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   });
   const errorList = () => (errors.length > 0 ? errors.join(' | ') : 'none');
 
-  await page.goto('/?nolock&seed=1&quality=low');
+  await page.goto('/?nolock&seed=1');
   // Wait for the title screen or the boot's own failure text, whichever comes first.
   await page.waitForFunction(
     () => document.querySelector('.menu-title-start') !== null || /Failed/.test(document.getElementById('loading')?.textContent ?? ''),
@@ -33,8 +34,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   }
   await expect(page.locator('#loading')).toHaveCount(0);
   await expect(page.locator('.menu-title-wordmark')).toBeVisible();
-  // SwiftShader is a software renderer: the title screen warns that the game will run slowly (M18b).
+  // SwiftShader is a software renderer: the title screen warns that the game will run slowly (M18b), and that it picked
+  // Low for this visit as nothing was saved (audit M-02).
   await expect(page.locator('.menu-title-warning')).toContainText('without hardware acceleration');
+  await expect(page.locator('.menu-title-warning')).toContainText('set to Low for this visit');
   // No map is loaded until Play (M15b); the e2e build exposes the game as `airsoft`.
   const matchLoaded = () => page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null);
   expect(await matchLoaded()).toBe(false);
@@ -134,6 +137,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.locator('.team-swatch')).toHaveCount(2);
   await settings.getByRole('group', { name: 'Sound cues' }).getByRole('button', { name: 'On' }).click();
   await settings.getByRole('tab', { name: /Graphics/i }).click();
+  await expect(settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('100');
   await expect(settings.getByRole('button', { name: 'Go fullscreen' })).toBeVisible();
   await settings.getByRole('tab', { name: /Key bindings/i }).click();
@@ -227,7 +231,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  // Graphics quality (M14): a saved picker on Settings → Graphics that applies at once (this visit started on Low).
+  // Graphics quality (M14): a saved picker on Settings → Graphics that applies at once (this visit started on Low, the
+  // software fallback).
   // Medium turns the sun's shadows on in the match loaded and Low off again (the screenshots after this one show Low).
   await pauseMenu.getByRole('button', { name: 'Settings' }).click();
   await settings.getByRole('tab', { name: /Graphics/i }).click();
@@ -304,6 +309,26 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });
 
+/**
+ * The High preset (the default on a real GPU) still boots in a browser: `?quality=high` overrides the software fallback,
+ * so its renderer setup runs once here, to the title screen only (a match on High is too slow in software).
+ */
+test('the game boots to the title screen on High', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=1&quality=high');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  // Asked for in the address, so the warning doesn't claim Low was picked.
+  await expect(page.locator('.menu-title-warning')).toContainText('without hardware acceleration');
+  await expect(page.locator('.menu-title-warning')).not.toContainText('set to Low');
+  const shadows = await page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
+  expect(shadows).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 /** The practice range (M21): opened from the title, its targets loaded, firing reads out where the BB landed. */
 test('the practice range opens from the title screen and reads out the last BB', async ({ page }) => {
   const errors: string[] = [];
@@ -311,13 +336,24 @@ test('the practice range opens from the title screen and reads out the last BB',
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
-  // Low, so the range draws fast enough in software on a CI runner (as the first test).
-  await page.goto('/?nolock&seed=1&quality=low');
+  // Loaded on Medium, then Low picked on Settings before the range opens: the range is built with the pick (audit M-01),
+  // and draws fast enough in software on a CI runner (as the first test).
+  await page.goto('/?nolock&seed=1&quality=medium');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-setup').getByRole('button', { name: /Settings/i }).click();
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('tab', { name: /Graphics/i }).click();
+  await settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' }).click();
+  await page.keyboard.press('Escape');
+  await page.locator('.menu-setup').getByRole('button', { name: 'Back' }).click();
   await page.getByRole('button', { name: 'Practice range' }).click();
   const readout = page.locator('.range-readout');
   await expect(readout).toBeVisible();
   await expect(readout).toContainText('Practice range');
+  type Lit = { airsoft: { renderer: { scene: { children: { isDirectionalLight?: boolean; castShadow: boolean }[] } } } };
+  const sunCastsShadow = () => page.evaluate(() => (window as unknown as Lit).airsoft.renderer.scene.children.find((o) => o.isDirectionalLight)!.castShadow);
+  expect(await sunCastsShadow()).toBe(false);
   type RangeState = { targets: unknown[]; characters: { armament: { ammo: { mag: number; pouch: number[] }[]; handling: { magSize: number }[] } }[] };
   const state = () => page.evaluate(() => (window as unknown as { airsoft: { state: RangeState } }).airsoft.state);
   const s0 = await state();

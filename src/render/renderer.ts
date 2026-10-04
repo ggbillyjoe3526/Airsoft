@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ATMOSPHERE, RENDER, type QualitySettings } from '../config/render';
-import { lacksHardwareAcceleration } from './gpuCheck';
+import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './proceduralTextures';
 
 const REFERENCE_ASPECT = 16 / 9;
 const DEG = Math.PI / 180;
@@ -28,10 +28,10 @@ export class Renderer {
   /** View size in CSS pixels (kept up to date on resize, so HUD code never has to read layout). */
   width = 0;
   height = 0;
+  /** The map surfaces' textures, drawn the first time a session asks (surfaceTextures). */
+  private surfaces: SurfaceTextures | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
-  /** Whether the browser draws in software (undefined until first asked). */
-  private software: boolean | undefined;
 
   /**
    * `quality` is the preset the game loads with: its antialiasing is fixed for the WebGL context's life; the rest can
@@ -67,15 +67,20 @@ export class Renderer {
   /**
    * A lost graphics context (a driver reset, the GPU taken by another app; audit W-01): `listener(true)` when it goes,
    * `listener(false)` when the browser gives it back. Three.js keeps every geometry, texture and shader's source and
-   * uploads them again on the next frame drawn, so nothing needs rebuilding.
+   * uploads them again on the next frame drawn, except render targets, which come back empty: whatever draws into one
+   * once must draw it again (CombatPresentation.contextRestored, audit L-02; shadow maps are redrawn every frame).
    */
   onContextChange(listener: (lost: boolean) => void): void {
     this.contextListener = listener;
   }
 
-  /** True if the browser draws without hardware acceleration (the game would crawl): checked once, at startup. */
-  get softwareRendering(): boolean {
-    return (this.software ??= lacksHardwareAcceleration(this.renderer.getContext()));
+  /**
+   * The map surfaces' textures (render/proceduralTextures.ts), shared by every match and range: they are the same each
+   * time (fixed seeds), so they are drawn and uploaded once, the first time they are wanted, and freed with the renderer
+   * (audit L-04). Sessions must not dispose them.
+   */
+  get surfaceTextures(): SurfaceTextures {
+    return (this.surfaces ??= createSurfaceTextures());
   }
 
   get canvas(): HTMLCanvasElement {
@@ -133,6 +138,8 @@ export class Renderer {
     window.removeEventListener('resize', this.resize);
     this.canvas.removeEventListener('webglcontextlost', this.contextLost);
     this.canvas.removeEventListener('webglcontextrestored', this.contextRestored);
+    if (this.surfaces) disposeSurfaceTextures(this.surfaces);
+    this.surfaces = null;
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }

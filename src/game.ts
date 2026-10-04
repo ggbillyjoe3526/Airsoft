@@ -72,10 +72,15 @@ export interface GameOptions {
   /** Seeds the simulation and the bots (core/seed.ts): the same seed replays the same bot decisions for the same inputs. */
   seed: number;
   /**
-   * The render quality preset to start with (config/render.ts): the saved one, or `?quality=` for a visit. Settings →
-   * Graphics changes it later (all but antialiasing, which keeps the starting preset's until the next load).
+   * The render quality preset to start with (config/render.ts startingQuality): `?quality=` for a visit, the saved one,
+   * or else the default (Low in a browser drawing in software). Settings → Graphics changes it later (all but
+   * antialiasing, which keeps the starting preset's until the next load).
    */
   quality: QualityPreset;
+  /** `quality` was picked for this visit because the browser draws in software (not saved; config/render.ts startingQuality). */
+  automaticQuality: boolean;
+  /** The browser draws without hardware acceleration (render/gpuCheck.ts): the title screen warns. */
+  softwareRendering: boolean;
 }
 
 /**
@@ -263,7 +268,10 @@ export class Game {
       },
     });
     this.menus.showTitle();
-    if (this.renderer.softwareRendering) this.menus.showTitleWarning(BROWSER_NOTES.noHardwareAcceleration);
+    if (options.softwareRendering) {
+      const note = BROWSER_NOTES.noHardwareAcceleration;
+      this.menus.showTitleWarning(options.automaticQuality ? `${note} ${BROWSER_NOTES.qualitySetLow}` : note);
+    }
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
     document.addEventListener('visibilitychange', this.visibilityChanged);
@@ -282,15 +290,19 @@ export class Game {
   /**
    * The graphics context was lost (true) or is back (false) (M18b, audit W-01). While it's gone the match pauses
    * and a notice covers everything; once it's back the pause menu says so and Resume carries on (Three.js uploads
-   * everything again on the next frame).
+   * everything again on the next frame, except render targets, which the session renders again: contextRestored).
    */
   private graphicsContextChanged(lost: boolean): void {
     this.graphicsLost = lost;
     this.graphicsNotice.setVisible(lost);
     // The menus can't be used under the notice (not even Resume by Enter or Space on the focused button).
     this.menus.setBlocked(lost);
-    if (lost) this.stopPlay();
-    else if (this.started) this.menus.showHint(BROWSER_NOTES.graphicsBack);
+    if (lost) {
+      this.stopPlay();
+    } else {
+      this.session?.contextRestored();
+      if (this.started) this.menus.showHint(BROWSER_NOTES.graphicsBack);
+    }
   }
 
   /** Stops play as if the player had pressed Esc: the mouse is given back, and the pause menu comes up. */
@@ -428,7 +440,7 @@ export class Game {
       bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
       parts: this.picked.map((r) => this.partsOf(r)),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
-    }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair, pose, tutorialFrom);
+    }, this.options.seed, QUALITY[this.quality], this.audio, this.crosshair, pose, tutorialFrom);
     this.session.setMotion(motionScale(this.reducedMotion));
     applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
   }

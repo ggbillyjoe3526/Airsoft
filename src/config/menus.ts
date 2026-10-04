@@ -14,6 +14,8 @@ export const BROWSER_NOTES = {
   /** On the title screen when the browser draws without hardware acceleration (render/gpuCheck.ts). */
   noHardwareAcceleration:
     'Your browser is drawing without hardware acceleration, so the game will run slowly. Turn on "Use graphics acceleration when available" (Chrome, Edge) or "Use recommended performance settings" (Firefox) in its settings, then restart the browser.',
+  /** Added to that warning when the game picked Low for the visit itself (nothing saved; config/render.ts startingQuality). */
+  qualitySetLow: 'Graphics quality is set to Low for this visit (Settings, Graphics).',
   /** Over everything while the graphics context is lost. */
   graphicsLost: 'Graphics reset. The graphics card dropped the game for a moment; waiting for it to come back…',
   /** On the pause menu once it's back. */
