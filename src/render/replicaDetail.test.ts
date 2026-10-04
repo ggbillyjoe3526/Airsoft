@@ -297,7 +297,8 @@ describe('the Cyber Pistol\'s model (M32)', () => {
   it('is its own chunky pistol in mint, hot pink and black, the same on either team', () => {
     const blue = buildReplicaModels(WITH_CYBER, 0x3a7bd5, false);
     const red = buildReplicaModels(WITH_CYBER, 0xd54a3a, false);
-    expect(drawn(blue, 'cyber')).not.toBe(drawn(blue, 'pistol'));
+    // Its own mesh, about as dear as the Gas Pistol's (7,944 at once on Low; 9,140): pinned so a change to it is seen.
+    expect(drawn(blue, 'cyber')).toBe(9140);
     expect(mat(blue, 'mint').getHex()).toBe(REPLICA_FINISH.cyber.mint);
     expect(mat(blue, 'pink').getHex()).toBe(REPLICA_FINISH.cyber.pink);
     expect(mat(blue, 'polymer').getHex()).toBe(0x2a2c31);
