@@ -1,4 +1,4 @@
-import { GRIPS, type GripId, MAGAZINES, type MagazineId } from '../config/attachments';
+import { BARRELS, type BarrelId, GRIPS, type GripId, MAGAZINES, type MagazineId, MUZZLES, type MuzzleId } from '../config/attachments';
 import type { Difficulty } from '../config/bots';
 import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
@@ -11,7 +11,7 @@ import { type PoolRow, type PoolTable, readTables } from './poolFile';
  * file's text into plain data and lists what it couldn't read, and src/pool/gamePool.ts loads the bundled file.
  */
 
-export type AssetCategory = 'replica' | 'power' | 'optic' | 'grip' | 'laser' | 'magazine' | 'grenade';
+export type AssetCategory = 'replica' | 'power' | 'optic' | 'grip' | 'laser' | 'magazine' | 'barrel' | 'muzzle' | 'grenade';
 export type PowerType = 'battery' | 'gas' | 'spring';
 
 /** The replica behind each replica Key (pool.md's Key column). */
@@ -21,6 +21,8 @@ export const OPTIC_KEYS = Object.keys(OPTICS) as OpticId[];
 export const GRIP_KEYS = (Object.keys(GRIPS) as GripId[]).filter((g) => g !== 'none');
 export const LASER_KEYS = Object.keys(LASERS) as LaserId[];
 export const MAGAZINE_KEYS = (Object.keys(MAGAZINES) as MagazineId[]).filter((m) => m !== 'standard');
+export const BARREL_KEYS = Object.keys(BARRELS) as BarrelId[];
+export const MUZZLE_KEYS = Object.keys(MUZZLES) as MuzzleId[];
 
 /** The power type each replica tag stands for: a battery drives an `electric` replica. */
 export const POWER_TAGS: Readonly<Record<PowerType, string>> = { battery: 'electric', gas: 'gas', spring: 'spring' };
@@ -99,6 +101,8 @@ const ASSET_SECTIONS: Readonly<Record<string, AssetCategory>> = {
   Grips: 'grip',
   Lasers: 'laser',
   Magazines: 'magazine',
+  Barrels: 'barrel',
+  'Muzzle parts': 'muzzle',
   Grenades: 'grenade',
 };
 
@@ -108,6 +112,8 @@ const KEYS_BY_CATEGORY: Readonly<Record<Exclude<AssetCategory, 'power'>, readonl
   grip: GRIP_KEYS,
   laser: LASER_KEYS,
   magazine: MAGAZINE_KEYS,
+  barrel: BARREL_KEYS,
+  muzzle: MUZZLE_KEYS,
   grenade: [],
 };
 

@@ -1,7 +1,7 @@
 # Pool: every asset you can own
 
-This file is the game's register of **pooled assets**: every replica, power source, optic, grip, laser, magazine
-and (later) grenade the player can own. It also holds the numbers behind the Armory: what Field Credits you earn,
+This file is the game's register of **pooled assets**: every replica, power source, optic, grip, laser, magazine,
+barrel, muzzle part and (later) grenade the player can own. It also holds the numbers behind the Armory: what Field Credits you earn,
 what Tokens and Shots cost, the rarity tiers and their odds, and what scrapping pays.
 
 **The game reads this file.** It is bundled into the build, and the tables below are parsed when the game starts
@@ -34,8 +34,9 @@ Rifle, and so on. The ID is what the player's save remembers, so:
 Compatibility works by **tags**, not by naming replicas, so a part is never tied to one replica:
 
 - Each **replica** lists the **Tags** that describe it: what drives it (`electric`, `gas`, `spring`), what rails it
-  has (`top-rail` for an optic, `under-rail` for a grip, `pistol-rail` for a laser) and what magazines it takes
-  (`aeg-mag`, `pistol-mag`).
+  has (`top-rail` for an optic, `under-rail` for a grip, `pistol-rail` for a laser), what magazines it takes
+  (`aeg-mag`, `pistol-mag`), whether its barrel can be swapped (`barrel-mount`) and whether its muzzle is threaded for
+  a silencer (`muzzle-thread`).
 - Each **part** lists in **Fits** the tags it needs. It fits every replica that has **any one** of those tags.
 - Fits can also name a replica by its ID, for a part that should go on one replica only (for example `000002`).
 
@@ -151,7 +152,8 @@ Token), and a Shot you can't cover in Tokens can be paid for in FC at the same r
 
 What the Bonus % improves is stats.md's **Tier scaling** table: with the numbers as shipped, a Legendary (15 %) replica
 has 15 % less spread, a 15 % quicker reload and draw, and 7.5 % more energy and rate of fire; a Legendary battery 7.5 %
-more rate of fire; a Legendary gas 7.5 % more energy; optics, grips, lasers and magazines handle better.
+more rate of fire; a Legendary gas 7.5 % more energy; optics, grips, lasers, magazines, barrels and muzzle parts
+handle better (and a barrel shoots a little tighter).
 
 ---
 
@@ -161,8 +163,8 @@ more rate of fire; a Legendary gas 7.5 % more energy; optics, grips, lasers and 
 
 | ID | Name | Key | Tags | Starter | In Shots |
 |---|---|---|---|---|---|
-| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail | yes | yes |
-| 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail | yes | yes |
+| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail, muzzle-thread | yes | yes |
+| 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail, barrel-mount, muzzle-thread | yes | yes |
 
 ### Power sources
 
@@ -207,6 +209,23 @@ Each replica's standard magazine is built in (as are iron sights and no grip): t
 | 000012 | Hi-Cap Magazine | hiCap | aeg-mag | no | yes |
 | 000013 | Low-Cap Magazine | lowCap | aeg-mag | no | yes |
 | 000014 | Extended Magazine | extended | pistol-mag | no | yes |
+
+### Barrels
+
+Each replica's standard barrel is built in: these are the alternatives. Later: barrels for the pistol, more lengths.
+
+| ID | Name | Key | Fits | Starter | In Shots |
+|---|---|---|---|---|---|
+| 000016 | Tight-Bore Barrel | tightBore | barrel-mount | no | yes |
+| 000017 | Long Barrel | long | barrel-mount | no | yes |
+
+### Muzzle parts
+
+Later: a tracer unit (with tracer BBs, v0.3).
+
+| ID | Name | Key | Fits | Starter | In Shots |
+|---|---|---|---|---|---|
+| 000018 | Silencer | silencer | muzzle-thread | no | yes |
 
 ### Grenades
 

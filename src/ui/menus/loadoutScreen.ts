@@ -1,4 +1,4 @@
-import { GRIPS, handlingOf, MAGAZINES, type ReplicaParts } from '../../config/attachments';
+import { BARRELS, GRIPS, handlingOf, MAGAZINES, MUZZLES, type ReplicaParts } from '../../config/attachments';
 import { LASERS } from '../../config/lasers';
 import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
@@ -13,8 +13,10 @@ import {
   gripReadout,
   hopUpLabel,
   hopUpReadout,
+  barrelReadout,
   laserReadout,
   magazineReadout,
+  muzzleReadout,
   opticReadout,
   powerReadout,
 } from '../loadoutChoice';
@@ -48,6 +50,8 @@ const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[]
   { slot: 'optic', label: 'Optic', none: 'Iron Sights' },
   { slot: 'grip', label: 'Grip', none: 'No Grip' },
   { slot: 'laser', label: 'Laser', none: 'No Laser' },
+  { slot: 'barrel', label: 'Barrel', none: 'Standard' },
+  { slot: 'muzzle', label: 'Muzzle', none: 'None' },
   { slot: 'magazine', label: 'Magazine', none: 'Standard' },
   // Every replica needs a power source: no "none".
   { slot: 'power', label: 'Power Source', none: null },
@@ -251,7 +255,7 @@ export class LoadoutScreen {
     for (const row of FIT_ROWS) {
       // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power always have a choice.
       if (row.none !== null && row.slot !== 'magazine' && !m.hasSlot(asset.id, row.slot)) {
-        rows.append(fixedRow(row.label, LOADOUT_TEXT.noMount));
+        rows.append(fixedRow(row.label, row.slot === 'barrel' ? LOADOUT_TEXT.fixedBarrel : row.slot === 'muzzle' ? LOADOUT_TEXT.noThread : LOADOUT_TEXT.noMount));
         if (row.slot === 'optic') this.appendBbRows(rows, base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
         continue;
       }
@@ -331,6 +335,8 @@ export class LoadoutScreen {
     if (slot === 'grip') return GRIPS[kit.parts.grip].blurb;
     if (slot === 'magazine') return MAGAZINES[kit.parts.magazine].blurb;
     if (slot === 'laser') return kit.parts.laser ? LASERS[kit.parts.laser].blurb : 'No laser: the spread as it comes.';
+    if (slot === 'barrel') return kit.parts.barrel ? BARRELS[kit.parts.barrel].blurb : LOADOUT_TEXT.standardBarrel;
+    if (slot === 'muzzle') return kit.parts.muzzle ? MUZZLES[kit.parts.muzzle].blurb : LOADOUT_TEXT.noMuzzle;
     const type = power ? this.opts.model.pool.byId.get(power.asset)?.power?.type : undefined;
     return type ? LOADOUT_TEXT.powerBlurb[type] : '';
   }
@@ -340,6 +346,8 @@ export class LoadoutScreen {
     if (slot === 'grip') return gripReadout(kit);
     if (slot === 'magazine') return magazineReadout(kit);
     if (slot === 'laser') return laserReadout(kit);
+    if (slot === 'barrel') return barrelReadout(kit);
+    if (slot === 'muzzle') return muzzleReadout(kit);
     return '';
   }
 

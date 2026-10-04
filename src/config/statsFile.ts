@@ -31,7 +31,7 @@ export interface PowerStats {
 export const NO_POWER_STATS: PowerStats = { energy: 0, fireRate: 0, recoil: 0 };
 
 /** The categories a tier's Bonus % can improve: a power source by its type. */
-export type ScaledCategory = 'replica' | 'battery' | 'gas' | 'spring' | 'optic' | 'grip' | 'laser' | 'magazine';
+export type ScaledCategory = 'replica' | 'battery' | 'gas' | 'spring' | 'optic' | 'grip' | 'laser' | 'magazine' | 'barrel' | 'muzzle';
 /** The stats a tier can improve (always the better way: more energy and rate, less spread and time). */
 export type ScaledStat = 'energy' | 'fireRate' | 'spread' | 'reload' | 'draw' | 'raise' | 'shake';
 
@@ -48,9 +48,11 @@ export const SCALABLE: Readonly<Record<ScaledCategory, readonly ScaledStat[]>> =
   grip: ['raise', 'draw', 'shake'],
   laser: ['spread'],
   magazine: ['reload'],
+  barrel: ['spread', 'draw', 'raise'],
+  muzzle: ['draw', 'raise'],
 };
 
-/** The shares as shipped, for any row stats.md is missing. */
+/** The shares as shipped, used when stats.md has no Tier scaling table at all (a stat its table leaves out gets 0). */
 export const DEFAULT_TIER_SHARES: TierShares = {
   replica: { spread: 1, reload: 1, draw: 1, energy: 0.5, fireRate: 0.5 },
   battery: { fireRate: 0.5 },
@@ -60,6 +62,8 @@ export const DEFAULT_TIER_SHARES: TierShares = {
   grip: { raise: 0.5, draw: 0.5, shake: 0.5 },
   laser: { spread: 0.5 },
   magazine: { reload: 1 },
+  barrel: { spread: 0.5, draw: 0.5, raise: 0.5 },
+  muzzle: { draw: 0.5, raise: 0.5 },
 };
 
 /** The site limits as shipped (J), by replica class. */
@@ -75,6 +79,8 @@ export interface StatsFile {
   grips: Readonly<Record<string, { handlingScale?: number; shakeScale?: number }>>;
   lasers: Readonly<Record<string, { spreadScale?: number }>>;
   magazines: Readonly<Record<string, { capacity?: number; carried?: number; reloadScale?: number; drawScale?: number; rattles?: boolean }>>;
+  barrels: Readonly<Record<string, { energy?: number; spreadScale?: number; handlingScale?: number }>>;
+  muzzles: Readonly<Record<string, { energy?: number; handlingScale?: number; heardScale?: number }>>;
   tierShares: TierShares;
   /** Energy limit (J) by replica class. */
   siteLimits: Readonly<Record<string, number>>;
@@ -131,6 +137,18 @@ const MAGAZINE_COLUMNS: Readonly<Record<string, Column>> = {
   Rattles: { field: 'rattles', kind: 'yesNo' },
 };
 
+const BARREL_COLUMNS: Readonly<Record<string, Column>> = {
+  'Energy %': { field: 'energy', kind: 'percent', min: -50, max: 50 },
+  'Spread (×)': { field: 'spreadScale', kind: 'number', min: 0.1, max: 3 },
+  'Handling (×)': { field: 'handlingScale', kind: 'number', min: 0.1, max: 5 },
+};
+
+const MUZZLE_COLUMNS: Readonly<Record<string, Column>> = {
+  'Energy %': { field: 'energy', kind: 'percent', min: -50, max: 50 },
+  'Handling (×)': { field: 'handlingScale', kind: 'number', min: 0.1, max: 5 },
+  'Heard from (×)': { field: 'heardScale', kind: 'number', min: 0.05, max: 2 },
+};
+
 const CATEGORY_WORDS: Readonly<Record<string, ScaledCategory>> = {
   replica: 'replica',
   battery: 'battery',
@@ -140,6 +158,8 @@ const CATEGORY_WORDS: Readonly<Record<string, ScaledCategory>> = {
   grip: 'grip',
   laser: 'laser',
   magazine: 'magazine',
+  barrel: 'barrel',
+  muzzle: 'muzzle',
 };
 
 const STAT_WORDS: Readonly<Record<string, ScaledStat>> = {
@@ -221,6 +241,8 @@ function readShares(t: PoolTable | undefined, fail: Fail, errors: string[]): Tie
     grip: {},
     laser: {},
     magazine: {},
+    barrel: {},
+    muzzle: {},
   };
   if (!t) {
     errors.push('no "Tier scaling" table: using the built-in shares');
@@ -280,6 +302,8 @@ export function loadStats(text: string): StatsFile {
     grips: keyedRows(table('Grips'), 'Grips', 'Key', GRIP_COLUMNS, fail, errors) as StatsFile['grips'],
     lasers: keyedRows(table('Lasers'), 'Lasers', 'Key', LASER_COLUMNS, fail, errors) as StatsFile['lasers'],
     magazines: keyedRows(table('Magazines'), 'Magazines', 'Key', MAGAZINE_COLUMNS, fail, errors) as StatsFile['magazines'],
+    barrels: keyedRows(table('Barrels'), 'Barrels', 'Key', BARREL_COLUMNS, fail, errors) as StatsFile['barrels'],
+    muzzles: keyedRows(table('Muzzle parts'), 'Muzzle parts', 'Key', MUZZLE_COLUMNS, fail, errors) as StatsFile['muzzles'],
     tierShares: readShares(table('Tier scaling'), fail, errors),
     siteLimits: readLimits(table('Site limits'), fail, errors),
     errors,

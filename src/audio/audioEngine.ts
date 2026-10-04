@@ -1,9 +1,9 @@
 import { AUDIO, VOLUME, type VolumeChannel } from '../config/audio';
-import type { SoundCue } from '../config/sounds';
+import { cues, SHOT_PROFILES, type SoundCue } from '../config/sounds';
 import { renderAmbienceBed } from './ambience';
 import { volumeGain, type Volumes } from './audioMix';
 import { seededRandom } from './dsp';
-import { SoundLibrary } from './soundBank';
+import { SoundLibrary, suppressedCopies } from './soundBank';
 
 /** Lets an audio context's promise (resume, suspend, close) settle quietly: a refusal changes nothing we rely on. */
 export function settle(p: Promise<void>): void {
@@ -59,6 +59,7 @@ export class AudioEngine {
   private unavailable = false;
   private readonly buses = new Map<VolumeChannel, GainNode>();
   private readonly buffers = new Map<SoundCue, AudioBuffer[]>();
+  private readonly muffled = new Map<SoundCue, AudioBuffer[]>();
   private reverb: AudioBuffer | null = null;
   /** The yard's outdoor bed, a loop (audit CORE-34). */
   private ambience: AudioBuffer | null = null;
@@ -145,6 +146,15 @@ export class AudioEngine {
   cueBuffers(): ReadonlyMap<SoundCue, readonly AudioBuffer[]> {
     this.finishWarmUp();
     return this.buffers;
+  }
+
+  /**
+   * A shot cue's muffled copies (a silencer, M29b; a replica built suppressed), made with the rendering and kept for
+   * every match, so the first silenced shot never waits on them. Empty without a context or for any other cue.
+   */
+  muffledBuffers(cue: SoundCue): readonly AudioBuffer[] {
+    this.finishWarmUp();
+    return this.muffled.get(cue) ?? [];
   }
 
   /**
@@ -322,6 +332,13 @@ export class AudioEngine {
     for (const [cue, variants] of this.library.get(rate)) {
       if (this.buffers.has(cue)) continue;
       this.buffers.set(cue, variants.map((v) => toBuffer(ctx, v)));
+      yield;
+    }
+    for (const profile of SHOT_PROFILES) {
+      const cue = cues.shot(profile);
+      const shots = this.buffers.get(cue);
+      if (!shots || this.muffled.has(cue)) continue;
+      this.muffled.set(cue, suppressedCopies(shots.map((b) => b.getChannelData(0)), rate).map((v) => toBuffer(ctx, v)));
       yield;
     }
     // The buffers hold every sound now; the library's copy would double the memory (about 9 MB).

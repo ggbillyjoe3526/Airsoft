@@ -1131,7 +1131,7 @@ body {
 /* Customise (M29): the parts on the left, the Performance sheet beside them; above them on a narrow window */
 .customise-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   align-items: start;
   gap: var(--sp-5);
 }

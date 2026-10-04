@@ -219,8 +219,16 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): R
   // Barrel, low-profile gas block (the front sight is a flip-up on the rail), flash hider.
   b.tube('metal', 0.4, 0.165, 0.034, 0.009);
   b.box('polymer', 0.43, 0.455, 0.022, 0.05, 0.03);
-  b.tube(orangeTip ? 'orange' : 'metal', 0.565, 0.016, 0.034, 0.013, 10);
-  b.tube(orangeTip ? 'orange' : 'polymer', 0.581, 0.03, 0.034, 0.012, 6);
+  // The muzzle end (M29b): a long barrel's extra length, and the flash hider or a silencer on the muzzle mount, which
+  // moves out to the fitted barrel's end.
+  const longBarrel = new ModelBuilder();
+  longBarrel.tube('metal', AEG_MUZZLE.barrelEnd, AEG_MUZZLE.extensions.long, 0.034, 0.009);
+  const hider = new ModelBuilder();
+  hider.tube(orangeTip ? 'orange' : 'metal', 0, 0.016, 0.034, 0.013, 10);
+  hider.tube(orangeTip ? 'orange' : 'polymer', 0.016, 0.03, 0.034, 0.012, 6);
+  const aegSilencer = new ModelBuilder();
+  aegSilencer.tube('polymer', 0, AEG_MUZZLE.tips.silencer - 0.006, 0.034, 0.019, 16);
+  aegSilencer.tube(orangeTip ? 'orange' : 'polymer', AEG_MUZZLE.tips.silencer - 0.006, 0.006, 0.034, 0.019, 16);
   // Buffer tube, collapsible stock, butt pad.
   b.tube('polymer', -0.27, 0.17, 0.032, 0.016);
   b.profile('furniture', [[-0.2, 0.056], [-0.33, 0.06], [-0.336, -0.056], [-0.31, -0.064], [-0.236, -0.012], [-0.2, 0.0]], 0.044, 0.012);
@@ -299,9 +307,10 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): R
   group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'));
   group.add(namedPart(optic, m, 'optic:redDot'), namedPart(scope, m, 'optic:scope2x'));
   group.add(namedPart(vertical, m, 'grip:vertical'), namedPart(angled, m, 'grip:angled'));
-  const muzzle = muzzleMarker(0.611, 0.034);
-  group.add(muzzle);
-  return { group, muzzle, magazine, supportHand };
+  group.add(namedPart(longBarrel, m, 'barrel:long'));
+  const mount = muzzleMount(AEG_MUZZLE, 0.034, { none: namedPart(hider, m, 'muzzle:none'), silencer: namedPart(aegSilencer, m, 'muzzle:silencer') });
+  group.add(mount.group);
+  return { group, muzzle: mount.marker, magazine, supportHand, mount };
 }
 
 /** Polymer striker-fired gas pistol in two-tone: black slide over a tan frame with an accessory rail. */
@@ -369,9 +378,13 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
   // From the side of the grip down to the magazine's base plate.
   const supportHand = supportHandPart(support, m, [0.004, -0.068, -0.024]);
   group.add(supportHand.group);
-  const muzzle = muzzleMarker(0.104, 0.015);
-  group.add(muzzle);
-  return { group, muzzle, magazine, supportHand };
+  // A silencer screwed onto the threaded barrel (M29b), a little narrower than the slide.
+  const pistolSilencer = new ModelBuilder();
+  pistolSilencer.tube('polymer', 0, PISTOL_MUZZLE.tips.silencer - 0.005, 0.015, 0.0135, 16);
+  pistolSilencer.tube(orangeTip ? 'orange' : 'polymer', PISTOL_MUZZLE.tips.silencer - 0.005, 0.005, 0.015, 0.0135, 16);
+  const mount = muzzleMount(PISTOL_MUZZLE, 0.015, { silencer: namedPart(pistolSilencer, m, 'muzzle:silencer') });
+  group.add(mount.group);
+  return { group, muzzle: mount.marker, magazine, supportHand, mount };
 }
 
 /**
@@ -380,10 +393,33 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
  */
 export interface ReplicaModel {
   group: THREE.Group;
-  /** Empty marker at the muzzle, where visual BBs start. */
+  /** Empty marker at the muzzle, where visual BBs start (on the muzzle mount: it follows the fitted barrel and device). */
   muzzle: THREE.Object3D;
   magazine: MagazinePart;
   supportHand: SupportHandPart;
+  mount: MuzzleMount;
+}
+
+/**
+ * Where a model's muzzle end is (M29b), forward from its origin (m): where its standard barrel ends, how much further a
+ * longer barrel reaches, and how far beyond the barrel's end each muzzle device ('none': as it comes) puts the muzzle.
+ */
+export interface MuzzleLayout {
+  barrelEnd: number;
+  extensions: Readonly<Record<string, number>>;
+  tips: Readonly<Record<string, number>>;
+}
+
+/** The AEG's: a 0.1 m longer barrel; the flash hider 4.6 cm long, a silencer 12 cm. */
+export const AEG_MUZZLE = { barrelEnd: 0.565, extensions: { long: 0.1 }, tips: { none: 0.046, silencer: 0.12 } } satisfies MuzzleLayout;
+/** The pistol's: no barrel swap; a silencer 10 cm. */
+export const PISTOL_MUZZLE = { barrelEnd: 0.104, extensions: {}, tips: { none: 0, silencer: 0.1 } } satisfies MuzzleLayout;
+
+/** The muzzle mount (named 'muzzleMount'): the muzzle devices and the muzzle marker, moved out to the fitted barrel's end. */
+export interface MuzzleMount {
+  group: THREE.Group;
+  marker: THREE.Object3D;
+  layout: MuzzleLayout;
 }
 
 /** The magazine group (named 'magazine'), which slides out along `axis` (the magwell, a unit vector) on a reload. */
@@ -493,6 +529,27 @@ function namedPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>
   const group = builder.build(m);
   group.name = name;
   return group;
+}
+
+/**
+ * The muzzle mount at the standard barrel's end: the device parts (named 'muzzle:<id>', built from 0 forward) and the
+ * muzzle marker, at the bare muzzle's tip. The viewmodel moves the mount and the marker to what is fitted (`fitMuzzle`).
+ */
+function muzzleMount(layout: MuzzleLayout, up: number, devices: Readonly<Record<string, THREE.Group>>): MuzzleMount {
+  const group = new THREE.Group();
+  group.name = 'muzzleMount';
+  for (const part of Object.values(devices)) group.add(part);
+  const marker = muzzleMarker(layout.tips.none ?? 0, up);
+  group.add(marker);
+  group.position.z = -layout.barrelEnd;
+  return { group, marker, layout };
+}
+
+/** Moves a mount (and its muzzle marker) to the end of the fitted barrel and device; null for as it comes. */
+export function fitMuzzle(mount: MuzzleMount, barrel: string | null, device: string | null): void {
+  const l = mount.layout;
+  mount.group.position.z = -(l.barrelEnd + (barrel ? (l.extensions[barrel] ?? 0) : 0));
+  mount.marker.position.z = -(l.tips[device ?? 'none'] ?? l.tips.none ?? 0);
 }
 
 /** Empty marker at the muzzle (forward, up) so presentation can start visual BBs there. */

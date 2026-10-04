@@ -1,4 +1,5 @@
 import { SOUND_CUES, type SoundCueKind } from '../config/accessibility';
+import { shotHeardScale } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { wrapAngle } from '../sim/vec';
@@ -9,6 +10,8 @@ export interface HeardSound {
   sourceId: number;
   x: number;
   z: number;
+  /** How far it carries, as a share of its kind's range (a silenced shot, M29b: below 1); 1 if left out. */
+  reach?: number;
 }
 
 /**
@@ -18,6 +21,7 @@ export interface HeardSound {
  */
 export function soundCueOf(e: GameEvent, local: Character, characterOf: (id: number) => Character | undefined, out: HeardSound): boolean {
   let source: Character | undefined;
+  out.reach = 1;
   if (e.type === 'footstep') {
     source = characterOf(e.characterId);
     if (!source || source.team === local.team) return false;
@@ -25,6 +29,7 @@ export function soundCueOf(e: GameEvent, local: Character, characterOf: (id: num
   } else if (e.type === 'shot') {
     source = characterOf(e.characterId);
     out.kind = 'shot';
+    out.reach = source ? shotHeardScale(source) : 1;
   } else if (e.type === 'characterHit') {
     // The call comes from whoever was hit.
     source = characterOf(e.victimId);
@@ -123,7 +128,7 @@ export class SoundCues {
    */
   add(sound: HeardSound, time: number): void {
     if (!this.enabled) return;
-    if (Math.hypot(sound.x - this.listenerX, sound.z - this.listenerZ) > SOUND_CUES.range[sound.kind]) return;
+    if (Math.hypot(sound.x - this.listenerX, sound.z - this.listenerZ) > SOUND_CUES.range[sound.kind] * (sound.reach ?? 1)) return;
     let same: Marker | undefined;
     let free: Marker | undefined;
     let oldest: Marker | undefined;

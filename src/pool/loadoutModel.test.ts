@@ -4,6 +4,7 @@ import { AEG, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
 import { gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { EMPTY_FIT } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
 
@@ -26,7 +27,7 @@ describe('Loadout model (M26b)', () => {
   it('starts a new player on the AEG Rifle and Gas Pistol with their starter power sources and nothing else fitted', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
     expect(model.equipped()).toEqual([item('AEG Rifle'), item('Gas Pistol')]);
-    expect(model.fitOf(id('AEG Rifle'))).toEqual({ optic: null, grip: null, laser: null, magazine: null, power: item('Standard Battery') });
+    expect(model.fitOf(id('AEG Rifle'))).toEqual({ ...EMPTY_FIT, power: item('Standard Battery') });
     expect(model.fitOf(id('Gas Pistol')).power).toEqual(item('Green Gas'));
     const kit = model.kit();
     expect(kit.slots.map((s) => s.replica.id)).toEqual([AEG.id, GAS_PISTOL.id]);
@@ -180,5 +181,56 @@ describe('Loadout model (M26b)', () => {
         Object.assign(black, saved);
       }
     });
+  });
+});
+
+describe('Loadout model: barrels and muzzle parts (M29b)', () => {
+  const PARTS = [...STARTERS, item('Tight-Bore Barrel'), item('Long Barrel', 'epic'), item('Silencer', 'rare')];
+
+  it('gives the AEG both rows and the Gas Pistol a muzzle only: its barrel is fixed', () => {
+    const model = new LoadoutModel(pool, owning(STARTERS));
+    expect(model.hasSlot(id('AEG Rifle'), 'barrel')).toBe(true);
+    expect(model.hasSlot(id('AEG Rifle'), 'muzzle')).toBe(true);
+    expect(model.hasSlot(id('Gas Pistol'), 'barrel')).toBe(false);
+    expect(model.hasSlot(id('Gas Pistol'), 'muzzle')).toBe(true);
+  });
+
+  it('offers only the barrels and silencer the player owns (none from the start), and the pistol only the silencer', () => {
+    expect(new LoadoutModel(pool, owning(STARTERS)).fitChoices(id('AEG Rifle'), 'barrel')).toEqual([]);
+    expect(new LoadoutModel(pool, owning(STARTERS)).fitChoices(id('AEG Rifle'), 'muzzle')).toEqual([]);
+    const model = new LoadoutModel(pool, owning(PARTS));
+    expect(model.fitChoices(id('AEG Rifle'), 'barrel').map((r) => r.asset).sort()).toEqual([id('Tight-Bore Barrel'), id('Long Barrel')].sort());
+    expect(model.fitChoices(id('AEG Rifle'), 'muzzle')).toEqual([item('Silencer', 'rare')]);
+    expect(model.fitChoices(id('Gas Pistol'), 'barrel')).toEqual([]);
+    expect(model.fitChoices(id('Gas Pistol'), 'muzzle')).toEqual([item('Silencer', 'rare')]);
+  });
+
+  it('carries the fitted barrel and silencer into the kit, and refuses a barrel on the pistol even if saved by hand', () => {
+    const model = new LoadoutModel(pool, owning(PARTS));
+    model.setFit(id('AEG Rifle'), 'barrel', item('Long Barrel', 'epic'));
+    model.setFit(id('AEG Rifle'), 'muzzle', item('Silencer', 'rare'));
+    model.setFit(id('Gas Pistol'), 'barrel', item('Tight-Bore Barrel'));
+    model.setFit(id('Gas Pistol'), 'muzzle', item('Silencer', 'rare'));
+    const [rifle, pistol] = model.kit().slots;
+    expect([rifle!.parts.barrel, rifle!.parts.muzzle]).toEqual(['long', 'silencer']);
+    expect([pistol!.parts.barrel, pistol!.parts.muzzle]).toEqual([null, 'silencer']);
+    expect(model.fitOf(id('Gas Pistol')).barrel).toBeNull();
+    // Falls back to nothing fitted when the part is no longer owned.
+    const own = owning(PARTS);
+    const m2 = new LoadoutModel(pool, own);
+    m2.setFit(id('AEG Rifle'), 'muzzle', item('Silencer', 'rare'));
+    own.items.delete(itemKey(id('Silencer'), 'rare'));
+    expect(m2.fitOf(id('AEG Rifle')).muzzle).toBeNull();
+  });
+
+  it('offers every barrel and muzzle part at every tier with Unlock all gear, and none of them after', () => {
+    let unlocked = true;
+    const model = new LoadoutModel(pool, gameOwnership(pool, () => newCollection(pool, 1), () => unlocked));
+    expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toHaveLength(2 * pool.tiers.length);
+    expect(model.fitChoices(id('AEG Rifle'), 'muzzle')).toHaveLength(pool.tiers.length);
+    expect(model.fitChoices(id('Gas Pistol'), 'muzzle')).toHaveLength(pool.tiers.length);
+    expect(model.fitChoices(id('Gas Pistol'), 'barrel')).toEqual([]);
+    unlocked = false;
+    expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toEqual([]);
   });
 });

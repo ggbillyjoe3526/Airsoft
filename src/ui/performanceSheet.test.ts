@@ -70,7 +70,7 @@ describe('Performance sheet (M29)', () => {
 });
 
 describe('Performance sheet, acceptance 5: every row, and the sliders', () => {
-  const LABELS = ['Energy', 'Muzzle speed', 'BB weight', 'Rate of fire', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Magazines', 'Reload', 'Draw', 'Aim raise'];
+  const LABELS = ['Energy', 'Muzzle speed', 'BB weight', 'Rate of fire', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Magazines', 'Reload', 'Draw', 'Aim raise', 'Shots heard from'];
 
   it('lists energy, speed (m/s and fps), BB weight, rate, reach, time to 20 m, spread, recoil, magazines, reload, draw and aim raise, in that order', () => {
     expect(rowsOf(aeg(), aeg()).map((r) => r.label)).toEqual(LABELS);
@@ -190,5 +190,24 @@ describe('Performance sheet, acceptance 6: the gear slot and the Armory line', (
 
   it('says nothing for an item that is not in the pool', () => {
     expect(tierLine(pool, { asset: '999999', tier: 'legendary' })).toBe('');
+  });
+});
+
+describe('Performance sheet, barrels and muzzle parts (M29b)', () => {
+  it('shows how far shots are heard, and a silencer halving it as better, with its energy cost as worse', () => {
+    const rows = rowsOf(aeg('common', { muzzle: item('Silencer') }), aeg());
+    expect(find(rowsOf(aeg(), aeg()), 'Shots heard from').value).toBe('22 m');
+    expect(find(rows, 'Shots heard from')).toMatchObject({ value: '11 m', delta: '−50%', change: 'better' });
+    expect(find(rows, 'Energy')).toMatchObject({ delta: '−5%', change: 'worse' });
+    expect(find(rows, 'Draw').change).toBe('worse');
+  });
+
+  it('marks a Tight-Bore Barrel tighter and stronger, and a Long Barrel stronger but slower to draw', () => {
+    const tight = rowsOf(aeg('common', { barrel: item('Tight-Bore Barrel') }), aeg());
+    expect(find(tight, 'Spread')).toMatchObject({ delta: '−15%', change: 'better' });
+    expect(find(tight, 'Energy')).toMatchObject({ delta: '+3%', change: 'better' });
+    const long = rowsOf(aeg('common', { barrel: item('Long Barrel') }), aeg());
+    expect(find(long, 'Energy')).toMatchObject({ delta: '+8%', change: 'better' });
+    expect(find(long, 'Draw')).toMatchObject({ delta: '+15%', change: 'worse' });
   });
 });

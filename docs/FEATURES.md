@@ -55,6 +55,8 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - A Customise view per replica: optic, BB weight, hop-up, grip, laser, magazine, power source (M26b)
 - Every replica's and part's numbers in a hand-editable `stats.md`; a Performance sheet in Customise compares your setup with the replica as it comes (M29a)
 - Higher tiers add energy and rate of fire; batteries set the rate of fire (11.1 V LiPo battery); stronger gas kicks harder; a site energy limit (M29a)
+- Barrel and Muzzle parts: a Tight-Bore Barrel and a Long Barrel for the AEG, a Silencer for both replicas that halves how far bots, the minimap and sound cues hear your shots (M29b)
+- On Hard, each opponent carries its own kit rolled from the pool by the match's seed (M29b)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start (M26a)
 - Your collection is saved apart from the settings (M26a)
 - Armory, beta and free: earn Field Credits from matches, buy Tokens, draw assets from the pool at rarity odds (M26c)
