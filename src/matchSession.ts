@@ -46,7 +46,7 @@ import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
 import type { MatchResult } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
-import type { NotCounted } from './ui/recordsView';
+import { type NotCounted, notCountedFor } from './ui/recordsView';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
@@ -313,12 +313,12 @@ export class MatchSession {
 
   /** Whether this match's result goes into the records: the standard match (M20), without Dev help (M24), on a finished map (M33). */
   get countsForRecords(): boolean {
-    return this.standardRules && !this.devAssisted && !this.mapInDevelopment;
+    return this.notCountedReason === '';
   }
 
   /** Why it doesn't, for the summary: custom rules, Dev settings, or '' when it counts. */
   get notCountedReason(): NotCounted {
-    return this.mapInDevelopment ? 'map' : !this.standardRules ? 'rules' : this.devAssisted ? 'dev' : '';
+    return notCountedFor(this.standardRules, this.devAssisted, this.mapInDevelopment);
   }
 
   /** Settings → HUD → Hit feed (M24). */

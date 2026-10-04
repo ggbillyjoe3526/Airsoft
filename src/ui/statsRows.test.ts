@@ -6,7 +6,7 @@ import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { emptyStats, type PlayerStats } from '../stats/matchStats';
 import { addMatch, emptyRecords } from '../stats/records';
-import { recordsView } from './recordsView';
+import { notCountedFor, recordsView } from './recordsView';
 import { formatAccuracy, formatTime, rosterNames, statsBlocks } from './statsRows';
 
 /** You (0) and Blue 2 (1) against Orange 1 (2) and Orange 2 (3). */
@@ -79,6 +79,14 @@ describe('records view (M19)', () => {
     const view = recordsView(emptyRecords(), { bestAccuracy: true, bestStreak: false }, 'hard', 'attackDefend', 'dev');
     expect(view.notCounted).toContain('Dev settings');
     expect(view.bests.every((b) => !b.isNew)).toBe(true);
+  });
+
+  it('keeps every match on a map in development out of the records, whatever its rules and Dev help (M33d)', () => {
+    expect(notCountedFor(true, false, false)).toBe('');
+    expect(notCountedFor(true, false, true)).toBe('map');
+    expect(notCountedFor(false, true, true)).toBe('map');
+    expect(notCountedFor(false, false, false)).toBe('rules');
+    expect(notCountedFor(true, true, false)).toBe('dev');
   });
 
   it('says the map is still being built when a match on a map in development was kept out of the records (M33d)', () => {

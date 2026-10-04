@@ -22,6 +22,14 @@ const NO_NEWS: RecordNews = { bestAccuracy: false, bestStreak: false };
  */
 export type NotCounted = '' | 'rules' | 'dev' | 'map';
 
+/**
+ * Why a match doesn't go into the records ('' when it does): a map still being built (M33) first, then custom rules
+ * (M20), then Dev help (M24).
+ */
+export function notCountedFor(standardRules: boolean, devAssisted: boolean, mapInDevelopment: boolean): NotCounted {
+  return mapInDevelopment ? 'map' : !standardRules ? 'rules' : devAssisted ? 'dev' : '';
+}
+
 /** The line over the records after a match that didn't count. */
 function notCountedLine(why: NotCounted): string {
   if (why === 'dev') return "Dev settings changed how this match played, so it isn't in your records.";
