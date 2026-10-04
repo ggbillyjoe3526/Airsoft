@@ -115,7 +115,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Later | |
-| Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
+| Alpha · Phase 4 · M14 Art pass | Later | |
+| Alpha · Phase 4 · M16 Tutorial (last of Phase 4 → feature complete): a coached first session on the practice range | Done (owner to play it) | M16_SCORE |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -593,6 +594,14 @@ each one went:**
     the audio rework (M13) casts for muffling, so they no longer seem to hear through walls like a wallhack
     (KNOWN_ISSUES). The headless match guards are re-measured on Depot.
 - **M16. Onboarding:** a short tutorial.
+  - **Built (2026-10-04):** the title screen's **Tutorial** (tagged "New? Start here" until you finish it once) opens
+    the practice range with a coach panel at the top: ten short steps, each finished by doing it (look around, walk to
+    the firing line, ring a plate, knock down a figure at 30 m or more, reload, aim down the sight, crouch, lean,
+    switch replica and hit something, then one hit and you're out). Keys show as you have them bound. With iron sights
+    (no optic to aim through) the aim step points to the Loadout's optics instead. A finished step shows a tick for a
+    moment; after the last one the coach gives way to the range readout and you keep practising. Pausing shows which
+    step you're on, and changing the loadout from the pause menu keeps your place (`config/tutorial.ts`,
+    `tutorial/tutorial.ts`, `ui/coachPanel.ts`).
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
   in M12a), a "graphics reset" message on a lost WebGL context (W-01, now in M18), shader warm-up if the overlay shows a hitch

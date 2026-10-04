@@ -373,6 +373,19 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   screen and start a normal match: it plays as before.
 - [ ] **Walk downrange.** Nothing stops you walking among the targets; BBs fired from there still hit them.
 
+## Tutorial (M16)
+
+- [ ] **Title screen.** A **Tutorial** button sits next to Start and Practice range, tagged "New? Start here" (until
+  you've finished it once).
+- [ ] **Play it through.** The coach at the top says "Tutorial · 1 of 10 · Look around" and moves on when you've done
+  each thing: look around, walk to the line, ring a plate, knock down a figure at 30 m or more, reload, aim (or, with
+  iron sights, a pointer to the Loadout's optics), crouch, lean, switch replica and hit something, then the "one hit"
+  card. Each finished step shows a green tick for a moment. Did any step feel stuck or unclear?
+- [ ] **Keys.** Rebind a key (e.g. reload) in Settings, start the Tutorial again: the coach shows your key.
+- [ ] **Esc mid-tutorial.** The pause menu says which step you're on. Change the loadout and come back: same step.
+- [ ] **After the last step** the coach goes and the range readout appears; the "New? Start here" tag is gone from the
+  title screen, also after reloading the page.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
