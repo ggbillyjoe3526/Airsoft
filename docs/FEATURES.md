@@ -44,6 +44,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Attack / Defend: raise your flag on the other team's pole or keep yours down; overtime; sides swap at half-time (M5)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only the standard match counts for the records (M20)
+- Rules picker: Skirmish, Tournament, Pro CQB (dev) and Custom; named rulesets keep their own records, Custom never counts (M39)
 
 ## Maps
 

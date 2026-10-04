@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_DIFFICULTY } from '../config/bots';
-import { DEFAULT_MATCH_RULES } from '../config/matchRules';
+import { DEFAULT_MATCH_RULES, DEFAULT_RULESET } from '../config/matchRules';
 import { DEFAULT_MODE } from '../config/modes';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import { TORCHES } from '../config/torches';
@@ -22,7 +22,7 @@ afterAll(() => vi.unstubAllGlobals());
 
 const TORCH_ID = '000020';
 const torchRef = { asset: TORCH_ID, tier: 'common' };
-const picks = (map: MapId): NewGamePicks => ({ map, mode: DEFAULT_MODE, difficulty: DEFAULT_DIFFICULTY, teammateDifficulty: DEFAULT_DIFFICULTY, rules: { ...DEFAULT_MATCH_RULES } });
+const picks = (map: MapId): NewGamePicks => ({ map, mode: DEFAULT_MODE, difficulty: DEFAULT_DIFFICULTY, teammateDifficulty: DEFAULT_DIFFICULTY, ruleset: DEFAULT_RULESET, rules: { ...DEFAULT_MATCH_RULES } });
 const without = (pool: Pool, id: string): Pool => {
   const assets = pool.assets.filter((a) => a.id !== id);
   return { ...pool, assets, byId: new Map(assets.map((a) => [a.id, a])) };

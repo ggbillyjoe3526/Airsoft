@@ -1,4 +1,5 @@
 import type { Difficulty } from '../config/bots';
+import { CUSTOM_RULES_PAY_CAP } from '../config/matchRules';
 import { randomSeed } from '../core/seed';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import { addItem, type Collection, type ItemRef, itemKey, ownedCount } from './collection';
@@ -23,6 +24,11 @@ export interface MatchOutcome {
   difficulty: Difficulty;
   /** Your teammates' difficulty; absent with no teammates (1v1). The lower multiplier of the two pays (audit POOL-08). */
   teammateDifficulty?: Difficulty;
+  /**
+   * Custom rules (M39, config/matchRules.ts standardRules: not a named ruleset's standard match): the multiplier is
+   * capped at CUSTOM_RULES_PAY_CAP (Pro's ×2 is for the named rulesets). Absent: the standard match.
+   */
+  customRules?: boolean;
 }
 
 /** A match's Field Credits, line by line as the summary shows them, and the total (after the difficulty). */
@@ -45,7 +51,11 @@ export function matchEarnings(e: Economy, o: MatchOutcome): Earnings {
   if (o.hits > 0) lines.push({ label: `${o.hits} ${o.hits === 1 ? 'hit' : 'hits'} on an opponent`, fc: e.earn.hit * o.hits });
   // The lower of the two teams' (audit POOL-08): Hard teammates carrying you against Hard opponents pay as Hard only
   // if you're in there too, and Easy opponents never pay Hard rates.
-  const multiplier = Math.min(e.difficulty[o.difficulty], o.teammateDifficulty ? e.difficulty[o.teammateDifficulty] : Number.POSITIVE_INFINITY);
+  const multiplier = Math.min(
+    e.difficulty[o.difficulty],
+    o.teammateDifficulty ? e.difficulty[o.teammateDifficulty] : Number.POSITIVE_INFINITY,
+    o.customRules ? CUSTOM_RULES_PAY_CAP : Number.POSITIVE_INFINITY,
+  );
   const total = Math.max(0, Math.round(lines.reduce((sum, l) => sum + l.fc, 0) * multiplier));
   return { lines, multiplier, total };
 }

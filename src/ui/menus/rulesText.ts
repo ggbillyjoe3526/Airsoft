@@ -1,3 +1,4 @@
+import { type MatchRules, REALCAP_TEXT } from '../../config/matchRules';
 import type { MatchMode } from '../../config/modes';
 
 /** What the New game screen needs to explain the match. */
@@ -17,6 +18,8 @@ export interface MatchRulesText {
   /** The match's friendly fire and ricochet rules (M20). */
   friendlyFire: boolean;
   ricochetsCount: boolean;
+  /** The Rules picker's switches (M39); absent, as the game always played. */
+  switches?: Pick<MatchRules, 'winByTwo' | 'timeOutToMorePlayers' | 'heardOnMinimap' | 'semiAutoOnly' | 'realcap' | 'factoryKit'>;
 }
 
 /** A map end's name (0 is west, MapData.spawns). */
@@ -34,7 +37,15 @@ export function describeRules(r: MatchRulesText, mode: MatchMode): string {
       : `${r.teamSize}v${r.teamSize} with bots: you and ${mates} bot teammate${mates === 1 ? '' : 's'} (${r.playerTeam}) against ${opponents}. `;
   const fire = mates === 0 ? '' : r.friendlyFire ? ' Friendly fire counts.' : ' Friendly fire is off.';
   const ricochets = r.ricochetsCount ? ' Ricochets count.' : " Ricochets don't count.";
-  const end = `First to ${r.winsNeeded} rounds wins the match. One hit and you're out.${fire}${ricochets}`;
+  const sw = r.switches;
+  const winBy = sw?.winByTwo ? `, by two clear: level at ${r.winsNeeded - 1} all, play on until one team is two ahead` : '';
+  const extra = [
+    sw?.semiAutoOnly ? ' Every replica fires semi only, bots\' too.' : '',
+    sw?.realcap ? ` Realcap magazines for everyone: ${REALCAP_TEXT}.` : '',
+    sw?.factoryKit ? ' Everyone carries the factory rifle and pistol as they come.' : '',
+    sw && !sw.heardOnMinimap ? ' The minimap shows your teammates only.' : '',
+  ].join('');
+  const end = `First to ${r.winsNeeded} rounds wins the match${winBy}. One hit and you're out.${fire}${ricochets}${extra}`;
   if (mode === 'attackDefend') {
     return (
       teams +
@@ -46,7 +57,7 @@ export function describeRules(r: MatchRulesText, mode: MatchMode): string {
   }
   return (
     teams +
-    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out it's a draw). ` +
+    `Knock out the whole other team to win a round (${minutes}:${seconds} on the clock; if time runs out ${sw?.timeOutToMorePlayers ? 'the team with more players left wins it, a draw if level' : "it's a draw"}). ` +
     `You start at the ${END_NAMES[r.eliminationStartEnd === 0 ? 0 : 1]} end; teams swap ends after round ${r.halfTimeAfter}. ` +
     end
   );

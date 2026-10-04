@@ -19,18 +19,31 @@ function bus() {
 
 const instant = () => Promise.resolve();
 
-/** One exclusive Web Lock, as navigator.locks grants it: held until the holder's promise settles. */
-function webLocks(): SaveLocks & { held: () => boolean } {
+/**
+ * One exclusive Web Lock, as navigator.locks grants it: held until the holder's promise settles, then freed after
+ * `releaseMs` (the browser frees a lock a moment after its holder lets go; 0 frees it at once). A request with
+ * ifAvailable gets null while it is held; one without waits its turn.
+ */
+function webLocks(releaseMs = 0): SaveLocks & { held: () => boolean } {
   let held = false;
+  const waiting: (() => void)[] = [];
+  const free = () => {
+    held = false;
+    waiting.shift()?.();
+  };
   return {
     held: () => held,
-    async request(_name, _options, callback) {
-      if (held) return callback(null);
+    async request(_name, options, callback) {
+      if (held) {
+        if (options.ifAvailable) return callback(null);
+        await new Promise<void>((resolve) => waiting.push(resolve));
+      }
       held = true;
       try {
         await callback({});
       } finally {
-        held = false;
+        if (releaseMs > 0) setTimeout(free, releaseMs);
+        else free();
       }
       return undefined;
     },
@@ -117,6 +130,33 @@ describe('tab lock (M31)', () => {
     expect(locks.held()).toBe(false);
     const b2 = new TabLock({ channel, locks, onLost: vi.fn(), id: 'b2', wait: instant });
     expect(await b2.claim()).toBe(true);
+  });
+
+  it('with Web Locks, the tab reloaded by Play here waits for the lock the browser frees a moment late (the CI race)', async () => {
+    const channel = bus();
+    const locks = webLocks(20);
+    const timer = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+    const a = new TabLock({ channel, locks, onLost: vi.fn(), id: 'a', wait: timer });
+    expect(await a.claim()).toBe(true);
+    const b = new TabLock({ channel, locks, onLost: vi.fn(), id: 'b', wait: timer });
+    expect(await b.claim()).toBe(false);
+    await b.take();
+    // The playing tab has said it let go, but the lock is still held: a plain start-up check would wait behind the notice.
+    expect(locks.held()).toBe(true);
+    const reloaded = new TabLock({ channel, locks, onLost: vi.fn(), id: 'b2', wait: timer });
+    expect(await reloaded.claim(true)).toBe(true);
+    expect(reloaded.owns).toBe(true);
+  });
+
+  it('with Web Locks, a tab reloaded by Play here still waits behind the notice if the lock is never let go', async () => {
+    const locks = webLocks();
+    const timer = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+    const a = new TabLock({ channel: silent, locks, onLost: vi.fn(), id: 'a', wait: timer });
+    expect(await a.claim()).toBe(true);
+    const reloaded = new TabLock({ channel: silent, locks, onLost: vi.fn(), id: 'b', wait: timer });
+    expect(await reloaded.claim(true)).toBe(false);
+    expect(reloaded.owns).toBe(false);
+    expect(a.owns).toBe(true);
   });
 
   it('plays alone where the browser has no BroadcastChannel', async () => {

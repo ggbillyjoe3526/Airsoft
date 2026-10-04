@@ -58,6 +58,16 @@ describe('Field Credits (M26c)', () => {
     expect(matchEarnings(e, { won: false, roundsWon: 0, hits: 0, winsNeeded: 9, difficulty: 'normal' }).total).toBe(40);
   });
 
+  it('cap custom rules at ×1.5 (M39): Pro\'s ×2 drops to Hard\'s rate, Easy to Hard pay as before', () => {
+    const o = { won: true, roundsWon: 5, hits: 6, winsNeeded: 5 } as const;
+    expect(matchEarnings(e, { ...o, difficulty: 'pro' }).multiplier).toBe(2);
+    expect(matchEarnings(e, { ...o, difficulty: 'pro', customRules: true }).multiplier).toBe(1.5);
+    expect(matchEarnings(e, { ...o, difficulty: 'pro', customRules: true }).total).toBe(matchEarnings(e, { ...o, difficulty: 'hard' }).total);
+    for (const d of ['easy', 'normal', 'hard'] as const) {
+      expect(matchEarnings(e, { ...o, difficulty: d, customRules: true })).toEqual(matchEarnings(e, { ...o, difficulty: d }));
+    }
+  });
+
   it('pay nothing while Dev settings → Disable Armory is on (M26d)', () => {
     const o = { won: true, roundsWon: 5, hits: 6, winsNeeded: 5, difficulty: 'normal' } as const;
     expect(matchPay(e, o, true)).toBeNull();
