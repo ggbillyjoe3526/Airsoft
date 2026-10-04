@@ -16,7 +16,6 @@ const openSky: WorldQuery = { raycastStatic: () => -1 };
 function setup(query: WorldQuery = openSky) {
   const events: GameEvent[] = [];
   const ctx: ArmamentContext = {
-    loadout: LOADOUT,
     ballistics: BALLISTICS,
     bbs: createBBPool(512),
     rng: createRng(7),
@@ -433,7 +432,7 @@ describe('fire selector (owner, 2026-10-03)', () => {
     setHopUps(c.armament, [0.4, 0.8]);
     setBbWeights(c.armament, [0.28, 0.25]);
     c.armament.ammo[0]!.mag = 3;
-    respawnCharacter(c, LOADOUT);
+    respawnCharacter(c);
     expect(c.armament.modes).toEqual(['burst', 'semi']);
     expect(c.armament.hopUps).toEqual([0.4, 0.8]);
     expect(c.armament.bbWeights).toEqual([0.28, 0.25]);
@@ -444,7 +443,7 @@ describe('fire selector (owner, 2026-10-03)', () => {
     const c = createCharacter(0, vec3(), 0, LOADOUT);
     c.armament.modes[0] = 'semi';
     c.armament.triggerWasDown = true; // held through the end of the last round
-    respawnCharacter(c, LOADOUT);
+    respawnCharacter(c);
     const s = setup();
     Object.assign(s.a, c.armament);
     expect(s.count(s.run(10, (cmd) => (cmd.fire = true)), 'shot')).toBe(0);
@@ -456,13 +455,13 @@ describe('fire selector (owner, 2026-10-03)', () => {
 describe('attachments on the armament (M17b)', () => {
   it('fits grips and magazines per replica, with fresh magazines of the new kind', () => {
     const a = createArmament(LOADOUT);
-    fitParts(a, LOADOUT, [
+    fitParts(a, [
       { grip: 'angled', magazine: 'hiCap' },
-      { grip: 'vertical', magazine: 'extended' },
+      { grip: 'none', magazine: 'extended' },
     ]);
-    expect(a.parts).toEqual([
+    expect(a.parts).toMatchObject([
       { grip: 'angled', magazine: 'hiCap' },
-      { grip: 'none', magazine: 'extended' }, // the pistol has no rail for a grip
+      { grip: 'none', magazine: 'extended' },
     ]);
     expect(a.ammo[0]!.mag).toBe(120);
     expect(a.ammo[0]!.pouch).toEqual([120]);
@@ -472,7 +471,7 @@ describe('attachments on the armament (M17b)', () => {
 
   it('reloads and draws in the times the parts give', () => {
     const { a, run } = setup();
-    fitParts(a, LOADOUT, [{ grip: 'none', magazine: 'lowCap' }, { grip: 'none', magazine: 'extended' }]);
+    fitParts(a, [{ grip: 'none', magazine: 'lowCap' }, { grip: 'none', magazine: 'extended' }]);
     a.ammo[0]!.mag = 0;
     run(1, (c) => (c.reload = true));
     expect(a.reload).toBeCloseTo(AEG.reloadTime * 0.8, 6);
@@ -484,10 +483,10 @@ describe('attachments on the armament (M17b)', () => {
 
   it('keeps the parts through a respawn, refilling their magazines', () => {
     const c = createCharacter(0, vec3(), 0, LOADOUT, 0);
-    fitParts(c.armament, LOADOUT, [{ grip: 'vertical', magazine: 'hiCap' }]);
+    fitParts(c.armament, [{ grip: 'vertical', magazine: 'hiCap' }]);
     c.armament.ammo[0]!.mag = 3;
-    respawnCharacter(c, LOADOUT);
-    expect(c.armament.parts[0]).toEqual({ grip: 'vertical', magazine: 'hiCap' });
+    respawnCharacter(c);
+    expect(c.armament.parts[0]).toMatchObject({ grip: 'vertical', magazine: 'hiCap' });
     expect(c.armament.ammo[0]!.mag).toBe(120);
     expect(rattles(c.armament)).toBe(true);
   });

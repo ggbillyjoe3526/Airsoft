@@ -53,6 +53,11 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
 - **M21 range:** `map/range.ts`, `rangeSession.ts`; targets are sim data (`sim/rangeTargets.ts`).
 - **M22 squad orders:** `ai/squadOrders.ts` (spots), `BotController.giveOrder`, mode `order` in `botBrain.chooseMode`;
   tuning in `config/squad.ts`; keys Z, X, V.
+- **M26 Loadout, Armory and asset pool (owner's 2026-10-04 batch):** `pool.md` at the root is the asset register the game
+  reads (`src/pool/`). The Loadout is `pool/loadoutModel.ts` (what is equipped and fitted, saved) over `pool/kit.ts`
+  (what the items make of a replica); each character carries its own `Armament.replicas` (bots `LOADOUT` as it comes).
+  A new asset is a pool.md row; a new behaviour (a key) needs code in `config/` first. M26c (Armory) and M26d (Dev
+  toggles on M24's Dev panel) follow; the owner chose "Claude merges" for this batch.
 
 ## Working notes and gotchas
 
@@ -61,7 +66,7 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
   smoke test also loses and restores the WebGL context, adds a shot after each tick to get a sound cue (it patches
   `airsoft.session.match.afterTick`, `e2e` build only) and presses Z twice for the squad line.
 - **Input:** read fire and aim through the bindings, never the mouse. A toggled sprint pressed before forward waits for
-  forward. **Loadout:** read `Armament.handling`. **Menus:** one screen at a time (`Menus.go`); `Menus.setBlocked`
+  forward. **Loadout:** read `Armament.handling` and `Armament.replicas`, never `LOADOUT` (that is what bots carry). **Menus:** one screen at a time (`Menus.go`); `Menus.setBlocked`
   makes them inert (graphics reset).
 - **Ending a match quickly in a scratch script:** set `airsoft.state.round.score` to 4–4 and one team's characters'
   `status` to `'out'`.

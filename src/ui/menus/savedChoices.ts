@@ -23,7 +23,7 @@ import {
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
-import { AIMING, DEFAULT_OPTIC, OPTIC_CHOICES, type OpticChoice } from '../../config/optics';
+import { AIMING } from '../../config/optics';
 import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset, RENDER } from '../../config/render';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
@@ -96,11 +96,6 @@ export function loadInvertMouse(): boolean {
 /** The mouse's DPI as the player entered it, for the cm/360 figure. */
 export function loadMouseDpi(): number {
   return loadSetting('mouseDpi', numberIn(MOUSE_DPI.min, MOUSE_DPI.max), MOUSE_DPI.default);
-}
-
-/** The optic for the replica with a rail (the rifle). */
-export function loadOptic(): OpticChoice {
-  return loadChoice('optic', OPTIC_CHOICES, DEFAULT_OPTIC);
 }
 
 /** The map picked on New game. */

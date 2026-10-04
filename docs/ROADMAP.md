@@ -120,7 +120,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M14 Art pass, VFX and lighting (procedural: the CC0 asset sites were unreachable): daylight with a sky and trees, dressed Depot surfaces and props, figures in airsoft kit, toy-like replicas, gas puffs and impact dust, the Graphics quality picker back | Done (owner to play it) | 9.0 |
 | Alpha · Phase 4 · M16 Tutorial: a coached first session on the practice range | Done (merged; owner to play it) | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M26a Asset pool: `pool.md` (the asset register the game reads, with its guide), rarity tiers, the economy's numbers, the player's collection | Done | 9.1 |
-| Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Planned | |
+| Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Done | CRITIC |
 | Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Planned | |
 | Alpha · Owner's 2026-10-04 batch · M26d Dev settings for the Armory: switch the gacha off, unlock all gear; docs | Planned | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |

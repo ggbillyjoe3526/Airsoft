@@ -3,6 +3,7 @@ import poolText from '../../pool.md?raw';
 import { addItem, type Collection, grantStarters, itemKey, loadCollection, newCollection, ownedItems, parseItemKey, saveCollection } from './collection';
 import { assetOfReplica, DEFAULT_ECONOMY, fcPerToken, fits, loadPool, replicaOf, tierId } from './pool';
 import { readTables } from './poolFile';
+import { MemoryStorage } from './testStorage';
 import { AEG, GAS_PISTOL } from '../config/replicas';
 
 const pool = loadPool(poolText);
@@ -22,28 +23,6 @@ function mini(extra: string): string {
     '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes |',
     extra,
   ].join('\n');
-}
-
-class MemoryStorage {
-  private readonly map = new Map<string, string>();
-  get length(): number {
-    return this.map.size;
-  }
-  clear(): void {
-    this.map.clear();
-  }
-  getItem(k: string): string | null {
-    return this.map.get(k) ?? null;
-  }
-  key(i: number): string | null {
-    return [...this.map.keys()][i] ?? null;
-  }
-  removeItem(k: string): void {
-    this.map.delete(k);
-  }
-  setItem(k: string, v: string): void {
-    this.map.set(k, v);
-  }
 }
 
 describe('pool.md', () => {

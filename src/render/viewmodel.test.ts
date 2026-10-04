@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { REDUCED_MOTION } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import { LOADOUT } from '../config/replicas';
-import { createArmament, fitOptic, fitParts } from '../sim/armament';
+import { createArmament, fitOptics, fitParts } from '../sim/armament';
 import { buildReplicaModels, RIFLE_OPTIC, RIFLE_SCOPE } from './replicaModels';
 import { magazineOut, magazineSwap, sprintCarry, Viewmodel } from './viewmodel';
 
@@ -167,7 +167,7 @@ describe('Viewmodel optic', () => {
     expect(named(vm, 'optic:redDot')).toHaveLength(1); // only the rifle has a rail for one
     vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
     expect([optic!.visible, up!.visible, down!.visible]).toEqual([false, true, false]);
-    fitOptic(arm, LOADOUT, 'redDot');
+    fitOptics(arm, ['redDot', null]);
     vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
     expect([optic!.visible, up!.visible, down!.visible]).toEqual([true, false, true]);
     vm.dispose();
@@ -180,8 +180,8 @@ describe('Viewmodel optic', () => {
     vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
     expect([...shown('magazine:standard'), ...shown('magazine:hiCap'), ...shown('magazine:extended')]).toEqual([true, true, false, false]);
     expect([...shown('grip:vertical'), ...shown('grip:angled'), ...shown('optic:scope2x')]).toEqual([false, false, false]);
-    fitOptic(arm, LOADOUT, 'scope2x');
-    fitParts(arm, LOADOUT, [
+    fitOptics(arm, ['scope2x', null]);
+    fitParts(arm, [
       { grip: 'angled', magazine: 'hiCap' },
       { grip: 'none', magazine: 'extended' },
     ]);
@@ -192,10 +192,25 @@ describe('Viewmodel optic', () => {
     vm.dispose();
   });
 
+  it("shows the pistol's red laser only when it is fitted (M26b)", () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const arm = createArmament(LOADOUT);
+    const shown = () => named(vm, 'laser:redLaser').map((o) => o.visible);
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
+    expect(shown()).toEqual([false]);
+    fitParts(arm, [
+      { grip: 'none', magazine: 'standard' },
+      { grip: 'none', magazine: 'standard', laser: 'redLaser' },
+    ]);
+    vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
+    expect(shown()).toEqual([true]);
+    vm.dispose();
+  });
+
   it('raised to the eye, puts the 2× scope on the same axis as the red dot (M17b)', () => {
     const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
     const arm = createArmament(LOADOUT);
-    fitOptic(arm, LOADOUT, 'scope2x');
+    fitOptics(arm, ['scope2x', null]);
     vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 1);
     const [scope] = named(vm, 'optic:scope2x');
     scope!.updateWorldMatrix(true, false);
@@ -212,7 +227,7 @@ describe('Viewmodel optic', () => {
   it('raised to the eye, puts the optic square on the view centre line, where BBs go', () => {
     const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
     const arm = createArmament(LOADOUT);
-    fitOptic(arm, LOADOUT, 'redDot');
+    fitOptics(arm, ['redDot', null]);
     vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 1);
     const [optic] = named(vm, 'optic:redDot');
     optic!.updateWorldMatrix(true, false);
@@ -230,7 +245,7 @@ describe('Viewmodel optic', () => {
   it('keeps the dot (the view centre) inside the glass at the strongest recoil kick', () => {
     const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
     const arm = createArmament(LOADOUT);
-    fitOptic(arm, LOADOUT, 'redDot');
+    fitOptics(arm, ['redDot', null]);
     for (let i = 0; i < 5; i++) vm.onShot(); // full auto: the kick is at kickMax
     vm.update(0, 0, 0, 0, 4.2, 0, arm, false, 1);
     const [optic] = named(vm, 'optic:redDot');

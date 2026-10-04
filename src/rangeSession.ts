@@ -7,7 +7,6 @@ import { HITS, ROUNDS } from './config/hits';
 import type { CrosshairSettings } from './config/matchInfo';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
-import { opticOf } from './config/optics';
 import { PHYSICS } from './config/physics';
 import { RANGE } from './config/range';
 import type { QualitySettings } from './config/render';
@@ -26,7 +25,7 @@ import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMesh
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
-import { fitOptic, fitParts, setBbWeights, setHopUps } from './sim/armament';
+import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { createRangeTargets } from './sim/rangeTargets';
@@ -41,7 +40,7 @@ import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 const PLAYER_ID = 0;
 
 /** What the range needs from New game's choices: the loadout (the match rules don't apply). */
-export type RangeSetup = Pick<MatchSetup, 'loadout' | 'optic' | 'hopUps' | 'bbWeights' | 'parts' | 'teamColours'>;
+export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours'>;
 
 /** Where you stand and which way you face: kept when the range is rebuilt for a new loadout. */
 export interface RangePose {
@@ -96,7 +95,7 @@ export class RangeSession {
     tutorialFrom?: number,
   ) {
     const map = RANGE_MAP;
-    this.loadout = setup.loadout;
+    this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04).
     this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
     renderer.scene.add(this.mapGroup);
@@ -113,7 +112,6 @@ export class RangeSession {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
-      loadout: this.loadout,
       killY: map.killY,
       hits: HITS,
       deadZones: map.deadZones,
@@ -127,7 +125,7 @@ export class RangeSession {
     const at = pose ? vec3(pose.x, spawn.position.y, pose.z) : spawn.position;
     this.player = createCharacter(PLAYER_ID, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), pose?.yaw ?? spawn.yaw, this.loadout, 0);
     this.tutorialView = { dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets };
-    respawnCharacter(this.player, this.loadout);
+    respawnCharacter(this.player);
     this.state.characters.push(this.player);
     this.physics.addCharacter(this.player);
     this.fitPickedLoadout();
@@ -142,7 +140,7 @@ export class RangeSession {
     this.readout = new RangeReadout(container);
     this.readout.set(lastShotText(null));
     if (tutorialFrom !== undefined) {
-      this.tutorial = new TutorialTracker(TUTORIAL_STEPS, canAimDownSights(this.player.armament, this.loadout), tutorialFrom);
+      this.tutorial = new TutorialTracker(TUTORIAL_STEPS, canAimDownSights(this.player.armament), tutorialFrom);
       this.coach = new CoachPanel(container, (action) => input.keyName(action));
       this.coach.show(this.tutorial);
     }
@@ -179,7 +177,7 @@ export class RangeSession {
   /** One frame of practice: reads the input, then runs the ticks that are due. Returns how many ran. */
   advance(dt: number): number {
     const p = this.player;
-    this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament, this.loadout));
+    this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
     const ticks = advanceStepper(this.stepper, dt);
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);
@@ -242,10 +240,11 @@ export class RangeSession {
 
   /** Fits the picked optic, parts, hop-up dials and BB weights to your replicas (fresh magazines of the picked kind). */
   private fitPickedLoadout(): void {
-    fitOptic(this.player.armament, this.loadout, opticOf(this.setup.optic));
-    fitParts(this.player.armament, this.loadout, this.setup.parts);
-    setHopUps(this.player.armament, this.setup.hopUps);
-    setBbWeights(this.player.armament, this.setup.bbWeights);
+    const kit = this.setup.kit;
+    fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
+    fitParts(this.player.armament, kit.slots.map((s) => s.parts));
+    setHopUps(this.player.armament, kit.hopUps);
+    setBbWeights(this.player.armament, kit.bbWeights);
   }
 
   private afterTick(): void {

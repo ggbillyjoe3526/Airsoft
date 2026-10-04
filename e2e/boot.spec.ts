@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 
 /**
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
- * Difficulty pop-ups, a 2v2 picked, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2× scope, an
- * angled grip, a hi-cap and 0.28 g BBs, holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
+ * Difficulty pop-ups, a 2v2 picked, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2x scope, an
+ * angled grip, a hi-cap and 0.28 g BBs (owned through a saved collection), holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
  * down the scope, switches the graphics quality to Medium and back to Low mid-match, ends the match (summary, result, Play
  * Again) and keeps running without a page error.
  *
@@ -25,6 +25,12 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   });
   const errorList = () => (errors.length > 0 ? errors.join(' | ') : 'none');
 
+  // Armory unlocks (M26c) a new player wouldn't have: the red dot, the 2x scope, a Rare angled grip and a hi-cap, besides
+  // the starters. Saved before the page loads, as a returning player's collection.
+  await page.addInitScript(() => {
+    const owned = ['000001', '000002', '000003', '000004', '000007', '000010', '000012'].map((id) => [`${id}@common`, 1]);
+    localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000011@rare', 1]]), fc: 0, tokens: 0, seed: 1 }));
+  });
   await page.goto('/?nolock&seed=1');
   // Wait for the title screen or the boot's own failure text, whichever comes first.
   await page.waitForFunction(
@@ -92,41 +98,57 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await dialog.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Normal' }).click();
   await dialog.getByRole('button', { name: 'Close' }).click();
 
-  // The Loadout screen: the replica in each slot, the optic, and a hop-up dial and BB weight per replica. Fit the red
-  // dot and heavier BBs before the match.
+  // The Loadout screen (M26b): three gear slots, the AEG Rifle and Gas Pistol equipped, Grenades empty. Right-click the
+  // Primary slot to customise the rifle: fit the red dot and heavier BBs before the match.
   await setup.getByRole('button', { name: /Loadout/i }).click();
   const loadout = page.locator('.menu-loadout');
   await expect(loadout).toBeVisible();
-  await expect(loadout.locator('.loadout-hopup input[type=range]')).toHaveCount(2);
-  await expect(loadout.getByRole('group', { name: 'Primary replica' }).getByRole('button', { name: 'AEG rifle' })).toHaveAttribute('aria-pressed', 'true');
-  await loadout.getByRole('button', { name: 'Red dot' }).click();
-  await expect(loadout.getByRole('button', { name: 'Red dot' })).toHaveAttribute('aria-pressed', 'true');
-  const rifleWeight = loadout.getByRole('group', { name: 'AEG rifle BB weight' });
-  await expect(rifleWeight.getByRole('button', { name: '0.25 g' })).toHaveAttribute('aria-pressed', 'true');
-  await rifleWeight.getByRole('button', { name: '0.28 g' }).click();
+  await expect(loadout.locator('.gear-slot')).toHaveCount(3);
+  const primary = loadout.getByRole('button', { name: /^Primary: AEG Rifle/ });
+  await expect(primary).toHaveAttribute('aria-pressed', 'true');
+  await expect(loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ })).toBeVisible();
+  await expect(loadout.getByRole('button', { name: /^Grenades: Empty/ })).toBeVisible();
+  await primary.click({ button: 'right' });
+  await expect(loadout.getByRole('heading', { name: /Customise: AEG Rifle/ })).toBeVisible();
+  const optic = loadout.getByRole('group', { name: 'Optic' });
+  await expect(optic.getByRole('button', { name: 'Iron Sights' })).toHaveAttribute('aria-pressed', 'true');
+  await optic.getByRole('button', { name: /Red Dot/ }).click();
+  await expect(optic.getByRole('button', { name: /Red Dot/ })).toHaveAttribute('aria-pressed', 'true');
+  const rifleWeight = loadout.getByRole('slider', { name: 'AEG Rifle BB weight' });
+  await expect(rifleWeight).toHaveValue('0.25');
+  await rifleWeight.fill('0.28');
   await expect(loadout.getByText(/Leaves the barrel at \d+ m\/s .* Longest reach at about 75% hop-up/).first()).toBeVisible();
-  await loadout.getByRole('button', { name: 'Back' }).click();
-  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('Red dot');
+  // Back leaves Customise for the gear first, then the Loadout.
+  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(loadout.locator('.item-grid')).toBeVisible();
+  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('Red Dot');
   await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('0.28 g / 0.20 g BBs');
 
-  // Attachments (M17b): the 2× scope, an angled grip and a hi-cap on the rifle, each with its numbers under it.
+  // Attachments: the 2x scope, a Rare angled grip and a hi-cap on the rifle, each with its numbers under it.
   await setup.getByRole('button', { name: /Loadout/i }).click();
-  await loadout.getByRole('button', { name: '2× scope' }).click();
-  const rifleGrip = loadout.getByRole('group', { name: 'AEG rifle grip' });
-  await expect(rifleGrip.getByRole('button', { name: 'No grip' })).toHaveAttribute('aria-pressed', 'true');
-  await rifleGrip.getByRole('button', { name: 'Angled grip' }).click();
+  await loadout.getByRole('button', { name: /^Customise AEG Rifle/ }).click();
+  await loadout.getByRole('group', { name: 'Optic' }).getByRole('button', { name: /2x Scope/ }).click();
+  const rifleGrip = loadout.getByRole('group', { name: 'Grip' });
+  await expect(rifleGrip.getByRole('button', { name: 'No Grip' })).toHaveAttribute('aria-pressed', 'true');
+  await rifleGrip.getByRole('button', { name: /Angled Grip/ }).click();
+  await expect(rifleGrip.getByRole('button', { name: /Angled Grip/ })).toContainText('Rare');
   // The numbers themselves are the unit tests' (loadoutChoice.test.ts); here only that they show (audit L-10).
-  await expect(loadout.getByText(/Brings the AEG rifle up in [\d.]+ s/)).toBeVisible();
+  await expect(loadout.getByText(/Brings the AEG Rifle up in [\d.]+ s/)).toBeVisible();
   await expect(loadout.getByText(/Up to your eye in [\d.]+ s with the angled grip\./)).toBeVisible();
-  const rifleMag = loadout.getByRole('group', { name: 'AEG rifle magazine' });
-  await rifleMag.getByRole('button', { name: 'Hi-cap' }).click();
-  // The magazine's line sits under its buttons, in the picker around the group (the pistol has one too).
-  const hiCapLine = loadout.locator('.picker', { has: page.getByRole('group', { name: 'AEG rifle magazine' }) }).getByText(/\d+ BBs each, \d+ carried \(\d+ in all\)\. Reload [\d.]+ s\./);
+  await loadout.getByRole('group', { name: 'Magazine' }).getByRole('button', { name: /Hi-Cap/ }).click();
+  // The magazine's line sits under its tiles, in the same row.
+  const hiCapLine = loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Magazine' }) }).getByText(/\d+ BBs each, \d+ carried \(\d+ in all\)\. Reload [\d.]+ s\./);
   await expect(hiCapLine).toBeVisible();
   const hiCap = Number((await hiCapLine.textContent())!.match(/(\d+) BBs each/)![1]); // checked in the match below
-  await expect(loadout.getByText('Replicas and outfit').first()).toBeAttached(); // skins, greyed as LATER
-  await loadout.getByRole('button', { name: 'Back' }).click();
-  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('2× scope · Angled grip · Hi-cap mag');
+  await expect(loadout.getByText('Skins').first()).toBeAttached(); // greyed as LATER
+  // The pistol has no top rail: its Optic row says so. Esc goes back to the gear like Back.
+  await page.keyboard.press('Escape');
+  await loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ }).click({ button: 'right' });
+  await expect(loadout.locator('.menu-row.later', { hasText: 'Optic' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('2x Scope · Angled Grip · Hi-Cap Magazine');
 
   // Settings: its own screen with tabs; Esc works as Back and returns to New game, with focus back on the Settings tile.
   await setup.getByRole('button', { name: /Settings/i }).click();
@@ -482,7 +504,7 @@ test('the practice range opens from the title screen and reads out the last BB',
     .toBe(true);
   await page.mouse.up();
 
-  // Esc (here: tabbing away) on the range offers the Loadout; heavier BBs, Back, Resume: the range is rebuilt where you
+  // Esc (here: tabbing away) on the range offers the Loadout; 0.30 g BBs, Back, Resume: the range is rebuilt where you
   // stood and looked, with the new BBs in the rifle.
   const before = await page.evaluate(() => {
     const game = (window as unknown as Aim).airsoft;
@@ -500,8 +522,10 @@ test('the practice range opens from the title screen and reads out the last BB',
   });
   await pauseMenu.getByRole('button', { name: 'Loadout' }).click();
   const loadout = page.locator('.menu-loadout');
-  await loadout.getByRole('group', { name: 'AEG rifle BB weight' }).getByRole('button', { name: '0.28 g' }).click();
-  await loadout.getByRole('button', { name: 'Back' }).click();
+  await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
+  await loadout.getByRole('slider', { name: 'AEG Rifle BB weight' }).fill('0.3');
+  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
+  await loadout.getByRole('button', { name: 'Back', exact: true }).click();
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   await expect(readout).toContainText('Practice range'); // a new range: no last shot yet
@@ -513,7 +537,7 @@ test('the practice range opens from the title screen and reads out the last BB',
   expect(after.z).toBeCloseTo(before.z, 1);
   expect(after.yaw).toBeCloseTo(before.yaw, 3);
   expect(after.pitch).toBeCloseTo(before.pitch, 3);
-  expect(after.bb).toBe(0.28);
+  expect(after.bb).toBe(0.3);
   expect(errors).toEqual([]);
 });
 

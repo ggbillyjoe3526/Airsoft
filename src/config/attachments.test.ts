@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { factoryParts, GRIP_CHOICES, GRIPS, type GripId, handlingOf, MAGAZINES, partsFor } from './attachments';
+import { factoryParts, GRIPS, type GripId, handlingOf, MAGAZINES, type MagazineId, NO_TUNE, partsFor } from './attachments';
 import { AEG, GAS_PISTOL, LOADOUT } from './replicas';
 
 describe('attachments', () => {
@@ -10,16 +10,15 @@ describe('attachments', () => {
     }
   });
 
-  it('fit only what a replica takes: no grip on the pistol, only magazines made for it', () => {
-    expect(partsFor(GAS_PISTOL, { grip: 'vertical', magazine: 'hiCap' })).toEqual({ grip: 'none', magazine: 'standard' });
-    expect(partsFor(GAS_PISTOL, { magazine: 'extended' })).toEqual({ grip: 'none', magazine: 'extended' });
-    expect(partsFor(AEG, { grip: 'angled', magazine: 'extended' })).toEqual({ grip: 'angled', magazine: 'standard' });
-    expect(partsFor(AEG, { grip: 'bogus' as GripId })).toEqual(factoryParts(AEG));
+  it("keep only parts the game knows; which replica takes what is pool.md's call (M26b)", () => {
+    expect(partsFor(GAS_PISTOL, { magazine: 'extended', laser: 'redLaser' })).toEqual({ grip: 'none', magazine: 'extended', laser: 'redLaser', tune: NO_TUNE });
+    expect(partsFor(AEG, { grip: 'angled', magazine: 'hiCap' })).toMatchObject({ grip: 'angled', magazine: 'hiCap', laser: null });
+    expect(partsFor(AEG, { grip: 'bogus' as GripId, magazine: 'bogus' as MagazineId })).toMatchObject(factoryParts(AEG));
   });
 
   it('are trade-offs: every grip and magazine is better than the factory part at something and worse at something', () => {
     const better = (a: number, b: number) => a < b - 1e-9;
-    for (const id of GRIP_CHOICES.map((g) => g.id).filter((g) => g !== 'none')) {
+    for (const id of (Object.keys(GRIPS) as GripId[]).filter((g) => g !== 'none')) {
       const g = GRIPS[id];
       const gains = [better(g.handlingScale, 1), better(g.shakeScale, 1)];
       const costs = [better(1, g.handlingScale), better(1, g.shakeScale)];

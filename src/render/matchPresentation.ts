@@ -4,7 +4,6 @@ import type { HitConfig } from '../config/hits';
 import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
-import type { ReplicaConfig } from '../config/replicas';
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { teamCss, type TeamColours } from '../config/teams';
 import type { WorldQuery } from '../sim/armament';
@@ -90,10 +89,9 @@ export class MatchPresentation {
     keyName: (action: Action) => string,
     /** The team colours picked on Settings → Accessibility (the HUD's follow the container's CSS, see Game.play). */
     teamColours: TeamColours,
-    /** The replica in each loadout slot (the figures hold the active one). */
-    loadout: readonly ReplicaConfig[],
   ) {
-    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, loadout);
+    // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
+    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits);
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));

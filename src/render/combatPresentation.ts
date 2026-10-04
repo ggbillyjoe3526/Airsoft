@@ -242,7 +242,7 @@ export class CombatPresentation {
     this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carry, p.armament, p.status === 'calling', this.aimBlend);
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;
-    const spread = THREE.MathUtils.degToRad(this.loadout[p.armament.active]!.spreadDeg * p.spreadScale);
+    const spread = THREE.MathUtils.degToRad(p.armament.replicas[p.armament.active]!.spreadDeg * p.spreadScale);
     const focalPx = this.renderer.height / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
     const sight = optic != null && this.aimBlend >= AIMING.reticleFrom ? optic : null;
     this.viewmodel.setScoped(sight !== null && OPTICS[sight].scope);
@@ -306,7 +306,7 @@ export class CombatPresentation {
    */
   private gasBreath(shooterId: number): void {
     const shooter = shooterId === this.player.id ? this.player : this.characterOf(shooterId);
-    if (!shooter || this.loadout[shooter.armament.active]?.power !== 'gas') return;
+    if (!shooter || shooter.armament.replicas[shooter.armament.active]?.power !== 'gas') return;
     const cam = this.renderer.camera;
     const at = this.puffAt;
     let ok = true;
@@ -343,7 +343,7 @@ export class CombatPresentation {
 
   /** The third-person figure's hold for `c`'s active replica: where its muzzle is. */
   private holdOf(c: Character): FigureHold {
-    return holdsPistol(c, this.loadout) ? FIGURE.pistol : FIGURE.rifle;
+    return holdsPistol(c) ? FIGURE.pistol : FIGURE.rifle;
   }
 
   private readonly characterOf = (id: number): Character | undefined => this.state.characters.find((c) => c.id === id);

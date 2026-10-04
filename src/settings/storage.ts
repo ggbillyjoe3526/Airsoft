@@ -11,8 +11,9 @@ export const SETTINGS_VERSION = 1;
 
 /**
  * What each setting is called in the stored object (`hopUp.<replica id>` and `bbWeight.<replica id>`: that replica's
- * hop-up dial and BB weight; `slot.<slot id>`: the replica picked for that loadout slot; `volume.<channel>`: a volume
- * slider on Settings → Audio; `crosshair.<part>`: Settings → Crosshair).
+ * hop-up dial and BB weight; `equip.<gear slot>`: the replica item in that Loadout slot and `fit.<asset id>.<fit slot>`:
+ * the item fitted there (M26b, pool/loadoutModel.ts); `volume.<channel>`: a volume slider on Settings → Audio;
+ * `crosshair.<part>`: Settings → Crosshair).
  */
 export type SettingField =
   | 'sensitivity'
@@ -33,7 +34,6 @@ export type SettingField =
   | 'reducedMotion'
   | 'teamColours'
   | 'soundCues'
-  | 'optic'
   | 'map'
   | 'fov'
   | 'quality'
@@ -42,10 +42,10 @@ export type SettingField =
   | `hopUp.${string}`
   | `volume.${string}`
   | `bbWeight.${string}`
-  | `slot.${string}`
-  | `crosshair.${string}`
-  | `grip.${string}`
-  | `mag.${string}`;
+  | `equip.${string}`
+  | `fit.${string}`
+  | `crosshair.${string}`;
+
 
 /** Where earlier builds kept a setting, before the settings object. */
 const LEGACY_KEYS: Partial<Record<SettingField, string>> = {

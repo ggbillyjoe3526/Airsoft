@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { FIGURE } from '../config/characters';
 import type { HitConfig } from '../config/hits';
-import type { ReplicaConfig } from '../config/replicas';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
 import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll } from './characterModels';
@@ -46,8 +45,8 @@ export function flinchEnvelope(t: number): number {
 }
 
 /** True if `c`'s active replica is a pistol (the figure holds it out in both hands; BBs and gas leave its muzzle). */
-export function holdsPistol(c: Character, loadout: readonly ReplicaConfig[]): boolean {
-  return loadout[c.armament.active]?.look.model === 'pistol';
+export function holdsPistol(c: Character): boolean {
+  return c.armament.replicas[c.armament.active]?.look.model === 'pistol';
 }
 
 /**
@@ -67,8 +66,6 @@ export class CharacterRenderer {
     private readonly characters: readonly Character[],
     teamColors: readonly number[],
     private readonly hits: HitConfig,
-    /** The replica in each loadout slot: a figure holds its active one (rifle or pistol pose). */
-    private readonly loadout: readonly ReplicaConfig[],
   ) {
     for (const c of characters) {
       const material = this.material.clone();
@@ -137,7 +134,7 @@ export class CharacterRenderer {
       // In play: aiming. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
       const handUp = c.status === 'calling' || c.status === 'walkingOff' || c.status === 'leaving';
       f.aim.visible = !handUp;
-      const pistol = holdsPistol(c, this.loadout);
+      const pistol = holdsPistol(c);
       f.aimRifle.visible = !pistol;
       f.aimPistol.visible = pistol;
       f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.prevPitch + (c.pitch - c.prevPitch) * alpha;

@@ -12,11 +12,10 @@ import { countsForRecords, hitRulesFor, type MatchRules, roundRulesFor } from '.
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
-import type { ReplicaParts } from './config/attachments';
-import { type OpticChoice, opticOf } from './config/optics';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
-import type { ReplicaConfig } from './config/replicas';
+import { LOADOUT, type ReplicaConfig } from './config/replicas';
+import type { PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadOrderKind } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
@@ -32,7 +31,7 @@ import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMesh
 import { MatchPresentation } from './render/matchPresentation';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
-import { fitOptic, fitParts, setBbWeights, setHopUps } from './sim/armament';
+import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
@@ -55,13 +54,11 @@ export interface MatchSetup {
   teammateDifficulty: Difficulty;
   /** Rounds to win, round time, team size, friendly fire and ricochets (the Match pop-up, M20). */
   rules: MatchRules;
-  /** The replica in each loadout slot (primary, secondary); everyone in the match carries these (bots with factory setups). */
-  loadout: readonly ReplicaConfig[];
-  /** The optic for the replica with a rail, and each slot's hop-up dial, BB weight (grams), grip and magazine, from the Loadout screen. */
-  optic: OpticChoice;
-  hopUps: readonly number[];
-  bbWeights: readonly number[];
-  parts: readonly ReplicaParts[];
+  /**
+   * The player's kit from the Loadout screen (M26b): each gear slot's replica as carried (rarity, power source and laser
+   * worked in), its optic, parts, hop-up dial and BB weight. Bots carry config/replicas.ts LOADOUT as it comes.
+   */
+  kit: PlayerKit;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
 }
@@ -115,7 +112,7 @@ export class MatchSession {
     crosshair: CrosshairSettings,
   ) {
     const map = setup.map;
-    this.loadout = setup.loadout;
+    this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04).
     this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
     renderer.scene.add(this.mapGroup);
@@ -136,7 +133,6 @@ export class MatchSession {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
-      loadout: this.loadout,
       killY: map.killY,
       hits: this.hits,
       deadZones: map.deadZones,
@@ -154,13 +150,13 @@ export class MatchSession {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: this.hits, loadout: this.loadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: this.hits, loadout: LOADOUT, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
     );
     input.resetView(this.player.spawnYaw);
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, this.hits);
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, this.loadout);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours);
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -174,7 +170,7 @@ export class MatchSession {
    */
   advance(dt: number): number {
     const p = this.player;
-    this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament, this.loadout));
+    this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament));
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
     const order = this.input.takeOrder();
     if (order) this.giveOrder(order);
@@ -293,11 +289,12 @@ export class MatchSession {
     }
     let id = PLAYER_ID;
     for (let team = 0; team < TEAMS.length; team++) {
-      for (let i = 0; i < size; i++) this.state.characters.push(createCharacter(id++, vec3(), 0, this.loadout, team));
+      // You carry your kit; every bot carries the default loadout as it comes.
+      for (let i = 0; i < size; i++, id++) this.state.characters.push(createCharacter(id, vec3(), 0, id === PLAYER_ID ? this.loadout : LOADOUT, team));
     }
     placeTeams(this.state.round, this.state.characters, this.ctx.round);
     for (const c of this.state.characters) {
-      respawnCharacter(c, this.loadout);
+      respawnCharacter(c);
       this.physics.addCharacter(c);
     }
     return this.state.characters[0]!;
@@ -308,10 +305,11 @@ export class MatchSession {
    * the picked kind). A direct sim-state change, between rounds.
    */
   private fitPickedLoadout(): void {
-    fitOptic(this.player.armament, this.loadout, opticOf(this.setup.optic));
-    fitParts(this.player.armament, this.loadout, this.setup.parts);
-    setHopUps(this.player.armament, this.setup.hopUps);
-    setBbWeights(this.player.armament, this.setup.bbWeights);
+    const kit = this.setup.kit;
+    fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
+    fitParts(this.player.armament, kit.slots.map((s) => s.parts));
+    setHopUps(this.player.armament, kit.hopUps);
+    setBbWeights(this.player.armament, kit.bbWeights);
   }
 
   /**

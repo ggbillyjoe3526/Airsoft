@@ -94,7 +94,6 @@ body {
 .choice-name,
 .settings-tab,
 .menu-row-label,
-.loadout-slot-name,
 .menu-result-headline,
 .menu-later {
   text-transform: uppercase;
@@ -161,7 +160,9 @@ body {
 .menu-close:focus-visible,
 .setup-tile:focus-visible,
 .choice-option:focus-visible,
-.loadout-slot:focus-visible,
+.gear-slot:focus-visible,
+.item-tile:focus-visible,
+.item-chip:focus-visible,
 .settings-tab:focus-visible,
 .picker-button:focus-visible,
 .key-button:focus-visible {
@@ -647,59 +648,209 @@ body {
   gap: 32px;
 }
 
-.loadout-slots {
+/* The gear column (M26b): three square slots, Primary, Secondary and Grenades, like a character screen's weapons */
+.gear-column {
   display: flex;
-  flex: 1 1 280px;
+  flex: 0 0 auto;
   flex-direction: column;
-  gap: 10px;
-  max-width: 340px;
+  gap: 6px;
+  width: 168px;
 }
 
-.loadout-slots .menu-kicker {
-  margin-top: 8px;
+.gear-column .menu-kicker {
+  margin-top: 10px;
 }
 
-.loadout-slot {
+.gear-slot {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 64px;
-  padding: 0 18px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 168px;
+  aspect-ratio: 1;
+  padding: 14px;
   font: inherit;
   color: var(--paper);
-  background: var(--menu-panel);
+  text-align: left;
+  background: linear-gradient(160deg, var(--menu-panel-hi), var(--menu-panel) 70%);
   border: 2px solid var(--menu-line);
+  border-bottom: 6px solid var(--tier, var(--menu-line));
   border-radius: 8px;
   cursor: pointer;
 }
 
-.loadout-slot.selected {
-  background: var(--menu-panel-hi);
-  border-color: var(--orange);
+.gear-slot:hover {
+  border-color: var(--menu-muted);
+  border-bottom-color: var(--tier, var(--menu-muted));
 }
 
-.loadout-slot-name {
+.gear-slot.selected {
+  border-color: var(--orange);
+  border-bottom-color: var(--tier, var(--orange));
+}
+
+.gear-slot.empty {
+  border-style: dashed;
+  border-bottom-width: 2px;
+  background: transparent;
+}
+
+.gear-name {
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  line-height: 1.15;
 }
 
-.loadout-slot-tag {
+.gear-slot.empty .gear-name {
+  color: var(--menu-faint);
+}
+
+.gear-tier,
+.item-tier,
+.tier-tag {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tier, var(--menu-faint));
+}
+
+.gear-hint {
+  margin: 8px 0 0;
   font-size: 13px;
+  line-height: 1.4;
+  color: var(--menu-faint);
+}
+
+/* Rarity colours, common to rarest (pool.md's tiers; a tier added there shows grey until it gets one here) */
+[data-tier] {
+  --tier: #9aa0a6;
+}
+[data-tier='uncommon'] {
+  --tier: #4cc35a;
+}
+[data-tier='rare'] {
+  --tier: #3d8bff;
+}
+[data-tier='veryRare'] {
+  --tier: #a46bff;
+}
+[data-tier='epic'] {
+  --tier: #ff5fb4;
+}
+[data-tier='legendary'] {
+  --tier: #ffc13b;
+}
+
+/* Owned items: square tiles for replicas, chips for parts, each edged in its tier's colour */
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 8px 0 20px;
+}
+
+.item-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 4px;
+  aspect-ratio: 1;
+  padding: 12px;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: var(--menu-panel-hi);
+  border: 2px solid var(--menu-line);
+  border-bottom: 6px solid var(--tier, var(--menu-line));
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.item-tile:hover {
+  border-color: var(--menu-muted);
+  border-bottom-color: var(--tier, var(--menu-muted));
+}
+
+.item-tile.selected,
+.item-chip.selected {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px var(--orange);
+}
+
+.item-tile.selected {
+  border-bottom-color: var(--tier, var(--orange));
+}
+
+.item-tile.locked {
+  color: var(--menu-faint);
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
+}
+
+.item-name {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.item-note {
+  font-size: 12px;
   font-weight: 600;
   color: var(--menu-muted);
 }
 
-.loadout-slot-more {
+.item-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.item-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 120px;
   min-height: 52px;
-  padding: 0 18px;
+  padding: 6px 12px;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-left: 5px solid var(--tier, var(--menu-line));
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.item-chip:hover {
+  border-color: var(--menu-muted);
+  border-left-color: var(--tier, var(--menu-muted));
+}
+
+.item-chip .item-name {
   font-size: 15px;
+}
+
+.item-row + .picker-blurb {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.menu-readout.menu-faint,
+.loadout-note {
   color: var(--menu-faint);
-  border: 2px dashed var(--menu-line);
-  border-radius: 8px;
+}
+
+.tier-tag {
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 .loadout-panel,

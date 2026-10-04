@@ -1,5 +1,3 @@
-import type { PowerSource } from './replicas';
-
 /**
  * The menus (M15, owner's design, 2026-10-03): a title screen, then New game (Mode, Difficulty, Loadout, Settings),
  * a Loadout screen and a Settings screen of their own, a pause menu and the match result. Items not built yet are
@@ -22,22 +20,28 @@ export const BROWSER_NOTES = {
   graphicsBack: 'Graphics are back. Resume when you’re ready.',
 } as const;
 
-/** How a replica's power source shows on the loadout screen: its slot tag, and the placeholder row under it. */
-export const POWER_LABELS: Readonly<Record<PowerSource, { tag: string; row: string; value: string }>> = {
-  electric: { tag: 'Electric', row: 'Power', value: 'Battery (electric)' },
-  gas: { tag: 'Gas', row: 'Gas type', value: 'Green gas' },
-};
-
-/** Shown greyed in the optic and grip rows of a replica with no rail for one (M17b). */
-export const LOADOUT_FIXED = {
-  noOptic: 'Iron sights',
-  noGrip: 'No rail for one',
-} as const;
-
-/** Loadout parts not built yet, shown as placeholders. */
-export const LOADOUT_LATER = {
+/** The Loadout screen's words (M26b). */
+export const LOADOUT_TEXT = {
+  slots: { primary: 'Primary', secondary: 'Secondary', grenades: 'Grenades' },
+  empty: 'Empty',
+  equipped: 'Equipped',
+  customise: 'Customise',
+  backToGear: 'Back To Gear',
+  rightClickHint: 'Right-click a replica to customise it.',
+  locked: 'Locked',
+  /** Under a row with nothing owned to fit yet. */
+  armoryHint: 'Unlock more in the Armory.',
+  /** A part the replica has no rail or mount for. */
+  noMount: 'No rail for one',
+  /** Under the power sources, by the fitted one's type. */
+  powerBlurb: {
+    battery: 'A higher-capacity battery shoots harder and cycles faster.',
+    gas: 'A stronger gas (red, then black) shoots harder.',
+    spring: 'A stiffer spring shoots harder.',
+  },
+  grenadesLater: 'Grenades, smoke and flash bombs come in a later version.',
   /** Skins come with customisation (v0.5): the row keeps their place (M17b). */
-  skins: 'Replicas and outfit',
+  skinsLater: 'Replicas and outfit',
 } as const;
 
 export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'audio' | 'accessibility';
