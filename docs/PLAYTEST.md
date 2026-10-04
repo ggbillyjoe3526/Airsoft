@@ -125,14 +125,14 @@ replica per slot for now), then the optic, the **BB weight** (0.20, 0.25 or 0.28
 
 - [ ] **The BB weight starts where each replica comes set up:** 0.25 g on the rifle, 0.20 g on the pistol. The line
   under it gives both sides: how fast the BB leaves and reaches 20 m, and the hop-up that gives it the longest reach and how far it then
-  stays on target (rifle: 88 m/s, 20 m in 0.28 s, best about 65%, ~38 m).
+  stays on target (rifle: 88 m/s, 20 m in 0.30 s, best about 65%, ~39 m).
 - [ ] **Pick 0.28 g on the rifle.** It leaves slower (about 84 m/s) and the hop-up line now says it is on target to
-  about 34 m: heavy BBs need more hop. Turn the dial up to the 75% the weight line suggests: on target to about 40 m.
+  about 35 m: heavy BBs need more hop. Turn the dial up to the 75% the weight line suggests: on target to about 41 m.
 - [ ] **Pick 0.20 g on the rifle with the dial at 65%.** The hop-up line warns it's too much (light BBs rise more on
-  the same hop). In a match, far shots fly high and float; turn the dial down to about 55% and they fly flat.
+  the same hop). In a match, far shots fly high and float; turn the dial down to about 50% and they fly flat.
 - [ ] **Is the choice worth having?** The differences are small on purpose, as at a real site (DECISIONS): 0.28 g
   carries a couple of metres further past Depot's longest sightlines (~34 m), 0.20 g gets to 10–20 m a hundredth of a
-  second sooner (by ~30 m they arrive together). On the pistol the gap is bigger (25 → 34 m of reach on full hop). If you can't feel
+  second sooner (by ~30 m they arrive together). On the pistol the gap is bigger (about 31 → 35 m of best reach). If you can't feel
   it on Depot, say so and it can be widened (for example, light BBs scattering more).
 - [ ] **Back on New game** the Loadout button lists the weights (e.g. "0.28 g / 0.20 g BBs"), and they are still
   picked after reloading the page. Bots always shoot their replicas' standard BBs.
@@ -184,11 +184,31 @@ setting does.
 
 - [ ] **Leave both on the factory setting (rifle 65%, pistol 55%) and shoot at a bot or a wall far away (30 m and
   more).** Rifle BBs rise a little (about a hand's width) around 20 m and are still on target at Depot's longest
-  sightlines (about 34 m). The pistol's BBs drop sooner, from about 25 m.
+  sightlines (about 34 m), on target to about 39 m. The pistol's BBs drop sooner, from about 27 m.
 - [ ] **Turn the rifle's hop-up right down (0%).** BBs start dropping from about 14 m; far shots land low.
 - [ ] **Turn it right up (90–100%).** The BBs climb about half a metre over your aim and float before they fall.
   The line under the slider says so.
 - [ ] **Find a setting you like.** The game remembers it. Bots always use the factory setting.
+
+## BB flight and wind (M30)
+
+BBs now fly by real air physics: drag slows them the way air slows a real 6 mm BB, the hop-up's backspin holds them up
+until it wears off and the BB slows, and each match has its own light breeze (calm to about 2 m/s, gusting a little)
+that pushes BBs, never players. The dust floating in the air (Medium and High quality) drifts with it.
+
+- [ ] **Shoot the rifle at a wall 30 m or more away, on the factory hop.** The BBs take about half a second to get there,
+  fly flat and then drop away past about 40 m, slowing visibly at the end.
+- [ ] **Look at the dust in the air for a few seconds on Medium or High.** It drifts one way: that's the wind. Start a
+  few matches: the strength and direction change from match to match.
+- [ ] **Fire a long burst across the wind at 30 m or more.** The BBs curve gently downwind, more and more towards the
+  end (in the strongest breeze up to about half a metre at 34 m); at 10 m you can't see it. Aiming a little upwind
+  brings them back on. Dev tab › BB paths shows the curve from above.
+- [ ] **Shoot with the wind and into it.** Into the wind BBs arrive a touch later and drop a little sooner.
+- [ ] **On the practice range** every target out to 60 m can still be hit: from 40 m out aim high (or turn the hop-up up)
+  and a little upwind. The readout's miss line shows where the last BB landed.
+- [ ] **Bots:** they hit you as often as before at short range and lead you better when you run across their aim at
+  range. In a strong breeze their long shots miss downwind as yours do. Say if bots feel too weak or too strong.
+- [ ] **Frame rate:** a full-auto firefight on Low feels as smooth as before.
 
 ## Bots and rounds
 

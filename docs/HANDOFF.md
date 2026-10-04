@@ -76,6 +76,14 @@ touches movement or materials can fail one seed; re-measure over 16 seeds before
   `pool/armory.ts` (rules) and `ui/menus/armoryScreen.ts`; the Dev tab's Disable Armory and Unlock all gear (M26d) are
   read in `Game` (`gameOwnership`, the Armory tile's summary, the match's pay); the owner chose "Claude merges" for this batch.
 
+- **M30 BB flight model (fluid dynamics):** `sim/air.ts` (air density and viscosity, Morrison's sphere Cd by Reynolds
+  number, a drag table by airspeed built once per config), `sim/ballistics.ts` `stepFlight` (drag and Magnus lift against
+  the airflow, backspin decaying, one midpoint step a tick), `sim/wind.ts` (the match's breeze from its seed, into
+  `GameState.wind` each tick; the dust motes ride it). **Tunables are in `config/ballistics.ts`, not pool.md or
+  stats.md:** `air` (temperature, pressure), `spinPerHop` (hop to backspin), `spinFriction`, the lift fit, and `WIND`
+  (strength range, gusts, veer). Retuning `spinPerHop` moves the tutorial's "about 39 m" (its test says so). M29 owns what
+  leaves the muzzle (`muzzleVelocity`, `bbMass`); the flight model only reads them. Bots lead with `flightTimeEstimate`.
+
 ## Working notes and gotchas
 
 - **Checks:** `npm run check` (about 75 s; the headless match guards run in parallel files). In a cloud container set

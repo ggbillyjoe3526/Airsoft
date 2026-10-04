@@ -127,6 +127,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Done | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Done | 9.1 |
 | Alpha · Owner's 2026-10-04 batch · M26d Dev settings for the Armory: switch the gacha off, unlock all gear; docs | Done | 9.1 |
+| Alpha · Owner's 2026-10-04 batch · M30 BB physics pass 2 (owner, 2026-10-04): a flight model from fluid dynamics: real drag by Reynolds number, Magnus lift from the hop-up's decaying backspin, a per-match breeze with gusts that drifts BBs (the dust shows it) | Done (owner to play it) | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
