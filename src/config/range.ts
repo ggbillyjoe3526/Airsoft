@@ -18,8 +18,10 @@ export interface RangeLane {
 
 export const RANGE = {
   /**
-   * Target distances from the firing line (m). Out past Depot's longest sightlines (about 50 m end to end): a 0.25 g
-   * BB with the hop-up set right still carries to 60 m, it just takes a while to get there.
+   * Target distances from the firing line (m). Out past Depot's longest sightlines (about 50 m end to end), so the far
+   * plates need holdover: a level 0.25 g rifle shot on its best hop-up stays on target to about 39 m and lands at about
+   * 53 m (1.3 s); a 60 m plate takes aiming about 3° high, some 3.5 m over it (1.7 s of flight), or more hop-up
+   * (audit SIM-16, measured with M30's flight; map/range.test.ts checks it).
    */
   distances: [10, 20, 30, 40, 50, 60],
   /** Steel plates on the left, standing figures in the middle, crouched figures on the right. */

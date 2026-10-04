@@ -20,7 +20,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Optics: iron sights, a red dot or a 2× scope; aiming down sights with right click, at its own sensitivity (M12b, M17b)
 - Grips (vertical, angled) and magazines (hi-cap, low-cap, the pistol's extended one) trade handling for noise and sway (M17b)
 - A laser module and a choice of power source on the pistol, from the pool (M26b)
-- BBs can ricochet off concrete and steel; whether a ricochet counts as a hit is a match setting, off by default (M20)
+- BBs can ricochet off concrete and steel; own ricochets can hit you; whether ricochets count as hits is a match setting, off by default (M20, FA12)
 
 ## Hits and elimination
 

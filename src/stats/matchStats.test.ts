@@ -37,6 +37,13 @@ describe('match stats (M19)', () => {
     expect(stats.roundOf(0)).toEqual(stats.matchOf(0));
   });
 
+  it('counts your own ricochet as a time you were hit, not as a hit on anyone (audit SIM-07)', () => {
+    const state = match();
+    const stats = new MatchStats(state.characters);
+    tick(stats, state, [shot(0), { ...hit(0, 0), ricochet: true } as GameEvent]);
+    expect(stats.matchOf(0)).toMatchObject({ bbsFired: 1, hits: 0, friendlyHits: 0, timesHit: 1 });
+  });
+
   it('measures accuracy as opponents hit per BB fired (friendly hits do not count), none before a BB', () => {
     const state = match();
     const stats = new MatchStats(state.characters);

@@ -798,6 +798,21 @@ describe('bot suppression', () => {
     bots.observe(state);
     expect(b.suppressedAt).toBe(state.time);
   });
+
+  it('takes a ricochet tick from an enemy as being under fire, not one from its own ricochet (audit SIM-07)', () => {
+    const { state, bot, bots } = duel(18);
+    const b = bots.bots[0]!;
+    const before = b.suppressedAt;
+    const tick = (shooterId: number) => {
+      state.events.length = 0;
+      state.events.push({ type: 'ricochetTick', victimId: bot.id, shooterId, position: vec3(), direction: vec3(0, 0, 1) });
+      bots.observe(state);
+    };
+    tick(bot.id);
+    expect(b.suppressedAt).toBe(before);
+    tick(0); // the enemy player
+    expect(b.suppressedAt).toBe(state.time);
+  });
 });
 
 describe('bot lead (M30)', () => {
