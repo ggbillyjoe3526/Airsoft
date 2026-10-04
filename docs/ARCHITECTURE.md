@@ -98,7 +98,7 @@ ends the round). A hit character is eliminated
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
-  The eye and BB origin (`leanedEye`), the hit volume (`hitbox.ts`: body plus a head and shoulder sphere that
+  The eye and BB origin (`leanedEye`), the hit volume (`hitbox.ts`: body, a head and shoulder sphere and a hips-to-shoulder torso capsule that
   swing out), the camera (`render/cameraRig.ts`, plus a small roll), the drawn figure (`figureLeanRoll`) and what
   bots see and aim at (`ai/perception.ts`) all use it. Leaning slows you towards walking pace (quiet from half a lean) and blocks sprinting.
 - **sim/accuracy.ts**: accuracy by stance and movement. `stepAccuracy` (after leaning) keeps `Character.spreadScale`,

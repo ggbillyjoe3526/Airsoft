@@ -24,7 +24,7 @@ export interface ReplicaConfig {
    * the replica is modelled on (owner, 2026-10-03): a striker pistol is semi only, a rifle or SMG may offer more.
    */
   fireModes: readonly FireMode[];
-  /** The mode it starts each match in (one of fireModes). */
+  /** The mode it starts each match in (one of fireModes); the selector keeps its setting from round to round. */
   defaultFireMode: FireMode;
   /** Shots per second while the trigger is held (auto, and within a burst) or the fastest you can click (semi). */
   fireRate: number;

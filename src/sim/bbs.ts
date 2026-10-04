@@ -5,14 +5,20 @@ import { type BB, type BBPool, stepBBFlight } from './ballistics';
 import type { Character } from './character';
 import { type EliminationContext, eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
-import { characterHitVolume, createHitVolume, rayCharacter } from './hitbox';
+import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } from './hitbox';
 import { firstRangeTargetHit, hitRangeTarget, type RangeTarget, type RangeTargetHit } from './rangeTargets';
 import { ricochet } from './ricochet';
 import type { RngState } from './rng';
 import { copy, vec3 } from './vec';
 
 const segmentDir = vec3();
-const volume = createHitVolume();
+/**
+ * This tick's hit volume of each character in play, by index in BBTargets.characters, and every character's team by
+ * id: characters don't move while BBs fly, so they're built once per tick (prepareTargets), not once per BB. Grown
+ * to the roster's size once, then reused.
+ */
+const volumes: HitVolume[] = [];
+const teamOf = new Map<number, number>();
 const surface: SurfaceHit = { normal: vec3(), material: 'concrete' };
 const targetHit: RangeTargetHit = { index: -1, at: 0, post: false };
 
@@ -25,17 +31,31 @@ export interface BBTargets {
   rangeTargets?: RangeTarget[];
 }
 
-/** The first character in play along the BB's segment this tick (before `maxT`), or undefined. */
+/** Builds this tick's hit volumes and team lookup (see `volumes`). */
+function prepareTargets(t: BBTargets): void {
+  const characters = t.characters;
+  while (volumes.length < characters.length) volumes.push(createHitVolume());
+  for (let i = 0; i < characters.length; i++) {
+    const c = characters[i]!;
+    teamOf.set(c.id, c.team);
+    if (isInPlay(c)) characterHitVolume(c, t.hits, volumes[i]!);
+  }
+}
+
+/**
+ * The first character in play along the BB's segment this tick (before `maxT`), or undefined. Needs prepareTargets
+ * first. A character hit earlier in the tick is out of play, so no later BB hits it.
+ */
 function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { victim: Character; at: number } | undefined {
-  let ownerTeam = -1;
-  for (const c of t.characters) if (c.id === bb.ownerId) ownerTeam = c.team;
+  const ownerTeam = teamOf.get(bb.ownerId) ?? -1;
   let victim: Character | undefined;
   let best = Math.min(len, maxT);
-  for (const c of t.characters) {
+  const characters = t.characters;
+  for (let i = 0; i < characters.length; i++) {
+    const c = characters[i]!;
     if (c.id === bb.ownerId || !isInPlay(c)) continue;
     if (!t.hits.friendlyFire && c.team === ownerTeam) continue;
-    characterHitVolume(c, t.hits, volume);
-    const d = rayCharacter(bb.prevPosition, segmentDir, best, volume);
+    const d = rayCharacter(bb.prevPosition, segmentDir, best, volumes[i]!);
     if (d >= 0 && d <= best) {
       best = d;
       victim = c;
@@ -63,6 +83,7 @@ export function stepBBs(
   targets?: BBTargets,
   rng?: RngState,
 ): void {
+  let prepared = false;
   for (const bb of pool.bbs) {
     if (!bb.active) continue;
     copy(bb.prevPosition, bb.position);
@@ -77,6 +98,10 @@ export function stepBBs(
       segmentDir.y = dy / len;
       segmentDir.z = dz / len;
       const t = query.raycastSurface ? query.raycastSurface(bb.prevPosition, segmentDir, len, surface) : query.raycastStatic(bb.prevPosition, segmentDir, len);
+      if (targets && !prepared) {
+        prepareTargets(targets);
+        prepared = true;
+      }
       const hit = targets ? firstCharacterHit(bb, len, t >= 0 ? t : len, targets) : undefined;
       if (targets?.rangeTargets && targets.rangeTargets.length > 0) {
         firstRangeTargetHit(bb.prevPosition, segmentDir, hit ? hit.at : t >= 0 ? t : len, targets.rangeTargets, targets.hits, targetHit);
