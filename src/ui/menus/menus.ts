@@ -49,6 +49,9 @@ export interface MenusOptions {
   onLeaveMatch: () => void;
   /** The title screen's Practice range (M21): open the range and play. */
   onRange: () => void;
+  /** The title screen's Tutorial (M16): the range with the coach. `tutorialDone`: it was played through before. */
+  onTutorial: () => void;
+  tutorialDone: boolean;
   map: { initial: MapId; onChange: (m: MapId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
@@ -103,7 +106,7 @@ export class Menus {
     this.matchRules = { ...opts.matchRules.initial };
     this.difficulty = opts.difficulty.initial;
     this.teammateDifficulty = opts.teammateDifficulty.initial;
-    this.title = new TitleScreen(() => this.go('setup'), () => this.openRange());
+    this.title = new TitleScreen(() => this.go('setup'), () => this.openRange(this.opts.onRange), () => this.openRange(this.opts.onTutorial), opts.tutorialDone);
     this.setup = new SetupScreen({
       onMap: () => this.mapDialog.open(),
       onMode: () => this.modeDialog.open(),
@@ -315,9 +318,14 @@ export class Menus {
     this.opts.onPlay();
   }
 
-  private openRange(): void {
+  private openRange(open: () => void): void {
     this.showHint('');
-    this.opts.onRange();
+    open();
+  }
+
+  /** The tutorial was just played through (M16). */
+  markTutorialDone(): void {
+    this.title.setTutorialDone(true);
   }
 
   private openLoadout(from: SettingsOrigin): void {

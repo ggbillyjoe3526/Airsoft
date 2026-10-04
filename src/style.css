@@ -2208,3 +2208,82 @@ kbd {
 .range-readout[hidden] {
   display: none;
 }
+
+/* The tutorial's coach (M16): top centre on the range, in place of the readout until the last step. */
+.coach {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - 32px));
+  padding: 10px 16px 12px;
+  border-radius: 8px;
+  border-left: 4px solid var(--orange);
+  background: rgba(14, 16, 20, 0.82);
+  color: var(--paper);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.coach[hidden] {
+  display: none;
+}
+
+.coach.done {
+  border-left-color: #5fbf6a;
+}
+
+.coach-head {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(247, 243, 234, 0.75);
+}
+
+.coach-body {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.coach-body kbd {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid rgba(247, 243, 234, 0.5);
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* "New? Start here" on the title's Tutorial button until the tutorial has been played through (M16). */
+.menu-title-new {
+  margin-right: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--orange);
+  color: #14161a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.menu-title-new[hidden] {
+  display: none;
+}
+
+/* The coach's last-BB line on the steps that ask for a hit (M16) */
+.coach-shot {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.coach-shot[hidden],
+.coach-shot:empty {
+  display: none;
+}

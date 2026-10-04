@@ -376,3 +376,44 @@ test('the practice range opens from the title screen and reads out the last BB',
   expect(after.bb).toBe(0.28);
   expect(errors).toEqual([]);
 });
+
+/** The tutorial (M16): tagged for new players on the title, it opens the range with the coach on its first step. */
+test('the tutorial opens on the range with the coach', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  await page.goto('/?nolock&seed=1');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  const tutorial = page.getByRole('button', { name: /Tutorial/ });
+  await expect(tutorial.locator('.menu-title-new')).toBeVisible();
+  await expect(tutorial).toContainText('New? Start here');
+  await tutorial.click();
+  const coach = page.locator('.coach');
+  await expect(coach).toBeVisible();
+  await expect(coach).toContainText('Look around');
+  await expect(coach).toContainText(/1 of \d+/);
+  await expect(page.locator('.range-readout')).toBeHidden(); // the coach takes its place until the last step
+
+  // Doing it moves it on: turn the view, and after the tick the coach asks you to move.
+  type Tut = { airsoft: { input: { yaw: number }; session: { tutorial: { index: number; amount: number } } } };
+  for (let i = 0; i < 8; i++) {
+    await page.evaluate(() => {
+      (window as unknown as Tut).airsoft.input.yaw += 0.3;
+    });
+    await page.waitForTimeout(50);
+  }
+  await expect(coach).toContainText(/2 of \d+/, { timeout: 10_000 });
+  await expect(coach).toContainText('Move');
+
+  // The last card read to its end: the coach gives way to the range readout, and the title stops tagging the button.
+  await page.evaluate(() => {
+    const t = (window as unknown as Tut).airsoft.session.tutorial;
+    t.index = 9;
+    t.amount = 11.9;
+  });
+  await expect(page.locator('.range-readout')).toBeVisible({ timeout: 10_000 });
+  await expect(coach).toBeHidden();
+  await page.reload();
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await expect(page.getByRole('button', { name: /Tutorial/ }).locator('.menu-title-new')).toBeHidden();
+  expect(errors).toEqual([]);
+});
