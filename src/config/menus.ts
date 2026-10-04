@@ -9,6 +9,17 @@ import type { PowerSource } from './replicas';
 /** Shown in the title screen's corner: the release this build belongs to (moves with each tag, CLAUDE.md §7). */
 export const BUILD_LABEL = 'v0.1-alpha.3';
 
+/** Browser basics (M18b): what the game says when the browser gets in the way. */
+export const BROWSER_NOTES = {
+  /** On the title screen when the browser draws without hardware acceleration (render/gpuCheck.ts). */
+  noHardwareAcceleration:
+    'Your browser is drawing without hardware acceleration, so the game will run slowly. Turn on "Use graphics acceleration when available" (Chrome, Edge) or "Use recommended performance settings" (Firefox) in its settings, then restart the browser.',
+  /** Over everything while the graphics context is lost. */
+  graphicsLost: 'Graphics reset. The graphics card dropped the game for a moment; waiting for it to come back…',
+  /** On the pause menu once it's back. */
+  graphicsBack: 'Graphics are back. Resume when you’re ready.',
+} as const;
+
 /** How a replica's power source shows on the loadout screen: its slot tag, and the placeholder row under it. */
 export const POWER_LABELS: Readonly<Record<PowerSource, { tag: string; row: string; value: string }>> = {
   electric: { tag: 'Electric', row: 'Power', value: 'Battery (electric)' },
@@ -47,8 +58,5 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   graphics: [],
   crosshair: [],
   audio: [{ label: 'Voices (hit calls)', help: '' }],
-  accessibility: [
-    { label: 'Colour-blind team colours', help: '' },
-    { label: 'On-screen sound cues', help: 'Markers at the screen edge for footsteps, shots and hit calls.' },
-  ],
+  accessibility: [],
 };

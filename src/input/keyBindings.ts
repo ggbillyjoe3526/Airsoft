@@ -165,6 +165,10 @@ const MOUSE_LABELS: Readonly<Record<string, string>> = {
   Mouse4: 'Mouse 5',
 };
 
+const ARROW_LABELS: Readonly<Record<string, string>> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
+const KEY_NAMES: Readonly<Record<string, string>> = { Space: 'Space', Backquote: '`', CapsLock: 'Caps Lock', Enter: 'Enter', Tab: 'Tab', Backspace: 'Backspace' };
+const SIDE_KEY = /^(Shift|Control|Alt|Meta)(Left|Right)$/;
+
 /** A readable name for a KeyboardEvent.code ("KeyW" → "W", "ShiftLeft" → "Left Shift") or a mouse button's code. */
 export function keyLabel(code: string): string {
   if (!code) return '—';
@@ -172,10 +176,9 @@ export function keyLabel(code: string): string {
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
   if (code.startsWith('Numpad')) return `Num ${code.slice(6)}`;
-  const arrows: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
-  if (arrows[code]) return arrows[code]!;
-  const side = code.match(/^(Shift|Control|Alt|Meta)(Left|Right)$/);
+  const arrow = ARROW_LABELS[code];
+  if (arrow) return arrow;
+  const side = SIDE_KEY.exec(code);
   if (side) return `${side[2]} ${side[1] === 'Control' ? 'Ctrl' : side[1]}`;
-  const names: Record<string, string> = { Space: 'Space', Backquote: '`', CapsLock: 'Caps Lock', Enter: 'Enter', Tab: 'Tab', Backspace: 'Backspace' };
-  return names[code] ?? code;
+  return KEY_NAMES[code] ?? code;
 }

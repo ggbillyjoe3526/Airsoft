@@ -5,6 +5,7 @@ import { type AccessibilitySettingsOptions, accessibilitySettings } from '../acc
 import { type AudioSettingsOptions, audioSettings } from '../audioSettings';
 import { type ControlsSettingsOptions, controlsSettings } from '../controlsSettings';
 import { type CrosshairSettingsOptions, crosshairSettings } from '../crosshairSettings';
+import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscreen';
 import { KeySettings } from '../keySettings';
 import type { SettingsOrigin } from './menuNav';
 import { backButton, el, laterRow, laterTag, menuPage, menuRow, rangeControl } from './menuParts';
@@ -37,6 +38,8 @@ export class SettingsScreen {
   private readonly keySettings: KeySettings;
   private tab: SettingsTab = 'controls';
   private origin: SettingsOrigin = 'setup';
+  /** Stops the Fullscreen button following the page's fullscreen state. */
+  private unwatchFullscreen: () => void = () => undefined;
 
   constructor(opts: SettingsOptions) {
     const page = menuPage('menu-settings', 'Settings');
@@ -88,6 +91,21 @@ export class SettingsScreen {
 
   dispose(): void {
     this.keySettings.dispose();
+    this.unwatchFullscreen();
+  }
+
+  /** One button that enters or leaves fullscreen, saying which it will do. */
+  private fullscreenButton(): HTMLButtonElement {
+    const button = el('button', 'picker-button settings-fullscreen');
+    button.type = 'button';
+    const show = (on: boolean): void => {
+      button.textContent = on ? 'Leave fullscreen' : 'Go fullscreen';
+      button.setAttribute('aria-pressed', String(on));
+    };
+    show(isFullscreen());
+    button.addEventListener('click', toggleFullscreen);
+    this.unwatchFullscreen = onFullscreenChange(show);
+    return button;
   }
 
   private showTab(id: SettingsTab): void {
@@ -115,6 +133,7 @@ export class SettingsScreen {
           'How wide you see, across a 16:9 screen. Aiming through an optic zooms in from it.',
           rangeControl('Field of view', FOV_SETTING, opts.fov.initial, (v) => `${Math.round(v)}°`, 'fov', opts.fov.onChange),
         ),
+        menuRow('Fullscreen', 'The whole screen for the game. Esc leaves it; in a match the Fullscreen key (Key bindings) turns it on and off.', this.fullscreenButton()),
         // Held back until there is real graphics work to scale (owner, 2026-10-03): the game runs on High.
         laterRow('Quality', 'Comes back with the art pass.', QUALITY_LABELS[opts.quality]),
       );

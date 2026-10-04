@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { TEAM_COLORS } from '../config/teams';
+import { TEAM_COLOUR_SETS } from '../config/teams';
+
+/** Every team colour of every set (Settings → Accessibility, M18b). */
+const TEAM_COLORS = Object.values(TEAM_COLOUR_SETS).flatMap((s) => s.figures);
 import { DEPOT } from '../map/depot';
 import { vec3 } from '../sim/vec';
 import { blockTint } from './mapMeshes';

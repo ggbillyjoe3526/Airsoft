@@ -1,7 +1,7 @@
 /**
  * Optics: accessories fitted to a replica, never part of its model (owner, 2026-10-03), picked for the rifle on the
- * Loadout screen before a match: the red dot, or a low-power 2× scope (M17b). Aiming down sights (hold the right
- * mouse button) works only with an optic fitted. More optics and full customisation come with bigger loadouts (v0.3)
+ * Loadout screen before a match: the red dot, or a low-power 2× scope (M17b). Aiming down sights (the aim button, right
+ * mouse by default, held or toggled) works only with an optic fitted. More optics and full customisation come with bigger loadouts (v0.3)
  * and customisation (v0.5).
  */
 export type OpticId = 'redDot' | 'scope2x';

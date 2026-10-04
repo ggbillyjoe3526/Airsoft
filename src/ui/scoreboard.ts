@@ -1,11 +1,9 @@
 import { HUD } from '../config/render';
-import { TEAMS } from '../config/teams';
+import { TEAMS, teamCss } from '../config/teams';
 import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
 import type { RoundState } from '../sim/round';
 import { flagLine } from './flagStatus';
-
-const hex = (c: number): string => `#${c.toString(16).padStart(6, '0')}`;
 
 /**
  * Top-centre scoreboard: rounds won per team either side of the round clock, with a pip per player
@@ -43,7 +41,7 @@ export class Scoreboard {
     this.root.className = 'scoreboard';
     this.root.hidden = true;
     const side = (team: number) => `
-      <div class="sb-team sb-team-${team}" style="--team:${hex(TEAMS[team]!.color)}">
+      <div class="sb-team sb-team-${team}" style="--team:${teamCss(team)}">
         <span class="sb-name">${TEAMS[team]!.name}${team === playerTeam ? ' <em>you</em>' : ''}<span class="sb-role"></span></span>
         <span class="sb-pips">${'<i></i>'.repeat(teamSize)}</span>
         <span class="sb-score">0</span>
@@ -106,7 +104,7 @@ export class Scoreboard {
       this.shownPercent = -1; // your side changed: rebuild the line
       this.flag.hidden = attackers < 0;
       for (let t = 0; t < 2; t++) this.roles[t]!.textContent = attackers < 0 ? '' : t === attackers ? 'ATK' : 'DEF';
-      if (attackers >= 0) this.flag.style.setProperty('--flag', hex(TEAMS[attackers]!.color));
+      if (attackers >= 0) this.flag.style.setProperty('--flag', teamCss(attackers));
     }
     if (attackers < 0) return;
     const percent = Math.floor(round.flag.progress * 100);

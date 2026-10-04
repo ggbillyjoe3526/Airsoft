@@ -318,6 +318,22 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   little in full auto (that shows where the BBs go). If your computer's own "reduce motion" setting is on, the game
   starts with it On until you pick.
 
+## Accessibility and browser basics (M18b)
+
+- [ ] **Team colours.** Settings → Accessibility → **Team colours: High contrast**. The swatches show light blue and
+  dark orange. Start a match: the figures' tape and armbands, the flag, your own armband, the scoreboard, hit feed and
+  teammate markers all use them. Standard puts them back from the next match.
+- [ ] **Spare magazines.** Fire most of a magazine and reload a few times: a nearly empty spare is striped as well as
+  orange, and the one a reload takes has a yellow caret under it as well as the outline.
+- [ ] **On-screen sound cues.** Accessibility → **On-screen sound cues: On**. In a match a marker round the crosshair
+  points to enemy footsteps (two dots), shots (an arrowhead) and hit calls (a HIT tag), fainter further away; turn
+  towards one and it moves to the top. Your own steps and shots and your teammates' steps show nothing. Off by default.
+- [ ] **Tab away.** Mid-round, switch to another tab (Ctrl+Tab) and back: the match is paused on the pause menu.
+- [ ] **Fullscreen.** Settings → Graphics → **Go fullscreen**; the button then reads Leave fullscreen. In a match press
+  **F10**: fullscreen on and off. Esc leaves fullscreen (and pauses). Rebind it under Key bindings.
+- [ ] **Hardware acceleration.** Turn off the browser's graphics acceleration and restart it: the title screen warns
+  that the game will run slowly and says where to turn it back on. With it on, no warning.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score

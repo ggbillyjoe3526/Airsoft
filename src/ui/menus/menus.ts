@@ -164,6 +164,11 @@ export class Menus {
     this.showHint('');
   }
 
+  /** A warning on the title screen ('' hides it): the browser runs without hardware acceleration. */
+  showTitleWarning(text: string): void {
+    this.title.setWarning(text);
+  }
+
   /** A short message under the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */
   showHint(text: string): void {
     this.setup.showHint(text);

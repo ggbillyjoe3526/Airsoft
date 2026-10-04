@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RENDER, type QualitySettings } from '../config/render';
+import { lacksHardwareAcceleration } from './gpuCheck';
 
 const REFERENCE_ASPECT = 16 / 9;
 const DEG = Math.PI / 180;
@@ -27,6 +28,10 @@ export class Renderer {
   /** View size in CSS pixels (kept up to date on resize, so HUD code never has to read layout). */
   width = 0;
   height = 0;
+  /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
+  private contextListener: (lost: boolean) => void = () => undefined;
+  /** Whether the browser draws in software (undefined until first asked). */
+  private software: boolean | undefined;
 
   constructor(
     private readonly container: HTMLElement,
@@ -49,6 +54,22 @@ export class Renderer {
 
     this.resize();
     window.addEventListener('resize', this.resize);
+    this.canvas.addEventListener('webglcontextlost', this.contextLost);
+    this.canvas.addEventListener('webglcontextrestored', this.contextRestored);
+  }
+
+  /**
+   * A lost graphics context (a driver reset, the GPU taken by another app; audit W-01): `listener(true)` when it goes,
+   * `listener(false)` when the browser gives it back. Three.js keeps every geometry, texture and shader's source and
+   * uploads them again on the next frame drawn, so nothing needs rebuilding.
+   */
+  onContextChange(listener: (lost: boolean) => void): void {
+    this.contextListener = listener;
+  }
+
+  /** True if the browser draws without hardware acceleration (the game would crawl): checked once, at startup. */
+  get softwareRendering(): boolean {
+    return (this.software ??= lacksHardwareAcceleration(this.renderer.getContext()));
   }
 
   get canvas(): HTMLCanvasElement {
@@ -94,9 +115,21 @@ export class Renderer {
 
   dispose(): void {
     window.removeEventListener('resize', this.resize);
+    this.canvas.removeEventListener('webglcontextlost', this.contextLost);
+    this.canvas.removeEventListener('webglcontextrestored', this.contextRestored);
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
+
+  private readonly contextLost = (e: Event): void => {
+    // Without this the browser never gives the context back (Three.js does it too; repeating it is harmless).
+    e.preventDefault();
+    this.contextListener(true);
+  };
+
+  private readonly contextRestored = (): void => {
+    this.contextListener(false);
+  };
 
   private readonly resize = (): void => {
     const w = this.container.clientWidth || window.innerWidth;

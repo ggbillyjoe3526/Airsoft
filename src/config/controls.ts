@@ -28,6 +28,8 @@ export const DEFAULT_BINDINGS = {
   fire: ['Mouse0'],
   /** Aims down sights (needs an optic); hold or toggle, see AIM_MODES. */
   aim: ['Mouse2'],
+  /** Fullscreen on and off while playing (M18b). F11 is the browser's own and would leave the page's fullscreen; F10 is free once the game takes it. */
+  fullscreen: ['F10'],
   debugOverlay: ['Backquote', 'F3'],
   /** Debug: draw the recent flight paths of BBs. */
   debugBbPaths: ['BracketRight'],
@@ -54,6 +56,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },
+  { action: 'fullscreen', label: 'Fullscreen' },
 ];
 
 /** Keys that can't be bound: Escape pauses (the browser releases the mouse), and Meta/OS keys. */
@@ -105,7 +108,7 @@ export const DEFAULT_AIM_MODE: HoldMode = 'hold';
 /** The sprint key: hold by default, as before M18. A toggled sprint stops when you let go of forward, or crouch, aim, walk or fire. */
 export const SPRINT_MODES: readonly { id: HoldMode; label: string; blurb: string }[] = [
   { id: 'hold', label: 'Hold', blurb: 'Sprint while the key is held.' },
-  { id: 'toggle', label: 'Toggle', blurb: 'Press sprint to run flat out until you let go of forward, or crouch, aim, walk or fire.' },
+  { id: 'toggle', label: 'Toggle', blurb: 'Press sprint to run flat out (at once, or as soon as you push forward) until you let go of forward, or crouch, aim, walk or fire.' },
 ];
 
 export const DEFAULT_SPRINT_MODE: HoldMode = 'hold';
