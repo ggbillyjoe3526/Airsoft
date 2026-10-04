@@ -412,7 +412,7 @@ function sheetRow(r: SheetRow): HTMLElement[] {
 
 /** A greyed row for a part this replica has no rail or mount for. */
 /** What a row says when nothing can be fitted there. */
-function fixedValue(slot: FitSlot, kit: KitSlot): string {
+export function fixedValue(slot: FitSlot, kit: KitSlot): string {
   if (slot === 'barrel') return LOADOUT_TEXT.fixedBarrel;
   if (slot === 'muzzle') return LOADOUT_TEXT.noThread;
   if (slot === 'magazine') return LOADOUT_TEXT.ownMagazine(handlingOf(kit.replica, kit.parts).magSize);
