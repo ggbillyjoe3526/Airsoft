@@ -11,6 +11,9 @@ import { PRECOMPRESS, precompressedCopies } from './src/config/precompress.ts';
  */
 const CHUNK_BUDGET_KB = { rapier: 4550, default: 800 };
 
+/** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`. */
+const SLOW_TESTS = 'src/ai/depotMatch*.test.ts';
+
 /** True on a CI runner (the workflow's runner sets CI); read without Node's types, which the project doesn't load. */
 const ON_CI = Boolean((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.CI);
 
@@ -157,8 +160,18 @@ export default defineConfig(async () => ({
     chunkSizeWarningLimit: CHUNK_BUDGET_KB.rapier,
   },
   test: {
-    // The pipeline's own rules (pipeline/scope.mjs) are tested here too.
-    include: ['src/**/*.test.ts', 'pipeline/**/*.test.mjs'],
     environment: 'node',
+    // Test files share a worker's module cache (audit CORE-15): three.js, Rapier's WASM and the configs load once per
+    // worker rather than once per file, about a sixth of the suite's CPU time (measured 2026-10-04, DECISIONS). A test
+    // that stubs a global or spies on a shared object restores it (vi.unstubAllGlobals, mockRestore); a file that
+    // resets the module registry resets it again when it ends (save/startGuardedStorage.test.ts).
+    isolate: false,
+    // Two projects (audit CORE-15): `npx vitest run` (the gate, CI, `npm test`) runs both; `npx vitest run --project
+    // fast` leaves out the headless bot-match guards for quick feedback while working. Every seed stays in `slow`.
+    projects: [
+      // The pipeline's own rules (pipeline/scope.mjs, pipeline/smokeReport.mjs) are tested here too.
+      { extends: true, test: { name: 'fast', include: ['src/**/*.test.ts', 'pipeline/**/*.test.mjs'], exclude: [SLOW_TESTS] } },
+      { extends: true, test: { name: 'slow', include: [SLOW_TESTS] } },
+    ],
   },
 }));

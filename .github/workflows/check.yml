@@ -25,9 +25,11 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # The headless bot-match tests (src/ai/depotMatch*.test.ts) are the longest part of the unit suite (about 200 s of
-    # work in all, a few files over 40 s each, measured locally 2026-10-04; audit CORE-15 is to shorten them); vitest
-    # runs them in parallel, and CI runners are slower.
+    # The headless bot-match tests (src/ai/depotMatch*.test.ts, vitest project `slow`) are most of the unit suite: the
+    # longest take 18-25 s each (custom, flag, ricochetFlag, ends, ricochet, customFlag; the custom-match file was
+    # 42 s before FA11b split it by mode), about 155 s of work in all. Measured 2026-10-04 in a 4-core container (FA11b,
+    # audit CORE-15): the suite takes 3 min 08 s of CPU with files sharing a worker (vite.config.ts `isolate: false`;
+    # 3 min 49 s isolated), so about 1.5-2 min on a 2-vCPU runner; 73-91 s of wall time there, with other work running.
     timeout-minutes: 20
     steps:
       # The whole history, so the scope gate can diff the pull request against its base and find the task block a
