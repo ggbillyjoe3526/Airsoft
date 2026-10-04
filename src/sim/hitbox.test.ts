@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { FIGURE } from '../config/characters';
 import { HITS } from '../config/hits';
 import { createCharacter } from './character';
-import { characterHitVolume, createHitVolume, hitTop, rayCapsule, rayCharacter, type VerticalCapsule } from './hitbox';
+import { characterHitVolume, createHitVolume, hitTop, rayCapsule, rayCharacter, raySegmentCapsule, type VerticalCapsule } from './hitbox';
+import { leanOffset } from './lean';
+import { createRng, rngNext } from './rng';
 import { vec3 } from './vec';
 
 const cap: VerticalCapsule = { x: 0, z: 0, y0: 0.26, y1: 1.54, r: 0.26 };
@@ -47,6 +49,40 @@ describe('rayCapsule', () => {
 
   it('ignores a body behind the ray', () => {
     expect(rayCapsule(vec3(0, 1, 5), vec3(0, 0, 1), 20, cap)).toBe(-1);
+  });
+});
+
+describe('raySegmentCapsule', () => {
+  it('agrees with rayCapsule on an upright segment, for rays from all around', () => {
+    const seg = { ax: cap.x, ay: cap.y0, az: cap.z, bx: cap.x, by: cap.y1, bz: cap.z, r: cap.r };
+    const rng = createRng(7);
+    const range = (lo: number, hi: number) => lo + (hi - lo) * rngNext(rng);
+    for (let i = 0; i < 500; i++) {
+      const o = vec3(range(-3, 3), range(-1, 3), range(-3, 3));
+      const d = norm(range(-1, 1), range(-1, 1), range(-1, 1));
+      const maxT = range(0.5, 6);
+      const expected = rayCapsule(o, d, maxT, cap);
+      const got = raySegmentCapsule(o, d, maxT, seg);
+      if (expected < 0) expect(got).toBe(-1);
+      else expect(got).toBeCloseTo(expected, 9);
+    }
+  });
+
+  it('hits a slanted capsule along its whole length, and misses past its rounded ends', () => {
+    // From (0, 0, 0) to (1, 1, 0), radius 0.1: a BB along -Z through its axis hits at the front of the capsule.
+    const seg = { ax: 0, ay: 0, az: 0, bx: 1, by: 1, bz: 0, r: 0.1 };
+    for (const s of [0, 0.25, 0.5, 1]) expect(raySegmentCapsule(vec3(s, s, 5), vec3(0, 0, -1), 10, seg)).toBeCloseTo(4.9, 9);
+    expect(raySegmentCapsule(vec3(0.5, 0.5 + 0.13, 5), vec3(0, 0, -1), 10, seg)).toBeGreaterThan(0); // 0.092 off the axis
+    expect(raySegmentCapsule(vec3(0.5, 0.5 + 0.15, 5), vec3(0, 0, -1), 10, seg)).toBe(-1); // 0.106 off it
+    expect(raySegmentCapsule(vec3(1.08, 1.08, 5), vec3(0, 0, -1), 10, seg)).toBe(-1);
+    expect(raySegmentCapsule(vec3(0.5, 0.5, 5), vec3(0, 0, 1), 10, seg)).toBe(-1); // behind the ray
+    expect(raySegmentCapsule(vec3(0.5, 0.5, 0.05), vec3(0, 0, 1), 10, seg)).toBe(0); // starts inside
+  });
+
+  it('handles a BB flying along the axis', () => {
+    const seg = { ax: 0, ay: 0, az: 0, bx: 0, by: 0, bz: -1, r: 0.1 };
+    expect(raySegmentCapsule(vec3(0, 0, 3), vec3(0, 0, -1), 10, seg)).toBeCloseTo(2.9, 9);
+    expect(raySegmentCapsule(vec3(0, 0, -3), vec3(0, 0, 1), 10, seg)).toBeCloseTo(1.9, 9);
   });
 });
 
@@ -119,6 +155,38 @@ describe('the hit volume of a leaning character', () => {
     // Cover up to the hips on the right of the upright body: everything that sticks out past it is
     // above the hips (head and shoulder), never the legs.
     expect(shoot(c, HITS.bodyRadius + 0.05, 0.6)).toBe(-1);
+  });
+
+  it('covers the tilted torso out to its edge, from the hips to the shoulders, at either lean and crouched', () => {
+    // A BB along -Z, 0.15 m either side of the leaned torso's axis (inside bodyRadius, so on the drawn torso), at
+    // every height from the hips to the shoulder sphere's centre (above it the upright torso narrows too).
+    const at = vec3();
+    for (const lean of [1, -1]) {
+      for (const crouch of [0, 1]) {
+        const c = createCharacter(0, vec3(), 0);
+        c.lean = lean;
+        c.crouchAmount = crouch;
+        const drop = HITS.crouchDrop * crouch;
+        const shoulderHeight = HITS.bodyTop - drop - HITS.bodyRadius;
+        for (let h = HITS.lean.pivotHeight - drop; h <= shoulderHeight + 1e-9; h += 0.05) {
+          leanOffset(h, lean, crouch, 0, HITS, at);
+          for (const side of [-0.15, 0.15]) {
+            expect(shoot(c, at.x + side, h + at.y), `lean ${lean}, crouch ${crouch}, ${h.toFixed(2)} m, ${side} m`).toBeGreaterThan(0);
+          }
+        }
+      }
+    }
+  });
+
+  it('is the same as before upright: the torso capsule only joins in when leaning', () => {
+    const c = createCharacter(0, vec3(), 0);
+    characterHitVolume(c, HITS, volume);
+    expect(volume.torso.r).toBe(0);
+    expect(volume.body.y1).toBeCloseTo(HITS.bodyTop - HITS.bodyRadius, 9);
+    expect(shoot(c, HITS.bodyRadius + 0.01, 1.2)).toBe(-1);
+    c.lean = 0.5;
+    characterHitVolume(c, HITS, volume);
+    expect(volume.torso.r).toBe(HITS.bodyRadius);
   });
 
   it('follows a crouch: the pivot comes down with the upper body', () => {
