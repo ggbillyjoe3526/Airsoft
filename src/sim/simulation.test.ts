@@ -4,7 +4,7 @@ import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { HITS, ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
-import { LOADOUT } from '../config/replicas';
+import { LOADOUT, TRIGGER } from '../config/replicas';
 import { RANGE } from '../config/range';
 import { createCharacter, eyeHeight, respawnCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
@@ -174,6 +174,57 @@ describe('stepSimulation', () => {
       fired += shots();
     }
     expect(fired).toBeGreaterThan(0);
+  });
+
+  it('fires a semi click made in the first moment after a sprint once the lockout ends, exactly once (audit SIM-03)', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0);
+    c.armament.modes[c.armament.active] = 'semi';
+    state.characters.push(c);
+    const cmd = createCommand();
+    cmd.forward = 1;
+    cmd.sprint = true;
+    const ctx = testContext(floor, KILL_Y);
+    for (let i = 0; i < 30; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.sprinting).toBe(true);
+    // Let go of sprint and click on the first lockout tick (one tick of trigger).
+    cmd.sprint = false;
+    cmd.forward = 0;
+    cmd.fire = true;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(c.sprinting).toBe(false);
+    expect(c.sprintLockout).toBeGreaterThan(TRIGGER.pressBuffer); // the lockout outlasts the plain press buffer
+    expect(state.events.filter((e) => e.type === 'shot')).toHaveLength(0);
+    cmd.fire = false;
+    let shots = 0;
+    for (let i = 0; i < 60; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      shots += state.events.filter((e) => e.type === 'shot').length;
+    }
+    expect(shots).toBe(1);
+  });
+
+  it('still drops a click made while sprinting, as before (the sprint itself is a choice; KNOWN_ISSUES)', () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0);
+    c.armament.modes[c.armament.active] = 'semi';
+    state.characters.push(c);
+    const cmd = createCommand();
+    cmd.forward = 1;
+    cmd.sprint = true;
+    const ctx = testContext(floor, KILL_Y);
+    for (let i = 0; i < 30; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    cmd.fire = true;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT); // clicked while still sprinting
+    cmd.fire = false;
+    cmd.sprint = false;
+    cmd.forward = 0;
+    let shots = 0;
+    for (let i = 0; i < 60; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      shots += state.events.filter((e) => e.type === 'shot').length;
+    }
+    expect(shots).toBe(0);
   });
 
   it('leans while Q / E is held, records the previous lean for smooth rendering, and fires from the leaned eye', () => {

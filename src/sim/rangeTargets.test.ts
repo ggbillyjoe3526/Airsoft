@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { HITS } from '../config/hits';
 import { BODY } from '../config/movement';
+import { PHYSICS } from '../config/physics';
 import { RANGE } from '../config/range';
 import { LOADOUT } from '../config/replicas';
 import type { WorldQuery } from './armament';
 import { createArmament } from './armament';
 import { createBBPool, spawnBB } from './ballistics';
+import { createCharacter } from './character';
+import { characterHitVolume, createHitVolume, rayCharacter } from './hitbox';
 import { stepBBs } from './bbs';
 import type { GameEvent } from './events';
 import { createRangeTargets, firstRangeTargetHit, rayRangeTarget, refillSpares, stepRangeTargets } from './rangeTargets';
@@ -93,6 +96,25 @@ describe('practice range targets (M21)', () => {
     for (let t = 0; t < RANGE.figureDownTime + DT; t += DT) stepRangeTargets(targets, DT);
     expect(figure.down).toBe(0);
     expect(rayRangeTarget(from, vec3(0, 0, -1), 10, figure, HITS)).toBeGreaterThan(4.5);
+  });
+
+  it('stands its figures exactly as tall as a character on the same floor: a hit on the range is a hit in a match (audit SIM-12)', () => {
+    for (const crouched of [false, true]) {
+      const figure = createRangeTargets().find((t) => t.kind === 'figure' && t.crouched === crouched)!;
+      const p = figure.position;
+      const c = createCharacter(0, vec3(p.x, p.y + PHYSICS.groundRestGap, p.z), 0); // resting on the same floor point
+      c.crouchAmount = crouched ? 1 : 0;
+      const v = createHitVolume();
+      characterHitVolume(c, HITS, v);
+      // Level rays from in front, from well below the head's top to just over it: both agree at every height.
+      for (let y = 0.8; y <= 1.9; y += 0.005) {
+        const o = vec3(p.x, y, p.z + 5);
+        const d = vec3(0, 0, -1);
+        const onRange = rayRangeTarget(o, d, 10, figure, HITS) >= 0;
+        const inMatch = rayCharacter(o, d, 10, v) >= 0;
+        expect(onRange, `${crouched ? 'crouched' : 'standing'} at ${y.toFixed(3)} m`).toBe(inMatch);
+      }
+    }
   });
 
   it('gives a crouched figure a crouched hit volume: a BB at standing chest height flies over it', () => {

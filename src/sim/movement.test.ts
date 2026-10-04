@@ -215,6 +215,56 @@ describe('movement', () => {
     expect(c.velocity.y).toBeLessThanOrEqual(0);
   });
 
+  it('a jump pressed two ticks before landing still fires on landing (audit SIM-05: jump buffer)', () => {
+    const c = createCharacter(0, vec3(0, 0.2, 0), 0);
+    c.velocity.y = -3; // falling: lands on the third tick
+    const cmd = command((k) => (k.jump = true));
+    step(c, cmd, 1);
+    cmd.jump = false;
+    expect(c.grounded).toBe(false);
+    step(c, cmd, 1);
+    expect(c.grounded).toBe(false);
+    step(c, cmd, 1);
+    expect(c.grounded).toBe(true); // landed, two ticks after the press
+    step(c, cmd, 1);
+    expect(c.velocity.y).toBeGreaterThan(0); // the press, kept for jumpBuffer, jumps now
+    // Once: the kept press is used up by the jump.
+    let jumps = 0;
+    let rising = true;
+    for (let i = 0; i < 120; i++) {
+      step(c, cmd, 1);
+      if (c.velocity.y > 0 && !rising) jumps++;
+      rising = c.velocity.y > 0;
+    }
+    expect(jumps).toBe(0);
+  });
+
+  it('a jump pressed while standing up from a crouch fires once the character is upright (audit SIM-05)', () => {
+    const c = createCharacter(0, vec3(), 0);
+    step(c, command((k) => (k.crouch = true)), 30);
+    const cmd = command((k) => (k.jump = true)); // crouch let go and jump pressed on the same tick
+    step(c, cmd, 1);
+    expect(c.velocity.y).toBeLessThanOrEqual(0); // still crouched this tick
+    cmd.jump = false;
+    let jumped = false;
+    for (let i = 0; i < 10 && !jumped; i++) {
+      step(c, cmd, 1);
+      jumped = c.velocity.y > 0;
+    }
+    expect(jumped).toBe(true);
+  });
+
+  it('forgets a jump press after jumpBuffer', () => {
+    const c = createCharacter(0, vec3(0, 1, 0), 0); // a long way up: lands well after the buffer runs out
+    const cmd = command((k) => (k.jump = true));
+    step(c, cmd, 1);
+    cmd.jump = false;
+    for (let i = 0; i < 60 && !c.grounded; i++) step(c, cmd, 1);
+    expect(c.grounded).toBe(true);
+    step(c, cmd, 5);
+    expect(c.velocity.y).toBeLessThanOrEqual(0);
+  });
+
   it('keeps full jump height when collision trims upward moves by a hair (sliding along a wall)', () => {
     const slidingMover: CharacterMover = {
       ...flatMover(),

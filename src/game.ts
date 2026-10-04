@@ -617,7 +617,8 @@ export class Game {
     } else if (screen === 'result') {
       const mine = s.player.team;
       const theirs = 1 - mine;
-      const draws = r.number - r.score[0] - r.score[1];
+      const draws = r.draws;
+      const played = r.score[0] + r.score[1] + draws;
       const headline = r.matchWinner === mine ? 'You win!' : 'You lose';
       const score = `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name}`;
       // The finished match goes into the records once (a second stop on the same result shows the same news).
@@ -639,7 +640,7 @@ export class Game {
         // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
         this.lastEarnings = null;
       }
-      this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
+      this.menus.showResult(headline, `${score} · ${played} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
         result: `${headline} · ${score}`,
         blocks: s.summaryBlocks(),
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),

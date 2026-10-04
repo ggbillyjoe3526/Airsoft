@@ -79,6 +79,7 @@ export function createSimContext(services: SimServices): SimContext {
       rng: createRng(0),
       query: services.query,
       events: [],
+      fireHoldOff: 0,
     },
     targets: {
       characters: [],
@@ -153,6 +154,8 @@ export function stepSimulation(
     m.pitch = c.pitch;
     m.spreadScale = c.spreadScale;
     const canFire = live && !c.sprinting && c.sprintLockout <= 0;
+    // A click just after a sprint is kept until the lockout ends (not one made while still sprinting).
+    armCtx.fireHoldOff = c.sprinting ? 0 : c.sprintLockout;
     stepArmament(c.id, c.armament, cmd, m, canFire, armCtx, dt);
   }
 
