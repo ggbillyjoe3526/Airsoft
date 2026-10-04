@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import type { DetailLevel } from '../config/render';
+import { REPLICA_FINISH } from '../config/replicaFinish';
 
 /**
  * Gloved hands and sleeved forearms for the first-person replicas. Stylised but anatomical: a padded
@@ -10,8 +12,12 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
  */
 export type V3 = readonly [across: number, up: number, forward: number];
 
+/**
+ * Where the hand's parts go, by material. On Hand detail `high` (FA8) parts carry a `color` attribute (seams and pads
+ * shaded on the glove's colour) and the wrist strap's rubber and buckle's metal join in.
+ */
 export interface GeometrySink {
-  addGeometry(key: 'glove' | 'sleeve' | 'armband', geo: THREE.BufferGeometry): void;
+  addGeometry(key: 'glove' | 'sleeve' | 'armband' | 'rubber' | 'metal', geo: THREE.BufferGeometry): void;
 }
 
 /** Per-finger joint bends in radians (knuckle, middle joint, tip joint), bending towards the palm. */
@@ -67,18 +73,35 @@ const DETAIL = {
 
 const toVec = (p: V3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], -p[2]);
 
-/** Capsule from a to b (world vectors), tessellated as `detail` ([cap rings, sides]). */
-function capsule(a: THREE.Vector3, b: THREE.Vector3, radius: number, detail: readonly [number, number]): THREE.BufferGeometry {
+/** A `color` attribute on `geo`: each vertex `shade(x, y, z)` of white (in the geometry's own space, before placing it). */
+function shadeVertices(geo: THREE.BufferGeometry, shade: (x: number, y: number, z: number) => number): void {
+  const pos = geo.getAttribute('position');
+  const colors = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) colors.fill(shade(pos.getX(i), pos.getY(i), pos.getZ(i)), i * 3, i * 3 + 3);
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
+/**
+ * Capsule from a to b (world vectors), tessellated as `detail` ([cap rings, sides]). `seams`: its ends (the joints) a
+ * shade darker (Hand detail `high`).
+ */
+function capsule(a: THREE.Vector3, b: THREE.Vector3, radius: number, detail: readonly [number, number], seams = false): THREE.BufferGeometry {
   const dir = b.clone().sub(a);
   const len = Math.max(1e-4, dir.length());
   const geo = new THREE.CapsuleGeometry(radius, len, detail[0], detail[1]);
+  if (seams) shadeVertices(geo, (_x, y) => (Math.abs(y) > len / 2 ? REPLICA_FINISH.hands.seamShade : 1));
   geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
   geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
   return geo;
 }
 
-/** Builds one gloved hand in the given pose and returns its wrist point (where the forearm starts). */
-export function buildHand(sink: GeometrySink, pose: HandPose): V3 {
+/**
+ * Builds one gloved hand in the given pose and returns its wrist point (where the forearm starts). Hand detail `high`
+ * (FA8, QualitySettings.handDetail) adds a lighter knuckle pad, darker seams at the finger joints and a rubber wrist
+ * strap with a buckle; `low` is the hand as it was (REN-10's).
+ */
+export function buildHand(sink: GeometrySink, pose: HandPose, detail: DetailLevel = 'low'): V3 {
+  const high = detail === 'high';
   const a = toVec(pose.across).normalize();
   const n = toVec(pose.back).normalize();
   // Right hand: fingers = back × across; the left hand is its mirror image.
@@ -117,7 +140,7 @@ export function buildHand(sink: GeometrySink, pose: HandPose): V3 {
       up.applyQuaternion(q);
       const len = SEGMENTS[f]![s]!;
       const q2 = p.clone().addScaledVector(dir, len);
-      sink.addGeometry('glove', capsule(p, q2, radius * (1 - s * 0.07), DETAIL.finger));
+      sink.addGeometry('glove', capsule(p, q2, radius * (1 - s * 0.07), DETAIL.finger, high));
       p = q2;
     }
   }
@@ -143,7 +166,7 @@ export function buildHand(sink: GeometrySink, pose: HandPose): V3 {
     tDir.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(tAxis, pose.thumb.curl[s]!));
     const len = s === 0 ? 0.034 : 0.028;
     const next = tpos.clone().addScaledVector(tDir, len);
-    sink.addGeometry('glove', capsule(tpos, next, s === 0 ? 0.0115 : 0.0105, DETAIL.thumb));
+    sink.addGeometry('glove', capsule(tpos, next, s === 0 ? 0.0115 : 0.0105, DETAIL.thumb, high));
     tpos = next;
   }
 
@@ -161,6 +184,26 @@ export function buildHand(sink: GeometrySink, pose: HandPose): V3 {
   const strapAt = local(midAcross, -PALM.length / 2 - 0.02, 0.028);
   strap.translate(strapAt.x, strapAt.y, strapAt.z);
   sink.addGeometry('glove', strap);
+  if (high) {
+    // A padded knuckle guard across the back of the hand, a shade lighter than the glove.
+    const pad = new RoundedBoxGeometry(PALM.width * 0.92, 0.024, 0.009, 1, 0.004);
+    shadeVertices(pad, () => REPLICA_FINISH.hands.knuckleLight);
+    pad.applyMatrix4(basis);
+    const padAt = local(midAcross, PALM.length / 2 - 0.012, PALM.thickness / 2 + 0.002);
+    pad.translate(padAt.x, padAt.y, padAt.z);
+    sink.addGeometry('glove', pad);
+    // A rubber strap round the cuff with a small metal buckle on the back.
+    const ring = new THREE.CylinderGeometry(0.0305, 0.0295, 0.011, DETAIL.cuffSides, 1, true);
+    ring.applyMatrix4(basis);
+    const ringAt = local(midAcross, -PALM.length / 2 - 0.016, 0);
+    ring.translate(ringAt.x, ringAt.y, ringAt.z);
+    sink.addGeometry('rubber', ring);
+    const buckle = new THREE.BoxGeometry(0.014, 0.013, 0.004);
+    buckle.applyMatrix4(basis);
+    const buckleAt = local(midAcross, -PALM.length / 2 - 0.016, 0.031);
+    buckle.translate(buckleAt.x, buckleAt.y, buckleAt.z);
+    sink.addGeometry('metal', buckle);
+  }
   return [wristB.x, wristB.y, -wristB.z];
 }
 
@@ -175,9 +218,11 @@ const FOREARM_PROFILE: readonly [number, number][] = [
 
 /**
  * A sleeved forearm from the wrist back to the elbow (usually out of view): a tapered, slightly oval
- * sleeve shaped like the arm inside it, a rolled cuff at the wrist end, and the team armband.
+ * sleeve shaped like the arm inside it, a rolled cuff at the wrist end, and the team armband. Hand detail `high` (FA8)
+ * darkens the sleeve's inner side (the fold).
  */
-export function buildForearm(sink: GeometrySink, wrist: V3, elbow: V3, elbowRadius = 0.046): void {
+export function buildForearm(sink: GeometrySink, wrist: V3, elbow: V3, elbowRadius = 0.046, detail: DetailLevel = 'low'): void {
+  const high = detail === 'high';
   const a = toVec(wrist);
   const b = toVec(elbow);
   const axis = b.clone().sub(a);
@@ -186,6 +231,10 @@ export function buildForearm(sink: GeometrySink, wrist: V3, elbow: V3, elbowRadi
   const points = FOREARM_PROFILE.map(([t, r]) => new THREE.Vector2(r * elbowRadius, start + t * (length - start)));
   const sleeve = new THREE.LatheGeometry(points, 18);
   sleeve.scale(1, 1, 0.82); // forearms are wider than they are deep
+  if (high) {
+    const fold = REPLICA_FINISH.hands.foldShade;
+    shadeVertices(sleeve, (x) => 1 - (1 - fold) * Math.max(0, -x / elbowRadius) ** 2);
+  }
   const orient = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis.clone().normalize());
   sleeve.applyQuaternion(orient);
   sleeve.translate(a.x, a.y, a.z);
@@ -198,6 +247,7 @@ export function buildForearm(sink: GeometrySink, wrist: V3, elbow: V3, elbowRadi
   cuff.translate(0, start + 0.015, 0);
   cuff.applyQuaternion(orient);
   cuff.translate(a.x, a.y, a.z);
+  if (high) shadeVertices(cuff, () => 1);
   sink.addGeometry('sleeve', cuff);
 
   // Team armband around the upper forearm.
