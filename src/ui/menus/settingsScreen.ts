@@ -124,6 +124,7 @@ export class SettingsScreen {
 
   dispose(): void {
     this.keySettings.dispose();
+    this.saveSettings.dispose();
     this.unwatchFullscreen();
   }
 

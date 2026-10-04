@@ -446,7 +446,7 @@ export class Game {
     this.graphicsLost = lost;
     this.graphicsNotice.setVisible(lost);
     // The menus can't be used under the notice (not even Resume by Enter or Space on the focused button).
-    this.menus.setBlocked(lost);
+    this.menus.setBlocked(lost || this.yielded);
     if (lost) {
       this.stopPlay();
     } else {
@@ -474,9 +474,13 @@ export class Game {
 
   /** Another tab took the save (M31, save/tabLock.ts): play stops and the menus can't be used under its notice. */
   yieldToOtherTab(): void {
+    this.yielded = true;
     this.stopPlay();
     this.menus.setBlocked(true);
   }
+
+  /** Another tab has the save (yieldToOtherTab): the menus stay blocked for the rest of the visit. */
+  private yielded = false;
 
   /** Stops play as if the player had pressed Esc: the mouse is given back, and the pause menu comes up. */
   private stopPlay(): void {

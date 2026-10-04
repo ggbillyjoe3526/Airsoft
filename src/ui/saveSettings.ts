@@ -25,6 +25,8 @@ export class SaveSettings {
   private readonly replaceButtons: HTMLButtonElement[] = [];
   private readonly undoButton: HTMLButtonElement;
   private inMatch = false;
+  /** Ends the page-wide drop listeners. */
+  private readonly listening = new AbortController();
 
   constructor(private readonly manager: SaveManager) {
     this.problem.setAttribute('role', 'status');
@@ -75,21 +77,27 @@ export class SaveSettings {
    */
   acceptDrops(area: HTMLElement): void {
     const files = (e: DragEvent) => this.shown() && e.dataTransfer?.types.includes('Files') === true;
+    const { signal } = this.listening;
     window.addEventListener('dragover', (e) => {
       if (!files(e)) return;
       e.preventDefault();
       area.classList.add('save-drop');
-    });
+    }, { signal });
     window.addEventListener('dragleave', (e) => {
       if (e.relatedTarget === null) area.classList.remove('save-drop');
-    });
+    }, { signal });
     window.addEventListener('drop', (e) => {
       if (!files(e)) return;
       e.preventDefault();
       area.classList.remove('save-drop');
       const file = e.dataTransfer?.files[0];
       if (file) void this.load(file);
-    });
+    }, { signal });
+  }
+
+  /** Stops listening for dropped files (the Settings screen is going). */
+  dispose(): void {
+    this.listening.abort();
   }
 
   /** The tab is on screen (its panel shown, Settings open). */
@@ -171,16 +179,16 @@ export class SaveSettings {
     this.say('');
     const notes = parsed.checksumOk ? [] : [{ text: SAVE_TEXT.checksumBad, warn: true }];
     const yes = await this.ask(SAVE_TEXT.confirmLoadTitle, parsed.save, 'file', notes, parsed.checksumOk ? SAVE_TEXT.replaceButton : SAVE_TEXT.loadAnywayButton);
-    if (yes) this.manager.replace(parsed.save, 'load');
+    if (yes) this.done(this.manager.replace(parsed.save, 'load'));
   }
 
   private async restore(point: SaveData): Promise<void> {
-    if (await this.ask(SAVE_TEXT.confirmRestoreTitle, point, 'restore', [], SAVE_TEXT.replaceButton)) this.manager.replace(point, 'restore');
+    if (await this.ask(SAVE_TEXT.confirmRestoreTitle, point, 'restore', [], SAVE_TEXT.replaceButton)) this.done(this.manager.replace(point, 'restore'));
   }
 
   private async undo(): Promise<void> {
     const slot = this.manager.undoable();
-    if (slot && (await this.ask(SAVE_TEXT.confirmUndoTitle, slot.save, 'undo', [], SAVE_TEXT.undoButton))) this.manager.undo();
+    if (slot && (await this.ask(SAVE_TEXT.confirmUndoTitle, slot.save, 'undo', [], SAVE_TEXT.undoButton))) this.done(this.manager.undo());
   }
 
   private async deleteSave(): Promise<void> {
@@ -193,7 +201,7 @@ export class SaveSettings {
       },
       new Date(),
     );
-    if (yes && !this.inMatch) this.manager.deleteSave();
+    if (yes && !this.inMatch) this.done(this.manager.deleteSave());
   }
 
   /** The pop-up with this browser's save beside `incoming`. */
@@ -211,6 +219,11 @@ export class SaveSettings {
     this.protectButton.disabled = state === 'on' || state === 'unsupported';
     this.protectButton.textContent = state === 'on' ? SAVE_TEXT.protectOn : SAVE_TEXT.protectButton;
     this.protectLine.textContent = state === 'refused' ? SAVE_TEXT.protectRefused : state === 'unsupported' ? SAVE_TEXT.protectUnsupported : '';
+  }
+
+  /** After a load, restore, Undo or delete: the game reloads, or (false) the browser had no room and nothing changed. */
+  private done(reloading: boolean): void {
+    if (!reloading) this.say(SAVE_TEXT.errors.noRoom);
   }
 
   private say(text: string): void {

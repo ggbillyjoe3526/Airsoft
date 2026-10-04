@@ -2,7 +2,7 @@ import { RESTORE_POINTS, SAVE_KEYS } from '../config/save';
 import { flushSettings } from '../settings/storage';
 import type { GuardedStorage } from './guardedStorage';
 import { canonicalJson, isEmpty, parseSaveObject, SAVE_FORMAT, type SaveData, saveObject } from './saveFile';
-import { SAVE_STORES, type StoreData } from './stores';
+import { SAVE_STORES, type StoreData, type StoreId } from './stores';
 
 /**
  * The save as the game runs (M31): takes it from the stores for a download, writes a loaded one over them, keeps the
@@ -109,7 +109,10 @@ export class SaveManager {
   /** The save as it stands, pending slider changes included. */
   current(): SaveData {
     flushSettings(this.storage);
-    return { format: SAVE_FORMAT, build: this.opts.build, savedAt: this.now().toISOString(), stores: readStores(this.storage) };
+    // A newer build's save is labelled as its own format, so that build migrates it from the right place.
+    const format = this.newerBuild ? this.meta.format : SAVE_FORMAT;
+    const build = this.newerBuild ? this.meta.build : this.opts.build;
+    return { format, build, savedAt: this.now().toISOString(), stores: readStores(this.storage) };
   }
 
   /** Notes a download (the Save tab's "Last downloaded"). */
@@ -121,19 +124,19 @@ export class SaveManager {
 
   /**
    * Writes `save` over this browser's save and reloads the page to use it; the save it replaces goes to the Undo slot
-   * (`what` names the action). Nothing happens while saving is frozen (another tab, a newer save, a load under way).
+   * (`what` names the action). False, with nothing changed, while saving is frozen or doesn't work, or when the
+   * browser hasn't the room for the Undo copy or the new save (a load is never made without its Undo).
    */
-  replace(save: SaveData, what: UndoWhat): void {
-    if (!this.canReplace) return;
-    this.keepForUndo(what);
-    this.overwrite(save.stores);
+  replace(save: SaveData, what: UndoWhat): boolean {
+    if (!this.canReplace) return false;
+    const before = this.current();
+    if (!this.storage.trySet(SAVE_KEYS.undo, JSON.stringify({ what, save: saveObject(before) }))) return false;
+    return this.overwrite(save.stores, before.stores);
   }
 
-  /** Deletes the save (kept for Undo) and reloads: the game starts as for a new player. */
-  deleteSave(): void {
-    if (!this.canReplace) return;
-    this.keepForUndo('delete');
-    this.overwrite({});
+  /** Deletes the save (kept for Undo) and reloads: the game starts as for a new player. False as for replace. */
+  deleteSave(): boolean {
+    return this.replace({ format: SAVE_FORMAT, build: this.opts.build, savedAt: '', stores: {} }, 'delete');
   }
 
   /** What Undo would bring back, and from before what; null when there is nothing to undo. */
@@ -150,12 +153,19 @@ export class SaveManager {
     }
   }
 
-  /** Brings back the save from before the last load, restore or delete, and reloads. The Undo slot is used up. */
-  undo(): void {
+  /**
+   * Brings back the save from before the last load, restore or delete, and reloads; the Undo slot is used up. False,
+   * with nothing changed, as for replace.
+   */
+  undo(): boolean {
     const slot = this.undoable();
-    if (!slot || !this.canReplace) return;
+    const text = this.storage.getItem(SAVE_KEYS.undo);
+    if (!slot || text === null || !this.canReplace) return false;
+    const before = this.current();
     this.storage.writeThrough(SAVE_KEYS.undo, null);
-    this.overwrite(slot.save.stores);
+    if (this.overwrite(slot.save.stores, before.stores)) return true;
+    this.storage.trySet(SAVE_KEYS.undo, text);
+    return false;
   }
 
   /** The restore points, newest first. */
@@ -212,26 +222,25 @@ export class SaveManager {
     }
   }
 
-  private keepForUndo(what: UndoWhat): void {
-    const slot = JSON.stringify({ what, save: saveObject(this.current()) });
-    // A full disk: the restore points make room (Undo matters more right now), then it goes without.
-    if (!this.storage.trySet(SAVE_KEYS.undo, slot)) {
-      this.storage.writeThrough(SAVE_KEYS.restorePoints, null);
-      this.storage.trySet(SAVE_KEYS.undo, slot);
-    }
-  }
-
-  /** Freezes saving (nothing the old visit holds can write over it), writes `stores` and reloads. */
-  private overwrite(stores: StoreData): void {
-    flushSettings(this.storage);
-    this.storage.freeze('reloading');
+  /**
+   * Writes `stores` over the save, then freezes saving (nothing the old visit holds can write over it) and reloads. A
+   * store the browser refuses (a full disk) puts `before` back and returns false: never half one save, half another.
+   */
+  private overwrite(stores: StoreData, before: StoreData): boolean {
+    const text = (data: StoreData, id: StoreId) => {
+      const v = data[id];
+      return v === null || v === undefined ? null : JSON.stringify(v);
+    };
     for (const { id, key } of SAVE_STORES) {
-      const v = stores[id];
-      this.storage.writeThrough(key, v === null || v === undefined ? null : JSON.stringify(v));
+      if (this.storage.writeThrough(key, text(stores, id))) continue;
+      for (const s of SAVE_STORES) this.storage.writeThrough(s.key, text(before, s.id));
+      return false;
     }
+    this.storage.freeze('reloading');
     this.meta = { ...this.meta, format: SAVE_FORMAT, build: this.opts.build, savedAt: this.now().toISOString() };
     this.storage.writeThrough(SAVE_KEYS.meta, JSON.stringify(this.meta));
     this.opts.reload();
+    return true;
   }
 
   private writeMeta(): void {

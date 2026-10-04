@@ -81,16 +81,27 @@ export class GuardedStorage implements Storage {
   }
 
   setItem(key: string, value: string): void {
-    this.store(key, String(value), false);
+    this.store(key, String(value));
   }
 
   removeItem(key: string): void {
-    this.store(key, null, false);
+    this.store(key, null);
   }
 
-  /** Writes past a freeze: the save system's own last writes before the page reloads (a loaded save). */
-  writeThrough(key: string, value: string | null): void {
-    this.store(key, value, true);
+  /**
+   * Writes past a freeze, straight to the browser's storage: the save system's writes of a loaded save. True if the
+   * browser took it; a refusal leaves nothing in memory and raises no warning (the caller undoes what it started).
+   */
+  writeThrough(key: string, value: string | null): boolean {
+    if (!this.backing) return false;
+    try {
+      if (value === null) this.backing.removeItem(key);
+      else this.backing.setItem(key, value);
+      this.overlay.delete(key);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -135,14 +146,15 @@ export class GuardedStorage implements Storage {
     return [...all];
   }
 
-  private store(key: string, value: string | null, past: boolean): void {
+  private store(key: string, value: string | null): void {
     const game = key.startsWith(GAME_PREFIX);
-    if (this.backing && (past || !game || this.frozenFor === null)) {
+    if (this.backing && (!game || this.frozenFor === null)) {
       try {
         if (value === null) this.backing.removeItem(key);
         else this.backing.setItem(key, value);
         this.overlay.delete(key);
         if (game) for (const fn of this.writeListeners) fn(key);
+        if (this.failed) this.retryHeld();
         return;
       } catch {
         if (!this.failed) {
@@ -152,6 +164,24 @@ export class GuardedStorage implements Storage {
       }
     }
     this.overlay.set(key, value);
+  }
+
+  /**
+   * After a refusal, a write went through again (space freed): the writes held in memory since are tried again, and
+   * once they all reach the browser saving counts as working again.
+   */
+  private retryHeld(): void {
+    for (const [key, value] of this.overlay) {
+      try {
+        if (value === null) this.backing!.removeItem(key);
+        else this.backing!.setItem(key, value);
+        this.overlay.delete(key);
+      } catch {
+        return;
+      }
+    }
+    this.failed = false;
+    this.tellProblem();
   }
 
   private tellProblem(): void {

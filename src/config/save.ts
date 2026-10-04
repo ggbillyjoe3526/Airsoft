@@ -94,6 +94,8 @@ export const SAVE_TEXT = {
     notSave: 'That file isn\'t an Airsoft save.',
     newer: (build: string) => `That save is from a newer version of the game (${build}). Update the game to load it.`,
     unreadable: 'The browser couldn\'t read that file.',
+    /** A full disk: no room for the Undo copy or the new save, so nothing was changed. */
+    noRoom: 'The browser is out of space, so your save was left as it was. Download it, then clear some browsing data and try again.',
   },
   /** The rows of the side-by-side comparison. */
   compare: {

@@ -64,37 +64,35 @@ describe('restore points and Undo on a full disk (M31)', () => {
     expect(storage.getItem(SAVE_KEYS.restorePoints)).toBeNull();
   });
 
-  it('makes room for the Undo slot by dropping the restore points', () => {
+  it('refuses a load or delete with no room for the Undo copy, and keeps the restore points', () => {
     const backing = new LimitedStorage();
     const { storage, manager, reload } = setup(backing);
     storage.setItem(COLLECTION, collection(10));
     manager.keepRestorePoint();
+    backing.refused.add(SAVE_KEYS.undo);
+    const incoming: SaveData = { format: SAVE_FORMAT, build: 'b', savedAt: '', stores: { collection: JSON.parse(collection(500)) } };
+    expect(manager.replace(incoming, 'load')).toBe(false);
+    expect(manager.deleteSave()).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
+    expect(JSON.parse(backing.getItem(COLLECTION)!).fc).toBe(10);
     expect(manager.restorePoints()).toHaveLength(1);
-    // The disk has room for the Undo slot only once the restore points are gone.
-    const restoreLength = backing.getItem(SAVE_KEYS.restorePoints)!.length;
-    const originalSet = backing.setItem.bind(backing);
-    backing.setItem = (k, v) => {
-      if (k === SAVE_KEYS.undo && backing.getItem(SAVE_KEYS.restorePoints) !== null) throw new DOMException('full', 'QuotaExceededError');
-      originalSet(k, v);
-    };
-    expect(restoreLength).toBeGreaterThan(0);
-    manager.deleteSave();
-    expect(reload).toHaveBeenCalledTimes(1);
-    expect(backing.getItem(SAVE_KEYS.restorePoints)).toBeNull();
-    expect(JSON.parse(backing.getItem(SAVE_KEYS.undo)!).what).toBe('delete');
+    expect(manager.canReplace).toBe(true);
   });
 
-  it('still replaces the save, with nothing to undo, when the Undo slot cannot be stored at all', () => {
+  it('puts the old save back when the browser refuses one of the new stores (never half one save, half another)', () => {
     const backing = new LimitedStorage();
     const { storage, manager, reload } = setup(backing);
     storage.setItem(COLLECTION, collection(10));
-    backing.refused.add(SAVE_KEYS.undo);
-    const incoming: SaveData = { format: SAVE_FORMAT, build: 'b', savedAt: '', stores: { collection: JSON.parse(collection(500)) } };
-    manager.replace(incoming, 'load');
-    expect(reload).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(backing.getItem(COLLECTION)!).fc).toBe(500);
-    expect(manager.undoable()).toBeNull();
-    expect(manager.blocked).toBe(false);
+    storage.setItem('airsoft.settings', JSON.stringify({ version: 1, fov: 80 }));
+    // The settings go in first; the collection is refused.
+    backing.limits.set(COLLECTION, collection(10).length);
+    const incoming: SaveData = { format: SAVE_FORMAT, build: 'b', savedAt: '', stores: { settings: { version: 1, fov: 100 }, collection: JSON.parse(collection(1_000_000)) } };
+    expect(manager.replace(incoming, 'load')).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
+    expect(JSON.parse(backing.getItem('airsoft.settings')!).fov).toBe(80);
+    expect(JSON.parse(backing.getItem(COLLECTION)!).fc).toBe(10);
+    // Saving still works for the rest of the visit.
+    expect(manager.keeping).toBe(true);
   });
 });
 
@@ -204,5 +202,33 @@ describe('persistent storage request (M31 acceptance 8)', () => {
     expect(await make(refusing).protect()).toBe(false);
     expect(await make(throwing).protect()).toBe(false);
     expect(await make(throwing).protectedNow()).toBeNull();
+  });
+});
+
+describe('a newer build\'s save, downloaded by an older build (M31)', () => {
+  it('is labelled with its own format and build, so the newer build migrates it from the right place', () => {
+    const backing = new MemoryStorage();
+    backing.setItem(SAVE_KEYS.meta, JSON.stringify({ format: SAVE_FORMAT + 1, build: 'v0.3', savedAt: null, downloadedAt: null }));
+    backing.setItem(COLLECTION, collection(70));
+    const { manager } = setup(backing);
+    const save = manager.current();
+    expect(save.format).toBe(SAVE_FORMAT + 1);
+    expect(save.build).toBe('v0.3');
+    // This build refuses its own download of it, as any newer save.
+    expect(JSON.parse(saveFileText(save)).format).toBe(SAVE_FORMAT + 1);
+  });
+});
+
+describe('saving again after a refused write (M31)', () => {
+  it('writes what was held in memory once the browser takes writes again, and stops warning', () => {
+    const backing = new LimitedStorage();
+    const { storage, manager } = setup(backing);
+    backing.refused.add(COLLECTION);
+    storage.setItem(COLLECTION, collection(10));
+    expect(manager.blocked).toBe(true);
+    backing.refused.clear();
+    storage.setItem('airsoft.settings', JSON.stringify({ version: 1, fov: 90 }));
+    expect(manager.blocked).toBe(false);
+    expect(JSON.parse(backing.getItem(COLLECTION)!).fc).toBe(10);
   });
 });
