@@ -47,6 +47,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
 - **M33a** · Woodland shown as Coming soon in the Map pop-up
+- **M36** · Pro difficulty level: a fourth bot level above Hard, visible only with Dev settings on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted
 
 ### Changed
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
