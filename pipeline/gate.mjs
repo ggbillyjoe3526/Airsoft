@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTitle, tasksVersions } from './scope.mjs';
+import { smokeFailures } from './smokeReport.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
@@ -95,7 +96,9 @@ function record(name, gate) {
   console.log(`gate ${name.padEnd(9)} ${mark}${gate.ms !== undefined ? ` (${(gate.ms / 1000).toFixed(0)} s)` : ''}${gate.reason ? ` · ${gate.reason}` : ''}`);
   // A failed gate names what failed in the log too, so a CI run can be read without downloading its artifact.
   for (const f of gate.pass === false ? (gate.failures ?? []) : []) {
-    console.log(`  ✗ ${f.file ? `${f.file} › ` : ''}${f.test ?? f.title ?? ''}: ${String(f.message ?? '').replace(/\x1b\[[0-9;]*m/g, '').split('\n')[0].slice(0, 300)}`);
+    console.log(`  ✗ ${f.project ? `[${f.project}] ` : ''}${f.file ? `${f.file} › ` : ''}${f.test ?? f.title ?? ''}: ${String(f.message ?? '').replace(/\x1b\[[0-9;]*m/g, '').split('\n')[0].slice(0, 300)}`);
+    // The smoke test's failures carry the lines after the first: the locator, what was expected, the call log's start.
+    for (const line of (f.detail ?? []).slice(1)) console.log(`      ${line.slice(0, 300)}`);
   }
 }
 
@@ -135,16 +138,8 @@ if (!options.smoke) {
   let summary = { pass: r.ok, ms: r.ms, log: r.log };
   try {
     const data = JSON.parse(readFileSync(json, 'utf8'));
-    const failures = [];
-    const walk = (suite) => {
-      for (const spec of suite.specs ?? []) {
-        for (const t of spec.tests ?? []) {
-          if (t.status !== 'expected') failures.push({ test: spec.title, file: spec.file, status: t.status, message: (t.results?.at(-1)?.error?.message ?? '').split('\n')[0] });
-        }
-      }
-      for (const s of suite.suites ?? []) walk(s);
-    };
-    for (const s of data.suites ?? []) walk(s);
+    // Each failing test's full title, project, place and the error's locator / expectation lines (smokeReport.mjs).
+    const failures = smokeFailures(data);
     const expected = data.stats?.expected ?? 0;
     summary = { ...summary, expected, unexpected: data.stats?.unexpected ?? 0, pass: r.ok && failures.length === 0 && expected > 0, report: relative(ROOT, json), html: 'playwright-report/index.html', ...(failures.length ? { failures } : {}) };
   } catch (e) {
