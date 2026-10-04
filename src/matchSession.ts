@@ -36,6 +36,7 @@ import { fitOptic, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { placeTeams, restartMatch } from './sim/round';
+import { isInPlay } from './sim/elimination';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
@@ -85,6 +86,8 @@ export class MatchSession {
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
+  /** Where your teammates hold, while they do (scratch for the HUD marker). */
+  private readonly holdSpot = vec3();
   /** Reduced motion (Settings → Accessibility): the lean's roll here, the held replica's motion in `combat`. */
   private motion: MotionScale = FULL_MOTION;
   private readonly ctx: SimContext;
@@ -209,7 +212,8 @@ export class MatchSession {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
-    this.match.showSquadOrder(this.bots.orderOf(this.player), dt);
+    const holding = this.bots.holdSpot(this.player, this.holdSpot);
+    this.match.showSquadOrder(this.bots.orderOf(this.player), holding ? this.holdSpot : null, this.renderer.camera, dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.combat.render(!spectating);
   }
@@ -282,11 +286,18 @@ export class MatchSession {
     setBbWeights(this.player.armament, this.setup.bbWeights);
   }
 
-  /** A squad order key (M22): your bot teammates' radios answer when they take it; the HUD says what's in force. */
+  /**
+   * A squad order key (M22): your bot teammates' radios answer when they take it; the HUD says what's in force. While
+   * you are out, or between rounds, the key does nothing but say so.
+   */
   private giveOrder(order: SquadOrderKind): void {
+    if (!isInPlay(this.player) || this.state.round.phase !== 'live') {
+      this.match.orderGiven('none', 'notNow');
+      return;
+    }
     const before = this.bots.orderOf(this.player);
     const result = this.bots.giveOrder(this.player, order);
-    this.match.orderGiven(result, before !== 'none');
+    this.match.orderGiven(result, before !== 'none' ? 'cancelled' : 'nobody');
     if (result !== 'none') this.combat.orderHeard();
   }
 

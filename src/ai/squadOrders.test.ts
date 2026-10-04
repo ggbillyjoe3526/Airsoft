@@ -97,9 +97,14 @@ describe('squad orders (M22)', () => {
     expect(bots.orderOf(you)).toBe('follow');
     cmd.forward = 1;
     let worst = 0;
+    let ticks = 0;
+    let watched = 0;
     run(10, () => {
       for (const b of mates) worst = Math.max(worst, flat(b.character.position, you.position));
+      // Someone keeps looking back the way you came on the move too (once settled in behind you).
+      if (++ticks > 2 / DT) watched += mates.some((b) => Math.abs(wrapAngle(b.character.yaw - EAST - Math.PI)) < Math.PI / 3) ? 1 : 0;
     });
+    expect(watched / (ticks - 2 / DT)).toBeGreaterThan(0.6);
     expect(you.position.x).toBeGreaterThan(5); // you went a long way east
     // Never left far behind, and they end up behind you, not in front.
     expect(worst).toBeLessThan(SQUAD_ORDERS.catchUp + 3);
@@ -172,9 +177,15 @@ describe('squad orders (M22)', () => {
     expect(Math.min(...mates.map((b) => flat(b.character.position, you.position)))).toBeGreaterThan(18);
     expect(bots.giveOrder(you, 'regroup')).toBe('regroup');
     let sprinted = false;
+    // The HUD's order (orderOf) reads Regroup until every teammate is back, never flipping between the two.
+    let flips = 0;
+    let last = bots.orderOf(you);
     run(10, () => {
       for (const b of mates) sprinted ||= commands.get(b.character.id)!.sprint;
+      if (bots.orderOf(you) !== last) flips++;
+      last = bots.orderOf(you);
     });
+    expect(flips).toBe(1);
     expect(sprinted).toBe(true);
     for (const b of mates) expect(flat(b.character.position, you.position)).toBeLessThan(SQUAD_ORDERS.followDistance + SQUAD_ORDERS.followRowGap + 2);
     expect(bots.orderOf(you)).toBe('follow');
@@ -193,8 +204,18 @@ describe('squad orders (M22)', () => {
     cmd.yaw = 0;
     run(0.3);
     expect(bots.giveOrder(you, 'hold')).toBe('hold');
+    expect(bots.holdSpot(you, vec3())).toBe(true);
     // The same spot again: cancelled.
     expect(bots.giveOrder(you, 'hold')).toBe('none');
+    expect(bots.holdSpot(you, vec3())).toBe(false);
+    // Holding a spot you looked at, Hold here at the sky holds where they stand; at the sky again, cancelled.
+    expect(bots.giveOrder(you, 'hold')).toBe('hold');
+    cmd.pitch = 0.3;
+    run(0.3);
+    expect(bots.giveOrder(you, 'hold')).toBe('hold');
+    expect(bots.giveOrder(you, 'hold')).toBe('none');
+    cmd.pitch = -0.2;
+    run(0.3);
     // Another order replaces the one in force.
     bots.giveOrder(you, 'hold');
     expect(bots.giveOrder(you, 'regroup')).toBe('regroup');

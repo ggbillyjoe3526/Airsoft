@@ -226,10 +226,10 @@ describe('a 3v3 bot match on Depot', () => {
           worst = Math.max(worst, d);
         }
       });
-      // Measured (seeds 1-3): always within catchUp + 2 m between fights, never more than 10 m off.
+      // Measured (seeds 1-3): always within catchUp + 2 m between fights, never more than about 8 m off.
       expect(counted, `seed ${seed}`).toBeGreaterThan(1000);
       expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.95);
-      expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp + 5);
+      expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp + 3);
     }
   });
 

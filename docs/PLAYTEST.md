@@ -341,10 +341,12 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   to catch up if left behind; stop and one looks back the way you came, the other to a side. Walk (Shift) or crouch
   and they walk too. They still fight anyone they see, then come back. Press **Z** again: "Back to the team plan".
 - [ ] **Hold here (X).** Look at a spot (a doorway, a crate's corner) and press **X**: both go there side by side and
-  watch the way you looked, and stay when you walk off. Look at the sky and press X: each holds where it stands.
-  Look somewhere else and press X: the hold moves; press X again on the same spot: back to the team plan.
+  watch the way you looked, and stay when you walk off. A diamond marker with the distance shows the held spot.
+  Look somewhere else and press X: the hold moves; at the sky: each holds where it stands; press X again on the same
+  spot (or at the sky again): back to the team plan.
 - [ ] **Regroup (V).** With teammates far off, press **V**: they sprint back to you, then follow (the line changes to
-  FOLLOW ME). Get hit: the order ends and they play their plan. A new round starts with no order.
+  FOLLOW ME once both are back). Get hit: the order ends and they play their plan; order keys then say "Orders wait for
+  the next round". A new round starts with no order.
 - [ ] **Rebind.** Settings → Controls → Key bindings has the three squad keys.
 - [ ] **Hearing through walls.** Sneak up to Orange behind a wall (running, not walking): they should notice you
   later than in the open. Do bots still seem to hear you through walls like a wallhack, or now too little?

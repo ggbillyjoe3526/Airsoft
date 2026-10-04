@@ -23,7 +23,8 @@ _Last updated: 2026-10-04 · M22 (squad orders)._
 - **Orders:** `ai/squadOrders.ts` (where each bot goes: follow spots behind the leader's heading, hold spots across
   their view, regroup), `BotController.giveOrder` / `orderOf`, mode `order` in `botBrain.chooseMode` (after fights and
   cover, before the pole and noises). Tuning in `config/squad.ts`. Keys `orderFollow` / `orderHold` / `orderRegroup`
-  (Z, X, V), read once per frame by `PlayerInput.takeOrder` in `MatchSession.advance`. HUD: `ui/squadOrderLine.ts`;
+  (Z, X, V), read once per frame by `PlayerInput.takeOrder` in `MatchSession.advance`. The controller's `given` map is
+  the one record of the order in force (Regroup turns into Follow me there). HUD: `ui/squadOrderLine.ts`, `ui/holdMarker.ts`;
   sound: `radio.ack` in `config/sounds.ts`. Tests: `ai/squadOrders.test.ts` (open field) and the Depot follow guard.
 - **Hearing:** `BotController.hear` casts `sim/soundPath.ts` rays beyond `wallHearing` × range (shared with the
   audio's muffling). Depot rounds run longer since; `playMatch` takes an `onTick` hook for guards like the follow one.

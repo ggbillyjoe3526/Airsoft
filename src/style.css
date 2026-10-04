@@ -1636,7 +1636,6 @@ kbd {
   opacity: 0.75;
 }
 
-/* Match info (M19): the hit feed, teammate markers, the scoreboard over the field and the stats tables */
 /* Squad orders (M22): the order your bot teammates carry out, bottom left. */
 .squad-order {
   position: absolute;
@@ -1660,6 +1659,43 @@ kbd {
   display: none;
 }
 
+/* Where your teammates hold (M22): a diamond in your team's colour over the spot, with the distance. */
+.hold-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin: -8px 0 0 -40px;
+  width: 80px;
+  color: #fff;
+  font: 700 11px var(--ui-font);
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.hold-marker[hidden] {
+  display: none;
+}
+
+.hold-marker i {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  background: var(--team);
+  transform: rotate(45deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.hold-marker.edge {
+  opacity: 0.75;
+}
+
+/* Match info (M19): the hit feed, teammate markers, the scoreboard over the field and the stats tables */
 .hit-feed {
   position: absolute;
   top: 12px;

@@ -15,7 +15,7 @@ export const SQUAD_ORDERS = {
   followRowGap: 1.6,
   /** Close enough to the follow spot to stop there (m). */
   followArrive: 1.2,
-  /** Further than this from their spot (m), followers sprint to catch up. */
+  /** Further than this from you (m), followers sprint to catch up; they also sprint when you do. */
   catchUp: 8,
   /** Your heading is the way you move, once you move at least this fast (m/s); standing still keeps it. */
   headingSpeed: 1,
@@ -34,6 +34,9 @@ export const SQUAD_ORDERS = {
   holdArrive: 0.7,
   /** Hold here again, looking at least this far from the held spot (m), moves it; nearer cancels the order. */
   holdMove: 3,
+  /** The hold marker sits this high over the held spot (m), and stays this far inside the screen's edge (px). */
+  markerHeight: 1.2,
+  markerEdge: 48,
   /** Regroup: teammates sprint back to you and follow once this close (m). */
   regroupArrive: 4,
   /** What the HUD calls each order. */
@@ -41,5 +44,7 @@ export const SQUAD_ORDERS = {
   /** The HUD line after an order is cancelled, or given with no teammate left to take it, for `noticeTime` seconds. */
   cancelled: 'Back to the team plan',
   nobody: 'No teammates left to order',
+  /** An order key pressed while you are out, or between rounds: ignored, with this notice. */
+  notNow: 'Orders wait for the next round',
   noticeTime: 2,
 } as const;

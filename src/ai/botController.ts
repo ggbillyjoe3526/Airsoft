@@ -57,6 +57,11 @@ export class BotController {
   private readonly ear = vec3();
   private readonly held = vec3();
   private readonly lookedAt = vec3();
+  /**
+   * Per player who gave one, the squad order in force (one source for the HUD and for giving it again). `ownSpot`: a
+   * Hold here given looking at nothing, so each holds where it stood.
+   */
+  private readonly given = new Map<Character, { kind: SquadOrderKind; ownSpot: boolean }>();
   private plannerCursor = 0;
   /** Tuning to switch to at the next round start (a difficulty change made mid-match). */
   private pendingCfg: BotConfig | undefined;
@@ -156,26 +161,32 @@ export class BotController {
       if (isInPlay(c)) this.visited[c.team]![this.sectorOf(c.position.x, c.position.z)] = state.time;
     }
     this.planRoutes();
-    this.endStaleOrders();
+    this.updateOrders();
     this.pickRetakers();
     for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
   }
 
   /**
    * A squad order from `leader` (a player) to the bot teammates in play (M22). Giving the order already in force
-   * cancels it, except Hold here aimed at least holdMove from the held spots, which moves them. Returns the order in
-   * force afterwards ('none' also when no teammate is left to take it).
+   * cancels it, except Hold here aimed somewhere else (at least holdMove from the held spot, or at nothing while they
+   * hold a spot you looked at, which holds where they stand), which moves it. Returns the order in force afterwards
+   * ('none' also when no teammate is in play to take it).
    */
   giveOrder(leader: Character, kind: SquadOrderKind): SquadOrderKind | 'none' {
     const w = this.world;
     const team = this.bots.filter((b) => b.character !== leader && b.character.team === leader.team && isInPlay(b.character));
-    if (!isInPlay(leader) || team.length === 0) return 'none';
-    const current = this.orderOf(leader);
-    let point: Vec3 | undefined = holdPoint(leader, w, this.lookedAt) ? this.lookedAt : undefined;
-    if (current === kind) {
-      const moveHold = kind === 'hold' && heldCentre(team, leader, this.held) && (point ? Math.hypot(point.x - this.held.x, point.z - this.held.z) : 0) >= SQUAD_ORDERS.holdMove;
-      if (!moveHold) {
-        for (const b of team) if (b.orderLeader === leader) endOrder(b, w);
+    if (!isInPlay(leader) || team.length === 0) {
+      this.dropOrder(leader);
+      return 'none';
+    }
+    const current = this.given.get(leader);
+    const point = holdPoint(leader, w, this.lookedAt) ? this.lookedAt : undefined;
+    if (current?.kind === kind) {
+      const same =
+        kind !== 'hold' ||
+        (point ? !current.ownSpot && heldCentre(this.bots, leader, this.held) && Math.hypot(point.x - this.held.x, point.z - this.held.z) < SQUAD_ORDERS.holdMove : current.ownSpot);
+      if (same) {
+        this.dropOrder(leader);
         return 'none';
       }
     }
@@ -184,25 +195,57 @@ export class BotController {
       const rx = Math.cos(leader.yaw);
       const rz = -Math.sin(leader.yaw);
       team.sort((a, b) => a.character.position.x * rx + a.character.position.z * rz - (b.character.position.x * rx + b.character.position.z * rz));
-    } else {
-      point = undefined;
     }
+    for (const b of this.bots) if (b.orderLeader === leader && !team.includes(b)) endOrder(b, w);
     team.forEach((b, slot) => startOrder(b, leader, kind, slot));
     if (kind === 'hold') placeHold(team, leader, point, w);
+    this.given.set(leader, { kind, ownSpot: kind === 'hold' && !point });
     return kind;
   }
 
   /** The order `leader`'s bot teammates are carrying out ('none': they play the team plan). */
   orderOf(leader: Character): SquadOrderKind | 'none' {
-    for (const b of this.bots) if (b.orderLeader === leader && b.order !== 'none') return b.order;
-    return 'none';
+    return this.given.get(leader)?.kind ?? 'none';
   }
 
-  /** Orders end when whoever gave them, or the bot itself, is out of play (hit, or the round over). */
-  private endStaleOrders(): void {
-    for (const b of this.bots) {
-      const leader = b.orderLeader;
-      if (b.order !== 'none' && (!leader || !isInPlay(leader) || !isInPlay(b.character))) endOrder(b, this.world);
+  /** While `leader`'s teammates hold a spot: the middle of the held spots into `out`, and true. */
+  holdSpot(leader: Character, out: Vec3): boolean {
+    return this.given.get(leader)?.kind === 'hold' && heldCentre(this.bots, leader, out);
+  }
+
+  /** Everyone given `leader`'s order goes back to the team plan. */
+  private dropOrder(leader: Character): void {
+    for (const b of this.bots) if (b.orderLeader === leader) endOrder(b, this.world);
+    this.given.delete(leader);
+  }
+
+  /**
+   * Before the bots think: an order ends when whoever gave it is out of play (hit, or the round over), and for a bot
+   * that is out itself; Regroup becomes Follow me for each bot that has got back, and for the order once all have.
+   */
+  private updateOrders(): void {
+    for (const b of this.bots) if (b.order !== 'none' && !isInPlay(b.character)) endOrder(b, this.world);
+    for (const [leader, given] of this.given) {
+      if (!isInPlay(leader)) {
+        this.dropOrder(leader);
+        continue;
+      }
+      let carried = 0;
+      let regrouping = 0;
+      for (const b of this.bots) {
+        if (b.orderLeader !== leader) continue;
+        carried++;
+        if (b.order !== 'regroup') continue;
+        const p = b.character.position;
+        if (Math.hypot(leader.position.x - p.x, leader.position.z - p.z) <= SQUAD_ORDERS.regroupArrive) {
+          b.order = 'follow';
+          b.orderHeading = leader.yaw;
+        } else {
+          regrouping++;
+        }
+      }
+      if (carried === 0) this.given.delete(leader);
+      else if (given.kind === 'regroup' && regrouping === 0) given.kind = 'follow';
     }
   }
 
@@ -242,6 +285,7 @@ export class BotController {
           this.pendingCfg = undefined;
         }
         for (const v of this.visited) v.fill(Number.NEGATIVE_INFINITY);
+        this.given.clear(); // resetBot ends every bot's order
         this.planRound();
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);

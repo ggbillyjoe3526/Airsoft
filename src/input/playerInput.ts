@@ -1,7 +1,7 @@
-import type { SquadOrderKind } from '../config/squad';
 import { type Action, type CrouchMode, DEFAULT_AIM_MODE, DEFAULT_CROUCH_MODE, DEFAULT_SPRINT_MODE, type HoldMode, MOUSE } from '../config/controls';
 import { AIMING } from '../config/optics';
 import type { MovementConfig } from '../config/movement';
+import type { SquadOrderKind } from '../config/squad';
 import type { PlayerCommand } from '../sim/commands';
 import { wrapAngle } from '../sim/vec';
 import type { Keyboard } from './keyboard';

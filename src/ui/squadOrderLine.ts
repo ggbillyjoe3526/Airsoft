@@ -4,8 +4,14 @@ import { teamCss } from '../config/teams';
 /** What the squad line says: a notice while one lasts, else the order in force ('' hides the line). */
 export function squadLineText(order: SquadOrderKind | 'none', notice: string): string {
   if (notice) return notice;
-  return order === 'none' ? '' : `Squad · ${SQUAD_ORDERS.labels[order]}`;
+  return order === 'none' ? '' : LINES[order];
 }
+
+const LINES: Readonly<Record<SquadOrderKind, string>> = {
+  follow: `Squad · ${SQUAD_ORDERS.labels.follow}`,
+  hold: `Squad · ${SQUAD_ORDERS.labels.hold}`,
+  regroup: `Squad · ${SQUAD_ORDERS.labels.regroup}`,
+};
 
 /**
  * The HUD's squad line (M22), bottom left: the order your bot teammates are carrying out, and for a moment after you
@@ -28,12 +34,12 @@ export class SquadOrderLine {
   }
 
   /**
-   * You gave an order and `result` is now in force; `hadOrder`: one was in force before. An order that leaves none in
-   * force gets a notice: it was cancelled, or nobody was left to take it.
+   * You pressed an order key and `result` is now in force: an order that leaves none in force gets a notice saying why
+   * (`why`: it cancelled the one in force, nobody was left to take it, or orders wait for the next round).
    */
-  ordered(result: SquadOrderKind | 'none', hadOrder: boolean): void {
+  ordered(result: SquadOrderKind | 'none', why: 'cancelled' | 'nobody' | 'notNow'): void {
     this.noticeLeft = result === 'none' ? SQUAD_ORDERS.noticeTime : 0;
-    this.notice = hadOrder ? SQUAD_ORDERS.cancelled : SQUAD_ORDERS.nobody;
+    this.notice = SQUAD_ORDERS[why];
   }
 
   /** False while a menu is up. */

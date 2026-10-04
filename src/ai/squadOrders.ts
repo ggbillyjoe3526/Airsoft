@@ -163,15 +163,13 @@ export function moveOrder(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): 
   const lp = leader.position;
   const away = Math.hypot(lp.x - p.x, lp.z - p.z);
   if (b.order === 'regroup') {
-    if (away > SQUAD_ORDERS.regroupArrive) {
-      b.orderRush = true;
-      b.orderGoal.x = lp.x;
-      b.orderGoal.y = lp.y;
-      b.orderGoal.z = lp.z;
-      b.orderYaw = leader.yaw;
-      return walkTo(b, w, b.orderGoal, SQUAD_ORDERS.regroupArrive, dt);
-    }
-    b.order = 'follow';
+    // Sprint back; once close the controller turns it into Follow me.
+    b.orderRush = away > SQUAD_ORDERS.regroupArrive;
+    b.orderGoal.x = lp.x;
+    b.orderGoal.y = lp.y;
+    b.orderGoal.z = lp.z;
+    b.orderYaw = leader.yaw;
+    return walkTo(b, w, b.orderGoal, SQUAD_ORDERS.regroupArrive, dt);
   }
   // Follow me: keep a spot behind the way the leader moves, and cover their back once there.
   const v = leader.velocity;
@@ -179,7 +177,8 @@ export function moveOrder(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): 
   followSpot(leader, b.orderHeading, b.orderSlot, w, b.orderGoal);
   const watch = SQUAD_ORDERS.followWatchDeg;
   b.orderYaw = b.orderHeading + watch[b.orderSlot % watch.length]! * DEG;
-  b.orderRush = away > SQUAD_ORDERS.catchUp;
+  // Sprint with a sprinting leader (once off the spot), or to catch up from far behind.
+  b.orderRush = away > SQUAD_ORDERS.catchUp || (leader.sprinting && away > SQUAD_ORDERS.followDistance);
   // Moving quietly with a leader who does.
   cmd.walk = !b.orderRush && (leader.walking || leader.crouchAmount > 0.5);
   return walkTo(b, w, b.orderGoal, SQUAD_ORDERS.followArrive, dt);
