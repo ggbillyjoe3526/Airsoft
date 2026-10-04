@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FOLIAGE_LOOK } from '../config/render';
 import type { Bush } from '../map/foliage';
+import { withoutEnvironment } from './surfaceMaterials';
 
 /** A fixed hash of an integer to [-1, 1], so every bush keeps its lumps and shade from one load to the next. */
 function hash(n: number): number {
@@ -48,7 +49,7 @@ export function buildFoliageMesh(bushes: readonly Bush[]): THREE.Mesh | null {
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
   geo.computeBoundingSphere();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  const mesh = new THREE.Mesh(geo, withoutEnvironment(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })));
   mesh.name = 'map-foliage';
   mesh.castShadow = true;
   mesh.receiveShadow = true;

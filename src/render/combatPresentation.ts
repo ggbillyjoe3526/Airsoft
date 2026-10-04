@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Sfx, type SfxSetup } from '../audio/sfx';
 import type { MotionScale } from '../config/accessibility';
 import { FIGURE } from '../config/characters';
@@ -7,7 +6,7 @@ import { impactMaterialAt } from '../audio/soundMaterials';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
-import { BB_VISUALS, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, QUALITY, type QualitySettings } from '../config/render';
+import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, type OpticId, OPTICS } from '../config/optics';
@@ -23,6 +22,7 @@ import { BBRenderer } from './bbRenderer';
 import { figureMuzzle, type FigureHold } from './characterModels';
 import { holdsPistol } from './characterRenderer';
 import { DustMotes } from './dustMotes';
+import { ImpactGrit, shooterSide } from './impactGrit';
 import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
 import { sprintCarry, Viewmodel } from './viewmodel';
@@ -42,17 +42,23 @@ const NO_GLOW: BBGlow = { player: [], others: false };
 export class CombatPresentation {
   private readonly bbs: BBRenderer;
   private readonly puffs = new ImpactPuffs(IMPACT_PUFFS);
+  /**
+   * Impact grit (QualitySettings.impactGrit, FA8): a faint ring of dust round each impact puff (made the first time grit
+   * is turned on, so Low never draws its texture), and chips of the surface.
+   */
+  private rings: ImpactPuffs | null = null;
+  private readonly grit = new ImpactGrit();
+  /** Where a landed BB's shooter is, for its grit (reused). */
+  private readonly gritFrom = { x: 0, y: 0, z: 0 };
   /** Bigger puffs where BBs land on players: hit confirmation at range. */
   private readonly hitPuffs = new ImpactPuffs(HIT_PUFFS);
   /** A gas replica's breath at the muzzle and ejection port on each shot (M14). */
   private readonly gasPuffs = new ImpactPuffs(GAS_PUFFS);
-  /** Dust drifting in the sunlight round the camera (M14); how much is the quality preset's. */
-  private readonly motes = new DustMotes(QUALITY.high.dustMotes);
+  /** Dust drifting in the sunlight round the camera (M14); how much is the quality settings' (at most the Custom row's top). */
+  private readonly motes = new DustMotes(DUST_MOTES.max);
   /** The impact dust's tint per material (linear colours, made once). */
   private readonly dustTints = new Map<ImpactMaterial, THREE.Color>();
-  /** The held replica's reflections (M14, QualitySettings.replicaSheen): made the first time they are wanted. */
-  private sheen: THREE.WebGLRenderTarget | null = null;
-  /** The preset in use, to make the sheen again after a lost graphics context (contextRestored). */
+  /** The settings in use, to light the replica again after a lost or replaced graphics context (contextRestored). */
   private quality: QualitySettings;
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
@@ -110,37 +116,41 @@ export class CombatPresentation {
     this.sfx = new Sfx(loadout, field.blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
-    renderer.scene.add(this.bbs.object, this.puffs.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
+    renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
     for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
-    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout);
+    this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail });
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container, keyName, crosshair);
     this.quality = quality;
     this.setQuality(quality);
   }
 
-  /** A quality preset (Settings → Graphics, M14): how much dust drifts in the air, and the held replica's sheen. */
+  /**
+   * A quality preset (Settings → Graphics, M14): how much dust drifts in the air, the held replica's sheen, and the
+   * visual overhaul's rows (FA8): replica and hand detail, the laser beam, the BBs' glow and impact grit.
+   */
   setQuality(quality: QualitySettings): void {
     this.quality = quality;
     this.motes.setCount(quality.dustMotes);
-    if (quality.replicaSheen && !this.sheen) {
-      // Only the prefiltered target is kept: the generator's own buffers are freed at once (audit L-02).
-      const pmrem = new THREE.PMREMGenerator(this.renderer.renderer);
-      const room = new RoomEnvironment();
-      this.sheen = pmrem.fromScene(room, 0.04);
-      room.dispose();
-      pmrem.dispose();
+    this.viewmodel.setDetail({ replica: quality.replicaDetail, hands: quality.handDetail });
+    this.viewmodel.setLaserBeam(quality.laserBeam);
+    this.bbs.setGlow(quality.bbGlow);
+    this.grit.setEnabled(quality.impactGrit);
+    if (quality.impactGrit && !this.rings) {
+      this.rings = new ImpactPuffs(IMPACT_RINGS);
+      this.renderer.scene.add(this.rings.object);
     }
-    this.viewmodel.setEnvironment(quality.replicaSheen ? (this.sheen?.texture ?? null) : null);
+    if (this.rings) this.rings.object.visible = quality.impactGrit;
+    // The Renderer owns the sheen (REN-06): made once per context, freed while the setting is off.
+    this.viewmodel.setEnvironment(quality.replicaSheen ? this.renderer.replicaSheen : null);
   }
 
   /**
-   * The graphics context is back after a loss (audit L-02). Three.js uploads geometry and textures again from their
-   * copies, but a render target comes back empty, so the sheen is rendered again. The old target is dropped, not
-   * disposed: its GL objects went with the lost context, and freeing them on the new one only logs WebGL warnings.
+   * The graphics context is back after a loss, or was replaced (audit L-02, REN-04). Three.js uploads geometry and
+   * textures again from their copies, but a render target comes back empty: the Renderer has dropped its sheen, and
+   * asking for it again here prefilters it on the new context.
    */
   contextRestored(): void {
-    this.sheen = null;
     this.setQuality(this.quality);
   }
 
@@ -158,6 +168,11 @@ export class CombatPresentation {
   /** The crosshair changed on Settings → Crosshair. */
   setCrosshair(crosshair: CrosshairSettings): void {
     this.hud.setCrosshair(crosshair);
+  }
+
+  /** A short line on the HUD (the game's own quality step-down says so, REN-03). */
+  showNotice(text: string, seconds: number): void {
+    this.hud.showNotice(text, seconds);
   }
 
   /** No rounds here (the practice range, M21): no start whistle when play starts. */
@@ -207,7 +222,12 @@ export class CombatPresentation {
       } else if (e.type === 'bbImpact') {
         // Dust by what the BB hit, and its tick: one lookup for both (audit L-15).
         const material = impactMaterialAt(this.field.blocks, e.position, this.field.terrain ?? null);
-        this.puffs.spawn(e.position, this.dustTints.get(material), IMPACT_DUST[material].scale);
+        const tint = this.dustTints.get(material);
+        this.puffs.spawn(e.position, tint, IMPACT_DUST[material].scale);
+        if (this.grit.active && tint) {
+          this.rings?.spawn(e.position, tint, IMPACT_DUST[material].scale);
+          this.grit.spawn(e.position, tint, shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom));
+        }
         this.sfx.impact(e.position, material);
       } else if (e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
@@ -240,10 +260,13 @@ export class CombatPresentation {
 
   /** Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. */
   frame(dt: number, alpha: number, yaw: number, pitch: number): void {
-    this.bbs.update(alpha, this.renderer.camera.position);
+    this.bbs.update(alpha, this.renderer.camera.position, this.renderer.camera.quaternion);
     this.puffs.update(dt, this.renderer.camera);
+    this.rings?.update(dt, this.renderer.camera);
+    this.grit.update(dt, this.renderer.camera);
     this.hitPuffs.update(dt, this.renderer.camera);
     this.gasPuffs.update(dt, this.renderer.camera);
+    this.motes.setPixelRatio(this.renderer.renderer.getPixelRatio());
     this.motes.update(dt, this.renderer.camera.position, this.state.wind);
     this.paths.update();
 
@@ -284,12 +307,12 @@ export class CombatPresentation {
   dispose(): void {
     this.bbs.dispose();
     this.puffs.dispose();
+    this.rings?.dispose();
+    this.grit.dispose();
     this.hitPuffs.dispose();
     this.gasPuffs.dispose();
     this.motes.dispose();
     this.viewmodel.setEnvironment(null);
-    this.sheen?.dispose();
-    this.sheen = null;
     this.paths.dispose();
     this.viewmodel.dispose();
     this.hud.dispose();
@@ -319,7 +342,7 @@ export class CombatPresentation {
     }
     if (!newest) return; // blocked muzzle: the shot hit cover immediately
     this.lastSerialByOwner.set(shooterId, newest.serial);
-    this.bbs.setGlow(newest, shooter === this.player ? (this.glow.player[shooter.armament.active] ?? false) : this.glow.others);
+    this.bbs.setGlowInDark(newest, shooter === this.player ? (this.glow.player[shooter.armament.active] ?? false) : this.glow.others);
     this.bbs.startFromMuzzle(newest, at, this.estimateFlightTime(newest));
   }
 

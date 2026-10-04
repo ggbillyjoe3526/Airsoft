@@ -11,13 +11,6 @@ export const RENDER = {
   horizontalFov16x9: 90,
   near: 0.05,
   far: 250,
-  /** Anisotropic filtering for surface textures; keeps floor detail readable at grazing angles. */
-  textureAnisotropy: 4,
-  /**
-   * Exposure under ACES filmic tone mapping (M14): a touch over 1, so sunny concrete reads bright and friendly rather
-   * than grey, without washing out the team colours.
-   */
-  toneMappingExposure: 1.08,
   /**
    * Leaning tilts the view by this much at full lean (radians), a fraction of the body's tilt: enough to
    * feel the peek without making the world swing.
@@ -44,17 +37,24 @@ export const ATMOSPHERE = {
   skyRadius: 200,
   skyWidthSegments: 32,
   skyHeightSegments: 16,
+  /**
+   * The dome's draw order (audit REN-05): after every opaque object (order 0), so the depth test leaves only the sky's
+   * own pixels to shade; drawn first it filled the whole screen under the field, about 9 % of a Low frame.
+   */
+  skyRenderOrder: 1,
   /** Linear haze in the horizon colour (metres from the camera). */
   fogNear: 32,
   fogFar: 210,
   /**
    * A ring of trees beyond the walls, so the yard sits somewhere: how many, how far from the field's centre
-   * (metres), how tall, and their greens. One merged mesh, never casting shadows.
+   * (metres; a field whose far corner is within `ringClearance` of `ringMin` pushes the ring out, keeping its width:
+   * every map gets it, none has trees inside), how tall, and their greens. One merged mesh, never casting shadows.
    */
   trees: {
     count: 70,
     ringMin: 62,
     ringMax: 100,
+    ringClearance: 20,
     heightMin: 10,
     heightMax: 18,
     /** Radius as a share of the height (pines are slim, broadleaves rounder). */
@@ -66,6 +66,43 @@ export const ATMOSPHERE = {
     trunk: 0x6b5843,
     seed: 4141,
   },
+  /**
+   * The detailed ring (QualitySettings.trees 2; audit section 5 "Sky and trees"): more trees, broadleaves of two or
+   * three stacked crowns (radii as a share of the first, each offset sideways up to `crownJitter` of its radius), pines
+   * of two cone tiers, seven-sided trunks; every crown darker on its lower half (`underShade`) and warmer on the sun's
+   * side (`sunWarm`, baked: free self-shading). A hedge of shrubs runs round the field just outside its walls.
+   */
+  detailedTrees: {
+    count: 110,
+    crowns: [1, 0.78, 0.6],
+    crownLift: [0, 0.55, 1],
+    crownJitter: 0.3,
+    pineTiers: 2,
+    trunkSides: 7,
+    underShade: 0.8,
+    sunWarm: 0.12,
+    warmColour: 0xffe2a8,
+    shrubs: { spacing: 3, gapFrom: 1.2, gapTo: 3.2, radiusMin: 0.75, radiusMax: 1.25, squash: 0.8, colors: [0x5b8448, 0x678f4d, 0x51773f] },
+  },
+  /**
+   * Clouds and the sun's disc (QualitySettings.clouds, row 21): `count` flat-bottomed cumulus clouds round the sky at
+   * `radius` metres, `widthMin`..`widthMax` wide, `elevationMin`..`elevationMax` radians above the horizon, each a few
+   * overlapping soft discs (vertex colours and alpha, `opacity` at the middle, `shade` underneath; no texture), and the
+   * sun as a soft disc `sunSize` radians across. One mesh: no fog (they are the sky), no depth writes, after the field.
+   */
+  clouds: {
+    count: 9,
+    radius: 180,
+    widthMin: 34,
+    widthMax: 62,
+    elevationMin: 0.09,
+    elevationMax: 0.3,
+    opacity: 0.92,
+    shade: 0xd8e2ee,
+    sunSize: 0.035,
+    sunColour: 0xfff6dc,
+    seed: 3301,
+  },
 } as const;
 /**
  * The Field of view setting on Settings, Graphics (M15b): horizontal degrees on a 16:9 screen, as
@@ -75,76 +112,279 @@ export const ATMOSPHERE = {
 export const FOV_SETTING = { min: 80, max: 120, step: 1 } as const;
 
 export type QualityPreset = 'low' | 'medium' | 'high';
+/** What the Quality picker and the settings store hold: a preset, or the player's own mix of the Custom rows. */
+export type QualityChoice = QualityPreset | 'custom';
+/** The presets, cheapest first. */
+export const QUALITY_PRESETS: readonly QualityPreset[] = ['low', 'medium', 'high'];
+
+/** Shadow map sizes (texels per side): each step is four times the depth fill and memory (4 / 16 / 64 MB). */
+export type ShadowMapSize = 1024 | 2048 | 4096;
+/** Surface texture sizes (pixels per side): eight textures with mipmaps are 2.8 / 11.2 / 44.7 MB. */
+export type TextureSize = 256 | 512 | 1024;
+/** Anisotropic filtering levels (1 = off); the browser clamps to what the graphics card offers. */
+export type Anisotropy = 1 | 2 | 4 | 8 | 16;
+/**
+ * How much modelled detail an asset group carries (FA8, final alpha audit section 5): `low` is the mesh as it was before
+ * the visual overhaul (Low's cost), `high` adds the overhaul's shapes, finishes and edge highlights.
+ */
+export type DetailLevel = 'low' | 'high';
+/** The detail levels, cheapest first. */
+export const DETAIL_LEVELS: readonly DetailLevel[] = ['low', 'high'];
 
 /**
- * What a quality preset sets (Settings → Graphics → Quality, M14). Everything applies at once except antialiasing,
- * which needs a new WebGL context: it follows the preset the game loaded with (the next load picks up a change).
+ * What a quality preset or the Custom rows set (Settings → Graphics; final alpha audit section 4). Every field applies
+ * at once, antialiasing too (a new WebGL context, Renderer.setQuality). Fields are added, never renamed: each new one
+ * gets a value on every preset, a Custom row (config/graphics.ts) and a `graphics.<field>` key in the settings store.
  */
 export interface QualitySettings {
+  /** Resolution as a share of the screen's (0.5..1): the browser scales the picture up. The first lever on an iGPU. */
+  renderScale: number;
   /** Caps devicePixelRatio; high-DPI laptops with iGPUs pay a lot for full resolution. */
   maxPixelRatio: number;
+  /** 4× multisampling on the screen's framebuffer. */
   antialias: boolean;
   shadows: boolean;
-  shadowMapSize: 1024 | 2048;
-  /** PCF filter radius in shadow-map texels: softer shadow edges cost more samples' worth of blur. */
+  shadowMapSize: ShadowMapSize;
+  /**
+   * Shadow softness in shadow-map texels. A look setting only: the filter takes the same five samples at any radius
+   * (Three.js r186 PCFShadowMap), so it costs nothing (audit REN-09).
+   */
   shadowRadius: number;
+  /**
+   * The sun's shadow map follows the view (REN-08): it covers a disc round the ground ahead of you
+   * (LIGHTING.shadowView), not the whole field, so each texel is about a third of the ground and shadows of rails, posts
+   * and limbs are sharp; past it nothing casts a shadow. Off, one map covers the whole field.
+   */
+  shadowFollowsView: boolean;
+  /** Figures, the flag's cloth and the range targets are shaded by walls and containers, not only cast shadows (REN-07). */
+  figureShadows: boolean;
   /**
    * Surface relief: the surface textures double as bump maps, so slab joints, mortar, planks and container ribs
    * catch the sun. Costs a few texture reads per pixel on every surface.
    */
   surfaceRelief: boolean;
+  /** The surface textures' size (REN-13): sharper close up, more memory. */
+  textureSize: TextureSize;
+  /** Anisotropic filtering on the surface textures: keeps the floor sharp at grazing angles (REN-13). */
+  anisotropy: Anisotropy;
   /** Dust motes drifting in the sunlight round you (render/dustMotes.ts); 0 draws none. */
   dustMotes: number;
   /** The held replica picks up soft reflections (an environment map), so its plastic has a moulded sheen. */
   replicaSheen: boolean;
+  /**
+   * Environment lighting (audit section 5, F1): the game's own sky, prefiltered once, lights and reflects in players,
+   * the flag, the range's targets and steel floors (scene.environment), and is the replica's sheen too (one map, 6.3 MB).
+   * The map's painted surfaces never take it (render/surfaceMaterials.ts withoutEnvironment): they are most of the screen.
+   */
+  environment: boolean;
+  /**
+   * How surface relief is drawn (F4): a normal map worked out from each texture (one read a pixel, sharper), or the
+   * texture itself as a bump map (three reads and derivatives: the look before the overhaul). Nothing while relief is off.
+   */
+  normalMaps: boolean;
+  /**
+   * Map detail (F3 and the map, flag and range asset groups): bevelled edges with a light edge, a soft baked occlusion
+   * in corners and under overhangs on a finer floor grid, painted signs and stencils, more prop detail, the flag's and
+   * the range targets' finer parts. Static geometry, built once (a change rebuilds the map); off is the look before.
+   */
+  mapDetail: boolean;
+  /** Trees round the field: 0 none, 1 the simple ring (the look before the overhaul), 2 layered crowns and a hedge. */
+  trees: TreeDetail;
+  /** Clouds and the sun's disc in the sky (row 21): one merged mesh of soft discs, no texture. */
+  clouds: boolean;
+  // FA8 (visual overhaul: figures, replicas, attachments, hands and effects; audit section 5 rows 17-20, 23).
+  /**
+   * Players' detail (row 17): `high` models the head, goggles, gloves, kit and clothing folds, with glossy goggles, helmet
+   * shells and replicas from a per-vertex finish on the figure's one material (no extra draw call; render/figureFinish.ts).
+   */
+  figureDetail: DetailLevel;
+  /**
+   * The held replica and its parts (FA8): `high` adds bevelled edges with a lighter edge highlight, real rail slots,
+   * ring sights, a moulded speckle finish (two 128² textures), glass lenses and an emissive laser lens.
+   */
+  replicaDetail: DetailLevel;
+  /** The first-person gloves and sleeves (row 18): `high` adds knuckle pads, wrist straps, joint seams and sleeve folds. */
+  handDetail: DetailLevel;
+  /** A soft warm glow round every BB in flight (row 19), so a BB at 25 m is a warm dot, not a grey pixel. */
+  bbGlow: boolean;
+  /** Impact grit (row 20): a BB hitting a surface throws a few chips of it and a faint ring of dust round the puff. */
+  impactGrit: boolean;
+  /** A faint beam from the laser module's lens (row 23): off on every preset (a toy cue; real ones are invisible by day). */
+  laserBeam: boolean;
 }
 
+/** Trees round the field (QualitySettings.trees). */
+export type TreeDetail = 0 | 1 | 2;
+
 /**
- * Render quality presets (M14: the Settings picker is back now the art pass gives it real work to scale). High is
- * the full look and the default (Low in a browser drawing in software, see startingQuality); Medium keeps shadows and relief at a lower cost; Low drops shadows, antialiasing,
- * relief, dust and the replica's sheen for integrated graphics. `?quality=low|medium|high` still overrides the saved
- * pick for one visit, to measure frame cost (Phase 3 audit C-04).
+ * Render quality presets (M14; the ladder reworked by the final alpha audit, section 4, REN-01/02/23). High is the full
+ * look for a discrete GPU; Medium is a true middle for integrated graphics (shadows, relief and smoothing, a smaller
+ * shadow map and textures, no sheen); Low drops everything that costs fill rate and renders at 80 % of the screen's
+ * resolution (REN-01). `?quality=low|medium|high|custom` overrides the saved pick for one visit, to measure frame cost
+ * (Phase 3 audit C-04).
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
-  low: { maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, surfaceRelief: false, dustMotes: 0, replicaSheen: false },
-  medium: { maxPixelRatio: 1, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, surfaceRelief: true, dustMotes: 90, replicaSheen: true },
-  high: { maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, surfaceRelief: true, dustMotes: 180, replicaSheen: true },
+  low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false,
+    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false },
+  medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true,
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false },
+  high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true,
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false },
 };
 
-export const DEFAULT_QUALITY: QualityPreset = 'high';
+/** The fields of a QualitySettings, in the order the Custom rows show them. */
+export const QUALITY_FIELDS = Object.keys(QUALITY.high) as readonly (keyof QualitySettings)[];
 
 /**
- * The preset a browser drawing in software starts on when nothing is saved (audit M-02): High there runs at about two
- * frames a second and the simulation in slow motion; Low at four times that.
+ * The settings in force for a choice: a preset's row, or (Custom) High's row overlaid with the saved custom fields.
+ * The custom fields are trusted: the store's loader (ui/menus/savedChoices.ts loadCustomQuality) has checked them.
  */
-export const SOFTWARE_RENDERING_QUALITY: QualityPreset = 'low';
+export function resolveQuality(choice: QualityChoice, custom: Partial<QualitySettings>): QualitySettings {
+  if (choice !== 'custom') return QUALITY[choice];
+  const q: QualitySettings = { ...QUALITY.high };
+  for (const field of QUALITY_FIELDS) {
+    const v = custom[field];
+    if (v !== undefined) (q as unknown as Record<string, unknown>)[field] = v;
+  }
+  return q;
+}
+
+/** Which preset a settings object equals in every field, or 'custom'. */
+export function qualityChoiceOf(q: QualitySettings): QualityChoice {
+  return QUALITY_PRESETS.find((p) => QUALITY_FIELDS.every((f) => QUALITY[p][f] === q[f])) ?? 'custom';
+}
 
 /**
- * The preset a visit starts with: `?quality=` if given, else the saved pick, else SOFTWARE_RENDERING_QUALITY when the
- * browser draws in software and DEFAULT_QUALITY otherwise. `automatic` marks the software fallback: it is not saved, so
- * the same browser with its graphics acceleration back on starts on the default again.
+ * The renderer's pixel ratio for a screen's devicePixelRatio: the DPI cap, then the render scale (REN-01). Below 1 the
+ * game renders fewer pixels than the screen has and the browser scales the picture up (the HUD is HTML, so stays crisp).
+ */
+export function effectivePixelRatio(devicePixelRatio: number, q: QualitySettings): number {
+  return Math.min(devicePixelRatio, q.maxPixelRatio) * q.renderScale;
+}
+
+/** What the graphics card is, by the renderer name the browser reports (render/gpuCheck.ts gpuTier). */
+export type GpuTier = 'software' | 'integrated' | 'discrete' | 'unknown';
+
+/**
+ * The preset a first visit starts on by GPU (REN-03): Low when the browser draws in software (audit M-02: High there
+ * runs at about two frames a second), Medium on integrated graphics and when the name is hidden (Firefox's
+ * fingerprinting protection), High on a discrete card.
+ */
+export const TIER_QUALITY: Readonly<Record<GpuTier, QualityPreset>> = { software: 'low', integrated: 'medium', unknown: 'medium', discrete: 'high' };
+
+/**
+ * The quality a visit starts with: `?quality=` if given, else the saved pick, else the GPU tier's preset. `automatic`
+ * marks the game's own pick: it is never saved (the same browser on a better GPU, or with its acceleration back on,
+ * starts on that GPU's preset), and only an automatic pick steps down by itself when frames run slow (QUALITY_STEP_DOWN).
  */
 export function startingQuality(
-  fromUrl: QualityPreset | null,
-  saved: QualityPreset | null,
-  softwareRendering: boolean,
-): { preset: QualityPreset; automatic: boolean } {
+  fromUrl: QualityChoice | null,
+  saved: QualityChoice | null,
+  custom: Partial<QualitySettings>,
+  tier: GpuTier,
+): { choice: QualityChoice; settings: QualitySettings; automatic: boolean } {
   const picked = fromUrl ?? saved;
-  if (picked !== null) return { preset: picked, automatic: false };
-  return softwareRendering ? { preset: SOFTWARE_RENDERING_QUALITY, automatic: true } : { preset: DEFAULT_QUALITY, automatic: false };
+  if (picked !== null) return { choice: picked, settings: resolveQuality(picked, custom), automatic: false };
+  const choice = TIER_QUALITY[tier];
+  return { choice, settings: QUALITY[choice], automatic: true };
 }
 
-/** The Quality picker's options (Settings → Graphics), cheapest first. */
-export const QUALITY_CHOICES: readonly { id: QualityPreset; label: string; blurb: string }[] = [
-  { id: 'low', label: 'Low', blurb: 'For integrated graphics: no shadows, relief or dust, and no edge smoothing from the next time the game loads.' },
-  { id: 'medium', label: 'Medium', blurb: 'Shadows and surface relief at a lower cost: a good middle for most laptops.' },
-  { id: 'high', label: 'High', blurb: 'The full look: sharper on high-DPI screens, softer shadows, dust in the sunlight.' },
+/** The Quality picker's options (Settings → Graphics), cheapest first, then Custom. */
+export const QUALITY_CHOICES: readonly { id: QualityChoice; label: string; blurb: string }[] = [
+  { id: 'low', label: 'Low', blurb: 'For integrated graphics: no shadows, relief, edge smoothing or dust, the plain map and sky, and 80 % resolution, scaled up.' },
+  { id: 'medium', label: 'Medium', blurb: 'Shadows, players in shade, surface relief, sky reflections, the detailed map, trees and clouds, at a lower cost: a good middle for most laptops.' },
+  { id: 'high', label: 'High', blurb: 'The full look: sharp textures, a finer shadow map that follows your view and dust in the sunlight.' },
+  { id: 'custom', label: 'Custom', blurb: 'Your own mix of the rows below.' },
 ];
 
-/** The preset a `?quality=` value names, or null for a missing or unknown value. */
-export function parseQuality(value: string | null): QualityPreset | null {
-  return value !== null && Object.hasOwn(QUALITY, value) ? (value as QualityPreset) : null;
+/** The choice a `?quality=` value names, or null for a missing or unknown value. */
+export function parseQuality(value: string | null): QualityChoice | null {
+  return QUALITY_CHOICES.find((c) => c.id === value)?.id ?? null;
 }
+
+/**
+ * The automatic step-down (REN-03): while the game's own pick is in force (nothing saved, no `?quality=`), frame times
+ * are watched in windows of `windowSeconds` of play; when `windows` windows in a row have a 95th percentile over
+ * `p95Ms` (or over `capSlack` frames of a frame-rate cap, whichever is longer), the next preset down applies, once per
+ * match, between rounds, and the HUD says so for `noticeSeconds`. It is never saved. A window is slow when more than
+ * `slowShare` of its frames are over the threshold (that is what a 95th percentile over it means).
+ */
+export const QUALITY_STEP_DOWN = { windowSeconds: 2, p95Ms: 20, slowShare: 0.05, windows: 2, capSlack: 1.25, noticeSeconds: 5 } as const;
+
+/**
+ * Frame-rate cap (Settings → Graphics; REN-16, CORE-25): frames a second the game draws at most (0 = as many as the
+ * screen shows). Not part of a preset. The simulation keeps its 60 ticks a second whatever the cap.
+ */
+export const FRAME_RATE_CAPS = [0, 30, 60, 120, 144] as const;
+export type FrameRateCap = (typeof FRAME_RATE_CAPS)[number];
+/**
+ * A frame is drawn up to `slackMs` early, so a cap equal to the screen's rate never drops to every other frame on a
+ * slightly early vsync; more than `resetFrames` frame periods behind, the schedule restarts from now (no burst to catch up).
+ */
+export const FRAME_PACING = { slackMs: 1, resetFrames: 2 } as const;
+
+/**
+ * The debug overlay's frame breakdown (REN-17): simulation, draw and GPU milliseconds a frame, each a running average
+ * where every new frame weighs `smoothing`.
+ */
+export const FRAME_TIMING = { smoothing: 0.1 } as const;
+
+/**
+ * The held replica's sheen and the environment lighting (render/replicaSheen.ts, QualitySettings.replicaSheen and
+ * .environment): the game's own sky prefiltered once into a half-float target (768 × 1024, about 6.3 MB), blurred by
+ * `blur` (PMREM sigma, radians) so plastic reads moulded, not mirrored.
+ */
+export const REPLICA_SHEEN = { blur: 0.04 } as const;
+
+/**
+ * The environment map is the game's own sky (audit section 5, F1): the dome's colours (render/atmosphere.ts skyColour)
+ * over a disc of sunlit concrete, so players, replicas, the flag and steel pick up a blue sky from above and a warm
+ * ground from below, at every quality level the same. `intensity` is scene.environmentIntensity: a share of the sky's
+ * light on top of the hemisphere fill, not instead of it. The scene is drawn once into the PMREM and freed.
+ */
+export const ENVIRONMENT = {
+  intensity: 0.35,
+  /** The ground under the sky: sunlit concrete (sRGB), as a disc `groundRadius` wide `groundDrop` below the eye. */
+  ground: 0xa7a194,
+  groundRadius: 40,
+  groundDrop: 1,
+  /** The sky sphere's size and segments (inside the PMREM camera's far plane, 100). */
+  skyRadius: 20,
+  skyWidthSegments: 32,
+  skyHeightSegments: 16,
+} as const;
+
+/** Tone mapping (Settings → Graphics; not part of a preset, audit section 5 F2): how bright colours are rolled off. */
+export type ToneMappingId = 'aces' | 'agx' | 'neutral';
+
+/**
+ * The tone mapping row (F2, owner decision: Neutral). ACES (the look until the overhaul) desaturates the team blue and
+ * orange and greys the sky; Khronos PBR Neutral keeps saturated mid-tones (the clean, stylised look) and AgX sits
+ * between. Each has its own exposure so sunny concrete reads about as bright under all three.
+ */
+export const TONE_MAPPING = {
+  default: 'neutral' as ToneMappingId,
+  /** ACES at 1.08 is M14's: a touch over 1, so sunny concrete reads bright and friendly rather than grey. */
+  exposure: { aces: 1.08, agx: 1.15, neutral: 1 } satisfies Record<ToneMappingId, number>,
+} as const;
+
+/**
+ * Contact shadows (F5, render/contactShadows.ts): a soft dark disc on the floor under every player, one draw call for
+ * all of them, on every preset (free: a few dozen triangles). It grounds a figure on Low, where there are no shadow
+ * maps, and under a wall's shade on every preset. Radius (m) standing and fully crouched (a crouch hugs the floor),
+ * darkness at the centre, rings and sides of the disc, and its lift off the floor (m).
+ */
+export const CONTACT_SHADOWS = {
+  radius: 0.42,
+  crouchedRadius: 0.36,
+  darkness: 0.42,
+  /** The disc's darkness at its middle ring (a share of `darkness`), at `middle` of the radius out. */
+  middleShade: 0.55,
+  middle: 0.5,
+  segments: 12,
+  lift: 0.015,
+  maxFigures: 16,
+} as const;
 
 /**
  * Bright, friendly daylight: a warm late-morning sun and a cool sky fill (M14). The hemisphere's ground colour is the
@@ -161,7 +401,17 @@ export const LIGHTING = {
   /** Extra margin around the level box for the shadow camera (metres). */
   shadowMargin: 2,
   shadowBias: -0.0004,
-  shadowNormalBias: 0.03,
+  /**
+   * Normal bias in shadow-map texels (REN-08): acne hides behind about half a texel whatever the texel's size, so the
+   * bias follows it (0.03 m at Medium's 5.9 cm texels on Depot; a third of that on High's view-fitted map).
+   */
+  shadowNormalBiasTexels: 0.5,
+  /**
+   * The view-fitted shadow map (QualitySettings.shadowFollowsView, High): a disc of `radius` metres centred `ahead`
+   * metres in front of the camera along the ground (so 26 m ahead and 10 m behind are shadowed). At 2048² the
+   * texels are 1.9 cm, against 2.9 cm for the whole of Depot. The disc moves in whole texels, so edges don't crawl.
+   */
+  shadowView: { radius: 18, ahead: 8 },
 } as const;
 
 /**
@@ -194,8 +444,6 @@ export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated'
  * here is drawing only: blocks collide, cover and steer bots exactly as their data says.
  */
 export const SURFACES = {
-  /** Texture size in pixels (square, a power of two): eight of these are about 11 MB of GPU memory with mipmaps. */
-  textureSize: 512,
   /** Metres one texture repeat covers, for the textures mapped in world space (crates are mapped once per face). */
   worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2 } satisfies Record<SurfaceTextureId, number>,
   /** How strongly each texture's light and dark read as relief when surface relief is on (bump scale). */
@@ -208,6 +456,11 @@ export const SURFACES = {
   grimeShade: 0.72,
   /** Each block's brightness varies by up to this share (by its position), so neighbouring props don't look cloned. */
   shadeJitter: 0.07,
+  /**
+   * A floor or ramp whose top is this far above the ground (metres) casts a shadow (a dock, its ramps, a walkway);
+   * the ground's own slab doesn't (KNOWN_ISSUES: a platform's height read only from its lit sides).
+   */
+  raisedFrom: 0.01,
   /**
    * Purely visual detail drawn inside each block's own bounds (metres). Containers: the corrugated box sits `inset` in
    * from a steel frame of corner posts and top and bottom rails, darker than the walls, with locking bars on one end;
@@ -246,12 +499,86 @@ export const SURFACES = {
     cageSteel: 0x9aa0a6,
     rubble: 0x8a8174,
   },
+  /**
+   * Normal maps (QualitySettings.normalMaps, audit section 5 F4): each texture's brightness read as height and turned
+   * into a normal map (render/surfaceNormals.ts heightToNormal). The slope scale per surface, for the original
+   * 256-pixel drawing (the maps at other sizes are scaled to match, so relief reads the same at any texture size).
+   */
+  normalStrength: { concrete: 1.4, blockWall: 2.2, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2 } satisfies Record<SurfaceTextureId, number>,
+  /** The largest normal map (pixels a side): High's 1024² pictures are scaled down to it first (render/surfaceNormals.ts). */
+  normalMapMaxSize: 512,
+  /**
+   * At `fromSize` pixels and up (High's 1024), each texture gets a pixel-fine grain (brightness ± `amount` of 255) and
+   * the container ribs a row of `ribChips` paint chips each, so the larger drawing has detail at its own scale.
+   */
+  fineGrain: { fromSize: 1024, amount: 7, ribChips: 40 },
+  /** Steel tread plate under environment lighting (row 16): painted steel that picks up the sky (art bible). */
+  steelSheen: { metalness: 0.6, roughness: 0.45 },
+  /**
+   * Baked vertex occlusion (F3, render/vertexOcclusion.ts; with map detail): each vertex casts a fixed fan of rays
+   * `reach` metres out and darkens by up to `strength` by how much is blocked (nearer blocks count more), so corners,
+   * the floor along a wall's foot and under the dock's lip sit in a soft shade. Faces are cut into `cell`-metre tiles so
+   * the shade has vertices to land on; rays start `lift` metres off the surface.
+   */
+  occlusion: { reach: 2, strength: 0.55, cell: 1.25, lift: 0.01 },
+  /**
+   * Edge bevels (the art bible's "CS edge highlight"; with map detail): vertical and top edges of walls, crates,
+   * containers, barriers and site props are cut at 45° `size` metres in, the cut a share `highlight` brighter. Pieces
+   * thinner than `minPiece` (rails, bars, straps) and floors keep sharp edges; a bevel is never more than `maxShare`
+   * of a piece's thinnest side.
+   */
+  bevel: { size: 0.025, minPiece: 0.1, maxShare: 0.2, highlight: 1.1 },
+  /** Ground variation (with map detail): the floor grid's brightness drifts by up to `amount` over about `period` m. */
+  groundNoise: { amount: 0.05, period: 2.2, seed: 9157 },
+  /**
+   * Finer prop detail (with map detail), in metres. Containers: a cast corner block at each corner of each container
+   * (`casting` a side, `castingShade` of the frame's colour), a lock box on the door bars. Barriers: a recessed top
+   * (`recess` deep, a `rim` wide). Pallets: the top deck as `boards` boards with gaps. The generator: a fuel cap.
+   * The skip: a heap of rubble `heap` higher with blocks in it.
+   */
+  propDetail: {
+    casting: 0.18,
+    castingShade: 0.8,
+    lockBox: { width: 0.12, height: 0.18, depth: 0.03 },
+    barrier: { recess: 0.04, rim: 0.05, shade: 0.8 },
+    pallet: { boards: 5, gap: 0.035 },
+    fuelCap: { size: 0.1, height: 0.04 },
+    skipHeap: { heap: 0.12, blocks: 3, size: 0.3 },
+  },
+  /**
+   * Painted signs and stencils (with map detail, render/mapDecals.ts): one texture of `atlasSize` pixels holding every
+   * sign, drawn on quads `offset` metres off the face they're painted on. Container bay numbers on the long sides of
+   * each container (`stencilHeight` tall at `stencilY` up), a roundel and a "SAFE ZONE" board on the field's long
+   * perimeter walls, hazard chevrons on barriers' long faces.
+   */
+  decals: {
+    atlasSize: 1024,
+    offset: 0.006,
+    stencilHeight: 0.42,
+    stencilY: 1.3,
+    roundelSize: 1.5,
+    roundelY: 1.45,
+    boardWidth: 1.6,
+    boardY: 1.4,
+    chevronHeight: 0.22,
+    chevronY: 0.55,
+    minWall: 6,
+    stencil: '#f2efe6',
+    paint: '#f2efe6',
+    ink: '#2a2d30',
+    hazard: '#e8c547',
+  },
 } as const;
 
 /** BB and impact visuals. BBs are drawn bigger than 6 mm so they read at speed. */
 export const BB_VISUALS = {
   radius: 0.018,
   color: 0xfffbe8,
+  /**
+   * The ball is two-toned (FA8): lit cream (`color`) on top, this warm grey underneath, blended over the sphere's
+   * middle, so a BB reads as a ball in the sun rather than a flat disc. Free: a colour per vertex.
+   */
+  shadeColor: 0xc8bba0,
   /**
    * A BB is never drawn smaller than this on screen: its radius grows with distance so it stays a
    * visible dot at 10-30 m (radians of view; 0.003 ≈ 5 px wide at 1080p).
@@ -263,14 +590,20 @@ export const BB_VISUALS = {
   trailOpacity: 0.75,
   /**
    * Glowing BBs (M33b, the Loadout's Glowing BBs row): glow-in-the-dark green, drawn a little larger and with a longer
-   * streak so a shot can be followed all the way, at night above all. Presentation only: they fly like any BB.
+   * streak so a shot can be followed all the way, at night above all. Presentation only: they fly like any BB. A
+   * Loadout choice, so drawn on every graphics preset (it costs nothing: a colour); `glow` below is FA8's halo.
    */
-  glow: {
+  glowInDark: {
     color: 0x9dff7a,
     trailColor: 0x5cff4a,
     minAngularRadius: 0.0045,
     trailSeconds: 0.05,
   },
+  /**
+   * The streak's width as an angle (radians of view; 0.0018 ≈ 1.8 px at 1080p, 2.3 px at 1440p): a camera-facing ribbon
+   * (audit REN-19), the same on screen at any pixel ratio, where a WebGL line is one device pixel (fainter on high-DPI).
+   */
+  trailAngularWidth: 0.0018,
   /**
    * Your own BBs are drawn leaving the replica's muzzle and blend onto their true (eye-line) path over
    * this many seconds (~10 m), so you can see them fly instead of edge-on along your line of sight.
@@ -280,6 +613,11 @@ export const BB_VISUALS = {
   convergeBeforeImpact: 0.7,
   /** Point-blank shots still blend over at least this long (s) instead of snapping. */
   minConvergeTime: 0.01,
+  /**
+   * The glow round each BB (QualitySettings.bbGlow, FA8): a soft warm dot `scale` times the ball's size, added (not
+   * blended) at `opacity`, so a BB at 25 m is a warm dot and not a grey pixel. One more instanced draw while BBs fly.
+   */
+  glow: { scale: 2.6, opacity: 0.35, color: 0xffe2a8 },
   /** Debug BB-path overlay: how many recent paths, and points per path. */
   debugPaths: 48,
   debugPathPoints: 150,
@@ -334,19 +672,56 @@ export const IMPACT_DUST: Readonly<Record<ImpactMaterial, { tint: number; scale:
 };
 
 /**
+ * Impact grit (QualitySettings.impactGrit, FA8): with each impact puff, a fainter, wider ring of dust (IMPACT_RINGS) and
+ * `perImpact` chips of the surface (in its dust tint) thrown out at `speed` m/s, falling under `gravity` and gone after
+ * `lifetime` s. Each chip is a small square `size` metres across (never under `minAngularSize` radians on screen),
+ * spinning. Dust and splinters, never sparks. A pool of `max` chips (the oldest reused), one draw call.
+ */
+export const IMPACT_GRIT = {
+  max: 256,
+  perImpact: [4, 6] as const,
+  speed: [2, 4] as const,
+  gravity: 9.8,
+  lifetime: 0.35,
+  size: [0.006, 0.012] as const,
+  minAngularSize: 0.0016,
+  /** Thrown out towards the side the BB came from (its shooter's): this much of the direction, the rest random and up. */
+  toward: 0.6,
+  up: 0.5,
+  spin: 18,
+  /** Chips are a touch darker than the dust's tint, so they read against the puff. */
+  shade: 0.75,
+  seed: 4413,
+} as const;
+
+/** The faint ring of dust round an impact puff with impact grit on (FA8): wider, fainter and slower than the puff. */
+export const IMPACT_RINGS: PuffConfig = {
+  ...IMPACT_PUFFS,
+  max: 32,
+  lifetime: 0.5,
+  growTime: 0.12,
+  startScale: 0.4,
+  radius: IMPACT_PUFFS.radius * 1.8,
+  minAngularRadius: IMPACT_PUFFS.minAngularRadius * 1.8,
+  opacity: 0.25,
+  drift: 0.08,
+};
+
+/**
  * A gas replica's breath (M14): each shot of a gas pistol puffs a little propellant from the muzzle, pushed forward
  * (`muzzleSpeed`, m/s), and a smaller one out of the ejection port to the right as the slide cycles. No flash, no
  * casings: a toy's puff of gas.
  */
 export const GAS_PUFFS: PuffConfig & { muzzleSpeed: number; portScale: number; portSpeed: number; portBack: number } = {
   max: 16,
-  lifetime: 0.5,
+  lifetime: 0.35,
   growTime: 0.07,
   startScale: 0,
   radius: 0.045,
   /** Small even far away: a hint, not a marker (0.004 ≈ 6 px wide at 1080p). */
   minAngularRadius: 0.004,
-  color: 0xf2f6fa,
+  // A cool, short breath (FA8): gas, not smoke.
+  color: 0xe8f0ff,
   opacity: 0.45,
   drift: 0.12,
   muzzleSpeed: 1.6,
@@ -358,10 +733,11 @@ export const GAS_PUFFS: PuffConfig & { muzzleSpeed: number; portScale: number; p
 
 /**
  * Dust motes drifting in the sunlight round you (M14, render/dustMotes.ts): how many is the quality preset's
- * (QualitySettings.dustMotes); they fill a cube `box` metres across centred on the camera, wrapping round it as you move.
- * Reduced motion turns them off.
+ * (QualitySettings.dustMotes, at most `max`: the Custom row's top); they fill a cube `box` metres across centred on the
+ * camera, wrapping round it as you move. Reduced motion turns them off.
  */
 export const DUST_MOTES = {
+  max: 300,
   box: 14,
   /** World size of a mote (metres): a few pixels a couple of metres off, a speck further away. */
   size: 0.045,
@@ -546,8 +922,10 @@ export const FLAG_VISUALS = {
   poleHeight: 3.4,
   poleRadius: 0.035,
   poleColor: 0xe9e6dd,
+  /** The pole's paint as before the overhaul; with Environment lighting, brushed aluminium that picks up the sky (`poleLit`). */
   poleRoughness: 0.5,
   poleMetalness: 0.3,
+  poleLit: { roughness: 0.35, metalness: 0.7 },
   poleSegments: 10,
   baseRadius: 0.28,
   /** The base tapers to this radius at the top (metres). */
@@ -576,6 +954,26 @@ export const FLAG_VISUALS = {
   ringSegments: 48,
   /** Height of the ring above the floor (metres): just enough not to flicker against it. */
   ringLift: 0.01,
+  /** Drawn after the floor with a depth offset, so it never flickers against it at a distance. */
+  ringRenderOrder: 1,
+  /**
+   * Detail with QualitySettings.mapDetail (audit section 5, "Flagpole and cloth"): a ball finial, a rope down the pole
+   * to a cleat, a finer cloth (`clothDetailSegments` along and down) painted with the site's flag (`design`: a BB
+   * roundel between two stripes, white so the team colour tints it) with a darker hem (`hemShade`, `hem` of the cloth's
+   * size), and a ripple damped near the pole (`ripplePower` 1 is the plain cloth's straight growth).
+   */
+  detail: {
+    finialRadius: 0.055,
+    ropeRadius: 0.006,
+    ropeOffset: 0.05,
+    cleat: { width: 0.02, height: 0.12, depth: 0.03, at: 1.1 },
+    ropeColor: 0xd9d2c0,
+    clothDetailSegments: [16, 10] as const,
+    ripplePower: 1.6,
+    hemShade: 0.82,
+    hem: 0.08,
+    design: { width: 256, height: 168, stripe: '#d6d6d6', roundel: '#ffffff', ring: '#cfcfcf', bb: '#3a3d40' },
+  },
   /** Screen marker over the pole: anchor height (metres), and kept this far in from the screen edge (px). */
   markerHeight: 3.7,
   markerEdge: 36,

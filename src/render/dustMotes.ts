@@ -46,6 +46,8 @@ export class DustMotes {
   private readonly sprite: THREE.CanvasTexture;
   private count = 0;
   private time = 0;
+  /** The shader's cap on a mote's size in device pixels: DUST_MOTES.maxPixels at the drawing buffer's pixel ratio. */
+  private readonly maxSize: { value: number } = { value: DUST_MOTES.maxPixels };
   /** How far the air has carried the motes so far (m, per axis, kept within the box). */
   private readonly drift = { x: 0, y: 0, z: 0 };
   private motionOn = true;
@@ -76,11 +78,12 @@ export class DustMotes {
       sizeAttenuation: true,
       vertexColors: true,
     });
-    // Cap the point size: even a faded mote never covers more than a few pixels.
+    // Cap the point size: even a faded mote never covers more than a few pixels (at any pixel ratio: setPixelRatio).
     material.onBeforeCompile = (shader) => {
-      shader.vertexShader = shader.vertexShader.replace(
+      shader.uniforms.moteMaxSize = this.maxSize;
+      shader.vertexShader = `uniform float moteMaxSize;\n${shader.vertexShader}`.replace(
         '#include <logdepthbuf_vertex>',
-        `gl_PointSize = min(gl_PointSize, ${D.maxPixels.toFixed(1)});\n#include <logdepthbuf_vertex>`,
+        'gl_PointSize = min(gl_PointSize, moteMaxSize);\n#include <logdepthbuf_vertex>',
       );
     };
     this.object = new THREE.Points(geo, material);
@@ -94,6 +97,19 @@ export class DustMotes {
     this.count = Math.max(0, Math.min(this.max, Math.floor(count)));
     this.object.geometry.setDrawRange(0, this.count);
     this.object.visible = this.count > 0 && this.motionOn;
+  }
+
+  /**
+   * The drawing buffer's pixel ratio (KNOWN_ISSUES: near motes looked smaller on high-DPI screens): a mote's world size
+   * is drawn in device pixels, so the cap is scaled with it and a mote looks the same size at any pixel ratio.
+   */
+  setPixelRatio(pixelRatio: number): void {
+    this.maxSize.value = DUST_MOTES.maxPixels * pixelRatio;
+  }
+
+  /** The cap in force, in device pixels. */
+  get maxPointSize(): number {
+    return this.maxSize.value;
   }
 
   /** Reduced motion on (false) or off (true): drifting specks are movement on screen, so they go. */

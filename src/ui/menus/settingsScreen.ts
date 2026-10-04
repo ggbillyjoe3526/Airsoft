@@ -1,6 +1,6 @@
 import { devIntro } from '../../config/dev';
 import { DEV_TOGGLE_LABEL, SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/menus';
-import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset } from '../../config/render';
+import { FOV_SETTING, type QualityChoice, type QualitySettings } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
 import { DEV_ENABLED_FIELD } from '../../settings/dev';
 import { saveSetting } from '../../settings/storage';
@@ -10,9 +10,9 @@ import { type ControlsSettingsOptions, controlsSettings } from '../controlsSetti
 import { type CrosshairSettingsOptions, crosshairSettings } from '../crosshairSettings';
 import { type DevSettingsOptions, devSettings } from '../devSettings';
 import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscreen';
+import { GraphicsSettings, type GraphicsSettingsOptions } from '../graphicsSettings';
 import { type HudSettingsOptions, hudSettings } from '../hudSettings';
 import { KeySettings } from '../keySettings';
-import { OptionPicker } from '../optionPicker';
 import { SaveSettings } from '../saveSettings';
 import type { SaveManager } from '../../save/saveManager';
 import { SETTINGS_TAB_ICONS } from './icons';
@@ -25,8 +25,8 @@ export interface SettingsOptions {
   controls: ControlsSettingsOptions;
   /** Field of view (horizontal degrees on a 16:9 screen), applied at once. */
   fov: { initial: number; onChange: (v: number) => void };
-  /** The render quality preset (M14): saved, and applied at once (antialiasing from the next load). */
-  quality: { initial: QualityPreset; onChange: (q: QualityPreset) => void };
+  /** The quality preset or Custom mix, the frame-rate cap and the FPS readout (ui/graphicsSettings.ts): saved, applied at once. */
+  graphics: GraphicsSettingsOptions;
   /** The volume sliders on the Audio tab (ui/audioSettings.ts). */
   audio: AudioSettingsOptions;
   /** The crosshair's look on the Crosshair tab (ui/crosshairSettings.ts). */
@@ -56,6 +56,8 @@ export class SettingsScreen {
   private origin: SettingsOrigin = 'setup';
   /** Stops the Fullscreen button following the page's fullscreen state. */
   private unwatchFullscreen: () => void = () => undefined;
+  /** The Graphics tab's quality rows (made with the tab). */
+  private graphics: GraphicsSettings | null = null;
 
   constructor(opts: SettingsOptions) {
     const page = menuPage('menu-settings', 'Settings');
@@ -115,6 +117,11 @@ export class SettingsScreen {
 
   get openedFrom(): SettingsOrigin {
     return this.origin;
+  }
+
+  /** Shows a quality choice and its settings on the Graphics tab without saving them (the game's own step-down). */
+  showQuality(choice: QualityChoice, settings: QualitySettings): void {
+    this.graphics?.show(choice, settings);
   }
 
   /** Stops waiting for a key press when the screen closes. */
@@ -199,18 +206,16 @@ export class SettingsScreen {
       mouse.innerHTML = '<kbd>Wheel</kbd> switch replica (a direction bound above does that instead) · <kbd>Esc</kbd> pause and resume · <kbd>`</kbd> / <kbd>F3</kbd> debug info';
       panel.append(this.keySettings.root, mouse);
     } else if (id === 'graphics') {
+      this.graphics = new GraphicsSettings(opts.graphics);
       panel.append(
         menuRow(
           'Field of view',
           'How wide you see, across a 16:9 screen. Aiming through an optic zooms in from it.',
           rangeControl('Field of view', FOV_SETTING, opts.fov.initial, (v) => `${Math.round(v)}°`, 'fov', opts.fov.onChange),
         ),
-        menuRow(
-          'Quality',
-          'Shadows, sharpness, surface relief and dust in the sunlight. Lower it if the game stutters.',
-          new OptionPicker('Quality', QUALITY_CHOICES, opts.quality.initial, 'quality', opts.quality.onChange).root,
+        ...this.graphics.rows(
+          menuRow('Fullscreen', 'The whole screen for the game. Esc leaves it; in a match the Fullscreen key (Key Bindings) turns it on and off.', this.fullscreenButton()),
         ),
-        menuRow('Fullscreen', 'The whole screen for the game. Esc leaves it; in a match the Fullscreen key (Key Bindings) turns it on and off.', this.fullscreenButton()),
       );
     } else if (id === 'crosshair') {
       panel.append(...crosshairSettings(opts.crosshair));

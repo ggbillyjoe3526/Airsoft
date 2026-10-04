@@ -1,4 +1,3 @@
-import type * as THREE from 'three';
 import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
@@ -22,6 +21,7 @@ import { bbGlowFor, type PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
+import { BuildTiming } from './core/buildTiming';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MapData } from './map/mapTypes';
@@ -29,8 +29,9 @@ import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
+import { ContactShadows } from './render/contactShadows';
 import { addLighting, type Daylight } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
+import { mapLookOf } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -44,9 +45,11 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
+import { MatchTakes } from './stats/settleMatch';
 import type { MatchResult } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import { type NotCounted, notCountedFor } from './ui/recordsView';
+import { pauseText, resultText, type ResultText } from './ui/matchStopText';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
@@ -89,8 +92,9 @@ export class MatchSession {
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
-  private readonly mapGroup: THREE.Group;
   private readonly daylight: Daylight;
+  /** A soft dark disc on the floor under every player (audit section 5, F5), on every preset. */
+  private readonly contact: ContactShadows;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
@@ -104,10 +108,8 @@ export class MatchSession {
   private readonly hits: HitConfig;
   /** Simulation time the match was decided (NaN while it's on, and once the result screen is due). */
   private matchOverAt = Number.NaN;
-  /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
-  private resultTaken = false;
-  /** The decided match has been paid its Field Credits (takeOutcome, M26c), so it is paid once. */
-  private outcomeTaken = false;
+  /** The decided match goes to the records (takeMatchResult) and is paid (takeOutcome, M26c) once each. */
+  private readonly takes = new MatchTakes();
   /** The standard match, so its result could go into the records (custom rules don't, M20). */
   private readonly standardRules: boolean;
   /** Played on a map still being built (M33): never in the records. */
@@ -116,6 +118,11 @@ export class MatchSession {
   private devAssisted = false;
   /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
   private played = false;
+  /**
+   * How long each part of building this match took (audit CORE-33): `performance.measure` entries, and one line Game logs
+   * with `?perf`. Started as the session is made, so it counts everything the constructor does.
+   */
+  readonly build = new BuildTiming('match build');
 
   constructor(
     private readonly renderer: Renderer,
@@ -129,13 +136,18 @@ export class MatchSession {
   ) {
     const map = setup.map;
     this.loadout = setup.kit.slots.map((s) => s.replica);
-    // The surface textures are the renderer's, shared by every session (audit L-04).
-    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
-    renderer.scene.add(this.mapGroup);
+    // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
+    // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
+    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTextures, mapLookOf(quality)));
+    this.build.phase('map meshes');
+    if (renderer.mapMeshes.reused) this.build.notes.push('map meshes reused');
     this.daylight = addLighting(renderer.scene, map, quality);
+    this.build.phase('lighting');
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
+    this.build.phase('physics');
     this.nav = buildNavGrid(map, NAV);
+    this.build.phase('navigation');
     // Maps without a flagpole can only be played in elimination.
     this.mode = map.flag ? setup.mode : 'elimination';
     this.rounds = roundRulesFor(setup.rules);
@@ -170,13 +182,20 @@ export class MatchSession {
       this.commands,
       { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), foliage: map.foliage ?? [], body: BODY, hits: this.hits, loadout: LOADOUT, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
     );
+    this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
     input.restartScript();
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(setup.kit, map.night ?? false));
+    this.build.phase('replica, effects and sound');
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail);
+    this.match.setFigureShadows(quality.figureShadows);
+    this.match.setFlagQuality(quality);
+    this.contact = new ContactShadows(this.state.characters, this.hits.vanishTime);
+    renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
+    this.build.phase('figures, flag and HUD');
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -218,11 +237,10 @@ export class MatchSession {
    */
   takeMatchResult(): MatchResult | null {
     const r = this.state.round;
-    if (r.phase !== 'matchOver' || this.resultTaken) return null;
-    this.resultTaken = true;
-    if (!this.countsForRecords) return null;
-    const mine = this.stats.matchOf(this.player.id);
-    return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+    return this.takes.result(r.phase === 'matchOver', this.countsForRecords, () => {
+      const mine = this.stats.matchOf(this.player.id);
+      return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+    });
   }
 
   /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24). */
@@ -236,22 +254,31 @@ export class MatchSession {
    */
   takeOutcome(): MatchOutcome | null {
     const r = this.state.round;
-    if (r.phase !== 'matchOver' || this.outcomeTaken) return null;
-    this.outcomeTaken = true;
-    if (!this.paysFieldCredits) return null;
-    return {
+    return this.takes.outcome(r.phase === 'matchOver', this.paysFieldCredits, () => ({
       won: r.matchWinner === this.player.team,
-      roundsWon: r.score[this.player.team] ?? 0,
+      // Rounds won with you in them (audit POOL-08), and the teammates' difficulty when you have any.
+      roundsWon: this.stats.roundsContributed(this.player.id),
       hits: this.stats.matchOf(this.player.id).hits,
       winsNeeded: this.rounds.winsNeeded,
       difficulty: this.setup.difficulty,
-    };
+      ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
+    }));
   }
 
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
   summaryBlocks(): TeamBlock[] {
     const names = rosterNames(this.state.characters, this.player.id);
     return statsBlocks(this.state.characters, names, (id) => this.stats.matchOf(id), this.state.round.score, this.player, false);
+  }
+
+  /** The result screen for the decided match (audit CORE-05): its lines and every player's numbers, for Game to show. */
+  resultView(): ResultText & { summaryBlocks: TeamBlock[] } {
+    return { ...resultText(this.state.round, this.player.team), summaryBlocks: this.summaryBlocks() };
+  }
+
+  /** The pause screen's line about the match (the round, your role, the score; ui/matchStopText.ts). */
+  pauseLine(): string {
+    return pauseText(this.state.round, this.player.team, this.rounds);
   }
 
   /**
@@ -264,12 +291,15 @@ export class MatchSession {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
+    this.contact.update(alpha, spectating ? -1 : PLAYER_ID);
     const holding = this.bots.holdSpot(this.player, this.holdSpot);
     const order = this.bots.orderOf(this.player);
     this.match.showSquadOrder(order, holding ? this.holdSpot : null, this.renderer.camera, dt);
     this.match.showOrderWheel(this.input.wheelOpen, this.input.wheelPointer, order, this.input.wheelSelect);
     this.match.showMinimap(holding ? this.holdSpot : null);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    // High's shadow map follows the view (REN-08), the spectator's too.
+    this.daylight.follow(this.renderer.camera);
     this.combat.render(!spectating);
   }
 
@@ -280,12 +310,16 @@ export class MatchSession {
   }
 
   /**
-   * A new quality preset (Settings → Graphics, M14): the sun's shadows, the surfaces' relief, the dust in the air and
-   * the held replica's sheen follow it at once. (The renderer's own part is Renderer.setQuality.)
+   * New quality settings (Settings → Graphics): the sun's shadows, the surfaces' textures and relief, the figures'
+   * shading, the dust in the air and the held replica's sheen follow them at once. Call after Renderer.setQuality (the
+   * renderer's part, which draws a new texture size when the map asks for it here).
    */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    setMapRelief(this.mapGroup, quality.surfaceRelief);
+    this.renderer.mapMeshes.restyle(this.renderer.surfaceTextures, mapLookOf(quality));
+    this.match.setFigureShadows(quality.figureShadows);
+    this.match.setFlagQuality(quality);
+    this.match.setFigureDetail(quality.figureDetail);
     this.combat.setQuality(quality);
   }
 
@@ -335,8 +369,9 @@ export class MatchSession {
   dispose(): void {
     this.combat.dispose();
     this.match.dispose();
-    this.renderer.scene.remove(this.mapGroup);
-    disposeMapMeshes(this.mapGroup);
+    this.contact.dispose();
+    // Out of the scene, kept by the renderer for the next session on this map (freed there, CORE-33).
+    this.renderer.mapMeshes.release();
     this.daylight.dispose();
     this.physics.dispose();
     this.renderer.setZoom(1);

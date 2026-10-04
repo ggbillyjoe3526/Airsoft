@@ -3,7 +3,7 @@ import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
-import { FLAG_VISUALS, HUD } from '../config/render';
+import { type DetailLevel, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
 import { SQUAD_ORDERS, type SquadOrderKind, type WheelSelect } from '../config/squad';
 import { cssColor, teamCss, type TeamColours } from '../config/teams';
 import type { MapData } from '../map/mapTypes';
@@ -108,10 +108,12 @@ export class MatchPresentation {
     field: Pick<MapData, 'blocks' | 'terrain' | 'foliage'>,
     /** The figure model, if the build has one (M25a); null draws the built-in figures. */
     figureModel: FigureModel | null = null,
+    /** Player detail (QualitySettings.figureDetail, FA8); setFigureDetail changes it. */
+    figureDetail: DetailLevel = 'low',
   ) {
     this.keyName = keyName;
     // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
-    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel);
+    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail);
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));
@@ -135,6 +137,26 @@ export class MatchPresentation {
   private wheelHintSelect: WheelSelect | '' = '';
   private wheelHintOn = false;
   private wheelHintText = '';
+
+  /** Figures and the flag's cloth shaded by walls and containers (QualitySettings.figureShadows, REN-07). */
+  setFigureShadows(on: boolean): void {
+    this.characters.setReceiveShadows(on);
+    this.flag.setReceiveShadows(on);
+  }
+
+  /**
+   * The flagpole's look for the quality settings: its finer detail (mapDetail; audit section 5, "Flagpole and cloth")
+   * and its brushed metal while the sky lights it (environment).
+   */
+  setFlagQuality(quality: Pick<QualitySettings, 'mapDetail' | 'environment'>): void {
+    this.flag.setDetail(quality.mapDetail);
+    this.flag.setEnvironmentLit(quality.environment);
+  }
+
+  /** Player detail (QualitySettings.figureDetail, FA8): the figures are built again at the new level. */
+  setFigureDetail(level: DetailLevel): void {
+    this.characters.setDetail(level);
+  }
 
   /** On-screen sound cues turned on or off (also called once as the match is built). */
   setSoundCues(on: boolean): void {
@@ -290,7 +312,7 @@ export class MatchPresentation {
     }
     this.watched = watched;
     this.boardUp = this.boardView(boardHeld) !== 'none';
-    this.characters.update(alpha, dt, spectating ? -1 : this.player.id);
+    this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position);
     this.flag.update(this.state.round, this.state.time);
     this.updateMarker(camera, spectating);
     this.updateMateMarkers(camera, alpha, watched);

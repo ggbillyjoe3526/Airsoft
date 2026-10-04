@@ -5,6 +5,23 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
+- **FA7** · Environment lighting on Medium and High: sky reflects in players, the flag, range targets and steel; contact shadows under every player on all presets (#71)
+- **FA7** · Settings → Graphics: tone mapping choice (Neutral, AgX, ACES) and relief maps option (Normal, Bump) (#71)
+- **FA7** · Map detail on Medium and High, on every map: bevelled edges with lighter rims, corner shading, ground variation, prop detail and signs; Low looks as before (#71)
+- **FA7** · Trees round the field: None, Simple or Detailed with layered crowns and a hedge; clouds and sun disc on Medium and High (#71)
+- **FA7** · The flag gets a finial, rope, cleat and painted cloth; the practice range gets chains, bands, brackets, a BB shelf, scuffed plates and painted figures, drawing fewer calls than before (#71)
+- **FA2** · Settings → Graphics: Custom option to pick a preset and modify any row; changes show Custom, setting back shows the preset again; Custom is saved (#67)
+- **FA2** · Graphics Settings has a frame-rate limit and Show FPS counter (#67)
+- **FA2** · The first start picks a preset from the graphics card: Medium on integrated graphics (Intel, AMD Ryzen), High on a discrete card (#67)
+- **FA4** · Bots keep apart and never take a teammate's cover or lane spot; their routes keep a body's width from walls (#66)
+- **FA4** · A BB landing close by tells a bot roughly where the shot came from; a teammate's "HIT!" gives only the direction. Fighting bots sidestep only onto open ground that keeps you in sight; a search that finds nobody ends with a crouched look round (#66)
+- **FA4** · Difficulty changes how bots play, not only how they aim: Hard uses cover and flanks more, Easy less; Easy reacts slower (0.6–1.0 s) with wider first shots but settles its aim nearer Normal (#66)
+- **FA4** · Against Easy opponents your teammates start on Normal, and that default pair counts for your records under Easy (#66)
+- **FA8** · Players, replicas, their parts and your gloved hands are rebuilt in a clean, stylised look with more detail on Medium and High; Low looks and costs the same (#69)
+- **FA8** · Barrels and silencer have proper models on High (fluted barrels, a coupling collar, silencer end caps and rubber bands) (#69)
+- **FA8** · New Custom graphics rows: Player detail, Replica detail, Hand detail, BB glow, Impact grit, Laser beam (#69)
+- **FA10** · Armory pity: an Epic or better within 20 Shots, a Legendary within 100; items you don't own are twice as likely; the catalogue lists every item by rarity tier (#63)
+- **FA10** · Tutorial: skip it or resume it from the pause screen; new steps for the fire selector and shooting after a sprint (#63)
 - **M31** · Settings → Save: download your save as a file and load it back (Undo after), daily restore points; a second tab waits instead of overwriting
 - **FA5** · Second key per action; mouse wheel binding; HUD size (0.8–1.5); crosshair custom; raw mouse input; cm/360 kept; order wheel shows keys (#59)
 - **FA5** · High-contrast styles; hit, out, round messages read by screen readers (#59)
@@ -43,6 +60,18 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33e** · Bushes: they hide you from bots (BBs and people pass through), on any map that has them; Woodland has 70, shown on the minimap
 
 ### Changed
+- **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
+- **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
+- **FA2** · Low has 80 % resolution with no shadows; Medium adds shadows and relief; High adds sharp textures, finer shadows, sheen and dust (#67)
+- **FA3** · Low draws the same frame about 18 % faster in our test, with 20 % fewer triangles and a quarter of the texture memory (#67)
+- **FA3** · High has crisp, steady shadows fitted to the view (about 25 m range) with fewer draw calls and triangles (#67)
+- **FA3** · Raised dock and ramps cast shadows; BB streaks have consistent thickness on any screen; replica sheen returns after switching presets (#67)
+- **FA4** · Bots holding a spot crouch where they can still see and sweep their view; a defender at its post decides once on arrival (#66)
+- **FA8** · Third-person rifles on High show a silencer when one is fitted (#69)
+- **FA4** · Attack / Defend: one attacking bot raises the flag while the others guard the pole from cover. Depot: the east spawns sit at the north end of their yard and its north exit is closed, so both ends are about as far from the dock and the Main Gate; in bot-only matches the west wins 48 % of rounds (#66)
+- **FA4** · Bots plan at most one route per tick in all, so big fights don't hitch (#66)
+- **FA10** · Field Credits: a won round pays only if you took part, pay scales with match length, and the difficulty bonus follows the lower of your teammates' and opponents' levels; Armory: 10 Shots and Scrap ask to confirm, holding Enter takes one Shot, the reveal shows rarest first with prices (#63)
+- **FA10** · The match summary says why a round paid nothing (#63)
 - **FA5** · Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell (#59)
 - **FA9** · Cleaner menus and HUD: consistent style, button states, focus ring, marked tabs, dialogs, fade-in, hit-feed colours (#59)
 - Pistol leans slightly left again, much less than before (#13)
@@ -54,6 +83,11 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 
 ### Fixed
+- **FA11c** · A second tab now always waits behind the "open in another tab" notice, even when the first is busy loading (#69)
+- **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
+- **FA2** · Turning Edge smoothing on or off no longer causes graphics memory to leak (#67)
+- **FA3** · The first Play no longer hitches as surface textures are built during the title screen (#67)
+- **FA10** · Shot spread is the same sideways and up-down when aiming steeply up or down (#63)
 - **FA5** · Esc resumes from the pause screen; the first mouse jump after the lock is ignored; teammate markers hide behind the minimap and while the scoreboard is up (#59)
 - **FA1** · Jump pressed up to 0.1 s before landing still happens; click after sprint fires as soon as lockout ends (#57)
 - **FA1** · Stepping down a kerb no longer widens the crosshair; drawn Elimination rounds replay (#57)
@@ -70,6 +104,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M28** · Impact puffs start at half size
 
 ### Internal
+- **FA11b** · What Play does next and the pause and result text are pure, unit-tested functions; `?perf` logs how long each part of a match build takes (#73)
+- **FA11b** · Unit tests share a worker's modules and split into fast and slow projects (`npx vitest run --project fast` for quick feedback); the gate's browser-test failures show the test, the locator and the expected and received values (#73)
+- **FA3** · The perf harness measures Low, Medium and High with `--preset all` (#67)
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
 - Audit fixes: graphics quality, audio, simulation, bots, menus, accessibility, tooling (#34, #35, #36)
 - Bug pass: game flow, replica handling, sound, menus, HUD, squad orders on ramps and platforms (#37, #38)

@@ -1,4 +1,5 @@
 import type { Difficulty } from '../config/bots';
+import { randomSeed } from '../core/seed';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import { addItem, type Collection, type ItemRef, itemKey, ownedCount } from './collection';
 import { type Asset, type Economy, fcPerToken, type Pool, type RarityTier } from './pool';
@@ -12,7 +13,7 @@ import { type Asset, type Economy, fcPerToken, type Pool, type RarityTier } from
 /** What a finished match was, for its Field Credits. */
 export interface MatchOutcome {
   won: boolean;
-  /** Rounds your team won. */
+  /** Rounds your team won that you played a part in (audit POOL-08: a round sat out pays nothing). */
   roundsWon: number;
   /** Your BBs on an opponent. */
   hits: number;
@@ -20,26 +21,31 @@ export interface MatchOutcome {
   winsNeeded: number;
   /** The opponents' difficulty. */
   difficulty: Difficulty;
+  /** Your teammates' difficulty; absent with no teammates (1v1). The lower multiplier of the two pays (audit POOL-08). */
+  teammateDifficulty?: Difficulty;
 }
 
 /** A match's Field Credits, line by line as the summary shows them, and the total (after the difficulty). */
 export interface Earnings {
   lines: { label: string; fc: number }[];
-  /** The opponents' difficulty multiplier the lines are scaled by. */
+  /** The difficulty multiplier the lines are scaled by (the lower of the opponents' and the teammates'). */
   multiplier: number;
   total: number;
 }
 
-/** The standard match's rounds to win: Match played and Match won are paid in full from here on (pool.md). */
+/** The standard match's rounds to win: Match played, Match won and Round won are paid in full from here on (pool.md). */
 const FULL_MATCH_WINS = 5;
 
 export function matchEarnings(e: Economy, o: MatchOutcome): Earnings {
   const scale = Math.min(1, Math.max(0, o.winsNeeded) / FULL_MATCH_WINS);
   const lines = [{ label: 'Match played', fc: Math.round(e.earn.matchPlayed * scale) }];
   if (o.won) lines.push({ label: 'Match won', fc: Math.round(e.earn.matchWon * scale) });
-  if (o.roundsWon > 0) lines.push({ label: `${o.roundsWon} ${o.roundsWon === 1 ? 'round' : 'rounds'} won`, fc: e.earn.roundWon * o.roundsWon });
+  // Scaled like the match lines (audit POOL-09): a short 1v1 is no richer a farm than the standard match.
+  if (o.roundsWon > 0) lines.push({ label: `${o.roundsWon} ${o.roundsWon === 1 ? 'round' : 'rounds'} won`, fc: Math.round(e.earn.roundWon * o.roundsWon * scale) });
   if (o.hits > 0) lines.push({ label: `${o.hits} ${o.hits === 1 ? 'hit' : 'hits'} on an opponent`, fc: e.earn.hit * o.hits });
-  const multiplier = e.difficulty[o.difficulty];
+  // The lower of the two teams' (audit POOL-08): Hard teammates carrying you against Hard opponents pay as Hard only
+  // if you're in there too, and Easy opponents never pay Hard rates.
+  const multiplier = Math.min(e.difficulty[o.difficulty], o.teammateDifficulty ? e.difficulty[o.teammateDifficulty] : Number.POSITIVE_INFINITY);
   const total = Math.max(0, Math.round(lines.reduce((sum, l) => sum + l.fc, 0) * multiplier));
   return { lines, multiplier, total };
 }
@@ -49,9 +55,9 @@ export function matchPay(e: Economy, o: MatchOutcome, armoryOff: boolean): Earni
   return armoryOff ? null : matchEarnings(e, o);
 }
 
-/** Adds a match's Field Credits to the collection. */
+/** Adds a match's Field Credits to the collection (never past the largest whole number held exactly, audit POOL-19). */
 export function earn(c: Collection, fc: number): void {
-  c.fc += Math.max(0, Math.round(fc));
+  c.fc = Math.min(Number.MAX_SAFE_INTEGER, c.fc + Math.max(0, Math.round(fc)));
 }
 
 /** Tokens the collection could buy with all its FC. */
@@ -111,40 +117,102 @@ export function drawTier(tiers: readonly RarityTier[], rng: RngState, from = 0):
   return pool[pool.length - 1]!;
 }
 
+/** Pity left (audit POOL-01): for each pool.md Pity rule, rarest first, the Shots within which its tier or rarer comes. */
+export function pityLeft(pool: Pool, c: Collection): { tier: RarityTier; shots: number }[] {
+  return pool.economy.pity.flatMap((rule) => {
+    const tier = pool.tiers.find((t) => t.id === rule.tier);
+    return tier ? [{ tier, shots: Math.max(1, rule.shots - (c.pity?.[rule.tier] ?? 0)) }] : [];
+  });
+}
+
+/** The asset of a draw at `tier`: any In Shots asset, one not yet owned at that tier (nor drawn already) weighted up. */
+function drawAsset(assets: readonly Asset[], tier: RarityTier, c: Collection, drawn: ReadonlySet<string>, weight: number, rng: RngState): Asset {
+  const w = (a: Asset): number => {
+    const key = itemKey(a.id, tier.id);
+    return (c.owned[key] ?? 0) > 0 || drawn.has(key) ? 1 : weight;
+  };
+  let roll = rngNext(rng) * assets.reduce((sum, a) => sum + w(a), 0);
+  for (const a of assets) {
+    roll -= w(a);
+    if (roll < 0) return a;
+  }
+  return assets[assets.length - 1]!;
+}
+
 /**
- * Takes `count` Shots: pays for them (Tokens, then FC for any short), dispenses `assetsPerShot` assets each (any asset
- * marked In Shots, equally likely, at a tier drawn by the odds) and adds them to the collection. A ten-Shot holds at
- * least one item of the guaranteed tier or rarer: if none came up, its last item's tier is drawn again from those
- * tiers only. Returns what was dispensed, in order, or null (nothing changes) if it can't be paid for or there is
- * nothing to dispense. The draws carry on from the collection's saved random state.
+ * Takes `count` Shots: pays for them (Tokens, then FC for any short), dispenses `assetsPerShot` assets each and adds
+ * them to the collection. Each draw takes its tier by the odds, then an asset marked In Shots, one you don't own at
+ * that tier `unownedWeight` times likelier (audit POOL-05). Pity (audit POOL-01): a Shot that reaches a Pity rule's
+ * count without its tier or rarer has its commonest item drawn again from those tiers (tier, then asset); the counts carry on in the
+ * collection. A ten-Shot also holds at least one item of the guaranteed tier or rarer (its last item lifted if
+ * none came up). Returns what was dispensed, in order, or null (nothing changes) if it can't be paid for or there is
+ * nothing to dispense. The draws carry on from the collection's saved random state mixed with `entropy` (audit
+ * POOL-07: fresh each call, so the save doesn't tell the next Shot; pass a fixed one to replay).
  */
-export function takeShots(pool: Pool, c: Collection, count: ShotCount): Dispensed[] | null {
+export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy = randomSeed()): Dispensed[] | null {
   const e = pool.economy;
   const assets = shotAssets(pool);
   if (assets.length === 0 || pool.tiers.length === 0 || !canTakeShots(e, c, count)) return null;
   const price = shotPrice(e, c, count);
   c.tokens -= price.tokens;
   c.fc -= price.fc;
-  const rng = createRng(c.seed);
-  const draws: { asset: Asset; tier: RarityTier }[] = [];
-  for (let i = 0; i < count * Math.max(1, e.assetsPerShot); i++) {
-    const asset = assets[Math.min(assets.length - 1, Math.floor(rngNext(rng) * assets.length))]!;
-    draws.push({ asset, tier: drawTier(pool.tiers, rng) });
+  const rng = createRng((c.seed ^ entropy) >>> 0);
+  const rank = (t: RarityTier): number => pool.tiers.indexOf(t);
+  const floorOf = (id: string | null): number => (id ? pool.tiers.findIndex((t) => t.id === id) : -1);
+  const tenFloor = count === 10 ? floorOf(e.tenShotGuarantee) : -1;
+  const pity = (c.pity ??= {});
+  const perShot = Math.max(1, e.assetsPerShot);
+  const out: Dispensed[] = [];
+  let tenMet = false;
+  for (let shot = 0; shot < count; shot++) {
+    const draws: { asset: Asset; tier: RarityTier }[] = [];
+    const drawn = new Set<string>();
+    for (let i = 0; i < perShot; i++) {
+      const tier = drawTier(pool.tiers, rng);
+      const asset = drawAsset(assets, tier, c, drawn, e.unownedWeight, rng);
+      drawn.add(itemKey(asset.id, tier.id));
+      draws.push({ asset, tier });
+    }
+    const lift = (floor: number): void => {
+      if (draws.some((d) => rank(d.tier) >= floor)) return;
+      // The commonest item (the last of equals) is drawn again from the floor up: its tier, then its asset at that
+      // tier, so the unowned weight counts for a lifted item too.
+      let at = draws.length - 1;
+      for (let i = draws.length - 1; i >= 0; i--) if (rank(draws[i]!.tier) < rank(draws[at]!.tier)) at = i;
+      const tier = drawTier(pool.tiers, rng, floor);
+      const others = new Set(draws.flatMap((d, i) => (i === at ? [] : [itemKey(d.asset.id, d.tier.id)])));
+      draws[at] = { tier, asset: drawAsset(assets, tier, c, others, e.unownedWeight, rng) };
+    };
+    if (tenFloor >= 0) {
+      tenMet ||= draws.some((d) => rank(d.tier) >= tenFloor);
+      if (shot === count - 1 && !tenMet) lift(tenFloor);
+    }
+    for (const rule of e.pity) {
+      const floor = floorOf(rule.tier);
+      if (floor >= 0 && (pity[rule.tier] ?? 0) + 1 >= rule.shots) lift(floor);
+    }
+    for (const rule of e.pity) {
+      const floor = floorOf(rule.tier);
+      if (floor >= 0) pity[rule.tier] = draws.some((d) => rank(d.tier) >= floor) ? 0 : (pity[rule.tier] ?? 0) + 1;
+    }
+    for (const { asset, tier } of draws) {
+      const item = { asset: asset.id, tier: tier.id };
+      out.push({ item, isNew: ownedCount(c, item) === 0 });
+      addItem(c, item);
+    }
   }
-  const floor = count === 10 && e.tenShotGuarantee ? pool.tiers.findIndex((t) => t.id === e.tenShotGuarantee) : -1;
-  if (floor >= 0 && !draws.some((d) => pool.tiers.indexOf(d.tier) >= floor)) draws[draws.length - 1]!.tier = drawTier(pool.tiers, rng, floor);
   c.seed = rng.s;
-  return draws.map(({ asset, tier }) => {
-    const item = { asset: asset.id, tier: tier.id };
-    const isNew = ownedCount(c, item) === 0;
-    addItem(c, item);
-    return { item, isNew };
-  });
+  return out;
 }
 
-/** Copies of an item beyond the one you keep. */
-export function spares(c: Collection, item: ItemRef): number {
-  return Math.max(0, ownedCount(c, item) - 1);
+/**
+ * Copies of an item you can scrap: every copy beyond the one you keep, and that one too when you own the same asset at
+ * a rarer tier (audit POOL-05: one kept per asset, so a Common Red Dot doesn't stay for ever once a Rare one is owned).
+ */
+export function spares(pool: Pool, c: Collection, item: ItemRef): number {
+  const at = pool.tiers.findIndex((t) => t.id === item.tier);
+  const rarerOwned = at >= 0 && pool.tiers.slice(at + 1).some((t) => ownedCount(c, { asset: item.asset, tier: t.id }) > 0);
+  return Math.max(0, ownedCount(c, item) - (rarerOwned ? 0 : 1));
 }
 
 /** FC one spare copy of an item pays (its tier's Scrap FC). */
@@ -152,25 +220,102 @@ export function scrapValue(pool: Pool, item: ItemRef): number {
   return pool.tiers.find((t) => t.id === item.tier)?.scrapFc ?? 0;
 }
 
-/** Scraps every spare copy of `item` (you keep one); returns the FC paid. */
-export function scrapSpares(pool: Pool, c: Collection, item: ItemRef): number {
-  const n = spares(c, item);
+/** Scraps up to `max` spare copies of `item` (all of them by default); returns the FC paid. */
+export function scrapSpares(pool: Pool, c: Collection, item: ItemRef, max = Number.POSITIVE_INFINITY): number {
+  const n = Math.min(spares(pool, c, item), Math.max(0, Math.floor(max)));
   if (n === 0 || !pool.byId.has(item.asset)) return 0;
   const fc = n * scrapValue(pool, item);
-  c.owned[itemKey(item.asset, item.tier)] = 1;
-  c.fc += fc;
+  const key = itemKey(item.asset, item.tier);
+  const left = ownedCount(c, item) - n;
+  if (left > 0) c.owned[key] = left;
+  else delete c.owned[key];
+  earn(c, fc);
   return fc;
 }
 
-/** Scraps every spare of every item in the pool; returns the FC paid. */
+/** Scraps every spare of every item in the pool (rarest tier first, so each asset keeps its best); returns the FC paid. */
 export function scrapAllSpares(pool: Pool, c: Collection): number {
   let fc = 0;
-  for (const a of pool.assets) for (const t of pool.tiers) fc += scrapSpares(pool, c, { asset: a.id, tier: t.id });
+  for (const a of pool.assets) for (let t = pool.tiers.length - 1; t >= 0; t--) fc += scrapSpares(pool, c, { asset: a.id, tier: pool.tiers[t]!.id });
   return fc;
+}
+
+/** FC scrapping every spare would pay. */
+export function sparesValue(pool: Pool, c: Collection): number {
+  let fc = 0;
+  for (const a of pool.assets) for (const t of pool.tiers) fc += spares(pool, c, { asset: a.id, tier: t.id }) * t.scrapFc;
+  return fc;
+}
+
+/** One asset of the Armory's catalogue (audit POOL-04): its copies at each tier, its spares and what they scrap for. */
+export interface CollectionRow {
+  asset: Asset;
+  /** Copies owned at each tier, in tier order (commonest first). */
+  counts: number[];
+  spares: number;
+  spareFc: number;
+}
+
+/**
+ * The Armory's catalogue (audit POOL-04): every asset Shots can give, and any other owned one, in pool order; and how
+ * many of its items (asset × tier) are owned out of all of them.
+ */
+export function collectionRows(pool: Pool, c: Collection): { rows: CollectionRow[]; owned: number; total: number } {
+  const rows: CollectionRow[] = [];
+  let owned = 0;
+  for (const asset of pool.assets) {
+    const counts = pool.tiers.map((t) => ownedCount(c, { asset: asset.id, tier: t.id }));
+    if (!asset.inShots && counts.every((n) => n === 0)) continue;
+    let n = 0;
+    let fc = 0;
+    pool.tiers.forEach((t) => {
+      const s = spares(pool, c, { asset: asset.id, tier: t.id });
+      n += s;
+      fc += s * t.scrapFc;
+    });
+    owned += counts.filter((k) => k > 0).length;
+    rows.push({ asset, counts, spares: n, spareFc: fc });
+  }
+  return { rows, owned, total: rows.length * pool.tiers.length };
+}
+
+/** The commonest item of an asset that has a spare (what "Scrap 1" scraps), or null. */
+export function cheapestSpare(pool: Pool, c: Collection, asset: string): ItemRef | null {
+  for (const t of pool.tiers) if (spares(pool, c, { asset, tier: t.id }) > 0) return { asset, tier: t.id };
+  return null;
 }
 
 /** Each tier's chance, normalised to 100 (as the Armory shows and draws them). */
 export function tierChances(pool: Pool): { tier: RarityTier; percent: number }[] {
   const total = pool.tiers.reduce((sum, t) => sum + Math.max(0, t.odds), 0);
   return pool.tiers.map((tier) => ({ tier, percent: total > 0 ? (Math.max(0, tier.odds) / total) * 100 : 0 }));
+}
+
+/** What `count` Shots cost in FC alone (audit POOL-13: the price shown on the buttons, whatever Tokens are held). */
+export function shotFcPrice(e: Economy, count: ShotCount): number {
+  return shotTokens(e, count) * fcPerToken(e);
+}
+
+/** A Shot's items rarest first (audit POOL-11), draw order kept between equals. */
+export function rarestFirst(pool: Pool, got: readonly Dispensed[]): Dispensed[] {
+  const rank = (d: Dispensed): number => pool.tiers.findIndex((t) => t.id === d.item.tier);
+  return got.map((d, i) => ({ d, i })).sort((a, b) => rank(b.d) - rank(a.d) || a.i - b.i).map(({ d }) => d);
+}
+
+/**
+ * One line for a Shot (audit POOL-11): "1 Epic, 4 Rare, 25 others · 3 new". Tiers from Rare up are named (the ten-Shot
+ * guarantee's tier, else the third), the rest counted together.
+ */
+export function revealSummary(pool: Pool, got: readonly Dispensed[]): string {
+  const guaranteed = pool.tiers.findIndex((t) => t.id === pool.economy.tenShotGuarantee);
+  const named = guaranteed > 0 ? guaranteed : Math.min(2, pool.tiers.length - 1);
+  const parts: string[] = [];
+  for (let t = pool.tiers.length - 1; t >= named; t--) {
+    const n = got.filter((d) => d.item.tier === pool.tiers[t]!.id).length;
+    if (n > 0) parts.push(`${n} ${pool.tiers[t]!.label}`);
+  }
+  const rest = got.filter((d) => pool.tiers.findIndex((t) => t.id === d.item.tier) < named).length;
+  if (rest > 0) parts.push(parts.length > 0 ? `${rest} ${rest === 1 ? 'other' : 'others'}` : `${rest} ${rest === 1 ? 'item' : 'items'}`);
+  const fresh = got.filter((d) => d.isNew).length;
+  return fresh > 0 ? `${parts.join(', ')} · ${fresh} new` : parts.join(', ');
 }

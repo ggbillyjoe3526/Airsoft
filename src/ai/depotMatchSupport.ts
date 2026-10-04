@@ -194,6 +194,19 @@ export function playMatch(
 export type MatchStats = ReturnType<typeof playMatch>;
 
 /**
+ * Per finished round, whether it was played after half-time. A drawn round is played again under the same number
+ * (audit SIM-19), so only decided rounds count towards half-time.
+ */
+export function playedAfterHalfTime(results: readonly { winner: number }[], rules: RoundRules = ROUNDS): boolean[] {
+  let decided = 0;
+  return results.map((r) => {
+    const after = decided >= rules.halfTimeAfter;
+    if (r.winner >= 0) decided++;
+    return after;
+  });
+}
+
+/**
  * Nobody in play is off the ground for longer than the in-air spread's delay (a lost ground contact would
  * spike their spread), and nobody goes below the map's lowest floor or more than 2 m over its highest.
  */
@@ -282,4 +295,51 @@ export function expectRicochetsPlayable(mode: MatchMode): void {
   expect(favoured / rounds, mode).toBeGreaterThan(0.35);
   expect(favoured / rounds, mode).toBeLessThan(0.65);
   if (mode === 'attackDefend') expect(captures, mode).toBeGreaterThanOrEqual(7);
+}
+
+/**
+ * Seconds of play per custom match. 240 since FA4 + FA10 (2026-10-04): FA4's bots hold and search longer and FA10 spreads
+ * shots evenly round the line of sight, so 2v2 rounds run longer and a few 200 s matches stopped after two rounds
+ * (47 rounds over 16 seeds, under the 48 floor). The per-round checks are unchanged. Measured at 240 s: 1v1 Elimination
+ * west 56 of 115 decided, 1v1 Attack / Defend attackers 80 of 136, 2v2 Elimination west 34 of 55, 2v2 Attack / Defend
+ * attackers 30 of 63.
+ */
+const CUSTOM_MATCH_SECONDS = 240;
+
+/**
+ * Fair 1v1 (32 seeds) and 2v2 (16 seeds) custom matches in `mode`, first to 3 (M20): rounds get decided, neither end
+ * (Elimination) nor side (Attack / Defend) is favoured, nobody stays at spawn, no friendly hits. One file per mode, so
+ * the two run in parallel (audit CORE-15).
+ */
+export function expectCustomMatchesFair(mode: MatchMode): void {
+  const rules = { ...ROUNDS, winsNeeded: 3, halfTimeAfter: 2 };
+  for (const size of [1, 2]) {
+    const label = `${size}v${size} ${mode}`;
+    let rounds = 0;
+    let decided = 0;
+    let favoured = 0; // elimination: rounds the west end won; attack / defend: rounds the attackers won
+    let friendlyHits = 0;
+    const seeds = size === 1 ? 32 : 16;
+    for (let seed = 1; seed <= seeds; seed++) {
+      const stats = playMatch(CUSTOM_MATCH_SECONDS, seed, undefined, BOTS, mode, rules, DEPOT, size);
+      expect(stats.farthestFromSpawn, label).toHaveLength(2 * size);
+      friendlyHits += stats.friendlyHits;
+      for (const r of stats.results) {
+        rounds++;
+        if (r.winner < 0) continue;
+        decided++;
+        if (mode === 'elimination' ? r.winnerEnd === 0 : r.winner === r.attackers) favoured++;
+      }
+      // Everyone leaves spawn in round 1; in Attack / Defend only the attackers (Blue) must, defenders may hold.
+      stats.farthestFromSpawn.forEach((d, i) => {
+        if (mode === 'elimination' || i < size) expect(d, `${label} seed ${seed}`).toBeGreaterThan(8);
+      });
+      expectGrounded(stats, DEPOT);
+    }
+    expect(rounds, label).toBeGreaterThanOrEqual(seeds * 3);
+    expect(decided / rounds, label).toBeGreaterThan(0.9);
+    expect(favoured / decided, label).toBeGreaterThan(0.35);
+    expect(favoured / decided, label).toBeLessThan(0.65);
+    expect(friendlyHits, label).toBe(0);
+  }
 }
