@@ -197,7 +197,10 @@ export class MatchPresentation {
     this.soundCues.dispose();
   }
 
-  private readonly characterOf = (id: number): Character | undefined => this.state.characters.find((c) => c.id === id);
+  private readonly characterOf = (id: number): Character | undefined => {
+    for (const c of this.state.characters) if (c.id === id) return c;
+    return undefined;
+  };
 
   /** A hit feed line for `victimId` calling a hit from `shooterId`'s BB. */
   private addFeedLine(victimId: number, shooterId: number): void {

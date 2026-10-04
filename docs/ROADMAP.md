@@ -110,7 +110,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M17b Loadout: attachments: more optics, grips, magazines (skins shown as LATER) | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M13 Audio rework: replicas that sound like how they fire (electric, gas, spring), footsteps by surface and kit rustle you can locate by ear (HRTF, muffled through walls), BB impacts by material, volume settings | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M18a Comfort and controls (owner's second batch, 2026-10-03): invert mouse, reduced motion, aim and sprint toggles, mouse buttons rebindable, sensitivity as cm/360 | Done (merged; owner to play it) | 9.0 (re-scored 2026-10-04 after its must-fixes) |
-| Alpha · Phase 4 · M18b Accessibility and browser basics (owner's second batch; moved out of M18a at the owner's wrap-up, 2026-10-03): colour-blind options, on-screen sound cues, pause on a hidden tab, a lost graphics context, a hardware acceleration warning, fullscreen | Done (owner to play it) | M18B_SCORE |
+| Alpha · Phase 4 · M18b Accessibility and browser basics (owner's second batch; moved out of M18a at the owner's wrap-up, 2026-10-03): colour-blind options, on-screen sound cues, pause on a hidden tab, a lost graphics context, a hardware acceleration warning, fullscreen | Done (owner to play it) | 9.0 |
 | Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Later | |
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
@@ -510,7 +510,7 @@ each one went:**
 - **M18. Comfort, accessibility and browser basics** (the owner's second batch, items 2–5, 7, 14–17, 21 and 23). The
   settings every player looks for first (PCGamingWiki's list, the Game Accessibility Guidelines' basic tier). It fills
   the Controls and Accessibility tabs' LATER rows; volume comes with M13. Built in two halves: **M18a** (done) the
-  Controls items and reduced motion; **M18b** (done) colour-blind options, sound cues and the browser basics. M19 was built before M18; the order of what's left is M18b → M20 → M21 → M22 → M14 → M16.
+  Controls items and reduced motion; **M18b** (done) colour-blind options, sound cues and the browser basics. M19 was built before M18; the order of what's left is M20 → M21 → M22 → M14 → M16.
   - **Controls:** invert mouse; toggle or hold for aiming down sights and for sprint (as crouch already has); fire,
     aim and any other action bindable to mouse buttons, side buttons included; the sensitivity also shown as cm/360
     (worked out from the mouse's DPI, which the player enters), so it can match another shooter.
