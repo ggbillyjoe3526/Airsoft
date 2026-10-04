@@ -62,3 +62,17 @@ acceptance:
 status: open
 attempts: 0
 
+
+## M33h · Weapon torch
+tier: core
+perf: required
+touches: pool.md, stats.md, src/pool/, src/config/, src/sim/, src/input/, src/ai/perception.ts, src/ai/botBrain.ts, src/ai/botTorch.ts, src/map/nightSight.ts, src/map/torchLight.ts, src/render/, src/audio/, src/ui/, src/matchSession.ts, src/game.ts, src/newGamePicks.ts, src/save/, e2e/, docs/
+contract: a fitted Weapon Torch (pool 000020, slot `light`, Access dev) is switched with the Weapon torch key (T); on a night preset it lights a cone the holder and bots see further in and gives the holder away; the day preset builds nothing for it; real lights per quality stay fixed (the spot takes one of `poolLights`).
+acceptance:
+  1. pool.md has a Lights table with 000020 Weapon Torch (Starter yes, In Shots no, Tiers Common, Access dev); existing saves get it; with Dev content off there is no Light slot, no torch in any match and Depot matches count and pay as today.
+  2. T (rebindable) switches the fitted torch on and off with a click; it is off at spawn and when hit; bots on a night field with Dev content on carry it and switch it by state without strobing; seeded bot kits are unchanged.
+  3. Bots see a target 40 m away when it stands in a lit beam, or when its own lit torch faces them; nothing changes on day maps or with the torch off.
+  4. Night rendering: own torch is one real SpotLight on Medium and High (pools get one fewer point light, no shader rebuild on toggle); other torches and Low use cheap instanced cone, glare and hit spot; Woodland Low stays within 100 draw calls and 150k triangles; Depot by day is unchanged on every preset.
+  5. The viewmodel is lit by the night preset (and by the torch when on); the torch is modelled on all three replicas in first and third person.
+status: open
+attempts: 0
