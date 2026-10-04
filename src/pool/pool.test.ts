@@ -38,8 +38,8 @@ describe('pool.md', () => {
     expect(new Set(pool.assets.map((a) => a.id)).size).toBe(pool.assets.length);
   });
 
-  it('starts every player with the AEG Rifle, Gas Pistol, Standard Battery and Green Gas, nothing else', () => {
-    expect(pool.assets.filter((a) => a.starter).map((a) => a.name).sort()).toEqual(['AEG Rifle', 'Gas Pistol', 'Green Gas', 'Standard Battery']);
+  it('starts every player with the AEG Rifle, Gas Pistol, Standard Battery, Green Gas and the (dev) Weapon Torch, nothing else', () => {
+    expect(pool.assets.filter((a) => a.starter).map((a) => a.name).sort()).toEqual(['AEG Rifle', 'Gas Pistol', 'Green Gas', 'Standard Battery', 'Weapon Torch']);
   });
 
   it('fits by tags: Green Gas on the pistol, the battery on the rifle, the laser on the pistol only', () => {
@@ -180,6 +180,7 @@ describe('collection', () => {
       'Gas Pistol@common',
       'Green Gas@common',
       'Standard Battery@common',
+      'Weapon Torch@common',
     ]);
     expect(c.fc).toBe(0);
     expect(c.tokens).toBe(0);
@@ -369,10 +370,10 @@ describe('pool.md, the Access column (M35)', () => {
     expect(rowErrors(p)[0]).toMatch(/^line 14: Access must be public or dev, not "devv"/);
   });
 
-  it('has every asset in the real pool.md public today, and no errors', () => {
+  it('has every asset in the real pool.md public today but the Weapon Torch (dev, M33h), and no errors', () => {
     expect(pool.errors).toEqual([]);
     expect(pool.assets.length).toBeGreaterThan(0);
-    expect(pool.assets.filter((a) => a.tag !== 'public')).toEqual([]);
+    expect(pool.assets.filter((a) => a.tag !== 'public').map((a) => a.name)).toEqual(['Weapon Torch']);
   });
 
   it('keeps a dev asset out of Shots, even marked In Shots', () => {
@@ -416,8 +417,9 @@ describe('M32 acceptance 1: the Cyber Pistol row and the Tiers and Drop % column
     expect(assetOfReplica(pool, CYBER_PISTOL)).toBe(cyber);
     // No power source fits it, and no other asset is a chase item or has tiers of its own.
     expect(pool.assets.filter((a) => a.category === 'power' && fits(a, cyber))).toEqual([]);
+    // The Weapon Torch (M33h) comes at Common only: no tier improves a light.
     for (const a of pool.assets.filter((x) => x !== cyber)) {
-      expect(a.tiers, a.name).toBeUndefined();
+      expect(a.tiers, a.name).toEqual(a.category === 'light' ? ['common'] : undefined);
       expect(a.dropChance, a.name).toBeUndefined();
       expect(isChase(a), a.name).toBe(false);
     }

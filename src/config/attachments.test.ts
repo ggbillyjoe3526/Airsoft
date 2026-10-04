@@ -11,7 +11,7 @@ describe('attachments', () => {
   });
 
   it("keep only parts the game knows; which replica takes what is pool.md's call (M26b)", () => {
-    expect(partsFor(GAS_PISTOL, { magazine: 'extended', laser: 'redLaser' })).toEqual({ grip: 'none', magazine: 'extended', laser: 'redLaser', barrel: null, muzzle: null, tune: NO_TUNE });
+    expect(partsFor(GAS_PISTOL, { magazine: 'extended', laser: 'redLaser' })).toEqual({ grip: 'none', magazine: 'extended', laser: 'redLaser', barrel: null, muzzle: null, light: null, tune: NO_TUNE });
     expect(partsFor(AEG, { grip: 'angled', magazine: 'hiCap' })).toMatchObject({ grip: 'angled', magazine: 'hiCap', laser: null });
     expect(partsFor(AEG, { grip: 'bogus' as GripId, magazine: 'bogus' as MagazineId })).toMatchObject(factoryParts(AEG));
   });

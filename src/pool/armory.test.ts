@@ -298,9 +298,10 @@ describe('duplicate protection (audit POOL-05)', () => {
 
 describe('the Armory catalogue and reveal (audit POOL-04, POOL-11, POOL-13)', () => {
   it('lists every asset Shots can give, owned or not, with its copies per tier and the completion', () => {
+    // As the Armory shows it with Dev content off: the owned dev Weapon Torch (M33h, a starter) is hidden.
     const c = newCollection(pool, 1);
     addItem(c, item('Red Dot', 'epic'), 2);
-    const cat = collectionRows(pool, c);
+    const cat = collectionRows(contentPool(pool, false), c);
     expect(cat.rows.map((r) => r.asset.id)).toEqual(shotAssets(pool).map((a) => a.id));
     // Every asset at every tier, but the Cyber Pistol (M32) at Legendary only.
     expect(cat.total).toBe((shotAssets(pool).length - 1) * pool.tiers.length + 1);
@@ -432,7 +433,8 @@ describe('dev gear and Shots (M35)', () => {
     expect(row.counts).toEqual([0, 0, 0, 0, 2, 0]);
     // Each asset counts the tiers it comes in (the Cyber Pistol: Legendary only, M32), the owned dev one among them.
     const tiersIn = (a: Asset): number => tiersOf(devPool, a).length;
-    expect(cat.total).toBe(shotAssets(devPool).reduce((n, a) => n + tiersIn(a), 0) + tiersIn(dev('Red Dot')));
+    // The Weapon Torch (M33h) is a dev starter, owned from the start: it shows over the full pool too.
+    expect(cat.total).toBe(shotAssets(devPool).reduce((n, a) => n + tiersIn(a), 0) + tiersIn(dev('Red Dot')) + tiersIn(dev('Weapon Torch')));
     // an unowned dev asset stays out beside it
     expect(cat.rows.map((r) => r.asset.name)).not.toContain('Silencer');
   });

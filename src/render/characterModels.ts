@@ -194,13 +194,25 @@ const FIN = FIGURE.finish;
 /** A colour `k` times as bright (clamped): the detailed figure's lids, cuffs and soles. */
 const tone = (color: Color, k: number): Color => new THREE.Color(color).multiplyScalar(k).getHex();
 
-/** The parts a figure shows on its replicas (FA8, Player detail `high`): a silencer on the rifle (M29b). */
+/**
+ * The parts a figure shows on its replicas: a silencer on the rifle (M29b; Player detail `high` only), and a weapon
+ * torch on the rifle's handguard or under the pistol (M33h; at every detail: two boxes, 24 triangles).
+ */
 export interface FigureKit {
   rifleSilencer: boolean;
+  rifleTorch?: boolean;
+  pistolTorch?: boolean;
 }
 
 /** As every replica comes. */
 export const BARE_KIT: FigureKit = { rifleSilencer: false };
+
+/** A weapon torch along -Z (M33h): a body `length` long ending in a pale lens, centred at (x, y, z). */
+function addTorch(b: PartBuilder, x: number, y: number, z: number, size: number, length: number): void {
+  const polymer: PartLook = { finish: FIN.polymer };
+  b.box(C.replica, size, size, length, x, y, z, polymer);
+  b.box(C.torchLens, size * 0.8, size * 0.8, 0.008, x, y, z - length / 2 - 0.004);
+}
 
 /** A simple two-tone toy rifle along -Z from `z0` (butt) with its bore at height y; `kit` (detailed only): its silencer. */
 function addRifle(b: PartBuilder, x: number, y: number, z0: number, kit: FigureKit = BARE_KIT): void {
@@ -211,6 +223,7 @@ function addRifle(b: PartBuilder, x: number, y: number, z0: number, kit: FigureK
   b.rounded(C.furniture, 0.06, 0.07, 0.24, x, y, z0 - 0.66, 0.015, polymer); // handguard
   b.box(C.replica, 0.025, 0.025, 0.2, x, y, z0 - 0.88, { finish: FIN.steel }); // barrel
   b.box(C.replica, 0.02, 0.04, 0.03, x, y + 0.06, z0 - 0.24, polymer); // flip-up rear sight (optics aren't drawn on figures)
+  if (kit.rifleTorch) addTorch(b, x + FIGURE.torch.rifleSide, y, z0 - FIGURE.torch.rifleAt, FIGURE.torch.size, FIGURE.torch.length);
   if (!b.overhaul) return;
   // Detailed: a top rail along the receiver and handguard, the pistol grip, and a flash hider at the muzzle, or a fitted
   // silencer over the barrel's end (its front at the muzzle, where BBs leave).
@@ -223,11 +236,13 @@ function addRifle(b: PartBuilder, x: number, y: number, z0: number, kit: FigureK
   } else b.add(new THREE.CylinderGeometry(0.018, 0.018, 0.045, b.detail.radialSegments).rotateX(Math.PI / 2).translate(x, y, muzzle + 0.0225), C.replica, { finish: FIN.steel });
 }
 
-/** A compact pistol along -Z from `z0` (the back of the slide) with its bore at height y. */
-function addPistol(b: PartBuilder, x: number, y: number, z0: number): void {
+/** A compact pistol along -Z from `z0` (the back of the slide) with its bore at height y; `kit`: its torch (M33h). */
+function addPistol(b: PartBuilder, x: number, y: number, z0: number, kit: FigureKit = BARE_KIT): void {
   const polymer: PartLook = { finish: FIN.polymer, edge: true };
   b.rounded(C.replica, 0.032, 0.038, FIGURE.pistol.length, x, y, z0 - FIGURE.pistol.length / 2, 0.008, polymer); // slide
   b.box(C.replica, 0.028, 0.1, 0.04, x, y - 0.06, z0 - 0.035, polymer); // grip
+  const T = FIGURE.torch;
+  if (kit.pistolTorch) addTorch(b, x, y - T.pistolBelow, z0 - FIGURE.pistol.length + T.pistolLength / 2, T.size * 0.8, T.pistolLength);
   if (!b.overhaul) return;
   // Detailed: the tan frame under the slide and its trigger guard.
   b.rounded(C.furniture, 0.03, 0.014, FIGURE.pistol.length * 0.8, x, y - 0.024, z0 - FIGURE.pistol.length * 0.45, 0.005, polymer);
@@ -414,7 +429,7 @@ export function buildFigure(
   aim.position.y = F.shoulderHeight + hy;
   const shoulders = v(0, F.shoulderHeight, 0);
   const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(look, teamColor, material, detail, kit);
-  const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(look, teamColor, material, detail);
+  const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(look, teamColor, material, detail, kit);
   aimPistol.visible = false;
   aim.add(aimRifle, aimPistol);
   upper.add(aim);
@@ -505,13 +520,13 @@ function builtAimRifle(look: FigureLook, teamColor: Color, material: THREE.Mater
 }
 
 /** The built-in arms with the pistol held out in both hands, in aim-group space. */
-function builtAimPistol(look: FigureLook, teamColor: Color, material: THREE.Material, detail: FigureDetail): THREE.Mesh {
+function builtAimPistol(look: FigureLook, teamColor: Color, material: THREE.Material, detail: FigureDetail, kit: FigureKit): THREE.Mesh {
   const F = FIGURE;
   const P = F.pistol;
   const pistol = new PartBuilder(detail);
   arm(pistol, look, teamColor, v(F.shoulderSpread, 0, 0), v(0.17, -0.15, -0.21), v(P.x, P.y - 0.08, P.butt - 0.03));
   arm(pistol, look, teamColor, v(-F.shoulderSpread, 0, 0), v(-0.13, -0.17, -0.2), v(P.x - 0.04, P.y - 0.09, P.butt - 0.05));
-  addPistol(pistol, P.x, P.y, P.butt);
+  addPistol(pistol, P.x, P.y, P.butt, kit);
   return pistol.build(material);
 }
 

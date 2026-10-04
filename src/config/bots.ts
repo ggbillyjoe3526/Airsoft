@@ -430,6 +430,11 @@ export interface BotSkill {
   readonly peekWatchTime: readonly [number, number];
   /** Trades a hit teammate, moves in pairs, sets crossfires on defence and pushes late when behind (see tradeTime…). */
   readonly teamPlay: boolean;
+  /**
+   * Weapon torch discipline at night (M33h, ai/botTorch.ts): true keeps the torch on while advancing too (sloppy: Easy),
+   * giving itself away. Absent: off on the move, as the levels above play it.
+   */
+  readonly torchOnTheMove?: boolean;
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'pro';
@@ -499,6 +504,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     slicesCorners: false,
     peekWatchTime: [0, 0],
     teamPlay: false,
+    torchOnTheMove: true,
   },
   normal: {
     reactionTime: [0.35, 0.6],
@@ -619,3 +625,11 @@ export const BOTS: BotConfig = botConfig(DEFAULT_DIFFICULTY);
  * read from well off its axis), and lights whoever its beam falls on like a light pool.
  */
 export const NIGHT_SIGHT: NightSightConfig = { lit: 40, open: 25, canopy: 10, canopyTrees: 3, canopyRadius: 4, canopyCell: 1, torchSeenFromDeg: 60 };
+
+/**
+ * How bots work their weapon torch on a night field (M33h, ai/botTorch.ts; every bot carries one there, pool/botKit.ts
+ * botLight). On while searching for someone lost or heard and while fighting someone within the beam's reach; off while
+ * advancing (Easy: on; BotSkill.torchOnTheMove), in cover, at the pole and on squad orders. A state is held at least
+ * `minHold` seconds, so the beam never strobes as the bot's mode flickers. First guesses for the owner's playtest.
+ */
+export const BOT_TORCH = { minHold: 1.5 } as const;

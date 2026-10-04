@@ -55,6 +55,8 @@ export const FIGURE = {
     headset: 0x26282a,
     replica: 0x26282c,
     furniture: 0xb49a70,
+    /** A weapon torch's lens on a figure's replica (M33h): pale glass; its glow is the torch beams' glare. */
+    torchLens: 0xdde6ee,
   },
   looks: LOOKS,
   /** The team tape round the torso: height (metres) and its centre above the torso's bottom. */
@@ -119,6 +121,12 @@ export const FIGURE = {
   silencer: { length: 0.12, radius: 0.024 },
   /** The same for the pistol, held out in both hands (figures draw it when the pistol is the active replica). */
   pistol: { x: 0.03, y: -0.05, butt: -0.42, length: 0.2 },
+  /**
+   * A weapon torch on a figure's replica (M33h): a box `size` square and `length` long on the right of the rifle's
+   * handguard (`rifleSide` out, its middle `rifleAt` ahead of the butt), or `pistolLength` long under the pistol's slide
+   * (`pistolBelow` down), its front at the muzzle.
+   */
+  torch: { size: 0.032, length: 0.11, rifleSide: 0.045, rifleAt: 0.72, pistolBelow: 0.035, pistolLength: 0.07 },
   headRadius: 0.11,
   headHeight: HITS.headHeight,
   /** Crouched, the upper body drops this far and the legs fold to fit. */
