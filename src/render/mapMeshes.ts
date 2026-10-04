@@ -623,6 +623,21 @@ export function setMapRelief(group: THREE.Group, on: boolean): void {
 }
 
 /**
+ * Points a built map at another set of surface textures (Texture detail, audit REN-13): each material keeps its surface
+ * (by the texture's name, its SurfaceTextureId) and its relief. The UVs are in metres, so any size maps the same way.
+ */
+export function setMapTextures(group: THREE.Group, textures: SurfaceTextures): void {
+  group.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh) || !(obj.material instanceof THREE.MeshLambertMaterial)) return;
+    const mat = obj.material;
+    const next = mat.map && Object.hasOwn(textures, mat.map.name) ? textures[mat.map.name as SurfaceTextureId].texture : null;
+    if (!next || next === mat.map) return;
+    if (mat.bumpMap) mat.bumpMap = next;
+    mat.map = next;
+  });
+}
+
+/**
  * Builds the static level as one merged mesh per surface texture (and whether it casts shadows): a handful of draw
  * calls for the whole map, details included. Returns a group; call `disposeMapMeshes` to free GPU resources.
  */

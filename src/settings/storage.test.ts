@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { loadSetting, numberIn, oneOf, saveSetting, SETTINGS_KEY } from './storage';
+import { QUALITY, resolveQuality } from '../config/render';
+import { loadCustomQuality, loadSavedQuality } from '../ui/menus/savedChoices';
+import { loadSetting, migrateSettings, numberIn, oneOf, saveSetting, SETTINGS_KEY, SETTINGS_VERSION } from './storage';
 
 /** A Storage backed by a Map (only the calls the settings use). */
 function memoryStorage(initial: Record<string, string> = {}): Storage {
@@ -59,5 +61,49 @@ describe('settings store (audit W-02)', () => {
     expect(sens('abc')).toBeUndefined();
     expect(sens(null)).toBeUndefined();
     expect(sens('0.5')).toBe(0.5);
+  });
+});
+
+describe('settings migration and the Custom graphics fields (final alpha audit section 4)', () => {
+  it('reads a version 1 object with a preset back unchanged: the Custom fields are an addition, not a new format', () => {
+    expect(SETTINGS_VERSION).toBe(1);
+    const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, quality: 'medium', fov: 95 }) });
+    expect(loadSavedQuality(s)).toBe('medium');
+    expect(loadCustomQuality(s)).toEqual({});
+    expect(loadSetting('fov', numberIn(80, 120), 90, s)).toBe(95);
+  });
+
+  it('resolves a saved Custom with no rows saved to High', () => {
+    const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, quality: 'custom' }) });
+    expect(loadSavedQuality(s)).toBe('custom');
+    expect(resolveQuality('custom', loadCustomQuality(s))).toEqual(QUALITY.high);
+  });
+
+  it('reads the saved Custom rows, dropping any a row does not offer', () => {
+    const s = memoryStorage();
+    saveSetting('quality', 'custom', s);
+    saveSetting('graphics.renderScale', 70, s);
+    saveSetting('graphics.shadows', 'off', s);
+    saveSetting('graphics.textureSize', '256', s);
+    saveSetting('graphics.anisotropy', '3', s); // not an option
+    saveSetting('graphics.dustMotes', 9999, s); // out of range
+    expect(loadCustomQuality(s)).toEqual({ renderScale: 0.7, shadows: false, textureSize: 256 });
+    expect(resolveQuality('custom', loadCustomQuality(s))).toEqual({ ...QUALITY.high, renderScale: 0.7, shadows: false, textureSize: 256 });
+    // An unknown quality id is nothing saved.
+    saveSetting('quality', 'ultra', s);
+    expect(loadSavedQuality(s)).toBeNull();
+  });
+
+  it('runs an older object through the migrations in order, and refuses one it cannot bring up to date', () => {
+    const migrations = {
+      1: (o: Record<string, unknown>) => ({ ...o, fieldOfView: undefined, fov: o.fieldOfView }),
+      2: (o: Record<string, unknown>) => ({ ...o, quality: o.quality === 'ultra' ? 'high' : o.quality }),
+    };
+    expect(migrateSettings({ version: 1, fieldOfView: 100, quality: 'ultra' }, migrations, 3)).toEqual({ version: 3, fov: 100, fieldOfView: undefined, quality: 'high' });
+    expect(migrateSettings({ version: 3, fov: 90 }, migrations, 3)).toEqual({ version: 3, fov: 90 });
+    expect(migrateSettings({ version: 4 }, migrations, 3)).toBeNull(); // from a newer build
+    expect(migrateSettings({ version: 0 }, migrations, 3)).toBeNull(); // no step from 0
+    expect(migrateSettings({ fov: 90 }, migrations, 3)).toBeNull();
+    expect(migrateSettings('junk', migrations, 3)).toBeNull();
   });
 });

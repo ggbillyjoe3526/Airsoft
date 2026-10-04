@@ -4,7 +4,7 @@ import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
 import { vec3 } from '../sim/vec';
 import { SURFACES, type SurfaceTextureId } from '../config/render';
-import { blockPieces, blockShade, blockTint, buildMapMeshes, disposeMapMeshes, setMapRelief } from './mapMeshes';
+import { blockPieces, blockShade, blockTint, buildMapMeshes, disposeMapMeshes, setMapRelief, setMapTextures } from './mapMeshes';
 import type { SurfaceTextures } from './proceduralTextures';
 
 /** Every team colour of every set (Settings → Accessibility, M18b). */
@@ -139,6 +139,33 @@ describe('the art pass on the map (M14)', () => {
     expect(materials.every((m) => m.bumpMap === null)).toBe(true);
     setMapRelief(group, true);
     expect(materials.every((m) => m.bumpMap === m.map)).toBe(true);
+    disposeMapMeshes(group);
+  });
+
+  it('points a built map at another texture set (Texture detail, REN-13), keeping each surface and its relief', () => {
+    /** A set like createSurfaceTextures' (each texture named by its surface), stubbed: no canvas in the tests. */
+    const named = (): SurfaceTextures =>
+      Object.fromEntries(
+        (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => {
+          const texture = new THREE.Texture() as THREE.CanvasTexture;
+          texture.name = id;
+          return [id, { texture, worldSize: SURFACES.worldSize[id] }];
+        }),
+      ) as SurfaceTextures;
+    const [small, large] = [named(), named()];
+    const group = buildMapMeshes(DEPOT, small, true);
+    const materials = group.children.map((m) => (m as THREE.Mesh).material as THREE.MeshLambertMaterial);
+    const surfaces = materials.map((m) => m.map!.name);
+    setMapTextures(group, large);
+    expect(materials.map((m) => m.map!.name)).toEqual(surfaces);
+    for (const m of materials) {
+      expect(m.map).toBe(large[m.map!.name as SurfaceTextureId].texture);
+      expect(m.bumpMap).toBe(m.map);
+    }
+    // Relief off stays off.
+    setMapRelief(group, false);
+    setMapTextures(group, small);
+    expect(materials.every((m) => m.bumpMap === null && m.map === small[m.map!.name as SurfaceTextureId].texture)).toBe(true);
     disposeMapMeshes(group);
   });
 });

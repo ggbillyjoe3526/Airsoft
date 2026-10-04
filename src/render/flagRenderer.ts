@@ -52,6 +52,11 @@ export class FlagRenderer {
     this.object.visible = false;
   }
 
+  /** The cloth shaded by walls and containers, or lit as if in full sun (QualitySettings.figureShadows, REN-07). */
+  setReceiveShadows(on: boolean): void {
+    this.cloth.receiveShadow = on;
+  }
+
   /** Once per frame. `time` (s) drives the ripple. */
   update(round: RoundState, time: number): void {
     const show = round.mode === 'attackDefend' && round.attackers >= 0;

@@ -57,6 +57,12 @@ body {
   z-index: 19;
 }
 
+/* Settings → Graphics → Show FPS: the overlay's first line alone, smaller */
+.debug-overlay.fps-readout {
+  padding: 3px 7px;
+  font-size: 12px;
+}
+
 /* Below the minimap (M23) while it shows, so the panel doesn't hide your arrow and the markers round you (bug pass). */
 :has(> .minimap:not([hidden])) > .debug-overlay {
   top: calc(16px + var(--minimap-size, 0px) + 8px);
@@ -547,6 +553,40 @@ body {
 }
 
 .menu-row.later .menu-row-label {
+  color: var(--menu-faint);
+}
+
+/* What a Custom graphics row costs (final alpha audit, UI-06): a quiet tag under its help */
+.menu-row-cost {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--menu-muted);
+}
+
+/* Settings → Graphics: the Custom settings block under the presets */
+.graphics-subhead {
+  margin: 24px 0 4px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.graphics-custom > .menu-readout {
+  margin-bottom: 8px;
+}
+
+.graphics-custom .picker-blurb:empty {
+  display: none;
+}
+
+/* A row the browser can't honour as picked (no multisampling, a lower filtering cap) */
+.graphics-note {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
   color: var(--menu-faint);
 }
 

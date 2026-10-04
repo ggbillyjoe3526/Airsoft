@@ -1,3 +1,5 @@
+import type { GpuTier } from '../config/render';
+
 /**
  * Is the browser drawing without hardware acceleration (M18b)? Then the game runs at a few frames a second, the most
  * common problem with browser games, and the title screen says how to fix it. Two signs: the renderer's name is a
@@ -34,37 +36,64 @@ function release(gl: WebGL2RenderingContext): void {
   gl.getExtension('WEBGL_lose_context')?.loseContext();
 }
 
+/** What the startup probe found: whether the browser draws in software, and the GPU's name ('' if hidden or none). */
+export interface GpuProbe {
+  software: boolean;
+  name: string;
+}
+
 /**
- * True if a throwaway context asking to fail on a major performance caveat is refused while a plain one is given (the
- * browser would draw in software). False if the plain one is refused too: WebGL2 is unavailable or blocked, or too many
- * contexts are live, which is not a caveat (audit M-02, KNOWN_ISSUES row 138). The probes' contexts are given back at once.
+ * Asks the browser once, before the game's own renderer is made (audit REN-18: one throwaway context in the usual case,
+ * two at most, where it used to make up to three). The first probe asks to fail on a major performance caveat: given,
+ * its renderer name says whether it is a software rasteriser anyway. Refused, a plain probe tells a caveat (the browser
+ * would draw in software) from no WebGL2 at all (blocked, or too many contexts live: not a speed problem, and the
+ * renderer's own failure says so; KNOWN_ISSUES row 138). Every probe's context is given back at once.
  */
-export function performanceCaveat(): boolean {
+export function probeGpu(): GpuProbe {
   try {
     const flagged = probeContext({ failIfMajorPerformanceCaveat: true });
     if (flagged) {
+      const name = rendererName(flagged);
       release(flagged);
-      return false;
+      return { software: isSoftwareRenderer(name), name };
     }
     const plain = probeContext();
-    if (!plain) return false;
+    if (!plain) return { software: false, name: '' };
+    const name = rendererName(plain);
     release(plain);
-    return true;
+    return { software: true, name };
   } catch {
-    return false;
+    return { software: false, name: '' };
   }
 }
 
-/** True if the browser draws WebGL2 without hardware acceleration. Probes throwaway contexts; asked once, at startup. */
+/** True if the browser draws WebGL2 without hardware acceleration (probeGpu). */
 export function lacksHardwareAcceleration(): boolean {
-  try {
-    const gl = probeContext();
-    // No WebGL2 at all: not a speed problem (the renderer fails and the loading screen says so).
-    if (!gl) return false;
-    const software = isSoftwareRenderer(rendererName(gl));
-    release(gl);
-    return software || performanceCaveat();
-  } catch {
-    return false;
-  }
+  return probeGpu().software;
+}
+
+/**
+ * Discrete cards by name: NVIDIA's (but not the MX laptop parts, which perform like integrated graphics), AMD's RX and
+ * Pro cards, Intel's Arc A and B cards.
+ */
+const DISCRETE = /nvidia|geforce|quadro|\brtx\b|radeon\s*(\(tm\)\s*)?(rx|pro|r9|vii)|intel\(r\)\s*arc\(tm\)\s*[ab]\d|\barc\s+[ab]\d/i;
+/** NVIDIA's MX laptop parts: integrated-class performance. */
+const ENTRY_DISCRETE = /geforce\s*mx\s*\d/i;
+/**
+ * Integrated graphics by name: Intel's UHD, Iris, HD Graphics and the Arc in Core Ultra chips, AMD's APUs (Vega,
+ * "Radeon Graphics", the 600M and 700M parts), Apple silicon, and the Arm laptops' Adreno, Mali and PowerVR.
+ */
+const INTEGRATED = /intel|radeon.*(vega|graphics|\d{3}m\b)|apple|adreno|mali|powervr/i;
+
+/**
+ * What the graphics card is, by the name the browser reports (REN-03): picks the preset a first visit starts on
+ * (config/render.ts TIER_QUALITY). A hidden or unfamiliar name is 'unknown' (Firefox with fingerprinting protection
+ * reports a generic one), which starts on Medium like integrated graphics.
+ */
+export function gpuTier(name: string, software = false): GpuTier {
+  if (software || isSoftwareRenderer(name)) return 'software';
+  if (ENTRY_DISCRETE.test(name)) return 'integrated';
+  if (DISCRETE.test(name)) return 'discrete';
+  if (INTEGRATED.test(name)) return 'integrated';
+  return 'unknown';
 }

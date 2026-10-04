@@ -13,7 +13,8 @@ import {
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
 import { MATCH_MODES, type MatchMode } from '../../config/modes';
-import type { QualityPreset } from '../../config/render';
+import type { QualityChoice, QualitySettings } from '../../config/render';
+import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
 import { MAPS, type MapId } from '../../map/maps';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
@@ -66,8 +67,8 @@ export interface MenusOptions {
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   controls: ControlsSettingsOptions;
   fov: { initial: number; onChange: (v: number) => void };
-  /** The render quality preset (Settings → Graphics). */
-  quality: { initial: QualityPreset; onChange: (q: QualityPreset) => void };
+  /** The quality rows on Settings → Graphics (ui/graphicsSettings.ts). */
+  graphics: GraphicsSettingsOptions;
   audio: AudioSettingsOptions;
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;
@@ -179,7 +180,7 @@ export class Menus {
       bindings: opts.bindings,
       controls: opts.controls,
       fov: opts.fov,
-      quality: opts.quality,
+      graphics: opts.graphics,
       audio: opts.audio,
       crosshair: opts.crosshair,
       accessibility: opts.accessibility,
@@ -265,6 +266,11 @@ export class Menus {
   /** A warning on the title screen ('' hides it): the browser runs without hardware acceleration. */
   showTitleWarning(text: string): void {
     this.title.setWarning(text);
+  }
+
+  /** Shows a quality choice on Settings → Graphics without saving it (the game's own step-down, REN-03). */
+  showQuality(choice: QualityChoice, settings: QualitySettings): void {
+    this.settings.showQuality(choice, settings);
   }
 
   /** A short message under the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */

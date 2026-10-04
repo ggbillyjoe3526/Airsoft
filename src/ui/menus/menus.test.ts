@@ -65,8 +65,8 @@ describe('menu data', () => {
     }
   });
 
-  it('offers every quality preset on the Quality picker (M14), and has no Brightness setting', () => {
-    expect(QUALITY_CHOICES.map((c) => c.id).sort()).toEqual(Object.keys(QUALITY).sort());
+  it('offers every quality preset and Custom on the Quality picker (M14, final alpha audit), and has no Brightness setting', () => {
+    expect(QUALITY_CHOICES.map((c) => c.id).sort()).toEqual([...Object.keys(QUALITY), 'custom'].sort());
     expect(SETTINGS_LATER.graphics.some((s) => s.label === 'Brightness' || s.label === 'Field of view' || s.label === 'Quality')).toBe(false);
     // No browser storage in the tests: nothing saved (the game then picks one for the visit, config/render.ts).
     expect(loadSavedQuality()).toBeNull();

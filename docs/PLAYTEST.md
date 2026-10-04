@@ -502,6 +502,30 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   summary says Dev settings kept it out of your records. Untick the box and Play Again: everything is back to normal
   and that match counts. Disable Armory and Unlock all gear: see "Loadout and Armory (M26)".
 
+## Graphics presets and Custom (FA2)
+
+- [ ] **First start.** Clear the site's data (or use a private window) and load the game. On a laptop with Intel or AMD
+  integrated graphics, Settings → Graphics shows **Medium**; on a desktop with an NVIDIA or AMD RX card, **High**. Press
+  `` ` `` in a match: the debug panel's quality line ends with "(auto)".
+- [ ] **The ladder.** In a match, switch Low → Medium → High and back. Low: softer picture (80 % resolution), no
+  shadows, plain surfaces, jagged edges. Medium: shadows, players darker inside a container's shade, relief, smooth
+  edges. High: sharper floor textures up close and into the distance, finer shadow edges, the replica's sheen, dust.
+  Each switch applies at once with at most a short pause (edge smoothing makes a new graphics context), and the game
+  keeps the mouse captured after Resume.
+- [ ] **Custom.** Pick Medium, then set Shadows Off: the picker jumps to **Custom**. Set it back On: **Medium** again.
+  Pick Custom, move Render scale to 60 %: the picture softens at once; the HUD and menus stay sharp. Reload the page:
+  Custom and 60 % are still picked. Each row's help ends with what it costs.
+- [ ] **Edge smoothing in Firefox on Linux.** Set Edge smoothing On: if the line under it says "Not available in this
+  browser", the game draws without it (that browser refuses multisampling), as the debug panel's antialias line says.
+- [ ] **Frame-rate limit.** On a 120 Hz or faster screen set it to 60: Show FPS reads about 60, the laptop runs cooler;
+  the game plays the same (movement and BBs at the same speed). Off returns to the screen's rate.
+- [ ] **Show FPS.** On: a small "NN FPS · N.N ms" counter in the top-left corner while you play; Off hides it.
+- [ ] **Automatic step-down.** Only with nothing saved (clear the site's data) on a machine that struggles: after a few
+  seconds of slow frames, at the end of the round, the HUD says "Graphics set to Low to keep the game smooth" and the
+  picker shows Low. It is not saved: a reload starts on the GPU's preset again. It never happens once you pick a preset.
+- [ ] **Debug panel.** `` ` `` in a match shows "frame ms (sim / draw / GPU)" (GPU is "n/a" in Firefox) and the
+  antialias line ("on asked, on given (4 samples)" on Chrome).
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score

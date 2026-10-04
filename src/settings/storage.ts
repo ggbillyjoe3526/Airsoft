@@ -39,7 +39,13 @@ export type SettingField =
   | 'soundCues'
   | 'map'
   | 'fov'
+  /** Settings → Graphics → Quality: a preset or 'custom' (config/render.ts QualityChoice). */
   | 'quality'
+  /** The Custom rows (config/graphics.ts), one per QualitySettings field: read when Quality is Custom. */
+  | `graphics.${string}`
+  /** Settings → Graphics: the frame-rate cap and the FPS readout (not part of a preset). */
+  | 'frameRateCap'
+  | 'showFps'
   /** The tutorial was played to the end (M16): the title stops pointing new players at it. */
   | 'tutorialDone'
   | `hopUp.${string}`
@@ -75,6 +81,26 @@ interface StoredSettings {
   [field: string]: unknown;
 }
 
+/**
+ * Format changes, by the version they upgrade from: `MIGRATIONS[n]` turns a version-n object into a version-n+1 one.
+ * Empty so far: every change since version 1 has only added fields (the final alpha audit's Custom graphics rows too),
+ * and a reader falls back to the default for a field it doesn't find. A rename or a changed meaning adds an entry here
+ * and bumps SETTINGS_VERSION, so no saved setting is lost to the version check.
+ */
+export const MIGRATIONS: Readonly<Record<number, (stored: Record<string, unknown>) => Record<string, unknown>>> = {};
+
+/** `stored` brought up to SETTINGS_VERSION through `migrations`, or null if it can't be (a future or unknown version). */
+export function migrateSettings(stored: unknown, migrations = MIGRATIONS, version = SETTINGS_VERSION): StoredSettings | null {
+  if (!stored || typeof stored !== 'object') return null;
+  let s = stored as StoredSettings;
+  while (typeof s.version === 'number' && s.version < version) {
+    const step = migrations[s.version];
+    if (!step) return null;
+    s = { ...step(s), version: s.version + 1 };
+  }
+  return s.version === version ? s : null;
+}
+
 /** localStorage, or null where the browser blocks it (settings then last for the session only). */
 export function browserStorage(): Storage | null {
   try {
@@ -86,8 +112,7 @@ export function browserStorage(): Storage | null {
 
 function readObject(storage: Storage): StoredSettings | null {
   try {
-    const parsed: unknown = JSON.parse(storage.getItem(SETTINGS_KEY) ?? 'null');
-    if (parsed && typeof parsed === 'object' && (parsed as StoredSettings).version === SETTINGS_VERSION) return parsed as StoredSettings;
+    return migrateSettings(JSON.parse(storage.getItem(SETTINGS_KEY) ?? 'null'));
   } catch {
     // Unreadable: treated as nothing saved.
   }

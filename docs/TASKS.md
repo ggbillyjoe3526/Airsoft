@@ -28,3 +28,22 @@ acceptance:
   3. The KNOWN_ISSUES row about the first frame of a puff is removed
 status: open
 attempts: 0
+
+## FA2 · Quality presets and the Custom graphics option
+tier: core
+perf: required
+touches: src/config/render.ts, src/config/graphics.ts, src/settings/storage.ts, src/ui/menus/savedChoices.ts, src/ui/menus/settingsScreen.ts, src/ui/menus/menus.ts, src/ui/graphicsSettings.ts, src/ui/debugOverlay.ts, src/style.css, src/render/gpuCheck.ts, src/render/gpuTimer.ts, src/render/renderer.ts, src/render/proceduralTextures.ts, src/render/mapMeshes.ts, src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/flagRenderer.ts, src/render/rangeTargetsRenderer.ts, src/render/matchPresentation.ts, src/render/combatPresentation.ts, src/render/qualityStepDown.ts, src/core/framePacer.ts, src/matchSession.ts, src/rangeSession.ts, src/game.ts, src/main.ts, docs/KNOWN_ISSUES.md
+contract: QualitySettings and QUALITY (fields added: renderScale, antialias, figureShadows, textureSize, anisotropy, dustMotes; shadowMapSize widened; QualityChoice adds 'custom'), the settings store keys (additive: graphics.<field>, frameRateCap, showFps; a migration chain at version 1)
+acceptance:
+  1. REN-20, REN-01, REN-23, REN-13, REN-09: every preset sets every QualitySettings field; Low renders at 0.8 render scale with no MSAA, 256² textures, no anisotropy and no dust, and is never dearer than before on any row; Medium and High differ from the preset below on at least three rows visible on a DPR-1 screen; shadowRadius is documented and costed as free (config/render.test.ts)
+  2. REN-07: figures, the flag cloth and the range targets receive shadows when `figureShadows` is on (Medium, High) and stop on Low, live (characterModels.test.ts)
+  3. REN-16, CORE-25: a frame-rate cap (Off, 30, 60, 120, 144) skips draws by a due-time schedule that holds the cap on a 60, 120 or 144 Hz screen; the simulation still steps every frame (framePacer.test.ts)
+  4. UI-06: Settings → Graphics shows Quality (Low, Medium, High, Custom), the frame-rate cap, Show FPS and one Custom row per QualitySettings field with its cost; changing a row turns the picker to Custom (or the preset it now equals) and applies at once; the rows come from one table (config/graphics.ts) so a later field is one entry (config/graphics.test.ts, e2e boot quality step)
+  5. Settings store: the Custom rows save as `graphics.<field>`, read back validated (a stale or hand-edited value is dropped), and a migration chain walks old versions to the current one (settings/storage.test.ts)
+  6. REN-03: the first start picks a preset from the GPU's renderer string (software Low, integrated or unknown Medium, discrete High; a table test of real strings); an automatic pick that stutters (over 5 % of frames past 20 ms in two windows running) steps down once, between rounds, with a HUD notice, and is never saved (gpuCheck.test.ts, qualityStepDown.test.ts)
+  7. REN-04, REN-21, REN-24: changing antialiasing mid-session makes a new context on a new canvas (the old one disposed and its context forced lost); when that fails the row says it applies on the next load; the row says when the browser gave no multisampling, the filtering row when the card caps anisotropy
+  8. REN-18: the GPU probe makes one context (the flagged one) when it is granted, two when refused (gpuCheck.test.ts counts them)
+  9. REN-17: the debug overlay shows the quality in force, the frame split into simulation, draw and GPU time (EXT_disjoint_timer_query_webgl2, one query reused), and the antialiasing asked and given (gpuTimer.test.ts)
+  10. Low's perf (draw calls, triangles, GPU memory) is no worse than its baseline; the KNOWN_ISSUES rows FA2 closes are reworded or removed
+status: gates
+attempts: 1

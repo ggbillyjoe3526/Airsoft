@@ -32,11 +32,12 @@ import {
 import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, SCOREBOARD_SIZE } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
-import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset, RENDER } from '../../config/render';
+import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES } from '../../config/graphics';
+import { FOV_SETTING, type FrameRateCap, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER } from '../../config/render';
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
-import { loadSetting, numberIn, oneOf } from '../../settings/storage';
+import { browserStorage, loadSetting, numberIn, oneOf } from '../../settings/storage';
 import { loadChoice } from '../optionPicker';
 
 /** The choices the menus save in the browser, each read back here with its default. */
@@ -123,11 +124,35 @@ export function loadFov(): number {
 }
 
 /**
- * The render quality preset picked on Settings → Graphics → Quality (M14), or null if none has been saved: then the
- * game picks one for the visit (config/render.ts startingQuality).
+ * The render quality picked on Settings → Graphics → Quality (M14): a preset or 'custom', or null if none has been
+ * saved: then the game picks one for the visit (config/render.ts startingQuality).
  */
-export function loadSavedQuality(): QualityPreset | null {
-  return loadSetting<QualityPreset | null>('quality', oneOf(QUALITY_CHOICES.map((q) => q.id)), null);
+export function loadSavedQuality(storage = browserStorage()): QualityChoice | null {
+  return loadSetting<QualityChoice | null>('quality', oneOf(QUALITY_CHOICES.map((q) => q.id)), null, storage);
+}
+
+/**
+ * The Custom rows as saved (`graphics.<field>`, config/graphics.ts): only the fields saved with a value their row
+ * offers; config/render.ts resolveQuality fills the rest from High.
+ */
+export function loadCustomQuality(storage = browserStorage()): Partial<QualitySettings> {
+  const custom: Record<string, unknown> = {};
+  for (const row of GRAPHICS_ROWS) {
+    const v = loadSetting(graphicsKey(row.field), (raw) => parseStored(row, raw), undefined, storage);
+    if (v !== undefined) custom[row.field] = v;
+  }
+  return custom as Partial<QualitySettings>;
+}
+
+/** The frame-rate cap (Settings → Graphics; 0 = none, the default). */
+export function loadFrameRateCap(): FrameRateCap {
+  const id = loadChoice('frameRateCap', FRAME_RATE_CAP_CHOICES, 'off');
+  return FRAME_RATE_CAP_CHOICES.find((c) => c.id === id)!.value;
+}
+
+/** The FPS readout (Settings → Graphics): off unless the player turned it on. */
+export function loadShowFps(): boolean {
+  return loadChoice('showFps', SHOW_FPS_CHOICES, 'off') === 'on';
 }
 
 export function loadSensitivity(): number {

@@ -7,7 +7,7 @@ import { impactMaterialAt } from '../audio/soundMaterials';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
-import { BB_VISUALS, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, QUALITY, type QualitySettings } from '../config/render';
+import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, type OpticId, OPTICS } from '../config/optics';
@@ -38,8 +38,8 @@ export class CombatPresentation {
   private readonly hitPuffs = new ImpactPuffs(HIT_PUFFS);
   /** A gas replica's breath at the muzzle and ejection port on each shot (M14). */
   private readonly gasPuffs = new ImpactPuffs(GAS_PUFFS);
-  /** Dust drifting in the sunlight round the camera (M14); how much is the quality preset's. */
-  private readonly motes = new DustMotes(QUALITY.high.dustMotes);
+  /** Dust drifting in the sunlight round the camera (M14); how much is the quality settings' (at most the Custom row's top). */
+  private readonly motes = new DustMotes(DUST_MOTES.max);
   /** The impact dust's tint per material (linear colours, made once). */
   private readonly dustTints = new Map<ImpactMaterial, THREE.Color>();
   /** The held replica's reflections (M14, QualitySettings.replicaSheen): made the first time they are wanted. */
@@ -147,6 +147,11 @@ export class CombatPresentation {
   /** The crosshair changed on Settings → Crosshair. */
   setCrosshair(crosshair: CrosshairSettings): void {
     this.hud.setCrosshair(crosshair);
+  }
+
+  /** A short line on the HUD (the game's own quality step-down says so, REN-03). */
+  showNotice(text: string, seconds: number): void {
+    this.hud.showNotice(text, seconds);
   }
 
   /** No rounds here (the practice range, M21): no start whistle when play starts. */

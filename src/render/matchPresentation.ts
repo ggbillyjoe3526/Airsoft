@@ -134,6 +134,12 @@ export class MatchPresentation {
   private wheelHintOn = false;
   private wheelHintText = '';
 
+  /** Figures and the flag's cloth shaded by walls and containers (QualitySettings.figureShadows, REN-07). */
+  setFigureShadows(on: boolean): void {
+    this.characters.setReceiveShadows(on);
+    this.flag.setReceiveShadows(on);
+  }
+
   /** On-screen sound cues turned on or off (also called once as the match is built). */
   setSoundCues(on: boolean): void {
     this.soundCues.setEnabled(on);

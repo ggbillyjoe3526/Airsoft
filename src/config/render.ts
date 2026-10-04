@@ -11,8 +11,6 @@ export const RENDER = {
   horizontalFov16x9: 90,
   near: 0.05,
   far: 250,
-  /** Anisotropic filtering for surface textures; keeps floor detail readable at grazing angles. */
-  textureAnisotropy: 4,
   /**
    * Exposure under ACES filmic tone mapping (M14): a touch over 1, so sunny concrete reads bright and friendly rather
    * than grey, without washing out the team colours.
@@ -75,24 +73,48 @@ export const ATMOSPHERE = {
 export const FOV_SETTING = { min: 80, max: 120, step: 1 } as const;
 
 export type QualityPreset = 'low' | 'medium' | 'high';
+/** What the Quality picker and the settings store hold: a preset, or the player's own mix of the Custom rows. */
+export type QualityChoice = QualityPreset | 'custom';
+/** The presets, cheapest first. */
+export const QUALITY_PRESETS: readonly QualityPreset[] = ['low', 'medium', 'high'];
+
+/** Shadow map sizes (texels per side): each step is four times the depth fill and memory (4 / 16 / 64 MB). */
+export type ShadowMapSize = 1024 | 2048 | 4096;
+/** Surface texture sizes (pixels per side): eight textures with mipmaps are 2.8 / 11.2 / 44.7 MB. */
+export type TextureSize = 256 | 512 | 1024;
+/** Anisotropic filtering levels (1 = off); the browser clamps to what the graphics card offers. */
+export type Anisotropy = 1 | 2 | 4 | 8 | 16;
 
 /**
- * What a quality preset sets (Settings → Graphics → Quality, M14). Everything applies at once except antialiasing,
- * which needs a new WebGL context: it follows the preset the game loaded with (the next load picks up a change).
+ * What a quality preset or the Custom rows set (Settings → Graphics; final alpha audit section 4). Every field applies
+ * at once, antialiasing too (a new WebGL context, Renderer.setQuality). Fields are added, never renamed: each new one
+ * gets a value on every preset, a Custom row (config/graphics.ts) and a `graphics.<field>` key in the settings store.
  */
 export interface QualitySettings {
+  /** Resolution as a share of the screen's (0.5..1): the browser scales the picture up. The first lever on an iGPU. */
+  renderScale: number;
   /** Caps devicePixelRatio; high-DPI laptops with iGPUs pay a lot for full resolution. */
   maxPixelRatio: number;
+  /** 4× multisampling on the screen's framebuffer. */
   antialias: boolean;
   shadows: boolean;
-  shadowMapSize: 1024 | 2048;
-  /** PCF filter radius in shadow-map texels: softer shadow edges cost more samples' worth of blur. */
+  shadowMapSize: ShadowMapSize;
+  /**
+   * Shadow softness in shadow-map texels. A look setting only: the filter takes the same five samples at any radius
+   * (Three.js r186 PCFShadowMap), so it costs nothing (audit REN-09).
+   */
   shadowRadius: number;
+  /** Figures, the flag's cloth and the range targets are shaded by walls and containers, not only cast shadows (REN-07). */
+  figureShadows: boolean;
   /**
    * Surface relief: the surface textures double as bump maps, so slab joints, mortar, planks and container ribs
    * catch the sun. Costs a few texture reads per pixel on every surface.
    */
   surfaceRelief: boolean;
+  /** The surface textures' size (REN-13): sharper close up, more memory. */
+  textureSize: TextureSize;
+  /** Anisotropic filtering on the surface textures: keeps the floor sharp at grazing angles (REN-13). */
+  anisotropy: Anisotropy;
   /** Dust motes drifting in the sunlight round you (render/dustMotes.ts); 0 draws none. */
   dustMotes: number;
   /** The held replica picks up soft reflections (an environment map), so its plastic has a moulded sheen. */
@@ -100,51 +122,113 @@ export interface QualitySettings {
 }
 
 /**
- * Render quality presets (M14: the Settings picker is back now the art pass gives it real work to scale). High is
- * the full look and the default (Low in a browser drawing in software, see startingQuality); Medium keeps shadows and relief at a lower cost; Low drops shadows, antialiasing,
- * relief, dust and the replica's sheen for integrated graphics. `?quality=low|medium|high` still overrides the saved
- * pick for one visit, to measure frame cost (Phase 3 audit C-04).
+ * Render quality presets (M14; the ladder reworked by the final alpha audit, section 4, REN-01/02/23). High is the full
+ * look for a discrete GPU; Medium is a true middle for integrated graphics (shadows, relief and smoothing, a smaller
+ * shadow map and textures, no sheen); Low drops everything that costs fill rate and renders at 80 % of the screen's
+ * resolution (REN-01). `?quality=low|medium|high|custom` overrides the saved pick for one visit, to measure frame cost
+ * (Phase 3 audit C-04).
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
-  low: { maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, surfaceRelief: false, dustMotes: 0, replicaSheen: false },
-  medium: { maxPixelRatio: 1, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, surfaceRelief: true, dustMotes: 90, replicaSheen: true },
-  high: { maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, surfaceRelief: true, dustMotes: 180, replicaSheen: true },
+  low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false },
+  medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: false },
+  high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true },
 };
 
-export const DEFAULT_QUALITY: QualityPreset = 'high';
+/** The fields of a QualitySettings, in the order the Custom rows show them. */
+export const QUALITY_FIELDS = Object.keys(QUALITY.high) as readonly (keyof QualitySettings)[];
 
 /**
- * The preset a browser drawing in software starts on when nothing is saved (audit M-02): High there runs at about two
- * frames a second and the simulation in slow motion; Low at four times that.
+ * The settings in force for a choice: a preset's row, or (Custom) High's row overlaid with the saved custom fields.
+ * The custom fields are trusted: the store's loader (ui/menus/savedChoices.ts loadCustomQuality) has checked them.
  */
-export const SOFTWARE_RENDERING_QUALITY: QualityPreset = 'low';
+export function resolveQuality(choice: QualityChoice, custom: Partial<QualitySettings>): QualitySettings {
+  if (choice !== 'custom') return QUALITY[choice];
+  const q: QualitySettings = { ...QUALITY.high };
+  for (const field of QUALITY_FIELDS) {
+    const v = custom[field];
+    if (v !== undefined) (q as unknown as Record<string, unknown>)[field] = v;
+  }
+  return q;
+}
+
+/** Which preset a settings object equals in every field, or 'custom'. */
+export function qualityChoiceOf(q: QualitySettings): QualityChoice {
+  return QUALITY_PRESETS.find((p) => QUALITY_FIELDS.every((f) => QUALITY[p][f] === q[f])) ?? 'custom';
+}
 
 /**
- * The preset a visit starts with: `?quality=` if given, else the saved pick, else SOFTWARE_RENDERING_QUALITY when the
- * browser draws in software and DEFAULT_QUALITY otherwise. `automatic` marks the software fallback: it is not saved, so
- * the same browser with its graphics acceleration back on starts on the default again.
+ * The renderer's pixel ratio for a screen's devicePixelRatio: the DPI cap, then the render scale (REN-01). Below 1 the
+ * game renders fewer pixels than the screen has and the browser scales the picture up (the HUD is HTML, so stays crisp).
+ */
+export function effectivePixelRatio(devicePixelRatio: number, q: QualitySettings): number {
+  return Math.min(devicePixelRatio, q.maxPixelRatio) * q.renderScale;
+}
+
+/** What the graphics card is, by the renderer name the browser reports (render/gpuCheck.ts gpuTier). */
+export type GpuTier = 'software' | 'integrated' | 'discrete' | 'unknown';
+
+/**
+ * The preset a first visit starts on by GPU (REN-03): Low when the browser draws in software (audit M-02: High there
+ * runs at about two frames a second), Medium on integrated graphics and when the name is hidden (Firefox's
+ * fingerprinting protection), High on a discrete card.
+ */
+export const TIER_QUALITY: Readonly<Record<GpuTier, QualityPreset>> = { software: 'low', integrated: 'medium', unknown: 'medium', discrete: 'high' };
+
+/**
+ * The quality a visit starts with: `?quality=` if given, else the saved pick, else the GPU tier's preset. `automatic`
+ * marks the game's own pick: it is never saved (the same browser on a better GPU, or with its acceleration back on,
+ * starts on that GPU's preset), and only an automatic pick steps down by itself when frames run slow (QUALITY_STEP_DOWN).
  */
 export function startingQuality(
-  fromUrl: QualityPreset | null,
-  saved: QualityPreset | null,
-  softwareRendering: boolean,
-): { preset: QualityPreset; automatic: boolean } {
+  fromUrl: QualityChoice | null,
+  saved: QualityChoice | null,
+  custom: Partial<QualitySettings>,
+  tier: GpuTier,
+): { choice: QualityChoice; settings: QualitySettings; automatic: boolean } {
   const picked = fromUrl ?? saved;
-  if (picked !== null) return { preset: picked, automatic: false };
-  return softwareRendering ? { preset: SOFTWARE_RENDERING_QUALITY, automatic: true } : { preset: DEFAULT_QUALITY, automatic: false };
+  if (picked !== null) return { choice: picked, settings: resolveQuality(picked, custom), automatic: false };
+  const choice = TIER_QUALITY[tier];
+  return { choice, settings: QUALITY[choice], automatic: true };
 }
 
-/** The Quality picker's options (Settings → Graphics), cheapest first. */
-export const QUALITY_CHOICES: readonly { id: QualityPreset; label: string; blurb: string }[] = [
-  { id: 'low', label: 'Low', blurb: 'For integrated graphics: no shadows, relief or dust, and no edge smoothing from the next time the game loads.' },
-  { id: 'medium', label: 'Medium', blurb: 'Shadows and surface relief at a lower cost: a good middle for most laptops.' },
-  { id: 'high', label: 'High', blurb: 'The full look: sharper on high-DPI screens, softer shadows, dust in the sunlight.' },
+/** The Quality picker's options (Settings → Graphics), cheapest first, then Custom. */
+export const QUALITY_CHOICES: readonly { id: QualityChoice; label: string; blurb: string }[] = [
+  { id: 'low', label: 'Low', blurb: 'For integrated graphics: no shadows, relief, edge smoothing or dust, and 80 % resolution, scaled up.' },
+  { id: 'medium', label: 'Medium', blurb: 'Shadows, players in shade, surface relief and edge smoothing at a lower cost: a good middle for most laptops.' },
+  { id: 'high', label: 'High', blurb: 'The full look: sharp textures, a finer shadow map, the replica’s sheen and dust in the sunlight.' },
+  { id: 'custom', label: 'Custom', blurb: 'Your own mix of the rows below.' },
 ];
 
-/** The preset a `?quality=` value names, or null for a missing or unknown value. */
-export function parseQuality(value: string | null): QualityPreset | null {
-  return value !== null && Object.hasOwn(QUALITY, value) ? (value as QualityPreset) : null;
+/** The choice a `?quality=` value names, or null for a missing or unknown value. */
+export function parseQuality(value: string | null): QualityChoice | null {
+  return QUALITY_CHOICES.find((c) => c.id === value)?.id ?? null;
 }
+
+/**
+ * The automatic step-down (REN-03): while the game's own pick is in force (nothing saved, no `?quality=`), frame times
+ * are watched in windows of `windowSeconds` of play; when `windows` windows in a row have a 95th percentile over
+ * `p95Ms` (or over `capSlack` frames of a frame-rate cap, whichever is longer), the next preset down applies, once per
+ * match, between rounds, and the HUD says so for `noticeSeconds`. It is never saved.
+ */
+export const QUALITY_STEP_DOWN = { windowSeconds: 2, p95Ms: 20, windows: 2, capSlack: 1.25, noticeSeconds: 5 } as const;
+
+/**
+ * Frame-rate cap (Settings → Graphics; REN-16, CORE-25): frames a second the game draws at most (0 = as many as the
+ * screen shows). Not part of a preset. The simulation keeps its 60 ticks a second whatever the cap.
+ */
+export const FRAME_RATE_CAPS = [0, 30, 60, 120, 144] as const;
+export type FrameRateCap = (typeof FRAME_RATE_CAPS)[number];
+/**
+ * A frame is drawn up to `slackMs` early, so a cap equal to the screen's rate never drops to every other frame on a
+ * slightly early vsync; more than `resetFrames` frame periods behind, the schedule restarts from now (no burst to catch up).
+ */
+export const FRAME_PACING = { slackMs: 1, resetFrames: 2 } as const;
+
+/**
+ * The debug overlay's frame breakdown (REN-17): simulation, draw and GPU milliseconds a frame, each a running average
+ * where every new frame weighs `smoothing`.
+ */
+export const FRAME_TIMING = { smoothing: 0.1 } as const;
 
 /**
  * Bright, friendly daylight: a warm late-morning sun and a cool sky fill (M14). The hemisphere's ground colour is the
@@ -172,8 +256,6 @@ export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated'
  * here is drawing only: blocks collide, cover and steer bots exactly as their data says.
  */
 export const SURFACES = {
-  /** Texture size in pixels (square, a power of two): eight of these are about 11 MB of GPU memory with mipmaps. */
-  textureSize: 512,
   /** Metres one texture repeat covers, for the textures mapped in world space (crates are mapped once per face). */
   worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2 } satisfies Record<SurfaceTextureId, number>,
   /** How strongly each texture's light and dark read as relief when surface relief is on (bump scale). */
@@ -319,10 +401,11 @@ export const GAS_PUFFS: PuffConfig & { muzzleSpeed: number; portScale: number; p
 
 /**
  * Dust motes drifting in the sunlight round you (M14, render/dustMotes.ts): how many is the quality preset's
- * (QualitySettings.dustMotes); they fill a cube `box` metres across centred on the camera, wrapping round it as you move.
- * Reduced motion turns them off.
+ * (QualitySettings.dustMotes, at most `max`: the Custom row's top); they fill a cube `box` metres across centred on the
+ * camera, wrapping round it as you move. Reduced motion turns them off.
  */
 export const DUST_MOTES = {
+  max: 300,
   box: 14,
   /** World size of a mote (metres): a few pixels a couple of metres off, a speck further away. */
   size: 0.045,

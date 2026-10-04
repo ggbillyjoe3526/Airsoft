@@ -11,7 +11,9 @@ import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './con
 import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
-import { QUALITY, type QualityPreset } from './config/render';
+import { GRAPHICS_TEXT } from './config/graphics';
+import { FRAME_TIMING, type FrameRateCap, QUALITY, QUALITY_CHOICES, QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset, type QualitySettings } from './config/render';
+import { FramePacer } from './core/framePacer';
 import { SIM } from './config/sim';
 import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
 import { KeyBindings } from './input/keyBindings';
@@ -22,6 +24,7 @@ import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { deriveSeed } from './core/seed';
 import { loadFigureModel } from './render/externalModels';
+import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { Renderer } from './render/renderer';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
@@ -51,6 +54,7 @@ import {
   loadCrouchMode,
   loadDifficulty,
   loadFov,
+  loadFrameRateCap,
   loadInvertMouse,
   loadMap,
   loadMatchRules,
@@ -58,6 +62,7 @@ import {
   loadMouseDpi,
   loadReducedMotion,
   loadSensitivity,
+  loadShowFps,
   loadHitFeedMode,
   loadScoreboardSize,
   loadSoundCueColour,
@@ -83,12 +88,13 @@ export interface GameOptions {
   /** Seeds the simulation and the bots (core/seed.ts): the same seed replays the same bot decisions for the same inputs. */
   seed: number;
   /**
-   * The render quality preset to start with (config/render.ts startingQuality): `?quality=` for a visit, the saved one,
-   * or else the default (Low in a browser drawing in software). Settings → Graphics changes it later (all but
-   * antialiasing, which keeps the starting preset's until the next load).
+   * The render quality to start with (config/render.ts startingQuality): `?quality=` for a visit, the saved one, or else
+   * the GPU's preset (Low in a browser drawing in software). Settings → Graphics changes it later.
    */
-  quality: QualityPreset;
-  /** `quality` was picked for this visit because the browser draws in software (not saved; config/render.ts startingQuality). */
+  quality: QualityChoice;
+  /** What `quality` resolves to (a preset's row, or the saved Custom mix). */
+  qualitySettings: QualitySettings;
+  /** `quality` is the game's own pick for this visit (nothing saved or asked for): not saved, and it may step down by itself. */
   automaticQuality: boolean;
   /** The browser draws without hardware acceleration (render/gpuCheck.ts): the title screen warns. */
   softwareRendering: boolean;
@@ -187,8 +193,26 @@ export class Game {
   private devEnabled = loadDevEnabled();
   private readonly devPicked: DevSettings = loadDevSettings();
   private dev: DevSettings = activeDev(this.devEnabled, this.devPicked);
-  /** The render quality preset in use (Settings → Graphics, M14). */
-  private quality: QualityPreset;
+  /** The render quality in use (Settings → Graphics, M14; Custom since the final alpha audit) and what it resolves to. */
+  private qualityChoice: QualityChoice;
+  private quality: QualitySettings;
+  /**
+   * The game's own pick is in force (nothing saved or asked for, REN-03): frame times are watched, and once per match a
+   * run of slow windows steps it down a preset, between rounds. A pick on Settings → Graphics ends it.
+   */
+  private autoQuality: boolean;
+  private readonly frameWatch = new FrameTimeWatch();
+  /** The preset to step down to at the next break in play; and whether this session has stepped down already. */
+  private stepDownTo: QualityPreset | null = null;
+  private steppedDown = false;
+  /** The frame-rate cap (Settings → Graphics; 0 = none) and which frames it lets through (REN-16, CORE-25). */
+  private frameRateCap: FrameRateCap = loadFrameRateCap();
+  private readonly pacer = new FramePacer();
+  /** Time since the last drawn frame (s): a capped frame's animations cover the frames skipped. */
+  private sinceDrawn = 0;
+  /** Smoothed milliseconds a frame in the simulation and in the draw (the CPU side), for the debug overlay (REN-17). */
+  private simMs = 0;
+  private drawMs = 0;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once.
@@ -202,9 +226,11 @@ export class Game {
     private readonly container: HTMLElement,
     private readonly options: GameOptions,
   ) {
-    this.quality = options.quality;
+    this.qualityChoice = options.quality;
+    this.quality = options.qualitySettings;
+    this.autoQuality = options.automaticQuality;
     this.matchSeed = options.seed;
-    this.renderer = new Renderer(container, QUALITY[options.quality]);
+    this.renderer = new Renderer(container, this.quality);
     this.renderer.setFov(loadFov());
     this.map = loadMap();
     this.mode = loadMode();
@@ -218,7 +244,8 @@ export class Game {
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
-    this.pointer = new PointerLock(this.renderer.canvas, this.keyboard);
+    // The lock is on the game's container, not the canvas: turning antialiasing on or off replaces the canvas (REN-04).
+    this.pointer = new PointerLock(container, this.keyboard);
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     if (options.scriptedPlayer) this.input.script = PERF_SCRIPT;
     this.input.crouchMode = loadCrouchMode();
@@ -242,8 +269,10 @@ export class Game {
         speed: p ? Math.hypot(p.velocity.x, p.velocity.z).toFixed(2) : '-',
         grounded: String(p?.grounded ?? '-'),
         'BBs in flight': s?.combat.bbsInFlight ?? 0,
-        quality: this.quality,
+        quality: this.qualityText(),
         'pixel ratio': this.renderer.renderer.getPixelRatio(),
+        'frame ms (sim / draw / GPU)': `${this.simMs.toFixed(1)} / ${this.drawMs.toFixed(1)} / ${Number.isNaN(this.renderer.gpuMs) ? 'n/a' : this.renderer.gpuMs.toFixed(1)}`,
+        antialias: this.antialiasText(),
         'draw calls': this.renderer.renderer.info.render.calls,
         triangles: this.renderer.renderer.info.render.triangles,
         'programs / geometries / textures': `${this.renderer.renderer.info.programs?.length ?? 0} / ${this.renderer.renderer.info.memory.geometries} / ${this.renderer.renderer.info.memory.textures}`,
@@ -311,7 +340,16 @@ export class Game {
         wheelSelect: { initial: this.input.wheelSelect, onChange: (m) => (this.input.wheelSelect = m) },
       },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
-      quality: { initial: this.quality, onChange: (q) => this.changeQuality(q) },
+      graphics: {
+        quality: {
+          initial: this.qualityChoice,
+          settings: this.quality,
+          onChange: (choice, q) => this.changeQuality(choice, q),
+          status: () => ({ antialiased: this.renderer.antialiased, antialiasPending: this.renderer.antialiasPending, maxAnisotropy: this.renderer.maxAnisotropy }),
+        },
+        frameRateCap: { initial: this.frameRateCap, onChange: (cap) => (this.frameRateCap = cap) },
+        showFps: { initial: loadShowFps(), onChange: (on) => this.debug.setFpsReadout(on) },
+      },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
       accessibility: {
@@ -345,6 +383,7 @@ export class Game {
     this.showHudLook();
     window.addEventListener('resize', this.showHudLook);
     this.debug.setVisible(this.dev.showDebug);
+    this.debug.setFpsReadout(loadShowFps());
     this.showMotion();
     if (options.softwareRendering) {
       const note = BROWSER_NOTES.noHardwareAcceleration;
@@ -423,11 +462,53 @@ export class Game {
     this.container.classList.toggle('full-motion', !this.reducedMotion);
   }
 
-  /** A quality preset picked on Settings → Graphics: applied at once to the renderer and the match loaded. */
-  private changeQuality(preset: QualityPreset): void {
-    this.quality = preset;
-    this.renderer.setQuality(QUALITY[preset]);
-    this.session?.setQuality(QUALITY[preset]);
+  /**
+   * New quality settings (Settings → Graphics, or the game's own step-down when `automatic`): applied at once to the
+   * renderer and the match loaded. A new WebGL context (antialiasing turned on or off) has the session render its render
+   * targets again, as after a lost context.
+   */
+  private changeQuality(choice: QualityChoice, settings: QualitySettings, automatic = false): void {
+    this.qualityChoice = choice;
+    this.quality = settings;
+    if (!automatic) {
+      this.autoQuality = false;
+      this.stepDownTo = null;
+    }
+    if (this.renderer.setQuality(settings)) this.session?.contextRestored();
+    this.session?.setQuality(settings);
+  }
+
+  /**
+   * The automatic step-down (REN-03), after each frame drawn in play: frame times go to the watch while the game's own
+   * pick is in force; a step decided mid-round waits for the round to end (a new WebGL context compiles every shader,
+   * a hitch nobody wants mid-fight), then applies, unsaved, with a line on the HUD.
+   */
+  private watchFrameTimes(s: MatchSession | RangeSession, frameSeconds: number): void {
+    if (!this.autoQuality || this.steppedDown) return;
+    if (this.stepDownTo === null) {
+      const below = presetBelow(this.qualityChoice);
+      if (below && this.frameWatch.add(frameSeconds * 1000, slowFrameMs(this.frameRateCap))) this.stepDownTo = below;
+    }
+    if (this.stepDownTo === null || (s instanceof MatchSession && s.state.round.phase === 'live')) return;
+    const preset = this.stepDownTo;
+    this.stepDownTo = null;
+    this.steppedDown = true;
+    this.changeQuality(preset, QUALITY[preset], true);
+    this.menus.showQuality(preset, QUALITY[preset]);
+    const label = QUALITY_CHOICES.find((c) => c.id === preset)!.label;
+    s.combat.showNotice(GRAPHICS_TEXT.steppedDown(label), QUALITY_STEP_DOWN.noticeSeconds);
+  }
+
+  /** The debug overlay's quality line: the choice, and the render scale, pixel ratio and shadow map in force. */
+  private qualityText(): string {
+    const q = this.quality;
+    return `${this.qualityChoice}${this.autoQuality ? ' (auto)' : ''} · scale ${q.renderScale} · shadow map ${q.shadows ? q.shadowMapSize : 'off'} · textures ${q.textureSize}`;
+  }
+
+  /** The debug overlay's antialiasing line (REN-21): asked for, given, and the samples per pixel. */
+  private antialiasText(): string {
+    const gl = this.renderer.renderer.getContext();
+    return `${this.quality.antialias ? 'on' : 'off'} asked, ${this.renderer.antialiased ? 'on' : 'off'} given (${String(gl.getParameter(gl.SAMPLES))} samples)`;
   }
 
   /** On-screen sound cues turned on or off: kept for the next match and applied to the one loaded. */
@@ -530,7 +611,8 @@ export class Game {
         rules: { ...this.matchRules },
         kit: this.loadout.kit(),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
-      }, this.matchSeed, QUALITY[this.quality], this.audio, this.crosshair);
+      }, this.matchSeed, this.quality, this.audio, this.crosshair);
+      this.steppedDown = false;
       this.session.setMotion(motionScale(this.reducedMotion));
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
@@ -557,7 +639,8 @@ export class Game {
     this.session = new RangeSession(this.renderer, this.container, this.input, {
       kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
-    }, this.options.seed, QUALITY[this.quality], this.audio, this.crosshair, pose, tutorialFrom);
+    }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
+    this.steppedDown = false;
     this.session.setMotion(motionScale(this.reducedMotion));
     this.applyDevTo(this.session);
     applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
@@ -582,6 +665,8 @@ export class Game {
       this.matchesPlayed++;
     }
     this.started = true;
+    // Time on the menus isn't a frame time.
+    this.frameWatch.reset();
     this.keyboard.capturing = true;
     this.menus.hide();
     s.setPlaying(true);
@@ -674,7 +759,9 @@ export class Game {
       // Still within the key press's user activation, which the browser needs for fullscreen.
       if (this.keyboard.wasPressed('fullscreen')) toggleFullscreen();
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
+      const simStart = performance.now();
       this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
+      this.simMs += (performance.now() - simStart - this.simMs) * FRAME_TIMING.smoothing;
       if (s instanceof RangeSession && s.takeTutorialFinished()) {
         saveSetting('tutorialDone', true);
         this.menus.markTutorialDone();
@@ -699,8 +786,20 @@ export class Game {
       this.tickRateTimer -= 1;
     }
 
+    // The frame-rate cap (REN-16, CORE-25): a frame not drawn still ran the simulation above; the next one drawn animates
+    // over the time since the last.
+    this.sinceDrawn += dt;
+    if (!this.pacer.shouldDraw(now, this.frameRateCap)) return;
+    const frameSeconds = this.sinceDrawn;
+    this.sinceDrawn = 0;
     // Only while playing: the menus are opaque, so drawing the paused field under them would be GPU work nobody sees.
-    if (running) s.draw(dt, this.keyboard.isDown('scoreboard'));
-    this.debug.frame(dt);
+    if (running) {
+      this.renderer.gpuTiming = this.debug.visible;
+      const drawStart = performance.now();
+      s.draw(frameSeconds, this.keyboard.isDown('scoreboard'));
+      this.drawMs += (performance.now() - drawStart - this.drawMs) * FRAME_TIMING.smoothing;
+      this.watchFrameTimes(s, frameSeconds);
+    }
+    this.debug.frame(frameSeconds);
   };
 }
