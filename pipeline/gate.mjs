@@ -94,9 +94,10 @@ function record(name, gate) {
   console.log(`gate ${name.padEnd(9)} ${mark}${gate.ms !== undefined ? ` (${(gate.ms / 1000).toFixed(0)} s)` : ''}${gate.reason ? ` · ${gate.reason}` : ''}`);
 }
 
-// 1. build: type check and the production build with its chunk budgets (vite.config.ts fails over budget on CI).
+// 1. build: type check and the production build with its chunk budgets (vite.config.ts fails over budget on CI). Always
+// built; the stamp it leaves lets the smoke test's release server reuse dist/ (pipeline/build-cached.mjs).
 {
-  const r = run('build', 'npm', ['run', 'build'], options.ci ? { CI: '1' } : {});
+  const r = run('build', 'node', ['pipeline/build-cached.mjs', '--mode', 'production', '--force'], options.ci ? { CI: '1' } : {});
   record('build', { pass: r.ok, ms: r.ms, log: r.log, ...(r.ok ? {} : { evidence: tail(r.output) }) });
 }
 
