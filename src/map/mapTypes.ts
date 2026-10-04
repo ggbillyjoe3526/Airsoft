@@ -74,4 +74,9 @@ export interface MapData {
    * only be played in Elimination.
    */
   flag?: Vec3;
+  /**
+   * The field is played at night (M33): glowing BBs by default (config/glowBBs.ts), and later night lighting. Absent
+   * or false: daylight.
+   */
+  night?: boolean;
 }
