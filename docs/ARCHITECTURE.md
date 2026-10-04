@@ -217,3 +217,27 @@ coordinates (north = -z in three.js) in `map/depot.ts`. The same data builds Rap
 Multiplayer is not planned. The fixed tick, command-driven characters (bots drive the same commands as
 the player), plain-data state and seeded RNG stay because they make the simulation deterministic and
 unit-testable (headless bot matches in tests).
+
+## Contracts
+
+The interfaces a task may not change unless its block in `docs/TASKS.md` says so (the pipeline's critic checks,
+`pipeline/README.md`). A contract change is a plan step: the planning thread updates this list in the same pull
+request. Each line names where it lives and what pins it.
+
+- **`PlayerCommand`** (`sim/commands.ts`): one command per character per tick, absolute view angles; the only way
+  input or bots drive the simulation. Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`.
+- **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`): plain data, no Three.js or DOM; events are
+  the only channel to presentation and are cleared each tick. Pinned by `sim/simulation.test.ts`.
+- **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its
+  phases; randomness only from `state.rng`. Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
+- **`WorldQuery` and `CharacterMover`** (`sim/`, implemented by `physics/physicsWorld.ts`): ray and shape casts and
+  the character controller the simulation sees; the simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.
+- **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`): simulation first, presentation
+  after; `afterTick` is where stats, the HUD and sound read the tick's events. Pinned by the smoke test.
+- **`QualitySettings` and `QUALITY`** (`config/render.ts`): what a preset may set; `Renderer.setQuality` and
+  `MatchSession.setQuality` apply it at once. Pinned by `config/render.test.ts`, `render/renderer.test.ts`.
+- **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`): saved under `airsoft.*`, versioned;
+  renaming a key needs a migration. Pinned by `settings/storage.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Pinned by `pool/pool.test.ts`.
+- **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
+  `map/mapData.test.ts`, `nav/navGrid.test.ts`.
