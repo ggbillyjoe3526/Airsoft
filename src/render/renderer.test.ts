@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping } from 'three';
 import { describe, expect, it, vi } from 'vitest';
+import { TONE_MAPPING } from '../config/render';
 import type { SurfaceTextures } from './proceduralTextures';
-import { handOverRenderer, releaseGpuResources, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
+import { handOverRenderer, releaseGpuResources, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
 
 describe('verticalFovFor', () => {
   it('converts a 16:9 horizontal FOV to the matching vertical FOV', () => {
@@ -56,6 +58,14 @@ describe('warmSurfacesInIdle (REN-14)', () => {
     current = null;
     while (waiting() > 0) runOne();
     expect(uploaded).toEqual(['concrete']);
+  });
+});
+
+describe('toneMappingOf (audit F2)', () => {
+  it('gives each Tone mapping choice its Three.js mapper and exposure, Neutral at 1 by default', () => {
+    expect(toneMappingOf(TONE_MAPPING.default)).toEqual({ mapping: NeutralToneMapping, exposure: 1 });
+    expect(toneMappingOf('agx').mapping).toBe(AgXToneMapping);
+    expect(toneMappingOf('aces')).toEqual({ mapping: ACESFilmicToneMapping, exposure: TONE_MAPPING.exposure.aces });
   });
 });
 

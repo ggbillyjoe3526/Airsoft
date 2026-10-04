@@ -88,11 +88,11 @@ export function shadowTexel(cam: THREE.OrthographicCamera, mapSize: number): num
 
 /** The match's daylight: change it with a new quality preset, follow the view each frame, dispose it with the match. */
 export interface Daylight {
-  /** Shadows on or off, their map size, softness and reach (Settings → Graphics → Quality). */
+  /** Shadows on or off, their map size, softness and reach; the trees and clouds (Settings → Graphics → Quality). */
   setQuality(quality: QualitySettings): void;
   /** Moves a view-fitted shadow map to the ground ahead of `camera` (High; nothing otherwise). Call before drawing. */
   follow(camera: THREE.Camera): void;
-  /** Removes the lights, sky and trees and frees the shadow map. */
+  /** Removes the lights, sky, trees and clouds and frees the shadow map. */
   dispose(): void;
 }
 
@@ -152,9 +152,12 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
 
   scene.add(hemi, sun, sun.target);
   const sunDirection = sun.position.clone().sub(sun.target.position).normalize();
-  const disposeAtmosphere = addAtmosphere(scene, sun.target.position, sunDirection);
+  const atmosphere = addAtmosphere(scene, sun.target.position, sunDirection, quality, box);
   return {
-    setQuality,
+    setQuality: (q) => {
+      setQuality(q);
+      atmosphere.setQuality(q);
+    },
     follow: (camera) => {
       if (!following) return;
       // The ground ahead: the view's heading, flattened, `ahead` metres out from the eye.
@@ -166,7 +169,7 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
       fitShadowToView(cam, level, focus, viewHalf, sun.shadow.mapSize.x);
     },
     dispose: () => {
-      disposeAtmosphere();
+      atmosphere.dispose();
       scene.remove(hemi, sun, sun.target);
       sun.dispose();
       hemi.dispose();
