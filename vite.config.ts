@@ -70,7 +70,8 @@ export default defineConfig(async () => ({
         codeSplitting: {
           groups: [
             { name: 'rapier', test: /node_modules[\\/]@dimforge/ },
-            { name: 'three', test: /node_modules[\\/]three/ },
+            // The glTF loader and its helpers stay out: only a build with a figure model loads them (M25a).
+            { name: 'three', test: /node_modules[\\/]three[\\/](?!examples[\\/]jsm[\\/](loaders|libs|utils[\\/]SkeletonUtils))/ },
           ],
         },
       },

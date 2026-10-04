@@ -20,6 +20,15 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
   fixed is in DECISIONS (2026-10-04 · Bug pass) and REVIEWS; what it left is in KNOWN_ISSUES (search "bug pass").
   Nothing it found in rounds, scoring, ballistics, records, leaks or navigation needed a change.
 
+## The owner's 2026-10-04 batch: M25 (Depot rework and CC0 assets)
+
+- **M25a (CC0 assets):** guide in `docs/CC0_ASSETS.md`; `src/render/externalModels.ts` loads an optional
+  `src/assets/models/characters/figure.glb` (settings in `config/assets.ts`) and `buildFigure` takes its parts. The
+  asset sites are blocked by the cloud network policy: the owner commits models, or allows the hosts. Next steps when
+  wanted: glTF animations for rigged models, props and surface textures from files.
+- **M25b (Depot rework, minor):** the owner approved concept v2 (sketches in the project's shared files,
+  `concepts/depot-rework-*-v2.*`). New prop kinds in `map/mapTypes.ts` and `render/mapMeshes.ts`; layout in `map/depot.ts`.
+
 ## Bug pass in short (what changed under you)
 
 - **Seeds:** each match played in a visit has its own seed (`Game.matchSeed`: the visit's seed + matches played before

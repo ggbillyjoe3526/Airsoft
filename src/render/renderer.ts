@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ATMOSPHERE, RENDER, type QualitySettings } from '../config/render';
+import type { FigureModel } from './externalModels';
 import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './proceduralTextures';
 
 const REFERENCE_ASPECT = 16 / 9;
@@ -30,6 +31,11 @@ export class Renderer {
   height = 0;
   /** The map surfaces' textures, drawn the first time a session asks (surfaceTextures). */
   private surfaces: SurfaceTextures | null = null;
+  /**
+   * The figure model every match draws its players with (M25a, render/externalModels.ts), loaded once at start; null
+   * for the built-in figures. Shared by every match and freed with the renderer.
+   */
+  figureModel: FigureModel | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
 
@@ -140,6 +146,8 @@ export class Renderer {
     this.canvas.removeEventListener('webglcontextrestored', this.contextRestored);
     if (this.surfaces) disposeSurfaceTextures(this.surfaces);
     this.surfaces = null;
+    this.figureModel?.dispose();
+    this.figureModel = null;
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }

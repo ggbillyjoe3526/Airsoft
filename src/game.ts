@@ -20,6 +20,7 @@ import { PointerLock } from './input/pointerLock';
 import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { deriveSeed } from './core/seed';
+import { loadFigureModel } from './render/externalModels';
 import { Renderer } from './render/renderer';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
@@ -184,8 +185,11 @@ export class Game {
   private quality: QualityPreset;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
-    await initPhysics();
-    return new Game(container, options);
+    // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once.
+    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel()]);
+    const game = new Game(container, options);
+    game.renderer.figureModel = figureModel;
+    return game;
   }
 
   private constructor(

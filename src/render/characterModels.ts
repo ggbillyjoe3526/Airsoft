@@ -5,6 +5,8 @@ import { FIGURE, type FigureLook } from '../config/characters';
 import type { HitConfig } from '../config/hits';
 import type { Character } from '../sim/character';
 import type { Vec3 } from '../sim/vec';
+import type { FigurePart } from '../config/assets';
+import { type FigureModel, instanceModelPart } from './externalModels';
 
 /**
  * Third-person figures (M14 art pass, reworked): stylised players at a weekend airsoft game: casual clothes under a
@@ -12,6 +14,9 @@ import type { Vec3 } from '../sim/vec';
  * helmet with a headset or bare hair, pads, gloves, and the team colour as tape (a broad band round the torso, shoulder
  * straps, armbands, a band on the headgear and on each thigh). Each moving part is one merged mesh with flat vertex
  * colours, all on the figure's one material. Figures face -Z with their feet at the origin.
+ *
+ * A figure model (M25a, render/externalModels.ts) replaces whichever of these parts it names, posed the same way; the
+ * built-in parts fill in the rest.
  */
 
 type Color = number;
@@ -157,16 +162,21 @@ export interface Figure {
   root: THREE.Group;
   /** Everything above the hips; drops when crouching. */
   upper: THREE.Group;
-  legL: THREE.Mesh;
-  legR: THREE.Mesh;
+  /** The legs, each pivoting at its hip. */
+  legL: THREE.Object3D;
+  legR: THREE.Object3D;
   /** Arms and replica in the aiming pose; pitches with the view about the shoulders. */
   aim: THREE.Group;
   /** The aim group's two holds: the rifle shouldered, or the pistol out in both hands (one shows at a time). */
-  aimRifle: THREE.Mesh;
-  aimPistol: THREE.Mesh;
+  aimRifle: THREE.Object3D;
+  aimPistol: THREE.Object3D;
   /** Hit-calling pose: one hand raised high, replica held muzzle-down. */
-  hitPose: THREE.Mesh;
+  hitPose: THREE.Object3D;
   callout: THREE.Sprite;
+  /** This figure's own copies of a figure model's materials (none for a built-in figure): they fade with it. */
+  modelMaterials: THREE.Material[];
+  /** A figure model drawn whole (no named parts), standing on the root; null otherwise. */
+  whole: THREE.Object3D | null;
 }
 
 /**
@@ -208,14 +218,34 @@ function head(b: PartBuilder, look: FigureLook, team: Color, y: number): void {
  * Builds one figure in its team colour, using `material` (vertex colours) and the shared `calloutMaterial`. `id`
  * picks its looks (figureLooks).
  */
-export function buildFigure(teamColor: Color, material: THREE.Material, calloutMaterial: THREE.SpriteMaterial, id = 0): Figure {
+export function buildFigure(teamColor: Color, material: THREE.Material, calloutMaterial: THREE.SpriteMaterial, id = 0, model: FigureModel | null = null): Figure {
   const F = FIGURE;
   const look = figureLooks(id);
   const root = new THREE.Group();
   const knee = F.hipHeight * 0.48; // height of the knee below the hip
+  const modelMaterials: THREE.Material[] = [];
+  /**
+   * The model's `name` part for this figure, set in its pivot (which sits at `pivot` in the figure), or null when the
+   * model doesn't have it. A model drawn whole replaces the body and legs and leaves them empty.
+   */
+  const fromModel = (name: FigurePart, pivot: THREE.Vector3): THREE.Object3D | null => {
+    const part = model?.parts[name];
+    if (!part) return model?.whole && (name === 'body' || name === 'legL' || name === 'legR') ? new THREE.Group() : null;
+    const copy = instanceModelPart(part, teamColor, modelMaterials);
+    copy.position.sub(pivot);
+    const holder = new THREE.Group();
+    holder.add(copy);
+    return holder;
+  };
 
   // Legs pivot at the hips so they can swing: thigh with a team band, knee pad, shin, boot.
-  const leg = (side: number): THREE.Mesh => {
+  const leg = (side: number): THREE.Object3D => {
+    const pivot = v(side * F.hipSpread, F.hipHeight, 0);
+    const own = fromModel(side < 0 ? 'legL' : 'legR', pivot);
+    if (own) {
+      own.position.copy(pivot);
+      return own;
+    }
     const b = new PartBuilder();
     const hip = v(0, 0, 0);
     const kneeAt = v(0, -knee, -0.015);
@@ -236,6 +266,40 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   const upper = new THREE.Group();
   upper.position.y = F.hipHeight;
   const hy = -F.hipHeight; // add this to world heights to get upper-body local heights
+  const hips = v(0, F.hipHeight, 0);
+  const modelBody = fromModel('body', hips);
+  if (modelBody) upper.add(modelBody);
+  else upper.add(builtBody(look, teamColor, material, hy));
+
+  // Aiming pose: pivot at the shoulder line. Rifle shouldered on the right, or the pistol held out in both hands.
+  const aim = new THREE.Group();
+  aim.position.y = F.shoulderHeight + hy;
+  const shoulders = v(0, F.shoulderHeight, 0);
+  const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(look, teamColor, material);
+  const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(look, teamColor, material);
+  aimPistol.visible = false;
+  aim.add(aimRifle, aimPistol);
+  upper.add(aim);
+
+  const hitPose = fromModel('hitPose', hips) ?? builtHitPose(look, teamColor, material, hy);
+  hitPose.visible = false;
+  upper.add(hitPose);
+
+  const callout = new THREE.Sprite(calloutMaterial);
+  callout.scale.set(F.callout.width, F.callout.width * F.callout.aspect, 1);
+  callout.position.y = F.callout.height;
+  callout.visible = false;
+
+  // In a holder of its own, so crouching can scale it without touching the model's fit.
+  const whole = model?.whole ? new THREE.Group().add(instanceModelPart(model.whole, teamColor, modelMaterials)) : null;
+  if (whole) root.add(whole);
+  root.add(legL, legR, upper, callout);
+  return { root, upper, legL, legR, aim, aimRifle, aimPistol, hitPose, callout, modelMaterials, whole };
+}
+
+/** The built-in body: torso with the team tape, vest, pouches, neck and head, in upper-body space (`hy`: see buildFigure). */
+function builtBody(look: FigureLook, teamColor: Color, material: THREE.Material, hy: number): THREE.Mesh {
+  const F = FIGURE;
   const t = F.torso;
   const body = new PartBuilder();
   const mid = t.bottom + hy; // the torso's bottom, local
@@ -261,29 +325,33 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   for (const x of [-0.1, 0, 0.1]) body.rounded(look.pouches, 0.085, 0.12, 0.055, x, bandTop + 0.08, front - 0.06, 0.012);
   body.limb(look.skin, 0.05, v(0, F.shoulderHeight + hy, 0), v(0, F.headHeight - 0.08 + hy, 0)); // neck
   head(body, look, teamColor, F.headHeight + hy);
-  upper.add(body.build(material));
+  return body.build(material);
+}
 
-  // Aiming pose: pivot at the shoulder line. Rifle shouldered on the right, or the pistol held out in both hands.
-  const aim = new THREE.Group();
-  aim.position.y = F.shoulderHeight + hy;
-  const sR = v(F.shoulderSpread, 0, 0);
-  const sL = v(-F.shoulderSpread, 0, 0);
+/** The built-in arms with the rifle shouldered on the right, in aim-group space (the shoulder line). */
+function builtAimRifle(look: FigureLook, teamColor: Color, material: THREE.Material): THREE.Mesh {
+  const F = FIGURE;
   const rifle = new PartBuilder();
-  arm(rifle, look, teamColor, sR, v(0.2, -0.2, -0.12), v(0.07, -0.12, -0.26));
-  arm(rifle, look, teamColor, sL, v(-0.14, -0.22, -0.3), v(0.03, -0.08, -0.55));
+  arm(rifle, look, teamColor, v(F.shoulderSpread, 0, 0), v(0.2, -0.2, -0.12), v(0.07, -0.12, -0.26));
+  arm(rifle, look, teamColor, v(-F.shoulderSpread, 0, 0), v(-0.14, -0.22, -0.3), v(0.03, -0.08, -0.55));
   addRifle(rifle, F.rifle.x, F.rifle.y, F.rifle.butt);
-  const aimRifle = rifle.build(material);
-  const pistol = new PartBuilder();
-  const P = F.pistol;
-  arm(pistol, look, teamColor, sR, v(0.17, -0.15, -0.21), v(P.x, P.y - 0.08, P.butt - 0.03));
-  arm(pistol, look, teamColor, sL, v(-0.13, -0.17, -0.2), v(P.x - 0.04, P.y - 0.09, P.butt - 0.05));
-  addPistol(pistol, P.x, P.y, P.butt);
-  const aimPistol = pistol.build(material);
-  aimPistol.visible = false;
-  aim.add(aimRifle, aimPistol);
-  upper.add(aim);
+  return rifle.build(material);
+}
 
-  // Hit pose: right hand straight up (open glove), rifle hanging muzzle-down from the left hand.
+/** The built-in arms with the pistol held out in both hands, in aim-group space. */
+function builtAimPistol(look: FigureLook, teamColor: Color, material: THREE.Material): THREE.Mesh {
+  const F = FIGURE;
+  const P = F.pistol;
+  const pistol = new PartBuilder();
+  arm(pistol, look, teamColor, v(F.shoulderSpread, 0, 0), v(0.17, -0.15, -0.21), v(P.x, P.y - 0.08, P.butt - 0.03));
+  arm(pistol, look, teamColor, v(-F.shoulderSpread, 0, 0), v(-0.13, -0.17, -0.2), v(P.x - 0.04, P.y - 0.09, P.butt - 0.05));
+  addPistol(pistol, P.x, P.y, P.butt);
+  return pistol.build(material);
+}
+
+/** The built-in hit pose: right hand straight up (open glove), rifle hanging muzzle-down from the left hand. */
+function builtHitPose(look: FigureLook, teamColor: Color, material: THREE.Material, hy: number): THREE.Mesh {
+  const F = FIGURE;
   const hit = new PartBuilder();
   const top = F.shoulderHeight + hy;
   const raisedElbow = v(F.shoulderSpread + 0.04, top + 0.3, 0.02);
@@ -298,17 +366,7 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   addRifle(hanging, 0, 0, 0.12);
   // Muzzle down and slightly forward, held at the left hand.
   hit.addPart(hanging, new THREE.Matrix4().makeTranslation(hangHand.x, hangHand.y, hangHand.z).multiply(new THREE.Matrix4().makeRotationX(-(Math.PI / 2 - 0.25))));
-  const hitPose = hit.build(material);
-  hitPose.visible = false;
-  upper.add(hitPose);
-
-  const callout = new THREE.Sprite(calloutMaterial);
-  callout.scale.set(F.callout.width, F.callout.width * F.callout.aspect, 1);
-  callout.position.y = F.callout.height;
-  callout.visible = false;
-
-  root.add(legL, legR, upper, callout);
-  return { root, upper, legL, legR, aim, aimRifle, aimPistol, hitPose, callout };
+  return hit.build(material);
 }
 
 /** The shared "HIT!" sign texture. */
@@ -335,10 +393,12 @@ export function createCalloutTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/** Frees a figure's geometry and its own model materials (a figure model's geometry is shared: the model frees it). */
 export function disposeFigure(f: Figure): void {
   f.root.traverse((o) => {
-    if (o instanceof THREE.Mesh) o.geometry.dispose();
+    if (o instanceof THREE.Mesh && !o.userData.sharedGeometry) o.geometry.dispose();
   });
+  for (const m of f.modelMaterials) m.dispose();
   f.root.removeFromParent();
 }
 
