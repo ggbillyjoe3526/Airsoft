@@ -66,8 +66,11 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'fullscreen', label: 'Fullscreen' },
 ];
 
-/** Keys that can't be bound: Escape pauses (the browser releases the mouse), and Meta/OS keys. */
-export const UNBINDABLE_KEYS: ReadonlySet<string> = new Set(['Escape', 'MetaLeft', 'MetaRight', 'ContextMenu']);
+/**
+ * Keys that can't be bound: Escape pauses (the browser releases the mouse), Meta/OS keys, and keys the browser can't name
+ * (`Unidentified`: unmapped media or Fn keys), which would never match again. An empty code is refused too (KeyBindings).
+ */
+export const UNBINDABLE_KEYS: ReadonlySet<string> = new Set(['Escape', 'MetaLeft', 'MetaRight', 'ContextMenu', 'Unidentified']);
 
 /**
  * Keys whose browser default (page scroll, find bar, Alt opening the menu bar) is suppressed while

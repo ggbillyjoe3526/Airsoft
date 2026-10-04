@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BINDINGS } from '../config/controls';
-import { describeKeys, KeyBindings, type KeyValueStore, keyLabel, mouseButtonCode } from './keyBindings';
+import { bindable, describeKeys, KeyBindings, type KeyValueStore, keyLabel, mouseButtonCode } from './keyBindings';
 
 class MemoryStore implements KeyValueStore {
   readonly data = new Map<string, string>();
@@ -92,6 +92,10 @@ describe('KeyBindings', () => {
     const b = new KeyBindings(null);
     expect(b.rebind('jump', 'Escape')).toBe(false);
     expect(b.primary('jump')).toBe('Space');
+    // Keys the browser can't name (audit L-28): bound, they could never match a press again.
+    expect(b.rebind('reload', '')).toBe(false);
+    expect(b.rebind('reload', 'Unidentified')).toBe(false);
+    expect(b.codes('reload')).toEqual(['KeyR']);
   });
 
   it('keeps the debug keys reserved: they never swap onto a player key', () => {
@@ -133,6 +137,10 @@ describe('KeyBindings', () => {
     const b = new KeyBindings(store);
     expect(b.primary('jump')).toBe('Space');
     expect(b.primary('reload')).toBe('KeyR');
+    store.setItem('airsoft.keyBindings', JSON.stringify({ reload: [''], jump: ['Unidentified'] }));
+    const c = new KeyBindings(store);
+    expect(c.codes('reload')).toEqual(['KeyR']);
+    expect(c.codes('jump')).toEqual(['Space']);
   });
 
   it('falls back to the defaults when saved data would leave an action without a key', () => {
@@ -189,6 +197,14 @@ describe('KeyBindings', () => {
     const b = new KeyBindings(broken);
     expect(b.rebind('jump', 'KeyJ')).toBe(true);
     expect(b.primary('jump')).toBe('KeyJ');
+  });
+});
+
+describe('bindable', () => {
+  it('takes named keys and mouse buttons, not Escape, OS keys or a key the browser could not name', () => {
+    expect(bindable('KeyT')).toBe(true);
+    expect(bindable('Mouse3')).toBe(true);
+    for (const code of ['', 'Unidentified', 'Escape', 'MetaLeft', 'ContextMenu']) expect(bindable(code)).toBe(false);
   });
 });
 

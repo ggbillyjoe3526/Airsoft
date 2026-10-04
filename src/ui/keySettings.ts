@@ -1,5 +1,5 @@
-import { type Action, REBINDABLE, UNBINDABLE_KEYS } from '../config/controls';
-import { describeKeys, type KeyBindings, keyLabel, mouseButtonCode } from '../input/keyBindings';
+import { type Action, REBINDABLE } from '../config/controls';
+import { bindable, describeKeys, type KeyBindings, keyLabel, mouseButtonCode } from '../input/keyBindings';
 
 const CTRL_WARNING = 'Heads up: some Ctrl combinations (like Ctrl+W, close tab) can\'t be blocked by the browser.';
 
@@ -115,9 +115,11 @@ export class KeySettings {
       this.listen(null);
       return;
     }
-    if (UNBINDABLE_KEYS.has(e.code) || !this.bindings.rebind(action, e.code)) {
+    if (!bindable(e.code) || !this.bindings.rebind(action, e.code)) {
       const reserved = this.bindings.actionOf(e.code)?.startsWith('debug');
-      this.refresh(`${keyLabel(e.code)} can't be bound${reserved ? ' (it shows debug info)' : ''}.`);
+      // A key the browser can't name (an unmapped media or Fn key) has no label worth showing.
+      const name = e.code && e.code !== 'Unidentified' ? keyLabel(e.code) : 'That key';
+      this.refresh(`${name} can't be bound${reserved ? ' (it shows debug info)' : ''}.`);
       return;
     }
     this.listening = null;
