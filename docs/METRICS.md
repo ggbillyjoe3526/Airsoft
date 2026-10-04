@@ -16,4 +16,5 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-04 | FA5 | 1 | Opus 5.5 (worker in a worktree) | ✓ | ✓ | ✗ (e2e still named the old key boxes) | – | ✓ | ✓ | 8/8 Accept (Opus) | smoke: test text updated to the new slot names | ~60 min | worker ~250k, critic (Opus) shared with FA9 |
 | 2026-10-04 | FA9 | 1 | Opus 5.5 (worker in a worktree) | ✓ | ✓ | ✓ | ✓ (container) | ✓ | ✓ | 7/8 near miss (Opus) | check 6 CSP connect-src | ~60 min | worker ~250k, critic (Opus) ~150k |
 | 2026-10-04 | FA5+FA9 | 2 | Opus 5.5 (lead) | ✓ 16 s | ✓ 211 s | ✗ (order wheel now shows key caps) → fixed | ✓ (ticks 1,804, at baseline) | ✓ | ✓ | – (must-fix only) | – | ~25 min | changelog (Haiku) 65k |
+| 2026-10-04 | FA12 | 1 | Opus 5.5 (worker in a worktree) | ✓ 10 s | ✓ 96 s | ✓ 70 s | ✓ 212 s (ticks 1,804, at baseline) | ✓ | ✓ | 7/8 Accept (Opus) | check 8 changelog (added by the lead) | ~45 min | worker ~200k, critic (Opus) ~180k, changelog (Haiku) 53k |
 | 2026-10-04 | M28 | 1 | Fable 5.1 (build thread) | ✓ 5 s | ✓ 70 s | ✓ 45 s | ✓ 108 s | ✓ | ✓ | – (trivial: Haiku diff check, 3/3) | – | 15 min | changelog 52k (16 s), triage 53k (41 s) |

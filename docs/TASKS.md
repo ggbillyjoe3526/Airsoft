@@ -34,16 +34,3 @@ acceptance:
   7. Bots carry each replica as it comes: the headless match guards pass unchanged
 status: accepted
 attempts: 1
-
-## FA12 · BB hot path and the BB-flight audit leftovers
-tier: core
-perf: required
-touches: src/sim/levelRay.ts, src/physics/physicsWorld.ts, src/config/physics.ts, src/sim/bbs.ts, src/stats/matchStats.ts, src/render/matchPresentation.ts, src/ai/botController.ts, src/ai/depotMatchSupport.ts, src/config/range.ts, docs/
-contract: none (WorldQuery is unchanged; PhysicsWorld now answers its rays from sim/levelRay.ts instead of Rapier)
-acceptance:
-  1. SIM-01, SIM-18: BB (and every other level) ray casts allocate nothing and never call Rapier: `sim/levelRay.ts` slab-tests the blocks through a column grid and `PhysicsWorld.raycastStatic` / `raycastSurface` delegate to it; a test fires ~24,000 seeded rays at every Depot and range block and over both maps through it and through Rapier (distance within 0.1 mm on Depot, same material, normal dot > 0.99, same misses); the audit's 9,000-BB tunnelling probe (0.05 / 0.3 / 0.4 m walls and a crate, 97 m/s, ricochets on) is a test with no BB through a wall or inside a block, and a 500-BB version runs through Rapier too
-  2. SIM-07: a ricochet can hit its shooter once it has bounced (a characterHit with shooterId = victimId when ricochets count, a ricochetTick otherwise; never with friendly fire off); the stats count it as a time hit only, the hit feed doesn't tag it friendly, and a bot isn't put under fire by its own ricochet; the ricochets-count match guards count it apart from friendly hits and bound it (tests)
-  3. SIM-16: config/range.ts says what M30's flight does (a level 0.25 g shot lands at ~53 m; the 60 m plates take ~3° of holdover) and map/range.test.ts pins it
-  4. KNOWN_ISSUES: the BB-weight-on-Depot row re-measured on M30's flight; the bot-lead row is already gone (M30)
-status: gates
-attempts: 0
