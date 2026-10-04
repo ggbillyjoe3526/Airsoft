@@ -47,6 +47,9 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     lookAngles(eye.x, eye.y, eye.z, b.lastKnown.x, eye.y, b.lastKnown.z, look);
   } else if (walking && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
     look.yaw = walkYaw;
+  } else if (b.mode === 'order') {
+    // At the spot a squad order sent it to: look the way the order says (M22).
+    look.yaw = b.orderYaw;
   } else {
     // Holding a point, or walking back along the lane: face the enemy side rather than turn our back.
     look.yaw = enemyYaw;

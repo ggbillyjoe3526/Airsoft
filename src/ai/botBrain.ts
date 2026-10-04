@@ -169,7 +169,7 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   const remembered = fresh && !watchFromPost;
   if (seeing && target) {
     // A fresh contact at range while on the move: get behind close crouch cover first, then peek.
-    if ((b.mode === 'advance' || b.mode === 'search') && b.coverCooldown <= 0) {
+    if ((b.mode === 'advance' || b.mode === 'search' || b.mode === 'order') && b.coverCooldown <= 0) {
       const d = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
       contactSearch.radius = cfg.contactCoverRadius;
       if (d >= cfg.contactCoverMinDistance && takeCover(b, w, target, 0, contactSearch)) {
@@ -178,6 +178,15 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
       }
     }
     b.mode = 'fight';
+  } else if (b.order !== 'none') {
+    // A squad order (M22) comes before the team plan: the pole, chasing noises and the lane. A noise still turns its
+    // head (aimBot watches lastKnown) until it is old news.
+    if (b.mode !== 'order') {
+      b.mode = 'order';
+      b.routeState = 'none';
+      b.route.length = 0;
+    }
+    if (!fresh) b.hasLastKnown = false;
   } else if (wantsFlag(b, w)) {
     // Attack / Defend: the pole comes before chasing noises.
     if (b.mode !== 'flag') enterFlagMode(b, w);
@@ -239,7 +248,9 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     cmd.forward = -Math.sin(b.aim.yaw) * dir.x - Math.cos(b.aim.yaw) * dir.z;
     cmd.right = Math.cos(b.aim.yaw) * dir.x - Math.sin(b.aim.yaw) * dir.z;
     const calm = w.time - b.lastThreatAt > cfg.sprintWhenCalmFor;
-    cmd.sprint = (b.mode === 'advance' || b.mode === 'flag') && calm && cmd.forward > cfg.sprintForward;
+    // Hurrying to an order (regroup, catching up) sprints even with a fight just over.
+    const hurry = b.mode === 'order' && b.orderRush;
+    cmd.sprint = (((b.mode === 'advance' || b.mode === 'flag') && calm) || hurry) && cmd.forward > cfg.sprintForward;
     // Closing in on where someone was seen or heard: walk, so footsteps don't give us away.
     cmd.walk ||= b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < cfg.searchWalkDistance;
   }

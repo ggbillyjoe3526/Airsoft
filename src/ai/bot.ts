@@ -2,6 +2,7 @@ import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
+import type { SquadOrderKind } from '../config/squad';
 import type { NavGrid } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
@@ -23,8 +24,10 @@ import { type CoverBlock, type CoverSpot, createCoverSpot } from './cover';
  * - flag (flag mode): go to the pole, crouch there and work the rope: attackers once their lane is swept,
  *   defenders while the flag is off the bottom. In flag mode defenders hold a point near home on their
  *   lane instead of advancing, and nobody hunts.
+ * - order: carrying out a squad order from a player on its team (M22): following them, holding a spot or regrouping
+ *   on them. It takes the place of advancing, searching and the pole; fights and cover still come first.
  */
-export type BotMode = 'advance' | 'fight' | 'cover' | 'search' | 'flag';
+export type BotMode = 'advance' | 'fight' | 'cover' | 'search' | 'flag' | 'order';
 
 /** What a bot remembers about one enemy it has seen (sight only; hearing never counts). */
 export interface Contact {
@@ -110,6 +113,21 @@ export interface Bot {
   peekFightLeft: number;
   strafeDir: number;
   strafeLeft: number;
+
+  // A squad order from a player on the team (M22; 'none': play the team plan).
+  order: SquadOrderKind | 'none';
+  /** Who gave it. */
+  orderLeader: Character | undefined;
+  /** This bot's place among the teammates given the order (which follow or hold spot is its own). */
+  orderSlot: number;
+  /** Hold: the spot to hold. Follow and regroup: where to make for now (moves with the leader). */
+  orderGoal: Vec3;
+  /** Which way to look once there (yaw). */
+  orderYaw: number;
+  /** Follow: the leader's heading (yaw), the way they last moved. */
+  orderHeading: number;
+  /** Hurrying (regroup, or a follower far behind): sprints even when a fight was close. */
+  orderRush: boolean;
 }
 
 /** Everything a bot's decisions depend on besides its own state. */
@@ -191,6 +209,13 @@ export function createBot(character: Character, seed: number, cfg: BotConfig): B
     peekFightLeft: 0,
     strafeDir: 1,
     strafeLeft: 0,
+    order: 'none',
+    orderLeader: undefined,
+    orderSlot: 0,
+    orderGoal: vec3(),
+    orderYaw: 0,
+    orderHeading: 0,
+    orderRush: false,
   };
   resetBot(bot, -1, 0, cfg);
   return bot;
@@ -231,6 +256,9 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotConfig
   b.coverLeft = 0;
   b.coverCooldown = 0;
   b.fromCover = false;
+  b.order = 'none';
+  b.orderLeader = undefined;
+  b.orderRush = false;
 }
 
 /** Drops the current target (its contact stays remembered for contactGrace). */
