@@ -357,6 +357,20 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 - [ ] **Hardware acceleration.** Turn off the browser's graphics acceleration and restart it: the title screen warns
   that the game will run slowly and says where to turn it back on. With it on, no warning.
 
+## Practice range (M21)
+
+- [ ] **Title screen, Practice range.** You're alone behind a painted line on a long concrete range, facing three
+  lanes of targets: white steel plates on the left, standing plywood figures in the middle, crouched ones on the
+  right. Boards on both walls and lines on the floor say 10 m to 60 m. No whistle, no clock, no score.
+- [ ] **Shoot each kind.** A plate rings (you should still hear it at 60 m) and swings back; a figure falls back and
+  stands up again after a second and a half. The readout at the top says "Last BB: 31 m · hit Steel 30 m", or
+  "· miss" with where it landed. Can you tell from it how far the rifle carries with the hop-up as it is?
+- [ ] **Reload.** Empty a magazine and reload: the spare gauges never run down.
+- [ ] **Esc, Loadout.** The pause menu has a Loadout button. Change the BB weight or the hop-up, go Back and Resume:
+  you're where you stood, with the new setup (the HUD's replica name and the readout follow it). Then Quit to title
+  screen and start a normal match: it plays as before.
+- [ ] **Walk downrange.** Nothing stops you walking among the targets; BBs fired from there still hit them.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
