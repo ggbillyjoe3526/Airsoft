@@ -12,7 +12,7 @@ export interface MapLight {
   colour: number;
 }
 
-/** How far a bot makes someone out at night (m), by the light the target stands in (BotBehaviour.nightSight). */
+/** How far a bot makes someone out at night (m), by the light the target stands in (config/bots.ts NIGHT_SIGHT). */
 export interface NightSightConfig {
   /** In a light pool (later also with a torch on): as far as in daylight. */
   lit: number;

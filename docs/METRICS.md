@@ -28,3 +28,4 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-04 | M33d | 1 | Opus 5.5 (build thread) | ✓ 18 s | ✓ 76 s | ✓ 85 s | ✓ 85 s | ✓ | ✓ | 7/8 Accept (Opus) | – | ~2 h | QA (Sonnet) 146k (483 s), critic (Opus) 122k (188 s); changelog by the build thread |
 | 2026-10-04 | M33d | 2 | Opus 5.5 (build thread) | ✓ 20 s | ✓ 83 s | ✓ 85 s | ✓ 70 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~40 min | critic (Opus) 98k (262 s); Pro plan fort and approach rules |
 | 2026-10-04 | M33e | 1 | Opus 5.5 (build thread) | ✓ 20 s | ✓ 82 s | ✓ 88 s | ✓ 69 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~1 h | QA (Sonnet) 150k (447 s), critic (Opus) 89k (83 s); changelog by the build thread |
+| 2026-10-04 | M33g | 1 | Opus 5.5 (build thread) | ✓ 20 s | ✓ 88 s | ✓ 90 s | ✓ 104 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~1 h | QA (Sonnet) 132k (594 s), critic (Opus) 75k (73 s); changelog by the build thread |
