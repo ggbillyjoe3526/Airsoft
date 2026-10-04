@@ -268,6 +268,11 @@ export class MatchPresentation {
    * watch), with your teammates, where you last heard the other team, where your teammates hold (`hold`, or null) and
    * in Attack / Defend the flagpole.
    */
+  /** The other team where heard on the minimap (M23), or teammates only (the Rules picker's minimap switch, M39). */
+  setHeardOnMinimap(shown: boolean): void {
+    this.minimap.setHeardShown(shown);
+  }
+
   showMinimap(hold: Vec3 | null): void {
     if (!this.playing) return;
     const f = this.minimapFrame;

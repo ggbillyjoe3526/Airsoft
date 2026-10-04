@@ -35,7 +35,7 @@ acceptance:
   3. Pro CQB: Tournament plus semi-auto only and realcap 30-BB magazines (3 carried).
   4. Named rulesets get their own records on every difficulty and pay ×2 on Pro; Custom on Pro pays ×1.5 and never counts.
   5. The picker is the field rules presets' machinery: a new ruleset is one data entry.
-status: open
+status: building
 attempts: 0
 
 ## M40 · Map balance for Pro

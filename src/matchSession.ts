@@ -8,13 +8,13 @@ import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
 import type { CrosshairSettings, HitFeedMode } from './config/matchInfo';
-import { countsForRecords, hitRulesFor, type MatchRules, roundRulesFor } from './config/matchRules';
+import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsKeyOf, roundRulesFor, type RulesetId, standardRules } from './config/matchRules';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
-import { LOADOUT, type ReplicaConfig } from './config/replicas';
+import { LOADOUT, REALCAP, type ReplicaConfig, replicaUnderRules } from './config/replicas';
 import { botKitSeed, carriedLoadout, chaseCarrier, chaseReady, kittedCharacter, randomKit } from './pool/botKit';
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
@@ -64,7 +64,12 @@ export interface MatchSetup {
   /** The opponents' bot difficulty, and your bot teammates' (M20). */
   difficulty: Difficulty;
   teammateDifficulty: Difficulty;
-  /** Rounds to win, round time, team size, friendly fire and ricochets (the Match pop-up, M20). */
+  /** The Rules picker's ruleset (M39): where the match goes in the records, and whether its rules are custom. */
+  ruleset: RulesetId;
+  /**
+   * The rules as played (the Match pop-up, M20, under the ruleset's own switches, M39: newGamePicks.ts playedPicks):
+   * rounds to win, round time, team size, friendly fire, ricochets and the Rules picker's switches.
+   */
   rules: MatchRules;
   /**
    * The player's kit from the Loadout screen (M26b): each gear slot's replica as carried (rarity, power source and laser
@@ -100,6 +105,10 @@ export class MatchSession {
   readonly match: MatchPresentation;
   readonly mode: MatchMode;
   private readonly loadout: readonly ReplicaConfig[];
+  /** The player's kit under the match's rules (M39 kitUnderRules: the factory kit, semi only, realcap), fitted each round. */
+  private readonly kit: PlayerKit;
+  /** The bots' factory loadout under the match's rules (LOADOUT itself when none apply). */
+  private readonly botLoadout: readonly ReplicaConfig[];
   /** Every player's numbers for the match and the round (M19). */
   readonly stats: MatchStats;
   private readonly physics: PhysicsWorld;
@@ -125,6 +134,8 @@ export class MatchSession {
   private readonly takes = new MatchTakes();
   /** The standard match, so its result could go into the records (custom rules don't, M20). */
   private readonly standardRules: boolean;
+  /** Not the ruleset's standard match (M39): custom rules pay no more than CUSTOM_RULES_PAY_CAP. */
+  private readonly customRules: boolean;
   /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
   private devAssisted = false;
   /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
@@ -146,7 +157,9 @@ export class MatchSession {
     crosshair: CrosshairSettings,
   ) {
     const map = setup.map;
-    this.loadout = setup.kit.slots.map((s) => s.replica);
+    this.kit = kitUnderRules(setup.kit, setup.rules);
+    this.loadout = this.kit.slots.map((s) => s.replica);
+    this.botLoadout = LOADOUT.map((r) => replicaUnderRules(r, setup.rules));
     // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
     // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
     renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTextures, mapLookOf(quality)));
@@ -163,7 +176,8 @@ export class MatchSession {
     this.mode = map.flag ? setup.mode : 'elimination';
     this.rounds = roundRulesFor(setup.rules);
     this.hits = hitRulesFor(setup.rules);
-    this.standardRules = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty);
+    this.standardRules = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty, setup.ruleset);
+    this.customRules = !standardRules(setup.ruleset, setup.rules);
     this.state = createGameState(seed, BALLISTICS.maxBBs, this.rounds, this.mode, map.flag);
     this.ctx = createSimContext({
       mover: this.physics,
@@ -190,18 +204,20 @@ export class MatchSession {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: this.hits, loadout: LOADOUT, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
     input.restartScript();
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(setup.kit, map.night ?? false));
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, map.night ?? false));
     this.build.phase('replica, effects and sound');
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail);
     this.match.setFigureShadows(quality.figureShadows);
     this.match.setFlagQuality(quality);
+    // Teammates only on the minimap, with no heard patches, under rules that say so (M39).
+    this.match.setHeardOnMinimap(setup.rules.heardOnMinimap);
     this.contact = new ContactShadows(this.state.characters, this.hits.vanishTime);
     renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
@@ -249,7 +265,9 @@ export class MatchSession {
     const r = this.state.round;
     return this.takes.result(r.phase === 'matchOver', this.countsForRecords, () => {
       const mine = this.stats.matchOf(this.player.id);
-      return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+      // A named ruleset has its own cells (M39); Skirmish the plain ones, as before.
+      const ruleset = recordsKeyOf(this.setup.ruleset) ?? '';
+      return { difficulty: this.setup.difficulty, mode: this.mode, ...(ruleset ? { ruleset } : {}), won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
     });
   }
 
@@ -277,6 +295,8 @@ export class MatchSession {
       winsNeeded: this.rounds.winsNeeded,
       difficulty: this.setup.difficulty,
       ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
+      // Custom rules pay no more than ×1.5 (M39): Pro's ×2 is for the named rulesets played as they are.
+      ...(this.customRules ? { customRules: true } : {}),
     }));
   }
 
@@ -411,7 +431,8 @@ export class MatchSession {
     let id = PLAYER_ID;
     // Bots roll only from what is offered: dev gear only with Dev content on (M35).
     const botPool = contentPool(GAME_POOL, this.setup.devContent);
-    const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random';
+    // Under the factory kit rule (M39) nobody rolls a kit: everyone carries LOADOUT as it comes.
+    const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random' && !this.setup.rules.factoryKit;
     // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
     const opponents = TEAMS.flatMap((_, team) => (team === PLAYER_TEAM ? [] : Array.from({ length: size }, (_, i) => PLAYER_ID + team * size + i)));
     const carrier = rolls ? chaseCarrier(botPool, this.setup.chaseOwned ?? [], seed, opponents) : null;
@@ -421,8 +442,8 @@ export class MatchSession {
       const rolled = team !== PLAYER_TEAM && rolls;
       for (let i = 0; i < size; i++, id++) {
         if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-        else if (rolled) this.state.characters.push(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier));
-        else this.state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, team));
+        else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
+        else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
       }
     }
     placeTeams(this.state.round, this.state.characters, this.ctx.round);
@@ -434,11 +455,27 @@ export class MatchSession {
   }
 
   /**
+   * A bot with a rolled kit under the match's replica rules (M39): each replica held on semi and/or on realcap
+   * magazines (the standard one fitted). Once, as the match is built; the bot itself when no rule applies.
+   */
+  private underRules(c: Character): Character {
+    const rules = this.setup.rules;
+    if (!rules.semiAutoOnly && !rules.realcap) return c;
+    const a = c.armament;
+    for (let i = 0; i < a.replicas.length; i++) {
+      a.replicas[i] = replicaUnderRules(a.replicas[i]!, rules);
+      a.modes[i] = a.replicas[i]!.defaultFireMode;
+    }
+    if (rules.realcap) fitParts(a, a.parts.map((p) => ({ ...p, magazine: REALCAP.magazine })));
+    return c;
+  }
+
+  /**
    * Fits the picked optic, hop-up dials, BB weights, grips and magazines to the player's replicas (fresh magazines of
    * the picked kind). A direct sim-state change, between rounds.
    */
   private fitPickedLoadout(): void {
-    const kit = this.setup.kit;
+    const kit = this.kit;
     fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
     fitParts(this.player.armament, kit.slots.map((s) => s.parts));
     setHopUps(this.player.armament, kit.hopUps);
