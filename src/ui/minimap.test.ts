@@ -185,3 +185,103 @@ describe('the minimap on a map with storeys (M34c)', () => {
     expect(dom.canvases[1]!.fills).toHaveLength(blocks.length);
   });
 });
+
+/** A fake DOM whose main canvas records its path calls and the field canvases it draws (M34c), to read the markers. */
+function pathDom() {
+  type Op = { op: string; args: unknown[] };
+  const canvases: object[] = [];
+  const ops: Op[] = [];
+  const parent = {
+    style: { setProperty: () => undefined, getPropertyValue: () => '' },
+    appendChild: () => undefined,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
+  };
+  (globalThis as { document?: unknown }).document = {
+    createElement: () => {
+      const mine = canvases.length === 0;
+      const ctx = new Proxy({} as Record<string, unknown>, {
+        get: (_t, key) => (mine ? (...args: unknown[]) => void ops.push({ op: String(key), args }) : () => undefined),
+        set: () => true,
+      });
+      const canvas = { width: 0, height: 0, hidden: false, className: '', setAttribute: () => undefined, getContext: () => ctx, remove: () => undefined, getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }) };
+      canvases.push(canvas);
+      return canvas;
+    },
+  };
+  /** Each marker triangle drawn since `from`: beginPath, moveTo, two lineTo, closePath. */
+  const triangles = (): { tip: { x: number; y: number }; base: number; dot: { x: number; y: number } | null }[] => {
+    const out: { tip: { x: number; y: number }; base: number; dot: { x: number; y: number } | null }[] = [];
+    let dot: { x: number; y: number } | null = null;
+    for (let i = 0; i < ops.length; i++) {
+      if (ops[i]!.op === 'arc' && ops[i]!.args[2] === 4.5) dot = { x: ops[i]!.args[0] as number, y: ops[i]!.args[1] as number };
+      if (ops[i]!.op !== 'moveTo' || ops[i + 1]?.op !== 'lineTo' || ops[i + 2]?.op !== 'lineTo' || ops[i + 3]?.op !== 'closePath') continue;
+      const [tx, ty] = ops[i]!.args as [number, number];
+      out.push({ tip: { x: tx, y: ty }, base: (ops[i + 1]!.args as [number, number])[1], dot });
+    }
+    return out;
+  };
+  const images = (): unknown[] => ops.filter((o) => o.op === 'drawImage').map((o) => o.args[0]);
+  return { parent: parent as unknown as HTMLElement, canvases, ops, triangles, images };
+}
+
+describe('the minimap on other storeys (M34c)', () => {
+  const frame = (y: number, mates: { y: number; hit?: boolean }[]) => ({
+    x: 5,
+    y,
+    z: 5,
+    yaw: 0,
+    mates: mates.map((m) => ({ x: 7, y: m.y, z: 5, hit: m.hit ?? false })),
+    count: mates.length,
+    hold: null,
+    flag: null,
+    time: 0,
+  });
+  const floor = (y: number): MapBlock => ({ kind: 'floor', center: vec3(0, y - 0.15, 0), size: vec3(10, 0.3, 10) });
+  const blocks = [floor(0), floor(3), floor(6)];
+  const show = (storeys: number[] | undefined, f: ReturnType<typeof frame>) => {
+    const dom = pathDom();
+    const minimap = new Minimap(dom.parent, blocks, '#00f', '#f80', null, storeys);
+    minimap.setVisible(true);
+    minimap.update(f, []);
+    return dom;
+  };
+
+  it('draws the field of the storey you stand on, by your feet: the street, then Level 1 from 0.5 m under it', () => {
+    // canvases: [minimap, street field, level 1 field, level 2 field]; the same drawing object, not just one that looks alike.
+    const drawn = (y: number, field: number): void => {
+      const dom = show([0, 3, 6], frame(y, []));
+      expect(dom.canvases).toHaveLength(4);
+      expect(dom.images()).toHaveLength(1);
+      expect(dom.images()[0], `feet at ${y} m draw field ${field}`).toBe(dom.canvases[field]);
+    };
+    drawn(0, 1);
+    drawn(2.4, 1); // halfway up a stair you are still on the street
+    drawn(2.5, 2);
+    drawn(3, 2);
+    drawn(5.4, 2);
+    drawn(6, 3);
+  });
+
+  it('marks a teammate on a higher storey with an arrow up over their dot, and one on a lower storey with an arrow down', () => {
+    const up = show([0, 3, 6], frame(0, [{ y: 3 }])).triangles();
+    expect(up).toHaveLength(1);
+    expect(up[0]!.tip.y, 'tip above its base: pointing up').toBeLessThan(up[0]!.base);
+    expect(up[0]!.base, 'sits over the dot').toBeLessThan(up[0]!.dot!.y);
+    expect(up[0]!.tip.x).toBeCloseTo(up[0]!.dot!.x, 6);
+    const down = show([0, 3, 6], frame(6, [{ y: 3 }])).triangles();
+    expect(down).toHaveLength(1);
+    expect(down[0]!.tip.y, 'tip below its base: pointing down').toBeGreaterThan(down[0]!.base);
+    // Two storeys away is an arrow too, and each other teammate gets their own.
+    const several = show([0, 3, 6], frame(3, [{ y: 6 }, { y: 0 }, { y: 3 }, { y: 0, hit: true }])).triangles();
+    expect(several.map((t) => Math.sign(t.base - t.tip.y))).toEqual([1, -1, -1]);
+  });
+
+  it('draws no arrow for a teammate on your storey, nor for one near its floor (a stair top)', () => {
+    expect(show([0, 3, 6], frame(3, [{ y: 3 }, { y: 3.4 }, { y: 2.6 }, { y: 6.2 }])).triangles().map((t) => Math.sign(t.base - t.tip.y))).toEqual([1]);
+    expect(show([0, 3, 6], frame(0, [{ y: 0 }, { y: 2.4 }, { y: 0.3 }])).triangles()).toHaveLength(0);
+  });
+
+  it('draws no arrows on a map with one storey, whatever the heights', () => {
+    for (const storeys of [undefined, [], [0]]) expect(show(storeys, frame(0, [{ y: 3 }, { y: -2 }])).triangles(), String(storeys)).toHaveLength(0);
+  });
+});

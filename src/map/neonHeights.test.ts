@@ -112,6 +112,20 @@ describe('Neon Heights layout', () => {
     }
   });
 
+  it('shuts the view at each Sky Bridge end with a wall, not just something to step round: head high, a partition within a couple of metres', () => {
+    const sky = bridges.find((b) => b.name === 'Sky Bridge')!;
+    const [a, b] = sky.ends;
+    for (const [end, other] of [
+      [a!, b!],
+      [b!, a!],
+    ] as const) {
+      const dx = end.x - other.x;
+      const d = castLevelRay(level, eye(end, 1.8), vec3(Math.sign(dx), 0, 0), 30);
+      expect(d, `Sky Bridge end at x ${end.x}`).toBeGreaterThan(0);
+      expect(d, `Sky Bridge end at x ${end.x}`).toBeLessThanOrEqual(CORNER);
+    }
+  });
+
   it('has no spot that holds two stairs at once: no two stair tops in sight, in range and in one held angle', () => {
     const held: string[] = [];
     for (let k = 0; k < grid.floorY.length; k += 2) {

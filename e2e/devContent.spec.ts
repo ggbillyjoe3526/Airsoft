@@ -101,7 +101,22 @@ test('Neon Heights (dev content, M34c) loads and plays: the city builds, the HUD
   expect(await page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null)).toBe(true);
   await expect(page.locator('.hud')).toBeVisible();
   await expect(page.locator('.minimap')).toBeVisible();
-  // A few seconds of play: the bots set off up the city's lanes and stairs.
-  await page.waitForTimeout(3000);
+  // It is Neon Heights that was built (the session's setup names the map), with both teams in its yards: 4v4 is its
+  // standard team size, so at least six stand in play, and Neon Heights' yards are at x -20 and +22.6 (Depot's -22.7 and 24).
+  type Played = { airsoft: { session: { setup: { map: { name: string } } }; state: { tick: number; characters: { position: { x: number; y: number } }[] } } };
+  expect(await page.evaluate(() => (window as unknown as Played).airsoft.session.setup.map.name)).toBe('Neon Heights');
+  const placed = () => page.evaluate(() => (window as unknown as Played).airsoft.state.characters.map((c) => c.position));
+  const yards = await placed();
+  expect(yards.length).toBeGreaterThanOrEqual(6);
+  expect(Math.min(...yards.map((p) => p.x))).toBeLessThan(-18);
+  expect(Math.max(...yards.map((p) => p.x))).toBeGreaterThan(18);
+  // Play on: the simulation runs two more seconds of game time, the bots set off from their yards, and nobody falls
+  // off a floor (the lowest floor is the street at 0).
+  const tick = () => page.evaluate(() => (window as unknown as Played).airsoft.state.tick);
+  const start = await tick();
+  await expect.poll(tick, { timeout: 60_000 }).toBeGreaterThan(start + 120);
+  const after = await placed();
+  expect(after.some((p, i) => Math.hypot(p.x - yards[i]!.x, p.y - yards[i]!.y) > 1)).toBe(true);
+  expect(Math.min(...after.map((p) => p.y))).toBeGreaterThanOrEqual(-0.5);
   expect(errors, errors.join(' | ')).toEqual([]);
 });
