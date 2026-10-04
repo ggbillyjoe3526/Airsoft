@@ -7,7 +7,7 @@ import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
-import { LOADOUT } from '../config/replicas';
+import { bbMass, LOADOUT, muzzleVelocity } from '../config/replicas';
 import type { MapData } from '../map/mapTypes';
 import { TEST_YARD } from '../map/testYard';
 import { buildNavGrid, isWalkableAt, type NavGrid } from '../nav/navGrid';
@@ -15,6 +15,7 @@ import { DEPOT, DEPOT_LAYOUT } from '../map/depot';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { isInPlay } from '../sim/elimination';
 import { aimDirection, fitParts, type WorldQuery } from '../sim/armament';
+import { flightTimeEstimate } from '../sim/ballistics';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { createRng } from '../sim/rng';
@@ -24,7 +25,7 @@ import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { vec3 } from '../sim/vec';
 import { aimErrorSize, createAim, freshAimError, stepAim } from './aim';
 import type { Bot } from './bot';
-import { reloadBot, shootBot } from './botCombat';
+import { aimBot, reloadBot, shootBot } from './botCombat';
 import { BotController } from './botController';
 import { type CoverBlock, type CoverWorld, createCoverSpot, findCover, hidesFrom, lowCoverBlocks, tallCoverBlocks } from './cover';
 import { bodyPoint, canSee, eyeOf, lineClear, visiblePart } from './perception';
@@ -648,6 +649,32 @@ describe('bot suppression', () => {
     state.events.push({ type: 'bbImpact', position: near, ownerId: 0 }); // the enemy player
     bots.observe(state);
     expect(b.suppressedAt).toBe(state.time);
+  });
+});
+
+describe('bot lead (M30)', () => {
+  it("leads a crossing target by the BB's flight time under drag, which is longer than distance / muzzle speed", () => {
+    const dist = 35;
+    const { state, bot, player, bots } = duel(dist);
+    const b = bots.bots[0]!;
+    const w = bots.worldForTests;
+    b.targetVisible = true;
+    b.contact = { seenAt: state.time, acquiredAt: 0, reactAt: 0 };
+    w.live = true;
+    w.time = state.time;
+    player.velocity.x = 4;
+    player.velocity.z = 0;
+    const eye = eyeOf(bot, BODY, HITS, vec3());
+    const straight = bodyPoint(player, HITS, b.targetPart, vec3());
+    const range = Math.hypot(straight.x - eye.x, straight.y - eye.y, straight.z - eye.z);
+    const aimPoint = vec3();
+    aimBot(b, w, player, eye, aimPoint, false, createCommand(), DT);
+    const lead = (aimPoint.x - straight.x) / (4 * b.skill.leadFactor); // seconds of flight the bot allowed for
+    const replica = LOADOUT[0]!;
+    expect(lead).toBeCloseTo(flightTimeEstimate(range, muzzleVelocity(replica), bbMass(replica), BALLISTICS), 9);
+    expect(lead).toBeGreaterThan((range / muzzleVelocity(replica)) * 1.05); // drag has slowed the BB: at least 5% longer
+    expect(aimPoint.z).toBeCloseTo(straight.z, 9); // nothing along the line of sight, and no allowance for wind
+    expect(aimPoint.y).toBeCloseTo(straight.y, 9);
   });
 });
 

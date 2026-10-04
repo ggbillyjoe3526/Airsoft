@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { BALLISTICS } from '../config/ballistics';
+import { BALLISTICS, WIND } from '../config/ballistics';
 import { BOTS, type BotConfig } from '../config/bots';
 import { type HitConfig, HITS, ROUNDS } from '../config/hits';
 import type { MatchMode } from '../config/modes';
@@ -16,6 +16,7 @@ import { PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter, respawnCharacter } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
+import { createWind } from '../sim/wind';
 import { placeTeams, type RoundRules } from '../sim/round';
 import { createGameState, type GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
@@ -57,6 +58,7 @@ export function playMatch(
     footsteps: FOOTSTEPS,
     body: BODY,
     ballistics: BALLISTICS,
+    wind: createWind(seed, WIND),
     killY: map.killY,
     hits,
     deadZones: map.deadZones,

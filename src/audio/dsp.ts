@@ -96,7 +96,7 @@ function spreadFactor(rand: () => number, spread: number): number {
 }
 
 /** One RBJ-cookbook biquad (direct form I). */
-class Biquad {
+export class Biquad {
   private b0 = 1;
   private b1 = 0;
   private b2 = 0;

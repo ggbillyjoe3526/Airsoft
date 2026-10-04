@@ -20,6 +20,7 @@ import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
 import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
+import { awayWatch } from './core/awayWatch';
 import { deriveSeed } from './core/seed';
 import { loadFigureModel } from './render/externalModels';
 import { Renderer } from './render/renderer';
@@ -242,6 +243,7 @@ export class Game {
         speed: p ? Math.hypot(p.velocity.x, p.velocity.z).toFixed(2) : '-',
         grounded: String(p?.grounded ?? '-'),
         'BBs in flight': s?.combat.bbsInFlight ?? 0,
+        'audio latency (ms)': this.audio.latencyMs()?.toFixed(1) ?? '-',
         quality: this.quality,
         'pixel ratio': this.renderer.renderer.getPixelRatio(),
         'draw calls': this.renderer.renderer.info.render.calls,
@@ -352,7 +354,11 @@ export class Game {
     }
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
-    document.addEventListener('visibilitychange', this.visibilityChanged);
+    this.stopWatchingAway = awayWatch({ doc: document, win: window }, () => this.stopPlay());
+    this.audio.onBlocked = () => {
+      this.audioBlocked = true;
+      this.menus.showHint(BROWSER_NOTES.audioBlocked);
+    };
     this.pointer.onChange((locked) => {
       if (locked) this.resume();
       else this.pause();
@@ -361,10 +367,10 @@ export class Game {
     this.audio.warmUp();
   }
 
-  /** The tab was hidden (another tab, the window minimised): the match pauses, as Esc would (M18b). */
-  private readonly visibilityChanged = (): void => {
-    if (document.hidden) this.stopPlay();
-  };
+  /** The tab hidden or the window's focus lost (M18b, audit CORE-20) stops play, as Esc would; this stops watching. */
+  private readonly stopWatchingAway: () => void;
+  /** The browser wouldn't let the sound start since play last resumed (audit CORE-21): the menus say so. */
+  private audioBlocked = false;
 
   /**
    * The graphics context was lost (true) or is back (false) (M18b, audit W-01). While it's gone the match pauses
@@ -484,7 +490,7 @@ export class Game {
 
   dispose(): void {
     cancelAnimationFrame(this.rafId);
-    document.removeEventListener('visibilitychange', this.visibilityChanged);
+    this.stopWatchingAway();
     window.removeEventListener('resize', this.showHudLook);
     this.graphicsNotice.dispose();
     this.session?.dispose();
@@ -584,6 +590,7 @@ export class Game {
     this.started = true;
     this.keyboard.capturing = true;
     this.menus.hide();
+    this.audioBlocked = false;
     s.setPlaying(true);
   }
 
@@ -657,6 +664,8 @@ export class Game {
       );
     }
     s?.setPlaying(false);
+    // The screen just shown starts without a hint: say again why the match was silent.
+    if (this.audioBlocked) this.menus.showHint(BROWSER_NOTES.audioBlocked);
   }
 
   private readonly frame = (now: number): void => {

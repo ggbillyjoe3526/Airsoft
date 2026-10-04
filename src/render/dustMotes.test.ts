@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DUST_MOTES } from '../config/render';
-import { moteFade, motePosition } from './dustMotes';
+import { DustMotes, moteFade, motePosition } from './dustMotes';
 
 describe('motePosition', () => {
   it('keeps every mote within half a box of the eye, wherever the eye goes and however far they drift', () => {
@@ -47,5 +47,41 @@ describe('moteFade', () => {
     // At 1080 p a world-size point is size × 540 / distance pixels; the cap keeps it at maxPixels or under.
     expect((D.size * 540) / D.fadeFar).toBeGreaterThan(D.maxPixels);
     expect(D.maxPixels).toBeLessThanOrEqual(12);
+  });
+});
+
+describe('DustMotes (M30)', () => {
+  // The motes' sprite is drawn on a canvas; the test only reads positions, so a stand-in canvas will do.
+  beforeAll(() => vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) }));
+  afterAll(() => vi.unstubAllGlobals());
+
+  it("drift with the match's wind, so it can be read from the dust in the air", () => {
+    const xs = (wind: { x: number; y: number; z: number }) => {
+      const motes = new DustMotes(64);
+      motes.setCount(64);
+      const eye = { x: 0, y: 1.6, z: 0 };
+      const read = () => Array.from(motes.object.geometry.getAttribute('position').array as Float32Array);
+      motes.update(0, eye, wind); // place them
+      const before = read();
+      for (let i = 0; i < 30; i++) motes.update(1 / 60, eye, wind); // half a second
+      const after = read();
+      motes.dispose();
+      // Mean movement along x (motes that wrapped round the box are left out).
+      let sum = 0;
+      let n = 0;
+      for (let j = 0; j < before.length; j += 3) {
+        const dx = after[j]! - before[j]!;
+        if (Math.abs(dx) < DUST_MOTES.box / 2) {
+          sum += dx;
+          n++;
+        }
+      }
+      return sum / n;
+    };
+    const calm = xs({ x: 0, y: 0, z: 0 });
+    const breeze = xs({ x: 1.5, y: 0, z: 0 });
+    // Half a second of a 1.5 m/s breeze carries the dust ~0.75 m further than calm air.
+    expect(breeze - calm).toBeGreaterThan(0.6 * DUST_MOTES.windShare);
+    expect(breeze - calm).toBeLessThan(0.9 * DUST_MOTES.windShare);
   });
 });

@@ -1,3 +1,6 @@
+import { GAME_STATS } from './gameStats';
+import { overlay } from './statsFile';
+
 /**
  * Lasers (M26): a part on a replica's laser rail, unlocked from the asset pool (pool.md). A laser makes the replica
  * steadier from the hip: the shots group tighter without raising a sight. (No dot is drawn in the world yet:
@@ -15,6 +18,8 @@ export interface LaserConfig {
   colour: number;
 }
 
-export const LASERS: Readonly<Record<LaserId, LaserConfig>> = {
-  redLaser: { blurb: 'A laser module on the rail: steadier from the hip, the shots group tighter without a sight.', spreadScale: 0.8, colour: 0xff2a2a },
-};
+/** Built-in numbers; stats.md's Lasers table is what the game uses (M29). */
+export const LASERS: Readonly<Record<LaserId, LaserConfig>> = overlay<LaserConfig>(
+  { redLaser: { blurb: 'A laser module on the rail: steadier from the hip, the shots group tighter without a sight.', spreadScale: 0.8, colour: 0xff2a2a } },
+  GAME_STATS.lasers,
+) as Record<LaserId, LaserConfig>;

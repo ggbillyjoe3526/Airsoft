@@ -2,7 +2,7 @@ import { GRIPS, handlingOf, MAGAZINES, type ReplicaParts } from '../../config/at
 import { LASERS } from '../../config/lasers';
 import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
-import { LOADOUT_TEXT } from '../../config/menus';
+import { LOADOUT_TEXT, PERFORMANCE_SHEET } from '../../config/menus';
 import type { ItemRef } from '../../pool/collection';
 import type { FitSlot, KitSlot } from '../../pool/kit';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
@@ -18,6 +18,7 @@ import {
   opticReadout,
   powerReadout,
 } from '../loadoutChoice';
+import { gearLine, performanceOf, type SheetRow, sheetRows } from '../performanceSheet';
 import { backButton, el, laterRow, menuButton, menuPage, menuRow, rangeControl } from './menuParts';
 
 const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
@@ -62,7 +63,7 @@ const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[]
  */
 export class LoadoutScreen {
   readonly root: HTMLDivElement;
-  private readonly column = new Map<ColumnSlot, { button: HTMLButtonElement; name: HTMLSpanElement; tier: HTMLSpanElement }>();
+  private readonly column = new Map<ColumnSlot, { button: HTMLButtonElement; name: HTMLSpanElement; tier: HTMLSpanElement; line: HTMLSpanElement }>();
   private readonly panel: HTMLDivElement;
   private selected: ColumnSlot = 'primary';
   /** The gear slot whose replica is being customised, or null on the item list. */
@@ -78,7 +79,8 @@ export class LoadoutScreen {
       button.type = 'button';
       const name = el('span', 'gear-name');
       const tier = el('span', 'gear-tier');
-      button.append(name, tier);
+      const line = el('span', 'gear-stats');
+      button.append(name, tier, line);
       button.addEventListener('click', () => this.select(slot));
       if (slot !== 'grenades') {
         button.addEventListener('contextmenu', (e) => {
@@ -88,7 +90,7 @@ export class LoadoutScreen {
       }
       if (slot === 'primary') button.dataset.autofocus = '';
       gear.append(label, button);
-      this.column.set(slot, { button, name, tier });
+      this.column.set(slot, { button, name, tier, line });
     }
     gear.append(el('p', 'gear-hint', LOADOUT_TEXT.rightClickHint));
     this.panel = el('div', 'menu-panel loadout-panel');
@@ -158,6 +160,7 @@ export class LoadoutScreen {
       const ref = slot === 'grenades' ? null : (equipped[GEAR_SLOTS.indexOf(slot)] ?? null);
       parts.name.textContent = ref ? m.pool.byId.get(ref.asset)!.name : LOADOUT_TEXT.empty;
       parts.tier.textContent = ref ? this.tierLabel(ref) : '';
+      parts.line.textContent = ref ? gearLine(m.slotKit(ref), m.bbWeight(replicaOf(m.pool.byId.get(ref.asset)!))) : '';
       setTier(parts.button, ref);
       parts.button.classList.toggle('empty', !ref);
       parts.button.setAttribute('aria-label', `${LOADOUT_TEXT.slots[slot]}: ${ref ? `${parts.name.textContent}, ${parts.tier.textContent}` : LOADOUT_TEXT.empty}`);
@@ -224,20 +227,32 @@ export class LoadoutScreen {
     close.classList.add('loadout-close');
     head.append(title, close);
     this.panel.append(head, el('p', 'loadout-replica-summary', replicaSummary(kit.replica, kit.parts)));
+    // The parts on the left, the Performance sheet beside them (above them on a narrow window).
+    const body = el('div', 'customise-body');
+    const rows = el('div', 'customise-rows');
+    const sheet = el('aside', 'perf-sheet');
+    sheet.setAttribute('aria-label', PERFORMANCE_SHEET.title);
+    const sheetRowsBox = el('dl', 'perf-rows');
+    sheet.append(el('h3', 'menu-kicker perf-title', PERFORMANCE_SHEET.title), sheetRowsBox, el('p', 'perf-note', PERFORMANCE_SHEET.against(PERFORMANCE_SHEET.chronoGrams)));
+    body.append(rows, sheet);
+    this.panel.append(body);
 
     const fit = m.fitOf(asset.id);
     let grams = m.bbWeight(base);
     let dial = m.hopUp(base);
+    const factory = performanceOf(m.asItComes(asset.id), base.bbWeight, base.hopUpDial);
+    const capped = m.capped(ref);
     // Readouts that follow the sliders without a full redraw (that would drop the slider being dragged).
     const powerLine = el('p', 'menu-readout');
     const live = (): void => {
       powerLine.textContent = powerReadout(kit, grams);
+      sheetRowsBox.replaceChildren(...sheetRows(performanceOf(kit, grams, dial, capped), factory, HOP_UP.readoutRange).flatMap(sheetRow));
     };
     for (const row of FIT_ROWS) {
       // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power always have a choice.
       if (row.none !== null && row.slot !== 'magazine' && !m.hasSlot(asset.id, row.slot)) {
-        this.panel.append(fixedRow(row.label, LOADOUT_TEXT.noMount));
-        if (row.slot === 'optic') this.appendBbRows(base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
+        rows.append(fixedRow(row.label, LOADOUT_TEXT.noMount));
+        if (row.slot === 'optic') this.appendBbRows(rows, base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
         continue;
       }
       const choices = m.fitChoices(asset.id, row.slot);
@@ -269,16 +284,16 @@ export class LoadoutScreen {
       control.append(tiles, el('p', 'picker-blurb', this.fitBlurb(row.slot, kit, fit.power)));
       control.append(row.slot === 'power' ? powerLine : el('p', 'menu-readout', this.fitReadout(row.slot, kit)));
       if (choices.length === 0 && row.none !== null) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.armoryHint));
-      this.panel.append(menuRow(row.label, '', control));
+      rows.append(menuRow(row.label, '', control));
       // BB weight and hop-up go after the optic, before the parts that change handling: as you set a replica up at a site.
-      if (row.slot === 'optic') this.appendBbRows(base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
+      if (row.slot === 'optic') this.appendBbRows(rows, base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
     }
     live();
-    this.panel.append(laterRow('Skins', '', LOADOUT_TEXT.skinsLater));
+    rows.append(laterRow('Skins', '', LOADOUT_TEXT.skinsLater));
   }
 
   /** The BB weight slider (free, never pooled) and the hop-up dial, their readouts following each other. */
-  private appendBbRows(base: ReplicaConfig, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
+  private appendBbRows(into: HTMLElement, base: ReplicaConfig, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
     let grams = grams0;
     let dial = dial0;
     const weightLine = el('p', 'menu-readout', bbWeightReadout(carried, grams));
@@ -307,7 +322,7 @@ export class LoadoutScreen {
     });
     hop.classList.add('loadout-hopup');
     hop.append(hopLine);
-    this.panel.append(menuRow('BB Weight', '', weight), menuRow('Hop-Up', '', hop));
+    into.append(menuRow('BB Weight', '', weight), menuRow('Hop-Up', '', hop));
   }
 
   /** What the fitted item (or "as it comes") is, in a line. */
@@ -369,6 +384,18 @@ function smallTile(name: string, tier: string, selected: boolean): HTMLButtonEle
   tile.append(el('span', 'item-name', name));
   if (tier) tile.append(el('span', 'item-tier', tier));
   return tile;
+}
+
+/** One stat of the Performance sheet: its name, its value, and its change against the replica as it comes. */
+function sheetRow(r: SheetRow): HTMLElement[] {
+  const value = el('dd', 'perf-value', r.value);
+  if (r.delta) {
+    const delta = el('span', `perf-delta${r.change ? ` perf-${r.change}` : ''}`, r.delta);
+    if (r.change) delta.title = PERFORMANCE_SHEET[r.change];
+    value.append(' ', delta);
+    if (r.change) value.append(el('span', 'sr-only', ` (${PERFORMANCE_SHEET[r.change]})`));
+  }
+  return [el('dt', 'perf-label', r.label), value];
 }
 
 /** A greyed row for a part this replica has no rail or mount for. */
