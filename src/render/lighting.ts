@@ -1,15 +1,22 @@
 import * as THREE from 'three';
 import { LIGHTING, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
+import { terrainMaxX, terrainMaxZ, terrainRange } from '../map/terrain';
 import { addAtmosphere } from './atmosphere';
 
-/** World-space bounding box of every block in the map (walls, floor, props). */
+/** World-space bounding box of every block in the map (walls, floor, props) and its sloping ground (M33c), if any. */
 export function mapBoundingBox(map: MapData): THREE.Box3 {
   const box = new THREE.Box3();
   const v = new THREE.Vector3();
   for (const b of map.blocks) {
     box.expandByPoint(v.set(b.center.x - b.size.x / 2, b.center.y - b.size.y / 2, b.center.z - b.size.z / 2));
     box.expandByPoint(v.set(b.center.x + b.size.x / 2, b.center.y + b.size.y / 2, b.center.z + b.size.z / 2));
+  }
+  if (map.terrain) {
+    const t = map.terrain;
+    const { min, max } = terrainRange(t);
+    box.expandByPoint(v.set(t.minX, min, t.minZ));
+    box.expandByPoint(v.set(terrainMaxX(t), max, terrainMaxZ(t)));
   }
   return box;
 }

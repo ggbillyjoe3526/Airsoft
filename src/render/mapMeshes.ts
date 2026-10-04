@@ -7,6 +7,7 @@ import { buildMapDecals, disposeMapDecals, drawDecalAtlas } from './mapDecals';
 import type { ProceduralTexture, SurfaceTextures } from './proceduralTextures';
 import { isSurfaceMaterial, setReliefMaps, type SurfaceMaterial, withoutEnvironment } from './surfaceMaterials';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
+import { buildTerrainMesh } from './terrainMeshes';
 import { buildOccluders, type Occluders, occlusionAt, occlusionShade } from './vertexOcclusion';
 
 interface KindStyle {
@@ -763,6 +764,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     mesh.updateMatrix();
     group.add(mesh);
   }
+  if (map.terrain) group.add(buildTerrainMesh(map.terrain));
   if (look.detail && decalAtlas) {
     const decals = buildMapDecals(map, decalAtlas);
     if (decals) group.add(decals);

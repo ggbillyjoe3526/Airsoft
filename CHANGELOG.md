@@ -62,6 +62,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M35** · pool.md has an Access column: public or dev for each asset (#70)
 
 ### Changed
+- **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
 - **FA2** · Low has 80 % resolution with no shadows; Medium adds shadows and relief; High adds sharp textures, finer shadows, sheen and dust (#67)
@@ -86,6 +87,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits (#70)
 
 ### Fixed
+- **FA13** · Your left hand holds the rifle's handguard, thumb up the near side, instead of sitting under it; the raised hand when you're hit is one glove again (#76)
+- **FA13** · Teammates' name tags sit just above their heads up close instead of floating high (#76)
+- **FA13** · Customise's Muzzle line mentions a silencer only when one is fitted (#76)
 - **M32** · All carried replicas now have their sounds in the match; hear bots' AEG shots even without an equipped AEG (#75)
 - **FA11c** · A second tab now always waits behind the "open in another tab" notice, even when the first is busy loading (#69)
 - **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
@@ -122,6 +126,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA6** · Audio renders at 48 kHz with seeded reverb; debug overlay shows latency (#55)
 - **FA11a** · Production build compresses with Brotli and gzip; browser test plays real production build with mouse lock (#61)
 - **FA11a** · TypeScript stricter (exactOptionalPropertyTypes); GitHub checks verify scope and changelog; dead code removed (#61)
+- **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 
 ## v0.1-alpha.3 · 2026-10-03
 

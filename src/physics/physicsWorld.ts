@@ -3,6 +3,7 @@ import type { BodyConfig } from '../config/movement';
 import { PHYSICS } from '../config/physics';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
+import { terrainMesh } from '../map/terrain';
 import type { SurfaceHit } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { buildLevelRay, castLevelRay, type LevelRay } from '../sim/levelRay';
@@ -119,7 +120,12 @@ export class PhysicsWorld implements CharacterMover {
       desc.setTranslation(b.center.x, b.center.y, b.center.z).setCollisionGroups(STATIC_GROUPS);
       this.world.createCollider(desc);
     }
-    this.level = buildLevelRay(map.blocks);
+    if (map.terrain) {
+      // The ground (M33c): its triangles as one fixed mesh, the same triangles the level ray and the nav grid use.
+      const { positions, indices } = terrainMesh(map.terrain);
+      this.world.createCollider(RAPIER.ColliderDesc.trimesh(positions, indices, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES).setCollisionGroups(STATIC_GROUPS));
+    }
+    this.level = buildLevelRay(map.blocks, PHYSICS.rayGridCell, map.terrain ?? null);
 
     this.controller = this.world.createCharacterController(PHYSICS.controllerOffset);
     this.controller.setUp({ x: 0, y: 1, z: 0 });
