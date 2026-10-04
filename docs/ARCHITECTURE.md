@@ -305,7 +305,8 @@ request. Each line names where it lives and what pins it.
   one (untagged is public). `isAvailable(tag, devContent)` is the one check; `devContent` is the Dev tab's Dev content
   switch (`dev.devContent`, applying only while Dev settings is ticked). Dev content is not shown anywhere while it is
   off (`contentPool`, `playedPicks`, `ChoiceDialog`/`OptionPicker.setDevContent`), never drops from Shots
-  (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed`, or a bot's rolled gear) stays out of the
-  records and pays nothing (`NotCounted` 'devContent'). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`.
+  (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
+  player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
+  `NotCounted` 'devContent'). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`.
