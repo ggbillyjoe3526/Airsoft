@@ -30,7 +30,9 @@ ends the round). A hit character is eliminated
 - **physics/**: `PhysicsWorld` implements the sim's `CharacterMover` interface (Rapier kinematic character
   controller). Characters collide only with level geometry, never each other. Level blocks collide as
   closed triangle meshes to avoid a Rapier capsule-vs-cuboid bug. Standing characters move horizontally,
-  then `probeGround` (a downward sphere cast) rests them 0.04 m above the floor. It also offers static ray casts.
+  then `probeGround` (a downward sphere cast) rests them 0.04 m above the floor. Its static ray casts (`raycastStatic`,
+  `raycastSurface`) are answered by `sim/levelRay.ts` (FA12): a slab test against the axis-aligned blocks and ramp wedges
+  through a 1 m column grid, allocation-free, held to Rapier's answer by `physics/levelRay.rapier.test.ts`.
   The sim returns anything below `killY` to its spawn.
 - **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
   routes (8-neighbour A*, string-pulled into straight legs). Each cell stores one floor height (`floorY`, the floor or

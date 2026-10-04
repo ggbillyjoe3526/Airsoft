@@ -304,7 +304,8 @@ export class BotController {
         const shooter = this.character(state, e.shooterId);
         if (victim && shooter && isInPlay(shooter) && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'ricochetTick') {
-        // A ricochet that doesn't count still tells its victim they're under fire.
+        // A ricochet that doesn't count still tells its victim they're under fire, unless it was their own (SIM-07).
+        if (e.victimId === e.shooterId) continue;
         for (const b of this.bots) {
           if (b.character.id !== e.victimId) continue;
           b.suppressedAt = time;
