@@ -16,12 +16,16 @@ export interface RecordsView {
 
 const NO_NEWS: RecordNews = { bestAccuracy: false, bestStreak: false };
 
-/** Why a match isn't in the records: custom rules (M20; config/matchRules countsForRecords), or Dev settings (M24). */
-export type NotCounted = '' | 'rules' | 'dev';
+/**
+ * Why a match isn't in the records: custom rules (M20; config/matchRules countsForRecords), Dev settings (M24), or a
+ * map still being built (M33).
+ */
+export type NotCounted = '' | 'rules' | 'dev' | 'map';
 
 /** The line over the records after a match that didn't count. */
 function notCountedLine(why: NotCounted): string {
   if (why === 'dev') return "Dev settings changed how this match played, so it isn't in your records.";
+  if (why === 'map') return "This map is still being built, so this match isn't in your records.";
   return `Custom rules, so this match isn't in your records. They count the standard match: ${standardMatchText()}`;
 }
 

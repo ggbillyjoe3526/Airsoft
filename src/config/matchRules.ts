@@ -26,11 +26,13 @@ export const WINS_NEEDED_CHOICES: readonly { id: string; label: string; blurb: s
   { id: '10', label: '10', blurb: 'A marathon: first to 10 round wins.' },
 ];
 
-/** Players per team. Depot has room for three a side; bigger teams wait for bigger fields (v0.2). */
+/** Players per team. Each map offers as many as it has room for (map/maps.ts teamSize: Depot 3, Woodland 5, M33). */
 export const TEAM_SIZE_CHOICES: readonly { id: string; label: string; blurb: string }[] = [
   { id: '1', label: '1v1', blurb: 'You against one bot: no teammates, nobody to cover you.' },
   { id: '2', label: '2v2', blurb: 'You and one bot teammate against two bots.' },
   { id: '3', label: '3v3', blurb: 'You and two bot teammates against three bots.' },
+  { id: '4', label: '4v4', blurb: 'You and three bot teammates against four bots.' },
+  { id: '5', label: '5v5', blurb: 'You and four bot teammates against five bots.' },
 ];
 
 export const FRIENDLY_FIRE_CHOICES: readonly { id: Switch; label: string; blurb: string }[] = [

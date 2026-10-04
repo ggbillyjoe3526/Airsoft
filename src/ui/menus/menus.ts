@@ -16,7 +16,8 @@ import { MATCH_MODES, type MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
-import { COMING_MAPS, COMING_SOON_TAG, MAPS, type MapId } from '../../map/maps';
+import { COMING_SOON_TAG, IN_DEVELOPMENT_TAG, MAPS, type MapId, mapEntry, teamSizeOn } from '../../map/maps';
+import { saveSetting } from '../../settings/storage';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
@@ -73,8 +74,11 @@ export interface MenusOptions {
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;
   hud: HudSettingsOptions;
-  /** The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. */
-  dev: SettingsOptions['dev'] & { cheating: () => boolean };
+  /**
+   * The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records; `mapAccess`:
+   * maps still being built can be picked (Access maps in development, M33).
+   */
+  dev: SettingsOptions['dev'] & { cheating: () => boolean; mapAccess: () => boolean };
   /** The save, for Settings → Save (M31). */
   save: SettingsOptions['save'];
 }
@@ -97,6 +101,8 @@ export class Menus {
   private readonly mapDialog: ChoiceDialog<MapId>;
   private readonly modeDialog: ChoiceDialog<MatchMode>;
   private readonly matchDialog: RowsDialog;
+  /** The Match pop-up's team sizes: each map offers as many as it has room for (M33). */
+  private teamSizePicker!: OptionPicker<string>;
   private readonly difficultyDialog: RowsDialog;
   /** What the Match and Difficulty pop-ups have picked. */
   private readonly matchRules: MatchRules;
@@ -138,10 +144,10 @@ export class Menus {
       'map',
       (m) => {
         opts.map.onChange(m);
+        this.mapPicked(m);
         this.refreshSetup();
       },
-      COMING_MAPS,
-      COMING_SOON_TAG,
+      { ids: MAPS.filter((m) => m.data.inDevelopment).map((m) => m.id), locked: COMING_SOON_TAG, open: IN_DEVELOPMENT_TAG },
     );
     this.modeDialog = new ChoiceDialog('Game mode', MATCH_MODES, opts.mode.initial, 'mode', (m) => {
       opts.mode.onChange(m);
@@ -323,10 +329,10 @@ export class Menus {
       menuRow(
         'Team size',
         'Bigger teams come with bigger fields.',
-        new OptionPicker('Team size', TEAM_SIZE_CHOICES, String(m.teamSize), 'teamSize', (v) => {
+        (this.teamSizePicker = new OptionPicker('Team size', TEAM_SIZE_CHOICES, String(m.teamSize), 'teamSize', (v) => {
           m.teamSize = Number(v);
           changed();
-        }).root,
+        })).root,
       ),
       menuRow(
         'Friendly fire',
@@ -451,8 +457,23 @@ export class Menus {
   }
 
   /** The New game buttons and the rules under them show what is picked now. */
+  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
+  private mapPicked(id: MapId): void {
+    const size = mapEntry(id).teamSize.standard;
+    if (this.matchRules.teamSize === size) return;
+    this.matchRules.teamSize = size;
+    saveSetting('teamSize', String(size));
+    this.opts.matchRules.onChange({ ...this.matchRules });
+  }
+
   private refreshSetup(): void {
-    const m = this.matchRules;
+    // A map still being built can be picked only with Dev settings › Access maps in development; while it is locked,
+    // the map in force is Depot, with no more players a side than Depot has room for.
+    this.mapDialog.setUnlocked(this.opts.dev.mapAccess());
+    const map = mapEntry(this.mapDialog.value);
+    const m = { ...this.matchRules, teamSize: teamSizeOn(map.id, this.matchRules.teamSize) };
+    this.teamSizePicker.limit((id) => Number(id) <= map.teamSize.max);
+    this.teamSizePicker.show(String(m.teamSize));
     this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
     const match = matchRulesSummary(m);
@@ -469,7 +490,8 @@ export class Menus {
     // Said before the match, not only on its summary: custom rules don't go into the records (M20), nor does a match
     // played with Dev settings that change play (M24).
     const notes = [rules];
-    if (!recorded) notes.push(NOT_RECORDED_NOTE);
+    if (map.data.inDevelopment) notes.push(MAP_NOT_RECORDED_NOTE);
+    else if (!recorded) notes.push(NOT_RECORDED_NOTE);
     else if (this.opts.dev.cheating()) notes.push(DEV_NOT_RECORDED_NOTE);
     this.setup.setRules(notes.join(' '));
     const loadout = this.opts.loadout.summary();
@@ -484,6 +506,9 @@ export class Menus {
     this.refreshSetup();
   }
 }
+
+/** Under New game's rules on a map still being built (M33). */
+export const MAP_NOT_RECORDED_NOTE = "This map is still being built, so its matches don't go into your records.";
 
 /** Under New game's rules while Dev settings that change play are on (M24). */
 export const DEV_NOT_RECORDED_NOTE = "Dev settings are on, so this match won't go into your records.";

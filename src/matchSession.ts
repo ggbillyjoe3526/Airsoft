@@ -110,6 +110,8 @@ export class MatchSession {
   private outcomeTaken = false;
   /** The standard match, so its result could go into the records (custom rules don't, M20). */
   private readonly standardRules: boolean;
+  /** Played on a map still being built (M33): never in the records. */
+  private readonly mapInDevelopment: boolean;
   /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
   private devAssisted = false;
   /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
@@ -139,6 +141,7 @@ export class MatchSession {
     this.rounds = roundRulesFor(setup.rules);
     this.hits = hitRulesFor(setup.rules);
     this.standardRules = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty);
+    this.mapInDevelopment = map.inDevelopment ?? false;
     this.state = createGameState(seed, BALLISTICS.maxBBs, this.rounds, this.mode, map.flag);
     this.ctx = createSimContext({
       mover: this.physics,
@@ -308,14 +311,14 @@ export class MatchSession {
     else if (devCheating(cheats)) this.devAssisted = true;
   }
 
-  /** Whether this match's result goes into the records: the standard match (M20), played without Dev help (M24). */
+  /** Whether this match's result goes into the records: the standard match (M20), without Dev help (M24), on a finished map (M33). */
   get countsForRecords(): boolean {
-    return this.standardRules && !this.devAssisted;
+    return this.standardRules && !this.devAssisted && !this.mapInDevelopment;
   }
 
   /** Why it doesn't, for the summary: custom rules, Dev settings, or '' when it counts. */
   get notCountedReason(): NotCounted {
-    return !this.standardRules ? 'rules' : this.devAssisted ? 'dev' : '';
+    return this.mapInDevelopment ? 'map' : !this.standardRules ? 'rules' : this.devAssisted ? 'dev' : '';
   }
 
   /** Settings → HUD → Hit feed (M24). */

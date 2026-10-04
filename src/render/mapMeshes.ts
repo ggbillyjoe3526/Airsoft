@@ -35,6 +35,11 @@ const STYLES: Record<BlockKind, KindStyle> = {
   sandbags: { texture: 'sandbag', uv: 'world', tints: [0xffffff, 0xeee6d6], castShadow: true, grime: true },
   generator: { texture: 'barrier', uv: 'world', tints: [0xcdb338, 0x5f7f52], castShadow: true, grime: true },
   skip: { texture: 'corrugated', uv: 'world', tints: [0xcdb338, 0x4f8a57, 0x7a8288], castShadow: true, grime: true },
+  // The woods (M33, greybox until Woodland's look): bark browns, grey stone, weathered boards.
+  tree: { texture: 'crate', uv: 'world', tints: [0x6b4f36, 0x5e4630, 0x75583c], castShadow: true, grime: false },
+  boulder: { texture: 'concrete', uv: 'world', tints: [0x8c9094, 0x7d8286, 0x9a968c], castShadow: true, grime: true },
+  log: { texture: 'crate', uv: 'world', tints: [0x8a6a48, 0x7c5e3e], castShadow: true, grime: true },
+  fence: { texture: 'crate', uv: 'world', tints: [0x6e5a44], castShadow: true, grime: true },
 };
 
 /** A steel floor or ramp (MapBlock.surface 'metal', which also clanks underfoot): diamond tread plate in plain steel. */

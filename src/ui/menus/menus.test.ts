@@ -6,7 +6,7 @@ import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
 import { TEAM_COLOUR_CHOICES } from '../../config/teams';
-import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
+import { COMING_SOON_TAG, DEFAULT_MAP, IN_DEVELOPMENT_TAG, MAPS, mapData, mapEntry, mapOpen, playableMap, teamSizeOn } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
 import { backTarget, escResumes, moreBelow, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
@@ -103,22 +103,29 @@ describe('menu data', () => {
     for (const m of MAPS) expect(m.blurb.split(' ').length).toBeLessThanOrEqual(8);
   });
 
-  it('lists Woodland as a coming map that is not a MapId, so the Map choice never saves or loads it (M33a)', () => {
-    expect(COMING_MAPS.map((m) => m.label)).toContain('Woodland');
-    const playable = new Set<string>(MAPS.map((m) => m.id));
-    for (const m of COMING_MAPS) {
-      expect(playable.has(m.label.toLowerCase()), m.label).toBe(false);
-      expect(mapData(m.label.toLowerCase() as never)).toBe(mapData(DEFAULT_MAP)); // an unknown id falls back to Depot
-    }
+  it('lists Woodland as a map still being built, locked unless Dev settings open it (M33a, M33d)', () => {
+    const woodland = mapEntry('woodland');
+    expect(woodland.data.inDevelopment).toBe(true);
+    expect(mapOpen('woodland', false)).toBe(false);
+    expect(playableMap('woodland', false)).toBe(DEFAULT_MAP);
+    expect(playableMap('woodland', true)).toBe('woodland');
+    expect(playableMap('depot', false)).toBe('depot');
+    expect(mapData('unknown' as never)).toBe(mapData(DEFAULT_MAP)); // an unknown id falls back to Depot
     expect(DEFAULT_MAP).toBe('depot');
+    expect(COMING_SOON_TAG).toBe('Coming soon');
+    expect(IN_DEVELOPMENT_TAG).toBe('In development');
   });
 
-  it('describes each coming map in at most eight words, tagged "Coming soon" (M33a)', () => {
-    expect(COMING_SOON_TAG).toBe('Coming soon');
-    for (const m of COMING_MAPS) {
-      expect(m.blurb.trim()).not.toBe('');
-      expect(m.blurb.split(' ').length, m.label).toBeLessThanOrEqual(8);
+  it('plays no more a side than a map has spawns for (M33d)', () => {
+    for (const m of MAPS) {
+      expect(m.teamSize.standard).toBeLessThanOrEqual(m.teamSize.max);
+      expect(m.data.spawns[0].length, m.id).toBeGreaterThanOrEqual(m.teamSize.max);
+      expect(m.data.spawns[1].length, m.id).toBeGreaterThanOrEqual(m.teamSize.max);
+      expect(teamSizeOn(m.id, 5)).toBe(m.teamSize.max);
+      expect(teamSizeOn(m.id, 1)).toBe(1);
     }
+    expect(mapEntry('depot').teamSize).toEqual({ standard: 3, max: 3 });
+    expect(mapEntry('woodland').teamSize).toEqual({ standard: 4, max: 5 });
   });
 
   it('starts every word of a two-word button with a capital (owner, 2026-10-04)', () => {

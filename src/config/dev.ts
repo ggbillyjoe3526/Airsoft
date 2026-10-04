@@ -19,6 +19,8 @@ export interface DevSettings {
   ghost: boolean;
   /** The simulation's speed: 1 is normal, below it slow motion. */
   gameSpeed: number;
+  /** Maps still being built (MapData.inDevelopment, M33) can be picked and played; their matches aren't recorded. */
+  mapsInDevelopment: boolean;
 }
 
 export const DEV_DEFAULTS: Readonly<DevSettings> = {
@@ -29,6 +31,7 @@ export const DEV_DEFAULTS: Readonly<DevSettings> = {
   bottomlessMags: false,
   ghost: false,
   gameSpeed: 1,
+  mapsInDevelopment: false,
 };
 
 type KeysOf<V> = { [K in keyof DevSettings]: DevSettings[K] extends V ? K : never }[keyof DevSettings];
@@ -47,6 +50,7 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
   { kind: 'range', id: 'gameSpeed', label: 'Game speed', help: 'Below 100% everything slows down, BBs too; above it, everything speeds up.', cheat: true, min: 0.25, max: 2, step: 0.25 },
   { kind: 'switch', id: 'bottomlessMags', label: 'Bottomless magazines', help: 'Your magazines never run dry.', cheat: true },
   { kind: 'switch', id: 'ghost', label: 'Ghost', help: 'BBs pass straight through you. The bots still shoot at you.', cheat: true },
+  { kind: 'switch', id: 'mapsInDevelopment', label: 'Access maps in development', help: "Maps still being built can be picked in New game's Map pop-up. Their matches don't go into your records.", cheat: false },
 ];
 
 /** The two Dev tab switches the game shows as On / Off. */

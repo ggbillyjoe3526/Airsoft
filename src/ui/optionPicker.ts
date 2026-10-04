@@ -74,6 +74,11 @@ export class OptionPicker<T extends string> {
     }
   }
 
+  /** Offers only the options `allowed` says yes to (the team sizes a map has room for, M33); the rest are hidden. */
+  limit(allowed: (id: T) => boolean): void {
+    for (const [id, button] of this.buttons) button.hidden = !allowed(id);
+  }
+
   /** Shows `value` as picked without saving it or reporting a change (another choice set it, e.g. M20's teammates). */
   show(value: T): void {
     this.current = value;

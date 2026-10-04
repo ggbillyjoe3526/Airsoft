@@ -22,7 +22,7 @@ import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { type MapId, mapData } from './map/maps';
+import { type MapId, mapData, playableMap, teamSizeOn } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadFigureModel } from './render/externalModels';
@@ -262,7 +262,7 @@ export class Game {
       const p = s?.player;
       return {
         seed: s instanceof RangeSession ? options.seed : this.matchSeed,
-        map: s instanceof RangeSession ? 'range' : this.map,
+        map: s instanceof RangeSession ? 'range' : this.playedMap,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
         characters: s?.characterCount ?? 0,
@@ -375,6 +375,7 @@ export class Game {
           this.applyDev();
         },
         cheating: () => devCheating(this.dev),
+        mapAccess: () => this.dev.mapsInDevelopment,
         diagnostics: () => this.diagnostics(),
       },
       save: options.save,
@@ -555,6 +556,11 @@ export class Game {
     style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize * hud, this.container.clientWidth || window.innerWidth).toFixed(3));
   };
 
+  /** The map a match is played on: the picked one, or the default while it is still being built and locked (M33). */
+  private get playedMap(): MapId {
+    return playableMap(this.map, this.dev.mapsInDevelopment);
+  }
+
   /** A Dev setting changed, or the Dev tab was shown or hidden (M24): what applies now goes to the game and the session. */
   private applyDev(): void {
     const before = this.dev;
@@ -565,6 +571,8 @@ export class Game {
     this.session?.setDevCheats(this.dev);
     // Unlock all gear changes what the Loadout offers and carries; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear) this.loadoutChanged = this.setupChanged = true;
+    // Access maps in development (M33) may change the map played, and with it the team size.
+    if (this.dev.mapsInDevelopment !== before.mapsInDevelopment) this.setupChanged = true;
   }
 
   /** A new session takes the Dev settings in force (M24). */
@@ -631,11 +639,11 @@ export class Game {
       this.matchSeed = matchSeed(this.options.seed, this.matchesPlayed);
       this.matchCounted = false;
       this.session = new MatchSession(this.renderer, this.container, this.input, {
-        map: mapData(this.map),
+        map: mapData(this.playedMap),
         mode: this.mode,
         difficulty: this.difficulty,
         teammateDifficulty: this.teammateDifficulty,
-        rules: { ...this.matchRules },
+        rules: { ...this.matchRules, teamSize: teamSizeOn(this.playedMap, this.matchRules.teamSize) },
         kit: this.loadout.kit(),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
       }, this.matchSeed, QUALITY[this.quality], this.audio, this.crosshair);
