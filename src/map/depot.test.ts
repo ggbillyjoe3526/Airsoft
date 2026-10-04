@@ -4,7 +4,7 @@ import { FLAG } from '../config/modes';
 import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
-import { buildNavGrid, canStep, cellIndex, cellX, cellZ, createNavSearch, findPath, floorAt, isWalkableAt, type NavGrid, nearestWalkable } from '../nav/navGrid';
+import { buildNavGrid, canStep, cellX, cellZ, createNavSearch, findPath, floorAt, isWalkableAt, type NavGrid, nearestWalkable, nodeAt, stepNode } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter } from '../sim/character';
 import { createCommand } from '../sim/commands';
@@ -93,13 +93,13 @@ function segmentHitsBox(a: Vec3, b: Vec3, k: MapBlock): boolean {
 const sees = (a: Vec3, b: Vec3): boolean => !sightBlockers.some((k) => segmentHitsBox(a, b, k));
 
 /** The eye of someone standing (or crouched) at (x, z) on the floor there. */
-const eyeAt = (x: number, z: number, eye = STANDING_EYE): Vec3 => vec3(x, floorAt(NAV_GRID, x, z) + eye, z);
+const eyeAt = (x: number, z: number, eye = STANDING_EYE): Vec3 => vec3(x, floorAt(NAV_GRID, x, 0, z) + eye, z);
 
 /** Every place a player can stand on a `step` grid (walkable nav cells, any floor height). */
 function standablePoints(step: number): { x: number; z: number }[] {
   const pts: { x: number; z: number }[] = [];
   for (let x = -halfX + step / 2; x < halfX; x += step) {
-    for (let z = -halfZ + step / 2; z < halfZ; z += step) if (isWalkableAt(NAV_GRID, x, z)) pts.push({ x, z });
+    for (let z = -halfZ + step / 2; z < halfZ; z += step) if (isWalkableAt(NAV_GRID, x, 0, z)) pts.push({ x, z });
   }
   return pts;
 }
@@ -109,18 +109,18 @@ function spawnZone(spawns: SpawnPoint[], step: number): { x: number; z: number }
   return standablePoints(step).filter((p) => spawns.some((s) => Math.hypot(p.x - s.position.x, p.z - s.position.z) <= SPAWN_ZONE_RADIUS));
 }
 
-/** Breadth-first search over the nav grid (with its step rule); `allowed` can veto cells (to force a route through one lane). */
+/** Breadth-first search over the nav grid's nodes (with its step rule); `allowed` can veto cells (to force a route through one lane). */
 function reachable(g: NavGrid, from: Vec3, to: Vec3, allowed: (x: number, z: number) => boolean): boolean {
-  const goal = cellIndex(g, to.x, to.z);
-  const start = cellIndex(g, from.x, from.z);
-  const seen = new Uint8Array(g.cols * g.rows);
+  const goal = nodeAt(g, to.x, to.y, to.z);
+  const start = nodeAt(g, from.x, from.y, from.z);
+  const seen = new Uint8Array(g.floorY.length);
   const queue = [start];
   seen[start] = 1;
   for (let head = 0; head < queue.length; head++) {
     const c = queue[head]!;
     if (c === goal) return true;
-    const i = c % g.cols;
-    const j = (c - i) / g.cols;
+    const i = g.nodeCell[c]! % g.cols;
+    const j = (g.nodeCell[c]! - i) / g.cols;
     for (const [di, dj] of [
       [1, 0],
       [-1, 0],
@@ -130,8 +130,8 @@ function reachable(g: NavGrid, from: Vec3, to: Vec3, allowed: (x: number, z: num
       const ni = i + di;
       const nj = j + dj;
       if (ni < 0 || nj < 0 || ni >= g.cols || nj >= g.rows) continue;
-      const n = nj * g.cols + ni;
-      if (seen[n] || !canStep(g, c, n) || !allowed(cellX(g, ni), cellZ(g, nj))) continue;
+      const n = stepNode(g, c, nj * g.cols + ni);
+      if (n < 0 || seen[n] || !canStep(g, c, n) || !allowed(cellX(g, ni), cellZ(g, nj))) continue;
       seen[n] = 1;
       queue.push(n);
     }
@@ -159,12 +159,12 @@ function walk(from: Vec3, to: Vec3): number {
 }
 
 /**
- * Route length (metres) from every nav cell to cell `goal` over the same 8-neighbour moves findPath searches (no
+ * Route length (metres) from every nav node to node `goal` over the same 8-neighbour moves findPath searches (no
  * squeezing diagonally past a blocked cell or a drop); Infinity where there's no route. A string-pulled route is never
  * longer, so this is an upper bound on the walk.
  */
 function routeLengths(g: NavGrid, goal: number): Float64Array {
-  const dist = new Float64Array(g.cols * g.rows).fill(Number.POSITIVE_INFINITY);
+  const dist = new Float64Array(g.floorY.length).fill(Number.POSITIVE_INFINITY);
   const heap: [number, number][] = [];
   const push = (d: number, c: number): void => {
     heap.push([d, c]);
@@ -198,17 +198,22 @@ function routeLengths(g: NavGrid, goal: number): Float64Array {
   while (heap.length > 0) {
     const [d, c] = pop();
     if (d > dist[c]!) continue;
-    const ci = c % g.cols;
-    const cj = (c - ci) / g.cols;
+    const cc = g.nodeCell[c]!;
+    const ci = cc % g.cols;
+    const cj = (cc - ci) / g.cols;
     for (let di = -1; di <= 1; di++) {
       for (let dj = -1; dj <= 1; dj++) {
         if (di === 0 && dj === 0) continue;
         const ni = ci + di;
         const nj = cj + dj;
         if (ni < 0 || nj < 0 || ni >= g.cols || nj >= g.rows) continue;
-        const n = nj * g.cols + ni;
-        if (!canStep(g, c, n)) continue;
-        if (di !== 0 && dj !== 0 && !(canStep(g, c, cj * g.cols + ni) && canStep(g, c, nj * g.cols + ci))) continue;
+        const n = stepNode(g, c, nj * g.cols + ni);
+        if (n < 0 || !canStep(g, c, n)) continue;
+        if (di !== 0 && dj !== 0) {
+          const sa = stepNode(g, c, cj * g.cols + ni);
+          const sb = stepNode(g, c, nj * g.cols + ci);
+          if (sa < 0 || sb < 0 || !canStep(g, c, sa) || !canStep(g, c, sb)) continue;
+        }
         const nd = d + (di !== 0 && dj !== 0 ? Math.SQRT2 : 1) * g.cell;
         if (nd < dist[n]!) {
           dist[n] = nd;
@@ -283,7 +288,7 @@ describe('Depot map', () => {
       for (const s of spawns) {
         expect(s.position.y).toBe(0);
         expect(Math.sign(-Math.sin(s.yaw))).toBe(end === 0 ? 1 : -1);
-        expect(isWalkableAt(NAV_GRID, s.position.x, s.position.z), `spawn ${JSON.stringify(s.position)} is blocked`).toBe(true);
+        expect(isWalkableAt(NAV_GRID, s.position.x, s.position.y, s.position.z), `spawn ${JSON.stringify(s.position)} is blocked`).toBe(true);
       }
     }
   });
@@ -294,7 +299,7 @@ describe('Depot map', () => {
       for (const s of spots) {
         const where = `end ${end} dead-zone spot ${JSON.stringify(s.position)}`;
         expect(s.position.y).toBe(0);
-        expect(isWalkableAt(NAV_GRID, s.position.x, s.position.z), `${where} is blocked`).toBe(true);
+        expect(isWalkableAt(NAV_GRID, s.position.x, s.position.y, s.position.z), `${where} is blocked`).toBe(true);
         for (const sp of DEPOT.spawns[end]!) expect(Math.hypot(s.position.x - sp.position.x, s.position.z - sp.position.z), where).toBeGreaterThan(1);
         for (const o of spots) if (o !== s) expect(Math.hypot(s.position.x - o.position.x, s.position.z - o.position.z), where).toBeGreaterThan(2 * BODY.radius); // figures on neighbouring spots don't overlap
       }
@@ -307,15 +312,15 @@ describe('Depot map', () => {
     let worst = 0;
     for (const spots of DEPOT.deadZones) {
       for (const spot of spots) {
-        const lengths = routeLengths(NAV_GRID, nearestWalkable(NAV_GRID, spot.position.x, spot.position.z, NAV.snap));
+        const lengths = routeLengths(NAV_GRID, nearestWalkable(NAV_GRID, spot.position.x, spot.position.y, spot.position.z, NAV.snap));
         // Every walkable point on a 1 m grid (either end's victims can be hit anywhere, half-time swaps the ends).
         for (let x = -halfX + 0.5; x < halfX; x += 1) {
           for (let z = -halfZ + 0.5; z < halfZ; z += 1) {
-            const c = cellIndex(NAV_GRID, x, z);
+            const c = nodeAt(NAV_GRID, x, 0, z);
             if (c < 0 || NAV_GRID.walkable[c] !== 1 || !Number.isFinite(lengths[c]!)) continue;
             let metres = lengths[c]!;
             // Over budget on the grid: measure the real (string-pulled) route the walk-off would follow.
-            if (metres / pace > budget) metres = walk(vec3(x, floorAt(NAV_GRID, x, z), z), spot.position);
+            if (metres / pace > budget) metres = walk(vec3(x, floorAt(NAV_GRID, x, 0, z), z), spot.position);
             worst = Math.max(worst, metres / pace);
             expect(metres / pace, `walk-off from ${x}, ${z} to ${spot.position.x}, ${spot.position.z}`).toBeLessThanOrEqual(budget);
           }
@@ -351,7 +356,7 @@ describe('Depot map', () => {
   describe('the loading dock', () => {
     it('is reached by a ramp at each end, and is a drop everywhere else (bots never route off its edge)', () => {
       const onDock = vec3(4.5, dockHeight, dockPlan.edgeZ - 0.4);
-      expect(floorAt(NAV_GRID, onDock.x, onDock.z)).toBeCloseTo(dockHeight, 6);
+      expect(floorAt(NAV_GRID, onDock.x, onDock.y, onDock.z)).toBeCloseTo(dockHeight, 6);
       // Up the west ramp only (east half of the map closed), and up the east ramp only (west half closed).
       expect(reachable(NAV_GRID, west[0]!.position, onDock, (x) => x < 6)).toBe(true);
       expect(reachable(NAV_GRID, east[0]!.position, onDock, (x) => x > 3)).toBe(true);
@@ -363,7 +368,7 @@ describe('Depot map', () => {
     it('overlooks the road, not Container Alley: the containers under it are stacked (only the west ramp looks through the connector)', () => {
       // On the dock proper (its west end aside, where the ramp comes up from the connector to mid), nothing in
       // the alley is in sight.
-      const onDock = standablePoints(0.5).filter((p) => floorAt(NAV_GRID, p.x, p.z) > dockHeight - EPS && p.x > 2);
+      const onDock = standablePoints(0.5).filter((p) => floorAt(NAV_GRID, p.x, 0, p.z) > dockHeight - EPS && p.x > 2);
       const alley = standablePoints(0.5).filter((p) => p.z < lanes.mid.maxZ && p.z > lanes.mid.minZ && p.x < 3.6);
       expect(onDock.length).toBeGreaterThan(50);
       const open: string[] = [];
@@ -384,7 +389,7 @@ describe('Depot map', () => {
         for (let dz = -r; dz <= r; dz += 0.2) {
           if (Math.hypot(dx, dz) > r) continue;
           all++;
-          if (isWalkableAt(NAV_GRID, pole.x + dx, pole.z + dz)) open++;
+          if (isWalkableAt(NAV_GRID, pole.x + dx, pole.y, pole.z + dz)) open++;
         }
       }
       expect(open / all).toBeGreaterThan(0.9);
@@ -429,7 +434,7 @@ describe('Depot map', () => {
     for (const [name, lane] of Object.entries(lanes)) {
       for (let z = lane.minZ + BODY.radius; z <= lane.maxZ - BODY.radius; z += 0.25) {
         const row: Vec3[] = [];
-        for (let x = -halfX + 0.25; x < halfX; x += 0.5) if (isWalkableAt(NAV_GRID, x, z)) row.push(eyeAt(x, z));
+        for (let x = -halfX + 0.25; x < halfX; x += 0.5) if (isWalkableAt(NAV_GRID, x, 0, z)) row.push(eyeAt(x, z));
         let longest = 0;
         for (let i = 0; i < row.length; i++) {
           for (let j = row.length - 1; j > i; j--) {

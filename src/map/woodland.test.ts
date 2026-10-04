@@ -71,8 +71,8 @@ describe('Woodland: spawns, dead zones and the flag (M33d, acceptance 1)', () =>
     for (const [what, p] of points) {
       const at = `${what} at ${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}`;
       expect(insideMap(p), `${at} inside`).toBe(true);
-      expect(isWalkableAt(nav, p.x, p.z), `${at} walkable`).toBe(true);
-      expect(Math.abs(p.y - floorAt(nav, p.x, p.z)), `${at} on the floor`).toBeLessThanOrEqual(ON_FLOOR);
+      expect(isWalkableAt(nav, p.x, p.y, p.z), `${at} walkable`).toBe(true);
+      expect(Math.abs(p.y - floorAt(nav, p.x, p.y, p.z)), `${at} on the floor`).toBeLessThanOrEqual(ON_FLOOR);
     }
   });
 
@@ -81,9 +81,9 @@ describe('Woodland: spawns, dead zones and the flag (M33d, acceptance 1)', () =>
     for (const lane of WOODLAND.lanes) {
       for (const p of lane) {
         expect(insideMap(p)).toBe(true);
-        expect(isWalkableAt(nav, p.x, p.z), `lane point ${p.x}, ${p.z}`).toBe(true);
+        expect(isWalkableAt(nav, p.x, p.y, p.z), `lane point ${p.x}, ${p.z}`).toBe(true);
         // A lane point sits anywhere in its nav cell, so on a slope the cell's floor (taken at the centre) may differ a little.
-        expect(Math.abs(p.y - floorAt(nav, p.x, p.z))).toBeLessThanOrEqual(ON_FLOOR + PHYSICS.maxRampSlope * NAV.cell);
+        expect(Math.abs(p.y - floorAt(nav, p.x, p.y, p.z))).toBeLessThanOrEqual(ON_FLOOR + PHYSICS.maxRampSlope * NAV.cell);
       }
     }
   });
@@ -197,7 +197,7 @@ describe('Woodland: the fort can be attacked (the Pro difficulty plan, owner 19:
     const search = createNavSearch(nav);
     const route: Vec3[] = [];
     for (const e of entrances) {
-      expect(isWalkableAt(nav, e.x, e.z), `${e.x}, ${e.z}`).toBe(true);
+      expect(isWalkableAt(nav, e.x, e.y, e.z), `${e.x}, ${e.z}`).toBe(true);
       expect(findPath(nav, search, e, flag, NAV.snap, route), `from ${e.x}, ${e.z}`).toBe(true);
     }
   });
@@ -206,7 +206,7 @@ describe('Woodland: the fort can be attacked (the Pro difficulty plan, owner 19:
     let spots = 0;
     for (let x = inside.x0 + 0.25; x < inside.x1; x += 0.5) {
       for (let z = inside.z0 + 0.25; z < inside.z1; z += 0.5) {
-        if (!isWalkableAt(nav, x, z)) continue;
+        if (!isWalkableAt(nav, x, ground(x, z), z)) continue;
         spots++;
         const eye = vec3(x, ground(x, z) + BODY.standEyeHeight, z);
         const seen = entrances.filter((e) => clear(eye, vec3(e.x, e.y + 1.2, e.z))).length;
