@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUDIO } from '../config/audio';
+import { AUDIO, matchOverBlastStart } from '../config/audio';
 import { LOADOUT } from '../config/replicas';
+import type { SoundCue } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
 import { type Character, createCharacter } from '../sim/character';
 import type { GameEvent } from '../sim/events';
@@ -98,8 +99,18 @@ class FakeBuffer {
   }
 }
 
+class FakeConvolver extends FakeNode {
+  buffer: unknown = null;
+}
+
 class FakeContext {
   static last: FakeContext;
+  /** Contexts constructed since the test began. */
+  static made = 0;
+  state: 'running' | 'suspended' | 'closed' = 'running';
+  resumed = 0;
+  suspended = 0;
+  closed = 0;
   currentTime = 0;
   sampleRate = 48000;
   readonly destination = new FakeNode();
@@ -108,8 +119,10 @@ class FakeContext {
   readonly panners: FakePanner[] = [];
   readonly filters: FakeFilter[] = [];
   readonly sources: FakeSource[] = [];
+  readonly oscillators: FakeSource[] = [];
   constructor() {
     FakeContext.last = this;
+    FakeContext.made++;
   }
   createGain(): FakeGain {
     const g = new FakeGain();
@@ -132,24 +145,32 @@ class FakeContext {
     return s;
   }
   createOscillator(): FakeSource {
-    return new FakeSource();
+    const o = new FakeSource();
+    this.oscillators.push(o);
+    return o;
   }
   createDynamicsCompressor(): FakeNode & Record<'threshold' | 'knee' | 'ratio' | 'attack' | 'release', FakeParam> {
     return Object.assign(new FakeNode(), { threshold: new FakeParam(), knee: new FakeParam(), ratio: new FakeParam(), attack: new FakeParam(), release: new FakeParam() });
   }
-  createConvolver(): FakeNode & { buffer: unknown } {
-    return Object.assign(new FakeNode(), { buffer: null });
+  createConvolver(): FakeConvolver {
+    return new FakeConvolver();
   }
   createBuffer(channels: number, length: number, rate: number): FakeBuffer {
     return new FakeBuffer(channels, length, rate);
   }
   resume(): Promise<void> {
+    this.resumed++;
+    this.state = 'running';
     return Promise.resolve();
   }
   suspend(): Promise<void> {
+    this.suspended++;
+    this.state = 'suspended';
     return Promise.resolve();
   }
   close(): Promise<void> {
+    this.closed++;
+    this.state = 'closed';
     return Promise.resolve();
   }
 }
@@ -180,11 +201,37 @@ function destinationOf(src: FakeSource): unknown {
   return [...gain!.outputs][0];
 }
 
+/** Every node downstream of `node`. */
+function downstream(node: FakeNode): Set<unknown> {
+  const seen = new Set<unknown>();
+  const todo: unknown[] = [...node.outputs];
+  while (todo.length > 0) {
+    const n = todo.pop();
+    if (seen.has(n)) continue;
+    seen.add(n);
+    if (n instanceof FakeNode) todo.push(...n.outputs);
+  }
+  return seen;
+}
+
+/** Plays dry (an interface cue): reaches the speakers through no panner and no reverb. */
+function playsDry(src: FakeSource, ctx: FakeContext): boolean {
+  const after = [...downstream(src)];
+  return after.includes(ctx.destination) && !after.some((n) => n instanceof FakePanner || n instanceof FakeConvolver);
+}
+
+/** Whether `src` plays one of `cue`'s rendered variants. */
+function plays(src: FakeSource, cue: SoundCue): boolean {
+  const data = (src.buffer as FakeBuffer).data[0]!;
+  return LIBRARY.get(48000).get(cue)!.some((v) => v.length === data.length && v.every((x, i) => x === data[i]));
+}
+
 const shot = (characterId: number): GameEvent => ({ type: 'shot', characterId, replicaId: 'aeg', position: vec3(0, 1.6, 0) });
 const step = (characterId: number): GameEvent => ({ type: 'footstep', characterId, kind: 'run' });
 
 describe('the sound engine (M13)', () => {
   beforeEach(() => {
+    FakeContext.made = 0;
     vi.stubGlobal('AudioContext', FakeContext);
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
   });
@@ -291,5 +338,141 @@ describe('the sound engine (M13)', () => {
     sfx.setVolume('interface', 0.5);
     const eased = ctx.gains.flatMap((g) => g.gain.targets);
     expect(eased).toContainEqual({ value: volumeGain(0.5), at: 0 });
+  });
+});
+
+describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const roundOver: GameEvent = { type: 'roundOver', winner: 0, reason: 'eliminated' };
+  const matchOver: GameEvent = { type: 'matchOver', winner: 0 };
+  const roundStart: GameEvent = { type: 'roundStart', round: 2 };
+
+  it('builds one audio context however often it is unlocked', () => {
+    const { sfx } = setup();
+    sfx.unlock();
+    expect(FakeContext.made).toBe(1);
+  });
+
+  it('suspends the audio with the game and resumes it', () => {
+    const { sfx, ctx } = setup();
+    const resumed = ctx.resumed;
+    sfx.setPaused(true);
+    expect(ctx.suspended).toBeGreaterThan(0);
+    expect(ctx.state).toBe('suspended');
+    sfx.setPaused(false);
+    expect(ctx.resumed).toBe(resumed + 1);
+    expect(ctx.state).toBe('running');
+  });
+
+  it('plays nothing once disposed, and pausing it then is harmless', () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    sfx.dispose();
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    sfx.onEvent(roundOver, PLAYER, characterOf);
+    sfx.setPaused(false);
+    expect(ctx.sources).toHaveLength(0);
+    expect(ctx.oscillators).toHaveLength(0);
+    expect(sfx.roundStartWhistle()).toBe(false);
+  });
+
+  it('blows one long blast at the end of a round, and the extra ones at the end of the match, all dry', () => {
+    const { sfx, ctx, characterOf } = setup();
+    sfx.onEvent(roundOver, PLAYER, characterOf);
+    // Each blast is a tone and its warble (which only moves the tone's pitch).
+    expect(ctx.oscillators).toHaveLength(2);
+    expect(ctx.oscillators[0]!.startAt).toBe(0);
+    sfx.onEvent(matchOver, PLAYER, characterOf);
+    expect(ctx.oscillators).toHaveLength(2 * (1 + AUDIO.matchOverBlasts));
+    for (let i = 0; i < AUDIO.matchOverBlasts; i++) expect(ctx.oscillators[2 + 2 * i]!.startAt).toBeCloseTo(matchOverBlastStart(i));
+    for (let i = 0; i < ctx.oscillators.length; i += 2) expect(playsDry(ctx.oscillators[i]!, ctx)).toBe(true);
+  });
+
+  it('cuts a blast still sounding when the next round starts, then blows the two short ones', () => {
+    const { sfx, ctx, characterOf } = setup();
+    sfx.onEvent(roundOver, PLAYER, characterOf);
+    const [tone, warble] = ctx.oscillators;
+    sfx.onEvent(roundStart, PLAYER, characterOf);
+    expect(tone!.stopAt).toBe(0);
+    expect(warble!.stopAt).toBe(0);
+    expect(ctx.oscillators).toHaveLength(2 + 4);
+    expect(ctx.oscillators[4]!.startAt).toBeCloseTo(AUDIO.roundStartWhistle * AUDIO.roundStartWhistleGap);
+  });
+
+  it("disconnects a blast's nodes when it ends", () => {
+    const { sfx, ctx, characterOf } = setup();
+    sfx.onEvent(roundOver, PLAYER, characterOf);
+    const [tone, warble] = ctx.oscillators;
+    const level = [...tone!.outputs][0] as FakeGain;
+    const depth = [...warble!.outputs][0] as FakeGain;
+    tone!.end();
+    for (const node of [tone!, warble!, level, depth]) expect(node.disconnected).toBe(true);
+    // An ended blast is forgotten: a new round's start doesn't stop it again.
+    tone!.stopAt = null;
+    sfx.onEvent(roundStart, PLAYER, characterOf);
+    expect(tone!.stopAt).toBeNull();
+  });
+
+  it('routes a hit: yours is the dry tick; one you scored is the body hit on the victim plus the dry hit marker', () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    const hit = (victimId: number, shooterId: number): GameEvent => ({ type: 'characterHit', victimId, shooterId, position: vec3(6, 1.2, 0), direction: vec3(1, 0, 0), ricochet: false });
+    sfx.onEvent(hit(PLAYER, bot.id), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(1);
+    expect(plays(ctx.sources[0]!, 'hitTick')).toBe(true);
+    expect(playsDry(ctx.sources[0]!, ctx)).toBe(true);
+
+    sfx.onEvent(hit(bot.id, PLAYER), PLAYER, characterOf);
+    const [body, marker] = ctx.sources.slice(1);
+    expect(plays(body!, 'bodyHit')).toBe(true);
+    expect(destinationOf(body!)).toBe(ctx.panners.find((p) => p.panningModel === 'HRTF'));
+    expect(plays(marker!, 'hitMarker')).toBe(true);
+    expect(playsDry(marker!, ctx)).toBe(true);
+
+    // Someone else's hit on someone no longer in play: the body hit where it landed, no marker.
+    sfx.onEvent(hit(7, bot.id), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(4);
+    expect(plays(ctx.sources[3]!, 'bodyHit')).toBe(true);
+    expect(destinationOf(ctx.sources[3]!)).toBe(ctx.panners.at(-1));
+    expect(ctx.panners.at(-1)!.panningModel).toBe('equalpower');
+  });
+
+  it("plays a range target's ring and the flag's rope where they are, with the hit marker for your own hit", () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    sfx.onEvent({ type: 'targetHit', targetId: 0, kind: 'steel', shooterId: PLAYER, position: vec3(0, 1, -30), ricochet: false }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(2);
+    expect(plays(ctx.sources[0]!, 'steelRing')).toBe(true);
+    expect(destinationOf(ctx.sources[0]!)).toBe(ctx.panners[0]);
+    expect(plays(ctx.sources[1]!, 'hitMarker')).toBe(true);
+    sfx.onEvent({ type: 'targetHit', targetId: 1, kind: 'figure', shooterId: bot.id, position: vec3(0, 1, -30), ricochet: false }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(3);
+    expect(plays(ctx.sources[2]!, 'impact.wood')).toBe(true);
+    sfx.onEvent({ type: 'flagRope', position: vec3(0, 2, 10), raising: true }, PLAYER, characterOf);
+    expect(plays(ctx.sources[3]!, 'rope.up')).toBe(true);
+    expect(ctx.panners).toHaveLength(3);
+    for (const p of ctx.panners) expect(p.panningModel).toBe('equalpower');
+  });
+
+  it("caps other players' footsteps and BB impacts per window, and lets them through again after it", () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    for (let i = 0; i < AUDIO.footsteps.maxPerWindow + 3; i++) sfx.onEvent(step(bot.id), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(AUDIO.footsteps.maxPerWindow);
+    // Your own steps are never capped.
+    sfx.onEvent(step(PLAYER), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(AUDIO.footsteps.maxPerWindow + 1);
+    ctx.currentTime = AUDIO.footsteps.window + 0.01;
+    sfx.onEvent(step(bot.id), PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(AUDIO.footsteps.maxPerWindow + 2);
+
+    const before = ctx.sources.length;
+    for (let i = 0; i < AUDIO.maxImpactsPerWindow + 3; i++) sfx.onEvent({ type: 'bbImpact', position: vec3(3, 0, 0), ownerId: 1 }, PLAYER, characterOf);
+    expect(ctx.sources.length - before).toBe(AUDIO.maxImpactsPerWindow);
   });
 });
