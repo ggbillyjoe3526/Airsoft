@@ -205,8 +205,8 @@ describe('points on a raised floor (audit AI-08)', () => {
     const out = vec3();
     for (let i = 0; i < 300; i++) {
       jitterPoint(b, w, point, 2, out);
-      expect(Math.abs(floorAt(nav, out.x, out.z) - point.y)).toBeLessThanOrEqual(nav.maxStep);
-      expect(out.y).toBeCloseTo(floorAt(nav, out.x, out.z), 5);
+      expect(Math.abs(floorAt(nav, out.x, out.y, out.z) - point.y)).toBeLessThanOrEqual(nav.maxStep);
+      expect(out.y).toBeCloseTo(floorAt(nav, out.x, out.y, out.z), 5);
     }
   });
 });
@@ -401,7 +401,7 @@ describe('search (audit AI-14, AI-17)', () => {
         // Off the straight way by flankOffset, flankBack short of the spot, on the spot's floor.
         expect(Math.abs(b.flankGoal.z)).toBeCloseTo(BOTS.flankOffset);
         expect(b.flankGoal.x).toBeCloseTo(BOTS.flankBack);
-        expect(b.flankGoal.y).toBe(floorAt(nav, b.flankGoal.x, b.flankGoal.z));
+        expect(b.flankGoal.y).toBe(floorAt(nav, b.flankGoal.x, b.flankGoal.y, b.flankGoal.z));
       }
       return n;
     };
@@ -646,7 +646,7 @@ describe('KNOWN_ISSUES rows (49, 93, 94)', () => {
     bots.observe(state);
     expect(b.hasLastKnown).toBe(true);
     expect(b.lastKnown.y).toBeGreaterThan(nav.maxStep);
-    expect(b.lastKnown.y).toBe(floorAt(bots.worldForTests.nav, b.lastKnown.x, b.lastKnown.z));
+    expect(b.lastKnown.y).toBe(floorAt(bots.worldForTests.nav, b.lastKnown.x, b.lastKnown.y, b.lastKnown.z));
   });
 
   it('row 94: a raiser with no way to the pole tries again later instead of standing for good', () => {

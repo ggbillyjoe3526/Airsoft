@@ -4,12 +4,12 @@ import { PHYSICS } from '../config/physics';
 import { buildNavGrid, floorAt } from '../nav/navGrid';
 import { DEPOT } from './depot';
 import type { MapData } from './mapTypes';
-import { RAMP_YARD } from './testYard';
+import { RAMP_YARD, STACK_HOUSE } from './testYard';
 
 /** How far a map's points may sit from the nav floor under them. */
 const ON_FLOOR = 0.05;
 
-describe.each([DEPOT, RAMP_YARD])('$name map data', (map: MapData) => {
+describe.each([DEPOT, RAMP_YARD, STACK_HOUSE])('$name map data', (map: MapData) => {
   it('puts every spawn, dead-zone spot, lane point and flag spot on the floor under it', () => {
     const nav = buildNavGrid(map, NAV);
     const points = [
@@ -20,7 +20,7 @@ describe.each([DEPOT, RAMP_YARD])('$name map data', (map: MapData) => {
     ];
     expect(points.length).toBeGreaterThan(0);
     for (const [what, p] of points) {
-      const floor = floorAt(nav, p.x, p.z);
+      const floor = floorAt(nav, p.x, p.y, p.z);
       expect(Math.abs(p.y - floor), `${what} at ${p.x}, ${p.y}, ${p.z} (floor ${floor})`).toBeLessThanOrEqual(ON_FLOOR);
     }
   });
