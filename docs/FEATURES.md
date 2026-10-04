@@ -107,6 +107,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Custom graphics option: pick a preset and modify any row (shadows, shadow detail, softness, range, render scale, edge smoothing, surface relief (Normal or Bump), texture detail, dust and more); Custom is saved (FA2, FA7)
 - Graphics Settings: frame-rate limit, show FPS counter and tone mapping choice (Neutral, AgX, ACES); preset selected from graphics card on first run (Medium for integrated, High for discrete) (FA2, FA7)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved across preset switches; contact shadows under every player on all presets (FA3, FA7)
+- Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High; barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 
 ## Practice range and tutorial

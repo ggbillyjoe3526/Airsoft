@@ -1,10 +1,33 @@
 import * as THREE from 'three';
 import { BB_VISUALS } from '../config/render';
 import type { BB, BBPool } from '../sim/ballistics';
+import { softDotTexture } from './softDot';
 
 /** Vertices and indices of one streak: a quad, two corners at the head and two at the tail. */
 const QUAD_VERTICES = 4;
 const QUAD_INDICES = 6;
+/** The glow's soft dot is drawn this much wider than its radius (as the puffs', impactPuffs.ts). */
+const SOFT_EDGE = 1.4;
+const WHITE = new THREE.Color(0xffffff);
+
+/**
+ * The BB's ball, two-toned (FA8): lit cream on top, a warm grey underneath, so it reads as a ball in the sun. Vertex
+ * colours on the sphere; the material is white.
+ */
+function twoToneBall(): THREE.SphereGeometry {
+  const geo = new THREE.SphereGeometry(BB_VISUALS.radius, 8, 6);
+  const lit = new THREE.Color(BB_VISUALS.color);
+  const shade = new THREE.Color(BB_VISUALS.shadeColor);
+  const pos = geo.getAttribute('position');
+  const colors = new Float32Array(pos.count * 3);
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    c.lerpColors(shade, lit, THREE.MathUtils.smoothstep(pos.getY(i) / BB_VISUALS.radius, -0.6, 0.5));
+    colors.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geo;
+}
 
 /**
  * Draws every BB in flight as a small bright ball with a short streak behind it (one instanced mesh + one ribbon
@@ -14,6 +37,13 @@ const QUAD_INDICES = 6;
 export class BBRenderer {
   readonly object = new THREE.Group();
   private readonly balls: THREE.InstancedMesh;
+  /** A soft warm glow round each ball (QualitySettings.bbGlow, FA8): camera-facing dots, added. Hidden while off. */
+  private readonly glow: THREE.InstancedMesh;
+  /** The glow's soft dot, drawn the first time the glow is turned on. */
+  private glowDot: THREE.CanvasTexture | null = null;
+  private glowOn = false;
+  private readonly glowScale = new THREE.Vector3();
+  private readonly glowPos = new THREE.Vector3();
   private readonly trails: THREE.Mesh;
   private readonly trailPositions: Float32Array;
   private readonly matrix = new THREE.Matrix4();
@@ -37,13 +67,21 @@ export class BBRenderer {
     this.offsets = new Float32Array(n * 3);
     this.offsetSerial = new Float64Array(n);
     this.convergeTimes = new Float32Array(n);
-    this.balls = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(BB_VISUALS.radius, 8, 6),
-      new THREE.MeshBasicMaterial({ color: BB_VISUALS.color }),
-      n,
-    );
+    this.balls = new THREE.InstancedMesh(twoToneBall(), new THREE.MeshBasicMaterial({ vertexColors: true }), n);
     this.balls.count = 0;
     this.balls.frustumCulled = false;
+    const G = BB_VISUALS.glow;
+    const glowSize = BB_VISUALS.radius * 2 * G.scale * SOFT_EDGE;
+    this.glow = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(glowSize, glowSize),
+      new THREE.MeshBasicMaterial({ color: G.color, transparent: true, opacity: G.opacity, blending: THREE.AdditiveBlending, depthWrite: false }),
+      n,
+    );
+    // A colour per instance (all white), so the glow shares the puffs' shader program rather than adding one.
+    for (let i = 0; i < n; i++) this.glow.setColorAt(i, WHITE);
+    this.glow.count = 0;
+    this.glow.frustumCulled = false;
+    this.glow.visible = false;
 
     this.trailPositions = new Float32Array(n * QUAD_VERTICES * 3);
     const colors = new Float32Array(n * QUAD_VERTICES * 3);
@@ -74,11 +112,28 @@ export class BBRenderer {
       }),
     );
     this.trails.frustumCulled = false;
-    this.object.add(this.balls, this.trails);
+    this.object.add(this.balls, this.trails, this.glow);
   }
 
-  /** `alpha` interpolates between the last two simulation ticks. */
-  update(alpha: number, camera: { x: number; y: number; z: number }): void {
+  /** The glow round each BB on or off (QualitySettings.bbGlow, FA8). */
+  setGlow(on: boolean): void {
+    if (on && !this.glowDot) {
+      this.glowDot = softDotTexture();
+      const material = this.glow.material as THREE.MeshBasicMaterial;
+      material.map = this.glowDot;
+      material.needsUpdate = true;
+    }
+    this.glowOn = on;
+    this.glow.visible = on;
+    if (!on) this.glow.count = 0;
+  }
+
+  /**
+   * `alpha` interpolates between the last two simulation ticks; `camera` is the eye. `facing` (the camera's rotation)
+   * turns the glow's dots to face it; without it there is no glow this frame.
+   */
+  update(alpha: number, camera: { x: number; y: number; z: number }, facing?: THREE.Quaternion): void {
+    const glowing = this.glowOn && facing !== undefined;
     let count = 0;
     const bbs = this.pool.bbs;
     const trail = BB_VISUALS.trailSeconds;
@@ -118,15 +173,21 @@ export class BBRenderer {
       const s = Math.max(1, dist * minScale);
       this.matrix.makeScale(s, s, s).setPosition(x, y, z);
       this.balls.setMatrixAt(count, this.matrix);
+      if (glowing) {
+        this.matrix.compose(this.glowPos.set(x, y, z), facing, this.glowScale.setScalar(s));
+        this.glow.setMatrixAt(count, this.matrix);
+      }
       this.writeStreak(count * QUAD_VERTICES * 3, x, y, z, tx, ty, tz, camera);
       count++;
     }
     this.balls.count = count;
+    this.glow.count = glowing ? count : 0;
     const geo = this.trails.geometry;
     geo.setDrawRange(0, count * QUAD_INDICES);
     // Nothing in flight now or last frame: the buffers already say so (REN-22).
     if (count > 0 || this.lastCount > 0) {
       this.balls.instanceMatrix.needsUpdate = true;
+      if (glowing) this.glow.instanceMatrix.needsUpdate = true;
       (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
     }
     this.lastCount = count;
@@ -190,6 +251,10 @@ export class BBRenderer {
     this.balls.geometry.dispose();
     (this.balls.material as THREE.Material).dispose();
     this.balls.dispose();
+    this.glow.geometry.dispose();
+    (this.glow.material as THREE.Material).dispose();
+    this.glow.dispose();
+    this.glowDot?.dispose();
     this.trails.geometry.dispose();
     (this.trails.material as THREE.Material).dispose();
     this.object.removeFromParent();

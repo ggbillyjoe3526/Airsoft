@@ -42,9 +42,10 @@ describe('the Custom graphics rows (final alpha audit section 4, UI-06)', () => 
 });
 
 describe('the visual overhaul’s rows (FA7)', () => {
-  it('adds its rows after the existing ones, in one block', () => {
+  it('adds its rows after the replica sheen, in one block', () => {
     const fields = GRAPHICS_ROWS.map((r) => r.field);
-    expect(fields.slice(-5)).toEqual(['environment', 'normalMaps', 'mapDetail', 'trees', 'clouds']);
+    const at = fields.indexOf('replicaSheen') + 1;
+    expect(fields.slice(at, at + 5)).toEqual(['environment', 'normalMaps', 'mapDetail', 'trees', 'clouds']);
   });
 
   it('stores trees and relief maps by name and reads them back', () => {
