@@ -41,15 +41,36 @@ afterEach(() => {
   (globalThis as { document?: unknown }).document = realDocument;
 });
 
-function setup(answers: ('refuse' | 'lock' | 'refuseEventLater')[]) {
+function setup(answers: ('refuse' | 'lock' | 'refuseEventLater')[], boundCodes: readonly string[] = []) {
   const doc = fakeDocument();
   (globalThis as { document?: unknown }).document = doc;
   const log: string[] = [];
-  const buttons = { press: (code: string) => log.push(`press:${code}`), release: (code: string) => log.push(`release:${code}`) };
-  const lock = new PointerLock(fakeCanvas(doc, answers), buttons);
+  const buttons = {
+    press: (code: string) => log.push(`press:${code}`),
+    release: (code: string) => log.push(`release:${code}`),
+    bound: (code: string) => boundCodes.includes(code),
+  };
+  const canvas = fakeCanvas(doc, answers);
+  const lock = new PointerLock(canvas, buttons);
   lock.onChange((locked) => log.push(`change:${locked}`));
   lock.onError(() => log.push('error'));
-  return { lock, log, doc };
+  return { lock, log, doc, canvas };
+}
+
+/** A mouse move as the browser sends it while locked. */
+function move(doc: EventTarget, x: number, y: number): void {
+  const e = new Event('mousemove') as Event & { movementX: number; movementY: number };
+  e.movementX = x;
+  e.movementY = y;
+  doc.dispatchEvent(e);
+}
+
+/** One wheel event of `deltaY` pixels. */
+function wheel(doc: EventTarget, deltaY: number): void {
+  const e = new Event('wheel') as Event & { deltaY: number; deltaMode: number };
+  e.deltaY = deltaY;
+  e.deltaMode = 0;
+  doc.dispatchEvent(e);
 }
 
 /** A mouse button event as the browser sends it; returns whether its default was blocked. */
@@ -126,5 +147,61 @@ describe('mouse buttons (M18)', () => {
     mouse(doc, 'mousedown', 2);
     lock.setUnlockedButtons(false);
     expect(log).toEqual(['press:Mouse2', 'release:Mouse2']);
+  });
+});
+
+describe('mouse movement (audit UI-10)', () => {
+  it('skips the first move after the lock is taken, and drops a single implausible jump', async () => {
+    const { lock, doc } = setup(['lock']);
+    await lock.request();
+    const d = { x: 0, y: 0 };
+    move(doc, 4000, 0); // the first move after locking: can carry a glitch
+    move(doc, 12, -5);
+    move(doc, 5000, 3); // a driver glitch
+    move(doc, 3, 1);
+    lock.consumeDelta(d);
+    expect(d).toEqual({ x: 15, y: -4 });
+  });
+});
+
+describe('the mouse wheel as a key (audit UI-05)', () => {
+  it('taps WheelUp / WheelDown per notch and switches replicas only for an unbound direction', () => {
+    const { lock, log, doc } = setup([], ['WheelUp']);
+    lock.setUnlockedButtons(true);
+    wheel(doc, -120);
+    expect(log).toEqual(['press:WheelUp', 'release:WheelUp']);
+    expect(lock.consumeWheelSteps()).toBe(0); // up is bound (say to jump): no replica switch
+    wheel(doc, 60);
+    expect(lock.consumeWheelSteps()).toBe(0); // not a notch yet
+    wheel(doc, 60);
+    expect(log.slice(2)).toEqual(['press:WheelDown', 'release:WheelDown']);
+    expect(lock.consumeWheelSteps()).toBe(1);
+    expect(lock.consumeWheelSteps()).toBe(0);
+  });
+});
+
+describe('raw mouse input (audit UI-20)', () => {
+  it('reports raw input active when the raw lock is granted, unavailable on the plain retry, off when turned off', async () => {
+    const granted = setup(['lock']);
+    const seen: string[] = [];
+    granted.lock.onRawStatus((s) => seen.push(s));
+    expect(granted.lock.rawStatus).toBe('unknown');
+    await granted.lock.request();
+    expect(granted.lock.rawStatus).toBe('active');
+
+    const fallback = setup(['refuse', 'lock']);
+    await fallback.lock.request();
+    expect(fallback.lock.rawStatus).toBe('unavailable');
+
+    const off = setup([]);
+    const asked: unknown[] = [];
+    (off.canvas as unknown as { requestPointerLock: (o?: unknown) => Promise<void> }).requestPointerLock = async (o?: unknown) => {
+      asked.push(o);
+    };
+    off.lock.rawInput = false;
+    await off.lock.request();
+    expect(asked).toEqual([undefined]); // no unadjustedMovement asked for
+    expect(off.lock.rawStatus).toBe('off');
+    expect(seen).toEqual(['active']);
   });
 });

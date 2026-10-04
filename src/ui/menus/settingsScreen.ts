@@ -180,7 +180,7 @@ export class SettingsScreen {
       panel.append(...controlsSettings(opts.controls));
     } else if (id === 'keys') {
       const mouse = el('p', 'menu-readout settings-mouse');
-      mouse.innerHTML = '<kbd>Wheel</kbd> switch replica · <kbd>Esc</kbd> pause · <kbd>`</kbd> / <kbd>F3</kbd> debug info';
+      mouse.innerHTML = '<kbd>Wheel</kbd> switch replica (a direction bound above does that instead) · <kbd>Esc</kbd> pause and resume · <kbd>`</kbd> / <kbd>F3</kbd> debug info';
       panel.append(this.keySettings.root, mouse);
     } else if (id === 'graphics') {
       panel.append(

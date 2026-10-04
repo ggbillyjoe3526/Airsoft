@@ -48,6 +48,11 @@ export class Keyboard {
     this.held.delete(code);
   }
 
+  /** Whether `code` (a key, a mouse button or a wheel direction) is bound to an action. */
+  bound(code: string): boolean {
+    return this.bindings.actionOf(code) !== undefined;
+  }
+
   endFrame(): void {
     this.pressedThisFrame.clear();
   }
