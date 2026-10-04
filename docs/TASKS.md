@@ -10,19 +10,6 @@ files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged de
 owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
 first (M33 changes both).
 
-## M36 · The Pro difficulty level
-tier: core
-perf: skip
-touches: src/config/bots.ts, src/config/content.ts, src/pool/, pool.md, src/stats/, src/settings/storage.ts, src/ui/menus/, src/ui/recordsView.ts, src/config/menus.ts, src/config/matchRules.ts, src/matchSession.ts
-acceptance:
-  1. A fourth difficulty `pro` ("Pro") for opponents and teammates, tagged dev: listed only with the Dev content switch on.
-  2. Its BOT_SKILL row: settled aim tighter than Hard, lead about 0.85, `aimErrorStartMetres` above zero, short bursts.
-  3. Opponents roll kits as on Hard with partChance about 0.8; the Cyber Pistol rule applies as on Hard.
-  4. pool.md's Difficulty table has a Pro row ×2, read by the game; a pool.md without the row still loads.
-  5. Records keep `pro.<mode>` rows; saves from before load unchanged (no SAVE_FORMAT change, or an upgrade step if one is needed).
-status: building
-attempts: 0
-
 ## M37 · Pro bots hold angles
 tier: core
 perf: required
