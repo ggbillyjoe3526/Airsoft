@@ -1,5 +1,5 @@
 import { BUILD_LABEL } from '../../config/menus';
-import { el, menuButton, wordmark } from './menuParts';
+import { el, hintLine, menuButton, setHint, wordmark } from './menuParts';
 
 /**
  * The first thing a player sees: "AIRSOFT." in the middle over the field, Start at the bottom left, then the tutorial
@@ -9,6 +9,8 @@ export class TitleScreen {
   readonly root: HTMLDivElement;
   private readonly warning: HTMLParagraphElement;
   private readonly tutorialTag: HTMLElement;
+  /** Over the buttons: e.g. the browser refused the mouse lock for the range or the tutorial (audit L-29). */
+  private readonly hint = hintLine();
 
   constructor(onStart: () => void, onRange: () => void, onTutorial: () => void, tutorialDone: boolean) {
     this.root = el('div', 'menu-screen menu-title');
@@ -24,7 +26,7 @@ export class TitleScreen {
     // The tag is a visual nudge; the button's name stays "Tutorial" (and Start stays the only "Start").
     this.tutorialTag.setAttribute('aria-hidden', 'true');
     tutorial.prepend(this.tutorialTag);
-    actions.append(start, tutorial, menuButton('Practice range', 'secondary', onRange, true));
+    actions.append(this.hint, start, tutorial, menuButton('Practice range', 'secondary', onRange, true));
     this.setTutorialDone(tutorialDone);
     this.warning = el('p', 'menu-title-warning');
     this.warning.setAttribute('role', 'alert');
@@ -36,6 +38,11 @@ export class TitleScreen {
   setWarning(text: string): void {
     this.warning.textContent = text;
     this.warning.hidden = text === '';
+  }
+
+  /** A short message over the buttons ('' hides it). */
+  showHint(text: string): void {
+    setHint(this.hint, text);
   }
 
   /** Once the tutorial has been played through, it stops calling for new players. */

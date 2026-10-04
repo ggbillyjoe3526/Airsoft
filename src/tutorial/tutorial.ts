@@ -60,6 +60,20 @@ export class TutorialTracker {
     return this.doneLeft > 0;
   }
 
+  /**
+   * Dev server and the smoke test's `e2e` build only (a no-op elsewhere; audit L-09): jumps to step `index` with `amount`
+   * of its goal already done (radians turned, or seconds aiming or reading), so a test can reach the end without playing
+   * every step. The next tick shows the new step.
+   */
+  debugJumpTo(index: number, amount = 0): void {
+    if (!import.meta.env.DEV && import.meta.env.MODE !== 'e2e') return;
+    this.index = Math.min(Math.max(0, index), this.steps.length);
+    this.amount = amount;
+    this.firedSlot = false;
+    this.doneIndex = -1;
+    this.doneLeft = 0;
+  }
+
   /** After a simulation tick. Returns true when the step shown changed (done, or the next one started). */
   observe(v: TutorialView): boolean {
     let changed = false;

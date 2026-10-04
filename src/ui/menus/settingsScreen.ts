@@ -8,7 +8,7 @@ import { type CrosshairSettingsOptions, crosshairSettings } from '../crosshairSe
 import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscreen';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
-import type { SettingsOrigin } from './menuNav';
+import { type SettingsOrigin, tabAfterKey } from './menuNav';
 import { backButton, el, laterRow, laterTag, menuPage, menuRow, rangeControl } from './menuParts';
 
 export interface SettingsOptions {
@@ -47,20 +47,27 @@ export class SettingsScreen {
     this.root = page.root;
     this.keySettings = new KeySettings(opts.bindings);
 
+    // The WAI-ARIA tabs pattern (audit L-31): only the picked tab is in the Tab order; the arrows, Home and End move
+    // between tabs (each shows its panel as it takes the focus).
     const tabList = el('div', 'settings-tabs');
     tabList.setAttribute('role', 'tablist');
     tabList.setAttribute('aria-label', 'Settings sections');
+    tabList.setAttribute('aria-orientation', 'vertical');
+    tabList.addEventListener('keydown', (e) => this.onTabKey(e));
     const panels = el('div', 'menu-panel settings-panel');
     for (const { id, label, later } of SETTINGS_TABS) {
       const button = el('button', 'settings-tab');
       button.type = 'button';
+      button.id = `settings-tab-${id}`;
       button.setAttribute('role', 'tab');
+      button.setAttribute('aria-controls', `settings-panel-${id}`);
       button.append(el('span', '', label));
       if (later) button.append(laterTag());
       button.addEventListener('click', () => this.showTab(id));
-      if (id === 'controls') button.dataset.autofocus = '';
       const panel = el('div', 'settings-tab-panel');
+      panel.id = `settings-panel-${id}`;
       panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', button.id);
       panel.append(el('h2', 'menu-panel-title', label));
       this.fillTab(id, panel, opts);
       for (const item of SETTINGS_LATER[id]) panel.append(laterRow(item.label, item.help));
@@ -115,9 +122,24 @@ export class SettingsScreen {
       const on = tab === id;
       button.classList.toggle('selected', on);
       button.setAttribute('aria-selected', String(on));
+      button.tabIndex = on ? 0 : -1;
+      // The screen opens with the focus on the picked tab.
+      if (on) button.dataset.autofocus = '';
+      else delete button.dataset.autofocus;
       panel.hidden = !on;
     }
     this.keySettings.setVisible(id === 'keys');
+  }
+
+  /** Arrow Up / Down, Home and End on the tab list move to another tab and show it. */
+  private onTabKey(e: KeyboardEvent): void {
+    const ids = [...this.tabs.keys()];
+    const next = tabAfterKey(e.key, ids.indexOf(this.tab), ids.length);
+    if (next === null) return;
+    e.preventDefault();
+    const id = ids[next]!;
+    this.showTab(id);
+    this.tabs.get(id)!.button.focus();
   }
 
   private fillTab(id: SettingsTab, panel: HTMLDivElement, opts: SettingsOptions): void {

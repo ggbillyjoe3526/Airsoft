@@ -47,6 +47,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: 'far',
     title: 'Hop-up and range',
+    // The reach is the stock rifle's hopUpReach, rounded; tutorial.test.ts fails when a retune moves it.
     text: "BBs fly flat while the hop-up's backspin lasts (the stock rifle: about 38 m), then drop. Knock down a figure 50 m out or further: aim high, or turn the hop-up up on the Loadout (Esc).",
     goal: { kind: 'hit', target: 'figure', minDistance: 50 },
   },

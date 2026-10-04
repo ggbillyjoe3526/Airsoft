@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { TUTORIAL, TUTORIAL_STEPS } from '../config/tutorial';
-import { LOADOUT } from '../config/replicas';
+import { BALLISTICS } from '../config/ballistics';
+import { AEG, LOADOUT } from '../config/replicas';
 import { createCharacter } from '../sim/character';
 import type { GameEvent } from '../sim/events';
+import { hopUpReach } from '../sim/hopUp';
 import { createRangeTargets } from '../sim/rangeTargets';
 import { vec3 } from '../sim/vec';
 import { keySegments, TutorialTracker } from './tutorial';
@@ -138,6 +140,21 @@ describe('the tutorial (M16)', () => {
     expect(t.showingDone).toBe(false);
   });
 
+  it('jumps to a step part done for the smoke test (debug hook, audit L-09)', () => {
+    const { t, tick } = setup();
+    const last = t.steps.length - 1;
+    const goal = t.steps[last]!.goal;
+    if (goal.kind !== 'read') throw new Error('the last step is read to its end');
+    t.debugJumpTo(last, goal.seconds - 1.5 * DT); // two ticks from its end
+    expect(t.stepIndex).toBe(last);
+    expect(t.finished).toBe(false);
+    tick();
+    tick();
+    expect(t.goalIndex).toBe(t.steps.length);
+    for (let i = 0; i < (TUTORIAL.doneTime + 0.1) / DT; i++) tick();
+    expect(t.finished).toBe(true);
+  });
+
   it('shows the keys a step names as the player has them bound', () => {
     const names: Record<string, string> = { fire: 'Left mouse', reload: 'R' };
     expect(keySegments('Press {fire}, then {reload}.', (a) => names[a] ?? '')).toEqual([
@@ -148,6 +165,16 @@ describe('the tutorial (M16)', () => {
       { text: '.', key: false },
     ]);
     expect(keySegments('{jump}', () => '')).toEqual([{ text: '(unbound)', key: true }]);
+  });
+
+  it("gives the stock rifle's hop-up reach as the game works it out, short of the far step's figure (audit L-35)", () => {
+    const far = TUTORIAL_STEPS.find((x) => x.id === 'far')!;
+    const reach = hopUpReach(AEG, AEG.hopUpDial, BALLISTICS).onTargetTo;
+    // A retune of the ballistics or the hop-up that moves the reach has to update the text.
+    expect(far.text).toContain(`(the stock rifle: about ${Math.round(reach)} m)`);
+    // The step asks for a hit beyond it, so it teaches aiming high or turning the hop-up up.
+    if (far.goal.kind !== 'hit') throw new Error('the far step asks for a hit');
+    expect(far.goal.minDistance).toBeGreaterThan(reach);
   });
 
   it('names only real key bindings in its text', async () => {
