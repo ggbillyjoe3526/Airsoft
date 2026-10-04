@@ -109,10 +109,15 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const rifleGrip = loadout.getByRole('group', { name: 'AEG rifle grip' });
   await expect(rifleGrip.getByRole('button', { name: 'No grip' })).toHaveAttribute('aria-pressed', 'true');
   await rifleGrip.getByRole('button', { name: 'Angled grip' }).click();
-  await expect(loadout.getByText(/Brings the AEG rifle up in 0\.36 s/)).toBeVisible();
-  await expect(loadout.getByText('Up to your eye in 0.19 s with the angled grip.')).toBeVisible();
-  await loadout.getByRole('group', { name: 'AEG rifle magazine' }).getByRole('button', { name: 'Hi-cap' }).click();
-  await expect(loadout.getByText('120 BBs each, 2 carried (240 in all). Reload 1.8 s.')).toBeVisible();
+  // The numbers themselves are the unit tests' (loadoutChoice.test.ts); here only that they show (audit L-10).
+  await expect(loadout.getByText(/Brings the AEG rifle up in [\d.]+ s/)).toBeVisible();
+  await expect(loadout.getByText(/Up to your eye in [\d.]+ s with the angled grip\./)).toBeVisible();
+  const rifleMag = loadout.getByRole('group', { name: 'AEG rifle magazine' });
+  await rifleMag.getByRole('button', { name: 'Hi-cap' }).click();
+  // The magazine's line sits under its buttons, in the picker around the group (the pistol has one too).
+  const hiCapLine = loadout.locator('.picker', { has: page.getByRole('group', { name: 'AEG rifle magazine' }) }).getByText(/\d+ BBs each, \d+ carried \(\d+ in all\)\. Reload [\d.]+ s\./);
+  await expect(hiCapLine).toBeVisible();
+  const hiCap = Number((await hiCapLine.textContent())!.match(/(\d+) BBs each/)![1]); // checked in the match below
   await expect(loadout.getByText('Replicas and outfit').first()).toBeAttached(); // skins, greyed as LATER
   await loadout.getByRole('button', { name: 'Back' }).click();
   await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('2× scope · Angled grip · Hi-cap mag');
@@ -123,7 +128,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings).toBeVisible();
   // Controls (M18): the sensitivity as cm/360 at the mouse's DPI; typing a cm/360 moves the slider to match.
   const cm = settings.getByRole('spinbutton', { name: /cm per 360/ });
-  await expect(cm).toHaveValue(/^(19\.9|20\.0)$/); // 19.95 cm at sensitivity 1.00 and 800 DPI
+  await expect(cm).toHaveValue(/^\d+\.\d$/); // worked out from the sensitivity and DPI (sensitivity.test.ts has the sums)
   await cm.fill('40');
   await cm.press('Enter');
   await expect(settings.getByRole('slider', { name: 'Mouse sensitivity' })).toHaveValue('0.5');
@@ -169,6 +174,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(setup).toBeVisible();
   await expect(setup.getByRole('button', { name: /Settings/i })).toBeFocused();
 
+  const teamCss = () => page.evaluate(() => getComputedStyle(document.getElementById('app')!).getPropertyValue('--team-1').trim());
+  const standardOrange = await teamCss(); // the stylesheet's until a match applies the picked set
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   expect(await matchLoaded()).toBe(true);
@@ -176,7 +183,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
   await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
   // The match wears the High contrast colours on the HUD, and the sound cue ring is up.
-  expect(await page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--team-1'))).toBe('#e0601a');
+  const matchOrange = await teamCss();
+  expect(matchOrange).toMatch(/^#[0-9a-f]{6}$/);
+  expect(matchOrange).not.toBe(standardOrange);
   await expect(page.locator('.sound-cues')).not.toHaveAttribute('hidden');
   // Holding Tab shows the scoreboard with every player (M19); letting go hides it.
   const board = page.locator('.match-board');
@@ -204,7 +213,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const mag = page.locator('.hud-mag');
   await expect(mag).toHaveText(/^\d+$/);
   const full = Number(await mag.textContent());
-  expect(full).toBe(120); // the hi-cap
+  expect(full).toBe(hiCap); // the hi-cap, as the Loadout said
 
   // Fire: hold the button until the magazine count drops.
   await page.mouse.move(640, 360);
