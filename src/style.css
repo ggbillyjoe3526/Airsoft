@@ -3453,6 +3453,105 @@ kbd {
   font-size: var(--fs-md);
 }
 
+/* The catalogue (audit POOL-04): an asset not owned at any tier is dimmed; a pip per tier, coloured when owned */
+.armory-row.is-unowned {
+  color: var(--menu-faint);
+}
+
+.armory-completion {
+  margin-left: 8px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--menu-muted);
+}
+
+.armory-pips {
+  display: flex;
+  gap: 4px;
+}
+
+.armory-pip {
+  min-width: 2.6em;
+  padding: 2px 4px;
+  font-size: var(--fs-xs);
+  text-align: center;
+  color: var(--menu-faint);
+  border: 1px solid var(--menu-line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.armory-pip.is-owned {
+  font-weight: 700;
+  color: var(--paper);
+  border-color: var(--tier);
+  box-shadow: inset 0 -2px 0 var(--tier);
+}
+
+/* Pity (audit POOL-01): each rule's countdown, edged in its tier's colour */
+.armory-pity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-md);
+}
+
+.armory-pity li {
+  padding-left: 10px;
+  border-left: 3px solid var(--tier);
+}
+
+.armory-per-asset {
+  margin-top: 4px;
+}
+
+/* The reveal (audit POOL-11): tiles come in one after another, rarest first; at once with reduced motion */
+.armory-reveal-grid .armory-tile {
+  animation: armory-tile-in var(--t-med) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.reduced-motion .armory-reveal-grid .armory-tile {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .armory-reveal-grid .armory-tile {
+    animation: none;
+  }
+}
+
+@keyframes armory-tile-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+.armory-reveal-grid .armory-tile:is([data-tier='epic'], [data-tier='legendary']) {
+  box-shadow: 0 0 0 1px var(--tier), 0 0 18px -4px var(--tier);
+}
+
+.armory-reveal-summary {
+  margin: 0 0 4px;
+}
+
+/* Asking before a big spend (audit POOL-03) */
+.confirm-text {
+  margin: var(--sp-3) 0 var(--sp-5);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--menu-muted);
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
 /* Seven New game tiles on a laptop screen (1180–1400 px wide): tighter, so the longest words fit */
 @media (min-width: 1181px) and (max-width: 1400px) {
   .setup-tiles {

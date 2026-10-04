@@ -55,6 +55,9 @@ export function resultKey(difficulty: Difficulty, mode: MatchMode): string {
   return `${difficulty}.${mode}`;
 }
 
+/** "normal.elimination": a difficulty id and a mode id (camel case words). */
+const RESULT_KEY = /^[a-z][a-zA-Z0-9]*\.[a-z][a-zA-Z0-9]*$/;
+
 const count = (v: unknown): number => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : 0);
 
 /** The saved records, or empty ones if nothing valid is saved (or storage is blocked). Bad fields are dropped one by one. */
@@ -67,7 +70,9 @@ export function loadRecords(store: RecordStore | null): Records {
     const r = raw as Record<string, unknown>;
     if (r.results && typeof r.results === 'object') {
       for (const [key, v] of Object.entries(r.results as Record<string, unknown>)) {
-        if (!v || typeof v !== 'object') continue;
+        // Only keys shaped like resultKey's (audit POOL-21); a difficulty or mode this build doesn't know is kept, so a
+        // save from a newer build keeps its records when an older one writes it back.
+        if (!RESULT_KEY.test(key) || !v || typeof v !== 'object') continue;
         const wl = v as Record<string, unknown>;
         records.results[key] = { wins: count(wl.wins), losses: count(wl.losses) };
       }

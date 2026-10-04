@@ -7,6 +7,7 @@ import { gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
 import { EMPTY_FIT } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
+import { saveSetting } from '../settings/storage';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -89,9 +90,9 @@ describe('Loadout model (M26b)', () => {
 
   it('keeps each replica its own BB weight (any 0.01 g step from 0.20 to 0.30 g) and hop-up dial', () => {
     const model = new LoadoutModel(pool, owning(STARTERS));
-    model.setBbWeight(AEG, 0.3);
-    model.setBbWeight(GAS_PISTOL, 0.305); // between steps: ignored
-    model.setHopUp(GAS_PISTOL, 0.4);
+    model.setBbWeight(id('AEG Rifle'), 0.3);
+    model.setBbWeight(id('Gas Pistol'), 0.305); // between steps: ignored
+    model.setHopUp(id('Gas Pistol'), 0.4);
     expect(model.kit().bbWeights).toEqual([0.3, GAS_PISTOL.bbWeight]);
     expect(model.kit().hopUps).toEqual([AEG.hopUpDial, 0.4]);
   });
@@ -232,5 +233,35 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     expect(model.fitChoices(id('Gas Pistol'), 'barrel')).toEqual([]);
     unlocked = false;
     expect(model.fitChoices(id('AEG Rifle'), 'barrel')).toEqual([]);
+  });
+
+  it('keys the dials by replica asset, reads a dial saved by config id before, and sandboxes them under Unlock all gear (audit POOL-17)', () => {
+    saveSetting('hopUp.aeg', 0.7);
+    let unlocked = false;
+    const model = new LoadoutModel(pool, gameOwnership(pool, () => newCollection(pool, 1), () => unlocked));
+    expect(model.hopUp(id('AEG Rifle'))).toBe(0.7);
+    expect(model.dialField('hopUp', id('AEG Rifle'))).toBe(`hopUp.${id('AEG Rifle')}`);
+    model.setHopUp(id('AEG Rifle'), 0.5);
+    unlocked = true;
+    expect(model.dialField('hopUp', id('AEG Rifle'))).toBe(`hopUp.dev.${id('AEG Rifle')}`);
+    expect(model.hopUp(id('AEG Rifle'))).toBe(0.5);
+    model.setHopUp(id('AEG Rifle'), 0.9);
+    model.setBbWeight(id('AEG Rifle'), 0.3);
+    expect(model.kit().hopUps[0]).toBe(0.9);
+    unlocked = false;
+    expect(model.hopUp(id('AEG Rifle'))).toBe(0.5);
+    expect(model.bbWeight(id('AEG Rifle'))).toBe(AEG.bbWeight);
+  });
+
+  it('moves a pick to the best copy left of the same item when the picked copy is scrapped (audit POOL-05)', () => {
+    const own = owning([...STARTERS, item('AEG Rifle', 'rare'), item('Red Dot'), item('Red Dot', 'epic')]);
+    const model = new LoadoutModel(pool, own);
+    model.equip('primary', item('AEG Rifle'));
+    model.setFit(id('AEG Rifle'), 'optic', item('Red Dot'));
+    // The Common AEG and the Common Red Dot scrapped: the rarer copies take their places, not the defaults.
+    own.items.delete(itemKey(id('AEG Rifle'), 'common'));
+    own.items.delete(itemKey(id('Red Dot'), 'common'));
+    expect(model.equipped()[0]).toEqual(item('AEG Rifle', 'rare'));
+    expect(model.fitOf(id('AEG Rifle')).optic).toEqual(item('Red Dot', 'epic'));
   });
 });

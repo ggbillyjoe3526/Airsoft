@@ -164,7 +164,7 @@ export class LoadoutScreen {
       const ref = slot === 'grenades' ? null : (equipped[GEAR_SLOTS.indexOf(slot)] ?? null);
       parts.name.textContent = ref ? m.pool.byId.get(ref.asset)!.name : LOADOUT_TEXT.empty;
       parts.tier.textContent = ref ? this.tierLabel(ref) : '';
-      parts.line.textContent = ref ? gearLine(m.slotKit(ref), m.bbWeight(replicaOf(m.pool.byId.get(ref.asset)!))) : '';
+      parts.line.textContent = ref ? gearLine(m.slotKit(ref), m.bbWeight(ref.asset)) : '';
       setTier(parts.button, ref);
       parts.button.classList.toggle('empty', !ref);
       parts.button.setAttribute('aria-label', `${LOADOUT_TEXT.slots[slot]}: ${ref ? `${parts.name.textContent}, ${parts.tier.textContent}` : LOADOUT_TEXT.empty}`);
@@ -242,8 +242,8 @@ export class LoadoutScreen {
     this.panel.append(body);
 
     const fit = m.fitOf(asset.id);
-    let grams = m.bbWeight(base);
-    let dial = m.hopUp(base);
+    let grams = m.bbWeight(asset.id);
+    let dial = m.hopUp(asset.id);
     const factory = performanceOf(m.asItComes(asset.id), base.bbWeight, base.hopUpDial);
     const capped = m.capped(ref);
     // Readouts that follow the sliders without a full redraw (that would drop the slider being dragged).
@@ -256,7 +256,7 @@ export class LoadoutScreen {
       // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power always have a choice.
       if (row.none !== null && row.slot !== 'magazine' && !m.hasSlot(asset.id, row.slot)) {
         rows.append(fixedRow(row.label, row.slot === 'barrel' ? LOADOUT_TEXT.fixedBarrel : row.slot === 'muzzle' ? LOADOUT_TEXT.noThread : LOADOUT_TEXT.noMount));
-        if (row.slot === 'optic') this.appendBbRows(rows, base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
+        if (row.slot === 'optic') this.appendBbRows(rows, asset.id, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
         continue;
       }
       const choices = m.fitChoices(asset.id, row.slot);
@@ -290,14 +290,14 @@ export class LoadoutScreen {
       if (choices.length === 0 && row.none !== null) control.append(el('p', 'menu-readout menu-faint', LOADOUT_TEXT.armoryHint));
       rows.append(menuRow(row.label, '', control));
       // BB weight and hop-up go after the optic, before the parts that change handling: as you set a replica up at a site.
-      if (row.slot === 'optic') this.appendBbRows(rows, base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
+      if (row.slot === 'optic') this.appendBbRows(rows, asset.id, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
     }
     live();
     rows.append(laterRow('Skins', '', LOADOUT_TEXT.skinsLater));
   }
 
   /** The BB weight slider (free, never pooled) and the hop-up dial, their readouts following each other. */
-  private appendBbRows(into: HTMLElement, base: ReplicaConfig, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
+  private appendBbRows(into: HTMLElement, replicaId: string, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
     let grams = grams0;
     let dial = dial0;
     const weightLine = el('p', 'menu-readout', bbWeightReadout(carried, grams));
@@ -315,12 +315,12 @@ export class LoadoutScreen {
         this.opts.onChange();
       });
     };
-    const weight = rangeControl(`${carried.name} BB weight`, { min: BB_WEIGHT.min, max: BB_WEIGHT.max, step: BB_WEIGHT.step }, grams, bbWeightLabel, `bbWeight.${base.id}`, (v) => {
+    const weight = rangeControl(`${carried.name} BB weight`, { min: BB_WEIGHT.min, max: BB_WEIGHT.max, step: BB_WEIGHT.step }, grams, bbWeightLabel, this.opts.model.dialField('bbWeight', replicaId), (v) => {
       grams = Math.round(v * 100) / 100;
       update();
     });
     weight.append(weightLine);
-    const hop = rangeControl(`${carried.name} hop-up`, { min: HOP_UP.minDial, max: HOP_UP.maxDial, step: HOP_UP.dialStep }, dial, hopUpLabel, `hopUp.${base.id}`, (v) => {
+    const hop = rangeControl(`${carried.name} hop-up`, { min: HOP_UP.minDial, max: HOP_UP.maxDial, step: HOP_UP.dialStep }, dial, hopUpLabel, this.opts.model.dialField('hopUp', replicaId), (v) => {
       dial = v;
       update();
     });

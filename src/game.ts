@@ -41,11 +41,12 @@ import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
-import { type Collection, loadCollection, saveCollection } from './pool/collection';
+import { type Collection, loadCollection, saveCollection, syncCollection } from './pool/collection';
 import { GAME_POOL } from './pool/gamePool';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
+import type { Unpaid } from './ui/menus/summaryScreen';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
@@ -182,6 +183,8 @@ export class Game {
   private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
   /** What the last match paid in Field Credits (M26c), for its summary. */
   private lastEarnings: Earnings | null = null;
+  /** Why the last match paid nothing, for the summary (audit POOL-22), or null when it paid. */
+  private unpaidReason: Unpaid | null = null;
   /** Reduced motion (Settings → Accessibility), kept across matches. */
   private reducedMotion = loadReducedMotion();
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
@@ -292,7 +295,8 @@ export class Game {
       },
       armory: {
         pool: GAME_POOL,
-        collection: () => this.collection,
+        // Another tab's save since this one read it is taken first, so a Shot here never undoes it (audit POOL-02).
+        collection: () => (syncCollection(this.collection, GAME_POOL), this.collection),
         equipped: () => this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : [])),
         onChange: () => {
           saveCollection(this.collection);
@@ -706,6 +710,7 @@ export class Game {
         blocks: s.summaryBlocks(),
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
         fieldCredits: this.lastEarnings,
+        unpaid: this.unpaidReason,
       });
     } else {
       const mine = s.player.team;
@@ -732,6 +737,7 @@ export class Game {
     // Once per session, on the first frame the match is over: nothing is built on the frames after (CLAUDE.md §9).
     if (s.state.round.phase !== 'matchOver' || this.settledSession === s) return;
     this.settledSession = s;
+    syncCollection(this.collection, GAME_POOL);
     const settled = settleMatch(this.records, this.collection, s.takeMatchResult(), s.takeOutcome(), GAME_POOL.economy, this.dev.disableArmory);
     if (settled.news) {
       this.recordNews = settled.news;
@@ -739,11 +745,13 @@ export class Game {
     }
     if (settled.pay) {
       this.lastEarnings = settled.pay;
+      this.unpaidReason = null;
       saveCollection(this.collection);
       this.menus.refresh();
     } else if (!s.paysFieldCredits || this.dev.disableArmory) {
-      // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
+      // Not paid (Dev settings, or the Armory off): the summary says why (audit POOL-22), not what an earlier match paid.
       this.lastEarnings = null;
+      this.unpaidReason = this.dev.disableArmory ? 'off' : 'dev';
     }
   }
 
