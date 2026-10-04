@@ -3,6 +3,7 @@ import type { Difficulty } from '../config/bots';
 import { CONTENT_TAGS, type ContentTag } from '../config/content';
 import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
+import { LIGHT_KEYS } from '../config/torches';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, type ReplicaConfig } from '../config/replicas';
 import { type PoolRow, type PoolTable, readTables } from './poolFile';
 
@@ -12,7 +13,7 @@ import { type PoolRow, type PoolTable, readTables } from './poolFile';
  * file's text into plain data and lists what it couldn't read, and src/pool/gamePool.ts loads the bundled file.
  */
 
-export type AssetCategory = 'replica' | 'power' | 'optic' | 'grip' | 'laser' | 'magazine' | 'barrel' | 'muzzle' | 'grenade';
+export type AssetCategory = 'replica' | 'power' | 'optic' | 'grip' | 'laser' | 'magazine' | 'barrel' | 'muzzle' | 'light' | 'grenade';
 export type PowerType = 'battery' | 'gas' | 'spring';
 
 /** The replica behind each replica Key (pool.md's Key column). */
@@ -24,6 +25,8 @@ export const LASER_KEYS = Object.keys(LASERS) as LaserId[];
 export const MAGAZINE_KEYS = (Object.keys(MAGAZINES) as MagazineId[]).filter((m) => m !== 'standard');
 export const BARREL_KEYS = Object.keys(BARRELS) as BarrelId[];
 export const MUZZLE_KEYS = Object.keys(MUZZLES) as MuzzleId[];
+/** The weapon lights (M33h, config/torches.ts). */
+export { LIGHT_KEYS };
 
 /** The power type each replica tag stands for: a battery drives an `electric` replica. */
 const POWER_TAGS: Readonly<Record<PowerType, string>> = { battery: 'electric', gas: 'gas', spring: 'spring' };
@@ -143,6 +146,7 @@ const ASSET_SECTIONS: Readonly<Record<string, AssetCategory>> = {
   Magazines: 'magazine',
   Barrels: 'barrel',
   'Muzzle parts': 'muzzle',
+  Lights: 'light',
   Grenades: 'grenade',
 };
 
@@ -154,6 +158,7 @@ const KEYS_BY_CATEGORY: Readonly<Record<Exclude<AssetCategory, 'power'>, readonl
   magazine: MAGAZINE_KEYS,
   barrel: BARREL_KEYS,
   muzzle: MUZZLE_KEYS,
+  light: LIGHT_KEYS,
   grenade: [],
 };
 

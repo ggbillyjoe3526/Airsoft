@@ -1,7 +1,7 @@
 # Pool: every asset you can own
 
 This file is the game's register of **pooled assets**: every replica, power source, optic, grip, laser, magazine,
-barrel, muzzle part and (later) grenade the player can own. It also holds the numbers behind the Armory: what Field Credits you earn,
+barrel, muzzle part, light and (later) grenade the player can own. It also holds the numbers behind the Armory: what Field Credits you earn,
 what Tokens and Shots cost, the rarity tiers and their odds, and what scrapping pays.
 
 **The game reads this file.** It is bundled into the build, and the tables below are parsed when the game starts
@@ -277,6 +277,16 @@ Later: a tracer unit (with tracer BBs, v0.3).
 | ID | Name | Key | Fits | Starter | In Shots | Access |
 |---|---|---|---|---|---|---|
 | 000018 | Silencer | silencer | muzzle-thread | no | yes | public |
+
+### Lights
+
+A weapon torch on its own mount (M33h): the Weapon torch key (T) switches it on and off. At night it lights a cone you
+and the bots see further in, and it gives you away; by day only its lens glows. Every bot carries one on a night field.
+No rarity tier improves it (stats.md's Lights table), so it comes at Common only.
+
+| ID | Name | Key | Fits | Starter | In Shots | Tiers | Drop % | Access |
+|---|---|---|---|---|---|---|---|---|
+| 000020 | Weapon Torch | weaponTorch | pistol, rifle | yes | no | Common | | dev |
 
 ### Grenades
 

@@ -3,6 +3,7 @@ import type { HitConfig } from '../config/hits';
 import { type Bush, foliageDepth } from '../map/foliage';
 import type { MapData } from '../map/mapTypes';
 import { buildNightField, type NightField, nightSightRange } from '../map/nightSight';
+import { createTorchLight, type TorchLight, torchSightRange } from '../map/torchLight';
 import type { BodyConfig } from '../config/movement';
 import type { WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
@@ -56,6 +57,11 @@ const NO_FOLIAGE: readonly Bush[] = [];
 export interface SightConditions {
   foliage: readonly Bush[];
   night: NightField | null;
+  /**
+   * Who the weapon torches light this tick (M33h, map/torchLight.ts; refreshed by ai/botTorch.ts): only on a night
+   * field. Absent or null: no torch changes anyone's sight.
+   */
+  torches?: TorchLight | null;
 }
 
 /** Daylight with no bushes: walls are all that hide anyone. */
@@ -63,7 +69,8 @@ export const OPEN_SIGHT: SightConditions = { foliage: NO_FOLIAGE, night: null };
 
 /** The sight conditions of `map`, worked out once as a match loads. */
 export function sightConditionsOf(map: MapData): SightConditions {
-  return { foliage: map.foliage ?? NO_FOLIAGE, night: buildNightField(map, NIGHT_SIGHT) };
+  const night = buildNightField(map, NIGHT_SIGHT);
+  return { foliage: map.foliage ?? NO_FOLIAGE, night, torches: night ? createTorchLight() : null };
 }
 
 /**
@@ -72,7 +79,8 @@ export function sightConditionsOf(map: MapData): SightConditions {
  * Seeing needs the target within view distance, inside the field of view (unless very close), and a
  * clear line from the viewer's eyes: nothing static in the way, and no more than `bots.foliageSeeThrough` of bush
  * (M33e; within `closeAwareness` a bush hides no one). On a night field (M33g) the view distance is how far the
- * target's light lets them be made out: lit, in the moonlit open, or under the trees (map/nightSight.ts).
+ * target's light lets them be made out: lit, in the moonlit open, or under the trees (map/nightSight.ts), or in a
+ * torch's beam or by their own lit torch facing the viewer (M33h, map/torchLight.ts).
  */
 export function visiblePart(
   viewer: Character,
@@ -86,7 +94,7 @@ export function visiblePart(
   const dx = target.position.x - viewer.position.x;
   const dz = target.position.z - viewer.position.z;
   const dist = Math.hypot(dx, dz);
-  const range = sight.night ? Math.min(bots.viewDistance, nightSightRange(sight.night, target.position)) : bots.viewDistance;
+  const range = sight.night ? Math.min(bots.viewDistance, nightRange(sight.night, sight.torches, viewer, target)) : bots.viewDistance;
   if (dist > range) return 0;
   if (dist > bots.closeAwareness) {
     // Facing (-sin yaw, -cos yaw); compare with the direction to the target.
@@ -98,6 +106,12 @@ export function visiblePart(
   if (sightClear(query, eye, bodyPoint(target, hits, bots.aimHeightFraction, point), leaves, bots.foliageSeeThrough)) return bots.aimHeightFraction;
   if (sightClear(query, eye, bodyPoint(target, hits, bots.headHeightFraction, point), leaves, bots.foliageSeeThrough)) return bots.headHeightFraction;
   return 0;
+}
+
+/** How far `viewer` makes `target` out at night: by the light round the target, or by torchlight if that is further. */
+function nightRange(night: NightField, torches: TorchLight | null | undefined, viewer: Character, target: Character): number {
+  const range = nightSightRange(night, target.position);
+  return torches ? Math.max(range, torchSightRange(torches, night, viewer, target)) : range;
 }
 
 /** Whether `viewer` can see any of `target` right now (see visiblePart). */

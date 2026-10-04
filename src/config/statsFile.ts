@@ -81,6 +81,8 @@ export interface StatsFile {
   magazines: Readonly<Record<string, { capacity?: number; carried?: number; reloadScale?: number; drawScale?: number; rattles?: boolean }>>;
   barrels: Readonly<Record<string, { energy?: number; spreadScale?: number; handlingScale?: number }>>;
   muzzles: Readonly<Record<string, { energy?: number; handlingScale?: number; heardScale?: number }>>;
+  /** Weapon lights (M33h): no rarity tier improves them. */
+  lights: Readonly<Record<string, { reach?: number; beamDeg?: number; spillDeg?: number }>>;
   tierShares: TierShares;
   /** Energy limit (J) by replica class. */
   siteLimits: Readonly<Record<string, number>>;
@@ -147,6 +149,12 @@ const MUZZLE_COLUMNS: Readonly<Record<string, Column>> = {
   'Energy %': { field: 'energy', kind: 'percent', min: -50, max: 50 },
   'Handling (×)': { field: 'handlingScale', kind: 'number', min: 0.1, max: 5 },
   'Heard from (×)': { field: 'heardScale', kind: 'number', min: 0.05, max: 2 },
+};
+
+const LIGHT_COLUMNS: Readonly<Record<string, Column>> = {
+  'Reach (m)': { field: 'reach', kind: 'number', min: 1, max: 100 },
+  'Beam (°)': { field: 'beamDeg', kind: 'number', min: 1, max: 90 },
+  'Spill (°)': { field: 'spillDeg', kind: 'number', min: 1, max: 120 },
 };
 
 const CATEGORY_WORDS: Readonly<Record<string, ScaledCategory>> = {
@@ -304,6 +312,7 @@ export function loadStats(text: string): StatsFile {
     magazines: keyedRows(table('Magazines'), 'Magazines', 'Key', MAGAZINE_COLUMNS, fail, errors) as StatsFile['magazines'],
     barrels: keyedRows(table('Barrels'), 'Barrels', 'Key', BARREL_COLUMNS, fail, errors) as StatsFile['barrels'],
     muzzles: keyedRows(table('Muzzle parts'), 'Muzzle parts', 'Key', MUZZLE_COLUMNS, fail, errors) as StatsFile['muzzles'],
+    lights: keyedRows(table('Lights'), 'Lights', 'Key', LIGHT_COLUMNS, fail, errors) as StatsFile['lights'],
     tierShares: readShares(table('Tier scaling'), fail, errors),
     siteLimits: readLimits(table('Site limits'), fail, errors),
     errors,

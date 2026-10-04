@@ -14,7 +14,7 @@ export interface MapLight {
 
 /** How far a bot makes someone out at night (m), by the light the target stands in (config/bots.ts NIGHT_SIGHT). */
 export interface NightSightConfig {
-  /** In a light pool (later also with a torch on): as far as in daylight. */
+  /** In a light pool, or in a lit weapon torch's beam (M33h, map/torchLight.ts): as far as in daylight. */
   lit: number;
   /** In the open, by moonlight. */
   open: number;
@@ -25,6 +25,11 @@ export interface NightSightConfig {
   canopyRadius: number;
   /** The canopy is worked out on a grid of this cell size (m). */
   canopyCell: number;
+  /**
+   * A lit weapon torch (M33h) gives its holder away to anyone within this angle (degrees) of where it points: they are
+   * made out from `lit` metres, however dark it is round them.
+   */
+  torchSeenFromDeg: number;
 }
 
 /**

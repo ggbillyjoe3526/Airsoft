@@ -1,6 +1,7 @@
 import { BARRELS, GRIPS, handlingOf, MAGAZINES, MUZZLES, type ReplicaParts } from '../../config/attachments';
 import { GLOW_BB_CHOICES } from '../../config/glowBBs';
 import { LASERS } from '../../config/lasers';
+import { TORCHES } from '../../config/torches';
 import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
 import { LOADOUT_TEXT, PERFORMANCE_SHEET } from '../../config/menus';
@@ -16,6 +17,7 @@ import {
   hopUpReadout,
   barrelReadout,
   laserReadout,
+  lightReadout,
   magazineReadout,
   muzzleReadout,
   opticReadout,
@@ -58,6 +60,8 @@ const FIT_ROWS: readonly { slot: FitSlot; label: string; none: string | null }[]
   { slot: 'magazine', label: 'Magazine', none: 'Standard' },
   // Every replica needs a power source: no "none".
   { slot: 'power', label: 'Power Source', none: null },
+  // M33h: the weapon torch, switched in play with the Weapon torch key.
+  { slot: 'light', label: 'Light', none: 'No Light' },
 ];
 
 /**
@@ -261,6 +265,8 @@ export class LoadoutScreen {
       sheetRowsBox.replaceChildren(...sheetRows(performanceOf(kit, grams, dial, capped), factory, HOP_UP.readoutRange).flatMap(sheetRow));
     };
     for (const row of FIT_ROWS) {
+      // A light (M33h) is dev content while it is built: no row at all unless one is offered for this replica.
+      if (row.slot === 'light' && !m.hasSlot(asset.id, row.slot)) continue;
       // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power have a choice unless the
       // replica takes nothing but its own (the Cyber Pistol, M32).
       if (!m.hasSlot(asset.id, row.slot) && (row.none !== null || hasBuiltInPower(asset))) {
@@ -352,6 +358,7 @@ export class LoadoutScreen {
     if (slot === 'laser') return kit.parts.laser ? LASERS[kit.parts.laser].blurb : 'No laser: the spread as it comes.';
     if (slot === 'barrel') return kit.parts.barrel ? BARRELS[kit.parts.barrel].blurb : LOADOUT_TEXT.standardBarrel;
     if (slot === 'muzzle') return kit.parts.muzzle ? MUZZLES[kit.parts.muzzle].blurb : LOADOUT_TEXT.noMuzzle;
+    if (slot === 'light') return kit.parts.light ? TORCHES[kit.parts.light].blurb : LOADOUT_TEXT.noLight;
     const type = power ? this.opts.model.pool.byId.get(power.asset)?.power?.type : undefined;
     return type ? LOADOUT_TEXT.powerBlurb[type] : '';
   }
@@ -363,6 +370,7 @@ export class LoadoutScreen {
     if (slot === 'laser') return laserReadout(kit);
     if (slot === 'barrel') return barrelReadout(kit);
     if (slot === 'muzzle') return muzzleReadout(kit);
+    if (slot === 'light') return lightReadout(kit);
     return '';
   }
 

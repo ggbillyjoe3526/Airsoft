@@ -16,6 +16,7 @@ import { stepFootsteps } from './footsteps';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { leanedEye, stepLean } from './lean';
 import { refillSpares, stepRangeTargets } from './rangeTargets';
+import { stepTorch } from './torch';
 import { createRng } from './rng';
 import { type RoundContext, type RoundRules, stepRound } from './round';
 import type { GameState } from './state';
@@ -160,6 +161,8 @@ export function stepSimulation(
     // A click just after a sprint is kept until the lockout ends (not one made while still sprinting).
     armCtx.fireHoldOff = c.sprinting ? 0 : c.sprintLockout;
     stepArmament(c.id, c.armament, cmd, m, canFire, armCtx, dt);
+    // After the armament: a switch this tick to a replica without a light puts the torch out (M33h).
+    stepTorch(c, cmd, state.events, dt);
   }
 
   if (ctx.wind) windAt(ctx.wind, state.time, state.wind);

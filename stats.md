@@ -141,6 +141,20 @@ Screwed onto a replica tagged `muzzle-thread` in pool.md (both replicas).
 - **Heard from**: how far away its shots are heard, by bots, on the minimap and in the sound cues (0.5 is half as
   far). A silencer's shots also sound muffled.
 
+## Lights
+
+A weapon torch (M33h) on any replica it fits (pool.md's Lights table), switched with the Weapon torch key. No rarity
+tier improves it: a brighter torch is a new row.
+
+| Key | Name | Reach (m) | Beam (°) | Spill (°) |
+|---|---|---|---|---|
+| weaponTorch | Weapon Torch | 40 | 14 | 28 |
+
+- **Reach**: how far its beam lights someone well enough to be made out at night, by you and by bots (no further than
+  a light pool lets them be seen).
+- **Beam**: the bright hotspot's full angle. **Spill**: the dimmer cone round it, full angle; anyone inside it within
+  its reach is lit.
+
 ## Tier scaling
 
 Categories: Replica, Battery, Gas, Spring, Optic, Grip, Laser, Magazine, Barrel, Muzzle. Stats: Energy, Fire rate, Spread, Reload,

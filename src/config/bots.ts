@@ -563,6 +563,8 @@ export const BOTS: BotConfig = botConfig(DEFAULT_DIFFICULTY);
 /**
  * How far bots make someone out on a night field (M33g, map/nightSight.ts; the concept's first guesses, the same as
  * players by eye): 40 m in a light pool (as by day), 25 m in the moonlit open, 10 m under the trees. The target's light
- * decides; `viewDistance` still caps it. Ground is under the trees where 3 trunks stand within 4 m (on a 1 m grid).
+ * decides; `viewDistance` still caps it. Ground is under the trees where 3 trunks stand within 4 m (on a 1 m grid). A lit
+ * weapon torch (M33h) gives its holder away from `lit` to anyone within 60° of where it points (its lens and spill
+ * read from well off its axis), and lights whoever its beam falls on like a light pool.
  */
-export const NIGHT_SIGHT: NightSightConfig = { lit: 40, open: 25, canopy: 10, canopyTrees: 3, canopyRadius: 4, canopyCell: 1 };
+export const NIGHT_SIGHT: NightSightConfig = { lit: 40, open: 25, canopy: 10, canopyTrees: 3, canopyRadius: 4, canopyCell: 1, torchSeenFromDeg: 60 };
