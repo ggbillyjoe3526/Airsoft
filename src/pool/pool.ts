@@ -25,7 +25,7 @@ export const BARREL_KEYS = Object.keys(BARRELS) as BarrelId[];
 export const MUZZLE_KEYS = Object.keys(MUZZLES) as MuzzleId[];
 
 /** The power type each replica tag stands for: a battery drives an `electric` replica. */
-export const POWER_TAGS: Readonly<Record<PowerType, string>> = { battery: 'electric', gas: 'gas', spring: 'spring' };
+const POWER_TAGS: Readonly<Record<PowerType, string>> = { battery: 'electric', gas: 'gas', spring: 'spring' };
 
 export interface Asset {
   /** Six digits, never reused (the player's save remembers it). */

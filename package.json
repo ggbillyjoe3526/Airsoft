@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run test && npm run build",
-    "build:e2e": "vite build --mode e2e --outDir dist-e2e --emptyOutDir",
+    "build:e2e": "node pipeline/build-cached.mjs --mode e2e",
     "test:browser": "playwright test",
     "check:all": "npm run check && npm run test:browser",
     "gate": "node pipeline/gate.mjs",

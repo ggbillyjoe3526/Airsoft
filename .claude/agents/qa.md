@@ -15,10 +15,10 @@ checks that such a commit touches nothing else. If the feature cannot be tested 
 
 ## How the project tests
 
-- **Vitest** (`npm run test`, about 80 s for the suite; `npx vitest run src/sim/foo.test.ts` for one file) for pure
+- **Vitest** (`npm run test`, about 105 s for the suite; `npx vitest run src/sim/foo.test.ts` for one file) for pure
   logic: the simulation (`src/sim`), bots (`src/ai`), config, input mapping, stats, pool. Tests build state with the
   helpers in `src/sim/testSupport.ts` and drive `stepSimulation`; bot matches run headless through
-  `src/ai/depotMatchSupport.ts` (keep a new match test under about 40 s). Randomness is seeded (`state.rng`).
+  `src/ai/depotMatchSupport.ts` (keep a new match test file no longer than the longest today, about 50 s; audit CORE-15 is to shorten them). Randomness is seeded (`state.rng`).
 - **Playwright** (`e2e/boot.spec.ts`, `npm run test:browser`; in a cloud container set `PLAYWRIGHT_CHROMIUM` to
   `/opt/pw-browsers/chromium`) for what a player sees. SwiftShader draws a few frames a second: assert on page text
   and `window.airsoft` state, poll with `expect.poll` or `waitForFunction`, never wait a fixed time. Extend the

@@ -25,7 +25,10 @@ export function* renderSoundsGradually(
   return out;
 }
 
-/** Renders `variants` versions of every cue in config/sounds.ts at `sampleRate`, all at once. */
+/**
+ * Renders `variants` versions of every cue in config/sounds.ts at `sampleRate`, all at once (test only: the game renders
+ * them a slice at a time through SoundBank).
+ */
 export function renderSounds(sampleRate: number, variants: number = AUDIO.variants, seed: number = AUDIO.synthSeed): Map<SoundCue, Float32Array[]> {
   return finish(renderSoundsGradually(sampleRate, variants, seed));
 }

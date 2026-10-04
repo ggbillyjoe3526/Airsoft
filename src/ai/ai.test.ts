@@ -982,7 +982,7 @@ describe('difficulty levels', () => {
     const { state, player } = duel(12, (s) => s.characters.push(createCharacter(2, vec3(5, 0, -10), 0, LOADOUT, 1)));
     const options = { query: noWalls, nav: OPEN_NAV, navSnap: NAV.snap, lanes: OPEN_FIELD.lanes, lowCover: [], tallCover: [], body: BODY, hits: HITS, loadout: LOADOUT, cfg: BOTS, seed: 3 };
     const heard = (teamCfg?: BotConfig[]) => {
-      const bots = new BotController(state, state.characters, new Map(), { ...options, teamCfg });
+      const bots = new BotController(state, state.characters, new Map(), { ...options, ...(teamCfg ? { teamCfg } : {}) });
       state.events.length = 0;
       // Blue's player fires (Orange hears it), and one of Orange (Blue's bot hears that).
       state.events.push({ type: 'shot', characterId: 0, replicaId: LOADOUT[0]!.id, position: vec3(player.position.x, 1.5, player.position.z) });
