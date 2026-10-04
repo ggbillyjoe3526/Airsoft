@@ -182,3 +182,58 @@ describe('Woodland: a night field with five a side (M33d, acceptance 2)', () => 
     expect(mapEntry('depot').teamSize.standard).toBe(3);
   });
 });
+
+describe('Woodland: the fort can be attacked (the Pro difficulty plan, owner 19:08)', () => {
+  const level = buildLevelRay(WOODLAND.blocks, PHYSICS.rayGridCell, terrain);
+  const { inside, entrances } = WOODLAND_LAYOUT.fort;
+  const ground = (x: number, z: number): number => terrainHeightAt(terrain, x, z)!;
+  const clear = (a: Vec3, b: Vec3): boolean => {
+    const d = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
+    return castLevelRay(level, a, vec3((b.x - a.x) / d, (b.y - a.y) / d, (b.z - a.z) / d), d) < 0;
+  };
+
+  it('has at least three ways in, each a walkable route from outside the wall to the flag', () => {
+    expect(entrances.length).toBeGreaterThanOrEqual(3);
+    const search = createNavSearch(nav);
+    const route: Vec3[] = [];
+    for (const e of entrances) {
+      expect(isWalkableAt(nav, e.x, e.z), `${e.x}, ${e.z}`).toBe(true);
+      expect(findPath(nav, search, e, flag, NAV.snap, route), `from ${e.x}, ${e.z}`).toBe(true);
+    }
+  });
+
+  it('has no spot inside from which one defender, standing, sees more than two of the ways in', () => {
+    let spots = 0;
+    for (let x = inside.x0 + 0.25; x < inside.x1; x += 0.5) {
+      for (let z = inside.z0 + 0.25; z < inside.z1; z += 0.5) {
+        if (!isWalkableAt(nav, x, z)) continue;
+        spots++;
+        const eye = vec3(x, ground(x, z) + BODY.standEyeHeight, z);
+        const seen = entrances.filter((e) => clear(eye, vec3(e.x, e.y + 1.2, e.z))).length;
+        expect(seen, `from ${x}, ${z}`).toBeLessThanOrEqual(2);
+      }
+    }
+    expect(spots).toBeGreaterThan(200);
+  });
+
+  it('has cover beside the last 20 m of every lane up to the fort: a log or boulder within 2.5 m every 2 m', () => {
+    const cover = WOODLAND.blocks.filter((b) => b.kind !== 'fence' && Math.min(b.size.x, b.size.z) >= 0.8 && Math.max(b.size.x, b.size.z) >= 1.4);
+    const nearestCover = (x: number, z: number): number =>
+      Math.min(...cover.map((b) => Math.hypot(Math.max(0, Math.abs(x - b.center.x) - b.size.x / 2), Math.max(0, Math.abs(z - b.center.z) - b.size.z / 2))));
+    const inFort = (x: number, z: number): boolean => x >= inside.x0 - 1 && x <= inside.x1 + 1 && z >= inside.z0 - 1 && z <= inside.z1 + 1;
+    for (const [i, lane] of WOODLAND.lanes.entries()) {
+      // Sample the lane every 0.5 m up to where it reaches the fort, then check the last 20 m of it.
+      const samples: { x: number; z: number }[] = [];
+      for (let k = 1; k < lane.length; k++) {
+        const a = lane[k - 1]!;
+        const b = lane[k]!;
+        const len = Math.hypot(b.x - a.x, b.z - a.z);
+        for (let s = 0; s < len; s += 0.5) samples.push({ x: a.x + ((b.x - a.x) * s) / len, z: a.z + ((b.z - a.z) * s) / len });
+      }
+      const reach = samples.findIndex((p) => inFort(p.x, p.z));
+      expect(reach, `lane ${i + 1} reaches the fort`).toBeGreaterThan(40);
+      for (let k = reach; k >= reach - 40; k -= 4) expect(nearestCover(samples[k]!.x, samples[k]!.z), `lane ${i + 1}, ${(reach - k) / 2} m out`).toBeLessThanOrEqual(2.5);
+    }
+  });
+});
+

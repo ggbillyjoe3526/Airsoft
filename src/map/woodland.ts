@@ -155,11 +155,11 @@ const centred = (kind: BlockKind, x: number, z: number, w: number, d: number, h:
 /** Advance routes from end 0 to end 1 (plan points); defending bots hold the last or second-last point of theirs. */
 const LANE_POINTS: readonly (readonly [number, number])[][] = [
   // Pine Belt: out of the camp's north gap, along the forest track, down the Knoll's north shoulder into the fort.
-  [[13, 51], [24, 62], [38, 69.5], [55, 72], [72, 72], [86, 67], [95, 60], [101, 57], [101, 52]],
+  [[13, 51], [24, 62], [38, 69.5], [55, 72], [72, 72], [86, 67], [95, 60], [101, 57], [101, 52.7], [98.3, 52.7], [98.3, 48.5]],
   // Meadow: straight across, past the lone oak's north side, up the Knoll's west face.
-  [[13, 44], [30, 46.5], [49, 47.5], [62, 46.5], [76, 46], [89, 46.5], [98, 47]],
+  [[13, 44], [30, 46.5], [49, 47.5], [62, 46.5], [76, 46], [89, 46.5], [95.8, 47], [95.8, 44.2], [98.5, 44.2]],
   // Creek: down to the creek's north bank, past the cabin's south and east sides, up the sunken track into the fort.
-  [[13, 36], [22, 24], [34, 17.5], [50, 17], [60, 16], [73, 16.5], [76, 24], [86, 29], [94, 36], [101, 37], [101, 42]],
+  [[13, 36], [22, 24], [34, 17.5], [50, 17], [60, 16], [73, 16.5], [76, 24], [86, 29], [94, 36], [101, 37], [101, 41.3], [103.8, 41.3], [103.8, 44]],
 ];
 
 /** The flagpole: on the Knoll's top, inside the fort. */
@@ -192,7 +192,12 @@ const END1_CAMP: MapBlock[] = [
   standing('log', 112, 113, 43.5, 46.5, CROUCH),
 ];
 
-/** The log fort round the flag, open on all four sides; a hut beside the pole and two log piles for the defenders. */
+/**
+ * The log fort round the flag, open on all four sides. Just inside the west, north and south gaps a full-height log
+ * baffle turns whoever comes in left or right, and the hut stands behind the east gap, so no one spot inside sees more
+ * than two ways in (the Pro difficulty plan's rule, owner 19:08: holding a hill is the most defender-friendly setup
+ * there is).
+ */
 const FORT: MapBlock[] = [
   // North-west corner.
   standing('log', 94, 95, 50, 54, FULL),
@@ -206,10 +211,11 @@ const FORT: MapBlock[] = [
   // South-east.
   standing('log', 102.5, 107.5, 39.5, 40.5, FULL),
   standing('log', 107.5, 108.5, 39.5, 44, FULL),
-  // The hut and the piles.
+  // The hut, and the baffles inside the west, north and south gaps (1.6 m in from the wall).
   standing('log', 104, 107, 45.5, 49.5, FULL),
-  standing('log', 97.5, 98.7, 44, 45.6, CROUCH),
-  standing('log', 97.5, 98.7, 49, 50.6, CROUCH),
+  standing('log', 96.6, 97.4, 45, 49, FULL),
+  standing('log', 99, 103, 51.1, 51.9, FULL),
+  standing('log', 99, 103, 42.1, 42.9, FULL),
 ];
 
 /**
@@ -285,6 +291,31 @@ const LOGS: MapBlock[] = [
   standing('log', 42.5, 44.5, 64.5, 66, FULL),
   standing('log', 27, 31, 24, 25.5, CROUCH),
   standing('log', 90, 93.5, 25, 26.5, CROUCH),
+];
+
+/**
+ * Cover on the last 20 m of each way up to the fort (the Pro difficulty plan, owner 19:08): a log pile or a boulder
+ * every few metres beside the Pine Belt's descent, the Meadow's climb and the sunken track, so attackers can bound up
+ * from cover to cover instead of crossing open ground under the fort's guns.
+ */
+const APPROACH_COVER: MapBlock[] = [
+  // Pine Belt, down the north shoulder.
+  centred('log', 97, 60.9, 3, 0.9, CROUCH),
+  centred('boulder', 92, 64.5, 2.4, 2, FULL),
+  centred('boulder', 86.5, 68.9, 1.6, 1.4, CROUCH),
+  centred('log', 103.6, 57.4, 0.9, 3, CROUCH),
+  centred('boulder', 102.6, 59.4, 1.6, 1.4, CROUCH),
+  // Meadow, up the west face.
+  centred('boulder', 76.5, 43.7, 1.6, 1.4, CROUCH),
+  centred('boulder', 82.5, 48.8, 2.4, 2, FULL),
+  centred('boulder', 87.5, 44, 1.6, 1.4, CROUCH),
+  centred('log', 91.5, 49.3, 0.9, 3, CROUCH),
+  // Creek, up the sunken track.
+  centred('boulder', 85.4, 31.8, 1.6, 1.4, CROUCH),
+  centred('boulder', 91, 31.8, 1.6, 1.4, CROUCH),
+  centred('log', 93.6, 32.6, 3, 0.9, CROUCH),
+  centred('log', 97.5, 34.6, 3, 0.9, CROUCH),
+  centred('boulder', 104.5, 36.5, 2.4, 2, FULL),
 ];
 
 /** The lone oak in the middle of the meadow: a trunk you can hide behind. */
@@ -387,7 +418,7 @@ function fenceSection(x0: number, x1: number, z0: number, z1: number): MapBlock 
   return { kind: 'fence', center: vec3(worldX((x0 + x1) / 2), (y0 + y1) / 2, worldZ((z0 + z1) / 2)), size: vec3(x1 - x0, y1 - y0, z1 - z0) };
 }
 
-const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...BOULDERS, ...LOGS, OAK];
+const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...BOULDERS, ...LOGS, ...APPROACH_COVER, OAK];
 
 export const WOODLAND: MapData = {
   name: 'Woodland',
@@ -412,4 +443,12 @@ export const WOODLAND_LAYOUT = {
   knoll: { x: worldX(KNOLL.x), z: worldZ(KNOLL.z), topRadius: KNOLL_TOP, height: KNOLL_HEIGHT },
   /** The camps' barricade lines (world x): end 0's to the west, end 1's to the east. */
   campLines: [worldX(11), worldX(111)],
+  /**
+   * The fort round the flag: its inside (world x0..x1 × z0..z1, between the walls) and a point just outside each of its
+   * four gaps (west, north, south, east), where the ways in start.
+   */
+  fort: {
+    inside: { x0: worldX(95), x1: worldX(107.5), z0: worldZ(53.5), z1: worldZ(40.5) },
+    entrances: [onGround(93, 47), onGround(101, 55.5), onGround(101, 38.5), onGround(109.5, 47)],
+  },
 } as const;
