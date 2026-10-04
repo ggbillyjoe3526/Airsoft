@@ -11,21 +11,24 @@ import type { Character } from './character';
 const AIR_TIME_EPSILON = 1e-9;
 
 /**
- * The spread multiplier this character's state calls for right now (before settling). Off the ground it is
+ * The spread multiplier this character's state calls for right now (before settling): movement times stance. Off the ground it is
  * cfg.accuracy.air once airTime reaches airSpreadDelay; until then the horizontal speed decides, as on the ground.
  */
 export function targetSpreadScale(c: Character, cfg: MovementConfig): number {
   const a = cfg.accuracy;
+  const speed = Math.hypot(c.velocity.x, c.velocity.z);
   let move: number;
   if (!c.grounded && c.airTime >= a.airSpreadDelay - AIR_TIME_EPSILON) move = a.air;
   else if (c.sprinting) move = a.sprint;
   else {
-    const speed = Math.hypot(c.velocity.x, c.velocity.z);
     if (speed <= a.stillBelow) move = 1 + (a.steady - 1) * Math.min(1, c.stillTime / a.steadyTime);
     else if (speed <= cfg.walkSpeed) move = 1 + ((a.walk - 1) * (speed - a.stillBelow)) / (cfg.walkSpeed - a.stillBelow);
     else move = a.walk + ((a.run - a.walk) * Math.min(1, (speed - cfg.walkSpeed) / (cfg.runSpeed - cfg.walkSpeed)));
   }
-  return move * (1 + (a.crouched - 1) * c.crouchAmount);
+  // Crouching steadies a still shooter fully, a moving one less (audit SIM-10).
+  const moving = Math.min(1, Math.max(0, (speed - a.stillBelow) / (cfg.crouchSpeed - a.stillBelow)));
+  const crouched = a.crouched + (a.crouchedMoving - a.crouched) * moving;
+  return move * (1 + (crouched - 1) * c.crouchAmount);
 }
 
 /**

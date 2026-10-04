@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { HITS } from '../config/hits';
 import { LOADOUT } from '../config/replicas';
 import { createCharacter } from './character';
-import { eliminate, planWalkOffRoutes } from './elimination';
+import { createCommand } from './commands';
+import { eliminate, fillEliminatedCommand, isParked, planWalkOffRoutes } from './elimination';
 import { openFieldElimination } from './testSupport';
 import { vec3 } from './vec';
 
@@ -56,5 +58,35 @@ describe('walk-off route searches (M27)', () => {
     eliminate(characters[0]!, 5, characters, ctx);
     expect(characters[0]!.walkOffRoutePending).toBe(false);
     expect(characters[0]!.walkOffRoute).toEqual(route);
+  });
+});
+
+describe('the command a hit character follows', () => {
+  it('idles every field of a reused command, whatever its controller last set (audit SIM-11)', () => {
+    const c = createCharacter(0, vec3(), 0.7, LOADOUT, 1);
+    c.status = 'calling';
+    const cmd = createCommand();
+    Object.assign(cmd, { forward: 1, right: -1, yaw: 2, pitch: 0.4, sprint: true, walk: true, crouch: true, lean: 1, jump: true, aim: true, fire: true, reload: true, switchTo: 1, cycleFireMode: true });
+    expect(fillEliminatedCommand(c, HITS, cmd)).toEqual({ ...createCommand(), yaw: 0.7 });
+  });
+});
+
+describe('a character parked in the dead zone (audit SIM-15)', () => {
+  it('is parked once out and standing there since before this tick, never while in play, calling or walking off', () => {
+    const c = createCharacter(0, vec3(), 0, LOADOUT, 1);
+    c.grounded = true;
+    c.statusTime = 1;
+    expect(isParked(c)).toBe(false);
+    for (const status of ['calling', 'walkingOff', 'leaving'] as const) {
+      c.status = status;
+      expect(isParked(c)).toBe(false);
+    }
+    c.status = 'out';
+    expect(isParked(c)).toBe(true);
+    c.statusTime = 0; // the tick it arrives settles it first
+    expect(isParked(c)).toBe(false);
+    c.statusTime = 1;
+    c.grounded = false; // placed in the air: falls and lands first
+    expect(isParked(c)).toBe(false);
   });
 });

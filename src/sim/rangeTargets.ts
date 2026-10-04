@@ -1,4 +1,5 @@
 import type { HitConfig } from '../config/hits';
+import { PHYSICS } from '../config/physics';
 import { RANGE, type RangeTargetKind, rangeLayout } from '../config/range';
 import type { Armament } from './armament';
 import { rayCapsule, type VerticalCapsule } from './hitbox';
@@ -57,13 +58,16 @@ export function rayRangeTarget(o: Vec3, d: Vec3, maxT: number, target: RangeTarg
   }
   if (target.down > 0) return -1;
   const drop = target.crouched ? hits.crouchDrop : 0;
+  // Measured from where a character standing on that floor rests (PHYSICS.groundRestGap up, as characterHitVolume
+  // does), so a hit on the range is a hit in a match to the centimetre (audit SIM-12).
+  const base = p.y + PHYSICS.groundRestGap;
   body.x = head.x = p.x;
   body.z = head.z = p.z;
   body.r = hits.bodyRadius;
-  body.y0 = p.y + hits.bodyBottom + hits.bodyRadius;
-  body.y1 = p.y + hits.bodyTop - drop - hits.bodyRadius;
+  body.y0 = base + hits.bodyBottom + hits.bodyRadius;
+  body.y1 = base + hits.bodyTop - drop - hits.bodyRadius;
   head.r = hits.headRadius;
-  head.y0 = head.y1 = p.y + hits.headHeight - drop;
+  head.y0 = head.y1 = base + hits.headHeight - drop;
   const b = rayCapsule(o, d, maxT, body);
   const h = rayCapsule(o, d, b >= 0 ? b : maxT, head);
   return h >= 0 ? h : b;

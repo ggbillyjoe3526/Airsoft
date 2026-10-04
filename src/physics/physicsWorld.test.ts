@@ -371,13 +371,19 @@ describe('PhysicsWorld (Rapier)', () => {
         cmd.crouch = pace === 'crouch';
         let streak = 0;
         let longest = 0;
+        // Pace on the ramp, past its first and before its last half metre (the slope is felt a tick late at the foot).
+        let slowest = Infinity;
         for (let t = 0; t < 600 && (up ? c.position.x < run + 1.5 : c.position.x > -1.5); t++) {
           stepMovement(c, cmd, MOVEMENT, DT, world, scratch);
           streak = c.grounded ? 0 : streak + 1;
           longest = Math.max(longest, streak);
+          if (c.position.x > 0.5 && c.position.x < run - 0.5) slowest = Math.min(slowest, Math.hypot(c.velocity.x, c.velocity.z));
         }
         const label = `${pace} ${up ? 'up' : 'down'}`;
         expect(longest, label).toBe(0);
+        // Up or down, the ramp keeps the pace (audit SIM-17: a sprint up the dock ramp lost a quarter of it).
+        const full = pace === 'walk' ? MOVEMENT.walkSpeed : pace === 'sprint' ? MOVEMENT.sprintSpeed : pace === 'crouch' ? MOVEMENT.crouchSpeed : MOVEMENT.runSpeed;
+        expect(slowest, label).toBeGreaterThanOrEqual(0.95 * full);
         expect(c.position.y, label).toBeCloseTo((up ? 1 : 0) + REST, 2);
       }
     }

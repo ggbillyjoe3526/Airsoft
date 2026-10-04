@@ -8,12 +8,14 @@ import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules } from './config/matchRules';
 import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './config/matchInfo';
+import { CRASH_TEXT } from './config/crash';
 import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { QUALITY, type QualityPreset } from './config/render';
 import { SIM } from './config/sim';
 import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
+import { crashReport, type ReportField } from './core/crashReport';
 import { KeyBindings } from './input/keyBindings';
 import { Keyboard } from './input/keyboard';
 import { PlayerInput } from './input/playerInput';
@@ -23,13 +25,17 @@ import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { deriveSeed } from './core/seed';
 import { loadFigureModel } from './render/externalModels';
+import { rendererName } from './render/gpuCheck';
 import { Renderer } from './render/renderer';
+import { buildsNewMatch, matchSeed } from './matchFlow';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
 import { attackersInRound, teamEnd } from './sim/round';
 import type { GameState } from './sim/state';
-import { addMatch, loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
+import { loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
+import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
+import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
 import { toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
@@ -38,10 +44,10 @@ import { type Collection, loadCollection, saveCollection } from './pool/collecti
 import { GAME_POOL } from './pool/gamePool';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
-import { earn, type Earnings, matchPay } from './pool/armory';
+import type { Earnings } from './pool/armory';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
-import { browserStorage, saveSetting } from './settings/storage';
+import { browserStorage, SETTINGS_KEY, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
@@ -190,6 +196,8 @@ export class Game {
   private dev: DevSettings = activeDev(this.devEnabled, this.devPicked);
   /** The render quality preset in use (Settings → Graphics, M14). */
   private quality: QualityPreset;
+  /** Up once the game has stopped on an error (crash); the loop never runs again. */
+  private crashScreen: CrashScreen | null = null;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once.
@@ -341,6 +349,7 @@ export class Game {
           this.applyDev();
         },
         cheating: () => devCheating(this.dev),
+        diagnostics: () => this.diagnostics(),
       },
     });
     this.menus.showTitle();
@@ -360,6 +369,7 @@ export class Game {
       this.menus.showHint(BROWSER_NOTES.audioBlocked);
     };
     this.pointer.onChange((locked) => {
+      if (this.crashScreen) return; // stopped on an error: the crash pane stays on top, nothing resumes
       if (locked) this.resume();
       else this.pause();
     });
@@ -518,15 +528,18 @@ export class Game {
       // same tutorial step).
       this.openRange(s.pose, s.tutorialStep);
     } else if (
-      (!this.started && (this.setupChanged || !(s instanceof MatchSession))) ||
-      // Play Again after something that shows only in a new build changed mid-match (the team colours).
-      (this.started && s instanceof MatchSession && s.state.round.phase === 'matchOver' && this.setupChanged)
+      buildsNewMatch({
+        started: this.started,
+        loaded: s instanceof MatchSession ? 'match' : s ? 'range' : null,
+        matchOver: s instanceof MatchSession && s.state.round.phase === 'matchOver',
+        setupChanged: this.setupChanged,
+      })
     ) {
       this.session?.dispose();
       this.setupChanged = false;
       // The first match plays the visit's seed (?seed=N replays it); each later one its own, or every match in a visit
-      // would open with the same bot plans, round by round (bug pass).
-      this.matchSeed = deriveSeed(this.options.seed, 1, this.matchesPlayed);
+      // would open with the same bot plans, round by round (bug pass). Play Again is a new match too (audit SIM-08).
+      this.matchSeed = matchSeed(this.options.seed, this.matchesPlayed);
       this.matchCounted = false;
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         map: mapData(this.map),
@@ -581,8 +594,6 @@ export class Game {
       this.pointer.release();
       return;
     }
-    // "Play Again" on the result screen: the new match starts only once play really resumes.
-    if (s instanceof MatchSession && s.state.round.phase === 'matchOver') s.restart();
     if (s instanceof MatchSession && !this.matchCounted) {
       this.matchCounted = true;
       this.matchesPlayed++;
@@ -624,29 +635,13 @@ export class Game {
     } else if (screen === 'result') {
       const mine = s.player.team;
       const theirs = 1 - mine;
-      const draws = r.number - r.score[0] - r.score[1];
+      const draws = r.draws;
+      const played = r.score[0] + r.score[1] + draws;
       const headline = r.matchWinner === mine ? 'You win!' : 'You lose';
       const score = `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name}`;
-      // The finished match goes into the records once (a second stop on the same result shows the same news).
-      const result = s.takeMatchResult();
-      if (result) {
-        this.recordNews = addMatch(this.records, result);
-        saveRecords(this.records, browserStorage());
-      }
-      // And it pays its Field Credits once (M26c); a second stop on the same result shows the same pay.
-      // With the Armory switched off (Dev settings, M26d) nothing is paid.
-      const outcome = s.takeOutcome();
-      const pay = outcome && matchPay(GAME_POOL.economy, outcome, this.dev.disableArmory);
-      if (pay) {
-        this.lastEarnings = pay;
-        earn(this.collection, this.lastEarnings.total);
-        saveCollection(this.collection);
-        this.menus.refresh();
-      } else if (!s.paysFieldCredits || this.dev.disableArmory) {
-        // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
-        this.lastEarnings = null;
-      }
-      this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
+      // Settled the moment it was decided (frame); again here in case that frame never came (it does nothing twice).
+      this.settleMatch(s);
+      this.menus.showResult(headline, `${score} · ${played} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
         result: `${headline} · ${score}`,
         blocks: s.summaryBlocks(),
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
@@ -668,8 +663,119 @@ export class Game {
     if (this.audioBlocked) this.menus.showHint(BROWSER_NOTES.audioBlocked);
   }
 
+  /**
+   * A decided match goes into the records and pays its Field Credits as soon as it is decided (audit CORE-06), not when
+   * the mouse is given back for the result screen: a tab closed in between, or a browser that never reports the lock's
+   * release, lost it. Once per match (the session's take latches); the result screen only shows what this saved.
+   */
+  private settleMatch(s: MatchSession): void {
+    if (s.state.round.phase !== 'matchOver') return;
+    const settled = settleMatch(this.records, this.collection, s.takeMatchResult(), s.takeOutcome(), GAME_POOL.economy, this.dev.disableArmory);
+    if (settled.news) {
+      this.recordNews = settled.news;
+      saveRecords(this.records, browserStorage());
+    }
+    if (settled.pay) {
+      this.lastEarnings = settled.pay;
+      saveCollection(this.collection);
+      this.menus.refresh();
+    } else if (!s.paysFieldCredits || this.dev.disableArmory) {
+      // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
+      this.lastEarnings = null;
+    }
+  }
+
+  /**
+   * The game's state for a crash or diagnostics report (audit CORE-04, CORE-32), read defensively: it may run after an
+   * error left things half-done, so each value falls back to '-' rather than throwing.
+   */
+  private reportFields(): ReportField[] {
+    const read = <T>(f: () => T): T | '-' => {
+      try {
+        return f();
+      } catch {
+        return '-';
+      }
+    };
+    const s = this.session;
+    const range = s instanceof RangeSession;
+    const match = s instanceof MatchSession ? s : null;
+    const r = match?.state.round;
+    const info = this.renderer.renderer.info;
+    return [
+      ['Seed', range ? this.options.seed : this.matchSeed],
+      ['Map', read(() => (range ? 'range' : match ? match.setup.map.name : '-'))],
+      ['Mode', read(() => (match ? `${match.mode}, ${match.setup.difficulty} (teammates ${match.setup.teammateDifficulty})` : range ? 'practice' : '-'))],
+      ['Round', read(() => (r ? `${r.number} (${r.phase}), score ${r.score[0]}–${r.score[1]}, draws ${r.draws}` : '-'))],
+      ['Tick', read(() => s?.state.tick ?? '-')],
+      ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay) && s ? 'in play' : `menus: ${this.menus.screen}`))],
+      ['Quality', `${this.quality}${this.options.automaticQuality ? ' (automatic)' : ''}`],
+      ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
+      ['GPU', read(() => rendererName(this.renderer.renderer.getContext()))],
+      ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],
+      ['Sim ticks/s', this.tickRate],
+      ['Draw calls / triangles', read(() => `${info.render.calls} / ${info.render.triangles}`)],
+      ['Dev settings', this.devEnabled ? JSON.stringify(this.dev) : 'off'],
+      ['Settings', read(() => browserStorage()?.getItem(SETTINGS_KEY) ?? '-')],
+    ];
+  }
+
+  /** The diagnostics report (Settings → Dev → Copy diagnostics; audit CORE-32): the crash report's fields, no error. */
+  diagnostics(): string {
+    return crashReport({ title: 'Airsoft diagnostics', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: this.reportFields() });
+  }
+
+  /**
+   * The game stopped on an error (audit CORE-04, UI-02): from the loop, or an uncaught error or rejection (main.ts). The
+   * loop stops for good, the mouse and keys are given back, the sound stops, and the crash pane shows what happened with
+   * a report to copy. Each step is guarded: whatever broke may break them too. A later error only adds to the report.
+   */
+  crash(error: unknown): void {
+    console.error(error);
+    let report: string;
+    try {
+      report = crashReport({ title: 'Airsoft crash report', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: this.reportFields(), error });
+    } catch {
+      report = crashReport({ title: 'Airsoft crash report', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: [], error });
+    }
+    if (this.crashScreen) {
+      this.crashScreen.append(report);
+      return;
+    }
+    const steps = [
+      () => cancelAnimationFrame(this.rafId),
+      () => (this.keyboard.capturing = false),
+      () => this.keyboard.releaseAll(),
+      () => this.pointer.setUnlockedButtons(false),
+      () => this.pointer.release(),
+      () => this.session?.setPlaying(false),
+      () => this.audio.setRunning(false),
+      () => this.menus.setBlocked(true),
+    ];
+    for (const step of steps) {
+      try {
+        step();
+      } catch {
+        // Keep going: the pane matters more than any one of these.
+      }
+    }
+    this.unlockedPlay = false;
+    this.crashScreen = new CrashScreen(this.container, { heading: CRASH_TEXT.heading, body: CRASH_TEXT.body, advice: '', report });
+  }
+
   private readonly frame = (now: number): void => {
+    if (this.crashScreen) return;
     this.rafId = requestAnimationFrame(this.frame);
+    try {
+      this.step(now);
+    } catch (error) {
+      // Once, then stop: an error here would otherwise repeat every frame with the mouse locked and no word on screen.
+      this.crash(error);
+    }
+  };
+
+  /** One frame of the loop: input, the simulation ticks due, and the drawing. */
+  private step(now: number): void {
     // rAF timestamps can precede the performance.now() taken in start(); clamp to [0, MAX].
     const dt = Math.min(SIM.maxFrameDt, Math.max(0, (now - this.lastTime) / 1000));
     this.lastTime = now;
@@ -684,6 +790,7 @@ export class Game {
       if (this.keyboard.wasPressed('fullscreen')) toggleFullscreen();
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
+      if (s instanceof MatchSession) this.settleMatch(s);
       if (s instanceof RangeSession && s.takeTutorialFinished()) {
         saveSetting('tutorialDone', true);
         this.menus.markTutorialDone();
@@ -711,5 +818,5 @@ export class Game {
     // Only while playing: the menus are opaque, so drawing the paused field under them would be GPU work nobody sees.
     if (running) s.draw(dt, this.keyboard.isDown('scoreboard'));
     this.debug.frame(dt);
-  };
+  }
 }

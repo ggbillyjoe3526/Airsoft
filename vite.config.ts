@@ -64,6 +64,10 @@ export default defineConfig(async () => ({
   plugins: [chunkBudget()],
   build: {
     target: 'es2022',
+    // Source maps next to the chunks but not linked from them (audit CORE-11): players never download them, and a
+    // crash report's stack (index-abc.js:1:48213) can be read against dist/assets/*.map in DevTools or with a
+    // source-map tool. The chunk budgets count the code only.
+    sourcemap: 'hidden' as const,
     rolldownOptions: {
       output: {
         // Vendor code in its own chunks so it caches across game updates and each size stays visible.
