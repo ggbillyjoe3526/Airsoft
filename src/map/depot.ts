@@ -25,9 +25,10 @@ import type { BlockKind, MapBlock, MapData, RampRise, SpawnPoint } from './mapTy
  * is longer than 34 m, and the two spawn yards can't see each other. Layout rules are checked in depot.test.ts.
  *
  * Props (M25b, the owner's approved concept v2, 2026-10-04): most of M11's two-high crate stacks became single
- * full-height site props on the same footprints (portable toilets, pallet racks, HESCO barriers, wrapped pallet
- * loads), six stacks dropped to waist height (two IBC tanks, a generator, three single crates) where that opened
- * the fewest long sightlines, and some single crates became sandbags, IBCs or a generator. Two crate stacks stay: the car park's far corner and the crate yard by the divider.
+ * full-height site props on the same footprints (portable toilets, pallet racks, gabion barriers, wrapped pallet
+ * loads), four stacks dropped to waist height (a generator, an IBC tank, two single crates) where that opened the
+ * fewest long sightlines and kept the ends' balance, and some single crates became sandbags, IBCs or a generator. Two
+ * crate stacks stay: the car park's far corner and the crate yard by the divider.
  */
 
 const HALF_X = 25;
@@ -149,11 +150,11 @@ const WEST_YARD: MapBlock[] = [
   // Spawn wall: cover for leaving spawn, and it keeps mid from looking straight into the spawn yard.
   wall(-17.7, -17.7 + WALL_THICKNESS, -5.5, 5.5, 0, SPAWN_WALL_HEIGHT),
   // Just outside the yard's north exit: cover for leaving spawn, and it stops the yard seeing down mid.
-  prop('portaloo', -16.3, 5, CRATE, CRATE, FULL_HEIGHT),
-  // Car park: two portaloos and a stack by the yard's south exit, a rack, a container and a generator between the
+  prop('toilet', -16.3, 5, CRATE, CRATE, FULL_HEIGHT),
+  // Car park: two portable toilets and a stack by the yard's south exit, a rack, a container and a generator between the
   // yard and the office's west door, and a skip against the south wall.
-  prop('portaloo', -19.6, -11.2, CRATE, CRATE, FULL_HEIGHT),
-  prop('portaloo', -20.2, -9.0, CRATE, CRATE, FULL_HEIGHT),
+  prop('toilet', -19.6, -11.2, CRATE, CRATE, FULL_HEIGHT),
+  prop('toilet', -20.2, -9.0, CRATE, CRATE, FULL_HEIGHT),
   ...crateStack(-22.0, -12.4), // the car park's far corner can't see up to the dock's west ramp
   prop('rack', -16.8, -8.2, 2.6, CRATE, FULL_HEIGHT),
   container(-14.2, -11.8, -14.6, -10.6),
@@ -171,11 +172,11 @@ const DOCK_ROAD: MapBlock[] = [
   container(-5.8, 11.4, DIVIDER_Z0, DIVIDER_Z1, STACKED_HEIGHT),
   container(13.8, 18.2, DIVIDER_Z0, DIVIDER_Z1),
 
-  // Staging yard S-bend: a rack against the divider, then one against the perimeter wall.
+  // Staging yard S-bend: a rack against the divider, then one against the perimeter wall, and a wrapped load.
   prop('rack', -14.1, DIVIDER_Z1, CRATE, 3 * CRATE, FULL_HEIGHT),
   prop('rack', -9.3, HALF_Z - 3 * CRATE, CRATE, 3 * CRATE, FULL_HEIGHT),
   prop('ibc', -11.7, HALF_Z - CRATE, CRATE, CRATE, CRATE),
-  prop('ibc', -6.6, 11.6, CRATE, CRATE, CRATE),
+  prop('wrapped', -6.6, 11.6, CRATE, CRATE, FULL_HEIGHT),
 
   // The dock and its ramps (the west one from the staging yard, the east one down to the North Gate).
   box('floor', DOCK_X0, DOCK_X1, 0, DOCK_HEIGHT, DOCK_Z0, HALF_Z),
@@ -186,27 +187,27 @@ const DOCK_ROAD: MapBlock[] = [
   // Cover on the dock. Between them they span its width, so nobody on the ground sees along it.
   prop('sandbags', DOCK_X0 + 0.4, HALF_Z - CRATE, CRATE, CRATE, CRATE, DOCK_HEIGHT), // cover at the top of the west ramp
   prop('ibc', 1.2, 13.6, CRATE, CRATE, CRATE, DOCK_HEIGHT),
-  crate(5.0, HALF_Z - CRATE, 0, DOCK_HEIGHT),
+  prop('wrapped', 5.0, HALF_Z - CRATE, CRATE, CRATE, FULL_HEIGHT, DOCK_HEIGHT),
   crate(7.6, DOCK_Z0, 0, DOCK_HEIGHT),
   // Cover on the road below.
-  prop('hesco', 2.4, DIVIDER_Z1, CRATE, 2 * CRATE, FULL_HEIGHT),
-  prop('hesco', 7.2, 12.0, CRATE, CRATE, FULL_HEIGHT),
+  prop('gabion', 2.4, DIVIDER_Z1, CRATE, 2 * CRATE, FULL_HEIGHT),
+  prop('gabion', 7.2, 12.0, CRATE, CRATE, FULL_HEIGHT),
 ];
 
 /** Lane 2, Container Alley: the crate yard between the divider and the office. */
 const CONTAINER_ALLEY: MapBlock[] = [
-  prop('hesco', -13, 3.7, CRATE, CRATE, FULL_HEIGHT),
+  prop('gabion', -13, 3.7, CRATE, CRATE, FULL_HEIGHT),
   ...crateStack(-11.4, DIVIDER_Z0 - CRATE),
-  prop('hesco', -8.2, 2.3, CRATE, CRATE, FULL_HEIGHT),
+  prop('gabion', -8.2, 2.3, CRATE, CRATE, FULL_HEIGHT),
   prop('wrapped', -8.4, 5.4, CRATE, CRATE, FULL_HEIGHT),
   box('barrier', -11.9, -11.3, 0, CROUCH_COVER_HEIGHT, -1.7, 1.7),
-  prop('hesco', -8.2, -4.6, CRATE, CRATE, FULL_HEIGHT),
+  prop('gabion', -8.2, -4.6, CRATE, CRATE, FULL_HEIGHT),
   prop('wrapped', -12.0, -5.8, CRATE, CRATE, FULL_HEIGHT), // with the load against the office wall, nothing sees along the wall
   // Across the line into the Main Gate: no straight look from the yard into the Bay.
   container(-1.4, 1.0, -2.6, 4.2),
   box('barrier', -4.6, -4.0, 0, CROUCH_COVER_HEIGHT, 2.6, 5.6),
   box('barrier', -6.0, -5.7, 0, BARRICADE_HEIGHT, 2.8, 5.2),
-  prop('hesco', -4.4, -5.4, CRATE, CRATE, FULL_HEIGHT),
+  prop('gabion', -4.4, -5.4, CRATE, CRATE, FULL_HEIGHT),
   prop('wrapped', -6.6, OFFICE_N1, CRATE, CRATE, FULL_HEIGHT),
 ];
 

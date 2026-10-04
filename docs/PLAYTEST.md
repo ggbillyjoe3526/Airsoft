@@ -216,21 +216,21 @@ swap ends after round 4.
 - [ ] **Play Attack / Defend for a full match.** You attack first (from the west). Note whether attacking or
   defending feels easier, and which lane the bots pick. In bot-only tests the attackers win about half the rounds.
 - [ ] **Play Elimination across half-time.** You start in the east (by the Bay). The banner says ends swap
-  after round 4, and round 5 starts you in the west yard. In bot-only tests the west end now wins a little more often (about 54%, since the M25b props; the east did before); say if either end feels unfair.
+  after round 4, and round 5 starts you in the west yard. In bot-only tests the east end wins a little more often (the west about 48%); say if either end feels unfair.
 - [ ] **Watch where hit players walk.** Each end has its own dead zone, away from the fighting.
 
 ### Depot props (M25b)
 
 Most two-high crate stacks are now single site props on the same spots: portable toilets by the west yard, pallet
-racks in the staging yard, car park and Bay, HESCO barriers on the road and in the crate yard, wrapped pallet loads,
-IBC tanks, sandbags, two generators and a skip. Six stacks are now waist high. Two crate stacks are left.
+racks in the staging yard, car park and Bay, gabion barriers on the road and in the crate yard, wrapped pallet loads,
+IBC tanks, sandbags, two generators and a skip. Four stacks are now waist high. Two crate stacks are left.
 
 - [ ] **Walk all three lanes and look around.** It should feel less cluttered and less tall than before, and every
   object should read as what it is (compare with the concept sketch, `concepts/depot-rework-plan-after-v2.png`).
-- [ ] **Hide behind a rack, a HESCO barrier and a portaloo.** Each is full cover: nobody sees or shoots through it.
+- [ ] **Hide behind a rack, a gabion barrier and a portable toilet.** Each is full cover: nobody sees or shoots through it.
 - [ ] **Crouch behind an IBC tank, the generator and the sandbags.** Crouched you're hidden; standing you can shoot over.
-- [ ] **Shoot sandbags, a HESCO barrier and a skip with ricochets on.** BBs bounce off the steel (skip, racks, IBC
-  cages, generators) and sink into the sandbags and HESCO.
+- [ ] **Shoot sandbags, a gabion barrier and a skip with ricochets on.** BBs bounce off the steel (skip, racks, IBC
+  cages, generators) and sink into the sandbags and gabions.
 - [ ] **Play a few rounds of each mode.** Do the lanes still feel like the same map, with no new long sightline that
   dominates?
 

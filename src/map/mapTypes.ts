@@ -7,8 +7,8 @@ import type { Vec3 } from '../sim/vec';
  *
  * The site props (M25b) are drawn as more than a box (render/mapMeshes.ts), always inside their bounds, so what
  * you see is what stops you and your BBs:
- * - full height (2.4 m): `portaloo` (a portable toilet), `rack` (pallet racking loaded with stock, or shelving
- *   indoors), `hesco` (a wire-mesh barrier filled with sand), `wrapped` (a pallet load shrink-wrapped in film);
+ * - full height (2.4 m): `toilet` (a portable site toilet), `rack` (pallet racking loaded with stock, or shelving
+ *   indoors), `gabion` (a wire-mesh barrier filled with sand), `wrapped` (a pallet load shrink-wrapped in film);
  * - crouch height (1.2 m): `ibc` (a water tank in a steel cage), `sandbags`, `generator`, `skip`.
  */
 export type BlockKind =
@@ -18,9 +18,9 @@ export type BlockKind =
   | 'crate'
   | 'container'
   | 'barrier'
-  | 'portaloo'
+  | 'toilet'
   | 'rack'
-  | 'hesco'
+  | 'gabion'
   | 'wrapped'
   | 'ibc'
   | 'sandbags'

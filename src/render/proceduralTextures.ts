@@ -376,7 +376,7 @@ function sandbag(): ProceduralTexture {
  * A wire-mesh gabion lined with geotextile and filled with sand (M25b, the field-build barrier): beige fabric bulging
  * between the welded square mesh, a thicker coil joint down the edge of each cell (one per repeat).
  */
-function hesco(): ProceduralTexture {
+function gabion(): ProceduralTexture {
   const [canvas, ctx] = makeCanvas();
   const rng = createRng(67);
   ctx.fillStyle = '#c9b892';
@@ -413,7 +413,7 @@ function hesco(): ProceduralTexture {
     ctx.fillRect(0, y, 3 * PX, 1.2 * PX);
   }
   blotches(ctx, rng, 8, 8, 26, [96, 82, 58], 0.14); // dirt splashed up the fabric
-  return finish(canvas, 'hesco');
+  return finish(canvas, 'gabion');
 }
 
 export type SurfaceTextures = Record<SurfaceTextureId, ProceduralTexture>;
@@ -428,7 +428,7 @@ export function createSurfaceTextures(): SurfaceTextures {
     steelPlate: steelPlate(),
     barrier: barrier(),
     sandbag: sandbag(),
-    hesco: hesco(),
+    gabion: gabion(),
   };
 }
 

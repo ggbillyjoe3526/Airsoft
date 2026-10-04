@@ -691,13 +691,15 @@ pool, items 11, 12 and part of 14).
   - **M25b. Depot rework, minor** (item 4: fewer crates stacked two high and close together, less verticality and
     clutter, more variety but nothing major, sightlines and balance kept). Concept sketches and mock screenshots first;
     the owner chose "open it up more" on the first and approved the second (v2). Most double stacks become single
-    full-height objects of new kinds (portable toilets, pallet racking, HESCO barriers, wrapped pallet loads, IBC
-    tanks, sandbags, a generator, a skip), six spots drop to waist height where the sightline cost is lowest, and
-    two crate stacks stay. Collision stays boxes; the layout tests still pass.
+    full-height objects of new kinds (portable toilets, pallet racking, gabion barriers, wrapped pallet loads), a
+    skip, sandbags, IBC tanks and generators join, four stacks drop to waist height where the sightline cost is
+    lowest, and two crate stacks stay. Collision stays boxes; the layout tests still pass.
   - **Built (M25b, 2026-10-04):** eight new block kinds with code-built looks and two new surface textures (sandbag
-    cloth, HESCO mesh), still 10 draw calls for the map. Steel props bounce BBs (ricochets), sandbags and HESCO soak
-    them up. Against the M11 Depot: 3,039 more standing sightline pairs of 77,318 (none longer than 32.9 m), the
-    layout and bot tests pass, and the west end now wins about 54% of bot-only Elimination rounds (45% before).
+    cloth, gabion mesh), 10 draw calls for the map (8 before, one per texture). Steel props bounce BBs (ricochets),
+    sandbags and gabions soak them up. Against the M11 Depot: 1,928 more standing sightline pairs of 77,318 (none
+    longer than 32.9 m), the layout and bot tests pass, and the west end wins 48% of bot-only Elimination rounds over
+    64 seeds (45% before). v2 lowered two more stacks (the staging yard's east end and the dock), which tipped the
+    west end to 54%; those two are full-height wrapped loads instead.
 - **M26. Loadout, Armory and asset pool** (items 11, 12 and the Armory's Dev settings from 14).
   - **M26a. Asset pool.** Every replica and part is a single asset with a six-digit ID (`000001` Gas Pistol, `000002`
     AEG Rifle …) in `pool.md` at the repository's root: a hand-editable register the game reads at start, with a guide

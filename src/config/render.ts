@@ -165,7 +165,7 @@ export const LIGHTING = {
 } as const;
 
 /** The surface textures (render/proceduralTextures.ts), drawn on canvases as each match loads. */
-export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier' | 'sandbag' | 'hesco';
+export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier' | 'sandbag' | 'gabion';
 
 /**
  * The look of the field's surfaces and props (M14, render/proceduralTextures.ts and render/mapMeshes.ts). Everything
@@ -175,9 +175,9 @@ export const SURFACES = {
   /** Texture size in pixels (square, a power of two): eight of these are about 11 MB of GPU memory with mipmaps. */
   textureSize: 512,
   /** Metres one texture repeat covers, for the textures mapped in world space (crates are mapped once per face). */
-  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, hesco: 1.2 } satisfies Record<SurfaceTextureId, number>,
+  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2 } satisfies Record<SurfaceTextureId, number>,
   /** How strongly each texture's light and dark read as relief when surface relief is on (bump scale). */
-  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, hesco: 1.8 } satisfies Record<SurfaceTextureId, number>,
+  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 1.8 } satisfies Record<SurfaceTextureId, number>,
   /**
    * Grime and contact shade near the floor: the sides of walls, containers, crates and barriers darken towards their
    * foot over this height (metres), to this share of their colour at the very bottom.
@@ -200,13 +200,18 @@ export const SURFACES = {
    * The site props (M25b, render/mapMeshes.ts), in metres; colours are sRGB hex. Every piece stays inside its block.
    */
   siteProps: {
-    portaloo: { skid: 0.08, inset: 0.04, roof: 0.14, doorWidth: 0.78, doorHeight: 1.95 },
-    rack: { bay: 1.2, post: 0.08, beam: 0.1, loadInset: 0.04, spine: 0.04, headroom: 0.08, boxGap: 0.05 },
-    hesco: { sandTop: 0.04, sandInset: 0.05 },
+    toilet: { skid: 0.08, inset: 0.04, roof: 0.14, doorWidth: 0.78, doorHeight: 1.95, latchDepth: 0.015, latchFromEdge: 0.1, latchSize: 0.08, latchY: [1.0, 1.1] },
+    /**
+     * `beamSet`: beams sit this far inside the uprights' faces (front, back and top), so no two faces share a plane.
+     * `shortBoxes`: the heights of the shorter of two boxes (of the shelf's clear height), kept near full so little open
+     * shelf shows in front of the spine.
+     */
+    rack: { bay: 1.2, post: 0.08, beam: 0.1, beamSet: 0.01, loadInset: 0.04, spine: 0.04, headroom: 0.06, boxGap: 0.05, shortBoxes: [0.9, 0.84] },
+    gabion: { sandTop: 0.04, sandInset: 0.05 },
     ibc: { base: 0.14, inset: 0.05, bar: 0.03, lid: 0.12 },
     sandbags: { course: 0.2, inset: 0.025, topInset: 0.05 },
-    generator: { skid: 0.1, inset: 0.04, louvres: 5 },
-    skip: { foot: 0.35, footInset: 0.18, inset: 0.05, rim: 0.1, rimWidth: 0.08, rubbleDrop: 0.05 },
+    generator: { skid: 0.1, inset: 0.04, louvres: 5, louvreFrom: 0.25, louvreStep: 0.1, louvreHeight: 0.04, louvreEnd: 0.2, panelWidth: 0.5, panelY: [0.6, 1.0] },
+    skip: { foot: 0.3, footInset: 0.09, inset: 0.05, rim: 0.1, rimWidth: 0.08, rubbleDrop: 0.05 },
     strapWidth: 0.05,
     strapThickness: 0.012,
     paleRoof: 0xeeece4,

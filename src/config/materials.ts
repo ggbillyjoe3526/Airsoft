@@ -12,11 +12,11 @@ export const BLOCK_MATERIALS = {
   barrier: 'concrete',
   crate: 'wood',
   container: 'metal',
-  // Site props (M25b). Moulded plastic ticks hollow, nearest to wood; sand-filled bags and HESCO soak BBs up as wood
+  // Site props (M25b). Moulded plastic ticks hollow, nearest to wood; sand-filled bags and gabions soak BBs up as wood
   // does (no ricochet) with the dullest of the three ticks.
-  portaloo: 'wood',
+  toilet: 'wood',
   rack: 'metal',
-  hesco: 'wood',
+  gabion: 'wood',
   wrapped: 'wood',
   ibc: 'metal',
   sandbags: 'wood',

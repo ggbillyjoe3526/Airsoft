@@ -26,9 +26,9 @@ const STYLES: Record<BlockKind, KindStyle> = {
   container: { texture: 'corrugated', uv: 'world', tints: [0x4f8a57, 0xcdb338, 0x7a8288, 0x4f7a80], castShadow: true, grime: true },
   barrier: { texture: 'barrier', uv: 'world', tints: [0xe8e4da, 0xd9c04a], castShadow: true, grime: true },
   // Site props (M25b): each kind's main colour; their details are shades of it (see sitePropPieces).
-  portaloo: { texture: 'barrier', uv: 'world', tints: [0x5f8f5c, 0x7d8a78, 0xa9a48e], castShadow: true, grime: true },
+  toilet: { texture: 'barrier', uv: 'world', tints: [0x5f8f5c, 0x7d8a78, 0xa9a48e], castShadow: true, grime: true },
   rack: { texture: 'barrier', uv: 'world', tints: [0x8a9096, 0x6f7c6a], castShadow: true, grime: true },
-  hesco: { texture: 'hesco', uv: 'world', tints: [0xffffff, 0xeee8da], castShadow: true, grime: true },
+  gabion: { texture: 'gabion', uv: 'world', tints: [0xffffff, 0xeee8da], castShadow: true, grime: true },
   wrapped: { texture: 'barrier', uv: 'world', tints: [0xe9ecef, 0xddd8cc], castShadow: true, grime: true },
   ibc: { texture: 'barrier', uv: 'world', tints: [0xf2f0ea, 0xe6e2d6], castShadow: true, grime: true },
   sandbags: { texture: 'sandbag', uv: 'world', tints: [0xffffff, 0xeee6d6], castShadow: true, grime: true },
@@ -356,9 +356,9 @@ function span(along: 0 | 2, a0: number, a1: number, c0: number, c1: number, y0: 
 }
 
 /** A portable toilet: moulded shell on a dark skid, a pale roof, and its door (with a latch) on the side the hash picks. */
-function portalooPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+function toiletPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
   const b = boundsOf(block);
-  const p = PROP.portaloo;
+  const p = PROP.toilet;
   const dark = shade(color, 0.45);
   add(out, [b.min[0], b.min[1], b.min[2]], [b.max[0], b.min[1] + p.skid, b.max[2]], 'barrier', dark);
   add(out, [b.min[0] + p.inset, b.min[1] + p.skid, b.min[2] + p.inset], [b.max[0] - p.inset, b.max[1] - p.roof, b.max[2] - p.inset], 'barrier', color);
@@ -368,12 +368,15 @@ function portalooPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void
   const along: 0 | 2 = side < 2 ? 2 : 0;
   const normal = along === 0 ? 2 : 0;
   const mid = (b.min[along] + b.max[along]) / 2;
-  const face = side % 2 === 0 ? b.min[normal] : b.max[normal] - p.inset;
+  // Depths into the block from its face on that side: the latch stands proud of the door, the door of the shell.
+  const outer = side % 2 === 0 ? b.min[normal] : b.max[normal];
+  const dir = side % 2 === 0 ? 1 : -1;
+  const depth = (d0: number, d1: number): [number, number] => [Math.min(outer + dir * d0, outer + dir * d1), Math.max(outer + dir * d0, outer + dir * d1)];
   const y0 = b.min[1] + p.skid;
-  const [dMin, dMax] = span(along, mid - p.doorWidth / 2, mid + p.doorWidth / 2, face, face + p.inset, y0, y0 + p.doorHeight);
+  const [dMin, dMax] = span(along, mid - p.doorWidth / 2, mid + p.doorWidth / 2, ...depth(p.latchDepth, p.inset), y0, y0 + p.doorHeight);
   add(out, dMin, dMax, 'barrier', shade(color, 0.86));
-  const latchAt = mid + p.doorWidth / 2 - 0.1;
-  const [lMin, lMax] = span(along, latchAt - 0.04, latchAt + 0.04, face, face + p.inset, y0 + 1.0, y0 + 1.1);
+  const latchAt = mid + p.doorWidth / 2 - p.latchFromEdge;
+  const [lMin, lMax] = span(along, latchAt - p.latchSize / 2, latchAt + p.latchSize / 2, ...depth(0, p.latchDepth), y0 + p.latchY[0], y0 + p.latchY[1]);
   add(out, lMin, lMax, 'barrier', new THREE.Color(PROP.latch), false);
 }
 
@@ -399,14 +402,15 @@ function rackPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
       add(out, min, max, 'barrier', color);
     }
   }
-  // Beams along the front and back at the bottom, the deck and the top; the deck and the spine inside the uprights.
-  for (const y of [b.min[1], deckY, b.max[1] - r.beam]) {
-    for (const c of [b.min[across], b.max[across] - r.post]) {
-      const [min, max] = span(along, b.min[along], b.max[along], c, c + r.post, y, y + r.beam);
+  // Beams along the front and back at the bottom, the deck and the top, between the end uprights and set into them
+  // (no face shared with an upright); the deck and the spine inside the uprights.
+  const inner = [b.min[along] + r.post, b.max[along] - r.post] as const;
+  for (const y of [b.min[1], deckY, b.max[1] - r.beam - r.beamSet]) {
+    for (const c of [b.min[across] + r.beamSet, b.max[across] - r.post + r.beamSet]) {
+      const [min, max] = span(along, inner[0], inner[1], c, c + r.post - 2 * r.beamSet, y, y + r.beam);
       add(out, min, max, 'barrier', beam, false);
     }
   }
-  const inner = [b.min[along] + r.post, b.max[along] - r.post] as const;
   const [dMin, dMax] = span(along, inner[0], inner[1], b.min[across] + r.post, b.max[across] - r.post, deckY, deckY + r.beam);
   add(out, dMin, dMax, 'steelPlate', beam, false);
   const [sMin, sMax] = span(along, inner[0], inner[1], mid - r.spine / 2, mid + r.spine / 2, b.min[1] + r.beam, b.max[1] - r.beam);
@@ -439,7 +443,7 @@ function rackPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
         const split = a0 + (a1 - a0) * (pick === 1 ? 0.5 : 0.58);
         for (const [f0, f1, h] of [
           [a0, split - r.boxGap / 2, 1],
-          [split + r.boxGap / 2, a1, pick === 3 ? 0.62 : 0.78],
+          [split + r.boxGap / 2, a1, r.shortBoxes[pick === 3 ? 1 : 0]],
         ] as const) {
           const [min, max] = span(along, f0, f1, c0, c1, y0, y0 + (y1 - r.headroom - y0) * h);
           add(out, min, max, 'barrier', shade(cardboard, h === 1 ? 1 : 0.92), false);
@@ -449,11 +453,11 @@ function rackPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
   }
 }
 
-/** A Hesco-style gabion: sand-filled wire mesh with the sand showing at the top. */
-function hescoPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+/** A gabion: sand-filled wire mesh with the sand showing at the top. */
+function gabionPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
   const b = boundsOf(block);
-  const h = PROP.hesco;
-  add(out, b.min, [b.max[0], b.max[1] - h.sandTop, b.max[2]], 'hesco', color);
+  const h = PROP.gabion;
+  add(out, b.min, [b.max[0], b.max[1] - h.sandTop, b.max[2]], 'gabion', color);
   add(out, [b.min[0] + h.sandInset, b.max[1] - h.sandTop, b.min[2] + h.sandInset], [b.max[0] - h.sandInset, b.max[1], b.max[2] - h.sandInset], 'concrete', new THREE.Color(PROP.sand), false);
 }
 
@@ -526,12 +530,13 @@ function generatorPieces(block: MapBlock, color: THREE.Color, out: Piece[]): voi
   const louvre = shade(color, 0.6);
   for (const at of [b.min[across], b.max[across] - g.inset]) {
     for (let k = 0; k < g.louvres; k++) {
-      const y = b.min[1] + g.skid + 0.25 + k * 0.1;
-      const [min, max] = span(along, b.min[along] + 0.2, b.max[along] - 0.2, at, at + g.inset, y, y + 0.04);
+      const y = b.min[1] + g.skid + g.louvreFrom + k * g.louvreStep;
+      const [min, max] = span(along, b.min[along] + g.louvreEnd, b.max[along] - g.louvreEnd, at, at + g.inset, y, y + g.louvreHeight);
       add(out, min, max, 'barrier', louvre, false);
     }
   }
-  const [pMin, pMax] = span(along, b.max[along] - g.inset, b.max[along], (b.min[across] + b.max[across]) / 2 - 0.25, (b.min[across] + b.max[across]) / 2 + 0.25, b.min[1] + 0.6, b.min[1] + 1.0);
+  const centre = (b.min[across] + b.max[across]) / 2;
+  const [pMin, pMax] = span(along, b.max[along] - g.inset, b.max[along], centre - g.panelWidth / 2, centre + g.panelWidth / 2, b.min[1] + g.panelY[0], b.min[1] + g.panelY[1]);
   add(out, pMin, pMax, 'barrier', new THREE.Color(PROP.latch), false);
 }
 
@@ -580,9 +585,9 @@ export function blockPieces(block: MapBlock, blocks: readonly MapBlock[]): Piece
   if (block.kind === 'container') containerPieces(block, color, out);
   else if (block.kind === 'wall') wallPieces(block, color, out);
   else if (block.kind === 'crate' && !onCrate(block, blocks)) palletPieces(block, color, out);
-  else if (block.kind === 'portaloo') portalooPieces(block, color, out);
+  else if (block.kind === 'toilet') toiletPieces(block, color, out);
   else if (block.kind === 'rack') rackPieces(block, color, out);
-  else if (block.kind === 'hesco') hescoPieces(block, color, out);
+  else if (block.kind === 'gabion') gabionPieces(block, color, out);
   else if (block.kind === 'wrapped') wrappedPieces(block, color, out);
   else if (block.kind === 'ibc') ibcPieces(block, color, out);
   else if (block.kind === 'sandbags') sandbagPieces(block, color, out);
