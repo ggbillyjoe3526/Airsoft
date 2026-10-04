@@ -24,7 +24,7 @@ export const LOADOUT_TEXT = {
   equipped: 'Equipped',
   customise: 'Customise',
   backToGear: 'Back To Gear',
-  rightClickHint: 'Right-click a replica to customise it.',
+  rightClickHint: 'Right-click an equipped replica to customise it.',
   /** Under a row with nothing owned to fit yet. */
   armoryHint: 'Unlock more in the Armory.',
   /** A part the replica has no rail or mount for. */
