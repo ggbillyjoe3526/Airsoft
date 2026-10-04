@@ -17,8 +17,8 @@ export interface Collection {
   seed: number;
 }
 
-export const COLLECTION_KEY = 'airsoft.collection';
-export const COLLECTION_VERSION = 1;
+const COLLECTION_KEY = 'airsoft.collection';
+const COLLECTION_VERSION = 1;
 
 /** One item: an asset at a rarity tier. */
 export interface ItemRef {

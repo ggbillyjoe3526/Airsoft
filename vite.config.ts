@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 import { archivalDescribe, versionLabel } from './src/config/buildVersion.ts';
 import { LOADING } from './src/config/loading.ts';
 import { CONTENT_SECURITY_POLICY } from './src/config/page.ts';
+import { PRECOMPRESS, precompressedCopies } from './src/config/precompress.ts';
 
 /**
  * Size budgets in kB (minified, before gzip). Rapier inlines its WASM, so it gets its own budget: 4,333 kB measured at
@@ -64,6 +65,47 @@ function pageMeta(): Plugin {
   };
 }
 
+/** The node:zlib and node:fs/promises calls precompress() needs, typed here: the project doesn't load Node's types. */
+interface ZlibCalls {
+  brotliCompress(source: Uint8Array, options: { params: Record<number, number> }, done: (error: Error | null, out: Uint8Array) => void): void;
+  gzip(source: Uint8Array, options: { level: number }, done: (error: Error | null, out: Uint8Array) => void): void;
+  constants: { BROTLI_PARAM_QUALITY: number; BROTLI_PARAM_LGWIN: number; BROTLI_PARAM_SIZE_HINT: number };
+}
+interface FsCalls {
+  writeFile(path: string, data: Uint8Array): Promise<void>;
+}
+
+/**
+ * Brotli and gzip copies of the release build's files (audit CORE-29, config/precompress.ts), for a static host that
+ * serves precompressed files (README › Hosting). Not in the e2e build, which only the tests load. Written once the
+ * bundle is on disk, so the page itself (emitted last) is among them.
+ */
+function precompress(): Plugin {
+  return {
+    name: 'airsoft-precompress',
+    apply: (_config, env) => env.command === 'build' && env.mode !== 'e2e',
+    enforce: 'post',
+    writeBundle: {
+      order: 'post',
+      async handler(options, bundle) {
+        const zlib = (await import('node:zlib' as string)) as ZlibCalls;
+        const fs = (await import('node:fs/promises' as string)) as FsCalls;
+        const call = (fn: (done: (error: Error | null, out: Uint8Array) => void) => void) =>
+          new Promise<Uint8Array>((resolve, reject) => fn((error, out) => (error ? reject(error) : resolve(out))));
+        const files = Object.values(bundle).map((file) => ({
+          fileName: file.fileName,
+          source: file.type === 'chunk' ? new TextEncoder().encode(file.code) : typeof file.source === 'string' ? new TextEncoder().encode(file.source) : file.source,
+        }));
+        const copies = await precompressedCopies(files, {
+          brotli: (source) => call((done) => zlib.brotliCompress(source, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: PRECOMPRESS.brotliQuality, [zlib.constants.BROTLI_PARAM_LGWIN]: PRECOMPRESS.brotliWindowBits, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: source.byteLength } }, done)),
+          gzip: (source) => call((done) => zlib.gzip(source, { level: PRECOMPRESS.gzipLevel }, done)),
+        });
+        await Promise.all(copies.map((copy) => fs.writeFile(`${options.dir ?? 'dist'}/${copy.fileName}`, copy.source)));
+      },
+    },
+  };
+}
+
 /** The two Node calls the version needs, typed here: the project doesn't load Node's types. */
 interface NodeCalls {
   execFileSync(file: string, args: string[], options: { encoding: 'utf8'; stdio: string[] }): string;
@@ -92,7 +134,7 @@ export default defineConfig(async () => ({
   define: {
     __BUILD_VERSION__: JSON.stringify(versionLabel(await buildDescribe())),
   },
-  plugins: [chunkBudget(), pageMeta()],
+  plugins: [chunkBudget(), pageMeta(), precompress()],
   build: {
     target: 'es2022',
     // Source maps next to the chunks but not linked from them (audit CORE-11): players never download them, and a
@@ -115,7 +157,8 @@ export default defineConfig(async () => ({
     chunkSizeWarningLimit: CHUNK_BUDGET_KB.rapier,
   },
   test: {
-    include: ['src/**/*.test.ts'],
+    // The pipeline's own rules (pipeline/scope.mjs) are tested here too.
+    include: ['src/**/*.test.ts', 'pipeline/**/*.test.mjs'],
     environment: 'node',
   },
 }));

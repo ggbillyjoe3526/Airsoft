@@ -1,36 +1,25 @@
 # Tasks
 
-Open tasks only, one block each (format in `pipeline/README.md`). A task that lands leaves this file: its REVIEWS
-line, its ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
+Open tasks only, one block each (format in `pipeline/README.md`). A task that lands leaves this file in its records
+commit, before its pull request merges (CI's scope gate finds the block in the branch's history): its REVIEWS line, its
+ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
 keeps `status` and `attempts` current.
 
-## M30 · BB flight model from fluid dynamics: real drag, Magnus lift from the hop-up's spin, wind
+## FA11a · Build, tests and pipeline hygiene
 tier: core
-perf: required
-touches: src/config/ballistics.ts, src/sim/air.ts, src/sim/ballistics.ts, src/sim/bbs.ts, src/sim/ricochet.ts, src/sim/hopUp.ts, src/sim/wind.ts, src/sim/state.ts, src/sim/simulation.ts, src/matchSession.ts, src/rangeSession.ts, src/ai/depotMatchSupport.ts, src/ai/botCombat.ts, src/render/bbRenderer.ts, src/render/dustMotes.ts, src/render/combatPresentation.ts, src/config/render.ts, src/config/tutorial.ts, src/config/replicas.ts, docs/KNOWN_ISSUES.md
-contract: GameState (a `wind` field is allowed); stepSimulation (its phase order is unchanged; the wind is worked out just before BBs fly); M29 owns what leaves the muzzle (energy, velocity, BB mass) and reads none of this
+perf: skip
+touches: pipeline/gate.mjs, pipeline/scope.mjs, pipeline/scope.test.mjs, pipeline/build-cached.mjs, pipeline/perf-run.mjs, pipeline/README.md, .github/workflows/check.yml, .claude/agents/qa.md, .claude/agents/worker.md, .claude/skills/pipeline/SKILL.md, playwright.config.ts, vite.config.ts, tsconfig.json, package.json, src/config/precompress.ts, src/config/sounds.ts, src/audio/soundBank.ts, src/pool/pool.ts, src/pool/armory.ts, src/pool/collection.ts, src/sim/simulation.ts, src/sim/round.ts
+contract: none
 acceptance:
-  1. Drag is real sphere drag: ½·ρ·Cd·A·v² with Cd from the Reynolds number (a published sphere fit), ρ and μ from the air's temperature and pressure; no game scale on it (a test checks the table against the formula and the air against 1.204 kg/m³ and 1.81e-5 Pa·s)
-  2. Hop-up lift is Magnus lift from a spinning BB: the dial sets the backspin, CL follows the spin ratio ω·r / v, the spin decays under the air's torque (faster on a lighter BB), and the axis follows the barrel so the lift is the same whichever way a shot is fired (tests)
-  3. Wind: one breeze per match from its seed, 0.3–1.8 m/s from any direction with gentle gusts, level; BBs feel drag and lift against the air, so a crosswind drifts them downwind more and more with distance (tests: a few cm at 10 m, a torso's width at 34 m in 1.5 m/s); players never feel it; the practice range has one too
-  4. The factory dials keep their reach within a couple of metres (rifle ~38 m on target, pistol ~26 m), the BB-weight trade-off still holds, and the Loadout's readouts (hopUpReach, flightTime) fly the same model in still air
-  5. One flight step a tick with a second-order integrator: within 1 cm of a 100-substep flight at 50 m; the per-BB step costs no more than before (benchmark in the PR) and allocates nothing
-  6. Bots lead targets with the BB's flight time under drag (flightTimeEstimate, within 5% of the full model), not distance / muzzle speed; the KNOWN_ISSUES row about under-leading is removed; bots don't allow for wind; the headless match guards stay green
-  7. The dust in the air drifts with the wind, so it can be read; nothing on the HUD
-status: done
-
-## M29b · Barrels, the silencer, and Hard opponents on kit of their own
-tier: core
-perf: required
-touches: stats.md, pool.md, src/config/statsFile.ts, src/config/attachments.ts, src/config/menus.ts, src/config/bots.ts, src/pool/pool.ts, src/pool/kit.ts, src/pool/armory.ts, src/pool/botKit.ts, src/sim/armament.ts, src/ai/botController.ts, src/audio/sfx.ts, src/audio/audioEngine.ts, src/render/replicaModels.ts, src/render/viewmodel.ts, src/render/matchPresentation.ts, src/ui/soundCues.ts, src/ui/minimapView.ts, src/ui/performanceSheet.ts, src/ui/loadoutChoice.ts, src/ui/menus/loadoutScreen.ts, src/ui/menus/armoryScreen.ts, src/matchSession.ts, src/style.css, src/ai/depotMatchSupport.ts, CHANGELOG.md, docs/
-contract: pool.md's format (two new sections, Barrels and Muzzle parts; new tags barrel-mount and muzzle-thread); stats.md's format (two new tables, Barrels and Muzzle parts; Barrel and Muzzle in Tier scaling)
-acceptance:
-  1. Customise has Barrel and Muzzle rows: the AEG takes barrels and the silencer, the Gas Pistol the silencer only (its Barrel row says it has a fixed barrel); the Tight-Bore Barrel (000016), Long Barrel (000017) and Silencer (000018) come from Shots, with their numbers in stats.md
-  2. Tight-Bore Barrel: 15 % less spread, 3 % more energy; Long Barrel: 8 % more energy, 15 % slower draw and aim raise; Silencer: 5 % less energy, 10 % slower draw and aim raise, shots heard from half as far; each tier improves their handling (and a barrel's spread) by stats.md's shares; the site limit still holds
-  3. A silenced shot carries half as far for bots (22 m to 11 m, and behind a wall the same share), for the minimap's heard markers and for sound cues, and it sounds muffled
-  4. The fitted barrel and muzzle part show on the first-person replica, and BBs leave from the end of whatever is fitted
-  5. The Performance sheet shows "Shots heard from" and marks the barrel's and silencer's changes better or worse
-  6. On Hard, each of the other team's bots carries its own kit, rolled from the pool by the match's seed: a tier for each replica and each part by the Armory's odds, a power source always, any part slot filled or left empty, only parts that fit; BB weight and hop-up as the replica comes; your teammates, and Easy and Normal opponents, carry the replicas as they come
-  7. The headless match guards pass unchanged and Low still holds its frame budget
-status: accepted
-attempts: 1
+  1. CORE-07: the scope gate no longer lets a task change `pool.md` or `CLAUDE.md` outside its `touches`; the rules live in `pipeline/scope.mjs` with tests
+  2. CORE-08: CI runs the scope and changelog gates for the task id(s) a pull request's title starts with (a block the branch already cleared is found in its history); pipeline/README.md and check.yml say plainly what still runs only locally (perf, the laptop frame-time budget, the critic)
+  3. CORE-09: a browser test loads a build without `?nolock&seed=1` and takes the real pointer lock (Play, lose it → pause, Resume); a Firefox project can't be run where the pipeline runs, so KNOWN_ISSUES says so
+  4. CORE-13: `exactOptionalPropertyTypes` is on and `tsc --noEmit` is clean
+  5. CORE-14: CI installs Playwright's system libraries only when the cached Chromium can't start without them, and each bundle (production, e2e) is built once per run
+  6. CORE-18: docs/TASKS.md holds no landed (`done`, `accepted`) blocks, and the pipeline's records step clears a task's block
+  7. CORE-22: the perf harness and the smoke test reuse an e2e (or production) build made from the same source; a browser test boots the production build (`dist/`) and checks the test flags and `window.airsoft` are absent
+  8. CORE-24: the unused exports the audit lists are gone or private, the test-only ones say so
+  9. CORE-27: pipeline/README.md and the agents' timings match the scripts (re-measured), and the laptop frame-time gate is named as a manual owner step
+  10. CORE-29: the production build writes Brotli and gzip copies of its compressible files with node:zlib (no new dependency), and README says how a static host serves them
+status: gates
+attempts: 2
