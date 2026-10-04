@@ -296,7 +296,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(mapDialog).toBeVisible();
   await expect(mapDialog.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('Escape');
-  await setup.getByRole('button', { name: /Settings/i }).click();
+  await setup.getByRole('button', { name: /^Settings/ }).click();
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'Off' }).click();
   await devBox.uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
