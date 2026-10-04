@@ -59,6 +59,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33d** · Woodland's layout, playable with Dev settings › Access maps in development (its matches aren't recorded); 4v4 and 5v5 on maps with room
 - **M33e** · Bushes: they hide you from bots (BBs and people pass through), on any map that has them; Woodland has 70, shown on the minimap
 - **M33g** · Night sight: on night maps bots see less far in the dark (40 m by a fire or lantern, 25 m in the open, 10 m under the trees); Woodland's fires and lanterns give you away
+- **M33f** · Night lighting: any map picks a day or night look in its data; Woodland is dark under a low moon over the Knoll, its fires and lanterns glow and light the ground, and on Medium and High the nearest ones light players too (Graphics › Night lights)
 
 ### Changed
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
