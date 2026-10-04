@@ -21,7 +21,15 @@ export class SpectatorCamera {
   private readonly head = { x: 0, y: 0, z: 0 };
   private readonly dir = { x: 0, y: 0, z: 0 };
   private readonly pos = { x: 0, y: 0, z: 0 };
+  private readonly castFrom = { x: 0, y: 0, z: 0 };
+  private readonly castDir = { x: 0, y: 0, z: 0 };
   private placed = false;
+  /**
+   * The wall check behind the target, kept until the target moves (audit REN-12): a ray cast allocates a hit object,
+   * and the camera only changes once a tick at most. `castFor` is what the last cast was made from.
+   */
+  private reach = 0;
+  private readonly castFor = { id: -1, x: Number.NaN, y: Number.NaN, z: Number.NaN, yaw: Number.NaN, crouch: Number.NaN };
 
   constructor(
     private readonly characters: readonly Character[],
@@ -83,8 +91,7 @@ export class SpectatorCamera {
     d.x = (backX * SPECTATOR.distance) / len;
     d.y = SPECTATOR.height / len;
     d.z = (backZ * SPECTATOR.distance) / len;
-    const hit = this.query.raycastStatic(h, d, len);
-    const reach = hit >= 0 ? Math.max(0, hit - SPECTATOR.wallPadding) : len;
+    const reach = this.wallReach(c, len);
     const p = this.pos;
     const tx = h.x + d.x * reach;
     const ty = h.y + d.y * reach;
@@ -97,5 +104,32 @@ export class SpectatorCamera {
 
     camera.position.set(p.x, p.y, p.z);
     camera.lookAt(h.x - backX * SPECTATOR.lookAhead, h.y, h.z - backZ * SPECTATOR.lookAhead);
+  }
+
+  /**
+   * How far back the camera can sit before a wall (the same direction as `place`'s, from the target's latest tick pose),
+   * cast only when that pose changes: a tick that moved or turned the target, or another target. The camera eases
+   * towards the result anyway (followRate), so the tick pose stands in for the interpolated one between ticks.
+   */
+  private wallReach(c: Character, len: number): number {
+    const k = this.castFor;
+    if (k.id === c.id && k.x === c.position.x && k.y === c.position.y && k.z === c.position.z && k.yaw === c.yaw && k.crouch === c.crouchAmount) return this.reach;
+    k.id = c.id;
+    k.x = c.position.x;
+    k.y = c.position.y;
+    k.z = c.position.z;
+    k.yaw = c.yaw;
+    k.crouch = c.crouchAmount;
+    const from = this.castFrom;
+    from.x = c.position.x;
+    from.y = c.position.y + eyeHeight(c.crouchAmount, this.body);
+    from.z = c.position.z;
+    const d = this.castDir;
+    d.x = (Math.sin(c.yaw) * SPECTATOR.distance) / len;
+    d.y = SPECTATOR.height / len;
+    d.z = (Math.cos(c.yaw) * SPECTATOR.distance) / len;
+    const hit = this.query.raycastStatic(from, d, len);
+    this.reach = hit >= 0 ? Math.max(0, hit - SPECTATOR.wallPadding) : len;
+    return this.reach;
   }
 }

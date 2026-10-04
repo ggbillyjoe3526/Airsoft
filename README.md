@@ -82,7 +82,8 @@ Then open **http://localhost:4173**.
 |---|---|
 | `npm` is "not recognized" / "command not found" | Close and reopen the terminal after installing Node.js; if it still fails, restart the computer. |
 | The page says the address can't be reached | Check the terminal is still running `npm run dev`, and use the exact address it printed. |
-| Black screen or "Failed to start" | Update your browser; the game needs WebGL2 (any recent Chrome, Firefox or Edge has it). |
+| Black screen or "The game couldn't start" | Update your browser and graphics driver; the game needs WebGL2 (any recent Chrome, Firefox or Edge has it). |
+| "Something went wrong" | The game stopped on an error. Press Copy Report, post the report with what you were doing, then Reload. |
 | Clicking doesn't capture the mouse | Wait a second and click again (browsers refuse to re-capture the mouse right after Esc). |
 | It feels slow | Close other heavy tabs and apps; press `` ` `` or F3 to see the frame rate. |
 
@@ -215,14 +216,25 @@ The browser smoke test (`e2e/boot.spec.ts`) needs Playwright's Chromium once per
 GitHub runs `npm run check` and the smoke test on every pull request and every push to `main`
 (`.github/workflows/check.yml`).
 
-URL flag `?nolock` plays without pointer lock (for automated browsers; fire and wheel work, mouse look doesn't). It works only on the
-dev server and in the smoke test's build (`npm run build:e2e`), never in a normal release build.
-Each page load picks a fresh random seed (shown in the debug overlay); `?seed=N` (0 to 4294967295) replays one.
-The render preset is picked on Settings → Graphics → Quality (High by default, saved); `?quality=low|medium|high`
-overrides it for one visit (`medium` renders at standard resolution with smaller, harder shadows and less dust; `low`
-also drops shadows, antialiasing, surface relief, dust and the replica's sheen). The debug overlay (`` ` `` or F3) shows the preset, frame rate and draw calls, so presets can be compared on one machine.
-On the dev server and in the smoke test's build, `window.airsoft` exposes the running game, and `?script=perf` replaces
-the player with the perf harness's scripted one (`src/config/perfScript.ts`).
+### URL flags and diagnostics
+
+| Flag | Builds | What it does |
+|---|---|---|
+| `?seed=N` | all | Plays seed N (0 to 4294967295) instead of a fresh random one. Each match in a visit has its own seed, shown on the pause screen, in the debug overlay and in crash reports; `?seed=` with it replays that match. |
+| `?quality=low\|medium\|high` | all | Overrides the saved render preset (Settings → Graphics → Quality, High by default) for one visit. `medium` renders at standard resolution with smaller, harder shadows and less dust; `low` also drops shadows, antialiasing, surface relief, dust and the replica's sheen. |
+| `?nolock` | dev, e2e | Plays without pointer lock (automated browsers; fire and wheel work, mouse look doesn't). |
+| `?script=perf` | dev, e2e | Replaces the player with the perf harness's scripted one (`src/config/perfScript.ts`). |
+
+On the dev server and in the smoke test's build (`npm run build:e2e`), `window.airsoft` exposes the running game; a
+normal release build has none of the dev and e2e flags. The debug overlay (`` ` `` or F3, or Settings → Dev → Debug
+info) shows the seed, preset, frame rate and draw calls, so presets can be compared on one machine; `]` shows the BB
+paths. In any build, Settings → Dev (tick the box under the tabs) → Diagnostics → Copy puts the build, browser,
+graphics card, seed, match and settings on the clipboard for a bug report.
+
+If the game stops on an error, a "Something went wrong" pane gives the mouse back and shows a report to copy (the
+same fields plus the error and its stack); a failed start shows the same pane, with advice when the browser has no
+WebGL. Production builds write hidden source maps (`dist/assets/*.js.map`, not linked from the code), so a stack from
+a report (`index-abc.js:1:48213`) can be read against the matching build in DevTools or with a source-map tool.
 
 **Performance budget and baselines** (`pipeline/perf-budget.json`, `pipeline/baseline/`): the harness plays a fixed
 Depot match (seed 1, the scripted player, 1920 × 1080 at pixel ratio 1, CPU throttled 4× on a laptop) for 60 s and

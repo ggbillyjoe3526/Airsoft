@@ -58,8 +58,12 @@ export const HITS: HitConfig = {
   callTime: 1.4,
   /** Walk-off pace as a fraction of the normal (run) speed: a brisk walk-off, so it fits in walkOffTime. */
   walkOffSpeed: 0.8,
-  /** Longest walk-off (seconds): enough to cross Depot; anyone still walking then leaves the field. */
-  walkOffTime: 14,
+  /**
+   * Longest walk-off (seconds); anyone still walking then leaves the field. The longest route on Depot (from the far
+   * quarter to the other end's dead zone, 58 m) takes 17.2 s at walk-off pace; 14 s cut it short (audit SIM-06), so
+   * 20 s, checked for every point of the map in depot.test.ts.
+   */
+  walkOffTime: 20,
   /**
    * Close enough to the dead-zone spot to stop walking (metres). Well under half the spots' spacing, so
    * teammates who walk in from the same side don't end up standing inside each other.
