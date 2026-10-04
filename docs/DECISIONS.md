@@ -278,4 +278,5 @@ One line each: decision, then why.
 - **2026-10-04 · M26b · Rarity shares by category** (code, explained in pool.md): a replica, optic and magazine take their tier's Bonus % in full; a power source, grip and laser half. A replica's spread, reload and draw shrink by it; a power source adds it to its Power %; an optic raises quicker; a grip steadies and handles better; a magazine reloads quicker.
 - **2026-10-04 · M26b · A returning player keeps the parts they had picked.** Before M26 every optic, grip and magazine was free; once, at start, each part saved in the old `optic`, `grip.<replica>` and `mag.<replica>` settings is added to the collection (Common, unless a copy is owned) and fitted where it was (`pool/oldPicks.ts`).
 - **2026-10-04 · M26b · The Loadout lists only what you own** (the owner's words); what the Armory can give is on the Armory's own screen (M26c). Right-click anywhere on the Loadout never opens the browser's menu.
+- **2026-10-04 · M26b · Rarer items still count for the records.** Their bonuses are small (at most 15%) and handling only; the owner can rule otherwise once the Armory has been played.
 
