@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { ATMOSPHERE, RENDER, type QualitySettings } from '../config/render';
-import { lacksHardwareAcceleration } from './gpuCheck';
 
 const REFERENCE_ASPECT = 16 / 9;
 const DEG = Math.PI / 180;
@@ -30,8 +29,6 @@ export class Renderer {
   height = 0;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
-  /** Whether the browser draws in software (undefined until first asked). */
-  private software: boolean | undefined;
 
   /**
    * `quality` is the preset the game loads with: its antialiasing is fixed for the WebGL context's life; the rest can
@@ -71,11 +68,6 @@ export class Renderer {
    */
   onContextChange(listener: (lost: boolean) => void): void {
     this.contextListener = listener;
-  }
-
-  /** True if the browser draws without hardware acceleration (the game would crawl): checked once, at startup. */
-  get softwareRendering(): boolean {
-    return (this.software ??= lacksHardwareAcceleration(this.renderer.getContext()));
   }
 
   get canvas(): HTMLCanvasElement {

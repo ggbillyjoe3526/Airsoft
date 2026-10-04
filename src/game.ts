@@ -72,10 +72,15 @@ export interface GameOptions {
   /** Seeds the simulation and the bots (core/seed.ts): the same seed replays the same bot decisions for the same inputs. */
   seed: number;
   /**
-   * The render quality preset to start with (config/render.ts): the saved one, or `?quality=` for a visit. Settings →
-   * Graphics changes it later (all but antialiasing, which keeps the starting preset's until the next load).
+   * The render quality preset to start with (config/render.ts startingQuality): `?quality=` for a visit, the saved one,
+   * or else the default (Low in a browser drawing in software). Settings → Graphics changes it later (all but
+   * antialiasing, which keeps the starting preset's until the next load).
    */
   quality: QualityPreset;
+  /** `quality` was picked for this visit because the browser draws in software (not saved; config/render.ts startingQuality). */
+  automaticQuality: boolean;
+  /** The browser draws without hardware acceleration (render/gpuCheck.ts): the title screen warns. */
+  softwareRendering: boolean;
 }
 
 /**
@@ -263,7 +268,10 @@ export class Game {
       },
     });
     this.menus.showTitle();
-    if (this.renderer.softwareRendering) this.menus.showTitleWarning(BROWSER_NOTES.noHardwareAcceleration);
+    if (options.softwareRendering) {
+      const note = BROWSER_NOTES.noHardwareAcceleration;
+      this.menus.showTitleWarning(options.automaticQuality ? `${note} ${BROWSER_NOTES.qualitySetLow}` : note);
+    }
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
     document.addEventListener('visibilitychange', this.visibilityChanged);
