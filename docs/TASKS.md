@@ -84,3 +84,16 @@ acceptance:
   4. Tuning numbers for Pro in one place, ready for the owner's playtest per map.
 status: open
 attempts: 0
+## M33f · Night lighting: a lighting preset any map picks in its data (day or night), moonlight and dark sky, and pools of light from its fires and lanterns
+tier: core
+perf: required
+touches: src/config/render.ts, src/config/graphics.ts, src/map/mapTypes.ts, src/map/woodland.ts, src/render/lightingPreset.ts, src/render/lightPools.ts, src/render/lighting.ts, src/render/atmosphere.ts, src/render/renderer.ts, src/render/matchPresentation.ts, src/matchSession.ts, src/rangeSession.ts, src/settings/, docs/
+contract: MapData gains an optional `lighting` (preset list, first the default, and an optional `moonOver` point; additive, absent means day); QualitySettings gains `poolLights` (0 | 2 | 4, a Custom row "Night lights"); addLighting and addAtmosphere take a resolved LightingPreset; Renderer gains setLighting
+acceptance:
+  1. Any map picks its look from data: Depot, the range and the test maps resolve to day and draw exactly as before (the day preset is today's constants, field by field)
+  2. Woodland resolves to night: dark sky and fog, a low moon as the key light that rims the Knoll's top while its west face stays dark, dimmer hemisphere and environment light, the same shadows as by day on each preset
+  3. Every map light pool (`MapData.lights`) glows on every preset; Low lights the ground under it with one additive mesh and no real lights; Medium and High add a fixed number of point lights (`poolLights`: 2 and 4) on the pools nearest the eye, no shadows, the count never changing in a match
+  4. Leaving a night match for a day one (or the range) brings back the day's sky, fog, exposure and environment
+  5. Low on Woodland stays inside its draw call and triangle budgets; Depot's perf is unchanged
+status: building
+attempts: 1
