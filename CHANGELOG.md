@@ -40,6 +40,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33a** · Woodland shown as Coming soon in the Map pop-up (#64)
 - **M33b** · Glowing BBs: a per-replica Customise option (At Night by default, Always or Off); bots load them on night fields
 - **M33d** · Woodland's layout, playable with Dev settings › Access maps in development (its matches aren't recorded); 4v4 and 5v5 on maps with room
+- **M33e** · Bushes: they hide you from bots (BBs and people pass through), on any map that has them; Woodland has 70, shown on the minimap
 
 ### Changed
 - **FA5** · Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell (#59)

@@ -50,6 +50,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Woodland: a second field coming soon, shown as disabled in the Map pop-up (M33a)
 - Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland (M33c)
 - Woodland's layout: 120 × 80 m on a gentle slope up to the Knoll and its log fort, three lanes (Pine Belt, Meadow, Creek with the cabin), trees, boulders and logs; 4v4 by default, up to 5v5; playable only with Dev settings › Access maps in development, and its matches aren't recorded (M33d)
+- Bushes on any map that lists them: bots can't see someone deep in or behind one, BBs and people pass through, drawn on the minimap; Woodland has 70 (M33e)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
