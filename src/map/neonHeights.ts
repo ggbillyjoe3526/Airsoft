@@ -132,7 +132,7 @@ function slab(area: Rect, top: number, holes: Rect[] = []): MapBlock[] {
   return out;
 }
 
-/** A 1.2 m rail along x (`z0..z1` thick) or along z, standing on the floor at `base`. */
+/** A 1 m rail (`RAIL`) along x (`z0..z1` thick) or along z, standing on the floor at `base`. */
 const railX = (z0: number, x0: number, x1: number, base: number): MapBlock => box('barrier', x0, x1, base, base + RAIL, z0, z0 + RAIL_THICKNESS);
 const railZ = (x0: number, z0: number, z1: number, base: number): MapBlock => box('barrier', x0, x0 + RAIL_THICKNESS, base, base + RAIL, z0, z1);
 
@@ -506,7 +506,7 @@ const LANES: Vec3[][] = [
 ];
 
 /**
- * The windows, balconies and galleries above each area (the Pro difficulty's watch angles, M36): where someone up
+ * The windows, balconies and galleries above each area (the Pro difficulty's watch angles, M37): where someone up
  * there stands to see the area.
  */
 const OVERLOOKS: Overlook[] = [
