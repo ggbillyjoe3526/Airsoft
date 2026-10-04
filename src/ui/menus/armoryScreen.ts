@@ -8,7 +8,7 @@ export interface ArmoryOptions {
   pool: Pool;
   /** The player's collection, changed in place. */
   collection: () => Collection;
-  /** The replica item in each Loadout slot, to say when a Shot's item became what you carry. */
+  /** Every item you carry (the replicas and what is fitted to them), to say when a Shot's item became one of them. */
   equipped: () => readonly (ItemRef | null)[];
   /** Something was bought, dispensed or scrapped: save the collection, and the Loadout follows it. */
   onChange: () => void;
@@ -47,7 +47,7 @@ export class ArmoryScreen {
   private readonly reveal: HTMLDivElement;
   private readonly owned: HTMLDivElement;
   private last: Dispensed[] = [];
-  /** The last Shot's items that went straight into a Loadout slot (a rarer copy of a replica you never picked). */
+  /** The last Shot's items you now carry without picking them (a rarer copy of a replica or part left on its default). */
   private nowEquipped = new Set<string>();
   private readonly back: HTMLButtonElement;
 

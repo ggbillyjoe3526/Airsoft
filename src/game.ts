@@ -254,7 +254,7 @@ export class Game {
       armory: {
         pool: GAME_POOL,
         collection: () => this.collection,
-        equipped: () => this.loadout.equipped(),
+        equipped: () => this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : [])),
         onChange: () => {
           saveCollection(this.collection);
           this.loadoutChanged = this.setupChanged = true;
