@@ -1,5 +1,5 @@
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
-import { clearLine, floorAt, isWalkableAt } from '../nav/navGrid';
+import { cellX, cellZ, clearLine, dropOnLine, floorAt, isWalkableAt, nearestWalkable } from '../nav/navGrid';
 import { aimDirection } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
@@ -17,6 +17,7 @@ import { eyeOf } from './perception';
 const DEG = Math.PI / 180;
 const eye = vec3();
 const view = vec3();
+const anchor = vec3();
 
 /** Sets `b` carrying out `kind` for `leader` as the `slot`th of the teammates given it. */
 export function startOrder(b: Bot, leader: Character, kind: SquadOrderKind, slot: number): void {
@@ -74,8 +75,8 @@ export function holdPoint(leader: Character, w: BotWorld, out: Vec3): boolean {
 
 /**
  * Hold here for the teammates `bots` (by their place across `leader`'s view, left to right): each its own spot across
- * the line of sight from `point`, holdSpacing apart (the point itself where that isn't walkable), or with no point, the
- * spot it stands on. All of them then look the way the leader looks.
+ * the line of sight from `point`, holdSpacing apart (the point itself where that isn't walkable or a wall is in between),
+ * or with no point, the spot it stands on. All of them then look the way the leader looks.
  */
 export function placeHold(bots: readonly Bot[], leader: Character, point: Vec3 | undefined, w: BotWorld): void {
   const rightX = Math.cos(leader.yaw);
@@ -91,7 +92,9 @@ export function placeHold(bots: readonly Bot[], leader: Character, point: Vec3 |
     const across = (k - (bots.length - 1) / 2) * SQUAD_ORDERS.holdSpacing;
     const x = point.x + rightX * across;
     const z = point.z + rightZ * across;
-    const walkable = isWalkableAt(w.nav, x, z) && Math.abs(floorAt(w.nav, x, z) - point.y) <= w.nav.maxStep;
+    // A side spot must be walkable at the point's height and in a straight walkable line from it (M-05: not on the
+    // far side of a thin wall, which would send the bot round by the next doorway).
+    const walkable = isWalkableAt(w.nav, x, z) && Math.abs(floorAt(w.nav, x, z) - point.y) <= w.nav.maxStep && clearLine(w.nav, point.x, point.z, x, z);
     g.x = walkable ? x : point.x;
     g.y = point.y;
     g.z = walkable ? z : point.z;
@@ -119,9 +122,10 @@ export function heldCentre(bots: readonly Bot[], leader: Character, out: Vec3): 
 
 /**
  * Follow me: the spot behind the leader's heading for follower `slot` into `out`: followers pair up either side of
- * straight behind, each further pair a row back. Where that spot isn't walkable (a corridor wall, a drop), straight
- * behind at the same distance, then that much closer; only if none is, the leader's own (M22 review: never inside you
- * when there's room behind).
+ * straight behind, each further pair a row back. Where that spot isn't walkable (a corridor wall, a drop) or can't be
+ * walked to in a straight line from the leader (the far side of a thin wall, M-05), straight behind at the same
+ * distance, then that much closer; only if none is, the leader's own (M22 review: never inside you when there's room
+ * behind).
  */
 export function followSpot(leader: Character, heading: number, slot: number, w: BotWorld, out: Vec3): Vec3 {
   const side = slot % 2 === 0 ? 1 : -1;
@@ -130,17 +134,33 @@ export function followSpot(leader: Character, heading: number, slot: number, w: 
   out.x = p.x;
   out.y = p.y;
   out.z = p.z;
-  if (tryFollowSpot(p, heading + Math.PI + side * SQUAD_ORDERS.followSpreadDeg * DEG, dist, w, out)) return out;
-  if (tryFollowSpot(p, heading + Math.PI, dist, w, out)) return out;
-  tryFollowSpot(p, heading + Math.PI, dist - SQUAD_ORDERS.followFallbackStep, w, out);
+  // Spots are measured from where the leader stands or, inside the margin the nav grid keeps from walls and edges (a
+  // body touching a wall stands in it), from the nearest walkable cell: on the leader's side of that wall.
+  anchor.x = p.x;
+  anchor.y = p.y;
+  anchor.z = p.z;
+  if (!isWalkableAt(w.nav, p.x, p.z)) {
+    const c = nearestWalkable(w.nav, p.x, p.z, SQUAD_ORDERS.followLineSnap);
+    if (c >= 0) {
+      anchor.x = cellX(w.nav, c % w.nav.cols);
+      anchor.z = cellZ(w.nav, Math.floor(c / w.nav.cols));
+    }
+  }
+  if (tryFollowSpot(anchor, heading + Math.PI + side * SQUAD_ORDERS.followSpreadDeg * DEG, dist, w, out)) return out;
+  if (tryFollowSpot(anchor, heading + Math.PI, dist, w, out)) return out;
+  tryFollowSpot(anchor, heading + Math.PI, dist - SQUAD_ORDERS.followFallbackStep, w, out);
   return out;
 }
 
-/** Writes the spot `dist` from `p` along `angle` into `out` if it is walkable at about `p`'s height; returns whether. */
-function tryFollowSpot(p: Vec3, angle: number, dist: number, w: BotWorld, out: Vec3): boolean {
-  const x = p.x - Math.sin(angle) * dist;
-  const z = p.z - Math.cos(angle) * dist;
-  if (!isWalkableAt(w.nav, x, z) || Math.abs(floorAt(w.nav, x, z) - p.y) > w.nav.maxStep) return false;
+/**
+ * Writes the spot `dist` from `from` along `angle` into `out` if it is walkable at about `from`'s height and in a
+ * straight walkable line from it; returns whether.
+ */
+function tryFollowSpot(from: Vec3, angle: number, dist: number, w: BotWorld, out: Vec3): boolean {
+  const x = from.x - Math.sin(angle) * dist;
+  const z = from.z - Math.cos(angle) * dist;
+  if (!isWalkableAt(w.nav, x, z) || Math.abs(floorAt(w.nav, x, z) - from.y) > w.nav.maxStep) return false;
+  if (!clearLine(w.nav, from.x, from.z, x, z)) return false;
   out.x = x;
   out.z = z;
   return true;
@@ -208,9 +228,20 @@ function followMove(b: Bot, w: BotWorld, leader: Character, away: number, wasRus
     // Straight at the spot while the leader stands; with the leader on the move, go their way and close on the spot
     // (pursuit: their velocity plus a pull towards the spot), so the direction stays steady as the spot slides along.
     const pull = leaderMoving ? o.followPull : 1;
-    const dx = (leaderMoving ? v.x : 0) + (g.x - p.x) * pull;
-    const dz = (leaderMoving ? v.z : 0) + (g.z - p.z) * pull;
-    const len = Math.hypot(dx, dz);
+    let dx = (leaderMoving ? v.x : 0) + (g.x - p.x) * pull;
+    let dz = (leaderMoving ? v.z : 0) + (g.z - p.z) * pull;
+    let len = Math.hypot(dx, dz);
+    // That blend is not the line checked above (M-08): where it would step off a drop just ahead, go straight at the
+    // spot along the checked line instead. Walls only stop the bot (it slides along them), and checking for them too
+    // flipped the way back and forth beside every wall (followers stood still more than twice as often on Depot).
+    if (leaderMoving && len >= 1e-6) {
+      const look = w.cfg.edgeLookahead / len;
+      if (dropOnLine(w.nav, p.x, p.z, p.x + dx * look, p.z + dz * look)) {
+        dx = g.x - p.x;
+        dz = g.z - p.z;
+        len = d;
+      }
+    }
     if (len < 1e-6) return false;
     b.moveDir.x = dx / len;
     b.moveDir.z = dz / len;

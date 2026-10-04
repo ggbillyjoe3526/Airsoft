@@ -127,13 +127,18 @@ describe('BB pool', () => {
     expect(c.age).toBe(0);
   });
 
-  it('overwrites the oldest BB when full', () => {
-    const pool = createBBPool(2);
-    const first = spawnBB(pool, 0, vec3(), vec3(0, 0, -1), 50, 0, 0.25e-3);
-    spawnBB(pool, 0, vec3(), vec3(0, 0, -1), 50, 0, 0.25e-3);
-    const third = spawnBB(pool, 0, vec3(), vec3(0, 0, -1), 50, 0, 0.25e-3);
-    expect(third).toBe(first);
-    expect(pool.bbs.filter((b) => b.active)).toHaveLength(2);
+  it('overwrites the oldest BB in flight when full, wherever its slot is', () => {
+    const pool = createBBPool(3);
+    const fire = () => spawnBB(pool, 0, vec3(), vec3(0, 0, -1), 50, 0, 0.25e-3);
+    const [a, b, c] = [fire(), fire(), fire()];
+    // The middle slot lands and is fired again: it now holds the newest BB, and `a` is the oldest.
+    b.active = false;
+    expect(fire()).toBe(b);
+    expect(fire()).toBe(a);
+    expect(pool.bbs.filter((x) => x.active)).toHaveLength(3);
+    // Then `c` (the oldest left), then `b` (older than the BB just put in a's slot).
+    expect(fire()).toBe(c);
+    expect(fire()).toBe(b);
   });
 });
 

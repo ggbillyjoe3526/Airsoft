@@ -229,4 +229,33 @@ describe('stepBBs hitting characters', () => {
     expect(b.status).toBe('calling');
     expect(a.deadZoneTarget).not.toEqual(b.deadZoneTarget);
   });
+
+  it('lets the second of two BBs reaching someone in the same tick fly on: they were already hit by the first', () => {
+    const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    const target = createCharacter(2, vec3(0, 0, -10), 0, LOADOUT, 1);
+    const pool = createBBPool(4);
+    const first = spawnBB(pool, 1, vec3(0, 1.2, -9), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    const second = spawnBB(pool, 1, vec3(0.05, 1.2, -9), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    const events: GameEvent[] = [];
+    stepBBs(pool, BALLISTICS, noWall, KILL_Y, events, DT, { characters: [shooter, target], hits: HITS, elimination: openFieldElimination(deadZones) });
+    expect(events.filter((e) => e.type === 'characterHit')).toHaveLength(1);
+    expect(first.active).toBe(false);
+    expect(second.active).toBe(true);
+    expect(second.position.z).toBeLessThan(-10);
+  });
+
+  it('hits a leaning character on the flank of the tilted torso (M-06)', () => {
+    const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
+    const target = createCharacter(2, vec3(0, 0, -10), 0, LOADOUT, 1);
+    target.lean = 1;
+    // Just above the hips, 0.15 m out from the leaned torso's axis: outside the old body capsule and shoulder sphere.
+    const h = HITS.lean.pivotHeight + 0.1;
+    const out = (h - HITS.lean.pivotHeight) * Math.sin(HITS.lean.maxAngle) + 0.15;
+    const pool = createBBPool(4);
+    const bb = spawnBB(pool, 1, vec3(out, h, -9), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    const events: GameEvent[] = [];
+    stepBBs(pool, BALLISTICS, noWall, KILL_Y, events, DT, { characters: [shooter, target], hits: HITS, elimination: openFieldElimination(deadZones) });
+    expect(bb.active).toBe(false);
+    expect(target.status).toBe('calling');
+  });
 });

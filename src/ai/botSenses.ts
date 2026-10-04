@@ -46,7 +46,7 @@ export function perceive(b: Bot, w: BotWorld): void {
   }
   const contact = contactFor(b, best.id);
   if (w.time - contact.seenAt > cfg.contactGrace) {
-    contact.reactAt = w.time + pick(b.rng, cfg.reactionTime);
+    contact.reactAt = w.time + pick(b.rng, b.skill.reactionTime);
     contact.acquiredAt = w.time;
     freshAimError(b.aim, cfg, b.rng);
   }

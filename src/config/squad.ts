@@ -15,6 +15,11 @@ export const SQUAD_ORDERS = {
   followRowGap: 1.6,
   /** Where a follow spot isn't walkable (a wall, a drop), the spot is tried straight behind you, then this much closer (m). */
   followFallbackStep: 1.5,
+  /**
+   * A follow spot must also be in a straight walkable line from you (not behind a wall). That line starts at the
+   * nearest walkable ground within this (m) when you stand inside the margin bots keep from walls and edges.
+   */
+  followLineSnap: 0.8,
   /** Close enough to the follow spot to stop there while you stand still (m). */
   followArrive: 1.2,
   /** Settled at the spot, followers stay put until it is this much further off (m), so they don't shuffle. */

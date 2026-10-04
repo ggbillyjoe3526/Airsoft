@@ -24,8 +24,6 @@ export interface BB {
 export interface BBPool {
   bbs: BB[];
   nextSerial: number;
-  /** Next slot to overwrite when the pool is full (oldest first). */
-  cursor: number;
 }
 
 export function createBBPool(size: number): BBPool {
@@ -44,21 +42,27 @@ export function createBBPool(size: number): BBPool {
       bounces: 0,
     });
   }
-  return { bbs, nextSerial: 1, cursor: 0 };
+  return { bbs, nextSerial: 1 };
 }
 
 /**
  * Fires a BB of `mass` kg from `origin` along the unit vector `dir` at `speed`. Reuses a free slot, else
- * the oldest BB.
+ * the oldest BB in flight (the smallest serial).
  */
 export function spawnBB(pool: BBPool, ownerId: number, origin: Vec3, dir: Vec3, speed: number, hopUp: number, mass: number): BB {
   // Drag, lift and spin all divide by the mass: a missing or zero mass would fill the flight with NaN.
   if (!(mass > 0)) throw new Error(`BB mass must be positive (kg), got ${mass}`);
-  let bb = pool.bbs.find((b) => !b.active);
-  if (!bb) {
-    bb = pool.bbs[pool.cursor]!;
-    pool.cursor = (pool.cursor + 1) % pool.bbs.length;
+  let bb: BB | undefined;
+  let oldest: BB | undefined;
+  for (const b of pool.bbs) {
+    if (!b.active) {
+      bb = b;
+      break;
+    }
+    if (!oldest || b.serial < oldest.serial) oldest = b;
   }
+  bb ??= oldest;
+  if (!bb) throw new Error('BB pool has no slots');
   bb.active = true;
   bb.serial = pool.nextSerial++;
   bb.ownerId = ownerId;

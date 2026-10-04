@@ -110,7 +110,7 @@ export const BOT_BEHAVIOUR = {
   lowCoverGap: 0.45,
   /** Second try behind a low block when the spot at lowCoverGap isn't walkable (metres). */
   lowCoverGapFar: 0.8,
-  /** A low block counts as standing on the floor if its bottom is within this of y = 0 (metres). */
+  /** A low block counts as standing on the floor if its bottom is within this of the nav floor under it (metres). */
   lowCoverFloorGap: 0.05,
   /**
    * Corners of full-height blocks (walls, containers) are tried as lean spots: just behind the corner as
@@ -247,8 +247,8 @@ export const BOT_BEHAVIOUR = {
 type Widen<T> = { readonly [K in keyof T]: T[K] extends readonly [number, number] ? readonly [number, number] : number };
 
 /**
- * How good a bot is: reaction, turning, aim and trigger discipline. One set per difficulty level; all
- * bots in a match (teammates too) play at the chosen level.
+ * How good a bot is: reaction, turning, aim and trigger discipline. One set per difficulty level; each
+ * team's bots play at the level picked for it (M20).
  */
 export interface BotSkill {
   /** Delay between first seeing someone and opening fire (s). */
@@ -339,8 +339,11 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
   },
 };
 
+/** The behaviour tuning every bot shares, whatever its level (BOT_BEHAVIOUR's shape). */
+export type BotBehaviour = Widen<typeof BOT_BEHAVIOUR>;
+
 /** Everything a bot's decisions are tuned by: shared behaviour plus one difficulty's skill. */
-export type BotConfig = Widen<typeof BOT_BEHAVIOUR> & BotSkill;
+export type BotConfig = BotBehaviour & BotSkill;
 
 /** The full bot tuning for a difficulty level. */
 export function botConfig(difficulty: Difficulty): BotConfig {

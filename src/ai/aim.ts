@@ -1,4 +1,4 @@
-import type { BotConfig } from '../config/bots';
+import type { BotBehaviour, BotSkill } from '../config/bots';
 import { type RngState, rngNext } from '../sim/rng';
 import { wrapAngle } from '../sim/vec';
 
@@ -30,21 +30,21 @@ export function createAim(yaw: number): AimState {
  * bot moves or the target does. The starting error is never smaller than aimErrorStartMetres off the
  * target, so up close the first BBs can miss.
  */
-export function aimErrorSize(sinceAcquired: number, moving: boolean, dist: number, sideways: number, cfg: BotConfig): number {
-  const t = Math.min(1, Math.max(0, sinceAcquired / cfg.aimSettleTime));
+export function aimErrorSize(sinceAcquired: number, moving: boolean, dist: number, sideways: number, skill: BotSkill): number {
+  const t = Math.min(1, Math.max(0, sinceAcquired / skill.aimSettleTime));
   const d = Math.max(dist, 1e-3);
-  const start = Math.max(cfg.aimErrorStartDeg * DEG, Math.atan2(cfg.aimErrorStartMetres, d));
-  const settled = cfg.aimErrorSettledDeg * DEG;
-  const tracking = Math.atan2(Math.abs(sideways) * cfg.aimErrorTracking, d);
-  return start + (settled - start) * t + (moving ? cfg.aimErrorMovingDeg * DEG : 0) + tracking;
+  const start = Math.max(skill.aimErrorStartDeg * DEG, Math.atan2(skill.aimErrorStartMetres, d));
+  const settled = skill.aimErrorSettledDeg * DEG;
+  const tracking = Math.atan2(Math.abs(sideways) * skill.aimErrorTracking, d);
+  return start + (settled - start) * t + (moving ? skill.aimErrorMovingDeg * DEG : 0) + tracking;
 }
 
 /**
  * Turns the view towards (desiredYaw, desiredPitch) plus the wandering aim error of size `errorSize`,
- * at most cfg.turnRate per second. Returns the angle (radians) still left between the view and the
- * erroneous aim point.
+ * at most skill.turnRate per second (the error wanders at the shared cfg.aimWanderRate). Returns the
+ * angle (radians) still left between the view and the erroneous aim point.
  */
-export function stepAim(a: AimState, desiredYaw: number, desiredPitch: number, errorSize: number, cfg: BotConfig, rng: RngState, dt: number): number {
+export function stepAim(a: AimState, desiredYaw: number, desiredPitch: number, errorSize: number, cfg: BotBehaviour, skill: BotSkill, rng: RngState, dt: number): number {
   a.wanderLeft -= dt;
   if (a.wanderLeft <= 0) {
     a.wanderLeft = 1 / cfg.aimWanderRate;
@@ -62,7 +62,7 @@ export function stepAim(a: AimState, desiredYaw: number, desiredPitch: number, e
   const dYaw = wrapAngle(goalYaw - a.yaw);
   const dPitch = goalPitch - a.pitch;
   const off = Math.hypot(dYaw, dPitch);
-  const maxTurn = cfg.turnRate * dt;
+  const maxTurn = skill.turnRate * dt;
   const s = off > maxTurn ? maxTurn / off : 1;
   a.yaw = wrapAngle(a.yaw + dYaw * s);
   a.pitch += dPitch * s;
@@ -74,7 +74,7 @@ export function stepAim(a: AimState, desiredYaw: number, desiredPitch: number, e
  * out, and holds there while its size settles, so the first BBs walk onto the target instead of
  * starting dead on it.
  */
-export function freshAimError(a: AimState, cfg: BotConfig, rng: RngState): void {
+export function freshAimError(a: AimState, cfg: BotBehaviour, rng: RngState): void {
   const angle = rngNext(rng) * Math.PI * 2;
   const r = cfg.aimFirstErrorMin + rngNext(rng) * (1 - cfg.aimFirstErrorMin);
   a.errYaw = a.goalErrYaw = Math.cos(angle) * r;

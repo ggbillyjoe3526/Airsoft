@@ -13,12 +13,14 @@ import { createCharacter, respawnCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
-import { buildNavGrid } from '../nav/navGrid';
+import type { MapData } from '../map/mapTypes';
+import { buildNavGrid, clearLine, dropOnLine, isWalkableAt, type NavGrid } from '../nav/navGrid';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { vec3, wrapAngle } from '../sim/vec';
 import { BotController } from './botController';
 import type { Bot, BotWorld } from './bot';
-import { followSpot, heldCentre } from './squadOrders';
+import { createBot } from './bot';
+import { followSpot, heldCentre, moveOrder, placeHold, startOrder } from './squadOrders';
 
 const DT = 1 / 60;
 
@@ -27,11 +29,12 @@ beforeAll(async () => {
 });
 
 /**
- * Squad orders on the open field with real physics: you (Blue, not a bot) at (-30, 0, 20) with two Blue bots beside
- * you, and one Orange player standing still far off that nobody sees (bots look 20 m here).
+ * Squad orders on the open field (or `map`, with its nav grid `nav`) with real physics: you (Blue, not a bot) at
+ * (-30, 0, 20) with two Blue bots beside you, and one Orange player standing still far off that nobody sees (bots look
+ * 20 m here).
  */
-function squad() {
-  const physics = new PhysicsWorld(OPEN_FIELD, BODY, DT);
+function squad(map: MapData = OPEN_FIELD, nav: NavGrid = OPEN_NAV) {
+  const physics = new PhysicsWorld(map, BODY, DT);
   const state = createGameState(5, BALLISTICS.maxBBs, ROUNDS);
   const ctx = createSimContext({
     mover: physics,
@@ -41,10 +44,10 @@ function squad() {
     body: BODY,
     ballistics: BALLISTICS,
     loadout: LOADOUT,
-    killY: OPEN_FIELD.killY,
+    killY: map.killY,
     hits: HITS,
     deadZones: [[{ position: vec3(-45, 0, 45), yaw: 0 }], [{ position: vec3(45, 0, -45), yaw: 0 }]],
-    nav: OPEN_NAV,
+    nav,
     navSnap: NAV.snap,
     rounds: ROUNDS,
   });
@@ -61,9 +64,9 @@ function squad() {
   // Orange is one player standing still far off (not a bot), so nobody fights.
   const bots = new BotController(state, rest.filter((c) => c.team === 0), commands, {
     query: physics,
-    nav: OPEN_NAV,
+    nav,
     navSnap: NAV.snap,
-    lanes: OPEN_FIELD.lanes,
+    lanes: map.lanes,
     lowCover: [],
     tallCover: [],
     body: BODY,
@@ -334,5 +337,109 @@ describe('squad orders (M22)', () => {
     // In the open the side spots stand.
     followSpot(leader, EAST, 0, { nav: OPEN_NAV } as unknown as BotWorld, out);
     expect(Math.abs(out.z)).toBeGreaterThan(1.5);
+  });
+
+  /** The open field with a thin (0.4 m) wall along x at z 18.6-19.0, from x -40 to 40: walkable floor either side. */
+  const THIN_WALL: MapData = { ...OPEN_FIELD, blocks: [...OPEN_FIELD.blocks, { kind: 'wall', center: vec3(0, 1.5, 18.8), size: vec3(80, 3, 0.4) }] };
+  const THIN_WALL_NAV = buildNavGrid(THIN_WALL, NAV);
+
+  it('follow me beside a thin wall: no spot on its far side, so nobody detours round it (M-05)', () => {
+    // A side spot 3.2 m back at 40° would be 2.1 m to the side: through the wall, on walkable floor.
+    const w = { nav: THIN_WALL_NAV } as unknown as BotWorld;
+    const leader = createCharacter(0, vec3(), 0, LOADOUT, 0);
+    for (const z of [20, 19.3]) {
+      // 19.3: you touching the wall, inside the margin the nav grid keeps from it.
+      leader.position = vec3(0, 0, z);
+      expect(isWalkableAt(THIN_WALL_NAV, 0, 17.9), 'floor beyond the wall').toBe(true);
+      for (const slot of [0, 1]) {
+        const out = followSpot(leader, EAST, slot, w, vec3());
+        expect(out.z, `slot ${slot} at z ${z}`).toBeGreaterThan(19);
+        expect(out.x, `slot ${slot} at z ${z}`).toBeLessThan(-1); // still behind you, not at you
+        expect(clearLine(THIN_WALL_NAV, 0, 20, out.x, out.z)).toBe(true);
+      }
+    }
+    // Walking east along the wall: both followers stay on your side of it and never take a long way round.
+    const { you, bots, mates, cmd, run } = squad(THIN_WALL, THIN_WALL_NAV);
+    cmd.yaw = EAST;
+    run(0.1);
+    bots.giveOrder(you, 'follow');
+    cmd.forward = 1;
+    let worstDetour = 0;
+    run(10, () => {
+      expect(you.position.z).toBeGreaterThan(19);
+      for (const b of mates) {
+        const p = b.character.position;
+        expect(p.z).toBeGreaterThan(19);
+        if (b.routeState !== 'ok' || b.routeLeg >= b.route.length) continue;
+        let length = 0;
+        let from: { x: number; z: number } = p;
+        for (let i = b.routeLeg; i < b.route.length; i++) {
+          length += flat(from, b.route[i]!);
+          from = b.route[i]!;
+        }
+        worstDetour = Math.max(worstDetour, length / Math.max(1, flat(p, from)));
+      }
+    });
+    expect(you.position.x).toBeGreaterThan(5);
+    expect(worstDetour).toBeLessThan(1.5);
+    for (const b of mates) expect(flat(b.character.position, you.position)).toBeLessThan(SQUAD_ORDERS.catchUp);
+  });
+
+  it('hold here beside a thin wall: a side spot beyond it falls back to the point (M-05)', () => {
+    // You look east at a point at z 18 just short of the wall; three hold spots across your view, 1.4 m apart in z.
+    const w = { nav: THIN_WALL_NAV } as unknown as BotWorld;
+    const leader = createCharacter(0, vec3(), EAST, LOADOUT, 0);
+    leader.yaw = EAST;
+    const point = vec3(0, 0, 18.1);
+    expect(isWalkableAt(THIN_WALL_NAV, point.x, point.z)).toBe(true);
+    expect(isWalkableAt(THIN_WALL_NAV, point.x, point.z + SQUAD_ORDERS.holdSpacing)).toBe(true); // beyond the wall
+    const holders = [0, 1, 2].map(() => ({ orderGoal: vec3(), character: leader }) as unknown as Bot);
+    placeHold(holders, leader, point, w);
+    for (const b of holders) {
+      expect(b.orderGoal.z).toBeLessThan(18.6);
+      expect(clearLine(THIN_WALL_NAV, point.x, point.z, b.orderGoal.x, b.orderGoal.z)).toBe(true);
+    }
+    // In the open the same spots spread out on both sides.
+    placeHold(holders, leader, point, { nav: OPEN_NAV } as unknown as BotWorld);
+    expect(Math.max(...holders.map((b) => b.orderGoal.z))).toBeCloseTo(point.z + SQUAD_ORDERS.holdSpacing, 5);
+  });
+
+  it('follow me steers by the line it checked when the blended direction runs off a drop (M-08)', () => {
+    // You run east at 5 m/s; the follower stands 1 m to the side of its spot (away from you), with a pit just east of
+    // it. Pursuit (your velocity plus a pull to the spot) points mostly east, over the edge; the line to the spot is clear.
+    const leader = createCharacter(0, vec3(), EAST, LOADOUT, 0);
+    leader.position = vec3(0, 0, 0);
+    leader.yaw = EAST;
+    leader.velocity = vec3(5, 0, 0);
+    const g = followSpot(leader, EAST, 0, { nav: OPEN_NAV } as unknown as BotWorld, vec3());
+    const s = Math.sign(g.z - leader.position.z);
+    const start = vec3(g.x, 0, g.z + s);
+    // The open field's floor round a pit 1.5 m wide (x) starting 0.5 m east of the follower, beside it and beyond it.
+    const [x0, x1] = [start.x + 0.5, start.x + 2];
+    const [z0, z1] = [Math.min(start.z - 0.3 * s, start.z + 2 * s), Math.max(start.z - 0.3 * s, start.z + 2 * s)];
+    const floor = (ax: number, bx: number, az: number, bz: number) => ({ kind: 'floor' as const, center: vec3((ax + bx) / 2, -0.25, (az + bz) / 2), size: vec3(bx - ax, 0.5, bz - az) });
+    const pitNav = buildNavGrid({ ...OPEN_FIELD, blocks: [floor(-50, x0, -50, 50), floor(x1, 50, -50, 50), floor(x0, x1, -50, z0), floor(x0, x1, z1, 50)] }, NAV);
+    // A wall there instead: walls only stop you (you slide along them), so they don't change the way.
+    const wallNav = buildNavGrid({ ...OPEN_FIELD, blocks: [...OPEN_FIELD.blocks, { kind: 'wall', center: vec3((x0 + x1) / 2, 1.5, (z0 + z1) / 2), size: vec3(x1 - x0, 3, z1 - z0) }] }, NAV);
+    const steer = (nav: NavGrid) => {
+      const b = createBot(createCharacter(1, vec3(start.x, 0, start.z), EAST, LOADOUT, 0), 1, BOTS, BOTS);
+      b.character.position = vec3(start.x, 0, start.z);
+      startOrder(b, leader, 'follow', 0);
+      expect(moveOrder(b, { nav, cfg: BOTS } as unknown as BotWorld, createCommand(), DT)).toBe(true);
+      expect(b.orderGoal.x).toBeCloseTo(g.x, 5); // the same spot with the pit there
+      expect(b.orderGoal.z).toBeCloseTo(g.z, 5);
+      return { ...b.moveDir };
+    };
+    const drops = (d: { x: number; z: number }) => dropOnLine(pitNav, start.x, start.z, start.x + d.x * BOTS.edgeLookahead, start.z + d.z * BOTS.edgeLookahead);
+    // In the open: mostly your way, which here runs into the pit.
+    const open = steer(OPEN_NAV);
+    expect(open.x).toBeGreaterThan(0.8);
+    expect(drops(open)).toBe(true);
+    expect(steer(wallNav)).toEqual(open);
+    // By the pit: straight at the spot, along the line that was checked.
+    const byPit = steer(pitNav);
+    expect(byPit.x).toBeCloseTo(0, 5);
+    expect(byPit.z).toBeCloseTo(-s, 5);
+    expect(drops(byPit)).toBe(false);
   });
 });

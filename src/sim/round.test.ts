@@ -275,4 +275,20 @@ describe('flag rounds', () => {
     restartMatch(round, cs, createBBPool(1), CTX, [], 'elimination');
     expect(round).toMatchObject({ mode: 'elimination', attackers: -1 });
   });
+
+  it('keep each replica’s fire selector from round to round, and put it back on its default for a new match', () => {
+    const round = createRoundState(RULES);
+    const cs = teams();
+    const rifle = LOADOUT.findIndex((r) => r.fireModes.length > 1);
+    const other = LOADOUT[rifle]!.fireModes.find((m) => m !== LOADOUT[rifle]!.defaultFireMode)!;
+    cs[0]!.armament.modes[rifle] = other;
+    const events: GameEvent[] = [];
+    cs[2]!.status = 'out';
+    cs[3]!.status = 'out';
+    run(RULES.resetDelay + 0.2, round, cs, events);
+    expect(events).toContainEqual({ type: 'roundStart', round: 2 });
+    expect(cs[0]!.armament.modes[rifle]).toBe(other);
+    restartMatch(round, cs, createBBPool(1), CTX, [], 'elimination');
+    expect(cs[0]!.armament.modes).toEqual(LOADOUT.map((r) => r.defaultFireMode));
+  });
 });

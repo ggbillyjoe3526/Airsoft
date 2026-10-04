@@ -181,8 +181,18 @@ export function stepRound(round: RoundState, characters: Character[], bbs: BBPoo
   }
 }
 
-/** Starts a new match in `mode` from round 1: scores cleared, everyone respawned. */
+/**
+ * Starts a new match in `mode` from round 1: scores cleared, every fire selector back on its replica's
+ * defaultFireMode (rounds within a match keep it), everyone respawned.
+ */
 export function restartMatch(round: RoundState, characters: Character[], bbs: BBPool, ctx: RoundContext, events: GameEvent[], mode: MatchMode): void {
+  for (const c of characters) {
+    const modes = c.armament.modes;
+    for (let i = 0; i < modes.length; i++) {
+      const replica = ctx.loadout[i];
+      if (replica) modes[i] = replica.defaultFireMode;
+    }
+  }
   round.mode = mode;
   round.score[0] = 0;
   round.score[1] = 0;
