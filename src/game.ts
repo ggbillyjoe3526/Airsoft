@@ -20,14 +20,15 @@ import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
 import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
-import { deriveSeed } from './core/seed';
 import { loadFigureModel } from './render/externalModels';
 import { Renderer } from './render/renderer';
+import { buildsNewMatch, matchSeed } from './matchFlow';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
 import { attackersInRound, teamEnd } from './sim/round';
 import type { GameState } from './sim/state';
-import { addMatch, loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
+import { loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
+import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
 import { DebugOverlay } from './ui/debugOverlay';
 import { toggleFullscreen } from './ui/fullscreen';
@@ -37,7 +38,7 @@ import { type Collection, loadCollection, saveCollection } from './pool/collecti
 import { GAME_POOL } from './pool/gamePool';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
-import { earn, type Earnings, matchPay } from './pool/armory';
+import type { Earnings } from './pool/armory';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, saveSetting } from './settings/storage';
@@ -512,15 +513,18 @@ export class Game {
       // same tutorial step).
       this.openRange(s.pose, s.tutorialStep);
     } else if (
-      (!this.started && (this.setupChanged || !(s instanceof MatchSession))) ||
-      // Play Again after something that shows only in a new build changed mid-match (the team colours).
-      (this.started && s instanceof MatchSession && s.state.round.phase === 'matchOver' && this.setupChanged)
+      buildsNewMatch({
+        started: this.started,
+        loaded: s instanceof MatchSession ? 'match' : s ? 'range' : null,
+        matchOver: s instanceof MatchSession && s.state.round.phase === 'matchOver',
+        setupChanged: this.setupChanged,
+      })
     ) {
       this.session?.dispose();
       this.setupChanged = false;
       // The first match plays the visit's seed (?seed=N replays it); each later one its own, or every match in a visit
-      // would open with the same bot plans, round by round (bug pass).
-      this.matchSeed = deriveSeed(this.options.seed, 1, this.matchesPlayed);
+      // would open with the same bot plans, round by round (bug pass). Play Again is a new match too (audit SIM-08).
+      this.matchSeed = matchSeed(this.options.seed, this.matchesPlayed);
       this.matchCounted = false;
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         map: mapData(this.map),
@@ -575,8 +579,6 @@ export class Game {
       this.pointer.release();
       return;
     }
-    // "Play Again" on the result screen: the new match starts only once play really resumes.
-    if (s instanceof MatchSession && s.state.round.phase === 'matchOver') s.restart();
     if (s instanceof MatchSession && !this.matchCounted) {
       this.matchCounted = true;
       this.matchesPlayed++;
@@ -621,25 +623,8 @@ export class Game {
       const played = r.score[0] + r.score[1] + draws;
       const headline = r.matchWinner === mine ? 'You win!' : 'You lose';
       const score = `${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name}`;
-      // The finished match goes into the records once (a second stop on the same result shows the same news).
-      const result = s.takeMatchResult();
-      if (result) {
-        this.recordNews = addMatch(this.records, result);
-        saveRecords(this.records, browserStorage());
-      }
-      // And it pays its Field Credits once (M26c); a second stop on the same result shows the same pay.
-      // With the Armory switched off (Dev settings, M26d) nothing is paid.
-      const outcome = s.takeOutcome();
-      const pay = outcome && matchPay(GAME_POOL.economy, outcome, this.dev.disableArmory);
-      if (pay) {
-        this.lastEarnings = pay;
-        earn(this.collection, this.lastEarnings.total);
-        saveCollection(this.collection);
-        this.menus.refresh();
-      } else if (!s.paysFieldCredits || this.dev.disableArmory) {
-        // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
-        this.lastEarnings = null;
-      }
+      // Settled the moment it was decided (frame); again here in case that frame never came (it does nothing twice).
+      this.settleMatch(s);
       this.menus.showResult(headline, `${score} · ${played} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
         result: `${headline} · ${score}`,
         blocks: s.summaryBlocks(),
@@ -660,6 +645,28 @@ export class Game {
     s?.setPlaying(false);
   }
 
+  /**
+   * A decided match goes into the records and pays its Field Credits as soon as it is decided (audit CORE-06), not when
+   * the mouse is given back for the result screen: a tab closed in between, or a browser that never reports the lock's
+   * release, lost it. Once per match (the session's take latches); the result screen only shows what this saved.
+   */
+  private settleMatch(s: MatchSession): void {
+    if (s.state.round.phase !== 'matchOver') return;
+    const settled = settleMatch(this.records, this.collection, s.takeMatchResult(), s.takeOutcome(), GAME_POOL.economy, this.dev.disableArmory);
+    if (settled.news) {
+      this.recordNews = settled.news;
+      saveRecords(this.records, browserStorage());
+    }
+    if (settled.pay) {
+      this.lastEarnings = settled.pay;
+      saveCollection(this.collection);
+      this.menus.refresh();
+    } else if (!s.paysFieldCredits || this.dev.disableArmory) {
+      // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
+      this.lastEarnings = null;
+    }
+  }
+
   private readonly frame = (now: number): void => {
     this.rafId = requestAnimationFrame(this.frame);
     // rAF timestamps can precede the performance.now() taken in start(); clamp to [0, MAX].
@@ -676,6 +683,7 @@ export class Game {
       if (this.keyboard.wasPressed('fullscreen')) toggleFullscreen();
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
+      if (s instanceof MatchSession) this.settleMatch(s);
       if (s instanceof RangeSession && s.takeTutorialFinished()) {
         saveSetting('tutorialDone', true);
         this.menus.markTutorialDone();
