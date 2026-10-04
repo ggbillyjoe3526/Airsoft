@@ -58,6 +58,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M36** · Pro difficulty level: a fourth bot level above Hard, visible only with Dev settings on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted
 
 ### Changed
+- **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
 - **M37** · Pro bots holding still aim at the corners and doorways you'd step out of, and answer a peek there faster; anywhere else no faster than Hard
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
 - **FA2** · Low has 80 % resolution with no shadows; Medium adds shadows and relief; High adds sharp textures, finer shadows, sheen and dust (#67)
@@ -102,6 +103,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M28** · Impact puffs start at half size
 
 ### Internal
+- **FA11b** · What Play does next and the pause and result text are pure, unit-tested functions; `?perf` logs how long each part of a match build takes (#73)
+- **FA11b** · Unit tests share a worker's modules and split into fast and slow projects (`npx vitest run --project fast` for quick feedback); the gate's browser-test failures show the test, the locator and the expected and received values (#73)
 - **FA3** · The perf harness measures Low, Medium and High with `--preset all` (#67)
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
 - Audit fixes: graphics quality, audio, simulation, bots, menus, accessibility, tooling (#34, #35, #36)

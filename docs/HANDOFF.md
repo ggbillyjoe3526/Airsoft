@@ -5,32 +5,32 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-04 · the second bug pass (BP1, #53) after the pipeline and the owner's batch; **main is ready for the owner's playtest**._
+_Last updated: 2026-10-04 · the final alpha audit is implemented (FA1–FA12); **main is ready for the owner's playtest**, then the step 3 polish pass._
 
 ## Where we are
 
-- **Next: the owner playtests `main`.** Phase 4 (M11–M22) and the owner's 2026-10-04 batch (M23 minimap and order wheel,
-  M24 menus and Dev tab, M25 Depot props and CC0 loader, M26 Loadout, Armory and pool.md) are in, plus the build
-  pipeline and its dry run (M27, M28). His notes go into the roadmap first, as before. **Merges:** "Claude merges" is the
-  standing default (owner, 2026-10-04): a pipeline pull request is merged by its thread once CI is green and the critic
-  accepted (CLAUDE.md §7).
-- **The build pipeline** (owner's design): `pipeline/gate.mjs` runs build, tests, smoke, perf, scope and changelog
-  gates (`pipeline/out/gate-report.json`; CI runs the same script); agents in `.claude/agents/`; the step list in
-  `.claude/skills/pipeline/SKILL.md`; open tasks in `docs/TASKS.md`; one row per attempt in `docs/METRICS.md`. The
-  container perf baseline was re-recorded on main in BP1 (the old one predated merges that raised GPU memory to
-  16.38 MB). **The laptop baseline is still missing:** run `npm run perf -- --env laptop --baseline` on the owner's
-  machine and commit `pipeline/baseline/laptop.json` before frame-time budgets gate anything. Dry-run report with token
-  costs: the project's shared files, `pipeline/dry-run-report-2026-10-04.md`.
-- **BP1, the second bug pass (#53):** played every mode in the browser (Elimination to the result screen, Attack and
-  Defend, the tutorial, the range and its Loadout, the Armory with 10 Shots and scrapping, the Dev tab, Play Again,
-  scoreboard at 200%) with no page errors, reviewed all code added since the first bug pass, and swept KNOWN_ISSUES.
-  Fixed: stacked crates showed as low cover on the minimap (`coverHeight`), Dev help switched off before play still kept
-  a match out of the records (`MatchSession.played`), the debug panel covered the minimap, pallet racks bounced BBs, the
-  perf script didn't restart per match; and 11 KNOWN_ISSUES rows (hit-direction wedge fade, sprint on lean release, shot
-  pitch past vertical, early semi/burst double-tap, seed on the pause screen, the start end on New game, double-click
-  on Play, double-click on a key box, sounds held twice, the 200% scoreboard, dot-only crosshair). Decisions in
-  DECISIONS (2026-10-04 · Bug pass (BP1)). What is left in KNOWN_ISSUES is design calls for the playtest ("playtest"),
-  beta balance and tuning, or needs hardware or browsers this container doesn't have (Firefox, a real GPU).
+- **The final alpha audit is on `main`** (Fable audit, 2026-10-04: the report and its PR order are in the project's shared
+  files `audits/final-alpha-audit-2026-10-04.md`; the owner confirmed all twelve decisions). PRs: FA6 audio #55, FA1 crash
+  handling and sim #57, FA5+FA9 input, HUD and UI polish #59, FA12 BB hot path #60, FA11a build and pipeline #61, FA10
+  Armory and economy #63, FA4 bots and difficulty #66, FA2+FA3 quality presets, Custom graphics and render cost #67,
+  FA8+FA11c figures, replicas, effects and the tab lock #69, FA7 lighting, sky, map, flag and range #71, FA11b session
+  plan, faster tests and map reuse #73. One line per task in REVIEWS, one row per attempt in METRICS.
+- **Next:** the owner playtests `main` (PLAYTEST › "Final alpha audit: start here" lists what to try first and the calls
+  that are his: SIM-17 ramp pace, own ricochets, the laser beam, the Easy teammate default). Then step 3 of the final
+  alpha chain, the polish pass (a new thread). M32 Cyber Pistol, M33 Woodland, M34 city map, M35 content tags and
+  M36–M41 Pro carry on in parallel; their content is dev-tagged.
+- **Graphics contract** (FA2, DECISIONS › FA2): `QualitySettings` in `config/render.ts`; Low / Medium / High plus a
+  saved Custom via `resolveQuality`; the Graphics tab's rows in `config/graphics.ts`. Every graphical effect is an
+  engine feature read from quality settings and map data, never map-exclusive (owner, 2026-10-04). FA7 owns base
+  lighting and the environment map (`Renderer.setEnvironmentLook`); M33 builds its night preset on it.
+- **The laptop baseline is still missing:** run `node pipeline/perf-run.mjs --env laptop --preset all --baseline` on the
+  owner's machine and commit `pipeline/baseline/laptop*.json` before frame-time budgets gate anything. The container
+  baselines were re-recorded on main in FA7 (#71).
+- **Left for Beta on purpose:** the `GameSettings` extraction (CORE-05 part 1, KNOWN_ISSUES) and a renderer-free
+  `MatchSession` test (CORE-23 part 2); both with their reason in DECISIONS › FA11b.
+- **Tests:** files share a worker's modules (`isolate: false`); a test that stubs a global or resets modules undoes it
+  when it ends. `npx vitest run --project fast` (about 12 s) for quick feedback; the gate and CI run both projects.
+  `?perf` logs the match build's phases in the console.
 
 ## The regular bug pass (owner, 2026-10-04)
 

@@ -526,6 +526,9 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     }
     // Once for the refused context: the engine doesn't try again on every Play.
     expect(warn).toHaveBeenCalledTimes(1);
+    // Files share a worker's globals (vite.config.ts isolate: false): nothing stubbed here outlives the test.
+    warn.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it("lets a context's refused resume, suspend or close settle quietly (audit M-04)", async () => {

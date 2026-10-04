@@ -12,6 +12,8 @@ import {
 } from '../config/render';
 import type { FigureModel } from './externalModels';
 import { GpuTimer } from './gpuTimer';
+import { MapMeshCache } from './mapMeshCache';
+import { mapLookOf } from './mapMeshes';
 import { createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
@@ -181,6 +183,11 @@ export class Renderer {
    * for the built-in figures. Shared by every match and freed with the renderer.
    */
   figureModel: FigureModel | null = null;
+  /**
+   * The last map's meshes, kept between sessions (audit CORE-33): Quit → Play on the same map takes them back. Sessions
+   * take and release them (they must not dispose them); freed with the renderer.
+   */
+  readonly mapMeshes = new MapMeshCache();
   /** The overlay scene drawn last frame (the held replica), released with the world when the context is swapped. */
   private overlayScene: THREE.Scene | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
@@ -343,6 +350,8 @@ export class Renderer {
     this.sheen.trim(quality.replicaSheen || quality.environment);
     // Normal maps are freed while nothing draws with them, like the sheen (made again when a material asks).
     if (this.surfaces && !usesNormalMaps(quality)) releaseNormalMaps(this.surfaces);
+    // Kept map meshes no session holds go when this look would build them again (a held map follows its session).
+    this.mapMeshes.trim(mapLookOf(quality));
     this.environmentDirty = true;
     const replaced = quality.antialias !== this.contextAntialias && this.replaceContext(quality.antialias);
     this.gl.shadowMap.enabled = quality.shadows;
@@ -381,6 +390,7 @@ export class Renderer {
   dispose(): void {
     window.removeEventListener('resize', this.resize);
     this.unlisten(this.canvas);
+    this.mapMeshes.clear();
     if (this.surfaces) disposeSurfaceTextures(this.surfaces);
     this.surfaces = null;
     this.sheen.dispose();
@@ -437,6 +447,8 @@ export class Renderer {
     // the scene's environment is made again on the next frame.
     this.sheen.dispose();
     this.environmentDirty = true;
+    // Kept map meshes outside the scene are freed rather than handed over (CORE-33); a held map is in the scene.
+    this.mapMeshes.contextReplaced();
     // Everything the old renderer has drawn (or uploaded ahead, the surface textures) lets go of it (REN-24).
     const roots: THREE.Object3D[] = [this.scene];
     if (this.overlayScene) roots.push(this.overlayScene);
