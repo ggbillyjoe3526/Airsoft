@@ -446,7 +446,7 @@ export class BotController {
     const off = Math.sqrt(rngNext(b.rng)) * dist * this.world.cfg.hearingError;
     out.x = source.x + Math.cos(angle) * off;
     out.z = source.z + Math.sin(angle) * off;
-    const floor = floorAt(this.opts.nav, out.x, out.z);
+    const floor = floorAt(this.opts.nav, out.x, source.y, out.z);
     out.y = Number.isNaN(floor) ? b.character.position.y : floor;
   }
 
@@ -573,7 +573,11 @@ export class BotController {
     const cells = nav.cols * nav.rows;
     for (let k = 0, tries = 0; k < cfg.huntCandidates && tries < cfg.huntCandidates * cfg.huntTriesPerCandidate; tries++) {
       const cell = Math.floor(rngNext(bot.rng) * cells);
-      if (!nav.walkable[cell]) continue;
+      // One of the cell's floors (M34b: a draw only where floors are stacked, so a map without stays as it was).
+      const floors = nav.cellStart[cell + 1]! - nav.cellStart[cell]!;
+      if (floors === 0) continue;
+      const node = nav.cellStart[cell]! + (floors > 1 ? Math.floor(rngNext(bot.rng) * floors) : 0);
+      if (!nav.walkable[node]) continue;
       k++;
       const x = cellX(nav, cell % nav.cols);
       const z = cellZ(nav, Math.floor(cell / nav.cols));
@@ -583,7 +587,7 @@ export class BotController {
       if (score < best) {
         best = score;
         out.x = x;
-        out.y = nav.floorY[cell]!;
+        out.y = nav.floorY[node]!;
         out.z = z;
       }
     }

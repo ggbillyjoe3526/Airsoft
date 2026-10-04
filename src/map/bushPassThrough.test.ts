@@ -17,6 +17,7 @@ import { type Vec3, vec3 } from '../sim/vec';
 import { createWind } from '../sim/wind';
 import type { Bush } from './foliage';
 import type { MapData } from './mapTypes';
+import { terrainHeightAt } from './terrain';
 import { DEPOT } from './depot';
 import { RANGE_MAP } from './range';
 import { WOODLAND } from './woodland';
@@ -160,7 +161,7 @@ describe('the nav grid under bushes (M33e, acceptance 2)', () => {
     const b = buildNavGrid(withBush(OPEN_FIELD, [BUSH, { ...BUSH, x: 6, z: 3 }]), NAV);
     expect(Array.from(b.floorY)).toEqual(Array.from(a.floorY));
     expect(b.cols).toBe(a.cols);
-    expect(isWalkableAt(b, BUSH.x, BUSH.z)).toBe(true);
+    expect(isWalkableAt(b, BUSH.x, 0, BUSH.z)).toBe(true);
   });
 
   it('finds a straight path through a bush for a bot, and the line is clear', () => {
@@ -168,7 +169,7 @@ describe('the nav grid under bushes (M33e, acceptance 2)', () => {
     const out: Vec3[] = [];
     const search = createNavSearch(nav);
     expect(findPath(nav, search, vec3(0, 0, 0), vec3(0, 0, -10), NAV.snap, out)).toBe(true);
-    expect(clearLine(nav, 0, 0, 0, -10)).toBe(true);
+    expect(clearLine(nav, 0, 0, 0, 0, -10)).toBe(true);
     // Straight through, not round: no waypoint strays beyond a cell or two of the line.
     for (const p of out) expect(Math.abs(p.x)).toBeLessThan(NAV.cell * 2);
   });
@@ -187,8 +188,9 @@ describe('the nav grid under bushes (M33e, acceptance 2)', () => {
       for (const [dx, dz] of [[0, 0], [0.7, 0], [-0.7, 0], [0, 0.7], [0, -0.7]] as const) {
         const x = b.x + dx * b.radius;
         const z = b.z + dz * b.radius;
-        expect(isWalkableAt(navWith, x, z), `bush at ${b.x.toFixed(1)}, ${b.z.toFixed(1)} (${dx}, ${dz})`).toBe(true);
-        expect(Number.isNaN(floorAt(navWith, x, z))).toBe(false);
+        const y = terrainHeightAt(WOODLAND.terrain!, x, z)!;
+        expect(isWalkableAt(navWith, x, y, z), `bush at ${b.x.toFixed(1)}, ${b.z.toFixed(1)} (${dx}, ${dz})`).toBe(true);
+        expect(Number.isNaN(floorAt(navWith, x, y, z))).toBe(false);
       }
     }
     // No collider: a ray through every bush hits what it hits on the same map without bushes.
