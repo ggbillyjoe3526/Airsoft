@@ -1,5 +1,5 @@
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
-import { clearLine, dropOnLine, floorAt, isWalkableAt, nearestWalkable, nodeX, nodeZ } from '../nav/navGrid';
+import { clearLine, dropOnLine, floorAt, isWalkableAt, NODE_PICK_ABOVE, nearestWalkable, nodeX, nodeZ } from '../nav/navGrid';
 import { aimDirection } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
@@ -64,10 +64,11 @@ export function holdPoint(leader: Character, w: BotWorld, out: Vec3): boolean {
     const d = reach - back;
     const x = leader.position.x + (view.x / flat) * d;
     const z = leader.position.z + (view.z / flat) * d;
-    // The floor under the line of sight there (M34b): the street below when the leader looks down off a balcony, but
-    // never one above eye height (looking up under a ceiling passes the floor over it; from high on a stair the floor
-    // ahead is still found).
-    const y = Math.min(eye.y + (view.y / flat) * d, eye.y);
+    // The floor the line of sight passes over there (M34b): the street below when the leader looks down off a balcony,
+    // the floor upstairs when they look up at it from below, the hall when they look up under its ceiling. A rising
+    // line takes the highest floor under it (never lower than the eye's own reach); a falling one keeps nodeAt's reach.
+    const lineY = eye.y + (view.y / flat) * d;
+    const y = Math.min(lineY, Math.max(eye.y, lineY - NODE_PICK_ABOVE));
     if (!isWalkableAt(w.nav, x, y, z)) continue;
     out.x = x;
     out.y = floorAt(w.nav, x, y, z);

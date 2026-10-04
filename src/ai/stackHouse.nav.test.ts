@@ -147,6 +147,22 @@ describe('squad orders on stacked floors (M34b)', () => {
     }
   });
 
+  it('hold here looking up at the upper floor from the yard or low on a stair marks the upper floor, not the hall under it', () => {
+    const world = { nav, query: physics, body: BODY, hits: HITS } as unknown as BotWorld;
+    const out = vec3();
+    const deg = Math.PI / 180;
+    const cases = [
+      { x: -14, z: 6, yaw: 285 * deg, pitch: 0.2 }, // the yard, looking up at the splitting wall upstairs
+      { x: -10.25, z: 6, yaw: 255 * deg, pitch: 0.15 }, // low on the north-west stair
+    ];
+    for (const c of cases) {
+      const looker = leader(c.x, floorAt(nav, c.x, 0, c.z), c.z, c.yaw);
+      looker.pitch = c.pitch;
+      expect(holdPoint(looker, world, out), `from ${c.x}, ${c.z}`).toBe(true);
+      expect(out.y, `from ${c.x}, ${c.z}`).toBe(STOREY);
+    }
+  });
+
   it('hold here looking down off the balcony marks the street below, not the balcony', () => {
     const world = { nav, query: physics, body: BODY, hits: HITS } as unknown as BotWorld;
     const looker = leader(-5.4, STOREY, 2.5, Math.PI / 2); // facing west, over the open edge
