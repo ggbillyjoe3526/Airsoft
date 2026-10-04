@@ -1,3 +1,5 @@
+import { HITS } from '../config/hits';
+
 /**
  * Hit feedback and round messages over the game view: the hit marker when your BB lands, the "you're
  * hit" flash with a marker pointing to where the shot came from, the spectating label and the
@@ -35,6 +37,8 @@ export class HitFeedback {
       <div class="hitfx-out"></div>
       <div class="hitfx-spectating"></div>
       <div class="hitfx-round"></div>`;
+    // The hit-direction wedge fades over the hit call, so it's gone just as calling ends (setCalling) rather than cut off.
+    this.root.style.setProperty('--hit-call', `${HITS.callTime}s`);
     parent.appendChild(this.root);
     const q = (sel: string) => this.root.querySelector(sel) as HTMLDivElement;
     this.flash = q('.hitfx-flash');

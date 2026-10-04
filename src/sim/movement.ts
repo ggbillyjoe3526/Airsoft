@@ -62,10 +62,12 @@ export function stepMovement(
 
   // Walk (slow, quiet) wins over sprint, and so does aiming down sights (sim/aiming.ts). Sprint: forward only,
   // never crouched. Leaning (the actual lean, which the key eases in and walls or a jump can stop) slows you
-  // towards walking pace, is quiet from leanQuietFrom of a full lean, and rules out sprinting: no running out of a peek.
+  // towards walking pace, is quiet from leanQuietFrom of a full lean, and rules out sprinting while the lean key is
+  // held: no running out of a peek. Once the key is let go, sprint picks up as the lean eases back under leanQuietFrom
+  // instead of waiting for it to reach upright (the lean still slows the sprint until then, targetSpeed).
   const lean = Math.abs(c.lean);
   c.walking = (cmd.walk || c.aiming || lean >= cfg.leanQuietFrom) && !crouched;
-  c.sprinting = cmd.sprint && !c.walking && lean === 0 && cmd.forward >= cfg.sprintMinForward && !crouched;
+  c.sprinting = cmd.sprint && !c.walking && (lean === 0 || cmd.lean === 0) && cmd.forward >= cfg.sprintMinForward && !crouched;
   // The replica is carried, not aimed, while sprinting and for a moment after.
   c.sprintLockout = c.sprinting ? cfg.sprintFireLockout : Math.max(0, c.sprintLockout - dt);
 

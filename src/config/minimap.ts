@@ -34,8 +34,10 @@ export const MINIMAP = {
   noisePad: 1,
   /** A player heard beyond the minimap's edge shows as a patch this big (px) on its rim, towards them. */
   rimPatch: 5,
-  /** Blocks whose top is at most this high (m) draw as low cover; taller ones as walls. */
+  /** Blocks whose top is at most this high (m) above the floor they stand on draw as low cover; taller ones as walls. */
   lowCoverTop: 1.3,
+  /** How close (m) a floor's top must be to a block's bottom for the block to stand on it. */
+  floorContact: 0.05,
   /** Floors whose top is above this (m) draw as raised ground (docks, platforms). */
   raisedFloor: 0.3,
   /** Colours of the field drawing (CSS). */

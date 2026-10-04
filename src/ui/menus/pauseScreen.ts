@@ -18,6 +18,7 @@ export class PauseScreen {
   private readonly status: HTMLParagraphElement;
   private readonly hint = hintLine();
   private readonly loadout: HTMLButtonElement;
+  private readonly seed: HTMLParagraphElement;
 
   constructor(actions: PauseActions) {
     this.root = el('div', 'menu-screen menu-pause');
@@ -27,6 +28,8 @@ export class PauseScreen {
     resume.dataset.autofocus = '';
     this.status = el('p', 'menu-pause-status');
     this.loadout = menuButton('Loadout', 'secondary', actions.onLoadout);
+    // The match's seed, small at the bottom, so a bug seen in play can be reported and replayed (bug pass).
+    this.seed = el('p', 'menu-pause-seed');
     panel.append(
       el('h1', 'menu-heading', 'Paused'),
       this.status,
@@ -35,6 +38,7 @@ export class PauseScreen {
       this.loadout,
       menuButton('Settings', 'secondary', actions.onSettings),
       menuButton('Quit', 'secondary', actions.onQuit),
+      this.seed,
     );
     this.setRange(false);
     this.root.append(panel);
@@ -47,6 +51,11 @@ export class PauseScreen {
 
   setStatus(text: string): void {
     this.status.textContent = text;
+  }
+
+  /** The seed of what's in play, for bug reports. */
+  setSeed(seed: number): void {
+    this.seed.textContent = `Seed ${seed}`;
   }
 
   showHint(text: string): void {

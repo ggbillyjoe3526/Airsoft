@@ -25,7 +25,7 @@ import { loadFigureModel } from './render/externalModels';
 import { Renderer } from './render/renderer';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
-import { attackersInRound } from './sim/round';
+import { attackersInRound, teamEnd } from './sim/round';
 import type { GameState } from './sim/state';
 import { addMatch, loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
 import { loadCrosshair } from './ui/crosshair';
@@ -256,6 +256,7 @@ export class Game {
         enemyTeam: TEAMS[1 - PLAYER_TEAM]!.name,
         raiseTime: ROUNDS.flag.raiseTime,
         attackFirst: ROUNDS.flag.firstAttackers === PLAYER_TEAM,
+        eliminationStartEnd: teamEnd(PLAYER_TEAM, 'elimination', 1, ROUNDS),
       },
       bindings: this.bindings,
       loadout: {
@@ -608,7 +609,7 @@ export class Game {
     const r = s?.state.round;
     const screen = screenWhenStopped(this.started, r?.phase === 'matchOver');
     if (this.started && s instanceof RangeSession) {
-      this.menus.showPause(s.status, true);
+      this.menus.showPause(s.status, this.options.seed, true);
     } else if (!this.started || !(s instanceof MatchSession) || !r) {
       // Play never began (a lock that came late, after Back, and was given straight back): the menus are still up on
       // whichever screen the player went to, so they stay there.
@@ -651,6 +652,7 @@ export class Game {
       const role = r.mode === 'attackDefend' ? ` · attack / defend, you ${attackers === mine ? 'attack' : 'defend'}${r.phase === 'over' ? ' next' : ''}` : '';
       this.menus.showPause(
         `${r.phase === 'over' ? `After round ${r.number}` : `Round ${r.number}`}${role} · ${TEAMS[mine]!.name} (you) ${r.score[mine]} – ${r.score[theirs]} ${TEAMS[theirs]!.name} · first to ${s.rounds.winsNeeded}`,
+        this.matchSeed,
       );
     }
     s?.setPlaying(false);

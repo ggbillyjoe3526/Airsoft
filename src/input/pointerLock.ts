@@ -55,9 +55,11 @@ export class PointerLock {
    * again without it. Refusals (Chrome blocks re-locking for ~1 s after Esc) are reported through `onError` when
    * both tries have failed: `pointerlockerror` events during the request are held back (the first try's would
    * otherwise report a refusal the second try then overturns), and browsers that only fire the event, without a
-   * promise to reject, still report it.
+   * promise to reject, still report it. A request while one is still under way (a double-click on Play) is dropped:
+   * the browser would refuse it as already pending and show the refusal hint for nothing.
    */
   async request(): Promise<void> {
+    if (this.requesting > 0) return;
     this.requesting++;
     try {
       await this.element.requestPointerLock({ unadjustedMovement: true });

@@ -653,10 +653,16 @@ describe("the shared audio engine: one context and one render for the page's mat
     expect(second.ctx).toBe(first.ctx);
     expect(FakeContext.made).toBe(1);
     expect(first.ctx.buffersMade).toBe(made);
-    // Another engine (another context at the same rate) shares the rendered samples too.
-    setup(OPEN, engineFor(library));
-    expect(FakeContext.made).toBe(2);
     expect(renders).toEqual([48000]);
+  });
+
+  it('holds the sounds once: the library lets go of its samples once the engine has made its buffers (bug pass)', () => {
+    const { library } = countingLibrary();
+    const { engine, ctx } = setup(OPEN, engineFor(library));
+    expect(library.holds(ctx.sampleRate)).toBe(false);
+    // A match's own variants (a suppressed replica's) still get the samples, from the buffers.
+    const [cue, buffers] = [...engine.cueBuffers()][0]!;
+    expect(engine.samples(cue)[0]).toBe(buffers[0]!.getChannelData(0));
   });
 
   it("renders in the title screen's spare time, a cue at a time, so Play has nothing left to do", () => {

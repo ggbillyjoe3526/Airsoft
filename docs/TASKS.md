@@ -28,3 +28,16 @@ acceptance:
   3. The KNOWN_ISSUES row about the first frame of a puff is removed
 status: open
 attempts: 0
+
+## BP1 · Bug pass and KNOWN_ISSUES sweep (2026-10-04, before the owner's playtest)
+tier: core
+perf: required
+touches: src/sim/armament.ts, src/sim/movement.ts, src/config/replicas.ts, src/config/materials.ts, src/config/minimap.ts, src/audio/audioEngine.ts, src/audio/soundBank.ts, src/input/pointerLock.ts, src/input/playerInput.ts, src/matchSession.ts, src/game.ts, src/style.css, src/ui/hitFeedback.ts, src/ui/keySettings.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/ui/menus/menus.ts, src/ui/menus/pauseScreen.ts, src/ui/menus/rulesText.ts, docs/
+contract: none (no simulation contract changes; one Character-free tweak to the movement and armament steps)
+acceptance:
+  1. The bugs found by playing every mode and reviewing the code added since the last bug pass are fixed, each with a test where the code allows one: stacked crates draw as tall cover on the minimap; Dev help switched off before play begins no longer keeps a match out of the records; the debug panel sits below the minimap; pallet racks soak BBs up; the perf script restarts with each match and ignores the mouse
+  2. KNOWN_ISSUES rows fixed and removed, each with a test or a browser check: the hit-direction wedge fades over the hit call; sprint resumes once the lean key is let go; a BB never goes past vertical; a semi or burst double-tap is never a tick early; the seed shows on the pause screen; New game says which end you start at; a double-click on Play sends one lock request; a quick double-click on a key box says why it cancelled; the sounds are held once; the 200% scoreboard fits a 768 px screen (measured); the dot-only crosshair exists (M19)
+  3. Every test passes; the headless bot guards pass (seed 11's round floor re-measured over 16 seeds)
+status: building
+attempts: 1
+

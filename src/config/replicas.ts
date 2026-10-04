@@ -217,6 +217,11 @@ export const RECOIL = {
   recoveryTime: 0.12,
   /** Kick never accumulates past this (degrees). */
   maxDeg: 2,
+  /**
+   * A shot's pitch, kick and spread included, stays within this of straight up or down (degrees), so a BB fired at the
+   * top of the look range never goes past vertical and backwards.
+   */
+  maxShotPitchDeg: 89.9,
 } as const;
 
 export const TRIGGER = {

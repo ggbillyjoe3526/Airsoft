@@ -1,6 +1,6 @@
 import { MINIMAP } from '../config/minimap';
 import type { MapBlock } from '../map/mapTypes';
-import { clampToRim, type HeardPlayer, type MapPoint, noiseAlpha, toMinimap } from './minimapView';
+import { clampToRim, coverHeight, type HeardPlayer, type MapPoint, noiseAlpha, toMinimap } from './minimapView';
 
 /** A teammate as the minimap shows them: where they are, and whether they've called a hit (greyed). */
 export interface MinimapMate {
@@ -68,7 +68,8 @@ export class Minimap {
     const px = Math.round(MINIMAP.size * this.pixelRatio);
     this.root.width = px;
     this.root.height = px;
-    this.root.style.setProperty('--minimap-size', `${MINIMAP.size}px`);
+    // On the container, so the debug panel can move clear of the minimap too (style.css, bug pass).
+    parent.style.setProperty('--minimap-size', `${MINIMAP.size}px`);
     this.ctx = this.root.getContext('2d');
     this.field = drawField(blocks);
     parent.appendChild(this.root);
@@ -259,7 +260,7 @@ function drawField(blocks: readonly MapBlock[]): FieldLayer | null {
   const c = MINIMAP.colours;
   for (const b of order) {
     ctx.fillStyle =
-      b.kind === 'floor' ? (top(b) > MINIMAP.raisedFloor ? c.raised : c.ground) : b.kind === 'ramp' ? c.ramp : b.size.y <= MINIMAP.lowCoverTop ? c.low : c.tall;
+      b.kind === 'floor' ? (top(b) > MINIMAP.raisedFloor ? c.raised : c.ground) : b.kind === 'ramp' ? c.ramp : coverHeight(b, blocks) <= MINIMAP.lowCoverTop ? c.low : c.tall;
     ctx.fillRect((b.center.x - b.size.x / 2 - x0) * s, (b.center.z - b.size.z / 2 - z0) * s, b.size.x * s, b.size.z * s);
   }
   return { canvas, x: x0, z: z0, width: x1 - x0, depth: z1 - z0 };

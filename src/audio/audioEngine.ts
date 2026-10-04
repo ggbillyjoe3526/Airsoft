@@ -115,10 +115,12 @@ export class AudioEngine {
     return this.buffers;
   }
 
-  /** A cue's rendered samples at the context's rate (for a match's own variants of a sound). Empty without a context. */
+  /**
+   * A cue's rendered samples at the context's rate (for a match's own variants of a sound), read from its buffers: the
+   * library lets go of its copy once the buffers are made. Empty without a context.
+   */
   samples(cue: SoundCue): readonly Float32Array[] {
-    const ctx = this.context();
-    return ctx ? (this.library.get(ctx.sampleRate).get(cue) ?? []) : [];
+    return this.cueBuffers().get(cue)?.map((b) => b.getChannelData(0)) ?? [];
   }
 
   /** The yard's echo (a stereo impulse response for a convolver). Null without a context. */
@@ -211,6 +213,8 @@ export class AudioEngine {
       this.buffers.set(cue, variants.map((v) => toBuffer(ctx, v)));
       yield;
     }
+    // The buffers hold every sound now; the library's copy would double the memory (about 9 MB).
+    this.library.release(rate);
     this.reverb = reverbImpulse(ctx);
   }
 

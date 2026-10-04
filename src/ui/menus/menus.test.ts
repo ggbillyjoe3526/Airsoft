@@ -122,6 +122,7 @@ describe('the rules shown on New game', () => {
     raiseTime: 5,
     halfTimeAfter: 4,
     attackFirst: true,
+    eliminationStartEnd: 1,
     friendlyFire: true,
     ricochetsCount: false,
   };
@@ -130,22 +131,23 @@ describe('the rules shown on New game', () => {
     const text = describeRules(rules, 'elimination');
     expect(text).toContain('3v3 with bots: you and 2 bot teammates (Blue) against Orange.');
     expect(text).toContain('2:30 on the clock');
-    expect(text).toContain('Teams swap ends after round 4.');
+    expect(text).toContain('You start at the east end; teams swap ends after round 4.');
     expect(text).toContain('First to 5 rounds wins');
+    expect(describeRules({ ...rules, eliminationStartEnd: 0 }, 'elimination')).toContain('You start at the west end');
   });
 
   it('explain attack and defend: raising the flag, and which side your team starts on', () => {
     const text = describeRules(rules, 'attackDefend');
     expect(text).toContain('stand by it for 5 s to raise your flag');
-    expect(text).toContain('Your team attacks first; sides swap after round 4.');
-    expect(describeRules({ ...rules, attackFirst: false }, 'attackDefend')).toContain('Your team defends first');
+    expect(text).toContain('Your team attacks first, from the west end; sides swap after round 4.');
+    expect(describeRules({ ...rules, attackFirst: false }, 'attackDefend')).toContain('Your team defends first, from the east end');
   });
 
   it('follow the Match pop-up: team size, rounds, the clock, friendly fire and ricochets (M20)', () => {
     const duel = describeRules({ ...rules, teamSize: 1, winsNeeded: 3, roundTime: 90, halfTimeAfter: 2 }, 'elimination');
     expect(duel).toContain('1v1: you (Blue) against one Orange bot.');
     expect(duel).toContain('1:30 on the clock');
-    expect(duel).toContain('Teams swap ends after round 2.');
+    expect(duel).toContain('teams swap ends after round 2.');
     expect(duel).toContain('First to 3 rounds');
     expect(duel).not.toContain('Friendly fire'); // nobody to hit in a 1v1
     expect(describeRules({ ...rules, teamSize: 2 }, 'elimination')).toContain('you and 1 bot teammate (Blue)');
