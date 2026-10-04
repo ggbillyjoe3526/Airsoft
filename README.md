@@ -118,6 +118,11 @@ Then open **http://localhost:4173**.
 - **Bot difficulty** (Easy, Normal, Hard) is picked on the New game screen, one level for your opponents and one for
   your bot teammates. On Normal, a bot's first BBs up close can miss, and
   moving targets are harder for bots to hit.
+- **Practice range:** the title screen's **Practice range** puts you alone on a walled range with three lanes of
+  targets at 10 to 60 m: white steel plates that ring and swing when hit, and standing and crouched plywood figures
+  that fall back and stand up again. Painted lines and boards on the walls mark the distances, the readout at the top
+  says how far your last BB went and what it hit, and your spare magazines stay full (you still reload). Press Esc
+  for the **Loadout**: change a replica, BB weight, hop-up or part and you're back on the range where you stood.
 - **Loadout, before a match:** the Loadout screen (**Start**, then **Loadout**) fits the rifle's optic (iron sights, a red dot or a 2× scope) and
   sets each replica's **hop-up**: the backspin that keeps a BB flying flat. Out of the box the rifle is on target to
   about 38 m and the pistol to about 25 m; turn it up too far and BBs rise and float. It also picks each replica's

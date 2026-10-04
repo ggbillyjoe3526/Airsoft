@@ -286,3 +286,93 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await testInfo.attach('sound-cue', { body: await page.screenshot(), contentType: 'image/png' });
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });
+
+/** The practice range (M21): opened from the title, its targets loaded, firing reads out where the BB landed. */
+test('the practice range opens from the title screen and reads out the last BB', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=1');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Practice range' }).click();
+  const readout = page.locator('.range-readout');
+  await expect(readout).toBeVisible();
+  await expect(readout).toContainText('Practice range');
+  type RangeState = { targets: unknown[]; characters: { armament: { ammo: { mag: number; pouch: number[] }[]; handling: { magSize: number }[] } }[] };
+  const state = () => page.evaluate(() => (window as unknown as { airsoft: { state: RangeState } }).airsoft.state);
+  const s0 = await state();
+  expect(s0.targets).toHaveLength(18);
+  expect(s0.characters).toHaveLength(1); // you alone on the range
+
+  // Fire down the middle: the BB lands somewhere downrange and the readout says how far.
+  const canvas = page.locator('canvas').first();
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(readout).toContainText('Last BB', { timeout: 30_000 });
+  await page.mouse.up();
+  const s1 = await state();
+  const ammo = s1.characters[0]!.armament.ammo[0]!;
+  expect(ammo.mag).toBeLessThan(s1.characters[0]!.armament.handling[0]!.magSize);
+  expect(ammo.pouch.every((m) => m === s1.characters[0]!.armament.handling[0]!.magSize)).toBe(true);
+
+  // Aim at the standing figure 10 m out (the middle lane's nearest) and knock it down: the readout names it.
+  type Aim = { airsoft: { input: { yaw: number; pitch: number }; state: { targets: { kind: string; crouched: boolean; distance: number; position: { x: number; z: number } }[]; characters: { position: { x: number; z: number } }[] } } };
+  await page.evaluate(() => {
+    const game = (window as unknown as Aim).airsoft;
+    const me = game.state.characters[0]!.position;
+    const figure = game.state.targets.find((t) => t.kind === 'figure' && !t.crouched && t.distance === 10)!;
+    const dx = figure.position.x - me.x;
+    const dz = figure.position.z - me.z;
+    game.input.yaw = Math.atan2(-dx, -dz); // facing -z at yaw 0
+    game.input.pitch = Math.atan2(1.2 - 1.62, Math.hypot(dx, dz)); // eye height to the chest
+  });
+  // Full auto: the next BB flies past the fallen figure and says "miss", so remember every text the readout showed.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { readoutSeen: string[] }).readoutSeen = seen;
+    const el = document.querySelector('.range-readout')!;
+    new MutationObserver(() => seen.push(el.textContent ?? '')).observe(el, { childList: true, characterData: true, subtree: true });
+  });
+  await page.mouse.down();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { readoutSeen: string[] }).readoutSeen.some((t) => t.includes('hit Figure 10 m'))), { timeout: 30_000 })
+    .toBe(true);
+  await page.mouse.up();
+
+  // Esc (here: tabbing away) on the range offers the Loadout; heavier BBs, Back, Resume: the range is rebuilt where you
+  // stood and looked, with the new BBs in the rifle.
+  const before = await page.evaluate(() => {
+    const game = (window as unknown as Aim).airsoft;
+    return { ...game.state.characters[0]!.position, yaw: game.input.yaw, pitch: game.input.pitch };
+  });
+  const pauseMenu = page.locator('.menu-pause');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(pauseMenu).toBeVisible({ timeout: 10_000 });
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await pauseMenu.getByRole('button', { name: 'Loadout' }).click();
+  const loadout = page.locator('.menu-loadout');
+  await loadout.getByRole('group', { name: 'AEG rifle BB weight' }).getByRole('button', { name: '0.28 g' }).click();
+  await loadout.getByRole('button', { name: 'Back' }).click();
+  await pauseMenu.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
+  await expect(readout).toContainText('Practice range'); // a new range: no last shot yet
+  const after = await page.evaluate(() => {
+    const game = (window as unknown as Aim & { airsoft: { state: { characters: { armament: { bbWeights: number[] } }[] } } }).airsoft;
+    return { ...game.state.characters[0]!.position, yaw: game.input.yaw, pitch: game.input.pitch, bb: game.state.characters[0]!.armament.bbWeights[0] };
+  });
+  expect(after.x).toBeCloseTo(before.x, 1);
+  expect(after.z).toBeCloseTo(before.z, 1);
+  expect(after.yaw).toBeCloseTo(before.yaw, 3);
+  expect(after.pitch).toBeCloseTo(before.pitch, 3);
+  expect(after.bb).toBe(0.28);
+  expect(errors).toEqual([]);
+});

@@ -113,7 +113,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M18b Accessibility and browser basics (owner's second batch; moved out of M18a at the owner's wrap-up, 2026-10-03): colour-blind options, on-screen sound cues, pause on a hidden tab, a lost graphics context, a hardware acceleration warning, fullscreen | Done (owner to play it) | 9.0 |
 | Alpha · Phase 4 · M19 Match info (owner's feature picks and second batch, 2026-10-03): hit feed, teammate markers, hold-Tab scoreboard, round and match stats, end-of-match summary, local records, crosshair options | Done (merged; owner's playtest next) | 9.0 |
 | Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Done (merged; owner to play it) | 9.0 |
-| Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Later | |
+| Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Done (owner to play it) | 8.8 (auto-accepted, 4 of 4) |
 | Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
@@ -576,6 +576,13 @@ each one went:**
   - Open the Loadout screen from the range (not a match, so the never-mid-match rule doesn't apply) and try a replica,
     BB weight, hop-up or part straight away; magazines refill and a readout gives the last shot's distance.
   - The tutorial (M16) can take place here and ends in free practice on it.
+  - **Built (2026-10-04):** **Practice range** on the title screen opens a walled 22 × 72 m concrete range (a 5 m
+    backstop at 66 m): steel plates on the left, standing figures in the middle and crouched figures on the right, at
+    10, 20, 30, 40, 50 and 60 m, each a little further right than the one in front so none hides another. Plates ring
+    and swing back; figures (a player's hit volume, standing or crouched) fall back and stand up after 1.5 s. Painted
+    lines across the floor and boards on both walls mark the distances; the readout says where your last BB landed
+    and what it hit. Spare magazines stay full. The pause menu there offers the Loadout, and coming back rebuilds the
+    range with the new kit where you stood (`config/range.ts`, `sim/rangeTargets.ts`, `rangeSession.ts`).
 - **M22. Squad orders** (the owner's second batch, items 18 and 20). A small first step towards team communication;
   the wheel, pings and hand signals still wait until the bots can follow them.
   - **Three orders** for your bot teammates, each on a key (rebindable): **Follow me** (they move with you and cover

@@ -152,6 +152,12 @@ ends the round). A hit character is eliminated
   when the player leaves the match, so the next Play can load another map; Play Again restarts it in place. Its
   `MatchSetup` carries New game's Match rules (M20, `config/matchRules.ts`: team size, rounds to win, round time,
   friendly fire, ricochets), turned into the match's own round and hit rules, and a bot difficulty per team.
+- **rangeSession.ts**: the practice range (M21): `map/range.ts` with the targets of `config/range.ts`, the player alone,
+  no bots and no rounds. `SimServices.practice` makes `stepSimulation` skip the round flow, step the targets
+  (`sim/rangeTargets.ts`: `GameState.targets`, tested by `stepBBs`, which emits `targetHit`) and keep the spare
+  magazines full. `render/rangeTargetsRenderer.ts` draws the plates, figures and distance markers and
+  `ui/rangeReadout.ts` the last BB's distance. `Game` holds a `MatchSession` or a `RangeSession`; changing the loadout
+  from the range's pause menu rebuilds the range where you stood.
 
 ## Map data
 

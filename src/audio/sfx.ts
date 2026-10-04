@@ -274,6 +274,12 @@ export class Sfx {
         else this.oneShot('bodyHit', e.position, L.bodyHit);
         return;
       }
+      case 'targetHit':
+        // The practice range (M21): steel rings, a plywood figure knocks; your own hit gets the hit marker's "tock".
+        if (e.kind === 'steel') this.oneShot('steelRing', e.position, L.steelRing);
+        else this.oneShot(cues.impact('wood'), e.position, L.impact);
+        if (e.shooterId === localId) this.play('hitMarker', this.buses.get('interface')!, L.hitMarker);
+        return;
       case 'roundOver':
         this.whistle?.blast(AUDIO.roundOverWhistle, 0);
         return;

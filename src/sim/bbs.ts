@@ -6,6 +6,7 @@ import type { Character } from './character';
 import { type EliminationContext, eliminate, isInPlay } from './elimination';
 import type { GameEvent } from './events';
 import { characterHitVolume, createHitVolume, rayCharacter } from './hitbox';
+import { firstRangeTargetHit, hitRangeTarget, type RangeTarget, type RangeTargetHit } from './rangeTargets';
 import { ricochet } from './ricochet';
 import type { RngState } from './rng';
 import { copy, vec3 } from './vec';
@@ -13,12 +14,15 @@ import { copy, vec3 } from './vec';
 const segmentDir = vec3();
 const volume = createHitVolume();
 const surface: SurfaceHit = { normal: vec3(), material: 'concrete' };
+const targetHit: RangeTargetHit = { index: -1, at: 0, post: false };
 
 /** Who BBs can hit this tick, and what happens to them. */
 export interface BBTargets {
   characters: Character[];
   hits: HitConfig;
   elimination: EliminationContext;
+  /** Practice range targets (M21; none in a match). */
+  rangeTargets?: RangeTarget[];
 }
 
 /** The first character in play along the BB's segment this tick (before `maxT`), or undefined. */
@@ -45,7 +49,8 @@ function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { v
  * (characterHit event; the character is eliminated) or a level surface (bbImpact event), where a hard surface bounces
  * it off instead (a ricochet, M20; it flies on from there next tick). A ricochet only knocks someone out when the
  * match counts ricochets (HitConfig.ricochetsCount); otherwise it ticks them and stops (ricochetTick event), and they
- * play on. BBs that fall out of the world or get too old just vanish. A BB never hits whoever fired it, nor anyone
+ * play on. On the practice range a BB also stops at the first target it reaches (targetHit event, M21). BBs that fall
+ * out of the world or get too old are removed (bbLost event). A BB never hits whoever fired it, nor anyone
  * already hit. `rng` scatters bounces (the simulation's seeded stream).
  */
 export function stepBBs(
@@ -73,6 +78,24 @@ export function stepBBs(
       segmentDir.z = dz / len;
       const t = query.raycastSurface ? query.raycastSurface(bb.prevPosition, segmentDir, len, surface) : query.raycastStatic(bb.prevPosition, segmentDir, len);
       const hit = targets ? firstCharacterHit(bb, len, t >= 0 ? t : len, targets) : undefined;
+      if (targets?.rangeTargets && targets.rangeTargets.length > 0) {
+        firstRangeTargetHit(bb.prevPosition, segmentDir, hit ? hit.at : t >= 0 ? t : len, targets.rangeTargets, targets.hits, targetHit);
+        if (targetHit.index >= 0) {
+          const target = targets.rangeTargets[targetHit.index]!;
+          bb.position.x = bb.prevPosition.x + segmentDir.x * targetHit.at;
+          bb.position.y = bb.prevPosition.y + segmentDir.y * targetHit.at;
+          bb.position.z = bb.prevPosition.z + segmentDir.z * targetHit.at;
+          bb.active = false;
+          if (targetHit.post) {
+            // A plate's post: the BB stops on it, as on a wall (a miss where it stopped).
+            events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+            continue;
+          }
+          hitRangeTarget(target);
+          events.push({ type: 'targetHit', targetId: target.id, kind: target.kind, shooterId: bb.ownerId, position: vec3(bb.position.x, bb.position.y, bb.position.z), ricochet: bb.bounces > 0 });
+          continue;
+        }
+      }
       if (hit) {
         bb.position.x = bb.prevPosition.x + segmentDir.x * hit.at;
         bb.position.y = bb.prevPosition.y + segmentDir.y * hit.at;
@@ -101,6 +124,9 @@ export function stepBBs(
         continue;
       }
     }
-    if (bb.age > cfg.maxLifetime || bb.position.y < killY) bb.active = false;
+    if (bb.age > cfg.maxLifetime || bb.position.y < killY) {
+      bb.active = false;
+      events.push({ type: 'bbLost', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+    }
   }
 }

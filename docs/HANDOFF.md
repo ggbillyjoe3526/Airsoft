@@ -5,19 +5,19 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-04 · M22 (squad orders), after M20 (custom matches)._
+_Last updated: 2026-10-04 · M22 (squad orders), after M21 (practice range)._
 
 ## Where we are
 
 - **Phase 4 merged on `main`:** M12a–c, M11, M15, M15b, M13 audio, M19 match info, M17a and M17b Loadout, M18a and
-  M18b, M20 custom matches and now **M22 squad orders** (see REVIEWS). The owner asked (2026-10-04) for every remaining
-  Phase 4 milestone, then a full code audit (Fable), its fixes (Opus), a bug pass, and a note when Phase 4 is ready to
-  playtest. For this run the owner chose "Claude merges": build threads merge their own pull request once CI is green
-  and the critic has accepted it (never tag, never push to `main` directly).
-- **Two build threads run side by side:** one does M22 squad orders → **M14 art pass** (built, its critic next); the
-  other M21 practice range (built, its pull request next) → **M16 tutorial** (built on the range, last). They conflict
-  in docs and in `matchSession.ts`, `game.ts`, `settings/storage.ts`, `config/controls.ts`, `sim/events.ts`: merge
-  `main` in before every push and keep both sides.
+  M18b, M20 custom matches, M21 practice range and now **M22 squad orders** (see REVIEWS). The owner asked
+  (2026-10-04) for every remaining Phase 4 milestone, then a full code audit (Fable), its fixes (Opus), a bug pass, and
+  a note when Phase 4 is ready to playtest. For this run the owner chose "Claude merges": build threads merge their own
+  pull request once CI is green and the critic has accepted it (never tag, never push to `main` directly).
+- **Two build threads run side by side:** one does M22 squad orders → **M14 art pass** (built, in critic rework); the
+  other has done M20 and M21 and does **M16 tutorial** last (built on the range). They conflict in docs and in
+  `matchSession.ts`, `game.ts`, `settings/storage.ts`, `config/controls.ts`, `sim/events.ts`: merge `main` in before
+  every push and keep both sides.
 
 ## M22 in short
 
@@ -29,6 +29,15 @@ _Last updated: 2026-10-04 · M22 (squad orders), after M20 (custom matches)._
   sound: `radio.ack` in `config/sounds.ts`. Tests: `ai/squadOrders.test.ts` (open field) and the Depot follow guard.
 - **Hearing:** `BotController.hear` casts `sim/soundPath.ts` rays beyond `wallHearing` × range (shared with the
   audio's muffling). Depot rounds run longer since; `playMatch` takes an `onTick` hook for guards like the follow one.
+
+## M21 in short (what to know when touching it)
+
+- **Range:** `map/range.ts` from `config/range.ts`; `Game` holds a `MatchSession` or a `RangeSession`
+  (`rangeSession.ts`). `SimServices.practice` skips the round flow and keeps spares full. Targets are sim data
+  (`GameState.targets`, `sim/rangeTargets.ts`) tested in `stepBBs` (`targetHit`; a plate's post stops a BB as a
+  `bbImpact`). Every BB that falls out or times out now emits `bbLost` (matches ignore it; the readout uses it).
+- **Loadout from the range:** the pause menu's Loadout; `Game.play` rebuilds the range at `RangeSession.pose`
+  (position, yaw, pitch) when `loadoutChanged`. Sound cues are match-only; team colours apply on the range too.
 
 ## M20 in short (what to know when touching it)
 

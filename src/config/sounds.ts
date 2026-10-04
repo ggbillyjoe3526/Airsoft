@@ -41,6 +41,8 @@ export type SoundCue =
   | 'magRattle'
   | `impact.${ImpactMaterial}`
   | 'bodyHit'
+  /** A BB ringing a steel plate on the practice range (M21). */
+  | 'steelRing'
   | 'hitTick'
   | 'hitMarker'
   /** A teammate's radio keyed twice: your squad order was heard (M22). */
@@ -279,6 +281,14 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
       { kind: 'tone', wave: 'sine', attack: 0.001, decay: 0.04, gain: 0.25, hz: 220, hzTo: 120 },
     ],
     ...LOOSE,
+  },
+  /** A BB on a practice range steel plate (M21): the bright "ting" a plate is there for, ringing on a moment. */
+  steelRing: {
+    layers: [
+      click(0, 6000, 0.2, 0.003),
+      { kind: 'modes', gain: 0.22, modes: [{ hz: 1480, decay: 0.45, gain: 0.9 }, { hz: 3390, decay: 0.3, gain: 0.55 }, { hz: 5720, decay: 0.18, gain: 0.3 }, { hz: 8100, decay: 0.08, gain: 0.15 }] },
+    ],
+    ...TIGHT,
   },
   /** You're hit: a sharp, close plastic "tick" with a hiss and a little thump. Unmistakable. */
   hitTick: {
