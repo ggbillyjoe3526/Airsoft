@@ -56,7 +56,10 @@ export class SaveSettings {
       menuRow(SAVE_TEXT.protectLabel, SAVE_TEXT.protectHelp, control(this.protectButton, this.protectLine)),
       menuRow(SAVE_TEXT.deleteLabel, SAVE_TEXT.deleteHelp, control(del)),
     ];
-    manager.onChange(() => this.refresh());
+    // Every save the game makes can change what the tab shows; worked out only while it is on screen (and as it opens).
+    manager.onChange(() => {
+      if (this.shown()) this.refresh();
+    });
     this.refresh();
   }
 
@@ -66,24 +69,32 @@ export class SaveSettings {
     this.refresh();
   }
 
-  /** A file dropped on `area` (the Save tab's panel) is loaded as a save. */
+  /**
+   * While the Save tab shows, a file dropped anywhere on the page is loaded as a save (and `area`, its panel, lights up
+   * as one is dragged over), rather than the browser opening the file in place of the game.
+   */
   acceptDrops(area: HTMLElement): void {
-    const hasFile = (e: DragEvent) => e.dataTransfer?.types.includes('Files') === true;
-    area.addEventListener('dragover', (e) => {
-      if (!hasFile(e)) return;
+    const files = (e: DragEvent) => this.shown() && e.dataTransfer?.types.includes('Files') === true;
+    window.addEventListener('dragover', (e) => {
+      if (!files(e)) return;
       e.preventDefault();
       area.classList.add('save-drop');
     });
-    area.addEventListener('dragleave', (e) => {
-      if (e.target === area) area.classList.remove('save-drop');
+    window.addEventListener('dragleave', (e) => {
+      if (e.relatedTarget === null) area.classList.remove('save-drop');
     });
-    area.addEventListener('drop', (e) => {
-      if (!hasFile(e)) return;
+    window.addEventListener('drop', (e) => {
+      if (!files(e)) return;
       e.preventDefault();
       area.classList.remove('save-drop');
       const file = e.dataTransfer?.files[0];
       if (file) void this.load(file);
     });
+  }
+
+  /** The tab is on screen (its panel shown, Settings open). */
+  private shown(): boolean {
+    return this.status.isConnected && this.status.offsetParent !== null;
   }
 
   /** Brings the tab up to date (times, Undo, the restore points, the browser's protection). */
