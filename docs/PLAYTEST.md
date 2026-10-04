@@ -232,6 +232,23 @@ that pushes BBs, never players. The dust floating in the air (Medium and High qu
   range. In a strong breeze their long shots miss downwind as yours do. Say if bots feel too weak or too strong.
 - [ ] **Frame rate:** a full-auto firefight on Low feels as smooth as before.
 
+## BB hot path and own ricochets (FA12)
+
+BBs now find walls with the game's own ray test instead of the physics engine's (the same answer, much cheaper), and a
+ricochet can come back and hit whoever fired it.
+
+- [ ] **BBs still stop on everything.** On Depot, shoot crates, container sides and ends, wall tops and corners, the
+  dock and its steel ramps, a gabion, the toilets: every BB stops or bounces where it meets the surface, never inside or
+  through it, and steel and concrete still ricochet as before. Dev tab › BB paths makes it easy to see.
+- [ ] **Your own ricochet, ricochets on.** Custom match with "Ricochets count" on: stand 2 m from a container's side
+  and fire one shot square at it. The BB comes back and you're hit: the hit feed says you called a hit off yourself,
+  tagged "ricochet" (not "friendly"); the scoreboard counts you hit once and no hit for you.
+- [ ] **Your own ricochet, ricochets off (the default).** Same shot: the "Ricochet · doesn't count, play on" notice, and you
+  play on.
+- [ ] **Practice range, 60 m plate:** a level shot on the factory hop lands short (about 53 m); aiming about 3° high (some
+  3.5 m above the plate) rings it.
+- [ ] **Frame rate:** a long full-auto firefight on Low (Dev tab FPS) is as smooth as before or smoother.
+
 ## Bots and rounds
 
 You're on Blue with two bot teammates against three Orange bots. One BB hit puts anyone out, a round lasts up
