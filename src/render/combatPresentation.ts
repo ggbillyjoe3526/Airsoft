@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Sfx, type SfxSetup } from '../audio/sfx';
 import type { MotionScale } from '../config/accessibility';
 import { FIGURE } from '../config/characters';
@@ -7,7 +6,7 @@ import { impactMaterialAt } from '../audio/soundMaterials';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
-import { BB_VISUALS, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, QUALITY, type QualitySettings } from '../config/render';
+import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, type OpticId, OPTICS } from '../config/optics';
@@ -46,13 +45,11 @@ export class CombatPresentation {
   private readonly hitPuffs = new ImpactPuffs(HIT_PUFFS);
   /** A gas replica's breath at the muzzle and ejection port on each shot (M14). */
   private readonly gasPuffs = new ImpactPuffs(GAS_PUFFS);
-  /** Dust drifting in the sunlight round the camera (M14); how much is the quality preset's. */
-  private readonly motes = new DustMotes(QUALITY.high.dustMotes);
+  /** Dust drifting in the sunlight round the camera (M14); how much is the quality settings' (at most the Custom row's top). */
+  private readonly motes = new DustMotes(DUST_MOTES.max);
   /** The impact dust's tint per material (linear colours, made once). */
   private readonly dustTints = new Map<ImpactMaterial, THREE.Color>();
-  /** The held replica's reflections (M14, QualitySettings.replicaSheen): made the first time they are wanted. */
-  private sheen: THREE.WebGLRenderTarget | null = null;
-  /** The preset in use, to make the sheen again after a lost graphics context (contextRestored). */
+  /** The settings in use, to light the replica again after a lost or replaced graphics context (contextRestored). */
   private quality: QualitySettings;
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
@@ -122,24 +119,16 @@ export class CombatPresentation {
   setQuality(quality: QualitySettings): void {
     this.quality = quality;
     this.motes.setCount(quality.dustMotes);
-    if (quality.replicaSheen && !this.sheen) {
-      // Only the prefiltered target is kept: the generator's own buffers are freed at once (audit L-02).
-      const pmrem = new THREE.PMREMGenerator(this.renderer.renderer);
-      const room = new RoomEnvironment();
-      this.sheen = pmrem.fromScene(room, 0.04);
-      room.dispose();
-      pmrem.dispose();
-    }
-    this.viewmodel.setEnvironment(quality.replicaSheen ? (this.sheen?.texture ?? null) : null);
+    // The Renderer owns the sheen (REN-06): made once per context, freed while the setting is off.
+    this.viewmodel.setEnvironment(quality.replicaSheen ? this.renderer.replicaSheen : null);
   }
 
   /**
-   * The graphics context is back after a loss (audit L-02). Three.js uploads geometry and textures again from their
-   * copies, but a render target comes back empty, so the sheen is rendered again. The old target is dropped, not
-   * disposed: its GL objects went with the lost context, and freeing them on the new one only logs WebGL warnings.
+   * The graphics context is back after a loss, or was replaced (audit L-02, REN-04). Three.js uploads geometry and
+   * textures again from their copies, but a render target comes back empty: the Renderer has dropped its sheen, and
+   * asking for it again here prefilters it on the new context.
    */
   contextRestored(): void {
-    this.sheen = null;
     this.setQuality(this.quality);
   }
 
@@ -157,6 +146,11 @@ export class CombatPresentation {
   /** The crosshair changed on Settings → Crosshair. */
   setCrosshair(crosshair: CrosshairSettings): void {
     this.hud.setCrosshair(crosshair);
+  }
+
+  /** A short line on the HUD (the game's own quality step-down says so, REN-03). */
+  showNotice(text: string, seconds: number): void {
+    this.hud.showNotice(text, seconds);
   }
 
   /** No rounds here (the practice range, M21): no start whistle when play starts. */
@@ -243,6 +237,7 @@ export class CombatPresentation {
     this.puffs.update(dt, this.renderer.camera);
     this.hitPuffs.update(dt, this.renderer.camera);
     this.gasPuffs.update(dt, this.renderer.camera);
+    this.motes.setPixelRatio(this.renderer.renderer.getPixelRatio());
     this.motes.update(dt, this.renderer.camera.position, this.state.wind);
     this.paths.update();
 
@@ -287,8 +282,6 @@ export class CombatPresentation {
     this.gasPuffs.dispose();
     this.motes.dispose();
     this.viewmodel.setEnvironment(null);
-    this.sheen?.dispose();
-    this.sheen = null;
     this.paths.dispose();
     this.viewmodel.dispose();
     this.hud.dispose();

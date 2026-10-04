@@ -30,7 +30,7 @@ import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
+import { buildMapMeshes, disposeMapMeshes, setMapRelief, setMapTextures } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -172,6 +172,7 @@ export class MatchSession {
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(setup.kit, map.night ?? false));
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map.blocks, renderer.figureModel);
+    this.match.setFigureShadows(quality.figureShadows);
     input.ordersEnabled = true;
   }
 
@@ -264,6 +265,8 @@ export class MatchSession {
     this.match.showOrderWheel(this.input.wheelOpen, this.input.wheelPointer, order, this.input.wheelSelect);
     this.match.showMinimap(holding ? this.holdSpot : null);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    // High's shadow map follows the view (REN-08), the spectator's too.
+    this.daylight.follow(this.renderer.camera);
     this.combat.render(!spectating);
   }
 
@@ -274,12 +277,15 @@ export class MatchSession {
   }
 
   /**
-   * A new quality preset (Settings → Graphics, M14): the sun's shadows, the surfaces' relief, the dust in the air and
-   * the held replica's sheen follow it at once. (The renderer's own part is Renderer.setQuality.)
+   * New quality settings (Settings → Graphics): the sun's shadows, the surfaces' textures and relief, the figures'
+   * shading, the dust in the air and the held replica's sheen follow them at once. Call after Renderer.setQuality (the
+   * renderer's part, which draws a new texture size when the map asks for it here).
    */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
+    setMapTextures(this.mapGroup, this.renderer.surfaceTextures);
     setMapRelief(this.mapGroup, quality.surfaceRelief);
+    this.match.setFigureShadows(quality.figureShadows);
     this.combat.setQuality(quality);
   }
 

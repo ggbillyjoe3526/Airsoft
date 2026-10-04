@@ -22,7 +22,7 @@ import { bbGlowFor } from './pool/loadoutModel';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
+import { buildMapMeshes, disposeMapMeshes, setMapRelief, setMapTextures } from './render/mapMeshes';
 import { RangeTargetsRenderer } from './render/rangeTargetsRenderer';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -151,6 +151,7 @@ export class RangeSession {
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false));
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
+    this.targets.setReceiveShadows(quality.figureShadows);
     renderer.scene.add(this.targets.object);
     this.readout = new RangeReadout(container);
     this.readout.set(lastShotText(null));
@@ -234,6 +235,7 @@ export class RangeSession {
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     this.targets.update(dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    this.daylight.follow(this.renderer.camera);
     this.combat.render(true);
   }
 
@@ -250,10 +252,12 @@ export class RangeSession {
     this.player.armament.bottomless = cheats.bottomlessMags && !this.tutorial;
   }
 
-  /** A new quality preset (Settings → Graphics, M14): as MatchSession.setQuality. */
+  /** New quality settings (Settings → Graphics): as MatchSession.setQuality. */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
+    setMapTextures(this.mapGroup, this.renderer.surfaceTextures);
     setMapRelief(this.mapGroup, quality.surfaceRelief);
+    this.targets.setReceiveShadows(quality.figureShadows);
     this.combat.setQuality(quality);
   }
 

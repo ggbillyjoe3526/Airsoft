@@ -46,7 +46,13 @@ export type SettingField =
   | 'soundCues'
   | 'map'
   | 'fov'
+  /** Settings → Graphics → Quality: a preset or 'custom' (config/render.ts QualityChoice). */
   | 'quality'
+  /** The Custom rows (config/graphics.ts), one per QualitySettings field: read when Quality is Custom. */
+  | `graphics.${string}`
+  /** Settings → Graphics: the frame-rate cap and the FPS readout (not part of a preset). */
+  | 'frameRateCap'
+  | 'showFps'
   /** The tutorial was played to the end (M16): the title stops pointing new players at it. */
   | 'tutorialDone'
   /** The tutorial's step still to do, to resume there next time (audit POOL-14); 0 once it is over. */
@@ -142,6 +148,8 @@ function readStored(storage: Storage): ParsedSettings {
  * Brings a stored object (or nothing) to SETTINGS_VERSION; null if nothing usable is stored. One case per format
  * change: the next version adds `case 1:` turning a version 1 object into a version 2 one, and so on. Version 0 is the
  * per-setting keys of the builds before the object (LEGACY_KEYS): any still there fill fields the object lacks.
+ * Added fields need no case: the final alpha audit's Custom graphics rows (`graphics.<field>`, `quality: 'custom'`,
+ * `frameRateCap`, `showFps`) went into version 1, and a reader falls back to its default for a field it doesn't find.
  */
 export function migrate(raw: unknown, storage: Storage): StoredSettings | null {
   let stored: StoredSettings | null = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as StoredSettings) : null;

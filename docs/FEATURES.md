@@ -68,7 +68,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA5)
+- Settings tabs: Graphics (quality presets with Custom option, frame-rate limit, show FPS, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA2, FA5)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison, restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if the save is from a newer version (M31)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
@@ -104,7 +104,10 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Dark loading screen with a progress bar for the physics module; favicon and web manifest (FA9)
 - Procedural daylight with a sky, haze and trees; dressed Depot surfaces and props; figures in airsoft kit with team tape (M14)
 - Gas puffs, impact dust by material, dust in the sunlight (M3, M14)
-- Quality presets Low, Medium and High, switchable mid-match; Low is picked on its own for software rendering (M14)
+- Quality presets Low, Medium and High, switchable mid-match; Low has 80 % resolution with no shadows, Medium adds shadows and relief, High adds sharp textures and dust (M14, FA2, FA3)
+- Custom graphics option: pick a preset and modify any row (shadows, shadow detail, softness, range, render scale, edge smoothing, surface relief, texture detail, dust and more); Custom is saved (FA2)
+- Graphics Settings: frame-rate limit and Show FPS counter; preset selected from graphics card on first run (Medium for integrated, High for discrete) (FA2)
+- Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen preserved across preset switches (FA3)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 
 ## Practice range and tutorial

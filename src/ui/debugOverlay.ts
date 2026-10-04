@@ -3,9 +3,14 @@ export type DebugStatsProvider = () => Record<string, string | number>;
 
 const REFRESH_INTERVAL = 0.25;
 
-/** Toggleable diagnostics panel (FPS, frame time, entity counts, anything the game adds). */
+/**
+ * Toggleable diagnostics panel (FPS, frame time, entity counts, anything the game adds). With the panel hidden, the FPS
+ * readout (Settings → Graphics → Show FPS, UI-06) shows its first line alone.
+ */
 export class DebugOverlay {
   visible = false;
+  /** The FPS line on its own while the panel is hidden. */
+  private fpsReadout = false;
   private readonly el: HTMLDivElement;
   private frames = 0;
   private elapsed = 0;
@@ -30,10 +35,21 @@ export class DebugOverlay {
 
   setVisible(visible: boolean): void {
     this.visible = visible;
-    this.el.hidden = !visible;
+    this.showState();
   }
 
-  /** Call every rendered frame with the real frame time in seconds. */
+  /** The FPS readout on or off (shown while the panel is hidden). */
+  setFpsReadout(on: boolean): void {
+    this.fpsReadout = on;
+    this.showState();
+  }
+
+  private showState(): void {
+    this.el.hidden = !this.visible && !this.fpsReadout;
+    this.el.classList.toggle('fps-readout', !this.visible && this.fpsReadout);
+  }
+
+  /** Call every drawn frame with the time since the last one drawn, in seconds. */
   frame(dt: number): void {
     this.frames++;
     this.elapsed += dt;
@@ -46,7 +62,7 @@ export class DebugOverlay {
     this.frames = 0;
     this.elapsed = 0;
     this.worstFrameMs = 0;
-    if (this.visible) this.render();
+    if (this.visible || this.fpsReadout) this.render();
   }
 
   dispose(): void {
@@ -54,6 +70,10 @@ export class DebugOverlay {
   }
 
   private render(): void {
+    if (!this.visible) {
+      this.el.textContent = `${this.fps.toFixed(0)} FPS · ${this.avgMs.toFixed(1)} ms`;
+      return;
+    }
     const lines = [
       `FPS ${this.fps.toFixed(0)}  avg ${this.avgMs.toFixed(1)}ms  worst ${this.worstMs.toFixed(1)}ms`,
     ];
