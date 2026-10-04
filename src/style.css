@@ -3837,3 +3837,40 @@ kbd {
   padding: 0 var(--sp-4);
   font-size: var(--fs-sm);
 }
+
+/* Chase items (M32): their line under the odds, edged in their tier's colour; a catalogue pip for a tier the asset
+   never comes in stays empty; a chase item in the reveal glows in its tier's colour (still with reduced motion). */
+.armory-chase {
+  padding-left: 10px;
+  border-left: 3px solid var(--tier, var(--menu-line));
+}
+
+.armory-pip.is-na {
+  border-style: dashed;
+  opacity: 0.4;
+}
+
+.armory-tile.is-chase {
+  border-color: var(--tier);
+  box-shadow: 0 0 0 2px var(--tier), 0 0 18px var(--tier);
+}
+
+.armory-reveal-grid .armory-tile.is-chase {
+  animation: armory-tile-in var(--t-med) var(--ease) both, armory-chase-glow 1.6s var(--ease) calc(var(--i, 0) * 60ms + var(--t-med)) 3;
+}
+
+.reduced-motion .armory-reveal-grid .armory-tile.is-chase {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .armory-reveal-grid .armory-tile.is-chase {
+    animation: none;
+  }
+}
+
+@keyframes armory-chase-glow {
+  50% {
+    box-shadow: 0 0 0 3px var(--tier), 0 0 32px var(--tier);
+  }
+}

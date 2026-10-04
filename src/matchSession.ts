@@ -15,9 +15,9 @@ import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, type ReplicaConfig } from './config/replicas';
-import { botKitSeed, kittedCharacter, randomKit } from './pool/botKit';
+import { botKitSeed, carriedLoadout, chaseCarrier, chaseReady, kittedCharacter, randomKit } from './pool/botKit';
 import { GAME_POOL } from './pool/gamePool';
-import type { PlayerKit } from './pool/loadoutModel';
+import { bbGlowFor, type PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
@@ -70,6 +70,11 @@ export interface MatchSetup {
    * worked in), its optic, parts, hop-up dial and BB weight. Bots carry config/replicas.ts LOADOUT as it comes.
    */
   kit: PlayerKit;
+  /**
+   * The chase replicas the player owns (pool asset ids, M32): on a difficulty that rolls kits, one opponent now and then
+   * carries one (pool/botKit.ts chaseCarrier). Absent: none.
+   */
+  chaseOwned?: readonly string[];
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
 }
@@ -183,7 +188,7 @@ export class MatchSession {
     input.resetView(this.player.spawnYaw);
     input.restartScript();
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, this.hits);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(setup.kit, map.night ?? false));
     this.build.phase('replica, effects and sound');
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map.blocks, renderer.figureModel, quality.figureDetail);
@@ -384,13 +389,17 @@ export class MatchSession {
       if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
     }
     let id = PLAYER_ID;
+    const rolls = BOT_LOADOUTS[this.setup.difficulty] === 'random';
+    // Now and then, on a difficulty that rolls kits, one opponent carries a chase replica the player owns (M32).
+    const opponents = TEAMS.flatMap((_, team) => (team === PLAYER_TEAM ? [] : Array.from({ length: size }, (_, i) => PLAYER_ID + team * size + i)));
+    const carrier = rolls ? chaseCarrier(GAME_POOL, this.setup.chaseOwned ?? [], seed, opponents) : null;
     for (let team = 0; team < TEAMS.length; team++) {
       // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
       // their difficulty rolls each one a kit of its own (M29b).
-      const rolled = team !== PLAYER_TEAM && BOT_LOADOUTS[this.setup.difficulty] === 'random';
+      const rolled = team !== PLAYER_TEAM && rolls;
       for (let i = 0; i < size; i++, id++) {
         if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-        else if (rolled) this.state.characters.push(kittedCharacter(id, team, randomKit(GAME_POOL, LOADOUT, botKitSeed(seed, id))));
+        else if (rolled) this.state.characters.push(chaseReady(kittedCharacter(id, team, randomKit(GAME_POOL, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id))), carrier));
         else this.state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, team));
       }
     }

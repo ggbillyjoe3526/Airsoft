@@ -1,4 +1,5 @@
 import { BARRELS, GRIPS, handlingOf, MAGAZINES, MUZZLES, type ReplicaParts } from '../../config/attachments';
+import { GLOW_BB_CHOICES } from '../../config/glowBBs';
 import { LASERS } from '../../config/lasers';
 import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
@@ -6,7 +7,7 @@ import { LOADOUT_TEXT, PERFORMANCE_SHEET } from '../../config/menus';
 import type { ItemRef } from '../../pool/collection';
 import type { FitSlot, KitSlot } from '../../pool/kit';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
-import { replicaOf } from '../../pool/pool';
+import { hasBuiltInPower, replicaOf } from '../../pool/pool';
 import {
   bbWeightLabel,
   bbWeightReadout,
@@ -20,6 +21,7 @@ import {
   opticReadout,
   powerReadout,
 } from '../loadoutChoice';
+import { OptionPicker } from '../optionPicker';
 import { gearLine, performanceOf, type SheetRow, sheetRows, tierBlurb } from '../performanceSheet';
 import { ITEM_ICONS, itemIcon } from './icons';
 import { backButton, el, laterRow, menuButton, menuPage, menuRow, rangeControl } from './menuParts';
@@ -259,9 +261,10 @@ export class LoadoutScreen {
       sheetRowsBox.replaceChildren(...sheetRows(performanceOf(kit, grams, dial, capped), factory, HOP_UP.readoutRange).flatMap(sheetRow));
     };
     for (const row of FIT_ROWS) {
-      // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power always have a choice.
-      if (row.none !== null && row.slot !== 'magazine' && !m.hasSlot(asset.id, row.slot)) {
-        rows.append(fixedRow(row.label, row.slot === 'barrel' ? LOADOUT_TEXT.fixedBarrel : row.slot === 'muzzle' ? LOADOUT_TEXT.noThread : LOADOUT_TEXT.noMount));
+      // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power have a choice unless the
+      // replica takes nothing but its own (the Cyber Pistol, M32).
+      if (!m.hasSlot(asset.id, row.slot) && (row.none !== null || hasBuiltInPower(asset))) {
+        rows.append(fixedRow(row.label, fixedValue(row.slot, kit)));
         if (row.slot === 'optic') this.appendBbRows(rows, asset.id, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
         continue;
       }
@@ -303,7 +306,10 @@ export class LoadoutScreen {
     rows.append(laterRow('Skins', '', LOADOUT_TEXT.skinsLater));
   }
 
-  /** The BB weight slider (free, never pooled) and the hop-up dial, their readouts following each other. */
+  /**
+   * The BB weight slider (free, never pooled) and the hop-up dial, their readouts following each other, then the Glowing
+   * BBs choice (M33b; free too).
+   */
   private appendBbRows(into: HTMLElement, replicaId: string, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
     let grams = grams0;
     let dial = dial0;
@@ -333,7 +339,9 @@ export class LoadoutScreen {
     });
     hop.classList.add('loadout-hopup');
     hop.append(hopLine);
-    into.append(menuRow('BB Weight', '', weight), menuRow('Hop-Up', '', hop));
+    const m = this.opts.model;
+    const glow = new OptionPicker('Glowing BBs', GLOW_BB_CHOICES, m.glowBBs(replicaId), m.glowField(replicaId), () => this.opts.onChange());
+    into.append(menuRow('BB Weight', '', weight), menuRow('Hop-Up', '', hop), menuRow('Glowing BBs', '', glow.root));
   }
 
   /** What the fitted item (or "as it comes") is, in a line. */
@@ -414,6 +422,15 @@ function sheetRow(r: SheetRow): HTMLElement[] {
     if (r.change) value.append(el('span', 'sr-only', ` (${PERFORMANCE_SHEET[r.change]})`));
   }
   return [el('dt', 'perf-label', r.label), value];
+}
+
+/** What a row says when nothing can be fitted there. */
+export function fixedValue(slot: FitSlot, kit: KitSlot): string {
+  if (slot === 'barrel') return LOADOUT_TEXT.fixedBarrel;
+  if (slot === 'muzzle') return LOADOUT_TEXT.noThread;
+  if (slot === 'magazine') return LOADOUT_TEXT.ownMagazine(handlingOf(kit.replica, kit.parts).magSize);
+  if (slot === 'power') return LOADOUT_TEXT.builtInBattery;
+  return LOADOUT_TEXT.noMount;
 }
 
 /** A greyed row for a part this replica has no rail or mount for. */
