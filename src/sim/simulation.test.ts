@@ -176,6 +176,23 @@ describe('stepSimulation', () => {
     expect(fired).toBeGreaterThan(0);
   });
 
+  it("hands each tick's spreadScale to the muzzle that fires the shot (KNOWN_ISSUES accuracy wiring)", () => {
+    const state = createGameState(1, 16, ROUNDS);
+    const c = createCharacter(0, vec3(), 0);
+    state.characters.push(c);
+    const cmd = createCommand();
+    const ctx = testContext(floor, KILL_Y);
+    for (let i = 0; i < 10; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(ctx.muzzle.spreadScale).toBe(c.spreadScale);
+    const still = ctx.muzzle.spreadScale;
+    cmd.forward = 1;
+    for (let i = 0; i < 30; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      expect(ctx.muzzle.spreadScale).toBe(c.spreadScale);
+    }
+    expect(ctx.muzzle.spreadScale).toBeGreaterThan(still);
+  });
+
   it('fires a semi click made in the first moment after a sprint once the lockout ends, exactly once (audit SIM-03)', () => {
     const state = createGameState(1, 16, ROUNDS);
     const c = createCharacter(0, vec3(), 0);
