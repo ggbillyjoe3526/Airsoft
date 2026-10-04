@@ -1,4 +1,5 @@
 import type { MagazineId } from './attachments';
+import type { ShotProfile } from './sounds';
 import { GAME_STATS } from './gameStats';
 import { DEFAULT_SITE_LIMITS, type StatsFile } from './statsFile';
 
@@ -78,6 +79,10 @@ export type ReplicaModelKind = 'rifle' | 'pistol';
 
 export interface ReplicaLook {
   model: ReplicaModelKind;
+  /** Its own first-person model (render/replicaModels.ts), when it isn't its kind's standard one (the Cyber Pistol's, M32). */
+  viewmodel?: 'cyber';
+  /** The sounds it makes (config/sounds.ts), when they aren't its power's own (the Cyber Pistol's, M32). */
+  sound?: ShotProfile;
   /** Fitted with a suppressor: its shots sound quieter and duller (config/audio.ts suppressed). */
   suppressed: boolean;
   /**
@@ -165,6 +170,38 @@ export const GAS_PISTOL: ReplicaConfig = withStats({
   magazines: ['standard', 'extended'],
   siteClass: 'pistol',
   look: { model: 'pistol', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
+});
+
+/**
+ * Cyber Pistol (M32, owner's design 2026-10-04): an electric pistol with a battery built in, a chase replica that only
+ * comes at Legendary (pool.md's Tiers and Drop % columns). Rifle-class power and reach close to the rifle's, with
+ * pistol handling and almost no kick; no parts fit it. stats.md's row is set so the Legendary bonus lands on the spec:
+ * 1.0 J, 14 BBs/s, 0.30° spread, 1.1 s reload, 0.28 s draw.
+ */
+export const CYBER_PISTOL: ReplicaConfig = withStats({
+  id: 'cyber',
+  name: 'Cyber Pistol',
+  power: 'electric',
+  fireModes: ['semi', 'burst', 'auto'],
+  defaultFireMode: 'semi',
+  fireRate: 13.03,
+  magSize: 50,
+  mags: 3,
+  reloadTime: 1.294,
+  drawTime: 0.329,
+  // ×1.075 at Legendary: 1.00 J on 0.25 g BBs, 89 m/s, the pistol class's limit.
+  muzzleEnergy: 0.93,
+  bbWeight: 0.25,
+  // A weaker hop-up than the others (owner: "hop shouldn't be as important"): out of the box it keeps 0.25 g BBs on
+  // target to about 33 m, further than the Gas Pistol, short of the AEG's 39 m. Turned right up it reaches about 35 m
+  // (38 m on 0.20 g BBs), still short of what a tuned AEG reaches (about 41 m).
+  hopUpMax: 0.17,
+  hopUpDial: 0.95,
+  spreadDeg: 0.353,
+  recoilDeg: 0.06,
+  magazines: ['standard'],
+  siteClass: 'pistol',
+  look: { model: 'pistol', viewmodel: 'cyber', sound: 'cyber', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
 });
 
 /** The hop-up dial the player turns before a match (0..1 of a replica's hopUpMax), shown as a percentage. */

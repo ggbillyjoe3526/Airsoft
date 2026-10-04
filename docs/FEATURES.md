@@ -12,7 +12,8 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Replicas and BBs
 
-- An AEG rifle (single, burst or auto on the fire selector) and a gas pistol, switched with the wheel or keys (Phase 1, M12a)
+- An AEG rifle (single, burst or auto on the fire selector), a gas pistol and an electric Cyber Pistol, switched with the wheel or keys (Phase 1, M12a, M32)
+- Cyber Pistol: electric semi, burst and auto; built-in battery, fits either gear slot (M32)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c, M30)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
@@ -58,9 +59,11 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Higher tiers add energy and rate of fire; batteries set the rate of fire (11.1 V LiPo battery); stronger gas kicks harder; a site energy limit (M29a)
 - Barrel and Muzzle parts: a Tight-Bore Barrel and a Long Barrel for the AEG, a Silencer for both replicas that halves how far bots, the minimap and sound cues hear your shots (M29b)
 - On Hard, each opponent carries its own kit rolled from the pool by the match's seed (M29b)
+- Glowing BBs per replica in Customise: At Night (the default, glowing only on night fields), Always or Off; a glowing BB is green, a little larger at range and leaves a longer streak; bots load them on night fields (M33b)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start (M26a)
 - Your collection is saved apart from the settings (M26a)
 - Armory, free to play: earn Field Credits (scaled by participation and match length), buy Tokens, draw with pity (an Epic or better within 20 Shots, a Legendary within 100); catalogue shows all items by rarity tier (M26c, FA10)
+- Chase items: a Legendary-only replica with its own 0.25 % chance per Shot item, shown on the Armory's Chase line (M32)
 
 ## Menus and settings
 

@@ -32,7 +32,8 @@ function twoToneBall(): THREE.SphereGeometry {
 /**
  * Draws every BB in flight as a small bright ball with a short streak behind it (one instanced mesh + one ribbon
  * buffer, sized to the pool, so nothing is allocated per frame). Each streak is a quad facing the camera, as wide on
- * screen at its head and its tail (BB_VISUALS.trailAngularWidth, audit REN-19), not a one-device-pixel line.
+ * screen at its head and its tail (BB_VISUALS.trailAngularWidth, audit REN-19), not a one-device-pixel line. Glowing
+ * BBs (M33b, setGlowInDark) share both: a per-instance and per-vertex colour, a larger minimum size and a longer streak.
  */
 export class BBRenderer {
   readonly object = new THREE.Group();
@@ -58,6 +59,12 @@ export class BBRenderer {
   private readonly offsetSerial: Float64Array;
   /** Per pool slot: seconds over which the muzzle offset blends away (never longer than the flight). */
   private readonly convergeTimes: Float32Array;
+  /** Per pool slot: the serial of the glowing BB in it (setGlowInDark); a reused slot's new BB doesn't glow. */
+  private readonly glowInDarkSerial: Float64Array;
+  private readonly trailColors: Float32Array;
+  private readonly glowInDarkColor = new THREE.Color(BB_VISUALS.glowInDark.color);
+  private readonly trailHead = new THREE.Color(BB_VISUALS.trailColor);
+  private readonly glowInDarkTrailHead = new THREE.Color(BB_VISUALS.glowInDark.trailColor);
 
   constructor(
     private readonly pool: BBPool,
@@ -67,7 +74,10 @@ export class BBRenderer {
     this.offsets = new Float32Array(n * 3);
     this.offsetSerial = new Float64Array(n);
     this.convergeTimes = new Float32Array(n);
+    this.glowInDarkSerial = new Float64Array(n).fill(-1);
+    // Two-tone vertex colours (FA8) times an instance colour: white, or green for a glowing BB (M33b).
     this.balls = new THREE.InstancedMesh(twoToneBall(), new THREE.MeshBasicMaterial({ vertexColors: true }), n);
+    this.balls.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3).fill(1), 3).setUsage(THREE.DynamicDrawUsage);
     this.balls.count = 0;
     this.balls.frustumCulled = false;
     const G = BB_VISUALS.glow;
@@ -84,18 +94,17 @@ export class BBRenderer {
     this.glow.visible = false;
 
     this.trailPositions = new Float32Array(n * QUAD_VERTICES * 3);
-    const colors = new Float32Array(n * QUAD_VERTICES * 3);
+    // Bright at the BB (corners 0, 1), fading to black (invisible with additive blending) at the tail (2, 3); the head's
+    // colour is set per frame, as the BB drawn in a quad changes (white or glowing).
+    this.trailColors = new Float32Array(n * QUAD_VERTICES * 3);
     const index = new Uint16Array(n * QUAD_INDICES);
-    const head = new THREE.Color(BB_VISUALS.trailColor);
     for (let i = 0; i < n; i++) {
-      // Bright at the BB (corners 0, 1), fading to black (invisible with additive blending) at the tail (2, 3).
-      colors.set([head.r, head.g, head.b, head.r, head.g, head.b, 0, 0, 0, 0, 0, 0], i * QUAD_VERTICES * 3);
       const v = i * QUAD_VERTICES;
       index.set([v, v + 1, v + 2, v + 2, v + 1, v + 3], i * QUAD_INDICES);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.trailPositions, 3).setUsage(THREE.DynamicDrawUsage));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(this.trailColors, 3).setUsage(THREE.DynamicDrawUsage));
     geo.setIndex(new THREE.BufferAttribute(index, 1));
     geo.setDrawRange(0, 0);
     this.trails = new THREE.Mesh(
@@ -136,11 +145,14 @@ export class BBRenderer {
     const glowing = this.glowOn && facing !== undefined;
     let count = 0;
     const bbs = this.pool.bbs;
-    const trail = BB_VISUALS.trailSeconds;
+    const tc = this.trailColors;
     const minScale = BB_VISUALS.minAngularRadius / BB_VISUALS.radius;
+    const luminousMinScale = BB_VISUALS.glowInDark.minAngularRadius / BB_VISUALS.radius;
     for (let i = 0; i < bbs.length; i++) {
       const bb = bbs[i]!;
       if (!bb.active) continue;
+      const luminous = this.glowInDarkSerial[i] === bb.serial;
+      const trail = luminous ? BB_VISUALS.glowInDark.trailSeconds : BB_VISUALS.trailSeconds;
       let x = bb.prevPosition.x + (bb.position.x - bb.prevPosition.x) * alpha;
       let y = bb.prevPosition.y + (bb.position.y - bb.prevPosition.y) * alpha;
       let z = bb.prevPosition.z + (bb.position.z - bb.prevPosition.z) * alpha;
@@ -170,14 +182,20 @@ export class BBRenderer {
       }
       // Keep far BBs visible: scale up in proportion to distance once they'd be under the minimum size.
       const dist = Math.hypot(x - camera.x, y - camera.y, z - camera.z);
-      const s = Math.max(1, dist * minScale);
+      const s = Math.max(1, dist * (luminous ? luminousMinScale : minScale));
       this.matrix.makeScale(s, s, s).setPosition(x, y, z);
       this.balls.setMatrixAt(count, this.matrix);
+      this.balls.setColorAt(count, luminous ? this.glowInDarkColor : WHITE);
       if (glowing) {
         this.matrix.compose(this.glowPos.set(x, y, z), facing, this.glowScale.setScalar(s));
         this.glow.setMatrixAt(count, this.matrix);
       }
-      this.writeStreak(count * QUAD_VERTICES * 3, x, y, z, tx, ty, tz, camera);
+      const o = count * QUAD_VERTICES * 3;
+      const head = luminous ? this.glowInDarkTrailHead : this.trailHead;
+      tc[o] = tc[o + 3] = head.r;
+      tc[o + 1] = tc[o + 4] = head.g;
+      tc[o + 2] = tc[o + 5] = head.b;
+      this.writeStreak(o, x, y, z, tx, ty, tz, camera);
       count++;
     }
     this.balls.count = count;
@@ -187,8 +205,10 @@ export class BBRenderer {
     // Nothing in flight now or last frame: the buffers already say so (REN-22).
     if (count > 0 || this.lastCount > 0) {
       this.balls.instanceMatrix.needsUpdate = true;
+      this.balls.instanceColor!.needsUpdate = true;
       if (glowing) this.glow.instanceMatrix.needsUpdate = true;
       (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+      (geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
     }
     this.lastCount = count;
   }
@@ -222,6 +242,12 @@ export class BBRenderer {
     tp[o + 9] = tx - s.x * tailHalf;
     tp[o + 10] = ty - s.y * tailHalf;
     tp[o + 11] = tz - s.z * tailHalf;
+  }
+
+  /** Draws `bb` as a glowing (glow-in-the-dark) BB, or not, for the rest of its flight (M33b). */
+  setGlowInDark(bb: BB, on: boolean): void {
+    const i = this.pool.bbs.indexOf(bb);
+    if (i >= 0) this.glowInDarkSerial[i] = on ? bb.serial : -1;
   }
 
   /**
