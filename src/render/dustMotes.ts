@@ -46,6 +46,8 @@ export class DustMotes {
   private readonly sprite: THREE.CanvasTexture;
   private count = 0;
   private time = 0;
+  /** How far the air has carried the motes so far (m, per axis, kept within the box). */
+  private readonly drift = { x: 0, y: 0, z: 0 };
   private motionOn = true;
 
   /** `max`: the most motes any preset shows (the buffer's size). */
@@ -100,17 +102,22 @@ export class DustMotes {
     this.setCount(this.count);
   }
 
-  update(dt: number, eye: { x: number; y: number; z: number }): void {
+  /** Moves the motes on by `dt` round the camera at `eye`, carried by the match's `wind` (m/s; M30): dust rides the air. */
+  update(dt: number, eye: { x: number; y: number; z: number }, wind: { x: number; y: number; z: number }): void {
     if (!this.object.visible) return;
     const D = DUST_MOTES;
     this.time += dt;
     const t = this.time;
+    const drift = this.drift;
+    drift.x = wrap(drift.x + (wind.x * D.windShare + D.breeze.x) * dt, D.box);
+    drift.y = wrap(drift.y + (wind.y * D.windShare + D.breeze.y) * dt, D.box);
+    drift.z = wrap(drift.z + (wind.z * D.windShare + D.breeze.z) * dt, D.box);
     for (let i = 0; i < this.count; i++) {
       const w = t * D.wanderRate + this.phase[i]!;
       const j = i * 3;
-      this.positions[j] = motePosition(this.base[j]!, D.breeze.x * t + Math.sin(w) * D.wander, eye.x, D.box);
-      this.positions[j + 1] = motePosition(this.base[j + 1]!, D.breeze.y * t + Math.sin(w * 1.3) * D.wander, eye.y, D.box);
-      this.positions[j + 2] = motePosition(this.base[j + 2]!, D.breeze.z * t + Math.cos(w * 0.9) * D.wander, eye.z, D.box);
+      this.positions[j] = motePosition(this.base[j]!, drift.x + Math.sin(w) * D.wander, eye.x, D.box);
+      this.positions[j + 1] = motePosition(this.base[j + 1]!, drift.y + Math.sin(w * 1.3) * D.wander, eye.y, D.box);
+      this.positions[j + 2] = motePosition(this.base[j + 2]!, drift.z + Math.cos(w * 0.9) * D.wander, eye.z, D.box);
       const dx = this.positions[j]! - eye.x;
       const dy = this.positions[j + 1]! - eye.y;
       const dz = this.positions[j + 2]! - eye.z;

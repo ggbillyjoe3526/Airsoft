@@ -13,8 +13,9 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Replicas and BBs
 
 - An AEG rifle (single, burst or auto on the fire selector) and a gas pistol, switched with the wheel or keys (Phase 1, M12a)
-- BBs are real projectiles: visible flight, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c)
+- BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c, M30)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
+- Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
 - A limited set of magazines each round; a reload swaps in the fullest spare, no topping up (M8)
 - Optics: iron sights, a red dot or a 2× scope; aiming down sights with right click, at its own sensitivity (M12b, M17b)
 - Grips (vertical, angled) and magazines (hi-cap, low-cap, the pistol's extended one) trade handling for noise and sway (M17b)

@@ -33,9 +33,12 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Changed
 - Pistol leans slightly left again, much less than before (#13)
 - **M25b** · Depot: site props instead of most two-high crate stacks (#45)
+- **M30** · BBs fly by real air physics: full drag (0.52 s to 30 m, was 0.47 s), hop-up spin that wears off, factory reach unchanged
+- **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 
 ### Fixed
 - Empty magazine hint names your reload key (#23)
+- **M30** · Bots lead moving targets at range by the BB's real, slower flight time under drag
 - **BP1** · The hit-direction marker fades over the hit call instead of being cut off; sprint picks up as soon as you let go of Q / E (#53)
 - **BP1** · A semi or burst double-tap never fires a tick early; a BB fired straight up never goes backwards (#53)
 - **BP1** · The pause screen shows the match's seed; New game says which end you start at (#53)
@@ -50,6 +53,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - Roadmap: the owner's third feature picks (#46)
 - **M26d** · Dev settings: Disable Armory and Unlock all gear for testing (#48)
 - **M27** · Walk-off route searches rationed to one per tick (pull request to follow)
+- **M30** · One midpoint integrator step per tick replaces two Euler sub-steps; drag from a lookup table; BB streak follows its mean velocity, not its end-of-tick velocity
 - **BP1** · The rendered sounds are held once (about 9 MB less); the perf script restarts with each match (#53)
 
 ## v0.1-alpha.3 · 2026-10-03

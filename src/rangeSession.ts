@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
-import { BALLISTICS } from './config/ballistics';
+import { BALLISTICS, WIND } from './config/ballistics';
 import { FOOTSTEPS } from './config/footsteps';
 import { HITS, ROUNDS } from './config/hits';
 import type { CrosshairSettings } from './config/matchInfo';
@@ -30,6 +30,7 @@ import { type Character, createCharacter, respawnCharacter } from './sim/charact
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { createRangeTargets } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
+import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import type { DevSettings } from './config/dev';
@@ -113,6 +114,7 @@ export class RangeSession {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
+      wind: createWind(seed, WIND),
       killY: map.killY,
       hits: HITS,
       deadZones: map.deadZones,
