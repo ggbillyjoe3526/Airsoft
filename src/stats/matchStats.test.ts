@@ -79,4 +79,23 @@ describe('match stats (M19)', () => {
     stats.reset();
     expect(stats.matchOf(1)).toMatchObject({ bbsFired: 0, hits: 0, timeAlive: 0 });
   });
+
+  it('counts a round won for a player who hit an opponent in it or was still in play at its end, not one sat out (audit POOL-08)', () => {
+    const state = match();
+    const stats = new MatchStats(state.characters);
+    const won = { type: 'roundOver', winner: 0, reason: 'eliminated' } as const;
+    // Round 1: everyone on Blue still in play.
+    tick(stats, state, [won]);
+    // Round 2: player 0 out early with no hit, player 1 hit an opponent and was then hit too.
+    tick(stats, state, [{ type: 'roundStart', round: 2 }]);
+    state.characters[0]!.status = 'out';
+    tick(stats, state, [hit(2, 1)]);
+    state.characters[1]!.status = 'out';
+    tick(stats, state, [won]);
+    // Round 3, lost: nobody on Blue is paid for it.
+    tick(stats, state, [{ type: 'roundStart', round: 3 }, { type: 'roundOver', winner: 1, reason: 'eliminated' }]);
+    expect([stats.roundsContributed(0), stats.roundsContributed(1), stats.roundsContributed(2)]).toEqual([1, 2, 1]);
+    stats.reset();
+    expect(stats.roundsContributed(1)).toBe(0);
+  });
 });

@@ -44,6 +44,7 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
+import { MatchTakes } from './stats/settleMatch';
 import type { MatchResult } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import type { NotCounted } from './ui/recordsView';
@@ -104,10 +105,8 @@ export class MatchSession {
   private readonly hits: HitConfig;
   /** Simulation time the match was decided (NaN while it's on, and once the result screen is due). */
   private matchOverAt = Number.NaN;
-  /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
-  private resultTaken = false;
-  /** The decided match has been paid its Field Credits (takeOutcome, M26c), so it is paid once. */
-  private outcomeTaken = false;
+  /** The decided match goes to the records (takeMatchResult) and is paid (takeOutcome, M26c) once each. */
+  private readonly takes = new MatchTakes();
   /** The standard match, so its result could go into the records (custom rules don't, M20). */
   private readonly standardRules: boolean;
   /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
@@ -215,11 +214,10 @@ export class MatchSession {
    */
   takeMatchResult(): MatchResult | null {
     const r = this.state.round;
-    if (r.phase !== 'matchOver' || this.resultTaken) return null;
-    this.resultTaken = true;
-    if (!this.countsForRecords) return null;
-    const mine = this.stats.matchOf(this.player.id);
-    return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+    return this.takes.result(r.phase === 'matchOver', this.countsForRecords, () => {
+      const mine = this.stats.matchOf(this.player.id);
+      return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+    });
   }
 
   /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24). */
@@ -233,16 +231,15 @@ export class MatchSession {
    */
   takeOutcome(): MatchOutcome | null {
     const r = this.state.round;
-    if (r.phase !== 'matchOver' || this.outcomeTaken) return null;
-    this.outcomeTaken = true;
-    if (!this.paysFieldCredits) return null;
-    return {
+    return this.takes.outcome(r.phase === 'matchOver', this.paysFieldCredits, () => ({
       won: r.matchWinner === this.player.team,
-      roundsWon: r.score[this.player.team] ?? 0,
+      // Rounds won with you in them (audit POOL-08), and the teammates' difficulty when you have any.
+      roundsWon: this.stats.roundsContributed(this.player.id),
       hits: this.stats.matchOf(this.player.id).hits,
       winsNeeded: this.rounds.winsNeeded,
       difficulty: this.setup.difficulty,
-    };
+      ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
+    }));
   }
 
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
