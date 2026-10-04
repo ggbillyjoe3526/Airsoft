@@ -42,5 +42,5 @@ acceptance:
   5. One flight step a tick with a second-order integrator: within 1 cm of a 100-substep flight at 50 m; the per-BB step costs no more than before (benchmark in the PR) and allocates nothing
   6. Bots lead targets with the BB's flight time under drag (flightTimeEstimate, within 5% of the full model), not distance / muzzle speed; the KNOWN_ISSUES row about under-leading is removed; bots don't allow for wind; the headless match guards stay green
   7. The dust in the air drifts with the wind, so it can be read; nothing on the HUD
-status: building
+status: done
 attempts: 1

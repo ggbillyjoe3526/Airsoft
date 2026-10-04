@@ -19,6 +19,9 @@ export interface WindState {
   veerPeriod: number;
 }
 
+/** How the two gust waves mix into the strength's swing (they sum to 1, so the swing peaks at `gust`). */
+const GUST_MIX = [0.6, 0.4] as const;
+
 /** Stirs the match seed so the wind's draws don't follow the simulation's own stream (createRng(seed)). */
 const WIND_SALT = 0x5f3759df;
 
@@ -43,7 +46,7 @@ export function createWind(seed: number, cfg: WindConfig): WindState {
  */
 export function windAt(w: WindState, time: number, out: Vec3): Vec3 {
   const tau = Math.PI * 2;
-  const gust = 0.6 * Math.sin((tau * time) / w.gustPeriods[0] + w.phases[0]) + 0.4 * Math.sin((tau * time) / w.gustPeriods[1] + w.phases[1]);
+  const gust = GUST_MIX[0] * Math.sin((tau * time) / w.gustPeriods[0] + w.phases[0]) + GUST_MIX[1] * Math.sin((tau * time) / w.gustPeriods[1] + w.phases[1]);
   const speed = w.speed * (1 + w.gust * gust);
   const yaw = w.yaw + w.veer * Math.sin((tau * time) / w.veerPeriod + w.phases[2]);
   out.x = -Math.sin(yaw) * speed;

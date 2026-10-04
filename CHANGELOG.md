@@ -33,7 +33,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - Pistol leans slightly left again, much less than before (#13)
 - **M25b** · Depot: site props instead of most two-high crate stacks (#45)
 - **M30** · BBs fly by real air physics: full drag (0.52 s to 30 m, was 0.47 s), hop-up spin that wears off, factory reach unchanged
-- **M30** · Each match has a light breeze that drifts BBs downwind (up to ~40 cm at 34 m); the dust in the air drifts with it
+- **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 
 ### Fixed
 - Empty magazine hint names your reload key (#23)
