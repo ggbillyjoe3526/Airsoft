@@ -526,13 +526,14 @@ describe('walk-off route searches through the simulation (M27)', () => {
     eliminate(a, blue.id, state.characters, ctx.targets.elimination);
     eliminate(b, blue.id, state.characters, ctx.targets.elimination);
     expect(searches()).toBe(before); // the hits themselves search nothing
-    expect(a.walkOffRoute).toHaveLength(0);
-    expect(b.walkOffRoute).toHaveLength(0);
+    expect(a.walkOffRoutePending).toBe(true);
+    expect(b.walkOffRoutePending).toBe(true);
 
     stepSimulation(state, commands, ctx, DT);
     expect(searches()).toBe(before + 1); // one search this tick: the first victim's
     expect(a.walkOffRoute.length).toBeGreaterThan(0);
-    expect(b.walkOffRoute).toHaveLength(0);
+    expect(a.walkOffRoutePending).toBe(false);
+    expect(b.walkOffRoutePending).toBe(true);
     expect(a.status).toBe('calling');
     expect(b.status).toBe('calling'); // still standing and calling while its route waits
 
@@ -559,7 +560,6 @@ describe('walk-off route searches through the simulation (M27)', () => {
     for (let i = 0; i < 5; i++) stepSimulation(state, commands, ctx, DT);
     expect(searches()).toBe(before);
     expect(a.status).toBe('alive');
-    expect(a.walkOffRoute).toHaveLength(0);
     expect(a.walkOffRoutePending).toBe(false);
   });
 });

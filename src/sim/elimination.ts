@@ -45,8 +45,9 @@ export function eliminate(victim: Character, shooterId: number, characters: read
   const spot = spots && spots.length > 0 ? spots[alreadyOut % spots.length]! : undefined;
   copy(victim.deadZoneTarget, spot ? spot.position : victim.spawnPosition);
   victim.deadZoneYaw = spot ? spot.yaw : victim.spawnYaw;
+  // The old route stays in place until the search overwrites it (findPath reuses its waypoint objects); nothing reads
+  // it while the victim is still calling.
   victim.walkOffLeg = 0;
-  victim.walkOffRoute.length = 0;
   victim.walkOffRoutePending = true;
 }
 
