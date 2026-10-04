@@ -18,6 +18,21 @@ export function sensitivityForCm(cm: number, dpi: number): number {
   return FULL_TURN / (MOUSE.radiansPerCount * counts);
 }
 
+/**
+ * The sensitivity a typed cm/360 sets: sensitivityForCm kept to the slider's range and rounded to its step (audit
+ * L-32), so the slider, its readout and the game all use the same value.
+ */
+export function sensitivityFromTypedCm(cm: number, dpi: number): number {
+  const v = Math.max(MOUSE.minSensitivity, Math.min(MOUSE.maxSensitivity, sensitivityForCm(cm, dpi)));
+  return roundToStep(v, MOUSE.sensitivityStep);
+}
+
+/** `v` to the nearest multiple of `step` (a step such as 0.05, whose inverse is a whole number, rounds exactly). */
+export function roundToStep(v: number, step: number): number {
+  const perUnit = Math.round(1 / step);
+  return Math.round(v * perUnit) / perUnit;
+}
+
 /** The sensitivity another shooter needs to turn as far per mouse count, given its `degreesPerCount` at sensitivity 1. */
 export function sameSensitivityAs(sensitivity: number, degreesPerCount: number): number {
   return (MOUSE.radiansPerCount * sensitivity * DEGREES_PER_RADIAN) / degreesPerCount;
