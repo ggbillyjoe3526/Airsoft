@@ -33,8 +33,8 @@ describe('a 3v3 bot match on the Ramp Yard', () => {
   it('has bot teammates follow a leader over the ramp and along the platform without stepping off an edge (M-08)', { timeout: 60_000 }, () => {
     // A smoke test of Follow me over drops: it passes without M-08's drop check too (the followers here never turn
     // along an edge), so squadOrders.test.ts's pit case is the regression guard for that.
-    // Measured 2026-10-04 (seeds 1-3, 60 s): within a few metres of the leader all the time, at worst about 4.4 m
-    // behind, never in the air.
+    // Measured 2026-10-04 (seeds 1-3, 60 s, after the bug pass put follow spots along the ramp rather than at the
+    // leader): within a few metres of the leader all the time, at worst about 6.1 m behind, never in the air.
     for (const seed of [1, 2, 3]) {
       const { stats, counted, near, worst } = playFollowMatch(60, seed, RAMP_YARD);
       expect(counted, `seed ${seed}`).toBeGreaterThan(500);
