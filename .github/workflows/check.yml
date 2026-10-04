@@ -7,10 +7,11 @@ on:
     branches: [main]
   pull_request:
 
-# A newer push to a pull request cancels its older run; runs on main always finish, so every merge shows whether
-# main is green.
+# A newer push to a pull request cancels its older run. Pushes to main are grouped by commit, so no run on main is
+# cancelled (GitHub drops a pending run in the same group whatever cancel-in-progress says) and every merge shows
+# whether main is green.
 concurrency:
-  group: check-${{ github.ref }}
+  group: check-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:

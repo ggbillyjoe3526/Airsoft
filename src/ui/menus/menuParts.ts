@@ -123,6 +123,8 @@ export function rangeControl(
 /** A line under a play button for messages such as the browser refusing the mouse lock. */
 export function hintLine(): HTMLParagraphElement {
   const hint = el('p', 'menu-hint');
+  // A status region, so a screen reader reads out a refused mouse lock (audit fixes critic).
+  hint.setAttribute('role', 'status');
   hint.hidden = true;
   return hint;
 }
