@@ -4,8 +4,8 @@ import { Sfx, type SfxSetup } from '../audio/sfx';
 import type { MotionScale } from '../config/accessibility';
 import { FIGURE } from '../config/characters';
 import { impactMaterialAt } from '../audio/soundMaterials';
-import type { VolumeChannel } from '../config/audio';
 import type { Action } from '../config/controls';
+import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { BB_VISUALS, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, QUALITY, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
@@ -43,7 +43,9 @@ export class CombatPresentation {
   /** The impact dust's tint per material (linear colours, made once). */
   private readonly dustTints = new Map<ImpactMaterial, THREE.Color>();
   /** The held replica's reflections (M14, QualitySettings.replicaSheen): made the first time they are wanted. */
-  private sheen: { pmrem: THREE.PMREMGenerator; target: THREE.WebGLRenderTarget } | null = null;
+  private sheen: THREE.WebGLRenderTarget | null = null;
+  /** The preset in use, to make the sheen again after a lost graphics context (contextRestored). */
+  private quality: QualitySettings;
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
   private readonly hud: Hud;
@@ -91,6 +93,8 @@ export class CombatPresentation {
     keyName: (action: Action) => string,
     crosshair: CrosshairSettings,
     quality: QualitySettings,
+    /** The match's hit rules: a leaning figure's muzzle tilts by their lean angle. */
+    private readonly hits: HitConfig,
   ) {
     this.sfx = new Sfx(loadout, blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
@@ -100,30 +104,38 @@ export class CombatPresentation {
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container, keyName, crosshair);
+    this.quality = quality;
     this.setQuality(quality);
   }
 
   /** A quality preset (Settings → Graphics, M14): how much dust drifts in the air, and the held replica's sheen. */
   setQuality(quality: QualitySettings): void {
+    this.quality = quality;
     this.motes.setCount(quality.dustMotes);
     if (quality.replicaSheen && !this.sheen) {
+      // Only the prefiltered target is kept: the generator's own buffers are freed at once (audit L-02).
       const pmrem = new THREE.PMREMGenerator(this.renderer.renderer);
       const room = new RoomEnvironment();
-      const target = pmrem.fromScene(room, 0.04);
+      this.sheen = pmrem.fromScene(room, 0.04);
       room.dispose();
-      this.sheen = { pmrem, target };
+      pmrem.dispose();
     }
-    this.viewmodel.setEnvironment(quality.replicaSheen ? (this.sheen?.target.texture ?? null) : null);
+    this.viewmodel.setEnvironment(quality.replicaSheen ? (this.sheen?.texture ?? null) : null);
+  }
+
+  /**
+   * The graphics context is back after a loss (audit L-02). Three.js uploads geometry and textures again from their
+   * copies, but a render target comes back empty, so the sheen is rendered again. The old target is dropped, not
+   * disposed: its GL objects went with the lost context, and freeing them on the new one only logs WebGL warnings.
+   */
+  contextRestored(): void {
+    this.sheen = null;
+    this.setQuality(this.quality);
   }
 
   /** Browsers only allow audio after a user gesture: call from the Play click. */
   unlockAudio(): void {
     this.sfx.unlock();
-  }
-
-  /** A volume slider moved on Settings → Audio. */
-  setVolume(channel: VolumeChannel, position: number): void {
-    this.sfx.setVolume(channel, position);
   }
 
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
@@ -177,9 +189,10 @@ export class CombatPresentation {
           continue;
         }
       } else if (e.type === 'bbImpact') {
-        // Dust by what the BB hit (the material its tick sounds by).
+        // Dust by what the BB hit, and its tick: one lookup for both (audit L-15).
         const material = impactMaterialAt(this.blocks, e.position);
         this.puffs.spawn(e.position, this.dustTints.get(material), IMPACT_DUST[material].scale);
+        this.sfx.impact(e.position, material);
       } else if (e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
@@ -240,7 +253,7 @@ export class CombatPresentation {
     this.listenerPos.y = cam.position.y;
     this.listenerPos.z = cam.position.z;
     this.sfx.setListener(this.listenerPos, this.forward.x, this.forward.y, this.forward.z);
-    this.sfx.updateSources(this.state.characters, this.player.id);
+    this.sfx.placeSources(this.state.characters, this.player.id);
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */
@@ -255,8 +268,7 @@ export class CombatPresentation {
     this.gasPuffs.dispose();
     this.motes.dispose();
     this.viewmodel.setEnvironment(null);
-    this.sheen?.target.dispose();
-    this.sheen?.pmrem.dispose();
+    this.sheen?.dispose();
     this.sheen = null;
     this.paths.dispose();
     this.viewmodel.dispose();
@@ -283,7 +295,7 @@ export class CombatPresentation {
     } else {
       const shooter = this.state.characters.find((c) => c.id === shooterId);
       ok = shooter !== undefined;
-      if (shooter) figureMuzzle(shooter, this.muzzle, this.holdOf(shooter));
+      if (shooter) figureMuzzle(shooter, this.muzzle, this.holdOf(shooter), this.hits);
     }
     if (ok) this.bbs.startFromMuzzle(newest, this.muzzle, this.estimateFlightTime(newest));
   }
@@ -299,7 +311,7 @@ export class CombatPresentation {
     const at = this.puffAt;
     let ok = true;
     if (shooter === this.player) ok = this.viewmodel.muzzleWorld(cam, at);
-    else figureMuzzle(shooter, at, this.holdOf(shooter));
+    else figureMuzzle(shooter, at, this.holdOf(shooter), this.hits);
     if (!ok) return;
     // Forward along the shooter's view (yaw and pitch: the replica points where they look).
     const v = this.puffVelocity;

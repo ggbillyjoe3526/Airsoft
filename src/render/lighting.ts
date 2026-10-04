@@ -54,10 +54,13 @@ export interface Daylight {
   dispose(): void;
 }
 
-/** Points the sun's shadow at the preset: on or off, map size (the old map is freed to be remade) and softness. */
+/**
+ * Points the sun's shadow at the preset: on or off, map size and softness. The old map is freed when the size changes
+ * (Three.js makes a new one at the next shadow pass) and when shadows go off, so Low keeps no render target (audit L-01).
+ */
 function applyShadowQuality(sun: THREE.DirectionalLight, quality: QualitySettings): void {
   sun.castShadow = quality.shadows;
-  if (sun.shadow.mapSize.x !== quality.shadowMapSize) {
+  if (!quality.shadows || sun.shadow.mapSize.x !== quality.shadowMapSize) {
     sun.shadow.map?.dispose();
     sun.shadow.map = null;
     sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);

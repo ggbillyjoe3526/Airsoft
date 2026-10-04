@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { FIGURE } from '../config/characters';
+import { HITS } from '../config/hits';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { TEAM_COLOUR_SETS } from '../config/teams';
-import { buildFigure, disposeFigure, figureLooks, figureMuzzle } from './characterModels';
+import { buildFigure, disposeFigure, figureLeanRoll, figureLooks, figureMuzzle } from './characterModels';
 
 describe('figureMuzzle', () => {
-  it('matches the muzzle of the built figure for any position, yaw, pitch and crouch', () => {
+  it('matches the muzzle of the built figure for any position, yaw, pitch, crouch and lean', () => {
     const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial());
     // A marker at the barrel tip, in the aim group's own space.
     const tip = new THREE.Object3D();
@@ -24,24 +25,29 @@ describe('figureMuzzle', () => {
       [-5, 7, -2.5, -0.4, 1],
       [1, 1, Math.PI, 0.8, 0.5],
     ] as const) {
-      c.position.x = x;
-      c.position.z = z;
-      c.yaw = yaw;
-      c.pitch = pitch;
-      c.crouchAmount = crouch;
-      // Pose the figure the way CharacterRenderer does.
-      figure.root.position.set(x, 0, z);
-      figure.root.rotation.y = yaw;
-      figure.upper.position.y = FIGURE.hipHeight - crouch * FIGURE.crouchDrop;
-      figure.aim.rotation.x = pitch;
-      figure.root.updateMatrixWorld(true);
-      tip.getWorldPosition(want);
-      figureMuzzle(c, got);
-      expect(Math.hypot(got.x - want.x, got.y - want.y, got.z - want.z)).toBeLessThan(1e-6);
-      // The pistol hold's muzzle too (gas puffs and BBs leave it when the pistol is drawn).
-      pistolTip.getWorldPosition(want);
-      figureMuzzle(c, got, FIGURE.pistol);
-      expect(Math.hypot(got.x - want.x, got.y - want.y, got.z - want.z)).toBeLessThan(1e-6);
+      // Leaning left, upright and right (audit L-03: the BB and gas puff leave the rifle the figure is seen holding).
+      for (const lean of [-1, 0, 1]) {
+        c.position.x = x;
+        c.position.z = z;
+        c.yaw = yaw;
+        c.pitch = pitch;
+        c.crouchAmount = crouch;
+        c.lean = lean;
+        // Pose the figure the way CharacterRenderer does.
+        figure.root.position.set(x, 0, z);
+        figure.root.rotation.y = yaw;
+        figure.upper.position.y = FIGURE.hipHeight - crouch * FIGURE.crouchDrop;
+        figure.upper.rotation.z = figureLeanRoll(lean, HITS);
+        figure.aim.rotation.x = pitch;
+        figure.root.updateMatrixWorld(true);
+        tip.getWorldPosition(want);
+        figureMuzzle(c, got, FIGURE.rifle, HITS);
+        expect(Math.hypot(got.x - want.x, got.y - want.y, got.z - want.z)).toBeLessThan(1e-6);
+        // The pistol hold's muzzle too (gas puffs and BBs leave it when the pistol is drawn).
+        pistolTip.getWorldPosition(want);
+        figureMuzzle(c, got, FIGURE.pistol, HITS);
+        expect(Math.hypot(got.x - want.x, got.y - want.y, got.z - want.z)).toBeLessThan(1e-6);
+      }
     }
   });
 

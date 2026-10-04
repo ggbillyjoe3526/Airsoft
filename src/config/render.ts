@@ -100,7 +100,7 @@ export interface QualitySettings {
 
 /**
  * Render quality presets (M14: the Settings picker is back now the art pass gives it real work to scale). High is
- * the full look and the default; Medium keeps shadows and relief at a lower cost; Low drops shadows, antialiasing,
+ * the full look and the default (Low in a browser drawing in software, see startingQuality); Medium keeps shadows and relief at a lower cost; Low drops shadows, antialiasing,
  * relief, dust and the replica's sheen for integrated graphics. `?quality=low|medium|high` still overrides the saved
  * pick for one visit, to measure frame cost (Phase 3 audit C-04).
  */
@@ -111,6 +111,27 @@ export const QUALITY: Record<QualityPreset, QualitySettings> = {
 };
 
 export const DEFAULT_QUALITY: QualityPreset = 'high';
+
+/**
+ * The preset a browser drawing in software starts on when nothing is saved (audit M-02): High there runs at about two
+ * frames a second and the simulation in slow motion; Low at four times that.
+ */
+export const SOFTWARE_RENDERING_QUALITY: QualityPreset = 'low';
+
+/**
+ * The preset a visit starts with: `?quality=` if given, else the saved pick, else SOFTWARE_RENDERING_QUALITY when the
+ * browser draws in software and DEFAULT_QUALITY otherwise. `automatic` marks the software fallback: it is not saved, so
+ * the same browser with its graphics acceleration back on starts on the default again.
+ */
+export function startingQuality(
+  fromUrl: QualityPreset | null,
+  saved: QualityPreset | null,
+  softwareRendering: boolean,
+): { preset: QualityPreset; automatic: boolean } {
+  const picked = fromUrl ?? saved;
+  if (picked !== null) return { preset: picked, automatic: false };
+  return softwareRendering ? { preset: SOFTWARE_RENDERING_QUALITY, automatic: true } : { preset: DEFAULT_QUALITY, automatic: false };
+}
 
 /** The Quality picker's options (Settings → Graphics), cheapest first. */
 export const QUALITY_CHOICES: readonly { id: QualityPreset; label: string; blurb: string }[] = [

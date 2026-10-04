@@ -331,7 +331,7 @@ function barrier(): ProceduralTexture {
 
 export type SurfaceTextures = Record<SurfaceTextureId, ProceduralTexture>;
 
-/** Draws every surface texture (once per match). */
+/** Draws every surface texture (once per game: Renderer.surfaceTextures shares them between sessions). */
 export function createSurfaceTextures(): SurfaceTextures {
   return { concrete: concrete(), blockWall: blockWall(), crate: crate(), corrugated: corrugated(), steelPlate: steelPlate(), barrier: barrier() };
 }

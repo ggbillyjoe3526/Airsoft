@@ -60,7 +60,7 @@ ends the round). A hit character is eliminated
   from a player to its bot teammates; between fights an ordered bot is in mode `order` (before the pole, noises and its
   lane), and `orderOf` tells the HUD's squad line (`ui/squadOrderLine.ts`) what is in force. Hearing (`hear`) casts the
   same wall rays as the audio's muffling (`sim/soundPath.ts`): through walls a bot hears at `wallHearing` of the range.
-- **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
+- **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame). Consequence (audit L-34): at 60 ticks/s, 5 ticks cover 83 ms, so below about 12 frames/s the rest of each frame's time is dropped and the whole game (round clock, reloads, BB flight, bots) runs in slow motion rather than spiralling into ever longer catch-up frames (frame time is also capped at `SIM.maxFrameDt`, 0.25 s). Only the debug overlay's "sim ticks/s" shows it; a browser drawing in software starts on Low to stay above it (M-02).
 - **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
   streams made from it (the bots' plans, each bot).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
@@ -85,8 +85,11 @@ ends the round). A hit character is eliminated
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
 - **audio/** (reworked in M13): every effect is a recipe of layers in `config/sounds.ts` (filtered noise, gliding
-  tones, struck resonances), rendered by the pure `audio/dsp.ts` into a few variants each when audio starts (on Play)
-  and played back from buffers. A replica's shots follow its power source (`ReplicaConfig.power`: electric, gas;
+  tones, struck resonances), rendered by the pure `audio/dsp.ts` into a few variants each and played back from
+  buffers. The `Game` keeps one `AudioEngine` (`audio/audioEngine.ts`) for the page: the audio context (made suspended
+  at start, running only while a match is played), the volume buses and every sound's buffers, rendered a cue at a
+  time in the title screen's spare time. Each match's `Sfx` builds only its own graph on it and disconnects it when
+  the match goes. A replica's shots follow its power source (`ReplicaConfig.power`: electric, gas;
   spring is ready for the v0.3 armoury); an AEG winds its motor up on a fresh trigger pull and down after the last
   shot (`audio/motor.ts`). `Sfx` keeps one channel per other character (an HRTF panner that follows them, then a
   low-pass and gain muffling them by how much level geometry blocks two rays from the listener, `audio/occlusion.ts`);

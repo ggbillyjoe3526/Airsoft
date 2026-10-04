@@ -176,7 +176,7 @@ export const RIFLE_SCOPE = { from: -0.01, length: 0.11, outer: 0.014, inner: 0.0
  * Flat-top rails with flip-up iron sights (folded down when an optic is fitted), birdcage-style flash hider.
  * The optic is its own part, shown only when one is fitted.
  */
-function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): THREE.Group {
+function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): ReplicaModel {
   const b = new ModelBuilder();
   // Upper receiver with flat-top rail, forward assist and ejection port (right side), charging handle.
   b.profile('polymer', [[-0.11, 0.012], [0.15, 0.012], [0.15, 0.058], [-0.092, 0.058], [-0.11, 0.042]], 0.05);
@@ -288,18 +288,21 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): T
   buildForearm(support, leftWrist, [-0.3, -0.28, 0.02]);
 
   const group = b.build(m);
-  group.add(magazinePart({ standard: mag, hiCap, lowCap }, m, [0, -0.97, 0.25], { lowCap: [0, 0.06, -0.014] }));
+  const magazine = magazinePart({ standard: mag, hiCap, lowCap }, m, [0, -0.97, 0.25], { lowCap: [0, 0.06, -0.014] });
+  group.add(magazine.group);
   // From the handguard to just under the magazine's base plate (forward 0.1, up -0.26).
-  group.add(supportHandPart(support, m, [0.012, -0.242, -0.19]));
+  const supportHand = supportHandPart(support, m, [0.012, -0.242, -0.19]);
+  group.add(supportHand.group);
   group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'));
   group.add(namedPart(optic, m, 'optic:redDot'), namedPart(scope, m, 'optic:scope2x'));
   group.add(namedPart(vertical, m, 'grip:vertical'), namedPart(angled, m, 'grip:angled'));
-  group.add(muzzleMarker(0.611, 0.034));
-  return group;
+  const muzzle = muzzleMarker(0.611, 0.034);
+  group.add(muzzle);
+  return { group, muzzle, magazine, supportHand };
 }
 
 /** Polymer striker-fired gas pistol in two-tone: black slide over a tan frame with an accessory rail. */
-function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): THREE.Group {
+function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean): ReplicaModel {
   const b = new ModelBuilder();
   // Slide: boxy, rear serrations, barrel hood showing in the ejection port, sights, muzzle.
   b.profile('polymer', [[-0.095, 0.0], [0.1, 0.0], [0.1, 0.026], [0.092, 0.03], [-0.09, 0.03], [-0.097, 0.018]], 0.028, 0.004);
@@ -353,15 +356,47 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean)
   });
   buildForearm(support, leftWrist, [-0.16, -0.26, -0.28]);
   const group = b.build(m);
-  group.add(magazinePart({ standard: mag, extended }, m, GRIP_DOWN, { extended: [0, -0.038, 0] }));
+  const magazine = magazinePart({ standard: mag, extended }, m, GRIP_DOWN, { extended: [0, -0.038, 0] });
+  group.add(magazine.group);
   // From the side of the grip down to the magazine's base plate.
-  group.add(supportHandPart(support, m, [0.004, -0.068, -0.024]));
-  group.add(muzzleMarker(0.104, 0.015));
-  return group;
+  const supportHand = supportHandPart(support, m, [0.004, -0.068, -0.024]);
+  group.add(supportHand.group);
+  const muzzle = muzzleMarker(0.104, 0.015);
+  group.add(muzzle);
+  return { group, muzzle, magazine, supportHand };
+}
+
+/**
+ * One held replica's model and the parts the viewmodel moves (typed here rather than found by name and read from
+ * userData, audit L-05). Positions are as (across, up, back) in the model's space.
+ */
+export interface ReplicaModel {
+  group: THREE.Group;
+  /** Empty marker at the muzzle, where visual BBs start. */
+  muzzle: THREE.Object3D;
+  magazine: MagazinePart;
+  supportHand: SupportHandPart;
+}
+
+/** The magazine group (named 'magazine'), which slides out along `axis` (the magwell, a unit vector) on a reload. */
+export interface MagazinePart {
+  group: THREE.Group;
+  axis: THREE.Vector3;
+  /**
+   * Per fitted-magazine part ('magazine:<id>') whose base plate sits elsewhere than the standard one's: the offset
+   * there, where the support hand reaches on a reload. Missing: the standard base.
+   */
+  bases: ReadonlyMap<THREE.Object3D, THREE.Vector3>;
+}
+
+/** The support hand and forearm (named 'supportHand'); `toMag` moves it from its grip to holding the magazine. */
+export interface SupportHandPart {
+  group: THREE.Group;
+  toMag: THREE.Vector3;
 }
 
 export interface ReplicaModels {
-  models: Map<string, THREE.Group>;
+  models: Map<string, ReplicaModel>;
   /** Your own left hand raised high, palm forward: calling your hit. */
   raisedHand: THREE.Group;
   dispose(): void;
@@ -388,7 +423,7 @@ function buildRaisedHand(m: Record<MaterialKey, THREE.Material>): THREE.Group {
 /** Builds the held-replica model (with hands and team armband) for each replica in the loadout, keyed by replica id. */
 export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor: number, orangeTips: boolean): ReplicaModels {
   const materials = createMaterials(teamColor);
-  const models = new Map<string, THREE.Group>();
+  const models = new Map<string, ReplicaModel>();
   for (const r of loadout) {
     models.set(r.id, r.look.model === 'pistol' ? buildPistol(materials, orangeTips) : buildAeg(materials, orangeTips));
   }
@@ -400,7 +435,7 @@ export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor:
       raisedHand.traverse((o) => {
         if (o instanceof THREE.Mesh) o.geometry.dispose();
       });
-      for (const group of models.values()) {
+      for (const { group } of models.values()) {
         group.traverse((o) => {
           if (o instanceof THREE.Mesh) o.geometry.dispose();
         });
@@ -420,30 +455,29 @@ function magazinePart(
   m: Record<MaterialKey, THREE.Material>,
   axis: readonly [number, number, number],
   baseShift: Partial<Record<MagazineId, readonly [number, number, number]>> = {},
-): THREE.Group {
+): MagazinePart {
   const group = new THREE.Group();
+  const bases = new Map<THREE.Object3D, THREE.Vector3>();
   for (const [id, builder] of Object.entries(builders)) {
     const part = namedPart(builder, m, `magazine:${id}`);
     // Where this magazine's base plate sits against the standard one's, as (across, up, forward): the support hand
     // reaches there on a reload.
     const shift = baseShift[id as MagazineId];
-    if (shift) part.userData.toBase = new THREE.Vector3(shift[0], shift[1], -shift[2]);
+    if (shift) bases.set(part, new THREE.Vector3(shift[0], shift[1], -shift[2]));
     group.add(part);
   }
   group.name = 'magazine';
-  group.userData.axis = new THREE.Vector3(axis[0], axis[1], -axis[2]).normalize();
-  return group;
+  return { group, axis: new THREE.Vector3(axis[0], axis[1], -axis[2]).normalize(), bases };
 }
 
 /**
  * The support (left) hand and forearm as their own group named 'supportHand', so reloads can move it
  * to the magazine: `toMag` is the offset from its grip to holding the magazine, as (across, up, forward).
  */
-function supportHandPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>, toMag: readonly [number, number, number]): THREE.Group {
+function supportHandPart(builder: ModelBuilder, m: Record<MaterialKey, THREE.Material>, toMag: readonly [number, number, number]): SupportHandPart {
   const group = builder.build(m);
   group.name = 'supportHand';
-  group.userData.toMag = new THREE.Vector3(toMag[0], toMag[1], -toMag[2]);
-  return group;
+  return { group, toMag: new THREE.Vector3(toMag[0], toMag[1], -toMag[2]) };
 }
 
 /** A part the viewmodel shows or hides by name (the fitted optic, grip or magazine, the iron sights up or folded). */

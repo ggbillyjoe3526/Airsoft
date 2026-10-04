@@ -4,7 +4,7 @@ import type { HitConfig } from '../config/hits';
 import type { ReplicaConfig } from '../config/replicas';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
-import { buildFigure, createCalloutTexture, disposeFigure, type Figure } from './characterModels';
+import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll } from './characterModels';
 
 interface FigureState {
   figure: Figure;
@@ -34,14 +34,6 @@ export function flinchLean(dirX: number, dirZ: number, yaw: number, amount: numb
   out.x = localZ * amount;
   out.z = -localX * amount;
   return out;
-}
-
-/**
- * Roll of the figure's upper body (about its local Z, pivoting at the hips) for a lean of `lean` (-1 left
- * .. 1 right). +Z tips the top to the figure's left, so leaning right is negative. Matches sim/lean.ts.
- */
-export function figureLeanRoll(lean: number, hits: HitConfig): number {
-  return -lean * hits.lean.maxAngle;
 }
 
 /** Flinch strength (0..1) `t` seconds after a hit: a quick snap, then easing back. */

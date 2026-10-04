@@ -6,7 +6,8 @@ import { createCharacter } from '../sim/character';
 import { characterHitVolume, createHitVolume, type VerticalCapsule } from '../sim/hitbox';
 import { leanOffset } from '../sim/lean';
 import { vec3 } from '../sim/vec';
-import { figureLeanRoll, flinchEnvelope, flinchLean } from './characterRenderer';
+import { figureLeanRoll } from './characterModels';
+import { flinchEnvelope, flinchLean } from './characterRenderer';
 
 describe('flinchEnvelope', () => {
   const F = FIGURE.flinch;

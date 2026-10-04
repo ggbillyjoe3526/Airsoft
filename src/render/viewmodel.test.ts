@@ -1,11 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { REDUCED_MOTION } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import { LOADOUT } from '../config/replicas';
 import { createArmament, fitOptic, fitParts } from '../sim/armament';
-import { RIFLE_OPTIC, RIFLE_SCOPE } from './replicaModels';
+import { buildReplicaModels, RIFLE_OPTIC, RIFLE_SCOPE } from './replicaModels';
 import { magazineOut, magazineSwap, sprintCarry, Viewmodel } from './viewmodel';
+
+/** Each replica's typed model parts (replicaModels.ts), built apart from the viewmodel's: the same offsets. */
+const reference = buildReplicaModels(LOADOUT, 0x3a7bd5, VIEWMODEL.orangeTips);
+const partsOf = (id: string) => reference.models.get(id)!;
+afterAll(() => reference.dispose());
 
 describe('magazineOut', () => {
   const R = VIEWMODEL.reload;
@@ -62,7 +67,7 @@ describe('Viewmodel reload', () => {
         deepest = Math.max(deepest, mag[slot]!.position.length());
         if (arm.reload < replica.reloadTime - VIEWMODEL.reload.handMoveTime - dt) {
           // Once there, the hand holds the magazine: it moves exactly with it.
-          const toMag = hand.userData.toMag as THREE.Vector3;
+          const toMag = partsOf(replica.id).supportHand.toMag;
           expect(hand.position.clone().sub(toMag).distanceTo(mag[slot]!.position)).toBeLessThan(1e-9);
         }
       }
@@ -86,14 +91,14 @@ describe('Viewmodel reload with a fitted magazine (M17b)', () => {
     const dt = 1 / 60;
     for (const [slot, replica] of LOADOUT.entries()) {
       arm.active = slot;
-      const magOf = (id: string) => vm.scene.getObjectByName(`magazine:${id}`);
-      const base = magOf(parts[slot]!.magazine)!.userData.toBase as THREE.Vector3;
+      const ref = partsOf(replica.id).magazine;
+      const base = ref.bases.get(ref.group.getObjectByName(`magazine:${parts[slot]!.magazine}`)!)!;
       expect(base).toBeDefined();
       // Once the hand is on the magazine, it sits at the standard grab plus the fitted base's offset.
       arm.reload = replica.reloadTime;
       for (let t = 0; t < VIEWMODEL.reload.handMoveTime + 2 * dt; t += dt, arm.reload -= dt) vm.update(dt, 0, 0, 0, 4.2, 0, arm, false, 0);
       const mag = hands[slot]!.parent!.getObjectByName('magazine')!;
-      const expected = (hands[slot]!.userData.toMag as THREE.Vector3).clone().add(base).add(mag.position);
+      const expected = partsOf(replica.id).supportHand.toMag.clone().add(base).add(mag.position);
       expect(hands[slot]!.position.distanceTo(expected)).toBeLessThan(1e-9);
       expect(Math.sign(base.y)).toBe(parts[slot]!.magazine === 'lowCap' ? 1 : -1);
       arm.reload = 0;

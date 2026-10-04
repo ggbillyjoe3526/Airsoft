@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_QUALITY, DUST_MOTES, parseQuality, QUALITY, QUALITY_CHOICES, SURFACES } from './render';
+import { DEFAULT_QUALITY, DUST_MOTES, parseQuality, QUALITY, QUALITY_CHOICES, SOFTWARE_RENDERING_QUALITY, startingQuality, SURFACES } from './render';
 
 describe('render quality presets', () => {
   it('defaults to high, the full look', () => {
@@ -44,5 +44,17 @@ describe('render quality presets', () => {
     expect(parseQuality('')).toBeNull();
     expect(parseQuality('ultra')).toBeNull();
     expect(parseQuality('toString')).toBeNull(); // not fooled by inherited object keys
+  });
+
+  it('starts a browser drawing in software on Low, unless a preset was asked for or saved (audit M-02)', () => {
+    expect(SOFTWARE_RENDERING_QUALITY).toBe('low');
+    expect(startingQuality(null, null, false)).toEqual({ preset: DEFAULT_QUALITY, automatic: false });
+    expect(startingQuality(null, null, true)).toEqual({ preset: 'low', automatic: true });
+    // A saved pick is the player's: kept even in software.
+    expect(startingQuality(null, 'high', true)).toEqual({ preset: 'high', automatic: false });
+    expect(startingQuality(null, 'medium', false)).toEqual({ preset: 'medium', automatic: false });
+    // ?quality= wins over both.
+    expect(startingQuality('high', 'low', true)).toEqual({ preset: 'high', automatic: false });
+    expect(startingQuality('medium', null, true)).toEqual({ preset: 'medium', automatic: false });
   });
 });
