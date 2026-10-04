@@ -55,6 +55,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
 - **M33a** · Woodland shown as Coming soon in the Map pop-up
+- **M42** · Dev tab Retro pixels: 1990s shooter look with chunky pixels, dithering and crushed palette; Pixel size and Colours sliders; HUD and menus stay sharp
 
 ### Changed
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
