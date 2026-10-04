@@ -138,6 +138,21 @@ describe('the tutorial (M16)', () => {
     expect(t.showingDone).toBe(false);
   });
 
+  it('jumps to a step part done for the smoke test (debug hook, audit L-09)', () => {
+    const { t, tick } = setup();
+    const last = t.steps.length - 1;
+    const goal = t.steps[last]!.goal;
+    if (goal.kind !== 'read') throw new Error('the last step is read to its end');
+    t.debugJumpTo(last, goal.seconds - 1.5 * DT); // two ticks from its end
+    expect(t.stepIndex).toBe(last);
+    expect(t.finished).toBe(false);
+    tick();
+    tick();
+    expect(t.goalIndex).toBe(t.steps.length);
+    for (let i = 0; i < (TUTORIAL.doneTime + 0.1) / DT; i++) tick();
+    expect(t.finished).toBe(true);
+  });
+
   it('shows the keys a step names as the player has them bound', () => {
     const names: Record<string, string> = { fire: 'Left mouse', reload: 'R' };
     expect(keySegments('Press {fire}, then {reload}.', (a) => names[a] ?? '')).toEqual([

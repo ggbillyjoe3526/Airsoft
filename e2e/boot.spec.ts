@@ -455,6 +455,9 @@ test('the practice range opens from the title screen and reads out the last BB',
 test('the tutorial opens on the range with the coach', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
   // Low, so the range draws fast enough in software on a CI runner (as the first test).
   await page.goto('/?nolock&seed=1&quality=low');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
@@ -468,22 +471,32 @@ test('the tutorial opens on the range with the coach', async ({ page }) => {
   await expect(coach).toContainText(/1 of \d+/);
   await expect(page.locator('.range-readout')).toBeHidden(); // the coach takes its place until the last step
 
-  // Doing it moves it on: turn the view, and after the tick the coach asks you to move.
-  type Tut = { airsoft: { input: { yaw: number }; session: { tutorial: { index: number; amount: number } } } };
-  for (let i = 0; i < 8; i++) {
-    await page.evaluate(() => {
-      (window as unknown as Tut).airsoft.input.yaw += 0.3;
-    });
-    await page.waitForTimeout(50);
-  }
-  await expect(coach).toContainText(/2 of \d+/, { timeout: 10_000 });
+  // Doing it moves it on: turn the view (a little more on each poll, so the ticks see it), and the coach asks you to move.
+  type Tut = {
+    airsoft: {
+      input: { yaw: number };
+      session: { tutorial: { steps: { goal: { seconds?: number } }[]; debugJumpTo: (index: number, amount: number) => void } };
+    };
+  };
+  await expect
+    .poll(
+      async () => {
+        await page.evaluate(() => {
+          (window as unknown as Tut).airsoft.input.yaw += 0.3;
+        });
+        return coach.textContent();
+      },
+      { timeout: 10_000 },
+    )
+    .toMatch(/2 of \d+/);
   await expect(coach).toContainText('Move');
 
-  // The last card read to its end: the coach gives way to the range readout, and the title stops tagging the button.
+  // The last card read to its end (the tracker's debug jump, e2e build only): the coach gives way to the range readout,
+  // and the title stops tagging the button.
   await page.evaluate(() => {
     const t = (window as unknown as Tut).airsoft.session.tutorial;
-    t.index = 9;
-    t.amount = 11.9;
+    const last = t.steps.length - 1;
+    t.debugJumpTo(last, (t.steps[last]!.goal.seconds ?? 0) - 0.1);
   });
   await expect(page.locator('.range-readout')).toBeVisible({ timeout: 10_000 });
   await expect(coach).toBeHidden();
