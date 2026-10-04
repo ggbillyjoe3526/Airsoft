@@ -5,6 +5,15 @@ import { DEPOT } from '../map/depot';
 import { initPhysics } from '../physics/physicsWorld';
 import { expectGrounded, playMatch } from './depotMatchSupport';
 
+/**
+ * Seconds of play per match. 240 since FA4 + FA10 (2026-10-04): FA4's bots hold and search longer and FA10 spreads
+ * shots evenly round the line of sight, so 2v2 rounds run longer and a few 200 s matches stopped after two rounds
+ * (47 rounds over 16 seeds, under the 48 floor). The per-round checks are unchanged. Measured at 240 s: 1v1 Elimination
+ * west 56 of 115 decided, 1v1 Attack / Defend attackers 80 of 136, 2v2 Elimination west 34 of 55, 2v2 Attack / Defend
+ * attackers 30 of 63.
+ */
+const MATCH_SECONDS = 240;
+
 describe('custom matches on Depot (M20)', () => {
   beforeAll(async () => {
     await initPhysics();
@@ -28,7 +37,7 @@ describe('custom matches on Depot (M20)', () => {
         let friendlyHits = 0;
         const seeds = size === 1 ? 32 : 16;
         for (let seed = 1; seed <= seeds; seed++) {
-          const stats = playMatch(200, seed, undefined, BOTS, mode, rules, DEPOT, size);
+          const stats = playMatch(MATCH_SECONDS, seed, undefined, BOTS, mode, rules, DEPOT, size);
           expect(stats.farthestFromSpawn, label).toHaveLength(2 * size);
           friendlyHits += stats.friendlyHits;
           for (const r of stats.results) {
