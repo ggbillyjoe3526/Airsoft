@@ -53,7 +53,7 @@ describe('records view (M19)', () => {
     const news = addMatch(r, { difficulty: 'hard', mode: 'attackDefend', won: true, hits: 12, bbsFired: 40 });
     const view = recordsView(r, news, 'hard', 'attackDefend');
     expect(view.modes).toEqual(MATCH_MODES.map((m) => m.label));
-    expect(view.rows.map((row) => row.label)).toEqual(DIFFICULTIES.map((d) => d.label));
+    expect(view.rows.map((row) => row.label)).toEqual(['Easy', 'Normal', 'Hard']);
     const hard = view.rows[DIFFICULTIES.findIndex((d) => d.id === 'hard')]!;
     const cell = hard.cells[MATCH_MODES.findIndex((m) => m.id === 'attackDefend')]!;
     expect(cell).toEqual({ text: '1 W · 0 L', current: true });
@@ -64,6 +64,16 @@ describe('records view (M19)', () => {
       { label: 'Wins in a row', value: '1 now · best 1', isNew: true },
     ]);
     expect(view.notCounted).toBe('');
+  });
+
+  it('has no Pro row while Pro is dev content, since a dev match never enters the records (M36, M35)', () => {
+    const r = emptyRecords();
+    const news = addMatch(r, { difficulty: 'hard', mode: 'elimination', won: true, hits: 3, bbsFired: 40 });
+    const view = recordsView(r, news, 'pro', 'elimination', 'devContent');
+    expect(DIFFICULTIES.find((d) => d.id === 'pro')?.tag).toBe('dev');
+    expect(view.rows.map((row) => row.label)).toEqual(['Easy', 'Normal', 'Hard']);
+    expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);
+    expect(view.notCounted).toContain('still being built');
   });
 
   it('marks nothing and says why after a custom match (M20)', () => {

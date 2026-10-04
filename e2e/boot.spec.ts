@@ -328,40 +328,58 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   expect(matchOrange).toMatch(/^#[0-9a-f]{6}$/);
   expect(matchOrange).not.toBe(standardOrange);
   await expect(page.locator('.sound-cues')).not.toHaveAttribute('hidden');
+  // The keys below act on the frames after they're pressed, so the match must be drawing first. On a CI runner in
+  // software a frame can take seconds early in a match (Chrome 153 there, where these steps were flaky with 10 s waits;
+  // they never failed on Chromium 141 in the container): wait for frames to come, then give each key's result the same
+  // CI-sized wait as the fire and reload steps below (keyWait).
+  type Drawn = { airsoft: { renderer: { renderer: { info: { render: { frame: number } } } } } };
+  const framesDrawn = () => page.evaluate(() => (window as unknown as Drawn).airsoft.renderer.renderer.info.render.frame);
+  const drawnAtStart = await framesDrawn();
+  await expect.poll(framesDrawn, { timeout: 60_000 }).toBeGreaterThan(drawnAtStart + 10);
+  const keyWait = { timeout: 30_000 };
   // Holding Tab shows the scoreboard with every player (M19); letting go hides it.
   const board = page.locator('.match-board');
   await page.keyboard.down('Tab');
-  await expect(board).toBeVisible({ timeout: 10_000 });
+  await expect(board).toBeVisible(keyWait);
   await expect(board.locator('tbody tr:not(:first-child)')).toHaveCount(4); // the 2v2 picked on Match
   await page.keyboard.up('Tab');
-  await expect(board).toBeHidden({ timeout: 10_000 });
+  await expect(board).toBeHidden(keyWait);
   // The minimap (M23) is up while playing.
   await expect(page.locator('.minimap')).toBeVisible();
   // The order wheel (M23) shows while Z is held; let go in the middle, it closes with no order given.
   const wheel = page.locator('.order-wheel');
   await page.keyboard.down('z');
-  await expect(wheel.locator('.order-wheel-item').first()).toBeVisible({ timeout: 10_000 });
+  await expect(wheel.locator('.order-wheel-item').first()).toBeVisible(keyWait);
   // Each direct order shows its key (FA5, UI-03); the Team Plan has none.
   await expect(wheel.locator('.order-wheel-item')).toHaveText([/^Follow Me/, /^Hold Here/, /^Regroup/, 'Team Plan']);
   await expect(wheel.locator('.order-wheel-key')).toHaveText(['F', 'X', 'V']);
   await page.keyboard.up('z');
-  await expect(wheel).toHaveAttribute('hidden', '', { timeout: 10_000 });
+  await expect(wheel).toHaveAttribute('hidden', '', keyWait);
   // Squad orders (M22): F has the bot teammates follow you and the HUD says so; F again sends them back to the plan.
+  // Orders are taken only in a live round with you and a teammate in play (else the line says why for a moment).
   const squadLine = page.locator('.squad-order');
   await expect(squadLine).toBeHidden();
+  type Orders = { airsoft: { state: { round: { phase: string }; characters: { team: number; status: string }[] }; session: { player: { team: number; status: string } } } };
+  const ordersTaken = () =>
+    page.evaluate(() => {
+      const { state, session } = (window as unknown as Orders).airsoft;
+      const p = session.player;
+      return state.round.phase === 'live' && p.status === 'alive' && state.characters.some((c) => c !== p && c.team === p.team && c.status === 'alive');
+    });
+  await expect.poll(ordersTaken, keyWait).toBe(true);
   await page.keyboard.press('f');
-  await expect(squadLine).toHaveText(/Follow me/i, { timeout: 10_000 });
+  await expect(squadLine).toHaveText(/Follow me/i, keyWait);
   await page.keyboard.press('f');
-  await expect(squadLine).toHaveText(/Back to the team plan/i, { timeout: 10_000 });
+  await expect(squadLine).toHaveText(/Back to the team plan/i, keyWait);
   // X: they hold, and a marker shows where; X again on the same spot lets them go.
   const holdMarker = page.locator('.hold-marker');
   await page.keyboard.press('x');
-  await expect(squadLine).toHaveText(/Hold here/i, { timeout: 10_000 });
-  await expect(holdMarker).not.toHaveAttribute('hidden', { timeout: 10_000 });
+  await expect(squadLine).toHaveText(/Hold here/i, keyWait);
+  await expect(holdMarker).not.toHaveAttribute('hidden', keyWait);
   await expect(holdMarker).toContainText(/Hold · \d+ m/);
   await page.keyboard.press('x');
-  await expect(squadLine).toHaveText(/Back to the team plan/i, { timeout: 10_000 });
-  await expect(holdMarker).toHaveAttribute('hidden', '', { timeout: 10_000 });
+  await expect(squadLine).toHaveText(/Back to the team plan/i, keyWait);
+  await expect(holdMarker).toHaveAttribute('hidden', '', keyWait);
   const mag = page.locator('.hud-mag');
   await expect(mag).toHaveText(/^\d+$/);
   const full = Number(await mag.textContent());
