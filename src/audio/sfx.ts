@@ -106,16 +106,15 @@ export class Sfx {
 
   /**
    * Must be called from a user gesture (browsers keep audio suspended until then). Builds every sound the first time.
-   * Where the browser has no Web Audio (or refuses a context) the game carries on without sound (audit M-04).
+   * The new context is suspended at once: nothing plays until play really starts (`setPaused(false)` once the mouse
+   * is captured), so a refused mouse lock leaves the menus silent (audit M-07). Where the browser has no Web Audio
+   * (or refuses a context) the game carries on without sound (audit M-04).
    */
   unlock(): void {
-    if (this.ctx) {
-      settle(this.ctx.resume());
-      return;
-    }
-    if (typeof AudioContext === 'undefined') return;
+    if (this.ctx || typeof AudioContext === 'undefined') return;
     try {
       this.build(new AudioContext());
+      settle(this.ctx!.suspend());
     } catch (e) {
       console.warn('Audio unavailable, playing without sound', e);
       this.dispose();

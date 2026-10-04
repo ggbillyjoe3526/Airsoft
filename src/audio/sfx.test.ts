@@ -399,6 +399,21 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     expect(FakeContext.made).toBe(1);
   });
 
+  it('keeps a new match silent until play starts: unlocking never resumes the audio (audit M-07)', () => {
+    const { sfx, ctx } = setup();
+    sfx.unlock();
+    expect(ctx.resumed).toBe(0);
+    expect(ctx.state).toBe('suspended');
+    sfx.setPaused(false);
+    expect(ctx.resumed).toBe(1);
+    expect(ctx.state).toBe('running');
+    // Play again after Esc (the click comes before the mouse is captured again): still silent until the capture.
+    sfx.setPaused(true);
+    sfx.unlock();
+    expect(ctx.resumed).toBe(1);
+    expect(ctx.state).toBe('suspended');
+  });
+
   it('suspends the audio with the game and resumes it', () => {
     const { sfx, ctx } = setup();
     const resumed = ctx.resumed;
