@@ -54,7 +54,8 @@ node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env
 of their `touches`. A block the branch has already cleared from `docs/TASKS.md` is looked for in the branch's history
 since the base.
 
-`--quick` is build and tests: about QUICK_TIME. The full gate in a cloud container is about five minutes plus the perf run
+`--quick` is build and tests: about two minutes (build about 20 s with the `.br`/`.gz` copies, the suite about 105 s;
+measured 2026-10-04 in the container with other work running). The full gate in a cloud container is about five minutes plus the perf run
 when it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
 `pipeline/out/gate-report.json`; logs and reports under `pipeline/out/qa-artifacts/`; all git-ignored.
 
