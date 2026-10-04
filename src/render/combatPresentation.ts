@@ -229,7 +229,7 @@ export class CombatPresentation {
     this.puffs.update(dt, this.renderer.camera);
     this.hitPuffs.update(dt, this.renderer.camera);
     this.gasPuffs.update(dt, this.renderer.camera);
-    this.motes.update(dt, this.renderer.camera.position);
+    this.motes.update(dt, this.renderer.camera.position, this.state.wind);
     this.paths.update();
 
     const p = this.player;

@@ -13,6 +13,9 @@ warning in the browser console, so a typo never stops the game from starting.
 
 BBs are not pooled assets: every BB weight is free and unlimited, picked on the Loadout's slider.
 
+**How each asset performs** (muzzle energy, BB weight, rate of fire, handling, and what a higher tier improves) is in
+[stats.md](stats.md), next to this file. This file says what exists; that one says how it shoots.
+
 ---
 
 ## How to read and edit this file
@@ -42,12 +45,12 @@ Green Gas. To let the AEG Rifle take the Red Laser, either add `under-rail` to t
 
 ### The Key column
 
-Replicas, optics, grips, lasers and magazines have a **Key**: the name of the code that says how they behave (the
-replica's fire rate, the optic's zoom, the grip's handling). Keys are listed in `src/pool/pool.ts`
-(`REPLICA_KEYS` and its neighbours). A new row can reuse an existing key: for example a second red dot with the same
-behaviour but its own name and ID. A brand new behaviour needs code first.
+Replicas, optics, grips, lasers and magazines have a **Key**: the name of the code that says how they behave. Their
+numbers (the replica's fire rate, the optic's zoom, the grip's handling) are in stats.md, by the same Key. Keys are
+listed in `src/pool/pool.ts` (`REPLICA_KEYS` and its neighbours). A new row can reuse an existing key: for example a
+second red dot with the same behaviour but its own name and ID. A brand new behaviour needs code first.
 
-Power sources need no key: their **Type** and **Power %** say everything.
+Power sources need no key: their **Type** says what drives them, and stats.md's Power sources table (by ID) what they do.
 
 ### Power sources
 
@@ -55,8 +58,8 @@ Every replica needs one, picked on its Customise screen from the ones you own th
 
 - **Type** is `battery`, `gas` or `spring`. It must match how the replica is driven (its tags: `electric`, `gas` or
   `spring`), which Fits takes care of.
-- **Power %** is how much harder it shoots than the replica as it comes: the muzzle energy rises by that much (a
-  little more speed, a flatter, longer flight). A battery also raises the rate of fire by the same amount.
+- What it does is in stats.md's Power sources table, by its ID: a battery sets the rate of fire (as in a real AEG,
+  where the spring inside sets the energy), a gas or a spring the energy. A new power source needs a row there too.
 - Each spring is its own asset (an M100 spring, an M110 spring …), not a slider on one spring: swapping springs is
   how a spring replica is tuned. There are no spring replicas yet, so the Springs table below is empty.
 
@@ -71,16 +74,19 @@ Every replica needs one, picked on its Customise screen from the ones you own th
 To add a higher spec battery for every electric replica, take the next free ID and add a row to Power sources:
 
 ```
-| 000015 | High Output Battery | battery | 8 | electric | no | yes |
+| 000019 | High Output Battery | battery | electric | no | yes |
 ```
 
-It then drops from Shots, and once owned it shows in the Power row of every replica tagged `electric`.
+and a row to stats.md's Power sources table saying what it does (say `| 000019 | High Output Battery | 0 | 25 | 0 |`
+for 25 % more rate of fire). It then drops from Shots, and once owned it shows in the Power row of every replica tagged
+`electric`.
 
 ### Rarity tiers
 
 Every asset comes in every rarity tier (a Legendary AEG Rifle, a Rare Green Gas …), and each copy is a separate item
-you own. Higher tiers carry a **Bonus %** that improves the asset a little (the table under Rarity says what each
-category improves). One hit is still one hit: rarity improves handling, never "damage".
+you own. Higher tiers carry a **Bonus %** that improves the asset a little (stats.md's Tier scaling table says which
+stats each category improves, and by how much of the Bonus). One hit is still one hit: rarity improves how a replica
+shoots and handles, never "damage".
 
 - **Odds %** is the chance that a dispensed asset comes in that tier. The odds must add up to 100.
 - **Scrap FC** is what one spare copy pays back when you scrap it in the Armory (you always keep one).
@@ -143,17 +149,9 @@ Token), and a Shot you can't cover in Tokens can be paid for in FC at the same r
 | Epic | 4 | 12 | 80 |
 | Legendary | 1 | 15 | 160 |
 
-What the Bonus % improves, by category. This table explains what the code does; the game doesn't read it, so editing
-it changes nothing (the halving for power sources, grips and lasers is set in code):
-
-| Category | A Bonus of 15% means |
-|---|---|
-| Replica | 15% tighter spread, 15% quicker reload and draw |
-| Power source | 7.5% more muzzle energy (and, for a battery, rate of fire), on top of its Power % |
-| Optic | 15% quicker to raise to your eye |
-| Grip | its steadiness and handling both 7.5% better |
-| Laser | 7.5% tighter spread on top of its own |
-| Magazine | 15% quicker reload |
+What the Bonus % improves is stats.md's **Tier scaling** table: with the numbers as shipped, a Legendary (15 %) replica
+has 15 % less spread, a 15 % quicker reload and draw, and 7.5 % more energy and rate of fire; a Legendary battery 7.5 %
+more rate of fire; a Legendary gas 7.5 % more energy; optics, grips, lasers and magazines handle better.
 
 ---
 
@@ -168,12 +166,13 @@ it changes nothing (the halving for power sources, grips and lasers is set in co
 
 ### Power sources
 
-| ID | Name | Type | Power % | Fits | Starter | In Shots |
-|---|---|---|---|---|---|---|
-| 000003 | Standard Battery | battery | 0 | electric | yes | yes |
-| 000004 | Green Gas | gas | 0 | gas | yes | yes |
-| 000008 | Red Gas | gas | 10 | gas | no | yes |
-| 000009 | Black Gas | gas | 20 | gas | no | yes |
+| ID | Name | Type | Fits | Starter | In Shots |
+|---|---|---|---|---|---|
+| 000003 | Standard Battery | battery | electric | yes | yes |
+| 000015 | 11.1 V LiPo Battery | battery | electric | no | yes |
+| 000004 | Green Gas | gas | gas | yes | yes |
+| 000008 | Red Gas | gas | gas | no | yes |
+| 000009 | Black Gas | gas | gas | no | yes |
 
 ### Springs
 

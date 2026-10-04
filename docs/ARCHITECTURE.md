@@ -14,7 +14,7 @@ ai (bots) ─► PlayerCommand ┤   (ai/ and walk-offs use nav/: a walkability 
 
 - **sim/**: all gameplay rules. Plain data (`GameState`, `Character`, the BB pool), no Three.js, no DOM, no `Math.random`.
   Each tick: move characters, handle replicas (`armament.ts`: fire, switch, reload by magazine swap; spawns BBs), then fly BBs
-  (`ballistics.ts` flight model: gravity, drag and hop-up lift by BB mass; replicas are rated in joules and BB weight, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
+  (`ballistics.ts` flight model, M30: gravity, drag by Reynolds number and Magnus lift from the hop-up's decaying backspin, all against the airflow, one midpoint step a tick; `air.ts` the air's density, viscosity and drag table; `wind.ts` the match's breeze from its seed, into `GameState.wind` each tick; replicas are rated in joules and BB weight, `bbs.ts` collision with the level via the `WorldQuery` ray cast and with
   characters via `hitbox.ts` capsules; `ricochet.ts` bounces a BB off a hard surface, using the normal and material
   `WorldQuery.raycastSurface` reports, and a ricochet only knocks someone out if `HitConfig.ricochetsCount`), then match flow (`round.ts`: the match mode, round clock, wipe-out or time-out, score, first to
 `winsNeeded`, `restartMatch(mode)`; in Attack / Defend also who attacks (swapping at half-time) and the pole, stepped by
@@ -101,7 +101,10 @@ ends the round). A hit character is eliminated
   sound by the surface underfoot (`MapBlock.surface`), BB impacts by the block they hit (`audio/soundMaterials.ts`),
   and crouching, standing and leaning rustle (`audio/foley.ts`, presentation only: bots hear what they did before).
   Buses: master, effects (in-world, with the yard's reverb) and interface (hit tick, hit marker, whistle, dry), set
-  by the Settings → Audio sliders (`audio/audioMix.ts`, saved in the settings store).
+  by the Settings → Audio sliders (`audio/audioMix.ts`, saved in the settings store). Since FA6 the limiter and the
+  ducking (your own hit, the whistles) sit on effects only; interface goes straight to master. Sounds render at
+  `AUDIO.renderRate` whatever the device's rate; one-off sounds beyond `maxDistance` aren't played; while you're out
+  the world is muffled; a seeded outdoor bed and birds (`audio/ambience.ts`) play into the world.
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
@@ -176,6 +179,17 @@ ends the round). A hit character is eliminated
   `MatchSession` gives the player those replicas (`createCharacter(..., kit replicas)`) and bots `LOADOUT`. Every
   character's `Armament.replicas` is what it carries, and the sim, renderer and HUD read that, never `LOADOUT`.
   `ui/menus/loadoutScreen.ts` draws the gear column and Customise view; `ui/loadoutChoice.ts` holds its readouts.
+- **Performance numbers (M29):** `stats.md` beside `pool.md` holds every replica's and part's numbers (energy, BB
+  weight, rate of fire, magazines, handling), what each power source adds, the Tier scaling (which stats a tier's
+  Bonus improves, and by what share) and the site's energy limits. `config/statsFile.ts` reads it (pure, by Key or
+  pool ID, every unreadable cell listed by line) and `config/gameStats.ts` holds `GAME_STATS`; `config/replicas.ts`
+  (`withStats`, which also sets `ReplicaConfig.energyLimit`), `attachments.ts`, `optics.ts` and `lasers.ts` lay it over
+  their built-in numbers when they load, so bots and the sim see the file's numbers too. `pool/kit.ts` applies the
+  power stats and tier shares (`KitStats`, injectable for tests) and caps the energy at the limit (`energyCapped`).
+  The muzzle is the boundary: `muzzleEnergy` / `muzzleVelocity` / `bbMass` (config/replicas.ts) are what leaves the
+  barrel; everything after it is `config/ballistics.ts` and `sim/ballistics.ts`. `ui/performanceSheet.ts` builds the
+  Customise screen's Performance sheet (against `LoadoutModel.asItComes`), the gear slots' line and the Armory's
+  tier line.
 - **Armory (M26c):** `pool/armory.ts` holds its rules, pure, over a `Collection`: `matchEarnings` (the FC a finished
   match pays, from `MatchSession.takeOutcome`), `buyTokens`, `takeShots` (paid in Tokens, then FC; the draws carry on
   from the collection's saved `sim/rng.ts` state, so they are seeded and replayable) and `scrapSpares`. `Game` adds a
@@ -240,6 +254,9 @@ request. Each line names where it lives and what pins it.
   renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
   "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added. Pinned by
   `settings/storage.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
+- **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
+  power sources by pool ID, Tier scaling, Site limits) the config modules lay over their built-in ones. Pinned by
+  `config/stats.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`.
