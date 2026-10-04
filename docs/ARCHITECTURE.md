@@ -36,7 +36,7 @@ ends the round). A hit character is eliminated
   The sim returns anything below `killY` to its spawn.
 - **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
   routes (8-neighbour A*, string-pulled into straight legs). The grid is layered (M34b): each cell holds one node per
-  floor over it (the floor and ramp tops at its centre with body height clear above), stored flat (`cellStart`,
+  floor over it (the floor and ramp tops at its centre, and a terrain's ground (M33c), with body height clear above), stored flat (`cellStart`,
   `nodeCell`, `walkable`, `floorY`). Blocks are judged per node against its floor, neighbouring nodes connect only if
   their floors differ by at most `maxStep` (0.15 m), drops get the same clearance as walls on the floor they edge, and
   waypoints carry the floor height. Every query takes a height (`nodeAt`, `floorAt`, `isWalkableAt`,
