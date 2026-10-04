@@ -43,7 +43,8 @@ describe('overStored: unknown fields survive a store\'s next save (M31)', () => 
     const s = new MemoryStorage();
     s.setItem(COLLECTION_KEY, JSON.stringify({ version: 1, owned: {}, fc: 1, tokens: 0, seed: 1, cosmetics: { hat: 'red' } }));
     saveCollection({ owned: { '000001@common': 1 }, fc: 50, tokens: 2, seed: 9 }, s);
-    expect(JSON.parse(s.getItem(COLLECTION_KEY)!)).toEqual({ version: 1, owned: { '000001@common': 1 }, fc: 50, tokens: 2, seed: 9, cosmetics: { hat: 'red' } });
+    // `rev` is the save's revision (FA10, audit POOL-02), raised by every save.
+    expect(JSON.parse(s.getItem(COLLECTION_KEY)!)).toEqual({ version: 1, owned: { '000001@common': 1 }, fc: 50, tokens: 2, seed: 9, rev: 1, cosmetics: { hat: 'red' } });
   });
 
   it('key bindings keep an action a newer build added', () => {

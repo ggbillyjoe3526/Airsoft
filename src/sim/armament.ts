@@ -230,6 +230,26 @@ export function aimDirection(out: Vec3, yaw: number, pitch: number): Vec3 {
 }
 
 /**
+ * A shot's direction (audit SIM-09): the aim (`yaw`, `pitch`) thrown off by `gx` and `gy` standard deviations of
+ * `spread` (rad), sideways and up. Up and down is a change of pitch (held within RECOIL.maxShotPitchDeg, so a shot never
+ * goes over the top and backwards); sideways is a turn about the line of sight's own up, square to it, so it is the
+ * same angle at any pitch. Spread taken in yaw instead shrinks sideways with the cosine of the pitch (half at 60°).
+ */
+export function spreadDirection(out: Vec3, yaw: number, pitch: number, spread: number, gx: number, gy: number): Vec3 {
+  const limit = RECOIL.maxShotPitchDeg * DEG;
+  const f = aimDirection(out, yaw, Math.max(-limit, Math.min(limit, pitch + gy * spread)));
+  // Right of the aim, level and square to it; as a tangent, so the angle off the aim is exactly gx × spread.
+  const side = Math.tan(gx * spread);
+  const x = f.x + Math.cos(yaw) * side;
+  const z = f.z - Math.sin(yaw) * side;
+  const len = Math.sqrt(x * x + f.y * f.y + z * z);
+  out.x = x / len;
+  out.y = f.y / len;
+  out.z = z / len;
+  return out;
+}
+
+/**
  * One tick of replica handling for one character: switching, reloading, firing and recoil.
  * `canFire` is false while sprinting (or just after) — the replica is carried, not aimed.
  */
@@ -348,11 +368,9 @@ function startReload(characterId: number, a: Armament, replica: ReplicaConfig, c
 }
 
 function fire(characterId: number, a: Armament, replica: ReplicaConfig, muzzle: Muzzle, ctx: ArmamentContext): void {
-  const spread = replica.spreadDeg * muzzle.spreadScale * DEG;
-  const yaw = muzzle.yaw + rngGaussian(ctx.rng) * spread;
-  const pitchLimit = RECOIL.maxShotPitchDeg * DEG;
-  const pitch = Math.max(-pitchLimit, Math.min(pitchLimit, muzzle.pitch + a.recoil + rngGaussian(ctx.rng) * spread));
-  aimDirection(dir, yaw, pitch);
+  // Sideways first, then up and down: the random stream's order as before audit SIM-09.
+  const gx = rngGaussian(ctx.rng);
+  spreadDirection(dir, muzzle.yaw, muzzle.pitch + a.recoil, replica.spreadDeg * muzzle.spreadScale * DEG, gx, rngGaussian(ctx.rng));
   a.recoil = Math.min(RECOIL.maxDeg * DEG, a.recoil + replica.recoilDeg * DEG);
   ctx.events.push({ type: 'shot', characterId, replicaId: replica.id, position: vec3(muzzle.eye.x, muzzle.eye.y, muzzle.eye.z) });
 

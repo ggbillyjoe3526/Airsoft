@@ -1,8 +1,28 @@
 import { ARMORY_TEXT } from '../../config/menus';
-import { canTakeShots, type Dispensed, scrapAllSpares, scrapSpares, scrapValue, shotPrice, type ShotCount, spares, takeShots, tierChances, buyTokens } from '../../pool/armory';
-import { type Collection, type ItemRef, ownedItems } from '../../pool/collection';
+import {
+  buyTokens,
+  canTakeShots,
+  cheapestSpare,
+  collectionRows,
+  type CollectionRow,
+  type Dispensed,
+  pityLeft,
+  rarestFirst,
+  revealSummary,
+  scrapAllSpares,
+  scrapSpares,
+  shotAssets,
+  shotFcPrice,
+  shotPrice,
+  type ShotCount,
+  sparesValue,
+  takeShots,
+  tierChances,
+} from '../../pool/armory';
+import type { Collection, ItemRef } from '../../pool/collection';
 import { type Asset, fcPerToken, type Pool } from '../../pool/pool';
 import { tierLine } from '../performanceSheet';
+import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
 import { backButton, el, menuButton, menuPage } from './menuParts';
 
 export interface ArmoryOptions {
@@ -41,14 +61,16 @@ function tokensText(n: number): string {
 /**
  * The Armory (M26c, beta): completely free. Field Credits earned in matches buy Tokens; a Token takes a Shot, which
  * dispenses three random assets at random rarity tiers into the collection; spare copies scrap back into FC. The left
- * column holds the balance, the exchange, the Shots and the odds; the right shows the last Shot's assets and everything
- * owned, with each item's spares to scrap.
+ * column holds the balance, the exchange, the Shots, what pity guarantees and the odds; the right shows the last Shot's
+ * assets, rarest first, and the catalogue: every asset Shots can give, with the copies owned at each tier and the
+ * spares to scrap (audit POOL-04). Ten Shots and Scrap all spares ask first (audit POOL-03).
  */
 export class ArmoryScreen {
   readonly root: HTMLDivElement;
   private readonly side: HTMLDivElement;
   private readonly reveal: HTMLDivElement;
   private readonly owned: HTMLDivElement;
+  private readonly confirm = new ConfirmDialog();
   private last: Dispensed[] = [];
   /** The last Shot's items you now carry without picking them (a rarer copy of a replica or part left on its default). */
   private nowEquipped = new Set<string>();
@@ -62,6 +84,9 @@ export class ArmoryScreen {
     this.side = el('div', 'menu-panel armory-side');
     const main = el('div', 'menu-panel armory-main');
     this.reveal = el('div', 'armory-reveal');
+    // Live from the start, so the first Shot is read out too (audit POOL-11).
+    this.reveal.setAttribute('aria-live', 'polite');
+    this.reveal.setAttribute('aria-atomic', 'true');
     this.owned = el('div', 'armory-owned');
     main.append(this.reveal, this.owned);
     const columns = el('div', 'loadout-columns armory-columns');
@@ -69,11 +94,13 @@ export class ArmoryScreen {
     page.body.append(columns);
     this.back = backButton(opts.onBack);
     page.footer.append(this.back);
+    this.root.append(this.confirm.root);
     this.refresh();
   }
 
   /** Re-reads the collection (after a match paid FC, say), forgetting the last Shot. */
   refresh(): void {
+    this.confirm.close();
     this.last = [];
     this.nowEquipped.clear();
     this.render();
@@ -83,11 +110,14 @@ export class ArmoryScreen {
     return this.opts.pool;
   }
 
-  /** Saves and redraws; the focus goes to the first of `focus` (data-action names) still there and enabled, else Back. */
-  private changed(...focus: string[]): void {
+  /**
+   * Saves and redraws; the focus goes to what `focus` finds in the new screen, else the first of `actions`
+   * (data-action names) still there and enabled, else Back.
+   */
+  private changed(actions: readonly string[], focus?: () => HTMLElement | null): void {
     this.opts.onChange();
     this.render();
-    this.firstEnabled([...focus, 'shot-1', 'buy-1']).focus({ preventScroll: true });
+    (focus?.() ?? this.firstEnabled([...actions, 'shot-1', 'buy-1'])).focus({ preventScroll: true });
   }
 
   /** The first of these actions on screen and enabled, else Back (always there). */
@@ -100,16 +130,17 @@ export class ArmoryScreen {
   }
 
   private render(): void {
-    this.renderSide();
+    // Read (and synced with another tab's save) once per redraw; each action reads it again before it changes it.
+    const c = this.opts.collection();
+    this.renderSide(c);
     this.renderReveal();
-    this.renderOwned();
+    this.renderOwned(c);
     // Opening the screen puts the keyboard on a Shot (or a Token to buy, or Back when there is nothing to afford).
     for (const node of this.root.querySelectorAll<HTMLElement>('[data-autofocus]')) delete node.dataset.autofocus;
     this.firstEnabled(['shot-1', 'buy-1']).dataset.autofocus = '';
   }
 
-  private renderSide(): void {
-    const c = this.opts.collection();
+  private renderSide(c: Collection): void {
     const e = this.pool.economy;
     const rate = fcPerToken(e);
     const balance = el('div', 'armory-balance');
@@ -119,7 +150,7 @@ export class ArmoryScreen {
     const exchange = el('div', 'armory-actions');
     for (const n of [1, 10]) {
       const b = this.actionButton(`buy-${n}`, `${ARMORY_TEXT.buy} ${tokensText(n)}`, fcText(n * rate), n * rate <= c.fc, () => {
-        if (buyTokens(e, this.opts.collection(), n)) this.changed(`buy-${n}`);
+        if (buyTokens(e, this.opts.collection(), n)) this.changed([`buy-${n}`]);
       });
       exchange.append(b);
     }
@@ -127,14 +158,13 @@ export class ArmoryScreen {
     const shots = el('div', 'armory-actions');
     for (const n of [1, 10] as ShotCount[]) {
       const price = shotPrice(e, c, n);
-      const cost = [price.tokens > 0 ? tokensText(price.tokens) : '', price.fc > 0 ? fcText(price.fc) : ''].filter(Boolean).join(' + ');
-      const b = this.actionButton(`shot-${n}`, n === 1 ? ARMORY_TEXT.oneShot : ARMORY_TEXT.tenShots, cost, canTakeShots(e, c, n), () => {
-        const before = new Set(this.opts.equipped().map((r) => r && `${r.asset}@${r.tier}`));
-        const got = takeShots(this.pool, this.opts.collection(), n);
-        if (!got) return;
-        this.last = got;
-        this.nowEquipped = new Set(this.opts.equipped().flatMap((r) => (r && !before.has(`${r.asset}@${r.tier}`) ? [`${r.asset}@${r.tier}`] : [])));
-        this.changed(`shot-${n}`);
+      // The FC price on the button (audit POOL-13); how it is paid under it when Tokens cover some.
+      const paid = [price.tokens > 0 ? tokensText(price.tokens) : '', price.fc > 0 ? fcText(price.fc) : ''].filter(Boolean).join(' + ');
+      const note = price.tokens > 0 ? ARMORY_TEXT.paidWith(paid) : ARMORY_TEXT.paidInFc;
+      const label = `${n === 1 ? ARMORY_TEXT.oneShot : ARMORY_TEXT.tenShots} · ${fcText(shotFcPrice(e, n))}`;
+      const b = this.actionButton(`shot-${n}`, label, note, canTakeShots(e, c, n), () => {
+        if (n === 1) return this.takeShots(n);
+        this.confirm.ask(ARMORY_TEXT.confirmTenTitle, ARMORY_TEXT.confirmTen(paid), ARMORY_TEXT.confirmTenYes, () => this.takeShots(n));
       });
       b.classList.add('armory-shot');
       shots.append(b);
@@ -148,13 +178,23 @@ export class ArmoryScreen {
       const name = el('th', 'item-tier', tier.label);
       name.scope = 'row';
       name.dataset.tier = tier.id;
-      row.append(name, el('td', '', `${percent < 10 ? percent.toFixed(1) : Math.round(percent)}%`), el('td', 'armory-odds-scrap', `${ARMORY_TEXT.scrap} ${fcText(tier.scrapFc)}`));
+      row.append(name, el('td', '', `${percentText(percent)}%`), el('td', 'armory-odds-scrap', `${ARMORY_TEXT.scrap} ${fcText(tier.scrapFc)}`));
     }
     const guarantee = e.tenShotGuarantee ? this.pool.tiers.find((t) => t.id === e.tenShotGuarantee) : undefined;
     const notes = [ARMORY_TEXT.perShot(e.assetsPerShot)];
     if (guarantee) notes.push(ARMORY_TEXT.guarantee(guarantee.label));
+    const pity = el('ul', 'armory-pity');
+    // The nearest guarantee first.
+    for (const p of pityLeft(this.pool, c).sort((x, y) => x.shots - y.shots)) {
+      const line = el('li', '', ARMORY_TEXT.pity(p.tier.label, p.shots));
+      line.dataset.tier = p.tier.id;
+      pity.append(line);
+    }
+    const n = shotAssets(this.pool).length;
+    const rarest = tierChances(this.pool).filter((t) => t.percent > 0).at(-1);
+    const perAsset = n > 0 && rarest ? el('p', 'menu-readout armory-per-asset', ARMORY_TEXT.perAsset(n, e.unownedWeight, rarest.tier.label, Math.round((n * 100) / rarest.percent))) : null;
 
-    this.side.replaceChildren(
+    const parts: (HTMLElement | null)[] = [
       balance,
       el('p', 'menu-kicker', ARMORY_TEXT.exchange),
       el('p', 'menu-readout', ARMORY_TEXT.rate(rate)),
@@ -162,72 +202,117 @@ export class ArmoryScreen {
       el('p', 'menu-kicker', ARMORY_TEXT.shots),
       el('p', 'menu-readout', notes.join(' ')),
       shots,
+      ...(pity.childElementCount > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.pityKicker), pity] : []),
       odds,
-    );
+      perAsset,
+    ];
+    this.side.replaceChildren(...parts.filter((x): x is HTMLElement => x !== null));
+  }
+
+  private takeShots(n: ShotCount): void {
+    const before = new Set(this.opts.equipped().map((r) => r && `${r.asset}@${r.tier}`));
+    const got = takeShots(this.pool, this.opts.collection(), n);
+    if (!got) return;
+    this.last = got;
+    this.nowEquipped = new Set(this.opts.equipped().flatMap((r) => (r && !before.has(`${r.asset}@${r.tier}`) ? [`${r.asset}@${r.tier}`] : [])));
+    // The keyboard goes to what came out, not back to the Shot button (audit POOL-03).
+    this.changed([`shot-${n}`], () => this.reveal.querySelector<HTMLElement>('h2'));
   }
 
   private renderReveal(): void {
     this.reveal.replaceChildren();
     if (this.last.length === 0) return;
     const grid = el('div', 'item-grid armory-reveal-grid');
-    for (const d of this.last) {
+    rarestFirst(this.pool, this.last).forEach((d, i) => {
       const equipped = this.nowEquipped.has(`${d.item.asset}@${d.item.tier}`);
       const tile = this.tile(d.item, d.isNew ? (equipped ? `${ARMORY_TEXT.new} · ${ARMORY_TEXT.nowEquipped}` : ARMORY_TEXT.new) : ARMORY_TEXT.spare);
       tile.classList.toggle('is-new', d.isNew);
+      // Staggered in (style.css; none with reduced motion), the rarest first.
+      tile.style.setProperty('--i', String(i));
       grid.append(tile);
-    }
+    });
     const head = el('h2', 'menu-panel-title', ARMORY_TEXT.dispensed);
-    this.reveal.append(head, grid);
-    this.reveal.setAttribute('aria-live', 'polite');
+    head.tabIndex = -1;
+    this.reveal.append(head, el('p', 'menu-readout armory-reveal-summary', revealSummary(this.pool, this.last)), grid);
   }
 
-  private renderOwned(): void {
-    const c = this.opts.collection();
+  private renderOwned(c: Collection): void {
+    const catalogue = collectionRows(this.pool, c);
     const head = el('div', 'loadout-replica-head');
-    head.append(el('h2', 'menu-panel-title', ARMORY_TEXT.collection));
-    const items = ownedItems(c, this.pool);
-    const total = items.reduce((sum, item) => sum + spares(c, item) * scrapValue(this.pool, item), 0);
+    const title = el('h2', 'menu-panel-title', ARMORY_TEXT.collection);
+    title.append(' ', el('span', 'armory-completion', ARMORY_TEXT.completion(catalogue.owned, catalogue.total)));
+    head.append(title);
+    const total = sparesValue(this.pool, c);
     if (total > 0) {
-      const all = menuButton(`${ARMORY_TEXT.scrapAll} (+${fcText(total)})`, 'secondary', () => {
-        scrapAllSpares(this.pool, this.opts.collection());
-        this.changed('buy-1');
-      });
+      const count = catalogue.rows.reduce((sum, r) => sum + r.spares, 0);
+      const all = noKeyRepeat(
+        menuButton(`${ARMORY_TEXT.scrapAll} (+${fcText(total)})`, 'secondary', () =>
+          this.confirm.ask(ARMORY_TEXT.confirmScrapTitle, ARMORY_TEXT.confirmScrap(count, fcText(total)), ARMORY_TEXT.confirmScrapYes, () => {
+            scrapAllSpares(this.pool, this.opts.collection());
+            this.changed(['buy-1']);
+          }),
+        ),
+      );
       all.dataset.action = 'scrap-all';
       head.append(all);
     }
     const list = el('div', 'armory-list');
     let category: Asset['category'] | null = null;
-    // Rarest first within each asset, as the Loadout lists them.
-    const ordered = [...items].sort((a, b) => this.assetIndex(a) - this.assetIndex(b) || this.tierIndex(b) - this.tierIndex(a));
-    for (const item of ordered) {
-      const asset = this.pool.byId.get(item.asset)!;
-      if (asset.category !== category) {
-        category = asset.category;
+    for (const row of catalogue.rows) {
+      if (row.asset.category !== category) {
+        category = row.asset.category;
         list.append(el('p', 'menu-kicker armory-category', CATEGORY_LABELS[category]));
       }
-      list.append(this.ownedRow(item, asset));
+      list.append(this.assetRow(row, c));
     }
     this.owned.replaceChildren(head, el('p', 'menu-readout', ARMORY_TEXT.keepOne), list);
   }
 
-  private ownedRow(item: ItemRef, asset: Asset): HTMLDivElement {
-    const c = this.opts.collection();
+  /** One asset of the catalogue: its name, a pip per tier (copies owned, or a dash), and its spares to scrap. */
+  private assetRow(r: CollectionRow, c: Collection): HTMLDivElement {
     const row = el('div', 'armory-row');
-    row.dataset.tier = item.tier;
-    const n = spares(c, item) + 1;
-    const name = el('span', 'armory-row-name', asset.name);
-    row.append(name, el('span', 'item-tier', this.tierLabel(item)), el('span', 'armory-row-count', `×${n}`));
-    const adds = tierLine(this.pool, item);
-    if (adds) row.append(el('span', 'armory-row-adds', adds));
-    const extra = n - 1;
-    if (extra > 0) {
-      const key = `scrap-${item.asset}-${item.tier}`;
-      const b = menuButton(`${ARMORY_TEXT.scrap} ${extra} (+${fcText(extra * scrapValue(this.pool, item))})`, 'secondary', () => {
-        scrapSpares(this.pool, this.opts.collection(), item);
-        this.changed('scrap-all', 'buy-1');
-      });
-      b.dataset.action = key;
-      b.setAttribute('aria-label', `${ARMORY_TEXT.scrap} ${extra} spare ${asset.name}, ${this.tierLabel(item)}, for ${fcText(extra * scrapValue(this.pool, item))}`);
+    let best = -1;
+    r.counts.forEach((n, t) => (best = n > 0 ? t : best));
+    if (best >= 0) row.dataset.tier = this.pool.tiers[best]!.id;
+    else row.classList.add('is-unowned');
+    row.append(el('span', 'armory-row-name', r.asset.name));
+    const pips = el('span', 'armory-pips');
+    r.counts.forEach((n, t) => {
+      const tier = this.pool.tiers[t]!;
+      const pip = el('span', `armory-pip${n > 0 ? ' is-owned' : ''}`, n > 0 ? `×${n}` : '–');
+      pip.dataset.tier = tier.id;
+      pip.title = `${tier.label}: ${n > 0 ? `×${n}` : ARMORY_TEXT.notOwned}`;
+      pip.setAttribute('aria-label', pip.title);
+      pips.append(pip);
+    });
+    row.append(pips);
+    if (best >= 0) {
+      const adds = tierLine(this.pool, { asset: r.asset.id, tier: this.pool.tiers[best]!.id });
+      if (adds) row.append(el('span', 'armory-row-adds', adds));
+    }
+    const one = cheapestSpare(this.pool, c, r.asset.id);
+    if (one) {
+      const oneFc = this.pool.tiers.find((t) => t.id === one.tier)!.scrapFc;
+      const b = noKeyRepeat(
+        menuButton(`${ARMORY_TEXT.scrapOne} (+${fcText(oneFc)})`, 'secondary', () => {
+          scrapSpares(this.pool, this.opts.collection(), one, 1);
+          this.changed([`scrap1-${r.asset.id}`, `scrap-${r.asset.id}`, 'scrap-all', 'buy-1']);
+        }),
+      );
+      b.dataset.action = `scrap1-${r.asset.id}`;
+      b.setAttribute('aria-label', `${ARMORY_TEXT.scrapOne} ${this.tierLabel(one)} ${r.asset.name} for ${fcText(oneFc)}`);
+      row.append(b);
+    }
+    if (r.spares > 1) {
+      const b = noKeyRepeat(
+        menuButton(`${ARMORY_TEXT.scrap} ${r.spares} (+${fcText(r.spareFc)})`, 'secondary', () => {
+          const c = this.opts.collection();
+          for (let t = this.pool.tiers.length - 1; t >= 0; t--) scrapSpares(this.pool, c, { asset: r.asset.id, tier: this.pool.tiers[t]!.id });
+          this.changed(['scrap-all', 'buy-1']);
+        }),
+      );
+      b.dataset.action = `scrap-${r.asset.id}`;
+      b.setAttribute('aria-label', `${ARMORY_TEXT.scrap} ${r.spares} spare ${r.asset.name} for ${fcText(r.spareFc)}`);
       row.append(b);
     }
     return row;
@@ -246,7 +331,7 @@ export class ArmoryScreen {
     b.disabled = !enabled;
     b.append(el('span', 'item-name', label), el('span', 'item-note', cost));
     b.addEventListener('click', onClick);
-    return b;
+    return noKeyRepeat(b);
   }
 
   private tile(item: ItemRef, note: string): HTMLDivElement {
@@ -268,12 +353,8 @@ export class ArmoryScreen {
   private tierLabel(item: ItemRef): string {
     return this.pool.tiers.find((t) => t.id === item.tier)?.label ?? item.tier;
   }
+}
 
-  private assetIndex(item: ItemRef): number {
-    return this.pool.assets.findIndex((a) => a.id === item.asset);
-  }
-
-  private tierIndex(item: ItemRef): number {
-    return this.pool.tiers.findIndex((t) => t.id === item.tier);
-  }
+function percentText(percent: number): string {
+  return percent < 10 ? percent.toFixed(1) : String(Math.round(percent));
 }

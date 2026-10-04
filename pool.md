@@ -132,8 +132,11 @@ never bought with money: the whole Armory is free. A match you lose still pays, 
 | Round won | 10 |
 | Hit on an opponent | 5 |
 
-A shorter custom match pays less: Match played and Match won are scaled by the match's rounds to win ÷ 5 (at most 1),
-so a first-to-5 match pays them in full. The total is then multiplied by the opponents' difficulty:
+A shorter custom match pays less: Match played, Match won and each Round won are scaled by the match's rounds to win
+÷ 5 (at most 1), so a first-to-5 match pays them in full. A Round won pays only for a round you played a part in (you
+hit an opponent in it, or were still in when it ended), so sitting a match out earns no more than taking part. The
+total is then multiplied by the difficulty, the lower of the opponents' and your teammates' (the opponents' alone
+when you have none):
 
 | Difficulty | Multiplier |
 |---|---|
@@ -153,8 +156,25 @@ Token), and a Shot you can't cover in Tokens can be paid for in FC at the same r
 | Tokens per 10 Shots | 10 |
 | Assets per Shot | 3 |
 | Ten Shots guarantee | Rare |
+| Unowned item weight | 2 |
 
 "Ten Shots guarantee" is the lowest tier a ten-Shot always holds at least one of (`none` to switch it off).
+
+Each dispensed asset first gets its tier by the Rarity odds below, then one of the assets in Shots: "Unowned item
+weight" makes an asset you don't own yet at that tier that many times likelier than one you do (1: all equally likely).
+The tier odds are never changed by it.
+
+### Pity
+
+However the draws fall, you never go more Shots than this without an asset of the tier or rarer: the Shot that
+reaches the count holds one. The count carries on between visits; a single Shot and each Shot of a ten-Shot count
+alike. Add a row for another tier
+(`| Very Rare or rarer within | 10 |`), or take one out to switch it off.
+
+| Guarantee | Shots |
+|---|---|
+| Epic or rarer within | 20 |
+| Legendary or rarer within | 100 |
 
 ### Rarity
 
