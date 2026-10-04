@@ -132,6 +132,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
 | Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up. M33b: glowing BBs. M33c: sloping ground. M33d: the layout, behind Dev settings. M33e: bushes | In progress (M33a done #64, M33b done #65, M33c done; sketches approved) | M33a 7/8 |
+| Alpha · Owner's 2026-10-04 requests · M32 Cyber Pistol, a third replica (owner's design): a Legendary-only chase pistol from the Armory (1 in 400 Shot items), rifle power with pistol handling and almost no kick, Semi / Burst / Auto, no parts, a quiet futuristic sound; now and then an opponent on Hard carries it once you own one | Done (owner to play it) | 7/8 |
 | Alpha · Final alpha chain · Final alpha audit implemented (FA1–FA12, Fable audit of 2026-10-04: 148 findings, 0 critical, 4 high; the owner confirmed all twelve decisions): crash handling and sim fixes (#57), audio (#55), input, HUD and UI polish (#59), BB hot path (#60), build and pipeline hygiene (#61), Armory and economy (#63), bots and difficulty (#66), quality presets with Custom graphics and render cost (#67), the visual overhaul of figures, replicas and effects (#69) and of lighting, sky, map, flag and range (#71), the tab lock (#69), session plan, faster tests and map reuse (#73) | Done (owner's playtest next; then the step 3 polish pass) | 7–8/8 per task |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | Planned (starts after the final alpha pass) | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
@@ -771,6 +772,18 @@ pool, items 11, 12 and part of 14).
   - **M33e. Bushes:** any map can have bushes. They hide whoever is in or behind them from bots (someone at the edge is
     still seen), and BBs, players and bots pass straight through. Woodland has 70, drawn on the minimap too.
 
+- **M32. Cyber Pistol, a third replica** (owner, 2026-10-04: "an extremely rare and powerful pistol … a chase
+  replica"; his design and colours, spec approved 2026-10-04). Pulled forward from the v0.3 armoury; the reason is in
+  DECISIONS. Spec sheet in the project's shared files (`plans/cyber-pistol-spec.md`).
+  - **What it is:** an electric pistol with a built-in battery, in either gear slot. 1.00 J on 0.25 g BBs (the pistol
+    limit), on target to about 33 m, Semi (default), Burst and Auto at 14 BBs/s, the tightest spread in the game and a
+    third of the rifle's kick, 50 BBs × 3, 1.1 s reload, 0.28 s draw. No parts fit it (hop-up and BB weight still
+    turn). A quiet, futuristic electric pop; heard from as far as any replica.
+  - **A chase item:** only ever Legendary (pool.md's new Tiers column). Each Shot item has its own 0.25 % chance of
+    being it (the new Drop % column), drawn apart from the rest; Unlock all gear lends it.
+  - **Bots:** on Hard, once you own one, about 1 match in 20 has one opponent carrying it as their primary, on Auto.
+  - **Look:** a chunky, slab-sided pistol in mint, hot pink and black on either team, built in the replicas' own
+    procedural style (built on the audit's model overhaul, FA8).
 - **M36–M41. Esports difficulty, called "Pro" in the game** (owner, 2026-10-04: "high stakes and require skill … the
   player deliberately moves slowly and carefully peeks around corners … the game must still be fun"; he approved the
   plan in the project's shared files, `research/esports-difficulty-2026-10-04.md`). Starts after the final alpha pass.
