@@ -1,6 +1,8 @@
-import type { Plugin } from 'vite';
+import type { HtmlTagDescriptor, Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { archivalDescribe, versionLabel } from './src/config/buildVersion.ts';
+import { LOADING } from './src/config/loading.ts';
+import { CONTENT_SECURITY_POLICY } from './src/config/page.ts';
 
 /**
  * Size budgets in kB (minified, before gzip). Rapier inlines its WASM, so it gets its own budget: 4,333 kB measured at
@@ -33,6 +35,35 @@ function chunkBudget(): Plugin {
   };
 }
 
+/**
+ * Release extras for the built page (audit CORE-10, CORE-19): the CSP <meta> first in <head>, and a <meta> naming the
+ * Rapier chunk and its size, so the loading screen can show its download as it arrives (ui/loadingProgress.ts).
+ */
+function pageMeta(): Plugin {
+  let base = './';
+  return {
+    name: 'airsoft-page-meta',
+    apply: 'build',
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, ctx) {
+        const tags: HtmlTagDescriptor[] = [
+          { tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: CONTENT_SECURITY_POLICY }, injectTo: 'head-prepend' },
+        ];
+        const rapier = Object.values(ctx.bundle ?? {}).find((file) => file.type === 'chunk' && file.name === 'rapier');
+        if (rapier?.type === 'chunk') {
+          const bytes = new TextEncoder().encode(rapier.code).length;
+          tags.push({ tag: 'meta', attrs: { name: LOADING.chunkMeta, content: `${base}${rapier.fileName}`, 'data-bytes': String(bytes) }, injectTo: 'head' });
+        }
+        return tags;
+      },
+    },
+  };
+}
+
 /** The two Node calls the version needs, typed here: the project doesn't load Node's types. */
 interface NodeCalls {
   execFileSync(file: string, args: string[], options: { encoding: 'utf8'; stdio: string[] }): string;
@@ -61,7 +92,7 @@ export default defineConfig(async () => ({
   define: {
     __BUILD_VERSION__: JSON.stringify(versionLabel(await buildDescribe())),
   },
-  plugins: [chunkBudget()],
+  plugins: [chunkBudget(), pageMeta()],
   build: {
     target: 'es2022',
     rolldownOptions: {

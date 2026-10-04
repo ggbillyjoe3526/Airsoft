@@ -1,15 +1,29 @@
 import './style.css';
+import { LOADING } from './config/loading';
 import { parseQuality, startingQuality } from './config/render';
 import { parseSeed, randomSeed } from './core/seed';
 import { Game } from './game';
 // Reads pool.md at start (M26a), so a row it can't read is reported in the console straight away.
 import './pool/gamePool';
+import { initPhysics } from './physics/physicsWorld';
 import { lacksHardwareAcceleration } from './render/gpuCheck';
+import { chunkInfo, prefetchWithProgress } from './ui/loadingProgress';
+import { LoadingScreen } from './ui/loadingScreen';
 import { loadSavedQuality } from './ui/menus/savedChoices';
 
 async function main(): Promise<void> {
   const container = document.getElementById('app');
   if (!container) throw new Error('#app container missing');
+  // The loading bar (audit CORE-10): the physics chunk's download as it arrives, then starting physics and the game.
+  const loading = LoadingScreen.find();
+  const chunk = chunkInfo(document.querySelector(`meta[name="${LOADING.chunkMeta}"]`));
+  if (chunk) {
+    loading?.show(0, LOADING.text.download);
+    await prefetchWithProgress(chunk, (share) => loading?.show(share * LOADING.downloadShare, LOADING.text.download));
+  }
+  loading?.show(LOADING.physicsAt, LOADING.text.physics);
+  await initPhysics();
+  loading?.show(LOADING.gameAt, LOADING.text.game);
   const params = new URLSearchParams(window.location.search);
   // A fresh seed each load, so the bots' plans differ from session to session; ?seed=N replays one
   // (the debug overlay shows the seed in use). An unreadable ?seed= value is ignored.
@@ -30,13 +44,12 @@ async function main(): Promise<void> {
     softwareRendering,
   });
   game.start();
-  document.getElementById('loading')?.remove();
+  loading?.remove();
   // The console handle (and the smoke test's): dev server and the `e2e` build only.
   if (import.meta.env.DEV || import.meta.env.MODE === 'e2e') (window as unknown as { airsoft: Game }).airsoft = game;
 }
 
 main().catch((err: unknown) => {
   console.error(err);
-  const el = document.getElementById('loading');
-  if (el) el.textContent = `Failed to start: ${err instanceof Error ? err.message : String(err)}`;
+  LoadingScreen.find()?.fail(err instanceof Error ? err.message : String(err));
 });

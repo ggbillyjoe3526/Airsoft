@@ -31,6 +31,15 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
     const owned = ['000001', '000002', '000003', '000004', '000007', '000010', '000012'].map((id) => [`${id}@common`, 1]);
     localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: Object.fromEntries([...owned, ['000011@rare', 1]]), fc: 400, tokens: 0, seed: 1 }));
   });
+  // The loading bar (audit CORE-10): the furthest it got, read as the page changes it.
+  await page.addInitScript(() => {
+    const w = window as unknown as { loadingMax: number };
+    w.loadingMax = -1;
+    new MutationObserver(() => {
+      const now = Number(document.querySelector('.loading-bar')?.getAttribute('aria-valuenow') ?? -1);
+      w.loadingMax = Math.max(w.loadingMax, now);
+    }).observe(document, { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'] });
+  });
   await page.goto('/?nolock&seed=1');
   // Wait for the title screen or the boot's own failure text, whichever comes first.
   await page.waitForFunction(
@@ -44,6 +53,24 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   }
   await expect(page.locator('#loading')).toHaveCount(0);
   await expect(page.locator('.menu-title-wordmark')).toBeVisible();
+  // Release basics (audit CORE-19, FA9): the built page carries its Content-Security-Policy (a violation would be a
+  // console error above), an icon and a manifest. The loading bar showed the physics chunk's download (CORE-10): the
+  // chunk is fetched once with progress and the module import that follows is answered by the cache, not a second
+  // download (no modulepreload of it either).
+  await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', /'wasm-unsafe-eval'/);
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /icon\.svg$/);
+  await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
+  const physicsChunk = (await page.locator('meta[name="airsoft-physics-chunk"]').getAttribute('content')) ?? '';
+  expect(physicsChunk).toMatch(/rapier-.*\.js$/);
+  await expect(page.locator('link[rel="modulepreload"][href*="rapier-"]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { loadingMax: number }).loadingMax)).toBeGreaterThanOrEqual(85);
+  const chunkLoads = await page.evaluate(() =>
+    performance
+      .getEntriesByType('resource')
+      .filter((e) => /rapier-/.test(e.name))
+      .map((e) => (e as PerformanceResourceTiming).transferSize > (e as PerformanceResourceTiming).encodedBodySize / 2),
+  );
+  expect(chunkLoads.filter((full) => full)).toHaveLength(1);
   // SwiftShader is a software renderer: the title screen warns that the game will run slowly (M18b), and that it picked
   // Low for this visit as nothing was saved (audit M-02).
   await expect(page.locator('.menu-title-warning')).toContainText('without hardware acceleration');

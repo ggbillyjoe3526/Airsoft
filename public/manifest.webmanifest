@@ -1,0 +1,10 @@
+{
+  "name": "Airsoft",
+  "short_name": "Airsoft",
+  "description": "A first-person airsoft shooter in the browser: one BB, you're hit. Call it, walk off, go again.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#16181d",
+  "theme_color": "#16181d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
