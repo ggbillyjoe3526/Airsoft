@@ -36,6 +36,16 @@ export interface BBGlow {
 const NO_GLOW: BBGlow = { player: [], others: false };
 
 /**
+ * Every replica whose sounds the match needs: yours first (as you carry them), then any other a character carries. Bots
+ * needn't carry what you do (you may leave the AEG at home, M32), and a replica without sounds would shoot silently.
+ */
+export function heardReplicas(loadout: readonly ReplicaConfig[], characters: readonly Character[]): ReplicaConfig[] {
+  const out = [...loadout];
+  for (const c of characters) for (const r of c.armament.replicas) if (!out.some((o) => o.id === r.id)) out.push(r);
+  return out;
+}
+
+/**
  * Everything the player sees and hears about replicas and BBs: BBs in flight, impact puffs, the held
  * replica, the ammo HUD and sound. Reads simulation state and the events of each tick; never writes.
  */
@@ -112,7 +122,7 @@ export class CombatPresentation {
     /** Whose BBs glow (M33b): yours by gear slot (your Loadout's choice on this field), and everyone else's. */
     private readonly glow: BBGlow = NO_GLOW,
   ) {
-    this.sfx = new Sfx(loadout, blocks, query, audio);
+    this.sfx = new Sfx(heardReplicas(loadout, state.characters), blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);

@@ -7,10 +7,13 @@ import type { SoundRecipe } from '../audio/dsp';
  * a click, never the boom of a firearm (CLAUDE.md §2).
  */
 
-/** What powers a replica's shot sound (ReplicaConfig.power picks it; spring replicas come with the v0.3 armoury). */
-export type ShotProfile = 'electric' | 'gas' | 'spring';
+/**
+ * What a replica sounds like: its power's sounds (ReplicaConfig.power; spring replicas come with the v0.3 armoury), or
+ * its own (ReplicaLook.sound: the Cyber Pistol's, M32).
+ */
+export type ShotProfile = 'electric' | 'gas' | 'spring' | 'cyber';
 /** Every shot profile, for the audio tests that walk them all (test only). */
-export const SHOT_PROFILES: readonly ShotProfile[] = ['electric', 'gas', 'spring'];
+export const SHOT_PROFILES: readonly ShotProfile[] = ['electric', 'gas', 'spring', 'cyber'];
 
 /** What a footstep lands on (MapBlock.surface; floors and ramps without one are concrete). */
 export type FloorSurface = 'concrete' | 'metal';
@@ -148,6 +151,22 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     ...TIGHT,
     drive: 0.5,
   },
+  /**
+   * Cyber Pistol (M32): futuristic and quiet but satisfying. A quick rising electronic chirp, a soft rounded pop with a
+   * puff of air, a bright click on top and a faint shimmer after it. Quieter than the AEG's gearbox, no motor.
+   */
+  'shot.cyber': {
+    layers: [
+      { kind: 'tone', wave: 'sine', attack: 0.002, decay: 0.05, gain: 0.16, hz: 900, hzTo: 2400, glide: 0.03 },
+      { kind: 'tone', wave: 'square', attack: 0.002, decay: 0.035, gain: 0.04, hz: 450, hzTo: 1200, glide: 0.03, filter: { type: 'lowpass', hz: 3000, q: 0.7 } },
+      { kind: 'tone', wave: 'sine', at: 0.008, attack: 0.002, decay: 0.06, gain: 0.7, hz: 220, hzTo: 70 },
+      { kind: 'noise', at: 0.008, attack: 0.001, decay: 0.035, gain: 0.42, filter: { type: 'bandpass', hz: 1800, hzTo: 900, q: 0.9 } },
+      { kind: 'modes', at: 0.006, gain: 0.2, modes: [{ hz: 3200, decay: 0.014, gain: 0.8 }, { hz: 5400, decay: 0.01, gain: 0.5 }, { hz: 7800, decay: 0.006, gain: 0.3 }] },
+      { kind: 'tone', wave: 'triangle', at: 0.02, attack: 0.01, decay: 0.08, gain: 0.035, hz: 1800, hzTo: 1500 },
+    ],
+    ...TIGHT,
+    drive: 0.3,
+  },
   'motor.spinUp': {
     layers: [{ kind: 'tone', wave: 'saw', attack: 0.006, decay: 0.07, gain: 0.22, hz: 85, hzTo: 205, glide: 0.04, filter: { type: 'lowpass', hz: 1500, q: 0.8 } }],
     ...TIGHT,
@@ -172,6 +191,11 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
   },
   /** An empty gas pistol: only the trigger's click, the slide already locked back. */
   'dryFire.gas': { layers: [click(0, 2600, 0.7), click(0.01, 1800, 0.4)], ...TIGHT },
+  /** An empty Cyber Pistol: a soft falling blip and the trigger's click. */
+  'dryFire.cyber': {
+    layers: [{ kind: 'tone', wave: 'sine', attack: 0.002, decay: 0.035, gain: 0.16, hz: 1400, hzTo: 800 }, click(0.004, 2800, 0.45)],
+    ...TIGHT,
+  },
   'dryFire.spring': { layers: [click(0, 2200, 0.7), click(0.012, 1500, 0.5)], ...TIGHT },
   /** The AEG's plastic magazine: the catch clicks and the mag slides out. */
   'magOut.electric': {
@@ -196,6 +220,25 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     layers: [
       { kind: 'noise', attack: 0.006, decay: 0.04, gain: 0.2, filter: { type: 'bandpass', hz: 1500, q: 1.5 } },
       { kind: 'modes', at: 0.045, gain: 0.42, modes: [{ hz: 1450, decay: 0.04, gain: 0.8 }, { hz: 3300, decay: 0.025, gain: 0.5 }, { hz: 6100, decay: 0.012, gain: 0.25 }] },
+    ],
+    ...TIGHT,
+  },
+  /** The Cyber Pistol's magazine: the catch clicks and the power drops with a falling whir as it slides free. */
+  'magOut.cyber': {
+    layers: [
+      click(0, 2600, 0.5),
+      { kind: 'tone', wave: 'sine', at: 0.004, attack: 0.004, decay: 0.09, gain: 0.08, hz: 1200, hzTo: 500 },
+      { kind: 'noise', at: 0.01, attack: 0.008, decay: 0.06, gain: 0.35, filter: { type: 'bandpass', hz: 1500, hzTo: 1000, q: 1.5 } },
+    ],
+    ...TIGHT,
+  },
+  /** The magazine seating with a firm clack, then a two-note chime as the pistol powers up again. */
+  'magIn.cyber': {
+    layers: [
+      { kind: 'noise', attack: 0.008, decay: 0.045, gain: 0.2, filter: { type: 'bandpass', hz: 1100, hzTo: 1500, q: 1.5 } },
+      { kind: 'modes', at: 0.045, gain: 0.38, modes: [{ hz: 1000, decay: 0.03, gain: 0.8 }, { hz: 2300, decay: 0.02, gain: 0.5 }, { hz: 4200, decay: 0.01, gain: 0.3 }] },
+      { kind: 'tone', wave: 'sine', at: 0.08, attack: 0.003, decay: 0.05, gain: 0.07, hz: 1320 },
+      { kind: 'tone', wave: 'sine', at: 0.13, attack: 0.003, decay: 0.08, gain: 0.07, hz: 1980 },
     ],
     ...TIGHT,
   },
