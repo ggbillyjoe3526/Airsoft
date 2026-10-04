@@ -85,3 +85,14 @@ acceptance:
 status: open
 attempts: 0
 
+
+## FA14 · Boot smoke test: in-match keys wait for frames and their result
+tier: trivial
+perf: skip
+touches: e2e/boot.spec.ts
+acceptance:
+  1. Before the Tab, Z and F/X steps the test waits for the match to draw frames, then gives each key's result a CI-sized wait (30 s, as the fire and reload steps), still checking the same states.
+  2. The squad order presses wait for a live round with you and a teammate in play, where an order is taken.
+  3. Nothing skipped or loosened: every expectation of the block is kept.
+status: open
+attempts: 0
