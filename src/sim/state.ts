@@ -5,7 +5,7 @@ import type { GameEvent } from './events';
 import type { RangeTarget } from './rangeTargets';
 import { createRoundState, type RoundRules, type RoundState } from './round';
 import { createRng, type RngState } from './rng';
-import type { Vec3 } from './vec';
+import { type Vec3, vec3 } from './vec';
 
 /** Entire simulation state as plain data. Presentation layers read it, never write it. */
 export interface GameState {
@@ -19,6 +19,8 @@ export interface GameState {
   round: RoundState;
   /** Practice range targets (M21); empty in a match. */
   targets: RangeTarget[];
+  /** The wind (m/s) BBs flew through this tick (M30; SimServices.wind); still air without one. */
+  wind: Vec3;
 }
 
 /** A fresh game in `mode` (flag mode needs the map's flagpole). */
@@ -32,5 +34,6 @@ export function createGameState(seed: number, maxBBs: number, rules: RoundRules,
     rng: createRng(seed),
     round: createRoundState(rules, mode, pole),
     targets: [],
+    wind: vec3(),
   };
 }

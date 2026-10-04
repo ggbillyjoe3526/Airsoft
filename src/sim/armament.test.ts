@@ -219,7 +219,7 @@ describe('replica handling', () => {
     run(1, (c) => (c.fire = true));
     const rifleBB = ctx.bbs.bbs.find((b) => b.active)!;
     expect(rifleBB.mass).toBeCloseTo(0.00025, 9);
-    expect(rifleBB.hopUp).toBe(hopUpLift(AEG, AEG.hopUpDial)); // the factory hop-up setting
+    expect(rifleBB.spin).toBe(hopUpLift(AEG, AEG.hopUpDial) * BALLISTICS.spinPerHop); // the factory hop-up setting's backspin
     run(1, (c) => (c.fire = false));
     run(1, (c) => (c.switchTo = 1));
     run(Math.ceil(GAS_PISTOL.drawTime / DT) + 1);
@@ -228,7 +228,7 @@ describe('replica handling', () => {
     run(1, (c) => (c.fire = true));
     const pistolBB = ctx.bbs.bbs.find((b) => b.active && b.serial >= before)!;
     expect(pistolBB.mass).toBeCloseTo(0.0002, 9);
-    expect(pistolBB.hopUp).toBe(hopUpLift(GAS_PISTOL, GAS_PISTOL.hopUpDial));
+    expect(pistolBB.spin).toBe(hopUpLift(GAS_PISTOL, GAS_PISTOL.hopUpDial) * BALLISTICS.spinPerHop);
     expect(Math.hypot(pistolBB.velocity.x, pistolBB.velocity.y, pistolBB.velocity.z)).toBeCloseTo(72, 0);
   });
 
@@ -236,7 +236,7 @@ describe('replica handling', () => {
     const { ctx, a, run } = setup();
     setHopUps(a, [1, 0]);
     run(1, (c) => (c.fire = true));
-    expect(ctx.bbs.bbs.find((b) => b.active)!.hopUp).toBe(AEG.hopUpMax);
+    expect(ctx.bbs.bbs.find((b) => b.active)!.spin).toBe(AEG.hopUpMax * BALLISTICS.spinPerHop);
   });
 
   it('fires the BB weight picked for the replica: heavier leaves slower, with a little more energy', () => {

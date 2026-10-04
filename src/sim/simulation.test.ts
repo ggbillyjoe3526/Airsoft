@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALLISTICS } from '../config/ballistics';
+import { BALLISTICS, WIND } from '../config/ballistics';
 import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
 import { HITS, ROUNDS } from '../config/hits';
@@ -17,6 +17,7 @@ import { createRangeTargets } from './rangeTargets';
 import { placeTeams } from './round';
 import { createGameState } from './state';
 import { OPEN_NAV, openFieldElimination } from './testSupport';
+import { createWind, windAt } from './wind';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
@@ -198,6 +199,56 @@ describe('stepSimulation', () => {
     stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
     expect(c.prevLean).toBe(1);
     expect(c.lean).toBeLessThan(1);
+  });
+
+  it("flies BBs through the match's wind (M30): state.wind follows it every tick, and a BB drifts downwind", () => {
+    const run = (wind: boolean) => {
+      const state = createGameState(1, 16, ROUNDS);
+      const c = createCharacter(0, vec3(0, 0, 0), 0);
+      state.characters.push(c);
+      const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, wind: wind ? { ...createWind(5, WIND), yaw: -Math.PI / 2, speed: 1.5 } : undefined, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
+      const fire = createCommand();
+      fire.fire = true;
+      stepSimulation(state, new Map([[0, fire]]), ctx, DT);
+      const bb = state.bbs.bbs.find((b) => b.active)!;
+      const idle = createCommand();
+      for (let i = 0; i < 20; i++) stepSimulation(state, new Map([[0, idle]]), ctx, DT);
+      return { state, ctx, bb };
+    };
+    const calm = run(false);
+    expect(calm.state.wind).toEqual({ x: 0, y: 0, z: 0 });
+    const windy = run(true);
+    // The wind as it blows at this moment of the match...
+    expect(windy.state.wind).toEqual(windAt(windy.ctx.wind!, windy.state.time - DT, vec3()));
+    expect(windy.state.wind.x).toBeGreaterThan(1); // yaw −90°: blowing towards +x
+    // ...carries the BB that way, where the calm one flies straight on.
+    expect(windy.bb.position.x - calm.bb.position.x).toBeGreaterThan(0.01);
+  });
+
+  it("does not push characters about, and leaves the seeded rng alone, however hard the wind blows (M30)", () => {
+    const run = (wind: boolean) => {
+      const state = createGameState(11, 16, ROUNDS);
+      const still = createCharacter(0, vec3(2, 0, 3), 0);
+      const walker = createCharacter(1, vec3(-4, 0, 0), 0);
+      state.characters.push(still, walker);
+      const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, wind: wind ? { ...createWind(11, WIND), speed: 1.8, gust: 0 } : undefined, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
+      const go = createCommand();
+      go.forward = 1;
+      const commands = new Map([[1, go]]);
+      for (let i = 0; i < 120; i++) stepSimulation(state, commands, ctx, DT);
+      return state;
+    };
+    const calm = run(false);
+    const windy = run(true);
+    expect(Math.hypot(windy.wind.x, windy.wind.z)).toBeGreaterThan(1); // it really blew
+    expect(windy.characters[0]!.position).toEqual(calm.characters[0]!.position);
+    expect(windy.characters[0]!.position).toEqual({ x: 2, y: 0, z: 3 });
+    expect(windy.characters[0]!.velocity).toEqual(calm.characters[0]!.velocity);
+    expect(windy.characters[1]!.position).toEqual(calm.characters[1]!.position);
+    expect(windy.characters[1]!.velocity).toEqual(calm.characters[1]!.velocity);
+    // No draw from the simulation's stream (a shot-free match, with and without a breeze, ends on the same rng state).
+    expect(windy.rng).toEqual(calm.rng);
+    expect(windy.rng).toEqual(createGameState(11, 16, ROUNDS).rng);
   });
 
   it('clears last tick\'s events at the start of every tick', () => {

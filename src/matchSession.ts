@@ -3,7 +3,7 @@ import { BotController } from './ai/botController';
 import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
-import { BALLISTICS } from './config/ballistics';
+import { BALLISTICS, WIND } from './config/ballistics';
 import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
@@ -40,6 +40,7 @@ import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
 import { placeTeams, restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
+import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
@@ -148,6 +149,7 @@ export class MatchSession {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
+      wind: createWind(seed, WIND),
       killY: map.killY,
       hits: this.hits,
       deadZones: map.deadZones,
