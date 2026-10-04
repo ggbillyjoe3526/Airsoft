@@ -4,7 +4,6 @@ import { Sfx, type SfxSetup } from '../audio/sfx';
 import type { MotionScale } from '../config/accessibility';
 import { FIGURE } from '../config/characters';
 import { impactMaterialAt } from '../audio/soundMaterials';
-import type { VolumeChannel } from '../config/audio';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
@@ -139,11 +138,6 @@ export class CombatPresentation {
     this.sfx.unlock();
   }
 
-  /** A volume slider moved on Settings → Audio. */
-  setVolume(channel: VolumeChannel, position: number): void {
-    this.sfx.setVolume(channel, position);
-  }
-
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
   setMotion(scale: MotionScale): void {
     this.viewmodel.setMotion(scale);
@@ -195,9 +189,10 @@ export class CombatPresentation {
           continue;
         }
       } else if (e.type === 'bbImpact') {
-        // Dust by what the BB hit (the material its tick sounds by).
+        // Dust by what the BB hit, and its tick: one lookup for both (audit L-15).
         const material = impactMaterialAt(this.blocks, e.position);
         this.puffs.spawn(e.position, this.dustTints.get(material), IMPACT_DUST[material].scale);
+        this.sfx.impact(e.position, material);
       } else if (e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
@@ -258,7 +253,7 @@ export class CombatPresentation {
     this.listenerPos.y = cam.position.y;
     this.listenerPos.z = cam.position.z;
     this.sfx.setListener(this.listenerPos, this.forward.x, this.forward.y, this.forward.z);
-    this.sfx.updateSources(this.state.characters, this.player.id);
+    this.sfx.placeSources(this.state.characters, this.player.id);
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */

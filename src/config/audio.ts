@@ -1,4 +1,6 @@
 
+import type { SoundCue } from './sounds';
+
 /**
  * How sound is mixed and placed (M13). The sounds themselves are recipes in config/sounds.ts; this file sets how
  * loud each kind plays, how it's positioned in 3D and muffled by walls, the yard's echo and the volume settings.
@@ -112,6 +114,16 @@ export const AUDIO = {
    * replica has a suppressor yet; muzzle devices come with loadouts (after v0.1).
    */
   suppressed: { lowpassHz: 1400, volume: 0.45 },
+  /**
+   * The sounds are rendered in the browser's spare time on the title screen (audit M-09), a cue at a time, for as
+   * long as a spare moment has more than this many milliseconds left (a cue takes about 4 ms).
+   */
+  warmUpSliceMs: 5,
+  /**
+   * Letting go of a volume slider plays this short dry cue through the bus it sets (audit L-17), so the level can be
+   * judged from the pause menu or the title screen.
+   */
+  volumePreview: { cue: 'hitMarker' as SoundCue, gain: 0.55 },
 } as const;
 
 /** The player's volume sliders (Settings → Audio): everything, sounds in the world, and the interface's cues. */

@@ -81,11 +81,18 @@ describe('sound synthesis (M13)', () => {
     expect(v0).not.toEqual(v1);
   });
 
-  it('builds every sound quickly enough to do when Play is pressed', () => {
-    const t0 = performance.now();
-    renderSounds(RATE);
-    // Node is slower than a browser's JIT at this; the game renders once per page load.
-    expect(performance.now() - t0).toBeLessThan(1500);
+  it("keeps the sounds small enough to render in the title screen's spare time (a budget in samples, not wall time)", () => {
+    // Measured at M-09 (audit): 1,167,190 samples (4.7 MB) in all, the longest cue (steel's ring) 116,965. Counting
+    // samples keeps the guard from flaking on a slow CI runner (audit L-11); rendering time follows the count.
+    const all = renderSounds(RATE);
+    let total = 0;
+    for (const [cue, variants] of all) {
+      const samples = variants.reduce((n, v) => n + v.length, 0);
+      // Each cue is rendered in one spare moment (AudioEngine.warmUp), which the browser keeps under 50 ms.
+      expect(samples, `${cue} is too long to render in one spare moment`).toBeLessThan(0.15 * 1e6);
+      total += samples;
+    }
+    expect(total, 'samples kept per sample rate').toBeLessThan(1.4e6);
   });
 
   it('has a shot sound for every power source the replicas use', () => {

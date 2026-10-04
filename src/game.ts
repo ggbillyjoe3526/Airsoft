@@ -1,7 +1,6 @@
+import { AudioEngine } from './audio/audioEngine';
 import { loadVolumes } from './audio/audioMix';
-import type { SfxSetup } from './audio/sfx';
 import { motionScale } from './config/accessibility';
-import { SoundLibrary } from './audio/soundBank';
 import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
 import { ROUNDS } from './config/hits';
@@ -130,8 +129,11 @@ export class Game {
   /** Each replica's hop-up dial and BB weight as picked on the Loadout screen, by replica id (saved ones until changed). */
   private readonly hopUps = new Map<string, number>();
   private readonly bbWeights = new Map<string, number>();
-  /** The volume sliders and the synthesised sounds, kept across matches (each match's Sfx plays from them). */
-  private readonly audio: SfxSetup = { volumes: loadVolumes(), library: new SoundLibrary() };
+  /**
+   * The audio context, volume buses and synthesised sounds, kept across matches (each match's Sfx plays through
+   * them). Made suspended at start; the sounds render in the title screen's spare time (audit M-09).
+   */
+  private readonly audio = new AudioEngine(loadVolumes());
   /** The crosshair's look (Settings → Crosshair), kept across matches. */
   private crosshair: CrosshairSettings = loadCrosshair();
   /** The local records (M19), and what the last match finished changed in them. */
@@ -258,7 +260,7 @@ export class Game {
       },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
       quality: { initial: this.quality, onChange: (q) => this.changeQuality(q) },
-      audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v) },
+      audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
       accessibility: {
         reducedMotion: { initial: this.reducedMotion, onChange: (on) => this.changeReducedMotion(on) },
@@ -280,6 +282,7 @@ export class Game {
       else this.pause();
     });
     this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
+    this.audio.warmUp();
   }
 
   /** The tab was hidden (another tab, the window minimised): the match pauses, as Esc would (M18b). */
@@ -316,10 +319,9 @@ export class Game {
     }
   }
 
-  /** A volume slider moved on Settings → Audio: kept for the next match and applied to the one loaded. */
+  /** A volume slider moved on Settings → Audio: the shared bus eases to it (the match loaded and every later one). */
   private changeVolume(channel: VolumeChannel, position: number): void {
-    this.audio.volumes[channel] = position;
-    this.session?.combat.setVolume(channel, position);
+    this.audio.setVolume(channel, position);
   }
 
   private hopUpOf(r: ReplicaConfig): number {
@@ -376,6 +378,7 @@ export class Game {
     this.graphicsNotice.dispose();
     this.session?.dispose();
     this.session = null;
+    this.audio.dispose();
     this.keyboard.dispose();
     this.pointer.dispose();
     this.debug.dispose();
