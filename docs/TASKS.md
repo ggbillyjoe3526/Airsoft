@@ -5,11 +5,12 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
 keeps `status` and `attempts` current.
 
-The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
+The Esports plan (owner approved 2026-10-04; ROADMAP M36, DECISIONS "M36", the plan in the project's shared
 files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged dev with M35's content tag until the
-owner says it's done. Any change under `src/ai/` is announced to the coordinator first (FA4 and M33 touch bots).
+owner says it's done. Starts after the final alpha pass, when the coordinator says so; M36a first. Any change under
+`src/ai/` is announced to the coordinator first (M33 touches bot perception).
 
-## M36 · The Pro difficulty level
+## M36a · The Pro difficulty level
 tier: core
 perf: skip
 touches: src/config/bots.ts, src/config/content.ts, src/pool/, pool.md, src/stats/, src/settings/storage.ts, src/ui/menus/, src/config/menus.ts, src/matchSession.ts
@@ -22,7 +23,7 @@ acceptance:
 status: open
 attempts: 0
 
-## M37 · Pro bots hold angles
+## M36b · Pro bots hold angles
 tier: core
 perf: required
 touches: src/ai/, src/nav/, src/map/, src/config/bots.ts
@@ -35,7 +36,7 @@ acceptance:
 status: open
 attempts: 0
 
-## M38 · Pro bots clear corners and play as a team
+## M36c · Pro bots clear corners and play as a team
 tier: core
 perf: required
 touches: src/ai/, src/config/bots.ts
@@ -48,7 +49,7 @@ acceptance:
 status: open
 attempts: 0
 
-## M39 · Rules picker: Skirmish, Tournament, Pro CQB, Custom
+## M36d · Rules picker: Skirmish, Tournament, Pro CQB, Custom
 tier: core
 perf: skip
 touches: src/config/matchRules.ts, src/config/hits.ts, src/config/content.ts, src/sim/round.ts, src/sim/state.ts, src/matchSession.ts, src/game.ts, src/ui/menus/, src/config/menus.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/config/minimap.ts, src/pool/armory.ts, src/stats/, src/settings/storage.ts, src/config/replicas.ts
@@ -61,7 +62,7 @@ acceptance:
 status: open
 attempts: 0
 
-## M40 · Map balance for Pro
+## M36e · Map balance for Pro
 tier: core
 perf: skip
 touches: src/ai/, src/map/
@@ -72,7 +73,7 @@ acceptance:
 status: open
 attempts: 0
 
-## M41 · What got you, Pro tips and tuning
+## M36f · What got you, Pro tips and tuning
 tier: ui
 perf: skip
 touches: src/ui/, src/config/matchInfo.ts, src/sim/events.ts, src/game.ts, src/config/tutorial.ts, src/config/bots.ts
