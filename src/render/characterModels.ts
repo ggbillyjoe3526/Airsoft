@@ -194,20 +194,33 @@ const FIN = FIGURE.finish;
 /** A colour `k` times as bright (clamped): the detailed figure's lids, cuffs and soles. */
 const tone = (color: Color, k: number): Color => new THREE.Color(color).multiplyScalar(k).getHex();
 
-/** A simple two-tone toy rifle along -Z from `z0` (butt) with its bore at height y. */
-function addRifle(b: PartBuilder, x: number, y: number, z0: number): void {
+/** The parts a figure shows on its replicas (FA8, Player detail `high`): a silencer on the rifle (M29b). */
+export interface FigureKit {
+  rifleSilencer: boolean;
+}
+
+/** As every replica comes. */
+export const BARE_KIT: FigureKit = { rifleSilencer: false };
+
+/** A simple two-tone toy rifle along -Z from `z0` (butt) with its bore at height y; `kit` (detailed only): its silencer. */
+function addRifle(b: PartBuilder, x: number, y: number, z0: number, kit: FigureKit = BARE_KIT): void {
   const polymer: PartLook = { finish: FIN.polymer, edge: true };
   b.rounded(C.furniture, 0.05, 0.1, 0.2, x, y - 0.02, z0 - 0.1, 0.012, polymer); // stock
   b.rounded(C.replica, 0.055, 0.08, 0.34, x, y, z0 - 0.37, 0.012, polymer); // receiver
   b.box(C.furniture, 0.04, 0.14, 0.06, x, y - 0.1, z0 - 0.42, polymer); // magazine
   b.rounded(C.furniture, 0.06, 0.07, 0.24, x, y, z0 - 0.66, 0.015, polymer); // handguard
   b.box(C.replica, 0.025, 0.025, 0.2, x, y, z0 - 0.88, { finish: FIN.steel }); // barrel
-  b.box(C.replica, 0.02, 0.04, 0.03, x, y + 0.06, z0 - 0.24, polymer); // flip-up rear sight (optics are accessories; bots fit none)
+  b.box(C.replica, 0.02, 0.04, 0.03, x, y + 0.06, z0 - 0.24, polymer); // flip-up rear sight (optics aren't drawn on figures)
   if (!b.overhaul) return;
-  // Detailed: a top rail along the receiver and handguard, the pistol grip, and a flash hider at the muzzle.
+  // Detailed: a top rail along the receiver and handguard, the pistol grip, and a flash hider at the muzzle, or a fitted
+  // silencer over the barrel's end (its front at the muzzle, where BBs leave).
   b.box(C.replica, 0.024, 0.012, 0.56, x, y + 0.045, z0 - 0.54, polymer);
   b.rounded(C.replica, 0.032, 0.09, 0.045, x, y - 0.075, z0 - 0.27, 0.01, polymer);
-  b.add(new THREE.CylinderGeometry(0.018, 0.018, 0.045, b.detail.radialSegments).rotateX(Math.PI / 2).translate(x, y, z0 - 0.98 + 0.0225), C.replica, { finish: FIN.steel });
+  const muzzle = z0 - FIGURE.rifle.length;
+  if (kit.rifleSilencer) {
+    const S = FIGURE.silencer;
+    b.add(new THREE.CylinderGeometry(S.radius, S.radius, S.length, b.detail.radialSegments).rotateX(Math.PI / 2).translate(x, y, muzzle + S.length / 2), C.replica, polymer);
+  } else b.add(new THREE.CylinderGeometry(0.018, 0.018, 0.045, b.detail.radialSegments).rotateX(Math.PI / 2).translate(x, y, muzzle + 0.0225), C.replica, { finish: FIN.steel });
 }
 
 /** A compact pistol along -Z from `z0` (the back of the slide) with its bore at height y. */
@@ -323,7 +336,8 @@ function head(b: PartBuilder, look: FigureLook, team: Color, y: number): void {
 
 /**
  * Builds one figure in its team colour, using `material` (vertex colours) and the shared `calloutMaterial`. `id`
- * picks its looks (figureLooks). `detail` is FIGURE.detail.low unless the Player detail setting asks for more (FA8).
+ * picks its looks (figureLooks). `detail` is FIGURE.detail.low unless the Player detail setting asks for more (FA8);
+ * `kit` is what the detailed figure shows fitted (a silencer on its rifle).
  */
 export function buildFigure(
   teamColor: Color,
@@ -332,6 +346,7 @@ export function buildFigure(
   id = 0,
   model: FigureModel | null = null,
   detail: FigureDetail = FIGURE.detail.low,
+  kit: FigureKit = BARE_KIT,
 ): Figure {
   const F = FIGURE;
   const look = figureLooks(id);
@@ -395,13 +410,13 @@ export function buildFigure(
   const aim = new THREE.Group();
   aim.position.y = F.shoulderHeight + hy;
   const shoulders = v(0, F.shoulderHeight, 0);
-  const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(look, teamColor, material, detail);
+  const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(look, teamColor, material, detail, kit);
   const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(look, teamColor, material, detail);
   aimPistol.visible = false;
   aim.add(aimRifle, aimPistol);
   upper.add(aim);
 
-  const hitPose = fromModel('hitPose', hips) ?? builtHitPose(look, teamColor, material, hy, detail);
+  const hitPose = fromModel('hitPose', hips) ?? builtHitPose(look, teamColor, material, hy, detail, kit);
   hitPose.visible = false;
   upper.add(hitPose);
 
@@ -470,7 +485,7 @@ function builtBody(look: FigureLook, teamColor: Color, material: THREE.Material,
 }
 
 /** The built-in arms with the rifle shouldered on the right, in aim-group space (the shoulder line). */
-function builtAimRifle(look: FigureLook, teamColor: Color, material: THREE.Material, detail: FigureDetail): THREE.Mesh {
+function builtAimRifle(look: FigureLook, teamColor: Color, material: THREE.Material, detail: FigureDetail, kit: FigureKit): THREE.Mesh {
   const F = FIGURE;
   const rifle = new PartBuilder(detail);
   arm(rifle, look, teamColor, v(F.shoulderSpread, 0, 0), v(0.2, -0.2, -0.12), v(0.07, -0.12, -0.26));
@@ -482,7 +497,7 @@ function builtAimRifle(look: FigureLook, teamColor: Color, material: THREE.Mater
       rifle.limb(C.gloves, 0.0095, v(0.05, -0.11, z), v(0.094, -0.085, z), undefined, SMALL_SIDES, 1);
     }
   }
-  addRifle(rifle, F.rifle.x, F.rifle.y, F.rifle.butt);
+  addRifle(rifle, F.rifle.x, F.rifle.y, F.rifle.butt, kit);
   return rifle.build(material);
 }
 
@@ -498,7 +513,7 @@ function builtAimPistol(look: FigureLook, teamColor: Color, material: THREE.Mate
 }
 
 /** The built-in hit pose: right hand straight up (open glove), rifle hanging muzzle-down from the left hand. */
-function builtHitPose(look: FigureLook, teamColor: Color, material: THREE.Material, hy: number, detail: FigureDetail): THREE.Mesh {
+function builtHitPose(look: FigureLook, teamColor: Color, material: THREE.Material, hy: number, detail: FigureDetail, kit: FigureKit): THREE.Mesh {
   const F = FIGURE;
   const hit = new PartBuilder(detail);
   const top = F.shoulderHeight + hy;
@@ -516,7 +531,7 @@ function builtHitPose(look: FigureLook, teamColor: Color, material: THREE.Materi
   const hangHand = v(-F.shoulderSpread - 0.03, top - 0.55, -0.06);
   arm(hit, look, teamColor, v(-F.shoulderSpread, top, 0), v(-F.shoulderSpread - 0.02, top - 0.28, -0.02), hangHand);
   const hanging = new PartBuilder(detail);
-  addRifle(hanging, 0, 0, 0.12);
+  addRifle(hanging, 0, 0, 0.12, kit);
   // Muzzle down and slightly forward, held at the left hand.
   hit.addPart(hanging, new THREE.Matrix4().makeTranslation(hangHand.x, hangHand.y, hangHand.z).multiply(new THREE.Matrix4().makeRotationX(-(Math.PI / 2 - 0.25))));
   return hit.build(material);

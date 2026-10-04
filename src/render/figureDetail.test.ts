@@ -3,10 +3,11 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { FIGURE } from '../config/characters';
 import { HITS } from '../config/hits';
 import { TEAM_COLOUR_SETS } from '../config/teams';
+import { fitParts } from '../sim/armament';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
-import { buildFigure, disposeFigure, type Figure } from './characterModels';
-import { CharacterRenderer } from './characterRenderer';
+import { BARE_KIT, buildFigure, disposeFigure, type Figure } from './characterModels';
+import { CharacterRenderer, rifleSilenced } from './characterRenderer';
 import { FINISH_ATTRIBUTE, hasVertexFinish, useVertexFinish } from './figureFinish';
 
 const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
@@ -103,6 +104,65 @@ describe('Player detail (FA8, QualitySettings.figureDetail)', () => {
     for (let i = 0; i < col.count; i++) if (Math.abs(col.getX(i) / top.r - FIGURE.hemShade) < 0.02 && Math.abs(col.getY(i) / top.g - FIGURE.hemShade) < 0.02) darker++;
     expect(darker).toBeGreaterThan(0);
     disposeFigure(figure);
+  });
+});
+
+/** The widest the aiming rifle gets across (from its bore) in the last `from`..`to` metres behind its muzzle. */
+const widthNearMuzzle = (f: Figure, from: number, to: number): number => {
+  const pos = (f.aimRifle as THREE.Mesh).geometry.getAttribute('position');
+  const muzzle = FIGURE.rifle.butt - FIGURE.rifle.length;
+  let widest = 0;
+  for (let i = 0; i < pos.count; i++) {
+    const back = pos.getZ(i) - muzzle;
+    if (back >= from && back <= to && Math.abs(pos.getY(i) - FIGURE.rifle.y) < 0.04) widest = Math.max(widest, Math.abs(pos.getX(i) - FIGURE.rifle.x));
+  }
+  return widest;
+};
+
+describe('fitted parts on the figures (FA8 with M29b)', () => {
+  it('shows a fitted silencer in place of the detailed rifle\'s flash hider, its front at the muzzle; Low is unchanged', () => {
+    const silenced = { rifleSilencer: true };
+    const bare = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 0, null, FIGURE.detail.high, BARE_KIT);
+    const fitted = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 0, null, FIGURE.detail.high, silenced);
+    // The bare rifle's flash hider is at the muzzle and nothing ends 10–12.5 cm behind it; the silencer is wider than
+    // the hider and its back end is there.
+    // (A cylinder's sides reach a little short of its radius across.)
+    const across = (f: Figure, from: number, to: number): number => widthNearMuzzle(f, from, to) / FIGURE.silencer.radius;
+    expect(across(bare, -0.001, 0.05)).toBeLessThan(0.8);
+    expect(across(bare, 0.1, 0.125)).toBe(0);
+    expect(across(fitted, -0.001, 0.05)).toBeGreaterThan(0.9);
+    expect(across(fitted, 0.1, 0.125)).toBeGreaterThan(0.9);
+    const box = new THREE.Box3().setFromBufferAttribute((fitted.aimRifle as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute);
+    expect(box.min.z).toBeCloseTo(FIGURE.rifle.butt - FIGURE.rifle.length, 6);
+    const low = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 0, null, FIGURE.detail.low, silenced);
+    const lowBare = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 0, null, FIGURE.detail.low);
+    expect(drawn(low)).toBe(drawn(lowBare));
+    for (const f of [bare, fitted, low, lowBare]) disposeFigure(f);
+  });
+
+  it('rebuilds a detailed figure whose rifle gains a silencer between rounds, and only then', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
+    const characters = [createCharacter(0, vec3(), 0), createCharacter(1, vec3(2, 0, 0), 1)];
+    const r = new CharacterRenderer(characters, [0x3d8bff, 0xff8a2a], HITS, null, 'high');
+    r.setReceiveShadows(true);
+    r.update(1, 0.016, -1);
+    const before = meshesOf(r.object);
+    expect(rifleSilenced(characters[0]!)).toBe(false);
+    const rifle = characters[0]!.armament.replicas.findIndex((c) => c.look.model !== 'pistol');
+    const parts = characters[0]!.armament.parts.map((p, i) => (i === rifle ? { ...p, muzzle: 'silencer' as const } : p));
+    fitParts(characters[0]!.armament, parts);
+    expect(rifleSilenced(characters[0]!)).toBe(true);
+    r.update(1, 0.016, -1);
+    const after = meshesOf(r.object);
+    expect(after).toHaveLength(before.length);
+    const changed = after.filter((m) => !before.includes(m));
+    expect(changed.length).toBeGreaterThan(0);
+    for (const m of changed) expect(m.receiveShadow).toBe(true);
+    // The other figure is untouched, and nothing more is rebuilt while the kit stays.
+    r.update(1, 0.016, -1);
+    expect(meshesOf(r.object)).toEqual(after);
+    r.dispose();
+    vi.unstubAllGlobals();
   });
 });
 

@@ -5,7 +5,7 @@ import type { HitConfig } from '../config/hits';
 import type { DetailLevel } from '../config/render';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
-import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll, setReceiveShadows } from './characterModels';
+import { BARE_KIT, buildFigure, createCalloutTexture, disposeFigure, type Figure, type FigureKit, figureLeanRoll, setReceiveShadows } from './characterModels';
 import { type FigureModel, fadeModelMaterials } from './externalModels';
 import { useVertexFinish } from './figureFinish';
 
@@ -21,6 +21,18 @@ interface FigureState {
   flinchAge: number;
   flinchX: number;
   flinchZ: number;
+  /** Its rifle had a silencer fitted when it was built (shown on Player detail `high`). */
+  silencer: boolean;
+}
+
+/** A rifle with a silencer fitted (BARE_KIT: as it comes). */
+const SILENCED: FigureKit = { rifleSilencer: true };
+
+/** True if `c` carries a rifle (not a pistol) with a silencer fitted (M29b): the detailed figure shows it. */
+export function rifleSilenced(c: Character): boolean {
+  const a = c.armament;
+  for (let i = 0; i < a.replicas.length; i++) if (a.replicas[i]!.look.model !== 'pistol' && a.parts[i]?.muzzle === 'silencer') return true;
+  return false;
 }
 
 /**
@@ -90,8 +102,9 @@ export class CharacterRenderer {
     private detail: DetailLevel = 'low',
   ) {
     for (const c of characters) {
-      const { figure, material } = this.build(c);
-      this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0 });
+      const silencer = rifleSilenced(c);
+      const { figure, material } = this.build(c, silencer);
+      this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer });
     }
   }
 
@@ -108,23 +121,28 @@ export class CharacterRenderer {
   setDetail(level: DetailLevel): void {
     if (level === this.detail) return;
     this.detail = level;
-    for (let i = 0; i < this.characters.length; i++) {
-      const s = this.figures[i]!;
-      disposeFigure(s.figure);
-      s.material.dispose();
-      const { figure, material } = this.build(this.characters[i]!);
-      s.figure = figure;
-      s.material = material;
-    }
+    for (let i = 0; i < this.characters.length; i++) this.rebuild(i, rifleSilenced(this.characters[i]!));
     setReceiveShadows(this.object, this.receiveShadows);
   }
 
+  /** Figure `i` built again at the current detail, with or without a silencer on its rifle, keeping its walk and flinch. */
+  private rebuild(i: number, silencer: boolean): void {
+    const s = this.figures[i]!;
+    disposeFigure(s.figure);
+    s.material.dispose();
+    const { figure, material } = this.build(this.characters[i]!, silencer);
+    s.figure = figure;
+    s.material = material;
+    s.silencer = silencer;
+  }
+
   /** One character's figure at the current detail, added to the scene, with its own copy of the material. */
-  private build(c: Character): { figure: Figure; material: THREE.MeshStandardMaterial } {
+  private build(c: Character, silencer: boolean): { figure: Figure; material: THREE.MeshStandardMaterial } {
     const high = this.detail === 'high';
     // The detailed figure reads each vertex's roughness and metalness (glossy goggles and shells, steel barrels).
     const material = high ? useVertexFinish(this.material.clone()) : this.material.clone();
-    const figure = buildFigure(this.teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail]);
+    const kit = silencer ? SILENCED : BARE_KIT;
+    const figure = buildFigure(this.teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail], kit);
     this.object.add(figure.root);
     return { figure, material };
   }
@@ -148,6 +166,14 @@ export class CharacterRenderer {
     for (let i = 0; i < this.characters.length; i++) {
       const c = this.characters[i]!;
       const s = this.figures[i]!;
+      // Parts are fitted between rounds (fitParts): a detailed figure whose rifle gained or lost a silencer is rebuilt.
+      if (this.detail === 'high') {
+        const silencer = rifleSilenced(c);
+        if (silencer !== s.silencer) {
+          this.rebuild(i, silencer);
+          setReceiveShadows(s.figure.root, this.receiveShadows);
+        }
+      }
       const f = s.figure;
       f.root.visible = c.id !== hiddenId;
       if (!f.root.visible) continue;

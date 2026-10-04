@@ -112,6 +112,11 @@ export const FIGURE = {
    * leaving this muzzle.
    */
   rifle: { x: 0.06, y: -0.06, butt: 0.12, length: 0.98 },
+  /**
+   * Player detail `high` (FA8): a fitted silencer (M29b) on the rifle in place of its flash hider, this long and round,
+   * ending at the muzzle so BBs still leave its front.
+   */
+  silencer: { length: 0.12, radius: 0.024 },
   /** The same for the pistol, held out in both hands (figures draw it when the pistol is the active replica). */
   pistol: { x: 0.03, y: -0.05, butt: -0.42, length: 0.2 },
   headRadius: 0.11,
