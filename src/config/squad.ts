@@ -13,6 +13,8 @@ export const SQUAD_ORDERS = {
   followSpreadDeg: 40,
   /** Each further pair of followers keeps this much further back (m). */
   followRowGap: 1.6,
+  /** Where a follow spot isn't walkable (a wall, a drop), the spot is tried straight behind you, then this much closer (m). */
+  followFallbackStep: 1.5,
   /** Close enough to the follow spot to stop there while you stand still (m). */
   followArrive: 1.2,
   /** Settled at the spot, followers stay put until it is this much further off (m), so they don't shuffle. */

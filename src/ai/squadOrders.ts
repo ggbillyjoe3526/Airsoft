@@ -119,20 +119,31 @@ export function heldCentre(bots: readonly Bot[], leader: Character, out: Vec3): 
 
 /**
  * Follow me: the spot behind the leader's heading for follower `slot` into `out`: followers pair up either side of
- * straight behind, each further pair a row back. Where that spot isn't walkable, the leader's own.
+ * straight behind, each further pair a row back. Where that spot isn't walkable (a corridor wall, a drop), straight
+ * behind at the same distance, then that much closer; only if none is, the leader's own (M22 review: never inside you
+ * when there's room behind).
  */
 export function followSpot(leader: Character, heading: number, slot: number, w: BotWorld, out: Vec3): Vec3 {
   const side = slot % 2 === 0 ? 1 : -1;
-  const angle = heading + Math.PI + side * SQUAD_ORDERS.followSpreadDeg * DEG;
   const dist = SQUAD_ORDERS.followDistance + Math.floor(slot / 2) * SQUAD_ORDERS.followRowGap;
   const p = leader.position;
+  out.x = p.x;
+  out.y = p.y;
+  out.z = p.z;
+  if (tryFollowSpot(p, heading + Math.PI + side * SQUAD_ORDERS.followSpreadDeg * DEG, dist, w, out)) return out;
+  if (tryFollowSpot(p, heading + Math.PI, dist, w, out)) return out;
+  tryFollowSpot(p, heading + Math.PI, dist - SQUAD_ORDERS.followFallbackStep, w, out);
+  return out;
+}
+
+/** Writes the spot `dist` from `p` along `angle` into `out` if it is walkable at about `p`'s height; returns whether. */
+function tryFollowSpot(p: Vec3, angle: number, dist: number, w: BotWorld, out: Vec3): boolean {
   const x = p.x - Math.sin(angle) * dist;
   const z = p.z - Math.cos(angle) * dist;
-  const walkable = isWalkableAt(w.nav, x, z) && Math.abs(floorAt(w.nav, x, z) - p.y) <= w.nav.maxStep;
-  out.x = walkable ? x : p.x;
-  out.y = p.y;
-  out.z = walkable ? z : p.z;
-  return out;
+  if (!isWalkableAt(w.nav, x, z) || Math.abs(floorAt(w.nav, x, z) - p.y) > w.nav.maxStep) return false;
+  out.x = x;
+  out.z = z;
+  return true;
 }
 
 /** True if `b` got to the end of a route planned for about `goal` and is standing there (nothing to replan). */

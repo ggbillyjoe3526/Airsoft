@@ -13,11 +13,12 @@ import { createCharacter, respawnCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
+import { buildNavGrid } from '../nav/navGrid';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { vec3, wrapAngle } from '../sim/vec';
-import type { Bot } from './bot';
 import { BotController } from './botController';
-import { heldCentre } from './squadOrders';
+import type { Bot, BotWorld } from './bot';
+import { followSpot, heldCentre } from './squadOrders';
 
 const DT = 1 / 60;
 
@@ -305,5 +306,33 @@ describe('squad orders (M22)', () => {
     expect(heldCentre([holder(1, 1.2), holder(3, 1.2)], leader, out)).toBe(true);
     expect(out).toEqual({ x: 2, y: 1.2, z: 4 });
     expect(heldCentre([], leader, out)).toBe(false);
+  });
+
+  it('follow me in a corridor too narrow for the side spots: straight behind you, never inside you', () => {
+    // A 3 m wide corridor along x: walls at z = -1.5 and z = 1.5.
+    const corridor = buildNavGrid(
+      {
+        ...OPEN_FIELD,
+        blocks: [
+          ...OPEN_FIELD.blocks,
+          { kind: 'wall', center: vec3(0, 1.5, -2), size: vec3(100, 3, 1) },
+          { kind: 'wall', center: vec3(0, 1.5, 2), size: vec3(100, 3, 1) },
+        ],
+      },
+      NAV,
+    );
+    const w = { nav: corridor } as unknown as BotWorld;
+    const leader = createCharacter(0, vec3(0, PHYSICS.groundRestGap, 0), 0, LOADOUT, 0);
+    leader.position = vec3(0, 0, 0);
+    const out = vec3();
+    for (const slot of [0, 1]) {
+      followSpot(leader, EAST, slot, w, out);
+      // Walking east, the spot is behind (west of) you at the follow distance, in the middle of the corridor.
+      expect(out.x).toBeCloseTo(-SQUAD_ORDERS.followDistance, 1);
+      expect(Math.abs(out.z)).toBeLessThan(0.01);
+    }
+    // In the open the side spots stand.
+    followSpot(leader, EAST, 0, { nav: OPEN_NAV } as unknown as BotWorld, out);
+    expect(Math.abs(out.z)).toBeGreaterThan(1.5);
   });
 });
