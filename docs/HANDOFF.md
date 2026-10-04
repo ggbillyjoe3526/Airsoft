@@ -5,10 +5,21 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last step before the owner's playtest._
+_Last updated: 2026-10-04 · the build pipeline landed (#47, #49, #50) and its dry run (M27 #51, M28) merged; the owner playtests next._
 
 ## Where we are
 
+- **The build pipeline is in (2026-10-04, owner's design):** `pipeline/gate.mjs` runs build, tests, smoke, perf,
+  scope and changelog gates and writes `pipeline/out/gate-report.json`; CI runs the same script. Agents live in
+  `.claude/agents/` (critic with eight binary checks, qa, performance, triage, worker, changelog), the build thread's
+  step list in `.claude/skills/pipeline/SKILL.md`, the protocol in `pipeline/README.md`, open tasks with acceptance
+  criteria in `docs/TASKS.md` (empty now), one row per attempt in `docs/METRICS.md`. `npm run perf` plays a scripted
+  Depot match; the container baseline is committed, **the laptop one is not**: run
+  `npm run perf -- --env laptop --baseline` on the owner's machine and commit `pipeline/baseline/laptop.json` before
+  frame-time budgets gate anything. The dry run (M27 walk-off route rationing, M28 puff first frame) is in REVIEWS and
+  METRICS; the report with token costs and what to change is in the project's shared files
+  (`pipeline/dry-run-report-2026-10-04.md`). The owner stopped the planned bug pass over KNOWN_ISSUES on 2026-10-04
+  (usage); it is still the next step after his playtest.
 - **Phase 4 is feature complete on `main`** (M11–M22, see REVIEWS), audited (Fable, report in the project's shared files:
   `audits/phase4-audit-2026-10-04.md`), the audit fixed (#34–#36, all but L-07: no LICENSE, owner 2026-10-02), and
   bug-passed (#37 and the bots-and-docs pull request after it). **Next: the owner playtests Phase 4.** His notes go into
