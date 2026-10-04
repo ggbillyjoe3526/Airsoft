@@ -39,7 +39,7 @@ export const DEV_DEFAULTS: Readonly<DevSettings> = {
   gameSpeed: 1,
   retroPixels: false,
   retroPixelSize: 4,
-  retroColours: 5,
+  retroColours: 6,
 };
 
 type KeysOf<V> = { [K in keyof DevSettings]: DevSettings[K] extends V ? K : never }[keyof DevSettings];
@@ -60,7 +60,7 @@ export const DEV_ENTRIES: readonly DevEntry[] = [
   { kind: 'switch', id: 'showBbPaths', label: 'BB paths', help: 'Draws the flight of every BB, to watch hop-up lift it and drop take over.', cheat: false },
   { kind: 'switch', id: 'retroPixels', label: 'Retro pixels', help: 'Chunky pixels and a small dithered palette, like a 1990s shooter. The HUD and menus stay sharp.', cheat: false },
   { kind: 'range', id: 'retroPixelSize', label: 'Pixel size', help: 'How big each retro pixel is, in screen pixels.', cheat: false, min: 2, max: 8, step: 1, format: (v) => `${v} px` },
-  { kind: 'range', id: 'retroColours', label: 'Colours', help: 'How many colours the retro palette has: fewer is cruder.', cheat: false, min: 2, max: 8, step: 1, format: (v) => String(v ** 3) },
+  { kind: 'range', id: 'retroColours', label: 'Colours', help: 'How many colours the retro palette has: fewer is cruder.', cheat: false, min: 3, max: 8, step: 1, format: (v) => String(v ** 3) },
   { kind: 'range', id: 'gameSpeed', label: 'Game speed', help: 'Below 100% everything slows down, BBs too; above it, everything speeds up.', cheat: true, min: 0.25, max: 2, step: 0.25 },
   { kind: 'switch', id: 'bottomlessMags', label: 'Bottomless magazines', help: 'Your magazines never run dry.', cheat: true },
   { kind: 'switch', id: 'ghost', label: 'Ghost', help: 'BBs pass straight through you. The bots still shoot at you.', cheat: true },

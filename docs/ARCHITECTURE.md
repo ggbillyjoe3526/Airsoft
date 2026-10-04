@@ -102,6 +102,10 @@ ends the round). A hit character is eliminated
   The debug overlay shows the quality in force, pixel ratio, sim / draw / GPU milliseconds (`gpuTimer.ts`), the
   multisampling granted, draw calls and GPU object counts; Show FPS keeps its first line on screen. `Renderer.setFov` applies the
   Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.
+  `Renderer.setRetro` (M42, Dev › Retro pixels) draws the field and the held replica into a small half-float target
+  (`retroFilter.ts`, a texel per retro pixel) and shows it through one pass that tone maps, crushes colours to a few levels
+  with a 4×4 Bayer dither and samples with no smoothing; the page's HUD and menus are untouched, and `BBRenderer` keeps
+  balls and streaks at least `RETRO.bbMinPixels` / `trailMinPixels` retro pixels wide. Off under the perf script.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input (mouse buttons go into the keyboard as binding codes, `Mouse0` …, so every action binds to a key or a button); `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them, and runs the hold or toggle modes of crouch, aim and sprint. `sensitivity.ts` converts the sensitivity to cm/360.
 - **ui/**: DOM overlays (the menus in `ui/menus/`, debug overlay, ammo HUD), the on-screen sound cue ring `ui/soundCues.ts`, fed by

@@ -376,7 +376,7 @@ export const TONE_MAPPING = {
 export interface RetroLook {
   /** CSS pixels per retro pixel, each way. */
   pixelSize: number;
-  /** Shades of each of red, green and blue (2 or more): 5 gives 125 colours. */
+  /** Shades of each of red, green and blue (2 or more): 6 gives 216 colours. */
   levels: number;
 }
 
