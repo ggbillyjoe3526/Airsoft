@@ -68,6 +68,6 @@ describe('bushes stop nothing but sight (M33e)', () => {
 
   it('leaves the ground under a bush walkable for bots', () => {
     const nav = buildNavGrid(field, NAV);
-    expect(isWalkableAt(nav, 0, 0)).toBe(true);
+    expect(isWalkableAt(nav, 0, 0, 0)).toBe(true);
   });
 });
