@@ -340,6 +340,21 @@ describe('slicing towards a heard spot (Pro, M38 attempt 3)', () => {
     }
   });
 
+  it('slices the corner short of the spot, not the far end of a long wall that lies nearer its bearing', () => {
+    // A wall from x = -2 to 24 at z = -8 to -9; the spot (8, -12) is behind it. The far end's angle is nearer the spot's
+    // bearing than the near end's, but it lies beyond the spot, so it can't be the corner the spot is behind.
+    const r = search(boxQuery(11, -8.5, 13, 0.5, 3), { x: 0, z: 0 }, { x: 8, z: -12 });
+    expect(r.hidden).toBe(true);
+    const angles = r.b.heldAngles.slice(0, r.b.heldAngleCount);
+    const near = angles.find((a) => a.point.x < 0);
+    const far = angles.find((a) => a.point.x > 20);
+    expect(near, 'the near end is found').toBeDefined();
+    expect(far, 'the far end is found').toBeDefined();
+    expect(Math.abs(wrapAngle(far!.yaw - r.toSpot.yaw))).toBeLessThan(Math.abs(wrapAngle(near!.yaw - r.toSpot.yaw)));
+    expect(r.offAngle(near!)).toBeLessThan(4);
+    expect(r.offAngle(far!)).toBeGreaterThan(BOTS.angleSeparationDeg);
+  });
+
   it('with the spot in plain view it watches the spot at head height and does not lean, however close the corner', () => {
     // The corner wall (x from -30 to 0 at z = -8): standing 4 m from its end, a spot ahead and to the right is in view,
     // one behind the wall is not.

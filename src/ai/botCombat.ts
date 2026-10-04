@@ -108,15 +108,18 @@ function sliceTowardsLastKnown(b: Bot, w: BotWorld, eye: Vec3, cmd: PlayerComman
   lastKnownHead.z = b.lastKnown.z;
   if (lineClear(w.query, eye, lastKnownHead)) return false;
   lookAngles(eye.x, eye.y, eye.z, lastKnownHead.x, lastKnownHead.y, lastKnownHead.z, look);
-  return slice(b, w, heldAngleLook(b, w, eye, look.yaw, true), cmd);
+  // Only a corner short of the spot can be the one it is behind (not the far end of a long wall).
+  const toSpot = Math.hypot(lastKnownHead.x - eye.x, lastKnownHead.z - eye.z);
+  return slice(b, w, heldAngleLook(b, w, eye, look.yaw, true, toSpot), cmd);
 }
 
 /**
  * Holding with held angles (M37), or slicing on the move (M38): looks for the corners in view of where it stands, facing
- * about `facingYaw` (again every angleRefresh, or once it has moved), then sets `look` on one of them: the one nearest
- * `facingYaw` if `nearest`, else switching every angleSwitchTime. Returns it, or null if it found none.
+ * about `facingYaw` (again every angleRefresh, or once it has moved), then sets `look` on one of them: if `nearest`,
+ * the one nearest `facingYaw` among those within `within` metres, else switching every angleSwitchTime. Returns it, or
+ * null if it found none.
  */
-function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number, nearest: boolean): HeldAngle | null {
+function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number, nearest: boolean, within = Number.POSITIVE_INFINITY): HeldAngle | null {
   const cfg = w.cfg;
   const p = b.character.position;
   const from = b.heldAnglesFrom;
@@ -133,12 +136,15 @@ function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number, neares
     b.heldAngleCount = findHeldAngles(w.query, standEye, head, facingYaw, cfg, b.heldAngles);
   }
   if (b.heldAngleCount === 0) return null;
-  let a = b.heldAngles[Math.floor(b.teamWait / cfg.angleSwitchTime) % b.heldAngleCount]!;
+  let a: HeldAngle | null = b.heldAngles[Math.floor(b.teamWait / cfg.angleSwitchTime) % b.heldAngleCount]!;
   if (nearest) {
+    a = null;
     for (let i = 0; i < b.heldAngleCount; i++) {
       const o = b.heldAngles[i]!;
-      if (Math.abs(wrapAngle(o.yaw - facingYaw)) < Math.abs(wrapAngle(a.yaw - facingYaw))) a = o;
+      if (Math.hypot(o.point.x - p.x, o.point.z - p.z) > within) continue;
+      if (!a || Math.abs(wrapAngle(o.yaw - facingYaw)) < Math.abs(wrapAngle(a.yaw - facingYaw))) a = o;
     }
+    if (!a) return null;
   }
   lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, look);
   return a;
