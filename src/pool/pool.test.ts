@@ -116,7 +116,7 @@ describe('reading pool.md', () => {
         ].join('\n'),
       ),
     );
-    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Green Gas', 'Typo Gas']);
+    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Green Gas']);
     expect(p.errors.some((e) => /^line 14: Type must be battery, gas or spring/.test(e))).toBe(true);
     expect(p.errors.some((e) => /^line 15: ID 000001 is already used by Gas Pistol/.test(e))).toBe(true);
     expect(p.errors.some((e) => /^line 16: Typo Gas fits "gsa", which no replica has/.test(e))).toBe(true);

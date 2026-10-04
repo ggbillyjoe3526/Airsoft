@@ -148,8 +148,11 @@ export function loadPool(text: string): Pool {
     }
   }
   for (const heading of Object.keys(ASSET_SECTIONS)) if (!table(heading)) errors.push(`no "${heading}" table (it may be empty, but keep its header)`);
-  checkFits(assets, tables, fail);
-  return { assets, byId, tiers, economy, errors };
+  // A part that fits nothing it should is left out like any other unreadable row.
+  const misfits = checkFits(assets, tables, fail);
+  const kept = assets.filter((a) => !misfits.has(a.id));
+  for (const id of misfits) byId.delete(id);
+  return { assets: kept, byId, tiers, economy, errors };
 }
 
 function cell(row: PoolRow, header: string): string {
@@ -211,7 +214,8 @@ function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m
  * Every Fits entry names a tag some replica has (or a power type's tag), or a replica's ID; a power source fits only
  * replicas driven its way (a battery's Fits holds `electric`, or names replicas by ID).
  */
-function checkFits(assets: readonly Asset[], tables: readonly PoolTable[], fail: (line: number, m: string) => void): void {
+function checkFits(assets: readonly Asset[], tables: readonly PoolTable[], fail: (line: number, m: string) => void): Set<string> {
+  const misfits = new Set<string>();
   const replicas = assets.filter((a) => a.category === 'replica');
   const known = new Set<string>([...Object.values(POWER_TAGS), ...replicas.flatMap((r) => r.tags)]);
   const ids = new Set(replicas.map((r) => r.id));
@@ -219,14 +223,21 @@ function checkFits(assets: readonly Asset[], tables: readonly PoolTable[], fail:
     if (a.category === 'replica') continue;
     const row = tables.flatMap((t) => t.rows).find((r) => r.cells.ID === a.id);
     for (const f of a.tags) {
-      if (ID_PATTERN.test(f) ? !ids.has(f) : !known.has(f)) fail(row?.line ?? 0, `${a.name} fits "${f}", which no replica has`);
+      if (ID_PATTERN.test(f) ? !ids.has(f) : !known.has(f)) {
+        fail(row?.line ?? 0, `${a.name} fits "${f}", which no replica has`);
+        misfits.add(a.id);
+      }
     }
     if (a.power) {
       const own = POWER_TAGS[a.power.type];
       const wrong = a.tags.find((f) => !ID_PATTERN.test(f) && f !== own);
-      if (wrong !== undefined) fail(row?.line ?? 0, `${a.name} is a ${a.power.type}, so it fits "${own}" replicas, not "${wrong}"`);
+      if (wrong !== undefined) {
+        fail(row?.line ?? 0, `${a.name} is a ${a.power.type}, so it fits "${own}" replicas, not "${wrong}"`);
+        misfits.add(a.id);
+      }
     }
   }
+  return misfits;
 }
 
 function readTiers(t: PoolTable | undefined, fail: (line: number, m: string) => void, errors: string[]): RarityTier[] {
