@@ -626,6 +626,7 @@ One line each: decision, then why.
 - **2026-10-04 · M39 · Equal kit is Custom's Kit switch ("Factory": everyone carries the factory rifle and pistol as they come, nobody rolls a kit, Glowing BBs the bots' way); Tournament uses your own Armory kit.** M36's decision (question 4).
 - **2026-10-04 · M39 · Custom and its switches are public, as the brief says; only Tournament and Pro CQB are dev.** A Custom match never counts, and its new switches change only how the match is played.
 - **2026-10-04 · M39 · Strict marshal is a typed `MatchRules.strictMarshal` that Tournament and Pro CQB set and nothing reads; Custom doesn't offer it.** The overshooting rule it doubles doesn't exist until v0.2 (KNOWN_ISSUES).
+- **2026-10-04 · M39 · Bots squeeze a semi trigger again every other tick during a burst instead of holding it.** Held, a semi replica fires once per burst, so under Pro CQB's semi-only rule bots fired about one BB a second; tapping fires at the replica's own rate, as a player clicking would. Bots carry primaries on auto today, so Skirmish play is unchanged (the full suite and guards pass as before). `touches` gained src/newGamePicks.ts, src/render/matchPresentation.ts and src/ai/botCombat.ts for the picks, the minimap passthrough and this.
 
 ## FA11c · Tab lock on Web Locks
 

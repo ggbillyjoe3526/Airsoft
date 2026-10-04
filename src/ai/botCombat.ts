@@ -192,7 +192,10 @@ export function shootBot(b: Bot, w: BotWorld, target: Character | undefined, eye
   if (lineOfFireBlocked(b, w, eye, aimPoint, aimLine, dist)) return;
   if (b.burstLeft <= 0 && b.pauseLeft <= 0) b.burstLeft = pick(b.rng, b.skill.burst);
   if (b.burstLeft > 0) {
-    cmd.fire = true;
+    // On semi (a gas pistol, or Pro CQB's semi-only rule, M39) a held trigger fires once: squeeze again every other
+    // tick instead, so a burst is a quick string of shots at the replica's own rate, as a player tapping would fire.
+    const a = me.armament;
+    cmd.fire = a.modes[a.active] !== 'semi' || !a.triggerWasDown;
     b.burstLeft -= dt;
     if (b.burstLeft <= 0) b.pauseLeft = pick(b.rng, b.skill.burstPause);
   } else {
