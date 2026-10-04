@@ -20,7 +20,9 @@ describe('the built page\'s Content-Security-Policy (audit CORE-19)', () => {
     expect(csp.get('style-src')).toContain("'unsafe-inline'");
     expect(csp.get('img-src')).toEqual(expect.arrayContaining(['data:', 'blob:']));
     expect(csp.get('worker-src')).toContain('blob:');
-    expect(csp.get('connect-src')).toEqual(["'self'"]);
+    // blob: and data: too: GLTFLoader turns a .glb's embedded textures into blob: URLs that ImageBitmapLoader fetch()es,
+    // so a drop-in figure.glb (M25a) would load untextured under connect-src 'self' alone (FA9 critic).
+    expect(csp.get('connect-src')).toEqual(["'self'", 'blob:', 'data:']);
   });
 
   it('holds nothing a <meta> policy cannot carry (the browser would log an error for it)', () => {

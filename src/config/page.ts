@@ -12,7 +12,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' blob: data:",
   "worker-src 'self' blob:",
   "media-src 'self' data: blob:",
   "manifest-src 'self'",

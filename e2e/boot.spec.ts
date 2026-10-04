@@ -251,10 +251,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
   // A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T, is saved,
   // and the match below reloads on T.
-  await settings.getByRole('button', { name: 'Reload: R' }).click();
-  await expect(settings.getByRole('button', { name: /^Reload: Press a key/ })).toBeVisible();
+  await settings.getByRole('button', { name: 'Reload, main key: R' }).click();
+  await expect(settings.getByRole('button', { name: 'Reload, main key: waiting for a key' })).toBeVisible();
   await page.keyboard.press('KeyT');
-  await expect(settings.getByRole('button', { name: 'Reload: T' })).toHaveText('T');
+  await expect(settings.getByRole('button', { name: 'Reload, main key: T' })).toHaveText('T');
   const savedReload = await page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.keyBindings') ?? '{}') as { reload?: string[] }).reload);
   expect(savedReload).toEqual(['KeyT']);
   await settings.getByRole('tab', { name: /Audio/i }).click();
