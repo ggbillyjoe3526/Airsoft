@@ -20,4 +20,4 @@ acceptance:
   7. Laser beam (row 23): a fading line from the Red Laser's lens, off on every preset (config/render.test.ts, replicaDetail.test.ts)
   8. Low keeps today's cost: every FA8 field is `low`/off on Low (config/render.test.ts) and the measured draw calls, triangles and textures on Low are not above the base build's; Medium and High's change is recorded in DECISIONS
 status: gates
-attempts: 1
+attempts: 2

@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import { FIGURE } from '../config/characters';
 import { IMPACT_GRIT } from '../config/render';
+import type { Character } from '../sim/character';
 import { createRng, rngNext } from '../sim/rng';
 import type { Vec3 } from '../sim/vec';
 
@@ -21,6 +23,26 @@ interface Chip {
 }
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
+
+/**
+ * Where the BB that landed came from, for its grit to fly back towards (FA8): its shooter `ownerId`'s replica, at
+ * shoulder height (lower when crouched), written into `out`; `fallback` (the camera) when no character fired it. An
+ * index loop: nothing allocated per impact.
+ */
+export function shooterSide(characters: readonly Character[], ownerId: number, fallback: Vec3, out: Vec3): Vec3 {
+  for (let i = 0; i < characters.length; i++) {
+    const c = characters[i]!;
+    if (c.id !== ownerId) continue;
+    out.x = c.position.x;
+    out.y = c.position.y + FIGURE.shoulderHeight - FIGURE.crouchDrop * c.crouchAmount;
+    out.z = c.position.z;
+    return out;
+  }
+  out.x = fallback.x;
+  out.y = fallback.y;
+  out.z = fallback.z;
+  return out;
+}
 
 /**
  * Impact grit (FA8, QualitySettings.impactGrit): a BB landing throws a few chips of the surface it hit (IMPACT_GRIT),
@@ -64,13 +86,13 @@ export class ImpactGrit {
     return this.enabled;
   }
 
-  /** A BB landed at `at`: chips in `tint` (linear), thrown towards `eye` (the side the BB came from) and up. */
-  spawn(at: Vec3, tint: THREE.Color, eye: Vec3): void {
+  /** A BB landed at `at`: chips in `tint` (linear), thrown towards `from` (the shooter's side: `shooterSide`) and up. */
+  spawn(at: Vec3, tint: THREE.Color, from: Vec3): void {
     if (!this.enabled) return;
     const G = IMPACT_GRIT;
-    let tx = eye.x - at.x;
-    let ty = eye.y - at.y;
-    let tz = eye.z - at.z;
+    let tx = from.x - at.x;
+    let ty = from.y - at.y;
+    let tz = from.z - at.z;
     const len = Math.hypot(tx, ty, tz) || 1;
     tx /= len;
     ty /= len;
@@ -79,7 +101,7 @@ export class ImpactGrit {
     for (let i = 0; i < n; i++) {
       const c = this.chips[this.next]!;
       this.next = (this.next + 1) % this.chips.length;
-      // A random direction, leaning towards the eye's side and up.
+      // A random direction, leaning towards the shooter's side and up.
       const u = rngNext(this.rng) * 2 - 1;
       const a = rngNext(this.rng) * Math.PI * 2;
       const s = Math.sqrt(1 - u * u);

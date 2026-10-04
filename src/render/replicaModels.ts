@@ -550,17 +550,15 @@ function longBarrel(b: ModelBuilder): void {
 }
 
 /**
- * The tight-bore barrel (M29b): a precision inner barrel the same length, shown by a heavier steel sleeve over the outer
- * barrel between the gas block and the flash hider. High: a tan index band at the gas block, fluting and a crown ring.
+ * The tight-bore barrel (M29b): a precision inner barrel the same length. Low draws nothing for it (as M29b did: the
+ * outer barrel looks the same, and Low gains no draw call); high shows it by a heavier fluted steel sleeve over the outer
+ * barrel between the gas block and the flash hider, a tan index band at the gas block and a crown ring.
  */
 function tightBoreBarrel(b: ModelBuilder): void {
+  if (!b.high) return;
   const { barrelEnd: end, up } = AEG_MUZZLE;
   const B = F.barrel;
   const from = AEG_GAS_BLOCK_END;
-  if (!b.high) {
-    b.tube('metal', from, end - from, up, B.sleeveRadius, 10);
-    return;
-  }
   b.tube('metal', from, end - from, up, B.sleeveRadius, B.segments);
   b.tube('furniture', from + 0.004, 0.005, up, B.sleeveRadius + 0.0006, B.segments);
   flutes(b, from + 0.014, end - B.collar - 0.004, up, B.sleeveRadius);

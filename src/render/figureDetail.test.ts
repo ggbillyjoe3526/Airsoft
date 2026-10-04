@@ -94,6 +94,40 @@ describe('Player detail (FA8, QualitySettings.figureDetail)', () => {
     }
   });
 
+  it('keeps the detailed helmet\'s shell inside its team tape at the front and back (no shell showing through)', () => {
+    const team = new THREE.Color(0x3d8bff);
+    const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 1, null, FIGURE.detail.high);
+    const body = figure.upper.children[0] as THREE.Mesh;
+    const pos = body.geometry.getAttribute('position');
+    const col = body.geometry.getAttribute('color');
+    const fin = body.geometry.getAttribute(FINISH_ATTRIBUTE);
+    const isTeam = (i: number): boolean => Math.abs(col.getX(i) - team.r) + Math.abs(col.getY(i) - team.g) + Math.abs(col.getZ(i) - team.b) < 1e-6;
+    // The tape: the team colour above the shoulders. Its oval reach (z over its 1.05 depth), and its height.
+    const oval = (i: number): number => Math.hypot(pos.getX(i), pos.getZ(i) / 1.05);
+    let top = -Infinity;
+    let bottom = Infinity;
+    let reach = Infinity;
+    const shoulders = FIGURE.shoulderHeight - FIGURE.hipHeight;
+    for (let i = 0; i < pos.count; i++) {
+      if (!isTeam(i) || pos.getY(i) < shoulders + 0.1) continue;
+      top = Math.max(top, pos.getY(i));
+      bottom = Math.min(bottom, pos.getY(i));
+      if (oval(i) > 0.05) reach = Math.min(reach, oval(i)); // its rim, not its caps' centres
+    }
+    expect(top - bottom).toBeCloseTo(0.045, 3);
+    // Its flat sides sit a little inside its corners; every shell corner in its height, front and back, is inside them.
+    const inside = reach * Math.cos(Math.PI / FIGURE.detail.high.wrap[1]);
+    let checked = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < bottom || y > top || Math.abs(fin.getX(i) - FIGURE.finish.shell[0]) > 1e-3 || Math.abs(pos.getZ(i)) < Math.abs(pos.getX(i))) continue;
+      checked++;
+      expect(oval(i)).toBeLessThan(inside);
+    }
+    expect(checked).toBeGreaterThan(0);
+    disposeFigure(figure);
+  });
+
   it('shades the torso darker towards its hem (baked occlusion) and lights bevels, never above full colour', () => {
     const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), 0, null, FIGURE.detail.high);
     const body = figure.upper.children[0] as THREE.Mesh;

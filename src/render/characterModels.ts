@@ -311,7 +311,10 @@ function head(b: PartBuilder, look: FigureLook, team: Color, y: number): void {
   if (look.mask !== null) b.wrap(look.mask, r * 1.03, 0.075, y - 0.06, Math.PI * 0.8);
   if (look.headgear === 'helmet') {
     b.add(new THREE.SphereGeometry(r * 1.17, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.95, 1.05).translate(0, y + 0.015, 0), look.hat, { finish: FIN.shell });
-    b.wrap(team, r * 1.19, 0.045, y + 0.045, Math.PI * 2); // team tape round the shell
+    // Team tape round the shell. Detailed: as oval as the shell (its 1.05 depth) and wide enough that its flat sides clear
+    // the shell's corners, so no shell shows through it at the front and back.
+    if (b.overhaul) b.add(new THREE.CylinderGeometry(r * 1.2, r * 1.2, 0.045, b.detail.wrap[1]).scale(1, 1, 1.05).translate(0, y + 0.045, 0), team);
+    else b.wrap(team, r * 1.19, 0.045, y + 0.045, Math.PI * 2);
     for (const side of [-1, 1]) {
       b.box(look.hat, 0.02, 0.028, 0.12, side * r * 1.13, y + 0.02, 0, { finish: FIN.shell }); // side rails
       b.add(new THREE.CylinderGeometry(0.04, 0.04, 0.035, 10).rotateZ(Math.PI / 2).translate(side * r * 1.05, y - 0.015, 0.005), C.headset, { finish: FIN.polymer });

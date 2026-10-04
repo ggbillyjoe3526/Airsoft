@@ -22,7 +22,7 @@ import { BBRenderer } from './bbRenderer';
 import { figureMuzzle, type FigureHold } from './characterModels';
 import { holdsPistol } from './characterRenderer';
 import { DustMotes } from './dustMotes';
-import { ImpactGrit } from './impactGrit';
+import { ImpactGrit, shooterSide } from './impactGrit';
 import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
 import { sprintCarry, Viewmodel } from './viewmodel';
@@ -40,6 +40,8 @@ export class CombatPresentation {
    */
   private rings: ImpactPuffs | null = null;
   private readonly grit = new ImpactGrit();
+  /** Where a landed BB's shooter is, for its grit (reused). */
+  private readonly gritFrom = { x: 0, y: 0, z: 0 };
   /** Bigger puffs where BBs land on players: hit confirmation at range. */
   private readonly hitPuffs = new ImpactPuffs(HIT_PUFFS);
   /** A gas replica's breath at the muzzle and ejection port on each shot (M14). */
@@ -213,7 +215,7 @@ export class CombatPresentation {
         this.puffs.spawn(e.position, tint, IMPACT_DUST[material].scale);
         if (this.grit.active && tint) {
           this.rings?.spawn(e.position, tint, IMPACT_DUST[material].scale);
-          this.grit.spawn(e.position, tint, this.renderer.camera.position);
+          this.grit.spawn(e.position, tint, shooterSide(this.state.characters, e.ownerId, this.renderer.camera.position, this.gritFrom));
         }
         this.sfx.impact(e.position, material);
       } else if (e.type === 'targetHit') this.puffs.spawn(e.position);

@@ -472,7 +472,7 @@ export const IMPACT_GRIT = {
   lifetime: 0.35,
   size: [0.006, 0.012] as const,
   minAngularSize: 0.0016,
-  /** Thrown out towards the side the BB came from (the camera's side): this much of the direction, the rest random and up. */
+  /** Thrown out towards the side the BB came from (its shooter's): this much of the direction, the rest random and up. */
   toward: 0.6,
   up: 0.5,
   spin: 18,

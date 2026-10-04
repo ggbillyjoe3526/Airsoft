@@ -86,7 +86,9 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
       for (const name of names) {
         const lo = low.models.get(id)!.group.getObjectByName(name)!;
         const hi = high.models.get(id)!.group.getObjectByName(name)!;
-        expect(trianglesOf(lo), name).toBeGreaterThan(0);
+        // The Tight-Bore is the one part Low draws nothing for (as M29b did): an empty group, no draw call.
+        if (name === 'barrel:tightBore') expect(meshesOf(lo), name).toHaveLength(0);
+        else expect(trianglesOf(lo), name).toBeGreaterThan(0);
         expect(trianglesOf(hi), name).toBeGreaterThan(trianglesOf(lo));
         // A part stays a handful of draw calls: one mesh per material it uses.
         expect(meshesOf(hi).length, name).toBeLessThanOrEqual(4);
@@ -101,13 +103,12 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
     const marker = new THREE.Vector3();
     for (const detail of [LOW_DETAIL, HIGH]) {
       const models = buildReplicaModels(LOADOUT, 0x3a7bd5, true, detail);
+      // Every combination M29b allows: the AEG's three barrels with and without a silencer, the pistol bare or silenced.
       const fits = [
-        { id: 'aeg', layout: AEG_MUZZLE, barrel: null, device: null },
-        { id: 'aeg', layout: AEG_MUZZLE, barrel: 'long', device: null },
-        { id: 'aeg', layout: AEG_MUZZLE, barrel: 'long', device: 'silencer' },
-        { id: 'aeg', layout: AEG_MUZZLE, barrel: 'tightBore', device: 'silencer' },
-        { id: 'pistol', layout: PISTOL_MUZZLE, barrel: null, device: 'silencer' },
-      ] as const;
+        ...([null, 'long', 'tightBore'] as const).flatMap((barrel) => ([null, 'silencer'] as const).map((device) => ({ id: 'aeg', layout: AEG_MUZZLE, barrel, device }))),
+        ...([null, 'silencer'] as const).map((device) => ({ id: 'pistol', layout: PISTOL_MUZZLE, barrel: null, device })),
+      ];
+      expect(fits).toHaveLength(8);
       for (const f of fits) {
         const { group, mount, muzzle } = models.models.get(f.id)!;
         fitMuzzle(mount, f.barrel, f.device);
@@ -119,7 +120,8 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
         // The mount sits on the fitted barrel's end: the long barrel's front is where the device starts.
         const barrelEnd = -(f.layout.barrelEnd + (f.barrel === 'long' ? AEG_MUZZLE.extensions.long : 0));
         expect(mount.group.position.z, where).toBeCloseTo(barrelEnd, 6);
-        if (f.barrel) expect(box.setFromObject(group.getObjectByName(`barrel:${f.barrel}`)!).min.z, where).toBeCloseTo(f.barrel === 'long' ? barrelEnd : -f.layout.barrelEnd, 3);
+        const barrel = f.barrel ? group.getObjectByName(`barrel:${f.barrel}`)! : null;
+        if (barrel && (f.barrel !== 'tightBore' || detail.replica === 'high')) expect(box.setFromObject(barrel).min.z, where).toBeCloseTo(f.barrel === 'long' ? barrelEnd : -f.layout.barrelEnd, 3);
         // The BB leaves the fitted device's front face (within the bore's 0.5 mm lip on high).
         const device = group.getObjectByName(`muzzle:${f.device ?? 'none'}`);
         if (device) {

@@ -6,7 +6,8 @@ import { createBBPool, spawnBB } from '../sim/ballistics';
 import { vec3 } from '../sim/vec';
 import { BBRenderer } from './bbRenderer';
 import { placeCallout } from './characterRenderer';
-import { ImpactGrit } from './impactGrit';
+import { createCharacter } from '../sim/character';
+import { ImpactGrit, shooterSide } from './impactGrit';
 
 beforeAll(() => {
   // The glow's soft dot is drawn on a canvas: stood in for (it draws nothing here).
@@ -86,6 +87,31 @@ describe('impact grit (FA8, QualitySettings.impactGrit)', () => {
   const tint = new THREE.Color(0xf2cf98);
   const at = { x: 0, y: 1, z: -5 };
 
+  it('finds the side to throw towards from the BB\'s owner (a bot\'s BB flies back towards the bot), the camera only as a fallback', () => {
+    const bot = createCharacter(3, vec3(6, 0, -2), 0);
+    const characters = [createCharacter(0, vec3(0, 0, 0), 0), bot];
+    const out = { x: 0, y: 0, z: 0 };
+    expect(shooterSide(characters, 3, eye, out)).toBe(out);
+    expect(out).toEqual({ x: 6, y: FIGURE.shoulderHeight, z: -2 });
+    bot.crouchAmount = 1;
+    expect(shooterSide(characters, 3, eye, out).y).toBeCloseTo(FIGURE.shoulderHeight - FIGURE.crouchDrop, 6);
+    expect(shooterSide(characters, -1, eye, out)).toEqual(eye); // no character fired it
+    // A bot to the right of the camera: its BB's chips go right, not at the camera.
+    const grit = new ImpactGrit();
+    grit.setEnabled(true);
+    grit.spawn(at, tint, shooterSide(characters, 3, eye, out));
+    grit.update(1 / 60, camera);
+    const m = new THREE.Matrix4();
+    const p = new THREE.Vector3();
+    let right = 0;
+    for (let i = 0; i < grit.object.count; i++) {
+      grit.object.getMatrixAt(i, m);
+      if (p.setFromMatrixPosition(m).x > at.x) right++;
+    }
+    expect(right).toBeGreaterThan(grit.object.count / 2);
+    grit.dispose();
+  });
+
   it('throws nothing while off (Low)', () => {
     const grit = new ImpactGrit();
     grit.spawn(at, tint, eye);
@@ -94,7 +120,7 @@ describe('impact grit (FA8, QualitySettings.impactGrit)', () => {
     grit.dispose();
   });
 
-  it('throws a few chips of the surface towards the eye, which fall and are gone after their lifetime', () => {
+  it('throws a few chips of the surface towards the shooter\'s side, which fall and are gone after their lifetime', () => {
     const grit = new ImpactGrit();
     grit.setEnabled(true);
     grit.spawn(at, tint, eye);
@@ -109,7 +135,7 @@ describe('impact grit (FA8, QualitySettings.impactGrit)', () => {
     for (let i = 0; i < n; i++) {
       grit.object.getMatrixAt(i, m);
       p.setFromMatrixPosition(m);
-      if (p.z > at.z) towards++; // the eye is at z 0, the wall at -5
+      if (p.z > at.z) towards++; // the shooter is at z 0, the wall at -5
       grit.object.getColorAt(i, c);
       expect(c.r).toBeCloseTo(tint.r * IMPACT_GRIT.shade, 6);
     }
