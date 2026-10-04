@@ -5,13 +5,15 @@ import { BODY, MOVEMENT } from '../config/movement';
 import { HITS, ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
-import { createCharacter } from './character';
+import { RANGE } from '../config/range';
+import { createCharacter, eyeHeight } from './character';
 import { createCommand, type PlayerCommand } from './commands';
 import type { CharacterMover } from './movement';
 import { createSimContext, type SimContext, stepSimulation } from './simulation';
 import type { GameEvent } from './events';
 import { spawnBB } from './ballistics';
 import { eliminate } from './elimination';
+import { createRangeTargets } from './rangeTargets';
 import { createGameState } from './state';
 import { OPEN_NAV, openFieldElimination } from './testSupport';
 import { vec3 } from './vec';
@@ -392,6 +394,82 @@ describe('hit calling and round flow', () => {
       for (let i = 0; i < 3 && target.status === 'alive'; i++) stepSimulation(state, new Map([[0, fire]]), ctx, DT);
       expect(target.status, `target ${gap} m away`).toBe('calling');
     }
+  });
+});
+
+describe('practice range', () => {
+  /** You alone on the range (M21): practice context, the range's targets, standing at the origin facing downrange. */
+  function range() {
+    const state = createGameState(1, 64, ROUNDS);
+    state.targets = createRangeTargets();
+    const player = createCharacter(0, vec3(), 0, LOADOUT, 0);
+    state.characters.push(player);
+    const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap, practice: true });
+    return { state, player, ctx };
+  }
+
+  it('never runs the round clock down or respawns anyone: it stays live, and you stay where you are', () => {
+    const { state, player, ctx } = range();
+    player.armament.ammo[0]!.mag = 3; // a respawn would fill it
+    const start = { ...player.position };
+    const roundEvents: string[] = [];
+    for (let i = 0; i < Math.ceil((ROUNDS.roundTime + 1) / DT); i++) {
+      stepSimulation(state, new Map(), ctx, DT);
+      for (const e of state.events) if (e.type === 'roundStart' || e.type === 'roundOver' || e.type === 'matchOver') roundEvents.push(e.type);
+    }
+    expect(roundEvents).toEqual([]);
+    expect(state.round.number).toBe(1);
+    expect(state.round.phase).toBe('live');
+    expect(player.position).toEqual(start);
+    expect(player.armament.ammo[0]!.mag).toBe(3);
+  });
+
+  it('BBs hit the targets: a figure 10 m out goes down, then stands up again after figureDownTime', () => {
+    const { state, player, ctx } = range();
+    const figure = state.targets.find((t) => t.kind === 'figure' && !t.crouched && t.distance === 10)!;
+    // Aim from the eye at the middle of the figure's body.
+    const dx = figure.position.x - player.position.x;
+    const dz = figure.position.z - player.position.z;
+    const cmd = createCommand();
+    cmd.yaw = Math.atan2(-dx, -dz);
+    cmd.pitch = Math.atan2(HITS.bodyTop / 2 - eyeHeight(0, BODY), Math.hypot(dx, dz));
+    cmd.fire = true;
+    stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(state.events.filter((e) => e.type === 'shot')).toHaveLength(1);
+    cmd.fire = false;
+    let hit: GameEvent | undefined;
+    for (let i = 0; i < 60 && !hit; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      hit = state.events.find((e) => e.type === 'targetHit');
+    }
+    expect(hit?.type === 'targetHit' && hit.targetId).toBe(figure.id);
+    expect(figure.down).toBeGreaterThan(0);
+    for (let i = 0; i < Math.ceil(RANGE.figureDownTime / DT) + 1; i++) stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+    expect(figure.down).toBe(0);
+  });
+
+  it('keeps the spare magazines full every tick while you shoot the loaded one empty and reload', () => {
+    const { state, player, ctx } = range();
+    const ammo = player.armament.ammo[0]!;
+    const size = player.armament.handling[0]!.magSize;
+    const cmd = createCommand();
+    cmd.fire = true;
+    let emptied = false;
+    for (let i = 0; i < 60 * 30 && !emptied; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      expect(ammo.pouch.every((m) => m === size)).toBe(true);
+      emptied = ammo.mag === 0;
+    }
+    expect(emptied).toBe(true);
+    // A reload takes a full magazine from the pouch, which is topped up again by the end of the tick.
+    cmd.fire = false;
+    cmd.reload = true;
+    for (let i = 0; i < 60 * 5 && ammo.mag === 0; i++) {
+      stepSimulation(state, new Map([[0, cmd]]), ctx, DT);
+      cmd.reload = false;
+      expect(ammo.pouch.every((m) => m === size)).toBe(true);
+    }
+    expect(ammo.mag).toBe(size);
   });
 });
 
