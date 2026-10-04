@@ -6,6 +6,7 @@ import { FIGURE } from '../config/characters';
 import { impactMaterialAt } from '../audio/soundMaterials';
 import type { VolumeChannel } from '../config/audio';
 import type { Action } from '../config/controls';
+import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { BB_VISUALS, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, QUALITY, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
@@ -93,6 +94,8 @@ export class CombatPresentation {
     keyName: (action: Action) => string,
     crosshair: CrosshairSettings,
     quality: QualitySettings,
+    /** The match's hit rules: a leaning figure's muzzle tilts by their lean angle. */
+    private readonly hits: HitConfig,
   ) {
     this.sfx = new Sfx(loadout, blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
@@ -297,7 +300,7 @@ export class CombatPresentation {
     } else {
       const shooter = this.state.characters.find((c) => c.id === shooterId);
       ok = shooter !== undefined;
-      if (shooter) figureMuzzle(shooter, this.muzzle, this.holdOf(shooter));
+      if (shooter) figureMuzzle(shooter, this.muzzle, this.holdOf(shooter), this.hits);
     }
     if (ok) this.bbs.startFromMuzzle(newest, this.muzzle, this.estimateFlightTime(newest));
   }
@@ -313,7 +316,7 @@ export class CombatPresentation {
     const at = this.puffAt;
     let ok = true;
     if (shooter === this.player) ok = this.viewmodel.muzzleWorld(cam, at);
-    else figureMuzzle(shooter, at, this.holdOf(shooter));
+    else figureMuzzle(shooter, at, this.holdOf(shooter), this.hits);
     if (!ok) return;
     // Forward along the shooter's view (yaw and pitch: the replica points where they look).
     const v = this.puffVelocity;

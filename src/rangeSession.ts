@@ -137,7 +137,7 @@ export class RangeSession {
     input.resetView(pose?.yaw ?? spawn.yaw);
     if (pose) input.pitch = pose.pitch;
 
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, HITS);
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
     renderer.scene.add(this.targets.object);

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FIGURE, type FigureLook } from '../config/characters';
+import type { HitConfig } from '../config/hits';
 import type { Character } from '../sim/character';
 import type { Vec3 } from '../sim/vec';
 
@@ -345,10 +346,19 @@ export function disposeFigure(f: Figure): void {
 export type FigureHold = { readonly x: number; readonly y: number; readonly butt: number; readonly length: number };
 
 /**
- * World position of a character's replica muzzle in the third-person aiming pose (matches buildFigure: the aim group
- * pivots at the shoulder line by the view pitch, the figure turns by yaw). `hold`: the rifle's (default) or the pistol's.
+ * Roll of the figure's upper body (about its local Z, pivoting at the hips) for a lean of `lean` (-1 left
+ * .. 1 right). +Z tips the top to the figure's left, so leaning right is negative. Matches sim/lean.ts.
  */
-export function figureMuzzle(c: Character, out: Vec3, hold: FigureHold = FIGURE.rifle): Vec3 {
+export function figureLeanRoll(lean: number, hits: HitConfig): number {
+  return -lean * hits.lean.maxAngle;
+}
+
+/**
+ * World position of a character's replica muzzle in the third-person aiming pose (matches buildFigure and
+ * CharacterRenderer: the aim group pivots at the shoulder line by the view pitch, the upper body rolls about the hips by
+ * the lean, the figure turns by yaw). `hold`: the rifle's or the pistol's. `hits` gives the lean's angle.
+ */
+export function figureMuzzle(c: Character, out: Vec3, hold: FigureHold, hits: HitConfig): Vec3 {
   const F = FIGURE;
   const lx = hold.x;
   const ly = hold.y;
@@ -357,10 +367,17 @@ export function figureMuzzle(c: Character, out: Vec3, hold: FigureHold = FIGURE.
   const sp = Math.sin(c.pitch);
   const y1 = ly * cp - lz * sp;
   const z1 = ly * sp + lz * cp;
+  // Height above the hips, then the lean's roll about the hips (audit L-03).
+  const dy = F.shoulderHeight - F.hipHeight + y1;
+  const roll = figureLeanRoll(c.lean, hits);
+  const cr = Math.cos(roll);
+  const sr = Math.sin(roll);
+  const x2 = lx * cr - dy * sr;
+  const dy2 = lx * sr + dy * cr;
   const cy = Math.cos(c.yaw);
   const sy = Math.sin(c.yaw);
-  out.x = c.position.x + lx * cy + z1 * sy;
-  out.y = c.position.y + F.shoulderHeight - F.crouchDrop * c.crouchAmount + y1;
-  out.z = c.position.z - lx * sy + z1 * cy;
+  out.x = c.position.x + x2 * cy + z1 * sy;
+  out.y = c.position.y + F.hipHeight - F.crouchDrop * c.crouchAmount + dy2;
+  out.z = c.position.z - x2 * sy + z1 * cy;
   return out;
 }
