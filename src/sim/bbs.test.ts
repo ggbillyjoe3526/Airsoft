@@ -271,3 +271,105 @@ describe('stepBBs hitting characters', () => {
     expect(target.status).toBe('calling');
   });
 });
+
+describe('stepBBs in the wind (M30)', () => {
+  const noWall: WorldQuery = { raycastStatic: () => -1 };
+  const CROSSWIND = vec3(30, 0, 0); // towards +x; far stronger than any match breeze, so a drift is tens of centimetres in 10 m
+
+  it('drifts a BB downwind, where still air leaves it on its line, mirrored by the opposite wind', () => {
+    const fly = (wind: Readonly<ReturnType<typeof vec3>> | undefined) => {
+      const pool = createBBPool(1);
+      const bb = spawnBB(pool, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 80, 0, 0.25e-3);
+      for (let i = 0; i < 30; i++) stepBBs(pool, BALLISTICS, noWall, KILL_Y, [], DT, undefined, undefined, wind);
+      return bb;
+    };
+    const still = fly(undefined);
+    const windy = fly(CROSSWIND);
+    expect(still.position.x).toBe(0);
+    expect(windy.position.x).toBeGreaterThan(0.2);
+    expect(fly(vec3(-30, 0, 0)).position.x).toBeCloseTo(-windy.position.x, 6); // mirrored wind, mirrored drift
+    expect(windy.velocity.x).toBeGreaterThan(0); // dragged along by the air
+  });
+
+  it('treats an absent wind as still air (the same flight as a zero wind)', () => {
+    const fly = (wind?: Readonly<ReturnType<typeof vec3>>) => {
+      const pool = createBBPool(1);
+      const bb = spawnBB(pool, 0, vec3(0, 1.5, 0), vec3(0.3, 0.1, -1), 80, 0.12, 0.25e-3);
+      for (let i = 0; i < 40; i++) stepBBs(pool, BALLISTICS, noWall, KILL_Y, [], DT, undefined, undefined, wind);
+      return bb.position;
+    };
+    expect(fly(vec3())).toEqual(fly());
+  });
+
+  it('still stops at the wall in its way, where the wind has carried it to', () => {
+    const pool = createBBPool(1);
+    const bb = spawnBB(pool, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 80, 0, 0.25e-3);
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 60 && bb.active; i++) stepBBs(pool, BALLISTICS, wallAt(-12), KILL_Y, events, DT, undefined, undefined, CROSSWIND);
+    expect(bb.active).toBe(false);
+    expect(bb.position.z).toBeCloseTo(-12, 6);
+    expect(bb.position.x).toBeGreaterThan(0.05);
+    const impacts = events.filter((e) => e.type === 'bbImpact');
+    expect(impacts).toHaveLength(1);
+    expect(impacts[0]!.type === 'bbImpact' && impacts[0]!.position.x).toBeCloseTo(bb.position.x, 6);
+  });
+
+  it('hits whoever the wind carries the BB into, and misses whoever stood on the still-air line', () => {
+    const fireAt = (targetX: number, wind: Readonly<ReturnType<typeof vec3>> | undefined) => {
+      const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
+      const target = createCharacter(2, vec3(targetX, 0, -10), 0, LOADOUT, 1);
+      const pool = createBBPool(1);
+      const bb = spawnBB(pool, 1, vec3(0, 1.2, 0), vec3(0, 0, -1), 80, 0, 0.25e-3);
+      const targets: BBTargets = { characters: [shooter, target], hits: HITS, elimination: openFieldElimination([[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }]]) };
+      for (let i = 0; i < 60 && bb.active; i++) stepBBs(pool, BALLISTICS, noWall, KILL_Y, [], DT, targets, undefined, wind);
+      return target.status;
+    };
+    // Where the windy BB crosses z = -10: found by flying it with nobody there.
+    const probePool = createBBPool(1);
+    const probe = spawnBB(probePool, 1, vec3(0, 1.2, 0), vec3(0, 0, -1), 80, 0, 0.25e-3);
+    while (probe.position.z > -10) stepBBs(probePool, BALLISTICS, noWall, KILL_Y, [], DT, undefined, undefined, CROSSWIND);
+    const drift = probe.position.x;
+    expect(drift).toBeGreaterThan(HITS.bodyRadius + 0.2); // wide enough to tell the two lines apart
+
+    expect(fireAt(drift, undefined)).toBe('alive'); // still air: the BB passes the target by
+    expect(fireAt(drift, CROSSWIND)).toBe('calling'); // windy: carried into them
+    expect(fireAt(0, CROSSWIND)).toBe('alive'); // and the one on the straight line is missed
+    expect(fireAt(0, undefined)).toBe('calling');
+  });
+
+  it('gives a bounced BB no Magnus lift: its spin is scrubbed, so it flies on as an unspun BB would', () => {
+    const open: WorldQuery = { raycastStatic: () => -1 };
+    const bounce = () => {
+      const pool = createBBPool(1);
+      const bb = spawnBB(pool, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 80, 0.12, 0.25e-3);
+      for (let i = 0; i < 20 && bb.bounces === 0; i++) stepBBs(pool, BALLISTICS, hardWallAt(-12), KILL_Y, [], DT);
+      expect(bb.bounces).toBe(1);
+      return bb;
+    };
+    const bounced = bounce();
+    expect(bounced.spin).toBe(0);
+    // The same BB (position, velocity, age) with no hop-up at all, flown on in the same open air.
+    const plain = createBBPool(1);
+    const twin = spawnBB(plain, 0, bounced.position, vec3(0, 0, 1), 1, 0, bounced.mass);
+    twin.velocity.x = bounced.velocity.x;
+    twin.velocity.y = bounced.velocity.y;
+    twin.velocity.z = bounced.velocity.z;
+    const pool = { bbs: [bounced], nextSerial: 2 };
+    for (let i = 0; i < 40; i++) {
+      stepBBs(pool, BALLISTICS, open, KILL_Y, [], DT);
+      stepBBs(plain, BALLISTICS, open, KILL_Y, [], DT);
+    }
+    expect(bounced.position.y).toBeCloseTo(twin.position.y, 9);
+    expect(bounced.position.x).toBeCloseTo(twin.position.x, 9);
+    // Control: a spun BB sent out the same way does climb away from the unspun one.
+    const spunPool = createBBPool(1);
+    const spun = spawnBB(spunPool, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 80, 0.12, 0.25e-3);
+    const unspunPool = createBBPool(1);
+    const unspun = spawnBB(unspunPool, 0, vec3(0, 1.5, 0), vec3(0, 0, -1), 80, 0, 0.25e-3);
+    for (let i = 0; i < 20; i++) {
+      stepBBs(spunPool, BALLISTICS, open, KILL_Y, [], DT);
+      stepBBs(unspunPool, BALLISTICS, open, KILL_Y, [], DT);
+    }
+    expect(spun.position.y - unspun.position.y).toBeGreaterThan(0.1);
+  });
+});

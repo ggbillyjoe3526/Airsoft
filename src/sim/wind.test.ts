@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WIND } from '../config/ballistics';
+import { createRng, rngNext } from './rng';
 import { vec3 } from './vec';
 import { createWind, windAt } from './wind';
 
@@ -47,5 +48,18 @@ describe('the match wind (M30)', () => {
     const out = windAt(w, 5, vec3());
     expect(out.z).toBeCloseTo(-w.speed, 9);
     expect(out.x).toBeCloseTo(0, 9);
+  });
+});
+
+describe('the wind and the simulation share a seed, not a stream (M30)', () => {
+  it("is drawn from a salted seed: not the first draws of the simulation's createRng(seed)", () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const stream = createRng(seed);
+      const first = rngNext(stream);
+      const second = rngNext(stream);
+      const w = createWind(seed, WIND);
+      expect(w.speed, `seed ${seed}`).not.toBeCloseTo(WIND.minSpeed + (WIND.maxSpeed - WIND.minSpeed) * first, 6);
+      expect(w.yaw, `seed ${seed}`).not.toBeCloseTo(second * Math.PI * 2, 6);
+    }
   });
 });
