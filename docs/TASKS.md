@@ -42,5 +42,5 @@ acceptance:
   5. The Customise screen shows a Performance sheet (energy, muzzle speed in m/s and fps on 0.20 g, BB weight, rate of fire, on-target range, time to 20 m, spread, recoil, magazines, reload, draw, aim raise), each change against the replica as it comes marked better or worse; it follows the BB weight and hop-up sliders
   6. Each gear slot shows "energy · rate of fire · magazine"; the Armory shows what each copy's tier adds (dispensed tiles and the collection list)
   7. Bots carry each replica as it comes: the headless match guards pass unchanged
-status: building
-attempts: 0
+status: accepted
+attempts: 1
