@@ -1,4 +1,5 @@
 import { BARRELS, GRIPS, handlingOf, MAGAZINES, MUZZLES, type ReplicaParts } from '../../config/attachments';
+import { GLOW_BB_CHOICES } from '../../config/glowBBs';
 import { LASERS } from '../../config/lasers';
 import { OPTIC_BLURBS } from '../../config/optics';
 import { BB_WEIGHT, type FireMode, HOP_UP, type PowerSource, type ReplicaConfig } from '../../config/replicas';
@@ -21,6 +22,7 @@ import {
   powerReadout,
 } from '../loadoutChoice';
 import { gearLine, performanceOf, type SheetRow, sheetRows } from '../performanceSheet';
+import { OptionPicker } from '../optionPicker';
 import { backButton, el, laterRow, menuButton, menuPage, menuRow, rangeControl } from './menuParts';
 
 const FIRE_MODE_WORDS: Readonly<Record<FireMode, string>> = { semi: 'semi', burst: 'burst', auto: 'auto' };
@@ -296,7 +298,10 @@ export class LoadoutScreen {
     rows.append(laterRow('Skins', '', LOADOUT_TEXT.skinsLater));
   }
 
-  /** The BB weight slider (free, never pooled) and the hop-up dial, their readouts following each other. */
+  /**
+   * The BB weight slider (free, never pooled) and the hop-up dial, their readouts following each other, then the Glowing
+   * BBs choice (M33b; free too).
+   */
   private appendBbRows(into: HTMLElement, base: ReplicaConfig, carried: ReplicaConfig, grams0: number, dial0: number, changed: (grams: number, dial: number) => void): void {
     let grams = grams0;
     let dial = dial0;
@@ -326,7 +331,9 @@ export class LoadoutScreen {
     });
     hop.classList.add('loadout-hopup');
     hop.append(hopLine);
-    into.append(menuRow('BB Weight', '', weight), menuRow('Hop-Up', '', hop));
+    const m = this.opts.model;
+    const glow = new OptionPicker('Glowing BBs', GLOW_BB_CHOICES, m.glowBBs(base), `glowBBs.${base.id}`, () => this.opts.onChange());
+    into.append(menuRow('BB Weight', '', weight), menuRow('Hop-Up', '', hop), menuRow('Glowing BBs', '', glow.root));
   }
 
   /** What the fitted item (or "as it comes") is, in a line. */

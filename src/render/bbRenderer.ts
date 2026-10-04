@@ -4,7 +4,8 @@ import type { BB, BBPool } from '../sim/ballistics';
 
 /**
  * Draws every BB in flight as a small bright ball with a short streak behind it (one instanced
- * mesh + one line-segment buffer, sized to the pool, so nothing is allocated per frame).
+ * mesh + one line-segment buffer, sized to the pool, so nothing is allocated per frame). Glowing BBs (M33b, setGlow)
+ * share both: a per-instance and per-vertex colour, a larger minimum size and a longer streak.
  */
 export class BBRenderer {
   readonly object = new THREE.Group();
@@ -17,6 +18,13 @@ export class BBRenderer {
   private readonly offsetSerial: Float64Array;
   /** Per pool slot: seconds over which the muzzle offset blends away (never longer than the flight). */
   private readonly convergeTimes: Float32Array;
+  /** Per pool slot: the serial of the BB in it that glows (setGlow); a reused slot's new BB doesn't. */
+  private readonly glowSerial: Float64Array;
+  private readonly trailColors: Float32Array;
+  private readonly ballColor = new THREE.Color(BB_VISUALS.color);
+  private readonly glowColor = new THREE.Color(BB_VISUALS.glow.color);
+  private readonly trailHead = new THREE.Color(BB_VISUALS.trailColor);
+  private readonly glowTrailHead = new THREE.Color(BB_VISUALS.glow.trailColor);
 
   constructor(
     private readonly pool: BBPool,
@@ -26,24 +34,20 @@ export class BBRenderer {
     this.offsets = new Float32Array(n * 3);
     this.offsetSerial = new Float64Array(n);
     this.convergeTimes = new Float32Array(n);
-    this.balls = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(BB_VISUALS.radius, 8, 6),
-      new THREE.MeshBasicMaterial({ color: BB_VISUALS.color }),
-      n,
-    );
+    this.glowSerial = new Float64Array(n).fill(-1);
+    // White material: each BB's colour (white or glowing green) is its instance colour.
+    this.balls = new THREE.InstancedMesh(new THREE.SphereGeometry(BB_VISUALS.radius, 8, 6), new THREE.MeshBasicMaterial(), n);
+    this.balls.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage);
     this.balls.count = 0;
     this.balls.frustumCulled = false;
 
     this.trailPositions = new Float32Array(n * 2 * 3);
-    const colors = new Float32Array(n * 2 * 3);
-    const head = new THREE.Color(BB_VISUALS.trailColor);
-    for (let i = 0; i < n; i++) {
-      // Bright at the BB, fading to black (invisible with additive blending) at the tail.
-      colors.set([head.r, head.g, head.b, 0, 0, 0], i * 6);
-    }
+    // Bright at the BB, fading to black (invisible with additive blending) at the tail; the head's colour is set per
+    // frame, as the BB drawn in a segment changes.
+    this.trailColors = new Float32Array(n * 2 * 3);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.trailPositions, 3).setUsage(THREE.DynamicDrawUsage));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(this.trailColors, 3).setUsage(THREE.DynamicDrawUsage));
     geo.setDrawRange(0, 0);
     this.trails = new THREE.LineSegments(
       geo,
@@ -64,11 +68,14 @@ export class BBRenderer {
     let count = 0;
     const tp = this.trailPositions;
     const bbs = this.pool.bbs;
-    const trail = BB_VISUALS.trailSeconds;
+    const tc = this.trailColors;
     const minScale = BB_VISUALS.minAngularRadius / BB_VISUALS.radius;
+    const glowMinScale = BB_VISUALS.glow.minAngularRadius / BB_VISUALS.radius;
     for (let i = 0; i < bbs.length; i++) {
       const bb = bbs[i]!;
       if (!bb.active) continue;
+      const glow = this.glowSerial[i] === bb.serial;
+      const trail = glow ? BB_VISUALS.glow.trailSeconds : BB_VISUALS.trailSeconds;
       let x = bb.prevPosition.x + (bb.position.x - bb.prevPosition.x) * alpha;
       let y = bb.prevPosition.y + (bb.position.y - bb.prevPosition.y) * alpha;
       let z = bb.prevPosition.z + (bb.position.z - bb.prevPosition.z) * alpha;
@@ -98,10 +105,15 @@ export class BBRenderer {
       }
       // Keep far BBs visible: scale up in proportion to distance once they'd be under the minimum size.
       const dist = Math.hypot(x - camera.x, y - camera.y, z - camera.z);
-      const s = Math.max(1, dist * minScale);
+      const s = Math.max(1, dist * (glow ? glowMinScale : minScale));
       this.matrix.makeScale(s, s, s).setPosition(x, y, z);
       this.balls.setMatrixAt(count, this.matrix);
+      this.balls.setColorAt(count, glow ? this.glowColor : this.ballColor);
       const o = count * 6;
+      const head = glow ? this.glowTrailHead : this.trailHead;
+      tc[o] = head.r;
+      tc[o + 1] = head.g;
+      tc[o + 2] = head.b;
       tp[o] = x;
       tp[o + 1] = y;
       tp[o + 2] = z;
@@ -112,9 +124,17 @@ export class BBRenderer {
     }
     this.balls.count = count;
     this.balls.instanceMatrix.needsUpdate = true;
+    this.balls.instanceColor!.needsUpdate = true;
     const geo = this.trails.geometry;
     geo.setDrawRange(0, count * 2);
     (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+    (geo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
+  }
+
+  /** Draws `bb` as a glowing BB (or not) for the rest of its flight. */
+  setGlow(bb: BB, glow: boolean): void {
+    const i = this.pool.bbs.indexOf(bb);
+    if (i >= 0) this.glowSerial[i] = glow ? bb.serial : -1;
   }
 
   /**

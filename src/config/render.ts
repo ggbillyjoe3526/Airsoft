@@ -240,6 +240,16 @@ export const BB_VISUALS = {
   trailColor: 0xfff4cc,
   trailOpacity: 0.75,
   /**
+   * Glowing BBs (M33b, the Loadout's Glowing BBs row): glow-in-the-dark green, drawn a little larger and with a longer
+   * streak so a shot can be followed all the way, at night above all. Presentation only: they fly like any BB.
+   */
+  glow: {
+    color: 0x9dff7a,
+    trailColor: 0x5cff4a,
+    minAngularRadius: 0.0045,
+    trailSeconds: 0.05,
+  },
+  /**
    * Your own BBs are drawn leaving the replica's muzzle and blend onto their true (eye-line) path over
    * this many seconds (~10 m), so you can see them fly instead of edge-on along your line of sight.
    */

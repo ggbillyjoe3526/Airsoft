@@ -1,5 +1,6 @@
+import { BOT_GLOW_BBS, bbsGlow, DEFAULT_GLOW_BBS, GLOW_BB_CHOICES, type GlowBBs } from '../config/glowBBs';
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
-import { loadSetting, numberIn, saveSetting } from '../settings/storage';
+import { loadSetting, numberIn, oneOf, saveSetting } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { EMPTY_FIT, energyCapped, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
 import { type Asset, fits, type Pool, replicaOf } from './pool';
@@ -22,6 +23,16 @@ export interface PlayerKit {
   /** Each slot's hop-up dial and BB weight (grams). */
   hopUps: readonly number[];
   bbWeights: readonly number[];
+  /** Each slot's Glowing BBs choice (M33b); the session resolves it against the field's day or night. */
+  glowBBs: readonly GlowBBs[];
+}
+
+/**
+ * Whose BBs glow on a field played at night (`night`) or by day (M33b): the player's by gear slot from their kit, and
+ * the bots' the default way (BOT_GLOW_BBS).
+ */
+export function bbGlowFor(kit: PlayerKit, night: boolean): { player: boolean[]; others: boolean } {
+  return { player: kit.glowBBs.map((g) => bbsGlow(g, night)), others: bbsGlow(BOT_GLOW_BBS, night) };
 }
 
 /** What the player can equip: the collection's items, or (Dev settings, M26d) everything. */
@@ -153,6 +164,15 @@ export class LoadoutModel {
     if (g !== undefined) saveSetting(`bbWeight.${r.id}`, g);
   }
 
+  /** A replica's Glowing BBs choice (M33b), or the default: on night fields only. */
+  glowBBs(r: ReplicaConfig): GlowBBs {
+    return loadSetting(`glowBBs.${r.id}`, oneOf(GLOW_BB_CHOICES.map((c) => c.id)), DEFAULT_GLOW_BBS);
+  }
+
+  setGlowBBs(r: ReplicaConfig, choice: GlowBBs): void {
+    saveSetting(`glowBBs.${r.id}`, choice);
+  }
+
   /** The kit slot for a replica item with its current fit: what the Customise screen's numbers describe. */
   slotKit(ref: ItemRef): KitSlot {
     return kitSlot(this.pool, ref, this.fitOf(ref.asset));
@@ -183,6 +203,7 @@ export class LoadoutModel {
       slots,
       hopUps: slots.map((s) => this.hopUp(s.replica)),
       bbWeights: slots.map((s) => this.bbWeight(s.replica)),
+      glowBBs: slots.map((s) => this.glowBBs(s.replica)),
     };
   }
 
