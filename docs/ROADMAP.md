@@ -132,6 +132,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
 | Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up | In progress (M33a done; concept sketch v1 with the owner) | M33a 7/8 |
+| Alpha · Owner's 2026-10-04 requests · M35 Public and dev content tags: every map, mode, difficulty and pooled asset tagged public or dev; dev content shown only with the Dev tab's Dev content switch, never in Shots, carried by bots only with it on, and kept out of the records and Field Credits | In progress | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -481,7 +482,7 @@ each one went:**
     GPU memory stays flat across matches, as it does today across restarts).
   - **A Map button** on New game, beside Mode, Difficulty, Loadout and Settings, opening a pop-up like Mode's. It
     lists Depot (the default), and its choice is saved like the others. Later fields join this pop-up as they are built
-    (Woodland, M33, shows there greyed out as Coming soon until it is playable).
+    (Woodland, M33, shows there greyed out as Coming soon until it is playable, and since M35 only with Dev content on).
   - **Opaque menus:** a solid background on every menu screen, so nothing of the game shows through. The pause menu
     is opaque too (a default; the owner can ask for it to stay see-through mid-match).
   - **Controls only under Settings:** the controls list leaves the New game and pause screens; the key bindings stay
@@ -754,6 +755,13 @@ pool, items 11, 12 and part of 14).
   - **Glowing BBs:** a Loadout option on any field, on by default on night fields.
   - **M33a. Coming soon:** Woodland shows in the Map pop-up under Depot, greyed out with a Coming soon tag, and can't
     be picked until it is playable.
+
+- **M35. Public and dev content tags** (owner, 2026-10-04: "use Dev setting as a way to test development of new
+  features/weapons/maps"). Every map, mode, difficulty and pooled asset (and any Match pop-up choice that needs it) is
+  tagged `public` or `dev` (`config/content.ts`; pool.md's Access column for gear). One Dev tab switch, Dev content,
+  shows dev content; with it off, dev content is not shown anywhere (Woodland's Coming soon tile included). Dev gear
+  never drops from Shots, bots carry it only with the switch on, and a match that uses dev content stays out of the
+  records and pays no Field Credits. Woodland, the city map and Esports are dev until the owner makes them public.
 
 When the owner calls the game feature complete, alpha ends.
 
