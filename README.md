@@ -183,6 +183,9 @@ the first public release. More modes, maps, replicas, loadouts and customisation
 arrives as a pull request that the owner reviews and merges. Later, development
 moves to an `alpha` branch and testing to a `beta` branch, and `main` only receives tested releases.
 
+**Every change, by release:** [`CHANGELOG.md`](CHANGELOG.md). **Everything the game has today, by area:**
+[`docs/FEATURES.md`](docs/FEATURES.md). Player-facing notes per release: [`docs/patch-notes/`](docs/patch-notes/).
+
 **Not yet:** more maps or replicas, downloaded (CC0) art (the art so far is generated in code), and the menu items
 marked LATER (gas type, skins, voices for hit calls and squad orders).
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in
