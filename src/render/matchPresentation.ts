@@ -338,7 +338,8 @@ export class MatchPresentation {
     this.feed.add(
       { name: this.names.get(victim.id) ?? '', team: victim.team },
       { name: this.names.get(shooter.id) ?? '', team: shooter.team },
-      victim.team === shooter.team,
+      // Your own ricochet (audit SIM-07) is no friendly hit: the line names you twice, tagged "ricochet".
+      victim.team === shooter.team && victim !== shooter,
       you,
       this.state.time,
       ricochet,
