@@ -27,3 +27,4 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-04 | M33c | 1 | Opus 5.5 (build thread) | ✓ 22 s | ✓ 125 s | ✓ 91 s | ✓ 96 s | ✓ (second run: testSupport.ts added to touches) | ✓ | 8/8 Accept (Opus) | – | ~2 h | QA (Sonnet) 187k (647 s), changelog (Haiku) 51k (36 s), critic (Opus) 123k (185 s) |
 | 2026-10-04 | M33d | 1 | Opus 5.5 (build thread) | ✓ 18 s | ✓ 76 s | ✓ 85 s | ✓ 85 s | ✓ | ✓ | 7/8 Accept (Opus) | – | ~2 h | QA (Sonnet) 146k (483 s), critic (Opus) 122k (188 s); changelog by the build thread |
 | 2026-10-04 | M33d | 2 | Opus 5.5 (build thread) | ✓ 20 s | ✓ 83 s | ✓ 85 s | ✓ 70 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~40 min | critic (Opus) 98k (262 s); Pro plan fort and approach rules |
+| 2026-10-04 | M33e | 1 | Opus 5.5 (build thread) | ✓ 20 s | ✓ 82 s | ✓ 88 s | ✓ 69 s | ✓ | ✓ | 8/8 Accept (Opus) | – | ~1 h | QA (Sonnet) 150k (447 s), critic (Opus) 89k (83 s); changelog by the build thread |

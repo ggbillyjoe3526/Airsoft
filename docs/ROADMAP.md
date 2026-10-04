@@ -763,7 +763,7 @@ pool, items 11, 12 and part of 14).
     sight lines, bot routes, the shadows and the minimap; BBs land in earth with no bounce. Depot is unchanged.
   - **M33d. The layout:** Woodland as sketched (lanes, the Knoll and its fort, the cabin, the creek, trees, boulders
     and logs), five spawns a side, 4v4 by default and up to 5v5. Playable only with Dev settings › Access maps in
-    development; its matches don't go into the records. Still to come: bushes (M33e), night lighting (M33f), how far
+    development; its matches don't go into the records. Still to come: night lighting (M33f), how far
     players and bots see at night, glow sticks and the hit light (M33g), the weapon torch (M33h), the woodland look
     and sounds (M33i).
   - **M33e. Bushes:** any map can have bushes. They hide whoever is in or behind them from bots (someone at the edge is
