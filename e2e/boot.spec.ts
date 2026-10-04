@@ -91,6 +91,13 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const mapDialog = page.getByRole('dialog', { name: 'Map' });
   await expect(mapDialog).toBeVisible();
   await expect(mapDialog.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
+  // Woodland is listed under Depot, greyed out with a "Coming soon" tag, and can't be picked (M33a).
+  const woodland = mapDialog.getByRole('button', { name: /Woodland/i });
+  await expect(woodland).toBeDisabled();
+  await expect(woodland).toContainText('Coming soon');
+  await woodland.click({ force: true });
+  await expect(mapDialog).toBeVisible();
+  await expect(mapDialog.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
   await mapDialog.getByRole('button', { name: /Depot/i }).click();
   await expect(mapDialog).toBeHidden();
   await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Depot');
