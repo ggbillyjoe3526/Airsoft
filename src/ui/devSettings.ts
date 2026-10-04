@@ -13,6 +13,8 @@ export interface DevSettingsOptions {
   diagnostics?: () => string;
 }
 
+const percent = (v: number): string => `${Math.round(v * 100)}%`;
+
 /** The Dev tab's rows (Settings → Dev, M24), one per entry in config/dev.ts, each saved as `dev.<id>` as it changes. */
 export function devSettings(opts: DevSettingsOptions): HTMLDivElement[] {
   const rows = DEV_ENTRIES.map((e) => {
@@ -20,7 +22,7 @@ export function devSettings(opts: DevSettingsOptions): HTMLDivElement[] {
       const picker = new OptionPicker(e.label, DEV_SWITCH_CHOICES, opts.initial[e.id] ? 'on' : 'off', devField(e.id), (v) => opts.onChange(e.id, v === 'on'));
       return menuRow(e.label, e.help, picker.root);
     }
-    return menuRow(e.label, e.help, rangeControl(e.label, e, opts.initial[e.id], (v) => `${Math.round(v * 100)}%`, devField(e.id), (v) => opts.onChange(e.id, v)));
+    return menuRow(e.label, e.help, rangeControl(e.label, e, opts.initial[e.id], e.format ?? percent, devField(e.id), (v) => opts.onChange(e.id, v)));
   });
   const diagnostics = opts.diagnostics;
   if (diagnostics) rows.push(menuRow(DIAGNOSTICS_TEXT.label, DIAGNOSTICS_TEXT.help, diagnosticsButton(diagnostics)));

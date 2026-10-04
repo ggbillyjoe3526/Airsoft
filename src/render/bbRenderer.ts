@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BB_VISUALS } from '../config/render';
+import { BB_VISUALS, RETRO } from '../config/render';
 import type { BB, BBPool } from '../sim/ballistics';
 import { softDotTexture } from './softDot';
 
@@ -52,6 +52,10 @@ export class BBRenderer {
   private readonly along = new THREE.Vector3();
   private readonly toEye = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
+  /** One retro pixel's width (radians of view) while the retro filter is on (M42), else 0. */
+  private pixelAngle = 0;
+  /** This frame's streak half-width (radians of view): BB_VISUALS.trailAngularWidth, or a retro pixel's if wider. */
+  private trailHalfAngle = BB_VISUALS.trailAngularWidth / 2;
   /** BBs drawn last frame: with none then and none now there is nothing to upload (REN-22). */
   private lastCount = 0;
   /** Per pool slot: visual offset (muzzle minus true spawn point) for your own BBs, and which BB it belongs to. */
@@ -138,6 +142,15 @@ export class BBRenderer {
   }
 
   /**
+   * One retro pixel's width in radians of view (Renderer.retroPixelAngle, M42; 0 with the filter off): balls and streaks
+   * are then never drawn narrower than RETRO.bbMinPixels and RETRO.trailMinPixels of them, so they don't fall between
+   * the low-resolution view's samples.
+   */
+  setPixelAngle(angle: number): void {
+    this.pixelAngle = angle;
+  }
+
+  /**
    * `alpha` interpolates between the last two simulation ticks; `camera` is the eye. `facing` (the camera's rotation)
    * turns the glow's dots to face it; without it there is no glow this frame.
    */
@@ -146,8 +159,11 @@ export class BBRenderer {
     let count = 0;
     const bbs = this.pool.bbs;
     const tc = this.trailColors;
-    const minScale = BB_VISUALS.minAngularRadius / BB_VISUALS.radius;
-    const luminousMinScale = BB_VISUALS.glowInDark.minAngularRadius / BB_VISUALS.radius;
+    // Never narrower than a couple of retro pixels while the retro filter is on (M42).
+    const retroMin = (this.pixelAngle * RETRO.bbMinPixels) / 2;
+    const minScale = Math.max(BB_VISUALS.minAngularRadius, retroMin) / BB_VISUALS.radius;
+    const luminousMinScale = Math.max(BB_VISUALS.glowInDark.minAngularRadius, retroMin) / BB_VISUALS.radius;
+    this.trailHalfAngle = Math.max(BB_VISUALS.trailAngularWidth, this.pixelAngle * RETRO.trailMinPixels) / 2;
     for (let i = 0; i < bbs.length; i++) {
       const bb = bbs[i]!;
       if (!bb.active) continue;
@@ -215,12 +231,13 @@ export class BBRenderer {
 
   /**
    * One streak's quad at float offset `o`: the head (x, y, z) and tail (tx, ty, tz) each widened sideways, across the
-   * line of sight, by their own distance × trailAngularWidth, so the ribbon is the same width on screen end to end.
+   * line of sight, by their own distance × trailAngularWidth (or a retro pixel, M42), so the ribbon is the same width
+   * on screen end to end.
    * A streak seen exactly end-on has no side: its quad is a line, drawn as nothing (the ball covers it).
    */
   private writeStreak(o: number, x: number, y: number, z: number, tx: number, ty: number, tz: number, eye: { x: number; y: number; z: number }): void {
     const tp = this.trailPositions;
-    const halfAngle = BB_VISUALS.trailAngularWidth / 2;
+    const halfAngle = this.trailHalfAngle;
     this.along.set(x - tx, y - ty, z - tz);
     this.toEye.set(eye.x - x, eye.y - y, eye.z - z);
     this.side.crossVectors(this.along, this.toEye);
