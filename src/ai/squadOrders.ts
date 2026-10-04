@@ -99,14 +99,17 @@ export function placeHold(bots: readonly Bot[], leader: Character, point: Vec3 |
 export function heldCentre(bots: readonly Bot[], leader: Character, out: Vec3): boolean {
   let n = 0;
   out.x = 0;
+  out.y = 0;
   out.z = 0;
   for (const b of bots) {
     if (b.order !== 'hold' || b.orderLeader !== leader) continue;
     out.x += b.orderGoal.x;
+    out.y += b.orderGoal.y;
     out.z += b.orderGoal.z;
     n++;
   }
   out.x /= Math.max(1, n);
+  out.y /= Math.max(1, n);
   out.z /= Math.max(1, n);
   return n > 0;
 }
@@ -142,18 +145,28 @@ function walkTo(b: Bot, w: BotWorld, goal: Vec3, arrive: number, dt: number): bo
     return false;
   }
   wantRoute(b, goal, w.cfg);
+  if (b.routeState === 'wanted' && b.routeLeg < b.route.length) {
+    // A leader on the move shifts the goal every few metres: keep walking the old route until the new one comes,
+    // rather than stopping for a tick at each replan (a stutter, and a sprint cut short).
+    b.routeState = 'ok';
+    const moving = followRoute(b, w, dt);
+    b.routeState = 'wanted';
+    return moving;
+  }
   return followRoute(b, w, dt);
 }
 
 /** Moves an ordered bot for this tick (moveBot's 'order' mode). Returns whether it walks a route. */
 export function moveOrder(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): boolean {
   const leader = b.orderLeader;
+  const wasRushing = b.orderRush;
   b.orderRush = false;
   if (!leader || b.order === 'none') return false;
   if (b.order === 'hold') {
     // No way there: hold where it got to.
     if (b.routeState === 'failed') {
       b.orderGoal.x = b.character.position.x;
+      b.orderGoal.y = b.character.position.y;
       b.orderGoal.z = b.character.position.z;
       b.routeState = 'none';
     }
@@ -177,8 +190,12 @@ export function moveOrder(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): 
   followSpot(leader, b.orderHeading, b.orderSlot, w, b.orderGoal);
   const watch = SQUAD_ORDERS.followWatchDeg;
   b.orderYaw = b.orderHeading + watch[b.orderSlot % watch.length]! * DEG;
-  // Sprint with a sprinting leader (once off the spot), or to catch up from far behind.
-  b.orderRush = away > SQUAD_ORDERS.catchUp || (leader.sprinting && away > SQUAD_ORDERS.followDistance);
+  // Sprint with a sprinting leader once well off the spot, or to catch up from far behind; once sprinting, keep at it
+  // until back at the spot's distance (or rushEase inside catchUp), so it doesn't flick between run and sprint.
+  const ease = wasRushing ? SQUAD_ORDERS.rushEase : 0;
+  b.orderRush =
+    away > SQUAD_ORDERS.catchUp - ease ||
+    (leader.sprinting && away > SQUAD_ORDERS.followDistance + (wasRushing ? 0 : SQUAD_ORDERS.followArrive));
   // Moving quietly with a leader who does.
   cmd.walk = !b.orderRush && (leader.walking || leader.crouchAmount > 0.5);
   return walkTo(b, w, b.orderGoal, SQUAD_ORDERS.followArrive, dt);

@@ -15,8 +15,13 @@ export const SQUAD_ORDERS = {
   followRowGap: 1.6,
   /** Close enough to the follow spot to stop there (m). */
   followArrive: 1.2,
-  /** Further than this from you (m), followers sprint to catch up; they also sprint when you do. */
+  /**
+   * Further than this from you (m), followers sprint to catch up; they also sprint when you do, once more than
+   * followArrive past their spot's distance. They keep sprinting until rushEase inside catchUp (or back at the spot's
+   * distance behind a sprinting leader).
+   */
   catchUp: 8,
+  rushEase: 3,
   /** Your heading is the way you move, once you move at least this fast (m/s); standing still keeps it. */
   headingSpeed: 1,
   /**

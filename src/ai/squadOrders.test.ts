@@ -125,6 +125,29 @@ describe('squad orders (M22)', () => {
     expect(flat(mates[0]!.character.position, mates[1]!.character.position)).toBeGreaterThan(1);
   });
 
+  it('follow me with you sprinting: they sprint along with you, without flicking between run and sprint', () => {
+    const { bots, mates, you, cmd, run, commands } = squad();
+    cmd.yaw = EAST;
+    run(0.1);
+    bots.giveOrder(you, 'follow');
+    cmd.forward = 1;
+    cmd.sprint = true;
+    const toggles = mates.map(() => 0);
+    const last = mates.map(() => false);
+    let sprinting = 0;
+    run(8, () => {
+      mates.forEach((b, i) => {
+        const s = commands.get(b.character.id)!.sprint;
+        if (s !== last[i]) toggles[i]!++;
+        last[i] = s;
+        if (s) sprinting++;
+      });
+    });
+    expect(sprinting).toBeGreaterThan(8 * 60); // they did sprint
+    for (const t of toggles) expect(t).toBeLessThanOrEqual(6);
+    for (const b of mates) expect(flat(b.character.position, you.position)).toBeLessThan(SQUAD_ORDERS.catchUp + 2);
+  });
+
   it('hold here: teammates go to the spot you look at, side by side, look your way and stay when you leave', () => {
     const { you, bots, mates, cmd, run } = squad();
     cmd.yaw = EAST;
@@ -156,6 +179,8 @@ describe('squad orders (M22)', () => {
     run(0.3);
     const before = mates.map((b) => ({ ...b.character.position }));
     bots.giveOrder(you, 'hold');
+    // Each where it stands: no one spot to mark.
+    expect(bots.holdSpot(you, vec3())).toBe(false);
     cmd.forward = 1;
     run(4);
     mates.forEach((b, i) => expect(flat(b.character.position, before[i]!)).toBeLessThan(1));
@@ -204,7 +229,10 @@ describe('squad orders (M22)', () => {
     cmd.yaw = 0;
     run(0.3);
     expect(bots.giveOrder(you, 'hold')).toBe('hold');
-    expect(bots.holdSpot(you, vec3())).toBe(true);
+    const spot = vec3(0, 9, 0);
+    expect(bots.holdSpot(you, spot)).toBe(true);
+    expect(spot.y).toBeCloseTo(0, 1); // on the floor, not left at whatever it was
+    expect(flat(spot, you.position)).toBeGreaterThan(3);
     // The same spot again: cancelled.
     expect(bots.giveOrder(you, 'hold')).toBe('none');
     expect(bots.holdSpot(you, vec3())).toBe(false);

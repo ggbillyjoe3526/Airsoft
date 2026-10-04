@@ -360,7 +360,6 @@ describe('cover on a raised floor', () => {
 const HEAR_THROUGH_WALLS: BotConfig = { ...BOTS, wallHearing: 1 };
 
 /** A duel on an open floor: one Orange bot facing a Blue character `dist` metres away. */
-
 function duel(
   dist: number,
   extra: (state: GameState) => void = () => {},

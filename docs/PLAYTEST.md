@@ -341,7 +341,7 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   to catch up if left behind; stop and one looks back the way you came, the other to a side. Walk (Shift) or crouch
   and they walk too. They still fight anyone they see, then come back. Press **Z** again: "Back to the team plan".
 - [ ] **Hold here (X).** Look at a spot (a doorway, a crate's corner) and press **X**: both go there side by side and
-  watch the way you looked, and stay when you walk off. A diamond marker with the distance shows the held spot.
+  watch the way you looked, and stay when you walk off. A diamond marker with the distance shows the held spot (none when each holds where it stands).
   Look somewhere else and press X: the hold moves; at the sky: each holds where it stands; press X again on the same
   spot (or at the sky again): back to the team plan.
 - [ ] **Regroup (V).** With teammates far off, press **V**: they sprint back to you, then follow (the line changes to

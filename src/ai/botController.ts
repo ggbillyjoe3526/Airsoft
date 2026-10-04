@@ -208,9 +208,13 @@ export class BotController {
     return this.given.get(leader)?.kind ?? 'none';
   }
 
-  /** While `leader`'s teammates hold a spot: the middle of the held spots into `out`, and true. */
+  /**
+   * While `leader`'s teammates hold a spot they looked at: the middle of the held spots into `out`, and true. False
+   * for a hold where each stood (they may be far apart: no one spot to mark).
+   */
   holdSpot(leader: Character, out: Vec3): boolean {
-    return this.given.get(leader)?.kind === 'hold' && heldCentre(this.bots, leader, out);
+    const given = this.given.get(leader);
+    return given?.kind === 'hold' && !given.ownSpot && heldCentre(this.bots, leader, out);
   }
 
   /** Everyone given `leader`'s order goes back to the team plan. */
