@@ -130,16 +130,17 @@ export class ArmoryScreen {
   }
 
   private render(): void {
-    this.renderSide();
+    // Read (and synced with another tab's save) once per redraw; each action reads it again before it changes it.
+    const c = this.opts.collection();
+    this.renderSide(c);
     this.renderReveal();
-    this.renderOwned();
+    this.renderOwned(c);
     // Opening the screen puts the keyboard on a Shot (or a Token to buy, or Back when there is nothing to afford).
     for (const node of this.root.querySelectorAll<HTMLElement>('[data-autofocus]')) delete node.dataset.autofocus;
     this.firstEnabled(['shot-1', 'buy-1']).dataset.autofocus = '';
   }
 
-  private renderSide(): void {
-    const c = this.opts.collection();
+  private renderSide(c: Collection): void {
     const e = this.pool.economy;
     const rate = fcPerToken(e);
     const balance = el('div', 'armory-balance');
@@ -235,8 +236,7 @@ export class ArmoryScreen {
     this.reveal.append(head, el('p', 'menu-readout armory-reveal-summary', revealSummary(this.pool, this.last)), grid);
   }
 
-  private renderOwned(): void {
-    const c = this.opts.collection();
+  private renderOwned(c: Collection): void {
     const catalogue = collectionRows(this.pool, c);
     const head = el('div', 'loadout-replica-head');
     const title = el('h2', 'menu-panel-title', ARMORY_TEXT.collection);
@@ -263,13 +263,13 @@ export class ArmoryScreen {
         category = row.asset.category;
         list.append(el('p', 'menu-kicker armory-category', CATEGORY_LABELS[category]));
       }
-      list.append(this.assetRow(row));
+      list.append(this.assetRow(row, c));
     }
     this.owned.replaceChildren(head, el('p', 'menu-readout', ARMORY_TEXT.keepOne), list);
   }
 
   /** One asset of the catalogue: its name, a pip per tier (copies owned, or a dash), and its spares to scrap. */
-  private assetRow(r: CollectionRow): HTMLDivElement {
+  private assetRow(r: CollectionRow, c: Collection): HTMLDivElement {
     const row = el('div', 'armory-row');
     let best = -1;
     r.counts.forEach((n, t) => (best = n > 0 ? t : best));
@@ -290,7 +290,7 @@ export class ArmoryScreen {
       const adds = tierLine(this.pool, { asset: r.asset.id, tier: this.pool.tiers[best]!.id });
       if (adds) row.append(el('span', 'armory-row-adds', adds));
     }
-    const one = cheapestSpare(this.pool, this.opts.collection(), r.asset.id);
+    const one = cheapestSpare(this.pool, c, r.asset.id);
     if (one) {
       const oneFc = this.pool.tiers.find((t) => t.id === one.tier)!.scrapFc;
       const b = noKeyRepeat(

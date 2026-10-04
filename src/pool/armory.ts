@@ -143,7 +143,7 @@ function drawAsset(assets: readonly Asset[], tier: RarityTier, c: Collection, dr
  * Takes `count` Shots: pays for them (Tokens, then FC for any short), dispenses `assetsPerShot` assets each and adds
  * them to the collection. Each draw takes its tier by the odds, then an asset marked In Shots, one you don't own at
  * that tier `unownedWeight` times likelier (audit POOL-05). Pity (audit POOL-01): a Shot that reaches a Pity rule's
- * count without its tier or rarer has its commonest item drawn again from those tiers; the counts carry on in the
+ * count without its tier or rarer has its commonest item drawn again from those tiers (tier, then asset); the counts carry on in the
  * collection. A ten-Shot also holds at least one item of the guaranteed tier or rarer (its last item lifted if
  * none came up). Returns what was dispensed, in order, or null (nothing changes) if it can't be paid for or there is
  * nothing to dispense. The draws carry on from the collection's saved random state mixed with `entropy` (audit
@@ -175,10 +175,13 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy =
     }
     const lift = (floor: number): void => {
       if (draws.some((d) => rank(d.tier) >= floor)) return;
-      // The commonest item (the last of equals) is drawn again from the floor up.
+      // The commonest item (the last of equals) is drawn again from the floor up: its tier, then its asset at that
+      // tier, so the unowned weight counts for a lifted item too.
       let at = draws.length - 1;
       for (let i = draws.length - 1; i >= 0; i--) if (rank(draws[i]!.tier) < rank(draws[at]!.tier)) at = i;
-      draws[at]!.tier = drawTier(pool.tiers, rng, floor);
+      const tier = drawTier(pool.tiers, rng, floor);
+      const others = new Set(draws.flatMap((d, i) => (i === at ? [] : [itemKey(d.asset.id, d.tier.id)])));
+      draws[at] = { tier, asset: drawAsset(assets, tier, c, others, e.unownedWeight, rng) };
     };
     if (tenFloor >= 0) {
       tenMet ||= draws.some((d) => rank(d.tier) >= tenFloor);

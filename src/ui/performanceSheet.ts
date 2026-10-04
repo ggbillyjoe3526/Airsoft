@@ -143,10 +143,6 @@ const TIER_WORDS: readonly { stat: ScaledStat; word: string; sign: '+' | '−' }
 ];
 
 /**
- * What an item's tier adds (stats.md's Tier scaling times its tier's Bonus), for the Armory, e.g. "+7.5% energy ·
- * +7.5% rate of fire · −15% spread · −15% reload · −15% draw"; '' for a tier that adds nothing (Common).
- */
-/**
  * What an item's tier means, in a line for the Loadout (audit POOL-10): "Legendary: −15% spread · …", or
  * "Common: no tier bonus".
  */
@@ -155,6 +151,10 @@ export function tierBlurb(pool: Pool, ref: ItemRef): string {
   return `${label}: ${tierLine(pool, ref) || 'no tier bonus'}`;
 }
 
+/**
+ * What an item's tier adds (stats.md's Tier scaling times its tier's Bonus), for the Armory, e.g. "+7.5% energy ·
+ * +7.5% rate of fire · −15% spread · −15% reload · −15% draw"; '' for a tier that adds nothing (Common).
+ */
 export function tierLine(pool: Pool, ref: ItemRef): string {
   const asset = pool.byId.get(ref.asset);
   if (!asset || !scaledCategory(asset)) return '';

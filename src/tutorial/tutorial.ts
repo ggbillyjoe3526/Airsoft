@@ -20,6 +20,8 @@ export interface TutorialView {
  */
 export class TutorialTracker {
   readonly steps: readonly TutorialStep[];
+  /** Each step's id as listed in TUTORIAL_STEPS (the aiming step keeps its id when it is played without an optic). */
+  private readonly ids: readonly string[];
   /** The step whose goal is being checked (steps.length once all are done). */
   private index: number;
   /** The current goal so far: view turned (rad), time aiming or reading, or time since a sprint ended (s). */
@@ -34,12 +36,22 @@ export class TutorialTracker {
   private doneLeft = 0;
 
   /**
-   * `slots`: the replicas carried; a step asking for a slot the player doesn't have is left out (audit POOL-16), so a
-   * one-replica kit can still finish.
+   * `start`: the step to begin at, by index, or by id (a saved step: an id still finds its lesson after a later build
+   * adds or removes steps, audit POOL-14; an id no longer listed starts from the beginning). `slots`: the replicas
+   * carried; a step asking for a slot the player doesn't have is left out (audit POOL-16), so a one-replica kit can
+   * still finish.
    */
-  constructor(steps: readonly TutorialStep[], canAim: boolean, start = 0, slots = Number.POSITIVE_INFINITY) {
-    this.steps = steps.filter((s) => !(s.goal.kind === 'hit' && s.goal.slot !== undefined && s.goal.slot >= slots)).map((s) => (!canAim && s.withoutOptic ? s.withoutOptic : s));
-    this.index = Math.min(Math.max(0, start), this.steps.length);
+  constructor(steps: readonly TutorialStep[], canAim: boolean, start: number | string = 0, slots = Number.POSITIVE_INFINITY) {
+    const kept = steps.filter((s) => !(s.goal.kind === 'hit' && s.goal.slot !== undefined && s.goal.slot >= slots));
+    this.ids = kept.map((s) => s.id);
+    this.steps = kept.map((s) => (!canAim && s.withoutOptic ? s.withoutOptic : s));
+    const at = typeof start === 'string' ? Math.max(0, kept.findIndex((s) => s.id === start || s.withoutOptic?.id === start)) : start;
+    this.index = Math.min(Math.max(0, at), this.steps.length);
+  }
+
+  /** The id (as listed in TUTORIAL_STEPS) of the step still to do, to save and resume at; '' once all are done. */
+  get goalId(): string {
+    return this.ids[this.index] ?? '';
   }
 
   /** The step shown: the one just finished while its tick shows, else the one under way; null once it's all over. */
@@ -67,10 +79,16 @@ export class TutorialTracker {
   }
 
   /**
-   * Skips the step under way (audit POOL-14: the pause menu's Skip step): the next one starts at once, no tick shown.
-   * Past the last step, the tutorial is over.
+   * Skips the step shown (audit POOL-14: the pause menu's Skip step): the next one starts at once, no tick shown. Past
+   * the last step, the tutorial is over. While a finished step still shows its tick, the step after it hasn't been
+   * seen yet: it comes up (with what was already done of it), not skipped too.
    */
   skip(): void {
+    if (this.doneLeft > 0) {
+      this.doneLeft = 0;
+      this.doneIndex = -1;
+      return;
+    }
     this.jump(this.index + 1);
   }
 

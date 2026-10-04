@@ -667,7 +667,7 @@ export class Game {
    * Builds the practice range (M21) with the picked loadout, at `pose` if given (else behind the firing line), with the
    * tutorial from step `tutorialFrom` if given (M16).
    */
-  private openRange(pose?: RangePose, tutorialFrom?: number): void {
+  private openRange(pose?: RangePose, tutorialFrom?: number | string): void {
     this.session?.dispose();
     this.loadoutChanged = false;
     this.session = new RangeSession(this.renderer, this.container, this.input, {
@@ -776,7 +776,7 @@ export class Game {
   private takeTutorialFinished(s: RangeSession): void {
     if (!s.takeTutorialFinished()) return;
     saveSetting('tutorialDone', true);
-    saveSetting('tutorialStep', 0);
+    saveSetting('tutorialStep', '');
     this.menus.markTutorialDone();
   }
 

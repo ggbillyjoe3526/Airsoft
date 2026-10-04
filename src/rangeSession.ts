@@ -80,12 +80,15 @@ export class RangeSession {
   private coach: CoachPanel | null = null;
   private tutorialFinishedOwed = false;
   private tutorialFinishedSeen = false;
-  /** Told the tutorial's step still to do whenever it moves on (audit POOL-14: the game saves it, to resume there). */
-  onTutorialStep: ((goalIndex: number) => void) | null = null;
+  /**
+   * Told the id of the tutorial's step still to do ('' once all are done) whenever it moves on (audit POOL-14: the game
+   * saves it, to resume there).
+   */
+  onTutorialStep: ((stepId: string) => void) | null = null;
   /** Play is running (not paused). */
   private playing = false;
   /** The step still to do last reported to onTutorialStep. */
-  private savedStep = -1;
+  private savedStep: string | null = null;
   /** What the tutorial reads after each tick, reused rather than made anew. */
   private readonly tutorialView: TutorialView;
 
@@ -99,8 +102,8 @@ export class RangeSession {
     audio: SfxSetup,
     crosshair: CrosshairSettings,
     pose?: RangePose,
-    /** Run the tutorial (M16) from this step (0: the start); leave out for free practice. */
-    tutorialFrom?: number,
+    /** Run the tutorial (M16) from this step, by index or id (0: the start); leave out for free practice. */
+    tutorialFrom?: number | string,
   ) {
     const map = RANGE_MAP;
     this.loadout = setup.kit.slots.map((s) => s.replica);
@@ -291,9 +294,9 @@ export class RangeSession {
   /** The tutorial's step shown or still to do changed (a step done, or skipped). */
   private tutorialMoved(t: TutorialTracker): void {
     this.coach!.show(t);
-    if (t.goalIndex !== this.savedStep) {
-      this.savedStep = t.goalIndex;
-      this.onTutorialStep?.(t.goalIndex);
+    if (t.goalId !== this.savedStep) {
+      this.savedStep = t.goalId;
+      this.onTutorialStep?.(t.goalId);
     }
     // Done as soon as the last step is (its tick still shows), so a rebuild in that moment can't lose it.
     if (t.goalIndex >= t.steps.length && !this.tutorialFinishedSeen) this.tutorialFinishedOwed = this.tutorialFinishedSeen = true;

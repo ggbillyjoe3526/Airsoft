@@ -253,6 +253,26 @@ describe('duplicate protection (audit POOL-05)', () => {
     expect(dots / (n * 3)).toBeLessThan(0.66);
   });
 
+  it('weights the asset of an item lifted by pity too, at its new tier', () => {
+    // Only pity can give an Epic here. Both assets are owned at Common (drawn evenly there); at Epic only the Gas Pistol.
+    const p = rigged(['| Common | 100 | 0 | 5 |', '| Epic | 0 | 12 | 80 |']);
+    let dots = 0;
+    const n = 3000;
+    for (let i = 0; i < n; i++) {
+      const c = newCollection(p, 5);
+      addItem(c, { asset: '000001', tier: 'epic' });
+      addItem(c, { asset: '000007', tier: 'common' });
+      c.pity = { epic: 19 };
+      c.tokens = 1;
+      const lifted = takeShots(p, c, 1, i)!.filter((d) => d.item.tier === 'epic');
+      expect(lifted).toHaveLength(1);
+      if (lifted[0]!.item.asset === '000007') dots++;
+    }
+    // 2 : 1 for the unowned Red Dot (an even pick would be 0.5).
+    expect(dots / n).toBeGreaterThan(0.61);
+    expect(dots / n).toBeLessThan(0.72);
+  });
+
   it('lets a lower tier go once a rarer copy of the same asset is owned, never the best one', () => {
     const c = newCollection(pool, 1);
     const dot = (tier: string) => item('Red Dot', tier);

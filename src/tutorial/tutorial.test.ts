@@ -226,9 +226,33 @@ describe('skipping and resuming the tutorial (audit POOL-14, POOL-16)', () => {
     expect(t.goalIndex).toBe(TUTORIAL_STEPS.length);
   });
 
-  it('resumes at a saved step', () => {
-    const t = new TutorialTracker(TUTORIAL_STEPS, true, TUTORIAL_STEPS.findIndex((s) => s.id === 'far'));
+  it('resumes at a saved step by its id, whatever steps a later build adds before it', () => {
+    const t = new TutorialTracker(TUTORIAL_STEPS, true, 'far');
     expect(t.step?.id).toBe('far');
+    expect(t.goalId).toBe('far');
+    // A build with a new first step still resumes at the same lesson.
+    const added = [{ ...TUTORIAL_STEPS[0]!, id: 'newFirst' }, ...TUTORIAL_STEPS];
+    expect(new TutorialTracker(added, true, 'far').step?.id).toBe('far');
+    // The aiming step keeps its listed id when played as "fit an optic".
+    const noOptic = new TutorialTracker(TUTORIAL_STEPS, false, 'aim');
+    expect([noOptic.step?.id, noOptic.goalId]).toEqual(['optics', 'aim']);
+    // An id no longer listed starts from the beginning; an old saved index still works; done reads ''.
+    expect(new TutorialTracker(TUTORIAL_STEPS, true, 'gone').goalIndex).toBe(0);
+    expect(new TutorialTracker(TUTORIAL_STEPS, true, 3).step?.id).toBe(TUTORIAL_STEPS[3]!.id);
+    expect(new TutorialTracker(TUTORIAL_STEPS, true, TUTORIAL_STEPS.length).goalId).toBe('');
+  });
+
+  it("doesn't skip the next step, unseen, when Skip is pressed while a finished step still shows its tick", () => {
+    const { player, t, tick } = setup();
+    for (let i = 0; i < 20; i++) {
+      player.yaw += 0.1;
+      tick();
+    }
+    expect([t.step?.id, t.showingDone]).toEqual(['look', true]);
+    t.skip();
+    expect([t.step?.id, t.showingDone]).toEqual(['walk', false]);
+    t.skip();
+    expect(t.step?.id).toBe('steel');
   });
 
   it('leaves out the switch-replica step for a player carrying one replica', () => {
