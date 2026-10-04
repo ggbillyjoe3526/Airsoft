@@ -23,19 +23,6 @@ acceptance:
 status: building
 attempts: 0
 
-## M37 · Pro bots hold angles
-tier: core
-perf: required
-touches: src/ai/, src/nav/, src/map/, src/config/bots.ts
-acceptance:
-  1. Angles (doorways, wall corners) are worked out from each map's own geometry where the bot stands, not hand-placed, and tested on Depot. Stair tops (the city's layered floors, M34b) and bush edges (Woodland's foliage, M33e) are added in M40 once those land on main.
-  2. A Pro bot that stops holds an angle, aimed at head height where someone would appear.
-  3. Reaction about 0.18–0.28 s to someone appearing within a few degrees of where the bot aims; Hard speed or slower elsewhere.
-  4. A headless test fails if any bot, at any difficulty, aims at someone it hasn't seen or heard.
-  5. Easy, Normal and Hard play as before (their guards unchanged).
-status: building
-attempts: 0
-
 ## M38 · Pro bots clear corners and play as a team
 tier: core
 perf: required
