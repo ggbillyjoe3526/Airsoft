@@ -1,6 +1,6 @@
 import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
-import { type Bot, type BotWorld, type Contact, forgetTarget, lastSeenAt, pick } from './bot';
+import { type Bot, type BotWorld, type Contact, forgetTarget, lastSeenAt, pick, recallHeardOther } from './bot';
 import { freshAimError } from './aim';
 import { visiblePart } from './perception';
 
@@ -49,6 +49,9 @@ export function perceive(b: Bot, w: BotWorld): void {
     contact.reactAt = w.time + pick(b.rng, b.skill.reactionTime);
     contact.acquiredAt = w.time;
     freshAimError(b.aim, cfg, b.rng);
+  } else if (contact !== b.contact) {
+    // Back on someone seen moments ago: no new reaction delay, but the aim error is this target's, not the last one's.
+    freshAimError(b.aim, cfg, b.rng);
   }
   if (contact !== b.contact) {
     b.burstLeft = 0;
@@ -86,9 +89,10 @@ export function currentTarget(b: Bot, w: BotWorld): Character | undefined {
   for (const c of w.characters) {
     if (c.id !== b.targetId) continue;
     if (isInPlay(c)) return c;
-    // They're out: nothing left to hunt there.
+    // They're out: nothing left to hunt there, but another enemy heard during the fight is worth a look.
     forgetTarget(b);
     b.hasLastKnown = false;
+    recallHeardOther(b, w.time, w.cfg);
     return undefined;
   }
   return undefined;

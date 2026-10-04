@@ -526,6 +526,9 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     }
     // Once for the refused context: the engine doesn't try again on every Play.
     expect(warn).toHaveBeenCalledTimes(1);
+    // Files share a worker's globals (vite.config.ts isolate: false): nothing stubbed here outlives the test.
+    warn.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it("lets a context's refused resume, suspend or close settle quietly (audit M-04)", async () => {
@@ -963,6 +966,16 @@ describe('the final alpha audit: range, pause, mix and ambience (FA6)', () => {
     expect(renders).toEqual([AUDIO.renderRate]);
     for (const variants of engine.cueBuffers().values()) for (const b of variants) expect(b.sampleRate).toBe(AUDIO.renderRate);
     expect(engine.ambienceBed()!.sampleRate).toBe(AUDIO.renderRate);
+    // The silencer's muffled shot copies too (FA6 follow-up): filtered at the rate they were rendered at.
+    const shotCues = [...engine.cueBuffers().keys()].filter((c) => c.startsWith('shot.'));
+    expect(shotCues.length).toBeGreaterThan(0);
+    for (const cue of shotCues) {
+      const want = suppressedCopies(engine.samples(cue), AUDIO.renderRate);
+      const got = engine.muffledBuffers(cue).map((b) => (b as unknown as FakeBuffer).data[0]!);
+      expect(got).toEqual(want);
+      // Filtered at the device's rate instead, they would sound duller or brighter than meant.
+      expect(got).not.toEqual(suppressedCopies(engine.samples(cue), 44100));
+    }
     // The convolver takes only the context's own rate.
     expect((ctx.convolvers[0]!.buffer as FakeBuffer).sampleRate).toBe(44100);
   });

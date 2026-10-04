@@ -71,16 +71,36 @@ ends the round). A hit character is eliminated
 - **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
   streams made from it (the bots' plans, each bot).
 - **render/**: reads `GameState` and interpolates between `prevPosition` and `position` using the stepper alpha.
-  Quality presets (`config/render.ts` `QUALITY`, picked on Settings → Graphics and saved, or `?quality=` for a visit)
-  scale the pixel ratio, shadows, surface relief, dust motes and the replica's sheen: `Game.changeQuality` applies a
-  new one at once through `Renderer.setQuality` and `MatchSession.setQuality` (the daylight, `setMapRelief`, and
-  `CombatPresentation.setQuality`); only antialiasing waits for the next load. The art pass (M14) is procedural:
-  `lighting.ts` (sun and sky fill) adds `atmosphere.ts` (the sky dome and the trees; the renderer's fog matches the
-  horizon); `proceduralTextures.ts` draws the surface textures; `mapMeshes.ts` turns each block into pieces (container
-  frames, wall copings, pallets, all inside the block's bounds) merged per texture, with grime shading near the ground.
+  Quality (`config/render.ts`): a preset (`QUALITY`) or the player's Custom mix (`resolveQuality` over High, one row
+  per `QualitySettings` field in `config/graphics.ts`, the Graphics tab in `ui/graphicsSettings.ts`), picked on Settings
+  → Graphics and saved, `?quality=` for a visit, or else the GPU's preset (`gpuCheck.ts` `probeGpu`/`gpuTier`: Low in
+  software, Medium on integrated graphics, High on a discrete card), which steps down by itself on slow frames
+  (`qualityStepDown.ts`, never saved). It sets the render scale and DPI cap (`effectivePixelRatio`), antialiasing,
+  shadows, the figures' shading, surface relief, texture size and filtering, dust and the replica's sheen:
+  `Game.changeQuality` applies new settings at once through `Renderer.setQuality` (a new WebGL context on a new canvas
+  when antialiasing changes; the pointer lock is on the container, so it survives) and `MatchSession.setQuality` (the
+  daylight, `restyleMap`, the figures and `CombatPresentation.setQuality`). The frame-rate cap
+  (`core/framePacer.ts`) skips draws, never ticks. The art pass (M14) is procedural:
+  `lighting.ts` (sun and sky fill; on High the sun's shadow map follows the view, `Daylight.follow` each frame, moved
+  in whole texels, normal bias in texels) adds `atmosphere.ts` (the sky dome, the tree ring at the Trees setting, the
+  clouds and sun disc; the dome is drawn after the opaque field so only sky pixels shade it; the renderer's fog matches
+  the horizon); `proceduralTextures.ts` draws the surface textures, owned by the `Renderer` and drawn and uploaded in
+  the title screen's idle time (`Renderer.warmUp`), with normal maps worked out from them on demand
+  (`surfaceNormals.ts`). The visual overhaul (FA7, `docs/ART.md`) adds the sky-derived environment map
+  (`replicaSheen.ts`: the dome's own colours over a concrete disc, prefiltered once per context and per
+  `EnvironmentLook` passed to `Renderer.setEnvironmentLook`, freed while off; the `Renderer` sets it as `scene.environment` with Environment lighting, and the map's and trees' Lambert materials opt
+  out, `surfaceMaterials.ts`) and the tone mapping choice (`Renderer.setToneMapping`). `mapMeshes.ts` turns each block
+  into pieces (container frames, wall copings, pallets, all inside the block's bounds) merged per texture by
+  `cuboidMesh.ts`, with grime shading near the ground; with Map detail the boxes are bevelled with a lighter edge,
+  tiled, shaded by baked vertex occlusion (`vertexOcclusion.ts`) and ground noise, the props get extra pieces, the signs
+  are one alpha-tested mesh (`mapDecals.ts`), and the shadow map draws each mesh's plain boxes from a second index range
+  of the same geometry. `contactShadows.ts` lays a soft disc under every figure on every preset (one instanced draw).
   Effects are pooled: `impactPuffs.ts` (impact dust tinted by material, hit puffs, a gas pistol's puffs; soft dots from
-  `softDot.ts`) and `dustMotes.ts` (faded out near the camera, size-capped, hidden with Reduced motion).
-  The debug overlay shows the preset, pixel ratio, draw calls and GPU object counts. `Renderer.setFov` applies the
+  `softDot.ts`), `bbRenderer.ts` (balls and camera-facing streak quads of a fixed on-screen width) and `dustMotes.ts`
+  (faded out near the camera, size-capped in device pixels times the pixel ratio, hidden with Reduced motion); a pool
+  with nothing in flight uploads nothing.
+  The debug overlay shows the quality in force, pixel ratio, sim / draw / GPU milliseconds (`gpuTimer.ts`), the
+  multisampling granted, draw calls and GPU object counts; Show FPS keeps its first line on screen. `Renderer.setFov` applies the
   Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input (mouse buttons go into the keyboard as binding codes, `Mouse0` …, so every action binds to a key or a button); `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them, and runs the hold or toggle modes of crouch, aim and sprint. `sensitivity.ts` converts the sensitivity to cm/360.
@@ -199,21 +219,24 @@ ends the round). A hit character is eliminated
   tier line.
 - **Armory (M26c):** `pool/armory.ts` holds its rules, pure, over a `Collection`: `matchEarnings` (the FC a finished
   match pays, from `MatchSession.takeOutcome`), `buyTokens`, `takeShots` (paid in Tokens, then FC; the draws carry on
-  from the collection's saved `sim/rng.ts` state, so they are seeded and replayable) and `scrapSpares`. `Game` adds a
-  match's FC at the result and saves the collection; `ui/menus/armoryScreen.ts` is the screen, opened from New game's
-  Armory tile.
+  from the collection's saved `sim/rng.ts` state mixed with fresh entropy per Shot, replayable with a fixed one; pity
+  counts kept in the collection, FA10) and `scrapSpares` (one copy kept per asset, its best tier). `stats/settleMatch.ts`
+  pays and records a decided match once (`MatchTakes`); `Game` syncs the collection with storage before changing it
+  (`syncCollection`: another tab's newer revision wins) and saves it; `ui/menus/armoryScreen.ts` is the screen, opened
+  from New game's Armory tile, with `confirmDialog.ts` before big spends.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).
 - **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,
   navigation, the simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it
-  when the player leaves the match, so the next Play can load another map; Play Again builds a new one with its own seed (`matchFlow.ts`: `matchSeed`, `buildsNewMatch`; audit SIM-08). A decided match is recorded and paid once, the frame it is decided, by the pure `stats/settleMatch.ts` (audit CORE-06). Its
+  when the player leaves the match, so the next Play can load another map; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`; audit SIM-08). What Play does (build a match or the range, rebuild the range, reuse what is loaded) is the pure `core/sessionPlan.ts` `nextSessionAction`; the result and pause screens' text is `ui/matchStopText.ts`, through `MatchSession.resultView` / `pauseLine` (FA11b, audit CORE-05). The field's meshes come from `Renderer.mapMeshes` (`render/mapMeshCache.ts`), which keeps the last map's between sessions, so the same map again reuses them (audit CORE-33). A decided match is recorded and paid once, the frame it is decided, by the pure `stats/settleMatch.ts` (audit CORE-06). Its
   `MatchSetup` carries New game's Match rules (M20, `config/matchRules.ts`: team size, rounds to win, round time,
   friendly fire, ricochets), turned into the match's own round and hit rules, and a bot difficulty per team.
 - **rangeSession.ts**: the practice range (M21): `map/range.ts` with the targets of `config/range.ts`, the player alone,
   no bots and no rounds. `SimServices.practice` makes `stepSimulation` skip the round flow, step the targets
   (`sim/rangeTargets.ts`: `GameState.targets`, tested by `stepBBs`, which emits `targetHit`) and keep the spare
-  magazines full. `render/rangeTargetsRenderer.ts` draws the plates, figures and distance markers and
+  magazines full. `render/rangeTargetsRenderer.ts` draws the plates, figures and distance markers (one instanced mesh per kind
+  of moving part, one merged mesh per material for the rest) and
   `ui/rangeReadout.ts` the last BB's distance. `Game` holds a `MatchSession` or a `RangeSession`; changing the loadout
   from the range's pause menu rebuilds the range where you stood.
   With a tutorial (M16) it also holds a `tutorial/tutorial.ts` `TutorialTracker`, which watches the player and the
@@ -264,18 +287,24 @@ request. Each line names where it lives and what pins it.
   the character controller the simulation sees; the simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.
 - **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`): simulation first, presentation
   after; `afterTick` is where stats, the HUD and sound read the tick's events. Pinned by the smoke test.
-- **`QualitySettings` and `QUALITY`** (`config/render.ts`): what a preset may set; `Renderer.setQuality` and
-  `MatchSession.setQuality` apply it at once. Pinned by `config/render.test.ts`, `render/renderer.test.ts`.
+- **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`): the
+  fields a preset or the Custom rows may set (every preset sets every field; `QUALITY` is the preset table; a choice is
+  a preset or `'custom'`, which resolves to High overlaid with the saved rows); `Renderer.setQuality` and
+  `MatchSession.setQuality` apply them at once, antialiasing included. Fields are added, never renamed: a new field
+  takes a value on every preset, a row in `config/graphics.ts` and a `graphics.<field>` store key, with no further
+  contract change. Pinned by `config/render.test.ts`, `config/graphics.test.ts`, `render/renderer.test.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`): saved under `airsoft.*`, versioned;
   renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
-  "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added. Pinned by
-  `settings/storage.test.ts`. Since M31 `browserStorage()` returns the save system's guarded storage once it has
+  "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added: `quality`
+  holds a `QualityChoice`; `graphics.<field>` holds a Custom row (an option id or a slider position), `frameRateCap`
+  and `showFps` the two Graphics rows outside the presets (FA2), all read with a fallback, so version 1 stands. Pinned
+  by `settings/storage.test.ts`. Since M31 `browserStorage()` returns the save system's guarded storage once it has
   started (same keys, same values).
 - **The save file format** (`save/saveFile.ts`, M31): `{ game, format, build, savedAt, summary, stores, checksum }`,
   the stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per
   format); a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`).
   Pinned by `save/saveFile.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
   power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
   over their built-in ones. Pinned by

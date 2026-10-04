@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SETTINGS_WRITE_DELAY_MS } from '../config/menus';
-import { flushSettings, loadSetting, numberIn, oneOf, saveSetting, saveSettingSoon, SETTINGS_KEY } from './storage';
+import { QUALITY, resolveQuality } from '../config/render';
+import { loadCustomQuality, loadSavedQuality, loadToneMapping } from '../ui/menus/savedChoices';
+import { flushSettings, loadSetting, numberIn, oneOf, saveSetting, saveSettingSoon, SETTINGS_KEY, SETTINGS_VERSION } from './storage';
 
 /** A Storage backed by a Map (only the calls the settings use); `writes` and `parses` count the work done. */
 function memoryStorage(initial: Record<string, string> = {}): Storage & { writes: number } {
@@ -64,6 +66,70 @@ describe('settings store (audit W-02)', () => {
     expect(sens('abc')).toBeUndefined();
     expect(sens(null)).toBeUndefined();
     expect(sens('0.5')).toBe(0.5);
+  });
+});
+
+describe('settings migration and the Custom graphics fields (final alpha audit section 4)', () => {
+  it('reads a version 1 object with a preset back unchanged: the Custom fields are an addition, not a new format', () => {
+    expect(SETTINGS_VERSION).toBe(1);
+    const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, quality: 'medium', fov: 95 }) });
+    expect(loadSavedQuality(s)).toBe('medium');
+    expect(loadCustomQuality(s)).toEqual({});
+    expect(loadSetting('fov', numberIn(80, 120), 90, s)).toBe(95);
+  });
+
+  it('resolves a saved Custom with no rows saved to High', () => {
+    const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, quality: 'custom' }) });
+    expect(loadSavedQuality(s)).toBe('custom');
+    expect(resolveQuality('custom', loadCustomQuality(s))).toEqual(QUALITY.high);
+  });
+
+  it('reads the saved Custom rows, dropping any a row does not offer', () => {
+    const s = memoryStorage();
+    saveSetting('quality', 'custom', s);
+    saveSetting('graphics.renderScale', 70, s);
+    saveSetting('graphics.shadows', 'off', s);
+    saveSetting('graphics.textureSize', '256', s);
+    saveSetting('graphics.anisotropy', '3', s); // not an option
+    saveSetting('graphics.dustMotes', 9999, s); // out of range
+    expect(loadCustomQuality(s)).toEqual({ renderScale: 0.7, shadows: false, textureSize: 256 });
+    expect(resolveQuality('custom', loadCustomQuality(s))).toEqual({ ...QUALITY.high, renderScale: 0.7, shadows: false, textureSize: 256 });
+    // An unknown quality id is nothing saved.
+    saveSetting('quality', 'ultra', s);
+    expect(loadSavedQuality(s)).toBeNull();
+  });
+
+  it('keeps the Custom rows through the store\'s one migrate path, and drops them with a newer build\'s object', () => {
+    const s = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, quality: 'custom', 'graphics.renderScale': 60 }), 'airsoft.mode': 'attackDefend' });
+    saveSetting('graphics.shadows', 'off', s);
+    expect(JSON.parse(s.getItem(SETTINGS_KEY)!)).toEqual({ version: 1, quality: 'custom', 'graphics.renderScale': 60, 'graphics.shadows': 'off', mode: 'attackDefend' });
+    expect(loadCustomQuality(s)).toEqual({ renderScale: 0.6, shadows: false });
+    const newer = memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: SETTINGS_VERSION + 1, quality: 'custom', 'graphics.renderScale': 60 }) });
+    expect(loadSavedQuality(newer)).toBeNull();
+    expect(loadCustomQuality(newer)).toEqual({});
+  });
+});
+
+describe('the visual overhaul’s settings (FA7)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('reads its Custom rows as additions to the version 1 object', () => {
+    const s = memoryStorage();
+    saveSetting('quality', 'custom', s);
+    saveSetting('graphics.trees', 'none', s);
+    saveSetting('graphics.normalMaps', 'bump', s);
+    saveSetting('graphics.clouds', 'maybe', s); // not an option
+    expect(loadCustomQuality(s)).toEqual({ trees: 0, normalMaps: false });
+    expect(resolveQuality('custom', loadCustomQuality(s))).toEqual({ ...QUALITY.high, trees: 0, normalMaps: false });
+  });
+
+  it('maps tones with Neutral until the player picks another, and ignores a value it does not offer', () => {
+    vi.stubGlobal('localStorage', memoryStorage());
+    expect(loadToneMapping()).toBe('neutral');
+    vi.stubGlobal('localStorage', memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, toneMapping: 'agx' }) }));
+    expect(loadToneMapping()).toBe('agx');
+    vi.stubGlobal('localStorage', memoryStorage({ [SETTINGS_KEY]: JSON.stringify({ version: 1, toneMapping: 'sepia' }) }));
+    expect(loadToneMapping()).toBe('neutral');
   });
 });
 

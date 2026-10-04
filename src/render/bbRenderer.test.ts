@@ -19,6 +19,20 @@ function drawn(r: BBRenderer, i: number): { pos: THREE.Vector3; scale: number } 
   return { pos, scale: scale.x };
 }
 
+/** Corner `c` (0, 1 at the head; 2, 3 at the tail) of drawn BB `i`'s streak quad. */
+function corner(r: BBRenderer, i: number, c: number): THREE.Vector3 {
+  const trails = r.object.children[1] as THREE.Mesh;
+  return new THREE.Vector3().fromBufferAttribute(trails.geometry.getAttribute('position') as THREE.BufferAttribute, i * 4 + c);
+}
+
+/** Head and tail of drawn BB `i`'s streak: the centre line of its quad (REN-19). */
+function streakEnds(r: BBRenderer, i: number): { head: THREE.Vector3; tail: THREE.Vector3 } {
+  return {
+    head: corner(r, i, 0).add(corner(r, i, 1)).multiplyScalar(0.5),
+    tail: corner(r, i, 2).add(corner(r, i, 3)).multiplyScalar(0.5),
+  };
+}
+
 describe('BBRenderer', () => {
   const eye = { x: 0, y: 1.6, z: 0 };
 
@@ -80,10 +94,7 @@ describe('BBRenderer', () => {
     bb.velocity.z = -70;
     bb.age = 1;
     r.update(0.5, eye);
-    const trails = r.object.children[1] as THREE.LineSegments;
-    const p = (trails.geometry.getAttribute('position') as THREE.BufferAttribute).array;
-    const head = new THREE.Vector3(p[0], p[1], p[2]);
-    const tail = new THREE.Vector3(p[3], p[4], p[5]);
+    const { head, tail } = streakEnds(r, 0);
     expect(head.distanceTo(new THREE.Vector3(0, 1.6, -3.7))).toBeLessThan(1e-5); // half way along the tick
     // The tail is on the line prevPosition -> position: level here, and no further back than the tick's mean speed says.
     expect(tail.y).toBeCloseTo(1.6, 5);
@@ -103,11 +114,10 @@ describe('BBRenderer', () => {
       stepBBFlight(bb, BALLISTICS, DT);
     }
     const dir = new THREE.Vector3(bb.position.x - bb.prevPosition.x, bb.position.y - bb.prevPosition.y, bb.position.z - bb.prevPosition.z).normalize();
-    const trails = r.object.children[1] as THREE.LineSegments;
     for (const alpha of [0, 0.5, 1]) {
       r.update(alpha, eye);
-      const p = (trails.geometry.getAttribute('position') as THREE.BufferAttribute).array;
-      const along = new THREE.Vector3(p[3]! - p[0]!, p[4]! - p[1]!, p[5]! - p[2]!);
+      const { head, tail } = streakEnds(r, 0);
+      const along = tail.clone().sub(head);
       const off = along.clone().sub(dir.clone().multiplyScalar(along.dot(dir)));
       expect(off.length(), `alpha ${alpha}`).toBeLessThan(2e-4);
     }
@@ -119,9 +129,11 @@ describe('BBRenderer', () => {
       (r.object.children[0] as THREE.InstancedMesh).getColorAt(i, c);
       return c;
     };
+    /** Floats per streak: a quad of four corners, two at the head and two at the tail. */
+    const QUAD = 12;
     const headColor = (r: BBRenderer, i: number): THREE.Color => {
-      const a = ((r.object.children[1] as THREE.LineSegments).geometry.getAttribute('color') as THREE.BufferAttribute).array;
-      return new THREE.Color(a[i * 6]!, a[i * 6 + 1]!, a[i * 6 + 2]!);
+      const a = ((r.object.children[1] as THREE.Mesh).geometry.getAttribute('color') as THREE.BufferAttribute).array;
+      return new THREE.Color(a[i * QUAD]!, a[i * QUAD + 1]!, a[i * QUAD + 2]!);
     };
     /** A BB that went 1.4 m last tick, level, so a streak shows. */
     const farBB = (pool: ReturnType<typeof createBBPool>, z: number) => {
@@ -130,9 +142,12 @@ describe('BBRenderer', () => {
       bb.age = 1;
       return bb;
     };
+    /** Head to tail, between the midpoints of the quad's head corners (0, 1) and tail corners (2, 3). */
     const streak = (r: BBRenderer, i: number): number => {
-      const p = ((r.object.children[1] as THREE.LineSegments).geometry.getAttribute('position') as THREE.BufferAttribute).array;
-      return Math.hypot(p[i * 6 + 3]! - p[i * 6]!, p[i * 6 + 4]! - p[i * 6 + 1]!, p[i * 6 + 5]! - p[i * 6 + 2]!);
+      const p = ((r.object.children[1] as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute).array;
+      const o = i * QUAD;
+      const mid = (k: number, axis: number): number => (p[o + k * 6 + axis]! + p[o + k * 6 + 3 + axis]!) / 2;
+      return Math.hypot(mid(1, 0) - mid(0, 0), mid(1, 1) - mid(0, 1), mid(1, 2) - mid(0, 2));
     };
 
     it('draws a glowing BB in the glow colour and a normal BB as before, in the same instanced mesh', () => {
@@ -140,14 +155,14 @@ describe('BBRenderer', () => {
       const r = new BBRenderer(pool, DT);
       const a = spawnBB(pool, 1, vec3(0, 1.6, -5), vec3(0, 0, -1), 88, 0, 0.25e-3);
       spawnBB(pool, 1, vec3(0, 1.6, -6), vec3(0, 0, -1), 88, 0, 0.25e-3);
-      r.setGlow(a, true);
+      r.setGlowInDark(a, true);
       r.update(0, eye);
       expect((r.object.children[0] as THREE.InstancedMesh).count).toBe(2);
-      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glow.color).getHex());
-      expect(colorOf(r, 1).getHex()).toBe(new THREE.Color(BB_VISUALS.color).getHex());
-      expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glow.trailColor).getHex());
+      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.color).getHex());
+      expect(colorOf(r, 1).getHex()).toBe(0xffffff);
+      expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.trailColor).getHex());
       expect(headColor(r, 1).getHex()).toBe(new THREE.Color(BB_VISUALS.trailColor).getHex());
-      expect(r.object.children).toHaveLength(2); // still the one mesh and the one line buffer
+      expect(r.object.children).toHaveLength(3); // still the balls, the streaks and FA8's halo: no mesh added
       r.dispose();
     });
 
@@ -156,11 +171,11 @@ describe('BBRenderer', () => {
       const r = new BBRenderer(pool, DT);
       const glowing = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
       spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
-      r.setGlow(glowing, true);
+      r.setGlowInDark(glowing, true);
       r.update(0, eye);
       const g = drawn(r, 0);
       const n = drawn(r, 1);
-      expect((g.scale * BB_VISUALS.radius) / 30).toBeGreaterThanOrEqual(BB_VISUALS.glow.minAngularRadius - 1e-9);
+      expect((g.scale * BB_VISUALS.radius) / 30).toBeGreaterThanOrEqual(BB_VISUALS.glowInDark.minAngularRadius - 1e-9);
       expect((n.scale * BB_VISUALS.radius) / 30).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);
       expect(g.scale).toBeGreaterThan(n.scale);
       r.dispose();
@@ -171,10 +186,10 @@ describe('BBRenderer', () => {
       const r = new BBRenderer(pool, DT);
       const a = farBB(pool, -10);
       farBB(pool, -10);
-      r.setGlow(a, true);
+      r.setGlowInDark(a, true);
       r.update(0, eye);
       expect(streak(r, 1)).toBeCloseTo((1.4 / DT) * BB_VISUALS.trailSeconds, 4);
-      expect(streak(r, 0)).toBeCloseTo((1.4 / DT) * BB_VISUALS.glow.trailSeconds, 4);
+      expect(streak(r, 0)).toBeCloseTo((1.4 / DT) * BB_VISUALS.glowInDark.trailSeconds, 4);
       expect(streak(r, 0)).toBeGreaterThan(streak(r, 1));
       r.dispose();
     });
@@ -184,7 +199,7 @@ describe('BBRenderer', () => {
       const r = new BBRenderer(pool, DT);
       const a = farBB(pool, -10);
       farBB(pool, -10);
-      r.setGlow(a, true);
+      r.setGlowInDark(a, true);
       r.update(0.5, eye);
       expect(drawn(r, 0).pos.distanceTo(drawn(r, 1).pos)).toBeLessThan(1e-6);
       r.dispose();
@@ -194,16 +209,16 @@ describe('BBRenderer', () => {
       const pool = createBBPool(1);
       const r = new BBRenderer(pool, DT);
       const first = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
-      r.setGlow(first, true);
+      r.setGlowInDark(first, true);
       r.update(0, eye);
-      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glow.color).getHex());
+      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.color).getHex());
       const serial = first.serial;
       first.active = false; // it hit something; its slot is free
       const second = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
       expect(second).toBe(first);
       expect(second.serial).not.toBe(serial);
       r.update(0, eye);
-      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.color).getHex());
+      expect(colorOf(r, 0).getHex()).toBe(0xffffff);
       expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.trailColor).getHex());
       expect((drawn(r, 0).scale * BB_VISUALS.radius) / 30).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);
       r.dispose();
@@ -213,11 +228,62 @@ describe('BBRenderer', () => {
       const pool = createBBPool(1);
       const r = new BBRenderer(pool, DT);
       const a = spawnBB(pool, 1, vec3(0, 1.6, -5), vec3(0, 0, -1), 88, 0, 0.25e-3);
-      r.setGlow(a, true);
-      r.setGlow(a, false);
+      r.setGlowInDark(a, true);
+      r.setGlowInDark(a, false);
       r.update(0, eye);
-      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.color).getHex());
+      expect(colorOf(r, 0).getHex()).toBe(0xffffff);
       r.dispose();
     });
+  });
+});
+
+describe('BBRenderer streaks (REN-19)', () => {
+  const eye = { x: 0, y: 1.6, z: 0 };
+
+  it('draws each streak as a camera-facing quad as wide on screen at its head as at its tail, near or far', () => {
+    const pool = createBBPool(2);
+    const r = new BBRenderer(pool, DT);
+    // Crossing the view at 3 m and at 30 m, old enough for a full-length streak.
+    for (const z of [-3, -30]) {
+      const bb = spawnBB(pool, 1, vec3(-1, 1.6, z), vec3(1, 0, 0), 88, 0, 0.25e-3);
+      bb.age = 1;
+      bb.prevPosition.x = bb.position.x - bb.velocity.x * DT; // the streak runs back along the last tick's path (M30)
+    }
+    r.update(1, eye);
+    const trails = r.object.children[1] as THREE.Mesh;
+    expect(trails.geometry.drawRange.count).toBe(2 * 6);
+    const e = new THREE.Vector3(eye.x, eye.y, eye.z);
+    for (const i of [0, 1]) {
+      for (const [a, b] of [[0, 1], [2, 3]] as const) {
+        const p = corner(r, i, a);
+        const q = corner(r, i, b);
+        const mid = p.clone().add(q).multiplyScalar(0.5);
+        // Width over distance: the angle the streak spans across the line of sight.
+        expect(p.distanceTo(q) / mid.distanceTo(e)).toBeCloseTo(BB_VISUALS.trailAngularWidth, 6);
+        // Widened across the line of sight, not along it.
+        expect(Math.abs(p.clone().sub(q).normalize().dot(mid.clone().sub(e).normalize()))).toBeLessThan(1e-6);
+      }
+    }
+    r.dispose();
+  });
+
+  it('uploads nothing while no BB is in flight, and clears the last streak once (REN-22)', () => {
+    const pool = createBBPool(2);
+    const r = new BBRenderer(pool, DT);
+    const balls = r.object.children[0] as THREE.InstancedMesh;
+    const trails = (r.object.children[1] as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute;
+    r.update(0, eye);
+    const idle = [balls.instanceMatrix.version, trails.version];
+    r.update(0, eye);
+    expect([balls.instanceMatrix.version, trails.version]).toEqual(idle);
+    const bb = spawnBB(pool, 1, vec3(0, 1.6, -5), vec3(0, 0, -1), 88, 0, 0.25e-3);
+    r.update(0, eye);
+    expect(balls.instanceMatrix.version).toBeGreaterThan(idle[0]!);
+    bb.active = false;
+    r.update(0, eye); // the frame it goes: one upload with nothing drawn
+    const after = [balls.instanceMatrix.version, trails.version];
+    r.update(0, eye);
+    expect([balls.instanceMatrix.version, trails.version]).toEqual(after);
+    r.dispose();
   });
 });

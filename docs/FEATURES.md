@@ -31,11 +31,11 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Bots
 
-- Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover and search (Phase 1)
-- Three difficulty levels, picked for your teammates and the other team separately (M4a, M20)
+- Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover, keep apart from teammates and search (Phase 1, FA4)
+- Three difficulty levels, picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking) (M4a, M20, FA4)
 - Bots crouch-peek over low cover, lean round corners, move as a team on varied routes and walk when it pays (M4b, M10)
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
-- In Attack / Defend defenders hold near the pole and attackers push to it (M5)
+- In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from cover (M5, FA4)
 
 ## Modes and matches
 
@@ -46,7 +46,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Maps
 
-- Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole (M1, M11, M25b)
+- Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole; both ends about as far from the dock and the Main Gate (M1, M11, M25b, FA4)
 - Woodland: a second field coming soon, shown as disabled in the Map pop-up (M33a)
 - Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland (M33c)
 - Woodland's layout: 120 × 80 m on a gentle slope up to the Knoll and its log fort, three lanes (Pine Belt, Meadow, Creek with the cabin), trees, boulders and logs; 4v4 by default, up to 5v5; playable only with Dev settings › Access maps in development, and its matches aren't recorded (M33d)
@@ -65,14 +65,14 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Glowing BBs per replica in Customise: At Night (the default, glowing only on night fields), Always or Off; a glowing BB is green, a little larger at range and leaves a longer streak; bots load them on night fields (M33b)
 - The asset pool (`pool.md`): every item at a rarity tier with a small handling bonus; starters are yours from the start (M26a)
 - Your collection is saved apart from the settings (M26a)
-- Armory, beta and free: earn Field Credits from matches, buy Tokens, draw assets from the pool at rarity odds (M26c)
+- Armory, free to play: earn Field Credits (scaled by participation and match length), buy Tokens, draw with pity (an Epic or better within 20 Shots, a Legendary within 100); catalogue shows all items by rarity tier (M26c, FA10)
 
 ## Menus and settings
 
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA5)
+- Settings tabs: Graphics (quality presets with Custom option, frame-rate limit, show FPS, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA2, FA5)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison, restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if the save is from a newer version (M31)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
@@ -106,15 +106,19 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Graphics and art
 
 - Dark loading screen with a progress bar for the physics module; favicon and web manifest (FA9)
-- Procedural daylight with a sky, haze and trees; dressed Depot surfaces and props; figures in airsoft kit with team tape (M14)
+- Procedural daylight with a sky, haze and trees lit by the environment; field trees in None, Simple or Detailed with layered crowns and a hedge; clouds and sun disc on Medium and High; dressed Depot surfaces and props; figures in airsoft kit with team tape (M14, FA7)
 - Gas puffs, impact dust by material, dust in the sunlight (M3, M14)
-- Quality presets Low, Medium and High, switchable mid-match; Low is picked on its own for software rendering (M14)
+- Quality presets Low, Medium and High, switchable mid-match; Low has 80 % resolution with no shadows, Medium adds shadows and relief, High adds sharp textures and dust; Medium and High add map detail (bevelled edges, corner shading, ground variation, prop detail and signs) (M14, FA2, FA3, FA7)
+- Custom graphics option: pick a preset and modify any row (shadows, shadow detail, softness, range, render scale, edge smoothing, surface relief (Normal or Bump), texture detail, dust and more); Custom is saved (FA2, FA7)
+- Graphics Settings: frame-rate limit, show FPS counter and tone mapping choice (Neutral, AgX, ACES); preset selected from graphics card on first run (Medium for integrated, High for discrete) (FA2, FA7)
+- Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved across preset switches; contact shadows under every player on all presets (FA3, FA7)
+- Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High; barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 
 ## Practice range and tutorial
 
-- A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
-- A tutorial of ten coached steps on the range, with your own key bindings (M16)
+- A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB; figures stand at the same height as match characters; detail includes chains, bands, brackets, a BB shelf and scuffed plates, with fewer draw calls than before (M21, FA1, FA7)
+- A tutorial of ten coached steps on the range, with your own key bindings; skip and resume from pause (M16, FA10)
 
 ## Accessibility and comfort
 

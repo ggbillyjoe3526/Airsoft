@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TERRAIN_LOOK } from '../config/render';
 import { type Terrain, terrainMesh, terrainRange } from '../map/terrain';
+import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * The ground of a map with terrain (M33c): one mesh of the terrain's own triangles (map/terrain.ts), so what you see is
@@ -31,7 +32,7 @@ export function buildTerrainMesh(t: Terrain): THREE.Mesh {
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.computeBoundingSphere();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const mesh = new THREE.Mesh(geo, withoutEnvironment(new THREE.MeshLambertMaterial({ vertexColors: true })));
   mesh.name = 'map-terrain';
   mesh.receiveShadow = true;
   mesh.castShadow = false;
