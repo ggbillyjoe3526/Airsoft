@@ -80,6 +80,7 @@ export class RangeSession {
   private tutorial: TutorialTracker | null = null;
   private coach: CoachPanel | null = null;
   private tutorialFinishedOwed = false;
+  private tutorialFinishedSeen = false;
   /** What the tutorial reads after each tick, reused rather than made anew. */
   private readonly tutorialView: TutorialView;
 
@@ -151,7 +152,8 @@ export class RangeSession {
 
   /** The tutorial's step to rebuild the range at (undefined: free practice, or the tutorial is over). */
   get tutorialStep(): number | undefined {
-    return this.tutorial && !this.tutorial.finished ? Math.min(this.tutorial.goalIndex, this.tutorial.steps.length - 1) : undefined;
+    const t = this.tutorial;
+    return t && t.goalIndex < t.steps.length ? t.goalIndex : undefined;
   }
 
   /** "Tutorial · step 3 of 10", or "Practice range". */
@@ -247,11 +249,12 @@ export class RangeSession {
     v.targets = this.state.targets;
     if (t && !t.finished && t.observe(v)) {
       this.coach!.show(t);
+      // Done as soon as the last step is (its tick still shows), so a rebuild in that moment can't lose it.
+      if (t.goalIndex >= t.steps.length && !this.tutorialFinishedSeen) this.tutorialFinishedOwed = this.tutorialFinishedSeen = true;
       if (t.finished) {
         // Free practice from here: the readout takes the coach's place.
         this.coach!.setVisible(false);
         this.readout.setVisible(true);
-        this.tutorialFinishedOwed = true;
       }
     }
     for (const e of this.state.events) {

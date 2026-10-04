@@ -47,7 +47,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: 'far',
     title: 'Hop-up and range',
-    text: "BBs are slow. The hop-up's backspin keeps them flying flat for a while (the rifle out of the box: to about 38 m), then they drop. Knock down a figure 50 m out or further: aim a little high and read where they land. The Loadout (Esc) has the hop-up dial.",
+    text: "BBs fly flat while the hop-up's backspin lasts (the stock rifle: about 38 m), then drop. Knock down a figure 50 m out or further: aim high, or turn the hop-up up on the Loadout (Esc).",
     goal: { kind: 'hit', target: 'figure', minDistance: 50 },
   },
   {

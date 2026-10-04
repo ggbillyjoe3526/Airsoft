@@ -116,7 +116,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Later | |
 | Alpha · Phase 4 · M14 Art pass | Later | |
-| Alpha · Phase 4 · M16 Tutorial (last of Phase 4 → feature complete): a coached first session on the practice range | Done (owner to play it) | M16_SCORE |
+| Alpha · Phase 4 · M16 Tutorial (last of Phase 4 → feature complete): a coached first session on the practice range | Done (merged; owner to play it) | 9.0 |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -596,7 +596,7 @@ each one went:**
 - **M16. Onboarding:** a short tutorial.
   - **Built (2026-10-04):** the title screen's **Tutorial** (tagged "New? Start here" until you finish it once) opens
     the practice range with a coach panel at the top: ten short steps, each finished by doing it (look around, walk to
-    the firing line, ring a plate, knock down a figure at 50 m or more (the hop-up step), reload, aim down the sight, crouch, lean,
+    the firing line, ring a plate, knock down a figure at 50 m or more (the hop-up step, with the last BB on the coach), reload, aim down the sight, crouch, lean,
     switch replica and hit something, then one hit and you're out). Keys show as you have them bound. With iron sights
     (no optic to aim through) the aim step points to the Loadout's optics instead. A finished step shows a tick for a
     moment; after the last one the coach gives way to the range readout and you keep practising. Pausing shows which
