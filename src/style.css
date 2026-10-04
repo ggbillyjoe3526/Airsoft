@@ -682,6 +682,22 @@ body {
   border-color: var(--orange);
 }
 
+/* A map still being built (M33): greyed out, not clickable, its tag beside the name. */
+.choice-option.soon,
+.choice-option.soon:hover {
+  cursor: default;
+  background: transparent;
+  border-color: var(--menu-line);
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.choice-option.soon .choice-name {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
 .choice-dot {
   flex: none;
   width: 18px;
