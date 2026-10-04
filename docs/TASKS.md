@@ -68,21 +68,6 @@ tagged dev with M35's content tag until the owner says it's done. M33 owns the m
 optional `extraction` block), the Pro thread owns held angles and team play (M37, M38): changes there go through the
 coordinator.
 
-## M43 · Extraction: the run, exits, clock and respawn on Depot
-tier: core
-perf: required
-touches: src/config/modes.ts, src/config/extraction.ts, src/config/render.ts, src/config/content.ts, src/map/mapTypes.ts, src/map/depot.ts, src/map/maps.ts, src/sim/extraction.ts, src/sim/round.ts, src/sim/events.ts, src/sim/state.ts, src/matchSession.ts, src/game.ts, src/render/exitRenderer.ts, src/render/matchPresentation.ts, src/ui/scoreboard.ts, src/ui/roundBanner.ts, src/ui/matchStopText.ts, src/ui/runStatus.ts, src/ui/flagMarker.ts, src/ui/minimap.ts, src/ui/hitFeedback.ts, src/ui/recordsView.ts, src/ui/menus/rulesText.ts, src/ui/menus/menus.ts, src/ui/menus/choiceDialog.ts, src/ui/menus/choiceDialog.test.ts, src/stats/settleMatch.ts, src/style.css, src/audio/, src/core/seed.ts, src/sim/simulation.ts, src/map/playableMode.ts, src/ai/squadFollow.ts, src/config/sounds.ts, src/config/audio.ts, src/newGamePicks.ts, src/newGamePicks.test.ts, src/config/matchRules.ts, src/config/matchRules.test.ts, src/ui/statsRows.ts, src/ui/statsRows.test.ts, docs/
-contract: GameState and state.events (RoundState gains `run`; events `respawned`, `exitCount`, `exitOpened`, `runWarning`); MapData gains an optional `extraction` block
-acceptance:
-  1. A mode `extraction` ("Extraction"), tagged dev, offered only on maps whose data has an `extraction` block (insertions, exits, opponent starts, run time, base opponents); Depot has one.
-  2. Squad of 1–3 (the Match pop-up's team size) against base + squad size opponents in play (Depot 3 / 4 / 5); the insertion is picked from the run's seed; exits within 30 m of it are closed for the run; a late exit opens with 3:00 left.
-  3. Holding an open exit for 10 s ends the run "extracted"; leaving resets the count, an opponent in play inside pauses it; time out ends it "caught out"; a whistle at 1:00 left.
-  4. A hit squad member respawns at the insertion automatically once the hit call ends, once per run; the second hit is out (the player's ends the run "out"); bot teammates follow you by default and after a respawn.
-  5. HUD: the run clock, the exit line (count, paused, closed), whether your respawn is spent, exit markers and minimap icons; banner and result screen worded for the run; runs stay out of the records and pay nothing until M47.
-  6. Elimination and Attack / Defend play as before (their guards unchanged); a headless run test covers extract, time out, respawn and out.
-status: retry 2
-attempts: 2
-
 ## M44 · Extraction: cases and loot
 tier: core
 perf: required
