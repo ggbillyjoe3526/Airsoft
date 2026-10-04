@@ -3,20 +3,21 @@
  * Difficulty buttons open a pop-up and whose Loadout and Settings buttons open a screen of their own. Esc in a match
  * opens the pause menu (Resume, Settings, Quit to title screen). After a match: the summary (M19: everyone's numbers
  * and your records; Continue), then the result (Play Again, Change setup, Title screen, and Match summary to look
- * again). The loadout is reached only through New game, so never mid-match.
+ * again). The loadout is reached only through New game, so never mid-match; the practice range (M21, from the title)
+ * opens it from its pause menu too, since nothing is at stake there.
  */
 export type MenuScreen = 'title' | 'setup' | 'loadout' | 'settings' | 'pause' | 'summary' | 'result';
 
-/** Where Settings was opened from, and so where its Back button returns. */
+/** Where Settings (or, on the practice range, the Loadout) was opened from, and so where its Back button returns. */
 export type SettingsOrigin = 'setup' | 'pause';
 
 /** Where a screen's Back button goes, or null for screens without one (title, pause, summary, result). */
-export function backTarget(screen: MenuScreen, settingsFrom: SettingsOrigin): MenuScreen | null {
+export function backTarget(screen: MenuScreen, settingsFrom: SettingsOrigin, loadoutFrom: SettingsOrigin = 'setup'): MenuScreen | null {
   switch (screen) {
     case 'setup':
       return 'title';
     case 'loadout':
-      return 'setup';
+      return loadoutFrom;
     case 'settings':
       return settingsFrom;
     default:

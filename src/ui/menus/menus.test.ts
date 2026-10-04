@@ -22,6 +22,11 @@ describe('menu navigation', () => {
     expect(backTarget('loadout', 'setup')).toBe('setup');
   });
 
+  it('returns from the Loadout to the practice range\'s pause menu when it was opened there (M21)', () => {
+    expect(backTarget('loadout', 'setup', 'pause')).toBe('pause');
+    expect(backTarget('loadout', 'pause', 'setup')).toBe('setup');
+  });
+
   it('returns from Settings to whichever screen opened it', () => {
     expect(backTarget('settings', 'setup')).toBe('setup');
     expect(backTarget('settings', 'pause')).toBe('pause');

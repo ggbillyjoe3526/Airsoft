@@ -270,3 +270,36 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await testInfo.attach('sound-cue', { body: await page.screenshot(), contentType: 'image/png' });
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });
+
+/** The practice range (M21): opened from the title, its targets loaded, firing reads out where the BB landed. */
+test('the practice range opens from the title screen and reads out the last BB', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=1');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Practice range' }).click();
+  const readout = page.locator('.range-readout');
+  await expect(readout).toBeVisible();
+  await expect(readout).toContainText('Practice range');
+  type RangeState = { targets: unknown[]; characters: { armament: { ammo: { mag: number; pouch: number[] }[]; handling: { magSize: number }[] } }[] };
+  const state = () => page.evaluate(() => (window as unknown as { airsoft: { state: RangeState } }).airsoft.state);
+  const s0 = await state();
+  expect(s0.targets).toHaveLength(18);
+  expect(s0.characters).toHaveLength(1); // you alone on the range
+
+  // Fire down the middle: the BB lands somewhere downrange and the readout says how far.
+  const canvas = page.locator('canvas').first();
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(readout).toContainText('Last BB', { timeout: 30_000 });
+  await page.mouse.up();
+  const s1 = await state();
+  const ammo = s1.characters[0]!.armament.ammo[0]!;
+  expect(ammo.mag).toBeLessThan(s1.characters[0]!.armament.handling[0]!.magSize);
+  expect(ammo.pouch.every((m) => m === s1.characters[0]!.armament.handling[0]!.magSize)).toBe(true);
+  expect(errors).toEqual([]);
+});

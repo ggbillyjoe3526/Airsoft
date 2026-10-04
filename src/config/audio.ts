@@ -29,6 +29,8 @@ export const AUDIO = {
     ownFoley: { gain: 0.45, pitchSpread: 0.08 },
     impact: { gain: 0.9, pitchSpread: 0.1 },
     bodyHit: { gain: 1, pitchSpread: 0.06 },
+    /** Practice range steel (M21): loud enough to hear from 60 m, as a plate is. */
+    steelRing: { gain: 1.4, pitchSpread: 0.03 },
     hitTick: { gain: 1, pitchSpread: 0 },
     hitMarker: { gain: 0.55, pitchSpread: 0 },
     rope: { gain: 1, pitchSpread: 0.04 },

@@ -16,6 +16,7 @@ import { fillEliminatedCommand, isInPlay, stepElimination } from './elimination'
 import { stepFootsteps } from './footsteps';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { leanedEye, stepLean } from './lean';
+import { refillSpares, stepRangeTargets } from './rangeTargets';
 import { createRng } from './rng';
 import { type RoundContext, type RoundRules, stepRound } from './round';
 import type { GameState } from './state';
@@ -46,6 +47,11 @@ export interface SimServices {
   rounds: RoundRules;
   /** The flagpole, at end 1 where the defenders start (map data; absent: no flag mode). */
   pole?: Vec3;
+  /**
+   * The practice range (M21): no rounds (it's always live), targets in GameState.targets, and the spare magazines
+   * always full.
+   */
+  practice?: boolean;
 }
 
 /** Services and tuning the simulation needs from outside, plus reusable scratch. */
@@ -80,6 +86,7 @@ export function createSimContext(services: SimServices): SimContext {
     targets: {
       characters: [],
       hits: services.hits,
+      rangeTargets: [],
       elimination: { deadZones: services.deadZones, nav: services.nav, navSearch: createNavSearch(services.nav), snap: services.navSnap },
     },
     round: { rules: services.rounds, loadout: services.loadout, pole: services.pole, spawns: services.spawns ?? [], spawnLift: services.spawnLift ?? 0 },
@@ -105,6 +112,7 @@ export function stepSimulation(
   armCtx.rng = state.rng;
   armCtx.events = state.events;
   ctx.targets.characters = state.characters;
+  ctx.targets.rangeTargets = state.targets;
   // Once the round is decided it's a cease-fire, as after the end whistle at a site: nobody can fire,
   // and BBs still in the air can't hit anyone.
   const live = state.round.phase === 'live';
@@ -144,7 +152,12 @@ export function stepSimulation(
   }
 
   stepBBs(state.bbs, ctx.ballistics, ctx.query, ctx.killY, state.events, dt, live ? ctx.targets : undefined, state.rng);
-  stepRound(state.round, state.characters, state.bbs, ctx.round, state.events, dt);
+  if (ctx.practice) {
+    stepRangeTargets(state.targets, dt);
+    for (const c of state.characters) refillSpares(c.armament);
+  } else {
+    stepRound(state.round, state.characters, state.bbs, ctx.round, state.events, dt);
+  }
   state.tick++;
   state.time += dt;
 }

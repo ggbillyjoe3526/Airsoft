@@ -1,3 +1,4 @@
+import type { RangeTargetKind } from '../config/range';
 import type { FireMode } from '../config/replicas';
 import type { FootstepKind } from './footsteps';
 import type { Vec3 } from './vec';
@@ -27,6 +28,8 @@ export type GameEvent =
   | { type: 'characterHit'; victimId: number; shooterId: number; position: Vec3; direction: Vec3; ricochet: boolean }
   /** A ricochet ticked a character, in a match where ricochets don't count (M20): they feel it and play on. */
   | { type: 'ricochetTick'; victimId: number; shooterId: number; position: Vec3; direction: Vec3 }
+  /** A BB hit a practice range target (M21; sim/rangeTargets.ts). `ricochet`: it had bounced on the way. */
+  | { type: 'targetHit'; targetId: number; kind: RangeTargetKind; shooterId: number; position: Vec3; ricochet: boolean }
   /**
    * A round ended: `winner` is the team that won it, or -1 for a draw (elimination: time ran out, or
    * both teams out at once). In flag mode the attackers win by raising the flag ('captured') and the
