@@ -84,3 +84,18 @@ acceptance:
   4. Tuning numbers for Pro in one place, ready for the owner's playtest per map.
 status: open
 attempts: 0
+
+## FA13 · Screenshot pass fixes
+tier: ui
+perf: required
+touches: src/render/handModels.ts, src/render/replicaModels.ts, src/config/matchInfo.ts, src/ui/loadoutChoice.ts, src/ui/menus/icons.ts, src/ui/menus/loadoutScreen.ts, src/ui/menus/armoryScreen.ts, src/style.css
+contract: none
+acceptance:
+  1. The rifle's support hand holds the handguard on Hand detail Low and High: palm against the underside, fingertips on the far side, the thumb up the near side, nothing more than 3 mm into it (`handPoses.test.ts`; the old pose put the thumb under it and the fingertips 19 mm in)
+  2. The left hands (the support hands, the raised hand) are drawn outside out, so the raised hand's fingers join an olive palm (`handPoses.test.ts`)
+  3. Teammates' name tags sit just over the head up close (within 4.5 % of the screen's height at 1.5 and 2 m on the narrowest field of view; it was about 170 px at 2 m) and still clear of the head far off (`screenMarker.test.ts`)
+  4. Loadout and Armory tiles show a drawing of what they hold at the top (replica model, power source type, part category; a grenade on the empty Grenades slot) and the layout is otherwise unchanged (`icons.test.ts`)
+  5. The Muzzle line reads "Bots hear your shots from 22 m." with nothing fitted and keeps "(22 m without a silencer)" only with a silencer (`loadoutChoice.test.ts`)
+  6. The Gas Pistol in the Primary list is by design (any replica in either slot: ROADMAP M26b, `LoadoutModel.replicaChoices`, PLAYTEST › Loadout and Armory (M26)); no change
+status: gates
+attempts: 0
