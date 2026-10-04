@@ -3,7 +3,7 @@ import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
-import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
+import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOT_PART_CHANCE, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
@@ -421,7 +421,7 @@ export class MatchSession {
       const rolled = team !== PLAYER_TEAM && rolls;
       for (let i = 0; i < size; i++, id++) {
         if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-        else if (rolled) this.state.characters.push(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id))), carrier));
+        else if (rolled) this.state.characters.push(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier));
         else this.state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, team));
       }
     }

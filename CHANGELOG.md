@@ -62,6 +62,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
 - **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
 - **M35** · pool.md has an Access column: public or dev for each asset (#70)
+- **M36** · Pro difficulty level: a fourth bot level above Hard, shown only with Dev content on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
