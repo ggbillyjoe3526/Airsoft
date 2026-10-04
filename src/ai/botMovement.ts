@@ -170,7 +170,7 @@ function crossfireSpot(b: Bot, w: BotWorld, mate: Vec3): boolean {
       if (!onSameFloor(w, g, x, z)) continue;
       if (Math.abs(wrapAngle(Math.atan2(x - choke.x, z - choke.z) - mateYaw)) < cfg.crossfireMinDeg * DEG) continue;
       postEye.x = x;
-      postEye.y = floorAt(w.nav, x, z) + eyeUp;
+      postEye.y = floorAt(w.nav, x, g.y, z) + eyeUp;
       postEye.z = z;
       if (!lineClear(w.query, postEye, chokeEye)) continue;
       g.x = x;
