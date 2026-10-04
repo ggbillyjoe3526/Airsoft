@@ -290,15 +290,19 @@ export class Game {
   /**
    * The graphics context was lost (true) or is back (false) (M18b, audit W-01). While it's gone the match pauses
    * and a notice covers everything; once it's back the pause menu says so and Resume carries on (Three.js uploads
-   * everything again on the next frame).
+   * everything again on the next frame, except render targets, which the session renders again: contextRestored).
    */
   private graphicsContextChanged(lost: boolean): void {
     this.graphicsLost = lost;
     this.graphicsNotice.setVisible(lost);
     // The menus can't be used under the notice (not even Resume by Enter or Space on the focused button).
     this.menus.setBlocked(lost);
-    if (lost) this.stopPlay();
-    else if (this.started) this.menus.showHint(BROWSER_NOTES.graphicsBack);
+    if (lost) {
+      this.stopPlay();
+    } else {
+      this.session?.contextRestored();
+      if (this.started) this.menus.showHint(BROWSER_NOTES.graphicsBack);
+    }
   }
 
   /** Stops play as if the player had pressed Esc: the mouse is given back, and the pause menu comes up. */

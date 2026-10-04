@@ -217,6 +217,11 @@ export class RangeSession {
     this.combat.setQuality(quality);
   }
 
+  /** The graphics context is back after a loss: as MatchSession.contextRestored. */
+  contextRestored(): void {
+    this.combat.contextRestored();
+  }
+
   setPlaying(playing: boolean): void {
     this.combat.setPlaying(playing);
     const coaching = this.tutorial !== null && !this.tutorial.finished;

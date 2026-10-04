@@ -64,7 +64,8 @@ export class Renderer {
   /**
    * A lost graphics context (a driver reset, the GPU taken by another app; audit W-01): `listener(true)` when it goes,
    * `listener(false)` when the browser gives it back. Three.js keeps every geometry, texture and shader's source and
-   * uploads them again on the next frame drawn, so nothing needs rebuilding.
+   * uploads them again on the next frame drawn, except render targets, which come back empty: whatever draws into one
+   * once must draw it again (CombatPresentation.contextRestored, audit L-02; shadow maps are redrawn every frame).
    */
   onContextChange(listener: (lost: boolean) => void): void {
     this.contextListener = listener;

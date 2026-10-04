@@ -43,7 +43,9 @@ export class CombatPresentation {
   /** The impact dust's tint per material (linear colours, made once). */
   private readonly dustTints = new Map<ImpactMaterial, THREE.Color>();
   /** The held replica's reflections (M14, QualitySettings.replicaSheen): made the first time they are wanted. */
-  private sheen: { pmrem: THREE.PMREMGenerator; target: THREE.WebGLRenderTarget } | null = null;
+  private sheen: THREE.WebGLRenderTarget | null = null;
+  /** The preset in use, to make the sheen again after a lost graphics context (contextRestored). */
+  private quality: QualitySettings;
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
   private readonly hud: Hud;
@@ -100,20 +102,33 @@ export class CombatPresentation {
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container, keyName, crosshair);
+    this.quality = quality;
     this.setQuality(quality);
   }
 
   /** A quality preset (Settings → Graphics, M14): how much dust drifts in the air, and the held replica's sheen. */
   setQuality(quality: QualitySettings): void {
+    this.quality = quality;
     this.motes.setCount(quality.dustMotes);
     if (quality.replicaSheen && !this.sheen) {
+      // Only the prefiltered target is kept: the generator's own buffers are freed at once (audit L-02).
       const pmrem = new THREE.PMREMGenerator(this.renderer.renderer);
       const room = new RoomEnvironment();
-      const target = pmrem.fromScene(room, 0.04);
+      this.sheen = pmrem.fromScene(room, 0.04);
       room.dispose();
-      this.sheen = { pmrem, target };
+      pmrem.dispose();
     }
-    this.viewmodel.setEnvironment(quality.replicaSheen ? (this.sheen?.target.texture ?? null) : null);
+    this.viewmodel.setEnvironment(quality.replicaSheen ? (this.sheen?.texture ?? null) : null);
+  }
+
+  /**
+   * The graphics context is back after a loss (audit L-02). Three.js uploads geometry and textures again from their
+   * copies, but a render target comes back empty, so the sheen is rendered again.
+   */
+  contextRestored(): void {
+    this.sheen?.dispose();
+    this.sheen = null;
+    this.setQuality(this.quality);
   }
 
   /** Browsers only allow audio after a user gesture: call from the Play click. */
@@ -255,8 +270,7 @@ export class CombatPresentation {
     this.gasPuffs.dispose();
     this.motes.dispose();
     this.viewmodel.setEnvironment(null);
-    this.sheen?.target.dispose();
-    this.sheen?.pmrem.dispose();
+    this.sheen?.dispose();
     this.sheen = null;
     this.paths.dispose();
     this.viewmodel.dispose();

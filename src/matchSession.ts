@@ -249,6 +249,11 @@ export class MatchSession {
     this.combat.setQuality(quality);
   }
 
+  /** The graphics context is back after a loss: what was rendered once into a render target is rendered again. */
+  contextRestored(): void {
+    this.combat.contextRestored();
+  }
+
   /** On-screen sound cues turned on or off (also called once as the match is built). */
   setSoundCues(on: boolean): void {
     this.match.setSoundCues(on);
