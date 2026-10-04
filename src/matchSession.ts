@@ -18,6 +18,7 @@ import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
+import type { SquadOrderKind } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
@@ -35,6 +36,7 @@ import { canAimDownSights } from './sim/aiming';
 import { fitOptic, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
+import { isInPlay } from './sim/elimination';
 import { placeTeams, restartMatch } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createGameState, type GameState } from './sim/state';
@@ -89,6 +91,8 @@ export class MatchSession {
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
+  /** Where your teammates hold, while they do (scratch for the HUD marker). */
+  private readonly holdSpot = vec3();
   /** Reduced motion (Settings → Accessibility): the lean's roll here, the held replica's motion in `combat`. */
   private motion: MotionScale = FULL_MOTION;
   private readonly ctx: SimContext;
@@ -174,6 +178,8 @@ export class MatchSession {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament, this.loadout));
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
+    const order = this.input.takeOrder();
+    if (order) this.giveOrder(order);
     const ticks = advanceStepper(this.stepper, dt);
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);
@@ -221,6 +227,8 @@ export class MatchSession {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
+    const holding = this.bots.holdSpot(this.player, this.holdSpot);
+    this.match.showSquadOrder(this.bots.orderOf(this.player), holding ? this.holdSpot : null, this.renderer.camera, dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.combat.render(!spectating);
   }
@@ -292,6 +300,21 @@ export class MatchSession {
     fitParts(this.player.armament, this.loadout, this.setup.parts);
     setHopUps(this.player.armament, this.setup.hopUps);
     setBbWeights(this.player.armament, this.setup.bbWeights);
+  }
+
+  /**
+   * A squad order key (M22): your bot teammates' radios answer when they take it; the HUD says what's in force. While
+   * you are out, or between rounds, the key does nothing but say so.
+   */
+  private giveOrder(order: SquadOrderKind): void {
+    if (!isInPlay(this.player) || this.state.round.phase !== 'live') {
+      this.match.orderGiven('none', 'notNow');
+      return;
+    }
+    const before = this.bots.orderOf(this.player);
+    const result = this.bots.giveOrder(this.player, order);
+    this.match.orderGiven(result, before !== 'none' ? 'cancelled' : 'nobody');
+    if (result !== 'none') this.combat.orderHeard();
   }
 
   /** Everything that reacts to a simulation tick's events. */

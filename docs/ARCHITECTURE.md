@@ -56,6 +56,10 @@ ends the round). A hit character is eliminated
   / `wantsFlag` in `bot.ts`) defenders walk only the first one or two points of their lane and hold there, chase
   noises only near the pole, and the two nearest it run to the pole (mode `flag`) once the flag is off the bottom; attackers go to
   the pole once they have walked their lane to midfield, crouch by it and stay. Nobody hunts.
+  Squad orders (M22, `squadOrders.ts`, `config/squad.ts`): `BotController.giveOrder` hands Follow me, Hold here or Regroup
+  from a player to its bot teammates; between fights an ordered bot is in mode `order` (before the pole, noises and its
+  lane), and `orderOf` tells the HUD's squad line (`ui/squadOrderLine.ts`) what is in force. Hearing (`hear`) casts the
+  same wall rays as the audio's muffling (`sim/soundPath.ts`): through walls a bot hears at `wallHearing` of the range.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame).
 - **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the
   streams made from it (the bots' plans, each bot).

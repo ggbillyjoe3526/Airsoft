@@ -45,6 +45,8 @@ export type SoundCue =
   | 'steelRing'
   | 'hitTick'
   | 'hitMarker'
+  /** A teammate's radio keyed twice: your squad order was heard (M22). */
+  | 'radio.ack'
   | 'rope.up'
   | 'rope.down';
 
@@ -306,6 +308,19 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
       { kind: 'modes', gain: 0.2, modes: [{ hz: 1100, decay: 0.04, gain: 1 }, { hz: 2600, decay: 0.02, gain: 0.4 }] },
     ],
     pitchSpread: 0.02,
+    timeSpread: 0.05,
+    gainSpread: 0.05,
+  },
+
+  /** Two quick squelches of a cheap walkie-talkie: "copy that", for a squad order (M22). */
+  'radio.ack': {
+    layers: [
+      { kind: 'noise', attack: 0.002, decay: 0.05, gain: 0.45, filter: { type: 'bandpass', hz: 1800, q: 2.5 } },
+      { kind: 'tone', wave: 'square', attack: 0.002, decay: 0.035, gain: 0.08, hz: 1250 },
+      { kind: 'noise', at: 0.11, attack: 0.002, decay: 0.05, gain: 0.45, filter: { type: 'bandpass', hz: 1800, q: 2.5 } },
+      { kind: 'tone', wave: 'square', at: 0.11, attack: 0.002, decay: 0.035, gain: 0.08, hz: 1250 },
+    ],
+    pitchSpread: 0.03,
     timeSpread: 0.05,
     gainSpread: 0.05,
   },

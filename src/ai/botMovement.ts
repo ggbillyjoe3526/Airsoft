@@ -4,6 +4,7 @@ import type { PlayerCommand } from '../sim/commands';
 import { rngNext } from '../sim/rng';
 import type { Vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, pick } from './bot';
+import { moveOrder } from './squadOrders';
 
 /** Asks the planner for a route to `goal`, unless the current (or failed) one already goes about there. */
 export function wantRoute(b: Bot, goal: Vec3, cfg: BotConfig): void {
@@ -74,10 +75,12 @@ export function enterFlagMode(b: Bot, w: BotWorld): void {
 
 /**
  * Follows the current route: writes the world direction to walk into `b.moveDir` and returns true, or
- * false when there is nothing to walk (no route, or arrived).
+ * false when there is nothing to walk (no route, or arrived). `whilePlanning`: keep walking the current route
+ * while a new one is wanted (a goal on the move), rather than stopping until it comes.
  */
-function followRoute(b: Bot, w: BotWorld, dt: number): boolean {
-  if (b.routeState !== 'ok') return false;
+export function followRoute(b: Bot, w: BotWorld, dt: number, whilePlanning = false): boolean {
+  const planning = whilePlanning && b.routeState === 'wanted';
+  if (b.routeState !== 'ok' && !planning) return false;
   const p = b.character.position;
   while (b.routeLeg < b.route.length) {
     const wp = b.route[b.routeLeg]!;
@@ -85,7 +88,7 @@ function followRoute(b: Bot, w: BotWorld, dt: number): boolean {
     b.routeLeg++;
   }
   if (b.routeLeg >= b.route.length) {
-    b.routeState = 'none';
+    if (!planning) b.routeState = 'none';
     return false;
   }
   const wp = b.route[b.routeLeg]!;
@@ -183,6 +186,8 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): bo
       cmd.walk = true;
       return true;
     }
+    case 'order':
+      return moveOrder(b, w, cmd, dt);
     case 'fight':
       // Fighting over crouch cover: stay put behind it.
       if (b.fromCover) return false;

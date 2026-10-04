@@ -296,6 +296,11 @@ export class Sfx {
     }
   }
 
+  /** A teammate's radio keyed twice: the squad order you gave was heard (M22). */
+  orderHeard(): void {
+    if (this.ctx) this.play('radio.ack', this.buses.get('interface')!, AUDIO.levels.radioAck);
+  }
+
   /** The two short blasts that start a round. False if audio isn't unlocked yet (nothing played). */
   roundStartWhistle(): boolean {
     if (!this.ctx) return false;

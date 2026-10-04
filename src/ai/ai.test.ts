@@ -356,6 +356,9 @@ describe('cover on a raised floor', () => {
   });
 });
 
+/** Bots that hear through walls as if they weren't there (before M22): for tests that use walls only to blind them. */
+const HEAR_THROUGH_WALLS: BotConfig = { ...BOTS, wallHearing: 1 };
+
 /** A duel on an open floor: one Orange bot facing a Blue character `dist` metres away. */
 function duel(
   dist: number,
@@ -559,6 +562,21 @@ describe('bots in a duel', () => {
       });
       expect(heardIt, `hi-cap walk at ${dist} m`).toBe(heard);
     }
+  });
+
+  it('hear gunfire through a wall only at a shorter range (M22)', () => {
+    const wall: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // a wall between them, never seen
+    const heardShots = (dist: number, cfg: BotConfig) => {
+      const { bots, run, commands } = duel(dist, () => {}, wall, cfg);
+      Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 });
+      run(0.3);
+      return bots.bots[0]!.hasLastKnown;
+    };
+    const behindWall = BOTS.hearingDistance * BOTS.wallHearing;
+    expect(heardShots(behindWall - 2, BOTS)).toBe(true);
+    expect(heardShots(behindWall + 3, BOTS)).toBe(false);
+    // Without the wall rule (before M22) the same shot carried its full range.
+    expect(heardShots(behindWall + 3, HEAR_THROUGH_WALLS)).toBe(true);
   });
 
   it('still need their full reaction time on re-sighting someone after only hearing them', () => {
@@ -1117,7 +1135,8 @@ describe('bot team play and routes', () => {
     });
 
     it('defenders go after noise near the pole, but hold their post and watch when it comes from far off', () => {
-      const { state, bots } = depotBots('attackDefend', blind);
+      // Walls everywhere keep the bot blind; they'd also shorten its hearing (M22), so that is off here.
+      const { state, bots } = depotBots('attackDefend', blind, HEAR_THROUGH_WALLS);
       const shooter = state.characters.find((c) => c.team === 0)!;
       const b = bots.bots[0]!;
       b.character.position.x = 11.9;
@@ -1220,7 +1239,7 @@ describe('bot team play and routes', () => {
 
   it('walk the last stretch to where they heard someone, so their own steps are silent', () => {
     const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // heard, never seen
-    const { state, bots, run, commands } = duel(22, () => {}, walls);
+    const { state, bots, run, commands } = duel(22, () => {}, walls, HEAR_THROUGH_WALLS);
     const b = bots.bots[0]!;
     const botCmd = commands.get(1)!;
     Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 });

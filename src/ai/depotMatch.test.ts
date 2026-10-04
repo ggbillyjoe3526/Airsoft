@@ -8,6 +8,7 @@ import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
 import { LOADOUT } from '../config/replicas';
+import { SQUAD_ORDERS } from '../config/squad';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
 import { RAMP_YARD } from '../map/testYard';
@@ -17,7 +18,7 @@ import { createCharacter, respawnCharacter } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { placeTeams, type RoundRules } from '../sim/round';
-import { createGameState } from '../sim/state';
+import { createGameState, type GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BotController } from './botController';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
@@ -26,9 +27,21 @@ const DT = 1 / 60;
 
 /**
  * A 3v3 on Depot (or `map`) with real physics, headless. By default all six are bots; with `hider`, Blue
- * is a single non-bot player standing still at that spot (hiding) against three Orange bots.
+ * is a single non-bot player standing still at that spot (hiding) against three Orange bots. `onTick` runs after
+ * each tick, while its events are in the state.
  */
-function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig = BOTS, mode: MatchMode = 'elimination', rules: RoundRules = ROUNDS, map: MapData = DEPOT, teamSize: number = ROUNDS.teamSize, hits: HitConfig = HITS) {
+function playMatch(
+  seconds: number,
+  seed: number,
+  hider?: Vec3,
+  cfg: BotConfig = BOTS,
+  mode: MatchMode = 'elimination',
+  rules: RoundRules = ROUNDS,
+  map: MapData = DEPOT,
+  teamSize: number = ROUNDS.teamSize,
+  hits: HitConfig = HITS,
+  onTick: (state: GameState, bots: BotController) => void = () => {},
+) {
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
   const state = createGameState(seed, BALLISTICS.maxBBs, rules, mode, map.flag);
@@ -114,6 +127,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     bots.think(state, DT);
     stepSimulation(state, commands, ctx, DT);
     bots.observe(state);
+    onTick(state, bots);
     for (const e of state.events) {
       if (e.type === 'roundStart') roundStart = state.time;
       if (e.type === 'roundOver') {
@@ -183,8 +197,9 @@ describe('a 3v3 bot match on Depot', () => {
   });
 
   it('plays out rounds: bots leave spawn, find each other, and eliminate a team', { timeout: 30_000 }, () => {
-    // 200 s: on the M11 Depot this seed's first round is a long last-man hunt (93 s; KNOWN_ISSUES).
-    const stats = playMatch(200, 11);
+    // 260 s: on the M11 Depot this seed's first round is a long last-man hunt (93 s; KNOWN_ISSUES), and since bots
+    // hear less through walls (M22) rounds run about a quarter longer (normal: 27 s → 34 s on average over seeds 1-6).
+    const stats = playMatch(260, 11);
     expect(stats.rounds).toBeGreaterThanOrEqual(3);
     expect(stats.hits).toBeGreaterThanOrEqual(stats.rounds * 3);
     // Every bot got well out of its spawn yard in round 1 (nobody stuck at spawn).
@@ -199,6 +214,46 @@ describe('a 3v3 bot match on Depot', () => {
       const stats = playMatch(120, 4, undefined, botConfig(level));
       expect(stats.rounds, level).toBeGreaterThanOrEqual(2);
       expect(stats.friendlyHits, level).toBe(0);
+    }
+  });
+
+  it('has bot teammates follow a leader round Depot without being left behind (squad orders, M22)', { timeout: 60_000 }, () => {
+    for (const seed of [1, 2, 3]) {
+      let near = 0;
+      let counted = 0;
+      let worst = 0;
+      let standing = 0;
+      /** Seconds a follower back from a fight or cover gets to rejoin before it is judged. */
+      const REJOIN = 3;
+      /** Per character, seconds in a row spent carrying out the order (a fight or cover resets it). */
+      const following = new Map<number, number>();
+      playMatch(90, seed, undefined, BOTS, 'elimination', ROUNDS, DEPOT, ROUNDS.teamSize, HITS, (state, bots) => {
+        // Blue's first bot leads (playing its team plan); the other two are told to follow it every round.
+        const leader = state.characters[0]!;
+        if (state.events.some((e) => e.type === 'roundStart') || state.tick === 1) bots.giveOrder(leader, 'follow');
+        if (state.round.phase !== 'live' || leader.status !== 'alive') return;
+        const leaderMoving = Math.hypot(leader.velocity.x, leader.velocity.z) > SQUAD_ORDERS.headingSpeed;
+        for (const b of bots.bots) {
+          const c = b.character;
+          if (c.team !== 0 || c === leader) continue;
+          const t = b.order === 'follow' && b.mode === 'order' ? (following.get(c.id) ?? 0) + DT : 0;
+          following.set(c.id, t);
+          // Judged once a follower has had a few seconds to rejoin after a fight.
+          if (t < REJOIN) continue;
+          const d = Math.hypot(c.position.x - leader.position.x, c.position.z - leader.position.z);
+          counted++;
+          if (d < SQUAD_ORDERS.followDistance + SQUAD_ORDERS.catchUpGap + 2) near++;
+          if (leaderMoving && Math.hypot(c.velocity.x, c.velocity.z) < 0.5) standing++;
+          worst = Math.max(worst, d);
+        }
+      });
+      // Measured (seeds 1-3): 90-98% of the time within a few metres of their spot, at worst about 10 m behind (a
+      // sprinting leader round corners: a sprint can't catch a sprint), and standing still under 2% of the time the
+      // leader moves (one that got ahead of its spot waiting for it).
+      expect(counted, `seed ${seed}`).toBeGreaterThan(1000);
+      expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.85);
+      expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp + 3);
+      expect(standing / counted, `seed ${seed}`).toBeLessThan(0.03);
     }
   });
 
