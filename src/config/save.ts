@@ -85,7 +85,7 @@ export const SAVE_TEXT = {
   deleteConfirmButton: 'Delete',
   downloadFirstButton: 'Download first',
   cancelButton: 'Cancel',
-  reloadNote: 'The game reloads to use it.',
+  reloadNote: 'The game reloads straight after.',
   checksumBad: 'This file was changed or damaged since it was saved. Loading it may lose or change some of your progress.',
   /** Why a file was refused. */
   errors: {

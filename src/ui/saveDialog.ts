@@ -36,7 +36,7 @@ export class SaveDialog {
     this.root.replaceChildren();
     this.root.setAttribute('aria-label', q.title);
     const head = el('div', 'menu-dialog-head');
-    head.append(el('h2', 'menu-dialog-title', q.title), closeButton(SAVE_TEXT.cancelButton, () => this.root.close()));
+    head.append(el('h2', 'menu-dialog-title', q.title), closeButton('Close', () => this.root.close()));
     this.root.append(head);
     if (q.compare) this.root.append(compareTable(q.compare, now));
     for (const note of q.notes) this.root.append(el('p', note.warn ? 'save-dialog-note warn' : 'save-dialog-note', note.text));

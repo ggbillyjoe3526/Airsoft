@@ -120,7 +120,7 @@ export class SaveSettings {
     for (const point of points) {
       const s = summarize(point.stores);
       const item = el('div', 'save-restore');
-      const text = `${dayText(point.savedAt, now)} · ${s.fc} FC · ${s.tokens} ${s.tokens === 1 ? 'Token' : 'Tokens'} · ${s.items} items · ${s.matches} ${s.matches === 1 ? 'match' : 'matches'}`;
+      const text = `${dayText(point.savedAt, now)} · ${s.fc} FC · ${s.tokens} ${s.tokens === 1 ? 'Token' : 'Tokens'} · ${s.items} ${s.items === 1 ? 'item' : 'items'} · ${s.matches} ${s.matches === 1 ? 'match' : 'matches'}`;
       const button = menuButton(SAVE_TEXT.restoreButton, 'secondary', () => void this.restore(point));
       button.disabled = !can;
       button.setAttribute('aria-label', `${SAVE_TEXT.restoreButton}: ${text}`);

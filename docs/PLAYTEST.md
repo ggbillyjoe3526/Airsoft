@@ -581,6 +581,36 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   summary says Dev settings kept it out of your records. Untick the box and Play Again: everything is back to normal
   and that match counts. Disable Armory and Unlock all gear: see "Loadout and Armory (M26)".
 
+## Save (M31)
+
+Settings → **Save**, the tab before Dev. Nothing to press for saving itself: everything saves as it changes.
+
+- [ ] **Saved automatically.** Change the field of view, open the Save tab: "Last saved just now". Reload the page:
+  the setting, your Loadout, Armory items, FC and records are all as you left them.
+- [ ] **Download.** Press Download: `airsoft-save-<today>.json` lands in your Downloads folder. Open it in a text
+  editor: readable, with the game, version, date, a summary (FC, Tokens, items, matches) and the stores. The tab now
+  says "Last downloaded just now".
+- [ ] **Load in another browser.** Open the game in a second browser (or a private window), Settings → Save → Load
+  file, pick the download (or drag it onto the tab). The pop-up shows both saves side by side; Replace reloads the
+  game with your settings, Loadout, Armory and records. Undo on the Save tab brings back what was there.
+- [ ] **Clear and restore.** Clear the site's data (browser settings, or F12 → Application → Clear site data), reload:
+  a fresh game. Load your file: everything is back.
+- [ ] **Edited file.** Change the `fc` number in a downloaded file and load it: the pop-up warns the file was changed
+  or damaged and the button reads **Load anyway**. Cancel changes nothing.
+- [ ] **Not a save.** Load any other JSON or text file: "That file isn't an Airsoft save", nothing changes.
+- [ ] **Mid-match.** Pause a match, Settings → Save: Download works, Load, Restore, Undo and Delete are greyed with
+  "Leave the match to load a save."
+- [ ] **Restore points.** Open the game on two different days: the Save tab lists one restore point per day (three at
+  most). Restore one: same side-by-side pop-up, and Undo works after it.
+- [ ] **Delete.** Delete save → the pop-up offers Download first; Delete reloads a fresh game (tutorial tagged
+  "New? Start here" again). Undo on the Save tab brings it all back.
+- [ ] **Two tabs.** Open the game in a second tab: it shows "Airsoft is open in another tab" and doesn't start. Play
+  here: that tab loads the game and the first one shows the notice instead. Earn FC in one, switch: nothing is lost.
+- [ ] **Protect.** Press Protect: Chrome and Edge answer straight away (often "said no for now" on a site you rarely
+  visit); Firefox asks with its own prompt. Once allowed, the button reads Protected.
+- [ ] **Firefox and Edge** (the automated tests run Chromium only): do Download, Load (button and drag and drop), the
+  two-tab notice and Protect once in each. Firefox: the download prompt or Downloads list shows the `.json` file.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
