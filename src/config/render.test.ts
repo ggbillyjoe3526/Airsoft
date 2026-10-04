@@ -64,6 +64,8 @@ describe('render quality presets (final alpha audit section 4)', () => {
     expect(low.textureSize).toBeLessThanOrEqual(512);
     expect(low.anisotropy).toBeLessThanOrEqual(4);
     expect(low.dustMotes).toBe(0);
+    // No real lights on Low (M33f): its light pools light the ground with one mesh.
+    expect(low.poolLights).toBe(0);
   });
 
   it('keeps every visual-overhaul feature off or at today’s value on Low, and turns them on for Medium and High (FA7)', () => {

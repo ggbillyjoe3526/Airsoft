@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { ATMOSPHERE, type QualitySettings, type TreeDetail } from '../config/render';
+import { ATMOSPHERE, type LightingPreset, LIGHTING_PRESETS, type QualitySettings, type SkyPalette, type TreeDetail } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import { withoutEnvironment } from './surfaceMaterials';
 
@@ -14,24 +14,10 @@ import { withoutEnvironment } from './surfaceMaterials';
 const tmp = new THREE.Color();
 const glow = new THREE.Color();
 
-/** The values a sky is painted from (sRGB hex colours): ATMOSPHERE's daytime sky unless a map brings its own. */
-export interface SkyPalette {
-  zenith: number;
-  horizon: number;
-  below: number;
-  sunGlow: number;
-  sunGlowPower: number;
-  horizonFalloff: number;
-}
+export type { SkyPalette };
 
-export const DEFAULT_SKY: SkyPalette = {
-  zenith: ATMOSPHERE.zenith,
-  horizon: ATMOSPHERE.horizon,
-  below: ATMOSPHERE.below,
-  sunGlow: ATMOSPHERE.sunGlow,
-  sunGlowPower: ATMOSPHERE.sunGlowPower,
-  horizonFalloff: ATMOSPHERE.horizonFalloff,
-};
+/** The daytime sky (LIGHTING_PRESETS.day): the default wherever no other sky is passed. */
+export const DEFAULT_SKY: SkyPalette = LIGHTING_PRESETS.day.sky;
 
 /** The sky's colour (linear RGB, into `out`) looking along the unit direction `dir`, with the sun along `sun`. */
 export function skyColour(dir: THREE.Vector3, sun: THREE.Vector3, out: THREE.Color, sky: SkyPalette = DEFAULT_SKY): THREE.Color {
@@ -46,7 +32,7 @@ export function skyColour(dir: THREE.Vector3, sun: THREE.Vector3, out: THREE.Col
   return out.lerp(glow.setHex(A.sunGlow), g * 0.7);
 }
 
-function buildSky(sunDirection: THREE.Vector3): THREE.Mesh {
+function buildSky(sunDirection: THREE.Vector3, palette: SkyPalette): THREE.Mesh {
   const A = ATMOSPHERE;
   const geo = new THREE.SphereGeometry(A.skyRadius, A.skyWidthSegments, A.skyHeightSegments);
   geo.deleteAttribute('uv');
@@ -57,7 +43,7 @@ function buildSky(sunDirection: THREE.Vector3): THREE.Mesh {
   const c = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     dir.fromBufferAttribute(pos, i).normalize();
-    skyColour(dir, sunDirection, c);
+    skyColour(dir, sunDirection, c, palette);
     colors[i * 3] = c.r;
     colors[i * 3 + 1] = c.g;
     colors[i * 3 + 2] = c.b;
@@ -301,12 +287,16 @@ const cloudColour = new THREE.Color();
 const cloudShade = new THREE.Color();
 const cloudTop = new THREE.Color();
 
+/** How the clouds and the key light's disc are coloured: a lighting preset's (M33f; by day white tops, the sun's disc). */
+export type CloudLook = Pick<LightingPreset, 'clouds'> & { key: Pick<LightingPreset['key'], 'disc'> };
+
 /**
  * Clouds and the sun's disc (Clouds, row 21): flat-bottomed cumulus cards of overlapping soft discs round the sky,
  * lit from above (white tops, a cool grey underside), and the sun as a soft white disc; one mesh with vertex colours
- * and alpha (no texture). Unfogged (they are the sky), no depth writes, drawn after the field.
+ * and alpha (no texture). Unfogged (they are the sky), no depth writes, drawn after the field. `look` colours the clouds
+ * and the disc (M33f: dim clouds and the moon at night).
  */
-export function buildClouds(centre: THREE.Vector3, sun: THREE.Vector3): THREE.Mesh {
+export function buildClouds(centre: THREE.Vector3, sun: THREE.Vector3, look: CloudLook = LIGHTING_PRESETS.day): THREE.Mesh {
   const K = ATMOSPHERE.clouds;
   const rng = createRng(K.seed);
   const pos: number[] = [];
@@ -315,8 +305,8 @@ export function buildClouds(centre: THREE.Vector3, sun: THREE.Vector3): THREE.Me
   const up = new THREE.Vector3();
   const right = new THREE.Vector3();
   const at = new THREE.Vector3();
-  cloudShade.setHex(K.shade);
-  cloudTop.setHex(0xffffff);
+  cloudShade.setHex(look.clouds.shade);
+  cloudTop.setHex(look.clouds.top);
   for (let i = 0; i < K.count; i++) {
     const heading = ((i + rngNext(rng) * 0.6) / K.count) * Math.PI * 2;
     const elevation = K.elevationMin + rngNext(rng) * (K.elevationMax - K.elevationMin);
@@ -337,15 +327,15 @@ export function buildClouds(centre: THREE.Vector3, sun: THREE.Vector3): THREE.Me
       up.set(0, ry, 0);
       // Every puff's underside stops at the cloud's base: flat-bottomed.
       const floor = (baseY - cy) / ry;
-      softDisc(pos, col, idx, c, r, up, 14, 0.6, 0.85, K.opacity, (v) => cloudColour.copy(cloudShade).lerp(cloudTop, Math.min(1, Math.max(0, (v * ry + cy - baseY) / (ry * 1.4)))), floor);
+      softDisc(pos, col, idx, c, r, up, 14, 0.6, 0.85, look.clouds.opacity, (v) => cloudColour.copy(cloudShade).lerp(cloudTop, Math.min(1, Math.max(0, (v * ry + cy - baseY) / (ry * 1.4)))), floor);
     }
   }
   // The sun: a soft white disc where the sunlight comes from, a little inside the dome.
   const sunAt = at.copy(sun).multiplyScalar(ATMOSPHERE.skyRadius * 0.95).add(centre);
   const sunRight = new THREE.Vector3(-sun.z, 0, sun.x).normalize();
   const sunUp = new THREE.Vector3().crossVectors(sunRight, sun).normalize().negate();
-  const radius = ATMOSPHERE.skyRadius * 0.95 * Math.tan(K.sunSize / 2);
-  const sunColour = new THREE.Color(K.sunColour);
+  const radius = ATMOSPHERE.skyRadius * 0.95 * Math.tan(look.key.disc.size / 2);
+  const sunColour = new THREE.Color(look.key.disc.colour);
   softDisc(pos, col, idx, sunAt, sunRight.multiplyScalar(radius), sunUp.multiplyScalar(radius), 20, 0.55, 0.95, 1, () => sunColour);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -367,8 +357,9 @@ export interface Atmosphere {
 
 /**
  * Adds the sky dome, the tree ring and the clouds round the field centred on `centre` (sun along `sunDirection`, a unit
- * vector towards the sun; `field` the map's bounds, for the hedge) at `quality`'s Trees and Clouds, and returns its
- * handle. Changing either setting rebuilds that mesh only.
+ * vector towards the key light; `field` the map's bounds, for the hedge) at `quality`'s Trees and Clouds, and returns its
+ * handle. Changing either setting rebuilds that mesh only. `preset` (M33f) paints the sky, the clouds and the key
+ * light's disc: the day's unless a map's lighting says otherwise.
  */
 export function addAtmosphere(
   scene: THREE.Scene,
@@ -376,8 +367,9 @@ export function addAtmosphere(
   sunDirection: THREE.Vector3,
   quality: Pick<QualitySettings, 'trees' | 'clouds'>,
   field: THREE.Box3 | null = null,
+  preset: LightingPreset = LIGHTING_PRESETS.day,
 ): Atmosphere {
-  const sky = buildSky(sunDirection);
+  const sky = buildSky(sunDirection, preset.sky);
   sky.position.copy(centre);
   scene.add(sky);
   let trees: THREE.Mesh | null = null;
@@ -400,7 +392,7 @@ export function addAtmosphere(
     }
     if (q.clouds !== (clouds !== null)) {
       clouds = drop(clouds);
-      if (q.clouds) scene.add((clouds = buildClouds(centre, sunDirection)));
+      if (q.clouds) scene.add((clouds = buildClouds(centre, sunDirection, preset)));
     }
   };
   setQuality(quality);

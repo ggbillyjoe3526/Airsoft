@@ -169,6 +169,18 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
     ],
   }),
   choice({ field: 'clouds', label: 'Clouds', help: 'Clouds and the sun’s disc in the sky.', cost: 'Small', options: onOff }),
+  // M33f: night lighting.
+  choice({
+    field: 'poolLights',
+    label: 'Night lights',
+    help: 'On a night field, the camp fires and lanterns nearest you light players and cover, not only the ground.',
+    cost: 'GPU: small to medium, on night fields only',
+    options: [
+      { id: 'off', label: 'Off', value: 0 },
+      { id: '2', label: 'Nearest 2', value: 2 },
+      { id: '4', label: 'Nearest 4', value: 4 },
+    ],
+  }),
   // FA8: the visual overhaul's rows (audit section 5, rows 17-20 and 23).
   choice({
     field: 'figureDetail',

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { ATMOSPHERE, QUALITY, RENDER } from '../config/render';
+import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, RENDER } from '../config/render';
 import { DEPOT } from '../map/depot';
 import { RANGE_MAP } from '../map/range';
 import { addAtmosphere, buildClouds, shadedCrown, skyColour, treeRingStart } from './atmosphere';
@@ -149,6 +149,52 @@ describe('the tree ring round any map (engine-level)', () => {
       const pos = (scene.getObjectByName('trees') as THREE.Mesh).geometry.getAttribute('position');
       for (let i = 0; i < pos.count; i++) expect(big.containsPoint(new THREE.Vector3(pos.getX(i), 1, pos.getZ(i)))).toBe(false);
       atmosphere.dispose();
+    }
+  });
+});
+
+describe('the sky under a lighting preset (M33f)', () => {
+  const moon = new THREE.Vector3(1, 0.3, 0).normalize();
+  const domeColours = (scene: THREE.Scene): THREE.BufferAttribute => (scene.getObjectByName('sky') as THREE.Mesh).geometry.getAttribute('color') as THREE.BufferAttribute;
+  const mean = (col: THREE.BufferAttribute): number => {
+    let m = 0;
+    for (let i = 0; i < col.count; i++) m += col.getX(i) + col.getY(i) + col.getZ(i);
+    return m / col.count / 3;
+  };
+
+  it('paints the dome from the night palette, and from the day’s by default, as before', () => {
+    const night = LIGHTING_PRESETS.night;
+    const a = new THREE.Scene();
+    const day = addAtmosphere(a, new THREE.Vector3(), moon, QUALITY.low);
+    const b = new THREE.Scene();
+    const dark = addAtmosphere(b, new THREE.Vector3(), moon, QUALITY.low, null, night);
+    const dayCol = domeColours(a);
+    const nightCol = domeColours(b);
+    const pos = (a.getObjectByName('sky') as THREE.Mesh).geometry.getAttribute('position');
+    const dir = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i += 37) {
+      dir.fromBufferAttribute(pos, i).normalize();
+      expect(dayCol.getZ(i)).toBeCloseTo(skyColour(dir, moon, new THREE.Color()).b, 6);
+      expect(nightCol.getZ(i)).toBeCloseTo(skyColour(dir, moon, new THREE.Color(), night.sky).b, 6);
+    }
+    expect(mean(nightCol)).toBeLessThan(mean(dayCol) / 4);
+    day.dispose();
+    dark.dispose();
+  });
+
+  it('colours the clouds and the key light’s disc from the preset: dim clouds and a pale moon at night', () => {
+    const day = buildClouds(new THREE.Vector3(), moon);
+    const night = buildClouds(new THREE.Vector3(), moon, LIGHTING_PRESETS.night);
+    const dayCol = day.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const nightCol = night.geometry.getAttribute('color') as THREE.BufferAttribute;
+    // The last vertex is the disc's rim; the first, a cloud's middle.
+    const disc = new THREE.Color(LIGHTING_PRESETS.night.key.disc.colour);
+    expect(nightCol.getX(nightCol.count - 1)).toBeCloseTo(disc.r, 6);
+    expect(nightCol.getX(0)).toBeLessThan(dayCol.getX(0) / 2);
+    expect(nightCol.getW(0)).toBeLessThan(dayCol.getW(0));
+    for (const m of [day, night]) {
+      m.geometry.dispose();
+      (m.material as THREE.Material).dispose();
     }
   });
 });
