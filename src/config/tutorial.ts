@@ -59,12 +59,12 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: 'aim',
     title: 'Aim down the sight',
-    text: 'Hold {aim} to look through your sight: zoomed in and steadier. Hold it on a target for a moment.',
+    text: 'Aim with {aim} to look through your sight: zoomed in and steadier. Stay on a target for a moment.',
     goal: { kind: 'aim', seconds: 1 },
     withoutOptic: {
       id: 'optics',
       title: 'Optics',
-      text: 'Your rifle has iron sights. Fit a red dot or a 2× scope on the Loadout (Esc, then Loadout) and hold {aim} to aim through it.',
+      text: 'Your rifle has iron sights. Fit a red dot or a 2× scope on the Loadout (Esc, then Loadout) and aim through it with {aim}.',
       goal: { kind: 'read', seconds: 8 },
     },
   },
