@@ -28,11 +28,13 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M26a** · Asset pool: pool.md register, rarity tiers, economy numbers, player's collection saved (#39)
 - **M26b** · Loadout screen: Primary, Secondary and Grenades slots; Customise view per replica (#42)
 - **M26c** · Armory, beta and free: earn Field Credits from matches, buy Tokens, draw from the pool (#44)
+- **FA6** · Outdoor ambience bed with distant birds; world sounds muffled when eliminated (#55)
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 
 ### Changed
 - Pistol leans slightly left again, much less than before (#13)
 - **M25b** · Depot: site props instead of most two-high crate stacks (#45)
+- **FA6** · World sounds carry further; getting hit and the whistles briefly dip the rest of the mix (#55)
 - **M30** · BBs fly by real air physics: full drag (0.52 s to 30 m, was 0.47 s), hop-up spin that wears off, factory reach unchanged
 - **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 
@@ -45,6 +47,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **BP1** · Minimap: stacked crates show as tall cover; the debug panel sits below the minimap (#53)
 - **BP1** · Pallet racks soak BBs up instead of bouncing them; turning Dev settings off before a match starts lets it count for records (#53)
 - **BP1** · A double-click on Play no longer shows the "needs a moment" hint; Key bindings says why two quick clicks cancel (#53)
+- **FA6** · Pause fades audio in 30 ms instead of clicking; pauses when the window loses focus; hint when the browser blocks audio (#55)
 
 ### Internal
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
@@ -55,6 +58,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M27** · Walk-off route searches rationed to one per tick (pull request to follow)
 - **M30** · One midpoint integrator step per tick replaces two Euler sub-steps; drag from a lookup table; BB streak follows its mean velocity, not its end-of-tick velocity
 - **BP1** · The rendered sounds are held once (about 9 MB less); the perf script restarts with each match (#53)
+- **FA6** · Audio renders at 48 kHz with seeded reverb; debug overlay shows latency (#55)
 
 ## v0.1-alpha.3 · 2026-10-03
 

@@ -48,7 +48,9 @@ export type SoundCue =
   /** A teammate's radio keyed twice: your squad order was heard (M22). */
   | 'radio.ack'
   | 'rope.up'
-  | 'rope.down';
+  | 'rope.down'
+  /** A bird somewhere round the yard: the ambience's sparse one-shots (audit CORE-34). */
+  | 'ambience.bird';
 
 /** Typical spreads: shots and mechanisms vary a little, steps and impacts more. */
 const TIGHT = { pitchSpread: 0.04, timeSpread: 0.08, gainSpread: 0.1 } as const;
@@ -342,6 +344,17 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
       { kind: 'noise', attack: 0.01, decay: 0.09, gain: 0.5, filter: { type: 'bandpass', hz: 2100, q: 6 } },
     ],
     ...TIGHT,
+  },
+  /** A small bird's three-note chirp, up, down and up again: playful, never a recording. */
+  'ambience.bird': {
+    layers: [
+      { kind: 'tone', wave: 'sine', attack: 0.004, decay: 0.07, gain: 0.5, hz: 3400, hzTo: 4600, glide: 0.05 },
+      { kind: 'tone', wave: 'sine', at: 0.11, attack: 0.004, decay: 0.06, gain: 0.45, hz: 4200, hzTo: 3300, glide: 0.05 },
+      { kind: 'tone', wave: 'sine', at: 0.2, attack: 0.004, decay: 0.09, gain: 0.4, hz: 3600, hzTo: 4900, glide: 0.07 },
+    ],
+    pitchSpread: 0.1,
+    timeSpread: 0.15,
+    gainSpread: 0.15,
   },
 };
 

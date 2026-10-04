@@ -85,7 +85,10 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - Every sound is synthesised: replica shots by power source (electric, gas), the AEG motor winding up and down (M2, M13)
 - Footsteps by surface, landing thuds, kit rustle when you crouch, stand or lean (M2, M13)
-- Sounds you can locate by ear, muffled through walls; BB impacts sound by material (M13)
+- Sounds you can locate by ear, muffled through walls and when eliminated; BB impacts sound by material; world sounds carry further (M13, FA6)
+- Getting hit and the round and match whistles briefly dip the rest of the mix (FA6)
+- Outdoor ambience with distant birds plays during play (FA6)
+- Pause fades audio in 30 ms; hint when the browser blocks audio (FA6)
 - Master, effects and interface volume sliders (M13)
 
 ## Graphics and art
@@ -103,7 +106,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Accessibility and comfort
 
 - Team colour sets checked for colour blindness, patterns on the gauges, on-screen sound cues round the crosshair (M18b)
-- Reduced motion, pause on a hidden tab, recovery from a lost graphics context, fullscreen on F10 (M18a, M18b)
+- Reduced motion, pause on a hidden tab or when the window loses focus, recovery from a lost graphics context, fullscreen on F10 (M18a, M18b, FA6)
 
 ## Developer and debug
 
