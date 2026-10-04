@@ -347,7 +347,6 @@ One line each: decision, then why.
 - **2026-10-04 · M29a · Red and Black Gas kick harder by as much as they push harder (+10 %, +20 % recoil; owner's pick).** Stronger gas is a trade-off, not a straight upgrade, like the parts.
 - **2026-10-04 · M29a · A site chrono limit per class: 1.20 J for rifles, 1.00 J for pistols, on the rated energy (owner's pick).** Nothing reaches it today (a Legendary pistol on Legendary Black Gas is 0.71 J); it keeps stacked bonuses and later items in check. The limit applies at the factory BB weight, where the energy is rated.
 - **2026-10-04 · M29a · The Performance sheet compares against the replica as it comes (Common, no parts, its starter power source, factory BB and hop-up), and shows a trade-off (BB weight, magazines) without a colour.** Speed is also given in fps on 0.20 g BBs, as a site's chrono reads it. Changes are coloured and signed, and read out as "better / worse than as it comes" for screen readers and colour-blind players.
-- **2026-10-04 · M28 · Impact puffs appear at half size (`PuffConfig.startScale`, 0.5 for `IMPACT_PUFFS`) and grow from there over the same `growTime`; their full size and lifetime are unchanged, and the hit and gas puffs keep `startScale: 0` so this change stays with the task.*
 
 ### FA12 · BB hot path and the BB-flight audit leftovers
 
@@ -373,3 +372,5 @@ One line each: decision, then why.
 - **2026-10-04 · FA1 · A drawn round is replayed in both Elimination and Attack / Defend (owner default for Elimination, SIM-19); `RoundState.draws` counts them and the summary adds them to rounds played.** A draw can't decide a match, so in either mode it would otherwise just shrink the match.
 - **2026-10-04 · FA1 · Play Again always builds a new session with a new seed derived from the visit seed (SIM-08).** The bots' random streams live in `src/ai` (another worker's area) and can't be reseeded from outside, so a fresh session is the only way the seed on the overlay reproduces the match; `MatchSession.restart` is gone.
 - **2026-10-04 · FA1 · A decided match is recorded and paid on the frame it ends (`settleMatch`), not when the lock is released (CORE-06).** Pausing still settles a finished match, as before.
+
+- **2026-10-04 · M28 · Impact puffs appear at half size (`PuffConfig.startScale`, 0.5 for `IMPACT_PUFFS`) and grow from there over the same `growTime`; their full size and lifetime are unchanged, and the hit and gas puffs keep `startScale: 0` so this change stays with the task.*
