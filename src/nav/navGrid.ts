@@ -79,55 +79,70 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
   const n = cols * rows;
   const frame = { cell: cfg.cell, cols, rows, minX, minZ };
 
-  // Every walkable surface over each cell's centre, as (height there, the bottom of the solid under it) pairs. A
-  // heightfield would add its ground here with a bottom of -Infinity.
-  const surfaces: (number[] | undefined)[] = new Array(n);
+  // Every walkable surface over each cell's centre, as (height there, the bottom of the solid under it) pairs, packed
+  // per cell (counted first, then filled). A heightfield would add its ground here with a bottom of -Infinity.
+  const surfStart = new Int32Array(n + 1);
+  for (const b of map.blocks) {
+    if (!isSurface(b)) continue;
+    forCellsUnder(frame, b, 0, (c, x, z) => {
+      if (surfaceHeightAt(b, x, z) !== undefined) surfStart[c + 1]!++;
+    });
+  }
+  for (let c = 0; c < n; c++) surfStart[c + 1]! += surfStart[c]!;
+  const total = surfStart[n]!;
+  const surfY = new Float64Array(total);
+  const surfBottom = new Float64Array(total);
+  const fill = surfStart.slice(0, n);
   for (const b of map.blocks) {
     if (!isSurface(b)) continue;
     forCellsUnder(frame, b, 0, (c, x, z) => {
       const y = surfaceHeightAt(b, x, z);
       if (y === undefined) return;
-      (surfaces[c] ??= []).push(y, bottom(b));
+      const k = fill[c]!++;
+      surfY[k] = y;
+      surfBottom[k] = bottom(b);
     });
   }
 
   // A cell's floors: each surface with headroom over it (no other surface's solid within a body's height above it, at
   // the centre), lowest first; of two floors closer than a body's height (one surface just over another) the higher.
   const cellStart = new Int32Array(n + 1);
-  const floors: number[] = [];
-  const cellOf: number[] = [];
+  const floors = new Float32Array(total);
+  const cellOf = new Int32Array(total);
+  let count = 0;
   let layers = 0;
   const kept: number[] = [];
   for (let c = 0; c < n; c++) {
-    cellStart[c] = floors.length;
-    const s = surfaces[c];
-    if (!s) continue;
+    cellStart[c] = count;
+    const s0 = surfStart[c]!;
+    const s1 = surfStart[c + 1]!;
+    if (s0 === s1) continue;
     kept.length = 0;
-    for (let k = 0; k < s.length; k += 2) {
-      const f = s[k]!;
+    for (let k = s0; k < s1; k++) {
+      const f = surfY[k]!;
       let free = true;
-      for (let o = 0; o < s.length && free; o += 2) {
-        if (o !== k && s[o + 1]! < f + cfg.bodyHeight && s[o]! > f + cfg.maxLedge) free = false;
+      for (let o = s0; o < s1 && free; o++) {
+        if (o !== k && surfBottom[o]! < f + cfg.bodyHeight && surfY[o]! > f + cfg.maxLedge) free = false;
       }
       if (free) kept.push(f);
     }
-    kept.sort((a, b) => a - b);
-    let count = 0;
+    if (kept.length > 1) kept.sort((a, b) => a - b);
+    const first = count;
     for (let k = 0; k < kept.length; k++) {
       if (k + 1 < kept.length && kept[k + 1]! - kept[k]! < cfg.bodyHeight) continue;
-      floors.push(kept[k]!);
-      cellOf.push(c);
+      floors[count] = kept[k]!;
+      cellOf[count] = c;
       count++;
     }
-    layers = Math.max(layers, count);
+    layers = Math.max(layers, count - first);
   }
-  cellStart[n] = floors.length;
+  cellStart[n] = count;
   const grid: NavGrid = {
     ...frame,
     cellStart,
-    nodeCell: Int32Array.from(cellOf),
-    walkable: new Uint8Array(floors.length).fill(1),
-    floorY: Float32Array.from(floors),
+    nodeCell: cellOf.slice(0, count),
+    walkable: new Uint8Array(count).fill(1),
+    floorY: floors.slice(0, count),
     layers,
     maxStep: cfg.maxStep,
     headroom: cfg.bodyHeight,
@@ -234,7 +249,9 @@ function nearestNode(g: NavGrid, c: number, y: number): number {
 
 /** The node of cell `c` a character on node `k` steps onto (floors at most maxStep apart, walkable or not), or -1. */
 export function stepNode(g: NavGrid, k: number, c: number): number {
-  const n = nearestNode(g, c, g.floorY[k]!);
+  const s = g.cellStart[c]!;
+  // One floor (most cells): no search.
+  const n = g.cellStart[c + 1]! - s === 1 ? s : nearestNode(g, c, g.floorY[k]!);
   return n >= 0 && Math.abs(g.floorY[n]! - g.floorY[k]!) <= g.maxStep ? n : -1;
 }
 
@@ -568,23 +585,28 @@ function astar(g: NavGrid, s: NavSearch, a: number, b: number): boolean {
     if (s.closed[c] === gen) continue;
     s.closed[c] = gen;
     if (c === b) return true;
-    const cc = g.nodeCell[c]!;
-    const ci = cc % cols;
+    const cc: number = g.nodeCell[c]!;
+    const ci: number = cc % cols;
     const cj: number = (cc - ci) / cols;
     const gc = s.g[c]!;
+    // The four straight neighbours' nodes, looked up once: each diagonal checks two of them.
+    const o0: number = ci + 1 < cols ? stepNode(g, c, cc + 1) : -1;
+    const o1: number = ci > 0 ? stepNode(g, c, cc - 1) : -1;
+    const o2: number = cj + 1 < rows ? stepNode(g, c, cc + cols) : -1;
+    const o3: number = cj > 0 ? stepNode(g, c, cc - cols) : -1;
+    const w0 = o0 >= 0 && walk[o0] === 1;
+    const w1 = o1 >= 0 && walk[o1] === 1;
+    const w2 = o2 >= 0 && walk[o2] === 1;
+    const w3 = o3 >= 0 && walk[o3] === 1;
     for (let k = 0; k < 8; k++) {
       const ni = ci + NDI[k]!;
       const nj: number = cj + NDJ[k]!;
       if (ni < 0 || nj < 0 || ni >= cols || nj >= rows) continue;
-      // canStep(c, n), inlined (c is walkable).
-      const n = stepNode(g, c, nj * cols + ni);
-      if (n < 0 || !walk[n] || s.closed[n] === gen) continue;
       // No squeezing diagonally past a blocked node (or a drop).
-      if (k >= 4) {
-        const sa = stepNode(g, c, cj * cols + ni);
-        const sb = stepNode(g, c, nj * cols + ci);
-        if (sa < 0 || sb < 0 || !walk[sa] || !walk[sb]) continue;
-      }
+      if (k >= 4 && !(k === 4 ? w0 && w2 : k === 5 ? w0 && w3 : k === 6 ? w1 && w2 : w1 && w3)) continue;
+      // canStep(c, n), inlined (c is walkable).
+      const n = k === 0 ? o0 : k === 1 ? o1 : k === 2 ? o2 : k === 3 ? o3 : stepNode(g, c, nj * cols + ni);
+      if (n < 0 || !walk[n] || s.closed[n] === gen) continue;
       const ng = gc + NCOST[k]!;
       if (s.stamp[n] === gen && s.g[n]! <= ng) continue;
       s.stamp[n] = gen;
