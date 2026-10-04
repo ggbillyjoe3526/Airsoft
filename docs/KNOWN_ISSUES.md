@@ -5,6 +5,7 @@ Classified as **fix now / document / can wait**.
 | Issue | Class | Notes |
 |---|---|---|
 | Below ~20 fps (or on a hitch), the first shot out of a sprint can be drawn from a still-turning barrel | can wait | Shot visuals use the last rendered viewmodel pose; the sprint carry is gone 50 ms before firing unlocks (`VIEWMODEL.carrySquareAt`), which covers 20 fps and up (M12c critic). |
+| Running up a ramp still costs up to a quarter of a sprint's pace (Rapier keeps about cos²θ of a level move up a slope); running down costs none | playtest | Audit SIM-17. FA1 built the fix (`MOVEMENT.rampPace`: 1 gives the pace back in full, tested in `physicsWorld.test.ts`) but ships it at 0: at 1 attackers reach Depot's pole up the dock ramps sooner and Attack / Defend moved (captures 66 → 85 over seeds 1-48, the pole guard failed). The owner decides after playing both (PLAYTEST, FA1 › Ramps); re-measure the guards with the new value. |
 | Automated browsers can't take pointer lock | document | Use the `?nolock` URL flag (dev server and the smoke test's `e2e` build only; fire and wheel work without the lock there). The real lock flow, mouse look and Esc to pause stay manual tests. |
 | Ledges 0.2–0.3 m tall are climbable only sometimes (sprinting yes, crouching no) | document | Rapier autostep with capsules; keep map ledges ≤ 0.15 m or ≥ uncrossable cover height (tested for Depot). |
 | Firefox ignores `unadjustedMovement` (raw mouse input) | can wait | Sensitivity may feel different vs Chrome/Edge when OS acceleration is on. |
