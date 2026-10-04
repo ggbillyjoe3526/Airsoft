@@ -124,12 +124,18 @@ export function teamEnd(team: number, mode: MatchMode, number: number, rules: Ro
  * spawn of its slot there (its place among its teammates, in roster order). Call respawnCharacter after it.
  */
 export function placeTeams(round: RoundState, characters: readonly Character[], ctx: RoundContext): void {
+  const sizes = [0, 0];
+  for (const c of characters) sizes[c.team] = sizes[c.team]! + 1;
   const slots = [0, 0];
   for (const c of characters) {
-    const slot = slots[c.team]!;
-    slots[c.team] = slot + 1;
     c.end = teamEnd(c.team, round.mode, round.number, ctx.rules);
-    const s = ctx.spawns[c.end]?.[slot];
+    // A team smaller than its end's spawn line takes the middle of it (M20: a 1v1 starts from the middle spawn at
+    // both ends, not from the first one, which sits off to one side differently at each end).
+    const spawns = ctx.spawns[c.end] ?? [];
+    const first = Math.max(0, Math.floor((spawns.length - sizes[c.team]!) / 2));
+    const slot = first + slots[c.team]!;
+    slots[c.team] = slots[c.team]! + 1;
+    const s = spawns[slot];
     if (!s) continue;
     c.spawnPosition.x = s.position.x;
     c.spawnPosition.y = s.position.y + ctx.spawnLift;

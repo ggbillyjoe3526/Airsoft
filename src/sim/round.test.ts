@@ -145,6 +145,17 @@ describe('ends of the map', () => {
     ]);
   });
 
+  it('start a team smaller than its spawn line from the middle of it (a 1v1, M20)', () => {
+    const round = createRoundState(RULES);
+    const line = (x: number) => [0, 1, 2].map((z) => ({ position: vec3(x, 0, z), yaw: 0 }));
+    const cs = [createCharacter(0, vec3(), 0, LOADOUT, 0), createCharacter(1, vec3(), 0, LOADOUT, 1)];
+    placeTeams(round, cs, { ...CTX, spawns: [line(-20), line(20)] });
+    expect(cs.map((c) => [c.spawnPosition.x, c.spawnPosition.z])).toEqual([
+      [-20, 1],
+      [20, 1],
+    ]);
+  });
+
   it('leave spawns alone when the map gives none for an end', () => {
     const round = createRoundState(RULES);
     const cs = teams();
