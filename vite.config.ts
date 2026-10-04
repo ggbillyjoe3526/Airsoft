@@ -1,10 +1,19 @@
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
-/** Size budgets in kB (minified, before gzip). Rapier inlines its WASM, so it gets its own budget. */
-const CHUNK_BUDGET_KB = { rapier: 4500, default: 800 };
+/**
+ * Size budgets in kB (minified, before gzip). Rapier inlines its WASM, so it gets its own budget: 4,333 kB measured at
+ * @dimforge/rapier3d-compat 0.21.0 plus about 5 % (DECISIONS 2026-10-04), so an upgrade that grows it is a deliberate bump.
+ */
+const CHUNK_BUDGET_KB = { rapier: 4550, default: 800 };
 
-/** Warns when any output chunk exceeds its budget, so the game and three.js chunks can't grow unnoticed. */
+/** True on a CI runner (the workflow's runner sets CI); read without Node's types, which the project doesn't load. */
+const ON_CI = Boolean((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.CI);
+
+/**
+ * Checks every output chunk against its budget, so the game, three.js and Rapier chunks can't grow unnoticed: over
+ * budget fails the build on CI and warns locally (audit L-12).
+ */
 function chunkBudget(): Plugin {
   return {
     name: 'airsoft-chunk-budget',
@@ -14,7 +23,10 @@ function chunkBudget(): Plugin {
         if (file.type !== 'chunk') continue;
         const kb = new TextEncoder().encode(file.code).length / 1000;
         const budget = file.name === 'rapier' ? CHUNK_BUDGET_KB.rapier : CHUNK_BUDGET_KB.default;
-        if (kb > budget) this.warn(`${file.fileName} is ${kb.toFixed(0)} kB, over its ${budget} kB budget`);
+        if (kb <= budget) continue;
+        const message = `${file.fileName} is ${kb.toFixed(0)} kB, over its ${budget} kB budget (vite.config.ts)`;
+        if (ON_CI) this.error(message);
+        else this.warn(message);
       }
     },
   };
