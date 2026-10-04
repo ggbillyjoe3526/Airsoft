@@ -27,6 +27,14 @@ import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
 import { sprintCarry, Viewmodel } from './viewmodel';
 
+/** Whose BBs are drawn glowing (M33b): the player's by gear slot, and every other shooter's. */
+export interface BBGlow {
+  player: readonly boolean[];
+  others: boolean;
+}
+
+const NO_GLOW: BBGlow = { player: [], others: false };
+
 /**
  * Every replica whose sounds the match needs: yours first (as you carry them), then any other a character carries. Bots
  * needn't carry what you do (you may leave the AEG at home, M32), and a replica without sounds would shoot silently.
@@ -111,6 +119,8 @@ export class CombatPresentation {
     quality: QualitySettings,
     /** The match's hit rules: a leaning figure's muzzle tilts by their lean angle. */
     private readonly hits: HitConfig,
+    /** Whose BBs glow (M33b): yours by gear slot (your Loadout's choice on this field), and everyone else's. */
+    private readonly glow: BBGlow = NO_GLOW,
   ) {
     this.sfx = new Sfx(heardReplicas(loadout, state.characters), blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
@@ -249,7 +259,7 @@ export class CombatPresentation {
         const shooter = this.characterOf(e.characterId);
         // The drawn muzzle once per shot, for the BB and the gas breath both (audit REN-11).
         if (shooter && this.shooterMuzzle(shooter, this.muzzle)) {
-          this.drawFromMuzzle(shooter.id, this.muzzle);
+          this.drawFromMuzzle(shooter, this.muzzle);
           this.gasBreath(shooter, this.muzzle);
         }
       }
@@ -332,7 +342,8 @@ export class CombatPresentation {
    * Starts a shooter's newest BB (if the shot spawned one) visually at their replica's drawn muzzle `at` (BBs really
    * leave from the eyes, which would look like they come out of faces).
    */
-  private drawFromMuzzle(shooterId: number, at: THREE.Vector3): void {
+  private drawFromMuzzle(shooter: Character, at: THREE.Vector3): void {
+    const shooterId = shooter.id;
     const last = this.lastSerialByOwner.get(shooterId) ?? 0;
     let newest: BB | undefined;
     for (const bb of this.state.bbs.bbs) {
@@ -340,6 +351,7 @@ export class CombatPresentation {
     }
     if (!newest) return; // blocked muzzle: the shot hit cover immediately
     this.lastSerialByOwner.set(shooterId, newest.serial);
+    this.bbs.setGlowInDark(newest, shooter === this.player ? (this.glow.player[shooter.armament.active] ?? false) : this.glow.others);
     this.bbs.startFromMuzzle(newest, at, this.estimateFlightTime(newest));
   }
 

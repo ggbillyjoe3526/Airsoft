@@ -171,6 +171,15 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   // The red dot just fitted shows as its raise time instead of "no optic".
   await expect(sheet.locator('dd', { hasText: /^\d\.\d\d s/ }).last()).toBeVisible();
   await expect(loadout.getByText(/Leaves the barrel at \d+ m\/s .* Longest reach at about 75% hop-up/).first()).toBeVisible();
+  // Glowing BBs (M33b) sit beside BB weight and hop-up: At Night by default, and the pick is kept for the replica.
+  const glow = loadout.getByRole('group', { name: 'Glowing BBs' });
+  await expect(glow.getByRole('button', { name: 'At Night' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(glow.getByRole('button', { name: 'Always' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(glow.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'false');
+  await glow.getByRole('button', { name: 'Always' }).click();
+  await expect(loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'Always' })).toHaveAttribute('aria-pressed', 'true');
+  await loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'At Night' }).click();
+  await expect(loadout.getByRole('group', { name: 'Glowing BBs' }).getByRole('button', { name: 'At Night' })).toHaveAttribute('aria-pressed', 'true');
   // Back leaves Customise for the gear first, then the Loadout.
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(loadout.locator('.item-grid')).toBeVisible();

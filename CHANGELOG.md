@@ -54,7 +54,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA6** · Outdoor ambience bed with distant birds; world sounds muffled when eliminated (#55)
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
-- **M33a** · Woodland shown as Coming soon in the Map pop-up
+- **M33a** · Woodland shown as Coming soon in the Map pop-up (#64)
+- **M33b** · Glowing BBs: a per-replica Customise option (At Night by default, Always or Off); bots load them on night fields
 - **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches
 
