@@ -3,9 +3,9 @@ import { BOT_LOADOUTS } from '../config/bots';
 import { AEG, GAS_PISTOL, LOADOUT } from '../config/replicas';
 import { createRng } from '../sim/rng';
 import { respawnCharacter } from '../sim/character';
-import { botKitSeed, kittedCharacter, randomFit, randomKit, rolledKit } from './botKit';
+import { botKitSeed, kittedCharacter, randomFit, randomKit, rolledKit, rolledKitMayHoldDev } from './botKit';
 import { contentPool } from './contentPool';
-import { withTags } from './testSupport';
+import { strayDevPart, withAssets, withTags } from './testSupport';
 import { GAME_POOL } from './gamePool';
 import { FIT_CATEGORY, FIT_SLOTS } from './kit';
 import { assetOfReplica, fits } from './pool';
@@ -138,5 +138,37 @@ describe('rolled bot kits and dev gear (M35)', () => {
       const { items } = rolledKit(shown, LOADOUT, seed, 1);
       expect(items.map((r) => r.asset)).not.toContain(devPool.assets.find((a) => a.name === 'Gas Pistol')!.id);
     }
+  });
+});
+
+describe('whether a rolled kit may hold dev gear (M35 rolledKitMayHoldDev)', () => {
+  it('is false for the real pool, whose every asset is public', () => {
+    expect(pool.assets.every((a) => a.tag === 'public')).toBe(true);
+    expect(rolledKitMayHoldDev(pool, LOADOUT)).toBe(false);
+  });
+
+  it('is true when a part that fits a LOADOUT replica is dev, a power source and a muzzle part included', () => {
+    for (const name of ['Red Dot', 'Vertical Grip', 'Red Laser', 'Hi-Cap Magazine', 'Red Gas', '11.1 V LiPo Battery']) {
+      expect(rolledKitMayHoldDev(withTags(pool, { [name]: 'dev' }), LOADOUT), name).toBe(true);
+    }
+  });
+
+  it("is true when a LOADOUT replica's own row is dev", () => {
+    expect(rolledKitMayHoldDev(withTags(pool, { 'Gas Pistol': 'dev' }), LOADOUT)).toBe(true);
+    expect(rolledKitMayHoldDev(withTags(pool, { 'AEG Rifle': 'dev' }), LOADOUT)).toBe(true);
+  });
+
+  it('is false when the only dev asset fits no LOADOUT replica', () => {
+    const stray = strayDevPart(pool);
+    const devPool = withAssets(pool, [stray]);
+    expect(devPool.assets.filter((a) => a.tag === 'dev')).toEqual([stray]);
+    expect(LOADOUT.every((r) => !fits(stray, assetOfReplica(devPool, r)!))).toBe(true);
+    expect(rolledKitMayHoldDev(devPool, LOADOUT)).toBe(false);
+  });
+
+  it('only looks at the replicas it is given', () => {
+    const devPool = withTags(pool, { 'Red Laser': 'dev' }); // fits the pistol only
+    expect(rolledKitMayHoldDev(devPool, [GAS_PISTOL])).toBe(true);
+    expect(rolledKitMayHoldDev(devPool, [AEG])).toBe(false);
   });
 });

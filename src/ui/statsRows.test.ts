@@ -86,7 +86,8 @@ describe('records view (M19)', () => {
     const news = addMatch(r, { difficulty: 'hard', mode: 'attackDefend', won: true, hits: 12, bbsFired: 40 });
     const view = recordsView(r, news, 'hard', 'attackDefend', 'devContent');
     expect(view.notCounted).toBe(DEV_CONTENT_NOT_RECORDED);
-    expect(view.notCounted).toContain('Dev');
+    expect(view.notCounted).toContain('content still being built');
+    expect(view.notCounted).not.toContain('Dev');
     expect(view.notCounted).not.toContain('Custom rules');
     expect(view.notCounted).not.toContain('Dev settings');
     expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);

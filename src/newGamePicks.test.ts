@@ -4,7 +4,10 @@ import type { ContentTag } from './config/content';
 import { DEFAULT_MATCH_RULES, TEAM_SIZE_CHOICES, WINS_NEEDED_CHOICES } from './config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
 import { DEFAULT_MAP, MAPS } from './map/maps';
-import { type NewGamePicks, pickTags, picksUseDev, playedPicks } from './newGamePicks';
+import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks } from './newGamePicks';
+import { BOT_LOADOUTS } from './config/bots';
+import { GAME_POOL } from './pool/gamePool';
+import { strayDevPart, withAssets, withTags } from './pool/testSupport';
 
 const picks = (over: Partial<NewGamePicks> = {}, rules: Partial<NewGamePicks['rules']> = {}): NewGamePicks => ({
   map: DEFAULT_MAP,
@@ -104,5 +107,58 @@ describe('New game picks and dev content (M35)', () => {
 
   it('restores the lists after a test tagged an entry (the real lists stay public)', () => {
     for (const o of [...MAPS, ...MATCH_MODES, ...DIFFICULTIES, ...TEAMMATE_DIFFICULTIES]) expect(o.tag).toBe('public');
+  });
+});
+
+describe('whether the opponents may carry dev gear and whether a match uses dev content (M35)', () => {
+  const kitOf = (...names: string[]) => names.map((n) => ({ asset: GAME_POOL.assets.find((a) => a.name === n)!.id, tier: 'common' }));
+  const devPool = withTags(GAME_POOL, { 'Red Dot': 'dev' });
+  const strayPool = withAssets(GAME_POOL, [strayDevPart(GAME_POOL)]);
+
+  it('rolls the bots\' kits on hard only (the premise of the rest)', () => {
+    expect(BOT_LOADOUTS).toEqual({ easy: 'factory', normal: 'factory', hard: 'random' });
+  });
+
+  it('says no for the real pool, on every difficulty, with Dev content off or on', () => {
+    for (const devContent of [false, true]) for (const d of DIFFICULTIES) expect(botsMayCarryDev(GAME_POOL, devContent, d.id)).toBe(false);
+  });
+
+  it('says yes only with Dev content on, on a difficulty that rolls kits, and dev gear a kit could hold', () => {
+    expect(botsMayCarryDev(devPool, true, 'hard')).toBe(true);
+    expect(botsMayCarryDev(devPool, false, 'hard')).toBe(false);
+    expect(botsMayCarryDev(devPool, true, 'easy')).toBe(false);
+    expect(botsMayCarryDev(devPool, true, 'normal')).toBe(false);
+    expect(botsMayCarryDev(withTags(GAME_POOL, { 'Gas Pistol': 'dev' }), true, 'hard')).toBe(true);
+  });
+
+  it('says no when the only dev asset fits no LOADOUT replica', () => {
+    expect(botsMayCarryDev(strayPool, true, 'hard')).toBe(false);
+  });
+
+  it('uses no dev content when nothing is dev, whatever the kit, difficulty or switch', () => {
+    const kit = kitOf('AEG Rifle', 'Gas Pistol', 'Red Dot');
+    for (const devContent of [false, true]) for (const d of DIFFICULTIES) expect(matchUsesDev(picks({ difficulty: d.id }), kit, GAME_POOL, devContent)).toBe(false);
+    expect(matchUsesDev(picks(), [null, null], GAME_POOL, true)).toBe(false);
+  });
+
+  it('uses dev content when a pick is dev (a real entry tagged for the test)', () => {
+    tagDev(MATCH_MODES, 'attackDefend');
+    expect(matchUsesDev(picks({ mode: 'attackDefend' }), [], GAME_POOL, false)).toBe(true);
+    expect(matchUsesDev(picks({ mode: 'attackDefend' }), [], GAME_POOL, true)).toBe(true);
+    expect(matchUsesDev(picks(), [], GAME_POOL, true)).toBe(false);
+  });
+
+  it('uses dev content when an item in the kit is dev, null slots skipped', () => {
+    const kit = kitOf('AEG Rifle', 'Red Dot');
+    expect(matchUsesDev(picks(), [null, ...kit], devPool, false)).toBe(true);
+    expect(matchUsesDev(picks(), [null, ...kit], devPool, true)).toBe(true);
+    expect(matchUsesDev(picks(), kitOf('AEG Rifle'), devPool, false)).toBe(false);
+  });
+
+  it("uses dev content when the opponents may roll dev gear, on hard with Dev content on only", () => {
+    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devPool, true)).toBe(true);
+    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devPool, false)).toBe(false);
+    expect(matchUsesDev(picks({ difficulty: 'normal' }), [], devPool, true)).toBe(false);
+    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], strayPool, true)).toBe(false);
   });
 });

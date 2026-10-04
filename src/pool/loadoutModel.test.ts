@@ -3,7 +3,7 @@ import { GAME_STATS } from '../config/gameStats';
 import { AEG, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
-import { gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { collectionOwnership, gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
 import { EMPTY_FIT } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
@@ -337,5 +337,50 @@ describe('Loadout model with dev gear (M35)', () => {
     expect(model.fitChoices(aeg, 'optic')).toHaveLength(2 * tiers);
     expect(model.fitChoices(aeg, 'optic').map((r) => r.asset)).toContain(devId('Red Dot'));
     expect(model.replicaChoices()).toHaveLength(2 * tiers);
+  });
+});
+
+describe('Loadout slots and dev gear (M35 hasSlot)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+
+  // The Red Laser is the only laser, and it fits the pistol: tagging it dev leaves the pistol's laser slot with dev parts only.
+  const devPool = withTags(pool, { 'Red Laser': 'dev' });
+  const pistol = devPool.assets.find((a) => a.name === 'Gas Pistol')!.id;
+  const aeg = devPool.assets.find((a) => a.name === 'AEG Rifle')!.id;
+
+  it('has no slot for a part that is only dev while Dev content is off, and has it once on', () => {
+    let devContent = false;
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => false, () => devContent));
+    expect(model.hasSlot(pistol, 'laser')).toBe(false);
+    devContent = true;
+    expect(model.hasSlot(pistol, 'laser')).toBe(true);
+    devContent = false;
+    expect(model.hasSlot(pistol, 'laser')).toBe(false);
+  });
+
+  it('does the same with Unlock all gear on, and still has the slots that have a public part', () => {
+    let devContent = false;
+    const model = new LoadoutModel(devPool, gameOwnership(devPool, () => newCollection(devPool, 1), () => true, () => devContent));
+    expect(model.hasSlot(pistol, 'laser')).toBe(false);
+    expect(model.hasSlot(pistol, 'muzzle')).toBe(true);
+    expect(model.hasSlot(aeg, 'optic')).toBe(true);
+    devContent = true;
+    expect(model.hasSlot(pistol, 'laser')).toBe(true);
+  });
+
+  it('keeps a slot with at least one public part while Dev content is off', () => {
+    const mixed = withTags(pool, { 'Red Dot': 'dev' }); // the 2x Scope stays public
+    const model = new LoadoutModel(mixed, gameOwnership(mixed, () => newCollection(mixed, 1), () => false, () => false));
+    expect(model.hasSlot(aeg, 'optic')).toBe(true);
+  });
+
+  it('has the slot with plain collection ownership, which offers no filter', () => {
+    const c = newCollection(devPool, 1);
+    const model = new LoadoutModel(devPool, collectionOwnership(() => c));
+    expect(collectionOwnership(() => c).offers).toBeUndefined();
+    expect(model.hasSlot(pistol, 'laser')).toBe(true);
+    expect(new LoadoutModel(devPool, owning([])).hasSlot(pistol, 'laser')).toBe(true);
   });
 });
