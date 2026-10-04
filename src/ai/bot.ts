@@ -10,6 +10,7 @@ import type { RoundState } from '../sim/round';
 import { createRng, type RngState, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type AimState, createAim } from './aim';
+import { createHeldAngle, type HeldAngle } from './angles';
 import { type CoverBlock, type CoverSpot, createCoverSpot } from './cover';
 
 /**
@@ -98,6 +99,11 @@ export interface Bot {
   holding: boolean;
   /** Whether to crouch while holding here: decided once per hold by one ray towards the enemy side (AI-02). */
   holdCrouch: boolean;
+  /** Held angles (M37): the corners it aims at while holding (best first), how many, and when they were found (s). */
+  heldAngles: HeldAngle[];
+  heldAngleCount: number;
+  heldAnglesAt: number;
+  heldAnglesFrom: Vec3;
   /** A defender settled at its post last tick: its holdCrouch was chosen on arrival and stands until it leaves (AI-02). */
   atPost: boolean;
   /** On the way to cover by the lane point just reached, to hold from there (AI-02). */
@@ -235,6 +241,10 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     teamWait: 0,
     waitForTeam: false,
     holding: false,
+    heldAngles: [createHeldAngle(), createHeldAngle()],
+    heldAngleCount: 0,
+    heldAnglesAt: Number.NEGATIVE_INFINITY,
+    heldAnglesFrom: vec3(),
     holdCrouch: false,
     atPost: false,
     holdCover: false,
@@ -312,6 +322,8 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.teamWait = 0;
   b.waitForTeam = false;
   b.holding = false;
+  b.heldAngleCount = 0;
+  b.heldAnglesAt = Number.NEGATIVE_INFINITY;
   b.atPost = false;
   b.holdCover = false;
   b.searchLookLeft = 0;
