@@ -1,4 +1,5 @@
 import { AUDIO } from '../config/audio';
+import { blockMaterial } from '../config/materials';
 import type { FloorSurface, ImpactMaterial } from '../config/sounds';
 import type { MapBlock } from '../map/mapTypes';
 import { surfaceHeightAt } from '../map/surfaces';
@@ -41,7 +42,7 @@ export function impactMaterialAt(blocks: readonly MapBlock[], p: Vec3): ImpactMa
   let found: ImpactMaterial | undefined;
   for (const b of blocks) {
     if (!nearBlock(b, p, AUDIO.impactBlockMargin)) continue;
-    const m = b.surface ?? AUDIO.impactMaterials[b.kind];
+    const m = blockMaterial(b);
     if (b.kind === 'crate' || b.kind === 'container') return m;
     found ??= m;
   }

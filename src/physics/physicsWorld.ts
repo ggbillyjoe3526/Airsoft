@@ -1,8 +1,11 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { blockMaterial } from '../config/materials';
 import type { BodyConfig } from '../config/movement';
+import type { ImpactMaterial } from '../config/sounds';
 import { PHYSICS } from '../config/physics';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
+import type { SurfaceHit } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { CharacterMover } from '../sim/movement';
 import type { Vec3 } from '../sim/vec';
@@ -81,6 +84,8 @@ export class PhysicsWorld implements CharacterMover {
   private readonly scratch = { x: 0, y: 0, z: 0 };
   private readonly groundProbe: RAPIER.Ball;
   private readonly ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
+  /** What each level block's collider is made of, by collider handle (ricochets). */
+  private readonly materials = new Map<number, ImpactMaterial>();
 
   /** Call `initPhysics()` first. */
   constructor(
@@ -98,7 +103,7 @@ export class PhysicsWorld implements CharacterMover {
     for (const b of map.blocks) {
       const desc = blockCollider(b);
       desc.setTranslation(b.center.x, b.center.y, b.center.z).setCollisionGroups(STATIC_GROUPS);
-      this.world.createCollider(desc);
+      this.materials.set(this.world.createCollider(desc).handle, blockMaterial(b));
     }
 
     this.controller = this.world.createCharacterController(PHYSICS.controllerOffset);
@@ -182,7 +187,28 @@ export class PhysicsWorld implements CharacterMover {
     return hit ? hit.timeOfImpact : -1;
   }
 
+  /** raycastStatic, also giving the surface's normal (facing back along the ray) and material (BB ricochets). */
+  raycastSurface(origin: Vec3, dir: Vec3, maxDist: number, out: SurfaceHit): number {
+    const r = this.ray;
+    r.origin.x = origin.x;
+    r.origin.y = origin.y;
+    r.origin.z = origin.z;
+    r.dir.x = dir.x;
+    r.dir.y = dir.y;
+    r.dir.z = dir.z;
+    const hit = this.world.castRayAndGetNormal(r, maxDist, true, undefined, QUERY_STATIC_ONLY);
+    if (!hit) return -1;
+    // A closed mesh's faces point outwards; flip one met from behind so the normal always faces the ray.
+    const facing = hit.normal.x * dir.x + hit.normal.y * dir.y + hit.normal.z * dir.z > 0 ? -1 : 1;
+    out.normal.x = hit.normal.x * facing;
+    out.normal.y = hit.normal.y * facing;
+    out.normal.z = hit.normal.z * facing;
+    out.material = this.materials.get(hit.collider.handle) ?? 'concrete';
+    return hit.timeOfImpact;
+  }
+
   dispose(): void {
+    this.materials.clear();
     this.controller.free();
     this.world.free();
     this.characterColliders.clear();

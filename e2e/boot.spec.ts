@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map and
- * Difficulty pop-ups, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2× scope, an
+ * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
+ * Difficulty pop-ups, a 2v2 picked, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2× scope, an
  * angled grip, a hi-cap and 0.28 g BBs, holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
  * down the scope and keeps running without a page error.
  *
@@ -53,15 +53,36 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(mapDialog).toBeHidden();
   await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Depot');
 
-  // Difficulty opens a pop-up; picking an option closes it and the button shows the choice.
+  // Match (M20): rounds to win, round time, team size, friendly fire and ricochets; the button sums them up.
+  await expect(setup.getByRole('button', { name: /Match/i })).toContainText('3v3 · first to 5');
+  await setup.getByRole('button', { name: /Match/i }).click();
+  const matchDialog = page.getByRole('dialog', { name: 'Match' });
+  await expect(matchDialog).toBeVisible();
+  await expect(matchDialog.getByRole('group', { name: 'Ricochets count' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  await matchDialog.getByRole('group', { name: 'Team size' }).getByRole('button', { name: '2v2' }).click();
+  await matchDialog.getByRole('group', { name: 'Rounds to win' }).getByRole('button', { name: '3' }).click();
+  await page.keyboard.press('Escape');
+  await expect(matchDialog).toBeHidden();
+  await expect(setup).toBeVisible(); // Esc closed the pop-up only
+  await expect(setup.getByRole('button', { name: /Match/i })).toContainText('2v2 · first to 3');
+  await expect(page.locator('.setup-rules')).toContainText('you and 1 bot teammate');
+  await expect(page.locator('.setup-rules')).toContainText("won't go into your records"); // custom rules, said before Play
+
+  // Difficulty opens a pop-up with a level for the opponents and one for your teammates; the button shows both.
   await setup.getByRole('button', { name: /Difficulty/i }).click();
   const dialog = page.getByRole('dialog', { name: 'Bot difficulty' });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: /Hard/i }).click();
+  // Nothing saved for the teammates yet: they follow the opponents' level until picked.
+  await dialog.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Hard' }).click();
+  await expect(dialog.getByRole('group', { name: 'Teammates' }).getByRole('button', { name: 'Hard' })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('group', { name: 'Teammates' }).getByRole('button', { name: 'Normal' }).click();
+  await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
-  await expect(setup.getByRole('button', { name: /Difficulty/i })).toContainText('Hard');
+  await expect(setup.getByRole('button', { name: /Difficulty/i })).toContainText('Hard / Normal');
+  await expect(page.locator('.setup-rules')).toContainText('2:30 rounds'); // the custom-rules note names the whole standard
   await setup.getByRole('button', { name: /Difficulty/i }).click();
-  await dialog.getByRole('button', { name: /Normal/i }).click();
+  await dialog.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Normal' }).click();
+  await dialog.getByRole('button', { name: 'Close' }).click();
 
   // The Loadout screen: the replica in each slot, the optic, and a hop-up dial and BB weight per replica. Fit the red
   // dot and heavier BBs before the match.
@@ -142,7 +163,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const board = page.locator('.match-board');
   await page.keyboard.down('Tab');
   await expect(board).toBeVisible({ timeout: 10_000 });
-  await expect(board.locator('tbody tr:not(:first-child)')).toHaveCount(6);
+  await expect(board.locator('tbody tr:not(:first-child)')).toHaveCount(4); // the 2v2 picked on Match
   await page.keyboard.up('Tab');
   await expect(board).toBeHidden({ timeout: 10_000 });
   const mag = page.locator('.hud-mag');

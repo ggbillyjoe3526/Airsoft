@@ -297,14 +297,14 @@ body {
   letter-spacing: 0.03em;
 }
 
-/* New game: five big buttons in a row (three, then two, on narrower screens) */
+/* New game: six big buttons in a row (three, then two, on narrower screens) */
 .menu-setup .menu-page-body {
   max-width: 1400px;
 }
 
 .setup-tiles {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -329,7 +329,8 @@ body {
 }
 
 .setup-tile-value {
-  font-size: 24px;
+  /* Six tiles to a row from 1180 px wide: the type shrinks with the window so "Elimination" fits its tile. */
+  font-size: clamp(16px, 1.25vw, 24px);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: 0.03em;
@@ -463,6 +464,30 @@ body {
   font-size: 15px;
   line-height: 1.45;
   color: var(--menu-muted);
+}
+
+/* Pop-ups of settings rows (New game's Match and Difficulty, M20): wide enough for a row's label beside its control */
+.rows-dialog {
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 20px 28px 24px;
+}
+
+.rows-dialog .menu-dialog-head {
+  margin-bottom: 4px;
+}
+
+.rows-dialog .menu-row {
+  padding: 8px 0;
+}
+
+.rows-dialog .menu-row-name {
+  flex-basis: 170px;
+}
+
+.rows-dialog .menu-row > .picker {
+  flex: 1 1 280px;
+  min-width: 0;
 }
 
 /* Rows of settings and loadout parts: a label (and help) on the left, the control on the right */
@@ -900,7 +925,7 @@ kbd {
   }
 
   .setup-tile-value {
-    font-size: 22px;
+    font-size: clamp(16px, 1.25vw, 22px);
   }
 
   .setup-rules {
@@ -1892,6 +1917,12 @@ kbd {
 .records-grid td.current {
   font-weight: 800;
   color: var(--orange);
+}
+
+.records-not-counted {
+  margin: 0 0 10px;
+  color: var(--menu-muted);
+  font-size: 15px;
 }
 
 .records-bests {

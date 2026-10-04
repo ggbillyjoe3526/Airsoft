@@ -63,6 +63,12 @@ export class OptionPicker<T extends string> {
     this.refresh();
   }
 
+  /** Shows `value` as picked without saving it or reporting a change (another choice set it, e.g. M20's teammates). */
+  show(value: T): void {
+    this.current = value;
+    this.refresh();
+  }
+
   private refresh(): void {
     for (const [id, button] of this.buttons) {
       const on = id === this.current;

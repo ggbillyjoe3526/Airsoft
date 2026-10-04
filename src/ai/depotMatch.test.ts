@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
 import { BOTS, type BotConfig, botConfig } from '../config/bots';
-import { HITS, ROUNDS } from '../config/hits';
+import { type HitConfig, HITS, ROUNDS } from '../config/hits';
 import type { MatchMode } from '../config/modes';
 import { FOOTSTEPS } from '../config/footsteps';
 import { BODY, MOVEMENT } from '../config/movement';
@@ -28,7 +28,7 @@ const DT = 1 / 60;
  * A 3v3 on Depot (or `map`) with real physics, headless. By default all six are bots; with `hider`, Blue
  * is a single non-bot player standing still at that spot (hiding) against three Orange bots.
  */
-function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig = BOTS, mode: MatchMode = 'elimination', rules: RoundRules = ROUNDS, map: MapData = DEPOT) {
+function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig = BOTS, mode: MatchMode = 'elimination', rules: RoundRules = ROUNDS, map: MapData = DEPOT, teamSize: number = ROUNDS.teamSize, hits: HitConfig = HITS) {
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
   const state = createGameState(seed, BALLISTICS.maxBBs, rules, mode, map.flag);
@@ -41,7 +41,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     ballistics: BALLISTICS,
     loadout: LOADOUT,
     killY: map.killY,
-    hits: HITS,
+    hits,
     deadZones: map.deadZones,
     spawns: map.spawns,
     spawnLift: PHYSICS.groundRestGap,
@@ -52,7 +52,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
   });
   let id = 0;
   for (let team = 0; team < 2; team++) {
-    for (let i = 0; i < (hider && team === 0 ? 1 : ROUNDS.teamSize); i++) state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
+    for (let i = 0; i < (hider && team === 0 ? 1 : teamSize); i++) state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
   }
   // Round 1 as the game starts it: each team at its end; a hider stands at its spot instead.
   placeTeams(state.round, state.characters, ctx.round);
@@ -70,7 +70,7 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     lowCover: lowCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap),
     tallCover: tallCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap),
     body: BODY,
-    hits: HITS,
+    hits,
     loadout: LOADOUT,
     cfg,
     seed,
@@ -81,6 +81,10 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
     shots: 0,
     hits: 0,
     friendlyHits: 0,
+    /** Hits by a BB that had bounced (they only knock out when the match counts ricochets), and ticks that didn't. */
+    ricochetHits: 0,
+    friendlyRicochets: 0,
+    ricochetTicks: 0,
     firstRoundEnd: -1,
     roundEnds: [] as number[],
     farthestFromSpawn: state.characters.map(() => 0),
@@ -126,7 +130,10 @@ function playMatch(seconds: number, seed: number, hider?: Vec3, cfg: BotConfig =
         hitY[state.characters.indexOf(v)] = v.position.y;
         const s = state.characters.find((c) => c.id === e.shooterId)!;
         if (v.team === s.team) stats.friendlyHits++;
+        if (e.ricochet) stats.ricochetHits++;
+        if (e.ricochet && v.team === s.team) stats.friendlyRicochets++;
       }
+      if (e.type === 'ricochetTick') stats.ricochetTicks++;
     }
     stats.maxFlag = Math.max(stats.maxFlag, state.round.flag.progress);
     if (state.round.phase === 'live' && state.time - roundStart > 0.5) {
@@ -225,7 +232,7 @@ describe('a 3v3 bot match on Depot', () => {
       }
     }
     // Measured on the M11 Depot (2026-10-03): the west end wins 40% of the decided rounds here (46 of 114) and
-    // 46% over seeds 1-96. The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
+    // 46% over seeds 1-96; with M20's ricochets, 39% (45 of 116). The east end is stronger (KNOWN_ISSUES); the end swap evens out a match. Re-measure with this test after any layout or bot change.
     expect(westWins / decided).toBeGreaterThan(0.35);
     expect(westWins / decided).toBeLessThan(0.6);
   });
@@ -259,7 +266,8 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
     }
     // Measured on the M11 Depot with M12c's hop-up (2026-10-03; 16 seeds): 15 captures in 126 rounds, a flag
     // raised in 10 of 16 matches, attackers winning 51%, no friendly hits. Over seeds 1-96 attackers win 50%
-    // (107 captures in 736 rounds); the old mirrored Depot measured 53%. Bots check their line of fire, but a teammate dodging into
+    // (107 captures in 736 rounds); the old mirrored Depot measured 53%. With M20's ricochets (not counting): 18 captures in
+    // 125 rounds, flags raised in 11 of 16, attackers 53%, 1 friendly hit, 193 ricochet ticks. Bots check their line of fire, but a teammate dodging into
     // a BB already in the air can't always be helped (KNOWN_ISSUES).
     // Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);
@@ -284,6 +292,86 @@ describe('a 3v3 Attack / Defend match on Depot', () => {
     const rules = { ...ROUNDS, roundTime: 30 };
     const stats = playMatch(32, 2, vec3(-24.1, 0, -4.3), BOTS, 'attackDefend', rules);
     expect(stats.results[0]).toMatchObject({ attackers: 0, winner: 1, reason: 'time' });
+  });
+});
+
+describe('custom matches on Depot (M20)', () => {
+  beforeAll(async () => {
+    await initPhysics();
+  });
+
+  it('plays fair 1v1 and 2v2 matches in both modes: rounds get decided, neither end is favoured, nobody stays at spawn', { timeout: 600_000 }, () => {
+    // Measured 2026-10-04 (16 seeds each, first to 3, 200 s; about 50 s for all four here): a 1v1 starts from the middle spawn at both ends (first,
+    // from the end's first spawn, the west won 63% of 1v1 rounds over 8 seeds). Elimination: the west wins 47% of
+    // decided 1v1 rounds (27 of 58) and 48% of 2v2 (33 of 69). Attack / Defend: attackers win 49% of 1v1 rounds (30
+    // of 61, 3 captures) and 52% of 2v2 (34 of 65, 15 captures). 95% or more of rounds are decided, no friendly hits.
+    const rules = { ...ROUNDS, winsNeeded: 3, halfTimeAfter: 2 };
+    for (const size of [1, 2]) {
+      for (const mode of ['elimination', 'attackDefend'] as const) {
+        const label = `${size}v${size} ${mode}`;
+        let rounds = 0;
+        let decided = 0;
+        let favoured = 0; // elimination: rounds the west end won; attack / defend: rounds the attackers won
+        let friendlyHits = 0;
+        for (let seed = 1; seed <= 16; seed++) {
+          const stats = playMatch(200, seed, undefined, BOTS, mode, rules, DEPOT, size);
+          expect(stats.farthestFromSpawn, label).toHaveLength(2 * size);
+          friendlyHits += stats.friendlyHits;
+          for (const r of stats.results) {
+            rounds++;
+            if (r.winner < 0) continue;
+            decided++;
+            if (mode === 'elimination' ? r.winnerEnd === 0 : r.winner === r.attackers) favoured++;
+          }
+          // Everyone leaves spawn in round 1; in Attack / Defend only the attackers (Blue) must, defenders may hold.
+          stats.farthestFromSpawn.forEach((d, i) => {
+            if (mode === 'elimination' || i < size) expect(d, `${label} seed ${seed}`).toBeGreaterThan(8);
+          });
+          expectGrounded(stats, DEPOT);
+        }
+        expect(rounds, label).toBeGreaterThanOrEqual(16 * 3);
+        expect(decided / rounds, label).toBeGreaterThan(0.9);
+        expect(favoured / decided, label).toBeGreaterThan(0.35);
+        expect(favoured / decided, label).toBeLessThan(0.65);
+        expect(friendlyHits, label).toBe(0);
+      }
+    }
+  });
+
+  it('stays playable with ricochets counting: bots never shoot a teammate, and bounced BBs decide only some hits', { timeout: 600_000 }, () => {
+    // Measured 2026-10-04 (16 seeds, 3v3, friendly fire on): Elimination: 72 of 520 hits were ricochets (14%), the west
+    // won 44% of rounds (55 of 125), 5 friendly hits, all ricochets. Attack / Defend: 80 of 487 hits ricochets (16%),
+    // attackers won 54% (65 of 120), 14 captures, flags raised in 10 of 16, 3 friendly hits, all ricochets. Bots can't
+    // see where a bounce goes, so a ricochet can catch a teammate (as at a site that counts them).
+    const hits = { ...HITS, ricochetsCount: true };
+    for (const mode of ['elimination', 'attackDefend'] as const) {
+      let rounds = 0;
+      let favoured = 0;
+      let captures = 0;
+      let allHits = 0;
+      let ricochetHits = 0;
+      let directFriendly = 0;
+      let friendlyRicochets = 0;
+      for (let seed = 1; seed <= 16; seed++) {
+        const stats = playMatch(mode === 'elimination' ? 300 : 400, seed, undefined, BOTS, mode, ROUNDS, DEPOT, ROUNDS.teamSize, hits);
+        allHits += stats.hits;
+        ricochetHits += stats.ricochetHits;
+        friendlyRicochets += stats.friendlyRicochets;
+        directFriendly += stats.friendlyHits - stats.friendlyRicochets;
+        for (const r of stats.results) {
+          rounds++;
+          if (r.reason === 'captured') captures++;
+          if (mode === 'elimination' ? r.winner >= 0 && r.winnerEnd === 0 : r.winner === r.attackers) favoured++;
+        }
+      }
+      expect(directFriendly, mode).toBe(0);
+      expect(friendlyRicochets, mode).toBeLessThanOrEqual(8);
+      expect(ricochetHits / allHits, mode).toBeGreaterThan(0.05);
+      expect(ricochetHits / allHits, mode).toBeLessThan(0.25);
+      expect(favoured / rounds, mode).toBeGreaterThan(0.35);
+      expect(favoured / rounds, mode).toBeLessThan(0.65);
+      if (mode === 'attackDefend') expect(captures, mode).toBeGreaterThanOrEqual(7);
+    }
   });
 });
 

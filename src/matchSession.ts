@@ -4,10 +4,11 @@ import { lowCoverBlocks, tallCoverBlocks } from './ai/cover';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS } from './config/ballistics';
-import { BOT_BEHAVIOUR, botConfig, type Difficulty } from './config/bots';
+import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
-import { HITS, ROUNDS } from './config/hits';
+import type { HitConfig } from './config/hits';
 import type { CrosshairSettings } from './config/matchInfo';
+import { countsForRecords, hitRulesFor, type MatchRules, roundRulesFor } from './config/matchRules';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
@@ -48,7 +49,11 @@ const PLAYER_ID = 0;
 export interface MatchSetup {
   map: MapData;
   mode: MatchMode;
+  /** The opponents' bot difficulty, and your bot teammates' (M20). */
   difficulty: Difficulty;
+  teammateDifficulty: Difficulty;
+  /** Rounds to win, round time, team size, friendly fire and ricochets (the Match pop-up, M20). */
+  rules: MatchRules;
   /** The replica in each loadout slot (primary, secondary); everyone in the match carries these (bots with factory setups). */
   loadout: readonly ReplicaConfig[];
   /** The optic for the replica with a rail, and each slot's hop-up dial, BB weight (grams), grip and magazine, from the Loadout screen. */
@@ -87,10 +92,15 @@ export class MatchSession {
   /** Reduced motion (Settings → Accessibility): the lean's roll here, the held replica's motion in `combat`. */
   private motion: MotionScale = FULL_MOTION;
   private readonly ctx: SimContext;
+  /** The match's round rules and hit rules (from setup.rules). */
+  readonly rounds: ReturnType<typeof roundRulesFor>;
+  private readonly hits: HitConfig;
   /** Simulation time the match was decided (NaN while it's on, and once the result screen is due). */
   private matchOverAt = Number.NaN;
   /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
   private resultTaken = false;
+  /** The standard match, so its result goes into the records (custom rules don't, M20). */
+  readonly countsForRecords: boolean;
 
   constructor(
     private readonly renderer: Renderer,
@@ -113,7 +123,10 @@ export class MatchSession {
     this.nav = buildNavGrid(map, NAV);
     // Maps without a flagpole can only be played in elimination.
     this.mode = map.flag ? setup.mode : 'elimination';
-    this.state = createGameState(seed, BALLISTICS.maxBBs, ROUNDS, this.mode, map.flag);
+    this.rounds = roundRulesFor(setup.rules);
+    this.hits = hitRulesFor(setup.rules);
+    this.countsForRecords = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty);
+    this.state = createGameState(seed, BALLISTICS.maxBBs, this.rounds, this.mode, map.flag);
     this.ctx = createSimContext({
       mover: this.physics,
       query: this.physics,
@@ -123,13 +136,13 @@ export class MatchSession {
       ballistics: BALLISTICS,
       loadout: this.loadout,
       killY: map.killY,
-      hits: HITS,
+      hits: this.hits,
       deadZones: map.deadZones,
       spawns: map.spawns,
       spawnLift: PHYSICS.groundRestGap,
       nav: this.nav,
       navSnap: NAV.snap,
-      rounds: ROUNDS,
+      rounds: this.rounds,
       pole: map.flag,
     });
     this.player = this.spawnRoster(map);
@@ -139,13 +152,13 @@ export class MatchSession {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: HITS, loadout: this.loadout, cfg: botConfig(setup.difficulty), seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), body: BODY, hits: this.hits, loadout: this.loadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
     );
     input.resetView(this.player.spawnYaw);
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, HITS, this.physics, ROUNDS.teamSize, ROUNDS, this.stats, (action) => input.keyName(action), setup.teamColours);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours);
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -180,12 +193,14 @@ export class MatchSession {
 
   /**
    * The decided match for the records, once per match (null before it's decided, and after the first call). Only a
-   * match played to the end counts: quitting one counts as nothing.
+   * match played to the end counts: quitting one counts as nothing. A match with custom rules is never counted
+   * (countsForRecords).
    */
   takeMatchResult(): MatchResult | null {
     const r = this.state.round;
     if (r.phase !== 'matchOver' || this.resultTaken) return null;
     this.resultTaken = true;
+    if (!this.countsForRecords) return null;
     const mine = this.stats.matchOf(this.player.id);
     return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
   }
@@ -204,7 +219,7 @@ export class MatchSession {
     const alpha = stepperAlpha(this.stepper); // frozen while paused, so the view holds still
     // The camera shows where BBs actually go: view pitch plus the replica's recoil kick.
     const pitch = this.input.pitch + this.player.armament.recoil;
-    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
+    updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.combat.render(!spectating);
@@ -252,12 +267,13 @@ export class MatchSession {
    * plus bot teammates on Blue, and Orange bots. Returns the player.
    */
   private spawnRoster(map: MapData): Character {
+    const size = this.setup.rules.teamSize;
     for (const [end, spawns] of map.spawns.entries()) {
-      if (spawns.length < ROUNDS.teamSize) throw new Error(`Map ${map.name} needs ${ROUNDS.teamSize} spawns at end ${end}`);
+      if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
     }
     let id = PLAYER_ID;
     for (let team = 0; team < TEAMS.length; team++) {
-      for (let i = 0; i < ROUNDS.teamSize; i++) this.state.characters.push(createCharacter(id++, vec3(), 0, this.loadout, team));
+      for (let i = 0; i < size; i++) this.state.characters.push(createCharacter(id++, vec3(), 0, this.loadout, team));
     }
     placeTeams(this.state.round, this.state.characters, this.ctx.round);
     for (const c of this.state.characters) {
@@ -292,4 +308,9 @@ export class MatchSession {
       if (e.type === 'matchOver') this.matchOverAt = this.state.time;
     }
   }
+}
+
+/** Per team, the bots' tuning: your team's bots at the teammates' difficulty, the other team's at the opponents' (M20). */
+function teamBotConfigs(playerTeam: number, setup: MatchSetup): BotConfig[] {
+  return TEAMS.map((_, team) => botConfig(team === playerTeam ? setup.teammateDifficulty : setup.difficulty));
 }

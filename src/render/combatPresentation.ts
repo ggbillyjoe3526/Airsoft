@@ -137,6 +137,14 @@ export class CombatPresentation {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
         if (e.victimId === this.player.id) this.viewmodel.onHit();
         else this.hitPuffs.spawn(e.position);
+      } else if (e.type === 'ricochetTick') {
+        // A ricochet that doesn't count (M20): you feel the tick and play on. On anyone else it's the plain impact puff,
+        // not the bigger hit puff, so it never reads as a hit nobody called; your own BB's ricochet says so.
+        if (e.victimId === this.player.id) this.hud.showNotice(HUD.ricochetNotice, HUD.noticeTime);
+        else {
+          this.puffs.spawn(e.position);
+          if (e.shooterId === this.player.id) this.hud.showNotice(HUD.ricochetShooterNotice, HUD.noticeTime);
+        }
       } else if (e.type === 'reloadRefused' && e.characterId === this.player.id) {
         this.hud.showNotice('No fuller magazine', HUD.noticeTime);
       }

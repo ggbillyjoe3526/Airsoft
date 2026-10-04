@@ -4,6 +4,7 @@ import { PHYSICS } from '../config/physics';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { DEPOT } from '../map/depot';
 import { TEST_YARD, TEST_YARD_HALF_SIZE } from '../map/testYard';
+import type { SurfaceHit } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { createMovementScratch, stepMovement } from '../sim/movement';
@@ -380,6 +381,23 @@ describe('PhysicsWorld (Rapier)', () => {
         expect(c.position.y, label).toBeCloseTo((up ? 1 : 0) + REST, 2);
       }
     }
+    world.dispose();
+  });
+
+  it('tells what a ray met: the surface facing back along it and its material (BB ricochets, M20)', () => {
+    const world = new PhysicsWorld(MAP, BODY, DT);
+    const out: SurfaceHit = { normal: vec3(), material: 'metal' };
+    // Towards the concrete wall at z = -5 (its near face at -4.8).
+    const t = world.raycastSurface(vec3(0, 1.5, 0), vec3(0, 0, -1), 20, out);
+    expect(t).toBeCloseTo(4.8, 3);
+    expect(t).toBeCloseTo(world.raycastStatic(vec3(0, 1.5, 0), vec3(0, 0, -1), 20), 6);
+    expect(out.normal.z).toBeCloseTo(1, 3);
+    expect(out.material).toBe('concrete');
+    // Down onto the wooden crate's top.
+    expect(world.raycastSurface(vec3(-4, 3, 0), vec3(0, -1, 0), 10, out)).toBeCloseTo(1.8, 3);
+    expect(out.normal.y).toBeCloseTo(1, 3);
+    expect(out.material).toBe('wood');
+    expect(world.raycastSurface(vec3(0, 1.5, 0), vec3(0, 1, 0), 10, out)).toBe(-1);
     world.dispose();
   });
 });

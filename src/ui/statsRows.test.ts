@@ -63,5 +63,15 @@ describe('records view (M19)', () => {
       { label: 'Best accuracy', value: '30%', isNew: true },
       { label: 'Wins in a row', value: '1 now · best 1', isNew: true },
     ]);
+    expect(view.notCounted).toBe('');
+  });
+
+  it('marks nothing and says why after a custom match (M20)', () => {
+    const r = emptyRecords();
+    const news = addMatch(r, { difficulty: 'hard', mode: 'attackDefend', won: true, hits: 12, bbsFired: 40 });
+    const view = recordsView(r, news, 'hard', 'attackDefend', false);
+    expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);
+    expect(view.bests.every((b) => !b.isNew)).toBe(true);
+    expect(view.notCounted).toContain('3v3 · first to 5');
   });
 });

@@ -20,8 +20,13 @@ export type GameEvent =
   | { type: 'bbImpact'; position: Vec3; ownerId: number }
   /** A character's footstep or landing, heard at its feet (walking and crouched moves are silent). */
   | { type: 'footstep'; characterId: number; kind: FootstepKind }
-  /** A BB hit a character: they are eliminated and start calling their hit. `direction` is the BB's flight direction. */
-  | { type: 'characterHit'; victimId: number; shooterId: number; position: Vec3; direction: Vec3 }
+  /**
+   * A BB hit a character: they are eliminated and start calling their hit. `direction` is the BB's flight direction;
+   * `ricochet`: it had bounced off something first (only when the match counts ricochets).
+   */
+  | { type: 'characterHit'; victimId: number; shooterId: number; position: Vec3; direction: Vec3; ricochet: boolean }
+  /** A ricochet ticked a character, in a match where ricochets don't count (M20): they feel it and play on. */
+  | { type: 'ricochetTick'; victimId: number; shooterId: number; position: Vec3; direction: Vec3 }
   /**
    * A round ended: `winner` is the team that won it, or -1 for a draw (elimination: time ran out, or
    * both teams out at once). In flag mode the attackers win by raising the flag ('captured') and the

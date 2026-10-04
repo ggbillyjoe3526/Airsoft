@@ -17,6 +17,8 @@ export interface BB {
   hopUp: number;
   /** BB mass (kg): drag, hop-up lift and how long the spin lasts all depend on it. */
   mass: number;
+  /** Times it has bounced off a surface (M20): a BB with bounces > 0 is a ricochet. */
+  bounces: number;
 }
 
 export interface BBPool {
@@ -39,6 +41,7 @@ export function createBBPool(size: number): BBPool {
       age: 0,
       hopUp: 0,
       mass: 0,
+      bounces: 0,
     });
   }
   return { bbs, nextSerial: 1, cursor: 0 };
@@ -68,6 +71,7 @@ export function spawnBB(pool: BBPool, ownerId: number, origin: Vec3, dir: Vec3, 
   bb.age = 0;
   bb.hopUp = hopUp;
   bb.mass = mass;
+  bb.bounces = 0;
   return bb;
 }
 

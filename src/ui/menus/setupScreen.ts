@@ -26,6 +26,7 @@ class SetupTile {
 export interface SetupActions {
   onMap: () => void;
   onMode: () => void;
+  onMatch: () => void;
   onDifficulty: () => void;
   onLoadout: () => void;
   onSettings: () => void;
@@ -33,11 +34,12 @@ export interface SetupActions {
   onPlay: () => void;
 }
 
-/** New game: Map, Mode, Difficulty, Loadout and Settings, the rules of the picked mode, then Back or Play. */
+/** New game: Map, Mode, Match, Difficulty, Loadout and Settings, the rules of the picked match, then Back or Play. */
 export class SetupScreen {
   readonly root: HTMLDivElement;
   readonly map: SetupTile;
   readonly mode: SetupTile;
+  readonly match: SetupTile;
   readonly difficulty: SetupTile;
   readonly loadout: SetupTile;
   private readonly rules: HTMLParagraphElement;
@@ -48,12 +50,13 @@ export class SetupScreen {
     this.root = page.root;
     this.map = new SetupTile('Map', 'Change', actions.onMap);
     this.mode = new SetupTile('Mode', 'Change', actions.onMode);
+    this.match = new SetupTile('Match', 'Change', actions.onMatch);
     this.difficulty = new SetupTile('Difficulty', 'Change', actions.onDifficulty);
     this.loadout = new SetupTile('Loadout', 'Open loadout', actions.onLoadout);
     const settings = new SetupTile('Settings', 'Open settings', actions.onSettings);
     settings.set('Settings', 'Sensitivity, key bindings, controls, field of view.');
     const tiles = el('div', 'setup-tiles');
-    tiles.append(this.map.root, this.mode.root, this.difficulty.root, this.loadout.root, settings.root);
+    tiles.append(this.map.root, this.mode.root, this.match.root, this.difficulty.root, this.loadout.root, settings.root);
     this.rules = el('p', 'setup-rules');
     page.body.append(tiles, this.rules);
     const play = el('div', 'menu-footer-end');
