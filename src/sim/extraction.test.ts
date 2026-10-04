@@ -15,7 +15,7 @@ import { vec3 } from './vec';
 
 const DT = 1 / 60;
 const RUN_TIME = 240;
-const RULES: RoundRules = { roundTime: RUN_TIME, resetDelay: 2, winsNeeded: 1, halfTimeAfter: 1, eliminationFirstEnd: 0, flag: FLAG };
+const RULES: RoundRules = { roundTime: RUN_TIME, resetDelay: 2, winsNeeded: 1, halfTimeAfter: 1, eliminationFirstEnd: 0, flag: FLAG, winBy: 1, timeOutToMorePlayers: false };
 /** The insertion in the west; exits west (too close: closed), east (open), north-east (late). */
 const INSERTION: SpawnPoint[] = [0, 1, 2].map((z) => ({ position: vec3(-20, 0, z), yaw: -Math.PI / 2 }));
 const EXITS: ExitZone[] = [

@@ -73,6 +73,8 @@ export class Minimap {
   private readonly circle = { x: 0, y: 0, r: 0 };
   private readonly at: MapPoint = { x: 0, y: 0 };
   private visible = false;
+  /** Whether the other team shows where heard (M23); off under rules that show teammates only (M39). */
+  private heardShown = true;
 
   /** `blocks`: the map's; `mine` / `theirs`: the two teams' HUD colours (CSS); `terrain`: the map's ground, if any. */
   constructor(
@@ -102,6 +104,11 @@ export class Minimap {
     this.visible = visible;
     this.root.hidden = !visible;
     if (visible) this.layout();
+  }
+
+  /** Heard patches shown (true, M23) or not: teammates only (the Rules picker's minimap switch, M39). */
+  setHeardShown(shown: boolean): void {
+    this.heardShown = shown;
   }
 
   /**
@@ -174,7 +181,7 @@ export class Minimap {
     ctx.save();
     ctx.clip();
     for (const h of heard) {
-      if (Number.isNaN(h.at)) continue;
+      if (!this.heardShown || Number.isNaN(h.at)) continue;
       const alpha = noiseAlpha(f.time - h.at);
       if (alpha <= 0) continue;
       const p = toMinimap(f.yaw, f.x, f.z, h.x, h.z, scale, this.at);

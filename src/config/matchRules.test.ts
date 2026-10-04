@@ -3,7 +3,7 @@ import { defaultTeammateDifficulty } from './bots';
 import { hasSavedTeammateDifficulty, loadDifficulty, loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
-import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, TEAM_SIZE_CHOICES, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor, runRulesSummary } from './matchRules';
+import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, SKIRMISH_SWITCHES, TEAM_SIZE_CHOICES, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor, runRulesSummary } from './matchRules';
 
 /** A browser store holding `fields` in the settings object. */
 function storageWith(fields: Record<string, unknown>): Storage {
@@ -24,7 +24,7 @@ describe('custom match rules (M20)', () => {
   });
 
   it('default to the match the game always had: 3v3, first to 5, 2:30 rounds, friendly fire on, ricochets not counting', () => {
-    expect(DEFAULT_MATCH_RULES).toEqual({ winsNeeded: 5, roundTime: 150, teamSize: 3, friendlyFire: true, ricochetsCount: false });
+    expect(DEFAULT_MATCH_RULES).toEqual({ winsNeeded: 5, roundTime: 150, teamSize: 3, friendlyFire: true, ricochetsCount: false, ...SKIRMISH_SWITCHES });
     const rounds = roundRulesFor(DEFAULT_MATCH_RULES);
     expect(rounds).toMatchObject({ winsNeeded: ROUNDS.winsNeeded, roundTime: ROUNDS.roundTime, halfTimeAfter: ROUNDS.halfTimeAfter, teamSize: ROUNDS.teamSize });
     expect(hitRulesFor(DEFAULT_MATCH_RULES)).toEqual(HITS);
@@ -90,7 +90,7 @@ describe('custom match rules (M20)', () => {
   });
 
   it('carry friendly fire and ricochets into the hit rules, and team size, rounds and time into the round rules', () => {
-    const m = { winsNeeded: 3, roundTime: 90, teamSize: 1, friendlyFire: false, ricochetsCount: true };
+    const m = { ...DEFAULT_MATCH_RULES, winsNeeded: 3, roundTime: 90, teamSize: 1, friendlyFire: false, ricochetsCount: true };
     expect(hitRulesFor(m)).toMatchObject({ friendlyFire: false, ricochetsCount: true, bodyRadius: HITS.bodyRadius });
     expect(roundRulesFor(m)).toMatchObject({ winsNeeded: 3, roundTime: 90, teamSize: 1, resetDelay: ROUNDS.resetDelay });
   });
@@ -122,7 +122,7 @@ describe('custom match rules (M20)', () => {
 
   it('read back what was saved, and the default for anything missing or off the menu', () => {
     vi.stubGlobal('localStorage', storageWith({ winsNeeded: '7', roundTime: 210, teamSize: '2', friendlyFire: 'off', ricochets: 'on' }));
-    expect(loadMatchRules()).toEqual({ winsNeeded: 7, roundTime: 210, teamSize: 2, friendlyFire: false, ricochetsCount: true });
+    expect(loadMatchRules()).toEqual({ winsNeeded: 7, roundTime: 210, teamSize: 2, friendlyFire: false, ricochetsCount: true, ...SKIRMISH_SWITCHES });
     vi.stubGlobal('localStorage', storageWith({ winsNeeded: '4', roundTime: 200, teamSize: '6', friendlyFire: 'maybe' }));
     expect(loadMatchRules()).toEqual(DEFAULT_MATCH_RULES);
   });

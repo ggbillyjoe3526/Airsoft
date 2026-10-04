@@ -106,5 +106,9 @@ export const ROUNDS = {
    * matches (54%, DECISIONS 2026-10-03), so the player's team plays its first rounds, the ones that teach the map, there.
    */
   eliminationFirstEnd: 1,
+  /** The lead a team needs once it has `winsNeeded` round wins: 1, the first there wins (Win by two sets 2, M39). */
+  winBy: 1,
+  /** Elimination: a round that runs out of time is a draw, played again (the Rules picker can give it to the side with more players left, M39). */
+  timeOutToMorePlayers: false,
   flag: FLAG,
 } as const;

@@ -12,19 +12,6 @@ first (M33 changes both).
 
 attempts: 0
 
-## M39 · Rules picker: Skirmish, Tournament, Pro CQB, Custom
-tier: core
-perf: skip
-touches: src/config/matchRules.ts, src/config/hits.ts, src/config/content.ts, src/sim/round.ts, src/sim/state.ts, src/matchSession.ts, src/game.ts, src/ui/menus/, src/config/menus.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/config/minimap.ts, src/pool/armory.ts, src/stats/, src/settings/storage.ts, src/config/replicas.ts
-acceptance:
-  1. A Rules row beside Mode; Skirmish (today's rules) is the default; Tournament, Pro CQB tagged dev; Custom holds every switch.
-  2. Tournament: first to 7 with half-time and win-by-two overtime, 2:00 rounds, Elimination time-out won by the side with more players left (draw if equal), minimap teammates only, ricochets count, strict marshal (once the overshooting rule exists), Loadout locked for the match, own Armory kit.
-  3. Pro CQB: Tournament plus semi-auto only and realcap 30-BB magazines (3 carried).
-  4. Named rulesets get their own records on every difficulty and pay ×2 on Pro; Custom on Pro pays ×1.5 and never counts.
-  5. The picker is the field rules presets' machinery: a new ruleset is one data entry.
-status: open
-attempts: 0
-
 ## M40 · Map balance for Pro
 tier: core
 perf: skip

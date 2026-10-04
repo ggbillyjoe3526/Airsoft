@@ -1,7 +1,23 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
 import type { ContentTag } from './config/content';
-import { DEFAULT_MATCH_RULES, TEAM_SIZE_CHOICES, WINS_NEEDED_CHOICES } from './config/matchRules';
+import {
+  countsForRecords,
+  CUSTOM_RULES_PAY_CAP,
+  DEFAULT_MATCH_RULES,
+  DEFAULT_RULESET,
+  type MatchRules,
+  recordsKeyOf,
+  RULESETS,
+  type RulesetId,
+  standardRules,
+  standardRulesOf,
+  TEAM_SIZE_CHOICES,
+  WINS_NEEDED_CHOICES,
+} from './config/matchRules';
+import { matchEarnings } from './pool/armory';
+import { resultKey } from './stats/records';
+import { matchStanding } from './stats/settleMatch';
 import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
 import { DEFAULT_MAP, MAPS } from './map/maps';
 import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks, playedTeamSize } from './newGamePicks';
@@ -17,6 +33,7 @@ const picks = (over: Partial<NewGamePicks> = {}, rules: Partial<NewGamePicks['ru
   mode: DEFAULT_MODE,
   difficulty: DEFAULT_DIFFICULTY,
   teammateDifficulty: DEFAULT_DIFFICULTY,
+  ruleset: DEFAULT_RULESET,
   rules: { ...DEFAULT_MATCH_RULES, ...rules },
   ...over,
 });
@@ -24,10 +41,10 @@ const picks = (over: Partial<NewGamePicks> = {}, rules: Partial<NewGamePicks['ru
 /** The lists are readonly in type only; a test tags an entry dev for its length and puts it back. */
 type Taggable = { id: string; tag?: ContentTag | undefined };
 const undo: (() => void)[] = [];
-function tagDev(list: readonly Taggable[], id: string): void {
+function tagDev(list: readonly Taggable[], id: string, tag: ContentTag = 'dev'): void {
   const entry = list.find((o) => o.id === id)!;
   const was = entry.tag;
-  (entry as Taggable).tag = 'dev';
+  (entry as Taggable).tag = tag;
   undo.push(() => void ((entry as Taggable).tag = was));
 }
 afterEach(() => {
@@ -214,5 +231,97 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
 describe('the replicas every bot carries (M35)', () => {
   it('are public in pool.md: teammates and Easy or Normal opponents carry them whatever the Dev content switch says', () => {
     for (const r of LOADOUT) expect(assetOfReplica(GAME_POOL, r)?.tag).toBe('public');
+  });
+});
+
+describe('the Rules picker and dev content, records and pay (M39)', () => {
+  const economy = GAME_POOL.economy;
+  /** What a match of these picks (as played) would do: count, pay and file where. */
+  function settle(p: NewGamePicks, devContent: boolean) {
+    const played = playedPicks(p, devContent);
+    const standing = matchStanding({
+      standardRules: countsForRecords(played.rules, played.difficulty, played.teammateDifficulty, played.ruleset),
+      devAssisted: false,
+      devContentUsed: matchUsesDev(played, [], GAME_POOL, devContent),
+    });
+    const customRules = !standardRules(played.ruleset, played.rules);
+    const pay = matchEarnings(economy, { won: true, roundsWon: 7, hits: 0, winsNeeded: played.rules.winsNeeded, difficulty: played.difficulty, teammateDifficulty: played.teammateDifficulty, ...(customRules ? { customRules } : {}) });
+    const key = recordsKeyOf(played.ruleset);
+    return { played, standing, multiplier: pay.multiplier, cell: key === null ? null : resultKey(played.difficulty, played.mode, key) };
+  }
+  const on = (ruleset: RulesetId, difficulty: 'easy' | 'normal' | 'hard' | 'pro' = 'normal', rules: Partial<MatchRules> = {}) =>
+    picks({ ruleset, difficulty, teammateDifficulty: difficulty }, rules);
+
+  it('tags Tournament and Pro CQB dev, and plays them as Skirmish while Dev content is off', () => {
+    expect(devIds(RULESETS)).toEqual(['tournament', 'proCqb']);
+    for (const r of ['tournament', 'proCqb'] as const) {
+      expect(picksUseDev(playedPicks(on(r), true))).toBe(true);
+      expect(playedPicks(on(r), false)).toEqual(picks());
+      expect(picksUseDev(playedPicks(on(r), false))).toBe(false);
+    }
+    expect(playedPicks(on('custom'), false).ruleset).toBe('custom');
+    expect(picksUseDev(on('custom'))).toBe(false);
+  });
+
+  it('plays the ruleset\'s own switches over the Match pop-up\'s picks', () => {
+    const p = on('proCqb', 'pro', { winsNeeded: 3, roundTime: 300, teamSize: 2 });
+    expect(playedPicks(p, true).rules).toEqual({ ...standardRulesOf('proCqb'), teamSize: 2 });
+    // Skirmish keeps today's picks and the new switches off, whatever Custom saved.
+    const s = picks({}, { winsNeeded: 3, semiAutoOnly: true, factoryKit: true });
+    expect(playedPicks(s, true).rules).toEqual({ ...DEFAULT_MATCH_RULES, winsNeeded: 3 });
+  });
+
+  it('keeps every match on Pro or a dev ruleset unpaid and out of the records while they are dev (M35)', () => {
+    for (const r of ['tournament', 'proCqb'] as const) {
+      expect(settle(on(r, 'hard'), true).standing).toEqual({ notCounted: 'devContent', unpaid: 'devContent' });
+    }
+    expect(settle(on('skirmish', 'pro'), true).standing.unpaid).toBe('devContent');
+    expect(settle(on('custom', 'pro'), true).standing).toEqual({ notCounted: 'rules', unpaid: 'devContent' });
+  });
+
+  it('once public: named rulesets get their own cells on every level and pay ×2 on Pro; Custom on Pro pays ×1.5 and never counts', () => {
+    tagDev(DIFFICULTIES, 'pro', 'public');
+    tagDev(TEAMMATE_DIFFICULTIES, 'pro', 'public');
+    tagDev(RULESETS, 'tournament', 'public');
+    tagDev(RULESETS, 'proCqb', 'public');
+    for (const d of ['easy', 'normal', 'hard', 'pro'] as const) {
+      for (const r of ['tournament', 'proCqb'] as const) {
+        const m = settle(on(r, d), false);
+        expect(m.standing).toEqual({ notCounted: '', unpaid: null });
+        expect(m.cell).toBe(`${d}.elimination.${r}`);
+        expect(m.multiplier).toBe(economy.difficulty[d]);
+      }
+      // Skirmish files as it always did.
+      expect(settle(on('skirmish', d), false).cell).toBe(`${d}.elimination`);
+      // Custom never counts and pays its level's rate, capped at ×1.5.
+      const c = settle(on('custom', d), false);
+      expect(c.standing).toEqual({ notCounted: 'rules', unpaid: null });
+      expect(c.multiplier).toBe(Math.min(economy.difficulty[d], CUSTOM_RULES_PAY_CAP));
+    }
+    expect(settle(on('tournament', 'pro'), false).multiplier).toBe(2);
+    expect(settle(on('proCqb', 'pro'), false).multiplier).toBe(2);
+    expect(settle(on('custom', 'pro'), false).multiplier).toBe(1.5);
+    // A named ruleset with its team size changed is custom rules: not recorded, and paid as Custom on Pro.
+    const small = settle(on('tournament', 'pro', { teamSize: 2 }), false);
+    expect(small.standing.notCounted).toBe('rules');
+    expect(small.multiplier).toBe(1.5);
+  });
+
+  it('pays and records Easy, Normal and Hard Skirmish exactly as before M39', () => {
+    for (const d of ['easy', 'normal', 'hard'] as const) {
+      const m = settle(on('skirmish', d), false);
+      expect(m.standing).toEqual({ notCounted: '', unpaid: null });
+      expect(m.multiplier).toBe(economy.difficulty[d]);
+      const custom = settle(on('skirmish', d, { teamSize: 1 }), false);
+      expect(custom.standing.notCounted).toBe('rules');
+      expect(custom.multiplier).toBe(economy.difficulty[d]);
+    }
+  });
+
+  it('leaves both kits out of the dev check under the factory kit rule: everyone carries LOADOUT as it comes', () => {
+    const devPool = withTags(GAME_POOL, { 'Red Dot': 'dev' });
+    const kit = [{ asset: GAME_POOL.assets.find((a) => a.name === 'Red Dot')!.id, tier: 'common' }];
+    expect(matchUsesDev(on('custom', 'hard'), kit, devPool, true)).toBe(true);
+    expect(matchUsesDev(on('custom', 'hard', { factoryKit: true }), kit, devPool, true)).toBe(false);
   });
 });

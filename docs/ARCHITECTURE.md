@@ -243,7 +243,11 @@ ends the round). A hit character is eliminated
   navigation, the simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it
   when the player leaves the match, so the next Play can load another map; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`; audit SIM-08). What Play does (build a match or the range, rebuild the range, reuse what is loaded) is the pure `core/sessionPlan.ts` `nextSessionAction`; the result and pause screens' text is `ui/matchStopText.ts`, through `MatchSession.resultView` / `pauseLine` (FA11b, audit CORE-05). The field's meshes come from `Renderer.mapMeshes` (`render/mapMeshCache.ts`), which keeps the last map's between sessions, so the same map again reuses them (audit CORE-33). A decided match is recorded and paid once, the frame it is decided, by the pure `stats/settleMatch.ts` (audit CORE-06). Its
   `MatchSetup` carries New game's Match rules (M20, `config/matchRules.ts`: team size, rounds to win, round time,
-  friendly fire, ricochets), turned into the match's own round and hit rules, and a bot difficulty per team.
+  friendly fire, ricochets), turned into the match's own round and hit rules, and a bot difficulty per team. Since M39
+  it also carries the Rules picker's ruleset (`RULESETS`: one data entry each, laid over the Match pop-up's picks by
+  `playedPicks`) and its switches (win by two and the Elimination time-out in `RoundRules`, the minimap's heard
+  patches, semi only and realcap through `kitUnderRules` / `replicaUnderRules`, the factory kit); a named ruleset's
+  standard match files its records under `<difficulty>.<mode>.<ruleset>`, and custom rules pay at most ×1.5.
 - **rangeSession.ts**: the practice range (M21): `map/range.ts` with the targets of `config/range.ts`, the player alone,
   no bots and no rounds. `SimServices.practice` makes `stepSimulation` skip the round flow, step the targets
   (`sim/rangeTargets.ts`: `GameState.targets`, tested by `stepBBs`, which emits `targetHit`) and keep the spare
@@ -325,8 +329,8 @@ request. Each line names where it lives and what pins it.
   power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
   over their built-in ones. Pinned by
   `config/stats.test.ts`.
-- **Content tags** (`config/content.ts`, M35): every map, mode, difficulty (`tag` on `MAPS`, `MATCH_MODES`,
-  `DIFFICULTIES`) and pooled asset (`Asset.tag`, pool.md's Access) is `public` or `dev`; Match pop-up choices may carry
+- **Content tags** (`config/content.ts`, M35): every map, mode, difficulty, ruleset (`tag` on `MAPS`, `MATCH_MODES`,
+  `DIFFICULTIES`, `RULESETS` since M39) and pooled asset (`Asset.tag`, pool.md's Access) is `public` or `dev`; Match pop-up choices may carry
   one (untagged is public). `isAvailable(tag, devContent)` is the one check; `devContent` is the Dev tab's Dev content
   switch (`dev.devContent`, applying only while Dev settings is ticked). Dev content is not shown anywhere while it is
   off (`contentPool`, `playedPicks`, `ChoiceDialog`/`OptionPicker.setDevContent`), never drops from Shots
