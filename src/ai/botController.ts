@@ -1,3 +1,4 @@
+import { AUDIO } from '../config/audio';
 import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
@@ -9,12 +10,13 @@ import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { createRng, type RngState, rngNext } from '../sim/rng';
+import { blockedShare } from '../sim/soundPath';
 import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type Bot, type BotWorld, createBot, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
-import { bodyPoint } from './perception';
+import { bodyPoint, eyeOf } from './perception';
 import { assignLanes, pickTeamPlan, shuffledLanes, type TeamPlan } from './teamPlan';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
@@ -50,6 +52,7 @@ export class BotController {
   private readonly search: NavSearch;
   private readonly commandsById = new Map<number, PlayerCommand>();
   private readonly chest = vec3();
+  private readonly ear = vec3();
   private plannerCursor = 0;
   /** Tuning to switch to at the next round start (a difficulty change made mid-match). */
   private pendingCfg: BotConfig | undefined;
@@ -191,17 +194,17 @@ export class BotController {
         this.planRound();
       } else if (e.type === 'shot') {
         const shooter = this.character(state, e.characterId);
-        if (shooter) this.hear(shooter.team, e.position, time, shooter.position, cfg.hearingDistance);
+        if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'characterHit') {
         // Teammates near someone who calls a hit turn towards where it came from.
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
-        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, time, shooter.position, cfg.hearingDistance);
+        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'footstep') {
         const walker = this.character(state, e.characterId);
         const range =
           e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : e.kind === 'rattle' ? cfg.footstepHearingRattle : cfg.footstepHearingRun;
-        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, time, walker.position, range);
+        if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range);
       } else if (e.type === 'bbImpact') {
         // Only enemy fire suppresses: a bot's own BB (or a teammate's) landing near it is no threat.
         const shooter = this.character(state, e.ownerId);
@@ -221,14 +224,21 @@ export class BotController {
    * Bots not on `shooterTeam` within `range` of `heardAt` (gunfire, a hit call, footsteps) learn roughly where the source is,
    * unless they can already see someone. The guess is off by up to hearingError × distance and is kept
    * while the noise keeps coming from about there (bursts and nearby shooters don't make it jump).
-   * Hearing is not sight: it never skips a bot's reaction when the shooter then appears.
+   * Hearing is not sight: it never skips a bot's reaction when the shooter then appears. Walls between the bot and
+   * whoever made the sound (standing at `sourceFeet`) shorten the range (wallHearing, M22).
    */
-  private hear(shooterTeam: number, heardAt: Vec3, time: number, shooterPos: Vec3, range: number): void {
+  private hear(shooterTeam: number, heardAt: Vec3, sourceFeet: Vec3, time: number, shooterPos: Vec3, range: number): void {
     const cfg = this.world.cfg;
     for (const b of this.bots) {
       const c = b.character;
       if (c.team === shooterTeam || !isInPlay(c) || b.targetVisible) continue;
-      if (Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z) > range) continue;
+      const heard = Math.hypot(heardAt.x - c.position.x, heardAt.z - c.position.z);
+      if (heard > range) continue;
+      // Within the range a wall leaves, nothing to check; beyond it, cast the rays.
+      if (heard > range * cfg.wallHearing) {
+        const share = blockedShare(this.opts.query, eyeOf(c, this.opts.body, this.opts.hits, this.ear), sourceFeet, AUDIO.occlusion.rayHeights);
+        if (heard > range * (1 - share * (1 - cfg.wallHearing))) continue;
+      }
       // Gunfire from within the current guess's margin of error (any shooter) is the same noise: keep
       // the guess. Only a clearly different source makes a new one; the guess never tracks anyone.
       const dist = Math.hypot(shooterPos.x - c.position.x, shooterPos.z - c.position.z);

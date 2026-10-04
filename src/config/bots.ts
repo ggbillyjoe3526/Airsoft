@@ -27,6 +27,12 @@ export const BOT_BEHAVIOUR = {
   footstepHearingSprint: 16,
   footstepHearingLand: 12,
   footstepHearingRattle: 7,
+  /**
+   * Through walls (M22): a sound fully blocked from a bot carries only this fraction of its range, and half blocked
+   * (low cover) halfway between. Judged by the same rays (ear to the source's knees and head) that muffle sounds for
+   * the player (AUDIO.occlusion), so bots hear through walls no better than the player does.
+   */
+  wallHearing: 0.5,
   /** A heard position is off by up to this fraction of the distance (hearing through walls is vague). */
   hearingError: 0.3,
   /**
