@@ -169,7 +169,7 @@ export class Game {
       const p = s?.player;
       return {
         seed: options.seed,
-        map: this.map,
+        map: s instanceof RangeSession ? 'range' : this.map,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
         characters: s?.characterCount ?? 0,
