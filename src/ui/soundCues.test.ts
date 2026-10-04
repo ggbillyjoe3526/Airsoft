@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SOUND_CUES } from '../config/accessibility';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { vec3 } from '../sim/vec';
-import { cueAngle, cueOpacity, type HeardSound, soundCueOf } from './soundCues';
+import { cueAngle, cueOpacity, type HeardSound, SoundCues, soundCueOf } from './soundCues';
 
 const person = (id: number, team: number, x = 0, z = 0): Character => ({ id, team, position: vec3(x, 0, z) }) as Character;
 
@@ -68,5 +68,111 @@ describe('cueOpacity', () => {
   it('shows nothing beyond the range the sound is played to', () => {
     expect(cueOpacity('step', 0, SOUND_CUES.range.step + 0.1)).toBe(0);
     expect(cueOpacity('shot', 0, SOUND_CUES.range.step + 0.1)).toBeGreaterThan(0);
+  });
+});
+
+/** Just enough of an element for SoundCues (the tests run without a browser). */
+class FakeElement {
+  className = '';
+  hidden = false;
+  readonly children: FakeElement[] = [];
+  readonly props = new Map<string, string>();
+  readonly classes = new Set<string>();
+  readonly style = {
+    opacity: '',
+    setProperty: (name: string, value: string) => void this.props.set(name, value),
+  };
+  readonly classList = {
+    add: (c: string) => void this.classes.add(c),
+    remove: (c: string) => void this.classes.delete(c),
+  };
+  setAttribute(): void {}
+  append(...els: FakeElement[]): void {
+    this.children.push(...els);
+  }
+  appendChild(el: FakeElement): void {
+    this.children.push(el);
+  }
+  remove(): void {}
+}
+
+describe('SoundCues (the ring)', () => {
+  const realDocument = globalThis.document;
+  beforeEach(() => {
+    (globalThis as { document: unknown }).document = { createElement: () => new FakeElement() };
+  });
+  afterEach(() => {
+    (globalThis as { document: unknown }).document = realDocument;
+  });
+
+  const make = () => {
+    const parent = new FakeElement();
+    const cues = new SoundCues(parent as unknown as HTMLElement);
+    const ring = parent.children[0]!;
+    const shown = () => ring.children.filter((m) => !m.hidden);
+    return { cues, ring, shown };
+  };
+  const shot = (sourceId: number, x: number, z: number): HeardSound => ({ kind: 'shot', sourceId, x, z });
+
+  it('shows the ring only while playing with cues on', () => {
+    const { cues, ring } = make();
+    expect(ring.hidden).toBe(true);
+    cues.setVisible(true);
+    expect(ring.hidden).toBe(true);
+    cues.setEnabled(true);
+    expect(ring.hidden).toBe(false);
+    cues.setVisible(false);
+    expect(ring.hidden).toBe(true);
+    cues.setVisible(true);
+    cues.setEnabled(false);
+    expect(ring.hidden).toBe(true);
+  });
+
+  it('places a heard sound, turns it with the view and lets it fade out', () => {
+    const { cues, shown } = make();
+    cues.setEnabled(true);
+    cues.setVisible(true);
+    cues.add(shot(3, 10, 0), 0);
+    cues.update(0, 0, 0, 0.1);
+    expect(shown()).toHaveLength(1);
+    const marker = shown()[0]!;
+    expect(marker.classes.has('cue-shot')).toBe(true);
+    // Straight to the right of a listener looking down -z.
+    expect(parseFloat(marker.props.get('--a')!)).toBeCloseTo(Math.PI / 2, 1);
+    // Turning right a quarter turn faces it.
+    cues.update(0, 0, -Math.PI / 2, 0.2);
+    expect(parseFloat(marker.props.get('--a')!)).toBeCloseTo(0, 1);
+    cues.update(0, 0, 0, SOUND_CUES.life + 0.1);
+    expect(shown()).toHaveLength(0);
+  });
+
+  it('ignores sounds while cues are off', () => {
+    const { cues, shown } = make();
+    cues.add(shot(3, 10, 0), 0);
+    cues.update(0, 0, 0, 0.1);
+    expect(shown()).toHaveLength(0);
+  });
+
+  it('drops a sound beyond its range from the listener, so it never takes a nearer cue\'s marker', () => {
+    const { cues, shown } = make();
+    cues.setEnabled(true);
+    cues.update(0, 0, 0, 0);
+    for (let id = 1; id <= SOUND_CUES.markers; id++) cues.add(shot(id, id, 0), 0);
+    cues.add({ kind: 'step', sourceId: 99, x: SOUND_CUES.range.step + 1, z: 0 }, 0.05);
+    cues.update(0, 0, 0, 0.1);
+    expect(shown()).toHaveLength(SOUND_CUES.markers);
+    expect(shown().every((m) => m.classes.has('cue-shot'))).toBe(true);
+  });
+
+  it('moves the same player\'s marker for a burst, and measures from the first listener spot it is given', () => {
+    const { cues, shown } = make();
+    cues.setEnabled(true);
+    // Before any update nothing is dropped (the listener is not known yet).
+    cues.add(shot(3, 500, 0), 0);
+    cues.add(shot(3, 10, 0), 0.05);
+    cues.add(shot(3, 0, -10), 0.1);
+    cues.update(0, 0, 0, 0.15);
+    expect(shown()).toHaveLength(1);
+    expect(parseFloat(shown()[0]!.props.get('--a')!)).toBeCloseTo(0, 1);
   });
 });

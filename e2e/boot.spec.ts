@@ -217,16 +217,35 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.hud')).toBeVisible();
   await testInfo.attach('after-graphics-reset', { body: await page.screenshot(), contentType: 'image/png' });
 
-  // Sound cues: an Orange player brought close makes sounds (steps, shots), and the ring points to them.
+  // Sound cues: an Orange player's shot 6 m from the camera gets a marker on the ring. The shot is added to
+  // each tick's events after the simulation has run (so no bot or physics step depends on luck), with the shooter
+  // moved beside the camera only while the presentation reads the events, then put back.
   await page.evaluate(() => {
-    type C = { team: number; status: string; position: { x: number; z: number } };
-    const chars = (window as unknown as { airsoft: { state: { characters: C[] } } }).airsoft.state.characters;
-    const me = chars[0]!;
-    const enemy = chars.find((c) => c.team === 1 && c.status === 'alive')!;
-    enemy.position.x = me.position.x + 6;
-    enemy.position.z = me.position.z;
+    type P = { x: number; y: number; z: number };
+    type C = { id: number; team: number; position: P };
+    type Session = {
+      state: { characters: C[]; events: unknown[] };
+      match: { afterTick: (yaw: number) => void };
+    };
+    const game = window as unknown as { airsoft: { session: Session; renderer: { camera: { position: P } } }; stopShots?: () => void };
+    const s = game.airsoft.session;
+    const cam = game.airsoft.renderer.camera.position;
+    const enemy = s.state.characters.find((c) => c.team === 1)!;
+    const real = s.match.afterTick;
+    s.match.afterTick = function (yaw: number): void {
+      const { x, y, z } = enemy.position;
+      Object.assign(enemy.position, { x: cam.x + 6, y, z: cam.z });
+      s.state.events.push({ type: 'shot', characterId: enemy.id, replicaId: 'aeg', position: { ...enemy.position } });
+      real.call(this, yaw);
+      s.state.events.pop();
+      Object.assign(enemy.position, { x, y, z });
+    };
+    game.stopShots = () => {
+      s.match.afterTick = real;
+    };
   });
-  await expect(page.locator('.sound-cue:not([hidden])').first()).toBeAttached({ timeout: 20_000 });
+  await expect(page.locator('.sound-cue.cue-shot:not([hidden])').first()).toBeAttached({ timeout: 10_000 });
+  await page.evaluate(() => (window as unknown as { stopShots: () => void }).stopShots());
   await testInfo.attach('sound-cue', { body: await page.screenshot(), contentType: 'image/png' });
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });

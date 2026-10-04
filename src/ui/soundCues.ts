@@ -80,9 +80,12 @@ export class SoundCues {
   private readonly markers: Marker[] = [];
   private enabled = false;
   private visible = false;
-  /** The listener at the last update (x, z), to drop sounds too far off to be heard as they arrive. */
-  private listenerX = 0;
-  private listenerZ = 0;
+  /**
+   * The listener at the last update (x, z), to drop sounds too far off to be heard as they arrive. NaN until the
+   * first update, so nothing is dropped before the listener is known.
+   */
+  private listenerX = Number.NaN;
+  private listenerZ = Number.NaN;
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
