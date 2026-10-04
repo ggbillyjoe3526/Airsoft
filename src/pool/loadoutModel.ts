@@ -2,6 +2,8 @@ import { BOT_GLOW_BBS, bbsGlow, DEFAULT_GLOW_BBS, GLOW_BB_CHOICES, type GlowBBs 
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
 import { loadSetting, numberIn, oneOf, saveSetting } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
+import { isAvailable } from '../config/content';
+import { isDevItem } from './contentPool';
 import { EMPTY_FIT, energyCapped, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
 import { type Asset, fits, isChase, type Pool, replicaOf, tiersOf } from './pool';
 
@@ -38,6 +40,8 @@ export function bbGlowFor(kit: PlayerKit, night: boolean): { player: boolean[]; 
 /** What the player can equip: the collection's items, or (Dev settings, M26d) everything. */
 export interface Ownership {
   owns(ref: ItemRef): boolean;
+  /** Whether `asset` is offered at all (M35: dev gear only with Dev content on); every asset when absent. */
+  offers?(asset: Asset): boolean;
   /**
    * True while everything is unlocked (M26d): picks are then saved apart from the real ones (under `equip.dev.` and
    * `fit.dev.`), starting from them, so turning Unlock all gear off brings back the loadout the player owns.
@@ -49,10 +53,18 @@ export function collectionOwnership(collection: () => Collection): Ownership {
   return { owns: (ref) => (collection().owned[itemKey(ref.asset, ref.tier)] ?? 0) > 0 };
 }
 
-/** The collection's items, or, while `unlockAll()` (Dev settings → Unlock all gear, M26d), every asset at every tier. */
-export function gameOwnership(pool: Pool, collection: () => Collection, unlockAll: () => boolean): Ownership {
+/**
+ * The collection's items, or, while `unlockAll()` (Dev settings → Unlock all gear, M26d), every asset at every tier;
+ * either way only public ones unless `devContent()` (M35): an owned dev item is then hidden, not lost, and a pick of it
+ * falls back to a default until Dev content is on again.
+ */
+export function gameOwnership(pool: Pool, collection: () => Collection, unlockAll: () => boolean, devContent: () => boolean = () => false): Ownership {
   const owned = collectionOwnership(collection);
-  return { owns: (ref) => (unlockAll() ? inPool(pool, ref) : owned.owns(ref)), sandboxed: unlockAll };
+  return {
+    owns: (ref) => (devContent() || !isDevItem(pool, ref)) && (unlockAll() ? inPool(pool, ref) : owned.owns(ref)),
+    offers: (asset) => isAvailable(asset.tag, devContent()),
+    sandboxed: unlockAll,
+  };
 }
 
 const NONE = 'none';
@@ -157,10 +169,10 @@ export class LoadoutModel {
     return this.ownedItems((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
   }
 
-  /** Any asset in the pool (owned or not) fits `slot` on this replica: the slot exists for it. */
+  /** Any asset offered (owned or not; M35: dev gear only with Dev content on) fits `slot` on this replica: the slot exists for it. */
   hasSlot(replicaId: string, slot: FitSlot): boolean {
     const replica = this.pool.byId.get(replicaId);
-    return !!replica && this.pool.assets.some((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
+    return !!replica && this.pool.assets.some((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica) && (this.ownership.offers?.(a) ?? true));
   }
 
   /**

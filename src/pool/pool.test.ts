@@ -312,6 +312,54 @@ describe('two tabs on one collection (audit POOL-02)', () => {
   });
 });
 
+describe('pool.md, the Access column (M35)', () => {
+  /** The errors that are about an asset row, not the missing tables of a small pool. */
+  const rowErrors = (p: { errors: readonly string[] }): string[] => p.errors.filter((e) => !e.startsWith('no "'));
+  const rows = (...r: string[]): string =>
+    mini(['### Power sources', '| ID | Name | Type | Fits | Starter | In Shots | Access |', '|---|---|---|---|---|---|---|', ...r].join('\n'));
+
+  it('reads a blank Access as public, dev and DEV as dev, and public as public', () => {
+    const p = loadPool(
+      rows(
+        '| 000002 | Green Gas | gas | gas | yes | yes | |',
+        '| 000003 | Dev Gas | gas | gas | no | yes | dev |',
+        '| 000004 | Loud Gas | gas | gas | no | yes | DEV |',
+        '| 000005 | Open Gas | gas | gas | no | yes | Public |',
+      ),
+    );
+    expect(rowErrors(p)).toEqual([]);
+    const tag = (name: string) => p.assets.find((a) => a.name === name)?.tag;
+    expect(tag('Green Gas')).toBe('public');
+    expect(tag('Dev Gas')).toBe('dev');
+    expect(tag('Loud Gas')).toBe('dev');
+    expect(tag('Open Gas')).toBe('public');
+  });
+
+  it('reads a table with no Access column as public', () => {
+    const p = loadPool(mini(''));
+    expect(rowErrors(p)).toEqual([]);
+    expect(p.assets.map((a) => a.tag)).toEqual(['public']);
+  });
+
+  it('leaves a row with a bad Access word out and names its line, so a typo never makes a dev asset public', () => {
+    const p = loadPool(rows('| 000002 | Green Gas | gas | gas | yes | yes | |', '| 000003 | Typo Gas | gas | gas | no | yes | devv |'));
+    expect(p.assets.map((a) => a.name)).toEqual(['Gas Pistol', 'Green Gas']);
+    expect(rowErrors(p)).toHaveLength(1);
+    expect(rowErrors(p)[0]).toMatch(/^line 14: Access must be public or dev, not "devv"/);
+  });
+
+  it('has every asset in the real pool.md public today, and no errors', () => {
+    expect(pool.errors).toEqual([]);
+    expect(pool.assets.length).toBeGreaterThan(0);
+    expect(pool.assets.filter((a) => a.tag !== 'public')).toEqual([]);
+  });
+
+  it('keeps a dev asset out of Shots, even marked In Shots', () => {
+    const p = loadPool(rows('| 000002 | Green Gas | gas | gas | yes | yes | |', '| 000003 | Dev Gas | gas | gas | no | yes | dev |'));
+    expect(shotAssets(p).map((a) => a.name)).toEqual(['Gas Pistol', 'Green Gas']);
+  });
+});
+
 describe('M32 acceptance 1: the Cyber Pistol row and the Tiers and Drop % columns', () => {
   /** A pool.md with a Replicas table that has the two new columns, one row per entry (line 11 is the first extra row). */
   const chaseText = (...rows: string[]): string =>

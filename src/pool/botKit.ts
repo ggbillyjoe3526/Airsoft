@@ -50,13 +50,32 @@ export function randomFit(pool: Pool, replica: Asset, rng: RngState, partChance:
  * carried as it comes, with its factory parts.
  */
 export function randomKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: number, partChance: number = RANDOM_LOADOUT.partChance): KitSlot[] {
+  return rolledKit(pool, loadout, seed, partChance).kit;
+}
+
+/** randomKit, with the pool items it rolled (each replica and part). */
+export function rolledKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: number, partChance: number = RANDOM_LOADOUT.partChance): { kit: KitSlot[]; items: ItemRef[] } {
   const rng = createRng(seed);
-  return loadout.map((replica) => {
+  const items: ItemRef[] = [];
+  const kit = loadout.map((replica) => {
     const asset = assetOfReplica(pool, replica);
     if (!asset || pool.tiers.length === 0) return { replica, optic: null, parts: factoryParts(replica) };
     const item = drawItem(pool, asset, rng);
-    return kitSlot(pool, item, randomFit(pool, asset, rng, partChance));
+    const fit = randomFit(pool, asset, rng, partChance);
+    items.push(item, ...Object.values(fit).filter((r): r is ItemRef => r !== null));
+    return kitSlot(pool, item, fit);
   });
+  return { kit, items };
+}
+
+/**
+ * Whether a rolled kit for `loadout` could hold dev gear (M35): a dev row for one of its replicas, or a dev part or
+ * power source that fits one. New game's note and the match's records rule both use it, so they agree without
+ * predicting the rolls.
+ */
+export function rolledKitMayHoldDev(pool: Pool, loadout: readonly ReplicaConfig[]): boolean {
+  const replicas = loadout.flatMap((r) => assetOfReplica(pool, r) ?? []);
+  return pool.assets.some((a) => a.tag === 'dev' && replicas.some((r) => a === r || (a.category !== 'replica' && fits(a, r))));
 }
 
 /** A character carrying `kit`: its replicas as the kit makes them, with the kit's optics and parts fitted. */
