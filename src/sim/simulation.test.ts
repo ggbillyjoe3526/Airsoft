@@ -6,7 +6,7 @@ import { HITS, ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
 import { LOADOUT } from '../config/replicas';
 import { RANGE } from '../config/range';
-import { createCharacter, eyeHeight } from './character';
+import { createCharacter, eyeHeight, respawnCharacter } from './character';
 import { createCommand, type PlayerCommand } from './commands';
 import type { CharacterMover } from './movement';
 import { createSimContext, type SimContext, stepSimulation } from './simulation';
@@ -503,3 +503,63 @@ describe('practice range', () => {
   });
 });
 
+
+describe('walk-off route searches through the simulation (M27)', () => {
+  const SPOTS = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }, { position: vec3(30, 0, 4), yaw: 0 }]];
+
+  /** Two Blue, three Orange on the open field; ids 1 and 2 (Orange) are the ones the tests knock out. */
+  function field() {
+    const state = createGameState(1, 16, ROUNDS);
+    const blue = createCharacter(0, vec3(0, 0, 40), 0, LOADOUT, 0);
+    const a = createCharacter(1, vec3(0, 0, 10), 0, LOADOUT, 1);
+    const b = createCharacter(2, vec3(0, 0, 14), 0, LOADOUT, 1);
+    const spare = createCharacter(3, vec3(20, 0, -40), 0, LOADOUT, 1); // keeps Orange from being wiped out
+    state.characters.push(blue, a, b, spare);
+    const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, killY: KILL_Y, hits: HITS, deadZones: SPOTS, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
+    const searches = () => ctx.targets.elimination.navSearch.generation;
+    return { state, blue, a, b, ctx, searches, commands: new Map<number, PlayerCommand>() };
+  }
+
+  it('two victims hit between the same two ticks get their routes on consecutive ticks and both reach their dead-zone spots', () => {
+    const { state, blue, a, b, ctx, searches, commands } = field();
+    const before = searches();
+    eliminate(a, blue.id, state.characters, ctx.targets.elimination);
+    eliminate(b, blue.id, state.characters, ctx.targets.elimination);
+    expect(searches()).toBe(before); // the hits themselves search nothing
+    expect(a.walkOffRoute).toHaveLength(0);
+    expect(b.walkOffRoute).toHaveLength(0);
+
+    stepSimulation(state, commands, ctx, DT);
+    expect(searches()).toBe(before + 1); // one search this tick: the first victim's
+    expect(a.walkOffRoute.length).toBeGreaterThan(0);
+    expect(b.walkOffRoute).toHaveLength(0);
+    expect(a.status).toBe('calling');
+    expect(b.status).toBe('calling'); // still standing and calling while its route waits
+
+    stepSimulation(state, commands, ctx, DT);
+    expect(searches()).toBe(before + 2); // and the second victim's the next tick
+    expect(b.walkOffRoute.length).toBeGreaterThan(0);
+
+    for (let i = 0; i < 20; i++) stepSimulation(state, commands, ctx, DT);
+    expect(searches()).toBe(before + 2); // nobody waiting: no further search
+
+    const ticks = Math.ceil((HITS.callTime + HITS.walkOffTime) / DT) + 5;
+    for (let i = 0; i < ticks && (a.status !== 'out' || b.status !== 'out'); i++) stepSimulation(state, commands, ctx, DT);
+    expect(a.status).toBe('out');
+    expect(b.status).toBe('out');
+    expect(Math.hypot(a.position.x - 30, a.position.z)).toBeLessThan(0.01); // first free spot
+    expect(Math.hypot(b.position.x - 30, b.position.z - 4)).toBeLessThan(0.01); // second spot
+  });
+
+  it('a character respawned before its route was searched has no pending route and costs no search', () => {
+    const { state, blue, a, ctx, searches, commands } = field();
+    const before = searches();
+    eliminate(a, blue.id, state.characters, ctx.targets.elimination);
+    respawnCharacter(a); // the round ended before the tick that would have searched its route
+    for (let i = 0; i < 5; i++) stepSimulation(state, commands, ctx, DT);
+    expect(searches()).toBe(before);
+    expect(a.status).toBe('alive');
+    expect(a.walkOffRoute).toHaveLength(0);
+    expect(a.walkOffRoutePending).toBe(false);
+  });
+});
