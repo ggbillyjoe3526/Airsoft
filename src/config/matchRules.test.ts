@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadMatchRules } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
-import { DEFAULT_MATCH_RULES, formatRoundTime, hitRulesFor, matchRulesSummary, roundRulesFor } from './matchRules';
+import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, hitRulesFor, matchRulesSummary, roundRulesFor } from './matchRules';
 
 /** A browser store holding `fields` in the settings object. */
 function storageWith(fields: Record<string, unknown>): Storage {
@@ -27,6 +27,16 @@ describe('custom match rules (M20)', () => {
     const rounds = roundRulesFor(DEFAULT_MATCH_RULES);
     expect(rounds).toMatchObject({ winsNeeded: ROUNDS.winsNeeded, roundTime: ROUNDS.roundTime, halfTimeAfter: ROUNDS.halfTimeAfter, teamSize: ROUNDS.teamSize });
     expect(hitRulesFor(DEFAULT_MATCH_RULES)).toEqual(HITS);
+  });
+
+  it('count for the records only as the standard match with both teams at one difficulty', () => {
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'hard', 'hard')).toBe(true);
+    expect(countsForRecords(DEFAULT_MATCH_RULES, 'hard', 'normal')).toBe(false);
+    expect(countsForRecords({ ...DEFAULT_MATCH_RULES, teamSize: 1 }, 'normal', 'normal')).toBe(false);
+    expect(countsForRecords({ ...DEFAULT_MATCH_RULES, winsNeeded: 3 }, 'normal', 'normal')).toBe(false);
+    expect(countsForRecords({ ...DEFAULT_MATCH_RULES, roundTime: 180 }, 'normal', 'normal')).toBe(false);
+    expect(countsForRecords({ ...DEFAULT_MATCH_RULES, friendlyFire: false }, 'normal', 'normal')).toBe(false);
+    expect(countsForRecords({ ...DEFAULT_MATCH_RULES, ricochetsCount: true }, 'normal', 'normal')).toBe(false);
   });
 
   it('swap ends one round before a team could first win: the decider is always in the second half', () => {

@@ -94,6 +94,8 @@ export function stepBBs(
         bb.position.y = bb.prevPosition.y + segmentDir.y * t;
         bb.position.z = bb.prevPosition.z + segmentDir.z * t;
         events.push({ type: 'bbImpact', position: vec3(bb.position.x, bb.position.y, bb.position.z), ownerId: bb.ownerId });
+        // A bounce flies on from the surface next tick: the rest of this tick's travel is dropped, so a ricochet
+        // arrives at most one tick (1/60 s) late, which nobody can see at these speeds.
         if (query.raycastSurface && ricochet(bb, surface, cfg.ricochet, rng)) continue;
         bb.active = false;
         continue;

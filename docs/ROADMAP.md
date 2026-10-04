@@ -557,11 +557,13 @@ each one went:**
   - **Built (2026-10-04):** a **Match** button on New game (after Mode) opens a pop-up with Rounds to win (3, 5, 7, 10),
     Round time (1:30 to 5:00 in half minutes), Team size (1v1, 2v2, 3v3), Friendly fire and Ricochets count, each saved
     and shown on the button and in the rules text; half-time follows the rounds to win (after `winsNeeded - 1`). The
-    Difficulty pop-up has an Opponents and a Teammates row; each team's bots think with their own level's skill, and
-    records count the opponents' level. BBs bounce off concrete (40% of the speed into it back out) and steel containers
+    Difficulty pop-up has an Opponents and a Teammates row; each team's bots think with their own level's skill.
+    Only the standard match (3v3, first to 5, both teams at one difficulty) counts for the records; after a custom one
+    the summary says so. BBs bounce off concrete (40% of the speed into it back out) and steel containers
     (55%), keep 75% along the surface, lose their backspin, scatter a little, at most twice and never below 12 m/s;
     crates stop them. A ricochet that doesn't count makes a knock and a "Ricochet · doesn't count, play on" notice; one
-    that counts knocks you out and the hit feed tags it RICOCHET. With friendly fire off, bots no longer hold fire for
+    that counts knocks you out and the hit feed tags it RICOCHET. Headless guards play 1v1 and 2v2 in both modes over several seeds,
+    and a 3v3 with ricochets counting. With friendly fire off, bots no longer hold fire for
     teammates in their line (`config/matchRules.ts`, `sim/ricochet.ts`).
 - **M21. Practice range** (the owner's feature pick 17; moved up from v0.3)
   - A small range of its own, opened from the title screen: lanes with distance markers out past Depot's longest

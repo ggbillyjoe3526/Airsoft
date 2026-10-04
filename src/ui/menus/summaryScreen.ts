@@ -67,5 +67,6 @@ function recordsBlock(view: RecordsView): HTMLElement[] {
     bests.append(li);
   }
   const note = el('p', 'menu-footer-note', `Kept in this browser. Best accuracy counts matches with at least ${STATS.minBBsForAccuracyRecord} BBs fired.`);
-  return [grid, bests, note];
+  if (!view.notCounted) return [grid, bests, note];
+  return [el('p', 'records-not-counted', view.notCounted), grid, bests, note];
 }

@@ -8,7 +8,7 @@ import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty } from 
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
 import type { CrosshairSettings } from './config/matchInfo';
-import { hitRulesFor, type MatchRules, roundRulesFor } from './config/matchRules';
+import { countsForRecords, hitRulesFor, type MatchRules, roundRulesFor } from './config/matchRules';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
@@ -97,6 +97,8 @@ export class MatchSession {
   private matchOverAt = Number.NaN;
   /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
   private resultTaken = false;
+  /** The standard match, so its result goes into the records (custom rules don't, M20). */
+  readonly countsForRecords: boolean;
 
   constructor(
     private readonly renderer: Renderer,
@@ -121,6 +123,7 @@ export class MatchSession {
     this.mode = map.flag ? setup.mode : 'elimination';
     this.rounds = roundRulesFor(setup.rules);
     this.hits = hitRulesFor(setup.rules);
+    this.countsForRecords = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty);
     this.state = createGameState(seed, BALLISTICS.maxBBs, this.rounds, this.mode, map.flag);
     this.ctx = createSimContext({
       mover: this.physics,
@@ -188,12 +191,14 @@ export class MatchSession {
 
   /**
    * The decided match for the records, once per match (null before it's decided, and after the first call). Only a
-   * match played to the end counts: quitting one counts as nothing.
+   * match played to the end counts: quitting one counts as nothing. A match with custom rules is never counted
+   * (countsForRecords).
    */
   takeMatchResult(): MatchResult | null {
     const r = this.state.round;
     if (r.phase !== 'matchOver' || this.resultTaken) return null;
     this.resultTaken = true;
+    if (!this.countsForRecords) return null;
     const mine = this.stats.matchOf(this.player.id);
     return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
   }

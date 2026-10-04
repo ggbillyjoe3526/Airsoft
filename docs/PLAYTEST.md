@@ -330,12 +330,15 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   ends at 3 wins. Try a 1:30 round time: the clock starts at 1:30.
 - [ ] **Difficulty: Opponents and Teammates.** The pop-up has a row for each. Put Opponents on Easy and Teammates on
   Hard: the button reads "EASY / HARD", and your teammates should win their fights clearly more often than the
-  enemy. Records count the opponents' level.
+  enemy. Finish that match: the summary says custom rules aren't in your records (only the standard 3v3, first to 5,
+  with both teams at one difficulty counts), and marks no cell.
 - [ ] **Friendly fire off.** Shoot a teammate in the back: nothing happens (the BB goes past). Your bot teammates also
   stop holding fire when you're in their line.
 - [ ] **Ricochets.** Fire at a concrete wall or a container at an angle: BBs glance off and fly on, slower (watch with
   ] for BB paths). Into a crate: they stop. When a bounced BB hits you, you hear a knock and see "Ricochet · doesn't
-  count, play on". With **Ricochets count** on, the same BB knocks you out, and the hit feed line says RICOCHET.
+  count, play on". A bounced BB of yours that reaches a bot shows a small grey puff (not the bigger hit puff) and "Your
+  BB ricocheted · doesn't count". With **Ricochets count** on, the same BB knocks you out, and the hit feed line says
+  RICOCHET. Is the ricochet notice useful, or does it come up too often in a 3v3?
 
 ## Pause, menus and tabbing away
 

@@ -68,6 +68,23 @@ export function hitRulesFor(m: MatchRules): HitConfig {
   return { ...HITS, friendlyFire: m.friendlyFire, ricochetsCount: m.ricochetsCount };
 }
 
+/**
+ * Whether a match counts towards the records (M20): the standard match (DEFAULT_MATCH_RULES) with both teams' bots at
+ * one difficulty, as every match was before M20. The records grid is per difficulty and mode, so a 1v1 first to 3, or
+ * Hard opponents with Hard teammates at your side, would mix easier or shorter matches into the same cell.
+ */
+export function countsForRecords(rules: MatchRules, opponents: string, teammates: string): boolean {
+  const d = DEFAULT_MATCH_RULES;
+  return (
+    opponents === teammates &&
+    rules.winsNeeded === d.winsNeeded &&
+    rules.roundTime === d.roundTime &&
+    rules.teamSize === d.teamSize &&
+    rules.friendlyFire === d.friendlyFire &&
+    rules.ricochetsCount === d.ricochetsCount
+  );
+}
+
 /** "2:30". */
 export function formatRoundTime(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;

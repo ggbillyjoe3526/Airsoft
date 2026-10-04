@@ -1904,6 +1904,12 @@ kbd {
   color: var(--orange);
 }
 
+.records-not-counted {
+  margin: 0 0 10px;
+  color: var(--menu-muted);
+  font-size: 15px;
+}
+
 .records-bests {
   display: flex;
   flex-wrap: wrap;

@@ -358,7 +358,7 @@ export class Game {
       this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {
         result: `${headline} · ${score}`,
         blocks: s.summaryBlocks(),
-        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode),
+        records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.countsForRecords),
       });
     } else {
       const mine = s.player.team;
