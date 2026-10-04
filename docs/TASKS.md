@@ -28,3 +28,17 @@ acceptance:
   3. The KNOWN_ISSUES row about the first frame of a puff is removed
 status: open
 attempts: 0
+
+## FA4 · Bots: spacing, cover, behaviour, difficulty and fairness
+tier: core
+perf: required
+touches: src/ai/bot.ts, src/ai/botBrain.ts, src/ai/botCombat.ts, src/ai/botController.ts, src/ai/botMovement.ts, src/ai/botSenses.ts, src/ai/cover.ts, src/ai/testSupport.ts, src/nav/navGrid.ts, src/config/bots.ts, src/config/nav.ts, src/map/depot.ts
+contract: none
+acceptance:
+  1. Hot path (audit AI-07, AI-10, AI-11, AI-16): at most one route search per tick including walk-offs; a failed bot route is not re-requested for routeRetryDelay; the search's open list is 2× the cells and grows instead of failing, with no closure per search; a bot's move command is projected on the view it ends the tick with (tests in botTactics.test.ts and navGrid.test.ts)
+  2. Spacing and cover (AI-01, AI-08, AI-12, AI-13): bots steer apart and never pick a teammate's cover spot or lane spot; two characters inside each other on < 0.5 % of live ticks over seeds 1–3 (depotMatch.spacing.test.ts); jittered points stay on their floor; route legs keep a body radius from blocks; no crouch while waiting for a cover route
+  3. Behaviour (AI-02, AI-04, AI-05, AI-06, AI-14, AI-15): holding bots crouch where that still sees and sweep their view; a near miss is heard at any range; sidesteps never go into a wall or out of sight of the target; in Attack / Defend one bot raises and the others guard from cover; a search ends with a look round; a second enemy heard mid-fight is searched afterwards
+  4. Difficulty and fairness (AI-03, AI-17, AI-18, AI-09, SIM-13): Easy reshaped with Easy rounds no longer than 1.6× Normal's (depotMatch.difficulty.test.ts); Hard uses cover and flanks more, Easy less (BotSkill); a hit call gives a bearing, not the shooter's spot; Depot's ends reach the dock and the Main Gate within 8 m of route of each other, with the Depot match guards passing; AI-18 recorded in DECISIONS
+  5. KNOWN_ISSUES rows 30 (merged), 33 (re-measured), 49, 90, 93, 94 and 95 struck or reworded, each fix with a test; rows 87 and 43/44 left with the reason in DECISIONS
+status: gates
+attempts: 1

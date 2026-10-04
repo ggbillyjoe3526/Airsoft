@@ -539,6 +539,34 @@ Quick checks that these stay fixed:
 - [ ] **Watch bots fighting near door frames.** They shouldn't fire into the frame right beside them, or dive for
   cover after their own BB hits the wall next to them.
 
+## Bot spacing, cover, behaviour and difficulty (FA4)
+
+Play Elimination on Depot at Normal, then a round each on Easy and Hard, and one Attack / Defend match. Spectate
+(after you're out) to watch bots that can't see you.
+
+- [ ] **Two bots on one lane** hold side by side at a lane point, about a metre apart, never inside each other;
+  bots walking past each other bend round instead of passing through.
+- [ ] **Bots holding a lane point** crouch after a moment where crouched they can still see ahead, and slowly sweep
+  their view left and right; some (more on Hard, fewer on Easy) step into crouch cover by the point first.
+- [ ] **A bot waiting to run for cover** doesn't bob down for a few frames before it runs.
+- [ ] **Shoot near a bot from far away** (past 22 m, unseen): it ducks and comes looking for you, or takes cover.
+- [ ] **A bot that searched where it heard you and found nobody** crouches and looks round for a second or two
+  before it moves on.
+- [ ] **Fight a bot standing beside a wall or a container**: it sidesteps away from the wall, not into it, and keeps
+  you in sight; on the dock's edge it never steps off, and where both sides are blocked it steps forward or back
+  rather than stand still.
+- [ ] **Hit a bot's teammate from far off** (30 m+): the others turn towards roughly the right side, not straight to
+  where you stand.
+- [ ] **Fight one bot while a teammate of yours fires from elsewhere**: once your bot is down, the other heads for
+  where your teammate was heard.
+- [ ] **Hard bots** sometimes come at a spot from the side instead of straight down the lane; **Easy bots** never do.
+- [ ] **Attack / Defend, your team attacking with bots**: one bot works the rope; the others hold cover a few metres
+  out, watching. With you at the rope, no bot crowds in.
+- [ ] **Depot's east end (Blue's start in Elimination)**: the spawn yard has no way out to the north road any more;
+  the team leaves past the wall's south end, so the dock and the Main Gate take about as long to reach from both
+  ends. Check nobody gets stuck in the yard's north corner.
+- [ ] **Bots turning a corner** no longer brush the wall or door frame as they pass.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:
