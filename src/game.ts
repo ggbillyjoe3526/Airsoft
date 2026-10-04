@@ -6,6 +6,7 @@ import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
 import { ROUNDS } from './config/hits';
 import type { CrosshairSettings } from './config/matchInfo';
+import { BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import type { ReplicaParts } from './config/attachments';
@@ -13,7 +14,7 @@ import type { OpticChoice } from './config/optics';
 import { QUALITY, type QualityPreset } from './config/render';
 import { LOADOUT_SLOTS, type ReplicaConfig } from './config/replicas';
 import { SIM } from './config/sim';
-import { TEAMS } from './config/teams';
+import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
 import { KeyBindings } from './input/keyBindings';
 import { Keyboard } from './input/keyboard';
 import { PlayerInput } from './input/playerInput';
@@ -27,6 +28,8 @@ import type { GameState } from './sim/state';
 import { addMatch, loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
 import { loadCrosshair } from './ui/crosshair';
 import { DebugOverlay } from './ui/debugOverlay';
+import { toggleFullscreen } from './ui/fullscreen';
+import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadBbWeight, loadHopUp, loadoutSummary, loadParts, loadSlotPick } from './ui/loadoutChoice';
 import { browserStorage } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
@@ -45,7 +48,9 @@ import {
   loadOptic,
   loadReducedMotion,
   loadSensitivity,
+  loadSoundCues,
   loadSprintMode,
+  loadTeamColours,
 } from './ui/menus/savedChoices';
 
 /** The player is the first character, on Blue (see MatchSession). */
@@ -76,6 +81,10 @@ export class Game {
   private readonly input: PlayerInput;
   private readonly debug: DebugOverlay;
   private readonly menus: Menus;
+  /** Over everything while the graphics context is lost (M18b). */
+  private readonly graphicsNotice: GraphicsNotice;
+  /** True while the graphics context is lost: nothing can be drawn, so play can't start or resume. */
+  private graphicsLost = false;
   /** The match being played (or paused, or just decided); null on the title and New game screens. */
   private session: MatchSession | null = null;
   private rafId = 0;
@@ -107,6 +116,9 @@ export class Game {
   private readonly parts = new Map<string, ReplicaParts>();
   /** Reduced motion (Settings → Accessibility), kept across matches. */
   private reducedMotion = loadReducedMotion();
+  /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
+  private teamColours: TeamColourSetId = loadTeamColours();
+  private soundCues = loadSoundCues();
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     await initPhysics();
@@ -205,14 +217,53 @@ export class Game {
       quality: options.quality,
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
-      accessibility: { reducedMotion: { initial: this.reducedMotion, onChange: (on) => this.changeReducedMotion(on) } },
+      accessibility: {
+        reducedMotion: { initial: this.reducedMotion, onChange: (on) => this.changeReducedMotion(on) },
+        // The figures are built with their colours, so a new set shows from the next match.
+        teamColours: { initial: this.teamColours, onChange: (set) => (this.teamColours = set) },
+        soundCues: { initial: this.soundCues, onChange: (on) => this.changeSoundCues(on) },
+      },
     });
     this.menus.showTitle();
+    if (this.renderer.softwareRendering) this.menus.showTitleWarning(BROWSER_NOTES.noHardwareAcceleration);
+    this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
+    this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
+    document.addEventListener('visibilitychange', this.visibilityChanged);
     this.pointer.onChange((locked) => {
       if (locked) this.resume();
       else this.pause();
     });
     this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
+  }
+
+  /** The tab was hidden (another tab, the window minimised): the match pauses, as Esc would (M18b). */
+  private readonly visibilityChanged = (): void => {
+    if (document.hidden) this.stopPlay();
+  };
+
+  /**
+   * The graphics context was lost (true) or is back (false) (M18b, audit W-01). While it's gone the match pauses
+   * and a notice covers everything; once it's back the pause menu says so and Resume carries on (Three.js uploads
+   * everything again on the next frame).
+   */
+  private graphicsContextChanged(lost: boolean): void {
+    this.graphicsLost = lost;
+    this.graphicsNotice.setVisible(lost);
+    // The menus can't be used under the notice (not even Resume by Enter or Space on the focused button).
+    this.menus.setBlocked(lost);
+    if (lost) this.stopPlay();
+    else if (this.started) this.menus.showHint(BROWSER_NOTES.graphicsBack);
+  }
+
+  /** Stops play as if the player had pressed Esc: the mouse is given back, and the pause menu comes up. */
+  private stopPlay(): void {
+    if (this.unlockedPlay) {
+      this.unlockedPlay = false;
+      this.pointer.setUnlockedButtons(false);
+      this.pause();
+    } else if (this.pointer.locked) {
+      this.pointer.release();
+    }
   }
 
   /** A volume slider moved on Settings → Audio: kept for the next match and applied to the one loaded. */
@@ -245,6 +296,12 @@ export class Game {
     this.session?.setMotion(motionScale(on));
   }
 
+  /** On-screen sound cues turned on or off: kept for the next match and applied to the one loaded. */
+  private changeSoundCues(on: boolean): void {
+    this.soundCues = on;
+    this.session?.setSoundCues(on);
+  }
+
   /** The simulation state of the match in play (null with no match loaded). For the console in dev builds. */
   get state(): GameState | null {
     return this.session?.state ?? null;
@@ -257,6 +314,8 @@ export class Game {
 
   dispose(): void {
     cancelAnimationFrame(this.rafId);
+    document.removeEventListener('visibilitychange', this.visibilityChanged);
+    this.graphicsNotice.dispose();
     this.session?.dispose();
     this.session = null;
     this.keyboard.dispose();
@@ -272,6 +331,7 @@ export class Game {
    * unlocked.
    */
   private play(): void {
+    if (this.graphicsLost) return;
     if (!this.started) {
       this.session?.dispose();
       this.session = new MatchSession(this.renderer, this.container, this.input, {
@@ -283,8 +343,11 @@ export class Game {
         hopUps: this.picked.map((r) => this.hopUpOf(r)),
         bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
         parts: this.picked.map((r) => this.partsOf(r)),
+        teamColours: TEAM_COLOUR_SETS[this.teamColours],
       }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair);
       this.session.setMotion(motionScale(this.reducedMotion));
+      this.session.setSoundCues(this.soundCues);
+      applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
     }
     this.session!.combat.unlockAudio();
     if (this.options.allowUnlocked) {
@@ -376,6 +439,8 @@ export class Game {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) s.combat.toggleBbPaths();
+      // Still within the key press's user activation, which the browser needs for fullscreen.
+      if (this.keyboard.wasPressed('fullscreen')) toggleFullscreen();
       this.ticksThisSecond += s.advance(dt);
       // A little after the match is decided, give the mouse back and show the result screen.
       if (s.takeResultDue()) {

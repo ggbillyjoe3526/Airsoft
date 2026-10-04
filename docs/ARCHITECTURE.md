@@ -65,7 +65,11 @@ ends the round). A hit character is eliminated
   Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.
   The local camera uses the latest input angles directly, so aim is never a tick behind.
 - **input/**: `Keyboard` and `PointerLock` collect raw input (mouse buttons go into the keyboard as binding codes, `Mouse0` …, so every action binds to a key or a button); `PlayerInput` latches one-shot actions (jump, reload, switch, trigger clicks) until a tick consumes them, and runs the hold or toggle modes of crouch, aim and sprint. `sensitivity.ts` converts the sensitivity to cm/360.
-- **ui/**: DOM overlays (the menus in `ui/menus/`, debug overlay, ammo HUD).
+- **ui/**: DOM overlays (the menus in `ui/menus/`, debug overlay, ammo HUD), the on-screen sound cue ring `ui/soundCues.ts`, fed by
+  `MatchPresentation` from the tick's events). Team colours (M18b) are a picked set (`config/teams.ts`): the 3D figures,
+  flag and armband take its colours at Play, and the HUD reads `--team-0` / `--team-1`, which `Game.play` sets on the
+  container. The `Renderer` reports a lost and restored graphics context (`onContextChange`) and whether it draws in
+  software (`render/gpuCheck.ts`); `Game` pauses on either a lost context or a hidden tab.
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
 - **audio/** (reworked in M13): every effect is a recipe of layers in `config/sounds.ts` (filtered noise, gliding

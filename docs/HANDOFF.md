@@ -5,56 +5,44 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-03 · M18a (comfort and controls). The owner asked to wrap up here; M18b is next._
+_Last updated: 2026-10-04 · M18b (accessibility and browser basics)._
 
 ## Where we are
 
-- **Phase 4 merged on `main`:** M12a–c weapon handling, M11 Depot rework, M15 menus, M15b (#18, #21), M13 audio (#19),
-  M19 match info (#24), M17a Loadout slots and BBs (#25), M17b attachments (#26), and the owner's feature picks in the
-  roadmap (#20, #22). The owner asked (2026-10-03) for all remaining Phase 4 milestones to be built, then to wrap up.
-- **M18a is built** (its pull request; see REVIEWS for the critic): invert mouse, hold or toggle for aim and sprint
-  (`AIM_MODES`, `SPRINT_MODES` in `config/controls.ts`, the rules in `PlayerInput`), fire and aim as rebindable
-  actions with mouse buttons as binding codes (`Mouse0` … `Mouse4`, fed by `PointerLock` into `Keyboard.press/release`),
-  sensitivity as cm/360 at a typed DPI plus "same as CS2 / Valorant" (`input/sensitivity.ts`, `ui/controlsSettings.ts`),
-  and Reduced motion on the Accessibility tab (`config/accessibility.ts`, `Viewmodel.setMotion`, the lean roll in
-  `cameraRig`), defaulting to the system's prefers-reduced-motion.
-- **Next: M18b** (ROADMAP), then M20 custom matches, M21 practice range, M22 squad orders, M14 art pass, M16 tutorial.
+- **Phase 4 merged on `main`:** M12a–c, M11, M15, M15b, M13 audio, M19 match info, M17a and M17b Loadout, M18a comfort
+  and controls (re-scored 9.0), and now **M18b** (see REVIEWS). The owner asked (2026-10-04) for every remaining
+  Phase 4 milestone, then a full code audit (Fable), its fixes (Opus), a bug pass, and a note when Phase 4 is ready to
+  playtest. For this run the owner chose "Claude merges": build threads merge their own pull request once CI is green
+  and the critic has accepted it (never tag, never push to `main` directly).
+- **Two build threads run side by side:** this one does M18b → **M22 squad orders** → **M14 art pass**; the other does
+  M20 custom matches → M21 practice range → M16 tutorial. They conflict in docs and in `matchSession.ts`, `game.ts`,
+  `settings/storage.ts`, `config/controls.ts`: merge `main` in before every push and keep both sides.
+- **M22 is started** (local only): bots' hearing shortened by walls (`wallHearing` in `config/bots.ts`, rays from
+  `sim/soundPath.ts`, shared with the player's muffling). The headless Depot guards need re-measuring (easy bots now
+  finish fewer rounds in 120 s), then the three orders.
 
-## M18b: the plan so far (nothing built)
+## M18b in short (what to know when touching it)
 
-- **Colour-blind options:** Blue `#3d8bff` vs Orange `#ff8a2a` already stay far apart under simulated protanopia,
-  deuteranopia and tritanopia (Machado 2009 matrices, CIE Lab ΔE 122 / 138 / 95) but differ little in lightness
-  (L 59 vs 69). Plan: a Team colours picker, Standard and High contrast (dark blue vs light amber, ΔL > 30), with a
-  unit test running that simulation over every set. Team colours flow through `TEAM_COLORS` / `TEAM_CSS`
-  (`matchPresentation`, `flagRenderer`, `hitFeed`, `scoreboard`, `statsTable`, the viewmodel's team colour): pass the
-  picked set in at Play rather than a global. Orange low-ammo also equals the Orange team colour. The spare-magazine
-  gauges need a shape for "next" (a caret) and a pattern for "low" (stripes), always on (KNOWN_ISSUES).
-- **Sound cues (opt-in):** a ring of direction wedges around the centre with a different shape per kind (steps, shots,
-  hit calls), fed by the same events `Sfx.onEvent` gets; skip your own sounds and teammates' footsteps; pooled DOM.
-- **Browser basics:** `visibilitychange` hidden → release the lock (or pause unlocked play); `webglcontextlost` →
-  `preventDefault`, pause, show "Graphics reset", Three re-uploads on `webglcontextrestored` (test with
-  `WEBGL_lose_context` in Playwright); a title-screen warning for a software renderer (SwiftShader, llvmpipe, Microsoft
-  Basic Render Driver, or a `failIfMajorPerformanceCaveat` probe failing). The smoke test runs on SwiftShader, so the
-  warning will show there (assert it). Fullscreen: a Graphics row and a rebindable key (F11 belongs to the browser).
+- **Team colours:** `config/teams.ts` `TEAM_COLOUR_SETS` (figures and HUD colours per set). The 3D side takes the set
+  at Play (`MatchSetup.teamColours`); the HUD reads `teamCss(team)` = `var(--team-N)`, set on the container by
+  `applyTeamCss` in `Game.play`. Never hard-code a team colour in the HUD. `config/colourVision.test.ts` simulates
+  colour blindness over every set; `mapMeshes.test.ts` keeps props off every set's hues.
+- **Sound cues:** `ui/soundCues.ts` (pure helpers `soundCueOf`, `cueAngle`, `cueOpacity` are unit-tested), fed by
+  `MatchPresentation.afterTick`, placed each frame from the camera. Ranges follow `config/audio.ts`.
+- **Browser basics:** `Game.stopPlay()` is "as if Esc": used by a hidden tab and a lost context. `Renderer.onContextChange`;
+  `render/gpuCheck.ts` for the software-renderer warning (SwiftShader shows it, the smoke test asserts it).
+  `ui/fullscreen.ts`; the key is the `fullscreen` action (F10).
 
 ## Working notes and gotchas
 
-- **Settings tabs:** Controls is `ui/controlsSettings.ts`, Accessibility `ui/accessibilitySettings.ts` (M18b adds its
-  rows there and removes the LATER rows from `SETTINGS_LATER`), Crosshair and Audio have their own modules.
-- **Input:** read fire and aim through the bindings (`kb.isDown('fire')`), never the mouse directly. A toggled aim
-  reads `canAimDownSights` (sim/aiming.ts), passed to `PlayerInput.update` each frame.
-- **Loadout:** read `Armament.handling` for the fitted numbers (magazine, reload, draw, raise), never `replica.magSize`.
-  Readouts on the Loadout screen come from the sim; keep them computed.
-- **Lifecycle:** Play builds the session before asking for the mouse lock (audio unlock needs the click). Nothing is
-  drawn while a menu is up. `PointerLock.request()` holds back `pointerlockerror` while a request is in flight.
-- **Menus:** one screen at a time (`Menus.go`); text is set in capitals by CSS. `BUILD_LABEL` moves with each tag.
-- **Parallel pull requests conflict** in `docs/DECISIONS.md`, `docs/REVIEWS.md`, `docs/KNOWN_ISSUES.md`, `docs/ROADMAP.md`,
-  `game.ts`, `matchSession.ts`, `playerInput.ts` and the viewmodel. Merge `main` in and keep both sides, `main`'s first.
-- **Checks:** `npm run check` (type check, tests, build). In a cloud container, run the smoke test with a temporary copy
-  of `playwright.config.ts` whose `launchOptions.executablePath` is `/opt/pw-browsers/chromium` (don't commit it). The
-  `e2e` build and the dev server expose `window.airsoft` (the Game). Playwright can't press side buttons: dispatch a
-  `MouseEvent` with `button: 3` on `document` in unlocked play.
+- **Checks:** `npm run check`. In a cloud container run the smoke test with a temporary copy of
+  `playwright.config.ts` whose `launchOptions.executablePath` is `/opt/pw-browsers/chromium` (keep it out of git). The
+  smoke test now also loses and restores the WebGL context and teleports an enemy close to get a sound cue
+  (`window.airsoft.state`, `e2e` build only).
+- **Input:** read fire and aim through the bindings, never the mouse. A toggled sprint pressed before forward waits for
+  forward. **Loadout:** read `Armament.handling`. **Menus:** one screen at a time (`Menus.go`); `Menus.setBlocked`
+  makes them inert (graphics reset).
 - **Ending a match quickly in a scratch script:** set `airsoft.state.round.score` to 4–4 and one team's characters'
   `status` to `'out'`.
-- **Git:** new branch from the latest `main`, push, open a pull request; the owner merges. Never push to `main`, merge a
-  pull request, or create or move tags. Install with npm 11 (`npx -y npm@11 install`) so the lockfile keeps its `libc` fields.
+- **Git:** a new branch from the latest `main`, push, open a pull request. Install with npm 11 (`npx -y npm@11 install`)
+  so the lockfile keeps its `libc` fields.

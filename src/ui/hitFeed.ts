@@ -1,5 +1,5 @@
 import { HIT_FEED } from '../config/matchInfo';
-import { TEAM_CSS } from '../config/teams';
+import { teamCss } from '../config/teams';
 
 /** Someone in a hit feed line: their name (which carries the team, or is "You") and team. */
 export interface FeedName {
@@ -78,7 +78,7 @@ export class HitFeed {
 function name(n: FeedName): HTMLSpanElement {
   const span = document.createElement('span');
   span.className = 'hit-feed-name';
-  span.style.setProperty('--team', TEAM_CSS[n.team] ?? '#fff');
+  span.style.setProperty('--team', teamCss(n.team));
   span.textContent = n.name;
   return span;
 }

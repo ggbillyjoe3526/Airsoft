@@ -1,4 +1,5 @@
 import type { Switch } from './controls';
+import { AUDIO } from './audio';
 
 /** Settings → Accessibility (M18): reduced motion so far. */
 
@@ -30,3 +31,36 @@ export type MotionScale = { readonly [K in keyof typeof REDUCED_MOTION]: number 
 export function motionScale(reduced: boolean): MotionScale {
   return reduced ? REDUCED_MOTION : FULL_MOTION;
 }
+
+/** On-screen sound cues (Settings → Accessibility, M18b): off by default, so playing by ear stays the norm. */
+export const SOUND_CUE_CHOICES: readonly { id: Switch; label: string; blurb: string }[] = [
+  { id: 'off', label: 'Off', blurb: 'Footsteps, shots and hit calls are heard only.' },
+  {
+    id: 'on',
+    label: 'On',
+    blurb: 'A marker round the crosshair points to each footstep (two dots), shot (an arrow) and hit call (a HIT tag), fainter further away.',
+  },
+];
+
+/**
+ * The sound cue ring (ui/soundCues.ts). Each cue shows as far as its sound is played (config/audio.ts), so it never
+ * tells you more than your ears would.
+ */
+export const SOUND_CUES = {
+  /** Seconds a cue stays up; it fades over the last `fade` of them. */
+  life: 1.4,
+  fade: 0.6,
+  /** Furthest each kind shows (m). Steps: as far as other players' steps play; shots and hit calls: the 3D sound's reach. */
+  range: { step: AUDIO.footsteps.maxDistance, shot: AUDIO.spatial.maxDistance, hit: AUDIO.spatial.maxDistance },
+  /** Opacity of a cue at the edge of its range (1 right beside you). */
+  farOpacity: 0.35,
+  /** Markers kept (pooled); a new sound from the same player and kind moves that player's marker instead. */
+  markers: 10,
+  /** Distance of the ring from the screen centre (px): outside the crosshair and the hit direction arrow. */
+  radius: 150,
+  /** A marker moves or fades only in steps of this many radians and this much opacity (fewer style writes). */
+  angleStep: 0.02,
+  opacityStep: 0.05,
+} as const;
+
+export type SoundCueKind = keyof typeof SOUND_CUES.range;

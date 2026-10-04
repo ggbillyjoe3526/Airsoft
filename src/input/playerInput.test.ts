@@ -258,6 +258,18 @@ describe('sprint toggle (M18)', () => {
     expect(frame().sprint).toBe(false); // pushing forward again doesn't restart it
   });
 
+  it('pressed before forward, waits for forward, then runs (M18a review)', () => {
+    const { keys, frame } = toggleSetup();
+    keys.release('forward');
+    expect(frame(() => keys.press('sprint')).sprint).toBe(false);
+    keys.release('sprint');
+    expect(frame().sprint).toBe(false);
+    keys.press('forward');
+    expect(frame().sprint).toBe(true);
+    keys.release('forward');
+    expect(frame().sprint).toBe(false);
+  });
+
   it('stops on a second press, or a crouch, aim, walk or fire press', () => {
     for (const stopper of ['sprint', 'crouch', 'aim', 'walk', 'fire'] as const) {
       const { keys, frame } = toggleSetup();

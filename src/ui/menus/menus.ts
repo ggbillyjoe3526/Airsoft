@@ -164,6 +164,20 @@ export class Menus {
     this.showHint('');
   }
 
+  /**
+   * Blocked (true) while the game can't be played, e.g. under the "Graphics reset" notice: nothing on the menus can be
+   * focused or pressed. Unblocked, the screen's main button takes the focus again.
+   */
+  setBlocked(blocked: boolean): void {
+    this.root.inert = blocked;
+    if (!blocked && !this.root.hidden) this.screens[this.current].querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true });
+  }
+
+  /** A warning on the title screen ('' hides it): the browser runs without hardware acceleration. */
+  showTitleWarning(text: string): void {
+    this.title.setWarning(text);
+  }
+
   /** A short message under the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */
   showHint(text: string): void {
     this.setup.showHint(text);

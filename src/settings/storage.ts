@@ -25,6 +25,8 @@ export type SettingField =
   | 'invertMouse'
   | 'mouseDpi'
   | 'reducedMotion'
+  | 'teamColours'
+  | 'soundCues'
   | 'optic'
   | 'map'
   | 'fov'
