@@ -53,6 +53,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M36** · Pro difficulty level: a fourth bot level above Hard, visible only with Dev settings on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted
 
 ### Changed
+- **M37** · Pro bots holding still aim at the corners and doorways you'd step out of, and answer a peek there faster; anywhere else no faster than Hard
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
 - **FA2** · Low has 80 % resolution with no shadows; Medium adds shadows and relief; High adds sharp textures, finer shadows, sheen and dust (#67)
 - **FA3** · Low draws the same frame about 18 % faster in our test, with 20 % fewer triangles and a quarter of the texture memory (#67)
