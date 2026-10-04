@@ -34,3 +34,21 @@ acceptance:
   7. Bots carry each replica as it comes: the headless match guards pass unchanged
 status: accepted
 attempts: 1
+
+## M31 · Save system: automatic browser save, download and load a save file, restore points, version migrations
+tier: ui
+perf: skip
+touches: src/save/, src/config/save.ts, src/settings/storage.ts, src/input/keyBindings.ts, src/stats/records.ts, src/pool/collection.ts, src/config/menus.ts, src/ui/menus/icons.ts, src/ui/menus/settingsScreen.ts, src/ui/menus/menus.ts, src/ui/saveSettings.ts, src/ui/saveDialog.ts, src/ui/otherTabNotice.ts, src/game.ts, src/main.ts, src/style.css, e2e/, docs/
+contract: the settings store keys (unchanged: no key renamed; `browserStorage()` may return the save layer's guarded storage); a new contract, the save file format (`save/saveFile.ts`, `SAVE_FORMAT`)
+acceptance:
+  1. Settings, key bindings, Loadout picks, Dev settings, the Armory collection (FC, Tokens, items, Shot seed), records and the tutorial flag keep saving automatically as they change; the Save tab says when it last saved
+  2. Settings → Save (a new tab, last before Dev) downloads the whole save as readable JSON `airsoft-save-YYYY-MM-DD.json` with the game's version, the date, a summary and a SHA-256 checksum; it works with storage blocked (the session's data)
+  3. Load save file (button or a file dropped on the tab) shows this browser's save beside the file's (date, version, FC, Tokens, items, matches) and replaces it only on Replace; the replaced save is kept for Undo; the game reloads; refused mid-match (from the pause menu), for a file that isn't a save, a file over the size limit and a save from a newer format ("update the game"); a checksum mismatch asks "Load anyway?"
+  4. Forward compatibility: the save carries a format number; older formats are migrated step by step (one function per step, tested), anything a build doesn't recognise is kept on load and on the next save (settings, records, collection, key bindings); a test fails if a store's version changes without SAVE_FORMAT following
+  5. Three daily restore points in the browser, restorable from the Save tab; Undo last load or delete; Delete save and start over with a confirm that offers a download first
+  6. A browser save written by a newer format is never overwritten by this build (changes last for the visit, the Save tab and title say so); blocked or failing storage is shown on the Save tab and the title screen
+  7. A second tab shows "Airsoft is open in another tab" with Play here; taking over makes the first tab write what's pending and stop saving
+  8. Protect from automatic clearing asks the browser for persistent storage only when pressed, and shows the answer
+  9. Only standard APIs available in current Chrome, Edge and Firefox (Blob download, file input, drag and drop, BroadcastChannel, StorageManager); PLAYTEST lists the Firefox checks
+status: building
+attempts: 0

@@ -75,6 +75,8 @@ export interface MenusOptions {
   hud: HudSettingsOptions;
   /** The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. */
   dev: SettingsOptions['dev'] & { cheating: () => boolean };
+  /** The save, for Settings → Save (M31). */
+  save: SettingsOptions['save'];
 }
 
 /**
@@ -193,6 +195,7 @@ export class Menus {
         onChange: (id, value) => (opts.dev.onChange(id, value), this.refreshSetup()),
         onEnabled: (on) => (opts.dev.onEnabled(on), this.refreshSetup()),
       },
+      save: opts.save,
       onBack: () => this.back(),
     });
     this.pause = new PauseScreen({

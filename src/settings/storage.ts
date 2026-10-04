@@ -11,6 +11,7 @@
  */
 
 import { SETTINGS_WRITE_DELAY_MS } from '../config/menus';
+import { guardedStorage } from '../save/guardedStorage';
 
 export const SETTINGS_KEY = 'airsoft.settings';
 export const SETTINGS_VERSION = 1;
@@ -84,8 +85,14 @@ interface StoredSettings {
   [field: string]: unknown;
 }
 
-/** localStorage, or null where the browser blocks it (settings then last for the session only). */
+/**
+ * Where the game keeps what it saves: the save system's guarded storage once it has started (M31,
+ * save/guardedStorage.ts: it notices writes, keeps refused ones for the visit and can be frozen); before that, and in
+ * unit tests, localStorage, or null where the browser blocks it (settings then last for the session only).
+ */
 export function browserStorage(): Storage | null {
+  const guarded = guardedStorage();
+  if (guarded) return guarded;
   try {
     return globalThis.localStorage ?? null;
   } catch {
