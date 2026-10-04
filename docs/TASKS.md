@@ -8,7 +8,7 @@ keeps `status` and `attempts` current.
 ## M32 · Cyber Pistol: a Legendary-only chase replica (owner's design)
 tier: core
 perf: required
-touches: pool.md, stats.md, src/config/replicas.ts, src/config/sounds.ts, src/config/bots.ts, src/config/menus.ts, src/config/dev.ts, src/pool/pool.ts, src/pool/collection.ts, src/pool/loadoutModel.ts, src/pool/armory.ts, src/pool/botKit.ts, src/audio/sfx.ts, src/render/combatPresentation.ts, src/render/replicaModels.ts, src/render/viewmodel.ts, src/ui/menus/loadoutScreen.ts, src/ui/menus/armoryScreen.ts, src/matchSession.ts, src/game.ts, src/style.css, CHANGELOG.md, docs/
+touches: pool.md, stats.md, src/config/replicas.ts, src/config/sounds.ts, src/config/bots.ts, src/config/menus.ts, src/config/dev.ts, src/pool/pool.ts, src/pool/collection.ts, src/pool/loadoutModel.ts, src/pool/armory.ts, src/pool/botKit.ts, src/audio/sfx.ts, src/render/combatPresentation.ts, src/render/replicaModels.ts, src/config/replicaFinish.ts, src/render/viewmodel.ts, src/ui/menus/loadoutScreen.ts, src/ui/menus/armoryScreen.ts, src/matchSession.ts, src/game.ts, src/style.css, CHANGELOG.md, docs/
 contract: pool.md's format (two optional columns, Tiers and Drop %, and the tag built-in-power); stats.md's Replicas table (a cyber row); MatchSetup (an optional chaseOwned list)
 acceptance:
   1. pool.md has the Cyber Pistol (000019, key cyber) with Tiers `Legendary` and Drop % 0.25; a bad tier name or Drop % is reported with its line and the row skipped; blank cells change nothing

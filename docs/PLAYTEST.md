@@ -664,6 +664,11 @@ tick Settings → Dev settings → **Unlock all gear**.
 
 - [ ] **Equip it.** Loadout → Primary or Secondary: the Cyber Pistol is there at Legendary only (no Common or Rare
   copy). It goes in either slot.
+- [ ] **Its look.** In your hands it is its own chunky pistol: a stepped mint slide with a pink stripe and three
+  vents, a black frame with a short pink-toothed rail and a square trigger guard, mint grip panels and a long magazine
+  with a wide pink base plate. The same colours on either team; the Orange tips setting still paints its muzzle. On
+  Graphics High (Replica detail High) it gains rear ridges, a pink charge light and the moulded speckle; Low draws the
+  plain shape. Does it read as rare and special?
 - [ ] **Customise.** Right-click it: Power Source reads **Built-in battery**, Magazine **Its own, 50 BBs**, and Optic,
   Grip, Laser, Barrel and Muzzle are greyed out. BB weight and hop-up still turn. The Performance sheet shows 1.00 J,
   14 BBs/s, a 1.1 s reload; the summary line reads Electric · Semi, Burst, Auto · 50 BBs a magazine.

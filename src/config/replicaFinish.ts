@@ -32,6 +32,11 @@ export const REPLICA_FINISH = {
   /** The laser module's lens glows: emissive at this strength over a dark red body (tone mapping rolls it off, no bloom). */
   laserGlow: 2,
   laserBody: 0x400808,
+  /**
+   * The Cyber Pistol's own colours (M32, the owner's reference photo): a mint slide and grip panels, hot pink accents,
+   * on a black frame, the same on either team. Its polymer takes the speckle like the rest.
+   */
+  cyber: { mint: 0x9fe3cf, pink: 0xe8336d },
   /** BBs seen through the standard magazine's witness window. */
   witnessBb: 0xfff4dc,
   /** Real rail slots: a tooth every `pitch`, `tooth` long. */

@@ -768,7 +768,7 @@ pool, items 11, 12 and part of 14).
     being it (the new Drop % column), drawn apart from the rest; Unlock all gear lends it.
   - **Bots:** on Hard, once you own one, about 1 match in 20 has one opponent carrying it as their primary, on Auto.
   - **Look:** a chunky, slab-sided pistol in mint, hot pink and black on either team, built in the replicas' own
-    procedural style (after the audit's model overhaul, FA8).
+    procedural style (built on the audit's model overhaul, FA8).
 - **M36–M41. Esports difficulty, called "Pro" in the game** (owner, 2026-10-04: "high stakes and require skill … the
   player deliberately moves slowly and carefully peeks around corners … the game must still be fun"; he approved the
   plan in the project's shared files, `research/esports-difficulty-2026-10-04.md`). Starts after the final alpha pass.

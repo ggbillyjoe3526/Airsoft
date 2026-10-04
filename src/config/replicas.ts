@@ -79,6 +79,8 @@ export type ReplicaModelKind = 'rifle' | 'pistol';
 
 export interface ReplicaLook {
   model: ReplicaModelKind;
+  /** Its own first-person model (render/replicaModels.ts), when it isn't its kind's standard one (the Cyber Pistol's, M32). */
+  viewmodel?: 'cyber';
   /** The sounds it makes (config/sounds.ts), when they aren't its power's own (the Cyber Pistol's, M32). */
   sound?: ShotProfile;
   /** Fitted with a suppressor: its shots sound quieter and duller (config/audio.ts suppressed). */
@@ -199,7 +201,7 @@ export const CYBER_PISTOL: ReplicaConfig = withStats({
   recoilDeg: 0.06,
   magazines: ['standard'],
   siteClass: 'pistol',
-  look: { model: 'pistol', sound: 'cyber', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
+  look: { model: 'pistol', viewmodel: 'cyber', sound: 'cyber', suppressed: false, hold: { position: [0.09, -0.095, -0.45], yaw: 0.1 } },
 });
 
 /** The hop-up dial the player turns before a match (0..1 of a replica's hopUpMax), shown as a percentage. */
