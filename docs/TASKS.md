@@ -84,6 +84,7 @@ acceptance:
   4. Tuning numbers for Pro in one place, ready for the owner's playtest per map.
 status: open
 attempts: 0
+
 ## M33f · Night lighting: a lighting preset any map picks in its data (day or night), moonlight and dark sky, and pools of light from its fires and lanterns
 tier: core
 perf: required

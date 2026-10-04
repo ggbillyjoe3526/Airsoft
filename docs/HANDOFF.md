@@ -14,7 +14,7 @@ _Last updated: 2026-10-04 · the final alpha audit is implemented (FA1–FA12); 
   handling and sim #57, FA5+FA9 input, HUD and UI polish #59, FA12 BB hot path #60, FA11a build and pipeline #61, FA10
   Armory and economy #63, FA4 bots and difficulty #66, FA2+FA3 quality presets, Custom graphics and render cost #67,
   FA8+FA11c figures, replicas, effects and the tab lock #69, FA7 lighting, sky, map, flag and range #71, FA11b session
-  plan, faster tests and map reuse #73. One line per task in REVIEWS, one row per attempt in METRICS.
+  plan, faster tests and map reuse #73, FA13 screenshot pass fixes (hands, name tags, tile drawings) #76. One line per task in REVIEWS, one row per attempt in METRICS.
 - **Next:** the owner playtests `main` (PLAYTEST › "Final alpha audit: start here" lists what to try first and the calls
   that are his: SIM-17 ramp pace, own ricochets, the laser beam, the Easy teammate default). Then step 3 of the final
   alpha chain, the polish pass (a new thread). M32 Cyber Pistol, M33 Woodland, M34 city map, M35 content tags and
