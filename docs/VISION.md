@@ -29,3 +29,4 @@ Should not feel: grimdark, gory, militaristic, simulation-heavy, bloated, esport
 - Bright daylight, warm concrete, painted breeze-block walls, plywood crates, coloured shipping containers.
 - Teams are **Blue** and **Orange** (armbands / vests), the way sites use coloured tape.
 - BBs are bright white/tracer dots with short streaks. Impacts make dust puffs, never blood.
+- The full look (palette, the four material families, edges, wear and light) is the art bible in [ART.md](ART.md).
