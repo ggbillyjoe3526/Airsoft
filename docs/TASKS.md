@@ -27,3 +27,18 @@ acceptance:
   14. KNOWN_ISSUES: the bump-map and tree rows are struck or reworded; PLAYTEST has the FA7 checks
 status: gates
 attempts: 2
+
+## FA11b · Session plan, result text, test wall time, kept map meshes and the smoke summary
+tier: core
+perf: required
+touches: src/core/sessionPlan.ts, src/core/buildTiming.ts, src/ui/matchStopText.ts, src/matchFlow.ts, src/game.ts, src/main.ts, src/matchSession.ts, src/rangeSession.ts, src/render/renderer.ts, src/render/mapMeshCache.ts, src/ai/depotMatchSupport.ts, vite.config.ts, .github/workflows/check.yml, pipeline/
+contract: none (`MatchSession.advance` / `draw` / `afterTick` unchanged; the sessions take their map meshes from `Renderer.mapMeshes`)
+acceptance:
+  1. CORE-05 (2): `nextSessionAction(flags)` in `core/sessionPlan.ts` decides what Play does; `Game.play` acts on it; `sessionPlan.test.ts` has a row for every reachable combination (36, checked against an enumeration) and the graphics-lost case
+  2. CORE-05 (3): the result and pause screen text come from `ui/matchStopText.ts` through `MatchSession.resultView` / `pauseLine`; `Game.pause` only shows them (`matchStopText.test.ts`); part (1), `GameSettings`, is deferred with its reason in DECISIONS and a KNOWN_ISSUES row
+  3. CORE-23: the table test above; the renderer-free `MatchSession` test is skipped with its reason (DECISIONS, KNOWN_ISSUES)
+  4. CORE-15: the five long `depotMatch.*` files measured; the custom-match guard split by mode into two files (every seed and guard kept); `isolate: false`; projects `fast` and `slow` (`npx vitest run --project fast` for workers, the gate and CI run both); check.yml and pipeline/README carry the measured numbers
+  5. CORE-33: `performance.measure` per match build phase and one `?perf` console line; the Renderer keeps the last map's meshes (`MapMeshCache`): the same map reuses them, freed on another map, a look that rebuilds them while released, a context swap and the renderer's dispose (`mapMeshCache.test.ts`, `buildTiming.test.ts`)
+  6. The gate's smoke failure summary names each failing test's describe path, project and line and prints the error's locator / expectation / call-log lines (`pipeline/smokeReport.test.mjs`)
+status: gates
+attempts: 1
