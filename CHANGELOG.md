@@ -47,8 +47,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
 - **M33a** · Woodland shown as Coming soon in the Map pop-up
-- **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots
-- **M35** · pool.md has an Access column: public or dev for each asset
+- **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
+- **M35** · pool.md has an Access column: public or dev for each asset (#70)
 
 ### Changed
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
@@ -70,7 +70,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 - **FA12** · With ricochets set to count, a BB that bounces can hit whoever fired it (not with friendly fire off) (#60)
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
-- **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits
+- **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits (#70)
 
 ### Fixed
 - **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
