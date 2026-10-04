@@ -1001,8 +1001,9 @@ describe('bot team play and routes', () => {
         for (const b of bots.bots) {
           expect(b.laneDir).toBe(1); // west to east
           // Past halfway from the west spawns to the east ones: the dock's middle (4th point), just short of the
-          // Main Gate (4th), the hall (5th).
-          expect(b.lanePoints).toBe([4, 4, 5][b.lane]);
+          // Main Gate (4th), the stores (6th; the hall, 5th, before the east spawns moved north, away from the office
+          // lane, for audit SIM-13).
+          expect(b.lanePoints).toBe([4, 4, 6][b.lane]);
         }
       }
       // And once those points are walked, the lane is done and the bot heads for the pole.

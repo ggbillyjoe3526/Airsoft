@@ -7,7 +7,9 @@ import type { BlockKind, MapBlock, MapData, RampRise, SpawnPoint } from './mapTy
  * swap ends at half-time in both modes, so the map is fair over a match.
  *
  * - End 0 (the attackers' end in Attack / Defend): the west spawn yard behind a spawn wall, as before.
- * - End 1 (the defenders'): the north-east spawn yard behind its own wall.
+ * - End 1 (the defenders'): the north-east spawn yard behind its own wall, open only at its south end (audit
+ *   SIM-13, 2026-10-04: the spawns sit at the yard's north end, so this end no longer reaches the dock and the Main
+ *   Gate well before the west end does; route lengths are checked in depot.test.ts).
  * - The Bay: a walled loading bay on the defenders' side, with the pole. Its west wall of containers has the
  *   Main Gate in it; the North Gate opens from the road, and the office's back door from the south.
  *
@@ -225,8 +227,9 @@ const THE_BAY: MapBlock[] = [
   // the office's back door.
   container(15.8, 17.2, -5.0, 2.0),
 
-  // Defenders' spawn wall, and a container along the south edge of their yard.
-  wall(18.2, 18.2 + WALL_THICKNESS, 3.0, 12.6, 0, SPAWN_WALL_HEIGHT),
+  // Defenders' spawn wall (closed to the road at the north: the way out is past its south end, SIM-13), and a
+  // container along the south edge of their yard.
+  wall(18.2, 18.2 + WALL_THICKNESS, 3.0, HALF_Z, 0, SPAWN_WALL_HEIGHT),
   container(21.0, HALF_X, 0.4, 2.8),
 
   // Back lot, east of the office.
@@ -269,7 +272,7 @@ const OFFICE: MapBlock[] = [
 
 /** Spawns: west yard facing east (yaw -90°), north-east yard facing west (yaw +90°). */
 const WEST_SPAWNS: SpawnPoint[] = [-2.3, 0, 2.3].map((z) => ({ position: vec3(-22.7, 0, z), yaw: -Math.PI / 2 }));
-const EAST_SPAWNS: SpawnPoint[] = [6.6, 8.9, 11.2].map((z) => ({ position: vec3(22.7, 0, z), yaw: Math.PI / 2 }));
+const EAST_SPAWNS: SpawnPoint[] = [10.2, 12.4, 14.6].map((z) => ({ position: vec3(22.7, 0, z), yaw: Math.PI / 2 }));
 
 /** Dead zones: a back corner of each spawn yard, behind the spawn line and out of every lane. */
 const WEST_DEAD_ZONE: SpawnPoint[] = [
@@ -296,7 +299,7 @@ const LANES: Vec3[][] = [
   [vec3(-15.0, 0, -6.6), vec3(-11.0, 0, -11.9), vec3(-6.6, 0, -11.9), vec3(-1.0, 0, -9.3), vec3(4.0, 0, -10.0), vec3(7.2, 0, -9.0), vec3(12.8, 0, -13.2)],
 ];
 
-/** The pole: in the Bay, about 16 m from the east spawns and 38 m from the west ones (tested). */
+/** The pole: in the Bay, about 17 m from the east spawns and 38 m from the west ones (tested). */
 const POLE = vec3(11.5, 0, -1.0);
 
 /**
