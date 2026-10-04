@@ -1,6 +1,6 @@
 import { overStored } from '../save/overStored';
 import { browserStorage } from '../settings/storage';
-import type { Pool } from './pool';
+import { comesIn, type Pool, tiersOf } from './pool';
 
 /**
  * What the player owns from the asset pool (M26a): a count of each item (an asset at a rarity tier), and their Field
@@ -47,9 +47,10 @@ export function parseItemKey(key: string): ItemRef | null {
   return m ? { asset: m[1]!, tier: m[2]! } : null;
 }
 
-/** An item the pool still has (its asset and tier both exist). */
+/** An item the pool still has: its asset exists, in that tier (one it comes in, M32). */
 export function inPool(pool: Pool, ref: ItemRef): boolean {
-  return pool.byId.has(ref.asset) && pool.tiers.some((t) => t.id === ref.tier);
+  const asset = pool.byId.get(ref.asset);
+  return !!asset && pool.tiers.some((t) => t.id === ref.tier) && comesIn(asset, ref.tier);
 }
 
 /** A new player's collection: the starters at the lowest tier, nothing to spend. */
@@ -61,11 +62,11 @@ export function newCollection(pool: Pool, seed: number): Collection {
 
 /** Gives the player any starter they lack (one added to pool.md later reaches existing saves too). */
 export function grantStarters(c: Collection, pool: Pool): void {
-  const lowest = pool.tiers[0]!.id;
   for (const a of pool.assets) {
     if (!a.starter) continue;
     const owns = pool.tiers.some((t) => (c.owned[itemKey(a.id, t.id)] ?? 0) > 0);
-    if (!owns) c.owned[itemKey(a.id, lowest)] = 1;
+    // At the lowest tier it comes in.
+    if (!owns) c.owned[itemKey(a.id, tiersOf(pool, a)[0]!.id)] = 1;
   }
 }
 

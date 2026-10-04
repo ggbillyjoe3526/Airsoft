@@ -567,6 +567,17 @@ export const BB_VISUALS = {
   trailColor: 0xfff4cc,
   trailOpacity: 0.75,
   /**
+   * Glowing BBs (M33b, the Loadout's Glowing BBs row): glow-in-the-dark green, drawn a little larger and with a longer
+   * streak so a shot can be followed all the way, at night above all. Presentation only: they fly like any BB. A
+   * Loadout choice, so drawn on every graphics preset (it costs nothing: a colour); `glow` below is FA8's halo.
+   */
+  glowInDark: {
+    color: 0x9dff7a,
+    trailColor: 0x5cff4a,
+    minAngularRadius: 0.0045,
+    trailSeconds: 0.05,
+  },
+  /**
    * The streak's width as an angle (radians of view; 0.0018 ≈ 1.8 px at 1080p, 2.3 px at 1440p): a camera-facing ribbon
    * (audit REN-19), the same on screen at any pixel ratio, where a WebGL line is one device pixel (fainter on high-DPI).
    */

@@ -1,10 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_STATS } from '../config/gameStats';
-import { AEG, GAS_PISTOL } from '../config/replicas';
+import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
-import { gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
-import { EMPTY_FIT } from './kit';
+import { bbGlowFor, gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { EMPTY_FIT, FIT_SLOTS } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
 import { saveSetting } from '../settings/storage';
@@ -98,6 +98,69 @@ describe('Loadout model (M26b)', () => {
     model.setHopUp(id('Gas Pistol'), 0.4);
     expect(model.kit().bbWeights).toEqual([0.3, GAS_PISTOL.bbWeight]);
     expect(model.kit().hopUps).toEqual([AEG.hopUpDial, 0.4]);
+  });
+
+  describe('Glowing BBs (M33b)', () => {
+    it('defaults every replica to At Night and keeps each replica its own choice', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      expect(model.glowBBs(id('AEG Rifle'))).toBe('night');
+      expect(model.glowBBs(id('Gas Pistol'))).toBe('night');
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      expect(model.glowBBs(id('AEG Rifle'))).toBe('always');
+      expect(model.glowBBs(id('Gas Pistol'))).toBe('night');
+      model.setGlowBBs(id('Gas Pistol'), 'off');
+      expect(model.glowBBs(id('Gas Pistol'))).toBe('off');
+      expect(model.glowBBs(id('AEG Rifle'))).toBe('always');
+    });
+
+    it('is saved by replica asset id, and kept apart while everything is unlocked (as FA10 keeps the dials)', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      expect(model.glowField(id('AEG Rifle'))).toBe(`glowBBs.${id('AEG Rifle')}`);
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      let sandboxed = true;
+      const dev = new LoadoutModel(pool, { ...owning(STARTERS), sandboxed: () => sandboxed });
+      expect(dev.glowField(id('AEG Rifle'))).toBe(`glowBBs.dev.${id('AEG Rifle')}`);
+      expect(dev.glowBBs(id('AEG Rifle'))).toBe('always');
+      dev.setGlowBBs(id('AEG Rifle'), 'off');
+      expect(dev.glowBBs(id('AEG Rifle'))).toBe('off');
+      sandboxed = false;
+      expect(dev.glowBBs(id('AEG Rifle'))).toBe('always');
+    });
+
+    it('is saved: a new model over the same storage reads the pick back', () => {
+      new LoadoutModel(pool, owning(STARTERS)).setGlowBBs(id('AEG Rifle'), 'off');
+      expect(new LoadoutModel(pool, owning(STARTERS)).glowBBs(id('AEG Rifle'))).toBe('off');
+    });
+
+    it('falls back to At Night for a stored value that is not a choice', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      const raw = JSON.parse(localStorage.getItem(localStorage.key(0)!)!);
+      raw[`glowBBs.${id('AEG Rifle')}`] = 'sparkly';
+      localStorage.setItem(localStorage.key(0)!, JSON.stringify(raw));
+      expect(model.glowBBs(id('AEG Rifle'))).toBe('night');
+    });
+
+    it("puts each slot's choice in the kit, following the slots when they swap", () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      model.setGlowBBs(id('Gas Pistol'), 'off');
+      expect(model.kit().glowBBs).toEqual(['always', 'off']);
+      model.equip('primary', item('Gas Pistol'));
+      expect(model.kit().glowBBs).toEqual(['off', 'always']);
+    });
+
+    it('resolves the kit against the field: yours by slot, the bots the default way', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      model.setGlowBBs(id('AEG Rifle'), 'always');
+      model.setGlowBBs(id('Gas Pistol'), 'off');
+      expect(bbGlowFor(model.kit(), false)).toEqual({ player: [true, false], others: false });
+      expect(bbGlowFor(model.kit(), true)).toEqual({ player: [true, false], others: true });
+      model.setGlowBBs(id('AEG Rifle'), 'night');
+      model.setGlowBBs(id('Gas Pistol'), 'night');
+      expect(bbGlowFor(model.kit(), true)).toEqual({ player: [true, true], others: true });
+      expect(bbGlowFor(model.kit(), false)).toEqual({ player: [false, false], others: false });
+    });
   });
 
   it('carries nothing in a slot it owns no replica for', () => {
@@ -266,5 +329,75 @@ describe('Loadout model: barrels and muzzle parts (M29b)', () => {
     own.items.delete(itemKey(id('Red Dot'), 'common'));
     expect(model.equipped()[0]).toEqual(item('AEG Rifle', 'rare'));
     expect(model.fitOf(id('AEG Rifle')).optic).toEqual(item('Red Dot', 'epic'));
+  });
+});
+
+describe('M32 acceptance 4: the Cyber Pistol only exists at Legendary', () => {
+  const CYBER = '000019';
+  const cyber = (tier = 'legendary'): ItemRef => ({ asset: CYBER, tier });
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+
+  it('is lent by Unlock all gear at Legendary only, and every other asset still at every tier', () => {
+    const c = newCollection(pool, 1);
+    const own = gameOwnership(pool, () => c, () => true);
+    expect(own.owns(cyber())).toBe(true);
+    for (const t of pool.tiers.filter((x) => x.id !== 'legendary')) expect(own.owns(cyber(t.id)), t.id).toBe(false);
+    for (const t of pool.tiers) expect(own.owns({ asset: id('AEG Rifle'), tier: t.id }), `AEG ${t.id}`).toBe(true);
+    const model = new LoadoutModel(pool, own);
+    expect(model.replicaChoices().filter((r) => r.asset === CYBER)).toEqual([cyber()]);
+    // Not lent without it: a player who has not found one does not have one.
+    const off = gameOwnership(pool, () => c, () => false);
+    expect(off.owns(cyber())).toBe(false);
+  });
+
+  it('lists the chase replicas the player owns at any tier (everything unlocked: every one), none by default', () => {
+    expect(new LoadoutModel(pool, owning(STARTERS)).ownedChase()).toEqual([]);
+    expect(new LoadoutModel(pool, owning([...STARTERS, cyber()])).ownedChase()).toEqual([CYBER]);
+    const c = newCollection(pool, 1);
+    expect(new LoadoutModel(pool, gameOwnership(pool, () => c, () => false)).ownedChase()).toEqual([]);
+    expect(new LoadoutModel(pool, gameOwnership(pool, () => c, () => true)).ownedChase()).toEqual([CYBER]);
+    // A chase replica only: not a part, not an ordinary replica.
+    expect(new LoadoutModel(pool, owning([...STARTERS, item('Red Dot', 'legendary')])).ownedChase()).toEqual([]);
+  });
+
+  it('takes it as it comes at Legendary, with no power source: the spec numbers, whatever the player owns', () => {
+    const model = new LoadoutModel(pool, owning([...STARTERS, cyber()]));
+    const slot = model.asItComes(CYBER);
+    expect(slot.replica.id).toBe(CYBER_PISTOL.id);
+    expect(slot.replica.name).toBe('Cyber Pistol');
+    expect(slot.replica.muzzleEnergy).toBeCloseTo(1.0, 2);
+    expect(slot.replica.fireRate).toBeCloseTo(14, 1);
+    // Exactly what carrying the Legendary one with nothing fitted gives (and not the Common-tier numbers).
+    expect(slot.replica).toEqual(model.slotKit(cyber()).replica);
+    expect(slot.replica.muzzleEnergy).toBeGreaterThan(CYBER_PISTOL.muzzleEnergy);
+    expect(slot.optic).toBeNull();
+    // The ordinary replicas are still as they come at Common.
+    expect(model.asItComes(id('AEG Rifle')).replica).toEqual({ ...AEG, name: 'AEG Rifle' });
+  });
+
+  it('has no slot for any part or power source, and offers none, so Customise has nothing to pick', () => {
+    const model = new LoadoutModel(pool, gameOwnership(pool, () => newCollection(pool, 1), () => true));
+    for (const slot of FIT_SLOTS) {
+      expect(model.hasSlot(CYBER, slot), slot).toBe(false);
+      expect(model.fitChoices(CYBER, slot), slot).toEqual([]);
+    }
+    // The other replicas keep theirs: a power source and a magazine for both.
+    for (const r of ['AEG Rifle', 'Gas Pistol']) {
+      expect(model.hasSlot(id(r), 'power'), r).toBe(true);
+      expect(model.hasSlot(id(r), 'magazine'), r).toBe(true);
+    }
+  });
+
+  it('carries it in a gear slot like any replica, as its Legendary self on nothing fitted', () => {
+    const model = new LoadoutModel(pool, owning([...STARTERS, cyber()]));
+    model.equip('primary', cyber());
+    const [primary, secondary] = model.kit().slots;
+    expect(primary!.replica.id).toBe(CYBER_PISTOL.id);
+    expect(primary!.replica.muzzleEnergy).toBeCloseTo(1.0, 2);
+    expect(secondary!.replica.id).toBe(GAS_PISTOL.id);
+    expect(model.fitOf(CYBER)).toEqual(EMPTY_FIT);
   });
 });

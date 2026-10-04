@@ -123,6 +123,118 @@ describe('BBRenderer', () => {
     }
     r.dispose();
   });
+  describe('glowing BBs (M33b)', () => {
+    const colorOf = (r: BBRenderer, i: number): THREE.Color => {
+      const c = new THREE.Color();
+      (r.object.children[0] as THREE.InstancedMesh).getColorAt(i, c);
+      return c;
+    };
+    /** Floats per streak: a quad of four corners, two at the head and two at the tail. */
+    const QUAD = 12;
+    const headColor = (r: BBRenderer, i: number): THREE.Color => {
+      const a = ((r.object.children[1] as THREE.Mesh).geometry.getAttribute('color') as THREE.BufferAttribute).array;
+      return new THREE.Color(a[i * QUAD]!, a[i * QUAD + 1]!, a[i * QUAD + 2]!);
+    };
+    /** A BB that went 1.4 m last tick, level, so a streak shows. */
+    const farBB = (pool: ReturnType<typeof createBBPool>, z: number) => {
+      const bb = spawnBB(pool, 1, vec3(0, 1.6, z), vec3(0, 0, -1), 88, 0, 0.25e-3);
+      bb.prevPosition.z = z + 1.4;
+      bb.age = 1;
+      return bb;
+    };
+    /** Head to tail, between the midpoints of the quad's head corners (0, 1) and tail corners (2, 3). */
+    const streak = (r: BBRenderer, i: number): number => {
+      const p = ((r.object.children[1] as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute).array;
+      const o = i * QUAD;
+      const mid = (k: number, axis: number): number => (p[o + k * 6 + axis]! + p[o + k * 6 + 3 + axis]!) / 2;
+      return Math.hypot(mid(1, 0) - mid(0, 0), mid(1, 1) - mid(0, 1), mid(1, 2) - mid(0, 2));
+    };
+
+    it('draws a glowing BB in the glow colour and a normal BB as before, in the same instanced mesh', () => {
+      const pool = createBBPool(2);
+      const r = new BBRenderer(pool, DT);
+      const a = spawnBB(pool, 1, vec3(0, 1.6, -5), vec3(0, 0, -1), 88, 0, 0.25e-3);
+      spawnBB(pool, 1, vec3(0, 1.6, -6), vec3(0, 0, -1), 88, 0, 0.25e-3);
+      r.setGlowInDark(a, true);
+      r.update(0, eye);
+      expect((r.object.children[0] as THREE.InstancedMesh).count).toBe(2);
+      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.color).getHex());
+      expect(colorOf(r, 1).getHex()).toBe(0xffffff);
+      expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.trailColor).getHex());
+      expect(headColor(r, 1).getHex()).toBe(new THREE.Color(BB_VISUALS.trailColor).getHex());
+      expect(r.object.children).toHaveLength(3); // still the balls, the streaks and FA8's halo: no mesh added
+      r.dispose();
+    });
+
+    it('keeps a glowing BB at least the glow minimum angular size far away, larger than a normal one', () => {
+      const pool = createBBPool(2);
+      const r = new BBRenderer(pool, DT);
+      const glowing = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
+      spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
+      r.setGlowInDark(glowing, true);
+      r.update(0, eye);
+      const g = drawn(r, 0);
+      const n = drawn(r, 1);
+      expect((g.scale * BB_VISUALS.radius) / 30).toBeGreaterThanOrEqual(BB_VISUALS.glowInDark.minAngularRadius - 1e-9);
+      expect((n.scale * BB_VISUALS.radius) / 30).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);
+      expect(g.scale).toBeGreaterThan(n.scale);
+      r.dispose();
+    });
+
+    it('draws a longer streak behind a glowing BB, in proportion to the glow trail time', () => {
+      const pool = createBBPool(2);
+      const r = new BBRenderer(pool, DT);
+      const a = farBB(pool, -10);
+      farBB(pool, -10);
+      r.setGlowInDark(a, true);
+      r.update(0, eye);
+      expect(streak(r, 1)).toBeCloseTo((1.4 / DT) * BB_VISUALS.trailSeconds, 4);
+      expect(streak(r, 0)).toBeCloseTo((1.4 / DT) * BB_VISUALS.glowInDark.trailSeconds, 4);
+      expect(streak(r, 0)).toBeGreaterThan(streak(r, 1));
+      r.dispose();
+    });
+
+    it("doesn't change where a glowing BB is drawn along its flight", () => {
+      const pool = createBBPool(2);
+      const r = new BBRenderer(pool, DT);
+      const a = farBB(pool, -10);
+      farBB(pool, -10);
+      r.setGlowInDark(a, true);
+      r.update(0.5, eye);
+      expect(drawn(r, 0).pos.distanceTo(drawn(r, 1).pos)).toBeLessThan(1e-6);
+      r.dispose();
+    });
+
+    it("doesn't glow the new BB that reuses a glowing BB's pool slot", () => {
+      const pool = createBBPool(1);
+      const r = new BBRenderer(pool, DT);
+      const first = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
+      r.setGlowInDark(first, true);
+      r.update(0, eye);
+      expect(colorOf(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.glowInDark.color).getHex());
+      const serial = first.serial;
+      first.active = false; // it hit something; its slot is free
+      const second = spawnBB(pool, 1, vec3(0, 1.6, -30), vec3(0, 0, -1), 88, 0, 0.25e-3);
+      expect(second).toBe(first);
+      expect(second.serial).not.toBe(serial);
+      r.update(0, eye);
+      expect(colorOf(r, 0).getHex()).toBe(0xffffff);
+      expect(headColor(r, 0).getHex()).toBe(new THREE.Color(BB_VISUALS.trailColor).getHex());
+      expect((drawn(r, 0).scale * BB_VISUALS.radius) / 30).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);
+      r.dispose();
+    });
+
+    it('can be switched off again for a BB (setGlow false)', () => {
+      const pool = createBBPool(1);
+      const r = new BBRenderer(pool, DT);
+      const a = spawnBB(pool, 1, vec3(0, 1.6, -5), vec3(0, 0, -1), 88, 0, 0.25e-3);
+      r.setGlowInDark(a, true);
+      r.setGlowInDark(a, false);
+      r.update(0, eye);
+      expect(colorOf(r, 0).getHex()).toBe(0xffffff);
+      r.dispose();
+    });
+  });
 });
 
 describe('BBRenderer streaks (REN-19)', () => {
