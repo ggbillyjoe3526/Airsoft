@@ -2,6 +2,9 @@
   --ui-font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --ui-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   --orange: #ff8a2a;
+  /* The team colours (config/teams.ts): the standard set until a match sets the picked one on the game's container */
+  --team-0: #3d8bff;
+  --team-1: #ff8a2a;
   --ink: #16181d;
   --paper: #f7f3ea;
 }
@@ -1232,13 +1235,25 @@ kbd {
   background: #f2f2f2;
 }
 
-/* The magazine a reload takes: outlined in yellow */
+/* The magazine a reload takes: outlined in yellow, with a caret under it (a shape, so colour isn't the only cue) */
 .hud-mags i.next {
   border: 2px solid #ffd84d;
 }
 
+.hud-mags i.next::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  translate: -50% 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 5px solid #ffd84d;
+}
+
+/* Low: orange and striped */
 .hud-mags i.low b {
-  background: var(--orange);
+  background: repeating-linear-gradient(135deg, var(--orange) 0 3px, #7a3a10 3px 5px);
 }
 
 .hud-mags i.empty {
@@ -1973,4 +1988,136 @@ kbd {
   border-radius: 50%;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
   vertical-align: -1px;
+}
+
+/* On-screen sound cues (M18b, opt-in): a ring round the crosshair, a shape per kind. Each marker is rotated about the
+   centre to point at its sound; its shape sits on the ring, at the top before the rotation. */
+.sound-cues {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.sound-cues[hidden],
+.sound-cue[hidden] {
+  display: none;
+}
+
+.sound-cue {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  rotate: var(--a, 0rad);
+}
+
+.sound-cue b {
+  position: absolute;
+  top: calc(-1 * var(--cue-radius));
+  left: 0;
+  translate: -50% -50%;
+  display: block;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+}
+
+/* Footsteps: two dots side by side, like a pair of prints */
+.cue-step b {
+  width: 16px;
+  height: 7px;
+  background:
+    radial-gradient(circle at 3.5px 50%, #f2f2f2 3px, transparent 3.5px),
+    radial-gradient(circle at 12.5px 50%, #f2f2f2 3px, transparent 3.5px);
+}
+
+/* A shot: an arrowhead pointing out towards it */
+.cue-shot b {
+  width: 22px;
+  height: 14px;
+  background: #fff4d6;
+  clip-path: polygon(50% 0, 100% 100%, 50% 70%, 0 100%);
+}
+
+/* A hit call: a small HIT tag */
+.cue-hit b {
+  /* Just outside the ring, so a hit call and a shot from the same way don't overlap; upright whichever way it points */
+  top: calc(-1 * var(--cue-radius) - 24px);
+  rotate: calc(-1 * var(--a, 0rad));
+  padding: 0 4px;
+  border: 1.5px solid #fff;
+  border-radius: 3px;
+  color: #fff;
+  font: 800 10px/14px var(--ui-font);
+  letter-spacing: 0.04em;
+}
+
+.cue-hit b::before {
+  content: 'HIT';
+}
+
+/* Settings → Accessibility: the picked team colours, as the figures wear them */
+.team-swatches {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.team-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 13px var(--ui-font);
+}
+
+.team-swatch::before {
+  content: '';
+  width: 28px;
+  height: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 3px;
+  background: var(--swatch);
+}
+
+/* Title screen: the browser draws without hardware acceleration (M18b) */
+.menu-title-warning {
+  position: absolute;
+  left: 50%;
+  top: var(--menu-gutter);
+  translate: -50% 0;
+  width: min(640px, calc(100% - 2 * var(--menu-gutter)));
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--orange);
+  border-left-width: 6px;
+  border-radius: 4px;
+  background: var(--menu-panel);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.menu-title-warning[hidden] {
+  display: none;
+}
+
+/* Over everything while the graphics context is lost (M18b) */
+.graphics-notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  background: #16181d;
+  color: var(--paper);
+  font: 600 18px/1.4 var(--ui-font);
+  text-align: center;
+  z-index: 40;
+}
+
+.graphics-notice[hidden] {
+  display: none;
 }

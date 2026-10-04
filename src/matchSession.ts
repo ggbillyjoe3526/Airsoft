@@ -18,7 +18,7 @@ import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
-import { TEAMS } from './config/teams';
+import { TEAMS, type TeamColours } from './config/teams';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MapData } from './map/mapTypes';
@@ -61,6 +61,8 @@ export interface MatchSetup {
   hopUps: readonly number[];
   bbWeights: readonly number[];
   parts: readonly ReplicaParts[];
+  /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
+  teamColours: TeamColours;
 }
 
 /**
@@ -154,9 +156,9 @@ export class MatchSession {
     );
     input.resetView(this.player.spawnYaw);
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, TEAMS[this.player.team]!.color, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action));
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours);
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -227,6 +229,11 @@ export class MatchSession {
   setMotion(scale: MotionScale): void {
     this.motion = scale;
     this.combat.setMotion(scale);
+  }
+
+  /** On-screen sound cues turned on or off (also called once as the match is built). */
+  setSoundCues(on: boolean): void {
+    this.match.setSoundCues(on);
   }
 
   setPlaying(playing: boolean): void {

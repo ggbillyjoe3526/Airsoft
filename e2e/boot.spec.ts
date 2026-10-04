@@ -32,6 +32,8 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   }
   await expect(page.locator('#loading')).toHaveCount(0);
   await expect(page.locator('.menu-title-wordmark')).toBeVisible();
+  // SwiftShader is a software renderer: the title screen warns that the game will run slowly (M18b).
+  await expect(page.locator('.menu-title-warning')).toContainText('without hardware acceleration');
   // No map is loaded until Play (M15b); the e2e build exposes the game as `airsoft`.
   const matchLoaded = () => page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null);
   expect(await matchLoaded()).toBe(false);
@@ -126,8 +128,13 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
   await settings.getByRole('tab', { name: /Accessibility/i }).click();
   await expect(settings.getByRole('group', { name: 'Reduced motion' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  // M18b: High contrast team colours and the on-screen sound cues, both for the match below.
+  await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'High contrast' }).click();
+  await expect(settings.locator('.team-swatch')).toHaveCount(2);
+  await settings.getByRole('group', { name: 'Sound cues' }).getByRole('button', { name: 'On' }).click();
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('100');
+  await expect(settings.getByRole('button', { name: 'Go fullscreen' })).toBeVisible();
   await settings.getByRole('tab', { name: /Key bindings/i }).click();
   // Fire and aim are bindings like the rest (M18), on the mouse buttons by default.
   await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
@@ -149,6 +156,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.hud')).toBeVisible();
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
   await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
+  // The match wears the High contrast colours on the HUD, and the sound cue ring is up.
+  expect(await page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--team-1'))).toBe('#e0601a');
+  await expect(page.locator('.sound-cues')).not.toHaveAttribute('hidden');
   // Holding Tab shows the scoreboard with every player (M19); letting go hides it.
   const board = page.locator('.match-board');
   await page.keyboard.down('Tab');
@@ -188,5 +198,75 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await testInfo.attach('aiming', { body: await page.screenshot(), contentType: 'image/png' });
   await page.mouse.up({ button: 'right' });
   await expect(hud).not.toHaveClass(/\baiming\b/, { timeout: 10_000 });
+
+  // Browser basics (M18b). A hidden tab pauses the match.
+  const pauseMenu = page.locator('.menu-pause');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(pauseMenu).toBeVisible({ timeout: 10_000 });
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await pauseMenu.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
+
+  // A lost graphics context pauses with a notice over everything; once it's back the pause menu says so, and the match
+  // carries on drawing after Resume.
+  await page.evaluate(() => {
+    const gl = document.querySelector('canvas')!.getContext('webgl2')!;
+    (window as unknown as { lose: WEBGL_lose_context }).lose = gl.getExtension('WEBGL_lose_context')!;
+    (window as unknown as { lose: WEBGL_lose_context }).lose.loseContext();
+  });
+  await expect(page.locator('.graphics-notice')).toBeVisible({ timeout: 10_000 });
+  await expect(pauseMenu).toBeAttached();
+  // Nothing under the notice can resume the match (Resume had the focus).
+  await page.keyboard.press('Space');
+  await page.keyboard.press('Enter');
+  await expect(pauseMenu).not.toHaveAttribute('hidden');
+  await expect(page.locator('.menus')).not.toHaveAttribute('hidden');
+  await page.evaluate(() => (window as unknown as { lose: WEBGL_lose_context }).lose.restoreContext());
+  await expect(page.locator('.graphics-notice')).toBeHidden({ timeout: 10_000 });
+  await expect(pauseMenu).toContainText('Graphics are back');
+  await pauseMenu.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
+  const tick = () => page.evaluate(() => (window as unknown as { airsoft: { state: { tick: number } } }).airsoft.state.tick);
+  const before = await tick();
+  await expect.poll(tick, { timeout: 20_000 }).toBeGreaterThan(before + 30);
+  await expect(page.locator('.hud')).toBeVisible();
+  await testInfo.attach('after-graphics-reset', { body: await page.screenshot(), contentType: 'image/png' });
+
+  // Sound cues: an Orange player's shot 6 m from the camera gets a marker on the ring. The shot is added to
+  // each tick's events after the simulation has run (so no bot or physics step depends on luck), with the shooter
+  // moved beside the camera only while the presentation reads the events, then put back.
+  await page.evaluate(() => {
+    type P = { x: number; y: number; z: number };
+    type C = { id: number; team: number; position: P };
+    type Session = {
+      state: { characters: C[]; events: unknown[] };
+      match: { afterTick: (yaw: number) => void };
+    };
+    const game = window as unknown as { airsoft: { session: Session; renderer: { camera: { position: P } } }; stopShots?: () => void };
+    const s = game.airsoft.session;
+    const cam = game.airsoft.renderer.camera.position;
+    const enemy = s.state.characters.find((c) => c.team === 1)!;
+    const real = s.match.afterTick;
+    s.match.afterTick = function (yaw: number): void {
+      const { x, y, z } = enemy.position;
+      Object.assign(enemy.position, { x: cam.x + 6, y, z: cam.z });
+      s.state.events.push({ type: 'shot', characterId: enemy.id, replicaId: 'aeg', position: { ...enemy.position } });
+      real.call(this, yaw);
+      s.state.events.pop();
+      Object.assign(enemy.position, { x, y, z });
+    };
+    game.stopShots = () => {
+      s.match.afterTick = real;
+    };
+  });
+  await expect(page.locator('.sound-cue.cue-shot:not([hidden])').first()).toBeAttached({ timeout: 10_000 });
+  await page.evaluate(() => (window as unknown as { stopShots: () => void }).stopShots());
+  await testInfo.attach('sound-cue', { body: await page.screenshot(), contentType: 'image/png' });
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });

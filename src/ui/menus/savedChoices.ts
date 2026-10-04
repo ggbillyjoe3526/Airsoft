@@ -1,4 +1,4 @@
-import { REDUCED_MOTION_CHOICES } from '../../config/accessibility';
+import { REDUCED_MOTION_CHOICES, SOUND_CUE_CHOICES } from '../../config/accessibility';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   AIM_MODES,
@@ -25,6 +25,7 @@ import {
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING, DEFAULT_OPTIC, OPTIC_CHOICES, type OpticChoice } from '../../config/optics';
 import { FOV_SETTING, RENDER } from '../../config/render';
+import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
 import { loadSetting, numberIn, oneOf } from '../../settings/storage';
 import { loadChoice } from '../optionPicker';
@@ -133,4 +134,14 @@ export function loadReducedMotion(): boolean {
     // No media queries (tests): off.
   }
   return loadChoice('reducedMotion', REDUCED_MOTION_CHOICES, systemWants ? 'on' : 'off') === 'on';
+}
+
+/** The team colour set (Settings → Accessibility, M18b). */
+export function loadTeamColours(): TeamColourSetId {
+  return loadChoice('teamColours', TEAM_COLOUR_CHOICES, DEFAULT_TEAM_COLOURS);
+}
+
+/** On-screen sound cues (Settings → Accessibility, M18b): off unless the player turned them on. */
+export function loadSoundCues(): boolean {
+  return loadChoice('soundCues', SOUND_CUE_CHOICES, 'off') === 'on';
 }

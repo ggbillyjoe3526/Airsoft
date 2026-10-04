@@ -1,4 +1,4 @@
-import { TEAM_CSS } from '../config/teams';
+import { teamCss } from '../config/teams';
 import type { StatsRow, TeamBlock } from './statsRows';
 
 const COLUMNS: readonly { key: Exclude<keyof StatsRow, 'name' | 'you' | 'out'>; label: string; title: string }[] = [
@@ -60,7 +60,7 @@ export class StatsTable {
     this.rows = blocks.map((block) => {
       const body = this.root.createTBody();
       body.className = 'stats-team';
-      body.style.setProperty('--team', TEAM_CSS[block.team] ?? '#fff');
+      body.style.setProperty('--team', teamCss(block.team));
       const title = document.createElement('th');
       title.colSpan = COLUMNS.length + 1;
       body.insertRow().append(title);

@@ -36,6 +36,8 @@ export class PlayerInput {
   /** Toggle modes: aiming / sprinting until pressed again (or something else ends it; see the class comment). */
   private aimToggled = false;
   private sprintToggled = false;
+  /** A toggled sprint has had forward held: letting go of forward now ends it (before that it waits for forward). */
+  private sprintRunning = false;
 
   private jumpLatch = false;
   private reloadLatch = false;
@@ -128,8 +130,13 @@ export class PlayerInput {
       if (kb.wasPressed('sprint') || switching || !canAim) this.aimToggled = false;
     }
     if (this.sprintModeValue === 'toggle') {
-      if (kb.wasPressed('sprint')) this.sprintToggled = !this.sprintToggled;
-      if (!kb.isDown('forward')) this.sprintToggled = false;
+      if (kb.wasPressed('sprint')) {
+        this.sprintToggled = !this.sprintToggled;
+        this.sprintRunning = false;
+      }
+      // Pressed before forward, it waits for forward (M18a review); once you've run, letting go of forward ends it.
+      if (this.sprintToggled && kb.isDown('forward')) this.sprintRunning = true;
+      else if (this.sprintRunning) this.sprintToggled = false;
       for (const a of SPRINT_STOPPERS) if (kb.wasPressed(a)) this.sprintToggled = false;
     }
   }
@@ -142,7 +149,7 @@ export class PlayerInput {
     cmd.yaw = this.yaw;
     cmd.pitch = this.pitch;
     cmd.walk = kb.isDown('walk');
-    cmd.sprint = this.sprintModeValue === 'toggle' ? this.sprintToggled : kb.isDown('sprint');
+    cmd.sprint = this.sprintModeValue === 'toggle' ? this.sprintToggled && kb.isDown('forward') : kb.isDown('sprint');
     cmd.crouch = this.crouchModeValue === 'toggle' ? this.crouchToggled : kb.isDown('crouch');
     cmd.lean = (kb.isDown('leanRight') ? 1 : 0) - (kb.isDown('leanLeft') ? 1 : 0);
     cmd.jump = this.jumpLatch;

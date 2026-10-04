@@ -330,7 +330,7 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   ends at 3 wins. Try a 1:30 round time: the clock starts at 1:30.
 - [ ] **Difficulty: Opponents and Teammates.** The pop-up has a row for each. Put Opponents on Easy and Teammates on
   Hard: the button reads "EASY / HARD", and your teammates should win their fights clearly more often than the
-  enemy. The rules under the buttons now end with "Custom rules: this match won't go into your records". Finish
+  enemy. The rules under the buttons now end with "This match won't go into your records". Finish
   that match: the summary says custom rules aren't in your records (only the standard 3v3, first to 5,
   with both teams at one difficulty counts), and marks no cell.
 - [ ] **Friendly fire off.** Shoot a teammate in the back: nothing happens (the BB goes past). Your bot teammates also
@@ -340,6 +340,22 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   count, play on". A bounced BB of yours that reaches a bot shows a small grey puff (not the bigger hit puff) and "Your
   BB ricocheted · doesn't count". With **Ricochets count** on, the same BB knocks you out, and the hit feed line says
   RICOCHET. Is the ricochet notice useful, or does it come up too often in a 3v3?
+
+## Accessibility and browser basics (M18b)
+
+- [ ] **Team colours.** Settings → Accessibility → **Team colours: High contrast**. The swatches show light blue and
+  dark orange. Start a match: the figures' tape and armbands, the flag, your own armband, the scoreboard, hit feed and
+  teammate markers all use them. Standard puts them back from the next match.
+- [ ] **Spare magazines.** Fire most of a magazine and reload a few times: a nearly empty spare is striped as well as
+  orange, and the one a reload takes has a yellow caret under it as well as the outline.
+- [ ] **On-screen sound cues.** Accessibility → **On-screen sound cues: On**. In a match a marker round the crosshair
+  points to enemy footsteps (two dots), shots (an arrowhead) and hit calls (a HIT tag), fainter further away; turn
+  towards one and it moves to the top. Your own steps and shots and your teammates' steps show nothing. Off by default.
+- [ ] **Tab away.** Mid-round, switch to another tab (Ctrl+Tab) and back: the match is paused on the pause menu.
+- [ ] **Fullscreen.** Settings → Graphics → **Go fullscreen**; the button then reads Leave fullscreen. In a match press
+  **F10**: fullscreen on and off. Esc leaves fullscreen (and pauses). Rebind it under Key bindings.
+- [ ] **Hardware acceleration.** Turn off the browser's graphics acceleration and restart it: the title screen warns
+  that the game will run slowly and says where to turn it back on. With it on, no warning.
 
 ## Pause, menus and tabbing away
 

@@ -4,7 +4,7 @@ import type { HitConfig } from '../config/hits';
 import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
-import { TEAM_COLORS, TEAM_CSS } from '../config/teams';
+import { teamCss, type TeamColours } from '../config/teams';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import type { RoundRules } from '../sim/round';
@@ -17,6 +17,7 @@ import { HitFeedback } from '../ui/hitFeedback';
 import { MatchBoard } from '../ui/matchBoard';
 import { roundBanner } from '../ui/roundBanner';
 import { Scoreboard } from '../ui/scoreboard';
+import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { CharacterRenderer } from './characterRenderer';
@@ -49,6 +50,10 @@ export class MatchPresentation {
   private readonly mateMarkers: TeammateMarkers;
   private readonly mateAnchor = new THREE.Vector3();
   private readonly mateAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
+  /** On-screen sound cues (Settings → Accessibility, M18b; off unless turned on). */
+  private readonly soundCues: SoundCues;
+  private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0 };
+  private readonly viewDir = new THREE.Vector3();
   /** Display names by character id ("Blue 2", "You"). */
   private readonly names: Map<number, string>;
   private roundStartedAt = 0;
@@ -75,9 +80,11 @@ export class MatchPresentation {
     private readonly stats: MatchStats,
     /** The key or button the player has on `action` now, for hints on screen. */
     keyName: (action: Action) => string,
+    /** The team colours picked on Settings → Accessibility (the HUD's follow the container's CSS, see Game.play). */
+    teamColours: TeamColours,
   ) {
-    this.characters = new CharacterRenderer(state.characters, TEAM_COLORS, hits);
-    this.flag = new FlagRenderer(TEAM_COLORS, rules.flag.radius);
+    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits);
+    this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));
     this.scoreboard = new Scoreboard(container, teamSize, player.team);
@@ -85,15 +92,22 @@ export class MatchPresentation {
     this.spectator = new SpectatorCamera(state.characters, player, body, query);
     this.names = rosterNames(state.characters, player.id);
     this.mates = state.characters.filter((c) => c.team === player.team && c !== player);
-    this.mateMarkers = new TeammateMarkers(container, this.mates.map((c) => this.names.get(c.id) ?? ''), TEAM_CSS[player.team]!);
+    this.mateMarkers = new TeammateMarkers(container, this.mates.map((c) => this.names.get(c.id) ?? ''), teamCss(player.team));
     this.feed = new HitFeed(container);
     this.board = new MatchBoard(container);
+    this.soundCues = new SoundCues(container);
+  }
+
+  /** On-screen sound cues turned on or off (also called once as the match is built). */
+  setSoundCues(on: boolean): void {
+    this.soundCues.setEnabled(on);
   }
 
   setPlaying(playing: boolean): void {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
     this.feed.setVisible(playing);
+    this.soundCues.setVisible(playing);
     this.playing = playing;
     if (!playing) {
       this.marker.hide();
@@ -127,7 +141,9 @@ export class MatchPresentation {
         this.roundStartedAt = this.state.time;
         this.spectator.reset();
         this.feed.clear();
+        this.soundCues.clear();
       }
+      if (soundCueOf(e, this.player, this.characterOf, this.heard)) this.soundCues.add(this.heard, this.state.time);
     }
   }
 
@@ -156,6 +172,9 @@ export class MatchPresentation {
     this.updateMarker(camera, spectating);
     this.updateMateMarkers(camera, alpha, watched);
     this.feed.update(this.state.time);
+    // The cues are placed for wherever the camera is (your eyes, or the player you watch), as the ears are.
+    camera.getWorldDirection(this.viewDir);
+    this.soundCues.update(camera.position.x, camera.position.z, Math.atan2(-this.viewDir.x, -this.viewDir.z), this.state.time);
     this.updateBoard(boardHeld);
 
     this.feedback.setCalling(status === 'calling');
@@ -175,7 +194,13 @@ export class MatchPresentation {
     this.feed.dispose();
     this.board.dispose();
     this.mateMarkers.dispose();
+    this.soundCues.dispose();
   }
+
+  private readonly characterOf = (id: number): Character | undefined => {
+    for (const c of this.state.characters) if (c.id === id) return c;
+    return undefined;
+  };
 
   /** A hit feed line for `victimId` calling a hit from `shooterId`'s BB. */
   private addFeedLine(victimId: number, shooterId: number, ricochet: boolean): void {
@@ -258,7 +283,7 @@ export class MatchPresentation {
     }
     const m = projectMarker(this.flag.markerAnchor, camera, this.view.width, this.view.height, FLAG_VISUALS.markerEdge, this.markerAt);
     const from = camera.position;
-    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), TEAM_CSS[r.attackers]!, !m.onScreen);
+    this.marker.show(m.x, m.y, Math.hypot(pole.x - from.x, pole.z - from.z), teamCss(r.attackers), !m.onScreen);
   }
 
   /** "OUT · hit by Orange 2", rebuilt only when who hit you changes. */

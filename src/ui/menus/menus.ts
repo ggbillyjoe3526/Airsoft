@@ -142,7 +142,7 @@ export class Menus {
           this.refreshSetup();
         }).root,
       ),
-      menuRow('Teammates', 'Your bot teammates (none in a 1v1). Until you pick, they play at the opponents\' level.', teammates.root),
+      menuRow('Teammates', 'Your bot teammates (none in a 1v1).', teammates.root),
     ]);
     // Every loadout change also refreshes New game's Loadout button.
     const lo = opts.loadout;
@@ -214,6 +214,20 @@ export class Menus {
     this.leave();
     this.root.hidden = true;
     this.showHint('');
+  }
+
+  /**
+   * Blocked (true) while the game can't be played, e.g. under the "Graphics reset" notice: nothing on the menus can be
+   * focused or pressed. Unblocked, the screen's main button takes the focus again.
+   */
+  setBlocked(blocked: boolean): void {
+    this.root.inert = blocked;
+    if (!blocked && !this.root.hidden) this.screens[this.current].querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true });
+  }
+
+  /** A warning on the title screen ('' hides it): the browser runs without hardware acceleration. */
+  showTitleWarning(text: string): void {
+    this.title.setWarning(text);
   }
 
   /** A short message under the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */
@@ -367,7 +381,7 @@ export class Menus {
 }
 
 /** Under New game's rules when the setup isn't the standard match. */
-export const NOT_RECORDED_NOTE = `Custom rules: this match won't go into your records. They count the standard match: ${standardMatchText()}`;
+export const NOT_RECORDED_NOTE = `This match won't go into your records, which count only the standard match: ${standardMatchText()}`;
 
 function difficultyLabel(d: Difficulty): string {
   return DIFFICULTIES.find((o) => o.id === d)?.label ?? d;
