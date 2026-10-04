@@ -93,6 +93,10 @@ function record(name, gate) {
   if (gate.pass === false) report.pass = false;
   const mark = gate.pass === true ? 'pass' : gate.pass === false ? 'FAIL' : 'skip';
   console.log(`gate ${name.padEnd(9)} ${mark}${gate.ms !== undefined ? ` (${(gate.ms / 1000).toFixed(0)} s)` : ''}${gate.reason ? ` · ${gate.reason}` : ''}`);
+  // A failed gate names what failed in the log too, so a CI run can be read without downloading its artifact.
+  for (const f of gate.pass === false ? (gate.failures ?? []) : []) {
+    console.log(`  ✗ ${f.file ? `${f.file} › ` : ''}${f.test ?? f.title ?? ''}: ${String(f.message ?? '').replace(/\x1b\[[0-9;]*m/g, '').split('\n')[0].slice(0, 300)}`);
+  }
 }
 
 // 1. build: type check and the production build with its chunk budgets (vite.config.ts fails over budget on CI). Always
