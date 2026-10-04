@@ -39,6 +39,11 @@ const onOff = [
   { id: 'on', label: 'On', value: true },
 ] as const;
 
+const detail = [
+  { id: 'low', label: 'Low', value: 'low' },
+  { id: 'high', label: 'High', value: 'high' },
+] as const;
+
 const choice = <K extends keyof QualitySettings>(row: Omit<ChoiceRow<K>, 'kind'>): ChoiceRow => ({ kind: 'choice', ...row }) as unknown as ChoiceRow;
 const range = <K extends keyof QualitySettings>(row: Omit<RangeRow<K>, 'kind'>): RangeRow => ({ kind: 'range', ...row }) as unknown as RangeRow;
 
@@ -119,6 +124,25 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
   }),
   range({ field: 'dustMotes', label: 'Dust in the air', help: 'Specks of dust drifting in the sunlight round you.', cost: 'Free', min: 0, max: 300, step: 30, perUnit: 1, format: (v) => String(Math.round(v)) }),
   choice({ field: 'replicaSheen', label: 'Replica sheen', help: 'Soft reflections in the held replica’s plastic.', cost: 'GPU: small; memory 6 MB', options: onOff }),
+  // FA8: the visual overhaul's rows (audit section 5, rows 17-20 and 23).
+  choice({
+    field: 'figureDetail',
+    label: 'Player detail',
+    help: 'Players’ faces, goggles, gloves, kit and clothing folds, with glossy goggles, helmets and replicas.',
+    cost: 'GPU: small',
+    options: detail,
+  }),
+  choice({
+    field: 'replicaDetail',
+    label: 'Replica detail',
+    help: 'Bevelled edges, rail slots, ring sights, a moulded plastic finish and glass lenses on the replica and its parts.',
+    cost: 'GPU: small; memory 0.2 MB',
+    options: detail,
+  }),
+  choice({ field: 'handDetail', label: 'Hand detail', help: 'Knuckle pads, wrist straps and seams on your gloves; folds in your sleeves.', cost: 'GPU: small', options: detail }),
+  choice({ field: 'bbGlow', label: 'BB glow', help: 'A soft warm glow round every BB in flight, so far BBs read as dots.', cost: 'GPU: small', options: onOff }),
+  choice({ field: 'impactGrit', label: 'Impact grit', help: 'BBs throw chips of the surface they hit and a faint ring of dust.', cost: 'GPU: small', options: onOff }),
+  choice({ field: 'laserBeam', label: 'Laser beam', help: 'A faint beam from the laser module. Real ones can’t be seen by day: a toy cue.', cost: 'Free', options: onOff }),
 ];
 
 /** The row for a field (every QualitySettings field has one: config/graphics.test.ts). */

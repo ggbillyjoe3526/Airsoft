@@ -168,7 +168,7 @@ export class MatchSession {
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, this.hits);
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map.blocks, renderer.figureModel);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map.blocks, renderer.figureModel, quality.figureDetail);
     this.match.setFigureShadows(quality.figureShadows);
     input.ordersEnabled = true;
   }
@@ -285,6 +285,7 @@ export class MatchSession {
     setMapTextures(this.mapGroup, this.renderer.surfaceTextures);
     setMapRelief(this.mapGroup, quality.surfaceRelief);
     this.match.setFigureShadows(quality.figureShadows);
+    this.match.setFigureDetail(quality.figureDetail);
     this.combat.setQuality(quality);
   }
 

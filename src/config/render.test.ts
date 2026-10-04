@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DETAIL_LEVELS,
   DUST_MOTES,
   effectivePixelRatio,
   parseQuality,
@@ -14,6 +15,9 @@ import {
   SURFACES,
   TIER_QUALITY,
 } from './render';
+
+/** A field's value on a cheapest-first scale: numbers and switches as numbers, a detail level by its place (FA8). */
+const rank = (v: QualitySettings[keyof QualitySettings]): number => (typeof v === 'string' ? DETAIL_LEVELS.indexOf(v) : Number(v));
 
 /** Fields whose change shows on a screen at 100 % scaling (devicePixelRatio 1): all but the high-DPI cap. */
 const VISIBLE_AT_DPR_1: readonly (keyof QualitySettings)[] = QUALITY_FIELDS.filter((f) => f !== 'maxPixelRatio');
@@ -36,7 +40,10 @@ describe('render quality presets (final alpha audit section 4)', () => {
     for (let i = 1; i < QUALITY_PRESETS.length; i++) {
       const cheaper = QUALITY[QUALITY_PRESETS[i - 1]!];
       const dearer = QUALITY[QUALITY_PRESETS[i]!];
-      for (const f of QUALITY_FIELDS) expect(Number(cheaper[f]), f).toBeLessThanOrEqual(Number(dearer[f]));
+      for (const f of QUALITY_FIELDS) {
+        expect(rank(cheaper[f]), f).toBeGreaterThanOrEqual(0);
+        expect(rank(cheaper[f]), f).toBeLessThanOrEqual(rank(dearer[f]));
+      }
     }
   });
 
@@ -56,6 +63,13 @@ describe('render quality presets (final alpha audit section 4)', () => {
     expect(low.textureSize).toBeLessThanOrEqual(512);
     expect(low.anisotropy).toBeLessThanOrEqual(4);
     expect(low.dustMotes).toBe(0);
+  });
+
+  it('keeps every FA8 overhaul item off Low (today\'s meshes, no glow, grit or beam), and the laser beam off every preset', () => {
+    expect(QUALITY.low).toMatchObject({ figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false });
+    for (const p of ['medium', 'high'] as const) {
+      expect(QUALITY[p]).toMatchObject({ figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false });
+    }
   });
 
   it('resolves a choice: a preset is its row whatever the custom fields; Custom is High overlaid with them (REN-20)', () => {

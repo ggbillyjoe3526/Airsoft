@@ -18,6 +18,8 @@ export interface FigureLook {
   /** A mesh lower-face mask in this colour, or null: goggles only, the face shows. */
   readonly mask: number | null;
   readonly skin: number;
+  /** A hoodie: its hood lies behind the neck on the detailed figure (QualitySettings.figureDetail, FA8). */
+  readonly hood: boolean;
 }
 
 /**
@@ -27,12 +29,12 @@ export interface FigureLook {
  * in a 3 v 3 looks different. None of these reads as a team colour (characterModels.test.ts).
  */
 const LOOKS: readonly FigureLook[] = [
-  { top: 0x4d5157, trousers: 0x4b5263, vest: 'rig', vestColor: 0x2f3134, pouches: 0x3b3e42, headgear: 'cap', hat: 0x2a2b2d, mask: null, skin: 0xe3b796 }, // charcoal hoodie, jeans
-  { top: 0xbcad8e, trousers: 0x5e584c, vest: 'carrier', vestColor: 0x958c6a, pouches: 0x7d7660, headgear: 'helmet', hat: 0xa08c68, mask: 0xb3a689, skin: 0xc68e68 }, // sand tee, brown work trousers
-  { top: 0x587a50, trousers: 0x8f8466, vest: 'rig', vestColor: 0x63674e, pouches: 0x55593f, headgear: 'hair', hat: 0x2a2622, mask: null, skin: 0x8a5a3c }, // green hoodie, khakis
-  { top: 0x9fa0a3, trousers: 0x35373b, vest: 'carrier', vestColor: 0x6c6e52, pouches: 0x5f6148, headgear: 'cap', hat: 0x5b5e4a, mask: null, skin: 0xf0c9a8 }, // grey tee, black trousers
-  { top: 0xd2c8b0, trousers: 0x515a6b, vest: 'rig', vestColor: 0x958c6a, pouches: 0x7d7660, headgear: 'helmet', hat: 0x2c2d2f, mask: 0x8d8f92, skin: 0xd9a47e }, // cream hoodie, jeans
-  { top: 0x7a7d62, trousers: 0x6a6d70, vest: 'carrier', vestColor: 0x34363a, pouches: 0x44474b, headgear: 'hair', hat: 0x4a4038, mask: null, skin: 0xb57a52 }, // olive tee, grey trousers
+  { top: 0x4d5157, trousers: 0x4b5263, vest: 'rig', vestColor: 0x2f3134, pouches: 0x3b3e42, headgear: 'cap', hat: 0x2a2b2d, mask: null, skin: 0xe3b796, hood: true }, // charcoal hoodie, jeans
+  { top: 0xbcad8e, trousers: 0x5e584c, vest: 'carrier', vestColor: 0x958c6a, pouches: 0x7d7660, headgear: 'helmet', hat: 0xa08c68, mask: 0xb3a689, skin: 0xc68e68, hood: false }, // sand tee, brown work trousers
+  { top: 0x587a50, trousers: 0x8f8466, vest: 'rig', vestColor: 0x63674e, pouches: 0x55593f, headgear: 'hair', hat: 0x2a2622, mask: null, skin: 0x8a5a3c, hood: true }, // green hoodie, khakis
+  { top: 0x9fa0a3, trousers: 0x35373b, vest: 'carrier', vestColor: 0x6c6e52, pouches: 0x5f6148, headgear: 'cap', hat: 0x5b5e4a, mask: null, skin: 0xf0c9a8, hood: false }, // grey tee, black trousers
+  { top: 0xd2c8b0, trousers: 0x515a6b, vest: 'rig', vestColor: 0x958c6a, pouches: 0x7d7660, headgear: 'helmet', hat: 0x2c2d2f, mask: 0x8d8f92, skin: 0xd9a47e, hood: true }, // cream hoodie, jeans
+  { top: 0x7a7d62, trousers: 0x6a6d70, vest: 'carrier', vestColor: 0x34363a, pouches: 0x44474b, headgear: 'hair', hat: 0x4a4038, mask: null, skin: 0xb57a52, hood: false }, // olive tee, grey trousers
 ];
 
 /**
@@ -74,6 +76,37 @@ export const FIGURE = {
   /** Mesh detail: segments round each limb and sphere (a figure stays a few thousand triangles). */
   radialSegments: 8,
   /**
+   * Player detail (QualitySettings.figureDetail, FA8; audit section 5 "Third-person figures and kit"). `low` is the figure
+   * as it was (Low's cost). `high` rounds the limbs and head further, shapes the head (jaw, ears), gives the goggles a
+   * framed band with a glossy lens, the gloves a thumb and knuckle pad, the kit lids, soles, cuffs, a hood and a
+   * hydration tube, darkens the torso's lower third and the hem (a baked "ambient occlusion") and lightens every bevel
+   * (the CS edge highlight). Segments: limbs, spheres, and the head's [sides, rings]; `wrap`: an arc's and a full ring's.
+   */
+  detail: {
+    low: { radialSegments: 8, sphereSegments: 10, head: [10, 6], wrap: [10, 14], overhaul: false },
+    high: { radialSegments: 10, sphereSegments: 12, head: [14, 10], wrap: [16, 20], overhaul: true },
+  },
+  /**
+   * The detailed figure's finishes (FA8, render/figureFinish.ts): [roughness, metalness] per vertex on the figure's one
+   * material. Fabric stays matte; the goggle lens and helmet shells are moulded and glossy; the replica is toy polymer
+   * with a painted-steel barrel. Shapes on top: bevels this much lighter (`edgeLight`), the torso's lower third and hem
+   * down to `hemShade` of its colour, cuffs and soles `cuffShade` and `soleShade` of theirs, lids `lidLight` lighter.
+   */
+  finish: {
+    fabric: [0.82, 0],
+    skin: [0.6, 0],
+    lens: [0.08, 0.25],
+    shell: [0.38, 0.08],
+    polymer: [0.5, 0],
+    steel: [0.4, 0.65],
+    rubber: [0.92, 0],
+  },
+  edgeLight: 1.1,
+  hemShade: 0.8,
+  cuffShade: 0.84,
+  soleShade: 0.55,
+  lidLight: 1.15,
+  /**
    * Where the rifle sits in the aiming pose, relative to the shoulder-line pivot (metres; x right, y up,
    * z forward is negative): its butt, and its length to the muzzle. BBs from other players are drawn
    * leaving this muzzle.
@@ -98,6 +131,10 @@ export const FIGURE = {
    * `rise` seconds and easing back over `time`, just before the hand goes up.
    */
   flinch: { lean: 0.32, rise: 0.05, time: 0.4 },
-  /** "HIT!" sign above a player calling their hit. */
-  callout: { height: 2.25, width: 0.62, aspect: 0.45, color: '#ffffff', background: '#d8262e' },
+  /**
+   * "HIT!" sign above a player calling their hit. Past `stableFrom` metres it grows with distance (FA8), so it stays the
+   * size it is there on screen (about 45 px tall at 1080p with the default field of view) across the longest sight line,
+   * its bottom edge kept where it was.
+   */
+  callout: { height: 2.25, width: 0.62, aspect: 0.45, color: '#ffffff', background: '#d8262e', stableFrom: 6 },
 } as const;

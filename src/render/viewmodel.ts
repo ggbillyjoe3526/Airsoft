@@ -3,7 +3,7 @@ import { FULL_MOTION, type MotionScale } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import type { ReplicaConfig } from '../config/replicas';
 import type { Armament } from '../sim/armament';
-import { buildReplicaModels, type MagazinePart, type ReplicaModels, type SupportHandPart } from './replicaModels';
+import { buildReplicaModels, LOW_DETAIL, type MagazinePart, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
 
 const smooth = (t: number): number => {
   const c = Math.max(0, Math.min(1, t));
@@ -62,7 +62,7 @@ export class Viewmodel {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
   private readonly rig = new THREE.Group();
-  private readonly replicas: ReplicaModels;
+  private replicas: ReplicaModels;
   /** Per loadout slot: the model, its magazine, support-hand and muzzle parts and hold pose. */
   private readonly slots: {
     model: THREE.Group;
@@ -98,8 +98,18 @@ export class Viewmodel {
   private hitBlend = 0;
   /** What's left of the bob, sway and kick (Settings → Accessibility → Reduced motion). */
   private motionScale: MotionScale = FULL_MOTION;
+  /** The fitted laser's beam is drawn (QualitySettings.laserBeam, FA8). */
+  private beamOn = false;
+  /** The laser beams, one per replica with a laser rail (found by name after each build). */
+  private beams: THREE.Object3D[] = [];
 
-  constructor(aspect: number, teamColor: number, loadout: readonly ReplicaConfig[]) {
+  constructor(
+    aspect: number,
+    private readonly teamColor: number,
+    private readonly loadout: readonly ReplicaConfig[],
+    /** Replica and hand detail (QualitySettings.replicaDetail and handDetail, FA8); setDetail changes them. */
+    detail: ReplicaDetail = LOW_DETAIL,
+  ) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, VIEWMODEL.near, VIEWMODEL.far);
     // Soft sky fill, a warm key from above-right and a cool rim from behind to separate the silhouette.
     this.scene.add(new THREE.HemisphereLight(...VIEWMODEL.light.hemi));
@@ -108,10 +118,16 @@ export class Viewmodel {
     const rim = new THREE.DirectionalLight(VIEWMODEL.light.rimColor, VIEWMODEL.light.rimIntensity);
     rim.position.set(...VIEWMODEL.light.rimPosition);
     this.scene.add(key, rim, this.rig);
+    this.replicas = this.build(detail);
+  }
 
-    this.replicas = buildReplicaModels(loadout, teamColor, VIEWMODEL.orangeTips);
-    for (const r of loadout) {
-      const { group: model, magazine, supportHand, muzzle } = this.replicas.models.get(r.id)!;
+  /** Builds every replica (and the raised hand) at `detail` and puts them in the rig. */
+  private build(detail: ReplicaDetail): ReplicaModels {
+    const replicas = buildReplicaModels(this.loadout, this.teamColor, VIEWMODEL.orangeTips, detail);
+    this.slots.length = 0;
+    this.beams = [];
+    for (const r of this.loadout) {
+      const { group: model, magazine, supportHand, muzzle } = replicas.models.get(r.id)!;
       model.position.set(...r.look.hold.position);
       model.rotation.y = r.look.hold.yaw;
       this.slots.push({
@@ -128,9 +144,33 @@ export class Viewmodel {
       });
       model.visible = false;
       this.rig.add(model);
+      model.traverse((o) => o.name === 'laserBeam' && this.beams.push(o));
     }
-    this.replicas.raisedHand.visible = false;
-    this.scene.add(this.replicas.raisedHand);
+    for (const beam of this.beams) beam.visible = this.beamOn;
+    replicas.raisedHand.visible = false;
+    this.scene.add(replicas.raisedHand);
+    replicas.setReflections(this.scene.environment !== null);
+    return replicas;
+  }
+
+  /**
+   * Replica and hand detail (QualitySettings.replicaDetail and handDetail, FA8): the replicas are built again at the new
+   * levels (the next update shows the fitted parts and the active slot as before). Nothing happens if neither changed.
+   */
+  setDetail(detail: ReplicaDetail): void {
+    const now = this.replicas.detail;
+    if (now.replica === detail.replica && now.hands === detail.hands) return;
+    for (const s of this.slots) s.model.removeFromParent();
+    this.replicas.raisedHand.removeFromParent();
+    this.replicas.dispose();
+    this.shownSlot = -1;
+    this.replicas = this.build({ ...detail });
+  }
+
+  /** The laser module's beam drawn or not (QualitySettings.laserBeam, FA8; it shows only while the laser is fitted). */
+  setLaserBeam(on: boolean): void {
+    this.beamOn = on;
+    for (const beam of this.beams) beam.visible = on;
   }
 
   setAspect(aspect: number): void {
@@ -146,6 +186,7 @@ export class Viewmodel {
   setEnvironment(texture: THREE.Texture | null): void {
     this.scene.environment = texture;
     this.scene.environmentIntensity = VIEWMODEL.sheenIntensity;
+    this.replicas.setReflections(texture !== null);
   }
 
   /** Reduced motion on or off: how much of the bob, sway and kick to show. */

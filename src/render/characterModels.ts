@@ -7,6 +7,7 @@ import type { Character } from '../sim/character';
 import type { Vec3 } from '../sim/vec';
 import type { FigurePart } from '../config/assets';
 import { type FigureModel, instanceModelPart } from './externalModels';
+import { FINISH_ATTRIBUTE } from './figureFinish';
 
 /**
  * Third-person figures (M14 art pass, reworked): stylised players at a weekend airsoft game: casual clothes under a
@@ -22,46 +23,100 @@ import { type FigureModel, instanceModelPart } from './externalModels';
 type Color = number;
 
 const UP = new THREE.Vector3(0, 1, 0);
+/** Small parts on the detailed figure (fingers, a thumb, a boom, a tube, ears, the goggles' rims): few sides read the same at range. */
+const SMALL_SIDES = 6;
+const RIM_SEGMENTS = 10;
 
-/** Collects coloured primitives and merges them into one geometry with a `color` attribute. */
+/** A figure's detail level (QualitySettings.figureDetail, FA8): segment counts and whether the overhaul's pieces show. */
+export type FigureDetail = (typeof FIGURE.detail)[keyof typeof FIGURE.detail];
+/** [roughness, metalness] of a vertex on the detailed figure (FIGURE.finish). */
+type Finish = readonly [roughness: number, metalness: number];
+
+/** How a part is coloured on the detailed figure: its finish, a lighter bevel, a shade by position. Ignored on `low`. */
+interface PartLook {
+  finish?: Finish;
+  /** Lighten the bevel faces of a rounded box (FIGURE.edgeLight): the CS edge highlight. Never on team tape. */
+  edge?: boolean;
+  /** A colour multiplier by vertex position (a baked shade: the torso's lower third, a cuff). */
+  shade?: (x: number, y: number, z: number) => number;
+}
+
+/** True for a vertex normal between two faces of a rounded box (a bevel), not on a flat face. */
+function onBevel(nx: number, ny: number, nz: number): boolean {
+  let axes = 0;
+  if (Math.abs(nx) > 0.2) axes++;
+  if (Math.abs(ny) > 0.2) axes++;
+  if (Math.abs(nz) > 0.2) axes++;
+  return axes >= 2;
+}
+
+/**
+ * Collects coloured primitives and merges them into one geometry with a `color` attribute. On the detailed figure every
+ * part also carries a per-vertex finish (render/figureFinish.ts) and its colour takes edge highlights and baked shade.
+ */
 class PartBuilder {
   private readonly geos: THREE.BufferGeometry[] = [];
 
-  add(geo: THREE.BufferGeometry, color: Color): this {
+  constructor(readonly detail: FigureDetail = FIGURE.detail.low) {}
+
+  /** The overhaul's extra pieces and finishes are drawn (figureDetail 'high'). */
+  get overhaul(): boolean {
+    return this.detail.overhaul;
+  }
+
+  add(geo: THREE.BufferGeometry, color: Color, look: PartLook = {}): this {
     const g = geo.index ? geo.toNonIndexed() : geo;
     if (g !== geo) geo.dispose();
     g.deleteAttribute('uv');
     const c = new THREE.Color(color);
     const n = g.getAttribute('position').count;
     const colors = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) colors.set([c.r, c.g, c.b], i * 3);
+    if (!this.overhaul) {
+      for (let i = 0; i < n; i++) colors.set([c.r, c.g, c.b], i * 3);
+    } else {
+      const pos = g.getAttribute('position');
+      const nor = g.getAttribute('normal');
+      const finish = new Float32Array(n * 2);
+      const [rough, metal] = look.finish ?? FIGURE.finish.fabric;
+      for (let i = 0; i < n; i++) {
+        let k = 1;
+        if (look.edge && onBevel(nor.getX(i), nor.getY(i), nor.getZ(i))) k *= FIGURE.edgeLight;
+        if (look.shade) k *= look.shade(pos.getX(i), pos.getY(i), pos.getZ(i));
+        colors[i * 3] = Math.min(1, c.r * k);
+        colors[i * 3 + 1] = Math.min(1, c.g * k);
+        colors[i * 3 + 2] = Math.min(1, c.b * k);
+        finish[i * 2] = rough;
+        finish[i * 2 + 1] = metal;
+      }
+      g.setAttribute(FINISH_ATTRIBUTE, new THREE.BufferAttribute(finish, 2));
+    }
     g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     this.geos.push(g);
     return this;
   }
 
-  box(color: Color, w: number, h: number, d: number, x: number, y: number, z: number): this {
-    return this.add(new THREE.BoxGeometry(w, h, d).translate(x, y, z), color);
+  box(color: Color, w: number, h: number, d: number, x: number, y: number, z: number, look?: PartLook): this {
+    return this.add(new THREE.BoxGeometry(w, h, d).translate(x, y, z), color, look);
   }
 
-  /** A box with chamfered edges (one segment of rounding): kit, plates and boots. */
-  rounded(color: Color, w: number, h: number, d: number, x: number, y: number, z: number, radius = 0.02): this {
-    return this.add(new RoundedBoxGeometry(w, h, d, 1, radius).translate(x, y, z), color);
+  /** A box with chamfered edges (one segment of rounding): kit, plates and boots. Detailed, its bevels catch the light. */
+  rounded(color: Color, w: number, h: number, d: number, x: number, y: number, z: number, radius = 0.02, look: PartLook = { edge: true }): this {
+    return this.add(new RoundedBoxGeometry(w, h, d, 1, radius).translate(x, y, z), color, look);
   }
 
-  /** Capsule from a to b. */
-  limb(color: Color, radius: number, a: THREE.Vector3, b: THREE.Vector3): this {
+  /** Capsule from a to b; small ones (fingers, a thumb, a tube) take fewer `sides` and cap rings. */
+  limb(color: Color, radius: number, a: THREE.Vector3, b: THREE.Vector3, look?: PartLook, sides: number = this.detail.radialSegments, capRings = 3): this {
     const dir = b.clone().sub(a);
-    const geo = new THREE.CapsuleGeometry(radius, Math.max(1e-3, dir.length()), 3, FIGURE.radialSegments);
+    const geo = new THREE.CapsuleGeometry(radius, Math.max(1e-3, dir.length()), capRings, sides);
     geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, dir.normalize()));
     geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
-    return this.add(geo, color);
+    return this.add(geo, color, look);
   }
 
   /** A limb tapering from radius `ra` at a to `rb` at b, with a rounded joint at each end. */
   taper(color: Color, a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number): this {
     const dir = b.clone().sub(a);
-    const geo = new THREE.CylinderGeometry(rb, ra, Math.max(1e-3, dir.length()), FIGURE.radialSegments, 1, true);
+    const geo = new THREE.CylinderGeometry(rb, ra, Math.max(1e-3, dir.length()), this.detail.radialSegments, 1, true);
     geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, dir.normalize()));
     geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
     this.add(geo, color);
@@ -70,28 +125,35 @@ class PartBuilder {
   }
 
   /** A band of tape (or a pad's strap) round the limb from a to b, at `t` (0..1) along it: `radius` round, `width` wide. */
-  band(color: Color, a: THREE.Vector3, b: THREE.Vector3, t: number, radius: number, width: number): this {
+  band(color: Color, a: THREE.Vector3, b: THREE.Vector3, t: number, radius: number, width: number, look?: PartLook): this {
     const dir = b.clone().sub(a);
-    const geo = new THREE.CylinderGeometry(radius, radius, width, FIGURE.radialSegments);
+    const geo = new THREE.CylinderGeometry(radius, radius, width, this.detail.radialSegments);
     geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize()));
     const at = a.clone().addScaledVector(dir, t);
     geo.translate(at.x, at.y, at.z);
-    return this.add(geo, color);
+    return this.add(geo, color, look);
   }
 
-  sphere(color: Color, r: number, x: number, y: number, z: number, segments: number = FIGURE.radialSegments + 2): this {
-    return this.add(new THREE.SphereGeometry(r, segments, Math.max(4, segments - 4)).translate(x, y, z), color);
+  sphere(color: Color, r: number, x: number, y: number, z: number, segments: number = this.detail.sphereSegments, look?: PartLook): this {
+    return this.add(new THREE.SphereGeometry(r, segments, Math.max(4, segments - 4)).translate(x, y, z), color, look);
   }
 
   /**
    * An upright curved strip round the head (goggles, the mask, a band): radius `r`, `height` tall, centred at height
    * `y`, covering `arc` radians round the front (2π: all the way round).
    */
-  wrap(color: Color, r: number, height: number, y: number, arc: number, z = 0): this {
+  wrap(color: Color, r: number, height: number, y: number, arc: number, z = 0, look?: PartLook): this {
     const full = arc >= Math.PI * 2;
     // CylinderGeometry measures its angle from +Z towards +X: π is straight ahead (-Z).
-    const geo = new THREE.CylinderGeometry(r, r, height, full ? 14 : 10, 1, !full, Math.PI - arc / 2, arc);
-    return this.add(geo.translate(0, y, z), color);
+    const geo = new THREE.CylinderGeometry(r, r, height, full ? this.detail.wrap[1] : this.detail.wrap[0], 1, !full, Math.PI - arc / 2, arc);
+    return this.add(geo.translate(0, y, z), color, look);
+  }
+
+  /** A horizontal rim (a torus arc of tube radius `tube`) round the front of the head over `arc` radians, at height `y`. */
+  rim(color: Color, r: number, tube: number, y: number, arc: number, look?: PartLook): this {
+    // The torus lies in XY from +X; turned so the arc is centred on the front (-Z) and laid flat.
+    const geo = new THREE.TorusGeometry(r, tube, 4, RIM_SEGMENTS, arc).rotateZ(Math.PI / 2 - arc / 2).rotateX(-Math.PI / 2);
+    return this.add(geo.translate(0, y, 0), color, look);
   }
 
   /** Adds another builder's merged, already coloured parts transformed by `m`. */
@@ -127,31 +189,49 @@ export function setReceiveShadows(root: THREE.Object3D, on: boolean): void {
 
 const v = (x: number, y: number, z: number): THREE.Vector3 => new THREE.Vector3(x, y, z);
 const C = FIGURE.colors;
+const FIN = FIGURE.finish;
+
+/** A colour `k` times as bright (clamped): the detailed figure's lids, cuffs and soles. */
+const tone = (color: Color, k: number): Color => new THREE.Color(color).multiplyScalar(k).getHex();
 
 /** A simple two-tone toy rifle along -Z from `z0` (butt) with its bore at height y. */
 function addRifle(b: PartBuilder, x: number, y: number, z0: number): void {
-  b.rounded(C.furniture, 0.05, 0.1, 0.2, x, y - 0.02, z0 - 0.1, 0.012); // stock
-  b.rounded(C.replica, 0.055, 0.08, 0.34, x, y, z0 - 0.37, 0.012); // receiver
-  b.box(C.furniture, 0.04, 0.14, 0.06, x, y - 0.1, z0 - 0.42); // magazine
-  b.rounded(C.furniture, 0.06, 0.07, 0.24, x, y, z0 - 0.66, 0.015); // handguard
-  b.box(C.replica, 0.025, 0.025, 0.2, x, y, z0 - 0.88); // barrel
-  b.box(C.replica, 0.02, 0.04, 0.03, x, y + 0.06, z0 - 0.24); // flip-up rear sight (optics are accessories; bots fit none)
+  const polymer: PartLook = { finish: FIN.polymer, edge: true };
+  b.rounded(C.furniture, 0.05, 0.1, 0.2, x, y - 0.02, z0 - 0.1, 0.012, polymer); // stock
+  b.rounded(C.replica, 0.055, 0.08, 0.34, x, y, z0 - 0.37, 0.012, polymer); // receiver
+  b.box(C.furniture, 0.04, 0.14, 0.06, x, y - 0.1, z0 - 0.42, polymer); // magazine
+  b.rounded(C.furniture, 0.06, 0.07, 0.24, x, y, z0 - 0.66, 0.015, polymer); // handguard
+  b.box(C.replica, 0.025, 0.025, 0.2, x, y, z0 - 0.88, { finish: FIN.steel }); // barrel
+  b.box(C.replica, 0.02, 0.04, 0.03, x, y + 0.06, z0 - 0.24, polymer); // flip-up rear sight (optics are accessories; bots fit none)
+  if (!b.overhaul) return;
+  // Detailed: a top rail along the receiver and handguard, the pistol grip, and a flash hider at the muzzle.
+  b.box(C.replica, 0.024, 0.012, 0.56, x, y + 0.045, z0 - 0.54, polymer);
+  b.rounded(C.replica, 0.032, 0.09, 0.045, x, y - 0.075, z0 - 0.27, 0.01, polymer);
+  b.add(new THREE.CylinderGeometry(0.018, 0.018, 0.045, b.detail.radialSegments).rotateX(Math.PI / 2).translate(x, y, z0 - 0.98 + 0.0225), C.replica, { finish: FIN.steel });
 }
 
 /** A compact pistol along -Z from `z0` (the back of the slide) with its bore at height y. */
 function addPistol(b: PartBuilder, x: number, y: number, z0: number): void {
-  b.rounded(C.replica, 0.032, 0.038, FIGURE.pistol.length, x, y, z0 - FIGURE.pistol.length / 2, 0.008); // slide
-  b.box(C.replica, 0.028, 0.1, 0.04, x, y - 0.06, z0 - 0.035); // grip
+  const polymer: PartLook = { finish: FIN.polymer, edge: true };
+  b.rounded(C.replica, 0.032, 0.038, FIGURE.pistol.length, x, y, z0 - FIGURE.pistol.length / 2, 0.008, polymer); // slide
+  b.box(C.replica, 0.028, 0.1, 0.04, x, y - 0.06, z0 - 0.035, polymer); // grip
+  if (!b.overhaul) return;
+  // Detailed: the tan frame under the slide and its trigger guard.
+  b.rounded(C.furniture, 0.03, 0.014, FIGURE.pistol.length * 0.8, x, y - 0.024, z0 - FIGURE.pistol.length * 0.45, 0.005, polymer);
+  b.box(C.furniture, 0.008, 0.024, 0.036, x, y - 0.04, z0 - 0.075, polymer);
 }
 
-/** A gloved hand gripping something at `at`. */
+/** A gloved hand gripping something at `at`. Detailed: a thumb along the grip and a lighter knuckle pad. */
 function glove(b: PartBuilder, at: THREE.Vector3): void {
   b.rounded(C.gloves, 0.07, 0.075, 0.09, at.x, at.y, at.z, 0.025);
+  if (!b.overhaul) return;
+  b.limb(C.gloves, 0.013, v(at.x - 0.036, at.y + 0.005, at.z), v(at.x - 0.036, at.y + 0.018, at.z - 0.045), undefined, SMALL_SIDES, 1);
+  b.rounded(tone(C.gloves, FIGURE.lidLight), 0.074, 0.022, 0.05, at.x, at.y + 0.03, at.z - 0.015, 0.008);
 }
 
 /**
  * One arm from the shoulder `s` through the elbow `e` to the hand `h`: sleeve, elbow pad, forearm, glove, and the team
- * armband round the upper arm.
+ * armband round the upper arm. Detailed: a darker cuff round the wrist.
  */
 function arm(b: PartBuilder, look: FigureLook, team: Color, s: THREE.Vector3, e: THREE.Vector3, h: THREE.Vector3): void {
   const F = FIGURE;
@@ -159,6 +239,7 @@ function arm(b: PartBuilder, look: FigureLook, team: Color, s: THREE.Vector3, e:
   b.band(team, s, e, 0.42, F.armRadius * 1.12, 0.13);
   b.taper(look.top, e, h, F.forearmRadius, F.forearmRadius * 0.8);
   b.sphere(C.pads, F.armRadius * 0.95, e.x, e.y, e.z, 6);
+  if (b.overhaul) b.band(tone(look.top, F.cuffShade), e, h, 0.8, F.forearmRadius * 0.86, 0.035);
   glove(b, h);
 }
 
@@ -191,27 +272,43 @@ export interface Figure {
 
 /**
  * The head: face, full-seal goggles with their strap, a mesh mask if the look has one, and a cap, a helmet with a
- * headset, or hair with a team sweatband. `y`: head centre.
+ * headset, or hair with a team sweatband. `y`: head centre. Detailed (FA8): an oval head with a jaw and ears, goggles
+ * in a framed band with a glossy lens, a glossy helmet shell with a cover seam and a headset boom, a bevelled brim.
  */
 function head(b: PartBuilder, look: FigureLook, team: Color, y: number): void {
   const F = FIGURE;
   const r = F.headRadius;
-  b.sphere(look.skin, r, 0, y, 0);
-  b.sphere(look.skin, 0.022, 0, y - 0.035, -r * 0.97, 6); // nose
+  const skin: PartLook = { finish: FIN.skin };
+  if (b.overhaul) {
+    const [sides, rings] = b.detail.head;
+    b.add(new THREE.SphereGeometry(r, sides, rings).scale(0.92, 1.1, 1).translate(0, y, 0), look.skin, skin);
+    b.rounded(look.skin, 0.11, 0.05, 0.1, 0, y - 0.07, -0.015, 0.02, skin); // jaw
+    for (const side of [-1, 1]) b.add(new THREE.SphereGeometry(0.022, SMALL_SIDES, 4).scale(0.5, 1, 0.8).translate(side * r * 0.92, y - 0.008, 0.005), look.skin, skin); // ears
+  } else b.sphere(look.skin, r, 0, y, 0);
+  b.sphere(look.skin, 0.022, 0, y - 0.035, -r * 0.97, 6, skin); // nose
   // Full-seal goggles: a dark frame wrapping the eyes, a tinted lens across it, the strap round the back.
-  b.wrap(C.goggles, r * 1.05, 0.062, y + 0.005, Math.PI * 0.95);
-  b.wrap(C.lens, r * 1.1, 0.04, y + 0.006, Math.PI * 0.62);
-  b.wrap(C.goggles, r * 1.01, 0.026, y + 0.01, Math.PI * 2);
+  b.wrap(C.goggles, r * 1.05, 0.062, y + 0.005, Math.PI * 0.95, 0, { finish: FIN.rubber });
+  b.wrap(C.lens, r * 1.1, 0.04, y + 0.006, Math.PI * 0.62, 0, { finish: FIN.lens });
+  b.wrap(C.goggles, r * 1.01, 0.026, y + 0.01, Math.PI * 2, 0, { finish: FIN.rubber });
+  if (b.overhaul) {
+    // The frame as a band round the lens: a lip above and below, so the goggles read as goggles at 15 m.
+    for (const dy of [-0.024, 0.036]) b.rim(C.goggles, r * 1.1, 0.007, y + dy, Math.PI * 0.66, { finish: FIN.rubber });
+  }
   // Mesh lower-face mask over the nose and mouth, on some looks only.
   if (look.mask !== null) b.wrap(look.mask, r * 1.03, 0.075, y - 0.06, Math.PI * 0.8);
   if (look.headgear === 'helmet') {
-    b.add(new THREE.SphereGeometry(r * 1.17, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.95, 1.05).translate(0, y + 0.015, 0), look.hat);
+    b.add(new THREE.SphereGeometry(r * 1.17, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.95, 1.05).translate(0, y + 0.015, 0), look.hat, { finish: FIN.shell });
     b.wrap(team, r * 1.19, 0.045, y + 0.045, Math.PI * 2); // team tape round the shell
     for (const side of [-1, 1]) {
-      b.box(look.hat, 0.02, 0.028, 0.12, side * r * 1.13, y + 0.02, 0); // side rails
-      b.add(new THREE.CylinderGeometry(0.04, 0.04, 0.035, 10).rotateZ(Math.PI / 2).translate(side * r * 1.05, y - 0.015, 0.005), C.headset);
+      b.box(look.hat, 0.02, 0.028, 0.12, side * r * 1.13, y + 0.02, 0, { finish: FIN.shell }); // side rails
+      b.add(new THREE.CylinderGeometry(0.04, 0.04, 0.035, 10).rotateZ(Math.PI / 2).translate(side * r * 1.05, y - 0.015, 0.005), C.headset, { finish: FIN.polymer });
     }
     b.box(C.headset, 0.06, 0.03, 0.015, 0, y + 0.075, -r * 1.12); // front mount
+    if (b.overhaul) {
+      b.wrap(tone(look.hat, F.cuffShade), r * 1.2, 0.012, y + 0.018, Math.PI * 2, 0, { finish: FIN.shell }); // the cover's seam at the rim
+      b.limb(C.headset, 0.006, v(-r * 1.08, y - 0.03, -0.01), v(-0.045, y - 0.075, -r * 1.02), { finish: FIN.polymer }, SMALL_SIDES, 1); // headset boom
+      b.sphere(C.headset, 0.012, -0.045, y - 0.075, -r * 1.02, SMALL_SIDES, { finish: FIN.rubber });
+    }
   } else if (look.headgear === 'cap') {
     b.add(new THREE.SphereGeometry(r * 1.07, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, y + 0.02, 0), look.hat);
     b.wrap(team, r * 1.09, 0.035, y + 0.035, Math.PI * 2); // team tape round the cap
@@ -226,9 +323,16 @@ function head(b: PartBuilder, look: FigureLook, team: Color, y: number): void {
 
 /**
  * Builds one figure in its team colour, using `material` (vertex colours) and the shared `calloutMaterial`. `id`
- * picks its looks (figureLooks).
+ * picks its looks (figureLooks). `detail` is FIGURE.detail.low unless the Player detail setting asks for more (FA8).
  */
-export function buildFigure(teamColor: Color, material: THREE.Material, calloutMaterial: THREE.SpriteMaterial, id = 0, model: FigureModel | null = null): Figure {
+export function buildFigure(
+  teamColor: Color,
+  material: THREE.Material,
+  calloutMaterial: THREE.SpriteMaterial,
+  id = 0,
+  model: FigureModel | null = null,
+  detail: FigureDetail = FIGURE.detail.low,
+): Figure {
   const F = FIGURE;
   const look = figureLooks(id);
   const root = new THREE.Group();
@@ -256,15 +360,21 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
       own.position.copy(pivot);
       return own;
     }
-    const b = new PartBuilder();
+    const b = new PartBuilder(detail);
     const hip = v(0, 0, 0);
     const kneeAt = v(0, -knee, -0.015);
     const ankle = v(0, -F.hipHeight + 0.11, 0);
     b.taper(look.trousers, hip, kneeAt, F.legRadius, F.kneeRadius);
     b.band(teamColor, hip, kneeAt, 0.35, F.legRadius * 1.04, 0.1);
     b.taper(look.trousers, kneeAt, ankle, F.kneeRadius, F.shinRadius * 0.85);
-    b.rounded(C.pads, 0.1, 0.12, 0.05, 0, -knee - 0.02, -0.06, 0.02); // knee pad
-    b.rounded(C.boots, 0.12, 0.12, 0.26, 0, -F.hipHeight + 0.06, -0.04, 0.03);
+    b.rounded(C.pads, 0.1, 0.12, 0.05, 0, -knee - 0.02, -0.06, 0.02, { finish: FIN.rubber, edge: true }); // knee pad
+    b.rounded(C.boots, 0.12, 0.12, 0.26, 0, -F.hipHeight + 0.06, -0.04, 0.03, { finish: FIN.rubber, edge: true });
+    if (b.overhaul) {
+      // A darker sole under the boot, the trouser cuff over it, and a lighter cap on the knee pad.
+      b.rounded(tone(C.boots, F.soleShade), 0.126, 0.024, 0.27, 0, -F.hipHeight + 0.012, -0.04, 0.008, { finish: FIN.rubber });
+      b.band(tone(look.trousers, F.cuffShade), kneeAt, ankle, 0.9, F.shinRadius * 0.92, 0.03);
+      b.rounded(tone(C.pads, F.lidLight), 0.08, 0.06, 0.016, 0, -knee - 0.02, -0.086, 0.008, { finish: FIN.rubber, edge: true });
+    }
     const mesh = b.build(material);
     mesh.position.set(side * F.hipSpread, F.hipHeight, 0);
     return mesh;
@@ -279,19 +389,19 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   const hips = v(0, F.hipHeight, 0);
   const modelBody = fromModel('body', hips);
   if (modelBody) upper.add(modelBody);
-  else upper.add(builtBody(look, teamColor, material, hy));
+  else upper.add(builtBody(look, teamColor, material, hy, detail));
 
   // Aiming pose: pivot at the shoulder line. Rifle shouldered on the right, or the pistol held out in both hands.
   const aim = new THREE.Group();
   aim.position.y = F.shoulderHeight + hy;
   const shoulders = v(0, F.shoulderHeight, 0);
-  const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(look, teamColor, material);
-  const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(look, teamColor, material);
+  const aimRifle = fromModel('aimRifle', shoulders) ?? builtAimRifle(look, teamColor, material, detail);
+  const aimPistol = fromModel('aimPistol', shoulders) ?? builtAimPistol(look, teamColor, material, detail);
   aimPistol.visible = false;
   aim.add(aimRifle, aimPistol);
   upper.add(aim);
 
-  const hitPose = fromModel('hitPose', hips) ?? builtHitPose(look, teamColor, material, hy);
+  const hitPose = fromModel('hitPose', hips) ?? builtHitPose(look, teamColor, material, hy, detail);
   hitPose.visible = false;
   upper.add(hitPose);
 
@@ -307,18 +417,24 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   return { root, upper, legL, legR, aim, aimRifle, aimPistol, hitPose, callout, modelMaterials, whole };
 }
 
-/** The built-in body: torso with the team tape, vest, pouches, neck and head, in upper-body space (`hy`: see buildFigure). */
-function builtBody(look: FigureLook, teamColor: Color, material: THREE.Material, hy: number): THREE.Mesh {
+/**
+ * The built-in body: torso with the team tape, vest, pouches, neck and head, in upper-body space (`hy`: see buildFigure).
+ * Detailed: the torso's lower third and hem shade darker (baked occlusion), pouch lids catch the light, a hydration tube
+ * runs from the carrier's pack over the shoulder, and a hoodie's hood lies behind the neck.
+ */
+function builtBody(look: FigureLook, teamColor: Color, material: THREE.Material, hy: number, detail: FigureDetail): THREE.Mesh {
   const F = FIGURE;
   const t = F.torso;
-  const body = new PartBuilder();
+  const body = new PartBuilder(detail);
   const mid = t.bottom + hy; // the torso's bottom, local
-  body.rounded(look.top, t.width, t.height, t.depth, 0, mid + t.height / 2, 0, 0.05);
-  body.rounded(look.trousers, t.width + 0.01, 0.07, t.depth + 0.01, 0, mid + 0.03, 0, 0.02); // belt
+  const occlusion = (_x: number, y: number): number => F.hemShade + (1 - F.hemShade) * THREE.MathUtils.smoothstep(y, mid, mid + t.height * 0.45);
+  if (body.overhaul) body.add(new RoundedBoxGeometry(t.width, t.height, t.depth, 2, 0.05).translate(0, mid + t.height / 2, 0), look.top, { shade: occlusion });
+  else body.rounded(look.top, t.width, t.height, t.depth, 0, mid + t.height / 2, 0, 0.05);
+  body.rounded(look.trousers, t.width + 0.01, 0.07, t.depth + 0.01, 0, mid + 0.03, 0, 0.02, { edge: true, shade: () => F.cuffShade }); // belt
   // Team tape round the torso, a quarter of a metre tall and under the arms whatever the pose: the main way to tell
-  // teams apart at range (enemies carry no marker).
+  // teams apart at range (enemies carry no marker). Never shaded or edge-lit: the team colour stays exact.
   const band = F.teamBand;
-  body.rounded(teamColor, t.width + 0.035, band.height, t.depth + 0.11, 0, mid + band.centre, 0, 0.03);
+  body.rounded(teamColor, t.width + 0.035, band.height, t.depth + 0.11, 0, mid + band.centre, 0, 0.03, {});
   const bandTop = mid + band.centre + band.height / 2;
   const front = -(t.depth / 2);
   if (look.vest === 'carrier') {
@@ -326,33 +442,55 @@ function builtBody(look: FigureLook, teamColor: Color, material: THREE.Material,
     const plateH = t.height - (bandTop - mid) - 0.04;
     for (const side of [-1, 1]) body.rounded(look.vestColor, t.width - 0.06, plateH, 0.05, 0, bandTop + plateH / 2, side * (t.depth / 2 + 0.02), 0.015);
     body.rounded(look.pouches, 0.24, 0.2, 0.07, 0, bandTop + 0.13, t.depth / 2 + 0.075, 0.02);
+    if (body.overhaul) {
+      // The pack's drinking tube over the right shoulder to the chest.
+      const tube = 0x2b2d2f;
+      const over = v(0.13, mid + t.height + 0.03, 0.02);
+      body.limb(tube, 0.008, v(0.09, bandTop + 0.2, t.depth / 2 + 0.09), over, { finish: FIN.rubber }, SMALL_SIDES, 1);
+      body.limb(tube, 0.008, over, v(0.12, bandTop + 0.1, front - 0.05), { finish: FIN.rubber }, SMALL_SIDES, 1);
+    }
   } else {
     // Chest rig: one front panel on straps; the top shows at the back.
     body.rounded(look.vestColor, t.width - 0.08, 0.2, 0.04, 0, bandTop + 0.1, front - 0.015, 0.015);
   }
   for (const side of [-1, 1]) body.box(teamColor, 0.065, 0.03, t.depth + 0.08, side * 0.11, mid + t.height + 0.005, 0); // shoulder straps
-  // Three magazine pouches across the chest.
-  for (const x of [-0.1, 0, 0.1]) body.rounded(look.pouches, 0.085, 0.12, 0.055, x, bandTop + 0.08, front - 0.06, 0.012);
-  body.limb(look.skin, 0.05, v(0, F.shoulderHeight + hy, 0), v(0, F.headHeight - 0.08 + hy, 0)); // neck
+  // Three magazine pouches across the chest; detailed, each with a lid a centimetre proud whose bevel catches the light.
+  for (const x of [-0.1, 0, 0.1]) {
+    body.rounded(look.pouches, 0.085, 0.12, 0.055, x, bandTop + 0.08, front - 0.06, 0.012);
+    if (body.overhaul) body.rounded(tone(look.pouches, F.lidLight), 0.09, 0.022, 0.062, x, bandTop + 0.135, front - 0.06, 0.006);
+  }
+  body.limb(look.skin, 0.05, v(0, F.shoulderHeight + hy, 0), v(0, F.headHeight - 0.08 + hy, 0), { finish: FIN.skin }); // neck
+  if (body.overhaul && look.hood) {
+    // The hood: a thick half-ring lying round the back of the neck.
+    const hood = new THREE.TorusGeometry(0.085, 0.035, 6, 12, Math.PI).rotateZ(Math.PI).rotateX(-Math.PI / 2).scale(1.1, 1, 1);
+    body.add(hood.translate(0, F.shoulderHeight + hy + 0.03, 0.02), tone(look.top, F.cuffShade));
+  }
   head(body, look, teamColor, F.headHeight + hy);
   return body.build(material);
 }
 
 /** The built-in arms with the rifle shouldered on the right, in aim-group space (the shoulder line). */
-function builtAimRifle(look: FigureLook, teamColor: Color, material: THREE.Material): THREE.Mesh {
+function builtAimRifle(look: FigureLook, teamColor: Color, material: THREE.Material, detail: FigureDetail): THREE.Mesh {
   const F = FIGURE;
-  const rifle = new PartBuilder();
+  const rifle = new PartBuilder(detail);
   arm(rifle, look, teamColor, v(F.shoulderSpread, 0, 0), v(0.2, -0.2, -0.12), v(0.07, -0.12, -0.26));
   arm(rifle, look, teamColor, v(-F.shoulderSpread, 0, 0), v(-0.14, -0.22, -0.3), v(0.03, -0.08, -0.55));
+  if (rifle.overhaul) {
+    // The support hand's fingers wrapped up the handguard's far side.
+    for (let i = 0; i < 4; i++) {
+      const z = -0.52 - i * 0.018;
+      rifle.limb(C.gloves, 0.0095, v(0.05, -0.11, z), v(0.094, -0.085, z), undefined, SMALL_SIDES, 1);
+    }
+  }
   addRifle(rifle, F.rifle.x, F.rifle.y, F.rifle.butt);
   return rifle.build(material);
 }
 
 /** The built-in arms with the pistol held out in both hands, in aim-group space. */
-function builtAimPistol(look: FigureLook, teamColor: Color, material: THREE.Material): THREE.Mesh {
+function builtAimPistol(look: FigureLook, teamColor: Color, material: THREE.Material, detail: FigureDetail): THREE.Mesh {
   const F = FIGURE;
   const P = F.pistol;
-  const pistol = new PartBuilder();
+  const pistol = new PartBuilder(detail);
   arm(pistol, look, teamColor, v(F.shoulderSpread, 0, 0), v(0.17, -0.15, -0.21), v(P.x, P.y - 0.08, P.butt - 0.03));
   arm(pistol, look, teamColor, v(-F.shoulderSpread, 0, 0), v(-0.13, -0.17, -0.2), v(P.x - 0.04, P.y - 0.09, P.butt - 0.05));
   addPistol(pistol, P.x, P.y, P.butt);
@@ -360,9 +498,9 @@ function builtAimPistol(look: FigureLook, teamColor: Color, material: THREE.Mate
 }
 
 /** The built-in hit pose: right hand straight up (open glove), rifle hanging muzzle-down from the left hand. */
-function builtHitPose(look: FigureLook, teamColor: Color, material: THREE.Material, hy: number): THREE.Mesh {
+function builtHitPose(look: FigureLook, teamColor: Color, material: THREE.Material, hy: number, detail: FigureDetail): THREE.Mesh {
   const F = FIGURE;
-  const hit = new PartBuilder();
+  const hit = new PartBuilder(detail);
   const top = F.shoulderHeight + hy;
   const raisedElbow = v(F.shoulderSpread + 0.04, top + 0.3, 0.02);
   const raisedHand = v(F.shoulderSpread + 0.06, top + 0.6, 0);
@@ -370,9 +508,14 @@ function builtHitPose(look: FigureLook, teamColor: Color, material: THREE.Materi
   hit.band(teamColor, v(F.shoulderSpread, top, 0), raisedElbow, 0.42, F.armRadius * 1.12, 0.13);
   hit.taper(look.top, raisedElbow, raisedHand, F.forearmRadius, F.forearmRadius * 0.8);
   hit.rounded(C.gloves, 0.09, 0.15, 0.04, raisedHand.x, raisedHand.y + 0.07, 0, 0.015); // open hand
+  if (hit.overhaul) {
+    // The raised hand's thumb out to the side and a cuff at the wrist: an open hand, clearly.
+    hit.rounded(C.gloves, 0.025, 0.06, 0.03, raisedHand.x - 0.055, raisedHand.y + 0.04, 0, 0.01);
+    hit.band(tone(look.top, F.cuffShade), raisedElbow, raisedHand, 0.85, F.forearmRadius * 0.86, 0.035);
+  }
   const hangHand = v(-F.shoulderSpread - 0.03, top - 0.55, -0.06);
   arm(hit, look, teamColor, v(-F.shoulderSpread, top, 0), v(-F.shoulderSpread - 0.02, top - 0.28, -0.02), hangHand);
-  const hanging = new PartBuilder();
+  const hanging = new PartBuilder(detail);
   addRifle(hanging, 0, 0, 0.12);
   // Muzzle down and slightly forward, held at the left hand.
   hit.addPart(hanging, new THREE.Matrix4().makeTranslation(hangHand.x, hangHand.y, hangHand.z).multiply(new THREE.Matrix4().makeRotationX(-(Math.PI / 2 - 0.25))));

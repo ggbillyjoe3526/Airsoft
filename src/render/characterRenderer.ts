@@ -2,10 +2,12 @@ import * as THREE from 'three';
 import { FIGURE_MODEL } from '../config/assets';
 import { FIGURE } from '../config/characters';
 import type { HitConfig } from '../config/hits';
+import type { DetailLevel } from '../config/render';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
 import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll, setReceiveShadows } from './characterModels';
 import { type FigureModel, fadeModelMaterials } from './externalModels';
+import { useVertexFinish } from './figureFinish';
 
 interface FigureState {
   figure: Figure;
@@ -46,6 +48,19 @@ export function flinchEnvelope(t: number): number {
   return k * k;
 }
 
+/**
+ * Sizes a figure's HIT! sign for a camera `distance` metres away (FA8): its own size up to FIGURE.callout.stableFrom,
+ * growing with the distance beyond, so it is as big on screen at 30 m as at 6 m; it rises as it grows, so its bottom edge
+ * stays above the head.
+ */
+export function placeCallout(callout: THREE.Object3D, distance: number): void {
+  const C = FIGURE.callout;
+  const k = Math.max(1, distance / C.stableFrom);
+  const h = C.width * C.aspect;
+  callout.scale.set(C.width * k, h * k, 1);
+  callout.position.y = C.height + ((k - 1) * h) / 2;
+}
+
 /** True if `c`'s active replica is a pistol (the figure holds it out in both hands; BBs and gas leave its muzzle). */
 export function holdsPistol(c: Character): boolean {
   return c.armament.replicas[c.armament.active]?.look.model === 'pistol';
@@ -63,25 +78,55 @@ export class CharacterRenderer {
   private readonly calloutMaterial = new THREE.SpriteMaterial({ map: this.calloutTexture, transparent: true });
   private readonly figures: FigureState[] = [];
   private readonly lean = { x: 0, z: 0 };
+  private receiveShadows = false;
 
   constructor(
     private readonly characters: readonly Character[],
-    teamColors: readonly number[],
+    private readonly teamColors: readonly number[],
     private readonly hits: HitConfig,
     /** A figure model (M25a, render/externalModels.ts), or null for the built-in figures. The renderer doesn't own it. */
-    model: FigureModel | null = null,
+    private readonly model: FigureModel | null = null,
+    /** Player detail (QualitySettings.figureDetail, FA8); setDetail changes it. */
+    private detail: DetailLevel = 'low',
   ) {
     for (const c of characters) {
-      const material = this.material.clone();
-      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, model);
-      this.object.add(figure.root);
+      const { figure, material } = this.build(c);
       this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0 });
     }
   }
 
   /** Figures shaded by walls and containers, or lit as if in full sun (QualitySettings.figureShadows, REN-07). */
   setReceiveShadows(on: boolean): void {
+    this.receiveShadows = on;
     setReceiveShadows(this.object, on);
+  }
+
+  /**
+   * Player detail (QualitySettings.figureDetail, FA8): every figure is built again at the new level (a few milliseconds
+   * for six), keeping its walk phase and flinch. Nothing happens if the level is unchanged.
+   */
+  setDetail(level: DetailLevel): void {
+    if (level === this.detail) return;
+    this.detail = level;
+    for (let i = 0; i < this.characters.length; i++) {
+      const s = this.figures[i]!;
+      disposeFigure(s.figure);
+      s.material.dispose();
+      const { figure, material } = this.build(this.characters[i]!);
+      s.figure = figure;
+      s.material = material;
+    }
+    setReceiveShadows(this.object, this.receiveShadows);
+  }
+
+  /** One character's figure at the current detail, added to the scene, with its own copy of the material. */
+  private build(c: Character): { figure: Figure; material: THREE.MeshStandardMaterial } {
+    const high = this.detail === 'high';
+    // The detailed figure reads each vertex's roughness and metalness (glossy goggles and shells, steel barrels).
+    const material = high ? useVertexFinish(this.material.clone()) : this.material.clone();
+    const figure = buildFigure(this.teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail]);
+    this.object.add(figure.root);
+    return { figure, material };
   }
 
   /** Character `id` was hit by a BB flying along `direction`: its figure flinches. */
@@ -97,9 +142,9 @@ export class CharacterRenderer {
 
   /**
    * `alpha` interpolates ticks; `dt` is the frame time; `hiddenId` is the character the camera is
-   * inside (drawn in first person instead), or -1.
+   * inside (drawn in first person instead), or -1. `eye`: where the camera is, so a far HIT! sign keeps its size on screen.
    */
-  update(alpha: number, dt: number, hiddenId: number): void {
+  update(alpha: number, dt: number, hiddenId: number, eye?: { x: number; y: number; z: number }): void {
     for (let i = 0; i < this.characters.length; i++) {
       const c = this.characters[i]!;
       const s = this.figures[i]!;
@@ -151,6 +196,7 @@ export class CharacterRenderer {
       f.aim.rotation.x = c.status === 'out' ? FIGURE.outAimPitch : c.prevPitch + (c.pitch - c.prevPitch) * alpha;
       f.hitPose.visible = handUp;
       f.callout.visible = c.status === 'calling';
+      if (f.callout.visible && eye) placeCallout(f.callout, Math.hypot(x - eye.x, y + FIGURE.callout.height - eye.y, z - eye.z));
 
       // A walk-off that couldn't finish leaves the field: the figure fades out where it stands (the sim
       // then puts it in the dead zone) instead of visibly jumping there.
