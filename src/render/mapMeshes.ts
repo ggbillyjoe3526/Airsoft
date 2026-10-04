@@ -43,6 +43,12 @@ function styleOf(block: MapBlock): KindStyle {
   return block.surface === 'metal' ? METAL_PLATE : STYLES[block.kind];
 }
 
+/** Whether a block's mesh casts the sun's shadow: its kind's rule, and every floor or ramp that rises above the ground (a dock). */
+export function castsShadow(block: MapBlock): boolean {
+  if (styleOf(block).castShadow) return true;
+  return (block.kind === 'floor' || block.kind === 'ramp') && block.center.y + block.size.y / 2 > SURFACES.raisedFrom;
+}
+
 /** A hash of a block's position. It uses |x|, so a block and its mirror twin across x = 0 always hash the same. */
 function blockHash(block: MapBlock): number {
   const q = (v: number): number => Math.round(v * 10);
@@ -594,7 +600,7 @@ export function blockPieces(block: MapBlock, blocks: readonly MapBlock[]): Piece
   else if (block.kind === 'sandbags') sandbagPieces(block, color, out);
   else if (block.kind === 'generator') generatorPieces(block, color, out);
   else if (block.kind === 'skip') skipPieces(block, color, out);
-  else out.push({ box: boundsOf(block), texture: style.texture, uv: style.uv, color, grime: style.grime, castShadow: style.castShadow });
+  else out.push({ box: boundsOf(block), texture: style.texture, uv: style.uv, color, grime: style.grime, castShadow: castsShadow(block) });
   return out;
 }
 
@@ -623,6 +629,21 @@ export function setMapRelief(group: THREE.Group, on: boolean): void {
 }
 
 /**
+ * Points a built map at another set of surface textures (Texture detail, audit REN-13): each material keeps its surface
+ * (by the texture's name, its SurfaceTextureId) and its relief. The UVs are in metres, so any size maps the same way.
+ */
+export function setMapTextures(group: THREE.Group, textures: SurfaceTextures): void {
+  group.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh) || !(obj.material instanceof THREE.MeshLambertMaterial)) return;
+    const mat = obj.material;
+    const next = mat.map && Object.hasOwn(textures, mat.map.name) ? textures[mat.map.name as SurfaceTextureId].texture : null;
+    if (!next || next === mat.map) return;
+    if (mat.bumpMap) mat.bumpMap = next;
+    mat.map = next;
+  });
+}
+
+/**
  * Builds the static level as one merged mesh per surface texture (and whether it casts shadows): a handful of draw
  * calls for the whole map, details included. Returns a group; call `disposeMapMeshes` to free GPU resources.
  */
@@ -641,7 +662,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, relief: 
     if (block.kind === 'ramp') {
       const style = styleOf(block);
       const color = new THREE.Color().setHex(blockTint(block), THREE.SRGBColorSpace).multiplyScalar(blockShade(block));
-      appendRamp(entry(style.texture, style.castShadow), block, textures[style.texture], color);
+      appendRamp(entry(style.texture, castsShadow(block)), block, textures[style.texture], color);
       continue;
     }
     const bottom = block.center.y - block.size.y / 2;

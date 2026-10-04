@@ -127,6 +127,12 @@ body {
   z-index: 19;
 }
 
+/* Settings → Graphics → Show FPS: the overlay's first line alone, smaller */
+.debug-overlay.fps-readout {
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-xs);
+}
+
 /* Below the minimap (M23) while it shows, so the panel doesn't hide your arrow and the markers round you (bug pass). */
 :has(> .minimap:not([hidden])) > .debug-overlay {
   top: calc(var(--hud-margin) + var(--minimap-size, 0px) + var(--sp-2));
@@ -785,6 +791,46 @@ body {
 }
 
 .menu-row.later .menu-row-label {
+  color: var(--menu-faint);
+}
+
+/* A Custom graphics row that does nothing with a setting off (the shadow rows while Shadows is Off) */
+.menu-row.menu-row-off .menu-row-label {
+  color: var(--menu-faint);
+}
+
+.menu-range input:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* What a Custom graphics row costs (final alpha audit, UI-06): a quiet tag under its help */
+.menu-row-cost {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-caps);
+  color: var(--menu-muted);
+}
+
+/* Settings → Graphics: the Custom settings block under the presets (the heading is a .menu-kicker) */
+.graphics-subhead {
+  margin: var(--sp-5) 0 var(--sp-1);
+}
+
+.graphics-custom > .menu-readout {
+  margin-bottom: var(--sp-2);
+}
+
+.graphics-custom .picker-blurb:empty {
+  display: none;
+}
+
+/* A row the browser can't honour as picked (no multisampling, a lower filtering cap) */
+.graphics-note {
+  flex-basis: 100%;
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
   color: var(--menu-faint);
 }
 

@@ -115,6 +115,16 @@ class PartBuilder {
   }
 }
 
+/**
+ * Whether every mesh under `root` is shaded by other things' shadows (QualitySettings.figureShadows, audit REN-07). Each
+ * material's shader is rebuilt once on the next frame (Three.js keys programs on it); nothing changes while shadows are off.
+ */
+export function setReceiveShadows(root: THREE.Object3D, on: boolean): void {
+  root.traverse((o) => {
+    if (o instanceof THREE.Mesh) o.receiveShadow = on;
+  });
+}
+
 const v = (x: number, y: number, z: number): THREE.Vector3 => new THREE.Vector3(x, y, z);
 const C = FIGURE.colors;
 

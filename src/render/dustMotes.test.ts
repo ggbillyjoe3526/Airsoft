@@ -1,3 +1,4 @@
+import type * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DUST_MOTES } from '../config/render';
 import { DustMotes, moteFade, motePosition } from './dustMotes';
@@ -47,6 +48,27 @@ describe('moteFade', () => {
     // At 1080 p a world-size point is size × 540 / distance pixels; the cap keeps it at maxPixels or under.
     expect((D.size * 540) / D.fadeFar).toBeGreaterThan(D.maxPixels);
     expect(D.maxPixels).toBeLessThanOrEqual(12);
+  });
+});
+
+describe('DustMotes size cap', () => {
+  // The soft dot's canvas is stood in for: nothing is drawn here.
+  beforeAll(() => vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) }));
+  afterAll(() => vi.unstubAllGlobals());
+
+  it('scales the cap with the pixel ratio, so a near mote is the same size on screen at any scaling (KNOWN_ISSUES)', () => {
+    const motes = new DustMotes(DUST_MOTES.max);
+    expect(motes.maxPointSize).toBe(DUST_MOTES.maxPixels);
+    motes.setPixelRatio(2);
+    expect(motes.maxPointSize).toBe(DUST_MOTES.maxPixels * 2);
+    motes.setPixelRatio(0.8); // Low's render scale
+    expect(motes.maxPointSize).toBeCloseTo(DUST_MOTES.maxPixels * 0.8, 9);
+    // The shader reads the same value as a uniform, not a constant baked into its source.
+    const shader = { uniforms: {} as Record<string, { value: number }>, vertexShader: '#include <logdepthbuf_vertex>', fragmentShader: '' };
+    (motes.object.material as THREE.PointsMaterial).onBeforeCompile(shader as never, undefined as never);
+    expect(shader.uniforms.moteMaxSize!.value).toBeCloseTo(DUST_MOTES.maxPixels * 0.8, 9);
+    expect(shader.vertexShader).toContain('min(gl_PointSize, moteMaxSize)');
+    motes.dispose();
   });
 });
 
