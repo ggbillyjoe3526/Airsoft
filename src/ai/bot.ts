@@ -104,6 +104,13 @@ export interface Bot {
   heldAngleCount: number;
   heldAnglesAt: number;
   heldAnglesFrom: Vec3;
+  /** Near the enemy with slicesCorners (M38): walking and aiming at each corner ahead as it opens (set each tick). */
+  careful: boolean;
+  /** Lost sight of someone (M38, peekWatchTime): stays and watches where they were until this time (s). */
+  watchUntil: number;
+  /** When it last heard a teammate call a hit (M38, teamPlay: trade them for tradeTime s), and whether it has tried. */
+  tradeAt: number;
+  tradeTried: boolean;
   /** A defender settled at its post last tick: its holdCrouch was chosen on arrival and stands until it leaves (AI-02). */
   atPost: boolean;
   /** On the way to cover by the lane point just reached, to hold from there (AI-02). */
@@ -194,6 +201,8 @@ export interface BotWorld {
   huntPoint(bot: Bot, out: Vec3): boolean;
   /** True if `bot` is more than teamSpread ahead (towards the enemy side) of its rearmost bot teammate. */
   aheadOfTeam(bot: Bot): boolean;
+  /** True if `bot` stands past the middle of the map, towards the enemy's end (M38: near the enemy). */
+  inEnemyHalf(bot: Bot): boolean;
   /** Counts `point`'s hunt sector as just checked by `bot`'s team (a spot it found no route to, AI-07). */
   markVisited(bot: Bot, point: Vec3): void;
   /** Every bot in the match (teammates' cover spots and lane holds, AI-01). */
@@ -245,6 +254,10 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     heldAngleCount: 0,
     heldAnglesAt: Number.NEGATIVE_INFINITY,
     heldAnglesFrom: vec3(),
+    careful: false,
+    watchUntil: Number.NEGATIVE_INFINITY,
+    tradeAt: Number.NEGATIVE_INFINITY,
+    tradeTried: false,
     holdCrouch: false,
     atPost: false,
     holdCover: false,
@@ -320,10 +333,15 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.retake = false;
   b.holdLeft = startHold;
   b.teamWait = 0;
-  b.waitForTeam = false;
+  // Moving in pairs (M38, teamPlay) starts at the spawn: of two on one lane, one sets off first.
+  b.waitForTeam = b.skill.teamPlay;
   b.holding = false;
   b.heldAngleCount = 0;
   b.heldAnglesAt = Number.NEGATIVE_INFINITY;
+  b.careful = false;
+  b.watchUntil = Number.NEGATIVE_INFINITY;
+  b.tradeAt = Number.NEGATIVE_INFINITY;
+  b.tradeTried = false;
   b.atPost = false;
   b.holdCover = false;
   b.searchLookLeft = 0;
@@ -362,6 +380,11 @@ export function recallHeardOther(b: Bot, time: number, cfg: BotBehaviour): boole
   b.heardAt = b.heardOtherAt;
   b.heardOtherAt = Number.NEGATIVE_INFINITY;
   return true;
+}
+
+/** True while the bot still remembers an enemy it saw or heard (memoryTime). */
+export function threatInMind(b: Bot, w: BotWorld): boolean {
+  return b.hasLastKnown && w.time - Math.max(lastSeenAt(b), b.heardAt) < w.cfg.memoryTime;
 }
 
 /** When the current target was last seen, or -Infinity without one. */

@@ -1,0 +1,1133 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { BOT_SKILL, BOTS, botConfig, type BotConfig, type Difficulty } from '../config/bots';
+import { BODY } from '../config/movement';
+import { DEPOT } from '../map/depot';
+import type { MapBlock, MapData } from '../map/mapTypes';
+import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
+import type { Character } from '../sim/character';
+import { OPEN_FIELD } from '../sim/testSupport';
+import { type Vec3, vec3, wrapAngle } from '../sim/vec';
+import { lookAngles } from './aim';
+import type { Bot } from './bot';
+import { pushingLate } from './botBrain';
+import { playMatch } from './depotMatchSupport';
+import { eyeOf, lineClear } from './perception';
+import { depotBots, skirmish } from './testSupport';
+
+// Clearing corners and team play (M38): what Pro bots do that the levels below don't.
+
+const DEG = Math.PI / 180;
+const DT = 1 / 60;
+
+const setSkill = (b: Bot, level: Difficulty | BotConfig) => {
+  (b as { skill: unknown }).skill = typeof level === 'string' ? botConfig(level) : level;
+};
+
+const box = (kind: MapBlock['kind'], x: number, z: number, sx: number, sy: number, sz: number): MapBlock => ({ kind, center: vec3(x, sy / 2, z), size: vec3(sx, sy, sz) });
+
+/** The open field with these blocks and lanes (each lane listed in Orange's walking order: Orange walks lanes last to first). */
+const field = (blocks: MapBlock[], lanes: Vec3[][] = []): MapData => ({ ...OPEN_FIELD, blocks: [...OPEN_FIELD.blocks, ...blocks], lanes: lanes.map((l) => [...l].reverse()) });
+
+// A closed hut (a container) where Blue hides: unseen, and silent while standing still.
+const HUT = box('container', 30, 30, 4, 3, 4);
+
+/** Empty magazines all round: these tests are about moving and looking, not shooting. */
+function unarmed(chars: readonly { armament: { ammo: { mag: number; pouch: number[] }[] } }[]): void {
+  for (const c of chars) {
+    c.armament.ammo[0]!.mag = 0;
+    c.armament.ammo[0]!.pouch.fill(0);
+  }
+}
+
+describe('clearing corners near the enemy', () => {
+  // Orange walks a lane south past the end of a wall on its left: a corner someone could step round.
+  const map = field([HUT, box('wall', -10, -24, 18, 3, 1)], [[vec3(0, 0, -16), vec3(0, 0, -22), vec3(0, 0, -30), vec3(3, 0, -40)]]);
+
+  function walkLane(level: 'hard' | 'pro') {
+    const { bots, run, commands, state } = skirmish(map, [
+      [30, 30, 0],
+      [0, -12, 1],
+    ]);
+    unarmed(state.characters);
+    const b = bots.bots[0]!;
+    setSkill(b, level);
+    const w = bots.worldForTests;
+    // Past the middle of the map, nobody seen or heard.
+    (w as { inEnemyHalf: (x: Bot) => boolean }).inEnemyHalf = () => true;
+    const cmd = commands.get(b.character.id)!;
+    let moving = 0;
+    let walked = 0;
+    let sprinted = 0;
+    let onCorner = 0;
+    // Leaning: how often it leans within and beyond sliceLeanDistance of the nearest corner it has in mind, and to the wrong side.
+    const leaned = { near: 0, far: 0, wrongSide: 0, farCornerTicks: 0 };
+    const eye = vec3();
+    const look = { yaw: 0, pitch: 0 };
+    run(6, () => {
+      if (cmd.forward === 0 && cmd.right === 0) return;
+      moving++;
+      if (cmd.walk) walked++;
+      if (cmd.sprint) sprinted++;
+      if (b.heldAngleCount === 0) return;
+      const me = b.character.position;
+      let nearest = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < b.heldAngleCount; i++) nearest = Math.min(nearest, Math.hypot(b.heldAngles[i]!.point.x - me.x, b.heldAngles[i]!.point.z - me.z));
+      if (nearest > BOTS.sliceLeanDistance) leaned.farCornerTicks++;
+      if (cmd.lean !== 0) {
+        if (nearest <= BOTS.sliceLeanDistance) leaned.near++;
+        else leaned.far++;
+        // The wall is on its left (-x), the corner's open side on the right: the lean is to the right.
+        if (cmd.lean !== 1) leaned.wrongSide++;
+      }
+      eyeOf(b.character, w.body, w.hits, eye);
+      const a = b.heldAngles[0]!;
+      lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, look);
+      if (Math.abs(wrapAngle(b.aim.yaw - look.yaw)) < 5 * DEG) onCorner++;
+    });
+    return { b, moving, walked, sprinted, onCorner, leaned };
+  }
+
+  it('walks, never sprints, and aims at the corner ahead instead of where it walks (Pro)', () => {
+    const pro = walkLane('pro');
+    expect(pro.b.hunting).toBe(false);
+    expect(pro.moving).toBeGreaterThan(60);
+    expect(pro.walked).toBe(pro.moving);
+    expect(pro.sprinted).toBe(0);
+    expect(pro.onCorner).toBeGreaterThan(pro.moving / 4);
+    // Hard runs its lane looking where it goes.
+    const hard = walkLane('hard');
+    expect(hard.moving).toBeGreaterThan(60);
+    expect(hard.walked).toBeLessThan(hard.moving / 2);
+    expect(hard.onCorner).toBe(0);
+  });
+
+  it('leans out to the open side of a near corner as it walks up to it, and never from further off (Pro); Hard never leans', () => {
+    const pro = walkLane('pro');
+    expect(pro.leaned.near).toBeGreaterThan(20);
+    expect(pro.leaned.wrongSide).toBe(0);
+    expect(pro.leaned.far).toBe(0);
+    // It spends a good while walking with the corner further off than that, not leaning (so the guard is not vacuous).
+    expect(pro.leaned.farCornerTicks).toBeGreaterThan(60);
+    const hard = walkLane('hard');
+    expect(hard.moving).toBeGreaterThan(60);
+    expect(hard.leaned.near + hard.leaned.far).toBe(0);
+  });
+
+  it('runs when it is hunting with nothing heard, even in the enemy half', () => {
+    const { bots, run, commands, state } = skirmish(field([HUT]), [
+      [30, 30, 0],
+      [0, -12, 1],
+    ]);
+    unarmed(state.characters);
+    const b = bots.bots[0]!;
+    setSkill(b, 'pro');
+    (bots.worldForTests as { inEnemyHalf: (x: Bot) => boolean }).inEnemyHalf = () => true;
+    const cmd = commands.get(b.character.id)!;
+    let moving = 0;
+    let walked = 0;
+    run(3, () => {
+      if (cmd.forward === 0 && cmd.right === 0) return;
+      moving++;
+      if (cmd.walk) walked++;
+    });
+    // No lanes on this field: it hunts from the start.
+    expect(b.hunting).toBe(true);
+    expect(moving).toBeGreaterThan(60);
+    expect(walked).toBeLessThan(moving / 2);
+  });
+});
+
+describe('slicing the corner that hides someone heard (Pro)', () => {
+  // A wall across the way, its right-hand end at (0, -10) a corner. Blue's player fires from 5 m behind it (z = -4). Two
+  // Pro bots hear it: a mate just south of the wall, and the one we follow, 7 m back and walking north (the mate shares
+  // where the shot came from, as the bot itself is out of earshot). Blue then slips off, so there is nobody at the spot.
+  const WALL = box('wall', -7, -10, 14, 3, 0.5);
+  const map = field([HUT, WALL]);
+  const MATE = [-10, -12, 1] as const;
+
+  /** Walks the bot at (3, -17) towards the heard spot for 9 s, sampling what it aims at and how it leans each tick. */
+  function approach(level: 'hard' | 'pro') {
+    const { state, player, bots, run, commands } = skirmish(map, [
+      [-5, -4, 0],
+      [3, -17, 1],
+      MATE,
+    ]);
+    unarmed(state.characters);
+    const [b, mate] = bots.bots as [Bot, Bot];
+    setSkill(mate, 'pro');
+    setSkill(b, 'pro');
+    state.events.push({ type: 'shot', characterId: player.id, replicaId: 'aeg', position: vec3(player.position.x, 1.4, player.position.z) });
+    bots.observe(state);
+    player.position.x = 30;
+    player.position.z = 40;
+    // The bot has learnt of the spot (the mate's guess of where the shot was).
+    expect(b.hasLastKnown).toBe(true);
+    // Hard: the same spot, as news of its own (a Hard bot is told nothing by a Pro one).
+    setSkill(b, level);
+    if (level === 'hard') {
+      b.hasLastKnown = true;
+      b.heardAt = state.time;
+      b.lastThreatAt = state.time;
+    }
+    const w = bots.worldForTests;
+    const cmd = commands.get(b.character.id)!;
+    const eye = vec3();
+    const head = vec3();
+    const spot = { yaw: 0, pitch: 0 };
+    const held = { yaw: 0, pitch: 0 };
+    const hiddenAtStart = (() => {
+      eyeOf(b.character, w.body, w.hits, eye);
+      head.x = b.lastKnown.x;
+      head.y = b.lastKnown.y + w.body.standEyeHeight;
+      head.z = b.lastKnown.z;
+      return !lineClear(w.query, eye, head);
+    })();
+    const seen = {
+      hiddenAtStart,
+      hidden: 0, // ticks searching with the spot out of view
+      sliced: 0, // ... of which it had a corner in mind
+      onCorner: 0, // ... aiming within 5 degrees of the held angle nearest the spot's bearing
+      atSpotHidden: 0, // ... aiming within 5 degrees of the spot itself
+      leans: 0,
+      leanWrong: 0, // leaning to anything but the open side of the corner it aims at
+      leanFar: 0, // leaning with that corner further off than sliceLeanDistance
+      nearCornerTicks: 0, // south of the wall, within 5 m of its end
+      nearCornerLeaning: 0, // ... of which leaning to the left (the open side walking north)
+      visible: 0, // ticks searching with the spot in view, settled for a quarter of a second
+      atSpotVisible: 0, // ... aiming at the spot, at head height (2 degrees)
+      leanVisible: 0,
+    };
+    let visibleSince = Number.NaN;
+    run(9, () => {
+      if (b.mode !== 'search' || !b.hasLastKnown || (cmd.forward === 0 && cmd.right === 0)) return;
+      eyeOf(b.character, w.body, w.hits, eye);
+      head.x = b.lastKnown.x;
+      head.y = b.lastKnown.y + w.body.standEyeHeight;
+      head.z = b.lastKnown.z;
+      lookAngles(eye.x, eye.y, eye.z, head.x, head.y, head.z, spot);
+      const me = b.character.position;
+      if (lineClear(w.query, eye, head)) {
+        if (Number.isNaN(visibleSince)) visibleSince = state.time;
+        if (state.time - visibleSince < 0.25) return;
+        seen.visible++;
+        if (Math.abs(wrapAngle(b.aim.yaw - spot.yaw)) < 2 * DEG && Math.abs(b.aim.pitch - spot.pitch) < 2 * DEG) seen.atSpotVisible++;
+        if (cmd.lean !== 0) seen.leanVisible++;
+        return;
+      }
+      visibleSince = Number.NaN;
+      // Past its first half second the view has turned to wherever it means to look.
+      if (state.time < 1) return;
+      seen.hidden++;
+      if (Math.abs(wrapAngle(b.aim.yaw - spot.yaw)) < 5 * DEG) seen.atSpotHidden++;
+      const nearCorner = me.z < -11 && Math.hypot(me.x, me.z + 10) <= 5;
+      if (nearCorner) {
+        seen.nearCornerTicks++;
+        if (cmd.lean === -1) seen.nearCornerLeaning++;
+      }
+      if (b.heldAngleCount === 0) return;
+      seen.sliced++;
+      // The held angle nearest the spot's bearing is the one it aims at.
+      let a = b.heldAngles[0]!;
+      for (let i = 1; i < b.heldAngleCount; i++) {
+        const o = b.heldAngles[i]!;
+        if (Math.abs(wrapAngle(o.yaw - spot.yaw)) < Math.abs(wrapAngle(a.yaw - spot.yaw))) a = o;
+      }
+      lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, held);
+      if (Math.abs(wrapAngle(b.aim.yaw - held.yaw)) < 5 * DEG) seen.onCorner++;
+      if (cmd.lean !== 0) {
+        seen.leans++;
+        if (cmd.lean !== a.side) seen.leanWrong++;
+        if (Math.hypot(a.point.x - me.x, a.point.z - me.z) > BOTS.sliceLeanDistance + 0.1) seen.leanFar++;
+      }
+    });
+    return { b, ...seen };
+  }
+
+  it('aims at the corner the spot is behind, not at the spot, and leans out to its open side as it walks up to it; once the spot is in view it watches that', () => {
+    const pro = approach('pro');
+    expect(pro.hiddenAtStart).toBe(true);
+    // A good while walking with the spot hidden, a corner in mind most of it, and the view on that corner, not the spot.
+    expect(pro.hidden).toBeGreaterThan(100);
+    expect(pro.sliced).toBeGreaterThan(pro.hidden * 0.6);
+    expect(pro.onCorner).toBeGreaterThan(pro.sliced * 0.8);
+    expect(pro.atSpotHidden).toBeLessThan(pro.hidden * 0.25);
+    // Close to the corner it leans out, left of its walk north (the wall is on its right), to that angle's open side only.
+    expect(pro.nearCornerTicks).toBeGreaterThan(15);
+    expect(pro.nearCornerLeaning).toBeGreaterThan(pro.nearCornerTicks * 0.8);
+    expect(pro.leans).toBeGreaterThan(15);
+    expect(pro.leanWrong).toBe(0);
+    expect(pro.leanFar).toBe(0);
+    // Round the corner the spot is in view: it looks at it (at head height), upright.
+    expect(pro.visible).toBeGreaterThan(30);
+    expect(pro.atSpotVisible).toBeGreaterThan(pro.visible * 0.9);
+    expect(pro.leanVisible).toBe(0);
+  });
+
+  it('Hard walking the same way never leans and looks at the spot, hidden or not', () => {
+    const hard = approach('hard');
+    expect(hard.hiddenAtStart).toBe(true);
+    expect(hard.hidden).toBeGreaterThan(100);
+    expect(hard.b.heldAngleCount).toBe(0);
+    expect(hard.sliced).toBe(0);
+    expect(hard.leans).toBe(0);
+    expect(hard.nearCornerLeaning).toBe(0);
+    expect(hard.leanVisible).toBe(0);
+    expect(hard.atSpotHidden).toBeGreaterThan(hard.hidden * 0.9);
+    expect(hard.visible).toBeGreaterThan(30);
+    expect(hard.atSpotVisible).toBeGreaterThan(hard.visible * 0.9);
+  });
+});
+
+describe('watching where someone ducked out of sight', () => {
+  // Blue's player stands in the open 12 m off, then steps into the hut.
+  const map = field([HUT]);
+
+  function lose(level: 'hard' | 'pro', seed: number) {
+    const { player, bots, run, state, commands } = skirmish(
+      map,
+      [
+        [0, 0, 0],
+        [0, -12, 1],
+      ],
+      BOTS,
+      seed,
+    );
+    unarmed(state.characters);
+    const b = bots.bots[0]!;
+    setSkill(b, level);
+    run(0.5);
+    expect(b.targetVisible).toBe(true);
+    player.position.x = 30;
+    player.position.z = 30;
+    const lostAt = state.time;
+    const cmd = commands.get(b.character.id)!;
+    // How long until it sets off after them (the first step it takes in search mode).
+    let stillFor = Number.NaN;
+    run(4, () => {
+      if (Number.isNaN(stillFor) && b.mode === 'search' && (cmd.forward !== 0 || cmd.right !== 0)) stillFor = state.time - lostAt;
+    });
+    return { b, stillFor, lostAt };
+  }
+
+  it('stays and watches the spot for a moment before going after them (Pro); Hard goes at once', () => {
+    const pro = botConfig('pro');
+    for (const seed of [1, 2, 3]) {
+      const { b, stillFor, lostAt } = lose('pro', seed);
+      // It notices the loss at its next look (thinkInterval).
+      expect(b.watchUntil - lostAt).toBeGreaterThanOrEqual(pro.peekWatchTime[0]);
+      expect(b.watchUntil - lostAt).toBeLessThanOrEqual(pro.peekWatchTime[1] + BOTS.thinkInterval + DT);
+      expect(stillFor).toBeGreaterThanOrEqual(pro.peekWatchTime[0]);
+      const hard = lose('hard', seed);
+      expect(hard.stillFor).toBeLessThan(0.5);
+      expect(hard.b.watchUntil).toBe(Number.NEGATIVE_INFINITY);
+    }
+  });
+
+  it('watches at head height there, and answers a re-peek from that spot as pre-aimed', () => {
+    const { player, bots, run, state } = skirmish(
+      map,
+      [
+        [0, 0, 0],
+        [0, -12, 1],
+      ],
+      BOTS,
+      2,
+    );
+    unarmed(state.characters);
+    const b = bots.bots[0]!;
+    setSkill(b, 'pro');
+    run(0.5);
+    const x = player.position.x;
+    const z = player.position.z;
+    player.position.x = 30;
+    player.position.z = 30;
+    // Out of sight for longer than contactGrace (a new contact when they come back), still within the watch.
+    run(BOTS.contactGrace + 0.2);
+    expect(state.time).toBeLessThan(b.watchUntil);
+    const eye = vec3();
+    eyeOf(b.character, BODY, bots.worldForTests.hits, eye);
+    const head = { yaw: 0, pitch: 0 };
+    lookAngles(eye.x, eye.y, eye.z, x, BODY.standEyeHeight, z, head);
+    expect(Math.abs(wrapAngle(b.aim.yaw - head.yaw))).toBeLessThan(2 * DEG);
+    expect(Math.abs(b.aim.pitch - head.pitch)).toBeLessThan(2 * DEG);
+    player.position.x = x;
+    player.position.z = z;
+    let delay = Number.NaN;
+    let settled = Number.NaN;
+    run(0.3, () => {
+      if (Number.isNaN(delay) && b.targetVisible && b.contact) {
+        delay = b.contact.reactAt - state.time;
+        settled = state.time - b.contact.acquiredAt;
+      }
+    });
+    const pro = botConfig('pro');
+    expect(delay).toBeLessThanOrEqual(pro.preAimReactionTime[1]);
+    expect(settled).toBeCloseTo(pro.preAimSettled * pro.aimSettleTime, 1);
+  });
+});
+
+describe('trading a hit teammate', () => {
+  // Blue's player shoots from behind a wall; Orange's first bot is hit 15 m off, its teammate 4 m beside it.
+  const wall = box('wall', 0, -5, 14, 3, 0.4);
+
+  function trade(level: 'hard' | 'pro', blocks: MapBlock[] = [wall], shooterZ = 0) {
+    const { state, player, bots, run, commands } = skirmish(field(blocks), [
+      [0, shooterZ, 0],
+      [0, -15, 1],
+      [4, -16, 1],
+    ]);
+    // Armed (an empty magazine would end any cover at once), but nobody is in sight to shoot at.
+    for (const b of bots.bots) setSkill(b, level);
+    const [victim, mate] = bots.bots as [Bot, Bot];
+    state.events.length = 0;
+    state.events.push({ type: 'characterHit', victimId: victim.character.id, shooterId: player.id, position: vec3(0, 1.2, -15), direction: vec3(0, 0, -1), ricochet: false });
+    victim.character.status = 'walkingOff';
+    bots.observe(state);
+    const cmd = commands.get(mate.character.id)!;
+    let walking = 0;
+    let moving = 0;
+    let peeked = false;
+    const start = vec3(mate.character.position.x, 0, mate.character.position.z);
+    run(3, () => {
+      if (cmd.forward !== 0 || cmd.right !== 0) {
+        moving++;
+        if (cmd.walk) walking++;
+      }
+      if (mate.mode === 'cover' && mate.coverPhase === 'peek') peeked = true;
+    });
+    const p = mate.character.position;
+    const closed = Math.hypot(start.x - mate.lastKnown.x, start.z - mate.lastKnown.z) - Math.hypot(p.x - mate.lastKnown.x, p.z - mate.lastKnown.z);
+    return { mate, walking, moving, peeked, closed };
+  }
+
+  it('goes for where the shot came from at a run (Pro); Hard creeps up on it', () => {
+    const pro = trade('pro');
+    expect(pro.mate.tradeAt).toBeGreaterThan(Number.NEGATIVE_INFINITY);
+    expect(pro.moving).toBeGreaterThan(60);
+    expect(pro.walking).toBe(0);
+    const hard = trade('hard');
+    expect(hard.mate.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(hard.walking).toBeGreaterThan(hard.moving / 2);
+    expect(pro.closed).toBeGreaterThan(hard.closed + 1);
+  });
+
+  it('peeks from cover near it towards the shot when there is some (Pro)', () => {
+    // The shooter out of sight beyond viewDistance (the hit call puts them hearingDistance back along the BB's way), and
+    // a crate a couple of metres off, between the teammate and there.
+    const crate = box('crate', 3, -13, 2, 1.2, 0.6);
+    const pro = trade('pro', [crate], 30);
+    expect(pro.peeked).toBe(true);
+    // Hard doesn't: it heads straight there.
+    expect(trade('hard', [crate], 30).peeked).toBe(false);
+  });
+});
+
+describe('reloading behind cover', () => {
+  // Someone was just heard in the hut 14 m off; a crate stands a couple of metres from the bot.
+  const map = field([box('container', 0, 0, 4, 3, 4), box('crate', 1.5, -12, 2, 1.2, 0.6)]);
+
+  function lowMag(level: 'hard' | 'pro', on = map) {
+    const { state, bots, run, commands } = skirmish(on, [
+      [0, 0, 0],
+      [0, -14, 1],
+    ]);
+    const b = bots.bots[0]!;
+    setSkill(b, level);
+    b.lastKnown.x = 0;
+    b.lastKnown.z = 0;
+    b.hasLastKnown = true;
+    b.heardAt = state.time;
+    b.character.armament.ammo[0]!.mag = 2;
+    const cmd = commands.get(b.character.id)!;
+    let reloadAt: { x: number; z: number; mode: string } | undefined;
+    run(4, () => {
+      if (cmd.reload && !reloadAt) reloadAt = { x: b.character.position.x, z: b.character.position.z, mode: b.mode };
+    });
+    return { b, reloadAt };
+  }
+
+  it('tops up from a cover spot with a threat in mind (Pro), where Hard tops up on the spot', () => {
+    const pro = lowMag('pro');
+    expect(pro.reloadAt).toBeDefined();
+    expect(pro.reloadAt!.mode).toBe('cover');
+    expect(Math.hypot(pro.reloadAt!.x - pro.b.cover.position.x, pro.reloadAt!.z - pro.b.cover.position.z)).toBeLessThan(BOTS.coverArrive);
+    const hard = lowMag('hard');
+    expect(hard.reloadAt).toBeDefined();
+    expect(Math.hypot(hard.reloadAt!.x, hard.reloadAt!.z + 14)).toBeLessThan(0.3);
+  });
+
+  it('tops up where it stands when no cover is near (Pro)', () => {
+    const open = lowMag('pro', field([box('container', 0, 0, 4, 3, 4)]));
+    expect(open.reloadAt).toBeDefined();
+    expect(Math.hypot(open.reloadAt!.x, open.reloadAt!.z + 14)).toBeLessThan(0.3);
+  });
+});
+
+describe('pushing late when behind', () => {
+  // Blue's two hide in the hut; Orange's one walks a long lane.
+  const map = field([HUT], [[vec3(0, 0, -16), vec3(0, 0, -30), vec3(0, 0, -45)]]);
+
+  function late(level: 'hard' | 'pro', clock: number, behind: boolean) {
+    const { state, bots, run } = skirmish(map, [
+      [30, 30, 0],
+      [0, -12, 1],
+      [30, 30, 0],
+    ]);
+    unarmed(state.characters);
+    for (const x of bots.bots) setSkill(x, level);
+    const b = bots.bots.find((x) => x.character.team === 1)!;
+    if (!behind) state.characters[2]!.status = 'out';
+    state.round.clock = clock;
+    run(0.5);
+    return { b, pushing: pushingLate(b, bots.worldForTests) };
+  }
+
+  it('goes looking for the other side late in the round with fewer in play (Pro only)', () => {
+    const pro = late('pro', 20, true);
+    expect(pro.pushing).toBe(true);
+    expect(pro.b.hunting).toBe(true);
+    for (const [level, clock, behind] of [
+      ['pro', 60, true],
+      ['pro', 20, false],
+      ['hard', 20, true],
+    ] as const) {
+      const r = late(level, clock, behind);
+      expect(r.pushing, `${level} ${clock} s ${behind}`).toBe(false);
+      expect(r.b.hunting, `${level} ${clock} s ${behind}`).toBe(false);
+    }
+  });
+});
+
+describe('defence and moving in pairs', () => {
+  beforeAll(async () => {
+    await initPhysics();
+  });
+
+  it('two Pro defenders on one lane both hold its forward point, the second in a crossfire where the yard allows', () => {
+    const physics = new PhysicsWorld(DEPOT, BODY, DT);
+    const { state, bots } = depotBots('attackDefend', physics, botConfig('pro'));
+    for (const b of bots.bots) setSkill(b, 'pro');
+    state.round.attackers = 0;
+    let pairs = 0;
+    let crossfires = 0;
+    for (let round = 2; round < 30; round++) {
+      state.events.length = 0;
+      state.events.push({ type: 'roundStart', round });
+      bots.bots.forEach((b, i) => {
+        const s = DEPOT.spawns[1]![i]!;
+        b.character.position.x = s.position.x;
+        b.character.position.z = s.position.z;
+      });
+      bots.observe(state);
+      const lanes = bots.bots.map((b) => b.lane);
+      const shared = lanes.find((l, i) => lanes.indexOf(l) !== i);
+      if (shared === undefined) continue;
+      const pair = bots.bots.filter((b) => b.lane === shared);
+      // Planning only, nobody steps: each arrives as soon as its route is planned.
+      for (let i = 0; i < 1800; i++) {
+        bots.think(state, DT);
+        state.time += DT;
+        for (const b of pair) {
+          const end = b.route[b.route.length - 1];
+          if (b.routeState !== 'ok' || !end) continue;
+          b.character.position.x = end.x;
+          b.character.position.z = end.z;
+        }
+      }
+      pairs++;
+      expect(pair[0]!.laneIndex).toBe(pair[1]!.laneIndex);
+      const choke = DEPOT.lanes[shared]![pair[0]!.laneIndex + pair[0]!.laneDir]!;
+      const [a, c] = pair.map((b) => Math.atan2(b.character.position.x - choke.x, b.character.position.z - choke.z));
+      if (Math.abs(wrapAngle(a! - c!)) < BOTS.crossfireMinDeg * DEG - 0.05) continue;
+      crossfires++;
+      for (const b of pair) {
+        const p = b.character.position;
+        expect(lineClear(physics, vec3(p.x, p.y + BODY.standEyeHeight, p.z), vec3(choke.x, choke.y + BODY.standEyeHeight, choke.z))).toBe(true);
+      }
+    }
+    physics.dispose();
+    expect(pairs).toBeGreaterThan(5);
+    // Two of Depot's lanes run along a narrow way where a second angle on the choke doesn't exist; the third has one.
+    expect(crossfires).toBeGreaterThan(0);
+  });
+
+  it('moves in pairs: a Pro bot sets off from a lane point only while its lane partner holds', { timeout: 60_000 }, () => {
+    /** Of the times a bot left a lane point with a lane partner near, the share it left while that partner was moving. */
+    const leftWithPartnerMoving = (cfg: BotConfig) => {
+      let departures = 0;
+      let together = 0;
+      const wasHolding = new Map<Bot, boolean>();
+      const moving = (o: Bot) => o.mode === 'advance' && !o.hunting && !o.holding && o.routeState === 'ok';
+      playMatch(90, 3, undefined, cfg, 'elimination', undefined, undefined, undefined, undefined, (_s, bots) => {
+        for (const b of bots.bots) {
+          const held = wasHolding.get(b) ?? false;
+          wasHolding.set(b, b.holding);
+          if (!held || b.holding || b.mode !== 'advance' || b.hunting || b.character.status !== 'alive') continue;
+          const p = b.character.position;
+          const partner = bots.bots.find(
+            (o) =>
+              o !== b &&
+              o.character.team === b.character.team &&
+              o.lane === b.lane &&
+              o.character.status === 'alive' &&
+              Math.hypot(o.character.position.x - p.x, o.character.position.z - p.z) <= BOTS.boundDistance,
+          );
+          if (!partner) continue;
+          departures++;
+          if (moving(partner)) together++;
+        }
+      });
+      return { departures, share: together / Math.max(1, departures) };
+    };
+    const pro = botConfig('pro');
+    const pairs = leftWithPartnerMoving(pro);
+    const loose = leftWithPartnerMoving({ ...pro, teamPlay: false });
+    expect(pairs.departures).toBeGreaterThan(5);
+    expect(loose.share).toBeGreaterThan(0.25);
+    // Only a wait that runs out (teamWaitMax) lets both go at once.
+    expect(pairs.share).toBeLessThan(loose.share / 2);
+  });
+});
+
+describe('heard spots shared, hit calls traded only by those who heard them', () => {
+  // Blue's player at the origin, behind a wall; Orange's bots: the victim 15 m off, `near` beside it, `far` 42 m off (27 m
+  // from the victim: beyond hearingDistance of a hit call). `extra` adds more characters after those.
+  function arena(map: MapData, playerZ = 0, extra: readonly (readonly [number, number, number])[] = []) {
+    const s = skirmish(map, [
+      [0, playerZ, 0],
+      [0, -15, 1],
+      [4, -16, 1],
+      [0, -42, 1],
+      ...extra,
+    ]);
+    for (const b of s.bots.bots) setSkill(b, 'pro');
+    const [victim, near, far] = s.bots.bots as [Bot, Bot, Bot];
+    s.state.events.length = 0;
+    /** The player hits the victim (from `playerZ`), as the simulation emits it. */
+    const hit = () => {
+      s.state.events.push({
+        type: 'characterHit',
+        victimId: victim.character.id,
+        shooterId: s.player.id,
+        position: vec3(0, 1.2, -15),
+        direction: vec3(0, 0, playerZ < -15 ? 1 : -1),
+        ricochet: false,
+      });
+      victim.character.status = 'walkingOff';
+    };
+    return { ...s, victim, near, far, hit };
+  }
+  const WALL = field([box('wall', 0, -5, 14, 3, 0.4)]);
+  const AWAY = vec3(50, 0, 50);
+  /** `far`'s own idea of where someone is: far from where anything is heard, to tell it kept it. */
+  const ownNews = (b: Bot, heardAt: number) => {
+    b.lastKnown.x = AWAY.x;
+    b.lastKnown.y = 0;
+    b.lastKnown.z = AWAY.z;
+    b.hasLastKnown = true;
+    b.heardAt = heardAt;
+  };
+
+  it('a far Pro teammate that did not hear the hit call is told where it came from, but does not trade', () => {
+    const { state, bots, run, near, far, hit } = arena(WALL);
+    hit();
+    bots.observe(state);
+    expect(near.heardAt).toBe(state.time);
+    expect(near.hasLastKnown).toBe(true);
+    expect(near.tradeAt).toBe(state.time);
+    // Told (a copy of its teammate's guess, heard now), not hearing it (nor fighting: nothing heard "besides").
+    expect(far.hasLastKnown).toBe(true);
+    expect(far.heardAt).toBe(state.time);
+    expect(far.lastThreatAt).toBe(state.time);
+    expect(far.lastKnown).toEqual(near.lastKnown);
+    expect(far.heardOtherAt).toBe(Number.NEGATIVE_INFINITY);
+    // But it never trades on hearsay, now or later.
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    run(1);
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(far.tradeTried).toBe(false);
+  });
+
+  it('a shot is shared the same way (no hit call: nobody trades)', () => {
+    const { state, player, bots, run, near, far } = arena(field([]));
+    state.events.push({ type: 'shot', characterId: player.id, replicaId: 'aeg', position: vec3(player.position.x, 1.4, player.position.z) });
+    bots.observe(state);
+    expect(near.heardAt).toBe(state.time);
+    expect(near.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    // The far one is beyond earshot of a shot at 42 m, yet knows where it was.
+    expect(far.hasLastKnown).toBe(true);
+    expect(far.heardAt).toBe(state.time);
+    expect(far.lastKnown).toEqual(near.lastKnown);
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    run(1);
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+  });
+
+  // The simulation emits a tick's events in order: a footstep or shot of the player's, then the BB's hit.
+  const noises = {
+    'a shot': (p: Character) => ({ type: 'shot', characterId: p.id, replicaId: 'aeg', position: vec3(p.position.x, 1.4, p.position.z) }) as const,
+    'a sprinting footstep': (p: Character) => ({ type: 'footstep', characterId: p.id, kind: 'sprint' }) as const,
+  };
+  it.each(Object.keys(noises) as (keyof typeof noises)[])('%s earlier in the tick, heard by a far teammate, does not make it trade a hit call it did not hear', (name) => {
+    // The player 30 m out: the far bot (12 m from them) hears the noise, but not the call at the victim (27 m off).
+    const { state, player, bots, victim, near, far, hit } = arena(field([]), -30);
+    state.events.push(noises[name](player));
+    hit();
+    bots.observe(state);
+    expect(far.heardAt).toBe(state.time);
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(far.tradeTried).toBe(false);
+    // The one that heard the call does trade.
+    expect(near.tradeAt).toBe(state.time);
+    expect(victim.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+  });
+
+  it('a Hard teammate gets nothing from a Pro one, and a Hard one that heard tells nobody', () => {
+    const a = arena(WALL);
+    setSkill(a.far, 'hard');
+    a.hit();
+    a.bots.observe(a.state);
+    expect(a.near.tradeAt).toBe(a.state.time);
+    expect(a.far.hasLastKnown).toBe(false);
+    expect(a.far.heardAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(a.far.lastThreatAt).toBe(Number.NEGATIVE_INFINITY);
+    // The other way round: the hearer is Hard, the far one Pro.
+    const b = arena(WALL);
+    setSkill(b.near, 'hard');
+    b.hit();
+    b.bots.observe(b.state);
+    expect(b.near.hasLastKnown).toBe(true);
+    expect(b.far.hasLastKnown).toBe(false);
+    expect(b.far.heardAt).toBe(Number.NEGATIVE_INFINITY);
+  });
+
+  it('a teammate with fresher news of its own keeps it; stale news is replaced', () => {
+    const fresh = arena(WALL);
+    ownNews(fresh.far, fresh.state.time - 0.5);
+    fresh.hit();
+    fresh.bots.observe(fresh.state);
+    expect(fresh.far.lastKnown.x).toBe(AWAY.x);
+    expect(fresh.far.lastKnown.z).toBe(AWAY.z);
+    expect(fresh.far.heardAt).toBe(fresh.state.time - 0.5);
+    // News from its own eyes counts as fresh as well (a contact seen a moment ago).
+    const seen = arena(WALL);
+    ownNews(seen.far, Number.NEGATIVE_INFINITY);
+    seen.far.contact = { seenAt: seen.state.time - 0.5 } as Bot['contact'];
+    seen.hit();
+    seen.bots.observe(seen.state);
+    expect(seen.far.lastKnown.x).toBe(AWAY.x);
+    expect(seen.far.heardAt).toBe(Number.NEGATIVE_INFINITY);
+    // Control: news from hearingContactTime ago is old, and the teammate's guess replaces it.
+    const stale = arena(WALL);
+    ownNews(stale.far, stale.state.time - BOTS.hearingContactTime - 0.5);
+    stale.hit();
+    stale.bots.observe(stale.state);
+    expect(stale.far.lastKnown).toEqual(stale.near.lastKnown);
+    expect(stale.far.heardAt).toBe(stale.state.time);
+  });
+
+  it('a teammate in a fight keeps its own idea of where they are, however old', () => {
+    const { state, bots, far, near, hit } = arena(WALL);
+    ownNews(far, state.time - 30);
+    far.targetVisible = true;
+    hit();
+    bots.observe(state);
+    expect(near.hasLastKnown).toBe(true);
+    expect(far.lastKnown.x).toBe(AWAY.x);
+    expect(far.lastKnown.z).toBe(AWAY.z);
+    expect(far.heardAt).toBe(state.time - 30);
+    expect(far.lastThreatAt).not.toBe(state.time);
+  });
+
+  it('nothing is shared with the other team or with a teammate out of play', () => {
+    // A Blue Pro bot beside the far one's spot; the far Orange one has been hit.
+    const { state, bots, far, hit } = arena(WALL, 0, [[0, -40, 0]]);
+    const blue = bots.bots[3]!;
+    expect(blue.character.team).toBe(0);
+    far.character.status = 'out';
+    hit();
+    bots.observe(state);
+    expect(blue.hasLastKnown).toBe(false);
+    expect(blue.heardAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(far.hasLastKnown).toBe(false);
+    expect(far.heardAt).toBe(Number.NEGATIVE_INFINITY);
+  });
+});
+
+describe('crossfire where the map allows it, the stagger hold where it does not', () => {
+  // In Orange's walking order: its spawn end first, the choke towards Blue last (the defenders hold the second point).
+  const LANE = [vec3(0, 0, -30), vec3(0, 0, -18), vec3(0, 0, -6)];
+  const walls = [box('wall', -2, -24, 1, 3, 40), box('wall', 2, -24, 1, 3, 40)];
+  // No lane jitter: the first defender's point is the lane's, so the second's offset is the stagger's or the crossfire's alone.
+  const cfgFor = (level: Difficulty): BotConfig => ({ ...botConfig(level), laneJitter: 0 });
+
+  /** Two Orange defenders on the one lane of an Attack / Defend round; played until they hold. */
+  function defend(level: Difficulty, blocks: MapBlock[], seed = 5) {
+    const { state, bots, run } = skirmish(
+      field([HUT, ...blocks], [LANE]),
+      [
+        [30, 30, 0],
+        [0, -40, 1],
+        [2, -40, 1],
+      ],
+      cfgFor(level),
+      seed,
+    );
+    unarmed(state.characters);
+    for (const b of bots.bots) setSkill(b, cfgFor(level));
+    state.round.mode = 'attackDefend';
+    state.round.attackers = 0;
+    state.events.length = 0;
+    state.events.push({ type: 'roundStart', round: 1 });
+    bots.observe(state);
+    let careful = 0;
+    run(30, () => {
+      for (const b of bots.bots) if (b.careful) careful++;
+    });
+    const [first, second] = bots.bots as [Bot, Bot];
+    const choke = LANE[2]!;
+    const yawOf = (b: Bot) => Math.atan2(b.laneGoal.x - choke.x, b.laneGoal.z - choke.z);
+    return { first, second, careful, apart: Math.abs(wrapAngle(yawOf(first) - yawOf(second))) / DEG, between: Math.hypot(first.laneGoal.x - second.laneGoal.x, first.laneGoal.z - second.laneGoal.z) };
+  }
+
+  it('in a corridor too narrow for a crossfire post the second Pro defender holds the stagger spot beside the first', () => {
+    const pro = botConfig('pro');
+    for (const seed of [1, 5, 9]) {
+      const { first, second, apart, between } = defend('pro', walls, seed);
+      // Both hold the lane's forward point, their goals exactly the stagger's laneHoldOffset apart (not on one spot), about
+      // the same angle on the choke.
+      expect(second.laneIndex, `seed ${seed}`).toBe(first.laneIndex);
+      expect(first.holding && second.holding, `seed ${seed}`).toBe(true);
+      expect(between, `seed ${seed}`).toBeCloseTo(pro.laneHoldOffset, 2);
+      expect(apart, `seed ${seed}`).toBeLessThan(pro.crossfireMinDeg);
+    }
+  });
+
+  it('the same lane in the open gets a real crossfire for Pro: a post well round the choke', () => {
+    const pro = botConfig('pro');
+    const { first, second, apart } = defend('pro', []);
+    expect(second.laneIndex).toBe(first.laneIndex);
+    expect(first.holding && second.holding).toBe(true);
+    expect(apart).toBeGreaterThanOrEqual(pro.crossfireMinDeg);
+  });
+
+  it.each(['easy', 'normal', 'hard'] as const)('%s defenders set no crossfire and never slice', (level) => {
+    const { first, second, apart, careful } = defend(level, []);
+    expect(careful).toBe(0);
+    // Not holding one forward point together, in a crossfire.
+    expect(second.laneIndex !== first.laneIndex || apart < botConfig('pro').crossfireMinDeg).toBe(true);
+  });
+});
+
+describe('moving in pairs: who counts as a partner that moves', () => {
+  const LANE = [vec3(0, 0, -6), vec3(0, 0, -18), vec3(0, 0, -30), vec3(0, 0, -42)];
+  const map = field([HUT], [LANE]);
+
+  /** One tick of Orange's first bot, waiting at a lane point with its team, after `setup` shaped its lane partner. */
+  function tick(level: Difficulty, setup: (partner: Bot) => void = () => {}) {
+    const { state, bots } = skirmish(map, [
+      [30, 30, 0],
+      [0, -20, 1],
+      [2, -20, 1],
+    ]);
+    unarmed(state.characters);
+    const [b, partner] = bots.bots as [Bot, Bot];
+    setSkill(b, level);
+    setSkill(partner, level);
+    // b has just paused at a lane point (its hold over), level with its partner (so not "ahead of the team"), who is on the way.
+    b.mode = 'advance';
+    b.hunting = false;
+    b.waitForTeam = true;
+    b.teamWait = 0;
+    b.holdLeft = 0;
+    b.routeState = 'none';
+    b.route.length = 0;
+    partner.lane = b.lane;
+    partner.mode = 'advance';
+    partner.hunting = false;
+    partner.holding = false;
+    partner.order = 'none';
+    partner.routeState = 'ok';
+    setup(partner);
+    bots.think(state, DT);
+    return { b, partner, waited: b.teamWait > 0 && b.holding };
+  }
+
+  it('a lane partner on the move within boundDistance makes a Pro bot wait (control), but not a Hard one', () => {
+    const wait = tick('pro');
+    expect(wait.waited).toBe(true);
+    expect(wait.b.teamWait).toBeCloseTo(DT, 5);
+    expect(tick('hard').waited).toBe(false);
+  });
+
+  it('of two partners at their points in one tick, the one that thinks second sees the first has set off (route still wanted) and waits', () => {
+    const { state, bots } = skirmish(map, [
+      [30, 30, 0],
+      [0, -20, 1],
+      [2, -20, 1],
+    ]);
+    unarmed(state.characters);
+    const [first, second] = bots.bots as [Bot, Bot];
+    for (const b of [first, second]) {
+      setSkill(b, 'pro');
+      b.mode = 'advance';
+      b.hunting = false;
+      b.waitForTeam = true;
+      b.teamWait = 0;
+      b.holdLeft = 0;
+      b.routeState = 'none';
+      b.route.length = 0;
+    }
+    second.lane = first.lane;
+    bots.think(state, DT);
+    // The first sets off (it has asked for a route), the second, finding it so, holds.
+    expect(first.holding).toBe(false);
+    expect(first.routeState).toBe('wanted');
+    expect(second.holding).toBe(true);
+    expect(second.teamWait).toBeCloseTo(DT, 5);
+  });
+
+  describe('how long it waits', () => {
+    /** Orange's first bot after `seconds` of waiting at its lane point with a partner that stays on the move, and when it first stopped holding. */
+    function waitOut(seconds: number, level: Difficulty = 'pro') {
+      const { state, bots } = skirmish(map, [
+        [30, 30, 0],
+        [0, -20, 1],
+        [2, -20, 1],
+      ]);
+      unarmed(state.characters);
+      const [b, partner] = bots.bots as [Bot, Bot];
+      setSkill(b, level);
+      setSkill(partner, level);
+      b.mode = 'advance';
+      b.hunting = false;
+      b.waitForTeam = true;
+      b.teamWait = 0;
+      b.holdLeft = 0;
+      b.routeState = 'none';
+      b.route.length = 0;
+      partner.lane = b.lane;
+      let waitingAt = Number.NaN;
+      for (let t = 0; t < seconds; t += DT) {
+        // The partner never arrives anywhere: always on the move.
+        partner.mode = 'advance';
+        partner.hunting = false;
+        partner.holding = false;
+        partner.order = 'none';
+        partner.routeState = 'ok';
+        bots.think(state, DT);
+        state.time += DT;
+        if (Number.isNaN(waitingAt) && !b.holding) waitingAt = t;
+      }
+      return { b, leftAt: waitingAt };
+    }
+
+    it('longer than teamWaitMax, up to boundWaitMax, then it sets off with the partner still moving', () => {
+      expect(BOTS.boundWaitMax).toBeGreaterThan(BOTS.teamWaitMax);
+      // Still holding well past teamWaitMax (which caps waiting for the team to catch up, not for a partner).
+      const mid = waitOut(BOTS.teamWaitMax + 1);
+      expect(mid.b.holding).toBe(true);
+      expect(mid.leftAt).toBeNaN();
+      // Gone by boundWaitMax (one think interval of slack), and not before it.
+      const end = waitOut(BOTS.boundWaitMax + 0.5);
+      expect(end.b.holding).toBe(false);
+      expect(end.leftAt).toBeGreaterThanOrEqual(BOTS.boundWaitMax - DT);
+      expect(end.leftAt).toBeLessThanOrEqual(BOTS.boundWaitMax + 0.5);
+      expect(end.b.teamWait).toBeGreaterThanOrEqual(BOTS.boundWaitMax);
+    });
+  });
+
+  it('pairing starts at the spawn: a round start has Pro bots wait for their team, and Hard ones not', () => {
+    const start = (level: Difficulty) => {
+      const { state, bots } = skirmish(map, [
+        [30, 30, 0],
+        [0, -20, 1],
+        [2, -20, 1],
+      ]);
+      for (const b of bots.bots) {
+        setSkill(b, level);
+        b.waitForTeam = level !== 'pro';
+      }
+      state.events.length = 0;
+      state.events.push({ type: 'roundStart', round: 1 });
+      bots.observe(state);
+      return bots.bots.map((b) => b.waitForTeam);
+    };
+    expect(start('pro')).toEqual([true, true]);
+    expect(start('hard')).toEqual([false, false]);
+  });
+
+  // Ways a lane partner can fail to be "on the move"; the last is ahead of b, so b is not "ahead of the team" either.
+  const excluded: [string, (p: Bot) => void][] = [
+    ['hunting', (p) => void (p.hunting = true)],
+    ['holding a point', (p) => void (p.holding = true)],
+    ['under a squad order', (p) => void (p.order = 'follow')],
+    ['out of play', (p) => void (p.character.status = 'out')],
+    ['with no route yet', (p) => void (p.routeState = 'none')],
+    ['in another mode', (p) => void (p.mode = 'search')],
+    ['on another lane', (p) => void (p.lane += 1)],
+    ['beyond boundDistance', (p) => void (p.character.position.z = -20 + BOTS.boundDistance + 1)],
+  ];
+
+  it.each(excluded)('a partner %s does not make it wait', (_name, shape) => {
+    const r = tick('pro', shape);
+    expect(r.waited).toBe(false);
+    expect(r.b.waitForTeam).toBe(false);
+  });
+
+  it('a partner just inside boundDistance still does', () => {
+    const r = tick('pro', (p) => (p.character.position.z = -20 + BOTS.boundDistance - 1));
+    expect(r.waited).toBe(true);
+  });
+});
+
+describe('pushing late: only in Elimination, only when behind, only in the last latePushTime', () => {
+  // Orange's bot (index 0 of the bots) against `blue` Blue characters in play and `orange` Orange ones.
+  function pushing(o: { mode?: 'attackDefend'; clock: number; blue: number; orange: number; level?: Difficulty }) {
+    const chars: [number, number, number][] = [[30, 30, 0]];
+    for (let i = 1; i < o.blue; i++) chars.push([30, 30, 0]);
+    for (let i = 0; i < o.orange; i++) chars.push([0, -12, 1]);
+    const { state, bots, run } = skirmish(field([HUT], [[vec3(0, 0, -16), vec3(0, 0, -30), vec3(0, 0, -45)]]), chars);
+    unarmed(state.characters);
+    for (const x of bots.bots) setSkill(x, o.level ?? 'pro');
+    if (o.mode) {
+      state.round.mode = o.mode;
+      state.round.attackers = 0;
+    }
+    state.round.clock = o.clock;
+    run(0.5);
+    const b = bots.bots.find((x) => x.character.team === 1)!;
+    return { pushing: pushingLate(b, bots.worldForTests), hunting: b.hunting };
+  }
+  const late = BOTS.latePushTime;
+
+  it('pushes at the last moment of latePushTime when behind (control), and not a moment before', () => {
+    expect(pushing({ clock: late, blue: 2, orange: 1 })).toEqual({ pushing: true, hunting: true });
+    expect(pushing({ clock: late + 0.5, blue: 2, orange: 1 })).toEqual({ pushing: false, hunting: false });
+  });
+
+  it('does not push in Attack / Defend, however late and behind', () => {
+    expect(pushing({ mode: 'attackDefend', clock: 10, blue: 2, orange: 1 })).toEqual({ pushing: false, hunting: false });
+  });
+
+  it('does not push when level on players or ahead', () => {
+    expect(pushing({ clock: 10, blue: 2, orange: 2 })).toEqual({ pushing: false, hunting: false });
+    expect(pushing({ clock: 10, blue: 1, orange: 2 })).toEqual({ pushing: false, hunting: false });
+  });
+
+  it.each(['easy', 'normal', 'hard'] as const)('%s never pushes late', (level) => {
+    expect(pushing({ clock: 10, blue: 2, orange: 1, level })).toEqual({ pushing: false, hunting: false });
+  });
+});
+
+describe('trading a hit teammate: once per call, and only soon enough', () => {
+  // As the peeking trade test: a crate near the teammate towards where the shot came from, the shooter out of sight.
+  const crate = box('crate', 3, -13, 2, 1.2, 0.6);
+
+  function hitCall(level: Difficulty = 'pro') {
+    const { state, player, bots, commands } = skirmish(field([crate]), [
+      [0, 30, 0],
+      [0, -15, 1],
+      [4, -16, 1],
+    ]);
+    for (const b of bots.bots) setSkill(b, level);
+    const [victim, mate] = bots.bots as [Bot, Bot];
+    const call = () => {
+      state.events.length = 0;
+      state.events.push({ type: 'characterHit', victimId: victim.character.id, shooterId: player.id, position: vec3(0, 1.2, -15), direction: vec3(0, 0, -1), ricochet: false });
+      victim.character.status = 'walkingOff';
+      bots.observe(state);
+      state.events.length = 0;
+    };
+    const tickOnce = () => {
+      bots.think(state, DT);
+      state.time += DT;
+    };
+    return { state, bots, mate, call, tickOnce, commands };
+  }
+
+  it('tries once per hit call: a second go needs a new call', () => {
+    const { state, mate, call, tickOnce } = hitCall();
+    call();
+    expect(mate.tradeTried).toBe(false);
+    for (let i = 0; i < 30; i++) tickOnce();
+    expect(mate.tradeTried).toBe(true);
+    expect(mate.mode).toBe('cover');
+    // Back in the open with its cooldown over and the call still fresh: no second try.
+    mate.mode = 'advance';
+    mate.coverCooldown = 0;
+    tickOnce();
+    expect(state.time - mate.tradeAt).toBeLessThan(BOTS.tradeTime);
+    expect(mate.mode).not.toBe('cover');
+    // A new call re-arms it (control: the guard is the only thing in the way).
+    call();
+    expect(mate.tradeTried).toBe(false);
+    expect(mate.tradeAt).toBe(state.time);
+    mate.mode = 'advance';
+    mate.coverCooldown = 0;
+    tickOnce();
+    expect(mate.tradeTried).toBe(true);
+    expect(mate.mode).toBe('cover');
+  });
+
+  it('does not go after tradeTime has passed, though it still remembers the shot', () => {
+    const { state, mate, call, tickOnce } = hitCall();
+    call();
+    state.time += BOTS.tradeTime - 0.5;
+    tickOnce();
+    expect(mate.tradeTried).toBe(true);
+    const late = hitCall();
+    late.call();
+    late.state.time += BOTS.tradeTime + 0.5;
+    late.tickOnce();
+    expect(late.mate.hasLastKnown).toBe(true);
+    expect(late.state.time - late.mate.heardAt).toBeLessThan(BOTS.memoryTime);
+    expect(late.mate.tradeTried).toBe(false);
+    expect(late.mate.mode).not.toBe('cover');
+  });
+
+  it.each(['easy', 'normal', 'hard'] as const)('%s bots never trade: no tradeAt, no try', (level) => {
+    const { state, mate, call, tickOnce } = hitCall(level);
+    call();
+    for (let i = 0; i < 30; i++) tickOnce();
+    expect(mate.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(mate.tradeTried).toBe(false);
+    expect(state.time).toBeGreaterThan(0);
+  });
+});
+
+describe('Easy, Normal and Hard keep their guards', () => {
+  it.each(['easy', 'normal', 'hard'] as const)('%s has every M38 behaviour off', (level) => {
+    expect(BOT_SKILL[level].slicesCorners).toBe(false);
+    expect(BOT_SKILL[level].teamPlay).toBe(false);
+    expect(BOT_SKILL[level].peekWatchTime).toEqual([0, 0]);
+  });
+
+  it.each(['easy', 'normal', 'hard'] as const)('%s never sets careful walking a lane in the enemy half or with a threat in mind', (level) => {
+    const map = field([HUT], [[vec3(0, 0, -16), vec3(0, 0, -30), vec3(3, 0, -40)]]);
+    const { bots, run, state } = skirmish(map, [
+      [30, 30, 0],
+      [0, -12, 1],
+    ]);
+    unarmed(state.characters);
+    const b = bots.bots[0]!;
+    setSkill(b, level);
+    (bots.worldForTests as { inEnemyHalf: (x: Bot) => boolean }).inEnemyHalf = () => true;
+    let carefulTicks = 0;
+    let thought = 0;
+    run(3, () => {
+      if (b.careful) carefulTicks++;
+    });
+    // Then with someone just heard.
+    b.lastKnown.x = 0;
+    b.lastKnown.z = 0;
+    b.hasLastKnown = true;
+    b.heardAt = state.time;
+    run(3, () => {
+      thought++;
+      if (b.careful) carefulTicks++;
+    });
+    expect(thought).toBeGreaterThan(100);
+    expect(carefulTicks).toBe(0);
+  });
+});

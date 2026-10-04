@@ -135,6 +135,32 @@ export const BOT_BEHAVIOUR = {
   angleMoveRefresh: 0.5,
   /** Someone appearing within this angle (degrees) of where a bot already aims counts as pre-aimed (the skill's preAim*). */
   preAimConeDeg: 6,
+  // ---- Clearing corners and team play (M38, for skills with slicesCorners / teamPlay) ---------------------------
+  /**
+   * After a teammate's hit call it heard, a bot that trades goes for where the shot came from for this long (s): to a
+   * spot within tradeCoverRadius (metres) it can peek that way from, or straight there at a run.
+   */
+  tradeTime: 4,
+  tradeCoverRadius: 6,
+  /** Slicing a corner (slicesCorners): leans out past the corner it aims at once it is this near (metres). */
+  sliceLeanDistance: 6,
+  /**
+   * Moving in pairs: a bot sharing a lane with a teammate within boundDistance (metres) doesn't set off from a lane
+   * point while that teammate is on the move, so one always holds while the other moves (for at most boundWaitMax s
+   * at a point, counting its hold there; a partner slicing corners at a walk takes longer than teamWaitMax).
+   */
+  boundDistance: 15,
+  boundWaitMax: 8,
+  /**
+   * Crossfire: of two defenders on one lane, the second holds as far from the lane's next point (the choke) as its own
+   * point, but swung round the choke by between these many degrees (the smaller end, the middle, then the larger, either
+   * way), on the same floor with a clear view of the choke; the two then see it from angles at least crossfireMinDeg
+   * apart.
+   */
+  crossfireTurnDeg: [35, 65],
+  crossfireMinDeg: 30,
+  /** Elimination: with this many seconds left, the side with fewer players in play goes looking for the others. */
+  latePushTime: 30,
   /**
    * At a lane point, a bot may first step into cover (its skill's holdCoverChance): the best spot within this radius
    * (metres) that hides it from a point this far (metres) towards the enemy side and that it can peek from.
@@ -386,6 +412,18 @@ export interface BotSkill {
   readonly preAimReactionTime: readonly [number, number];
   /** ...and how much of its aim settling (0..1 of aimSettleTime) is already done then. */
   readonly preAimSettled: number;
+  // Clearing corners and team play (M38): Pro does these; the levels below don't.
+  /**
+   * Near the enemy (past the middle of the map, or with a threat still in mind) it walks and slices corners: on its
+   * lane it aims at each corner ahead as it opens instead of where it walks; closing in on someone heard or lost, at the
+   * corner they are behind until the spot is in view; leaning out past a corner close by. With a threat in mind it tops
+   * up its magazine only from cover.
+   */
+  readonly slicesCorners: boolean;
+  /** Having lost sight of someone, how long it stays and watches where they were before going after them (s). */
+  readonly peekWatchTime: readonly [number, number];
+  /** Trades a hit teammate, moves in pairs, sets crossfires on defence and pushes late when behind (see tradeTime…). */
+  readonly teamPlay: boolean;
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'pro';
@@ -452,6 +490,9 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     holdsAngles: false,
     preAimReactionTime: [0.6, 1.0],
     preAimSettled: 0,
+    slicesCorners: false,
+    peekWatchTime: [0, 0],
+    teamPlay: false,
   },
   normal: {
     reactionTime: [0.35, 0.6],
@@ -473,6 +514,9 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     holdsAngles: false,
     preAimReactionTime: [0.35, 0.6],
     preAimSettled: 0,
+    slicesCorners: false,
+    peekWatchTime: [0, 0],
+    teamPlay: false,
   },
   hard: {
     reactionTime: [0.25, 0.45],
@@ -494,12 +538,16 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     holdsAngles: false,
     preAimReactionTime: [0.25, 0.45],
     preAimSettled: 0,
+    slicesCorners: false,
+    peekWatchTime: [0, 0],
+    teamPlay: false,
   },
   // Pro (M36, owner 2026-10-04): above Hard in every number, but its first BBs are still never dead on
   // (aimErrorStartMetres above zero) and it reacts no faster than Hard to someone it wasn't already aiming at. It plays
   // slower than Hard: longer holds at lane points, nearly always from cover, and a walk (silent) for the last 30 m to
   // a contact. Holding still it aims at the corners someone would step out of and answers someone appearing there in
-  // 0.18–0.28 s with its aim half settled (M37); clearing corners and team play come with M38.
+  // 0.18–0.28 s with its aim half settled (M37). Near the enemy it walks and slices each corner, watches a spot someone
+  // ducked out of before chasing, trades a hit teammate, moves in pairs and pushes late when behind (M38).
   pro: {
     reactionTime: [0.25, 0.45],
     turnRate: 6,
@@ -520,6 +568,9 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     holdsAngles: true,
     preAimReactionTime: [0.18, 0.28],
     preAimSettled: 0.5,
+    slicesCorners: true,
+    peekWatchTime: [1.5, 3],
+    teamPlay: true,
   },
 };
 

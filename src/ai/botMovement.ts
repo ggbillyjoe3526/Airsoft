@@ -5,11 +5,13 @@ import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { rngNext } from '../sim/rng';
-import { type Vec3, vec3 } from '../sim/vec';
+import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, pick, recallHeardOther } from './bot';
 import { type CoverSearch, findCover, type TakenSpots } from './cover';
 import { bodyPoint, eyeOf, lineClear } from './perception';
 import { moveOrder } from './squadOrders';
+
+const DEG = Math.PI / 180;
 
 // Scratch, each used only within one call of the function that fills it.
 const holdEye = vec3();
@@ -17,6 +19,8 @@ const holdLook = vec3();
 const threatEye = vec3();
 const sideEye = vec3();
 const targetPoint = vec3();
+const postEye = vec3();
+const chokeEye = vec3();
 
 /** Cover searches by a lane point and round the pole (AI-02, AI-06): spots to peek from only (radius set per call). */
 const holdSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
@@ -107,17 +111,23 @@ function nextAdvanceGoal(b: Bot, w: BotWorld): Vec3 | undefined {
 function staggerHold(b: Bot, w: BotWorld): void {
   const cfg = w.cfg;
   const g = b.laneGoal;
-  let crowded = false;
+  let mate: Vec3 | undefined;
   for (const o of w.bots) {
     if (o === b || o.character.team !== b.character.team || !isInPlay(o.character)) continue;
     const p = o.character.position;
     const heading = o.mode === 'advance' && !o.hunting && o.lane === b.lane;
-    if (Math.hypot(p.x - g.x, p.z - g.z) < cfg.laneHoldSpacing || (heading && Math.hypot(o.laneGoal.x - g.x, o.laneGoal.z - g.z) < cfg.laneHoldSpacing)) {
-      crowded = true;
+    if (Math.hypot(p.x - g.x, p.z - g.z) < cfg.laneHoldSpacing) {
+      mate = p;
+      break;
+    }
+    if (heading && Math.hypot(o.laneGoal.x - g.x, o.laneGoal.z - g.z) < cfg.laneHoldSpacing) {
+      mate = o.laneGoal;
       break;
     }
   }
-  if (!crowded) return;
+  if (!mate) return;
+  // Two defenders at one point (M38, teamPlay): the second sets a crossfire on the next point instead.
+  if (b.skill.teamPlay && flagRole(b, w) === 'defend' && crossfireSpot(b, w, mate)) return;
   const yaw = w.enemyYaw[b.character.team] ?? 0;
   // The view's right on the ground plane is (cos yaw, 0, -sin yaw) (see stepMovement); try a random side first.
   const first = rngNext(b.rng) < 0.5 ? 1 : -1;
@@ -129,6 +139,47 @@ function staggerHold(b: Bot, w: BotWorld): void {
     g.z = z;
     return;
   }
+}
+
+/**
+ * Crossfire (M38): moves `b.laneGoal` round the lane's next point (the choke towards the attackers) by crossfireTurnDeg,
+ * at the same distance from it, to the first spot on the same floor that sees the choke at head height from an angle at
+ * least crossfireMinDeg away from `mate`'s. False (goal unchanged) if the lane has no next point or no spot will do.
+ */
+function crossfireSpot(b: Bot, w: BotWorld, mate: Vec3): boolean {
+  const cfg = w.cfg;
+  const choke = w.lanes[b.lane]?.[b.laneIndex + b.laneDir];
+  if (!choke) return false;
+  const g = b.laneGoal;
+  const dx = g.x - choke.x;
+  const dz = g.z - choke.z;
+  if (Math.hypot(dx, dz) < 1e-6) return false;
+  const eyeUp = w.body.standEyeHeight;
+  chokeEye.x = choke.x;
+  chokeEye.y = choke.y + eyeUp;
+  chokeEye.z = choke.z;
+  const mateYaw = Math.atan2(mate.x - choke.x, mate.z - choke.z);
+  const [least, most] = cfg.crossfireTurnDeg;
+  for (let k = 0; k <= 2; k++) {
+    const turn = (least + ((most - least) * k) / 2) * DEG;
+    for (let side = 1; side >= -1; side -= 2) {
+      const c = Math.cos(turn * side);
+      const s = Math.sin(turn * side);
+      const x = choke.x + dx * c + dz * s;
+      const z = choke.z - dx * s + dz * c;
+      if (!onSameFloor(w, g, x, z)) continue;
+      if (Math.abs(wrapAngle(Math.atan2(x - choke.x, z - choke.z) - mateYaw)) < cfg.crossfireMinDeg * DEG) continue;
+      postEye.x = x;
+      postEye.y = floorAt(w.nav, x, z) + eyeUp;
+      postEye.z = z;
+      if (!lineClear(w.query, postEye, chokeEye)) continue;
+      g.x = x;
+      g.y = postEye.y - eyeUp;
+      g.z = z;
+      return true;
+    }
+  }
+  return false;
 }
 
 /** True if (x, z) is walkable and on the floor `point` stands on (within a step of its height). */
@@ -186,6 +237,8 @@ function startHold(b: Bot, w: BotWorld): void {
  * point holdCoverThreatDistance towards the enemy side, away from teammates' spots. False to hold where it stands.
  */
 function pickHoldCover(b: Bot, w: BotWorld): boolean {
+  // Two defenders sharing a lane hold their crossfire points (M38, teamPlay), not cover beside them.
+  if (b.skill.teamPlay && flagRole(b, w) === 'defend' && laneShared(b, w)) return false;
   if (rngNext(b.rng) >= b.skill.holdCoverChance) return false;
   const cfg = w.cfg;
   const p = b.character.position;
@@ -310,8 +363,10 @@ function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
     return false;
   }
   // At a lane point well ahead of the team: wait for them to catch up. The hold counts towards
-  // teamWaitMax, so a bot stands still at a point for at most max(hold, teamWaitMax).
-  if (b.waitForTeam && b.teamWait < cfg.teamWaitMax && w.aheadOfTeam(b)) {
+  // teamWaitMax, so a bot stands still at a point for at most max(hold, teamWaitMax). Moving in pairs (M38, teamPlay):
+  // also while a lane partner nearby is on the move (for up to boundWaitMax), so one covers while the other moves.
+  const waiting = (b.teamWait < cfg.teamWaitMax && w.aheadOfTeam(b)) || (b.skill.teamPlay && b.teamWait < cfg.boundWaitMax && partnerMoving(b, w));
+  if (b.waitForTeam && waiting) {
     b.teamWait += dt;
     b.holding = true;
     return false;
@@ -363,8 +418,31 @@ function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
   return followRoute(b, w, dt);
 }
 
+/** True if another bot teammate in play walks (or holds) the same lane. */
+function laneShared(b: Bot, w: BotWorld): boolean {
+  for (const o of w.bots) {
+    if (o !== b && o.character.team === b.character.team && o.lane === b.lane && o.mode === 'advance' && !o.hunting && isInPlay(o.character)) return true;
+  }
+  return false;
+}
+
+/** True if a bot teammate on the same lane, within boundDistance, is walking it now (M38: one moves, one covers). */
+function partnerMoving(b: Bot, w: BotWorld): boolean {
+  const p = b.character.position;
+  for (const o of w.bots) {
+    if (o === b || o.character.team !== b.character.team || o.lane !== b.lane || !isInPlay(o.character)) continue;
+    // Set off this tick (its route still wanted) counts: bots think in turn, and two at their points must not both go.
+    if (o.mode !== 'advance' || o.hunting || o.holding || o.order !== 'none' || (o.routeState !== 'ok' && o.routeState !== 'wanted')) continue;
+    const q = o.character.position;
+    if (Math.hypot(q.x - p.x, q.z - p.z) <= w.cfg.boundDistance) return true;
+  }
+  return false;
+}
+
 /** Search mode: to the last-known spot (round by a flank point first, if flanking), then a look round. */
 function search(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): boolean {
+  // Watching where someone ducked out of sight (M38, peekWatchTime) before going after them: they may peek again.
+  if (w.time < b.watchUntil) return false;
   if (b.searchLookLeft > 0) {
     // Got there and nobody about (AI-14): crouch and look round before giving up.
     b.searchLookLeft -= dt;
