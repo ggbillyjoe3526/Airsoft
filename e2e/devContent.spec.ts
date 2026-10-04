@@ -4,8 +4,8 @@ import { expect, test } from '@playwright/test';
  * Dev content (M35): the Dev tab's Dev content switch shows content still being built and hides it again. Woodland is
  * dev content today: with the switch off the Map pop-up doesn't list it at all; on, it is listed under Depot like any
  * other map and can be picked (M33d); off again, it is hidden and Depot plays, while the pick stays saved. A test of
- * its own, so the long match test in boot.spec.ts plays the same way as before. Uses `?nolock` like the other smoke
- * tests.
+ * its own, so the long match test in boot.spec.ts plays the same way as before. Neon Heights (M34c) is dev content too,
+ * listed and hidden with Woodland, and the second test plays it. Uses `?nolock` like the other smoke tests.
  */
 test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked, and hides it again', async ({ page }) => {
   const errors: string[] = [];
@@ -21,6 +21,7 @@ test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked
 
   const mapDialog = page.getByRole('dialog', { name: 'Map' });
   const woodland = mapDialog.getByRole('button', { name: /Woodland/i });
+  const neonHeights = mapDialog.getByRole('button', { name: /Neon Heights/i });
   const openMap = async (): Promise<void> => {
     await setup.getByRole('button', { name: /Map/i }).click();
     await expect(mapDialog).toBeVisible();
@@ -47,6 +48,7 @@ test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked
   // Off (the default): Woodland isn't listed at all, not even greyed out.
   await openMap();
   await expect(woodland).toBeHidden();
+  await expect(neonHeights).toBeHidden();
   await closeMap();
 
   // On: listed under Depot like any other map, no tag, and it can be picked (M33d).
@@ -55,6 +57,8 @@ test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked
   await expect(woodland).toBeVisible();
   await expect(woodland).toBeEnabled();
   await expect(woodland).not.toContainText('Coming soon');
+  await expect(neonHeights).toBeVisible();
+  await expect(neonHeights).toBeEnabled();
   await woodland.click();
   await expect(mapDialog).toBeHidden();
   await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Woodland');
@@ -64,9 +68,40 @@ test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked
   await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Depot');
   await openMap();
   await expect(woodland).toBeHidden();
+  await expect(neonHeights).toBeHidden();
   await closeMap();
   await devContent(true);
   await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Woodland');
 
+  expect(errors, errors.join(' | ')).toEqual([]);
+});
+
+test('Neon Heights (dev content, M34c) loads and plays: the city builds, the HUD and minimap come up, no errors', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=1');
+  await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start' }).click();
+  const setup = page.locator('.menu-setup');
+  await expect(setup).toBeVisible();
+  await setup.getByRole('button', { name: /^Settings/ }).click();
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
+  await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
+  await page.keyboard.press('Escape');
+  await expect(setup).toBeVisible();
+  await setup.getByRole('button', { name: /Map/i }).click();
+  await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Neon Heights/i }).click();
+  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Neon Heights');
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
+  expect(await page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null)).toBe(true);
+  await expect(page.locator('.hud')).toBeVisible();
+  await expect(page.locator('.minimap')).toBeVisible();
+  // A few seconds of play: the bots set off up the city's lanes and stairs.
+  await page.waitForTimeout(3000);
   expect(errors, errors.join(' | ')).toEqual([]);
 });

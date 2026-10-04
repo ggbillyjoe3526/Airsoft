@@ -42,6 +42,13 @@ export const MINIMAP = {
   floorContact: 0.05,
   /** Floors whose top is above this (m) draw as raised ground (docks, platforms). */
   raisedFloor: 0.3,
+  /**
+   * Maps with several storeys (M34c): feet at most this far (m) below a storey's floor already count as on it (the top
+   * of a stair), and a storey's drawing leaves out every block starting more than `storeyCut` (m) above its floor (the
+   * storeys over it: a body's height, so the walls and cover of the storey itself all show).
+   */
+  storeyPick: 0.5,
+  storeyCut: 1.8,
   /** Sloping ground (M33c) is lightened by up to this much white at its highest point, so hills read on the minimap. */
   terrainShade: 0.22,
   /** Colours of the field drawing (CSS). */
@@ -53,6 +60,8 @@ export const MINIMAP = {
     ramp: 'rgba(80, 88, 94, 0.95)',
     low: 'rgba(150, 156, 160, 0.95)',
     tall: 'rgba(214, 218, 220, 0.98)',
+    /** Laid over everything under the storey drawn (M34c), so the street through a stairwell reads as below you. */
+    belowStorey: 'rgba(8, 10, 14, 0.55)',
     you: '#ffffff',
     out: 'rgba(170, 170, 170, 0.8)',
   },

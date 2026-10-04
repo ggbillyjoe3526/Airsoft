@@ -92,4 +92,24 @@ export interface MapData {
    * over it. Absent: the map's ground is its floor blocks, as on Depot.
    */
   terrain?: Terrain;
+  /**
+   * Floor heights of a map with several storeys (M34c), lowest first (Neon Heights: street, +3, +6). The minimap draws
+   * the storey you stand on and marks teammates on other storeys as above or below. Absent: one storey.
+   */
+  storeys?: number[];
+  /**
+   * Where a floor can be watched from above (M34c, the pro layout's watch-angle list): each area of the ground with
+   * the windows and balconies that overlook it. Map data for bots and for the layout tests.
+   */
+  overlooks?: Overlook[];
+}
+
+/**
+ * One watched area (M34c): `area` is [x0, x1, z0, z1] on the floor below, `from` the standing spots (feet) above it
+ * that see into it.
+ */
+export interface Overlook {
+  name: string;
+  area: readonly [number, number, number, number];
+  from: Vec3[];
 }

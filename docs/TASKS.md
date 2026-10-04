@@ -10,6 +10,20 @@ files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged de
 owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
 first (M33 changes both).
 
+## M34c · Neon Heights, the greybox city by Day
+tier: core
+perf: required
+touches: src/map/neonHeights.ts, src/map/neonHeights.test.ts, src/map/maps.ts, src/map/mapTypes.ts, src/map/mapData.test.ts, src/ai/depotMatch.neonHeights*.test.ts, src/ui/minimap.ts, src/ui/minimap.test.ts, src/config/minimap.ts, src/render/matchPresentation.ts, src/ui/menus/menus.test.ts, src/newGamePicks.test.ts, e2e/devContent.spec.ts, docs/
+contract: MapData (storeys, overlooks)
+acceptance:
+  1. Neon Heights (concept v1, all twelve defaults) as map data: 46 × 30 m, street, Level 1 (+3 m) and Level 2 (+6 m) linked by stairs only (1:2 ramps), the Sky Bridge at +6 m with solid 1.2 m sides, open windows with a 1.2 m sill, a 3 m drop off the Capsules balcony, roofs not playable; 5 spawns and 5 dead-zone spots per end, four lanes, the flag on the Tower's atrium floor.
+  2. In MAPS tagged dev, 4v4 standard and 5v5 at most; hidden with Dev content off, picked and played with it on (e2e).
+  3. The pro layout rules, tested: two ways up to every raised floor (any one stair or bridge gone), a corner at every stair top and Sky Bridge end, no spot holding two stairs in one angle within 20 m, spawn yards out of each other's sight, no street line over 22 m between the spawn walls, overlooks (MapData.overlooks) that stand on their floors and see their areas.
+  4. Bot balance, headless 4v4: each end wins 40-60 % of decided Elimination rounds, attackers win 40-60 % in Attack / Defend, under 1 round in 10 ends on time; bots climb to Level 2, nobody falls or leaves the floors.
+  5. The minimap draws the storey you stand on (MapData.storeys), floors below shaded, and marks teammates on another storey with an up or down arrow; one-storey maps draw as before.
+status: building
+attempts: 1
+
 ## M36 · The Pro difficulty level
 tier: core
 perf: skip

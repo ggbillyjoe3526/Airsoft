@@ -35,8 +35,8 @@ afterEach(() => {
 const devIds = (list: readonly Taggable[]): string[] => list.filter((o) => o.tag === 'dev').map((o) => o.id);
 
 describe('New game picks and dev content (M35)', () => {
-  it('tags only Woodland, 4v4 and 5v5 dev today (M33d), so the default picks use no dev content', () => {
-    expect(devIds(MAPS)).toEqual(['woodland']);
+  it('tags only Woodland, Neon Heights (M34c), 4v4 and 5v5 dev today (M33d), so the default picks use no dev content', () => {
+    expect(devIds(MAPS)).toEqual(['woodland', 'neonHeights']);
     for (const list of [MATCH_MODES, DIFFICULTIES, TEAMMATE_DIFFICULTIES, WINS_NEEDED_CHOICES]) expect(devIds(list)).toEqual([]);
     expect(devIds(TEAM_SIZE_CHOICES)).toEqual(['4', '5']);
     expect(pickTags(picks()).every((t) => t === 'public')).toBe(true);
@@ -111,7 +111,7 @@ describe('New game picks and dev content (M35)', () => {
   });
 
   it('restores the lists after a test tagged an entry (only the real dev entries stay dev)', () => {
-    expect(devIds(MAPS)).toEqual(['woodland']);
+    expect(devIds(MAPS)).toEqual(['woodland', 'neonHeights']);
     for (const list of [MATCH_MODES, DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual([]);
   });
 });

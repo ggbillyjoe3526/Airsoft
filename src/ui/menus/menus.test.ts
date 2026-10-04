@@ -119,6 +119,13 @@ describe('menu data', () => {
     expect(COMING_SOON_TAG).toBe('Coming soon');
   });
 
+  it('lists Neon Heights as a playable dev map, 4v4 with up to 5v5, played as Depot while Dev content is off (M34c)', () => {
+    const city = mapEntry('neonHeights');
+    expect([city.label, city.tag, city.teamSize]).toEqual(['Neon Heights', 'dev', { standard: 4, max: 5 }]);
+    expect(availableChoice(MAPS, 'neonHeights', false, DEFAULT_MAP)).toBe(DEFAULT_MAP);
+    expect(availableChoice(MAPS, 'neonHeights', true, DEFAULT_MAP)).toBe('neonHeights');
+  });
+
   it('plays no more a side than a map has spawns for (M33d)', () => {
     for (const m of MAPS) {
       expect(m.teamSize.standard).toBeLessThanOrEqual(m.teamSize.max);

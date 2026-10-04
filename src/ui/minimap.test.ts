@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
-import { Minimap } from './minimap';
+import { Minimap, storeyOf } from './minimap';
+import type { MapBlock } from '../map/mapTypes';
+import { vec3 } from '../sim/vec';
 import { terrainMaxX, terrainMaxZ } from '../map/terrain';
 import { planeTerrain, SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
 
@@ -127,5 +129,59 @@ describe('the minimap on sloping ground (M33c)', () => {
     const none = recordingDom();
     new Minimap(none.parent, [], '#00f', '#f80');
     expect(none.canvases).toHaveLength(1); // no field layer at all, as before
+  });
+});
+
+describe('the minimap on a map with storeys (M34c)', () => {
+  const box = (kind: MapBlock['kind'], x0: number, x1: number, y0: number, y1: number): MapBlock => ({
+    kind,
+    center: vec3((x0 + x1) / 2, (y0 + y1) / 2, 0),
+    size: vec3(x1 - x0, y1 - y0, 2),
+  });
+  // A street, a wall on it, an upper floor over half of it with a wall and a crate on top, a window's sill up there.
+  const street = box('floor', 0, 10, -0.5, 0);
+  const lowerWall = box('wall', 4, 4.3, 0, 3);
+  const upper = box('floor', 5, 10, 2.7, 3);
+  const upperWall = box('wall', 9.7, 10, 3, 6);
+  const crate = box('crate', 6, 7, 3, 4.2);
+  const sill = box('wall', 5, 5.3, 3, 4.2);
+  const blocks = [upperWall, crate, sill, upper, lowerWall, street];
+  const at = (b: MapBlock) => (b.center.x - b.size.x / 2) * MINIMAP.layerScale;
+
+  it('picks the storey of feet at a height: the highest floor at most storeyPick above them', () => {
+    expect(storeyOf([0, 3, 6], 0)).toBe(0);
+    expect(storeyOf([0, 3, 6], 3 - MINIMAP.storeyPick - 0.1)).toBe(0);
+    expect(storeyOf([0, 3, 6], 3 - MINIMAP.storeyPick)).toBe(1);
+    expect(storeyOf([0, 3, 6], 6.2)).toBe(2);
+    expect(storeyOf([], 6)).toBe(0);
+  });
+
+  it('draws one field per storey: the street without the floor over it, the upper floor over the street shaded darker', () => {
+    const dom = recordingDom();
+    new Minimap(dom.parent, blocks, '#00f', '#f80', null, [0, 3]);
+    expect(dom.canvases).toHaveLength(3); // the minimap, then a field per storey
+    const [streetLayer, upperLayer] = [dom.canvases[1]!.fills, dom.canvases[2]!.fills];
+    // The street: its ground and wall only (everything upstairs starts over a body's height up).
+    expect(streetLayer.map((f) => f.x)).toEqual([at(street), at(lowerWall)]);
+    expect(streetLayer.map((f) => f.style)).toEqual([MINIMAP.colours.ground, MINIMAP.colours.tall]);
+    // Upstairs: the street and its wall, the shade over them, then the upper floor, its crate and sill (low cover over
+    // that floor, not 4.2 m walls) and its wall.
+    expect(upperLayer.map((f) => f.style)).toEqual([
+      MINIMAP.colours.ground,
+      MINIMAP.colours.tall,
+      MINIMAP.colours.belowStorey,
+      MINIMAP.colours.ground,
+      MINIMAP.colours.low,
+      MINIMAP.colours.low,
+      MINIMAP.colours.tall,
+    ]);
+    expect(upperLayer.map((f) => f.x)).toEqual([at(street), at(lowerWall), 0, at(upper), at(crate), at(sill), at(upperWall)]);
+  });
+
+  it('keeps one field on a map with one storey', () => {
+    const dom = recordingDom();
+    new Minimap(dom.parent, blocks, '#00f', '#f80', null, [0]);
+    expect(dom.canvases).toHaveLength(2);
+    expect(dom.canvases[1]!.fills).toHaveLength(blocks.length);
   });
 });
