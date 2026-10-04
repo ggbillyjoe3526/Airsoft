@@ -103,6 +103,19 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const matchDialog = page.getByRole('dialog', { name: 'Match' });
   await expect(matchDialog).toBeVisible();
   await expect(matchDialog.getByRole('group', { name: 'Ricochets count' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  // Rules (M39): Skirmish is picked, Tournament and Pro CQB are dev content (hidden with Dev content off), Custom opens
+  // every switch; Skirmish and a named ruleset show only the rows they leave to the player.
+  const rulesGroup = matchDialog.getByRole('group', { name: 'Rules' });
+  await expect(rulesGroup.getByRole('button', { name: 'Skirmish' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(rulesGroup.getByRole('button', { name: 'Tournament' })).toBeHidden();
+  await expect(rulesGroup.getByRole('button', { name: 'Pro CQB' })).toBeHidden();
+  await expect(matchDialog.getByRole('group', { name: 'Overtime' })).toBeHidden();
+  await rulesGroup.getByRole('button', { name: 'Custom' }).click();
+  await expect(matchDialog.getByRole('group', { name: 'Overtime' })).toBeVisible();
+  await expect(matchDialog.getByRole('group', { name: 'Fire modes' })).toBeVisible();
+  await expect(page.locator('.setup-rules')).toContainText('never go into your records'); // Custom never goes into the records, and says so
+  await rulesGroup.getByRole('button', { name: 'Skirmish' }).click();
+  await expect(matchDialog.getByRole('group', { name: 'Overtime' })).toBeHidden();
   await matchDialog.getByRole('group', { name: 'Team size' }).getByRole('button', { name: '2v2' }).click();
   await matchDialog.getByRole('group', { name: 'Rounds to win' }).getByRole('button', { name: '3' }).click();
   await page.keyboard.press('Escape');
