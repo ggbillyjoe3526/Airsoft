@@ -50,6 +50,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
 - **M33a** · Woodland shown as Coming soon in the Map pop-up
+- **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound
+- **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot; on Hard, bots carry it about 1 in 20 matches
 
 ### Changed
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
@@ -74,6 +76,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 
 ### Fixed
+- **M32** · All carried replicas now have their sounds in the match; hear bots' AEG shots even without an equipped AEG
 - **FA11c** · A second tab now always waits behind the "open in another tab" notice, even when the first is busy loading (#69)
 - **FA2** · When nothing is saved and the game runs slowly, it steps down to Low at the end of a round and reports it (#67)
 - **FA2** · Turning Edge smoothing on or off no longer causes graphics memory to leak (#67)
