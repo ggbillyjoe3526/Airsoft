@@ -1,4 +1,4 @@
-import { DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
+import { DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   countsForRecords,
   FRIENDLY_FIRE_CHOICES,
@@ -14,7 +14,8 @@ import {
 } from '../../config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
-import type { QualityPreset } from '../../config/render';
+import type { QualityChoice, QualitySettings } from '../../config/render';
+import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
 import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
 import { playedPicks } from '../../newGamePicks';
@@ -71,8 +72,8 @@ export interface MenusOptions {
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   controls: ControlsSettingsOptions;
   fov: { initial: number; onChange: (v: number) => void };
-  /** The render quality preset (Settings → Graphics). */
-  quality: { initial: QualityPreset; onChange: (q: QualityPreset) => void };
+  /** The quality rows on Settings → Graphics (ui/graphicsSettings.ts). */
+  graphics: GraphicsSettingsOptions;
   audio: AudioSettingsOptions;
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;
@@ -175,9 +176,9 @@ export class Menus {
       this.difficulty = d;
       opts.difficulty.onChange(d);
       if (teammatesFollow) {
-        this.teammateDifficulty = d;
-        teammates.show(d);
-        opts.teammateDifficulty.onChange(d);
+        this.teammateDifficulty = defaultTeammateDifficulty(d);
+        teammates.show(this.teammateDifficulty);
+        opts.teammateDifficulty.onChange(this.teammateDifficulty);
       }
       this.refreshSetup();
     });
@@ -206,7 +207,7 @@ export class Menus {
       bindings: opts.bindings,
       controls: opts.controls,
       fov: opts.fov,
-      quality: opts.quality,
+      graphics: opts.graphics,
       audio: opts.audio,
       crosshair: opts.crosshair,
       accessibility: opts.accessibility,
@@ -299,6 +300,11 @@ export class Menus {
   /** A warning on the title screen ('' hides it): the browser runs without hardware acceleration. */
   showTitleWarning(text: string): void {
     this.title.setWarning(text);
+  }
+
+  /** Shows a quality choice on Settings → Graphics without saving it (the game's own step-down, REN-03). */
+  showQuality(choice: QualityChoice, settings: QualitySettings): void {
+    this.settings.showQuality(choice, settings);
   }
 
   /** A short message under the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */

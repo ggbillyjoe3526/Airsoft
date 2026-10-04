@@ -4,18 +4,24 @@
  * (`?script=perf`, config/perfScript.ts) and seed 1, at a fixed resolution and pixel ratio, with the CPU throttled
  * over CDP, and records frame times, draw calls, triangles, GPU memory and heap growth for 60 s.
  *
- *   node pipeline/perf-run.mjs [--env container|laptop|ci] [--preset low|medium|high] [--cpu N] [--ticks 3600]
+ *   node pipeline/perf-run.mjs [--env container|laptop|ci] [--preset low|medium|high|all] [--cpu N] [--ticks 3600]
  *                              [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build] [--chromium /path]
+ *                              [--channel chrome|msedge] [--headless]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
  * The window is counted in simulation ticks, not wall time, so the player is at the same point of the script
  * whatever the frame rate: 3600 ticks is 60 s of play on a laptop and about four minutes in software rendering,
  * where the simulation runs at about 16 ticks/s (five catch-up ticks a frame). perf-budget.json sets each
- * environment's default (`ticks`). Writes pipeline/out/perf-<env>.json; --baseline also writes
- * pipeline/baseline/<env>.json (commit that one). Frame times mean something only on hardware rendering (the
- * owner's laptop); in a container they are noise and the gate ignores them (perf-budget.json
+ * environment's default (`ticks`, and `presetTicks` where Medium and High run far slower in software). `--preset all`
+ * runs Low, Medium and High in turn (audit REN-15). Writes pipeline/out/perf-<env>-<preset>.json, and
+ * perf-<env>.json for the budget preset (what the gate reads); --baseline also writes pipeline/baseline/<env>.json
+ * for the budget preset and <env>-<preset>.json for the others (commit those). Frame times mean something only on
+ * hardware rendering (the owner's laptop); in a container they are noise and the gate ignores them (perf-budget.json
  * frameTimeGatedEnvs). Draw calls, triangles, memory and heap are real everywhere.
+ *
+ * `--env laptop` measures the real GPU: no SwiftShader flags, a visible window (vsync, as a player sees it; --headless
+ * to hide it) and the installed Chrome (`--channel chrome`, the default there; or `--chromium /path`).
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -30,6 +36,7 @@ const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const budget = JSON.parse(readFileSync(join(ROOT, 'pipeline', 'perf-budget.json'), 'utf8'));
+const PRESETS = ['low', 'medium', 'high'];
 const options = {
   env: value('--env', 'container'),
   preset: value('--preset', budget.budgetPreset),
@@ -40,7 +47,14 @@ const options = {
   chromium: value('--chromium', process.env.PLAYWRIGHT_CHROMIUM),
 };
 options.cpu = Number(value('--cpu', budget.cpuThrottle?.[options.env] ?? 1));
-options.ticks = Number(value('--ticks', budget.ticks?.[options.env] ?? 3600));
+const presets = options.preset === 'all' ? PRESETS : [options.preset];
+if (!presets.every((p) => PRESETS.includes(p))) throw new Error(`--preset must be one of ${PRESETS.join(', ')} or all`);
+/** The measured window for a preset: --ticks, else the budget's per-preset line for this env, else the env's. */
+const ticksFor = (preset) => Number(value('--ticks', budget.presetTicks?.[options.env]?.[preset] ?? budget.ticks?.[options.env] ?? 3600));
+const laptop = options.env === 'laptop';
+/** Software rendering in the container and on CI; the real GPU on the laptop (REN-15). */
+const browserArgs = laptop ? ['--enable-precise-memory-info'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info'];
+const channel = options.chromium ? undefined : value('--channel', laptop ? 'chrome' : undefined);
 
 mkdirSync(OUT, { recursive: true });
 const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
@@ -51,11 +65,17 @@ if (options.build || !existsSync(join(ROOT, 'dist-e2e', 'index.html'))) {
   console.log('perf: the e2e bundle');
   execFileSync('node', ['pipeline/build-cached.mjs', '--mode', 'e2e'], { cwd: ROOT, stdio: 'ignore' });
 }
-const server = spawn('npx', ['vite', 'preview', '--outDir', 'dist-e2e', '--port', String(PORT), '--strictPort'], { cwd: ROOT, stdio: 'ignore', shell: process.platform === 'win32' });
-const url = `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${options.preset}`;
+const urlFor = (preset) => `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${preset}`;
+// A server already on the port (another run's, left over) would be measured instead of this build: refuse.
+if (await fetch(urlFor(presets[0])).then(() => true, () => false)) {
+  console.error(`perf: port ${PORT} is already serving something (a leftover perf server?); stop it and run again`);
+  process.exit(1);
+}
+// Vite itself, not through npx: killing an npx wrapper leaves its vite child serving the old build on the port.
+const server = spawn(process.execPath, [join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--outDir', 'dist-e2e', '--port', String(PORT), '--strictPort'], { cwd: ROOT, stdio: 'ignore' });
 for (let i = 0; i < 50; i++) {
   try {
-    const r = await fetch(url);
+    const r = await fetch(urlFor(presets[0]));
     if (r.ok) break;
   } catch {}
   await new Promise((r) => setTimeout(r, 200));
@@ -64,22 +84,33 @@ for (let i = 0; i < 50; i++) {
 const { chromium } = await import(pathToFileURL(join(ROOT, 'node_modules', '@playwright', 'test', 'index.mjs')).href);
 const browser = await chromium.launch({
   ...(options.chromium ? { executablePath: options.chromium } : {}),
-  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-precise-memory-info'],
+  ...(channel ? { channel } : {}),
+  headless: !laptop || flag('--headless'),
+  args: browserArgs,
 });
-let result;
+const results = [];
 try {
+  for (const preset of presets) results.push(await measure(preset));
+} finally {
+  await browser.close();
+  server.kill();
+}
+
+/** One preset's run: a fresh page, the match started, `ticksFor(preset)` ticks measured. */
+async function measure(preset) {
+  const ticks = ticksFor(preset);
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: options.cpu });
-  await page.goto(url);
+  await page.goto(urlFor(preset));
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   await page.getByRole('button', { name: 'Start' }).click();
   await page.locator('.menu-setup').getByRole('button', { name: 'Play', exact: true }).click();
   await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });
-  console.log(`perf: match running (env ${options.env}, preset ${options.preset}, cpu ×${options.cpu}); measuring ${options.ticks} ticks from tick ${options.warmupTicks}`);
+  console.log(`perf: match running (env ${options.env}, preset ${preset}, cpu ×${options.cpu}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
 
   const sample = await page.evaluate(async ({ ticks, maxSeconds }) => {
     const g = globalThis.airsoft;
@@ -143,27 +174,32 @@ try {
       seconds: secs, ticks: g.state.tick - tick0, simTicksPerSecond: (g.state.tick - tick0) / secs,
       pixelRatio: g.renderer.renderer.getPixelRatio(), characters: g.session.characterCount,
     };
-  }, { ticks: options.ticks, maxSeconds: options.maxSeconds });
-  result = { env: options.env, preset: options.preset, cpu: options.cpu, ticksWanted: options.ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: '1920x1080@1', metrics: sample, errors };
-} finally {
-  await browser.close();
-  server.kill();
+  }, { ticks, maxSeconds: options.maxSeconds });
+  await page.close();
+  return { env: options.env, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: '1920x1080@1', metrics: sample, errors };
 }
 
+/** The baseline file for a preset: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
+const baselineName = (preset) => (preset === budget.budgetPreset ? `${options.env}.json` : `${options.env}-${preset}.json`);
 const round = (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
-for (const k of Object.keys(result.metrics)) result.metrics[k] = round(result.metrics[k]);
-const out = join(OUT, `perf-${options.env}.json`);
-writeFileSync(out, `${JSON.stringify(result, null, 2)}\n`);
-console.log(`perf: ${relative(ROOT, out)}`);
-const m = result.metrics;
-console.log(`  ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
-console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (+${m.heapGrowthMB}), ${m.gcSpikes} GC drops`);
-if (result.errors.length) console.log(`  page errors: ${result.errors.length} (${result.errors[0]})`);
-if (options.baseline) {
-  const dir = join(ROOT, 'pipeline', 'baseline');
-  mkdirSync(dir, { recursive: true });
-  const file = join(dir, `${options.env}.json`);
-  writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
-  console.log(`perf: baseline written to ${relative(ROOT, file)} (commit it)`);
+for (const result of results) {
+  for (const k of Object.keys(result.metrics)) result.metrics[k] = round(result.metrics[k]);
+  const json = `${JSON.stringify(result, null, 2)}\n`;
+  const out = join(OUT, `perf-${options.env}-${result.preset}.json`);
+  writeFileSync(out, json);
+  // The gate reads the budget preset's run (and a single-preset run, as before).
+  if (result.preset === budget.budgetPreset || presets.length === 1) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
+  console.log(`perf: ${relative(ROOT, out)}`);
+  const m = result.metrics;
+  console.log(`  ${result.preset}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
+  console.log(`  draw calls ${m.drawCalls} (max ${m.drawCallsMax}) · triangles ${m.triangles} (max ${m.trianglesMax}) · GPU memory ~${m.gpuMemoryMB} MB · heap ${m.heapStartMB} → ${m.heapEndMB} MB (+${m.heapGrowthMB}), ${m.gcSpikes} GC drops`);
+  if (result.errors.length) console.log(`  page errors: ${result.errors.length} (${result.errors[0]})`);
+  if (options.baseline) {
+    const dir = join(ROOT, 'pipeline', 'baseline');
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, baselineName(result.preset));
+    writeFileSync(file, json);
+    console.log(`perf: baseline written to ${relative(ROOT, file)} (commit it)`);
+  }
 }
-process.exit(result.errors.length ? 1 : 0);
+process.exit(results.some((r) => r.errors.length) ? 1 : 0);

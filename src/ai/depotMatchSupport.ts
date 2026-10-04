@@ -193,6 +193,19 @@ export function playMatch(
 export type MatchStats = ReturnType<typeof playMatch>;
 
 /**
+ * Per finished round, whether it was played after half-time. A drawn round is played again under the same number
+ * (audit SIM-19), so only decided rounds count towards half-time.
+ */
+export function playedAfterHalfTime(results: readonly { winner: number }[], rules: RoundRules = ROUNDS): boolean[] {
+  let decided = 0;
+  return results.map((r) => {
+    const after = decided >= rules.halfTimeAfter;
+    if (r.winner >= 0) decided++;
+    return after;
+  });
+}
+
+/**
  * Nobody in play is off the ground for longer than the in-air spread's delay (a lost ground contact would
  * spike their spread), and nobody goes below the map's lowest floor or more than 2 m over its highest.
  */

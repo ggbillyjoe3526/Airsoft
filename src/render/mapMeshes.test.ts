@@ -4,7 +4,7 @@ import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
 import { vec3 } from '../sim/vec';
 import { SURFACES, type SurfaceTextureId } from '../config/render';
-import { blockPieces, blockShade, blockTint, buildMapMeshes, disposeMapMeshes, setMapRelief } from './mapMeshes';
+import { blockPieces, blockShade, blockTint, buildMapMeshes, castsShadow, disposeMapMeshes, setMapRelief, setMapTextures } from './mapMeshes';
 import type { SurfaceTextures } from './proceduralTextures';
 
 /** Every team colour of every set (Settings → Accessibility, M18b). */
@@ -123,6 +123,32 @@ describe('the art pass on the map (M14)', () => {
     disposeMapMeshes(group);
   });
 
+  it('makes the dock and its ramps cast shadows, and not the ground (KNOWN_ISSUES: raised floors cast none)', () => {
+    const floors = DEPOT.blocks.filter((b) => b.kind === 'floor' || b.kind === 'ramp');
+    const ground = floors.filter((b) => b.center.y + b.size.y / 2 <= 0);
+    const raised = floors.filter((b) => b.center.y + b.size.y / 2 > 0.1);
+    expect(ground.length).toBeGreaterThan(0);
+    expect(raised.length).toBeGreaterThanOrEqual(3); // the dock's deck and its two ramps
+    for (const b of ground) expect(castsShadow(b)).toBe(false);
+    for (const b of raised) expect(castsShadow(b), `${b.kind} at ${b.center.x}`).toBe(true);
+    // No part of the deck is left in a mesh that casts nothing (it shared the ground's), and no new mesh is needed.
+    const group = buildMapMeshes(DEPOT, textures, true);
+    const deck = raised.find((b) => b.kind === 'floor')!;
+    const top = deck.center.y + deck.size.y / 2;
+    const flat = group.children.filter((m): m is THREE.Mesh => m instanceof THREE.Mesh && !m.castShadow);
+    const deckInFlat = flat.some((m) => {
+      const pos = m.geometry.getAttribute('position');
+      for (let i = 0; i < pos.count; i++) {
+        const inside = Math.abs(pos.getX(i) - deck.center.x) <= deck.size.x / 2 + 1e-6 && Math.abs(pos.getZ(i) - deck.center.z) <= deck.size.z / 2 + 1e-6;
+        if (inside && Math.abs(pos.getY(i) - top) < 1e-6) return true;
+      }
+      return false;
+    });
+    expect(deckInFlat).toBe(false);
+    expect(group.children.length).toBeLessThanOrEqual(10);
+    disposeMapMeshes(group);
+  });
+
   it('varies brightness a little between props without changing their hue, the same for mirror twins', () => {
     for (const b of DEPOT.blocks) {
       const shade = blockShade(b);
@@ -139,6 +165,33 @@ describe('the art pass on the map (M14)', () => {
     expect(materials.every((m) => m.bumpMap === null)).toBe(true);
     setMapRelief(group, true);
     expect(materials.every((m) => m.bumpMap === m.map)).toBe(true);
+    disposeMapMeshes(group);
+  });
+
+  it('points a built map at another texture set (Texture detail, REN-13), keeping each surface and its relief', () => {
+    /** A set like createSurfaceTextures' (each texture named by its surface), stubbed: no canvas in the tests. */
+    const named = (): SurfaceTextures =>
+      Object.fromEntries(
+        (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => {
+          const texture = new THREE.Texture() as THREE.CanvasTexture;
+          texture.name = id;
+          return [id, { texture, worldSize: SURFACES.worldSize[id] }];
+        }),
+      ) as SurfaceTextures;
+    const [small, large] = [named(), named()];
+    const group = buildMapMeshes(DEPOT, small, true);
+    const materials = group.children.map((m) => (m as THREE.Mesh).material as THREE.MeshLambertMaterial);
+    const surfaces = materials.map((m) => m.map!.name);
+    setMapTextures(group, large);
+    expect(materials.map((m) => m.map!.name)).toEqual(surfaces);
+    for (const m of materials) {
+      expect(m.map).toBe(large[m.map!.name as SurfaceTextureId].texture);
+      expect(m.bumpMap).toBe(m.map);
+    }
+    // Relief off stays off.
+    setMapRelief(group, false);
+    setMapTextures(group, small);
+    expect(materials.every((m) => m.bumpMap === null && m.map === small[m.map!.name as SurfaceTextureId].texture)).toBe(true);
     disposeMapMeshes(group);
   });
 });

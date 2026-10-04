@@ -12,6 +12,8 @@ import { type Bot, type BotWorld, pick } from './bot';
 import { hasReacted } from './botSenses';
 import { bodyPoint, lineClear } from './perception';
 
+const DEG = Math.PI / 180;
+
 // Scratch, each used only within one call of the function that fills it.
 const look = { yaw: 0, pitch: 0 };
 const aimLine = vec3();
@@ -50,7 +52,11 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   }
   look.pitch = 0;
   const walkYaw = Math.atan2(-b.moveDir.x, -b.moveDir.z);
-  if (b.hasLastKnown && (b.mode === 'search' || b.mode === 'cover' || !walking)) {
+  if (b.mode === 'search' && b.searchLookLeft > 0) {
+    // At the end of a search (AI-14): look round, one way then the other, from the way it arrived.
+    const t = 1 - b.searchLookLeft / b.searchLookTime;
+    look.yaw = b.searchLookYaw + Math.sin(2 * Math.PI * t) * cfg.searchLookDeg * DEG;
+  } else if (b.hasLastKnown && (b.mode === 'search' || b.mode === 'cover' || !walking)) {
     // Watch where the threat was, even while moving there.
     lookAngles(eye.x, eye.y, eye.z, b.lastKnown.x, eye.y, b.lastKnown.z, look);
   } else if (b.mode === 'order' && (!walking || (b.order === 'follow' && !b.orderRush))) {
@@ -60,8 +66,10 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   } else if (walking && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
     look.yaw = walkYaw;
   } else {
-    // Holding a point, or walking back along the lane: face the enemy side rather than turn our back.
+    // Holding a point, or walking back along the lane: face the enemy side rather than turn our back. Holding, sweep
+    // the view slowly across it (AI-02) rather than stare one way.
     look.yaw = enemyYaw;
+    if (b.holding) look.yaw += Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
   }
   stepAim(b.aim, look.yaw, look.pitch, 0, cfg, b.skill, b.rng, dt);
   return Number.POSITIVE_INFINITY;
@@ -72,17 +80,23 @@ function friendInLine(b: Bot, w: BotWorld, from: Vec3, dir: Vec3, dist: number):
   // With friendly fire off (M20) BBs pass teammates by, so there's nothing to hold fire for.
   if (!w.hits.friendlyFire) return false;
   const me = b.character;
-  // A teammate on the move can run into the BBs' path while they fly: check where they'll be too.
-  const flight = bbFlightTime(w, dist);
+  const stray = Math.tan(w.cfg.friendlySpreadSigmas * w.loadout[0]!.spreadDeg * DEG); // metres off the line per metre
   for (const mate of w.characters) {
     if (mate === me || mate.team !== me.team || !isInPlay(mate)) continue;
+    // A teammate on the move can run into the BBs' path while they fly: check where they'll be when the BBs pass
+    // them too (the flight to them, not to the end of the reach: a far guess put a teammate running across the line
+    // already past it, and the BBs met them half-way).
+    const along = (mate.position.x - from.x) * dir.x + (mate.position.y - from.y) * dir.y + (mate.position.z - from.z) * dir.z;
+    const reach = Math.min(Math.max(0, along), dist);
+    const flight = bbFlightTime(w, reach);
+    const margin = w.cfg.friendlyMargin + reach * stray;
     const v = mateVolume;
     characterHitVolume(mate, w.hits, v);
-    v.body.r += w.cfg.friendlyMargin;
-    v.head.r += w.cfg.friendlyMargin;
-    v.shoulder.r += w.cfg.friendlyMargin;
+    v.body.r += margin;
+    v.head.r += margin;
+    v.shoulder.r += margin;
     // A leaning mate's tilted torso (audit M-06); radius 0 means upright, with no torso part to widen.
-    if (v.torso.r > 0) v.torso.r += w.cfg.friendlyMargin;
+    if (v.torso.r > 0) v.torso.r += margin;
     if (rayCharacter(from, dir, dist, v) >= 0) return true;
     const dx = mate.velocity.x * flight;
     const dz = mate.velocity.z * flight;
@@ -118,8 +132,8 @@ function lineOfFireBlocked(b: Bot, w: BotWorld, eye: Vec3, aimPoint: Vec3, dir: 
 /**
  * How far along `dir` (unit) from `eye` a missed BB can still hit someone: cfg.friendlyBeyondTarget past
  * the target (`dist` metres away), or less if a wall is in the way (`hit`: where the line meets geometry
- * within that reach, or -1). Only a wall: what the line meets must
- * also stand cfg.friendlyWallClearance higher right there (BBs can sail over the top of low cover).
+ * within that reach, or -1): cfg.friendlyPastWall past it (a line grazing a corner lets BBs by). Only a wall: what the
+ * line meets must also stand cfg.friendlyWallClearance higher right there (BBs can sail over the top of low cover).
  */
 function friendlyReach(w: BotWorld, eye: Vec3, dir: Vec3, dist: number, hit: number): number {
   const cfg = w.cfg;
@@ -130,7 +144,7 @@ function friendlyReach(w: BotWorld, eye: Vec3, dir: Vec3, dist: number, hit: num
   raisedPoint.x = eye.x + dir.x * (hit - back);
   raisedPoint.y = eye.y + dir.y * (hit - back) + cfg.friendlyWallClearance;
   raisedPoint.z = eye.z + dir.z * (hit - back);
-  return w.query.raycastStatic(raisedPoint, dir, back + cfg.friendlyWallProbe) >= 0 ? hit : reach;
+  return w.query.raycastStatic(raisedPoint, dir, back + cfg.friendlyWallProbe) >= 0 ? Math.min(reach, hit + cfg.friendlyPastWall) : reach;
 }
 
 /** Bursts at the target from `eye` towards `aimPoint` once reacted and on aim, never with a teammate or cover in the way. */

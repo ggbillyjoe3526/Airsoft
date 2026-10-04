@@ -46,10 +46,52 @@ export function fitShadowCamera(
   cam.updateProjectionMatrix();
 }
 
-/** The match's daylight: change it with a new quality preset, dispose it with the match. */
+/** An orthographic camera's bounds in its own space (left, right, bottom, top). */
+export interface ShadowBounds {
+  left: number;
+  right: number;
+  bottom: number;
+  top: number;
+}
+
+const focusScratch = new THREE.Vector3();
+
+/** Where the view-fitted map's centre goes on one light-space axis: in whole texels, kept inside the level's bounds. */
+function placeCentre(at: number, min: number, max: number, half: number, texel: number): number {
+  if (max - min <= 2 * half) return (min + max) / 2;
+  return Math.min(max - half, Math.max(min + half, Math.round(at / texel) * texel));
+}
+
+/**
+ * Fits the shadow camera (already pointed by fitShadowCamera, whose bounds are `level`) to a square of `half` metres
+ * either side of `focus` in light space (audit REN-08). The square is a fixed size, so the texel is too, and its centre
+ * moves in whole texels: a moving view never makes shadow edges crawl. Kept inside the level's bounds (no texels spent
+ * outside the field). Allocation-free: runs every frame on High.
+ */
+export function fitShadowToView(cam: THREE.OrthographicCamera, level: ShadowBounds, focus: THREE.Vector3, half: number, mapSize: number): void {
+  const p = focusScratch.copy(focus).applyMatrix4(cam.matrixWorldInverse);
+  const texel = (2 * half) / mapSize;
+  const x = placeCentre(p.x, level.left, level.right, half, texel);
+  const y = placeCentre(p.y, level.bottom, level.top, half, texel);
+  if (cam.left === x - half && cam.bottom === y - half && cam.right === x + half && cam.top === y + half) return;
+  cam.left = x - half;
+  cam.right = x + half;
+  cam.bottom = y - half;
+  cam.top = y + half;
+  cam.updateProjectionMatrix();
+}
+
+/** The world size of one shadow-map texel for the camera's bounds (the larger side over the map size). */
+export function shadowTexel(cam: THREE.OrthographicCamera, mapSize: number): number {
+  return Math.max(cam.right - cam.left, cam.top - cam.bottom) / mapSize;
+}
+
+/** The match's daylight: change it with a new quality preset, follow the view each frame, dispose it with the match. */
 export interface Daylight {
-  /** Shadows on or off, their map size and softness (Settings → Graphics → Quality). */
+  /** Shadows on or off, their map size, softness and reach (Settings → Graphics → Quality). */
   setQuality(quality: QualitySettings): void;
+  /** Moves a view-fitted shadow map to the ground ahead of `camera` (High; nothing otherwise). Call before drawing. */
+  follow(camera: THREE.Camera): void;
   /** Removes the lights, sky and trees and frees the shadow map. */
   dispose(): void;
 }
@@ -68,6 +110,11 @@ function applyShadowQuality(sun: THREE.DirectionalLight, quality: QualitySetting
   sun.shadow.radius = quality.shadowRadius;
 }
 
+/** The normal bias for the shadow camera's texel (REN-08): the same share of a texel at any map size or fit. */
+function applyNormalBias(sun: THREE.DirectionalLight): void {
+  sun.shadow.normalBias = LIGHTING.shadowNormalBiasTexels * shadowTexel(sun.shadow.camera, sun.shadow.mapSize.x);
+}
+
 /**
  * Adds daylight sized to the map (a sky fill, one warm shadow-casting sun) and the world round it (render/atmosphere.ts:
  * the sky dome and the trees), and returns its handle.
@@ -80,16 +127,44 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   const centre = box.getCenter(new THREE.Vector3());
   sun.target.position.set(centre.x, 0, centre.z);
   sun.position.set(centre.x + LIGHTING.sunOffset.x, LIGHTING.sunOffset.y, centre.z + LIGHTING.sunOffset.z);
-  applyShadowQuality(sun, quality);
-  fitShadowCamera(sun.shadow.camera, sun.position, sun.target.position, box, LIGHTING.shadowMargin);
+  const cam = sun.shadow.camera;
+  fitShadowCamera(cam, sun.position, sun.target.position, box, LIGHTING.shadowMargin);
+  const level: ShadowBounds = { left: cam.left, right: cam.right, bottom: cam.bottom, top: cam.top };
+  const viewHalf = LIGHTING.shadowView.radius + LIGHTING.shadowMargin;
   sun.shadow.bias = LIGHTING.shadowBias;
-  sun.shadow.normalBias = LIGHTING.shadowNormalBias;
+  let following = false;
+  const forward = new THREE.Vector3();
+  const focus = new THREE.Vector3();
+  const setQuality = (q: QualitySettings): void => {
+    applyShadowQuality(sun, q);
+    following = q.shadows && q.shadowFollowsView;
+    if (!following) {
+      // The whole field again.
+      cam.left = level.left;
+      cam.right = level.right;
+      cam.bottom = level.bottom;
+      cam.top = level.top;
+      cam.updateProjectionMatrix();
+    } else fitShadowToView(cam, level, sun.target.position, viewHalf, q.shadowMapSize);
+    applyNormalBias(sun);
+  };
+  setQuality(quality);
 
   scene.add(hemi, sun, sun.target);
   const sunDirection = sun.position.clone().sub(sun.target.position).normalize();
   const disposeAtmosphere = addAtmosphere(scene, sun.target.position, sunDirection);
   return {
-    setQuality: (q) => applyShadowQuality(sun, q),
+    setQuality,
+    follow: (camera) => {
+      if (!following) return;
+      // The ground ahead: the view's heading, flattened, `ahead` metres out from the eye.
+      forward.set(0, 0, -1).applyQuaternion(camera.quaternion).setY(0);
+      const len = forward.length();
+      focus.copy(camera.position);
+      if (len > 1e-6) focus.addScaledVector(forward, LIGHTING.shadowView.ahead / len);
+      focus.y = 0;
+      fitShadowToView(cam, level, focus, viewHalf, sun.shadow.mapSize.x);
+    },
     dispose: () => {
       disposeAtmosphere();
       scene.remove(hemi, sun, sun.target);

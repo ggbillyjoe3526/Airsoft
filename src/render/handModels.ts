@@ -49,13 +49,29 @@ const SEGMENTS = [
 /** Finger radii (gloved), slimmed in the art pass (M14): the fuller ones read as thick on the pistol's grip. */
 const FINGER_RADIUS = [0.0087, 0.009, 0.0085, 0.0076];
 
+/**
+ * Tessellation (audit REN-10): a finger is about 20 px across on a 1080p screen, so 8 sides and 3 rings per cap are as
+ * round as 14 and 6 were, at a third of the triangles (a hand: 7,012 → 2,396). The wrist, the widest round
+ * part, keeps more sides. [cap rings, sides] for capsules.
+ */
+const DETAIL = {
+  finger: [3, 8],
+  thumb: [3, 10],
+  wrist: [4, 12],
+  palmSegments: 2,
+  strapSegments: 1,
+  /** The thenar pad's sphere: [sides, rings]. */
+  thenar: [10, 6],
+  cuffSides: 12,
+} as const;
+
 const toVec = (p: V3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], -p[2]);
 
-/** Capsule from a to b (world vectors). */
-function capsule(a: THREE.Vector3, b: THREE.Vector3, radius: number): THREE.BufferGeometry {
+/** Capsule from a to b (world vectors), tessellated as `detail` ([cap rings, sides]). */
+function capsule(a: THREE.Vector3, b: THREE.Vector3, radius: number, detail: readonly [number, number]): THREE.BufferGeometry {
   const dir = b.clone().sub(a);
   const len = Math.max(1e-4, dir.length());
-  const geo = new THREE.CapsuleGeometry(radius, len, 6, 14);
+  const geo = new THREE.CapsuleGeometry(radius, len, detail[0], detail[1]);
   geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
   geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
   return geo;
@@ -80,7 +96,7 @@ export function buildHand(sink: GeometrySink, pose: HandPose): V3 {
       .addScaledVector(nn, w);
 
   // Palm: a padded, slightly thicker pad towards the heel of the hand.
-  const palm = new RoundedBoxGeometry(PALM.width, PALM.length, PALM.thickness, 4, PALM.radius);
+  const palm = new RoundedBoxGeometry(PALM.width, PALM.length, PALM.thickness, DETAIL.palmSegments, PALM.radius);
   const basis = new THREE.Matrix4().makeBasis(a, d, nn);
   palm.applyMatrix4(basis);
   palm.translate(centre.x, centre.y, centre.z);
@@ -101,13 +117,13 @@ export function buildHand(sink: GeometrySink, pose: HandPose): V3 {
       up.applyQuaternion(q);
       const len = SEGMENTS[f]![s]!;
       const q2 = p.clone().addScaledVector(dir, len);
-      sink.addGeometry('glove', capsule(p, q2, radius * (1 - s * 0.07)));
+      sink.addGeometry('glove', capsule(p, q2, radius * (1 - s * 0.07), DETAIL.finger));
       p = q2;
     }
   }
 
   // Thumb: from the heel of the hand on the index side, a fleshy pad, then two segments.
-  const thenar = new THREE.SphereGeometry(0.02, 12, 10);
+  const thenar = new THREE.SphereGeometry(0.02, DETAIL.thenar[0], DETAIL.thenar[1]);
   thenar.scale(1, 1.4, 0.75);
   thenar.applyMatrix4(basis);
   const tp = local(-0.03, -0.012, -0.006);
@@ -127,20 +143,20 @@ export function buildHand(sink: GeometrySink, pose: HandPose): V3 {
     tDir.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(tAxis, pose.thumb.curl[s]!));
     const len = s === 0 ? 0.034 : 0.028;
     const next = tpos.clone().addScaledVector(tDir, len);
-    sink.addGeometry('glove', capsule(tpos, next, s === 0 ? 0.0115 : 0.0105));
+    sink.addGeometry('glove', capsule(tpos, next, s === 0 ? 0.0115 : 0.0105, DETAIL.thumb));
     tpos = next;
   }
 
   // Wrist and glove cuff with a strap across the back.
   const wristA = local(midAcross, -PALM.length / 2 + 0.006, 0);
   const wristB = local(midAcross, -PALM.length / 2 - 0.03, 0);
-  sink.addGeometry('glove', capsule(wristA, wristB, 0.025));
-  const cuff = new THREE.CylinderGeometry(0.03, 0.028, 0.03, 16);
+  sink.addGeometry('glove', capsule(wristA, wristB, 0.025, DETAIL.wrist));
+  const cuff = new THREE.CylinderGeometry(0.03, 0.028, 0.03, DETAIL.cuffSides);
   cuff.applyMatrix4(new THREE.Matrix4().makeBasis(a, d, nn));
   const cuffAt = local(midAcross, -PALM.length / 2 - 0.022, 0);
   cuff.translate(cuffAt.x, cuffAt.y, cuffAt.z);
   sink.addGeometry('glove', cuff);
-  const strap = new RoundedBoxGeometry(0.034, 0.016, 0.008, 2, 0.003);
+  const strap = new RoundedBoxGeometry(0.034, 0.016, 0.008, DETAIL.strapSegments, 0.003);
   strap.applyMatrix4(basis);
   const strapAt = local(midAcross, -PALM.length / 2 - 0.02, 0.028);
   strap.translate(strapAt.x, strapAt.y, strapAt.z);

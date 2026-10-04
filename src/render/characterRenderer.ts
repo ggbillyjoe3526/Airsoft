@@ -4,7 +4,7 @@ import { FIGURE } from '../config/characters';
 import type { HitConfig } from '../config/hits';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
-import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll } from './characterModels';
+import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll, setReceiveShadows } from './characterModels';
 import { type FigureModel, fadeModelMaterials } from './externalModels';
 
 interface FigureState {
@@ -77,6 +77,11 @@ export class CharacterRenderer {
       this.object.add(figure.root);
       this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0 });
     }
+  }
+
+  /** Figures shaded by walls and containers, or lit as if in full sun (QualitySettings.figureShadows, REN-07). */
+  setReceiveShadows(on: boolean): void {
+    setReceiveShadows(this.object, on);
   }
 
   /** Character `id` was hit by a BB flying along `direction`: its figure flinches. */

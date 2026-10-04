@@ -1,3 +1,4 @@
+import { defaultTeammateDifficulty, type Difficulty, DIFFICULTIES } from './bots';
 import type { Tagged } from './content';
 import type { Switch } from './controls';
 import { HITS, type HitConfig, ROUNDS } from './hits';
@@ -77,14 +78,16 @@ export function hitRulesFor(m: MatchRules): HitConfig {
 }
 
 /**
- * Whether a match counts towards the records (M20): the standard match (DEFAULT_MATCH_RULES) with both teams' bots at
- * one difficulty, as every match was before M20. The records grid is per difficulty and mode, so a 1v1 first to 3, or
- * Hard opponents with Hard teammates at your side, would mix easier or shorter matches into the same cell.
+ * Whether a match counts towards the records (M20): the standard match (DEFAULT_MATCH_RULES) with your bot teammates at
+ * the opponents' level, as every match was before M20, or at the level the game gives them by default
+ * (defaultTeammateDifficulty: Normal against Easy, audit AI-03), so a player who changed nothing is always counted. The
+ * records grid is per opponents' difficulty and mode, so a 1v1 first to 3, or Hard opponents with Easy teammates at
+ * your side, would mix easier or shorter matches into the same cell.
  */
-export function countsForRecords(rules: MatchRules, opponents: string, teammates: string): boolean {
+export function countsForRecords(rules: MatchRules, opponents: Difficulty, teammates: Difficulty): boolean {
   const d = DEFAULT_MATCH_RULES;
   return (
-    opponents === teammates &&
+    (teammates === opponents || teammates === defaultTeammateDifficulty(opponents)) &&
     rules.winsNeeded === d.winsNeeded &&
     rules.roundTime === d.roundTime &&
     rules.teamSize === d.teamSize &&
@@ -95,11 +98,16 @@ export function countsForRecords(rules: MatchRules, opponents: string, teammates
 
 /**
  * The match the records count, in words (countsForRecords): "3v3 · first to 5, 2:30 rounds. Friendly fire on;
- * ricochets don't count. Both teams' bots at one difficulty." One text for New game's note and the summary's.
+ * ricochets don't count. Your teammates at the opponents' level, or Normal against Easy." One text for New game's note
+ * and the summary's.
  */
 export function standardMatchText(): string {
   const std = matchRulesSummary(DEFAULT_MATCH_RULES);
-  return `${std.value}, ${std.detail} Both teams' bots at one difficulty.`;
+  const label = (id: Difficulty) => DIFFICULTIES.find((d) => d.id === id)?.label ?? id;
+  const defaults = DIFFICULTIES.filter((d) => defaultTeammateDifficulty(d.id) !== d.id).map(
+    (d) => `, or ${label(defaultTeammateDifficulty(d.id))} against ${d.label}`,
+  );
+  return `${std.value}, ${std.detail} Your teammates at the opponents' level${defaults.join('')}.`;
 }
 
 /** "2:30". */

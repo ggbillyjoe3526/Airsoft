@@ -405,14 +405,26 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   const quality = settings.getByRole('group', { name: 'Quality' });
   const shadowsOn = () => page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
+  // Edge smoothing applies at once too (final alpha audit REN-04): the game's canvas gets a new, multisampled context.
+  const multisampled = () => page.evaluate(() => document.querySelector<HTMLCanvasElement>('canvas.game-canvas')!.getContext('webgl2')!.getContextAttributes()!.antialias);
   await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(false);
+  expect(await multisampled()).toBe(false);
   await quality.getByRole('button', { name: 'Medium' }).click();
   await expect(quality.getByRole('button', { name: 'Medium' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(true);
+  expect(await multisampled()).toBe(true);
+  expect(await page.locator('canvas.game-canvas').count()).toBe(1);
+  // A Custom row moves the picker to Custom; setting it back finds Medium again.
+  await settings.getByRole('group', { name: 'Shadows' }).getByRole('button', { name: 'Off' }).click();
+  await expect(quality.getByRole('button', { name: 'Custom' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await shadowsOn()).toBe(false);
+  await settings.getByRole('group', { name: 'Shadows' }).getByRole('button', { name: 'On' }).click();
+  await expect(quality.getByRole('button', { name: 'Medium' })).toHaveAttribute('aria-pressed', 'true');
   await quality.getByRole('button', { name: 'Low' }).click();
   await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(false);
+  expect(await multisampled()).toBe(false);
   // Team colours picked mid-match show from the next match, Play Again included (bug pass): back to Standard here.
   await settings.getByRole('tab', { name: /Accessibility/i }).click();
   await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'Standard' }).click();
