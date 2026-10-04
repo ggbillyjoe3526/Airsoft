@@ -19,7 +19,7 @@ export const SHOT_PROFILES: readonly ShotProfile[] = ['electric', 'gas', 'spring
 export type FloorSurface = 'concrete' | 'metal';
 
 /** What a BB ticks off (from the kind of block it hit; see audio/soundMaterials.ts). */
-export type ImpactMaterial = 'concrete' | 'metal' | 'wood';
+export type ImpactMaterial = 'concrete' | 'metal' | 'wood' | 'earth';
 
 export type FootstepPace = 'run' | 'sprint' | 'land';
 
@@ -316,6 +316,11 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
       click(0, 2500, 0.15, 0.005),
       { kind: 'modes', gain: 0.18, modes: [{ hz: 880, decay: 0.035, gain: 0.8 }, { hz: 2050, decay: 0.022, gain: 0.5 }, { hz: 3600, decay: 0.012, gain: 0.25 }] },
     ],
+    ...LOOSE,
+  },
+  /** A BB into the ground of an outdoor field (M33c, terrain): a soft, dull "thup", quieter than any hard surface. */
+  'impact.earth': {
+    layers: [{ kind: 'noise', attack: 0.0008, decay: 0.022, gain: 0.32, filter: { type: 'lowpass', hz: 1400, q: 0.7 } }],
     ...LOOSE,
   },
   /** A BB smacking into someone's jacket: duller than a hard surface, with a soft thud. */

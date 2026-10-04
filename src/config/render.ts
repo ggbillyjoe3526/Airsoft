@@ -414,6 +414,16 @@ export const LIGHTING = {
   shadowView: { radius: 18, ahead: 8 },
 } as const;
 
+/**
+ * The ground of a map with terrain (M33c, render/terrainMeshes.ts): greybox grass, a darker green low down to a lighter
+ * one at the top of the terrain, each vertex varied by up to `jitter` either way. The art pass gives it a texture.
+ */
+export const TERRAIN_LOOK = {
+  low: 0x4f6b3a,
+  high: 0x7d9455,
+  jitter: 0.06,
+} as const;
+
 /** The surface textures (render/proceduralTextures.ts), drawn on canvases as each match loads. */
 export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier' | 'sandbag' | 'gabion';
 
@@ -645,6 +655,8 @@ export const IMPACT_DUST: Readonly<Record<ImpactMaterial, { tint: number; scale:
   concrete: { tint: 0xf4f0ea, scale: 1 },
   wood: { tint: 0xf2cf98, scale: 0.85 },
   metal: { tint: 0xc9d2dc, scale: 0.6 },
+  /** Ground (M33c, terrain): a puff of brown soil. */
+  earth: { tint: 0xb89a72, scale: 0.9 },
 };
 
 /**

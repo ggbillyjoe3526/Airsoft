@@ -1,5 +1,6 @@
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { surfaceHeightAt } from '../map/surfaces';
+import { terrainHeightAt, terrainMaxX, terrainMaxZ } from '../map/terrain';
 import type { Vec3 } from '../sim/vec';
 
 /**
@@ -41,11 +42,12 @@ const bottom = (b: MapBlock): number => b.center.y - b.size.y / 2;
 const isSurface = (b: MapBlock): boolean => b.kind === 'floor' || b.kind === 'ramp';
 
 export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
-  // Bounds: the floor and ramp blocks.
-  let minX = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let minZ = Number.POSITIVE_INFINITY;
-  let maxZ = Number.NEGATIVE_INFINITY;
+  // Bounds: the floor and ramp blocks, and the terrain (M33c).
+  const terrain = map.terrain;
+  let minX = terrain ? terrain.minX : Number.POSITIVE_INFINITY;
+  let maxX = terrain ? terrainMaxX(terrain) : Number.NEGATIVE_INFINITY;
+  let minZ = terrain ? terrain.minZ : Number.POSITIVE_INFINITY;
+  let maxZ = terrain ? terrainMaxZ(terrain) : Number.NEGATIVE_INFINITY;
   for (const b of map.blocks) {
     if (!isSurface(b)) continue;
     minX = Math.min(minX, b.center.x - b.size.x / 2);
@@ -60,7 +62,16 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
   const floorY = new Float32Array(cols * rows).fill(Number.NaN);
   const grid: NavGrid = { cell: cfg.cell, cols, rows, minX, minZ, walkable, floorY, maxStep: cfg.maxStep };
 
-  // Floor heights: the highest walkable surface under each cell's centre. A cell without one is not walkable.
+  // Floor heights: the highest walkable surface under each cell's centre (the terrain's ground first, M33c). A cell
+  // without one is not walkable.
+  if (terrain) {
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const y = terrainHeightAt(terrain, cellX(grid, i), cellZ(grid, j));
+        if (y !== undefined) floorY[j * cols + i] = y;
+      }
+    }
+  }
   for (const b of map.blocks) {
     if (!isSurface(b)) continue;
     forCellsUnder(grid, b, 0, (c, x, z) => {

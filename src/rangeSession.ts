@@ -146,7 +146,7 @@ export class RangeSession {
     input.ordersEnabled = false;
     if (pose) input.pitch = pose.pitch;
 
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false));
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false));
     this.combat.skipStartWhistle();
     this.targets = new RangeTargetsRenderer(this.state.targets, HITS);
     this.targets.setReceiveShadows(quality.figureShadows);
