@@ -21,7 +21,7 @@ export interface LockChannel {
 
 /** The browser's Web Locks, as far as the lock uses them (navigator.locks in the browser, a stand-in in tests). */
 export interface SaveLocks {
-  request(name: string, options: { ifAvailable: boolean }, callback: (lock: unknown) => Promise<void> | undefined): Promise<unknown>;
+  request(name: string, options: { ifAvailable?: boolean }, callback: (lock: unknown) => Promise<void> | undefined): Promise<unknown>;
 }
 
 type Message = { t: 'hello'; id: string } | { t: 'here'; id: string } | { t: 'take'; id: string } | { t: 'released'; id: string };
@@ -62,9 +62,14 @@ export class TabLock {
     return this.playing;
   }
 
-  /** Asks whether another tab is playing; true if this one may play (nobody answered). */
-  async claim(): Promise<boolean> {
-    if (this.opts.locks) return this.claimLock(this.opts.locks);
+  /**
+   * Asks whether another tab is playing; true if this one may play (nobody answered). `tookSave`: this tab was just
+   * reloaded by its own Play here. The tab it took the save from let go of the Web Lock before saying so, but the
+   * browser frees the lock a moment later, so a tab reloaded at once can still find it held: it waits its turn for the
+   * lock (up to TAB_LOCK.releaseWaitMs) instead of giving up at once.
+   */
+  async claim(tookSave = false): Promise<boolean> {
+    if (this.opts.locks) return this.claimLock(this.opts.locks, tookSave);
     if (!this.channel) return (this.playing = true);
     this.heardPlaying = false;
     this.send({ t: 'hello', id: this.id });
@@ -84,16 +89,26 @@ export class TabLock {
     this.released = null;
   }
 
-  /** Holds the save's Web Lock until this tab lets go; false at once if another tab holds it. */
-  private claimLock(locks: SaveLocks): Promise<boolean> {
+  /**
+   * Holds the save's Web Lock until this tab lets go; false at once if another tab holds it, or with `queue`, false if
+   * it is still held after TAB_LOCK.releaseWaitMs (a turn granted after that is handed straight back).
+   */
+  private claimLock(locks: SaveLocks, queue: boolean): Promise<boolean> {
     return new Promise((resolve) => {
-      void locks.request(TAB_LOCK.lockName, { ifAvailable: true }, (lock) => {
-        if (!lock) {
-          resolve(false);
+      let decided = false;
+      const decide = (plays: boolean): boolean => {
+        if (decided) return false;
+        decided = true;
+        resolve(plays);
+        return true;
+      };
+      if (queue) void this.wait(TAB_LOCK.releaseWaitMs).then(() => decide(false));
+      void locks.request(TAB_LOCK.lockName, queue ? {} : { ifAvailable: true }, (lock) => {
+        if (!lock || !decide(true)) {
+          decide(false);
           return undefined;
         }
         this.playing = true;
-        resolve(true);
         return new Promise<void>((release) => (this.unlock = release));
       });
     });
