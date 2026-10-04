@@ -132,7 +132,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
 | Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up | In progress (M33a done; concept sketch v1 with the owner) | M33a 7/8 |
-| Alpha · Owner's 2026-10-04 requests · M36 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | Planned (starts after the final alpha pass) | |
+| Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | Planned (starts after the final alpha pass) | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -273,7 +273,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 2 | A basic **Field of view** slider; today's FOV stays the default, and the player can widen or narrow it | M15b |
 | 3 | Remove the Brightness setting from Graphics | M15b |
 | 4 | Graphics quality is held back for now (still basic geometry and models), but its place is kept for later | M15b (greyed out, LATER); back in M14 as a saved picker that scales the art pass |
-| 5 | An **Esport** difficulty above Hard that plays almost like a competitive title (Counter-Strike, Valorant). Noted, not built: Easy, Normal and Hard come first | Planned as M36 (owner, 2026-10-04) |
+| 5 | An **Esport** difficulty above Hard that plays almost like a competitive title (Counter-Strike, Valorant). Noted, not built: Easy, Normal and Hard come first | Planned as M36–M41 (owner, 2026-10-04) |
 
 **The owner's Loadout request (2026-10-03, after the M15 notes) and where it went:**
 
@@ -331,7 +331,7 @@ each one went:**
 | 17 | A practice range to test replicas and the loadout | M21 (moved up from v0.3) |
 | 18 | Crosshair customisation in the settings menu: size, colour, shape and the like | M19 |
 | 19 | Team communication (wheel, pings, hand signals) for later versions | Unchanged ([when the bots are ready](#when-the-bots-are-ready-team-communication)) |
-| 20 | Esport difficulty for later | Planned as M36 (owner, 2026-10-04) |
+| 20 | Esport difficulty for later | Planned as M36–M41 (owner, 2026-10-04) |
 | 21 | Absolutely no multiplayer | Confirmed (DECISIONS) |
 
 **The owner's second batch (2026-10-03, his own gap list, confirmed "yes to all") and where each item went:**
@@ -358,7 +358,7 @@ each one went:**
 | 18 | Orders for bot teammates: follow me, hold here, regroup | M22 (the wheel, pings and hand signals stay later) |
 | 19 | Practice range; the tutorial could end in a free-practice yard | M21 (already there) |
 | 20 | Bots hear through walls with no muffling; at higher difficulties it feels like wallhacking | M22 |
-| 21 | For a future Esport difficulty: sensitivity as cm/360 or "same as CS2 / Valorant", aim stats, first-shot spread tuned for that tier, bot hearing through walls fixed | cm/360 in M18; the rest in M36 (aim stats as its guards and tuning); hearing in M22 |
+| 21 | For a future Esport difficulty: sensitivity as cm/360 or "same as CS2 / Valorant", aim stats, first-shot spread tuned for that tier, bot hearing through walls fixed | cm/360 in M18; the rest in M36–M41 (aim stats as its guards and tuning); hearing in M22 |
 | 22 | Bug: the HUD says "press R to reload" after reload is rebound | Fixed in its own pull request (not a milestone) |
 | 23 | Mouse buttons can't be rebound (fire and aim fixed; side buttons unused) | M18 |
 
@@ -756,33 +756,33 @@ pool, items 11, 12 and part of 14).
   - **M33a. Coming soon:** Woodland shows in the Map pop-up under Depot, greyed out with a Coming soon tag, and can't
     be picked until it is playable.
 
-- **M36. Esports difficulty, called "Pro" in the game** (owner, 2026-10-04: "high stakes and require skill … the
+- **M36–M41. Esports difficulty, called "Pro" in the game** (owner, 2026-10-04: "high stakes and require skill … the
   player deliberately moves slowly and carefully peeks around corners … the game must still be fun"; he approved the
   plan in the project's shared files, `research/esports-difficulty-2026-10-04.md`). Starts after the final alpha pass.
   Tagged dev (the public / dev content tag) until the owner says it's done, so it shows only with the Dev settings on.
   The difficulty sets how good the bots are; a new Rules picker sets how the match is played.
-  - **M36a. The Pro level:** a fourth difficulty above Hard (opponents and teammates), its skill numbers, opponents'
+  - **M36. The Pro level:** a fourth difficulty above Hard (opponents and teammates), its skill numbers, opponents'
     rolled kits with more parts than Hard, the Cyber Pistol rule as on Hard, ×2 Field Credits, its own records rows.
-  - **M36b. Held angles:** angles worked out per map from the navigation (doorways, wall corners, stair tops, bush
+  - **M37. Held angles:** angles worked out per map from the navigation (doorways, wall corners, stair tops, bush
     edges and tree gaps); Pro bots hold and pre-aim them at head height. They react fast (about 0.2 s) only to someone
     appearing near where they already aim, and at Hard speed or slower to someone off to the side, so a wide swing
     loses and slicing a corner or a flank wins. A test fails if a bot ever aims at someone it hasn't seen or heard.
-  - **M36c. Clearing and team play:** Pro bots walk and slice corners near the enemy, trade a hit teammate, set
+  - **M38. Clearing and team play:** Pro bots walk and slice corners near the enemy, trade a hit teammate, set
     crossfires, pre-aim spots someone has peeked from, share heard positions with teammates, push late in a round when
     behind on players, and reload behind cover. Same eyes and ears as the player.
-  - **M36d. Rules picker:** a Rules row beside Mode: *Skirmish* (today's rules, the default), *Tournament* (first to 7
+  - **M39. Rules picker:** a Rules row beside Mode: *Skirmish* (today's rules, the default), *Tournament* (first to 7
     with half-time and win-by-two overtime, 2:00 rounds, an Elimination time-out won by the side with more players
     left, the minimap showing teammates only, ricochets count, a strict marshal, the Loadout locked for the match, your
     own Armory kit), *Pro CQB* (Tournament plus semi-auto only and realcap magazines) and *Custom* (any of those
     switches, factory kit for everyone among them). Named rulesets play on every difficulty and get their own records;
     on Pro they pay ×2, Custom pays like Hard and never counts. Built as the field rules presets' machinery (v0.3), so
     CQB, Speedsoft and Milsim slot in later. Each ruleset carries the public / dev tag.
-  - **M36e. Map balance:** bot-only Pro guards on every map (Attack / Defend attackers 40–60 %, each end 40–60 % of
+  - **M40. Map balance:** bot-only Pro guards on every map (Attack / Defend attackers 40–60 %, each end 40–60 % of
     decided Elimination rounds, under 1 round in 10 on time). Depot stays as it is; if its Office lane pushes attackers
     under 40 %, a window or second door between two rooms. Woodland and the city are designed to the plan's
     requirements from the start (cover on every approach's last 15–20 m, several ways into every objective, a landing
     with a corner at every stair top).
-  - **M36f. What got you, tips and tuning:** after you're hit, a card shows where the shot came from, whether that bot
+  - **M41. What got you, tips and tuning:** after you're hit, a card shows where the shot came from, whether that bot
     was holding the angle, how long you were in view and whether you were moving (every difficulty; on by default on
     Pro). Briefing tips for Pro, a playtest per map, then public when the owner says.
 
@@ -904,7 +904,7 @@ went.** The ones he said yes to "but maybe implement later" are placed in the ve
 - The practice range moved up into v0.1 (M21).
 - **Suppressors** with their own sound, built on the M9 groundwork.
 - **Field rules presets** (owner, 2026-10-04: for a later update; the picker itself and the Tournament and Pro CQB
-  rule sets come earlier, with M36d): one picker beside Mode that sets a whole rule set
+  rule sets come earlier, with M39): one picker beside Mode that sets a whole rule set
   the way real sites do: *Skirmish* (today's rules, the default), *CQB* (semi auto only, a bang rule), *Speedsoft*
   (semi only, no minimum distance, short rounds) and *Milsim* (realcap 30-BB magazines, a BB allowance per round, no
   hi-caps, a bleed-out instead of an instant out). Builds on M20's custom match settings; Milsim needs the pouches and
@@ -959,4 +959,4 @@ the bot AI is good enough to follow the calls. It can join whichever version tha
 
 Not approved yet; see `docs/IDEAS.md`: VIP escort and hostage
 rescue modes (owner, 2026-10-03), adjustable hop-up, dead rag and voiced hit calls, bang-bang surrender, a referee NPC,
-a who-hit-you view (a simpler "what got you" card comes with M36f), Depot variations, a rubber-knife tag and a slide into cover (owner, 2026-10-04).
+a who-hit-you view (a simpler "what got you" card comes with M41), Depot variations, a rubber-knife tag and a slide into cover (owner, 2026-10-04).
