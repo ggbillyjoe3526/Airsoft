@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
 import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { unpaidLine } from './summaryScreen';
-import { DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE, setupNotes } from './menus';
+import { CUSTOM_NOT_RECORDED_NOTE, DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE, notRecordedNote, setupNotes } from './menus';
+import { DEFAULT_MATCH_RULES, REALCAP_TEXT, standardMatchText, standardRulesOf } from '../../config/matchRules';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
@@ -207,6 +208,46 @@ describe('the rules shown on New game', () => {
     expect(describeRules({ ...rules, teamSize: 2 }, 'elimination')).toContain('you and 1 bot teammate (Blue)');
     expect(describeRules(rules, 'elimination')).toContain("Friendly fire counts. Ricochets don't count.");
     expect(describeRules({ ...rules, friendlyFire: false, ricochetsCount: true }, 'elimination')).toContain('Friendly fire is off. Ricochets count.');
+  });
+});
+
+describe('the Rules picker on New game (M39)', () => {
+  const rules: MatchRulesText = {
+    teamSize: 3,
+    winsNeeded: 7,
+    roundTime: 120,
+    playerTeam: 'Blue',
+    enemyTeam: 'Orange',
+    raiseTime: 5,
+    halfTimeAfter: 6,
+    attackFirst: true,
+    eliminationStartEnd: 1,
+    attackDefendStartEnd: 0,
+    friendlyFire: true,
+    ricochetsCount: true,
+  };
+
+  it('reads as before with Skirmish\'s switches, and spells out the ones a ruleset turns on', () => {
+    expect(describeRules({ ...rules, switches: DEFAULT_MATCH_RULES }, 'elimination')).toBe(describeRules(rules, 'elimination'));
+    const pro = describeRules({ ...rules, switches: standardRulesOf('proCqb') }, 'elimination');
+    expect(pro).toContain('if time runs out the team with more players left wins it, a draw if level');
+    expect(pro).toContain('First to 7 rounds wins the match, by two clear: level at 6 all, play on until one team is two ahead.');
+    expect(pro).toContain("Every replica fires semi only, bots' too.");
+    expect(pro).toContain(`Realcap magazines for everyone: ${REALCAP_TEXT}.`);
+    expect(pro).toContain('The minimap shows your teammates only.');
+    expect(pro).not.toContain('factory');
+    expect(describeRules({ ...rules, switches: { ...DEFAULT_MATCH_RULES, factoryKit: true } }, 'elimination')).toContain('factory rifle and pistol');
+    // Attack and Defend's time-out is the defenders' whatever the switch.
+    expect(describeRules({ ...rules, switches: standardRulesOf('tournament') }, 'attackDefend')).toContain('win if the clock (2:00) runs out');
+  });
+
+  it("says why a match won't count by its ruleset: Skirmish's note as before, a named ruleset's own standard, Custom never", () => {
+    expect(notRecordedNote('skirmish')).toBe(NOT_RECORDED_NOTE);
+    expect(notRecordedNote('tournament')).toContain(standardMatchText('tournament'));
+    expect(notRecordedNote('tournament')).toContain('Tournament records');
+    expect(notRecordedNote('custom')).toBe(CUSTOM_NOT_RECORDED_NOTE);
+    expect(setupNotes('Rules.', { recorded: false, cheating: false, devContentUsed: false, ruleset: 'custom' })).toBe(`Rules. ${CUSTOM_NOT_RECORDED_NOTE}`);
+    expect(setupNotes('Rules.', { recorded: false, cheating: false, devContentUsed: false })).toBe(`Rules. ${NOT_RECORDED_NOTE}`);
   });
 });
 

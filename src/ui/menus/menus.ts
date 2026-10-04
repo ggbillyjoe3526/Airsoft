@@ -1,15 +1,29 @@
 import { DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
 import {
   countsForRecords,
+  CUSTOM_RULES_PAY_CAP,
+  DEFAULT_RULESET,
+  FIRE_MODE_CHOICES,
   FRIENDLY_FIRE_CHOICES,
   formatRoundTime,
+  KIT_CHOICES,
+  MAGAZINE_CHOICES,
   type MatchRules,
   matchRulesSummary,
+  type RuleSwitch,
+  MINIMAP_HEARD_CHOICES,
+  offersSwitch,
+  OVERTIME_CHOICES,
+  recordsKeyOf,
   RICOCHETS_COUNT_CHOICES,
   ROUND_TIME_SETTING,
   roundRulesFor,
+  RULESETS,
+  type RulesetId,
+  rulesetOf,
   standardMatchText,
   TEAM_SIZE_CHOICES,
+  TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
@@ -41,7 +55,7 @@ import { type MatchSummary, SummaryScreen } from './summaryScreen';
 import { TitleScreen } from './titleScreen';
 
 /** The parts of the rules text that the Match pop-up doesn't change (team names, the flag, who attacks first). */
-export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount'>;
+export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount' | 'switches'>;
 
 /** What the menus show and what they report back to the game. */
 export interface MenusOptions {
@@ -69,8 +83,9 @@ export interface MenusOptions {
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
   /** `follows`: no teammate level is saved yet, so it follows the opponents' picks until one is chosen. */
   teammateDifficulty: { initial: Difficulty; follows: boolean; onChange: (d: Difficulty) => void };
-  /** The Match pop-up's rules (M20). */
+  /** The Match pop-up's rules (M20), and its Rules row (M39). */
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
+  ruleset: { initial: RulesetId; onChange: (r: RulesetId) => void };
   controls: ControlsSettingsOptions;
   fov: { initial: number; onChange: (v: number) => void };
   /** The quality rows on Settings → Graphics (ui/graphicsSettings.ts). */
@@ -112,8 +127,11 @@ export class Menus {
   private readonly difficultyDialog: RowsDialog;
   /** The pickers whose options may be dev content (M35), with the pick each shows as it plays. */
   private readonly taggedPickers: { picker: OptionPicker<string>; played: (p: ReturnType<typeof playedPicks>) => string }[] = [];
+  /** The Match pop-up's rows by the rule each sets (M39): a row shows only while the ruleset leaves its rule to you. */
+  private readonly switchRows: { field: keyof MatchRules; row: HTMLElement }[] = [];
   /** What the Match and Difficulty pop-ups have picked. */
   private readonly matchRules: MatchRules;
+  private ruleset: RulesetId;
   private difficulty: Difficulty;
   private teammateDifficulty: Difficulty;
   private readonly screens: Record<MenuScreen, HTMLElement>;
@@ -131,6 +149,7 @@ export class Menus {
   ) {
     this.root = el('div', 'menus');
     this.matchRules = { ...opts.matchRules.initial };
+    this.ruleset = opts.ruleset.initial;
     this.difficulty = opts.difficulty.initial;
     this.teammateDifficulty = opts.teammateDifficulty.initial;
     this.title = new TitleScreen(() => this.go('setup'), () => this.openRange(this.opts.onRange), () => this.openRange(this.opts.onTutorial), opts.tutorialDone);
@@ -332,13 +351,38 @@ export class Menus {
     return picker;
   }
 
-  /** The Match pop-up's rows: rounds to win, round time, team size, friendly fire and whether ricochets count. */
+  /**
+   * The Match pop-up's rows: the Rules row (M39), then rounds to win, round time, team size, friendly fire and whether
+   * ricochets count, then the Rules picker's switches (M39). A row shows only while the ruleset leaves its rule to you
+   * (refreshSetup): Skirmish the first five, Tournament and Pro CQB the team size, Custom every one.
+   */
   private matchRows(): HTMLElement[] {
     const m = this.matchRules;
     const changed = (): void => {
       this.opts.matchRules.onChange({ ...m });
       this.refreshSetup();
     };
+    const rules = this.tagPicker(
+      new OptionPicker('Rules', RULESETS, this.ruleset, 'ruleset', (r) => {
+        this.ruleset = r;
+        this.opts.ruleset.onChange(r);
+        this.refreshSetup();
+      }),
+      (p) => p.ruleset,
+    );
+    /** A two-way switch row for rule `field` (M39). */
+    const toggle = <T extends string>(field: RuleSwitch, label: string, help: string, choices: readonly { id: T; label: string; blurb: string }[], save: Parameters<typeof saveSetting>[0], on: T, off: T): HTMLElement =>
+      this.switchRow(
+        field,
+        menuRow(
+          label,
+          help,
+          new OptionPicker(label, choices, m[field] ? on : off, save, (v) => {
+            m[field] = v === on;
+            changed();
+          }).root,
+        ),
+      );
     const winsNeeded = new OptionPicker('Rounds to win', WINS_NEEDED_CHOICES, String(m.winsNeeded), 'winsNeeded', (v) => {
       m.winsNeeded = Number(v);
       changed();
@@ -351,33 +395,55 @@ export class Menus {
     // The size played: no more than the map in force has room for (M33).
     this.tagPicker(teamSize, (p) => String(teamSizeOn(p.map, p.rules.teamSize)));
     return [
-      menuRow('Rounds to win', '', winsNeeded.root),
-      menuRow(
-        'Round time',
-        'Out of time: a draw in Elimination, the defenders\' round in Attack and Defend.',
-        rangeControl('Round time', ROUND_TIME_SETTING, m.roundTime, formatRoundTime, 'roundTime', (v) => {
-          m.roundTime = v;
-          changed();
-        }),
+      menuRow('Rules', 'Named rulesets have their own records; Custom never counts.', rules.root),
+      this.switchRow('winsNeeded', menuRow('Rounds to win', '', winsNeeded.root)),
+      this.switchRow(
+        'roundTime',
+        menuRow(
+          'Round time',
+          'Out of time: a draw in Elimination, the defenders\' round in Attack and Defend.',
+          rangeControl('Round time', ROUND_TIME_SETTING, m.roundTime, formatRoundTime, 'roundTime', (v) => {
+            m.roundTime = v;
+            changed();
+          }),
+        ),
       ),
-      menuRow('Team size', 'Bigger teams come with bigger fields.', teamSize.root),
-      menuRow(
-        'Friendly fire',
-        '',
-        new OptionPicker('Friendly fire', FRIENDLY_FIRE_CHOICES, m.friendlyFire ? 'on' : 'off', 'friendlyFire', (v) => {
-          m.friendlyFire = v === 'on';
-          changed();
-        }).root,
+      this.switchRow('teamSize', menuRow('Team size', 'Bigger teams come with bigger fields.', teamSize.root)),
+      this.switchRow(
+        'friendlyFire',
+        menuRow(
+          'Friendly fire',
+          '',
+          new OptionPicker('Friendly fire', FRIENDLY_FIRE_CHOICES, m.friendlyFire ? 'on' : 'off', 'friendlyFire', (v) => {
+            m.friendlyFire = v === 'on';
+            changed();
+          }).root,
+        ),
       ),
-      menuRow(
-        'Ricochets count',
-        'BBs bounce off concrete and steel either way.',
-        new OptionPicker('Ricochets count', RICOCHETS_COUNT_CHOICES, m.ricochetsCount ? 'on' : 'off', 'ricochets', (v) => {
-          m.ricochetsCount = v === 'on';
-          changed();
-        }).root,
+      this.switchRow(
+        'ricochetsCount',
+        menuRow(
+          'Ricochets count',
+          'BBs bounce off concrete and steel either way.',
+          new OptionPicker('Ricochets count', RICOCHETS_COUNT_CHOICES, m.ricochetsCount ? 'on' : 'off', 'ricochets', (v) => {
+            m.ricochetsCount = v === 'on';
+            changed();
+          }).root,
+        ),
       ),
+      toggle('winByTwo', 'Overtime', 'Half-time stays one round short of the win.', OVERTIME_CHOICES, 'overtime', 'on', 'off'),
+      toggle('timeOutToMorePlayers', 'Time-out', 'Elimination only: in Attack and Defend the defenders hold.', TIME_OUT_CHOICES, 'timeOut', 'morePlayers', 'draw'),
+      toggle('heardOnMinimap', 'Minimap', 'The hit marker and the "you\'re hit" pointer stay either way.', MINIMAP_HEARD_CHOICES, 'minimapHeard', 'on', 'off'),
+      toggle('semiAutoOnly', 'Fire modes', 'For everyone, bots included.', FIRE_MODE_CHOICES, 'fireModes', 'semi', 'any'),
+      toggle('realcap', 'Magazines', 'For everyone, bots included.', MAGAZINE_CHOICES, 'magazines', 'realcap', 'carried'),
+      toggle('factoryKit', 'Kit', 'Your Loadout is locked for the match either way.', KIT_CHOICES, 'matchKit', 'factory', 'own'),
     ];
+  }
+
+  /** `row`, shown only while the ruleset in force leaves rule `field` to the player (M39, refreshSetup). */
+  private switchRow(field: keyof MatchRules, row: HTMLElement): HTMLElement {
+    this.switchRows.push({ field, row });
+    return row;
   }
 
   /** Ends the match the player is leaving, then shows `screen`. */
@@ -499,9 +565,11 @@ export class Menus {
     this.mapDialog.setDevContent(devContent);
     this.modeDialog.setDevContent(devContent);
     const played = playedPicks(
-      { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, rules: this.matchRules },
+      { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, ruleset: this.ruleset, rules: this.matchRules },
       devContent,
     );
+    // The Match pop-up offers the rules the ruleset as played leaves to you (M39).
+    for (const s of this.switchRows) s.row.hidden = !offersSwitch(played.ruleset, s.field);
     // Each map offers as many players a side as it has room for (Depot 3v3, Woodland up to 5v5, M33).
     const map = mapEntry(played.map);
     this.teamSizePicker.limit((id) => Number(id) <= map.teamSize.max);
@@ -510,7 +578,8 @@ export class Menus {
     this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
     const match = matchRulesSummary(m);
-    this.setup.match.set(match.value, match.detail);
+    // Under a ruleset other than Skirmish the line starts with its name (M39).
+    this.setup.match.set(match.value, played.ruleset === DEFAULT_RULESET ? match.detail : `${rulesetOf(played.ruleset).label}. ${match.detail}`);
     const opponents = difficultyLabel(played.difficulty);
     const mates = difficultyLabel(played.teammateDifficulty);
     this.setup.difficulty.set(
@@ -518,9 +587,9 @@ export class Menus {
       m.teamSize === 1 ? `Your opponent: ${opponents}. No teammates in a 1v1.` : `Opponents ${opponents}, teammates ${mates}.`,
     );
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
-    const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty);
-    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value);
-    this.setup.setRules(setupNotes(rules, { recorded, cheating: this.opts.dev.cheating(), devContentUsed: this.opts.dev.devContentUsed() }));
+    const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty, played.ruleset);
+    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter, switches: m }, this.modeDialog.value);
+    this.setup.setRules(setupNotes(rules, { recorded, cheating: this.opts.dev.cheating(), devContentUsed: this.opts.dev.devContentUsed(), ruleset: played.ruleset }));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);
     const armory = this.opts.armory.summary();
@@ -539,9 +608,9 @@ export class Menus {
  * (M20, not `recorded`), Dev settings that change play (M24, `cheating`), or dev content (M35, `devContentUsed`: in full,
  * or only that it won't pay when a note before it already says it won't be recorded). Pure.
  */
-export function setupNotes(rules: string, why: { recorded: boolean; cheating: boolean; devContentUsed: boolean }): string {
+export function setupNotes(rules: string, why: { recorded: boolean; cheating: boolean; devContentUsed: boolean; ruleset?: RulesetId }): string {
   const notes = [rules];
-  if (!why.recorded) notes.push(NOT_RECORDED_NOTE);
+  if (!why.recorded) notes.push(notRecordedNote(why.ruleset ?? DEFAULT_RULESET));
   else if (why.cheating) notes.push(DEV_NOT_RECORDED_NOTE);
   if (why.devContentUsed) notes.push(notes.length > 1 ? DEV_CONTENT_PAY_NOTE : DEV_CONTENT_NOTE);
   return notes.join(' ');
@@ -559,6 +628,16 @@ export const DEV_CONTENT_PAY_NOTE = "It uses content still being built, so it wo
 
 /** Under New game's rules when the setup isn't the standard match. */
 export const NOT_RECORDED_NOTE = `This match won't go into your records, which count only the standard match: ${standardMatchText()}`;
+
+/** Under New game's rules when the setup isn't `ruleset`'s standard match (M39): Skirmish's note, its own, or Custom's. */
+export function notRecordedNote(ruleset: RulesetId): string {
+  if (ruleset === DEFAULT_RULESET) return NOT_RECORDED_NOTE;
+  if (recordsKeyOf(ruleset) === null) return CUSTOM_NOT_RECORDED_NOTE;
+  return `This match won't go into your ${rulesetOf(ruleset).label} records, which count only its standard match: ${standardMatchText(ruleset)}`;
+}
+
+/** Under New game's rules with the Custom ruleset (M39). */
+export const CUSTOM_NOT_RECORDED_NOTE = `Custom rules never go into your records, and pay no more than ×${CUSTOM_RULES_PAY_CAP}.`;
 
 function difficultyLabel(d: Difficulty): string {
   return DIFFICULTIES.find((o) => o.id === d)?.label ?? d;

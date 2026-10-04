@@ -102,3 +102,38 @@ describe('Pro records (M36 criterion 5)', () => {
     expect(JSON.parse(store.data.get(RECORDS_KEY)!).version).toBe(1); // no format bump
   });
 });
+
+describe('ruleset records (M39 criterion 4)', () => {
+  it("files a named ruleset's match under <difficulty>.<mode>.<ruleset>, Skirmish's under the plain cell", () => {
+    const r = emptyRecords();
+    addMatch(r, win({ difficulty: 'pro', ruleset: 'tournament' }));
+    addMatch(r, win({ difficulty: 'easy', ruleset: 'proCqb', won: false }));
+    addMatch(r, win({ ruleset: '' }));
+    expect(resultKey('pro', 'elimination', 'tournament')).toBe('pro.elimination.tournament');
+    expect(resultKey('pro', 'elimination', '')).toBe('pro.elimination');
+    expect(r.results['pro.elimination.tournament']).toEqual({ wins: 1, losses: 0 });
+    expect(r.results['easy.elimination.proCqb']).toEqual({ wins: 0, losses: 1 });
+    expect(r.results['normal.elimination']).toEqual({ wins: 1, losses: 0 });
+    expect(r.results['pro.elimination']).toBeUndefined();
+  });
+
+  it('saves them beside the plain cells, so old records load unchanged and a build from before M39 keeps them', () => {
+    const old = { version: 1, results: { 'easy.elimination': { wins: 2, losses: 1 } }, bestAccuracy: 0.4, streak: 0, bestStreak: 3 };
+    const store = memory({ [RECORDS_KEY]: JSON.stringify(old) });
+    const r = loadRecords(store);
+    expect(r).toEqual({ results: old.results, bestAccuracy: 0.4, streak: 0, bestStreak: 3 });
+    addMatch(r, win({ difficulty: 'hard', mode: 'attackDefend', ruleset: 'tournament' }));
+    saveRecords(r, store);
+    const saved = JSON.parse(store.data.get(RECORDS_KEY)!);
+    expect(saved.version).toBe(1); // no format bump
+    expect(saved.results).toEqual(old.results);
+    expect(saved.rulesetResults).toEqual({ 'hard.attackDefend.tournament': { wins: 1, losses: 0 } });
+    expect(loadRecords(store).results).toEqual({ ...old.results, 'hard.attackDefend.tournament': { wins: 1, losses: 0 } });
+    // A build from before M39 rewrites `results` with what it knows and keeps the field it doesn't (overStored).
+    saveRecords({ ...emptyRecords(), results: { 'easy.elimination': { wins: 3, losses: 1 } } }, store);
+    expect(loadRecords(store).results['hard.attackDefend.tournament']).toEqual({ wins: 1, losses: 0 });
+    // Malformed ruleset keys are dropped one by one.
+    const junk = memory({ [RECORDS_KEY]: JSON.stringify({ version: 1, rulesetResults: { 'pro.elimination': { wins: 1, losses: 0 }, 'a.b.c.d': { wins: 1 }, 'pro.elimination.custom': { wins: 2, losses: 0 } } }) });
+    expect(Object.keys(loadRecords(junk).results)).toEqual(['pro.elimination.custom']);
+  });
+});

@@ -24,11 +24,20 @@ import {
 } from '../../config/controls';
 import {
   DEFAULT_MATCH_RULES,
+  DEFAULT_RULESET,
+  FIRE_MODE_CHOICES,
   FRIENDLY_FIRE_CHOICES,
+  KIT_CHOICES,
+  MAGAZINE_CHOICES,
   type MatchRules,
+  MINIMAP_HEARD_CHOICES,
+  OVERTIME_CHOICES,
   RICOCHETS_COUNT_CHOICES,
   ROUND_TIME_SETTING,
+  RULESETS,
+  type RulesetId,
   TEAM_SIZE_CHOICES,
+  TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
 import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE } from '../../config/matchInfo';
@@ -64,7 +73,10 @@ export function hasSavedTeammateDifficulty(): boolean {
   return loadSetting<Difficulty | null>('teammateDifficulty', oneOf(TEAMMATE_DIFFICULTIES.map((d) => d.id)), null) !== null;
 }
 
-/** The Match pop-up's rules (M20), each with its default. */
+/**
+ * The Match pop-up's rules (M20), each with its default, and Custom's switches (M39; off, as the game always played, until
+ * one is saved). Strict marshal is inert and never saved: off here, set only by a ruleset.
+ */
 export function loadMatchRules(): MatchRules {
   const d = DEFAULT_MATCH_RULES;
   return {
@@ -73,7 +85,19 @@ export function loadMatchRules(): MatchRules {
     teamSize: Number(loadChoice('teamSize', TEAM_SIZE_CHOICES, String(d.teamSize))),
     friendlyFire: loadChoice('friendlyFire', FRIENDLY_FIRE_CHOICES, d.friendlyFire ? 'on' : 'off') === 'on',
     ricochetsCount: loadChoice('ricochets', RICOCHETS_COUNT_CHOICES, d.ricochetsCount ? 'on' : 'off') === 'on',
+    winByTwo: loadChoice('overtime', OVERTIME_CHOICES, d.winByTwo ? 'on' : 'off') === 'on',
+    timeOutToMorePlayers: loadChoice('timeOut', TIME_OUT_CHOICES, d.timeOutToMorePlayers ? 'morePlayers' : 'draw') === 'morePlayers',
+    heardOnMinimap: loadChoice('minimapHeard', MINIMAP_HEARD_CHOICES, d.heardOnMinimap ? 'on' : 'off') === 'on',
+    semiAutoOnly: loadChoice('fireModes', FIRE_MODE_CHOICES, d.semiAutoOnly ? 'semi' : 'any') === 'semi',
+    realcap: loadChoice('magazines', MAGAZINE_CHOICES, d.realcap ? 'realcap' : 'carried') === 'realcap',
+    factoryKit: loadChoice('matchKit', KIT_CHOICES, d.factoryKit ? 'factory' : 'own') === 'factory',
+    strictMarshal: d.strictMarshal,
   };
+}
+
+/** The Rules picker's ruleset (M39): Skirmish until another is saved. */
+export function loadRuleset(): RulesetId {
+  return loadChoice('ruleset', RULESETS, DEFAULT_RULESET);
 }
 
 /** A saved round time: in range and on the slider's half-minute steps. */
