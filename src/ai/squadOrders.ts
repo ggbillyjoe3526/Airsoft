@@ -1,9 +1,9 @@
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
-import { floorAt, isWalkableAt } from '../nav/navGrid';
+import { clearLine, floorAt, isWalkableAt } from '../nav/navGrid';
 import { aimDirection } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
-import { type Vec3, vec3 } from '../sim/vec';
+import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole } from './bot';
 import { followRoute, wantRoute } from './botMovement';
 import { eyeOf } from './perception';
@@ -26,6 +26,9 @@ export function startOrder(b: Bot, leader: Character, kind: SquadOrderKind, slot
   b.orderYaw = leader.yaw;
   b.orderHeading = leader.yaw;
   b.orderRush = false;
+  b.orderSettled = false;
+  b.orderCatchingUp = false;
+  b.orderDroppingBack = false;
   b.routeState = 'none';
   b.route.length = 0;
 }
@@ -137,23 +140,72 @@ function arrivedFor(b: Bot, goal: Vec3, w: BotWorld): boolean {
   return b.routeState === 'none' && b.route.length > 0 && Math.hypot(goal.x - b.routeGoal.x, goal.z - b.routeGoal.z) < w.cfg.replanDistance;
 }
 
-/** Walks to `goal` until within `arrive`; returns whether the bot is walking a route (see moveBot). */
-function walkTo(b: Bot, w: BotWorld, goal: Vec3, arrive: number, dt: number): boolean {
+/**
+ * Walks to `goal` until within `arrive`, or until at the end of a route planned for about there (`settle`: a goal
+ * that stays put); returns whether the bot is walking a route (see moveBot).
+ */
+function walkTo(b: Bot, w: BotWorld, goal: Vec3, arrive: number, dt: number, settle = true): boolean {
   const p = b.character.position;
-  if (Math.hypot(goal.x - p.x, goal.z - p.z) <= arrive || arrivedFor(b, goal, w)) {
+  if (Math.hypot(goal.x - p.x, goal.z - p.z) <= arrive || (settle && arrivedFor(b, goal, w))) {
     if (b.routeState !== 'wanted') b.routeState = 'none';
     return false;
   }
   wantRoute(b, goal, w.cfg);
-  if (b.routeState === 'wanted' && b.routeLeg < b.route.length) {
-    // A leader on the move shifts the goal every few metres: keep walking the old route until the new one comes,
-    // rather than stopping for a tick at each replan (a stutter, and a sprint cut short).
-    b.routeState = 'ok';
-    const moving = followRoute(b, w, dt);
-    b.routeState = 'wanted';
-    return moving;
+  // A leader on the move shifts the goal every few metres: keep walking the old route until the new one comes,
+  // rather than stopping for a tick at each replan (a stutter, and a sprint cut short).
+  return followRoute(b, w, dt, true);
+}
+
+/**
+ * Follow me's moving (the spot is in `b.orderGoal`): settle at the spot while the leader stands still; otherwise make
+ * for it, straight there when the ground in between is clear (no route needed, so no stop at each replan) and round
+ * walls by route, at the leader's own pace: walking with a leader who walks or crouches, sprinting with one who
+ * sprints, a pace faster while catching up on the spot. Sets `b.orderRush` (sprinting) and `cmd.walk`.
+ */
+function followMove(b: Bot, w: BotWorld, leader: Character, away: number, wasRushing: boolean, cmd: PlayerCommand, dt: number): boolean {
+  const o = SQUAD_ORDERS;
+  const p = b.character.position;
+  const g = b.orderGoal;
+  const d = Math.hypot(g.x - p.x, g.z - p.z);
+  const v = leader.velocity;
+  const leaderSpeed = Math.hypot(v.x, v.z);
+  const leaderMoving = leaderSpeed >= o.headingSpeed;
+  b.orderSettled = !leaderMoving && (d <= o.followArrive || (b.orderSettled && d <= o.followArrive + o.followSettle));
+  // How far the spot is ahead of the bot along the leader's way (negative: the bot is ahead of it).
+  const behind = leaderMoving ? ((g.x - p.x) * v.x + (g.z - p.z) * v.z) / leaderSpeed : 0;
+  b.orderCatchingUp = behind > o.catchUpGap || (b.orderCatchingUp && behind > 0);
+  b.orderDroppingBack = behind < -o.catchUpGap || (b.orderDroppingBack && behind < 0);
+  if (b.orderSettled) {
+    if (b.routeState !== 'wanted') b.routeState = 'none';
+    return false;
   }
-  return followRoute(b, w, dt);
+  // Pace: 0 walk, 1 run, 2 sprint. Making for the spot with the leader still: run, and walk the last stretch.
+  let pace = leaderMoving ? (leader.sprinting ? 2 : leader.walking || leader.crouchAmount > 0.5 ? 0 : 1) : d > o.followSettle * 3 ? 1 : 0;
+  if (b.orderCatchingUp && leaderMoving) pace = Math.min(2, pace + 1);
+  // Ahead of the spot: a pace slower, so it drops back into place (from a walk, it waits for the spot to come by).
+  else if (b.orderDroppingBack) pace--;
+  if (pace < 0) {
+    if (b.routeState !== 'wanted') b.routeState = 'none';
+    return false;
+  }
+  if (away > o.catchUp - (wasRushing ? o.rushEase : 0)) pace = 2;
+  b.orderRush = pace === 2;
+  cmd.walk = pace === 0;
+  if (clearLine(w.nav, p.x, p.z, g.x, g.z)) {
+    b.routeState = 'none';
+    b.route.length = 0;
+    // Straight at the spot while the leader stands; with the leader on the move, go their way and close on the spot
+    // (pursuit: their velocity plus a pull towards the spot), so the direction stays steady as the spot slides along.
+    const pull = leaderMoving ? o.followPull : 1;
+    const dx = (leaderMoving ? v.x : 0) + (g.x - p.x) * pull;
+    const dz = (leaderMoving ? v.z : 0) + (g.z - p.z) * pull;
+    const len = Math.hypot(dx, dz);
+    if (len < 1e-6) return false;
+    b.moveDir.x = dx / len;
+    b.moveDir.z = dz / len;
+    return true;
+  }
+  return walkTo(b, w, g, 0, dt, false);
 }
 
 /** Moves an ordered bot for this tick (moveBot's 'order' mode). Returns whether it walks a route. */
@@ -186,17 +238,14 @@ export function moveOrder(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): 
   }
   // Follow me: keep a spot behind the way the leader moves, and cover their back once there.
   const v = leader.velocity;
-  if (Math.hypot(v.x, v.z) >= SQUAD_ORDERS.headingSpeed) b.orderHeading = Math.atan2(-v.x, -v.z);
+  if (Math.hypot(v.x, v.z) >= SQUAD_ORDERS.headingSpeed) {
+    // Eased, so the spots swing round behind a leader who turns rather than jump to the other side.
+    const turn = wrapAngle(Math.atan2(-v.x, -v.z) - b.orderHeading);
+    const most = SQUAD_ORDERS.headingTurnRate * dt;
+    b.orderHeading = wrapAngle(b.orderHeading + Math.max(-most, Math.min(most, turn)));
+  }
   followSpot(leader, b.orderHeading, b.orderSlot, w, b.orderGoal);
   const watch = SQUAD_ORDERS.followWatchDeg;
   b.orderYaw = b.orderHeading + watch[b.orderSlot % watch.length]! * DEG;
-  // Sprint with a sprinting leader once well off the spot, or to catch up from far behind; once sprinting, keep at it
-  // until back at the spot's distance (or rushEase inside catchUp), so it doesn't flick between run and sprint.
-  const ease = wasRushing ? SQUAD_ORDERS.rushEase : 0;
-  b.orderRush =
-    away > SQUAD_ORDERS.catchUp - ease ||
-    (leader.sprinting && away > SQUAD_ORDERS.followDistance + (wasRushing ? 0 : SQUAD_ORDERS.followArrive));
-  // Moving quietly with a leader who does.
-  cmd.walk = !b.orderRush && (leader.walking || leader.crouchAmount > 0.5);
-  return walkTo(b, w, b.orderGoal, SQUAD_ORDERS.followArrive, dt);
+  return followMove(b, w, leader, away, wasRushing, cmd, dt);
 }

@@ -1,3 +1,4 @@
+import { SQUAD_ORDERS } from '../config/squad';
 import { canReload } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
@@ -248,9 +249,10 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     cmd.forward = -Math.sin(b.aim.yaw) * dir.x - Math.cos(b.aim.yaw) * dir.z;
     cmd.right = Math.cos(b.aim.yaw) * dir.x - Math.sin(b.aim.yaw) * dir.z;
     const calm = w.time - b.lastThreatAt > cfg.sprintWhenCalmFor;
-    // Hurrying to an order (regroup, catching up) sprints even with a fight just over.
+    // Hurrying to an order (regroup, keeping up) sprints even with a fight just over, and through the small turns of
+    // following someone (a looser forward gate), so it doesn't flick between run and sprint at each one.
     const hurry = b.mode === 'order' && b.orderRush;
-    cmd.sprint = (((b.mode === 'advance' || b.mode === 'flag') && calm) || hurry) && cmd.forward > cfg.sprintForward;
+    cmd.sprint = hurry ? cmd.forward > SQUAD_ORDERS.sprintForward : (b.mode === 'advance' || b.mode === 'flag') && calm && cmd.forward > cfg.sprintForward;
     // Closing in on where someone was seen or heard: walk, so footsteps don't give us away.
     cmd.walk ||= b.mode === 'search' && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < cfg.searchWalkDistance;
   }

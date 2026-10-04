@@ -13,17 +13,29 @@ export const SQUAD_ORDERS = {
   followSpreadDeg: 40,
   /** Each further pair of followers keeps this much further back (m). */
   followRowGap: 1.6,
-  /** Close enough to the follow spot to stop there (m). */
+  /** Close enough to the follow spot to stop there while you stand still (m). */
   followArrive: 1.2,
+  /** Settled at the spot, followers stay put until it is this much further off (m), so they don't shuffle. */
+  followSettle: 0.8,
   /**
-   * Further than this from you (m), followers sprint to catch up; they also sprint when you do, once more than
-   * followArrive past their spot's distance. They keep sprinting until rushEase inside catchUp (or back at the spot's
-   * distance behind a sprinting leader).
+   * More than this behind their spot along your way (m), followers go a pace faster than you until back on it; more
+   * than this ahead of it, a pace slower until back on it.
+   */
+  catchUpGap: 1.5,
+  /** With you on the move, followers head your way plus this much (1/s) of the gap to their spot, closing it smoothly. */
+  followPull: 1.5,
+  /**
+   * Further than this from you (m), followers sprint to catch up (otherwise they keep your pace: walk, run or sprint),
+   * until rushEase inside it.
    */
   catchUp: 8,
   rushEase: 3,
+  /** Hurrying followers sprint while at least this much of their move is forward (bots' own gate is stricter). */
+  sprintForward: 0.6,
   /** Your heading is the way you move, once you move at least this fast (m/s); standing still keeps it. */
   headingSpeed: 1,
+  /** Followers' idea of your heading turns at most this fast (rad/s), so their spots swing round rather than jump. */
+  headingTurnRate: 1.5,
   /**
    * Where followers look once at their spot, turned from your heading (degrees): the first straight behind you, the
    * next to either side, so they cover your back.

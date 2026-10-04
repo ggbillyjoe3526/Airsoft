@@ -213,23 +213,38 @@ describe('a 3v3 bot match on Depot', () => {
       let near = 0;
       let counted = 0;
       let worst = 0;
+      let standing = 0;
+      /** Seconds a follower back from a fight or cover gets to rejoin before it is judged. */
+      const REJOIN = 3;
+      /** Per character, seconds in a row spent carrying out the order (a fight or cover resets it). */
+      const following = new Map<number, number>();
       playMatch(90, seed, undefined, BOTS, 'elimination', ROUNDS, DEPOT, (state, bots) => {
         // Blue's first bot leads (playing its team plan); the other two are told to follow it every round.
         const leader = state.characters[0]!;
         if (state.events.some((e) => e.type === 'roundStart') || state.tick === 1) bots.giveOrder(leader, 'follow');
         if (state.round.phase !== 'live' || leader.status !== 'alive') return;
+        const leaderMoving = Math.hypot(leader.velocity.x, leader.velocity.z) > SQUAD_ORDERS.headingSpeed;
         for (const b of bots.bots) {
-          if (b.character.team !== 0 || b.character === leader || b.order !== 'follow' || b.mode !== 'order') continue;
-          const d = Math.hypot(b.character.position.x - leader.position.x, b.character.position.z - leader.position.z);
+          const c = b.character;
+          if (c.team !== 0 || c === leader) continue;
+          const t = b.order === 'follow' && b.mode === 'order' ? (following.get(c.id) ?? 0) + DT : 0;
+          following.set(c.id, t);
+          // Judged once a follower has had a few seconds to rejoin after a fight.
+          if (t < REJOIN) continue;
+          const d = Math.hypot(c.position.x - leader.position.x, c.position.z - leader.position.z);
           counted++;
-          if (d < SQUAD_ORDERS.catchUp + 2) near++;
+          if (d < SQUAD_ORDERS.followDistance + SQUAD_ORDERS.catchUpGap + 2) near++;
+          if (leaderMoving && Math.hypot(c.velocity.x, c.velocity.z) < 0.5) standing++;
           worst = Math.max(worst, d);
         }
       });
-      // Measured (seeds 1-3): always within catchUp + 2 m between fights, never more than about 8 m off.
+      // Measured (seeds 1-3): 90-98% of the time within a few metres of their spot, at worst about 10 m behind (a
+      // sprinting leader round corners: a sprint can't catch a sprint), and standing still under 2% of the time the
+      // leader moves (one that got ahead of its spot waiting for it).
       expect(counted, `seed ${seed}`).toBeGreaterThan(1000);
-      expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.95);
+      expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.85);
       expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp + 3);
+      expect(standing / counted, `seed ${seed}`).toBeLessThan(0.03);
     }
   });
 

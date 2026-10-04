@@ -15,7 +15,9 @@ import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
 import { OPEN_FIELD, OPEN_NAV } from '../sim/testSupport';
 import { vec3, wrapAngle } from '../sim/vec';
+import type { Bot } from './bot';
 import { BotController } from './botController';
+import { heldCentre } from './squadOrders';
 
 const DT = 1 / 60;
 
@@ -125,27 +127,56 @@ describe('squad orders (M22)', () => {
     expect(flat(mates[0]!.character.position, mates[1]!.character.position)).toBeGreaterThan(1);
   });
 
-  it('follow me with you sprinting: they sprint along with you, without flicking between run and sprint', () => {
+  /**
+   * You go east at `pace` for `seconds` with Follow me given (zigzagging 0.8 rad either way every 1.5 s if `turn`).
+   * Returns, per teammate, the longest run of ticks it stood still and how far behind you it was on average once
+   * settled in behind you (after 3 s: one starting ahead of its spot waits for it), and how often its sprint turned on
+   * or off.
+   */
+  function followAlong(pace: 'walk' | 'run' | 'sprint', seconds: number, turn = false) {
     const { bots, mates, you, cmd, run, commands } = squad();
     cmd.yaw = EAST;
     run(0.1);
     bots.giveOrder(you, 'follow');
     cmd.forward = 1;
-    cmd.sprint = true;
-    const toggles = mates.map(() => 0);
-    const last = mates.map(() => false);
-    let sprinting = 0;
-    run(8, () => {
+    cmd.walk = pace === 'walk';
+    cmd.sprint = pace === 'sprint';
+    const stood = mates.map(() => 0);
+    const longestStand = mates.map(() => 0);
+    const behind = mates.map(() => 0);
+    const flips = mates.map(() => 0);
+    const sprinted = mates.map(() => false);
+    let t = 0;
+    let settled = 0;
+    run(seconds, () => {
+      t += DT;
+      if (turn) cmd.yaw = EAST + (Math.floor(t / 1.5) % 2 === 0 ? 0.4 : -0.4);
       mates.forEach((b, i) => {
+        const moving = Math.hypot(b.character.velocity.x, b.character.velocity.z) > 0.5;
+        stood[i] = moving ? 0 : stood[i]! + 1;
+        if (t > 3) longestStand[i] = Math.max(longestStand[i]!, stood[i]!);
+        if (t > 3) behind[i]! += flat(b.character.position, you.position);
         const s = commands.get(b.character.id)!.sprint;
-        if (s !== last[i]) toggles[i]!++;
-        last[i] = s;
-        if (s) sprinting++;
+        if (s !== sprinted[i]) flips[i]!++;
+        sprinted[i] = s;
       });
+      if (t > 3) settled++;
     });
-    expect(sprinting).toBeGreaterThan(8 * 60); // they did sprint
-    for (const t of toggles) expect(t).toBeLessThanOrEqual(6);
-    for (const b of mates) expect(flat(b.character.position, you.position)).toBeLessThan(SQUAD_ORDERS.catchUp + 2);
+    return { longestStand, meanBehind: behind.map((d) => d / settled), flips };
+  }
+
+  it('follow me: teammates keep moving with you at your pace, walking, running or sprinting, a few metres back', () => {
+    for (const pace of ['walk', 'run', 'sprint'] as const) {
+      const r = followAlong(pace, pace === 'sprint' ? 7 : 9);
+      for (const n of r.longestStand) expect(n, pace).toBeLessThanOrEqual(6); // never a stop-and-go
+      for (const d of r.meanBehind) {
+        expect(d, pace).toBeGreaterThan(SQUAD_ORDERS.followDistance - 1);
+        expect(d, pace).toBeLessThan(SQUAD_ORDERS.followDistance + SQUAD_ORDERS.catchUpGap + 1);
+      }
+      // Sprinting along with you: on once, and off no more than once or twice, even as you weave.
+      if (pace === 'sprint') for (const f of [...r.flips, ...followAlong('sprint', 7, true).flips]) expect(f).toBeLessThanOrEqual(3);
+      else for (const f of r.flips) expect(f, pace).toBeLessThanOrEqual(2);
+    }
   });
 
   it('hold here: teammates go to the spot you look at, side by side, look your way and stay when you leave', () => {
@@ -265,5 +296,14 @@ describe('squad orders (M22)', () => {
     state.events.push({ type: 'roundStart', round: 2 });
     bots.observe(state);
     expect(bots.orderOf(you)).toBe('none');
+  });
+
+  it('marks a hold on a raised floor at that floor, not the ground (the middle of the held spots)', () => {
+    const leader = createCharacter(0, vec3(), 0, LOADOUT, 0);
+    const holder = (x: number, y: number) => ({ order: 'hold', orderLeader: leader, orderGoal: vec3(x, y, 4) }) as unknown as Bot;
+    const out = vec3(0, -5, 0);
+    expect(heldCentre([holder(1, 1.2), holder(3, 1.2)], leader, out)).toBe(true);
+    expect(out).toEqual({ x: 2, y: 1.2, z: 4 });
+    expect(heldCentre([], leader, out)).toBe(false);
   });
 });

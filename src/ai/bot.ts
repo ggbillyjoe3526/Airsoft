@@ -128,6 +128,12 @@ export interface Bot {
   orderHeading: number;
   /** Hurrying (regroup, or a follower far behind): sprints even when a fight was close. */
   orderRush: boolean;
+  /** Follow me: standing at its spot while the leader stands still. */
+  orderSettled: boolean;
+  /** Follow me: fallen behind its spot, so going a pace faster than the leader until back on it. */
+  orderCatchingUp: boolean;
+  /** Follow me: got ahead of its spot, so going a pace slower than the leader until back on it. */
+  orderDroppingBack: boolean;
 }
 
 /** Everything a bot's decisions depend on besides its own state. */
@@ -216,6 +222,9 @@ export function createBot(character: Character, seed: number, cfg: BotConfig): B
     orderYaw: 0,
     orderHeading: 0,
     orderRush: false,
+    orderSettled: false,
+    orderCatchingUp: false,
+    orderDroppingBack: false,
   };
   resetBot(bot, -1, 0, cfg);
   return bot;
