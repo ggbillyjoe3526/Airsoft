@@ -7,7 +7,7 @@ import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
 import { TEAM_COLOUR_CHOICES } from '../../config/teams';
-import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
+import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
 import { backTarget, escResumes, moreBelow, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
@@ -102,6 +102,24 @@ describe('menu data', () => {
   it('describes each map in a few words (owner, 2026-10-04)', () => {
     expect(MAPS.find((m) => m.id === 'depot')!.blurb).toBe('An abandoned warehouse yard.');
     for (const m of MAPS) expect(m.blurb.split(' ').length).toBeLessThanOrEqual(8);
+  });
+
+  it('lists Woodland as a coming map that is not a MapId, so the Map choice never saves or loads it (M33a)', () => {
+    expect(COMING_MAPS.map((m) => m.label)).toContain('Woodland');
+    const playable = new Set<string>(MAPS.map((m) => m.id));
+    for (const m of COMING_MAPS) {
+      expect(playable.has(m.label.toLowerCase()), m.label).toBe(false);
+      expect(mapData(m.label.toLowerCase() as never)).toBe(mapData(DEFAULT_MAP)); // an unknown id falls back to Depot
+    }
+    expect(DEFAULT_MAP).toBe('depot');
+  });
+
+  it('describes each coming map in at most eight words, tagged "Coming soon" (M33a)', () => {
+    expect(COMING_SOON_TAG).toBe('Coming soon');
+    for (const m of COMING_MAPS) {
+      expect(m.blurb.trim()).not.toBe('');
+      expect(m.blurb.split(' ').length, m.label).toBeLessThanOrEqual(8);
+    }
   });
 
   it('starts every word of a two-word button with a capital (owner, 2026-10-04)', () => {
