@@ -163,7 +163,8 @@ export default defineConfig(async () => ({
     environment: 'node',
     // Test files share a worker's module cache (audit CORE-15): three.js, Rapier's WASM and the configs load once per
     // worker rather than once per file, about a sixth of the suite's CPU time (measured 2026-10-04, DECISIONS). A test
-    // that stubs a global or spies on a shared object restores it (vi.unstubAllGlobals, mockRestore).
+    // that stubs a global or spies on a shared object restores it (vi.unstubAllGlobals, mockRestore); a file that
+    // resets the module registry resets it again when it ends (save/startGuardedStorage.test.ts).
     isolate: false,
     // Two projects (audit CORE-15): `npx vitest run` (the gate, CI, `npm test`) runs both; `npx vitest run --project
     // fast` leaves out the headless bot-match guards for quick feedback while working. Every seed stays in `slow`.
