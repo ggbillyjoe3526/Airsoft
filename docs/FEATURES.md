@@ -8,7 +8,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Walk (hold Shift, quiet), run, sprint (Alt, no shooting for a moment) and a small jump (Phase 1, M1)
 - Crouch, as a hold or a toggle (Phase 1, M12a)
 - Lean left and right with Q and E to peek round cover; leaning slows you to walking pace (M7b)
-- Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air (M10)
+- Accuracy by stance and movement: steadier crouched and still, worse walking, running or in the air; crouch-walking is slightly less accurate than standing still (M10, FA1)
 
 ## Replicas and BBs
 
@@ -62,10 +62,11 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Menus and settings
 
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
+- Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
 - Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons too), Crosshair, HUD, Accessibility (M15, M18a, M19, M24)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle (M18a)
-- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear (M24, M26d)
+- A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy (M24, M26d, FA1)
 - The build's version on the title screen (M24)
 
 ## HUD and match info
@@ -100,7 +101,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Practice range and tutorial
 
-- A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB (M21)
+- A practice range from the title screen: steel plates that ring, figures that fall, at 10–60 m, with a readout of your last BB; figures stand at the same height as match characters (M21, FA1)
 - A tutorial of ten coached steps on the range, with your own key bindings (M16)
 
 ## Accessibility and comfort
