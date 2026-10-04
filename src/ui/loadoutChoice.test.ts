@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AEG, BB_WEIGHT, GAS_PISTOL, HOP_UP, muzzleEnergy, muzzleVelocity } from '../config/replicas';
 import { type ItemRef, itemKey } from '../pool/collection';
 import { GAME_POOL } from '../pool/gamePool';
@@ -116,6 +116,10 @@ describe('part readouts (M26b)', () => {
 describe('Loadout tile on New game (M26b)', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+  // Files share a worker's globals (vite.config.ts isolate: false): the stand-in storage goes with each test.
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   const owning = (items: ItemRef[]) => {
