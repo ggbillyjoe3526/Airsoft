@@ -38,10 +38,11 @@ test('the release build boots, ignores the test flags and plays with the real po
     expect((await copy.body()).equals(original), `${suffix} unpacks to the chunk`).toBe(true);
   }
 
-  // Play asks for the pointer lock: `?nolock` is ignored, so the match starts only once the canvas holds it.
+  // Play asks for the pointer lock: `?nolock` is ignored, so the match starts only once the game holds it
+  // (the lock is on the game's container, #app, since FA2: turning edge smoothing on or off replaces the canvas).
   await page.getByRole('button', { name: 'Start' }).click();
   await page.locator('.menu-setup').getByRole('button', { name: 'Play', exact: true }).click();
-  await page.waitForFunction(() => document.pointerLockElement instanceof HTMLCanvasElement, undefined, { timeout: 30_000 });
+  await page.waitForFunction(() => document.pointerLockElement?.id === 'app', undefined, { timeout: 30_000 });
   await expect(page.locator('.hud')).toBeVisible({ timeout: 30_000 });
 
   // Losing the lock (Esc in a real browser) pauses; Resume asks for it again and play carries on.
@@ -49,7 +50,7 @@ test('the release build boots, ignores the test flags and plays with the real po
   const pauseMenu = page.locator('.menu-pause');
   await expect(pauseMenu).toBeVisible({ timeout: 10_000 });
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
-  await page.waitForFunction(() => document.pointerLockElement instanceof HTMLCanvasElement, undefined, { timeout: 10_000 });
+  await page.waitForFunction(() => document.pointerLockElement?.id === 'app', undefined, { timeout: 10_000 });
   await expect(pauseMenu).toBeHidden();
 
   expect(errors).toEqual([]);

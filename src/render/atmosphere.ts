@@ -41,9 +41,11 @@ function buildSky(sunDirection: THREE.Vector3): THREE.Mesh {
     colors[i * 3 + 2] = c.b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  // Depth-tested, never depth-writing: the dome is behind everything inside the far plane, so it shades only the
+  // pixels nothing else covered (config ATMOSPHERE.skyRenderOrder).
   const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
   mesh.name = 'sky';
-  mesh.renderOrder = -1;
+  mesh.renderOrder = A.skyRenderOrder;
   mesh.frustumCulled = false;
   return mesh;
 }
