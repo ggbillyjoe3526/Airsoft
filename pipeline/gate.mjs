@@ -4,18 +4,20 @@
  * pipeline/out/gate-report.json with pass / fail per gate and the evidence paths. A failed gate means the task goes
  * back to the worker with this report; the critic runs only on a report where every gate passed.
  *
- *   node pipeline/gate.mjs [--task M27] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
+ *   node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
  *
  * Gates: build (tsc + vite build with the chunk budgets), tests (vitest), smoke (playwright), perf (only when the diff
  * touches a perf-relevant path, or --perf; needs pipeline/perf-run.mjs), scope (the diff stays inside the task's
  * `touches`, QA commits touch only tests) and changelog (CHANGELOG.md names the task under Unreleased).
  * --quick runs build and tests only. --ci is what the workflow runs: build, tests, smoke (no perf: a runner has no
- * baseline). Without --task, scope and changelog are skipped. Exit code 1 when any gate fails.
+ * baseline); without --task it takes the task ids from the pull request's title in GATE_PR_TITLE (audit CORE-08).
+ * With no task, scope and changelog are skipped. Exit code 1 when any gate fails.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { allowedFile, findTaskBlock, parseTaskList, qaAllowedFile, taskIdsFromTitle } from './scope.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
@@ -24,10 +26,6 @@ const REPORT = join(OUT, 'gate-report.json');
 
 /** Paths whose change makes the perf gate required (the proposal's "render loop, physics, entities, assets"). */
 const PERF_PATHS = ['src/sim/', 'src/physics/', 'src/render/', 'src/ai/', 'src/nav/', 'src/audio/', 'src/core/', 'src/map/', 'src/assets/', 'vite.config.ts'];
-/** What any task may touch besides its `touches` list. */
-const ALWAYS_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^docs\//, /^CHANGELOG\.md$/, /^README\.md$/, /^pool\.md$/, /^CLAUDE\.md$/];
-/** What a QA commit (trailer `Agent: qa`) may touch: tests and their support only. */
-const QA_ALLOWED = [/\.test\.ts$/, /^e2e\//, /^src\/.*\/testSupport\.ts$/, /^src\/ai\/depotMatchSupport\.ts$/, /^src\/pool\/testStorage\.ts$/];
 /** Perf metrics compared with the baseline; frame times only where the budget file says they are gated. */
 const RELATIVE_METRICS = ['drawCalls', 'triangles', 'gpuMemoryMB'];
 const FRAME_METRICS = ['p95Ms', 'p99Ms'];
@@ -36,8 +34,10 @@ const RELATIVE_TOLERANCE = 0.1;
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const value = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
+const prTitle = flag('--ci') ? process.env.GATE_PR_TITLE ?? '' : '';
 const options = {
-  task: value('--task', null),
+  // One task id or several ("FA5,FA9"); on CI, else the ids the pull request's title starts with.
+  tasks: args.includes('--task') ? parseTaskList(value('--task', '')) : taskIdsFromTitle(prTitle),
   quick: flag('--quick'),
   ci: flag('--ci'),
   smoke: !flag('--no-smoke') && !flag('--quick'),
@@ -63,7 +63,8 @@ const changed = new Set(
 const perfRequired = options.perf || [...changed].some((f) => PERF_PATHS.some((p) => f.startsWith(p)));
 
 const report = {
-  task: options.task,
+  task: options.tasks.length > 0 ? options.tasks.join(',') : null,
+  ...(prTitle && !args.includes('--task') ? { taskFrom: 'pull request title' } : {}),
   head,
   base: `${options.base}@${mergeBase.slice(0, 7)}`,
   env: options.env,
@@ -191,38 +192,48 @@ if (!perfRequired) {
 }
 
 // 5. scope: the diff stays inside the task's `touches` (plus tests and docs), and QA commits touch only tests.
-function taskBlock(id) {
-  const tasks = join(ROOT, 'docs', 'TASKS.md');
-  if (!existsSync(tasks)) return null;
-  const text = readFileSync(tasks, 'utf8');
-  const m = text.match(new RegExp(`^## ${id.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\b[^\\n]*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm'));
-  if (!m) return null;
-  const field = (key) => m[1].match(new RegExp(`^${key}:\\s*(.*)$`, 'm'))?.[1]?.trim() ?? '';
-  return { touches: field('touches').split(',').map((s) => s.trim()).filter(Boolean), tier: field('tier'), perf: field('perf') };
+/**
+ * docs/TASKS.md as it is now, then as each commit since the merge base left it (newest first), then at the merge base:
+ * a branch clears its block before its pull request merges, so the block is looked for where it last was.
+ */
+function* tasksVersions() {
+  const path = join(ROOT, 'docs', 'TASKS.md');
+  yield { where: 'working tree', text: existsSync(path) ? readFileSync(path, 'utf8') : null };
+  const show = (sha) => {
+    try {
+      return git('show', `${sha}:docs/TASKS.md`);
+    } catch {
+      return null;
+    }
+  };
+  for (const sha of git('rev-list', `${mergeBase}..HEAD`, '--', 'docs/TASKS.md').split('\n').filter(Boolean)) yield { where: sha.slice(0, 7), text: show(sha) };
+  yield { where: `merge base ${mergeBase.slice(0, 7)}`, text: show(mergeBase) };
 }
-if (!options.task) {
+if (options.tasks.length === 0) {
   record('scope', { pass: null, reason: 'skipped (no --task)' });
 } else {
-  const task = taskBlock(options.task);
-  if (!task) record('scope', { pass: false, reason: `no block "## ${options.task}" in docs/TASKS.md` });
+  const blocks = options.tasks.map((id) => ({ id, block: findTaskBlock(tasksVersions(), id) }));
+  const missing = blocks.filter((b) => !b.block).map((b) => b.id);
+  if (missing.length > 0) record('scope', { pass: false, reason: `no block ${missing.map((id) => `"## ${id}"`).join(', ')} in docs/TASKS.md or its history since ${mergeBase.slice(0, 7)}` });
   else {
-    const allowed = (f) => ALWAYS_ALLOWED.some((re) => re.test(f)) || task.touches.some((t) => (t.endsWith('/') ? f.startsWith(t) : f === t)) || f.startsWith('pipeline/out/');
-    const outside = [...changed].filter((f) => !allowed(f));
+    const touches = blocks.flatMap((b) => b.block.touches);
+    const outside = [...changed].filter((f) => !allowedFile(f, touches));
     const qaOutside = [];
     const log = git('log', '--format=%H%x00%B%x01', `${mergeBase}..HEAD`);
     for (const entry of log.split('\x01')) {
       const [sha, body] = entry.trim().split('\x00');
       if (!sha || !/^Agent:\s*qa\s*$/mi.test(body ?? '')) continue;
       for (const f of git('show', '--name-only', '--format=', sha).split('\n').filter(Boolean)) {
-        if (!QA_ALLOWED.some((re) => re.test(f))) qaOutside.push({ commit: sha.slice(0, 7), file: f });
+        if (!qaAllowedFile(f)) qaOutside.push({ commit: sha.slice(0, 7), file: f });
       }
     }
-    record('scope', { pass: outside.length === 0 && qaOutside.length === 0, touches: task.touches, ...(outside.length ? { outsideTouches: outside } : {}), ...(qaOutside.length ? { qaCommitsOutsideTests: qaOutside } : {}) });
+    const foundIn = blocks.filter((b) => b.block.where !== 'working tree').map((b) => `${b.id} from ${b.block.where}`);
+    record('scope', { pass: outside.length === 0 && qaOutside.length === 0, touches, ...(foundIn.length ? { blocksFrom: foundIn } : {}), ...(outside.length ? { outsideTouches: outside } : {}), ...(qaOutside.length ? { qaCommitsOutsideTests: qaOutside } : {}) });
   }
 }
 
-// 6. changelog: CHANGELOG.md names the task under Unreleased (the changelog agent writes that line).
-if (!options.task) {
+// 6. changelog: CHANGELOG.md names each task under Unreleased (the changelog agent writes that line).
+if (options.tasks.length === 0) {
   record('changelog', { pass: null, reason: 'skipped (no --task)' });
 } else {
   const path = join(ROOT, 'CHANGELOG.md');
@@ -230,8 +241,9 @@ if (!options.task) {
   else {
     const text = readFileSync(path, 'utf8');
     const unreleased = text.match(/^## Unreleased[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? '';
-    const line = unreleased.split('\n').find((l) => l.includes(`**${options.task}**`));
-    record('changelog', { pass: Boolean(line), ...(line ? { line: line.trim() } : { reason: `no line naming **${options.task}** under Unreleased` }) });
+    const lines = options.tasks.map((id) => ({ id, line: unreleased.split('\n').find((l) => l.includes(`**${id}**`)) }));
+    const missing = lines.filter((l) => !l.line).map((l) => `**${l.id}**`);
+    record('changelog', { pass: missing.length === 0, ...(missing.length ? { reason: `no line naming ${missing.join(', ')} under Unreleased` } : { lines: lines.map((l) => l.line.trim()) }) });
   }
 }
 

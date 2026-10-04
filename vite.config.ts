@@ -115,7 +115,8 @@ export default defineConfig(async () => ({
     chunkSizeWarningLimit: CHUNK_BUDGET_KB.rapier,
   },
   test: {
-    include: ['src/**/*.test.ts'],
+    // The pipeline's own rules (pipeline/scope.mjs) are tested here too.
+    include: ['src/**/*.test.ts', 'pipeline/**/*.test.mjs'],
     environment: 'node',
   },
 }));
