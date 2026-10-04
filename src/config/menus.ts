@@ -137,6 +137,7 @@ export const ARMORY_TEXT = {
   /** The summary's line for a match that paid nothing (audit POOL-22). */
   unpaidDev: 'No Field Credits: Dev settings changed how this match played.',
   unpaidOff: 'No Field Credits: the Armory is switched off in the Dev settings.',
+  unpaidDevContent: 'No Field Credits: this match used content still being built (tagged Dev).',
 } as const;
 
 export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'save' | 'dev';

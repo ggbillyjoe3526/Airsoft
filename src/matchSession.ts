@@ -16,7 +16,8 @@ import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, type ReplicaConfig } from './config/replicas';
-import { botKitSeed, kittedCharacter, randomKit } from './pool/botKit';
+import { botKitSeed, kittedCharacter, rolledKit } from './pool/botKit';
+import { contentPool, itemsUseDev } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import type { PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
@@ -68,6 +69,13 @@ export interface MatchSetup {
    * worked in), its optic, parts, hop-up dial and BB weight. Bots carry config/replicas.ts LOADOUT as it comes.
    */
   kit: PlayerKit;
+  /** Dev content is on (M35): bots may roll dev gear (config/content.ts). */
+  devContent: boolean;
+  /**
+   * The match's map, mode, either difficulty or the player's kit is dev content (M35): it stays out of the records and
+   * pays no Field Credits, as it does when a bot rolls dev gear.
+   */
+  devContentUsed: boolean;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
 }
@@ -113,6 +121,8 @@ export class MatchSession {
   private devAssisted = false;
   /** Play has begun in this match (since it was built): Dev help switched off before then doesn't count. */
   private played = false;
+  /** An opponent rolled dev gear (M35, only with Dev content on). */
+  private botsCarryDev = false;
 
   constructor(
     private readonly renderer: Renderer,
@@ -220,9 +230,19 @@ export class MatchSession {
     });
   }
 
-  /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24). */
+  /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24), nor with dev content (M35). */
   get paysFieldCredits(): boolean {
-    return !this.devAssisted;
+    return this.unpaidReason === null;
+  }
+
+  /** Why it pays nothing: Dev settings that change play, dev content, or null when it pays. */
+  get unpaidReason(): 'dev' | 'devContent' | null {
+    return this.devAssisted ? 'dev' : this.usesDevContent ? 'devContent' : null;
+  }
+
+  /** The match uses dev content (M35): its setup, or a bot's rolled gear. */
+  get usesDevContent(): boolean {
+    return this.setup.devContentUsed || this.botsCarryDev;
   }
 
   /**
@@ -305,14 +325,17 @@ export class MatchSession {
     else if (devCheating(cheats)) this.devAssisted = true;
   }
 
-  /** Whether this match's result goes into the records: the standard match (M20), played without Dev help (M24). */
+  /**
+   * Whether this match's result goes into the records: the standard match (M20), played without Dev help (M24) and
+   * without dev content (M35).
+   */
   get countsForRecords(): boolean {
-    return this.standardRules && !this.devAssisted;
+    return this.notCountedReason === '';
   }
 
-  /** Why it doesn't, for the summary: custom rules, Dev settings, or '' when it counts. */
+  /** Why it doesn't, for the summary: custom rules, Dev settings, dev content, or '' when it counts. */
   get notCountedReason(): NotCounted {
-    return !this.standardRules ? 'rules' : this.devAssisted ? 'dev' : '';
+    return !this.standardRules ? 'rules' : this.devAssisted ? 'dev' : this.usesDevContent ? 'devContent' : '';
   }
 
   /** Settings → HUD → Hit feed (M24). */
@@ -346,13 +369,19 @@ export class MatchSession {
       if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
     }
     let id = PLAYER_ID;
+    // Bots roll only from what is offered: dev gear only with Dev content on (M35).
+    const botPool = contentPool(GAME_POOL, this.setup.devContent);
     for (let team = 0; team < TEAMS.length; team++) {
       // You carry your kit; your teammates carry the default loadout as it comes, and so do the other team's bots unless
       // their difficulty rolls each one a kit of its own (M29b).
       const rolled = team !== PLAYER_TEAM && BOT_LOADOUTS[this.setup.difficulty] === 'random';
       for (let i = 0; i < size; i++, id++) {
         if (id === PLAYER_ID) this.state.characters.push(createCharacter(id, vec3(), 0, this.loadout, team));
-        else if (rolled) this.state.characters.push(kittedCharacter(id, team, randomKit(GAME_POOL, LOADOUT, botKitSeed(seed, id))));
+        else if (rolled) {
+          const { kit, items } = rolledKit(botPool, LOADOUT, botKitSeed(seed, id));
+          if (itemsUseDev(botPool, items)) this.botsCarryDev = true;
+          this.state.characters.push(kittedCharacter(id, team, kit));
+        }
         else this.state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, team));
       }
     }

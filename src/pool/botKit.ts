@@ -49,13 +49,22 @@ export function randomFit(pool: Pool, replica: Asset, rng: RngState, partChance:
  * carried as it comes, with its factory parts.
  */
 export function randomKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: number, partChance: number = RANDOM_LOADOUT.partChance): KitSlot[] {
+  return rolledKit(pool, loadout, seed, partChance).kit;
+}
+
+/** randomKit, with the pool items it rolled (each replica and part), so a match can tell if a bot carries dev gear (M35). */
+export function rolledKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: number, partChance: number = RANDOM_LOADOUT.partChance): { kit: KitSlot[]; items: ItemRef[] } {
   const rng = createRng(seed);
-  return loadout.map((replica) => {
+  const items: ItemRef[] = [];
+  const kit = loadout.map((replica) => {
     const asset = assetOfReplica(pool, replica);
     if (!asset || pool.tiers.length === 0) return { replica, optic: null, parts: factoryParts(replica) };
     const item = drawItem(pool, asset, rng);
-    return kitSlot(pool, item, randomFit(pool, asset, rng, partChance));
+    const fit = randomFit(pool, asset, rng, partChance);
+    items.push(item, ...Object.values(fit).filter((r): r is ItemRef => r !== null));
+    return kitSlot(pool, item, fit);
   });
+  return { kit, items };
 }
 
 /** A character carrying `kit`: its replicas as the kit makes them, with the kit's optics and parts fitted. */

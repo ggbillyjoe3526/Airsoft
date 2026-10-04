@@ -1,6 +1,7 @@
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
 import { loadSetting, numberIn, saveSetting } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
+import { isDevItem } from './contentPool';
 import { EMPTY_FIT, energyCapped, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
 import { type Asset, fits, type Pool, replicaOf } from './pool';
 
@@ -38,10 +39,17 @@ export function collectionOwnership(collection: () => Collection): Ownership {
   return { owns: (ref) => (collection().owned[itemKey(ref.asset, ref.tier)] ?? 0) > 0 };
 }
 
-/** The collection's items, or, while `unlockAll()` (Dev settings → Unlock all gear, M26d), every asset at every tier. */
-export function gameOwnership(pool: Pool, collection: () => Collection, unlockAll: () => boolean): Ownership {
+/**
+ * The collection's items, or, while `unlockAll()` (Dev settings → Unlock all gear, M26d), every asset at every tier;
+ * either way only public ones unless `devContent()` (M35): an owned dev item is then hidden, not lost, and a pick of it
+ * falls back to a default until Dev content is on again.
+ */
+export function gameOwnership(pool: Pool, collection: () => Collection, unlockAll: () => boolean, devContent: () => boolean = () => false): Ownership {
   const owned = collectionOwnership(collection);
-  return { owns: (ref) => (unlockAll() ? inPool(pool, ref) : owned.owns(ref)), sandboxed: unlockAll };
+  return {
+    owns: (ref) => (devContent() || !isDevItem(pool, ref)) && (unlockAll() ? inPool(pool, ref) : owned.owns(ref)),
+    sandboxed: unlockAll,
+  };
 }
 
 const NONE = 'none';

@@ -1,7 +1,8 @@
+import { isAvailable, type Tagged } from '../config/content';
 import { loadSetting, oneOf, type SettingField, saveSetting } from '../settings/storage';
 
-/** One choice in an OptionPicker. */
-export interface PickerOption<T extends string> {
+/** One choice in an OptionPicker; a `dev` one (M35) is offered only while Dev content is on. */
+export interface PickerOption<T extends string> extends Tagged {
   id: T;
   label: string;
   /** One line describing the option, shown under the buttons while it's picked. */
@@ -42,11 +43,14 @@ export class OptionPicker<T extends string> {
     name.className = 'picker-label';
     name.textContent = label;
     row.appendChild(name);
-    for (const { id, label: text } of options) {
+    for (const option of options) {
+      const { id, label: text } = option;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'picker-button';
       button.textContent = text;
+      // A dev option is offered only once Dev content is on (setDevContent).
+      button.hidden = !isAvailable(option.tag, false);
       button.addEventListener('click', () => {
         if (id === this.current) return;
         this.current = id;
@@ -72,6 +76,15 @@ export class OptionPicker<T extends string> {
       swatch.style.background = colours[i++]!.css;
       button.prepend(swatch);
     }
+  }
+
+  /**
+   * Dev content on or off (M35): the `dev` options offered (looking like the rest) or hidden, and `value` shown as picked
+   * (what the saved pick plays as now; nothing is saved).
+   */
+  setDevContent(on: boolean, value: T): void {
+    for (const o of this.options) this.buttons.get(o.id)!.hidden = !isAvailable(o.tag, on);
+    this.show(value);
   }
 
   /** Shows `value` as picked without saving it or reporting a change (another choice set it, e.g. M20's teammates). */

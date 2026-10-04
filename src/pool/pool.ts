@@ -1,5 +1,6 @@
 import { BARRELS, type BarrelId, GRIPS, type GripId, MAGAZINES, type MagazineId, MUZZLES, type MuzzleId } from '../config/attachments';
 import type { Difficulty } from '../config/bots';
+import { CONTENT_TAGS, type ContentTag } from '../config/content';
 import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
 import { AEG, GAS_PISTOL, type ReplicaConfig } from '../config/replicas';
@@ -40,8 +41,10 @@ export interface Asset {
   power?: { type: PowerType };
   /** Owned from the start, at the lowest tier. */
   starter: boolean;
-  /** Shots can dispense it. */
+  /** Shots can dispense it (a `dev` asset never, whatever this says: armory.ts shotAssets). */
   inShots: boolean;
+  /** pool.md's Access (M35, config/content.ts): `dev` assets show only with Dev content on. */
+  tag: ContentTag;
 }
 
 export interface RarityTier {
@@ -223,6 +226,18 @@ function numberCell(row: PoolRow, header: string, fail: (line: number, m: string
   return undefined;
 }
 
+/**
+ * The Access cell (M35): public or dev, blank meaning public; any other word is an error and leaves the row out, so a
+ * typo never makes something unfinished public.
+ */
+function accessCell(row: PoolRow, fail: (line: number, m: string) => void): ContentTag | undefined {
+  const v = cell(row, 'Access').toLowerCase();
+  if (v === '') return 'public';
+  const tag = CONTENT_TAGS.find((t) => t === v);
+  if (!tag) fail(row.line, `Access must be ${CONTENT_TAGS.join(' or ')}, not "${cell(row, 'Access')}"`);
+  return tag;
+}
+
 function list(raw: string): string[] {
   return raw
     .split(',')
@@ -237,7 +252,8 @@ function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m
   if (!name) return fail(row.line, `asset ${id} has no Name`), null;
   const starter = yesNo(row, 'Starter', fail);
   const inShots = yesNo(row, 'In Shots', fail);
-  if (starter === undefined || inShots === undefined) return null;
+  const tag = accessCell(row, fail);
+  if (starter === undefined || inShots === undefined || tag === undefined) return null;
   const tags = list(cell(row, category === 'replica' ? 'Tags' : 'Fits'));
   const badTag = tags.find((t) => !TAG_PATTERN.test(t));
   if (badTag !== undefined) return fail(row.line, `"${badTag}" isn't a tag (lower case words joined with -) or an ID`), null;
@@ -245,14 +261,14 @@ function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m
   if (category === 'power') {
     const type = cell(row, 'Type').toLowerCase();
     if (!(type in POWER_TAGS)) return fail(row.line, `Type must be battery, gas or spring, not "${cell(row, 'Type')}"`), null;
-    return { id, name, category, key: '', tags, power: { type: type as PowerType }, starter, inShots };
+    return { id, name, category, key: '', tags, power: { type: type as PowerType }, starter, inShots, tag };
   }
   const key = cell(row, 'Key');
   const keys = KEYS_BY_CATEGORY[category];
   if (!keys.includes(key)) {
     return fail(row.line, `"${key}" isn't a ${category} Key${keys.length ? ` (one of ${keys.join(', ')})` : ' (there are none yet)'}`), null;
   }
-  return { id, name, category, key, tags, starter, inShots };
+  return { id, name, category, key, tags, starter, inShots, tag };
 }
 
 /**

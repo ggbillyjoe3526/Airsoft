@@ -26,7 +26,8 @@ import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
 import { backButton, el, menuButton, menuPage } from './menuParts';
 
 export interface ArmoryOptions {
-  pool: Pool;
+  /** The pool as offered now (M35: dev gear only with Dev content on). */
+  pool: () => Pool;
   /** The player's collection, changed in place. */
   collection: () => Collection;
   /** Every item you carry (the replicas and what is fitted to them), to say when a Shot's item became one of them. */
@@ -107,7 +108,7 @@ export class ArmoryScreen {
   }
 
   private get pool(): Pool {
-    return this.opts.pool;
+    return this.opts.pool();
   }
 
   /**

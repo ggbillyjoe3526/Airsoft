@@ -41,8 +41,10 @@ import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
-import { type Collection, loadCollection, saveCollection, syncCollection } from './pool/collection';
+import { type Collection, type ItemRef, loadCollection, saveCollection, syncCollection } from './pool/collection';
+import { contentPool, itemsUseDev } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
+import { type NewGamePicks, picksUseDev, playedPicks } from './newGamePicks';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
@@ -241,7 +243,7 @@ export class Game {
     this.teammateDifficulty = loadTeammateDifficulty();
     this.matchRules = loadMatchRules();
     this.collection = loadCollection(GAME_POOL, options.seed);
-    this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear));
+    this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear, () => this.dev.devContent));
     // Against what is really owned, so the picks land in the real loadout even with Unlock all gear on (M26d).
     carryOverOldPicks(new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection)), this.collection, saveCollection);
 
@@ -299,10 +301,11 @@ export class Game {
         summary: () => loadoutTile(this.loadout),
       },
       armory: {
-        pool: GAME_POOL,
+        // Dev gear shows in the collection only with Dev content on (M35); Shots never give it either way.
+        pool: () => contentPool(GAME_POOL, this.dev.devContent),
         // Another tab's save since this one read it is taken first, so a Shot here never undoes it (audit POOL-02).
         collection: () => (syncCollection(this.collection, GAME_POOL), this.collection),
-        equipped: () => this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : [])),
+        equipped: () => this.equippedItems(),
         onChange: () => {
           saveCollection(this.collection);
           this.loadoutChanged = this.setupChanged = true;
@@ -382,6 +385,8 @@ export class Game {
           this.applyDev();
         },
         cheating: () => devCheating(this.dev),
+        devContent: () => this.dev.devContent,
+        devContentUsed: () => this.devContentUsed(this.playedPicks()),
         diagnostics: () => this.diagnostics(),
       },
       save: options.save,
@@ -570,8 +575,24 @@ export class Game {
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
     this.session?.setDevCheats(this.dev);
-    // Unlock all gear changes what the Loadout offers and carries; the next Play rebuilds the match with it.
-    if (this.dev.unlockAllGear !== before.unlockAllGear) this.loadoutChanged = this.setupChanged = true;
+    // Unlock all gear and Dev content (M35) change what the Loadout offers and carries, and Dev content what New game
+    // plays; the next Play rebuilds the match with it.
+    if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
+  }
+
+  /** New game's picks as they play now (M35: a dev pick plays as its list's default while Dev content is off). */
+  private playedPicks(): NewGamePicks {
+    return playedPicks({ map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, rules: this.matchRules }, this.dev.devContent);
+  }
+
+  /** Every item in the Loadout: each gear slot's replica and what is fitted to it (null for an empty slot). */
+  private equippedItems(): (ItemRef | null)[] {
+    return this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : []));
+  }
+
+  /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or pay. */
+  private devContentUsed(picks: NewGamePicks): boolean {
+    return picksUseDev(picks) || itemsUseDev(GAME_POOL, this.equippedItems());
   }
 
   /** A new session takes the Dev settings in force (M24). */
@@ -638,13 +659,16 @@ export class Game {
       // would open with the same bot plans, round by round (bug pass). Play Again is a new match too (audit SIM-08).
       this.matchSeed = matchSeed(this.options.seed, this.matchesPlayed);
       this.matchCounted = false;
+      const picks = this.playedPicks();
       this.session = new MatchSession(this.renderer, this.container, this.input, {
-        map: mapData(this.map),
-        mode: this.mode,
-        difficulty: this.difficulty,
-        teammateDifficulty: this.teammateDifficulty,
-        rules: { ...this.matchRules },
+        map: mapData(picks.map),
+        mode: picks.mode,
+        difficulty: picks.difficulty,
+        teammateDifficulty: picks.teammateDifficulty,
+        rules: { ...picks.rules },
         kit: this.loadout.kit(),
+        devContent: this.dev.devContent,
+        devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
       }, this.matchSeed, QUALITY[this.quality], this.audio, this.crosshair);
       this.session.setMotion(motionScale(this.reducedMotion));
@@ -803,7 +827,7 @@ export class Game {
     } else if (!s.paysFieldCredits || this.dev.disableArmory) {
       // Not paid (Dev settings, or the Armory off): the summary says why (audit POOL-22), not what an earlier match paid.
       this.lastEarnings = null;
-      this.unpaidReason = this.dev.disableArmory ? 'off' : 'dev';
+      this.unpaidReason = this.dev.disableArmory ? 'off' : (s.unpaidReason ?? 'dev');
     }
   }
 

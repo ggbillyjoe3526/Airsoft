@@ -1,3 +1,4 @@
+import type { Tagged } from './content';
 import type { Switch } from './controls';
 import { HITS, type HitConfig, ROUNDS } from './hits';
 
@@ -18,8 +19,15 @@ export interface MatchRules {
   ricochetsCount: boolean;
 }
 
+/** One of the Match pop-up's choices; a `dev` one (M35, config/content.ts) is offered only with Dev content on. */
+export interface MatchChoice<T extends string = string> extends Tagged {
+  id: T;
+  label: string;
+  blurb: string;
+}
+
 /** Rounds to win the match, as the Match pop-up offers them. */
-export const WINS_NEEDED_CHOICES: readonly { id: string; label: string; blurb: string }[] = [
+export const WINS_NEEDED_CHOICES: readonly MatchChoice[] = [
   { id: '3', label: '3', blurb: 'A quick match: first to 3 round wins.' },
   { id: '5', label: '5', blurb: 'The standard match: first to 5 round wins.' },
   { id: '7', label: '7', blurb: 'A long match: first to 7 round wins.' },
@@ -27,7 +35,7 @@ export const WINS_NEEDED_CHOICES: readonly { id: string; label: string; blurb: s
 ];
 
 /** Players per team. Depot has room for three a side; bigger teams wait for bigger fields (v0.2). */
-export const TEAM_SIZE_CHOICES: readonly { id: string; label: string; blurb: string }[] = [
+export const TEAM_SIZE_CHOICES: readonly MatchChoice[] = [
   { id: '1', label: '1v1', blurb: 'You against one bot: no teammates, nobody to cover you.' },
   { id: '2', label: '2v2', blurb: 'You and one bot teammate against two bots.' },
   { id: '3', label: '3v3', blurb: 'You and two bot teammates against three bots.' },
