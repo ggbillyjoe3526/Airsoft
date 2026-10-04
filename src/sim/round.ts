@@ -1,5 +1,4 @@
 import type { FlagRules, MatchMode } from '../config/modes';
-import type { ReplicaConfig } from '../config/replicas';
 import type { SpawnPoint } from '../map/mapTypes';
 import type { BBPool } from './ballistics';
 import { type Character, respawnCharacter } from './character';
@@ -27,12 +26,11 @@ export interface RoundRules {
 }
 
 /**
- * What round flow needs besides its own state: the rules, the loadout everyone respawns with, and the map's
- * spawns and pole.
+ * What round flow needs besides its own state: the rules and the map's spawns and pole. Everyone respawns with the
+ * replicas they carry (Armament.replicas).
  */
 export interface RoundContext {
   rules: RoundRules;
-  loadout: readonly ReplicaConfig[];
   /** Flag mode: the foot of the pole, at end 1 where the defenders start (map data; absent: no flag mode). */
   pole?: Vec3;
   /**
@@ -189,7 +187,7 @@ export function restartMatch(round: RoundState, characters: Character[], bbs: BB
   for (const c of characters) {
     const modes = c.armament.modes;
     for (let i = 0; i < modes.length; i++) {
-      const replica = ctx.loadout[i];
+      const replica = c.armament.replicas[i];
       if (replica) modes[i] = replica.defaultFireMode;
     }
   }
@@ -227,7 +225,7 @@ function startRound(round: RoundState, characters: Character[], bbs: BBPool, ctx
   round.overtime = 0;
   setUpObjective(round, ctx.rules, ctx.pole);
   placeTeams(round, characters, ctx);
-  for (const c of characters) respawnCharacter(c, ctx.loadout);
+  for (const c of characters) respawnCharacter(c);
   for (const bb of bbs.bbs) bb.active = false;
   events.push({ type: 'roundStart', round: number });
 }

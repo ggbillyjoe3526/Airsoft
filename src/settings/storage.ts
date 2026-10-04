@@ -11,8 +11,9 @@ export const SETTINGS_VERSION = 1;
 
 /**
  * What each setting is called in the stored object (`hopUp.<replica id>` and `bbWeight.<replica id>`: that replica's
- * hop-up dial and BB weight; `slot.<slot id>`: the replica picked for that loadout slot; `volume.<channel>`: a volume
- * slider on Settings → Audio; `crosshair.<part>`: Settings → Crosshair).
+ * hop-up dial and BB weight; `equip.<gear slot>`: the replica item in that Loadout slot and `fit.<asset id>.<fit slot>`:
+ * the item fitted there (M26b, pool/loadoutModel.ts); `volume.<channel>`: a volume slider on Settings → Audio;
+ * `crosshair.<part>`: Settings → Crosshair).
  */
 export type SettingField =
   | 'sensitivity'
@@ -35,7 +36,6 @@ export type SettingField =
   | 'reducedMotion'
   | 'teamColours'
   | 'soundCues'
-  | 'optic'
   | 'map'
   | 'fov'
   | 'quality'
@@ -44,10 +44,15 @@ export type SettingField =
   | `hopUp.${string}`
   | `volume.${string}`
   | `bbWeight.${string}`
-  | `slot.${string}`
+  | `equip.${string}`
+  | `fit.${string}`
   | `crosshair.${string}`
+  /** Before M26 (read once by pool/oldPicks.ts): the rifle's optic and each replica's grip and magazine. */
+  | 'optic'
   | `grip.${string}`
   | `mag.${string}`
+  /** Those picks were carried into the asset pool (M26b). */
+  | 'oldPicksCarried'
   /** Settings → Accessibility, the sound cues' look (M24). */
   | 'soundCueSize'
   | 'soundCueColour'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
-import { POWER_LABELS, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
+import { SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
@@ -109,7 +109,6 @@ describe('menu data', () => {
     expect(replicaSummary(GAS_PISTOL, factoryParts(GAS_PISTOL))).toBe(`Gas · semi · ${GAS_PISTOL.magSize} BBs a magazine`);
     // The fitted magazine, not the factory one (M17b).
     expect(replicaSummary(AEG, { ...factoryParts(AEG), magazine: 'hiCap' })).toMatch(new RegExp(`· ${AEG.magSize * 2} BBs a magazine$`));
-    expect(POWER_LABELS[GAS_PISTOL.power].row).toBe('Gas type');
   });
 });
 

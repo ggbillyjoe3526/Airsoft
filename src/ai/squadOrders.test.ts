@@ -45,7 +45,6 @@ function squad(map: MapData = OPEN_FIELD, nav: NavGrid = OPEN_NAV) {
     footsteps: FOOTSTEPS,
     body: BODY,
     ballistics: BALLISTICS,
-    loadout: LOADOUT,
     killY: map.killY,
     hits: HITS,
     deadZones: [[{ position: vec3(-45, 0, 45), yaw: 0 }], [{ position: vec3(45, 0, -45), yaw: 0 }]],
@@ -56,7 +55,7 @@ function squad(map: MapData = OPEN_FIELD, nav: NavGrid = OPEN_NAV) {
   const spots = [vec3(-30, 0, 20), vec3(-32, 0, 23), vec3(-28, 0, 23), vec3(40, 0, -40)];
   spots.forEach((p, id) => {
     const c = createCharacter(id, vec3(p.x, PHYSICS.groundRestGap, p.z), 0, LOADOUT, id < 3 ? 0 : 1);
-    respawnCharacter(c, LOADOUT);
+    respawnCharacter(c);
     c.position = vec3(p.x, PHYSICS.groundRestGap, p.z);
     state.characters.push(c);
     physics.addCharacter(c);

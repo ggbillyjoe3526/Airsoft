@@ -167,6 +167,15 @@ ends the round). A hit character is eliminated
   links it to its behaviour in `config/` (`REPLICA_KEYS`, the optic, grip, laser and magazine ids); compatibility is by
   tags (`fits`). `pool/collection.ts` keeps what the player owns (a count per asset at a tier, `000002@epic`), their FC
   and Tokens and the Shots' random state under its own browser key (`airsoft.collection`).
+- **Loadout (M26b):** `pool/loadoutModel.ts` `LoadoutModel` is the player's loadout without a DOM: the replica item in
+  each gear slot, what is fitted to each replica (`ReplicaFit`: an owned item or nothing per slot), each replica's BB
+  weight and hop-up, all saved in the settings store and read back against an `Ownership` (the collection; everything,
+  under the M26d Dev setting). `pool/kit.ts` turns a replica item and its fit into a `KitSlot`: the replica as carried
+  (rarity, power source and laser worked into its numbers) and its parts (with a `PartTune` for the optic's, grip's and
+  magazine's tiers, which `handlingOf` multiplies in). `Game` passes `loadout.kit()` to each match and range visit;
+  `MatchSession` gives the player those replicas (`createCharacter(..., kit replicas)`) and bots `LOADOUT`. Every
+  character's `Armament.replicas` is what it carries, and the sim, renderer and HUD read that, never `LOADOUT`.
+  `ui/menus/loadoutScreen.ts` draws the gear column and Customise view; `ui/loadoutChoice.ts` holds its readouts.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).

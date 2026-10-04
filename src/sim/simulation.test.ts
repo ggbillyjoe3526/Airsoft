@@ -27,7 +27,7 @@ const DEAD_ZONES = [[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(3
 const openSky = { raycastStatic: () => -1 };
 
 function testContext(mover: CharacterMover, killY: number): SimContext {
-  return createSimContext({ mover, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
+  return createSimContext({ mover, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, killY, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap });
 }
 
 const floor: CharacterMover = {
@@ -365,7 +365,6 @@ describe('hit calling and round flow', () => {
       footsteps: FOOTSTEPS,
       body: BODY,
       ballistics: BALLISTICS,
-      loadout: LOADOUT,
       killY: KILL_Y,
       hits: HITS,
       deadZones: DEAD_ZONES,
@@ -403,7 +402,7 @@ describe('hit calling and round flow', () => {
     const blue = createCharacter(0, vec3(0, 0, 0), 0, LOADOUT, 0);
     const orange = createCharacter(1, vec3(0, 0, -8), 0, LOADOUT, 1);
     state.characters.push(blue, orange);
-    const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: rules, nav: OPEN_NAV, navSnap: NAV.snap });
+    const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: rules, nav: OPEN_NAV, navSnap: NAV.snap });
     placeTeams(state.round, state.characters, ctx.round); // as a match does before round 1
     const first = rules.eliminationFirstEnd;
     expect(blue.end).toBe(first);
@@ -435,7 +434,7 @@ describe('practice range', () => {
     state.targets = createRangeTargets();
     const player = createCharacter(0, vec3(), 0, LOADOUT, 0);
     state.characters.push(player);
-    const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, loadout: LOADOUT, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap, practice: true });
+    const ctx = createSimContext({ mover: floor, query: openSky, movement: MOVEMENT, footsteps: FOOTSTEPS, body: BODY, ballistics: BALLISTICS, killY: KILL_Y, hits: HITS, deadZones: DEAD_ZONES, rounds: ROUNDS, nav: OPEN_NAV, navSnap: NAV.snap, practice: true });
     return { state, player, ctx };
   }
 

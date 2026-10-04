@@ -1,3 +1,4 @@
+import type { LaserId } from './lasers';
 import type { ReplicaConfig } from './replicas';
 
 /**
@@ -26,26 +27,20 @@ export interface GripConfig {
 
 /** Small, opposite strengths: the vertical grip steadies, the angled grip handles quicker. */
 export const GRIPS: Readonly<Record<GripId, GripConfig>> = {
-  none: { label: 'No grip', blurb: 'Hand on the handguard, as it comes.', handlingScale: 1, shakeScale: 1 },
+  none: { label: 'No Grip', blurb: 'Hand on the handguard, as it comes.', handlingScale: 1, shakeScale: 1 },
   vertical: {
-    label: 'Vertical grip',
+    label: 'Vertical Grip',
     blurb: 'Steadier: the shake of a sprint or a jump leaves your aim sooner. A little slower to bring up and to aim.',
     handlingScale: 1.25,
     shakeScale: 0.6,
   },
   angled: {
-    label: 'Angled grip',
+    label: 'Angled Grip',
     blurb: 'Quicker: brings the rifle up and raises the sight faster. The shake of a sprint or a jump lasts a little longer.',
     handlingScale: 0.8,
     shakeScale: 1.3,
   },
 };
-
-export const GRIP_CHOICES: readonly { id: GripId; label: string; blurb: string }[] = (Object.keys(GRIPS) as GripId[]).map((id) => ({
-  id,
-  label: GRIPS[id].label,
-  blurb: GRIPS[id].blurb,
-}));
 
 export type MagazineId = 'standard' | 'hiCap' | 'lowCap' | 'extended';
 
@@ -71,7 +66,7 @@ export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = {
   standard: { label: 'Standard', blurb: 'As it comes.', capacity: 1, carried: 0, reloadScale: 1, drawScale: 1, rattles: false },
   // Rifle: 120 BBs but two carried (the same 240), fewer reloads, and it gives you away when you sneak.
   hiCap: {
-    label: 'Hi-cap',
+    label: 'Hi-Cap',
     blurb: 'Twice the BBs in each, but only two carried, and the loose BBs rattle: bots close by hear you even walking.',
     capacity: 2,
     carried: -2,
@@ -81,7 +76,7 @@ export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = {
   },
   // Rifle: 30 BBs, one more carried (150 in all), and a quicker change.
   lowCap: {
-    label: 'Low-cap',
+    label: 'Low-Cap',
     blurb: 'Half the BBs in each and one more carried: fewer BBs in all, but quicker to change. Silent.',
     capacity: 0.5,
     carried: 1,
@@ -101,10 +96,27 @@ export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = {
   },
 };
 
+/**
+ * Multipliers a part's rarity tier brings (M26b, pool/kit.ts), on top of what the parts themselves do: below 1 is
+ * quicker or steadier.
+ */
+export interface PartTune {
+  raiseScale: number;
+  shakeScale: number;
+  drawScale: number;
+  reloadScale: number;
+}
+
+export const NO_TUNE: PartTune = { raiseScale: 1, shakeScale: 1, drawScale: 1, reloadScale: 1 };
+
 /** The parts fitted to one replica. */
 export interface ReplicaParts {
   grip: GripId;
   magazine: MagazineId;
+  /** A laser on its rail (M26b; config/lasers.ts): shown on the model. Its tighter spread is in the player's replica. */
+  laser?: LaserId | null;
+  /** What the parts' rarity tiers add (M26b); none for bots. */
+  tune?: PartTune;
 }
 
 /** How a replica comes: no grip, its first (standard) magazine. Bots always carry this. */
@@ -112,12 +124,17 @@ export function factoryParts(r: ReplicaConfig): ReplicaParts {
   return { grip: 'none', magazine: r.magazines[0]! };
 }
 
-/** `parts` as `r` can take them: a grip only on a replica with a grip mount, only magazines made for it. */
+/**
+ * `parts` with anything unknown replaced by the factory part. What fits which replica is the asset pool's call (pool.md
+ * tags, M26b): the Loadout only offers parts that fit.
+ */
 export function partsFor(r: ReplicaConfig, parts: Partial<ReplicaParts>): ReplicaParts {
   const factory = factoryParts(r);
   return {
-    grip: r.gripMount && parts.grip && parts.grip in GRIPS ? parts.grip : factory.grip,
-    magazine: parts.magazine && r.magazines.includes(parts.magazine) ? parts.magazine : factory.magazine,
+    grip: parts.grip && parts.grip in GRIPS ? parts.grip : factory.grip,
+    magazine: parts.magazine && parts.magazine in MAGAZINES ? parts.magazine : factory.magazine,
+    laser: parts.laser ?? null,
+    tune: parts.tune ?? NO_TUNE,
   };
 }
 
@@ -139,13 +156,14 @@ export interface Handling {
 export function handlingOf(r: ReplicaConfig, parts: ReplicaParts): Handling {
   const grip = GRIPS[parts.grip];
   const mag = MAGAZINES[parts.magazine];
+  const tune = parts.tune ?? NO_TUNE;
   return {
     magSize: Math.max(1, Math.round(r.magSize * mag.capacity)),
     mags: Math.max(1, r.mags + mag.carried),
-    reloadTime: r.reloadTime * mag.reloadScale,
-    drawTime: r.drawTime * mag.drawScale * grip.handlingScale,
-    raiseScale: grip.handlingScale,
-    shakeScale: grip.shakeScale,
+    reloadTime: r.reloadTime * mag.reloadScale * tune.reloadScale,
+    drawTime: r.drawTime * mag.drawScale * grip.handlingScale * tune.drawScale,
+    raiseScale: grip.handlingScale * tune.raiseScale,
+    shakeScale: grip.shakeScale * tune.shakeScale,
     rattles: mag.rattles,
   };
 }

@@ -42,7 +42,7 @@ export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'r
 export interface MenusOptions {
   rules: FixedRulesText;
   bindings: KeyBindings;
-  /** The Loadout screen's slots and choices, and the summary New game's Loadout button shows. */
+  /** The Loadout screen's model and change hook, and the summary New game's Loadout button shows. */
   loadout: Omit<LoadoutOptions, 'onBack'> & { summary: () => { replicas: string; detail: string } };
   /** Start (or resume) play: Play on New game, Resume, Play Again. */
   onPlay: () => void;
@@ -158,12 +158,8 @@ export class Menus {
     // Every loadout change also refreshes New game's Loadout button.
     const lo = opts.loadout;
     this.loadout = new LoadoutScreen({
-      slots: lo.slots,
-      picked: { initial: lo.picked.initial, onChange: (slot, r) => (lo.picked.onChange(slot, r), this.refreshSetup()) },
-      optic: { initial: lo.optic.initial, onChange: (o) => (lo.optic.onChange(o), this.refreshSetup()) },
-      hopUp: { initial: lo.hopUp.initial, onChange: (r, dial) => (lo.hopUp.onChange(r, dial), this.refreshSetup()) },
-      bbWeight: { initial: lo.bbWeight.initial, onChange: (r, grams) => (lo.bbWeight.onChange(r, grams), this.refreshSetup()) },
-      parts: { initial: lo.parts.initial, onChange: (r, parts) => (lo.parts.onChange(r, parts), this.refreshSetup()) },
+      model: lo.model,
+      onChange: () => (lo.onChange(), this.refreshSetup()),
       onBack: () => this.back(),
     });
     this.settings = new SettingsScreen({
@@ -344,6 +340,8 @@ export class Menus {
 
   private openLoadout(from: SettingsOrigin): void {
     this.loadoutFrom = from;
+    // What you own may have changed since it was last open (the Armory, M26c).
+    this.loadout.refresh();
     this.go('loadout');
   }
 
@@ -381,6 +379,11 @@ export class Menus {
    */
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.code !== 'Escape' || this.root.hidden || this.dialogOpen()) return;
+    // On the Loadout, Esc first closes a replica's Customise view (M26b).
+    if (this.current === 'loadout' && this.loadout.handleEscape()) {
+      e.preventDefault();
+      return;
+    }
     if (backTarget(this.current, this.settings.openedFrom, this.loadoutFrom) === null) return;
     e.preventDefault();
     this.back();

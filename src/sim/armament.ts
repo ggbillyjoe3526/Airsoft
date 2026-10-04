@@ -3,7 +3,7 @@ import type { BallisticsConfig } from '../config/ballistics';
 import type { OpticId } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
 import type { ImpactMaterial } from '../config/sounds';
-import { BB_WEIGHT, bbMass, type FireMode, HOP_UP, hopUpLift, muzzleVelocity, RECOIL, TRIGGER } from '../config/replicas';
+import { bbMass, type FireMode, HOP_UP, hopUpLift, muzzleVelocity, RECOIL, TRIGGER, validBbWeight } from '../config/replicas';
 import { type BBPool, spawnBB } from './ballistics';
 import type { PlayerCommand } from './commands';
 import type { GameEvent } from './events';
@@ -52,6 +52,11 @@ export function spareBBs(ammo: ReplicaAmmo): number {
 
 /** A character's replicas and what they're doing. Plain data. */
 export interface Armament {
+  /**
+   * The replica in each loadout slot, as this character carries it (M26b): the player's replicas with their rarity,
+   * power source and laser worked in (pool/kit.ts), the bots' as they come. Read these, never a shared list.
+   */
+  replicas: ReplicaConfig[];
   ammo: ReplicaAmmo[];
   active: number;
   /** Seconds until the next shot is allowed (can go slightly negative to keep auto fire rate exact). */
@@ -98,6 +103,7 @@ export function createArmament(loadout: readonly ReplicaConfig[], parts: readonl
   const fitted = loadout.map((r, i) => partsFor(r, parts[i] ?? factoryParts(r)));
   const handling = loadout.map((r, i) => handlingOf(r, fitted[i]!));
   return {
+    replicas: [...loadout],
     ammo: handling.map(fullAmmo),
     active: 0,
     cooldown: 0,
@@ -123,9 +129,9 @@ export function createArmament(loadout: readonly ReplicaConfig[], parts: readonl
  * Fits each replica's grip and magazine (by loadout slot; parts a replica can't take keep its factory ones) and fills
  * its magazines for the new parts. Between rounds only: the magazines start full.
  */
-export function fitParts(a: Armament, loadout: readonly ReplicaConfig[], parts: readonly ReplicaParts[]): void {
-  for (let i = 0; i < loadout.length && i < parts.length; i++) {
-    const r = loadout[i]!;
+export function fitParts(a: Armament, parts: readonly ReplicaParts[]): void {
+  for (let i = 0; i < a.replicas.length && i < parts.length; i++) {
+    const r = a.replicas[i]!;
     a.parts[i] = partsFor(r, parts[i]!);
     a.handling[i] = handlingOf(r, a.parts[i]!);
     a.ammo[i] = fullAmmo(a.handling[i]!);
@@ -135,8 +141,8 @@ export function fitParts(a: Armament, loadout: readonly ReplicaConfig[], parts: 
 /** Sets the BB weight each replica shoots (grams, by loadout slot; missing slots and weights not offered keep theirs). */
 export function setBbWeights(a: Armament, grams: readonly number[]): void {
   for (let i = 0; i < a.bbWeights.length && i < grams.length; i++) {
-    const g = grams[i]!;
-    if ((BB_WEIGHT.choices as readonly number[]).includes(g)) a.bbWeights[i] = g;
+    const g = validBbWeight(grams[i]!);
+    if (g !== undefined) a.bbWeights[i] = g;
   }
 }
 
@@ -154,9 +160,9 @@ export function rattles(a: Armament): boolean {
   return false;
 }
 
-/** Fits `optic` (or nothing) to every replica in the loadout that has an optic mount. */
-export function fitOptic(a: Armament, loadout: readonly ReplicaConfig[], optic: OpticId | null): void {
-  for (let i = 0; i < loadout.length; i++) a.optics[i] = loadout[i]!.opticMount ? optic : null;
+/** Fits each slot's optic (null: iron sights), by loadout slot; missing slots keep theirs. The pool decides what fits (M26b). */
+export function fitOptics(a: Armament, optics: readonly (OpticId | null)[]): void {
+  for (let i = 0; i < a.optics.length && i < optics.length; i++) a.optics[i] = optics[i] ?? null;
 }
 
 /** The fire selector's next setting for this replica (wrapping round), or `mode` itself if it has only one. */
@@ -193,7 +199,6 @@ export interface WorldQuery {
 }
 
 export interface ArmamentContext {
-  loadout: readonly ReplicaConfig[];
   ballistics: BallisticsConfig;
   bbs: BBPool;
   rng: RngState;
@@ -231,7 +236,7 @@ export function stepArmament(
   a.pendingPress = Math.max(0, a.pendingPress - dt);
   if (a.draw > 0) a.draw = Math.max(0, a.draw - dt);
 
-  let replica = ctx.loadout[a.active]!;
+  let replica = a.replicas[a.active]!;
   let ammo = a.ammo[a.active]!;
 
   if (a.reload > 0) {
@@ -251,10 +256,10 @@ export function stepArmament(
   }
 
   // Switching cancels a reload (the magazine you were swapping stays as it was).
-  if (cmd.switchTo >= 0 && cmd.switchTo < ctx.loadout.length && cmd.switchTo !== a.active) {
+  if (cmd.switchTo >= 0 && cmd.switchTo < a.replicas.length && cmd.switchTo !== a.active) {
     a.active = cmd.switchTo;
     a.reload = 0;
-    replica = ctx.loadout[a.active]!;
+    replica = a.replicas[a.active]!;
     ammo = a.ammo[a.active]!;
     a.draw = a.handling[a.active]!.drawTime;
     a.dryFiredThisPull = false; // a dry click on the other replica doesn't count for this one

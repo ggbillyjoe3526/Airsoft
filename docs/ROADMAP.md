@@ -122,7 +122,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 batch · M23 Minimap and order wheel (items 2 and 3): a minimap with your teammates and the other team where last heard; hold Z for a squad order wheel (hover or click) | Done (owner to play it) | 9.0 |
 | Alpha · M24 Menus and settings polish (owner's Phase 4 playtest notes 5–10, 13, 14, 2026-10-04): shorter button labels, the build's version from git, 90° field of view, short map blurbs, sound cue size and colour, a hit feed that keeps its lines, a larger scoreboard with a size setting, hidden Dev settings | Done (owner to play it) | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M26a Asset pool: `pool.md` (the asset register the game reads, with its guide), rarity tiers, the economy's numbers, the player's collection | Done | 9.1 |
-| Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Planned | |
+| Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Done | 9.0 |
 | Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Planned | |
 | Alpha · Owner's 2026-10-04 batch · M26d Dev settings for the Armory: switch the gacha off, unlock all gear; docs | Planned | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
