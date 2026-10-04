@@ -35,7 +35,7 @@ import { type Collection, loadCollection, saveCollection } from './pool/collecti
 import { GAME_POOL } from './pool/gamePool';
 import { gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
-import { earn, type Earnings, matchEarnings } from './pool/armory';
+import { earn, type Earnings, matchPay } from './pool/armory';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, saveSetting } from './settings/storage';
@@ -615,8 +615,9 @@ export class Game {
       // And it pays its Field Credits once (M26c); a second stop on the same result shows the same pay.
       // With the Armory switched off (Dev settings, M26d) nothing is paid.
       const outcome = s.takeOutcome();
-      if (outcome && !this.dev.disableArmory) {
-        this.lastEarnings = matchEarnings(GAME_POOL.economy, outcome);
+      const pay = outcome && matchPay(GAME_POOL.economy, outcome, this.dev.disableArmory);
+      if (pay) {
+        this.lastEarnings = pay;
         earn(this.collection, this.lastEarnings.total);
         saveCollection(this.collection);
         this.menus.refresh();

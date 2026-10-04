@@ -10,7 +10,7 @@ function saved(fields: Record<string, unknown>): Storage {
 }
 
 describe('Dev settings (M24)', () => {
-  it('has a row for every setting, and only the Armory and gear switches stubbed for the Loadout to read', () => {
+  it('has a row for every setting, and Unlock all gear (not Disable Armory) counting as Dev help', () => {
     expect(DEV_ENTRIES.map((e) => e.id).sort()).toEqual(Object.keys(DEV_DEFAULTS).sort());
     expect(DEV_ENTRIES.find((e) => e.id === 'disableArmory')).toMatchObject({ kind: 'switch', cheat: false });
     // Free Legendary gear changes play (M26d): such a match pays no Field Credits and stays out of the records.

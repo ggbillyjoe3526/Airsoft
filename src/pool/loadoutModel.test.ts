@@ -111,4 +111,23 @@ describe('Loadout model (M26b)', () => {
     expect(model.fitChoices(id('AEG Rifle'), 'optic')).toEqual([]);
     expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
   });
+
+  it('keeps picks made with everything unlocked apart, so turning it off brings back the real loadout (M26d)', () => {
+    let unlocked = false;
+    const c = newCollection(pool, 1);
+    c.owned[itemKey(id('Red Dot'), 'common')] = 1;
+    const model = new LoadoutModel(pool, gameOwnership(pool, () => c, () => unlocked));
+    const aeg = id('AEG Rifle');
+    model.setFit(aeg, 'optic', item('Red Dot'));
+    unlocked = true;
+    expect(model.fitOf(aeg).optic).toEqual(item('Red Dot')); // starts from the real picks
+    model.equip('primary', item('AEG Rifle', 'legendary'));
+    model.setFit(aeg, 'optic', item('2x Scope', 'legendary'));
+    expect(model.fitOf(aeg).optic).toEqual(item('2x Scope', 'legendary'));
+    unlocked = false;
+    expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
+    expect(model.fitOf(aeg).optic).toEqual(item('Red Dot'));
+    unlocked = true; // and the sandboxed picks are still there next time
+    expect(model.fitOf(aeg).optic).toEqual(item('2x Scope', 'legendary'));
+  });
 });
