@@ -117,6 +117,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M28** · Impact puffs start at half size
 
 ### Internal
+- **FA15** · The perf harness measures heap growth between two forced full garbage collections, so repeated runs agree (+0.9 MB on four of five runs, −3.4 on one, against swings of ±10 MB before) (#PR)
 - **FA14** · The browser smoke test waits for a match to draw before trying its keys, and gives the scoreboard, order wheel and squad order steps the same wait as firing and reloading, so slow frames on a CI runner no longer fail it (#80)
 - **M34b** · Multi-floor navigation: map cells hold multiple walkable levels, enabling buildings with stairs and balconies
 - **FA11b** · What Play does next and the pause and result text are pure, unit-tested functions; `?perf` logs how long each part of a match build takes (#73)

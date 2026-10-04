@@ -62,3 +62,14 @@ acceptance:
 status: open
 attempts: 0
 
+
+## FA15 · Perf harness: heap growth measured between forced full GCs
+tier: trivial
+perf: skip
+touches: pipeline/perf-run.mjs, pipeline/baseline/
+acceptance:
+  1. The browser gets `gc()` (`--js-flags=--expose-gc`) and the harness takes the heap's start and end after full collections; the max and GC drops stay the samples taken during play.
+  2. Repeated container runs of one head agree on heap growth far better than the ±10 MB seen before (runs recorded in METRICS).
+  3. The 5 MB budget and the laptop budget are unchanged; the container Low baseline re-recorded.
+status: open
+attempts: 0
