@@ -119,6 +119,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Done (owner to play it) | 8.8 (auto-accepted, 4 of 4) |
 | Alpha · Phase 4 · M14 Art pass, VFX and lighting (procedural: the CC0 asset sites were unreachable): daylight with a sky and trees, dressed Depot surfaces and props, figures in airsoft kit, toy-like replicas, gas puffs and impact dust, the Graphics quality picker back | Done (owner to play it) | 9.0 |
 | Alpha · Phase 4 · M16 Tutorial: a coached first session on the practice range | Done (merged; owner to play it) | 9.0 |
+| Alpha · Owner's 2026-10-04 batch · M25a CC0 assets: a guide (`docs/CC0_ASSETS.md`: sources, formats, folders, licences, size limits) and a loader that draws a dropped-in glTF player model, the built-in figures as fallback | Done | |
+| Alpha · Owner's 2026-10-04 batch · M25b Depot rework (minor): fewer stacked crates, less clutter, more kinds of objects, sightlines and balance kept (owner approved concept v2) | In progress | |
 | Alpha · Owner's 2026-10-04 batch · M26a Asset pool: `pool.md` (the asset register the game reads, with its guide), rarity tiers, the economy's numbers, the player's collection | Done | 9.1 |
 | Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Planned | |
 | Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Planned | |
@@ -640,6 +642,23 @@ William's notes of 2026-10-04 (fourteen items) were split into four threads, bui
 squad order wheel), M24 (menus and settings), M25 (Depot rework and CC0 assets) and M26 (Loadout, Armory and asset
 pool, items 11, 12 and part of 14).
 
+- **M25. Depot rework and CC0 assets** (items 1 and 4).
+  - **M25a. CC0 assets** (item 1: "how do I use CC0 assets to improve player models?"). A guide,
+    [`CC0_ASSETS.md`](CC0_ASSETS.md): which CC0 sites suit a browser game (Quaternius, Kenney, Kay Lousberg, Poly
+    Haven, ambientCG), glTF binary and the PBR texture maps, where files go, licences (recorded in ASSETS even though
+    CC0 needs no credit) and the web size budget. A player model saved as `src/assets/models/characters/figure.glb`
+    replaces the built-in figures for every player and bot: scaled to the hit volume, feet on the ground, team
+    materials painted in team colours. Named parts (`body`, `legL`, `legR`, `aimRifle`, `aimPistol`, `hitPose`) move
+    like the built-in ones and the built-in figure draws any part left out; an unnamed model is drawn whole. Without
+    the file nothing is fetched; a broken one falls back with a console warning. The asset sites are blocked by the
+    cloud environment's network policy, so files arrive by the owner committing them or by allowing those hosts.
+    Later: glTF animations, props and surface textures from files, Draco and KTX2.
+  - **M25b. Depot rework, minor** (item 4: fewer crates stacked two high and close together, less verticality and
+    clutter, more variety but nothing major, sightlines and balance kept). Concept sketches and mock screenshots first;
+    the owner chose "open it up more" on the first and approved the second (v2). Most double stacks become single
+    full-height objects of new kinds (portable toilets, pallet racking, HESCO barriers, wrapped pallet loads, IBC
+    tanks, sandbags, a generator, a skip), six spots drop to waist height where the sightline cost is lowest, and
+    two crate stacks stay. Collision stays boxes; the layout tests still pass.
 - **M26. Loadout, Armory and asset pool** (items 11, 12 and the Armory's Dev settings from 14).
   - **M26a. Asset pool.** Every replica and part is a single asset with a six-digit ID (`000001` Gas Pistol, `000002`
     AEG Rifle …) in `pool.md` at the repository's root: a hand-editable register the game reads at start, with a guide

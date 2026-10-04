@@ -74,7 +74,6 @@ export function prepareFigureModel(scene: THREE.Object3D): FigureModel {
     if (!node) continue;
     // A holder at the figure's origin, with the node attached under it at the same place in the figure.
     const holder = new THREE.Group();
-    holder.name = name;
     holder.attach(node);
     parts[name] = holder;
   }

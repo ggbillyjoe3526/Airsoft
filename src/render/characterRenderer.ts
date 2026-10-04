@@ -5,6 +5,7 @@ import type { ReplicaConfig } from '../config/replicas';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
 import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll } from './characterModels';
+import type { FigureModel } from './externalModels';
 
 interface FigureState {
   figure: Figure;
@@ -69,10 +70,12 @@ export class CharacterRenderer {
     private readonly hits: HitConfig,
     /** The replica in each loadout slot: a figure holds its active one (rifle or pistol pose). */
     private readonly loadout: readonly ReplicaConfig[],
+    /** A figure model (M25a, render/externalModels.ts), or null for the built-in figures. The renderer doesn't own it. */
+    model: FigureModel | null = null,
   ) {
     for (const c of characters) {
       const material = this.material.clone();
-      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id);
+      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, model);
       this.object.add(figure.root);
       this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0 });
     }
@@ -148,11 +151,16 @@ export class CharacterRenderer {
       // then puts it in the dead zone) instead of visibly jumping there.
       const opacity = c.status === 'leaving' ? Math.min(1, Math.max(0, 1 - c.statusTime / this.hits.vanishTime)) : 1;
       if (opacity !== s.material.opacity) {
-        s.material.opacity = opacity;
         const fading = opacity < 1;
-        if (s.material.transparent !== fading) {
-          s.material.transparent = fading;
-          s.material.needsUpdate = true;
+        const changed = s.material.transparent !== fading;
+        for (const m of [s.material, ...f.modelMaterials]) {
+          m.opacity = opacity;
+          if (changed) {
+            m.transparent = fading;
+            m.needsUpdate = true;
+          }
+        }
+        if (changed) {
           // Shadow maps ignore opacity: a fading figure would leave a solid shadow behind.
           f.root.traverse((o) => {
             if (o instanceof THREE.Mesh) o.castShadow = !fading;
