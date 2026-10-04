@@ -278,7 +278,7 @@ const OFFICE: MapBlock[] = [
 const WEST_SPAWNS: SpawnPoint[] = [-2.3, 0, 2.3].map((z) => ({ position: vec3(-22.7, 0, z), yaw: -Math.PI / 2 }));
 const EAST_SPAWNS: SpawnPoint[] = [10.2, 12.4, 14.6].map((z) => ({ position: vec3(24.15, 0, z), yaw: Math.PI / 2 }));
 
-/** Dead zones: a back corner of each spawn yard, behind the spawn line and out of every lane. */
+/** Dead zones: a back corner of each spawn yard, out of every lane (behind the spawn line in the west, level with it and 6 m to the side in the east). */
 const WEST_DEAD_ZONE: SpawnPoint[] = [
   [-24.1, -3.9],
   [-24.1, -4.7],
