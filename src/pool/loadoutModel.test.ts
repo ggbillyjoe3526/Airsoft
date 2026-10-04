@@ -3,7 +3,7 @@ import { GAME_STATS } from '../config/gameStats';
 import { AEG, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
-import { gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { bbGlowFor, gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
 import { EMPTY_FIT } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
@@ -94,6 +94,55 @@ describe('Loadout model (M26b)', () => {
     model.setHopUp(GAS_PISTOL, 0.4);
     expect(model.kit().bbWeights).toEqual([0.3, GAS_PISTOL.bbWeight]);
     expect(model.kit().hopUps).toEqual([AEG.hopUpDial, 0.4]);
+  });
+
+  describe('Glowing BBs (M33b)', () => {
+    it('defaults every replica to At Night and keeps each replica its own choice', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      expect(model.glowBBs(AEG)).toBe('night');
+      expect(model.glowBBs(GAS_PISTOL)).toBe('night');
+      model.setGlowBBs(AEG, 'always');
+      expect(model.glowBBs(AEG)).toBe('always');
+      expect(model.glowBBs(GAS_PISTOL)).toBe('night');
+      model.setGlowBBs(GAS_PISTOL, 'off');
+      expect(model.glowBBs(GAS_PISTOL)).toBe('off');
+      expect(model.glowBBs(AEG)).toBe('always');
+    });
+
+    it('is saved: a new model over the same storage reads the pick back', () => {
+      new LoadoutModel(pool, owning(STARTERS)).setGlowBBs(AEG, 'off');
+      expect(new LoadoutModel(pool, owning(STARTERS)).glowBBs(AEG)).toBe('off');
+    });
+
+    it('falls back to At Night for a stored value that is not a choice', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      model.setGlowBBs(AEG, 'always');
+      const raw = JSON.parse(localStorage.getItem(localStorage.key(0)!)!);
+      raw[`glowBBs.${AEG.id}`] = 'sparkly';
+      localStorage.setItem(localStorage.key(0)!, JSON.stringify(raw));
+      expect(model.glowBBs(AEG)).toBe('night');
+    });
+
+    it("puts each slot's choice in the kit, following the slots when they swap", () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      model.setGlowBBs(AEG, 'always');
+      model.setGlowBBs(GAS_PISTOL, 'off');
+      expect(model.kit().glowBBs).toEqual(['always', 'off']);
+      model.equip('primary', item('Gas Pistol'));
+      expect(model.kit().glowBBs).toEqual(['off', 'always']);
+    });
+
+    it('resolves the kit against the field: yours by slot, the bots the default way', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      model.setGlowBBs(AEG, 'always');
+      model.setGlowBBs(GAS_PISTOL, 'off');
+      expect(bbGlowFor(model.kit(), false)).toEqual({ player: [true, false], others: false });
+      expect(bbGlowFor(model.kit(), true)).toEqual({ player: [true, false], others: true });
+      model.setGlowBBs(AEG, 'night');
+      model.setGlowBBs(GAS_PISTOL, 'night');
+      expect(bbGlowFor(model.kit(), true)).toEqual({ player: [true, true], others: true });
+      expect(bbGlowFor(model.kit(), false)).toEqual({ player: [false, false], others: false });
+    });
   });
 
   it('carries nothing in a slot it owns no replica for', () => {
