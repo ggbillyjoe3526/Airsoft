@@ -34,6 +34,9 @@ export const LOADOUT_TEXT = {
   /** A replica whose barrel can't be swapped, or whose muzzle isn't threaded (M29b). */
   fixedBarrel: 'Fixed barrel',
   noThread: 'No thread for one',
+  /** A replica with nothing but its own magazine, and one with its battery built in (the Cyber Pistol, M32). */
+  ownMagazine: (bbs: number): string => `Its own, ${bbs} BBs`,
+  builtInBattery: 'Built-in battery',
   /** The Barrel and Muzzle rows as it comes (M29b). */
   standardBarrel: 'The standard barrel, as it comes.',
   noMuzzle: 'Nothing on the muzzle: your shots carry as usual.',
@@ -106,6 +109,12 @@ export const ARMORY_TEXT = {
   pityKicker: 'Guaranteed',
   odds: 'Rarity odds (each item drawn)',
   /** Under the odds (audit POOL-04, POOL-05, POOL-26): how an asset is picked once its tier is drawn. */
+  /** A chase item's own line under the odds (M32), e.g. the Cyber Pistol's. */
+  chase: (name: string, tiers: string, percent: string, oneIn: number) =>
+    `Chase item: the ${name}, ${tiers} only. Each item drawn has its own ${percent}% chance of being it (about 1 in ${oneIn.toLocaleString('en-GB')}), before the rest are drawn.`,
+  chaseKicker: 'Chase',
+  /** A catalogue pip for a tier the asset doesn't come in (M32). */
+  notInTier: 'Does not come in this tier',
   perAsset: (n: number, weight: number, rarest: string, oneIn: number) =>
     `Then one of ${n} assets is picked${weight > 1 ? `, one you don't own at that tier ${weight === 2 ? 'twice' : `${weight} times`} as likely as one you do` : ', each equally likely'}. A given asset at ${rarest} is about 1 in ${oneIn.toLocaleString('en-GB')} draws.`,
   scrap: 'Scrap',

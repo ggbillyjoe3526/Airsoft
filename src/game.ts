@@ -680,7 +680,7 @@ export class Game {
 
   /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or pay. */
   private devContentUsed(picks: NewGamePicks): boolean {
-    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent);
+    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.loadout.ownedChase());
   }
 
   /** A new session takes the Dev settings in force (M24). */
@@ -758,6 +758,7 @@ export class Game {
         teammateDifficulty: picks.teammateDifficulty,
         rules: { ...picks.rules },
         kit: this.loadout.kit(),
+        chaseOwned: this.loadout.ownedChase(),
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],

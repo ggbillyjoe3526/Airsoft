@@ -133,6 +133,18 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
     expect(botsMayCarryDev(withTags(GAME_POOL, { 'Gas Pistol': 'dev' }), true, 'hard')).toBe(true);
   });
 
+  it('says yes for a dev chase replica the player owns (M32: one opponent may carry it), with Dev content on, on hard', () => {
+    const cyber = GAME_POOL.assets.find((a) => a.name === 'Cyber Pistol')!.id;
+    const devCyber = withTags(GAME_POOL, { 'Cyber Pistol': 'dev' });
+    expect(botsMayCarryDev(devCyber, true, 'hard', [cyber])).toBe(true);
+    expect(botsMayCarryDev(devCyber, false, 'hard', [cyber])).toBe(false);
+    expect(botsMayCarryDev(devCyber, true, 'normal', [cyber])).toBe(false);
+    expect(botsMayCarryDev(devCyber, true, 'hard', [])).toBe(false);
+    expect(botsMayCarryDev(GAME_POOL, true, 'hard', [cyber])).toBe(false);
+    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devCyber, true, [cyber])).toBe(true);
+    expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devCyber, true)).toBe(false);
+  });
+
   it('says no when the only dev asset fits no LOADOUT replica', () => {
     expect(botsMayCarryDev(strayPool, true, 'hard')).toBe(false);
   });

@@ -87,16 +87,33 @@ config; owner, 2026-10-04).
 To add a higher spec battery for every electric replica, take the next free ID and add a row to Power sources:
 
 ```
-| 000019 | High Output Battery | battery | electric | no | yes | dev |
+| 000021 | High Output Battery | battery | electric | no | yes | dev |
 ```
 
-and a row to stats.md's Power sources table saying what it does (say `| 000019 | High Output Battery | 0 | 25 | 0 |`
+and a row to stats.md's Power sources table saying what it does (say `| 000021 | High Output Battery | 0 | 25 | 0 |`
 for 25 % more rate of fire). Its Access says `dev`, so it shows only with Dev content on while you try it out; change it
 to `public` and it drops from Shots, and once owned it shows in the Power row of every replica tagged `electric`.
 
+### Chase items: Tiers and Drop %
+
+The Replicas table has two more columns (any other asset table can take them too, with the same headers); leave both
+blank for an ordinary asset.
+
+- **Tiers** lists the only tiers the asset comes in (tier names from the Rarity table, separated by commas). The
+  Cyber Pistol says `Legendary`: there is no Common, Rare or Epic one. Shots, Unlock all gear and bots only ever give
+  it in those tiers.
+- **Drop %** makes it a **chase item**: each item a Shot gives has this chance of being it, drawn before and apart
+  from the rest (which stay equally likely among themselves). The Cyber Pistol's 0.25 is 1 in 400 items, about 1 in
+  133 Shots. A chase item comes in its Tiers, drawn by their odds.
+- A chase replica can also turn up in an opponent's hands on Hard once you own it (about 5 matches in 100,
+  `RANDOM_LOADOUT.chaseChance` in `src/config/bots.ts`).
+
+A replica tagged `built-in-power` has its power source built in (the Cyber Pistol's battery): no power source fits
+it, and it needs none to shoot.
+
 ### Rarity tiers
 
-Every asset comes in every rarity tier (a Legendary AEG Rifle, a Rare Green Gas …), and each copy is a separate item
+Every asset comes in every rarity tier (unless its Tiers column says otherwise) (a Legendary AEG Rifle, a Rare Green Gas …), and each copy is a separate item
 you own. Higher tiers carry a **Bonus %** that improves the asset a little (stats.md's Tier scaling table says which
 stats each category improves, and by how much of the Bonus). One hit is still one hit: rarity improves how a replica
 shoots and handles, never "damage".
@@ -193,10 +210,11 @@ handle better (and a barrel shoots a little tighter).
 
 ### Replicas
 
-| ID | Name | Key | Tags | Starter | In Shots | Access |
-|---|---|---|---|---|---|---|
-| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail, muzzle-thread | yes | yes | public |
-| 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail, barrel-mount, muzzle-thread | yes | yes | public |
+| ID | Name | Key | Tags | Starter | In Shots | Tiers | Drop % | Access |
+|---|---|---|---|---|---|---|---|---|
+| 000001 | Gas Pistol | pistol | pistol, gas, pistol-mag, pistol-rail, muzzle-thread | yes | yes | | | public |
+| 000002 | AEG Rifle | aeg | rifle, electric, aeg-mag, top-rail, under-rail, barrel-mount, muzzle-thread | yes | yes | | | public |
+| 000019 | Cyber Pistol | cyber | pistol, built-in-power | no | yes | Legendary | 0.25 | public |
 
 ### Power sources
 

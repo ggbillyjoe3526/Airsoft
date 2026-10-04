@@ -7,7 +7,7 @@ import { DEFAULT_MAP, MAPS, type MapId } from './map/maps';
 import { rolledKitMayHoldDev } from './pool/botKit';
 import type { ItemRef } from './pool/collection';
 import { itemsUseDev } from './pool/contentPool';
-import type { Pool } from './pool/pool';
+import { type Pool, replicaOf } from './pool/pool';
 
 /** New game's picks: the Map, Mode, Match and Difficulty pop-ups. */
 export interface NewGamePicks {
@@ -57,17 +57,24 @@ export function picksUseDev(p: NewGamePicks): boolean {
 
 /**
  * Whether the opponents may carry dev gear (M35): only with Dev content on, on a difficulty that rolls their kits
- * (config/bots.ts BOT_LOADOUTS), when the pool has dev gear such a kit could hold. Counted whether or not a bot rolls
+ * (config/bots.ts BOT_LOADOUTS), when the pool has dev gear such a kit could hold: LOADOUT's replicas, or a chase
+ * replica the player owns (`chaseOwned`, M32: one opponent now and then carries it). Counted whether or not a bot rolls
  * it, so New game can say so before the match. Teammates carry LOADOUT as it comes, which is public.
  */
-export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Difficulty): boolean {
-  return devContent && BOT_LOADOUTS[difficulty] === 'random' && rolledKitMayHoldDev(pool, LOADOUT);
+export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Difficulty, chaseOwned: readonly string[] = []): boolean {
+  if (!devContent || BOT_LOADOUTS[difficulty] !== 'random') return false;
+  const chase = chaseOwned.flatMap((id) => {
+    const asset = pool.byId.get(id);
+    return asset?.category === 'replica' ? [replicaOf(asset)] : [];
+  });
+  return rolledKitMayHoldDev(pool, [...LOADOUT, ...chase]);
 }
 
 /**
  * Whether a match uses dev content (M35): its picks (as played), the player's kit (`kit`: the Loadout's items) or the
- * opponents' possible gear. Such a match stays out of the records and pays no Field Credits.
+ * opponents' possible gear (`chaseOwned` as in botsMayCarryDev). Such a match stays out of the records and pays no
+ * Field Credits.
  */
-export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean): boolean {
-  return picksUseDev(picks) || itemsUseDev(pool, kit) || botsMayCarryDev(pool, devContent, picks.difficulty);
+export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean, chaseOwned: readonly string[] = []): boolean {
+  return picksUseDev(picks) || itemsUseDev(pool, kit) || botsMayCarryDev(pool, devContent, picks.difficulty, chaseOwned);
 }

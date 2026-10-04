@@ -2,7 +2,7 @@ import type { Difficulty } from '../config/bots';
 import { randomSeed } from '../core/seed';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import { addItem, type Collection, type ItemRef, itemKey, ownedCount } from './collection';
-import { type Asset, type Economy, fcPerToken, type Pool, type RarityTier } from './pool';
+import { type Asset, comesIn, type Economy, fcPerToken, isChase, type Pool, type RarityTier, tiersOf } from './pool';
 
 /**
  * The Armory's rules (M26c): Field Credits earned by a match, Tokens bought with them, Shots that dispense random assets
@@ -145,9 +145,24 @@ function drawAsset(assets: readonly Asset[], tier: RarityTier, c: Collection, dr
 }
 
 /**
+ * A chase item for one draw (M32), each on its own chance (pool.md's Drop %), or null for the usual draw. With no chase
+ * items in the pool it draws no random number, so the usual draws are exactly as they were.
+ */
+function drawChase(chase: readonly Asset[], rng: RngState): Asset | null {
+  if (chase.length === 0) return null;
+  let roll = rngNext(rng);
+  for (const a of chase) {
+    roll -= a.dropChance ?? 0;
+    if (roll < 0) return a;
+  }
+  return null;
+}
+
+/**
  * Takes `count` Shots: pays for them (Tokens, then FC for any short), dispenses `assetsPerShot` assets each and adds
- * them to the collection. Each draw takes its tier by the odds, then an asset marked In Shots, one you don't own at
- * that tier `unownedWeight` times likelier (audit POOL-05). Pity (audit POOL-01): a Shot that reaches a Pity rule's
+ * them to the collection. Each draw is first a chase item on its own Drop %, in a tier it comes in (M32); else it takes
+ * its tier by the odds, then an asset marked In Shots that comes in that tier, one you don't own at that tier
+ * `unownedWeight` times likelier (audit POOL-05). Pity (audit POOL-01): a Shot that reaches a Pity rule's
  * count without its tier or rarer has its commonest item drawn again from those tiers (tier, then asset); the counts carry on in the
  * collection. A ten-Shot also holds at least one item of the guaranteed tier or rarer (its last item lifted if
  * none came up). Returns what was dispensed, in order, or null (nothing changes) if it can't be paid for or there is
@@ -162,6 +177,13 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy =
   c.tokens -= price.tokens;
   c.fc -= price.fc;
   const rng = createRng((c.seed ^ entropy) >>> 0);
+  // Chase items (M32) come on their own chance; the rest are drawn by tier, among those that come in it.
+  const chase = assets.filter(isChase);
+  const even = assets.filter((a) => !isChase(a));
+  const comingIn = (tier: RarityTier): readonly Asset[] => {
+    const own = even.filter((a) => comesIn(a, tier.id));
+    return own.length > 0 ? own : even.length > 0 ? even : assets;
+  };
   const rank = (t: RarityTier): number => pool.tiers.indexOf(t);
   const floorOf = (id: string | null): number => (id ? pool.tiers.findIndex((t) => t.id === id) : -1);
   const tenFloor = count === 10 ? floorOf(e.tenShotGuarantee) : -1;
@@ -173,8 +195,9 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy =
     const draws: { asset: Asset; tier: RarityTier }[] = [];
     const drawn = new Set<string>();
     for (let i = 0; i < perShot; i++) {
-      const tier = drawTier(pool.tiers, rng);
-      const asset = drawAsset(assets, tier, c, drawn, e.unownedWeight, rng);
+      const chased = drawChase(chase, rng);
+      const tier = chased ? drawTier(tiersOf(pool, chased), rng) : drawTier(pool.tiers, rng);
+      const asset = chased ?? drawAsset(comingIn(tier), tier, c, drawn, e.unownedWeight, rng);
       drawn.add(itemKey(asset.id, tier.id));
       draws.push({ asset, tier });
     }
@@ -186,7 +209,7 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy =
       for (let i = draws.length - 1; i >= 0; i--) if (rank(draws[i]!.tier) < rank(draws[at]!.tier)) at = i;
       const tier = drawTier(pool.tiers, rng, floor);
       const others = new Set(draws.flatMap((d, i) => (i === at ? [] : [itemKey(d.asset.id, d.tier.id)])));
-      draws[at] = { tier, asset: drawAsset(assets, tier, c, others, e.unownedWeight, rng) };
+      draws[at] = { tier, asset: drawAsset(comingIn(tier), tier, c, others, e.unownedWeight, rng) };
     };
     if (tenFloor >= 0) {
       tenMet ||= draws.some((d) => rank(d.tier) >= tenFloor);
@@ -281,13 +304,21 @@ export function collectionRows(pool: Pool, c: Collection): { rows: CollectionRow
     owned += counts.filter((k) => k > 0).length;
     rows.push({ asset, counts, spares: n, spareFc: fc });
   }
-  return { rows, owned, total: rows.length * pool.tiers.length };
+  // Each asset counts the tiers it comes in (a chase replica: Legendary only, M32).
+  return { rows, owned, total: rows.reduce((sum, r) => sum + tiersOf(pool, r.asset).length, 0) };
 }
 
 /** The commonest item of an asset that has a spare (what "Scrap 1" scraps), or null. */
 export function cheapestSpare(pool: Pool, c: Collection, asset: string): ItemRef | null {
   for (const t of pool.tiers) if (spares(pool, c, { asset, tier: t.id }) > 0) return { asset, tier: t.id };
   return null;
+}
+
+/** The chase items Shots can give (M32), each with its chance per item drawn (0..1) and the tiers it comes in. */
+export function chaseChances(pool: Pool): { asset: Asset; chance: number; tiers: readonly RarityTier[] }[] {
+  return shotAssets(pool)
+    .filter(isChase)
+    .map((asset) => ({ asset, chance: asset.dropChance ?? 0, tiers: tiersOf(pool, asset) }));
 }
 
 /** Each tier's chance, normalised to 100 (as the Armory shows and draws them). */
@@ -322,5 +353,11 @@ export function revealSummary(pool: Pool, got: readonly Dispensed[]): string {
   const rest = got.filter((d) => pool.tiers.findIndex((t) => t.id === d.item.tier) < named).length;
   if (rest > 0) parts.push(parts.length > 0 ? `${rest} ${rest === 1 ? 'other' : 'others'}` : `${rest} ${rest === 1 ? 'item' : 'items'}`);
   const fresh = got.filter((d) => d.isNew).length;
-  return fresh > 0 ? `${parts.join(', ')} · ${fresh} new` : parts.join(', ');
+  const summary = fresh > 0 ? `${parts.join(', ')} · ${fresh} new` : parts.join(', ');
+  // A chase item (M32) leads the line.
+  const chased = got.flatMap((d) => {
+    const a = pool.byId.get(d.item.asset);
+    return a && isChase(a) ? [a.name] : [];
+  });
+  return chased.length > 0 ? `Chase item: ${[...new Set(chased)].join(', ')}! · ${summary}` : summary;
 }

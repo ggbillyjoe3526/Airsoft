@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { BARRELS, factoryParts, handlingOf, MUZZLES, NO_TUNE } from '../config/attachments';
 import { LASERS } from '../config/lasers';
 import { GAME_STATS } from '../config/gameStats';
-import { AEG, GAS_PISTOL } from '../config/replicas';
+import { BALLISTICS } from '../config/ballistics';
+import { AEG, CYBER_PISTOL, GAS_PISTOL, HOP_UP } from '../config/replicas';
+import { bestHopUp, hopUpReach } from '../sim/hopUp';
 import type { ItemRef } from './collection';
 import { GAME_POOL } from './gamePool';
 import { bonusOf, EMPTY_FIT, energyCapped, kitReplica, kitSlot, partTune, type ReplicaFit } from './kit';
@@ -304,5 +306,69 @@ describe('barrels and muzzle parts, acceptance 2: the site limit still holds (M2
     expect(none.parts.muzzle).toBeNull();
     expect(handlingOf(none.replica, none.parts).heardScale).toBe(1);
     expect(handlingOf(none.replica, none.parts).muffled).toBe(false);
+  });
+});
+
+describe('M32 acceptance 2: the Cyber Pistol as carried at Legendary', () => {
+  const legendary: ItemRef = { asset: '000019', tier: 'legendary' };
+  const cyber = kitReplica(pool, legendary, EMPTY_FIT);
+
+  it('shoots 1.00 J on 0.25 g BBs, 14 a second, spread 0.30 degrees, kick 0.06 degrees', () => {
+    expect(cyber.id).toBe('cyber');
+    expect(cyber.power).toBe('electric');
+    expect(cyber.bbWeight).toBe(0.25);
+    expect(cyber.muzzleEnergy).toBeGreaterThan(0.995);
+    expect(cyber.muzzleEnergy).toBeLessThan(1.005);
+    expect(cyber.fireRate).toBeGreaterThan(13.95);
+    expect(cyber.fireRate).toBeLessThan(14.05);
+    expect(cyber.spreadDeg).toBeCloseTo(0.3, 2);
+    expect(cyber.recoilDeg).toBeCloseTo(0.06, 3);
+  });
+
+  it('reloads in 1.1 s, draws in 0.28 s, holds 50 BBs in each of 3 magazines', () => {
+    expect(cyber.reloadTime).toBeCloseTo(1.1, 2);
+    expect(cyber.drawTime).toBeCloseTo(0.28, 2);
+    expect(cyber.magSize).toBe(50);
+    expect(cyber.mags).toBe(3);
+  });
+
+  it('fires semi, burst and auto, on semi to start with', () => {
+    expect(cyber.fireModes).toEqual(['semi', 'burst', 'auto']);
+    expect(cyber.defaultFireMode).toBe('semi');
+  });
+
+  it('is not held back by the pistol site limit: 1.00 J is the limit, and the Legendary one stays under it', () => {
+    expect(cyber.energyLimit).toBeCloseTo(1.0, 5);
+    expect(cyber.muzzleEnergy).toBeLessThanOrEqual(cyber.energyLimit + 1e-9);
+    expect(energyCapped(pool, legendary, EMPTY_FIT)).toBe(false);
+  });
+
+  it('uses only its own magazine and carries the same on a stats.md row set for the Legendary bonus', () => {
+    expect(cyber.magazines).toEqual(['standard']);
+    // The Common-tier row is weaker than what the spec says, so the spec numbers do come from the Legendary bonus.
+    expect(CYBER_PISTOL.muzzleEnergy).toBeLessThan(cyber.muzzleEnergy);
+    expect(CYBER_PISTOL.spreadDeg).toBeGreaterThan(cyber.spreadDeg);
+    expect(CYBER_PISTOL.reloadTime).toBeGreaterThan(cyber.reloadTime);
+    expect(CYBER_PISTOL.fireRate).toBeLessThan(cyber.fireRate);
+  });
+
+  it('stays on target to about 33 m out of the box on 0.25 g BBs', () => {
+    const reach = hopUpReach(cyber, cyber.hopUpDial, BALLISTICS);
+    expect(reach.onTargetTo).toBeGreaterThanOrEqual(31);
+    expect(reach.onTargetTo).toBeLessThanOrEqual(35);
+    // Further than the Gas Pistol, short of the AEG's own factory reach.
+    expect(reach.onTargetTo).toBeGreaterThan(hopUpReach(GAS_PISTOL, GAS_PISTOL.hopUpDial, BALLISTICS).onTargetTo);
+    expect(reach.onTargetTo).toBeLessThan(hopUpReach(AEG, AEG.hopUpDial, BALLISTICS).onTargetTo);
+  });
+
+  it("tuned as well as it goes, on any BB weight from 0.20 to 0.30 g, still falls short of a tuned AEG", () => {
+    const aegBest = bestHopUp(AEG, BALLISTICS).onTargetTo;
+    for (const grams of [0.2, 0.25, 0.3]) {
+      const best = bestHopUp(cyber, BALLISTICS, grams);
+      expect(best.onTargetTo, `${grams} g`).toBeGreaterThan(0);
+      expect(best.onTargetTo, `${grams} g`).toBeLessThan(aegBest);
+    }
+    // The dial still does something (hop-up still turns): none reaches less far than the factory setting.
+    expect(hopUpReach(cyber, HOP_UP.minDial, BALLISTICS).onTargetTo).toBeLessThan(hopUpReach(cyber, cyber.hopUpDial, BALLISTICS).onTargetTo);
   });
 });
