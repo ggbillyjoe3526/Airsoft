@@ -1,6 +1,6 @@
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
 import { loadSetting, numberIn, saveSetting } from '../settings/storage';
-import { type Collection, type ItemRef, itemKey, parseItemKey } from './collection';
+import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { EMPTY_FIT, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
 import { type Asset, fits, type Pool, replicaOf } from './pool';
 
@@ -31,6 +31,12 @@ export interface Ownership {
 
 export function collectionOwnership(collection: () => Collection): Ownership {
   return { owns: (ref) => (collection().owned[itemKey(ref.asset, ref.tier)] ?? 0) > 0 };
+}
+
+/** The collection's items, or, while `unlockAll()` (Dev settings → Unlock all gear, M26d), every asset at every tier. */
+export function gameOwnership(pool: Pool, collection: () => Collection, unlockAll: () => boolean): Ownership {
+  const owned = collectionOwnership(collection);
+  return { owns: (ref) => (unlockAll() ? inPool(pool, ref) : owned.owns(ref)) };
 }
 
 const NONE = 'none';

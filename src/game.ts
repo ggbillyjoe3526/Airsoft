@@ -33,7 +33,7 @@ import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
 import { type Collection, loadCollection, saveCollection } from './pool/collection';
 import { GAME_POOL } from './pool/gamePool';
-import { collectionOwnership, LoadoutModel } from './pool/loadoutModel';
+import { gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import { earn, type Earnings, matchEarnings } from './pool/armory';
 import { fcText } from './ui/menus/armoryScreen';
@@ -202,7 +202,7 @@ export class Game {
     this.teammateDifficulty = loadTeammateDifficulty();
     this.matchRules = loadMatchRules();
     this.collection = loadCollection(GAME_POOL, options.seed);
-    this.loadout = new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection));
+    this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear));
     carryOverOldPicks(this.loadout, this.collection, saveCollection);
 
     this.bindings = new KeyBindings(browserStorage());
@@ -258,7 +258,10 @@ export class Game {
           saveCollection(this.collection);
           this.loadoutChanged = this.setupChanged = true;
         },
-        summary: () => ({ value: fcText(this.collection.fc), detail: `${this.collection.tokens} ${this.collection.tokens === 1 ? 'Token' : 'Tokens'}. ${ARMORY_TEXT.tileDetail}`, disabled: false }),
+        summary: () =>
+          this.dev.disableArmory
+            ? { value: 'Off', detail: ARMORY_TEXT.off, disabled: true }
+            : { value: fcText(this.collection.fc), detail: `${this.collection.tokens} ${this.collection.tokens === 1 ? 'Token' : 'Tokens'}. ${ARMORY_TEXT.tileDetail}`, disabled: false },
       },
       onPlay: () => {
         // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
@@ -444,6 +447,8 @@ export class Game {
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
     this.session?.setDevCheats(this.dev);
+    // Unlock all gear changes what the Loadout offers and carries; the next Play rebuilds the match with it.
+    if (this.dev.unlockAllGear !== before.unlockAllGear) this.loadoutChanged = this.setupChanged = true;
   }
 
   /** A new session takes the Dev settings in force (M24). */
@@ -607,13 +612,14 @@ export class Game {
         saveRecords(this.records, browserStorage());
       }
       // And it pays its Field Credits once (M26c); a second stop on the same result shows the same pay.
+      // With the Armory switched off (Dev settings, M26d) nothing is paid.
       const outcome = s.takeOutcome();
-      if (outcome) {
+      if (outcome && !this.dev.disableArmory) {
         this.lastEarnings = matchEarnings(GAME_POOL.economy, outcome);
         earn(this.collection, this.lastEarnings.total);
         saveCollection(this.collection);
         this.menus.refresh();
-      } else if (s.notCountedReason === 'dev') {
+      } else if (outcome || s.notCountedReason === 'dev' || this.dev.disableArmory) {
         this.lastEarnings = null;
       }
       this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {

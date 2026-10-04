@@ -234,8 +234,13 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.getByRole('tab', { name: /^Dev$/i })).toHaveAttribute('aria-selected', 'true');
   await settings.getByRole('group', { name: 'Debug info' }).getByRole('button', { name: 'On' }).click();
   await expect(page.locator('.debug-overlay')).toBeVisible();
+  // M26d: Disable Armory greys out New game's Armory tile while it applies.
+  const armoryTileEl = page.locator('.menu-setup .setup-tile', { hasText: 'Armory' });
+  await settings.getByRole('group', { name: 'Disable Armory' }).getByRole('button', { name: 'On' }).click();
+  await expect(armoryTileEl).toBeDisabled();
   await devBox.uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
+  await expect(armoryTileEl).toBeEnabled();
   await expect(settings.getByRole('tab', { name: /^Dev$/i })).toBeHidden();
   await expect(settings.getByRole('tab', { name: /Controls/i })).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('Escape');

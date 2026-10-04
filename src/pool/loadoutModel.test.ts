@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AEG, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
-import { LoadoutModel, type Ownership } from './loadoutModel';
+import { gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
 
 const pool = GAME_POOL;
@@ -97,5 +98,17 @@ describe('Loadout model (M26b)', () => {
     const model = new LoadoutModel(pool, owning([item('Gas Pistol')]));
     expect(model.equipped()).toEqual([item('Gas Pistol'), null]);
     expect(model.kit().slots).toHaveLength(1);
+  });
+
+  it('offers every asset at every tier while Dev settings → Unlock all gear is on, and only the collection after (M26d)', () => {
+    let unlocked = true;
+    const c = newCollection(pool, 1);
+    const model = new LoadoutModel(pool, gameOwnership(pool, () => c, () => unlocked));
+    expect(model.fitChoices(id('AEG Rifle'), 'optic')).toHaveLength(2 * pool.tiers.length);
+    expect(model.equipped()[0]).toEqual(item('AEG Rifle', 'legendary'));
+    expect(c.owned).toEqual(newCollection(pool, 1).owned); // the collection itself is untouched
+    unlocked = false;
+    expect(model.fitChoices(id('AEG Rifle'), 'optic')).toEqual([]);
+    expect(model.equipped()[0]).toEqual(item('AEG Rifle'));
   });
 });

@@ -69,7 +69,8 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
   reads (`src/pool/`). The Loadout is `pool/loadoutModel.ts` (what is equipped and fitted, saved) over `pool/kit.ts`
   (what the items make of a replica); each character carries its own `Armament.replicas` (bots `LOADOUT` as it comes).
   A new asset is a pool.md row; a new behaviour (a key) needs code in `config/` first. The Armory (M26c) is
-  `pool/armory.ts` (rules) and `ui/menus/armoryScreen.ts`; M26d (Dev toggles on M24's Dev panel) follows; the owner chose "Claude merges" for this batch.
+  `pool/armory.ts` (rules) and `ui/menus/armoryScreen.ts`; the Dev tab's Disable Armory and Unlock all gear (M26d) are
+  read in `Game` (`gameOwnership`, the Armory tile's summary, the match's pay); the owner chose "Claude merges" for this batch.
 
 ## Working notes and gotchas
 
