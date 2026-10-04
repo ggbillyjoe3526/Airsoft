@@ -52,14 +52,19 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
   `HITS`. Ricochets in `sim/ricochet.ts`. Team colours via `teamCss(team)`, never hard-coded.
 - **M21 range:** `map/range.ts`, `rangeSession.ts`; targets are sim data (`sim/rangeTargets.ts`).
 - **M22 squad orders:** `ai/squadOrders.ts` (spots), `BotController.giveOrder`, mode `order` in `botBrain.chooseMode`;
-  tuning in `config/squad.ts`; keys Z, X, V.
+  tuning in `config/squad.ts`; keys F (Z before M23), X, V.
+- **M23 minimap and order wheel:** `config/minimap.ts`, `ui/minimap.ts` (canvas; the field drawn once per match from
+  the map's blocks), `ui/minimapView.ts` (`toMinimap`, `HeardPlayers`, fed in `MatchPresentation.afterTick`);
+  `input/orderWheel.ts` `WheelPointer` inside `PlayerInput` (`ordersEnabled`: on in a match, off on the range),
+  `ui/orderWheel.ts`, `ORDER_WHEEL` in `config/squad.ts`. A default key that moves goes in `MOVED_DEFAULTS`
+  (`config/controls.ts`) so old saved bindings follow.
 
 ## Working notes and gotchas
 
 - **Checks:** `npm run check` (about 75 s; the headless match guards run in parallel files). In a cloud container run the smoke test with a temporary copy of
   `playwright.config.ts` whose `launchOptions.executablePath` is `/opt/pw-browsers/chromium` (keep it out of git). The
   smoke test also loses and restores the WebGL context, adds a shot after each tick to get a sound cue (it patches
-  `airsoft.session.match.afterTick`, `e2e` build only) and presses Z twice for the squad line.
+  `airsoft.session.match.afterTick`, `e2e` build only) opens and closes the order wheel (Z), and presses F twice for the squad line.
 - **Input:** read fire and aim through the bindings, never the mouse. A toggled sprint pressed before forward waits for
   forward. **Loadout:** read `Armament.handling`. **Menus:** one screen at a time (`Menus.go`); `Menus.setBlocked`
   makes them inert (graphics reset).

@@ -334,7 +334,8 @@ export class MatchSession {
       this.match.orderGiven('none', before !== 'none' ? 'cancelled' : 'onPlan');
       return;
     }
-    const result = this.bots.giveOrder(this.player, order);
+    // Picked again on the wheel, the order in force stays (Team Plan ends it there); its key again cancels it.
+    const result = this.bots.giveOrder(this.player, order, !this.input.orderFromWheel);
     this.match.orderGiven(result, before !== 'none' ? 'cancelled' : 'nobody');
     if (result !== 'none') this.combat.orderHeard();
   }

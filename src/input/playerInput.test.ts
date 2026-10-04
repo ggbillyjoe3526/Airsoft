@@ -431,4 +431,30 @@ describe('order wheel (M23)', () => {
     expect(input.wheelOpen).toBe(false);
     expect(input.takeOrder()).toBeNull();
   });
+
+  it('never raises the sight from under the wheel, by a held or a toggled aim button, until it is let go of', () => {
+    for (const mode of ['hold', 'toggle'] as const) {
+      const { keys, input, frame } = wheelSetup();
+      input.aimMode = mode;
+      frame(() => keys.press('orderWheel'));
+      expect(frame(() => keys.press('aim')).aim, mode).toBe(false);
+      keys.release('orderWheel');
+      expect(frame().aim, mode).toBe(false); // wheel closed, aim still held
+      keys.release('aim');
+      frame();
+      expect(frame(() => keys.press('aim')).aim, mode).toBe(true);
+    }
+  });
+
+  it('says whether the order handed over came from the wheel or a key', () => {
+    const { keys, input, frame, move } = wheelSetup();
+    frame(() => keys.press('orderWheel'));
+    move(0, -400);
+    frame();
+    keys.release('orderWheel');
+    frame();
+    expect(input.orderFromWheel).toBe(true);
+    frame(() => keys.press('orderHold'));
+    expect(input.orderFromWheel).toBe(false);
+  });
 });

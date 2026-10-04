@@ -43,6 +43,11 @@ export class PlayerInput {
   private readonly wheel = new WheelPointer();
   /** The trigger is the wheel's: no shot until it is let go of after the wheel closes. */
   private fireBlocked = false;
+  /** Aim pressed while the wheel was open: no raising the sight until it is let go of after the wheel closes. */
+  private aimBlocked = false;
+  /** The order last handed over by takeOrder came from the wheel (M23), not an order key. */
+  orderFromWheel = false;
+  private latchFromWheel = false;
   private crouchModeValue: CrouchMode = DEFAULT_CROUCH_MODE;
   private aimModeValue: HoldMode = DEFAULT_AIM_MODE;
   private sprintModeValue: HoldMode = DEFAULT_SPRINT_MODE;
@@ -124,9 +129,9 @@ export class PlayerInput {
     if (kb.wasPressed('jump')) this.jumpLatch = true;
     if (kb.wasPressed('reload')) this.reloadLatch = true;
     if (kb.wasPressed('fireMode')) this.fireModeLatch = true;
-    if (kb.wasPressed('orderFollow')) this.orderLatch = 'follow';
-    if (kb.wasPressed('orderHold')) this.orderLatch = 'hold';
-    if (kb.wasPressed('orderRegroup')) this.orderLatch = 'regroup';
+    if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
+    if (kb.wasPressed('orderHold')) this.latchOrder('hold', false);
+    if (kb.wasPressed('orderRegroup')) this.latchOrder('regroup', false);
     if (this.crouchModeValue === 'toggle') {
       if (kb.wasPressed('crouch')) this.crouchToggled = !this.crouchToggled;
       // Sprinting or jumping stands you up; that press only stands you up (the jump comes on the next one).
@@ -147,7 +152,7 @@ export class PlayerInput {
     }
     const switching = this.switchLatch !== switchBefore && this.switchLatch !== activeSlot;
     if (this.aimModeValue === 'toggle') {
-      if (kb.wasPressed('aim')) this.aimToggled = !this.aimToggled;
+      if (kb.wasPressed('aim') && !this.aimBlocked) this.aimToggled = !this.aimToggled;
       if (kb.wasPressed('sprint') || switching || !canAim) this.aimToggled = false;
     }
     if (this.sprintModeValue === 'toggle') {
@@ -161,6 +166,7 @@ export class PlayerInput {
       for (const a of SPRINT_STOPPERS) if (kb.wasPressed(a) && !(a === 'fire' && this.fireBlocked)) this.sprintToggled = false;
     }
     if (this.fireBlocked && !this.wheel.open && !kb.isDown('fire')) this.fireBlocked = false;
+    if (this.aimBlocked && !this.wheel.open && !kb.isDown('aim')) this.aimBlocked = false;
   }
 
   /** The order wheel is open (M23). */
@@ -191,18 +197,24 @@ export class PlayerInput {
       this.fireLatch = false;
     }
     if (!w.open) return;
+    if (kb.wasPressed('aim')) this.aimBlocked = true;
     const gain = ORDER_WHEEL.pointerGain * this.sensitivity;
     w.move(this.mouseDelta.x * gain, this.mouseDelta.y * gain);
     this.mouseDelta.x = 0;
     this.mouseDelta.y = 0;
     const pick = w.pick;
     if (pick >= 0 && kb.wasPressed('fire')) {
-      this.orderLatch = ORDER_WHEEL.items[pick]!.command;
+      this.latchOrder(ORDER_WHEEL.items[pick]!.command, true);
       w.close();
     } else if (!kb.isDown('orderWheel')) {
-      if (pick >= 0 && this.wheelSelect === 'hover') this.orderLatch = ORDER_WHEEL.items[pick]!.command;
+      if (pick >= 0 && this.wheelSelect === 'hover') this.latchOrder(ORDER_WHEEL.items[pick]!.command, true);
       w.close();
     }
+  }
+
+  private latchOrder(command: SquadCommand, fromWheel: boolean): void {
+    this.orderLatch = command;
+    this.latchFromWheel = fromWheel;
   }
 
   /** Writes the command for the next tick and clears consumed one-shot actions. */
@@ -218,7 +230,7 @@ export class PlayerInput {
     cmd.lean = (kb.isDown('leanRight') ? 1 : 0) - (kb.isDown('leanLeft') ? 1 : 0);
     cmd.jump = this.jumpLatch;
     cmd.reload = this.reloadLatch;
-    cmd.aim = this.aimModeValue === 'toggle' ? this.aimToggled : kb.isDown('aim');
+    cmd.aim = this.aimModeValue === 'toggle' ? this.aimToggled : kb.isDown('aim') && !this.aimBlocked;
     cmd.fire = !this.fireBlocked && (kb.isDown('fire') || this.fireLatch);
     cmd.switchTo = this.switchLatch;
     cmd.cycleFireMode = this.fireModeLatch;
@@ -235,6 +247,7 @@ export class PlayerInput {
   /** The squad order key pressed or the wheel's order picked this frame, once (null if none; M22, M23). */
   takeOrder(): SquadCommand | null {
     const order = this.orderLatch;
+    this.orderFromWheel = this.latchFromWheel;
     this.orderLatch = null;
     return order;
   }
@@ -254,6 +267,7 @@ export class PlayerInput {
     this.clearOneShots();
     this.wheel.close();
     this.fireBlocked = false;
+    this.aimBlocked = false;
   }
 
   private clearOneShots(): void {

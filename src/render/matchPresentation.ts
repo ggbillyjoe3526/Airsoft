@@ -129,6 +129,9 @@ export class MatchPresentation {
   }
 
   private readonly keyName: (action: Action) => string;
+  private wheelHintSelect: WheelSelect | '' = '';
+  private wheelHintOn = false;
+  private wheelHintText = '';
 
   /** On-screen sound cues turned on or off (also called once as the match is built). */
   setSoundCues(on: boolean): void {
@@ -145,6 +148,8 @@ export class MatchPresentation {
     this.playing = playing;
     if (!playing) {
       this.orderWheel.hide();
+      // The wheel key may be rebound on the pause menu: the hint names it afresh.
+      this.wheelHintSelect = '';
       this.marker.hide();
       this.mateMarkers.hideAll();
       this.board.setVisible(false);
@@ -218,7 +223,14 @@ export class MatchPresentation {
       this.orderWheel.hide();
       return;
     }
-    this.orderWheel.update(true, pointer.pick, pointer.x, pointer.y, current, wheelHint(select, pointer.pick, this.keyName('orderWheel')));
+    // The hint is rebuilt only when what it says changes (the way of picking, or pointing at an order or not).
+    const on = pointer.pick >= 0;
+    if (select !== this.wheelHintSelect || on !== this.wheelHintOn) {
+      this.wheelHintSelect = select;
+      this.wheelHintOn = on;
+      this.wheelHintText = wheelHint(select, pointer.pick, this.keyName('orderWheel'));
+    }
+    this.orderWheel.update(true, pointer.pick, pointer.x, pointer.y, current, this.wheelHintText);
   }
 
   /**

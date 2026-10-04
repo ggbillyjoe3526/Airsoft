@@ -10,8 +10,11 @@ export const MINIMAP = {
   size: 200,
   /** Metres from the middle to the edge of the circle. */
   viewRadius: 20,
-  /** Pixels per metre in the field drawing made once per match (it's scaled to `size` as drawn). */
-  layerScale: 6,
+  /**
+   * Pixels per metre in the field drawing made once per match (it's scaled as drawn: about 4.9 px/m on screen, so this
+   * stays sharp up to a pixel ratio of 2).
+   */
+  layerScale: 10,
   /** The furthest each sound kind places a player: as far as its sound cue shows (and the sound plays). */
   hearing: SOUND_CUES.range,
   /**
@@ -29,6 +32,8 @@ export const MINIMAP = {
   noiseMaxBlur: 7,
   /** The patch's radius is the blur plus this (m), so the player is always inside it. */
   noisePad: 1,
+  /** A player heard beyond the minimap's edge shows as a patch this big (px) on its rim, towards them. */
+  rimPatch: 5,
   /** Blocks whose top is at most this high (m) draw as low cover; taller ones as walls. */
   lowCoverTop: 1.3,
   /** Floors whose top is above this (m) draw as raised ground (docks, platforms). */

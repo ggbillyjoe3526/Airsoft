@@ -117,6 +117,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Done (owner to play it) | 8.8 (auto-accepted, 4 of 4) |
 | Alpha · Phase 4 · M14 Art pass, VFX and lighting (procedural: the CC0 asset sites were unreachable): daylight with a sky and trees, dressed Depot surfaces and props, figures in airsoft kit, toy-like replicas, gas puffs and impact dust, the Graphics quality picker back | Done (owner to play it) | 9.0 |
 | Alpha · Phase 4 · M16 Tutorial: a coached first session on the practice range | Done (merged; owner to play it) | 9.0 |
+| Alpha · Phase 4 · M23 Minimap and order wheel (owner's playtest feedback, 2026-10-04, items 2 and 3): a minimap with your teammates and the other team where last heard; hold Z for a squad order wheel (hover or click) | Done (owner to play it) | REVIEW_SCORE |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -623,6 +624,22 @@ each one went:**
     moment; after the last one the coach gives way to the range readout and you keep practising. Pausing shows which
     step you're on, and changing the loadout from the pause menu keeps your place (`config/tutorial.ts`,
     `tutorial/tutorial.ts`, `ui/coachPanel.ts`).
+- **M23. Minimap and order wheel** (the owner's feedback of 2026-10-04, items 2 and 3).
+  - **Minimap:** your teammates at all times; the other team only at an approximate spot from the last noise each
+    made (footsteps, shots), as far as the on-screen sound cues reach.
+  - **Order wheel:** hold Z for a wheel of squad orders (follow, hold and so on). Point at one to light it; letting go of
+    Z gives it, or (a setting) a click does. The mouse moves only the wheel while it's open, never the view or aim.
+  - **Built (M23, 2026-10-04):** a round minimap top left, turned with your view and centred on you (on the player you
+    watch once you're out), drawn from the map's blocks so it follows any Depot change. Teammates show as dots (grey
+    once hit, pinned to the rim when off it), the hold spot as a diamond and in Attack / Defend the flagpole. Each
+    player of the other team shows as one patch where they were last heard: dashed for a footstep, with a dot for a
+    shot, wider the further off it was (a footstep is vaguer than a shot), fading over 5 s and gone once they're hit.
+    The wheel: **Follow Me**, **Hold Here**, **Regroup** and **Team Plan** (back to the team plan), the order in force
+    underlined (picking it again keeps it); the mouse moves the wheel's own pointer, the trigger, aim button and mouse
+    wheel are the wheel's while it's open (a held trigger needs a new pull), and your keys still move you. Settings → Controls → **Order wheel**: Hover
+    (default) or Click; a click gives an order either way. Follow me's own key moved from Z to **F** (a saved set of
+    key bindings from before moves with it); X and V stay (`config/minimap.ts`, `ui/minimap.ts`, `ui/minimapView.ts`,
+    `input/orderWheel.ts`, `ui/orderWheel.ts`).
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
   in M12a), a "graphics reset" message on a lost WebGL context (W-01, now in M18), shader warm-up if the overlay shows a hitch
@@ -727,7 +744,8 @@ covers part of "CQB warehouse / industrial". Which fields, and in what order, is
 
 An action wheel or menu, pings and hand signals, with bots that act on them. This is built only once
 the bot AI is good enough to follow the calls. It can join whichever version that happens in. Three simple orders
-(follow me, hold here, regroup) come first, in v0.1 (M22, owner, 2026-10-03).
+(follow me, hold here, regroup) come first, in v0.1 (M22, owner, 2026-10-03), and an order wheel for them (M23, owner,
+2026-10-04).
 
 ### Parked ideas
 

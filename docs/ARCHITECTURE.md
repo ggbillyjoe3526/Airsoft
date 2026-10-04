@@ -58,7 +58,11 @@ ends the round). A hit character is eliminated
   the pole once they have walked their lane to midfield, crouch by it and stay. Nobody hunts.
   Squad orders (M22, `squadOrders.ts`, `config/squad.ts`): `BotController.giveOrder` hands Follow me, Hold here or Regroup
   from a player to its bot teammates; between fights an ordered bot is in mode `order` (before the pole, noises and its
-  lane), and `orderOf` tells the HUD's squad line (`ui/squadOrderLine.ts`) what is in force. Hearing (`hear`) casts the
+  lane), and `orderOf` tells the HUD's squad line (`ui/squadOrderLine.ts`) what is in force. The order wheel (M23):
+  `PlayerInput` owns a `WheelPointer` (`input/orderWheel.ts`) that takes the mouse while the wheel key is held, and
+  hands the pick to `takeOrder` like an order key; `ui/orderWheel.ts` draws it. The minimap (M23, `ui/minimap.ts`)
+  draws the map's blocks once per match on a canvas and each frame the teammates and `HeardPlayers`
+  (`ui/minimapView.ts`), fed by the same heard sounds as the sound cues. Hearing (`hear`) casts the
   same wall rays as the audio's muffling (`sim/soundPath.ts`): through walls a bot hears at `wallHearing` of the range.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max 5 catch-up ticks per frame). Consequence (audit L-34): at 60 ticks/s, 5 ticks cover 83 ms, so below about 12 frames/s the rest of each frame's time is dropped and the whole game (round clock, reloads, BB flight, bots) runs in slow motion rather than spiralling into ever longer catch-up frames (frame time is also capped at `SIM.maxFrameDt`, 0.25 s). Only the debug overlay's "sim ticks/s" shows it; a browser drawing in software starts on Low to stay above it (M-02).
 - **core/seed**: the game's seed (a fresh one each page load, or `?seed=N`) and the exact 32-bit derivation of the

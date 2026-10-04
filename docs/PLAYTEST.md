@@ -374,12 +374,28 @@ Headphones help: direction (in front, behind, above) comes through best on them.
   screen and start a normal match: it plays as before.
 - [ ] **Walk downrange.** Nothing stops you walking among the targets; BBs fired from there still hit them.
 
+## Minimap and order wheel (M23)
+
+- [ ] **Minimap.** Start a match: a round map top left, the way you look always up, you the white arrow in the middle.
+  Your teammates are blue dots wherever they are (on the rim when off the map's edge), grey once hit.
+- [ ] **Hearing the other team.** Stand still and listen: when an opponent's footsteps or shots reach you, an orange
+  patch shows roughly where (dashed for steps, with a dot for a shot), fading after a few seconds. Far-off sounds give a
+  wider patch. Nothing shows for opponents you can't hear, and a patch goes once that player is hit.
+- [ ] **Order wheel (hover).** Hold **Z**: four orders round the crosshair. Move the mouse: the view and replica stay
+  still, a small pointer moves and lights the order it's on. Let go of Z on Follow Me: they follow (the bottom-left
+  line says so). Hold Z and let go without moving: nothing changes. Team Plan sends them back to the plan.
+- [ ] **Walk while choosing.** Hold Z and W together: you keep walking. Hold the trigger, then Z: firing stops, and
+  after the wheel closes it needs a new pull.
+- [ ] **Order wheel (click).** Settings → Controls → Order wheel → Click. Now letting go of Z gives nothing; point and
+  click instead. No BB is fired by that click.
+- [ ] **Keys.** F is Follow me now (X and V as before); Key bindings lists "Squad: order wheel (hold)".
+
 ## Squad orders and hearing (M22)
 
-- [ ] **Follow me (Z).** Start a match and press **Z**: a radio double-click answers and the HUD's bottom-left line
+- [ ] **Follow me (F; Z until the order wheel, M23).** Start a match and press **F**: a radio double-click answers and the HUD's bottom-left line
   reads SQUAD · FOLLOW ME. Walk round Depot: your two teammates keep up a few metres behind you, either side, sprinting
   to catch up if left behind; stop and one looks back the way you came, the other to a side. Walk (Shift) or crouch
-  and they walk too. They still fight anyone they see, then come back. Press **Z** again: "Back to the team plan".
+  and they walk too. They still fight anyone they see, then come back. Press **F** again: "Back to the team plan".
 - [ ] **Hold here (X).** Look at a spot (a doorway, a crate's corner) and press **X**: both go there side by side and
   watch the way you looked, and stay when you walk off. A diamond marker with the distance shows the held spot (none when each holds where it stands).
   Look somewhere else and press X: the hold moves; at the sky: each holds where it stands; press X again on the same

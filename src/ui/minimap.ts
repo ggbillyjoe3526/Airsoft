@@ -63,6 +63,7 @@ export class Minimap {
     this.root.className = 'minimap';
     this.root.hidden = true;
     this.root.setAttribute('aria-hidden', 'true');
+    // Read once per match (a match is built for the screen it starts on); at most 2, matching the field drawing's detail.
     this.pixelRatio = Math.min(2, Math.max(1, globalThis.devicePixelRatio || 1));
     const px = Math.round(MINIMAP.size * this.pixelRatio);
     this.root.width = px;
@@ -108,16 +109,20 @@ export class Minimap {
 
     ctx.save();
     ctx.translate(half, half);
-    // The other team where they were heard: a patch as wide as the guess is vague, dashed for a footstep.
+    // The other team where they were heard: a patch as wide as the guess is vague, dashed for a footstep, kept inside
+    // the circle. Heard beyond the map's edge (a shot carries further than it shows), a small patch on the rim.
+    ctx.beginPath();
+    ctx.arc(0, 0, rim, 0, Math.PI * 2);
+    ctx.save();
+    ctx.clip();
     for (const h of heard) {
       if (Number.isNaN(h.at)) continue;
       const alpha = noiseAlpha(f.time - h.at);
       if (alpha <= 0) continue;
       const p = toMinimap(f.yaw, f.x, f.z, h.x, h.z, scale, this.at);
-      if (Math.hypot(p.x, p.y) > rim + h.radius * scale) continue;
-      ctx.globalAlpha = alpha;
+      const pinned = clampToRim(p, rim - MINIMAP.rimPatch);
       ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(4, h.radius * scale), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, pinned ? MINIMAP.rimPatch : Math.max(4, h.radius * scale), 0, Math.PI * 2);
       ctx.fillStyle = this.theirs;
       ctx.globalAlpha = alpha * 0.28;
       ctx.fill();
@@ -134,6 +139,7 @@ export class Minimap {
       }
     }
     ctx.globalAlpha = 1;
+    ctx.restore();
 
     if (f.flag) this.drawFlag(f, scale, rim);
     if (f.hold) this.drawHold(f, scale, rim);
