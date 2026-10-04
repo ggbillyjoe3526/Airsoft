@@ -276,6 +276,10 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await quality.getByRole('button', { name: 'Low' }).click();
   await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(false);
+  // Team colours picked mid-match show from the next match, Play Again included (bug pass): back to Standard here.
+  await settings.getByRole('tab', { name: /Accessibility/i }).click();
+  await settings.getByRole('group', { name: 'Team colours' }).getByRole('button', { name: 'Standard' }).click();
+  expect(await teamCss()).toBe(matchOrange);
   await page.keyboard.press('Escape');
   await expect(pauseMenu).toBeVisible();
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
@@ -371,6 +375,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const round = () => page.evaluate(() => (window as unknown as End).airsoft.state.round);
   await expect.poll(async () => (await round()).phase, { timeout: 10_000 }).toBe('live');
   expect((await round()).score).toEqual([0, 0]);
+  expect(await teamCss()).toBe(standardOrange); // the Standard set picked mid-match
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });
 

@@ -21,6 +21,7 @@ import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
 import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
+import { deriveSeed } from './core/seed';
 import { Renderer } from './render/renderer';
 import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
@@ -112,6 +113,10 @@ export class Game {
    * clicked again after a refused mouse lock reuses the match already built (audit L-33).
    */
   private setupChanged = false;
+  /** Matches built so far this visit: each gets its own seed (matchSeed), so the bots' plans differ match to match. */
+  private matchesBuilt = 0;
+  /** The seed of the match loaded (the URL's or the visit's for the first match; see play). */
+  private matchSeed: number;
   private rafId = 0;
   private lastTime = 0;
   private ticksThisSecond = 0;
@@ -164,6 +169,7 @@ export class Game {
     private readonly options: GameOptions,
   ) {
     this.quality = options.quality;
+    this.matchSeed = options.seed;
     this.renderer = new Renderer(container, QUALITY[options.quality]);
     this.renderer.setFov(loadFov());
     this.map = loadMap();
@@ -189,7 +195,7 @@ export class Game {
       const s = this.session;
       const p = s?.player;
       return {
-        seed: options.seed,
+        seed: this.matchSeed,
         map: s instanceof RangeSession ? 'range' : this.map,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
@@ -270,7 +276,8 @@ export class Game {
       accessibility: {
         reducedMotion: { initial: this.reducedMotion, onChange: (on) => this.changeReducedMotion(on) },
         // The figures are built with their colours, so a new set shows from the next match.
-        teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = true)) },
+        // On the range they show from Resume (it's rebuilt where you stood, as after a loadout change).
+        teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = this.loadoutChanged = true)) },
         soundCues: { initial: this.soundCues, onChange: (on) => this.changeSoundCues(on) },
       },
     });
@@ -310,7 +317,8 @@ export class Game {
       this.stopPlay();
     } else {
       this.session?.contextRestored();
-      if (this.started) this.menus.showHint(BROWSER_NOTES.graphicsBack);
+      // Only the pause menu has a Resume to point at (not the result screen).
+      if (this.started && this.menus.screen === 'pause') this.menus.showHint(BROWSER_NOTES.graphicsBack);
     }
   }
 
@@ -416,9 +424,16 @@ export class Game {
       // Back from the Loadout on the range's pause menu: the range again, with the new kit, where you stood (and at the
       // same tutorial step).
       this.openRange(s.pose, s.tutorialStep);
-    } else if (!this.started && (this.setupChanged || !(s instanceof MatchSession))) {
+    } else if (
+      (!this.started && (this.setupChanged || !(s instanceof MatchSession))) ||
+      // Play Again after something that shows only in a new build changed mid-match (the team colours).
+      (this.started && s instanceof MatchSession && s.state.round.phase === 'matchOver' && this.setupChanged)
+    ) {
       this.session?.dispose();
       this.setupChanged = false;
+      // The first match plays the visit's seed (?seed=N replays it); each later one its own, or every match in a visit
+      // would open with the same bot plans, round by round (bug pass).
+      this.matchSeed = deriveSeed(this.options.seed, 1, this.matchesBuilt++);
       this.session = new MatchSession(this.renderer, this.container, this.input, {
         map: mapData(this.map),
         mode: this.mode,
@@ -431,7 +446,7 @@ export class Game {
         bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
         parts: this.picked.map((r) => this.partsOf(r)),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
-      }, this.options.seed, QUALITY[this.quality], this.audio, this.crosshair);
+      }, this.matchSeed, QUALITY[this.quality], this.audio, this.crosshair);
       this.session.setMotion(motionScale(this.reducedMotion));
       this.session.setSoundCues(this.soundCues);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
@@ -467,6 +482,11 @@ export class Game {
 
   private resume(): void {
     const s = this.session;
+    // A mouse lock granted after the graphics context was lost (the lock was still pending): nothing can be drawn.
+    if (this.graphicsLost) {
+      this.pointer.release();
+      return;
+    }
     if (!s) {
       // Nothing to play (should not happen: Play builds the match before asking for the lock); give the mouse back.
       this.pointer.release();
