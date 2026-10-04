@@ -5,6 +5,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
+- **FA5** · Second key per action; mouse wheel binding; HUD size (0.8–1.5); crosshair custom; raw mouse input; cm/360 kept; order wheel shows keys (#59)
+- **FA5** · High-contrast styles; hit, out, round messages read by screen readers (#59)
+- **FA9** · Dark loading screen with physics module progress bar; favicon and web manifest (#59)
 - **FA1** · Crash handling: "Something went wrong" screen with seed, Reload and Copy Report; Settings > Dev has Diagnostics Copy (#57)
 - **M12a** · Fire selector with single, burst and auto; faster reloads; crouch toggle; steadier aim when still (#10)
 - **M12b** · Red dot as an accessory; aiming down sights with separate sensitivity (#11)
@@ -34,6 +37,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 
 ### Changed
+- **FA5** · Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell (#59)
+- **FA9** · Cleaner menus and HUD: consistent style, button states, focus ring, marked tabs, dialogs, fade-in, hit-feed colours (#59)
 - Pistol leans slightly left again, much less than before (#13)
 - **M25b** · Depot: site props instead of most two-high crate stacks (#45)
 - **FA6** · World sounds carry further; getting hit and the whistles briefly dip the rest of the mix (#55)
@@ -41,6 +46,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 
 ### Fixed
+- **FA5** · Esc resumes from the pause screen; the first mouse jump after the lock is ignored; teammate markers hide behind the minimap and while the scoreboard is up (#59)
 - **FA1** · Jump pressed up to 0.1 s before landing still happens; click after sprint fires as soon as lockout ends (#57)
 - **FA1** · Stepping down a kerb no longer widens the crosshair; drawn Elimination rounds replay (#57)
 - **FA1** · A hit player always reaches the dead zone, even from the far end of Depot; crouch-walking is slightly less accurate; practice range figures match character height (#57)

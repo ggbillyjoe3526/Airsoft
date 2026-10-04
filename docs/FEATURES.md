@@ -64,22 +64,24 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons too), Crosshair, HUD, Accessibility (M15, M18a, M19, M24)
-- Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle (M18a)
+- Settings tabs: Graphics (quality presets, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA5)
+- Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
+- Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
+- HUD size slider (0.8–1.5) in Settings > HUD (FA5)
 - A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy (M24, M26d, FA1)
 - The build's version on the title screen (M24)
 
 ## HUD and match info
 
-- Crosshair with the spread gap; shape, size, thickness, gap, outline and colour from Settings (Phase 1, M19)
+- Crosshair with the spread gap; shape, size, thickness, gap, outline, colour, opacity and static gap option from Settings (Phase 1, M19, FA5)
 - Ammo and magazine gauges; the empty-magazine hint names your reload key (Phase 1, M8)
 - Round clock, score, round banners worded from your side (Phase 1)
-- Hit feed, teammate markers, the scoreboard on Tab, round stats between rounds (M19)
+- Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
 - End-of-match summary with your stats and local records (wins, accuracy, streaks) (M19)
 
 ## Squad orders and minimap
 
-- Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan; a HUD line shows the order (M22, M23)
+- Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan showing each order's key; a HUD line shows the order (M22, M23, FA5)
 - A minimap: the field, teammates always, the other team where last heard (M23)
 
 ## Audio
@@ -94,6 +96,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 ## Graphics and art
 
+- Dark loading screen with a progress bar for the physics module; favicon and web manifest (FA9)
 - Procedural daylight with a sky, haze and trees; dressed Depot surfaces and props; figures in airsoft kit with team tape (M14)
 - Gas puffs, impact dust by material, dust in the sunlight (M3, M14)
 - Quality presets Low, Medium and High, switchable mid-match; Low is picked on its own for software rendering (M14)
@@ -107,6 +110,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Accessibility and comfort
 
 - Team colour sets checked for colour blindness, patterns on the gauges, on-screen sound cues round the crosshair (M18b)
+- High-contrast styling; hit, out and round messages read by screen readers (FA5)
 - Reduced motion, pause on a hidden tab or when the window loses focus, recovery from a lost graphics context, fullscreen on F10 (M18a, M18b, FA6)
 
 ## Developer and debug

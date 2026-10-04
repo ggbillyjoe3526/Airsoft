@@ -1,10 +1,16 @@
 /**
  * The player's saved settings: one versioned object in the browser (`airsoft.settings`), so new settings
  * and later format changes have one place to go (Fable audit W-02). Settings saved by earlier builds under
- * their own keys (`airsoft.sensitivity`, `airsoft.difficulty`, `airsoft.mode`) are read once as a fallback;
- * saving a field writes it into the object and drops its old key. Key bindings keep their own key
+ * their own keys (`airsoft.sensitivity`, `airsoft.difficulty`, `airsoft.mode`: "version 0") are carried into the
+ * object as it is read (`migrate`), and the old keys go with the next save. Key bindings keep their own key
  * (input/keyBindings.ts). Every read and write tolerates blocked storage and garbage.
+ *
+ * The object is parsed once per stored text, not once per setting (audit UI-25). An object from a newer build
+ * (a higher version) is neither read nor overwritten (KNOWN_ISSUES row 99): an older build opened after a newer one
+ * keeps its changes for the session only.
  */
+
+import { SETTINGS_WRITE_DELAY_MS } from '../config/menus';
 
 export const SETTINGS_KEY = 'airsoft.settings';
 export const SETTINGS_VERSION = 1;
@@ -57,18 +63,21 @@ export type SettingField =
   /** Settings → Accessibility, the sound cues' look (M24). */
   | 'soundCueSize'
   | 'soundCueColour'
-  /** Settings → HUD (M24). */
+  /** Settings → HUD (M24); the HUD's size (audit UI-04). */
   | 'scoreboardSize'
   | 'hitFeed'
+  | 'hudSize'
+  /** Settings → Controls → Raw mouse input (audit UI-20). */
+  | 'rawInput'
   /** The Dev settings (M24, settings/dev.ts): `dev.enabled` and one per entry in config/dev.ts. */
   | `dev.${string}`;
 
 /** Where earlier builds kept a setting, before the settings object. */
-const LEGACY_KEYS: Partial<Record<SettingField, string>> = {
+const LEGACY_KEYS = {
   sensitivity: 'airsoft.sensitivity',
   difficulty: 'airsoft.difficulty',
   mode: 'airsoft.mode',
-};
+} as const satisfies Partial<Record<SettingField, string>>;
 
 interface StoredSettings {
   version: number;
@@ -84,14 +93,66 @@ export function browserStorage(): Storage | null {
   }
 }
 
-function readObject(storage: Storage): StoredSettings | null {
+/**
+ * The last text parsed for each storage and what it gave (null: nothing this build can read), with any changes not
+ * written yet (`dirty`, saveSettingSoon) and the timer that will write them.
+ */
+interface ParsedSettings {
+  text: string | null;
+  settings: StoredSettings | null;
+  newer: boolean;
+  dirty: boolean;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+const parsed = new WeakMap<Storage, ParsedSettings>();
+
+/**
+ * The stored settings as this build reads them: the object parsed (once per stored text, audit UI-25) and migrated
+ * from an older format. `newer`: the object is from a newer build, so this build neither reads nor overwrites it.
+ */
+function readStored(storage: Storage): ParsedSettings {
+  const text = storage.getItem(SETTINGS_KEY);
+  const cached = parsed.get(storage);
+  if (cached && cached.text === text) return cached;
+  let raw: unknown = null;
   try {
-    const parsed: unknown = JSON.parse(storage.getItem(SETTINGS_KEY) ?? 'null');
-    if (parsed && typeof parsed === 'object' && (parsed as StoredSettings).version === SETTINGS_VERSION) return parsed as StoredSettings;
+    raw = JSON.parse(text ?? 'null');
   } catch {
     // Unreadable: treated as nothing saved.
   }
-  return null;
+  const version = raw && typeof raw === 'object' ? (raw as StoredSettings).version : undefined;
+  const newer = typeof version === 'number' && version > SETTINGS_VERSION;
+  const entry: ParsedSettings = { text, settings: newer ? null : migrate(raw, storage), newer, dirty: false, timer: null };
+  parsed.set(storage, entry);
+  return entry;
+}
+
+/**
+ * Brings a stored object (or nothing) to SETTINGS_VERSION; null if nothing usable is stored. One case per format
+ * change: the next version adds `case 1:` turning a version 1 object into a version 2 one, and so on. Version 0 is the
+ * per-setting keys of the builds before the object (LEGACY_KEYS): any still there fill fields the object lacks.
+ */
+export function migrate(raw: unknown, storage: Storage): StoredSettings | null {
+  let stored: StoredSettings | null = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as StoredSettings) : null;
+  switch (stored?.version ?? 0) {
+    case 0: {
+      // No object (or one without a version): only the old keys, if any.
+      stored = null;
+      break;
+    }
+    case SETTINGS_VERSION:
+      break;
+    default:
+      return null;
+  }
+  for (const [field, key] of Object.entries(LEGACY_KEYS)) {
+    if (stored && field in stored) continue;
+    const old = storage.getItem(key);
+    if (old === null) continue;
+    stored ??= { version: SETTINGS_VERSION };
+    stored[field] = old;
+  }
+  return stored;
 }
 
 /**
@@ -101,15 +162,9 @@ function readObject(storage: Storage): StoredSettings | null {
 export function loadSetting<T>(field: SettingField, parse: (raw: unknown) => T | undefined, fallback: T, storage = browserStorage()): T {
   if (!storage) return fallback;
   try {
-    const stored = readObject(storage);
+    const stored = readStored(storage).settings;
     if (stored && field in stored) {
       const v = parse(stored[field]);
-      if (v !== undefined) return v;
-    }
-    const legacy = LEGACY_KEYS[field];
-    const old = legacy === undefined ? null : storage.getItem(legacy);
-    if (old !== null) {
-      const v = parse(old);
       if (v !== undefined) return v;
     }
   } catch {
@@ -118,18 +173,59 @@ export function loadSetting<T>(field: SettingField, parse: (raw: unknown) => T |
   return fallback;
 }
 
-/** Saves `field` into the settings object (the old per-setting key, if any, is dropped). Non-critical. */
+/**
+ * Saves `field` into the settings object; the old per-setting keys, now carried into it, are dropped. Non-critical.
+ * Not over an object from a newer build: the change then lasts for this session only.
+ */
 export function saveSetting(field: SettingField, value: string | number | boolean, storage = browserStorage()): void {
   if (!storage) return;
   try {
-    const stored = readObject(storage) ?? { version: SETTINGS_VERSION };
-    stored[field] = value;
-    storage.setItem(SETTINGS_KEY, JSON.stringify(stored));
-    const legacy = LEGACY_KEYS[field];
-    if (legacy !== undefined) storage.removeItem(legacy);
+    const read = readStored(storage);
+    if (read.newer) return;
+    write(storage, { ...(read.settings ?? { version: SETTINGS_VERSION }), [field]: value });
   } catch {
     // Non-critical: the setting still applies for this session.
   }
+}
+
+/**
+ * Saves `field` a moment later (SETTINGS_WRITE_DELAY_MS after the last such change, audit UI-11 / CORE-12): a slider
+ * dragged or stepped with the keys writes the settings once, not once per step. Reads see the new value at once. The
+ * game writes what is waiting when the page is hidden or closed (flushSettings).
+ */
+export function saveSettingSoon(field: SettingField, value: string | number | boolean, storage = browserStorage()): void {
+  if (!storage) return;
+  try {
+    const read = readStored(storage);
+    if (read.newer) return;
+    read.settings = { ...(read.settings ?? { version: SETTINGS_VERSION }), [field]: value };
+    read.dirty = true;
+    if (read.timer !== null) clearTimeout(read.timer);
+    read.timer = setTimeout(() => flushSettings(storage), SETTINGS_WRITE_DELAY_MS);
+  } catch {
+    // Non-critical: the setting still applies for this session.
+  }
+}
+
+/** Writes any changes saveSettingSoon is holding, now. */
+export function flushSettings(storage = browserStorage()): void {
+  const read = storage ? parsed.get(storage) : undefined;
+  if (!storage || !read?.dirty || !read.settings) return;
+  try {
+    write(storage, read.settings);
+  } catch {
+    // Non-critical, as saveSetting.
+  }
+}
+
+/** Writes the whole object (the old per-setting keys, now carried into it, are dropped) and remembers its text. */
+function write(storage: Storage, settings: StoredSettings): void {
+  const old = parsed.get(storage);
+  if (old?.timer) clearTimeout(old.timer);
+  const text = JSON.stringify(settings);
+  parsed.set(storage, { text, settings, newer: false, dirty: false, timer: null });
+  storage.setItem(SETTINGS_KEY, text);
+  for (const key of Object.values(LEGACY_KEYS)) storage.removeItem(key);
 }
 
 /** A parser for settings that are one of a fixed set of ids (difficulty, mode, crouch, optic). */

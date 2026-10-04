@@ -1,13 +1,17 @@
 import './style.css';
 import { CRASH_TEXT, WEBGL_ERROR } from './config/crash';
+import { LOADING } from './config/loading';
 import { parseQuality, startingQuality } from './config/render';
 import { crashReport } from './core/crashReport';
 import { parseSeed, randomSeed } from './core/seed';
 import { Game } from './game';
 // Reads pool.md at start (M26a), so a row it can't read is reported in the console straight away.
 import './pool/gamePool';
+import { initPhysics } from './physics/physicsWorld';
 import { lacksHardwareAcceleration } from './render/gpuCheck';
 import { CrashScreen } from './ui/crashScreen';
+import { chunkInfo, prefetchWithProgress } from './ui/loadingProgress';
+import { LoadingScreen } from './ui/loadingScreen';
 import { loadSavedQuality } from './ui/menus/savedChoices';
 
 /** The game once it has started; until then an error is a start-up failure. */
@@ -20,6 +24,16 @@ let bootSeed: number | null = null;
 async function main(): Promise<void> {
   const container = document.getElementById('app');
   if (!container) throw new Error('#app container missing');
+  // The loading bar (audit CORE-10): the physics chunk's download as it arrives, then starting physics and the game.
+  const loading = LoadingScreen.find();
+  const chunk = chunkInfo(document.querySelector(`meta[name="${LOADING.chunkMeta}"]`));
+  if (chunk) {
+    loading?.show(0, LOADING.text.download);
+    await prefetchWithProgress(chunk, (share) => loading?.show(share * LOADING.downloadShare, LOADING.text.download));
+  }
+  loading?.show(LOADING.physicsAt, LOADING.text.physics);
+  await initPhysics();
+  loading?.show(LOADING.gameAt, LOADING.text.game);
   const params = new URLSearchParams(window.location.search);
   // A fresh seed each load, so the bots' plans differ from session to session; ?seed=N replays one
   // (the debug overlay shows the seed in use). An unreadable ?seed= value is ignored.
@@ -42,30 +56,38 @@ async function main(): Promise<void> {
   });
   running = game;
   game.start();
-  document.getElementById('loading')?.remove();
+  loading?.remove();
   // The console handle (and the smoke test's): dev server and the `e2e` build only.
   if (import.meta.env.DEV || import.meta.env.MODE === 'e2e') (window as unknown as { airsoft: Game }).airsoft = game;
 }
 
 /**
- * The game couldn't start (audit CORE-28): the loading text goes, and the crash pane says so, with advice when the
- * browser has no WebGL, and a report with the build, the browser and the seed.
+ * The game couldn't start (audit CORE-28): the loading screen goes, and the crash pane says so, with advice when the
+ * browser has no WebGL, and a report with the build, the browser and the seed. Should the pane itself fail, the loading
+ * screen stays and its line says why (FA9).
  */
 function bootFailure(error: unknown): void {
   console.error(error);
-  document.getElementById('loading')?.remove();
   const report = crashReport({ title: 'Airsoft start-up report', build: __BUILD_VERSION__.label, userAgent: navigator.userAgent, fields: [['Address', window.location.search || '-'], ['Seed', bootSeed]], error });
   if (bootFailed) {
     bootFailed.append(report);
     return;
   }
   const webGl = error instanceof Error && WEBGL_ERROR.test(error.message);
-  bootFailed = new CrashScreen(document.getElementById('app') ?? document.body, {
-    heading: CRASH_TEXT.bootHeading,
-    body: CRASH_TEXT.bootBody,
-    advice: webGl ? CRASH_TEXT.bootWebGl : '',
-    report,
-  });
+  const loading = LoadingScreen.find();
+  try {
+    bootFailed = new CrashScreen(document.getElementById('app') ?? document.body, {
+      heading: CRASH_TEXT.bootHeading,
+      body: CRASH_TEXT.bootBody,
+      advice: webGl ? CRASH_TEXT.bootWebGl : '',
+      report,
+    });
+  } catch (paneError: unknown) {
+    console.error(paneError);
+    loading?.fail(error instanceof Error ? error.message : String(error));
+    return;
+  }
+  loading?.remove();
 }
 
 /**

@@ -13,4 +13,7 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-04 | FA6 | 1 | Opus 5.5 (worker in a worktree) | ✓ 12 s | ✓ 208 s | ✓ 105 s | ✗ 331 s (averages only, load ~15, explained) | ✓ | ✓ | 8/8 Accept (Opus) | – | ~35 min | worker 286k, changelog (Haiku) 59k, critic (Opus) 110k |
 | 2026-10-04 | FA1 | 1 | Opus 5.5 (worker in a worktree) | ✓ 14 s | ✗ 184 s (pole guard) | ✓ 96 s | – | ✓ | ✓ | – | pole guard: ramp pace changed Attack / Defend | ~40 min | worker 100k, changelog (Haiku) 58k |
 | 2026-10-04 | FA1 | 2 | Opus 5.5 (lead) | ✓ | ✓ (CI) | ✓ (CI) | – | ✓ | ✓ | 6/8 near miss → fixed (Opus) | check 3 settleMatch per frame; check 8 docs | ~30 min | critic (Opus) 179k |
+| 2026-10-04 | FA5 | 1 | Opus 5.5 (worker in a worktree) | ✓ | ✓ | ✗ (e2e still named the old key boxes) | – | ✓ | ✓ | 8/8 Accept (Opus) | smoke: test text updated to the new slot names | ~60 min | worker ~250k, critic (Opus) shared with FA9 |
+| 2026-10-04 | FA9 | 1 | Opus 5.5 (worker in a worktree) | ✓ | ✓ | ✓ | ✓ (container) | ✓ | ✓ | 7/8 near miss (Opus) | check 6 CSP connect-src | ~60 min | worker ~250k, critic (Opus) ~150k |
+| 2026-10-04 | FA5+FA9 | 2 | Opus 5.5 (lead) | ✓ 16 s | ✓ 211 s | ✗ (order wheel now shows key caps) → fixed | ✓ (ticks 1,804, at baseline) | ✓ | ✓ | – (must-fix only) | – | ~25 min | changelog (Haiku) 65k |
 | 2026-10-04 | M28 | 1 | Fable 5.1 (build thread) | ✓ 5 s | ✓ 70 s | ✓ 45 s | ✓ 108 s | ✓ | ✓ | – (trivial: Haiku diff check, 3/3) | – | 15 min | changelog 52k (16 s), triage 53k (41 s) |

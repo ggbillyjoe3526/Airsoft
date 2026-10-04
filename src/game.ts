@@ -7,7 +7,8 @@ import { activeDev, type DevSettings, devCheating } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules } from './config/matchRules';
-import { type CrosshairSettings, type HitFeedMode, scoreboardScale } from './config/matchInfo';
+import { type CrosshairSettings, type HitFeedMode, hudScale, scoreboardScale } from './config/matchInfo';
+import { FULLSCREEN_RELOCK_MS } from './config/controls';
 import { CRASH_TEXT } from './config/crash';
 import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
@@ -18,6 +19,7 @@ import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './c
 import { crashReport, type ReportField } from './core/crashReport';
 import { KeyBindings } from './input/keyBindings';
 import { Keyboard } from './input/keyboard';
+import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
 import { type MapId, mapData } from './map/maps';
@@ -36,7 +38,7 @@ import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
 import { CrashScreen } from './ui/crashScreen';
 import { DebugOverlay } from './ui/debugOverlay';
-import { toggleFullscreen } from './ui/fullscreen';
+import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
 import { type Collection, loadCollection, saveCollection } from './pool/collection';
@@ -46,7 +48,7 @@ import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
-import { browserStorage, SETTINGS_KEY, saveSetting } from './settings/storage';
+import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
@@ -65,6 +67,8 @@ import {
   loadReducedMotion,
   loadSensitivity,
   loadHitFeedMode,
+  loadHudSize,
+  loadRawInput,
   loadScoreboardSize,
   loadSoundCueColour,
   loadSoundCues,
@@ -188,6 +192,13 @@ export class Game {
   private soundCueColour: SoundCueColour = loadSoundCueColour();
   private scoreboardSize = loadScoreboardSize();
   private hitFeedMode: HitFeedMode = loadHitFeedMode();
+  /** The HUD's size as picked (Settings → HUD, audit UI-04); the screen's height scales it further (hudScale). */
+  private hudSize = loadHudSize();
+  /** When the Fullscreen key was last pressed in play (performance.now()), to take the mouse again (audit UI-19). */
+  private fullscreenKeyAt = Number.NEGATIVE_INFINITY;
+  /** Stop following the page's fullscreen state and the keyboard layout. */
+  private readonly unwatchFullscreen: () => void;
+  private readonly unwatchLayout: () => void;
   /**
    * The Dev settings (M24): whether their tab is shown, the values picked on it, and what applies (the picked values
    * while the tab is shown, else the defaults).
@@ -229,6 +240,9 @@ export class Game {
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
     this.pointer = new PointerLock(this.renderer.canvas, this.keyboard);
+    this.pointer.rawInput = loadRawInput();
+    // Key names on screen follow the player's keyboard layout where the browser tells it (audit UI-01).
+    this.unwatchLayout = watchKeyboardLayout(browserKeyboardMap(), window, (layout) => this.bindings.setLayout(layout));
     this.input = new PlayerInput(this.keyboard, this.pointer, MOVEMENT);
     if (options.scriptedPlayer) this.input.script = PERF_SCRIPT;
     this.input.crouchMode = loadCrouchMode();
@@ -316,6 +330,12 @@ export class Game {
         aimSensitivity: { initial: this.input.aimSensitivity, onChange: (v) => (this.input.aimSensitivity = v) },
         dpi: { initial: loadMouseDpi() },
         invertMouse: { initial: this.input.invertY, onChange: (on) => (this.input.invertY = on) },
+        rawInput: {
+          initial: this.pointer.rawInput,
+          onChange: (on) => (this.pointer.rawInput = on),
+          status: () => this.pointer.rawStatus,
+          watch: (fn) => this.pointer.onRawStatus(fn),
+        },
         crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
         aim: { initial: this.input.aimMode, onChange: (m) => (this.input.aimMode = m) },
         sprint: { initial: this.input.sprintMode, onChange: (m) => (this.input.sprintMode = m) },
@@ -335,6 +355,7 @@ export class Game {
         soundCueColour: { initial: this.soundCueColour, onChange: (c) => ((this.soundCueColour = c), this.showHudLook()) },
       },
       hud: {
+        hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
         scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
       },
@@ -364,7 +385,7 @@ export class Game {
     }
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
     this.renderer.onContextChange((lost) => this.graphicsContextChanged(lost));
-    this.stopWatchingAway = awayWatch({ doc: document, win: window }, () => this.stopPlay());
+    this.stopWatchingAway = awayWatch({ doc: document, win: window }, this.goneAway);
     this.audio.onBlocked = () => {
       this.audioBlocked = true;
       this.menus.showHint(BROWSER_NOTES.audioBlocked);
@@ -376,8 +397,14 @@ export class Game {
         return;
       }
       if (locked) this.resume();
-      else this.pause();
+      else {
+        this.pause();
+        this.relockAfterFullscreen();
+      }
     });
+    this.unwatchFullscreen = onFullscreenChange(() => this.relockAfterFullscreen());
+    // Slider changes wait a moment before they are written (settings/storage.ts saveSettingSoon): write them as the page goes.
+    window.addEventListener('pagehide', this.flushSettings);
     this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
     this.audio.warmUp();
   }
@@ -386,6 +413,26 @@ export class Game {
   private readonly stopWatchingAway: () => void;
   /** The browser wouldn't let the sound start since play last resumed (audit CORE-21): the menus say so. */
   private audioBlocked = false;
+
+  /** The player went away (tab hidden, focus lost): the match pauses and pending settings are written (FA5, UI-11). */
+  private readonly goneAway = (): void => {
+    this.stopPlay();
+    flushSettings();
+  };
+
+  private readonly flushSettings = (): void => flushSettings();
+
+  /**
+   * The page entered or left fullscreen, or the mouse lock dropped: just after the Fullscreen key in play, the lock is
+   * taken again, so the key doesn't stop the match on the pause menu (audit UI-19; Resume follows the lock as usual).
+   */
+  private relockAfterFullscreen(): void {
+    const since = performance.now() - this.fullscreenKeyAt;
+    const inMatch = this.started && this.session !== null && !this.crashScreen; // a crash gives the mouse back for good (FA1)
+    if (!relockAfterFullscreen(since, FULLSCREEN_RELOCK_MS, inMatch, this.pointer.locked, this.unlockedPlay)) return;
+    this.fullscreenKeyAt = Number.NEGATIVE_INFINITY;
+    void this.pointer.request();
+  }
 
   /**
    * The graphics context was lost (true) or is back (false) (M18b, audit W-01). While it's gone the match pauses
@@ -465,14 +512,18 @@ export class Game {
   }
 
   /**
-   * The HUD's look from the settings (M24), as CSS variables on the game's container (style.css): the sound cues' size
-   * and colour, and the scoreboard's size (held back in a narrow window so the hit feed keeps its room). Again on resize.
+   * The HUD's look from the settings (M24), as CSS variables on the game's container (style.css): the HUD's size (audit
+   * UI-04), the sound cues' size and colour, and the scoreboard's size (held back in a narrow window so the hit feed
+   * keeps its room). Again on resize.
    */
   private readonly showHudLook = (): void => {
     const style = this.container.style;
+    const hud = hudScale(this.hudSize, this.container.clientHeight || window.innerHeight);
+    style.setProperty('--hud-scale', String(hud));
     style.setProperty('--cue-scale', String(this.soundCueSize));
     style.setProperty('--cue-colour', soundCueCss(this.soundCueColour));
-    style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize, this.container.clientWidth || window.innerWidth).toFixed(3));
+    // The scoreboard grows with the HUD, still only as far as leaves the hit feed room.
+    style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize * hud, this.container.clientWidth || window.innerWidth).toFixed(3));
   };
 
   /** A Dev setting changed, or the Dev tab was shown or hidden (M24): what applies now goes to the game and the session. */
@@ -507,6 +558,10 @@ export class Game {
     cancelAnimationFrame(this.rafId);
     this.stopWatchingAway();
     window.removeEventListener('resize', this.showHudLook);
+    window.removeEventListener('pagehide', this.flushSettings);
+    this.unwatchFullscreen();
+    this.unwatchLayout();
+    flushSettings();
     this.graphicsNotice.dispose();
     this.session?.dispose();
     this.session = null;
@@ -723,7 +778,11 @@ export class Game {
       ['Sim ticks/s', this.tickRate],
       ['Draw calls / triangles', read(() => `${info.render.calls} / ${info.render.triangles}`)],
       ['Dev settings', this.devEnabled ? JSON.stringify(this.dev) : 'off'],
-      ['Settings', read(() => browserStorage()?.getItem(SETTINGS_KEY) ?? '-')],
+      // Pending slider writes (FA5's saveSettingSoon) go first, so the stored settings are the ones in use.
+      ['Settings', read(() => {
+        flushSettings();
+        return browserStorage()?.getItem(SETTINGS_KEY) ?? '-';
+      })],
     ];
   }
 
@@ -793,8 +852,11 @@ export class Game {
       // Only while playing: on the pause screen F3 belongs to the browser (find bar).
       if (this.keyboard.wasPressed('debugOverlay')) this.debug.toggle();
       if (this.keyboard.wasPressed('debugBbPaths')) s.combat.toggleBbPaths();
-      // Still within the key press's user activation, which the browser needs for fullscreen.
-      if (this.keyboard.wasPressed('fullscreen')) toggleFullscreen();
+      // Still within the key press's user activation, which the browser needs for fullscreen (and to take the mouse again).
+      if (this.keyboard.wasPressed('fullscreen')) {
+        this.fullscreenKeyAt = now;
+        toggleFullscreen();
+      }
       // The Dev settings' Game speed (M24) runs the simulation slower or faster than the clock.
       this.ticksThisSecond += s.advance(dt * this.dev.gameSpeed);
       if (s instanceof MatchSession) this.settleMatch(s);

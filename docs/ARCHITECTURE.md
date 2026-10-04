@@ -252,7 +252,9 @@ request. Each line names where it lives and what pins it.
 - **`QualitySettings` and `QUALITY`** (`config/render.ts`): what a preset may set; `Renderer.setQuality` and
   `MatchSession.setQuality` apply it at once. Pinned by `config/render.test.ts`, `render/renderer.test.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`): saved under `airsoft.*`, versioned;
-  renaming a key needs a migration. Pinned by `settings/storage.test.ts`.
+  renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
+  "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added. Pinned by
+  `settings/storage.test.ts`.
 - **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
   power sources by pool ID, Tier scaling, Site limits) the config modules lay over their built-in ones. Pinned by

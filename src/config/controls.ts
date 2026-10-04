@@ -89,6 +89,41 @@ export const MOVED_DEFAULTS: readonly { action: Action; old: readonly string[]; 
 export const UNBINDABLE_KEYS: ReadonlySet<string> = new Set(['Escape', 'MetaLeft', 'MetaRight', 'ContextMenu', 'Unidentified']);
 
 /**
+ * The browser's own keys, which can't be bound either (audit UI-07): F5 reloads the page on the pause screen (losing
+ * the match), F11 and F12 (fullscreen, developer tools) are taken by the browser before the page sees them, and the
+ * rest navigate or capture the screen.
+ */
+export const BROWSER_KEYS: ReadonlySet<string> = new Set(['F5', 'F11', 'F12', 'BrowserBack', 'BrowserForward', 'BrowserRefresh', 'PrintScreen', 'Pause']);
+
+/**
+ * The mouse wheel as two binding codes (audit UI-05): one notch (MOUSE.wheelStepPixels of travel) up or down is a press
+ * and release of its code, so the wheel binds like a key (a tap; nothing holds it). A direction bound to an action no
+ * longer switches replicas.
+ */
+export const WHEEL_CODES = { up: 'WheelUp', down: 'WheelDown' } as const;
+
+/** How many keys each action can have in Settings → Key Bindings: a main key and a second one (audit UI-05). */
+export const KEY_SLOTS = 2;
+
+/**
+ * Actions the game can't be played without: their last key can't be cleared, and another action can't take it from
+ * them when they would be left with none (audit UI-05).
+ */
+export const ESSENTIAL_ACTIONS: ReadonlySet<Action> = new Set<Action>(['fire', 'forward', 'back', 'left', 'right']);
+
+/** Settings → Key Bindings timings (ms). */
+export const KEY_SETTINGS = {
+  /** "Reset All" asks for a second click within this long before it resets (audit UI-17). */
+  resetConfirmMs: 3000,
+} as const;
+
+/**
+ * Esc on the pause menu resumes (audit UI-09), but not within this long (ms) of the pause menu showing: the Esc that
+ * released the mouse (where a browser passes it on to the page) must not resume straight away.
+ */
+export const PAUSE_ESC_GUARD_MS = 400;
+
+/**
  * Keys whose browser default (page scroll, find bar, Alt opening the menu bar) is suppressed while
  * playing, on key down and up. Any bound key is suppressed too.
  */
@@ -156,13 +191,52 @@ export const MOUSE = {
   defaultSensitivity: 1,
   minSensitivity: 0.2,
   maxSensitivity: 4,
-  sensitivityStep: 0.05,
+  /** Fine steps (audit UI-24): 0.20 → 0.25 was a 25 % jump at the low end. A typed cm/360 is kept exactly. */
+  sensitivityStep: 0.01,
   /** Wheel travel (pixels) that counts as one replica switch; stops trackpad swipes flipping replicas every frame. */
   wheelStepPixels: 100,
   /** Pixels per wheel delta when the browser reports lines / pages instead of pixels. */
   wheelLinePixels: 40,
   wheelPagePixels: 800,
+  /**
+   * A single mouse move larger than this (counts, either axis) is dropped as a glitch (audit UI-10): some drivers and
+   * browsers report a huge jump on the first move after the lock or a fullscreen change. No hand moves this far in one
+   * 1–8 ms event.
+   */
+  maxEventCounts: 1000,
 } as const;
+
+/**
+ * Raw mouse input (audit UI-20): ask the browser for unaccelerated movement (`unadjustedMovement`), or use the system's
+ * pointer speed and acceleration. Chrome and Edge honour it; Firefox ignores the request.
+ */
+export const RAW_INPUT: readonly { id: Switch; label: string; blurb: string }[] = [
+  { id: 'on', label: 'On', blurb: 'The mouse as it moves, without the system’s acceleration (Chrome, Edge).' },
+  { id: 'off', label: 'Off', blurb: 'The system’s pointer speed and acceleration, as on the desktop.' },
+];
+
+export const DEFAULT_RAW_INPUT: Switch = 'on';
+
+/**
+ * How the last mouse lock went for raw input (input/pointerLock.ts): `active` (unaccelerated movement granted),
+ * `unavailable` (refused, or ignored as Firefox does: the system's acceleration applies), `off` (turned off), or
+ * `unknown` before the first lock.
+ */
+export type RawInputStatus = 'active' | 'unavailable' | 'off' | 'unknown';
+
+/** The line under Settings → Controls → Raw mouse input saying which the player has (audit UI-20). */
+export const RAW_INPUT_STATUS: Readonly<Record<RawInputStatus, string>> = {
+  active: 'Raw input is active.',
+  unavailable: 'This browser gives no raw input: the system’s acceleration applies.',
+  off: 'Off: the system’s pointer speed and acceleration apply.',
+  unknown: 'Takes effect the next time the game takes the mouse; this line then says whether the browser gave it.',
+};
+
+/**
+ * The Fullscreen key pressed in play: if the browser drops the mouse lock as the page enters or leaves fullscreen
+ * within this long (ms), the game takes it again at once (audit UI-19), instead of stopping on the pause menu.
+ */
+export const FULLSCREEN_RELOCK_MS = 1500;
 
 /**
  * Sensitivity as cm/360 (M18): how far the mouse travels for one full turn, worked out from the mouse's DPI (counts per

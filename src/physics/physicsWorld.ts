@@ -1,4 +1,4 @@
-import RAPIER from '@dimforge/rapier3d-compat';
+import type * as Rapier from '@dimforge/rapier3d-compat';
 import { blockMaterial } from '../config/materials';
 import type { BodyConfig } from '../config/movement';
 import type { ImpactMaterial } from '../config/sounds';
@@ -47,7 +47,7 @@ const RAMP_TRIANGLES = new Uint32Array(RAMP_FACES.flatMap((f) => f.slice(2).flat
  * to walls and climb crates by spamming jump (see physicsWorld.test.ts regression tests). A ramp is a
  * closed 8-triangle wedge built the same way.
  */
-function blockCollider(b: MapBlock): RAPIER.ColliderDesc {
+function blockCollider(b: MapBlock): Rapier.ColliderDesc {
   if (b.kind === 'ramp') {
     const corners = new Float32Array(18);
     rampCorners(b, corners);
@@ -63,11 +63,20 @@ function blockCollider(b: MapBlock): RAPIER.ColliderDesc {
   return RAPIER.ColliderDesc.trimesh(corners, BOX_TRIANGLES, RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES);
 }
 
+/**
+ * Rapier, once `initPhysics()` has loaded it. Imported on demand (audit CORE-10), so its 4 MB chunk is no part of the
+ * page's first script: the game's own code runs first and the loading screen can show the chunk's download
+ * (main.ts, ui/loadingProgress.ts).
+ */
+let RAPIER: typeof Rapier.default;
 let rapierReady: Promise<void> | null = null;
 
-/** Loads the Rapier WASM module once. */
+/** Loads the Rapier module and its WASM once. */
 export function initPhysics(): Promise<void> {
-  rapierReady ??= RAPIER.init();
+  rapierReady ??= import('@dimforge/rapier3d-compat').then(async (module) => {
+    RAPIER = module.default;
+    await RAPIER.init();
+  });
   return rapierReady;
 }
 
@@ -76,20 +85,20 @@ export function initPhysics(): Promise<void> {
  * volume but not the movement capsule; Depot has no crawl spaces.
  */
 export class PhysicsWorld implements CharacterMover {
-  private readonly world: RAPIER.World;
-  private readonly controller: RAPIER.KinematicCharacterController;
-  private readonly characterColliders = new Map<number, RAPIER.Collider>();
+  private readonly world: Rapier.World;
+  private readonly controller: Rapier.KinematicCharacterController;
+  private readonly characterColliders = new Map<number, Rapier.Collider>();
   private readonly capsuleHalfHeight: number;
   private readonly capsuleCenterOffset: number;
   private readonly scratch = { x: 0, y: 0, z: 0 };
   /** The controller's corrected movement, filled in place each move (audit SIM-04: no Vector3 per call). */
   private readonly moved = { x: 0, y: 0, z: 0 };
-  private readonly groundProbe: RAPIER.Ball;
+  private readonly groundProbe: Rapier.Ball;
   /**
    * The ground probe's hit, filled in place (Rapier's broad-phase cast takes a target; World.castShape doesn't), so a
    * probe no longer allocates a hit object and its four vectors per standing character per tick.
    */
-  private readonly probeHit = new RAPIER.ColliderShapeCastHit(null as unknown as RAPIER.Collider, 0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+  private readonly probeHit = new RAPIER.ColliderShapeCastHit(null as unknown as Rapier.Collider, 0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
   private readonly ray = new RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
   /** What each level block's collider is made of, by collider handle (ricochets). */
   private readonly materials = new Map<number, ImpactMaterial>();
