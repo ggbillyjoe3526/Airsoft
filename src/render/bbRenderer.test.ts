@@ -107,7 +107,7 @@ describe('BBRenderer', () => {
     for (const alpha of [0, 0.5, 1]) {
       r.update(alpha, eye);
       const p = (trails.geometry.getAttribute('position') as THREE.BufferAttribute).array;
-      const along = new THREE.Vector3(p[3] - p[0], p[4] - p[1], p[5] - p[2]);
+      const along = new THREE.Vector3(p[3]! - p[0]!, p[4]! - p[1]!, p[5]! - p[2]!);
       const off = along.clone().sub(dir.clone().multiplyScalar(along.dot(dir)));
       expect(off.length(), `alpha ${alpha}`).toBeLessThan(2e-4);
     }
