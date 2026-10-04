@@ -150,3 +150,8 @@ export function loadTeamColours(): TeamColourSetId {
 export function loadSoundCues(): boolean {
   return loadChoice('soundCues', SOUND_CUE_CHOICES, 'off') === 'on';
 }
+
+/** Whether the tutorial was played to the end (M16). */
+export function loadTutorialDone(): boolean {
+  return loadSetting('tutorialDone', (raw) => (typeof raw === 'boolean' ? raw : undefined), false);
+}

@@ -37,6 +37,8 @@ export type SettingField =
   | 'map'
   | 'fov'
   | 'quality'
+  /** The tutorial was played to the end (M16): the title stops pointing new players at it. */
+  | 'tutorialDone'
   | `hopUp.${string}`
   | `volume.${string}`
   | `bbWeight.${string}`

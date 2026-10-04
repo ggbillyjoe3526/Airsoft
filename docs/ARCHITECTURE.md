@@ -166,6 +166,9 @@ ends the round). A hit character is eliminated
   magazines full. `render/rangeTargetsRenderer.ts` draws the plates, figures and distance markers and
   `ui/rangeReadout.ts` the last BB's distance. `Game` holds a `MatchSession` or a `RangeSession`; changing the loadout
   from the range's pause menu rebuilds the range where you stood.
+  With a tutorial (M16) it also holds a `tutorial/tutorial.ts` `TutorialTracker`, which watches the player and the
+  tick's events against the steps of `config/tutorial.ts`, and a `ui/coachPanel.ts` panel that shows the current step
+  (the range readout takes over once it's finished); `Game` saves `tutorialDone` when it reports the end.
 
 ## Map data
 

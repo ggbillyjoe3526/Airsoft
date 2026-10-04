@@ -21,7 +21,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13), match info (M19) and the Loadout feature (M17a, M17b, added by the owner) are done; comfort and accessibility (M18a controls and comfort, M18b accessibility and browser basics) and squad orders (M22) are done, and so is the art pass (M14: VFX and lighting, procedural, with the Graphics quality picker back); next come the rest of the owner's feature picks (M20 custom matches, M21 practice range) and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13), match info (M19) and the Loadout feature (M17a, M17b, added by the owner) are done; comfort and accessibility (M18a controls and comfort, M18b accessibility and browser basics), squad orders (M22), custom matches (M20), the practice range (M21), the tutorial (M16) and the art pass (M14: VFX and lighting, procedural, with the Graphics quality picker back) are done: Phase 4 is feature complete, next the owner's audit, fixes and bug pass, then his playtest. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -116,7 +116,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Done (owner to play it) | 8.8 (auto-accepted, 4 of 4) |
 | Alpha · Phase 4 · M14 Art pass, VFX and lighting (procedural: the CC0 asset sites were unreachable): daylight with a sky and trees, dressed Depot surfaces and props, figures in airsoft kit, toy-like replicas, gas puffs and impact dust, the Graphics quality picker back | Done (owner to play it) | 9.0 |
-| Alpha · Phase 4 · M16 Tutorial → feature complete | Later | |
+| Alpha · Phase 4 · M16 Tutorial: a coached first session on the practice range | Done (merged; owner to play it) | 9.0 |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -529,7 +529,7 @@ each one went:**
 - **M18. Comfort, accessibility and browser basics** (the owner's second batch, items 2–5, 7, 14–17, 21 and 23). The
   settings every player looks for first (PCGamingWiki's list, the Game Accessibility Guidelines' basic tier). It fills
   the Controls and Accessibility tabs' LATER rows; volume comes with M13. Built in two halves: **M18a** (done) the
-  Controls items and reduced motion; **M18b** (done) colour-blind options, sound cues and the browser basics. M19 was built before M18; the order of what's left is M20 → M21 → M16 (M22 and M14 done).
+  Controls items and reduced motion; **M18b** (done) colour-blind options, sound cues and the browser basics. M19 was built before M18; all are done (M16 went before M14 so the art pass dresses a finished game).
   - **Controls:** invert mouse; toggle or hold for aiming down sights and for sprint (as crouch already has); fire,
     aim and any other action bindable to mouse buttons, side buttons included; the sensitivity also shown as cm/360
     (worked out from the mouse's DPI, which the player enters), so it can match another shooter.
@@ -615,6 +615,14 @@ each one went:**
     and a HUD line shows the order in force; the same key again cancels. Bots hear through walls at 60% of the range.
     Voice lines and hand signs wait (KNOWN_ISSUES).
 - **M16. Onboarding:** a short tutorial.
+  - **Built (2026-10-04):** the title screen's **Tutorial** (tagged "New? Start here" until you finish it once) opens
+    the practice range with a coach panel at the top: ten short steps, each finished by doing it (look around, walk to
+    the firing line, ring a plate, knock down a figure at 50 m or more (the hop-up step, with the last BB on the coach), reload, aim down the sight, crouch, lean,
+    switch replica and hit something, then one hit and you're out). Keys show as you have them bound. With iron sights
+    (no optic to aim through) the aim step points to the Loadout's optics instead. A finished step shows a tick for a
+    moment; after the last one the coach gives way to the range readout and you keep practising. Pausing shows which
+    step you're on, and changing the loadout from the pause menu keeps your place (`config/tutorial.ts`,
+    `tutorial/tutorial.ts`, `ui/coachPanel.ts`).
 - Fix when touched (audit, `audit/OPUS_HANDOFF.md` §5), each inside the step that already edits that code: split the
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
   in M12a), a "graphics reset" message on a lost WebGL context (W-01, now in M18), shader warm-up if the overlay shows a hitch

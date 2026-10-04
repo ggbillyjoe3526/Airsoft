@@ -5,19 +5,19 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-04 · M14 (art pass), after M22 (squad orders)._
+_Last updated: 2026-10-04 · M14 (art pass), the last of Phase 4, after M16 (tutorial)._
 
 ## Where we are
 
 - **Phase 4 merged on `main`:** M12a–c, M11, M15, M15b, M13 audio, M19 match info, M17a and M17b Loadout, M18a and
-  M18b, M20 custom matches, M21 practice range, M22 squad orders and now **M14 art pass** (see REVIEWS). The owner asked
-  (2026-10-04) for every remaining Phase 4 milestone, then a full code audit (Fable), its fixes (Opus), a bug pass, and
-  a note when Phase 4 is ready to playtest. For this run the owner chose "Claude merges": build threads merge their own
-  pull request once CI is green and the critic has accepted it (never tag, never push to `main` directly).
-- **Two build threads run side by side:** one did M18b, M22 squad orders and the **M14 art pass** (done; next is the owner's audit chain); the
-  other has done M20 and M21 and does **M16 tutorial** last (built on the range). They conflict in docs and in
-  `matchSession.ts`, `game.ts`, `settings/storage.ts`, `config/controls.ts`, `sim/events.ts`: merge `main` in before
-  every push and keep both sides.
+  M18b, M20 custom matches, M21 practice range, M22 squad orders, M16 tutorial and now **M14 art pass** (see REVIEWS):
+  **Phase 4 is feature complete.** The owner asked (2026-10-04) for every remaining Phase 4 milestone, then a full
+  code audit (Fable), its fixes (Opus), a bug pass, and a note when Phase 4 is ready to playtest; the audit is next.
+  For this run the owner chose "Claude merges": threads merge their own pull request once CI is green and the critic
+  has accepted it (never tag, never push to `main` directly).
+- **Two build threads ran side by side** (M18b, M22, M14 in one; M20, M21, M16 in the other). They conflicted in docs
+  and in `matchSession.ts`, `game.ts`, `settings/storage.ts`, `config/controls.ts`, `sim/events.ts`: whoever works in
+  parallel next, merge `main` in before every push and keep both sides.
 
 ## M14 in short
 
@@ -27,6 +27,13 @@ _Last updated: 2026-10-04 · M14 (art pass), after M22 (squad orders)._
   `config/characters.ts` (a torso team band, tested to read at range), `render/replicaModels.ts`, `render/impactPuffs.ts`
   (gas puffs, dust by material), `render/dustMotes.ts` (hidden with reduced motion). Quality presets in
   `config/render.ts` `QUALITY`; `MatchSession` and `RangeSession` both have `setQuality`.
+
+## M16 in short
+
+- **Tutorial:** steps as data in `config/tutorial.ts`; `tutorial/tutorial.ts` `TutorialTracker` reads the player and
+  each tick's events (never writes); `goalIndex` is the step being checked, `stepIndex` the one shown (a finished step's
+  tick shows while the next is already checked). `ui/coachPanel.ts` draws it (with the last-BB line on hit steps).
+  `RangeSession` takes `tutorialFrom`; `Game` rebuilds at `tutorialStep` after a loadout change and saves `tutorialDone`.
 
 ## M22 in short
 

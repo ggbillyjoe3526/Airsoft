@@ -118,6 +118,9 @@ Then open **http://localhost:4173**.
 - **Bot difficulty** (Easy, Normal, Hard) is picked on the New game screen, one level for your opponents and one for
   your bot teammates. On Normal, a bot's first BBs up close can miss, and
   moving targets are harder for bots to hit.
+- **Tutorial:** new to the game? The title screen's **Tutorial** walks you through the basics on the practice range,
+  one short step at a time (moving, shooting, BB drop, reloading, aiming, crouching, leaning, switching replicas), each
+  finished by doing it. After the last step you stay on the range to practise.
 - **Practice range:** the title screen's **Practice range** puts you alone on a walled range with three lanes of
   targets at 10 to 60 m: white steel plates that ring and swing when hit, and standing and crouched plywood figures
   that fall back and stand up again. Painted lines and boards on the walls mark the distances, the readout at the top
