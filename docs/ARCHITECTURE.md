@@ -155,6 +155,14 @@ ends the round). A hit character is eliminated
   emit `footstep` events of kind `rattle`. Optics (`config/optics.ts`) carry their zoom, raise time and whether they
   are a scope (the HUD's eyepiece; the viewmodel hides while looking through one). Parts on the model are named
   `optic:<id>`, `grip:<id>`, `magazine:<id>` and shown when fitted.
+- **Asset pool (M26a):** `pool.md` at the repository's root is the register of every asset the player can own (replicas,
+  power sources, optics, grips, lasers, magazines; grenades later) and the Armory's numbers (FC earned, Tokens, Shots,
+  rarity tiers and odds, scrap values). It is bundled as text (`?raw`) and read once at start: `pool/poolFile.ts`
+  pulls out its Markdown tables, `pool/pool.ts` turns them into `Asset`s, `RarityTier`s and an `Economy` (with each
+  unreadable row listed by line and left out), and `pool/gamePool.ts` holds the game's `GAME_POOL`. An asset's Key
+  links it to its behaviour in `config/` (`REPLICA_KEYS`, the optic, grip, laser and magazine ids); compatibility is by
+  tags (`fits`). `pool/collection.ts` keeps what the player owns (a count per asset at a tier, `000002@epic`), their FC
+  and Tokens and the Shots' random state under its own browser key (`airsoft.collection`).
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).

@@ -73,8 +73,10 @@ v0.1 focuses on core gameplay and foundations. Later content builds on those fou
 - **Fields are built from a checklist** (owner). Every field has cover, barricades, buildings, windows,
   doorways, choke points, flanking routes, objective locations, and dead zones / spawn areas. Layout
   rules are tested in code, as for Depot.
-- **Unlocks never block fun.** Until progression is designed, everything is free from the start. When
-  progression comes, it is earned by unlocking replicas and gear, never by levels.
+- **Unlocks never block fun.** Progression is earned by unlocking replicas and gear, never by levels. From M26
+  (owner, 2026-10-04) replicas and parts are assets in a pool (`pool.md`) unlocked in the Armory with Field Credits
+  earned by playing: completely free, never bought with money, marked beta, and it can be switched off. The
+  starting kit (AEG Rifle, Gas Pistol, Standard Battery, Green Gas) is a full loadout, and BBs are always free.
 
 ## Progress (updated 2026-10-03)
 
@@ -117,6 +119,10 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Done (owner to play it) | 8.8 (auto-accepted, 4 of 4) |
 | Alpha · Phase 4 · M14 Art pass, VFX and lighting (procedural: the CC0 asset sites were unreachable): daylight with a sky and trees, dressed Depot surfaces and props, figures in airsoft kit, toy-like replicas, gas puffs and impact dust, the Graphics quality picker back | Done (owner to play it) | 9.0 |
 | Alpha · Phase 4 · M16 Tutorial: a coached first session on the practice range | Done (merged; owner to play it) | 9.0 |
+| Alpha · Owner's 2026-10-04 batch · M26a Asset pool: `pool.md` (the asset register the game reads, with its guide), rarity tiers, the economy's numbers, the player's collection | In progress | |
+| Alpha · Owner's 2026-10-04 batch · M26b Loadout screen: Primary, Secondary and Grenades slots, an item picker, a Customise screen per replica (optics, BB weight slider, hop-up, grip, laser, magazine, power source) | Planned | |
+| Alpha · Owner's 2026-10-04 batch · M26c Armory (beta): Field Credits from matches, Tokens, single and ten Shots of three assets, scrapping spares | Planned | |
+| Alpha · Owner's 2026-10-04 batch · M26d Dev settings for the Armory: switch the gacha off, unlock all gear; docs | Planned | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -627,6 +633,31 @@ each one went:**
   start screen and menus out of `game.ts` first (W-05, done in M15: `ui/menus/`), one versioned settings store for the new settings (W-02,
   in M12a), a "graphics reset" message on a lost WebGL context (W-01, now in M18), shader warm-up if the overlay shows a hitch
   (W-04), and reusing audio nodes in M13 (W-03).
+
+### The owner's feedback batch (2026-10-04)
+
+William's notes of 2026-10-04 (fourteen items) were split into four threads, built side by side: M23 (minimap and
+squad order wheel), M24 (menus and settings), M25 (Depot rework and CC0 assets) and M26 (Loadout, Armory and asset
+pool, items 11, 12 and part of 14).
+
+- **M26. Loadout, Armory and asset pool** (items 11, 12 and the Armory's Dev settings from 14).
+  - **M26a. Asset pool.** Every replica and part is a single asset with a six-digit ID (`000001` Gas Pistol, `000002`
+    AEG Rifle …) in `pool.md` at the repository's root: a hand-editable register the game reads at start, with a guide
+    to the IDs, the tags that decide what fits what (Green Gas fits anything tagged `gas`, not just the pistol), power
+    sources (batteries, gas types, springs as separate items), rarity tiers (Common to Legendary, with the owner's ten
+    later tiers documented) and the Armory's numbers. Starters: AEG Rifle, Gas Pistol, Standard Battery, Green Gas.
+    Unlockable: Red Laser, Vertical Grip, Red Dot, Red Gas, Black Gas, and the M17b parts (2× scope, angled grip,
+    hi-cap, low-cap and extended magazines). BBs are not pooled. The player's collection (items owned, FC, Tokens) is
+    saved in the browser (`src/pool/`).
+  - **M26b. Loadout screen** in the style of Destiny 2's character screen, with no player model: a column of three
+    square slots (Primary, Secondary, Grenades). Clicking a slot lists the owned replicas for it (any replica in either
+    slot); right-clicking an equipped replica opens its Customise screen: optics, BB weight (a free slider, never
+    pooled), hop-up, grip, laser, magazine and power source (only those that fit it), skins later. Grenades shows empty
+    until grenades arrive (v0.3).
+  - **M26c. Armory (beta)**, next to the Loadout: Field Credits (FC) earned by every match (less for a loss), exchanged
+    for Tokens at 0.00625 Tokens per FC (160 FC a Token), one Token a Shot or ten for a ten-Shot, three random assets
+    per Shot, spare copies scrapped for FC. Marked beta, completely free, can be switched off.
+  - **M26d. Dev settings** (on M24's hidden Dev panel): switch all gacha off (greys out the Armory), unlock all gear.
 
 When the owner calls the game feature complete, alpha ends.
 
