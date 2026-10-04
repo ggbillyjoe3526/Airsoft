@@ -318,7 +318,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const wheel = page.locator('.order-wheel');
   await page.keyboard.down('z');
   await expect(wheel.locator('.order-wheel-item').first()).toBeVisible({ timeout: 10_000 });
-  await expect(wheel.locator('.order-wheel-item')).toHaveText(['Follow Me', 'Hold Here', 'Regroup', 'Team Plan']);
+  // Each direct order shows its key (FA5, UI-03); the Team Plan has none.
+  await expect(wheel.locator('.order-wheel-item')).toHaveText([/^Follow Me/, /^Hold Here/, /^Regroup/, 'Team Plan']);
+  await expect(wheel.locator('.order-wheel-key')).toHaveText(['F', 'X', 'V']);
   await page.keyboard.up('z');
   await expect(wheel).toHaveAttribute('hidden', '', { timeout: 10_000 });
   // Squad orders (M22): F has the bot teammates follow you and the HUD says so; F again sends them back to the plan.
