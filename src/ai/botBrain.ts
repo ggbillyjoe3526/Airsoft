@@ -251,10 +251,10 @@ function tradeHit(b: Bot, w: BotWorld): boolean {
 function reloadFromCover(b: Bot, w: BotWorld): boolean {
   const cfg = w.cfg;
   if (!b.skill.slicesCorners || b.coverCooldown > 0 || !lowOnBBs(b, cfg.tacticalReloadFraction)) return false;
-  knownThreatEye(b, w);
-  if (!takeCoverFrom(b, w, threatEye, pick(b.rng, cfg.coverTime))) return false;
+  // Cooled down whether or not a spot is found, as for ducking under fire: no search every tick while none is near.
   b.coverCooldown = cfg.coverCooldown;
-  return true;
+  knownThreatEye(b, w);
+  return takeCoverFrom(b, w, threatEye, pick(b.rng, cfg.coverTime));
 }
 
 /** Elimination (M38, teamPlay): latePushTime or less left, and fewer of its team in play than of the other. */
@@ -306,8 +306,8 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   // With a threat in mind, or walking its lane in the enemy's half (M38, slicesCorners): walk and slice each corner
   // ahead. Hunting with nothing heard, trading a hit teammate or pushing late, it hurries.
   const trading = w.time - b.tradeAt < cfg.tradeTime;
-  const near = threatInMind(b, w) || (!b.hunting && w.inEnemyHalf(b));
-  b.careful = b.skill.slicesCorners && near && !trading && (b.mode === 'advance' || b.mode === 'search') && !pushingLate(b, w);
+  const near = b.skill.slicesCorners && (threatInMind(b, w) || (!b.hunting && w.inEnemyHalf(b)));
+  b.careful = near && !trading && (b.mode === 'advance' || b.mode === 'search') && !pushingLate(b, w);
   // Steer clear of anyone close by, or step out of their way (AI-01).
   const moving = keepApart(b, w, moveBot(b, w, cmd, dt, target), cmd);
   // Holding a lane point or a post: crouch once settled, where crouched eyes still see the enemy side (AI-02).
