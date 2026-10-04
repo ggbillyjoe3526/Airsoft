@@ -32,7 +32,7 @@ export const BOT_BEHAVIOUR = {
    * (low cover) halfway between. Judged by the same rays (ear to the source's knees and head) that muffle sounds for
    * the player (AUDIO.occlusion), so bots hear through walls no better than the player does.
    */
-  wallHearing: 0.5,
+  wallHearing: 0.6,
   /** A heard position is off by up to this fraction of the distance (hearing through walls is vague). */
   hearingError: 0.3,
   /**

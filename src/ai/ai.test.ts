@@ -564,6 +564,21 @@ describe('bots in a duel', () => {
     }
   });
 
+  it('hear gunfire through a wall only at a shorter range (M22)', () => {
+    const wall: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // a wall between them, never seen
+    const heardShots = (dist: number, cfg: BotConfig) => {
+      const { bots, run, commands } = duel(dist, () => {}, wall, cfg);
+      Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 });
+      run(0.3);
+      return bots.bots[0]!.hasLastKnown;
+    };
+    const behindWall = BOTS.hearingDistance * BOTS.wallHearing;
+    expect(heardShots(behindWall - 2, BOTS)).toBe(true);
+    expect(heardShots(behindWall + 3, BOTS)).toBe(false);
+    // Without the wall rule (before M22) the same shot carried its full range.
+    expect(heardShots(behindWall + 3, HEAR_THROUGH_WALLS)).toBe(true);
+  });
+
   it('still need their full reaction time on re-sighting someone after only hearing them', () => {
     // Line of sight can be switched off, like the target stepping behind a wall.
     let blocked = false;
