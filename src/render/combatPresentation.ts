@@ -234,7 +234,7 @@ export class CombatPresentation {
     this.listenerPos.y = cam.position.y;
     this.listenerPos.z = cam.position.z;
     this.sfx.setListener(this.listenerPos, this.forward.x, this.forward.y, this.forward.z);
-    this.sfx.updateSources(this.state.characters, this.player.id);
+    this.sfx.placeSources(this.state.characters, this.player.id);
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */

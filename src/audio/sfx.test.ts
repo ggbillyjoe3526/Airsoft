@@ -348,14 +348,38 @@ describe('the sound engine (M13)', () => {
 
   it('muffles a character behind a wall and leaves one in the open clear', () => {
     const open = setup(OPEN);
-    open.sfx.updateSources([open.player, open.bot], PLAYER);
+    open.sfx.afterTick([open.player, open.bot], PLAYER);
     const clear = open.ctx.filters.find((f) => f.type === 'lowpass')!;
     expect(clear.frequency.value).toBe(AUDIO.occlusion.openHz);
 
     const walled = setup(WALLED);
-    walled.sfx.updateSources([walled.player, walled.bot], PLAYER);
+    walled.sfx.afterTick([walled.player, walled.bot], PLAYER);
     const muffled = walled.ctx.filters.find((f) => f.type === 'lowpass')!;
     expect(muffled.frequency.value).toBeCloseTo(AUDIO.occlusion.muffledHz);
+  });
+
+  it('casts the muffling rays once per tick, not per frame; frames only move the channels (audit L-14)', () => {
+    let casts = 0;
+    const counting: OcclusionQuery = { raycastStatic: () => (casts++, -1) };
+    const { sfx, player, bot, ctx } = setup(counting);
+    const third = createCharacter(2, vec3(-4, 0, 3), 0, LOADOUT, 1);
+    const all = [player, bot, third];
+    sfx.placeSources(all, PLAYER);
+    bot.position.x = 7;
+    sfx.placeSources(all, PLAYER);
+    expect(casts).toBe(0);
+    expect(ctx.panners.find((p) => p.positionX.value === 7)).toBeDefined();
+    sfx.afterTick(all, PLAYER);
+    expect(casts).toBe(AUDIO.occlusion.rayHeights.length * 2);
+  });
+
+  it("doesn't muffle anyone before the first frame has placed the listener", () => {
+    const sfx = new Sfx(LOADOUT, FLOOR, WALLED, engineFor());
+    sfx.unlock();
+    const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
+    const bot = createCharacter(1, vec3(6, 0, 0), 0, LOADOUT, 1);
+    sfx.afterTick([player, bot], PLAYER);
+    expect(FakeContext.last.filters.find((f) => f.type === 'lowpass')?.frequency.value ?? AUDIO.occlusion.openHz).toBe(AUDIO.occlusion.openHz);
   });
 
   it('eases a volume bus to its slider', () => {
@@ -399,7 +423,8 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
         sfx.onEvent(shot(PLAYER), PLAYER, () => player);
         sfx.setPaused(false);
         sfx.setListener(vec3(0, 1.6, 0), 0, 0, -1);
-        sfx.updateSources([player], PLAYER);
+        sfx.placeSources([player], PLAYER);
+        sfx.afterTick([player], PLAYER);
         engine.setVolume('master', 0.5);
         sfx.unlock();
         sfx.dispose();

@@ -81,6 +81,7 @@ export class Sfx {
   private readonly foleyLimit = new VoiceLimit(AUDIO.foley.maxPerWindow, AUDIO.foley.window);
   /** Where the listener is (distance culling of quiet sounds, and muffling). */
   private readonly listener = { x: 0, y: 0, z: 0 };
+  private listenerPlaced = false;
   private readonly muffle: Muffle = { hz: 0, gain: 0 };
   private whistle: Whistle | null = null;
 
@@ -150,6 +151,7 @@ export class Sfx {
     this.listener.x = pos.x;
     this.listener.y = pos.y;
     this.listener.z = pos.z;
+    this.listenerPlaced = true;
     const l = this.ctx?.listener;
     if (!l) return;
     if (!l.positionX) {
@@ -170,34 +172,18 @@ export class Sfx {
     l.upZ.value = 0;
   }
 
-  /**
-   * Once per rendered frame, after setListener: moves every other character's channel to them and muffles it by
-   * how much level geometry stands between you.
-   */
-  updateSources(characters: readonly Character[], localId: number): void {
+  /** Once per rendered frame, after setListener: moves every other character's channel to them. */
+  placeSources(characters: readonly Character[], localId: number): void {
     if (!this.ctx) return;
     for (const c of characters) {
-      if (c.id === localId) continue;
-      const ch = this.channel(c);
-      this.placePanner(ch.panner, c.position, AUDIO.spatial.sourceHeight);
-      const share = blockedShare(this.query, this.listener, c.position);
-      if (share === ch.share) continue;
-      muffleFor(share, this.muffle);
-      const t = this.ctx.currentTime;
-      if (ch.share < 0) {
-        ch.filter.frequency.value = this.muffle.hz;
-        ch.gain.gain.value = this.muffle.gain;
-      } else {
-        ch.filter.frequency.setTargetAtTime(this.muffle.hz, t, AUDIO.occlusion.smoothing);
-        ch.gain.gain.setTargetAtTime(this.muffle.gain, t, AUDIO.occlusion.smoothing);
-      }
-      ch.share = share;
+      if (c.id !== localId) this.placePanner(this.channel(c).panner, c.position, AUDIO.spatial.sourceHeight);
     }
   }
 
-  /** After every simulation tick: the rustle of anyone starting to crouch, stand or lean. */
+  /** After every simulation tick: muffling, and the rustle of anyone starting to crouch, stand or lean. */
   afterTick(characters: readonly Character[], localId: number): void {
     if (!this.ctx) return;
+    this.updateMuffling(characters, localId);
     this.foley.update(characters, (c, move) => this.foleyMove(c, move, localId));
   }
 
@@ -432,6 +418,31 @@ export class Sfx {
     const startsAt = when ?? ctx.currentTime;
     src.start(startsAt);
     return { src, gain: g, startsAt };
+  }
+
+  /**
+   * Muffles every other character's channel by how much level geometry stands between you. Once per tick, not per
+   * frame (audit L-14): only the simulation moves anyone, and the change eases over AUDIO.occlusion.smoothing anyway.
+   */
+  private updateMuffling(characters: readonly Character[], localId: number): void {
+    // Not before the first frame has put the listener at the camera.
+    if (!this.listenerPlaced) return;
+    const t = this.ctx!.currentTime;
+    for (const c of characters) {
+      if (c.id === localId) continue;
+      const ch = this.channel(c);
+      const share = blockedShare(this.query, this.listener, c.position);
+      if (share === ch.share) continue;
+      muffleFor(share, this.muffle);
+      if (ch.share < 0) {
+        ch.filter.frequency.value = this.muffle.hz;
+        ch.gain.gain.value = this.muffle.gain;
+      } else {
+        ch.filter.frequency.setTargetAtTime(this.muffle.hz, t, AUDIO.occlusion.smoothing);
+        ch.gain.gain.setTargetAtTime(this.muffle.gain, t, AUDIO.occlusion.smoothing);
+      }
+      ch.share = share;
+    }
   }
 
   // ---- Channels and buses -------------------------------------------------------------------
