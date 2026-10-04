@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { ATMOSPHERE, QUALITY, RENDER } from '../config/render';
-import { addAtmosphere, buildClouds, shadedCrown, skyColour } from './atmosphere';
+import { DEPOT } from '../map/depot';
+import { RANGE_MAP } from '../map/range';
+import { addAtmosphere, buildClouds, shadedCrown, skyColour, treeRingStart } from './atmosphere';
+import { mapBoundingBox } from './lighting';
 
 describe('skyColour', () => {
   const sun = new THREE.Vector3(1, 2, 0).normalize();
@@ -123,5 +126,29 @@ describe('trees and clouds (rows 20b and 21)', () => {
     expect(bottom).toBeLessThan(top);
     expect(sunward).toBeGreaterThan(away);
     geo.dispose();
+  });
+});
+
+describe('the tree ring round any map (engine-level)', () => {
+  it('keeps the configured ring round Depot and the range, and moves it out round a bigger field', () => {
+    for (const map of [DEPOT, RANGE_MAP]) {
+      const box = mapBoundingBox(map);
+      expect(treeRingStart(box.getCenter(new THREE.Vector3()), box)).toBe(ATMOSPHERE.trees.ringMin);
+    }
+    const big = new THREE.Box3(new THREE.Vector3(-90, 0, -60), new THREE.Vector3(90, 4, 60));
+    const start = treeRingStart(new THREE.Vector3(), big);
+    expect(start).toBeCloseTo(Math.hypot(90, 60) + ATMOSPHERE.trees.ringClearance);
+  });
+
+  it('plants no tree inside a big field, at either tree setting', () => {
+    const big = new THREE.Box3(new THREE.Vector3(-90, 0, -60), new THREE.Vector3(90, 4, 60));
+    const sun = new THREE.Vector3(0.4, 0.8, 0.3).normalize();
+    for (const trees of [1, 2] as const) {
+      const scene = new THREE.Scene();
+      const atmosphere = addAtmosphere(scene, new THREE.Vector3(), sun, { trees, clouds: false }, big);
+      const pos = (scene.getObjectByName('trees') as THREE.Mesh).geometry.getAttribute('position');
+      for (let i = 0; i < pos.count; i++) expect(big.containsPoint(new THREE.Vector3(pos.getX(i), 1, pos.getZ(i)))).toBe(false);
+      atmosphere.dispose();
+    }
   });
 });

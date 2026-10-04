@@ -87,8 +87,8 @@ ends the round). A hit character is eliminated
   the horizon); `proceduralTextures.ts` draws the surface textures, owned by the `Renderer` and drawn and uploaded in
   the title screen's idle time (`Renderer.warmUp`), with normal maps worked out from them on demand
   (`surfaceNormals.ts`). The visual overhaul (FA7, `docs/ART.md`) adds the sky-derived environment map
-  (`replicaSheen.ts`: the dome's own colours over a concrete disc, prefiltered once per context, freed while off; the
-  `Renderer` sets it as `scene.environment` with Environment lighting, and the map's and trees' Lambert materials opt
+  (`replicaSheen.ts`: the dome's own colours over a concrete disc, prefiltered once per context and per
+  `EnvironmentLook` passed to `Renderer.setEnvironmentLook`, freed while off; the `Renderer` sets it as `scene.environment` with Environment lighting, and the map's and trees' Lambert materials opt
   out, `surfaceMaterials.ts`) and the tone mapping choice (`Renderer.setToneMapping`). `mapMeshes.ts` turns each block
   into pieces (container frames, wall copings, pallets, all inside the block's bounds) merged per texture by
   `cuboidMesh.ts`, with grime shading near the ground; with Map detail the boxes are bevelled with a lighter edge,
@@ -229,7 +229,8 @@ ends the round). A hit character is eliminated
 - **rangeSession.ts**: the practice range (M21): `map/range.ts` with the targets of `config/range.ts`, the player alone,
   no bots and no rounds. `SimServices.practice` makes `stepSimulation` skip the round flow, step the targets
   (`sim/rangeTargets.ts`: `GameState.targets`, tested by `stepBBs`, which emits `targetHit`) and keep the spare
-  magazines full. `render/rangeTargetsRenderer.ts` draws the plates, figures and distance markers and
+  magazines full. `render/rangeTargetsRenderer.ts` draws the plates, figures and distance markers (one instanced mesh per kind
+  of moving part, one merged mesh per material for the rest) and
   `ui/rangeReadout.ts` the last BB's distance. `Game` holds a `MatchSession` or a `RangeSession`; changing the loadout
   from the range's pause menu rebuilds the range where you stood.
   With a tutorial (M16) it also holds a `tutorial/tutorial.ts` `TutorialTracker`, which watches the player and the

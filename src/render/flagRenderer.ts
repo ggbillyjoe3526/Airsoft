@@ -101,12 +101,14 @@ export class FlagRenderer {
   /** The site's flag (drawn the first time detail is on). */
   private design: THREE.Texture | null = null;
   private readonly ripple = { z: 0, slope: 0 };
+  /** The pole, finial and cleat: painted as before, brushed metal with Environment lighting (setEnvironmentLit). */
+  private readonly poleMat: THREE.MeshStandardMaterial;
 
   constructor(
     private readonly teamColors: readonly number[],
     ropeRadius: number,
   ) {
-    const poleMat = this.track(new THREE.MeshStandardMaterial({ color: F.poleColor, roughness: F.poleRoughness, metalness: F.poleMetalness }));
+    const poleMat = (this.poleMat = this.track(new THREE.MeshStandardMaterial({ color: F.poleColor, roughness: F.poleRoughness, metalness: F.poleMetalness })));
     const pole = new THREE.Mesh(this.track(new THREE.CylinderGeometry(F.poleRadius, F.poleRadius, F.poleHeight, F.poleSegments)), poleMat);
     pole.position.y = F.poleHeight / 2;
     pole.castShadow = true;
@@ -167,6 +169,16 @@ export class FlagRenderer {
       this.fine.mesh.material.map = this.design;
       this.fine.mesh.material.needsUpdate = true;
     }
+  }
+
+  /**
+   * Environment lighting on or off (QualitySettings.environment): with the sky to reflect, the pole is brushed
+   * aluminium; without it (Low) metal has nothing to pick up and would look dull, so it keeps its paint.
+   */
+  setEnvironmentLit(on: boolean): void {
+    const look = on ? F.poleLit : { roughness: F.poleRoughness, metalness: F.poleMetalness };
+    this.poleMat.roughness = look.roughness;
+    this.poleMat.metalness = look.metalness;
   }
 
   /** Once per frame. `time` (s) drives the ripple. */

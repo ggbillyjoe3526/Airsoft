@@ -38,6 +38,21 @@ describe('map signs (decals, map asset group)', () => {
     }
   });
 
+  it('places the same signs on a map turned a quarter turn (engine-level: no map-specific axis)', () => {
+    const swap = <T extends { x: number; y: number; z: number }>(v: T): T => ({ ...v, x: v.z, z: v.x });
+    const turned = {
+      ...DEPOT,
+      blocks: DEPOT.blocks.map((b) => ({ ...b, center: swap(b.center), size: swap(b.size) })),
+      deadZones: DEPOT.deadZones.map((zone) => zone.map((p) => ({ ...p, position: swap(p.position) }))),
+    } as typeof DEPOT;
+    const count = (list: typeof quads, rect: readonly number[]) => list.filter((q) => q.rect.every((v, i) => v === rect[i])).length;
+    const turnedQuads = decalQuads(turned);
+    expect(count(turnedQuads, rects.roundel)).toBe(count(quads, rects.roundel));
+    expect(count(turnedQuads, rects.roundel)).toBeGreaterThanOrEqual(1);
+    // On the walls along the longer side: they face across the short axis (x, once turned).
+    for (const q of turnedQuads.filter((q) => q.rect.every((v, i) => v === rects.roundel[i]))) expect(q.axis).toBe(0);
+  });
+
   it('draws every picture from inside the atlas', () => {
     for (const r of [...rects.stencils, rects.roundel, rects.safeZone, rects.chevrons]) {
       expect(r[0]).toBeGreaterThanOrEqual(0);

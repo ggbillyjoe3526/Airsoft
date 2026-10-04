@@ -14,9 +14,28 @@ import { withoutEnvironment } from './surfaceMaterials';
 const tmp = new THREE.Color();
 const glow = new THREE.Color();
 
+/** The values a sky is painted from (sRGB hex colours): ATMOSPHERE's daytime sky unless a map brings its own. */
+export interface SkyPalette {
+  zenith: number;
+  horizon: number;
+  below: number;
+  sunGlow: number;
+  sunGlowPower: number;
+  horizonFalloff: number;
+}
+
+export const DEFAULT_SKY: SkyPalette = {
+  zenith: ATMOSPHERE.zenith,
+  horizon: ATMOSPHERE.horizon,
+  below: ATMOSPHERE.below,
+  sunGlow: ATMOSPHERE.sunGlow,
+  sunGlowPower: ATMOSPHERE.sunGlowPower,
+  horizonFalloff: ATMOSPHERE.horizonFalloff,
+};
+
 /** The sky's colour (linear RGB, into `out`) looking along the unit direction `dir`, with the sun along `sun`. */
-export function skyColour(dir: THREE.Vector3, sun: THREE.Vector3, out: THREE.Color): THREE.Color {
-  const A = ATMOSPHERE;
+export function skyColour(dir: THREE.Vector3, sun: THREE.Vector3, out: THREE.Color, sky: SkyPalette = DEFAULT_SKY): THREE.Color {
+  const A = sky;
   const h = dir.y;
   if (h >= 0) {
     out.setHex(A.horizon).lerp(tmp.setHex(A.zenith), 1 - Math.pow(1 - h, A.horizonFalloff));
@@ -100,23 +119,37 @@ export function shadedCrown(geo: THREE.BufferGeometry, color: number, centreY: n
 }
 
 /** Where a tree of the ring stands and how it looks, drawn from `rng` (the same for both ring styles). */
-function placeTree(rng: RngState, i: number, count: number, centre: THREE.Vector3): { x: number; z: number; height: number; color: number; broad: boolean } {
+/**
+ * The tree ring's inner radius (metres from `centre`) round `field`: ATMOSPHERE.trees.ringMin, or further out on a
+ * field whose far corner comes within `ringClearance` of it, so no map gets trees inside it (Depot and the range keep
+ * the configured ring). The ring keeps its width. Exported for the tests.
+ */
+export function treeRingStart(centre: THREE.Vector3, field: THREE.Box3 | null): number {
+  const T = ATMOSPHERE.trees;
+  if (!field || field.isEmpty()) return T.ringMin;
+  const dx = Math.max(Math.abs(field.min.x - centre.x), Math.abs(field.max.x - centre.x));
+  const dz = Math.max(Math.abs(field.min.z - centre.z), Math.abs(field.max.z - centre.z));
+  return Math.max(T.ringMin, Math.hypot(dx, dz) + T.ringClearance);
+}
+
+function placeTree(rng: RngState, i: number, count: number, centre: THREE.Vector3, ringMin: number): { x: number; z: number; height: number; color: number; broad: boolean } {
   const T = ATMOSPHERE.trees;
   // Evenly round the ring with a little jitter, so there are no bare gaps.
   const angle = ((i + rngNext(rng) * 0.8) / count) * Math.PI * 2;
-  const dist = T.ringMin + rngNext(rng) * (T.ringMax - T.ringMin);
+  const dist = ringMin + rngNext(rng) * (T.ringMax - T.ringMin);
   const height = T.heightMin + rngNext(rng) * (T.heightMax - T.heightMin);
   const color = T.colors[Math.floor(rngNext(rng) * T.colors.length)]!;
   return { x: centre.x + Math.cos(angle) * dist, z: centre.z + Math.sin(angle) * dist, height, color, broad: rngNext(rng) < T.broadShare };
 }
 
 /** The simple ring (Trees: Simple, the look before the overhaul): pines and broadleaves, one flat-shaded mesh. */
-function simpleTrees(centre: THREE.Vector3): THREE.BufferGeometry[] {
+function simpleTrees(centre: THREE.Vector3, field: THREE.Box3 | null): THREE.BufferGeometry[] {
   const T = ATMOSPHERE.trees;
   const rng = createRng(T.seed);
+  const ringMin = treeRingStart(centre, field);
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < T.count; i++) {
-    const { x, z, height, color, broad } = placeTree(rng, i, T.count, centre);
+    const { x, z, height, color, broad } = placeTree(rng, i, T.count, centre, ringMin);
     const trunkHeight = height * 0.25;
     parts.push(painted(new THREE.CylinderGeometry(height * 0.025, height * 0.035, trunkHeight, 5).translate(x, trunkHeight / 2, z), T.trunk));
     if (broad) {
@@ -139,9 +172,10 @@ function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.B
   const T = ATMOSPHERE.trees;
   const D = ATMOSPHERE.detailedTrees;
   const rng = createRng(T.seed);
+  const ringMin = treeRingStart(centre, field);
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < D.count; i++) {
-    const { x, z, height, color, broad } = placeTree(rng, i, D.count, centre);
+    const { x, z, height, color, broad } = placeTree(rng, i, D.count, centre, ringMin);
     const trunkHeight = height * 0.25;
     parts.push(painted(new THREE.CylinderGeometry(height * 0.025, height * 0.035, trunkHeight, D.trunkSides).translate(x, trunkHeight / 2, z), T.trunk));
     if (broad) {
@@ -209,7 +243,7 @@ function shrubs(field: THREE.Box3, sun: THREE.Vector3): THREE.BufferGeometry[] {
 /** The tree ring for a Trees setting, as one mesh (null for none). */
 function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null): THREE.Mesh | null {
   if (level === 0) return null;
-  const parts = level === 1 ? simpleTrees(centre) : detailedTrees(centre, sun, field);
+  const parts = level === 1 ? simpleTrees(centre, field) : detailedTrees(centre, sun, field);
   const merged = mergeGeometries(parts);
   for (const p of parts) p.dispose();
   if (!merged) throw new Error('no trees');

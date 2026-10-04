@@ -92,7 +92,7 @@ acceptance:
   10. Flagpole and cloth: with Map detail a finial, rope and cleat and a finer painted cloth whose ripple is damped near the pole; the plain cloth's ripple is unchanged (flagRenderer.test.ts)
   11. Range targets: with Map detail chains, arm, safety band, hinge brackets, a shelf of BB bottles, scuffed plates and painted figures (rangeTargetsRenderer.test.ts)
   12. Low keeps today's cost: every new feature off or at today's value on Low; its draw calls rise only by the contact shadows and its triangles and textures not at all (render.test.ts; perf numbers in DECISIONS)
-  13. Medium stays within 80 draw calls, 110k triangles, 16 programs and 30 MB of textures, High within 130k triangles and 80 MB (DECISIONS)
+  13. Medium stays within 80 draw calls, 110k triangles, 16 programs and 30 MB of textures, High within 130k triangles and 80 MB, on Depot and the practice range (draw calls) (DECISIONS)
   14. KNOWN_ISSUES: the bump-map and tree rows are struck or reworded; PLAYTEST has the FA7 checks
 status: gates
-attempts: 1
+attempts: 2

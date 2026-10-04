@@ -64,6 +64,31 @@ describe('range targets with map detail (audit section 5)', () => {
     expect(near).toBeGreaterThan(a.length / 2);
   });
 
+  it('moves only the instances of the target that was hit, and only while it moves', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
+    const targets = createRangeTargets();
+    const r = new RangeTargetsRenderer(targets, HITS);
+    const movers = (): THREE.InstancedMesh[] => r.object.children.filter((o): o is THREE.InstancedMesh => o instanceof THREE.InstancedMesh);
+    const matrices = (): number[][] => movers().map((m) => Array.from(m.instanceMatrix.array));
+    const versions = (): number[] => movers().map((m) => m.instanceMatrix.version);
+    const still = matrices();
+    const v0 = versions();
+    r.update(0.1);
+    expect(versions()).toEqual(v0); // nothing moved: nothing uploaded
+    const steel = targets.find((t) => t.kind === 'steel')!;
+    r.afterTick([{ type: 'targetHit', targetId: steel.id, kind: 'steel', shooterId: 0, position: steel.position, ricochet: false }]);
+    r.update(Math.PI / 2 / RANGE_VISUALS.swingRate);
+    const swung = matrices();
+    const changed = swung.map((m, k) => m.some((x, j) => x !== still[k]![j]));
+    expect(changed.filter(Boolean).length).toBe(2); // that plate and its chain
+    const figure = targets.find((t) => t.kind === 'figure')!;
+    figure.down = RANGE.figureDownTime / 2;
+    r.update(0);
+    const fallen = matrices();
+    expect(fallen.map((m, k) => m.some((x, j) => x !== swung[k]![j])).filter(Boolean).length).toBe(2); // its torso and head
+    r.dispose();
+  });
+
   it('shows its chains, arms, bands, brackets and shelf and paints its plates only with map detail', () => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
     const r = new RangeTargetsRenderer(createRangeTargets(), HITS);
@@ -81,6 +106,9 @@ describe('range targets with map detail (audit section 5)', () => {
     r.setDetail(true);
     const detailed = visible();
     expect(detailed.meshes).toBeGreaterThan(plain.meshes);
+    // Few draw calls: one chain mesh per plate (it swings with the plate) and one mesh for every static fitting.
+    const plates = createRangeTargets().filter((t) => t.kind === 'steel').length;
+    expect(detailed.meshes - plain.meshes).toBeLessThanOrEqual(plates + 1);
     expect(detailed.mapped).toBeGreaterThan(plain.mapped);
     r.setDetail(false);
     expect(visible()).toEqual(plain);

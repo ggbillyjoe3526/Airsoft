@@ -13,7 +13,8 @@ import {
 import type { FigureModel } from './externalModels';
 import { GpuTimer } from './gpuTimer';
 import { createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
-import { ReplicaSheen } from './replicaSheen';
+import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
+import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 
 const REFERENCE_ASPECT = 16 / 9;
 const DEG = Math.PI / 180;
@@ -97,6 +98,8 @@ export class Renderer {
    * freed while neither setting wants it (REN-06).
    */
   private readonly sheen = new ReplicaSheen();
+  /** The sky the environment map is made from: the engine's daytime sky until a session passes another. */
+  private environmentLook: EnvironmentLook = defaultEnvironmentLook();
   /** The scene's environment must be set again before the next frame (settings changed, a new or restored context). */
   private environmentDirty = true;
   /** Settings → Graphics → Tone mapping (F2): not part of a preset. */
@@ -191,7 +194,17 @@ export class Renderer {
    * shared by every match and range; null while Replica sheen is off. Sessions must not dispose it.
    */
   get replicaSheen(): THREE.Texture | null {
-    return this.sheen.texture(this.gl, this.quality.replicaSheen);
+    return this.sheen.texture(this.gl, this.quality.replicaSheen, this.environmentLook);
+  }
+
+  /**
+   * The sky the environment map and the replica's sheen reflect (render/replicaSheen.ts EnvironmentLook): a map with
+   * another sky passes its own; the prefiltered target is made again for a new look on the next frame. Sessions that
+   * hold the sheen (CombatPresentation) ask for it again after this.
+   */
+  setEnvironmentLook(look: EnvironmentLook): void {
+    this.environmentLook = look;
+    this.environmentDirty = true;
   }
 
   /** The tone mapping in use (Settings → Graphics). */
@@ -258,6 +271,8 @@ export class Renderer {
     }
     if (this.surfaces) setSurfaceAnisotropy(this.surfaces, quality.anisotropy);
     this.sheen.trim(quality.replicaSheen || quality.environment);
+    // Normal maps are freed while nothing draws with them, like the sheen (made again when a material asks).
+    if (this.surfaces && !usesNormalMaps(quality)) releaseNormalMaps(this.surfaces);
     this.environmentDirty = true;
     const replaced = quality.antialias !== this.contextAntialias && this.replaceContext(quality.antialias);
     this.gl.shadowMap.enabled = quality.shadows;
@@ -314,7 +329,7 @@ export class Renderer {
    */
   private applyEnvironment(): void {
     this.environmentDirty = false;
-    this.scene.environment = this.sheen.texture(this.gl, this.quality.environment);
+    this.scene.environment = this.sheen.texture(this.gl, this.quality.environment, this.environmentLook);
     this.scene.environmentIntensity = ENVIRONMENT.intensity;
   }
 

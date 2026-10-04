@@ -6,6 +6,7 @@ import { appendCuboid, type Buffers, type Cuboid, type CuboidShape, emptyBuffers
 import { buildMapDecals, disposeMapDecals, drawDecalAtlas } from './mapDecals';
 import type { ProceduralTexture, SurfaceTextures } from './proceduralTextures';
 import { isSurfaceMaterial, setReliefMaps, type SurfaceMaterial, withoutEnvironment } from './surfaceMaterials';
+import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 import { buildOccluders, type Occluders, occlusionAt, occlusionShade } from './vertexOcclusion';
 
 interface KindStyle {
@@ -772,7 +773,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
 /**
  * A new look for a built map (Settings → Graphics): built again (a new group in the old one's place, the old one freed)
  * when its geometry or materials change (map detail, the steel's sheen), else its textures and relief follow in place.
- * Returns the map's group. `decalAtlas` as for buildMapMeshes.
+ * Returns the map's group. `decalAtlas` as for buildMapMeshes. Normal maps the new look doesn't draw are freed.
  */
 export function restyleMap(
   group: THREE.Group,
@@ -782,15 +783,21 @@ export function restyleMap(
   to: MapLook,
   decalAtlas: (() => THREE.Texture) | null = drawDecalAtlas,
 ): THREE.Group {
+  // Normal maps nothing draws with any more are freed (they are made again when wanted).
+  const trim = (): void => {
+    if (!usesNormalMaps({ surfaceRelief: to.relief, normalMaps: to.normalMaps })) releaseNormalMaps(textures);
+  };
   if (!mapNeedsRebuild(from, to)) {
     setMapTextures(group, textures);
     setMapRelief(group, textures, to);
+    trim();
     return group;
   }
   const parent = group.parent;
   disposeMapMeshes(group);
   const next = buildMapMeshes(map, textures, to, decalAtlas);
   parent?.add(next);
+  trim();
   return next;
 }
 

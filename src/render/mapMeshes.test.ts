@@ -304,6 +304,34 @@ describe('the art pass on the map (M14)', () => {
     expect(scene.children).toHaveLength(0);
   });
 
+  it('frees the normal maps once the look stops drawing them (Bump or relief off), as the sheen while off', () => {
+    const fresh = (): SurfaceTextures =>
+      Object.fromEntries(
+        (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => [
+          id,
+          { texture: Object.assign(new THREE.Texture(), { name: id }) as THREE.CanvasTexture, worldSize: SURFACES.worldSize[id], normal: new THREE.Texture() },
+        ]),
+      ) as SurfaceTextures;
+    const set = fresh();
+    const normals = Object.values(set).map((t) => t.normal!);
+    const freed = normals.map((n) => vi.spyOn(n, 'dispose'));
+    let group = buildMapMeshes(DEPOT, set, detailed, atlas);
+    group = restyleMap(group, DEPOT, set, detailed, { ...detailed, relief: true }, atlas);
+    expect(freed.every((f) => f.mock.calls.length === 0)).toBe(true);
+    // Relief maps: Bump (in place): the normal maps go, and every material draws the bump map instead.
+    group = restyleMap(group, DEPOT, set, detailed, { ...detailed, normalMaps: false }, atlas);
+    expect(freed.every((f) => f.mock.calls.length === 1)).toBe(true);
+    expect(Object.values(set).every((t) => t.normal === undefined)).toBe(true);
+    disposeMapMeshes(group);
+    // Built again at Low (relief off): the same.
+    const other = fresh();
+    const otherFreed = Object.values(other).map((t) => vi.spyOn(t.normal!, 'dispose'));
+    group = buildMapMeshes(DEPOT, other, detailed, atlas);
+    group = restyleMap(group, DEPOT, other, detailed, mapLookOf(QUALITY.low), atlas);
+    expect(otherFreed.every((f) => f.mock.calls.length === 1)).toBe(true);
+    disposeMapMeshes(group);
+  });
+
   it('frees the signs’ texture with the map', () => {
     const texture = atlas();
     const dispose = vi.spyOn(texture, 'dispose');

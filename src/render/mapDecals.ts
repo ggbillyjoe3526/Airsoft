@@ -148,10 +148,12 @@ export function decalQuads(map: MapData, size: number = D.atlasSize): DecalQuad[
     return { centre, axis: w.axis, sign: w.sign, width, height, rect };
   };
   const tries = [0, 0.25, -0.25, 0.4, -0.4];
-  // A roundel on the long perimeter walls, as near their middle as is clear.
+  // A roundel on the perimeter walls along the field's longer side (whichever way the map runs), as near their middle
+  // as is clear.
+  const longFace: 0 | 2 = maxX - minX >= maxZ - minZ ? 2 : 0;
   for (const w of perimeter) {
-    if (w.length < D.minWall || w.axis !== 2) continue;
-    const alongAxis: 0 | 2 = 0;
+    if (w.length < D.minWall || w.axis !== longFace) continue;
+    const alongAxis: 0 | 2 = longFace === 2 ? 0 : 2;
     for (const t of tries) {
       if (add(faceAt(w, D.roundelY, vec(w.b)[alongAxis] + t * w.length, D.roundelSize, D.roundelSize, rects.roundel), w.b)) break;
     }

@@ -63,3 +63,17 @@ describe('FlagRenderer.setDetail', () => {
     flag.dispose();
   });
 });
+
+describe('FlagRenderer.setEnvironmentLit', () => {
+  it('keeps the pole’s old paint without Environment lighting (Low) and brushes it to metal with it', () => {
+    const flag = new FlagRenderer([0x2f6fd6, 0xf07a22], 2);
+    const pole = flag.object.children.find((o) => o instanceof THREE.Mesh && o.geometry instanceof THREE.CylinderGeometry && o.position.y === F.poleHeight / 2) as THREE.Mesh;
+    const mat = pole.material as THREE.MeshStandardMaterial;
+    expect([mat.metalness, mat.roughness]).toEqual([0.3, 0.5]);
+    flag.setEnvironmentLit(true);
+    expect([mat.metalness, mat.roughness]).toEqual([F.poleLit.metalness, F.poleLit.roughness]);
+    flag.setEnvironmentLit(false);
+    expect([mat.metalness, mat.roughness]).toEqual([0.3, 0.5]);
+    flag.dispose();
+  });
+});

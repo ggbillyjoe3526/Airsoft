@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SURFACES, type SurfaceTextureId } from '../config/render';
-import type { ProceduralTexture } from './proceduralTextures';
+import type { ProceduralTexture, SurfaceTextures } from './proceduralTextures';
 
 /** Rec. 601 luma weights: a pixel's brightness, read as its height. */
 const LUMA = [0.299, 0.587, 0.114] as const;
@@ -82,4 +82,25 @@ export function ensureNormalMap(surface: ProceduralTexture): THREE.Texture {
   normal.name = `${surface.texture.name}-normal`;
   surface.normal = normal;
   return normal;
+}
+
+/**
+ * Frees the surfaces' normal maps while nothing draws with them (relief off, or Relief maps: Bump), as the sheen is
+ * freed while off: a 512² set is about 11 MB. They are worked out again the next time a material asks
+ * (ensureNormalMap). Returns how many it freed.
+ */
+export function releaseNormalMaps(textures: SurfaceTextures): number {
+  let freed = 0;
+  for (const surface of Object.values(textures) as ProceduralTexture[]) {
+    if (!surface.normal) continue;
+    surface.normal.dispose();
+    delete surface.normal;
+    freed++;
+  }
+  return freed;
+}
+
+/** Whether a look draws normal maps (Surface relief on, Relief maps: Normal). */
+export function usesNormalMaps(q: { surfaceRelief: boolean; normalMaps: boolean }): boolean {
+  return q.surfaceRelief && q.normalMaps;
 }

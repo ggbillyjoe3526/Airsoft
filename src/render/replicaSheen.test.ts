@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { ENVIRONMENT, QUALITY } from '../config/render';
 import { skyColour } from './atmosphere';
-import { disposeEnvironmentScene, ReplicaSheen, type SheenTarget, skyEnvironmentScene, sunDirection } from './replicaSheen';
+import { defaultEnvironmentLook, disposeEnvironmentScene, ReplicaSheen, type SheenTarget, skyEnvironmentScene, sunDirection } from './replicaSheen';
 
 /** A stand-in for the prefiltered target: no WebGL needed. */
 function fakeFactory() {
@@ -89,5 +89,35 @@ describe('the sky-derived environment map (audit section 5, F1)', () => {
   it('points at the sun the lighting places', () => {
     expect(sunDirection().length()).toBeCloseTo(1);
     expect(sunDirection().y).toBeGreaterThan(0);
+  });
+});
+
+describe('the environment map per sky (engine-level: a map with another sky gets its own)', () => {
+  it('is built from the sky values passed in, not the daytime constants', () => {
+    const day = defaultEnvironmentLook();
+    const night = { ...day, sky: { ...day.sky, zenith: 0x0b1530, horizon: 0x1c2a44 }, ground: 0x30302c };
+    const scene = skyEnvironmentScene(night);
+    const sky = scene.children.find((o) => o.name !== 'ground') as THREE.Mesh;
+    const col = sky.geometry.getAttribute('color');
+    const pos = sky.geometry.getAttribute('position');
+    const want = skyColour(new THREE.Vector3().fromBufferAttribute(pos, 0).normalize(), sunDirection(), new THREE.Color(), night.sky);
+    expect(col.getZ(0)).toBeCloseTo(want.b);
+    expect(((scene.getObjectByName('ground') as THREE.Mesh).material as THREE.MeshBasicMaterial).color.getHex()).toBe(0x30302c);
+    disposeEnvironmentScene(scene);
+  });
+
+  it('keeps one prefiltered target per look: the same sky is shared, another sky frees the old and makes its own', () => {
+    const { make, made } = fakeFactory();
+    const sheen = new ReplicaSheen(make);
+    const day = defaultEnvironmentLook();
+    const first = sheen.texture(gl, true, day);
+    expect(sheen.texture(gl, true, defaultEnvironmentLook())).toBe(first);
+    expect(make).toHaveBeenCalledTimes(1);
+    const night = { ...day, sky: { ...day.sky, zenith: 0x0b1530 } };
+    const second = sheen.texture(gl, true, night);
+    expect(second).not.toBe(first);
+    expect(make).toHaveBeenCalledTimes(2);
+    expect(made[0]!.dispose).toHaveBeenCalledTimes(1);
+    expect((make.mock.calls[1] as unknown[])[1]).toBe(night);
   });
 });

@@ -47,12 +47,14 @@ export const ATMOSPHERE = {
   fogFar: 210,
   /**
    * A ring of trees beyond the walls, so the yard sits somewhere: how many, how far from the field's centre
-   * (metres), how tall, and their greens. One merged mesh, never casting shadows.
+   * (metres; a field whose far corner is within `ringClearance` of `ringMin` pushes the ring out, keeping its width:
+   * every map gets it, none has trees inside), how tall, and their greens. One merged mesh, never casting shadows.
    */
   trees: {
     count: 70,
     ringMin: 62,
     ringMax: 100,
+    ringClearance: 20,
     heightMin: 10,
     heightMax: 18,
     /** Radius as a share of the height (pines are slim, broadleaves rounder). */
@@ -83,10 +85,10 @@ export const ATMOSPHERE = {
     shrubs: { spacing: 3, gapFrom: 1.2, gapTo: 3.2, radiusMin: 0.75, radiusMax: 1.25, squash: 0.8, colors: [0x5b8448, 0x678f4d, 0x51773f] },
   },
   /**
-   * Clouds and the sun's disc (QualitySettings.clouds, row 21): `count` flat-bottomed cumulus cards round the sky at
-   * `radius` metres, `widthMin`..`widthMax` wide (half as tall), `elevationMin`..`elevationMax` radians above the
-   * horizon, drawn from one small canvas (`textureWidth` × half that) with the sun's disc in a corner, `sunSize`
-   * radians across. No fog (they are the sky), no depth writes, after the field.
+   * Clouds and the sun's disc (QualitySettings.clouds, row 21): `count` flat-bottomed cumulus clouds round the sky at
+   * `radius` metres, `widthMin`..`widthMax` wide, `elevationMin`..`elevationMax` radians above the horizon, each a few
+   * overlapping soft discs (vertex colours and alpha, `opacity` at the middle, `shade` underneath; no texture), and the
+   * sun as a soft disc `sunSize` radians across. One mesh: no fog (they are the sky), no depth writes, after the field.
    */
   clouds: {
     count: 9,
@@ -99,7 +101,6 @@ export const ATMOSPHERE = {
     shade: 0xd8e2ee,
     sunSize: 0.035,
     sunColour: 0xfff6dc,
-    textureWidth: 512,
     seed: 3301,
   },
 } as const;
@@ -182,7 +183,7 @@ export interface QualitySettings {
   mapDetail: boolean;
   /** Trees round the field: 0 none, 1 the simple ring (the look before the overhaul), 2 layered crowns and a hedge. */
   trees: TreeDetail;
-  /** Clouds and the sun's disc in the sky (row 21): one merged mesh of cards and one small texture. */
+  /** Clouds and the sun's disc in the sky (row 21): one merged mesh of soft discs, no texture. */
   clouds: boolean;
 }
 
@@ -812,9 +813,10 @@ export const FLAG_VISUALS = {
   poleHeight: 3.4,
   poleRadius: 0.035,
   poleColor: 0xe9e6dd,
-  /** Brushed aluminium (audit section 5: a pole that picks up the sky with environment lighting). */
-  poleRoughness: 0.35,
-  poleMetalness: 0.7,
+  /** The pole's paint as before the overhaul; with Environment lighting, brushed aluminium that picks up the sky (`poleLit`). */
+  poleRoughness: 0.5,
+  poleMetalness: 0.3,
+  poleLit: { roughness: 0.35, metalness: 0.7 },
   poleSegments: 10,
   baseRadius: 0.28,
   /** The base tapers to this radius at the top (metres). */

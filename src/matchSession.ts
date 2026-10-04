@@ -178,7 +178,7 @@ export class MatchSession {
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map.blocks, renderer.figureModel);
     this.match.setFigureShadows(quality.figureShadows);
-    this.match.setFlagDetail(quality.mapDetail);
+    this.match.setFlagQuality(quality);
     this.contact = new ContactShadows(this.state.characters, this.hits.vanishTime);
     renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
@@ -298,7 +298,7 @@ export class MatchSession {
     this.mapGroup = restyleMap(this.mapGroup, this.mapData, this.renderer.surfaceTextures, this.mapLook, look);
     this.mapLook = look;
     this.match.setFigureShadows(quality.figureShadows);
-    this.match.setFlagDetail(quality.mapDetail);
+    this.match.setFlagQuality(quality);
     this.combat.setQuality(quality);
   }
 
