@@ -240,7 +240,8 @@ function pickFlagSpot(b: Bot, w: BotWorld): void {
 
 /**
  * A search begins (AI-17): with the skill's flankChance, and a far enough spot, go round by a point flankOffset to one
- * side of the straight way first (walkable, on that spot's floor), so the bot comes at it from the side.
+ * side of the straight way and flankBack short of the spot first (walkable, on that spot's floor), so the bot comes at
+ * it from the side.
  */
 export function startSearch(b: Bot, w: BotWorld): void {
   const cfg = w.cfg;
@@ -254,8 +255,8 @@ export function startSearch(b: Bot, w: BotWorld): void {
   const uz = (k.z - p.z) / d;
   const first = rngNext(b.rng) < 0.5 ? 1 : -1;
   for (let side = first, i = 0; i < 2; i++, side = -side) {
-    const x = k.x - ux * cfg.flankOffset * 0.5 - uz * cfg.flankOffset * side;
-    const z = k.z - uz * cfg.flankOffset * 0.5 + ux * cfg.flankOffset * side;
+    const x = k.x - ux * cfg.flankBack - uz * cfg.flankOffset * side;
+    const z = k.z - uz * cfg.flankBack + ux * cfg.flankOffset * side;
     if (!onSameFloor(w, k, x, z)) continue;
     b.flankGoal.x = x;
     b.flankGoal.y = floorAt(w.nav, x, z);
@@ -300,7 +301,7 @@ export function followRoute(b: Bot, w: BotWorld, dt: number, whilePlanning = fal
 }
 
 /** Advance mode: lane points with a pause (and maybe cover) at each, then hunting. See moveBot. */
-function advance(b: Bot, w: BotWorld, dt: number): boolean {
+function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
   const cfg = w.cfg;
   if (b.holdLeft > 0) {
     b.holdLeft -= dt;
@@ -338,8 +339,10 @@ function advance(b: Bot, w: BotWorld, dt: number): boolean {
     const goal = nextAdvanceGoal(b, w);
     if (!goal) {
       // A defender at its post holds there (crouched and watching, AI-02); an attacker is off to the pole next tick.
+      // Whether to crouch is chosen once, on arrival, and kept while it stays (`atPost`: it was here last tick too).
       if (flagRole(b, w) === 'defend') {
-        if (!b.holding) b.holdCrouch = crouchedViewClear(b, w, b.character.position);
+        if (!atPost) b.holdCrouch = crouchedViewClear(b, w, b.character.position);
+        b.atPost = true;
         b.holding = true;
         b.teamWait += dt;
       }
@@ -435,9 +438,12 @@ function flag(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): boolean {
 export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, target?: Character): boolean {
   const cfg = w.cfg;
   b.holding = false;
+  // Any tick not spent settled at the post (advance sets it again) ends the hold there, so the next is a fresh one.
+  const atPost = b.atPost;
+  b.atPost = false;
   switch (b.mode) {
     case 'advance':
-      return advance(b, w, dt);
+      return advance(b, w, dt, atPost);
     case 'search':
       return search(b, w, cmd, dt);
     case 'flag':

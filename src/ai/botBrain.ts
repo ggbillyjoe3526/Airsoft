@@ -233,6 +233,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.switchTo = 0; // bots use their primary
   if (!isInPlay(me)) {
     b.mode = 'advance';
+    b.atPost = false;
     b.aim.yaw = cmd.yaw = me.yaw;
     b.aim.pitch = cmd.pitch = me.pitch;
     return;

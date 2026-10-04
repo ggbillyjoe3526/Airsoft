@@ -257,6 +257,48 @@ describe('cover and holding (audit AI-02, AI-13)', () => {
   });
 });
 
+describe('a defender at its post (audit AI-02)', () => {
+  it('chooses whether to crouch once, on arrival, keeps that while it stays, and chooses afresh after leaving', () => {
+    let open = true; // crouched eyes see the enemy side
+    let rays = 0;
+    const query: WorldQuery = {
+      raycastStatic: (_o, _d, max) => {
+        rays++;
+        return open ? -1 : max * 0.5;
+      },
+    };
+    const { state, bots } = depotBots('attackDefend', query);
+    state.round.attackers = 0; // Blue attacks: the bots (Orange) defend
+    const w = bots.worldForTests;
+    const b = bots.bots[0]!;
+    // Lane walked: nowhere further to go, so it holds where it stands.
+    b.mode = 'advance';
+    b.lanePoints = 0;
+    b.hunting = false;
+    b.holdLeft = 0;
+    b.waitForTeam = false;
+    b.holdCover = false;
+    b.routeState = 'none';
+    const cmd = createCommand();
+    moveBot(b, w, cmd, DT);
+    expect(b.holding).toBe(true);
+    expect(b.holdCrouch).toBe(true);
+    open = false; // the view would now be blocked: but the choice stands for this hold
+    rays = 0;
+    for (let i = 0; i < 120; i++) moveBot(b, w, cmd, DT);
+    expect(rays).toBe(0); // no ray a tick while it stays
+    expect(b.holding).toBe(true);
+    expect(b.holdCrouch).toBe(true);
+    // Off the post for a tick (into cover), then back: a new hold, a new choice.
+    b.mode = 'cover';
+    moveBot(b, w, cmd, DT);
+    b.mode = 'advance';
+    moveBot(b, w, cmd, DT);
+    expect(rays).toBe(1);
+    expect(b.holdCrouch).toBe(false);
+  });
+});
+
 describe('reacting to fire (audit AI-04, AI-09, AI-15)', () => {
   it('goes after a shooter beyond hearing range whose BB lands close by', () => {
     const wall = boxQuery(0, -20, 4, 0.3, 3);
@@ -356,8 +398,9 @@ describe('search (audit AI-14, AI-17)', () => {
         startSearch(b, w);
         if (!b.flanking) continue;
         n++;
-        // Off the straight way by flankOffset, on the spot's floor.
+        // Off the straight way by flankOffset, flankBack short of the spot, on the spot's floor.
         expect(Math.abs(b.flankGoal.z)).toBeCloseTo(BOTS.flankOffset);
+        expect(b.flankGoal.x).toBeCloseTo(BOTS.flankBack);
         expect(b.flankGoal.y).toBe(floorAt(nav, b.flankGoal.x, b.flankGoal.z));
       }
       return n;

@@ -98,6 +98,8 @@ export interface Bot {
   holding: boolean;
   /** Whether to crouch while holding here: decided once per hold by one ray towards the enemy side (AI-02). */
   holdCrouch: boolean;
+  /** A defender settled at its post last tick: its holdCrouch was chosen on arrival and stands until it leaves (AI-02). */
+  atPost: boolean;
   /** On the way to cover by the lane point just reached, to hold from there (AI-02). */
   holdCover: boolean;
   holdSpot: CoverSpot;
@@ -234,6 +236,7 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     waitForTeam: false,
     holding: false,
     holdCrouch: false,
+    atPost: false,
     holdCover: false,
     holdSpot: createCoverSpot(),
     searchLookLeft: 0,
@@ -309,6 +312,7 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.teamWait = 0;
   b.waitForTeam = false;
   b.holding = false;
+  b.atPost = false;
   b.holdCover = false;
   b.searchLookLeft = 0;
   b.flanking = false;

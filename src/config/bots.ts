@@ -236,6 +236,8 @@ export const BOT_BEHAVIOUR = {
    */
   flankMinDistance: 8,
   flankOffset: 4,
+  /** How far short of the searched spot (metres, along the straight way) the flank point lies: it comes in from the side. */
+  flankBack: 2,
   /** Sprint along routes when nobody has been seen or heard for this long (s), if heading mostly forward. */
   sprintWhenCalmFor: 3,
   sprintForward: 0.9,
