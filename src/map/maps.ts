@@ -6,7 +6,7 @@ export type MapId = 'depot';
 
 /** The maps in the order New game's Map pop-up lists them, with their labels. */
 export const MAPS: readonly { id: MapId; label: string; blurb: string; data: MapData }[] = [
-  { id: 'depot', label: 'Depot', blurb: 'A warehouse yard: three lanes (Dock Road, Container Alley, the Office) to one flagpole.', data: DEPOT },
+  { id: 'depot', label: 'Depot', blurb: 'An abandoned warehouse yard.', data: DEPOT },
 ];
 
 export const DEFAULT_MAP: MapId = 'depot';

@@ -5,9 +5,10 @@ import type { ImpactMaterial } from './sounds';
 export const RENDER = {
   /**
    * Horizontal field of view in degrees on a 16:9 screen (CS ≈ 106°, Valorant 103°). Wider screens get
-   * more horizontal view with the same vertical FOV ("Hor+"), so ultrawide doesn't fisheye.
+   * more horizontal view with the same vertical FOV ("Hor+"), so ultrawide doesn't fisheye. The default for the Field of
+   * view setting: 90 (owner, 2026-10-04; was 100).
    */
-  horizontalFov16x9: 100,
+  horizontalFov16x9: 90,
   near: 0.05,
   far: 250,
   /** Anisotropic filtering for surface textures; keeps floor detail readable at grazing angles. */

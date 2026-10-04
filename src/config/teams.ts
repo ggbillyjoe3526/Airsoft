@@ -37,7 +37,7 @@ export const TEAM_COLOUR_SETS: Readonly<Record<TeamColourSetId, TeamColours>> = 
 
 export const TEAM_COLOUR_CHOICES: readonly { id: TeamColourSetId; label: string; blurb: string }[] = [
   { id: 'standard', label: 'Standard', blurb: 'Blue and orange: they stay apart for the common kinds of colour blindness.' },
-  { id: 'highContrast', label: 'High contrast', blurb: 'Light blue and dark orange: apart in lightness too, for little or no colour vision. From the next match.' },
+  { id: 'highContrast', label: 'High Contrast', blurb: 'Light blue and dark orange: apart in lightness too, for little or no colour vision. From the next match.' },
 ];
 
 export const DEFAULT_TEAM_COLOURS: TeamColourSetId = 'standard';

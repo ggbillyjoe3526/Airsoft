@@ -51,6 +51,13 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
 - **M20 custom matches:** `config/matchRules.ts`; match code reads `MatchSession.rounds` / `.hits`, never `ROUNDS` /
   `HITS`. Ricochets in `sim/ricochet.ts`. Team colours via `teamCss(team)`, never hard-coded.
 - **M21 range:** `map/range.ts`, `rangeSession.ts`; targets are sim data (`sim/rangeTargets.ts`).
+- **M24 menus and settings polish** (the owner's playtest notes 5–10, 13, 14): the version from git
+  (`config/buildVersion.ts`, `vite.config.ts`, `.git_archival.txt`; no `BUILD_LABEL` to bump), Settings → HUD
+  (`ui/hudSettings.ts`: scoreboard size as `--sb-scale`, hit feed Fade / Keep in `ui/hitFeed.ts`), sound cue size and
+  colour (`--cue-scale`, `--cue-colour`; all three set by `Game.showHudLook`). **Dev settings:** `config/dev.ts` lists
+  them (add one there, then read it in `Game.applyDev`); `Game.dev` holds what applies (the defaults while the box is
+  unticked). `dev.disableArmory` and `dev.unlockAllGear` are saved but read by nothing until the Armory and the gear
+  pool (M26) do.
 - **M22 squad orders:** `ai/squadOrders.ts` (spots), `BotController.giveOrder`, mode `order` in `botBrain.chooseMode`;
   tuning in `config/squad.ts`; keys F (Z before M23), X, V.
 - **M23 minimap and order wheel:** `config/minimap.ts`, `ui/minimap.ts` (canvas; the field drawn once per match from

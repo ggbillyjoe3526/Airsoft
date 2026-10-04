@@ -10,7 +10,43 @@ export const HIT_FEED = {
   /** Seconds a line stays up (simulation time, so a pause holds it), the last `fadeTime` of them fading out. */
   lineTime: 6,
   fadeTime: 1,
+  /** Lines kept when the feed is set to Keep (Settings → HUD, M24): the match's last this many hits, none fading. */
+  keptLines: 10,
 } as const;
+
+/** Settings → HUD → Hit feed (M24): lines fade as before, or the last few stay up for the whole match. */
+export type HitFeedMode = 'fade' | 'keep';
+
+export const HIT_FEED_MODES: readonly { id: HitFeedMode; label: string; blurb: string }[] = [
+  { id: 'fade', label: 'Fade', blurb: `Each hit shows for ${HIT_FEED.lineTime} s, up to ${HIT_FEED.maxLines} at once.` },
+  { id: 'keep', label: 'Keep', blurb: `The last ${HIT_FEED.keptLines} hits stay on screen for the whole match.` },
+];
+
+export const DEFAULT_HIT_FEED_MODE: HitFeedMode = 'fade';
+
+/**
+ * Settings → HUD → Scoreboard size (M24; owner, 2026-10-04: larger than before, and adjustable): a scale on the
+ * scoreboard over the field, 1 = its size before M24.
+ */
+export const SCOREBOARD_SIZE = {
+  min: 0.8,
+  max: 2,
+  step: 0.1,
+  default: 1.3,
+  /** Half the scoreboard's width at size 1 in its widest form (Attack and Defend), px. */
+  halfWidth: 222,
+  /** Room kept between the scoreboard and the screen's right edge for the hit feed, px (bug pass: never under it). */
+  feedRoom: 220,
+} as const;
+
+/**
+ * The scoreboard's scale on a `viewportWidth` px wide screen for the size picked: as picked, unless that would leave the
+ * hit feed less than SCOREBOARD_SIZE.feedRoom beside it; then as large as fits, but never below size 1.
+ */
+export function scoreboardScale(picked: number, viewportWidth: number): number {
+  const fits = (viewportWidth / 2 - SCOREBOARD_SIZE.feedRoom) / SCOREBOARD_SIZE.halfWidth;
+  return Math.min(picked, Math.max(1, fits));
+}
 
 /** The marker with the name over each teammate (never over an enemy). */
 export const TEAMMATE_MARKERS = {
@@ -55,10 +91,10 @@ export const DEFAULT_CROSSHAIR: CrosshairSettings = {
 };
 
 export const CROSSHAIR_SHAPES: readonly { id: CrosshairShape; label: string; blurb: string }[] = [
-  { id: 'crossDot', label: 'Cross and dot', blurb: 'Four arms that open with your spread, and a dot in the middle.' },
+  { id: 'crossDot', label: 'Cross and Dot', blurb: 'Four arms that open with your spread, and a dot in the middle.' },
   { id: 'cross', label: 'Cross', blurb: 'Four arms that open with your spread.' },
   { id: 'circle', label: 'Circle', blurb: 'A ring as wide as your spread, and a dot in the middle.' },
-  { id: 'dot', label: 'Dot only', blurb: 'Just a dot: it does not show your spread.' },
+  { id: 'dot', label: 'Dot Only', blurb: 'Just a dot: it does not show your spread.' },
 ];
 
 /** Colours a crosshair can take. Blue and orange are left out: they are the teams' colours. */

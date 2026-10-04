@@ -9,8 +9,9 @@ export interface ResultActions {
 }
 
 /**
- * The end of a match: who won and the score, then Play Again (same setup), Change setup (New game), Title screen, or
- * Match summary to look at the numbers again.
+ * The end of a match: who won and the score, then Play Again (same setup), New Game (the New game screen to change
+ * it), Summary to look at the numbers again, or Quit (to the title screen). Labels kept to a word or two (owner,
+ * 2026-10-04).
  */
 export class ResultScreen {
   readonly root: HTMLDivElement;
@@ -30,9 +31,9 @@ export class ResultScreen {
     playAgain.dataset.autofocus = '';
     buttons.append(
       playAgain,
-      menuButton('Change setup', 'secondary', actions.onChangeSetup),
-      menuButton('Title screen', 'secondary', actions.onTitle),
-      menuButton('Match summary', 'secondary', actions.onSummary),
+      menuButton('New Game', 'secondary', actions.onChangeSetup),
+      menuButton('Summary', 'secondary', actions.onSummary),
+      menuButton('Quit', 'secondary', actions.onTitle),
     );
     const foot = el('div', 'menu-result-foot');
     foot.append(this.hint, buttons);

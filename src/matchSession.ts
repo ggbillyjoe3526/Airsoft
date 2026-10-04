@@ -7,7 +7,8 @@ import { BALLISTICS } from './config/ballistics';
 import { BOT_BEHAVIOUR, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
-import type { CrosshairSettings } from './config/matchInfo';
+import { DEV_DEFAULTS, type DevSettings, devCheating } from './config/dev';
+import type { CrosshairSettings, HitFeedMode } from './config/matchInfo';
 import { countsForRecords, hitRulesFor, type MatchRules, roundRulesFor } from './config/matchRules';
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
@@ -42,6 +43,7 @@ import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
 import type { MatchResult } from './stats/records';
+import type { NotCounted } from './ui/recordsView';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
@@ -69,7 +71,7 @@ export interface MatchSetup {
 /**
  * One match on one map: the field's meshes and lighting, physics, the bots' navigation, the simulation and
  * everything drawn and heard in it. Built when Play is pressed and disposed when the player leaves the match
- * (Quit to title screen, Change setup, Title screen), so the next Play can load another map with another setup.
+ * (Quit, or New Game after it), so the next Play can load another map with another setup.
  * The app around it (renderer, input, menus) outlives it; see Game.
  */
 export class MatchSession {
@@ -101,8 +103,12 @@ export class MatchSession {
   private matchOverAt = Number.NaN;
   /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
   private resultTaken = false;
-  /** The standard match, so its result goes into the records (custom rules don't, M20). */
-  readonly countsForRecords: boolean;
+  /** The standard match, so its result could go into the records (custom rules don't, M20). */
+  private readonly standardRules: boolean;
+  /** Dev settings that change play were on at some point in this match (M24), so it stays out of the records. */
+  private devAssisted = false;
+  /** The Dev settings that change play, as last set. */
+  private cheats: DevSettings = { ...DEV_DEFAULTS };
 
   constructor(
     private readonly renderer: Renderer,
@@ -127,7 +133,7 @@ export class MatchSession {
     this.mode = map.flag ? setup.mode : 'elimination';
     this.rounds = roundRulesFor(setup.rules);
     this.hits = hitRulesFor(setup.rules);
-    this.countsForRecords = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty);
+    this.standardRules = countsForRecords(setup.rules, setup.difficulty, setup.teammateDifficulty);
     this.state = createGameState(seed, BALLISTICS.maxBBs, this.rounds, this.mode, map.flag);
     this.ctx = createSimContext({
       mover: this.physics,
@@ -261,6 +267,32 @@ export class MatchSession {
     this.match.setSoundCues(on);
   }
 
+  /**
+   * The Dev settings that change play (M24): applied to you at once; any of them on, now or earlier in the match, keeps
+   * it out of the records.
+   */
+  setDevCheats(cheats: DevSettings): void {
+    this.cheats = cheats;
+    this.player.armament.bottomless = cheats.bottomlessMags;
+    this.player.ghost = cheats.ghost;
+    if (devCheating(cheats)) this.devAssisted = true;
+  }
+
+  /** Whether this match's result goes into the records: the standard match (M20), played without Dev help (M24). */
+  get countsForRecords(): boolean {
+    return this.standardRules && !this.devAssisted;
+  }
+
+  /** Why it doesn't, for the summary: custom rules, Dev settings, or '' when it counts. */
+  get notCountedReason(): NotCounted {
+    return !this.standardRules ? 'rules' : this.devAssisted ? 'dev' : '';
+  }
+
+  /** Settings → HUD → Hit feed (M24). */
+  setHitFeedMode(mode: HitFeedMode): void {
+    this.match.setHitFeedMode(mode);
+  }
+
   setPlaying(playing: boolean): void {
     this.combat.setPlaying(playing);
     this.match.setPlaying(playing);
@@ -273,6 +305,8 @@ export class MatchSession {
     this.matchOverAt = Number.NaN;
     this.resultTaken = false;
     this.stats.reset();
+    // A new match: it stays out of the records only if Dev help is still on.
+    this.devAssisted = devCheating(this.cheats);
     this.afterTick();
   }
 
