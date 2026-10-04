@@ -364,3 +364,4 @@ One line each: decision, then why.
 - **2026-10-04 · FA1 · Play Again always builds a new session with a new seed derived from the visit seed (SIM-08).** The bots' random streams live in `src/ai` (another worker's area) and can't be reseeded from outside, so a fresh session is the only way the seed on the overlay reproduces the match; `MatchSession.restart` is gone.
 - **2026-10-04 · FA1 · A decided match is recorded and paid on the frame it ends (`settleMatch`), not when the lock is released (CORE-06).** Pausing still settles a finished match, as before.
 
+- **2026-10-04 · M28 · Impact puffs appear at half size (`PuffConfig.startScale`, 0.5 for `IMPACT_PUFFS`) and grow from there over the same `growTime`; their full size and lifetime are unchanged, and the hit and gas puffs keep `startScale: 0` so this change stays with the task.*
