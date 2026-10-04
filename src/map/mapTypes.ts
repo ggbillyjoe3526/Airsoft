@@ -1,6 +1,8 @@
+import type { LightingPreset, LightingPresetId } from '../config/render';
 import type { FloorSurface } from '../config/sounds';
 import type { Vec3 } from '../sim/vec';
 import type { Bush } from './foliage';
+import type { MapLight } from './nightSight';
 import type { Terrain } from './terrain';
 
 /**
@@ -84,8 +86,8 @@ export interface MapData {
    */
   flag?: Vec3;
   /**
-   * The field is played at night (M33): glowing BBs by default (config/glowBBs.ts), and later night lighting. Absent
-   * or false: daylight.
+   * The field is played at night (M33): glowing BBs by default (config/glowBBs.ts), bots see less far in the dark
+   * (map/nightSight.ts), and later night lighting. Absent or false: daylight.
    */
   night?: boolean;
   /**
@@ -97,6 +99,18 @@ export interface MapData {
    * Bushes (M33e, map/foliage.ts): they hide whoever is in or behind them, but BBs and people pass through. Absent: none.
    */
   foliage?: readonly Bush[];
+  /**
+   * Pools of light on a night field (M33g, map/nightSight.ts): camp fires and lanterns. Anyone standing in one is seen from
+   * as far as in daylight. Absent: none.
+   */
+  lights?: readonly MapLight[];
+  /**
+   * How the map is lit (M33f, render/lightingPreset.ts): the lighting presets it can be played under, the first by
+   * default (later a match-start choice picks among them, M34), and `moonOver`, a world point (x, z) the key light is
+   * turned towards from the field's centre (keeping its height), so a low moon rims that hill's top. `overrides` tweaks a
+   * preset's values for this map only. Absent: day.
+   */
+  lighting?: MapLighting;
   /**
    * Floor heights of a map with several storeys (M34c), lowest first (Neon Heights: street, +3, +6). The minimap draws
    * the storey you stand on and marks teammates on other storeys as above or below. Absent: one storey.
@@ -117,4 +131,14 @@ export interface Overlook {
   name: string;
   area: readonly [number, number, number, number];
   from: Vec3[];
+}
+
+/** A tweak of a lighting preset for one map: any group's values (MapData.lighting.overrides). */
+export type LightingOverride = { [K in keyof LightingPreset]?: LightingPreset[K] extends object ? Partial<LightingPreset[K]> : LightingPreset[K] };
+
+/** How a map is lit (MapData.lighting, M33f). */
+export interface MapLighting {
+  presets: readonly [LightingPresetId, ...LightingPresetId[]];
+  moonOver?: { x: number; z: number };
+  overrides?: Partial<Record<LightingPresetId, LightingOverride>>;
 }

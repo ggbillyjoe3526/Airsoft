@@ -94,7 +94,12 @@ ends the round). A hit character is eliminated
   (`surfaceNormals.ts`). The visual overhaul (FA7, `docs/ART.md`) adds the sky-derived environment map
   (`replicaSheen.ts`: the dome's own colours over a concrete disc, prefiltered once per context and per
   `EnvironmentLook` passed to `Renderer.setEnvironmentLook`, freed while off; the `Renderer` sets it as `scene.environment` with Environment lighting, and the map's and trees' Lambert materials opt
-  out, `surfaceMaterials.ts`) and the tone mapping choice (`Renderer.setToneMapping`). `mapMeshes.ts` turns each block
+  out, `surfaceMaterials.ts`) and the tone mapping choice (`Renderer.setToneMapping`). Night lighting (M33f): a map
+  names its lighting presets in its data (`MapData.lighting`, absent means day; `config/render.ts` `LIGHTING_PRESETS`),
+  `lightingPreset.ts` resolves one (`resolveLighting`, the key light turned to the map's `moonOver`), every session
+  passes it to `Renderer.setLighting` (haze, background, exposure, environment) and `addLighting` (key light, fill, sky,
+  clouds), and `lightPools.ts` draws the map's light pools (`MapData.lights`): one glow mesh, one additive ground mesh
+  and, on Medium and High, a fixed number of point lights on the pools nearest the eye (`QualitySettings.poolLights`). `mapMeshes.ts` turns each block
   into pieces (container frames, wall copings, pallets, all inside the block's bounds) merged per texture by
   `cuboidMesh.ts`, with grime shading near the ground; with Map detail the boxes are bevelled with a lighter edge,
   tiled, shaded by baked vertex occlusion (`vertexOcclusion.ts`) and ground noise, the props get extra pieces, the signs

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { HITS } from '../config/hits';
-import { HIT_PUFFS, IMPACT_PUFFS, QUALITY, SURFACES, type SurfaceTextureId } from '../config/render';
+import { HIT_PUFFS, IMPACT_PUFFS, LIGHTING_PRESETS, QUALITY, SURFACES, type SurfaceTextureId } from '../config/render';
 import { LOADOUT } from '../config/replicas';
 import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
@@ -145,7 +145,7 @@ describe('disposal', () => {
     }
     const shadowMap = vi.fn();
     expectClean('addLighting', (scene) => {
-      const daylight = addLighting(scene, DEPOT, QUALITY.high);
+      const daylight = addLighting(scene, DEPOT, QUALITY.high, LIGHTING_PRESETS.day);
       daylight.setQuality(QUALITY.low);
       const sun = scene.children.find((o): o is THREE.DirectionalLight => o instanceof THREE.DirectionalLight)!;
       sun.shadow.map = { dispose: shadowMap } as unknown as THREE.WebGLRenderTarget; // as Three.js makes at the first shadow pass

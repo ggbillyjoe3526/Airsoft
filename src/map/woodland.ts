@@ -1,6 +1,7 @@
 import { createRng, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import type { Bush } from './foliage';
+import type { MapLight } from './nightSight';
 import type { BlockKind, MapBlock, MapData, SpawnPoint } from './mapTypes';
 import { buildTerrain, type Terrain, terrainHeightAt } from './terrain';
 
@@ -466,6 +467,20 @@ function fenceSection(x0: number, x1: number, z0: number, z1: number): MapBlock 
   return { kind: 'fence', center: vec3(worldX((x0 + x1) / 2), (y0 + y1) / 2, worldZ((z0 + z1) / 2)), size: vec3(x1 - x0, y1 - y0, z1 - z0) };
 }
 
+/** Fire and lantern light (hex RGB) and how far each lights the ground (m). */
+const FIRE = { colour: 0xff9a4a, radius: 7, height: 0.5 };
+const LANTERN = { colour: 0xffd27a, radius: 5.5, height: 2.2 };
+
+/**
+ * The light pools (M33g): a camp fire behind each end's spawns, a lantern on the fort's north and south baffles and one
+ * by the cabin's north door. Anyone in one is seen from as far as by day; the rest of the field is moonlit or, under the
+ * trees, dark.
+ */
+const LIGHTS: readonly MapLight[] = [
+  ...[[4.5, 52], [115.5, 52]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + FIRE.height, worldZ(z!)), radius: FIRE.radius, colour: FIRE.colour })),
+  ...[[101, 52], [101, 42], [66, 27.5]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + LANTERN.height, worldZ(z!)), radius: LANTERN.radius, colour: LANTERN.colour })),
+];
+
 const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...BOULDERS, ...LOGS, ...APPROACH_COVER, OAK];
 const BLOCKS: MapBlock[] = [...fence(), ...COVER, ...woods(LANE_POINTS, COVER)];
 
@@ -478,8 +493,11 @@ export const WOODLAND: MapData = {
   lanes: LANE_POINTS.map((lane) => lane.map(([x, z]) => onGround(x, z))),
   flag: onGround(FLAG.x, FLAG.z),
   night: true,
+  // Lit by night (M33f): the moon low over the Knoll, so it rims the hill's top while the face towards end 0 stays dark.
+  lighting: { presets: ['night'], moonOver: { x: worldX(KNOLL.x), z: worldZ(KNOLL.z) } },
   terrain: TERRAIN,
   foliage: bushes(LANE_POINTS, BLOCKS),
+  lights: LIGHTS,
 };
 
 /** Layout facts the tests check against (world coordinates), exported so they can't drift from the geometry. */
