@@ -611,6 +611,30 @@ Settings → **Save**, the tab before Dev. Nothing to press for saving itself: e
 - [ ] **Firefox and Edge** (the automated tests run Chromium only): do Download, Load (button and drag and drop), the
   two-tab notice and Protect once in each. Firefox: the download prompt or Downloads list shows the `.json` file.
 
+## Cyber Pistol (M32)
+
+The owner's chase replica: Legendary only, from the Armory on a 1 in 400 chance per item. To try it straight away,
+tick Settings → Dev settings → **Unlock all gear**.
+
+- [ ] **Equip it.** Loadout → Primary or Secondary: the Cyber Pistol is there at Legendary only (no Common or Rare
+  copy). It goes in either slot.
+- [ ] **Customise.** Right-click it: Power Source reads **Built-in battery**, Magazine **Its own, 50 BBs**, and Optic,
+  Grip, Laser, Barrel and Muzzle are greyed out. BB weight and hop-up still turn. The Performance sheet shows 1.00 J,
+  14 BBs/s, a 1.1 s reload; the summary line reads Electric · Semi, Burst, Auto · 50 BBs a magazine.
+- [ ] **Shoot it on the range.** It starts on Semi; the selector steps Burst and Auto. Even on Auto the sight barely
+  climbs. Out of the box BBs stay on target to about 33 m (the AEG about 39 m, the Gas Pistol about 27 m).
+- [ ] **Its sound.** A quiet electronic chirp and a soft pop, with no motor whine; an empty trigger blips, and a reload
+  ends in a two-note chime. Does it feel futuristic but still a toy?
+- [ ] **Leave the AEG at home.** Equip the Cyber Pistol and the Gas Pistol, play a match on Normal: the bots' AEG shots
+  still sound (they used to need your AEG).
+- [ ] **The Armory.** The left column has a **Chase** line: "the Cyber Pistol, Legendary only … 0.25% … about 1 in
+  400". In your collection its row has one pip, Legendary; the other tiers are dashed and empty. Getting one for real
+  takes a long while (about 130 Shots on average); when it drops, its tile glows and the reveal line starts "Chase
+  item: Cyber Pistol!".
+- [ ] **Bots with it.** With Unlock all gear on (or one owned), play matches on **Hard**: about 1 match in 20, one
+  opponent fights with it on Auto (its quiet pop, its 50-BB magazines). Never on Easy or Normal, never a teammate.
+  The figure still shows a plain pistol until the figures show replicas properly.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
