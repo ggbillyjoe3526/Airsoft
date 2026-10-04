@@ -169,10 +169,11 @@ export class BotController {
   /**
    * A squad order from `leader` (a player) to the bot teammates in play (M22). Giving the order already in force
    * cancels it, except Hold here aimed somewhere else (at least holdMove from the held spot, or at nothing while they
-   * hold a spot you looked at, which holds where they stand), which moves it. Returns the order in force afterwards
-   * ('none' also when no teammate is in play to take it).
+   * hold a spot you looked at, which holds where they stand), which moves it. With `toggle` false (the order wheel,
+   * M23, which has its own Team Plan) the order already in force stays as it is instead. Returns the order in force
+   * afterwards ('none' also when no teammate is in play to take it).
    */
-  giveOrder(leader: Character, kind: SquadOrderKind): SquadOrderKind | 'none' {
+  giveOrder(leader: Character, kind: SquadOrderKind, toggle = true): SquadOrderKind | 'none' {
     const w = this.world;
     const team = this.bots.filter((b) => b.character !== leader && b.character.team === leader.team && isInPlay(b.character));
     if (!isInPlay(leader) || team.length === 0) {
@@ -186,6 +187,7 @@ export class BotController {
         kind !== 'hold' ||
         (point ? !current.ownSpot && heldCentre(this.bots, leader, this.held) && Math.hypot(point.x - this.held.x, point.z - this.held.z) < SQUAD_ORDERS.holdMove : current.ownSpot);
       if (same) {
+        if (!toggle) return kind;
         this.dropOrder(leader);
         return 'none';
       }
@@ -215,6 +217,11 @@ export class BotController {
   holdSpot(leader: Character, out: Vec3): boolean {
     const given = this.given.get(leader);
     return given?.kind === 'hold' && !given.ownSpot && heldCentre(this.bots, leader, out);
+  }
+
+  /** `leader`'s order ends (the order wheel's Team plan, M23): everyone given it goes back to the team plan. */
+  cancelOrder(leader: Character): void {
+    this.dropOrder(leader);
   }
 
   /** Everyone given `leader`'s order goes back to the team plan. */

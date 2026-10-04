@@ -28,8 +28,13 @@ export const DEFAULT_BINDINGS = {
   fire: ['Mouse0'],
   /** Aims down sights (needs an optic); hold or toggle, see AIM_MODES. */
   aim: ['Mouse2'],
-  /** Squad orders for your bot teammates (M22, config/squad.ts); the same key again cancels. */
-  orderFollow: ['KeyZ'],
+  /** Hold for the order wheel (M23, config/squad.ts ORDER_WHEEL): point at an order, then let go or click. */
+  orderWheel: ['KeyZ'],
+  /**
+   * Squad orders straight from a key (M22, config/squad.ts); the same key again cancels. Follow me was on Z until the
+   * wheel took it (MOVED_DEFAULTS).
+   */
+  orderFollow: ['KeyF'],
   orderHold: ['KeyX'],
   orderRegroup: ['KeyV'],
   /** Fullscreen on and off while playing (M18b). F11 is the browser's own and would leave the page's fullscreen; F10 is free once the game takes it. */
@@ -60,10 +65,21 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },
+  { action: 'orderWheel', label: 'Squad: order wheel (hold)' },
   { action: 'orderFollow', label: 'Squad: follow me' },
   { action: 'orderHold', label: 'Squad: hold here' },
   { action: 'orderRegroup', label: 'Squad: regroup' },
   { action: 'fullscreen', label: 'Fullscreen' },
+];
+
+/**
+ * Default keys that moved when a later action took them: bindings saved before `added` existed, with `action` still on
+ * its `old` keys, give `action` its new default instead, so `added` gets its default key rather than none (the
+ * player never chose `old`; input/keyBindings.ts). Saved sets that have `added` are left as they are.
+ */
+export const MOVED_DEFAULTS: readonly { action: Action; old: readonly string[]; added: Action }[] = [
+  // The order wheel took Z from Follow me (M23).
+  { action: 'orderFollow', old: ['KeyZ'], added: 'orderWheel' },
 ];
 
 /**

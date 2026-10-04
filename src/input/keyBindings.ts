@@ -1,4 +1,4 @@
-import { type Action, DEFAULT_BINDINGS, REBINDABLE, UNBINDABLE_KEYS } from '../config/controls';
+import { type Action, DEFAULT_BINDINGS, MOVED_DEFAULTS, REBINDABLE, UNBINDABLE_KEYS } from '../config/controls';
 
 const REBINDABLE_ACTIONS: ReadonlySet<Action> = new Set(REBINDABLE.map((r) => r.action));
 
@@ -105,6 +105,7 @@ export class KeyBindings {
         if (!REBINDABLE_ACTIONS.has(action)) continue; // debug keys always keep their defaults
         const codes = saved[action];
         if (Array.isArray(codes) && codes.length > 0 && codes.every((c) => typeof c === 'string' && bindable(c))) {
+          if (movedDefault(saved, action, codes as string[])) continue;
           this.map.set(action, codes as string[]);
           fromSave.add(action);
         }
@@ -131,6 +132,11 @@ export class KeyBindings {
       }
     }
   }
+}
+
+/** `action`'s saved `codes` are an old default a later action has since taken (MOVED_DEFAULTS), in a set saved before it. */
+function movedDefault(saved: Record<string, unknown>, action: Action, codes: readonly string[]): boolean {
+  return MOVED_DEFAULTS.some((m) => m.action === action && !(m.added in saved) && m.old.length === codes.length && m.old.every((c, i) => codes[i] === c));
 }
 
 /** Whether `code` can be bound: not empty (a key the browser couldn't name) and not one of UNBINDABLE_KEYS. */
