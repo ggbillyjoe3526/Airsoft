@@ -1,5 +1,6 @@
 import type { FloorSurface } from '../config/sounds';
 import type { Vec3 } from '../sim/vec';
+import type { Terrain } from './terrain';
 
 /**
  * Visual family of a greybox block. Every kind collides as a solid box, except `ramp`: a wedge whose top
@@ -79,4 +80,9 @@ export interface MapData {
    * or false: daylight.
    */
   night?: boolean;
+  /**
+   * Ground that rises and falls (M33c, map/terrain.ts): walkable everywhere it is drawn, with no floor or ramp block
+   * over it. Absent: the map's ground is its floor blocks, as on Depot.
+   */
+  terrain?: Terrain;
 }

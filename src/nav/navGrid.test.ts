@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { NAV } from '../config/nav';
 import { DEPOT } from '../map/depot';
 import { RAMP_YARD, STACK_HOUSE, TEST_YARD } from '../map/testYard';
+import { GENTLE_SLOPE, planeTerrain, SLOPE_YARD, SLOPE_YARD_TERRAIN, terrainOnly } from '../map/testSupport';
+import { buildTerrain, steepestSlope, terrainHeightAt } from '../map/terrain';
+import { PHYSICS } from '../config/physics';
+import { createRng, rngNext } from '../sim/rng';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { type Vec3, vec3 } from '../sim/vec';
 import { BODY } from '../config/movement';
@@ -343,5 +347,94 @@ describe('nav grid with floors over floors (M34b)', () => {
     expect(path[downAt - 1]!.y).toBe(3);
     expect(path[downAt]!.x).toBeGreaterThan(11.5);
     expect(path[downAt]!.z).toBeLessThan(-5);
+  });
+});
+
+/** A height over every floor of the one-storey terrain maps below: their queries take the cell's only (highest) floor. */
+const ABOVE = 50;
+
+describe('nav grid on sloping ground (M33c)', () => {
+  it('takes its bounds from the terrain and sets each cell floor to the ground height at its centre', () => {
+    const g = buildNavGrid(SLOPE_YARD, NAV);
+    expect(g.minX).toBe(SLOPE_YARD_TERRAIN.minX);
+    expect(g.minZ).toBe(SLOPE_YARD_TERRAIN.minZ);
+    expect(g.minX + g.cols * g.cell).toBeGreaterThanOrEqual(15);
+    const rng = createRng(2);
+    let checked = 0;
+    for (let n = 0; n < 400; n++) {
+      const x = -14 + rngNext(rng) * 28;
+      const z = -14 + rngNext(rng) * 28;
+      // The cell's own centre, not the point: the floor is the ground there.
+      const i = Math.floor((x - g.minX) / g.cell);
+      const j = Math.floor((z - g.minZ) / g.cell);
+      const cx = g.minX + (i + 0.5) * g.cell;
+      const cz = g.minZ + (j + 0.5) * g.cell;
+      if (SLOPE_YARD.blocks.some((b) => Math.abs(cx - b.center.x) < b.size.x / 2 + 0.5 && Math.abs(cz - b.center.z) < b.size.z / 2 + 0.5)) continue;
+      expect(floorAt(g, x, ABOVE, z), `(${cx}, ${cz})`).toBeCloseTo(terrainHeightAt(SLOPE_YARD_TERRAIN, cx, cz)!, 4);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(300);
+    // The floor rises along the slope: about 0.15 per metre on the flat side of the yard.
+    expect(floorAt(g, 4, ABOVE, 10) - floorAt(g, -4, ABOVE, 10)).toBeCloseTo(1.2, 1);
+  });
+
+  it('keeps the crate and the end wall blocking on the slope, and the open ground beside them walkable', () => {
+    const g = buildNavGrid(SLOPE_YARD, NAV);
+    expect(isWalkableAt(g, -5, ABOVE, 3)).toBe(false); // the crate, whose top is above the ground there by more than a ledge
+    expect(isWalkableAt(g, -5, ABOVE, 5)).toBe(true);
+    expect(isWalkableAt(g, -14.5, ABOVE, 0)).toBe(false); // against the end wall
+    expect(isWalkableAt(g, 0, ABOVE, 10)).toBe(true);
+    // Beyond the terrain's edge: not walkable, with no floor.
+    expect(isWalkableAt(g, 16, ABOVE, 0)).toBe(false);
+    expect(Number.isNaN(floorAt(g, 16, ABOVE, 0))).toBe(true);
+  });
+
+  it('lets a floor block override the ground where it is higher, and leaves the ground where it is lower', () => {
+    const base = terrainOnly(planeTerrain(0.1));
+    const map: MapData = {
+      ...base,
+      blocks: [
+        // A platform whose top is 1 m above the ground at x = 2..4 (the ground is 0.2..0.4 there).
+        { kind: 'floor', center: vec3(3, 0.5, 5), size: vec3(2, 1, 4) },
+        // A slab sunk below the ground: it must not lower the floor.
+        { kind: 'floor', center: vec3(-5, -3.25, -5), size: vec3(4, 0.5, 4) },
+      ],
+    };
+    const g = buildNavGrid(map, NAV);
+    expect(floorAt(g, 3, ABOVE, 5)).toBeCloseTo(1, 4);
+    expect(floorAt(g, 0, ABOVE, 5)).toBeCloseTo(0, 1);
+    expect(floorAt(g, -5, ABOVE, -5)).toBeCloseTo(-0.5, 1);
+    expect(isWalkableAt(g, -5, ABOVE, -5)).toBe(true);
+  });
+
+  it('finds a path up and down a slope as steep as a ramp may be, every leg walkable and the heights following the ground', () => {
+    expect(NAV.maxStep).toBeGreaterThanOrEqual(PHYSICS.maxRampSlope * NAV.cell);
+    for (const slope of [GENTLE_SLOPE, PHYSICS.maxRampSlope]) {
+      const terrain = planeTerrain(slope);
+      const g = buildNavGrid(terrainOnly(terrain), NAV);
+      const search = createNavSearch(g);
+      for (const [from, to] of [
+        [vec3(-10, slope * -10, 2), vec3(10, slope * 10, -3)],
+        [vec3(11, slope * 11, 6), vec3(-11, slope * -11, 6)],
+      ] as const) {
+        const path: Vec3[] = [];
+        expect(findPath(g, search, from, to, NAV.snap, path), `slope ${slope}`).toBe(true);
+        checkRoute(g, from, to, path);
+        // (A cell's floor is the ground at its centre, so it differs from the ground at the point by under a cell's rise.)
+        for (const p of path) expect(Math.abs(floorAt(g, p.x, ABOVE, p.z) - terrainHeightAt(terrain, p.x, p.z)!)).toBeLessThanOrEqual(slope * NAV.cell);
+      }
+    }
+  });
+
+  it('finds no route across ground steeper than a character steps up (a cliff, not a ramp), while each side stays connected', () => {
+    // A 1 m rise within one 1 m terrain cell (slope 1: 0.2 m per 0.2 m nav cell, over the 0.15 m a step allows).
+    const cliff = buildTerrain(-15, -15, 1, 30, 30, (x) => (x >= 0 ? 1 : 0));
+    expect(steepestSlope(cliff)).toBeGreaterThan(PHYSICS.maxRampSlope);
+    const g = buildNavGrid(terrainOnly(cliff), NAV);
+    const search = createNavSearch(g);
+    const path: Vec3[] = [];
+    expect(findPath(g, search, vec3(-10, 0, 0), vec3(10, 1, 0), 0.5, path)).toBe(false);
+    expect(findPath(g, search, vec3(-10, 0, 0), vec3(-4, 0, 6), 0.5, path)).toBe(true);
+    expect(findPath(g, search, vec3(4, 1, -6), vec3(10, 1, 0), 0.5, path)).toBe(true);
   });
 });

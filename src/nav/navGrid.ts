@@ -1,5 +1,6 @@
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { surfaceHeightAt } from '../map/surfaces';
+import { terrainHeightAt, terrainMaxX, terrainMaxZ } from '../map/terrain';
 import type { Vec3 } from '../sim/vec';
 
 /**
@@ -61,11 +62,12 @@ const bottom = (b: MapBlock): number => b.center.y - b.size.y / 2;
 const isSurface = (b: MapBlock): boolean => b.kind === 'floor' || b.kind === 'ramp';
 
 export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
-  // Bounds: the floor and ramp blocks.
-  let minX = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let minZ = Number.POSITIVE_INFINITY;
-  let maxZ = Number.NEGATIVE_INFINITY;
+  // Bounds: the floor and ramp blocks, and the terrain (M33c).
+  const terrain = map.terrain;
+  let minX = terrain ? terrain.minX : Number.POSITIVE_INFINITY;
+  let maxX = terrain ? terrainMaxX(terrain) : Number.NEGATIVE_INFINITY;
+  let minZ = terrain ? terrain.minZ : Number.POSITIVE_INFINITY;
+  let maxZ = terrain ? terrainMaxZ(terrain) : Number.NEGATIVE_INFINITY;
   for (const b of map.blocks) {
     if (!isSurface(b)) continue;
     minX = Math.min(minX, b.center.x - b.size.x / 2);
@@ -80,8 +82,20 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
   const frame = { cell: cfg.cell, cols, rows, minX, minZ };
 
   // Every walkable surface over each cell's centre, as (height there, the bottom of the solid under it) pairs, packed
-  // per cell (counted first, then filled). A heightfield would add its ground here with a bottom of -Infinity.
+  // per cell (counted first, then filled): the terrain's ground (M33c), with nothing under it, then the floor and ramp
+  // tops.
   const surfStart = new Int32Array(n + 1);
+  const ground = terrain ? new Float64Array(n).fill(Number.NaN) : undefined;
+  if (terrain && ground) {
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const y = terrainHeightAt(terrain, cellX(frame, i), cellZ(frame, j));
+        if (y === undefined) continue;
+        ground[j * cols + i] = y;
+        surfStart[j * cols + i + 1]!++;
+      }
+    }
+  }
   for (const b of map.blocks) {
     if (!isSurface(b)) continue;
     forCellsUnder(frame, b, 0, (c, x, z) => {
@@ -93,6 +107,14 @@ export function buildNavGrid(map: MapData, cfg: NavGridConfig): NavGrid {
   const surfY = new Float64Array(total);
   const surfBottom = new Float64Array(total);
   const fill = surfStart.slice(0, n);
+  if (ground) {
+    for (let c = 0; c < n; c++) {
+      if (Number.isNaN(ground[c]!)) continue;
+      const k = fill[c]!++;
+      surfY[k] = ground[c]!;
+      surfBottom[k] = Number.NEGATIVE_INFINITY;
+    }
+  }
   for (const b of map.blocks) {
     if (!isSurface(b)) continue;
     forCellsUnder(frame, b, 0, (c, x, z) => {

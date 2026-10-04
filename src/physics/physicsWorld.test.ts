@@ -4,6 +4,8 @@ import { PHYSICS } from '../config/physics';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { DEPOT } from '../map/depot';
 import { TEST_YARD, TEST_YARD_HALF_SIZE } from '../map/testYard';
+import { terrainHeightAt } from '../map/terrain';
+import { GENTLE_SLOPE, planeTerrain, SLOPE_YARD, terrainOnly } from '../map/testSupport';
 import type { SurfaceHit } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
@@ -389,6 +391,79 @@ describe('PhysicsWorld (Rapier)', () => {
         expect(c.position.y, label).toBeCloseTo((up ? 1 : 0) + REST, 2);
       }
     }
+    world.dispose();
+  });
+
+  it('lands a falling character on sloping ground and keeps it on it, with no floor block under it (M33c)', () => {
+    const world = new PhysicsWorld(SLOPE_YARD, BODY, DT);
+    const spots: [number, number][] = [[-8, 8], [6, -6], [8, 9], [-2, -10]];
+    for (const [x, z] of spots) {
+      const ground = terrainHeightAt(SLOPE_YARD.terrain!, x, z)!;
+      const c = createCharacter(0, vec3(x, ground + 2, z), 0);
+      world.addCharacter(c);
+      simulate(world, c, createCommand(), 150);
+      expect(c.grounded, `(${x}, ${z})`).toBe(true);
+      expect(c.position.y, `(${x}, ${z})`).toBeGreaterThan(ground - 0.01);
+      expect(c.position.y, `(${x}, ${z})`).toBeLessThan(ground + 0.15);
+    }
+    world.dispose();
+  });
+
+  it('walks up and down a slope no steeper than a ramp at every pace, staying on the ground (M33c)', () => {
+    const slope = GENTLE_SLOPE;
+    const terrain = planeTerrain(slope);
+    const world = new PhysicsWorld(terrainOnly(terrain), BODY, DT);
+    const SLOPE_PACE = { ...MOVEMENT, rampPace: 1 };
+    const high = 10;
+    for (const pace of ['walk', 'run', 'sprint', 'crouch'] as const) {
+      for (const up of [true, false]) {
+        const x0 = up ? -high : high;
+        const c = createCharacter(0, vec3(x0, terrainHeightAt(terrain, x0, 0.3)! + REST, 0.3), up ? -Math.PI / 2 : Math.PI / 2);
+        world.addCharacter(c);
+        const cmd = createCommand();
+        cmd.yaw = c.yaw;
+        cmd.forward = 1;
+        cmd.walk = pace === 'walk';
+        cmd.sprint = pace === 'sprint';
+        cmd.crouch = pace === 'crouch';
+        let streak = 0;
+        let longest = 0;
+        let worstGap = 0;
+        let slowest = Infinity;
+        for (let t = 0; t < 900 && (up ? c.position.x < high - 1 : c.position.x > -high + 1); t++) {
+          stepMovement(c, cmd, SLOPE_PACE, DT, world, scratch);
+          streak = c.grounded ? 0 : streak + 1;
+          longest = Math.max(longest, streak);
+          // How far the character's feet are from the ground under them.
+          worstGap = Math.max(worstGap, Math.abs(c.position.y - terrainHeightAt(terrain, c.position.x, c.position.z)!));
+          if (t > 30) slowest = Math.min(slowest, Math.hypot(c.velocity.x, c.velocity.z));
+        }
+        const label = `${pace} ${up ? 'up' : 'down'}`;
+        expect(up ? c.position.x : -c.position.x, label).toBeGreaterThanOrEqual(high - 1.2); // it got there
+        expect(longest, label).toBe(0);
+        // Never sinks into the ground nor floats above it by more than the rest gap and a step's give.
+        expect(worstGap, label).toBeLessThan(REST + 0.1);
+        const full = pace === 'walk' ? MOVEMENT.walkSpeed : pace === 'sprint' ? MOVEMENT.sprintSpeed : pace === 'crouch' ? MOVEMENT.crouchSpeed : MOVEMENT.runSpeed;
+        expect(slowest, label).toBeGreaterThanOrEqual(0.9 * full);
+      }
+    }
+    world.dispose();
+  });
+
+  it('keeps the walls of a map with terrain solid and a BB ray stopping on the ground (M33c)', () => {
+    const world = new PhysicsWorld(SLOPE_YARD, BODY, DT);
+    const out: SurfaceHit = { normal: vec3(), material: 'metal' };
+    const ground = terrainHeightAt(SLOPE_YARD.terrain!, 0, 8)!;
+    expect(world.raycastSurface(vec3(0, ground + 3, 8), vec3(0, -1, 0), 10, out)).toBeCloseTo(3, 4);
+    expect(out.material).toBe('earth');
+    expect(out.normal.y).toBeGreaterThan(0.9);
+    const c = createCharacter(0, vec3(-12, terrainHeightAt(SLOPE_YARD.terrain!, -12, 0)! + REST, 0), Math.PI);
+    world.addCharacter(c);
+    const cmd = createCommand();
+    cmd.yaw = Math.PI / 2; // towards -x, into the end wall
+    cmd.forward = 1;
+    simulate(world, c, cmd, 240);
+    expect(c.position.x).toBeGreaterThan(-14.6);
     world.dispose();
   });
 
