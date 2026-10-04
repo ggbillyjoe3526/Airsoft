@@ -168,7 +168,7 @@ export class BotController {
    */
   giveOrder(leader: Character, kind: SquadOrderKind): SquadOrderKind | 'none' {
     const w = this.world;
-    const team = this.bots.filter((b) => b.character.team === leader.team && isInPlay(b.character));
+    const team = this.bots.filter((b) => b.character !== leader && b.character.team === leader.team && isInPlay(b.character));
     if (!isInPlay(leader) || team.length === 0) return 'none';
     const current = this.orderOf(leader);
     let point: Vec3 | undefined = holdPoint(leader, w, this.lookedAt) ? this.lookedAt : undefined;

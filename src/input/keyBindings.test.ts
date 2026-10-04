@@ -19,7 +19,7 @@ describe('KeyBindings', () => {
     expect(b.primary('sprint')).toBe('AltLeft');
     expect(b.actionOf('KeyW')).toBe('forward');
     expect(b.actionOf('ArrowUp')).toBe('forward');
-    expect(b.actionOf('KeyZ')).toBeUndefined();
+    expect(b.actionOf('KeyP')).toBeUndefined();
   });
 
   it('holds the scoreboard on Tab by default, and it can be rebound (M19)', () => {

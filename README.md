@@ -173,7 +173,7 @@ arrives as a pull request that the owner reviews and merges. Later, development
 moves to an `alpha` branch and testing to a `beta` branch, and `main` only receives tested releases.
 
 **Not yet:** more maps or replicas, real art, and the menu items marked LATER (gas type, skins,
-graphics quality, voices for hit calls).
+graphics quality, voices for hit calls and squad orders).
 The game is single-player against bots (no multiplayer is planned). Known rough edges are listed in
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md). Bot difficulty levels and Attack / Defend balance still need
 tuning from playtesting.

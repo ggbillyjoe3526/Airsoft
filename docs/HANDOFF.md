@@ -5,21 +5,28 @@ the cloud). **Read this first, then CLAUDE.md, `docs/ROADMAP.md` and `git log`.*
 append) at the end of every session; keep it to about a screen. Status lives in the roadmap and decisions
 in DECISIONS: this file is for the working context those don't hold.
 
-_Last updated: 2026-10-04 · M18b (accessibility and browser basics)._
+_Last updated: 2026-10-04 · M22 (squad orders)._
 
 ## Where we are
 
 - **Phase 4 merged on `main`:** M12a–c, M11, M15, M15b, M13 audio, M19 match info, M17a and M17b Loadout, M18a comfort
-  and controls (re-scored 9.0), and now **M18b** (see REVIEWS). The owner asked (2026-10-04) for every remaining
+  and controls (re-scored 9.0), M18b accessibility (#29), and now **M22 squad orders** (see REVIEWS). The owner asked (2026-10-04) for every remaining
   Phase 4 milestone, then a full code audit (Fable), its fixes (Opus), a bug pass, and a note when Phase 4 is ready to
   playtest. For this run the owner chose "Claude merges": build threads merge their own pull request once CI is green
   and the critic has accepted it (never tag, never push to `main` directly).
-- **Two build threads run side by side:** this one does M18b → **M22 squad orders** → **M14 art pass**; the other does
+- **Two build threads run side by side:** this one does M18b → M22 squad orders → **M14 art pass** (next); the other does
   M20 custom matches → M21 practice range → M16 tutorial. They conflict in docs and in `matchSession.ts`, `game.ts`,
   `settings/storage.ts`, `config/controls.ts`: merge `main` in before every push and keep both sides.
-- **M22 is started** (local only): bots' hearing shortened by walls (`wallHearing` in `config/bots.ts`, rays from
-  `sim/soundPath.ts`, shared with the player's muffling). The headless Depot guards need re-measuring (easy bots now
-  finish fewer rounds in 120 s), then the three orders.
+
+## M22 in short
+
+- **Orders:** `ai/squadOrders.ts` (where each bot goes: follow spots behind the leader's heading, hold spots across
+  their view, regroup), `BotController.giveOrder` / `orderOf`, mode `order` in `botBrain.chooseMode` (after fights and
+  cover, before the pole and noises). Tuning in `config/squad.ts`. Keys `orderFollow` / `orderHold` / `orderRegroup`
+  (Z, X, V), read once per frame by `PlayerInput.takeOrder` in `MatchSession.advance`. HUD: `ui/squadOrderLine.ts`;
+  sound: `radio.ack` in `config/sounds.ts`. Tests: `ai/squadOrders.test.ts` (open field) and the Depot follow guard.
+- **Hearing:** `BotController.hear` casts `sim/soundPath.ts` rays beyond `wallHearing` × range (shared with the
+  audio's muffling). Depot rounds run longer since; `playMatch` takes an `onTick` hook for guards like the follow one.
 
 ## M18b in short (what to know when touching it)
 
@@ -37,8 +44,8 @@ _Last updated: 2026-10-04 · M18b (accessibility and browser basics)._
 
 - **Checks:** `npm run check`. In a cloud container run the smoke test with a temporary copy of
   `playwright.config.ts` whose `launchOptions.executablePath` is `/opt/pw-browsers/chromium` (keep it out of git). The
-  smoke test now also loses and restores the WebGL context and teleports an enemy close to get a sound cue
-  (`window.airsoft.state`, `e2e` build only).
+  smoke test also loses and restores the WebGL context, adds a shot after each tick to get a sound cue (it patches
+  `airsoft.session.match.afterTick`, `e2e` build only) and presses Z twice for the squad line.
 - **Input:** read fire and aim through the bindings, never the mouse. A toggled sprint pressed before forward waits for
   forward. **Loadout:** read `Armament.handling`. **Menus:** one screen at a time (`Menus.go`); `Menus.setBlocked`
   makes them inert (graphics reset).
