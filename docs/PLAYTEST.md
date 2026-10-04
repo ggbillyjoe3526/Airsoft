@@ -610,6 +610,52 @@ Settings → **Save**, the tab before Dev. Nothing to press for saving itself: e
   visit); Firefox asks with its own prompt. Once allowed, the button reads Protected.
 - [ ] **Firefox and Edge** (the automated tests run Chromium only): do Download, Load (button and drag and drop), the
   two-tab notice and Protect once in each. Firefox: the download prompt or Downloads list shows the `.json` file.
+## Graphics presets and Custom (FA2)
+
+- [ ] **First start.** Clear the site's data (or use a private window) and load the game. On a laptop with Intel or AMD
+  integrated graphics, Settings → Graphics shows **Medium**; on a desktop with an NVIDIA or AMD RX card, **High**. Press
+  `` ` `` in a match: the debug panel's quality line ends with "(auto)".
+- [ ] **The ladder.** In a match, switch Low → Medium → High and back. Low: softer picture (80 % resolution), no
+  shadows, plain surfaces, jagged edges. Medium: shadows, players darker inside a container's shade, relief, smooth
+  edges. High: sharper floor textures up close and into the distance, finer shadow edges, the replica's sheen, dust.
+  Each switch applies at once with at most a short pause (edge smoothing makes a new graphics context), and the game
+  keeps the mouse captured after Resume.
+- [ ] **Custom.** Pick Medium, then set Shadows Off: the picker jumps to **Custom**. Set it back On: **Medium** again.
+  Pick Custom, move Render scale to 60 %: the picture softens at once; the HUD and menus stay sharp. Reload the page:
+  Custom and 60 % are still picked. Each row's help ends with what it costs.
+- [ ] **Edge smoothing in Firefox on Linux.** Set Edge smoothing On: if the line under it says "Not available in this
+  browser", the game draws without it (that browser refuses multisampling), as the debug panel's antialias line says.
+- [ ] **Frame-rate limit.** On a 120 Hz or faster screen set it to 60: Show FPS reads about 60, the laptop runs cooler;
+  the game plays the same (movement and BBs at the same speed). Off returns to the screen's rate.
+- [ ] **Show FPS.** On: a small "NN FPS · N.N ms" counter in the top-left corner while you play; Off hides it.
+- [ ] **Automatic step-down.** Only with nothing saved (clear the site's data) on a machine that struggles: after a few
+  seconds of slow frames, at the end of the round, the HUD says "Graphics set to Low to keep the game smooth" and the
+  picker shows Low. It is not saved: a reload starts on the GPU's preset again. It never happens once you pick a preset.
+- [ ] **Debug panel.** `` ` `` in a match shows "frame ms (sim / draw / GPU)" (GPU is "n/a" in Firefox) and the
+  antialias line ("on asked, on given (4 samples)" on Chrome).
+
+## Render cost fixes (FA3)
+
+- [ ] **Shadows near you on High.** On High, walk Depot: rails, container posts, the IBC cage bars and players' arms
+  throw crisp shadows close by. Walk and turn slowly: shadow edges stay still (no crawling or shimmer). About 25 m ahead
+  the shadows stop: look down the long sightlines for a hard line on the floor where they end, and say if it bothers
+  you (Custom → Shadow range → Whole field keeps them everywhere, softer). No dark speckle (acne) on the floor or
+  walls, and no shadow floating off a wall's foot.
+- [ ] **The sky.** On every preset the sky looks as before: a pale haze at the horizon, blue above, warm towards the
+  sun; no sky colour showing through wall edges or corners (edge smoothing on).
+- [ ] **The dock.** The raised dock and its ramps throw a shadow on the yard on Medium and High.
+- [ ] **BB streaks.** Fire across the field: each BB's streak reads as a thin bright line at 20–30 m, the same
+  thickness on a high-DPI laptop as on a desktop monitor, and fades towards its tail; your own shots still leave the
+  muzzle in line with the barrel.
+- [ ] **Hands.** Look at the gloved hands on the rifle and the pistol: fingers and thumb look as round as before.
+- [ ] **First Play.** From the title screen, wait a couple of seconds, then Play: the match starts with no longer
+  hitch than before (the surface textures are made while the title screen waits).
+- [ ] **Sheen.** On High the held replica has its soft reflections from the first match; switch to Low (none) and back
+  to High: they return.
+- [ ] **Dust on high-DPI.** On High with dust, near motes look the same size on a 150 % or 200 % scaled screen as on a
+  100 % one.
+- [ ] **The laptop baseline.** Once, on the target laptop (pipeline/README.md, "The laptop run"):
+  `node pipeline/perf-run.mjs --env laptop --preset all --baseline`, then commit `pipeline/baseline/laptop*.json`.
 
 ## Pause, menus and tabbing away
 
@@ -647,6 +693,38 @@ Quick checks that these stay fixed:
 - [ ] **Empty the AEG with the trigger held, press 2 then 1 while still holding.** It clicks dry and starts a reload.
 - [ ] **Watch bots fighting near door frames.** They shouldn't fire into the frame right beside them, or dive for
   cover after their own BB hits the wall next to them.
+
+## Bot spacing, cover, behaviour and difficulty (FA4)
+
+Play Elimination on Depot at Normal, then a round each on Easy and Hard, and one Attack / Defend match. Spectate
+(after you're out) to watch bots that can't see you.
+
+- [ ] **Two bots on one lane** hold side by side at a lane point, about a metre apart, never inside each other;
+  bots walking past each other bend round instead of passing through.
+- [ ] **Bots holding a lane point** crouch after a moment where crouched they can still see ahead, and slowly sweep
+  their view left and right; some (more on Hard, fewer on Easy) step into crouch cover by the point first.
+- [ ] **A bot waiting to run for cover** doesn't bob down for a few frames before it runs.
+- [ ] **Shoot near a bot from far away** (past 22 m, unseen): it ducks and comes looking for you, or takes cover.
+- [ ] **A bot that searched where it heard you and found nobody** crouches and looks round for a second or two
+  before it moves on.
+- [ ] **Fight a bot standing beside a wall or a container**: it sidesteps away from the wall, not into it, and keeps
+  you in sight; on the dock's edge it never steps off, and where both sides are blocked it steps forward or back
+  rather than stand still.
+- [ ] **Hit a bot's teammate from far off** (30 m+): the others turn towards roughly the right side, not straight to
+  where you stand.
+- [ ] **Fight one bot while a teammate of yours fires from elsewhere**: once your bot is down, the other heads for
+  where your teammate was heard.
+- [ ] **Hard bots** sometimes come at a spot from the side instead of straight down the lane; **Easy bots** never do.
+- [ ] **Attack / Defend, your team attacking with bots**: one bot works the rope; the others hold cover a few metres
+  out, watching. With you at the rope, no bot crowds in.
+- [ ] **Depot's east end (Blue's start in Elimination)**: the spawn yard has no way out to the north road any more;
+  the team leaves past the wall's south end, so the dock and the Main Gate take about as long to reach from both
+  ends. Check nobody gets stuck in the yard's north corner. The east spawns stand near the yard's back wall now: does
+  either end still feel stronger over a half?
+- [ ] **Bots turning a corner** no longer brush the wall or door frame as they pass.
+- [ ] **New game → Bot difficulty, with no Teammates level picked yet**: set Opponents to Easy and Teammates shows
+  Normal; Normal or Hard opponents bring the teammates along to the same level. That default (Easy opponents, Normal
+  teammates) has no "won't go into your records" note, and its summary counts it.
 
 ## Audio pass (FA6)
 
@@ -777,6 +855,84 @@ Headphones help. Every sound is still generated by the game (nothing downloaded)
 - [ ] **Mouse look** in Chrome on the production build: smooth, no jump on the first move after Play or Resume.
 - [ ] **Precompressed files** (only when the game is put on a host that serves them, README › Hosting): in DevTools →
   Network the `rapier-….js` response has `content-encoding: br` and a transfer of about 1.2 MB.
+
+## Armory, economy, records and tutorial (FA10)
+
+- [ ] **Armory, Shots:** the buttons read "1 Shot · 160 FC" and "10 Shots · 1,600 FC", with "Paid in FC" or "Paid with
+  2 Tokens + …" under them. 10 Shots opens "Take 10 Shots?" with the keyboard on Cancel; Enter there cancels. Hold
+  Enter on 1 Shot for a second: exactly one Shot is taken.
+- [ ] **Reveal:** after a ten-Shot the tiles come in one after another, rarest first, an Epic or Legendary glowing in
+  its colour, with a line like "1 Epic, 4 Rare, 25 others · 3 new" above; the keyboard sits on "Last Shot". With
+  Reduced motion on, the tiles appear at once. A screen reader reads the first Shot too.
+- [ ] **Pity:** under the Shots, "Epic or rarer within 20 more Shots" and "Legendary or rarer within 100 more Shots"
+  count down a Shot at a time and survive a reload of the page.
+- [ ] **Catalogue:** "Your collection" lists every asset Shots can give, owned or not (dimmed), with a pip per tier
+  and "N / 84 items" in the heading. Own a part at Common and Rare: "Scrap 1" scraps the Common; fit the Common on
+  Customise first, scrap it, and Customise shows the Rare fitted. "Scrap all spares" asks first and keeps the best
+  copy of everything.
+- [ ] **Two tabs** (M31's tab lock): open the game in a second tab: it waits behind the "Airsoft is open in another tab"
+  notice. Take a Shot in the first, then let the second take over: its Armory shows the Shot (balance and items).
+- [ ] **Customise:** under the replica's name a line says what its tier adds ("Legendary: +7.5% energy · …", or
+  "Common: no tier bonus"); hovering any item tile shows the same.
+- [ ] **Summary after a Dev-assisted match** (Dev settings → Bottomless magazines on, play a match to the end): "No
+  Field Credits: Dev settings changed how this match played." With Disable Armory on: "…the Armory is switched off…".
+- [ ] **Pay:** a first-to-5 3v3 on Normal pays as before when you play; a round your team won while you were out
+  with no hit isn't in the "rounds won" line. Hard opponents with Easy teammates show "difficulty ×0.5".
+- [ ] **Tutorial:** press Esc during it: Skip step and Skip tutorial are there (not on the practice range alone or in
+  a match). Skip step moves the pause line to the next step. Quit at step 5, start the tutorial again from the title:
+  it picks up at step 5. Skip tutorial: free practice, and the title stops tagging the Tutorial "New?". The new steps
+  (fire selector, sprint then shoot, "In a match") each finish by doing what they say.
+- [ ] **Spread looking up:** on the range, aim the rifle steeply up (about 60°) and fire a magazine: the BBs spread
+  as wide sideways as up and down (before FA10 they bunched into a vertical line).
+- [ ] **AEG spin-up** (KNOWN_ISSUES): on a fresh trigger pull, is the motor's wind-up heard before or under the first
+  shot? If not, say so: it can be raised or the shot led by a few milliseconds now that M29 has merged.
+## Visual overhaul (FA7)
+
+- [ ] **Low looks as before.** On Low, Depot, the trees and the sky look as they did (only the colours a touch cleaner:
+  Neutral tone mapping); a soft dark disc sits under every player's feet.
+- [ ] **Edges and corners on Medium.** Walk Depot on Medium: boxes, walls, containers and props have a thin lighter edge
+  (no razor edges); the floor darkens softly along wall feet, under the dock's lip and between close props; no dark
+  blotch on an open wall or floor, and no flicker where a sign or chevron sits on its face.
+- [ ] **Relief.** Concrete, block walls and container ribs show relief that follows the light; on High no wall looks
+  pitted. Custom → Relief maps → Bump brings back the old look.
+- [ ] **Sky and trees.** Clouds and a soft sun disc in the sky on Medium and High; layered trees and a hedge round the
+  walls; from the dock or a stack nothing floats or pops. Custom → Clouds off and Trees Simple/None change them at once.
+- [ ] **Reflections.** On Medium and High the held replica and the figures pick up a blue sky above and warm ground
+  below; the dock's steel plate has a soft sheen; Environment lighting off removes both.
+- [ ] **Tone mapping.** Settings → Graphics → Tone mapping: Neutral (default), AgX and ACES each change the colours at
+  once; the team blue and orange read clearly on Neutral; the choice is kept after a reload.
+- [ ] **Signs.** Bay numbers on the containers, hazard chevrons on the barriers, a site roundel on the long walls and
+  SAFE ZONE by each dead zone: readable, never mirrored, never half inside a prop.
+- [ ] **Flag and range.** In Attack and Defend on Medium the pole has a ball on top, a rope to a cleat, and a painted
+  flag that ripples less near the pole. On the practice range the plates show BB scuffs, hang from chains, and the
+  posts have an orange band; a shelf of BB bottles stands by the firing line.
+- [ ] **Load time.** Play on Medium on the laptop: the match starts no more than about half a second later than on Low.
+
+## Figures, replicas, hands and effects (FA8)
+
+- [ ] **Figures on High** (Settings → Graphics → Quality High, a match on each map: every effect here is engine-level, on every map): bots have a shaped head with ears,
+  goggles with a dark rim and a glossy lens that catches the sky, glossy helmets, gloves with a thumb, boots with
+  soles; vest and pouch edges catch a lighter line. Team colours still read at once, also with each colour-blind
+  option (Accessibility). Switch Player detail Low ↔ High in Custom mid-match: the figures rebuild without a hitch
+  you notice, and Low looks as before.
+- [ ] **HIT! sign at range:** hit a bot 20–30 m away: the sign stays readable (about the size it is at 6 m).
+- [ ] **AEG on High:** a fine speckle on the polymer, rounded lit edges, worn charging handle and grip front, rail
+  slots, the selector, ring rear sight and front sight post; in the Loadout try every optic, grip and magazine
+  (standard: BBs in the side window; hi-cap: the wheel; low-cap: steel ribs). Nothing floats or clips the hands.
+- [ ] **Barrels and silencers on High and Low** (Loadout → Customise, M29b's parts): the AEG's Long Barrel adds a
+  fluted length with a steel collar at the join, the Tight-Bore a heavier fluted steel sleeve with a tan band (High
+  only; on Low it looks as it comes); the Silencer (AEG and pistol) has steel end caps, two rubber bands and a dark bore. With each fitted, fire at a wall
+  close up: the BBs and their streaks leave the front of the silencer, flash hider or long barrel, not inside it.
+- [ ] **Pistol on High:** slide serrations, rubber grip panels; with the Red Laser the lens glows red. Custom →
+  Laser beam on: a faint fading line from the lens (off on every preset).
+- [ ] **Hands on High:** a lighter knuckle pad, seams at the finger joints, a strap and buckle at the wrist, the
+  sleeve's fold; fingers still wrap the grip and handguard on both replicas (look through a reload).
+- [ ] **BB glow and grit on High:** BBs in flight carry a soft warm glow (easy to follow against the sky and dark
+  walls), not a beam; a BB landing on a wall throws a few small chips back towards whoever shot it (stand beside a
+  wall a bot is shooting: they fly towards the bot, not at you), plus a faint ring. Low: no glow, no chips, as before.
+- [ ] **Helmets on High:** a helmeted figure at 5–15 m: the blue or orange tape round the shell is clean, no tan
+  showing through it.
+- [ ] **Low unchanged:** Quality Low looks and runs as it did (F3 overlay: draw calls and triangles as before).
 
 ## Reporting what you find
 

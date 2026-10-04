@@ -76,9 +76,22 @@ can't start without them.
 Perf environments: `container` (SwiftShader, no GPU; frame times are noise, counts and memory are real), `laptop`
 (the owner's low-spec laptop with CPU throttled 4×; the only environment whose frame times are judged), `ci` (no
 baseline). **Frame-time gating is a manual owner step**: no automation runs `laptop`; the owner runs
-`node pipeline/perf-run.mjs --env laptop` before a release tag (and with `--baseline` at milestones, committed).
-`pipeline/baseline/<env>.json` is written by `perf-run.mjs --baseline` on `main` after a merge that changed
-perf-relevant code, and committed.
+`node pipeline/perf-run.mjs --env laptop` before a release tag (and with `--baseline` at milestones, committed). `pipeline/baseline/<env>.json` (Low, the budget preset) and `<env>-medium.json`, `<env>-high.json` are
+written by `perf-run.mjs --preset all --baseline` on `main` after a merge that changed perf-relevant code, and
+committed. The gate runs Low; `--preset all` runs Low, Medium and High in turn (audit REN-15), so a change that makes
+High dearer is seen too (`--preset high` alone for one).
+
+**The laptop run** (the owner, on the target laptop, from the repository with `npm ci` done and Chrome installed):
+
+```
+node pipeline/perf-run.mjs --env laptop --preset all --baseline
+```
+
+It builds the e2e bundle, opens a Chrome window (the installed Chrome, `--channel chrome`; `--chromium <path>` for
+another build) on the real GPU (no SwiftShader flags under `--env laptop`), plays the scripted Depot match on each
+preset for 3600 ticks (60 s) with the CPU throttled 4×, and writes `pipeline/baseline/laptop.json`,
+`laptop-medium.json` and `laptop-high.json`. Leave the window alone and the laptop plugged in; commit the three files.
+From then on `node pipeline/gate.mjs --env laptop --perf` judges p95 and p99 against the budget there.
 
 ## Task block (`docs/TASKS.md`)
 

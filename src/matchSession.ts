@@ -29,8 +29,9 @@ import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
+import { ContactShadows } from './render/contactShadows';
 import { addLighting, type Daylight } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
+import { buildMapMeshes, disposeMapMeshes, type MapLook, mapLookOf, restyleMap } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -44,6 +45,7 @@ import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
+import { MatchTakes } from './stats/settleMatch';
 import type { MatchResult } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import { type NotCounted, notCountedFor } from './ui/recordsView';
@@ -89,8 +91,13 @@ export class MatchSession {
   private readonly physics: PhysicsWorld;
   private readonly nav: NavGrid;
   private readonly bots: BotController;
-  private readonly mapGroup: THREE.Group;
+  private mapGroup: THREE.Group;
+  /** The map's drawing as built (map detail, relief…) and the map itself, to restyle it (Settings → Graphics). */
+  private mapLook: MapLook;
+  private readonly mapData: MapData;
   private readonly daylight: Daylight;
+  /** A soft dark disc on the floor under every player (audit section 5, F5), on every preset. */
+  private readonly contact: ContactShadows;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
@@ -104,10 +111,8 @@ export class MatchSession {
   private readonly hits: HitConfig;
   /** Simulation time the match was decided (NaN while it's on, and once the result screen is due). */
   private matchOverAt = Number.NaN;
-  /** The decided match has been handed to the records (takeMatchResult), so it is counted once. */
-  private resultTaken = false;
-  /** The decided match has been paid its Field Credits (takeOutcome, M26c), so it is paid once. */
-  private outcomeTaken = false;
+  /** The decided match goes to the records (takeMatchResult) and is paid (takeOutcome, M26c) once each. */
+  private readonly takes = new MatchTakes();
   /** The standard match, so its result could go into the records (custom rules don't, M20). */
   private readonly standardRules: boolean;
   /** Played on a map still being built (M33): never in the records. */
@@ -130,7 +135,9 @@ export class MatchSession {
     const map = setup.map;
     this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04).
-    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, quality.surfaceRelief);
+    this.mapData = map;
+    this.mapLook = mapLookOf(quality);
+    this.mapGroup = buildMapMeshes(map, renderer.surfaceTextures, this.mapLook);
     renderer.scene.add(this.mapGroup);
     this.daylight = addLighting(renderer.scene, map, quality);
 
@@ -175,7 +182,11 @@ export class MatchSession {
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(setup.kit, map.night ?? false));
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail);
+    this.match.setFigureShadows(quality.figureShadows);
+    this.match.setFlagQuality(quality);
+    this.contact = new ContactShadows(this.state.characters, this.hits.vanishTime);
+    renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
   }
 
@@ -218,11 +229,10 @@ export class MatchSession {
    */
   takeMatchResult(): MatchResult | null {
     const r = this.state.round;
-    if (r.phase !== 'matchOver' || this.resultTaken) return null;
-    this.resultTaken = true;
-    if (!this.countsForRecords) return null;
-    const mine = this.stats.matchOf(this.player.id);
-    return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+    return this.takes.result(r.phase === 'matchOver', this.countsForRecords, () => {
+      const mine = this.stats.matchOf(this.player.id);
+      return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+    });
   }
 
   /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24). */
@@ -236,16 +246,15 @@ export class MatchSession {
    */
   takeOutcome(): MatchOutcome | null {
     const r = this.state.round;
-    if (r.phase !== 'matchOver' || this.outcomeTaken) return null;
-    this.outcomeTaken = true;
-    if (!this.paysFieldCredits) return null;
-    return {
+    return this.takes.outcome(r.phase === 'matchOver', this.paysFieldCredits, () => ({
       won: r.matchWinner === this.player.team,
-      roundsWon: r.score[this.player.team] ?? 0,
+      // Rounds won with you in them (audit POOL-08), and the teammates' difficulty when you have any.
+      roundsWon: this.stats.roundsContributed(this.player.id),
       hits: this.stats.matchOf(this.player.id).hits,
       winsNeeded: this.rounds.winsNeeded,
       difficulty: this.setup.difficulty,
-    };
+      ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
+    }));
   }
 
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */
@@ -264,12 +273,15 @@ export class MatchSession {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
+    this.contact.update(alpha, spectating ? -1 : PLAYER_ID);
     const holding = this.bots.holdSpot(this.player, this.holdSpot);
     const order = this.bots.orderOf(this.player);
     this.match.showSquadOrder(order, holding ? this.holdSpot : null, this.renderer.camera, dt);
     this.match.showOrderWheel(this.input.wheelOpen, this.input.wheelPointer, order, this.input.wheelSelect);
     this.match.showMinimap(holding ? this.holdSpot : null);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
+    // High's shadow map follows the view (REN-08), the spectator's too.
+    this.daylight.follow(this.renderer.camera);
     this.combat.render(!spectating);
   }
 
@@ -280,12 +292,18 @@ export class MatchSession {
   }
 
   /**
-   * A new quality preset (Settings → Graphics, M14): the sun's shadows, the surfaces' relief, the dust in the air and
-   * the held replica's sheen follow it at once. (The renderer's own part is Renderer.setQuality.)
+   * New quality settings (Settings → Graphics): the sun's shadows, the surfaces' textures and relief, the figures'
+   * shading, the dust in the air and the held replica's sheen follow them at once. Call after Renderer.setQuality (the
+   * renderer's part, which draws a new texture size when the map asks for it here).
    */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    setMapRelief(this.mapGroup, quality.surfaceRelief);
+    const look = mapLookOf(quality);
+    this.mapGroup = restyleMap(this.mapGroup, this.mapData, this.renderer.surfaceTextures, this.mapLook, look);
+    this.mapLook = look;
+    this.match.setFigureShadows(quality.figureShadows);
+    this.match.setFlagQuality(quality);
+    this.match.setFigureDetail(quality.figureDetail);
     this.combat.setQuality(quality);
   }
 
@@ -335,6 +353,7 @@ export class MatchSession {
   dispose(): void {
     this.combat.dispose();
     this.match.dispose();
+    this.contact.dispose();
     this.renderer.scene.remove(this.mapGroup);
     disposeMapMeshes(this.mapGroup);
     this.daylight.dispose();

@@ -8,15 +8,15 @@ import { Game } from './game';
 // Reads pool.md at start (M26a), so a row it can't read is reported in the console straight away.
 import './pool/gamePool';
 import { initPhysics } from './physics/physicsWorld';
-import { lacksHardwareAcceleration } from './render/gpuCheck';
+import { gpuTier, probeGpu } from './render/gpuCheck';
 import { CrashScreen } from './ui/crashScreen';
 import { chunkInfo, prefetchWithProgress } from './ui/loadingProgress';
 import { LoadingScreen } from './ui/loadingScreen';
-import { loadSavedQuality } from './ui/menus/savedChoices';
+import { loadCustomQuality, loadSavedQuality } from './ui/menus/savedChoices';
 import { OtherTabNotice } from './ui/otherTabNotice';
 import { startGuardedStorage } from './save/guardedStorage';
 import { SaveManager } from './save/saveManager';
-import { browserLockChannel, TabLock } from './save/tabLock';
+import { browserLockChannel, browserSaveLocks, TabLock } from './save/tabLock';
 import { flushSettings } from './settings/storage';
 
 /** The game once it has started; until then an error is a start-up failure. */
@@ -50,18 +50,21 @@ async function main(): Promise<void> {
   // (the debug overlay shows the seed in use). An unreadable ?seed= value is ignored.
   const seed = parseSeed(params.get('seed')) ?? randomSeed();
   bootSeed = seed;
-  // The saved render preset (Settings → Graphics); ?quality=low|medium|high picks another for this visit, to measure
-  // frame cost (the debug overlay shows which). With neither, a browser drawing in software starts on Low (audit
-  // M-02). Decided before the renderer is made, so its antialiasing matches.
-  const softwareRendering = lacksHardwareAcceleration();
-  const quality = startingQuality(parseQuality(params.get('quality')), loadSavedQuality(), softwareRendering);
+  // The saved render quality (Settings → Graphics: a preset or the Custom mix); ?quality=low|medium|high|custom picks
+  // another for this visit, to measure frame cost (the debug overlay shows which). With neither, the GPU decides: Low in
+  // a browser drawing in software (audit M-02), Medium on integrated graphics, High on a discrete card (REN-03). Decided
+  // before the renderer is made, so its first context is the right one.
+  const gpu = probeGpu();
+  const softwareRendering = gpu.software;
+  const quality = startingQuality(parseQuality(params.get('quality')), loadSavedQuality(), loadCustomQuality(), gpuTier(gpu.name, gpu.software));
   const game = await Game.create(container, {
     // ?nolock works on the dev server and in the smoke test's `e2e` build, never in a normal release build.
     allowUnlocked: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('nolock'),
     // ?script=perf drives the player from config/perfScript.ts for the perf harness (pipeline/perf-run.mjs).
     scriptedPlayer: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.get('script') === 'perf',
     seed,
-    quality: quality.preset,
+    quality: quality.choice,
+    qualitySettings: quality.settings,
     automaticQuality: quality.automatic,
     softwareRendering,
     save,
@@ -80,6 +83,7 @@ async function main(): Promise<void> {
 async function startSave(): Promise<SaveManager | null> {
   const storage = startGuardedStorage();
   const lock = new TabLock({
+    locks: browserSaveLocks(),
     channel: browserLockChannel(),
     // Another tab took the save: write what's waiting, stop saving, and wait behind the notice.
     onLost: () => {
