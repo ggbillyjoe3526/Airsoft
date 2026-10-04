@@ -1,3 +1,4 @@
+import type { SquadOrderKind } from '../config/squad';
 import { type Action, type CrouchMode, DEFAULT_AIM_MODE, DEFAULT_CROUCH_MODE, DEFAULT_SPRINT_MODE, type HoldMode, MOUSE } from '../config/controls';
 import { AIMING } from '../config/optics';
 import type { MovementConfig } from '../config/movement';
@@ -43,6 +44,8 @@ export class PlayerInput {
   private reloadLatch = false;
   private fireLatch = false;
   private fireModeLatch = false;
+  /** A squad order key pressed since the last takeOrder (M22). */
+  private orderLatch: SquadOrderKind | null = null;
   private switchLatch = -1;
   private readonly mouseDelta = { x: 0, y: 0 };
 
@@ -106,6 +109,9 @@ export class PlayerInput {
     if (kb.wasPressed('jump')) this.jumpLatch = true;
     if (kb.wasPressed('reload')) this.reloadLatch = true;
     if (kb.wasPressed('fireMode')) this.fireModeLatch = true;
+    if (kb.wasPressed('orderFollow')) this.orderLatch = 'follow';
+    if (kb.wasPressed('orderHold')) this.orderLatch = 'hold';
+    if (kb.wasPressed('orderRegroup')) this.orderLatch = 'regroup';
     if (this.crouchModeValue === 'toggle') {
       if (kb.wasPressed('crouch')) this.crouchToggled = !this.crouchToggled;
       // Sprinting or jumping stands you up; that press only stands you up (the jump comes on the next one).
@@ -168,6 +174,13 @@ export class PlayerInput {
     return clicked;
   }
 
+  /** The squad order key pressed this frame, once (null if none; M22). */
+  takeOrder(): SquadOrderKind | null {
+    const order = this.orderLatch;
+    this.orderLatch = null;
+    return order;
+  }
+
   /** Looks the way a new round starts: along `yaw`, level, standing, sight down and not sprinting. */
   resetView(yaw: number): void {
     this.yaw = yaw;
@@ -184,6 +197,7 @@ export class PlayerInput {
     this.reloadLatch = false;
     this.fireLatch = false;
     this.fireModeLatch = false;
+    this.orderLatch = null;
     this.switchLatch = -1;
   }
 }

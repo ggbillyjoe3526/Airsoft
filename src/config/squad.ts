@@ -38,4 +38,8 @@ export const SQUAD_ORDERS = {
   regroupArrive: 4,
   /** What the HUD calls each order. */
   labels: { follow: 'Follow me', hold: 'Hold here', regroup: 'Regroup' } satisfies Record<SquadOrderKind, string>,
+  /** The HUD line after an order is cancelled, or given with no teammate left to take it, for `noticeTime` seconds. */
+  cancelled: 'Back to the team plan',
+  nobody: 'No teammates left to order',
+  noticeTime: 2,
 } as const;

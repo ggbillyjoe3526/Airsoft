@@ -17,6 +17,7 @@ import { PHYSICS } from './config/physics';
 import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import type { ReplicaConfig } from './config/replicas';
 import { SIM, SIM_DT } from './config/sim';
+import type { SquadOrderKind } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
@@ -161,6 +162,8 @@ export class MatchSession {
     const p = this.player;
     this.input.update(p.armament.active, this.loadout.length, this.combat.aimRaised, this.combat.aimSensitivityScale, canAimDownSights(p.armament, this.loadout));
     if (this.match.spectating && this.input.takeClick()) this.match.nextSpectateTarget();
+    const order = this.input.takeOrder();
+    if (order) this.giveOrder(order);
     const ticks = advanceStepper(this.stepper, dt);
     for (let i = 0; i < ticks; i++) {
       this.input.fillCommand(this.playerCommand);
@@ -206,6 +209,7 @@ export class MatchSession {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, HITS, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
+    this.match.showSquadOrder(this.bots.orderOf(this.player), dt);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.combat.render(!spectating);
   }
@@ -276,6 +280,14 @@ export class MatchSession {
     fitParts(this.player.armament, this.loadout, this.setup.parts);
     setHopUps(this.player.armament, this.setup.hopUps);
     setBbWeights(this.player.armament, this.setup.bbWeights);
+  }
+
+  /** A squad order key (M22): your bot teammates' radios answer when they take it; the HUD says what's in force. */
+  private giveOrder(order: SquadOrderKind): void {
+    const before = this.bots.orderOf(this.player);
+    const result = this.bots.giveOrder(this.player, order);
+    this.match.orderGiven(result, before !== 'none');
+    if (result !== 'none') this.combat.orderHeard();
   }
 
   /** Everything that reacts to a simulation tick's events. */

@@ -3,6 +3,7 @@ import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { ReplicaConfig } from '../config/replicas';
+import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { botSeed, planSeed } from '../core/seed';
 import { cellX, cellZ, createNavSearch, findPath, type NavGrid, type NavSearch } from '../nav/navGrid';
 import type { WorldQuery } from '../sim/armament';
@@ -17,6 +18,7 @@ import { type Bot, type BotWorld, createBot, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
 import { bodyPoint, eyeOf } from './perception';
+import { endOrder, heldCentre, holdPoint, placeHold, startOrder } from './squadOrders';
 import { assignLanes, pickTeamPlan, shuffledLanes, type TeamPlan } from './teamPlan';
 
 /** Score of a sector nobody has visited this round: older than any real visit. */
@@ -53,6 +55,8 @@ export class BotController {
   private readonly commandsById = new Map<number, PlayerCommand>();
   private readonly chest = vec3();
   private readonly ear = vec3();
+  private readonly held = vec3();
+  private readonly lookedAt = vec3();
   private plannerCursor = 0;
   /** Tuning to switch to at the next round start (a difficulty change made mid-match). */
   private pendingCfg: BotConfig | undefined;
@@ -152,8 +156,54 @@ export class BotController {
       if (isInPlay(c)) this.visited[c.team]![this.sectorOf(c.position.x, c.position.z)] = state.time;
     }
     this.planRoutes();
+    this.endStaleOrders();
     this.pickRetakers();
     for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
+  }
+
+  /**
+   * A squad order from `leader` (a player) to the bot teammates in play (M22). Giving the order already in force
+   * cancels it, except Hold here aimed at least holdMove from the held spots, which moves them. Returns the order in
+   * force afterwards ('none' also when no teammate is left to take it).
+   */
+  giveOrder(leader: Character, kind: SquadOrderKind): SquadOrderKind | 'none' {
+    const w = this.world;
+    const team = this.bots.filter((b) => b.character.team === leader.team && isInPlay(b.character));
+    if (!isInPlay(leader) || team.length === 0) return 'none';
+    const current = this.orderOf(leader);
+    let point: Vec3 | undefined = holdPoint(leader, w, this.lookedAt) ? this.lookedAt : undefined;
+    if (current === kind) {
+      const moveHold = kind === 'hold' && heldCentre(team, leader, this.held) && (point ? Math.hypot(point.x - this.held.x, point.z - this.held.z) : 0) >= SQUAD_ORDERS.holdMove;
+      if (!moveHold) {
+        for (const b of team) if (b.orderLeader === leader) endOrder(b, w);
+        return 'none';
+      }
+    }
+    if (kind === 'hold') {
+      // Left to right across the leader's view, so nobody crosses another's path to their spot.
+      const rx = Math.cos(leader.yaw);
+      const rz = -Math.sin(leader.yaw);
+      team.sort((a, b) => a.character.position.x * rx + a.character.position.z * rz - (b.character.position.x * rx + b.character.position.z * rz));
+    } else {
+      point = undefined;
+    }
+    team.forEach((b, slot) => startOrder(b, leader, kind, slot));
+    if (kind === 'hold') placeHold(team, leader, point, w);
+    return kind;
+  }
+
+  /** The order `leader`'s bot teammates are carrying out ('none': they play the team plan). */
+  orderOf(leader: Character): SquadOrderKind | 'none' {
+    for (const b of this.bots) if (b.orderLeader === leader && b.order !== 'none') return b.order;
+    return 'none';
+  }
+
+  /** Orders end when whoever gave them, or the bot itself, is out of play (hit, or the round over). */
+  private endStaleOrders(): void {
+    for (const b of this.bots) {
+      const leader = b.orderLeader;
+      if (b.order !== 'none' && (!leader || !isInPlay(leader) || !isInPlay(b.character))) endOrder(b, this.world);
+    }
   }
 
   /**
@@ -167,12 +217,13 @@ export class BotController {
     for (const b of this.bots) {
       const c = b.character;
       b.retake = false;
-      if (r.mode !== 'attackDefend' || r.attackers < 0 || c.team === r.attackers || !isInPlay(c)) continue;
+      // A bot under a squad order isn't picked: it does what it was told, and the next nearest goes.
+      if (r.mode !== 'attackDefend' || r.attackers < 0 || c.team === r.attackers || !isInPlay(c) || b.order !== 'none') continue;
       const d = Math.hypot(c.position.x - pole.x, c.position.z - pole.z);
       let closer = 0;
       for (const o of this.bots) {
         const oc = o.character;
-        if (o === b || oc.team !== c.team || !isInPlay(oc)) continue;
+        if (o === b || oc.team !== c.team || !isInPlay(oc) || o.order !== 'none') continue;
         const od = Math.hypot(oc.position.x - pole.x, oc.position.z - pole.z);
         if (od < d || (od === d && oc.id < c.id)) closer++;
       }
@@ -360,7 +411,8 @@ export class BotController {
     let rear = Number.POSITIVE_INFINITY;
     for (const b of this.bots) {
       const c = b.character;
-      if (c === me || c.team !== me.team || !isInPlay(c)) continue;
+      // Bots under a squad order go their own way: nobody waits for them.
+      if (c === me || c.team !== me.team || !isInPlay(c) || b.order !== 'none') continue;
       rear = Math.min(rear, this.progress(c));
     }
     return this.progress(me) - rear > this.world.cfg.teamSpread;

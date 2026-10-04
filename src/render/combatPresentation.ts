@@ -118,6 +118,11 @@ export class CombatPresentation {
     return this.bbs.visibleCount;
   }
 
+  /** A teammate's radio answers a squad order (M22). */
+  orderHeard(): void {
+    this.sfx.orderHeard();
+  }
+
   /** Call after every simulation tick, while that tick's events are still in the state. */
   afterTick(): void {
     this.paths.recordTick();

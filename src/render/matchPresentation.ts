@@ -1,3 +1,4 @@
+import type { SquadOrderKind } from '../config/squad';
 import * as THREE from 'three';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
@@ -18,6 +19,7 @@ import { MatchBoard } from '../ui/matchBoard';
 import { roundBanner } from '../ui/roundBanner';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
+import { SquadOrderLine } from '../ui/squadOrderLine';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { CharacterRenderer } from './characterRenderer';
@@ -52,6 +54,7 @@ export class MatchPresentation {
   private readonly mateAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   /** On-screen sound cues (Settings → Accessibility, M18b; off unless turned on). */
   private readonly soundCues: SoundCues;
+  private readonly squadLine: SquadOrderLine;
   private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0 };
   private readonly viewDir = new THREE.Vector3();
   /** Display names by character id ("Blue 2", "You"). */
@@ -96,6 +99,7 @@ export class MatchPresentation {
     this.feed = new HitFeed(container);
     this.board = new MatchBoard(container);
     this.soundCues = new SoundCues(container);
+    this.squadLine = new SquadOrderLine(container, player.team);
   }
 
   /** On-screen sound cues turned on or off (also called once as the match is built). */
@@ -108,6 +112,7 @@ export class MatchPresentation {
     this.scoreboard.setVisible(playing);
     this.feed.setVisible(playing);
     this.soundCues.setVisible(playing);
+    this.squadLine.setVisible(playing);
     this.playing = playing;
     if (!playing) {
       this.marker.hide();
@@ -142,9 +147,20 @@ export class MatchPresentation {
         this.spectator.reset();
         this.feed.clear();
         this.soundCues.clear();
+        this.squadLine.clear();
       }
       if (soundCueOf(e, this.player, this.characterOf, this.heard)) this.soundCues.add(this.heard, this.state.time);
     }
+  }
+
+  /** You gave a squad order and `result` is now in force (`hadOrder`: one was before); see SquadOrderLine. */
+  orderGiven(result: SquadOrderKind | 'none', hadOrder: boolean): void {
+    this.squadLine.ordered(result, hadOrder);
+  }
+
+  /** Once per frame: the squad order your bot teammates are carrying out. */
+  showSquadOrder(order: SquadOrderKind | 'none', dt: number): void {
+    this.squadLine.update(order, dt);
   }
 
   /** Clicking while spectating watches the next player. */
@@ -195,6 +211,7 @@ export class MatchPresentation {
     this.board.dispose();
     this.mateMarkers.dispose();
     this.soundCues.dispose();
+    this.squadLine.dispose();
   }
 
   private readonly characterOf = (id: number): Character | undefined => {
