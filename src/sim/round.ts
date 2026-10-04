@@ -4,6 +4,7 @@ import type { BBPool } from './ballistics';
 import { type Character, respawnCharacter } from './character';
 import { isInPlay } from './elimination';
 import type { GameEvent, RoundEndReason } from './events';
+import { createRunState, type ExtractionContext, placeRun, resetRun, type RunState, stepRun } from './extraction';
 import { createFlagState, type FlagState, resetFlag, stepFlag } from './flag';
 import type { Vec3 } from './vec';
 
@@ -40,6 +41,8 @@ export interface RoundContext {
   spawns: readonly (readonly SpawnPoint[])[];
   /** Characters stand this far above a spawn's floor point (the physics rest gap). */
   spawnLift: number;
+  /** Extraction (M43): the run's rules and places; absent in the other modes. */
+  extraction?: ExtractionContext | undefined;
 }
 
 /**
@@ -77,6 +80,8 @@ export interface RoundState {
   attackers: number;
   /** Flag mode: this round's pole (unused in elimination). */
   flag: FlagState;
+  /** Extraction: the run (sim/extraction.ts); the match is one run, `clock` its time left. Unused in the other modes. */
+  run: RunState;
 }
 
 /** A match ready to play round 1 in `mode` (characters are put at their spawns with placeTeams and respawnCharacter). */
@@ -95,6 +100,7 @@ export function createRoundState(rules: RoundRules, mode: MatchMode = 'eliminati
     matchWinner: -1,
     attackers: -1,
     flag: createFlagState(),
+    run: createRunState(),
   };
   setUpObjective(round, rules, pole);
   return round;
@@ -162,6 +168,10 @@ export function stepRound(round: RoundState, characters: Character[], bbs: BBPoo
     return;
   }
 
+  if (round.mode === 'extraction') {
+    stepRunRound(round, characters, ctx, events, dt);
+    return;
+  }
   // Live. A team with members but nobody left in play is wiped out (an empty team never is).
   let blue = 0;
   let orange = 0;
@@ -238,10 +248,46 @@ function startRound(round: RoundState, characters: Character[], bbs: BBPool, ctx
   round.timer = 0;
   round.overtime = 0;
   setUpObjective(round, ctx.rules, ctx.pole);
-  placeTeams(round, characters, ctx);
-  for (const c of characters) respawnCharacter(c);
+  if (round.mode === 'extraction') startRun(round, characters, ctx);
+  else {
+    placeTeams(round, characters, ctx);
+    for (const c of characters) respawnCharacter(c);
+  }
   for (const bb of bbs.bbs) bb.active = false;
   events.push({ type: 'roundStart', round: number });
+}
+
+/**
+ * Extraction: a fresh run (sim/extraction.ts resetRun) with the squad at the insertion and the home team at its starts.
+ * Also how a session sets up its run before the first tick (placeTeams' place in the other modes).
+ */
+export function startRun(round: RoundState, characters: readonly Character[], ctx: RoundContext): void {
+  const x = ctx.extraction;
+  if (!x) throw new Error('Extraction needs the run context');
+  let ids = 0;
+  for (const c of characters) ids = Math.max(ids, c.id + 1);
+  resetRun(round.run, x, ids);
+  placeRun(characters, x);
+}
+
+/**
+ * Extraction's live tick: the clock, then the run (exits, respawns, the count). The run ending ends the match at once,
+ * won by the squad when it extracted and by the home team otherwise; there are no rounds after it.
+ */
+function stepRunRound(round: RoundState, characters: Character[], ctx: RoundContext, events: GameEvent[], dt: number): void {
+  const x = ctx.extraction;
+  if (!x) throw new Error('Extraction needs the run context');
+  round.clock = Math.max(0, round.clock - dt);
+  const outcome = stepRun(round.run, characters, x, round.clock, events, dt);
+  if (outcome === 'none') return;
+  const winner = outcome === 'extracted' ? x.squadTeam : 1 - x.squadTeam;
+  round.winner = winner;
+  round.reason = outcome;
+  round.score[winner === 0 ? 0 : 1]++;
+  round.phase = 'matchOver';
+  round.matchWinner = winner;
+  events.push({ type: 'roundOver', winner, reason: outcome });
+  events.push({ type: 'matchOver', winner });
 }
 
 /** Flag mode: who attacks this round, and the pole at the defenders' end with the flag at the bottom. */

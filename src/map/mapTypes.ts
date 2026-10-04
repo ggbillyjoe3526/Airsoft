@@ -85,4 +85,41 @@ export interface MapData {
    * over it. Absent: the map's ground is its floor blocks, as on Depot.
    */
   terrain?: Terrain;
+  /**
+   * Extraction (M43): where a squad goes in, where it can get out and where the home team starts. Maps without one
+   * can't be played in Extraction.
+   */
+  extraction?: ExtractionData;
+}
+
+/** A way off the field in Extraction: stand inside it for EXTRACTION.extractTime to be counted out. */
+export interface ExitZone {
+  /** What the HUD calls it ("Car park gate"). */
+  name: string;
+  /** Floor point at its middle. */
+  position: Vec3;
+  /** Radius (metres, horizontal) a squad member must be within. */
+  radius: number;
+  /** Opens only when EXTRACTION.lateExitAt seconds are left. */
+  late?: boolean;
+}
+
+/** A place a squad can go in at: its spawn points (one per member) and the end of the map whose lanes lead out of it. */
+export interface Insertion {
+  name: string;
+  spawns: SpawnPoint[];
+  /** The end (0 or 1) this insertion counts as, for lanes and dead zones: the home team plays from the other end. */
+  end: number;
+}
+
+/** A map's Extraction data (M43). The run's seed picks the insertion; exits near it are closed for that run. */
+export interface ExtractionData {
+  /** Seconds a run lasts on this map. */
+  runTime: number;
+  /** Opponents in play at once before the squad's share: base + squad size (Depot: 2, so 3 / 4 / 5). */
+  baseOpponents: number;
+  insertions: Insertion[];
+  exits: ExitZone[];
+  /** Where the home team starts a run: at least base + 3 points, picked far from the insertion. */
+  opponentStarts: SpawnPoint[];
 }

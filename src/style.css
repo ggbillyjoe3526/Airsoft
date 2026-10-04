@@ -2430,6 +2430,65 @@ kbd {
   opacity: calc(0.9 * var(--hud-l3));
 }
 
+/* Extraction's exit markers (M43): the flag marker's frame with a door icon in the exit's green. */
+.flag-marker.exit-marker .flag-marker-icon {
+  width: calc(12px * var(--hud-scale, 1));
+  height: calc(16px * var(--hud-scale, 1));
+  border: 2px solid var(--flag);
+  border-left-width: 2px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(var(--flag), var(--flag)) right 2px top 55% / 2px 2px no-repeat;
+}
+
+/* Extraction's strip (M43): no round scores, and the respawn note beside the exit line. */
+.scoreboard.sb-run .sb-score {
+  display: none;
+}
+
+.sb-respawn {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: var(--fs-2xs);
+  letter-spacing: var(--ls-wide);
+}
+
+.sb-respawn.spent {
+  color: var(--warning);
+}
+
+.sb-respawn[hidden] {
+  display: none;
+}
+
+/* Back at the insertion after a hit (M43): a short fade in from black. */
+.respawn-fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 12;
+}
+
+.respawn-fade.on {
+  animation: respawn-fade 0.6s ease-out forwards;
+}
+
+@keyframes respawn-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.reduced-motion .respawn-fade.on {
+  animation-duration: 0.01s;
+}
+
 /* Squad orders (M22): the order your bot teammates carry out, bottom left. */
 .squad-order {
   position: absolute;

@@ -17,7 +17,7 @@ import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
-import { COMING_MAPS, COMING_SOON_TAG, MAPS, type MapId } from '../../map/maps';
+import { COMING_MAPS, COMING_SOON_TAG, MAPS, type MapId, mapData } from '../../map/maps';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
@@ -479,7 +479,7 @@ export class Menus {
     );
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
     const recorded = countsForRecords(m, this.difficulty, this.teammateDifficulty);
-    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value);
+    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter }, this.modeDialog.value, mapData(this.mapDialog.value).extraction);
     // Said before the match, not only on its summary: custom rules don't go into the records (M20), nor does a match
     // played with Dev settings that change play (M24).
     const notes = [rules];

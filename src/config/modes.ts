@@ -1,14 +1,16 @@
 /**
  * Match modes. Elimination: knock out the whole other team. Attack / Defend: one team attacks a flagpole in the
  * other team's half and wins by raising its flag to the top; the defenders win by holding out until
- * time runs out. Knocking out the whole other team wins in either mode.
+ * time runs out. Knocking out the whole other team wins in either mode. Extraction (M43): one run, not rounds: a squad
+ * gets in, finds what it can and gets out through an exit before time runs out (config/extraction.ts).
  */
-export type MatchMode = 'elimination' | 'attackDefend';
+export type MatchMode = 'elimination' | 'attackDefend' | 'extraction';
 
 /** Modes in the order the Mode pop-up lists them, with their labels. */
 export const MATCH_MODES: readonly { id: MatchMode; label: string; blurb: string }[] = [
   { id: 'elimination', label: 'Elimination', blurb: 'Last team with someone in play wins the round.' },
   { id: 'attackDefend', label: 'Attack and Defend', blurb: "Raise your flag on the other team's pole, or keep yours down." },
+  { id: 'extraction', label: 'Extraction', blurb: 'Get in, get what you can and get counted out at an exit before the whistle.' },
 ];
 
 export const DEFAULT_MODE: MatchMode = 'elimination';
