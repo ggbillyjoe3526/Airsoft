@@ -4,6 +4,7 @@ import { BODY } from '../config/movement';
 import { DEPOT } from '../map/depot';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
+import type { Character } from '../sim/character';
 import { OPEN_FIELD } from '../sim/testSupport';
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { lookAngles } from './aim';
@@ -58,6 +59,8 @@ describe('clearing corners near the enemy', () => {
     let walked = 0;
     let sprinted = 0;
     let onCorner = 0;
+    // Leaning: how often it leans within and beyond sliceLeanDistance of the nearest corner it has in mind, and to the wrong side.
+    const leaned = { near: 0, far: 0, wrongSide: 0, farCornerTicks: 0 };
     const eye = vec3();
     const look = { yaw: 0, pitch: 0 };
     run(6, () => {
@@ -66,12 +69,22 @@ describe('clearing corners near the enemy', () => {
       if (cmd.walk) walked++;
       if (cmd.sprint) sprinted++;
       if (b.heldAngleCount === 0) return;
+      const me = b.character.position;
+      let nearest = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < b.heldAngleCount; i++) nearest = Math.min(nearest, Math.hypot(b.heldAngles[i]!.point.x - me.x, b.heldAngles[i]!.point.z - me.z));
+      if (nearest > BOTS.sliceLeanDistance) leaned.farCornerTicks++;
+      if (cmd.lean !== 0) {
+        if (nearest <= BOTS.sliceLeanDistance) leaned.near++;
+        else leaned.far++;
+        // The wall is on its left (-x), the corner's open side on the right: the lean is to the right.
+        if (cmd.lean !== 1) leaned.wrongSide++;
+      }
       eyeOf(b.character, w.body, w.hits, eye);
       const a = b.heldAngles[0]!;
       lookAngles(eye.x, eye.y, eye.z, a.point.x, a.point.y, a.point.z, look);
       if (Math.abs(wrapAngle(b.aim.yaw - look.yaw)) < 5 * DEG) onCorner++;
     });
-    return { b, moving, walked, sprinted, onCorner };
+    return { b, moving, walked, sprinted, onCorner, leaned };
   }
 
   it('walks, never sprints, and aims at the corner ahead instead of where it walks (Pro)', () => {
@@ -86,6 +99,18 @@ describe('clearing corners near the enemy', () => {
     expect(hard.moving).toBeGreaterThan(60);
     expect(hard.walked).toBeLessThan(hard.moving / 2);
     expect(hard.onCorner).toBe(0);
+  });
+
+  it('leans out to the open side of a near corner as it walks up to it, and never from further off (Pro); Hard never leans', () => {
+    const pro = walkLane('pro');
+    expect(pro.leaned.near).toBeGreaterThan(20);
+    expect(pro.leaned.wrongSide).toBe(0);
+    expect(pro.leaned.far).toBe(0);
+    // It spends a good while walking with the corner further off than that, not leaning (so the guard is not vacuous).
+    expect(pro.leaned.farCornerTicks).toBeGreaterThan(60);
+    const hard = walkLane('hard');
+    expect(hard.moving).toBeGreaterThan(60);
+    expect(hard.leaned.near + hard.leaned.far).toBe(0);
   });
 
   it('runs when it is hunting with nothing heard, even in the enemy half', () => {
@@ -423,53 +448,168 @@ describe('defence and moving in pairs', () => {
   });
 });
 
-describe('no pooled hearing: a bot reacts only to what it heard itself', () => {
-  // Blue's player at the origin, behind a wall; Orange's bots: one 15 m off, one beside it, one 42 m off (beyond hearingDistance).
-  const chars = [
-    [0, 0, 0],
-    [0, -15, 1],
-    [4, -16, 1],
-    [0, -42, 1],
-  ] as const;
-
-  function arena(map: MapData) {
-    const s = skirmish(map, chars);
+describe('heard spots shared, hit calls traded only by those who heard them', () => {
+  // Blue's player at the origin, behind a wall; Orange's bots: the victim 15 m off, `near` beside it, `far` 42 m off (27 m
+  // from the victim: beyond hearingDistance of a hit call). `extra` adds more characters after those.
+  function arena(map: MapData, playerZ = 0, extra: readonly (readonly [number, number, number])[] = []) {
+    const s = skirmish(map, [
+      [0, playerZ, 0],
+      [0, -15, 1],
+      [4, -16, 1],
+      [0, -42, 1],
+      ...extra,
+    ]);
     for (const b of s.bots.bots) setSkill(b, 'pro');
     const [victim, near, far] = s.bots.bots as [Bot, Bot, Bot];
     s.state.events.length = 0;
-    return { ...s, victim, near, far };
+    /** The player hits the victim (from `playerZ`), as the simulation emits it. */
+    const hit = () => {
+      s.state.events.push({
+        type: 'characterHit',
+        victimId: victim.character.id,
+        shooterId: s.player.id,
+        position: vec3(0, 1.2, -15),
+        direction: vec3(0, 0, playerZ < -15 ? 1 : -1),
+        ricochet: false,
+      });
+      victim.character.status = 'walkingOff';
+    };
+    return { ...s, victim, near, far, hit };
   }
+  const WALL = field([box('wall', 0, -5, 14, 3, 0.4)]);
+  const AWAY = vec3(50, 0, 50);
+  /** `far`'s own idea of where someone is: far from where anything is heard, to tell it kept it. */
+  const ownNews = (b: Bot, heardAt: number) => {
+    b.lastKnown.x = AWAY.x;
+    b.lastKnown.y = 0;
+    b.lastKnown.z = AWAY.z;
+    b.hasLastKnown = true;
+    b.heardAt = heardAt;
+  };
 
-  it("a hit call is heard (and traded) only by teammates within earshot; a far Pro bot gets no tradeAt or lastKnown", () => {
-    const { state, player, bots, run, victim, near, far } = arena(field([box('wall', 0, -5, 14, 3, 0.4)]));
-    state.events.push({ type: 'characterHit', victimId: victim.character.id, shooterId: player.id, position: vec3(0, 1.2, -15), direction: vec3(0, 0, -1), ricochet: false });
-    victim.character.status = 'walkingOff';
+  it('a far Pro teammate that did not hear the hit call is told where it came from, but does not trade', () => {
+    const { state, bots, run, near, far, hit } = arena(WALL);
+    hit();
     bots.observe(state);
     expect(near.heardAt).toBe(state.time);
     expect(near.hasLastKnown).toBe(true);
     expect(near.tradeAt).toBe(state.time);
-    expect(far.heardAt).toBe(Number.NEGATIVE_INFINITY);
-    expect(far.hasLastKnown).toBe(false);
-    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    // Told (a copy of its teammate's guess, heard now), not hearing it (nor fighting: nothing heard "besides").
+    expect(far.hasLastKnown).toBe(true);
+    expect(far.heardAt).toBe(state.time);
+    expect(far.lastThreatAt).toBe(state.time);
+    expect(far.lastKnown).toEqual(near.lastKnown);
     expect(far.heardOtherAt).toBe(Number.NEGATIVE_INFINITY);
-    // Nor does the near bot's reaction reach it later.
-    run(1);
-    expect(far.hasLastKnown).toBe(false);
+    // But it never trades on hearsay, now or later.
     expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    run(1);
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(far.tradeTried).toBe(false);
   });
 
-  it('a bot does not learn of a shooter that another bot heard (and a shot is no hit call: nobody trades)', () => {
+  it('a shot is shared the same way (no hit call: nobody trades)', () => {
     const { state, player, bots, run, near, far } = arena(field([]));
     state.events.push({ type: 'shot', characterId: player.id, replicaId: 'aeg', position: vec3(player.position.x, 1.4, player.position.z) });
     bots.observe(state);
     expect(near.heardAt).toBe(state.time);
-    expect(near.hasLastKnown).toBe(true);
     expect(near.tradeAt).toBe(Number.NEGATIVE_INFINITY);
-    expect(far.heardAt).toBe(Number.NEGATIVE_INFINITY);
-    expect(far.hasLastKnown).toBe(false);
-    expect(far.heardOtherAt).toBe(Number.NEGATIVE_INFINITY);
+    // The far one is beyond earshot of a shot at 42 m, yet knows where it was.
+    expect(far.hasLastKnown).toBe(true);
+    expect(far.heardAt).toBe(state.time);
+    expect(far.lastKnown).toEqual(near.lastKnown);
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
     run(1);
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+  });
+
+  // The simulation emits a tick's events in order: a footstep or shot of the player's, then the BB's hit.
+  const noises = {
+    'a shot': (p: Character) => ({ type: 'shot', characterId: p.id, replicaId: 'aeg', position: vec3(p.position.x, 1.4, p.position.z) }) as const,
+    'a sprinting footstep': (p: Character) => ({ type: 'footstep', characterId: p.id, kind: 'sprint' }) as const,
+  };
+  it.each(Object.keys(noises) as (keyof typeof noises)[])('%s earlier in the tick, heard by a far teammate, does not make it trade a hit call it did not hear', (name) => {
+    // The player 30 m out: the far bot (12 m from them) hears the noise, but not the call at the victim (27 m off).
+    const { state, player, bots, victim, near, far, hit } = arena(field([]), -30);
+    state.events.push(noises[name](player));
+    hit();
+    bots.observe(state);
+    expect(far.heardAt).toBe(state.time);
+    expect(far.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(far.tradeTried).toBe(false);
+    // The one that heard the call does trade.
+    expect(near.tradeAt).toBe(state.time);
+    expect(victim.tradeAt).toBe(Number.NEGATIVE_INFINITY);
+  });
+
+  it('a Hard teammate gets nothing from a Pro one, and a Hard one that heard tells nobody', () => {
+    const a = arena(WALL);
+    setSkill(a.far, 'hard');
+    a.hit();
+    a.bots.observe(a.state);
+    expect(a.near.tradeAt).toBe(a.state.time);
+    expect(a.far.hasLastKnown).toBe(false);
+    expect(a.far.heardAt).toBe(Number.NEGATIVE_INFINITY);
+    expect(a.far.lastThreatAt).toBe(Number.NEGATIVE_INFINITY);
+    // The other way round: the hearer is Hard, the far one Pro.
+    const b = arena(WALL);
+    setSkill(b.near, 'hard');
+    b.hit();
+    b.bots.observe(b.state);
+    expect(b.near.hasLastKnown).toBe(true);
+    expect(b.far.hasLastKnown).toBe(false);
+    expect(b.far.heardAt).toBe(Number.NEGATIVE_INFINITY);
+  });
+
+  it('a teammate with fresher news of its own keeps it; stale news is replaced', () => {
+    const fresh = arena(WALL);
+    ownNews(fresh.far, fresh.state.time - 0.5);
+    fresh.hit();
+    fresh.bots.observe(fresh.state);
+    expect(fresh.far.lastKnown.x).toBe(AWAY.x);
+    expect(fresh.far.lastKnown.z).toBe(AWAY.z);
+    expect(fresh.far.heardAt).toBe(fresh.state.time - 0.5);
+    // News from its own eyes counts as fresh as well (a contact seen a moment ago).
+    const seen = arena(WALL);
+    ownNews(seen.far, Number.NEGATIVE_INFINITY);
+    seen.far.contact = { seenAt: seen.state.time - 0.5 } as Bot['contact'];
+    seen.hit();
+    seen.bots.observe(seen.state);
+    expect(seen.far.lastKnown.x).toBe(AWAY.x);
+    expect(seen.far.heardAt).toBe(Number.NEGATIVE_INFINITY);
+    // Control: news from hearingContactTime ago is old, and the teammate's guess replaces it.
+    const stale = arena(WALL);
+    ownNews(stale.far, stale.state.time - BOTS.hearingContactTime - 0.5);
+    stale.hit();
+    stale.bots.observe(stale.state);
+    expect(stale.far.lastKnown).toEqual(stale.near.lastKnown);
+    expect(stale.far.heardAt).toBe(stale.state.time);
+  });
+
+  it('a teammate in a fight keeps its own idea of where they are, however old', () => {
+    const { state, bots, far, near, hit } = arena(WALL);
+    ownNews(far, state.time - 30);
+    far.targetVisible = true;
+    hit();
+    bots.observe(state);
+    expect(near.hasLastKnown).toBe(true);
+    expect(far.lastKnown.x).toBe(AWAY.x);
+    expect(far.lastKnown.z).toBe(AWAY.z);
+    expect(far.heardAt).toBe(state.time - 30);
+    expect(far.lastThreatAt).not.toBe(state.time);
+  });
+
+  it('nothing is shared with the other team or with a teammate out of play', () => {
+    // A Blue Pro bot beside the far one's spot; the far Orange one has been hit.
+    const { state, bots, far, hit } = arena(WALL, 0, [[0, -40, 0]]);
+    const blue = bots.bots[3]!;
+    expect(blue.character.team).toBe(0);
+    far.character.status = 'out';
+    hit();
+    bots.observe(state);
+    expect(blue.hasLastKnown).toBe(false);
+    expect(blue.heardAt).toBe(Number.NEGATIVE_INFINITY);
     expect(far.hasLastKnown).toBe(false);
+    expect(far.heardAt).toBe(Number.NEGATIVE_INFINITY);
   });
 });
 
@@ -577,6 +717,103 @@ describe('moving in pairs: who counts as a partner that moves', () => {
     expect(wait.waited).toBe(true);
     expect(wait.b.teamWait).toBeCloseTo(DT, 5);
     expect(tick('hard').waited).toBe(false);
+  });
+
+  it('of two partners at their points in one tick, the one that thinks second sees the first has set off (route still wanted) and waits', () => {
+    const { state, bots } = skirmish(map, [
+      [30, 30, 0],
+      [0, -20, 1],
+      [2, -20, 1],
+    ]);
+    unarmed(state.characters);
+    const [first, second] = bots.bots as [Bot, Bot];
+    for (const b of [first, second]) {
+      setSkill(b, 'pro');
+      b.mode = 'advance';
+      b.hunting = false;
+      b.waitForTeam = true;
+      b.teamWait = 0;
+      b.holdLeft = 0;
+      b.routeState = 'none';
+      b.route.length = 0;
+    }
+    second.lane = first.lane;
+    bots.think(state, DT);
+    // The first sets off (it has asked for a route), the second, finding it so, holds.
+    expect(first.holding).toBe(false);
+    expect(first.routeState).toBe('wanted');
+    expect(second.holding).toBe(true);
+    expect(second.teamWait).toBeCloseTo(DT, 5);
+  });
+
+  describe('how long it waits', () => {
+    /** Orange's first bot after `seconds` of waiting at its lane point with a partner that stays on the move, and when it first stopped holding. */
+    function waitOut(seconds: number, level: Difficulty = 'pro') {
+      const { state, bots } = skirmish(map, [
+        [30, 30, 0],
+        [0, -20, 1],
+        [2, -20, 1],
+      ]);
+      unarmed(state.characters);
+      const [b, partner] = bots.bots as [Bot, Bot];
+      setSkill(b, level);
+      setSkill(partner, level);
+      b.mode = 'advance';
+      b.hunting = false;
+      b.waitForTeam = true;
+      b.teamWait = 0;
+      b.holdLeft = 0;
+      b.routeState = 'none';
+      b.route.length = 0;
+      partner.lane = b.lane;
+      let waitingAt = Number.NaN;
+      for (let t = 0; t < seconds; t += DT) {
+        // The partner never arrives anywhere: always on the move.
+        partner.mode = 'advance';
+        partner.hunting = false;
+        partner.holding = false;
+        partner.order = 'none';
+        partner.routeState = 'ok';
+        bots.think(state, DT);
+        state.time += DT;
+        if (Number.isNaN(waitingAt) && !b.holding) waitingAt = t;
+      }
+      return { b, leftAt: waitingAt };
+    }
+
+    it('longer than teamWaitMax, up to boundWaitMax, then it sets off with the partner still moving', () => {
+      expect(BOTS.boundWaitMax).toBeGreaterThan(BOTS.teamWaitMax);
+      // Still holding well past teamWaitMax (which caps waiting for the team to catch up, not for a partner).
+      const mid = waitOut(BOTS.teamWaitMax + 1);
+      expect(mid.b.holding).toBe(true);
+      expect(mid.leftAt).toBeNaN();
+      // Gone by boundWaitMax (one think interval of slack), and not before it.
+      const end = waitOut(BOTS.boundWaitMax + 0.5);
+      expect(end.b.holding).toBe(false);
+      expect(end.leftAt).toBeGreaterThanOrEqual(BOTS.boundWaitMax - DT);
+      expect(end.leftAt).toBeLessThanOrEqual(BOTS.boundWaitMax + 0.5);
+      expect(end.b.teamWait).toBeGreaterThanOrEqual(BOTS.boundWaitMax);
+    });
+  });
+
+  it('pairing starts at the spawn: a round start has Pro bots wait for their team, and Hard ones not', () => {
+    const start = (level: Difficulty) => {
+      const { state, bots } = skirmish(map, [
+        [30, 30, 0],
+        [0, -20, 1],
+        [2, -20, 1],
+      ]);
+      for (const b of bots.bots) {
+        setSkill(b, level);
+        b.waitForTeam = level !== 'pro';
+      }
+      state.events.length = 0;
+      state.events.push({ type: 'roundStart', round: 1 });
+      bots.observe(state);
+      return bots.bots.map((b) => b.waitForTeam);
+    };
+    expect(start('pro')).toEqual([true, true]);
+    expect(start('hard')).toEqual([false, false]);
   });
 
   // Ways a lane partner can fail to be "on the move"; the last is ahead of b, so b is not "ahead of the team" either.

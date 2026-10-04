@@ -79,6 +79,23 @@ describe('finding held angles', () => {
     expect(findHeldAngles(noWalls, vec3(0, EYE, 0), EYE, 0, BOTS, out)).toBe(0);
   });
 
+  it('notes the open side of the edge: -1 for a ray open to the left of the wall, 1 to the right (M38)', () => {
+    const out = angles(2);
+    // CORNER: the wall runs off to the left, its right-hand end is the corner: the open side is the right.
+    expect(findHeldAngles(CORNER, vec3(0, EYE, 0), EYE, 0, BOTS, out)).toBe(1);
+    expect(out[0]!.side).toBe(1);
+    expect(out[0]!.point.x).toBeGreaterThan(0);
+    // Its mirror image: the open side is the left.
+    expect(findHeldAngles(boxQuery(15, -8.5, 15, 0.5, 3), vec3(0, EYE, 0), EYE, 0, BOTS, out)).toBe(1);
+    expect(out[0]!.side).toBe(-1);
+    expect(out[0]!.point.x).toBeLessThan(0);
+    // A doorway: the left wall's end is open to the right, the right wall's to the left; copied with the angle into the best slots.
+    const door = boxes(boxQuery(-23, -10, 20, 0.5, 3), boxQuery(23, -10, 20, 0.5, 3));
+    expect(findHeldAngles(door, vec3(0, EYE, 0), EYE, 0, BOTS, out)).toBe(2);
+    for (const a of out) expect(a.side).toBe(a.point.x < 0 ? 1 : -1);
+    expect(out[0]!.side).not.toBe(out[1]!.side);
+  });
+
   it('sees no corner in a long wall seen at a slant, where each ray reaches a little further along it', () => {
     // A wall 8 m away running far to both sides: at the fan's edges the rays meet it metres apart, but it has no end.
     expect(findHeldAngles(boxQuery(0, -8.5, 60, 0.5, 3), vec3(0, EYE, 0), EYE, 0, BOTS, angles(2))).toBe(0);
@@ -192,6 +209,65 @@ describe('holding an angle (Pro)', () => {
     expect(behindTheCorner.length).toBeGreaterThan(0);
     expect(corners(-20, 20)).toEqual(behindTheCorner);
     expect(corners(10, -2)).toEqual(behindTheCorner);
+  });
+});
+
+describe('leaning while slicing a corner (Pro, M38)', () => {
+  const MIRROR = boxQuery(15, -8.5, 15, 0.5, 3);
+
+  /** One aim step of a bot walking down -z from (0, z) in `query`'s world: its lean, and how far it is from the corner it aimed at. */
+  function slice(query: WorldQuery, z: number, level: 'hard' | 'pro' = 'pro') {
+    const { bot, bots, player } = duel(12, () => {}, query);
+    const b = bots.bots[0]!;
+    (b as { skill: unknown }).skill = botConfig(level);
+    const w = bots.worldForTests;
+    bot.position.x = 0;
+    bot.position.z = z;
+    player.position.x = 30;
+    player.position.z = 30;
+    (w.enemyYaw as number[])[bot.team] = 0;
+    b.mode = 'advance';
+    b.hunting = false;
+    b.careful = level === 'pro';
+    b.hasLastKnown = false;
+    b.moveDir.x = 0;
+    b.moveDir.z = -1;
+    const eye = vec3();
+    const cmd = createCommand();
+    eyeOf(bot, w.body, w.hits, eye);
+    aimBot(b, w, undefined, eye, vec3(), true, cmd, DT);
+    const a = b.heldAngles[0]!;
+    return { lean: cmd.lean, held: b.heldAngleCount, dist: b.heldAngleCount > 0 ? Math.hypot(a.point.x - bot.position.x, a.point.z - bot.position.z) : Number.NaN };
+  }
+
+  it.each([
+    ['right', CORNER, 1],
+    ['left', MIRROR, -1],
+  ] as const)('leans to the open side (%s) once within sliceLeanDistance of the corner, and not before', (_name, query, side) => {
+    let leaned = 0;
+    let upright = 0;
+    for (let z = 0; z >= -5; z -= 0.5) {
+      const r = slice(query, z);
+      expect(r.held, `z ${z}`).toBeGreaterThan(0);
+      if (r.dist <= BOTS.sliceLeanDistance) {
+        expect(r.lean, `z ${z}, ${r.dist.toFixed(1)} m off`).toBe(side);
+        leaned++;
+      } else {
+        expect(r.lean, `z ${z}, ${r.dist.toFixed(1)} m off`).toBe(0);
+        upright++;
+      }
+    }
+    // The sweep crosses the limit both ways.
+    expect(leaned).toBeGreaterThan(2);
+    expect(upright).toBeGreaterThan(2);
+  });
+
+  it('never leans on Hard, which does not slice, however near the corner', () => {
+    for (const z of [0, -2, -4]) {
+      const r = slice(CORNER, z, 'hard');
+      expect(r.held, `z ${z}`).toBe(0);
+      expect(r.lean, `z ${z}`).toBe(0);
+    }
   });
 });
 
