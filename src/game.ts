@@ -70,7 +70,10 @@ export interface GameOptions {
   allowUnlocked: boolean;
   /** Seeds the simulation and the bots (core/seed.ts): the same seed replays the same bot decisions for the same inputs. */
   seed: number;
-  /** Render quality preset (config/render.ts) in use; fixed until the page reloads. */
+  /**
+   * The render quality preset to start with (config/render.ts): the saved one, or `?quality=` for a visit. Settings →
+   * Graphics changes it later (all but antialiasing, which keeps the starting preset's until the next load).
+   */
   quality: QualityPreset;
 }
 
@@ -133,6 +136,8 @@ export class Game {
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
   private teamColours: TeamColourSetId = loadTeamColours();
   private soundCues = loadSoundCues();
+  /** The render quality preset in use (Settings → Graphics, M14). */
+  private quality: QualityPreset;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     await initPhysics();
@@ -143,6 +148,7 @@ export class Game {
     private readonly container: HTMLElement,
     private readonly options: GameOptions,
   ) {
+    this.quality = options.quality;
     this.renderer = new Renderer(container, QUALITY[options.quality]);
     this.renderer.setFov(loadFov());
     this.map = loadMap();
@@ -177,7 +183,7 @@ export class Game {
         speed: p ? Math.hypot(p.velocity.x, p.velocity.z).toFixed(2) : '-',
         grounded: String(p?.grounded ?? '-'),
         'BBs in flight': s?.combat.bbsInFlight ?? 0,
-        quality: options.quality,
+        quality: this.quality,
         'pixel ratio': this.renderer.renderer.getPixelRatio(),
         'draw calls': this.renderer.renderer.info.render.calls,
         triangles: this.renderer.renderer.info.render.triangles,
@@ -236,7 +242,7 @@ export class Game {
         sprint: { initial: this.input.sprintMode, onChange: (m) => (this.input.sprintMode = m) },
       },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
-      quality: options.quality,
+      quality: { initial: this.quality, onChange: (q) => this.changeQuality(q) },
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
       accessibility: {
@@ -318,6 +324,13 @@ export class Game {
     this.session?.setMotion(motionScale(on));
   }
 
+  /** A quality preset picked on Settings → Graphics: applied at once to the renderer and the match loaded. */
+  private changeQuality(preset: QualityPreset): void {
+    this.quality = preset;
+    this.renderer.setQuality(QUALITY[preset]);
+    this.session?.setQuality(QUALITY[preset]);
+  }
+
   /** On-screen sound cues turned on or off: kept for the next match and applied to the one loaded. */
   private changeSoundCues(on: boolean): void {
     this.soundCues = on;
@@ -375,7 +388,7 @@ export class Game {
         bbWeights: this.picked.map((r) => this.bbWeightOf(r)),
         parts: this.picked.map((r) => this.partsOf(r)),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
-      }, this.options.seed, QUALITY[this.options.quality], this.audio, this.crosshair);
+      }, this.options.seed, QUALITY[this.quality], this.audio, this.crosshair);
       this.session.setMotion(motionScale(this.reducedMotion));
       this.session.setSoundCues(this.soundCues);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);

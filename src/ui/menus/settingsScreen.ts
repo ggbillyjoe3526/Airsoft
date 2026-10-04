@@ -1,5 +1,5 @@
 import { SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/menus';
-import { FOV_SETTING, QUALITY_LABELS, type QualityPreset } from '../../config/render';
+import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
 import { type AccessibilitySettingsOptions, accessibilitySettings } from '../accessibilitySettings';
 import { type AudioSettingsOptions, audioSettings } from '../audioSettings';
@@ -7,6 +7,7 @@ import { type ControlsSettingsOptions, controlsSettings } from '../controlsSetti
 import { type CrosshairSettingsOptions, crosshairSettings } from '../crosshairSettings';
 import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscreen';
 import { KeySettings } from '../keySettings';
+import { OptionPicker } from '../optionPicker';
 import type { SettingsOrigin } from './menuNav';
 import { backButton, el, laterRow, laterTag, menuPage, menuRow, rangeControl } from './menuParts';
 
@@ -16,8 +17,8 @@ export interface SettingsOptions {
   controls: ControlsSettingsOptions;
   /** Field of view (horizontal degrees on a 16:9 screen), applied at once. */
   fov: { initial: number; onChange: (v: number) => void };
-  /** The render preset in use: the Quality picker is held back (LATER), so its row only shows this. */
-  quality: QualityPreset;
+  /** The render quality preset (M14): saved, and applied at once (antialiasing from the next load). */
+  quality: { initial: QualityPreset; onChange: (q: QualityPreset) => void };
   /** The volume sliders on the Audio tab (ui/audioSettings.ts). */
   audio: AudioSettingsOptions;
   /** The crosshair's look on the Crosshair tab (ui/crosshairSettings.ts). */
@@ -133,9 +134,12 @@ export class SettingsScreen {
           'How wide you see, across a 16:9 screen. Aiming through an optic zooms in from it.',
           rangeControl('Field of view', FOV_SETTING, opts.fov.initial, (v) => `${Math.round(v)}°`, 'fov', opts.fov.onChange),
         ),
+        menuRow(
+          'Quality',
+          'Shadows, sharpness, surface relief and dust in the sunlight. Lower it if the game stutters.',
+          new OptionPicker('Quality', QUALITY_CHOICES, opts.quality.initial, 'quality', opts.quality.onChange).root,
+        ),
         menuRow('Fullscreen', 'The whole screen for the game. Esc leaves it; in a match the Fullscreen key (Key bindings) turns it on and off.', this.fullscreenButton()),
-        // Held back until there is real graphics work to scale (owner, 2026-10-03): the game runs on High.
-        laterRow('Quality', 'Comes back with the art pass.', QUALITY_LABELS[opts.quality]),
       );
     } else if (id === 'crosshair') {
       panel.append(...crosshairSettings(opts.crosshair));

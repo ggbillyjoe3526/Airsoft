@@ -1,0 +1,129 @@
+import * as THREE from 'three';
+import { DUST_MOTES } from '../config/render';
+import { createRng, rngNext } from '../sim/rng';
+import { softDotTexture } from './softDot';
+
+/** Wraps `v` into 0..size. */
+const wrap = (v: number, size: number): number => v - Math.floor(v / size) * size;
+
+/**
+ * Where a mote is drawn on one axis: its home `base` (0..box), moved by the breeze and its wander over `time`, wrapped
+ * into the box centred on the camera's `eye`, so motes never run out as you move and none pop near you.
+ */
+export function motePosition(base: number, moved: number, eye: number, box: number): number {
+  return eye + wrap(base + moved - eye + box / 2, box) - box / 2;
+}
+
+const smoothstep = (a: number, b: number, x: number): number => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * How visible a mote is (0..1): `distance` metres from the camera, `edge` its largest offset along any axis (the box
+ * wraps per axis). Gone within DUST_MOTES.fadeNear, full past fadeFar, fading out again before the box's edge.
+ */
+export function moteFade(distance: number, edge: number): number {
+  const D = DUST_MOTES;
+  const half = D.box / 2;
+  return smoothstep(D.fadeNear, D.fadeFar, distance) * (1 - smoothstep(half - D.edgeFade, half, edge));
+}
+
+/**
+ * Dust motes drifting in the sunlight round the camera (M14): one draw call of soft points, positions refreshed each
+ * frame into a buffer made once. How many show is the quality preset's; reduced motion hides them. Each mote's alpha
+ * (moteFade) keeps the ones right by the camera from turning into blurry blobs, and the shader caps the point size.
+ */
+export class DustMotes {
+  readonly object: THREE.Points;
+  private readonly base: Float32Array;
+  private readonly phase: Float32Array;
+  private readonly positions: Float32Array;
+  private readonly attribute: THREE.BufferAttribute;
+  /** Per-mote RGBA (white, alpha from moteFade): the material multiplies it in. */
+  private readonly alphas: Float32Array;
+  private readonly alphaAttribute: THREE.BufferAttribute;
+  private readonly sprite: THREE.CanvasTexture;
+  private count = 0;
+  private time = 0;
+  private motionOn = true;
+
+  /** `max`: the most motes any preset shows (the buffer's size). */
+  constructor(private readonly max: number) {
+    const D = DUST_MOTES;
+    const rng = createRng(D.seed);
+    this.base = new Float32Array(max * 3);
+    this.phase = new Float32Array(max);
+    for (let i = 0; i < max * 3; i++) this.base[i] = rngNext(rng) * D.box;
+    for (let i = 0; i < max; i++) this.phase[i] = rngNext(rng) * Math.PI * 2;
+    this.positions = new Float32Array(max * 3);
+    const geo = new THREE.BufferGeometry();
+    this.attribute = new THREE.BufferAttribute(this.positions, 3).setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('position', this.attribute);
+    this.alphas = new Float32Array(max * 4).fill(1);
+    this.alphaAttribute = new THREE.BufferAttribute(this.alphas, 4).setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('color', this.alphaAttribute);
+    this.sprite = softDotTexture();
+    const material = new THREE.PointsMaterial({
+      size: D.size,
+      map: this.sprite,
+      color: D.color,
+      transparent: true,
+      opacity: D.opacity,
+      depthWrite: false,
+      sizeAttenuation: true,
+      vertexColors: true,
+    });
+    // Cap the point size: even a faded mote never covers more than a few pixels.
+    material.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <logdepthbuf_vertex>',
+        `gl_PointSize = min(gl_PointSize, ${D.maxPixels.toFixed(1)});\n#include <logdepthbuf_vertex>`,
+      );
+    };
+    this.object = new THREE.Points(geo, material);
+    this.object.name = 'dustMotes';
+    this.object.frustumCulled = false;
+    this.setCount(0);
+  }
+
+  /** How many motes to show (the quality preset's), at most the buffer's size. */
+  setCount(count: number): void {
+    this.count = Math.max(0, Math.min(this.max, Math.floor(count)));
+    this.object.geometry.setDrawRange(0, this.count);
+    this.object.visible = this.count > 0 && this.motionOn;
+  }
+
+  /** Reduced motion on (false) or off (true): drifting specks are movement on screen, so they go. */
+  setMotion(on: boolean): void {
+    this.motionOn = on;
+    this.setCount(this.count);
+  }
+
+  update(dt: number, eye: { x: number; y: number; z: number }): void {
+    if (!this.object.visible) return;
+    const D = DUST_MOTES;
+    this.time += dt;
+    const t = this.time;
+    for (let i = 0; i < this.count; i++) {
+      const w = t * D.wanderRate + this.phase[i]!;
+      const j = i * 3;
+      this.positions[j] = motePosition(this.base[j]!, D.breeze.x * t + Math.sin(w) * D.wander, eye.x, D.box);
+      this.positions[j + 1] = motePosition(this.base[j + 1]!, D.breeze.y * t + Math.sin(w * 1.3) * D.wander, eye.y, D.box);
+      this.positions[j + 2] = motePosition(this.base[j + 2]!, D.breeze.z * t + Math.cos(w * 0.9) * D.wander, eye.z, D.box);
+      const dx = this.positions[j]! - eye.x;
+      const dy = this.positions[j + 1]! - eye.y;
+      const dz = this.positions[j + 2]! - eye.z;
+      this.alphas[i * 4 + 3] = moteFade(Math.hypot(dx, dy, dz), Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)));
+    }
+    this.attribute.needsUpdate = true;
+    this.alphaAttribute.needsUpdate = true;
+  }
+
+  dispose(): void {
+    this.object.geometry.dispose();
+    (this.object.material as THREE.Material).dispose();
+    this.sprite.dispose();
+    this.object.removeFromParent();
+  }
+}

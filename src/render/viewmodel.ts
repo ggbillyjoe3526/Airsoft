@@ -137,6 +137,15 @@ export class Viewmodel {
     this.camera.updateProjectionMatrix();
   }
 
+  /**
+   * The replica's sheen (M14): a soft environment reflected in its plastic at VIEWMODEL.sheenIntensity, or none (null).
+   * The caller owns the texture.
+   */
+  setEnvironment(texture: THREE.Texture | null): void {
+    this.scene.environment = texture;
+    this.scene.environmentIntensity = VIEWMODEL.sheenIntensity;
+  }
+
   /** Reduced motion on or off: how much of the bob, sway and kick to show. */
   setMotion(scale: MotionScale): void {
     this.motionScale = scale;

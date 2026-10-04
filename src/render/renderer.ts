@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RENDER, type QualitySettings } from '../config/render';
+import { ATMOSPHERE, RENDER, type QualitySettings } from '../config/render';
 import { lacksHardwareAcceleration } from './gpuCheck';
 
 const REFERENCE_ASPECT = 16 / 9;
@@ -33,13 +33,18 @@ export class Renderer {
   /** Whether the browser draws in software (undefined until first asked). */
   private software: boolean | undefined;
 
+  /**
+   * `quality` is the preset the game loads with: its antialiasing is fixed for the WebGL context's life; the rest can
+   * change later (setQuality).
+   */
   constructor(
     private readonly container: HTMLElement,
-    private readonly quality: QualitySettings,
+    private quality: QualitySettings,
   ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: quality.antialias, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = RENDER.toneMappingExposure;
     this.renderer.shadowMap.enabled = quality.shadows;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.domElement.className = 'game-canvas';
@@ -49,8 +54,9 @@ export class Renderer {
     this.camera = new THREE.PerspectiveCamera(this.baseFov, 1, RENDER.near, RENDER.far);
     this.camera.rotation.order = 'YXZ';
 
-    this.scene.background = new THREE.Color(RENDER.skyColor);
-    this.scene.fog = new THREE.Fog(RENDER.skyColor, RENDER.fogNear, RENDER.fogFar);
+    // The match's sky dome covers this (render/atmosphere.ts); the haze fades far things into the horizon's colour.
+    this.scene.background = new THREE.Color(ATMOSPHERE.horizon);
+    this.scene.fog = new THREE.Fog(ATMOSPHERE.horizon, ATMOSPHERE.fogNear, ATMOSPHERE.fogFar);
 
     this.resize();
     window.addEventListener('resize', this.resize);
@@ -90,6 +96,16 @@ export class Renderer {
     this.baseFov = verticalFovFor(horizontalFov16x9);
     this.camera.fov = zoomedFov(this.baseFov, this.zoom);
     this.camera.updateProjectionMatrix();
+  }
+
+  /**
+   * A new quality preset (Settings → Graphics): the pixel ratio and whether shadows are drawn change at once. The
+   * match's lights, surfaces and effects follow it through MatchSession.setQuality; antialiasing stays as loaded.
+   */
+  setQuality(quality: QualitySettings): void {
+    this.quality = quality;
+    this.renderer.shadowMap.enabled = quality.shadows;
+    this.resize();
   }
 
   /** Narrows the main camera's view by `zoom` (1 = the normal view), e.g. while aiming down an optic. */

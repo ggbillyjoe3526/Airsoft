@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { LIGHTING, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
+import { addAtmosphere } from './atmosphere';
 
 /** World-space bounding box of every block in the map (walls, floor, props). */
 export function mapBoundingBox(map: MapData): THREE.Box3 {
@@ -45,8 +46,30 @@ export function fitShadowCamera(
   cam.updateProjectionMatrix();
 }
 
-/** Adds daylight sized to the map and returns a disposer that removes it and frees the shadow map. */
-export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings): () => void {
+/** The match's daylight: change it with a new quality preset, dispose it with the match. */
+export interface Daylight {
+  /** Shadows on or off, their map size and softness (Settings → Graphics → Quality). */
+  setQuality(quality: QualitySettings): void;
+  /** Removes the lights, sky and trees and frees the shadow map. */
+  dispose(): void;
+}
+
+/** Points the sun's shadow at the preset: on or off, map size (the old map is freed to be remade) and softness. */
+function applyShadowQuality(sun: THREE.DirectionalLight, quality: QualitySettings): void {
+  sun.castShadow = quality.shadows;
+  if (sun.shadow.mapSize.x !== quality.shadowMapSize) {
+    sun.shadow.map?.dispose();
+    sun.shadow.map = null;
+    sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
+  }
+  sun.shadow.radius = quality.shadowRadius;
+}
+
+/**
+ * Adds daylight sized to the map (a sky fill, one warm shadow-casting sun) and the world round it (render/atmosphere.ts:
+ * the sky dome and the trees), and returns its handle.
+ */
+export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings): Daylight {
   const hemi = new THREE.HemisphereLight(LIGHTING.hemiSky, LIGHTING.hemiGround, LIGHTING.hemiIntensity);
 
   const sun = new THREE.DirectionalLight(LIGHTING.sunColor, LIGHTING.sunIntensity);
@@ -54,17 +77,21 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   const centre = box.getCenter(new THREE.Vector3());
   sun.target.position.set(centre.x, 0, centre.z);
   sun.position.set(centre.x + LIGHTING.sunOffset.x, LIGHTING.sunOffset.y, centre.z + LIGHTING.sunOffset.z);
-  sun.castShadow = quality.shadows;
-  sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
+  applyShadowQuality(sun, quality);
   fitShadowCamera(sun.shadow.camera, sun.position, sun.target.position, box, LIGHTING.shadowMargin);
   sun.shadow.bias = LIGHTING.shadowBias;
   sun.shadow.normalBias = LIGHTING.shadowNormalBias;
-  sun.shadow.radius = LIGHTING.shadowRadius;
 
   scene.add(hemi, sun, sun.target);
-  return () => {
-    scene.remove(hemi, sun, sun.target);
-    sun.dispose();
-    hemi.dispose();
+  const sunDirection = sun.position.clone().sub(sun.target.position).normalize();
+  const disposeAtmosphere = addAtmosphere(scene, sun.target.position, sunDirection);
+  return {
+    setQuality: (q) => applyShadowQuality(sun, q),
+    dispose: () => {
+      disposeAtmosphere();
+      scene.remove(hemi, sun, sun.target);
+      sun.dispose();
+      hemi.dispose();
+    },
   };
 }

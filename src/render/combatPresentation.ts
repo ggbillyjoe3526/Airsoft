@@ -1,10 +1,14 @@
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Sfx, type SfxSetup } from '../audio/sfx';
 import type { MotionScale } from '../config/accessibility';
+import { FIGURE } from '../config/characters';
+import { impactMaterialAt } from '../audio/soundMaterials';
 import type { VolumeChannel } from '../config/audio';
 import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
-import { BB_VISUALS, HIT_PUFFS, HUD, IMPACT_PUFFS } from '../config/render';
+import { BB_VISUALS, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, QUALITY, type QualitySettings } from '../config/render';
+import type { ImpactMaterial } from '../config/sounds';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, type OpticId, OPTICS } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
@@ -16,7 +20,9 @@ import type { GameState } from '../sim/state';
 import { Hud } from '../ui/hud';
 import { BBPathsDebug } from './bbPathsDebug';
 import { BBRenderer } from './bbRenderer';
-import { figureMuzzle } from './characterModels';
+import { figureMuzzle, type FigureHold } from './characterModels';
+import { holdsPistol } from './characterRenderer';
+import { DustMotes } from './dustMotes';
 import { ImpactPuffs } from './impactPuffs';
 import type { Renderer } from './renderer';
 import { sprintCarry, Viewmodel } from './viewmodel';
@@ -30,6 +36,14 @@ export class CombatPresentation {
   private readonly puffs = new ImpactPuffs(IMPACT_PUFFS);
   /** Bigger puffs where BBs land on players: hit confirmation at range. */
   private readonly hitPuffs = new ImpactPuffs(HIT_PUFFS);
+  /** A gas replica's breath at the muzzle and ejection port on each shot (M14). */
+  private readonly gasPuffs = new ImpactPuffs(GAS_PUFFS);
+  /** Dust drifting in the sunlight round the camera (M14); how much is the quality preset's. */
+  private readonly motes = new DustMotes(QUALITY.high.dustMotes);
+  /** The impact dust's tint per material (linear colours, made once). */
+  private readonly dustTints = new Map<ImpactMaterial, THREE.Color>();
+  /** The held replica's reflections (M14, QualitySettings.replicaSheen): made the first time they are wanted. */
+  private sheen: { pmrem: THREE.PMREMGenerator; target: THREE.WebGLRenderTarget } | null = null;
   private readonly paths: BBPathsDebug;
   private readonly viewmodel: Viewmodel;
   private readonly hud: Hud;
@@ -38,6 +52,9 @@ export class CombatPresentation {
   private readonly listenerPos = { x: 0, y: 0, z: 0 };
   private readonly muzzle = new THREE.Vector3();
   private readonly dir = { x: 0, y: 0, z: 0 };
+  private readonly puffVelocity = { x: 0, y: 0, z: 0 };
+  private readonly puffAt = new THREE.Vector3();
+  private readonly viewRight = new THREE.Vector3();
   /** Newest BB serial already given a muzzle start, per shooter. */
   private readonly lastSerialByOwner = new Map<number, number>();
   private readonly overlay: { scene: THREE.Scene; camera: THREE.Camera };
@@ -69,18 +86,34 @@ export class CombatPresentation {
     private readonly query: WorldQuery,
     teamColor: number,
     tickSeconds: number,
-    blocks: readonly MapBlock[],
+    private readonly blocks: readonly MapBlock[],
     audio: SfxSetup,
     keyName: (action: Action) => string,
     crosshair: CrosshairSettings,
+    quality: QualitySettings,
   ) {
     this.sfx = new Sfx(loadout, blocks, query, audio);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
-    renderer.scene.add(this.bbs.object, this.puffs.object, this.hitPuffs.object, this.paths.object);
+    renderer.scene.add(this.bbs.object, this.puffs.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
+    for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container, keyName, crosshair);
+    this.setQuality(quality);
+  }
+
+  /** A quality preset (Settings → Graphics, M14): how much dust drifts in the air, and the held replica's sheen. */
+  setQuality(quality: QualitySettings): void {
+    this.motes.setCount(quality.dustMotes);
+    if (quality.replicaSheen && !this.sheen) {
+      const pmrem = new THREE.PMREMGenerator(this.renderer.renderer);
+      const room = new RoomEnvironment();
+      const target = pmrem.fromScene(room, 0.04);
+      room.dispose();
+      this.sheen = { pmrem, target };
+    }
+    this.viewmodel.setEnvironment(quality.replicaSheen ? (this.sheen?.target.texture ?? null) : null);
   }
 
   /** Browsers only allow audio after a user gesture: call from the Play click. */
@@ -96,6 +129,7 @@ export class CombatPresentation {
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
   setMotion(scale: MotionScale): void {
     this.viewmodel.setMotion(scale);
+    this.motes.setMotion(scale.dust > 0);
   }
 
   /** The crosshair changed on Settings → Crosshair. */
@@ -142,7 +176,12 @@ export class CombatPresentation {
           this.startWhistleOwed = true;
           continue;
         }
-      } else if (e.type === 'bbImpact' || e.type === 'targetHit') this.puffs.spawn(e.position);
+      } else if (e.type === 'bbImpact') {
+        // Dust by what the BB hit (the material its tick sounds by).
+        const material = impactMaterialAt(this.blocks, e.position);
+        this.puffs.spawn(e.position, this.dustTints.get(material), IMPACT_DUST[material].scale);
+      }
+      } else if (e.type === 'targetHit') this.puffs.spawn(e.position);
       else if (e.type === 'characterHit') {
         // Your own hit: the replica jolts in your hands (the puff would fill your view).
         if (e.victimId === this.player.id) this.viewmodel.onHit();
@@ -161,6 +200,7 @@ export class CombatPresentation {
       if (e.type === 'shot') {
         if (e.characterId === this.player.id) this.viewmodel.onShot();
         this.drawFromMuzzle(e.characterId);
+        this.gasBreath(e.characterId);
       }
       this.sfx.onEvent(e, this.player.id, this.characterOf);
     }
@@ -169,8 +209,10 @@ export class CombatPresentation {
   /** Once per rendered frame, after the camera has been placed. `alpha` interpolates ticks. */
   frame(dt: number, alpha: number, yaw: number, pitch: number): void {
     this.bbs.update(alpha, this.renderer.camera.position);
-    this.puffs.update(dt, this.renderer.camera.position);
-    this.hitPuffs.update(dt, this.renderer.camera.position);
+    this.puffs.update(dt, this.renderer.camera);
+    this.hitPuffs.update(dt, this.renderer.camera);
+    this.gasPuffs.update(dt, this.renderer.camera);
+    this.motes.update(dt, this.renderer.camera.position);
     this.paths.update();
 
     const p = this.player;
@@ -211,6 +253,12 @@ export class CombatPresentation {
     this.bbs.dispose();
     this.puffs.dispose();
     this.hitPuffs.dispose();
+    this.gasPuffs.dispose();
+    this.motes.dispose();
+    this.viewmodel.setEnvironment(null);
+    this.sheen?.target.dispose();
+    this.sheen?.pmrem.dispose();
+    this.sheen = null;
     this.paths.dispose();
     this.viewmodel.dispose();
     this.hud.dispose();
@@ -219,7 +267,7 @@ export class CombatPresentation {
 
   /**
    * Starts a shooter's newest BB (if the shot spawned one) visually at their replica's muzzle: the
-   * held replica for you, the third-person figure's rifle for everyone else (BBs really leave from the
+   * held replica for you, the third-person figure's rifle or pistol for everyone else (BBs really leave from the
    * eyes, which would look like they come out of faces).
    */
   private drawFromMuzzle(shooterId: number): void {
@@ -236,9 +284,37 @@ export class CombatPresentation {
     } else {
       const shooter = this.state.characters.find((c) => c.id === shooterId);
       ok = shooter !== undefined;
-      if (shooter) figureMuzzle(shooter, this.muzzle);
+      if (shooter) figureMuzzle(shooter, this.muzzle, this.holdOf(shooter));
     }
     if (ok) this.bbs.startFromMuzzle(newest, this.muzzle, this.estimateFlightTime(newest));
+  }
+
+  /**
+   * A gas replica's breath on a shot (M14): a puff pushed forward out of the muzzle, and for your own pistol a smaller
+   * one out of the ejection port to the right. Electric replicas only whirr.
+   */
+  private gasBreath(shooterId: number): void {
+    const shooter = shooterId === this.player.id ? this.player : this.characterOf(shooterId);
+    if (!shooter || this.loadout[shooter.armament.active]?.power !== 'gas') return;
+    const cam = this.renderer.camera;
+    const at = this.puffAt;
+    let ok = true;
+    if (shooter === this.player) ok = this.viewmodel.muzzleWorld(cam, at);
+    else figureMuzzle(shooter, at, this.holdOf(shooter));
+    if (!ok) return;
+    // Forward along the shooter's view (yaw and pitch: the replica points where they look).
+    const v = this.puffVelocity;
+    const cp = Math.cos(shooter.pitch);
+    v.x = -Math.sin(shooter.yaw) * cp * GAS_PUFFS.muzzleSpeed;
+    v.y = Math.sin(shooter.pitch) * GAS_PUFFS.muzzleSpeed;
+    v.z = -Math.cos(shooter.yaw) * cp * GAS_PUFFS.muzzleSpeed;
+    this.gasPuffs.spawn(at, undefined, 1, v);
+    if (shooter !== this.player) return;
+    this.viewRight.set(1, 0, 0).applyQuaternion(cam.quaternion);
+    v.x = this.viewRight.x * GAS_PUFFS.portSpeed;
+    v.y = GAS_PUFFS.portSpeed * 0.5;
+    v.z = this.viewRight.z * GAS_PUFFS.portSpeed;
+    this.gasPuffs.spawn(at.lerp(cam.position, GAS_PUFFS.portBack), undefined, GAS_PUFFS.portScale, v);
   }
 
   /** Rough seconds until `bb` hits level geometry (straight line at its launch speed); Infinity if nothing is near. */
@@ -252,6 +328,11 @@ export class CombatPresentation {
     const reach = speed * BB_VISUALS.muzzleConvergeTime;
     const d = this.query.raycastStatic(bb.prevPosition, this.dir, reach);
     return d < 0 ? Number.POSITIVE_INFINITY : d / speed;
+  }
+
+  /** The third-person figure's hold for `c`'s active replica: where its muzzle is. */
+  private holdOf(c: Character): FigureHold {
+    return holdsPistol(c, this.loadout) ? FIGURE.pistol : FIGURE.rifle;
   }
 
   private readonly characterOf = (id: number): Character | undefined => this.state.characters.find((c) => c.id === id);

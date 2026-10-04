@@ -19,14 +19,18 @@ type Pt = readonly [forward: number, up: number];
 
 type MaterialKey = 'polymer' | 'furniture' | 'mag' | 'metal' | 'rubber' | 'orange' | 'lens' | 'glove' | 'sleeve' | 'armband';
 
+/**
+ * The replicas' materials (M14 polish): moulded polymer with a soft satin sheen (it catches the viewmodel's environment
+ * on High and Medium), dull grey "metal" that is plainly painted zinc and plastic, rubber, tinted lens. Toys, not guns.
+ */
 function createMaterials(teamColor: number): Record<MaterialKey, THREE.Material> {
   return {
-    polymer: new THREE.MeshStandardMaterial({ color: 0x26282c, roughness: 0.72, metalness: 0.05 }),
-    furniture: new THREE.MeshStandardMaterial({ color: 0xb49a70, roughness: 0.82, metalness: 0 }),
-    mag: new THREE.MeshStandardMaterial({ color: 0x34373c, roughness: 0.7, metalness: 0.05 }),
-    metal: new THREE.MeshStandardMaterial({ color: 0x5c6068, roughness: 0.42, metalness: 0.55 }),
+    polymer: new THREE.MeshStandardMaterial({ color: 0x2a2c31, roughness: 0.5, metalness: 0 }),
+    furniture: new THREE.MeshStandardMaterial({ color: 0xb79c70, roughness: 0.58, metalness: 0 }),
+    mag: new THREE.MeshStandardMaterial({ color: 0x363a40, roughness: 0.52, metalness: 0 }),
+    metal: new THREE.MeshStandardMaterial({ color: 0x6a6f78, roughness: 0.45, metalness: 0.35 }),
     rubber: new THREE.MeshStandardMaterial({ color: 0x17181a, roughness: 0.95, metalness: 0 }),
-    orange: new THREE.MeshStandardMaterial({ color: 0xff6a13, roughness: 0.55, metalness: 0 }),
+    orange: new THREE.MeshStandardMaterial({ color: 0xff6a13, roughness: 0.5, metalness: 0 }),
     lens: new THREE.MeshBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.12, depthWrite: false }),
     // Olive gloves: clearly separate from the black polymer and tan furniture.
     glove: new THREE.MeshStandardMaterial({ color: 0x5d6146, roughness: 0.9, metalness: 0 }),

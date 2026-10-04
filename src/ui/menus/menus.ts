@@ -59,8 +59,8 @@ export interface MenusOptions {
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   controls: ControlsSettingsOptions;
   fov: { initial: number; onChange: (v: number) => void };
-  /** The render preset in use, shown on the greyed Quality row. */
-  quality: QualityPreset;
+  /** The render quality preset (Settings → Graphics). */
+  quality: { initial: QualityPreset; onChange: (q: QualityPreset) => void };
   audio: AudioSettingsOptions;
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;

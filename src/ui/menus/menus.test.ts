@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { POWER_LABELS, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
-import { FOV_SETTING, QUALITY, QUALITY_LABELS, RENDER } from '../../config/render';
+import { DEFAULT_QUALITY, FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
@@ -8,7 +8,7 @@ import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
 import { backTarget, screenWhenStopped } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
-import { loadFov, loadMap } from './savedChoices';
+import { loadFov, loadMap, loadQuality } from './savedChoices';
 
 describe('menu navigation', () => {
   it('opens the title before the first match, the pause menu during one and the result after it', () => {
@@ -47,9 +47,11 @@ describe('menu data', () => {
     }
   });
 
-  it('names every quality preset for the greyed Quality row, and has no Brightness setting', () => {
-    expect(Object.keys(QUALITY_LABELS).sort()).toEqual(Object.keys(QUALITY).sort());
-    expect(SETTINGS_LATER.graphics.some((s) => s.label === 'Brightness' || s.label === 'Field of view')).toBe(false);
+  it('offers every quality preset on the Quality picker (M14), and has no Brightness setting', () => {
+    expect(QUALITY_CHOICES.map((c) => c.id).sort()).toEqual(Object.keys(QUALITY).sort());
+    expect(SETTINGS_LATER.graphics.some((s) => s.label === 'Brightness' || s.label === 'Field of view' || s.label === 'Quality')).toBe(false);
+    // No browser storage in the tests: nothing saved, so the default preset.
+    expect(loadQuality()).toBe(DEFAULT_QUALITY);
   });
 
   it('has the field of view slider around the default view', () => {

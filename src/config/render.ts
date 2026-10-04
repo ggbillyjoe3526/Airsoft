@@ -1,4 +1,5 @@
 import { matchOverWhistlesDuration } from './audio';
+import type { ImpactMaterial } from './sounds';
 
 /** Presentation tuning. Kept conservative for integrated GPUs. */
 export const RENDER = {
@@ -11,9 +12,11 @@ export const RENDER = {
   far: 250,
   /** Anisotropic filtering for surface textures; keeps floor detail readable at grazing angles. */
   textureAnisotropy: 4,
-  skyColor: 0xa9c6de,
-  fogNear: 60,
-  fogFar: 160,
+  /**
+   * Exposure under ACES filmic tone mapping (M14): a touch over 1, so sunny concrete reads bright and friendly rather
+   * than grey, without washing out the team colours.
+   */
+  toneMappingExposure: 1.08,
   /**
    * Leaning tilts the view by this much at full lean (radians), a fraction of the body's tilt: enough to
    * feel the peek without making the world swing.
@@ -21,6 +24,48 @@ export const RENDER = {
   leanCameraRoll: 0.12,
 } as const;
 
+/**
+ * The sky, haze and the trees round the yard (M14, render/atmosphere.ts): a clear summer day. The haze matches the
+ * horizon so far things fade into the sky. It starts at 32 m and is still thin at the longest sight line on the field
+ * (34 m on Depot), so nobody is ever hidden by it.
+ */
+export const ATMOSPHERE = {
+  /** Sky dome colours: straight up, at the horizon, and below it (seen only over low walls). */
+  zenith: 0x5f9fd8,
+  horizon: 0xd3e5f1,
+  below: 0xc4d0cc,
+  /** A warm glow round the sun's direction: its colour and how tightly it gathers (higher = smaller). */
+  sunGlow: 0xfff0d2,
+  sunGlowPower: 6,
+  /** How quickly the sky darkens from the horizon up (higher = a thinner pale band at the horizon). */
+  horizonFalloff: 2.2,
+  /** Sky dome radius (metres): inside the camera's far plane. Segments: enough for a smooth gradient. */
+  skyRadius: 200,
+  skyWidthSegments: 32,
+  skyHeightSegments: 16,
+  /** Linear haze in the horizon colour (metres from the camera). */
+  fogNear: 32,
+  fogFar: 210,
+  /**
+   * A ring of trees beyond the walls, so the yard sits somewhere: how many, how far from the field's centre
+   * (metres), how tall, and their greens. One merged mesh, never casting shadows.
+   */
+  trees: {
+    count: 70,
+    ringMin: 62,
+    ringMax: 100,
+    heightMin: 10,
+    heightMax: 18,
+    /** Radius as a share of the height (pines are slim, broadleaves rounder). */
+    pineWidth: 0.2,
+    broadWidth: 0.3,
+    /** Share of the trees that are broadleaves (a round crown on a trunk) rather than pines. */
+    broadShare: 0.45,
+    colors: [0x5f8a4e, 0x6f9a52, 0x557d4c, 0x7aa05a],
+    trunk: 0x6b5843,
+    seed: 4141,
+  },
+} as const;
 /**
  * The Field of view setting on Settings, Graphics (M15b): horizontal degrees on a 16:9 screen, as
  * RENDER.horizontalFov16x9 (the default). The range is a first guess: wide enough for a wider view, narrow enough
@@ -30,52 +75,105 @@ export const FOV_SETTING = { min: 80, max: 120, step: 1 } as const;
 
 export type QualityPreset = 'low' | 'medium' | 'high';
 
-/** What a quality preset sets. Read once at start-up (antialiasing needs a new WebGL context to change). */
+/**
+ * What a quality preset sets (Settings → Graphics → Quality, M14). Everything applies at once except antialiasing,
+ * which needs a new WebGL context: it follows the preset the game loaded with (the next load picks up a change).
+ */
 export interface QualitySettings {
   /** Caps devicePixelRatio; high-DPI laptops with iGPUs pay a lot for full resolution. */
   maxPixelRatio: number;
   antialias: boolean;
   shadows: boolean;
   shadowMapSize: 1024 | 2048;
+  /** PCF filter radius in shadow-map texels: softer shadow edges cost more samples' worth of blur. */
+  shadowRadius: number;
+  /**
+   * Surface relief: the surface textures double as bump maps, so slab joints, mortar, planks and container ribs
+   * catch the sun. Costs a few texture reads per pixel on every surface.
+   */
+  surfaceRelief: boolean;
+  /** Dust motes drifting in the sunlight round you (render/dustMotes.ts); 0 draws none. */
+  dustMotes: number;
+  /** The held replica picks up soft reflections (an environment map), so its plastic has a moulded sheen. */
+  replicaSheen: boolean;
 }
 
 /**
- * Render quality presets. The game runs on `high`, the game's look so far; `?quality=low|medium|high` picks one for a
- * visit, to measure frame cost. The others trade sharpness and shadows for frame time on iGPUs. The Settings picker
- * is held back (greyed out, LATER) until there is real graphics work to scale (owner, 2026-10-03; M15b).
+ * Render quality presets (M14: the Settings picker is back now the art pass gives it real work to scale). High is
+ * the full look and the default; Medium keeps shadows and relief at a lower cost; Low drops shadows, antialiasing,
+ * relief, dust and the replica's sheen for integrated graphics. `?quality=low|medium|high` still overrides the saved
+ * pick for one visit, to measure frame cost (Phase 3 audit C-04).
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
-  low: { maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024 },
-  medium: { maxPixelRatio: 1, antialias: true, shadows: true, shadowMapSize: 1024 },
-  high: { maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048 },
+  low: { maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, surfaceRelief: false, dustMotes: 0, replicaSheen: false },
+  medium: { maxPixelRatio: 1, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, surfaceRelief: true, dustMotes: 90, replicaSheen: true },
+  high: { maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, surfaceRelief: true, dustMotes: 180, replicaSheen: true },
 };
 
 export const DEFAULT_QUALITY: QualityPreset = 'high';
 
-/** How the presets are named in the menus (Settings → Graphics shows the one in use). */
-export const QUALITY_LABELS: Readonly<Record<QualityPreset, string>> = { low: 'Low', medium: 'Medium', high: 'High' };
-
+/** The Quality picker's options (Settings → Graphics), cheapest first. */
+export const QUALITY_CHOICES: readonly { id: QualityPreset; label: string; blurb: string }[] = [
+  { id: 'low', label: 'Low', blurb: 'For integrated graphics: no shadows, relief or dust, and no edge smoothing from the next time the game loads.' },
+  { id: 'medium', label: 'Medium', blurb: 'Shadows and surface relief at a lower cost: a good middle for most laptops.' },
+  { id: 'high', label: 'High', blurb: 'The full look: sharper on high-DPI screens, softer shadows, dust in the sunlight.' },
+];
 
 /** The preset a `?quality=` value names, or null for a missing or unknown value. */
 export function parseQuality(value: string | null): QualityPreset | null {
   return value !== null && Object.hasOwn(QUALITY, value) ? (value as QualityPreset) : null;
 }
 
-/** Bright, friendly daylight: hemisphere fill plus one shadow-casting sun. */
+/**
+ * Bright, friendly daylight: a warm late-morning sun and a cool sky fill (M14). The hemisphere's ground colour is the
+ * sunlit concrete's bounce, so shaded sides stay warm and readable, never murky.
+ */
 export const LIGHTING = {
-  hemiSky: 0xdfeeff,
-  hemiGround: 0x6b6250,
-  hemiIntensity: 1.6,
-  sunColor: 0xfff1d6,
-  sunIntensity: 2.2,
-  /** Sun position relative to the map centre (metres). */
-  sunOffset: { x: 18, y: 40, z: 12 },
+  hemiSky: 0xcfe2ff,
+  hemiGround: 0x8f8268,
+  hemiIntensity: 1.45,
+  sunColor: 0xffe4bd,
+  sunIntensity: 2.7,
+  /** Sun position relative to the map centre (metres): high enough that walls throw short, readable shadows. */
+  sunOffset: { x: 20, y: 42, z: 14 },
   /** Extra margin around the level box for the shadow camera (metres). */
   shadowMargin: 2,
-  shadowBias: -0.0005,
+  shadowBias: -0.0004,
   shadowNormalBias: 0.03,
-  /** PCF filter radius; softens shadow edges a little. */
-  shadowRadius: 2,
+} as const;
+
+/** The surface textures (render/proceduralTextures.ts), drawn on canvases as each match loads. */
+export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier';
+
+/**
+ * The look of the field's surfaces and props (M14, render/proceduralTextures.ts and render/mapMeshes.ts). Everything
+ * here is drawing only: blocks collide, cover and steer bots exactly as their data says.
+ */
+export const SURFACES = {
+  /** Texture size in pixels (square, a power of two): six of these are about 8 MB of GPU memory with mipmaps. */
+  textureSize: 512,
+  /** Metres one texture repeat covers, for the textures mapped in world space (crates are mapped once per face). */
+  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1 } satisfies Record<SurfaceTextureId, number>,
+  /** How strongly each texture's light and dark read as relief when surface relief is on (bump scale). */
+  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8 } satisfies Record<SurfaceTextureId, number>,
+  /**
+   * Grime and contact shade near the floor: the sides of walls, containers, crates and barriers darken towards their
+   * foot over this height (metres), to this share of their colour at the very bottom.
+   */
+  grimeHeight: 0.55,
+  grimeShade: 0.72,
+  /** Each block's brightness varies by up to this share (by its position), so neighbouring props don't look cloned. */
+  shadeJitter: 0.07,
+  /**
+   * Purely visual detail drawn inside each block's own bounds (metres). Containers: the corrugated box sits `inset` in
+   * from a steel frame of corner posts and top and bottom rails, darker than the walls, with locking bars on one end;
+   * a block `length` long (or `height` tall) is drawn as a row (or stack) of containers that size.
+   * Walls: a concrete coping on top, `overhang` proud of the painted blocks. Crates not stacked on another stand on a
+   * pallet.
+   */
+  container: { inset: 0.04, post: 0.14, rail: 0.12, frameShade: 0.62, length: 6, height: 2.6, bar: 0.035, barShade: 0.62 },
+  wallCoping: { height: 0.08, overhang: 0.025 },
+  pallet: { height: 0.14, deck: 0.025, runner: 0.1, inset: 0.03, shade: 0.85 },
 } as const;
 
 /** BB and impact visuals. BBs are drawn bigger than 6 mm so they read at speed. */
@@ -129,12 +227,72 @@ export const IMPACT_PUFFS: PuffConfig = {
    * at 20 m and isn't hidden inside the crosshair's centre gap.
    */
   minAngularRadius: 0.013,
-  /** Bright warm dust, strong enough to stand out on grey concrete and dark wood. */
+  /** Bright warm dust, strong enough to stand out on grey concrete and dark wood (each material tints it, IMPACT_DUST). */
   color: 0xfff1c9,
   opacity: 0.8,
   /** Upward drift while fading (m/s). */
   drift: 0.15,
 };
+
+/**
+ * What a BB kicks up by the material it hits (M14; the same material its tick sounds by, audio/soundMaterials.ts): a
+ * tint over IMPACT_PUFFS' colour and a size. Pale grit off concrete, a tan crumb of wood, only a faint grey breath off
+ * steel. Light and toy-like: dust, never sparks.
+ */
+export const IMPACT_DUST: Readonly<Record<ImpactMaterial, { tint: number; scale: number }>> = {
+  concrete: { tint: 0xf4f0ea, scale: 1 },
+  wood: { tint: 0xf2cf98, scale: 0.85 },
+  metal: { tint: 0xc9d2dc, scale: 0.6 },
+};
+
+/**
+ * A gas replica's breath (M14): each shot of a gas pistol puffs a little propellant from the muzzle, pushed forward
+ * (`muzzleSpeed`, m/s), and a smaller one out of the ejection port to the right as the slide cycles. No flash, no
+ * casings: a toy's puff of gas.
+ */
+export const GAS_PUFFS: PuffConfig & { muzzleSpeed: number; portScale: number; portSpeed: number; portBack: number } = {
+  max: 16,
+  lifetime: 0.5,
+  growTime: 0.07,
+  radius: 0.045,
+  /** Small even far away: a hint, not a marker (0.004 ≈ 6 px wide at 1080p). */
+  minAngularRadius: 0.004,
+  color: 0xf2f6fa,
+  opacity: 0.45,
+  drift: 0.12,
+  muzzleSpeed: 1.6,
+  /** The port puff: its size (share of the muzzle's), speed, and where it starts (this share of the way back from the muzzle to your eye). */
+  portScale: 0.45,
+  portSpeed: 0.7,
+  portBack: 0.15,
+};
+
+/**
+ * Dust motes drifting in the sunlight round you (M14, render/dustMotes.ts): how many is the quality preset's
+ * (QualitySettings.dustMotes); they fill a cube `box` metres across centred on the camera, wrapping round it as you move.
+ * Reduced motion turns them off.
+ */
+export const DUST_MOTES = {
+  box: 14,
+  /** World size of a mote (metres): a few pixels a couple of metres off, a speck further away. */
+  size: 0.045,
+  /**
+   * Near the camera a world-size point balloons into a blurry blob (half a metre off it would be ~50 px), so motes fade
+   * out closer than `fadeFar` and are gone by `fadeNear` (metres), and no mote is ever drawn bigger than `maxPixels`
+   * (device pixels). They also fade over the last `edgeFade` metres before the box's edge, so none pops as it wraps.
+   */
+  fadeNear: 0.8,
+  fadeFar: 1.8,
+  maxPixels: 10,
+  edgeFade: 1.5,
+  color: 0xfff4dc,
+  opacity: 0.65,
+  /** A slow breeze (m/s), and each mote's own wander round it: amplitude (m) and rate (rad/s). */
+  breeze: { x: 0.12, y: 0.02, z: 0.05 },
+  wander: 0.25,
+  wanderRate: 0.35,
+  seed: 707,
+} as const;
 
 /**
  * A BB landing on a player: a bigger, brighter burst of fabric dust that lingers a little, so a hit is
@@ -263,6 +421,11 @@ export const VIEWMODEL = {
   raisedHand: [-0.3, -0.02, -0.62] as const,
   raiseFrom: 0.35,
   raiseTime: 0.25,
+  /**
+   * The replica's sheen (QualitySettings.replicaSheen): a soft studio environment reflected in its plastic at this
+   * strength, so the polymer reads as moulded toy plastic rather than flat paint.
+   */
+  sheenIntensity: 0.32,
   /** Viewmodel lighting: [sky, ground, intensity] hemisphere, warm key from above-right, cool rim from behind. */
   light: {
     hemi: [0xe8f0ff, 0x4a4438, 1.3],

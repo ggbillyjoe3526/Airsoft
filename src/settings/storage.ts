@@ -36,6 +36,7 @@ export type SettingField =
   | 'optic'
   | 'map'
   | 'fov'
+  | 'quality'
   | `hopUp.${string}`
   | `volume.${string}`
   | `bbWeight.${string}`

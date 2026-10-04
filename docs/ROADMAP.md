@@ -21,7 +21,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13), match info (M19) and the Loadout feature (M17a, M17b, added by the owner) are done; comfort and accessibility (M18a controls and comfort, M18b accessibility and browser basics) and squad orders (M22) are done; next come the rest of the owner's feature picks (M20 custom matches, M21 practice range), art and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13), match info (M19) and the Loadout feature (M17a, M17b, added by the owner) are done; comfort and accessibility (M18a controls and comfort, M18b accessibility and browser basics) and squad orders (M22) are done, and so is the art pass (M14: VFX and lighting, procedural, with the Graphics quality picker back); next come the rest of the owner's feature picks (M20 custom matches, M21 practice range) and a tutorial. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -115,7 +115,8 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 4 · M20 Custom matches (owner's feature picks): rounds, round time, team size, friendly fire, a ricochets setting (off by default) | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M21 Practice range (owner's feature picks): try replicas and loadouts on a range | Done (merged; owner to play it) | 9.0 |
 | Alpha · Phase 4 · M22 Squad orders (owner's second batch): follow me, hold here, regroup; bots hear less through walls | Done (owner to play it) | 8.8 (auto-accepted, 4 of 4) |
-| Alpha · Phase 4 · M14 Art pass, M16 Tutorial → feature complete | Later | |
+| Alpha · Phase 4 · M14 Art pass, VFX and lighting (procedural: the CC0 asset sites were unreachable): daylight with a sky and trees, dressed Depot surfaces and props, figures in airsoft kit, toy-like replicas, gas puffs and impact dust, the Graphics quality picker back | Done (owner to play it) | M14_SCORE |
+| Alpha · Phase 4 · M16 Tutorial → feature complete | Later | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -255,7 +256,7 @@ owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the ga
 | 1 | The menu appears without loading a map. A **Map** choice sits beside Mode, Difficulty and the rest, with Depot as the default (more maps come later). The map, difficulty, loadout and settings load only when Play is pressed. The menus are opaque, not see-through onto the field. The controls list shows only under Settings, where the key bindings live | M15b |
 | 2 | A basic **Field of view** slider; today's FOV stays the default, and the player can widen or narrow it | M15b |
 | 3 | Remove the Brightness setting from Graphics | M15b |
-| 4 | Graphics quality is held back for now (still basic geometry and models), but its place is kept for later | M15b (greyed out, LATER); M14 or beta brings it back |
+| 4 | Graphics quality is held back for now (still basic geometry and models), but its place is kept for later | M15b (greyed out, LATER); back in M14 as a saved picker that scales the art pass |
 | 5 | An **Esport** difficulty above Hard that plays almost like a competitive title (Counter-Strike, Valorant). Noted, not built: Easy, Normal and Hard come first | Parked (`docs/IDEAS.md`; [After v0.1](#after-v01-later-versions)) |
 
 **The owner's Loadout request (2026-10-03, after the M15 notes) and where it went:**
@@ -425,6 +426,23 @@ each one went:**
     panning and muffling by two rays per character; Master, Effects and Interface volume sliders on Settings → Audio.
     No CC0 samples were needed yet. Bots hear exactly what they heard before. W-03 done.
 - **M14. Art pass** (CC0 assets only), VFX and lighting for Depot, the replicas and the figures.
+  - **Built (M14, 2026-10-04):** an alpha art pass, all procedural (the CC0 asset sites were unreachable from the build
+    environment, DECISIONS 2026-10-04; downloaded CC0 models and textures can replace parts later). **Lighting:** a warm
+    sun and cool sky fill, a gradient sky dome with a glow towards the sun, a matching light haze and a ring of trees
+    beyond the walls (`render/atmosphere.ts`), all in `config/render.ts`. **Depot:** new canvas textures (slab concrete with
+    joints, stains and cracks; painted breeze blocks; braced plank crates; ribbed container steel with streaks and rust;
+    diamond tread plate on the steel ramps; moulded barriers), grime and contact shade at the foot of walls and props, a
+    little brightness variation between blocks, and detail drawn inside each block's own bounds (container frames and
+    locking bars, wall copings, pallets under crates on the ground), so collision, nav and cover are untouched.
+    **Figures:** players at a weekend game: six casual looks (hoodies and tees, jeans and work trousers, a chest rig or a
+    plate carrier, a cap, a helmet or bare hair, goggles on all and a mesh mask on two, faces showing), pads and gloves,
+    tapered limbs, and the team colour as tape (a broad torso band that reads at 30 m on Low, shoulder straps, armbands,
+    headgear and thigh bands); a two-handed pistol pose; still four merged meshes drawn each. **Replicas:** satin moulded plastic with a soft
+    reflected sheen, slimmer glove fingers. **VFX:** a gas pistol puffs gas at the muzzle and ejection port on each
+    shot, BB impact dust tinted and sized by material, soft round puffs, dust motes drifting round you (off with
+    Reduced motion), flag folds that catch the light. **Graphics → Quality** is back as a saved picker (Low / Medium /
+    High, applied at once; antialiasing from the next load): it scales pixel ratio, shadows and their softness, surface
+    relief, dust and the replica's sheen; on Depot Low makes a little over half the draw calls of High (35 against 61).
 - **M15. Menus and a full settings screen** (pulled forward ahead of M13 by the owner, 2026-10-03, to his own
   design; concept sketch approved the same day). The start screen was too cluttered, so it becomes:
   - **Title screen:** "AIRSOFT" in the middle over the field, **Start** at the bottom left.
@@ -460,7 +478,7 @@ each one went:**
   - **Graphics quality held back:** the Quality picker is greyed out and marked LATER, the game runs on the default
     preset (High), and any saved quality is ignored. `?quality=` stays as a developer switch for measuring frame
     cost (Phase 3 audit C-04). The picker comes back with the art pass (M14) or the beta performance work, when
-    there is real graphics work to scale.
+    there is real graphics work to scale. (M14: back, as a saved setting that applies at once.)
   - The playtest guide's "Menus (M15)" section is updated to match.
   - Also: mode, difficulty and loadout are only picked on New game, with no match loaded, so the old "starts with the
     next round / match" rules and notes are gone; Play always builds the match from what is picked.
@@ -498,7 +516,8 @@ each one went:**
     - **Skins:** a greyed **Skins** row (replicas and outfit) marked LATER keeps their place; skins come with
       customisation (v0.5).
     - The power or gas type row stays LATER (the v0.3 platforms).
-    - Each part shows on the held replica as simple geometry; the art pass (M14) models them properly.
+    - Each part shows on the held replica as simple geometry; the art pass (M14) models them properly. (M14 polished
+      the replicas' materials but left the parts' shapes as they were: KNOWN_ISSUES.)
     - Built (2026-10-03, `config/attachments.ts`): the **2× scope** (zoom 2, 1.6× slower to raise, the HUD shows only
       its round eyepiece with a reticle and a lit centre dot, and the mouse turns slower in proportion); the **vertical grip** (the shake
       of a sprint or landing settles in 0.6× the time; 25% slower to draw and to raise a sight) and the **angled grip**
@@ -510,7 +529,7 @@ each one went:**
 - **M18. Comfort, accessibility and browser basics** (the owner's second batch, items 2–5, 7, 14–17, 21 and 23). The
   settings every player looks for first (PCGamingWiki's list, the Game Accessibility Guidelines' basic tier). It fills
   the Controls and Accessibility tabs' LATER rows; volume comes with M13. Built in two halves: **M18a** (done) the
-  Controls items and reduced motion; **M18b** (done) colour-blind options, sound cues and the browser basics. M19 was built before M18; the order of what's left is M20 → M21 → M14 → M16 (M22 done).
+  Controls items and reduced motion; **M18b** (done) colour-blind options, sound cues and the browser basics. M19 was built before M18; the order of what's left is M20 → M21 → M16 (M22 and M14 done).
   - **Controls:** invert mouse; toggle or hold for aiming down sights and for sprint (as crouch already has); fire,
     aim and any other action bindable to mouse buttons, side buttons included; the sensitivity also shown as cm/360
     (worked out from the mouse's DPI, which the player enters), so it can match another shooter.

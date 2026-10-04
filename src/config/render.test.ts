@@ -1,16 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_QUALITY, parseQuality, QUALITY } from './render';
+import { DEFAULT_QUALITY, DUST_MOTES, parseQuality, QUALITY, QUALITY_CHOICES, SURFACES } from './render';
 
 describe('render quality presets', () => {
-  it('defaults to high, which keeps the look the game had before presets existed', () => {
+  it('defaults to high, the full look', () => {
     expect(DEFAULT_QUALITY).toBe('high');
-    expect(QUALITY.high).toEqual({ maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048 });
+    expect(QUALITY.high).toMatchObject({ maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, surfaceRelief: true, replicaSheen: true });
   });
 
-  it('gets cheaper from high to low', () => {
-    expect(QUALITY.medium.maxPixelRatio).toBeLessThanOrEqual(QUALITY.high.maxPixelRatio);
-    expect(QUALITY.medium.shadowMapSize).toBeLessThan(QUALITY.high.shadowMapSize);
-    expect(QUALITY.low).toMatchObject({ maxPixelRatio: 1, antialias: false, shadows: false });
+  it('gets cheaper at every step from high to low, in everything the art pass added (M14)', () => {
+    const order = QUALITY_CHOICES.map((c) => QUALITY[c.id]); // cheapest first
+    for (let i = 1; i < order.length; i++) {
+      const [cheaper, dearer] = [order[i - 1]!, order[i]!];
+      expect(cheaper.maxPixelRatio).toBeLessThanOrEqual(dearer.maxPixelRatio);
+      expect(cheaper.shadowMapSize).toBeLessThanOrEqual(dearer.shadowMapSize);
+      expect(cheaper.shadowRadius).toBeLessThanOrEqual(dearer.shadowRadius);
+      expect(cheaper.dustMotes).toBeLessThan(dearer.dustMotes);
+      expect(Number(cheaper.shadows) + Number(cheaper.surfaceRelief) + Number(cheaper.replicaSheen) + Number(cheaper.antialias)).toBeLessThanOrEqual(
+        Number(dearer.shadows) + Number(dearer.surfaceRelief) + Number(dearer.replicaSheen) + Number(dearer.antialias),
+      );
+    }
+    // Low is noticeably cheaper: no shadow pass, no antialiasing, no relief, dust or sheen, one pixel per CSS pixel.
+    expect(QUALITY.low).toMatchObject({ maxPixelRatio: 1, antialias: false, shadows: false, surfaceRelief: false, dustMotes: 0, replicaSheen: false });
+  });
+
+  it('keeps the surface textures within a small GPU budget', () => {
+    const size = SURFACES.textureSize;
+    expect(Math.log2(size) % 1).toBe(0); // a power of two, for mipmaps
+    const textures = Object.keys(SURFACES.worldSize).length;
+    // RGBA with mipmaps (a third more): under 12 MB for the lot, on any preset.
+    expect((textures * size * size * 4 * 4) / 3 / 2 ** 20).toBeLessThan(12);
+  });
+
+  it('never draws more dust motes than a small budget', () => {
+    expect(Math.max(...Object.values(QUALITY).map((q) => q.dustMotes))).toBeLessThanOrEqual(256);
+    expect(DUST_MOTES.box).toBeGreaterThan(0);
   });
 
   it('reads ?quality= values and rejects anything else', () => {

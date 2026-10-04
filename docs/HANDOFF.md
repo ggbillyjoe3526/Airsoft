@@ -14,7 +14,7 @@ _Last updated: 2026-10-04 · M22 (squad orders), after M21 (practice range)._
   (2026-10-04) for every remaining Phase 4 milestone, then a full code audit (Fable), its fixes (Opus), a bug pass, and
   a note when Phase 4 is ready to playtest. For this run the owner chose "Claude merges": build threads merge their own
   pull request once CI is green and the critic has accepted it (never tag, never push to `main` directly).
-- **Two build threads run side by side:** one does M22 squad orders → **M14 art pass** (built, in critic rework); the
+- **Two build threads run side by side:** one does M22 squad orders → **M14 art pass** (built 2026-10-04, procedural; see ROADMAP and DECISIONS); the
   other has done M20 and M21 and does **M16 tutorial** last (built on the range). They conflict in docs and in
   `matchSession.ts`, `game.ts`, `settings/storage.ts`, `config/controls.ts`, `sim/events.ts`: merge `main` in before
   every push and keep both sides.

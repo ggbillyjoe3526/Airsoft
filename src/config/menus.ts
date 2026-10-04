@@ -54,7 +54,6 @@ export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: bo
 export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: string; help: string }[]>> = {
   controls: [],
   keys: [],
-  // Quality is listed greyed out too, with the preset in use (settingsScreen.ts).
   graphics: [],
   crosshair: [],
   audio: [{ label: 'Voices (hit calls)', help: '' }],

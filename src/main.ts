@@ -1,7 +1,8 @@
 import './style.css';
-import { DEFAULT_QUALITY, parseQuality } from './config/render';
+import { parseQuality } from './config/render';
 import { parseSeed, randomSeed } from './core/seed';
 import { Game } from './game';
+import { loadQuality } from './ui/menus/savedChoices';
 
 async function main(): Promise<void> {
   const container = document.getElementById('app');
@@ -10,9 +11,9 @@ async function main(): Promise<void> {
   // A fresh seed each load, so the bots' plans differ from session to session; ?seed=N replays one
   // (the debug overlay shows the seed in use). An unreadable ?seed= value is ignored.
   const seed = parseSeed(params.get('seed')) ?? randomSeed();
-  // The default render preset; ?quality=low|medium|high picks another for this visit, to measure frame cost (the debug
-  // overlay shows which). The Settings picker is held back until the art pass (M15b).
-  const quality = parseQuality(params.get('quality')) ?? DEFAULT_QUALITY;
+  // The saved render preset (Settings → Graphics); ?quality=low|medium|high picks another for this visit, to measure
+  // frame cost (the debug overlay shows which).
+  const quality = parseQuality(params.get('quality')) ?? loadQuality();
   const game = await Game.create(container, {
     // ?nolock works on the dev server and in the smoke test's `e2e` build, never in a normal release build.
     allowUnlocked: (import.meta.env.DEV || import.meta.env.MODE === 'e2e') && params.has('nolock'),

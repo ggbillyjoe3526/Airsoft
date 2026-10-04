@@ -237,7 +237,8 @@ swap ends after round 4.
   optic, any parts that differ from stock, BB weights and dials.
 - [ ] **Click Settings.** Tabs on the left: **Controls** (see Comfort and controls below), **Key bindings**,
   **Graphics**, **Crosshair**, **Audio** (volumes, see Sound below) and **Accessibility**. Back returns to New game.
-- [ ] **Graphics.** A **Field of view** slider at 100°, and **Quality** greyed out (High, LATER). No Brightness.
+- [ ] **Graphics.** A **Field of view** slider at 100°, and the **Quality** picker (High; see the M14 section). No
+  Brightness.
 - [ ] **Field of view in a match.** Play, press Esc, Settings, Graphics: drag the slider to 120°. Back and Resume:
   you see more at the sides. Aim down the red dot: it still zooms in. Set it to 80°: a narrower view. Reload the
   page: the slider keeps your setting.
@@ -390,6 +391,34 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 - [ ] **Hearing through walls.** Sneak up to Orange behind a wall (running, not walking): they should notice you
   later than in the open. Do bots still seem to hear you through walls like a wallhack, or now too little?
 
+## Art, VFX and lighting (M14)
+
+- [ ] **Daylight.** Start a match on Depot: a sunny day, a blue sky paler towards the horizon and warmer towards the
+  sun, trees beyond the walls, short soft shadows. Nothing gloomy; shaded sides of containers stay readable.
+- [ ] **Surfaces.** Walk round: the concrete has joints, stains and hairline cracks; walls are painted blocks with a
+  concrete coping on top; containers have a darker steel frame and locking bars on one end; crates on the ground
+  stand on pallets; the dock ramps are tread plate. Walls and props darken a little where they meet the ground.
+  Nothing you can see sticks out further than what you collide with: brush along a container and a crate.
+- [ ] **Figures.** Look at your teammates and the opponents up close: players at a weekend game, not soldiers. Hoodies
+  and tees over jeans or work trousers, a chest rig or a plate carrier, a cap, a helmet or bare hair; goggles on
+  everyone, most faces showing (two wear a mesh mask). No two players in a match look the same. The team colour is
+  tape: a broad band round the middle, the shoulders, both arms, the headgear and both thighs. At 30 m, on **Low**
+  too, can you tell the teams apart at a glance, from the front, the side and the back? Try High contrast colours too.
+- [ ] **Hit call.** Hit a bot: the "HIT!" sign, the hand up in a glove, the rifle hanging; still clear at range.
+- [ ] **Replicas.** The held rifle and pistol look like moulded toy plastic with a soft sheen, not metal guns. The
+  pistol's glove fingers look slimmer than before.
+- [ ] **Gas puffs.** Switch to the pistol and fire: a small puff of gas leaves the muzzle, and a smaller one the
+  ejection port, on each shot. The rifle shows none. No flash, no casings.
+- [ ] **Impact dust.** Shoot concrete, a crate and a container: pale dust off concrete, tan crumbs off wood, a small
+  grey puff off steel. Soft round puffs, never sparks.
+- [ ] **Dust in the air.** On High, a few specks drift slowly round you in the sun. None ever turns into a big blurry
+  blob next to the gun or your face. Settings → Accessibility → Reduced motion: On, and they're gone.
+- [ ] **Quality.** Settings → Graphics → **Quality**: Low, Medium, High (High at first). Mid-match from the pause menu,
+  pick Low: shadows, surface relief, dust and the replica's sheen go at once; pick High: they come back. It is saved
+  for the next visit. Low turns off edge smoothing only after a reload. Does Low run noticeably smoother on a laptop?
+- [ ] **Frame rate.** Open the debug overlay (`` ` `` or F3) on each preset: note the frame rate and draw calls on your
+  machine, in the open yard and in the office.
+
 ## Pause, menus and tabbing away
 
 - [ ] **Press Esc mid-round.** Everything freezes, the mouse is freed, and the pause menu shows the round and score
@@ -437,5 +466,5 @@ Post each problem in the project chat, one message per problem. These four thing
 4. **A screenshot or short clip** if you can (Windows: Win+Shift+S; Mac: Cmd+Shift+4).
 
 Feelings count too: "bots are too good on Normal" or "leaning feels slow" is useful feedback, not just bugs.
-A few things are already known and on the list, such as bots never using the pistol, the greybox look of the
-figures, and arm hits not counting (owner's choice).
+A few things are already known and on the list, such as bots never using the pistol, the figures' simple walk
+cycle, and arm hits not counting (owner's choice).

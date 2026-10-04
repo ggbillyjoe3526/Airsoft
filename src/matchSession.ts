@@ -27,8 +27,8 @@ import { buildNavGrid, type NavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
-import { addLighting } from './render/lighting';
-import { buildMapMeshes, disposeMapMeshes } from './render/mapMeshes';
+import { addLighting, type Daylight } from './render/lighting';
+import { buildMapMeshes, disposeMapMeshes, setMapRelief } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
 import { createSurfaceTextures, disposeSurfaceTextures, type SurfaceTextures } from './render/proceduralTextures';
 import type { Renderer } from './render/renderer';
@@ -87,7 +87,7 @@ export class MatchSession {
   private readonly bots: BotController;
   private readonly textures: SurfaceTextures;
   private readonly mapGroup: THREE.Group;
-  private readonly disposeLighting: () => void;
+  private readonly daylight: Daylight;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
@@ -119,9 +119,9 @@ export class MatchSession {
     const map = setup.map;
     this.loadout = setup.loadout;
     this.textures = createSurfaceTextures();
-    this.mapGroup = buildMapMeshes(map, this.textures);
+    this.mapGroup = buildMapMeshes(map, this.textures, quality.surfaceRelief);
     renderer.scene.add(this.mapGroup);
-    this.disposeLighting = addLighting(renderer.scene, map, quality);
+    this.daylight = addLighting(renderer.scene, map, quality);
 
     this.physics = new PhysicsWorld(map, BODY, SIM_DT);
     this.nav = buildNavGrid(map, NAV);
@@ -160,9 +160,9 @@ export class MatchSession {
     );
     input.resetView(this.player.spawnYaw);
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality);
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, this.loadout);
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -239,6 +239,16 @@ export class MatchSession {
     this.combat.setMotion(scale);
   }
 
+  /**
+   * A new quality preset (Settings → Graphics, M14): the sun's shadows, the surfaces' relief, the dust in the air and
+   * the held replica's sheen follow it at once. (The renderer's own part is Renderer.setQuality.)
+   */
+  setQuality(quality: QualitySettings): void {
+    this.daylight.setQuality(quality);
+    setMapRelief(this.mapGroup, quality.surfaceRelief);
+    this.combat.setQuality(quality);
+  }
+
   /** On-screen sound cues turned on or off (also called once as the match is built). */
   setSoundCues(on: boolean): void {
     this.match.setSoundCues(on);
@@ -265,7 +275,7 @@ export class MatchSession {
     this.renderer.scene.remove(this.mapGroup);
     disposeMapMeshes(this.mapGroup);
     disposeSurfaceTextures(this.textures);
-    this.disposeLighting();
+    this.daylight.dispose();
     this.physics.dispose();
     this.renderer.setZoom(1);
   }

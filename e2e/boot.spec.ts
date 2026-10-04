@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
  * Smoke test: the built game boots to the title screen with no map loaded, goes through New game (the Map, Match and
  * Difficulty pop-ups, a 2v2 picked, the Loadout and Settings screens, a crosshair picked) and starts a match with a 2× scope, an
  * angled grip, a hi-cap and 0.28 g BBs, holds Tab for the scoreboard, fires, reloads, moves the fire selector, aims
- * down the scope and keeps running without a page error.
+ * down the scope, switches the graphics quality to Low mid-match and keeps running without a page error.
  *
  * Uses `?nolock` (no pointer lock; automated browsers can't take it): the fire button and wheel work without
  * the lock there, but the real lock flow, mouse look and Esc to pause stay manual tests. SwiftShader draws only
@@ -226,6 +226,18 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
   });
+  // Graphics quality (M14): a saved picker on Settings → Graphics that applies at once. Low turns the sun's shadows off
+  // in the match loaded (the screenshots after this one show Low).
+  await pauseMenu.getByRole('button', { name: 'Settings' }).click();
+  await settings.getByRole('tab', { name: /Graphics/i }).click();
+  const quality = settings.getByRole('group', { name: 'Quality' });
+  await expect(quality.getByRole('button', { name: 'High' })).toHaveAttribute('aria-pressed', 'true');
+  await quality.getByRole('button', { name: 'Low' }).click();
+  await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
+  const shadowsOn = () => page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
+  expect(await shadowsOn()).toBe(false);
+  await page.keyboard.press('Escape');
+  await expect(pauseMenu).toBeVisible();
   await pauseMenu.getByRole('button', { name: 'Resume' }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
 

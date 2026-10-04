@@ -1,16 +1,21 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { FIGURE } from '../config/characters';
+import { FIGURE, type FigureLook } from '../config/characters';
 import type { Character } from '../sim/character';
 import type { Vec3 } from '../sim/vec';
 
 /**
- * Third-person figures: chunky greybox players in airsoft kit (cap, goggles, team-colour chest rig and
- * armbands, replica). Each moving part is one mesh with flat vertex colours, all on the figure's one
- * material. Figures face -Z with their feet at the origin.
+ * Third-person figures (M14 art pass, reworked): stylised players at a weekend airsoft game: casual clothes under a
+ * chest rig or a plate carrier, full-seal goggles (a mesh mask on some, the face showing on most), a cap, a bump
+ * helmet with a headset or bare hair, pads, gloves, and the team colour as tape (a broad band round the torso, shoulder
+ * straps, armbands, a band on the headgear and on each thigh). Each moving part is one merged mesh with flat vertex
+ * colours, all on the figure's one material. Figures face -Z with their feet at the origin.
  */
 
 type Color = number;
+
+const UP = new THREE.Vector3(0, 1, 0);
 
 /** Collects coloured primitives and merges them into one geometry with a `color` attribute. */
 class PartBuilder {
@@ -33,17 +38,54 @@ class PartBuilder {
     return this.add(new THREE.BoxGeometry(w, h, d).translate(x, y, z), color);
   }
 
+  /** A box with chamfered edges (one segment of rounding): kit, plates and boots. */
+  rounded(color: Color, w: number, h: number, d: number, x: number, y: number, z: number, radius = 0.02): this {
+    return this.add(new RoundedBoxGeometry(w, h, d, 1, radius).translate(x, y, z), color);
+  }
+
   /** Capsule from a to b. */
   limb(color: Color, radius: number, a: THREE.Vector3, b: THREE.Vector3): this {
     const dir = b.clone().sub(a);
-    const geo = new THREE.CapsuleGeometry(radius, Math.max(1e-3, dir.length()), 3, 8);
-    geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
+    const geo = new THREE.CapsuleGeometry(radius, Math.max(1e-3, dir.length()), 3, FIGURE.radialSegments);
+    geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, dir.normalize()));
     geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
     return this.add(geo, color);
   }
 
-  sphere(color: Color, r: number, x: number, y: number, z: number): this {
-    return this.add(new THREE.SphereGeometry(r, 12, 8).translate(x, y, z), color);
+  /** A limb tapering from radius `ra` at a to `rb` at b, with a rounded joint at each end. */
+  taper(color: Color, a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number): this {
+    const dir = b.clone().sub(a);
+    const geo = new THREE.CylinderGeometry(rb, ra, Math.max(1e-3, dir.length()), FIGURE.radialSegments, 1, true);
+    geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, dir.normalize()));
+    geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+    this.add(geo, color);
+    this.sphere(color, ra, a.x, a.y, a.z, 6);
+    return this.sphere(color, rb, b.x, b.y, b.z, 6);
+  }
+
+  /** A band of tape (or a pad's strap) round the limb from a to b, at `t` (0..1) along it: `radius` round, `width` wide. */
+  band(color: Color, a: THREE.Vector3, b: THREE.Vector3, t: number, radius: number, width: number): this {
+    const dir = b.clone().sub(a);
+    const geo = new THREE.CylinderGeometry(radius, radius, width, FIGURE.radialSegments);
+    geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, dir.clone().normalize()));
+    const at = a.clone().addScaledVector(dir, t);
+    geo.translate(at.x, at.y, at.z);
+    return this.add(geo, color);
+  }
+
+  sphere(color: Color, r: number, x: number, y: number, z: number, segments: number = FIGURE.radialSegments + 2): this {
+    return this.add(new THREE.SphereGeometry(r, segments, Math.max(4, segments - 4)).translate(x, y, z), color);
+  }
+
+  /**
+   * An upright curved strip round the head (goggles, the mask, a band): radius `r`, `height` tall, centred at height
+   * `y`, covering `arc` radians round the front (2π: all the way round).
+   */
+  wrap(color: Color, r: number, height: number, y: number, arc: number, z = 0): this {
+    const full = arc >= Math.PI * 2;
+    // CylinderGeometry measures its angle from +Z towards +X: π is straight ahead (-Z).
+    const geo = new THREE.CylinderGeometry(r, r, height, full ? 14 : 10, 1, !full, Math.PI - arc / 2, arc);
+    return this.add(geo.translate(0, y, z), color);
   }
 
   /** Adds another builder's merged, already coloured parts transformed by `m`. */
@@ -70,14 +112,44 @@ class PartBuilder {
 const v = (x: number, y: number, z: number): THREE.Vector3 => new THREE.Vector3(x, y, z);
 const C = FIGURE.colors;
 
-/** A simple rifle along -Z from `z0` (butt) with its bore at height y. */
+/** A simple two-tone toy rifle along -Z from `z0` (butt) with its bore at height y. */
 function addRifle(b: PartBuilder, x: number, y: number, z0: number): void {
-  b.box(C.furniture, 0.05, 0.1, 0.2, x, y - 0.02, z0 - 0.1); // stock
-  b.box(C.replica, 0.055, 0.08, 0.34, x, y, z0 - 0.37); // receiver
+  b.rounded(C.furniture, 0.05, 0.1, 0.2, x, y - 0.02, z0 - 0.1, 0.012); // stock
+  b.rounded(C.replica, 0.055, 0.08, 0.34, x, y, z0 - 0.37, 0.012); // receiver
   b.box(C.furniture, 0.04, 0.14, 0.06, x, y - 0.1, z0 - 0.42); // magazine
-  b.box(C.furniture, 0.06, 0.07, 0.24, x, y, z0 - 0.66); // handguard
+  b.rounded(C.furniture, 0.06, 0.07, 0.24, x, y, z0 - 0.66, 0.015); // handguard
   b.box(C.replica, 0.025, 0.025, 0.2, x, y, z0 - 0.88); // barrel
   b.box(C.replica, 0.02, 0.04, 0.03, x, y + 0.06, z0 - 0.24); // flip-up rear sight (optics are accessories; bots fit none)
+}
+
+/** A compact pistol along -Z from `z0` (the back of the slide) with its bore at height y. */
+function addPistol(b: PartBuilder, x: number, y: number, z0: number): void {
+  b.rounded(C.replica, 0.032, 0.038, FIGURE.pistol.length, x, y, z0 - FIGURE.pistol.length / 2, 0.008); // slide
+  b.box(C.replica, 0.028, 0.1, 0.04, x, y - 0.06, z0 - 0.035); // grip
+}
+
+/** A gloved hand gripping something at `at`. */
+function glove(b: PartBuilder, at: THREE.Vector3): void {
+  b.rounded(C.gloves, 0.07, 0.075, 0.09, at.x, at.y, at.z, 0.025);
+}
+
+/**
+ * One arm from the shoulder `s` through the elbow `e` to the hand `h`: sleeve, elbow pad, forearm, glove, and the team
+ * armband round the upper arm.
+ */
+function arm(b: PartBuilder, look: FigureLook, team: Color, s: THREE.Vector3, e: THREE.Vector3, h: THREE.Vector3): void {
+  const F = FIGURE;
+  b.taper(look.top, s, e, F.armRadius, F.armRadius * 0.85);
+  b.band(team, s, e, 0.42, F.armRadius * 1.12, 0.13);
+  b.taper(look.top, e, h, F.forearmRadius, F.forearmRadius * 0.8);
+  b.sphere(C.pads, F.armRadius * 0.95, e.x, e.y, e.z, 6);
+  glove(b, h);
+}
+
+/** A figure's looks, from its id (FIGURE.looks): clothes, vest, headgear and face vary so a team doesn't look cloned. */
+export function figureLooks(id: number): FigureLook {
+  const n = FIGURE.looks.length;
+  return FIGURE.looks[((Math.floor(id) % n) + n) % n]!;
 }
 
 export interface Figure {
@@ -88,21 +160,70 @@ export interface Figure {
   legR: THREE.Mesh;
   /** Arms and replica in the aiming pose; pitches with the view about the shoulders. */
   aim: THREE.Group;
+  /** The aim group's two holds: the rifle shouldered, or the pistol out in both hands (one shows at a time). */
+  aimRifle: THREE.Mesh;
+  aimPistol: THREE.Mesh;
   /** Hit-calling pose: one hand raised high, replica held muzzle-down. */
   hitPose: THREE.Mesh;
   callout: THREE.Sprite;
 }
 
-/** Builds one figure in its team colour, using `material` (vertex colours) and the shared `calloutMaterial`. */
-export function buildFigure(teamColor: Color, material: THREE.Material, calloutMaterial: THREE.SpriteMaterial): Figure {
+/**
+ * The head: face, full-seal goggles with their strap, a mesh mask if the look has one, and a cap, a helmet with a
+ * headset, or hair with a team sweatband. `y`: head centre.
+ */
+function head(b: PartBuilder, look: FigureLook, team: Color, y: number): void {
   const F = FIGURE;
-  const root = new THREE.Group();
+  const r = F.headRadius;
+  b.sphere(look.skin, r, 0, y, 0);
+  b.sphere(look.skin, 0.022, 0, y - 0.035, -r * 0.97, 6); // nose
+  // Full-seal goggles: a dark frame wrapping the eyes, a tinted lens across it, the strap round the back.
+  b.wrap(C.goggles, r * 1.05, 0.062, y + 0.005, Math.PI * 0.95);
+  b.wrap(C.lens, r * 1.1, 0.04, y + 0.006, Math.PI * 0.62);
+  b.wrap(C.goggles, r * 1.01, 0.026, y + 0.01, Math.PI * 2);
+  // Mesh lower-face mask over the nose and mouth, on some looks only.
+  if (look.mask !== null) b.wrap(look.mask, r * 1.03, 0.075, y - 0.06, Math.PI * 0.8);
+  if (look.headgear === 'helmet') {
+    b.add(new THREE.SphereGeometry(r * 1.17, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.95, 1.05).translate(0, y + 0.015, 0), look.hat);
+    b.wrap(team, r * 1.19, 0.045, y + 0.045, Math.PI * 2); // team tape round the shell
+    for (const side of [-1, 1]) {
+      b.box(look.hat, 0.02, 0.028, 0.12, side * r * 1.13, y + 0.02, 0); // side rails
+      b.add(new THREE.CylinderGeometry(0.04, 0.04, 0.035, 10).rotateZ(Math.PI / 2).translate(side * r * 1.05, y - 0.015, 0.005), C.headset);
+    }
+    b.box(C.headset, 0.06, 0.03, 0.015, 0, y + 0.075, -r * 1.12); // front mount
+  } else if (look.headgear === 'cap') {
+    b.add(new THREE.SphereGeometry(r * 1.07, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, y + 0.02, 0), look.hat);
+    b.wrap(team, r * 1.09, 0.035, y + 0.035, Math.PI * 2); // team tape round the cap
+    b.rounded(look.hat, 0.17, 0.016, 0.11, 0, y + 0.03, -r * 1.2, 0.006); // brim
+  } else {
+    // Hair over the crown and down the back, a team sweatband round it above the goggles.
+    b.add(new THREE.SphereGeometry(r * 1.05, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.1, 1).translate(0, y + 0.02, 0), look.hat);
+    b.add(new THREE.SphereGeometry(r * 1.04, 10, 4, Math.PI * 0.2, Math.PI * 0.6, Math.PI / 2, Math.PI * 0.22).translate(0, y + 0.02, 0), look.hat);
+    b.wrap(team, r * 1.08, 0.035, y + 0.05, Math.PI * 2);
+  }
+}
 
-  // Legs pivot at the hips so they can swing.
+/**
+ * Builds one figure in its team colour, using `material` (vertex colours) and the shared `calloutMaterial`. `id`
+ * picks its looks (figureLooks).
+ */
+export function buildFigure(teamColor: Color, material: THREE.Material, calloutMaterial: THREE.SpriteMaterial, id = 0): Figure {
+  const F = FIGURE;
+  const look = figureLooks(id);
+  const root = new THREE.Group();
+  const knee = F.hipHeight * 0.48; // height of the knee below the hip
+
+  // Legs pivot at the hips so they can swing: thigh with a team band, knee pad, shin, boot.
   const leg = (side: number): THREE.Mesh => {
     const b = new PartBuilder();
-    b.limb(C.trousers, F.legRadius, v(0, 0, 0), v(0, -F.hipHeight + 0.12, 0));
-    b.box(C.boots, 0.12, 0.1, 0.24, 0, -F.hipHeight + 0.05, -0.04);
+    const hip = v(0, 0, 0);
+    const kneeAt = v(0, -knee, -0.015);
+    const ankle = v(0, -F.hipHeight + 0.11, 0);
+    b.taper(look.trousers, hip, kneeAt, F.legRadius, F.kneeRadius);
+    b.band(teamColor, hip, kneeAt, 0.35, F.legRadius * 1.04, 0.1);
+    b.taper(look.trousers, kneeAt, ankle, F.kneeRadius, F.shinRadius * 0.85);
+    b.rounded(C.pads, 0.1, 0.12, 0.05, 0, -knee - 0.02, -0.06, 0.02); // knee pad
+    b.rounded(C.boots, 0.12, 0.12, 0.26, 0, -F.hipHeight + 0.06, -0.04, 0.03);
     const mesh = b.build(material);
     mesh.position.set(side * F.hipSpread, F.hipHeight, 0);
     return mesh;
@@ -116,56 +237,66 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   const hy = -F.hipHeight; // add this to world heights to get upper-body local heights
   const t = F.torso;
   const body = new PartBuilder();
-  body.box(C.jacket, t.width, t.height, t.depth, 0, t.bottom + t.height / 2 + hy, 0);
-  // Team-colour chest rig: the main way to tell teams apart at range.
-  body.box(teamColor, t.width + 0.03, t.height * 0.55, t.depth + 0.04, 0, t.bottom + t.height * 0.62 + hy, 0);
-  body.box(C.trousers, t.width - 0.04, 0.1, t.depth - 0.02, 0, t.bottom + hy, 0); // belt line
-  body.limb(C.skin, 0.05, v(0, F.shoulderHeight + hy, 0), v(0, F.headHeight - 0.08 + hy, 0)); // neck
-  body.sphere(C.skin, F.headRadius, 0, F.headHeight + hy, 0);
-  // Cap with a brim, and full-seal goggles: eye protection is mandatory at every site.
-  body.add(new THREE.SphereGeometry(F.headRadius * 1.06, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, F.headHeight + 0.02 + hy, 0), C.cap);
-  body.box(C.cap, 0.16, 0.015, 0.1, 0, F.headHeight + 0.03 + hy, -0.13);
-  body.box(C.goggles, 0.2, 0.06, 0.06, 0, F.headHeight + 0.0 + hy, -0.085);
-  body.box(C.lens, 0.16, 0.035, 0.01, 0, F.headHeight + 0.0 + hy, -0.118);
+  const mid = t.bottom + hy; // the torso's bottom, local
+  body.rounded(look.top, t.width, t.height, t.depth, 0, mid + t.height / 2, 0, 0.05);
+  body.rounded(look.trousers, t.width + 0.01, 0.07, t.depth + 0.01, 0, mid + 0.03, 0, 0.02); // belt
+  // Team tape round the torso, a quarter of a metre tall and under the arms whatever the pose: the main way to tell
+  // teams apart at range (enemies carry no marker).
+  const band = F.teamBand;
+  body.rounded(teamColor, t.width + 0.035, band.height, t.depth + 0.11, 0, mid + band.centre, 0, 0.03);
+  const bandTop = mid + band.centre + band.height / 2;
+  const front = -(t.depth / 2);
+  if (look.vest === 'carrier') {
+    // Plate carrier: front and back plates above the tape, a hydration pack high on the back.
+    const plateH = t.height - (bandTop - mid) - 0.04;
+    for (const side of [-1, 1]) body.rounded(look.vestColor, t.width - 0.06, plateH, 0.05, 0, bandTop + plateH / 2, side * (t.depth / 2 + 0.02), 0.015);
+    body.rounded(look.pouches, 0.24, 0.2, 0.07, 0, bandTop + 0.13, t.depth / 2 + 0.075, 0.02);
+  } else {
+    // Chest rig: one front panel on straps; the top shows at the back.
+    body.rounded(look.vestColor, t.width - 0.08, 0.2, 0.04, 0, bandTop + 0.1, front - 0.015, 0.015);
+  }
+  for (const side of [-1, 1]) body.box(teamColor, 0.065, 0.03, t.depth + 0.08, side * 0.11, mid + t.height + 0.005, 0); // shoulder straps
+  // Three magazine pouches across the chest.
+  for (const x of [-0.1, 0, 0.1]) body.rounded(look.pouches, 0.085, 0.12, 0.055, x, bandTop + 0.08, front - 0.06, 0.012);
+  body.limb(look.skin, 0.05, v(0, F.shoulderHeight + hy, 0), v(0, F.headHeight - 0.08 + hy, 0)); // neck
+  head(body, look, teamColor, F.headHeight + hy);
   upper.add(body.build(material));
 
-  // Aiming pose: pivot at the shoulder line, rifle shouldered on the right.
+  // Aiming pose: pivot at the shoulder line. Rifle shouldered on the right, or the pistol held out in both hands.
   const aim = new THREE.Group();
   aim.position.y = F.shoulderHeight + hy;
-  const arms = new PartBuilder();
   const sR = v(F.shoulderSpread, 0, 0);
   const sL = v(-F.shoulderSpread, 0, 0);
-  const grip = v(0.07, -0.12, -0.26);
-  const fore = v(0.03, -0.08, -0.55);
-  arms.limb(C.jacket, F.armRadius, sR, v(0.2, -0.2, -0.12));
-  arms.limb(C.jacket, F.armRadius, v(0.2, -0.2, -0.12), grip);
-  arms.limb(C.jacket, F.armRadius, sL, v(-0.14, -0.22, -0.3));
-  arms.limb(C.jacket, F.armRadius, v(-0.14, -0.22, -0.3), fore);
-  arms.box(teamColor, 0.13, 0.07, 0.13, F.shoulderSpread, -0.07, 0); // armbands
-  arms.box(teamColor, 0.13, 0.07, 0.13, -F.shoulderSpread, -0.07, 0);
-  arms.sphere(C.skin, 0.045, grip.x, grip.y, grip.z);
-  arms.sphere(C.skin, 0.045, fore.x, fore.y, fore.z);
-  addRifle(arms, F.rifle.x, F.rifle.y, F.rifle.butt);
-  aim.add(arms.build(material));
+  const rifle = new PartBuilder();
+  arm(rifle, look, teamColor, sR, v(0.2, -0.2, -0.12), v(0.07, -0.12, -0.26));
+  arm(rifle, look, teamColor, sL, v(-0.14, -0.22, -0.3), v(0.03, -0.08, -0.55));
+  addRifle(rifle, F.rifle.x, F.rifle.y, F.rifle.butt);
+  const aimRifle = rifle.build(material);
+  const pistol = new PartBuilder();
+  const P = F.pistol;
+  arm(pistol, look, teamColor, sR, v(0.17, -0.15, -0.21), v(P.x, P.y - 0.08, P.butt - 0.03));
+  arm(pistol, look, teamColor, sL, v(-0.13, -0.17, -0.2), v(P.x - 0.04, P.y - 0.09, P.butt - 0.05));
+  addPistol(pistol, P.x, P.y, P.butt);
+  const aimPistol = pistol.build(material);
+  aimPistol.visible = false;
+  aim.add(aimRifle, aimPistol);
   upper.add(aim);
 
-  // Hit pose: right hand straight up (open hand), rifle hanging muzzle-down from the left hand.
+  // Hit pose: right hand straight up (open glove), rifle hanging muzzle-down from the left hand.
   const hit = new PartBuilder();
   const top = F.shoulderHeight + hy;
-  hit.limb(C.jacket, F.armRadius, v(F.shoulderSpread, top, 0), v(F.shoulderSpread + 0.04, top + 0.3, 0.02));
-  hit.limb(C.jacket, F.armRadius, v(F.shoulderSpread + 0.04, top + 0.3, 0.02), v(F.shoulderSpread + 0.06, top + 0.58, 0));
-  hit.box(C.skin, 0.09, 0.14, 0.04, F.shoulderSpread + 0.06, top + 0.67, 0); // open hand
-  hit.box(teamColor, 0.13, 0.07, 0.13, F.shoulderSpread, top - 0.07, 0);
-  hit.box(teamColor, 0.13, 0.07, 0.13, -F.shoulderSpread, top - 0.07, 0);
-  hit.limb(C.jacket, F.armRadius, v(-F.shoulderSpread, top, 0), v(-F.shoulderSpread - 0.03, top - 0.5, -0.06));
-  hit.sphere(C.skin, 0.045, -F.shoulderSpread - 0.03, top - 0.55, -0.06);
+  const raisedElbow = v(F.shoulderSpread + 0.04, top + 0.3, 0.02);
+  const raisedHand = v(F.shoulderSpread + 0.06, top + 0.6, 0);
+  hit.taper(look.top, v(F.shoulderSpread, top, 0), raisedElbow, F.armRadius, F.armRadius * 0.85);
+  hit.band(teamColor, v(F.shoulderSpread, top, 0), raisedElbow, 0.42, F.armRadius * 1.12, 0.13);
+  hit.taper(look.top, raisedElbow, raisedHand, F.forearmRadius, F.forearmRadius * 0.8);
+  hit.rounded(C.gloves, 0.09, 0.15, 0.04, raisedHand.x, raisedHand.y + 0.07, 0, 0.015); // open hand
+  const hangHand = v(-F.shoulderSpread - 0.03, top - 0.55, -0.06);
+  arm(hit, look, teamColor, v(-F.shoulderSpread, top, 0), v(-F.shoulderSpread - 0.02, top - 0.28, -0.02), hangHand);
   const hanging = new PartBuilder();
   addRifle(hanging, 0, 0, 0.12);
   // Muzzle down and slightly forward, held at the left hand.
-  hit.addPart(
-    hanging,
-    new THREE.Matrix4().makeTranslation(-F.shoulderSpread - 0.03, top - 0.55, -0.06).multiply(new THREE.Matrix4().makeRotationX(-(Math.PI / 2 - 0.25))),
-  );
+  hit.addPart(hanging, new THREE.Matrix4().makeTranslation(hangHand.x, hangHand.y, hangHand.z).multiply(new THREE.Matrix4().makeRotationX(-(Math.PI / 2 - 0.25))));
   const hitPose = hit.build(material);
   hitPose.visible = false;
   upper.add(hitPose);
@@ -176,7 +307,7 @@ export function buildFigure(teamColor: Color, material: THREE.Material, calloutM
   callout.visible = false;
 
   root.add(legL, legR, upper, callout);
-  return { root, upper, legL, legR, aim, hitPose, callout };
+  return { root, upper, legL, legR, aim, aimRifle, aimPistol, hitPose, callout };
 }
 
 /** The shared "HIT!" sign texture. */
@@ -210,15 +341,18 @@ export function disposeFigure(f: Figure): void {
   f.root.removeFromParent();
 }
 
+/** Where a replica's bore and muzzle sit in the aim group (FIGURE.rifle or FIGURE.pistol). */
+export type FigureHold = { readonly x: number; readonly y: number; readonly butt: number; readonly length: number };
+
 /**
- * World position of a character's rifle muzzle in the third-person aiming pose (matches buildFigure:
- * the aim group pivots at the shoulder line by the view pitch, the figure turns by yaw).
+ * World position of a character's replica muzzle in the third-person aiming pose (matches buildFigure: the aim group
+ * pivots at the shoulder line by the view pitch, the figure turns by yaw). `hold`: the rifle's (default) or the pistol's.
  */
-export function figureMuzzle(c: Character, out: Vec3): Vec3 {
+export function figureMuzzle(c: Character, out: Vec3, hold: FigureHold = FIGURE.rifle): Vec3 {
   const F = FIGURE;
-  const lx = F.rifle.x;
-  const ly = F.rifle.y;
-  const lz = F.rifle.butt - F.rifle.length;
+  const lx = hold.x;
+  const ly = hold.y;
+  const lz = hold.butt - hold.length;
   const cp = Math.cos(c.pitch);
   const sp = Math.sin(c.pitch);
   const y1 = ly * cp - lz * sp;
