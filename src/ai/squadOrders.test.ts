@@ -422,7 +422,7 @@ describe('squad orders (M22)', () => {
     // A wall there instead: walls only stop you (you slide along them), so they don't change the way.
     const wallNav = buildNavGrid({ ...OPEN_FIELD, blocks: [...OPEN_FIELD.blocks, { kind: 'wall', center: vec3((x0 + x1) / 2, 1.5, (z0 + z1) / 2), size: vec3(x1 - x0, 3, z1 - z0) }] }, NAV);
     const steer = (nav: NavGrid) => {
-      const b = createBot(createCharacter(1, vec3(start.x, 0, start.z), EAST, LOADOUT, 0), 1, BOTS);
+      const b = createBot(createCharacter(1, vec3(start.x, 0, start.z), EAST, LOADOUT, 0), 1, BOTS, BOTS);
       b.character.position = vec3(start.x, 0, start.z);
       startOrder(b, leader, 'follow', 0);
       expect(moveOrder(b, { nav, cfg: BOTS } as unknown as BotWorld, createCommand(), DT)).toBe(true);

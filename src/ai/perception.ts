@@ -1,4 +1,4 @@
-import type { BotConfig } from '../config/bots';
+import type { BotBehaviour } from '../config/bots';
 import type { HitConfig } from '../config/hits';
 import type { BodyConfig } from '../config/movement';
 import type { WorldQuery } from '../sim/armament';
@@ -48,7 +48,7 @@ export function lineClear(query: WorldQuery, a: Vec3, b: Vec3): boolean {
  * Seeing needs the target within view distance, inside the field of view (unless very close), and a
  * clear line from the viewer's eyes.
  */
-export function visiblePart(viewer: Character, target: Character, query: WorldQuery, bots: BotConfig, body: BodyConfig, hits: HitConfig): number {
+export function visiblePart(viewer: Character, target: Character, query: WorldQuery, bots: BotBehaviour, body: BodyConfig, hits: HitConfig): number {
   const dx = target.position.x - viewer.position.x;
   const dz = target.position.z - viewer.position.z;
   const dist = Math.hypot(dx, dz);
@@ -65,6 +65,6 @@ export function visiblePart(viewer: Character, target: Character, query: WorldQu
 }
 
 /** Whether `viewer` can see any of `target` right now (see visiblePart). */
-export function canSee(viewer: Character, target: Character, query: WorldQuery, bots: BotConfig, body: BodyConfig, hits: HitConfig): boolean {
+export function canSee(viewer: Character, target: Character, query: WorldQuery, bots: BotBehaviour, body: BodyConfig, hits: HitConfig): boolean {
   return visiblePart(viewer, target, query, bots, body, hits) > 0;
 }

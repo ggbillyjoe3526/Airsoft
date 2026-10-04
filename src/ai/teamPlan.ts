@@ -1,11 +1,11 @@
-import type { BotConfig } from '../config/bots';
+import type { BotBehaviour } from '../config/bots';
 import { type RngState, rngNext } from '../sim/rng';
 
 /** How a team's bots spread over the lanes this round. */
 export type TeamPlan = 'split' | 'pair' | 'stack';
 
 /** Picks this round's plan by the weights in the config. */
-export function pickTeamPlan(rng: RngState, cfg: BotConfig): TeamPlan {
+export function pickTeamPlan(rng: RngState, cfg: BotBehaviour): TeamPlan {
   const total = cfg.planSplitWeight + cfg.planPairWeight + cfg.planStackWeight;
   const r = rngNext(rng) * total;
   if (r < cfg.planSplitWeight) return 'split';

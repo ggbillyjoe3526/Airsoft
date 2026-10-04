@@ -339,8 +339,11 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
   },
 };
 
+/** The behaviour tuning every bot shares, whatever its level (BOT_BEHAVIOUR's shape). */
+export type BotBehaviour = Widen<typeof BOT_BEHAVIOUR>;
+
 /** Everything a bot's decisions are tuned by: shared behaviour plus one difficulty's skill. */
-export type BotConfig = Widen<typeof BOT_BEHAVIOUR> & BotSkill;
+export type BotConfig = BotBehaviour & BotSkill;
 
 /** The full bot tuning for a difficulty level. */
 export function botConfig(difficulty: Difficulty): BotConfig {

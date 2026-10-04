@@ -128,9 +128,9 @@ describe('aim', () => {
   it('turns no faster than the turn rate and then settles on the target', () => {
     const a = createAim(0);
     const rng = createRng(1);
-    stepAim(a, Math.PI / 2, 0, 0, BOTS, rng, DT);
+    stepAim(a, Math.PI / 2, 0, 0, BOTS, BOTS, rng, DT);
     expect(a.yaw).toBeCloseTo(BOTS.turnRate * DT, 6);
-    for (let i = 0; i < 60; i++) stepAim(a, Math.PI / 2, 0, 0, BOTS, rng, DT);
+    for (let i = 0; i < 60; i++) stepAim(a, Math.PI / 2, 0, 0, BOTS, BOTS, rng, DT);
     expect(a.yaw).toBeCloseTo(Math.PI / 2, 6);
   });
   it('starts with a large error that settles, and is worse on the move', () => {
@@ -166,7 +166,7 @@ describe('aim', () => {
     const rng = createRng(3);
     const size = 2 * DEG;
     for (let i = 0; i < 600; i++) {
-      stepAim(a, 0.3, -0.1, size, BOTS, rng, DT);
+      stepAim(a, 0.3, -0.1, size, BOTS, BOTS, rng, DT);
       if (i > 60) expect(Math.hypot(a.yaw - 0.3, a.pitch + 0.1)).toBeLessThanOrEqual(size + 1e-6);
     }
   });
@@ -877,6 +877,23 @@ describe('difficulty levels', () => {
       expect(delay).toBeGreaterThanOrEqual(skill.reactionTime[0]);
       expect(delay).toBeLessThanOrEqual(skill.reactionTime[1]);
     }
+  });
+
+  it('hear the same whatever level each team plays at: hearing is shared behaviour, not skill (L-19)', () => {
+    const { state, player } = duel(12, (s) => s.characters.push(createCharacter(2, vec3(5, 0, -10), 0, LOADOUT, 1)));
+    const options = { query: noWalls, nav: OPEN_NAV, navSnap: NAV.snap, lanes: OPEN_FIELD.lanes, lowCover: [], tallCover: [], body: BODY, hits: HITS, loadout: LOADOUT, cfg: BOTS, seed: 3 };
+    const heard = (teamCfg?: BotConfig[]) => {
+      const bots = new BotController(state, state.characters, new Map(), { ...options, teamCfg });
+      state.events.length = 0;
+      // Blue's player fires (Orange hears it), and one of Orange (Blue's bot hears that).
+      state.events.push({ type: 'shot', characterId: 0, replicaId: LOADOUT[0]!.id, position: vec3(player.position.x, 1.5, player.position.z) });
+      state.events.push({ type: 'shot', characterId: 2, replicaId: LOADOUT[0]!.id, position: vec3(5, 1.5, -10) });
+      bots.observe(state);
+      return bots.bots.map((b) => ({ heardAt: b.heardAt, known: b.hasLastKnown, x: b.lastKnown.x, z: b.lastKnown.z }));
+    };
+    const same = heard();
+    expect(same.every((h) => h.known)).toBe(true);
+    expect(heard([botConfig('easy'), botConfig('hard')])).toEqual(same);
   });
 });
 
