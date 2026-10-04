@@ -2215,3 +2215,16 @@ kbd {
 .menu-title-new[hidden] {
   display: none;
 }
+
+/* The coach's last-BB line on the steps that ask for a hit (M16) */
+.coach-shot {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.coach-shot[hidden],
+.coach-shot:empty {
+  display: none;
+}

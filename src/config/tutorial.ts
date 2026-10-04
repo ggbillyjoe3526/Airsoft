@@ -46,14 +46,14 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   },
   {
     id: 'far',
-    title: 'BBs drop',
-    text: "BBs are slow and drop at range. Knock down a figure 30 m out or further: aim a little high and watch where they land.",
-    goal: { kind: 'hit', target: 'figure', minDistance: 30 },
+    title: 'Hop-up and range',
+    text: "BBs are slow. The hop-up's backspin keeps them flying flat for a while (the rifle out of the box: to about 38 m), then they drop. Knock down a figure 50 m out or further: aim a little high and read where they land. The Loadout (Esc) has the hop-up dial.",
+    goal: { kind: 'hit', target: 'figure', minDistance: 50 },
   },
   {
     id: 'reload',
     title: 'Reload',
-    text: 'Press {reload} to change magazines: your fullest spare goes in. In a match nothing refills until the next round.',
+    text: 'Fire a few BBs, then press {reload} to change magazines: your fullest spare goes in. In a match nothing refills until the next round.',
     goal: { kind: 'reload' },
   },
   {
@@ -97,4 +97,6 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
 export const TUTORIAL = {
   /** A finished step shows its tick for this long before the next one (s). */
   doneTime: 0.9,
+  /** How far down (0..1, the character's crouch amount) counts as crouched. */
+  crouchedAt: 0.95,
 } as const;

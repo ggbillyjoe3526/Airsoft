@@ -378,7 +378,7 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 - [ ] **Title screen.** A **Tutorial** button sits next to Start and Practice range, tagged "New? Start here" (until
   you've finished it once).
 - [ ] **Play it through.** The coach at the top says "Tutorial · 1 of 10 · Look around" and moves on when you've done
-  each thing: look around, walk to the line, ring a plate, knock down a figure at 30 m or more, reload, aim (or, with
+  each thing: look around, walk to the line, ring a plate, knock down a figure at 50 m or more (past the stock hop-up's reach; the coach shows where your last BB landed), reload, aim (or, with
   iron sights, a pointer to the Loadout's optics), crouch, lean, switch replica and hit something, then the "one hit"
   card. Each finished step shows a green tick for a moment. Did any step feel stuck or unclear?
 - [ ] **Keys.** Rebind a key (e.g. reload) in Settings, start the Tutorial again: the coach shows your key.

@@ -59,8 +59,9 @@ describe('the tutorial (M16)', () => {
 
     expectStep('far');
     tick([hit(figure.id)]); // only 10 m
+    tick([hit(targets.find((x) => x.kind === 'figure' && x.distance === 40)!.id)]); // inside the stock hop-up's reach
     expect(t.showingDone).toBe(false);
-    tick([hit(targets.find((x) => x.kind === 'figure' && x.distance === 40)!.id)]);
+    tick([hit(targets.find((x) => x.kind === 'figure' && x.distance === 50)!.id)]);
     finishStep();
 
     expectStep('reload');
@@ -84,9 +85,13 @@ describe('the tutorial (M16)', () => {
     finishStep();
 
     expectStep('secondary');
-    tick([hit(steel.id)]); // still on the first replica
-    expect(t.showingDone).toBe(false);
+    const shot: GameEvent = { type: 'shot', characterId: 0, replicaId: 'x', position: vec3() };
+    tick([shot, hit(steel.id)]); // still on the first replica
     player.armament.active = 1;
+    tick([hit(steel.id)]); // switched, but that BB came from the first one
+    expect(t.showingDone).toBe(false);
+    tick([shot]);
+    player.armament.active = 0; // switched back while the second replica's BB flies
     tick([hit(steel.id)]);
     finishStep();
 
@@ -96,6 +101,23 @@ describe('the tutorial (M16)', () => {
     expect(t.finished).toBe(true);
     expect(t.step).toBeNull();
     expect(ids).toEqual(TUTORIAL_STEPS.map((s) => s.id));
+  });
+
+  it('keeps checking the next step while the last one shows its tick, so nothing done then is lost', () => {
+    const { player, t, tick, finishStep } = setup();
+    for (let i = 0; i < 20; i++) {
+      player.yaw += 0.1;
+      tick();
+    }
+    expect(t.showingDone).toBe(true);
+    expect(t.step?.id).toBe('look');
+    player.position.z = 0; // at the line straight away
+    tick();
+    expect(t.step?.id).toBe('walk'); // its tick shows now
+    expect(t.showingDone).toBe(true);
+    finishStep();
+    expect(t.step?.id).toBe('steel');
+    expect(t.goalIndex).toBe(2);
   });
 
   it('swaps aiming down the sight for how to fit an optic when the replica has none, and can start part way', () => {

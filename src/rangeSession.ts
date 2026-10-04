@@ -35,7 +35,7 @@ import { createSimContext, type SimContext, stepSimulation } from './sim/simulat
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { TUTORIAL_STEPS } from './config/tutorial';
-import { TutorialTracker } from './tutorial/tutorial';
+import { TutorialTracker, type TutorialView } from './tutorial/tutorial';
 import { CoachPanel } from './ui/coachPanel';
 import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 
@@ -80,6 +80,8 @@ export class RangeSession {
   private tutorial: TutorialTracker | null = null;
   private coach: CoachPanel | null = null;
   private tutorialFinishedOwed = false;
+  /** What the tutorial reads after each tick, reused rather than made anew. */
+  private readonly tutorialView: TutorialView;
 
   constructor(
     private readonly renderer: Renderer,
@@ -125,6 +127,7 @@ export class RangeSession {
     const spawn = map.spawns[0][0]!;
     const at = pose ? vec3(pose.x, spawn.position.y, pose.z) : spawn.position;
     this.player = createCharacter(PLAYER_ID, vec3(at.x, at.y + PHYSICS.groundRestGap, at.z), pose?.yaw ?? spawn.yaw, this.loadout, 0);
+    this.tutorialView = { dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets };
     respawnCharacter(this.player, this.loadout);
     this.state.characters.push(this.player);
     this.physics.addCharacter(this.player);
@@ -148,7 +151,7 @@ export class RangeSession {
 
   /** The tutorial's step to rebuild the range at (undefined: free practice, or the tutorial is over). */
   get tutorialStep(): number | undefined {
-    return this.tutorial && !this.tutorial.finished ? this.tutorial.stepIndex : undefined;
+    return this.tutorial && !this.tutorial.finished ? Math.min(this.tutorial.goalIndex, this.tutorial.steps.length - 1) : undefined;
   }
 
   /** "Tutorial · step 3 of 10", or "Practice range". */
@@ -238,7 +241,11 @@ export class RangeSession {
     this.combat.afterTick();
     this.targets.afterTick(this.state.events);
     const t = this.tutorial;
-    if (t && !t.finished && t.observe({ dt: SIM_DT, player: this.player, events: this.state.events, targets: this.state.targets })) {
+    const v = this.tutorialView;
+    v.player = this.player;
+    v.events = this.state.events;
+    v.targets = this.state.targets;
+    if (t && !t.finished && t.observe(v)) {
       this.coach!.show(t);
       if (t.finished) {
         // Free practice from here: the readout takes the coach's place.
@@ -259,6 +266,7 @@ export class RangeSession {
         this.lastShot = { distance: downrange(e.position), target: t ? { label: t.label, distance: t.distance } : null };
       } else continue;
       this.readout.set(lastShotText(this.lastShot));
+      this.coach?.setShot(lastShotText(this.lastShot));
     }
   }
 }
