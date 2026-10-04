@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { TEAM_COLOUR_SETS } from '../config/teams';
-
-/** Every team colour of every set (Settings → Accessibility, M18b). */
-const TEAM_COLORS = Object.values(TEAM_COLOUR_SETS).flatMap((s) => s.figures);
 import { DEPOT } from '../map/depot';
 import { vec3 } from '../sim/vec';
 import { blockTint } from './mapMeshes';
+
+/** Every team colour of every set (Settings → Accessibility, M18b). */
+const TEAM_COLORS = Object.values(TEAM_COLOUR_SETS).flatMap((s) => s.figures);
 
 /** A prop colour "reads as a team" if it's saturated and within this hue distance of a team colour. */
 const TEAM_HUE_MARGIN_DEG = 20;

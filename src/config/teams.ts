@@ -32,7 +32,7 @@ export interface TeamColours {
 
 export const TEAM_COLOUR_SETS: Readonly<Record<TeamColourSetId, TeamColours>> = {
   standard: { figures: TEAM_COLORS, hud: TEAM_COLORS },
-  highContrast: { figures: [0x8ccfff, 0xb8460c], hud: [0x8ccfff, 0xcc4f14] },
+  highContrast: { figures: [0x8ccfff, 0xb8460c], hud: [0x8ccfff, 0xe0601a] },
 };
 
 export const TEAM_COLOUR_CHOICES: readonly { id: TeamColourSetId; label: string; blurb: string }[] = [

@@ -136,7 +136,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(page.locator('.hud-replica-name')).toHaveText(/AEG rifle/i);
   await expect(page.locator('.hud .hud-crosshair')).toHaveClass(/\bshape-circle\b/);
   // The match wears the High contrast colours on the HUD, and the sound cue ring is up.
-  expect(await page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--team-1'))).toBe('#cc4f14');
+  expect(await page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--team-1'))).toBe('#e0601a');
   await expect(page.locator('.sound-cues')).not.toHaveAttribute('hidden');
   // Holding Tab shows the scoreboard with every player (M19); letting go hides it.
   const board = page.locator('.match-board');
@@ -201,6 +201,11 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   });
   await expect(page.locator('.graphics-notice')).toBeVisible({ timeout: 10_000 });
   await expect(pauseMenu).toBeAttached();
+  // Nothing under the notice can resume the match (Resume had the focus).
+  await page.keyboard.press('Space');
+  await page.keyboard.press('Enter');
+  await expect(pauseMenu).not.toHaveAttribute('hidden');
+  await expect(page.locator('.menus')).not.toHaveAttribute('hidden');
   await page.evaluate(() => (window as unknown as { lose: WEBGL_lose_context }).lose.restoreContext());
   await expect(page.locator('.graphics-notice')).toBeHidden({ timeout: 10_000 });
   await expect(pauseMenu).toContainText('Graphics are back');
@@ -211,5 +216,17 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect.poll(tick, { timeout: 20_000 }).toBeGreaterThan(before + 30);
   await expect(page.locator('.hud')).toBeVisible();
   await testInfo.attach('after-graphics-reset', { body: await page.screenshot(), contentType: 'image/png' });
+
+  // Sound cues: an Orange player brought close makes sounds (steps, shots), and the ring points to them.
+  await page.evaluate(() => {
+    type C = { team: number; status: string; position: { x: number; z: number } };
+    const chars = (window as unknown as { airsoft: { state: { characters: C[] } } }).airsoft.state.characters;
+    const me = chars[0]!;
+    const enemy = chars.find((c) => c.team === 1 && c.status === 'alive')!;
+    enemy.position.x = me.position.x + 6;
+    enemy.position.z = me.position.z;
+  });
+  await expect(page.locator('.sound-cue:not([hidden])').first()).toBeAttached({ timeout: 20_000 });
+  await testInfo.attach('sound-cue', { body: await page.screenshot(), contentType: 'image/png' });
   expect(errors, `Page errors: ${errorList()}`).toEqual([]);
 });

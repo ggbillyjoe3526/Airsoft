@@ -57,6 +57,8 @@ export function cueOpacity(kind: SoundCueKind, age: number, metres: number): num
   return fade * near;
 }
 
+const roundTo = (v: number, step: number): number => Math.round(v / step) * step;
+
 interface Marker {
   root: HTMLDivElement;
   sound: HeardSound;
@@ -77,6 +79,10 @@ export class SoundCues {
   private readonly root: HTMLDivElement;
   private readonly markers: Marker[] = [];
   private enabled = false;
+  private visible = false;
+  /** The listener at the last update (x, z), to drop sounds too far off to be heard as they arrive. */
+  private listenerX = 0;
+  private listenerZ = 0;
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -99,15 +105,22 @@ export class SoundCues {
   setEnabled(on: boolean): void {
     this.enabled = on;
     if (!on) this.clear();
+    this.showRing();
   }
 
+  /** False while a menu is up. The ring shows only while playing with cues on. */
   setVisible(visible: boolean): void {
-    this.root.hidden = !visible;
+    this.visible = visible;
+    this.showRing();
   }
 
-  /** A sound heard at simulation time `time` (ignored while cues are off). */
+  /**
+   * A sound heard at simulation time `time` (ignored while cues are off, or beyond its range from where the listener
+   * last stood, so it never takes the marker of a nearer sound still showing).
+   */
   add(sound: HeardSound, time: number): void {
     if (!this.enabled) return;
+    if (Math.hypot(sound.x - this.listenerX, sound.z - this.listenerZ) > SOUND_CUES.range[sound.kind]) return;
     let same: Marker | undefined;
     let free: Marker | undefined;
     let oldest: Marker | undefined;
@@ -131,10 +144,12 @@ export class SoundCues {
 
   /** Once per frame: places the markers for a listener at (x, z) looking along `viewYaw`. */
   update(x: number, z: number, viewYaw: number, time: number): void {
+    this.listenerX = x;
+    this.listenerZ = z;
     for (const m of this.markers) {
       if (Number.isNaN(m.at)) continue;
       const s = m.sound;
-      const opacity = Math.round(cueOpacity(s.kind, time - m.at, Math.hypot(s.x - x, s.z - z)) * 20) / 20;
+      const opacity = roundTo(cueOpacity(s.kind, time - m.at, Math.hypot(s.x - x, s.z - z)), SOUND_CUES.opacityStep);
       if (opacity <= 0) {
         this.free(m);
         continue;
@@ -143,7 +158,7 @@ export class SoundCues {
         if (m.kind) m.root.classList.remove(`cue-${m.kind}`);
         m.root.classList.add(`cue-${(m.kind = s.kind)}`);
       }
-      const angle = Math.round(cueAngle(viewYaw, x, z, s.x, s.z) * 50) / 50;
+      const angle = roundTo(cueAngle(viewYaw, x, z, s.x, s.z), SOUND_CUES.angleStep);
       if (angle !== m.angle) m.root.style.setProperty('--a', `${(m.angle = angle)}rad`);
       if (opacity !== m.opacity) m.root.style.opacity = String((m.opacity = opacity));
       if (m.root.hidden) m.root.hidden = false;
@@ -157,6 +172,10 @@ export class SoundCues {
 
   dispose(): void {
     this.root.remove();
+  }
+
+  private showRing(): void {
+    this.root.hidden = !(this.visible && this.enabled);
   }
 
   private free(m: Marker): void {

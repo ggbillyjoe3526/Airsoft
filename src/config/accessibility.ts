@@ -58,6 +58,9 @@ export const SOUND_CUES = {
   markers: 10,
   /** Distance of the ring from the screen centre (px): outside the crosshair and the hit direction arrow. */
   radius: 150,
+  /** A marker moves or fades only in steps of this many radians and this much opacity (fewer style writes). */
+  angleStep: 0.02,
+  opacityStep: 0.05,
 } as const;
 
 export type SoundCueKind = keyof typeof SOUND_CUES.range;

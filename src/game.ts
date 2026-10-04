@@ -83,6 +83,8 @@ export class Game {
   private readonly menus: Menus;
   /** Over everything while the graphics context is lost (M18b). */
   private readonly graphicsNotice: GraphicsNotice;
+  /** True while the graphics context is lost: nothing can be drawn, so play can't start or resume. */
+  private graphicsLost = false;
   /** The match being played (or paused, or just decided); null on the title and New game screens. */
   private session: MatchSession | null = null;
   private rafId = 0;
@@ -245,7 +247,10 @@ export class Game {
    * everything again on the next frame).
    */
   private graphicsContextChanged(lost: boolean): void {
+    this.graphicsLost = lost;
     this.graphicsNotice.setVisible(lost);
+    // The menus can't be used under the notice (not even Resume by Enter or Space on the focused button).
+    this.menus.setBlocked(lost);
     if (lost) this.stopPlay();
     else if (this.started) this.menus.showHint(BROWSER_NOTES.graphicsBack);
   }
@@ -326,6 +331,7 @@ export class Game {
    * unlocked.
    */
   private play(): void {
+    if (this.graphicsLost) return;
     if (!this.started) {
       this.session?.dispose();
       this.session = new MatchSession(this.renderer, this.container, this.input, {

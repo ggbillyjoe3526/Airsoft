@@ -79,8 +79,9 @@ describe('team colour sets (M18b)', () => {
     const { figures, hud } = TEAM_COLOUR_SETS.highContrast;
     for (const vision of VISIONS) {
       expect(lightnessGap(figures[0]!, figures[1]!, vision), `figures, ${vision}`).toBeGreaterThan(25);
-      // The HUD's orange is lifted to stay readable on dark panels, so it keeps a little less.
-      expect(lightnessGap(hud[0]!, hud[1]!, vision), `hud, ${vision}`).toBeGreaterThan(20);
+      // The HUD's orange is lifted to stay readable on its grey panels, so it keeps less (the HUD names the teams in
+      // text as well).
+      expect(lightnessGap(hud[0]!, hud[1]!, vision), `hud, ${vision}`).toBeGreaterThan(15);
     }
     // More than the standard set, which differs little in lightness.
     const std = TEAM_COLOUR_SETS.standard.figures;
