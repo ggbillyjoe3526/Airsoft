@@ -33,6 +33,7 @@ import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, SCOREBOARD_SIZ
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset, RENDER } from '../../config/render';
+import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
 import { loadSetting, numberIn, oneOf } from '../../settings/storage';
@@ -94,6 +95,11 @@ export function loadAimMode(): HoldMode {
 /** The sprint key's behaviour (hold or toggle). */
 export function loadSprintMode(): HoldMode {
   return loadChoice('sprintMode', SPRINT_MODES, DEFAULT_SPRINT_MODE);
+}
+
+/** How the order wheel gives an order (M23): hover by default. */
+export function loadWheelSelect(): WheelSelect {
+  return loadChoice('orderWheel', WHEEL_SELECT_MODES, DEFAULT_WHEEL_SELECT);
 }
 
 /** Invert mouse: off unless the player turned it on. */

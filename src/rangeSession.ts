@@ -132,6 +132,8 @@ export class RangeSession {
     this.fitPickedLoadout();
     this.commands.set(PLAYER_ID, this.playerCommand);
     input.resetView(pose?.yaw ?? spawn.yaw);
+    // Nobody to order on the range: the order wheel's key does nothing.
+    input.ordersEnabled = false;
     if (pose) input.pitch = pose.pitch;
 
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, HITS);

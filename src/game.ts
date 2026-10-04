@@ -65,6 +65,7 @@ import {
   loadTeammateDifficulty,
   loadTeamColours,
   loadTutorialDone,
+  loadWheelSelect,
 } from './ui/menus/savedChoices';
 
 /** The player is the first character, on Blue (see MatchSession). */
@@ -202,7 +203,7 @@ export class Game {
     this.matchRules = loadMatchRules();
     this.collection = loadCollection(GAME_POOL, options.seed);
     this.loadout = new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection));
-    carryOverOldPicks(this.loadout, this.collection, (c) => saveCollection(c));
+    carryOverOldPicks(this.loadout, this.collection, saveCollection);
 
     this.bindings = new KeyBindings(browserStorage());
     this.keyboard = new Keyboard(window, this.bindings);
@@ -214,6 +215,7 @@ export class Game {
     this.input.invertY = loadInvertMouse();
     this.input.sensitivity = loadSensitivity();
     this.input.aimSensitivity = loadAimSensitivity();
+    this.input.wheelSelect = loadWheelSelect();
 
     this.debug = new DebugOverlay(container, () => {
       const s = this.session;
@@ -288,6 +290,7 @@ export class Game {
         crouch: { initial: this.input.crouchMode, onChange: (m) => (this.input.crouchMode = m) },
         aim: { initial: this.input.aimMode, onChange: (m) => (this.input.aimMode = m) },
         sprint: { initial: this.input.sprintMode, onChange: (m) => (this.input.sprintMode = m) },
+        wheelSelect: { initial: this.input.wheelSelect, onChange: (m) => (this.input.wheelSelect = m) },
       },
       fov: { initial: this.renderer.fov, onChange: (v) => this.renderer.setFov(v) },
       quality: { initial: this.quality, onChange: (q) => this.changeQuality(q) },

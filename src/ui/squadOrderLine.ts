@@ -1,6 +1,9 @@
 import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
 import { teamCss } from '../config/teams';
 
+/** Why no order is in force after one was given: see SquadOrderLine.ordered. */
+export type OrderNotice = 'cancelled' | 'nobody' | 'notNow' | 'onPlan';
+
 /** What the squad line says: a notice while one lasts, else the order in force ('' hides the line). */
 export function squadLineText(order: SquadOrderKind | 'none', notice: string): string {
   if (notice) return notice;
@@ -35,9 +38,10 @@ export class SquadOrderLine {
 
   /**
    * You pressed an order key and `result` is now in force: an order that leaves none in force gets a notice saying why
-   * (`why`: it cancelled the one in force, nobody was left to take it, or orders wait for the next round).
+   * (`why`: it cancelled the one in force, nobody was left to take it, orders wait for the next round, or the wheel's
+   * Team plan was picked with none in force).
    */
-  ordered(result: SquadOrderKind | 'none', why: 'cancelled' | 'nobody' | 'notNow'): void {
+  ordered(result: SquadOrderKind | 'none', why: OrderNotice): void {
     this.noticeLeft = result === 'none' ? SQUAD_ORDERS.noticeTime : 0;
     this.notice = SQUAD_ORDERS[why];
   }

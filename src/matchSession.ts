@@ -18,7 +18,7 @@ import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, type ReplicaConfig } from './config/replicas';
 import type { PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
-import type { SquadOrderKind } from './config/squad';
+import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
@@ -165,7 +165,8 @@ export class MatchSession {
     // The player is always on Blue.
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map.blocks, audio, (action) => input.keyName(action), crosshair, quality, this.hits);
     this.stats = new MatchStats(this.state.characters);
-    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours);
+    this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, setup.rules.teamSize, this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map.blocks);
+    input.ordersEnabled = true;
   }
 
   /** Characters in the match (for the debug overlay). */
@@ -249,7 +250,10 @@ export class MatchSession {
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
     const holding = this.bots.holdSpot(this.player, this.holdSpot);
-    this.match.showSquadOrder(this.bots.orderOf(this.player), holding ? this.holdSpot : null, this.renderer.camera, dt);
+    const order = this.bots.orderOf(this.player);
+    this.match.showSquadOrder(order, holding ? this.holdSpot : null, this.renderer.camera, dt);
+    this.match.showOrderWheel(this.input.wheelOpen, this.input.wheelPointer, order, this.input.wheelSelect);
+    this.match.showMinimap(holding ? this.holdSpot : null);
     this.combat.frame(dt, alpha, this.input.yaw, pitch);
     this.combat.render(!spectating);
   }
@@ -369,16 +373,23 @@ export class MatchSession {
   }
 
   /**
-   * A squad order key (M22): your bot teammates' radios answer when they take it; the HUD says what's in force. While
-   * you are out, or between rounds, the key does nothing but say so.
+   * A squad order key (M22) or an order picked on the wheel (M23): your bot teammates' radios answer when they take it;
+   * the HUD says what's in force. Team plan (`cancel`, the wheel's) sends them back to the team plan. While you are out,
+   * or between rounds, it does nothing but say so.
    */
-  private giveOrder(order: SquadOrderKind): void {
+  private giveOrder(order: SquadCommand): void {
     if (!isInPlay(this.player) || this.state.round.phase !== 'live') {
       this.match.orderGiven('none', 'notNow');
       return;
     }
     const before = this.bots.orderOf(this.player);
-    const result = this.bots.giveOrder(this.player, order);
+    if (order === 'cancel') {
+      this.bots.cancelOrder(this.player);
+      this.match.orderGiven('none', before !== 'none' ? 'cancelled' : 'onPlan');
+      return;
+    }
+    // Picked again on the wheel, the order in force stays (Team Plan ends it there); its key again cancels it.
+    const result = this.bots.giveOrder(this.player, order, !this.input.orderFromWheel);
     this.match.orderGiven(result, before !== 'none' ? 'cancelled' : 'nobody');
     if (result !== 'none') this.combat.orderHeard();
   }

@@ -29,6 +29,8 @@ export type SettingField =
   | 'crouch'
   | 'aimMode'
   | 'sprintMode'
+  /** How the order wheel gives an order (M23): hover or click. */
+  | 'orderWheel'
   | 'invertMouse'
   | 'mouseDpi'
   | 'reducedMotion'
