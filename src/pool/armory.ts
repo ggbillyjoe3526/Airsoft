@@ -1,7 +1,7 @@
 import type { Difficulty } from '../config/bots';
 import { createRng, rngNext, type RngState } from '../sim/rng';
 import { addItem, type Collection, type ItemRef, itemKey, ownedCount } from './collection';
-import { type Asset, type Economy, fcPerToken, type Pool, type RarityTier } from './pool';
+import { type Asset, type Economy, fcPerToken, isChase, type Pool, type RarityTier, tiersOf } from './pool';
 
 /**
  * The Armory's rules (M26c): Field Credits earned by a match, Tokens bought with them, Shots that dispense random assets
@@ -112,8 +112,9 @@ export function drawTier(tiers: readonly RarityTier[], rng: RngState, from = 0):
 }
 
 /**
- * Takes `count` Shots: pays for them (Tokens, then FC for any short), dispenses `assetsPerShot` assets each (any asset
- * marked In Shots, equally likely, at a tier drawn by the odds) and adds them to the collection. A ten-Shot holds at
+ * Takes `count` Shots: pays for them (Tokens, then FC for any short), dispenses `assetsPerShot` assets each (a chase item
+ * on its own Drop %, else any other asset marked In Shots, equally likely; at a tier drawn by the odds among the tiers it
+ * comes in, M32) and adds them to the collection. A ten-Shot holds at
  * least one item of the guaranteed tier or rarer: if none came up, its last item's tier is drawn again from those
  * tiers only. Returns what was dispensed, in order, or null (nothing changes) if it can't be paid for or there is
  * nothing to dispense. The draws carry on from the collection's saved random state.
@@ -127,12 +128,20 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount): Dispense
   c.fc -= price.fc;
   const rng = createRng(c.seed);
   const draws: { asset: Asset; tier: RarityTier }[] = [];
+  const chase = assets.filter(isChase);
+  const even = assets.filter((a) => !isChase(a));
   for (let i = 0; i < count * Math.max(1, e.assetsPerShot); i++) {
-    const asset = assets[Math.min(assets.length - 1, Math.floor(rngNext(rng) * assets.length))]!;
-    draws.push({ asset, tier: drawTier(pool.tiers, rng) });
+    const asset = drawAsset(chase, even, rng);
+    draws.push({ asset, tier: drawTier(tiersOf(pool, asset), rng) });
   }
   const floor = count === 10 && e.tenShotGuarantee ? pool.tiers.findIndex((t) => t.id === e.tenShotGuarantee) : -1;
-  if (floor >= 0 && !draws.some((d) => pool.tiers.indexOf(d.tier) >= floor)) draws[draws.length - 1]!.tier = drawTier(pool.tiers, rng, floor);
+  if (floor >= 0 && !draws.some((d) => pool.tiers.indexOf(d.tier) >= floor)) {
+    // The last item again, among the guaranteed tiers it comes in (any it comes in, if none is that rare).
+    const last = draws[draws.length - 1]!;
+    const own = tiersOf(pool, last.asset);
+    const from = own.findIndex((t) => pool.tiers.indexOf(t) >= floor);
+    if (from >= 0) last.tier = drawTier(own, rng, from);
+  }
   c.seed = rng.s;
   return draws.map(({ asset, tier }) => {
     const item = { asset: asset.id, tier: tier.id };
@@ -140,6 +149,21 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount): Dispense
     addItem(c, item);
     return { item, isNew };
   });
+}
+
+/**
+ * One Shot item's asset (M32): each chase item first, on its own chance (pool.md's Drop %), then one of the rest, all
+ * equally likely. With no chase items in the pool it draws exactly as before (one random number).
+ */
+function drawAsset(chase: readonly Asset[], even: readonly Asset[], rng: RngState): Asset {
+  if (chase.length > 0) {
+    let roll = rngNext(rng);
+    for (const a of chase) {
+      roll -= a.dropChance ?? 0;
+      if (roll < 0 || even.length === 0) return a;
+    }
+  }
+  return even[Math.min(even.length - 1, Math.floor(rngNext(rng) * even.length))]!;
 }
 
 /** Copies of an item beyond the one you keep. */

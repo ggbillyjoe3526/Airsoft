@@ -2,7 +2,7 @@ import { BARRELS, type BarrelId, GRIPS, type GripId, MAGAZINES, type MagazineId,
 import type { Difficulty } from '../config/bots';
 import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
-import { AEG, GAS_PISTOL, type ReplicaConfig } from '../config/replicas';
+import { AEG, CYBER_PISTOL, GAS_PISTOL, type ReplicaConfig } from '../config/replicas';
 import { type PoolRow, type PoolTable, readTables } from './poolFile';
 
 /**
@@ -15,7 +15,7 @@ export type AssetCategory = 'replica' | 'power' | 'optic' | 'grip' | 'laser' | '
 export type PowerType = 'battery' | 'gas' | 'spring';
 
 /** The replica behind each replica Key (pool.md's Key column). */
-export const REPLICA_KEYS: Readonly<Record<string, ReplicaConfig>> = { pistol: GAS_PISTOL, aeg: AEG };
+export const REPLICA_KEYS: Readonly<Record<string, ReplicaConfig>> = { pistol: GAS_PISTOL, aeg: AEG, cyber: CYBER_PISTOL };
 /** The optic, grip, laser and magazine behind each Key. "As it comes" (iron sights, no grip, standard) isn't pooled. */
 export const OPTIC_KEYS = Object.keys(OPTICS) as OpticId[];
 export const GRIP_KEYS = (Object.keys(GRIPS) as GripId[]).filter((g) => g !== 'none');
@@ -42,6 +42,16 @@ export interface Asset {
   starter: boolean;
   /** Shots can dispense it. */
   inShots: boolean;
+  /**
+   * The tiers it comes in, by tier id (pool.md's Tiers column, M32), commonest first; absent: every tier. A chase
+   * replica comes at Legendary only.
+   */
+  tiers?: readonly string[];
+  /**
+   * Its own chance (0..1) per item a Shot gives (pool.md's Drop %, M32): a chase item, drawn apart from the rest, in a
+   * tier of its own. Absent: one of the even draw.
+   */
+  dropChance?: number;
 }
 
 export interface RarityTier {
@@ -143,7 +153,7 @@ export function loadPool(text: string): Pool {
     const category = ASSET_SECTIONS[t.heading];
     if (!category) continue;
     for (const row of t.rows) {
-      const asset = readAsset(row, category, fail);
+      const asset = readAsset(row, category, tiers, fail);
       if (!asset) continue;
       if (byId.has(asset.id)) {
         fail(row.line, `ID ${asset.id} is already used by ${byId.get(asset.id)!.name}`);
@@ -189,7 +199,29 @@ function list(raw: string): string[] {
     .filter(Boolean);
 }
 
-function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m: string) => void): Asset | null {
+/**
+ * The optional Tiers and Drop % cells (M32): which tiers an asset comes in (blank: all) and its own chance per Shot item
+ * (blank: the even draw). Undefined (and an error) if either can't be read.
+ */
+function readRarity(row: PoolRow, tiers: readonly RarityTier[], fail: (line: number, m: string) => void): Pick<Asset, 'tiers' | 'dropChance'> | undefined {
+  const out: Pick<Asset, 'tiers' | 'dropChance'> = {};
+  const names = list(cell(row, 'Tiers'));
+  if (names.length > 0) {
+    const ids = names.map(tierId);
+    const unknown = names.find((_, i) => !tiers.some((t) => t.id === ids[i]));
+    if (unknown !== undefined) return fail(row.line, `"${unknown}" isn't a tier in the Rarity table`), undefined;
+    // In the Rarity table's order, whatever order they were typed in.
+    out.tiers = tiers.filter((t) => ids.includes(t.id)).map((t) => t.id);
+  }
+  if (cell(row, 'Drop %').trim() !== '') {
+    const drop = numberCell(row, 'Drop %', fail, 0, 100);
+    if (drop === undefined) return undefined;
+    out.dropChance = drop / 100;
+  }
+  return out;
+}
+
+function readAsset(row: PoolRow, category: AssetCategory, tiers: readonly RarityTier[], fail: (line: number, m: string) => void): Asset | null {
   const id = cell(row, 'ID');
   const name = cell(row, 'Name');
   if (!ID_PATTERN.test(id)) return fail(row.line, `ID must be six digits, not "${id}"`), null;
@@ -197,6 +229,8 @@ function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m
   const starter = yesNo(row, 'Starter', fail);
   const inShots = yesNo(row, 'In Shots', fail);
   if (starter === undefined || inShots === undefined) return null;
+  const rarity = readRarity(row, tiers, fail);
+  if (!rarity) return null;
   const tags = list(cell(row, category === 'replica' ? 'Tags' : 'Fits'));
   const badTag = tags.find((t) => !TAG_PATTERN.test(t));
   if (badTag !== undefined) return fail(row.line, `"${badTag}" isn't a tag (lower case words joined with -) or an ID`), null;
@@ -204,14 +238,14 @@ function readAsset(row: PoolRow, category: AssetCategory, fail: (line: number, m
   if (category === 'power') {
     const type = cell(row, 'Type').toLowerCase();
     if (!(type in POWER_TAGS)) return fail(row.line, `Type must be battery, gas or spring, not "${cell(row, 'Type')}"`), null;
-    return { id, name, category, key: '', tags, power: { type: type as PowerType }, starter, inShots };
+    return { id, name, category, key: '', tags, power: { type: type as PowerType }, starter, inShots, ...rarity };
   }
   const key = cell(row, 'Key');
   const keys = KEYS_BY_CATEGORY[category];
   if (!keys.includes(key)) {
     return fail(row.line, `"${key}" isn't a ${category} Key${keys.length ? ` (one of ${keys.join(', ')})` : ' (there are none yet)'}`), null;
   }
-  return { id, name, category, key, tags, starter, inShots };
+  return { id, name, category, key, tags, starter, inShots, ...rarity };
 }
 
 /**
@@ -376,4 +410,29 @@ export function assetOfReplica(pool: Pool, replica: ReplicaConfig): Asset | unde
 
 export function tierOf(pool: Pool, id: string): RarityTier | undefined {
   return pool.tiers.find((t) => t.id === id);
+}
+
+/** The tiers `asset` comes in (pool.md's Tiers column; all of them when it names none), commonest first (M32). */
+export function tiersOf(pool: Pool, asset: Asset): readonly RarityTier[] {
+  if (!asset.tiers) return pool.tiers;
+  const own = pool.tiers.filter((t) => asset.tiers!.includes(t.id));
+  return own.length > 0 ? own : pool.tiers;
+}
+
+/** True if `asset` comes in tier `tier` (M32: a chase replica only at Legendary). */
+export function comesIn(asset: Asset, tier: string): boolean {
+  return !asset.tiers || asset.tiers.includes(tier);
+}
+
+/** The tag of a replica whose power source is built in (the Cyber Pistol's battery, M32): none is fitted to it. */
+export const BUILT_IN_POWER = 'built-in-power';
+
+/** True if replica `asset` has its power source built in (tagged BUILT_IN_POWER). */
+export function hasBuiltInPower(asset: Asset): boolean {
+  return asset.tags.includes(BUILT_IN_POWER);
+}
+
+/** A chase item (M32): Shots give it on a chance of its own (pool.md's Drop %), not in the even draw. */
+export function isChase(asset: Asset): boolean {
+  return asset.dropChance !== undefined;
 }

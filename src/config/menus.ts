@@ -34,6 +34,9 @@ export const LOADOUT_TEXT = {
   /** A replica whose barrel can't be swapped, or whose muzzle isn't threaded (M29b). */
   fixedBarrel: 'Fixed barrel',
   noThread: 'No thread for one',
+  /** A replica with nothing but its own magazine, and one with its battery built in (the Cyber Pistol, M32). */
+  ownMagazine: (bbs: number): string => `Its own, ${bbs} BBs`,
+  builtInBattery: 'Built-in battery',
   /** The Barrel and Muzzle rows as it comes (M29b). */
   standardBarrel: 'The standard barrel, as it comes.',
   noMuzzle: 'Nothing on the muzzle: your shots carry as usual.',

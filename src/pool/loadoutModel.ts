@@ -2,7 +2,7 @@ import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/re
 import { loadSetting, numberIn, saveSetting } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { EMPTY_FIT, energyCapped, FIT_CATEGORY, FIT_SLOTS, type FitSlot, type KitSlot, kitSlot, type ReplicaFit } from './kit';
-import { type Asset, fits, type Pool, replicaOf } from './pool';
+import { type Asset, fits, isChase, type Pool, replicaOf, tiersOf } from './pool';
 
 /**
  * The player's loadout (M26b): which owned replica is in each gear slot, what is fitted to each replica, and each
@@ -76,6 +76,14 @@ export class LoadoutModel {
   /** The replicas the player can put in a gear slot (any replica goes in either slot). */
   replicaChoices(): ItemRef[] {
     return this.ownedItems((a) => a.category === 'replica');
+  }
+
+  /**
+   * The chase replicas (M32) the player owns in any tier, by asset id (with Unlock all gear on: every one): what
+   * opponents on Hard may now and then carry.
+   */
+  ownedChase(): string[] {
+    return this.pool.assets.filter((a) => a.category === 'replica' && isChase(a) && this.ownedItems((b) => b === a).length > 0).map((a) => a.id);
   }
 
   /** The replica item in each gear slot (null only if the player owns no replica for it). */
@@ -159,14 +167,16 @@ export class LoadoutModel {
   }
 
   /**
-   * The replica asset `replicaId` as it comes (M29): Common, no parts, on its starter power source. What the Loadout's
-   * Performance sheet compares against (and what bots carry).
+   * The replica asset `replicaId` as it comes (M29): at the lowest tier it comes in (Common, or Legendary for a chase
+   * replica, M32), no parts, on its starter power source (none for a battery built in). What the Loadout's Performance
+   * sheet compares against (and what bots carry).
    */
   asItComes(replicaId: string): KitSlot {
     const replica = this.pool.byId.get(replicaId)!;
     const power = this.pool.assets.find((a) => a.category === 'power' && a.starter && fits(a, replica));
     const common = this.pool.tiers[0]!.id;
-    return kitSlot(this.pool, { asset: replicaId, tier: common }, { ...EMPTY_FIT, power: power ? { asset: power.id, tier: common } : null });
+    const lowest = tiersOf(this.pool, replica)[0]!.id;
+    return kitSlot(this.pool, { asset: replicaId, tier: lowest }, { ...EMPTY_FIT, power: power ? { asset: power.id, tier: common } : null });
   }
 
   /** True if the site limit stops the energy of `ref` with its current fit (the Performance sheet says so). */

@@ -6,7 +6,7 @@ import { LOADOUT_TEXT, PERFORMANCE_SHEET } from '../../config/menus';
 import type { ItemRef } from '../../pool/collection';
 import type { FitSlot, KitSlot } from '../../pool/kit';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
-import { replicaOf } from '../../pool/pool';
+import { hasBuiltInPower, replicaOf } from '../../pool/pool';
 import {
   bbWeightLabel,
   bbWeightReadout,
@@ -253,9 +253,10 @@ export class LoadoutScreen {
       sheetRowsBox.replaceChildren(...sheetRows(performanceOf(kit, grams, dial, capped), factory, HOP_UP.readoutRange).flatMap(sheetRow));
     };
     for (const row of FIT_ROWS) {
-      // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power always have a choice.
-      if (row.none !== null && row.slot !== 'magazine' && !m.hasSlot(asset.id, row.slot)) {
-        rows.append(fixedRow(row.label, row.slot === 'barrel' ? LOADOUT_TEXT.fixedBarrel : row.slot === 'muzzle' ? LOADOUT_TEXT.noThread : LOADOUT_TEXT.noMount));
+      // No rail for it in the pool (nothing could ever fit): a greyed row. Magazines and power have a choice unless the
+      // replica takes nothing but its own (the Cyber Pistol, M32).
+      if (!m.hasSlot(asset.id, row.slot) && (row.none !== null || hasBuiltInPower(asset))) {
+        rows.append(fixedRow(row.label, fixedValue(row.slot, kit)));
         if (row.slot === 'optic') this.appendBbRows(rows, base, kit.replica, grams, dial, (g, d) => ((grams = g), (dial = d), live()));
         continue;
       }
@@ -407,6 +408,15 @@ function sheetRow(r: SheetRow): HTMLElement[] {
 }
 
 /** A greyed row for a part this replica has no rail or mount for. */
+/** What a row says when nothing can be fitted there. */
+function fixedValue(slot: FitSlot, kit: KitSlot): string {
+  if (slot === 'barrel') return LOADOUT_TEXT.fixedBarrel;
+  if (slot === 'muzzle') return LOADOUT_TEXT.noThread;
+  if (slot === 'magazine') return LOADOUT_TEXT.ownMagazine(handlingOf(kit.replica, kit.parts).magSize);
+  if (slot === 'power') return LOADOUT_TEXT.builtInBattery;
+  return LOADOUT_TEXT.noMount;
+}
+
 function fixedRow(label: string, value: string): HTMLDivElement {
   const control = el('div', 'menu-row-control');
   control.append(el('span', 'menu-later-value', value));

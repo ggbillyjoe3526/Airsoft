@@ -637,6 +637,7 @@ export class Game {
         teammateDifficulty: this.teammateDifficulty,
         rules: { ...this.matchRules },
         kit: this.loadout.kit(),
+        chaseOwned: this.loadout.ownedChase(),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
       }, this.matchSeed, QUALITY[this.quality], this.audio, this.crosshair);
       this.session.setMotion(motionScale(this.reducedMotion));

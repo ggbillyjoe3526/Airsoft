@@ -132,6 +132,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M29b Barrels and silencers (AEG: barrel and muzzle; pistol: muzzle), and random loadouts for opponents on Hard | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
 | Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up | In progress (M33a done; concept sketch v1 with the owner) | M33a 7/8 |
+| Alpha · Owner's 2026-10-04 requests · M32 Cyber Pistol, a third replica (owner's design): a Legendary-only chase pistol from the Armory (1 in 400 Shot items), rifle power with pistol handling and almost no kick, Semi / Burst / Auto, no parts, a quiet futuristic sound; now and then an opponent on Hard carries it once you own one | In progress | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -754,6 +755,19 @@ pool, items 11, 12 and part of 14).
   - **Glowing BBs:** a Loadout option on any field, on by default on night fields.
   - **M33a. Coming soon:** Woodland shows in the Map pop-up under Depot, greyed out with a Coming soon tag, and can't
     be picked until it is playable.
+
+- **M32. Cyber Pistol, a third replica** (owner, 2026-10-04: "an extremely rare and powerful pistol … a chase
+  replica"; his design and colours, spec approved 2026-10-04). Pulled forward from the v0.3 armoury; the reason is in
+  DECISIONS. Spec sheet in the project's shared files (`plans/cyber-pistol-spec.md`).
+  - **What it is:** an electric pistol with a built-in battery, in either gear slot. 1.00 J on 0.25 g BBs (the pistol
+    limit), on target to about 33 m, Semi (default), Burst and Auto at 14 BBs/s, the tightest spread in the game and a
+    third of the rifle's kick, 50 BBs × 3, 1.1 s reload, 0.28 s draw. No parts fit it (hop-up and BB weight still
+    turn). A quiet, futuristic electric pop; heard from as far as any replica.
+  - **A chase item:** only ever Legendary (pool.md's new Tiers column). Each Shot item has its own 0.25 % chance of
+    being it (the new Drop % column), drawn apart from the rest; Unlock all gear lends it.
+  - **Bots:** on Hard, once you own one, about 1 match in 20 has one opponent carrying it as their primary, on Auto.
+  - **Look:** a chunky, slab-sided pistol in mint, hot pink and black on either team, built in the replicas' own
+    procedural style (after the audit's model overhaul, FA8).
 
 When the owner calls the game feature complete, alpha ends.
 

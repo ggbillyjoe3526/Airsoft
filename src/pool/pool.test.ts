@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import poolText from '../../pool.md?raw';
 import { addItem, type Collection, grantStarters, itemKey, loadCollection, newCollection, ownedItems, parseItemKey, saveCollection } from './collection';
 import { shotAssets } from './armory';
-import { assetOfReplica, DEFAULT_ECONOMY, fcPerToken, fits, loadPool, replicaOf, tierId } from './pool';
+import { assetOfReplica, DEFAULT_ECONOMY, fcPerToken, fits, hasBuiltInPower, loadPool, replicaOf, tierId } from './pool';
 import { readTables } from './poolFile';
 import { MemoryStorage } from './testStorage';
 import { AEG, GAS_PISTOL } from '../config/replicas';
@@ -54,9 +54,11 @@ describe('pool.md', () => {
     expect(fits(byName('Vertical Grip'), rifle)).toBe(true);
   });
 
-  it('gives every replica a starter power source that fits it', () => {
+  it('gives every replica a starter power source that fits it, unless its power is built in (then none fits)', () => {
     for (const r of pool.assets.filter((a) => a.category === 'replica')) {
-      expect(pool.assets.some((p) => p.category === 'power' && p.starter && fits(p, r))).toBe(true);
+      const power = pool.assets.filter((p) => p.category === 'power' && fits(p, r));
+      if (hasBuiltInPower(r)) expect(power).toEqual([]);
+      else expect(power.some((p) => p.starter)).toBe(true);
     }
   });
 
