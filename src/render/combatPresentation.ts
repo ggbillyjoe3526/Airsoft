@@ -4,7 +4,6 @@ import { Sfx, type SfxSetup } from '../audio/sfx';
 import type { MotionScale } from '../config/accessibility';
 import { FIGURE } from '../config/characters';
 import { impactMaterialAt } from '../audio/soundMaterials';
-import type { VolumeChannel } from '../config/audio';
 import type { Action } from '../config/controls';
 import type { CrosshairSettings } from '../config/matchInfo';
 import { BB_VISUALS, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, QUALITY, type QualitySettings } from '../config/render';
@@ -119,11 +118,6 @@ export class CombatPresentation {
   /** Browsers only allow audio after a user gesture: call from the Play click. */
   unlockAudio(): void {
     this.sfx.unlock();
-  }
-
-  /** A volume slider moved on Settings → Audio. */
-  setVolume(channel: VolumeChannel, position: number): void {
-    this.sfx.setVolume(channel, position);
   }
 
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */

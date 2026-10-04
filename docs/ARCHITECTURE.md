@@ -85,8 +85,11 @@ ends the round). A hit character is eliminated
 - **render/combatPresentation.ts**: after each tick consumes `state.events` (puffs, viewmodel kick, sound);
   each frame draws BBs (instanced, interpolated), puffs, the held replica (second render pass) and the HUD.
 - **audio/** (reworked in M13): every effect is a recipe of layers in `config/sounds.ts` (filtered noise, gliding
-  tones, struck resonances), rendered by the pure `audio/dsp.ts` into a few variants each when audio starts (on Play)
-  and played back from buffers. A replica's shots follow its power source (`ReplicaConfig.power`: electric, gas;
+  tones, struck resonances), rendered by the pure `audio/dsp.ts` into a few variants each and played back from
+  buffers. The `Game` keeps one `AudioEngine` (`audio/audioEngine.ts`) for the page: the audio context (made suspended
+  at start, running only while a match is played), the volume buses and every sound's buffers, rendered a cue at a
+  time in the title screen's spare time. Each match's `Sfx` builds only its own graph on it and disconnects it when
+  the match goes. A replica's shots follow its power source (`ReplicaConfig.power`: electric, gas;
   spring is ready for the v0.3 armoury); an AEG winds its motor up on a fresh trigger pull and down after the last
   shot (`audio/motor.ts`). `Sfx` keeps one channel per other character (an HRTF panner that follows them, then a
   low-pass and gain muffling them by how much level geometry blocks two rays from the listener, `audio/occlusion.ts`);

@@ -6,10 +6,11 @@ import type { MapBlock } from '../map/mapTypes';
 import { type Character, createCharacter } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { vec3 } from '../sim/vec';
+import { AudioEngine, type IdleScheduler } from './audioEngine';
 import { volumeGain } from './audioMix';
 import type { OcclusionQuery } from './occlusion';
 import { Sfx } from './sfx';
-import { SoundLibrary } from './soundBank';
+import { renderSoundsGradually, SoundLibrary } from './soundBank';
 
 // ---- A minimal stand-in for the Web Audio API (records what Sfx builds and connects) --------------
 
@@ -111,6 +112,7 @@ class FakeContext {
   resumed = 0;
   suspended = 0;
   closed = 0;
+  buffersMade = 0;
   currentTime = 0;
   sampleRate = 48000;
   readonly destination = new FakeNode();
@@ -156,6 +158,7 @@ class FakeContext {
     return new FakeConvolver();
   }
   createBuffer(channels: number, length: number, rate: number): FakeBuffer {
+    this.buffersMade++;
     return new FakeBuffer(channels, length, rate);
   }
   resume(): Promise<void> {
@@ -185,14 +188,36 @@ const VOLUMES = { master: 1, effects: 1, interface: 1 };
 const LIBRARY = new SoundLibrary();
 const PLAYER = 0;
 
-function setup(query: OcclusionQuery = OPEN): { sfx: Sfx; ctx: FakeContext; player: Character; bot: Character; characterOf: (id: number) => Character | undefined } {
+/** Spare moments on demand: `run()` gives each waiting job one moment of `ms` milliseconds. */
+function manualIdle(ms = 0): { idle: IdleScheduler; waiting: () => number; run: () => void } {
+  let jobs: ((timeLeft: () => number) => void)[] = [];
+  return {
+    idle: (work) => void jobs.push(work),
+    waiting: () => jobs.length,
+    run: () => {
+      const now = jobs;
+      jobs = [];
+      for (const job of now) job(() => ms);
+    },
+  };
+}
+
+/** An engine as the Game keeps one; its spare-time rendering only runs when a test asks. */
+function engineFor(library = LIBRARY): AudioEngine {
+  return new AudioEngine({ ...VOLUMES }, library, manualIdle().idle);
+}
+
+function setup(
+  query: OcclusionQuery = OPEN,
+  engine = engineFor(),
+): { sfx: Sfx; ctx: FakeContext; engine: AudioEngine; player: Character; bot: Character; characterOf: (id: number) => Character | undefined } {
   const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
   const bot = createCharacter(1, vec3(6, 0, 0), 0, LOADOUT, 1);
-  const sfx = new Sfx(LOADOUT, FLOOR, query, { volumes: VOLUMES, library: LIBRARY });
+  const sfx = new Sfx(LOADOUT, FLOOR, query, engine);
   sfx.unlock();
   sfx.setListener(vec3(0, 1.6, 0), 0, 0, -1);
   const all = [player, bot];
-  return { sfx, ctx: FakeContext.last, player, bot, characterOf: (id) => all.find((c) => c.id === id) };
+  return { sfx, ctx: FakeContext.last, engine, player, bot, characterOf: (id) => all.find((c) => c.id === id) };
 }
 
 /** The node a source plays into (through its level gain). */
@@ -334,8 +359,8 @@ describe('the sound engine (M13)', () => {
   });
 
   it('eases a volume bus to its slider', () => {
-    const { sfx, ctx } = setup();
-    sfx.setVolume('interface', 0.5);
+    const { engine, ctx } = setup();
+    engine.setVolume('interface', 0.5);
     const eased = ctx.gains.flatMap((g) => g.gain.targets);
     expect(eased).toContainEqual({ value: volumeGain(0.5), at: 0 });
   });
@@ -366,29 +391,35 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     for (const AudioContextStub of [undefined, Refused]) {
       vi.stubGlobal('AudioContext', AudioContextStub);
       const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
-      const sfx = new Sfx(LOADOUT, FLOOR, OPEN, { volumes: VOLUMES, library: LIBRARY });
+      const engine = engineFor();
+      const sfx = new Sfx(LOADOUT, FLOOR, OPEN, engine);
       expect(() => {
+        engine.warmUp();
         sfx.unlock();
         sfx.onEvent(shot(PLAYER), PLAYER, () => player);
         sfx.setPaused(false);
         sfx.setListener(vec3(0, 1.6, 0), 0, 0, -1);
         sfx.updateSources([player], PLAYER);
+        engine.setVolume('master', 0.5);
         sfx.unlock();
         sfx.dispose();
+        engine.dispose();
       }).not.toThrow();
       expect(sfx.roundStartWhistle()).toBe(false);
     }
-    expect(warn).toHaveBeenCalledTimes(2);
+    // Once for the refused context: the engine doesn't try again on every Play.
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it("lets a context's refused resume, suspend or close settle quietly (audit M-04)", async () => {
-    const { sfx, ctx } = setup();
+    const { sfx, ctx, engine } = setup();
     const refuse = (): Promise<void> => Promise.reject(new DOMException('refused', 'InvalidStateError'));
     Object.assign(ctx, { resume: refuse, suspend: refuse, close: refuse });
     sfx.setPaused(false);
     sfx.setPaused(true);
     sfx.unlock();
     sfx.dispose();
+    engine.dispose();
     // An unhandled rejection would fail the run once the microtasks have run.
     await new Promise((r) => setTimeout(r, 0));
   });
@@ -526,5 +557,109 @@ describe('the sound engine: lifecycle, whistle and routing (audit L-18)', () => 
     const before = ctx.sources.length;
     for (let i = 0; i < AUDIO.maxImpactsPerWindow + 3; i++) sfx.onEvent({ type: 'bbImpact', position: vec3(3, 0, 0), ownerId: 1 }, PLAYER, characterOf);
     expect(ctx.sources.length - before).toBe(AUDIO.maxImpactsPerWindow);
+  });
+});
+
+describe("the shared audio engine: one context and one render for the page's matches (audit M-09)", () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** A library whose renders are counted (one variant per cue, to keep the test quick). */
+  function countingLibrary(): { library: SoundLibrary; renders: number[] } {
+    const renders: number[] = [];
+    const library = new SoundLibrary((rate) => {
+      renders.push(rate);
+      return renderSoundsGradually(rate, 1);
+    });
+    return { library, renders };
+  }
+
+  it('renders the sounds once per sample rate, and makes their buffers once, however many matches play', () => {
+    const { library, renders } = countingLibrary();
+    const engine = engineFor(library);
+    const first = setup(OPEN, engine);
+    const made = first.ctx.buffersMade;
+    first.sfx.dispose();
+    const second = setup(OPEN, engine);
+    expect(second.ctx).toBe(first.ctx);
+    expect(FakeContext.made).toBe(1);
+    expect(first.ctx.buffersMade).toBe(made);
+    // Another engine (another context at the same rate) shares the rendered samples too.
+    setup(OPEN, engineFor(library));
+    expect(FakeContext.made).toBe(2);
+    expect(renders).toEqual([48000]);
+  });
+
+  it("renders in the title screen's spare time, a cue at a time, so Play has nothing left to do", () => {
+    const { library, renders } = countingLibrary();
+    const spare = manualIdle(0);
+    const engine = new AudioEngine({ ...VOLUMES }, library, spare.idle);
+    engine.warmUp();
+    expect(renders).toEqual([]);
+    let moments = 0;
+    while (spare.waiting() > 0) {
+      spare.run();
+      moments++;
+    }
+    expect(renders).toEqual([48000]);
+    // A cue per moment for the samples and again for the buffers, then the echo.
+    expect(moments).toBeGreaterThan(20);
+    const ctx = FakeContext.last;
+    const made = ctx.buffersMade;
+    setup(OPEN, engine);
+    expect(ctx.buffersMade).toBe(made);
+  });
+
+  it('finishes the rendering at once when Play comes first, and the spare-time slices then stop', () => {
+    const { library, renders } = countingLibrary();
+    const spare = manualIdle(0);
+    const engine = new AudioEngine({ ...VOLUMES }, library, spare.idle);
+    engine.warmUp();
+    spare.run();
+    spare.run();
+    const { sfx, ctx, characterOf } = setup(OPEN, engine);
+    sfx.onEvent(shot(PLAYER), PLAYER, characterOf);
+    expect(ctx.sources.length).toBeGreaterThan(0);
+    spare.run();
+    expect(spare.waiting()).toBe(0);
+    expect(renders).toEqual([48000]);
+  });
+
+  it('makes the context suspended, and runs it only while a match is played', () => {
+    const engine = engineFor();
+    const ctx = engine.context() as unknown as FakeContext;
+    expect(ctx.state).toBe('suspended');
+    expect(ctx.resumed).toBe(0);
+    const { sfx } = setup(OPEN, engine);
+    expect(ctx.state).toBe('suspended');
+    sfx.setPaused(false);
+    expect(ctx.state).toBe('running');
+    sfx.setPaused(true);
+    expect(ctx.state).toBe('suspended');
+  });
+
+  it("disconnects a finished match's nodes and its whistle but keeps the context for the next; the Game's dispose closes it", () => {
+    const engine = engineFor();
+    const { sfx, ctx, characterOf } = setup(OPEN, engine);
+    sfx.onEvent({ type: 'roundOver', winner: 0, reason: 'time' }, PLAYER, characterOf);
+    sfx.onEvent(step(1), PLAYER, characterOf);
+    // The engine's buses are the first three gains; the match's world, echo, own-sound and interface gains follow.
+    const ownNodes = [...ctx.gains.slice(3, 7), ...ctx.panners, ...ctx.filters];
+    sfx.dispose();
+    expect(ctx.oscillators[0]!.stopAt).toBe(0);
+    for (const node of ownNodes) expect(node.outputs.size, 'a node still connected').toBe(0);
+    for (const voice of [...ctx.sources, ...ctx.oscillators]) expect(downstream(voice).has(ctx.destination), 'a voice still reaches the speakers').toBe(false);
+    // The engine's buses stay wired to the speakers.
+    expect(downstream(ctx.gains[0]!).has(ctx.destination)).toBe(true);
+    expect(ctx.closed).toBe(0);
+    engine.dispose();
+    expect(ctx.closed).toBe(1);
   });
 });
