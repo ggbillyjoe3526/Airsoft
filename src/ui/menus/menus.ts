@@ -16,7 +16,7 @@ import { MATCH_MODES, type MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
-import { MAPS, type MapId } from '../../map/maps';
+import { COMING_MAPS, COMING_SOON_TAG, MAPS, type MapId } from '../../map/maps';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
 import type { ControlsSettingsOptions } from '../controlsSettings';
@@ -134,10 +134,18 @@ export class Menus {
       onBack: () => this.back(),
       onPlay: () => this.play(),
     });
-    this.mapDialog = new ChoiceDialog('Map', MAPS, opts.map.initial, 'map', (m) => {
-      opts.map.onChange(m);
-      this.refreshSetup();
-    });
+    this.mapDialog = new ChoiceDialog(
+      'Map',
+      MAPS,
+      opts.map.initial,
+      'map',
+      (m) => {
+        opts.map.onChange(m);
+        this.refreshSetup();
+      },
+      COMING_MAPS,
+      COMING_SOON_TAG,
+    );
     this.modeDialog = new ChoiceDialog('Game mode', MATCH_MODES, opts.mode.initial, 'mode', (m) => {
       opts.mode.onChange(m);
       this.refreshSetup();

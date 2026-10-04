@@ -39,6 +39,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA6** · Outdoor ambience bed with distant birds; world sounds muffled when eliminated (#55)
 - **M29a** · Weapon stats in stats.md; tiers add energy and rate of fire; 11.1 V LiPo battery; site energy limit; Performance sheet in Customise (#54)
 - **M29b** · Barrels and a silencer: Tight-Bore and Long Barrel for the AEG, a Silencer for both (bots hear it from half as far); Hard opponents carry kits of their own (#58)
+- **M33a** · Woodland shown as Coming soon in the Map pop-up
 
 ### Changed
 - **FA10** · Field Credits: a won round pays only if you took part, pay scales with match length, and the difficulty bonus follows the lower of your teammates' and opponents' levels; Armory: 10 Shots and Scrap ask to confirm, holding Enter takes one Shot, the reveal shows rarest first with prices (#63)
