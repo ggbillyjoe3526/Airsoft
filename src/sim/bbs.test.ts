@@ -217,6 +217,31 @@ describe('stepBBs hitting characters', () => {
     }
   });
 
+  it('lets a ricochet come back and hit the shooter, under the same rules as anyone else (audit SIM-07)', () => {
+    // Fired into a steel wall 2 m away: it comes straight back (no scatter without an rng) through the shooter.
+    const fire = (hits: HitConfig) => {
+      const shooter = createCharacter(1, vec3(), 0, LOADOUT, 0);
+      const characters = [shooter];
+      const pool = createBBPool(1);
+      const bb = spawnBB(pool, 1, vec3(0, 1.2, 0), vec3(0, 0, -1), 80, 0, 0.25e-3);
+      const events: GameEvent[] = [];
+      const targets: BBTargets = { characters, hits, elimination: openFieldElimination(deadZones) };
+      for (let i = 0; i < 30 && bb.active; i++) stepBBs(pool, BALLISTICS, hardWallAt(-2, 'metal'), KILL_Y, events, DT, targets);
+      return { shooter, bb, events };
+    };
+    const ticked = fire(HITS);
+    expect(ticked.shooter.status).toBe('alive');
+    expect(ticked.events.find((e) => e.type === 'ricochetTick')).toMatchObject({ victimId: 1, shooterId: 1 });
+    const counted = fire({ ...HITS, ricochetsCount: true });
+    expect(counted.shooter.status).toBe('calling');
+    expect(counted.events.find((e) => e.type === 'characterHit')).toMatchObject({ victimId: 1, shooterId: 1, ricochet: true });
+    expect(counted.bb.bounces).toBe(1);
+    // With friendly fire off nobody's BBs hit their own team, the shooter included.
+    const noFf = fire({ ...HITS, ricochetsCount: true, friendlyFire: false });
+    expect(noFf.shooter.status).toBe('alive');
+    expect(noFf.events.some((e) => e.type === 'characterHit' || e.type === 'ricochetTick')).toBe(false);
+  });
+
   it('flies over a crouched character that a standing one would have caught in the chest', () => {
     // BB at 1.2 m: hits a standing target, passes over a fully crouched one (top 1.13 m).
     const standing = setup([{ id: 2, team: 1, z: -5 }]);

@@ -30,7 +30,9 @@ ends the round). A hit character is eliminated
 - **physics/**: `PhysicsWorld` implements the sim's `CharacterMover` interface (Rapier kinematic character
   controller). Characters collide only with level geometry, never each other. Level blocks collide as
   closed triangle meshes to avoid a Rapier capsule-vs-cuboid bug. Standing characters move horizontally,
-  then `probeGround` (a downward sphere cast) rests them 0.04 m above the floor. It also offers static ray casts.
+  then `probeGround` (a downward sphere cast) rests them 0.04 m above the floor. Its static ray casts (`raycastStatic`,
+  `raycastSurface`) are answered by `sim/levelRay.ts` (FA12): a slab test against the axis-aligned blocks and ramp wedges
+  through a 1 m column grid, allocation-free, held to Rapier's answer by `physics/levelRay.rapier.test.ts`.
   The sim returns anything below `killY` to its spawn.
 - **nav/**: `navGrid.ts` builds a 0.2 m walkability grid from map blocks (clearance = body radius + margin) and finds
   routes (8-neighbour A*, string-pulled into straight legs). Each cell stores one floor height (`floorY`, the floor or
@@ -187,6 +189,10 @@ ends the round). A hit character is eliminated
   (`withStats`, which also sets `ReplicaConfig.energyLimit`), `attachments.ts`, `optics.ts` and `lasers.ts` lay it over
   their built-in numbers when they load, so bots and the sim see the file's numbers too. `pool/kit.ts` applies the
   power stats and tier shares (`KitStats`, injectable for tests) and caps the energy at the limit (`energyCapped`).
+  Barrels and muzzle parts (M29b, `BARRELS` / `MUZZLES` in `config/attachments.ts`) add to the energy and spread in
+  `kitReplica` and to the handling in `handlingOf` (`heardScale`, `muffled`); `sim/armament.ts` `shotHeardScale` is
+  the one place bots (`ai/botController.ts`), the minimap and sound cues read a shot's reach. On Hard,
+  `pool/botKit.ts` rolls each opponent a seeded kit (`randomKit`, `kittedCharacter`; `BOT_LOADOUTS` in config/bots.ts).
   The muzzle is the boundary: `muzzleEnergy` / `muzzleVelocity` / `bbMass` (config/replicas.ts) are what leaves the
   barrel; everything after it is `config/ballistics.ts` and `sim/ballistics.ts`. `ui/performanceSheet.ts` builds the
   Customise screen's Performance sheet (against `LoadoutModel.asItComes`), the gear slots' line and the Armory's
@@ -257,7 +263,8 @@ request. Each line names where it lives and what pins it.
   `settings/storage.test.ts`.
 - **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
-  power sources by pool ID, Tier scaling, Site limits) the config modules lay over their built-in ones. Pinned by
+  power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
+  over their built-in ones. Pinned by
   `config/stats.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`.

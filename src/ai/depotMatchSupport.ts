@@ -13,7 +13,7 @@ import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
 import { buildNavGrid } from '../nav/navGrid';
 import { PhysicsWorld } from '../physics/physicsWorld';
-import { createCharacter, respawnCharacter } from '../sim/character';
+import { type Character, createCharacter, respawnCharacter } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createWind } from '../sim/wind';
@@ -47,6 +47,8 @@ export function playMatch(
   teamSize: number = ROUNDS.teamSize,
   hits: HitConfig = HITS,
   onTick: (state: GameState, bots: BotController) => void = () => {},
+  /** Who carries something other than the default loadout (a bot's rolled kit, M29b): its character, or undefined for the default. */
+  carry: (id: number, team: number) => Character | undefined = () => undefined,
 ) {
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
@@ -71,7 +73,10 @@ export function playMatch(
   });
   let id = 0;
   for (let team = 0; team < 2; team++) {
-    for (let i = 0; i < (hider && team === 0 ? 1 : teamSize); i++) state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
+    for (let i = 0; i < (hider && team === 0 ? 1 : teamSize); i++) {
+      state.characters.push(carry(id, team) ?? createCharacter(id, vec3(), 0, LOADOUT, team));
+      id++;
+    }
   }
   // Round 1 as the game starts it: each team at its end; a hider stands at its spot instead.
   placeTeams(state.round, state.characters, ctx.round);
@@ -103,6 +108,8 @@ export function playMatch(
     /** Hits by a BB that had bounced (they only knock out when the match counts ricochets), and ticks that didn't. */
     ricochetHits: 0,
     friendlyRicochets: 0,
+    /** Hits by the shooter's own ricochet (audit SIM-07); not counted in friendlyHits or friendlyRicochets. */
+    selfHits: 0,
     ricochetTicks: 0,
     firstRoundEnd: -1,
     roundEnds: [] as number[],
@@ -149,9 +156,12 @@ export function playMatch(
         const v = state.characters.find((c) => c.id === e.victimId)!;
         hitY[state.characters.indexOf(v)] = v.position.y;
         const s = state.characters.find((c) => c.id === e.shooterId)!;
-        if (v.team === s.team) stats.friendlyHits++;
         if (e.ricochet) stats.ricochetHits++;
-        if (e.ricochet && v.team === s.team) stats.friendlyRicochets++;
+        if (v === s) stats.selfHits++;
+        else if (v.team === s.team) {
+          stats.friendlyHits++;
+          if (e.ricochet) stats.friendlyRicochets++;
+        }
       }
       if (e.type === 'ricochetTick') stats.ricochetTicks++;
     }
@@ -237,7 +247,7 @@ export function playFollowMatch(seconds: number, seed: number, map: MapData = DE
 
 /**
  * 16 seeds of 3v3 in `mode` with ricochets counting (friendly fire on): bots never shoot a teammate directly, and
- * bounced BBs decide only some hits. One file per mode, so the two run in parallel.
+ * bounced BBs decide only some hits, few of them on the shooter (FA12). One file per mode, so the two run in parallel.
  */
 export function expectRicochetsPlayable(mode: MatchMode): void {
   const hits = { ...HITS, ricochetsCount: true };
@@ -248,11 +258,13 @@ export function expectRicochetsPlayable(mode: MatchMode): void {
   let ricochetHits = 0;
   let directFriendly = 0;
   let friendlyRicochets = 0;
+  let selfHits = 0;
   for (let seed = 1; seed <= 16; seed++) {
     const stats = playMatch(mode === 'elimination' ? 300 : 400, seed, undefined, BOTS, mode, ROUNDS, DEPOT, ROUNDS.teamSize, hits);
     allHits += stats.hits;
     ricochetHits += stats.ricochetHits;
     friendlyRicochets += stats.friendlyRicochets;
+    selfHits += stats.selfHits;
     directFriendly += stats.friendlyHits - stats.friendlyRicochets;
     for (const r of stats.results) {
       rounds++;
@@ -262,6 +274,8 @@ export function expectRicochetsPlayable(mode: MatchMode): void {
   }
   expect(directFriendly, mode).toBe(0);
   expect(friendlyRicochets, mode).toBeLessThanOrEqual(8);
+  // A bot's own ricochet now catches it too (audit SIM-07): rare, a few hits in 16 matches.
+  expect(selfHits / allHits, mode).toBeLessThan(0.04);
   expect(ricochetHits / allHits, mode).toBeGreaterThan(0.05);
   expect(ricochetHits / allHits, mode).toBeLessThan(0.25);
   expect(favoured / rounds, mode).toBeGreaterThan(0.35);

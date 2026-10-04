@@ -1,5 +1,6 @@
 import { handlingOf } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
+import { BOT_BEHAVIOUR } from '../config/bots';
 import { PERFORMANCE_SHEET } from '../config/menus';
 import { AIMING, OPTICS } from '../config/optics';
 import { BB_WEIGHT, muzzleEnergy, muzzleVelocity } from '../config/replicas';
@@ -42,6 +43,8 @@ export interface Performance {
   draw: number;
   /** Seconds to raise the fitted optic, or null with iron sights. */
   raise: number | null;
+  /** Metres away bots hear its shots (BOT_BEHAVIOUR.hearingDistance, shorter with a silencer, M29b). */
+  heardFrom: number;
 }
 
 /** A replica's numbers as carried in `slot`, shooting `grams` BBs with its hop-up dial at `dial`. */
@@ -65,6 +68,7 @@ export function performanceOf(slot: KitSlot, grams: number, dial: number, capped
     reload: h.reloadTime,
     draw: h.drawTime,
     raise: slot.optic === null ? null : AIMING.raiseTime * OPTICS[slot.optic].raiseScale * h.raiseScale,
+    heardFrom: BOT_BEHAVIOUR.hearingDistance * h.heardScale,
   };
 }
 
@@ -117,6 +121,7 @@ export function sheetRows(now: Performance, factory: Performance, readoutRange: 
     row(t.reload, `${now.reload.toFixed(2)} s`, now.reload, factory.reload, 'lower'),
     row(t.draw, `${now.draw.toFixed(2)} s`, now.draw, factory.draw, 'lower'),
     row(t.raise, now.raise === null ? t.noOptic : `${now.raise.toFixed(2)} s`, now.raise, factory.raise, 'lower'),
+    row(t.heardFrom, `${Math.round(now.heardFrom)} m`, now.heardFrom, factory.heardFrom, 'lower'),
   ];
 }
 

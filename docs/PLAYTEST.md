@@ -198,6 +198,26 @@ The numbers live in `stats.md` beside `pool.md`. Start, then Loadout; right-clic
   says 20 BBs/s and the rifle (and the bots' rifles) fire faster. Put it back. A typo (`2O`) shows in the console and
   `npm run test` names its line.
 
+## Barrels, silencer and Hard opponents' kit (M29b)
+
+Turn on Dev settings → Unlock all gear, then Loadout; right-click the rifle to customise it.
+
+- [ ] **Rows.** The rifle has Barrel and Muzzle rows; the pistol's Barrel row says it has a fixed barrel and its
+  Muzzle row offers the Silencer.
+- [ ] **Tight-Bore Barrel.** Spread −15 % and energy +3 % on the sheet; the first-person rifle looks the same length.
+- [ ] **Long Barrel.** Energy +8 %, Draw and Aim raise +15 % (red); the rifle's barrel is visibly longer in first
+  person and BBs leave from its new end.
+- [ ] **Silencer.** On both replicas: a can on the muzzle, energy −5 %, Draw slower, "Shots heard from" 22 m → 11 m
+  (green). In a match the shots sound duller and quieter.
+- [ ] **Bots hear less.** In a Normal match with the silenced rifle, fire from about 15 m behind a bot that can't see
+  you: it shouldn't turn round (unsilenced it does). On the minimap (Sound cues on too) a silenced bot shows up only
+  within half the usual range.
+- [ ] **Hard opponents.** Start a Hard match and play a few rounds: opponents' rifles differ (some faster, some with a
+  silencer you hear muffled, some longer-ranged). Play Again rolls new kits. Easy and Normal opponents, and your
+  teammates on any level, are as before.
+- [ ] **Shots.** A ten-Shot can dispense the Tight-Bore Barrel, Long Barrel or Silencer; the Armory lists them under
+  Barrels and Muzzle parts.
+
 ## Hop-up
 
 Hop-up puts backspin on the BB, and the spin lifts it so it flies flat for longer. Each replica has a dial in the
@@ -231,6 +251,23 @@ that pushes BBs, never players. The dust floating in the air (Medium and High qu
 - [ ] **Bots:** they hit you as often as before at short range and lead you better when you run across their aim at
   range. In a strong breeze their long shots miss downwind as yours do. Say if bots feel too weak or too strong.
 - [ ] **Frame rate:** a full-auto firefight on Low feels as smooth as before.
+
+## BB hot path and own ricochets (FA12)
+
+BBs now find walls with the game's own ray test instead of the physics engine's (the same answer, much cheaper), and a
+ricochet can come back and hit whoever fired it.
+
+- [ ] **BBs still stop on everything.** On Depot, shoot crates, container sides and ends, wall tops and corners, the
+  dock and its steel ramps, a gabion, the toilets: every BB stops or bounces where it meets the surface, never inside or
+  through it, and steel and concrete still ricochet as before. Dev tab › BB paths makes it easy to see.
+- [ ] **Your own ricochet, ricochets on.** Custom match with "Ricochets count" on: stand 2 m from a container's side
+  and fire one shot square at it. The BB comes back and you're hit: the hit feed says you called a hit off yourself,
+  tagged "ricochet" (not "friendly"); the scoreboard counts you hit once and no hit for you.
+- [ ] **Your own ricochet, ricochets off (the default).** Same shot: the "Ricochet · doesn't count, play on" notice, and you
+  play on.
+- [ ] **Practice range, 60 m plate:** a level shot on the factory hop lands short (about 53 m); aiming about 3° high (some
+  3.5 m above the plate) rings it.
+- [ ] **Frame rate:** a long full-auto firefight on Low (Dev tab FPS) is as smooth as before or smoother.
 
 ## Bots and rounds
 

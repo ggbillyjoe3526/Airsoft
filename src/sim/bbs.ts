@@ -47,7 +47,9 @@ function prepareTargets(t: BBTargets): void {
 
 /**
  * The first character in play along the BB's segment this tick (before `maxT`), or undefined. Needs prepareTargets
- * first. A character hit earlier in the tick is out of play, so no later BB hits it.
+ * first. A character hit earlier in the tick is out of play, so no later BB hits it. The shooter is skipped only until
+ * the BB first bounces (its first segment starts at their eye, inside them): a ricochet can come back and hit them
+ * (audit SIM-07), under the same rules as anyone on their team.
  */
 function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { victim: Character; at: number } | undefined {
   const ownerTeam = teamOf.get(bb.ownerId) ?? -1;
@@ -56,7 +58,7 @@ function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { v
   const characters = t.characters;
   for (let i = 0; i < characters.length; i++) {
     const c = characters[i]!;
-    if (c.id === bb.ownerId || c.ghost || !isInPlay(c)) continue;
+    if ((c.id === bb.ownerId && bb.bounces === 0) || c.ghost || !isInPlay(c)) continue;
     if (!t.hits.friendlyFire && c.team === ownerTeam) continue;
     const d = rayCharacter(bb.prevPosition, segmentDir, best, volumes[i]!);
     if (d >= 0 && d <= best) {
@@ -73,8 +75,8 @@ function firstCharacterHit(bb: BB, len: number, maxT: number, t: BBTargets): { v
  * it off instead (a ricochet, M20; it flies on from there next tick). A ricochet only knocks someone out when the
  * match counts ricochets (HitConfig.ricochetsCount); otherwise it ticks them and stops (ricochetTick event), and they
  * play on. On the practice range a BB also stops at the first target it reaches (targetHit event, M21). BBs that fall
- * out of the world or get too old are removed (bbLost event). A BB never hits whoever fired it, nor anyone
- * already hit. `rng` scatters bounces (the simulation's seeded stream); `wind` (m/s) drifts every BB (M30).
+ * out of the world or get too old are removed (bbLost event). A BB never hits anyone already hit, nor whoever fired
+ * it until it has bounced. `rng` scatters bounces (the simulation's seeded stream); `wind` (m/s) drifts every BB (M30).
  */
 export function stepBBs(
   pool: BBPool,

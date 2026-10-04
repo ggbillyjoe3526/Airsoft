@@ -11,7 +11,8 @@ import { AudioEngine, type IdleScheduler } from './audioEngine';
 import { volumeGain } from './audioMix';
 import type { OcclusionQuery } from './occlusion';
 import { Sfx } from './sfx';
-import { renderSoundsGradually, SoundLibrary } from './soundBank';
+import { renderSoundsGradually, SoundLibrary, suppressedCopies } from './soundBank';
+import { fitParts } from '../sim/armament';
 
 // ---- A minimal stand-in for the Web Audio API (records what Sfx builds and connects) --------------
 
@@ -1187,5 +1188,50 @@ describe('the final alpha audit: range, pause, mix and ambience (FA6)', () => {
     const times = level.gain.events.map((e) => e.at);
     expect([...times].sort((a, b) => a - b)).toEqual(times);
     expect(tone!.stopAt).toBeCloseTo(10 + d + AUDIO.stopPadding);
+  });
+});
+
+describe('a silenced shot sounds muffled (M29b)', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const bufferOf = (src: FakeSource): Float32Array => (src.buffer as FakeBuffer).data[0]!;
+  const same = (a: Float32Array, b: Float32Array): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
+
+  it("plays the shooter's own muffled copies when its silencer is fitted, and the usual shot when it is not", () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    const usual = bufferOf(ctx.sources[0]!);
+    // The usual variants of the cue that shot used, and their muffled copies.
+    const cue = [...LIBRARY.get(48000).keys()].find((c) => LIBRARY.get(48000).get(c)!.some((v) => same(v, usual)))!;
+    const muffled = suppressedCopies(LIBRARY.get(48000).get(cue)!, 48000);
+    expect(muffled.some((v) => same(v, usual))).toBe(false);
+    fitParts(bot.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    const heard = bufferOf(ctx.sources[ctx.sources.length - 1]!);
+    expect(muffled.some((v) => same(v, heard)), 'muffled copy').toBe(true);
+    expect(same(heard, usual)).toBe(false);
+    // A shooter without one is not muffled by another's silencer, and your own silenced shot is muffled too.
+    const { sfx: sfx2, ctx: ctx2, player, characterOf: of2 } = setup();
+    fitParts(player.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+    sfx2.onEvent(shot(PLAYER), PLAYER, of2);
+    expect(muffled.some((v) => same(v, bufferOf(ctx2.sources[0]!)))).toBe(true);
+  });
+
+  it('has its muffled copies ready before the match: the first silenced shot makes no buffer', () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    fitParts(bot.armament, [{ grip: 'none', magazine: 'standard', muzzle: 'silencer' }]);
+    const made = ctx.buffersMade;
+    sfx.onEvent(shot(bot.id), PLAYER, characterOf);
+    expect(ctx.sources.length).toBeGreaterThan(0);
+    expect(ctx.buffersMade).toBe(made);
   });
 });

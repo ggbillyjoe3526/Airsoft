@@ -7,6 +7,7 @@ import { LoadoutModel } from '../pool/loadoutModel';
 import { MemoryStorage } from '../pool/testStorage';
 import {
   bbWeightLabel,
+  barrelReadout,
   bbWeightReadout,
   gripReadout,
   hopUpLabel,
@@ -15,6 +16,7 @@ import {
   loadoutSummary,
   loadoutTile,
   magazineReadout,
+  muzzleReadout,
   opticReadout,
   powerReadout,
 } from './loadoutChoice';
@@ -133,5 +135,17 @@ describe('Loadout tile on New game (M26b)', () => {
   it('shows the factory setting for a missing dial or weight', () => {
     const kit = { slots: [pistol()], hopUps: [], bbWeights: [] };
     expect(loadoutSummary(kit, [])).toBe(`0.20 g BBs · hop-up ${hopUpLabel(GAS_PISTOL.hopUpDial)}`);
+  });
+});
+
+describe('barrel and muzzle readouts (M29b)', () => {
+  it("says the barrel's energy, spread and draw, and how far bots hear a silencer's shots", () => {
+    expect(barrelReadout(aeg())).toBe(`${AEG.muzzleEnergy.toFixed(2)} J with 0.25 g BBs, spread ${AEG.spreadDeg.toFixed(2)}°. Brings it up in ${AEG.drawTime.toFixed(2)} s.`);
+    const tight = barrelReadout(aeg({ barrel: item('Tight-Bore Barrel') }));
+    expect(Number(/spread ([\d.]+)°/.exec(tight)![1])).toBeLessThan(AEG.spreadDeg);
+    expect(Number(/Brings it up in ([\d.]+) s/.exec(barrelReadout(aeg({ barrel: item('Long Barrel') })))![1])).toBeCloseTo(AEG.drawTime * 1.15, 1);
+    expect(muzzleReadout(aeg())).toBe('Bots hear your shots from 22 m (22 m without a silencer).');
+    expect(muzzleReadout(aeg({ muzzle: item('Silencer') }))).toBe('Bots hear your shots from 11 m (22 m without a silencer).');
+    expect(muzzleReadout(pistol({ muzzle: item('Silencer') }))).toMatch(/from 11 m/);
   });
 });

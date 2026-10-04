@@ -66,7 +66,7 @@ export class MatchPresentation {
   private readonly holdMarker: HoldMarker;
   private readonly holdAnchor = new THREE.Vector3();
   private readonly holdAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
-  private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0 };
+  private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0, reach: 1 };
   /** The minimap (M23): the other team where last heard, from where the camera was at the last frame. */
   private readonly minimap: Minimap;
   private readonly heardPlayers = new HeardPlayers();
@@ -341,7 +341,8 @@ export class MatchPresentation {
     this.feed.add(
       { name: this.names.get(victim.id) ?? '', team: victim.team },
       { name: this.names.get(shooter.id) ?? '', team: shooter.team },
-      victim.team === shooter.team,
+      // Your own ricochet (audit SIM-07) is no friendly hit: the line names you twice, tagged "ricochet".
+      victim.team === shooter.team && victim !== shooter,
       you,
       this.state.time,
       ricochet,

@@ -99,7 +99,7 @@ export function shotAssets(pool: Pool): Asset[] {
 }
 
 /** A tier drawn by the odds (normalised, so odds that don't add up to 100 still work), from `from` (index) up. */
-function drawTier(tiers: readonly RarityTier[], rng: RngState, from = 0): RarityTier {
+export function drawTier(tiers: readonly RarityTier[], rng: RngState, from = 0): RarityTier {
   const pool = tiers.slice(from);
   const total = pool.reduce((sum, t) => sum + Math.max(0, t.odds), 0);
   if (total <= 0) return pool[0] ?? tiers[0]!;

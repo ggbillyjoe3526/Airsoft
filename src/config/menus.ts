@@ -31,6 +31,12 @@ export const LOADOUT_TEXT = {
   armoryHint: 'Unlock more in the Armory.',
   /** A part the replica has no rail or mount for. */
   noMount: 'No rail for one',
+  /** A replica whose barrel can't be swapped, or whose muzzle isn't threaded (M29b). */
+  fixedBarrel: 'Fixed barrel',
+  noThread: 'No thread for one',
+  /** The Barrel and Muzzle rows as it comes (M29b). */
+  standardBarrel: 'The standard barrel, as it comes.',
+  noMuzzle: 'Nothing on the muzzle: your shots carry as usual.',
   /** Under the power sources, by the fitted one's type. */
   powerBlurb: {
     battery: 'A higher-voltage battery cycles faster: more BBs a second. The energy is the replica\'s own.',
@@ -71,6 +77,7 @@ export const PERFORMANCE_SHEET = {
     draw: 'Draw',
     raise: 'Aim raise',
     noOptic: 'no optic',
+    heardFrom: 'Shots heard from',
   },
   /** Read out on a change, for a screen reader and for anyone who can't tell the colours apart. */
   better: 'better than as it comes',
