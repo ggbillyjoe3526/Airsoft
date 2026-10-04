@@ -1,33 +1,70 @@
 import type { ImpactMaterial } from './sounds';
 
 /**
- * BB flight model. A 6 mm plastic BB with backspin from the hop-up: gravity pulls it down, air drag
- * slows it, and Magnus lift from the backspin holds it up. The spin decays, so the BB flies flat
- * over mid-range and then drops away. BB weight matters as at a real site: from the same replica a
- * lighter BB leaves faster but loses speed sooner and is lifted harder by the same hop, a heavier one the
- * other way round. Fun and readability beat simulation where they conflict (see `dragArea`).
+ * BB flight model (M30): a 6 mm plastic sphere in air, from the fluid dynamics of a spinning ball. Four forces act on it:
+ * gravity; drag along the airflow, ½·ρ·Cd·A·v², with Cd read from the Reynolds number (sim/air.ts); Magnus lift
+ * from the hop-up's backspin, ½·ρ·CL·A·v² across the airflow, with CL from the spin ratio ω·r / v; and the wind, since
+ * drag and lift both act on the BB's speed relative to the air. The backspin itself decays under the air's friction
+ * torque. So a hopped BB flies flat while its spin still holds it up, then drops away as it slows, and a breeze drifts
+ * it most at the end of a long shot. BB weight matters as at a real site: from the same replica a lighter BB leaves
+ * faster but loses speed sooner and is lifted harder by the same hop, a heavier one the other way round.
  */
 export interface BallisticsConfig {
   gravity: number;
+  /** The air the BBs fly through: sea-level air at a mild day's temperature. Density and viscosity follow from it. */
+  air: AirConfig;
+  /** BB diameter (m): 5.95 mm, the standard airsoft BB (the barrel is 6.01–6.08 mm). */
+  bbDiameter: number;
   /**
-   * Air drag of a 6 mm BB, ½·ρ·Cd·A (kg/m): deceleration = dragArea / mass · speed². About 60% of a real
-   * BB's (~8e-6 kg/m): real BBs slow down so much that the arc would need far more hop to stay readable
-   * across a CQB field; this keeps visible travel time (~0.47 s to 30 m) without that.
+   * Backspin (rad/s) per unit of hop-up a replica gives (`hopUpLift`, its hopUpMax × the dial). The rifle's factory
+   * setting (0.195) spins a BB at about 975 rad/s (9,300 rpm). Tuned so the factory dials keep the rifle on target to
+   * ~38 m and the pistol to ~26 m, as before M30.
    */
-  dragArea: number;
+  spinPerHop: number;
   /**
-   * The BB weight replicas' hop-up and spin are tuned against (kg). A replica's hop-up lift lifts a BB of this
-   * weight; a lighter BB is lifted harder, a heavier one less (lift force / mass), and spin lasts longer
-   * on a heavier BB.
+   * The Magnus lift coefficient's fit to the spin ratio S = ω·r / v: CL = S / (liftBase + liftSlope · S). Linear
+   * (CL ≈ S) at the small spin ratios a hop-up gives, levelling off near 0.5 at high spin, the shape measured on
+   * spinning spheres.
    */
-  referenceMass: number;
-  /** Hop-up spin decays as exp(-age / decay), decay = spinDecayTime × mass / referenceMass (s). */
-  spinDecayTime: number;
+  liftBase: number;
+  liftSlope: number;
+  /**
+   * The air's friction torque on the spinning BB, as a moment coefficient per unit spin ratio (CM = spinFriction · S).
+   * Spin then decays at 1.25 · ρ · A · spinFriction · v / m per second: faster while the BB is fast, slower on a
+   * heavier BB (a 0.25 g BB at 80 m/s loses about half its spin in a second).
+   */
+  spinFriction: number;
   /** Seconds before an unhit BB is removed. */
   maxLifetime: number;
   /** Size of the BB pool (maximum BBs in flight at once). */
   maxBBs: number;
   ricochet: RicochetConfig;
+}
+
+/** The air's state; density from the ideal gas law, viscosity from Sutherland's law (sim/air.ts). */
+export interface AirConfig {
+  /** °C. */
+  temperature: number;
+  /** Pa (sea level: 101,325). */
+  pressure: number;
+}
+
+/**
+ * A breeze across the field, the same for the whole match and new each match (M30). It moves only BBs (and the dust in
+ * the air), never players. Its strength is picked between `minSpeed` and `maxSpeed` from the match's seed, from any
+ * direction, then gusts a little round that: two slow waves on its strength and one on its direction.
+ */
+export interface WindConfig {
+  /** m/s: calm air to a light breeze (Beaufort 1–2), measured at head height. */
+  minSpeed: number;
+  maxSpeed: number;
+  /** How much the strength gusts, as a share of it (0: steady). */
+  gust: number;
+  /** Periods (s) of the two gust waves; not multiples of each other, so the pattern doesn't repeat soon. */
+  gustPeriods: readonly [number, number];
+  /** How far (radians) the direction swings either way, and over what period (s). */
+  veer: number;
+  veerPeriod: number;
 }
 
 /**
@@ -54,9 +91,12 @@ export interface RicochetConfig {
 
 export const BALLISTICS: BallisticsConfig = {
   gravity: 9.81,
-  dragArea: 5e-6,
-  referenceMass: 0.25e-3,
-  spinDecayTime: 0.5,
+  air: { temperature: 20, pressure: 101_325 },
+  bbDiameter: 5.95e-3,
+  spinPerHop: 5000,
+  liftBase: 0.981,
+  liftSlope: 2.022,
+  spinFriction: 0.05,
   maxLifetime: 2.5,
   maxBBs: 256,
   ricochet: {
@@ -69,4 +109,13 @@ export const BALLISTICS: BallisticsConfig = {
     spinKept: 0,
     liftOff: 0.002,
   },
+};
+
+export const WIND: WindConfig = {
+  minSpeed: 0.3,
+  maxSpeed: 1.8,
+  gust: 0.25,
+  gustPeriods: [7.3, 11.9],
+  veer: 0.14,
+  veerPeriod: 17.1,
 };
