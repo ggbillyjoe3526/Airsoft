@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, graphicsRow, parseStored, storedValue } from './graphics';
-import { FRAME_RATE_CAPS, QUALITY, QUALITY_FIELDS, QUALITY_PRESETS } from './render';
+import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, graphicsRow, parseStored, rowEnabled, storedValue } from './graphics';
+import { FRAME_RATE_CAPS, QUALITY, QUALITY_CHOICES, QUALITY_FIELDS, QUALITY_PRESETS } from './render';
 
 describe('the Custom graphics rows (final alpha audit section 4, UI-06)', () => {
   it('has one row for every quality setting, each with help and a cost', () => {
@@ -38,5 +38,23 @@ describe('the Custom graphics rows (final alpha audit section 4, UI-06)', () => 
   it('offers no cap first, then each frame-rate cap', () => {
     expect(FRAME_RATE_CAP_CHOICES.map((c) => c.value)).toEqual([...FRAME_RATE_CAPS]);
     expect(FRAME_RATE_CAP_CHOICES[0]).toMatchObject({ id: 'off', value: 0 });
+  });
+});
+
+describe('the shadow rows', () => {
+  it('names Shadow detail’s options after the presets that use them', () => {
+    const row = graphicsRow('shadowMapSize')!;
+    if (row.kind !== 'choice') throw new Error('Shadow detail is a choice row');
+    for (const p of QUALITY_PRESETS) {
+      if (!QUALITY[p].shadows) continue;
+      const label = QUALITY_CHOICES.find((c) => c.id === p)!.label;
+      expect(row.options.find((o) => o.value === QUALITY[p].shadowMapSize)?.label, p).toBe(label);
+    }
+  });
+
+  it('greys out the four shadow rows while Shadows is off, and only those', () => {
+    expect(GRAPHICS_ROWS.filter((r) => r.needs === 'shadows').map((r) => r.field)).toEqual(['shadowMapSize', 'shadowRadius', 'shadowFollowsView', 'figureShadows']);
+    expect(GRAPHICS_ROWS.filter((r) => !rowEnabled(r, QUALITY.low)).map((r) => r.field)).toEqual(['shadowMapSize', 'shadowRadius', 'shadowFollowsView', 'figureShadows']);
+    for (const r of GRAPHICS_ROWS) expect(rowEnabled(r, QUALITY.medium), r.field).toBe(true);
   });
 });

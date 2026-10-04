@@ -62,6 +62,12 @@ export interface Bot {
   hasLastKnown: boolean;
   lastThreatAt: number;
   suppressedAt: number;
+  /**
+   * Heard while fighting someone else (audit AI-15): roughly where another enemy made a noise, and when (-Infinity:
+   * nothing). Becomes the last-known spot once the bot loses its target.
+   */
+  heardOther: Vec3;
+  heardOtherAt: number;
 
   // Firing.
   burstLeft: number;
@@ -88,6 +94,28 @@ export interface Bot {
   /** Seconds stood at the lane point just reached (the hold there counts), and whether to wait for teammates. */
   teamWait: number;
   waitForTeam: boolean;
+  /** Holding still this tick: at a lane point (hold or team wait), or at a defender's post (AI-02). */
+  holding: boolean;
+  /** Whether to crouch while holding here: decided once per hold by one ray towards the enemy side (AI-02). */
+  holdCrouch: boolean;
+  /** A defender settled at its post last tick: its holdCrouch was chosen on arrival and stands until it leaves (AI-02). */
+  atPost: boolean;
+  /** On the way to cover by the lane point just reached, to hold from there (AI-02). */
+  holdCover: boolean;
+  holdSpot: CoverSpot;
+  /** End of a search with nobody found (AI-14): seconds left looking round, and the heading it arrived on. */
+  searchLookLeft: number;
+  searchLookTime: number;
+  searchLookYaw: number;
+  /** Flanking a search (AI-17): going round by `flankGoal` before heading for the last-known spot. */
+  flanking: boolean;
+  flankGoal: Vec3;
+  /** Attack / Defend attacker that raises the flag (the others guard the pole from cover; set by the controller, AI-06). */
+  raiser: boolean;
+  /** Flag mode: whether `flagGoal` is a guard spot (not by the pole), and for which raiser state it was picked. */
+  flagGuard: boolean;
+  /** No route search for this bot before this time (s): its last one found no way (AI-07). */
+  routeRetryAt: number;
   route: Vec3[];
   routeLeg: number;
   routeGoal: Vec3;
@@ -160,6 +188,10 @@ export interface BotWorld {
   huntPoint(bot: Bot, out: Vec3): boolean;
   /** True if `bot` is more than teamSpread ahead (towards the enemy side) of its rearmost bot teammate. */
   aheadOfTeam(bot: Bot): boolean;
+  /** Counts `point`'s hunt sector as just checked by `bot`'s team (a spot it found no route to, AI-07). */
+  markVisited(bot: Bot, point: Vec3): void;
+  /** Every bot in the match (teammates' cover spots and lane holds, AI-01). */
+  bots: readonly Bot[];
   /** Simulation time now (s). */
   time: number;
   /** False after the round is decided (cease-fire). */
@@ -185,6 +217,8 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     hasLastKnown: false,
     lastThreatAt: Number.NEGATIVE_INFINITY,
     suppressedAt: Number.NEGATIVE_INFINITY,
+    heardOther: vec3(),
+    heardOtherAt: Number.NEGATIVE_INFINITY,
     burstLeft: 0,
     pauseLeft: 0,
     lane: 0,
@@ -200,6 +234,19 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     holdLeft: 0,
     teamWait: 0,
     waitForTeam: false,
+    holding: false,
+    holdCrouch: false,
+    atPost: false,
+    holdCover: false,
+    holdSpot: createCoverSpot(),
+    searchLookLeft: 0,
+    searchLookTime: 0,
+    searchLookYaw: 0,
+    flanking: false,
+    flankGoal: vec3(),
+    raiser: false,
+    flagGuard: false,
+    routeRetryAt: Number.NEGATIVE_INFINITY,
     route: [],
     routeLeg: 0,
     routeGoal: vec3(),
@@ -250,6 +297,7 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.heardAt = Number.NEGATIVE_INFINITY;
   b.lastThreatAt = Number.NEGATIVE_INFINITY;
   b.suppressedAt = Number.NEGATIVE_INFINITY;
+  b.heardOtherAt = Number.NEGATIVE_INFINITY;
   b.burstLeft = 0;
   b.pauseLeft = 0;
   b.lane = lane;
@@ -263,6 +311,14 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.holdLeft = startHold;
   b.teamWait = 0;
   b.waitForTeam = false;
+  b.holding = false;
+  b.atPost = false;
+  b.holdCover = false;
+  b.searchLookLeft = 0;
+  b.flanking = false;
+  b.raiser = false;
+  b.flagGuard = false;
+  b.routeRetryAt = Number.NEGATIVE_INFINITY;
   b.routeState = 'none';
   b.route.length = 0;
   b.stuckFor = 0;
@@ -279,6 +335,21 @@ export function forgetTarget(b: Bot): void {
   b.targetId = -1;
   b.targetVisible = false;
   b.contact = undefined;
+}
+
+/**
+ * A bot done with its target (out of play, or searched for in vain) turns to the other enemy it heard while fighting
+ * (AI-15): that guess becomes its last-known spot. False if it heard nobody else lately (memoryTime).
+ */
+export function recallHeardOther(b: Bot, time: number, cfg: BotBehaviour): boolean {
+  if (time - b.heardOtherAt >= cfg.memoryTime) return false;
+  b.lastKnown.x = b.heardOther.x;
+  b.lastKnown.y = b.heardOther.y;
+  b.lastKnown.z = b.heardOther.z;
+  b.hasLastKnown = true;
+  b.heardAt = b.heardOtherAt;
+  b.heardOtherAt = Number.NEGATIVE_INFINITY;
+  return true;
 }
 
 /** When the current target was last seen, or -Infinity without one. */

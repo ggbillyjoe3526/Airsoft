@@ -4,7 +4,7 @@ import { REDUCED_MOTION } from '../config/accessibility';
 import { VIEWMODEL } from '../config/render';
 import { LOADOUT } from '../config/replicas';
 import { createArmament, fitOptics, fitParts } from '../sim/armament';
-import { buildReplicaModels, RIFLE_OPTIC, RIFLE_SCOPE } from './replicaModels';
+import { AEG_MUZZLE, buildReplicaModels, PISTOL_MUZZLE, RIFLE_OPTIC, RIFLE_SCOPE } from './replicaModels';
 import { magazineOut, magazineSwap, sprintCarry, Viewmodel } from './viewmodel';
 
 /** Each replica's typed model parts (replicaModels.ts), built apart from the viewmodel's: the same offsets. */
@@ -331,5 +331,40 @@ describe('Viewmodel reduced motion (M18)', () => {
     expect(reduced.turned).toBeCloseTo(0, 9);
     expect(reduced.kicked).toBeCloseTo(full.kicked * REDUCED_MOTION.kick, 6);
     expect(full.kicked).toBeGreaterThan(0);
+  });
+});
+
+describe('Viewmodel barrels and muzzle parts (M29b)', () => {
+  it('shows the fitted barrel and silencer and moves the muzzle out to their end; the flash hider shows as it comes', () => {
+    const vm = new Viewmodel(16 / 9, 0x3a7bd5, LOADOUT);
+    const fittedParts = [{ grip: 'none', magazine: 'standard', barrel: 'long', muzzle: 'silencer' }, { grip: 'none', magazine: 'standard', muzzle: 'silencer' }] as const;
+    const stock = createArmament(LOADOUT);
+    const fitted = createArmament(LOADOUT, [...fittedParts]);
+    const named = (name: string) => {
+      const found: THREE.Object3D[] = [];
+      vm.scene.traverse((o) => o.name === name && found.push(o));
+      return found;
+    };
+    const muzzleZ = (slot: number) => {
+      const marker = named('muzzle')[slot]!;
+      return marker.getWorldPosition(new THREE.Vector3()).applyMatrix4(marker.parent!.parent!.matrixWorld.clone().invert()).z;
+    };
+    const frame = (arm: ReturnType<typeof createArmament>) => {
+      vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
+      vm.scene.updateMatrixWorld(true);
+    };
+    frame(stock);
+    expect(named('barrel:long')[0]!.visible).toBe(false);
+    expect(named('muzzle:none')[0]!.visible).toBe(true);
+    expect(named('muzzle:silencer').every((o) => !o.visible)).toBe(true);
+    const stockZ = [muzzleZ(0), muzzleZ(1)];
+    frame(fitted);
+    expect(named('barrel:long')[0]!.visible).toBe(true);
+    expect(named('muzzle:none')[0]!.visible).toBe(false);
+    expect(named('muzzle:silencer').every((o) => o.visible)).toBe(true);
+    // Forward is -z: the muzzle now sits past the longer barrel and the silencer.
+    expect(muzzleZ(0)).toBeCloseTo(stockZ[0]! - AEG_MUZZLE.extensions.long - (AEG_MUZZLE.tips.silencer - AEG_MUZZLE.tips.none), 6);
+    expect(muzzleZ(1)).toBeCloseTo(stockZ[1]! - PISTOL_MUZZLE.tips.silencer, 6);
+    vm.dispose();
   });
 });

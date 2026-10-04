@@ -248,9 +248,10 @@ export function parseQuality(value: string | null): QualityChoice | null {
  * The automatic step-down (REN-03): while the game's own pick is in force (nothing saved, no `?quality=`), frame times
  * are watched in windows of `windowSeconds` of play; when `windows` windows in a row have a 95th percentile over
  * `p95Ms` (or over `capSlack` frames of a frame-rate cap, whichever is longer), the next preset down applies, once per
- * match, between rounds, and the HUD says so for `noticeSeconds`. It is never saved.
+ * match, between rounds, and the HUD says so for `noticeSeconds`. It is never saved. A window is slow when more than
+ * `slowShare` of its frames are over the threshold (that is what a 95th percentile over it means).
  */
-export const QUALITY_STEP_DOWN = { windowSeconds: 2, p95Ms: 20, windows: 2, capSlack: 1.25, noticeSeconds: 5 } as const;
+export const QUALITY_STEP_DOWN = { windowSeconds: 2, p95Ms: 20, slowShare: 0.05, windows: 2, capSlack: 1.25, noticeSeconds: 5 } as const;
 
 /**
  * Frame-rate cap (Settings → Graphics; REN-16, CORE-25): frames a second the game draws at most (0 = as many as the

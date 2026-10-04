@@ -45,9 +45,9 @@ export interface SimServices {
   /** Round length, pause between rounds, wins needed, flag rules. */
   rounds: RoundRules;
   /** The flagpole, at end 1 where the defenders start (map data; absent: no flag mode). */
-  pole?: Vec3;
+  pole?: Vec3 | undefined;
   /** The match's breeze (M30; createWind from the match's seed); still air without one. */
-  wind?: WindState;
+  wind?: WindState | undefined;
   /**
    * The practice range (M21): no rounds (it's always live), targets in GameState.targets, and the spare magazines
    * always full.

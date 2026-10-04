@@ -4,7 +4,8 @@ import { DEPOT } from '../map/depot';
 import { TEST_YARD } from '../map/testYard';
 import type { MapBlock, MapData } from '../map/mapTypes';
 import { type Vec3, vec3 } from '../sim/vec';
-import { buildNavGrid, clearLine, createNavSearch, dropOnLine, findPath, floorAt, isWalkableAt, nearestWalkable } from './navGrid';
+import { BODY } from '../config/movement';
+import { buildNavGrid, clearLine, createNavSearch, dropOnLine, findPath, floorAt, isWalkableAt, NAV_HEAP_PER_CELL, nearestWalkable } from './navGrid';
 
 const yard = buildNavGrid(TEST_YARD, NAV);
 const depot = buildNavGrid(DEPOT, NAV);
@@ -106,6 +107,69 @@ describe('nav grid', () => {
         for (const s of [DEPOT.spawns[0][0]!, DEPOT.spawns[1][0]!]) expect(findPath(depot, search, s.position, p, NAV.snap, path)).toBe(true);
       }
     }
+  });
+});
+
+describe('nav grid route searches (audit AI-11, AI-12)', () => {
+  /** Distance on the ground plane from (x, z) to the nearest Depot block that stands in a walker's way on the ground. */
+  const solid = DEPOT.blocks.filter((b) => b.kind !== 'ramp' && b.kind !== 'floor' && b.center.y - b.size.y / 2 < BODY.height / 2 && b.center.y + b.size.y / 2 > NAV.maxStep);
+  function toBlocks(x: number, z: number): number {
+    let m = Number.POSITIVE_INFINITY;
+    for (const b of solid) m = Math.min(m, Math.hypot(Math.max(Math.abs(x - b.center.x) - b.size.x / 2, 0), Math.max(Math.abs(z - b.center.z) - b.size.z / 2, 0)));
+    return m;
+  }
+  /** Closest any leg of the route (start first) comes to a block. */
+  function closestApproach(path: Vec3[]): number {
+    let m = Number.POSITIVE_INFINITY;
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1]!;
+      const b = path[i]!;
+      for (let t = 0; t <= 1; t += 1 / 64) m = Math.min(m, toBlocks(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t));
+    }
+    return m;
+  }
+
+  it('starts with a modest open list and grows it when a search outgrows it, instead of failing', () => {
+    const s = createNavSearch(depot);
+    expect(s.heap.length).toBe(depot.cols * depot.rows * NAV_HEAP_PER_CELL);
+    // Shrink it to a handful of slots: the spawn-to-spawn search still finds its route.
+    s.heap = new Int32Array(4);
+    s.heapF = new Float32Array(4);
+    const path: Vec3[] = [];
+    expect(findPath(depot, s, DEPOT.spawns[0][0]!.position, DEPOT.spawns[1][0]!.position, NAV.snap, path)).toBe(true);
+    expect(s.heap.length).toBeGreaterThan(4);
+    expect(s.heapF.length).toBe(s.heap.length);
+  });
+
+  it("keeps bots' route legs at least a body radius from Depot's blocks, not just the grid's cell centres", () => {
+    const s = createNavSearch(depot);
+    const path: Vec3[] = [];
+    // Two routes whose plain string-pulled legs (clearLine) pass a few millimetres inside the body (found by a sweep
+    // of 2000 routes), then a seeded sweep.
+    const pairs: [number, number, number, number][] = [
+      [3.819315647622254, 9.523805991990404, -1.5377613993071748, 9.129878249079866],
+      [-3.036300269438094, -4.436642778775022, 2.3016265818391126, -1.9000533627812057],
+    ];
+    let seed = 1;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    while (pairs.length < 150) {
+      const ax = -24 + rnd() * 48;
+      const az = -15 + rnd() * 30;
+      pairs.push([ax, az, ax - 6 + rnd() * 12, az - 6 + rnd() * 12]);
+    }
+    let checked = 0;
+    for (const [ax, az, bx, bz] of pairs) {
+      const a = vec3(ax, 0, az);
+      const b = vec3(bx, 0, bz);
+      if (!isWalkableAt(depot, ax, az) || !isWalkableAt(depot, bx, bz) || floorAt(depot, ax, az) !== 0 || floorAt(depot, bx, bz) !== 0) continue;
+      if (!findPath(depot, s, a, b, NAV.snap, path, NAV.legProbe)) continue;
+      if (path.some((p) => p.y !== 0)) continue; // ground-level routes only (the block test above is for the ground)
+      // Ends well clear of blocks, so any leg that comes close does so on the search's account.
+      if (toBlocks(ax, az) < NAV.clearance || toBlocks(bx, bz) < NAV.clearance) continue;
+      expect(closestApproach([a, ...path]), `${ax},${az} → ${bx},${bz}`).toBeGreaterThanOrEqual(BODY.radius);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(40);
   });
 });
 

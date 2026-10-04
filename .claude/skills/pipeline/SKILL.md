@@ -19,7 +19,7 @@ text under its frontmatter) at the top of the prompt, the task content last. Tel
 4. **Changelog**: spawn `changelog` with the task id, the PR title you intend, a one-paragraph diff summary and the new
    DECISIONS lines. It writes the `Unreleased` line(s) and the FEATURES line.
 5. **Full gate**: `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium node pipeline/gate.mjs --task <id>` (drop the
-   variable outside a cloud container). About five minutes. Set `status: gates`.
+   variable outside a cloud container). About five minutes, plus the perf run when it is required. Set `status: gates`.
    - Any gate `false`: fix from the report's evidence (spawn `triage` on a log longer than about 60 lines first),
      count an attempt in the block's `attempts:` line, go to 2. No critic on a failed gate.
    - `perf` ran: spawn `performance` with the env, so its diff review and ranking are on file. A regression it
@@ -32,7 +32,9 @@ text under its frontmatter) at the top of the prompt, the task content last. Tel
    `docs/KNOWN_ISSUES.md`; otherwise stop, keep the best attempt on the branch and reply to the owner with what failed
    and what each attempt tried.
 8. **Record**: the REVIEWS line (`<id> · <attempts> attempts · <score> · <verdict>`), the ROADMAP row's status, a
-   METRICS row per attempt (`docs/METRICS.md`), the task block's status `done`. Copy `pipeline/out/gate-report.json`,
+   METRICS row per attempt (`docs/METRICS.md`), and delete the task block from `docs/TASKS.md` (no `done` blocks stay
+   behind; CI's scope gate finds the block in the branch's history). Copy `pipeline/out/gate-report.json`,
    `critic.md` and the triaged summaries to the project's shared files under `pipeline/runs/<id>/attempt-<n>/`.
-9. **Ship**: merge `origin/main` in, push, open the PR (template in `pipeline/README.md`), subscribe to it, and once
-   CI is green merge it (the owner's standing choice, 2026-10-04). Then delete the task block from TASKS.md.
+9. **Ship**: merge `origin/main` in, push, open the PR (template in `pipeline/README.md`; its title starts with the
+   task id, `<id>: …`, so CI runs the scope and changelog gates), subscribe to it, and once CI is green merge it (the
+   owner's standing choice, 2026-10-04).

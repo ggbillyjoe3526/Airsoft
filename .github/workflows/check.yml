@@ -1,11 +1,16 @@
 # Runs the project's own checks on every pull request and every push to main through the pipeline's gate script:
-# the production build with its type check, the unit tests, then the browser smoke test (pipeline/README.md).
+# the production build with its type check, the unit tests, then the browser smoke test (pipeline/README.md). On a pull
+# request whose title starts with its task id(s) ("FA12: …", "FA5 + FA9: …") it also runs the scope and changelog gates
+# (audit CORE-08). What runs only on a worker's machine or the owner's: the perf gate (no baseline or GPU on a runner),
+# the frame-time budget (the owner's laptop, by hand) and the critic.
 name: Check
 
 on:
   push:
     branches: [main]
   pull_request:
+    # `edited` too, so renaming a pull request's title (its task ids) runs the scope and changelog gates again.
+    types: [opened, synchronize, reopened, edited]
 
 # A newer push to a pull request cancels its older run. Pushes to main are grouped by commit, so no run on main is
 # cancelled (GitHub drops a pending run in the same group whatever cancel-in-progress says) and every merge shows
@@ -20,18 +25,22 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # The headless bot-match tests (src/ai/depotMatch*.test.ts, ~175 s of work in all) are split into files of at
-    # most ~40 s each (measured locally 2026-10-04) that vitest runs in parallel; CI runners are slower.
+    # The headless bot-match tests (src/ai/depotMatch*.test.ts) are the longest part of the unit suite (about 200 s of
+    # work in all, a few files over 40 s each, measured locally 2026-10-04; audit CORE-15 is to shorten them); vitest
+    # runs them in parallel, and CI runners are slower.
     timeout-minutes: 20
     steps:
+      # The whole history, so the scope gate can diff the pull request against its base and find the task block a
+      # branch cleared before merging (pipeline/scope.mjs).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      # Playwright's Chromium is cached per lockfile (the Playwright version pins the browser build); the system
-      # libraries it needs are installed every run, since they live outside the cache.
+      # Playwright's Chromium is cached per lockfile (the Playwright version pins the browser build).
       - name: Cache the Playwright browser
         id: playwright-cache
         uses: actions/cache@v4
@@ -40,10 +49,23 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install chromium
-      - run: npx playwright install-deps chromium
-      # The pipeline's gate script (pipeline/README.md) runs the same checks as before, `npm run check` and the smoke
-      # test, and writes pipeline/out/gate-report.json with pass / fail per gate; no perf gate on a runner (no baseline).
-      - run: node pipeline/gate.mjs --ci
+      # The system libraries it needs live outside that cache. The runner's image usually has them already, so apt runs
+      # (about a minute) only when the cached browser can't start without them (audit CORE-14).
+      - name: Playwright's system libraries, only when missing
+        run: |
+          if node -e "import('@playwright/test').then(({ chromium }) => chromium.launch()).then((b) => b.close())"; then
+            echo "Chromium starts; no system libraries to install"
+          else
+            npx playwright install-deps chromium
+          fi
+      # The pipeline's gate script (pipeline/README.md): the production build, the unit tests, the smoke test (which
+      # builds the e2e bundle once and loads the production build too), and on a pull request the scope and changelog
+      # gates for the task ids its title starts with. Writes pipeline/out/gate-report.json with pass / fail per gate.
+      # A pull request is checked out as its merge commit, whose first parent is the base it would merge into.
+      - name: Gates
+        env:
+          GATE_PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node pipeline/gate.mjs --ci ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '' }}
       - name: Upload the gate report, the test reports and the smoke test report (screenshot inside)
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

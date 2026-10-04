@@ -333,11 +333,34 @@ export const RIFLE_OPTIC = { axisUp: 0.126, from: -0.005, length: 0.07, outer: 0
 export const RIFLE_SCOPE = { from: -0.01, length: 0.11, outer: 0.014, inner: 0.012, bellLength: 0.035, bellOuter: 0.022, eyeLength: 0.03 } as const;
 
 /**
- * Draws one fitted part (an optic, a grip, a magazine, the laser) into its own builder. Every part the Loadout can fit
- * has an entry in its replica's table below, by name; a new part (a barrel or a silencer when they get models) is one
- * more entry, drawn the same way (the table keys are the viewmodel's 'kind:id' names).
+ * Where a model's muzzle end is (M29b), forward from its origin (m): where its standard barrel ends and how high its bore
+ * sits, how much further a longer barrel reaches, and how far beyond the barrel's end each muzzle device ('none': as it
+ * comes) puts the muzzle.
+ */
+export interface MuzzleLayout {
+  barrelEnd: number;
+  up: number;
+  extensions: Readonly<Record<string, number>>;
+  tips: Readonly<Record<string, number>>;
+}
+
+/** The AEG's: a 0.1 m longer barrel; the flash hider 4.6 cm long, a silencer 12 cm. */
+export const AEG_MUZZLE = { barrelEnd: 0.565, up: 0.034, extensions: { long: 0.1 }, tips: { none: 0.046, silencer: 0.12 } } satisfies MuzzleLayout;
+/** The pistol's: no barrel swap; a silencer 10 cm. */
+export const PISTOL_MUZZLE = { barrelEnd: 0.104, up: 0.015, extensions: {}, tips: { none: 0, silencer: 0.1 } } satisfies MuzzleLayout;
+
+/**
+ * Draws one fitted part (an optic, a grip, a magazine, the laser, a barrel) into its own builder. Every part the Loadout
+ * can fit has an entry in its replica's table below, by name (the table keys are the viewmodel's 'kind:id' names); muzzle
+ * devices have their own table, drawn on the muzzle mount.
  */
 type PartDraw = (b: ModelBuilder) => void;
+
+/**
+ * Draws a muzzle device (M29b) on the mount: from 0 (the fitted barrel's end) forward along the bore (`up` high), its
+ * tip painted orange with `orangeTip`.
+ */
+type MuzzleDraw = (b: ModelBuilder, orangeTip: boolean) => void;
 
 /** The red dot: a tall riser mount clamped to the rail under a tube you look through (front lens faintly tinted). */
 function redDot(b: ModelBuilder): void {
@@ -502,19 +525,103 @@ function redLaser(b: ModelBuilder): void {
 /** Where the laser's lens is (forward, up): the beam starts there. */
 const PISTOL_LASER_LENS: Pt = [0.093, -0.034];
 
+/** Where the AEG's gas block ends and its bare outer barrel shows, forward (m). */
+const AEG_GAS_BLOCK_END = 0.455;
+
+/** Dark flutes cut along a barrel from `from` to `to`: one on top, one each side (high detail). */
+function flutes(b: ModelBuilder, from: number, to: number, up: number, radius: number): void {
+  const B = F.barrel;
+  b.box('rubber', from, to, up + radius - B.fluteDepth, up + radius + B.fluteDepth, B.fluteWidth);
+  for (const side of [-1, 1]) b.box('rubber', from, to, up - B.fluteWidth / 2, up + B.fluteWidth / 2, B.fluteDepth * 2, side * radius);
+}
+
+/**
+ * The long barrel (M29b): the outer barrel carried 0.1 m further, the muzzle mount moved to its end. High: a steel
+ * coupling collar with two wrench flats where it joins, and fluting along it.
+ */
+function longBarrel(b: ModelBuilder): void {
+  const { barrelEnd: end, up, extensions } = AEG_MUZZLE;
+  const B = F.barrel;
+  b.tube('metal', end, extensions.long, up, B.radius);
+  if (!b.high) return;
+  b.tube('metal', end - B.collar / 2, B.collar, up, B.collarRadius, B.segments);
+  for (const side of [-1, 1]) b.box('rubber', end - B.collar / 2 + 0.002, end + B.collar / 2 - 0.002, up - 0.004, up + 0.004, 0.001, side * B.collarRadius);
+  flutes(b, end + B.collar, end + extensions.long - B.collar, up, B.radius);
+}
+
+/**
+ * The tight-bore barrel (M29b): a precision inner barrel the same length, shown by a heavier steel sleeve over the outer
+ * barrel between the gas block and the flash hider. High: a tan index band at the gas block, fluting and a crown ring.
+ */
+function tightBoreBarrel(b: ModelBuilder): void {
+  const { barrelEnd: end, up } = AEG_MUZZLE;
+  const B = F.barrel;
+  const from = AEG_GAS_BLOCK_END;
+  if (!b.high) {
+    b.tube('metal', from, end - from, up, B.sleeveRadius, 10);
+    return;
+  }
+  b.tube('metal', from, end - from, up, B.sleeveRadius, B.segments);
+  b.tube('furniture', from + 0.004, 0.005, up, B.sleeveRadius + 0.0006, B.segments);
+  flutes(b, from + 0.014, end - B.collar - 0.004, up, B.sleeveRadius);
+  b.tube('metal', end - B.collar, B.collar, up, B.collarRadius, B.segments);
+}
+
+
+/** The AEG's birdcage flash hider (as it comes: 'muzzle:none'). High: its slots. */
+function flashHider(b: ModelBuilder, orangeTip: boolean): void {
+  const up = AEG_MUZZLE.up;
+  b.tube(orangeTip ? 'orange' : 'metal', 0, 0.016, up, 0.013, 10);
+  b.tube(orangeTip ? 'orange' : 'polymer', 0.016, 0.03, up, 0.012, 6);
+  if (b.high) for (const side of [-1, 1]) b.box('rubber', 0.021, 0.041, up - 0.003, up + 0.003, 0.002, side * 0.0115);
+}
+
+/**
+ * A silencer (M29b) `length` long and `radius` round, its front `cap` orange with `orangeTip`. High: a steel thread
+ * adapter at the back, stepped steel end caps, two stippled rubber grip bands and the dark bore at the front.
+ */
+function silencer(layout: MuzzleLayout, radius: number, cap: number): MuzzleDraw {
+  const length = layout.tips.silencer ?? 0;
+  const up = layout.up;
+  return (b, orangeTip) => {
+    if (!b.high) {
+      b.tube('polymer', 0, length - cap, up, radius, 16);
+      b.tube(orangeTip ? 'orange' : 'polymer', length - cap, cap, up, radius, 16);
+      return;
+    }
+    const S = F.silencer;
+    const capRadius = radius - S.capStep;
+    b.tube('metal', 0, S.adapter, up, radius * S.adapterShare, S.segments);
+    b.tube('metal', S.adapter, cap, up, capRadius, S.segments);
+    b.tube('polymer', S.adapter + cap, length - S.adapter - cap * 2, up, radius, S.segments);
+    b.tube(orangeTip ? 'orange' : 'metal', length - cap, cap, up, capRadius, S.segments);
+    for (const at of [S.adapter + cap + S.bandInset, length - cap - S.bandInset - S.band]) b.tube('rubber', at, S.band, up, radius + S.bandProud, S.segments);
+    b.tube('rubber', length - S.boreDepth, S.boreDepth + 0.0005, up, radius * S.boreShare, 12);
+  };
+}
+
 /** The rifle's parts by name (M17b), each drawn on demand; the Loadout's names are the keys. */
 const AEG_PARTS: Readonly<Record<string, PartDraw>> = {
   'optic:redDot': redDot,
   'optic:scope2x': scope2x,
   'grip:vertical': verticalGrip,
   'grip:angled': angledGrip,
+  'barrel:long': longBarrel,
+  'barrel:tightBore': tightBoreBarrel,
 };
 const AEG_MAGAZINES: Partial<Record<MagazineId, PartDraw>> = { standard: aegStandardMag, hiCap: aegHiCap, lowCap: aegLowCap };
+/** The muzzle devices by id ('none': the bare muzzle's own), drawn on the mount. */
+const AEG_MUZZLE_DEVICES: Readonly<Record<string, MuzzleDraw>> = { none: flashHider, silencer: silencer(AEG_MUZZLE, 0.019, 0.006) };
 const PISTOL_PARTS: Readonly<Record<string, PartDraw>> = { 'laser:redLaser': redLaser };
 const PISTOL_MAGAZINES: Partial<Record<MagazineId, PartDraw>> = { standard: pistolStandardMag, extended: pistolExtendedMag };
+/** A silencer a little narrower than the slide; the bare muzzle has no device of its own. */
+const PISTOL_MUZZLE_DEVICES: Readonly<Record<string, MuzzleDraw>> = { silencer: silencer(PISTOL_MUZZLE, 0.0135, 0.005) };
 
 /** Every part a replica's table draws, built and named (exported for the tests: one builder per entry). */
-export const REPLICA_PART_TABLES = { aeg: { parts: AEG_PARTS, magazines: AEG_MAGAZINES }, pistol: { parts: PISTOL_PARTS, magazines: PISTOL_MAGAZINES } } as const;
+export const REPLICA_PART_TABLES = {
+  aeg: { parts: AEG_PARTS, magazines: AEG_MAGAZINES, muzzles: AEG_MUZZLE_DEVICES },
+  pistol: { parts: PISTOL_PARTS, magazines: PISTOL_MAGAZINES, muzzles: PISTOL_MUZZLE_DEVICES },
+} as const;
 
 /**
  * AR-pattern AEG in two-tone: black upper and lower receiver, tan stock, grip, handguard and magazine.
@@ -554,10 +661,9 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   if (b.high) for (const side of [-1, 1]) b.sideRail(0.27, 0.39, 0.034, side, 0.029);
   // Barrel, low-profile gas block (the front sight is a flip-up on the rail), flash hider.
   b.tube('metal', 0.4, 0.165, 0.034, 0.009);
-  b.box('polymer', 0.43, 0.455, 0.022, 0.05, 0.03);
-  b.tube(orangeTip ? 'orange' : 'metal', 0.565, 0.016, 0.034, 0.013, 10);
-  b.tube(orangeTip ? 'orange' : 'polymer', 0.581, 0.03, 0.034, 0.012, 6);
-  if (b.high) for (const side of [-1, 1]) b.box('rubber', 0.586, 0.606, 0.031, 0.037, 0.002, side * 0.0115); // the flash hider's slots
+  b.box('polymer', 0.43, AEG_GAS_BLOCK_END, 0.022, 0.05, 0.03);
+  // The muzzle end (M29b) is drawn from the part tables: a fitted barrel, and the flash hider or a silencer on the
+  // muzzle mount, which moves out to the fitted barrel's end.
   // Buffer tube, collapsible stock, butt pad.
   b.tube('polymer', -0.27, 0.17, 0.032, 0.016);
   b.profile('furniture', [[-0.2, 0.056], [-0.33, 0.06], [-0.336, -0.056], [-0.31, -0.064], [-0.236, -0.012], [-0.2, 0.0]], 0.044, 0.012);
@@ -608,9 +714,9 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   group.add(supportHand.group);
   group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'));
   for (const [name, draw] of Object.entries(AEG_PARTS)) group.add(drawnPart(draw, m, detail, name));
-  const muzzle = muzzleMarker(0.611, 0.034);
-  group.add(muzzle);
-  return { group, muzzle, magazine, supportHand };
+  const mount = muzzleMount(AEG_MUZZLE, AEG_MUZZLE_DEVICES, m, detail, orangeTip);
+  group.add(mount.group);
+  return { group, muzzle: mount.marker, magazine, supportHand, mount };
 }
 
 /** Polymer striker-fired gas pistol in two-tone: black slide over a tan frame with an accessory rail. */
@@ -671,9 +777,10 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
   // From the side of the grip down to the magazine's base plate.
   const supportHand = supportHandPart(support, m, [0.004, -0.068, -0.024]);
   group.add(supportHand.group);
-  const muzzle = muzzleMarker(0.104, 0.015);
-  group.add(muzzle);
-  return { group, muzzle, magazine, supportHand };
+  // A silencer screwed onto the threaded barrel (M29b), from the muzzle-device table.
+  const mount = muzzleMount(PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, m, detail, orangeTip);
+  group.add(mount.group);
+  return { group, muzzle: mount.marker, magazine, supportHand, mount };
 }
 
 /**
@@ -701,10 +808,18 @@ function laserBeam(lens: Pt): THREE.LineSegments {
  */
 export interface ReplicaModel {
   group: THREE.Group;
-  /** Empty marker at the muzzle, where visual BBs start. */
+  /** Empty marker at the muzzle, where visual BBs start (on the muzzle mount: it follows the fitted barrel and device). */
   muzzle: THREE.Object3D;
   magazine: MagazinePart;
   supportHand: SupportHandPart;
+  mount: MuzzleMount;
+}
+
+/** The muzzle mount (named 'muzzleMount'): the muzzle devices and the muzzle marker, moved out to the fitted barrel's end. */
+export interface MuzzleMount {
+  group: THREE.Group;
+  marker: THREE.Object3D;
+  layout: MuzzleLayout;
 }
 
 /** The magazine group (named 'magazine'), which slides out along `axis` (the magwell, a unit vector) on a reload. */
@@ -840,6 +955,34 @@ function drawnPart(draw: PartDraw, m: Record<MaterialKey, THREE.Material>, detai
   const b = new ModelBuilder(detail);
   draw(b);
   return namedPart(b, m, name);
+}
+
+/**
+ * The muzzle mount at the standard barrel's end: the device parts (named 'muzzle:<id>', drawn from its table from 0
+ * forward on the bore's axis) and the muzzle marker, at the bare muzzle's tip. The viewmodel moves the mount and the
+ * marker to what is fitted (`fitMuzzle`).
+ */
+function muzzleMount(
+  layout: MuzzleLayout,
+  devices: Readonly<Record<string, MuzzleDraw>>,
+  m: Record<MaterialKey, THREE.Material>,
+  detail: ReplicaDetail,
+  orangeTip: boolean,
+): MuzzleMount {
+  const group = new THREE.Group();
+  group.name = 'muzzleMount';
+  for (const [id, draw] of Object.entries(devices)) group.add(drawnPart((b) => draw(b, orangeTip), m, detail, `muzzle:${id}`));
+  const marker = muzzleMarker(layout.tips.none ?? 0, layout.up);
+  group.add(marker);
+  group.position.z = -layout.barrelEnd;
+  return { group, marker, layout };
+}
+
+/** Moves a mount (and its muzzle marker) to the end of the fitted barrel and device; null for as it comes. */
+export function fitMuzzle(mount: MuzzleMount, barrel: string | null, device: string | null): void {
+  const l = mount.layout;
+  mount.group.position.z = -(l.barrelEnd + (barrel ? (l.extensions[barrel] ?? 0) : 0));
+  mount.marker.position.z = -(l.tips[device ?? 'none'] ?? l.tips.none ?? 0);
 }
 
 /** Empty marker at the muzzle (forward, up) so presentation can start visual BBs there. */

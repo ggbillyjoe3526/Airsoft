@@ -37,6 +37,18 @@ export const REPLICA_FINISH = {
   /** Real rail slots: a tooth every `pitch`, `tooth` long. */
   rail: { pitch: 0.01, tooth: 0.005 },
   /**
+   * The AEG's swapped barrels (M29b): the outer barrel's `radius` (a long barrel carries it on), the tight-bore's heavier
+   * steel `sleeveRadius`; on high, a `collar` that long and round where a barrel joins or is crowned, dark flutes
+   * `fluteWidth` wide and `fluteDepth` deep, and `segments` round.
+   */
+  barrel: { radius: 0.009, sleeveRadius: 0.0105, collar: 0.012, collarRadius: 0.0118, fluteWidth: 0.003, fluteDepth: 0.0006, segments: 16 },
+  /**
+   * A silencer on high (M29b): a steel thread `adapter` this long at `adapterShare` of its radius, end caps `capStep`
+   * narrower than the body, two rubber grip bands `band` long `bandInset` from the caps and `bandProud` proud, the dark
+   * bore at the front (`boreShare` of its radius, `boreDepth` deep), `segments` round.
+   */
+  silencer: { adapter: 0.008, adapterShare: 0.66, capStep: 0.0015, band: 0.012, bandInset: 0.006, bandProud: 0.0005, boreShare: 0.35, boreDepth: 0.002, segments: 24 },
+  /**
    * The laser beam (QualitySettings.laserBeam, off on every preset): a line from the lens this long in the viewmodel's
    * space, fading out, at this opacity (additive). No dot is drawn in the world yet, so it stops short of anything.
    */

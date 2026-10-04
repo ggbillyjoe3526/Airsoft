@@ -51,6 +51,74 @@ export function warmSurfacesInIdle(
   });
 }
 
+/** A renderer's own record of each material (WebGLRenderer.properties): the uniforms it binds, its own textures among them. */
+export interface RendererProperties {
+  get(object: object): unknown;
+}
+
+/** What `handOverRenderer` needs of a WebGL renderer (a stub stands in for it in tests). */
+export interface RetiringRenderer {
+  readonly domElement: { replaceWith(next: HTMLCanvasElement): void };
+  readonly properties: RendererProperties;
+  dispose(): void;
+  forceContextLoss(): void;
+}
+
+/**
+ * Lets go of everything a WebGL renderer has seen under `root`: each geometry, material, texture (a material's maps and
+ * a shader's texture uniforms, a scene's background and environment), instanced mesh and light shadow map is disposed,
+ * which drops the renderer's GPU copy and the dispose listener it keeps on the object. With the renderer's `properties`,
+ * the textures it binds to a material by itself go too (Three's shared DFG lookup table for standard materials, which
+ * would otherwise keep every old renderer alive). Nothing on the CPU side is lost: the next renderer to draw them uploads
+ * them again from their copies (a shadow map is made again).
+ */
+export function releaseGpuResources(root: THREE.Object3D, properties?: RendererProperties): void {
+  if (root instanceof THREE.Scene) {
+    disposeIfTexture(root.background);
+    disposeIfTexture(root.environment);
+  }
+  root.traverse((o) => {
+    if (o instanceof THREE.InstancedMesh) o.dispose();
+    const { geometry, material } = o as Partial<THREE.Mesh>;
+    geometry?.dispose();
+    if (material) for (const m of Array.isArray(material) ? material : [material]) releaseMaterial(m, properties);
+    const shadow = (o as Partial<THREE.DirectionalLight>).shadow;
+    if (shadow?.map) {
+      shadow.map.dispose();
+      shadow.map = null;
+    }
+  });
+}
+
+function releaseMaterial(material: THREE.Material, properties: RendererProperties | undefined): void {
+  for (const value of Object.values(material)) disposeIfTexture(value);
+  disposeUniformTextures((material as Partial<THREE.ShaderMaterial>).uniforms);
+  disposeUniformTextures((properties?.get(material) as { uniforms?: Record<string, THREE.IUniform> } | undefined)?.uniforms);
+  material.dispose();
+}
+
+function disposeUniformTextures(uniforms: Record<string, THREE.IUniform> | undefined): void {
+  if (uniforms) for (const u of Object.values(uniforms)) disposeIfTexture(u.value);
+}
+
+function disposeIfTexture(value: unknown): void {
+  if (value instanceof THREE.Texture) value.dispose();
+}
+
+/**
+ * Antialiasing's context swap (REN-04, REN-24): `next` takes `old`'s place on the page, and `old` is freed with its
+ * context. Three.js keeps a dispose listener (holding its renderer) on every geometry, material, texture, instanced mesh
+ * and render target it has drawn, and never removes them on its own dispose(): without releasing `roots` first, every
+ * swap would keep the old renderer, its lost context and its canvas alive for as long as the scene lives.
+ */
+export function handOverRenderer(old: RetiringRenderer, next: { domElement: HTMLCanvasElement }, roots: readonly THREE.Object3D[]): void {
+  for (const root of roots) releaseGpuResources(root, old.properties);
+  old.domElement.replaceWith(next.domElement);
+  old.dispose();
+  // Frees the context at once rather than when the canvas is collected (REN-24): browsers cap live contexts.
+  old.forceContextLoss();
+}
+
 /** Owns the WebGL renderer, main camera and scene. Handles resizing. */
 export class Renderer {
   /** The WebGL renderer: replaced (a new canvas and context) when antialiasing is turned on or off (setQuality). */
@@ -81,6 +149,8 @@ export class Renderer {
    * for the built-in figures. Shared by every match and freed with the renderer.
    */
   figureModel: FigureModel | null = null;
+  /** The overlay scene drawn last frame (the held replica), released with the world when the context is swapped. */
+  private overlayScene: THREE.Scene | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
 
@@ -237,6 +307,7 @@ export class Renderer {
     gl.info.reset();
     gl.autoClear = true;
     gl.render(this.scene, this.camera);
+    this.overlayScene = overlay?.scene ?? null;
     if (overlay) {
       gl.autoClear = false;
       gl.clearDepth();
@@ -290,9 +361,13 @@ export class Renderer {
     this.unlisten(old.domElement);
     // The sheen's target is freed by the context that made it; the session asks for a new one (contextRestored).
     this.sheen.dispose();
-    old.domElement.replaceWith(next.domElement);
-    old.dispose();
-    old.forceContextLoss();
+    // Everything the old renderer has drawn (or uploaded ahead, the surface textures) lets go of it (REN-24).
+    const roots: THREE.Object3D[] = [this.scene];
+    if (this.overlayScene) roots.push(this.overlayScene);
+    const figure = this.figureModel;
+    if (figure) for (const part of [...Object.values(figure.parts), figure.whole]) if (part) roots.push(part);
+    if (this.surfaces) for (const t of Object.values(this.surfaces)) t.texture.dispose();
+    handOverRenderer(old, next, roots);
     this.gl = next;
     this.contextAntialias = antialias;
     this.listen(next.domElement);

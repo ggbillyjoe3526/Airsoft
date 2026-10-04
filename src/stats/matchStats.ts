@@ -40,6 +40,8 @@ export class MatchStats {
   private readonly match = new Map<number, PlayerStats>();
   private readonly round = new Map<number, PlayerStats>();
   private readonly teamOf = new Map<number, number>();
+  /** Rounds each player's team won that the player took part in (audit POOL-08). */
+  private readonly roundsWonWith = new Map<number, number>();
   /** Goes up whenever a count changes (not the time alive): the tables redraw on it. */
   version = 0;
 
@@ -71,6 +73,12 @@ export class MatchStats {
         this.version++;
       } else if (e.type === 'shot') {
         this.add(e.characterId, 'bbsFired');
+      } else if (e.type === 'roundOver') {
+        // A round won counts for a player who hit an opponent in it or was still in play when it ended.
+        for (const c of state.characters) {
+          if (c.team !== e.winner || !(this.roundOf(c.id).hits > 0 || isInPlay(c))) continue;
+          this.roundsWonWith.set(c.id, (this.roundsWonWith.get(c.id) ?? 0) + 1);
+        }
       } else if (e.type === 'characterHit') {
         this.add(e.victimId, 'timesHit');
         // Your own ricochet (audit SIM-07) is a time you were hit, not a hit you scored on anyone.
@@ -88,8 +96,14 @@ export class MatchStats {
     }
   }
 
+  /** Rounds `id`'s team won with `id` taking part: a hit on an opponent in the round, or still in play at its end. */
+  roundsContributed(id: number): number {
+    return this.roundsWonWith.get(id) ?? 0;
+  }
+
   /** Everything back to zero: a new match ("Play Again"). */
   reset(): void {
+    this.roundsWonWith.clear();
     for (const s of this.match.values()) clear(s);
     for (const s of this.round.values()) clear(s);
     this.version++;

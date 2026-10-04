@@ -13,7 +13,7 @@ import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
 import { buildNavGrid } from '../nav/navGrid';
 import { PhysicsWorld } from '../physics/physicsWorld';
-import { createCharacter, respawnCharacter } from '../sim/character';
+import { type Character, createCharacter, respawnCharacter } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createWind } from '../sim/wind';
@@ -47,6 +47,8 @@ export function playMatch(
   teamSize: number = ROUNDS.teamSize,
   hits: HitConfig = HITS,
   onTick: (state: GameState, bots: BotController) => void = () => {},
+  /** Who carries something other than the default loadout (a bot's rolled kit, M29b): its character, or undefined for the default. */
+  carry: (id: number, team: number) => Character | undefined = () => undefined,
 ) {
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
@@ -71,7 +73,10 @@ export function playMatch(
   });
   let id = 0;
   for (let team = 0; team < 2; team++) {
-    for (let i = 0; i < (hider && team === 0 ? 1 : teamSize); i++) state.characters.push(createCharacter(id++, vec3(), 0, LOADOUT, team));
+    for (let i = 0; i < (hider && team === 0 ? 1 : teamSize); i++) {
+      state.characters.push(carry(id, team) ?? createCharacter(id, vec3(), 0, LOADOUT, team));
+      id++;
+    }
   }
   // Round 1 as the game starts it: each team at its end; a hider stands at its spot instead.
   placeTeams(state.round, state.characters, ctx.round);
@@ -186,6 +191,19 @@ export function playMatch(
 }
 
 export type MatchStats = ReturnType<typeof playMatch>;
+
+/**
+ * Per finished round, whether it was played after half-time. A drawn round is played again under the same number
+ * (audit SIM-19), so only decided rounds count towards half-time.
+ */
+export function playedAfterHalfTime(results: readonly { winner: number }[], rules: RoundRules = ROUNDS): boolean[] {
+  let decided = 0;
+  return results.map((r) => {
+    const after = decided >= rules.halfTimeAfter;
+    if (r.winner >= 0) decided++;
+    return after;
+  });
+}
 
 /**
  * Nobody in play is off the ground for longer than the in-air spread's delay (a lost ground contact would

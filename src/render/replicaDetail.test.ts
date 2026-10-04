@@ -5,7 +5,7 @@ import { LOADOUT } from '../config/replicas';
 import { createArmament, fitParts } from '../sim/armament';
 import { buildHand, type GeometrySink, type HandPose } from './handModels';
 import { heightToNormal, projectSpeckleUvs, speckleHeights, speckleTextures } from './replicaFinish';
-import { buildReplicaModels, LOW_DETAIL, REPLICA_PART_TABLES, type ReplicaModels } from './replicaModels';
+import { AEG_MUZZLE, buildReplicaModels, fitMuzzle, LOW_DETAIL, PISTOL_MUZZLE, REPLICA_PART_TABLES, type ReplicaModels } from './replicaModels';
 import { Viewmodel } from './viewmodel';
 
 const HIGH = { replica: 'high', hands: 'high' } as const;
@@ -17,13 +17,18 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
   return out;
 };
 const trianglesOf = (root: THREE.Object3D): number => meshesOf(root).reduce((n, m) => n + m.geometry.getAttribute('position').count / 3, 0);
-/** A replica's triangles drawn at once: its body, the support hand, the standing sights, and the fitted magazine. */
+/**
+ * A replica's triangles drawn at once as it comes: its body, the support hand, the standing sights, the standard
+ * magazine and its bare muzzle's device (M29b's flash hider, on the muzzle mount).
+ */
 const drawn = (models: ReplicaModels, id: string): number => {
   const { group } = models.models.get(id)!;
+  const fitted = ['optic:', 'grip:', 'laser:', 'barrel:'];
   let n = 0;
   for (const child of group.children) {
-    if (child.name.startsWith('optic:') || child.name.startsWith('grip:') || child.name.startsWith('laser:') || child.name === 'sightsDown') continue;
+    if (fitted.some((kind) => child.name.startsWith(kind)) || child.name === 'sightsDown') continue;
     if (child.name === 'magazine') n += trianglesOf(child.getObjectByName('magazine:standard')!);
+    else if (child.name === 'muzzleMount') n += child.getObjectByName('muzzle:none') ? trianglesOf(child.getObjectByName('muzzle:none')!) : 0;
     else n += trianglesOf(child);
   }
   return n;
@@ -77,7 +82,7 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
       const id = kind === 'aeg' ? 'aeg' : 'pistol';
       const low = buildReplicaModels(LOADOUT, 0x3a7bd5, false);
       const high = buildReplicaModels(LOADOUT, 0x3a7bd5, false, HIGH);
-      const names = [...Object.keys(table.parts), ...Object.keys(table.magazines).map((m) => `magazine:${m}`)];
+      const names = [...Object.keys(table.parts), ...Object.keys(table.magazines).map((m) => `magazine:${m}`), ...Object.keys(table.muzzles).map((m) => `muzzle:${m}`)];
       for (const name of names) {
         const lo = low.models.get(id)!.group.getObjectByName(name)!;
         const hi = high.models.get(id)!.group.getObjectByName(name)!;
@@ -88,6 +93,41 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
       }
       low.dispose();
       high.dispose();
+    }
+  });
+
+  it('draws the barrels and silencers (M29b) on every level with the BBs leaving the fitted muzzle\'s front face', () => {
+    const box = new THREE.Box3();
+    const marker = new THREE.Vector3();
+    for (const detail of [LOW_DETAIL, HIGH]) {
+      const models = buildReplicaModels(LOADOUT, 0x3a7bd5, true, detail);
+      const fits = [
+        { id: 'aeg', layout: AEG_MUZZLE, barrel: null, device: null },
+        { id: 'aeg', layout: AEG_MUZZLE, barrel: 'long', device: null },
+        { id: 'aeg', layout: AEG_MUZZLE, barrel: 'long', device: 'silencer' },
+        { id: 'aeg', layout: AEG_MUZZLE, barrel: 'tightBore', device: 'silencer' },
+        { id: 'pistol', layout: PISTOL_MUZZLE, barrel: null, device: 'silencer' },
+      ] as const;
+      for (const f of fits) {
+        const { group, mount, muzzle } = models.models.get(f.id)!;
+        fitMuzzle(mount, f.barrel, f.device);
+        group.updateMatrixWorld(true);
+        const where = `${detail.replica} ${f.id} ${f.barrel} ${f.device}`;
+        muzzle.getWorldPosition(marker);
+        expect(marker.y, where).toBeCloseTo(f.layout.up, 6);
+        expect(marker.x, where).toBeCloseTo(0, 6);
+        // The mount sits on the fitted barrel's end: the long barrel's front is where the device starts.
+        const barrelEnd = -(f.layout.barrelEnd + (f.barrel === 'long' ? AEG_MUZZLE.extensions.long : 0));
+        expect(mount.group.position.z, where).toBeCloseTo(barrelEnd, 6);
+        if (f.barrel) expect(box.setFromObject(group.getObjectByName(`barrel:${f.barrel}`)!).min.z, where).toBeCloseTo(f.barrel === 'long' ? barrelEnd : -f.layout.barrelEnd, 3);
+        // The BB leaves the fitted device's front face (within the bore's 0.5 mm lip on high).
+        const device = group.getObjectByName(`muzzle:${f.device ?? 'none'}`);
+        if (device) {
+          expect(Math.abs(box.setFromObject(device).min.z - marker.z), where).toBeLessThan(0.0006);
+          expect(trianglesOf(device), where).toBeGreaterThan(0);
+        } else expect(marker.z, where).toBeCloseTo(barrelEnd, 6);
+      }
+      models.dispose();
     }
   });
 

@@ -4,6 +4,7 @@ import {
   GRAPHICS_TEXT,
   type GraphicsRow,
   graphicsKey,
+  rowEnabled,
   SHOW_FPS_CHOICES,
   storedValue,
 } from '../config/graphics';
@@ -50,6 +51,9 @@ interface RowControl {
   show: (value: QualitySettings[keyof QualitySettings]) => void;
   /** A grey line under the row for what the browser can't honour (null when the row has none). */
   note: HTMLParagraphElement | null;
+  /** The row and its inputs, greyed out and disabled while the setting it needs is off (config/graphics.ts `needs`). */
+  element: HTMLDivElement;
+  inputs: readonly (HTMLButtonElement | HTMLInputElement)[];
 }
 
 /**
@@ -185,14 +189,20 @@ export class GraphicsSettings {
       note.hidden = true;
       control.append(note);
     }
-    this.controls.push({ row, show, note });
+    this.controls.push({ row, show, note, element: r, inputs: [...control.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input')] });
     return r;
   }
 
-  /** The grey lines under the rows a browser can't always honour, from what the renderer reports (REN-21). */
+  /**
+   * The grey lines under the rows a browser can't always honour, from what the renderer reports (REN-21), and the rows
+   * greyed out while the setting they need is off (the shadow rows while Shadows is Off).
+   */
   private refreshNotes(): void {
     const status = this.opts.quality.status();
-    for (const { row, note } of this.controls) {
+    for (const { row, note, element, inputs } of this.controls) {
+      const enabled = rowEnabled(row, this.settings);
+      element.classList.toggle('menu-row-off', !enabled);
+      for (const input of inputs) input.disabled = !enabled;
       if (!note) continue;
       let text = '';
       if (row.field === 'antialias') {

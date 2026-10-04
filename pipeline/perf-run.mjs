@@ -8,6 +8,8 @@
  *                              [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build] [--chromium /path]
  *                              [--channel chrome|msedge] [--headless]
  *
+ * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
+ *
  * The window is counted in simulation ticks, not wall time, so the player is at the same point of the script
  * whatever the frame rate: 3600 ticks is 60 s of play on a laptop and about four minutes in software rendering,
  * where the simulation runs at about 16 ticks/s (five catch-up ticks a frame). perf-budget.json sets each
@@ -57,9 +59,11 @@ const channel = options.chromium ? undefined : value('--channel', laptop ? 'chro
 mkdirSync(OUT, { recursive: true });
 const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
 
+// The e2e bundle, rebuilt only when the source changed since the last one (pipeline/build-cached.mjs; audit CORE-22):
+// after the gate's smoke test it is already there. --no-build uses whatever dist-e2e/ holds.
 if (options.build || !existsSync(join(ROOT, 'dist-e2e', 'index.html'))) {
-  console.log('perf: building the e2e bundle');
-  execFileSync('npm', ['run', 'build:e2e'], { cwd: ROOT, stdio: 'ignore', shell: process.platform === 'win32' });
+  console.log('perf: the e2e bundle');
+  execFileSync('node', ['pipeline/build-cached.mjs', '--mode', 'e2e'], { cwd: ROOT, stdio: 'ignore' });
 }
 const urlFor = (preset) => `http://localhost:${PORT}/?nolock&seed=1&script=perf&quality=${preset}`;
 // A server already on the port (another run's, left over) would be measured instead of this build: refuse.

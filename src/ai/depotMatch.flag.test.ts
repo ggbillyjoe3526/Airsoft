@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
 import { ROUNDS } from '../config/hits';
 import { initPhysics } from '../physics/physicsWorld';
-import { playMatch } from './depotMatchSupport';
+import { playedAfterHalfTime, playMatch } from './depotMatchSupport';
 
 describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
   beforeAll(async () => {
@@ -18,8 +18,9 @@ describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
     for (let seed = 1; seed <= 16; seed++) {
       const stats = playMatch(400, seed, undefined, BOTS, 'attackDefend');
       friendlyHits += stats.friendlyHits;
-      // Rounds 1-4 Blue attacks, then Orange; the attackers always start at the west end.
-      expect(stats.results.map((r) => r.attackers)).toEqual(stats.results.map((_, i) => (i < ROUNDS.halfTimeAfter ? 0 : 1)));
+      // Rounds 1-4 Blue attacks, then Orange (a drawn round is replayed under its number); the attackers always start
+      // at the west end.
+      expect(stats.results.map((r) => r.attackers)).toEqual(playedAfterHalfTime(stats.results).map((after) => (after ? 1 : 0)));
       expect(stats.results.every((r) => r.attackerEnd === 0)).toBe(true);
       for (const r of stats.results) {
         rounds++;
@@ -34,6 +35,10 @@ describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
     // (107 captures in 736 rounds); the old mirrored Depot measured 53%. With M20's ricochets (not counting): 18 captures in
     // 125 rounds, flags raised in 11 of 16, attackers 53%, 1 friendly hit, 193 ricochet ticks. Bots check their line of fire, but a teammate dodging into
     // a BB already in the air can't always be helped (KNOWN_ISSUES).
+    // FA4 (2026-10-04: one attacker raises, the others guard the pole from cover): 13 captures in 120 rounds, flags
+    // raised in 7 of 16, attackers 51%, no friendly hits; over seeds 1-48 37 captures in 359 rounds (10%; 19% before
+    // FA4, when all three crowded the rope), attackers 51% (52% before). After merging M30 and FA1: 20 captures in 123
+    // rounds, flags raised in 13 of 16, attackers 55% (without FA4: 25 in 125, 58%).
     // Re-measure and update DECISIONS with this test after any bot tuning change.
     expect(friendlyHits).toBeLessThanOrEqual(1);
     expect(captures).toBeGreaterThanOrEqual(9);

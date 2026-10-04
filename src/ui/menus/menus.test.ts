@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
-import { SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
+import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
+import { unpaidLine } from './summaryScreen';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
 import { TEAM_COLOUR_CHOICES } from '../../config/teams';
-import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
+import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
 import { backTarget, escResumes, moreBelow, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
@@ -101,6 +102,24 @@ describe('menu data', () => {
   it('describes each map in a few words (owner, 2026-10-04)', () => {
     expect(MAPS.find((m) => m.id === 'depot')!.blurb).toBe('An abandoned warehouse yard.');
     for (const m of MAPS) expect(m.blurb.split(' ').length).toBeLessThanOrEqual(8);
+  });
+
+  it('lists Woodland as a coming map that is not a MapId, so the Map choice never saves or loads it (M33a)', () => {
+    expect(COMING_MAPS.map((m) => m.label)).toContain('Woodland');
+    const playable = new Set<string>(MAPS.map((m) => m.id));
+    for (const m of COMING_MAPS) {
+      expect(playable.has(m.label.toLowerCase()), m.label).toBe(false);
+      expect(mapData(m.label.toLowerCase() as never)).toBe(mapData(DEFAULT_MAP)); // an unknown id falls back to Depot
+    }
+    expect(DEFAULT_MAP).toBe('depot');
+  });
+
+  it('describes each coming map in at most eight words, tagged "Coming soon" (M33a)', () => {
+    expect(COMING_SOON_TAG).toBe('Coming soon');
+    for (const m of COMING_MAPS) {
+      expect(m.blurb.trim()).not.toBe('');
+      expect(m.blurb.split(' ').length, m.label).toBeLessThanOrEqual(8);
+    }
   });
 
   it('starts every word of a two-word button with a capital (owner, 2026-10-04)', () => {
@@ -199,5 +218,14 @@ describe('HUD settings (M24)', () => {
     expect(at1280).toBeLessThan(SCOREBOARD_SIZE.max);
     expect(1280 / 2 - SCOREBOARD_SIZE.halfWidth * at1280).toBeCloseTo(SCOREBOARD_SIZE.feedRoom, 5);
     expect(scoreboardScale(SCOREBOARD_SIZE.max, 800)).toBe(1);
+  });
+});
+
+describe('the summary when a match paid nothing (audit POOL-22)', () => {
+  it('says why: Dev settings changed the match, or the Armory is off; nothing when it paid', () => {
+    expect(unpaidLine(null, 'dev')).toBe(ARMORY_TEXT.unpaidDev);
+    expect(unpaidLine(null, 'off')).toBe(ARMORY_TEXT.unpaidOff);
+    expect(unpaidLine(null, null)).toBe('');
+    expect(unpaidLine({ lines: [], multiplier: 1, total: 40 }, 'dev')).toBe('');
   });
 });

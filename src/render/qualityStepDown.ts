@@ -2,9 +2,9 @@ import { QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset } from '../co
 
 /**
  * The automatic quality step-down (audit REN-03): frame times while playing, judged in windows of
- * QUALITY_STEP_DOWN.windowSeconds. A window is slow when more than 5 % of its frames took longer than the threshold (its
- * 95th percentile is over it); `windows` slow windows in a row say the preset is too much for this machine. Counting
- * frames over the threshold needs no buffer and no sort: nothing is allocated.
+ * QUALITY_STEP_DOWN.windowSeconds. A window is slow when more than QUALITY_STEP_DOWN.slowShare (5 %) of its frames took
+ * longer than the threshold (its 95th percentile is over it); `windows` slow windows in a row say the preset is too much
+ * for this machine. Counting frames over the threshold needs no buffer and no sort: nothing is allocated.
  */
 export class FrameTimeWatch {
   private frames = 0;
@@ -18,7 +18,7 @@ export class FrameTimeWatch {
     if (frameMs > thresholdMs) this.over++;
     this.elapsedMs += frameMs;
     if (this.elapsedMs < QUALITY_STEP_DOWN.windowSeconds * 1000) return false;
-    const slow = this.over > this.frames * 0.05;
+    const slow = this.over > this.frames * QUALITY_STEP_DOWN.slowShare;
     this.frames = this.over = this.elapsedMs = 0;
     this.slowWindows = slow ? this.slowWindows + 1 : 0;
     if (this.slowWindows < QUALITY_STEP_DOWN.windows) return false;
