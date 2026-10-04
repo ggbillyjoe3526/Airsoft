@@ -608,6 +608,8 @@ Play Elimination on Depot at Normal, then a round each on Easy and Hard, and one
   the team leaves past the wall's south end, so the dock and the Main Gate take about as long to reach from both
   ends. Check nobody gets stuck in the yard's north corner.
 - [ ] **Bots turning a corner** no longer brush the wall or door frame as they pass.
+- [ ] **New game → Bot difficulty, with no Teammates level picked yet**: set Opponents to Easy and Teammates shows
+  Normal; Normal or Hard opponents bring the teammates along to the same level.
 
 ## Audio pass (FA6)
 

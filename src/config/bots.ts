@@ -373,6 +373,15 @@ export const TEAMMATE_DIFFICULTIES: readonly { id: Difficulty; label: string; bl
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
 
+/**
+ * Your bot teammates' level until you pick one (audit AI-03): the opponents' level, as every bot had before M20, except
+ * that Easy opponents give you Normal teammates. A new player on Easy needs teammates who win their fights, and Easy
+ * against Easy plays the longest rounds.
+ */
+export function defaultTeammateDifficulty(opponents: Difficulty): Difficulty {
+  return opponents === 'easy' ? DEFAULT_DIFFICULTY : opponents;
+}
+
 /** Skill per difficulty level (see BotSkill). Tuned with measured time-to-hit (docs/DECISIONS.md). */
 export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
   // Easy (audit AI-03): forgiving to the player where the player feels it (slow reactions, wide first BBs), but its

@@ -82,4 +82,12 @@ describe('custom match rules (M20)', () => {
     vi.stubGlobal('localStorage', storageWith({}));
     expect(loadTeammateDifficulty()).toBe('normal');
   });
+
+  it('give Normal teammates, not Easy ones, against Easy opponents until a teammate level is saved (audit AI-03)', () => {
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'easy' }));
+    expect(loadTeammateDifficulty()).toBe('normal');
+    expect(hasSavedTeammateDifficulty()).toBe(false);
+    vi.stubGlobal('localStorage', storageWith({ difficulty: 'easy', teammateDifficulty: 'easy' }));
+    expect(loadTeammateDifficulty()).toBe('easy'); // a level the player picked stands
+  });
 });
