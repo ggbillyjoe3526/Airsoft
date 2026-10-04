@@ -33,17 +33,6 @@ acceptance:
   6. Each gear slot shows "energy · rate of fire · magazine"; the Armory shows what each copy's tier adds (dispensed tiles and the collection list)
   7. Bots carry each replica as it comes: the headless match guards pass unchanged
 status: accepted
-## FA1 · Crash handling, simulation hot paths and correctness
-tier: core
-perf: required
-touches: src/physics/physicsWorld.ts, src/sim/elimination.ts, src/sim/simulation.ts, src/sim/accuracy.ts, src/sim/character.ts, src/sim/movement.ts, src/sim/armament.ts, src/sim/rangeTargets.ts, src/sim/round.ts, src/config/sim.ts, src/config/movement.ts, src/config/hits.ts, src/config/crash.ts, src/render/viewmodel.ts, src/render/combatPresentation.ts, src/render/spectatorCamera.ts, src/core/crashReport.ts, src/ui/roundBanner.ts, src/ui/clipboard.ts, src/ui/crashScreen.ts, src/ui/devSettings.ts, src/stats/settleMatch.ts, src/matchFlow.ts, src/matchSession.ts, src/game.ts, src/main.ts, src/style.css, vite.config.ts, e2e/boot.spec.ts, e2e/crash.spec.ts
-contract: GameState (fields on Character: jumpWanted, groundRise; on RoundState: draws), stepSimulation (one skip: a parked out-of-play character goes straight to the elimination step; the phase order is otherwise unchanged and the headless guards pass); ArmamentContext gains an optional fireHoldOff. WorldQuery and CharacterMover are unchanged
-acceptance:
-  1. Crash handling (CORE-04, UI-02, CORE-11, CORE-28, CORE-32): an exception in the game loop stops the loop, pauses, releases the pointer lock and shows a "Something went wrong" pane styled like the menus with the seed and a copyable report; a boot failure shows the same pane with WebGL advice when it fits; production builds emit hidden source maps and the chunk budgets pass; the README lists the URL flags as a set; Dev settings can copy a diagnostics report (two e2e tests, a crashReport unit test)
-  2. Hot paths (SIM-04, SIM-14, SIM-15, REN-11, REN-12): no Vector3 or hit object per move/probe, parked out-of-play characters skip movement and probing, the stepper catches up at most 10 ticks a frame, one muzzle position per shot with no rig matrix update, the spectator wall cast runs once per tick pose
-  3. Correctness (SIM-02, SIM-03, SIM-05, SIM-06, SIM-08, SIM-10, SIM-11, SIM-12, SIM-17, SIM-19, CORE-06): air spread waits out a walkable ledge, a click just after a sprint fires when the lockout ends, a 100 ms jump buffer, a walk-off budget every Depot spot meets, Play Again builds a new match with a new seed, crouch-walking costs a little accuracy, eliminated characters send an idle command, the range figure's hit volume matches the match one, ramps keep their pace, a drawn round is replayed, and a decided match is recorded and paid by a pure, tested settleMatch
-  4. The KNOWN_ISSUES rows these close are struck or reworded; DECISIONS and PLAYTEST carry the FA1 entries
-status: gates
 attempts: 1
 
 ## FA4 · Bots: spacing, cover, behaviour, difficulty and fairness
