@@ -286,6 +286,18 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.getByRole('tab', { name: /^Dev$/i })).toHaveAttribute('aria-selected', 'true');
   await settings.getByRole('group', { name: 'Debug info' }).getByRole('button', { name: 'On' }).click();
   await expect(page.locator('.debug-overlay')).toBeVisible();
+  // M42: the Retro pixels switch (off) and its two sliders sit on the Dev tab; the smoke run leaves the filter off.
+  const retro = settings.getByRole('group', { name: 'Retro pixels' });
+  await expect(retro).toBeVisible();
+  await expect(retro.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(retro.getByRole('button', { name: 'On' })).toHaveAttribute('aria-pressed', 'false');
+  const retroPixelSize = settings.getByRole('slider', { name: 'Pixel size' });
+  const retroColours = settings.getByRole('slider', { name: 'Colours' });
+  await expect(retroPixelSize).toHaveValue('4');
+  await expect(retroColours).toHaveValue('6');
+  const devPanel = settings.getByRole('tabpanel', { name: 'Dev' });
+  await expect(devPanel.getByText('4 px', { exact: true })).toBeVisible();
+  await expect(devPanel.getByText('216', { exact: true })).toBeVisible();
   // M26d: Disable Armory greys out New game's Armory tile while it applies.
   const armoryTileEl = page.locator('.menu-setup .setup-tile', { hasText: 'Armory' });
   await settings.getByRole('group', { name: 'Disable Armory' }).getByRole('button', { name: 'On' }).click();

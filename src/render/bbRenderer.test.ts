@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { BALLISTICS } from '../config/ballistics';
-import { BB_VISUALS } from '../config/render';
+import { BB_VISUALS, RETRO } from '../config/render';
 import { createBBPool, spawnBB, stepBBFlight } from '../sim/ballistics';
 import { vec3 } from '../sim/vec';
 import { BBRenderer } from './bbRenderer';
@@ -172,6 +172,86 @@ describe('BBRenderer streaks (REN-19)', () => {
     const after = [balls.instanceMatrix.version, trails.version];
     r.update(0, eye);
     expect([balls.instanceMatrix.version, trails.version]).toEqual(after);
+    r.dispose();
+  });
+});
+
+describe('BBRenderer under the retro pixel filter (M42)', () => {
+  const eye = { x: 0, y: 1.6, z: 0 };
+  // One retro pixel at 8 px a pixel on a 1080p view with a 60 degree lens is about 0.0155 rad; 0.01 is plenty to show it.
+  const PIXEL = 0.01;
+
+  /** Pool slot 0: crossing the view at `z` (a full-length streak); returns the renderer. */
+  function crossing(z: number, pixelAngle?: number): BBRenderer {
+    const pool = createBBPool(1);
+    const r = new BBRenderer(pool, DT);
+    if (pixelAngle !== undefined) r.setPixelAngle(pixelAngle);
+    const bb = spawnBB(pool, 1, vec3(-1, 1.6, z), vec3(1, 0, 0), 88, 0, 0.25e-3);
+    bb.age = 1;
+    bb.prevPosition.x = bb.position.x - bb.velocity.x * DT;
+    r.update(1, eye);
+    return r;
+  }
+
+  const e = new THREE.Vector3(eye.x, eye.y, eye.z);
+
+  it('never draws a ball narrower than RETRO.bbMinPixels retro pixels, near or far', () => {
+    for (const z of [-5, -30]) {
+      const r = crossing(z, PIXEL);
+      const { pos, scale } = drawn(r, 0);
+      const angularRadius = (scale * BB_VISUALS.radius) / pos.distanceTo(e);
+      expect(angularRadius).toBeGreaterThanOrEqual((PIXEL * RETRO.bbMinPixels) / 2 - 1e-9);
+      expect(angularRadius).toBeCloseTo((PIXEL * RETRO.bbMinPixels) / 2, 6); // and no bigger than it has to be
+      r.dispose();
+    }
+    // At 5 m the normal rule would leave the ball at its real size: the filter grows it.
+    const plain = crossing(-5);
+    expect(drawn(plain, 0).scale).toBe(1);
+    plain.dispose();
+    const retro = crossing(-5, PIXEL);
+    expect(drawn(retro, 0).scale).toBeGreaterThan(2);
+    retro.dispose();
+  });
+
+  it('never draws a streak thinner than RETRO.trailMinPixels retro pixel, head and tail alike', () => {
+    for (const z of [-3, -30]) {
+      const r = crossing(z, PIXEL);
+      for (const [a, b] of [[0, 1], [2, 3]] as const) {
+        const p = corner(r, 0, a);
+        const q = corner(r, 0, b);
+        const mid = p.clone().add(q).multiplyScalar(0.5);
+        expect(p.distanceTo(q) / mid.distanceTo(e)).toBeCloseTo(PIXEL * RETRO.trailMinPixels, 6);
+      }
+      r.dispose();
+    }
+  });
+
+  it('with an angle of 0 (the filter off, or back off) leaves today\'s sizes', () => {
+    const pool = createBBPool(1);
+    const r = new BBRenderer(pool, DT);
+    r.setPixelAngle(PIXEL);
+    const bb = spawnBB(pool, 1, vec3(-1, 1.6, -30), vec3(1, 0, 0), 88, 0, 0.25e-3);
+    bb.age = 1;
+    bb.prevPosition.x = bb.position.x - bb.velocity.x * DT;
+    r.update(1, eye);
+    const wide = drawn(r, 0).scale;
+    r.setPixelAngle(0);
+    r.update(1, eye);
+    const { pos, scale } = drawn(r, 0);
+    expect(scale).toBeLessThan(wide);
+    expect((scale * BB_VISUALS.radius) / pos.distanceTo(e)).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);
+    const p = corner(r, 0, 0);
+    const q = corner(r, 0, 1);
+    expect(p.distanceTo(q) / p.clone().add(q).multiplyScalar(0.5).distanceTo(e)).toBeCloseTo(BB_VISUALS.trailAngularWidth, 6);
+    r.dispose();
+  });
+
+  it('keeps a streak already wider than a retro pixel at its normal width (a tiny pixel angle changes nothing)', () => {
+    const r = crossing(-30, 0.0001);
+    const p = corner(r, 0, 0);
+    const q = corner(r, 0, 1);
+    expect(p.distanceTo(q) / p.clone().add(q).multiplyScalar(0.5).distanceTo(e)).toBeCloseTo(BB_VISUALS.trailAngularWidth, 6);
+    expect((drawn(r, 0).scale * BB_VISUALS.radius) / drawn(r, 0).pos.distanceTo(e)).toBeCloseTo(BB_VISUALS.minAngularRadius, 6);
     r.dispose();
   });
 });
