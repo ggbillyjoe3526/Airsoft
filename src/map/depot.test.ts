@@ -402,7 +402,7 @@ describe('Depot map', () => {
   it('lets neither end reach the high ground or mid first: the dock and the Main Gate are about as far from each (audit SIM-13)', () => {
     // From each end's middle spawn: to the nearer top of a dock ramp (0.3 m onto the dock), and to the Main Gate (the
     // gap between the Bay's two west containers, plan x 3.6–6.0, z −2.4…2.2). Before SIM-13 the east end's route to
-    // the dock was 15.8 m shorter (14.1 vs 29.9 m) and to the Main Gate 10 m shorter (22.1 vs 32.1 m); now 2 and 7 m.
+    // the dock was 15.8 m shorter (14.1 vs 29.9 m) and to the Main Gate 10 m shorter (22.1 vs 32.1 m); now 2.6 and 7.6 m.
     const dockZ = (dockPlan.edgeZ - halfZ) / 2;
     const rampTops = [vec3(dockPlan.ramps[0][1] + 0.3, dockHeight, dockZ), vec3(dockPlan.ramps[1][0] - 0.3, dockHeight, dockZ)];
     const mainGate = vec3(4.8, 0, 0.1);

@@ -227,9 +227,10 @@ const THE_BAY: MapBlock[] = [
   // the office's back door.
   container(15.8, 17.2, -5.0, 2.0),
 
-  // Defenders' spawn wall (closed to the road at the north: the way out is past its south end, SIM-13), and a
+  // Defenders' spawn wall (closed to the road at the north: the way out is past its south end, SIM-13; that end at
+  // 3.6 keeps a walk-off from the yard's far corner to the west dead zone within FA1's walk-off budget), and a
   // container along the south edge of their yard.
-  wall(18.2, 18.2 + WALL_THICKNESS, 3.0, HALF_Z, 0, SPAWN_WALL_HEIGHT),
+  wall(18.2, 18.2 + WALL_THICKNESS, 3.6, HALF_Z, 0, SPAWN_WALL_HEIGHT),
   container(21.0, HALF_X, 0.4, 2.8),
 
   // Back lot, east of the office.
