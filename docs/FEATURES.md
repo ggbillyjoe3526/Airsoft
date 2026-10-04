@@ -43,13 +43,14 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Elimination: knock out the whole other team (Phase 1)
 - Attack / Defend: raise your flag on the other team's pole or keep yours down; overtime; sides swap at half-time (M5)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
-- Custom matches: rounds to win, round time, 1v1 to 3v3, friendly fire, ricochets; only the standard match counts for the records (M20)
+- Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only the standard match counts for the records (M20)
 
 ## Maps
 
 - Depot: an asymmetric 50 × 32 m yard with Container Alley, the Office, a raised loading dock with ramps, site props and one flagpole; both ends about as far from the dock and the Main Gate (M1, M11, M25b, FA4)
 - Woodland: a second field coming soon, shown as disabled in the Map pop-up only with Dev content on (M33a, M35)
 - Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland (M33c)
+- Woodland's layout: 120 × 80 m on a gentle slope up to the Knoll and its log fort, three lanes (Pine Belt, Meadow, Creek with the cabin), trees, boulders and logs; 4v4 by default, up to 5v5; dev content, playable with the Dev content switch on, and its matches aren't recorded or paid (M33d)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory

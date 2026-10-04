@@ -24,6 +24,11 @@ export const BLOCK_MATERIALS = {
   sandbags: 'wood',
   generator: 'metal',
   skip: 'metal',
+  // The woods (M33): bark, logs and fence boards soak BBs up; a boulder gives one back like concrete.
+  tree: 'wood',
+  boulder: 'concrete',
+  log: 'wood',
+  fence: 'wood',
 } as const satisfies Record<BlockKind, ImpactMaterial>;
 
 /** What the ground of a map with terrain (M33c, map/terrain.ts) is to a BB: soil. */

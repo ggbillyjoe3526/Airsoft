@@ -24,7 +24,7 @@ import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { type MapId, mapData } from './map/maps';
+import { type MapId, mapData, teamSizeOn } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadFigureModel } from './render/externalModels';
@@ -300,7 +300,7 @@ export class Game {
       const p = s?.player;
       return {
         seed: s instanceof RangeSession ? options.seed : this.matchSeed,
-        map: s instanceof RangeSession ? 'range' : this.map,
+        map: s instanceof RangeSession ? 'range' : this.playedPicks().map,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
         characters: s?.characterCount ?? 0,
@@ -756,7 +756,7 @@ export class Game {
         mode: picks.mode,
         difficulty: picks.difficulty,
         teammateDifficulty: picks.teammateDifficulty,
-        rules: { ...picks.rules },
+        rules: { ...picks.rules, teamSize: teamSizeOn(picks.map, picks.rules.teamSize) },
         kit: this.loadout.kit(),
         chaseOwned: this.loadout.ownedChase(),
         devContent: this.dev.devContent,
