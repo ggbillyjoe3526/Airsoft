@@ -113,6 +113,29 @@ export const BOT_BEHAVIOUR = {
   holdSweepDeg: 35,
   holdSweepPeriod: 4,
   /**
+   * Held angles (M37, for skills with holdsAngles): holding still, the bot fans this many rays at eye height across
+   * this wide a view (degrees) of the enemy side and aims where a ray that stops at a wall sits beside one that runs on
+   * at least angleJump (metres) further than the wall itself would reach (so a long wall seen at a slant is no corner): a
+   * corner or doorway someone would step out of. It aims anglePast (metres) past
+   * the wall's distance, at head height. Edges nearer than angleMinDist or beyond angleMaxDist (metres) are skipped,
+   * those near angleBestDist (metres) preferred; it keeps two at least angleSeparationDeg apart, switches between them
+   * every angleSwitchTime (s) and looks again every angleRefresh (s).
+   */
+  angleFanDeg: 140,
+  angleRays: 29,
+  angleJump: 2.5,
+  anglePast: 0.6,
+  angleMinDist: 2,
+  angleMaxDist: 30,
+  angleBestDist: 10,
+  angleSeparationDeg: 15,
+  angleSwitchTime: 3,
+  angleRefresh: 2,
+  /** ...or as soon as it has moved this far (metres) since it last looked. */
+  angleMoveRefresh: 0.5,
+  /** Someone appearing within this angle (degrees) of where a bot already aims counts as pre-aimed (the skill's preAim*). */
+  preAimConeDeg: 6,
+  /**
    * At a lane point, a bot may first step into cover (its skill's holdCoverChance): the best spot within this radius
    * (metres) that hides it from a point this far (metres) towards the enemy side and that it can peek from.
    */
@@ -356,18 +379,26 @@ export interface BotSkill {
   readonly searchWalkDistance: number;
   /** Chance a search of a far spot goes round to one side of it first (see flankOffset). */
   readonly flankChance: number;
+  // Held angles (M37): Pro holds and pre-aims the corners someone would come round; the levels below don't.
+  /** Holding still, aim at the corners and doorways someone would step out of (see angleFanDeg). */
+  readonly holdsAngles: boolean;
+  /** Reaction to someone appearing where the bot already aims (within preAimConeDeg), instead of reactionTime (s). */
+  readonly preAimReactionTime: readonly [number, number];
+  /** ...and how much of its aim settling (0..1 of aimSettleTime) is already done then. */
+  readonly preAimSettled: number;
 }
 
-export type Difficulty = 'easy' | 'normal' | 'hard';
+export type Difficulty = 'easy' | 'normal' | 'hard' | 'pro';
 
 /**
  * Difficulty levels in the order the Difficulty pop-up lists them, with their labels and content tags (M35,
- * config/content.ts: a `dev` level, as Esports will be while it is built, is offered only with Dev content on).
+ * config/content.ts: a `dev` level, as Pro is while it is built, is offered only with Dev content on).
  */
 export const DIFFICULTIES: readonly { id: Difficulty; label: string; blurb: string; tag: ContentTag }[] = [
   { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim. Learn the map.', tag: 'public' },
   { id: 'normal', label: 'Normal', blurb: 'A fair fight: their first BBs up close can miss.', tag: 'public' },
   { id: 'hard', label: 'Hard', blurb: 'Quick and steady, each on kit of its own. Get seen first and you\'re out.', tag: 'public' },
+  { id: 'pro', label: 'Pro', blurb: 'Tournament-sharp: patient, accurate and well kitted. Slow down and slice every corner.', tag: 'dev' },
 ];
 
 /** The same levels as the Difficulty pop-up's Teammates row describes them (M20), with the same tags. */
@@ -375,7 +406,15 @@ export const TEAMMATE_DIFFICULTIES: readonly { id: Difficulty; label: string; bl
   { id: 'easy', label: 'Easy', blurb: 'Slow to react, shaky aim: you carry the team.', tag: 'public' },
   { id: 'normal', label: 'Normal', blurb: 'They hold their own in a fair fight.', tag: 'public' },
   { id: 'hard', label: 'Hard', blurb: 'Quick and steady: they win fights for you.', tag: 'public' },
+  { id: 'pro', label: 'Pro', blurb: 'Patient and accurate: they hold their angles and win their duels.', tag: 'dev' },
 ];
+
+/** True when `d` is `min` or above, in the Difficulty pop-up's order (Easy, Normal, Hard, Pro). */
+export function difficultyAtLeast(d: Difficulty, min: Difficulty): boolean {
+  return DIFFICULTY_RANK[d] >= DIFFICULTY_RANK[min];
+}
+
+const DIFFICULTY_RANK = Object.fromEntries(DIFFICULTIES.map((o, i) => [o.id, i])) as Readonly<Record<Difficulty, number>>;
 
 export const DEFAULT_DIFFICULTY: Difficulty = 'normal';
 
@@ -410,6 +449,9 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     contactCoverMinDistance: 12,
     searchWalkDistance: 4,
     flankChance: 0,
+    holdsAngles: false,
+    preAimReactionTime: [0.6, 1.0],
+    preAimSettled: 0,
   },
   normal: {
     reactionTime: [0.35, 0.6],
@@ -428,6 +470,9 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     contactCoverMinDistance: 8,
     searchWalkDistance: 12,
     flankChance: 0.25,
+    holdsAngles: false,
+    preAimReactionTime: [0.35, 0.6],
+    preAimSettled: 0,
   },
   hard: {
     reactionTime: [0.25, 0.45],
@@ -446,6 +491,35 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     contactCoverMinDistance: 5,
     searchWalkDistance: 20,
     flankChance: 0.7,
+    holdsAngles: false,
+    preAimReactionTime: [0.25, 0.45],
+    preAimSettled: 0,
+  },
+  // Pro (M36, owner 2026-10-04): above Hard in every number, but its first BBs are still never dead on
+  // (aimErrorStartMetres above zero) and it reacts no faster than Hard to someone it wasn't already aiming at. It plays
+  // slower than Hard: longer holds at lane points, nearly always from cover, and a walk (silent) for the last 30 m to
+  // a contact. Holding still it aims at the corners someone would step out of and answers someone appearing there in
+  // 0.18–0.28 s with its aim half settled (M37); clearing corners and team play come with M38.
+  pro: {
+    reactionTime: [0.25, 0.45],
+    turnRate: 6,
+    aimErrorStartDeg: 3.5,
+    aimErrorSettledDeg: 0.75,
+    aimSettleTime: 0.7,
+    aimErrorStartMetres: 0.2,
+    aimErrorMovingDeg: 1.0,
+    aimErrorTracking: 0.05,
+    leadFactor: 0.85,
+    burst: [0.15, 0.35],
+    burstPause: [0.2, 0.4],
+    holdTime: [1.2, 3],
+    holdCoverChance: 0.9,
+    contactCoverMinDistance: 4,
+    searchWalkDistance: 30,
+    flankChance: 0.7,
+    holdsAngles: true,
+    preAimReactionTime: [0.18, 0.28],
+    preAimSettled: 0.5,
   },
 };
 
@@ -453,7 +527,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
  * What the other team's bots carry, per difficulty (M29b, owner 2026-10-04): 'factory' is each replica as it comes;
  * 'random' rolls every bot its own compatible kit from the pool (pool/botKit.ts). Your teammates always carry factory.
  */
-export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = { easy: 'factory', normal: 'factory', hard: 'random' };
+export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = { easy: 'factory', normal: 'factory', hard: 'random', pro: 'random' };
 
 /**
  * How a random loadout is rolled: the chance each part slot (optic, grip, laser, barrel, muzzle, magazine) gets a part,
@@ -462,6 +536,9 @@ export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = 
  * one (Unlock all gear counts). 0.05: about 5 matches in 100.
  */
 export const RANDOM_LOADOUT = { partChance: 0.6, chaseChance: 0.05 } as const;
+
+/** That chance per difficulty that rolls kits (BOT_LOADOUTS): Hard's as above, Pro's higher (M36: better kitted). */
+export const BOT_PART_CHANCE: Readonly<Record<Difficulty, number>> = { easy: 0, normal: 0, hard: RANDOM_LOADOUT.partChance, pro: 0.8 };
 
 /** The behaviour tuning every bot shares, whatever its level (BOT_BEHAVIOUR's shape). */
 export type BotBehaviour = Widen<typeof BOT_BEHAVIOUR>;

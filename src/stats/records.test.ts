@@ -69,3 +69,36 @@ describe('local records (M19)', () => {
     expect(Object.keys(r.results).sort()).toEqual(['insane.capture', 'normal.elimination']);
   });
 });
+
+describe('Pro records (M36 criterion 5)', () => {
+  it('files a Pro match under pro.<mode> and reads it back after a save', () => {
+    const store = memory();
+    const r = emptyRecords();
+    addMatch(r, win({ difficulty: 'pro', mode: 'attackDefend' }));
+    addMatch(r, win({ difficulty: 'pro', mode: 'attackDefend', won: false }));
+    addMatch(r, win({ difficulty: 'pro', mode: 'elimination' }));
+    expect(resultKey('pro', 'attackDefend')).toBe('pro.attackDefend');
+    expect(r.results['pro.attackDefend']).toEqual({ wins: 1, losses: 1 });
+    expect(r.results['pro.elimination']).toEqual({ wins: 1, losses: 0 });
+    expect(r.results[resultKey('hard', 'attackDefend')]).toBeUndefined();
+    saveRecords(r, store);
+    const back = loadRecords(store);
+    expect(back.results['pro.attackDefend']).toEqual({ wins: 1, losses: 1 });
+    expect(back.results['pro.elimination']).toEqual({ wins: 1, losses: 0 });
+  });
+
+  it('loads records written before Pro existed unchanged, and a Pro match added after leaves them alone', () => {
+    const old = { version: 1, results: { 'easy.elimination': { wins: 2, losses: 1 }, 'hard.attackDefend': { wins: 0, losses: 4 } }, bestAccuracy: 0.4, streak: 0, bestStreak: 3 };
+    const store = memory({ [RECORDS_KEY]: JSON.stringify(old) });
+    const r = loadRecords(store);
+    expect(r).toEqual({ results: old.results, bestAccuracy: 0.4, streak: 0, bestStreak: 3 });
+    expect(r.results['pro.elimination']).toBeUndefined();
+    addMatch(r, win({ difficulty: 'pro' }));
+    saveRecords(r, store);
+    const again = loadRecords(store);
+    expect(again.results['easy.elimination']).toEqual({ wins: 2, losses: 1 });
+    expect(again.results['hard.attackDefend']).toEqual({ wins: 0, losses: 4 });
+    expect(again.results['pro.elimination']).toEqual({ wins: 1, losses: 0 });
+    expect(JSON.parse(store.data.get(RECORDS_KEY)!).version).toBe(1); // no format bump
+  });
+});

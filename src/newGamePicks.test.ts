@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_DIFFICULTY, DIFFICULTIES, TEAMMATE_DIFFICULTIES } from './config/bots';
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
 import type { ContentTag } from './config/content';
 import { DEFAULT_MATCH_RULES, TEAM_SIZE_CHOICES, WINS_NEEDED_CHOICES } from './config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
@@ -35,9 +35,10 @@ afterEach(() => {
 const devIds = (list: readonly Taggable[]): string[] => list.filter((o) => o.tag === 'dev').map((o) => o.id);
 
 describe('New game picks and dev content (M35)', () => {
-  it('tags only Woodland, Neon Heights (M34c), 4v4 and 5v5 dev today (M33d), so the default picks use no dev content', () => {
+  it('tags only Woodland, 4v4, 5v5 (M33d), Pro (M36) and Neon Heights (M34c) dev today, so the default picks use no dev content', () => {
     expect(devIds(MAPS)).toEqual(['woodland', 'neonHeights']);
-    for (const list of [MATCH_MODES, DIFFICULTIES, TEAMMATE_DIFFICULTIES, WINS_NEEDED_CHOICES]) expect(devIds(list)).toEqual([]);
+    for (const list of [MATCH_MODES, WINS_NEEDED_CHOICES]) expect(devIds(list)).toEqual([]);
+    for (const list of [DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual(['pro']);
     expect(devIds(TEAM_SIZE_CHOICES)).toEqual(['4', '5']);
     expect(pickTags(picks()).every((t) => t === 'public')).toBe(true);
     expect(picksUseDev(picks())).toBe(false);
@@ -50,9 +51,11 @@ describe('New game picks and dev content (M35)', () => {
       expect(playedPicks(p, false).map).toBe(map.tag === 'dev' ? DEFAULT_MAP : map.id);
       expect(picksUseDev(playedPicks(p, false))).toBe(false);
     }
+    // Pro (dev, M36) plays as the default level with Dev content off.
     for (const devContent of [false, true]) for (const d of DIFFICULTIES) for (const t of TEAMMATE_DIFFICULTIES) {
+      const plays = (o: { id: Difficulty; tag: string }) => (devContent || o.tag === 'public' ? o.id : DEFAULT_DIFFICULTY);
       const p = picks({ difficulty: d.id, teammateDifficulty: t.id });
-      expect(playedPicks(p, devContent)).toEqual(p);
+      expect(playedPicks(p, devContent)).toEqual(picks({ difficulty: plays(d), teammateDifficulty: plays(t) }));
     }
     for (const w of WINS_NEEDED_CHOICES) for (const s of TEAM_SIZE_CHOICES) {
       const p = picks({}, { winsNeeded: Number(w.id), teamSize: Number(s.id) });
@@ -112,7 +115,8 @@ describe('New game picks and dev content (M35)', () => {
 
   it('restores the lists after a test tagged an entry (only the real dev entries stay dev)', () => {
     expect(devIds(MAPS)).toEqual(['woodland', 'neonHeights']);
-    for (const list of [MATCH_MODES, DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual([]);
+    expect(devIds(MATCH_MODES)).toEqual([]);
+    for (const list of [DIFFICULTIES, TEAMMATE_DIFFICULTIES]) expect(devIds(list)).toEqual(['pro']);
   });
 });
 
@@ -121,8 +125,8 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
   const devPool = withTags(GAME_POOL, { 'Red Dot': 'dev' });
   const strayPool = withAssets(GAME_POOL, [strayDevPart(GAME_POOL)]);
 
-  it('rolls the bots\' kits on hard only (the premise of the rest)', () => {
-    expect(BOT_LOADOUTS).toEqual({ easy: 'factory', normal: 'factory', hard: 'random' });
+  it('rolls the bots\' kits on hard and pro only (the premise of the rest)', () => {
+    expect(BOT_LOADOUTS).toEqual({ easy: 'factory', normal: 'factory', hard: 'random', pro: 'random' });
   });
 
   it('says no for the real pool, on every difficulty, with Dev content off or on', () => {
@@ -153,9 +157,11 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
     expect(botsMayCarryDev(strayPool, true, 'hard')).toBe(false);
   });
 
-  it('uses no dev content when nothing is dev, whatever the kit, difficulty or switch', () => {
+  it('uses no dev content when nothing is dev, whatever the kit, public difficulty or switch; Pro is dev (M36)', () => {
     const kit = kitOf('AEG Rifle', 'Gas Pistol', 'Red Dot');
-    for (const devContent of [false, true]) for (const d of DIFFICULTIES) expect(matchUsesDev(picks({ difficulty: d.id }), kit, GAME_POOL, devContent)).toBe(false);
+    for (const devContent of [false, true]) for (const d of DIFFICULTIES) {
+      expect(matchUsesDev(picks({ difficulty: d.id }), kit, GAME_POOL, devContent)).toBe(d.id === 'pro');
+    }
     expect(matchUsesDev(picks(), [null, null], GAME_POOL, true)).toBe(false);
   });
 
