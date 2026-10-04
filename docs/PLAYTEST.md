@@ -539,6 +539,48 @@ Quick checks that these stay fixed:
 - [ ] **Watch bots fighting near door frames.** They shouldn't fire into the frame right beside them, or dive for
   cover after their own BB hits the wall next to them.
 
+## Input, key bindings and HUD fixes (FA5)
+
+- [ ] **Chrome or Edge with a French (AZERTY) or German (QWERTZ) keyboard layout.** Settings → Key Bindings shows
+  Move forward as **Z** (AZERTY) and the order wheel as **W** (AZERTY) or **Y** (QWERTZ); the tutorial's hints and
+  the "press R to reload" hint use the same letters. Switch the system layout while the game is open, click back
+  into the window: the names follow.
+- [ ] **Firefox:** Key Bindings shows a line saying names follow a US keyboard; the keys still work by position.
+- [ ] **Key Bindings:** each row has a main and a second key box. Rebind Move forward's main key: ↑ stays as its
+  second key. Bind Jump to R: the line under the list says "R was Reload: Reload is now Space" and Reload's row
+  flashes. Click a box and press Backspace: it clears (Move forward's last key refuses, saying it needs a key).
+  Click a box and turn the mouse wheel: it binds "Wheel up" / "Wheel down", and in a match that direction no longer
+  switches replicas. F5, F11 and F12 are refused ("the browser uses it").
+- [ ] **Keyboard only:** Tab to a key box, press Enter, press a key: the focus stays on that box (Tab moves on to the
+  next one). Bind Space and Enter this way: the box doesn't start waiting again.
+- [ ] **Reset All** asks "Click Again To Reset" and resets only on a second click within 3 s.
+- [ ] **Esc on the pause menu resumes** (with the mouse lock: right after pausing, Chrome may need a moment and
+  shows "click again"; a second Esc a second later resumes).
+- [ ] **F10 mid-match (Chrome, Edge, Firefox):** the page goes fullscreen and play carries on without the pause menu
+  (if the browser keeps the pause menu up, Resume works as before). Same leaving fullscreen with F10. Then strike
+  KNOWN_ISSUES "The fullscreen key drops the mouse lock".
+- [ ] **Raw mouse input** (Settings → Controls): after the first Play the line under it says "Raw input is active"
+  in Chrome/Edge, "no raw input" in Firefox. Turn it off, Resume: the system's acceleration applies.
+- [ ] **Turn distance:** type 36.4 in the cm/360 box and press Enter: it still says 36.4. The sensitivity slider
+  moves in 0.01 steps with the arrow keys.
+- [ ] **HUD size** (Settings → HUD): 150 % makes the replica panel, scoreboard, minimap, hit feed, squad line, round
+  messages, order wheel and teammate markers bigger, nothing overlaps at 1280×720; the crosshair keeps its size. On a
+  1440p or 4K screen (without system scaling) 100 % is already larger than on 1080p.
+- [ ] **Minimap on a second screen:** drag the window to a screen with another scaling mid-match (or zoom the
+  browser), pause and resume: the minimap is sharp and the right size.
+- [ ] **Teammate markers:** a teammate whose marker would sit inside the minimap circle has none there; holding Tab
+  hides every marker over the field (teammates, the flag, the hold spot).
+- [ ] **Crosshair:** Custom colour (the colour box at the end of the colour buttons), Opacity and Spread (Static keeps
+  the gap while moving and firing) show in the preview and in a match.
+- [ ] **Order wheel:** each order shows its own key (F, X, V) under its name; rebind one and open the wheel again.
+- [ ] **New game at 1920×1080 and 2560×1440:** "Elimination" stays inside its tile.
+- [ ] **Settings at 1280×720:** Controls, Key Bindings and Crosshair fade out above the Back button while there is
+  more below; scrolled to the end, the fade goes.
+- [ ] **Windows High Contrast** (or Chrome DevTools → Rendering → forced-colors: active): the crosshair, team pips,
+  hit wedge and sound cues keep their colours in a match.
+- [ ] **Screen reader (NVDA/VoiceOver):** being hit is read out ("Hit! You called your hit"), the round result once
+  (not the countdown), and a squad order as it is given.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:
