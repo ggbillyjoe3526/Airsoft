@@ -59,6 +59,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33d** · Woodland's layout, playable with the Dev content switch on (dev content: its matches aren't recorded or paid); 4v4 and 5v5 on maps with room
 - **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound (#75)
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
+- **M34c** · Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend
+- **M34c** · Minimap on multi-level maps shows the floor you stand on (floors below darker) and marks teammates on other floors with an up or down arrow
 - **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
 - **M35** · pool.md has an Access column: public or dev for each asset (#70)
 
