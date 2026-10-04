@@ -254,6 +254,7 @@ export class Game {
       armory: {
         pool: GAME_POOL,
         collection: () => this.collection,
+        equipped: () => this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : [])),
         onChange: () => {
           saveCollection(this.collection);
           this.loadoutChanged = this.setupChanged = true;
@@ -619,7 +620,8 @@ export class Game {
         earn(this.collection, this.lastEarnings.total);
         saveCollection(this.collection);
         this.menus.refresh();
-      } else if (outcome || s.notCountedReason === 'dev' || this.dev.disableArmory) {
+      } else if (!s.paysFieldCredits || this.dev.disableArmory) {
+        // Not paid (Dev settings, or the Armory off): nothing to show, whatever an earlier match paid.
         this.lastEarnings = null;
       }
       this.menus.showResult(headline, `${score} · ${r.number} rounds${draws > 0 ? `, ${draws} drawn` : ''}`, {

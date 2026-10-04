@@ -1150,6 +1150,11 @@ kbd {
   .setup-tiles {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  /* 4 + 3: the last tile (Settings) takes the gap */
+  .setup-tiles > :last-child {
+    grid-column: span 2;
+  }
 }
 
 /* Small laptop windows (1024 × 640): two rows of tiles, packed tighter so Play stays on screen. */
@@ -2766,6 +2771,7 @@ kbd {
 }
 
 .armory-odds-scrap {
+  white-space: nowrap;
   color: var(--menu-faint);
 }
 
@@ -2830,4 +2836,19 @@ kbd {
   min-height: 36px;
   padding: 0 14px;
   font-size: 14px;
+}
+
+/* Seven New game tiles on a laptop screen (1180–1400 px wide): tighter, so the longest words fit */
+@media (min-width: 1181px) and (max-width: 1400px) {
+  .setup-tiles {
+    gap: 12px;
+  }
+
+  .setup-tile {
+    padding: 18px 14px;
+  }
+
+  .setup-tile-value {
+    font-size: 17px;
+  }
 }

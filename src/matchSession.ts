@@ -215,6 +215,11 @@ export class MatchSession {
     return { difficulty: this.setup.difficulty, mode: this.mode, won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
   }
 
+  /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24). */
+  get paysFieldCredits(): boolean {
+    return !this.devAssisted;
+  }
+
   /**
    * The decided match for its Field Credits (M26c), once per match: custom rules pay too (scaled by pool.md), but a
    * match played with Dev settings that change play (M24) pays nothing, so null then.
@@ -223,7 +228,7 @@ export class MatchSession {
     const r = this.state.round;
     if (r.phase !== 'matchOver' || this.outcomeTaken) return null;
     this.outcomeTaken = true;
-    if (this.devAssisted) return null;
+    if (!this.paysFieldCredits) return null;
     return {
       won: r.matchWinner === this.player.team,
       roundsWon: r.score[this.player.team] ?? 0,

@@ -111,6 +111,21 @@ describe('Tokens and Shots (M26c)', () => {
     expect(counts.get('legendary')! / total).toBeLessThan(0.02);
   });
 
+  it('lift only the last item of a ten-Shot that drew nothing at the guaranteed tier', () => {
+    // Rare can never come up by the odds, so every ten-Shot falls back on the guarantee.
+    const text = ['### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', '| Common | 100 | 0 | 5 |', '| Rare | 0 | 6 | 20 |', '### Replicas', '| ID | Name | Key | Tags | Starter | In Shots |', '|---|---|---|---|---|---|', '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes |'].join('\n');
+    const rigged: Pool = loadPool(text);
+    expect(rigged.economy.tenShotGuarantee).toBe('rare');
+    const c = newCollection(rigged, 5);
+    c.tokens = 11;
+    const ten = takeShots(rigged, c, 10)!.map((d) => d.item.tier);
+    expect(ten).toHaveLength(10 * rigged.economy.assetsPerShot);
+    expect(ten.slice(0, -1).every((t) => t === 'common')).toBe(true);
+    expect(ten.at(-1)).toBe('rare');
+    // A single Shot carries no guarantee.
+    expect(takeShots(rigged, c, 1)!.every((d) => d.item.tier === 'common')).toBe(true);
+  });
+
   it('normalise odds that do not add up to 100, as the warning in pool.md promises', () => {
     const text = (odds: [number, number]) =>
       ['### Rarity', '| Tier | Odds % | Bonus % | Scrap FC |', '|---|---|---|---|', `| Common | ${odds[0]} | 0 | 5 |`, `| Rare | ${odds[1]} | 6 | 20 |`, '### Replicas', '| ID | Name | Key | Tags | Starter | In Shots |', '|---|---|---|---|---|---|', '| 000001 | Gas Pistol | pistol | pistol, gas | yes | yes |'].join('\n');
