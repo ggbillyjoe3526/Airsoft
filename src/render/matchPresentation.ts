@@ -5,8 +5,9 @@ import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { FLAG_VISUALS, HUD } from '../config/render';
 import type { ReplicaConfig } from '../config/replicas';
-import { SQUAD_ORDERS, type SquadOrderKind } from '../config/squad';
-import { teamCss, type TeamColours } from '../config/teams';
+import { SQUAD_ORDERS, type SquadOrderKind, type WheelSelect } from '../config/squad';
+import { cssColor, teamCss, type TeamColours } from '../config/teams';
+import type { MapBlock } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import type { RoundRules } from '../sim/round';
@@ -18,10 +19,13 @@ import { HitFeed } from '../ui/hitFeed';
 import { HitFeedback } from '../ui/hitFeedback';
 import { HoldMarker } from '../ui/holdMarker';
 import { MatchBoard } from '../ui/matchBoard';
+import { Minimap, type MinimapFrame } from '../ui/minimap';
+import { HeardPlayers } from '../ui/minimapView';
+import { OrderWheel, wheelHint } from '../ui/orderWheel';
 import { roundBanner } from '../ui/roundBanner';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
-import { SquadOrderLine } from '../ui/squadOrderLine';
+import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { CharacterRenderer } from './characterRenderer';
@@ -61,6 +65,14 @@ export class MatchPresentation {
   private readonly holdAnchor = new THREE.Vector3();
   private readonly holdAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   private readonly heard: HeardSound = { kind: 'step', sourceId: -1, x: 0, z: 0 };
+  /** The minimap (M23): the other team where last heard, from where the camera was at the last frame. */
+  private readonly minimap: Minimap;
+  private readonly heardPlayers = new HeardPlayers();
+  private readonly minimapFrame: MinimapFrame;
+  private readonly listener = { x: 0, z: 0, yaw: 0 };
+  private readonly orderWheel: OrderWheel;
+  /** The player the camera follows while you spectate (the middle of the minimap), as of the last frame. */
+  private watched: Character | undefined;
   private readonly viewDir = new THREE.Vector3();
   /** Display names by character id ("Blue 2", "You"). */
   private readonly names: Map<number, string>;
@@ -92,7 +104,10 @@ export class MatchPresentation {
     teamColours: TeamColours,
     /** The replica in each loadout slot (the figures hold the active one). */
     loadout: readonly ReplicaConfig[],
+    /** The map's blocks, for the minimap's drawing of the field. */
+    blocks: readonly MapBlock[],
   ) {
+    this.keyName = keyName;
     this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, loadout);
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
@@ -108,7 +123,12 @@ export class MatchPresentation {
     this.soundCues = new SoundCues(container);
     this.squadLine = new SquadOrderLine(container, player.team);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
+    this.minimap = new Minimap(container, blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!));
+    this.minimapFrame = { x: 0, z: 0, yaw: 0, mates: this.mates.map(() => ({ x: 0, z: 0, hit: false })), count: 0, hold: null, flag: null, time: 0 };
+    this.orderWheel = new OrderWheel(container, teamCss(player.team));
   }
+
+  private readonly keyName: (action: Action) => string;
 
   /** On-screen sound cues turned on or off (also called once as the match is built). */
   setSoundCues(on: boolean): void {
@@ -121,8 +141,10 @@ export class MatchPresentation {
     this.feed.setVisible(playing);
     this.soundCues.setVisible(playing);
     this.squadLine.setVisible(playing);
+    this.minimap.setVisible(playing);
     this.playing = playing;
     if (!playing) {
+      this.orderWheel.hide();
       this.marker.hide();
       this.mateMarkers.hideAll();
       this.board.setVisible(false);
@@ -156,13 +178,18 @@ export class MatchPresentation {
         this.feed.clear();
         this.soundCues.clear();
         this.squadLine.clear();
+        this.heardPlayers.clear();
       }
-      if (soundCueOf(e, this.player, this.characterOf, this.heard)) this.soundCues.add(this.heard, this.state.time);
+      if (e.type === 'characterHit') this.heardPlayers.forget(e.victimId);
+      if (soundCueOf(e, this.player, this.characterOf, this.heard)) {
+        this.soundCues.add(this.heard, this.state.time);
+        if (this.characterOf(this.heard.sourceId)?.team !== this.player.team) this.heardPlayers.add(this.heard, this.listener.x, this.listener.z, this.state.time);
+      }
     }
   }
 
   /** You pressed a squad order key and `result` is now in force (`why`: the reason if none is); see SquadOrderLine. */
-  orderGiven(result: SquadOrderKind | 'none', why: 'cancelled' | 'nobody' | 'notNow'): void {
+  orderGiven(result: SquadOrderKind | 'none', why: OrderNotice): void {
     this.squadLine.ordered(result, why);
   }
 
@@ -180,6 +207,45 @@ export class MatchPresentation {
     const m = projectMarker(this.holdAnchor, camera, this.view.width, this.view.height, SQUAD_ORDERS.markerEdge, this.holdAt);
     const p = this.player.position;
     this.holdMarker.show(m.x, m.y, Math.hypot(hold.x - p.x, hold.z - p.z), !m.onScreen);
+  }
+
+  /**
+   * Once per frame, after `frame`: the order wheel (M23) while its key is held. `pointer`: the wheel's pointer and the
+   * order it's on (input/playerInput.ts), `current`: the order in force, `select`: how an order is given.
+   */
+  showOrderWheel(open: boolean, pointer: { readonly x: number; readonly y: number; readonly pick: number }, current: SquadOrderKind | 'none', select: WheelSelect): void {
+    if (!open || !this.playing) {
+      this.orderWheel.hide();
+      return;
+    }
+    this.orderWheel.update(true, pointer.pick, pointer.x, pointer.y, current, wheelHint(select, pointer.pick, this.keyName('orderWheel')));
+  }
+
+  /**
+   * Once per frame, after `frame`: the minimap (M23), round wherever the camera is (your eyes, or the player you
+   * watch), with your teammates, where you last heard the other team, where your teammates hold (`hold`, or null) and
+   * in Attack / Defend the flagpole.
+   */
+  showMinimap(hold: Vec3 | null): void {
+    if (!this.playing) return;
+    const f = this.minimapFrame;
+    f.x = this.listener.x;
+    f.z = this.listener.z;
+    f.yaw = this.listener.yaw;
+    f.time = this.state.time;
+    f.count = 0;
+    for (const c of this.mates) {
+      if (c.status === 'out' || c === this.watched) continue;
+      const m = f.mates[f.count++]!;
+      m.x = c.position.x;
+      m.z = c.position.z;
+      m.hit = c.status !== 'alive';
+    }
+    f.hold = hold;
+    const r = this.state.round;
+    f.flag = this.flag.object.visible && r.mode === 'attackDefend' ? r.flag.position : null;
+    this.heardPlayers.expire(this.state.time);
+    this.minimap.update(f, this.heardPlayers.players);
   }
 
   /** Clicking while spectating watches the next player. */
@@ -202,6 +268,7 @@ export class MatchPresentation {
     } else {
       this.feedback.setSpectating('');
     }
+    this.watched = watched;
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id);
     this.flag.update(this.state.round, this.state.time);
     this.updateMarker(camera, spectating);
@@ -209,7 +276,10 @@ export class MatchPresentation {
     this.feed.update(this.state.time);
     // The cues are placed for wherever the camera is (your eyes, or the player you watch), as the ears are.
     camera.getWorldDirection(this.viewDir);
-    this.soundCues.update(camera.position.x, camera.position.z, Math.atan2(-this.viewDir.x, -this.viewDir.z), this.state.time);
+    this.listener.x = camera.position.x;
+    this.listener.z = camera.position.z;
+    this.listener.yaw = Math.atan2(-this.viewDir.x, -this.viewDir.z);
+    this.soundCues.update(this.listener.x, this.listener.z, this.listener.yaw, this.state.time);
     this.updateBoard(boardHeld);
 
     this.feedback.setCalling(status === 'calling');
@@ -232,6 +302,8 @@ export class MatchPresentation {
     this.soundCues.dispose();
     this.squadLine.dispose();
     this.holdMarker.dispose();
+    this.minimap.dispose();
+    this.orderWheel.dispose();
   }
 
   private readonly characterOf = (id: number): Character | undefined => {

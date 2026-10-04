@@ -217,6 +217,11 @@ export class BotController {
     return given?.kind === 'hold' && !given.ownSpot && heldCentre(this.bots, leader, out);
   }
 
+  /** `leader`'s order ends (the order wheel's Team plan, M23): everyone given it goes back to the team plan. */
+  cancelOrder(leader: Character): void {
+    this.dropOrder(leader);
+  }
+
   /** Everyone given `leader`'s order goes back to the team plan. */
   private dropOrder(leader: Character): void {
     for (const b of this.bots) if (b.orderLeader === leader) endOrder(b, this.world);

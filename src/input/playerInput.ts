@@ -1,10 +1,11 @@
 import { type Action, type CrouchMode, DEFAULT_AIM_MODE, DEFAULT_CROUCH_MODE, DEFAULT_SPRINT_MODE, type HoldMode, MOUSE } from '../config/controls';
 import { AIMING } from '../config/optics';
 import type { MovementConfig } from '../config/movement';
-import type { SquadOrderKind } from '../config/squad';
+import { DEFAULT_WHEEL_SELECT, ORDER_WHEEL, type SquadCommand, type WheelSelect } from '../config/squad';
 import type { PlayerCommand } from '../sim/commands';
 import { wrapAngle } from '../sim/vec';
 import type { Keyboard } from './keyboard';
+import { WheelPointer } from './orderWheel';
 import type { PointerLock } from './pointerLock';
 
 /** A press of any of these stops a toggled sprint. */
@@ -20,6 +21,10 @@ const SPRINT_STOPPERS: readonly Action[] = ['crouch', 'aim', 'walk', 'fire'];
  * - a toggled aim drops on a sprint press, a replica switch, or when the replica in hand has no sight;
  * - a toggled sprint stops when forward is let go, or on a crouch, aim, walk or fire press.
  * The mouse turns at `aimSensitivity` times the normal rate once the sight is up; `invertY` swaps up and down.
+ *
+ * The order wheel (M23, while `ordersEnabled`): holding its key opens it, and from then until it closes the mouse moves
+ * the wheel's pointer, never the view; the wheel takes the mouse wheel too, and the trigger, so a click can never fire
+ * (a held trigger needs a new pull once the wheel is gone). The keyboard still moves you. See `wheelSelect`.
  */
 export class PlayerInput {
   yaw = 0;
@@ -29,6 +34,15 @@ export class PlayerInput {
   aimSensitivity: number = AIMING.defaultSensitivity;
   /** Invert mouse (Settings → Controls): moving the mouse forward looks down. */
   invertY = false;
+  /**
+   * The order wheel can open: true in a match, false on the range (no teammates to order). Turning it off closes it.
+   */
+  ordersEnabled = false;
+  /** How the wheel gives an order (Settings → Controls): let go of its key while pointing at it, or click it. */
+  wheelSelect: WheelSelect = DEFAULT_WHEEL_SELECT;
+  private readonly wheel = new WheelPointer();
+  /** The trigger is the wheel's: no shot until it is let go of after the wheel closes. */
+  private fireBlocked = false;
   private crouchModeValue: CrouchMode = DEFAULT_CROUCH_MODE;
   private aimModeValue: HoldMode = DEFAULT_AIM_MODE;
   private sprintModeValue: HoldMode = DEFAULT_SPRINT_MODE;
@@ -44,8 +58,8 @@ export class PlayerInput {
   private reloadLatch = false;
   private fireLatch = false;
   private fireModeLatch = false;
-  /** A squad order key pressed since the last takeOrder (M22). */
-  private orderLatch: SquadOrderKind | null = null;
+  /** A squad order key pressed (M22), or an order picked on the wheel (M23), since the last takeOrder. */
+  private orderLatch: SquadCommand | null = null;
   private switchLatch = -1;
   private readonly mouseDelta = { x: 0, y: 0 };
 
@@ -99,6 +113,7 @@ export class PlayerInput {
    */
   update(activeSlot: number, slotCount: number, aimRaised = 0, aimScale = 1, canAim = true): void {
     this.pointer.consumeDelta(this.mouseDelta);
+    this.updateWheel();
     const k = MOUSE.radiansPerCount * this.sensitivity * (1 + (this.aimSensitivity * aimScale - 1) * aimRaised);
     const maxPitch = this.movement.maxPitch;
     this.yaw = wrapAngle(this.yaw - this.mouseDelta.x * k);
@@ -121,12 +136,12 @@ export class PlayerInput {
         this.jumpLatch = false;
       }
     }
-    if (kb.wasPressed('fire')) this.fireLatch = true;
+    if (kb.wasPressed('fire') && !this.fireBlocked) this.fireLatch = true;
     const switchBefore = this.switchLatch;
     if (kb.wasPressed('slot1')) this.switchLatch = 0;
     if (kb.wasPressed('slot2')) this.switchLatch = 1;
     const cycle = this.pointer.consumeWheelSteps();
-    if (cycle !== 0 && slotCount > 1) {
+    if (cycle !== 0 && slotCount > 1 && !this.wheel.open) {
       const from = this.switchLatch >= 0 ? this.switchLatch : activeSlot;
       this.switchLatch = (((from + cycle) % slotCount) + slotCount) % slotCount;
     }
@@ -143,7 +158,50 @@ export class PlayerInput {
       // Pressed before forward, it waits for forward (M18a review); once you've run, letting go of forward ends it.
       if (this.sprintToggled && kb.isDown('forward')) this.sprintRunning = true;
       else if (this.sprintRunning) this.sprintToggled = false;
-      for (const a of SPRINT_STOPPERS) if (kb.wasPressed(a)) this.sprintToggled = false;
+      for (const a of SPRINT_STOPPERS) if (kb.wasPressed(a) && !(a === 'fire' && this.fireBlocked)) this.sprintToggled = false;
+    }
+    if (this.fireBlocked && !this.wheel.open && !kb.isDown('fire')) this.fireBlocked = false;
+  }
+
+  /** The order wheel is open (M23). */
+  get wheelOpen(): boolean {
+    return this.wheel.open;
+  }
+
+  /** The wheel's pointer (px from its middle) and the order it is on (an index into ORDER_WHEEL.items, or -1). */
+  get wheelPointer(): { readonly x: number; readonly y: number; readonly pick: number } {
+    return this.wheel;
+  }
+
+  /**
+   * The order wheel, before the mouse turns the view: opens on its key, and while open takes this frame's mouse
+   * movement for its pointer. A click on an order gives it (either way of picking); letting go of the key closes the
+   * wheel, giving the order pointed at when picking by hover.
+   */
+  private updateWheel(): void {
+    const kb = this.keyboard;
+    const w = this.wheel;
+    if (!this.ordersEnabled) {
+      if (w.open) w.close();
+      return;
+    }
+    if (!w.open && kb.wasPressed('orderWheel')) {
+      w.start();
+      this.fireBlocked = true;
+      this.fireLatch = false;
+    }
+    if (!w.open) return;
+    const gain = ORDER_WHEEL.pointerGain * this.sensitivity;
+    w.move(this.mouseDelta.x * gain, this.mouseDelta.y * gain);
+    this.mouseDelta.x = 0;
+    this.mouseDelta.y = 0;
+    const pick = w.pick;
+    if (pick >= 0 && kb.wasPressed('fire')) {
+      this.orderLatch = ORDER_WHEEL.items[pick]!.command;
+      w.close();
+    } else if (!kb.isDown('orderWheel')) {
+      if (pick >= 0 && this.wheelSelect === 'hover') this.orderLatch = ORDER_WHEEL.items[pick]!.command;
+      w.close();
     }
   }
 
@@ -161,10 +219,10 @@ export class PlayerInput {
     cmd.jump = this.jumpLatch;
     cmd.reload = this.reloadLatch;
     cmd.aim = this.aimModeValue === 'toggle' ? this.aimToggled : kb.isDown('aim');
-    cmd.fire = kb.isDown('fire') || this.fireLatch;
+    cmd.fire = !this.fireBlocked && (kb.isDown('fire') || this.fireLatch);
     cmd.switchTo = this.switchLatch;
     cmd.cycleFireMode = this.fireModeLatch;
-    this.clearLatches();
+    this.clearOneShots();
   }
 
   /** Returns true once per trigger click since the last tick (used for menus-in-play such as spectating). */
@@ -174,8 +232,8 @@ export class PlayerInput {
     return clicked;
   }
 
-  /** The squad order key pressed this frame, once (null if none; M22). */
-  takeOrder(): SquadOrderKind | null {
+  /** The squad order key pressed or the wheel's order picked this frame, once (null if none; M22, M23). */
+  takeOrder(): SquadCommand | null {
     const order = this.orderLatch;
     this.orderLatch = null;
     return order;
@@ -191,8 +249,14 @@ export class PlayerInput {
     this.clearLatches();
   }
 
-  /** Drops pending one-shot actions (e.g. when the game pauses). */
+  /** Drops pending one-shot actions and closes the order wheel without an order (e.g. when the game pauses). */
   clearLatches(): void {
+    this.clearOneShots();
+    this.wheel.close();
+    this.fireBlocked = false;
+  }
+
+  private clearOneShots(): void {
     this.jumpLatch = false;
     this.reloadLatch = false;
     this.fireLatch = false;

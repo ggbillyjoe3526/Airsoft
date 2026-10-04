@@ -1,5 +1,6 @@
 import { AIM_MODES, CROUCH_MODES, type CrouchMode, type HoldMode, INVERT_MOUSE, MOUSE, MOUSE_DPI, OTHER_SHOOTERS, SPRINT_MODES, TURN_CM } from '../config/controls';
 import { AIMING } from '../config/optics';
+import { WHEEL_SELECT_MODES, type WheelSelect } from '../config/squad';
 import { cmPer360, sameSensitivityAs, sensitivityFromTypedCm } from '../input/sensitivity';
 import { saveSetting } from '../settings/storage';
 import { el, menuRow, rangeControl } from './menus/menuParts';
@@ -14,6 +15,8 @@ export interface ControlsSettingsOptions {
   crouch: { initial: CrouchMode; onChange: (m: CrouchMode) => void };
   aim: { initial: HoldMode; onChange: (m: HoldMode) => void };
   sprint: { initial: HoldMode; onChange: (m: HoldMode) => void };
+  /** How the order wheel gives an order (M23). */
+  wheelSelect: { initial: WheelSelect; onChange: (m: WheelSelect) => void };
 }
 
 /**
@@ -135,5 +138,10 @@ export function controlsSettings(opts: ControlsSettingsOptions): HTMLDivElement[
     menuRow('Crouch key', '', new OptionPicker('Crouch key', CROUCH_MODES, opts.crouch.initial, 'crouch', opts.crouch.onChange).root),
     menuRow('Aim button', '', new OptionPicker('Aim button', AIM_MODES, opts.aim.initial, 'aimMode', opts.aim.onChange).root),
     menuRow('Sprint key', '', new OptionPicker('Sprint key', SPRINT_MODES, opts.sprint.initial, 'sprintMode', opts.sprint.onChange).root),
+    menuRow(
+      'Order wheel',
+      'Hold the order wheel key for squad orders. The mouse moves the wheel’s pointer, not your view.',
+      new OptionPicker('Order wheel', WHEEL_SELECT_MODES, opts.wheelSelect.initial, 'orderWheel', opts.wheelSelect.onChange).root,
+    ),
   ];
 }

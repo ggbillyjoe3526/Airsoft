@@ -1,0 +1,46 @@
+import { SOUND_CUES } from './accessibility';
+
+/**
+ * The minimap (M23), top left while you play: the field round you, turned so the way you look is up. Your teammates
+ * show at all times. The other team shows only where you last heard each of them (a footstep or a shot, as far as the
+ * sound plays: the sound cue ranges), as a patch rather than a point, wider the further off it was, fading out.
+ */
+export const MINIMAP = {
+  /** On-screen size (CSS px, square; the field is drawn in a circle inside it). */
+  size: 200,
+  /** Metres from the middle to the edge of the circle. */
+  viewRadius: 20,
+  /** Pixels per metre in the field drawing made once per match (it's scaled to `size` as drawn). */
+  layerScale: 6,
+  /** The furthest each sound kind places a player: as far as its sound cue shows (and the sound plays). */
+  hearing: SOUND_CUES.range,
+  /**
+   * How long a heard player's patch stays (s), fading over the last `fade` of them. Each player has one patch: the
+   * last thing they were heard doing.
+   */
+  noiseLife: 5,
+  noiseFade: 2,
+  /**
+   * How far off a heard player's patch can sit from where they really were (m): this share of the distance to them,
+   * at least `noiseMinBlur` and at most `noiseMaxBlur`. Footsteps place less well than shots.
+   */
+  noiseBlurShare: { step: 0.22, shot: 0.12 },
+  noiseMinBlur: 1.5,
+  noiseMaxBlur: 7,
+  /** The patch's radius is the blur plus this (m), so the player is always inside it. */
+  noisePad: 1,
+  /** Blocks whose top is at most this high (m) draw as low cover; taller ones as walls. */
+  lowCoverTop: 1.3,
+  /** Floors whose top is above this (m) draw as raised ground (docks, platforms). */
+  raisedFloor: 0.3,
+  /** Colours of the field drawing (CSS). */
+  colours: {
+    ground: 'rgba(72, 80, 88, 0.92)',
+    raised: 'rgba(96, 104, 110, 0.95)',
+    ramp: 'rgba(80, 88, 94, 0.95)',
+    low: 'rgba(150, 156, 160, 0.95)',
+    tall: 'rgba(214, 218, 220, 0.98)',
+    you: '#ffffff',
+    out: 'rgba(170, 170, 170, 0.8)',
+  },
+} as const;

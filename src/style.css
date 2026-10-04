@@ -1746,6 +1746,105 @@ kbd {
   display: none;
 }
 
+/* The minimap (M23), top left: the field round you, turned with your view (drawn on a canvas, ui/minimap.ts) */
+.minimap {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  width: var(--minimap-size);
+  height: var(--minimap-size);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.minimap[hidden] {
+  display: none;
+}
+
+/* The order wheel (M23): the orders round the middle of the screen while its key is held */
+.order-wheel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 14;
+  color: var(--paper);
+  font-family: var(--ui-font);
+}
+
+.order-wheel[hidden] {
+  display: none;
+}
+
+.order-wheel::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--wheel-radius) - 70px);
+  top: calc(-1 * var(--wheel-radius) - 70px);
+  width: calc(2 * var(--wheel-radius) + 140px);
+  height: calc(2 * var(--wheel-radius) + 140px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(10, 12, 16, 0.55) 55%, transparent 72%);
+}
+
+.order-wheel-item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: calc(var(--x) - 50%) calc(var(--y) - 50%);
+  min-width: 104px;
+  padding: 8px 12px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  background: rgba(16, 18, 22, 0.8);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* The order your teammates carry out now: an underline in your team's colour */
+.order-wheel-item.current {
+  box-shadow: inset 0 -3px 0 var(--team);
+}
+
+/* The order pointed at: lit in your team's colour and a little bigger (not colour alone) */
+.order-wheel-item.picked {
+  border-color: #fff;
+  background: var(--team);
+  color: #10141a;
+  scale: 1.08;
+}
+
+.order-wheel-hint {
+  position: absolute;
+  left: 0;
+  top: 26px;
+  translate: -50% 0;
+  width: 170px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  opacity: 0.85;
+}
+
+.order-wheel-pointer {
+  position: absolute;
+  left: -5px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
 /* Where your teammates hold (M22): a diamond in your team's colour over the spot, with the distance. */
 .hold-marker {
   position: absolute;

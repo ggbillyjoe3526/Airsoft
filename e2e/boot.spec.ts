@@ -139,6 +139,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await cm.press('Enter');
   await expect(settings.getByRole('slider', { name: 'Mouse sensitivity' })).toHaveValue('0.5');
   await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(settings.getByRole('group', { name: 'Order wheel' }).getByRole('button', { name: 'Hover' })).toHaveAttribute('aria-pressed', 'true');
   await settings.getByRole('tab', { name: /Accessibility/i }).click();
   await expect(settings.getByRole('group', { name: 'Reduced motion' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
   // Reduced motion reaches the HUD's CSS animations through a class on the container (audit M-03); back off for the match.
@@ -201,12 +202,21 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(board.locator('tbody tr:not(:first-child)')).toHaveCount(4); // the 2v2 picked on Match
   await page.keyboard.up('Tab');
   await expect(board).toBeHidden({ timeout: 10_000 });
-  // Squad orders (M22): Z has the bot teammates follow you and the HUD says so; Z again sends them back to the plan.
+  // The minimap (M23) is up while playing.
+  await expect(page.locator('.minimap')).toBeVisible();
+  // The order wheel (M23) shows while Z is held; let go in the middle, it closes with no order given.
+  const wheel = page.locator('.order-wheel');
+  await page.keyboard.down('z');
+  await expect(wheel.locator('.order-wheel-item').first()).toBeVisible({ timeout: 10_000 });
+  await expect(wheel.locator('.order-wheel-item')).toHaveText(['Follow Me', 'Hold Here', 'Regroup', 'Team Plan']);
+  await page.keyboard.up('z');
+  await expect(wheel).toHaveAttribute('hidden', '', { timeout: 10_000 });
+  // Squad orders (M22): F has the bot teammates follow you and the HUD says so; F again sends them back to the plan.
   const squadLine = page.locator('.squad-order');
   await expect(squadLine).toBeHidden();
-  await page.keyboard.press('z');
+  await page.keyboard.press('f');
   await expect(squadLine).toHaveText(/Follow me/i, { timeout: 10_000 });
-  await page.keyboard.press('z');
+  await page.keyboard.press('f');
   await expect(squadLine).toHaveText(/Back to the team plan/i, { timeout: 10_000 });
   // X: they hold, and a marker shows where; X again on the same spot lets them go.
   const holdMarker = page.locator('.hold-marker');
