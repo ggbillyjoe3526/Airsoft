@@ -606,10 +606,12 @@ Play Elimination on Depot at Normal, then a round each on Easy and Hard, and one
   out, watching. With you at the rope, no bot crowds in.
 - [ ] **Depot's east end (Blue's start in Elimination)**: the spawn yard has no way out to the north road any more;
   the team leaves past the wall's south end, so the dock and the Main Gate take about as long to reach from both
-  ends. Check nobody gets stuck in the yard's north corner.
+  ends. Check nobody gets stuck in the yard's north corner. The east spawns stand near the yard's back wall now: does
+  either end still feel stronger over a half?
 - [ ] **Bots turning a corner** no longer brush the wall or door frame as they pass.
 - [ ] **New game → Bot difficulty, with no Teammates level picked yet**: set Opponents to Easy and Teammates shows
-  Normal; Normal or Hard opponents bring the teammates along to the same level.
+  Normal; Normal or Hard opponents bring the teammates along to the same level. That default (Easy opponents, Normal
+  teammates) has no "won't go into your records" note, and its summary counts it.
 
 ## Audio pass (FA6)
 

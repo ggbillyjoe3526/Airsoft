@@ -271,9 +271,12 @@ const OFFICE: MapBlock[] = [
   crate(14.8, -9.6),
 ];
 
-/** Spawns: west yard facing east (yaw -90°), north-east yard facing west (yaw +90°). */
+/**
+ * Spawns: west yard facing east (yaw -90°), north-east yard facing west (yaw +90°). The east line stands 0.85 m from
+ * the yard's back wall (SIM-13, FA4 attempt 2): a step further back than before evens the ends in bot play (DECISIONS).
+ */
 const WEST_SPAWNS: SpawnPoint[] = [-2.3, 0, 2.3].map((z) => ({ position: vec3(-22.7, 0, z), yaw: -Math.PI / 2 }));
-const EAST_SPAWNS: SpawnPoint[] = [10.2, 12.4, 14.6].map((z) => ({ position: vec3(22.7, 0, z), yaw: Math.PI / 2 }));
+const EAST_SPAWNS: SpawnPoint[] = [10.2, 12.4, 14.6].map((z) => ({ position: vec3(24.15, 0, z), yaw: Math.PI / 2 }));
 
 /** Dead zones: a back corner of each spawn yard, behind the spawn line and out of every lane. */
 const WEST_DEAD_ZONE: SpawnPoint[] = [
@@ -300,7 +303,7 @@ const LANES: Vec3[][] = [
   [vec3(-15.0, 0, -6.6), vec3(-11.0, 0, -11.9), vec3(-6.6, 0, -11.9), vec3(-1.0, 0, -9.3), vec3(4.0, 0, -10.0), vec3(7.2, 0, -9.0), vec3(12.8, 0, -13.2)],
 ];
 
-/** The pole: in the Bay, about 17 m from the east spawns and 38 m from the west ones (tested). */
+/** The pole: in the Bay, about 18 m from the east spawns and 37 m from the west ones (tested). */
 const POLE = vec3(11.5, 0, -1.0);
 
 /**

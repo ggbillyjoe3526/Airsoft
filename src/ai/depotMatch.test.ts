@@ -59,8 +59,9 @@ describe('a 3v3 bot match on Depot', () => {
     }
     // Standing still is judged over the four seeds together (FA4, 2026-10-04; DECISIONS): one seed's share swings with
     // a single long wait (over seeds 1-16 single seeds reach 4.8 % before FA4 and 5.0 % after it, while the mean fell
-    // from 1.8 to 1.6 %). Seeds 1-4 together: 2.5 % before FA4, 2.1 % after.
-    expect(allStanding / allCounted).toBeLessThan(0.04);
+    // from 1.8 to 1.6 %). Seeds 1-4 together: 2.5 % before FA4, 2.1 % after, 1.1 % with the east spawns moved back
+    // (FA4 attempt 2), so the limit is 3 %.
+    expect(allStanding / allCounted).toBeLessThan(0.03);
   });
 
   it('never has bots hit their own teammates', { timeout: 30_000 }, () => {

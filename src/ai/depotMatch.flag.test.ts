@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
 import { ROUNDS } from '../config/hits';
 import { initPhysics } from '../physics/physicsWorld';
-import { playMatch } from './depotMatchSupport';
+import { playedAfterHalfTime, playMatch } from './depotMatchSupport';
 
 describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
   beforeAll(async () => {
@@ -18,8 +18,9 @@ describe('a 3v3 Attack / Defend match on Depot: the pole over 16 seeds', () => {
     for (let seed = 1; seed <= 16; seed++) {
       const stats = playMatch(400, seed, undefined, BOTS, 'attackDefend');
       friendlyHits += stats.friendlyHits;
-      // Rounds 1-4 Blue attacks, then Orange; the attackers always start at the west end.
-      expect(stats.results.map((r) => r.attackers)).toEqual(stats.results.map((_, i) => (i < ROUNDS.halfTimeAfter ? 0 : 1)));
+      // Rounds 1-4 Blue attacks, then Orange (a drawn round is replayed under its number); the attackers always start
+      // at the west end.
+      expect(stats.results.map((r) => r.attackers)).toEqual(playedAfterHalfTime(stats.results).map((after) => (after ? 1 : 0)));
       expect(stats.results.every((r) => r.attackerEnd === 0)).toBe(true);
       for (const r of stats.results) {
         rounds++;
