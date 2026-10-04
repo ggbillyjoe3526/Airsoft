@@ -39,15 +39,16 @@ describe('a 3v3 bot match on Depot', () => {
   });
 
   it('has bot teammates follow a leader round Depot without being left behind (squad orders, M22)', { timeout: 60_000 }, () => {
-    for (const seed of [1, 2, 3]) {
+    for (const seed of [1, 2, 3, 4]) {
       const { counted, near, worst, standing } = playFollowMatch(90, seed);
-      // Measured (seeds 1-3): 90-98% of the time within a few metres of their spot, at worst about 10 m behind (a
-      // sprinting leader round corners: a sprint can't catch a sprint), and standing still under 2% of the time the
-      // leader moves (one that got ahead of its spot waiting for it).
+      // Measured 2026-10-04 (seeds 1-4, after M-05/M-08: no follow spot behind a wall): within a few metres of the
+      // leader all the time, at worst 5.3-6.9 m away (a sprinting leader round corners: a sprint can't catch a
+      // sprint), and standing still 1.0-2.6% of the time the leader moves (one that got ahead of its spot waiting for
+      // it). Before, a follower sent round a wall to a spot on its far side ended up to 10.9 m away.
       expect(counted, `seed ${seed}`).toBeGreaterThan(1000);
-      expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.85);
-      expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp + 3);
-      expect(standing / counted, `seed ${seed}`).toBeLessThan(0.03);
+      expect(near / counted, `seed ${seed}`).toBeGreaterThan(0.95);
+      expect(worst, `seed ${seed}`).toBeLessThan(SQUAD_ORDERS.catchUp);
+      expect(standing / counted, `seed ${seed}`).toBeLessThan(0.04);
     }
   });
 
