@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { NO_TUNE } from '../config/attachments';
 import { LASERS } from '../config/lasers';
+import { GAME_STATS } from '../config/gameStats';
 import { AEG, GAS_PISTOL } from '../config/replicas';
 import type { ItemRef } from './collection';
 import { GAME_POOL } from './gamePool';
-import { bonusOf, EMPTY_FIT, kitReplica, kitSlot, partTune, type ReplicaFit } from './kit';
+import { bonusOf, EMPTY_FIT, energyCapped, kitReplica, kitSlot, partTune, type ReplicaFit } from './kit';
 
 const pool = GAME_POOL;
 const id = (name: string) => pool.assets.find((a) => a.name === name)!.id;
@@ -23,24 +24,53 @@ describe('kit (M26b)', () => {
     expect(slot.parts).toEqual({ grip: 'none', magazine: GAS_PISTOL.magazines[0], laser: null, tune: NO_TUNE });
   });
 
-  it("gives a rarer replica its tier's Bonus % off spread, reload and draw, and nothing more", () => {
+  it("gives a rarer replica its tier's Bonus % off spread, reload and draw, and half of it on energy and rate of fire (M29)", () => {
     const r = kitReplica(pool, item('AEG Rifle', 'legendary'), STARTER_AEG);
-    expect(bonusOf(pool, item('AEG Rifle', 'legendary'))).toBeCloseTo(0.15);
+    expect(bonusOf(pool, item('AEG Rifle', 'legendary'), 'spread')).toBeCloseTo(0.15);
+    expect(bonusOf(pool, item('AEG Rifle', 'legendary'), 'energy')).toBeCloseTo(0.075);
     expect(r.spreadDeg).toBeCloseTo(AEG.spreadDeg * 0.85);
     expect(r.reloadTime).toBeCloseTo(AEG.reloadTime * 0.85);
     expect(r.drawTime).toBeCloseTo(AEG.drawTime * 0.85);
-    expect(r.muzzleEnergy).toBe(AEG.muzzleEnergy);
-    expect(r.fireRate).toBe(AEG.fireRate);
+    expect(r.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * 1.075);
+    expect(r.fireRate).toBeCloseTo(AEG.fireRate * 1.075);
+    expect(r.recoilDeg).toBe(AEG.recoilDeg);
   });
 
-  it('makes a stronger gas shoot harder at the same rate, and a rarer battery raise the rate of fire too', () => {
+  it('makes a stronger gas shoot harder and kick harder at the same rate, and a battery set the rate of fire only (M29)', () => {
     const black = kitReplica(pool, item('Gas Pistol'), fit({ power: item('Black Gas') }));
     expect(black.muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.2);
+    expect(black.recoilDeg).toBeCloseTo(GAS_PISTOL.recoilDeg * 1.2);
     expect(black.fireRate).toBe(GAS_PISTOL.fireRate);
-    // A power source takes half its tier's bonus: 7.5% at Legendary.
+    // A battery's tier improves its rate of fire by half its bonus (7.5% at Legendary), never the energy.
     const battery = kitReplica(pool, item('AEG Rifle'), fit({ power: item('Standard Battery', 'legendary') }));
-    expect(battery.muzzleEnergy).toBeCloseTo(AEG.muzzleEnergy * 1.075);
+    expect(battery.muzzleEnergy).toBe(AEG.muzzleEnergy);
     expect(battery.fireRate).toBeCloseTo(AEG.fireRate * 1.075);
+    const lipo = kitReplica(pool, item('AEG Rifle'), fit({ power: item('11.1 V LiPo Battery') }));
+    expect(lipo.fireRate).toBeCloseTo(AEG.fireRate * 1.15);
+    expect(lipo.muzzleEnergy).toBe(AEG.muzzleEnergy);
+    // A gas's tier improves its energy: a Legendary Red Gas is 10% + 7.5%.
+    const red = kitReplica(pool, item('Gas Pistol'), fit({ power: item('Red Gas', 'legendary') }));
+    expect(red.muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.175);
+  });
+
+  it('stops stacked energy at the site limit, and says so (M29)', () => {
+    const pistol = item('Gas Pistol', 'legendary');
+    const black = fit({ power: item('Black Gas', 'legendary') });
+    expect(kitReplica(pool, pistol, black).muzzleEnergy).toBeCloseTo(GAS_PISTOL.muzzleEnergy * 1.075 * 1.275);
+    expect(energyCapped(pool, pistol, black)).toBe(false);
+    // A site that allows less: the same kit stops at its limit.
+    const strict = { ...GAME_STATS, power: { ...GAME_STATS.power, [id('Black Gas')]: { energy: 1, fireRate: 0, recoil: 0 } } };
+    const capped = kitReplica(pool, pistol, black, strict);
+    expect(capped.muzzleEnergy).toBe(GAS_PISTOL.energyLimit);
+    expect(energyCapped(pool, pistol, black, strict)).toBe(true);
+  });
+
+  it('reads the tier shares from stats.md: a share of 0 leaves the stat as it comes', () => {
+    const flat = { ...GAME_STATS, tierShares: { ...GAME_STATS.tierShares, replica: { spread: 1 } } };
+    const r = kitReplica(pool, item('AEG Rifle', 'legendary'), STARTER_AEG, flat);
+    expect(r.spreadDeg).toBeCloseTo(AEG.spreadDeg * 0.85);
+    expect(r.reloadTime).toBe(AEG.reloadTime);
+    expect(r.muzzleEnergy).toBe(AEG.muzzleEnergy);
   });
 
   it("tightens the pistol's spread with the laser, more with a rarer one", () => {

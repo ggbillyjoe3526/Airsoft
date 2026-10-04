@@ -1,5 +1,7 @@
+import { GAME_STATS } from './gameStats';
 import type { LaserId } from './lasers';
 import type { ReplicaConfig } from './replicas';
+import { overlay } from './statsFile';
 
 /**
  * Attachments (M17b): the grip and magazine fitted to a replica on the Loadout screen. Each is a trade-off, never a
@@ -25,8 +27,11 @@ export interface GripConfig {
   shakeScale: number;
 }
 
-/** Small, opposite strengths: the vertical grip steadies, the angled grip handles quicker. */
-export const GRIPS: Readonly<Record<GripId, GripConfig>> = {
+/**
+ * Small, opposite strengths: the vertical grip steadies, the angled grip handles quicker. The numbers below are the
+ * built-in ones; stats.md's Grips table is what the game uses (M29).
+ */
+export const GRIPS: Readonly<Record<GripId, GripConfig>> = overlay<GripConfig>({
   none: { label: 'No Grip', blurb: 'Hand on the handguard, as it comes.', handlingScale: 1, shakeScale: 1 },
   vertical: {
     label: 'Vertical Grip',
@@ -40,7 +45,7 @@ export const GRIPS: Readonly<Record<GripId, GripConfig>> = {
     handlingScale: 0.8,
     shakeScale: 1.3,
   },
-};
+}, GAME_STATS.grips) as Record<GripId, GripConfig>;
 
 export type MagazineId = 'standard' | 'hiCap' | 'lowCap' | 'extended';
 
@@ -62,7 +67,8 @@ export interface MagazineConfig {
   rattles: boolean;
 }
 
-export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = {
+/** Built-in numbers; stats.md's Magazines table is what the game uses (M29). The standard magazine is how a replica comes. */
+export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = overlay<MagazineConfig>({
   standard: { label: 'Standard', blurb: 'As it comes.', capacity: 1, carried: 0, reloadScale: 1, drawScale: 1, rattles: false },
   // Rifle: 120 BBs but two carried (the same 240), fewer reloads, and it gives you away when you sneak.
   hiCap: {
@@ -94,7 +100,7 @@ export const MAGAZINES: Readonly<Record<MagazineId, MagazineConfig>> = {
     drawScale: 1.35,
     rattles: false,
   },
-};
+}, GAME_STATS.magazines) as Record<MagazineId, MagazineConfig>;
 
 /**
  * Multipliers a part's rarity tier brings (M26b, pool/kit.ts), on top of what the parts themselves do: below 1 is
