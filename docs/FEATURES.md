@@ -104,9 +104,10 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Procedural daylight with a sky, haze and trees; dressed Depot surfaces and props; figures in airsoft kit with team tape (M14)
 - Gas puffs, impact dust by material, dust in the sunlight (M3, M14)
 - Quality presets Low, Medium and High, switchable mid-match; Low has 80 % resolution with no shadows, Medium adds shadows and relief, High adds sharp textures and dust (M14, FA2, FA3)
-- Custom graphics option: pick a preset and modify any row (shadows, shadow detail, softness, range, render scale, edge smoothing, surface relief, texture detail, dust and more); Custom is saved (FA2)
+- Custom graphics option: pick a preset and modify any row (shadows, shadow detail, softness, range, render scale, edge smoothing, surface relief, texture detail, dust, figure detail, replica detail, hand detail, BB glow, impact grit, laser beam); Custom is saved (FA2, FA8)
 - Graphics Settings: frame-rate limit and Show FPS counter; preset selected from graphics card on first run (Medium for integrated, High for discrete) (FA2)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen preserved across preset switches (FA3)
+- Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High; barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 
 ## Practice range and tutorial
