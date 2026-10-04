@@ -121,7 +121,7 @@ Then open **http://localhost:4173**.
 - **Tutorial:** new to the game? The title screen's **Tutorial** walks you through the basics on the practice range,
   one short step at a time (moving, shooting, BB drop, reloading, aiming, crouching, leaning, switching replicas), each
   finished by doing it. After the last step you stay on the range to practise.
-- **Practice range:** the title screen's **Practice range** puts you alone on a walled range with three lanes of
+- **Practice range:** the title screen's **Practice Range** puts you alone on a walled range with three lanes of
   targets at 10 to 60 m: white steel plates that ring and swing when hit, and standing and crouched plywood figures
   that fall back and stand up again. Painted lines and boards on the walls mark the distances, the readout at the top
   says how far your last BB went and what it hit, and your spare magazines stay full (you still reload). Press Esc
@@ -140,7 +140,7 @@ Then open **http://localhost:4173**.
 |---|---|
 | W A S D | Move |
 | Mouse | Aim |
-| Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click). Fire and aim can be moved to any key or mouse button, side buttons included (**Settings**, **Key bindings**). |
+| Left click | Fire (on the AEG rifle: one BB per click in Semi, three in Burst, hold in Auto; the pistol fires one per click). Fire and aim can be moved to any key or mouse button, side buttons included (**Settings**, **Key Bindings**). |
 | B | Fire mode: step the AEG rifle through Semi, Burst and Auto (the pistol is semi only) |
 | Right click (hold, or toggle) | Aim down sights: only with an optic fitted (pick **Red dot** for the rifle on the Loadout screen). Narrows the view a little, slows you to a quiet walk and has its own **Aiming sensitivity** setting. **Settings**, Controls, can make it a toggle. |
 | Shift | Walk: slow and silent (no footsteps), for sneaking and holding angles |
@@ -151,7 +151,7 @@ Then open **http://localhost:4173**.
 | R | Reload (an empty trigger pull also reloads) |
 | 1 / 2 or mouse wheel | Switch between AEG rifle and gas pistol |
 | Left click while out | Watch the next player still in play (the fire button) |
-| Esc | Pause (releases the mouse): Resume, Settings (keys are under **Key bindings**) or Quit. |
+| Esc | Pause (releases the mouse): Resume, Settings (keys are under **Key Bindings**) or Quit. |
 | `` ` `` or F3 | Frame rate and debug info |
 | ] | Debug: show BB flight paths |
 

@@ -24,6 +24,8 @@ export class HitFeed {
   private readonly root: HTMLDivElement;
   private readonly lines: Line[] = [];
   private keep = false;
+  /** Simulation time at the last update, so lines kept until now start their fade from it when Keep goes. */
+  private now = 0;
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -40,6 +42,8 @@ export class HitFeed {
 
   /** Fade (lines go after a few seconds) or Keep (the last few stay for the match). */
   setMode(mode: HitFeedMode): void {
+    // Lines kept until now don't all vanish at once when Keep goes: each gets its full time from here.
+    if (this.keep && mode === 'fade') for (const line of this.lines) line.at = this.now;
     this.keep = mode === 'keep';
     this.trim();
   }
@@ -73,6 +77,7 @@ export class HitFeed {
 
   /** Once per frame with the simulation time: fades lines near their end and drops expired ones (none when kept). */
   update(time: number): void {
+    this.now = time;
     for (let i = this.lines.length - 1; i >= 0; i--) {
       const line = this.lines[i]!;
       const age = this.keep ? 0 : time - line.at;

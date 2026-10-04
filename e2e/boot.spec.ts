@@ -449,10 +449,10 @@ test('the practice range opens from the title screen and reads out the last BB',
   await settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' }).click();
   await page.keyboard.press('Escape');
   await page.locator('.menu-setup').getByRole('button', { name: 'Back' }).click();
-  // A refused mouse lock (Practice range or Tutorial clicked too soon after Esc) says so on the title too (audit L-29).
+  // A refused mouse lock (Practice Range or Tutorial clicked too soon after Esc) says so on the title too (audit L-29).
   await page.evaluate(() => document.dispatchEvent(new Event('pointerlockerror')));
   await expect(page.locator('.menu-title .menu-hint')).toContainText('Click again');
-  await page.getByRole('button', { name: 'Practice range' }).click();
+  await page.getByRole('button', { name: 'Practice Range' }).click();
   const readout = page.locator('.range-readout');
   await expect(readout).toBeVisible();
   await expect(readout).toContainText('Practice range');

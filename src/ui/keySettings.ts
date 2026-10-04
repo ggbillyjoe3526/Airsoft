@@ -6,7 +6,7 @@ const CTRL_WARNING = 'Heads up: some Ctrl combinations (like Ctrl+W, close tab) 
 /**
  * Key-binding settings: one row per rebindable action. Click a key button, then press the new key, or click the
  * button again with the mouse button wanted (left, right, middle or a side button; M18). Esc or a click elsewhere
- * cancels. Taking a key another action uses swaps the two. Lives on the Settings screen (Key bindings tab).
+ * cancels. Taking a key another action uses swaps the two. Lives on the Settings screen (Key Bindings tab).
  */
 export class KeySettings {
   readonly root: HTMLDivElement;

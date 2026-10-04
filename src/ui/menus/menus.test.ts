@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
 import { POWER_LABELS, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
 import { DEPOT } from '../../map/depot';
-import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
-import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
 import { TEAM_COLOUR_CHOICES } from '../../config/teams';
-
-/** Joining words that stay lower case in a title-case label ("Cross and Dot"). */
-const SMALL_WORDS = new Set(['and', 'or', 'to', 'of']);
+import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
 import { backTarget, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
 import { loadFov, loadMap, loadSavedQuality } from './savedChoices';
+
+/** Joining words that stay lower case in a title-case label ("Cross and Dot"). */
+const SMALL_WORDS = new Set(['and', 'or', 'to', 'of']);
 
 describe('menu navigation', () => {
   it('opens the title before the first match, the pause menu during one and the result after it', () => {

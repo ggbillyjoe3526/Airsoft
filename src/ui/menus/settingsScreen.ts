@@ -1,16 +1,16 @@
 import { devIntro } from '../../config/dev';
 import { DEV_TOGGLE_LABEL, SETTINGS_LATER, SETTINGS_TABS, type SettingsTab } from '../../config/menus';
-import { saveSetting } from '../../settings/storage';
-import { DEV_ENABLED_FIELD } from '../../settings/dev';
 import { FOV_SETTING, QUALITY_CHOICES, type QualityPreset } from '../../config/render';
 import type { KeyBindings } from '../../input/keyBindings';
+import { DEV_ENABLED_FIELD } from '../../settings/dev';
+import { saveSetting } from '../../settings/storage';
 import { type AccessibilitySettingsOptions, accessibilitySettings } from '../accessibilitySettings';
 import { type AudioSettingsOptions, audioSettings } from '../audioSettings';
 import { type ControlsSettingsOptions, controlsSettings } from '../controlsSettings';
 import { type CrosshairSettingsOptions, crosshairSettings } from '../crosshairSettings';
 import { type DevSettingsOptions, devSettings } from '../devSettings';
-import { type HudSettingsOptions, hudSettings } from '../hudSettings';
 import { isFullscreen, onFullscreenChange, toggleFullscreen } from '../fullscreen';
+import { type HudSettingsOptions, hudSettings } from '../hudSettings';
 import { KeySettings } from '../keySettings';
 import { OptionPicker } from '../optionPicker';
 import { type SettingsOrigin, tabAfterKey } from './menuNav';
@@ -194,7 +194,7 @@ export class SettingsScreen {
           'Shadows, sharpness, surface relief and dust in the sunlight. Lower it if the game stutters.',
           new OptionPicker('Quality', QUALITY_CHOICES, opts.quality.initial, 'quality', opts.quality.onChange).root,
         ),
-        menuRow('Fullscreen', 'The whole screen for the game. Esc leaves it; in a match the Fullscreen key (Key bindings) turns it on and off.', this.fullscreenButton()),
+        menuRow('Fullscreen', 'The whole screen for the game. Esc leaves it; in a match the Fullscreen key (Key Bindings) turns it on and off.', this.fullscreenButton()),
       );
     } else if (id === 'crosshair') {
       panel.append(...crosshairSettings(opts.crosshair));

@@ -1455,7 +1455,8 @@ kbd {
   position: absolute;
   left: 0;
   right: 0;
-  top: max(18%, 124px);
+  /* Clear of the scoreboard and the OUT tag under it at any scoreboard size (M24): 124 px at size 1. */
+  top: max(18%, calc(54px + 70px * var(--sb-scale, 1)));
   text-align: center;
   opacity: 0;
   transition: opacity 0.15s;
@@ -1942,7 +1943,7 @@ kbd {
   position: absolute;
   left: 50%;
   /* Under the "HIT!" call stamp (.hitfx-banner), so holding Tab while calling a hit doesn't hide it. */
-  top: calc(max(18%, 124px) + 96px);
+  top: calc(max(18%, calc(54px + 70px * var(--sb-scale, 1))) + 96px);
   transform: translateX(-50%);
   width: min(760px, calc(100% - 32px));
   padding: 14px 18px 16px;
