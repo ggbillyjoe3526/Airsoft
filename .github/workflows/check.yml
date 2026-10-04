@@ -1,5 +1,5 @@
-# Runs the project's own checks on every pull request and every push to main:
-# unit tests + production build with its type check (`npm run check`), then the browser smoke test.
+# Runs the project's own checks on every pull request and every push to main through the pipeline's gate script:
+# the production build with its type check, the unit tests, then the browser smoke test (pipeline/README.md).
 name: Check
 
 on:
@@ -30,7 +30,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
       # Playwright's Chromium is cached per lockfile (the Playwright version pins the browser build); the system
       # libraries it needs are installed every run, since they live outside the cache.
       - name: Cache the Playwright browser
@@ -42,13 +41,16 @@ jobs:
       - if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install chromium
       - run: npx playwright install-deps chromium
-      - run: npm run test:browser
-      - name: Upload the smoke test report (screenshot inside)
+      # The pipeline's gate script (pipeline/README.md) runs the same checks as before, `npm run check` and the smoke
+      # test, and writes pipeline/out/gate-report.json with pass / fail per gate; no perf gate on a runner (no baseline).
+      - run: node pipeline/gate.mjs --ci
+      - name: Upload the gate report, the test reports and the smoke test report (screenshot inside)
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: gate-report
           path: |
+            pipeline/out/
             playwright-report/
             test-results/
           if-no-files-found: ignore

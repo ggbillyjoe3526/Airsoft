@@ -4,6 +4,12 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 4180;
 
 /**
+ * A Chromium other than Playwright's own, for containers where the browser is preinstalled (the cloud sessions keep
+ * it at /opt/pw-browsers/chromium and block the download). Unset, Playwright uses the browser it installed.
+ */
+const CHROMIUM = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.PLAYWRIGHT_CHROMIUM;
+
+/**
  * Browser smoke test of the production build (`npm run test:browser`). Chromium only. The web server builds the
  * game in `e2e` mode into `dist-e2e/` (the only build where `?nolock` works outside the dev server; `dist/` is
  * left alone) and serves it. SwiftShader renders without a GPU, so this runs on CI too.
@@ -11,8 +17,9 @@ const PORT = 4180;
 export default defineConfig({
   testDir: 'e2e',
   timeout: 90_000,
-  // The HTML report (playwright-report/) keeps the in-match screenshot; CI uploads it.
-  reporter: [['list'], ['html', { open: 'never' }]],
+  // The HTML report (playwright-report/) keeps the in-match screenshot; CI uploads it. The JSON report is what the
+  // pipeline's gate script reads (pipeline/gate.mjs).
+  reporter: [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'pipeline/out/qa-artifacts/playwright.json' }]],
   use: {
     baseURL: `http://localhost:${PORT}`,
     screenshot: 'only-on-failure',
@@ -22,7 +29,10 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
+        launchOptions: {
+          ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
+          args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+        },
       },
     },
   ],

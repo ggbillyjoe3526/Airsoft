@@ -163,8 +163,9 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
      `docs/patch-notes/<tag>.md` and the README's "New since …" paragraph.
 - **Pull requests** (owner, 2026-10-02): every change lands as a pull request that the owner reviews and merges.
   Work on a new branch made from the latest `main` (one per milestone or batch), push that branch, and open a pull
-  request into `main`. **Never push to `main` and never merge a pull request yourself**, whatever else in this
-  repo says. One pull request may hold several commits.
+  request into `main`. **Never push to `main`.** A pull request built through the pipeline (`pipeline/README.md`)
+  is merged by its own thread once CI is green and the critic accepted (owner, 2026-10-04: "Claude merges"); any
+  other pull request waits for the owner. One pull request may hold several commits.
 - **Branches** (owner, 2026-10-01): `main` holds the latest stable release.
   - **Now (the v0.1 cycle):** work reaches `main` only when the owner merges its pull request, and the tagged
     commits on `main` are the releases.
@@ -196,10 +197,10 @@ Future ideas (modes, clans, community scenarios, etc.) go in `docs/IDEAS.md`. Do
 Then implement, then **verify**: run the type checker, tests, and build, and report what changed, what was tested, what passed, what failed, and what's incomplete. Never claim something works if you haven't verified it. For things you can't verify yourself (how it feels to play), tell me exactly what to test in the browser.
 
 **Context hygiene** (owner, 2026-10-02; the context window fills up fast on long sessions):
-- **One milestone per session.** After a milestone is accepted and committed on its branch, rewrite `docs/HANDOFF.md` on the same branch, push, open the pull request (or update it), and tell the owner it's ready to review and a good point to start a fresh session.
+- **One task per session (one thread per task).** After a task is accepted and committed on its branch, push, open the pull request (or update it), and tell the owner. `docs/HANDOFF.md` is rewritten once per batch by the planning thread (owner, 2026-10-04), not in every pull request.
 - Read files in ranges (grep first, then only the lines you need), and filter command and test output (e.g. only failures and totals).
 - Take screenshots only when you need to see something; prefer reading values with page text or JS.
-- Keep critic reports short (`.claude/agents/critic.md` caps them at ~300 words).
+- Keep agent reports short: QA, performance and the critic return at most about 30 lines, triage 15 (`.claude/agents/`).
 
 **Design decisions:** if you're unsure about something, ask me before acting (owner, 2026-10-02). For small details that are easy to change later, choose a sensible default, note it in `docs/DECISIONS.md` with a one-line reason, say which you chose, and keep going.
 
@@ -241,69 +242,45 @@ The goal is a genuinely fun airsoft game in the browser, not an impressive codeb
 
 ---
 
-## 12. Critic Agent (Quality Gate)
+## 12. The Pipeline: Gates and the Critic
 
-Every completed feature or substantial change goes through a critic review before it is considered done. The critic is a separate reviewing role whose only job is to find problems. It is not there to defend the work.
+Every task runs through the build pipeline (owner's design, 2026-10-04): `pipeline/README.md` is the protocol,
+`.claude/skills/pipeline/SKILL.md` the step list, `docs/TASKS.md` the open tasks with their acceptance criteria,
+`.claude/agents/` the agents (worker, qa, performance, triage, critic, changelog).
 
-### How to run the critic
+### Gates (a script, not a model)
 
-- Where possible, run the critic as a **separate subagent** (e.g. `.claude/agents/critic.md`) with fresh context, so it judges the result rather than remembering the intent behind it.
-- The critic reviews the actual code, the diff, and test/build output. It must run the type checker, tests, and build itself instead of trusting earlier reports.
-- The critic must be skeptical. An honest 7 is more useful than a generous 9.
+`node pipeline/gate.mjs --task <id>` runs the build, the unit tests, the browser smoke test, the perf harness when the
+diff touches a perf-relevant path, a scope check against the task's `touches`, and a changelog check, and writes
+`pipeline/out/gate-report.json`. A failed gate goes back to the worker with the evidence; the critic never sees it.
 
-### Scoring rubric
+### Critic (judgment only, on green gates)
 
-Score each criterion from 0–10, then compute the weighted total (one decimal place).
+The critic (`.claude/agents/critic.md`) runs as a separate subagent with fresh context, reads the diff, the gate
+report, the triaged QA and performance summaries and the task's acceptance criteria, and ticks eight binary checks:
 
-| Criterion | Weight | What a 10 looks like |
+| # | Check | Blocking |
 |---|---|---|
-| **Correctness** | 25% | Does exactly what was intended; type check, tests, and build all pass; no known bugs. |
-| **Design pillar fit** | 20% | Clearly strengthens the airsoft identity and tone (Section 2 and Section 11). |
-| **Game feel & readability** | 20% | Responsive, clear feedback; a new player would understand it. |
-| **Code quality** | 15% | Follows Section 9: small modules, data-driven, simulation separate from presentation. |
-| **Performance** | 10% | No frame drops, leaks, or per-frame allocations in hot paths; still meets 60 FPS target. |
-| **Scope discipline** | 10% | Does what was asked, nothing speculative, no unrelated changes. |
+| 1 | Every acceptance criterion met, with the diff line that meets it | yes |
+| 2 | No contract (`docs/ARCHITECTURE.md` › Contracts) changed unless the task allows it | yes |
+| 3 | No new per-frame or per-tick allocation in the diff | yes |
+| 4 | The new tests exercise the feature (would fail without it) | yes |
+| 5 | Simulation apart from presentation, no magic numbers, no hidden global state (§9) | yes |
+| 6 | Fits the pillars, the fixed decisions and the assets policy (§2, §3, §4, §11) | yes |
+| 7 | Maintainability (small modules, GPU disposal, no copy-paste) | no |
+| 8 | Scope (nothing beyond the task; the docs updated) | no |
 
-**Automatic caps** (these override the weighted total):
-- Type check, tests, or build fail → score capped at **5**.
-- Game no longer runs in the browser → score capped at **3**.
-- Violates a fixed technical decision (Section 3) or the assets policy (Section 4) → capped at **6**.
+**Score** is checks passed out of 8. **Accept**: every blocking check passes and at most one non-blocking fails.
+Otherwise **Retry** with only the failed checks and their evidence. A verdict one check short of Accept is a near
+miss and is re-run on Opus before the task goes back. `tier: trivial` tasks skip the critic: green gates plus a Haiku
+diff check. The critic still cannot play the game: it lists browser tests for the owner, whose playtest overrides it.
 
-### Score thresholds
+### Attempts
 
-Stricter thresholds and a fourth attempt since owner decision 2026-10-02.
+Four attempts per task (one build plus three targeted retries). After the fourth:
+- gates green and at least **6 of 8** with checks 1 and 2 passing → **auto-accept** (owner, 2026-10-04); every
+  failed check goes to `docs/KNOWN_ISSUES.md`;
+- otherwise stop, keep the best attempt on its branch and report to the owner what failed and what each attempt tried.
 
-| Score | Verdict | Action |
-|---|---|---|
-| **< 8.0** | Restart | Revert the attempt (e.g. `git stash`/reset to the pre-attempt commit) and try again with a different approach informed by the critic's feedback. |
-| **8.0 – 8.9** | Rework | Keep the attempt and fix the specific issues the critic listed. |
-| **9.0 – 10** | Accept | Commit and move on. |
-
-### Attempt limit
-
-- Maximum of **4 attempts** per feature to reach 9.0.
-- If attempt 4 scores **8.0 or higher**, auto-accept it, commit it, and log the critic's remaining issues in `docs/KNOWN_ISSUES.md`.
-- If attempt 4 scores **below 8.0**, do not accept it automatically. Restore the best-scoring attempt, stop, and report to me what went wrong across all attempts so we can decide together (the feature may be too large and need splitting, or the design may be wrong).
-
-### Critic report format
-
-After each review, the critic outputs:
-
-```
-Feature: <name>
-Attempt: <n> of 4
-Scores: Correctness x | Pillar fit x | Feel x | Code x | Performance x | Scope x
-Caps applied: <none / which>
-Total: x.x → <Restart / Rework / Accept>
-Top issues (most important first):
-1. ...
-2. ...
-Must-fix before next attempt: ...
-```
-
-Keep a one-line entry per feature in `docs/REVIEWS.md` (feature, attempts used, final score).
-
-### Limits of the critic
-
-- The critic cannot truly judge **how the game feels to play**. For game feel, it scores based on code evidence (feedback timing, tuning values, clarity) and lists specific things for **me** to test in the browser. My playtest feedback overrides the critic's score.
-- Small changes (typo fixes, config tweaks, docs) skip the critic. Use it for features and meaningful system changes.
+`docs/REVIEWS.md` keeps one line per task (id, attempts, score, verdict); `docs/METRICS.md` one row per attempt.
+Small changes (typo fixes, config tweaks, docs) are `tier: trivial`.
