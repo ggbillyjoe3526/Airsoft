@@ -20,7 +20,7 @@ describe.each([DEPOT, RAMP_YARD])('$name map data', (map: MapData) => {
     ];
     expect(points.length).toBeGreaterThan(0);
     for (const [what, p] of points) {
-      const floor = floorAt(nav, p.x, p.z);
+      const floor = floorAt(nav, p.x, p.y, p.z);
       expect(Math.abs(p.y - floor), `${what} at ${p.x}, ${p.y}, ${p.z} (floor ${floor})`).toBeLessThanOrEqual(ON_FLOOR);
     }
   });
