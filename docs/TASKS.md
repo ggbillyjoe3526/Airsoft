@@ -78,6 +78,7 @@ attempts: 1
 tier: core
 perf: required
 touches: src/config/render.ts, src/config/graphics.ts, src/config/characters.ts, src/config/replicaFinish.ts, src/render/figureFinish.ts, src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/matchPresentation.ts, src/matchSession.ts, src/render/handModels.ts, src/render/replicaFinish.ts, src/render/replicaModels.ts, src/render/viewmodel.ts, src/render/combatPresentation.ts, src/render/bbRenderer.ts, src/render/impactGrit.ts
+note: fa-wip-g is built on FA2/FA3's branch (fa-wip-b); until that merges, the scope check against origin/main also lists FA2/FA3's own files (their block's touches), none of them changed by FA8
 contract: QualitySettings and QUALITY (fields added additively, as FA2's contract line allows: figureDetail, replicaDetail, handDetail, bbGlow, impactGrit, laserBeam; a value on every preset, a Custom row each, a `graphics.<field>` store key each)
 acceptance:
   1. Third-person figures and kit (row 17, Player detail): on `high` the figures get a shaped head, goggle rims with a glossy lens, a glossy helmet shell, gloves with a thumb, boots with soles, cuffs, pouch lids, edge highlights and baked occlusion, in one draw call a figure as before (gloss per vertex, one program); `low` builds exactly today's figure; under 2× Low's triangles; team tape is never shaded; the HIT! sign keeps its on-screen size past 6 m (figureDetail.test.ts, effectsDetail.test.ts)
