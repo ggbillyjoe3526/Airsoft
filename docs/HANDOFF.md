@@ -78,8 +78,8 @@ _Last updated: 2026-10-04 · the Phase 4 bug pass (two pull requests), the last 
 - **M26 Loadout, Armory and asset pool (owner's 2026-10-04 batch):** `pool.md` at the root is the asset register the game
   reads (`src/pool/`). The Loadout is `pool/loadoutModel.ts` (what is equipped and fitted, saved) over `pool/kit.ts`
   (what the items make of a replica); each character carries its own `Armament.replicas` (bots `LOADOUT` as it comes).
-  A new asset is a pool.md row; a new behaviour (a key) needs code in `config/` first. M26c (Armory) and M26d (Dev
-  toggles on M24's Dev panel) follow; the owner chose "Claude merges" for this batch.
+  A new asset is a pool.md row; a new behaviour (a key) needs code in `config/` first. The Armory (M26c) is
+  `pool/armory.ts` (rules) and `ui/menus/armoryScreen.ts`; M26d (Dev toggles on M24's Dev panel) follows; the owner chose "Claude merges" for this batch.
 
 ## Working notes and gotchas
 
