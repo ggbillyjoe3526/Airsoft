@@ -53,7 +53,7 @@ describe('figureMuzzle', () => {
 
   it('puts the pistol muzzle at the end of the pistol the figure holds, nearer the body than the rifle muzzle', () => {
     const figure = buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial());
-    const box = new THREE.Box3().setFromBufferAttribute(figure.aimPistol.geometry.getAttribute('position') as THREE.BufferAttribute);
+    const box = new THREE.Box3().setFromBufferAttribute((figure.aimPistol as THREE.Mesh).geometry.getAttribute('position') as THREE.BufferAttribute);
     const P = FIGURE.pistol;
     expect(box.min.z).toBeCloseTo(P.butt - P.length, 2); // the slide's front is the furthest-forward point
     expect(P.butt - P.length).toBeGreaterThan(FIGURE.rifle.butt - FIGURE.rifle.length);
@@ -73,7 +73,7 @@ describe('buildFigure (M14 art pass)', () => {
     return out;
   };
 
-  const trianglesOf = (m: THREE.Mesh): number => m.geometry.getAttribute('position').count / 3;
+  const trianglesOf = (o: THREE.Object3D): number => (o as THREE.Mesh).geometry.getAttribute('position').count / 3;
 
   it('is six merged meshes on the one material given (four drawn at once), with vertex colours and no UVs', () => {
     for (const id of [0, 1, 2, 3, 4, 5]) {
