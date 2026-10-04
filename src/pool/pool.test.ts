@@ -85,13 +85,13 @@ describe('reading pool.md', () => {
       mini(
         [
           '### Power sources',
-          '| ID | Name | Type | Power % | Fits | Starter | In Shots |',
-          '|---|---|---|---|---|---|---|',
-          '| 000002 | Green Gas | gas | 0 | gas | yes | yes |',
-          '| 000003 | Odd Gas | plasma | 0 | gas | no | yes |',
-          '| 000001 | Copy | gas | 0 | gas | no | yes |',
-          '| 000004 | Typo Gas | gas | 5 | gsa | no | yes |',
-          '| 00005 | Short | gas | 5 | gas | no | yes |',
+          '| ID | Name | Type | Fits | Starter | In Shots |',
+          '|---|---|---|---|---|---|',
+          '| 000002 | Green Gas | gas | gas | yes | yes |',
+          '| 000003 | Odd Gas | plasma | gas | no | yes |',
+          '| 000001 | Copy | gas | gas | no | yes |',
+          '| 000004 | Typo Gas | gas | gsa | no | yes |',
+          '| 00005 | Short | gas | gas | no | yes |',
         ].join('\n'),
       ),
     );
@@ -121,9 +121,9 @@ describe('reading pool.md', () => {
       mini(
         [
           '### Power sources',
-          '| ID | Name | Type | Power % | Fits | Starter | In Shots |',
-          '|---|---|---|---|---|---|---|',
-          '| 000002 | Odd Battery | battery | 0 | gas | no | yes |',
+          '| ID | Name | Type | Fits | Starter | In Shots |',
+          '|---|---|---|---|---|---|',
+          '| 000002 | Odd Battery | battery | gas | no | yes |',
           '### Field Credits',
           '| Event | FC |',
           '|---|---|',
