@@ -18,6 +18,8 @@ const segmentDir = vec3();
  * to the roster's size once, then reused.
  */
 const volumes: HitVolume[] = [];
+// Never cleared, only overwritten: a BB's owner is always in the roster (characters are never removed mid-match), so
+// a stale entry can't be read.
 const teamOf = new Map<number, number>();
 const surface: SurfaceHit = { normal: vec3(), material: 'concrete' };
 const targetHit: RangeTargetHit = { index: -1, at: 0, post: false };
