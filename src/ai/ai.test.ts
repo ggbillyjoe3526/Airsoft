@@ -720,6 +720,34 @@ describe('bot hearing and targets', () => {
     // A switch is fine once someone is hit (they're out); flip-flopping isn't.
     expect(switches).toBeLessThanOrEqual(1);
   });
+
+  it('turn towards a teammate\'s hit only while its shooter is still in play (L-21)', () => {
+    const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // can't see anyone
+    const { state, player, bots } = duel(18, (s) => s.characters.push(createCharacter(2, vec3(3, 0, -14), 0, LOADOUT, 1)), walls);
+    const b = bots.bots[0]!;
+    const hit = () => {
+      state.events.length = 0;
+      state.events.push({ type: 'characterHit', victimId: 2, shooterId: 0, position: vec3(3, 1.2, -14), direction: vec3(0, 0, -1), ricochet: false });
+      bots.observe(state);
+    };
+    // A BB fired by someone hit since: they are walking off, nothing to look for there.
+    player.status = 'walkingOff';
+    hit();
+    expect(b.hasLastKnown).toBe(false);
+    player.status = 'alive';
+    hit();
+    expect(b.hasLastKnown).toBe(true);
+  });
+});
+
+describe('bot commands', () => {
+  it('clear every input each tick, aiming down sights and the fire selector too (L-21)', () => {
+    const { state, bots, commands } = duel(18);
+    const cmd = commands.get(bots.bots[0]!.character.id)!;
+    Object.assign(cmd, { aim: true, cycleFireMode: true, fire: true, jump: true });
+    bots.think(state, DT);
+    expect(cmd).toMatchObject({ aim: false, cycleFireMode: false, jump: false });
+  });
 });
 
 

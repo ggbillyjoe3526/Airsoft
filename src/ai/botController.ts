@@ -286,10 +286,11 @@ export class BotController {
         const shooter = this.character(state, e.characterId);
         if (shooter) this.hear(shooter.team, e.position, shooter.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'characterHit') {
-        // Teammates near someone who calls a hit turn towards where it came from.
+        // Teammates near someone who calls a hit turn towards where it came from; not from a BB fired by someone hit
+        // since (they are walking off, not where the threat is).
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
-        if (victim && shooter && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
+        if (victim && shooter && isInPlay(shooter) && victim.team !== shooter.team) this.hear(shooter.team, victim.position, victim.position, time, shooter.position, cfg.hearingDistance);
       } else if (e.type === 'ricochetTick') {
         // A ricochet that doesn't count still tells its victim they're under fire.
         for (const b of this.bots) {
