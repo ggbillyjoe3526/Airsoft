@@ -63,6 +63,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Changed
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
 - **M37** · Pro bots holding still aim at the corners and doorways you'd step out of, and answer a peek there faster; anywhere else no faster than Hard
+- **M38** · Pro bots walk and slice corners near the enemy, go after a teammate's shooter, hold crossfires, move in pairs and push late when behind
 - **FA2** · Shadow detail rows are greyed out when Shadows is Off (#67)
 - **FA2** · Low has 80 % resolution with no shadows; Medium adds shadows and relief; High adds sharp textures, finer shadows, sheen and dust (#67)
 - **FA3** · Low draws the same frame about 18 % faster in our test, with 20 % fewer triangles and a quarter of the texture memory (#67)
