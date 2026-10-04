@@ -28,6 +28,7 @@ import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { CharacterRenderer } from './characterRenderer';
+import type { FigureModel } from './externalModels';
 import { FlagRenderer } from './flagRenderer';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
@@ -103,10 +104,12 @@ export class MatchPresentation {
     teamColours: TeamColours,
     /** The map's blocks, for the minimap's drawing of the field. */
     blocks: readonly MapBlock[],
+    /** The figure model, if the build has one (M25a); null draws the built-in figures. */
+    figureModel: FigureModel | null = null,
   ) {
     this.keyName = keyName;
     // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
-    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits);
+    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel);
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));

@@ -1,9 +1,11 @@
 import * as THREE from 'three';
+import { FIGURE_MODEL } from '../config/assets';
 import { FIGURE } from '../config/characters';
 import type { HitConfig } from '../config/hits';
 import type { Character } from '../sim/character';
 import { lerpAngle } from '../sim/vec';
 import { buildFigure, createCalloutTexture, disposeFigure, type Figure, figureLeanRoll } from './characterModels';
+import { type FigureModel, fadeModelMaterials } from './externalModels';
 
 interface FigureState {
   figure: Figure;
@@ -66,10 +68,12 @@ export class CharacterRenderer {
     private readonly characters: readonly Character[],
     teamColors: readonly number[],
     private readonly hits: HitConfig,
+    /** A figure model (M25a, render/externalModels.ts), or null for the built-in figures. The renderer doesn't own it. */
+    model: FigureModel | null = null,
   ) {
     for (const c of characters) {
       const material = this.material.clone();
-      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id);
+      const figure = buildFigure(teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, model);
       this.object.add(figure.root);
       this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0 });
     }
@@ -130,6 +134,8 @@ export class CharacterRenderer {
       f.legR.scale.y = legScale;
       f.legL.rotation.x = swing;
       f.legR.rotation.x = -swing;
+      // A model drawn whole has no hips to bend: it sinks as far as the head does.
+      if (f.whole) f.whole.scale.y = 1 - (crouch * FIGURE.crouchDrop) / FIGURE_MODEL.height;
 
       // In play: aiming. Calling / walking off: hand up. Out in the dead zone: replica pointed at the ground.
       const handUp = c.status === 'calling' || c.status === 'walkingOff' || c.status === 'leaving';
@@ -145,11 +151,15 @@ export class CharacterRenderer {
       // then puts it in the dead zone) instead of visibly jumping there.
       const opacity = c.status === 'leaving' ? Math.min(1, Math.max(0, 1 - c.statusTime / this.hits.vanishTime)) : 1;
       if (opacity !== s.material.opacity) {
-        s.material.opacity = opacity;
         const fading = opacity < 1;
-        if (s.material.transparent !== fading) {
+        const changed = s.material.transparent !== fading;
+        s.material.opacity = opacity;
+        if (changed) {
           s.material.transparent = fading;
           s.material.needsUpdate = true;
+        }
+        fadeModelMaterials(f.modelMaterials, opacity, changed);
+        if (changed) {
           // Shadow maps ignore opacity: a fading figure would leave a solid shadow behind.
           f.root.traverse((o) => {
             if (o instanceof THREE.Mesh) o.castShadow = !fading;
