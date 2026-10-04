@@ -44,4 +44,17 @@ describe('OptionPicker and dev options (M35)', () => {
     expect(blurb(p)).toBe('Still being built.');
     expect(changes).toEqual([]);
   });
+
+  it('picks the stand-in for real when it is clicked while a dev pick is hidden', () => {
+    const changes: string[] = [];
+    const p = new OptionPicker('Pick', OPTIONS, 'c', 'matchMode' as never, (v) => changes.push(v));
+    p.setDevContent(false, 'a');
+    buttons(p)[0]!.click();
+    expect(changes).toEqual(['a']);
+    // The dev pick is gone: turning Dev content back on shows the stand-in, now picked.
+    p.setDevContent(true, 'a');
+    expect(buttons(p).map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
+    buttons(p)[0]!.click();
+    expect(changes).toEqual(['a']);
+  });
 });

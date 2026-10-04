@@ -6,7 +6,9 @@ import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
 import { DEFAULT_MAP, MAPS } from './map/maps';
 import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks } from './newGamePicks';
 import { BOT_LOADOUTS } from './config/bots';
+import { LOADOUT } from './config/replicas';
 import { GAME_POOL } from './pool/gamePool';
+import { assetOfReplica } from './pool/pool';
 import { strayDevPart, withAssets, withTags } from './pool/testSupport';
 
 const picks = (over: Partial<NewGamePicks> = {}, rules: Partial<NewGamePicks['rules']> = {}): NewGamePicks => ({
@@ -160,5 +162,11 @@ describe('whether the opponents may carry dev gear and whether a match uses dev 
     expect(matchUsesDev(picks({ difficulty: 'hard' }), [], devPool, false)).toBe(false);
     expect(matchUsesDev(picks({ difficulty: 'normal' }), [], devPool, true)).toBe(false);
     expect(matchUsesDev(picks({ difficulty: 'hard' }), [], strayPool, true)).toBe(false);
+  });
+});
+
+describe('the replicas every bot carries (M35)', () => {
+  it('are public in pool.md: teammates and Easy or Normal opponents carry them whatever the Dev content switch says', () => {
+    for (const r of LOADOUT) expect(assetOfReplica(GAME_POOL, r)?.tag).toBe('public');
   });
 });

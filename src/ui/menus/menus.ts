@@ -80,7 +80,8 @@ export interface MenusOptions {
   hud: HudSettingsOptions;
   /**
    * The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. `devContent`:
-   * dev content is offered (M35); `devContentUsed`: New game's picks or the Loadout use some, so the match won't count.
+   * dev content is offered (M35); `devContentUsed`: New game's picks, the Loadout or the opponents' possible gear use
+   * some, so the match won't count or pay.
    */
   dev: SettingsOptions['dev'] & { cheating: () => boolean; devContent: () => boolean; devContentUsed: () => boolean };
   /** The save, for Settings → Save (M31). */
