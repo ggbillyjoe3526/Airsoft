@@ -90,6 +90,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M28** · Impact puffs start at half size
 
 ### Internal
+- **M34b** · Multi-floor navigation: map cells hold multiple walkable levels, enabling buildings with stairs and balconies
 - **FA3** · The perf harness measures Low, Medium and High with `--preset all` (#67)
 - Roadmap: the owner's playtest notes, feature picks and second batch (#16, #17, #20, #22)
 - Audit fixes: graphics quality, audio, simulation, bots, menus, accessibility, tooling (#34, #35, #36)
