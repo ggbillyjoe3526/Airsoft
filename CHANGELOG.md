@@ -58,6 +58,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33b** · Glowing BBs: a per-replica Customise option (At Night by default, Always or Off); bots load them on night fields
 - **M32** · Cyber Pistol: electric pistol with semi, burst and auto, 1.00 J at 14 BBs/s, mint and pink model, unique chirp and pop sound (#75)
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
+- **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
+- **M35** · pool.md has an Access column: public or dev for each asset (#70)
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
@@ -82,6 +84,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M30** · Each match has a light breeze that drifts BBs downwind (up to about half a metre at 34 m); the dust in the air drifts with it
 - **FA12** · With ricochets set to count, a BB that bounces can hit whoever fired it (not with friendly fire off) (#60)
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
+- **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits (#70)
 
 ### Fixed
 - **FA13** · Your left hand holds the rifle's handguard, thumb up the near side, instead of sitting under it; the raised hand when you're hit is one glove again (#76)

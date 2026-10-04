@@ -135,6 +135,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M32 Cyber Pistol, a third replica (owner's design): a Legendary-only chase pistol from the Armory (1 in 400 Shot items), rifle power with pistol handling and almost no kick, Semi / Burst / Auto, no parts, a quiet futuristic sound; now and then an opponent on Hard carries it once you own one | Done (owner to play it) | 7/8 |
 | Alpha · Owner's 2026-10-04 requests · M34 Neon Heights, a third field (owner's concept v1, all defaults, 2026-10-04): a small, vertical futuristic city block, three playable floors, Day or Night picked on the map's tile, tagged dev until he calls it done. M34b: bot navigation for floors over floors | In progress (M34b done; M34c greybox next) | M34b 8/8 |
 | Alpha · Final alpha chain · Final alpha audit implemented (FA1–FA12, Fable audit of 2026-10-04: 148 findings, 0 critical, 4 high; the owner confirmed all twelve decisions): crash handling and sim fixes (#57), audio (#55), input, HUD and UI polish (#59), BB hot path (#60), build and pipeline hygiene (#61), Armory and economy (#63), bots and difficulty (#66), quality presets with Custom graphics and render cost (#67), the visual overhaul of figures, replicas and effects (#69) and of lighting, sky, map, flag and range (#71), the tab lock (#69), session plan, faster tests and map reuse (#73), screenshot pass fixes (#76) | Done (owner's playtest next; then the step 3 polish pass) | 7–8/8 per task |
+| Alpha · Owner's 2026-10-04 requests · M35 Public and dev content tags: every map, mode, difficulty and pooled asset tagged public or dev; dev content shown only with the Dev tab's Dev content switch, never in Shots, carried by bots only with it on, and kept out of the records and Field Credits | Done (owner to play it) | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | Planned (starts after the final alpha pass) | |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
@@ -485,7 +486,7 @@ each one went:**
     GPU memory stays flat across matches, as it does today across restarts).
   - **A Map button** on New game, beside Mode, Difficulty, Loadout and Settings, opening a pop-up like Mode's. It
     lists Depot (the default), and its choice is saved like the others. Later fields join this pop-up as they are built
-    (Woodland, M33, shows there greyed out as Coming soon until it is playable).
+    (Woodland, M33, shows there greyed out as Coming soon until it is playable, and since M35 only with Dev content on).
   - **Opaque menus:** a solid background on every menu screen, so nothing of the game shows through. The pause menu
     is opaque too (a default; the owner can ask for it to stay see-through mid-match).
   - **Controls only under Settings:** the controls list leaves the New game and pause screens; the key bindings stay
@@ -781,6 +782,13 @@ pool, items 11, 12 and part of 14).
   - **Build order, one pull request each:** M34b floors over floors for the bots (a layered nav grid and a test
     building); M34c the greybox city by Day; M34d the Day / Night switch; M34e night neon and interior light; M34f
     art and sound.
+
+- **M35. Public and dev content tags** (owner, 2026-10-04: "use Dev setting as a way to test development of new
+  features/weapons/maps"). Every map, mode, difficulty and pooled asset (and any Match pop-up choice that needs it) is
+  tagged `public` or `dev` (`config/content.ts`; pool.md's Access column for gear). One Dev tab switch, Dev content,
+  shows dev content; with it off, dev content is not shown anywhere (Woodland's Coming soon tile included). Dev gear
+  never drops from Shots, bots carry it only with the switch on, and a match that uses dev content stays out of the
+  records and pays no Field Credits. Woodland, the city map and Esports are dev until the owner makes them public.
 
 - **M32. Cyber Pistol, a third replica** (owner, 2026-10-04: "an extremely rare and powerful pistol … a chase
   replica"; his design and colours, spec approved 2026-10-04). Pulled forward from the v0.3 armoury; the reason is in
