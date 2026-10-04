@@ -39,6 +39,30 @@ To stop, click the terminal and press **Ctrl+C**. Next time, repeat steps 4 and 
 Tip: press **`** (top-left, under Esc) or **F3** while playing to show the frame rate and the game's **seed**.
 Note the seed when something goes wrong; it lets the same match be replayed.
 
+## Final alpha audit: start here (2026-10-04)
+
+The audit's fixes are all on `main` (FA1–FA12; each has its own section below). If time is short, play these first:
+
+1. **Graphics:** Settings → Graphics on Low, Medium, High and a Custom mix. Low should hold 60 fps on the laptop and look as
+   before. Medium and High should show the new lighting, map detail, trees and clouds, and the rebuilt players, replicas and gloves.
+   Turn on the FPS counter.
+2. **A full Elimination and a full Attack / Defend match on Normal and Hard:** bots should keep apart, use cover and react
+   to shots landing near them.
+3. **Quit, then Play again on the same map:** it should start almost at once now.
+4. **Esc on the pause screen** should resume the game and take the mouse back (Chrome sometimes asks for one more click).
+5. **The Armory:** ten Shots, scrapping and the pity counter. **The tutorial:** skip it and resume it.
+
+Your calls after playing (each currently on the default shown):
+- **Running up ramps** (SIM-17): the fix is built but off (`MOVEMENT.rampPace` 0), because it moved Attack / Defend balance.
+- **Your own ricochets** (SIM-07): with "Ricochets count" on, a ricochet of your own BB now knocks you out, under the same
+  rules as a teammate's. Say whether that should stay.
+- **The laser beam:** off on every preset (Custom → Laser beam turns it on).
+- **Against Easy opponents, your teammates start on Normal.**
+- **Depot's ends:** the west end now wins 48.4 % of bot-only rounds over 64 seeds.
+
+Once on the laptop, run `node pipeline/perf-run.mjs --env laptop --preset all --baseline` and commit the files it writes.
+That gives the frame-time budgets a baseline on real hardware.
+
 ## Movement
 
 Click **Start**. On the New game screen, pick **Elimination** (Mode) and **Normal** (Difficulty), set the mouse
