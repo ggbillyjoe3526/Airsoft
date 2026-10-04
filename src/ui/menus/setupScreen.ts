@@ -1,13 +1,17 @@
 import { ARMORY_TEXT } from '../../config/menus';
+import { SETUP_ICONS } from './icons';
 import { backButton, chevron, el, hintLine, menuButton, menuPage, setHint } from './menuParts';
 
-/** One of the New game screen's four buttons: a small orange label, the current choice in large type, a line under it. */
+/**
+ * One of the New game screen's buttons: a small orange label with its icon, the current choice in large type, a line
+ * under it.
+ */
 class SetupTile {
   readonly root: HTMLButtonElement;
   private readonly value: HTMLSpanElement;
   private readonly detail: HTMLSpanElement;
 
-  constructor(label: string, action: string, onClick: () => void, tag = '') {
+  constructor(label: string, icon: string, action: string, onClick: () => void, tag = '') {
     this.root = el('button', 'setup-tile');
     this.root.type = 'button';
     this.value = el('span', 'setup-tile-value');
@@ -15,6 +19,7 @@ class SetupTile {
     const foot = el('span', 'setup-tile-action', action);
     foot.insertAdjacentHTML('beforeend', chevron());
     const head = el('span', 'setup-tile-label', label);
+    head.insertAdjacentHTML('afterbegin', icon);
     if (tag) head.append(' ', el('span', 'beta-tag', tag));
     this.root.append(head, this.value, this.detail, foot);
     this.root.addEventListener('click', onClick);
@@ -58,14 +63,14 @@ export class SetupScreen {
   constructor(actions: SetupActions) {
     const page = menuPage('menu-setup', 'New game');
     this.root = page.root;
-    this.map = new SetupTile('Map', 'Change', actions.onMap);
-    this.mode = new SetupTile('Mode', 'Change', actions.onMode);
-    this.match = new SetupTile('Match', 'Change', actions.onMatch);
-    this.difficulty = new SetupTile('Difficulty', 'Change', actions.onDifficulty);
-    this.loadout = new SetupTile('Loadout', 'Open', actions.onLoadout);
+    this.map = new SetupTile('Map', SETUP_ICONS.map, 'Change', actions.onMap);
+    this.mode = new SetupTile('Mode', SETUP_ICONS.mode, 'Change', actions.onMode);
+    this.match = new SetupTile('Match', SETUP_ICONS.match, 'Change', actions.onMatch);
+    this.difficulty = new SetupTile('Difficulty', SETUP_ICONS.difficulty, 'Change', actions.onDifficulty);
+    this.loadout = new SetupTile('Loadout', SETUP_ICONS.loadout, 'Open', actions.onLoadout);
     // Next to the Loadout, marked beta (owner, 2026-10-04).
-    this.armory = new SetupTile('Armory', 'Open', actions.onArmory, ARMORY_TEXT.beta);
-    const settings = new SetupTile('Settings', 'Open', actions.onSettings);
+    this.armory = new SetupTile('Armory', SETUP_ICONS.armory, 'Open', actions.onArmory, ARMORY_TEXT.beta);
+    const settings = new SetupTile('Settings', SETUP_ICONS.settings, 'Open', actions.onSettings);
     settings.set('Settings', '');
     const tiles = el('div', 'setup-tiles');
     tiles.append(this.map.root, this.mode.root, this.match.root, this.difficulty.root, this.loadout.root, this.armory.root, settings.root);

@@ -140,3 +140,9 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   accessibility: [],
   dev: [],
 };
+
+/**
+ * A slider's change is written to the browser's storage this long (ms) after the last step, not on every step (audit
+ * UI-11 / CORE-12): a drag writes the settings once. It applies at once either way.
+ */
+export const SETTINGS_WRITE_DELAY_MS = 400;

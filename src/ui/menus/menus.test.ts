@@ -8,7 +8,7 @@ import { DEPOT } from '../../map/depot';
 import { TEAM_COLOUR_CHOICES } from '../../config/teams';
 import { DEFAULT_MAP, MAPS, mapData } from '../../map/maps';
 import { replicaSummary } from './loadoutScreen';
-import { backTarget, screenWhenStopped, tabAfterKey } from './menuNav';
+import { backTarget, escResumes, moreBelow, screenWhenStopped, tabAfterKey } from './menuNav';
 import { describeRules, type MatchRulesText } from './rulesText';
 import { loadFov, loadMap, loadSavedQuality } from './savedChoices';
 
@@ -41,6 +41,24 @@ describe('menu navigation', () => {
     expect(backTarget('title', 'setup')).toBeNull();
     expect(backTarget('pause', 'pause')).toBeNull();
     expect(backTarget('result', 'setup')).toBeNull();
+  });
+});
+
+describe('Esc on the pause menu (audit UI-09)', () => {
+  it('resumes from the pause menu only, not on a held key\'s repeats nor straight after the pause came up', () => {
+    expect(escResumes('pause', 1000, false, 400)).toBe(true);
+    expect(escResumes('pause', 100, false, 400)).toBe(false); // the Esc that released the mouse
+    expect(escResumes('pause', 1000, true, 400)).toBe(false);
+    for (const screen of ['title', 'setup', 'settings', 'loadout', 'result', 'summary'] as const) expect(escResumes(screen, 1000, false, 400)).toBe(false);
+  });
+});
+
+describe('the scroll hint on long pages (audit UI-18)', () => {
+  it('says there is more below until the page is scrolled to its end', () => {
+    expect(moreBelow(0, 720, 911)).toBe(true); // Controls at 1280 × 720 before the fix measured 191 px more
+    expect(moreBelow(191, 720, 911)).toBe(false);
+    expect(moreBelow(0, 720, 721)).toBe(false); // a pixel of rounding is not "more"
+    expect(moreBelow(0, 720, 600)).toBe(false);
   });
 });
 

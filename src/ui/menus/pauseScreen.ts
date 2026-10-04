@@ -1,4 +1,5 @@
-import { el, hintLine, menuButton, setHint } from './menuParts';
+import { PAUSE_ICONS } from './icons';
+import { el, hintLine, menuButton, setHint, withIcon } from './menuParts';
 
 export interface PauseActions {
   onResume: () => void;
@@ -24,10 +25,10 @@ export class PauseScreen {
     this.root = el('div', 'menu-screen menu-pause');
     this.root.hidden = true;
     const panel = el('div', 'menu-pause-panel');
-    const resume = menuButton('Resume', 'primary', actions.onResume);
+    const resume = withIcon(menuButton('Resume', 'primary', actions.onResume), PAUSE_ICONS.resume);
     resume.dataset.autofocus = '';
     this.status = el('p', 'menu-pause-status');
-    this.loadout = menuButton('Loadout', 'secondary', actions.onLoadout);
+    this.loadout = withIcon(menuButton('Loadout', 'secondary', actions.onLoadout), PAUSE_ICONS.loadout);
     // The match's seed, small at the bottom, so a bug seen in play can be reported and replayed (bug pass).
     this.seed = el('p', 'menu-pause-seed');
     panel.append(
@@ -36,8 +37,8 @@ export class PauseScreen {
       resume,
       this.hint,
       this.loadout,
-      menuButton('Settings', 'secondary', actions.onSettings),
-      menuButton('Quit', 'secondary', actions.onQuit),
+      withIcon(menuButton('Settings', 'secondary', actions.onSettings), PAUSE_ICONS.settings),
+      withIcon(menuButton('Quit', 'secondary', actions.onQuit), PAUSE_ICONS.quit),
       this.seed,
     );
     this.setRange(false);

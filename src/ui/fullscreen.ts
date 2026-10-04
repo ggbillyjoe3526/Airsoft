@@ -22,3 +22,13 @@ export function onFullscreenChange(listener: (on: boolean) => void): () => void 
   document.addEventListener('fullscreenchange', handler);
   return () => document.removeEventListener('fullscreenchange', handler);
 }
+
+/**
+ * Whether to take the mouse again after the page entered or left fullscreen (audit UI-19): the Fullscreen key was
+ * pressed in play `msSinceKey` ago (within `windowMs`), a match or the range is in play, and the browser dropped the
+ * lock (Chrome and Firefox do as fullscreen changes). The key press is still a user activation, so the request is
+ * allowed. Never in unlocked play (the `?nolock` test path).
+ */
+export function relockAfterFullscreen(msSinceKey: number, windowMs: number, inPlay: boolean, locked: boolean, unlockedPlay: boolean): boolean {
+  return msSinceKey >= 0 && msSinceKey <= windowMs && inPlay && !locked && !unlockedPlay;
+}

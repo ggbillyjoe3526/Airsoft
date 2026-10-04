@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- The game's mark (FA9, audit CORE-19): the wordmark's A and its orange full stop on the menus' ink. Drawn by hand. -->
+  <rect width="64" height="64" rx="12" fill="#16181d"/>
+  <path fill="#f7f3ea" fill-rule="evenodd" d="M8 51 22 13h9l14 38h-9.5l-2.6-8H20l-2.6 8zm14.4-15.5h8.2L26.5 23z"/>
+  <circle cx="53" cy="46.5" r="5.5" fill="#ff8a2a"/>
+</svg>

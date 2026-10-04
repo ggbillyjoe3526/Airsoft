@@ -20,9 +20,19 @@ export function roundBanner(r: RoundState, playerTeam: number, showStart: boolea
     // A draw is played again (audit SIM-19): same round, same ends, so no half-time after it.
     if (roundDrawn(r)) return `${result} · round ${r.number} again in ${secondsToNext}`;
     const halfTime = halfTimeAfterRound(r.number, rules) ? (flagMode ? ' · half-time, sides swap' : ' · half-time, ends swap') : '';
-    return `${result}${halfTime} · next round in ${secondsToNext}`;
+    return `${result}${halfTime}${NEXT_ROUND}${secondsToNext}`;
   }
   if (!showStart) return '';
   if (!flagMode) return `Round ${r.number}`;
-  return r.attackers === playerTeam ? `Round ${r.number} · Attack: raise your flag on their pole` : `Round ${r.number} · Defend your pole`;
+  // Short, so it fits on one line beside the hit feed at 1280 px (KNOWN_ISSUES row 138): the scoreboard says the rest.
+  return r.attackers === playerTeam ? `Round ${r.number} · Attack` : `Round ${r.number} · Defend`;
+}
+
+/** Before the countdown in the between-rounds message. */
+const NEXT_ROUND = ' · next round in ';
+
+/** The round message as a screen reader says it (audit UI-15): without the countdown, which changes every second. */
+export function spokenRoundMessage(text: string): string {
+  const at = text.indexOf(NEXT_ROUND);
+  return at < 0 ? text : text.slice(0, at);
 }
