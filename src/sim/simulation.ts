@@ -11,7 +11,7 @@ import { createBBPool } from './ballistics';
 import { type BBTargets, stepBBs } from './bbs';
 import { rescueIfOutOfWorld } from './character';
 import { createCommand, type PlayerCommand } from './commands';
-import { fillEliminatedCommand, isInPlay, planWalkOffRoutes, stepElimination } from './elimination';
+import { fillEliminatedCommand, isInPlay, isParked, planWalkOffRoutes, stepElimination } from './elimination';
 import { stepFootsteps } from './footsteps';
 import { type CharacterMover, createMovementScratch, type MovementScratch, stepMovement } from './movement';
 import { leanedEye, stepLean } from './lean';
@@ -82,6 +82,7 @@ export function createSimContext(services: SimServices): SimContext {
       rng: createRng(0),
       query: services.query,
       events: [],
+      fireHoldOff: 0,
     },
     targets: {
       characters: [],
@@ -97,7 +98,8 @@ export function createSimContext(services: SimServices): SimContext {
  * Advances the whole game by one fixed tick. Each character is driven by the command stored under
  * its id; the player and bots are indistinguishable here. Characters without a command this tick
  * keep their view and stand still (gravity still applies); characters that have been hit follow the
- * hit-calling routine instead of their command. Order: move (and footsteps), then use replicas (BBs leave from the new
+ * hit-calling routine instead of their command; once out and standing in the dead zone they are only timed (isParked).
+ * Order: move (and footsteps), then use replicas (BBs leave from the new
  * eye position), then fly BBs (hitting walls or characters), then round flow.
  */
 export function stepSimulation(
@@ -125,6 +127,11 @@ export function stepSimulation(
     c.prevLean = c.lean;
     c.prevYaw = c.yaw;
     c.prevPitch = c.pitch;
+    // Out and standing in the dead zone: only its clock runs (audit SIM-15).
+    if (isParked(c)) {
+      stepElimination(c, ctx.hits, dt);
+      continue;
+    }
     const inPlay = isInPlay(c);
     let cmd = inPlay ? commands.get(c.id) : fillEliminatedCommand(c, ctx.hits, ctx.eliminatedCommand);
     if (!cmd) {
@@ -150,6 +157,8 @@ export function stepSimulation(
     m.pitch = c.pitch;
     m.spreadScale = c.spreadScale;
     const canFire = live && !c.sprinting && c.sprintLockout <= 0;
+    // A click just after a sprint is kept until the lockout ends (not one made while still sprinting).
+    armCtx.fireHoldOff = c.sprinting ? 0 : c.sprintLockout;
     stepArmament(c.id, c.armament, cmd, m, canFire, armCtx, dt);
   }
 

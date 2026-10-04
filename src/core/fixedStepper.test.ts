@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SIM, SIM_DT } from '../config/sim';
 import { advanceStepper, createStepper, stepperAlpha } from './fixedStepper';
 
 describe('fixedStepper', () => {
@@ -41,5 +42,14 @@ describe('fixedStepper', () => {
     const s = createStepper(step, 5);
     expect(advanceStepper(s, -1)).toBe(0);
     expect(s.accumulator).toBe(0);
+  });
+
+  it(`keeps the game in real time down to ${SIM.realTimeDownToFps} frames a second with the game's cap (audit SIM-14)`, () => {
+    const s = createStepper(SIM_DT, SIM.maxTicksPerFrame);
+    const frame = 1 / SIM.realTimeDownToFps;
+    expect(frame).toBeLessThanOrEqual(SIM.maxFrameDt); // a frame that slow is still taken as real time
+    let ticks = 0;
+    for (let i = 0; i < SIM.realTimeDownToFps * 10; i++) ticks += advanceStepper(s, frame);
+    expect(Math.abs(ticks - 10 / SIM_DT)).toBeLessThanOrEqual(1); // ten seconds of frames, ten seconds of ticks
   });
 });
