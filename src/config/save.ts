@@ -26,12 +26,14 @@ export const SAVE_FILE_MAX_BYTES = 2 * 1024 * 1024;
 export const SAVE_FILE_PREFIX = 'airsoft-save-';
 
 /**
- * The tab lock: the Web Lock's name, the channel's, how long a new tab listens for an open one before it takes the save
- * where there are no Web Locks (ms), and how long Play here waits for the playing tab to let go.
+ * The tab lock: the Web Lock's name, the channel's, the session key a tab sets as Play here reloads it (so the reloaded
+ * tab waits its turn for the lock), how long a new tab listens for an open one before it takes the save where there are
+ * no Web Locks (ms), and how long Play here waits for the playing tab to let go (and the reloaded tab for the lock).
  */
 export const TAB_LOCK = {
   lockName: 'airsoft.save',
   channel: 'airsoft.tabs',
+  tookSaveKey: 'airsoft.tookSave',
   answerWaitMs: 300,
   releaseWaitMs: 600,
 } as const;

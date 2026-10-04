@@ -62,3 +62,14 @@ acceptance:
 status: open
 attempts: 0
 
+
+## FA16 · Tab lock: the tab reloaded by Play here waits its turn for the Web Lock
+tier: trivial
+perf: skip
+touches: src/save/tabLock.ts, src/main.ts, src/config/save.ts
+acceptance:
+  1. After its own Play here, a tab's start-up claim queues for the Web Lock (up to TAB_LOCK.releaseWaitMs) instead of giving up at once, since the browser frees the other tab's lock a moment after that tab says it let go.
+  2. Every other start keeps the immediate check; a lock never let go still leaves the tab behind the notice.
+  3. A unit test with a lock freed late fails without the change.
+status: open
+attempts: 0
