@@ -161,12 +161,12 @@ describe('Woodland: the lanes are walkable (M33d, acceptance 1)', () => {
 });
 
 describe('Woodland: a night field with five a side (M33d, acceptance 2)', () => {
-  it('is played at night, still in development, with a flag so both modes are offered', () => {
+  it('is played at night and is dev content (M35), with a flag so both modes are offered', () => {
     expect(WOODLAND.night).toBe(true);
-    expect(WOODLAND.inDevelopment).toBe(true);
+    expect(mapEntry('woodland').tag).toBe('dev');
     expect(WOODLAND.flag).toBeDefined();
     expect(mapEntry('depot').data.night ?? false).toBe(false);
-    expect(mapEntry('depot').data.inDevelopment ?? false).toBe(false);
+    expect(mapEntry('depot').tag).toBe('public');
   });
 
   it('clamps the team size to what each map has room for: Woodland 5v5, Depot 3v3, picking Woodland sets 4v4', () => {

@@ -92,9 +92,4 @@ export interface MapData {
    * over it. Absent: the map's ground is its floor blocks, as on Depot.
    */
   terrain?: Terrain;
-  /**
-   * Still being built (M33, owner): the Map pop-up shows it greyed out as Coming soon, and only Dev settings › Access
-   * maps in development opens it; its matches don't go into the records.
-   */
-  inDevelopment?: boolean;
 }

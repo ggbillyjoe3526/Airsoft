@@ -24,7 +24,7 @@ import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { type MapId, mapData, playableMap, teamSizeOn } from './map/maps';
+import { type MapId, mapData, teamSizeOn } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadFigureModel } from './render/externalModels';
@@ -45,8 +45,10 @@ import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
-import { type Collection, loadCollection, saveCollection, syncCollection } from './pool/collection';
+import { type Collection, type ItemRef, loadCollection, saveCollection, syncCollection } from './pool/collection';
+import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
+import { matchUsesDev, type NewGamePicks, playedPicks } from './newGamePicks';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
@@ -272,7 +274,7 @@ export class Game {
     this.teammateDifficulty = loadTeammateDifficulty();
     this.matchRules = loadMatchRules();
     this.collection = loadCollection(GAME_POOL, options.seed);
-    this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear));
+    this.loadout = new LoadoutModel(GAME_POOL, gameOwnership(GAME_POOL, () => this.collection, () => this.dev.unlockAllGear, () => this.dev.devContent));
     // Against what is really owned, so the picks land in the real loadout even with Unlock all gear on (M26d).
     carryOverOldPicks(new LoadoutModel(GAME_POOL, collectionOwnership(() => this.collection)), this.collection, saveCollection);
 
@@ -298,7 +300,7 @@ export class Game {
       const p = s?.player;
       return {
         seed: s instanceof RangeSession ? options.seed : this.matchSeed,
-        map: s instanceof RangeSession ? 'range' : this.playedMap,
+        map: s instanceof RangeSession ? 'range' : this.playedPicks().map,
         tick: s?.state.tick ?? '-',
         'sim ticks/s': this.tickRate,
         characters: s?.characterCount ?? 0,
@@ -333,10 +335,11 @@ export class Game {
         summary: () => loadoutTile(this.loadout),
       },
       armory: {
-        pool: GAME_POOL,
+        // Dev gear shows in the collection only with Dev content on (M35); Shots never give it either way.
+        pool: () => contentPool(GAME_POOL, this.dev.devContent),
         // Another tab's save since this one read it is taken first, so a Shot here never undoes it (audit POOL-02).
         collection: () => (syncCollection(this.collection, GAME_POOL), this.collection),
-        equipped: () => this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : [])),
+        equipped: () => this.equippedItems(),
         onChange: () => {
           saveCollection(this.collection);
           this.loadoutChanged = this.setupChanged = true;
@@ -426,7 +429,8 @@ export class Game {
           this.applyDev();
         },
         cheating: () => devCheating(this.dev),
-        mapAccess: () => this.dev.mapsInDevelopment,
+        devContent: () => this.dev.devContent,
+        devContentUsed: () => this.devContentUsed(this.playedPicks()),
         diagnostics: () => this.diagnostics(),
       },
       save: options.save,
@@ -651,11 +655,6 @@ export class Game {
     style.setProperty('--sb-scale', scoreboardScale(this.scoreboardSize * hud, this.container.clientWidth || window.innerWidth).toFixed(3));
   };
 
-  /** The map a match is played on: the picked one, or the default while it is still being built and locked (M33). */
-  private get playedMap(): MapId {
-    return playableMap(this.map, this.dev.mapsInDevelopment);
-  }
-
   /** A Dev setting changed, or the Dev tab was shown or hidden (M24): what applies now goes to the game and the session. */
   private applyDev(): void {
     const before = this.dev;
@@ -664,10 +663,24 @@ export class Game {
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
     this.session?.setDevCheats(this.dev);
-    // Unlock all gear changes what the Loadout offers and carries; the next Play rebuilds the match with it.
-    if (this.dev.unlockAllGear !== before.unlockAllGear) this.loadoutChanged = this.setupChanged = true;
-    // Access maps in development (M33) may change the map played, and with it the team size.
-    if (this.dev.mapsInDevelopment !== before.mapsInDevelopment) this.setupChanged = true;
+    // Unlock all gear and Dev content (M35) change what the Loadout offers and carries, and Dev content what New game
+    // plays; the next Play rebuilds the match with it.
+    if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
+  }
+
+  /** New game's picks as they play now (M35: a dev pick plays as its list's default while Dev content is off). */
+  private playedPicks(): NewGamePicks {
+    return playedPicks({ map: this.map, mode: this.mode, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, rules: this.matchRules }, this.dev.devContent);
+  }
+
+  /** Every item in the Loadout: each gear slot's replica and what is fitted to it (null for an empty slot). */
+  private equippedItems(): (ItemRef | null)[] {
+    return this.loadout.equipped().flatMap((r) => (r ? [r, ...Object.values(this.loadout.fitOf(r.asset))] : []));
+  }
+
+  /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or pay. */
+  private devContentUsed(picks: NewGamePicks): boolean {
+    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.loadout.ownedChase());
   }
 
   /** A new session takes the Dev settings in force (M24). */
@@ -737,14 +750,17 @@ export class Game {
       // would open with the same bot plans, round by round (bug pass). Play Again is a new match too (audit SIM-08).
       this.matchSeed = matchSeed(this.options.seed, this.matchesPlayed);
       this.matchCounted = false;
+      const picks = this.playedPicks();
       this.session = new MatchSession(this.renderer, this.container, this.input, {
-        map: mapData(this.playedMap),
-        mode: this.mode,
-        difficulty: this.difficulty,
-        teammateDifficulty: this.teammateDifficulty,
-        rules: { ...this.matchRules, teamSize: teamSizeOn(this.playedMap, this.matchRules.teamSize) },
+        map: mapData(picks.map),
+        mode: picks.mode,
+        difficulty: picks.difficulty,
+        teammateDifficulty: picks.teammateDifficulty,
+        rules: { ...picks.rules, teamSize: teamSizeOn(picks.map, picks.rules.teamSize) },
         kit: this.loadout.kit(),
         chaseOwned: this.loadout.ownedChase(),
+        devContent: this.dev.devContent,
+        devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
       }, this.matchSeed, this.quality, this.audio, this.crosshair);
       if (this.options.perfLog) console.info(this.session.build.line());
@@ -895,7 +911,7 @@ export class Game {
     } else if (!s.paysFieldCredits || this.dev.disableArmory) {
       // Not paid (Dev settings, or the Armory off): the summary says why (audit POOL-22), not what an earlier match paid.
       this.lastEarnings = null;
-      this.unpaidReason = this.dev.disableArmory ? 'off' : 'dev';
+      this.unpaidReason = this.dev.disableArmory ? 'off' : (s.unpaidReason ?? 'dev');
     }
   }
 
