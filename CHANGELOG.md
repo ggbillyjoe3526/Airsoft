@@ -74,6 +74,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M39** · New game → Match: a Rules row first: Skirmish (as before), Tournament and Pro CQB (Dev content only), or Custom with its own switches
 - **M39** · Tournament: first to 7, win by two, 2:00 rounds, time-outs to the team with more left, minimap teammates only; Pro CQB adds semi only, realcap
 - **M39** · Custom adds Overtime, Time-out, Minimap, Fire modes, Magazines and Kit rows; never counts for records, pays at most ×1.5
+- **M41** · After you're hit, a "what got you" card says where the shot came from, whether that bot held the angle, how long you were seen and if you moved
+- **M41** · Settings → HUD → What got you: Auto (on against Pro), On or Off; Pro matches show a tip between rounds (slice corners, short peeks, listen)
 - **M43** · Extraction (dev content, Depot): an 8:00 run against a home team; stand 10 s in an open exit to get out; one automatic respawn at the insertion (#83)
 - **M44** · Extraction cases: hold Use (G) to open ammo cans, field cases and a locker for FC, BBs and parts; a hit drops them; kept only if you get out
 - **M45** · Extraction waves: bots you hit come back together (every 75 s on Normal, or once all are out), out of sight; one more joins late

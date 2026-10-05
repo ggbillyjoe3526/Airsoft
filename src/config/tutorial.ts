@@ -123,3 +123,19 @@ export const TUTORIAL = {
   /** How far down (0..1, the character's crouch amount) counts as crouched. */
   crouchedAt: 0.95,
 } as const;
+
+/**
+ * Pro briefing tips (M41): short lines shown on the board between rounds (and while the scoreboard key is held) when the
+ * opponents are Pro, one per round in this order, round 1 first. First guesses, to tune in play.
+ */
+export const PRO_TIPS: readonly string[] = [
+  'Slice corners: open each one a step at a time, from wide, instead of running past it.',
+  'Short peeks: show yourself for a heartbeat and step back. A Pro bot needs a moment to answer, and a quick peek costs you nothing.',
+  'Listen: a bot on the move is loud. Stand still, hear which way they come, then peek.',
+  'Hold a corner yourself: stand still with your view on the doorway and let them walk into your aim.',
+];
+
+/** The Pro tip for round `round` (1 first), cycling through PRO_TIPS. */
+export function proTip(round: number): string {
+  return PRO_TIPS[(Math.max(1, Math.floor(round)) - 1) % PRO_TIPS.length]!;
+}

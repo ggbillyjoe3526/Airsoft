@@ -1054,6 +1054,39 @@ summary says "Not kept"; everything else plays as it will.
 - [ ] **Caught out or out:** end a run any other way carrying finds: "Lost: … Only what you get out with is yours."
 - [ ] **Key:** Settings › Key bindings has "Use: open a case (hold)"; rebind it and the prompt names the new key.
 
+## Pro (M36–M41, dev content)
+
+Turn on Settings › Dev settings › Dev content, then New game › Difficulty › Pro (opponents). Play each map once as
+Elimination and once as Attack / Defend: Depot, Woodland (a wide wood, at night) and Neon Heights (Day first, then
+Night). Pro pays ×2 but counts for nothing while it is dev content.
+
+- [ ] **Slow down:** Pro bots hold still aiming at corners and doorways, and walk (quietly) the last stretch towards
+  where they heard you. Run past a corner and you lose; stop, slice it a step at a time, or peek short and step back, and
+  you win.
+- [ ] **What got you:** get hit. After the HIT! stamp, once you walk off, a card shows "Orange 2 · from your left · 14 m",
+  whether that bot was holding the angle, how long you were in view and whether you were moving. It makes sense every
+  time, including a shot from behind and a ricochet. Settings › HUD › What got you: Off hides it on Pro; On shows it
+  on Hard and Normal (Auto: only Pro). The pick stays after a reload.
+- [ ] **Tips:** between rounds (and holding Tab) a "Tip" line sits under the board against Pro, a different one each
+  round; none against Hard.
+- [ ] **Teammates on Pro:** Teammates › Pro: they hold angles, trade your hits and win their duels.
+- [ ] **Rules:** New game › Rules › Tournament and Pro CQB on Pro (M39) play as written.
+- [ ] **Per map:** is any approach unfair to attackers or defenders; does one end of the map win far more; at night on
+  Woodland and Neon Heights, do Pro bots stand in lantern light (they should not when a dark spot is near)? Does a
+  round ever drag to the clock with nobody left to find?
+
+**Tuning** (everything is in `src/config/bots.ts`, "Pro tuning", plus `BOT_SKILL.pro`; the comment there maps each
+symptom to its numbers):
+
+- Pro too easy or too hard to out-aim: `BOT_SKILL.pro`: `reactionTime`, `preAimReactionTime`, `aimErrorSettledDeg`,
+  `aimSettleTime`, `aimErrorMovingDeg`.
+- Pro misses the corner you hide at or holds odd gaps (bushes, trunks, stairs): `angle*`, then `preAimConeDeg`.
+- Too slow or too bold near the enemy: `sliceLeanDistance`, `BOT_SKILL.pro.peekWatchTime`, `holdTime`.
+- Bunches up or trades badly: `tradeTime`, `tradeCoverRadius`, `boundDistance`, `crossfireTurnDeg`.
+- One end of a map wins, or rounds run to the clock: `huntMiddleBias`, `latePushTime`.
+- Stands in the light at night: `darkSpotRadius`, `darkSpotStep`.
+- The card's "moving": `WHAT_GOT_YOU.movingSpeed` in `src/config/matchInfo.ts`; the tips: `PRO_TIPS` in `src/config/tutorial.ts`.
+
 ## Extraction waves (M45, dev content)
 
 Dev content on, Extraction on Depot, Normal, as above.
