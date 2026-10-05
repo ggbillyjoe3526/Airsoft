@@ -8,7 +8,7 @@ import { isInPlay } from '../sim/elimination';
 import { rngNext } from '../sim/rng';
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { type Bot, type BotWorld, flagRole, holdYaw, pick, recallHeardOther } from './bot';
-import { type CoverSearch, findCover, type TakenSpots } from './cover';
+import { type CoverSearch, findCover, leanSideToSee, type TakenSpots } from './cover';
 import { bodyPoint, eyeOf, lineClear } from './perception';
 import { moveOrder } from './squadOrders';
 
@@ -124,7 +124,10 @@ function runGoal(b: Bot, w: BotWorld): Vec3 | undefined {
       b.post.y = p.y;
       b.post.z = p.z;
     }
-    return Math.hypot(b.post.x - p.x, b.post.z - p.z) <= w.cfg.coverArrive ? undefined : b.post;
+    // There once close by on the post's own floor (M55, audit AI-01), not under it on the floor below: the nav grid's
+    // floors stand at least a body height apart.
+    const there = Math.hypot(b.post.x - p.x, b.post.z - p.z) <= w.cfg.coverArrive && Math.abs(b.post.y - p.y) < w.body.height;
+    return there ? undefined : b.post;
   }
   const round = b.patrol;
   const lead = patrolLead(b);
@@ -444,7 +447,7 @@ export function followRoute(b: Bot, w: BotWorld, dt: number, whilePlanning = fal
 }
 
 /** Advance mode: lane points with a pause (and maybe cover) at each, then hunting. See moveBot. */
-function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
+function advance(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, atPost: boolean): boolean {
   const cfg = w.cfg;
   if (b.holdLeft > 0) {
     b.holdLeft -= dt;
@@ -493,11 +496,17 @@ function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
     const arrived = b.routeState === 'none' && b.route.length > 0;
     const goal = nextAdvanceGoal(b, w);
     if (!goal) {
+      // A guard steps right onto its post first (M55, audit AI-01): the post was picked for what it sees from there.
+      if (b.role === 'guard' && stepOnto(b, w, b.post, cmd, dt)) return true;
       // A defender at its post holds there (crouched and watching, AI-02), as do a guard at its post and a patrol at its
       // lead's stop (M46); an attacker is off to the pole next tick.
-      // Whether to crouch is chosen once, on arrival, and kept while it stays (`atPost`: it was here last tick too).
+      // Whether to crouch is chosen once, on arrival, and kept while it stays (`atPost`: it was here last tick too). A
+      // guard at a lean post leans out instead, the way that still shows the way in from where it stopped (M55, AI-01).
       if (flagRole(b, w) === 'defend' || b.role === 'guard' || b.role === 'patrol') {
-        if (!atPost) b.holdCrouch = crouchedViewClear(b, w, b.character.position);
+        if (!atPost) {
+          b.holdLean = b.role === 'guard' && b.postLean !== 0 ? leanSideToSee(b.character.position, b.postWatch, w) : 0;
+          b.holdCrouch = b.holdLean === 0 && crouchedViewClear(b, w, b.character.position);
+        }
         b.atPost = true;
         b.holding = true;
         b.teamWait += dt;
@@ -633,7 +642,7 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
   b.atPost = false;
   switch (b.mode) {
     case 'advance':
-      return advance(b, w, dt, atPost);
+      return advance(b, w, cmd, dt, atPost);
     case 'search':
       return search(b, w, cmd, dt);
     case 'flag':
@@ -647,17 +656,7 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
         cmd.crouch = b.routeState === 'none' && b.coverPhase === 'down';
         return false;
       }
-      const p = b.character.position;
-      const dx = b.cover.position.x - p.x;
-      const dz = b.cover.position.z - p.z;
-      const d = Math.hypot(dx, dz);
-      if (b.routeState !== 'none' || d <= cfg.leanSpotReach || d > cfg.leanSpotApproachMax) return false;
-      const reach = Math.min(d, cfg.edgeLookahead) / d;
-      if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach)) return false;
-      b.moveDir.x = dx / d;
-      b.moveDir.z = dz / d;
-      cmd.walk = true;
-      return true;
+      return b.routeState === 'none' && stepOnto(b, w, b.cover.position, cmd, dt);
     }
     case 'order':
       return moveOrder(b, w, cmd, dt);
@@ -670,6 +669,9 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
       if (b.strafeLeft <= 0) {
         b.strafeLeft = pick(b.rng, cfg.strafeTime);
         b.strafeDir = rngNext(b.rng) < 0.5 ? -1 : 1;
+        // A hunter looks whether a step ahead keeps its target in sight once per sidestep, not every tick (M55,
+        // KNOWN_ISSUES row 200); whether the ground ahead is there it looks at every tick (pushing).
+        if (b.role === 'hunter' && target) b.pushInSight = !stepLosesSight(b, w, 0, 1, target);
       }
       // Never sidestep off a floor, into a wall or out of sight of the target: turn back, or step forward or back if
       // both sides are blocked (so a bot on a narrow walkway doesn't stand still and steady its aim), or stand.
@@ -688,10 +690,38 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
   }
 }
 
-/** A hunter fighting `target` (M46): further than pushDistance off, with the step ahead clear (see stepBlocked). */
+/**
+ * The last few centimetres onto `spot` once its route is done, walking straight at it: a lean spot, where a few
+ * centimetres decide whether a lean sees round the corner, or a guard's post (M55, audit AI-01). True while stepping
+ * (direction in `b.moveDir`); false once within leanSpotReach, further off than leanSpotApproachMax, with a drop on
+ * the way, or once blocked for stuckTime.
+ */
+export function stepOnto(b: Bot, w: BotWorld, spot: Vec3, cmd: PlayerCommand, dt: number): boolean {
+  const cfg = w.cfg;
+  const p = b.character.position;
+  const dx = spot.x - p.x;
+  const dz = spot.z - p.z;
+  const d = Math.hypot(dx, dz);
+  if (d <= cfg.leanSpotReach || d > cfg.leanSpotApproachMax) return false;
+  // Blocked on the way (a teammate, or a corner the nav grid rounds off): it stops where it got to, as a route does.
+  if (b.stuckFor > cfg.stuckTime) return false;
+  const speed = Math.hypot(b.character.velocity.x, b.character.velocity.z);
+  b.stuckFor = speed < cfg.stuckSpeed ? b.stuckFor + dt : 0;
+  const reach = Math.min(d, cfg.edgeLookahead) / d;
+  if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach)) return false;
+  b.moveDir.x = dx / d;
+  b.moveDir.z = dz / d;
+  cmd.walk = true;
+  return true;
+}
+
+/**
+ * A hunter fighting `target` (M46): further than pushDistance off, with the step ahead clear (see stepBlocked; its sight
+ * of the target as looked at when this sidestep began, pushInSight).
+ */
 function pushing(b: Bot, w: BotWorld, target: Character): boolean {
   const p = b.character.position;
-  return Math.hypot(target.position.x - p.x, target.position.z - p.z) > w.cfg.pushDistance && !stepBlocked(b, w, 0, 1, target);
+  return Math.hypot(target.position.x - p.x, target.position.z - p.z) > w.cfg.pushDistance && b.pushInSight && !stepOffGround(b, w, 0, 1);
 }
 
 /** True if the bot is within reach of the flag's rope (FLAG.radius of the pole). */
@@ -751,16 +781,32 @@ export function keepApart(b: Bot, w: BotWorld, moving: boolean, cmd: PlayerComma
  * given) out of sight of the bot's eyes moved that way.
  */
 function stepBlocked(b: Bot, w: BotWorld, right: number, forward: number, target?: Character): boolean {
-  // The view's right on the ground plane is (cos yaw, 0, -sin yaw), its forward (-sin yaw, 0, -cos yaw) (stepMovement).
-  const yaw = b.aim.yaw;
-  const dx = Math.cos(yaw) * right - Math.sin(yaw) * forward;
-  const dz = -Math.sin(yaw) * right - Math.cos(yaw) * forward;
+  return stepOffGround(b, w, right, forward) || (target !== undefined && stepLosesSight(b, w, right, forward, target));
+}
+
+/** The view's right on the ground plane is (cos yaw, 0, -sin yaw), its forward (-sin yaw, 0, -cos yaw) (stepMovement). */
+function stepX(b: Bot, right: number, forward: number): number {
+  return Math.cos(b.aim.yaw) * right - Math.sin(b.aim.yaw) * forward;
+}
+
+function stepZ(b: Bot, right: number, forward: number): number {
+  return -Math.sin(b.aim.yaw) * right - Math.cos(b.aim.yaw) * forward;
+}
+
+/** The ground half of stepBlocked: the step would soon leave a floor or meet a wall (nav only, no rays). */
+function stepOffGround(b: Bot, w: BotWorld, right: number, forward: number): boolean {
+  const dx = stepX(b, right, forward);
+  const dz = stepZ(b, right, forward);
   const p = b.character.position;
   const reach = w.cfg.edgeLookahead;
-  if (dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach) || !isWalkableAt(w.nav, p.x + dx * reach, p.y, p.z + dz * reach)) return true;
-  if (!target || !b.targetVisible) return false;
+  return dropOnLine(w.nav, p.x, p.y, p.z, p.x + dx * reach, p.z + dz * reach) || !isWalkableAt(w.nav, p.x + dx * reach, p.y, p.z + dz * reach);
+}
+
+/** The sight half of stepBlocked: eyes moved that way would lose the target it sees (one ray). */
+function stepLosesSight(b: Bot, w: BotWorld, right: number, forward: number, target: Character): boolean {
+  if (!b.targetVisible) return false;
   eyeOf(b.character, w.body, w.hits, sideEye);
-  sideEye.x += dx * w.cfg.strafeSightOffset;
-  sideEye.z += dz * w.cfg.strafeSightOffset;
+  sideEye.x += stepX(b, right, forward) * w.cfg.strafeSightOffset;
+  sideEye.z += stepZ(b, right, forward) * w.cfg.strafeSightOffset;
   return !lineClear(w.query, sideEye, bodyPoint(target, w.hits, b.targetPart, targetPoint));
 }
