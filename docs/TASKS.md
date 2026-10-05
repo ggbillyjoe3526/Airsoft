@@ -15,5 +15,5 @@ acceptance:
   2. Woodland and Neon Heights play their own echo from `Ambience.reverb`, rendered in New game's spare time (Play makes no buffer for it); Depot and the range keep the yard's echo and wet level, and Depot's graph differs only in its shortened one-shot buffers.
   3. The neon hum has under 20 % of its power below 150 Hz and over 65 % between 150 and 500 Hz, and its two bed copies still sum to about twice one copy (within 10 %).
   4. No new SOUNDS entries or MAP_CUE_SEEDS changes; `tsc` and the fast project are clean.
-status: qa
+status: gates
 attempts: 0
