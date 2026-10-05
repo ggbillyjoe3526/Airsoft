@@ -270,8 +270,9 @@ ends the round). A hit character is eliminated
   from the collection's saved `sim/rng.ts` state mixed with fresh entropy per Shot, replayable with a fixed one; pity
   counts kept in the collection, FA10) and `scrapSpares` (one copy kept per asset, its best tier). `stats/settleMatch.ts`
   pays and records a decided match once (`MatchTakes`); `Game` syncs the collection with storage before changing it
-  (`syncCollection`: another tab's newer revision wins) and saves it (`saveOrReload`: if another tab saved first, the screen says the change was not kept); `ui/menus/armoryScreen.ts` is the screen, opened
-  from New game's Armory tile, with `confirmDialog.ts` before big spends.
+  (`syncCollection`: another tab's newer revision wins) and saves it (`saveOrReload`: if another tab saved first, the
+  save is reloaded and the screen says the change was not kept); `ui/menus/armoryScreen.ts` is the screen, opened from
+  New game's Armory tile, with `confirmDialog.ts` before big spends.
 - **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).
