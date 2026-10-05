@@ -89,6 +89,8 @@ export type SettingField =
   /** Settings → HUD (M24); the HUD's size (audit UI-04). */
   | 'scoreboardSize'
   | 'hitFeed'
+  /** Settings → HUD → What got you (M41): 'auto', 'on' or 'off'. */
+  | 'whatGotYou'
   | 'hudSize'
   /** Settings → Controls → Raw mouse input (audit UI-20). */
   | 'rawInput'

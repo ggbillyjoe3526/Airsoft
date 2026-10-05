@@ -5,12 +5,14 @@ import type { HitConfig } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
 import { type DetailLevel, EXIT_VISUALS, FLAG_VISUALS, HUD, type QualitySettings } from '../config/render';
+import { proTip } from '../config/tutorial';
 import { SQUAD_ORDERS, type SquadOrderKind, type WheelSelect } from '../config/squad';
 import { cssColor, teamCss, type TeamColours } from '../config/teams';
 import type { MapData } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
 import { type Character, eyeHeight } from '../sim/character';
 import { type ExtractionContext, respawnsLeft } from '../sim/extraction';
+import type { HitFacts } from '../sim/hitFacts';
 import type { RoundRules } from '../sim/round';
 import type { GameState } from '../sim/state';
 import { type Vec3, wrapAngle } from '../sim/vec';
@@ -30,6 +32,7 @@ import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
 import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
+import { WhatGotYouCard, whatGotYouText } from '../ui/whatGotYou';
 import { CharacterRenderer } from './characterRenderer';
 import { CaseRenderer } from './caseRenderer';
 import { ExitRenderer } from './exitRenderer';
@@ -60,6 +63,12 @@ export class MatchPresentation {
   private readonly markerAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   private readonly feed: HitFeed;
   private readonly board: MatchBoard;
+  /** The "what got you" card (M41), whether it is on, and the record of the hit it words (the bots' controller fills it). */
+  private readonly whatGotYou: WhatGotYouCard;
+  private whatGotYouOn = false;
+  private hitFacts: HitFacts | null = null;
+  /** Pro briefing tips for the board (M41): none unless the opponents are Pro. */
+  private proTips = false;
   /** What the board shows now, and what its numbers were built from (redrawn only when that changes). */
   private readonly shownBoard = { view: 'none' as BoardView, version: -1, second: -1, phase: '' };
   /** The board over the field is up this frame: the markers over the field hide under it (audit UI-13). */
@@ -148,6 +157,7 @@ export class MatchPresentation {
     this.mateMarkers = new TeammateMarkers(container, this.mates.map((c) => this.names.get(c.id) ?? ''), teamCss(player.team));
     this.feed = new HitFeed(container);
     this.board = new MatchBoard(container);
+    this.whatGotYou = new WhatGotYouCard(container);
     this.soundCues = new SoundCues(container);
     this.squadLine = new SquadOrderLine(container, player.team);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
@@ -216,6 +226,22 @@ export class MatchPresentation {
     this.feed.setMode(mode);
   }
 
+  /** The record the bots' controller keeps of the last hit on you, which the "what got you" card words (M41). */
+  setHitFacts(facts: HitFacts): void {
+    this.hitFacts = facts;
+  }
+
+  /** The "what got you" card on or off (Settings → HUD, M41; also called once as the match is built). */
+  setWhatGotYou(on: boolean): void {
+    this.whatGotYouOn = on;
+    if (!on) this.whatGotYou.clear();
+  }
+
+  /** Pro briefing tips on the board between rounds (M41): on when the opponents are Pro. */
+  setProTips(on: boolean): void {
+    this.proTips = on;
+  }
+
   setPlaying(playing: boolean): void {
     this.feedback.setVisible(playing);
     this.scoreboard.setVisible(playing);
@@ -233,6 +259,7 @@ export class MatchPresentation {
       for (const m of this.exitMarkers) m?.hide();
       this.mateMarkers.hideAll();
       this.board.setVisible(false);
+      this.whatGotYou.setShown(false);
       this.shownBoard.view = 'none';
     }
   }
@@ -253,12 +280,17 @@ export class MatchPresentation {
           // It came from the opposite of the BB's flight direction.
           this.hitFromYaw = Math.atan2(e.direction.x, e.direction.z);
           this.feedback.showHit(wrapAngle(cameraYaw - this.hitFromYaw));
+          const facts = this.hitFacts;
+          if (this.whatGotYouOn && facts && facts.victimId === e.victimId && facts.time === this.state.time) {
+            this.whatGotYou.set(whatGotYouText(facts, this.names.get(e.shooterId) ?? 'Someone', cameraYaw));
+          }
         } else if (e.shooterId === this.player.id) {
           const victim = this.state.characters.find((c) => c.id === e.victimId);
           this.feedback.showHitMarker(victim?.team === this.player.team);
         }
       } else if (e.type === 'respawned' && e.characterId === this.player.id) {
         this.respawnedAt = this.state.time;
+        this.whatGotYou.clear();
         this.feedback.setCalling(false);
         const fade = this.respawnFade;
         if (fade) {
@@ -274,6 +306,7 @@ export class MatchPresentation {
         this.casePrompt?.dropped(this.state.time);
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
+        this.whatGotYou.clear();
         this.spectator.reset();
         this.feed.roundStarted(e.round);
         this.soundCues.clear();
@@ -411,6 +444,7 @@ export class MatchPresentation {
     this.listener.yaw = Math.atan2(-this.viewDir.x, -this.viewDir.z);
     this.soundCues.update(this.listener.x, this.listener.z, this.listener.yaw, this.state.time);
     this.updateBoard(boardHeld);
+    this.whatGotYou.setShown(this.playing && spectating && !this.boardUp);
 
     this.feedback.setCalling(status === 'calling');
     if (status === 'calling') this.feedback.setHitDirection(wrapAngle(cameraYaw - this.hitFromYaw));
@@ -437,6 +471,7 @@ export class MatchPresentation {
     this.marker.dispose();
     this.feed.dispose();
     this.board.dispose();
+    this.whatGotYou.dispose();
     this.mateMarkers.dispose();
     this.soundCues.dispose();
     this.squadLine.dispose();
@@ -512,6 +547,7 @@ export class MatchPresentation {
     shown.second = second;
     shown.phase = r.phase;
     const match = view === 'match';
+    this.board.setTip(this.proTips ? proTip(r.number) : '');
     const heading = match ? (r.phase === 'matchOver' ? 'Match' : `Match so far · round ${r.number}`) : `Round ${r.number}`;
     const statsOf = match ? (id: number) => this.stats.matchOf(id) : (id: number) => this.stats.roundOf(id);
     this.board.set(heading, statsBlocks(this.state.characters, this.names, statsOf, r.score, this.player, r.phase === 'live', this.extraction !== undefined));

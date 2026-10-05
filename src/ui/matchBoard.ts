@@ -11,6 +11,9 @@ export class MatchBoard {
   private readonly table = new StatsTable();
   private shownVisible = false;
   private shownHeading = '';
+  /** A tip under the table (Pro briefing tips, M41); '' for none. */
+  private readonly tip: HTMLParagraphElement;
+  private shownTip = '';
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -18,7 +21,10 @@ export class MatchBoard {
     this.root.hidden = true;
     this.heading = document.createElement('h2');
     this.heading.className = 'match-board-heading';
-    this.root.append(this.heading, this.table.root);
+    this.tip = document.createElement('p');
+    this.tip.className = 'match-board-tip';
+    this.tip.hidden = true;
+    this.root.append(this.heading, this.table.root, this.tip);
     parent.appendChild(this.root);
   }
 
@@ -33,6 +39,14 @@ export class MatchBoard {
   set(heading: string, blocks: readonly TeamBlock[]): void {
     if (heading !== this.shownHeading) this.heading.textContent = this.shownHeading = heading;
     this.table.set(blocks);
+  }
+
+  /** The tip under the table, or '' to hide it. */
+  setTip(text: string): void {
+    if (text === this.shownTip) return;
+    this.shownTip = text;
+    this.tip.textContent = text;
+    this.tip.hidden = text === '';
   }
 
   dispose(): void {
