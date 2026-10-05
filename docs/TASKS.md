@@ -15,5 +15,5 @@ acceptance:
   2. `.settings-reload` and `.armory-row-count` are gone, and `styleSheet.test.ts` passes, with the fold's focus ring and chevron in forced colours.
   3. Owner decision 16 is recorded: menus are unchanged at 4K with 100 % OS scaling, auto scale in Beta (DECISIONS and a KNOWN_ISSUES row).
   4. Owner decision 17 is recorded: one exit green in every team colour set until a colour-blind playtester asks, colour never the only cue (DECISIONS and a KNOWN_ISSUES row); no change in the exit, team or minimap code.
-status: qa
+status: gates
 attempts: 0
