@@ -321,3 +321,67 @@ test('Woodland on Low: moon, stars and fires, within 100 draw calls and 150k tri
   expect(spin.after).toBe(spin.before);
   expect(errors).toEqual([]);
 });
+
+/**
+ * M33i QA: Medium's ceiling (120 draw calls, 200k triangles) at the largest team size, 5v5, where the figures' share is
+ * the largest: the moon, stars, flames and (Medium has dust motes) embers drawn, and no shader first built while you
+ * turn round at the spawn.
+ */
+test('Woodland on Medium at 5v5: within 120 draw calls and 200k triangles, embers on, no shader built mid-match', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=3&quality=medium');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start' }).click();
+  const setup = page.locator('.menu-setup');
+  await setup.getByRole('button', { name: /Settings/i }).click();
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
+  await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
+  await page.keyboard.press('Escape');
+  await setup.getByRole('button', { name: /Map/i }).click();
+  await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Woodland/i }).click();
+  await setup.getByRole('button', { name: /Match/i }).click();
+  const matchDialog = page.getByRole('dialog', { name: 'Match' });
+  await matchDialog.getByRole('group', { name: 'Team size' }).getByRole('button', { name: '5v5' }).click();
+  await page.keyboard.press('Escape');
+  await expect(setup.getByRole('button', { name: /Match/i })).toContainText('5v5');
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 30_000 });
+  await expect.poll(() => page.evaluate(() => (window as unknown as LookView).airsoft.state?.tick ?? 0), { timeout: 90_000 }).toBeGreaterThan(10);
+
+  const parts = await page.evaluate(() => {
+    const s = (window as unknown as LookView).airsoft.renderer.scene;
+    return ['night-stars', 'night-moon', 'fire-flames', 'fire-embers'].map((n) => s.getObjectByName(n)?.visible ?? null);
+  });
+  expect(parts).toEqual([true, true, true, true]);
+  const figures = await page.evaluate(() => (window as unknown as LookView).airsoft.state!.characters.length);
+  expect(figures).toBe(10);
+
+  const spin = await page.evaluate(async () => {
+    const g = (window as unknown as LookView).airsoft;
+    const info = g.renderer.renderer.info;
+    const me = g.state!.characters.find((c) => c.id === 0)!;
+    const programs = info.programs?.length ?? 0;
+    let calls = 0;
+    let triangles = 0;
+    const frames = 90;
+    for (let i = 0; i < frames; i++) {
+      me.yaw = (i / frames) * Math.PI * 2;
+      me.prevYaw = me.yaw;
+      await new Promise((r) => requestAnimationFrame(r));
+      calls = Math.max(calls, info.render.calls);
+      triangles = Math.max(triangles, info.render.triangles);
+    }
+    return { calls, triangles, before: programs, after: info.programs?.length ?? 0 };
+  });
+  console.log(`Woodland Medium 5v5 spin: ${JSON.stringify(spin)}`);
+  expect(spin.calls).toBeLessThanOrEqual(120);
+  expect(spin.triangles).toBeLessThanOrEqual(200_000);
+  expect(spin.after).toBe(spin.before);
+  expect(errors).toEqual([]);
+});
