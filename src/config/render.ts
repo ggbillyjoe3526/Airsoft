@@ -154,7 +154,8 @@ export interface QualitySettings {
   /**
    * The sun's shadow map follows the view (REN-08): it covers a disc round the ground ahead of you
    * (LIGHTING.shadowView), not the whole field, so each texel is about a third of the ground and shadows of rails, posts
-   * and limbs are sharp; past it nothing casts a shadow. Off, one map covers the whole field.
+   * and limbs are sharp; past it nothing casts a shadow. Off, one map covers the whole field, by day only: under a night
+   * preset the map follows the view whatever this says (M52, audit REN-08: the low moon stretches a whole-field map).
    */
   shadowFollowsView: boolean;
   /** Figures, the flag's cloth and the range targets are shaded by walls and containers, not only cast shadows (REN-07). */
@@ -439,9 +440,10 @@ export const LIGHTING = {
    */
   shadowNormalBiasTexels: 0.5,
   /**
-   * The view-fitted shadow map (QualitySettings.shadowFollowsView, High): a disc of `radius` metres centred `ahead`
-   * metres in front of the camera along the ground (so 26 m ahead and 10 m behind are shadowed). At 2048² the
-   * texels are 1.9 cm, against 2.9 cm for the whole of Depot. The disc moves in whole texels, so edges don't crawl.
+   * The view-fitted shadow map (QualitySettings.shadowFollowsView: High, and Medium at night on a field wider than the view since M52): a disc of
+   * `radius` metres centred `ahead` metres in front of the camera along the ground (so 26 m ahead and 10 m behind are
+   * shadowed). At 2048² the texels are 1.9 cm, against 2.9 cm for the whole of Depot; at 1024² 3.9 cm, against 10 cm
+   * for the whole of Woodland under its low moon. The disc moves in whole texels, so edges don't crawl.
    */
   shadowView: { radius: 18, ahead: 8 },
 } as const;
@@ -547,16 +549,20 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
     night: true,
     sky: { zenith: 0x0a1224, horizon: 0x1d2b46, below: 0x0e1218, sunGlow: 0x9fb4d6, sunGlowPower: 10, horizonFalloff: 1.6 },
     fog: { colour: 0x1d2b46, near: 20, far: 140 },
-    hemi: { sky: 0x3a4c78, ground: 0x1a1c22, intensity: 0.4 },
+    // M52 (audit REN-02): a paler moon and a warmer ground fill, both brighter, and a touch more exposure. Under the old
+    // blue moon (0xb8c8ff × 0.6, fill 0.4) Neutral tone mapping took browns near black (earth (5,2,5) sRGB); now earth
+    // reads (19,11,13), the cabin's boards (20,12,2) and a mid skin tone (48,31,25), and the neon signs glow as before
+    // (render/nightSwatch.test.ts works these out without WebGL).
+    hemi: { sky: 0x3a4c78, ground: 0x2a2620, intensity: 1 },
     key: {
-      colour: 0xb8c8ff,
-      intensity: 0.6,
+      colour: 0xc8d4ff,
+      intensity: 1,
       offset: { x: Math.cos(MOON_ELEVATION) * MOON.distance, y: Math.sin(MOON_ELEVATION) * MOON.distance, z: 0 },
       disc: { colour: 0xe8eeff, size: 0 },
     },
     clouds: { shade: 0x121826, top: 0x3c475e, opacity: 0.5 },
     environment: { ground: 0x1c1f26, intensity: 0.2 },
-    exposureScale: 1.15,
+    exposureScale: 1.3,
     // The held replica by moonlight (M33h): a dim cool fill, a pale moon key, a faint blue rim. Before, it stayed lit as
     // by day at night (KNOWN_ISSUES, M33f).
     viewmodel: { hemi: { sky: 0x6a7ca8, ground: 0x22242c, intensity: 0.55 }, key: { colour: 0xb8c8ff, intensity: 0.7 }, rim: { colour: 0x8fa6e0, intensity: 0.6 } },
@@ -687,8 +693,8 @@ export const FOLIAGE_LOOK = {
 export const GROUND_LOOK = {
   cell: 1,
   // Trampled earth at the fires, tracks and fort is a light, dry dirt, lighter than the leaf litter, which is darker
-  // again under the trees. At night Neutral tone mapping still takes browns and greys near black (KNOWN_ISSUES), so the
-  // spawns stay on grass.
+  // again under the trees. By moonlight they read dim but brown since M52 (the night preset's light, audit REN-02;
+  // render/nightSwatch.test.ts); the spawns stay on grass, which reads best.
   colours: { leaves: 0x55482f, earth: 0x927d60, gravel: 0x857f72, wood: 0x76603f },
   blend: 1,
   underTreeShade: 0.72,

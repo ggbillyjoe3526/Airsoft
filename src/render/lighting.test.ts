@@ -4,8 +4,10 @@ import { LIGHTING, LIGHTING_PRESETS, QUALITY, type QualitySettings } from '../co
 import { terrainMaxX, terrainMaxZ, terrainRange } from '../map/terrain';
 import { SLOPE_YARD, SLOPE_YARD_TERRAIN, terrainOnly } from '../map/testSupport';
 import { DEPOT } from '../map/depot';
+import { WOODLAND } from '../map/woodland';
 import { TEST_YARD, TEST_YARD_HALF_SIZE } from '../map/testYard';
 import { addLighting, fitShadowCamera, mapBoundingBox, shadowTexel } from './lighting';
+import { resolveLighting } from './lightingPreset';
 
 describe('shadow camera fitting', () => {
   it('covers every corner of the level box', () => {
@@ -209,5 +211,47 @@ describe('the view-fitted shadow map on High (REN-08)', () => {
     expect(sun.shadow.normalBias).toBeCloseTo(LIGHTING.shadowNormalBiasTexels * shadowTexel(cam, 1024), 9);
     expect(sun.shadow.normalBias).toBeGreaterThan(near * 2);
     daylight.dispose();
+  });
+
+  it('fits Medium’s map to the view at night too (M52, audit REN-08): Woodland’s low moon, texels 10 cm to 4 cm', () => {
+    const woods = (preset: typeof LIGHTING_PRESETS.day, quality: QualitySettings) => {
+      const scene = new THREE.Scene();
+      const daylight = addLighting(scene, WOODLAND, quality, preset);
+      const sun = scene.children.find((o): o is THREE.DirectionalLight => o instanceof THREE.DirectionalLight)!;
+      return { daylight, sun, cam: sun.shadow.camera };
+    };
+    const night = resolveLighting(WOODLAND);
+    expect(night.night).toBe(true);
+    expect(QUALITY.medium.shadowFollowsView).toBe(false); // Medium's own setting is the whole field
+    // The whole field under the moon, as Medium drew it before M52 (and Low at night, with no shadow map, keeps).
+    const low = woods(night, QUALITY.low);
+    const fieldWidth = width(low.cam);
+    low.daylight.follow(eye(4, -6, 0.5), 0);
+    expect(low.sun.castShadow).toBe(false);
+    expect(width(low.cam)).toBe(fieldWidth);
+    low.daylight.dispose();
+
+    const medium = woods(night, QUALITY.medium);
+    medium.daylight.follow(eye(4, -6, 0.5), 0);
+    const texel = shadowTexel(medium.cam, QUALITY.medium.shadowMapSize);
+    expect(texel).toBeLessThan(fieldWidth / QUALITY.medium.shadowMapSize / 2.5);
+    expect(medium.sun.shadow.normalBias).toBeCloseTo(LIGHTING.shadowNormalBiasTexels * texel, 9);
+    // It follows the view, in whole texels.
+    const first = medium.cam.left;
+    medium.daylight.follow(eye(4.05, -6.02, 0.5), 0);
+    const steps = (medium.cam.left - first) / texel;
+    expect(Math.abs(steps - Math.round(steps))).toBeLessThan(1e-6);
+    medium.daylight.follow(eye(-20, 10, 2), 0);
+    expect(medium.cam.left).not.toBe(first);
+    medium.daylight.dispose();
+
+    // By day the same field on Medium keeps its one whole-field map (Depot's Medium is unchanged too).
+    const day = woods(LIGHTING_PRESETS.day, QUALITY.medium);
+    const dayWidth = width(day.cam);
+    day.daylight.follow(eye(4, -6, 0.5), 0);
+    day.daylight.follow(eye(-20, 10, 2), 0);
+    expect(width(day.cam)).toBe(dayWidth);
+    expect(shadowTexel(day.cam, QUALITY.medium.shadowMapSize)).toBeGreaterThan(texel * 2);
+    day.daylight.dispose();
   });
 });

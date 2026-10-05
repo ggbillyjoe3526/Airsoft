@@ -110,7 +110,13 @@ describe('Neon Heights art (M34f)', () => {
     expect(night.night).toBe(true);
     expect(night.fog.colour).toBe(night.sky.horizon);
     expect(night.fog.colour).not.toBe(LIGHTING_PRESETS.night.fog.colour);
-    expect(night.hemi.intensity).toBeGreaterThan(LIGHTING_PRESETS.night.hemi.intensity);
+    // More sky light: the fill's sky side as light (linear luminance × intensity), since M52 lit the base night's fill
+    // at the city's intensity with a darker sky colour (audit REN-02).
+    const skyLight = (h: { sky: number; intensity: number }): number => {
+      const c = new THREE.Color(h.sky);
+      return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) * h.intensity;
+    };
+    expect(skyLight(night.hemi)).toBeGreaterThan(skyLight(LIGHTING_PRESETS.night.hemi) * 1.5);
     expect(night.nightSky!.stars).toBeLessThan(LIGHTING_PRESETS.night.nightSky!.stars);
     expect(night.fog.near).toBe(LIGHTING_PRESETS.night.fog.near); // only the colour
     expect(resolveLighting(mapUnderLighting(NEON_HEIGHTS, 'day'))).toEqual(LIGHTING_PRESETS.day);
