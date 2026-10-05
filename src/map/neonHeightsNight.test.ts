@@ -36,19 +36,19 @@ describe('Neon Heights by Night (M34e)', () => {
     NEON_HEIGHTS.lights!.forEach((l, i) => expect(l.position.y, `lamp ${i}`).toBeGreaterThan(field.lightFloors[i]! + 2));
   });
 
-  it('lights the avenue and the flag, and leaves every Level 1 room and the atrium corners dark, as close-up as under trees', () => {
+  it('lights the avenue and the flag, and leaves every Level 1 room and the atrium corners dark (the indoor range)', () => {
     expect(inLight(field, vec3(0.3, 0, -11.5))).toBe(true);
     expect(nightSightRange(field, NEON_HEIGHTS.flag!)).toBe(NIGHT_SIGHT.lit);
-    for (const name of ['Capsules', 'Clinic', 'Tower Level 1']) expect(nightSightRange(field, spot(name)), name).toBe(NIGHT_SIGHT.canopy);
+    for (const name of ['Capsules', 'Clinic', 'Tower Level 1']) expect(nightSightRange(field, spot(name)), name).toBe(NIGHT_SIGHT.indoor);
     // The atrium is roofed three storeys up: past the chandelier's pool it is dark.
-    expect(nightSightRange(field, vec3(NEON_HEIGHTS.flag!.x, 0, NEON_HEIGHTS.flag!.z + 4))).toBe(NIGHT_SIGHT.canopy);
+    expect(nightSightRange(field, vec3(NEON_HEIGHTS.flag!.x, 0, NEON_HEIGHTS.flag!.z + 4))).toBe(NIGHT_SIGHT.indoor);
   });
 
   it('keeps the stairwells dark and the Sky Bridge moonlit', () => {
     for (const l of links) {
       if (l.well === 'Plaza' || l.well === 'Grand') continue; // the plaza stair is outdoors, the grand stair in the lobby
       const mid = vec3((l.bottom.x + l.top.x) / 2, (l.bottom.y + l.top.y) / 2, (l.bottom.z + l.top.z) / 2);
-      expect(nightSightRange(field, mid), l.name).toBe(NIGHT_SIGHT.canopy);
+      expect(nightSightRange(field, mid), l.name).toBe(NIGHT_SIGHT.indoor);
     }
     const sky = bridges.find((b) => b.name === 'Sky Bridge')!;
     const middle = vec3((sky.ends[0]!.x + sky.ends[1]!.x) / 2, sky.y, sky.ends[0]!.z);

@@ -22,6 +22,8 @@ export interface NightSightConfig {
   open: number;
   /** Under the trees, where the canopy hides the moon. */
   canopy: number;
+  /** Indoors in the dark (M34e): under a floor or roof where no pool lights. */
+  indoor: number;
   /** Ground counts as under the trees when at least `canopyTrees` tree trunks stand within `canopyRadius` m of it. */
   canopyTrees: number;
   canopyRadius: number;
@@ -35,7 +37,7 @@ export interface NightSightConfig {
   poolAbove: number;
   /**
    * Indoors (M34e): feet with the underside of a block between `roofFrom` and `roofTo` m over them stand under a floor or
-   * roof; unlit, that is as dark as under the trees (`canopy`).
+   * roof; unlit, they are seen from `indoor` m.
    */
   roofFrom: number;
   roofTo: number;
@@ -186,10 +188,11 @@ export function underCanopy(field: NightField, p: Vec3): boolean {
 }
 
 /**
- * How far away someone standing at `p` can be made out at night (m): lit, under the trees or indoors in the dark
- * (M34e), or in the open.
+ * How far away someone standing at `p` can be made out at night (m): lit, under the trees, indoors in the dark (M34e),
+ * or in the open.
  */
 export function nightSightRange(field: NightField, p: Vec3): number {
   if (inLight(field, p)) return field.sight.lit;
-  return underCanopy(field, p) || underRoof(field, p) ? field.sight.canopy : field.sight.open;
+  if (underCanopy(field, p)) return field.sight.canopy;
+  return underRoof(field, p) ? field.sight.indoor : field.sight.open;
 }

@@ -44,10 +44,12 @@ describe('night sight on floors (M34e)', () => {
     expect(inLight(field, vec3(10, 0, 0))).toBe(false); // under the slab, below the upper lamp
   });
 
-  it('makes an unlit spot under a floor or roof as dark as under the trees, and a lit one lit', () => {
+  it('makes an unlit spot under a floor or roof indoors-dark, and a lit one lit', () => {
     const field = buildNightField(STACKED, NIGHT_SIGHT)!;
     expect(underRoof(field, vec3(10, 0, 0))).toBe(true);
-    expect(nightSightRange(field, vec3(10, 0, 0))).toBe(NIGHT_SIGHT.canopy);
+    expect(nightSightRange(field, vec3(10, 0, 0))).toBe(NIGHT_SIGHT.indoor);
+    expect(NIGHT_SIGHT.indoor).toBeLessThan(NIGHT_SIGHT.open);
+    expect(NIGHT_SIGHT.indoor).toBeGreaterThan(NIGHT_SIGHT.canopy);
     expect(nightSightRange(field, vec3(0, 0, 0))).toBe(NIGHT_SIGHT.lit);
     expect(nightSightRange(field, vec3(5, 3.25, 0))).toBe(NIGHT_SIGHT.open); // on the slab, open sky
   });

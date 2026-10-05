@@ -616,14 +616,17 @@ export const BOTS: BotConfig = botConfig(DEFAULT_DIFFICULTY);
  * players by eye): 40 m in a light pool (as by day), 25 m in the moonlit open, 10 m under the trees. The target's light
  * decides; `viewDistance` still caps it. Ground is under the trees where 3 trunks stand within 4 m (on a 1 m grid).
  * On floors (M34e): a pool lights its own floor, feet from 0.5 m under it to 2 m over it (a slope inside a camp fire's
- * pool, never the next storey 3 m up); and feet with a block's underside 1.9 to 9.5 m over them are indoors, as dark as
- * under the trees when no pool lights them (a doorway's lintel, a floor, a roof up to three storeys over a stairwell or
- * an atrium, a bridge over a street).
+ * pool, never the next storey 3 m up); and feet with a block's underside 1.9 to 9.5 m over them are indoors (a doorway's
+ * lintel, a floor, a roof up to three storeys over a stairwell or an atrium, a bridge over a street), seen from 15 m
+ * when no pool lights them: darker than the moonlit open, lighter than the woods (the city's glow through the windows).
+ * Measured on Neon Heights by Night over seeds 1-48 (2026-10-05): indoors at 10 m the west end won 61 % of Elimination,
+ * at 15 m 48 %, at 18 m 44 %.
  */
 export const NIGHT_SIGHT: NightSightConfig = {
   lit: 40,
   open: 25,
   canopy: 10,
+  indoor: 15,
   canopyTrees: 3,
   canopyRadius: 4,
   canopyCell: 1,
