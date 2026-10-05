@@ -14,18 +14,34 @@ export interface VersionLabel {
 }
 
 /**
- * "v0.1-alpha.3" on a release; "v0.1-alpha.3+12 · abc1234" twelve commits after it (commit abc1234); "build abc1234"
- * with no release tag in reach (a shallow clone); UNKNOWN_BUILD for anything else (empty, or an archive that wasn't
- * filled in).
+ * A release tag in the owner's display style (owner, 2026-10-05): "0.1 Dev 3" for `0.1-dev.3`, "0.1 Beta 1" for
+ * `0.1-beta.1`, "0.1.0" for `0.1.0`. The old tags still read (`v0.1-alpha.3` is "0.1 Dev 3": Dev replaced Alpha, and
+ * a stage without a number is its first build). '' for a tag that isn't a release.
+ */
+export function releaseName(tag: string): string {
+  const m = /^v?(\d+\.\d+(?:\.\d+)?)(?:-(alpha|dev|beta)(?:\.(\d+))?)?$/.exec(tag);
+  if (!m) return '';
+  const [, version = '', stage, build = '1'] = m;
+  if (!stage) return version;
+  return `${version} ${stage === 'beta' ? 'Beta' : 'Dev'} ${build}`;
+}
+
+/**
+ * "0.1 Dev 3" on a release; "0.1 Dev 3+12 · abc1234" twelve commits after it (commit abc1234); "build abc1234" with
+ * no release tag in reach (a shallow clone); UNKNOWN_BUILD for anything else (empty, an archive that wasn't filled
+ * in, or a tag that isn't a release).
  */
 export function versionLabel(describe: string): VersionLabel {
   const d = describe.trim();
-  const after = /^(v\d.*)-(\d+)-g([0-9a-f]{4,})$/.exec(d);
+  const after = /^(.+)-(\d+)-g([0-9a-f]{4,})$/.exec(d);
   if (after) {
-    const [, tag, commits, hash] = after;
-    return { label: `${tag}+${commits} · ${hash}`, title: `${commits} commit${commits === '1' ? '' : 's'} after ${tag} (commit ${hash})` };
+    const [, tag = '', commits, hash] = after;
+    const name = releaseName(tag);
+    if (!name) return { label: UNKNOWN_BUILD, title: 'Built outside git' };
+    return { label: `${name}+${commits} · ${hash}`, title: `${commits} commit${commits === '1' ? '' : 's'} after ${name} (commit ${hash})` };
   }
-  if (/^v\d[\w.-]*$/.test(d)) return { label: d, title: `Release ${d}` };
+  const name = releaseName(d);
+  if (name) return { label: name, title: `Release ${name}` };
   if (/^[0-9a-f]{4,}$/.test(d)) return { label: `build ${d}`, title: `Commit ${d}` };
   return { label: UNKNOWN_BUILD, title: 'Built outside git' };
 }

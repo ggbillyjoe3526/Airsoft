@@ -110,7 +110,7 @@ test('Woodland is lit by night and the practice range after it by day again', as
   expect(night.fogNear).toBe(20);
   expect(night.fogColour).toBe(0x1d2b46);
   expect(night.background).toBe(0x1d2b46);
-  expect(night.sun).toBeCloseTo(0.6, 5);
+  expect(night.sun).toBeCloseTo(1, 5); // the night key, M52 (audit REN-02 candidate B)
   expect(night.pools).toEqual(['pool-glow', 'pool-ground']);
   expect(night.pointLights).toBe(0); // Low: the pools light the ground with one mesh, no real lights
 

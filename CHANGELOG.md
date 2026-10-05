@@ -122,8 +122,12 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
+<<<<<<< HEAD
 - **M53** · Sound: the countdown beep is loud enough to hear, distant sounds fade behind walls smoothly instead of in a step at 60 m, sounds stay placed when you look up or lean, the neon hum no longer doubles, and each match's birds and calls come at different times
 - **M53** · Extraction: the Match pop-up no longer offers rounds or round time, the one-minute warning and a late exit are announced (banner, screen reader, a double beep), and the rules text names every switch that is on
+=======
+- **M52** · At night the ground, wood and faces read in their own colours instead of near black: a bluer, brighter night sky and moon, and on Medium the shadows at night stay sharp near you (#111)
+>>>>>>> origin/main
 - **M33j** · No birds sing at night any more, on any map (Woodland, Neon Heights by Night); footsteps on Woodland's ground no longer sound like concrete
 - **FA16** · Play here in a second tab no longer sometimes lands back on the "open in another tab" notice: the reloaded tab waits a moment for the other tab's save lock to be freed (#89)
 - **FA13** · Your left hand holds the rifle's handguard, thumb up the near side, instead of sitting under it; the raised hand when you're hit is one glove again (#76)
@@ -152,6 +156,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M50** · The crash report's Quality line reads properly (not "[object Object]") and the report adds the rules, the lighting, Retro pixels and an Extraction run's state (#107)
 
 ### Internal
+- **M51** · CI runs the slow tests in three parallel jobs beside the main check; the Extraction balance tests and the map Extraction blocks share one helper each; a smoke test plays Tournament Extraction with Retro pixels and Pro CQB against Pro (#110)
 - **M44** · Extraction cases: tests for the Use key, case rolls, drops and the haul, and a browser test of a run that opens the locker
 - **M45** · Extraction waves: tests for wave timing per difficulty, the reserve, regen points on Depot's real level, and bots setting off again
 - **M46** · Extraction guards and hunters: tests for posts, patrols, hunters and cover, and a balance guard per difficulty on Depot (#98)
@@ -178,7 +183,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 - **M50** · Woodland and Neon Heights download only once Dev content is on, the pool and stats tables are a file of their own, and the code size budget is 900 kB with a warning at 90 % (#107)
 
-## v0.1-alpha.3 · 2026-10-03
+## 0.1 Dev 3 · 2026-10-03
 
 ### Added
 - **M7a** · Q and E keys freed for leaning (swap key removed)
@@ -196,7 +201,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - Docs: every change as a pull request, the repository's new name, the roadmap and playtest guide (#1, #2, #5, #7, #8, #9)
 - Automatic checks on every pull request: a browser smoke test and a GitHub workflow (#3)
 
-## v0.1-alpha.2 · 2026-10-01
+## 0.1 Dev 2 · 2026-10-01
 
 ### Added
 - **M1** · Walk and sprint keys; rebindable key bindings; bigger Depot (50 × 32 m)
@@ -209,7 +214,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Internal
 - Bug pass: bots mind moving teammates; tag policy and docs tidied
 
-## v0.1-alpha · 2026-09-30
+## 0.1 Dev 1 · 2026-09-30
 
 ### Added
 - Scaffold and first-person scene with Three.js and Rapier
