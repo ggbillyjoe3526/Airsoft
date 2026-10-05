@@ -19,13 +19,14 @@ import { matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, REALCAP, type ReplicaConfig, replicaUnderRules } from './config/replicas';
 import { botKitSeed, carriedLoadout, chaseCarrier, chaseReady, kittedCharacter, randomKit } from './pool/botKit';
 import { contentPool } from './pool/contentPool';
+import { rollRunCases } from './pool/caches';
 import { GAME_POOL } from './pool/gamePool';
 import { bbGlowFor, type PlayerKit } from './pool/loadoutModel';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
 import { BuildTiming } from './core/buildTiming';
-import { runSeed } from './core/seed';
+import { caseSeed, runSeed } from './core/seed';
 import { advanceStepper, createStepper, stepperAlpha } from './core/fixedStepper';
 import type { PlayerInput } from './input/playerInput';
 import type { MapData } from './map/mapTypes';
@@ -45,7 +46,7 @@ import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
-import { createRunContext, type ExtractionContext } from './sim/extraction';
+import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, runFinds, runHaul } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createWind } from './sim/wind';
@@ -94,8 +95,20 @@ export interface MatchSetup {
    * carries one (pool/botKit.ts chaseCarrier). Absent: none.
    */
   chaseOwned?: readonly string[];
+  /**
+   * The collection's items (item key → copies, M44): an Extraction run's case parts are weighted towards what you
+   * don't own yet, as a Shot's are. Absent: as if you owned nothing.
+   */
+  owned?: Readonly<Record<string, number>>;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
+}
+
+/** What an Extraction run found, for the summary (MatchSession.runFinds). */
+export interface RunFinds {
+  extracted: boolean;
+  found: { fc: number; items: FoundItem[] };
+  out: { fc: number; items: FoundItem[] };
 }
 
 /**
@@ -186,7 +199,16 @@ export class MatchSession {
     this.mode = playableMode(map, setup.mode);
     this.extraction =
       this.mode === 'extraction' && map.extraction
-        ? createRunContext(map.extraction, { squad: setup.rules.teamSize, seed: runSeed(seed), runner: PLAYER_ID, squadTeam: PLAYER_TEAM, respawnAfter: hitRulesFor(setup.rules).callTime, spawnLift: PHYSICS.groundRestGap })
+        ? createRunContext(map.extraction, {
+            squad: setup.rules.teamSize,
+            seed: runSeed(seed),
+            runner: PLAYER_ID,
+            squadTeam: PLAYER_TEAM,
+            respawnAfter: hitRulesFor(setup.rules).callTime,
+            spawnLift: PHYSICS.groundRestGap,
+            // The run's cases (M44), filled from pool.md with the parts weighted towards what you don't own yet.
+            cases: rollRunCases(GAME_POOL, map.extraction.cases, setup.owned ?? {}, caseSeed(seed)),
+          })
         : undefined;
     // An Extraction run is one "round" of the map's run time (sim/round.ts); there is nothing to win twice.
     this.rounds = this.extraction && map.extraction ? { ...roundRulesFor(setup.rules), roundTime: map.extraction.runTime, winsNeeded: 1, winBy: 1 } : roundRulesFor(setup.rules);
@@ -318,7 +340,26 @@ export class MatchSession {
       ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
       // Custom rules pay no more than ×1.5 (M39): Pro's ×2 is for the named rulesets played as they are.
       ...(this.customRules ? { customRules: true } : {}),
+      // Extraction (M44): what you got out with goes into the collection with the pay.
+      ...this.haulOutcome(),
     }));
+  }
+
+  /** The haul for the match's outcome: present only for a run you extracted from carrying something. */
+  private haulOutcome(): Pick<MatchOutcome, 'haul'> {
+    if (!this.extraction) return {};
+    const haul = haulTotals(runHaul(this.state.round.run));
+    return haul.fc > 0 || haul.items.length > 0 ? { haul } : {};
+  }
+
+  /**
+   * Extraction's finds for the summary (M44): whether you got out, everything you found this run and what you got out
+   * with; null in the other modes.
+   */
+  runFinds(): RunFinds | null {
+    if (!this.extraction) return null;
+    const run = this.state.round.run;
+    return { extracted: run.outcome === 'extracted', found: haulTotals(runFinds(run)), out: haulTotals(runHaul(run)) };
   }
 
   /** Every player's numbers over the match, your team first, for the end-of-match summary. */

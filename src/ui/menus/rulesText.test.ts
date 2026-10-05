@@ -19,7 +19,7 @@ const RULES: MatchRulesText = {
   ricochetsCount: false,
 };
 
-const X: ExtractionData = { insertions: [], exits: [], opponentStarts: [], runTime: 480, baseOpponents: 2 };
+const X: ExtractionData = { insertions: [], exits: [], opponentStarts: [], runTime: 480, baseOpponents: 2, cases: [] };
 
 describe('the Extraction rules shown on New game (M43)', () => {
   it('explain the squad, the home team, the clock, the stand, the late exit and the one respawn', () => {

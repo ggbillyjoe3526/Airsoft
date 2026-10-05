@@ -717,3 +717,59 @@ describe('walk-off route searches through the simulation (M27)', () => {
     expect(a.walkOffRoutePending).toBe(false);
   });
 });
+
+describe('the Use key in the simulation (M44)', () => {
+  function useField() {
+    const state = createGameState(1, 16, ROUNDS);
+    const you = createCharacter(0, vec3(), 0, LOADOUT, 0);
+    const foe = createCharacter(1, vec3(10, 0, 0), 0, LOADOUT, 1);
+    state.characters.push(you, foe);
+    const ctx = testContext(floor, KILL_Y);
+    const held = createCommand();
+    held.use = true;
+    const commands = new Map<number, PlayerCommand>([[0, held], [1, held]]);
+    return { state, you, foe, ctx, held, commands };
+  }
+
+  it('is held on a character in play while the round is live, and let go with the key', () => {
+    const { state, you, ctx, held, commands } = useField();
+    stepSimulation(state, commands, ctx, DT);
+    expect(you.using).toBe(true);
+    held.use = false;
+    stepSimulation(state, commands, ctx, DT);
+    expect(you.using).toBe(false);
+  });
+
+  it('is cleared while hit (the hit-calling routine takes over the command), and again once respawned holding nothing', () => {
+    const { state, you, ctx, commands } = useField();
+    stepSimulation(state, commands, ctx, DT);
+    expect(you.using).toBe(true);
+    eliminate(you, 1, state.characters, ctx.targets.elimination);
+    stepSimulation(state, commands, ctx, DT);
+    expect(you.status).toBe('calling');
+    expect(you.using).toBe(false);
+    respawnCharacter(you);
+    expect(you.using).toBe(false);
+  });
+
+  it('is cleared once the round is decided, even with the key held (no opening a case after the whistle)', () => {
+    const { state, you, ctx, commands } = useField();
+    stepSimulation(state, commands, ctx, DT);
+    expect(you.using).toBe(true);
+    // The decider is over, so the round is not reset under the test's feet (a drawn round restarts at once).
+    state.round.phase = 'matchOver';
+    stepSimulation(state, commands, ctx, DT);
+    expect(you.using).toBe(false);
+    state.round.phase = 'over';
+    state.round.timer = 100;
+    stepSimulation(state, commands, ctx, DT);
+    expect(you.using).toBe(false);
+  });
+
+  it('stays false for a character with no command (a bot never uses a case)', () => {
+    const { state, you, foe, ctx } = useField();
+    stepSimulation(state, new Map(), ctx, DT);
+    expect(you.using).toBe(false);
+    expect(foe.using).toBe(false);
+  });
+});

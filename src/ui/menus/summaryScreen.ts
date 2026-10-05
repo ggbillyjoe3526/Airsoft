@@ -1,10 +1,14 @@
 import { STATS } from '../../config/matchInfo';
-import { ARMORY_TEXT } from '../../config/menus';
-import type { Earnings } from '../../pool/armory';
+import { ARMORY_TEXT, HAUL_TEXT } from '../../config/menus';
+import { type Dispensed, type Earnings, rarestFirst } from '../../pool/armory';
+import type { Pool } from '../../pool/pool';
+import type { ItemRef } from '../../pool/collection';
 import type { RecordsView } from '../recordsView';
 import { fcText } from './armoryScreen';
 import type { TeamBlock } from '../statsRows';
+import { haulWhat } from '../runStatus';
 import { StatsTable } from '../statsTable';
+import { itemTile } from './itemTile';
 import { el, menuButton, menuPage } from './menuParts';
 
 /** What the end-of-match summary shows. */
@@ -18,6 +22,20 @@ export interface MatchSummary {
   fieldCredits?: Earnings | null;
   /** Why it paid nothing, when it didn't (audit POOL-22). */
   unpaid?: Unpaid | null;
+  /** Extraction's haul (M44); absent in the other modes. */
+  haul?: HaulSummary | null;
+}
+
+/** What an Extraction run found and what came of it, for the summary (M44). */
+export interface HaulSummary {
+  /** The pool the parts come from (their names, tiers and drawings). */
+  pool: Pool;
+  extracted: boolean;
+  /** Everything found this run, and what you got out with. */
+  found: { fc: number; items: readonly ItemRef[] };
+  out: { fc: number; items: readonly ItemRef[] };
+  /** The parts as they went into the collection (new, or a spare), or null when the run kept nothing. */
+  kept: readonly Dispensed[] | null;
 }
 
 /** Why a match paid no Field Credits: Dev settings changed how it played, the Armory is switched off, or it used dev content (M35). */
@@ -34,6 +52,7 @@ export class SummaryScreen {
   private readonly table = new StatsTable('summary-table');
   private readonly records: HTMLDivElement;
   private readonly credits: HTMLDivElement;
+  private readonly haul: HTMLDivElement;
 
   constructor(onContinue: () => void) {
     const page = menuPage('menu-summary', 'Match summary');
@@ -41,8 +60,9 @@ export class SummaryScreen {
     this.result = el('p', 'summary-result');
     this.records = el('div', 'summary-records');
     this.credits = el('div', 'summary-credits');
+    this.haul = el('div', 'summary-haul');
     const panel = el('div', 'menu-panel summary-panel');
-    panel.append(this.result, this.credits, this.table.root, this.records);
+    panel.append(this.result, this.haul, this.credits, this.table.root, this.records);
     page.body.append(panel);
     const next = menuButton('Continue', 'primary', onContinue, true);
     next.dataset.autofocus = '';
@@ -54,7 +74,47 @@ export class SummaryScreen {
     this.table.set(summary.blocks);
     this.records.replaceChildren(...recordsBlock(summary.records));
     this.credits.replaceChildren(...creditsBlock(summary.fieldCredits ?? null, summary.unpaid ?? null));
+    this.haul.replaceChildren(...(summary.haul ? haulBlock(summary.haul) : []));
   }
+}
+
+/** The summary's haul from a run's finds (MatchSession.runFinds) and what settling it kept; null outside Extraction. */
+export function haulSummary(pool: Pool, finds: Omit<HaulSummary, 'pool' | 'kept'> | null, kept: readonly Dispensed[] | null): HaulSummary | null {
+  return finds ? { pool, ...finds, kept } : null;
+}
+
+/**
+ * The haul's line on the summary (M44): what you got out with and whether it was kept, what you lost, or nothing. Pure,
+ * so the wording is tested without a page.
+ */
+export function haulLine(h: Omit<HaulSummary, 'pool'>): string {
+  const outWhat = haulWhat(h.out);
+  if (h.extracted && outWhat) return h.kept ? HAUL_TEXT.kept(`+${outWhat}`) : HAUL_TEXT.notKept(outWhat);
+  if (h.extracted) return haulWhat(h.found) ? HAUL_TEXT.leftBehind : HAUL_TEXT.emptyOut;
+  const foundWhat = haulWhat(h.found);
+  return foundWhat ? HAUL_TEXT.lost(foundWhat) : HAUL_TEXT.nothing;
+}
+
+/**
+ * Extraction's haul (M44): its line, then the parts revealed as the Armory reveals a Shot (the same tiles in the
+ * tiers' colours, the rarest first, staggered in): new or a spare once kept, else marked not kept or lost.
+ */
+function haulBlock(h: HaulSummary): HTMLElement[] {
+  const head = el('p', 'summary-credits-total');
+  head.append(el('span', 'menu-kicker', HAUL_TEXT.title));
+  const out: HTMLElement[] = [head, el('p', 'menu-readout', haulLine(h))];
+  const shown: readonly Dispensed[] = h.kept ?? (h.extracted ? h.out : h.found).items.map((item) => ({ item, isNew: false }));
+  if (shown.length === 0) return out;
+  const note = (d: Dispensed): string => (h.kept ? (d.isNew ? HAUL_TEXT.new : HAUL_TEXT.spare) : h.extracted ? HAUL_TEXT.notKeptTile : HAUL_TEXT.lostTile);
+  const grid = el('div', 'item-grid armory-reveal-grid');
+  rarestFirst(h.pool, shown).forEach((d, i) => {
+    const tile = itemTile(h.pool, d.item, note(d));
+    tile.classList.toggle('is-new', h.kept !== null && d.isNew);
+    tile.style.setProperty('--i', String(i));
+    grid.append(tile);
+  });
+  out.push(grid);
+  return out;
 }
 
 /** "Field Credits earned +180 FC", then what paid them: "Match played 40 · Match won 60 … · Hard ×1.5". */

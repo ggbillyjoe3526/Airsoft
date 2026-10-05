@@ -15,6 +15,7 @@ import type { RoundRules } from '../sim/round';
 import type { GameState } from '../sim/state';
 import { type Vec3, wrapAngle } from '../sim/vec';
 import type { MatchStats } from '../stats/matchStats';
+import { CasePrompt } from '../ui/casePrompt';
 import { FlagMarker } from '../ui/flagMarker';
 import { HitFeed } from '../ui/hitFeed';
 import { HitFeedback } from '../ui/hitFeedback';
@@ -30,6 +31,7 @@ import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
 import { rosterNames, statsBlocks } from '../ui/statsRows';
 import { TeammateMarkers } from '../ui/teammateMarkers';
 import { CharacterRenderer } from './characterRenderer';
+import { CaseRenderer } from './caseRenderer';
 import { ExitRenderer } from './exitRenderer';
 import type { FigureModel } from './externalModels';
 import { FlagRenderer } from './flagRenderer';
@@ -102,6 +104,9 @@ export class MatchPresentation {
   private readonly respawnFade: HTMLDivElement | null = null;
   private respawnedAt = Number.NEGATIVE_INFINITY;
   private readonly runInfo = { rules: EXTRACTION, respawnsLeft: 0 };
+  /** Extraction (M44): the cases in the world, and the prompt under the crosshair for opening one. */
+  private readonly cases: CaseRenderer | null = null;
+  private readonly casePrompt: CasePrompt | null = null;
 
   constructor(
     scene: THREE.Scene,
@@ -170,6 +175,9 @@ export class MatchPresentation {
       this.respawnFade.className = 'respawn-fade';
       container.appendChild(this.respawnFade);
       this.runInfo.rules = extraction.rules;
+      this.cases = new CaseRenderer(run, teamColours.figures[player.team]!);
+      scene.add(this.cases.object);
+      this.casePrompt = new CasePrompt(container, () => keyName('use'));
     }
   }
 
@@ -215,6 +223,7 @@ export class MatchPresentation {
     this.soundCues.setVisible(playing);
     this.squadLine.setVisible(playing);
     this.minimap.setVisible(playing);
+    this.casePrompt?.setVisible(playing);
     this.playing = playing;
     if (!playing) {
       this.orderWheel.hide();
@@ -258,6 +267,11 @@ export class MatchPresentation {
           void fade.offsetWidth;
           fade.classList.add('on');
         }
+      } else if (e.type === 'caseOpened' && e.characterId === this.player.id) {
+        const k = this.state.round.run.cases[e.case];
+        if (k) this.casePrompt?.opened(k, this.state.time);
+      } else if (e.type === 'caseDropped' && e.characterId === this.player.id) {
+        this.casePrompt?.dropped(this.state.time);
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
         this.spectator.reset();
@@ -385,6 +399,8 @@ export class MatchPresentation {
     this.flag.update(this.state.round, this.state.time);
     this.updateMarker(camera, spectating);
     this.exits?.update(this.state.round.run);
+    this.cases?.update(this.state.round.run);
+    this.casePrompt?.update(this.state.round.run, this.state.time);
     this.updateExitMarkers(camera, spectating);
     this.updateMateMarkers(camera, alpha, watched);
     this.feed.update(this.state.time);
@@ -412,6 +428,8 @@ export class MatchPresentation {
     this.characters.dispose();
     this.flag.dispose();
     this.exits?.dispose();
+    this.cases?.dispose();
+    this.casePrompt?.dispose();
     for (const m of this.exitMarkers) m?.dispose();
     this.respawnFade?.remove();
     this.feedback.dispose();
