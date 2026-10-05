@@ -75,6 +75,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M39** · Custom adds Overtime, Time-out, Minimap, Fire modes, Magazines and Kit rows; never counts for records, pays at most ×1.5
 - **M43** · Extraction (dev content, Depot): an 8:00 run against a home team; stand 10 s in an open exit to get out; one automatic respawn at the insertion (#83)
 - **M44** · Extraction cases: hold Use (G) to open ammo cans, field cases and a locker for FC, BBs and parts; a hit drops them; kept only if you get out
+- **M34e** · Neon Heights by Night: 12 lamps light separate floors, neon signs that glow and are painted by day, lit and dark windows on the perimeter; balanced at 47–48 % west, 52 % attackers
+- **M34e** · Night sight on night maps knows floors and roofs: an unlit spot under a roof is seen from 15 m
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
