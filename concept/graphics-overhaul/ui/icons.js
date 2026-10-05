@@ -1,0 +1,37 @@
+// Line icons for the menu concept (24 x 24, currentColor).
+const s = (body, fill = false) =>
+  `<svg viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="${fill ? 'none' : 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+
+export const I = {
+  play: s('<path d="M7 4.5l12.5 7.5L7 19.5z"/>', true),
+  rifle: s('<path d="M1.5 9.5h13l1.6-1.6h5.4v3.2h-3.6l-1.2 1.6h-4.5l-2.4 5.6H6.6l1.2-5.6H1.5z"/>', true),
+  crate: s('<path d="M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/>'),
+  target: s('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>'),
+  sliders: s('<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'),
+  check: s('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+  lock: s('<rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+  search: s('<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/>'),
+  sun: s('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  moon: s('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+  graphics: s('<path d="M3 17l5-6 4 4 3-3 6 5"/><rect x="2.5" y="3.5" width="19" height="17" rx="1.5"/><circle cx="16" cy="8" r="1.6"/>'),
+  display: s('<rect x="2.5" y="4" width="19" height="12.5" rx="1.5"/><path d="M8 20.5h8M12 16.5v4"/>'),
+  audio: s('<path d="M4 9.5h3.5L12.5 5v14l-5-4.5H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>'),
+  controls: s('<rect x="6.5" y="2.5" width="11" height="19" rx="5.5"/><path d="M12 6.5v4"/>'),
+  gameplay: s('<path d="M5 21V3.5M5 4h12l-2.5 4L17 12H5"/>'),
+  access: s('<circle cx="12" cy="4.5" r="2"/><path d="M4 8.5l8 1.5 8-1.5M12 10v4.5l-3.5 7M12 14.5l3.5 7"/>'),
+  look: s('<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.8-1.8 0-1.4-1.4-1.8-1.4-3.1 0-1 .8-1.8 1.8-1.8h2.4A4.4 4.4 0 0 0 21 9.9C21 6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.3" fill="currentColor"/><circle cx="10" cy="7" r="1.3" fill="currentColor"/><circle cx="15" cy="7" r="1.3" fill="currentColor"/>'),
+  save: s('<path d="M5 3.5h11l3.5 3.5v13.5h-15z"/><path d="M8 3.5v5h7v-5M8 20.5v-6h8v6"/>'),
+  elim: s('<circle cx="12" cy="12" r="8"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="2" fill="currentColor"/>'),
+  flag: s('<path d="M5 22V2.5M5 3h13.5l-3 4.5 3 4.5H5"/>'),
+  exit: s('<path d="M14 3.5H5v17h9"/><path d="M10 12h11M17 8l4 4-4 4"/>'),
+  hand: s('<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V3.5a1.5 1.5 0 0 1 3 0V11M14 11V4.5a1.5 1.5 0 0 1 3 0V13M17 9.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-6.2-3.8L3.5 13.5a1.5 1.5 0 0 1 2.6-1.5L8 15"/>'),
+  robot: s('<rect x="4.5" y="7" width="15" height="12" rx="2"/><path d="M12 3v4M9 12.5h.01M15 12.5h.01M9 16h6"/>'),
+  person: s('<circle cx="12" cy="7.5" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+  star: s('<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>', true),
+  trophy: s('<path d="M7 3.5h10v5a5 5 0 0 1-10 0z"/><path d="M7 5H3.5v1.5A3.5 3.5 0 0 0 7 10M17 5h3.5v1.5A3.5 3.5 0 0 1 17 10M12 13.5V18M8 21h8M9 18h6"/>'),
+  info: s('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>'),
+  bb: s('<circle cx="12" cy="12" r="6"/><path d="M9.5 9.5a3 3 0 0 1 3-1.5"/>'),
+  dice: s('<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
+  arrowR: s('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+  key: s('<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>'),
+};

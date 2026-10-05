@@ -287,6 +287,47 @@ if (shot === 'ingame') {
   };
   const view = shot.includes('-') ? shot.slice(shot.indexOf('-') + 1) : 'map';
   post = (shot.startsWith('woodland') ? woodlandShot : neonShot)(ctx, view);
+} else if (shot === 'thumb') {
+  // One item on a dark card, for the menu concept's pictures: thumb&item=aeg|pistol|cyber|<attachment>&scheme=..&real=1
+  // &parts=redDot,vertical,torch,silencer,scope2x,angled,laser,hiCap,extended,long
+  const item = q.get('item') ?? 'aeg';
+  const sch = (q.get('scheme') ?? 'cobalt') as SchemeId;
+  const real = q.get('real') === '1';
+  const parts = new Set((q.get('parts') ?? '').split(',').filter(Boolean));
+  studio(0x34405a, 0x141922, true);
+  const k = new Kit(preset);
+  k.envMap = kit.envMap;
+  let g: THREE.Object3D;
+  if (item === 'aeg' || item === 'pistol' || item === 'cyber') {
+    g = buildReplica(k, item, {
+      scheme: sch,
+      realistic: real,
+      optic: parts.has('redDot') ? 'redDot' : parts.has('scope2x') ? 'scope2x' : undefined,
+      grip: parts.has('vertical') ? 'vertical' : parts.has('angled') ? 'angled' : undefined,
+      muzzle: parts.has('silencer') ? 'silencer' : undefined,
+      barrel: parts.has('long') ? 'long' : undefined,
+      torch: parts.has('torch'),
+      laser: parts.has('laser'),
+      mag: parts.has('hiCap') ? 'hiCap' : parts.has('extended') ? 'extended' : undefined,
+    }).group;
+  } else g = buildAttachment(k, item, sch, real);
+  // Side on, turned a little towards the camera, framed to fill the card.
+  const holder = new THREE.Group();
+  g.rotation.set(0, -Math.PI / 2 + 0.38, 0);
+  holder.add(g);
+  holder.rotation.x = 0.12;
+  holder.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(holder);
+  const c = box.getCenter(new THREE.Vector3());
+  holder.position.sub(c);
+  place(holder, -c.x, -c.z, 0, -c.y);
+  holder.traverse((o) => ((o as THREE.Mesh).castShadow = false));
+  const sz = box.getSize(new THREE.Vector3());
+  camera.fov = 18;
+  const fit = Math.max(sz.x / camera.aspect, sz.y) / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  camera.position.set(0, 0.02 * fit, fit * 1.1 + sz.z / 2);
+  camera.lookAt(0, 0, 0);
+  post = { bloom: 0.5, aoRadius: 0.05, dof: undefined };
 } else if (shot === 'replicas' || shot === 'replicas-real') {
   // The armoury: every replica and attachment. replicas-real is the same set with the Realistic colours setting on.
   const real = shot === 'replicas-real';
