@@ -191,7 +191,10 @@ ends the round). A hit character is eliminated
 - **sim/footsteps.ts**: after movement, emits `footstep` events every stride while running/sprinting and on hard
   landings; walking and crouched movement are silent.
 - **render/matchPresentation.ts**: other players (`characterRenderer.ts` + `characterModels.ts`: vertex-coloured
-  figures in casual airsoft kit with the team colour as tape, six looks by id (`FIGURE.looks`), six merged meshes
+  figures, G7: masked humans (`figureHuman.ts`) or robots (`figureRobot.ts`) on a shared part builder
+  (`figureParts.ts`, `figureShapes.ts`), coloured from the team colour (`figurePalette.ts`), holding blocky replicas
+  in their team's bot schemes (`figureReplicas.ts`, `figureHands.ts`); who is a robot comes from the match seed and the
+  Robots setting (`figureMix.ts`); six looks by id (`FIGURE.looks`), six merged meshes
   each on one material per figure, four drawn at once: legs, body, and the rifle, pistol or hit-call arms), hit feedback (`ui/hitFeedback.ts`), the spectator camera used once
   you're out, round messages (`ui/roundBanner.ts`, worded from your side) and the scoreboard (`ui/scoreboard.ts`:
   score, clock, who's still in; in Attack / Defend ATK/DEF tags and the flag strip, `ui/flagStatus.ts`). In Attack / Defend
@@ -273,7 +276,7 @@ ends the round). A hit character is eliminated
   (`syncCollection`: another tab's newer revision wins) and saves it (`saveOrReload`: if another tab saved first, the
   save is reloaded and the screen says the change was not kept); `ui/menus/armoryScreen.ts` is the screen, opened from
   New game's Armory tile, with `confirmDialog.ts` before big spends.
-- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. `replicaBuilder.ts` holds the materials and the builder, `replicaParts.ts` the fittable parts; `itemPictures.ts` draws the same models off screen for the menus (G2). The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
+- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands (or a robot's, `robotHands.ts` on the same hand skeleton, styled by `replicaArms.ts`, G7) built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. `replicaBuilder.ts` holds the materials and the builder, `replicaParts.ts` the fittable parts; `itemPictures.ts` draws the same models off screen for the menus (G2). The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).
 - **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,
