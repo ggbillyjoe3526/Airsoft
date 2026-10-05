@@ -12,18 +12,6 @@ first (M33 changes both).
 
 attempts: 0
 
-## M40 · Map balance for Pro
-tier: core
-perf: skip
-touches: src/ai/, src/map/, src/config/bots.ts, vite.config.ts, pipeline/README.md, .github/workflows/check.yml
-acceptance:
-  1. Headless Pro guards per playable map: Attack / Defend attackers 40–60 %, each end 40–60 % of decided Elimination rounds, under 1 round in 10 on time.
-  2. Depot unchanged unless its Office lane puts attackers under 40 %; then a window or second door between two rooms, layout tests still passing.
-  3. Woodland and the city are checked against the same guards once their navigation lands.
-  4. Held angles (M37) also cover stair tops on layered floors and bush edges and tree gaps where a map has foliage, tested on the maps that have them.
-status: building
-attempts: 0
-
 ## M41 · What got you, Pro tips and tuning
 tier: ui
 perf: skip
