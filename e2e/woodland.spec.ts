@@ -255,3 +255,69 @@ test('Woodland: T switches your weapon torch, one real spot light in place of a 
   expect(await dayLook()).toEqual({ lights: [], torchOn: false, torchObjects: [], spots: 0 });
   expect(errors).toEqual([]);
 });
+
+type LookView = {
+  airsoft: {
+    state: { tick: number; characters: { id: number; yaw: number; prevYaw: number }[] } | null;
+    renderer: {
+      scene: { getObjectByName: (n: string) => { visible: boolean } | undefined };
+      renderer: { info: { programs: unknown[] | null; render: { calls: number; triangles: number } } };
+    };
+  };
+};
+
+/**
+ * M33i QA: Woodland's look on Low (its 60 fps preset): the moon and stars, the camp fires' flames (no embers: Low has no
+ * dust motes), within Low's 100 draw calls and 150k triangles, and no shader first built while you turn round.
+ */
+test('Woodland on Low: moon, stars and fires, within 100 draw calls and 150k triangles, no shader built mid-match', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=3&quality=low');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start' }).click();
+  const setup = page.locator('.menu-setup');
+  await setup.getByRole('button', { name: /Settings/i }).click();
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
+  await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
+  await page.keyboard.press('Escape');
+  await setup.getByRole('button', { name: /Map/i }).click();
+  await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Woodland/i }).click();
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
+  await expect.poll(() => page.evaluate(() => (window as unknown as LookView).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
+
+  const parts = await page.evaluate(() => {
+    const s = (window as unknown as LookView).airsoft.renderer.scene;
+    return ['night-stars', 'night-moon', 'fire-flames', 'fire-embers'].map((n) => s.getObjectByName(n)?.visible ?? null);
+  });
+  expect(parts).toEqual([true, true, true, false]);
+
+  // Turn a full circle over a second and a half, reading what each frame draws and which shaders exist.
+  const spin = await page.evaluate(async () => {
+    const g = (window as unknown as LookView).airsoft;
+    const info = g.renderer.renderer.info;
+    const me = g.state!.characters.find((c) => c.id === 0)!;
+    const programs = info.programs?.length ?? 0;
+    let calls = 0;
+    let triangles = 0;
+    const frames = 90;
+    for (let i = 0; i < frames; i++) {
+      me.yaw = (i / frames) * Math.PI * 2;
+      me.prevYaw = me.yaw;
+      await new Promise((r) => requestAnimationFrame(r));
+      calls = Math.max(calls, info.render.calls);
+      triangles = Math.max(triangles, info.render.triangles);
+    }
+    return { calls, triangles, before: programs, after: info.programs?.length ?? 0 };
+  });
+  expect(spin.calls).toBeLessThanOrEqual(100);
+  expect(spin.triangles).toBeLessThanOrEqual(150_000);
+  expect(spin.after).toBe(spin.before);
+  expect(errors).toEqual([]);
+});

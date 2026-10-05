@@ -28,6 +28,9 @@ export interface NaturePaint {
 
 /** The share of an octagon's smaller half-extent always left as a flat side. */
 const OCTAGON_FLAT = 0.1;
+/** An octagon's +b and -b sides (see octagon()), as `prism` hidden-side bits. */
+const OCTAGON_TOP = 1 << 2;
+const OCTAGON_BOTTOM = 1 << 6;
 
 const vertexColour = new THREE.Color();
 const endColour = new THREE.Color();
@@ -73,7 +76,9 @@ export function chamferFor(gap: number, wanted: number): number {
  * A prism along unit axis `axis` from `s0` to `s1` (world coordinates along it, through `origin`), its cross-section
  * `profile` (octagon pairs, in the plane of unit vectors `ea`, `eb`), cut into rings at `rows` (along the axis), with
  * normals pointing out from the axis as if it were round (scaled by the half-extents `ha`, `hb`), and optionally capped
- * at each end in `capColour`. UVs: u round the profile, v along the axis, so grain runs along a trunk or a log.
+ * at each end in `capColour`. UVs: u round the profile, v along the axis, so grain runs along a trunk or a log. Sides
+ * whose bit is set in `hidden` (side i runs from profile point i to i + 1) are left out: faces pressed flat against a
+ * neighbour (a course's top on the next one's bottom) that nobody can see.
  */
 function prism(
   buf: Buffers,
@@ -89,6 +94,7 @@ function prism(
   colourK: number,
   shade: VertexShade | null,
   capColour: THREE.Color | null,
+  hidden = 0,
 ): void {
   const n = profile.length / 2;
   // Perimeter distances for u, closing the ring with a duplicated first vertex (the texture's seam).
@@ -123,6 +129,7 @@ function prism(
   const ring = n + 1;
   for (let r = 0; r + 1 < rows.length; r++) {
     for (let i = 0; i < n; i++) {
+      if (hidden & (1 << i)) continue;
       const p = base + r * ring + i;
       // Counter-clockwise seen from outside: the profile runs counter-clockwise about the axis (ea × eb = axis).
       buf.indices.push(p, p + 1, p + ring + 1, p, p + ring + 1, p + ring);
@@ -213,7 +220,9 @@ function appendLogs(buf: Buffers, block: MapBlock, paint: NaturePaint, shade: Ve
     const courseK = 1 + L.shade * (hash01(c.x + k, mid, c.z) * 2 - 1);
     // Origin on the block's centre line at this course's middle, minus the axis part (s is world along the axis).
     origin.set(alongX ? 0 : c.x, mid, alongX ? c.z : 0);
-    prism(buf, origin, axis, ea, UP, profile, ha, hb, [along - half, along + half], paint, courseK, shade, endColour);
+    // A course's top lies flat on the next one's bottom: neither is drawn (octagon side 2 is the top, 6 the bottom).
+    const hidden = (k + 2 < ys.length ? OCTAGON_TOP : 0) | (k > 0 ? OCTAGON_BOTTOM : 0);
+    prism(buf, origin, axis, ea, UP, profile, ha, hb, [along - half, along + half], paint, courseK, shade, endColour, hidden);
   }
 }
 
@@ -271,15 +280,17 @@ function appendBoulder(buf: Buffers, block: MapBlock, paint: NaturePaint, shade:
         const p10 = grid[j * (N + 1) + i + 1]!;
         const p11 = grid[(j + 1) * (N + 1) + i + 1]!;
         const p01 = grid[(j + 1) * (N + 1) + i]!;
-        triangle(buf, p00, p10, p11, paint, shade);
-        triangle(buf, p00, p11, p01, paint, shade);
+        // One shade for the facet's two triangles (by its diagonal), so the stone breaks into facets, not a checker.
+        const facet = 1 + B.facetShade * (hash01(p00[0] + p11[0], p00[1] + p11[1], p00[2] + p11[2]) * 2 - 1);
+        triangle(buf, p00, p10, p11, paint, shade, facet);
+        triangle(buf, p00, p11, p01, paint, shade, facet);
       }
     }
   }
 }
 
-/** One flat-shaded boulder facet: its own normal, UVs along its main axis, mossier when it faces up. */
-function triangle(buf: Buffers, p: readonly number[], q: readonly number[], r: readonly number[], paint: NaturePaint, shade: VertexShade | null): void {
+/** One flat-shaded boulder triangle: its own normal, UVs along its main axis, mossier when it faces up, `facet` brighter. */
+function triangle(buf: Buffers, p: readonly number[], q: readonly number[], r: readonly number[], paint: NaturePaint, shade: VertexShade | null, facet: number): void {
   const B = NATURE_SHAPES.boulder;
   edgeA.set(q[0]! - p[0]!, q[1]! - p[1]!, q[2]! - p[2]!);
   edgeB.set(r[0]! - p[0]!, r[1]! - p[1]!, r[2]! - p[2]!);
@@ -292,7 +303,7 @@ function triangle(buf: Buffers, p: readonly number[], q: readonly number[], r: r
   for (const v of [p, q, r]) {
     const [x, y, z] = v as [number, number, number];
     const [u, w] = ax >= ay && ax >= az ? [z, y] : ay >= az ? [x, z] : [x, y];
-    const k = (faceN.y < 0.9 ? grime(paint, y) : 1) * (shade ? shade(x, y, z, faceN.x, faceN.y, faceN.z) : 1);
+    const k = facet * (faceN.y < 0.9 ? grime(paint, y) : 1) * (shade ? shade(x, y, z, faceN.x, faceN.y, faceN.z) : 1);
     push(buf, x, y, z, faceN.x, faceN.y, faceN.z, u / paint.worldSize, w / paint.worldSize, vertexColour, k);
   }
   buf.indices.push(base, base + 1, base + 2);

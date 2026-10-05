@@ -50,9 +50,9 @@ const STYLES: Record<BlockKind, KindStyle> = {
   skip: { texture: 'corrugated', uv: 'world', tints: [0xcdb338, 0x4f8a57, 0x7a8288], castShadow: true, grime: true },
   // The woods (M33; M33i's look, render/natureShapes.ts): trunks and logs in bark, boulders in stone, the fence in
   // weathered boards. Trunks stay mid-value, so a figure in front of one still reads (readability first).
-  tree: { texture: 'bark', uv: 'world', tints: [0xb8aa98, 0xab9d8b, 0xc2b4a0], castShadow: true, grime: true },
-  boulder: { texture: 'stone', uv: 'world', tints: [0xd4d2cc, 0xc4c2bc, 0xd8d0c2], castShadow: true, grime: true },
-  log: { texture: 'bark', uv: 'world', tints: [0xd0b898, 0xc4ae90], castShadow: true, grime: true },
+  tree: { texture: 'bark', uv: 'world', tints: [0xccbca6, 0xbeb09a, 0xd4c4ae], castShadow: true, grime: true },
+  boulder: { texture: 'stone', uv: 'world', tints: [0xd6d2ca, 0xc8c4bc, 0xdcd6cc], castShadow: true, grime: true },
+  log: { texture: 'bark', uv: 'world', tints: [0xd2c0a4, 0xc6b69c], castShadow: true, grime: true },
   // Long boundary panels with little near enough to shade them: coarse tiles (M33i, Medium's triangle ceiling).
   fence: { texture: 'planks', uv: 'world', tints: [0xd8d0c4, 0xccc4b8], castShadow: true, grime: true, cell: SURFACES.occlusion.coarseCell },
 };

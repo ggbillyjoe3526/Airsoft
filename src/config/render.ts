@@ -667,8 +667,8 @@ export const FOLIAGE_LOOK = {
    * M33i, on a map lit by a key light from one side: the side facing it turns towards `rim` by up to `rimStrength`, and
    * the leaves below `footFrom` (of the half-height, -1 the very foot) are `footShade` darker, baked. Same triangles.
    */
-  rim: 0x8fa6d8,
-  rimStrength: 0.3,
+  rim: 0x93aa9c,
+  rimStrength: 0.25,
   footFrom: -0.4,
   footShade: 0.7,
 } as const;
@@ -686,7 +686,7 @@ export const GROUND_LOOK = {
   colours: { leaves: 0x4a3f2c, earth: 0x5e4c37, gravel: 0x7d786d, wood: 0x6f5639 },
   blend: 1,
   underTreeShade: 0.72,
-  pebbles: { perSquareMetre: 0.9, size: [0.07, 0.17], height: 0.55, depth: [0.7, 1], sink: 0.35, tints: [0x8c877c, 0x77736a, 0x9a948a], seed: 3391 },
+  pebbles: { perSquareMetre: 0.45, size: [0.07, 0.17], height: 0.55, depth: [0.7, 1], sink: 0.35, tints: [0x8c877c, 0x77736a, 0x9a948a], seed: 3391 },
 } as const;
 
 /**
@@ -701,13 +701,13 @@ export const GROUND_LOOK = {
  *   `shade` darker or lighter by its hash; cut ends `endTint` (the pale end grain).
  * - `boulder`: a box rounded `radius` m at its edges, each face cut into `segments` × `segments` facets pushed in by up
  *   to `lump` m (never at its edges), flat-shaded so the facets catch the light; facets facing up turn towards `moss`
- *   by up to `mossShare`.
+ *   by up to `mossShare`; each facet a little lighter or darker (up to `facetShade`), so the stone breaks up its box.
  */
 export const NATURE_SHAPES = {
   maxGap: 0.08,
   trunk: { chamfer: 0.113 },
   log: { course: 0.3, crouchMax: 1.3, roundFrom: 0.6, rounds: 2, chamfer: 0.1, shade: 0.1, endTint: 0xc9ad84 },
-  boulder: { radius: 0.1, segments: 3, lump: 0.065, moss: 0x5f6e46, mossShare: 0.3, seed: 6151 },
+  boulder: { radius: 0.1, segments: 3, lump: 0.075, moss: 0x6f7550, mossShare: 0.2, facetShade: 0.3, seed: 6151 },
 } as const;
 
 /**
@@ -723,13 +723,13 @@ export const NATURE_SHAPES = {
 export const CANOPY = {
   minBase: 3,
   broadFrom: 1,
-  pine: { sides: 7, apexAbove: 1.3, depth: 0.66, tiers: [{ from: 0, to: 0.62, radius: 1.75 }, { from: 0.42, to: 1, radius: 1.15 }] },
+  pine: { sides: 6, apexAbove: 1.3, depth: 0.66, tiers: [{ from: 0, to: 0.62, radius: 1.75 }, { from: 0.42, to: 1, radius: 1.15 }] },
   broad: { lumps: 3, detail: 1, radius: 0.27, lift: 0.62, spread: 0.45 },
   jitter: 0.15,
-  colours: [0x1d2c22, 0x22301f, 0x1a2a24],
+  colours: [0x1f3422, 0x26381f, 0x1c3126],
   underShade: 0.6,
   rim: 0x8fa6d8,
-  rimStrength: 0.4,
+  rimStrength: 0.32,
 } as const;
 
 /**

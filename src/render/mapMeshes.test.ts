@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { TEAM_COLOUR_SETS } from '../config/teams';
 import { DEPOT } from '../map/depot';
+import { WOODLAND } from '../map/woodland';
+import { buildFoliageMesh } from './foliageMeshes';
 import { terrainHeightAt, terrainMesh, terrainRange } from '../map/terrain';
 import { SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
 import { FOLIAGE_LOOK, TERRAIN_LOOK } from '../config/render';
@@ -21,6 +23,7 @@ import {
   restyleMap,
   setMapRelief,
   setMapTextures,
+  texturesFor,
 } from './mapMeshes';
 import type { SurfaceTextures } from './proceduralTextures';
 
@@ -461,5 +464,53 @@ describe('bushes (M33e)', () => {
     }
     disposeMapMeshes(withBushes);
     disposeMapMeshes(without);
+  });
+});
+
+describe('the woodland look (M33i)', () => {
+  const textures = Object.fromEntries(
+    (Object.keys(SURFACES.worldSize) as SurfaceTextureId[]).map((id) => [id, { texture: Object.assign(new THREE.Texture(), { name: id }) as THREE.CanvasTexture, worldSize: SURFACES.worldSize[id] }]),
+  ) as SurfaceTextures;
+  const drawn = (m: THREE.Mesh): number => Math.min(m.geometry.index?.count ?? m.geometry.getAttribute('position').count, m.geometry.drawRange.count) / 3;
+  const meshOf = (group: THREE.Group, name: string): THREE.Mesh => group.children.find((c) => c.name === name) as THREE.Mesh;
+
+  it('draws the woods’ textures only for a map that uses them', () => {
+    expect(texturesFor(WOODLAND)).toEqual(expect.arrayContaining(['bark', 'planks', 'stone', 'groundDetail']));
+    expect(texturesFor(DEPOT)).not.toEqual(expect.arrayContaining(['bark']));
+  });
+
+  it('draws trees and logs in bark, boulders in stone, fences in planks, crowns over the trees, inside a triangle budget', () => {
+    for (const q of [QUALITY.low, QUALITY.medium]) {
+      const group = buildMapMeshes(WOODLAND, textures, { ...mapLookOf(q), relief: false, normalMaps: false }, null);
+      const names = group.children.map((c) => c.name);
+      expect(names).toEqual(expect.arrayContaining(['map-bark', 'map-stone', 'map-planks', 'map-canopy', 'map-terrain', 'map-foliage']));
+      expect(names.filter((n) => n === 'map-crate')).toHaveLength(0);
+      // The map's whole share of a frame (Low: 150k triangles with the figures, Medium 200k at 5v5): measured 52k / 55k.
+      const total = group.children.reduce((n, c) => n + drawn(c as THREE.Mesh), 0);
+      expect(total, q.mapDetail ? 'medium' : 'low').toBeLessThan(q.mapDetail ? 60_000 : 56_000);
+      disposeMapMeshes(group);
+    }
+  });
+
+  it('casts crown and bush shadows only where the shadow map follows the view, switched in place', () => {
+    const medium = { ...mapLookOf(QUALITY.medium), relief: false, normalMaps: false };
+    const group = buildMapMeshes(WOODLAND, textures, medium, null);
+    expect(meshOf(group, 'map-canopy').castShadow).toBe(false);
+    expect(meshOf(group, 'map-foliage').castShadow).toBe(false);
+    const high = { ...mapLookOf(QUALITY.high), relief: false, normalMaps: false };
+    expect(restyleMap(group, WOODLAND, textures, medium, high, null)).toBe(group);
+    expect(meshOf(group, 'map-canopy').castShadow).toBe(true);
+    expect(meshOf(group, 'map-foliage').castShadow).toBe(true);
+    // The trunks, logs and boulders still cast theirs, from boxes (the shadow proxy).
+    expect(meshOf(group, 'map-bark').castShadow).toBe(true);
+    disposeMapMeshes(group);
+  });
+
+  it('rims bushes towards the moon without moving a leaf', () => {
+    const bushes = WOODLAND.foliage!.slice(0, 5);
+    const plainBushes = buildFoliageMesh(bushes)!;
+    const rimmed = buildFoliageMesh(bushes, new THREE.Vector3(0, 0.6, -0.8))!;
+    expect(rimmed.geometry.getAttribute('position').array).toEqual(plainBushes.geometry.getAttribute('position').array);
+    expect(rimmed.geometry.getAttribute('color').array).not.toEqual(plainBushes.geometry.getAttribute('color').array);
   });
 });

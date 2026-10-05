@@ -6,7 +6,7 @@
  *
  *   node pipeline/perf-run.mjs [--env container|laptop|ci] [--preset low|medium|high|all] [--cpu N] [--ticks 3600]
  *                              [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build] [--chromium /path]
- *                              [--channel chrome|msedge] [--headless]
+ *                              [--channel chrome|msedge] [--headless] [--map depot|woodland]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
@@ -19,6 +19,10 @@
  * for the budget preset and <env>-<preset>.json for the others (commit those). Frame times mean something only on
  * hardware rendering (the owner's laptop); in a container they are noise and the gate ignores them (perf-budget.json
  * frameTimeGatedEnvs). Draw calls, triangles, memory and heap are real everywhere.
+ *
+ * `--map woodland` (M33i) plays Woodland instead (dev content: Dev settings > Dev content on, then the map) with the same
+ * script, and names its files perf-<env>-woodland-<preset>.json (baseline <env>-woodland[-<preset>].json); the gate
+ * still reads Depot's run only.
  *
  * `--env laptop` measures the real GPU: no SwiftShader flags, a visible window (vsync, as a player sees it; --headless
  * to hide it) and the installed Chrome (`--channel chrome`, the default there; or `--chromium /path`).
@@ -45,7 +49,12 @@ const options = {
   baseline: flag('--baseline'),
   build: !flag('--no-build'),
   chromium: value('--chromium', process.env.PLAYWRIGHT_CHROMIUM),
+  map: value('--map', 'depot'),
 };
+const MAPS = { depot: /Depot/i, woodland: /Woodland/i };
+if (!(options.map in MAPS)) throw new Error(`--map must be one of ${Object.keys(MAPS).join(', ')}`);
+/** Depot's files keep their names (what the gate and the baselines read); another map's carry its name. */
+const mapTag = options.map === 'depot' ? '' : `-${options.map}`;
 options.cpu = Number(value('--cpu', budget.cpuThrottle?.[options.env] ?? 1));
 const presets = options.preset === 'all' ? PRESETS : [options.preset];
 if (!presets.every((p) => PRESETS.includes(p))) throw new Error(`--preset must be one of ${PRESETS.join(', ')} or all`);
@@ -111,9 +120,20 @@ async function measure(preset) {
   await page.goto(urlFor(preset));
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
   await page.getByRole('button', { name: 'Start' }).click();
-  await page.locator('.menu-setup').getByRole('button', { name: 'Play', exact: true }).click();
+  const setup = page.locator('.menu-setup');
+  if (options.map !== 'depot') {
+    // Dev content (Woodland is dev-tagged), then the map.
+    await setup.getByRole('button', { name: /Settings/i }).click();
+    const settings = page.locator('.menu-settings');
+    await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
+    await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
+    await page.keyboard.press('Escape');
+    await setup.getByRole('button', { name: /Map/i }).click();
+    await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: MAPS[options.map] }).click();
+  }
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });
-  console.log(`perf: match running (env ${options.env}, preset ${preset}, cpu ×${options.cpu}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
+  console.log(`perf: match running (map ${options.map}, env ${options.env}, preset ${preset}, cpu ×${options.cpu}); measuring ${ticks} ticks from tick ${options.warmupTicks}`);
 
   const sample = await page.evaluate(async ({ ticks, maxSeconds }) => {
     const g = globalThis.airsoft;
@@ -188,19 +208,19 @@ async function measure(preset) {
     };
   }, { ticks, maxSeconds: options.maxSeconds });
   await page.close();
-  return { env: options.env, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: '1920x1080@1', metrics: sample, errors };
+  return { env: options.env, map: options.map, preset, cpu: options.cpu, ticksWanted: ticks, warmupTicks: options.warmupTicks, head, when: new Date().toISOString(), seed: 1, viewport: '1920x1080@1', metrics: sample, errors };
 }
 
 /** The baseline file for a preset: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
-const baselineName = (preset) => (preset === budget.budgetPreset ? `${options.env}.json` : `${options.env}-${preset}.json`);
+const baselineName = (preset) => (preset === budget.budgetPreset ? `${options.env}${mapTag}.json` : `${options.env}${mapTag}-${preset}.json`);
 const round = (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
 for (const result of results) {
   for (const k of Object.keys(result.metrics)) result.metrics[k] = round(result.metrics[k]);
   const json = `${JSON.stringify(result, null, 2)}\n`;
-  const out = join(OUT, `perf-${options.env}-${result.preset}.json`);
+  const out = join(OUT, `perf-${options.env}${mapTag}-${result.preset}.json`);
   writeFileSync(out, json);
-  // The gate reads the budget preset's run (and a single-preset run, as before).
-  if (result.preset === budget.budgetPreset || presets.length === 1) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
+  // The gate reads the budget preset's run (and a single-preset run, as before), on Depot.
+  if (!mapTag && (result.preset === budget.budgetPreset || presets.length === 1)) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
   console.log(`perf: ${relative(ROOT, out)}`);
   const m = result.metrics;
   console.log(`  ${result.preset}: ${m.ticks} ticks in ${m.seconds} s · fps ${m.fps} (1 % low ${m.onePercentLowFps}) · p50 ${m.p50Ms} ms · p95 ${m.p95Ms} ms · p99 ${m.p99Ms} ms · sim ${m.simTicksPerSecond} ticks/s`);
