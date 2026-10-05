@@ -38,15 +38,26 @@ export class FakeElement {
   getAttribute(name: string): string | null {
     return this.attrs.get(name) ?? null;
   }
+  /** The element this one was put in (append, appendChild, prepend, after), for `after`. */
+  parent: FakeElement | null = null;
   append(...nodes: FakeElement[]): void {
+    for (const n of nodes) n.parent = this;
     this.children.push(...nodes);
   }
   appendChild(node: FakeElement): FakeElement {
+    node.parent = this;
     this.children.push(node);
     return node;
   }
   prepend(node: FakeElement): void {
+    node.parent = this;
     this.children.unshift(node);
+  }
+  /** Puts `node` right after this element in its parent, as the DOM's Element.after does. */
+  after(node: FakeElement): void {
+    if (!this.parent) return;
+    node.parent = this.parent;
+    this.parent.children.splice(this.parent.children.indexOf(this) + 1, 0, node);
   }
   insertAdjacentHTML(): void {}
   addEventListener(type: string, fn: (e: unknown) => void): void {
