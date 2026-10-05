@@ -48,6 +48,8 @@ export class ChoiceDialog<T extends string> {
   /** Each switch under an option (M34d), with its sides' buttons. */
   private readonly switches = new Map<T, { root: HTMLElement; sides: { id: string; button: HTMLButtonElement }[] }>();
   private readonly variants: ChoiceVariants<T> | undefined;
+  /** Each option's pick (its button's click), which its switch's sides call too. */
+  private readonly picks = new Map<T, () => void>();
   /** The `soon` entries' buttons, with their tags. */
   private readonly soonButtons: { entry: SoonEntry; button: HTMLButtonElement }[] = [];
   private readonly fallback: T;
@@ -94,26 +96,8 @@ export class ChoiceDialog<T extends string> {
       button.addEventListener('click', pick);
       list.append(button);
       this.buttons.set(option.id, button);
-      const sides = this.variants?.of(option.id) ?? [];
-      if (this.variants && sides.length > 1) {
-        const variants = this.variants;
-        const group = el('div', 'choice-variants');
-        group.setAttribute('role', 'group');
-        group.setAttribute('aria-label', `${option.label}: ${variants.label}`);
-        const made = sides.map((side) => {
-          const b = el('button', 'choice-variant', side.label);
-          b.type = 'button';
-          b.addEventListener('click', () => {
-            variants.onPick(option.id, side.id);
-            pick();
-          });
-          group.append(b);
-          return { id: side.id, button: b };
-        });
-        button.classList.add('has-variants');
-        list.append(group);
-        this.switches.set(option.id, { root: group, sides: made });
-      }
+      this.picks.set(option.id, pick);
+      this.switchOf(option);
     }
     for (const entry of extras.soon ?? []) {
       const button = el('button', 'choice-option soon');
@@ -187,6 +171,38 @@ export class ChoiceDialog<T extends string> {
     return this.options.find((o) => o.id === id) ?? this.options[0]!;
   }
 
+  /**
+   * Option `option`'s switch (M34d), under its button, once its variants number two or more: made when first shown, so
+   * a dev map's Day | Night switch appears once its data has loaded (M50, map/maps.ts loadDevMaps).
+   */
+  private switchOf(option: PickerOption<T>): { root: HTMLElement; sides: { id: string; button: HTMLButtonElement }[] } | undefined {
+    const made = this.switches.get(option.id);
+    if (made || !this.variants) return made;
+    const variants = this.variants;
+    const sides = variants.of(option.id);
+    if (sides.length < 2) return undefined;
+    const pick = this.picks.get(option.id)!;
+    const group = el('div', 'choice-variants');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', `${option.label}: ${variants.label}`);
+    const buttons = sides.map((side) => {
+      const b = el('button', 'choice-variant', side.label);
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        variants.onPick(option.id, side.id);
+        pick();
+      });
+      group.append(b);
+      return { id: side.id, button: b };
+    });
+    const button = this.buttons.get(option.id)!;
+    button.classList.add('has-variants');
+    button.after(group);
+    const sw = { root: group, sides: buttons };
+    this.switches.set(option.id, sw);
+    return sw;
+  }
+
   private refresh(): void {
     const picked = this.value;
     for (const option of this.options) {
@@ -195,7 +211,7 @@ export class ChoiceDialog<T extends string> {
       button.classList.toggle('selected', on);
       button.setAttribute('aria-pressed', String(on));
       button.hidden = button.disabled = !isAvailable(option.tag, this.devContent) || !this.offered(option.id);
-      const sw = this.switches.get(option.id);
+      const sw = button.hidden ? this.switches.get(option.id) : this.switchOf(option);
       if (!sw) continue;
       sw.root.hidden = button.hidden;
       const side = this.variants!.picked(option.id);
