@@ -129,14 +129,14 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     const follower = lead.patrolPartner!;
     r.play(2);
     for (const i of lead.patrol!.cases) r.state.round.run.cases[i]!.open = true;
-    // The lead finishes the walk to its stop, then finds nothing shut on its round.
-    r.play(30);
-    // Off the round: the follower no longer keeps to the lead's last stop.
-    for (const b of [lead, follower]) {
-      if (!isInPlay(b.character) || b.mode !== 'advance') continue;
-      expect(b.patrolIndex, `Red ${b.character.id}`).toBe(-1);
-      expect(b.hunting, `Red ${b.character.id}`).toBe(true);
-    }
+    // The lead finishes the walk to its stop, then finds nothing shut on its round: off the round, both hunt (the
+    // follower no longer keeps to the lead's last stop). Watched while they advance (a fight puts them in another mode).
+    const offRound = new Set<Bot>();
+    r.play(30, () => {
+      for (const b of [lead, follower]) if (isInPlay(b.character) && b.mode === 'advance' && b.patrolIndex === -1 && b.hunting) offRound.add(b);
+    });
+    expect(offRound.has(lead), `Red ${lead.character.id}`).toBe(true);
+    expect(offRound.has(follower), `Red ${follower.character.id}`).toBe(true);
     r.dispose();
   });
 

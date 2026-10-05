@@ -11,18 +11,6 @@ tagged dev with M35's content tag until the owner says it's done. M33 owns the m
 optional `extraction` block), the Pro thread owns held angles and team play (M37, M38): changes there go through the
 coordinator.
 
-## M46 · Extraction: guards, patrols and hunters
-tier: core
-perf: required
-touches: src/ai/, src/config/bots.ts, src/map/, src/sim/extraction.ts
-acceptance:
-  1. Guards hold cover facing a case's approaches within a leash (M37's angles where present), two on the locker; patrols walk between cases in pairs.
-  2. From halfway (Normal) hunters push to where the squad was last seen or heard: the bots' first push behaviour.
-  3. Bot teammates take cover facing outwards while you open a case.
-  4. Headless balance runs: extract rate and FC a minute per difficulty within bands, guarded by a test.
-status: building
-attempts: 0
-
 ## M47 · Extraction: pay and records
 tier: ui
 perf: skip
