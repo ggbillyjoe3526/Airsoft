@@ -17,7 +17,7 @@ acceptance:
   4. New game's Map tile names the light (e.g. "Neon Heights · Night") when the map offers a choice.
   5. Neon Heights stays inside its balance guards at Night too (headless, 16 seeds).
   6. Unit tests for the choice helper, the saved pick and the dialog's switch; the e2e plays Neon Heights by Day and checks the switch.
-status: building
+status: gates
 attempts: 0
 
 The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
