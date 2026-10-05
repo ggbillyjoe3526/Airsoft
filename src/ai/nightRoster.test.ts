@@ -168,7 +168,7 @@ describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57
     const banded = calls.filter((c) => !/, '[^']*'$/.test(c.args));
     expect(banded.map((c) => c.file).sort()).toEqual(['./neonHeightsMatch.pro.test.ts', './woodlandMatch.proFlag.test.ts']);
     expect(banded.find((c) => c.file.includes('woodland'))!.args).toContain("'attackDefend', WOODLAND,");
-    expect(sources['./woodlandMatch.proFlag.test.ts']).toContain('const ATTACKERS: readonly [number, number] = [0.25, PRO_BAND[1]];');
+    expect(sources['./woodlandMatch.proFlag.test.ts']).toContain('const ATTACKERS: readonly [number, number] = [0.15, PRO_BAND[1]];');
     // M71: the west's floor at 35 % until M73's lane point at the bar door, which puts it back.
     expect(banded.find((c) => c.file.includes('neon'))!.args).toContain("'elimination', DAY,");
     expect(sources['./neonHeightsMatch.pro.test.ts']).toContain('const WEST_UNTIL_M73: readonly [number, number] = [0.35, PRO_BAND[1]];');

@@ -18,7 +18,7 @@ import type { Bot, BotWorld } from './bot';
  * Whether `b` wants its torch on: on for the last stretch of a search (within its skill's searchWalkDistance of where it
  * last knew of someone) and fighting someone within `reach`; off advancing and on the way to a search (unless its skill
  * keeps it on the move), in cover, at the pole and on orders, and between rounds. A beam switched on far from the fight
- * only gives its bot away (M71: on Woodland it took 20 points off Hard attackers). Reads the last tick's mode and target
+ * only gives its bot away (M71: on Woodland it took 20 points off Hard attackers, 48 % against 28 %). Reads the last tick's mode and target
  * (a tick's lag is nothing next to the hold time), without changing them.
  */
 export function wantsTorch(b: Bot, w: BotWorld, reach: number): boolean {

@@ -782,6 +782,6 @@ export const NIGHT_SIGHT: NightSightConfig = {
  * `minHold` seconds, so the beam never strobes as the bot's mode flickers. First guesses for the owner's playtest.
  *
  * `fightReach` (M71): a beam switched on for a fight 20–40 m away lit its bot for every defender in the fort and lit
- * little it needed; Woodland Hard attackers won 23 % of Attack / Defend rounds with it at the beam's 40 m, 48 % at 20 m.
+ * little it needed; Woodland Hard attackers won 28 % of Attack / Defend rounds with it at the beam's 40 m, 48 % at 20 m.
  */
 export const BOT_TORCH = { minHold: 1.5, fightReach: 20 } as const;

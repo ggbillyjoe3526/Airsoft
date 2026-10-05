@@ -23,8 +23,8 @@ acceptance:
   4. The torch light refreshes at the perception rate, not every frame (AI-07); the aim wander's `* 3` is a named tuning value (AI-08).
   5. DECISIONS supersedes "Easy, Normal and Hard do neither" with the measured numbers; KNOWN_ISSUES rows 50, 160 and 186 updated.
   6. Added in the build: the habits alone left Woodland Attack / Defend attackers at 28 % (Normal and Hard) with torches against 40–45 % without, so a bot's torch comes on only for a fight within `BOT_TORCH.fightReach` and a search's last stretch (measured, DECISIONS, a test each); bots already sidestepping step apart when pressed together (the spacing guard crossed 0.5 %).
-status: gates
-attempts: 0
+status: retry 1
+attempts: 1
 
 ## M72 · Extraction opponents per level, Woodland's berth, insertion grace, hunters measured (Audit 2 BAL PR 2 + SIM-C: BAL-03, BAL-05, BAL-06, SIM-03)
 tier: core
@@ -125,7 +125,7 @@ acceptance:
   2. No import cycles, with a test that fails on one (CORE-08).
   3. Loop-seam tests bound the wrap by a fixed threshold, through one shared helper (AUD-06).
   4. Report section 5 items 1–7: stale rows and timings, the CHANGELOG PR numbers, the PLAYTEST start section.
-  5. The owed records: DECISIONS lines for the five final-audit defaults the owner confirmed and for Woodland and Neon Heights staying dev-only until he plays them; a DECISIONS line and a ROADMAP row for the graphics overhaul (since 20:39 on 5 October in 0.1 Dev 5, with the lines parked under "Owed doc lines" in the project's plans/graphics-overhaul-build.md); an IDEAS entry for a desktop wrapper; ROADMAP rows for the content toolkit checks (replicas, attachments and maps in 0.1 Beta, modes in 0.3, skins in 0.5).
+  5. The owed records: DECISIONS lines for the five final-audit defaults the owner confirmed and for Woodland and Neon Heights staying dev-only until he plays them; a DECISIONS line and a ROADMAP 0.2 row for the graphics overhaul; an IDEAS entry for a desktop wrapper; ROADMAP rows for the content toolkit checks (replicas, attachments and maps in 0.1 Beta, modes in 0.3, skins in 0.5).
 status: open
 attempts: 0
 
