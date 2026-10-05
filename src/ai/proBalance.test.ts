@@ -50,7 +50,7 @@ describe('Pro-only map balance skills (M40)', () => {
   });
 
   describe('holding out of the light on Woodland at night (keepsDark)', () => {
-    /** Seeds measured: one seed's share swings with its fights (seed 1 reads 43 % with torches, seeds 2-4 7-21 %). */
+    /** Seeds measured: one seed's share swings with its fights (seed 1 read 43 % with torches on the maps before M55, seeds 2-4 7-21 %). */
     const SEEDS = 4;
     beforeAll(async () => {
       await initPhysics();
