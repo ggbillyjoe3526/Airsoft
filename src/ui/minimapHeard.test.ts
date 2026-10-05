@@ -31,6 +31,7 @@ function recordingDom() {
   const canvas = { width: 0, height: 0, hidden: false, className: '', setAttribute: () => undefined, getContext: () => ctx, remove: () => undefined, getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }) };
   const parent = {
     style: { setProperty: () => undefined, getPropertyValue: () => '' },
+    classList: { toggle: () => undefined, remove: () => undefined },
     appendChild: () => undefined,
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
   };
