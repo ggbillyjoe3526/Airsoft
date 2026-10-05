@@ -767,7 +767,14 @@ export function keepApart(b: Bot, w: BotWorld, moving: boolean, cmd: PlayerComma
     b.moveDir.z = z * scale;
     return true;
   }
-  if (cmd.forward !== 0 || cmd.right !== 0) return false; // sidestepping in a fight already
+  if (cmd.forward !== 0 || cmd.right !== 0) {
+    // Sidestepping in a fight already: step to the side the push points, unless that side is blocked (M71: two
+    // teammates hunting the same middle met in one fight and strafed through each other).
+    const side = px * Math.cos(b.aim.yaw) - pz * Math.sin(b.aim.yaw);
+    const right = side > 0 ? 1 : -1;
+    if (Math.abs(side) > 1e-6 && cmd.right !== right && !stepBlocked(b, w, right, cmd.forward)) cmd.right = right;
+    return false;
+  }
   const len = Math.hypot(px, pz);
   b.moveDir.x = px / len;
   b.moveDir.z = pz / len;

@@ -66,6 +66,11 @@ export const BOT_BEHAVIOUR = {
   aimFirstErrorMin: 0.6,
   /** How fast the error drifts around (Hz): low values look like a hand correcting, not jitter. */
   aimWanderRate: 0.7,
+  /**
+   * How fast the error eases towards each new wander goal, as a multiple of aimWanderRate: 3 settles about 95 % of the
+   * way before the next goal is drawn (audit AI-08).
+   */
+  aimWanderSettle: 3,
   /** Fire only when the view is within this of the (erroneous) aim point (degrees). */
   fireCone: 3,
   /** Aim at this height on the target's body, as a fraction of its hit-volume height (chest). */
@@ -317,15 +322,16 @@ export const BOT_BEHAVIOUR = {
 
   // ---- Pro tuning (M37, M38, M40; Pro's skill is BOT_SKILL.pro below) --------------------------------------
   // Every number only Pro uses, in one place for the owner's playtest on each map. Nothing here changes Easy, Normal or
-  // Hard: each is read only by a bot whose skill sets the flag named (holdsAngles, slicesCorners, teamPlay, huntsMiddle,
-  // keepsDark). The rest of Pro's tuning: BOT_SKILL.pro (reaction, aim, holds), BOT_PART_CHANCE.pro (kit) and the
-  // Difficulty multiplier in pool.md (pay). What to turn when a map plays wrong (docs/PLAYTEST.md "Pro"):
+  // Hard: each is read only by a bot whose skill sets the flag named (holdsAngles, slicesCorners, teamPlay). The map
+  // balance numbers at the end of this block (huntMiddleBias, darkSpot*) are shared since Audit 2 (huntsMiddle at every
+  // level, keepsDark from Normal up). The rest of Pro's tuning: BOT_SKILL.pro (reaction, aim, holds),
+  // BOT_PART_CHANCE.pro (kit) and the Difficulty multiplier in pool.md (pay). What to turn when a map plays wrong (docs/PLAYTEST.md "Pro"):
   //  - Pro never finds the corner you hide behind, or aims at the wrong gap: angle* (the ray fan and what counts as an edge).
   //  - A held corner is wrongly picked on bushes, trunks or stairs: angleBush*, anglePost*, angleGap*, angleLevel*, angleRamp*.
   //  - Slicing is too slow or too cautious near the enemy: sliceLeanDistance, then skill peekWatchTime.
   //  - The team trades too eagerly, or bunches up: tradeTime, tradeCoverRadius, boundDistance, boundWaitMax, crossfire*.
   //  - A round drags when Pro is ahead or behind: latePushTime.
-  //  - One end of a map is easier than the other, or Pro sits in the light at night: huntMiddleBias, darkSpot*.
+  //  - One end of a map is easier than the other, or bots sit in the light at night: huntMiddleBias, darkSpot* (every level).
   // Held angles (M37, holdsAngles), M40's map features (bushes, trunk gaps, stair tops) and pre-aiming:
   /**
    * Held angles (M37, for skills with holdsAngles): holding still, the bot fans this many rays at eye height across
@@ -402,7 +408,7 @@ export const BOT_BEHAVIOUR = {
   crossfireMinDeg: 30,
   /** Elimination: with this many seconds left, the side with fewer players in play goes looking for the others. */
   latePushTime: 30,
-  // Map balance (M40, huntsMiddle / keepsDark):
+  // Map balance (huntsMiddle / keepsDark; M40 for Pro, every level since Audit 2, keepsDark from Normal up):
   /**
    * With the skill's huntsMiddle (M40), each metre nearer the middle of the map (halfway between the two ends) counts like
    * this many seconds staler instead.
@@ -526,11 +532,15 @@ export interface BotSkill {
    */
   readonly torchOnTheMove?: boolean;
   /**
-   * Map balance (M40): its lane swept with no one found, it hunts the middle of the map rather than the far end (see
-   * huntMiddleBias), where the other team, which swept a lane of its own the other way, comes back through.
+   * Map balance (M40; every level since Audit 2, BAL-01): its lane swept with no one found, it hunts the middle of the
+   * map rather than the far end (see huntMiddleBias), where the other team, which swept a lane of its own the other way,
+   * comes back through. Off, both teams sweep each other's empty ends and the round runs out the clock.
    */
   readonly huntsMiddle: boolean;
-  /** On a night field (M40), never holds a lane point in a light pool when a dark spot is near (see darkSpotRadius). */
+  /**
+   * On a night field (M40; Normal and up since Audit 2, BAL-02), never holds a lane point in a light pool when a dark
+   * spot is near (see darkSpotRadius). Easy keeps it off: a learning level whose defenders may stand in the light.
+   */
   readonly keepsDark: boolean;
   // Extraction (M46; plan, section 8): how the home team plays a run at this level.
   /** Guards posted on the marshal's locker, the run's best case. */
@@ -607,7 +617,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     peekWatchTime: [0, 0],
     teamPlay: false,
     torchOnTheMove: true,
-    huntsMiddle: false,
+    huntsMiddle: true,
     keepsDark: false,
     lockerGuards: 1,
     huntersFrom: null,
@@ -635,8 +645,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     slicesCorners: false,
     peekWatchTime: [0, 0],
     teamPlay: false,
-    huntsMiddle: false,
-    keepsDark: false,
+    huntsMiddle: true,
+    keepsDark: true,
     lockerGuards: 2,
     huntersFrom: 0.5,
   },
@@ -663,8 +673,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     slicesCorners: false,
     peekWatchTime: [0, 0],
     teamPlay: false,
-    huntsMiddle: false,
-    keepsDark: false,
+    huntsMiddle: true,
+    keepsDark: true,
     lockerGuards: 2,
     huntersFrom: 1 / 3,
   },
@@ -766,8 +776,12 @@ export const NIGHT_SIGHT: NightSightConfig = {
 
 /**
  * How bots work their weapon torch on a night field (M33h, ai/botTorch.ts; every bot carries one there, pool/botKit.ts
- * botLight). On while searching for someone lost or heard and while fighting someone within the beam's reach; off while
- * advancing (Easy: on; BotSkill.torchOnTheMove), in cover, at the pole and on squad orders. A state is held at least
+ * botLight). On for the last stretch of a search (BotSkill.searchWalkDistance from where it last knew of someone) and
+ * while fighting someone within `fightReach` metres (and the beam's reach); off while advancing and on the way to a
+ * search (Easy: on; BotSkill.torchOnTheMove), in cover, at the pole and on squad orders. A state is held at least
  * `minHold` seconds, so the beam never strobes as the bot's mode flickers. First guesses for the owner's playtest.
+ *
+ * `fightReach` (M71): a beam switched on for a fight 20–40 m away lit its bot for every defender in the fort and lit
+ * little it needed; Woodland Hard attackers won 23 % of Attack / Defend rounds with it at the beam's 40 m, 48 % at 20 m.
  */
-export const BOT_TORCH = { minHold: 1.5 } as const;
+export const BOT_TORCH = { minHold: 1.5, fightReach: 20 } as const;

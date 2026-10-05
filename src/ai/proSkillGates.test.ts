@@ -78,12 +78,12 @@ describe('keepsDark: lane points out of the light (M40)', () => {
     expect(goal.y).toBeCloseTo(lanePoint.y, 1);
   });
 
-  it('Easy, Normal and Hard keep the lane point in the pool', () => {
+  it('Normal and Hard move it too (Audit 2); Easy, and any level with the flag off, keep the lane point in the pool', () => {
     const map = lit(DEPOT, true, lanePoint, POOL);
-    for (const d of ['easy', 'normal', 'hard'] as Difficulty[]) {
-      const goal = at(botConfig(d), map);
-      expect(dist(goal, lanePoint), d).toBeLessThan(1e-6);
-    }
+    const night = sightConditionsOf(map).night!;
+    for (const d of ['normal', 'hard'] as Difficulty[]) expect(inLight(night, at(botConfig(d), map)), d).toBe(false);
+    expect(dist(at(botConfig('easy'), map), lanePoint)).toBeLessThan(1e-6);
+    expect(dist(at({ ...botConfig('pro'), keepsDark: false }, map), lanePoint)).toBeLessThan(1e-6);
   });
 
   it('by day the same lantern changes nothing, even for Pro', () => {
@@ -133,7 +133,7 @@ describe('the map\'s angle features are worked out once per match, and only for 
     expect(featuresOf(botsOn(DEPOT, botConfig('hard')).bots)).toBeUndefined();
   });
 
-  it('with one team on Pro and one on Hard, the features exist but only Pro\'s bots use the new skills', () => {
+  it('with one team on Pro and one on Hard, the features exist but only Pro\'s bots use the angle skills', () => {
     const state = createGameState(4, 64, ROUNDS, 'elimination', DEPOT.flag);
     for (let team = 0; team < 2; team++) {
       for (let i = 0; i < ROUNDS.teamSize; i++) {
@@ -158,8 +158,8 @@ describe('the map\'s angle features are worked out once per match, and only for 
     });
     expect(featuresOf(bots)).toBeDefined();
     for (const b of bots.bots) {
-      expect(b.skill.huntsMiddle, `team ${b.character.team}`).toBe(b.character.team === 1);
-      expect(b.skill.keepsDark, `team ${b.character.team}`).toBe(b.character.team === 1);
+      expect(b.skill.holdsAngles, `team ${b.character.team}`).toBe(b.character.team === 1);
+      expect(b.skill.slicesCorners, `team ${b.character.team}`).toBe(b.character.team === 1);
     }
   });
 });
@@ -184,12 +184,12 @@ describe('huntsMiddle is the skill\'s flag, not the difficulty\'s name (M40)', (
     return sum / 100;
   };
 
-  it('Pro with the flag off hunts like Hard; Hard with it on hunts like Pro', () => {
-    const hard = meanFromMiddle(botConfig('hard'));
+  it('Pro with the flag off hunts the far end; Easy with it on (as shipped since Audit 2) hunts like Pro', () => {
+    const easyOff = meanFromMiddle({ ...botConfig('easy'), huntsMiddle: false });
     const proOff = meanFromMiddle({ ...botConfig('pro'), huntsMiddle: false });
-    const hardOn = meanFromMiddle({ ...botConfig('hard'), huntsMiddle: true });
+    const easy = meanFromMiddle(botConfig('easy'));
     const pro = meanFromMiddle(botConfig('pro'));
     expect(proOff).toBeGreaterThan(pro * 2);
-    expect(hardOn).toBeLessThan(hard / 2);
+    expect(easy).toBeLessThan(easyOff / 2);
   });
 });

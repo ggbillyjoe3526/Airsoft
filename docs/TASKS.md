@@ -14,7 +14,7 @@ REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 ## M71 · Every level hunts the middle and keeps out of the light (Audit 2 BAL PR 1: BAL-01, BAL-02, BAL-08, BAL-09, AI-03, AI-07, AI-08)
 tier: core
 perf: required
-touches: src/config/bots.ts, src/ai/botController.ts, src/ai/botMovement.ts, src/ai/botBrain.ts, src/ai/botTorch.ts, src/ai/aim.ts, src/ai/depotMatchSupport.ts, vite.config.ts, docs/DECISIONS.md, docs/KNOWN_ISSUES.md, docs/PLAYTEST.md
+touches: src/config/bots.ts, src/ai/botController.ts, src/ai/botMovement.ts, src/ai/botBrain.ts, src/ai/botTorch.ts, src/ai/aim.ts, src/ai/depotMatchSupport.ts, src/map/torchLight.ts, vite.config.ts, docs/DECISIONS.md, docs/KNOWN_ISSUES.md, docs/PLAYTEST.md
 contract: none
 acceptance:
   1. Easy, Normal and Hard hunt the middle (`huntsMiddle`); Normal and Hard keep out of the light (`keepsDark`, owner decision 4); Pro is unchanged. `proBalance.test.ts` compares against the flags turned off.
@@ -22,6 +22,7 @@ acceptance:
   3. The Depot, Neon Heights and difficulty guards touched by the change are re-measured; comments carry the new figures; bands move only where crossed.
   4. The torch light refreshes at the perception rate, not every frame (AI-07); the aim wander's `* 3` is a named tuning value (AI-08).
   5. DECISIONS supersedes "Easy, Normal and Hard do neither" with the measured numbers; KNOWN_ISSUES rows 50, 160 and 186 updated.
+  6. Added in the build: the habits alone left Woodland Attack / Defend attackers at 28 % (Normal and Hard) with torches against 40–45 % without, so a bot's torch comes on only for a fight within `BOT_TORCH.fightReach` and a search's last stretch (measured, DECISIONS, a test each); bots already sidestepping step apart when pressed together (the spacing guard crossed 0.5 %).
 status: open
 attempts: 0
 
@@ -124,7 +125,7 @@ acceptance:
   2. No import cycles, with a test that fails on one (CORE-08).
   3. Loop-seam tests bound the wrap by a fixed threshold, through one shared helper (AUD-06).
   4. Report section 5 items 1–7: stale rows and timings, the CHANGELOG PR numbers, the PLAYTEST start section.
-  5. The owed records: DECISIONS lines for the five final-audit defaults the owner confirmed and for Woodland and Neon Heights staying dev-only until he plays them; a DECISIONS line and a ROADMAP 0.2 row for the graphics overhaul; an IDEAS entry for a desktop wrapper; ROADMAP rows for the content toolkit checks (replicas, attachments and maps in 0.1 Beta, modes in 0.3, skins in 0.5).
+  5. The owed records: DECISIONS lines for the five final-audit defaults the owner confirmed and for Woodland and Neon Heights staying dev-only until he plays them; a DECISIONS line and a ROADMAP row for the graphics overhaul (since 20:39 on 5 October in 0.1 Dev 5, with the lines parked under "Owed doc lines" in the project's plans/graphics-overhaul-build.md); an IDEAS entry for a desktop wrapper; ROADMAP rows for the content toolkit checks (replicas, attachments and maps in 0.1 Beta, modes in 0.3, skins in 0.5).
 status: open
 attempts: 0
 

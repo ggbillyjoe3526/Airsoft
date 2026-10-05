@@ -11,7 +11,9 @@ const SEEDS = 48;
 const BANDS: ExtractionBands = {
   // Measured: Easy 56 % and 34 FC a minute, Normal 50 % and 32, Hard 21 % and 25, Pro 15 % and 16. With the torches the
   // game fits every bot at night (M57, audit AI-02, on M55's maps): Easy 58 % (28 of 48) and 41.5, Normal 48 % (23) and
-  // 31, Hard 21 % (10) and 19, Pro 8 % (4) and 12, all inside these bands.
+  // 31, Hard 21 % (10) and 19, Pro 8 % (4) and 12, all inside these bands. M71 (Audit 2: every level hunts the middle
+  // and keeps out of the light, a torch only for a fight within 20 m or a search's last stretch): Easy 67 % (32) and
+  // 43, Normal 40 % (19) and 29, Hard 23 % (11) and 27, Pro 12.5 % (6) and 19.
   easy: { extract: [0.4, 0.75], fcPerMinute: [20, 55] },
   normal: { extract: [0.3, 0.65], fcPerMinute: [18, 50] },
   hard: { extract: [0.08, 0.35], fcPerMinute: [10, 40] },

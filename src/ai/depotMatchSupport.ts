@@ -393,6 +393,8 @@ export function tallyBalance(seeds: number, seconds: number, cfg: BotConfig, mod
 
 /** The Esports plan's Pro band (M40, owner 2026-10-04): the attackers' or each end's share of rounds. */
 export const PRO_BAND: readonly [number, number] = [0.4, 0.6];
+/** Below Pro (Audit 2, owner decision 3): 35–65 % at 8 seeds, on time still under 1 round in 10. */
+export const LEVELS_BAND: readonly [number, number] = [0.35, 0.65];
 
 /**
  * The Pro balance guard (M40, the Esports plan's bands, owner 2026-10-04): in Attack / Defend the attackers win 40–60 % of

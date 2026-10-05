@@ -27,7 +27,8 @@ describe('a 3v3 bot match on Depot: the ends', () => {
     // FA4 (2026-10-04: the east spawns moved so neither end reaches the dock or the Main Gate first, and the bot
     // changes): 53% here (42 of 80) and 49% over seeds 1-64 (165 of 339; 53% on the build before it). After merging
     // M30 and FA1: 56% here (48 of 86), 45% over seeds 1-64 (152 of 336; 50% without FA4). With the east spawns 1.45 m
-    // further back (FA4 attempt 2, SIM-13): 49% here (42 of 85), 48% over seeds 1-64 (166 of 343).
+    // further back (FA4 attempt 2, SIM-13): 49% here (42 of 85), 48% over seeds 1-64 (166 of 343). Since every level
+    // hunts the middle (M71, Audit 2; the audit read 58 % on seeds 1-8): 48% here (59 of 123), rounds shorter.
     expect(westWins / decided).toBeGreaterThan(0.35);
     expect(westWins / decided).toBeLessThan(0.6);
   });
