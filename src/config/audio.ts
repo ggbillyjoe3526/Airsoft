@@ -113,6 +113,8 @@ export const AUDIO = {
     rope: { gain: 1, pitchSpread: 0.04 },
     /** A bird somewhere round the yard (the ambience). */
     bird: { gain: 0.35, pitchSpread: 0.08 },
+    /** An owl somewhere in the woods at night (M33j): never above a bird's level. */
+    owl: { gain: 0.3, pitchSpread: 0.04 },
   },
   /**
    * An AEG's motor: the first shot after the trigger has rested this many fire-rate cycles gets the spin-up whine,
@@ -210,6 +212,179 @@ export const AUDIO = {
    */
   volumePreview: { cue: 'hitMarker' as SoundCue, gain: 0.55 },
 } as const;
+
+/** A playback level and per-play pitch spread (AUDIO.levels). */
+export interface SoundLevel {
+  readonly gain: number;
+  readonly pitchSpread: number;
+}
+
+/**
+ * A loop of filtered noise whose level swells in gusts (audio/ambience.ts renderAmbienceBed): a band around `bandHz`,
+ * rolled off above `topHz`, with a low rumble under `rumbleHz` mixed in at `rumbleMix`; `gusts` whole swells of
+ * `gustDepth` per loop of `seconds`, its tail crossfaded over its head for `crossfade` seconds.
+ */
+export interface NoiseLoopSpec {
+  readonly kind: 'noise';
+  readonly seconds: number;
+  readonly crossfade: number;
+  readonly bandHz: number;
+  readonly bandQ: number;
+  readonly topHz: number;
+  readonly rumbleHz: number;
+  readonly rumbleMix: number;
+  readonly gusts: number;
+  readonly gustDepth: number;
+  readonly seed: number;
+}
+
+/**
+ * Insects at night (audio/ambience.ts renderInsects): each voice a sine at `hz` (kept above the 0.7–4 kHz band where
+ * footsteps live) pulsed `pulseHz` times a second in chirps of `pulses`, `chirps` chirps per loop of `seconds` (whole
+ * numbers of everything, so the loop is seamless), at `level`; chirp levels vary by `jitter` from a seed.
+ */
+export interface InsectLoopSpec {
+  readonly kind: 'insects';
+  readonly seconds: number;
+  readonly seed: number;
+  readonly jitter: number;
+  readonly voices: readonly { readonly hz: number; readonly pulseHz: number; readonly pulses: number; readonly chirps: number; readonly level: number }[];
+}
+
+/**
+ * A camp fire (audio/ambience.ts renderCrackle): a low roar (noise under `roarHz`, flickering `flicker` deep), crackles
+ * (`crackles` a second: short bursts of noise between `crackleHz`, `crackleDecay` seconds long) and pops (`pops` a
+ * second: louder, lower knocks round `popHz`), a loop of `seconds` crossfaded over `crossfade`.
+ */
+export interface CrackleLoopSpec {
+  readonly kind: 'crackle';
+  readonly seconds: number;
+  readonly crossfade: number;
+  readonly seed: number;
+  readonly roarHz: number;
+  readonly roarLevel: number;
+  readonly flicker: number;
+  readonly crackles: number;
+  readonly crackleHz: readonly [number, number];
+  readonly crackleDecay: readonly [number, number];
+  readonly crackleLevel: number;
+  readonly pops: number;
+  readonly popHz: readonly [number, number];
+  readonly popDecay: number;
+  readonly popLevel: number;
+}
+
+export type LoopSpec = NoiseLoopSpec | InsectLoopSpec | CrackleLoopSpec;
+
+/** The ambience's looping sounds (M33j), each rendered once per page and only for a map that plays it. */
+export type LoopId = 'yard' | 'pines' | 'insects' | 'crackle';
+
+export const AMBIENT_LOOPS: Readonly<Record<LoopId, LoopSpec>> = {
+  /** The yard's bed (audit CORE-34), as it always was: rendered on the title screen. */
+  yard: { kind: 'noise', ...AUDIO.ambience },
+  /**
+   * Wind in the pines (M33j): a hiss of needles round 500–1500 Hz, a soft roar of air under it, three slow gusts in a
+   * loop of 7 s (coprime with the insects' 5 s, so the two repeat only every 35 s).
+   */
+  pines: { kind: 'noise', seconds: 7, crossfade: 0.3, bandHz: 600, bandQ: 0.7, topHz: 1100, rumbleHz: 160, rumbleMix: 0.6, gusts: 3, gustDepth: 0.6, seed: 3371 },
+  /** Crickets and katydids (M33j): three voices between 5.5 and 7 kHz, well above the footstep band. */
+  insects: {
+    kind: 'insects',
+    seconds: 5,
+    seed: 3372,
+    jitter: 0.35,
+    voices: [
+      { hz: 5600, pulseHz: 32, pulses: 4, chirps: 11, level: 1 },
+      { hz: 6300, pulseHz: 45, pulses: 3, chirps: 8, level: 0.7 },
+      { hz: 6900, pulseHz: 60, pulses: 6, chirps: 4, level: 0.45 },
+    ],
+  },
+  /** A camp fire burning (M33j): a soft roar, quick crackles and the odd pop, a loop of 4 s. */
+  crackle: {
+    kind: 'crackle',
+    seconds: 4,
+    crossfade: 0.2,
+    seed: 3373,
+    roarHz: 500,
+    roarLevel: 0.8,
+    flicker: 0.4,
+    crackles: 22,
+    crackleHz: [1500, 6000],
+    crackleDecay: [0.002, 0.006],
+    crackleLevel: 0.8,
+    pops: 1.2,
+    popHz: [500, 1100],
+    popDecay: 0.018,
+    popLevel: 1.2,
+  },
+};
+
+/** The fields' soundscapes (MapData.ambience; absent: the yard). */
+export type AmbienceId = 'yard' | 'woods';
+
+/** A loop playing as a bed (two copies half a loop apart, panned `width` left and right) at `gain`. */
+export interface AmbienceBed {
+  readonly loop: LoopId;
+  readonly gain: number;
+  readonly width: number;
+}
+
+/**
+ * Sparse calls round the listener (audio/ambience.ts AmbientCalls): `cue` now and then, `every` seconds apart (min, max),
+ * `distance` metres away (min, max) and `height` up, at `level`, timed from a seeded generator.
+ */
+export interface AmbientCallSpec {
+  readonly cue: SoundCue;
+  readonly level: SoundLevel;
+  readonly every: readonly [number, number];
+  readonly distance: readonly [number, number];
+  readonly height: number;
+  readonly seed: number;
+}
+
+/** A field's sound by day or by night: its beds, and its calls (none at all: null). */
+export interface Ambience {
+  readonly beds: readonly AmbienceBed[];
+  readonly call: AmbientCallSpec | null;
+}
+
+/** The yard's birds (audit CORE-34), as they always were. */
+const BIRDS: AmbientCallSpec = {
+  cue: 'ambience.bird',
+  level: AUDIO.levels.bird,
+  every: AUDIO.ambience.birdEvery,
+  distance: AUDIO.ambience.birdDistance,
+  height: AUDIO.ambience.birdHeight,
+  seed: AUDIO.ambience.seed,
+};
+
+/** A tawny owl in the woods at night (M33j): rarely, and far off. */
+const OWL: AmbientCallSpec = { cue: 'ambience.owl', level: AUDIO.levels.owl, every: [25, 60], distance: [30, 50], height: 8, seed: 3374 };
+
+const YARD_BED: AmbienceBed = { loop: 'yard', gain: AUDIO.ambience.gain, width: AUDIO.ambience.width };
+/**
+ * The woods' wind and insects (gameplay first: steps, BBs and bot cues on top). The wind sits low (round 600 Hz, rolled off
+ * above 1.1 kHz) and quieter than the yard's bed, so the two together put no more into the 0.7–4 kHz band footsteps live
+ * in than Depot's bed does (audio.test.ts); the insects, 6 dB under the wind, sing above that band.
+ */
+const PINES_BED: AmbienceBed = { loop: 'pines', gain: 0.018, width: 0.75 };
+const INSECTS_BED: AmbienceBed = { loop: 'insects', gain: 0.009, width: 0.9 };
+
+/**
+ * Every field's sound, by day and by night (M33j), picked by the lighting preset's night flag (never a map's name). The
+ * engine's rule: no birds under a night preset, on any map.
+ */
+export const AMBIENCES: Readonly<Record<AmbienceId, Readonly<Record<'day' | 'night', Ambience>>>> = {
+  yard: { day: { beds: [YARD_BED], call: BIRDS }, night: { beds: [YARD_BED], call: null } },
+  woods: { day: { beds: [PINES_BED], call: BIRDS }, night: { beds: [PINES_BED, INSECTS_BED], call: OWL } },
+};
+
+/**
+ * A camp fire's crackle (M33j), heard at each `kind: 'fire'` light of a field played at night: `loop` at `gain` (its
+ * loudest pop peaks under 0.25 within `refDistance` m, as loud as the bed on average), fading to nothing at
+ * `maxDistance` (a linear roll-off, equal-power panning). Lanterns are silent: an electric hum would sound wrong.
+ */
+export const FIRE_SOUND = { loop: 'crackle' as LoopId, gain: 0.028, refDistance: 2, maxDistance: 12, rolloff: 1, panningModel: 'equalpower' as PanningModelType };
 
 /** The player's volume sliders (Settings → Audio): everything, sounds in the world, and the interface's cues. */
 export type VolumeChannel = 'master' | 'effects' | 'interface';

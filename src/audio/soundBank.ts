@@ -1,13 +1,14 @@
 import { AUDIO } from '../config/audio';
-import { SOUNDS, type SoundCue } from '../config/sounds';
+import { MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { muffle, renderRecipe, seededRandom } from './dsp';
 
 /** Every sound, rendered: a few variants of each cue, as raw samples ready to copy into audio buffers. */
 export type RenderedSounds = ReadonlyMap<SoundCue, readonly Float32Array[]>;
 
 /**
- * Renders `variants` versions of every cue in config/sounds.ts at `sampleRate`, pausing (yielding) after each cue so
- * the work can be spread over the browser's spare time. Deterministic for a given seed, however it is spread.
+ * Renders `variants` versions of every title-screen cue in config/sounds.ts (TITLE_CUES: all but the map cues) at
+ * `sampleRate`, in table order from one seeded stream, pausing (yielding) after each cue so the work can be spread over
+ * the browser's spare time. Deterministic for a given seed, however it is spread.
  */
 export function* renderSoundsGradually(
   sampleRate: number,
@@ -16,7 +17,7 @@ export function* renderSoundsGradually(
 ): Generator<void, Map<SoundCue, Float32Array[]>> {
   const rand = seededRandom(seed);
   const out = new Map<SoundCue, Float32Array[]>();
-  for (const cue of Object.keys(SOUNDS) as SoundCue[]) {
+  for (const cue of TITLE_CUES) {
     const list: Float32Array[] = [];
     for (let v = 0; v < variants; v++) list.push(renderRecipe(SOUNDS[cue], sampleRate, rand));
     out.set(cue, list);
@@ -26,7 +27,20 @@ export function* renderSoundsGradually(
 }
 
 /**
- * Renders `variants` versions of every cue in config/sounds.ts at `sampleRate`, all at once (test only: the game renders
+ * `variants` versions of map cue `cue` (MAP_CUE_SEEDS, M33j) at `sampleRate`, from the cue's own seed: the same whatever
+ * else has been rendered, and whichever maps were played first.
+ */
+export function renderMapCue(cue: SoundCue, sampleRate: number, variants: number = AUDIO.variants): Float32Array[] {
+  const seed = MAP_CUE_SEEDS[cue];
+  if (seed === undefined) throw new Error(`${cue} is not a map cue`);
+  const rand = seededRandom(seed);
+  const list: Float32Array[] = [];
+  for (let v = 0; v < variants; v++) list.push(renderRecipe(SOUNDS[cue], sampleRate, rand));
+  return list;
+}
+
+/**
+ * Renders `variants` versions of every title-screen cue in config/sounds.ts at `sampleRate`, all at once (test only: the game renders
  * them a slice at a time through SoundBank).
  */
 export function renderSounds(sampleRate: number, variants: number = AUDIO.variants, seed: number = AUDIO.synthSeed): Map<SoundCue, Float32Array[]> {

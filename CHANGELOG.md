@@ -5,6 +5,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
+- **M33j** · Woodland's sounds (dev content): wind in the pines, insects and a distant owl at night, a crackle at each camp fire, and footsteps that sound like the ground underfoot (grass, leaf litter, earth, the creek's gravel, the cabin's boards), as loud as on concrete; Depot sounds exactly as before
 - **FA7** · Environment lighting on Medium and High: sky reflects in players, the flag, range targets and steel; contact shadows under every player on all presets (#71)
 - **FA7** · Settings → Graphics: tone mapping choice (Neutral, AgX, ACES) and relief maps option (Normal, Bump) (#71)
 - **FA7** · Map detail on Medium and High, on every map: bevelled edges with lighter rims, corner shading, ground variation, prop detail and signs; Low looks as before (#71)
@@ -116,6 +117,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
+- **M33j** · No birds sing at night any more, on any map (Woodland, Neon Heights by Night); footsteps on Woodland's ground no longer sound like concrete
 - **FA16** · Play here in a second tab no longer sometimes lands back on the "open in another tab" notice: the reloaded tab waits a moment for the other tab's save lock to be freed (#89)
 - **FA13** · Your left hand holds the rifle's handguard, thumb up the near side, instead of sitting under it; the raised hand when you're hit is one glove again (#76)
 - **FA13** · Teammates' name tags sit just above their heads up close instead of floating high (#76)
