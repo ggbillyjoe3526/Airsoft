@@ -1146,7 +1146,7 @@ Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Nig
 
 Turn on Dev content (Settings → Dev), pick Neon Heights, play it once by Day and once by Night, on Low and on Medium.
 
-- [ ] The city reads as playful: pastel buildings (mint, pink, lavender, amber), a paved street with a dark road, zebra crossings, neon strips on the Arcade, Tower and Sky Bridge.
+- [ ] The city reads as playful: pastel buildings (mint, pink, cyan, amber), a paved street with a dark road, zebra crossings, neon strips on the Arcade, Tower and Sky Bridge.
 - [ ] Arcade cabinets, vending machines, market stalls, planters, phone booths and the delivery van look like what they are, and you stop, take cover and get hit exactly where the old crates and racks were.
 - [ ] Nothing on the map is in team blue or orange, so a figure never blends with a prop.
 - [ ] Night: the sky is a soft purple with a few stars; indoor ceilings look plaster white by Day (a little olive by Night is known).

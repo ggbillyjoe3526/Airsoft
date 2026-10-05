@@ -55,15 +55,16 @@ const SPAWN_WALL_HEIGHT = 2.6;
 const ROOF = 0.3;
 
 /**
- * The city's paint (M34f, sRGB): mint, pink and lavender pastels on slate, with lemon, cyan and magenta accents, a nod
- * to the Cyber Pistol. Each building one colour; the city round the site slate; rooms pale; props their own. Nothing
- * that reads as team blue or orange (mapMeshes.test.ts' rule, checked in neonHeightsArt.test.ts).
+ * The city's paint (M34f, sRGB): the concept's mint, magenta and cyan pastels on slate for the three buildings (Repair
+ * Shop block, Arcade, Tower), amber for the walkways between them (the Walkway, the Sky Bridge), with magenta and teal
+ * accents. The cyan stops at hue 183° (linear), 28° short of the High Contrast team blue. Each building one colour; the
+ * city round the site slate; rooms pale; props their own. Nothing that reads as team blue or orange (mapMeshes.test.ts' rule, checked in neonHeightsArt.test.ts).
  */
 const PAINT = {
   slate: 0x7d8aa0,
   arcade: 0xf3b6d8,
   block: 0xa9e4cf,
-  tower: 0xc0b4ea,
+  tower: 0xa2e9ec,
   amber: 0xf4e08c,
   roof: 0xb4b8c0,
   plaza: 0xd9d3c8,
@@ -186,7 +187,6 @@ function slab(area: Rect, top: number, holes: Rect[] = []): MapBlock[] {
 const railX = (z0: number, x0: number, x1: number, base: number): MapBlock => box('barrier', x0, x1, base, base + RAIL, z0, z0 + RAIL_THICKNESS);
 const railZ = (x0: number, z0: number, z1: number, base: number): MapBlock => box('barrier', x0, x0 + RAIL_THICKNESS, base, base + RAIL, z0, z1);
 
-/** The level: ground and perimeter. The ground is three strips (M34f): paving either side of the avenue's road. */
 /** How far the road's surface stands proud of the street's slab (look only, under the markings' `SIGNS.offset`). */
 const ROAD_LIFT = 0.005;
 
@@ -199,6 +199,7 @@ function road(): MapBlock {
   return finished(box('floor', ROAD[0], ROAD[1], -GROUND_THICKNESS, ROAD_LIFT, -HALF_Z, HALF_Z), 'asphalt', PAINT.road);
 }
 
+/** The level: the street, one paved slab (the road is `road()`, look only), and the perimeter walls. */
 function ground(): MapBlock[] {
   const t = PERIMETER_THICKNESS;
   const x = HALF_X + t;
@@ -522,10 +523,10 @@ const BUILDINGS: { area: Rect; finish: BlockFinish; paint: number; floor: number
 const WALKS: { area: Rect; paint: number }[] = [
   { area: BALCONY, paint: PAINT.arcade },
   { area: FOOTBRIDGE, paint: PAINT.arcade },
-  { area: WALKWAY, paint: PAINT.block },
+  { area: WALKWAY, paint: PAINT.amber },
   { area: PLAZA_LANDING, paint: PAINT.plaza },
   { area: PLAZA_STAIR, paint: PAINT.plaza },
-  { area: SKY_BRIDGE, paint: PAINT.tower },
+  { area: SKY_BRIDGE, paint: PAINT.amber },
 ];
 
 /** Block `b` (plan coordinates) in the city's look, unless it has one of its own: rails steel, floors tiled or paved. */
