@@ -5,6 +5,7 @@ import { drawPart } from './armory';
 import { itemKey } from './collection';
 import { type Pool, type RarityTier, tierId } from './pool';
 import type { PoolRow, PoolTable } from './poolFile';
+import { kindsUnder, type SupplyEvent } from './supplyEvents';
 
 /**
  * Extraction's cases (M44): pool.md's Caches table (one row per kind of case: how many a run places, how long one takes
@@ -158,12 +159,13 @@ export function rollFind(pool: Pool, kind: CaseKind, owned: Readonly<Record<stri
 
 /**
  * A run's cases (M44), from its seed: placed on the map's spots and filled from pool.md's Caches table, with the parts
- * weighted towards what `owned` (the collection's items) lacks. The same seed and collection give the same run. Pure.
+ * weighted towards what `owned` (the collection's items) lacks, under the supply `event` on as the run starts (M49:
+ * richer cases, the same ones in the same places). The same seed, collection and event give the same run. Pure.
  */
-export function rollRunCases(pool: Pool, spots: readonly CaseSpotLike[], owned: Readonly<Record<string, number>>, seed: number): CaseSetup[] {
+export function rollRunCases(pool: Pool, spots: readonly CaseSpotLike[], owned: Readonly<Record<string, number>>, seed: number, event: SupplyEvent | null = null): CaseSetup[] {
   const rng = createRng(seed);
   const drawn = new Set<string>();
-  return placeCases(pool.caseKinds, spots, rng).map(({ spot, kind }) => {
+  return placeCases(kindsUnder(pool.caseKinds, event), spots, rng).map(({ spot, kind }) => {
     const s = spots[spot]!;
     return {
       kind: kind.key,

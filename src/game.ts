@@ -52,6 +52,7 @@ import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
+import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import type { Dispensed, Earnings } from './pool/armory';
 import { haulSummary, type Unpaid } from './ui/menus/summaryScreen';
 import { fcText } from './ui/menus/armoryScreen';
@@ -387,7 +388,15 @@ export class Game {
       onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true)) },
       lighting: { initial: this.lighting, onChange: (m, light) => ((this.lighting[m] = light), (this.setupChanged = true)) },
-      mode: { initial: this.mode, onChange: (m) => ((this.mode = m), (this.setupChanged = true)) },
+      mode: {
+        initial: this.mode,
+        onChange: (m) => ((this.mode = m), (this.setupChanged = true)),
+        // The supply event on by the device's clock as the Mode pop-up opens (M49).
+        supply: () => {
+          const event = activeSupplyEvent(GAME_POOL.supplyEvents, new Date());
+          return event ? supplyLine(event) : null;
+        },
+      },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
       matchRules: { initial: this.matchRules, onChange: (m) => ((this.matchRules = m), (this.setupChanged = true)) },
@@ -792,6 +801,8 @@ export class Game {
         kit: this.loadout.kit(),
         chaseOwned: this.loadout.ownedChase(),
         owned: { ...this.collection.owned },
+        // The supply event on by the device's clock as Play is pressed (M49): the run keeps it to the end.
+        supply: activeSupplyEvent(GAME_POOL.supplyEvents, new Date()),
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],

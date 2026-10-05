@@ -14,6 +14,9 @@ coordinator.
 ## M49 · Supply weekends and dated events
 tier: ui
 perf: skip
-touches: pool.md, src/pool/, src/config/, src/ui/
+touches: pool.md, src/pool/, src/config/, src/ui/, src/matchSession.ts, src/game.ts, src/style.css
 acceptance:
   1. A recurring Supply weekend (Friday to Sunday by the device clock) and a dated event table in data, each a case-odds modifier shown on the Mode pop-up.
+status: building
+attempts: 1
+notes: touches widened in the build for the match setup (the run takes the event at Play), game.ts (the clock) and the note's style.

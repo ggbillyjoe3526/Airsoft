@@ -192,3 +192,33 @@ describe('ChoiceDialog switches on an option (M34d: Day | Night)', () => {
     expect(list.children.filter((c) => c.className.includes('choice-variants'))).toHaveLength(1);
   });
 });
+
+describe('ChoiceDialog notes (M49)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('document', fakeDocument());
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Each option's note line (its text's third part) and whether it shows. */
+  const notes = (d: ChoiceDialog<Id>): [string, string, boolean][] =>
+    entries(d)
+      .filter((e) => e.button.className === 'choice-option' || e.button.className.includes('selected'))
+      .map((e) => {
+        const note = e.button.children[1]!.children[2]!;
+        return [e.name, note.textContent, !note.hidden];
+      });
+
+  it('shows a line under one option’s description when set, and takes it away with null', () => {
+    const d = new ChoiceDialog<Id>('Difficulty', OPTIONS, 'normal', 'difficulty' as never, () => {});
+    expect(notes(d).every(([, , showing]) => !showing)).toBe(true);
+    d.setNote('hard', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.');
+    expect(notes(d)).toEqual([
+      ['Easy', '', false],
+      ['Normal', '', false],
+      ['Hard', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.', true],
+    ]);
+    d.setNote('hard', null);
+    expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', '', false]);
+  });
+});

@@ -227,6 +227,22 @@ that ends any other way keeps nothing. Key is what the maps' case spots use; lea
 | Field case | field-case | 2 to 3 | 4 | 14 | 40 to 80 | 0 | 30 | Common |
 | Marshal's locker | locker | 1 | 7 | 30 | 100 to 150 | 0 | 100 | Rare |
 
+### Supply events
+
+Extras on top of Extraction (M49): while an event is on, every case a run places holds more. FC % scales each case's
+Field Credits (125 is a quarter more) and Part % its chance of a part (150 is half as often again, never past certain);
+how many cases there are, where they stand and how long they take stay as the Caches table has them. When says when an
+event is on, by the player's own clock: two weekdays for every week ("Friday to Sunday", from the first day's start to
+the last day's end), or two dates for a one-off ("2026-10-30 to 2026-11-01", both days included; a date alone is one
+day). When several are on, the first row here applies, so keep dated events above the weekend. A run takes the event
+that is on as Play is pressed and keeps it to its end. The Mode pop-up says which event is on. Key names the event;
+leave it as it is.
+
+| Supply event | Key | When | FC % | Part % |
+|---|---|---|---|---|
+| Halloween night run | halloween-2026 | 2026-10-30 to 2026-11-01 | 150 | 200 |
+| Supply weekend | supply-weekend | Friday to Sunday | 125 | 150 |
+
 ---
 
 ## Assets

@@ -43,6 +43,8 @@ export interface ChoiceVariants<T extends string> {
 export class ChoiceDialog<T extends string> {
   readonly root: HTMLDialogElement;
   private readonly buttons = new Map<T, HTMLButtonElement>();
+  /** Each option's note line (M49: a supply event on Extraction), empty and hidden until setNote. */
+  private readonly notes = new Map<T, HTMLElement>();
   /** Each switch under an option (M34d), with its sides' buttons. */
   private readonly switches = new Map<T, { root: HTMLElement; sides: { id: string; button: HTMLButtonElement }[] }>();
   private readonly variants: ChoiceVariants<T> | undefined;
@@ -75,7 +77,10 @@ export class ChoiceDialog<T extends string> {
       const button = el('button', 'choice-option');
       button.type = 'button';
       const text = el('span', 'choice-text');
-      text.append(el('span', 'choice-name', option.label), el('span', 'choice-blurb', option.blurb));
+      const note = el('span', 'choice-note');
+      note.hidden = true;
+      this.notes.set(option.id, note);
+      text.append(el('span', 'choice-name', option.label), el('span', 'choice-blurb', option.blurb), note);
       button.append(el('span', 'choice-dot'), text);
       const pick = (): void => {
         if (option.id !== this.current) {
@@ -145,6 +150,14 @@ export class ChoiceDialog<T extends string> {
   limit(offered: (id: T) => boolean): void {
     this.offered = offered;
     this.refresh();
+  }
+
+  /** A line under option `id`'s description (M49: the supply event on), or none (null). */
+  setNote(id: T, text: string | null): void {
+    const note = this.notes.get(id);
+    if (!note) return;
+    note.textContent = text ?? '';
+    note.hidden = text === null;
   }
 
   /** What is picked, as it plays: a dev pick is the fallback while Dev content is off, as is one not offered here. */
