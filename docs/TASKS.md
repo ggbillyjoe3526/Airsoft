@@ -14,14 +14,14 @@ REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 ## M74 · Route searches that fit a tick (Audit 2 SIM-B + AI-D: SIM-01, AI-04)
 tier: core
 perf: required
-touches: src/nav/navGrid.ts, src/sim/elimination.ts, src/ai/botController.ts, src/ai/botMovement.ts, src/config/nav.ts, docs/KNOWN_ISSUES.md
+touches: src/nav/navGrid.ts, src/sim/elimination.ts, src/sim/simulation.ts, src/ai/botController.ts, src/ai/botMovement.ts, src/config/nav.ts, docs/KNOWN_ISSUES.md, docs/DECISIONS.md
 contract: none
 acceptance:
-  1. A walk-off route reads a distance field built once per map end, with no A* at the hit (owner decision 10); the route matches today's in length within one cell.
+  1. A walk-off route reads a distance field built once per map end, with no A* at the hit (owner decision 10); over 300 random starts a map the route is as long as today's within 8 % (grid routes tie many ways, and the two break ties differently), the mean within 1 m.
   2. A bot route search is time-sliced under a per-tick budget (owner decision 12); Woodland and Neon Heights hold no tick over the budget in a probe.
   3. One `NavSearch` is shared, not two (Woodland's 7.7 MB once).
   4. Bot guards stay inside their bands.
-status: open
+status: build
 attempts: 0
 
 ## M75 · Woodland Medium margin (Audit 2 REN PR 2: REN-03 steps 1 and 4, REN-04)

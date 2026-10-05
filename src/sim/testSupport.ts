@@ -1,7 +1,7 @@
 import { NAV } from '../config/nav';
 import type { MapData, SpawnPoint } from '../map/mapTypes';
-import { buildNavGrid, createNavSearch } from '../nav/navGrid';
-import type { EliminationContext } from './elimination';
+import { buildNavGrid } from '../nav/navGrid';
+import { createEliminationContext, type EliminationContext } from './elimination';
 import { vec3 } from './vec';
 
 /** Test fixture: a 100 m open floor with nothing on it, and its nav grid. Only used by tests. */
@@ -18,5 +18,5 @@ export const OPEN_NAV = buildNavGrid(OPEN_FIELD, NAV);
 
 /** Elimination context on the open field with the given dead-zone spots. */
 export function openFieldElimination(deadZones: readonly (readonly SpawnPoint[])[]): EliminationContext {
-  return { deadZones, nav: OPEN_NAV, navSearch: createNavSearch(OPEN_NAV), snap: NAV.snap };
+  return createEliminationContext(deadZones, OPEN_NAV, NAV.snap);
 }
