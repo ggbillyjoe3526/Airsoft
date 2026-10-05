@@ -6,6 +6,7 @@ import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
 import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOT_PART_CHANCE, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
+import { EXTRACTION } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
@@ -48,7 +49,7 @@ import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
-import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, runFinds, runHaul } from './sim/extraction';
+import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { partsUnder } from './sim/torch';
@@ -218,6 +219,10 @@ export class MatchSession {
             spawnLift: PHYSICS.groundRestGap,
             // The run's cases (M44), filled from pool.md with the parts weighted towards what you don't own yet.
             cases: rollRunCases(GAME_POOL, map.extraction.cases, setup.owned ?? {}, caseSeed(seed)),
+            // The home team's waves (M45): as often as the opponents' difficulty says, out of the squad's sight.
+            waveEvery: EXTRACTION.waveEvery[setup.difficulty],
+            sight: { query: this.physics, body: BODY },
+            deadZones: map.deadZones,
           })
         : undefined;
     // An Extraction run is one "round" of the map's run time (sim/round.ts); there is nothing to win twice.
@@ -507,7 +512,7 @@ export class MatchSession {
    * plus bot teammates on Blue, and Orange bots. Returns the player.
    */
   private spawnRoster(map: MapData, seed: number): Character {
-    const [size, opposing] = this.teamSizes();
+    const [size, opposing] = this.rosterSizes();
     if (!this.extraction) {
       for (const [end, spawns] of map.spawns.entries()) {
         if (spawns.length < size) throw new Error(`Map ${map.name} needs ${size} spawns at end ${end}`);
@@ -552,6 +557,12 @@ export class MatchSession {
     const size = this.setup.rules.teamSize;
     const x = this.setup.map.extraction;
     return this.mode === 'extraction' && x ? [size, x.baseOpponents + size] : [size, size];
+  }
+
+  /** Characters per team: the team sizes, and in Extraction the home team's reserve for the run's last part (M45). */
+  private rosterSizes(): [number, number] {
+    const [size, opposing] = this.teamSizes();
+    return [size, opposing + (this.extraction ? reserveSize(this.extraction) : 0)];
   }
 
   /**

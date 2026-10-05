@@ -19,7 +19,7 @@ const RULES: MatchRulesText = {
   ricochetsCount: false,
 };
 
-const X: ExtractionData = { insertions: [], exits: [], opponentStarts: [], runTime: 480, baseOpponents: 2, cases: [] };
+const X: ExtractionData = { insertions: [], exits: [], opponentStarts: [], runTime: 480, baseOpponents: 2, cases: [], regens: [], regenDistance: 15 };
 
 describe('the Extraction rules shown on New game (M43)', () => {
   it('explain the squad, the home team, the clock, the stand, the late exit and the one respawn', () => {
@@ -49,6 +49,12 @@ describe('the Extraction rules shown on New game (M43)', () => {
   it("matches Depot's own data", () => {
     const x = DEPOT.extraction!;
     expect(describeRules({ ...RULES, teamSize: 2 }, 'extraction', x)).toContain(`against ${x.baseOpponents + 2} Orange bots`);
+  });
+
+  it('says hit opponents come back in waves on a map with regen points (M45), and not without', () => {
+    const waves = 'come back in waves, out of your sight, and one more joins them with 2:40 left';
+    expect(describeRules(RULES, 'extraction', DEPOT.extraction!)).toContain(waves);
+    expect(describeRules(RULES, 'extraction', X)).not.toContain('waves');
   });
 
   it('says the match is played as Elimination on a map without Extraction data', () => {
