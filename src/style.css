@@ -3631,6 +3631,21 @@ kbd {
   color: var(--menu-muted);
 }
 
+.armory-notice {
+  margin: 0 0 16px;
+  max-width: 60em;
+  padding: 8px 12px;
+  border-left: 4px solid var(--orange);
+  color: var(--paper);
+}
+
+/* Kept in the page when empty (a live region), but takes no room. */
+.armory-notice:empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .armory-side {
   display: flex;
   flex: 1 1 300px;
