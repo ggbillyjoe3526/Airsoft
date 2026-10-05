@@ -352,6 +352,18 @@ describe('the sound engine (M13)', () => {
     expect(ctx.sources).toHaveLength(2);
   });
 
+  it("clicks a weapon torch's switch (M33h): yours centred, a bot's from where it stands", () => {
+    const { sfx, ctx, bot, characterOf } = setup();
+    sfx.onEvent({ type: 'torch', characterId: PLAYER, on: true }, PLAYER, characterOf);
+    expect(ctx.panners).toHaveLength(0);
+    expect(ctx.sources).toHaveLength(1);
+    expect(plays(ctx.sources[0]!, 'torchClick')).toBe(true);
+    sfx.onEvent({ type: 'torch', characterId: bot.id, on: false }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(2);
+    expect(plays(ctx.sources[1]!, 'torchClick')).toBe(true);
+    expect(ctx.panners.length).toBeGreaterThan(0);
+  });
+
   it("doesn't play other players' steps beyond earshot", () => {
     const { sfx, ctx, bot, characterOf } = setup();
     bot.position.x = AUDIO.footsteps.maxDistance + 1;

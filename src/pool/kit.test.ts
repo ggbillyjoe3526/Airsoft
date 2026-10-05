@@ -24,7 +24,7 @@ describe('kit (M26b)', () => {
     expect(r.name).toBe('AEG Rifle');
     const slot = kitSlot(pool, item('Gas Pistol'), STARTER_PISTOL);
     expect(slot.optic).toBeNull();
-    expect(slot.parts).toEqual({ grip: 'none', magazine: GAS_PISTOL.magazines[0], laser: null, barrel: null, muzzle: null, tune: NO_TUNE });
+    expect(slot.parts).toEqual({ grip: 'none', magazine: GAS_PISTOL.magazines[0], laser: null, barrel: null, muzzle: null, light: null, tune: NO_TUNE });
   });
 
   it("gives a rarer replica its tier's Bonus % off spread, reload and draw, and half of it on energy and rate of fire (M29)", () => {

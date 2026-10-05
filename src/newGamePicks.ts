@@ -3,12 +3,14 @@ import { availableChoice, type ContentTag, tagOf } from './config/content';
 import { squadSize } from './config/extraction';
 import { DEFAULT_MATCH_RULES, DEFAULT_RULESET, type MatchRules, RULESETS, type RulesetId, rulesUnder, TEAM_SIZE_CHOICES, WINS_NEEDED_CHOICES } from './config/matchRules';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from './config/modes';
+import type { LightingPresetId } from './config/render';
 import { LOADOUT } from './config/replicas';
+import { playsAtNight as nightOf } from './map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId, mapData, teamSizeOn } from './map/maps';
 import { modeOffered } from './map/playableMode';
-import { rolledKitMayHoldDev } from './pool/botKit';
+import { botLight, rolledKitMayHoldDev } from './pool/botKit';
 import type { ItemRef } from './pool/collection';
-import { itemsUseDev } from './pool/contentPool';
+import { contentPool, itemsUseDev } from './pool/contentPool';
 import { type Pool, replicaOf } from './pool/pool';
 
 /** New game's picks: the Map, Mode, Match (with its Rules row, M39) and Difficulty pop-ups. */
@@ -92,12 +94,38 @@ export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Dif
 }
 
 /**
- * Whether a match uses dev content (M35): its picks (as played), the player's kit (`kit`: the Loadout's items) or the
- * opponents' possible gear (`chaseOwned` as in botsMayCarryDev). Such a match stays out of the records and pays no
- * Field Credits. Under the factory kit rule (M39) everyone carries LOADOUT as it comes, so neither kit counts.
+ * Whether map `id` is played at night (M33h) under its Day/Night pick `lighting` (M34d): the picked preset's `night`, not
+ * the map's own flag.
  */
-export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean, chaseOwned: readonly string[] = []): boolean {
+export function playsAtNight(id: MapId, lighting?: LightingPresetId | null): boolean {
+  return nightOf(mapData(id), lighting);
+}
+
+/**
+ * The items of `kit` that count as used (M33h): a weapon light does nothing by day (it isn't fitted then), so a fitted
+ * dev torch counts only on a night field; Depot by day with Dev content on pays as before.
+ */
+export function usedItems(pool: Pool, kit: readonly (ItemRef | null)[], night: boolean): (ItemRef | null)[] {
+  return night ? [...kit] : kit.filter((r) => r === null || pool.byId.get(r.asset)?.category !== 'light');
+}
+
+/** Whether the bots carry a dev torch (M33h): every bot carries the offered light on a night field (pool/botKit.ts botLight). */
+export function botsCarryDevLight(pool: Pool, devContent: boolean, night: boolean): boolean {
+  if (!night) return false;
+  const shown = contentPool(pool, devContent);
+  const light = botLight(shown);
+  return light !== null && shown.assets.some((a) => a.category === 'light' && a.key === light && a.tag === 'dev');
+}
+
+/**
+ * Whether a match uses dev content (M35): its picks (as played), the player's kit (`kit`: the Loadout's items; a light
+ * only at night, M33h) or the opponents' possible gear (`chaseOwned` as in botsMayCarryDev; the bots' torches at
+ * night). Night is under the map's Day/Night pick `lighting` (M34d). Such a match stays out of the records and pays no
+ * Field Credits. Under the factory kit rule (M39) everyone carries LOADOUT as it comes, torchless, so neither kit counts.
+ */
+export function matchUsesDev(picks: NewGamePicks, kit: readonly (ItemRef | null)[], pool: Pool, devContent: boolean, chaseOwned: readonly string[] = [], lighting?: LightingPresetId | null): boolean {
   if (picksUseDev(picks)) return true;
   if (picks.rules.factoryKit) return false;
-  return itemsUseDev(pool, kit) || botsMayCarryDev(pool, devContent, picks.difficulty, chaseOwned);
+  const night = playsAtNight(picks.map, lighting);
+  return itemsUseDev(pool, usedItems(pool, kit, night)) || botsMayCarryDev(pool, devContent, picks.difficulty, chaseOwned) || botsCarryDevLight(pool, devContent, night);
 }

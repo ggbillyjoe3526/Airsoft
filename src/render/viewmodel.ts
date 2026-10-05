@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { FULL_MOTION, type MotionScale } from '../config/accessibility';
-import { VIEWMODEL } from '../config/render';
+import { LIGHTING_PRESETS, type LightingPreset, VIEWMODEL } from '../config/render';
 import type { ReplicaConfig } from '../config/replicas';
 import type { Armament } from '../sim/armament';
 import { buildReplicaModels, fitMuzzle, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
@@ -41,12 +41,13 @@ export function sprintCarry(lockout: number, total: number): number {
 
 const clampSway = (v: number, max: number): number => Math.max(-max, Math.min(max, v));
 
-type PartKind = 'optic' | 'grip' | 'magazine' | 'laser' | 'barrel' | 'muzzle';
-const PART_KINDS: readonly string[] = ['optic', 'grip', 'magazine', 'laser', 'barrel', 'muzzle'];
+type PartKind = 'optic' | 'grip' | 'magazine' | 'laser' | 'barrel' | 'muzzle' | 'light';
+const PART_KINDS: readonly string[] = ['optic', 'grip', 'magazine', 'laser', 'barrel', 'muzzle', 'light'];
 
 /**
  * The parts a model can be fitted with: its objects named 'optic:<id>', 'grip:<id>', 'magazine:<id>', 'laser:<id>',
- * 'barrel:<id>' or 'muzzle:<id>' ('muzzle:none' is the bare muzzle's own device, shown with nothing fitted).
+ * 'barrel:<id>', 'muzzle:<id>' ('muzzle:none' is the bare muzzle's own device, shown with nothing fitted) or
+ * 'light:<id>' (a weapon torch, M33h).
  */
 function fittableParts(model: THREE.Object3D): { kind: PartKind; id: string; object: THREE.Object3D }[] {
   const parts: { kind: PartKind; id: string; object: THREE.Object3D }[] = [];
@@ -110,6 +111,17 @@ export class Viewmodel {
   private beamOn = false;
   /** The laser beams, one per replica with a laser rail (found by name after each build). */
   private beams: THREE.Object3D[] = [];
+  /** The replica's own three lights (a fill, a key, a rim): their colours follow the map's light (M33h), never their number. */
+  private readonly hemi: THREE.HemisphereLight;
+  private readonly key: THREE.DirectionalLight;
+  private readonly rim: THREE.DirectionalLight;
+  /** The map's light the replica is lit by (LightingPreset.viewmodel and .torch); the day's until setLighting. */
+  private lighting: LightingPreset = LIGHTING_PRESETS.day;
+  /** Your weapon torch is on (its lens glows, and its spill warms the key light at night). */
+  private torchOn = false;
+  private torchColour = 0xffffff;
+  private readonly keyColour = new THREE.Color();
+  private readonly torchTint = new THREE.Color();
 
   constructor(
     aspect: number,
@@ -120,12 +132,14 @@ export class Viewmodel {
   ) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, VIEWMODEL.near, VIEWMODEL.far);
     // Soft sky fill, a warm key from above-right and a cool rim from behind to separate the silhouette.
-    this.scene.add(new THREE.HemisphereLight(...VIEWMODEL.light.hemi));
+    this.hemi = new THREE.HemisphereLight(...VIEWMODEL.light.hemi);
     const key = new THREE.DirectionalLight(VIEWMODEL.light.keyColor, VIEWMODEL.light.keyIntensity);
     key.position.set(...VIEWMODEL.light.keyPosition);
     const rim = new THREE.DirectionalLight(VIEWMODEL.light.rimColor, VIEWMODEL.light.rimIntensity);
     rim.position.set(...VIEWMODEL.light.rimPosition);
-    this.scene.add(key, rim, this.rig);
+    this.key = key;
+    this.rim = rim;
+    this.scene.add(this.hemi, key, rim, this.rig);
     this.replicas = this.build(detail);
   }
 
@@ -159,7 +173,42 @@ export class Viewmodel {
     replicas.raisedHand.visible = false;
     this.scene.add(replicas.raisedHand);
     replicas.setReflections(this.scene.environment !== null);
+    replicas.setTorchLit(this.torchOn);
     return replicas;
+  }
+
+  /**
+   * The map's light (M33h): the replica's fill, key and rim take the preset's `viewmodel` colours and strengths (the
+   * day's are VIEWMODEL.light's), changed in place: the scene keeps its three lights.
+   */
+  setLighting(preset: LightingPreset): void {
+    this.lighting = preset;
+    const v = preset.viewmodel;
+    this.hemi.color.setHex(v.hemi.sky);
+    this.hemi.groundColor.setHex(v.hemi.ground);
+    this.hemi.intensity = v.hemi.intensity;
+    this.rim.color.setHex(v.rim.colour);
+    this.rim.intensity = v.rim.intensity;
+    this.applyKey();
+  }
+
+  /**
+   * Your weapon torch on or off (M33h): its lens glows, and on a night preset the key light turns towards the torch's
+   * `colour` and brightens (LightingPreset.torch.spill), as the beam's bounce would. Nothing happens if unchanged.
+   */
+  setTorch(on: boolean, colour: number): void {
+    if (on === this.torchOn && colour === this.torchColour) return;
+    this.torchOn = on;
+    this.torchColour = colour;
+    this.replicas.setTorchLit(on);
+    this.applyKey();
+  }
+
+  private applyKey(): void {
+    const v = this.lighting.viewmodel;
+    const spill = this.torchOn ? this.lighting.torch.spill : 0;
+    this.key.color.copy(this.keyColour.setHex(v.key.colour).lerp(this.torchTint.setHex(this.torchColour), spill));
+    this.key.intensity = v.key.intensity * (1 + (this.torchOn ? this.lighting.torch.spillIntensity : 0));
   }
 
   /**
@@ -252,7 +301,19 @@ export class Viewmodel {
       const muzzle = parts?.muzzle ?? null;
       for (const p of s.parts) {
         const fitted =
-          p.kind === 'optic' ? optic : p.kind === 'grip' ? parts?.grip : p.kind === 'laser' ? parts?.laser : p.kind === 'barrel' ? barrel : p.kind === 'muzzle' ? (muzzle ?? 'none') : parts?.magazine;
+          p.kind === 'optic'
+            ? optic
+            : p.kind === 'grip'
+              ? parts?.grip
+              : p.kind === 'laser'
+                ? parts?.laser
+                : p.kind === 'light'
+                  ? parts?.light
+                  : p.kind === 'barrel'
+                    ? barrel
+                    : p.kind === 'muzzle'
+                      ? (muzzle ?? 'none')
+                      : parts?.magazine;
         p.object.visible = p.id === fitted;
         if (p.kind === 'magazine' && p.object.visible) s.magBase = s.mag.bases.get(p.object);
       }

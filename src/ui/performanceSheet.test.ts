@@ -187,7 +187,8 @@ describe('Performance sheet, acceptance 6: the gear slot and the Armory line', (
     expect(tierLine(pool, item('Hi-Cap Magazine', 'rare'))).toBe('−6% reload');
     expect(tierLine(pool, item('Green Gas', 'legendary'))).toBe('+7.5% energy');
     expect(tierLine(pool, item('AEG Rifle', 'rare'))).toBe('+3% energy · +3% rate of fire · −6% spread · −6% reload · −6% draw');
-    for (const a of pool.assets.filter((x) => x.category !== 'grenade')) {
+    // Nothing improves a grenade or a light (M33h; the torch comes at Common only).
+    for (const a of pool.assets.filter((x) => x.category !== 'grenade' && x.category !== 'light')) {
       expect(tierLine(pool, { asset: a.id, tier: 'common' }), a.name).toBe('');
       expect(tierLine(pool, { asset: a.id, tier: 'legendary' }), a.name).not.toBe('');
     }

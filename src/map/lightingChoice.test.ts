@@ -7,7 +7,7 @@ import { saveSetting, SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage
 import { loadLightingPicks } from '../ui/menus/savedChoices';
 import type { MapData } from './mapTypes';
 import { DEPOT } from './depot';
-import { lightingChoices, lightingPicked, mapUnderLighting, parseLightingPick } from './lightingChoice';
+import { lightingChoices, lightingPicked, mapUnderLighting, parseLightingPick, playsAtNight } from './lightingChoice';
 import { MAPS } from './maps';
 import { NEON_HEIGHTS } from './neonHeights';
 import { WOODLAND } from './woodland';
@@ -123,5 +123,22 @@ describe('the saved Day or Night pick (M34d)', () => {
     const s = new MemoryStorage();
     saveSetting('lighting.neonHeights', 'day', s);
     expect(loadLightingPicks(s)).toEqual({ neonHeights: 'day' });
+  });
+});
+
+describe('the one night flag (M33h)', () => {
+  it('equals the resolved preset night for every map and pick, and the map played under that pick', () => {
+    for (const { data } of MAPS) {
+      for (const pick of [undefined, 'day', 'night'] as const) {
+        expect(playsAtNight(data, pick)).toBe(resolveLighting(data, pick).night);
+        expect(playsAtNight(mapUnderLighting(data, pick))).toBe(playsAtNight(data, pick));
+      }
+    }
+  });
+
+  it('reads a map override of night', () => {
+    const map: MapData = { ...DEPOT, lighting: { presets: ['day'], overrides: { day: { night: true } } } };
+    expect(playsAtNight(map)).toBe(true);
+    expect(resolveLighting(map).night).toBe(true);
   });
 });

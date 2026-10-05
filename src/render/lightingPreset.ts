@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { type LightingPreset, type LightingPresetId, LIGHTING_PRESETS } from '../config/render';
 import type { LightingOverride, MapData } from '../map/mapTypes';
-import { lightingChoices, lightingPicked } from '../map/lightingChoice';
+import { lightingChoices, lightingPicked, playsAtNight } from '../map/lightingChoice';
 import { mapBoundingBox } from './lighting';
 import type { EnvironmentLook } from './replicaSheen';
 
@@ -11,8 +11,9 @@ import type { EnvironmentLook } from './replicaSheen';
  * take what this resolves. Every map can use every preset: nothing here knows any map by name.
  */
 
-// The presets a map offers and the pick among them live with the map data (M34d, map/lightingChoice.ts).
-export { lightingChoices };
+// The presets a map offers, the pick among them and whether it plays at night live with the map data (M34d, M33h,
+// map/lightingChoice.ts).
+export { lightingChoices, playsAtNight };
 
 /**
  * The lighting preset a map is played under: `choice` if the map offers it (M34's match-start pick), else the map's

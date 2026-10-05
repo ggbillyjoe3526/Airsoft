@@ -18,6 +18,16 @@ export function lightingPicked(map: MapData, choice?: LightingPresetId | null): 
 }
 
 /**
+ * Whether `map` is played at night under `choice` (M33h): the picked preset's `night`, with the map's override of it if
+ * any. The one flag the night systems read (dev counting, the bots' torches and night sight, the torch light), so the
+ * Day/Night pick drives them all.
+ */
+export function playsAtNight(map: MapData, choice?: LightingPresetId | null): boolean {
+  const id = lightingPicked(map, choice);
+  return map.lighting?.overrides?.[id]?.night ?? LIGHTING_PRESETS[id].night;
+}
+
+/**
  * The map as it plays under `choice`: the picked preset listed first, so the one lighting path (resolveLighting,
  * addLighting) draws it, and `night` set by that preset, so glowing BBs and the bots' night sight go with it. A map
  * with no lighting block, or with one preset, plays as it is.

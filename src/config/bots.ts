@@ -483,6 +483,11 @@ export interface BotSkill {
   /** Trades a hit teammate, moves in pairs, sets crossfires on defence and pushes late when behind (see tradeTime…). */
   readonly teamPlay: boolean;
   /**
+   * Weapon torch discipline at night (M33h, ai/botTorch.ts): true keeps the torch on while advancing too (sloppy: Easy),
+   * giving itself away. Absent: off on the move, as the levels above play it.
+   */
+  readonly torchOnTheMove?: boolean;
+  /**
    * Map balance (M40): its lane swept with no one found, it hunts the middle of the map rather than the far end (see
    * huntMiddleBias), where the other team, which swept a lane of its own the other way, comes back through.
    */
@@ -558,6 +563,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     slicesCorners: false,
     peekWatchTime: [0, 0],
     teamPlay: false,
+    torchOnTheMove: true,
     huntsMiddle: false,
     keepsDark: false,
   },
@@ -682,6 +688,16 @@ export const BOTS: BotConfig = botConfig(DEFAULT_DIFFICULTY);
 /**
  * How far bots make someone out on a night field (M33g, map/nightSight.ts; the concept's first guesses, the same as
  * players by eye): 40 m in a light pool (as by day), 25 m in the moonlit open, 10 m under the trees. The target's light
- * decides; `viewDistance` still caps it. Ground is under the trees where 3 trunks stand within 4 m (on a 1 m grid).
+ * decides; `viewDistance` still caps it. Ground is under the trees where 3 trunks stand within 4 m (on a 1 m grid). A lit
+ * weapon torch (M33h) gives its holder away from `lit` to anyone within 60° of where it points (its lens and spill
+ * read from well off its axis), and lights whoever its beam falls on like a light pool.
  */
-export const NIGHT_SIGHT: NightSightConfig = { lit: 40, open: 25, canopy: 10, canopyTrees: 3, canopyRadius: 4, canopyCell: 1 };
+export const NIGHT_SIGHT: NightSightConfig = { lit: 40, open: 25, canopy: 10, canopyTrees: 3, canopyRadius: 4, canopyCell: 1, torchSeenFromDeg: 60 };
+
+/**
+ * How bots work their weapon torch on a night field (M33h, ai/botTorch.ts; every bot carries one there, pool/botKit.ts
+ * botLight). On while searching for someone lost or heard and while fighting someone within the beam's reach; off while
+ * advancing (Easy: on; BotSkill.torchOnTheMove), in cover, at the pole and on squad orders. A state is held at least
+ * `minHold` seconds, so the beam never strobes as the bot's mode flickers. First guesses for the owner's playtest.
+ */
+export const BOT_TORCH = { minHold: 1.5 } as const;

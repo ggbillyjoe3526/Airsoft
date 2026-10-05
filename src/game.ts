@@ -710,7 +710,7 @@ export class Game {
 
   /** Whether a match of `picks` with the Loadout as it is uses dev content (M35): it then won't count or pay. */
   private devContentUsed(picks: NewGamePicks): boolean {
-    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.loadout.ownedChase());
+    return matchUsesDev(picks, this.equippedItems(), GAME_POOL, this.dev.devContent, this.loadout.ownedChase(), this.lighting[picks.map]);
   }
 
   /** A new session takes the Dev settings in force (M24). */

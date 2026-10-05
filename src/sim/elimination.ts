@@ -50,6 +50,7 @@ export function eliminate(victim: Character, shooterId: number, characters: read
   victim.hitBy = shooterId;
   victim.walkOffStuck = 0;
   victim.sprinting = false;
+  victim.torchOn = false; // a hit player's torch goes off as their hand goes up (M33h)
   const spots = ctx.deadZones[victim.end];
   const spot = spots && spots.length > 0 ? spots[alreadyOut % spots.length]! : undefined;
   copy(victim.deadZoneTarget, spot ? spot.position : victim.spawnPosition);
@@ -99,6 +100,7 @@ export function fillEliminatedCommand(c: Character, cfg: HitConfig, out: PlayerC
   out.lean = 0;
   out.aim = false;
   out.cycleFireMode = false;
+  out.toggleTorch = false;
   out.yaw = c.yaw;
   out.forward = 0;
   if (c.status !== 'walkingOff') return out;

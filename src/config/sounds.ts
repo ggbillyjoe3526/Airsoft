@@ -32,6 +32,8 @@ export type SoundCue =
   | `magOut.${ShotProfile}`
   | `magIn.${ShotProfile}`
   | 'selector'
+  /** A weapon torch's tailcap switch (M33h): a softer, lower click than the selector. */
+  | 'torchClick'
   | 'draw'
   | 'reloadRefused'
   | `step.${FloorSurface}.${FootstepPace}`
@@ -413,6 +415,11 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     timeSpread: 0.15,
     gainSpread: 0.15,
   },
+  /**
+   * A weapon torch's tailcap switch (M33h): the selector's detent, softer and lower, with a rubbery body. Last in the
+   * table, so the seeded synthesis of every earlier cue is unchanged.
+   */
+  torchClick: { layers: [click(0, 1500, 0.28, 0.005), { kind: 'modes', gain: 0.1, modes: [{ hz: 1900, decay: 0.012, gain: 1 }] }], ...TIGHT },
 };
 
 /** The cue each kind of shot, mechanism, step or impact plays. */
