@@ -5,9 +5,9 @@ import { NEON_HEIGHTS } from '../map/neonHeights';
 import { initPhysics } from '../physics/physicsWorld';
 import { expectProBalance, PRO_BAND, tallyBalance } from './depotMatchSupport';
 
-/** Neon Heights plays 4v4 (M34c); this guard plays it by Day (M34d's switch; Night is its default). */
 /** The west's band (M71, DECISIONS) until M73 moves the east's edge at the bar door: PRO_BAND's ceiling, a 35 % floor. */
 const WEST_UNTIL_M73: readonly [number, number] = [0.35, PRO_BAND[1]];
+/** Neon Heights plays 4v4 (M34c); this guard plays it by Day (M34d's switch; Night is its default). */
 const TEAM_SIZE = 4;
 const DAY = mapUnderLighting(NEON_HEIGHTS, 'day');
 
