@@ -92,7 +92,9 @@ describe('a 4v4 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', 
           }
         }
       }
-    });
+      // The night field alone (M33g), without the torches the game fits (M57): woodlandTorchMatch.test.ts checks the same
+      // bound with torchlight on the real roster.
+    }, undefined, false);
     expect(sampled).toBeGreaterThan(300);
     expect(visibleBeyond, 'no bot ever had a target in view beyond that target\'s night range').toBe(0);
     expect(hiddenByDark, 'the dark hides enemies from bots in play').toBeGreaterThan(0);

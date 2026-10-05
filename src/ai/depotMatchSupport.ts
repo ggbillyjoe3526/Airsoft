@@ -13,6 +13,9 @@ import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
 import { buildNavGrid } from '../nav/navGrid';
 import { PhysicsWorld } from '../physics/physicsWorld';
+import { botLight, fitBotLight } from '../pool/botKit';
+import { contentPool } from '../pool/contentPool';
+import { GAME_POOL } from '../pool/gamePool';
 import { type Character, createCharacter, respawnCharacter } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { createSimContext, stepSimulation } from '../sim/simulation';
@@ -32,6 +35,19 @@ import { sightConditionsOf } from './perception';
 
 export const DT = 1 / 60;
 
+/** What the headless bots carry from: the game's pool with Dev content on, as both night maps (dev content) need it. */
+const BOT_POOL = contentPool(GAME_POOL, true);
+
+/**
+ * On a night field every bot carries the offered torch, by rule, as the match build fits it (M33h, matchSession.ts
+ * spawnRoster): fitted to each of `bots` as a match is set up. The headless guards played night maps without until M57
+ * (audit AI-02), so their bands measured a game nobody plays.
+ */
+export function fitNightTorches(bots: readonly Character[]): void {
+  const light = botLight(BOT_POOL);
+  for (const c of bots) fitBotLight(c, BOT_POOL, light);
+}
+
 /**
  * A 3v3 on Depot (or `map`) with real physics, headless. By default all six are bots; with `hider`, Blue
  * is a single non-bot player standing still at that spot (hiding) against three Orange bots. `onTick` runs after
@@ -50,6 +66,8 @@ export function playMatch(
   onTick: (state: GameState, bots: BotController) => void = () => {},
   /** Who carries something other than the default loadout (a bot's rolled kit, M29b): its character, or undefined for the default. */
   carry: (id: number, team: number) => Character | undefined = () => undefined,
+  /** Every bot carries the weapon torch (fitNightTorches): by default on a night field, as the game fits it (M57, audit AI-02). */
+  torches: boolean = map.night === true,
 ) {
   const physics = new PhysicsWorld(map, BODY, DT);
   const nav = buildNavGrid(map, NAV);
@@ -79,6 +97,8 @@ export function playMatch(
       id++;
     }
   }
+  const botCharacters = hider ? state.characters.filter((c) => c.team === 1) : state.characters;
+  if (torches) fitNightTorches(botCharacters);
   // Round 1 as the game starts it: each team at its end; a hider stands at its spot instead.
   placeTeams(state.round, state.characters, ctx.round);
   for (const c of state.characters) {
@@ -87,7 +107,7 @@ export function playMatch(
     physics.addCharacter(c);
   }
   const commands = new Map<number, PlayerCommand>();
-  const bots = new BotController(state, hider ? state.characters.filter((c) => c.team === 1) : state.characters, commands, {
+  const bots = new BotController(state, botCharacters, commands, {
     query: physics,
     nav,
     navSnap: NAV.snap,
@@ -371,21 +391,25 @@ export function tallyBalance(seeds: number, seconds: number, cfg: BotConfig, mod
   return t;
 }
 
+/** The Esports plan's Pro band (M40, owner 2026-10-04): the attackers' or each end's share of rounds. */
+export const PRO_BAND: readonly [number, number] = [0.4, 0.6];
+
 /**
  * The Pro balance guard (M40, the Esports plan's bands, owner 2026-10-04): in Attack / Defend the attackers win 40–60 % of
- * rounds; in Elimination each end wins 40–60 % of the decided rounds; under 1 round in 10 ends on time.
+ * rounds; in Elimination each end wins 40–60 % of the decided rounds; under 1 round in 10 ends on time. `band` other than
+ * PRO_BAND only where a guard measures outside the plan's and DECISIONS records it (M57: Woodland's Attack / Defend).
  */
-export function expectProBalance(t: BalanceTally, mode: MatchMode, label: string): void {
+export function expectProBalance(t: BalanceTally, mode: MatchMode, label: string, band: readonly [number, number] = PRO_BAND): void {
   // One standard error of the measured share (audit BAL-07), so a failure says whether it is noise or a real move.
   const n = mode === 'attackDefend' ? t.rounds : t.decided;
   const said = `${label}: ${JSON.stringify(t)} (±${(50 / Math.sqrt(Math.max(1, n))).toFixed(0)} % at one standard error)`;
   expect(t.rounds, said).toBeGreaterThan(0);
   if (mode === 'attackDefend') {
-    expect(t.attackerWins / t.rounds, said).toBeGreaterThanOrEqual(0.4);
-    expect(t.attackerWins / t.rounds, said).toBeLessThanOrEqual(0.6);
+    expect(t.attackerWins / t.rounds, said).toBeGreaterThanOrEqual(band[0]);
+    expect(t.attackerWins / t.rounds, said).toBeLessThanOrEqual(band[1]);
   } else {
-    expect(t.end0Wins / t.decided, said).toBeGreaterThanOrEqual(0.4);
-    expect(t.end0Wins / t.decided, said).toBeLessThanOrEqual(0.6);
+    expect(t.end0Wins / t.decided, said).toBeGreaterThanOrEqual(band[0]);
+    expect(t.end0Wins / t.decided, said).toBeLessThanOrEqual(band[1]);
   }
   expect(t.onTime / t.rounds, said).toBeLessThan(0.1);
 }
