@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
 import { BODY } from '../config/movement';
-import { buildNavGrid, createNavSearch, findPath, floorAt, isWalkableAt } from '../nav/navGrid';
+import { buildNavGrid, createNavSearch, findPath, floorAt, isWalkableAt, nodeX, nodeZ } from '../nav/navGrid';
 import { buildLevelRay, castLevelRay } from '../sim/levelRay';
+import { createRng, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { mapData, mapEntry, teamSizeOn } from './maps';
 import { steepestSlope, terrainHeightAt, terrainMaxX, terrainMaxZ } from './terrain';
@@ -130,6 +131,57 @@ describe('Woodland: the two camps cannot see each other (M33d, acceptance 1)', (
     const hit = castLevelRay(level, from, vec3(dx / flat, 0, dz / flat), flat);
     expect(hit).toBeGreaterThan(0);
     expect(hit).toBeLessThan(flat);
+  });
+});
+
+describe('Woodland: its longest sight line (M55, audit SIM-08)', () => {
+  /**
+   * The longest clear line from a standing eye to a standing eye over the field (m): corner to opposite corner across the
+   * meadow and the Knoll's east shoulder, 140.7 m measured. Intended (owner decision 11, 2026-10-05: the map is played at
+   * night, where the dark, not the ground, decides what anyone sees, and a BB doesn't carry that far). A change to the
+   * trees or the cover that opens a longer line fails here.
+   */
+  const LONGEST_LINE = 141;
+  /** ...and the long lines are there: the check is not blind. */
+  const MEADOW_LINE = 120;
+  /** Pairs of walkable nodes sampled over the whole field (a fixed seed)... */
+  const PAIRS = 40_000;
+  /** ...plus every pair between two opposite corners' nodes within this of the corner (m), where the longest lines are. */
+  const CORNER = 12;
+
+  it(`has no clear eye line longer than ${LONGEST_LINE} m, and the meadow's is over ${MEADOW_LINE} m`, { timeout: 30_000 }, () => {
+    const level = buildLevelRay(WOODLAND.blocks, PHYSICS.rayGridCell, terrain);
+    const walk: number[] = [];
+    for (let k = 0; k < nav.walkable.length; k++) if (nav.walkable[k] === 1) walk.push(k);
+    const from = vec3();
+    const dir = vec3();
+    let longest = 0;
+    const tryPair = (a: number, b: number): void => {
+      from.x = nodeX(nav, a);
+      from.z = nodeZ(nav, a);
+      from.y = terrainHeightAt(terrain, from.x, from.z)! + BODY.standEyeHeight;
+      dir.x = nodeX(nav, b) - from.x;
+      dir.z = nodeZ(nav, b) - from.z;
+      dir.y = terrainHeightAt(terrain, nodeX(nav, b), nodeZ(nav, b))! + BODY.standEyeHeight - from.y;
+      const d = Math.hypot(dir.x, dir.y, dir.z);
+      if (d <= longest) return;
+      dir.x /= d;
+      dir.y /= d;
+      dir.z /= d;
+      if (castLevelRay(level, from, dir, d) < 0) longest = d;
+    };
+    const rng = createRng(9);
+    for (let i = 0; i < PAIRS; i++) tryPair(walk[Math.floor(rngNext(rng) * walk.length)]!, walk[Math.floor(rngNext(rng) * walk.length)]!);
+    const maxX = terrainMaxX(terrain);
+    const maxZ = terrainMaxZ(terrain);
+    const near = (sx: number, sz: number): number[] => walk.filter((k) => sx * nodeX(nav, k) > maxX - CORNER && sz * nodeZ(nav, k) > maxZ - CORNER);
+    for (const [a, b] of [[near(-1, -1), near(1, 1)], [near(-1, 1), near(1, -1)]] as const) {
+      expect(a.length).toBeGreaterThan(0);
+      expect(b.length).toBeGreaterThan(0);
+      for (const i of a) for (const j of b) tryPair(i, j);
+    }
+    expect(longest).toBeLessThanOrEqual(LONGEST_LINE);
+    expect(longest).toBeGreaterThan(MEADOW_LINE);
   });
 });
 

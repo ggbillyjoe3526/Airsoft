@@ -116,8 +116,8 @@ const crate = (x: number, z: number, base = 0, w = CRATE, d = CRATE): MapBlock =
 const tall = (kind: BlockKind, x: number, z: number, w: number, d: number, base = 0): MapBlock => box(kind, x, x + w, base, base + FULL_COVER, z, z + d);
 /** A block finished in `finish` and painted `paint` (M34f): its look only, its box and kind as they were. */
 const finished = (b: MapBlock, finish: BlockFinish, paint: number): MapBlock => ({ ...b, finish, paint });
-/** A timber planter where a crate stood (crouch cover, the same box). */
-const planter = (x: number, z: number, base = 0): MapBlock => ({ ...crate(x, z, base), kind: 'planter' });
+/** A timber planter where a crate stood (crouch cover, the same box; `w` by `d` where it is butted against a wall). */
+const planter = (x: number, z: number, base = 0, w = CRATE, d = CRATE): MapBlock => ({ ...crate(x, z, base, w, d), kind: 'planter' });
 
 /** An opening in a wall: from `a` to `b` along it, open from `lo` to `hi` (heights above the storey's floor). */
 interface Opening {
@@ -368,7 +368,10 @@ function plaza(): MapBlock[] {
     railZ(l[0], l[2], l[3], STOREY),
     railX(l[3] - RAIL_THICKNESS, l[0] + RAIL_THICKNESS, w[1] + RAIL_THICKNESS, STOREY),
     planter(-15.6, -13.8),
-    planter(-12.4, -4.4 - CRATE),
+    // A planter round the block's north-west corner, in two boxes butted against its walls and the shrine (M55, audit
+    // SIM-04: it stood inside them).
+    planter(-12.4, -4.4 - CRATE, 0, BLOCK[0] + 12.4, BLOCK[3] + 4.4 + CRATE),
+    planter(BLOCK[0], BLOCK[3], 0, -12.4 + CRATE - BLOCK[0], -4.4 - BLOCK[3]),
   ];
 }
 
@@ -376,7 +379,7 @@ function plaza(): MapBlock[] {
 // Neon Avenue and the Sky Bridge.
 
 function avenue(): MapBlock[] {
-  const [x0, x1, z0, z1] = SKY_BRIDGE;
+  const [x0, , z0, z1] = SKY_BRIDGE;
   return [
     // A parked van and a kiosk (full cover), and billboard pillars against the walls, so no line runs the avenue's
     // length.
@@ -392,10 +395,10 @@ function avenue(): MapBlock[] {
     tall('booth', -3.4, 13, 1.2, 1.2),
     planter(-2.8, 11.2),
     planter(-1.4, -9.6),
-    // The Sky Bridge: solid 1.2 m sides.
-    ...slab([x0, x1, z0, z1], 2 * STOREY),
-    box('wall', x0, x1, 2 * STOREY, 2 * STOREY + SIDE, z0 - RAIL_THICKNESS, z0),
-    box('wall', x0, x1, 2 * STOREY, 2 * STOREY + SIDE, z1, z1 + RAIL_THICKNESS),
+    // The Sky Bridge: solid 1.2 m sides. It ends at the Tower's wall (M55, audit SIM-04): the door's sill crosses the wall.
+    ...slab([x0, TOWER[0], z0, z1], 2 * STOREY),
+    box('wall', x0, TOWER[0], 2 * STOREY, 2 * STOREY + SIDE, z0 - RAIL_THICKNESS, z0),
+    box('wall', x0, TOWER[0], 2 * STOREY, 2 * STOREY + SIDE, z1, z1 + RAIL_THICKNESS),
   ];
 }
 
@@ -434,7 +437,7 @@ function tower(): MapBlock[] {
     box('wall', x0, x1, 3 * STOREY, 3 * STOREY + ROOF, z0, z1),
     // The stairwell: walls, the two flights, the divider, the Level 1 landing (filled under) and Level 2 landing.
     ...wallAlongZ(w, w + WALL, s, z1 - WALL, [[door(s + WALL, a[2])], [door(a[3], z1 - WALL)], []]),
-    ...wallAlongX(s, s + WALL, w, x1 - WALL, [[], [], [door(15, x1 - WALL)]]),
+    ...wallAlongX(s, s + WALL, w + WALL, x1 - WALL, [[], [], [door(15, x1 - WALL)]]),
     stair(a[0], a[1], a[2], a[3], 0, '+z'),
     stair(b[0], b[1], b[2], b[3], STOREY, '-z'),
     box('wall', b[0], b[1], 0, STOREY, b[2], b[3]),
@@ -458,12 +461,16 @@ function tower(): MapBlock[] {
     // Street: the bar counter, cover under the galleries and on the atrium floor (planters), the store's shelving.
     finished(crate(4.8, 3.4, 0, 0.8, 2.4), 'tiles', PAINT.bar),
     planter(5.6, -2.4),
-    planter(12.3, 3.2),
+    // Butted against the stairwell's wall, with its corner in the door's frame (M55, audit SIM-04: it stood 0.1 m into
+    // the wall).
+    planter(12.3, 3.2, 0, TOWER_STAIRWELL_WEST - 12.3),
+    planter(TOWER_STAIRWELL_WEST, 3.2, 0, 12.3 + CRATE - TOWER_STAIRWELL_WEST, TOWER_LANE_A[2] - 3.2),
     planter(8, 3.6),
     planter(10.4, -1.6),
     tall('rack', 14.6, -2.6, 1.4, 0.6),
     tall('vending', 9, 7.8, 1.6, 0.6),
-    planter(5.2, -8.2),
+    // Butted against the grand stair's foot (M55, audit SIM-04: it stood 0.1 m into it).
+    planter(5.2, -8.2, 0, GRAND_STAIR[0] - 5.2),
     // Level 1: offices and the galleries.
     finished(crate(5, 4.8, STOREY), 'cladding', PAINT.desk),
     finished(crate(12.3, -1, STOREY), 'cladding', PAINT.desk),
@@ -779,8 +786,55 @@ function blockToWorld(b: MapBlock): MapBlock {
 const spawnToWorld = (s: SpawnPoint): SpawnPoint => ({ position: toWorld(s.position), yaw: Math.atan2(Math.sin(Math.PI - s.yaw), Math.cos(Math.PI - s.yaw)) });
 const rectToWorld = (r: Rect): Rect => [r[0], r[1], -r[3], -r[2]];
 
-/** Every block in plan coordinates, in the city's look (M34f). */
-const PLAN_BLOCKS: MapBlock[] = [
+/** Distances (m) below this count as zero when blocks are matched up. */
+const TOUCH = 1e-6;
+const lo = (b: MapBlock, axis: 'x' | 'y' | 'z'): number => b.center[axis] - b.size[axis] / 2;
+const hi = (b: MapBlock, axis: 'x' | 'y' | 'z'): number => b.center[axis] + b.size[axis] / 2;
+/** `b` cut to `x0..x1` × `y0..y1` × `z0..z1`, its look and kind as they were. */
+function cut(b: MapBlock, x0: number, x1: number, y0: number, y1: number, z0: number, z1: number): MapBlock {
+  return { ...b, ...box(b.kind, x0, x1, y0, y1, z0, z1) };
+}
+
+/**
+ * A floor laid into the top of a block (a door's sill above the street, in the top of the wall of the storey below; a
+ * slab over a wall, or over a stair's balustrade) takes that part of it (M55, audit SIM-04): the block stops under the
+ * floor along its whole length and what is left beside the floor at the floor's height stays as strips, so the level
+ * keeps its shape and no two blocks fill one space. The block keeps its footprint and its foot, so the bots' cover
+ * (ai/cover.ts) and night sight's roofs (map/nightSight.ts) read as before (neonHeightsArt.test.ts). A block that rises
+ * above the floor stays whole: cut, its part above would stand on the floor as new cover and its strips would roof the
+ * stair beside it at night, and cutting the floor round it instead changes the bots' nav grid (mapData.test.ts lists
+ * these). Plan coordinates, before floors grow by SEAM.
+ */
+function seatFloors(blocks: readonly MapBlock[]): MapBlock[] {
+  const floors = blocks.filter((b) => b.kind === 'floor');
+  const out: MapBlock[] = [];
+  for (const b of blocks) {
+    const through =
+      b.kind === 'floor' || b.kind === 'ramp' ? [] : floors.filter((f) => lo(f, 'y') > lo(b, 'y') + TOUCH && hi(f, 'y') <= hi(b, 'y') + TOUCH && overlaps(f, b, 'x') && overlaps(f, b, 'z'));
+    if (through.length === 0 || through.some((f) => hi(b, 'y') - hi(f, 'y') > TOUCH)) {
+      out.push(b);
+      continue;
+    }
+    const under = lo(through[0]!, 'y');
+    const over = hi(through[0]!, 'y');
+    if (through.some((f) => Math.abs(lo(f, 'y') - under) > TOUCH || Math.abs(hi(f, 'y') - over) > TOUCH)) throw new Error(`floors at two heights through the block at ${b.center.x}, ${b.center.z}`);
+    out.push(cut(b, lo(b, 'x'), hi(b, 'x'), lo(b, 'y'), under, lo(b, 'z'), hi(b, 'z')));
+    // Beside the floors at their height: along the block, between them (each spans the block's thickness).
+    const along = through.every((f) => spans(f, b, 'z')) ? 'x' : through.every((f) => spans(f, b, 'x')) ? 'z' : undefined;
+    if (!along) throw new Error(`a floor across a corner of the block at ${b.center.x}, ${b.center.z}`);
+    let pieces: [number, number][] = [[lo(b, along), hi(b, along)]];
+    for (const f of through) pieces = pieces.flatMap(([a, c]): [number, number][] => [[a, Math.min(c, lo(f, along))], [Math.max(a, hi(f, along)), c]]).filter(([a, c]) => c - a > TOUCH);
+    for (const [a, c] of pieces) out.push(along === 'x' ? cut(b, a, c, under, over, lo(b, 'z'), hi(b, 'z')) : cut(b, lo(b, 'x'), hi(b, 'x'), under, over, a, c));
+  }
+  return out;
+}
+/** Whether `a` and `b` overlap along `axis` (more than touching). */
+const overlaps = (a: MapBlock, b: MapBlock, axis: 'x' | 'z'): boolean => Math.min(hi(a, axis), hi(b, axis)) - Math.max(lo(a, axis), lo(b, axis)) > TOUCH;
+/** Whether `f` spans all of `b` along `axis`. */
+const spans = (f: MapBlock, b: MapBlock, axis: 'x' | 'z'): boolean => lo(f, axis) <= lo(b, axis) + TOUCH && hi(f, axis) >= hi(b, axis) - TOUCH;
+
+/** Every block in plan coordinates, in the city's look (M34f), seated under the floors laid into them (M55). */
+const PLAN_BLOCKS: MapBlock[] = seatFloors([
   ...ground(),
   ...westYard(),
   ...arcade(),
@@ -792,7 +846,7 @@ const PLAN_BLOCKS: MapBlock[] = [
   ...avenue(),
   ...tower(),
   ...eastAlleysAndYard(),
-].map(dress);
+].map(dress));
 /** What stands on the street, for the road markings to keep clear of (M34f). */
 const ON_STREET = PLAN_BLOCKS.filter((b) => b.kind !== 'floor' && b.kind !== 'ramp' && Math.abs(b.center.y - b.size.y / 2) < 1e-6);
 

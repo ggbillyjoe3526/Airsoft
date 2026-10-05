@@ -208,11 +208,17 @@ export class RunRoles {
     threat.z += lookOut.z * reach;
     postSearch.radius = cfg.guardPostRadius;
     const taken = teammateSpots(b, w);
-    const at = findCover(k.position, threat, w, b.rng, spot, postSearch, taken) ? spot.position : openPost(k, w, taken, front);
+    const covered = findCover(k.position, threat, w, b.rng, spot, postSearch, taken);
+    const at = covered ? spot.position : openPost(k, w, taken, threat, front);
     b.post.x = at.x;
     b.post.y = at.y;
     b.post.z = at.z;
     b.postYaw = Math.atan2(-(threat.x - at.x), -(threat.z - at.z));
+    // At a corner of full cover it leans out to watch (M55, audit AI-01): the spot was picked for that lean.
+    b.postLean = covered ? spot.lean : 0;
+    b.postWatch.x = threat.x;
+    b.postWatch.y = threat.y;
+    b.postWatch.z = threat.z;
   }
 
   /** Starts `b` (and `partner`, a moment behind) on a round of the shut cases nobody guards, nearest first. */
@@ -233,35 +239,52 @@ export class RunRoles {
 
 /**
  * A guard's post by a case with no cover near it (see guardOpenRadius): the first spot round the case, from straight out
- * in front, that is walkable on the case's floor, sees the case and keeps clear of `taken`; `fallback` if none does.
+ * in front, that is walkable on the case's floor, sees the case and the way in (`watch`, M55, audit AI-01) past every
+ * spot in `taken`, and keeps clear of them; then the same nearer, at patrolStandOff; `fallback` if none does.
  */
-function openPost(k: RunCase, w: BotWorld, taken: TakenSpots, fallback: Vec3): Vec3 {
+function openPost(k: RunCase, w: BotWorld, taken: TakenSpots, watch: Vec3, fallback: Vec3): Vec3 {
   const cfg = w.cfg;
   caseMiddle.x = k.position.x;
   caseMiddle.y = k.position.y + w.body.height / 2;
   caseMiddle.z = k.position.z;
   const steps = Math.floor(cfg.guardOpenMaxTurnDeg / cfg.guardOpenTurnDeg);
-  for (let i = 0; i <= 2 * steps; i++) {
-    // 0, +1, -1, +2, -2 … turns.
-    const turn = (i % 2 === 1 ? 1 : -1) * Math.ceil(i / 2) * cfg.guardOpenTurnDeg * DEG;
-    const x = k.position.x - Math.sin(k.yaw + turn) * cfg.guardOpenRadius;
-    const z = k.position.z - Math.cos(k.yaw + turn) * cfg.guardOpenRadius;
-    if (!isWalkableAt(w.nav, x, k.position.y, z)) continue;
-    const y = floorAt(w.nav, x, k.position.y, z);
-    if (Math.abs(y - k.position.y) > w.nav.maxStep) continue;
-    let clear = true;
-    for (let t = 0; t < taken.count && clear; t++) clear = Math.hypot(taken.points[t]!.x - x, taken.points[t]!.z - z) >= taken.minGap;
-    if (!clear) continue;
-    standEye.x = x;
-    standEye.y = y + w.body.standEyeHeight;
-    standEye.z = z;
-    if (!lineClear(w.query, standEye, caseMiddle)) continue;
-    spot.position.x = x;
-    spot.position.y = y;
-    spot.position.z = z;
-    return spot.position;
+  for (let ring = 0; ring < 2; ring++) {
+    const radius = ring === 0 ? cfg.guardOpenRadius : cfg.patrolStandOff;
+    for (let i = 0; i <= 2 * steps; i++) {
+      // 0, +1, -1, +2, -2 … turns.
+      const turn = (i % 2 === 1 ? 1 : -1) * Math.ceil(i / 2) * cfg.guardOpenTurnDeg * DEG;
+      const x = k.position.x - Math.sin(k.yaw + turn) * radius;
+      const z = k.position.z - Math.cos(k.yaw + turn) * radius;
+      if (!isWalkableAt(w.nav, x, k.position.y, z)) continue;
+      const y = floorAt(w.nav, x, k.position.y, z);
+      if (Math.abs(y - k.position.y) > w.nav.maxStep) continue;
+      let clear = true;
+      for (let t = 0; t < taken.count && clear; t++) {
+        const p = taken.points[t]!;
+        // Neither on a teammate's spot nor looking out past them (half the gap: a body's width off the line).
+        clear = Math.hypot(p.x - x, p.z - z) >= taken.minGap && planDistanceToSegment(p, x, z, watch) >= taken.minGap / 2;
+      }
+      if (!clear) continue;
+      standEye.x = x;
+      standEye.y = y + w.body.standEyeHeight;
+      standEye.z = z;
+      if (!lineClear(w.query, standEye, caseMiddle) || !lineClear(w.query, standEye, watch)) continue;
+      spot.position.x = x;
+      spot.position.y = y;
+      spot.position.z = z;
+      return spot.position;
+    }
   }
   return fallback;
+}
+
+/** How far `p` is, in plan, from the segment from (x, z) to `to` (metres). */
+function planDistanceToSegment(p: Vec3, x: number, z: number, to: Vec3): number {
+  const dx = to.x - x;
+  const dz = to.z - z;
+  const length2 = dx * dx + dz * dz;
+  const t = length2 > 0 ? Math.max(0, Math.min(1, ((p.x - x) * dx + (p.z - z) * dz) / length2)) : 0;
+  return Math.hypot(p.x - (x + dx * t), p.z - (z + dz * t));
 }
 
 /** Makes `b` a hunter: it drops what it was doing for its first goal (see the movement's run goals). */

@@ -20,6 +20,8 @@ describe('a 4v4 Attack / Defend match on Woodland, both teams on Pro (M40)', () 
     // posts in the fort under its two lanterns, seen from 40 m by attackers they couldn't see in the moonlit open (25 m).
     // Pro now holds lane points out of the light (keepsDark). Hard on the same seeds: attackers 73 % (51 of 70), none on
     // time. Re-measure with this test after any bot, layout or lighting change. Seeds 1-16 since M51 (audit BAL-07).
+    // M55 (audit SIM-05: a log and a boulder out of what they stood in) deals every seed again: attackers 43.4 % here
+    // (49 of 113), 40.7 % over seeds 1-48 (43.0 % before, ±3.7 between the two).
     expectProBalance(tallyBalance(16, SECONDS, botConfig('pro'), 'attackDefend', WOODLAND, TEAM_SIZE), 'attackDefend', 'Woodland Pro');
   });
 });

@@ -63,7 +63,8 @@ ends the round). A hit character is eliminated
   the pole once they have walked their lane to midfield, crouch by it and stay. Nobody hunts.
   In Extraction (M46, `extractionRoles.ts`: `RunRoles`, made by the controller each run) the home team's bots take
   roles (`Bot.role`): guards hold a post hidden near a case, facing its approach (`Bot.post`, `postYaw`; `holdYaw`
-  in `bot.ts`), on a leash; patrols walk in pairs, a lead and a follower, round the shut cases away from the insertion
+  in `bot.ts`) and seeing it, leaning out at a corner of full cover (M55: `postWatch`, `postLean`, `holdLean`), on a
+  leash; patrols walk in pairs, a lead and a follower, round the shut cases away from the insertion
   (`Bot.patrol`); from a share of the run on (`BotSkill.huntersFrom`) patrols turn hunters that push to the team's
   freshest news of the squad (`BotWorld.squadNews`). A bot back in a wave fills an empty guard post, hunts, or joins a
   patrol. The squad's bot teammates cover outwards while their leader opens a case (`squadOrders.ts`).
@@ -340,7 +341,8 @@ request. Each line names where it lives and what pins it.
   the events `caseNoise` (bots hear it), `caseOpened` and `caseDropped` report the cases. Since M45 the run counts the
   home team's waves (`ExtractionContext.waves`: regen points, the interval, the cap and its late extra, and the world
   query the out-of-sight check casts through; `ExtractionContext.reserveAt`: where the reserve past the cap waits), and
-  the event `returned` reports an opponent back in a wave. Since M46 the run names the squad's team (`RunState.squadTeam`). The `torch` event (M33h) reports a weapon light switched on
+  the event `returned` reports an opponent back in a wave. Since M55 `ExtractionContext.sight` (optional: the world
+  query and body) lets a case open only in the runner's line of sight; without it cases open by reach alone. Since M46 the run names the squad's team (`RunState.squadTeam`). The `torch` event (M33h) reports a weapon light switched on
   or off. Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
   `sim/extractionWaves.test.ts`, `sim/torch.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its

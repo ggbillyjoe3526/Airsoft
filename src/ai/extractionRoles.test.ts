@@ -1,18 +1,19 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { BOT_BEHAVIOUR, BOT_SKILL, type Difficulty } from '../config/bots';
 import { HITS } from '../config/hits';
+import { BODY } from '../config/movement';
 import { PHYSICS } from '../config/physics';
 import { DEPOT_LAYOUT } from '../map/depot';
 import { isWalkableAt } from '../nav/navGrid';
 import { initPhysics } from '../physics/physicsWorld';
 import { createCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
-import { wrapAngle } from '../sim/vec';
+import { vec3, wrapAngle } from '../sim/vec';
 import type { Bot } from './bot';
 import { moveBot } from './botMovement';
 import { DT } from './depotMatchSupport';
 import { setUpRun } from './extractionRunSupport';
-import { lineClear } from './perception';
+import { eyeOf, lineClear } from './perception';
 
 /**
  * The home team's jobs in an Extraction run (M46), headless on Depot with real physics: you (a ghost, standing where the
@@ -69,6 +70,90 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     }
     // Pairs: at most one patrol walks alone.
     expect(patrols.filter((p) => !p.patrolPartner).length).toBeLessThanOrEqual(1);
+    r.dispose();
+  });
+
+  it('posts every guard where it sees the way in: right on its post, leaning out at a corner of full cover (M55, audit AI-01, AI-09)', () => {
+    // Seeds with a lean post (2, 4), an open post in a corridor (1: the second guard goes nearer, beside the first's
+    // view) and one whose cover-less turned spot sees only the case (4). Measured: every guard sees its way in for 99 %
+    // or more of its ticks at the post (a lean follows the guard's look over its held angles); before, 3 of these 9 saw
+    // it for none.
+    const SEEN_SHARE = 0.8;
+    const eye = vec3();
+    let leanPosts = 0;
+    for (const seed of [1, 2, 4]) {
+      const r = setUpRun({ seed });
+      const held = new Map<Bot, { at: number; seen: number; leaned: number }>();
+      r.play(15, () => {
+        for (const b of home(r.bots.bots)) {
+          if (b.role !== 'guard' || !b.atPost) continue;
+          const tally = held.get(b) ?? { at: 0, seen: 0, leaned: 0 };
+          tally.at++;
+          if (lineClear(r.physics, eyeOf(b.character, BODY, HITS, eye), b.postWatch)) tally.seen++;
+          if (b.character.lean !== 0) tally.leaned++;
+          held.set(b, tally);
+        }
+      });
+      const guards = home(r.bots.bots).filter((b) => b.role === 'guard' && isInPlay(b.character));
+      expect(guards.length).toBeGreaterThan(0);
+      for (const g of guards) {
+        const tally = held.get(g);
+        const who = `seed ${seed}, Red ${g.character.id}`;
+        expect(tally, who).toBeDefined();
+        expect(tally!.seen / tally!.at, who).toBeGreaterThan(SEEN_SHARE);
+        if (g.postLean === 0) continue;
+        leanPosts++;
+        expect(tally!.leaned / tally!.at, who).toBeGreaterThan(SEEN_SHARE);
+      }
+      r.dispose();
+    }
+    expect(leanPosts).toBeGreaterThan(0);
+  });
+
+  it('settles a guard only on its post’s own floor, and where it got to when blocked short of the spot (M55, audit AI-01)', () => {
+    const r = runWithGuardedLocker();
+    r.play(10);
+    const w = r.bots.worldForTests;
+    const g = home(r.bots.bots).find((b) => b.role === 'guard' && b.atPost && isInPlay(b.character))!;
+    expect(g).toBeDefined();
+    const cmd = createCommand();
+    const post = { ...g.post };
+    // Its post a floor up, straight over where it stands: not there yet, it asks for a way up.
+    g.post.x = g.character.position.x;
+    g.post.y = post.y + BODY.height * 1.5;
+    g.post.z = g.character.position.z;
+    moveBot(g, w, cmd, DT);
+    expect(g.atPost).toBe(false);
+    expect(g.routeState).toBe('wanted');
+    // Its post just inside a wall beside it: it steps at it, and once blocked for stuckTime holds where it got to.
+    g.post.x = post.x;
+    g.post.y = post.y;
+    g.post.z = post.z;
+    g.routeState = 'none';
+    const c = g.character;
+    const waist = { x: c.position.x, y: c.position.y + BODY.height / 2, z: c.position.z };
+    let wall = -1;
+    const dir = { x: 0, y: 0, z: 0 };
+    for (let i = 0; i < 16 && wall < 0; i++) {
+      dir.x = Math.cos((i * Math.PI) / 8);
+      dir.z = Math.sin((i * Math.PI) / 8);
+      wall = w.query.raycastStatic(waist, dir, cfg.leanSpotApproachMax * 4);
+    }
+    expect(wall).toBeGreaterThan(0);
+    const stand = wall - BODY.radius - 0.05;
+    c.position.x += dir.x * stand;
+    c.position.z += dir.z * stand;
+    c.prevPosition.x = c.position.x;
+    c.prevPosition.z = c.position.z;
+    g.post.x = c.position.x + dir.x * (cfg.leanSpotApproachMax - 0.1);
+    g.post.y = c.position.y;
+    g.post.z = c.position.z + dir.z * (cfg.leanSpotApproachMax - 0.1);
+    g.stuckFor = 0;
+    let settled = false;
+    r.play(cfg.stuckTime + 0.5, () => {
+      settled ||= g.atPost;
+    });
+    expect(settled).toBe(true);
     r.dispose();
   });
 
@@ -247,7 +332,7 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     const forwardAt = (d: number, role: Bot['role']) => {
       put(d);
       b.role = role;
-      b.strafeLeft = 1; // no new sidestep drawn
+      b.strafeLeft = 0; // a new sidestep drawn: the step ahead is looked at then (M55, KNOWN_ISSUES row 200)
       cmd.forward = 0;
       cmd.right = 0;
       moveBot(b, w, cmd, DT, you);
@@ -256,6 +341,21 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     expect(forwardAt(cfg.pushDistance + 3, 'hunter')).toBe(cfg.strafeInput);
     expect(forwardAt(cfg.pushDistance + 3, 'patrol')).not.toBe(cfg.strafeInput);
     expect(forwardAt(cfg.pushDistance - 2, 'hunter')).not.toBe(cfg.strafeInput);
+    // Between sidesteps a pushing hunter casts no more rays a tick than a patrol fighting from the same spot (M55,
+    // KNOWN_ISSUES row 200): its sight of the step ahead was looked at when the sidestep was drawn.
+    const raysAt = (role: Bot['role']) => {
+      forwardAt(cfg.pushDistance + 3, role);
+      put(cfg.pushDistance + 3);
+      b.strafeLeft = 1; // no new sidestep drawn
+      const rays = vi.spyOn(w.query, 'raycastStatic');
+      moveBot(b, w, cmd, DT, you);
+      const n = rays.mock.calls.length;
+      rays.mockRestore();
+      return { n, forward: cmd.forward };
+    };
+    const hunter = raysAt('hunter');
+    expect(hunter.forward).toBe(cfg.strafeInput);
+    expect(hunter.n).toBe(raysAt('patrol').n);
     r.dispose();
   });
 
@@ -307,11 +407,23 @@ describe('Extraction: the home team’s jobs (M46)', () => {
       covering++;
       expect(m.orderCovering).toBe(true);
       expect(flat(m.character.position, r.you.position), `Blue ${m.character.id}`).toBeLessThanOrEqual(cfg.openCoverRadius + 1);
-      // Watching behind you, to its slot's side.
+      // Watching behind you, to its slot's side; from a corner of full cover, straight at the point that way (M55).
       const watch = cfg.openWatchDeg[m.orderSlot % cfg.openWatchDeg.length]!;
-      expect(Math.abs(wrapAngle(m.orderYaw - r.you.yaw - (watch * Math.PI) / 180))).toBeLessThan(1e-6);
+      const yaw = m.orderLean === 0 ? r.you.yaw + (watch * Math.PI) / 180 : Math.atan2(-(m.orderWatch.x - m.orderGoal.x), -(m.orderWatch.z - m.orderGoal.z));
+      expect(Math.abs(wrapAngle(m.orderYaw - yaw))).toBeLessThan(1e-6);
     }
     expect(covering).toBeGreaterThan(0);
+    // Once on a corner of full cover it leans out, and sees what it watches (M55, audit AI-01, AI-09; Depot's first
+    // guarded-locker seed puts both at one, the second still on its way there).
+    const eye = vec3();
+    let leaning = 0;
+    for (const m of mates) {
+      if (!isInPlay(m.character) || !m.orderCovering || !m.orderLeanChecked || m.orderLean === 0) continue;
+      leaning++;
+      expect(m.character.lean, `Blue ${m.character.id}`).not.toBe(0);
+      expect(lineClear(r.physics, eyeOf(m.character, BODY, HITS, eye), m.orderWatch), `Blue ${m.character.id}`).toBe(true);
+    }
+    expect(leaning).toBeGreaterThan(0);
     r.yours.use = false;
     r.play(0.5);
     for (const m of mates) if (m.mode === 'order') expect(m.orderCovering).toBe(false);
