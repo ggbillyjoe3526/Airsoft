@@ -92,6 +92,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M34g** · Neon Heights (dev content) sound: traffic hum and drones by day with chimes, neon sizzle and arcade bleeps by night; Depot and Woodland unchanged
 
 ### Changed
+- **M70** · The Armory's odds caption says the odds are for each item drawn, before pity
 - **M68** · Settings → Graphics is shorter: the Custom rows fold away under Low, Medium and High and open when you pick Custom or click "Custom settings" (#121)
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
@@ -123,6 +124,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
+- **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later
 - **M64** · The reload, case-opening and count bars fill smoothly in one motion (still step by step with Reduced motion on); the Key Bindings screen no longer holds on to the mouse wheel when no key is waiting (#118)
 - **M65** · A map's sounds are made while you're on the title screen, so pressing Play on Woodland or Neon Heights starts the match sooner (#119)
 - **M63** · Playing Neon Heights again with the same lighting reuses the built map instead of building it again; a match's shaders are compiled as it loads, so its first frame and first flag pickup hitch less; the GPU timer comes back after the graphics driver resets (#115)
