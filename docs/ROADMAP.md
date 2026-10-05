@@ -138,7 +138,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M35 Public and dev content tags: every map, mode, difficulty and pooled asset tagged public or dev; dev content shown only with the Dev tab's Dev content switch, never in Shots, carried by bots only with it on, and kept out of the records and Field Credits | Done (owner to play it) | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M42 Retro pixel filter: a Dev tab switch for a 1990s look (chunky pixels, a small dithered palette), with Pixel size and Colours sliders; the HUD and menus stay sharp | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | In progress (M36 merged, #79; M37 merged, #82; M38 merged, #84; M39 merged, #90; M40 merged, #94; M41 built; the owner chose to start before the final alpha pass) | |
-| Alpha · Owner's 2026-10-04 requests · M43–M49 Extraction: a squad of one to three against a home team on a timed run, guarded cases of seeded loot, waves, exits held for a count, one automatic respawn per run, pay and records, Woodland and city data, supply weekends; tagged dev until the owner says it's done | Building: M43 the run, exits, clock and respawn done (owner to play it); M44 cases and loot done (owner to play it); M45 waves and regen done (owner to play it); M46–M49 next | 8/8 (M43, M44), 7/8 (M45) |
+| Alpha · Owner's 2026-10-04 requests · M43–M49 Extraction: a squad of one to three against a home team on a timed run, guarded cases of seeded loot, waves, exits held for a count, one automatic respawn per run, pay and records, Woodland and city data, supply weekends; tagged dev until the owner says it's done | Building: M43 the run, exits, clock and respawn done (owner to play it); M44 cases and loot done (owner to play it); M45 waves and regen done (owner to play it); M46 guards, patrols and hunters done (owner to play it); M47–M49 next | 8/8 (M43, M44, M46), 7/8 (M45) |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -868,7 +868,11 @@ pool, items 11, 12 and part of 14).
     soon as all of them are out, up to the run's cap, with one more (a reserve) from the last third; each returner takes
     the next regen point that is at least the map's distance from every squad member (Depot 15 m), out of their sight,
     and free, and walks a lane on from there.
-  - **M46. Guards, patrols and hunters:** bots that guard cases (on M37's held angles), patrol and hunt the squad late.
+  - **M46. Guards, patrols and hunters:** two guards hold cover by the locker (one on Easy), facing its way in, on an
+    8 m leash; the rest patrol the shut cases in pairs, away from the insertion; from half the run on Normal (a third on
+    Hard and Pro, never on Easy) patrols hunt the squad's last known place and push in fights; returners fill empty
+    posts first. Your bot teammates cover outwards while you open a case. A headless guard keeps each level's extract
+    rate and FC a minute in a band.
   - **M47. Pay and records:** an Extraction payout and its own records, within M35's dev rule while tagged dev.
   - **M48. Woodland and city data:** insertions, exits, starts and case spots for the new maps once they are playable.
   - **M49. Supply weekends and events:** a dated or owner-switched event with its own loot table.

@@ -86,6 +86,8 @@ export const DROPPED_CASE = 'dropped';
 export type ExitCountStatus = 'idle' | 'counting' | 'paused';
 
 export interface RunState {
+  /** The squad's team (the home team is the other): what the bots plan the run by (M46). */
+  squadTeam: number;
   exits: RunExit[];
   /** Respawns each squad member has used, by character id (0 for the home team: they don't respawn here). */
   respawnsUsed: number[];
@@ -168,6 +170,7 @@ export interface ExtractionContext {
 
 export function createRunState(): RunState {
   return {
+    squadTeam: 0,
     exits: [],
     respawnsUsed: [],
     count: 0,
@@ -202,6 +205,7 @@ export function exitClosedFor(exit: ExitZone, insertion: readonly SpawnPoint[], 
 
 /** The run's first state: its exits (closed near the insertion, late ones shut), nobody counted, nothing used. */
 export function resetRun(run: RunState, ctx: ExtractionContext, characterCount: number): void {
+  run.squadTeam = ctx.squadTeam;
   run.exits = ctx.exits.map((e) => {
     const closed = exitClosedFor(e, ctx.insertion, ctx.rules.minExitDistance);
     const late = e.late ?? false;

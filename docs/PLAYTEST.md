@@ -1102,6 +1102,24 @@ Dev content on, Extraction on Depot, Normal, as above.
 - [ ] **The last third:** with 2:40 left one more Orange bot joins the next wave (the scoreboard keeps its usual pips).
 - [ ] **The rules text:** New game › Mode › Extraction says hit opponents come back in waves.
 
+## Extraction guards, patrols and hunters (M46, dev content)
+
+Dev content on, Extraction on Depot, Normal, as above.
+
+- [ ] **Guards:** the locker has two Orange bots near it, tucked behind cover and watching the way you'd come in;
+  sometimes a field case far from you has one too. A guard you shoot at or pass close by comes after you, but never
+  much more than about 8 m from its case: it goes back once you're gone.
+- [ ] **Nothing next to your door:** at the start no field-case guard or patrol is within about 15 m of where you come in. The locker is guarded even when it stands by your door (East yard with the locker on the dock): does that start feel fair?
+- [ ] **Patrols:** the rest of the home team walks between the shut cases in pairs, one following the other, and
+  re-takes its round after a fight. Do they read as a pair?
+- [ ] **Hunters:** from halfway through the run (a third of the way on Hard and Pro, never on Easy) the patrols stop
+  patrolling and come for you, running to where you were last seen or heard, and push in close in a fight rather than
+  holding back. Does the run get tense late without feeling unfair?
+- [ ] **Back in a wave:** a bot back in a wave takes an empty guard post first, else hunts or joins a patrol.
+- [ ] **Your teammates cover you:** hold G at a case with your two bot teammates following. They crouch at cover near
+  you, each facing a different way outwards, until you're done.
+- [ ] **Difficulty:** Easy should let you out with three cases most runs, Normal some runs, Hard rarely: say how it felt.
+
 ## Neon Heights by Night (M34e, dev content)
 
 Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Night is its default).

@@ -1,130 +1,18 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { BALLISTICS, WIND } from '../config/ballistics';
-import { BOTS, botConfig } from '../config/bots';
-import { EXTRACTION } from '../config/extraction';
-import { FOOTSTEPS } from '../config/footsteps';
-import { HITS, ROUNDS } from '../config/hits';
-import { BODY, MOVEMENT } from '../config/movement';
-import { NAV } from '../config/nav';
-import { PHYSICS } from '../config/physics';
-import { LOADOUT } from '../config/replicas';
-import { caseSeed, runSeed } from '../core/seed';
+import { HITS } from '../config/hits';
 import { DEPOT } from '../map/depot';
-import { buildNavGrid, createNavSearch } from '../nav/navGrid';
-import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
-import { rollRunCases } from '../pool/caches';
-import { GAME_POOL } from '../pool/gamePool';
-import { type Character, createCharacter } from '../sim/character';
-import { createCommand, type PlayerCommand } from '../sim/commands';
-import { eliminate, isInPlay } from '../sim/elimination';
-import { createRunContext, haulTotals, regenClear, reserveSize, runHaul } from '../sim/extraction';
-import { startRun } from '../sim/round';
-import { createSimContext, stepSimulation } from '../sim/simulation';
-import { createGameState } from '../sim/state';
-import { vec3 } from '../sim/vec';
-import { createWind } from '../sim/wind';
-import { BotController } from './botController';
-import { lowCoverBlocks, tallCoverBlocks } from './cover';
-import { DT } from './depotMatchSupport';
-import { SquadFollow } from './squadFollow';
+import { initPhysics } from '../physics/physicsWorld';
+import type { Character } from '../sim/character';
+import { isInPlay } from '../sim/elimination';
+import { haulTotals, regenClear, runHaul } from '../sim/extraction';
+import { setUpRun as setUp } from './extractionRunSupport';
 
 /**
- * Extraction on Depot (M43), headless with real physics and bots: you (not a bot: you stand where the test puts you)
- * with two bot teammates against the home team. You're a ghost here (BBs pass through, Dev settings' Ghost) unless a
- * test wants you hit, so the run's own rules decide how it ends.
+ * Extraction on Depot (M43), headless with real physics and bots (extractionRunSupport.ts): you (not a bot: you stand
+ * where the test puts you) with two bot teammates against the home team. You're a ghost here (BBs pass through, Dev
+ * settings' Ghost) unless a test wants you hit, so the run's own rules decide how it ends.
  */
-function setUpRun(seed: number) {
-  const x = DEPOT.extraction!;
-  const squad = 3;
-  const rules = { ...ROUNDS, roundTime: x.runTime, winsNeeded: 1 };
-  const physics = new PhysicsWorld(DEPOT, BODY, DT);
-  const nav = buildNavGrid(DEPOT, NAV);
-  const cases = rollRunCases(GAME_POOL, x.cases, {}, caseSeed(seed));
-  const run = createRunContext(x, {
-    squad,
-    seed: runSeed(seed),
-    runner: 0,
-    squadTeam: 0,
-    respawnAfter: HITS.callTime,
-    spawnLift: PHYSICS.groundRestGap,
-    cases,
-    waveEvery: EXTRACTION.waveEvery.normal,
-    sight: { query: physics, body: BODY },
-    deadZones: DEPOT.deadZones,
-  });
-  const state = createGameState(seed, BALLISTICS.maxBBs, rules, 'extraction');
-  const ctx = createSimContext({
-    mover: physics,
-    query: physics,
-    movement: MOVEMENT,
-    footsteps: FOOTSTEPS,
-    body: BODY,
-    ballistics: BALLISTICS,
-    wind: createWind(seed, WIND),
-    killY: DEPOT.killY,
-    hits: HITS,
-    deadZones: DEPOT.deadZones,
-    spawns: DEPOT.spawns,
-    spawnLift: PHYSICS.groundRestGap,
-    nav,
-    navSnap: NAV.snap,
-    rounds: rules,
-    extraction: run,
-  });
-  // The home team's cap and its reserve for the run's last part (M45).
-  const opponents = x.baseOpponents + squad + reserveSize(run);
-  for (let id = 0; id < squad + opponents; id++) state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, id < squad ? 0 : 1));
-  startRun(state.round, state.characters, ctx.round);
-  for (const c of state.characters) physics.addCharacter(c);
-  const you = state.characters[0]!;
-  you.ghost = true;
-  const commands = new Map<number, PlayerCommand>();
-  const bots = new BotController(state, state.characters.filter((c) => c !== you), commands, {
-    query: physics,
-    nav,
-    navSnap: NAV.snap,
-    lanes: DEPOT.lanes,
-    lowCover: lowCoverBlocks(DEPOT.blocks, nav, BODY, BOTS.lowCoverFloorGap),
-    tallCover: tallCoverBlocks(DEPOT.blocks, nav, BODY, BOTS.lowCoverFloorGap),
-    body: BODY,
-    hits: HITS,
-    loadout: LOADOUT,
-    cfg: BOTS,
-    teamCfg: [botConfig('normal'), botConfig('normal')],
-    seed,
-  });
-  const follow = new SquadFollow();
-  const play = (seconds: number, onTick: () => void = () => {}) => {
-    for (let i = 0; i < seconds / DT && state.round.phase === 'live'; i++) {
-      bots.think(state, DT);
-      stepSimulation(state, commands, ctx, DT);
-      bots.observe(state);
-      follow.update(bots, you, state.characters, state.events, state.round.phase === 'live');
-      onTick();
-    }
-  };
-  /** Puts you on the floor at (x, z) (between ticks, as a test would). */
-  const moveYou = (p: { x: number; y: number; z: number }) => {
-    you.position.x = p.x;
-    you.position.y = p.y + PHYSICS.groundRestGap;
-    you.position.z = p.z;
-    you.prevPosition.x = you.position.x;
-    you.prevPosition.y = you.position.y;
-    you.prevPosition.z = you.position.z;
-    you.velocity.x = 0;
-    you.velocity.y = 0;
-    you.velocity.z = 0;
-  };
-  const elimination = { deadZones: DEPOT.deadZones, nav, navSearch: createNavSearch(nav), snap: NAV.snap };
-  /** You're hit by the first opponent. */
-  const hitYou = () => eliminate(you, squad, state.characters, elimination);
-  /** `c` is hit by you. */
-  const hitThem = (c: Character) => eliminate(c, you.id, state.characters, elimination);
-  /** Your keys: you aren't a bot, so this is what you do each tick (standing still unless a test says otherwise). */
-  const yours = createCommand();
-  commands.set(you.id, yours);
-  return { state, run, you, yours, bots, play, moveYou, hitYou, hitThem, physics, dispose: () => physics.dispose() };
-}
+const setUpRun = (seed: number) => setUp({ seed });
 
 const mates = (cs: readonly Character[]) => cs.filter((c) => c.team === 0 && c.id !== 0);
 
