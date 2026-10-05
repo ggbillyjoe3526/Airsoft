@@ -77,6 +77,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · Extraction (dev content, Depot): an 8:00 run against a home team; stand 10 s in an open exit to get out; one automatic respawn at the insertion (#83)
 - **M44** · Extraction cases: hold Use (G) to open ammo cans, field cases and a locker for FC, BBs and parts; a hit drops them; kept only if you get out
 - **M45** · Extraction waves: bots you hit come back together (every 75 s on Normal, or once all are out), out of sight; one more joins late
+- **M46** · Extraction guards and hunters: guards in cover by the locker, patrols in pairs, hunters late in the run; teammates cover you at a case (#98)
 - **M34e** · Neon Heights by Night: 12 lamps light separate floors, neon signs that glow and are painted by day, lit and dark windows on the perimeter; balanced at 47–48 % west, 52 % attackers
 - **M34e** · Night sight on night maps knows floors and roofs: an unlit spot under a roof is seen from 15 m
 
@@ -139,6 +140,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Internal
 - **M44** · Extraction cases: tests for the Use key, case rolls, drops and the haul, and a browser test of a run that opens the locker
 - **M45** · Extraction waves: tests for wave timing per difficulty, the reserve, regen points on Depot's real level, and bots setting off again
+- **M46** · Extraction guards and hunters: tests for posts, patrols, hunters and cover, and a balance guard per difficulty on Depot (#98)
 - **FA15** · The perf harness measures heap growth between two forced full garbage collections, so repeated runs agree (+0.9 MB on four of five runs, −3.4 on one, against swings of ±10 MB before) (#88)
 - **FA14** · The browser smoke test waits for a match to draw before trying its keys, and gives the scoreboard, order wheel and squad order steps the same wait as firing and reloading, so slow frames on a CI runner no longer fail it (#80)
 - **M34b** · Multi-floor navigation: map cells hold multiple walkable levels, enabling buildings with stairs and balconies
