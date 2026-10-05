@@ -201,6 +201,8 @@ describe('Extraction run (M43)', () => {
       exits: EXITS,
       opponentStarts: STARTS,
       cases: [],
+      regens: [],
+      regenDistance: 15,
     };
     const setup = { squad: 3, runner: 0, squadTeam: 0, respawnAfter: 1, spawnLift: 0 };
     const picked = new Set<number>();

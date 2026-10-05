@@ -1,3 +1,5 @@
+import type { Difficulty } from './bots';
+
 /**
  * Extraction (M43; owner, 2026-10-04): a squad of one to three goes in at an insertion point, finds what it can and
  * gets out through an exit before the clock runs out. These are the rules every map shares; each map's own numbers
@@ -31,6 +33,21 @@ export interface ExtractionRules {
   caseNoiseEvery: number;
   /** Seconds to pick up what you dropped when you were hit (plan: no opening time, so the hold ends at once). */
   dropOpenTime: number;
+  /**
+   * Waves (M45): hit opponents come back together every this many seconds, by the opponents' difficulty, or as soon as
+   * none is left in play, up to the run's cap (base + squad).
+   */
+  waveEvery: Readonly<Record<Difficulty, number>>;
+  /** In the last part of the run (this share of its time left) the cap is this many higher. */
+  lateShare: number;
+  lateExtra: number;
+  /**
+   * A regen point is in a squad member's sight if a line from their eye reaches any of these heights of a returner
+   * standing there (shares of the body's height: chest and head).
+   */
+  regenSeenAt: readonly number[];
+  /** A regen point is free only with nobody in play within this distance (m): two returners never share one. */
+  regenClearance: number;
 }
 
 export const EXTRACTION: ExtractionRules = {
@@ -49,6 +66,14 @@ export const EXTRACTION: ExtractionRules = {
   caseHeightReach: 1,
   caseNoiseEvery: 1,
   dropOpenTime: 0,
+  /** The plan's numbers; Pro waves come as fast as Hard's (its bots are what make it harder). */
+  waveEvery: { easy: 100, normal: 75, hard: 60, pro: 60 },
+  /** "One more in play in the last third". */
+  lateShare: 1 / 3,
+  lateExtra: 1,
+  regenSeenAt: [0.5, 0.9],
+  /** About two bodies' width. */
+  regenClearance: 1,
 };
 
 /** The squad a run plays with for the picked team size: the team size, at most `maxSquad` (a map may allow bigger teams). */
