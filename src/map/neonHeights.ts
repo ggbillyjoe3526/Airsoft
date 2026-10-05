@@ -802,6 +802,7 @@ export const NEON_HEIGHTS: MapData = {
   name: 'Neon Heights',
   blocks: PLAN_BLOCKS.map(blockToWorld),
   decor: [road()].map(blockToWorld),
+  ambience: 'city',
   killY: -10,
   spawns: SPAWNS,
   deadZones: [WEST_DEAD_ZONE.map(spawnToWorld), EAST_DEAD_ZONE.map(spawnToWorld)],

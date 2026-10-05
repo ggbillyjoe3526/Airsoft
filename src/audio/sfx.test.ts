@@ -310,6 +310,12 @@ function plays(src: FakeSource, cue: SoundCue): boolean {
   return LIBRARY.get(48000).get(cue)!.some((v) => v.length === data.length && v.every((x, i) => x === data[i]));
 }
 
+/** Whether `src` plays one of the engine's variants of `cue` (map cues included). */
+function playsOf(engine: AudioEngine, src: FakeSource, cue: SoundCue): boolean {
+  const data = (src.buffer as FakeBuffer).data[0]!;
+  return engine.samples(cue).some((v) => v.length === data.length && v.every((x, i) => x === data[i]));
+}
+
 const shot = (characterId: number): GameEvent => ({ type: 'shot', characterId, replicaId: 'aeg', position: vec3(0, 1.6, 0) });
 const step = (characterId: number): GameEvent => ({ type: 'footstep', characterId, kind: 'run' });
 
@@ -1453,11 +1459,6 @@ describe('M33j: the woods at night in a match', () => {
   });
 
   const onGround = (x: number, z: number) => vec3(x, terrainHeightAt(WOODLAND.terrain!, x, z)!, z);
-  /** Whether `src` plays one of the engine's variants of `cue` (map cues included). */
-  const playsOf = (engine: AudioEngine, src: FakeSource, cue: SoundCue): boolean => {
-    const data = (src.buffer as FakeBuffer).data[0]!;
-    return engine.samples(cue).some((v) => v.length === data.length && v.every((x, i) => x === data[i]));
-  };
 
   /** A match on `map` by day or night, as CombatPresentation sets it up, playing from the first spawn. */
   function match(map: typeof WOODLAND, night: boolean, engine = engineFor()) {
@@ -1506,13 +1507,14 @@ describe('M33j: the woods at night in a match', () => {
     expect(calls.some((s) => plays(s, 'ambience.bird'))).toBe(false);
   });
 
-  it('silences the birds on Neon Heights by Night, and keeps them by Day', () => {
+  it('plays the city on Neon Heights (M34g): a shop door chiming by Day, arcade bleeps by Night, never a bird', () => {
     for (const night of [true, false]) {
-      const { sfx, ctx, all } = match(NEON_HEIGHTS, night);
+      const { sfx, ctx, engine, all } = match(NEON_HEIGHTS, night);
       for (let t = 0; t < Math.round(60 / SIM_DT); t++) sfx.afterTick(all, PLAYER);
-      const birds = ctx.sources.filter((s) => !s.loop && plays(s, 'ambience.bird'));
-      if (night) expect(birds).toHaveLength(0);
-      else expect(birds.length).toBeGreaterThan(0);
+      const calls = ctx.sources.filter((s) => !s.loop);
+      expect(calls.length, `night ${night}`).toBeGreaterThanOrEqual(2);
+      for (const s of calls) expect(playsOf(engine, s, night ? 'ambience.arcade' : 'ambience.chime')).toBe(true);
+      expect(calls.some((s) => plays(s, 'ambience.bird'))).toBe(false);
     }
   });
 
@@ -1568,9 +1570,9 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
     sfx.setPaused(false);
     return { sfx, ctx: FakeContext.last, player, bot, all, characterOf: (id: number) => all.find((c) => c.id === id) };
   }
-  const isMapCueName = (c: string): boolean => /^step\.(grass|leaves|earth|gravel|wood)\./.test(c) || c === 'ambience.owl';
+  const isMapCueName = (c: string): boolean => /^step\.(grass|leaves|earth|gravel|wood)\./.test(c) || /^ambience\.(owl|chime|arcade)$/.test(c);
 
-  it('renders nothing beyond the title screen for Depot and Neon Heights (day or night): not a buffer more', () => {
+  it('renders nothing beyond the title screen for Depot: not a buffer more', () => {
     const engine = engineFor();
     // The title screen: every title cue, the yard's bed and the echo.
     engine.cueBuffers();
@@ -1579,14 +1581,30 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
     const ctx = FakeContext.last;
     expect([...engine.cueBuffers().keys()].some(isMapCueName)).toBe(false);
     const titleBuffers = ctx.buffersMade;
-    for (const [map, night] of [[DEPOT, false], [NEON_HEIGHTS, true], [NEON_HEIGHTS, false]] as const) {
-      const m = matchOn(map, night, engine);
-      for (let t = 0; t < Math.round(10 / SIM_DT); t++) m.sfx.afterTick(m.all, PLAYER);
-      m.sfx.onEvent(step(m.bot.id), PLAYER, m.characterOf);
-      m.sfx.dispose();
-      expect(ctx.buffersMade, map.name).toBe(titleBuffers);
-    }
+    const m = matchOn(DEPOT, false, engine);
+    for (let t = 0; t < Math.round(10 / SIM_DT); t++) m.sfx.afterTick(m.all, PLAYER);
+    m.sfx.onEvent(step(m.bot.id), PLAYER, m.characterOf);
+    m.sfx.dispose();
+    expect(ctx.buffersMade).toBe(titleBuffers);
     expect([...engine.cueBuffers().keys()].some(isMapCueName)).toBe(false);
+  });
+
+  it("renders Neon Heights' own sounds (M34g) as a match on it loads, only its own, once each", () => {
+    const engine = engineFor();
+    engine.cueBuffers();
+    const ctx = FakeContext.last;
+    const title = ctx.buffersMade;
+    const day = matchOn(NEON_HEIGHTS, false, engine);
+    day.sfx.dispose();
+    const afterDay = ctx.buffersMade;
+    expect(afterDay).toBeGreaterThan(title);
+    expect(engine.cueBuffers().get('ambience.chime')?.length).toBe(AUDIO.variants);
+    expect(engine.cueBuffers().has('ambience.arcade')).toBe(false);
+    expect([...engine.cueBuffers().keys()].some((c) => c.startsWith('step.') && isMapCueName(c))).toBe(false);
+    matchOn(NEON_HEIGHTS, false, engine).sfx.dispose();
+    expect(ctx.buffersMade).toBe(afterDay);
+    matchOn(NEON_HEIGHTS, true, engine).sfx.dispose();
+    expect(engine.cueBuffers().get('ambience.arcade')?.length).toBe(AUDIO.variants);
   });
 
   it("stops every Woodland loop when its match ends, and the next match on Depot plays only the yard's bed, its birds and concrete", () => {
@@ -1622,17 +1640,17 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
     expect(depotLoops.every((s) => s.stopAt === 0)).toBe(true);
   });
 
-  it('switches Day | Night on Neon Heights without leaving the night silent of the bed or the day without birds', () => {
+  it("switches Day | Night on Neon Heights between the city's two soundscapes, two beds each, never a bird", () => {
     const engine = engineFor();
     for (const night of [true, false, true]) {
       const from = FakeContext.made > 0 ? FakeContext.last.sources.length : 0;
       const m = matchOn(NEON_HEIGHTS, night, engine);
       for (let t = 0; t < Math.round(60 / SIM_DT); t++) m.sfx.afterTick(m.all, PLAYER);
       const mine = m.ctx.sources.slice(from);
-      expect(mine.filter((s) => s.loop && s.stopAt === null), `night ${night}`).toHaveLength(2);
-      const birds = mine.filter((s) => !s.loop && plays(s, 'ambience.bird'));
-      if (night) expect(birds).toHaveLength(0);
-      else expect(birds.length).toBeGreaterThan(0);
+      expect(mine.filter((s) => s.loop && s.stopAt === null), `night ${night}`).toHaveLength(4);
+      const calls = mine.filter((s) => !s.loop);
+      expect(calls.length, `night ${night}`).toBeGreaterThan(0);
+      expect(calls.every((s) => playsOf(engine, s, night ? 'ambience.arcade' : 'ambience.chime'))).toBe(true);
       m.sfx.dispose();
       expect(m.ctx.sources.filter((s) => s.loop && s.stopAt === null)).toHaveLength(0);
     }

@@ -67,7 +67,10 @@ export type SoundCue =
   /** A bird somewhere round the yard: the ambience's sparse one-shots (audit CORE-34). */
   | 'ambience.bird'
   /** An owl somewhere in the woods at night (M33j): the night ambience's sparse one-shots. */
-  | 'ambience.owl';
+  | 'ambience.owl'
+  /** A shop door's chime down a city street by day, an arcade cabinet's bleeps by night (M34g). */
+  | 'ambience.chime'
+  | 'ambience.arcade';
 
 /** Typical spreads: shots and mechanisms vary a little, steps and impacts more. */
 const TIGHT = { pitchSpread: 0.04, timeSpread: 0.08, gainSpread: 0.1 } as const;
@@ -523,10 +526,32 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     timeSpread: 0.1,
     gainSpread: 0.1,
   },
+  /** A shop door's chime (M34g): two bell notes, "ding-dong", a major third apart (short: map sounds share a budget). */
+  'ambience.chime': {
+    layers: [
+      { kind: 'modes', gain: 0.5, modes: [{ hz: 1319, decay: 0.35, gain: 1 }, { hz: 2638, decay: 0.15, gain: 0.25 }, { hz: 3560, decay: 0.08, gain: 0.1 }] },
+      { kind: 'modes', at: 0.26, gain: 0.5, modes: [{ hz: 1047, decay: 0.4, gain: 1 }, { hz: 2094, decay: 0.18, gain: 0.25 }, { hz: 2826, decay: 0.09, gain: 0.1 }] },
+    ],
+    pitchSpread: 0.02,
+    timeSpread: 0.1,
+    gainSpread: 0.1,
+  },
+  /** An arcade cabinet's attract tune (M34g): four quick square-wave notes up an arpeggio, a toy's bleep, softened. */
+  'ambience.arcade': {
+    layers: [
+      { kind: 'tone', wave: 'square', attack: 0.003, decay: 0.08, gain: 0.3, hz: 523, filter: { type: 'lowpass', hz: 3000, q: 0.7 } },
+      { kind: 'tone', wave: 'square', at: 0.09, attack: 0.003, decay: 0.08, gain: 0.3, hz: 659, filter: { type: 'lowpass', hz: 3000, q: 0.7 } },
+      { kind: 'tone', wave: 'square', at: 0.18, attack: 0.003, decay: 0.08, gain: 0.3, hz: 784, filter: { type: 'lowpass', hz: 3000, q: 0.7 } },
+      { kind: 'tone', wave: 'square', at: 0.27, attack: 0.003, decay: 0.12, gain: 0.3, hz: 1047, hzTo: 1065, filter: { type: 'lowpass', hz: 3000, q: 0.7 } },
+    ],
+    pitchSpread: 0.03,
+    timeSpread: 0.15,
+    gainSpread: 0.1,
+  },
 };
 
 /**
- * The cues only some maps play (M33j): the ground's footsteps and the woods' owl. They come last in SOUNDS and are never
+ * The cues only some maps play (M33j): the ground's footsteps, the woods' owl and the city's chime and bleeps (M34g). They come last in SOUNDS and are never
  * rendered on the title screen: a map that plays them has them rendered as it loads (AudioEngine.prepare), each from
  * its own seed here, not the stream the title screen's cues share in table order, so adding one leaves every other
  * cue's sound as it was.
@@ -548,6 +573,8 @@ export const MAP_CUE_SEEDS: Readonly<Partial<Record<SoundCue, number>>> = {
   'step.wood.sprint': 3352,
   'step.wood.land': 3353,
   'ambience.owl': 3361,
+  'ambience.chime': 3491,
+  'ambience.arcade': 3492,
 };
 
 /** Whether `cue` is rendered only for a map that plays it (MAP_CUE_SEEDS). */

@@ -68,7 +68,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Neon Heights by Night: 12 lamps light separate floors, neon signs glow, lit and dark windows on the perimeter (M34e)
 - Neon Heights art: pastel painted buildings (mint, pink, cyan, amber on slate), paved street with asphalt, neon trim strips, lit arcade cabinets; night: softer purple sky with city lighting and 180 stars (M34f)
 - The woodland look on any map that asks for it: trees, logs and boulders drawn as bark and stone inside their boxes, crowns over the trees, ground patches (gravel, earth, wood, leaf litter under the trees), camp fires with flickering flames and embers, lanterns, and a moon and stars under the night preset; first used by Woodland (M33i)
-- The field's sound from map data: its ambience by day or night (no birds at night on any map), wind, insects, an owl and crackling camp fires in the woods at night, and footsteps on terrain by the ground underfoot (grass, leaves, earth, gravel, wood); first used by Woodland (M33j)
+- The field's sound from map data: its ambience by day or night (no birds at night on any map), wind, insects, an owl and crackling camp fires in the woods at night (Woodland), traffic hum, drones and shop chimes by day with neon sizzle and arcade bleeps by night (Neon Heights), and footsteps on terrain by ground underfoot (M33j, M34g)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
