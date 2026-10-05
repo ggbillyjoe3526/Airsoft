@@ -63,6 +63,7 @@ export function teammateSpots(b: Bot, w: BotWorld): TakenSpots {
     else if (o.mode === 'advance' && o.holdCover) addTaken(o.holdSpot.position);
     else if (o.mode === 'flag') addTaken(o.flagGoal);
     else if (o.role === 'guard') addTaken(o.post);
+    else if (o.orderCovering) addTaken(o.orderGoal);
   }
   return taken;
 }
@@ -143,6 +144,8 @@ function runGoal(b: Bot, w: BotWorld): Vec3 | undefined {
       jitterPoint(b, w, round.stops[b.patrolIndex]!, w.cfg.laneJitter, b.laneGoal);
       return b.laneGoal;
     }
+    // Every case on the round is open: off the round, so a follower stops keeping to a stop and hunts too.
+    b.patrolIndex = -1;
   }
   b.hunting = true;
   if (b.role === 'hunter' && freshNews(b, w, b.huntGoal)) {

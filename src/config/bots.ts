@@ -426,10 +426,11 @@ export const BOT_BEHAVIOUR = {
   /**
    * With no such cover (a case in the open), a guard stands guardOpenRadius from the case (metres), on its floor, with
    * the case in view and clear of teammates' spots: straight out from its front first, then turned guardOpenTurnDeg at a
-   * time to either side, up to 90°.
+   * time to either side, up to guardOpenMaxTurnDeg.
    */
   guardOpenRadius: 3,
   guardOpenTurnDeg: 30,
+  guardOpenMaxTurnDeg: 90,
   /** A guard goes after a noise, or someone it lost, only within this of its case (metres); further off it watches from its post. */
   guardLeash: 8,
   /**

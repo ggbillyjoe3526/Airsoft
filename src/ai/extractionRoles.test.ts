@@ -123,6 +123,23 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     r.dispose();
   });
 
+  it('sends both of a patrol pair off hunting once every case on their round is open', () => {
+    const r = runWithGuardedLocker('normal', 2);
+    const lead = home(r.bots.bots).find((b) => b.role === 'patrol' && b.patrolLead && b.patrolPartner)!;
+    const follower = lead.patrolPartner!;
+    r.play(2);
+    for (const i of lead.patrol!.cases) r.state.round.run.cases[i]!.open = true;
+    // The lead finishes the walk to its stop, then finds nothing shut on its round.
+    r.play(30);
+    // Off the round: the follower no longer keeps to the lead's last stop.
+    for (const b of [lead, follower]) {
+      if (!isInPlay(b.character) || b.mode !== 'advance') continue;
+      expect(b.patrolIndex, `Red ${b.character.id}`).toBe(-1);
+      expect(b.hunting, `Red ${b.character.id}`).toBe(true);
+    }
+    r.dispose();
+  });
+
   it('turns the patrols into hunters at huntersFrom of the run, who make for the latest news of the squad', () => {
     const r = runWithGuardedLocker();
     const runTime = r.state.round.clock;
@@ -284,14 +301,17 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     const mates = r.bots.bots.filter((b) => b.character.team === 0);
     r.play(k.openTime - 0.2);
     expect(run.opening).toBe(at);
+    let covering = 0;
     for (const m of mates) {
       if (!isInPlay(m.character) || m.mode !== 'order') continue;
+      covering++;
       expect(m.orderCovering).toBe(true);
       expect(flat(m.character.position, r.you.position), `Blue ${m.character.id}`).toBeLessThanOrEqual(cfg.openCoverRadius + 1);
       // Watching behind you, to its slot's side.
       const watch = cfg.openWatchDeg[m.orderSlot % cfg.openWatchDeg.length]!;
       expect(Math.abs(wrapAngle(m.orderYaw - r.you.yaw - (watch * Math.PI) / 180))).toBeLessThan(1e-6);
     }
+    expect(covering).toBeGreaterThan(0);
     r.yours.use = false;
     r.play(0.5);
     for (const m of mates) if (m.mode === 'order') expect(m.orderCovering).toBe(false);

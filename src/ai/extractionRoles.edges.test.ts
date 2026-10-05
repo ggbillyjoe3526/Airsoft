@@ -109,7 +109,7 @@ describe('Extraction: M46 edges', () => {
     r.dispose();
   });
 
-  it('never guards nor patrols a case within insertionBerth of the squad’s insertion, the locker included', () => {
+  it('never guards nor patrols a field case within insertionBerth of the squad’s insertion, but always guards the locker', () => {
     let within = 0;
     let lockerWithin = 0;
     for (let seed = 1; seed <= 12; seed++) {
@@ -121,7 +121,15 @@ describe('Extraction: M46 edges', () => {
       near.forEach((n, i) => {
         if (!n) return;
         within++;
-        if (cases[i]!.kind === 'locker') lockerWithin++;
+        if (cases[i]!.kind === 'locker') {
+          // The run's prize is guarded wherever it stands.
+          lockerWithin++;
+          expect(
+            team.filter((b) => b.role === 'guard' && b.guardCase === i).length,
+            `seed ${seed} locker guards`,
+          ).toBe(Math.min(BOT_SKILL.normal.lockerGuards, team.filter((b) => isInPlay(b.character)).length));
+          return;
+        }
         expect(
           team.some((b) => b.role === 'guard' && b.guardCase === i),
           `seed ${seed} case ${i} guarded`,

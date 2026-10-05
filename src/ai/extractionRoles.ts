@@ -59,14 +59,15 @@ export class RunRoles {
   ) {}
 
   /**
-   * The run's start: guards to the locker (and a field case), patrols in pairs over the rest; none of it within
-   * insertionBerth of `insertion` (the middle of the squad's insertion).
+   * The run's start: guards to the locker (and a field case), patrols in pairs over the rest; no field case's guard and
+   * no patrol round within insertionBerth of `insertion` (the middle of the squad's insertion). The locker is guarded
+   * wherever it stands: it is the run's prize.
    */
   start(bots: readonly Bot[], w: BotWorld, insertion: Vec3): void {
     const cases = w.round.run.cases;
     for (const k of cases) this.berth.push(flat(k.position, insertion) < w.cfg.insertionBerth);
     const team = bots.filter((b) => b.character.team === this.home && isInPlay(b.character));
-    const locker = cases.findIndex((k, i) => k.kind === LOCKER && !k.open && !this.berth[i]);
+    const locker = cases.findIndex((k) => k.kind === LOCKER && !k.open);
     const lockerGuards = locker >= 0 ? Math.min(this.skill.lockerGuards, team.length) : 0;
     if (lockerGuards > 0) this.slots.push({ caseIndex: locker, want: lockerGuards });
     // An odd one out of three or more left over guards a field case (the one furthest from the locker) rather than
@@ -239,7 +240,7 @@ function openPost(k: RunCase, w: BotWorld, taken: TakenSpots, fallback: Vec3): V
   caseMiddle.x = k.position.x;
   caseMiddle.y = k.position.y + w.body.height / 2;
   caseMiddle.z = k.position.z;
-  const steps = Math.floor(90 / cfg.guardOpenTurnDeg);
+  const steps = Math.floor(cfg.guardOpenMaxTurnDeg / cfg.guardOpenTurnDeg);
   for (let i = 0; i <= 2 * steps; i++) {
     // 0, +1, -1, +2, -2 … turns.
     const turn = (i % 2 === 1 ? 1 : -1) * Math.ceil(i / 2) * cfg.guardOpenTurnDeg * DEG;
