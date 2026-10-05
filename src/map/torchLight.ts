@@ -59,7 +59,8 @@ export function updateTorchLight(field: TorchLight, characters: readonly Charact
       ray.y = point.y - eye.y;
       ray.z = point.z - eye.z;
       const d = Math.hypot(ray.x, ray.y, ray.z);
-      if (d > light.reach || d < 1e-6) continue;
+      // Reach is measured across the ground, as perception measures sight ranges.
+      if (Math.hypot(ray.x, ray.z) > light.reach || d < 1e-6) continue;
       ray.x /= d;
       ray.y /= d;
       ray.z /= d;
