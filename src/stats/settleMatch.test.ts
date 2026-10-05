@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newCollection } from '../pool/collection';
+import { itemKey, newCollection } from '../pool/collection';
 import { GAME_POOL } from '../pool/gamePool';
 import { emptyRecords, resultKey } from './records';
 import { MatchTakes, matchStanding, settleMatch } from './settleMatch';
@@ -23,11 +23,35 @@ describe('settling a finished match (audit CORE-06)', () => {
     const records = emptyRecords();
     const collection = newCollection(GAME_POOL, 1);
     const fc = collection.fc;
-    expect(settleMatch(records, collection, null, null, GAME_POOL.economy, false)).toEqual({ news: null, pay: null });
+    expect(settleMatch(records, collection, null, null, GAME_POOL.economy, false)).toEqual({ news: null, pay: null, haul: null });
     expect(records).toEqual(emptyRecords());
     const off = settleMatch(records, collection, null, OUTCOME, GAME_POOL.economy, true);
     expect(off.pay).toBeNull();
     expect(collection.fc).toBe(fc);
+  });
+});
+
+describe('an Extraction haul (M44)', () => {
+  const grip = GAME_POOL.assets.find((a) => a.category === 'grip')!;
+  const HAUL = { fc: 85, items: [{ asset: grip.id, tier: 'epic' }] };
+
+  it('goes into the collection with the pay, in the same settle (one save), the parts revealed new or spare', () => {
+    const collection = newCollection(GAME_POOL, 1);
+    const fc = collection.fc;
+    const settled = settleMatch(emptyRecords(), collection, null, { ...OUTCOME, haul: HAUL }, GAME_POOL.economy, false);
+    expect(collection.fc).toBe(fc + settled.pay!.total + 85);
+    expect(collection.owned[itemKey(grip.id, 'epic')]).toBe(1);
+    expect(settled.haul).toEqual([{ item: HAUL.items[0], isNew: true }]);
+  });
+
+  it('is never granted when the run is not paid: the Armory off, Dev settings or dev content, or already taken', () => {
+    const collection = newCollection(GAME_POOL, 1);
+    const before = structuredClone(collection);
+    const off = settleMatch(emptyRecords(), collection, null, { ...OUTCOME, haul: HAUL }, GAME_POOL.economy, true);
+    expect(off.haul).toBeNull();
+    // A run that doesn't pay (Dev settings, dev content) or was settled already has no outcome to carry a haul.
+    expect(settleMatch(emptyRecords(), collection, null, null, GAME_POOL.economy, false).haul).toBeNull();
+    expect(collection).toEqual(before);
   });
 });
 

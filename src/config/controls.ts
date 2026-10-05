@@ -20,6 +20,8 @@ export const DEFAULT_BINDINGS = {
   reload: ['KeyR'],
   /** Steps the replica's fire selector (semi / burst / auto, as far as the replica has them). */
   fireMode: ['KeyB'],
+  /** Hold beside a case to open it (M44, Extraction). G: E leans and F is Follow me; T is kept for a weapon torch. */
+  use: ['KeyG'],
   slot1: ['Digit1'],
   slot2: ['Digit2'],
   /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
@@ -62,6 +64,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'jump', label: 'Jump' },
   { action: 'reload', label: 'Reload' },
   { action: 'fireMode', label: 'Fire mode' },
+  { action: 'use', label: 'Use: open a case (hold)' },
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },

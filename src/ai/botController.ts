@@ -380,6 +380,10 @@ export class BotController {
         const range =
           e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : e.kind === 'rattle' ? cfg.footstepHearingRattle : cfg.footstepHearingRun;
         if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range, walker.id);
+      } else if (e.type === 'caseNoise') {
+        // Extraction (M44): a case being opened carries as far as its kind's Heard m (pool.md Caches), walls muffling it.
+        const opener = this.character(state, e.characterId);
+        if (opener && isInPlay(opener)) this.hear(opener.team, e.position, opener.position, time, opener.position, e.range, opener.id);
       } else if (e.type === 'bbImpact') {
         // Only enemy fire suppresses: a bot's own BB (or a teammate's) landing near it is no threat.
         const shooter = this.character(state, e.ownerId);

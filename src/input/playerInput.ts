@@ -251,6 +251,7 @@ export class PlayerInput {
     cmd.fire = !this.fireBlocked && (kb.isDown('fire') || this.fireLatch);
     cmd.switchTo = this.switchLatch;
     cmd.cycleFireMode = this.fireModeLatch;
+    cmd.use = kb.isDown('use');
     this.clearOneShots();
   }
 

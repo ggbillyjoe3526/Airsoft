@@ -4,7 +4,7 @@ import type { Character } from '../sim/character';
 import { isInPlay } from '../sim/elimination';
 import type { RoundState } from '../sim/round';
 import type { ExtractionRules } from '../config/extraction';
-import { respawnNote, runLine } from './runStatus';
+import { carriedNote, respawnNote, runLine } from './runStatus';
 import { flagLine } from './flagStatus';
 
 /**
@@ -34,7 +34,7 @@ export class Scoreboard {
   private shownLive = false;
   private shownUrgent = false;
   /** Extraction: what the strip was last built from (see updateRun). */
-  private readonly shownRun = { status: '', second: -1, open: -1, warned: false, outcome: '', respawns: -1 };
+  private readonly shownRun = { status: '', second: -1, open: -1, warned: false, outcome: '', respawns: -1, carried: -1 };
   private readonly respawn: HTMLSpanElement;
 
   /** `teamSizes`: players per team (Extraction's sides differ). `playerTeam` is marked "you" so it's obvious which score is yours. */
@@ -108,7 +108,10 @@ export class Scoreboard {
     this.root.remove();
   }
 
-  /** Extraction: the run's strip and respawn note, rebuilt only when the count's second, an exit or the outcome changes. */
+  /**
+   * Extraction: the run's strip and respawn note (with what you carry, M44), rebuilt only when the count's second, an
+   * exit, the outcome or what you carry changes.
+   */
   private updateRun(round: RoundState, rules: ExtractionRules, respawnsLeft: number): void {
     const r = round.run;
     const shown = this.shownRun;
@@ -136,9 +139,12 @@ export class Scoreboard {
       // The bar fills smoothly between the seconds.
       this.setRunFill(r.count / rules.extractTime);
     }
-    if (respawnsLeft !== shown.respawns) {
+    // What you carry (M44) changes only as a case is opened, dropped or picked up again.
+    if (respawnsLeft !== shown.respawns || r.carried.length !== shown.carried) {
       shown.respawns = respawnsLeft;
-      this.respawn.textContent = respawnNote(respawnsLeft);
+      shown.carried = r.carried.length;
+      const carrying = carriedNote(r.carried);
+      this.respawn.textContent = carrying ? `${respawnNote(respawnsLeft)} · ${carrying}` : respawnNote(respawnsLeft);
       this.respawn.classList.toggle('spent', respawnsLeft <= 0);
     }
   }

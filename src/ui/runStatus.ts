@@ -1,6 +1,7 @@
 import type { ExtractionRules } from '../config/extraction';
-import type { RunState } from '../sim/extraction';
+import { type CaseFind, haulTotals, type RunState } from '../sim/extraction';
 import { formatRoundTime } from '../config/matchRules';
+import { fcText } from './menus/armoryScreen';
 
 /** What the strip under the scoreboard says in Extraction: the line, how far the count is (0..1), and whether it warns. */
 export interface RunLine {
@@ -34,4 +35,17 @@ export function runLine(run: RunState, clock: number, rules: ExtractionRules): R
 /** The respawn note beside the strip: your one respawn is still there, or spent. */
 export function respawnNote(left: number): string {
   return left > 0 ? `Respawn ready` : 'No respawn left';
+}
+
+/** "85 FC and 2 parts", "1 part", "40 FC" (M44); '' for nothing. */
+export function haulWhat(h: { fc: number; items: readonly unknown[] }): string {
+  const parts = h.items.length > 0 ? `${h.items.length} ${h.items.length === 1 ? 'part' : 'parts'}` : '';
+  const fc = h.fc > 0 ? fcText(h.fc) : '';
+  return fc && parts ? `${fc} and ${parts}` : fc || parts;
+}
+
+/** The strip's note on what you carry (M44): "Carrying 85 FC and 1 part", or '' with nothing. */
+export function carriedNote(carried: readonly CaseFind[]): string {
+  const what = haulWhat(haulTotals(carried));
+  return what ? `Carrying ${what}` : '';
 }

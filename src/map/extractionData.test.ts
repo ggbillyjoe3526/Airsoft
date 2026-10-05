@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { EXTRACTION } from '../config/extraction';
 import { NAV } from '../config/nav';
 import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
+import { placeCases } from '../pool/caches';
+import { GAME_POOL } from '../pool/gamePool';
 import { exitClosedFor, pickOpponentStarts } from '../sim/extraction';
+import { createRng } from '../sim/rng';
 import { MAPS } from './maps';
 import { modeOffered, playableMode } from './playableMode';
 
@@ -52,6 +55,22 @@ describe('Extraction map data (M43)', () => {
           for (const s of pickOpponentStarts(x.opponentStarts, ins.spawns, x.baseOpponents + MAX_SQUAD)) {
             for (const sp of ins.spawns) expect(Math.hypot(s.position.x - sp.position.x, s.position.z - sp.position.z), ins.name).toBeGreaterThan(15);
           }
+        }
+      });
+
+      it('has case spots on walkable floor, out of the exits, with room for every kind of case at its most (M44)', () => {
+        const keys = GAME_POOL.caseKinds.map((k) => k.key);
+        for (const c of x.cases) {
+          const at = JSON.stringify(c.position);
+          expect(isWalkableAt(nav, c.position.x, c.position.y, c.position.z), at).toBe(true);
+          for (const k of c.kinds) expect(keys, at).toContain(k);
+          for (const e of x.exits) expect(Math.hypot(c.position.x - e.position.x, c.position.z - e.position.z), at).toBeGreaterThan(e.radius + 1);
+        }
+        // Every kind at its most, whatever the seed: each still gets all it wants.
+        const most = GAME_POOL.caseKinds.map((k) => ({ ...k, count: { min: k.count.max, max: k.count.max } }));
+        for (let seed = 0; seed < 100; seed++) {
+          const placed = placeCases(most, x.cases, createRng(seed));
+          for (const k of most) expect(placed.filter((p) => p.kind.key === k.key).length, `${k.key} seed ${seed}`).toBe(k.count.max);
         }
       });
 

@@ -3,15 +3,18 @@ import type { ExitZone, ExtractionData, SpawnPoint } from '../map/mapTypes';
 import { type Character, respawnCharacter } from './character';
 import { isInPlay } from './elimination';
 import type { GameEvent } from './events';
+import { refillSpares } from './rangeTargets';
 import { createRng, rngNext } from './rng';
-import { type Vec3, vec3 } from './vec';
+import { copy, type Vec3, vec3 } from './vec';
 
 /**
  * Extraction's run (M43): one long "round" against the clock. The squad goes in at an insertion point, and the run ends
  * when the runner (the player) has stood in an open exit for `extractTime` ("extracted"), is hit with no respawn left
  * ("out"), or time runs out ("time": caught out). A hit squad member comes back at the insertion once per run, the
  * moment the hit call ends (owner, 2026-10-04: automatically, no walk back). Exits within `minExitDistance` of the
- * insertion are closed for the run; a late exit opens with `lateExitAt` seconds left. Plain data, stepped by
+ * insertion are closed for the run; a late exit opens with `lateExitAt` seconds left. Cases (M44): the runner opens one
+ * by holding the Use key beside it (its kind's opening time, making its noise as it goes), and carries what it held;
+ * a hit drops all of it as a case where they fell, and it is theirs only if they extract. Plain data, stepped by
  * sim/round.ts.
  */
 
@@ -29,6 +32,52 @@ export interface RunExit {
   open: boolean;
 }
 
+/** A part found in a case (M44): a pool asset id and its rarity tier id, as the collection stores them. */
+export interface FoundItem {
+  asset: string;
+  tier: string;
+}
+
+/**
+ * What a case holds (M44, rolled from pool.md's Caches table by pool/caches.ts): Field Credits, a BB resupply (used
+ * the moment it is opened: the runner's spare magazines are topped up) and at most one part.
+ */
+export interface CaseFind {
+  fc: number;
+  resupply: boolean;
+  item: FoundItem | null;
+}
+
+/** A case placed for the run: its kind (pool.md's Key), where it stands, how it opens and what it holds. */
+export interface CaseSetup {
+  kind: string;
+  name: string;
+  position: Vec3;
+  yaw: number;
+  /** Seconds the Use key is held to open it. */
+  openTime: number;
+  /** How far its noise carries while it is opened (m); 0 is silent. */
+  heard: number;
+  find: CaseFind;
+}
+
+/** A case in this run: one placed at the start, or what the runner dropped when hit (`dropped`). */
+export interface RunCase {
+  kind: string;
+  name: string;
+  position: Vec3;
+  yaw: number;
+  openTime: number;
+  heard: number;
+  /** What it holds: one find for a placed case, everything carried for a dropped one. */
+  finds: CaseFind[];
+  open: boolean;
+  dropped: boolean;
+}
+
+/** The kind of a case the runner dropped when hit (no pool.md row: it holds what they carried). */
+export const DROPPED_CASE = 'dropped';
+
 /** What the exit count is doing, for the HUD: nobody at an exit, counting, or paused by an opponent in the zone. */
 export type ExitCountStatus = 'idle' | 'counting' | 'paused';
 
@@ -45,6 +94,17 @@ export interface RunState {
   lateOpened: boolean;
   warned: boolean;
   outcome: RunOutcome;
+  /** The run's cases (M44): those placed at the start, then any the runner dropped. */
+  cases: RunCase[];
+  /** The shut case the runner could open now (within reach), or -1: the HUD's prompt. */
+  inReach: number;
+  /** The case the runner is opening (holding Use), or -1, and for how long so far (s). */
+  opening: number;
+  openProgress: number;
+  /** Seconds until the case being opened makes its noise again. */
+  noiseIn: number;
+  /** What the runner carries: theirs if they extract, dropped as a case if they are hit. */
+  carried: CaseFind[];
 }
 
 /** What a run needs from the session: the rules, who the runner and the squad are, and the run's places. */
@@ -64,10 +124,27 @@ export interface ExtractionContext {
   respawnAfter: number;
   /** Characters stand this far above a spawn's floor point (the physics rest gap). */
   spawnLift: number;
+  /** The run's cases, placed and rolled (pool/caches.ts rollRunCases); none on a map without case spots. */
+  cases: readonly CaseSetup[];
 }
 
 export function createRunState(): RunState {
-  return { exits: [], respawnsUsed: [], count: 0, countExit: -1, countStatus: 'idle', lateOpened: false, warned: false, outcome: 'none' };
+  return {
+    exits: [],
+    respawnsUsed: [],
+    count: 0,
+    countExit: -1,
+    countStatus: 'idle',
+    lateOpened: false,
+    warned: false,
+    outcome: 'none',
+    cases: [],
+    inReach: -1,
+    opening: -1,
+    openProgress: 0,
+    noiseIn: 0,
+    carried: [],
+  };
 }
 
 /** Horizontal distance from `a` to `b`. */
@@ -94,6 +171,20 @@ export function resetRun(run: RunState, ctx: ExtractionContext, characterCount: 
   run.lateOpened = false;
   run.warned = false;
   run.outcome = 'none';
+  run.cases = ctx.cases.map((c) => ({
+    kind: c.kind,
+    name: c.name,
+    position: vec3(c.position.x, c.position.y, c.position.z),
+    yaw: c.yaw,
+    openTime: c.openTime,
+    heard: c.heard,
+    finds: [c.find],
+    open: false,
+    dropped: false,
+  }));
+  run.inReach = -1;
+  stopOpening(run);
+  run.carried = [];
 }
 
 /**
@@ -139,6 +230,8 @@ export interface RunSetup {
   respawnAfter: number;
   spawnLift: number;
   rules?: ExtractionRules;
+  /** The run's cases (pool/caches.ts rollRunCases), rolled from the same seed; none if absent. */
+  cases?: readonly CaseSetup[];
 }
 
 /**
@@ -158,6 +251,7 @@ export function createRunContext(data: ExtractionData, setup: RunSetup): Extract
     exits: data.exits,
     respawnAfter: setup.respawnAfter,
     spawnLift: setup.spawnLift,
+    cases: setup.cases ?? [],
   };
 }
 
@@ -192,8 +286,10 @@ export function stepRun(run: RunState, characters: readonly Character[], ctx: Ex
   }
 
   let runner: Character | undefined;
+  for (const c of characters) if (c.id === ctx.runner) runner = c;
+  // Hit: what the runner carries stays where they fell, before the respawn takes them back to the insertion.
+  if (runner && !isInPlay(runner) && run.carried.length > 0) dropCarried(run, runner, rules, events);
   for (const c of characters) {
-    if (c.id === ctx.runner) runner = c;
     if (c.team !== ctx.squadTeam || isInPlay(c) || c.status === 'out') continue;
     // Back at the insertion the moment the hit call ends; a walk-off never starts (owner, 2026-10-04).
     if (c.status === 'calling' && c.statusTime < ctx.respawnAfter) continue;
@@ -207,8 +303,14 @@ export function stepRun(run: RunState, characters: readonly Character[], ctx: Ex
     events.push({ type: 'respawned', characterId: c.id, respawnsLeft: rules.respawns - used - 1 });
   }
 
-  if (runner && isInPlay(runner)) stepCount(run, runner, characters, ctx, events, dt);
-  else clearCount(run);
+  if (runner && isInPlay(runner)) {
+    stepCases(run, runner, rules, events, dt);
+    stepCount(run, runner, characters, ctx, events, dt);
+  } else {
+    run.inReach = -1;
+    stopOpening(run);
+    clearCount(run);
+  }
   if (run.count >= rules.extractTime) return endRun(run, 'extracted');
   if (clock <= 0) return endRun(run, 'time');
   return 'none';
@@ -223,7 +325,107 @@ export function respawnsLeft(run: RunState, c: Character, ctx: Pick<ExtractionCo
 function endRun(run: RunState, outcome: RunOutcome): RunOutcome {
   run.outcome = outcome;
   clearCount(run);
+  stopOpening(run);
+  run.inReach = -1;
   return outcome;
+}
+
+/**
+ * The haul (M44): what the runner carried out, once the run ended with them counted out at an exit; nothing for any
+ * other end (hit, caught out), so a run that ends otherwise keeps nothing.
+ */
+export function runHaul(run: RunState): readonly CaseFind[] {
+  return run.outcome === 'extracted' ? run.carried : [];
+}
+
+/** Everything the runner found this run (each placed case they opened; a BB resupply aside), kept or not. */
+export function runFinds(run: RunState): CaseFind[] {
+  const out: CaseFind[] = [];
+  for (const k of run.cases) if (k.open && !k.dropped) for (const f of k.finds) if (f.fc > 0 || f.item) out.push(f);
+  return out;
+}
+
+/** The haul's Field Credits and parts, in the order they were found. */
+export function haulTotals(finds: readonly CaseFind[]): { fc: number; items: FoundItem[] } {
+  let fc = 0;
+  const items: FoundItem[] = [];
+  for (const f of finds) {
+    fc += f.fc;
+    if (f.item) items.push(f.item);
+  }
+  return { fc, items };
+}
+
+function stopOpening(run: RunState): void {
+  run.opening = -1;
+  run.openProgress = 0;
+  run.noiseIn = 0;
+}
+
+/** Ticks summed to a whole opening time land a hair short of it (1/60 isn't exact): within this, it's done. */
+const SUM_SLACK = 1e-9;
+
+/** The nearest shut case within the runner's reach, or -1. */
+export function caseInReach(run: RunState, c: Character, rules: Pick<ExtractionRules, 'caseReach' | 'caseHeightReach'>): number {
+  let best = -1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < run.cases.length; i++) {
+    const k = run.cases[i]!;
+    if (k.open || Math.abs(c.position.y - k.position.y) > rules.caseHeightReach) continue;
+    const d = flat(c.position, k.position);
+    if (d <= rules.caseReach && d < bestDistance) {
+      best = i;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+/**
+ * The runner's Use key on the case in reach: held, it opens over the case's opening time, making its noise at the
+ * start and every `caseNoiseEvery` seconds; let go, or out of reach, and the next try starts again. Opened, its finds
+ * are carried (a BB resupply is used there and then).
+ */
+function stepCases(run: RunState, runner: Character, rules: ExtractionRules, events: GameEvent[], dt: number): void {
+  const at = caseInReach(run, runner, rules);
+  run.inReach = at;
+  if (at < 0 || !runner.using) {
+    stopOpening(run);
+    return;
+  }
+  const k = run.cases[at]!;
+  if (at !== run.opening) {
+    run.opening = at;
+    run.openProgress = 0;
+    run.noiseIn = 0;
+  }
+  run.openProgress += dt;
+  if (run.openProgress < k.openTime - SUM_SLACK) {
+    if (k.heard <= 0) return;
+    run.noiseIn -= dt;
+    if (run.noiseIn > 0) return;
+    run.noiseIn += rules.caseNoiseEvery;
+    events.push({ type: 'caseNoise', characterId: runner.id, case: at, kind: k.kind, position: k.position, range: k.heard });
+    return;
+  }
+  k.open = true;
+  for (const f of k.finds) {
+    if (f.resupply) refillSpares(runner.armament);
+    if (f.fc > 0 || f.item) run.carried.push(f);
+  }
+  stopOpening(run);
+  run.inReach = -1;
+  events.push({ type: 'caseOpened', characterId: runner.id, case: at, kind: k.kind, position: k.position });
+}
+
+/** The runner was hit carrying finds: they stay where the runner fell, as a case to come back for (no opening time). */
+function dropCarried(run: RunState, runner: Character, rules: ExtractionRules, events: GameEvent[]): void {
+  const position = vec3();
+  copy(position, runner.position);
+  run.cases.push({ kind: DROPPED_CASE, name: 'Dropped case', position, yaw: runner.yaw, openTime: rules.dropOpenTime, heard: 0, finds: run.carried, open: false, dropped: true });
+  run.carried = [];
+  stopOpening(run);
+  events.push({ type: 'caseDropped', characterId: runner.id, case: run.cases.length - 1 });
 }
 
 function clearCount(run: RunState): void {

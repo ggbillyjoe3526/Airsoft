@@ -6,6 +6,20 @@ import type { SoundCue } from './sounds';
  * loud each kind plays, how it's positioned in 3D and muffled by walls, the yard's echo and the volume settings.
  * Replicas sound mechanical and plasticky, never like firearms.
  */
+/**
+ * Extraction's cases (M44) reuse cues the bank already has (it is at its title-screen budget, audio.test.ts): a case
+ * being worked open is kit rummaged through, the marshal's locker a padlock and chain ratcheting (by pool.md Key), and
+ * a lid snapping open a magazine's clack.
+ */
+const CASE_WORK_SOUNDS: Readonly<Record<string, SoundCue>> = { locker: 'rope.down' };
+const CASE_WORK_SOUND: SoundCue = 'draw';
+export const CASE_OPEN_SOUND: SoundCue = 'magIn.electric';
+
+/** The sound of a case of `kind` being opened. */
+export function caseWorkSound(kind: string): SoundCue {
+  return CASE_WORK_SOUNDS[kind] ?? CASE_WORK_SOUND;
+}
+
 export const AUDIO = {
   /** Headroom under the player's master volume (several shots and steps at once must not clip). */
   masterVolume: 0.7,
@@ -93,6 +107,9 @@ export const AUDIO = {
     radioAck: { gain: 0.5, pitchSpread: 0.02 },
     /** Extraction's exit count (M43): the timer box's beeps, on the interface bus. */
     countBeep: { gain: 0.45, pitchSpread: 0 },
+    /** Extraction's cases (M44): worked while opened, and the lid popping. */
+    caseWork: { gain: 0.8, pitchSpread: 0.06 },
+    caseOpen: { gain: 0.9, pitchSpread: 0.05 },
     rope: { gain: 1, pitchSpread: 0.04 },
     /** A bird somewhere round the yard (the ambience). */
     bird: { gain: 0.35, pitchSpread: 0.08 },
