@@ -17,3 +17,18 @@ acceptance:
   4. An item-picture renderer draws a replica (with any parts fitted, in any scheme) or one part on its own off screen, from the same models without hands, at most one a frame, kept for the visit; a failed draw is retried on the next ask.
 status: building
 attempts: 0
+
+## G7 · Characters and arms (graphics overhaul, 0.1 Dev 5)
+tier: core
+perf: required
+touches: src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/figureMix.ts, src/render/figureParts.ts, src/render/figureShapes.ts, src/render/figurePalette.ts, src/render/figureHuman.ts, src/render/figureRobot.ts, src/render/figureHands.ts, src/render/figureReplicas.ts, src/render/handModels.ts, src/render/robotHands.ts, src/render/replicaModels.ts, src/render/viewmodel.ts, src/render/combatPresentation.ts, src/render/matchPresentation.ts, src/matchSession.ts, src/rangeSession.ts, src/config/characters.ts, src/config/replicaFinish.ts, src/config/look.ts
+contract: none (buildFigure's rig, figureMuzzle and FIGURE.rifle / FIGURE.pistol stay; a figure model's parts still replace the built ones)
+acceptance:
+  1. Figures are humans and robots built in code. With Robots on, every team of two or more mixes both looks from the match seed (robotFigures, apart from the sim's stream); off, every figure is human. No skin shows on any head.
+  2. Four masked human heads (high-cut helmet, bump helmet, balaclava, full-face visor) and a robot head; the team colour is exact on every part of every figure (plate carrier all round the torso, knee pads, armbands), colour-blind sets included; robots wear a light or dark shell by team; third-person replicas are the blocky two-tone replicas in the team's bot scheme (Realistic colours honoured, the Cyber Pistol in its own colours).
+  3. The rig behaves as before: six merged meshes on one vertex-coloured material, muzzles where figureMuzzle says, aim, pistol and hit poses, the HIT! callout, a fitted silencer and torch; a figure model's named parts still replace the code-built ones, on robots too.
+  4. Low draws no more triangles per part and no more draw calls per figure than before G7 (legs 424, body 1,392, rifle arms 1,064, pistol arms 824, hit pose 1,028; four drawn at once); High stays under 7,500 triangles drawn per figure.
+  5. First-person arms in the new style: dark gloves, camo sleeves from the team colour, the team armband; robot arms (shell, joints, team panel) when the player's own slot is a robot; hands keep every grip pose; Low no dearer in triangles or draw calls.
+  6. Every geometry and material made is disposed when a figure or the arms are rebuilt and when the match ends.
+status: building
+attempts: 0
