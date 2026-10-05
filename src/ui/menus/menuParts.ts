@@ -15,9 +15,12 @@ const ARROW_LEFT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H
 const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 const CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
-export type MenuButtonKind = 'primary' | 'secondary';
+export type MenuButtonKind = 'primary' | 'secondary' | 'ghost';
 
-/** A menu button: `primary` is the orange one that moves you on (Start, Play, Resume), with an arrow when `arrow`. */
+/**
+ * A menu button: `primary` is the orange one that moves you on (Play, Resume), `ghost` a quiet one in a line of text
+ * (Change), `secondary` everything else; with an arrow when `arrow`.
+ */
 export function menuButton(label: string, kind: MenuButtonKind, onClick: () => void, arrow = false): HTMLButtonElement {
   const button = el('button', `menu-button menu-button-${kind}`, label);
   button.type = 'button';

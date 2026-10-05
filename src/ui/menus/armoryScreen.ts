@@ -1,4 +1,4 @@
-import { ARMORY_TEXT } from '../../config/menus';
+import { ARMORY_TEXT, MENU_TEXT } from '../../config/menus';
 import {
   buyTokens,
   canTakeShots,
@@ -24,8 +24,10 @@ import type { Collection, ItemRef } from '../../pool/collection';
 import { type Asset, comesIn, fcPerToken, isChase, type Pool } from '../../pool/pool';
 import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
 import { tierLine } from '../performanceSheet';
-import { CATEGORY_LABELS, itemTile, tierLabel } from './itemTile';
-import { backButton, el, menuButton, menuPage } from './menuParts';
+import { hintsBar, type MenuHint, tagPill } from './chrome';
+import { CATEGORY_LABELS, itemPicture, itemTile, tierLabel } from './itemTile';
+import type { PictureContext } from './kitStrip';
+import { el, menuButton } from './menuParts';
 
 export interface ArmoryOptions {
   /** The pool as offered now (M35: dev gear only with Dev content on). */
@@ -40,6 +42,8 @@ export interface ArmoryOptions {
    */
   onChange: () => boolean | void;
   onBack: () => void;
+  /** Where the items' pictures come from (G3); without, each item shows its drawing. */
+  context?: PictureContext;
 }
 
 /** "1,600 FC". */
@@ -60,8 +64,10 @@ function tokensText(n: number): string {
  */
 export class ArmoryScreen {
   readonly root: HTMLDivElement;
+  readonly hints: readonly MenuHint[];
   private readonly side: HTMLDivElement;
   private readonly reveal: HTMLDivElement;
+  private readonly odds: HTMLDivElement;
   private readonly owned: HTMLDivElement;
   private readonly confirm = new ConfirmDialog();
   private last: Dispensed[] = [];
@@ -72,26 +78,38 @@ export class ArmoryScreen {
   private readonly back: HTMLButtonElement;
 
   constructor(private readonly opts: ArmoryOptions) {
-    const page = menuPage('menu-armory', 'Armory');
-    this.root = page.root;
-    page.root.querySelector('.menu-heading')?.append(' ', el('span', 'beta-tag', ARMORY_TEXT.beta));
-    page.body.append(el('p', 'armory-free', ARMORY_TEXT.free), this.notice);
+    this.root = el('div', 'menu-screen menu-page menu-armory menu-hub');
+    this.root.hidden = true;
     // Always in the page, so a screen reader reads it out when it is filled.
     this.notice.setAttribute('role', 'status');
-    this.side = el('div', 'menu-panel armory-side');
-    const main = el('div', 'menu-panel armory-main');
+    // The left column: the heading, the balance, the exchange and the Shots (renderSide fills the part under the heading).
+    const left = el('div', 'armory-left menu-card');
+    const heading = el('h1', 'menu-heading', 'Armory');
+    heading.append(' ', el('span', 'beta-tag', ARMORY_TEXT.beta));
+    const head = el('div', 'armory-head');
+    head.append(heading, tagPill(ARMORY_TEXT.freeTag));
+    this.side = el('div', 'armory-side');
+    left.append(head, el('p', 'armory-free', ARMORY_TEXT.free), this.notice, this.side);
+    // The middle: the last Shot, then the odds.
+    const main = el('div', 'armory-main');
     this.reveal = el('div', 'armory-reveal');
     // Live from the start, so the first Shot is read out too (audit POOL-11).
     this.reveal.setAttribute('aria-live', 'polite');
     this.reveal.setAttribute('aria-atomic', 'true');
-    this.owned = el('div', 'armory-owned');
-    main.append(this.reveal, this.owned);
-    const columns = el('div', 'loadout-columns armory-columns');
-    columns.append(this.side, main);
-    page.body.append(columns);
-    this.back = backButton(opts.onBack);
-    page.footer.append(this.back);
-    this.root.append(this.confirm.root);
+    this.odds = el('div', 'armory-odds-box');
+    main.append(this.reveal, this.odds);
+    // The right: the collection.
+    this.owned = el('div', 'armory-owned menu-card');
+    const columns = el('div', 'armory-columns');
+    columns.append(left, main, this.owned);
+    this.hints = [
+      { keys: ['Space'], label: MENU_TEXT.hints.shot, run: () => this.shotOne(), code: 'Space', idle: true, echo: true },
+      { keys: ['Esc'], label: MENU_TEXT.hints.back, run: opts.onBack },
+    ];
+    const bar = hintsBar(this.hints, MENU_TEXT.free);
+    // The Back hint (the second): the one there for the keyboard, as the 1 Shot hint echoes the screen's own button.
+    this.back = bar.querySelectorAll<HTMLButtonElement>('button')[1]!;
+    this.root.append(columns, bar, this.confirm.root);
     this.refresh();
   }
 
@@ -124,6 +142,12 @@ export class ArmoryScreen {
     (focus?.() ?? this.firstEnabled([...actions, 'shot-1', 'buy-1'])).focus({ preventScroll: true });
   }
 
+  /** Space: one Shot, when one can be taken (else nothing: the key never leaves the screen). */
+  private shotOne(): void {
+    const b = this.root.querySelector<HTMLButtonElement>('[data-action="shot-1"]');
+    if (b && !b.disabled) b.click();
+  }
+
   /** The first of these actions on screen and enabled, else Back (always there). */
   private firstEnabled(actions: readonly string[]): HTMLButtonElement {
     for (const action of actions) {
@@ -138,6 +162,7 @@ export class ArmoryScreen {
     const c = this.opts.collection();
     this.renderSide(c);
     this.renderReveal();
+    this.renderOdds();
     this.renderOwned(c);
     // Opening the screen puts the keyboard on a Shot (or a Token to buy, or Back when there is nothing to afford).
     for (const node of this.root.querySelectorAll<HTMLElement>('[data-autofocus]')) delete node.dataset.autofocus;
@@ -174,16 +199,6 @@ export class ArmoryScreen {
       shots.append(b);
     }
 
-    const odds = el('table', 'armory-odds');
-    odds.createCaption().textContent = ARMORY_TEXT.odds;
-    const body = odds.createTBody();
-    for (const { tier, percent } of tierChances(this.pool)) {
-      const row = body.insertRow();
-      const name = el('th', 'item-tier', tier.label);
-      name.scope = 'row';
-      name.dataset.tier = tier.id;
-      row.append(name, el('td', '', `${percentText(percent)}%`), el('td', 'armory-odds-scrap', `${ARMORY_TEXT.scrap} ${fcText(tier.scrapFc)}`));
-    }
     const guarantee = e.tenShotGuarantee ? this.pool.tiers.find((t) => t.id === e.tenShotGuarantee) : undefined;
     const notes = [ARMORY_TEXT.perShot(e.assetsPerShot)];
     if (guarantee) notes.push(ARMORY_TEXT.guarantee(guarantee.label));
@@ -193,6 +208,32 @@ export class ArmoryScreen {
       const line = el('li', '', ARMORY_TEXT.pity(p.tier.label, p.shots));
       line.dataset.tier = p.tier.id;
       pity.append(line);
+    }
+    const parts: HTMLElement[] = [
+      balance,
+      el('p', 'menu-kicker', ARMORY_TEXT.exchange),
+      el('p', 'menu-readout', ARMORY_TEXT.rate(rate)),
+      exchange,
+      el('h2', 'armory-shots-title', ARMORY_TEXT.shots),
+      el('p', 'menu-readout', notes.join(' ')),
+      shots,
+      ...(pity.children.length > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.pityKicker), pity] : []),
+    ];
+    this.side.replaceChildren(...parts);
+  }
+
+  /** The odds: each tier's share as a bar and a table, how an asset is picked, and the chase items' own lines. */
+  private renderOdds(): void {
+    const e = this.pool.economy;
+    const odds = el('table', 'armory-odds');
+    odds.createCaption().textContent = ARMORY_TEXT.odds;
+    const body = odds.createTBody();
+    for (const { tier, percent } of tierChances(this.pool)) {
+      const row = body.insertRow();
+      const name = el('th', 'item-tier', tier.label);
+      name.scope = 'row';
+      name.dataset.tier = tier.id;
+      row.append(name, el('td', '', `${percentText(percent)}%`), el('td', 'armory-odds-scrap', `${ARMORY_TEXT.scrap} ${fcText(tier.scrapFc)}`));
     }
     // Chase items (M32) are drawn apart, each on its own chance: a line each, and the rest are picked among themselves.
     const chase = chaseChances(this.pool).map(({ asset, chance, tiers }) => {
@@ -204,20 +245,16 @@ export class ArmoryScreen {
     const rarest = tierChances(this.pool).filter((t) => t.percent > 0).at(-1);
     const perAsset = n > 0 && rarest ? el('p', 'menu-readout armory-per-asset', ARMORY_TEXT.perAsset(n, e.unownedWeight, rarest.tier.label, Math.round((n * 100) / rarest.percent))) : null;
 
-    const parts: (HTMLElement | null)[] = [
-      balance,
-      el('p', 'menu-kicker', ARMORY_TEXT.exchange),
-      el('p', 'menu-readout', ARMORY_TEXT.rate(rate)),
-      exchange,
-      el('p', 'menu-kicker', ARMORY_TEXT.shots),
-      el('p', 'menu-readout', notes.join(' ')),
-      shots,
-      ...(pity.childElementCount > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.pityKicker), pity] : []),
-      odds,
-      perAsset,
-      ...(chase.length > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.chaseKicker), ...chase] : []),
-    ];
-    this.side.replaceChildren(...parts.filter((x): x is HTMLElement => x !== null));
+    const strip = el('div', 'armory-odds-strip');
+    strip.setAttribute('aria-hidden', 'true');
+    for (const { tier, percent } of tierChances(this.pool)) {
+      const part = el('span');
+      part.dataset.tier = tier.id;
+      part.style.setProperty('--share', String(percent));
+      strip.append(part);
+    }
+    const parts: (HTMLElement | null)[] = [strip, odds, perAsset, ...(chase.length > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.chaseKicker), ...chase] : [])];
+    this.odds.replaceChildren(...parts.filter((x): x is HTMLElement => x !== null));
   }
 
   private takeShots(n: ShotCount): void {
@@ -284,6 +321,7 @@ export class ArmoryScreen {
   /** One asset of the catalogue: its name, a pip per tier (copies owned, or a dash), and its spares to scrap. */
   private assetRow(r: CollectionRow, c: Collection): HTMLDivElement {
     const row = el('div', 'armory-row');
+    row.append(itemPicture(r.asset, this.opts.context, 'collection-pic').root);
     let best = -1;
     r.counts.forEach((n, t) => (best = n > 0 ? t : best));
     if (best >= 0) row.dataset.tier = this.pool.tiers[best]!.id;
@@ -350,7 +388,7 @@ export class ArmoryScreen {
   }
 
   private tile(item: ItemRef, note: string): HTMLDivElement {
-    return itemTile(this.pool, item, note);
+    return itemTile(this.pool, item, note, this.opts.context);
   }
 }
 

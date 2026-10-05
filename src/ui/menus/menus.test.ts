@@ -82,11 +82,16 @@ describe('settings tabs', () => {
 });
 
 describe('menu data', () => {
-  it('lists placeholders for every settings tab, and only "later" tabs have nothing built', () => {
+  it('lists the held-back rows for every settings group, each with its note (G3)', () => {
     for (const tab of SETTINGS_TABS) {
       expect(SETTINGS_LATER[tab.id]).toBeDefined();
-      if (tab.later) expect(SETTINGS_LATER[tab.id].length).toBeGreaterThan(0);
+      for (const row of SETTINGS_LATER[tab.id]) expect(row.help.length).toBeGreaterThan(0);
     }
+  });
+
+  it('groups Settings as the G3 brief asks: Graphics, Display, Audio, Controls, Gameplay, Accessibility, Look, Save, Dev', () => {
+    expect(SETTINGS_TABS.map((t) => t.id)).toEqual(['graphics', 'display', 'audio', 'controls', 'gameplay', 'accessibility', 'look', 'save', 'dev']);
+    expect(SETTINGS_TABS.filter((t) => t.hidden).map((t) => t.id)).toEqual(['dev']);
   });
 
   it('offers every quality preset and Custom on the Quality picker (M14, final alpha audit), and has no Brightness setting', () => {
@@ -268,9 +273,9 @@ describe('match info menus (M19)', () => {
     expect(backTarget('summary', 'setup')).toBeNull();
   });
 
-  it('has a Crosshair tab with nothing held back on it', () => {
-    expect(SETTINGS_TABS.find((t) => t.id === 'crosshair')).toMatchObject({ later: false });
-    expect(SETTINGS_LATER.crosshair).toEqual([]);
+  it('keeps the crosshair under Gameplay with nothing held back there', () => {
+    expect(SETTINGS_TABS.find((t) => t.id === 'gameplay')?.hidden).toBeUndefined();
+    expect(SETTINGS_LATER.gameplay).toEqual([]);
   });
 });
 

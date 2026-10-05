@@ -1,0 +1,3580 @@
+/*
+ * The menus (graphics overhaul G3): every screen before, between and after matches, in the concept's look (bold, vibrant,
+ * readable: deep navy, an orange that moves you on, Barlow and Barlow Condensed). Imported after style.css, whose :root
+ * holds the shared tokens; the menus' own sizes are set on .menus below. Text is never under 15 px here, notes are in
+ * sentence case at full contrast, and nothing behind a screen is blurred live: the backdrop is one picture, blurred when
+ * it was made (pipeline/map-stills.mjs).
+ */
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../../assets/fonts/Barlow-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../../assets/fonts/Barlow-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../../assets/fonts/BarlowCondensed-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../../assets/fonts/BarlowCondensed-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../../assets/fonts/BarlowCondensed-800.woff2') format('woff2');
+}
+
+/* Base: the menus' own type scale (15 px the smallest), the cut corner, the top bar's height and the page's edges. */
+.menus {
+  --fs-2xs: 15px;
+  --fs-xs: 15px;
+  --fs-sm: 15px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 21px;
+  --fs-2xl: 26px;
+  --fs-3xl: clamp(36px, 3.4vw, 64px);
+  --ls-caps: 0.06em;
+  --ls-wide: 0.14em;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --cut: 12px;
+  --topbar-h: clamp(60px, 4.4vw, 84px);
+  --menu-gutter: clamp(16px, 2.5vw, 48px);
+  --page-top: clamp(20px, 2.2vw, 40px);
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  color: var(--paper);
+  font: 500 var(--fs-md) / 1.4 var(--ui-font);
+  background: var(--menu-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.menus[hidden],
+.menu-screen[hidden],
+.menus [hidden] {
+  display: none !important;
+}
+
+.menus svg.icon {
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A screen: a page over the backdrop that scrolls when it must, its key hints pinned along the bottom. */
+.menu-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--page-top) var(--menu-gutter) 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--menu-line) transparent;
+}
+
+.menus.has-topbar .menu-hub {
+  padding-top: calc(var(--topbar-h) + var(--page-top));
+}
+
+/* A screen coming up fades its content in; the animation restarts each time it is shown (it leaves display: none). */
+.menu-screen > * {
+  animation: menu-enter var(--t-med) var(--ease) both;
+}
+
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Headings, labels and buttons in capitals, in the condensed face (owner, 2026-10-03; G3). */
+.menu-heading,
+.menu-panel-title,
+.menu-dialog-title,
+.menu-kicker,
+.choice-name,
+.settings-tab-name,
+.settings-panel-title,
+.menu-row-label,
+.menu-result-headline,
+.menu-later,
+.menu-button,
+.picker-button,
+.key-reset,
+.menu-section-title,
+.menu-nav-item,
+.menu-mark,
+.menu-chip,
+.menu-hints,
+.tag-pill,
+.gear-name,
+.item-name,
+.option-name,
+.customise-part-name,
+.customise-title,
+.selected-name,
+.kit-name,
+.play-map-line,
+.perf-title,
+.settings-about-title,
+.colour-real-title,
+.armory-shots-title,
+.title-next-map,
+.tier-text,
+.gear-tier,
+.item-tier,
+.option-tier,
+.summary-result {
+  font-family: var(--ui-display);
+  text-transform: uppercase;
+}
+
+.menu-heading {
+  margin: 0;
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.menu-kicker {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--ls-wide);
+  color: var(--menu-faint);
+}
+
+.menu-panel-title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.menu-hint {
+  margin: 0;
+  max-width: 28em;
+  font-size: var(--fs-md);
+  color: var(--hint);
+}
+
+.menu-footer-note,
+.menu-readout {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.menu-readout {
+  flex-basis: 100%;
+}
+
+.menu-faint {
+  color: var(--menu-faint);
+}
+
+/* A panel: navy, a hairline edge, the top-right corner cut. */
+.menu-card,
+.menu-panel {
+  background: rgba(12, 20, 42, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+
+.menu-panel {
+  padding: var(--sp-5) var(--sp-6);
+}
+
+/* The backdrop: the title's picture sharp, every other screen the one blurred when it was made, darkened. */
+.menu-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.menu-backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menu-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(7, 13, 31, 0.96) 0%, rgba(7, 13, 31, 0.8) 38%, rgba(7, 13, 31, 0.5) 70%, rgba(7, 13, 31, 0.72) 100%),
+    linear-gradient(0deg, rgba(7, 13, 31, 0.9), rgba(7, 13, 31, 0) 30%);
+}
+
+.menu-backdrop.even::after {
+  background: rgba(7, 13, 31, 0.86);
+}
+
+/* The top bar: the wordmark, the places (the current one underlined in orange), the wallet and the build. */
+.menu-topbar {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 40px);
+  height: var(--topbar-h);
+  padding: 0 var(--menu-gutter);
+  background: linear-gradient(180deg, rgba(7, 13, 31, 0.97), rgba(7, 13, 31, 0.82));
+  border-bottom: 1px solid var(--menu-line-soft);
+}
+
+.menu-mark,
+.menu-title-wordmark {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.05em;
+}
+
+.menu-mark {
+  gap: 12px;
+  font-size: clamp(24px, 1.8vw, 34px);
+  line-height: 1;
+}
+
+.menu-mark i,
+.menu-title-wordmark i {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background: var(--orange);
+  clip-path: polygon(30% 0, 100% 0, 70% 100%, 0 100%);
+}
+
+.menu-nav {
+  display: flex;
+  align-self: stretch;
+  gap: 2px;
+  min-width: 0;
+}
+
+.menu-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 clamp(10px, 1.1vw, 22px);
+  font: 700 clamp(17px, 1.1vw, 21px) / 1 var(--ui-display);
+  letter-spacing: 0.08em;
+  color: var(--menu-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 4px solid transparent;
+  cursor: pointer;
+}
+
+.menu-nav-item:hover {
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.menu-nav-item.on {
+  color: var(--paper);
+  border-bottom-color: var(--orange);
+  background: linear-gradient(0deg, rgba(255, 107, 26, 0.2), transparent);
+}
+
+.menu-nav-item:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.menu-wallet,
+.title-wallet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.menu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+}
+
+.menu-chip::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffc21a;
+}
+
+.menu-chip-tokens::before {
+  background: #1fd6c4;
+}
+
+.menu-build {
+  font: 600 var(--fs-sm) / 1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--menu-faint);
+}
+
+/* The key hints along the bottom: each key as a cap, then what it does; a line on the right. */
+.menu-hints {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 28px;
+  margin-top: auto;
+  padding: var(--sp-5) 0 clamp(14px, 1.4vw, 22px);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--menu-muted);
+  background: linear-gradient(0deg, var(--menu-bg) 45%, rgba(7, 13, 31, 0));
+}
+
+.menu-hint-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+button.menu-hint-key {
+  cursor: pointer;
+}
+
+button.menu-hint-key:hover {
+  color: var(--paper);
+}
+
+.menu-hints kbd,
+.menu-hints-box kbd {
+  min-width: 30px;
+  padding: 4px 8px;
+  font: 700 var(--fs-sm) / 1 var(--ui-display);
+  letter-spacing: 0.06em;
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-bottom-width: 3px;
+  border-radius: 0;
+}
+
+.menu-hints-aside {
+  margin-left: auto;
+  text-align: right;
+}
+
+.menu-hints-box {
+  margin-top: auto;
+}
+
+/* Numbered section heads: "01 MAP" with a rule out to the right and a note after it. */
+.menu-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin: 0 0 14px;
+}
+
+.menu-section-n {
+  font: 700 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.12em;
+  color: var(--orange-text);
+}
+
+.menu-section-title {
+  margin: 0;
+  font-size: clamp(22px, 1.5vw, 28px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.05em;
+}
+
+.menu-section-rule {
+  flex: 1;
+  align-self: center;
+  min-width: 24px;
+  height: 1px;
+  background: var(--menu-line-soft);
+}
+
+.menu-section-extra {
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+/* Tags: acid good news, pink dev content, orange, blue, gold. */
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  color: var(--menu-acid);
+  background: rgba(200, 255, 46, 0.12);
+  border: 1px solid rgba(200, 255, 46, 0.45);
+}
+
+.tag-dev {
+  color: #ff8fbb;
+  background: rgba(255, 61, 139, 0.14);
+  border-color: rgba(255, 61, 139, 0.5);
+}
+
+.tag-orange {
+  color: var(--orange-text);
+  background: rgba(255, 107, 26, 0.14);
+  border-color: rgba(255, 107, 26, 0.55);
+}
+
+.tag-blue {
+  color: var(--menu-blue);
+  background: rgba(63, 140, 255, 0.14);
+  border-color: rgba(63, 140, 255, 0.55);
+}
+
+.tag-gold {
+  color: #ffd15c;
+  background: rgba(255, 194, 26, 0.12);
+  border-color: rgba(255, 194, 26, 0.5);
+}
+
+.beta-tag {
+  display: inline-flex;
+  padding: 3px 8px;
+  font: 800 var(--fs-sm) / 1.1 var(--ui-display);
+  letter-spacing: 0.12em;
+  vertical-align: middle;
+  color: var(--ink);
+  background: var(--orange);
+}
+
+.menu-later {
+  padding: 3px 8px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  color: var(--menu-muted);
+  background: var(--menu-panel-hi);
+}
+
+/* Buttons: orange (primary) moves you on, navy (secondary) does everything else, ghost stays quiet in a line of text.
+   Each has hover, pressed, focus and disabled states, and the cut corners of the panels. */
+.menu-button,
+.picker-button,
+.key-button,
+.key-reset,
+.menu-close,
+.choice-card,
+.choice-variant,
+.settings-tab,
+.gear-slot,
+.item-tile,
+.item-chip,
+.option-tile,
+.customise-part,
+.menu-nav-item {
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease),
+    translate var(--t-fast) var(--ease);
+}
+
+.menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: var(--control-lg);
+  padding: 0 var(--sp-5);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+  cursor: pointer;
+}
+
+.menu-button:hover {
+  background: #1d2d5c;
+  border-color: var(--menu-muted);
+}
+
+.menu-button:active {
+  background: var(--menu-panel);
+}
+
+.menu-button-primary {
+  min-height: var(--control-xl);
+  padding: 0 var(--sp-6);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(180deg, #ff7f2e, #ff5a10);
+  border-color: transparent;
+}
+
+.menu-button-primary:hover {
+  background: linear-gradient(180deg, #ff9045, #ff6a20);
+  border-color: transparent;
+  translate: 0 -1px;
+}
+
+.menu-button-primary:active {
+  translate: 0;
+  filter: brightness(0.95);
+}
+
+/* The big one (Play): the label on the left, the arrow on the right. */
+.menu-button-big {
+  justify-content: space-between;
+  min-height: clamp(64px, 5vw, 84px);
+  padding: 0 clamp(24px, 2.4vw, 48px);
+  font-size: clamp(30px, 2.2vw, 40px);
+  letter-spacing: 0.08em;
+}
+
+.menu-button-ghost {
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-md);
+  color: var(--orange-text);
+  background: transparent;
+  border-color: transparent;
+  clip-path: none;
+}
+
+.menu-button-ghost:hover {
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: transparent;
+}
+
+.menu-button:disabled,
+.picker-button:disabled,
+.key-reset:disabled,
+.menu-close:disabled,
+.choice-card:disabled,
+.option-tile:disabled,
+.item-chip:disabled {
+  cursor: default;
+  opacity: 0.45;
+  translate: 0;
+  filter: none;
+}
+
+.menu-button:disabled:hover {
+  background: var(--menu-panel-hi);
+  border-color: var(--menu-line);
+}
+
+.menu-button-primary:disabled:hover {
+  background: linear-gradient(180deg, #ff7f2e, #ff5a10);
+}
+
+/* Keyboard focus, one rule for every control (audit section 6, item 6): the orange ring, with a page-coloured gap
+   under it so the ring reads on the orange buttons too. A cut-corner control draws it inside (its clip would hide it). */
+.menus :is(button, [role='tab'], input, select, a, summary, .gear-slot, .item-tile, .item-chip):focus-visible,
+.menu-dialog :is(button, input):focus-visible,
+.crash-screen :is(button, textarea):focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--menu-bg);
+}
+
+.menus :is(.menu-button, .choice-card, .option-tile, .item-tile, .gear-slot, .customise-part, .settings-tab, .menu-nav-item):focus-visible {
+  outline-offset: -4px;
+}
+
+/* Pictures: a drawing until the picture is drawn, then the picture, on a deep blue glow. */
+.pic-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 40%, #11214d, #050e24 72%);
+}
+
+.pic-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pic-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--menu-line);
+}
+
+.pic-placeholder svg {
+  width: 42%;
+  height: 42%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.pic-slot.has-picture .pic-placeholder {
+  display: none;
+}
+
+/* Rarity colours, common to rarest (pool.md's tiers; a tier added there shows grey until it gets one here) */
+[data-tier] {
+  --tier: #aab4c8;
+}
+
+[data-tier='uncommon'] {
+  --tier: #5ce08a;
+}
+
+[data-tier='rare'] {
+  --tier: #4f97ff;
+}
+
+[data-tier='veryRare'] {
+  --tier: #a47bff;
+}
+
+[data-tier='epic'] {
+  --tier: #ff5c9d;
+}
+
+[data-tier='legendary'] {
+  --tier: #ffc21a;
+}
+
+.tier-bar {
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: var(--tier, var(--menu-line));
+}
+
+.tier-text,
+.gear-tier,
+.item-tier,
+.option-tier {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--tier, var(--menu-muted));
+}
+
+/* The title: the wordmark over the field, Play and the places under it, a tip and the next match on the right. */
+.menu-title {
+  padding-top: clamp(24px, 4vw, 72px);
+}
+
+.title-wallet {
+  position: absolute;
+  top: clamp(16px, 2vw, 32px);
+  right: var(--menu-gutter);
+}
+
+.title-body {
+  display: grid;
+  grid-template-columns: minmax(320px, 680px) minmax(300px, 520px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 'hero hero' 'actions side';
+  justify-content: space-between;
+  align-items: end;
+  gap: clamp(24px, 3vw, 56px) var(--sp-6);
+  width: 100%;
+  padding-left: clamp(0px, 4.2vw, 72px);
+  flex: 1 0 auto;
+}
+
+.title-hero {
+  grid-area: hero;
+  align-self: start;
+}
+
+.title-kicker {
+  margin: 0 0 var(--sp-2);
+  font: 600 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+.menu-title-wordmark {
+  gap: 0.25em;
+  font: italic 800 clamp(72px, 9vw, 176px) / 0.9 var(--ui-display);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.menu-title-wordmark i {
+  width: 0.5em;
+  height: 0.78em;
+}
+
+.menu-title-tagline {
+  margin: var(--sp-4) 0 0;
+  font-size: clamp(20px, 1.6vw, 30px);
+  font-weight: 500;
+  color: var(--paper);
+}
+
+.title-actions {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.title-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.title-list .menu-button {
+  justify-content: flex-start;
+  min-height: clamp(48px, 3vw, 58px);
+  padding: 0 var(--sp-5);
+  font-size: clamp(20px, 1.3vw, 25px);
+  font-weight: 800;
+  background: rgba(14, 24, 52, 0.92);
+}
+
+.title-list .menu-button .tag-pill {
+  margin-left: auto;
+}
+
+.title-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.title-tip {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: var(--sp-4) var(--sp-5);
+  font-size: var(--fs-lg);
+  line-height: 1.4;
+  border-left: 4px solid var(--menu-acid);
+  clip-path: none;
+}
+
+.title-tip svg.icon {
+  margin-top: 2px;
+  color: var(--menu-acid);
+}
+
+.title-next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}
+
+.title-next-row {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: center;
+}
+
+.title-next-still {
+  flex: 0 0 44%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--menu-panel-hi);
+}
+
+.title-next-still img,
+.play-still img,
+.choice-card-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.title-next-map {
+  margin: 0 0 6px;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.title-next-line {
+  margin: 0;
+  font-size: var(--fs-lg);
+  color: var(--menu-muted);
+}
+
+/* The kit you carry: one picture card per slot, its name over the foot, its tier along the bottom. */
+.kit-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+.kit-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: clamp(88px, 6.4vw, 120px);
+  overflow: hidden;
+  border: 1px solid var(--menu-line-soft);
+}
+
+.kit-pic {
+  position: absolute;
+  inset: 0;
+}
+
+.kit-name {
+  position: relative;
+  padding: 26px 12px 10px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: linear-gradient(0deg, rgba(5, 10, 26, 0.92), rgba(5, 10, 26, 0));
+}
+
+/* The Play screen: Map, Mode and Match on the left; your match, your kit and Play on the right. */
+.play-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 25vw, 480px);
+  gap: clamp(20px, 2vw, 40px);
+  align-items: start;
+}
+
+.play-main {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 1.6vw, 28px);
+  min-width: 0;
+}
+
+.choice-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: clamp(10px, 1vw, 20px);
+}
+
+.choice-card-wrap {
+  position: relative;
+  display: flex;
+}
+
+.choice-card {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  gap: var(--sp-4);
+  min-height: 96px;
+  padding: var(--sp-4);
+  overflow: hidden;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.choice-card:hover {
+  border-color: var(--menu-muted);
+}
+
+.choice-card.selected {
+  border: 2px solid var(--orange);
+  box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.22);
+}
+
+.choice-card-pic {
+  position: absolute;
+  inset: 0;
+  background: var(--menu-panel-hi);
+}
+
+/* Over the picture: a dark foot for the words. */
+.map-cards .choice-card-pic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(5, 10, 26, 0.95) 8%, rgba(5, 10, 26, 0) 55%);
+}
+
+.map-cards .choice-card {
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+}
+
+.choice-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.choice-name {
+  font-size: clamp(22px, 1.6vw, 30px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.choice-blurb {
+  font-size: var(--fs-md);
+  line-height: 1.35;
+  color: var(--paper);
+}
+
+.choice-note {
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--menu-acid);
+}
+
+.choice-card-tags {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.map-cards .choice-card-tags .tag-blue {
+  position: absolute;
+  top: auto;
+  left: auto;
+}
+
+.choice-card-tags:empty {
+  display: none;
+}
+
+.choice-tick {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: #fff;
+  background: var(--orange);
+  border-radius: 50%;
+}
+
+.choice-card.selected .choice-tick {
+  display: grid;
+}
+
+.choice-tick svg.icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 3;
+}
+
+/* The mode cards: the picture on the left third, the sign and the words beside it. */
+.mode-cards .choice-card {
+  align-items: center;
+  min-height: clamp(110px, 8vw, 150px);
+  padding-left: calc(33% + var(--sp-4));
+}
+
+.mode-cards .choice-card-pic {
+  inset: 0 auto 0 0;
+  width: 33%;
+}
+
+.choice-card-icon {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+
+.choice-card-icon svg.icon {
+  width: 34px;
+  height: 34px;
+}
+
+.mode-cards .choice-card-icon {
+  left: calc(16.5% - 17px);
+  top: calc(50% - 17px);
+}
+
+.mode-cards .choice-card-tags {
+  position: static;
+  order: 3;
+  align-self: flex-start;
+}
+
+.choice-card.soon {
+  cursor: default;
+}
+
+.choice-card.soon .choice-name {
+  color: var(--menu-faint);
+}
+
+/* Day | Night on a map card: over the top-left of the picture, apart from the card's own button. */
+.choice-variants {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.choice-card-wrap.has-variants .choice-card-tags {
+  top: 56px;
+}
+
+.choice-variant {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--control-xs);
+  padding: 0 12px;
+  font: 700 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--menu-muted);
+  background: rgba(7, 13, 31, 0.82);
+  border: 1px solid var(--menu-line);
+  cursor: pointer;
+}
+
+.choice-variant:hover {
+  color: var(--paper);
+}
+
+.choice-variant[aria-pressed='true'] {
+  color: var(--paper);
+  border-color: var(--orange);
+  box-shadow: inset 0 -3px 0 var(--orange);
+}
+
+/* The Match section: the Rules row across, then the rows in two columns, each a label over its options. */
+.match-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.match-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2) clamp(16px, 2vw, 40px);
+}
+
+.match-panel .menu-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-top: 0;
+}
+
+.match-panel .menu-row-name {
+  flex: none;
+}
+
+.match-panel .menu-row-control,
+.match-panel .picker {
+  flex: none;
+  width: 100%;
+}
+
+.match-panel .picker-row {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.match-rules-row .picker-button {
+  min-height: 56px;
+}
+
+/* Your match: the still, the map, the facts, your kit and Play. */
+.play-aside {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}
+
+.play-still {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--menu-panel-hi);
+}
+
+.play-map-line {
+  margin: var(--sp-2) 0 0;
+  font-size: clamp(28px, 2vw, 40px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.play-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px var(--sp-5);
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+.play-facts dd {
+  margin: 0;
+}
+
+.play-loadout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--sp-2);
+}
+
+.play-loadout-line,
+.setup-rules {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.setup-rules {
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 4px solid var(--menu-acid);
+}
+
+.play-pays {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+.play-pays::before {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffc21a;
+}
+
+.play-button {
+  margin-top: var(--sp-2);
+}
+
+/* Rows of settings: a label (and its note) on the left, the control on the right */
+.menu-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-5);
+  min-height: calc(var(--control-lg) + var(--sp-2));
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.menu-row-name {
+  display: flex;
+  flex: 0 1 340px;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 200px;
+}
+
+.menu-row-label {
+  font-family: var(--ui-font);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Every row's note: sentence case, full contrast (G3). */
+.menu-row-help {
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--menu-soft);
+}
+
+.match-panel .menu-row-label {
+  font-family: var(--ui-display);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--menu-muted);
+}
+
+.menu-row.later .menu-row-label {
+  color: var(--menu-faint);
+}
+
+/* A Custom graphics row that does nothing with a setting off (the shadow rows while Shadows is Off) */
+.menu-row.menu-row-off .menu-row-label {
+  color: var(--menu-faint);
+}
+
+.menu-range input:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* What a Custom graphics row costs (final alpha audit, UI-06): a quiet tag under its note */
+.menu-row-cost {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: var(--ls-caps);
+  color: var(--orange-text);
+}
+
+/* Settings → Graphics: the Custom settings block under the presets, a disclosure (M68, audit UI-09): the summary is a
+   .menu-kicker with a chevron drawn in currentColor, so it follows forced colours and the heading's own colour. */
+.graphics-subhead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--control-sm);
+  margin: var(--sp-3) 0 var(--sp-1);
+  cursor: pointer;
+  list-style: none;
+}
+
+.graphics-subhead::-webkit-details-marker {
+  display: none;
+}
+
+.graphics-subhead::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+}
+
+.graphics-custom[open] > .graphics-subhead::before {
+  transform: rotate(45deg);
+}
+
+.graphics-custom > .menu-readout {
+  margin-bottom: var(--sp-2);
+}
+
+.graphics-custom .picker-blurb:empty {
+  display: none;
+}
+
+/* A row the browser can't honour as picked (no multisampling, a lower filtering cap) */
+.graphics-note {
+  flex-basis: 100%;
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--menu-muted);
+}
+
+.menu-row-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+/* A secondary button in a row (Dev › Copy diagnostics) is as tall as the row's pickers and number boxes. */
+.menu-row-control .menu-button {
+  min-height: var(--control-md);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-md);
+}
+
+.menu-later-value {
+  font-size: var(--fs-md);
+  color: var(--menu-faint);
+}
+
+.menu-range input {
+  width: min(320px, 100%);
+  accent-color: var(--orange);
+}
+
+.menu-range output {
+  min-width: 3.5em;
+  font: 700 var(--fs-lg) var(--ui-display);
+}
+
+/* Number boxes (cm/360 and the mouse's DPI on Settings → Controls) */
+.menu-turn {
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.menu-number:hover {
+  border-color: var(--menu-muted);
+}
+
+.menu-number {
+  width: 6.5em;
+  min-height: var(--control-md);
+  padding: 0 var(--sp-3);
+  font: 700 var(--fs-lg) var(--ui-display);
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+}
+
+/* Option pickers (optic, crouch key, quality): a row of segments, the picked one orange underneath */
+.picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.menu-row .picker-label {
+  display: none;
+}
+
+.picker-button {
+  min-height: var(--control-lg);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--menu-soft);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.picker-button:hover {
+  color: var(--paper);
+  border-color: var(--menu-muted);
+}
+
+.picker-button.selected {
+  color: var(--paper);
+  background: rgba(255, 107, 26, 0.2);
+  border-color: var(--orange);
+  box-shadow: inset 0 -3px 0 var(--orange);
+}
+
+.picker-blurb {
+  margin: 6px 0 0;
+  min-height: 1.4em;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.match-panel .picker-blurb {
+  display: none;
+}
+
+/* The Loadout: what you carry, the replicas you own, the picked slot's numbers. */
+.loadout-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) clamp(280px, 21vw, 400px);
+  gap: clamp(16px, 1.6vw, 32px);
+  align-items: start;
+}
+
+.loadout-carried,
+.loadout-replicas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.carried-card {
+  position: relative;
+}
+
+.gear-slot {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 'words pic' 'chips pic';
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: clamp(180px, 15vw, 300px);
+  padding: var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-5);
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+  cursor: pointer;
+}
+
+.gear-slot:hover {
+  border-color: var(--menu-muted);
+}
+
+.gear-slot.selected {
+  border-color: var(--orange);
+  box-shadow: inset 0 0 0 1px var(--orange);
+}
+
+.gear-slot .pic-slot {
+  grid-area: pic;
+  min-height: 140px;
+  background: none;
+}
+
+.gear-words {
+  grid-area: words;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gear-name {
+  font-size: clamp(30px, 2.3vw, 44px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.03em;
+}
+
+.gear-stats,
+.gear-note {
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.part-chips {
+  grid-area: chips;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  gap: 6px;
+}
+
+.part-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  font-size: var(--fs-md);
+  background: rgba(7, 13, 31, 0.7);
+  border: 1px solid var(--menu-line-soft);
+}
+
+.chip-pic {
+  width: 44px;
+  height: 30px;
+  background: none;
+}
+
+.carried-customise {
+  position: absolute;
+  right: var(--sp-5);
+  bottom: var(--sp-5);
+}
+
+/* Grenades: empty until they arrive, with hazard stripes and a lock. */
+.gear-grenades {
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'lock words';
+  align-items: center;
+  min-height: 0;
+  padding-left: calc(var(--sp-5) + 6px);
+  cursor: default;
+}
+
+.gear-grenades .stripes {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: repeating-linear-gradient(135deg, #ffc21a 0 6px, #070d1f 6px 12px);
+}
+
+.gear-lock {
+  grid-area: lock;
+  color: var(--menu-muted);
+}
+
+.gear-lock svg.icon {
+  width: 30px;
+  height: 30px;
+}
+
+.gear-grenades:hover {
+  border-color: var(--menu-line-soft);
+}
+
+/* Item tiles: a picture, the name and tier over its foot, the tier's colour along the bottom. */
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--sp-3);
+}
+
+.item-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  min-height: 150px;
+  padding: var(--sp-3);
+  overflow: hidden;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.item-tile:hover {
+  border-color: var(--menu-muted);
+}
+
+.item-tile.selected {
+  border: 2px solid var(--orange);
+  box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.22);
+}
+
+.item-tile .pic-slot {
+  position: absolute;
+  inset: 0 0 40%;
+  background: none;
+}
+
+.item-words {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-name {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.item-note,
+.item-kind {
+  position: relative;
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  color: var(--menu-muted);
+}
+
+.item-kind {
+  font-family: var(--ui-display);
+  font-weight: 600;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+}
+
+.item-note:empty {
+  display: none;
+}
+
+.option-tick {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #fff;
+  background: var(--orange);
+  border-radius: 50%;
+}
+
+.option-tick svg.icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 3;
+}
+
+.selected > .option-tick {
+  display: grid;
+}
+
+.replica-tile {
+  min-height: clamp(150px, 10vw, 190px);
+}
+
+.loadout-note,
+.gear-hint {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.loadout-selected {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+}
+
+.selected-name {
+  margin: 0;
+  font-size: clamp(28px, 2vw, 36px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.selected-line {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+/* The Performance sheet: each number with its change and a bar. */
+.perf-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.perf-sheet.menu-card {
+  padding: var(--sp-5);
+}
+
+.perf-title {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.selected-sheet .perf-title {
+  display: none;
+}
+
+.perf-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--menu-muted);
+}
+
+.perf-rows {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px var(--sp-3);
+  margin: var(--sp-2) 0 0;
+}
+
+.perf-label {
+  font-size: var(--fs-md);
+}
+
+.perf-value {
+  display: contents;
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+
+.perf-value > :first-child {
+  text-align: right;
+}
+
+.perf-delta {
+  margin-left: 4px;
+  font-weight: 700;
+  color: var(--menu-muted);
+}
+
+.perf-delta.perf-better {
+  color: var(--menu-good);
+}
+
+.perf-delta.perf-worse {
+  color: var(--menu-bad);
+}
+
+.perf-bar {
+  grid-column: 1 / -1;
+  position: relative;
+  height: 8px;
+  margin: 2px 0 var(--sp-2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.perf-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--share, 0) * 100%);
+  background: var(--menu-blue);
+}
+
+.perf-bar.perf-better i {
+  background: linear-gradient(90deg, var(--menu-blue) calc(100% - 12px), var(--menu-good) 0);
+}
+
+.perf-bar.perf-worse i {
+  background: linear-gradient(90deg, var(--menu-blue) calc(100% - 12px), var(--menu-bad) 0);
+}
+
+/* Customise: the parts down the left, the replica large in the middle with its options under it, its numbers right. */
+.customise-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 var(--sp-4);
+  font: 600 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.customise-crumbs b {
+  color: var(--orange-text);
+}
+
+.customise-crumb {
+  padding: 4px 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--menu-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.customise-crumb:hover {
+  color: var(--paper);
+}
+
+.customise-layout {
+  display: grid;
+  grid-template-columns: clamp(260px, 21vw, 400px) minmax(0, 1fr) clamp(280px, 21vw, 400px);
+  gap: clamp(16px, 1.4vw, 28px);
+  align-items: start;
+}
+
+.customise-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.customise-part {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 60px;
+  padding: 6px;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.customise-part:hover {
+  border-color: var(--menu-muted);
+}
+
+.customise-part.selected {
+  background: linear-gradient(90deg, rgba(255, 107, 26, 0.28), rgba(255, 107, 26, 0.08));
+  border-color: var(--orange);
+  box-shadow: inset 4px 0 0 var(--orange);
+}
+
+.customise-part.fixed,
+.customise-part.later {
+  cursor: default;
+}
+
+.customise-part.fixed .customise-part-name,
+.customise-part.later .customise-part-name {
+  color: var(--menu-faint);
+}
+
+.customise-part > .pic-slot,
+.part-swatch,
+.part-blank {
+  flex: none;
+  width: 76px;
+  height: 48px;
+}
+
+.part-blank {
+  border: 1px dashed var(--menu-line);
+}
+
+.part-swatch {
+  background: linear-gradient(135deg, var(--a, #3f8cff) 50%, var(--b, #11141c) 50%);
+}
+
+.customise-part-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.customise-part-name {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.customise-part-value {
+  overflow: hidden;
+  font-size: var(--fs-md);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--menu-muted);
+}
+
+.customise-centre {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.customise-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.customise-hero {
+  order: 2;
+  aspect-ratio: 2 / 1;
+  max-height: 46vh;
+  background: none;
+}
+
+.customise-head {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customise-title {
+  margin: 0;
+  font-size: clamp(44px, 3.6vw, 68px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.customise-line {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+.customise-summary {
+  margin: 0;
+  max-width: 48em;
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.customise-note {
+  margin: 4px 0 0;
+  font-size: var(--fs-md);
+  color: var(--menu-acid);
+}
+
+.customise-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.customise-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--sp-4);
+}
+
+.customise-panel-title {
+  margin: 0;
+  font: 800 clamp(22px, 1.6vw, 30px) / 1 var(--ui-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.customise-panel-note,
+.customise-later {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.fit-row {
+  padding: 0;
+  border: 0;
+}
+
+.fit-row > .menu-row-name {
+  display: none;
+}
+
+/* Options and colour schemes as picture tiles. */
+.option-grid,
+.scheme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.option-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 150px;
+  padding: var(--sp-3);
+  overflow: hidden;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.option-tile:hover {
+  border-color: var(--menu-muted);
+}
+
+.option-tile.selected {
+  border: 2px solid var(--orange);
+  box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.22);
+}
+
+.option-tile > .pic-slot {
+  position: absolute;
+  inset: 0 0 30%;
+  background: none;
+}
+
+.option-none {
+  position: absolute;
+  inset: 0 0 40%;
+  display: grid;
+  place-items: center;
+  font: 800 var(--fs-2xl) / 1 var(--ui-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.option-words {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option-name {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+
+.option-line {
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.fit-readout:empty {
+  display: none;
+}
+
+/* Colour: what the scheme applies to, Realistic colours and the families it maps to. */
+.customise-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.colour-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+}
+
+.colour-applies {
+  margin: 0;
+  font: 800 var(--fs-xl) / 1.1 var(--ui-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.colour-note {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--menu-soft);
+}
+
+.colour-other {
+  aspect-ratio: 2 / 1;
+  background: none;
+  border: 1px solid var(--menu-line-soft);
+}
+
+.colour-real-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.colour-real-title {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.colour-real-state {
+  font: 700 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--menu-muted);
+}
+
+.colour-real-state.on {
+  color: var(--menu-acid);
+}
+
+.family-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.family-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 90px;
+  padding: 8px 10px;
+  border: 1px solid var(--menu-line-soft);
+}
+
+.family-tile.selected {
+  border-color: var(--orange);
+}
+
+.family-tile .pic-slot {
+  position: absolute;
+  inset: 0 0 26%;
+  background: none;
+}
+
+.family-tile .option-name {
+  position: relative;
+  font-size: var(--fs-md);
+}
+
+/* Settings: the search box and the groups on the left, the group's rows in the middle, about the row on the right. */
+.settings-columns {
+  display: grid;
+  grid-template-columns: clamp(250px, 19vw, 380px) minmax(0, 1fr) clamp(260px, 20vw, 420px);
+  gap: clamp(16px, 1.6vw, 32px);
+  align-items: start;
+}
+
+.settings-side {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 56px;
+  padding: 0 var(--sp-4);
+  color: var(--menu-muted);
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line);
+}
+
+.settings-search:focus-within {
+  border-color: var(--orange);
+}
+
+.settings-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  font: 500 var(--fs-lg) var(--ui-font);
+  color: var(--paper);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.settings-search input::placeholder {
+  color: var(--menu-faint);
+}
+
+.settings-search-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.settings-search-note:empty {
+  display: none;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 64px;
+  padding: 8px var(--sp-4);
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.settings-tab svg.icon {
+  width: 26px;
+  height: 26px;
+  color: var(--menu-muted);
+}
+
+.settings-tab:hover {
+  border-color: var(--menu-muted);
+}
+
+.settings-tab.selected {
+  background: linear-gradient(90deg, rgba(255, 107, 26, 0.28), rgba(255, 107, 26, 0.08));
+  border-color: var(--orange);
+}
+
+.settings-tab.selected svg.icon {
+  color: var(--orange-text);
+}
+
+/* "The current place": a 4 px orange bar on the left of the group you're on. */
+.settings-tab.selected::before,
+.gear-slot.selected::before {
+  content: '';
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: 4px;
+  background: var(--orange);
+}
+
+.settings-tab-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-tab-name {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.05em;
+}
+
+.settings-tab-blurb {
+  font-size: var(--fs-sm);
+  color: var(--menu-soft);
+}
+
+.settings-tab-save {
+  margin-top: var(--sp-3);
+}
+
+/* The box that shows the hidden Dev group (M24): a switch under the groups. */
+.settings-dev-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--control-md);
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+  cursor: pointer;
+}
+
+.settings-dev-toggle:hover,
+.settings-dev-toggle:focus-within {
+  color: var(--paper);
+}
+
+.settings-dev-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggle-track {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 13px;
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: #cfd8ee;
+  border-radius: 50%;
+  transition: translate var(--t-fast) var(--ease);
+}
+
+.settings-dev-toggle input:checked + .toggle-track {
+  background: var(--orange);
+}
+
+.settings-dev-toggle input:checked + .toggle-track::after {
+  translate: 22px 0;
+  background: #fff;
+}
+
+.settings-dev-toggle input:focus-visible + .toggle-track {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.settings-panels {
+  min-width: 0;
+}
+
+.settings-tab-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(12, 20, 42, 0.86);
+  border: 1px solid var(--menu-line-soft);
+}
+
+.settings-tab-panel + .settings-tab-panel {
+  margin-top: var(--sp-4);
+}
+
+.settings-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--sp-4);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+}
+
+.settings-panel-title {
+  margin: 0;
+  font-size: clamp(36px, 3vw, 60px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.settings-panel-blurb {
+  margin: 0;
+  font-size: var(--fs-lg);
+  color: var(--menu-soft);
+}
+
+.settings-subhead {
+  margin: var(--sp-4) var(--sp-4) var(--sp-2);
+  font: 700 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+.settings-tab-panel > .menu-readout,
+.settings-tab-panel > .picker-blurb,
+.settings-keys,
+.settings-tab-panel > .graphics-custom,
+.settings-tab-panel > .key-settings {
+  margin-left: var(--sp-4);
+  margin-right: var(--sp-4);
+}
+
+.settings-tab-panel .menu-row:hover,
+.settings-tab-panel .menu-row:focus-within {
+  background: rgba(63, 140, 255, 0.08);
+  box-shadow: inset 4px 0 0 var(--menu-blue);
+}
+
+/* A search that matches nothing in a group hides its rows; the groups with matches show their heads. */
+.search-miss {
+  display: none !important;
+}
+
+.settings-about {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+}
+
+.settings-about-title {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.settings-about-text {
+  margin: 0;
+  font-size: var(--fs-lg);
+  line-height: 1.45;
+}
+
+.settings-about-cost {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--orange-text);
+}
+
+.settings-about-cost:empty {
+  display: none;
+}
+
+.settings-tip {
+  margin: var(--sp-4) 0 0;
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  background: rgba(200, 255, 46, 0.06);
+  border: 1px solid rgba(200, 255, 46, 0.35);
+}
+
+.settings-tip b {
+  color: var(--menu-acid);
+}
+
+.settings-fullscreen {
+  min-width: 8em;
+}
+
+/* Key bindings (Settings › Controls) */
+.key-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--sp-6);
+}
+
+.key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  min-height: var(--control-md);
+  font-size: var(--fs-md);
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.key-slots {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--sp-2);
+}
+
+.key-button {
+  min-width: 6.5em;
+  max-width: 9.5em;
+  min-height: var(--control-xs);
+  padding: 0 var(--sp-3);
+  font: 700 var(--fs-md) var(--ui-display);
+  letter-spacing: 0.06em;
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.key-button:hover {
+  border-color: var(--menu-muted);
+}
+
+.key-button.empty {
+  /* Muted, not faint, so the dash reads on the box's panel (audit UI-04). */
+  color: var(--menu-muted);
+}
+
+/* A row whose key another action just took (audit UI-05): a short flash, so the player sees what moved. */
+.key-row.moved {
+  animation: key-moved 1.4s ease-out;
+}
+
+@keyframes key-moved {
+  from {
+    background: rgba(255, 107, 26, 0.32);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.reduced-motion .key-row.moved {
+  animation: none;
+  background: rgba(255, 107, 26, 0.18);
+}
+
+/* Nothing saved: the system's "reduce motion" decides, live (audit UI-07; Game sets neither class then). */
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .key-row.moved {
+    animation: none;
+    background: rgba(255, 107, 26, 0.18);
+  }
+}
+
+.key-layout-note {
+  margin: 4px 0 0;
+}
+
+.key-reset.armed {
+  color: var(--ink);
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.key-button.listening {
+  color: var(--ink);
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.key-note {
+  min-height: 1.3em;
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-md);
+  color: var(--hint);
+}
+
+/* Reset All: a ghost button (tertiary) until it is armed. */
+.key-reset {
+  min-height: var(--control-md);
+  margin-top: var(--sp-2);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: var(--ls-caps);
+  color: var(--menu-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.key-reset:hover {
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+}
+
+.key-reset.armed:hover {
+  color: var(--ink);
+  background: var(--orange-hover);
+}
+
+.menus kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  font: 700 var(--fs-sm) var(--ui-display);
+  line-height: 1.6;
+  text-align: center;
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-bottom-width: 2px;
+}
+
+/* The custom crosshair colour's box (audit UI-21), at the end of the colour buttons. */
+.crosshair-custom {
+  width: 40px;
+  height: var(--control-lg);
+  padding: 2px;
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  cursor: pointer;
+}
+
+/* Settings › Gameplay: the crosshair's live preview, standing still and as when moving, on a mid-tone backdrop. */
+.crosshair-preview {
+  gap: 12px;
+}
+
+.crosshair-preview-cell {
+  position: relative;
+  flex: 0 0 150px;
+  height: 110px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #6f7a6a 0%, #8c8a7c 50%, #c9c4b3 100%);
+  border: 1px solid var(--menu-line);
+}
+
+.crosshair-preview-caption {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  font: 700 var(--fs-sm) var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--hud-fg);
+  text-shadow: var(--hud-shadow);
+}
+
+.crosshair-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 7px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  vertical-align: -1px;
+}
+
+/* Settings › Accessibility: the picked team colours, as the figures wear them */
+.team-swatches {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.team-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 var(--fs-sm) var(--ui-font);
+}
+
+.team-swatch::before {
+  content: '';
+  width: 28px;
+  height: 14px;
+  background: var(--swatch);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Settings › Save file (M31) */
+.save-problem {
+  margin: 0 var(--sp-4) var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--warning);
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+}
+
+.save-status {
+  font-size: var(--fs-md);
+  color: var(--menu-soft);
+}
+
+.save-line {
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--menu-muted);
+}
+
+.save-message:not(:empty) {
+  color: var(--hint);
+}
+
+.save-restore-list {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+
+.save-restore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.save-restore .menu-button {
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-md);
+}
+
+.menu-row-control .menu-button.save-danger:not(:disabled) {
+  color: var(--danger);
+}
+
+/* A file dragged over the Save group: the panel shows it can take it. */
+.settings-tab-panel.save-drop {
+  outline: 2px dashed var(--orange);
+  outline-offset: var(--sp-2);
+}
+
+.save-compare {
+  width: 100%;
+  margin: 0 0 var(--sp-4);
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+
+.save-compare th,
+.save-compare td {
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.save-compare tr:first-child th {
+  font-size: var(--fs-sm);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--menu-muted);
+  border-top: 0;
+}
+
+.save-compare tr th:first-child {
+  font-weight: 600;
+  color: var(--menu-muted);
+}
+
+.save-dialog-note {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.save-dialog-note.warn {
+  color: var(--warning);
+}
+
+.save-dialog-actions,
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+.save-dialog-actions .menu-button {
+  min-height: var(--control-md);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-md);
+}
+
+/* The Armory: balance, exchange and Shots on the left; the last Shot and the odds in the middle; the collection right. */
+.armory-columns {
+  display: grid;
+  grid-template-columns: clamp(300px, 26vw, 520px) minmax(0, 1fr) clamp(300px, 26vw, 520px);
+  gap: clamp(16px, 1.6vw, 32px);
+  align-items: start;
+}
+
+.armory-left,
+.armory-owned {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}
+
+.armory-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.armory-free {
+  margin: 0;
+  font-size: var(--fs-lg);
+  line-height: 1.45;
+}
+
+.armory-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 4px solid var(--orange);
+}
+
+/* Kept in the page when empty (a live region), but takes no room. */
+.armory-notice:empty {
+  padding: 0;
+  border: 0;
+}
+
+.armory-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.armory-balance {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+.armory-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-4);
+  border: 1px solid var(--menu-line-soft);
+}
+
+.armory-figure-value {
+  font: 800 clamp(30px, 2.2vw, 42px) / 1 var(--ui-display);
+  white-space: nowrap;
+}
+
+.armory-shots-title {
+  margin: var(--sp-3) 0 0;
+  padding-top: var(--sp-4);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.armory-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.item-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: 58px;
+  padding: 0 var(--sp-5);
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+  cursor: pointer;
+}
+
+.item-chip:hover {
+  border-color: var(--menu-muted);
+}
+
+.item-chip .item-name {
+  font-size: clamp(22px, 1.5vw, 28px);
+  font-weight: 800;
+}
+
+.item-chip .item-note {
+  font: 700 var(--fs-lg) / 1 var(--ui-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.armory-action.armory-shot:first-child {
+  color: #fff;
+  background: linear-gradient(180deg, #ff7f2e, #ff5a10);
+  border-color: transparent;
+}
+
+.armory-pity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-md);
+}
+
+.armory-pity li {
+  padding-left: 10px;
+  border-left: 3px solid var(--tier);
+}
+
+.armory-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+
+.armory-reveal:empty {
+  display: none;
+}
+
+.armory-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.armory-reveal-summary {
+  margin: 0;
+}
+
+.armory-reveal-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.armory-tile {
+  min-height: clamp(200px, 15vw, 300px);
+  cursor: default;
+  border: 2px solid var(--tier, var(--menu-line));
+}
+
+.armory-tile.is-new .item-note:last-child {
+  font-family: var(--ui-display);
+  font-weight: 800;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+/* The reveal (audit POOL-11): tiles come in one after another, rarest first; at once with reduced motion */
+.armory-reveal-grid .armory-tile {
+  animation: armory-tile-in var(--t-med) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.reduced-motion .armory-reveal-grid .armory-tile {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .armory-reveal-grid .armory-tile {
+    animation: none;
+  }
+}
+
+@keyframes armory-tile-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+.armory-reveal-grid .armory-tile:is([data-tier='epic'], [data-tier='legendary']) {
+  box-shadow: 0 0 0 1px var(--tier), 0 0 18px -4px var(--tier);
+}
+
+.armory-tile .tier-adds {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  color: var(--menu-muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+/* The odds: a strip in the tiers' colours, then the table. */
+.armory-odds-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.armory-odds-strip {
+  display: flex;
+  height: 40px;
+  overflow: hidden;
+}
+
+.armory-odds-strip span {
+  flex: var(--share, 0) 0 0;
+  min-width: 4px;
+  background: var(--tier);
+}
+
+.armory-odds {
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+
+.armory-odds caption {
+  padding-bottom: 6px;
+  font: 600 var(--fs-sm) var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.armory-odds th,
+.armory-odds td {
+  padding: 4px 16px 4px 0;
+  text-align: left;
+}
+
+.armory-odds th::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 10px;
+  vertical-align: -1px;
+  background: var(--tier);
+}
+
+.armory-odds-scrap {
+  white-space: nowrap;
+  color: var(--menu-muted);
+}
+
+.armory-per-asset {
+  margin-top: 4px;
+}
+
+/* Chase items (M32): their line under the odds, edged in their tier's colour; a chase item glows in the reveal. */
+.armory-chase {
+  padding-left: 10px;
+  border-left: 3px solid var(--tier, var(--menu-line));
+}
+
+.armory-tile.is-chase {
+  border-color: var(--tier);
+  box-shadow: 0 0 0 2px var(--tier), 0 0 18px var(--tier);
+}
+
+.armory-reveal-grid .armory-tile.is-chase {
+  animation: armory-tile-in var(--t-med) var(--ease) both, armory-chase-glow 1.6s var(--ease) calc(var(--i, 0) * 60ms + var(--t-med)) 3;
+}
+
+.reduced-motion .armory-reveal-grid .armory-tile.is-chase {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .armory-reveal-grid .armory-tile.is-chase {
+    animation: none;
+  }
+}
+
+@keyframes armory-chase-glow {
+  50% {
+    box-shadow: 0 0 0 3px var(--tier), 0 0 32px var(--tier);
+  }
+}
+
+/* The collection: a row per asset with its picture, a pip per tier coloured when owned, spares to scrap. */
+.loadout-replica-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.armory-completion {
+  margin-left: 8px;
+  font: 600 var(--fs-lg) var(--ui-font);
+  text-transform: none;
+  color: var(--menu-muted);
+}
+
+.armory-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.armory-category {
+  margin: var(--sp-4) 0 var(--sp-1);
+}
+
+.armory-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  min-height: 52px;
+  padding: 4px 0 4px 10px;
+  border-top: 1px solid var(--menu-line-soft);
+  border-left: 4px solid var(--tier, var(--menu-line));
+}
+
+.armory-row > .pic-slot {
+  flex: none;
+  width: 72px;
+  height: 44px;
+  background: none;
+}
+
+.armory-row-name {
+  flex: 1 1 120px;
+  font-weight: 700;
+}
+
+.armory-row-adds {
+  flex-basis: 100%;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.armory-row .menu-button {
+  min-height: var(--control-sm);
+  padding: 0 14px;
+  font-size: var(--fs-md);
+}
+
+.armory-row.is-unowned {
+  color: var(--menu-faint);
+}
+
+.armory-pips {
+  display: flex;
+  gap: 4px;
+}
+
+.armory-pip {
+  min-width: 2.6em;
+  padding: 2px 4px;
+  font-size: var(--fs-sm);
+  text-align: center;
+  color: var(--menu-faint);
+  border: 1px solid var(--menu-line-soft);
+}
+
+.armory-pip.is-owned {
+  font-weight: 700;
+  color: var(--paper);
+  border-color: var(--tier);
+  box-shadow: inset 0 -3px 0 var(--tier);
+}
+
+.armory-pip.is-na {
+  border-style: dashed;
+  opacity: 0.4;
+}
+
+/* The pause menu: a column on the left, over the paused field. */
+.menu-pause {
+  justify-content: center;
+}
+
+.menu-pause-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: min(460px, 100%);
+  margin: auto 0;
+  padding: var(--sp-6);
+  background: rgba(12, 20, 42, 0.94);
+  border: 1px solid var(--menu-line-soft);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+
+.menu-pause-panel .menu-button:not(.menu-button-big) {
+  justify-content: flex-start;
+}
+
+.menu-pause-status {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-lg);
+  color: var(--menu-muted);
+}
+
+.menu-pause-seed {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-faint);
+}
+
+/* The match summary: the result over the tables, your Field Credits and records beside them. */
+.summary-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: clamp(16px, 1.8vw, 32px);
+}
+
+.summary-result {
+  font-size: clamp(40px, 4.2vw, 84px);
+  line-height: 0.95;
+  font-style: italic;
+}
+
+.summary-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 26vw, 500px);
+  gap: clamp(16px, 2vw, 40px);
+  align-items: start;
+}
+
+.summary-main {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.summary-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.summary-credits,
+.summary-haul,
+.summary-records {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}
+
+.summary-credits-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-credits-total strong {
+  font: 800 clamp(34px, 2.6vw, 52px) / 1 var(--ui-display);
+  color: var(--paper);
+}
+
+.records-grid {
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.records-grid th,
+.records-grid td {
+  padding: 3px var(--sp-4) 3px 0;
+  text-align: left;
+}
+
+.records-grid thead th {
+  font: 600 var(--fs-sm) var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.records-grid tbody th {
+  font-weight: 700;
+}
+
+.records-grid td.current {
+  font-weight: 800;
+  color: var(--orange-text);
+}
+
+.records-not-counted {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.records-bests {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-md);
+}
+
+.records-best-label {
+  margin-right: 8px;
+  color: var(--menu-muted);
+}
+
+.records-new {
+  margin-left: 8px;
+  padding: 2px 7px;
+  font: 800 var(--fs-sm) var(--ui-display);
+  font-style: normal;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--ink);
+  background: #ffc21a;
+}
+
+/* The result: the headline large, Play again under it, the rest beside each other. */
+.menu-result {
+  justify-content: center;
+}
+
+.menu-result-centre {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: auto;
+  padding-left: clamp(0px, 3vw, 56px);
+}
+
+.menu-result-headline {
+  margin: 0;
+  font-size: clamp(64px, 8vw, 150px);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.9;
+  color: var(--menu-blue);
+}
+
+.menu-result-detail {
+  margin: 0;
+  font: 700 clamp(22px, 2vw, 36px) var(--ui-display);
+  letter-spacing: 0.04em;
+}
+
+.menu-result-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: min(560px, 100%);
+  margin: clamp(24px, 4vw, 64px) 0 auto;
+  padding-left: clamp(0px, 3vw, 56px);
+}
+
+.menu-result-buttons,
+.menu-result-more {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.menu-result-more {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Pop-ups (a confirm, the Save group's): a panel over a darkened page. No live blur behind them. */
+.menu-dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  font: 500 var(--fs-md) / 1.4 var(--ui-font);
+  color: var(--paper);
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.menu-dialog[open] {
+  animation: dialog-enter var(--t-med) var(--ease) both;
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+/* The backdrop takes literal colours: older browsers don't pass custom properties into ::backdrop. */
+.menu-dialog::backdrop {
+  background: rgba(7, 13, 31, 0.8);
+}
+
+.menu-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+
+.menu-dialog-title {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.menu-close {
+  display: grid;
+  place-items: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  padding: 0;
+  color: var(--menu-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.menu-close:hover {
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+}
+
+.menu-close svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* Asking before a big spend (audit POOL-03) */
+.confirm-text {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--menu-soft);
+}
+
+/* The title's warning: the browser draws without hardware acceleration (M18b), a slim banner with its sign. */
+.menu-title-warning {
+  position: absolute;
+  left: 50%;
+  top: clamp(16px, 2vw, 32px);
+  z-index: 2;
+  translate: -50% 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  width: min(900px, calc(100% - 2 * var(--menu-gutter) - 360px));
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--warning);
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+}
+
+.menu-title-warning svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Narrower windows: the three-column screens drop their right column under the rest, then stack. */
+@media (max-width: 1500px) {
+  .loadout-view {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .loadout-selected {
+    grid-column: 1 / -1;
+    position: static;
+  }
+
+  .customise-layout,
+  .settings-columns {
+    grid-template-columns: clamp(240px, 24vw, 320px) minmax(0, 1fr);
+  }
+
+  .customise-side,
+  .settings-about {
+    grid-column: 2;
+    position: static;
+  }
+
+  .armory-columns {
+    grid-template-columns: clamp(280px, 30vw, 420px) minmax(0, 1fr);
+  }
+
+  .armory-owned {
+    grid-column: 1 / -1;
+  }
+
+  .menu-nav-item svg.icon {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .play-layout,
+  .summary-layout,
+  .title-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .title-body {
+    grid-template-areas: 'hero' 'actions' 'side';
+    padding-left: 0;
+  }
+
+  .play-aside {
+    position: static;
+  }
+
+  .match-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .menu-build {
+    display: none;
+  }
+
+  .menu-title-warning {
+    width: calc(100% - 2 * var(--menu-gutter));
+    top: 72px;
+  }
+}
+
+@media (max-width: 900px) {
+  .loadout-view,
+  .customise-layout,
+  .settings-columns,
+  .armory-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customise-side,
+  .settings-about {
+    grid-column: auto;
+  }
+
+  .settings-side {
+    position: static;
+  }
+
+  .menu-chip {
+    padding: 4px 8px;
+  }
+
+  .menu-mark {
+    display: none;
+  }
+}

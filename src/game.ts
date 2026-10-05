@@ -12,7 +12,7 @@ import type { MatchRules, RulesetId } from './config/matchRules';
 import { type CrosshairSettings, type HitFeedMode, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
 import { FULLSCREEN_RELOCK_MS } from './config/controls';
 import { CRASH_TEXT } from './config/crash';
-import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
+import { BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { GRAPHICS_TEXT } from './config/graphics';
@@ -58,13 +58,13 @@ import { carryOverOldPicks } from './pool/oldPicks';
 import { activeSupplyEvent, supplyLine } from './pool/supplyEvents';
 import type { Dispensed, Earnings } from './pool/armory';
 import { haulSummary, type Unpaid } from './ui/menus/summaryScreen';
-import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
 import type { SaveManager } from './save/saveManager';
 import { SAVE_TEXT } from './config/save';
 import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
+import { followingPictureTarget, ItemPictures, webglPictureTarget } from './render/itemPictures';
 import { recordsView } from './ui/recordsView';
 import {
   effectiveReducedMotion,
@@ -151,6 +151,8 @@ export class Game {
   private readonly input: PlayerInput;
   private readonly debug: DebugOverlay;
   private readonly menus: Menus;
+  /** The menus' replica and part pictures (G3): drawn on demand with the game's renderer, one per frame. */
+  private readonly pictures: ItemPictures;
   /** Over everything while the graphics context is lost (M18b). */
   private readonly graphicsNotice: GraphicsNotice;
   /** True while the graphics context is lost: nothing can be drawn, so play can't start or resume. */
@@ -352,7 +354,10 @@ export class Game {
       };
     });
 
+    // The menus' pictures of replicas and parts (G3), drawn by whichever WebGL renderer the game has now.
+    this.pictures = new ItemPictures(followingPictureTarget(() => this.renderer.renderer, webglPictureTarget));
     this.menus = new Menus(container, {
+      pictures: this.pictures,
       rules: {
         playerTeam: TEAMS[PLAYER_TEAM]!.name,
         enemyTeam: TEAMS[1 - PLAYER_TEAM]!.name,
@@ -378,10 +383,8 @@ export class Game {
           this.loadoutChanged = this.setupChanged = true;
           return reloaded;
         },
-        summary: () =>
-          this.dev.disableArmory
-            ? { value: 'Off', detail: ARMORY_TEXT.off, disabled: true }
-            : { value: fcText(this.collection.fc), detail: `${this.collection.tokens} ${this.collection.tokens === 1 ? 'Token' : 'Tokens'}. ${ARMORY_TEXT.tileDetail}`, disabled: false },
+        // Off in the Dev settings: no wallet, and the Armory's buttons are greyed out.
+        wallet: () => (this.dev.disableArmory ? null : { fc: this.collection.fc, tokens: this.collection.tokens }),
       },
       onPlay: () => {
         // Before play begins this is New game's Play: a match, even after a Practice range whose mouse lock was refused.
@@ -817,6 +820,8 @@ export class Game {
     this.pointer.dispose();
     this.debug.dispose();
     this.menus.dispose();
+    // Its render target belongs to the renderer, so it goes first.
+    this.pictures.dispose();
     this.renderer.dispose();
   }
 
