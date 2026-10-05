@@ -6,7 +6,7 @@ import type { MagazineId } from '../config/attachments';
 import type { DetailLevel } from '../config/render';
 import { REPLICA_FINISH } from '../config/replicaFinish';
 import type { ReplicaConfig } from '../config/replicas';
-import { FAMILIES, FIXED_COLOUR_FAMILY, hasFixedColours, type ReplicaPaint, type Scheme, schemeColours } from '../config/schemes';
+import { CYBER_COLOURS, type CyberColours, hasFixedColours, type ReplicaPaint, schemeColours } from '../config/schemes';
 import { LASERS } from '../config/lasers';
 import { TORCHES } from '../config/torches';
 import { projectSpeckleUvs, type SpeckleTextures, speckleTextures } from './replicaFinish';
@@ -14,9 +14,10 @@ import { projectSpeckleUvs, type SpeckleTextures, speckleTextures } from './repl
 /**
  * First-person replica models built in code. They resemble real-world replica types (an AR-pattern
  * AEG, a polymer striker pistol) but are generic (no brands, logos or copies of a specific design)
- * and rendered stylised: chunky side-profile silhouettes extruded with soft bevels, plus cylinders
- * and small detail parts, in two-tone black and tan. The orange muzzle tip many real replicas carry
- * is optional (VIEWMODEL.orangeTips).
+ * and rendered stylised (graphics overhaul G2: Marathon's blocky, chamfered slabs with Valorant's clean finish): chunky
+ * side-profile silhouettes extruded with soft bevels, plus cylinders and small detail parts, two-tone in the player's
+ * colour scheme (config/schemes.ts) with a thin accent line. The orange muzzle tip many real replicas carry is optional
+ * (VIEWMODEL.orangeTips).
  *
  * Profiles are drawn as (forward, up) in metres, with the receiver/frame near the origin. Parts are
  * merged per material, so each replica is only a few draw calls.
@@ -29,8 +30,28 @@ import { projectSpeckleUvs, type SpeckleTextures, speckleTextures } from './repl
  */
 
 type Pt = readonly [forward: number, up: number];
+/** A point of a front-view outline: across the model (right is +) and up. */
+type FrontPt = readonly [across: number, up: number];
 
-type MaterialKey = 'polymer' | 'furniture' | 'mag' | 'metal' | 'rubber' | 'orange' | 'lens' | 'laserLens' | 'torchLens' | 'bb' | 'glove' | 'sleeve' | 'armband' | 'mint' | 'pink';
+type MaterialKey =
+  | 'polymer'
+  | 'furniture'
+  | 'detail'
+  | 'metal'
+  | 'rubber'
+  | 'stipple'
+  | 'accent'
+  | 'orange'
+  | 'lens'
+  | 'laserLens'
+  | 'torchLens'
+  | 'bb'
+  | 'glove'
+  | 'sleeve'
+  | 'armband'
+  | 'cyberSlab'
+  | 'cyberLine'
+  | 'cyberCore';
 
 /** The replica and hand detail a viewmodel is built at (QualitySettings.replicaDetail and handDetail, FA8). */
 export interface ReplicaDetail {
@@ -47,22 +68,36 @@ const F = REPLICA_FINISH;
 const SPECKLED: Partial<Record<MaterialKey, number>> = {
   polymer: F.density.polymer,
   furniture: F.density.polymer,
-  mag: F.density.polymer,
+  detail: F.density.polymer,
   rubber: F.density.rubber,
-  mint: F.density.polymer,
-  pink: F.density.polymer,
+  stipple: F.density.rubber,
+  cyberSlab: F.density.polymer,
 };
 
 /** How a part's vertices are coloured on high detail: which faces are its bevels, and whether its edges are worn. */
 type EdgeKind = 'none' | 'extrude' | 'box';
 
 /**
- * The replicas' materials (M14 polish): moulded polymer with a soft satin sheen (it catches the viewmodel's environment
- * on High and Medium), dull grey "metal" that is plainly painted zinc and plastic, rubber, tinted lens. Toys, not guns.
- * High detail (FA8): the speckle maps on polymer and rubber, vertex colours for the edge highlight, painted steel, a
- * glossy glass, a glowing laser lens.
+ * A replica's colours by role (graphics overhaul G1, G2): the body (receiver, slide), the furniture (stock, grip,
+ * handguard, foregrip), the details (rails, sights, magazines, small parts), a thin accent line (glowing when `glow`) and
+ * the steel of its barrel and pins. A scheme (config/schemes.ts) is one.
  */
-function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: SpeckleTextures | null): Record<MaterialKey, THREE.Material> {
+export interface ReplicaColours {
+  body: number;
+  furniture: number;
+  detail: number;
+  accent: number;
+  steel: number;
+  glow?: boolean;
+}
+
+/**
+ * The replicas' materials (M14 polish; repainted per scheme in G2): moulded polymer in the scheme's two tones with a soft
+ * satin sheen (it catches the viewmodel's environment on High and Medium), painted steel, rubber, tinted lens. Toys, not
+ * guns. High detail (FA8): the speckle maps on polymer and rubber, vertex colours for the edge highlight, metallic steel
+ * under a sheen, a glossy glass, a glowing laser lens.
+ */
+function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: SpeckleTextures | null, colours: ReplicaColours, cyber: CyberColours): Record<MaterialKey, THREE.Material> {
   const vertexColors = coloured(detail);
   const mean = F.speckle.grey / 255;
   const speckled = (color: number, roughness: number): THREE.MeshStandardMaterial =>
@@ -79,22 +114,26 @@ function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: Spec
       : new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, vertexColors });
   const high = detail.replica === 'high';
   const materials: Record<MaterialKey, THREE.Material> = {
-    polymer: speckled(0x2a2c31, high ? F.roughness.polymer : 0.5),
-    furniture: speckled(0xb79c70, high ? F.roughness.furniture : 0.58),
-    mag: speckled(0x363a40, high ? F.roughness.mag : 0.52),
+    polymer: speckled(colours.body, high ? F.roughness.polymer : 0.5),
+    furniture: speckled(colours.furniture, high ? F.roughness.furniture : 0.58),
+    detail: speckled(colours.detail, high ? F.roughness.mag : 0.52),
     metal: high
-      ? new THREE.MeshStandardMaterial({ color: F.metal.color, ...F.metal.unlit, vertexColors })
-      : new THREE.MeshStandardMaterial({ color: 0x6a6f78, roughness: 0.45, metalness: 0.35, vertexColors }),
+      ? new THREE.MeshStandardMaterial({ color: colours.steel, ...F.metal.unlit, vertexColors })
+      : new THREE.MeshStandardMaterial({ color: colours.steel, roughness: 0.45, metalness: 0.35, vertexColors }),
     rubber: speckled(0x17181a, high ? F.roughness.rubber : 0.95),
-    // The Cyber Pistol's moulded colours (M32): the same polymer in mint and hot pink.
-    mint: speckled(F.cyber.mint, high ? F.roughness.polymer : 0.5),
-    pink: speckled(F.cyber.pink, high ? F.roughness.polymer : 0.5),
+    // Stippled grip panels: the furniture's colour a shade darker, rough.
+    stipple: speckled(stippleOf(colours.furniture), high ? F.roughness.rubber : 0.95),
+    accent: accentMaterial(colours.accent, colours.glow === true, vertexColors),
+    // The Cyber Pistol's own colours: a white slab, a dark frame (its polymer), light lines and a core that glow.
+    cyberSlab: speckled(cyber.slab, high ? F.roughness.polymer : 0.5),
+    cyberLine: accentMaterial(cyber.line, cyber.glow, vertexColors),
+    cyberCore: accentMaterial(cyber.core, cyber.glow, vertexColors),
     orange: new THREE.MeshStandardMaterial({ color: 0xff6a13, roughness: 0.5, metalness: 0, vertexColors }),
     lens: high
       ? new THREE.MeshStandardMaterial({ color: F.glass.color, roughness: F.glass.roughness, metalness: 0, transparent: true, opacity: F.glass.opacity, depthWrite: false })
       : new THREE.MeshBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.12, depthWrite: false }),
-    // The red laser's lens glows its beam's colour (config/lasers.ts), unlit, so it reads in any light. High: emissive,
-    // so the tone mapping rolls it into a glow without a bloom pass.
+    // The red laser's lens (and the red dot's dot) glow their beam's colour (config/lasers.ts), unlit, so they read in
+    // any light. High: emissive, so the tone mapping (and bloom, where on) rolls it into a glow.
     laserLens: high
       ? new THREE.MeshStandardMaterial({ color: F.laserBody, emissive: LASERS.redLaser.colour, emissiveIntensity: F.laserGlow, roughness: 0.3, metalness: 0 })
       : new THREE.MeshBasicMaterial({ color: LASERS.redLaser.colour }),
@@ -103,7 +142,7 @@ function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: Spec
       ? new THREE.MeshStandardMaterial({ color: F.torch.lensOff, emissive: TORCHES.weaponTorch.colour, emissiveIntensity: 0, roughness: 0.1, metalness: 0 })
       : new THREE.MeshBasicMaterial({ color: F.torch.lensOff }),
     bb: new THREE.MeshStandardMaterial({ color: F.witnessBb, roughness: 0.35, metalness: 0, vertexColors }),
-    // Olive gloves: clearly separate from the black polymer and tan furniture.
+    // Olive gloves: clearly separate from the replica's colours.
     glove: new THREE.MeshStandardMaterial({ color: 0x5d6146, roughness: 0.9, metalness: 0, vertexColors }),
     sleeve: new THREE.MeshStandardMaterial({ color: 0x4a525c, roughness: 1, metalness: 0, vertexColors }),
     // Team tape on the sleeve, as players wear at real sites.
@@ -111,39 +150,72 @@ function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: Spec
   };
   // Vertex colours only darken (a colour can't pass white), so flat faces sit at VERTEX_BASE and the material is that
   // much brighter: a flat face is its colour as before, a bevel or worn edge lighter.
-  if (vertexColors) for (const mat of Object.values(materials)) if (mat instanceof THREE.MeshStandardMaterial && mat.vertexColors) mat.color.multiplyScalar(1 / VERTEX_BASE);
+  if (vertexColors) for (const mat of Object.values(materials)) if (mat instanceof THREE.MeshStandardMaterial && mat.vertexColors) brighten(mat);
   return materials;
 }
 
-/** The materials a colour scheme repaints (graphics overhaul G1): body, furniture, small parts and steel. */
-const PAINTED: readonly MaterialKey[] = ['polymer', 'furniture', 'mag', 'metal', 'mint', 'pink'];
+/** A painted line, or (glow) one lit from within: emissive in its colour, so it reads in the dark and blooms where bloom is on. */
+function accentMaterial(color: number, glow: boolean, vertexColors: boolean): THREE.MeshStandardMaterial {
+  return glow
+    ? new THREE.MeshStandardMaterial({ color: 0x101114, emissive: color, emissiveIntensity: F.accentGlow, roughness: 0.4, metalness: 0 })
+    : new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0, vertexColors });
+}
+
+/** Lifts a vertex-coloured material by 1 / VERTEX_BASE, so a flat face shows the material's own colour. */
+function brighten(mat: THREE.MeshStandardMaterial): void {
+  mat.color.multiplyScalar(1 / VERTEX_BASE);
+}
+
+/** The materials a replica's colours repaint: the scheme's roles, and the Cyber Pistol's own. */
+const PAINTED: readonly MaterialKey[] = ['polymer', 'furniture', 'detail', 'metal', 'stipple', 'accent', 'cyberSlab', 'cyberLine', 'cyberCore'];
+
+/** A stippled panel's colour: the furniture's, REPLICA_FINISH.stippleShade as bright. */
+function stippleOf(furniture: number): number {
+  return new THREE.Color(furniture).multiplyScalar(F.stippleShade).getHex();
+}
 
 /**
- * One replica's materials in `colours` (its scheme, or that scheme's plain family): copies of the painted materials,
- * the rest shared with `base`. The Cyber Pistol keeps its mint and pink unless Realistic colours turns it plain.
+ * One replica's materials in `colours` (and, for the Cyber Pistol, `cyber`): new copies of the painted materials, the
+ * rest shared with `base` (made in the unpainted colours).
  */
-function paintedMaterials(base: Record<MaterialKey, THREE.Material>, colours: Scheme, fixed: boolean): Record<MaterialKey, THREE.Material> {
+function paintedMaterials(base: Record<MaterialKey, THREE.Material>, detail: ReplicaDetail, colours: ReplicaColours, cyber: CyberColours): Record<MaterialKey, THREE.Material> {
+  const vertexColors = coloured(detail);
   const out = { ...base };
-  const tint: Partial<Record<MaterialKey, number>> = fixed
-    ? { mint: colours.furniture, pink: colours.body }
-    : { polymer: colours.body, furniture: colours.furniture, mag: colours.detail, metal: colours.steel };
-  for (const key of PAINTED) {
-    const hex = tint[key];
-    if (hex === undefined) continue;
+  const tint: Partial<Record<MaterialKey, number>> = {
+    polymer: colours.body,
+    furniture: colours.furniture,
+    detail: colours.detail,
+    metal: colours.steel,
+    stipple: stippleOf(colours.furniture),
+    cyberSlab: cyber.slab,
+  };
+  for (const [key, hex] of Object.entries(tint) as [MaterialKey, number][]) {
     const mat = (base[key] as THREE.MeshStandardMaterial).clone();
     mat.color.setHex(hex);
-    if (mat.vertexColors) mat.color.multiplyScalar(1 / VERTEX_BASE);
+    if (mat.vertexColors) brighten(mat);
     out[key] = mat;
+  }
+  out.accent = accentMaterial(colours.accent, colours.glow === true, vertexColors);
+  out.cyberLine = accentMaterial(cyber.line, cyber.glow, vertexColors);
+  out.cyberCore = accentMaterial(cyber.core, cyber.glow, vertexColors);
+  for (const key of ['accent', 'cyberLine', 'cyberCore'] as const) {
+    const mat = out[key] as THREE.MeshStandardMaterial;
+    if (mat.vertexColors) brighten(mat);
   }
   return out;
 }
 
-/** A replica's colours: its scheme in the loadout's paint, or (fixed colours) its own unless Realistic colours is on. */
-function paintOf(r: ReplicaConfig, slot: number, paint: ReplicaPaint | null): { colours: Scheme; fixed: boolean } | null {
-  if (!paint) return null;
-  if (hasFixedColours(r)) return paint.realistic ? { colours: FAMILIES[FIXED_COLOUR_FAMILY], fixed: true } : null;
-  const id = paint.schemes[slot];
-  return id ? { colours: schemeColours(id, paint.realistic), fixed: false } : null;
+/**
+ * A replica's own colours: its scheme by loadout slot (plain under Realistic colours), or for the Cyber Pistol its fixed
+ * ones (CYBER_COLOURS: the frame dark, the lines its accent); null for a replica drawn unpainted (no paint given).
+ */
+function coloursOf(r: ReplicaConfig, slot: number, paint: ReplicaPaint | null): { colours: ReplicaColours; cyber: CyberColours } | null {
+  if (hasFixedColours(r)) {
+    const cyber = paint?.realistic ? CYBER_COLOURS.realistic : CYBER_COLOURS.bold;
+    return { colours: { body: cyber.frame, furniture: cyber.frame, detail: cyber.frame, accent: cyber.line, steel: F.unpainted.steel, glow: cyber.glow }, cyber };
+  }
+  const id = paint?.schemes[slot];
+  return id ? { colours: schemeColours(id, paint!.realistic), cyber: CYBER_COLOURS.bold } : null;
 }
 
 /** A flat face's vertex colour when parts are coloured: the brightest edge (a worn one) is white. */
@@ -181,6 +253,20 @@ function roundedPath(points: readonly Pt[], radius: number, path: THREE.Path): T
   return path;
 }
 
+/** A rectangle `width` by `height` (across, up) centred `up` high, its corners rounded by `radius` in `steps` steps each. */
+function roundedRect(width: number, height: number, radius: number, up: number, steps: number): FrontPt[] {
+  const out: FrontPt[] = [];
+  const [w, h] = [width / 2 - radius, height / 2 - radius];
+  const corners: readonly (readonly [number, number])[] = [[w, h], [-w, h], [-w, -h], [w, -h]];
+  corners.forEach(([cx, cy], i) => {
+    for (let k = 0; k <= steps; k++) {
+      const a = ((i + k / steps) * Math.PI) / 2;
+      out.push([cx + Math.cos(a) * radius, up + cy + Math.sin(a) * radius]);
+    }
+  });
+  return out;
+}
+
 /** True for a bevel face's normal: an extrusion's (between its flat side and its outline) or a rounded box's (between two faces). */
 function onBevel(kind: EdgeKind, nx: number, ny: number, nz: number): boolean {
   if (kind === 'extrude') return Math.abs(nx) > 0.12 && Math.abs(nx) < 0.97;
@@ -205,19 +291,24 @@ class ModelBuilder {
     return this.detail.replica === 'high';
   }
 
-  /** Side-profile silhouette extruded to `width`, centred on the model's axis (or `x` across it), with a soft bevel. */
-  profile(key: MaterialKey, outline: readonly Pt[], width: number, round = 0.006, hole?: readonly Pt[], x = 0): this {
+  /**
+   * Side-profile silhouette extruded to `width`, centred on the model's axis (or `x` across it), with a soft bevel;
+   * `holes` cut right through it (a trigger guard's loop, a handguard's slots).
+   */
+  profile(key: MaterialKey, outline: readonly Pt[], width: number, round = 0.006, holes: readonly (readonly Pt[])[] = [], x = 0): this {
     const bevel = Math.min(0.004, width / 4);
     const shape = roundedPath(outline, round, new THREE.Shape()) as THREE.Shape;
-    if (hole) shape.holes.push(roundedPath(hole, round / 2, new THREE.Path()));
+    for (const hole of holes) shape.holes.push(roundedPath(hole, round / 2, new THREE.Path()));
     const depth = Math.max(0.001, width - bevel * 2);
+    // Low rounds each corner and bevel in fewer steps (G2): the overhaul's busier outlines stay within Low's old budget.
+    const steps = this.high ? F.profileSteps.high : F.profileSteps.low;
     const geo = new THREE.ExtrudeGeometry(shape, {
       depth,
       bevelEnabled: true,
       bevelThickness: bevel,
       bevelSize: bevel,
-      bevelSegments: 2,
-      curveSegments: 5,
+      bevelSegments: steps.bevel,
+      curveSegments: steps.corner,
     });
     geo.translate(0, 0, -depth / 2);
     // Shape x (forward) → -Z (the viewmodel faces -Z); extrusion → X (width).
@@ -294,22 +385,34 @@ class ModelBuilder {
    * on a polymer strip (REPLICA_FINISH.rail).
    */
   rail(from: number, to: number, y: number, width: number): this {
-    this.box('polymer', from, to, y, y + 0.01, width);
+    this.box('detail', from, to, y, y + 0.01, width);
     if (!this.high) {
-      for (let x = from + 0.004; x + 0.008 <= to; x += 0.016) this.box('polymer', x, x + 0.008, y + 0.01, y + 0.016, width + 0.004);
+      for (let x = from + 0.004; x + 0.008 <= to; x += 0.016) this.box('detail', x, x + 0.008, y + 0.01, y + 0.016, width + 0.004);
       return this;
     }
     const R = F.rail;
-    for (let x = from + R.tooth / 2; x + R.tooth <= to; x += R.pitch) this.box('polymer', x, x + R.tooth, y + 0.01, y + 0.016, width + 0.004);
+    for (let x = from + R.tooth / 2; x + R.tooth <= to; x += R.pitch) this.box('detail', x, x + R.tooth, y + 0.01, y + 0.016, width + 0.004);
     return this;
   }
 
   /** A short rail along one side of the handguard (high detail), `side` -1 left or 1 right, its teeth facing out. */
   sideRail(from: number, to: number, up: number, side: number, halfWidth: number): this {
     const R = F.rail;
-    this.box('polymer', from, to, up - 0.008, up + 0.008, 0.006, side * (halfWidth + 0.003));
-    for (let x = from + R.tooth / 2; x + R.tooth <= to; x += R.pitch) this.box('polymer', x, x + R.tooth, up - 0.009, up + 0.009, 0.004, side * (halfWidth + 0.008));
+    this.box('detail', from, to, up - 0.008, up + 0.008, 0.006, side * (halfWidth + 0.003));
+    for (let x = from + R.tooth / 2; x + R.tooth <= to; x += R.pitch) this.box('detail', x, x + R.tooth, up - 0.009, up + 0.009, 0.004, side * (halfWidth + 0.008));
     return this;
+  }
+
+  /**
+   * A front-view outline (across, up) extruded along the bore from `from` to `to`, with `holes` through it: a sight's
+   * hood you look through.
+   */
+  hood(key: MaterialKey, outline: readonly FrontPt[], holes: readonly (readonly FrontPt[])[], from: number, to: number): this {
+    const shape = new THREE.Shape(outline.map(([x, u]) => new THREE.Vector2(x, u)));
+    for (const hole of holes) shape.holes.push(new THREE.Path(hole.map(([x, u]) => new THREE.Vector2(x, u))));
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: to - from, bevelEnabled: false, curveSegments: 1 });
+    geo.translate(0, 0, -to);
+    return this.add(key, geo, 'none');
   }
 
   build(materials: Record<MaterialKey, THREE.Material>): THREE.Group {
@@ -386,10 +489,11 @@ const SUPPORT: FingerCurl = [1.0, 1.05, 0.6];
 
 /**
  * The red dot fitted to the rifle's receiver rail (an accessory, never part of the rifle: owner, 2026-10-03):
- * where its axis sits above the model's origin and where its tube starts and ends along the forward axis.
+ * where its axis sits above the model's origin, where its hood starts and ends along the forward axis, and the hood's
+ * half width outside and its window's inside (G2: an enclosed sight, square where it was a round tube).
  * The rifle's aiming hold (config/replicas.ts aimHold) puts this axis on the view's centre line.
  */
-export const RIFLE_OPTIC = { axisUp: 0.126, from: -0.005, length: 0.07, outer: 0.021, inner: 0.018 } as const;
+export const RIFLE_OPTIC = { axisUp: 0.126, from: -0.005, length: 0.056, outer: 0.022, inner: 0.018 } as const;
 
 /** The 2× scope's body on the same axis (M17b): main tube, objective bell in front, eyepiece behind (metres). */
 export const RIFLE_SCOPE = { from: -0.01, length: 0.11, outer: 0.014, inner: 0.012, bellLength: 0.035, bellOuter: 0.022, eyeLength: 0.03 } as const;
@@ -426,22 +530,29 @@ type PartDraw = (b: ModelBuilder) => void;
  */
 type MuzzleDraw = (b: ModelBuilder, orangeTip: boolean) => void;
 
-/** The red dot: a tall riser mount clamped to the rail under a tube you look through (front lens faintly tinted). */
+/**
+ * The red dot (G2: an enclosed reflex sight, as the concept): a squared hood you look through along the bore, a tinted
+ * lens across its window two-thirds of the way forward, a sunshade lip over the front, on a low mount and riser clamped
+ * to the rail. High: the dot on the lens, brightness buttons and a battery cap on the right, a windage turret on top
+ * and the clamp's cross-bolt.
+ */
 function redDot(b: ModelBuilder): void {
   const o = RIFLE_OPTIC;
+  const front = o.from + o.length;
+  const steps = b.high ? 4 : 1;
+  b.box('detail', o.from - 0.002, front + 0.002, 0.074, 0.082, 0.032);
   // The riser keeps the receiver and the folded sights well below the dot in the aimed view (a lower-third co-witness).
-  b.box('polymer', 0.004, 0.056, 0.074, 0.084, 0.034);
-  b.box('polymer', 0.012, 0.048, 0.084, o.axisUp - o.outer + 0.004, 0.024);
-  b.ringTube('polymer', o.from, o.length, o.axisUp, o.outer, o.inner);
-  if (!b.high) b.box('polymer', 0.02, 0.04, o.axisUp - 0.008, o.axisUp + 0.008, 0.012, o.outer + 0.004); // brightness dial, right side
-  b.tube('lens', o.from + o.length - 0.004, 0.002, o.axisUp, o.inner, 24);
+  b.box('detail', o.from + 0.008, front - 0.008, 0.082, o.axisUp - o.inner, 0.026);
+  b.hood('detail', roundedRect(o.outer * 2, o.outer * 2 + 0.004, 0.008, o.axisUp + 0.001, steps), [roundedRect(o.inner * 2, o.inner * 2, 0.005, o.axisUp, steps)], o.from, front);
+  b.box('detail', front - 0.004, front + 0.006, o.axisUp + o.outer + 0.003, o.axisUp + o.outer + 0.007, o.outer * 2 - 0.006);
+  const lens = o.from + o.length * 0.66;
+  b.box('lens', lens - 0.0005, lens + 0.0005, o.axisUp - o.inner, o.axisUp + o.inner, o.inner * 2);
   if (!b.high) return;
-  // A hood at the front with a 1 mm lip, a knurled brightness dial on the right, the emitter's housing low inside the
-  // tube at the back, and the clamp's cross-bolt through the mount.
-  b.ringTube('polymer', o.from + o.length - 0.006, 0.006, o.axisUp, o.outer + 0.0012, o.inner + 0.0005);
-  b.crossTube('polymer', 0.03, o.axisUp, 0.009, 0.008, o.outer + 0.004, 12);
-  b.box('polymer', o.from + 0.006, o.from + 0.018, o.axisUp - o.inner, o.axisUp - o.inner + 0.004, 0.012);
-  b.crossTube('metal', 0.03, 0.079, 0.0035, 0.04, 0, 8);
+  b.ball('laserLens', lens - 0.0012, o.axisUp, F.dot.radius);
+  for (const at of [o.from + 0.012, o.from + 0.024]) b.box('detail', at, at + 0.008, o.axisUp - 0.016, o.axisUp - 0.01, 0.006, o.outer + 0.002);
+  b.crossTube('metal', o.from + 0.036, o.axisUp - 0.004, 0.0075, 0.006, o.outer + 0.002, 16);
+  b.uprightTube('metal', o.from + 0.022, o.axisUp + o.outer + 0.0045, 0.006, 0.005, 0, 16);
+  b.crossTube('metal', (o.from + front) / 2, 0.078, 0.0035, 0.036, 0, 8);
 }
 
 /** The 2× scope (M17b): a longer tube on two rings, a wider objective bell in front, on the red dot's axis. */
@@ -449,53 +560,49 @@ function scope2x(b: ModelBuilder): void {
   const o = RIFLE_OPTIC;
   const sc = RIFLE_SCOPE;
   for (const x of [0.0, 0.07]) {
-    b.box('polymer', x, x + 0.024, 0.074, 0.084, 0.034);
-    b.box('polymer', x + 0.004, x + 0.02, 0.084, o.axisUp - sc.outer + 0.004, 0.022);
+    b.box('detail', x, x + 0.024, 0.074, 0.084, 0.034);
+    b.box('detail', x + 0.004, x + 0.02, 0.084, o.axisUp - sc.outer + 0.004, 0.022);
   }
-  b.ringTube('polymer', sc.from, sc.length, o.axisUp, sc.outer, sc.inner);
-  b.ringTube('polymer', sc.from + sc.length, sc.bellLength, o.axisUp, sc.bellOuter, sc.bellOuter - 0.003);
-  b.ringTube('polymer', sc.from - sc.eyeLength, sc.eyeLength, o.axisUp, sc.outer + 0.004, sc.inner);
-  if (!b.high) b.box('polymer', 0.03, 0.05, o.axisUp + sc.outer - 0.002, o.axisUp + sc.outer + 0.012, 0.016); // turret
+  b.ringTube('detail', sc.from, sc.length, o.axisUp, sc.outer, sc.inner);
+  b.ringTube('detail', sc.from + sc.length, sc.bellLength, o.axisUp, sc.bellOuter, sc.bellOuter - 0.003);
+  b.ringTube('detail', sc.from - sc.eyeLength, sc.eyeLength, o.axisUp, sc.outer + 0.004, sc.inner);
+  if (!b.high) b.box('detail', 0.03, 0.05, o.axisUp + sc.outer - 0.002, o.axisUp + sc.outer + 0.012, 0.016); // turret
   b.tube('lens', sc.from + sc.length + sc.bellLength - 0.004, 0.002, o.axisUp, sc.bellOuter - 0.003, 24);
   if (!b.high) return;
   // Turrets on top and on the right with their caps; a rubber eye cup; a dark inner tube in the bell, so the objective
   // reads as glass over black; scope rings round the tube with two screws a side.
   const turret = sc.from + sc.length / 2;
-  b.box('polymer', turret - 0.012, turret + 0.012, o.axisUp + sc.outer - 0.003, o.axisUp + sc.outer + 0.004, 0.02);
-  b.uprightTube('polymer', turret, o.axisUp + sc.outer + 0.009, 0.0085, 0.01, 0, 12);
+  b.box('detail', turret - 0.012, turret + 0.012, o.axisUp + sc.outer - 0.003, o.axisUp + sc.outer + 0.004, 0.02);
+  b.uprightTube('detail', turret, o.axisUp + sc.outer + 0.009, 0.0085, 0.01, 0, 12);
   b.uprightTube('rubber', turret, o.axisUp + sc.outer + 0.0145, 0.0088, 0.002, 0, 12);
-  b.crossTube('polymer', turret, o.axisUp, 0.0085, 0.01, sc.outer + 0.004, 12);
+  b.crossTube('detail', turret, o.axisUp, 0.0085, 0.01, sc.outer + 0.004, 12);
   b.ringTube('rubber', sc.from - sc.eyeLength - 0.008, 0.01, o.axisUp, sc.outer + 0.006, sc.inner + 0.001);
   b.ringTube('rubber', sc.from + sc.length + 0.004, sc.bellLength - 0.01, o.axisUp, sc.bellOuter - 0.003, sc.bellOuter - 0.005);
   for (const x of [0.0, 0.07]) {
-    b.ringTube('polymer', x + 0.004, 0.016, o.axisUp, sc.outer + 0.003, sc.outer);
-    for (const side of [-1, 1]) for (const dy of [-0.006, 0.006]) b.crossTube('polymer', x + 0.012, o.axisUp + dy, 0.0018, 0.003, side * (sc.outer + 0.004), 6);
+    b.ringTube('detail', x + 0.004, 0.016, o.axisUp, sc.outer + 0.003, sc.outer);
+    for (const side of [-1, 1]) for (const dy of [-0.006, 0.006]) b.crossTube('detail', x + 0.012, o.axisUp + dy, 0.0018, 0.003, side * (sc.outer + 0.004), 6);
   }
 }
 
-/** The vertical grip on the handguard rail, behind the support hand. High: a stippled rubber lower half and a capped foot. */
+/** The vertical grip on the handguard rail, behind the support hand: a squared, tapering block. High: three rubber bands. */
 function verticalGrip(b: ModelBuilder): void {
-  b.box('polymer', 0.196, 0.244, -0.008, 0.002, 0.03);
-  if (!b.high) {
-    b.profile('polymer', [[0.204, -0.008], [0.236, -0.008], [0.232, -0.088], [0.208, -0.092]], 0.026, 0.008);
-    return;
-  }
-  b.profile('polymer', [[0.204, -0.008], [0.236, -0.008], [0.234, -0.046], [0.206, -0.048]], 0.026, 0.004);
-  b.profile('rubber', [[0.206, -0.046], [0.234, -0.044], [0.232, -0.084], [0.208, -0.088]], 0.027, 0.004);
-  b.profile('polymer', [[0.206, -0.084], [0.233, -0.081], [0.233, -0.09], [0.207, -0.094]], 0.029, 0.003);
+  b.box('detail', 0.196, 0.244, -0.008, 0.002, 0.03);
+  b.profile('furniture', [[0.202, -0.008], [0.238, -0.008], [0.234, -0.088], [0.228, -0.096], [0.21, -0.096], [0.204, -0.088]], 0.032, b.high ? 0.003 : 0.006);
+  if (!b.high) return;
+  for (let i = 0; i < 3; i++) b.box('stipple', 0.2045, 0.2345, -0.03 - i * 0.02, -0.024 - i * 0.02, 0.0335);
 }
 
-/** The angled grip: a flat polymer wedge whose bevelled ridge catches the light (high). */
+/** The angled grip: a flat wedge whose bevelled ridge catches the light (high). */
 function angledGrip(b: ModelBuilder): void {
-  b.profile('polymer', [[0.165, -0.002], [0.262, -0.002], [0.262, -0.014], [0.188, -0.046], [0.172, -0.04]], 0.03, 0.006);
+  b.profile('furniture', [[0.165, -0.002], [0.262, -0.002], [0.262, -0.014], [0.188, -0.046], [0.172, -0.04]], 0.03, 0.004);
   if (!b.high) return;
   // Thumb ribs along its back edge.
-  for (let i = 0; i < 4; i++) b.box('polymer', 0.2 + i * 0.012, 0.206 + i * 0.012, -0.03 + i * 0.0045, -0.026 + i * 0.0045, 0.032);
+  for (let i = 0; i < 4; i++) b.box('detail', 0.2 + i * 0.012, 0.206 + i * 0.012, -0.03 + i * 0.0045, -0.026 + i * 0.0045, 0.032);
 }
 
-/** The rifle's curved magazine outline, and its base plate's. */
-const AEG_MAG: readonly Pt[] = [[0.03, -0.076], [0.092, -0.076], [0.105, -0.15], [0.127, -0.222], [0.073, -0.236], [0.055, -0.156]];
-const AEG_MAG_BASE: readonly Pt[] = [[0.071, -0.232], [0.129, -0.219], [0.133, -0.232], [0.074, -0.246]];
+/** The rifle's angular, gently forward-curved magazine (G2), and its base plate's outline. */
+const AEG_MAG: readonly Pt[] = [[0.03, -0.076], [0.094, -0.076], [0.112, -0.2], [0.106, -0.236], [0.042, -0.234], [0.034, -0.2]];
+const AEG_MAG_BASE: readonly Pt[] = [[0.038, -0.23], [0.11, -0.232], [0.112, -0.246], [0.04, -0.244]];
 
 /** The magazine's back and front edges at height `up` (the outline's first and last edges, as drawn). */
 function magSpan(back: readonly Pt[], front: readonly Pt[], up: number): [number, number] {
@@ -518,29 +625,28 @@ function magRib(b: ModelBuilder, key: MaterialKey, back: readonly Pt[], front: r
 }
 
 /** The rifle magazine's back and front edges (top to bottom), from AEG_MAG. */
-const AEG_MAG_BACK: readonly Pt[] = [[0.03, -0.076], [0.055, -0.156], [0.073, -0.236]];
-const AEG_MAG_FRONT: readonly Pt[] = [[0.092, -0.076], [0.105, -0.15], [0.127, -0.222]];
+const AEG_MAG_BACK: readonly Pt[] = [[0.03, -0.076], [0.034, -0.2], [0.042, -0.234]];
+const AEG_MAG_FRONT: readonly Pt[] = [[0.094, -0.076], [0.112, -0.2], [0.106, -0.236]];
 
-/** The standard (mid-cap) magazine: tan polymer, black base plate. High: two ribs and a witness window showing BBs. */
+/** The standard (mid-cap) magazine: a detail-coloured body on a base plate in the body colour. High: four ribs and a witness window showing BBs. */
 function aegStandardMag(b: ModelBuilder): void {
-  b.profile('furniture', AEG_MAG, 0.026, 0.008);
-  b.profile('polymer', AEG_MAG_BASE, 0.03, 0.004);
+  b.profile('detail', AEG_MAG, 0.034, 0.004);
+  b.profile('polymer', AEG_MAG_BASE, 0.038, 0.003);
   if (!b.high) return;
-  for (const up of [-0.09, -0.205]) magRib(b, 'furniture', AEG_MAG_BACK, AEG_MAG_FRONT, up, 0.005, 0.028);
+  for (const up of [-0.11, -0.135, -0.16, -0.185]) magRib(b, 'detail', AEG_MAG_BACK, AEG_MAG_FRONT, up, 0.005, 0.0365);
   // The witness window on the side you see: a dark slot down the body with four BBs behind it.
-  b.profile('rubber', [[0.062, -0.1], [0.07, -0.1], [0.086, -0.19], [0.078, -0.19]], 0.0275, 0.002);
-  for (let i = 0; i < 4; i++) b.ball('bb', 0.068 + i * 0.0042, -0.112 - i * 0.021, 0.0028, -0.0125);
+  b.profile('rubber', [[0.05, -0.09], [0.058, -0.09], [0.064, -0.106], [0.056, -0.106]], 0.0355, 0.0015);
+  for (let i = 0; i < 2; i++) b.ball('bb', 0.055 + i * 0.003, -0.094 - i * 0.008, 0.0026, -0.0165);
 }
 
-/** The hi-cap: the same shape, wider, with a winding wheel under its base. High: a bulged lower body, a ribbed base, a notched wheel. */
+/** The hi-cap: the same shape, wider and bulged, with a winding wheel under its base. High: a ribbed base, a notched wheel. */
 function aegHiCap(b: ModelBuilder): void {
-  if (b.high) b.profile('furniture', [[0.03, -0.076], [0.092, -0.076], [0.105, -0.15], [0.13, -0.2], [0.127, -0.222], [0.073, -0.236], [0.052, -0.18], [0.055, -0.156]], 0.03, 0.008);
-  else b.profile('furniture', AEG_MAG, 0.03, 0.008);
-  b.profile('polymer', AEG_MAG_BASE, 0.034, 0.004);
-  const wheel = { from: 0.088, length: 0.03, up: -0.252, radius: 0.014 };
+  b.profile('detail', [[0.03, -0.076], [0.094, -0.076], [0.112, -0.2], [0.118, -0.215], [0.106, -0.236], [0.042, -0.234], [0.03, -0.215], [0.034, -0.2]], 0.042, 0.004);
+  b.profile('polymer', AEG_MAG_BASE, 0.046, 0.003);
+  const wheel = { from: 0.06, length: 0.03, up: -0.256, radius: 0.013 };
   b.tube('metal', wheel.from, wheel.length, wheel.up, wheel.radius, 12); // the winding wheel
   if (!b.high) return;
-  b.profile('polymer', [[0.08, -0.236], [0.124, -0.226], [0.125, -0.23], [0.081, -0.24]], 0.036, 0.0015);
+  b.profile('polymer', [[0.046, -0.244], [0.104, -0.245], [0.105, -0.249], [0.047, -0.248]], 0.048, 0.0015);
   // Six notches round the wheel's rim, for a thumb to wind it.
   for (let i = 0; i < 6; i++) {
     const notch = new THREE.BoxGeometry(0.004, 0.004, wheel.length + 0.002).translate(0, wheel.radius - 0.0005, 0).rotateZ((i / 6) * Math.PI * 2);
@@ -548,55 +654,55 @@ function aegHiCap(b: ModelBuilder): void {
   }
 }
 
-/** The low-cap: short and straight. High: a grey steel body with three ribs on a polymer base. */
+/** The low-cap: short and straight. High: a steel body with three ribs on its base plate. */
 function aegLowCap(b: ModelBuilder): void {
-  const body: readonly Pt[] = [[0.03, -0.076], [0.092, -0.076], [0.1, -0.13], [0.108, -0.168], [0.062, -0.176], [0.052, -0.13]];
-  b.profile(b.high ? 'metal' : 'furniture', body, 0.026, 0.008);
-  b.profile('polymer', [[0.059, -0.172], [0.111, -0.164], [0.113, -0.176], [0.061, -0.186]], 0.03, 0.004);
+  const body: readonly Pt[] = [[0.03, -0.076], [0.094, -0.076], [0.104, -0.13], [0.108, -0.168], [0.042, -0.172], [0.034, -0.13]];
+  b.profile(b.high ? 'metal' : 'detail', body, 0.034, 0.004);
+  b.profile('polymer', [[0.04, -0.168], [0.11, -0.166], [0.112, -0.18], [0.042, -0.182]], 0.038, 0.003);
   if (!b.high) return;
-  const back: readonly Pt[] = [[0.03, -0.076], [0.052, -0.13], [0.062, -0.176]];
-  const front: readonly Pt[] = [[0.092, -0.076], [0.1, -0.13], [0.108, -0.168]];
-  for (const up of [-0.098, -0.12, -0.142]) magRib(b, 'metal', back, front, up, 0.004, 0.028);
+  const back: readonly Pt[] = [[0.03, -0.076], [0.034, -0.13], [0.042, -0.172]];
+  const front: readonly Pt[] = [[0.094, -0.076], [0.104, -0.13], [0.108, -0.168]];
+  for (const up of [-0.098, -0.12, -0.142]) magRib(b, 'metal', back, front, up, 0.004, 0.0365);
 }
 
 /** The pistol's magazine outline (hidden in the grip until a reload drops it out). */
 const PISTOL_MAG: readonly Pt[] = [[-0.058, -0.02], [-0.076, -0.02], [-0.1, -0.118], [-0.078, -0.12]];
+/** The pistol magazine's base pad, squared to the grip (G2). */
+const PISTOL_MAG_BASE: readonly Pt[] = [[-0.05, -0.13], [-0.112, -0.13], [-0.114, -0.143], [-0.052, -0.143]];
 
-/** The pistol's standard magazine and base plate. High: a tan base plate with a rim (furniture). */
+/** The pistol's standard magazine and base pad. High: a rim round the pad, worn lighter. */
 function pistolStandardMag(b: ModelBuilder): void {
-  b.profile('mag', PISTOL_MAG, 0.022, 0.003);
-  b.box(b.high ? 'furniture' : 'polymer', -0.108, -0.062, -0.13, -0.119, 0.032); // base plate
+  b.profile('detail', PISTOL_MAG, 0.022, 0.003);
+  b.profile('detail', PISTOL_MAG_BASE, 0.034, 0.003);
+  if (b.high) b.worn(() => b.box('detail', -0.11, -0.054, -0.146, -0.141, 0.036));
 }
 
-/** The extended magazine (M17b): a sleeve sticking out under the grip. High: its base lip 3 mm proud with a lighter rim. */
+/** The extended magazine (M17b): a sleeve standing out of the grip with a longer pad. Its accent line round the pad's top. */
 function pistolExtendedMag(b: ModelBuilder): void {
-  b.profile('mag', PISTOL_MAG, 0.022, 0.003);
-  b.profile('furniture', [[-0.1, -0.118], [-0.064, -0.12], [-0.058, -0.158], [-0.104, -0.158]], 0.03, 0.004);
-  b.box('polymer', -0.11, -0.056, -0.168, -0.157, 0.032); // base plate
-  if (b.high) b.worn(() => b.box('polymer', -0.113, -0.053, -0.16, -0.151, 0.038));
+  b.profile('detail', PISTOL_MAG, 0.022, 0.003);
+  b.profile('furniture', [[-0.108, -0.13], [-0.052, -0.13], [-0.05, -0.162], [-0.11, -0.162]], 0.031, 0.003);
+  b.profile('detail', PISTOL_MAG_BASE.map(([f, u]) => [f, u - 0.032] as const), 0.034, 0.003);
+  b.box('accent', -0.108, -0.054, -0.166, -0.163, 0.0346);
+  if (b.high) b.worn(() => b.box('detail', -0.11, -0.054, -0.178, -0.173, 0.036));
 }
 
-/** The Cyber Pistol's long magazine (M32): it sticks out of the grip in a mint sleeve, the wide base plate hot pink. */
-const CYBER_MAG_SLEEVE: readonly Pt[] = [[-0.1, -0.118], [-0.064, -0.12], [-0.058, -0.16], [-0.106, -0.16]];
-
-/** Its 50-BB magazine. High: a black rim round the base plate, worn lighter, and a pink pull tab at its back. */
+/** The Cyber Pistol's magazine (G2): hidden in the grip, its white base pad with a line of the core's colour round it (high). */
 function cyberMag(b: ModelBuilder): void {
-  b.profile('mag', PISTOL_MAG, 0.022, 0.003);
-  b.profile('mint', CYBER_MAG_SLEEVE, 0.032, 0.004);
-  b.box('pink', -0.116, -0.05, -0.172, -0.159, 0.04); // base plate
+  b.profile('polymer', PISTOL_MAG, 0.022, 0.003);
+  b.box('cyberSlab', -0.112, -0.05, -0.142, -0.13, 0.035);
   if (!b.high) return;
-  b.worn(() => b.box('polymer', -0.112, -0.054, -0.163, -0.156, 0.036));
-  b.box('pink', -0.122, -0.114, -0.17, -0.161, 0.014);
+  b.box('cyberCore', -0.108, -0.054, -0.137, -0.135, 0.0356);
+  b.worn(() => b.box('cyberSlab', -0.114, -0.048, -0.145, -0.141, 0.036));
 }
 
-/** The red laser (M26b): a module clipped to the dust cover's rail, its lens at the front. High: a clamp, a thumb screw, a switch cap. */
+/** The red laser (M26b): a chamfered module clipped to the dust cover's rail, its lens at the front. High: a clamp, a thumb screw, a switch cap. */
 function redLaser(b: ModelBuilder): void {
-  b.box('polymer', 0.046, 0.09, -0.042, -0.024, 0.022);
+  b.profile('detail', [[0.046, -0.026], [0.09, -0.026], [0.09, -0.042], [0.054, -0.042], [0.046, -0.036]], 0.022, 0.003);
   b.box('laserLens', 0.09, 0.093, -0.038, -0.03, 0.009);
   if (!b.high) return;
-  b.box('metal', 0.05, 0.072, -0.026, -0.018, 0.026);
-  b.crossTube('metal', 0.061, -0.022, 0.0035, 0.006, 0.016, 8);
-  b.tube('rubber', 0.034, 0.012, -0.033, 0.006, 10);
+  b.box('metal', 0.05, 0.072, -0.028, -0.02, 0.026);
+  b.crossTube('metal', 0.061, -0.024, 0.0035, 0.006, 0.016, 8);
+  b.tube('rubber', 0.034, 0.012, -0.034, 0.006, 10);
 }
 
 /**
@@ -618,8 +724,8 @@ interface TorchLayout {
 /** The AEG's: on the right of the handguard, ahead of the support hand, on the side rail. */
 const AEG_TORCH: TorchLayout = { from: 0.325, length: 0.07, up: 0.034, x: 0.049, radius: 0.012, head: 0.024, headRadius: 0.016, mount: { from: 0.34, to: 0.375, y0: 0.026, y1: 0.042, width: 0.016, x: 0.036 } };
 /** The Gas Pistol's: under the dust cover, below where the Red Laser clips on, so the two read as one unit. */
-const PISTOL_TORCH: TorchLayout = { from: 0.042, length: 0.044, up: -0.058, x: 0, radius: 0.0105, head: 0.014, headRadius: 0.0135, mount: { from: 0.05, to: 0.08, y0: -0.05, y1: -0.024, width: 0.014, x: 0 } };
-/** The Cyber Pistol's (its table was empty): a clamp under its slab dust cover. */
+const PISTOL_TORCH: TorchLayout = { from: 0.042, length: 0.044, up: -0.058, x: 0, radius: 0.0105, head: 0.014, headRadius: 0.0135, mount: { from: 0.05, to: 0.08, y0: -0.05, y1: -0.026, width: 0.014, x: 0 } };
+/** The Cyber Pistol's: a clamp under its slab dust cover. */
 const CYBER_TORCH: TorchLayout = { from: 0.046, length: 0.046, up: -0.042, x: 0, radius: 0.0105, head: 0.014, headRadius: 0.0135, mount: { from: 0.056, to: 0.084, y0: -0.034, y1: -0.027, width: 0.014, x: 0 } };
 
 /**
@@ -630,10 +736,10 @@ function weaponTorch(t: TorchLayout): PartDraw {
   return (b) => {
     const seg = b.high ? 16 : 6;
     const m = t.mount;
-    b.box('polymer', m.from, m.to, m.y0, m.y1, m.width, m.x);
-    b.tube('polymer', t.from, t.length, t.up, t.radius, seg, t.x);
+    b.box('detail', m.from, m.to, m.y0, m.y1, m.width, m.x);
+    b.tube('detail', t.from, t.length, t.up, t.radius, seg, t.x);
     const head = t.from + t.length;
-    b.tube('polymer', head, t.head, t.up, t.headRadius, seg, t.x);
+    b.tube('detail', head, t.head, t.up, t.headRadius, seg, t.x);
     b.tube('torchLens', head + t.head, 0.0015, t.up, t.headRadius * 0.82, seg, t.x);
     if (!b.high) return;
     const step = t.head / (F.torch.knurls + 1);
@@ -673,7 +779,7 @@ function longBarrel(b: ModelBuilder): void {
 /**
  * The tight-bore barrel (M29b): a precision inner barrel the same length. Low draws nothing for it (as M29b did: the
  * outer barrel looks the same, and Low gains no draw call); high shows it by a heavier fluted steel sleeve over the outer
- * barrel between the gas block and the flash hider, a tan index band at the gas block and a crown ring.
+ * barrel between the gas block and the flash hider, an index band in the furniture colour at the gas block and a crown ring.
  */
 function tightBoreBarrel(b: ModelBuilder): void {
   if (!b.high) return;
@@ -686,35 +792,34 @@ function tightBoreBarrel(b: ModelBuilder): void {
   b.tube('metal', end - B.collar, B.collar, up, B.collarRadius, B.segments);
 }
 
-
 /** The AEG's birdcage flash hider (as it comes: 'muzzle:none'). High: its slots. */
 function flashHider(b: ModelBuilder, orangeTip: boolean): void {
   const up = AEG_MUZZLE.up;
   b.tube(orangeTip ? 'orange' : 'metal', 0, 0.016, up, 0.013, 10);
-  b.tube(orangeTip ? 'orange' : 'polymer', 0.016, 0.03, up, 0.012, 6);
+  b.tube(orangeTip ? 'orange' : 'detail', 0.016, 0.03, up, 0.012, 6);
   if (b.high) for (const side of [-1, 1]) b.box('rubber', 0.021, 0.041, up - 0.003, up + 0.003, 0.002, side * 0.0115);
 }
 
 /**
- * A silencer (M29b) `length` long and `radius` round, its front `cap` orange with `orangeTip`. High: a steel thread
- * adapter at the back, stepped steel end caps, two stippled rubber grip bands and the dark bore at the front.
+ * A silencer (M29b; G2 the concept's): a six-sided body `length` long and `radius` across its corners in the detail
+ * colour with an accent ring near the back, its front `cap` steel (orange with `orangeTip`). High adds a steel thread
+ * adapter, a stepped back cap, steel grooves and the dark bore at the front.
  */
 function silencer(layout: MuzzleLayout, radius: number, cap: number): MuzzleDraw {
   const length = layout.tips.silencer ?? 0;
   const up = layout.up;
+  const S = F.silencer;
   return (b, orangeTip) => {
-    if (!b.high) {
-      b.tube('polymer', 0, length - cap, up, radius, 16);
-      b.tube(orangeTip ? 'orange' : 'polymer', length - cap, cap, up, radius, 16);
-      return;
-    }
-    const S = F.silencer;
+    const from = b.high ? S.adapter + cap : 0;
+    const body = length - cap - from;
     const capRadius = radius - S.capStep;
+    b.tube('detail', from, body, up, radius, 6);
+    b.tube('accent', from + body * S.ringAt, S.ring, up, radius * S.ringProud, 6);
+    b.tube(orangeTip ? 'orange' : 'metal', length - cap, cap, up, capRadius, b.high ? S.segments : 12);
+    if (!b.high) return;
     b.tube('metal', 0, S.adapter, up, radius * S.adapterShare, S.segments);
     b.tube('metal', S.adapter, cap, up, capRadius, S.segments);
-    b.tube('polymer', S.adapter + cap, length - S.adapter - cap * 2, up, radius, S.segments);
-    b.tube(orangeTip ? 'orange' : 'metal', length - cap, cap, up, capRadius, S.segments);
-    for (const at of [S.adapter + cap + S.bandInset, length - cap - S.bandInset - S.band]) b.tube('rubber', at, S.band, up, radius + S.bandProud, S.segments);
+    for (let i = 0; i < S.grooves; i++) b.tube('metal', from + body * S.ringAt + S.ring + S.groovePitch * (i + 0.5), S.groovePitch / 2, up, radius * (S.ringProud - 0.02), 6);
     b.tube('rubber', length - S.boreDepth, S.boreDepth + 0.0005, up, radius * S.boreShare, 12);
   };
 }
@@ -731,11 +836,11 @@ const AEG_PARTS: Readonly<Record<string, PartDraw>> = {
 };
 const AEG_MAGAZINES: Partial<Record<MagazineId, PartDraw>> = { standard: aegStandardMag, hiCap: aegHiCap, lowCap: aegLowCap };
 /** The muzzle devices by id ('none': the bare muzzle's own), drawn on the mount. */
-const AEG_MUZZLE_DEVICES: Readonly<Record<string, MuzzleDraw>> = { none: flashHider, silencer: silencer(AEG_MUZZLE, 0.019, 0.006) };
+const AEG_MUZZLE_DEVICES: Readonly<Record<string, MuzzleDraw>> = { none: flashHider, silencer: silencer(AEG_MUZZLE, 0.021, 0.006) };
 const PISTOL_PARTS: Readonly<Record<string, PartDraw>> = { 'laser:redLaser': redLaser, 'light:weaponTorch': weaponTorch(PISTOL_TORCH) };
 const PISTOL_MAGAZINES: Partial<Record<MagazineId, PartDraw>> = { standard: pistolStandardMag, extended: pistolExtendedMag };
 /** A silencer a little narrower than the slide; the bare muzzle has no device of its own. */
-const PISTOL_MUZZLE_DEVICES: Readonly<Record<string, MuzzleDraw>> = { silencer: silencer(PISTOL_MUZZLE, 0.0135, 0.005) };
+const PISTOL_MUZZLE_DEVICES: Readonly<Record<string, MuzzleDraw>> = { silencer: silencer(PISTOL_MUZZLE, 0.0155, 0.005) };
 
 /** Nothing but a weapon torch (M33h) fits the Cyber Pistol (M32): its table is that and its own magazine. */
 const CYBER_PARTS: Readonly<Record<string, PartDraw>> = { 'light:weaponTorch': weaponTorch(CYBER_TORCH) };
@@ -749,91 +854,106 @@ export const REPLICA_PART_TABLES = {
 } as const;
 
 /**
- * AR-pattern AEG in two-tone: black upper and lower receiver, tan stock, grip, handguard and magazine.
- * Flat-top rails with flip-up iron sights (folded down when an optic is fitted), birdcage-style flash hider.
- * The optic is its own part, shown only when one is fitted.
+ * Whether a replica is built with the hands holding it (in first person) or on its own (a picture of it in the
+ * menus, G2 itemPictures.ts).
  */
-function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail): ReplicaModel {
+export type HandsShown = 'hands' | 'bare';
+
+/**
+ * AR-pattern AEG (G2: the concept's blockier, Marathon-style build, in its scheme): an angular upper with a raised side
+ * plate and a flat-top rail, a flared, squared magwell with the accent line along the lower, a solid pistol grip, a
+ * squared handguard with chamfered corners (M-LOK slots on high) and its own accent line, a hard-angled stock with a
+ * cheek riser and a block butt. Flip-up iron sights (folded down when an optic is fitted), a birdcage flash hider. The
+ * optic is its own part, shown only when one is fitted. Every hand point and envelope is as before (AEG_HANDGUARD).
+ */
+function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
   const b = new ModelBuilder(detail);
-  // Upper receiver with flat-top rail, forward assist and ejection port (right side), charging handle.
-  b.profile('polymer', [[-0.11, 0.012], [0.15, 0.012], [0.15, 0.058], [-0.092, 0.058], [-0.11, 0.042]], 0.05);
+  // Upper receiver: the chamfered slab, its rail, the side plate over the ejection port, forward assist and charging handle.
+  b.profile('polymer', [[-0.116, 0.012], [0.15, 0.012], [0.15, 0.058], [-0.094, 0.058], [-0.116, 0.04]], 0.056, 0.004);
   b.rail(-0.09, 0.15, 0.058, 0.022);
-  b.box('polymer', -0.052, -0.014, 0.026, 0.046, 0.016, 0.029); // forward assist
-  b.box('metal', -0.008, 0.062, 0.02, 0.048, 0.004, 0.026); // ejection port cover
-  b.worn(() => b.box('polymer', -0.128, -0.106, 0.04, 0.053, 0.036)); // charging handle
-  // Lower receiver with flared magwell, trigger guard and trigger.
-  b.profile('polymer', [[-0.1, -0.032], [0.145, -0.032], [0.145, 0.016], [-0.1, 0.016]], 0.047);
-  b.profile('polymer', [[0.018, -0.03], [0.104, -0.03], [0.1, -0.08], [0.024, -0.08]], 0.044, 0.004);
-  b.profile(
-    'polymer',
-    [[-0.02, -0.03], [0.032, -0.03], [0.032, -0.07], [-0.026, -0.07]],
-    0.012,
-    0.01,
-    [[-0.012, -0.037], [0.024, -0.037], [0.024, -0.062], [-0.016, -0.062]],
-  );
-  b.box('metal', 0.001, 0.008, -0.056, -0.034, 0.006);
-  b.worn(() => b.profile('furniture', [[-0.012, -0.028], [-0.056, -0.028], [-0.092, -0.13], [-0.06, -0.142], [-0.03, -0.098]], 0.034, 0.012));
+  b.box('polymer', 0.06, 0.148, 0.02, 0.05, 0.0624);
+  b.box('metal', -0.008, 0.052, 0.022, 0.048, 0.004, 0.029); // ejection port cover
+  b.worn(() => b.box('polymer', -0.06, -0.042, 0.024, 0.046, 0.064)); // forward assist block
+  b.worn(() => b.box('detail', -0.134, -0.11, 0.042, 0.054, 0.03)); // charging handle
+  // Lower receiver with the flared magwell and its lip, the accent line, the squared trigger guard and the trigger.
+  b.profile('polymer', [[-0.106, -0.034], [0.148, -0.034], [0.148, 0.014], [-0.106, 0.014]], 0.054, 0.004);
+  b.profile('polymer', [[0.016, -0.03], [0.108, -0.03], [0.104, -0.086], [0.022, -0.086]], 0.052, 0.004);
+  b.box('detail', 0.016, 0.108, -0.092, -0.082, 0.056);
+  b.box('accent', 0.06, 0.145, -0.009, -0.003, 0.0552);
+  b.profile('detail', [[-0.022, -0.03], [0.032, -0.03], [0.032, -0.074], [-0.028, -0.074]], 0.014, 0.008, [[[-0.014, -0.037], [0.024, -0.037], [0.024, -0.066], [-0.018, -0.066]]]);
+  b.box('metal', 0.001, 0.008, -0.058, -0.034, 0.006);
+  // Pistol grip: a solid block with a slight rake and a palm shelf, a squared base cap.
+  b.worn(() => b.profile('furniture', [[-0.012, -0.032], [-0.06, -0.032], [-0.098, -0.134], [-0.096, -0.146], [-0.062, -0.15], [-0.03, -0.098], [-0.024, -0.07]], 0.036, 0.006));
+  b.box('detail', -0.102, -0.06, -0.156, -0.146, 0.038);
   if (b.high) {
-    // The magazine release on the right of the magwell, the trigger's pivot pin, the selector on the left.
-    b.worn(() => b.box('polymer', 0.03, 0.044, -0.018, -0.008, 0.012, 0.026));
+    // Stippled panels on the grip, the magazine release on the right of the magwell, the trigger's pivot pin, the selector.
+    for (const side of [-1, 1]) b.profile('stipple', [[-0.022, -0.05], [-0.062, -0.05], [-0.09, -0.128], [-0.054, -0.128], [-0.03, -0.088]], 0.003, 0.004, [], side * 0.018);
+    b.worn(() => b.box('detail', 0.03, 0.044, -0.018, -0.008, 0.012, 0.029));
     b.crossTube('metal', 0.006, -0.03, 0.0025, 0.05, 0, 8);
-    b.crossTube('polymer', -0.03, 0.0, 0.006, 0.006, -0.026, 10);
+    b.crossTube('detail', -0.03, 0.0, 0.006, 0.006, -0.028, 10);
   }
-  // Handguard (tan) with slots and a top rail.
+  // Handguard: a squared slab with chamfered front corners in the envelope the support hand holds, its top rail and accent line.
   const H = AEG_HANDGUARD;
-  b.profile('furniture', [[H.from, H.bottom], [H.to, H.bottom], [H.to, H.top], [H.from, H.top]], H.halfWidth * 2, 0.014);
-  for (const x of [0.19, 0.245, 0.3, 0.35]) b.box('rubber', x, x + 0.035, 0.026, 0.042, 0.06);
-  b.rail(0.155, 0.395, 0.066, 0.02);
-  if (b.high) for (const side of [-1, 1]) b.sideRail(0.27, 0.39, 0.034, side, 0.029);
-  // Barrel, low-profile gas block (the front sight is a flip-up on the rail), flash hider.
+  const slotsAt = [0.19, 0.245, 0.3, 0.35];
+  const slots = slotsAt.map((x): Pt[] => [[x, 0.02], [x + 0.032, 0.02], [x + 0.032, 0.032], [x, 0.032]]);
+  b.profile('furniture', [[H.from, H.bottom], [H.to - 0.01, H.bottom], [H.to, H.bottom + 0.014], [H.to, H.top - 0.01], [H.to - 0.01, H.top], [H.from, H.top]], H.halfWidth * 2, 0.003, b.high ? slots : []);
+  if (b.high) b.box('rubber', H.from + 0.02, H.to - 0.02, H.bottom + 0.006, H.top - 0.006, H.halfWidth * 2 - 0.012); // the dark inside, seen through the slots
+  else for (const x of slotsAt) b.box('rubber', x, x + 0.032, 0.02, 0.032, H.halfWidth * 2 + 0.002);
+  b.rail(0.155, 0.395, H.top, 0.02);
+  b.box('accent', H.from + 0.004, H.to - 0.012, 0.048, 0.052, H.halfWidth * 2 + 0.0012);
+  if (b.high) for (const side of [-1, 1]) b.sideRail(0.27, 0.39, 0.034, side, H.halfWidth);
+  // Barrel and low-profile gas block (the front sight is a flip-up on the rail). The muzzle end (M29b) is drawn from the
+  // part tables: a fitted barrel, and the flash hider or a silencer on the muzzle mount, at the fitted barrel's end.
   b.tube('metal', 0.4, 0.165, 0.034, 0.009);
-  b.box('polymer', 0.43, AEG_GAS_BLOCK_END, 0.022, 0.05, 0.03);
-  // The muzzle end (M29b) is drawn from the part tables: a fitted barrel, and the flash hider or a silencer on the
-  // muzzle mount, which moves out to the fitted barrel's end.
-  // Buffer tube, collapsible stock, butt pad.
-  b.tube('polymer', -0.27, 0.17, 0.032, 0.016);
-  b.profile('furniture', [[-0.2, 0.056], [-0.33, 0.06], [-0.336, -0.056], [-0.31, -0.064], [-0.236, -0.012], [-0.2, 0.0]], 0.044, 0.012);
-  b.profile('rubber', [[-0.332, 0.06], [-0.352, 0.06], [-0.358, -0.056], [-0.338, -0.058]], 0.046, 0.006);
+  b.box('detail', 0.43, AEG_GAS_BLOCK_END, 0.022, 0.05, 0.03);
+  // Buffer tube and the stock: a hard-angled frame (a lightening cut on high), a cheek riser, a block butt, a rubber pad.
+  b.tube('detail', -0.27, 0.165, 0.032, 0.016);
+  const cut: Pt[] = [[-0.21, 0.012], [-0.27, 0.012], [-0.288, -0.028], [-0.248, -0.028]];
+  b.profile('furniture', [[-0.16, 0.056], [-0.326, 0.062], [-0.342, 0.05], [-0.342, -0.07], [-0.298, -0.076], [-0.226, 0], [-0.16, 0.012]], 0.048, 0.006, b.high ? [cut] : []);
+  b.box('furniture', -0.322, -0.2, 0.06, 0.074, 0.04);
+  b.box('detail', -0.342, -0.292, -0.076, 0.062, 0.052);
+  b.box('rubber', -0.358, -0.342, -0.07, 0.06, 0.05);
+  b.box('accent', -0.29, -0.23, 0.054, 0.06, 0.0484);
   // Flip-up iron sights: a rear aperture at the back of the receiver rail and a front post at the front of the
   // handguard rail, standing up on the bare rifle and folded flat under a fitted optic. High: a steel ring with a 2 mm
   // aperture at the back, a post between protective ears at the front.
   const sightsUp = new ModelBuilder(detail);
-  sightsUp.box('polymer', -0.085, -0.062, 0.074, 0.084, 0.026);
+  sightsUp.box('detail', -0.085, -0.062, 0.074, 0.084, 0.026);
   if (sightsUp.high) {
-    sightsUp.profile('polymer', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.094], [-0.078, 0.094]], 0.022, 0.003);
+    sightsUp.profile('detail', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.094], [-0.078, 0.094]], 0.022, 0.003);
     sightsUp.ringTube('metal', -0.0755, 0.004, 0.101, 0.0075, 0.001, 16);
-  } else sightsUp.profile('polymer', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.112], [-0.078, 0.112]], 0.022, 0.003, [[-0.0755, 0.098], [-0.0705, 0.098], [-0.0705, 0.104], [-0.0755, 0.104]]);
-  sightsUp.box('polymer', 0.365, 0.39, 0.082, 0.092, 0.024);
+  } else sightsUp.profile('detail', [[-0.08, 0.084], [-0.066, 0.084], [-0.068, 0.112], [-0.078, 0.112]], 0.022, 0.003, [[[-0.0755, 0.098], [-0.0705, 0.098], [-0.0705, 0.104], [-0.0755, 0.104]]]);
+  sightsUp.box('detail', 0.365, 0.39, 0.082, 0.092, 0.024);
   if (sightsUp.high) {
     sightsUp.box('metal', 0.376, 0.38, 0.092, 0.11, 0.003); // the post
-    for (const side of [-1, 1]) sightsUp.box('polymer', 0.37, 0.386, 0.092, 0.112, 0.003, side * 0.007); // its ears
-  } else sightsUp.profile('polymer', [[0.37, 0.092], [0.386, 0.092], [0.381, 0.112], [0.375, 0.112]], 0.018, 0.002);
+    for (const side of [-1, 1]) sightsUp.box('detail', 0.37, 0.386, 0.092, 0.112, 0.003, side * 0.007); // its ears
+  } else sightsUp.profile('detail', [[0.37, 0.092], [0.386, 0.092], [0.381, 0.112], [0.375, 0.112]], 0.018, 0.002);
   const sightsDown = new ModelBuilder(detail);
-  sightsDown.box('polymer', -0.088, -0.054, 0.074, 0.082, 0.026);
-  sightsDown.box('polymer', 0.362, 0.396, 0.082, 0.089, 0.024);
+  sightsDown.box('detail', -0.088, -0.054, 0.074, 0.082, 0.026);
+  sightsDown.box('detail', 0.362, 0.396, 0.082, 0.089, 0.024);
 
-  // Right hand on the pistol grip: back of the hand to the right, knuckle row running down the
-  // grip, three fingers wrapped round its front, index finger straight along the frame (trigger
-  // discipline), thumb across the left of the receiver.
-  const rightWrist = buildHand(
-    b,
-    { side: 'right', palm: [0.034, -0.092, -0.074], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.9, curl: [0.3, 0.3] } },
-    detail.hands,
-  );
-  buildForearm(b, rightWrist, [0.2, -0.3, -0.42], undefined, detail.hands);
-
-  // Left hand cradling the handguard: palm underneath, index finger forward, fingers curling up the
-  // right side, thumb up the left side. Its own part: on reloads it cups the magazine's base plate.
   const support = new ModelBuilder(detail);
-  const leftWrist = buildHand(support, AEG_SUPPORT_POSE, detail.hands);
-  buildForearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
+  if (hands === 'hands') {
+    // Right hand on the pistol grip: back of the hand to the right, knuckle row running down the grip, three fingers
+    // wrapped round its front, index finger straight along the frame (trigger discipline), thumb across the left of the
+    // receiver.
+    const rightWrist = buildHand(
+      b,
+      { side: 'right', palm: [0.034, -0.092, -0.074], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.9, curl: [0.3, 0.3] } },
+      detail.hands,
+    );
+    buildForearm(b, rightWrist, [0.2, -0.3, -0.42], undefined, detail.hands);
+    // Left hand cradling the handguard: palm underneath, index finger forward, fingers curling up the right side, thumb
+    // up the left side. Its own part: on reloads it cups the magazine's base plate.
+    const leftWrist = buildHand(support, AEG_SUPPORT_POSE, detail.hands);
+    buildForearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
+  }
 
   const group = b.build(m);
-  const magazine = magazinePart(AEG_MAGAZINES, m, detail, [0, -0.97, 0.25], { lowCap: [0, 0.06, -0.014] });
+  const magazine = magazinePart(AEG_MAGAZINES, m, detail, [0, -0.97, 0.25], { lowCap: [0, 0.064, -0.002] });
   group.add(magazine.group);
-  // From the handguard to just under the magazine's base plate (forward 0.1, up -0.26): where it was before FA13 moved the
-  // palm 4 mm left and 2 mm up on the handguard.
-  const supportHand = supportHandPart(support, m, [0.016, -0.244, -0.19]);
+  // From the handguard to just under the magazine's base plate.
+  const supportHand = supportHandPart(support, m, [0.016, -0.244, -0.21]);
   group.add(supportHand.group);
   group.add(namedPart(sightsUp, m, 'sightsUp'), namedPart(sightsDown, m, 'sightsDown'));
   for (const [name, draw] of Object.entries(AEG_PARTS)) group.add(drawnPart(draw, m, detail, name));
@@ -842,63 +962,66 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   return { group, muzzle: mount.marker, magazine, supportHand, mount };
 }
 
-/** Polymer striker-fired gas pistol in two-tone: black slide over a tan frame with an accessory rail. */
-function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail): ReplicaModel {
-  const b = new ModelBuilder(detail);
-  // Slide: boxy, rear serrations, barrel hood showing in the ejection port, sights, muzzle.
-  b.profile('polymer', [[-0.095, 0.0], [0.1, 0.0], [0.1, 0.026], [0.092, 0.03], [-0.09, 0.03], [-0.097, 0.018]], 0.028, 0.004);
-  if (b.high) {
-    // Eight shallow ridges cut across the slide's rear, their tops worn lighter; a loaded-chamber dot behind the port.
-    b.worn(() => {
-      for (let i = 0; i < 8; i++) b.box('polymer', -0.089 + i * 0.006, -0.086 + i * 0.006, 0.006, 0.026, 0.0296);
-    });
-    b.box('laserLens', 0.004, 0.007, 0.0295, 0.031, 0.003);
-  } else for (let i = 0; i < 6; i++) b.box('rubber', -0.088 + i * 0.008, -0.085 + i * 0.008, 0.006, 0.026, 0.0295);
-  b.box('metal', 0.008, 0.044, 0.026, 0.0305, 0.018);
-  b.box('polymer', -0.093, -0.082, 0.03, 0.038, 0.022); // rear sight
-  b.box('polymer', 0.086, 0.093, 0.03, 0.036, 0.006); // front sight
-  b.tube(orangeTip ? 'orange' : 'rubber', 0.1, 0.004, 0.015, orangeTip ? 0.0095 : 0.006, 12);
-  // Frame: dust cover with an accessory rail, squared trigger guard, angled grip, magazine base.
-  b.profile('furniture', [[-0.085, 0.0], [0.092, 0.0], [0.092, -0.014], [0.038, -0.016], [-0.07, -0.016]], 0.026, 0.004);
-  b.box('furniture', 0.042, 0.088, -0.024, -0.014, 0.022);
-  for (const x of [0.05, 0.066]) b.box('rubber', x, x + 0.008, -0.024, -0.017, 0.023);
-  b.worn(() => b.profile('furniture', [[-0.03, -0.012], [-0.084, -0.012], [-0.104, -0.115], [-0.062, -0.122], [-0.044, -0.07]], 0.03, 0.008));
-  if (b.high) {
-    // Stippled rubber panels on both sides of the grip.
-    for (const side of [-1, 1]) b.profile('rubber', [[-0.04, -0.03], [-0.074, -0.03], [-0.092, -0.104], [-0.066, -0.108], [-0.05, -0.07]], 0.004, 0.006, undefined, side * 0.0145);
-  }
-  b.profile(
-    'furniture',
-    [[-0.03, -0.014], [0.034, -0.014], [0.034, -0.048], [-0.036, -0.046]],
-    0.01,
-    0.006,
-    [[-0.022, -0.02], [0.026, -0.02], [0.026, -0.042], [-0.027, -0.04]],
-  );
-  b.box('polymer', -0.004, 0.003, -0.036, -0.016, 0.005); // trigger
-  if (b.high) b.crossTube('metal', 0.0, -0.017, 0.0022, 0.012, 0, 8); // its pivot pin
-
-  // Two-handed grip: right hand round the grip, index finger along the frame; the left hand presses
-  // against the left of the grip with its fingers wrapped over the right hand's.
+/** The pistols' two-handed grip (the Gas and Cyber Pistols share the grip's line): the right hand round the grip, index finger along the frame; the left pressed against the grip, its fingers over the right hand's. */
+function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDetail): void {
   const rightWrist = buildHand(
     b,
     { side: 'right', palm: [0.03, -0.068, -0.078], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.6, curl: [0.2, 0.2] } },
     detail.hands,
   );
   buildForearm(b, rightWrist, [0.1, -0.26, -0.3], undefined, detail.hands);
-  const support = new ModelBuilder(detail);
   const leftWrist = buildHand(
     support,
     { side: 'left', palm: [-0.034, -0.072, -0.066], across: GRIP_DOWN, back: [-1, 0, 0], fingers: [SUPPORT, SUPPORT, SUPPORT, SUPPORT], thumb: { swing: 0.3, curl: [0.1, 0.1] } },
     detail.hands,
   );
   buildForearm(support, leftWrist, [-0.16, -0.26, -0.28], undefined, detail.hands);
+}
+
+/**
+ * Polymer striker-fired gas pistol (G2: squarer, as the concept): an angular slide with top chamfers and the accent line
+ * along both sides, a frame with a railed dust cover and a squared trigger guard, a rectangular grip at a steady rake
+ * with a short beavertail. High: front and rear serrations, stippled grip panels and a thumb ledge.
+ */
+function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
+  const b = new ModelBuilder(detail);
+  // Slide, its accent line, the barrel hood in the ejection port, sights, muzzle.
+  b.profile('polymer', [[-0.09, 0.0], [0.1, 0.0], [0.1, 0.03], [0.092, 0.036], [-0.08, 0.036], [-0.09, 0.03]], 0.032, 0.003);
+  b.box('accent', -0.08, 0.094, 0.012, 0.016, 0.0332);
+  if (b.high) {
+    // Seven grooves at the rear and four at the front, cut on both sides.
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 7; i++) b.box('rubber', -0.083 + i * 0.0065, -0.08 + i * 0.0065, 0.018, 0.033, 0.0008, side * 0.0161);
+      for (let i = 0; i < 4; i++) b.box('rubber', 0.07 + i * 0.0065, 0.073 + i * 0.0065, 0.018, 0.033, 0.0008, side * 0.0161);
+    }
+    b.box('laserLens', 0.0, 0.003, 0.0355, 0.037, 0.003); // loaded-chamber dot
+  } else for (let i = 0; i < 6; i++) b.box('rubber', -0.084 + i * 0.008, -0.081 + i * 0.008, 0.018, 0.033, 0.0325);
+  b.box('metal', 0.008, 0.044, 0.03, 0.0365, 0.018);
+  b.box('detail', -0.084, -0.072, 0.036, 0.045, 0.022); // rear sight
+  b.box('detail', 0.086, 0.094, 0.036, 0.043, 0.006); // front sight
+  b.tube(orangeTip ? 'orange' : 'rubber', 0.1, 0.004, 0.015, orangeTip ? 0.0095 : 0.006, 12);
+  // Frame: the dust cover with an accessory rail, the squared trigger guard, the grip.
+  b.profile('furniture', [[-0.085, 0.0], [0.096, 0.0], [0.096, -0.014], [0.038, -0.016], [-0.07, -0.016]], 0.03, 0.003);
+  b.box('furniture', 0.042, 0.092, -0.026, -0.014, 0.024);
+  for (const x of [0.05, 0.064, 0.078]) b.box('detail', x, x + 0.008, -0.026, -0.019, 0.025);
+  b.worn(() => b.profile('furniture', [[-0.012, -0.012], [-0.078, -0.012], [-0.094, -0.003], [-0.099, -0.009], [-0.082, -0.024], [-0.11, -0.128], [-0.106, -0.132], [-0.054, -0.132], [-0.051, -0.129], [-0.024, -0.03]], 0.032, 0.004));
+  if (b.high) {
+    for (const side of [-1, 1]) b.profile('stipple', [[-0.034, -0.04], [-0.08, -0.04], [-0.1, -0.118], [-0.06, -0.118]], 0.003, 0.004, [], side * 0.016);
+    b.box('furniture', -0.026, -0.02, -0.03, -0.024, 0.036); // thumb ledge
+  }
+  b.profile('furniture', [[-0.03, -0.014], [0.034, -0.014], [0.034, -0.048], [-0.036, -0.046]], 0.01, 0.006, [[[-0.022, -0.02], [0.026, -0.02], [0.026, -0.042], [-0.027, -0.04]]]);
+  b.box('detail', -0.004, 0.003, -0.036, -0.016, 0.005); // trigger
+  if (b.high) b.crossTube('metal', 0.0, -0.017, 0.0022, 0.012, 0, 8); // its pivot pin
+
+  const support = new ModelBuilder(detail);
+  if (hands === 'hands') pistolHands(b, support, detail);
   const group = b.build(m);
   for (const [name, draw] of Object.entries(PISTOL_PARTS)) group.add(drawnPart(draw, m, detail, name));
   group.getObjectByName('laser:redLaser')?.add(laserBeam(PISTOL_LASER_LENS));
-  const magazine = magazinePart(PISTOL_MAGAZINES, m, detail, GRIP_DOWN, { extended: [0, -0.038, 0] });
+  const magazine = magazinePart(PISTOL_MAGAZINES, m, detail, GRIP_DOWN, { extended: [0, -0.032, 0] });
   group.add(magazine.group);
-  // From the side of the grip down to the magazine's base plate.
-  const supportHand = supportHandPart(support, m, [0.004, -0.068, -0.024]);
+  // From the side of the grip down to the magazine's base pad.
+  const supportHand = supportHandPart(support, m, [0.004, -0.08, -0.024]);
   group.add(supportHand.group);
   // A silencer screwed onto the threaded barrel (M29b), from the muzzle-device table.
   const mount = muzzleMount(PISTOL_MUZZLE, PISTOL_MUZZLE_DEVICES, m, detail, orangeTip);
@@ -907,75 +1030,45 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
 }
 
 /**
- * The Cyber Pistol (M32, the owner's design): a chunky, slab-sided electric pistol in mint, hot pink and black, the same
- * on either team. Taken from the colours of his reference photo, not its logo, lettering or outline (CLAUDE.md §4). A
- * stepped mint slide (tall at the back, lower over the barrel) with a pink stripe and vents, a black frame with a short
- * rail and a square trigger guard, mint grip panels, a long magazine standing out of the grip. It sits in the hands like
- * the Gas Pistol (the same grip and hold), so the hands and the figures' pistol pose fit it unchanged.
+ * The Cyber Pistol (M32, the owner's design; G2 the concept's): a white slab of a pistol with light lines down both sides
+ * and a core window that glow, over a dark frame and grip, the same on either team (CYBER_COLOURS; Realistic colours
+ * turns it grey and unlit). A top fin sight, a dark muzzle with a ring of light. It sits in the hands like the Gas
+ * Pistol (the same grip line and hold), so the hands and the figures' pistol pose fit it unchanged.
  */
-function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail): ReplicaModel {
+function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
   const b = new ModelBuilder(detail);
-  // Slide: the tall rear block and the lower front step over the barrel, a pink stripe proud of both sides, three
-  // vents through the step, square sights (the front one pink), the muzzle.
-  b.profile('mint', [[-0.1, 0.0], [0.05, 0.0], [0.05, 0.036], [-0.094, 0.036], [-0.1, 0.026]], 0.032, 0.004);
-  b.profile('mint', [[0.046, 0.0], [0.114, 0.0], [0.114, 0.026], [0.046, 0.03]], 0.03, 0.004);
-  b.box('pink', -0.074, 0.044, 0.013, 0.019, 0.0335);
-  for (let i = 0; i < 3; i++) b.box('rubber', 0.06 + i * 0.016, 0.068 + i * 0.016, 0.007, 0.02, 0.031);
-  b.box('rubber', 0.002, 0.04, 0.03, 0.037, 0.018); // ejection port
-  b.box('rubber', -0.096, -0.082, 0.036, 0.045, 0.026); // rear sight
-  b.box('pink', 0.098, 0.106, 0.026, 0.034, 0.007); // front sight
-  b.tube(orangeTip ? 'orange' : 'rubber', 0.11, 0.004, 0.015, orangeTip ? 0.0095 : 0.006, 12);
+  const muzzle = CYBER_MUZZLE.barrelEnd;
+  // The slab over the barrel, chamfered nose and sloped back; the dust cover under it.
+  b.profile('cyberSlab', [[-0.09, -0.004], [0.098, -0.004], [0.104, 0.006], [0.104, 0.034], [0.098, 0.04], [-0.06, 0.044], [-0.09, 0.032]], 0.034, 0.004);
+  b.box('cyberSlab', 0.06, 0.1, -0.03, -0.004, 0.028);
+  // Light lines along both sides, the core window, a line down the back strap.
+  b.box('cyberLine', -0.07, 0.1, 0.022, 0.025, 0.0354);
+  b.box('cyberCore', 0.0, 0.05, 0.004, 0.014, 0.0354);
+  b.profile('cyberLine', [[-0.083, -0.03], [-0.087, -0.03], [-0.106, -0.112], [-0.102, -0.112]], 0.012, 0.001);
+  // Frame: the squared trigger guard and the trigger, the raked grip; the top fin sight; the muzzle with its ring.
+  b.profile('polymer', [[-0.004, -0.004], [0.06, -0.004], [0.06, -0.048], [-0.01, -0.048]], 0.012, 0.004, [[[0.004, -0.012], [0.052, -0.012], [0.052, -0.04], [0.0, -0.04]]]);
+  b.box('polymer', 0.014, 0.02, -0.034, -0.008, 0.005);
+  b.worn(() => b.profile('polymer', [[-0.004, -0.004], [-0.08, -0.004], [-0.094, -0.012], [-0.08, -0.024], [-0.108, -0.13], [-0.054, -0.13], [-0.02, -0.014]], 0.032, 0.004));
+  b.profile('polymer', [[-0.05, 0.043], [-0.02, 0.042], [-0.03, 0.056], [-0.046, 0.056]], 0.008, 0.002);
+  b.tube('polymer', 0.1, muzzle - 0.1 - 0.003, CYBER_MUZZLE.up, 0.009, 6);
+  b.tube('cyberLine', muzzle - 0.003, 0.001, CYBER_MUZZLE.up, 0.0093, 6);
+  b.tube(orangeTip ? 'orange' : 'polymer', muzzle - 0.002, 0.002, CYBER_MUZZLE.up, 0.0075, 12);
   if (b.high) {
-    // Six ridges across the slide's rear, worn lighter; a pink charge light on the back.
-    b.worn(() => {
-      for (let i = 0; i < 6; i++) b.box('mint', -0.093 + i * 0.007, -0.089 + i * 0.007, 0.021, 0.034, 0.0332);
-    });
-    b.box('pink', -0.1015, -0.0995, 0.008, 0.02, 0.012);
-    b.crossTube('metal', 0.02, 0.008, 0.0025, 0.034, 0, 8); // slide pin
-  }
-  // Frame: a slab dust cover with a short rail (pink teeth), the square trigger guard, the trigger.
-  b.profile('polymer', [[-0.09, 0.0], [0.104, 0.0], [0.104, -0.016], [0.04, -0.018], [-0.07, -0.018]], 0.03, 0.004);
-  b.box('polymer', 0.046, 0.098, -0.027, -0.016, 0.024);
-  for (const x of [0.052, 0.068, 0.084]) b.box('pink', x, x + 0.008, -0.029, -0.022, 0.025);
-  b.profile(
-    'polymer',
-    [[-0.03, -0.016], [0.04, -0.016], [0.04, -0.052], [-0.036, -0.052]],
-    0.011,
-    0.004,
-    [[-0.022, -0.022], [0.032, -0.022], [0.032, -0.046], [-0.027, -0.046]],
-  );
-  b.box('pink', -0.004, 0.004, -0.038, -0.018, 0.006); // trigger
-  // Grip: black, raked, mint panels on both sides; a battery hatch at its back.
-  b.worn(() => b.profile('polymer', [[-0.03, -0.012], [-0.086, -0.012], [-0.106, -0.116], [-0.062, -0.122], [-0.044, -0.07]], 0.032, 0.008));
-  for (const side of [-1, 1]) b.profile('mint', [[-0.04, -0.026], [-0.076, -0.026], [-0.094, -0.106], [-0.066, -0.11], [-0.05, -0.07]], 0.004, 0.006, undefined, side * 0.0155);
-  if (b.high) {
-    // The battery hatch's seam and catch down the back strap, the trigger's pivot pin, a takedown lever.
-    b.profile('rubber', [[-0.0855, -0.03], [-0.0895, -0.03], [-0.1018, -0.094], [-0.0978, -0.094]], 0.0325, 0.001);
-    b.worn(() => b.box('pink', -0.104, -0.098, -0.096, -0.088, 0.014));
-    b.crossTube('metal', 0.0, -0.019, 0.0022, 0.013, 0, 8);
-    b.box('mint', 0.02, 0.03, -0.008, -0.002, 0.034);
+    // A second line higher up, stippled grip panels, the slide pin and the trigger's pivot pin.
+    b.box('cyberLine', -0.05, 0.02, 0.031, 0.033, 0.0354);
+    b.profile('stipple', [[-0.03, -0.04], [-0.076, -0.04], [-0.1, -0.118], [-0.056, -0.118]], 0.0336, 0.004);
+    b.crossTube('metal', 0.02, 0.008, 0.0025, 0.036, 0, 8);
+    b.crossTube('metal', 0.017, -0.009, 0.0022, 0.013, 0, 8);
   }
 
-  // The Gas Pistol's two-handed grip: the frames share the grip's line.
-  const rightWrist = buildHand(
-    b,
-    { side: 'right', palm: [0.03, -0.068, -0.078], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.6, curl: [0.2, 0.2] } },
-    detail.hands,
-  );
-  buildForearm(b, rightWrist, [0.1, -0.26, -0.3], undefined, detail.hands);
   const support = new ModelBuilder(detail);
-  const leftWrist = buildHand(
-    support,
-    { side: 'left', palm: [-0.034, -0.072, -0.066], across: GRIP_DOWN, back: [-1, 0, 0], fingers: [SUPPORT, SUPPORT, SUPPORT, SUPPORT], thumb: { swing: 0.3, curl: [0.1, 0.1] } },
-    detail.hands,
-  );
-  buildForearm(support, leftWrist, [-0.16, -0.26, -0.28], undefined, detail.hands);
+  if (hands === 'hands') pistolHands(b, support, detail);
   const group = b.build(m);
   for (const [name, draw] of Object.entries(CYBER_PARTS)) group.add(drawnPart(draw, m, detail, name));
   const magazine = magazinePart(CYBER_MAGAZINES, m, detail, GRIP_DOWN);
   group.add(magazine.group);
-  // Down to the long magazine's base plate (the Gas Pistol's extended magazine's reach).
-  const supportHand = supportHandPart(support, m, [0.004, -0.106, -0.024]);
+  // Down to its base pad (where the Gas Pistol's is).
+  const supportHand = supportHandPart(support, m, [0.004, -0.08, -0.024]);
   group.add(supportHand.group);
   const mount = muzzleMount(CYBER_MUZZLE, {}, m, detail, orangeTip);
   group.add(mount.group);
@@ -1082,7 +1175,8 @@ function buildRaisedHand(m: Record<MaterialKey, THREE.Material>, detail: Replica
 /**
  * Builds the held-replica model (with hands and team armband) for each replica in the loadout, keyed by replica id, at
  * `detail` (Replica and Hand detail, FA8; Low's by default), each in its colour scheme from `paint` (G1; by loadout slot)
- * or, without one, the two-tone black and tan it had before.
+ * or, without one, the unpainted black and tan (the Cyber Pistol always in its own colours). `hands` 'bare': without the
+ * hands, for a picture of the replica on its own (itemPictures.ts).
  */
 export function buildReplicaModels(
   loadout: readonly ReplicaConfig[],
@@ -1090,18 +1184,19 @@ export function buildReplicaModels(
   orangeTips: boolean,
   detail: ReplicaDetail = LOW_DETAIL,
   paint: ReplicaPaint | null = null,
+  hands: HandsShown = 'hands',
 ): ReplicaModels {
   const speckle = detail.replica === 'high' ? speckleTextures() : null;
-  const materials = createMaterials(teamColor, detail, speckle);
+  const materials = createMaterials(teamColor, detail, speckle, F.unpainted, CYBER_COLOURS.bold);
   const models = new Map<string, ReplicaModel>();
-  // Every material made for a replica's own paint, to dispose and to switch with the sheen (setReflections).
+  // Every material made for a replica's own colours, to dispose and to switch with the sheen (setReflections).
   const painted: THREE.Material[] = [];
   loadout.forEach((r, slot) => {
     const build = r.look.viewmodel === 'cyber' ? buildCyberPistol : r.look.model === 'pistol' ? buildPistol : buildAeg;
-    const own = paintOf(r, slot, paint);
-    const mats = own ? paintedMaterials(materials, own.colours, own.fixed) : materials;
+    const own = coloursOf(r, slot, paint);
+    const mats = own ? paintedMaterials(materials, detail, own.colours, own.cyber) : materials;
     for (const key of PAINTED) if (mats[key] !== materials[key]) painted.push(mats[key]);
-    models.set(r.id, build(mats, orangeTips, detail));
+    models.set(r.id, build(mats, orangeTips, detail, hands));
   });
   const raisedHand = buildRaisedHand(materials, detail);
   const metals = [materials.metal, ...painted.filter((m) => (m as THREE.MeshStandardMaterial).metalness > 0)] as THREE.MeshStandardMaterial[];

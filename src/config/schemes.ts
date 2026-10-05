@@ -61,10 +61,23 @@ export const BOT_SCHEMES: readonly Readonly<Record<ReplicaConfig['look']['model'
 ];
 
 /**
- * Replicas with their own fixed colours (the Cyber Pistol's mint and pink, M32): no scheme applies to them, except that
- * Realistic colours turns them into this family.
+ * The Cyber Pistol's own colours (M32; restyled to the v3 concept William approved, 5 October 2026): a white slab with
+ * cyan light lines and a magenta core on a dark frame, the same on either team. No scheme applies to it; Realistic
+ * colours turns it into a dark grey slab with plain grey lines and no glow.
  */
-export const FIXED_COLOUR_FAMILY: FamilyId = 'black';
+export interface CyberColours {
+  slab: number;
+  frame: number;
+  line: number;
+  core: number;
+  /** The lines and the core glow. */
+  glow: boolean;
+}
+
+export const CYBER_COLOURS: Readonly<Record<'bold' | 'realistic', CyberColours>> = {
+  bold: { slab: 0xe9edf0, frame: 0x23262c, line: 0x30f0ff, core: 0xff3aa8, glow: true },
+  realistic: { slab: 0x4a4f57, frame: 0x23262c, line: 0x2a2d32, core: 0x6a7079, glow: false },
+};
 
 /** A replica's scheme before the player picks one. */
 export function defaultScheme(replica: ReplicaConfig): SchemeId {

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { REPLICA_FINISH } from '../config/replicaFinish';
+import { CYBER_COLOURS } from '../config/schemes';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import { createArmament, fitParts } from '../sim/armament';
 import { buildHand, type GeometrySink, type HandPose } from './handModels';
@@ -9,6 +10,11 @@ import { AEG_MUZZLE, buildReplicaModels, CYBER_MUZZLE, fitMuzzle, LOW_DETAIL, PI
 import { Viewmodel } from './viewmodel';
 
 const HIGH = { replica: 'high', hands: 'high' } as const;
+/**
+ * The most triangles each replica draws at once on high detail (G2: the overhaul's slots, ribs and grooves). One
+ * viewmodel, drawn once a frame, on the presets for a graphics card: well within it.
+ */
+const HIGH_BUDGET: Readonly<Record<string, number>> = { aeg: 17500, pistol: 11000, cyber: 11000 };
 /** The two factory replicas and the Cyber Pistol (M32), whose model is its own. */
 const WITH_CYBER = [...LOADOUT, CYBER_PISTOL];
 const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
@@ -37,11 +43,13 @@ const drawn = (models: ReplicaModels, id: string): number => {
 };
 
 describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
-  it('keeps Low as it was: no texture coordinates, colours or maps, and the same triangles (a viewmodel pass is not dearer)', () => {
+  it('keeps Low plain and no dearer: no texture coordinates, colours or maps, and fewer triangles than before G2', () => {
     const low = buildReplicaModels(LOADOUT, 0x3a7bd5, false);
-    // Pinned from the models before the overhaul (the rifle 10,844 at once, the pistol 7,944).
-    expect(drawn(low, 'aeg')).toBe(10844);
-    expect(drawn(low, 'pistol')).toBe(7944);
+    // G2's models, pinned so a change is seen; below the models before it (the rifle 10,844 at once, the pistol 7,944).
+    expect(drawn(low, 'aeg')).toBe(8508);
+    expect(drawn(low, 'pistol')).toBe(7096);
+    expect(drawn(low, 'aeg')).toBeLessThanOrEqual(10844);
+    expect(drawn(low, 'pistol')).toBeLessThanOrEqual(7944);
     for (const r of LOADOUT) {
       for (const m of meshesOf(low.models.get(r.id)!.group)) {
         expect(m.geometry.getAttribute('uv'), m.name).toBeUndefined();
@@ -54,12 +62,12 @@ describe('Replica detail (FA8, QualitySettings.replicaDetail)', () => {
     low.dispose();
   });
 
-  it('draws the high replicas with bevels, speckle and edge highlights, within a third more triangles', () => {
+  it('draws the high replicas with bevels, speckle and edge highlights, within their budgets', () => {
     const low = buildReplicaModels(LOADOUT, 0x3a7bd5, false);
     const high = buildReplicaModels(LOADOUT, 0x3a7bd5, false, HIGH);
     for (const r of LOADOUT) {
       expect(drawn(high, r.id), r.id).toBeGreaterThan(drawn(low, r.id));
-      expect(drawn(high, r.id), r.id).toBeLessThan(drawn(low, r.id) * 1.35);
+      expect(drawn(high, r.id), r.id).toBeLessThanOrEqual(HIGH_BUDGET[r.id]!);
       for (const m of meshesOf(high.models.get(r.id)!.group)) {
         const mat = m.material as THREE.MeshStandardMaterial;
         if (mat.roughnessMap) expect(m.geometry.getAttribute('uv'), `${r.id} ${m.name} needs uvs for its speckle`).toBeDefined();
@@ -290,21 +298,25 @@ describe('the viewmodel at each detail (FA8)', () => {
   });
 });
 
-describe('the Cyber Pistol\'s model (M32)', () => {
-  const mat = (models: ReplicaModels, key: string) =>
-    ((models.models.get('cyber')!.group.children.find((c) => c.name === key) as THREE.Mesh).material as THREE.MeshStandardMaterial).color;
+describe('the Cyber Pistol\'s model (M32; G2 the concept\'s)', () => {
+  const material = (models: ReplicaModels, key: string) =>
+    (models.models.get('cyber')!.group.children.find((c) => c.name === key) as THREE.Mesh).material as THREE.MeshStandardMaterial;
+  const mat = (models: ReplicaModels, key: string) => material(models, key).color;
+  const emissive = (models: ReplicaModels, key: string) => material(models, key).emissive.getHex();
 
-  it('is its own chunky pistol in mint, hot pink and black, the same on either team', () => {
+  it('is its own white slab with glowing lines and core over a dark frame, the same on either team', () => {
     const blue = buildReplicaModels(WITH_CYBER, 0x3a7bd5, false);
     const red = buildReplicaModels(WITH_CYBER, 0xd54a3a, false);
-    // Its own mesh, about as dear as the Gas Pistol's (7,944 at once on Low; 9,140): pinned so a change to it is seen.
-    expect(drawn(blue, 'cyber')).toBe(9140);
-    expect(mat(blue, 'mint').getHex()).toBe(REPLICA_FINISH.cyber.mint);
-    expect(mat(blue, 'pink').getHex()).toBe(REPLICA_FINISH.cyber.pink);
-    expect(mat(blue, 'polymer').getHex()).toBe(0x2a2c31);
-    for (const key of ['mint', 'pink', 'polymer']) expect(mat(red, key).getHex(), key).toBe(mat(blue, key).getHex());
-    // Slab-sided: its slide is wider and taller than the Gas Pistol's.
-    const box = (models: ReplicaModels, id: string) => new THREE.Box3().setFromObject(models.models.get(id)!.group.children.find((c) => c.name === (id === 'cyber' ? 'mint' : 'polymer'))!);
+    // Its own mesh, about as dear as the Gas Pistol's (7,096 at once on Low): pinned so a change to it is seen.
+    expect(drawn(blue, 'cyber')).toBe(6952);
+    const C = CYBER_COLOURS.bold;
+    expect(mat(blue, 'cyberSlab').getHex()).toBe(C.slab);
+    expect(mat(blue, 'polymer').getHex()).toBe(C.frame);
+    // The lines and core glow in their colours (emissive), so they read in the dark.
+    for (const [key, hex] of [['cyberLine', C.line], ['cyberCore', C.core]] as const) expect(emissive(blue, key)).toBe(hex);
+    for (const key of ['cyberSlab', 'cyberLine', 'cyberCore', 'polymer']) expect(mat(red, key).getHex(), key).toBe(mat(blue, key).getHex());
+    // Slab-sided: it stands taller than the Gas Pistol's slide.
+    const box = (models: ReplicaModels, id: string) => new THREE.Box3().setFromObject(models.models.get(id)!.group.children.find((c) => c.name === (id === 'cyber' ? 'cyberSlab' : 'polymer'))!);
     expect(box(blue, 'cyber').max.y).toBeGreaterThan(box(blue, 'pistol').max.y);
     blue.dispose();
     red.dispose();
@@ -319,9 +331,9 @@ describe('the Cyber Pistol\'s model (M32)', () => {
       expect((m.material as THREE.MeshStandardMaterial).roughnessMap ?? null).toBeNull();
     }
     expect(drawn(high, 'cyber')).toBeGreaterThan(drawn(low, 'cyber'));
-    expect(drawn(high, 'cyber')).toBeLessThan(drawn(low, 'cyber') * 1.35);
-    // High's flat mint is the colour as on Low (brightened by as much as the vertex colour darkens it).
-    expect(mat(high, 'mint').r / REPLICA_FINISH.wearLight).toBeCloseTo(mat(low, 'mint').r, 6);
+    expect(drawn(high, 'cyber')).toBeLessThanOrEqual(HIGH_BUDGET.cyber!);
+    // High's flat slab is the colour as on Low (brightened by as much as the vertex colour darkens it).
+    expect(mat(high, 'cyberSlab').r / REPLICA_FINISH.wearLight).toBeCloseTo(mat(low, 'cyberSlab').r, 6);
     for (const models of [low, high]) {
       const { group, muzzle } = models.models.get('cyber')!;
       const fittable: string[] = [];
@@ -343,9 +355,9 @@ describe('the Cyber Pistol\'s model (M32)', () => {
     const vm = new Viewmodel(16 / 9, 0x3a7bd5, [CYBER_PISTOL, LOADOUT[1]!]);
     const arm = createArmament([CYBER_PISTOL, LOADOUT[1]!]);
     vm.update(1 / 60, 0, 0, 0, 4.2, 0, arm, false, 0);
-    const pink: THREE.Object3D[] = [];
-    vm.scene.traverseVisible((o) => o.name === 'pink' && pink.push(o));
-    expect(pink.length).toBeGreaterThan(0);
+    const slab: THREE.Object3D[] = [];
+    vm.scene.traverseVisible((o) => o.name === 'cyberSlab' && slab.push(o));
+    expect(slab.length).toBeGreaterThan(0);
     vm.dispose();
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from './replicas';
-import { botScheme, DEFAULT_SCHEMES, defaultScheme, FAMILIES, hasFixedColours, isSchemeId, SCHEME_IDS, SCHEMES, schemeColours } from './schemes';
+import { botScheme, CYBER_COLOURS, DEFAULT_SCHEMES, defaultScheme, FAMILIES, hasFixedColours, isSchemeId, SCHEME_IDS, SCHEMES, schemeColours } from './schemes';
 
 describe('Replica colour schemes (G1)', () => {
   it('has the eight bold schemes William approved, in Customise order, each mapped to its plain family', () => {
@@ -43,9 +43,11 @@ describe('Replica colour schemes (G1)', () => {
     expect([botScheme(AEG, 1), botScheme(GAS_PISTOL, 1)]).toEqual(['signal', 'coral']);
   });
 
-  it('leaves the Cyber Pistol in its own colours', () => {
+  it('leaves the Cyber Pistol in its own colours, plain and unlit under Realistic colours', () => {
     expect(hasFixedColours(CYBER_PISTOL)).toBe(true);
     expect(hasFixedColours(AEG) || hasFixedColours(GAS_PISTOL)).toBe(false);
+    expect(CYBER_COLOURS.bold.glow).toBe(true);
+    expect(CYBER_COLOURS.realistic.glow).toBe(false);
   });
 
   it('accepts only the eight scheme ids from a save', () => {
