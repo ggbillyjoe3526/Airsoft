@@ -56,7 +56,7 @@ since the base.
 
 `--quick` is build and tests: about two minutes (build about 20 s with the `.br`/`.gz` copies, the suite 75-90 s;
 measured 2026-10-04 in the container with other work running). While working, `npx vitest run --project fast` runs
-every unit test except the headless bot-match guards (project `slow`, `src/ai/depotMatch*.test.ts`) in about 12 s; the
+every unit test except the headless bot-match guards (project `slow`, `src/ai/depotMatch*.test.ts` and the Pro guards `src/ai/*Match.pro*.test.ts`, `src/ai/proBalance.test.ts`) in about 12 s; the
 gate, CI and `npm test` always run both projects (vite.config.ts, audit CORE-15). The full gate in a cloud container is about five minutes plus the perf run
 when it is required; set `PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium` there. The report is
 `pipeline/out/gate-report.json`; logs and reports under `pipeline/out/qa-artifacts/`; all git-ignored.
