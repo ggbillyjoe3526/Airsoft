@@ -23,6 +23,9 @@ export class FakeElement {
     add: (...names: string[]): void => {
       for (const name of names) this.classes.add(name);
     },
+    remove: (...names: string[]): void => {
+      for (const name of names) this.classes.delete(name);
+    },
     toggle: (name: string, force?: boolean): boolean => {
       const on = force ?? !this.classes.has(name);
       if (on) this.classes.add(name);
@@ -69,6 +72,12 @@ export class FakeElement {
     for (const fn of this.listeners.get('click') ?? []) fn({ target: this });
   }
   focus(): void {}
+  /** Takes the element out of its parent, as the DOM's Element.remove does. */
+  remove(): void {
+    if (!this.parent) return;
+    this.parent.children.splice(this.parent.children.indexOf(this), 1);
+    this.parent = null;
+  }
   showModal(): void {
     this.open = true;
   }

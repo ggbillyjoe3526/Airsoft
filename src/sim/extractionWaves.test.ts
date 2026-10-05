@@ -136,10 +136,10 @@ describe('Extraction waves (M45)', () => {
       [10, 10],
       [20, 10],
     ]);
-    // The first walks off its point: the third comes in there, in the same wave.
+    // The first walks off its point: the third comes in there, in the same wave, when it next looks (M55: regenRetry).
     const first = home(cs).find((c) => isInPlay(c) && c.position.z === 10 && c.position.x === 10)!;
     first.position.x = 5;
-    play(DT, round, cs, events);
+    play(EXTRACTION.regenRetry + DT, round, cs, events);
     expect(inPlayAt(cs)).toBe(3);
     expect(round.run.waves).toBe(1);
     for (const e of events) if (e.type === 'returned') expect(at(cs[e.characterId]!)).not.toEqual([15, -10]);

@@ -5,11 +5,12 @@ import { FIRE_MODE_LABELS, type ReplicaConfig } from '../config/replicas';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
 import { emptyMagHint, isLowAmmo } from './ammoStatus';
 import { crosshairElement, crosshairGap, setCrosshairGap, styleCrosshair } from './crosshair';
+import { TimedFill } from './timedFill';
 
 /**
  * Minimal in-game HUD: crosshair (the player's own, Settings → Crosshair; or the red dot, or a scope's eyepiece and reticle, while aiming down one) and the replica panel (name and fire mode, BBs in the loaded magazine, a
  * gauge per spare magazine showing how full it is, with the one a reload takes marked, and reload progress).
- * DOM is only touched when a displayed value changes.
+ * DOM is only touched when a displayed value changes (the reload bar's fill runs on one CSS transition, ui/timedFill.ts).
  */
 export class Hud {
   private readonly root: HTMLDivElement;
@@ -31,7 +32,8 @@ export class Hud {
   private emptyHint = '';
   private readonly status: HTMLDivElement;
   private readonly reloadBar: HTMLDivElement;
-  private readonly reloadFill: HTMLDivElement;
+  /** The reload bar's fill: one CSS transition per reload, not a write per percent (M64, audit UI-11). */
+  private readonly reloadFill: TimedFill;
   private shownInPlay = true;
   private shownAiming = false;
   private shownScoped = false;
@@ -69,7 +71,7 @@ export class Hud {
     this.mags = this.root.querySelector('.hud-mags') as HTMLSpanElement;
     this.status = this.root.querySelector('.hud-status') as HTMLDivElement;
     this.reloadBar = this.root.querySelector('.hud-reload') as HTMLDivElement;
-    this.reloadFill = this.reloadBar.firstElementChild as HTMLDivElement;
+    this.reloadFill = new TimedFill(this.reloadBar.firstElementChild as HTMLElement);
     this.crosshair = crosshairElement();
     this.root.prepend(this.crosshair);
     this.minGap = crosshair.gap;
@@ -141,8 +143,9 @@ export class Hud {
     if (s.reloadPct !== pct) {
       s.reloadPct = pct;
       this.reloadBar.classList.toggle('active', reloading);
-      this.reloadFill.style.width = `${Math.max(0, pct)}%`;
+      if (!reloading) this.reloadFill.hold(0);
     }
+    if (reloading) this.reloadFill.follow(1 - armament.reload / handling.reloadTime, armament.reload);
 
     let status = '';
     if (reloading) status = 'Reloading';

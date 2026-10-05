@@ -29,6 +29,11 @@ export interface ExtractionRules {
    */
   caseReach: number;
   caseHeightReach: number;
+  /**
+   * A case opens only with a clear line from the runner's eye to this far above its spot (m, M55): never through a wall
+   * or a floor.
+   */
+  caseSightHeight: number;
   /** While a case is being opened it makes its noise every this many seconds (bots within its Heard m come). */
   caseNoiseEvery: number;
   /** Seconds to pick up what you dropped when you were hit (plan: no opening time, so the hold ends at once). */
@@ -48,6 +53,11 @@ export interface ExtractionRules {
   regenSeenAt: readonly number[];
   /** A regen point is free only with nobody in play within this distance (m): two returners never share one. */
   regenClearance: number;
+  /**
+   * A wave that can't place a returner (every regen point taken, near the squad or in its sight) looks again after this
+   * many seconds, not every tick (M55).
+   */
+  regenRetry: number;
 }
 
 export const EXTRACTION: ExtractionRules = {
@@ -64,6 +74,8 @@ export const EXTRACTION: ExtractionRules = {
   /** An arm's length and a step: you stand by the case, not on it. */
   caseReach: 1.5,
   caseHeightReach: 1,
+  /** The top of the smallest case (an ammo can is 0.24 m tall, config/render.ts CASE_VISUALS). */
+  caseSightHeight: 0.2,
   caseNoiseEvery: 1,
   dropOpenTime: 0,
   /** The plan's numbers; Pro waves come as fast as Hard's (its bots are what make it harder). */
@@ -74,6 +86,8 @@ export const EXTRACTION: ExtractionRules = {
   regenSeenAt: [0.5, 0.9],
   /** About two bodies' width. */
   regenClearance: 1,
+  /** A quarter of a second: a returner is never noticeably late, and the search costs a fifteenth of what it did. */
+  regenRetry: 0.25,
 };
 
 /** The squad a run plays with for the picked team size: the team size, at most `maxSquad` (a map may allow bigger teams). */

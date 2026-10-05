@@ -15,6 +15,7 @@ import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsK
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
+import { perfScriptFor } from './config/perfScript';
 import { PHYSICS } from './config/physics';
 import { type LightingPreset, matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, REALCAP, type ReplicaConfig, replicaUnderRules } from './config/replicas';
@@ -268,6 +269,8 @@ export class MatchSession {
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
+    // The perf harness's player (`?script=perf`) plays the script for this mode: Extraction's opens a case (M64, UI-05).
+    if (input.script) input.script = perfScriptFor(this.mode);
     input.restartScript();
     // The player is always on Blue.
     // The torches (M33h), once everyone is kitted: your own takes one of the night lights on Medium and High.

@@ -6,8 +6,8 @@ import type { PlayerCommand } from '../sim/commands';
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { isInPlay } from '../sim/elimination';
 import { type Bot, type BotWorld, flagRole } from './bot';
-import { followRoute, teammateSpots, wantRoute } from './botMovement';
-import { createCoverSpot, type CoverSearch, findCover } from './cover';
+import { followRoute, stepOnto, teammateSpots, wantRoute } from './botMovement';
+import { createCoverSpot, type CoverSearch, findCover, leanSideToSee } from './cover';
 import { eyeOf } from './perception';
 
 /**
@@ -333,8 +333,9 @@ function openingCase(leader: Character, w: BotWorld): boolean {
 /**
  * Follow me while the leader opens a case (M46): once per opening, the follower picks a spot within openCoverRadius of
  * the leader hidden from a point holdCoverThreatDistance out the way its slot watches (behind the leader, who faces the
- * case: left for the first, right for the second, openWatchDeg), away from teammates' spots; failing one, its follow
- * spot. It goes there, crouches at crouch cover, and watches that way (orderYaw).
+ * case: left for the first, right for the second, openWatchDeg; short of the first wall, M55), away from teammates'
+ * spots; failing one, its follow spot. It goes there, crouches at crouch cover or leans out at a corner of full cover
+ * (M55, audit AI-01), and watches that way (orderYaw; from a corner, straight at the point it watches).
  */
 function coverOpener(b: Bot, w: BotWorld, leader: Character, cmd: PlayerCommand, dt: number): boolean {
   const cfg = w.cfg;
@@ -344,21 +345,46 @@ function coverOpener(b: Bot, w: BotWorld, leader: Character, cmd: PlayerCommand,
     const watch = cfg.openWatchDeg;
     const yaw = leader.yaw + watch[b.orderSlot % watch.length]! * DEG;
     b.orderYaw = yaw;
-    watchPoint.x = leader.position.x - Math.sin(yaw) * cfg.holdCoverThreatDistance;
+    // Short of the first wall that way (M55, audit AI-01), as a guard's way in is: a point behind a wall hides every
+    // spot and is seen from none.
+    watchPoint.x = leader.position.x;
     watchPoint.y = leader.position.y + w.body.standEyeHeight;
-    watchPoint.z = leader.position.z - Math.cos(yaw) * cfg.holdCoverThreatDistance;
+    watchPoint.z = leader.position.z;
+    view.x = -Math.sin(yaw);
+    view.y = 0;
+    view.z = -Math.cos(yaw);
+    const wall = w.query.raycastStatic(watchPoint, view, cfg.holdCoverThreatDistance);
+    const reach = wall < 0 ? cfg.holdCoverThreatDistance : Math.max(0, wall - w.body.radius);
+    watchPoint.x += view.x * reach;
+    watchPoint.z += view.z * reach;
     openSearch.radius = cfg.openCoverRadius;
     if (findCover(leader.position, watchPoint, w, b.rng, coverSpot, openSearch, teammateSpots(b, w))) {
       b.orderGoal.x = coverSpot.position.x;
       b.orderGoal.y = coverSpot.position.y;
       b.orderGoal.z = coverSpot.position.z;
       b.orderCrouch = coverSpot.crouchOnly;
+      b.orderLean = coverSpot.lean;
+      // A lean spot sees the watch point only facing it (cover.ts leanSideToSee).
+      if (coverSpot.lean !== 0) b.orderYaw = Math.atan2(-(watchPoint.x - coverSpot.position.x), -(watchPoint.z - coverSpot.position.z));
     } else {
       followSpot(leader, b.orderHeading, b.orderSlot, w, b.orderGoal);
       b.orderCrouch = false;
+      b.orderLean = 0;
     }
+    b.orderWatch.x = watchPoint.x;
+    b.orderWatch.y = watchPoint.y;
+    b.orderWatch.z = watchPoint.z;
+    b.orderLeanChecked = false;
   }
   const moving = walkTo(b, w, b.orderGoal, SQUAD_ORDERS.holdArrive, dt);
-  if (!moving && b.routeState !== 'wanted') cmd.crouch = b.orderCrouch;
-  return moving;
+  if (moving || b.routeState === 'wanted') return moving;
+  if (b.orderLean !== 0 && !b.orderLeanChecked) {
+    // At a corner of full cover (M55, audit AI-01): right onto the spot, then lean out the way that still shows the
+    // watch point from where it stopped (none: it stands there).
+    if (stepOnto(b, w, b.orderGoal, cmd, dt)) return true;
+    b.orderLean = leanSideToSee(b.character.position, b.orderWatch, w);
+    b.orderLeanChecked = true;
+  }
+  cmd.crouch = b.orderCrouch;
+  return false;
 }

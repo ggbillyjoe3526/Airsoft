@@ -2,38 +2,17 @@
 
 Parking lot for future features. Do not implement unless asked.
 
-- **Dead-rag / hit cloth**: hit players pull a red dead-rag out, not just a raised hand.
-- **VIP escort** (owner, 2026-10-03: an idea for later): one team walks a VIP across the field, the other tries to knock the VIP out.
-- **Hostage rescue** (owner, 2026-10-03: an idea for later): one team frees a hostage (a prop or a figure) and brings them out; the other guards them.
-- **More game modes** from real sites beyond the roadmap's (TDM, Capture the Flag, Domination, Bomb and a medic mode are planned): speedsoft rules (semi auto only, no minimum distance, short fast rounds).
-- **Voiced hit calls**: a shouted "HIT!" (CC0 recording, or the browser's speech synthesis) when someone is hit.
-- **Referee NPC** who whistles for round start/end.
-- **Surrender rule** at close range (sites often use "bang-bang" or surrender for CQB).
-- **Adjustable hop-up**: tweak your BB arc in game (e.g. hold a key and scroll), like tuning a real replica. (Proposed for Phase 2, deferred by the owner to a later update.)
-- **Bang-bang surrender**: tag out an unaware enemy within ~3 m without shooting. (Deferred to a later update; see also the surrender rule above.)
-- **Who-hit-you view** after being hit (a short replay of the BB's arc). A simpler card without the replay comes with M41. The end-of-match summary moved to the roadmap (M19).
-- **Depot variations**: alternative cover layouts and a dusk lighting option.
-- **Vaulting** over low obstacles (owner idea, 2026-10-01): parked until the M11 Depot rework, which may add a few 0.7–0.9 m obstacles designed for it (see ROADMAP).
-- **Esport difficulty**: moved to the roadmap as M36–M41, the "Pro" difficulty (owner, 2026-10-04). Its notes from 2026-10-03 (aim stats, first-shot spread tuned with this tier in mind, no hearing through walls, cm/360) are folded into the plan.
-- **Rubber-knife tag** (owner, 2026-10-04: maybe later): a rubber-knife tap from behind as a silent takedown, a
-  house-rule toggle as at many sites. An alternative to the bang-bang surrender above; one of the two, not both.
-- **Slide into cover** (owner, 2026-10-04: maybe later, beside prone): a short sprint slide that ends crouched behind
-  a bunker, as speedsoft players do. Prone is on the roadmap (v0.4, with a field built for it).
-- **Progression curve for Beta** (audit POOL-23, owner 2026-10-04: an idea for Beta): today everything is owned at
-  some tier in ~20 Shots (~2 h), every asset at Rare or better in ~58 Shots (~6 h), then ~1,500 Shots (~100 h) of
-  +3 %-per-tier handling with no milestones. Ideas: completion on the Armory tile ("23 / 84 · 3 Legendary");
-  milestones in pool.md (`| Milestone | Needs | Gives |`: "Every optic owned → +1 Token", "Every asset Rare+ → a
-  Legendary Shot"); more assets before tuning odds (grenades, suppressors, tracers); Legendary 1 → 1.5 % now that pity
-  caps the wait; Easy ×0.5 → ×0.7, since Easy players most need their first unlocks.
-- **Hit players light up** (M33h plan, 2026-10-04): at night a hit player switches on a light as they call the hit,
-  as at real night games, so the walk-off reads in the dark and nobody shoots a player already out.
-- **Ground cover on terrain maps** (M33i plan, deferred): tufts of grass, ferns and leaf piles scattered from
-  `MapData.ground`'s grid (grass on grass cells, ferns under the trees), as instanced cards on Medium and High only.
-  Left out of M33i for Medium's 200k-triangle ceiling at 5v5; needs a cheaper figure or a culled instance pass first.
-- **Bots with gear for Beta** (audit POOL-24, owner 2026-10-04: an idea for Beta): the player's kit outgrows bots that
-  carry factory gear for ever on Easy and Normal (M29b gave Hard opponents rolled kits). Either give bots a tier dial by
-  difficulty (read from `botConfig`), or make higher tiers lateral (Legendary: tighter spread, a touch more recoil or a
-  slower draw), as the attachments already are. Decide after a playtest.
+Empty since the feature triage (owner, 2026-10-05): every idea parked here was placed in a version on the roadmap
+(`docs/ROADMAP.md`, Beta and "After 0.1") or declined below. New ideas go here until the owner places them.
+
+## Declined in the feature triage (owner, 2026-10-05)
+
+Cut for adding more complexity than player value (reasons in `docs/DECISIONS.md`); don't propose these again unless
+the owner brings them up: Bomb (Attack / Defend with another prop), Intel grab (Extraction already is "grab it and
+get out"), Free-for-all, the overshooting rule (bots never overshoot), tracer BBs as their own option (glowing BBs do
+it), supply weekends and dated events, VIP escort, hostage rescue, a referee NPC (the whistles cover it), tuning the
+hop-up during a match (the Customise dial covers it), a who-hit-you replay (the "what got you" card covers it), and a
+separate speedsoft mode and surrender rule (the field rule presets and the bang-bang rule cover them).
 
 ## Declined (owner, 2026-10-04)
 

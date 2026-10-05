@@ -425,8 +425,8 @@ export const BOT_BEHAVIOUR = {
   guardThreatDistance: 10,
   /**
    * With no such cover (a case in the open), a guard stands guardOpenRadius from the case (metres), on its floor, with
-   * the case in view and clear of teammates' spots: straight out from its front first, then turned guardOpenTurnDeg at a
-   * time to either side, up to guardOpenMaxTurnDeg.
+   * the case and the way in in view and clear of teammates' spots: straight out from its front first, then turned
+   * guardOpenTurnDeg at a time to either side, up to guardOpenMaxTurnDeg; then the same at patrolStandOff (M55).
    */
   guardOpenRadius: 3,
   guardOpenTurnDeg: 30,

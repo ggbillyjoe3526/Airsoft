@@ -1,14 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EXTRACTION } from '../config/extraction';
 import { HITS } from '../config/hits';
 import { FLAG } from '../config/modes';
+import { BODY } from '../config/movement';
 import { LOADOUT } from '../config/replicas';
 import type { SpawnPoint } from '../map/mapTypes';
 import { createBBPool } from './ballistics';
 import { type Character, createCharacter } from './character';
 import { stepElimination } from './elimination';
 import type { GameEvent } from './events';
-import { type CaseSetup, caseInReach, DROPPED_CASE, type ExtractionContext, haulTotals, pickOpponentStarts, runFinds, runHaul } from './extraction';
+import { type CaseSetup, caseInReach, DROPPED_CASE, type ExtractionContext, haulTotals, pickOpponentStarts, type RunSight, runFinds, runHaul } from './extraction';
+import { buildLevelRay, castLevelRay } from './levelRay';
 import { createRoundState, type RoundContext, type RoundRules, type RoundState, startRun, stepRound } from './round';
 import { vec3 } from './vec';
 
@@ -373,5 +375,139 @@ describe('Extraction cases (M44)', () => {
     cs[3]!.using = true;
     play(2, round, cs, []);
     expect(round.run.cases[3]!.open).toBe(false);
+  });
+});
+
+describe('Extraction cases: only in sight (M55, audit SIM-02)', () => {
+  /** A wall 0.2 m thick, `height` tall, across x = -10.7, between the field case (x = -10) and a runner at x = -11.2. */
+  function wall(height: number): RunSight {
+    const level = buildLevelRay([{ kind: 'wall', center: vec3(-10.7, height / 2, 0), size: vec3(0.2, height, 10) }]);
+    return { query: { raycastStatic: (o, d, max) => castLevelRay(level, o, d, max) }, body: BODY };
+  }
+  const SIGHTED: RoundContext = { ...CTX, extraction: { ...X, sight: wall(3) } };
+
+  function runWith(ctx: RoundContext, cs: Character[]): RoundState {
+    const round = createRoundState(RULES, 'extraction');
+    startRun(round, cs, ctx);
+    return round;
+  }
+  function playWith(ctx: RoundContext, seconds: number, round: RoundState, cs: Character[]): void {
+    const bbs = createBBPool(4);
+    for (let i = 0; i < Math.round(seconds / DT) && round.phase === 'live'; i++) stepRound(round, cs, bbs, ctx, [], DT);
+  }
+
+  it('never opens a case through a wall: within reach on its other side, Use does nothing; on its own side it opens', () => {
+    const cs = squadAndHome();
+    const you = cs[0]!;
+    const round = runWith(SIGHTED, cs);
+    standAt(you, -11.2, 0);
+    you.using = true;
+    playWith(SIGHTED, 5, round, cs);
+    expect(round.run.inReach).toBe(-1);
+    expect(round.run.cases[0]!.open).toBe(false);
+    standAt(you, -9.2, 0);
+    playWith(SIGHTED, 4.1, round, cs);
+    expect(round.run.cases[0]!.open).toBe(true);
+    // Without a world to look through (a test's run), reach alone decides, as before.
+    const blind = squadAndHome();
+    const before = runWith(CTX, blind);
+    standAt(blind[0]!, -11.2, 0);
+    blind[0]!.using = true;
+    playWith(CTX, 4.1, before, blind);
+    expect(before.run.cases[0]!.open).toBe(true);
+  });
+
+  it('offers a case in sight behind one that isn’t, and looks over a low wall standing, not crouched', () => {
+    const cs = squadAndHome();
+    const you = cs[0]!;
+    const round = runWith(SIGHTED, cs);
+    // The ammo can moved to your side of the wall, further than the field case behind it.
+    round.run.cases[1]!.position.x = -11.2;
+    round.run.cases[1]!.position.z = 1.4;
+    standAt(you, -11.2, 0);
+    expect(caseInReach(round.run, you, EXTRACTION)).toBe(0);
+    expect(caseInReach(round.run, you, EXTRACTION, wall(3))).toBe(1);
+    // A wall 0.8 m tall: your standing eye sees the field case's top over it, your crouched eye doesn't.
+    const low = wall(0.8);
+    you.crouchAmount = 0;
+    expect(caseInReach(round.run, you, EXTRACTION, low)).toBe(0);
+    you.crouchAmount = 1;
+    expect(caseInReach(round.run, you, EXTRACTION, low)).toBe(1);
+  });
+});
+
+describe('Extraction cases: one ray per candidate (M55, audit SIM-02, QA)', () => {
+  /** A sight that counts its rays and sees everything (no wall anywhere). */
+  function counting(): { sight: RunSight; rays: () => number } {
+    const raycastStatic = vi.fn(() => -1);
+    return { sight: { query: { raycastStatic }, body: BODY }, rays: () => raycastStatic.mock.calls.length };
+  }
+
+  it('casts no ray away from the cases, one for a lone case in reach, and none for one that is further than the nearest yet', () => {
+    const { sight, rays } = counting();
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const you = cs[0]!;
+    // The ammo can beside the field case, as near as the field case's own spot to a runner between them.
+    round.run.cases[1]!.position.x = -10;
+    round.run.cases[1]!.position.z = 1.2;
+    standAt(you, 0, 0);
+    expect(caseInReach(round.run, you, EXTRACTION, sight)).toBe(-1);
+    expect(rays()).toBe(0);
+    standAt(you, -10, -1);
+    expect(caseInReach(round.run, you, EXTRACTION, sight)).toBe(0);
+    expect(rays()).toBe(1);
+    // Both in reach, the first the nearer: the second is not a candidate, so no ray for it.
+    standAt(you, -10, 0.3);
+    expect(caseInReach(round.run, you, EXTRACTION, sight)).toBe(0);
+    expect(rays()).toBe(2);
+    // The second the nearer: a ray for each (the first was the nearest yet when it came up).
+    standAt(you, -10, 0.9);
+    expect(caseInReach(round.run, you, EXTRACTION, sight)).toBe(1);
+    expect(rays()).toBe(4);
+  });
+
+  it('casts no ray for a shut case on another floor, nor for one already open, and none with no sight to look through', () => {
+    const { sight, rays } = counting();
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const you = cs[0]!;
+    // The locker is 3 m up, straight over the field case: out of reach in height. The field case itself is open.
+    standAt(you, -10, 0);
+    round.run.cases[0]!.open = true;
+    expect(caseInReach(round.run, you, EXTRACTION, sight)).toBe(-1);
+    expect(rays()).toBe(0);
+    round.run.cases[0]!.open = false;
+    expect(caseInReach(round.run, you, EXTRACTION)).toBe(0);
+    expect(rays()).toBe(0);
+  });
+
+  it('aims the ray from your eye (lower crouched) at the top of the smallest case, caseSightHeight over its spot', () => {
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const you = cs[0]!;
+    const calls: { o: { y: number }; d: { y: number }; max: number }[] = [];
+    const sight: RunSight = {
+      query: {
+        raycastStatic: (o, d, max) => {
+          calls.push({ o: { y: o.y }, d: { y: d.y }, max });
+          return -1;
+        },
+      },
+      body: BODY,
+    };
+    standAt(you, -10, 1);
+    you.crouchAmount = 0;
+    caseInReach(round.run, you, EXTRACTION, sight);
+    you.crouchAmount = 1;
+    caseInReach(round.run, you, EXTRACTION, sight);
+    expect(calls).toHaveLength(2);
+    // Standing: the eye is above the case's top, so the ray runs down to it, over 1 m of plan.
+    expect(calls[0]!.o.y).toBeCloseTo(BODY.standEyeHeight, 6);
+    expect(calls[0]!.d.y).toBeLessThan(0);
+    expect(calls[0]!.o.y + calls[0]!.d.y * calls[0]!.max).toBeCloseTo(EXTRACTION.caseSightHeight, 6);
+    // Crouched: a lower eye, and the same target.
+    expect(calls[1]!.o.y).toBeLessThan(calls[0]!.o.y);
+    expect(calls[1]!.o.y + calls[1]!.d.y * calls[1]!.max).toBeCloseTo(EXTRACTION.caseSightHeight, 6);
   });
 });

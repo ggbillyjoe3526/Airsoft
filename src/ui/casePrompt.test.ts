@@ -73,12 +73,37 @@ describe('the case prompt on screen (M44)', () => {
     prompt.update(runWith({ inReach: 0, opening: 0, openProgress: 1 }), 2);
     expect(text()).toBe('Opening the field case');
     expect(bar().hidden).toBe(false);
-    expect(bar().children[0]!.style.width).toBe('25%');
+    // One transition for the rest of the opening: full in the 3 s left of the field case's 4.
+    expect(bar().children[0]!.style.transitionDuration).toBe('3s');
+    expect(bar().children[0]!.style.transform).toBe('scaleX(1)');
     prompt.update(runWith({ inReach: 1, opening: 1, openProgress: 3.5 }), 3);
     expect(text()).toBe("Opening the marshal's locker");
-    expect(bar().children[0]!.style.width).toBe('50%');
+    expect(bar().children[0]!.style.transitionDuration).toBe('3.5s'); // another case: the bar runs again from where it is
     prompt.update(runWith({}), 4);
     expect(root.hidden).toBe(true);
+  });
+
+  it('writes the bar once or twice for a whole opening, not once per percent (audit UI-11)', () => {
+    let clock = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    const fill = bar().children[0]!;
+    let writes = 0;
+    fill.style = new Proxy({} as Record<string, string>, {
+      set(target, property: string, value: string) {
+        writes++;
+        target[property] = value;
+        return true;
+      },
+    });
+    for (let tick = 0; tick <= 240; tick++) {
+      clock = (tick / 60) * 1000;
+      prompt.update(runWith({ inReach: 0, opening: 0, openProgress: tick / 60 }), tick / 60);
+    }
+    expect(writes).toBeLessThanOrEqual(4);
+    expect(fill.style.transitionDuration).toBe('4s');
+    prompt.update(runWith({}), 5);
+    expect(fill.style.transform).toBe('scaleX(0)'); // let go: the bar is rewound for the next try
+    vi.restoreAllMocks();
   });
 
   it('says what a case held for a moment, then goes back to the prompt or away; and the drop note the same way', () => {
@@ -112,5 +137,111 @@ describe('the case prompt on screen (M44)', () => {
     const dropped: RunCase = { ...field, kind: 'dropped', name: 'Dropped case', dropped: true, openTime: 0 };
     prompt.update(runWith({ cases: [dropped], inReach: 0 }), 0);
     expect(text()).toBe('Hold G to pick up what you dropped');
+  });
+});
+
+describe('the case-opening bar when the opening stops, resumes, is paused or runs calm (QA, M64 UI-11)', () => {
+  // The sim restarts an opening from nothing when the Use key is let go or the runner steps out of reach (stopOpening in
+  // sim/extraction.ts), so the bar must too.
+  const field: RunCase = { kind: 'field-case', name: 'Field case', position: vec3(), yaw: 0, openTime: 4, heard: 14, finds: [part], open: false, dropped: false };
+  const runWith = (over: Partial<RunState>): RunState => ({ ...createRunState(), cases: [field], ...over });
+  let prompt: CasePrompt;
+  let root: FakeElement;
+  let fill: FakeElement;
+  let log: string[];
+  let clock = 0;
+  let reduced = false;
+  /** One frame of an opening at `progress` s; the clock (ms) follows it unless `at` says otherwise. */
+  const opening = (progress: number, time = progress, at = progress * 1000): void => {
+    clock = at;
+    prompt.update(runWith({ inReach: 0, opening: 0, openProgress: progress }), time);
+  };
+
+  beforeEach(() => {
+    clock = 0;
+    reduced = false;
+    log = [];
+    vi.stubGlobal('document', fakeDocument());
+    vi.stubGlobal('getComputedStyle', () => {
+      log.push('flush');
+      return { transitionProperty: reduced ? 'none' : 'transform' };
+    });
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    const parent = new FakeElement('div');
+    prompt = new CasePrompt(parent as unknown as HTMLElement, () => 'G');
+    root = parent.children[0]!;
+    fill = root.children[1]!.children[0]!;
+    fill.style = new Proxy({} as Record<string, string>, {
+      set(target, property: string, value: string) {
+        log.push(`${property}=${value}`);
+        target[property] = value;
+        return true;
+      },
+    });
+    prompt.setVisible(true);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('rewinds when the key is let go half way and restarts from the sim\'s new progress when it is held again', () => {
+    for (let tick = 0; tick <= 120; tick++) opening(tick / 60); // 2 s of the 4
+    log.length = 0;
+    prompt.update(runWith({ inReach: 0 }), 2.1); // let go, still beside the case
+    expect(root.children[1]!.hidden).toBe(true);
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)']);
+    log.length = 0;
+    opening(1 / 60, 2.5, 3000); // held again: the sim began over, and so does the bar
+    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${1 / 60 / 4})`, 'flush', `transitionDuration=${4 - 1 / 60}s`, 'transform=scaleX(1)']);
+    expect(root.children[1]!.hidden).toBe(false);
+  });
+
+  it('rewinds when the runner walks out of reach, and when the case finishes opening', () => {
+    for (let tick = 0; tick <= 60; tick++) opening(tick / 60);
+    log.length = 0;
+    prompt.update(runWith({}), 1.1); // out of reach: nothing in reach, nothing opening
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)']);
+    expect(root.hidden).toBe(true);
+    for (let tick = 0; tick <= 239; tick++) opening(tick / 60);
+    log.length = 0;
+    prompt.update(runWith({ cases: [{ ...field, open: true }] }), 4); // opened: the sim's opening has ended
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)']);
+  });
+
+  it('starts a second opening, straight after the first with no frame between them, from the sim\'s progress', () => {
+    for (let tick = 0; tick <= 200; tick++) opening(tick / 60); // 3.3 s in
+    log.length = 0;
+    opening(0.05, 3.4, 200 * (1000 / 60) + 16); // let go and held again between two frames: the progress is back at the start
+    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${0.05 / 4})`, 'flush', `transitionDuration=${4 - 0.05}s`, 'transform=scaleX(1)']);
+  });
+
+  it('runs again from the sim\'s progress when the match was paused mid-opening (the prompt hidden under the menu)', () => {
+    for (let tick = 0; tick <= 60; tick++) opening(tick / 60);
+    prompt.setVisible(false);
+    log.length = 0;
+    prompt.setVisible(true);
+    // Twenty seconds in the menu; the first frame back whose whole percent has moved (it moves every 40 ms of a 4 s opening).
+    opening(1.05, 1.1, 21_000);
+    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${1.05 / 4})`, 'flush', `transitionDuration=${4 - 1.05}s`, 'transform=scaleX(1)']);
+  });
+
+  it('puts the bar back at the opening\'s progress on the first frame back from a pause, before its whole percent moves', () => {
+    for (let tick = 0; tick <= 60; tick++) opening(tick / 60);
+    prompt.setVisible(false);
+    log.length = 0;
+    prompt.setVisible(true);
+    opening(1, 1, 21_000); // the same progress as when the menu came up: hidden, the bar's transition ran to its end
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.25)']); // not left full; it runs again as the sim moves
+  });
+
+  it('steps the bar per percent and starts no transition under Reduced motion', () => {
+    reduced = true;
+    for (let tick = 0; tick <= 240; tick++) opening(tick / 60);
+    expect(log.some((entry) => entry.startsWith('transitionDuration=') && entry !== 'transitionDuration=0s')).toBe(false);
+    const steps = log.filter((entry) => entry.startsWith('transform=')).length;
+    expect(steps).toBeGreaterThan(50);
+    expect(steps).toBeLessThanOrEqual(102);
+    expect(fill.style.transform).toBe('scaleX(1)');
   });
 });

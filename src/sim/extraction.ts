@@ -118,6 +118,8 @@ export interface RunState {
   waves: number;
   /** The regen point the next returner tries first: they take turns, so a wave doesn't come in on one spot. */
   nextRegen: number;
+  /** Seconds until a due wave that found no free regen point looks again (M55, ExtractionRules.regenRetry). */
+  regenRetryIn: number;
   /** By character id: still the home team's reserve, kept out until the run's last part (M45). */
   reserve: boolean[];
 }
@@ -137,7 +139,13 @@ export interface WaveSetup {
   lateExtra: number;
   lateFrom: number;
   /** For the out-of-sight check: the world's static surfaces and the body a line of sight runs from and to. */
-  sight?: { query: WorldQuery; body: BodyConfig } | undefined;
+  sight?: RunSight | undefined;
+}
+
+/** What a line of sight in a run is cast through (the world's static surfaces) and from (the body's eye). */
+export interface RunSight {
+  query: WorldQuery;
+  body: BodyConfig;
 }
 
 /** What a run needs from the session: the rules, who the runner and the squad are, and the run's places. */
@@ -166,6 +174,8 @@ export interface ExtractionContext {
    * the run's cap, who join in its waves once `lateFrom` seconds are left.
    */
   reserveAt?: readonly SpawnPoint[] | undefined;
+  /** What the runner's line to a case is cast through (M55): a case behind a wall doesn't open. Without it, any in reach does. */
+  sight?: RunSight | undefined;
 }
 
 export function createRunState(): RunState {
@@ -189,6 +199,7 @@ export function createRunState(): RunState {
     waveDue: false,
     waves: 0,
     nextRegen: 0,
+    regenRetryIn: 0,
     reserve: [],
   };
 }
@@ -236,6 +247,7 @@ export function resetRun(run: RunState, ctx: ExtractionContext, characterCount: 
   run.waveDue = false;
   run.waves = 0;
   run.nextRegen = 0;
+  run.regenRetryIn = 0;
   run.reserve = new Array<boolean>(characterCount).fill(false);
 }
 
@@ -334,6 +346,7 @@ export function createRunContext(data: ExtractionData, setup: RunSetup): Extract
     cases: setup.cases ?? [],
     waves,
     reserveAt,
+    sight: setup.sight,
   };
 }
 
@@ -387,7 +400,7 @@ export function stepRun(run: RunState, characters: readonly Character[], ctx: Ex
   if (ctx.waves) stepWaves(run, characters, ctx, ctx.waves, clock, events, dt);
 
   if (runner && isInPlay(runner)) {
-    stepCases(run, runner, rules, events, dt);
+    stepCases(run, runner, rules, ctx.sight, events, dt);
     stepCount(run, runner, characters, ctx, events, dt);
   } else {
     run.inReach = -1;
@@ -421,7 +434,7 @@ function waiting(c: Character, run: RunState, ctx: ExtractionContext, late: bool
  * The home team's waves: one is due every `every` seconds (nobody waiting: that wave is empty), or as soon as nobody
  * of theirs is left in play or calling a hit with someone waiting. A due wave brings back those waiting, up to the cap,
  * each at the next regen point that is out of the squad's sight; whoever can't come in yet (no such point free) tries
- * again next tick, until the wave is in.
+ * again regenRetry later (M55: not every tick, KNOWN_ISSUES row 197), until the wave is in.
  */
 function stepWaves(run: RunState, characters: readonly Character[], ctx: ExtractionContext, waves: WaveSetup, clock: number, events: GameEvent[], dt: number): void {
   const late = clock <= waves.lateFrom;
@@ -444,11 +457,19 @@ function stepWaves(run: RunState, characters: readonly Character[], ctx: Extract
     run.waves++;
   }
   const cap = waveCap(waves, clock);
+  // No regen point was free a moment ago: look again only once regenRetry has passed (M55).
+  if (run.regenRetryIn > 0) {
+    run.regenRetryIn -= dt;
+    if (run.regenRetryIn > SUM_SLACK) return;
+  }
   for (const c of characters) {
     if (inPlay >= cap || ready === 0) break;
     if (!waiting(c, run, ctx, late)) continue;
     const at = freeRegen(run, characters, ctx, waves);
-    if (!at) break;
+    if (!at) {
+      run.regenRetryIn = ctx.rules.regenRetry;
+      break;
+    }
     setSpawn(c, at, ctx.spawnLift);
     respawnCharacter(c);
     run.reserve[c.id] = false;
@@ -484,7 +505,7 @@ function taken(r: SpawnPoint, characters: readonly Character[], rules: Extractio
   return false;
 }
 
-// Scratch for the out-of-sight check (used only within one call).
+// Scratch for the out-of-sight check and the case sight line (each used only within one call).
 const eye = vec3();
 const seen = vec3();
 
@@ -555,18 +576,28 @@ function stopOpening(run: RunState): void {
 /** Ticks summed to a whole opening time land a hair short of it (1/60 isn't exact): within this, it's done. */
 const SUM_SLACK = 1e-9;
 
-/** The nearest shut case within the runner's reach, or -1. */
-export function caseInReach(run: RunState, c: Character, rules: Pick<ExtractionRules, 'caseReach' | 'caseHeightReach'>): number {
+/**
+ * The nearest shut case within the runner's reach, or -1. With `sight` (M55, audit SIM-02), only one their eye has a
+ * clear line to (to caseSightHeight over its spot): not through a wall or a floor. One ray for each case in reach that
+ * would be the nearest yet, so none at all away from the cases.
+ */
+export function caseInReach(run: RunState, c: Character, rules: Pick<ExtractionRules, 'caseReach' | 'caseHeightReach' | 'caseSightHeight'>, sight?: RunSight): number {
   let best = -1;
   let bestDistance = Number.POSITIVE_INFINITY;
   for (let i = 0; i < run.cases.length; i++) {
     const k = run.cases[i]!;
     if (k.open || Math.abs(c.position.y - k.position.y) > rules.caseHeightReach) continue;
     const d = flat(c.position, k.position);
-    if (d <= rules.caseReach && d < bestDistance) {
-      best = i;
-      bestDistance = d;
+    if (d > rules.caseReach || d >= bestDistance) continue;
+    if (sight) {
+      copy(eye, c.position);
+      eye.y += eyeHeight(c.crouchAmount, sight.body);
+      copy(seen, k.position);
+      seen.y += rules.caseSightHeight;
+      if (lineBlocked(sight.query, eye, seen)) continue;
     }
+    best = i;
+    bestDistance = d;
   }
   return best;
 }
@@ -576,8 +607,8 @@ export function caseInReach(run: RunState, c: Character, rules: Pick<ExtractionR
  * start and every `caseNoiseEvery` seconds; let go, or out of reach, and the next try starts again. Opened, its finds
  * are carried (a BB resupply is used there and then).
  */
-function stepCases(run: RunState, runner: Character, rules: ExtractionRules, events: GameEvent[], dt: number): void {
-  const at = caseInReach(run, runner, rules);
+function stepCases(run: RunState, runner: Character, rules: ExtractionRules, sight: RunSight | undefined, events: GameEvent[], dt: number): void {
+  const at = caseInReach(run, runner, rules, sight);
   run.inReach = at;
   if (at < 0 || !runner.using) {
     stopOpening(run);

@@ -120,6 +120,8 @@ export interface Bot {
   holding: boolean;
   /** Whether to crouch while holding here: decided once per hold by one ray towards the enemy side (AI-02). */
   holdCrouch: boolean;
+  /** A guard at a lean post (M55, audit AI-01): the way it leans out while it holds there, chosen with holdCrouch. */
+  holdLean: number;
   /** Held angles (M37): the corners it aims at while holding (best first), how many, and when they were found (s). */
   heldAngles: HeldAngle[];
   heldAngleCount: number;
@@ -177,6 +179,11 @@ export interface Bot {
   peekFightLeft: number;
   strafeDir: number;
   strafeLeft: number;
+  /**
+   * A hunter fighting (M46): whether a step ahead keeps its target in sight, looked at once per sidestep (as strafeLeft
+   * is drawn) rather than every tick (M55, KNOWN_ISSUES row 200).
+   */
+  pushInSight: boolean;
 
   // A squad order from a player on the team (M22; 'none': play the team plan).
   order: SquadOrderKind | 'none';
@@ -204,6 +211,13 @@ export interface Bot {
    */
   orderCovering: boolean;
   orderCrouch: boolean;
+  /**
+   * Covering at a corner of full cover (M55, audit AI-01): the way it leans out to watch (1 right, -1 left, 0 not a lean
+   * spot), the point it watches (`orderWatch`), and whether the lean has been checked again from where it stopped.
+   */
+  orderLean: number;
+  orderWatch: Vec3;
+  orderLeanChecked: boolean;
 
   // Extraction (M46): its job on the home team.
   role: RunRole;
@@ -211,6 +225,12 @@ export interface Bot {
   guardCase: number;
   post: Vec3;
   postYaw: number;
+  /**
+   * Guard (M55, audit AI-01): the way in it watches from its post, and the way it leans out there to see it (1 right,
+   * -1 left, 0 not a lean post: it stands, or crouches where crouched eyes still see).
+   */
+  postWatch: Vec3;
+  postLean: number;
   /**
    * Patrol: its round (shared with its partner, if it has one) and the stop it is making for (-1: none yet). Of a pair,
    * the lead walks the round and the other keeps with it, stop by stop (the other leads once the lead is out).
@@ -312,6 +332,7 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     tradeAt: Number.NEGATIVE_INFINITY,
     tradeTried: false,
     holdCrouch: false,
+    holdLean: 0,
     atPost: false,
     holdCover: false,
     holdSpot: createCoverSpot(),
@@ -342,6 +363,7 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     peekFightLeft: 0,
     strafeDir: 1,
     strafeLeft: 0,
+    pushInSight: false,
     order: 'none',
     orderLeader: undefined,
     orderSlot: 0,
@@ -354,10 +376,15 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     orderDroppingBack: false,
     orderCovering: false,
     orderCrouch: false,
+    orderLean: 0,
+    orderWatch: vec3(),
+    orderLeanChecked: false,
     role: 'none',
     guardCase: -1,
     post: vec3(),
     postYaw: 0,
+    postWatch: vec3(),
+    postLean: 0,
     patrol: undefined,
     patrolIndex: -1,
     patrolPartner: undefined,
@@ -423,8 +450,10 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.orderLeader = undefined;
   b.orderRush = false;
   b.orderCovering = false;
+  b.orderLean = 0;
   b.role = 'none';
   b.guardCase = -1;
+  b.postLean = 0;
   b.patrol = undefined;
   b.patrolIndex = -1;
   b.patrolPartner = undefined;
