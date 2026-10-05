@@ -5,6 +5,7 @@ import { MemoryStorage } from '../pool/testStorage';
 import { resolveLighting } from '../render/lightingPreset';
 import { saveSetting, SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { loadLightingPicks } from '../ui/menus/savedChoices';
+import type { MapData } from './mapTypes';
 import { DEPOT } from './depot';
 import { lightingChoices, lightingPicked, mapUnderLighting, parseLightingPick } from './lightingChoice';
 import { MAPS } from './maps';
@@ -59,6 +60,44 @@ describe('Day or Night on a map (M34d)', () => {
     expect(parseLightingPick('day')).toBe('day');
     expect(parseLightingPick('night')).toBe('night');
     for (const raw of ['dusk', '', 3, null, undefined, {}, 'toString']) expect(parseLightingPick(raw), String(raw)).toBeUndefined();
+  });
+});
+
+describe('Day or Night on any map that lists both (M34d)', () => {
+  // A map the helper has never heard of, listing Day first and an override: it knows no map by name.
+  const OTHER: MapData = { ...DEPOT, lighting: { presets: ['day', 'night'], overrides: { night: { fog: { density: 0.01 } } as never } } };
+
+  it('offers the choice to any map that lists two presets, its first preset the default', () => {
+    expect(lightingChoices(OTHER)).toEqual(['day', 'night']);
+    expect(lightingPicked(OTHER, undefined)).toBe('day');
+    expect(mapUnderLighting(OTHER).night).toBe(false);
+    const night = mapUnderLighting(OTHER, 'night');
+    expect(night.night).toBe(true);
+    expect(night.lighting!.presets).toEqual(['night', 'day']);
+    expect(night.lighting!.overrides).toBe(OTHER.lighting!.overrides);
+    expect(sightConditionsOf(night).night).not.toBeNull();
+    expect(resolveLighting(night).sky).toEqual(LIGHTING_PRESETS.night.sky);
+  });
+
+  it('does not change the map it is given, and picking again picks the same', () => {
+    const before = JSON.stringify(NEON_HEIGHTS.lighting);
+    const day = mapUnderLighting(NEON_HEIGHTS, 'day');
+    expect(day).not.toBe(NEON_HEIGHTS);
+    expect(JSON.stringify(NEON_HEIGHTS.lighting)).toBe(before);
+    expect(NEON_HEIGHTS.night).toBe(true);
+    expect(mapUnderLighting(day, 'day')).toEqual(day);
+    // Night after Day on the already-picked map flips it back, whatever the order listed.
+    expect(mapUnderLighting(day, 'night')).toEqual(mapUnderLighting(NEON_HEIGHTS, 'night'));
+  });
+
+  it('keeps Neon Heights\' default Night: the bare map is what plays when nothing is picked', () => {
+    expect(NEON_HEIGHTS.night).toBe(true);
+    expect(mapUnderLighting(NEON_HEIGHTS)).toEqual(NEON_HEIGHTS);
+    expect(resolveLighting(NEON_HEIGHTS).night).toBe(true);
+  });
+
+  it('lists exactly one map in the game as offering both today: Neon Heights', () => {
+    expect(MAPS.filter((m) => lightingChoices(m.data).length > 1).map((m) => m.id)).toEqual(['neonHeights']);
   });
 });
 

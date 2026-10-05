@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryStorage } from '../../pool/testStorage';
+import { SETTINGS_KEY } from '../../settings/storage';
 import type { PickerOption } from '../optionPicker';
 import { fakeDocument, type FakeElement } from '../testSupport';
 import { ChoiceDialog } from './choiceDialog';
@@ -144,5 +145,50 @@ describe('ChoiceDialog switches on an option (M34d: Day | Night)', () => {
     expect(group.hidden).toBe(true);
     d.setDevContent(true);
     expect(group.hidden).toBe(false);
+  });
+
+  it('picks a side of an option that is not the picked one: the option is picked and saved once, the dialog closes', () => {
+    const { d, list, group, picks, changes } = make();
+    d.setDevContent(true);
+    expect(d.value).toBe('easy');
+    (d.root as unknown as FakeElement).open = true;
+    group.children[0]!.click();
+    expect(d.value).toBe('hard');
+    expect(changes).toEqual(['hard']);
+    expect(picks).toEqual([['hard', 'day']]);
+    expect(JSON.parse(localStorage.getItem(SETTINGS_KEY)!)['difficulty']).toBe('hard');
+    expect((d.root as unknown as FakeElement).open).toBe(false);
+    // The option's own button now shows as the picked one, and the other options do not.
+    const buttons = list.children.filter((c) => c.tag === 'button' && c.className.includes('choice-option'));
+    expect(buttons.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.children[1]!.children[0]!.textContent)).toEqual(['Hard']);
+  });
+
+  it('puts the switch\'s sides right after their option, as buttons that take no form submit, for Tab to reach in order', () => {
+    const { list, group } = make();
+    const at = list.children.indexOf(group);
+    expect(list.children[at - 1]!.tag).toBe('button');
+    expect(list.children[at - 1]!.classList.contains('has-variants')).toBe(true);
+    expect(group.getAttribute('role')).toBe('group');
+    for (const side of group.children) {
+      expect([side.tag, side.type]).toEqual(['button', 'button']);
+      expect(side.className).toContain('choice-variant');
+    }
+  });
+
+  it('shows a side picked elsewhere the next time the dialog is refreshed by any pick', () => {
+    const { d, group } = make();
+    d.setDevContent(true);
+    expect(pressed(group)).toEqual(['Night']);
+    group.children[0]!.click();
+    d.setDevContent(false);
+    d.setDevContent(true);
+    expect(pressed(group)).toEqual(['Day']);
+  });
+
+  it('hides a switch with its option when the options are limited, and gives the other options none', () => {
+    const { d, list } = make();
+    d.limit((id) => id !== 'hard');
+    expect(list.children.filter((c) => c.className.includes('choice-variants'))[0]!.hidden).toBe(true);
+    expect(list.children.filter((c) => c.className.includes('choice-variants'))).toHaveLength(1);
   });
 });
