@@ -7,7 +7,7 @@ import type { PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
 import { rngNext } from '../sim/rng';
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
-import { type Bot, type BotWorld, flagRole, pick, recallHeardOther } from './bot';
+import { type Bot, type BotWorld, flagRole, holdYaw, pick, recallHeardOther } from './bot';
 import { type CoverSearch, findCover, type TakenSpots } from './cover';
 import { bodyPoint, eyeOf, lineClear } from './perception';
 import { moveOrder } from './squadOrders';
@@ -23,6 +23,7 @@ const targetPoint = vec3();
 const postEye = vec3();
 const chokeEye = vec3();
 const darkProbe = vec3();
+const newsSpot = vec3();
 
 /** Cover searches by a lane point and round the pole (AI-02, AI-06): spots to peek from only (radius set per call). */
 const holdSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
@@ -61,6 +62,8 @@ export function teammateSpots(b: Bot, w: BotWorld): TakenSpots {
     if (o.mode === 'cover') addTaken(o.cover.position);
     else if (o.mode === 'advance' && o.holdCover) addTaken(o.holdSpot.position);
     else if (o.mode === 'flag') addTaken(o.flagGoal);
+    else if (o.role === 'guard') addTaken(o.post);
+    else if (o.orderCovering) addTaken(o.orderGoal);
   }
   return taken;
 }
@@ -84,6 +87,7 @@ function addTaken(p: Vec3): void {
  * to the pole (see wantsFlag).
  */
 function nextAdvanceGoal(b: Bot, w: BotWorld): Vec3 | undefined {
+  if (b.role !== 'none') return runGoal(b, w);
   const lane = w.lanes[b.lane];
   if (!b.hunting && lane && lane.length > 0) {
     const next = b.laneIndex < 0 ? (b.laneDir > 0 ? 0 : lane.length - 1) : b.laneIndex + b.laneDir;
@@ -104,6 +108,63 @@ function nextAdvanceGoal(b: Bot, w: BotWorld): Vec3 | undefined {
   }
   b.hunting = true;
   return w.huntPoint(b, b.huntGoal) ? b.huntGoal : undefined;
+}
+
+/**
+ * Extraction (M46): the next place for a home-team bot by its job. A guard makes for its post (none once there: it holds,
+ * see advance; with no way there it holds where it got to). A patrol makes for the next stop on its round whose case is
+ * still shut, and once every one is open hunts the map as a lane's end does. A hunter makes for the newest place its
+ * team saw or heard the squad, while that is no older than hunterMemory, else hunts the map.
+ */
+function runGoal(b: Bot, w: BotWorld): Vec3 | undefined {
+  const p = b.character.position;
+  if (b.role === 'guard') {
+    if (b.routeState === 'failed') {
+      b.post.x = p.x;
+      b.post.y = p.y;
+      b.post.z = p.z;
+    }
+    return Math.hypot(b.post.x - p.x, b.post.z - p.z) <= w.cfg.coverArrive ? undefined : b.post;
+  }
+  const round = b.patrol;
+  const lead = patrolLead(b);
+  if (round && lead && lead.patrolIndex >= 0) {
+    // Keeping with the pair's lead: to the stop it makes for, and there until it moves on.
+    // (With no way there, it waits where it got to.)
+    if (b.patrolIndex === lead.patrolIndex) return Math.hypot(b.laneGoal.x - p.x, b.laneGoal.z - p.z) <= w.cfg.coverArrive || b.routeState === 'failed' ? undefined : b.laneGoal;
+    b.patrolIndex = lead.patrolIndex;
+    jitterPoint(b, w, round.stops[b.patrolIndex]!, w.cfg.laneJitter, b.laneGoal);
+    return b.laneGoal;
+  }
+  if (b.role === 'patrol' && round) {
+    const cases = w.round.run.cases;
+    for (let k = 0; k < round.stops.length; k++) {
+      b.patrolIndex = (b.patrolIndex + 1) % round.stops.length;
+      if (cases[round.cases[b.patrolIndex]!]?.open) continue;
+      jitterPoint(b, w, round.stops[b.patrolIndex]!, w.cfg.laneJitter, b.laneGoal);
+      return b.laneGoal;
+    }
+    // Every case on the round is open: off the round, so a follower stops keeping to a stop and hunts too.
+    b.patrolIndex = -1;
+  }
+  b.hunting = true;
+  if (b.role === 'hunter' && freshNews(b, w, b.huntGoal)) {
+    b.newsTaken = w.squadNews(b.character.team, b.huntGoal);
+    return b.huntGoal;
+  }
+  return w.huntPoint(b, b.huntGoal) ? b.huntGoal : undefined;
+}
+
+/** The lead of `b`'s patrol pair while `b` keeps with it (M46): its partner, a patrol in play; else undefined. */
+function patrolLead(b: Bot): Bot | undefined {
+  const mate = b.patrolPartner;
+  return b.role === 'patrol' && !b.patrolLead && mate && mate.role === 'patrol' && isInPlay(mate.character) ? mate : undefined;
+}
+
+/** A hunter's team has news of the squad it hasn't gone after yet, no older than hunterMemory: where, into `out`. */
+function freshNews(b: Bot, w: BotWorld, out: Vec3): boolean {
+  const at = w.squadNews(b.character.team, out);
+  return at > b.newsTaken && w.time - at <= w.cfg.hunterMemory;
 }
 
 /**
@@ -242,7 +303,7 @@ export function jitterPoint(b: Bot, w: BotWorld, point: Vec3, radius: number, ou
  * to hold there (AI-02). Behind crouch cover they don't, so the bot holds standing and looks over it.
  */
 function crouchedViewClear(b: Bot, w: BotWorld, at: Vec3): boolean {
-  const yaw = w.enemyYaw[b.character.team] ?? 0;
+  const yaw = holdYaw(b, w);
   const floor = floorAt(w.nav, at.x, at.y, at.z);
   holdEye.x = at.x;
   holdEye.y = (Number.isNaN(floor) ? at.y : floor) + w.body.crouchEyeHeight;
@@ -394,13 +455,23 @@ function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
   // At a lane point well ahead of the team: wait for them to catch up. The hold counts towards
   // teamWaitMax, so a bot stands still at a point for at most max(hold, teamWaitMax). Moving in pairs (M38, teamPlay):
   // also while a lane partner nearby is on the move (for up to boundWaitMax), so one covers while the other moves.
-  const waiting = (b.teamWait < cfg.teamWaitMax && w.aheadOfTeam(b)) || (b.skill.teamPlay && b.teamWait < cfg.boundWaitMax && partnerMoving(b, w));
+  // A patrol (M46) waits for its partner instead: a run's home team has no front line to keep.
+  const waiting =
+    b.role !== 'none'
+      ? b.role === 'patrol' && b.teamWait < cfg.teamWaitMax && partnerBehind(b, w)
+      : (b.teamWait < cfg.teamWaitMax && w.aheadOfTeam(b)) || (b.skill.teamPlay && b.teamWait < cfg.boundWaitMax && partnerMoving(b, w));
   if (b.waitForTeam && waiting) {
     b.teamWait += dt;
     b.holding = true;
     return false;
   }
   b.waitForTeam = false;
+  // A hunter (M46) turns at once for news of the squad newer than what it is going after, once that news has moved
+  // replanDistance or more from its goal; news of the same place (its team watching the squad) is only noted.
+  if (b.role === 'hunter' && b.routeState === 'ok' && freshNews(b, w, newsSpot)) {
+    if (Math.hypot(newsSpot.x - b.huntGoal.x, newsSpot.z - b.huntGoal.z) >= cfg.replanDistance) b.routeState = 'none';
+    else b.newsTaken = w.squadNews(b.character.team, newsSpot);
+  }
   if (b.holdCover) {
     // Stepping into cover by the lane point just reached (AI-02): hold from there once there, or where it got to if
     // there's no way; then on to the next point, picked on arrival.
@@ -422,9 +493,10 @@ function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
     const arrived = b.routeState === 'none' && b.route.length > 0;
     const goal = nextAdvanceGoal(b, w);
     if (!goal) {
-      // A defender at its post holds there (crouched and watching, AI-02); an attacker is off to the pole next tick.
+      // A defender at its post holds there (crouched and watching, AI-02), as do a guard at its post and a patrol at its
+      // lead's stop (M46); an attacker is off to the pole next tick.
       // Whether to crouch is chosen once, on arrival, and kept while it stays (`atPost`: it was here last tick too).
-      if (flagRole(b, w) === 'defend') {
+      if (flagRole(b, w) === 'defend' || b.role === 'guard' || b.role === 'patrol') {
         if (!atPost) b.holdCrouch = crouchedViewClear(b, w, b.character.position);
         b.atPost = true;
         b.holding = true;
@@ -433,7 +505,9 @@ function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
       return false;
     }
     b.routeState = 'none';
-    if (arrived) {
+    // Guards, hunters and a patrol keeping with its lead (M46) don't stop on the way: a guard holds at its post, a
+    // hunter pushes on, a patrol's second waits where its lead does.
+    if (arrived && (b.role === 'none' || (b.role === 'patrol' && !patrolLead(b)))) {
       if (!b.hunting && pickHoldCover(b, w)) {
         b.holdCover = true;
         wantRoute(b, b.holdSpot.position, cfg);
@@ -453,6 +527,15 @@ function laneShared(b: Bot, w: BotWorld): boolean {
     if (o !== b && o.character.team === b.character.team && o.lane === b.lane && o.mode === 'advance' && !o.hunting && isInPlay(o.character)) return true;
   }
   return false;
+}
+
+/** True if a patrol's partner (M46) is in play and further than patrolPairGap from it. */
+function partnerBehind(b: Bot, w: BotWorld): boolean {
+  const mate = b.patrolPartner;
+  if (!mate || mate.role !== 'patrol' || !isInPlay(mate.character)) return false;
+  const p = b.character.position;
+  const q = mate.character.position;
+  return Math.hypot(q.x - p.x, q.z - p.z) > w.cfg.patrolPairGap;
 }
 
 /** True if a bot teammate on the same lane, within boundDistance, is walking it now (M38: one moves, one covers). */
@@ -591,6 +674,8 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
       // Never sidestep off a floor, into a wall or out of sight of the target: turn back, or step forward or back if
       // both sides are blocked (so a bot on a narrow walkway doesn't stand still and steady its aim), or stand.
       if (stepBlocked(b, w, b.strafeDir, 0, target)) b.strafeDir = -b.strafeDir;
+      // A hunter (M46) pushes: it closes in as it sidesteps, until pushDistance from its target.
+      if (b.role === 'hunter' && target && pushing(b, w, target)) cmd.forward = cfg.strafeInput;
       if (!stepBlocked(b, w, b.strafeDir, 0, target)) {
         cmd.right = b.strafeDir * cfg.strafeInput;
       } else if (!stepBlocked(b, w, 0, b.strafeDir, target)) {
@@ -601,6 +686,12 @@ export function moveBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number, tar
       return false;
     }
   }
+}
+
+/** A hunter fighting `target` (M46): further than pushDistance off, with the step ahead clear (see stepBlocked). */
+function pushing(b: Bot, w: BotWorld, target: Character): boolean {
+  const p = b.character.position;
+  return Math.hypot(target.position.x - p.x, target.position.z - p.z) > w.cfg.pushDistance && !stepBlocked(b, w, 0, 1, target);
 }
 
 /** True if the bot is within reach of the flag's rope (FLAG.radius of the pole). */

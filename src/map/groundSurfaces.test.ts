@@ -21,12 +21,13 @@ describe('the ground grid (M33i: one grid the ground is drawn from and M33j’s 
     }
   });
 
-  it('floors the cabin with wood and the fort and camps with earth', () => {
+  it('floors the cabin with wood, the fort and the camp fires’ clearings with earth, and leaves the spawns on grass', () => {
     const wood = patches.find((p) => p.surface === 'wood')!.box!;
     expect(groundAt(grid, (wood[0] + wood[1]) / 2, (wood[2] + wood[3]) / 2)).toBe('wood');
     const f = WOODLAND_LAYOUT.fort.inside;
     expect(groundAt(grid, (f.x0 + f.x1) / 2, (f.z0 + f.z1) / 2)).toBe('earth');
-    for (const s of WOODLAND.spawns.flat()) expect(groundAt(grid, s.position.x, s.position.z)).toBe('earth');
+    for (const l of WOODLAND.lights!.filter((x) => x.kind === 'fire')) expect(groundAt(grid, l.position.x, l.position.z)).toBe('earth');
+    for (const s of WOODLAND.spawns.flat()) expect(groundAt(grid, s.position.x, s.position.z)).toBe('grass');
   });
 
   it('puts leaf litter under the trees and grass on the open meadow', () => {
@@ -56,5 +57,24 @@ describe('the ground grid (M33i: one grid the ground is drawn from and M33j’s 
     expect(groundAt(g, 0.2, 0.2)).toBe('gravel');
     expect(groundAt(g, 3.5, 3.5)).toBe('earth');
     expect(groundAt(g, 1e6, -1e6)).toBe(groundAt(g, g.minX + g.cols * g.cell - 0.5, g.minZ + 0.5));
+  });
+
+  it('looks a point up in O(1): one cell of the grid read, whatever its size, and nothing else', () => {
+    for (const g of [grid, buildGroundGrid({ ...DEPOT, ground: { base: 'earth', patches: [] } })!]) {
+      let reads = 0;
+      const counted = new Proxy(g.surface, {
+        get(target, key) {
+          if (typeof key === 'string' && /^\d+$/.test(key)) reads++;
+          else if (key !== 'constructor') throw new Error(`groundAt touched surface.${String(key)}`);
+          return Reflect.get(target, key) as unknown;
+        },
+      });
+      const probe = { ...g, surface: counted as unknown as Uint8Array };
+      for (const [x, z] of [[0, 0], [17.3, -9.1], [-1e5, 1e5]] as const) {
+        reads = 0;
+        groundAt(probe, x, z);
+        expect(reads).toBe(1);
+      }
+    }
   });
 });

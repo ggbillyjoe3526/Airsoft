@@ -15,6 +15,11 @@ export interface ProceduralTexture {
   worldSize: number;
   /** Its normal map, worked out the first time Relief maps: Normal wants it (render/surfaceNormals.ts ensureNormalMap). */
   normal?: THREE.Texture;
+  /**
+   * The tile's mean linear luminance, for a detail tile the colours under it are lifted by (M33i: the ground's, so it
+   * adds grain without darkening; render/terrainMeshes.ts). Absent: not measured (treated as 1).
+   */
+  mean?: number;
 }
 
 /**

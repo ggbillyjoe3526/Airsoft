@@ -4,8 +4,10 @@ import { aimDirection } from '../sim/armament';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
+import { isInPlay } from '../sim/elimination';
 import { type Bot, type BotWorld, flagRole } from './bot';
-import { followRoute, wantRoute } from './botMovement';
+import { followRoute, teammateSpots, wantRoute } from './botMovement';
+import { createCoverSpot, type CoverSearch, findCover } from './cover';
 import { eyeOf } from './perception';
 
 /**
@@ -18,6 +20,10 @@ const DEG = Math.PI / 180;
 const eye = vec3();
 const view = vec3();
 const anchor = vec3();
+const watchPoint = vec3();
+const coverSpot = createCoverSpot();
+/** Cover by the leader opening a case (M46): spots to peek from only (radius set per call). */
+const openSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
 
 /** Sets `b` carrying out `kind` for `leader` as the `slot`th of the teammates given it. */
 export function startOrder(b: Bot, leader: Character, kind: SquadOrderKind, slot: number): void {
@@ -30,6 +36,7 @@ export function startOrder(b: Bot, leader: Character, kind: SquadOrderKind, slot
   b.orderSettled = false;
   b.orderCatchingUp = false;
   b.orderDroppingBack = false;
+  b.orderCovering = false;
   b.routeState = 'none';
   b.route.length = 0;
 }
@@ -43,6 +50,7 @@ export function endOrder(b: Bot, w: BotWorld): void {
   b.order = 'none';
   b.orderLeader = undefined;
   b.orderRush = false;
+  b.orderCovering = false;
   if (flagRole(b, w) === 'none') b.hunting = true;
 }
 
@@ -297,6 +305,12 @@ export function moveOrder(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): 
     b.orderYaw = leader.yaw;
     return walkTo(b, w, b.orderGoal, SQUAD_ORDERS.regroupArrive, dt);
   }
+  // Extraction (M46): while the leader opens a case, cover them from a spot close by instead.
+  if (openingCase(leader, w)) return coverOpener(b, w, leader, cmd, dt);
+  if (b.orderCovering) {
+    b.orderCovering = false;
+    b.routeState = 'none';
+  }
   // Follow me: keep a spot behind the way the leader moves, and cover their back once there.
   const v = leader.velocity;
   if (Math.hypot(v.x, v.z) >= SQUAD_ORDERS.headingSpeed) {
@@ -309,4 +323,42 @@ export function moveOrder(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): 
   const watch = SQUAD_ORDERS.followWatchDeg;
   b.orderYaw = b.orderHeading + watch[b.orderSlot % watch.length]! * DEG;
   return followMove(b, w, leader, away, wasRushing, cmd, dt);
+}
+
+/** Extraction (M46): `leader` is opening a case (holding Use by it; only the runner opens cases). */
+function openingCase(leader: Character, w: BotWorld): boolean {
+  return leader.using && isInPlay(leader) && w.round.mode === 'extraction' && w.round.run.opening >= 0;
+}
+
+/**
+ * Follow me while the leader opens a case (M46): once per opening, the follower picks a spot within openCoverRadius of
+ * the leader hidden from a point holdCoverThreatDistance out the way its slot watches (behind the leader, who faces the
+ * case: left for the first, right for the second, openWatchDeg), away from teammates' spots; failing one, its follow
+ * spot. It goes there, crouches at crouch cover, and watches that way (orderYaw).
+ */
+function coverOpener(b: Bot, w: BotWorld, leader: Character, cmd: PlayerCommand, dt: number): boolean {
+  const cfg = w.cfg;
+  if (!b.orderCovering) {
+    b.orderCovering = true;
+    b.routeState = 'none';
+    const watch = cfg.openWatchDeg;
+    const yaw = leader.yaw + watch[b.orderSlot % watch.length]! * DEG;
+    b.orderYaw = yaw;
+    watchPoint.x = leader.position.x - Math.sin(yaw) * cfg.holdCoverThreatDistance;
+    watchPoint.y = leader.position.y + w.body.standEyeHeight;
+    watchPoint.z = leader.position.z - Math.cos(yaw) * cfg.holdCoverThreatDistance;
+    openSearch.radius = cfg.openCoverRadius;
+    if (findCover(leader.position, watchPoint, w, b.rng, coverSpot, openSearch, teammateSpots(b, w))) {
+      b.orderGoal.x = coverSpot.position.x;
+      b.orderGoal.y = coverSpot.position.y;
+      b.orderGoal.z = coverSpot.position.z;
+      b.orderCrouch = coverSpot.crouchOnly;
+    } else {
+      followSpot(leader, b.orderHeading, b.orderSlot, w, b.orderGoal);
+      b.orderCrouch = false;
+    }
+  }
+  const moving = walkTo(b, w, b.orderGoal, SQUAD_ORDERS.holdArrive, dt);
+  if (!moving && b.routeState !== 'wanted') cmd.crouch = b.orderCrouch;
+  return moving;
 }

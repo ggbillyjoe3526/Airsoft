@@ -19,6 +19,7 @@ import { blockedShare } from '../sim/soundPath';
 import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type AngleFeatures, angleFeaturesOf } from './angleFeatures';
+import { RunRoles } from './extractionRoles';
 import { type Bot, type BotWorld, createBot, lastSeenAt, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
@@ -109,6 +110,8 @@ export class BotController {
   private readonly planRng: RngState;
   /** Per team, this round's plan. */
   readonly plans: TeamPlan[] = ['split', 'split'];
+  /** Extraction (M46): the home team's jobs in the run; undefined in the other modes. */
+  private run: RunRoles | undefined;
 
   constructor(
     state: GameState,
@@ -143,6 +146,7 @@ export class BotController {
       huntPoint: (bot, out) => this.huntPoint(bot, out),
       aheadOfTeam: (bot) => this.aheadOfTeam(bot),
       inEnemyHalf: (bot) => this.inEnemyHalf(bot),
+      squadNews: (team, out) => this.run?.newsFor(team, out) ?? Number.NEGATIVE_INFINITY,
       markVisited: (bot, point) => {
         this.visited[bot.character.team]![this.sectorOf(point.x, point.z)] = this.world.time;
       },
@@ -200,6 +204,7 @@ export class BotController {
     this.updateOrders();
     this.pickRetakers();
     this.pickRaiser();
+    this.run?.update(this.bots, w);
     // Each bot decides with its own team's skill (Bot.skill, set at creation); w.cfg is the shared behaviour.
     for (const b of this.bots) thinkBot(b, w, this.commandFor(b.character.id), dt);
   }
@@ -424,7 +429,14 @@ export class BotController {
         if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range, walker.id);
       } else if (e.type === 'returned') {
         // Extraction (M45): an opponent back in a wave sets out afresh from its regen point.
-        for (const b of this.bots) if (b.character.id === e.characterId) this.sendBack(b);
+        for (const b of this.bots) {
+          if (b.character.id !== e.characterId) continue;
+          this.sendBack(b);
+          this.run?.returned(b, this.bots, this.world); // its job on the home team (M46)
+        }
+      } else if (e.type === 'caseOpened') {
+        // Extraction (M46): the case's guards move on.
+        this.run?.caseOpened(e.case, this.bots, this.world);
       } else if (e.type === 'caseNoise') {
         // Extraction (M44): a case being opened carries as far as its kind's Heard m (pool.md Caches), walls muffling it.
         const opener = this.character(state, e.characterId);
@@ -566,6 +578,14 @@ export class BotController {
         }
         resetBot(b, lane, hold, cfg, points);
       });
+    }
+    // Extraction (M46): the home team plays the run by jobs, not lanes. The run is the match's one round, so its clock
+    // now is the run's length.
+    this.run = undefined;
+    if (round.mode === 'extraction') {
+      const home = 1 - round.run.squadTeam;
+      this.run = new RunRoles(home, round.clock, this.cfgOf(home));
+      this.run.start(this.bots, this.world, this.spawnCentre[round.run.squadTeam]!);
     }
   }
 

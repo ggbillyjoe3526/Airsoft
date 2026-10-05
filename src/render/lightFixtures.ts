@@ -23,13 +23,13 @@ const F = FIXTURES;
 /** How each sine of the flicker is offset by a light's seed (so two fires never flicker together). */
 const PHASE = [1, 1.7, 2.9] as const;
 
+/** The flicker seed of a map's light `index` (its place in MapData.lights): the flames and the real light share it. */
+export const flickerSeed = (index: number): number => index * 2.3 + 0.7;
+
 /**
  * A fire's brightness at `t` seconds (seed `seed`): 1 + FIXTURES.flicker.amount × a weighted sum of sines, so within
  * 1 ± amount and about 1 on average. The vertex shader below draws the same curve. Pure, allocation-free.
  */
-/** The flicker seed of a map's light `index` (its place in MapData.lights): the flames and the real light share it. */
-export const flickerSeed = (index: number): number => index * 2.3 + 0.7;
-
 export function flicker(t: number, seed: number): number {
   const { amount, rates, weights } = F.flicker;
   let s = 0;

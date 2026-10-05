@@ -816,7 +816,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
   const grid = map.terrain ? buildGroundGrid(map) : null;
   if (map.terrain) {
     const detail = grid ? surfaceTexture(textures, 'groundDetail') : null;
-    group.add(buildTerrainMesh(map.terrain, grid && detail ? { grid, material: surfaceMaterial(detail, 'groundDetail', look), tile: detail.worldSize } : null));
+    group.add(buildTerrainMesh(map.terrain, grid && detail ? { grid, material: surfaceMaterial(detail, 'groundDetail', look), tile: detail.worldSize, mean: detail.mean ?? 1 } : null));
   }
   const moon = map.blocks.some((b) => b.kind === 'tree') || map.ground ? keyDirection(resolveLighting(map)) : null;
   if (moon) {

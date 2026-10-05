@@ -22,6 +22,20 @@ export interface TextureKit {
   finish(canvas: HTMLCanvasElement, id: SurfaceTextureId): ProceduralTexture;
 }
 
+/** Linear value of each 8-bit sRGB level (the sRGB transfer curve). */
+const SRGB_TO_LINEAR = Array.from({ length: 256 }, (_, i) => {
+  const c = i / 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+});
+
+/** The mean linear luminance (Rec. 709 weights) of RGBA 8-bit sRGB pixels: what a tile multiplies colours by on average. */
+export function meanLinearLuminance(rgba: ArrayLike<number>): number {
+  let sum = 0;
+  const n = Math.floor(rgba.length / 4);
+  for (let i = 0; i < n; i++) sum += 0.2126 * SRGB_TO_LINEAR[rgba[i * 4]!]! + 0.7152 * SRGB_TO_LINEAR[rgba[i * 4 + 1]!]! + 0.0722 * SRGB_TO_LINEAR[rgba[i * 4 + 2]!]!;
+  return n > 0 ? sum / n : 1;
+}
+
 /** The four drawings, each a function that draws its texture once. */
 export function natureDrawers(k: TextureKit): Record<NatureSurfaceId, () => ProceduralTexture> {
   const { SIZE, PX } = k;
@@ -112,16 +126,17 @@ export function natureDrawers(k: TextureKit): Record<NatureSurfaceId, () => Proc
   }
 
   /**
-   * The ground's grain (greyscale, about 0.8 on average: the terrain's vertex colours carry the surface): soft light and
-   * dark patches, grit, and short dark strokes (twigs, blades, leaf edges) in every direction.
+   * The ground's grain (greyscale and light: the terrain's vertex colours carry the surface, lifted by the tile's
+   * measured mean so the grain neither darkens nor brightens the ground on average): soft light and dark patches, grit,
+   * and short dark strokes (twigs, blades, leaf edges) in every direction.
    */
   function groundDetail(): ProceduralTexture {
     const [canvas, ctx] = k.makeCanvas();
     const rng = createRng(83);
-    ctx.fillStyle = '#d4d4d4';
+    ctx.fillStyle = '#ececec';
     ctx.fillRect(0, 0, SIZE, SIZE);
-    k.blotches(ctx, rng, 30, 16, 60, [255, 255, 255], 0.14);
-    k.blotches(ctx, rng, 30, 16, 60, [90, 90, 90], 0.14);
+    k.blotches(ctx, rng, 30, 16, 60, [255, 255, 255], 0.2);
+    k.blotches(ctx, rng, 30, 16, 60, [150, 150, 150], 0.14);
     k.speckle(ctx, rng, 12000, 0.22, false);
     k.speckle(ctx, rng, 5000, 0.16, true);
     for (let i = 0; i < 700; i++) {
@@ -129,7 +144,7 @@ export function natureDrawers(k: TextureKit): Record<NatureSurfaceId, () => Proc
       const y = rngNext(rng) * SIZE;
       const a = rngNext(rng) * Math.PI;
       const len = (2 + rngNext(rng) * 5) * PX;
-      ctx.strokeStyle = k.rgba(60, 60, 60, 0.15 + rngNext(rng) * 0.2);
+      ctx.strokeStyle = k.rgba(90, 90, 90, 0.12 + rngNext(rng) * 0.16);
       ctx.lineWidth = 0.7 * PX;
       k.wrapped(x, y, len, (wx, wy) => {
         ctx.beginPath();
@@ -138,7 +153,8 @@ export function natureDrawers(k: TextureKit): Record<NatureSurfaceId, () => Proc
         ctx.stroke();
       });
     }
-    return k.finish(canvas, 'groundDetail');
+    const tile = k.finish(canvas, 'groundDetail');
+    return { ...tile, mean: meanLinearLuminance(ctx.getImageData(0, 0, SIZE, SIZE).data) };
   }
 
   return { bark, planks, stone, groundDetail };
