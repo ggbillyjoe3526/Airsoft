@@ -2,6 +2,7 @@ import type { Difficulty } from '../config/bots';
 import { RECORDS_KEY, STATS } from '../config/matchInfo';
 import type { MatchMode } from '../config/modes';
 import { overStored } from '../save/overStored';
+import type { CaseFind } from '../sim/extraction';
 
 /**
  * Local records, kept in the browser between sessions (M19): wins and losses per difficulty and mode, the best match
@@ -61,6 +62,17 @@ export interface RunResult {
   finds: number;
   /** Seconds from the start of the run to its end. */
   seconds: number;
+}
+
+/** An Extraction run's record from what you got out with (`runHaul`) and how long the run took (seconds). Pure. */
+export function runResultOf(haul: readonly CaseFind[], seconds: number): RunResult {
+  let haulFc = 0;
+  let finds = 0;
+  for (const f of haul) {
+    haulFc += f.fc;
+    if (f.fc > 0 || f.item) finds++;
+  }
+  return { haulFc, finds, seconds };
 }
 
 /** What a match changed, for the "new record" tags on the summary. */

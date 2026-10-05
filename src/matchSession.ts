@@ -58,7 +58,7 @@ import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
 import { matchStanding, MatchTakes } from './stats/settleMatch';
-import type { MatchResult } from './stats/records';
+import { type MatchResult, runResultOf } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
@@ -340,8 +340,7 @@ export class MatchSession {
   /** An Extraction run for the records (M47): what you got out with and how long the run took; nothing in the other modes. */
   private runResult(): Pick<MatchResult, 'run'> {
     if (!this.extraction) return {};
-    const haul = runHaul(this.state.round.run);
-    return { run: { haulFc: haulTotals(haul).fc, finds: haul.filter((f) => f.fc > 0 || f.item).length, seconds: this.rounds.roundTime - this.state.round.clock } };
+    return { run: runResultOf(runHaul(this.state.round.run), this.rounds.roundTime - this.state.round.clock) };
   }
 
   /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24), nor with dev content (M35). */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RECORDS_KEY, STATS } from '../config/matchInfo';
-import { addMatch, emptyRecords, loadRecords, type MatchResult, type RecordStore, resultKey, saveRecords } from './records';
+import { addMatch, emptyRecords, loadRecords, type MatchResult, type RecordStore, resultKey, runResultOf, saveRecords } from './records';
 
 function memory(initial: Record<string, string> = {}): RecordStore & { data: Map<string, string> } {
   const data = new Map(Object.entries(initial));
@@ -183,5 +183,13 @@ describe('Extraction records (M47)', () => {
     expect(loaded).toEqual({ ...emptyRecords(), results: old.results, bestAccuracy: 0.3, streak: 1, bestStreak: 4 });
     const bad = { ...old, bestHaul: -5, extractionStreak: 'x', bestExtractionStreak: 2.5, fastestExtraction: 0 };
     expect(loadRecords(memory({ [RECORDS_KEY]: JSON.stringify(bad) }))).toMatchObject({ bestHaul: null, extractionStreak: 0, bestExtractionStreak: 0, fastestExtraction: null });
+  });
+});
+
+describe('an Extraction run’s record from its haul (M47)', () => {
+  it('adds up the FC got out with and counts the finds (FC or a part), leaving a BB resupply out', () => {
+    const part = { asset: 'x', tier: 'rare' };
+    expect(runResultOf([{ fc: 40, resupply: false, item: null }, { fc: 0, resupply: false, item: part }, { fc: 0, resupply: true, item: null }], 123.5)).toEqual({ haulFc: 40, finds: 2, seconds: 123.5 });
+    expect(runResultOf([], 30)).toEqual({ haulFc: 0, finds: 0, seconds: 30 });
   });
 });
