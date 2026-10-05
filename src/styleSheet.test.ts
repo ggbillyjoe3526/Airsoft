@@ -151,3 +151,37 @@ describe('the Custom graphics disclosure (M68, audit UI-09)', () => {
     expect(blockOf('.graphics-custom[open] > .graphics-subhead::before')).toMatch(/rotate\(45deg\)/);
   });
 });
+
+describe('the Custom graphics disclosure in forced colours, Reduced motion and the keyboard (M68 QA, audit UI-09)', () => {
+  const chevron = '.graphics-subhead::before';
+
+  it('draws both chevron strokes in currentColor and gives the summary no marker of its own', () => {
+    expect(declared(chevron, 'border-bottom')).toContain('currentColor');
+    expect(declared('.graphics-subhead', 'list-style')).toBe('none');
+    expect(blockOf('.graphics-subhead::-webkit-details-marker')).toMatch(/display:\s*none/);
+  });
+
+  it('leaves the summary and its chevron to the system in forced colours (no forced-color-adjust: none reaches them)', () => {
+    const forced = blockOf('@media (forced-colors: active)') ?? '';
+    expect(forced).not.toBe('');
+    for (const selector of selectorsIn(forced)) expect(selector).not.toMatch(/graphics-(subhead|custom)|summary|\.menu-kicker/);
+  });
+
+  it('carries no transition or animation on the fold or its summary, in a Reduced-motion block or out of it', () => {
+    for (const selector of ['.graphics-subhead', '.graphics-custom > .menu-readout', '.graphics-custom[open] > .graphics-subhead::before']) {
+      expect(blockOf(selector) ?? '', selector).not.toMatch(/transition|animation/);
+    }
+    for (const m of sheet.matchAll(/[^{}]*graphics-(subhead|custom)[^{}]*\{[^{}]*\}/g)) expect(m[0]).not.toMatch(/transition|animation/);
+  });
+
+  it('keeps the focus ring of the shared rule (orange outline and the page-coloured gap) for the summary', () => {
+    const m = /(\.menus :is\([^)]*\bsummary\b[^)]*\):focus-visible)[^{]*\{([^}]*)\}/.exec(sheet);
+    expect(m).not.toBeNull();
+    expect(m![2]).toMatch(/outline:\s*2px solid var\(--orange\)/);
+    expect(m![2]).toMatch(/box-shadow/);
+  });
+
+  it('sizes the summary as a control (36 px at least) so a touch or a pointer can hit it', () => {
+    expect(declared('.graphics-subhead', 'min-height')).toBe('var(--control-sm)');
+  });
+});
