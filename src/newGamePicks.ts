@@ -10,7 +10,7 @@ import { botLight, rolledKitMayHoldDev } from './pool/botKit';
 import type { ItemRef } from './pool/collection';
 import { contentPool, itemsUseDev } from './pool/contentPool';
 import { type Pool, replicaOf } from './pool/pool';
-import { resolveLighting } from './render/lightingPreset';
+import { playsAtNight as nightOf } from './render/lightingPreset';
 
 /** New game's picks: the Map, Mode, Match (with its Rules row, M39) and Difficulty pop-ups. */
 export interface NewGamePicks {
@@ -97,7 +97,7 @@ export function botsMayCarryDev(pool: Pool, devContent: boolean, difficulty: Dif
  * it, not the map's own flag.
  */
 export function playsAtNight(id: MapId): boolean {
-  return resolveLighting(mapData(id)).night;
+  return nightOf(mapData(id));
 }
 
 /**

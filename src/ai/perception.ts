@@ -67,9 +67,12 @@ export interface SightConditions {
 /** Daylight with no bushes: walls are all that hide anyone. */
 export const OPEN_SIGHT: SightConditions = { foliage: NO_FOLIAGE, night: null };
 
-/** The sight conditions of `map`, worked out once as a match loads. */
-export function sightConditionsOf(map: MapData): SightConditions {
-  const night = buildNightField(map, NIGHT_SIGHT);
+/**
+ * The sight conditions of `map`, worked out once as a match loads; `atNight`: the match's resolved lighting preset's
+ * `night` (M33h; the map's own flag when not given).
+ */
+export function sightConditionsOf(map: MapData, atNight?: boolean): SightConditions {
+  const night = buildNightField(map, NIGHT_SIGHT, atNight);
   return { foliage: map.foliage ?? NO_FOLIAGE, night, torches: night ? createTorchLight() : null };
 }
 

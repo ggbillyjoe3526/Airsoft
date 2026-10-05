@@ -9,6 +9,7 @@ import { fitParts, type WorldQuery } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { OPEN_FIELD } from '../sim/testSupport';
 import { vec3 } from '../sim/vec';
+import { playsAtNight } from '../render/lightingPreset';
 import { DEPOT } from './depot';
 import { buildNightField } from './nightSight';
 import { createTorchLight, torchSightRange, updateTorchLight } from './torchLight';
@@ -88,6 +89,13 @@ describe('bots see by torchlight on a night field (M33h)', () => {
     expect(OPEN_SIGHT.torches).toBeUndefined();
     expect(sightConditionsOf(DEPOT).torches).toBeNull();
     expect(sightConditionsOf(WOODLAND).torches).not.toBeNull();
+    // The match passes its resolved lighting preset's night (render/lightingPreset.ts playsAtNight), so a Day/Night pick
+    // turns the night systems on or off with it, whatever the map's own flag.
+    expect(playsAtNight(WOODLAND)).toBe(true);
+    expect(playsAtNight(WOODLAND, 'day')).toBe(true); // Woodland offers only night: a pick it doesn't offer is ignored
+    expect(playsAtNight(DEPOT)).toBe(false);
+    expect(sightConditionsOf(WOODLAND, false)).toMatchObject({ night: null, torches: null });
+    expect(sightConditionsOf(DEPOT, true).torches).not.toBeNull();
     const target = person(1, 0, FAR, Math.PI, true);
     // By day the torch makes no difference to who is seen.
     expect(visiblePart(viewer, target, noWalls, BOTS, BODY, HITS, OPEN_SIGHT)).toBe(visiblePart(viewer, person(1, 0, FAR, Math.PI, false), noWalls, BOTS, BODY, HITS, OPEN_SIGHT));

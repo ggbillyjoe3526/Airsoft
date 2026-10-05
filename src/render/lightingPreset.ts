@@ -29,6 +29,14 @@ export function resolveLighting(map: MapData, choice?: LightingPresetId): Lighti
   return { ...preset, key: { ...preset.key, offset: aimOffset(preset.key.offset, over.x - centre.x, over.z - centre.z) } };
 }
 
+/**
+ * Whether `map` is played at night under `choice` (M33h): the resolved preset's `night`, the one flag the night systems
+ * read (dev counting, the bots' torches and night sight, the torch light), so a per-map Day/Night pick just works.
+ */
+export function playsAtNight(map: MapData, choice?: LightingPresetId): boolean {
+  return resolveLighting(map, choice).night;
+}
+
 /** A preset with an override's values laid over it, one group at a time (a group not named keeps all its values). */
 export function withOverride(preset: LightingPreset, override: LightingOverride | undefined): LightingPreset {
   if (!override) return preset;
