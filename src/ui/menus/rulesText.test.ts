@@ -52,7 +52,7 @@ describe('the Extraction rules shown on New game (M43)', () => {
   });
 
   it('says hit opponents come back in waves on a map with regen points (M45), and not without', () => {
-    const waves = 'come back in waves, out of your sight, and one more joins them for the last third';
+    const waves = 'come back in waves, out of your sight, and one more joins them with 2:40 left';
     expect(describeRules(RULES, 'extraction', DEPOT.extraction!)).toContain(waves);
     expect(describeRules(RULES, 'extraction', X)).not.toContain('waves');
   });

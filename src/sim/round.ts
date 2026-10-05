@@ -292,7 +292,7 @@ export function startRun(round: RoundState, characters: readonly Character[], ct
   let ids = 0;
   for (const c of characters) ids = Math.max(ids, c.id + 1);
   resetRun(round.run, x, ids);
-  placeRun(characters, x);
+  placeRun(characters, x, round.run);
 }
 
 /**

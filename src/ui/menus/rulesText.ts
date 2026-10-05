@@ -38,11 +38,18 @@ function describeRun(r: MatchRulesText, x: ExtractionData | undefined): string {
   return (
     `${squad} (${r.playerTeam}), against ${x.baseOpponents + r.teamSize} ${r.enemyTeam} bots of the home team. ` +
     // Waves (M45), on a map with regen points.
-    (x.regens.length > 0 ? `The ones you hit come back in waves, out of your sight, and one more joins them for the last third. ` : '') +
+    (x.regens.length > 0 ? `The ones you hit come back in waves, out of your sight, ${lateJoin(x)}. ` : '') +
     `You have ${formatRoundTime(x.runTime)} to get to an open exit and stand in it for ${EXTRACTION.extractTime} s while you're counted out; ` +
     `someone from the home team in the exit pauses the count. A late exit opens with ${formatRoundTime(EXTRACTION.lateExitAt)} left. ` +
     `Hit once and you're back at the insertion straight away; hit again and you're out of the run.`
   );
+}
+
+/** "and one more joins them with 2:40 left": the home team's reserve (M45), from the rules and the map's run time. */
+function lateJoin(x: ExtractionData): string {
+  const n = EXTRACTION.lateExtra;
+  if (n <= 0) return 'and no more than that';
+  return `and ${n === 1 ? 'one more joins' : `${n} more join`} them with ${formatRoundTime(x.runTime * EXTRACTION.lateShare)} left`;
 }
 
 /** The goal paragraph for `mode` (Extraction: on a map with `extraction` data). */

@@ -174,6 +174,23 @@ describe('Extraction waves (M45)', () => {
     expect(inPlayAt(cs)).toBe(4);
   });
 
+  it('keeps the reserve out before the last part even when a wave finds a free slot, and counts only waves that bring someone back', () => {
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const events: GameEvent[] = [];
+    // Hit just before the wave: still calling it when the wave comes, so that wave has a free slot and nobody ready.
+    play(EVERY - 0.5, round, cs, events);
+    hit(cs[2]!);
+    play(1, round, cs, events);
+    expect(isInPlay(cs[5]!)).toBe(false);
+    expect(round.run.waves).toBe(0);
+    play(EVERY, round, cs, events);
+    expect(isInPlay(cs[2]!)).toBe(true);
+    expect(isInPlay(cs[5]!)).toBe(false);
+    expect(round.run.waves).toBe(1);
+    expect(round.run.reserve[5]).toBe(true);
+  });
+
   it('sizes the reserve the session makes for the run: the late extra with waves, none without', () => {
     expect(reserveSize(X)).toBe(EXTRACTION.lateExtra);
     expect(reserveSize({ ...X, waves: undefined })).toBe(0);

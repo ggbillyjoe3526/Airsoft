@@ -356,7 +356,7 @@ const CASE_SPOTS: CaseSpot[] = (
 /**
  * The home team's regen points (M45): both spawn yards, the office's rooms, the stores and hall, the yards, the Bay, the
  * back lot, the car park and the dock. A returner takes one at least REGEN_DISTANCE from the squad and out of its
- * sight, so from any insertion several stay usable (extractionData.test.ts checks it with the real level).
+ * sight, so from any insertion several stay usable (extractionRegens.test.ts checks it with the real level).
  */
 const REGENS: SpawnPoint[] = (
   [
