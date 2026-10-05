@@ -1792,3 +1792,108 @@ describe('M53: mix and placement (audit AUD-02, AUD-03, AUD-05, AUD-07, AUD-12)'
     expect(beds.find((b) => b.loop === 'traffic')!.copyOffset).toBeUndefined();
   });
 });
+
+describe('M53 QA: the far channel, the listener fallback and the seeded calls on every scene', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const hzAt = (share: number): number => AUDIO.occlusion.openHz * (AUDIO.occlusion.muffledHz / AUDIO.occlusion.openHz) ** share;
+  const gainAt = (share: number): number => 1 - share * (1 - AUDIO.occlusion.muffledGain);
+  const channelGain = (ctx: FakeContext): FakeGain => [...channelFilter(ctx)!.outputs][0] as FakeGain;
+
+  it('mutes a bot first met beyond earshot by its distance alone, without a ray: half way at 30 m past the line, fully at the ramp end, its gain with it (AUD-03)', () => {
+    let casts = 0;
+    const counting: OcclusionQuery = { raycastStatic: () => (casts++, -1) };
+    const { sfx, ctx, player, bot } = setup(counting);
+    const all = [player, bot];
+    const o = AUDIO.occlusion;
+    bot.position.x = AUDIO.spatial.maxDistance + o.farRamp / 2;
+    sfx.afterTick(all, PLAYER);
+    expect(channelFilter(ctx)!.frequency.value).toBeCloseTo(hzAt(0.5), 6);
+    expect(channelGain(ctx).gain.value).toBeCloseTo(gainAt(0.5), 9);
+    bot.position.x = AUDIO.spatial.maxDistance + o.farRamp + 40;
+    sfx.afterTick(all, PLAYER);
+    expect(channelFilter(ctx)!.frequency.targets.at(-1)!.value).toBeCloseTo(o.muffledHz, 6);
+    expect(channelGain(ctx).gain.targets.at(-1)!.value).toBeCloseTo(o.muffledGain, 9);
+    expect(casts).toBe(0);
+  });
+
+  it('measures again once a bot is back within earshot: a wall found at 59 m closes the filter, an open line clears it', () => {
+    let wall = false;
+    const q: OcclusionQuery = { raycastStatic: () => (wall ? 1 : -1) };
+    const { sfx, ctx, player, bot } = setup(q);
+    const all = [player, bot];
+    bot.position.x = AUDIO.spatial.maxDistance + AUDIO.occlusion.farRamp;
+    sfx.afterTick(all, PLAYER);
+    expect(channelFilter(ctx)!.frequency.value).toBeCloseTo(AUDIO.occlusion.muffledHz, 6);
+    bot.position.x = AUDIO.spatial.maxDistance - 1;
+    sfx.afterTick(all, PLAYER);
+    expect(channelFilter(ctx)!.frequency.targets.at(-1)!.value).toBeCloseTo(AUDIO.occlusion.openHz, 6);
+    wall = true;
+    bot.position.x = AUDIO.spatial.maxDistance - 2;
+    sfx.afterTick(all, PLAYER);
+    expect(channelFilter(ctx)!.frequency.targets.at(-1)!.value).toBeCloseTo(AUDIO.occlusion.muffledHz, 6);
+  });
+
+  it("leaves a channel's filter exactly where it was across the line, and for the first farStep metres past it (AUD-03)", () => {
+    const { sfx, ctx, player, bot } = setup(OPEN);
+    const all = [player, bot];
+    bot.position.x = AUDIO.spatial.maxDistance - 0.5;
+    sfx.afterTick(all, PLAYER);
+    const filter = channelFilter(ctx)!;
+    const before = filter.frequency.targets.length;
+    for (const d of [0, 0.5, AUDIO.occlusion.farStep - 0.01]) {
+      bot.position.x = AUDIO.spatial.maxDistance + d;
+      sfx.afterTick(all, PLAYER);
+    }
+    expect(filter.frequency.targets).toHaveLength(before);
+    expect(filter.frequency.value).toBe(AUDIO.occlusion.openHz);
+  });
+
+  it("falls back to the old listener setters with the view's own up where there are no AudioParams (Firefox, AUD-05)", () => {
+    const { sfx, ctx } = setup();
+    const calls: number[][] = [];
+    (ctx as unknown as { listener: unknown }).listener = { setPosition: () => {}, setOrientation: (...a: number[]) => calls.push(a) };
+    sfx.setListener(vec3(1, 2, 3), 0, -0.99, -0.14, 0, 0.14, -0.99);
+    sfx.setListener(vec3(1, 2, 3), 0, 0, -1);
+    expect(calls).toEqual([
+      [0, -0.99, -0.14, 0, 0.14, -0.99],
+      [0, 0, -1, 0, 1, 0],
+    ]);
+  });
+
+  it('times a later scene\'s calls from the match seed too, not only the yard\'s: setScene on the woods at night (AUD-07)', () => {
+    const spawn = WOODLAND.spawns[0][0]!.position;
+    const call = soundscapeOf(WOODLAND, true).ambience.call!;
+    const firstOwl = (seed: number): number => {
+      const player = createCharacter(PLAYER, vec3(spawn.x, spawn.y, spawn.z), 0, LOADOUT, 0);
+      const sfx = new Sfx(LOADOUT, WOODLAND.blocks, OPEN, engineFor(), seed);
+      sfx.setScene(soundscapeOf(WOODLAND, true));
+      sfx.unlock();
+      sfx.setListener(vec3(spawn.x, spawn.y + 1.6, spawn.z), 0, 0, -1);
+      sfx.setPaused(false);
+      const ctx = FakeContext.last;
+      for (let tick = 0; tick < Math.round(call.every[1] / SIM_DT) + 2; tick++) {
+        sfx.afterTick([player], PLAYER);
+        if (ctx.sources.some((s) => !s.loop)) return tick;
+      }
+      throw new Error('no owl');
+    };
+    const expected = (seed: number): number => {
+      const calls = new AmbientCalls(call, (call.seed ^ seed) >>> 0);
+      let tick = 0;
+      while (!calls.due((tick + 1) * SIM_DT, vec3(0, 1.6, 0), vec3())) tick++;
+      return tick;
+    };
+    for (const seed of [0, 77, 4000000000]) expect(firstOwl(seed), `seed ${seed}`).toBe(expected(seed));
+    expect(new Set([0, 77, 4000000000, 5, 90210].map(expected)).size).toBeGreaterThan(1);
+  });
+});

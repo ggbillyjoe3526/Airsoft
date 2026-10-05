@@ -61,4 +61,28 @@ describe("M53: the listener's ears follow the view (audit AUD-05)", () => {
     expect(up.x).toBeCloseTo(Math.sin(RENDER.leanCameraRoll), 9);
     expect(forward.dot(up)).toBeCloseTo(0, 9);
   });
+
+  it('keeps the up a unit vector at right angles to the view for a camera under a scaled, turned parent (M53 QA)', () => {
+    const parent = new THREE.Object3D();
+    parent.scale.setScalar(3);
+    parent.rotation.set(0.3, 0.9, -0.2, 'YXZ');
+    const child = new THREE.PerspectiveCamera();
+    parent.add(child);
+    child.rotation.set(-1.2, 0.4, 0.1, 'YXZ');
+    listenerAxes(child, forward, up);
+    expect(forward.length()).toBeCloseTo(1, 9);
+    expect(up.length()).toBeCloseTo(1, 9);
+    expect(forward.dot(up)).toBeCloseTo(0, 9);
+  });
+
+  it('reads the camera as it is now, not as it was at the last matrix update (M53 QA)', () => {
+    const cam = new THREE.PerspectiveCamera();
+    cam.rotation.set(0, 0, 0, 'YXZ');
+    listenerAxes(cam, forward, up);
+    expect(up.y).toBeCloseTo(1, 9);
+    cam.rotation.set(-MOVEMENT.maxPitch, 0, 0, 'YXZ');
+    listenerAxes(cam, forward, up);
+    expect(up.y).toBeCloseTo(Math.cos(MOVEMENT.maxPitch), 9);
+    expect(forward.y).toBeCloseTo(-Math.sin(MOVEMENT.maxPitch), 9);
+  });
 });
