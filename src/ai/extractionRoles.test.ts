@@ -153,6 +153,34 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     r.dispose();
   });
 
+  it('keeps a hunter on its route while its team keeps seeing the squad in the same place', () => {
+    const r = runWithGuardedLocker();
+    r.state.round.clock = r.state.round.clock * (1 - BOT_SKILL.normal.huntersFrom!) - 0.1;
+    r.play(DT);
+    const team = home(r.bots.bots);
+    const guard = team.find((b) => b.role === 'guard' && isInPlay(b.character))!;
+    // The guard has the squad in view at the same spot every tick (its news is as new as the clock).
+    const watch = () => {
+      guard.lastKnown.x = r.you.position.x;
+      guard.lastKnown.y = r.you.position.y;
+      guard.lastKnown.z = r.you.position.z;
+      guard.hasLastKnown = true;
+      guard.heardAt = r.state.time;
+    };
+    watch();
+    r.play(1, watch);
+    const hunters = team.filter((b) => b.role === 'hunter' && isInPlay(b.character) && b.mode === 'advance' && b.routeState === 'ok');
+    expect(hunters.length).toBeGreaterThan(0);
+    // Without the replanDistance check each tick's news drops the route and asks for a new one.
+    let replans = 0;
+    r.play(2, () => {
+      watch();
+      for (const h of hunters) if (h.mode === 'advance' && h.routeState === 'wanted') replans++;
+    });
+    expect(replans).toBe(0);
+    r.dispose();
+  });
+
   it('never sends hunters on Easy', () => {
     const r = runWithGuardedLocker('easy');
     r.state.round.clock = 1;

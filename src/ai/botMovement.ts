@@ -463,8 +463,12 @@ function advance(b: Bot, w: BotWorld, dt: number, atPost: boolean): boolean {
     return false;
   }
   b.waitForTeam = false;
-  // A hunter (M46) turns at once for news of the squad newer than what it is going after.
-  if (b.role === 'hunter' && b.routeState === 'ok' && freshNews(b, w, newsSpot)) b.routeState = 'none';
+  // A hunter (M46) turns at once for news of the squad newer than what it is going after, once that news has moved
+  // replanDistance or more from its goal; news of the same place (its team watching the squad) is only noted.
+  if (b.role === 'hunter' && b.routeState === 'ok' && freshNews(b, w, newsSpot)) {
+    if (Math.hypot(newsSpot.x - b.huntGoal.x, newsSpot.z - b.huntGoal.z) >= cfg.replanDistance) b.routeState = 'none';
+    else b.newsTaken = w.squadNews(b.character.team, newsSpot);
+  }
   if (b.holdCover) {
     // Stepping into cover by the lane point just reached (AI-02): hold from there once there, or where it got to if
     // there's no way; then on to the next point, picked on arrival.
