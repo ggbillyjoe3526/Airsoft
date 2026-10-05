@@ -15,5 +15,5 @@ acceptance:
   2. A map or Day / Night change during the prefetch carries on with the sounds both fields share and lets go of the old pick's unplayed ones; played fields' sounds are kept as before. Nothing renders ahead while a match is played; a dev map is prefetched only with Dev content on and picked.
   3. The match build line has its own `sound` phase, so a `?perf` run shows the sound work left at Play.
   4. No new SOUNDS entries or MAP_CUE_SEEDS changes; the fast project and `tsc` are clean.
-status: qa
+status: gates
 attempts: 0
