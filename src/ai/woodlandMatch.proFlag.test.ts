@@ -14,12 +14,12 @@ describe('a 4v4 Attack / Defend match on Woodland, both teams on Pro (M40)', () 
     await initPhysics();
   });
 
-  it('keeps the attackers at 40-60 % of rounds, and rounds end before the clock', { timeout: 300_000 }, () => {
+  it('keeps the attackers at 40-60 % of rounds, and rounds end before the clock', { timeout: 600_000 }, () => {
     // Measured 2026-10-05 (M40, seeds 1-8, whole matches): attackers win 44 % (27 of 62 rounds), none on time. Seeds
     // 9-16: 43 % (24 of 56). Before M40: attackers 82 % (56 of 68, 54 of them by elimination): the defenders held their
     // posts in the fort under its two lanterns, seen from 40 m by attackers they couldn't see in the moonlit open (25 m).
     // Pro now holds lane points out of the light (keepsDark). Hard on the same seeds: attackers 73 % (51 of 70), none on
-    // time. Re-measure with this test after any bot, layout or lighting change.
-    expectProBalance(tallyBalance(8, SECONDS, botConfig('pro'), 'attackDefend', WOODLAND, TEAM_SIZE), 'attackDefend', 'Woodland Pro');
+    // time. Re-measure with this test after any bot, layout or lighting change. Seeds 1-16 since M51 (audit BAL-07).
+    expectProBalance(tallyBalance(16, SECONDS, botConfig('pro'), 'attackDefend', WOODLAND, TEAM_SIZE), 'attackDefend', 'Woodland Pro');
   });
 });

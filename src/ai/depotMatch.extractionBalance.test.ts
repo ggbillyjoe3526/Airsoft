@@ -1,8 +1,5 @@
-import { beforeAll, describe, expect, it } from 'vitest';
-import type { Difficulty } from '../config/bots';
-import { initPhysics } from '../physics/physicsWorld';
 import { DEPOT } from '../map/depot';
-import { measureRuns, type RunMeasure } from './extractionRunSupport';
+import { describeExtractionBalance, type ExtractionBands } from './extractionBalanceSupport';
 
 /**
  * Extraction's balance on Depot (M46; plan, section 4): whole runs, headless, a bot playing the runner by RUNNER_PLAN
@@ -13,7 +10,7 @@ import { measureRuns, type RunMeasure } from './extractionRunSupport';
  * is quicker about it than a player, so it is only comparable between levels and builds, not with Elimination's pay.
  */
 const SEEDS = 48;
-const BANDS: Readonly<Record<Difficulty, { extract: readonly [number, number]; fcPerMinute: readonly [number, number] }>> = {
+const BANDS: ExtractionBands = {
   // Measured: Easy 48 % and 63 FC a minute, Normal 25 % and 31, Hard 6 % and 11, Pro 8 % and 14.
   easy: { extract: [0.3, 0.65], fcPerMinute: [35, 90] },
   normal: { extract: [0.1, 0.45], fcPerMinute: [12, 55] },
@@ -21,29 +18,4 @@ const BANDS: Readonly<Record<Difficulty, { extract: readonly [number, number]; f
   pro: { extract: [0, 0.25], fcPerMinute: [0, 40] },
 };
 
-describe('Extraction balance on Depot (M46)', () => {
-  const LEVELS = ['easy', 'normal', 'hard', 'pro'] as const;
-  const measured = new Map<Difficulty, RunMeasure>();
-  beforeAll(async () => {
-    await initPhysics();
-    for (const level of LEVELS) measured.set(level, measureRuns(DEPOT, level, SEEDS));
-  }, 600_000);
-
-  for (const level of LEVELS) {
-    it(`keeps ${level}'s extract rate and FC a minute in their bands`, () => {
-      const m = measured.get(level)!;
-      const band = BANDS[level];
-      expect(m.extract, `${level} extract rate`).toBeGreaterThanOrEqual(band.extract[0]);
-      expect(m.extract, `${level} extract rate`).toBeLessThanOrEqual(band.extract[1]);
-      expect(m.fcPerMinute, `${level} FC a minute`).toBeGreaterThanOrEqual(band.fcPerMinute[0]);
-      expect(m.fcPerMinute, `${level} FC a minute`).toBeLessThanOrEqual(band.fcPerMinute[1]);
-      // Every run ends by the run's own rules, none on time with the runner bot (it leaves with 3:00 left).
-      expect(m.runs.every((r) => r.reason === 'extracted' || r.reason === 'out')).toBe(true);
-    });
-  }
-
-  it('makes a harder home team harder to get out from: Easy above Normal above Hard', () => {
-    expect(measured.get('easy')!.extract).toBeGreaterThan(measured.get('normal')!.extract);
-    expect(measured.get('normal')!.extract).toBeGreaterThan(measured.get('hard')!.extract);
-  });
-});
+describeExtractionBalance('Extraction balance on Depot (M46)', DEPOT, { seeds: SEEDS, bands: BANDS, harder: [['easy', 'normal'], ['normal', 'hard']], timeoutMs: 600_000 });
