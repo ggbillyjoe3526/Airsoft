@@ -13,7 +13,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Replicas and BBs
 
 - An AEG rifle (single, burst or auto on the fire selector), a gas pistol and an electric Cyber Pistol, switched with the wheel or keys (Phase 1, M12a, M32)
-- Cyber Pistol: electric semi, burst and auto; built-in battery, fits either gear slot (M32)
+- Cyber Pistol: electric semi, burst and auto; white slab with glowing cyan lines and magenta core, plain grey and unlit with Realistic colours; built-in battery, fits either gear slot (M32, G2)
 - Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); rifles Cobalt and pistols Ghost until the Customise screen lets players pick one per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c, M30)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
@@ -134,6 +134,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Graphics Settings: frame-rate limit, show FPS counter and tone mapping choice (Neutral, AgX, ACES); preset selected from graphics card on first run (Medium for integrated, High for discrete) (FA2, FA7)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved across preset switches; contact shadows under every player on all presets (FA3, FA7)
 - Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High; barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
+- Replicas and attachments redesigned: blockier two-tone style with stippled grips; red dot as enclosed square hood, silencer hexagonal body (G2)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 - Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet, vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under raised floors (M34f)
 

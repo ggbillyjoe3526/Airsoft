@@ -8,7 +8,7 @@ keeps `status` and `attempts` current.
 ## G2 · Replica and part models, item pictures (graphics overhaul, 0.1 Dev 5)
 tier: core
 perf: skip
-touches: src/render/replicaModels.ts, src/render/itemPictures.ts, src/config/itemPictures.ts, src/config/replicaFinish.ts, src/config/schemes.ts
+touches: src/render/replicaModels.ts, src/render/replicaBuilder.ts, src/render/replicaParts.ts, src/render/itemPictures.ts, src/config/itemPictures.ts, src/config/replicaFinish.ts, src/config/schemes.ts
 contract: none (the part tables keep every name; every hand point, the handguard envelope, the optic axis and the muzzle layouts stay as they are)
 acceptance:
   1. The rifle, Gas Pistol and Cyber Pistol and every part in their tables are the concept's blockier, two-tone builds: body, furniture, details, a thin accent line (glowing on Ghost) and steel in the replica's scheme; the Cyber Pistol a white slab with glowing cyan lines and a magenta core over a dark frame, grey and unlit under Realistic colours.
@@ -21,7 +21,7 @@ attempts: 0
 ## G7 · Characters and arms (graphics overhaul, 0.1 Dev 5)
 tier: core
 perf: required
-touches: src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/figureMix.ts, src/render/figureParts.ts, src/render/figureShapes.ts, src/render/figurePalette.ts, src/render/figureHuman.ts, src/render/figureRobot.ts, src/render/figureHands.ts, src/render/figureReplicas.ts, src/render/handModels.ts, src/render/robotHands.ts, src/render/replicaModels.ts, src/render/viewmodel.ts, src/render/combatPresentation.ts, src/render/matchPresentation.ts, src/matchSession.ts, src/rangeSession.ts, src/config/characters.ts, src/config/replicaFinish.ts, src/config/look.ts, src/config/matchInfo.ts
+touches: src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/figureMix.ts, src/render/figureParts.ts, src/render/figureShapes.ts, src/render/figurePalette.ts, src/render/figureHuman.ts, src/render/figureRobot.ts, src/render/figureHands.ts, src/render/figureReplicas.ts, src/render/handModels.ts, src/render/robotHands.ts, src/render/replicaModels.ts, src/render/viewmodel.ts, src/render/combatPresentation.ts, src/render/matchPresentation.ts, src/matchSession.ts, src/rangeSession.ts, src/config/characters.ts, src/config/replicaFinish.ts, src/config/look.ts, src/config/matchInfo.ts, src/render/replicaBuilder.ts, src/render/replicaArms.ts
 contract: none (buildFigure's rig, figureMuzzle and FIGURE.rifle / FIGURE.pistol stay; a figure model's parts still replace the built ones)
 acceptance:
   1. Figures are humans and robots built in code. With Robots on, every team of two or more mixes both looks from the match seed (robotFigures, apart from the sim's stream); off, every figure is human. No skin shows on any head.
