@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { blockMaterial } from '../config/materials';
+import { NAV } from '../config/nav';
 import { LIGHTING_PRESETS } from '../config/render';
 import { TEAM_COLOUR_SETS } from '../config/teams';
+import { buildNavGrid } from '../nav/navGrid';
 import { blockTint, texturesFor } from '../render/mapMeshes';
 import { resolveLighting } from '../render/lightingPreset';
 import { mapUnderLighting } from './lightingChoice';
@@ -43,10 +45,26 @@ export function playFingerprint(blocks: readonly MapBlock[]): { blocks: string; 
   return { blocks: `${rows.length}:${fnv(rows.join('|'))}`, street: `${[r(x0), r(x1), r(z0), r(z1)].join(',')} gaps ${gaps}` };
 }
 
+/**
+ * The bots' map of Neon Heights: the nav grid's corner, size and every node's floor height and walkability, exactly
+ * (no rounding: a corner shifted by 1e-15 moves cell centres across floor edges and changes who wins).
+ */
+export function navFingerprint(): string {
+  const g = buildNavGrid(NEON_HEIGHTS, NAV);
+  const text = [g.minX, g.minZ, g.cols, g.rows, Array.from(g.cellStart).join(','), Array.from(g.floorY).join(','), Array.from(g.walkable).join(',')].join('|');
+  return `${g.floorY.length}:${fnv(text)}`;
+}
+
 describe('Neon Heights art (M34f)', () => {
   it('plays exactly as before its art: the same boxes, ricochets, slopes and footsteps, the same street', () => {
     // Pinned from main before M34f (2026-10-05, 8b336aa): 280 blocks besides the street, which was one slab.
     expect(playFingerprint(NEON_HEIGHTS.blocks)).toEqual({ blocks: '280:6750a11a', street: '-23.510,23.510,-15.510,15.510 gaps 0' });
+  });
+
+  it('gives the bots exactly the same nav grid as before its art', () => {
+    // Pinned from main before M34f (2026-10-05, 7ec2c27). The street split into three strips once laid the grid from
+    // -23.509999999999998 instead of -23.51 and lifted the Pro attackers from 55 % to 64 %.
+    expect(navFingerprint()).toBe('52822:7b34b809');
   });
 
   it('is a city: every wall, floor and rail finished, the street asphalt and paving, no site toilet or container left', () => {

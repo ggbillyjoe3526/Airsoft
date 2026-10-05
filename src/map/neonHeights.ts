@@ -187,14 +187,26 @@ const railX = (z0: number, x0: number, x1: number, base: number): MapBlock => bo
 const railZ = (x0: number, z0: number, z1: number, base: number): MapBlock => box('barrier', x0, x0 + RAIL_THICKNESS, base, base + RAIL, z0, z1);
 
 /** The level: ground and perimeter. The ground is three strips (M34f): paving either side of the avenue's road. */
+/**
+ * One of the street's three strips (paving, the road, paving), already grown by `SEAM` from its edges: the street's
+ * outer edges come out exactly as the one slab's they replace (-23.51, not -23.509999999999998), so the nav grid is laid
+ * from the same corner and every cell centre falls on the same side of every floor edge as before (M34f: play
+ * unchanged, pinned by `map/neonHeightsArt.test.ts`).
+ */
+function streetStrip(x0: number, x1: number, z: number, finish: BlockFinish, paint: number): MapBlock {
+  const b = finished(box('floor', x0 - SEAM, x1 + SEAM, -GROUND_THICKNESS, 0, -z - SEAM, z + SEAM), finish, paint);
+  PRE_GROWN.add(b);
+  return b;
+}
+
 function ground(): MapBlock[] {
   const t = PERIMETER_THICKNESS;
   const x = HALF_X + t;
   const z = HALF_Z + t;
   return [
-    finished(box('floor', -x, ROAD[0], -GROUND_THICKNESS, 0, -z, z), 'paving', PAINT.paving),
-    finished(box('floor', ROAD[0], ROAD[1], -GROUND_THICKNESS, 0, -z, z), 'asphalt', PAINT.road),
-    finished(box('floor', ROAD[1], x, -GROUND_THICKNESS, 0, -z, z), 'paving', PAINT.paving),
+    streetStrip(-x, ROAD[0], z, 'paving', PAINT.paving),
+    streetStrip(ROAD[0], ROAD[1], z, 'asphalt', PAINT.road),
+    streetStrip(ROAD[1], x, z, 'paving', PAINT.paving),
     box('wall', -x, x, 0, PERIMETER_HEIGHT, HALF_Z, z),
     box('wall', -x, x, 0, PERIMETER_HEIGHT, -z, -HALF_Z),
     box('wall', -x, -HALF_X, 0, PERIMETER_HEIGHT, -HALF_Z, HALF_Z),
@@ -753,8 +765,10 @@ const FLIP_RISE: Record<RampRise, RampRise> = { '+x': '+x', '-x': '-x', '+z': '-
  * rounding, be under neither floor and read as a hole.
  */
 const SEAM = 0.01;
+/** Floors already grown by `SEAM` where they were made (the street's strips). */
+const PRE_GROWN = new WeakSet<MapBlock>();
 function blockToWorld(b: MapBlock): MapBlock {
-  const grow = b.kind === 'floor' ? 2 * SEAM : 0;
+  const grow = b.kind === 'floor' && !PRE_GROWN.has(b) ? 2 * SEAM : 0;
   const w: MapBlock = { kind: b.kind, center: toWorld(b.center), size: vec3(b.size.x + grow, b.size.y, b.size.z + grow) };
   if (b.rise) w.rise = FLIP_RISE[b.rise];
   if (b.surface) w.surface = b.surface;
