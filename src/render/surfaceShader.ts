@@ -7,7 +7,8 @@ import { NO_ENVIRONMENT } from './surfaceMaterials';
  *
  * - **Weathering** (QualitySettings.weathering, the concept's kit.ts): world-space dirt patches, dirt creeping up the
  *   lowest half metre of every wall, streaks running down from the tops and rust on steel. In world space, so it never
- *   repeats with the texture. Its strengths are compiled in (config/weathering.ts), one program per variant.
+ *   repeats with the texture. Its strengths (config/weathering.ts) are uniforms, so every weathered surface shares
+ *   one program (a match start compiles at most a few).
  * - **Baked bounce light** (QualitySettings.bakedLight `pixel`, render/bakedLight.ts): after Three.js's light sum, the
  *   sky fill is scaled by how much of the sky the nearest probes see, and the light bounced off nearby props is added,
  *   one 3D texture read per pixel.
@@ -59,17 +60,12 @@ float wN(vec3 p) {
 float wF(vec3 p) { return wN(p) * 0.5714 + wN(p * 2.03) * 0.2857 + wN(p * 4.01) * 0.1429; }
 `;
 
-/** The weathering, after the texture and vertex colour are in diffuseColor; leaves `wearG` (0..1) for roughness. */
-function wearGlsl(w: ShaderWear): string {
-  const rust =
-    w.rust > 0
-      ? `
-    float rs = smoothstep(0.6, 0.78, wF(wp * ${f(N.rustScale)} + 7.3) + fine * 0.08) * (0.35 + creep * 0.6 + streak * 0.9);
-    rs = clamp(rs, 0.0, 1.0) * ${f(w.rust)};
-    diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(M.rust)} * (0.7 + fine * 0.6), rs * ${f(M.rustStrength)});
-    wearG = max(wearG, rs);`
-      : '';
-  return `
+/**
+ * The weathering, after the texture and vertex colour are in diffuseColor; leaves `wearG` (0..1) for roughness. The
+ * surface's strengths are the uniforms `wearGrime` and `wearRust` (rust skipped where it is 0: the branch is the same
+ * for every pixel of a surface).
+ */
+const WEAR_GLSL = `
   float wearG = 0.0;
   {
     vec3 wp = vSurfW;
@@ -80,12 +76,19 @@ function wearGlsl(w: ShaderWear): string {
     // The ground is at y 0 on every map's floor (the creep is world height, as in the concept).
     float creep = (1.0 - smoothstep(0.0, ${f(N.creep)} + fine * ${f(N.creepVary)}, wp.y)) * vert;
     float streak = smoothstep(0.58, 0.95, wN(vec3((wp.x + wp.z) * ${f(N.streakAcross)}, wp.y * ${f(N.streakAlong)}, (wp.z - wp.x) * ${f(N.streakAcross)}))) * vert * (0.4 + 0.6 * big);
-    wearG = clamp(patchy * ${f(M.patches)} + creep * ${f(M.creep)} + streak * ${f(M.streaks)}, 0.0, 1.0) * ${f(w.grime)};
+    wearG = clamp(patchy * ${f(M.patches)} + creep * ${f(M.creep)} + streak * ${f(M.streaks)}, 0.0, 1.0) * wearGrime;
     float lum = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
     vec3 dirt = mix(diffuseColor.rgb, vec3(lum), ${f(M.grey)}) * ${v3(M.dirt)};
-    diffuseColor.rgb = mix(diffuseColor.rgb, dirt, wearG);${rust}
+    diffuseColor.rgb = mix(diffuseColor.rgb, dirt, wearG);
+    if (wearRust > 0.0) {
+      float rs = smoothstep(0.6, 0.78, wF(wp * ${f(N.rustScale)} + 7.3) + fine * 0.08) * (0.35 + creep * 0.6 + streak * 0.9);
+      rs = clamp(rs, 0.0, 1.0) * wearRust;
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${v3(M.rust)} * (0.7 + fine * 0.6), rs * ${f(M.rustStrength)});
+      wearG = max(wearG, rs);
+    }
   }`;
-}
+
+const WEAR_HEAD = 'uniform float wearGrime;\nuniform float wearRust;\n';
 
 /** After Three.js's light sum: the sky fill dimmed by the probes' sky visibility, the bounce added (the concept's gi.ts). */
 const PROBE_GLSL = `
@@ -101,23 +104,28 @@ const PROBE_GLSL = `
 
 const PROBE_HEAD = 'uniform highp sampler3D bakeTex;\nuniform vec3 bakeMin;\nuniform vec3 bakeSize;\nuniform float bakeScale;\nuniform float bakeOcclusion;\nuniform float bakeBounce;\nuniform float bakeLift;\n';
 
-/** The program cache key for a patch: one program per weathering strength, rust and baked light on or off. */
+/** The weathering a patch draws, or null for none (a surface weathered at 0 is not weathered). */
+function wearOf(p: SurfacePatch): ShaderWear | null {
+  return p.wear && (p.wear.grime > 0 || p.wear.rust > 0) ? p.wear : null;
+}
+
+/** The program cache key for a patch: one program per environment, weathering on or off and baked light on or off. */
 export function surfacePatchKey(p: SurfacePatch): string {
-  const wear = p.wear && (p.wear.grime > 0 || p.wear.rust > 0) ? `g${f(p.wear.grime)}r${f(p.wear.rust)}` : 'none';
-  return `surface:${p.environment ? 'env' : 'noenv'}:${wear}:${p.probes ? 'probes' : 'none'}`;
+  return `surface:${p.environment ? 'env' : 'noenv'}:${wearOf(p) ? 'wear' : 'none'}:${p.probes ? 'probes' : 'none'}`;
 }
 
 /** Whether a patch adds anything to Three.js's shader beyond keeping the environment off. */
 export function patchesShader(p: SurfacePatch): boolean {
-  return p.probes !== null || (p.wear !== null && (p.wear.grime > 0 || p.wear.rust > 0));
+  return p.probes !== null || wearOf(p) !== null;
 }
 
 /**
  * Rewrites a Three.js Lambert or Standard shader with the patch's additions. Pure: the tests read what it writes.
- * `shader` is what onBeforeCompile receives; the probes' uniforms are added to it by reference.
+ * `shader` is what onBeforeCompile receives; the probes' uniforms are added to it by reference, the weathering's as the
+ * surface's own values.
  */
 export function applySurfacePatch(shader: THREE.WebGLProgramParametersWithUniforms, p: SurfacePatch): void {
-  const wear = p.wear && (p.wear.grime > 0 || p.wear.rust > 0) ? p.wear : null;
+  const wear = wearOf(p);
   let vertex = shader.vertexShader;
   let fragment = shader.fragmentShader;
   if (!p.environment) {
@@ -129,14 +137,16 @@ export function applySurfacePatch(shader: THREE.WebGLProgramParametersWithUnifor
       .replace('#include <common>', `#include <common>\n${WORLD_VARYINGS}`)
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvSurfW = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvSurfN = normalize(mat3(modelMatrix) * objectNormal);');
     let head = `#include <common>\n${WORLD_VARYINGS}`;
-    if (wear) head += NOISE_GLSL;
+    if (wear) head += WEAR_HEAD + NOISE_GLSL;
     if (p.probes) head += PROBE_HEAD;
     fragment = fragment.replace('#include <common>', head);
   }
   if (wear) {
     fragment = fragment
-      .replace('#include <color_fragment>', `#include <color_fragment>\n${wearGlsl(wear)}`)
+      .replace('#include <color_fragment>', `#include <color_fragment>\n${WEAR_GLSL}`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 1.0, wearG * ${f(M.roughen)});`);
+    shader.uniforms.wearGrime = { value: wear.grime };
+    shader.uniforms.wearRust = { value: wear.rust };
   }
   if (p.probes) {
     fragment = fragment.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>\n${PROBE_GLSL}`);

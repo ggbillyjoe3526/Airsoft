@@ -44,6 +44,9 @@ describe('the surface shader patch (G6)', () => {
       expect(shader.fragmentShader).toContain('float rs = ');
       if (kind === 'physical') expect(shader.fragmentShader).toContain('roughnessFactor = mix(roughnessFactor, 1.0, wearG');
       expect(shader.uniforms.bakeTex).toBe(p.probes!.bakeTex);
+      // The surface's weathering strengths are its own uniforms.
+      expect(shader.uniforms.wearGrime!.value).toBe(wear.grime);
+      expect(shader.uniforms.wearRust!.value).toBe(wear.rust);
       expect(shader.vertexShader.length).toBeGreaterThan(before.v.length);
       expect(shader.fragmentShader.length).toBeGreaterThan(before.f.length);
     }
@@ -64,20 +67,19 @@ describe('the surface shader patch (G6)', () => {
     expect(steel.fragmentShader).toBe(sf);
   });
 
-  it('keys one program per variant: weathering strength, rust, baked light and the environment', () => {
+  it('keys one program per variant (weathering, baked light, the environment), whatever the surface’s strengths', () => {
     const keys = new Set(
       [
         { environment: false, wear: null, probes: null },
         { environment: false, wear: WEATHERING.shader.blockWall, probes: null },
-        { environment: false, wear: WEATHERING.shader.corrugated, probes: null },
         { environment: false, wear: WEATHERING.shader.blockWall, probes: probes() },
         { environment: true, wear: WEATHERING.shader.steelPlate, probes: probes() },
       ].map(surfacePatchKey),
     );
-    expect(keys.size).toBe(5);
-    // Two materials with the same patch share a program.
+    expect(keys.size).toBe(4);
+    // Surfaces weathered at different strengths, with or without rust, share a program.
     expect(surfacePatchKey({ environment: false, wear: WEATHERING.shader.blockWall, probes: probes() })).toBe(
-      surfacePatchKey({ environment: false, wear: WEATHERING.shader.blockWall, probes: probes() }),
+      surfacePatchKey({ environment: false, wear: WEATHERING.shader.corrugated, probes: probes() }),
     );
     const m = patchSurfaceMaterial(new THREE.MeshLambertMaterial(), { environment: false, wear: WEATHERING.shader.blockWall, probes: null });
     expect(m.customProgramCacheKey()).toBe(surfacePatchKey({ environment: false, wear: WEATHERING.shader.blockWall, probes: null }));
@@ -95,8 +97,10 @@ describe('the surface shader patch (G6)', () => {
     ] as const) {
       const group = buildMapMeshes(DEPOT, textures, { ...mapLookOf(QUALITY[q]), relief: false }, null);
       const keys = group.children.map((o) => ((o as THREE.Mesh).material as THREE.Material).customProgramCacheKey());
-      expect(keys.some((k) => k.includes(':g')), q).toBe(weathered);
+      expect(keys.some((k) => k.includes(':wear')), q).toBe(weathered);
       if (!weathered) expect(keys.every((k) => k === 'without-environment')).toBe(true);
+      // A handful of programs for the whole map (a match start compiles few).
+      expect(new Set(keys).size, q).toBeLessThanOrEqual(2);
       disposeMapMeshes(group);
     }
   });
