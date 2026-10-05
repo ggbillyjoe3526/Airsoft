@@ -119,81 +119,6 @@ export const BOT_BEHAVIOUR = {
   holdSweepDeg: 35,
   holdSweepPeriod: 4,
   /**
-   * Held angles (M37, for skills with holdsAngles): holding still, the bot fans this many rays at eye height across
-   * this wide a view (degrees) of the enemy side and aims where a ray that stops at a wall sits beside one that runs on
-   * at least angleJump (metres) further than the wall itself would reach (so a long wall seen at a slant is no corner): a
-   * corner or doorway someone would step out of. It aims anglePast (metres) past
-   * the wall's distance, at head height. Edges nearer than angleMinDist or beyond angleMaxDist (metres) are skipped,
-   * those near angleBestDist (metres) preferred; it keeps two at least angleSeparationDeg apart, switches between them
-   * every angleSwitchTime (s) and looks again every angleRefresh (s).
-   */
-  angleFanDeg: 140,
-  angleRays: 29,
-  angleJump: 2.5,
-  anglePast: 0.6,
-  angleMinDist: 2,
-  angleMaxDist: 30,
-  angleBestDist: 10,
-  angleSeparationDeg: 15,
-  angleSwitchTime: 3,
-  angleRefresh: 2,
-  /** ...or as soon as it has moved this far (metres) since it last looked. */
-  angleMoveRefresh: 0.5,
-  /**
-   * Held angles beyond walls (M40, map data and nav only, ai/angleFeatures.ts). A bush at least angleBushMinHeight
-   * (metres) tall stops a fan ray like a wall, so its edges are corners too. A gap of angleGapMin to angleGapMax
-   * (metres) between two narrow tall blocks (trunks, posts: at most anglePostMaxHalf either side of their centre) is a
-   * doorway, held when the line of sight crosses it at least as squarely as angleGapFacing (the sine of the angle). A post
-   * is about as deep as it is wide (its short side at least anglePostSquareness of its long one): a wall's stub by a
-   * door or window is not one.
-   */
-  angleBushMinHeight: 1,
-  anglePostMaxHalf: 0.75,
-  anglePostSquareness: 0.75,
-  angleGapMin: 0.8,
-  angleGapMax: 4,
-  angleGapFacing: 0.5,
-  /**
-   * A stair or ramp top (M40): the edge of a landing (floor no steeper than angleFlatSlope for angleLandingRun metres, or
-   * up to a wall) where the floor falls, angleRampSlope per metre or steeper on average, by angleLevelRise (metres) or
-   * more onto another landing within angleRampRun (metres): where someone coming up or down appears. Tops within
-   * angleTopMerge (metres) count as one.
-   */
-  angleLevelRise: 0.9,
-  angleRampRun: 8,
-  angleRampSlope: 0.3,
-  angleFlatSlope: 0.02,
-  angleLandingRun: 1,
-  angleTopMerge: 1.5,
-  /** Someone appearing within this angle (degrees) of where a bot already aims counts as pre-aimed (the skill's preAim*). */
-  preAimConeDeg: 6,
-  // ---- Clearing corners and team play (M38, for skills with slicesCorners / teamPlay) ---------------------------
-  /**
-   * After a teammate's hit call it heard, a bot that trades goes for where the shot came from for this long (s): to a
-   * spot within tradeCoverRadius (metres) it can peek that way from, or straight there at a run.
-   */
-  tradeTime: 4,
-  tradeCoverRadius: 6,
-  /** Slicing a corner (slicesCorners): leans out past the corner it aims at once it is this near (metres). */
-  sliceLeanDistance: 6,
-  /**
-   * Moving in pairs: a bot sharing a lane with a teammate within boundDistance (metres) doesn't set off from a lane
-   * point while that teammate is on the move, so one always holds while the other moves (for at most boundWaitMax s
-   * at a point, counting its hold there; a partner slicing corners at a walk takes longer than teamWaitMax).
-   */
-  boundDistance: 15,
-  boundWaitMax: 8,
-  /**
-   * Crossfire: of two defenders on one lane, the second holds as far from the lane's next point (the choke) as its own
-   * point, but swung round the choke by between these many degrees (the smaller end, the middle, then the larger, either
-   * way), on the same floor with a clear view of the choke; the two then see it from angles at least crossfireMinDeg
-   * apart.
-   */
-  crossfireTurnDeg: [35, 65],
-  crossfireMinDeg: 30,
-  /** Elimination: with this many seconds left, the side with fewer players in play goes looking for the others. */
-  latePushTime: 30,
-  /**
    * At a lane point, a bot may first step into cover (its skill's holdCoverChance): the best spot within this radius
    * (metres) that hides it from a point this far (metres) towards the enemy side and that it can peek from.
    */
@@ -354,18 +279,6 @@ export const BOT_BEHAVIOUR = {
   huntTriesPerCandidate: 20,
   /** Among never-visited sectors, each metre further from home counts like this many seconds staler. */
   huntFarBias: 0.01,
-  /**
-   * With the skill's huntsMiddle (M40), each metre nearer the middle of the map (halfway between the two ends) counts like
-   * this many seconds staler instead.
-   */
-  huntMiddleBias: 1,
-  /**
-   * With the skill's keepsDark (M40), a lane point in a light pool moves to the nearest dark spot on its floor within
-   * darkSpotRadius (metres), tried in rings darkSpotStep (metres) apart, darkSpotDirections round each.
-   */
-  darkSpotRadius: 8,
-  darkSpotStep: 1,
-  darkSpotDirections: 16,
   // ---- Flag mode -------------------------------------------------------------------------------
   /**
    * Bots stand at a random spot within this distance of the pole (metres): close enough to work the
@@ -401,6 +314,107 @@ export const BOT_BEHAVIOUR = {
    * the rest hold their posts.
    */
   retakers: 2,
+
+  // ---- Pro tuning (M37, M38, M40; Pro's skill is BOT_SKILL.pro below) --------------------------------------
+  // Every number only Pro uses, in one place for the owner's playtest on each map. Nothing here changes Easy, Normal or
+  // Hard: each is read only by a bot whose skill sets the flag named (holdsAngles, slicesCorners, teamPlay, huntsMiddle,
+  // keepsDark). The rest of Pro's tuning: BOT_SKILL.pro (reaction, aim, holds), BOT_PART_CHANCE.pro (kit) and the
+  // Difficulty multiplier in pool.md (pay). What to turn when a map plays wrong (docs/PLAYTEST.md "Pro"):
+  //  - Pro never finds the corner you hide behind, or aims at the wrong gap: angle* (the ray fan and what counts as an edge).
+  //  - A held corner is wrongly picked on bushes, trunks or stairs: angleBush*, anglePost*, angleGap*, angleLevel*, angleRamp*.
+  //  - Slicing is too slow or too cautious near the enemy: sliceLeanDistance, then skill peekWatchTime.
+  //  - The team trades too eagerly, or bunches up: tradeTime, tradeCoverRadius, boundDistance, boundWaitMax, crossfire*.
+  //  - A round drags when Pro is ahead or behind: latePushTime.
+  //  - One end of a map is easier than the other, or Pro sits in the light at night: huntMiddleBias, darkSpot*.
+  // Held angles (M37, holdsAngles), M40's map features (bushes, trunk gaps, stair tops) and pre-aiming:
+  /**
+   * Held angles (M37, for skills with holdsAngles): holding still, the bot fans this many rays at eye height across
+   * this wide a view (degrees) of the enemy side and aims where a ray that stops at a wall sits beside one that runs on
+   * at least angleJump (metres) further than the wall itself would reach (so a long wall seen at a slant is no corner): a
+   * corner or doorway someone would step out of. It aims anglePast (metres) past
+   * the wall's distance, at head height. Edges nearer than angleMinDist or beyond angleMaxDist (metres) are skipped,
+   * those near angleBestDist (metres) preferred; it keeps two at least angleSeparationDeg apart, switches between them
+   * every angleSwitchTime (s) and looks again every angleRefresh (s).
+   */
+  angleFanDeg: 140,
+  angleRays: 29,
+  angleJump: 2.5,
+  anglePast: 0.6,
+  angleMinDist: 2,
+  angleMaxDist: 30,
+  angleBestDist: 10,
+  angleSeparationDeg: 15,
+  angleSwitchTime: 3,
+  angleRefresh: 2,
+  /** ...or as soon as it has moved this far (metres) since it last looked. */
+  angleMoveRefresh: 0.5,
+  /**
+   * Held angles beyond walls (M40, map data and nav only, ai/angleFeatures.ts). A bush at least angleBushMinHeight
+   * (metres) tall stops a fan ray like a wall, so its edges are corners too. A gap of angleGapMin to angleGapMax
+   * (metres) between two narrow tall blocks (trunks, posts: at most anglePostMaxHalf either side of their centre) is a
+   * doorway, held when the line of sight crosses it at least as squarely as angleGapFacing (the sine of the angle). A post
+   * is about as deep as it is wide (its short side at least anglePostSquareness of its long one): a wall's stub by a
+   * door or window is not one.
+   */
+  angleBushMinHeight: 1,
+  anglePostMaxHalf: 0.75,
+  anglePostSquareness: 0.75,
+  angleGapMin: 0.8,
+  angleGapMax: 4,
+  angleGapFacing: 0.5,
+  /**
+   * A stair or ramp top (M40): the edge of a landing (floor no steeper than angleFlatSlope for angleLandingRun metres, or
+   * up to a wall) where the floor falls, angleRampSlope per metre or steeper on average, by angleLevelRise (metres) or
+   * more onto another landing within angleRampRun (metres): where someone coming up or down appears. Tops within
+   * angleTopMerge (metres) count as one.
+   */
+  angleLevelRise: 0.9,
+  angleRampRun: 8,
+  angleRampSlope: 0.3,
+  angleFlatSlope: 0.02,
+  angleLandingRun: 1,
+  angleTopMerge: 1.5,
+  /** Someone appearing within this angle (degrees) of where a bot already aims counts as pre-aimed (the skill's preAim*). */
+  preAimConeDeg: 6,
+  // Clearing corners and team play (M38, slicesCorners / teamPlay):
+  /**
+   * After a teammate's hit call it heard, a bot that trades goes for where the shot came from for this long (s): to a
+   * spot within tradeCoverRadius (metres) it can peek that way from, or straight there at a run.
+   */
+  tradeTime: 4,
+  tradeCoverRadius: 6,
+  /** Slicing a corner (slicesCorners): leans out past the corner it aims at once it is this near (metres). */
+  sliceLeanDistance: 6,
+  /**
+   * Moving in pairs: a bot sharing a lane with a teammate within boundDistance (metres) doesn't set off from a lane
+   * point while that teammate is on the move, so one always holds while the other moves (for at most boundWaitMax s
+   * at a point, counting its hold there; a partner slicing corners at a walk takes longer than teamWaitMax).
+   */
+  boundDistance: 15,
+  boundWaitMax: 8,
+  /**
+   * Crossfire: of two defenders on one lane, the second holds as far from the lane's next point (the choke) as its own
+   * point, but swung round the choke by between these many degrees (the smaller end, the middle, then the larger, either
+   * way), on the same floor with a clear view of the choke; the two then see it from angles at least crossfireMinDeg
+   * apart.
+   */
+  crossfireTurnDeg: [35, 65],
+  crossfireMinDeg: 30,
+  /** Elimination: with this many seconds left, the side with fewer players in play goes looking for the others. */
+  latePushTime: 30,
+  // Map balance (M40, huntsMiddle / keepsDark):
+  /**
+   * With the skill's huntsMiddle (M40), each metre nearer the middle of the map (halfway between the two ends) counts like
+   * this many seconds staler instead.
+   */
+  huntMiddleBias: 1,
+  /**
+   * With the skill's keepsDark (M40), a lane point in a light pool moves to the nearest dark spot on its floor within
+   * darkSpotRadius (metres), tried in rings darkSpotStep (metres) apart, darkSpotDirections round each.
+   */
+  darkSpotRadius: 8,
+  darkSpotStep: 1,
+  darkSpotDirections: 16,
 
   // ---- Extraction (M46): the home team's guards, patrols and hunters (plan, section 3) ---------
   /**
@@ -653,6 +667,7 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     lockerGuards: 2,
     huntersFrom: 1 / 3,
   },
+  // ---- Pro tuning: the skill (the rest of Pro's numbers are under "Pro tuning" in BOT_BEHAVIOUR above) ----
   // Pro (M36, owner 2026-10-04): above Hard in every number, but its first BBs are still never dead on
   // (aimErrorStartMetres above zero) and it reacts no faster than Hard to someone it wasn't already aiming at. It plays
   // slower than Hard: longer holds at lane points, nearly always from cover, and a walk (silent) for the last 30 m to
@@ -703,7 +718,7 @@ export const BOT_LOADOUTS: Readonly<Record<Difficulty, 'factory' | 'random'>> = 
  */
 export const RANDOM_LOADOUT = { partChance: 0.6, chaseChance: 0.05 } as const;
 
-/** That chance per difficulty that rolls kits (BOT_LOADOUTS): Hard's as above, Pro's higher (M36: better kitted). */
+/** That chance per difficulty that rolls kits (BOT_LOADOUTS): Hard's as above, Pro's higher (M36: better kitted; part of Pro tuning). */
 export const BOT_PART_CHANCE: Readonly<Record<Difficulty, number>> = { easy: 0, normal: 0, hard: RANDOM_LOADOUT.partChance, pro: 0.8 };
 
 /** The behaviour tuning every bot shares, whatever its level (BOT_BEHAVIOUR's shape). */

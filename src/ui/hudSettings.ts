@@ -1,4 +1,4 @@
-import { HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE } from '../config/matchInfo';
+import { HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../config/matchInfo';
 import { menuRow, rangeControl } from './menus/menuParts';
 import { OptionPicker } from './optionPicker';
 
@@ -8,6 +8,8 @@ export interface HudSettingsOptions {
   /** The scoreboard's size (a scale, 1 = as before M24). */
   scoreboardSize: { initial: number; onChange: (scale: number) => void };
   hitFeed: { initial: HitFeedMode; onChange: (mode: HitFeedMode) => void };
+  /** The "what got you" card after a hit (M41). */
+  whatGotYou: { initial: WhatGotYouMode; onChange: (mode: WhatGotYouMode) => void };
 }
 
 /** The HUD tab's rows (Settings → HUD, M24), each saved and applied as it changes. */
@@ -24,5 +26,10 @@ export function hudSettings(opts: HudSettingsOptions): HTMLDivElement[] {
       rangeControl('Scoreboard size', SCOREBOARD_SIZE, opts.scoreboardSize.initial, (v) => `${Math.round(v * 100)}%`, 'scoreboardSize', opts.scoreboardSize.onChange),
     ),
     menuRow('Hit feed', 'Who hit whom, in the top-right corner.', new OptionPicker('Hit feed', HIT_FEED_MODES, opts.hitFeed.initial, 'hitFeed', opts.hitFeed.onChange).root),
+    menuRow(
+      'What got you',
+      'After you are hit: where it came from, whether that bot held the angle, how long you were in view and whether you were moving. Auto shows it against Pro opponents only.',
+      new OptionPicker('What got you', WHAT_GOT_YOU_MODES, opts.whatGotYou.initial, 'whatGotYou', opts.whatGotYou.onChange).root,
+    ),
   ];
 }

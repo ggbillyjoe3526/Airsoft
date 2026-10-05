@@ -5,25 +5,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
 keeps `status` and `attempts` current.
 
-The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
-files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged dev with M35's content tag until the
-owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
-first (M33 changes both).
-
-attempts: 0
-
-## M41 · What got you, Pro tips and tuning
-tier: ui
-perf: skip
-touches: src/ui/, src/config/matchInfo.ts, src/sim/events.ts, src/game.ts, src/config/tutorial.ts, src/config/bots.ts
-acceptance:
-  1. After you're hit, a card shows where the shot came from, whether that bot was holding the angle, how long you were in view and whether you were moving.
-  2. A setting turns it on for every difficulty; on by default only on Pro.
-  3. Pro briefing tips (slice corners, short peeks, listen).
-  4. Tuning numbers for Pro in one place, ready for the owner's playtest per map.
-status: open
-attempts: 0
-
 The Extraction plan (owner approved 2026-10-04 20:51 and 20:54 UTC: every default except question 3, one automatic
 respawn per run; the plan in the project's shared files `research/extraction-mode-2026-10-04.md`). Everything here is
 tagged dev with M35's content tag until the owner says it's done. M33 owns the map framework (MapData gains only an

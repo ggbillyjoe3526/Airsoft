@@ -53,6 +53,10 @@ export interface Contact {
   seenAt: number;
   /** When this contact began: the aim error settles from here. */
   acquiredAt: number;
+  /** When this contact was first seen, unbroken since (M41: the "what got you" card's time in view; acquiredAt is shifted back by a pre-aim). */
+  firstSeenAt: number;
+  /** It began with the bot holding an angle (M41): a Pro bot standing still with its view already on that spot. */
+  held: boolean;
   /** The bot may open fire on this enemy from this time on (its reaction delay). */
   reactAt: number;
 }

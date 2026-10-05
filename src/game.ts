@@ -7,7 +7,7 @@ import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
-import { type CrosshairSettings, type HitFeedMode, hudScale, scoreboardScale } from './config/matchInfo';
+import { type CrosshairSettings, type HitFeedMode, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
 import { FULLSCREEN_RELOCK_MS } from './config/controls';
 import { CRASH_TEXT } from './config/crash';
 import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
@@ -94,6 +94,7 @@ import {
   loadTutorialDone,
   loadTutorialStep,
   loadWheelSelect,
+  loadWhatGotYouMode,
 } from './ui/menus/savedChoices';
 
 /** The player is the first character, on Blue (see MatchSession). */
@@ -220,6 +221,8 @@ export class Game {
   private soundCueColour: SoundCueColour = loadSoundCueColour();
   private scoreboardSize = loadScoreboardSize();
   private hitFeedMode: HitFeedMode = loadHitFeedMode();
+  /** Settings → HUD → What got you (M41): the card after a hit; Auto turns it on against Pro opponents only. */
+  private whatGotYouMode: WhatGotYouMode = loadWhatGotYouMode();
   /** The HUD's size as picked (Settings → HUD, audit UI-04); the screen's height scales it further (hudScale). */
   private hudSize = loadHudSize();
   /** When the Fullscreen key was last pressed in play (performance.now()), to take the mouse again (audit UI-19). */
@@ -432,6 +435,7 @@ export class Game {
         hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
         scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
         hitFeed: { initial: this.hitFeedMode, onChange: (m) => this.changeHitFeed(m) },
+        whatGotYou: { initial: this.whatGotYouMode, onChange: (m) => this.changeWhatGotYou(m) },
       },
       dev: {
         initial: this.devPicked,
@@ -656,6 +660,12 @@ export class Game {
     if (this.session instanceof MatchSession) this.session.setHitFeedMode(mode);
   }
 
+  /** The "what got you" card on, off or by difficulty (Settings → HUD, M41): kept for the next match and applied to the one loaded. */
+  private changeWhatGotYou(mode: WhatGotYouMode): void {
+    this.whatGotYouMode = mode;
+    if (this.session instanceof MatchSession) this.session.setWhatGotYouMode(mode);
+  }
+
   /**
    * The HUD's look from the settings (M24), as CSS variables on the game's container (style.css): the HUD's size (audit
    * UI-04), the sound cues' size and colour, and the scoreboard's size (held back in a narrow window so the hit feed
@@ -791,6 +801,7 @@ export class Game {
       this.session.setMotion(motionScale(this.reducedMotion));
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
+      this.session.setWhatGotYouMode(this.whatGotYouMode);
       this.applyDevTo(this.session);
       applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
     }

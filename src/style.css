@@ -2986,6 +2986,22 @@ kbd {
   color: var(--menu-muted);
 }
 
+.match-board-tip {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.match-board-tip::before {
+  content: 'Tip · ';
+  font-weight: 700;
+  color: var(--paper);
+}
+
+.match-board-tip[hidden] {
+  display: none;
+}
+
 .stats-table {
   width: 100%;
   border-collapse: collapse;
@@ -3851,6 +3867,7 @@ kbd {
   .hit-feed,
   .squad-order,
   .match-board,
+  .what-got-you,
   .crosshair-preview,
   .crosshair-swatch,
   .team-swatch {
@@ -4024,4 +4041,45 @@ kbd {
   50% {
     box-shadow: 0 0 0 3px var(--tier), 0 0 32px var(--tier);
   }
+}
+
+/* The "what got you" card (M41): after a hit, over the spectating label at the bottom of the view. */
+.what-got-you {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--hud-margin) + var(--sp-3) + 40px * var(--hud-scale, 1));
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  transform-origin: 50% 100%;
+  width: min(420px, calc((100% - 32px) / var(--hud-scale, 1)));
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--hud-radius);
+  background: var(--hud-panel-solid);
+  color: var(--paper);
+  font-family: var(--ui-font);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.what-got-you[hidden] {
+  display: none;
+}
+
+.what-got-you-title {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--menu-muted);
+}
+
+.what-got-you-where {
+  margin-top: 2px;
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+
+.what-got-you-notes p {
+  margin: 4px 0 0;
+  font-size: var(--fs-sm);
 }

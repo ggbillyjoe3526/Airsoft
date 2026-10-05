@@ -99,6 +99,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Round clock, score, round banners worded from your side (Phase 1)
 - Hit feed with team colour bars, teammate markers, the scoreboard on Tab, round stats between rounds (M19, FA9)
 - End-of-match summary with your stats and local records (wins, accuracy, streaks) (M19)
+- What got you: after you're hit, a card with the shot's direction and distance, whether the bot held the angle, your time in view and if you moved; Auto, On or Off; Pro tips between rounds (M41)
 
 ## Squad orders and minimap
 
