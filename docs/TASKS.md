@@ -11,6 +11,18 @@ tagged dev with M35's content tag until the owner says it's done. M33 owns the m
 optional `extraction` block), the Pro thread owns held angles and team play (M37, M38): changes there go through the
 coordinator.
 
+## M34g · Neon Heights sound (the city by day and night)
+tier: core
+perf: skip
+touches: src/config/audio.ts, src/config/sounds.ts, src/audio/ambience.ts, src/map/neonHeights.ts
+acceptance:
+  1. Engine data, not a map's name: a 'city' ambience in AMBIENCES picked by MapData.ambience and the preset's night flag; by Day a traffic hum, delivery drones passing high overhead and a shop-door chime now and then; by Night a quieter traffic hum, a neon buzz and arcade bleeps now and then; no birds by Night.
+  2. Gameplay first: the city puts no more into the footstep band than Depot's bed, by Day or Night, and is no louder than the yard; its calls are no louder than a bird.
+  3. Everything else sounds as before: title-screen cues, the yard and the woods sample for sample; new cues last in SOUNDS with their own seeds, new loops rendered only for a map that plays them.
+  4. Footsteps on the city's floors stay concrete, so play (ricochet materials) is unchanged.
+status: building
+attempts: 0
+
 ## M48 · Extraction on Woodland and Neon Heights
 tier: core
 perf: required

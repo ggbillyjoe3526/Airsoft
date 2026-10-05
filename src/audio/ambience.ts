@@ -1,4 +1,4 @@
-import { AMBIENT_LOOPS, AUDIO, type AmbientCallSpec, type CrackleLoopSpec, type InsectLoopSpec, type LoopId, type NoiseLoopSpec } from '../config/audio';
+import { AMBIENT_LOOPS, AUDIO, type AmbientCallSpec, type CrackleLoopSpec, type HumLoopSpec, type InsectLoopSpec, type LoopId, type NoiseLoopSpec } from '../config/audio';
 import type { Vec3 } from '../sim/vec';
 import { Biquad, seededRandom } from './dsp';
 
@@ -144,6 +144,38 @@ const POP_Q = 2.5;
 const CRACKLE_LEAST = 0.15;
 const CRACKLE_TAIL = 5;
 
+/**
+ * A neon tube's hum (M34g): harmonics of the mains frequency, swelling a little a whole number of times a loop, over a
+ * faint high sizzle (band-passed noise) that pulses at twice the mains frequency as the tube strikes on each half cycle.
+ * The tones are whole cycles per loop, so they wrap exactly; the sizzle's tail is crossfaded over its head. Normalised
+ * to a loudness (RMS) of 1; yields after each second of sound.
+ */
+export function* renderHum(sampleRate: number, spec: HumLoopSpec): Generator<void, Float32Array> {
+  const loop = Math.round(spec.seconds * sampleRate);
+  const fade = Math.round(spec.crossfade * sampleRate);
+  const rand = seededRandom(spec.seed);
+  const hz = Math.max(1, Math.round(spec.hz * spec.seconds)) / spec.seconds;
+  const sizzle = new Float32Array(loop + fade);
+  const band = new Biquad('bandpass', sampleRate);
+  band.set(spec.buzzHz, spec.buzzQ);
+  for (let i = 0; i < sizzle.length; i++) {
+    const strike = Math.abs(Math.sin((2 * Math.PI * hz * i) / sampleRate));
+    sizzle[i] = band.process(rand() * 2 - 1) * strike;
+    if ((i + 1) % sampleRate === 0) yield;
+  }
+  const buzz = seamless(sizzle, loop, fade);
+  const phase = rand();
+  const out = new Float32Array(loop);
+  for (let i = 0; i < loop; i++) {
+    const t = i / sampleRate;
+    let tone = 0;
+    for (let h = 0; h < spec.harmonics.length; h++) tone += spec.harmonics[h]! * Math.sin(2 * Math.PI * hz * (h + 1) * t);
+    const swell = 1 - spec.flickerDepth * 0.5 * (1 + Math.cos(2 * Math.PI * ((spec.flickers * i) / loop + phase)));
+    out[i] = tone * swell + spec.buzzLevel * buzz[i]!;
+  }
+  return normalised(out);
+}
+
 /** Renders loop `id` (config/audio.ts AMBIENT_LOOPS) at `sampleRate`, yielding as it goes. */
 export function renderLoop(id: LoopId, sampleRate: number): Generator<void, Float32Array> {
   const spec = AMBIENT_LOOPS[id];
@@ -154,6 +186,8 @@ export function renderLoop(id: LoopId, sampleRate: number): Generator<void, Floa
       return renderInsects(sampleRate, spec);
     case 'crackle':
       return renderCrackle(sampleRate, spec);
+    case 'hum':
+      return renderHum(sampleRate, spec);
   }
 }
 
