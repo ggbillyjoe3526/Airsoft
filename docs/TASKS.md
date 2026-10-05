@@ -15,6 +15,6 @@ acceptance:
   2. pool.md and stats.md are in a chunk of their own; the game chunk is under 90 % of its budget, and the default budget is 900 kB (owner decision 1, DECISIONS); a chunk within 10 % of its budget warns at build time (test: config/chunkBudget.test.ts).
   3. The crash and diagnostics report's Quality row is the quality line the debug overlay shows (choice, auto, scale, shadow map, textures; never "[object Object]"), reads the live automatic flag, and the report adds Rules, Lighting, Retro pixels and, in an Extraction run, a Run row (outcome, exits open, cases opened, carried, waves).
   4. `tierOf` is gone and the 28 exports nothing outside their file uses are no longer exported; no behaviour change (existing tests pass unchanged apart from reading map data through `mapData`).
-status: building
+status: gates
 attempts: 0
 

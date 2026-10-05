@@ -147,6 +147,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **BP1** · A double-click on Play no longer shows the "needs a moment" hint; Key bindings says why two quick clicks cancel (#53)
 - **FA6** · Pause fades audio in 30 ms instead of clicking; pauses when the window loses focus; hint when the browser blocks audio (#55)
 - **M28** · Impact puffs start at half size
+- **M50** · The crash report's Quality line reads properly (not "[object Object]") and the report adds the rules, the lighting, Retro pixels and an Extraction run's state
 
 ### Internal
 - **M44** · Extraction cases: tests for the Use key, case rolls, drops and the haul, and a browser test of a run that opens the locker
@@ -173,6 +174,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA11a** · Production build compresses with Brotli and gzip; browser test plays real production build with mouse lock (#61)
 - **FA11a** · TypeScript stricter (exactOptionalPropertyTypes); GitHub checks verify scope and changelog; dead code removed (#61)
 - **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
+- **M50** · Woodland and Neon Heights download only once Dev content is on, the pool and stats tables are a file of their own, and the code size budget is 900 kB with a warning at 90 %
 
 ## v0.1-alpha.3 · 2026-10-03
 
