@@ -83,7 +83,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M46** · Extraction guards and hunters: guards in cover by the locker, patrols in pairs, hunters late in the run; teammates cover you at a case (#98)
 - **M47** · Extraction pay and records: a run pays what you get out with plus your hits, times the difficulty; its own bests (#101)
 - **M48** · Extraction on Woodland (15 min, 4 to 6 opponents) and Neon Heights (10 min, the locker on Level 2); exits sit on slopes (#103)
-- **M49** · Extraction supply events: a Supply weekend every Friday to Sunday and a Halloween night run (30 October to 1 November 2026) fill cases with more Field Credits and parts; the Mode pop-up says which is on (#105)
+- **M49** · Extraction supply events: a Supply weekend every Friday to Sunday and a Halloween night run (30 October to 1 November 2026) fill cases with more Field Credits and parts; the Mode pop-up says which is on (#106)
 - **M34e** · Neon Heights by Night: 12 lamps light separate floors, neon signs that glow and are painted by day, lit and dark windows on the perimeter; balanced at 47–48 % west, 52 % attackers
 - **M34e** · Night sight on night maps knows floors and roofs: an unlit spot under a roof is seen from 15 m
 - **M33i** · Woodland's look (dev content): bark trunks and log walls, faceted boulders, plank fences, pine and broadleaf crowns against the sky, gravel creek, earth tracks and leaf litter under the trees, camp fires with flickering flames and embers, lanterns, and a moon and stars at night on every preset; Depot unchanged
@@ -153,7 +153,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M46** · Extraction guards and hunters: tests for posts, patrols, hunters and cover, and a balance guard per difficulty on Depot (#98)
 - **M47** · Extraction pay and records: tests for run pay, the run's records and bests, and older saves (#101)
 - **M48** · Extraction on Woodland and Neon Heights: data and balance tests per map, and the perf harness can play a run (#103)
-- **M49** · Supply events: a table in pool.md read by the pool, tests for the clock, the order and the case odds, and a browser test of the Mode pop-up with a fixed clock (#105)
+- **M49** · Supply events: a table in pool.md read by the pool, tests for the clock, the order and the case odds, and a browser test of the Mode pop-up with a fixed clock (#106)
 - **FA15** · The perf harness measures heap growth between two forced full garbage collections, so repeated runs agree (+0.9 MB on four of five runs, −3.4 on one, against swings of ±10 MB before) (#88)
 - **FA14** · The browser smoke test waits for a match to draw before trying its keys, and gives the scoreboard, order wheel and squad order steps the same wait as firing and reloading, so slow frames on a CI runner no longer fail it (#80)
 - **M34b** · Multi-floor navigation: map cells hold multiple walkable levels, enabling buildings with stairs and balconies
