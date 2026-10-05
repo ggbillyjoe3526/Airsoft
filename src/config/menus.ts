@@ -154,7 +154,9 @@ export const ARMORY_TEXT = {
 /** Extraction's haul on the match summary (M44): what the run found, and whether it went into your collection. */
 export const HAUL_TEXT = {
   title: 'The haul',
-  kept: (what: string): string => `${what}, now in your collection.`,
+  /** Kept (M47: its FC comes with the run's pay, times the difficulty; its parts go straight into the collection). */
+  kept: (what: string, parts: boolean, fc: boolean): string =>
+    `You got out with ${what}.${parts ? ' The parts are in your collection.' : ''}${fc ? ' The FC is in your pay below.' : ''}`,
   notKept: (what: string): string => `${what}. Not kept: nothing from this run goes into your collection.`,
   lost: (what: string): string => `Lost: ${what}. Only what you get out with is yours.`,
   leftBehind: 'You got out, but what you dropped stayed where you fell.',

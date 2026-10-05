@@ -58,7 +58,7 @@ import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
 import { MatchStats } from './stats/matchStats';
 import { matchStanding, MatchTakes } from './stats/settleMatch';
-import type { MatchResult } from './stats/records';
+import { type MatchResult, runResultOf } from './stats/records';
 import type { MatchOutcome } from './pool/armory';
 import type { NotCounted } from './ui/recordsView';
 import { pauseText, resultText, type ResultText } from './ui/matchStopText';
@@ -331,10 +331,17 @@ export class MatchSession {
     const r = this.state.round;
     return this.takes.result(r.phase === 'matchOver', this.countsForRecords, () => {
       const mine = this.stats.matchOf(this.player.id);
-      // A named ruleset has its own cells (M39); Skirmish the plain ones, as before.
-      const ruleset = recordsKeyOf(this.setup.ruleset) ?? '';
-      return { difficulty: this.setup.difficulty, mode: this.mode, ...(ruleset ? { ruleset } : {}), won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+      // A named ruleset has its own cells (M39); Skirmish the plain ones, as before. An Extraction run plays the map's
+      // own rules whatever the ruleset, so it always goes in the plain cell (M47).
+      const ruleset = this.extraction ? '' : (recordsKeyOf(this.setup.ruleset) ?? '');
+      return { difficulty: this.setup.difficulty, mode: this.mode, ...(ruleset ? { ruleset } : {}), won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired, ...this.runResult() };
     });
+  }
+
+  /** An Extraction run for the records (M47): what you got out with and how long the run took; nothing in the other modes. */
+  private runResult(): Pick<MatchResult, 'run'> {
+    if (!this.extraction) return {};
+    return { run: runResultOf(runHaul(this.state.round.run), this.rounds.roundTime - this.state.round.clock) };
   }
 
   /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24), nor with dev content (M35). */
@@ -363,7 +370,9 @@ export class MatchSession {
       ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
       // Custom rules pay no more than ×1.5 (M39): Pro's ×2 is for the named rulesets played as they are.
       ...(this.customRules ? { customRules: true } : {}),
-      // Extraction (M44): what you got out with goes into the collection with the pay.
+      // Extraction (M44): what you got out with goes into the collection with the pay, which is the haul's FC and your
+      // hits (M47).
+      ...(this.extraction ? { extraction: true } : {}),
       ...this.haulOutcome(),
     }));
   }
