@@ -18,9 +18,9 @@ import { withoutEnvironment } from './surfaceMaterials';
  * is what gives the holder away), and a lit disc where the beam lands (a ray cast per lit torch per frame, along the
  * level's own ray). Your own torch on Medium and High is one real spot light, made with the match and only turned up
  * and down, so no shader is ever rebuilt by a switch; it takes one of the night lights (`reserved`), so the scene's
- * real light count is the quality's, torch or not. On Low your own torch draws its lit disc too. A figure inside
- * someone's beam, where no real light reaches it, glows a little (`lit`, read by the figures). Unlit, unfogged and off
- * the environment map, as the light pools are (M33f). Allocation-free per frame.
+ * real light count is the quality's, torch or not. On Low your own torch draws a glow ahead and its lit disc. A figure
+ * inside someone's beam, where no real light reaches it, glows a little (`lit`, read by the figures). Unlit, unfogged
+ * and off the environment map, as the light pools are (M33f). Allocation-free per frame.
  */
 
 /** Whether any character carries a light on any replica: a match without one builds nothing for torches. */
@@ -204,7 +204,7 @@ export class TorchBeams {
   /**
    * One frame: every lit torch placed between ticks (`alpha`), seen from `camera`. `viewer` is the character the view
    * belongs to (you, or the player you watch): the real spot follows their torch; `firstPerson`: the camera is their
-   * eyes, so their cone and glare aren't drawn (the cone would fill the screen) and their beam leaves from the camera.
+   * eyes, so their beam leaves from the camera and no cone or glare is drawn (on Low, a soft glow ahead instead).
    */
   update(camera: THREE.Camera, viewer: Character | null, firstPerson: boolean, alpha: number): void {
     this.lit.fill(0);
@@ -259,6 +259,14 @@ export class TorchBeams {
           glare.setMatrixAt(nGlare, matrix.compose(lens, camera.quaternion, scale.set(size, size, size)));
           glare.setColorAt(nGlare++, this.tint.copy(colour).multiplyScalar(T.glare * k));
         }
+      } else if (!real) {
+        // Your own beam on Low (no real spot), seen from behind the lens: a soft glow in the haze ahead, the beam's width
+        // there, so a beam that lands on nothing still shows.
+        const ahead = d >= 0 ? Math.min(d, TORCH_BEAMS.hazeAt) : TORCH_BEAMS.hazeAt;
+        const size = tanSpill * ahead;
+        at.copy(lens).addScaledVector(dir, ahead);
+        glare.setMatrixAt(nGlare, matrix.compose(at, camera.quaternion, scale.set(size, size, size)));
+        glare.setColorAt(nGlare++, this.tint.copy(colour).multiplyScalar(T.beam * TORCH_BEAMS.hazeGain));
       }
       // The lit disc where it lands: not under your own real spot, which lights the surface itself.
       if (d >= 0 && !real) {

@@ -579,6 +579,12 @@ export const TORCH_BEAMS = {
   spotMinSize: 0.3,
   lensForward: 0.45,
   lensDown: 0.12,
+  /**
+   * Your own beam on Low, seen from behind the lens (no real spot): a soft glow `hazeAt` m ahead (or where the beam
+   * lands, if nearer), as bright as `hazeGain` times the preset's cone.
+   */
+  hazeAt: 6,
+  hazeGain: 1.5,
   /** The real spot light's falloff (physical: 2). */
   decay: 2,
 } as const;

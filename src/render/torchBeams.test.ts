@@ -111,6 +111,7 @@ describe('weapon torches drawn (M33h, acceptance 4)', () => {
     expect(low.spotLight).toBeNull();
     expect(count(low, 'torch-spots')).toBe(2); // your beam's disc and the bot's
     expect(count(low, 'torch-cones')).toBe(1); // the bot's only
+    expect(count(low, 'torch-glare')).toBe(1); // your beam's glow ahead (the bot points away)
     low.dispose();
     b.dispose();
   });
