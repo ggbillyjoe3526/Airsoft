@@ -31,6 +31,7 @@ const expectColour = (got: THREE.Color, hex: number, what: string): void => {
 };
 
 describe('G2: the accent line', () => {
+  // 64 replica builds: about 3 s alone, so it gets 30 s for a busy machine.
   it('shows every scheme\'s accent on the rifle and the Gas Pistol, lit only where the scheme glows, on both levels', () => {
     for (const [level, detail] of Object.entries(BOTH)) {
       for (const realistic of [false, true]) {
@@ -56,7 +57,7 @@ describe('G2: the accent line', () => {
         }
       }
     }
-  });
+  }, 30_000);
 
   it('glows Ghost\'s cyan line on both replicas and leaves Cobalt\'s painted, and Realistic colours put the glow out', () => {
     expect(SCHEMES.ghost.glow).toBe(true);

@@ -8,7 +8,7 @@ keeps `status` and `attempts` current.
 ## G2 · Replica and part models, item pictures (graphics overhaul, 0.1 Dev 5)
 tier: core
 perf: skip
-touches: src/render/replicaModels.ts, src/render/itemPictures.ts, src/config/itemPictures.ts, src/config/replicaFinish.ts, src/config/schemes.ts
+touches: src/render/replicaModels.ts, src/render/replicaBuilder.ts, src/render/replicaParts.ts, src/render/itemPictures.ts, src/config/itemPictures.ts, src/config/replicaFinish.ts, src/config/schemes.ts
 contract: none (the part tables keep every name; every hand point, the handguard envelope, the optic axis and the muzzle layouts stay as they are)
 acceptance:
   1. The rifle, Gas Pistol and Cyber Pistol and every part in their tables are the concept's blockier, two-tone builds: body, furniture, details, a thin accent line (glowing on Ghost) and steel in the replica's scheme; the Cyber Pistol a white slab with glowing cyan lines and a magenta core over a dark frame, grey and unlit under Realistic colours.
