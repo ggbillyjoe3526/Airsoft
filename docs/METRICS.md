@@ -96,3 +96,5 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-05 | M52 | 1 | build thread | ✓ 27 s | ✓ 468 s | ✗ 195 s (woodland spec night key) | ✓ 39 s | ✓ | ✓ | – | e2e expectation still the old preset | – | – |
 | 2026-10-05 | M52 | 2 | build thread | ✓ 21 s | ✓ 456 s | ✓ 185 s | ✓ 38 s | ✓ | ✓ | 7/8 Accept (core) | QA found the small-map coarsening (fixed); performance review clean | ~1 h | QA, performance, critic |
 | 2026-10-05 | M56 | 1 | build thread | ✓ 22 s | ✓ 545 s | ✓ 222 s | – (skip) | ✓ | ✓ | 7/8 Accept (core) | QA 17 edge tests; docs nits fixed in records | ~45 min | QA, critic |
+| 2026-10-05 | M55 | 1 | build thread | ✓ 27 s | ✗ 608 s (Woodland Pro and Neon Heights by Day guards moved) | ✓ 219 s | ✓ 44 s | ✓ | ✓ | – | the map fixes dealt every guard seed again | – | – |
+| 2026-10-05 | M55 | 2 | build thread | ✓ 21 s | ✓ 644 s | ✓ 255 s | ✓ 54 s | ✓ | ✓ | 7/8 Accept (core) | cause traced round by round; Neon `seatFloors` side effect fixed; Neon day guard 35–55 % recorded; docs rows added in records | ~5 h | QA, performance, critic |
