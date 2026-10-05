@@ -82,10 +82,11 @@ can't start without them.
 Perf environments: `container` (SwiftShader, no GPU; frame times are noise, counts and memory are real), `laptop`
 (the owner's low-spec laptop with CPU throttled 4×; the only environment whose frame times are judged), `ci` (no
 baseline). **Frame-time gating is a manual owner step**: no automation runs `laptop`; the owner runs
-`node pipeline/perf-run.mjs --env laptop` before a release tag (and with `--baseline` at milestones, committed). `pipeline/baseline/<env>.json` (Low, the budget preset) and `<env>-medium.json`, `<env>-high.json` are
+`node pipeline/perf-run.mjs --env laptop` before a release tag (and with `--baseline` at milestones, committed). `pipeline/baseline/<env>.json` (Low, the budget preset) and `<env>-medium.json`, `<env>-high.json`, `<env>-ultra.json` are
 written by `perf-run.mjs --preset all --baseline` on `main` after a merge that changed perf-relevant code, and
-committed. The gate runs Low; `--preset all` runs Low, Medium and High in turn (audit REN-15), so a change that makes
-High dearer is seen too (`--preset high` alone for one).
+committed. The gate runs Low; `--preset all` runs Low, Medium, High and Ultra in turn (audit REN-15; Ultra since G5), so
+a change that makes High or Ultra dearer is seen too (`--preset ultra` alone for one). `--viewport WxH` sets the page's
+size (default 1920x1080).
 
 **The laptop run** (the owner, on the target laptop, from the repository with `npm ci` done and Chrome installed):
 
@@ -96,8 +97,18 @@ node pipeline/perf-run.mjs --env laptop --preset all --baseline
 It builds the e2e bundle, opens a Chrome window (the installed Chrome, `--channel chrome`; `--chromium <path>` for
 another build) on the real GPU (no SwiftShader flags under `--env laptop`), plays the scripted Depot match on each
 preset for 3600 ticks (60 s) with the CPU throttled 4×, and writes `pipeline/baseline/laptop.json`,
-`laptop-medium.json` and `laptop-high.json`. Leave the window alone and the laptop plugged in; commit the three files.
-From then on `node pipeline/gate.mjs --env laptop --perf` judges p95 and p99 against the budget there.
+`laptop-medium.json`, `laptop-high.json` and `laptop-ultra.json`. Leave the window alone and the laptop plugged in;
+commit the four files. From then on `node pipeline/gate.mjs --env laptop --perf` judges p95 and p99 against the budget
+there.
+
+**The desktop run** (G5; the owner's desktop PC, where Ultra is measured at 4K, the same setup as the laptop run):
+
+```
+node pipeline/perf-run.mjs --env desktop --preset all --viewport 3840x2160 --baseline
+```
+
+The same as the laptop run without CPU throttling, at 3840×2160 at pixel ratio 1, writing `pipeline/baseline/desktop.json`
+and `desktop-<preset>.json`. Its frame times are reported, not judged, until the owner sets a 4K target.
 
 ## Task block (`docs/TASKS.md`)
 
