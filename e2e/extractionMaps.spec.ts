@@ -56,8 +56,10 @@ for (const map of [
     expect(drawn).toBeGreaterThanOrEqual(2);
     expect(run.cases.filter((k) => k === 'locker')).toHaveLength(1);
     expect(run.cases.length).toBeGreaterThanOrEqual(7);
-    const groups = await page.evaluate(() => (window as unknown as Airsoft).airsoft.renderer.scene.getObjectByName('exits')?.children.length ?? -1);
-    expect(groups).toBe(drawn);
+    // One group an exit drawn (its ring, wash and board), and every exit's cones and posts in two instanced meshes.
+    const exits = await page.evaluate(() => (window as unknown as Airsoft).airsoft.renderer.scene.getObjectByName('exits')?.children.map((c) => c.name) ?? []);
+    expect(exits.filter((n) => n !== 'exit-cones' && n !== 'exit-posts')).toHaveLength(drawn);
+    expect(exits.filter((n) => n === 'exit-cones' || n === 'exit-posts')).toHaveLength(2);
     expect(errors).toEqual([]);
   });
 }
