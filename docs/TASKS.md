@@ -21,7 +21,7 @@ acceptance:
   2. A bot route search is time-sliced under a per-tick budget (owner decision 12); Woodland and Neon Heights hold no tick over the budget in a probe.
   3. One `NavSearch` is shared, not two (Woodland's 7.7 MB once).
   4. Bot guards stay inside their bands.
-status: build
+status: gates
 attempts: 0
 
 ## M75 · Woodland Medium margin (Audit 2 REN PR 2: REN-03 steps 1 and 4, REN-04)
