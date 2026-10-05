@@ -16,12 +16,12 @@ tier: core
 perf: required
 touches: src/map/mapTypes.ts, src/map/neonHeights.ts, src/config/render.ts, src/config/materials.ts, src/render/mapMeshes.ts, src/render/proceduralTextures.ts, src/render/cityTextures.ts, src/render/cityProps.ts, src/render/mapSigns.ts, src/render/mapDecals.ts
 acceptance:
-  1. Engine features any map can use, driven by map data: a block's finish (painted plaster, metal cladding, tiles, asphalt, paving) and paint colour; city props (arcade cabinet, vending machine, stall, planter, booth, van) as honest boxes with their detail inside them; flat painted markings on floors (MapSign facing '+y', kind 'paint', never glowing). A map that uses none of them builds exactly as before (Depot and Woodland pinned).
+  1. Engine features any map can use, driven by map data: a block's finish (painted plaster, metal cladding, tiles, asphalt, paving) and paint colour; city props (arcade cabinet, vending machine, stall, planter, booth, van) as honest boxes with their detail inside them; flat painted markings on floors (MapSign facing '+y', kind 'paint', never glowing); look-only decor blocks (MapData.decor) that play never reads. A map that uses none of them builds exactly as before (Depot and Woodland pinned).
   2. Neon Heights painted with them by Day and Night: pastel buildings in mint, magenta, cyan and amber on slate, an asphalt avenue with markings, paved yards and lanes, tiled rooms, city props in place of the site props, neon trim; by Night a city sky glow and fewer stars through its lighting overrides.
   3. Play is unchanged: every block's box, ricochet material and walkable floor are the same as before (pinned), so the Neon Heights balance and Pro guards hold; the city's own textures are drawn only when it loads.
   4. Low stays within 100 draw calls and 150k triangles on Neon Heights; screenshots by Day and Night, Low and Medium, for the owner.
-status: gates
-attempts: 1
+status: retry 2
+attempts: 2
 
 ## M48 · Extraction on Woodland and Neon Heights
 tier: core

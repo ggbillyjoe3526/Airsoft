@@ -38,7 +38,7 @@ describe('Neon Heights map data (M34c)', () => {
     expect(innerZ * 2).toBeCloseTo(30, 6);
     // Nothing is built outside the walls.
     for (const b of map.blocks) {
-      if (b.kind === 'floor' && near(top(b), 0) && b.size.z > 30) continue; // the street's strips (M34f) run under the walls
+      if (b.kind === 'floor' && near(top(b), 0) && b.size.x > 40) continue; // the ground slab runs under the walls
       expect(Math.abs(b.center.x) + b.size.x / 2, b.kind).toBeLessThanOrEqual(23.5 + 1e-6);
       expect(Math.abs(b.center.z) + b.size.z / 2, b.kind).toBeLessThanOrEqual(15.5 + 1e-6);
     }

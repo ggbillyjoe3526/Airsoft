@@ -65,13 +65,18 @@ const STYLES: Record<BlockKind, KindStyle> = {
   van: { texture: 'barrier', uv: 'world', tints: [0xf2f0ea, 0x9ad8c0], castShadow: true, grime: true },
 };
 
+/** Every block a map draws: its blocks, then its look-only `decor` (M34f). */
+function drawnBlocks(map: MapData): readonly MapBlock[] {
+  return map.decor ? [...map.blocks, ...map.decor] : map.blocks;
+}
+
 /**
  * The surface textures `map`'s meshes are painted with (M33i): the core set every map has, and the woods' ones its
  * blocks, ground and light fixtures use, so a map draws only what it shows (Depot: the core set, as before).
  */
 export function texturesFor(map: MapData): SurfaceTextureId[] {
   const ids = new Set<SurfaceTextureId>(CORE_SURFACES);
-  for (const b of map.blocks) {
+  for (const b of drawnBlocks(map)) {
     ids.add(styleOf(b).texture);
     if (isCityProp(b.kind) && !b.finish) for (const id of cityPropTextures(b.kind)) ids.add(id);
   }
@@ -80,7 +85,7 @@ export function texturesFor(map: MapData): SurfaceTextureId[] {
     if (l.kind === 'lantern') ids.add('bark');
   }
   if (map.ground) ids.add('groundDetail');
-  if (map.blocks.some(hasCeiling)) ids.add('plaster');
+  if (drawnBlocks(map).some(hasCeiling)) ids.add('plaster');
   if (map.ground?.patches.some((p) => p.surface === 'gravel')) ids.add('stone');
   return [...ids];
 }
@@ -806,7 +811,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
   };
 
   const pieces: { piece: Piece; block: MapBlock }[] = [];
-  for (const block of map.blocks) {
+  for (const block of drawnBlocks(map)) {
     if (block.kind === 'ramp') {
       const style = styleOf(block);
       const color = new THREE.Color().setHex(blockTint(block), THREE.SRGBColorSpace).multiplyScalar(blockShade(block));

@@ -187,16 +187,16 @@ const railX = (z0: number, x0: number, x1: number, base: number): MapBlock => bo
 const railZ = (x0: number, z0: number, z1: number, base: number): MapBlock => box('barrier', x0, x0 + RAIL_THICKNESS, base, base + RAIL, z0, z1);
 
 /** The level: ground and perimeter. The ground is three strips (M34f): paving either side of the avenue's road. */
+/** How far the road's surface stands proud of the street's slab (look only, under the markings' `SIGNS.offset`). */
+const ROAD_LIFT = 0.005;
+
 /**
- * One of the street's three strips (paving, the road, paving), already grown by `SEAM` from its edges: the street's
- * outer edges come out exactly as the one slab's they replace (-23.51, not -23.509999999999998), so the nav grid is laid
- * from the same corner and every cell centre falls on the same side of every floor edge as before (M34f: play
- * unchanged, pinned by `map/neonHeightsArt.test.ts`).
+ * The road: asphalt laid on the street's paving between the kerbs, as look-only decor (`MapData.decor`), so the street
+ * stays the one slab it was and plays exactly as before (M34f; splitting the slab moved the bots' grid and the physics'
+ * floors and shifted the balance guards).
  */
-function streetStrip(x0: number, x1: number, z: number, finish: BlockFinish, paint: number): MapBlock {
-  const b = finished(box('floor', x0 - SEAM, x1 + SEAM, -GROUND_THICKNESS, 0, -z - SEAM, z + SEAM), finish, paint);
-  PRE_GROWN.add(b);
-  return b;
+function road(): MapBlock {
+  return finished(box('floor', ROAD[0], ROAD[1], -GROUND_THICKNESS, ROAD_LIFT, -HALF_Z, HALF_Z), 'asphalt', PAINT.road);
 }
 
 function ground(): MapBlock[] {
@@ -204,9 +204,7 @@ function ground(): MapBlock[] {
   const x = HALF_X + t;
   const z = HALF_Z + t;
   return [
-    streetStrip(-x, ROAD[0], z, 'paving', PAINT.paving),
-    streetStrip(ROAD[0], ROAD[1], z, 'asphalt', PAINT.road),
-    streetStrip(ROAD[1], x, z, 'paving', PAINT.paving),
+    finished(box('floor', -x, x, -GROUND_THICKNESS, 0, -z, z), 'paving', PAINT.paving),
     box('wall', -x, x, 0, PERIMETER_HEIGHT, HALF_Z, z),
     box('wall', -x, x, 0, PERIMETER_HEIGHT, -z, -HALF_Z),
     box('wall', -x, -HALF_X, 0, PERIMETER_HEIGHT, -HALF_Z, HALF_Z),
@@ -765,10 +763,8 @@ const FLIP_RISE: Record<RampRise, RampRise> = { '+x': '+x', '-x': '-x', '+z': '-
  * rounding, be under neither floor and read as a hole.
  */
 const SEAM = 0.01;
-/** Floors already grown by `SEAM` where they were made (the street's strips). */
-const PRE_GROWN = new WeakSet<MapBlock>();
 function blockToWorld(b: MapBlock): MapBlock {
-  const grow = b.kind === 'floor' && !PRE_GROWN.has(b) ? 2 * SEAM : 0;
+  const grow = b.kind === 'floor' ? 2 * SEAM : 0;
   const w: MapBlock = { kind: b.kind, center: toWorld(b.center), size: vec3(b.size.x + grow, b.size.y, b.size.z + grow) };
   if (b.rise) w.rise = FLIP_RISE[b.rise];
   if (b.surface) w.surface = b.surface;
@@ -800,6 +796,7 @@ const ON_STREET = PLAN_BLOCKS.filter((b) => b.kind !== 'floor' && b.kind !== 'ra
 export const NEON_HEIGHTS: MapData = {
   name: 'Neon Heights',
   blocks: PLAN_BLOCKS.map(blockToWorld),
+  decor: [road()].map(blockToWorld),
   killY: -10,
   spawns: [WEST_SPAWNS.map(spawnToWorld), EAST_SPAWNS.map(spawnToWorld)],
   deadZones: [WEST_DEAD_ZONE.map(spawnToWorld), EAST_DEAD_ZONE.map(spawnToWorld)],

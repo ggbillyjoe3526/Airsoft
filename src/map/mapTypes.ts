@@ -136,6 +136,12 @@ export interface MapData {
    */
   signs?: readonly MapSign[];
   /**
+   * Look-only blocks (M34f, render/mapMeshes.ts): drawn as blocks are (kind, finish, paint), never collided, walked,
+   * seen through, heard or mapped; play reads `blocks` only. For a surface laid on a floor, such as a road on a street's
+   * slab, a few millimetres proud of it, so the floor under it stays one block and plays as it did. Absent: none.
+   */
+  decor?: readonly MapBlock[];
+  /**
    * How the map is lit (M33f, render/lightingPreset.ts): the lighting presets it can be played under, the first by
    * default (later a match-start choice picks among them, M34), and `moonOver`, a world point (x, z) the key light is
    * turned towards from the field's centre (keeping its height), so a low moon rims that hill's top. `overrides` tweaks a

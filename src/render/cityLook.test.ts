@@ -90,6 +90,18 @@ describe('a block finish and paint (M34f)', () => {
     const names = group.children.map((m) => m.name);
     for (const id of ['cladding', 'glass', 'barrier', 'planks']) expect(names.some((n) => n.startsWith(`map-${id}`)), id).toBe(true);
   });
+
+  it('draws look-only decor as blocks are, with its textures, without it among the blocks play reads', () => {
+    const road = block('floor', 0, 4, -0.05, 0.005, 0, 4, { finish: 'asphalt' });
+    const plain = buildMapMeshes(OPEN_FIELD, stubTextures(texturesFor(OPEN_FIELD)), LOOK, null);
+    const withRoad: MapData = { ...OPEN_FIELD, decor: [road] };
+    expect(texturesFor(withRoad)).toContain('asphalt');
+    expect(texturesFor(OPEN_FIELD)).not.toContain('asphalt');
+    const group = buildMapMeshes(withRoad, stubTextures(texturesFor(withRoad)), LOOK, null);
+    expect(group.children.map((m) => m.name).filter((n) => n.startsWith('map-asphalt'))).toHaveLength(1);
+    expect(group.children.length).toBe(plain.children.length + 1);
+    expect(withRoad.blocks).toBe(OPEN_FIELD.blocks);
+  });
 });
 
 describe('the city props (M34f)', () => {

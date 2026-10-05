@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { blockMaterial } from '../config/materials';
 import { NAV } from '../config/nav';
-import { LIGHTING_PRESETS } from '../config/render';
+import { LIGHTING_PRESETS, SIGNS } from '../config/render';
 import { TEAM_COLOUR_SETS } from '../config/teams';
 import { buildNavGrid } from '../nav/navGrid';
 import { blockTint, texturesFor } from '../render/mapMeshes';
@@ -18,31 +18,18 @@ function fnv(text: string): string {
   return h.toString(16).padStart(8, '0');
 }
 
-const r = (v: number): string => v.toFixed(3);
 const isStreet = (b: MapBlock): boolean => b.kind === 'floor' && Math.abs(b.center.y + b.size.y / 2) < 1e-6;
 
 /**
- * What Neon Heights is to play: every block but the street's slab as its box, what BBs make of it and its slope and
- * footsteps; the street as the area it covers. Its look (finish, paint, kind among the props) is left out.
+ * What Neon Heights is to play, exactly and in order (physics builds its colliders in this order): every block's box,
+ * what BBs make of it, whether it is walked on and its slope and footsteps. Its look (finish, paint, which prop kind) is
+ * left out.
  */
-export function playFingerprint(blocks: readonly MapBlock[]): { blocks: string; street: string } {
-  const rows = blocks
-    .filter((b) => !isStreet(b))
-    .map((b) => [r(b.center.x), r(b.center.y), r(b.center.z), r(b.size.x), r(b.size.y), r(b.size.z), blockMaterial(b), b.kind === 'floor' || b.kind === 'ramp' ? b.kind : 'solid', b.rise ?? '', b.surface ?? ''].join(','))
-    .sort();
-  const street = blocks.filter(isStreet);
-  const x0 = Math.min(...street.map((b) => b.center.x - b.size.x / 2));
-  const x1 = Math.max(...street.map((b) => b.center.x + b.size.x / 2));
-  const z0 = Math.min(...street.map((b) => b.center.z - b.size.z / 2));
-  const z1 = Math.max(...street.map((b) => b.center.z + b.size.z / 2));
-  // Every point of the street's bounds, on a 10 cm grid, under some piece of it: no gap where it was split.
-  let gaps = 0;
-  for (let x = x0 + 0.05; x < x1; x += 0.1) {
-    for (let z = z0 + 0.05; z < z1; z += 0.1) {
-      if (!street.some((b) => Math.abs(x - b.center.x) <= b.size.x / 2 && Math.abs(z - b.center.z) <= b.size.z / 2)) gaps++;
-    }
-  }
-  return { blocks: `${rows.length}:${fnv(rows.join('|'))}`, street: `${[r(x0), r(x1), r(z0), r(z1)].join(',')} gaps ${gaps}` };
+export function playFingerprint(blocks: readonly MapBlock[]): string {
+  const rows = blocks.map((b) =>
+    [b.center.x, b.center.y, b.center.z, b.size.x, b.size.y, b.size.z, blockMaterial(b), b.kind === 'floor' || b.kind === 'ramp' ? b.kind : 'solid', b.rise ?? '', b.surface ?? ''].join(','),
+  );
+  return `${rows.length}:${fnv(rows.join('|'))}`;
 }
 
 /**
@@ -56,24 +43,30 @@ export function navFingerprint(): string {
 }
 
 describe('Neon Heights art (M34f)', () => {
-  it('plays exactly as before its art: the same boxes, ricochets, slopes and footsteps, the same street', () => {
-    // Pinned from main before M34f (2026-10-05, 8b336aa): 280 blocks besides the street, which was one slab.
-    expect(playFingerprint(NEON_HEIGHTS.blocks)).toEqual({ blocks: '280:6750a11a', street: '-23.510,23.510,-15.510,15.510 gaps 0' });
+  it('plays exactly as before its art: the same boxes in the same order, ricochets, slopes and footsteps', () => {
+    // Pinned from main before M34f (2026-10-05, 4780b4a): 281 blocks, the street one slab.
+    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('281:2402d1d3');
   });
 
   it('gives the bots exactly the same nav grid as before its art', () => {
-    // Pinned from main before M34f (2026-10-05, 7ec2c27). The street split into three strips once laid the grid from
-    // -23.509999999999998 instead of -23.51 and lifted the Pro attackers from 55 % to 64 %.
+    // Pinned from main before M34f (2026-10-05, 7ec2c27). The street split into three strips once laid this grid from
+    // -23.509999999999998 instead of -23.51 and lifted the Pro attackers from 55 % to 64 %; the road is decor now.
     expect(navFingerprint()).toBe('52822:7b34b809');
   });
 
-  it('is a city: every wall, floor and rail finished, the street asphalt and paving, no site toilet or container left', () => {
+  it('is a city: every wall, floor and rail finished, the street paving with an asphalt road, no site toilet or container left', () => {
     for (const b of NEON_HEIGHTS.blocks) {
       if (b.kind === 'wall' || b.kind === 'barrier' || b.kind === 'floor') expect(b.finish, `${b.kind} at ${b.center.x},${b.center.y},${b.center.z}`).toBeDefined();
       expect(['toilet', 'container']).not.toContain(b.kind);
     }
     const street = NEON_HEIGHTS.blocks.filter(isStreet);
-    expect(street.map((b) => b.finish)).toEqual(['paving', 'asphalt', 'paving']);
+    expect(street.map((b) => b.finish)).toEqual(['paving']);
+    // The road is look-only decor on the slab, a few millimetres proud of it, under the markings.
+    const decor = NEON_HEIGHTS.decor ?? [];
+    expect(decor.map((b) => [b.kind, b.finish])).toEqual([['floor', 'asphalt']]);
+    const roadTop = decor[0]!.center.y + decor[0]!.size.y / 2;
+    expect(roadTop).toBeGreaterThan(0);
+    expect(roadTop).toBeLessThan(SIGNS.offset);
     const kinds = new Set(NEON_HEIGHTS.blocks.map((b) => b.kind));
     for (const k of ['cabinet', 'vending', 'stall', 'planter', 'booth', 'van'] as const) expect(kinds.has(k), k).toBe(true);
     expect(new Set(texturesFor(NEON_HEIGHTS))).toEqual(
