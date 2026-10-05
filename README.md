@@ -282,3 +282,8 @@ docs/        vision, architecture, decisions, assets, ideas, known issues, revie
 
 See `CLAUDE.md` for the project guide and `docs/` for design notes. `docs/PLAYTEST.md` is the step-by-step
 playtest checklist.
+
+## Licence
+
+The code is released under the [MIT licence](LICENSE). Third-party assets and libraries keep their own licences;
+every external asset is listed with its licence in [docs/ASSETS.md](docs/ASSETS.md).
