@@ -12,24 +12,6 @@ first (M33 changes both).
 
 attempts: 0
 
-## M41 · What got you, Pro tips and tuning
-tier: ui
-perf: skip
-touches: src/ui/, src/config/matchInfo.ts, src/sim/events.ts, src/sim/hitFacts.ts, src/game.ts, src/config/tutorial.ts, src/config/bots.ts, src/ai/bot.ts, src/ai/botSenses.ts, src/ai/botController.ts, src/matchSession.ts, src/render/matchPresentation.ts, src/settings/storage.ts, src/style.css
-acceptance:
-  1. After you're hit, a card shows where the shot came from, whether that bot was holding the angle, how long you were in view and whether you were moving.
-  2. A setting turns it on for every difficulty; on by default only on Pro.
-  3. Pro briefing tips (slice corners, short peeks, listen).
-  4. Tuning numbers for Pro in one place, ready for the owner's playtest per map.
-status: open
-attempts: 0
-
-The Extraction plan (owner approved 2026-10-04 20:51 and 20:54 UTC: every default except question 3, one automatic
-respawn per run; the plan in the project's shared files `research/extraction-mode-2026-10-04.md`). Everything here is
-tagged dev with M35's content tag until the owner says it's done. M33 owns the map framework (MapData gains only an
-optional `extraction` block), the Pro thread owns held angles and team play (M37, M38): changes there go through the
-coordinator.
-
 ## M45 · Extraction: waves and regen points
 tier: core
 perf: required
