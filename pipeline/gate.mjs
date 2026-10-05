@@ -57,7 +57,8 @@ const options = {
   only: value('--only', null),
 };
 if (!['all', 'fast', 'slow'].includes(options.tests)) throw new Error(`gate: --tests takes all, fast or slow, not ${options.tests}`);
-if (options.shard !== null && !/^\d+\/\d+$/.test(options.shard)) throw new Error(`gate: --shard takes k/n, not ${options.shard}`);
+const shardOk = (s) => { const m = /^(\d+)\/(\d+)$/.exec(s); return m !== null && Number(m[1]) >= 1 && Number(m[1]) <= Number(m[2]); };
+if (options.shard !== null && !shardOk(options.shard)) throw new Error(`gate: --shard takes k/n with 1 ≤ k ≤ n, not ${options.shard}`);
 if (options.only !== null && options.only !== 'tests') throw new Error(`gate: --only takes tests, not ${options.only}`);
 const skipAllBut = (gate) => options.only !== null && options.only !== gate;
 
