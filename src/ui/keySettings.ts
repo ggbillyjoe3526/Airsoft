@@ -35,8 +35,23 @@ export class KeySettings {
   private readonly note: HTMLParagraphElement;
   private readonly layoutNote: HTMLParagraphElement;
   private readonly resetButton: HTMLButtonElement;
-  /** The box waiting for a key press, if any. */
-  private listening: Box | null = null;
+  private waiting: Box | null = null;
+  /**
+   * The box waiting for a key press, if any. The wheel listener (capturing, so it must be non-passive to stop the page
+   * scrolling) lives only while a box waits: on `window` for the page's whole life it would hold up every scroll of a
+   * long Settings page or the Armory list (M64, audit UI-14).
+   */
+  private get listening(): Box | null {
+    return this.waiting;
+  }
+
+  private set listening(box: Box | null) {
+    if ((box === null) !== (this.waiting === null)) {
+      if (box === null) window.removeEventListener('wheel', this.onWheel, true);
+      else window.addEventListener('wheel', this.onWheel, { capture: true, passive: false });
+    }
+    this.waiting = box;
+  }
   /**
    * The mouse button just bound (until the next press): its click, menu or browser navigation (the side buttons go back
    * and forward) must not follow.
@@ -99,7 +114,6 @@ export class KeySettings {
     window.addEventListener('mouseup', this.onMouseUp, true);
     window.addEventListener('auxclick', this.swallowBound, true);
     window.addEventListener('contextmenu', this.swallowBound, true);
-    window.addEventListener('wheel', this.onWheel, { capture: true, passive: false });
     this.refresh();
   }
 
@@ -122,7 +136,7 @@ export class KeySettings {
     window.removeEventListener('mouseup', this.onMouseUp, true);
     window.removeEventListener('auxclick', this.swallowBound, true);
     window.removeEventListener('contextmenu', this.swallowBound, true);
-    window.removeEventListener('wheel', this.onWheel, true);
+    this.listening = null; // takes the wheel listener off
     this.disarmReset();
     this.root.remove();
   }

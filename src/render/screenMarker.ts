@@ -13,10 +13,11 @@ const v = new THREE.Vector3();
 
 /**
  * Projects `point` onto a `width` × `height` view. Points off screen (or behind the camera) are pinned
- * `margin` pixels inside the edge, in the direction you'd turn to face them. Writes into `out`.
+ * `margin` pixels inside the edge, in the direction you'd turn to face them. Writes into `out`. The camera's matrices
+ * must be current: the caller calls `camera.updateMatrixWorld()` once a frame, after the camera is placed, before its
+ * markers (MatchPresentation.frame; M64, audit UI-13), not once per marker here.
  */
 export function projectMarker(point: THREE.Vector3, camera: THREE.Camera, width: number, height: number, margin: number, out: ScreenMarker): ScreenMarker {
-  camera.updateMatrixWorld(); // the camera may have moved since it was last rendered
   v.copy(point).applyMatrix4(camera.matrixWorldInverse);
   const behind = v.z > 0; // camera space looks down -Z
   v.applyMatrix4(camera.projectionMatrix); // to clip space, divided by w: NDC

@@ -73,12 +73,37 @@ describe('the case prompt on screen (M44)', () => {
     prompt.update(runWith({ inReach: 0, opening: 0, openProgress: 1 }), 2);
     expect(text()).toBe('Opening the field case');
     expect(bar().hidden).toBe(false);
-    expect(bar().children[0]!.style.width).toBe('25%');
+    // One transition for the rest of the opening: full in the 3 s left of the field case's 4.
+    expect(bar().children[0]!.style.transitionDuration).toBe('3s');
+    expect(bar().children[0]!.style.transform).toBe('scaleX(1)');
     prompt.update(runWith({ inReach: 1, opening: 1, openProgress: 3.5 }), 3);
     expect(text()).toBe("Opening the marshal's locker");
-    expect(bar().children[0]!.style.width).toBe('50%');
+    expect(bar().children[0]!.style.transitionDuration).toBe('3.5s'); // another case: the bar runs again from where it is
     prompt.update(runWith({}), 4);
     expect(root.hidden).toBe(true);
+  });
+
+  it('writes the bar once or twice for a whole opening, not once per percent (audit UI-11)', () => {
+    let clock = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    const fill = bar().children[0]!;
+    let writes = 0;
+    fill.style = new Proxy({} as Record<string, string>, {
+      set(target, property: string, value: string) {
+        writes++;
+        target[property] = value;
+        return true;
+      },
+    });
+    for (let tick = 0; tick <= 240; tick++) {
+      clock = (tick / 60) * 1000;
+      prompt.update(runWith({ inReach: 0, opening: 0, openProgress: tick / 60 }), tick / 60);
+    }
+    expect(writes).toBeLessThanOrEqual(4);
+    expect(fill.style.transitionDuration).toBe('4s');
+    prompt.update(runWith({}), 5);
+    expect(fill.style.transform).toBe('scaleX(0)'); // let go: the bar is rewound for the next try
+    vi.restoreAllMocks();
   });
 
   it('says what a case held for a moment, then goes back to the prompt or away; and the drop note the same way', () => {

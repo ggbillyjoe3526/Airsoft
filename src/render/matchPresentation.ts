@@ -452,6 +452,8 @@ export class MatchPresentation {
       this.feedback.setSpectating('');
     }
     this.watched = watched;
+    // The camera is placed now (by the session, or the spectator above): its matrices are made once for every marker below.
+    camera.updateMatrixWorld();
     this.boardUp = this.boardView(boardHeld) !== 'none';
     this.characters.update(alpha, dt, spectating ? -1 : this.player.id, camera.position);
     this.flag.update(this.state.round, this.state.time);
