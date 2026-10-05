@@ -1,5 +1,6 @@
+import type { AmbienceId } from '../config/audio';
 import type { LightingPreset, LightingPresetId } from '../config/render';
-import type { FloorSurface } from '../config/sounds';
+import type { BlockSurface } from '../config/sounds';
 import type { Vec3 } from '../sim/vec';
 import type { Bush } from './foliage';
 import type { MapLight } from './nightSight';
@@ -70,7 +71,7 @@ export interface MapBlock {
    */
   rise?: RampRise;
   /** Floors and ramps: what footsteps on it sound like (concrete if not given). Presentation only. */
-  surface?: FloorSurface;
+  surface?: BlockSurface;
   /**
    * Its finish (M34f): a finished block is drawn as one box in that surface (a wall keeps its coping), not as its kind's
    * prop. Absent: its kind's look, as before.
@@ -143,10 +144,15 @@ export interface MapData {
   lighting?: MapLighting;
   /**
    * What the ground is (M33i, map/groundSurfaces.ts): grass, leaf litter, earth, gravel or boards, on one grid the
-   * terrain is painted from and footsteps will read (M33j), so what you see and hear underfoot agree. Absent: the ground
-   * is drawn as before and nothing reads it.
+   * terrain is painted from and footsteps read (M33j, audio/soundMaterials.ts), so what you see and hear underfoot
+   * agree. Absent: the ground is drawn as before and footsteps on it are concrete.
    */
   ground?: MapGround;
+  /**
+   * What the field sounds like round you (M33j, config/audio.ts AMBIENCES): its bed, and its calls by day (birds) or by
+   * night (never birds), picked by the lighting preset's night flag. Absent: the yard, as on Depot.
+   */
+  ambience?: AmbienceId;
   /**
    * Extraction (M43): where a squad goes in, where it can get out and where the home team starts. Maps without one
    * can't be played in Extraction.
@@ -174,7 +180,7 @@ export interface Overlook {
   from: Vec3[];
 }
 
-/** What a patch of ground is (M33i): what it looks like, and later what it sounds like underfoot (M33j). */
+/** What a patch of ground is (M33i): what it looks like, and what it sounds like underfoot (M33j). */
 export type GroundSurface = 'grass' | 'leaves' | 'earth' | 'gravel' | 'wood';
 
 /**

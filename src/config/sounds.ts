@@ -1,4 +1,5 @@
 import type { SoundRecipe } from '../audio/dsp';
+import type { GroundSurface } from '../map/mapTypes';
 
 /**
  * Every sound effect as a recipe (audio/dsp.ts): layers of filtered noise, gliding tones and struck resonances,
@@ -15,13 +16,21 @@ export type ShotProfile = 'electric' | 'gas' | 'spring' | 'cyber';
 /** Every shot profile, for the audio tests that walk them all (test only). */
 export const SHOT_PROFILES: readonly ShotProfile[] = ['electric', 'gas', 'spring', 'cyber'];
 
-/** What a footstep lands on (MapBlock.surface; floors and ramps without one are concrete). */
-export type FloorSurface = 'concrete' | 'metal';
+/** What a floor or ramp block is underfoot (MapBlock.surface; without one, concrete). */
+export type BlockSurface = 'concrete' | 'metal';
+
+/**
+ * What a footstep lands on: a floor or ramp block's surface, or on terrain the ground's (M33j: MapData.ground, the grid
+ * the terrain is painted from).
+ */
+export type FloorSurface = BlockSurface | GroundSurface;
 
 /** What a BB ticks off (from the kind of block it hit; see audio/soundMaterials.ts). */
 export type ImpactMaterial = 'concrete' | 'metal' | 'wood' | 'earth';
 
 export type FootstepPace = 'run' | 'sprint' | 'land';
+/** Every footstep pace, for the cues a surface needs (M33j). */
+export const FOOTSTEP_PACES: readonly FootstepPace[] = ['run', 'sprint', 'land'];
 
 export type SoundCue =
   | `shot.${ShotProfile}`
@@ -56,7 +65,9 @@ export type SoundCue =
   /** Extraction (M43): the exit's timer box beeping each second of the count. */
   | 'count.beep'
   /** A bird somewhere round the yard: the ambience's sparse one-shots (audit CORE-34). */
-  | 'ambience.bird';
+  | 'ambience.bird'
+  /** An owl somewhere in the woods at night (M33j): the night ambience's sparse one-shots. */
+  | 'ambience.owl';
 
 /** Typical spreads: shots and mechanisms vary a little, steps and impacts more. */
 const TIGHT = { pitchSpread: 0.04, timeSpread: 0.08, gainSpread: 0.1 } as const;
@@ -65,6 +76,62 @@ const LOOSE = { pitchSpread: 0.12, timeSpread: 0.15, gainSpread: 0.2 } as const;
 /** A short noise click: the attack of a latch, a trigger or a BB's strike. */
 function click(at: number, hz: number, gain: number, decay = 0.006): SoundRecipe['layers'][number] {
   return { kind: 'noise', at, attack: 0.0004, decay, gain, filter: { type: 'bandpass', hz, q: 1.4 } };
+}
+
+/**
+ * How loud each ground's own layers are (M33j), set so every surface's step is as loud as concrete's within 1.5 dB
+ * (audio.test.ts): footsteps are information, so a softer ground never hides anyone.
+ */
+const GROUND_STEP_LEVEL: Readonly<Record<GroundSurface, number>> = { grass: 1.12, leaves: 1, earth: 1.05, gravel: 0.8, wood: 0.95 };
+
+/**
+ * What a boot does to the ground underfoot (M33j), after the heel's thump: grass swishes with a low crunch, dry leaves
+ * crackle above 3 kHz, earth gives a dull thud, gravel a scatter of granular clicks, boards a hollow knock. `loud` and
+ * `long` scale levels and decays as for a sprint or a landing.
+ */
+function groundUnderfoot(surface: GroundSurface, loud: number, long: number): SoundRecipe['layers'][number][] {
+  switch (surface) {
+    case 'grass':
+      return [
+        { kind: 'noise', attack: 0.01, decay: 0.09 * long, gain: 0.25 * loud, filter: { type: 'bandpass', hz: 1500, hzTo: 1000, q: 0.6 } },
+        { kind: 'noise', attack: 0.003, decay: 0.04 * long, gain: 0.5 * loud, filter: { type: 'lowpass', hz: 450, q: 0.8 } },
+        { kind: 'noise', at: 0.015, attack: 0.004, decay: 0.04, gain: 0.06 * loud, filter: { type: 'highpass', hz: 4000, q: 0.6 } },
+      ];
+    case 'leaves':
+      return [
+        click(0, 3600, 0.3 * loud, 0.005),
+        click(0.009, 5200, 0.24 * loud, 0.004),
+        click(0.02, 4300, 0.26 * loud, 0.005),
+        click(0.031, 6100, 0.18 * loud, 0.004),
+        click(0.047, 3900, 0.16 * loud, 0.005),
+        click(0.066, 5600, 0.1 * loud, 0.004),
+        { kind: 'noise', attack: 0.006, decay: 0.08 * long, gain: 0.22 * loud, filter: { type: 'highpass', hz: 3000, q: 0.7 } },
+        { kind: 'noise', attack: 0.003, decay: 0.05 * long, gain: 0.3 * loud, filter: { type: 'bandpass', hz: 1100, q: 0.9 } },
+      ];
+    case 'earth':
+      return [
+        { kind: 'noise', attack: 0.002, decay: 0.06 * long, gain: 0.45 * loud, filter: { type: 'lowpass', hz: 500, q: 0.9 } },
+        { kind: 'noise', attack: 0.003, decay: 0.045 * long, gain: 0.5 * loud, filter: { type: 'bandpass', hz: 900, hzTo: 650, q: 1 } },
+      ];
+    case 'gravel':
+      return [
+        click(0, 2600, 0.5 * loud, 0.006),
+        click(0.006, 3800, 0.4 * loud, 0.005),
+        click(0.013, 2200, 0.45 * loud, 0.007),
+        click(0.019, 4400, 0.32 * loud, 0.005),
+        click(0.027, 3000, 0.38 * loud, 0.006),
+        click(0.036, 4000, 0.26 * loud, 0.005),
+        click(0.047, 2700, 0.22 * loud, 0.006),
+        click(0.06, 3400, 0.16 * loud, 0.005),
+        { kind: 'noise', attack: 0.002, decay: 0.07 * long, gain: 0.4 * loud, filter: { type: 'bandpass', hz: 3000, q: 0.7 } },
+        { kind: 'noise', attack: 0.002, decay: 0.04 * long, gain: 0.12 * loud, filter: { type: 'lowpass', hz: 700, q: 0.8 } },
+      ];
+    case 'wood':
+      return [
+        { kind: 'modes', gain: 0.17 * loud, modes: [{ hz: 170, decay: 0.15 * long, gain: 0.8 }, { hz: 410, decay: 0.1 * long, gain: 0.6 }, { hz: 980, decay: 0.04, gain: 0.4 }, { hz: 2100, decay: 0.025, gain: 0.2 }] },
+        { kind: 'noise', attack: 0.002, decay: 0.03 * long, gain: 0.42 * loud, filter: { type: 'bandpass', hz: 1300, q: 1.2 } },
+      ];
+  }
 }
 
 /** A footstep on `surface` at `pace` (run, sprint, or landing a jump). */
@@ -81,12 +148,14 @@ function step(surface: FloorSurface, pace: FootstepPace): SoundRecipe {
       { kind: 'noise', attack: 0.003, decay: 0.06 * long, gain: 0.5 * loud, filter: { type: 'bandpass', hz: 950, hzTo: 700, q: 1.1 } },
       { kind: 'noise', at: 0.008, attack: 0.002, decay: 0.035, gain: 0.12 * loud, filter: { type: 'highpass', hz: 3600, q: 0.7 } },
     );
-  } else {
+  } else if (surface === 'metal') {
     // A steel ramp plate: a hollow clank that rings on, and a sharper scuff.
     layers.push(
       { kind: 'modes', gain: 0.13 * loud, modes: [{ hz: 290, decay: 0.2 * long, gain: 0.8 }, { hz: 705, decay: 0.14 * long, gain: 0.5 }, { hz: 1580, decay: 0.09, gain: 0.35 }, { hz: 2930, decay: 0.05, gain: 0.2 }] },
       { kind: 'noise', attack: 0.002, decay: 0.035 * long, gain: 0.32 * loud, filter: { type: 'bandpass', hz: 1700, q: 1.2 } },
     );
+  } else {
+    layers.push(...groundUnderfoot(surface, loud * GROUND_STEP_LEVEL[surface], long));
   }
   if (pace !== 'run') {
     // Sprinting and landing shake the kit: magazines and buckles rattle in their pouches.
@@ -420,7 +489,74 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
    * table, so the seeded synthesis of every earlier cue is unchanged.
    */
   torchClick: { layers: [click(0, 1500, 0.28, 0.005), { kind: 'modes', gain: 0.1, modes: [{ hz: 1900, decay: 0.012, gain: 1 }] }], ...TIGHT },
+
+  // ---- Only for the maps that use them (M33j: MAP_CUE_SEEDS) --------------------------------------
+  'step.grass.run': step('grass', 'run'),
+  'step.grass.sprint': step('grass', 'sprint'),
+  'step.grass.land': step('grass', 'land'),
+  'step.leaves.run': step('leaves', 'run'),
+  'step.leaves.sprint': step('leaves', 'sprint'),
+  'step.leaves.land': step('leaves', 'land'),
+  'step.earth.run': step('earth', 'run'),
+  'step.earth.sprint': step('earth', 'sprint'),
+  'step.earth.land': step('earth', 'land'),
+  'step.gravel.run': step('gravel', 'run'),
+  'step.gravel.sprint': step('gravel', 'sprint'),
+  'step.gravel.land': step('gravel', 'land'),
+  'step.wood.run': step('wood', 'run'),
+  'step.wood.sprint': step('wood', 'sprint'),
+  'step.wood.land': step('wood', 'land'),
+  /**
+   * A tawny owl far off in the trees (M33j): a soft "hoo", a pause, then a longer wavering "hoo-oo" a little lower,
+   * round 350–420 Hz with a breath of air on each. Gentle and a touch comic, never eerie.
+   */
+  'ambience.owl': {
+    layers: [
+      { kind: 'tone', wave: 'sine', attack: 0.06, decay: 0.3, gain: 0.55, hz: 395, hzTo: 380 },
+      { kind: 'tone', wave: 'sine', attack: 0.06, decay: 0.3, gain: 0.08, hz: 790, hzTo: 760 },
+      { kind: 'noise', attack: 0.05, decay: 0.25, gain: 0.05, filter: { type: 'bandpass', hz: 390, q: 3 } },
+      { kind: 'tone', wave: 'sine', at: 0.62, attack: 0.08, decay: 0.55, gain: 0.5, hz: 420, hzTo: 355, glide: 0.5 },
+      { kind: 'tone', wave: 'sine', at: 0.62, attack: 0.08, decay: 0.5, gain: 0.07, hz: 840, hzTo: 710, glide: 0.5 },
+      { kind: 'noise', at: 0.62, attack: 0.06, decay: 0.4, gain: 0.05, filter: { type: 'bandpass', hz: 380, q: 3 } },
+    ],
+    pitchSpread: 0.04,
+    timeSpread: 0.1,
+    gainSpread: 0.1,
+  },
 };
+
+/**
+ * The cues only some maps play (M33j): the ground's footsteps and the woods' owl. They come last in SOUNDS and are never
+ * rendered on the title screen: a map that plays them has them rendered as it loads (AudioEngine.prepare), each from
+ * its own seed here, not the stream the title screen's cues share in table order, so adding one leaves every other
+ * cue's sound as it was.
+ */
+export const MAP_CUE_SEEDS: Readonly<Partial<Record<SoundCue, number>>> = {
+  'step.grass.run': 3311,
+  'step.grass.sprint': 3312,
+  'step.grass.land': 3313,
+  'step.leaves.run': 3321,
+  'step.leaves.sprint': 3322,
+  'step.leaves.land': 3323,
+  'step.earth.run': 3331,
+  'step.earth.sprint': 3332,
+  'step.earth.land': 3333,
+  'step.gravel.run': 3341,
+  'step.gravel.sprint': 3342,
+  'step.gravel.land': 3343,
+  'step.wood.run': 3351,
+  'step.wood.sprint': 3352,
+  'step.wood.land': 3353,
+  'ambience.owl': 3361,
+};
+
+/** Whether `cue` is rendered only for a map that plays it (MAP_CUE_SEEDS). */
+export function isMapCue(cue: SoundCue): boolean {
+  return MAP_CUE_SEEDS[cue] !== undefined;
+}
+
+/** The cues the title screen renders for every match, in table order (they share one seeded stream). */
+export const TITLE_CUES: readonly SoundCue[] = (Object.keys(SOUNDS) as SoundCue[]).filter((c) => !isMapCue(c));
 
 /** The cue each kind of shot, mechanism, step or impact plays. */
 export const cues = {

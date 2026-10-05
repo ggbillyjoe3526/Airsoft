@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Sfx, type SfxSetup } from '../audio/sfx';
+import { soundscapeOf } from '../audio/soundscape';
 import type { MotionScale } from '../config/accessibility';
 import { FIGURE } from '../config/characters';
 import { impactMaterialAt } from '../audio/soundMaterials';
@@ -114,8 +115,11 @@ export class CombatPresentation {
     private readonly query: WorldQuery,
     teamColor: number,
     tickSeconds: number,
-    /** The map's blocks and sloping ground (M33c): what a BB's impact sounds and puffs like, and what you walk on. */
-    private readonly field: Pick<MapData, 'blocks' | 'terrain'>,
+    /**
+     * The map: its blocks and sloping ground (M33c), what a BB's impact sounds and puffs like; and what it sounds like
+     * (M33j: its ambience, its ground underfoot and its fires).
+     */
+    private readonly field: MapData,
     audio: SfxSetup,
     keyName: (action: Action) => string,
     crosshair: CrosshairSettings,
@@ -171,9 +175,14 @@ export class CombatPresentation {
     this.sfx.unlock();
   }
 
-  /** The map's light (M33h, LightingPreset): the held replica is lit by its `viewmodel` group, the day's or the night's. */
+  /**
+   * The map's light (M33h, LightingPreset): the held replica is lit by its `viewmodel` group, the day's or the night's,
+   * and the field sounds as it does by day or at night (M33j: its ambience, its fires; the map's own sounds are rendered
+   * now, as the match loads).
+   */
   setLighting(preset: LightingPreset): void {
     this.viewmodel.setLighting(preset);
+    this.sfx.setScene(soundscapeOf(this.field, preset.night));
   }
 
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */

@@ -409,3 +409,65 @@ test('Woodland on Medium at 5v5: within 120 draw calls and 200k triangles, ember
   expect(spin.after).toBe(spin.before);
   expect(errors).toEqual([]);
 });
+
+type SoundView = {
+  airsoft: {
+    state: { tick: number } | null;
+    audio: { ctx: { state: string } | null; buffers: Map<string, { length: number }[]>; loops: Map<string, { length: number }> };
+    session: { combat: { sfx: { bed: { loop: boolean; buffer: { length: number } }[]; scene: { fires: unknown[]; ambience: { call: { cue: string } | null } } } } };
+  };
+};
+
+/**
+ * M33j QA: a Woodland match sounds like the woods at night (Dev content on): the wind and insects as beds and a crackle
+ * at each camp fire are playing, the owl and every ground's steps are rendered (and only for this map), no birds, no
+ * console errors. Read through the e2e build's `window.airsoft`; the memory the map's own sounds hold is reported.
+ */
+test('Woodland sounds like the woods at night: its beds, fires, owl and ground steps, and no console errors', async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=3');
+  await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start' }).click();
+  const setup = page.locator('.menu-setup');
+  await setup.getByRole('button', { name: /Settings/i }).click();
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
+  await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
+  await page.keyboard.press('Escape');
+  await setup.getByRole('button', { name: /Map/i }).click();
+  await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Woodland/i }).click();
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
+  await expect.poll(() => page.evaluate(() => (window as unknown as SoundView).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
+
+  const heard = await page.evaluate(() => {
+    const { audio, session } = (window as unknown as SoundView).airsoft;
+    const sfx = session.combat.sfx;
+    const mapCues = [...audio.buffers.keys()].filter((c) => /^step\.(grass|leaves|earth|gravel|wood)\./.test(c) || c === 'ambience.owl');
+    const bytes = (n: number): number => n * 4;
+    const cueBytes = mapCues.reduce((sum, c) => sum + audio.buffers.get(c)!.reduce((s, b) => s + bytes(b.length), 0), 0);
+    const loopBytes = [...audio.loops.values()].reduce((sum, b) => sum + bytes(b.length), 0);
+    return {
+      context: audio.ctx?.state ?? 'none',
+      loops: [...audio.loops.keys()].sort(),
+      playing: sfx.bed.filter((s) => s.loop).length,
+      fires: sfx.scene.fires.length,
+      call: sfx.scene.ambience.call?.cue ?? null,
+      mapCues: mapCues.length,
+      megabytes: (cueBytes + loopBytes) / 1e6,
+    };
+  });
+  console.log(`Woodland's own sounds: ${heard.megabytes.toFixed(2)} MB (${heard.mapCues} cues, loops ${heard.loops.join(', ')}), context ${heard.context}`);
+  expect(heard.loops).toEqual(['crackle', 'insects', 'pines']);
+  expect(heard.fires).toBe(2);
+  expect(heard.playing).toBe(4 + heard.fires);
+  expect(heard.call).toBe('ambience.owl');
+  expect(heard.mapCues).toBe(16);
+  expect(heard.megabytes).toBeLessThan(7.5);
+  expect(errors).toEqual([]);
+});
