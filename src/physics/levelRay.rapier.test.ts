@@ -81,7 +81,8 @@ function insideBox(b: MapBlock, p: Vec3, margin: number): boolean {
   );
 }
 
-describe('level ray casts (sim/levelRay.ts) against Rapier (audit SIM-01, SIM-18)', () => {
+// 15 s a test (audit CORE-05, KNOWN_ISSUES): thousands of rays and BB flights each, over vitest's 5 s on a loaded machine.
+describe('level ray casts (sim/levelRay.ts) against Rapier (audit SIM-01, SIM-18)', { timeout: 15_000 }, () => {
   beforeAll(async () => {
     await initPhysics();
   });
