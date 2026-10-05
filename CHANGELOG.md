@@ -90,6 +90,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M34f** · Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade, vending, stall, planter, booth, van); painted ground markings; plaster ceilings under raised floors
 - **M34f** · Neon Heights: pastel buildings (mint, pink, cyan, amber on slate), paved street with asphalt, neon trim, lit arcade cabinets; night: softer purple sky with city lighting and 180 stars
 - **M34g** · Neon Heights (dev content) sound: traffic hum and drones by day with chimes, neon sizzle and arcade bleeps by night; Depot and Woodland unchanged
+- **G5** · Ultra graphics preset for fast graphics cards: soft 4096 shadows, up to 2× resolution, the most dust and night lights; never picked automatically
+- **G5** · Graphics effects: bloom from Medium; ambient occlusion, temporal smoothing and light shafts on High; reflections and film grain on Ultra
 
 ### Changed
 - **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)
@@ -122,6 +124,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 - **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits (#70)
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
+- **G5** · Frame-rate limit choices are Unlimited (the default), 30, 60, 120, 144 and 240; an older saved limit becomes the nearest choice
+- **G5** · Graphics › Night lights adds Nearest 8
 
 ### Fixed
 - **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later (#122)
@@ -191,6 +195,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA11a** · TypeScript stricter (exactOptionalPropertyTypes); GitHub checks verify scope and changelog; dead code removed (#61)
 - **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 - **M50** · Woodland and Neon Heights download only once Dev content is on, the pool and stats tables are a file of their own, and the code size budget is 900 kB with a warning at 90 % (#107)
+- **G5** · The perf harness measures Ultra (`--preset all` and `--preset ultra`), a desktop environment and any window size (`--viewport`)
 
 ## 0.1 Dev 3 · 2026-10-03
 

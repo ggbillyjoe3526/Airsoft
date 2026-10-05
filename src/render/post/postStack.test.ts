@@ -155,6 +155,17 @@ describe('the post stack (G5)', () => {
     expect(scenes[0]!.projection).not.toEqual(plain);
     expect(scenes[1]!.projection).not.toEqual(scenes[0]!.projection);
     expect([...camera.projectionMatrix.elements]).toEqual(plain);
+    // The frame tells the passes the shift in UV the jitter gave the picture, so the blend reprojects without it.
+    const p = new THREE.Vector3(1, 0.5, -10);
+    const uvOf = (projection: number[]) => {
+      const c = new THREE.Vector4(p.x, p.y, p.z, 1).applyMatrix4(new THREE.Matrix4().fromArray(projection));
+      return new THREE.Vector2(c.x / c.w, c.y / c.w).multiplyScalar(0.5);
+    };
+    const shift = uvOf(scenes[1]!.projection).sub(uvOf(plain));
+    const jitter = (high as unknown as { frame: { jitter: THREE.Vector2 } }).frame.jitter;
+    expect(jitter.length()).toBeGreaterThan(0);
+    expect(shift.x).toBeCloseTo(jitter.x, 9);
+    expect(shift.y).toBeCloseTo(jitter.y, 9);
     // Medium has no TAA: no jitter.
     const medium = stackFor('medium');
     const m = stubGl();
@@ -191,9 +202,9 @@ describe('the temporal blend’s jitter (G5)', () => {
     const before = p.clone().project(camera);
     jitterProjection(camera, 0.5, -0.25, 200, 100);
     const after = p.clone().project(camera);
-    // NDC spans 2 over 200 × 100 pixels.
-    expect(Math.abs(after.x - before.x) * 100).toBeCloseTo(0.5, 6);
-    expect(Math.abs(after.y - before.y) * 50).toBeCloseTo(0.25, 6);
+    // NDC spans 2 over 200 × 100 pixels: half a pixel right, a quarter down.
+    expect((after.x - before.x) * 100).toBeCloseTo(0.5, 6);
+    expect((after.y - before.y) * 50).toBeCloseTo(-0.25, 6);
     // The inverse follows the jittered projection.
     const identity = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix);
     identity.elements.forEach((v, i) => expect(v).toBeCloseTo(i % 5 === 0 ? 1 : 0, 9));

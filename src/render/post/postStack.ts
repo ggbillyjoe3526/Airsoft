@@ -94,6 +94,7 @@ export class PostStack {
       depth,
       viewProjection: new THREE.Matrix4(),
       inverseViewProjection: new THREE.Matrix4(),
+      jitter: new THREE.Vector2(),
       sun: new THREE.Vector3(0, 1, 0),
       night: false,
       index: 0,
@@ -152,6 +153,7 @@ export class PostStack {
       this.plainProjection.copy(camera.projectionMatrix);
       const k = (f.index % (jitter.length / 2)) * 2;
       jitterProjection(camera, jitter[k]!, jitter[k + 1]!, this.width, this.height);
+      f.jitter.set(jitter[k]! / this.width, jitter[k + 1]! / this.height);
     }
     gl.setRenderTarget(this.sceneTarget);
     const autoClear = gl.autoClear;

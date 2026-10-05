@@ -25,14 +25,15 @@ export function jitterSequence(count: number): Float32Array {
 }
 
 /**
- * Moves `camera`'s projection by a sub-pixel offset (`dx`, `dy` pixels of a `width` × `height` drawing buffer): the
- * temporal blend's jitter. PostStack puts the projection back after the chain (the HUD, the overlay and every later
- * reader see the plain one).
+ * Moves the picture `camera` draws by a sub-pixel offset (`dx`, `dy` pixels of a `width` × `height` drawing buffer, +x
+ * right, +y up): the temporal blend's jitter. PostStack puts the projection back after the chain (the HUD, the overlay
+ * and every later reader see the plain one).
  */
 export function jitterProjection(camera: THREE.PerspectiveCamera, dx: number, dy: number, width: number, height: number): void {
   const e = camera.projectionMatrix.elements;
-  e[8] += (dx * 2) / width;
-  e[9] += (dy * 2) / height;
+  // Clip x and y gain this times view z, and w is -z: the picture moves by minus this in NDC (2 across the buffer).
+  e[8] -= (dx * 2) / width;
+  e[9] -= (dy * 2) / height;
   camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
 }
 
@@ -50,6 +51,7 @@ export class TemporalAAPass implements PostPass {
   /** No history yet (a new stack, a resize, a restored context): the next frame starts it from itself. */
   private valid = false;
   private readonly previousViewProjection = new THREE.Matrix4();
+  private readonly previousJitter = new THREE.Vector2();
   private readonly resolve: THREE.ShaderMaterial;
   private readonly sharpen: THREE.ShaderMaterial;
   private readonly quad = new FullScreenQuad();
@@ -61,7 +63,7 @@ export class TemporalAAPass implements PostPass {
       uniform sampler2D tColour, tHistory;
       uniform highp sampler2D tDepth;
       uniform mat4 inverseViewProjection, previousViewProjection;
-      uniform vec2 texel;
+      uniform vec2 texel, jitter, previousJitter;
       uniform float history, hasHistory;
       varying vec2 vUv;
       vec3 toYCoCg(vec3 c) { return vec3(dot(c, vec3(0.25, 0.5, 0.25)), dot(c, vec3(0.5, 0.0, -0.5)), dot(c, vec3(-0.25, 0.5, -0.25))); }
@@ -83,9 +85,11 @@ export class TemporalAAPass implements PostPass {
             depth = min(depth, texture2D(tDepth, uv).x);
           }
         }
-        vec4 world = inverseViewProjection * vec4(vec3(vUv, depth) * 2.0 - 1.0, 1.0);
+        // Without this frame's jitter to find the point, with last frame's to find it in the history (drawn jittered),
+        // so a still view samples the history where its pixel was, not half a pixel off (which would blur).
+        vec4 world = inverseViewProjection * vec4(vec3(vUv - jitter, depth) * 2.0 - 1.0, 1.0);
         vec4 previous = previousViewProjection * vec4(world.xyz / world.w, 1.0);
-        vec2 then = previous.xy / previous.w * 0.5 + 0.5;
+        vec2 then = previous.xy / previous.w * 0.5 + 0.5 + previousJitter;
         bool inside = hasHistory > 0.5 && all(greaterThanEqual(then, vec2(0.0))) && all(lessThanEqual(then, vec2(1.0)));
         if (!inside) { gl_FragColor = vec4(fromYCoCg(centre), 1.0); return; }
         vec3 past = clamp(toYCoCg(texture2D(tHistory, then).rgb), lo, hi);
@@ -100,6 +104,8 @@ export class TemporalAAPass implements PostPass {
         inverseViewProjection: { value: new THREE.Matrix4() },
         previousViewProjection: { value: this.previousViewProjection },
         texel: { value: new THREE.Vector2() },
+        jitter: { value: new THREE.Vector2() },
+        previousJitter: { value: this.previousJitter },
         history: { value: POST.taa.history },
         hasHistory: { value: 0 },
       },
@@ -141,6 +147,7 @@ export class TemporalAAPass implements PostPass {
     r.tHistory!.value = past.texture;
     r.tDepth!.value = frame.depth;
     r.inverseViewProjection!.value.copy(frame.inverseViewProjection);
+    r.jitter!.value.copy(frame.jitter);
     r.hasHistory!.value = this.valid ? 1 : 0;
     this.quad.material = this.resolve;
     gl.setRenderTarget(next);
@@ -150,6 +157,7 @@ export class TemporalAAPass implements PostPass {
     gl.setRenderTarget(write);
     this.quad.render(gl);
     this.previousViewProjection.copy(frame.viewProjection);
+    this.previousJitter.copy(frame.jitter);
     this.current = 1 - this.current;
     this.valid = true;
     return true;

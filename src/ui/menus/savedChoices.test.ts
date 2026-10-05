@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../../settings/storage';
-import { effectiveReducedMotion, loadFrameRateCap, loadReducedMotion, motionClass } from './savedChoices';
+import { QUALITY, resolveQuality } from '../../config/render';
+import { effectiveReducedMotion, loadCustomQuality, loadFrameRateCap, loadReducedMotion, motionClass } from './savedChoices';
 
 function storageWith(fields: Record<string, unknown>): Storage {
   const data = new Map<string, string>([[SETTINGS_KEY, JSON.stringify({ version: SETTINGS_VERSION, ...fields })]]);
@@ -66,5 +67,21 @@ describe('the frame-rate choice (G5)', () => {
     expect(loadFrameRateCap(storageWith({ frameRateCap: 165 }))).toBe(144);
     expect(loadFrameRateCap(storageWith({ frameRateCap: 360 }))).toBe(240);
     expect(loadFrameRateCap(storageWith({ frameRateCap: 0 }))).toBe(0);
+  });
+});
+
+// G5: six new Custom rows. A Custom mix saved before them has none of their keys and takes High's values for them.
+describe('a Custom mix saved before the post rows (G5)', () => {
+  it('keeps its own rows and takes the new fields from High', () => {
+    const custom = loadCustomQuality(storageWith({ 'graphics.shadows': 'off', 'graphics.poolLights': '2' }));
+    expect(custom).toEqual({ shadows: false, poolLights: 2 });
+    const q = resolveQuality('custom', custom);
+    expect(q.shadows).toBe(false);
+    for (const f of ['ambientOcclusion', 'bloom', 'temporalAA', 'lightShafts', 'reflections', 'lensFinish'] as const) expect(q[f], f).toBe(QUALITY.high[f]);
+  });
+
+  it('reads the new rows when saved', () => {
+    const custom = loadCustomQuality(storageWith({ 'graphics.ambientOcclusion': 'full', 'graphics.reflections': 'on', 'graphics.poolLights': '8' }));
+    expect(custom).toEqual({ ambientOcclusion: 1, reflections: true, poolLights: 8 });
   });
 });

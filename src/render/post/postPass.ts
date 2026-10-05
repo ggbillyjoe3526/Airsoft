@@ -10,6 +10,8 @@ export interface PostFrame {
   /** The view-projection without the jitter, and its inverse: the temporal blend reprojects with these. */
   readonly viewProjection: THREE.Matrix4;
   readonly inverseViewProjection: THREE.Matrix4;
+  /** This frame's jitter as a shift of the picture in UV (0, 0 without the temporal blend): it reprojects without it. */
+  readonly jitter: THREE.Vector2;
   /** Towards the key light (the sun or the moon), world space, unit length. */
   readonly sun: THREE.Vector3;
   /** A night look (the moon's shafts). */
