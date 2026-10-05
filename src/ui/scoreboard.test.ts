@@ -173,12 +173,16 @@ describe('the strip\'s bar when the count ends, restarts or is switched, and in 
     expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${1 / 60 / EXTRACTION.extractTime})`, 'flush', `transitionDuration=${EXTRACTION.extractTime - 1 / 60}s`, 'transform=scaleX(1)']);
   });
 
-  it('runs again from the count\'s own progress after the game was paused mid-count', () => {
+  it('stands while the game is paused mid-count and runs again from the count\'s own progress after it', () => {
     extraction();
     for (let frame = 0; frame <= 60; frame++) counting(frame / 60);
     log.length = 0;
     counting(1, 60_000); // a minute in the pause menu: the count did not move
-    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${1 / EXTRACTION.extractTime})`, 'flush', `transitionDuration=${EXTRACTION.extractTime - 1}s`, 'transform=scaleX(1)']);
+    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${Math.floor((1 / EXTRACTION.extractTime) * 100) / 100})`]);
+    log.length = 0;
+    const next = 1 + 1 / 60;
+    counting(next, 60_000 + 1000 / 60); // the game goes on: one run from the count's progress
+    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${next / EXTRACTION.extractTime})`, 'flush', `transitionDuration=${EXTRACTION.extractTime - next}s`, 'transform=scaleX(1)']);
   });
 
   it('steps the count bar per percent and starts no transition under Reduced motion', () => {

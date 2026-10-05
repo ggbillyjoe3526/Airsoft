@@ -158,14 +158,20 @@ describe('the HUD reload bar through a cancelled, chained, paused and calm reloa
     expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)', 'flush', `transitionDuration=${reloadTime}s`, 'transform=scaleX(1)']);
   });
 
-  it('runs again from the reload\'s own progress when the match is paused mid-reload and carries on', () => {
+  it('stands while the match is paused mid-reload and runs again from the reload\'s own progress when it carries on', () => {
     for (let i = 0; i < 15; i++) frame(reloadTime - i / 60);
     const held = reloadTime - 14 / 60;
     log.length = 0;
     frame(held, 30_000); // paused 30 s: the sim's reload does not move
-    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${1 - held / reloadTime})`, 'flush', `transitionDuration=${held}s`, 'transform=scaleX(1)']);
+    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${Math.floor((1 - held / reloadTime) * 100) / 100})`]);
     log.length = 0;
-    frame(held - 1 / 60); // and the bar keeps pace after
+    frame(held, 1000); // still paused: nothing more is written
+    expect(log).toEqual([]);
+    const next = held - 1 / 60;
+    frame(next); // it carries on: one run from the reload's progress
+    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${1 - next / reloadTime})`, 'flush', `transitionDuration=${next}s`, 'transform=scaleX(1)']);
+    log.length = 0;
+    frame(next - 1 / 60); // and the bar keeps pace after
     expect(log).toEqual([]);
   });
 

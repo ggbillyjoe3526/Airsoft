@@ -130,7 +130,7 @@ describe('a bar whose run is cut short, followed, or switched under it (QA, M64 
     expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)', 'flush', 'transitionDuration=1.2s', 'transform=scaleX(1)']);
   });
 
-  it('runs again from the game\'s progress after a pause of any length, not from where the transition got to', () => {
+  it('stands while the game is paused and runs again from the game\'s progress after it, not from where the transition got to', () => {
     const { fill, log, time } = setUp();
     fill.follow(0, 2);
     time(1000);
@@ -138,10 +138,17 @@ describe('a bar whose run is cut short, followed, or switched under it (QA, M64 
     log.length = 0;
     time(31_000);
     fill.follow(0.5, 1);
-    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.5)', 'flush', 'transitionDuration=1s', 'transform=scaleX(1)']);
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.5)']);
     log.length = 0;
-    time(31_500);
-    fill.follow(0.75, 0.5); // and it keeps pace with the game after the pause
+    time(32_000);
+    fill.follow(0.5, 1); // still paused: nothing more is written
+    expect(log).toEqual([]);
+    time(32_250);
+    fill.follow(0.75, 0.5); // the game goes on: one run from its progress
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.75)', 'flush', 'transitionDuration=0.5s', 'transform=scaleX(1)']);
+    log.length = 0;
+    time(32_500);
+    fill.follow(0.875, 0.25); // and it keeps pace after
     expect(log).toEqual([]);
   });
 
@@ -170,7 +177,8 @@ describe('a bar whose run is cut short, followed, or switched under it (QA, M64 
     clock = 4100;
     fill.follow(0.2504, 1.9);
     fill.follow(0.26, 1.85);
-    expect(log).toEqual(['transform=scaleX(0.25)', 'transform=scaleX(0.26)']);
+    // The game goes on: the run begins again from its progress, finds Reduced motion on, and steps from there.
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.2504)', 'transform=scaleX(0.26)']);
   });
 
   it('clamps a fraction outside 0..1 and writes a valid scale', () => {

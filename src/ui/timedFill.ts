@@ -17,7 +17,9 @@ const percentOf = (fraction: number): number => Math.max(0, Math.min(100, Math.f
  * `transform-origin: left`, a `transform` transition (duration set here) and, under Reduced motion, `transition-property:
  * none`: then `follow` steps per whole percent as the bar always did, and nothing slides. The game's own progress still
  * rules: if it drifts off the transition's (a pause, a long frame, a count that was reset) the run starts again from it.
- * `hold` stands the bar at a fraction (a stopped, paused or finished one). Allocates only when it writes.
+ * `hold` stands the bar at a fraction (a stopped, paused or finished one); a bar whose progress stands still for longer
+ * than `HUD.barDriftSeconds` (the match paused, its menu over it) is stood too, so a hidden bar is not begun again every
+ * few frames. Allocates only when it writes.
  */
 export class TimedFill {
   private run = Run.Still;
@@ -27,6 +29,9 @@ export class TimedFill {
   private from = 0;
   private startedAt = 0;
   private rate = 0;
+  /** The fraction `follow` was last given, and when it last changed (ms): a progress standing still is a pause. */
+  private last = Number.NaN;
+  private changedAt = 0;
 
   constructor(
     private readonly fill: HTMLElement,
@@ -35,6 +40,11 @@ export class TimedFill {
 
   /** The bar stands at `fraction` (0..1) and nothing runs; written only when its whole percent changes. */
   hold(fraction: number): void {
+    this.last = Number.NaN;
+    this.stand(fraction);
+  }
+
+  private stand(fraction: number): void {
     const percent = percentOf(fraction);
     if (this.run !== Run.Smooth && percent === this.shown) {
       this.run = Run.Still;
@@ -56,6 +66,14 @@ export class TimedFill {
       return;
     }
     const now = this.now();
+    if (fraction !== this.last) {
+      this.last = fraction;
+      this.changedAt = now;
+    } else if (now - this.changedAt > HUD.barDriftSeconds * 1000) {
+      // The game's progress stands still (a pause): the bar stands where it is until it moves again.
+      if (this.run !== Run.Still) this.stand(fraction);
+      return;
+    }
     if (this.run === Run.Smooth) {
       const expected = this.from + this.rate * (now - this.startedAt);
       if (Math.abs(fraction - expected) <= this.rate * 1000 * HUD.barDriftSeconds) return;

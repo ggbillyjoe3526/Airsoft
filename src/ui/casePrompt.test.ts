@@ -226,6 +226,15 @@ describe('the case-opening bar when the opening stops, resumes, is paused or run
     expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${1.05 / 4})`, 'flush', `transitionDuration=${4 - 1.05}s`, 'transform=scaleX(1)']);
   });
 
+  it('puts the bar back at the opening\'s progress on the first frame back from a pause, before its whole percent moves', () => {
+    for (let tick = 0; tick <= 60; tick++) opening(tick / 60);
+    prompt.setVisible(false);
+    log.length = 0;
+    prompt.setVisible(true);
+    opening(1, 1, 21_000); // the same progress as when the menu came up: hidden, the bar's transition ran to its end
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.25)']); // not left full; it runs again as the sim moves
+  });
+
   it('steps the bar per percent and starts no transition under Reduced motion', () => {
     reduced = true;
     for (let tick = 0; tick <= 240; tick++) opening(tick / 60);

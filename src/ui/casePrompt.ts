@@ -104,6 +104,8 @@ export class CasePrompt {
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.keyStale = true;
+    // Hidden, the bar's transition was cut short at its end: the next frame sets it going again from the game's progress.
+    if (visible) this.shown.percent = -1;
     this.root.hidden = !visible || this.shown.showing === Showing.None;
   }
 
