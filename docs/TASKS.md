@@ -14,7 +14,7 @@ coordinator.
 ## M48 · Extraction on Woodland and Neon Heights
 tier: core
 perf: required
-touches: src/map/, src/ai/, src/render/exitRenderer.ts, src/render/matchPresentation.ts, pipeline/perf-run.mjs, vite.config.ts
+touches: src/map/, src/ai/, src/render/exitRenderer.ts, src/render/caseRenderer.ts, src/render/matchPresentation.ts, pipeline/perf-run.mjs, vite.config.ts
 acceptance:
   1. Each map's extraction block (insertions, exits, cases, regens, opponent starts), Woodland 15 min with 4 / 5 / 6 opponents, the city 10 min.
   2. The data tests and balance runs of M45 and M46 pass on each.

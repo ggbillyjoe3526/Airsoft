@@ -146,10 +146,11 @@ describe('New game picks and dev content (M35)', () => {
     expect([1, 2, 3, 4, 5].map((n) => squadSize(n))).toEqual([1, 2, 3, 3, 3]);
     expect(playedTeamSize(picks({ mode: 'extraction' }, { teamSize: 2 }))).toBe(2);
     expect(playedTeamSize(picks({ mode: 'extraction' }, { teamSize: 3 }))).toBe(3);
-    // Woodland has room for 5v5 but no Extraction data yet: it plays Elimination (not offered there), so its team size stands.
-    expect(playedPicks(picks({ map: 'woodland', mode: 'extraction' }), true).mode).toBe(DEFAULT_MODE);
+    // Woodland has room for 5v5 and Extraction data since M48: a run there is still a trio at most, while its other
+    // modes keep the team size picked. (A map without the data plays Elimination: extractionData.test.ts.)
+    expect(playedPicks(picks({ map: 'woodland', mode: 'extraction' }), true).mode).toBe('extraction');
     expect(playedPicks(picks({ map: 'depot', mode: 'extraction' }), true).mode).toBe('extraction');
-    expect(playedTeamSize(picks({ map: 'woodland', mode: 'extraction' }, { teamSize: 5 }))).toBe(5);
+    expect(playedTeamSize(picks({ map: 'woodland', mode: 'extraction' }, { teamSize: 5 }))).toBe(3);
     expect(playedTeamSize(picks({ map: 'woodland' }, { teamSize: 5 }))).toBe(5);
   });
 

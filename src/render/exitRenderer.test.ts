@@ -55,11 +55,31 @@ describe('ExitRenderer on terrain (M48)', () => {
     run.exits = [exitAt(1, -2)];
     const r = new ExitRenderer(run, SLOPE);
     r.object.updateMatrixWorld(true);
-    const standing = meshes(r.object).filter((m) => m.geometry instanceof THREE.ConeGeometry || m.geometry instanceof THREE.CylinderGeometry);
-    expect(standing).toHaveLength(V.cones + 1);
-    for (const m of standing) {
-      const foot = new THREE.Vector3().setFromMatrixPosition(m.matrixWorld);
-      expect(foot.y, `${foot.x.toFixed(2)}, ${foot.z.toFixed(2)}`).toBeCloseTo(groundAt(foot.x, foot.z), 4);
+    const instanced = meshes(r.object).filter((m): m is THREE.InstancedMesh => m instanceof THREE.InstancedMesh);
+    expect(instanced.map((m) => m.count).sort()).toEqual([1, V.cones].sort());
+    const at = new THREE.Matrix4();
+    for (const m of instanced) {
+      for (let i = 0; i < m.count; i++) {
+        m.getMatrixAt(i, at);
+        const foot = new THREE.Vector3().setFromMatrixPosition(at.premultiply(m.matrixWorld));
+        expect(foot.y, `${m.name} ${i}: ${foot.x.toFixed(2)}, ${foot.z.toFixed(2)}`).toBeCloseTo(groundAt(foot.x, foot.z), 4);
+        expect(Math.hypot(foot.x - 1, foot.z + 2), `${m.name} ${i} on the ring`).toBeCloseTo(3, 4);
+      }
+    }
+    r.dispose();
+  });
+
+  it('draws every exit’s cones in one instanced draw and every post in another, three meshes more an exit (M48)', () => {
+    const run = createRunState();
+    run.exits = [exitAt(1, -2), exitAt(-5, 4), { ...exitAt(5, 5), closed: true }, exitAt(6, -6)];
+    const r = new ExitRenderer(run, SLOPE);
+    const all = meshes(r.object);
+    expect(all).toHaveLength(2 + 3 * 3);
+    const instanced = all.filter((m): m is THREE.InstancedMesh => m instanceof THREE.InstancedMesh);
+    expect(instanced.map((m) => m.count).sort((a, b) => a - b)).toEqual([3, 3 * V.cones]);
+    for (const m of instanced) {
+      expect(m.castShadow).toBe(true);
+      expect(m.boundingSphere).not.toBeNull();
     }
     r.dispose();
   });

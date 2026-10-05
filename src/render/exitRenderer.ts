@@ -5,6 +5,8 @@ import { type Terrain, terrainHeightAt } from '../map/terrain';
 import type { RunExit, RunState } from '../sim/extraction';
 
 const V = EXIT_VISUALS;
+/** Scratch for an instance's matrix while the exits are built. */
+const PLACE = new THREE.Matrix4();
 
 /** One exit's meshes, and whether they were last drawn open. */
 interface ExitMeshes {
@@ -60,6 +62,8 @@ export class ExitRenderer {
   private readonly shutTexture = drawBoard(V.shutText, V.shutColor);
   private readonly boardOpen = new THREE.MeshStandardMaterial({ map: this.openTexture, roughness: 0.8, side: THREE.DoubleSide });
   private readonly boardShut = new THREE.MeshStandardMaterial({ map: this.shutTexture, roughness: 0.8, side: THREE.DoubleSide });
+  private readonly cones: THREE.InstancedMesh;
+  private readonly posts: THREE.InstancedMesh;
 
   constructor(
     run: RunState,
@@ -70,10 +74,22 @@ export class ExitRenderer {
     const postGeo = this.keep(new THREE.CylinderGeometry(V.postRadius, V.postRadius, V.postHeight, 8));
     postGeo.translate(0, V.postHeight / 2, 0);
     const boardGeo = this.keep(new THREE.PlaneGeometry(V.boardWidth, V.boardHeight));
-    for (const e of run.exits) {
-      if (e.closed) continue;
-      this.exits.push(this.build(e, coneGeo, postGeo, boardGeo));
+    // Every exit's cones in one instanced draw and every post in another (M48: on Woodland's Medium, a mesh each cost
+    // about forty draws with their shadows, past the budget).
+    const drawn = run.exits.filter((e) => !e.closed);
+    this.cones = new THREE.InstancedMesh(coneGeo, this.cone, Math.max(1, drawn.length * V.cones));
+    this.posts = new THREE.InstancedMesh(postGeo, this.post, Math.max(1, drawn.length));
+    this.cones.count = drawn.length * V.cones;
+    this.posts.count = drawn.length;
+    for (const m of [this.cones, this.posts]) m.castShadow = true;
+    this.cones.name = 'exit-cones';
+    this.posts.name = 'exit-posts';
+    for (let i = 0; i < drawn.length; i++) this.exits.push(this.build(drawn[i]!, i, boardGeo));
+    for (const m of [this.cones, this.posts]) {
+      m.instanceMatrix.needsUpdate = true;
+      m.computeBoundingSphere();
     }
+    this.object.add(this.cones, this.posts);
     this.object.name = 'exits';
   }
 
@@ -94,9 +110,17 @@ export class ExitRenderer {
   dispose(): void {
     for (const g of this.geometries) g.dispose();
     for (const m of [this.ringOpen, this.ringShut, this.fillOpen, this.fillShut, this.cone, this.post, this.boardOpen, this.boardShut]) m.dispose();
+    this.cones.dispose();
+    this.posts.dispose();
     this.openTexture.dispose();
     this.shutTexture.dispose();
     this.object.removeFromParent();
+  }
+
+  /** Puts instance `i` of `mesh` on the ground at (dx, dz) from exit `e`'s middle (world, as the instances' parent is). */
+  private place(mesh: THREE.InstancedMesh, i: number, e: RunExit, dx: number, dz: number): void {
+    PLACE.makeTranslation(e.position.x + dx, e.position.y + this.groundOffset(e, dx, dz), e.position.z + dz);
+    mesh.setMatrixAt(i, PLACE);
   }
 
   /** How far the ground at (dx, dz) from the exit's middle is above the middle: 0 on a flat field. */
@@ -120,7 +144,8 @@ export class ExitRenderer {
     return g;
   }
 
-  private build(e: RunExit, coneGeo: THREE.BufferGeometry, postGeo: THREE.BufferGeometry, boardGeo: THREE.BufferGeometry): ExitMeshes {
+  /** Builds exit `e`, the `index`th drawn: its own ring, wash and board, and its cones' and post's instances. */
+  private build(e: RunExit, index: number, boardGeo: THREE.BufferGeometry): ExitMeshes {
     const group = new THREE.Group();
     group.position.set(e.position.x, e.position.y, e.position.z);
     const ringGeo = this.keep(new THREE.RingGeometry(e.radius - V.ringWidth, e.radius, V.ringSegments));
@@ -136,22 +161,19 @@ export class ExitRenderer {
     group.add(ring, fill);
     for (let i = 0; i < V.cones; i++) {
       const a = (i / V.cones) * Math.PI * 2;
-      const cone = new THREE.Mesh(coneGeo, this.cone);
-      cone.position.set(Math.cos(a) * e.radius, 0, Math.sin(a) * e.radius);
-      cone.position.y = this.groundOffset(e, cone.position.x, cone.position.z);
-      cone.castShadow = true;
-      group.add(cone);
+      const dx = Math.cos(a) * e.radius;
+      const dz = Math.sin(a) * e.radius;
+      this.place(this.cones, index * V.cones + i, e, dx, dz);
     }
     // The sign stands at the ring's edge on the side nearest the middle of the field, so it faces whoever comes.
     const toMiddle = Math.atan2(-e.position.x, -e.position.z);
-    const post = new THREE.Mesh(postGeo, this.post);
-    post.position.set(Math.sin(toMiddle) * e.radius, 0, Math.cos(toMiddle) * e.radius);
-    post.position.y = this.groundOffset(e, post.position.x, post.position.z);
-    post.castShadow = true;
+    const px = Math.sin(toMiddle) * e.radius;
+    const pz = Math.cos(toMiddle) * e.radius;
+    this.place(this.posts, index, e, px, pz);
     const board = new THREE.Mesh(boardGeo, this.boardShut);
-    board.position.set(post.position.x, post.position.y + V.postHeight - V.boardHeight / 2, post.position.z);
+    board.position.set(px, this.groundOffset(e, px, pz) + V.postHeight - V.boardHeight / 2, pz);
     board.rotation.y = toMiddle;
-    group.add(post, board);
+    group.add(board);
     this.object.add(group);
     return { group, ring, fill, board, shownOpen: null };
   }
