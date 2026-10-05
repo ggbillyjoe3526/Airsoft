@@ -321,8 +321,11 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   const moving = keepApart(b, w, moveBot(b, w, cmd, dt, target), cmd);
   // Holding a lane point or a post: crouch once settled, where crouched eyes still see the enemy side (AI-02).
   if (b.holding && b.holdCrouch && b.teamWait >= cfg.holdCrouchDelay) cmd.crouch = true;
-  // Round a corner of full cover: lean out to look and fight, back in to hide.
+  // Round a corner of full cover: lean out to look and fight, back in to hide. A guard at a lean post, or a teammate
+  // covering you from one while you open a case, leans out to watch (M55, audit AI-01).
   if (leaningOut(b)) cmd.lean = b.cover.lean;
+  else if (b.mode === 'advance' && b.atPost) cmd.lean = b.holdLean;
+  else if (b.mode === 'order' && b.orderCovering && b.orderLeanChecked) cmd.lean = b.orderLean;
   eyeOf(me, w.body, w.hits, myEye);
   const offAim = aimBot(b, w, target, myEye, aimAt, moving, cmd, dt);
   cmd.yaw = b.aim.yaw;

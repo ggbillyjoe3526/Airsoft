@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { EXTRACTION } from '../config/extraction';
+import { BODY } from '../config/movement';
 import { NAV } from '../config/nav';
-import { buildNavGrid, createNavSearch, findPath, isWalkableAt } from '../nav/navGrid';
+import { PHYSICS } from '../config/physics';
+import { LOADOUT } from '../config/replicas';
+import { buildNavGrid, createNavSearch, findPath, floorAt, isWalkableAt } from '../nav/navGrid';
 import { placeCases, rollRunCases } from '../pool/caches';
 import { GAME_POOL } from '../pool/gamePool';
-import { exitClosedFor, pickOpponentStarts } from '../sim/extraction';
+import { createCharacter } from '../sim/character';
+import { caseInReach, createRunState, exitClosedFor, pickOpponentStarts, type RunSight } from '../sim/extraction';
+import { buildLevelRay, castLevelRay } from '../sim/levelRay';
 import { createRng } from '../sim/rng';
-import type { Vec3 } from '../sim/vec';
+import { type Vec3, vec3 } from '../sim/vec';
 import { MAPS, mapData } from './maps';
 import { modeOffered, playableMode } from './playableMode';
 
@@ -14,6 +19,10 @@ import { modeOffered, playableMode } from './playableMode';
 const MAX_SQUAD = EXTRACTION.maxSquad;
 /** Share of an exit's disc that must be walkable, so you can stand anywhere in it, give or take a corner. */
 const EXIT_WALKABLE = 0.7;
+/** Where you stand to open a case: in front of it, an arm's length off (as the bot runner does, RUNNER_PLAN.standOff). */
+const CASE_FRONT = 0.9;
+/** The grid (m) the reach round a case is walked on, for the spots it can't be opened from. */
+const REACH_STEP = 0.1;
 
 describe('Extraction map data (M43)', () => {
   for (const { id, label } of MAPS) {
@@ -74,6 +83,46 @@ describe('Extraction map data (M43)', () => {
           const placed = placeCases(most, x.cases, createRng(seed));
           for (const k of most) expect(placed.filter((p) => p.kind.key === k.key).length, `${k.key} seed ${seed}`).toBe(k.count.max);
         }
+      });
+
+      it('opens every case spot from in front of it, and refuses it from the far side of a wall in reach (M55, audit SIM-02)', () => {
+        const level = buildLevelRay(map.blocks, PHYSICS.rayGridCell, map.terrain ?? null);
+        const sight: RunSight = { query: { raycastStatic: (o, d, max) => castLevelRay(level, o, d, max) }, body: BODY };
+        const run = createRunState();
+        const you = createCharacter(0, vec3(), 0, LOADOUT, 0);
+        const standAt = (x: number, y: number, z: number) => {
+          you.position.x = x;
+          you.position.y = y;
+          you.position.z = z;
+        };
+        let refused = 0;
+        for (const c of x.cases) {
+          const at = JSON.stringify(c.position);
+          run.cases = [{ kind: c.kinds[0]!, name: 'case', position: c.position, yaw: c.yaw, openTime: 1, heard: 0, finds: [], open: false, dropped: false }];
+          // In front: the nearest walkable spot out from its front, an arm's length off at most.
+          let front = false;
+          for (let d = CASE_FRONT; d > 0 && !front; d -= nav.cell) {
+            const fx = c.position.x - Math.sin(c.yaw) * d;
+            const fz = c.position.z - Math.cos(c.yaw) * d;
+            if (!isWalkableAt(nav, fx, c.position.y, fz)) continue;
+            standAt(fx, floorAt(nav, fx, c.position.y, fz), fz);
+            front = caseInReach(run, you, EXTRACTION, sight) === 0;
+          }
+          expect(front, `${at} from its front`).toBe(true);
+          // Every walkable spot in reach on its floor: the line of sight decides, and the far side of a wall is refused.
+          for (let dx = -EXTRACTION.caseReach; dx <= EXTRACTION.caseReach; dx += REACH_STEP) {
+            for (let dz = -EXTRACTION.caseReach; dz <= EXTRACTION.caseReach; dz += REACH_STEP) {
+              const px = c.position.x + dx;
+              const pz = c.position.z + dz;
+              if (Math.hypot(dx, dz) > EXTRACTION.caseReach || !isWalkableAt(nav, px, c.position.y, pz)) continue;
+              standAt(px, floorAt(nav, px, c.position.y, pz), pz);
+              if (caseInReach(run, you, EXTRACTION) === 0 && caseInReach(run, you, EXTRACTION, sight) < 0) refused++;
+            }
+          }
+        }
+        // Neon Heights' partitions are thin: a case in an office is in reach from the corridor (Depot and Woodland only
+        // have a corner or two).
+        if (id === 'neonHeights') expect(refused).toBeGreaterThan(100);
       });
 
       it('can be walked to from every insertion to every case spot (M44)', () => {

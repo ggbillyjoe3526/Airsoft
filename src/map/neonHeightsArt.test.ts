@@ -44,8 +44,10 @@ export function navFingerprint(): string {
 
 describe('Neon Heights art (M34f)', () => {
   it('plays exactly as before its art: the same boxes in the same order, ricochets, slopes and footsteps', () => {
-    // Pinned from main before M34f (2026-10-05, 4780b4a): 281 blocks, the street one slab.
-    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('281:2402d1d3');
+    // Pinned from main before M34f (2026-10-05, 4780b4a): 281 blocks, the street one slab. Re-pinned for M55 (audit
+    // SIM-04): 300 blocks, the same space filled without two blocks in one place (walls stop under the floors laid
+    // through them, the Sky Bridge ends at the Tower's wall, planters stand against walls); the nav grid below is as it was.
+    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('300:0424eac9');
   });
 
   it('gives the bots exactly the same nav grid as before its art', () => {

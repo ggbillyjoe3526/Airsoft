@@ -212,7 +212,7 @@ describe('regen points and the wave in the run', () => {
     expect(seen).toEqual([xz(REGENS[0]!), xz(REGENS[1]!), xz(REGENS[2]!), xz(REGENS[0]!)]);
   });
 
-  it('wait while every regen point is in view of the squad, and place nobody in view; the wave comes in the moment one is not', () => {
+  it('wait while every regen point is in view of the squad, and place nobody in view; the wave comes in once one is not', () => {
     let visible = true;
     const query: WorldQuery = { raycastStatic: () => (visible ? -1 : 1) };
     const { cs, round, ctx, x } = run(3, REGENS, { query, body: BODY });
@@ -225,10 +225,35 @@ describe('regen points and the wave in the run', () => {
     expect(round.run.waveDue).toBe(true);
     expect(round.run.waves).toBe(1);
     visible = false;
-    play(2 * DT, round, cs, ctx, events);
+    // It looks again every regenRetry (M55), so within that.
+    play(EXTRACTION.regenRetry + 2 * DT, round, cs, ctx, events);
     expect(events.filter((e) => e.type === 'returned')).toEqual([{ type: 'returned', characterId: victim.id }]);
     expect(round.run.waveDue).toBe(false);
     expect(x.waves!.regens.some((r) => r.position.x === victim.position.x && r.position.z === victim.position.z)).toBe(true);
+  });
+
+  it('looks for a free point every regenRetry while none is, not every tick (M55, KNOWN_ISSUES row 197)', () => {
+    let rays = 0;
+    let ticksWithRays = 0;
+    const query: WorldQuery = {
+      raycastStatic: () => {
+        rays++;
+        return -1; // every point in view
+      },
+    };
+    const { cs, round, ctx } = run(3, REGENS, { query, body: BODY });
+    hit(homeOf(cs)[0]!);
+    // The hit call, then the first wave comes due at WAVE_EVERY.
+    play(WAVE_EVERY + 1, round, cs, ctx);
+    expect(round.run.waveDue).toBe(true);
+    const waited = 30;
+    play(waited, round, cs, ctx, [], () => {
+      if (rays > 0) ticksWithRays++;
+      rays = 0;
+    });
+    // One look a quarter of a second (give or take a tick), where it was every tick.
+    expect(ticksWithRays).toBeGreaterThanOrEqual(Math.floor(waited / EXTRACTION.regenRetry) - 1);
+    expect(ticksWithRays).toBeLessThanOrEqual(Math.ceil(waited / EXTRACTION.regenRetry) + 1);
   });
 
   it('does not count a second wave while the first is still waiting to come in', () => {
