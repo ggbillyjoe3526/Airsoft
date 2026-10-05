@@ -1,3 +1,4 @@
+import type { ReplicaParts } from '../config/attachments';
 import type { LightId } from '../config/torches';
 import type { Character } from './character';
 import type { PlayerCommand } from './commands';
@@ -9,6 +10,14 @@ import type { GameEvent } from './events';
  * like any other control, so the player and the bots work it the same way. Plain data on the character; what it lights
  * is worked out by map/torchLight.ts (for the bots) and drawn by render/torchBeams.ts.
  */
+
+/**
+ * A replica's parts as fitted under a day or night preset: a weapon light does nothing by day (only its lens would
+ * glow), so by day it is left off and the day builds nothing for it (the match and the range alike).
+ */
+export function partsUnder(parts: ReplicaParts, night: boolean): ReplicaParts {
+  return night || !parts.light ? parts : { ...parts, light: null };
+}
 
 /** The light fitted to the replica in `c`'s hands, or null. */
 export function lightInHand(c: Character): LightId | null {

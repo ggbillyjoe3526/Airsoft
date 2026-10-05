@@ -4,8 +4,9 @@ import { overlay } from './statsFile';
 /**
  * Weapon lights (M33h): a torch clipped to a replica, unlocked from the asset pool (pool.md's Lights table, slot
  * `light`). Switched on and off with the Weapon torch key (config/controls.ts). On a night preset it lights a cone the
- * holder and the bots see further in, and its lens gives the holder away; by day only the lens glows. No rarity tier
- * improves it (pool/kit.ts scaledCategory): a brighter torch is a new row. First guesses for the owner's playtest.
+ * holder and the bots see further in, and its lens gives the holder away; by day it is left off the replica
+ * (sim/torch.ts partsUnder). No rarity tier improves it (pool/kit.ts scaledCategory): a brighter torch is a new row.
+ * First guesses for the owner's playtest.
  */
 export type LightId = 'weaponTorch';
 

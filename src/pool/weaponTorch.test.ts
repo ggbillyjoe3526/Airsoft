@@ -100,6 +100,15 @@ describe('a match with the torch counts and pays (M33h, M35)', () => {
     expect(matchUsesDev(picks('woodland'), [torchRef], GAME_POOL, true)).toBe(true);
   });
 
+  it('follows the Day/Night pick (M34d): a map offering both counts the torch only under Night', () => {
+    expect(playsAtNight('neonHeights', 'day')).toBe(false);
+    expect(playsAtNight('neonHeights', 'night')).toBe(true);
+    expect(playsAtNight('woodland', 'day')).toBe(true); // Woodland offers only Night: a pick it doesn't offer is ignored
+    // Only the torch is in question here: with Neon Heights itself dev, the picks already count, so check the kit rule.
+    expect(usedItems(GAME_POOL, [torchRef], playsAtNight('neonHeights', 'day'))).toEqual([]);
+    expect(usedItems(GAME_POOL, [torchRef], playsAtNight('neonHeights', 'night'))).toEqual([torchRef]);
+  });
+
   it("counts the bots' torches on a night field with Dev content on, never by day or with it off", () => {
     expect(botsCarryDevLight(GAME_POOL, true, true)).toBe(true);
     expect(botsCarryDevLight(GAME_POOL, true, false)).toBe(false);

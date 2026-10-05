@@ -488,9 +488,9 @@ export interface LightingPreset {
    */
   viewmodel: { hemi: { sky: number; ground: number; intensity: number }; key: { colour: number; intensity: number }; rim: { colour: number; intensity: number } };
   /**
-   * Weapon torches under this light (M33h, render/torchBeams.ts). `beam` 0 builds nothing (the day: only the lens
-   * glows). Otherwise: the drawn beam's strength (the cone, additive), the lens glare's and the lit spot's where a beam
-   * lands; `spot` the real spot light's intensity on your own torch (candela, Medium and High); `spill` how far the held
+   * Weapon torches under this light (M33h, render/torchBeams.ts). `beam` 0 builds nothing (the day: the torch is left
+   * off the replica, sim/torch.ts partsUnder). Otherwise: the drawn beam's strength (the cone, additive), the lens
+   * glare's and the lit spot's where a beam lands; `spot` the real spot light's intensity on your own torch (candela, Medium and High); `spill` how far the held
    * replica's key light turns to the torch's colour and `spillIntensity` how much stronger it gets while yours is on
    * (bounce from the beam); `figureLift` the glow a figure in someone's beam takes where no real light reaches it.
    */

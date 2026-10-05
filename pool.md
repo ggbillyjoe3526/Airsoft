@@ -281,7 +281,8 @@ Later: a tracer unit (with tracer BBs, v0.3).
 ### Lights
 
 A weapon torch on its own mount (M33h): the Weapon torch key (T) switches it on and off. At night it lights a cone you
-and the bots see further in, and it gives you away; by day only its lens glows. Every bot carries one on a night field.
+and the bots see further in, and it gives you away; by day it does nothing and isn't fitted. Every bot carries one on a
+night field.
 No rarity tier improves it (stats.md's Lights table), so it comes at Common only.
 
 | ID | Name | Key | Fits | Starter | In Shots | Tiers | Drop % | Access |

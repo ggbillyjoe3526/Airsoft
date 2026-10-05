@@ -50,6 +50,7 @@ import { isInPlay } from './sim/elimination';
 import { createRunContext, type ExtractionContext } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
+import { partsUnder } from './sim/torch';
 import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
@@ -536,9 +537,7 @@ export class MatchSession {
   private fitPickedLoadout(): void {
     const kit = this.kit;
     fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
-    // A weapon light does nothing by day (M33h): it is left off by day, so the day builds nothing for it.
-    const night = this.lighting.night;
-    fitParts(this.player.armament, kit.slots.map((s) => (night || !s.parts.light ? s.parts : { ...s.parts, light: null })));
+    fitParts(this.player.armament, kit.slots.map((s) => partsUnder(s.parts, this.lighting.night)));
     setHopUps(this.player.armament, kit.hopUps);
     setBbWeights(this.player.armament, kit.bbWeights);
   }

@@ -4,6 +4,7 @@ import { BALLISTICS } from '../config/ballistics';
 import { FOOTSTEPS } from '../config/footsteps';
 import { HITS, ROUNDS } from '../config/hits';
 import { NAV } from '../config/nav';
+import { factoryParts } from '../config/attachments';
 import { LOADOUT } from '../config/replicas';
 import { fitParts } from './armament';
 import { type Character, createCharacter, respawnCharacter } from './character';
@@ -14,7 +15,7 @@ import type { CharacterMover } from './movement';
 import { createSimContext, stepSimulation } from './simulation';
 import { createGameState } from './state';
 import { OPEN_NAV, openFieldElimination } from './testSupport';
-import { lightInHand, stepTorch, torchLit } from './torch';
+import { lightInHand, partsUnder, stepTorch, torchLit } from './torch';
 import { vec3 } from './vec';
 
 const DT = 1 / 60;
@@ -108,5 +109,15 @@ describe('the weapon torch in the simulation (M33h)', () => {
     stepSimulation(state, new Map([[0, createCommand()]]), ctx, DT);
     expect(c.torchOn).toBe(true);
     expect(state.events.some((e) => e.type === 'torch')).toBe(false);
+  });
+});
+
+describe('a weapon light by day (M33h: the match and the range fit it only at night)', () => {
+  it('leaves the light off by day and every other part as picked; at night, or without a light, the parts as they are', () => {
+    const parts = { ...factoryParts(LOADOUT[0]!), light: 'weaponTorch' as const };
+    expect(partsUnder(parts, false)).toEqual({ ...parts, light: null });
+    expect(partsUnder(parts, true)).toBe(parts);
+    const none = factoryParts(LOADOUT[0]!);
+    expect(partsUnder(none, false)).toBe(none);
   });
 });

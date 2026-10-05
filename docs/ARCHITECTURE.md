@@ -301,11 +301,13 @@ The interfaces a task may not change unless its block in `docs/TASKS.md` says so
 request. Each line names where it lives and what pins it.
 
 - **`PlayerCommand`** (`sim/commands.ts`): one command per character per tick, absolute view angles; the only way
-  input or bots drive the simulation. Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`.
+  input or bots drive the simulation. Since M33h `toggleTorch` switches the weapon light in hand (`sim/torch.ts`).
+  Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`.
 - **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`): plain data, no Three.js or DOM; events are
   the only channel to presentation and are cleared each tick. Since M43 `RoundState.run` holds an Extraction run
   (`sim/extraction.ts`: exits, respawns used, the exit count, its outcome), and the events `respawned`, `exitCount`,
-  `exitOpened` and `runWarning` report it. Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`.
+  `exitOpened` and `runWarning` report it. The `torch` event (M33h) reports a weapon light switched on or off. Pinned by
+  `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/torch.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step, FA1); randomness only from `state.rng`. Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/`, implemented by `physics/physicsWorld.ts`): ray and shape casts and
@@ -329,10 +331,10 @@ request. Each line names where it lives and what pins it.
   the stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per
   format); a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`).
   Pinned by `save/saveFile.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). An Access column on every asset table, `public` or `dev` (M35; blank reads as public, any other word leaves the row out). Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). An Access column on every asset table, `public` or `dev` (M35; blank reads as public, any other word leaves the row out). A Lights table (M33h: category `light`, slot `light`, Fits by tag like the other parts). Pinned by `pool/pool.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
-  power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
-  over their built-in ones. Pinned by
+  power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Lights by Key (M33h), Tier scaling, Site limits)
+  the config modules lay over their built-in ones. Pinned by
   `config/stats.test.ts`.
 - **Content tags** (`config/content.ts`, M35): every map, mode, difficulty, ruleset (`tag` on `MAPS`, `MATCH_MODES`,
   `DIFFICULTIES`, `RULESETS` since M39) and pooled asset (`Asset.tag`, pool.md's Access) is `public` or `dev`; Match pop-up choices may carry
