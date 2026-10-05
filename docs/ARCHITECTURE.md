@@ -66,7 +66,9 @@ ends the round). A hit character is eliminated
   lane), and `orderOf` tells the HUD's squad line (`ui/squadOrderLine.ts`) what is in force. The order wheel (M23):
   `PlayerInput` owns a `WheelPointer` (`input/orderWheel.ts`) that takes the mouse while the wheel key is held, and
   hands the pick to `takeOrder` like an order key; `ui/orderWheel.ts` draws it. The minimap (M23, `ui/minimap.ts`)
-  draws the map's blocks once per match on a canvas and each frame the teammates and `HeardPlayers`
+  draws the map's blocks once per match on a canvas (one per storey on a map with `storeys`, M34c: cut away a body's
+  height over that floor, what lies below shaded; the frame shows the storey of whoever's eyes the camera is at, and
+  teammates on another storey carry an up or down arrow) and each frame the teammates and `HeardPlayers`
   (`ui/minimapView.ts`), fed by the same heard sounds as the sound cues. Hearing (`hear`) casts the
   same wall rays as the audio's muffling (`sim/soundPath.ts`): through walls a bot hears at `wallHearing` of the range.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max `SIM.maxTicksPerFrame`, 10, catch-up ticks per frame; 5 before FA1, audit SIM-14). Consequence (audit L-34): at 60 ticks/s, 10 ticks cover 167 ms, so below about 6 frames/s the rest of each frame's time is dropped and the whole game (round clock, reloads, BB flight, bots) runs in slow motion rather than spiralling into ever longer catch-up frames (frame time is also capped at `SIM.maxFrameDt`, 0.25 s). Only the debug overlay's "sim ticks/s" shows it; a browser drawing in software starts on Low to stay above it (M-02).
@@ -341,5 +343,8 @@ request. Each line names where it lives and what pins it.
   (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
   player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
   `NotCounted` 'devContent'). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`.
-- **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Optional blocks
-  are only added (M43 `extraction`; M44 its `cases`). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/extractionData.test.ts`.
+- **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
+  are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
+  time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
+  `extraction` (M44 adds its `cases`). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
+  `map/extractionData.test.ts`.

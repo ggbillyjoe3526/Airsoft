@@ -125,8 +125,8 @@ export class MatchPresentation {
     keyName: (action: Action) => string,
     /** The team colours picked on Settings → Accessibility (the HUD's follow the container's CSS, see Game.play). */
     teamColours: TeamColours,
-    /** The map's blocks and sloping ground, for the minimap's drawing of the field. */
-    field: Pick<MapData, 'blocks' | 'terrain' | 'foliage'>,
+    /** The map's blocks, sloping ground, bushes and storeys, for the minimap's drawing of the field. */
+    field: Pick<MapData, 'blocks' | 'terrain' | 'foliage' | 'storeys'>,
     /** The figure model, if the build has one (M25a); null draws the built-in figures. */
     figureModel: FigureModel | null = null,
     /** Player detail (QualitySettings.figureDetail, FA8); setFigureDetail changes it. */
@@ -151,13 +151,14 @@ export class MatchPresentation {
     this.soundCues = new SoundCues(container);
     this.squadLine = new SquadOrderLine(container, player.team);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
-    this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? []);
+    this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys);
     const run = state.round.run;
     this.minimapFrame = {
       x: 0,
+      y: 0,
       z: 0,
       yaw: 0,
-      mates: this.mates.map(() => ({ x: 0, z: 0, hit: false })),
+      mates: this.mates.map(() => ({ x: 0, y: 0, z: 0, hit: false })),
       count: 0,
       hold: null,
       flag: null,
@@ -341,6 +342,8 @@ export class MatchPresentation {
     if (!this.playing) return;
     const f = this.minimapFrame;
     f.x = this.listener.x;
+    // The storey drawn: that of whoever's eyes the camera is at (yours, or the player you watch).
+    f.y = (this.watched ?? this.player).position.y;
     f.z = this.listener.z;
     f.yaw = this.listener.yaw;
     f.time = this.state.time;
@@ -349,6 +352,7 @@ export class MatchPresentation {
       if (c.status === 'out' || c === this.watched) continue;
       const m = f.mates[f.count++]!;
       m.x = c.position.x;
+      m.y = c.position.y;
       m.z = c.position.z;
       m.hit = c.status !== 'alive';
     }
