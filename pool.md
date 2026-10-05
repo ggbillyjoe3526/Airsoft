@@ -118,7 +118,8 @@ you own. Higher tiers carry a **Bonus %** that improves the asset a little (stat
 stats each category improves, and by how much of the Bonus). One hit is still one hit: rarity improves how a replica
 shoots and handles, never "damage".
 
-- **Odds %** is the chance that a dispensed asset comes in that tier. The odds must add up to 100.
+- **Odds %** is the chance that a dispensed asset comes in that tier. The odds must add up to 100, and they fall (or stay
+  level) down the table: a rarer tier never has higher odds than the one above it.
 - **Scrap FC** is what one spare copy pays back when you scrap it in the Armory (you always keep one).
 - The tiers are read from the table top to bottom, rarest last. **Adding a tier is just a new row**, wherever it
   belongs in the order; give it odds and take those odds from the others so they still add up to 100.

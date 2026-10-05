@@ -92,3 +92,4 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-05 | M51 | 1 | build thread | ✓ | ✗ 1055 s (6 timeouts under load ~20) | ✓ | ✓ | ✗ (base before M50 merged) | ✓ | – | four QA agents and a bot worker ran beside the gate | – | – |
 | 2026-10-05 | M51 | 2 | build thread | ✓ | ✓ 557 s | ✓ 225 s | ✓ | ✗ (pipeline/gate.test.mjs outside touches) | ✓ | – | touches widened | – | – |
 | 2026-10-05 | M51 | 3 | build thread | ✓ | ✓ 522 s | ✓ 208 s | ✓ | ✓ | ✓ | 7/8 Accept (core) | QA found the shard range gap (fixed); check 7 comment ids fixed in records | ~1.5 h | QA, critic |
+| 2026-10-05 | M56 | 1 | build thread | ✓ 22 s | ✓ 545 s | ✓ 222 s | – (skip) | ✓ | ✓ | 7/8 Accept (core) | QA 17 edge tests; docs nits fixed in records | ~45 min | QA, critic |

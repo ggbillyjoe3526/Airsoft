@@ -493,7 +493,7 @@ describe('pool.md, plausibility guards (M56, audit POOL-02, POOL-03, POOL-06)', 
    * Every shipped ID and the asset it stands for (audit POOL-06). IDs are save keys (`000002@epic`, pity, fits, the
    * chase row): renumbering a row would turn every player's copies into copies of whatever now holds the ID. A new row
    * appends the next ID here; a removed row's ID stays out of pool.md and is never reused; a rename changes only its
-   * Name here. 000021 is the guide's example battery and stays free; loot cases take 000022 on.
+   * Name here. 000021 is the guide's example battery and stays free.
    */
   it('pins every shipped pool ID to its asset', () => {
     expect(Object.fromEntries(pool.assets.map((a) => [a.id, a.name]))).toEqual({
