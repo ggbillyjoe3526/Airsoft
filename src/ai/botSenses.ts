@@ -57,6 +57,8 @@ export function perceive(b: Bot, w: BotWorld): void {
     const preAimed = aimedAt(b, w, best, bestPart);
     contact.reactAt = w.time + pick(b.rng, preAimed ? b.skill.preAimReactionTime : b.skill.reactionTime);
     contact.acquiredAt = w.time - (preAimed ? b.skill.preAimSettled * b.skill.aimSettleTime : 0);
+    contact.firstSeenAt = w.time;
+    contact.held = b.skill.holdsAngles && b.holding && preAimed;
     freshAimError(b.aim, cfg, b.rng);
   } else if (contact !== b.contact) {
     // Back on someone seen moments ago: no new reaction delay, but the aim error is this target's, not the last one's.
@@ -90,7 +92,7 @@ function aimedAt(b: Bot, w: BotWorld, target: Character, part: number): boolean 
 function contactFor(b: Bot, id: number): Contact {
   let c = b.contacts.get(id);
   if (!c) {
-    c = { seenAt: Number.NEGATIVE_INFINITY, acquiredAt: 0, reactAt: 0 };
+    c = { seenAt: Number.NEGATIVE_INFINITY, acquiredAt: 0, firstSeenAt: Number.NEGATIVE_INFINITY, held: false, reactAt: 0 };
     b.contacts.set(id, c);
   }
   return c;

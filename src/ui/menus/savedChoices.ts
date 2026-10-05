@@ -40,7 +40,7 @@ import {
   TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
-import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE } from '../../config/matchInfo';
+import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
@@ -267,6 +267,11 @@ export function loadScoreboardSize(): number {
 /** Whether the hit feed's lines fade or stay (Settings → HUD, M24). */
 export function loadHitFeedMode(): HitFeedMode {
   return loadChoice('hitFeed', HIT_FEED_MODES, DEFAULT_HIT_FEED_MODE);
+}
+
+/** Whether the "what got you" card shows after a hit (Settings → HUD, M41): Auto (against Pro), On or Off. */
+export function loadWhatGotYouMode(): WhatGotYouMode {
+  return loadChoice('whatGotYou', WHAT_GOT_YOU_MODES, DEFAULT_WHAT_GOT_YOU_MODE);
 }
 
 /** The HUD's size as picked (Settings → HUD, audit UI-04): a scale, 1 = sized for the screen. */

@@ -3,6 +3,8 @@
  * records and the crosshair options. First guesses, to tune in play.
  */
 
+import { type Difficulty, difficultyAtLeast } from './bots';
+
 /** The hit feed in the top-right corner: "Orange 2 called HIT · Blue 1", newest at the top. */
 export const HIT_FEED = {
   /** Most lines shown at once; an older line is dropped when a new one comes in. */
@@ -23,6 +25,34 @@ export const HIT_FEED_MODES: readonly { id: HitFeedMode; label: string; blurb: s
 ];
 
 export const DEFAULT_HIT_FEED_MODE: HitFeedMode = 'fade';
+
+/**
+ * Settings → HUD → What got you (M41, owner's esports plan 2026-10-04, question 9): the card after you're hit that says
+ * where the shot came from, whether that bot was holding the angle, how long you were in its view and whether you were
+ * moving. Auto shows it only against Pro opponents (a hard game feels fair when you can see why you lost); On shows it
+ * on every difficulty, Off never.
+ */
+export type WhatGotYouMode = 'auto' | 'on' | 'off';
+
+export const WHAT_GOT_YOU_MODES: readonly { id: WhatGotYouMode; label: string; blurb: string }[] = [
+  { id: 'auto', label: 'Auto', blurb: 'Shown only against Pro opponents.' },
+  { id: 'on', label: 'On', blurb: 'After every hit, on any difficulty: where it came from, whether that bot was holding the angle, and how long you were seen.' },
+  { id: 'off', label: 'Off', blurb: 'Never shown.' },
+];
+
+export const DEFAULT_WHAT_GOT_YOU_MODE: WhatGotYouMode = 'auto';
+
+export const WHAT_GOT_YOU = {
+  /** Auto turns the card on when the opponents' difficulty is at least this one. */
+  autoFrom: 'pro',
+  /** Horizontal speed (m/s) at the hit from which you count as moving (a crouched creep is about 1 m/s; standing is 0). */
+  movingSpeed: 0.5,
+} as const satisfies { autoFrom: Difficulty; movingSpeed: number };
+
+/** Whether the card shows in a match against `opponents` with the setting at `mode`. */
+export function whatGotYouShown(mode: WhatGotYouMode, opponents: Difficulty): boolean {
+  return mode === 'on' || (mode === 'auto' && difficultyAtLeast(opponents, WHAT_GOT_YOU.autoFrom));
+}
 
 /**
  * Settings → HUD → Scoreboard size (M24; owner, 2026-10-04: larger than before, and adjustable): a scale on the

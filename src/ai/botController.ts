@@ -1,6 +1,7 @@
 import { AUDIO } from '../config/audio';
 import type { BotConfig } from '../config/bots';
 import type { HitConfig } from '../config/hits';
+import { WHAT_GOT_YOU } from '../config/matchInfo';
 import { FLAG } from '../config/modes';
 import type { BodyConfig } from '../config/movement';
 import { NAV } from '../config/nav';
@@ -12,6 +13,7 @@ import { shotHeardScale, type WorldQuery } from '../sim/armament';
 import type { Character } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { isInPlay } from '../sim/elimination';
+import { createHitFacts, type HitFacts, recordHitFacts } from '../sim/hitFacts';
 import { createRng, type RngState, rngNext } from '../sim/rng';
 import { blockedShare } from '../sim/soundPath';
 import type { GameState } from '../sim/state';
@@ -98,6 +100,11 @@ export class BotController {
   private readonly enemyYaw: number[] = [0, 0];
   /** Per team, the end of the map it starts from this round. */
   private readonly ends: number[] = [0, 1];
+  /**
+   * The facts of the last hit on a player (a character no bot drives), for the "what got you" card (M41): filled in
+   * `observe` the tick the hit comes in, from the shooter's own state; reused, never reallocated.
+   */
+  readonly lastHit: HitFacts = createHitFacts();
   /** The team plans' own random stream (separate from each bot's). */
   private readonly planRng: RngState;
   /** Per team, this round's plan. */
@@ -350,6 +357,29 @@ export class BotController {
     raiser.raiser = true;
   }
 
+  /**
+   * A player was hit (M41): writes what `shooter`'s bot knew into `lastHit`. Whether it was holding an angle and how long
+   * the victim had been in its view come from its contact with the victim; friendly fire or a ricochet leaves both unknown.
+   */
+  private recordHit(victim: Character, shooter: Character, ricochet: boolean, time: number): void {
+    let held: boolean | null = null;
+    let inView: number | null = null;
+    if (!ricochet && victim.team !== shooter.team) {
+      for (const b of this.bots) {
+        if (b.character !== shooter) continue;
+        const contact = b.contacts.get(victim.id);
+        held = contact?.held ?? false;
+        if (contact && Number.isFinite(contact.firstSeenAt) && Number.isFinite(contact.seenAt)) {
+          // Still in view, or until the moment the bot lost sight (a BB already in flight).
+          const end = time - contact.seenAt > this.cfgOf(shooter.team).contactGrace ? contact.seenAt : time;
+          inView = Math.max(0, end - contact.firstSeenAt);
+        }
+        break;
+      }
+    }
+    recordHitFacts(this.lastHit, time, victim, shooter, ricochet, held, inView, WHAT_GOT_YOU.movingSpeed);
+  }
+
   /** After a simulation tick, while its events are still in the state. */
   observe(state: GameState): void {
     const time = state.time;
@@ -369,6 +399,7 @@ export class BotController {
         // (AI-09): the guess is back along the BB's path from the victim, no further than gunfire carries.
         const victim = this.character(state, e.victimId);
         const shooter = this.character(state, e.shooterId);
+        if (victim && shooter && !this.botCharacters.has(victim)) this.recordHit(victim, shooter, e.ricochet, time);
         if (victim && shooter && isInPlay(shooter) && victim.team !== shooter.team) {
           const g = this.callGuess;
           const flat = Math.hypot(e.direction.x, e.direction.z);
