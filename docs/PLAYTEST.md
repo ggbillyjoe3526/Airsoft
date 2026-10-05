@@ -103,7 +103,7 @@ The rifle holds 60 BBs and the pistol 18, and each comes with 4 magazines per ro
   button does not keep firing. Press 1 to switch back.
 - [ ] **Shoot at a wall far away.** You can see the BBs fly, take a moment to arrive, and drop at long range.
   The pistol's BBs drop sooner than the rifle's.
-- [ ] **Fire about half a magazine, then press R.** A magazine swap plays, a little quicker than in `v0.1-alpha.3`
+- [ ] **Fire about half a magazine, then press R.** A magazine swap plays, a little quicker than in 0.1 Dev 3
   (rifle 1.8 s, pistol 1.2 s). The small gauges next to the BB count
   show your spares, and the half-used one goes back into the pouch.
 - [ ] **Empty a magazine completely, then pull the trigger.** An empty trigger pull starts a reload by itself.
@@ -589,7 +589,7 @@ Headphones help: direction (in front, behind, above) comes through best on them.
 
 - [ ] **Labels.** Title: Start, Tutorial, **Practice Range**. Pause: Resume, Settings, **Quit**, with no note under
   them. Result: Play Again, **New Game**, **Summary**, **Quit**. Settings has no "Changes save as you make them." line.
-- [ ] **Version.** The title screen's bottom-right corner names this build (`v0.1-alpha.3+N · commit` on `main`, just
+- [ ] **Version.** The title screen's bottom-right corner names this build ("0.1 Dev 3+N · commit" on `main`, just
   the tag on a release download); hover it for how many commits after the release it is.
 - [ ] **Field of view** starts at 90° (unless you'd moved the slider before: then it keeps yours). New game's Map tile
   says "An abandoned warehouse yard."

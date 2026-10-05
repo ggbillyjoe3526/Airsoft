@@ -176,7 +176,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 - **M50** · Woodland and Neon Heights download only once Dev content is on, the pool and stats tables are a file of their own, and the code size budget is 900 kB with a warning at 90 % (#107)
 
-## v0.1-alpha.3 · 2026-10-03
+## 0.1 Dev 3 · 2026-10-03
 
 ### Added
 - **M7a** · Q and E keys freed for leaning (swap key removed)
@@ -194,7 +194,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - Docs: every change as a pull request, the repository's new name, the roadmap and playtest guide (#1, #2, #5, #7, #8, #9)
 - Automatic checks on every pull request: a browser smoke test and a GitHub workflow (#3)
 
-## v0.1-alpha.2 · 2026-10-01
+## 0.1 Dev 2 · 2026-10-01
 
 ### Added
 - **M1** · Walk and sprint keys; rebindable key bindings; bigger Depot (50 × 32 m)
@@ -207,7 +207,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Internal
 - Bug pass: bots mind moving teammates; tag policy and docs tidied
 
-## v0.1-alpha · 2026-09-30
+## 0.1 Dev 1 · 2026-09-30
 
 ### Added
 - Scaffold and first-person scene with Three.js and Rapier
