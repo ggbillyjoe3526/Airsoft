@@ -48,6 +48,7 @@ const ARMORY_KIT: PlayerKit = {
   hopUps: [0.3, 0.4],
   bbWeights: [0.28, 0.2],
   glowBBs: ['always', 'always'],
+  schemes: ['acid', 'onyx'],
 };
 
 describe('the Rules picker (M39)', () => {

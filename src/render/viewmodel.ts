@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { FULL_MOTION, type MotionScale } from '../config/accessibility';
 import { LIGHTING_PRESETS, type LightingPreset, VIEWMODEL } from '../config/render';
 import type { ReplicaConfig } from '../config/replicas';
+import type { ReplicaPaint } from '../config/schemes';
 import type { Armament } from '../sim/armament';
 import { buildReplicaModels, fitMuzzle, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
 
@@ -129,6 +130,8 @@ export class Viewmodel {
     private readonly loadout: readonly ReplicaConfig[],
     /** Replica and hand detail (QualitySettings.replicaDetail and handDetail, FA8); setDetail changes them. */
     detail: ReplicaDetail = LOW_DETAIL,
+    /** Each replica's colour scheme by loadout slot, and Realistic colours (G1); null: the black and tan of before. */
+    private readonly paint: ReplicaPaint | null = null,
   ) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, VIEWMODEL.near, VIEWMODEL.far);
     // Soft sky fill, a warm key from above-right and a cool rim from behind to separate the silhouette.
@@ -145,7 +148,7 @@ export class Viewmodel {
 
   /** Builds every replica (and the raised hand) at `detail` and puts them in the rig. */
   private build(detail: ReplicaDetail): ReplicaModels {
-    const replicas = buildReplicaModels(this.loadout, this.teamColor, VIEWMODEL.orangeTips, detail);
+    const replicas = buildReplicaModels(this.loadout, this.teamColor, VIEWMODEL.orangeTips, detail, this.paint);
     this.slots.length = 0;
     this.beams = [];
     for (const r of this.loadout) {

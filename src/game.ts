@@ -3,6 +3,7 @@ import { loadVolumes } from './audio/audioMix';
 import { soundscapeOf } from './audio/soundscape';
 import { motionScale, type SoundCueColour, soundCueCss } from './config/accessibility';
 import type { VolumeChannel } from './config/audio';
+import type { LookSettings } from './config/look';
 import type { Difficulty } from './config/bots';
 import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/dev';
 import { PERF_SCRIPT } from './config/perfScript';
@@ -90,6 +91,7 @@ import {
   loadRawInput,
   loadScoreboardSize,
   loadSoundCueColour,
+  loadLook,
   loadSoundCues,
   loadSoundCueSize,
   loadSprintMode,
@@ -224,6 +226,8 @@ export class Game {
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
   private teamColours: TeamColourSetId = loadTeamColours();
   private soundCues = loadSoundCues();
+  /** Settings › Look (G1): robots and Realistic colours, for the next match or range visit. */
+  private look: LookSettings = loadLook();
   /** The sound cues' size and colour (Settings → Accessibility) and the scoreboard's size and hit feed (Settings → HUD), M24. */
   private soundCueSize = loadSoundCueSize();
   private soundCueColour: SoundCueColour = loadSoundCueColour();
@@ -452,6 +456,8 @@ export class Game {
         soundCueSize: { initial: this.soundCueSize, onChange: (v) => ((this.soundCueSize = v), this.showHudLook()) },
         soundCueColour: { initial: this.soundCueColour, onChange: (c) => ((this.soundCueColour = c), this.showHudLook()) },
       },
+      // Built into the figures and replicas, so a change shows from the next match (on the range, from Resume).
+      look: { initial: this.look, onChange: (look) => ((this.look = look), (this.setupChanged = this.loadoutChanged = true)) },
       hud: {
         hudSize: { initial: this.hudSize, onChange: (v) => ((this.hudSize = v), this.showHudLook()) },
         scoreboardSize: { initial: this.scoreboardSize, onChange: (v) => ((this.scoreboardSize = v), this.showHudLook()) },
@@ -863,6 +869,7 @@ export class Game {
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
+        look: this.look,
       }, this.matchSeed, this.quality, this.audio, this.crosshair);
       if (this.options.perfLog) console.info(this.session.build.line());
       this.steppedDown = false;
@@ -893,6 +900,7 @@ export class Game {
     this.session = new RangeSession(this.renderer, this.container, this.input, {
       kit: this.loadout.kit(),
       teamColours: TEAM_COLOUR_SETS[this.teamColours],
+      look: this.look,
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     this.steppedDown = false;

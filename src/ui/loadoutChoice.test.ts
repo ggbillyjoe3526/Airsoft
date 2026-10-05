@@ -137,7 +137,7 @@ describe('Loadout tile on New game (M26b)', () => {
   });
 
   it('shows the factory setting for a missing dial or weight', () => {
-    const kit = { slots: [pistol()], hopUps: [], bbWeights: [], glowBBs: [] };
+    const kit = { slots: [pistol()], hopUps: [], bbWeights: [], glowBBs: [], schemes: [] };
     expect(loadoutSummary(kit, [])).toBe(`0.20 g BBs · hop-up ${hopUpLabel(GAS_PISTOL.hopUpDial)}`);
   });
 });
