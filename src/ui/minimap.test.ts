@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { MINIMAP } from '../config/minimap';
+import { EXIT_VISUALS } from '../config/render';
+import { cssColor, TEAM_COLOUR_SETS } from '../config/teams';
 import { Minimap, storeyOf } from './minimap';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
@@ -347,5 +349,43 @@ describe('bushes on the minimap (M33e)', () => {
     const dom = recordingDom();
     new Minimap(dom.parent, SLOPE_YARD.blocks, '#00f', '#f80', SLOPE_YARD_TERRAIN);
     expect(dom.canvases[1]!.arcs).toHaveLength(0);
+  });
+});
+
+describe('the exit icons (M43, M68 audit UI-15)', () => {
+  /** The stroke colours drawn (the exit icons' among them) by a minimap made with `open` as its open-exit colour (or the default). */
+  function strokes(open?: string): string[] {
+    const colours: string[] = [];
+    const ctx = new Proxy({} as Record<string, unknown>, {
+      get: () => () => undefined,
+      set: (_t, key, value) => {
+        if (key === 'strokeStyle') colours.push(String(value));
+        return true;
+      },
+    });
+    const parent = {
+      style: { setProperty: () => undefined, getPropertyValue: () => '' },
+      classList: { toggle: () => undefined, remove: () => undefined },
+      appendChild: () => undefined,
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
+    };
+    (globalThis as { document?: unknown }).document = {
+      createElement: () => ({ width: 0, height: 0, hidden: false, className: '', setAttribute: () => undefined, getContext: () => ctx, remove: () => undefined, getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }) }),
+    };
+    const minimap = new Minimap(parent as unknown as HTMLElement, [], '#00f', '#f80', null, [], [], open);
+    minimap.setVisible(true);
+    minimap.update(
+      { x: 0, y: 0, z: 0, yaw: 0, mates: [], count: 0, hold: null, flag: null, exits: [{ x: 3, z: 0, open: true }, { x: -3, z: 0, open: false }], exitCount: 2, time: 0 },
+      [],
+    );
+    return colours;
+  }
+
+  it('draws an open exit in the colour it is given (the team colour set’s) and a shut one grey', () => {
+    const picked = strokes('#112233');
+    expect(picked).toContain('#112233');
+    expect(picked).toContain(cssColor(EXIT_VISUALS.shutColor));
+    expect(strokes()).toContain(cssColor(TEAM_COLOUR_SETS.standard.exit));
+    expect(strokes()).not.toContain('#112233');
   });
 });

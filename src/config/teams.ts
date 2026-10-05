@@ -28,11 +28,21 @@ export interface TeamColours {
    * so it still reads as text on the HUD's dark panels.
    */
   readonly hud: readonly number[];
+  /**
+   * Extraction's open exits (M68, audit UI-15): the ring, the sign, the markers and the minimap icon. It is picked with
+   * the team colours, so a colour set can move it off the figures' hues. Every set keeps the green for now (owner,
+   * 2026-10-05: until a colour-blind playtester asks); the exits also carry a door glyph, a distance and a name, so
+   * colour is never the only cue (M18b).
+   */
+  readonly exit: number;
 }
 
+/** The open exits' green. */
+const EXIT_GREEN = 0x3fcf6a;
+
 export const TEAM_COLOUR_SETS: Readonly<Record<TeamColourSetId, TeamColours>> = {
-  standard: { figures: TEAM_COLORS, hud: TEAM_COLORS },
-  highContrast: { figures: [0x8ccfff, 0xb8460c], hud: [0x8ccfff, 0xe0601a] },
+  standard: { figures: TEAM_COLORS, hud: TEAM_COLORS, exit: EXIT_GREEN },
+  highContrast: { figures: [0x8ccfff, 0xb8460c], hud: [0x8ccfff, 0xe0601a], exit: EXIT_GREEN },
 };
 
 export const TEAM_COLOUR_CHOICES: readonly { id: TeamColourSetId; label: string; blurb: string }[] = [

@@ -8,7 +8,7 @@ import { activeDev, type DevSettings, devCheating, retroLookOf } from './config/
 import { PERF_SCRIPT } from './config/perfScript';
 import { ROUNDS } from './config/hits';
 import type { MatchRules, RulesetId } from './config/matchRules';
-import { type CrosshairSettings, type HitFeedMode, hudScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
+import { type CrosshairSettings, type HitFeedMode, hudScale, menuScale, scoreboardScale, type WhatGotYouMode } from './config/matchInfo';
 import { FULLSCREEN_RELOCK_MS } from './config/controls';
 import { CRASH_TEXT } from './config/crash';
 import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
@@ -716,12 +716,14 @@ export class Game {
   /**
    * The HUD's look from the settings (M24), as CSS variables on the game's container (style.css): the HUD's size (audit
    * UI-04), the sound cues' size and colour, and the scoreboard's size (held back in a narrow window so the hit feed
-   * keeps its room). Again on resize.
+   * keeps its room), and the menus' size step (M68, audit UI-12). Again on resize.
    */
   private readonly showHudLook = (): void => {
     const style = this.container.style;
-    const hud = hudScale(this.hudSize, this.container.clientHeight || window.innerHeight);
+    const height = this.container.clientHeight || window.innerHeight;
+    const hud = hudScale(this.hudSize, height);
     style.setProperty('--hud-scale', String(hud));
+    style.setProperty('--menu-scale', String(menuScale(height)));
     style.setProperty('--cue-scale', String(this.soundCueSize));
     style.setProperty('--cue-colour', soundCueCss(this.soundCueColour));
     // The scoreboard grows with the HUD, still only as far as leaves the hit feed room.

@@ -43,9 +43,6 @@ import { FlagRenderer } from './flagRenderer';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
 
-/** The exit markers' colour (EXIT_VISUALS.openColor as CSS). */
-const EXIT_CSS = cssColor(EXIT_VISUALS.openColor);
-
 /** What the scoreboard over the field shows: nothing, the round just played, or the match so far. */
 type BoardView = 'none' | 'round' | 'match';
 
@@ -109,6 +106,8 @@ export class MatchPresentation {
   /** Extraction (M43): the exits in the world and their screen markers (null for an exit closed this run). */
   private readonly exits: ExitRenderer | null = null;
   private readonly exitMarkers: (FlagMarker | null)[] = [];
+  /** The exit markers' colour: the picked team colour set's exit colour as CSS (M68, audit UI-15). */
+  private readonly exitCss: string;
   private readonly exitAnchor = new THREE.Vector3();
   private readonly exitAt: ScreenMarker = { x: 0, y: 0, onScreen: false };
   /** The respawn's fade from black, and when you were last back in (the banner says so for a moment). */
@@ -167,7 +166,7 @@ export class MatchPresentation {
     this.soundCues = new SoundCues(container);
     this.squadLine = new SquadOrderLine(container, player.team);
     this.holdMarker = new HoldMarker(container, teamCss(player.team));
-    this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys);
+    this.minimap = new Minimap(container, field.blocks, cssColor(teamColours.hud[player.team]!), cssColor(teamColours.hud[1 - player.team]!), field.terrain ?? null, field.foliage ?? [], field.storeys, cssColor(teamColours.exit));
     const run = state.round.run;
     this.minimapFrame = {
       x: 0,
@@ -183,8 +182,9 @@ export class MatchPresentation {
       time: 0,
     };
     this.orderWheel = new OrderWheel(container, teamCss(player.team), keyName);
+    this.exitCss = cssColor(teamColours.exit);
     if (extraction) {
-      this.exits = new ExitRenderer(run, field.terrain ?? null);
+      this.exits = new ExitRenderer(run, field.terrain ?? null, teamColours.exit);
       scene.add(this.exits.object);
       this.exitMarkers = run.exits.map((e) => (e.closed ? null : new FlagMarker(container, 'exit-marker')));
       this.respawnFade = document.createElement('div');
@@ -607,7 +607,7 @@ export class MatchPresentation {
 
   /**
    * Extraction: a marker over each open exit (pinned to the screen edge when it's out of view) with the distance to it,
-   * in green; hidden while the run isn't live, while you stand at that exit and under the board.
+   * in the colour set's exit colour; hidden while the run isn't live, while you stand at that exit and under the board.
    */
   private updateExitMarkers(camera: THREE.PerspectiveCamera, spectating: boolean): void {
     if (this.exitMarkers.length === 0) return;
@@ -625,7 +625,7 @@ export class MatchPresentation {
       }
       this.exitAnchor.set(e.position.x, e.position.y + EXIT_VISUALS.markerHeight, e.position.z);
       const m = projectMarker(this.exitAnchor, camera, this.view.width, this.view.height, EXIT_VISUALS.markerEdge, this.exitAt);
-      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), EXIT_CSS, !m.onScreen);
+      marker.show(m.x, m.y, Math.hypot(e.position.x - from.x, e.position.z - from.z), this.exitCss, !m.onScreen);
     }
   }
 

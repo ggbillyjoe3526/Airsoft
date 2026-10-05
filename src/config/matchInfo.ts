@@ -101,6 +101,25 @@ export function hudScale(picked: number, viewportHeight: number): number {
   return Math.round(picked * auto * 1000) / 1000;
 }
 
+/**
+ * The menus' own size step (M68, audit UI-12), read like the HUD's: a window taller than `referenceHeight` grows the
+ * menus' type and controls (style.css, `.menus`) up to `maxAuto` times, so they don't shrink to a sliver at 4K with no
+ * system scaling. At 1080 px high or below it is 1: nothing changes. `maxAuto` is 1 for now (owner, 2026-10-05: no menu
+ * scaling until Beta); the audit's 1.4 turns the step on.
+ */
+export const MENU_SIZE = {
+  /** The window height (CSS px) the menus are drawn for. */
+  referenceHeight: 1080,
+  /** The most a tall window grows them. */
+  maxAuto: 1,
+} as const;
+
+/** The menus' scale on a `viewportHeight` px tall window (1 = as drawn at 1080 px high), `size` being MENU_SIZE's data. */
+export function menuScale(viewportHeight: number, size: { referenceHeight: number; maxAuto: number } = MENU_SIZE): number {
+  const auto = Math.min(size.maxAuto, Math.max(1, viewportHeight / size.referenceHeight));
+  return Math.round(auto * 1000) / 1000;
+}
+
 /** The marker with the name over each teammate (never over an enemy). */
 export const TEAMMATE_MARKERS = {
   /**
