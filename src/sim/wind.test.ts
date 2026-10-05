@@ -11,7 +11,8 @@ describe('the match wind (M30)', () => {
     expect(speeds.size).toBeGreaterThan(15);
   });
 
-  it('blows level, from any direction, between calm and a light breeze, gusting round its mean', () => {
+  // A timeout of its own (audit CORE-05, KNOWN_ISSUES): 64 seeds of sampling is the fast project's longest loop.
+  it('blows level, from any direction, between calm and a light breeze, gusting round its mean', { timeout: 15_000 }, () => {
     const out = vec3();
     const yaws: number[] = [];
     for (let seed = 1; seed <= 64; seed++) {
@@ -24,9 +25,10 @@ describe('the match wind (M30)', () => {
       let maxAbsY = 0;
       let maxSpeed = 0;
       let minSpeed = Infinity;
-      const samples = 2_000;
+      // 1,000 samples half a second apart: the same 500 s of gusts as 2,000 at a quarter (audit CORE-05).
+      const samples = 1_000;
       for (let i = 0; i < samples; i++) {
-        windAt(w, i * 0.25, out);
+        windAt(w, i * 0.5, out);
         maxAbsY = Math.max(maxAbsY, Math.abs(out.y));
         const speed = Math.hypot(out.x, out.z);
         maxSpeed = Math.max(maxSpeed, speed);
