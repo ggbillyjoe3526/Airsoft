@@ -5,12 +5,11 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
 keeps `status` and `attempts` current.
 
-The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
-files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged dev with M35's content tag until the
-owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
-first (M33 changes both).
-
-attempts: 0
+The Extraction plan (owner approved 2026-10-04 20:51 and 20:54 UTC: every default except question 3, one automatic
+respawn per run; the plan in the project's shared files `research/extraction-mode-2026-10-04.md`). Everything here is
+tagged dev with M35's content tag until the owner says it's done. M33 owns the map framework (MapData gains only an
+optional `extraction` block), the Pro thread owns held angles and team play (M37, M38): changes there go through the
+coordinator.
 
 ## M45 · Extraction: waves and regen points
 tier: core
