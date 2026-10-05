@@ -94,7 +94,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Changed
 - **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)
 - **M68** · Settings → Graphics is shorter: the Custom rows fold away under Low, Medium and High and open when you pick Custom or click "Custom settings" (#121)
-- **M69** · Woodland and Neon Heights each have an echo of their own (long and dark in the woods, brighter in the city), and the neon hum is easier to hear on small speakers (#123)
+- **M69** · Woodland and Neon Heights each have an echo of their own (long and dark in the woods, brighter in the city), and the neon hum is easier to hear on small speakers (#124)
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
 - **M37** · Pro bots holding still aim at the corners and doorways you'd step out of, and answer a peek there faster; anywhere else no faster than Hard
@@ -164,7 +164,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 
 ### Internal
 - **M68** · Two unused style rules removed (#121)
-- **M69** · Sound effects drop their silent tails and the countdown beep renders once, so the sounds take less memory (#123)
+- **M69** · Sound effects drop their silent tails and the countdown beep renders once, so the sounds take less memory (#124)
 - **M64** · The performance check can play Extraction: its scripted player opens a case on Depot (#118)
 - **M51** · CI runs the slow tests in three parallel jobs beside the main check; the Extraction balance tests and the map Extraction blocks share one helper each; a smoke test plays Tournament Extraction with Retro pixels and Pro CQB against Pro (#110)
 - **M57** · The night balance checks now play with the torches bots carry in a real match, and their bands use the new numbers (#120)
