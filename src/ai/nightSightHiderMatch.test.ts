@@ -53,7 +53,8 @@ describe('bots hunting a still player at night, in a headless match (acceptance 
         // A bot moves up to a step between sensing and this check.
         if (d > range + 0.5 && d > BOTS.closeAwareness) beyondRange++;
       }
-    });
+      // The night field alone, without the torches the game fits (M57): torchlight is woodlandTorchMatch.test.ts's.
+    }, undefined, false);
     return { farthest, sightings, beyondRange };
   };
 

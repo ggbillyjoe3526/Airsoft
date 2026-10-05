@@ -9,7 +9,9 @@ import { describeExtractionBalance, type ExtractionBands } from './extractionBal
  */
 const SEEDS = 48;
 const BANDS: ExtractionBands = {
-  // Measured: Easy 56 % and 34 FC a minute, Normal 50 % and 32, Hard 21 % and 25, Pro 15 % and 16.
+  // Measured: Easy 56 % and 34 FC a minute, Normal 50 % and 32, Hard 21 % and 25, Pro 15 % and 16. With the torches the
+  // game fits every bot at night (M57, audit AI-02, on M55's maps): Easy 58 % (28 of 48) and 41.5, Normal 48 % (23) and
+  // 31, Hard 21 % (10) and 19, Pro 8 % (4) and 12, all inside these bands.
   easy: { extract: [0.4, 0.75], fcPerMinute: [20, 55] },
   normal: { extract: [0.3, 0.65], fcPerMinute: [18, 50] },
   hard: { extract: [0.08, 0.35], fcPerMinute: [10, 40] },

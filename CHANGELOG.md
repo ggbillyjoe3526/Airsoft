@@ -161,6 +161,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Internal
 - **M64** · The performance check can play Extraction: its scripted player opens a case on Depot (#118)
 - **M51** · CI runs the slow tests in three parallel jobs beside the main check; the Extraction balance tests and the map Extraction blocks share one helper each; a smoke test plays Tournament Extraction with Retro pixels and Pro CQB against Pro (#110)
+- **M57** · The night balance checks now play with the torches bots carry in a real match, and their bands use the new numbers (#120)
 - **M44** · Extraction cases: tests for the Use key, case rolls, drops and the haul, and a browser test of a run that opens the locker
 - **M45** · Extraction waves: tests for wave timing per difficulty, the reserve, regen points on Depot's real level, and bots setting off again
 - **M46** · Extraction guards and hunters: tests for posts, patrols, hunters and cover, and a balance guard per difficulty on Depot (#98)

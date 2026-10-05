@@ -24,7 +24,9 @@ describe('a 4v4 Elimination match on Woodland, both teams on Pro (M40)', () => {
     // Seeds 1-16 since M51 (audit BAL-07): at 8 seeds one standard error is about 6 points and the 54 % sat within reach
     // of the ceiling either way; at 16 it is about 4.
     // M55 (audit SIM-05: a log and a boulder out of what they stood in) deals every seed again: end 0 52.3 % here (67 of
-    // 128), 55.8 % over seeds 1-48 (53.6 % before, ±3.7 between the two).
+    // 128), 55.8 % over seeds 1-48 (53.6 % before, ±3.7 between the two). Every figure so far played without the torches
+    // the game fits every bot at night; with them (M57, audit AI-02, on M55's maps) end 0 wins 50.4 % (62 of 123), none
+    // on time.
     expectProBalance(tallyBalance(16, SECONDS, botConfig('pro'), 'elimination', WOODLAND, TEAM_SIZE), 'elimination', 'Woodland Pro');
   });
 });
