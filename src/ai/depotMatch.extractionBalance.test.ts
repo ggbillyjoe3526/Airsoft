@@ -13,7 +13,7 @@ import { playRun, RUNNER_PLAN, type RunResult } from './extractionRunSupport';
  */
 const SEEDS = 48;
 const BANDS: Readonly<Record<Difficulty, { extract: readonly [number, number]; fcPerMinute: readonly [number, number] }>> = {
-  // Measured: Easy 46 % and 60 FC a minute, Normal 21 % and 28, Hard 8 % and 15, Pro 10 % and 19.
+  // Measured: Easy 48 % and 63 FC a minute, Normal 25 % and 31, Hard 6 % and 11, Pro 8 % and 14.
   easy: { extract: [0.3, 0.65], fcPerMinute: [35, 90] },
   normal: { extract: [0.1, 0.45], fcPerMinute: [12, 55] },
   hard: { extract: [0, 0.25], fcPerMinute: [0, 35] },

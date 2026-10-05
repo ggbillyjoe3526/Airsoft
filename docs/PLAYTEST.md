@@ -1109,7 +1109,7 @@ Dev content on, Extraction on Depot, Normal, as above.
 - [ ] **Guards:** the locker has two Orange bots near it, tucked behind cover and watching the way you'd come in;
   sometimes a field case far from you has one too. A guard you shoot at or pass close by comes after you, but never
   much more than about 8 m from its case: it goes back once you're gone.
-- [ ] **Nothing next to your door:** at the start no guard or patrol is within about 15 m of where you come in.
+- [ ] **Nothing next to your door:** at the start no field-case guard or patrol is within about 15 m of where you come in. The locker is guarded even when it stands by your door (East yard with the locker on the dock): does that start feel fair?
 - [ ] **Patrols:** the rest of the home team walks between the shut cases in pairs, one following the other, and
   re-takes its round after a fight. Do they read as a pair?
 - [ ] **Hunters:** from halfway through the run (a third of the way on Hard and Pro, never on Easy) the patrols stop
