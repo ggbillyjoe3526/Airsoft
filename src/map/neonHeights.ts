@@ -58,7 +58,8 @@ const ROOF = 0.3;
  * The city's paint (M34f, sRGB): the concept's mint, magenta and cyan pastels on slate for the three buildings (Repair
  * Shop block, Arcade, Tower), amber for the walkways between them (the Walkway, the Sky Bridge), with magenta and teal
  * accents. The cyan stops at hue 183° (linear), 28° short of the High Contrast team blue. Each building one colour; the
- * city round the site slate; rooms pale; props their own. Nothing that reads as team blue or orange (mapMeshes.test.ts' rule, checked in neonHeightsArt.test.ts).
+ * city round the site slate; rooms pale; props their own. Nothing that reads as team blue or orange (mapMeshes.test.ts'
+ * rule, checked in neonHeightsArt.test.ts).
  */
 const PAINT = {
   slate: 0x7d8aa0,
