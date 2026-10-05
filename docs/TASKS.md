@@ -15,5 +15,5 @@ acceptance:
   2. When a collection save is refused because another tab saved first, the collection is reloaded from that save at once and the Armory shows one plain-words line saying so and that the change was not kept; the line clears on the next change or when the screen opens again, and the stale Shot reveal is not shown.
   3. A full or blocked store and a newer game's file never show the notice, and a newer game's file is still never read or overwritten.
   4. `saveOrReload` and the Armory notice have tests that fail without the change; `tsc` and the fast project are clean.
-status: qa
+status: gates
 attempts: 0
