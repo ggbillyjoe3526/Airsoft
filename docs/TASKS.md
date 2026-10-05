@@ -78,3 +78,17 @@ perf: skip
 touches: pool.md, src/pool/, src/config/, src/ui/
 acceptance:
   1. A recurring Supply weekend (Friday to Sunday by the device clock) and a dated event table in data, each a case-odds modifier shown on the Mode pop-up.
+
+## M33i · The woodland look
+tier: core
+perf: required
+touches: src/render/, src/config/render.ts, src/config/materials.ts, src/map/mapTypes.ts, src/map/nightSight.ts, src/map/groundSurfaces.ts, src/map/woodland.ts, src/matchSession.ts, src/rangeSession.ts, pipeline/perf-run.mjs, src/config/perfScript.ts, e2e/, docs/
+contract: map data drives every new look (tree, log and boulder shapes by block kind, a canopy over `tree` blocks, optional MapData.ground patches, optional MapLight.kind fixtures, a night sky from the lighting preset); a map that uses none of them (Depot) builds exactly as today.
+acceptance:
+  1. Woodland's trees, logs, log walls, cabin, fort, fence and boulders read as wood, bark and stone (shapes inside their collision boxes, invisible corners at most 8 cm), with crowns against the sky; Depot's meshes, textures and GPU memory are unchanged.
+  2. The ground shows the creek bed, tracks, clearings and darker leaf litter under the trees from one ground grid that M33j's footsteps will read.
+  3. Camp fires and lanterns have fixtures; fires flicker (no per-frame CPU work on the mesh), with embers where dust motes are on; the night preset draws a moon and stars on every preset and the day nothing.
+  4. Woodland stays within Low's 100 draw calls and 150k triangles, and Medium's ceiling; the perf harness can play Woodland; no shader is first built mid-match.
+  5. Low and Medium screenshots of Woodland from the spawn and from the meadow towards the Knoll.
+status: open
+attempts: 0
