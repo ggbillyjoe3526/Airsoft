@@ -130,8 +130,8 @@ describe('menu data', () => {
   it('plays no more a side than a map has spawns for (M33d)', () => {
     for (const m of MAPS) {
       expect(m.teamSize.standard).toBeLessThanOrEqual(m.teamSize.max);
-      expect(m.data.spawns[0].length, m.id).toBeGreaterThanOrEqual(m.teamSize.max);
-      expect(m.data.spawns[1].length, m.id).toBeGreaterThanOrEqual(m.teamSize.max);
+      expect(mapData(m.id).spawns[0].length, m.id).toBeGreaterThanOrEqual(m.teamSize.max);
+      expect(mapData(m.id).spawns[1].length, m.id).toBeGreaterThanOrEqual(m.teamSize.max);
       expect(teamSizeOn(m.id, 5)).toBe(m.teamSize.max);
       expect(teamSizeOn(m.id, 1)).toBe(1);
     }

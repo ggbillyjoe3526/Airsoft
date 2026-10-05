@@ -19,7 +19,7 @@ import { matchEarnings } from './pool/armory';
 import { resultKey } from './stats/records';
 import { matchStanding } from './stats/settleMatch';
 import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
-import { DEFAULT_MAP, MAPS } from './map/maps';
+import { DEFAULT_MAP, MAPS, mapData } from './map/maps';
 import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks, playedTeamSize } from './newGamePicks';
 import { EXTRACTION, squadSize } from './config/extraction';
 import { BOT_LOADOUTS } from './config/bots';
@@ -67,7 +67,7 @@ describe('New game picks and dev content (M35)', () => {
     for (const map of MAPS) for (const mode of MATCH_MODES) {
       const p = picks({ map: map.id, mode: mode.id });
       // Extraction plays only on a map with its data (M43); elsewhere it plays as the default mode.
-      const offered = mode.id !== 'extraction' || map.data.extraction !== undefined;
+      const offered = mode.id !== 'extraction' || mapData(map.id).extraction !== undefined;
       expect(playedPicks(p, true)).toEqual(offered ? p : { ...p, mode: DEFAULT_MODE });
       expect(playedPicks(p, false).map).toBe(map.tag === 'dev' ? DEFAULT_MAP : map.id);
       expect(playedPicks(p, false).mode).toBe(mode.tag === 'dev' ? DEFAULT_MODE : mode.id);

@@ -3,7 +3,7 @@ import { AMBIENCES, type AmbienceId, AMBIENT_LOOPS, AUDIO, type LoopId } from '.
 import { isMapCue, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import { lightingChoices, mapUnderLighting, playsAtNight } from '../map/lightingChoice';
-import { MAPS } from '../map/maps';
+import { MAPS, mapData } from '../map/maps';
 import { NEON_HEIGHTS } from '../map/neonHeights';
 import { WOODLAND } from '../map/woodland';
 import { vec3 } from '../sim/vec';
@@ -475,9 +475,9 @@ describe("M34g city acceptance 3: the city's soundscape asks only for its own cu
 
   it('asks no other map, under any preset, for a city loop or cue', () => {
     for (const entry of MAPS) {
-      if (entry.data === NEON_HEIGHTS) continue;
-      for (const choice of lightingChoices(entry.data)) {
-        const scene = soundscapeOf(mapUnderLighting(entry.data, choice), playsAtNight(entry.data, choice));
+      if (mapData(entry.id) === NEON_HEIGHTS) continue;
+      for (const choice of lightingChoices(mapData(entry.id))) {
+        const scene = soundscapeOf(mapUnderLighting(mapData(entry.id), choice), playsAtNight(mapData(entry.id), choice));
         for (const id of CITY_LOOPS) expect(scene.loops, `${entry.id} by ${choice}`).not.toContain(id);
         for (const cue of CITY_CUES) expect(scene.cues, `${entry.id} by ${choice}`).not.toContain(cue);
       }

@@ -48,7 +48,7 @@ import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES,
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
 import { lightingChoices, parseLightingPick } from '../../map/lightingChoice';
-import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
+import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded } from '../../map/maps';
 import { browserStorage, loadSetting, numberIn, oneOf } from '../../settings/storage';
 import { loadChoice } from '../optionPicker';
 
@@ -148,15 +148,16 @@ export function loadMap(): MapId {
 
 /**
  * Each map's Day or Night pick (M34d), saved as `lighting.<map id>`: only for maps that offer more than one preset and
- * only a preset the map offers; a map without a saved pick plays its first (MapData.lighting).
+ * only a preset the map offers; a map without a saved pick plays its first (MapData.lighting). A dev map whose data
+ * isn't loaded yet (M50) keeps any preset saved for it: lightingPicked checks it against the map once it is.
  */
 export function loadLightingPicks(storage = browserStorage()): Partial<Record<MapId, LightingPresetId>> {
   const picks: Partial<Record<MapId, LightingPresetId>> = {};
   for (const m of MAPS) {
-    const offered = lightingChoices(m.data);
-    if (offered.length < 2) continue;
+    const offered = mapLoaded(m.id) ? lightingChoices(mapData(m.id)) : null;
+    if (offered && offered.length < 2) continue;
     const pick = loadSetting(`lighting.${m.id}`, parseLightingPick, undefined, storage);
-    if (pick !== undefined && offered.includes(pick)) picks[m.id] = pick;
+    if (pick !== undefined && (!offered || offered.includes(pick))) picks[m.id] = pick;
   }
   return picks;
 }

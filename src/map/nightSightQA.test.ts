@@ -4,7 +4,7 @@ import { sightConditionsOf } from '../ai/perception';
 import { OPEN_FIELD } from '../sim/testSupport';
 import { vec3 } from '../sim/vec';
 import { DEPOT } from './depot';
-import { MAPS } from './maps';
+import { MAPS, mapData } from './maps';
 import type { BlockKind, MapBlock, MapData } from './mapTypes';
 import { buildNightField, inLight, nightSightRange, underCanopy } from './nightSight';
 import { RANGE_MAP } from './range';
@@ -136,11 +136,12 @@ describe('daylight maps have no night field (acceptance 3)', () => {
   it('puts lights only on night maps, and every night map in the Map pop-up has a night field', () => {
     expect(MAPS.length).toBeGreaterThanOrEqual(2);
     for (const m of MAPS) {
-      if (m.data.lights && m.data.lights.length > 0) expect(m.data.night, m.id).toBe(true);
-      expect(buildNightField(m.data, NIGHT_SIGHT) !== null, m.id).toBe(!!m.data.night);
+      const data = mapData(m.id);
+      if (data.lights && data.lights.length > 0) expect(data.night, m.id).toBe(true);
+      expect(buildNightField(data, NIGHT_SIGHT) !== null, m.id).toBe(!!data.night);
     }
-    expect(MAPS.find((m) => m.id === 'depot')!.data.night).toBeFalsy();
-    expect(MAPS.find((m) => m.id === 'woodland')!.data.night).toBe(true);
+    expect(mapData('depot').night).toBeFalsy();
+    expect(mapData('woodland').night).toBe(true);
   });
 
   it('gives Woodland a night field in its sight conditions together with its bushes', () => {

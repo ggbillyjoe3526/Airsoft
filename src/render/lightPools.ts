@@ -105,7 +105,7 @@ const glowColour = new THREE.Color();
 const WHITE = new THREE.Color(0xffffff);
 
 /** Every pool's glow (M33f): a bright core at the light inside faint halos, additive and unlit, one mesh for all. */
-export function buildPoolGlow(pools: readonly MapLight[], cfg: PoolConfig = POOL_LIGHTS): THREE.Mesh {
+function buildPoolGlow(pools: readonly MapLight[], cfg: PoolConfig = POOL_LIGHTS): THREE.Mesh {
   const parts: THREE.BufferGeometry[] = [];
   for (const l of pools) {
     const core = cfg.core * l.radius;
@@ -233,7 +233,7 @@ export const NO_LIGHT_POOLS: LightPools = { setQuality: () => undefined, follow:
 export type PoolQuality = Pick<QualitySettings, 'poolLights'> & Partial<Pick<QualitySettings, 'dustMotes'>>;
 
 /** The real point lights the pools get: the Night lights setting less the `reserved` ones (M33h), never below none. */
-export function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, reserved = 0): number {
+function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, reserved = 0): number {
   return Math.max(0, quality.poolLights - reserved);
 }
 

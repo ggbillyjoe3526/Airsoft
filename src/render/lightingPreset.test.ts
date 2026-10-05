@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ATMOSPHERE, ENVIRONMENT, LIGHTING, LIGHTING_PRESETS } from '../config/render';
 import { DEPOT } from '../map/depot';
 import type { MapData } from '../map/mapTypes';
-import { MAPS } from '../map/maps';
+import { MAPS, mapData } from '../map/maps';
 import { RANGE_MAP } from '../map/range';
 import { terrainHeightAt } from '../map/terrain';
 import { RAMP_YARD, TEST_YARD } from '../map/testYard';
@@ -71,7 +71,7 @@ describe('a map picks its light in its data (M33f)', () => {
   });
 
   it('keeps the play cues’ night flag and the look in step on every map until M34 drops the flag', () => {
-    for (const { data: map } of MAPS) expect(map.night ?? false, map.name).toBe(resolveLighting(map).night);
+    for (const map of MAPS.map((m) => mapData(m.id))) expect(map.night ?? false, map.name).toBe(resolveLighting(map).night);
     expect(resolveLighting(WOODLAND).night).toBe(true);
   });
 });

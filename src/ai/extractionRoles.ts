@@ -302,7 +302,7 @@ function patrolRound(cases: readonly RunCase[], slots: readonly GuardSlot[], ber
  * The spot `distance` in front of case `k` on its floor, into `out`, stepping back towards the case until the floor is
  * walkable (the case's own spot if none is).
  */
-export function caseFront(k: RunCase, distance: number, w: BotWorld, out: Vec3): Vec3 {
+function caseFront(k: RunCase, distance: number, w: BotWorld, out: Vec3): Vec3 {
   const fx = -Math.sin(k.yaw);
   const fz = -Math.cos(k.yaw);
   for (let d = distance; d > 0; d -= w.nav.cell) {

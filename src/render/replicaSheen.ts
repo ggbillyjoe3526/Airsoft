@@ -73,7 +73,7 @@ export function disposeEnvironmentScene(scene: THREE.Scene): void {
 }
 
 /** Prefilters a sky; the scene and the generator's own buffers are freed at once (audit L-02). */
-export function prefilterSky(gl: THREE.WebGLRenderer, look: EnvironmentLook): SheenTarget {
+function prefilterSky(gl: THREE.WebGLRenderer, look: EnvironmentLook): SheenTarget {
   const pmrem = new THREE.PMREMGenerator(gl);
   const scene = skyEnvironmentScene(look);
   const target = pmrem.fromScene(scene, REPLICA_SHEEN.blur);

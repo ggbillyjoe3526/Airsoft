@@ -90,7 +90,7 @@ function compareTable(c: NonNullable<SaveQuestion['compare']>, now: Date): HTMLT
 }
 
 /** A save's moment for the comparison ("4 Oct 2026, 16:40"), '?' when unknown. */
-export function savedAtText(iso: string, now: Date): string {
+function savedAtText(iso: string, now: Date): string {
   const d = new Date(iso);
   if (!iso || Number.isNaN(d.getTime())) return '?';
   const sameYear = d.getFullYear() === now.getFullYear();

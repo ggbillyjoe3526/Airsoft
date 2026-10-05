@@ -396,7 +396,7 @@ export class AudioEngine {
  * An audio buffer holding `samples` (mono, rendered at AUDIO.renderRate) on `ctx`. A source playing it resamples it to
  * the context's rate, so the sounds are rendered once whatever the output device runs at (audit CORE-03).
  */
-export function toBuffer(ctx: AudioContext, samples: Float32Array): AudioBuffer {
+function toBuffer(ctx: AudioContext, samples: Float32Array): AudioBuffer {
   const buf = ctx.createBuffer(1, samples.length, AUDIO.renderRate);
   buf.copyToChannel(samples as Float32Array<ArrayBuffer>, 0);
   return buf;

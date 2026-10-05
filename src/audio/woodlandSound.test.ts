@@ -3,7 +3,7 @@ import { AMBIENCES, type AmbienceId, AMBIENT_LOOPS, AUDIO, FIRE_SOUND, type Loop
 import { cues, FOOTSTEP_PACES, isMapCue, MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { buildGroundGrid, GROUND_SURFACES, groundAt } from '../map/groundSurfaces';
 import { lightingChoices, mapUnderLighting, playsAtNight } from '../map/lightingChoice';
-import { MAPS } from '../map/maps';
+import { MAPS, mapData } from '../map/maps';
 import { DEPOT } from '../map/depot';
 import { NEON_HEIGHTS } from '../map/neonHeights';
 import { WOODLAND, WOODLAND_LAYOUT } from '../map/woodland';
@@ -360,13 +360,13 @@ describe('M33j acceptance 1: no daytime birds under a night preset, on any map',
 
   it('takes night from the lighting preset picked (never a map name): every map under every preset it offers', () => {
     for (const entry of MAPS) {
-      for (const choice of lightingChoices(entry.data)) {
-        const map = mapUnderLighting(entry.data, choice);
-        const night = playsAtNight(entry.data, choice);
+      for (const choice of lightingChoices(mapData(entry.id))) {
+        const map = mapUnderLighting(mapData(entry.id), choice);
+        const night = playsAtNight(mapData(entry.id), choice);
         const call = soundscapeOf(map, night).ambience.call?.cue;
         if (night) expect(call, `${entry.id} by ${choice}`).not.toBe('ambience.bird');
         // By day a bird, except where the field's ambience has its own day call (M34g: the city's shop chime).
-        else expect(call, `${entry.id} by ${choice}`).toBe(entry.data.ambience === 'city' ? 'ambience.chime' : 'ambience.bird');
+        else expect(call, `${entry.id} by ${choice}`).toBe(mapData(entry.id).ambience === 'city' ? 'ambience.chime' : 'ambience.bird');
       }
     }
   });
@@ -451,8 +451,8 @@ describe('M33j acceptance 5: sounds render lazily, for the maps that use them', 
     }
     // What a match loads beyond the title screen, per field and preset (M34g: per field, as only a field's own render).
     for (const entry of MAPS) {
-      for (const choice of lightingChoices(entry.data)) {
-        const scene = soundscapeOf(mapUnderLighting(entry.data, choice), playsAtNight(entry.data, choice));
+      for (const choice of lightingChoices(mapData(entry.id))) {
+        const scene = soundscapeOf(mapUnderLighting(mapData(entry.id), choice), playsAtNight(mapData(entry.id), choice));
         let samples = scene.cues.reduce((sum, c) => sum + size.get(c)!, 0);
         for (const id of scene.loops) if (id !== 'yard') samples += Math.round(AMBIENT_LOOPS[id].seconds * RATE);
         expect(samples * 4, `${entry.id} by ${choice}`).toBeLessThan(7.5e6);

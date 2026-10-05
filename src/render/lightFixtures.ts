@@ -208,7 +208,7 @@ export function flameGeometry(lights: readonly MapLight[], ground: GroundUnder):
 }
 
 /** Every fire's embers: FIXTURES.embers.perFire points at its foot, each with (phase, drift x, drift z, speed). */
-export function emberGeometry(lights: readonly MapLight[], ground: GroundUnder): THREE.BufferGeometry | null {
+function emberGeometry(lights: readonly MapLight[], ground: GroundUnder): THREE.BufferGeometry | null {
   const fires = lights.filter((l) => l.kind === 'fire');
   if (fires.length === 0) return null;
   const E = F.embers;

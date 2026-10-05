@@ -77,7 +77,7 @@ function placeCentre(at: number, min: number, max: number, half: number, texel: 
  * moves in whole texels: a moving view never makes shadow edges crawl. Kept inside the level's bounds (no texels spent
  * outside the field). Allocation-free: runs every frame on High.
  */
-export function fitShadowToView(cam: THREE.OrthographicCamera, level: ShadowBounds, focus: THREE.Vector3, half: number, mapSize: number): void {
+function fitShadowToView(cam: THREE.OrthographicCamera, level: ShadowBounds, focus: THREE.Vector3, half: number, mapSize: number): void {
   const p = focusScratch.copy(focus).applyMatrix4(cam.matrixWorldInverse);
   const texel = (2 * half) / mapSize;
   const x = placeCentre(p.x, level.left, level.right, half, texel);

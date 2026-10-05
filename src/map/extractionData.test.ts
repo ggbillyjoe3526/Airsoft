@@ -7,7 +7,7 @@ import { GAME_POOL } from '../pool/gamePool';
 import { exitClosedFor, pickOpponentStarts } from '../sim/extraction';
 import { createRng } from '../sim/rng';
 import type { Vec3 } from '../sim/vec';
-import { MAPS } from './maps';
+import { MAPS, mapData } from './maps';
 import { modeOffered, playableMode } from './playableMode';
 
 /** The biggest squad (a trio). */
@@ -16,7 +16,8 @@ const MAX_SQUAD = EXTRACTION.maxSquad;
 const EXIT_WALKABLE = 0.7;
 
 describe('Extraction map data (M43)', () => {
-  for (const { label, data: map } of MAPS) {
+  for (const { id, label } of MAPS) {
+    const map = mapData(id);
     const x = map.extraction;
     if (!x) continue;
     const nav = buildNavGrid(map, NAV);

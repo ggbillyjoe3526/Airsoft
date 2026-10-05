@@ -5,7 +5,7 @@ import { BODY } from '../config/movement';
 import { buildNavGrid, createNavSearch, findPath, floorAt, isWalkableAt } from '../nav/navGrid';
 import { buildLevelRay, castLevelRay } from '../sim/levelRay';
 import { type Vec3, vec3 } from '../sim/vec';
-import { mapEntry, teamSizeOn } from './maps';
+import { mapData, mapEntry, teamSizeOn } from './maps';
 import { steepestSlope, terrainHeightAt, terrainMaxX, terrainMaxZ } from './terrain';
 import { WOODLAND, WOODLAND_LAYOUT } from './woodland';
 
@@ -165,7 +165,7 @@ describe('Woodland: a night field with five a side (M33d, acceptance 2)', () => 
     expect(WOODLAND.night).toBe(true);
     expect(mapEntry('woodland').tag).toBe('dev');
     expect(WOODLAND.flag).toBeDefined();
-    expect(mapEntry('depot').data.night ?? false).toBe(false);
+    expect(mapData('depot').night ?? false).toBe(false);
     expect(mapEntry('depot').tag).toBe('public');
   });
 

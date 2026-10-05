@@ -34,7 +34,7 @@ import type { LightingPresetId, QualityChoice, QualitySettings } from '../../con
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
 import { LIGHTING_LABELS, lightingChoices, lightingPicked } from '../../map/lightingChoice';
-import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapEntry } from '../../map/maps';
+import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapData, mapEntry } from '../../map/maps';
 import { modeOffered } from '../../map/playableMode';
 import { playedPicks, playedTeamSize } from '../../newGamePicks';
 import { saveSetting } from '../../settings/storage';
@@ -197,7 +197,7 @@ export class Menus {
         // Day | Night on a map that offers both (M34d): picking a side picks the map with that light.
         variants: {
           label: 'Light',
-          of: (id) => LIGHTING_ORDER.filter((l) => lightingChoices(mapEntry(id).data).includes(l)).map((l) => ({ id: l, label: LIGHTING_LABELS[l] })),
+          of: (id) => LIGHTING_ORDER.filter((l) => lightingChoices(mapData(id)).includes(l)).map((l) => ({ id: l, label: LIGHTING_LABELS[l] })),
           picked: (id) => this.lightingOf(id),
           onPick: (id, light) => {
             const l = light as LightingPresetId;
@@ -585,7 +585,7 @@ export class Menus {
 
   /** The light `id` plays under (M34d): its saved pick if it offers it, else its first preset. */
   private lightingOf(id: MapId): LightingPresetId {
-    return lightingPicked(mapEntry(id).data, this.lightingPicks[id]);
+    return lightingPicked(mapData(id), this.lightingPicks[id]);
   }
 
   /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
@@ -603,7 +603,7 @@ export class Menus {
     const devContent = this.opts.dev.devContent();
     this.mapDialog.setDevContent(devContent);
     this.modeDialog.setDevContent(devContent);
-    const offeredOn = mapEntry(this.mapDialog.value).data;
+    const offeredOn = mapData(this.mapDialog.value);
     this.modeDialog.limit((id) => modeOffered(offeredOn, id));
     const played = playedPicks(
       { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, ruleset: this.ruleset, rules: this.matchRules },
@@ -614,13 +614,13 @@ export class Menus {
     // Each map offers as many players a side as it has room for (Depot 3v3, Woodland up to 5v5, M33).
     // An Extraction run takes a squad of at most three (M43).
     const map = mapEntry(played.map);
-    const run = played.mode === 'extraction' ? map.data.extraction : undefined;
+    const run = played.mode === 'extraction' ? mapData(map.id).extraction : undefined;
     const sizeMax = run ? squadSize(map.teamSize.max) : map.teamSize.max;
     this.teamSizePicker.limit((id) => Number(id) <= sizeMax);
     for (const t of this.taggedPickers) t.picker.setDevContent(devContent, t.played(played));
     const m = { ...played.rules, teamSize: playedTeamSize(played) };
     // A map that offers Day and Night names the one picked (M34d).
-    const light = lightingChoices(map.data).length > 1 ? ` · ${LIGHTING_LABELS[this.lightingOf(map.id)]}` : '';
+    const light = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[this.lightingOf(map.id)]}` : '';
     this.setup.map.set(`${this.mapDialog.label}${light}`, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
     const match = run ? runRulesSummary(m, run) : matchRulesSummary(m);

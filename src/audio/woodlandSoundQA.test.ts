@@ -4,7 +4,7 @@ import { BOTS } from '../config/bots';
 import { SIM_DT } from '../config/sim';
 import { GROUND_SURFACES, type GroundGrid, buildGroundGrid, groundAt } from '../map/groundSurfaces';
 import type { MapBlock, MapData } from '../map/mapTypes';
-import { MAPS } from '../map/maps';
+import { MAPS, mapData } from '../map/maps';
 import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
 import { resolveLighting } from '../render/lightingPreset';
@@ -85,7 +85,7 @@ describe('M33j QA acceptance 3: footsteps read blocks first, then the ground gri
   });
 
   it('takes, on every map, the grid the terrain is painted from (render/mapMeshes.ts: buildGroundGrid when the map has terrain)', () => {
-    for (const entry of [...MAPS.map((m) => m.data), RANGE_MAP]) {
+    for (const entry of [...MAPS.map((m) => mapData(m.id)), RANGE_MAP]) {
       const painted = entry.terrain ? buildGroundGrid(entry) : null;
       for (const night of [false, true]) expect(soundscapeOf(entry, night).ground).toEqual(painted);
     }
@@ -116,7 +116,7 @@ describe('M33j QA acceptance 1: birds by day exactly as before, and none by nigh
   });
 
   it('plays no bird and no daytime call under the night preset of any field, the range included', () => {
-    for (const map of [...MAPS.map((m) => m.data), RANGE_MAP] as MapData[]) {
+    for (const map of [...MAPS.map((m) => mapData(m.id)), RANGE_MAP] as MapData[]) {
       const night = soundscapeOf(map, true);
       expect(night.ambience.call?.cue ?? 'none', map.name).not.toBe('ambience.bird');
       expect(night.cues, map.name).not.toContain('ambience.bird');

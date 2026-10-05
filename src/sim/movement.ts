@@ -37,7 +37,7 @@ function approach(current: number, target: number, maxDelta: number): number {
  * Speed the character is aiming for given current stance and pace (walk / run / sprint). A lean slows
  * running smoothly down to walking pace, reached at cfg.leanQuietFrom of a full lean.
  */
-export function targetSpeed(c: Character, cfg: MovementConfig): number {
+function targetSpeed(c: Character, cfg: MovementConfig): number {
   let base = c.walking ? cfg.walkSpeed : c.sprinting ? cfg.sprintSpeed : cfg.runSpeed;
   const lean = Math.abs(c.lean);
   if (lean > 0 && !c.walking) base += (cfg.walkSpeed - base) * Math.min(1, lean / cfg.leanQuietFrom);
