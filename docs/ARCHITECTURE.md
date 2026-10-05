@@ -110,7 +110,7 @@ ends the round). A hit character is eliminated
   clouds), and `lightPools.ts` draws the map's light pools (`MapData.lights`) under a night preset only (M34e): one glow
   mesh, one additive ground mesh and, on Medium and High, a fixed number of point lights on the pools nearest the eye
   (`QualitySettings.poolLights`). `mapSigns.ts` draws a map's neon signs and lit windows (`MapData.signs`, M34e) as one
-  mesh of flat panels: unlit and self-lit by Night, Lambert (painted boards, dark glass) by Day. The woodland look
+  mesh of flat panels: unlit and self-lit by Night, Lambert (painted boards, dark glass) by Day. The city look (M34f) is map data too: a block's `finish` (plaster, cladding, tiles, asphalt, paving) picks its texture and `paint` its colour, a finished floor raised over a storey gets a plaster ceiling under it, the six city prop kinds (`cabinet`, `vending`, `stall`, `planter`, `booth`, `van`) are built by `cityProps.ts` inside their boxes with their screens and windows added to the signs (`mapSignsOf`), and `paint` signs facing `+y` are flat ground markings drawn as a second, always-lit-by-the-scene mesh (`map-paint`). The city's textures (`cityTextures.ts`) are drawn only for a map that uses them. The woodland look
   (M33i) is map data too: `natureShapes.ts` draws `tree`, `log` and `boulder` blocks as trunks, log courses and
   faceted stones in the merged meshes (inside their boxes, no gap over 8 cm); `canopyMeshes.ts` hangs a crown over
   every `tree` block; `terrainMeshes.ts` paints the ground from `MapData.ground`'s grid; `lightFixtures.ts` (built by
@@ -372,6 +372,6 @@ request. Each line names where it lives and what pins it.
   time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
   `extraction` (M44 adds its `cases`, M45 its `regens` and `regenDistance`), M34e's `signs` (neon signs and lit windows,
   presentation only), M33i's `ground` (the ground's patches: one grid, `map/groundSurfaces.ts`, that the terrain is
-  painted from and M33j's footsteps read) and `MapLight.kind` (`fire` or `lantern`: the light's fixture). Pinned by
+  painted from and M33j's footsteps read), `MapLight.kind` (`fire` or `lantern`: the light's fixture) and M34f's `MapBlock.finish` and `paint` (look only), six city prop kinds (each with a `BLOCK_MATERIALS` ricochet material, collided as its box) and `MapSign` `facing: '+y'` with `kind: 'paint'` (flat markings). Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
-  `render/depotLook.test.ts` (a map using none of M33i's fields builds as before).
+  `render/depotLook.test.ts` (a map using none of M33i's fields builds as before), `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (M34f: Neon Heights' boxes, materials and floors pinned).

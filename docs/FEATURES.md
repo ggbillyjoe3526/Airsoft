@@ -63,6 +63,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Day or Night selector: maps offering both modes show a switch in the Map pop-up; your choice is saved per map (M34d)
 - Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend, with Day and Night modes (M34c, M34d)
 - Neon Heights by Night: 12 lamps light separate floors, neon signs glow, lit and dark windows on the perimeter (M34e)
+- Neon Heights art: pastel painted buildings (mint, pink, lavender, amber on slate), paved street with asphalt, neon trim strips, lit arcade cabinets; night: softer purple sky with city lighting and 180 stars (M34f)
 - The woodland look on any map that asks for it: trees, logs and boulders drawn as bark and stone inside their boxes, crowns over the trees, ground patches (gravel, earth, wood, leaf litter under the trees), camp fires with flickering flames and embers, lanterns, and a moon and stars under the night preset; first used by Woodland (M33i)
 - Ramps and raised floors that players and bots use (Phase 3)
 
@@ -129,6 +130,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved across preset switches; contact shadows under every player on all presets (FA3, FA7)
 - Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High; barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
+- Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet, vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under raised floors (M34f)
 
 ## Practice range and tutorial
 
