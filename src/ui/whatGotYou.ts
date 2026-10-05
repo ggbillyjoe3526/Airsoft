@@ -1,4 +1,5 @@
 import type { HitFacts } from '../sim/hitFacts';
+import { wrapAngle } from '../sim/vec';
 
 /**
  * The "what got you" card (M41; Settings → HUD → What got you): after a hit, a small panel says where the shot came
@@ -31,7 +32,7 @@ export interface WhatGotYouText {
  * friendly fire; a ricochet says so, since where it came from is then not where it was fired.
  */
 export function whatGotYouText(facts: HitFacts, shooter: string, viewYaw: number): WhatGotYouText {
-  const rel = wrap(viewYaw - facts.yaw);
+  const rel = wrapAngle(viewYaw - facts.yaw);
   const where = `${shooter} · from ${describeBearing(rel)} · ${Math.max(1, Math.round(facts.distance))} m`;
   if (facts.ricochet) return { where, notes: ['It bounced off something first.'] };
   if (facts.friendly) return { where: `${where} · friendly fire`, notes: [] };
@@ -41,11 +42,6 @@ export function whatGotYouText(facts: HitFacts, shooter: string, viewYaw: number
   if (facts.inView !== null) notes.push(`You were in view ${facts.inView.toFixed(1)} s, ${stance}.`);
   else if (facts.held !== null) notes.push(`You were ${stance}.`);
   return { where, notes };
-}
-
-function wrap(a: number): number {
-  const t = Math.PI * 2;
-  return a - t * Math.round(a / t);
 }
 
 /** The panel over the game view: shown from when you walk off until the next round (or your respawn) clears it. */

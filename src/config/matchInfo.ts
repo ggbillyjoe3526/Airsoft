@@ -36,7 +36,7 @@ export type WhatGotYouMode = 'auto' | 'on' | 'off';
 
 export const WHAT_GOT_YOU_MODES: readonly { id: WhatGotYouMode; label: string; blurb: string }[] = [
   { id: 'auto', label: 'Auto', blurb: 'Shown only against Pro opponents.' },
-  { id: 'on', label: 'On', blurb: 'After every hit, on any difficulty: where it came from and what you could have done.' },
+  { id: 'on', label: 'On', blurb: 'After every hit, on any difficulty: where it came from, whether that bot was holding the angle, and how long you were seen.' },
   { id: 'off', label: 'Off', blurb: 'Never shown.' },
 ];
 

@@ -5,7 +5,7 @@ import { sightConditionsOf } from './ai/perception';
 import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
-import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOT_PART_CHANCE, BOTS, type BotConfig, botConfig, type Difficulty } from './config/bots';
+import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOT_PART_CHANCE, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
@@ -254,7 +254,7 @@ export class MatchSession {
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction);
     this.match.setHitFacts(this.bots.lastHit);
     // Pro briefing tips on the board between rounds, when the opponents are Pro (M41).
-    this.match.setProTips(setup.difficulty === 'pro');
+    this.match.setProTips(difficultyAtLeast(setup.difficulty, 'pro'));
     this.match.setFigureShadows(quality.figureShadows);
     this.match.setFlagQuality(quality);
     // Teammates only on the minimap, with no heard patches, under rules that say so (M39).

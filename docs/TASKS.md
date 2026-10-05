@@ -15,7 +15,7 @@ attempts: 0
 ## M41 · What got you, Pro tips and tuning
 tier: ui
 perf: skip
-touches: src/ui/, src/config/matchInfo.ts, src/sim/events.ts, src/sim/hitFacts.ts, src/game.ts, src/config/tutorial.ts, src/config/bots.ts, src/ai/, src/matchSession.ts, src/render/matchPresentation.ts, src/settings/storage.ts, src/style.css
+touches: src/ui/, src/config/matchInfo.ts, src/sim/events.ts, src/sim/hitFacts.ts, src/game.ts, src/config/tutorial.ts, src/config/bots.ts, src/ai/bot.ts, src/ai/botSenses.ts, src/ai/botController.ts, src/matchSession.ts, src/render/matchPresentation.ts, src/settings/storage.ts, src/style.css
 acceptance:
   1. After you're hit, a card shows where the shot came from, whether that bot was holding the angle, how long you were in view and whether you were moving.
   2. A setting turns it on for every difficulty; on by default only on Pro.
