@@ -4,8 +4,8 @@ import type { ExtractionData, SpawnPoint } from './mapTypes';
 
 /**
  * Woodland's Extraction data (M48), in Woodland's plan coordinates (x 0–120 east, z 0–80 north, as woodland.ts draws
- * them; the floor is the terrain, so every point's y is 0 and the placer finds the ground). The field's owner keeps the layout; this file only places the run on it, so woodland.ts passes in how it
- * puts a plan point on the ground. The data tests (extractionData.test.ts, extractionRegens.test.ts) check every point
+ * them; the floor is the terrain, so every point's y is 0 and the placer finds the ground). The field's owner keeps the
+ * layout; this file only places the run on it, so woodland.ts passes in how it puts a plan point on the ground. The data tests (extractionData.test.ts, extractionRegens.test.ts) check every point
  * against the real level, so a layout change that moves cover onto one of them fails there.
  *
  * The home team holds the Knoll fort and the cabin, the field's strongholds, so the squad never goes in beside them: at

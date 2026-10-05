@@ -21,7 +21,7 @@ describe('a 4v4 Elimination match on Woodland, both teams on Pro (M40)', () => {
     // (27 of 44) and 38 of 82 rounds drawn on time, as both teams swept a lane each to the other's camp and searched
     // there. Hard on the same seeds: end 0 53 % (21 of 40), 38 of 78 on time (Normal's 67 % and half on time are the
     // Woodland thread's, KNOWN_ISSUES). Re-measure with this test after any bot, layout, lighting or round-time change.
-    // Seeds 1-16 since M50 (audit BAL-07): at 8 seeds one standard error is about 6 points and the 54 % sat within reach
+    // Seeds 1-16 since M51 (audit BAL-07): at 8 seeds one standard error is about 6 points and the 54 % sat within reach
     // of the ceiling either way; at 16 it is about 4.
     expectProBalance(tallyBalance(16, SECONDS, botConfig('pro'), 'elimination', WOODLAND, TEAM_SIZE), 'elimination', 'Woodland Pro');
   });

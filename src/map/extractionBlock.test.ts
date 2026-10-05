@@ -4,7 +4,7 @@ import { mapData } from './maps';
 import { vec3 } from '../sim/vec';
 
 /**
- * The Extraction block both dev maps build through (M50, audit CORE-16). A stub placer marks which of its two calls
+ * The Extraction block both dev maps build through (M51, audit CORE-16). A stub placer marks which of its two calls
  * placed a value (a point is lifted 100 in x, a spawn 200 in z), so a swapped call or a dropped y shows.
  */
 const PLACER: PlanPlacer = {
@@ -40,7 +40,7 @@ const PLAN: RunPlan = {
   ],
 };
 
-describe('a map plan placed as Extraction data (M50)', () => {
+describe('a map plan placed as Extraction data (M51)', () => {
   const x = placeRun(PLAN, PLACER);
 
   it('carries the run numbers over unchanged', () => {
@@ -97,7 +97,7 @@ describe('a map plan placed as Extraction data (M50)', () => {
   });
 });
 
-describe('the shared case-spot kinds and facings (M50)', () => {
+describe('the shared case-spot kinds and facings (M51)', () => {
   it('lets the locker spot hold a locker or a field case, a room a field case or an ammo can, a lane an ammo can', () => {
     expect(SPOT_KINDS).toEqual({ locker: ['locker', 'field-case'], room: ['field-case', 'ammo-can'], lane: ['ammo-can'] });
   });

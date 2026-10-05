@@ -11,7 +11,7 @@ export type ExtractionBands = Readonly<Record<Difficulty, { extract: readonly [n
 const LEVELS = ['easy', 'normal', 'hard', 'pro'] as const;
 
 /**
- * Every map's Extraction balance guard (M46, M48; one support since M50, audit CORE-16): whole runs over seeds 1 to
+ * Every map's Extraction balance guard (M46, M48; one support since M51, audit CORE-16): whole runs over seeds 1 to
  * `seeds` by measureRuns at each level, each level's extract rate and FC a minute inside its bands, every run ended by
  * the run's own rules, and each pair in `harder` ([easier, harder]) further apart than nothing: the easier level's
  * squad gets out more often.
