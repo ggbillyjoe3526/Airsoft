@@ -37,17 +37,3 @@ perf: skip
 touches: pool.md, src/pool/, src/config/, src/ui/
 acceptance:
   1. A recurring Supply weekend (Friday to Sunday by the device clock) and a dated event table in data, each a case-odds modifier shown on the Mode pop-up.
-
-## M33j · The woodland sounds
-tier: core
-perf: skip
-touches: src/audio/, src/config/sounds.ts, src/config/audio.ts, src/config/footsteps.ts, src/map/mapTypes.ts, src/map/woodland.ts, src/map/groundSurfaces.ts, src/render/combatPresentation.ts, src/matchSession.ts, src/rangeSession.ts, e2e/, docs/
-contract: a map's ambience comes from its data (`MapData.ambience`, absent = today's yard) and the lighting preset's night flag; footsteps on terrain take the surface from M33i's ground grid; Depot sounds exactly as today (cue buffers pinned).
-acceptance:
-  1. No daytime birds under a night preset, on any map.
-  2. Woodland at night: wind in the pines, insects above the footstep band, a distant owl now and then, and fire crackle positioned at each fire light; lanterns silent.
-  3. Footsteps on terrain sound like the ground underfoot (grass, leaves, earth, gravel, wood) from the same ground grid the terrain is painted from; each surface as loud as concrete within 1.5 dB; bots' hearing unchanged.
-  4. BBs, footsteps and bot cues stay audible over the ambience (mix levels as the plan); new cues are appended with their own seeds so existing cue buffers are unchanged.
-  5. Sounds render lazily for the maps that use them; no allocation per footstep lookup.
-status: open
-attempts: 0
