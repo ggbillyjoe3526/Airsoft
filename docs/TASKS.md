@@ -78,5 +78,3 @@ perf: skip
 touches: pool.md, src/pool/, src/config/, src/ui/
 acceptance:
   1. A recurring Supply weekend (Friday to Sunday by the device clock) and a dated event table in data, each a case-odds modifier shown on the Mode pop-up.
-status: open
-attempts: 0

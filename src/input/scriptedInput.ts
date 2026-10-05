@@ -65,5 +65,6 @@ export function fillScriptedCommand(script: readonly ScriptStep[], tick: number,
   cmd.reload = first && (step?.reload ?? false);
   cmd.switchTo = first ? (step?.switchTo ?? -1) : -1;
   cmd.cycleFireMode = false;
+  cmd.toggleTorch = false;
   return newYaw;
 }

@@ -20,6 +20,8 @@ export const DEFAULT_BINDINGS = {
   reload: ['KeyR'],
   /** Steps the replica's fire selector (semi / burst / auto, as far as the replica has them). */
   fireMode: ['KeyB'],
+  /** Switches the weapon torch on the replica in hand on and off (M33h; T is free and the usual tactical-light key). */
+  torch: ['KeyT'],
   /** Hold beside a case to open it (M44, Extraction). G: E leans and F is Follow me; T is kept for a weapon torch. */
   use: ['KeyG'],
   slot1: ['Digit1'],
@@ -64,6 +66,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'jump', label: 'Jump' },
   { action: 'reload', label: 'Reload' },
   { action: 'fireMode', label: 'Fire mode' },
+  { action: 'torch', label: 'Weapon torch' },
   { action: 'use', label: 'Use: open a case (hold)' },
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },

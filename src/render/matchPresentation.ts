@@ -373,6 +373,16 @@ export class MatchPresentation {
     this.minimap.update(f, this.heardPlayers.players);
   }
 
+  /** The player the camera follows while you spectate, as of the last frame (null while you play; M33h: whose torch is real). */
+  get watchedCharacter(): Character | null {
+    return this.watched ?? null;
+  }
+
+  /** Others' torch beams on the figures (M33h, render/torchBeams.ts): each glows by its share of `colour`. */
+  setTorchLift(lit: Float32Array, colour: number): void {
+    this.characters.setTorchLift(lit, colour);
+  }
+
   /** Clicking while spectating watches the next player. */
   nextSpectateTarget(): void {
     this.spectator.next();

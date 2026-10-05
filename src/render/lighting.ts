@@ -100,6 +100,12 @@ export interface Daylight {
   /** Shadows on or off, their map size, softness and reach; the trees and clouds; the night lights (Settings → Graphics). */
   setQuality(quality: QualitySettings): void;
   /**
+   * How many of the night lights something else takes (M33h: your weapon torch's spot on Medium and High): the light
+   * pools get that many fewer real lights, so the scene's count stays the setting's. Call before the first frame and
+   * after each setQuality (it is kept until changed).
+   */
+  reserveLights(n: number): void;
+  /**
    * Moves a view-fitted shadow map to the ground ahead of `camera` (High) and the light pools' real lights to the pools
    * nearest it (M33f), fading over this frame's `dt` seconds. Call before drawing.
    */
@@ -183,11 +189,18 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   const atmosphere = addAtmosphere(scene, sun.target.position, sunDirection, quality, box, preset);
   const pools = preset.night ? addLightPools(scene, map, quality) : NO_LIGHT_POOLS;
   const signs = addMapSigns(scene, map, preset.night);
+  let poolQuality: Pick<QualitySettings, 'poolLights'> = quality;
+  let reserved = 0;
   return {
     setQuality: (q) => {
       setQuality(q);
       atmosphere.setQuality(q);
-      pools.setQuality(q);
+      poolQuality = q;
+      pools.setQuality(q, reserved);
+    },
+    reserveLights: (n) => {
+      reserved = n;
+      pools.setQuality(poolQuality, reserved);
     },
     follow: (camera, dt) => {
       pools.follow(camera.position, dt);

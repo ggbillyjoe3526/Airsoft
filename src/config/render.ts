@@ -482,7 +482,31 @@ export interface LightingPreset {
   environment: { ground: number; intensity: number };
   /** Times the tone mapping's own exposure (TONE_MAPPING.exposure). */
   exposureScale: number;
+  /**
+   * The held replica's own lights (M33h, render/viewmodel.ts): a hemisphere fill, a key and a rim, colours and
+   * intensities. Their directions are VIEWMODEL.light's. The day preset's are VIEWMODEL.light's exactly.
+   */
+  viewmodel: { hemi: { sky: number; ground: number; intensity: number }; key: { colour: number; intensity: number }; rim: { colour: number; intensity: number } };
+  /**
+   * Weapon torches under this light (M33h, render/torchBeams.ts). `beam` 0 builds nothing (the day: the torch is left
+   * off the replica, sim/torch.ts partsUnder). Otherwise: the drawn beam's strength (the cone, additive), the lens
+   * glare's and the lit spot's where a beam lands; `spot` the real spot light's intensity on your own torch (candela, Medium and High); `spill` how far the held
+   * replica's key light turns to the torch's colour and `spillIntensity` how much stronger it gets while yours is on
+   * (bounce from the beam); `figureLift` the glow a figure in someone's beam takes where no real light reaches it.
+   */
+  torch: { beam: number; glare: number; hitSpot: number; spot: number; spill: number; spillIntensity: number; figureLift: number };
 }
+
+/** The held replica's own lights by day (VIEWMODEL.light): the day preset's `viewmodel` group is made of these. */
+const VIEWMODEL_LIGHT = {
+  hemi: [0xe8f0ff, 0x4a4438, 1.3],
+  keyColor: 0xfff0d8,
+  keyIntensity: 2.2,
+  keyPosition: [0.6, 1, 0.4],
+  rimColor: 0xcfe0ff,
+  rimIntensity: 1.2,
+  rimPosition: [-0.8, 0.4, -1],
+} as const;
 
 /** The night key light's height above the horizon (degrees) and distance from the field's centre (m). */
 const MOON = { elevationDeg: 18, distance: 48 } as const;
@@ -504,6 +528,12 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
     clouds: { shade: ATMOSPHERE.clouds.shade, top: 0xffffff, opacity: ATMOSPHERE.clouds.opacity },
     environment: { ground: ENVIRONMENT.ground, intensity: ENVIRONMENT.intensity },
     exposureScale: 1,
+    viewmodel: {
+      hemi: { sky: VIEWMODEL_LIGHT.hemi[0], ground: VIEWMODEL_LIGHT.hemi[1], intensity: VIEWMODEL_LIGHT.hemi[2] },
+      key: { colour: VIEWMODEL_LIGHT.keyColor, intensity: VIEWMODEL_LIGHT.keyIntensity },
+      rim: { colour: VIEWMODEL_LIGHT.rimColor, intensity: VIEWMODEL_LIGHT.rimIntensity },
+    },
+    torch: { beam: 0, glare: 0, hitSpot: 0, spot: 0, spill: 0, spillIntensity: 0, figureLift: 0 },
   },
   night: {
     night: true,
@@ -519,8 +549,45 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
     clouds: { shade: 0x121826, top: 0x3c475e, opacity: 0.5 },
     environment: { ground: 0x1c1f26, intensity: 0.2 },
     exposureScale: 1.15,
+    // The held replica by moonlight (M33h): a dim cool fill, a pale moon key, a faint blue rim. Before, it stayed lit as
+    // by day at night (KNOWN_ISSUES, M33f).
+    viewmodel: { hemi: { sky: 0x6a7ca8, ground: 0x22242c, intensity: 0.55 }, key: { colour: 0xb8c8ff, intensity: 0.7 }, rim: { colour: 0x8fa6e0, intensity: 0.6 } },
+    torch: { beam: 0.16, glare: 1, hitSpot: 0.55, spot: 160, spill: 0.6, spillIntensity: 0.8, figureLift: 0.35 },
   },
 };
+
+/**
+ * The weapon torches drawn (M33h, render/torchBeams.ts), on any preset whose `torch.beam` is above 0. Everyone's torch
+ * but your own is three instanced draws for the whole match: a cone (`coneSegments` round, `coneShare` of the beam's
+ * reach or up to what it lands on, fading out along it), a glare at the lens (`glareSize` m, growing to `glareGrow`
+ * times as it points at you; seen from within `glareFromDeg` of its axis) and a lit disc where the beam lands
+ * (`spotSegments` round, its brightness falling with the distance over the reach, `spotLift` off the surface, at least
+ * `spotMinSize` m across). The lens is `lensForward` m ahead of the eye and `lensDown` below it. Your own torch on
+ * Medium and High is one real spot light (no shadow: it sits by the eye, so its shadows would hide behind what casts
+ * them), which takes one of the night lights (QualitySettings.poolLights), so the scene's real light count never changes.
+ */
+export const TORCH_BEAMS = {
+  coneSegments: 14,
+  coneShare: 0.6,
+  /** The cone fades in over this share of its length from the lens, and out by its end. */
+  coneFadeIn: 0.04,
+  glareSize: 0.09,
+  glareGrow: 4,
+  glareFromDeg: 70,
+  spotSegments: 16,
+  spotLift: 0.03,
+  spotMinSize: 0.3,
+  lensForward: 0.45,
+  lensDown: 0.12,
+  /**
+   * Your own beam on Low, seen from behind the lens (no real spot): a soft glow `hazeAt` m ahead (or where the beam
+   * lands, if nearer), as bright as `hazeGain` times the preset's cone.
+   */
+  hazeAt: 6,
+  hazeGain: 1.5,
+  /** The real spot light's falloff (physical: 2). */
+  decay: 2,
+} as const;
 
 /**
  * Light pools on a night field (M33f, render/lightPools.ts; MapLight in map/nightSight.ts), drawn under a night preset
@@ -1054,16 +1121,11 @@ export const VIEWMODEL = {
    * strength, so the polymer reads as moulded toy plastic rather than flat paint.
    */
   sheenIntensity: 0.32,
-  /** Viewmodel lighting: [sky, ground, intensity] hemisphere, warm key from above-right, cool rim from behind. */
-  light: {
-    hemi: [0xe8f0ff, 0x4a4438, 1.3],
-    keyColor: 0xfff0d8,
-    keyIntensity: 2.2,
-    keyPosition: [0.6, 1, 0.4],
-    rimColor: 0xcfe0ff,
-    rimIntensity: 1.2,
-    rimPosition: [-0.8, 0.4, -1],
-  },
+  /**
+   * Viewmodel lighting by day: [sky, ground, intensity] hemisphere, warm key from above-right, cool rim from behind. A
+   * map's lighting preset sets the colours and strengths (LightingPreset.viewmodel, M33h); the day preset's are these.
+   */
+  light: VIEWMODEL_LIGHT,
 } as const;
 
 /** How long after the match is decided the result screen appears: once the whistles have finished. */

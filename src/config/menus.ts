@@ -40,6 +40,8 @@ export const LOADOUT_TEXT = {
   /** The Barrel and Muzzle rows as it comes (M29b). */
   standardBarrel: 'The standard barrel, as it comes.',
   noMuzzle: 'Nothing on the muzzle: your shots carry as usual.',
+  /** The Light row as it comes (M33h). */
+  noLight: 'No light: at night you see by the moon and the fires, and nobody sees your torch.',
   /** Under the power sources, by the fitted one's type. */
   powerBlurb: {
     battery: 'A higher-voltage battery cycles faster: more BBs a second. The energy is the replica\'s own.',

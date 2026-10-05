@@ -214,7 +214,11 @@ function scaleDecal(d: PoolDecal, p: number, scale: number): void {
 
 /** A map's light pools in the scene: follow the eye each frame, change with the quality, dispose with the match. */
 export interface LightPools {
-  setQuality(quality: Pick<QualitySettings, 'poolLights'>): void;
+  /**
+   * Night lights (QualitySettings.poolLights), less `reserved` taken by something else (M33h: your weapon torch's spot
+   * light), so the scene's real light count is the setting's.
+   */
+  setQuality(quality: Pick<QualitySettings, 'poolLights'>, reserved?: number): void;
   /** Moves the real lights to the pools nearest `eye` (fading over `dt` seconds of this frame). Allocation-free. */
   follow(eye: THREE.Vector3, dt: number): void;
   dispose(): void;
@@ -223,8 +227,16 @@ export interface LightPools {
 /** No light pools: a map without them, or any map by Day (M34e). */
 export const NO_LIGHT_POOLS: LightPools = { setQuality: () => undefined, follow: () => undefined, dispose: () => undefined };
 
-/** Adds `map`'s light pools to `scene` at `quality`'s Night lights; a map without pools gets nothing. */
-export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<QualitySettings, 'poolLights'>): LightPools {
+/** The real point lights the pools get: the Night lights setting less the `reserved` ones (M33h), never below none. */
+export function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, reserved = 0): number {
+  return Math.max(0, quality.poolLights - reserved);
+}
+
+/**
+ * Adds `map`'s light pools to `scene` at `quality`'s Night lights, less `reserved` (M33h: taken by your torch's spot);
+ * a map without pools gets nothing.
+ */
+export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<QualitySettings, 'poolLights'>, reserved = 0): LightPools {
   const pools = map.lights ?? [];
   if (pools.length === 0) return NO_LIGHT_POOLS;
   const glow = buildPoolGlow(pools);
@@ -240,18 +252,19 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<Qu
     }
     lights = [];
   };
-  const setQuality = (q: Pick<QualitySettings, 'poolLights'>): void => {
-    if (q.poolLights === lights.length) return;
+  const setQuality = (q: Pick<QualitySettings, 'poolLights'>, reserve = 0): void => {
+    const count = poolLightCount(q, reserve);
+    if (count === lights.length) return;
     dropLights();
     // A fixed number for as long as the setting holds: Three.js rebuilds every lit shader when the count changes.
-    for (let k = 0; k < q.poolLights; k++) {
+    for (let k = 0; k < count; k++) {
       const l = new THREE.PointLight(0xffffff, 0, 0, POOL_LIGHTS.decay);
       l.castShadow = false;
       l.name = 'pool-light';
       lights.push(l);
       scene.add(l);
     }
-    state = createPoolLightState(q.poolLights, pools.length);
+    state = createPoolLightState(count, pools.length);
     for (let p = 0; p < pools.length; p++) setScale(p, 1);
   };
   const setScale = (p: number, scale: number): void => {
@@ -259,7 +272,7 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<Qu
     decalScale[p] = scale;
     scaleDecal(decal, p, scale);
   };
-  setQuality(quality);
+  setQuality(quality, reserved);
   return {
     setQuality,
     follow: (eye, dt) => {

@@ -8,6 +8,7 @@ import { type Bot, type BotWorld, flagRole, pick, threatInMind, wantsFlag } from
 import { aimBot, lowOnBBs, reloadBot, shootBot } from './botCombat';
 import { enterFlagMode, keepApart, moveBot, startSearch, teammateSpots, wantRoute } from './botMovement';
 import { currentTarget, perceive } from './botSenses';
+import { stepBotTorch } from './botTorch';
 import { type CoverSearch, findCover, hidesFrom, leanSideToSee } from './cover';
 import { eyeOf } from './perception';
 
@@ -284,6 +285,7 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   cmd.fire = false;
   cmd.reload = false;
   cmd.switchTo = 0; // bots use their primary
+  stepBotTorch(b, w, cmd); // M33h: night fields only (nothing by day)
   if (!isInPlay(me)) {
     b.mode = 'advance';
     b.atPost = false;

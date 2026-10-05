@@ -74,6 +74,8 @@ export const ITEM_ICONS = {
   magazine: icon('<path d="M8.5 3.5h6.5l.5 7 2.5 9.5-6 1.5L9.5 12z"/><path d="M9 7.5h6.2"/>'),
   barrel: icon('<path d="M2.5 10.5h19v3h-19z"/><path d="M6 10.5v3M18 10.5v3"/>'),
   muzzle: icon('<rect x="6" y="8.5" width="13" height="7" rx="2"/><path d="M2.5 12h3.5M19 12h2.5M10 8.5v7M15 8.5v7"/>'),
+  // A torch body widening to its head, its beam to the right (M33h).
+  light: icon('<path d="M2.5 10.5h7l3-2v7l-3-2h-7z"/><path d="M15 9.5l5.5-2.5M15 12h6.5M15 14.5l5.5 2.5"/>'),
   grenade: icon('<circle cx="12" cy="14.5" r="6"/><path d="M10 8.5V6h4v2.5M14 6.5l3.5-2"/>'),
 } as const;
 
@@ -84,6 +86,7 @@ const CATEGORY_ICONS: Readonly<Record<Exclude<AssetCategory, 'replica' | 'power'
   magazine: ITEM_ICONS.magazine,
   barrel: ITEM_ICONS.barrel,
   muzzle: ITEM_ICONS.muzzle,
+  light: ITEM_ICONS.light,
   grenade: ITEM_ICONS.grenade,
 };
 const POWER_ICONS: Readonly<Record<PowerType, string>> = { battery: ITEM_ICONS.battery, gas: ITEM_ICONS.gas, spring: ITEM_ICONS.spring };

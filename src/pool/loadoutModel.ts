@@ -306,12 +306,13 @@ export class LoadoutModel {
   }
 
   /**
-   * What a replica gets in a slot nothing was ever picked for: its best owned power source (a starter first), and in
-   * the other slots nothing (as it comes), so a new unlock is never fitted behind the player's back.
+   * What a replica gets in a slot nothing was ever picked for: its best owned power source and light (M33h: a torch
+   * hidden in Customise is a mechanic nobody finds, and it starts each round off), a starter first, and in the other
+   * slots nothing (as it comes), so a new unlock is never fitted behind the player's back.
    */
   private defaultFit(replica: Asset, slot: FitSlot): ItemRef | null {
-    if (slot !== 'power') return null;
-    const choices = this.ownedItems((a) => a.category === 'power' && fits(a, replica));
+    if (slot !== 'power' && slot !== 'light') return null;
+    const choices = this.ownedItems((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
     return choices.find((r) => this.pool.byId.get(r.asset)!.starter) ?? choices[0] ?? null;
   }
 }

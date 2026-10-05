@@ -1,5 +1,6 @@
 import { GAME_STATS } from './gameStats';
 import type { LaserId } from './lasers';
+import { isLightId, type LightId } from './torches';
 import type { ReplicaConfig } from './replicas';
 import { overlay } from './statsFile';
 
@@ -192,6 +193,8 @@ export interface ReplicaParts {
    */
   barrel?: BarrelId | null;
   muzzle?: MuzzleId | null;
+  /** A weapon light (M33h, config/torches.ts), switched with the Weapon torch key. Null: none. */
+  light?: LightId | null;
   /** What the parts' rarity tiers add (M26b); none for bots. */
   tune?: PartTune;
 }
@@ -213,6 +216,7 @@ export function partsFor(r: ReplicaConfig, parts: Partial<ReplicaParts>): Replic
     laser: parts.laser ?? null,
     barrel: parts.barrel && parts.barrel in BARRELS ? parts.barrel : null,
     muzzle: parts.muzzle && parts.muzzle in MUZZLES ? parts.muzzle : null,
+    light: isLightId(parts.light) ? parts.light : null,
     tune: parts.tune ?? NO_TUNE,
   };
 }
