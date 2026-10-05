@@ -56,6 +56,32 @@ describe('Neon Heights art (M34f)', () => {
     expect(navFingerprint()).toBe('52822:7b34b809');
   });
 
+  it('fills the space it did before M55 moved its overlaps: the solid blocks (not the ramps) hold the same volume to a few cubic metres (QA)', () => {
+    // Measured on main before M55 (2026-10-05, claude/audit2-fixes-1padgo, 281 blocks): 2644.2 m³ of the solid blocks' union
+    // on a 0.2 m grid over the map's plan; M55's 300 blocks measure the same, but for a 0.1 m sliver of a planter at the
+    // grand stair's foot (0.13 m³ on a 0.1 m grid). Cutting a wall under a floor, or a strip beside it, and losing it
+    // is 3 to 5 m³.
+    const CELL = 0.2;
+    let volume = 0;
+    for (let x = -23.6 + CELL / 2; x < 23.6; x += CELL) {
+      for (let z = -15.6 + CELL / 2; z < 15.6; z += CELL) {
+        const spans: [number, number][] = [];
+        for (const b of NEON_HEIGHTS.blocks) {
+          if (b.kind === 'ramp' || Math.abs(x - b.center.x) >= b.size.x / 2 || Math.abs(z - b.center.z) >= b.size.z / 2) continue;
+          spans.push([b.center.y - b.size.y / 2, b.center.y + b.size.y / 2]);
+        }
+        spans.sort((p, q) => p[0] - q[0]);
+        let top = Number.NEGATIVE_INFINITY;
+        for (const [from, to] of spans) {
+          if (to <= top) continue;
+          volume += (to - Math.max(from, top)) * CELL * CELL;
+          top = to;
+        }
+      }
+    }
+    expect(Math.abs(volume - 2644.2)).toBeLessThan(0.5);
+  });
+
   it('is a city: every wall, floor and rail finished, the street paving with an asphalt road, no site toilet or container left', () => {
     for (const b of NEON_HEIGHTS.blocks) {
       if (b.kind === 'wall' || b.kind === 'barrier' || b.kind === 'floor') expect(b.finish, `${b.kind} at ${b.center.x},${b.center.y},${b.center.z}`).toBeDefined();
