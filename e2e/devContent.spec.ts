@@ -148,7 +148,9 @@ test('with Dev content off there is no Light row, no torch in the match, and T d
   type View = { airsoft: { state: { tick: number; characters: { id: number; torchOn: boolean }[] } | null; renderer: { scene: { traverse: (f: (o: { name: string }) => void) => void } } } };
   await expect.poll(() => page.evaluate(() => (window as unknown as View).airsoft.state?.tick ?? 0), { timeout: 60_000 }).toBeGreaterThan(10);
   await page.keyboard.press('t');
-  await page.waitForTimeout(500);
+  // A second of play after the press (polled on the simulation's ticks, never a fixed wait).
+  const pressedAt = await page.evaluate(() => (window as unknown as View).airsoft.state?.tick ?? 0);
+  await expect.poll(() => page.evaluate(() => (window as unknown as View).airsoft.state?.tick ?? 0), { timeout: 30_000 }).toBeGreaterThan(pressedAt + 60);
   const seen = await page.evaluate(() => {
     const g = (window as unknown as View).airsoft;
     const torchObjects: string[] = [];
