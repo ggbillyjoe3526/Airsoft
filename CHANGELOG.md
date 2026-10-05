@@ -65,6 +65,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M32** · Cyber Pistol comes only at Legendary with a 0.25 % chase chance per Armory Shot item; on Hard, bots carry it about 1 in 20 matches (#75)
 - **M34c** · Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend
 - **M34c** · Minimap on multi-level maps shows the floor you stand on (floors below darker) and marks teammates on other floors with an up or down arrow
+- **M34d** · Map pop-up shows a Day or Night switch for maps with both modes; your choice is saved per map
+- **M34d** · Neon Heights by Night has the moon and night sight; neon and lit rooms are M34e
 - **M35** · Settings → Dev → Dev content (off by default): maps, modes, difficulties and gear still being built show only with it on, and never drop from Shots (#70)
 - **M35** · pool.md has an Access column: public or dev for each asset (#70)
 - **M36** · Pro difficulty level: a fourth bot level above Hard, shown only with Dev content on; Pro bots aim more precisely, lead moving targets more, fire shorter bursts, play slower with longer holds at cover and silent approaches, and opponents carry kits with more parts fitted

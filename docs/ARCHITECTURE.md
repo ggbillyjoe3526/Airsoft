@@ -96,7 +96,10 @@ ends the round). A hit character is eliminated
   `EnvironmentLook` passed to `Renderer.setEnvironmentLook`, freed while off; the `Renderer` sets it as `scene.environment` with Environment lighting, and the map's and trees' Lambert materials opt
   out, `surfaceMaterials.ts`) and the tone mapping choice (`Renderer.setToneMapping`). Night lighting (M33f): a map
   names its lighting presets in its data (`MapData.lighting`, absent means day; `config/render.ts` `LIGHTING_PRESETS`),
-  `lightingPreset.ts` resolves one (`resolveLighting`, the key light turned to the map's `moonOver`), every session
+  `lightingPreset.ts` resolves one (`resolveLighting`, the key light turned to the map's `moonOver`). A map listing two
+  presets offers Day | Night on its option in the Map pop-up (M34d, `map/lightingChoice.ts`, saved as
+  `lighting.<map id>`): `mapUnderLighting` puts the pick first and sets `night` from it, so the same path, the bots'
+  night sight and glowing BBs follow it. Every session
   passes it to `Renderer.setLighting` (haze, background, exposure, environment) and `addLighting` (key light, fill, sky,
   clouds), and `lightPools.ts` draws the map's light pools (`MapData.lights`): one glow mesh, one additive ground mesh
   and, on Medium and High, a fixed number of point lights on the pools nearest the eye (`QualitySettings.poolLights`). `mapMeshes.ts` turns each block

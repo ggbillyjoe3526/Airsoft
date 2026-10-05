@@ -30,9 +30,10 @@ import {
 import { squadSize } from '../../config/extraction';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
-import type { QualityChoice, QualitySettings } from '../../config/render';
+import type { LightingPresetId, QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
+import { LIGHTING_LABELS, lightingChoices, lightingPicked } from '../../map/lightingChoice';
 import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapEntry } from '../../map/maps';
 import { modeOffered } from '../../map/playableMode';
 import { playedPicks, playedTeamSize } from '../../newGamePicks';
@@ -60,6 +61,9 @@ import { TitleScreen } from './titleScreen';
 /** The parts of the rules text that the Match pop-up doesn't change (team names, the flag, who attacks first). */
 export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount' | 'switches'>;
 
+/** The order a map's Day | Night switch lists its sides (M34d). */
+const LIGHTING_ORDER: readonly LightingPresetId[] = ['day', 'night'];
+
 /** What the menus show and what they report back to the game. */
 export interface MenusOptions {
   rules: FixedRulesText;
@@ -81,6 +85,8 @@ export interface MenusOptions {
   onSkipTutorialStep: () => void;
   onSkipTutorial: () => void;
   map: { initial: MapId; onChange: (m: MapId) => void };
+  /** Each map's Day or Night pick (M34d), on the maps that offer both. */
+  lighting: { initial: Partial<Record<MapId, LightingPresetId>>; onChange: (m: MapId, light: LightingPresetId) => void };
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
@@ -123,6 +129,8 @@ export class Menus {
   private readonly summary: SummaryScreen;
   private readonly result: ResultScreen;
   private readonly mapDialog: ChoiceDialog<MapId>;
+  /** Each map's Day or Night pick (M34d). */
+  private readonly lightingPicks: Partial<Record<MapId, LightingPresetId>>;
   private readonly modeDialog: ChoiceDialog<MatchMode>;
   private readonly matchDialog: RowsDialog;
   /** The Match pop-up's team sizes: each map offers as many as it has room for (M33). */
@@ -167,6 +175,7 @@ export class Menus {
       onBack: () => this.back(),
       onPlay: () => this.play(),
     });
+    this.lightingPicks = { ...opts.lighting.initial };
     this.mapDialog = new ChoiceDialog(
       'Map',
       MAPS,
@@ -177,7 +186,25 @@ export class Menus {
         this.mapPicked(m);
         this.refreshSetup();
       },
-      { soon: COMING_MAPS, soonTag: COMING_SOON_TAG, fallback: DEFAULT_MAP },
+      {
+        soon: COMING_MAPS,
+        soonTag: COMING_SOON_TAG,
+        fallback: DEFAULT_MAP,
+        // Day | Night on a map that offers both (M34d): picking a side picks the map with that light.
+        variants: {
+          label: 'Light',
+          of: (id) => LIGHTING_ORDER.filter((l) => lightingChoices(mapEntry(id).data).includes(l)).map((l) => ({ id: l, label: LIGHTING_LABELS[l] })),
+          picked: (id) => this.lightingOf(id),
+          onPick: (id, light) => {
+            const l = light as LightingPresetId;
+            if (this.lightingOf(id) === l) return;
+            this.lightingPicks[id] = l;
+            saveSetting(`lighting.${id}`, l);
+            opts.lighting.onChange(id, l);
+            this.refreshSetup();
+          },
+        },
+      },
     );
     this.modeDialog = new ChoiceDialog(
       'Game mode',
@@ -552,6 +579,11 @@ export class Menus {
     if (this.current === 'settings') this.settings.closed();
   }
 
+  /** The light `id` plays under (M34d): its saved pick if it offers it, else its first preset. */
+  private lightingOf(id: MapId): LightingPresetId {
+    return lightingPicked(mapEntry(id).data, this.lightingPicks[id]);
+  }
+
   /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
   private mapPicked(id: MapId): void {
     const size = mapEntry(id).teamSize.standard;
@@ -583,7 +615,9 @@ export class Menus {
     this.teamSizePicker.limit((id) => Number(id) <= sizeMax);
     for (const t of this.taggedPickers) t.picker.setDevContent(devContent, t.played(played));
     const m = { ...played.rules, teamSize: playedTeamSize(played) };
-    this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
+    // A map that offers Day and Night names the one picked (M34d).
+    const light = lightingChoices(map.data).length > 1 ? ` · ${LIGHTING_LABELS[this.lightingOf(map.id)]}` : '';
+    this.setup.map.set(`${this.mapDialog.label}${light}`, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
     const match = run ? runRulesSummary(m, run) : matchRulesSummary(m);
     // Under a ruleset other than Skirmish the line starts with its name (M39).
