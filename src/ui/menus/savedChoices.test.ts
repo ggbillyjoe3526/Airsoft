@@ -37,4 +37,10 @@ describe('reduced motion (audit UI-07)', () => {
     expect(motionClass(true)).toBe('reduced-motion');
     expect(motionClass(false)).toBe('full-motion');
   });
+
+  it('reads only the saved words as a pick: a boolean, a number or another case is no pick (the stored field stays on / off)', () => {
+    for (const bad of [true, false, 1, 0, 'ON', 'Off', '', null]) {
+      expect(loadReducedMotion(storageWith({ reducedMotion: bad })), String(bad)).toBeNull();
+    }
+  });
 });
