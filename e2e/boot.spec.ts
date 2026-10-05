@@ -288,6 +288,11 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.getByRole('tab', { name: /HUD/i })).toHaveAttribute('aria-selected', 'true');
   await expect(settings.getByRole('slider', { name: 'Scoreboard size' })).toHaveValue('1.3');
   await expect(settings.getByRole('group', { name: 'Hit feed' }).getByRole('button', { name: 'Fade' })).toHaveAttribute('aria-pressed', 'true');
+  // M41: the What got you row is on the HUD tab, Auto by default (shown against Pro opponents only).
+  const whatGotYou = settings.getByRole('group', { name: 'What got you' });
+  await expect(whatGotYou).toBeVisible();
+  await expect(whatGotYou.getByRole('button')).toHaveText(['Auto', 'On', 'Off']);
+  await expect(whatGotYou.getByRole('button', { name: 'Auto' })).toHaveAttribute('aria-pressed', 'true');
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
   await page.keyboard.press('ArrowUp');
   await expect(settings.getByRole('tab', { name: /Crosshair/i })).toHaveAttribute('aria-selected', 'true');

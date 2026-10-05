@@ -8,7 +8,8 @@ import { withoutEnvironment } from './surfaceMaterials';
  * Tree crowns (M33i): one merged mesh over a map's `tree` blocks, built from their data alone (any map with trees gets
  * them; Depot has none). A trunk CANOPY.broadFrom across or more gets a broadleaf crown of a few lumps, thinner ones a
  * pine of stacked cones. Crowns are drawing only: BBs, people and bots' sight pass through them (a trunk's block is what
- * collides), and none comes lower than CANOPY.minBase over the ground, so it never hides a standing figure. Baked shade:
+ * collides), and no point of one comes lower than CANOPY.minBase over the ground beneath it (on a slope too), so it
+ * never hides a standing figure. Baked shade:
  * darker underneath, cooler on the moon's side. Flat-shaded Lambert like the tree ring round the field (the same shader).
  */
 
@@ -104,6 +105,19 @@ export function crownOf(block: MapBlock, terrain: Terrain | undefined): Crown {
     const turn = hash01(block, 4) * Math.PI * 2;
     for (const t of P.tiers) cone(triangles, x, z, bottom + t.from * span, bottom + t.to * span, t.radius * j(5), P.sides, turn);
     base = bottom;
+  }
+  // On a slope the ground under a crown's edge is higher than at its trunk: lift the whole crown until every point of
+  // it is CANOPY.minBase over the ground directly beneath.
+  if (terrain) {
+    let lift = 0;
+    for (let i = 0; i < triangles.length; i += 3) {
+      const under = terrainHeightAt(terrain, triangles[i]!, triangles[i + 2]!);
+      if (under !== undefined) lift = Math.max(lift, under + CANOPY.minBase - triangles[i + 1]!);
+    }
+    if (lift > 0) {
+      for (let i = 1; i < triangles.length; i += 3) triangles[i]! += lift;
+      base += lift;
+    }
   }
   return { base, ground, triangles };
 }
