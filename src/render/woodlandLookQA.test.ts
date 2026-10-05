@@ -179,8 +179,10 @@ describe('AC1: the canopy, from tree blocks only', () => {
 });
 
 describe('AC1: Depot’s textures and GPU memory are unchanged', () => {
-  it('asks for the core set only on Depot, Neon Heights and the range, and draws nothing new into the shared set', () => {
-    for (const map of [DEPOT, NEON_HEIGHTS, RANGE_MAP]) {
+  it('asks for the core set only on Depot and the range, and draws nothing new into the shared set', () => {
+    // Neon Heights asks for the city's (M34f, cityLook.test.ts), none of the woods' but the planters' boards.
+    expect(texturesFor(NEON_HEIGHTS).filter((id) => ['bark', 'stone', 'groundDetail'].includes(id))).toEqual([]);
+    for (const map of [DEPOT, RANGE_MAP]) {
       expect(new Set(texturesFor(map)), map.name).toEqual(new Set(CORE_SURFACES));
       const set = stubTextures(CORE_SURFACES);
       const before = { ...set };

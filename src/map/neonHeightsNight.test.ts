@@ -15,7 +15,7 @@ const field = buildNightField(mapUnderLighting(NEON_HEIGHTS, 'night'), NIGHT_SIG
 const { storey, raised, bridges, links } = NEON_HEIGHTS_LAYOUT;
 const spot = (name: string): Vec3 => raised.find((r) => r.name === name)!.at;
 
-const NORMAL: Record<MapSign['facing'], Vec3> = { '+x': vec3(1, 0, 0), '-x': vec3(-1, 0, 0), '+z': vec3(0, 0, 1), '-z': vec3(0, 0, -1) };
+const NORMAL: Record<MapSign['facing'], Vec3> = { '+x': vec3(1, 0, 0), '-x': vec3(-1, 0, 0), '+z': vec3(0, 0, 1), '-z': vec3(0, 0, -1), '+y': vec3(0, 1, 0) };
 
 /** Whether `p` is inside a wall block (or the perimeter). */
 const inWall = (p: Vec3): boolean =>
@@ -63,6 +63,7 @@ describe('Neon Heights by Night (M34e)', () => {
 
   it('puts every sign and window flat on solid wall, never across a door or window', () => {
     for (const [i, s] of NEON_HEIGHTS.signs!.entries()) {
+      if (s.facing === '+y') continue; // the road markings (M34f) lie on the street: neonHeightsArt.test.ts
       const n = NORMAL[s.facing];
       // Across the panel: right is up × normal.
       const right = vec3(-n.z, 0, n.x);

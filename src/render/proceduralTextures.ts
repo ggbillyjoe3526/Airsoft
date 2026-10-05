@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { type Anisotropy, type CoreSurfaceId, type NatureSurfaceId, SURFACES, type SurfaceTextureId, type TextureSize } from '../config/render';
+import { type Anisotropy, type CitySurfaceId, type CoreSurfaceId, type NatureSurfaceId, SURFACES, type SurfaceTextureId, type TextureSize } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
+import { cityDrawers } from './cityTextures';
 import { natureDrawers } from './natureTextures';
 
 /**
@@ -23,10 +24,11 @@ export interface ProceduralTexture {
 }
 
 /**
- * A set of surface textures: every core one, and the woods' ones (M33i) once a map that uses them has asked for them
- * (addSurfaceTextures; Renderer.surfaceTexturesFor), so a set no such map has used holds exactly what it did before.
+ * A set of surface textures: every core one, and the woods' (M33i) and the city's (M34f) once a map that uses them has
+ * asked for them (addSurfaceTextures; Renderer.surfaceTexturesFor), so a set no such map has used holds exactly what it
+ * did before.
  */
-export type SurfaceTextures = Record<CoreSurfaceId, ProceduralTexture> & Partial<Record<NatureSurfaceId, ProceduralTexture>>;
+export type SurfaceTextures = Record<CoreSurfaceId, ProceduralTexture> & Partial<Record<NatureSurfaceId | CitySurfaceId, ProceduralTexture>>;
 
 /** The core surfaces, the ones every set has. */
 export const CORE_SURFACES: readonly CoreSurfaceId[] = ['concrete', 'blockWall', 'crate', 'corrugated', 'steelPlate', 'barrier', 'sandbag', 'gabion'];
@@ -496,6 +498,7 @@ function surfaceDrawer(size: TextureSize, anisotropy: Anisotropy): (id: SurfaceT
     return finish(canvas, 'gabion');
   }
 
+  const kit = { SIZE, PX, makeCanvas, rgba, wrapped, speckle, blotches, crack, finish };
   const drawers: Record<SurfaceTextureId, () => ProceduralTexture> = {
     concrete,
     blockWall,
@@ -505,7 +508,8 @@ function surfaceDrawer(size: TextureSize, anisotropy: Anisotropy): (id: SurfaceT
     barrier,
     sandbag,
     gabion,
-    ...natureDrawers({ SIZE, PX, makeCanvas, rgba, wrapped, speckle, blotches, crack, finish }),
+    ...natureDrawers(kit),
+    ...cityDrawers(kit),
   };
   return (id) => drawers[id]();
 }

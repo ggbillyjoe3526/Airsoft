@@ -1159,6 +1159,16 @@ Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Nig
 - [ ] Day: no lamps or glows anywhere; the signs are painted boards and the windows dark glass.
 - [ ] Woodland by night looks as before: the camp fires and lanterns, and bots see you anywhere in their light.
 
+## Neon Heights look (M34f, dev content)
+
+Turn on Dev content (Settings → Dev), pick Neon Heights, play it once by Day and once by Night, on Low and on Medium.
+
+- [ ] The city reads as playful: pastel buildings (mint, pink, cyan, amber), a paved street with a dark road, zebra crossings, neon strips on the Arcade, Tower and Sky Bridge.
+- [ ] Arcade cabinets, vending machines, market stalls, planters, phone booths and the delivery van look like what they are, and you stop, take cover and get hit exactly where the old crates and racks were.
+- [ ] Nothing on the map is in team blue or orange, so a figure never blends with a prop.
+- [ ] Night: the sky is a soft purple with a few stars; indoor ceilings look plaster white by Day (a little olive by Night is known).
+- [ ] Depot and Woodland look exactly as before.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:

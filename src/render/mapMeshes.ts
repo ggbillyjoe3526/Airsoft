@@ -5,6 +5,7 @@ import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
 import { terrainHeightAt } from '../map/terrain';
 import { buildCanopyMesh } from './canopyMeshes';
+import { cityPropPieces, cityPropTextures, isCityProp } from './cityProps';
 import { appendCuboid, type Buffers, type Cuboid, type CuboidShape, emptyBuffers, FACES, PLAIN, type UvMode } from './cuboidMesh';
 import { buildFoliageMesh } from './foliageMeshes';
 import { appendFixtureSolids } from './lightFixtures';
@@ -55,7 +56,19 @@ const STYLES: Record<BlockKind, KindStyle> = {
   log: { texture: 'bark', uv: 'world', tints: [0xd2c0a4, 0xc6b69c], castShadow: true, grime: true },
   // Long boundary panels with little near enough to shade them: coarse tiles (M33i, Medium's triangle ceiling).
   fence: { texture: 'planks', uv: 'world', tints: [0xd8d0c4, 0xccc4b8], castShadow: true, grime: true, cell: SURFACES.occlusion.coarseCell },
+  // The city (M34f, render/cityProps.ts): drawn as more than a box, in their paint (MapBlock.paint) or these.
+  cabinet: { texture: 'barrier', uv: 'world', tints: [0x3a2b4a, 0x2b3a35], castShadow: true, grime: true },
+  vending: { texture: 'barrier', uv: 'world', tints: [0xe0459a, 0x2fc9a0, 0xf2f0ea], castShadow: true, grime: true },
+  stall: { texture: 'barrier', uv: 'world', tints: [0xe0459a, 0x2fb59a, 0xe8d040], castShadow: true, grime: true },
+  planter: { texture: 'planks', uv: 'world', tints: [0xe0d6c8, 0xd6ccbe], castShadow: true, grime: true },
+  booth: { texture: 'barrier', uv: 'world', tints: [0x2fb59a, 0xd04098], castShadow: true, grime: true },
+  van: { texture: 'barrier', uv: 'world', tints: [0xf2f0ea, 0x9ad8c0], castShadow: true, grime: true },
 };
+
+/** Every block a map draws: its blocks, then its look-only `decor` (M34f). */
+function drawnBlocks(map: MapData): readonly MapBlock[] {
+  return map.decor ? [...map.blocks, ...map.decor] : map.blocks;
+}
 
 /**
  * The surface textures `map`'s meshes are painted with (M33i): the core set every map has, and the woods' ones its
@@ -63,12 +76,16 @@ const STYLES: Record<BlockKind, KindStyle> = {
  */
 export function texturesFor(map: MapData): SurfaceTextureId[] {
   const ids = new Set<SurfaceTextureId>(CORE_SURFACES);
-  for (const b of map.blocks) ids.add(styleOf(b).texture);
+  for (const b of drawnBlocks(map)) {
+    ids.add(styleOf(b).texture);
+    if (isCityProp(b.kind) && !b.finish) for (const id of cityPropTextures(b.kind)) ids.add(id);
+  }
   for (const l of map.lights ?? []) {
     if (l.kind === 'fire') ids.add('stone').add('bark');
     if (l.kind === 'lantern') ids.add('bark');
   }
   if (map.ground) ids.add('groundDetail');
+  if (drawnBlocks(map).some(hasCeiling)) ids.add('plaster');
   if (map.ground?.patches.some((p) => p.surface === 'gravel')) ids.add('stone');
   return [...ids];
 }
@@ -76,7 +93,15 @@ export function texturesFor(map: MapData): SurfaceTextureId[] {
 /** A steel floor or ramp (MapBlock.surface 'metal', which also clanks underfoot): diamond tread plate in plain steel. */
 const METAL_PLATE: KindStyle = { texture: 'steelPlate', uv: 'world', tints: [0xf4f6f8], castShadow: false, grime: false };
 
+/**
+ * How a block is drawn: in its finish if it has one (M34f: that surface, with its kind's shadow and grime), else as its
+ * kind (a steel floor or ramp as tread plate).
+ */
 function styleOf(block: MapBlock): KindStyle {
+  if (block.finish) {
+    const kind = STYLES[block.kind];
+    return { texture: block.finish, uv: 'world', tints: kind.tints, castShadow: kind.castShadow, grime: kind.grime, ...(kind.cell === undefined ? {} : { cell: kind.cell }) };
+  }
   return block.surface === 'metal' ? METAL_PLATE : STYLES[block.kind];
 }
 
@@ -93,9 +118,11 @@ function blockHash(block: MapBlock): number {
 }
 
 /**
- * Tint for a block, picked from its kind's palette by a hash of its position, so a symmetric map looks symmetric.
+ * Tint for a block: its paint (M34f), else picked from its kind's palette by a hash of its position, so a symmetric map
+ * looks symmetric.
  */
 export function blockTint(block: MapBlock): number {
+  if (block.paint !== undefined) return block.paint;
   const tints = styleOf(block).tints;
   return tints[blockHash(block) % tints.length] ?? 0xffffff;
 }
@@ -246,15 +273,18 @@ function containerPieces(block: MapBlock, color: THREE.Color, out: Piece[], deta
   }
 }
 
-/** A wall: painted blocks under a concrete coping that stands `overhang` proud of them on both faces. */
-function wallPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+/**
+ * A wall: painted blocks (or its finish, M34f) under a concrete coping that stands `overhang` proud of them on both
+ * faces.
+ */
+function wallPieces(block: MapBlock, color: THREE.Color, out: Piece[], body: SurfaceTextureId = 'blockWall'): void {
   const b = boundsOf(block);
   const thin = block.size.x <= block.size.z ? 0 : 2;
-  const body = boundsOf(block);
-  body.max[1] -= COPING.height;
-  body.min[thin] += COPING.overhang;
-  body.max[thin] -= COPING.overhang;
-  out.push({ box: body, texture: 'blockWall', uv: 'world', color, grime: true, castShadow: true });
+  const inner = boundsOf(block);
+  inner.max[1] -= COPING.height;
+  inner.min[thin] += COPING.overhang;
+  inner.max[thin] -= COPING.overhang;
+  out.push({ box: inner, texture: body, uv: 'world', color, grime: true, castShadow: true });
   out.push({ box: { min: [b.min[0], b.max[1] - COPING.height, b.min[2]], max: b.max }, texture: 'concrete', uv: 'world', color, grime: false, castShadow: true });
 }
 
@@ -597,7 +627,12 @@ export function blockPieces(block: MapBlock, blocks: readonly MapBlock[], detail
   const style = styleOf(block);
   const color = new THREE.Color().setHex(blockTint(block), THREE.SRGBColorSpace).multiplyScalar(blockShade(block));
   const out: Piece[] = [];
-  if (block.kind === 'container') containerPieces(block, color, out, detail);
+  // A finished block (M34f) is one box in its finish; a wall keeps its coping, a raised floor has a ceiling under it.
+  if (hasCeiling(block)) ceilingPieces(block, color, out);
+  else if (block.finish && block.kind === 'wall') wallPieces(block, color, out, block.finish);
+  else if (block.finish) out.push({ box: boundsOf(block), texture: style.texture, uv: style.uv, color, grime: style.grime, castShadow: castsShadow(block) });
+  else if (isCityProp(block.kind)) cityPropPieces(block as MapBlock & { kind: typeof block.kind }, color, out);
+  else if (block.kind === 'container') containerPieces(block, color, out, detail);
   else if (block.kind === 'wall') wallPieces(block, color, out);
   else if (block.kind === 'crate' && !onCrate(block, blocks)) palletPieces(block, color, out, detail);
   else if (block.kind === 'toilet') toiletPieces(block, color, out);
@@ -611,6 +646,19 @@ export function blockPieces(block: MapBlock, blocks: readonly MapBlock[], detail
   else if (block.kind === 'barrier' && detail && block.surface !== 'metal') barrierPieces(block, color, out);
   else out.push({ box: boundsOf(block), texture: style.texture, uv: style.uv, color, grime: style.grime, castShadow: castsShadow(block) });
   return out;
+}
+
+/** Whether a block is a finished floor above the ground (M34f): its finish on top, a ceiling under it. */
+function hasCeiling(block: MapBlock): boolean {
+  return block.kind === 'floor' && block.finish !== undefined && block.center.y + block.size.y / 2 > SURFACES.raisedFrom;
+}
+
+/** A raised finished floor (M34f): its finish SURFACES.ceiling.depth deep on top, plastered underneath. */
+function ceilingPieces(block: MapBlock, color: THREE.Color, out: Piece[]): void {
+  const b = boundsOf(block);
+  const cut = b.max[1] - Math.min(SURFACES.ceiling.depth, block.size.y);
+  out.push({ box: { min: b.min, max: [b.max[0], cut, b.max[2]] }, texture: 'plaster', uv: 'world', color: new THREE.Color().setHex(SURFACES.ceiling.colour, THREE.SRGBColorSpace), grime: false, castShadow: true });
+  out.push({ box: { min: [b.min[0], cut, b.min[2]], max: b.max }, texture: block.finish!, uv: 'world', color, grime: false, castShadow: true });
 }
 
 /** What a built map looks like (from QualitySettings): rebuilt when `detail` or `steelSheen` changes (mapNeedsRebuild). */
@@ -763,7 +811,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
   };
 
   const pieces: { piece: Piece; block: MapBlock }[] = [];
-  for (const block of map.blocks) {
+  for (const block of drawnBlocks(map)) {
     if (block.kind === 'ramp') {
       const style = styleOf(block);
       const color = new THREE.Color().setHex(blockTint(block), THREE.SRGBColorSpace).multiplyScalar(blockShade(block));

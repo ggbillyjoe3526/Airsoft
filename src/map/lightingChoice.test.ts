@@ -46,7 +46,8 @@ describe('Day or Night on a map (M34d)', () => {
       expect(night.night).toBe(true);
       expect(night.lighting!.presets[0]).toBe('night');
       expect(resolveLighting(night).night).toBe(true);
-      expect(resolveLighting(night).sky).toEqual(LIGHTING_PRESETS.night.sky);
+      // The night preset under the city's own sky glow (M34f).
+      expect(resolveLighting(night).sky).toEqual({ ...LIGHTING_PRESETS.night.sky, ...NEON_HEIGHTS.lighting!.overrides!.night!.sky });
       expect(sightConditionsOf(night).night).not.toBeNull();
     }
   });

@@ -86,6 +86,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M34e** · Neon Heights by Night: 12 lamps light separate floors, neon signs that glow and are painted by day, lit and dark windows on the perimeter; balanced at 47–48 % west, 52 % attackers
 - **M34e** · Night sight on night maps knows floors and roofs: an unlit spot under a roof is seen from 15 m
 - **M33i** · Woodland's look (dev content): bark trunks and log walls, faceted boulders, plank fences, pine and broadleaf crowns against the sky, gravel creek, earth tracks and leaf litter under the trees, camp fires with flickering flames and embers, lanterns, and a moon and stars at night on every preset; Depot unchanged
+- **M34f** · Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade, vending, stall, planter, booth, van); painted ground markings; plaster ceilings under raised floors
+- **M34f** · Neon Heights: pastel buildings (mint, pink, cyan, amber on slate), paved street with asphalt, neon trim, lit arcade cabinets; night: softer purple sky with city lighting and 180 stars
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)

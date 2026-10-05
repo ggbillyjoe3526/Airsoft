@@ -1,4 +1,5 @@
 import { matchOverWhistlesDuration } from './audio';
+import type { BlockFinish } from '../map/mapTypes';
 import type { ImpactMaterial } from './sounds';
 
 /** Presentation tuning. Kept conservative for integrated GPUs. */
@@ -632,7 +633,9 @@ export const POOL_LIGHTS = {
  * Signs and lit windows (M34e, render/mapSigns.ts; MapSign in map/mapTypes.ts), one mesh for all of a map's. By Night
  * they are unlit and self-lit: a neon sign at its colour times `neon`, a window at `window`; by Day a neon sign is a
  * painted board, its colour `paint` of the way to `board`, and a window is dark glass (`glass`), lit by the sun.
- * Each stands `offset` m off its wall, so it never fights the wall for depth.
+ * Each stands `offset` m off its wall, so it never fights the wall for depth. Painted markings (M34f, kind `paint`) are
+ * their colour by Day and Night, lit like the floor under them, in a mesh of their own (`map-paint`). A city prop's
+ * screens and product windows glow by Night as lit windows (render/cityProps.ts propSigns).
  */
 export const SIGNS = {
   neon: 1.4,
@@ -818,8 +821,15 @@ export type CoreSurfaceId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 
  */
 export type NatureSurfaceId = 'bark' | 'planks' | 'stone' | 'groundDetail';
 
+/**
+ * The city's surfaces (M34f, render/cityTextures.ts): the block finishes (MapBlock.finish: painted plaster, metal
+ * cladding, tiles, asphalt, paving) and glass for the city props' windows and screens. Drawn only when a map that uses
+ * them loads, as the woods' are.
+ */
+export type CitySurfaceId = BlockFinish | 'glass';
+
 /** Every surface texture (render/proceduralTextures.ts). */
-export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId;
+export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId | CitySurfaceId;
 
 /**
  * The look of the field's surfaces and props (M14, render/proceduralTextures.ts and render/mapMeshes.ts). Everything
@@ -827,9 +837,9 @@ export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId;
  */
 export const SURFACES = {
   /** Metres one texture repeat covers, for the textures mapped in world space (crates are mapped once per face). */
-  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2, bark: 1.6, planks: 1.6, stone: 1.6, groundDetail: 4 } satisfies Record<SurfaceTextureId, number>,
+  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2, bark: 1.6, planks: 1.6, stone: 1.6, groundDetail: 4, plaster: 2.4, cladding: 1.6, tiles: 0.6, asphalt: 3, paving: 1.2, glass: 1.2 } satisfies Record<SurfaceTextureId, number>,
   /** How strongly each texture's light and dark read as relief when surface relief is on (bump scale). */
-  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 1.8, bark: 2.6, planks: 1.8, stone: 1.8, groundDetail: 1 } satisfies Record<SurfaceTextureId, number>,
+  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 1.8, bark: 2.6, planks: 1.8, stone: 1.8, groundDetail: 1, plaster: 0.6, cladding: 1.6, tiles: 1.4, asphalt: 1.4, paving: 1.6, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
   /**
    * Grime and contact shade near the floor: the sides of walls, containers, crates and barriers darken towards their
    * foot over this height (metres), to this share of their colour at the very bottom.
@@ -843,6 +853,11 @@ export const SURFACES = {
    * the ground's own slab doesn't (KNOWN_ISSUES: a platform's height read only from its lit sides).
    */
   raisedFrom: 0.01,
+  /**
+   * A finished floor above the ground (M34f, MapBlock.finish) is its finish only `depth` deep on top; under that it is a
+   * plastered ceiling in `colour`, so the rooms below see a ceiling, not the underside of a tiled floor.
+   */
+  ceiling: { depth: 0.03, colour: 0xe9e7e2 },
   /**
    * Purely visual detail drawn inside each block's own bounds (metres). Containers: the corrugated box sits `inset` in
    * from a steel frame of corner posts and top and bottom rails, darker than the walls, with locking bars on one end;
@@ -886,7 +901,7 @@ export const SURFACES = {
    * into a normal map (render/surfaceNormals.ts heightToNormal). The slope scale per surface, for the original
    * 256-pixel drawing (the maps at other sizes are scaled to match, so relief reads the same at any texture size).
    */
-  normalStrength: { concrete: 1.4, blockWall: 2.2, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2 } satisfies Record<SurfaceTextureId, number>,
+  normalStrength: { concrete: 1.4, blockWall: 2.2, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2, plaster: 0.6, cladding: 1.8, tiles: 1.6, asphalt: 1.6, paving: 1.8, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
   /** The largest normal map (pixels a side): High's 1024² pictures are scaled down to it first (render/surfaceNormals.ts). */
   normalMapMaxSize: 512,
   /**
@@ -951,6 +966,26 @@ export const SURFACES = {
     ink: '#2a2d30',
     hazard: '#e8c547',
   },
+} as const;
+
+/**
+ * The city props (M34f, render/cityProps.ts; BlockKind in map/mapTypes.ts), in metres; colours are sRGB hex. Every
+ * piece stays inside its block, and a face is never set in from it by more than `inset` (what you see is what stops
+ * you and your BBs). A row of arcade cabinets is cut into cabinets about `cabinet.width` wide, each with a screen and
+ * a marquee on both long faces in one of `cabinet.hues`; a vending machine has its product window on both long faces;
+ * a stall is a counter under a striped awning; a planter is a timber box of shrubs; a booth is glass in a frame under a
+ * lit sign band; a van stands on its wheels over a dark skirt, its windscreen at one end. By Night the screens, product
+ * windows and booth signs glow (propSigns, drawn with the map's signs). Heights are shares of the block's height.
+ */
+export const CITY_PROPS = {
+  inset: 0.04,
+  dark: 0x1e2126,
+  cabinet: { width: 0.8, plinth: 0.1, screen: [0.5, 0.74], deck: [0.4, 0.45], marquee: 0.3, edge: 0.08, hues: [0x2ef2c4, 0xff3cac, 0xb07bff, 0xd8ff3a] },
+  vending: { window: [0.36, 0.86], windowShare: 0.66, slot: [0.12, 0.2], slotShare: 0.4, header: 0.14, glow: 0xf4fff0 },
+  stall: { counter: 1.0, awning: 0.3, stripe: 0.3, stripeColour: 0xf4f1ea, inset: 0.04, wood: 0xd8cbb8, goods: 0xb3a28c },
+  planter: { foliage: 0.16, inset: 0.04, leaves: 0x4f7d3c },
+  booth: { post: 0.08, base: 0.1, roof: 0.14, band: 0.26, glow: 0x6fffd8 },
+  van: { skirt: 0.35, skirtInset: 0.04, wheel: 0.62, wheelLength: 0.66, wheelFromEnd: 0.75, wheelDepth: 0.26, body: 0.02, windscreen: [0.58, 0.88], cab: 1.2, stripe: [0.42, 0.48] },
 } as const;
 
 /** BB and impact visuals. BBs are drawn bigger than 6 mm so they read at speed. */
