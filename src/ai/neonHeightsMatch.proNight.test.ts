@@ -15,9 +15,11 @@ describe('a 4v4 Elimination match on Neon Heights by Night, both teams on Pro (M
   });
 
   it('keeps each end at 40-60 % of the decided rounds, and rounds end before the clock', { timeout: 300_000 }, () => {
-    // Measured 2026-10-05 with M34e's night light (seeds 1-32, 300 s each): the west end (end 0) wins 41.7 % of the decided
-    // rounds (73 of 175), 3 of 180 rounds end on time; Hard on the same seeds 41.2 % (75 of 182), none on time. The east end
-    // is the stronger, as by Day (KNOWN_ISSUES). Re-measure with this test after any bot, layout or night-sight change.
+    // Measured 2026-10-05 (M57, seeds 1-32, 300 s each, every bot carrying the torch the game fits it at night, audit
+    // AI-02): the west end (end 0) wins 48.9 % of the decided rounds (90 of 184), 1 of 188 rounds ends on time. Before M57
+    // the guard played without torches: west 41.7 % (73 of 175), 3 of 180 on time; Hard on the same seeds 41.2 % (75 of
+    // 182), none on time. By Day the east end is the stronger (KNOWN_ISSUES). Re-measure with this test after any bot,
+    // layout or night-sight change.
     expectProBalance(tallyBalance(32, 300, botConfig('pro'), 'elimination', NIGHT, TEAM_SIZE), 'elimination', 'Neon Heights by Night Pro');
   });
 });

@@ -50,15 +50,17 @@ describe('Pro-only map balance skills (M40)', () => {
   });
 
   describe('holding out of the light on Woodland at night (keepsDark)', () => {
+    /** Seeds measured: one seed's share swings with its fights (seed 1 reads 43 % with torches, seeds 2-4 7-21 %). */
+    const SEEDS = 4;
     beforeAll(async () => {
       await initPhysics();
     });
 
-    it('Pro defenders hold their posts in the fort at the edge of the lanterns\' light; Hard ones stand in it', { timeout: 40_000 }, () => {
+    it('Pro defenders hold their posts in the fort at the edge of the lanterns\' light; Hard ones stand in it', { timeout: 150_000 }, () => {
       const litAtPost = (level: Difficulty) => {
         let atPost = 0;
         let lit = 0;
-        playMatch(120, 1, undefined, botConfig(level), 'attackDefend', ROUNDS, WOODLAND, 4, HITS, (state, bots) => {
+        for (let seed = 1; seed <= SEEDS; seed++) playMatch(120, seed, undefined, botConfig(level), 'attackDefend', ROUNDS, WOODLAND, 4, HITS, (state, bots) => {
           if (state.round.phase !== 'live') return;
           const night = bots.worldForTests.sight!.night!;
           for (const b of bots.bots) {
@@ -74,8 +76,9 @@ describe('Pro-only map balance skills (M40)', () => {
       const said = `pro ${JSON.stringify(pro)}, hard ${JSON.stringify(hard)}`;
       expect(pro.atPost).toBeGreaterThan(0);
       expect(hard.atPost).toBeGreaterThan(0);
-      // Measured 2026-10-05 (seed 1, 120 s): Pro in the light for 24 % of its time at a post (it stops a step short of
-      // the pool's edge), Hard for 94 %.
+      // Measured 2026-10-05 (M57, seeds 1-4, 120 s each, every bot carrying its torch as the game fits it): Pro in the
+      // light for 22 % of its time at a post (it stops a step short of the pool's edge; seed 1 alone 43 %), Hard for 93 %.
+      // Before M57 (no torches, seed 1 alone): Pro 24 %, Hard 94 %.
       expect(pro.lit / pro.atPost, said).toBeLessThan(0.35);
       expect(hard.lit / hard.atPost, said).toBeGreaterThan(0.8);
     });

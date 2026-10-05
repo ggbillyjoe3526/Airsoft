@@ -35,8 +35,10 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Attack / Defend match o
       expectGrounded(stats, map);
     }
     // Measured 2026-10-04: attackers won 40 of 86 rounds here (47 %), 8 by raising the flag, none on time. Over seeds
-    // 1-32 they won 54 %, 32 of 178 rounds by raising the flag. By night (M34d, 2026-10-05) they won 39 of 87 here (45 %), 10 by raising it, none on time; with M34e's lamps and dark rooms 49 of 95 (52 %), none on time. Re-measure with this test after any layout or bot
-    // change.
+    // 1-32 they won 54 %, 32 of 178 rounds by raising the flag. By night (M34d, 2026-10-05) they won 39 of 87 here
+    // (45 %), 10 by raising it, none on time; with M34e's lamps and dark rooms 49 of 95 (52 %), none on time. With every
+    // bot carrying the torch the game fits it at night (M57, audit AI-02) 47 of 93 (50.5 %), 11 by raising it, none on
+    // time. Re-measure with this test after any layout or bot change.
     expect(attackWins / rounds).toBeGreaterThanOrEqual(0.4);
     expect(attackWins / rounds).toBeLessThanOrEqual(0.6);
     expect(captures).toBeGreaterThan(0);

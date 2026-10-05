@@ -26,7 +26,7 @@ import { createWind } from '../sim/wind';
 import { type Bot } from './bot';
 import { BotController } from './botController';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
-import { DT } from './depotMatchSupport';
+import { DT, fitNightTorches } from './depotMatchSupport';
 import { sightConditionsOf } from './perception';
 import { SquadFollow } from './squadFollow';
 import { startOrder } from './squadOrders';
@@ -48,6 +48,8 @@ export interface RunOptions {
   map?: MapData;
   /** The runner bot's plan (default RUNNER_PLAN). */
   plan?: RunnerPlanConfig;
+  /** Every bot carries the weapon torch (fitNightTorches; default: on a night field, as the game fits it; M57, audit AI-02). */
+  torches?: boolean;
 }
 
 /**
@@ -111,12 +113,15 @@ export function setUpRun(opts: RunOptions) {
   // The home team's cap and its reserve for the run's last part (M45).
   const home = x.baseOpponents + squad + reserveSize(run);
   for (let id = 0; id < squad + home; id++) state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, id < squad ? 0 : 1));
+  const you = state.characters[0]!;
+  // The bots: everyone, or everyone but you when you play the runner by hand.
+  const botCharacters = opts.runnerBot ? state.characters : state.characters.filter((c) => c !== you);
+  if (opts.torches ?? map.night === true) fitNightTorches(botCharacters);
   startRun(state.round, state.characters, ctx.round);
   for (const c of state.characters) physics.addCharacter(c);
-  const you = state.characters[0]!;
   you.ghost = !opts.runnerBot;
   const commands = new Map<number, PlayerCommand>();
-  const bots = new BotController(state, opts.runnerBot ? state.characters : state.characters.filter((c) => c !== you), commands, {
+  const bots = new BotController(state, botCharacters, commands, {
     query: physics,
     nav,
     navSnap: NAV.snap,
