@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { AUDIO, VOLUME } from '../config/audio';
+import { AMBIENCES, AUDIO, VOLUME } from '../config/audio';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
-import { cues, SHOT_PROFILES, SOUNDS, type SoundCue } from '../config/sounds';
+import { cues, isMapCue, SHOT_PROFILES, SOUNDS, type SoundCue } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import type { MapBlock } from '../map/mapTypes';
 import { terrainHeightAt } from '../map/terrain';
@@ -9,13 +9,13 @@ import { SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { saveSetting } from '../settings/storage';
-import { Birdsong, renderAmbienceBed } from './ambience';
+import { AmbientCalls, renderAmbienceBed } from './ambience';
 import { loadVolumes, volumeField, volumeGain } from './audioMix';
 import { recipeLength, renderRecipe, seededRandom, type SoundRecipe } from './dsp';
 import { type FoleyMove, FoleyTracker } from './foley';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, muffleFor, type OcclusionQuery } from './occlusion';
-import { renderSounds, suppressedCopies } from './soundBank';
+import { renderMapCue, renderSounds, suppressedCopies } from './soundBank';
 import { impactMaterialAt, surfaceUnder } from './soundMaterials';
 
 const RATE = 48000;
@@ -57,8 +57,15 @@ function brightness(buf: Float32Array): number {
   return n / (buf.length / RATE);
 }
 
+/** Every cue's `variants` variants: the title screen's (one stream) and the map cues (each its own seed, M33j). */
+function renderEveryCue(variants: number): Map<SoundCue, Float32Array[]> {
+  const all = renderSounds(RATE, variants);
+  for (const cue of Object.keys(SOUNDS) as SoundCue[]) if (isMapCue(cue)) all.set(cue, renderMapCue(cue, RATE, variants));
+  return all;
+}
+
 describe('sound synthesis (M13)', () => {
-  const rendered = renderSounds(RATE, 3);
+  const rendered = renderEveryCue(3);
 
   it('renders every cue: audible, finite, never clipping, fading to silence at the end', () => {
     for (const cue of Object.keys(SOUNDS) as SoundCue[]) {
@@ -380,7 +387,7 @@ describe("the yard's outdoor bed (audit CORE-34)", () => {
   });
 
   it('lets a bird sing between the configured gaps, round the listener at the configured distance', () => {
-    const birds = new Birdsong(5);
+    const birds = new AmbientCalls(AMBIENCES.yard.day.call!, 5);
     const at = vec3();
     const listener = vec3(3, 1.6, -4);
     const [least, most] = AUDIO.ambience.birdEvery;
