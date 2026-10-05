@@ -341,6 +341,11 @@ export class CombatPresentation {
     this.sfx.placeSources(this.state.characters, this.player.id);
   }
 
+  /** Compiles the world's and the held replica's shaders before the first frame (M63, audit REN-06: Renderer.warmShaders). */
+  warmShaders(): void {
+    this.renderer.warmShaders(this.overlay);
+  }
+
   /** Draws the frame; the held replica only when the camera is in first person. */
   render(firstPerson: boolean): void {
     this.renderer.render(firstPerson ? this.overlay : undefined);

@@ -293,6 +293,9 @@ export class MatchSession {
     renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
     this.build.phase('figures, flag and HUD');
+    // The scene is whole: its shaders are compiled now, not in the first frame (M63, audit REN-06).
+    this.combat.warmShaders();
+    this.build.phase('shaders');
   }
 
   /** Extraction's run context (the insertion, the home team's starts, the exits); undefined in the other modes. */

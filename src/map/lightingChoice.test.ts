@@ -91,6 +91,14 @@ describe('Day or Night on any map that lists both (M34d)', () => {
     expect(mapUnderLighting(day, 'night')).toEqual(mapUnderLighting(NEON_HEIGHTS, 'night'));
   });
 
+  it('gives the same map back for the same pick, and another for the other pick (M63, audit REN-01)', () => {
+    // The kept map meshes compare maps by identity: Play again on the same map and light must find the same object.
+    for (const pick of ['day', 'night'] as const) expect(mapUnderLighting(NEON_HEIGHTS, pick)).toBe(mapUnderLighting(NEON_HEIGHTS, pick));
+    expect(mapUnderLighting(NEON_HEIGHTS)).toBe(mapUnderLighting(NEON_HEIGHTS, 'night'));
+    expect(mapUnderLighting(NEON_HEIGHTS, null)).toBe(mapUnderLighting(NEON_HEIGHTS, 'night'));
+    expect(mapUnderLighting(NEON_HEIGHTS, 'day')).not.toBe(mapUnderLighting(NEON_HEIGHTS, 'night'));
+  });
+
   it('keeps Neon Heights\' default Night: the bare map is what plays when nothing is picked', () => {
     expect(NEON_HEIGHTS.night).toBe(true);
     expect(mapUnderLighting(NEON_HEIGHTS)).toEqual(NEON_HEIGHTS);
