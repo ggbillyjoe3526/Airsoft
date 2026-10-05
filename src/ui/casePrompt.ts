@@ -3,6 +3,7 @@ import { GAME_POOL } from '../pool/gamePool';
 import type { Pool } from '../pool/pool';
 import { type CaseFind, type FoundItem, haulTotals, type RunCase, type RunState } from '../sim/extraction';
 import { haulWhat } from './runStatus';
+import { TimedFill } from './timedFill';
 
 /** "Rare Red Dot", from the pool (the asset id if the pool doesn't have it). */
 export function itemName(pool: Pool, item: FoundItem): string {
@@ -54,13 +55,13 @@ const enum Showing {
 /**
  * Extraction's case prompt under the crosshair (M44): "Hold G to open the field case" beside a shut case, then
  * "Opening the field case" with a bar while the Use key is held, then what it held for a moment, and the note when a
- * hit drops what you carry. Touches the page only when what it shows changes (the bar per whole percent).
+ * hit drops what you carry. Touches the page only when what it shows changes (the bar runs on one CSS transition, ui/timedFill.ts).
  */
 export class CasePrompt {
   private readonly root: HTMLDivElement;
   private readonly text: HTMLSpanElement;
   private readonly bar: HTMLDivElement;
-  private readonly fill: HTMLDivElement;
+  private readonly fill: TimedFill;
   private line = '';
   private lineUntil = Number.NEGATIVE_INFINITY;
   private visible = false;
@@ -80,9 +81,10 @@ export class CasePrompt {
     this.text = document.createElement('span');
     this.bar = document.createElement('div');
     this.bar.className = 'case-prompt-bar';
-    this.fill = document.createElement('div');
-    this.fill.className = 'case-prompt-fill';
-    this.bar.append(this.fill);
+    const fill = document.createElement('div');
+    fill.className = 'case-prompt-fill';
+    this.fill = new TimedFill(fill);
+    this.bar.append(fill);
     this.root.append(this.text, this.bar);
     this.root.hidden = true;
     parent.appendChild(this.root);
@@ -102,6 +104,8 @@ export class CasePrompt {
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.keyStale = true;
+    // Hidden, the bar's transition was cut short at its end: the next frame sets it going again from the game's progress.
+    if (visible) this.shown.percent = -1;
     this.root.hidden = !visible || this.shown.showing === Showing.None;
   }
 
@@ -126,7 +130,9 @@ export class CasePrompt {
       this.bar.hidden = showing !== Showing.Opening;
       this.root.hidden = !this.visible || showing === Showing.None;
     }
-    if (percent !== s.percent && percent >= 0) this.fill.style.width = `${percent}%`;
+    // One transition for the whole opening (M64, audit UI-11); the bar is hidden between openings, so it is rewound there.
+    if (opening) this.fill.follow(run.openProgress / Math.max(1e-6, opening.openTime), opening.openTime - run.openProgress);
+    else if (s.percent >= 0) this.fill.hold(0);
     s.showing = showing;
     s.index = index;
     s.percent = percent;
