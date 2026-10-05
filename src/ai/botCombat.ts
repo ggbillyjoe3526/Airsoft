@@ -133,7 +133,7 @@ function heldAngleLook(b: Bot, w: BotWorld, eye: Vec3, facingYaw: number, neares
     standEye.x = p.x;
     standEye.y = head;
     standEye.z = p.z;
-    b.heldAngleCount = findHeldAngles(w.query, standEye, head, facingYaw, cfg, b.heldAngles);
+    b.heldAngleCount = findHeldAngles(w.query, standEye, head, facingYaw, cfg, b.heldAngles, w.angleFeatures(), p.y);
   }
   if (b.heldAngleCount === 0) return null;
   let a: HeldAngle | null = b.heldAngles[Math.floor(b.teamWait / cfg.angleSwitchTime) % b.heldAngleCount]!;

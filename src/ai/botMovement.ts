@@ -1,5 +1,6 @@
 import type { BotBehaviour } from '../config/bots';
 import { FLAG } from '../config/modes';
+import { inLight } from '../map/nightSight';
 import { dropOnLine, floorAt, isWalkableAt } from '../nav/navGrid';
 import type { Character } from '../sim/character';
 import type { PlayerCommand } from '../sim/commands';
@@ -21,6 +22,7 @@ const sideEye = vec3();
 const targetPoint = vec3();
 const postEye = vec3();
 const chokeEye = vec3();
+const darkProbe = vec3();
 
 /** Cover searches by a lane point and round the pole (AI-02, AI-06): spots to peek from only (radius set per call). */
 const holdSearch: CoverSearch = { radius: 0, randomCandidates: 0, peekable: true };
@@ -90,6 +92,7 @@ function nextAdvanceGoal(b: Bot, w: BotWorld): Vec3 | undefined {
       b.laneIndex = next;
       jitterPoint(b, w, lane[next]!, w.cfg.laneJitter, b.laneGoal);
       staggerHold(b, w);
+      if (b.skill.keepsDark) moveIntoDark(w, b.laneGoal);
       return b.laneGoal;
     }
   }
@@ -180,6 +183,32 @@ function crossfireSpot(b: Bot, w: BotWorld, mate: Vec3): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Keeping out of the light (M40, keepsDark): on a night field, a lane point in a light pool moves to the nearest spot on
+ * the same floor that is dark, within darkSpotRadius (rings darkSpotStep apart, darkSpotDirections round each); unmoved
+ * if none is, or by day. The nearest such spot is at the pool's edge, so a bot that stops a little short of it may stand
+ * just inside the light (DECISIONS M40: a margin clear of the edge made the defenders too strong).
+ */
+function moveIntoDark(w: BotWorld, g: Vec3): void {
+  const night = w.sight?.night;
+  if (!night || !inLight(night, g)) return;
+  const cfg = w.cfg;
+  for (let r = cfg.darkSpotStep; r <= cfg.darkSpotRadius; r += cfg.darkSpotStep) {
+    for (let k = 0; k < cfg.darkSpotDirections; k++) {
+      const angle = (2 * Math.PI * k) / cfg.darkSpotDirections;
+      darkProbe.x = g.x + Math.cos(angle) * r;
+      darkProbe.z = g.z + Math.sin(angle) * r;
+      if (!onSameFloor(w, g, darkProbe.x, darkProbe.z)) continue;
+      darkProbe.y = floorAt(w.nav, darkProbe.x, g.y, darkProbe.z);
+      if (inLight(night, darkProbe)) continue;
+      g.x = darkProbe.x;
+      g.y = darkProbe.y;
+      g.z = darkProbe.z;
+      return;
+    }
+  }
 }
 
 /** True if (x, z) is walkable and on the floor `point` stands on (within a step of its height). */
