@@ -12,8 +12,8 @@ import { PRECOMPRESS, precompressedCopies } from './src/config/precompress.ts';
 const CHUNK_BUDGET_KB = { rapier: 4550, default: 800 };
 
 /** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the
- * Pro guards on every map (M40) with them. */
-const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 'src/ai/proBalance.test.ts'];
+ * Pro guards on every map (M40) and the Extraction balance runs on every map (M46, M48) with them. */
+const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 'src/ai/proBalance.test.ts', 'src/ai/*Match.extraction*.test.ts'];
 
 /** True on a CI runner (the workflow's runner sets CI); read without Node's types, which the project doesn't load. */
 const ON_CI = Boolean((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.CI);

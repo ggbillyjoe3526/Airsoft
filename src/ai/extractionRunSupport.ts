@@ -27,6 +27,7 @@ import { type Bot } from './bot';
 import { BotController } from './botController';
 import { lowCoverBlocks, tallCoverBlocks } from './cover';
 import { DT } from './depotMatchSupport';
+import { sightConditionsOf } from './perception';
 import { SquadFollow } from './squadFollow';
 import { startOrder } from './squadOrders';
 
@@ -122,6 +123,8 @@ export function setUpRun(opts: RunOptions) {
     lanes: map.lanes,
     lowCover: lowCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap),
     tallCover: tallCoverBlocks(map.blocks, nav, BODY, BOTS.lowCoverFloorGap),
+    // Bushes and night as the map has them (M48: Woodland's woods and both night maps), as a match sets them.
+    sight: sightConditionsOf(map),
     body: BODY,
     hits: HITS,
     loadout: LOADOUT,
@@ -188,6 +191,29 @@ export function playRun(opts: RunOptions): RunResult {
   };
   r.dispose();
   return result;
+}
+
+/** A home team's level measured over whole runs (the balance guards, M46, M48): how often the squad got out, and with what. */
+export interface RunMeasure {
+  extract: number;
+  /** What the runs got out with over the minutes they lasted (Field Credits a minute). */
+  fcPerMinute: number;
+  runs: RunResult[];
+}
+
+/**
+ * Plays seeds 1 to `seeds` on `map` with the runner bot and RUNNER_PLAN, two Normal bot teammates standing in for you,
+ * against a home team at `opponents`.
+ */
+export function measureRuns(map: MapData, opponents: Difficulty, seeds: number): RunMeasure {
+  const runs: RunResult[] = [];
+  for (let seed = 1; seed <= seeds; seed++) runs.push(playRun({ seed, map, opponents, teammates: 'normal', plan: RUNNER_PLAN }));
+  const minutes = runs.reduce((sum, r) => sum + r.seconds, 0) / 60;
+  return {
+    extract: runs.filter((r) => r.reason === 'extracted').length / runs.length,
+    fcPerMinute: runs.reduce((sum, r) => sum + r.fc, 0) / minutes,
+    runs,
+  };
 }
 
 /**

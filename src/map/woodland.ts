@@ -4,6 +4,7 @@ import type { Bush } from './foliage';
 import type { MapLight } from './nightSight';
 import type { BlockKind, GroundPatch, MapBlock, MapData, MapGround, SpawnPoint } from './mapTypes';
 import { buildTerrain, type Terrain, terrainHeightAt } from './terrain';
+import { woodlandExtraction } from './woodlandExtraction';
 
 /**
  * "Woodland" (M33, the owner's pick, 2026-10-04; concept sketch v1 approved at 18:07 with its defaults): a wide wood at
@@ -517,6 +518,8 @@ const GROUND: MapGround = {
   ] satisfies GroundPatch[],
 };
 
+const SPAWNS: [SpawnPoint[], SpawnPoint[]] = [END0_SPAWNS.map(spawnAt), END1_SPAWNS.map(spawnAt)];
+
 const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...BOULDERS, ...LOGS, ...APPROACH_COVER, OAK];
 const BLOCKS: MapBlock[] = [...fence(), ...COVER, ...woods(LANE_POINTS, COVER)];
 
@@ -524,7 +527,7 @@ export const WOODLAND: MapData = {
   name: 'Woodland',
   blocks: BLOCKS,
   killY: -10,
-  spawns: [END0_SPAWNS.map(spawnAt), END1_SPAWNS.map(spawnAt)],
+  spawns: SPAWNS,
   deadZones: [END0_DEAD.map(spawnAt), END1_DEAD.map(spawnAt)],
   lanes: LANE_POINTS.map((lane) => lane.map(([x, z]) => onGround(x, z))),
   flag: onGround(FLAG.x, FLAG.z),
@@ -535,6 +538,8 @@ export const WOODLAND: MapData = {
   foliage: bushes(LANE_POINTS, BLOCKS),
   lights: LIGHTS,
   ground: GROUND,
+  // Extraction (M48): the run's own data, placed on this layout in woodlandExtraction.ts.
+  extraction: woodlandExtraction({ onGround, spawnAt, westCamp: SPAWNS[0] }),
 };
 
 /** Layout facts the tests check against (world coordinates), exported so they can't drift from the geometry. */

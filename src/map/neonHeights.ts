@@ -1,5 +1,6 @@
 import { type Vec3, vec3 } from '../sim/vec';
 import type { BlockKind, MapBlock, MapData, MapSign, Overlook, RampRise, SpawnPoint } from './mapTypes';
+import { neonHeightsExtraction } from './neonHeightsExtraction';
 import type { MapLight } from './nightSight';
 
 /**
@@ -637,6 +638,8 @@ function blockToWorld(b: MapBlock): MapBlock {
 const spawnToWorld = (s: SpawnPoint): SpawnPoint => ({ position: toWorld(s.position), yaw: Math.atan2(Math.sin(Math.PI - s.yaw), Math.cos(Math.PI - s.yaw)) });
 const rectToWorld = (r: Rect): Rect => [r[0], r[1], -r[3], -r[2]];
 
+const SPAWNS: [SpawnPoint[], SpawnPoint[]] = [WEST_SPAWNS.map(spawnToWorld), EAST_SPAWNS.map(spawnToWorld)];
+
 export const NEON_HEIGHTS: MapData = {
   name: 'Neon Heights',
   blocks: [
@@ -653,7 +656,7 @@ export const NEON_HEIGHTS: MapData = {
     ...eastAlleysAndYard(),
   ].map(blockToWorld),
   killY: -10,
-  spawns: [WEST_SPAWNS.map(spawnToWorld), EAST_SPAWNS.map(spawnToWorld)],
+  spawns: SPAWNS,
   deadZones: [WEST_DEAD_ZONE.map(spawnToWorld), EAST_DEAD_ZONE.map(spawnToWorld)],
   lanes: LANES.map((lane) => lane.map(toWorld)),
   flag: toWorld(POLE),
@@ -666,6 +669,8 @@ export const NEON_HEIGHTS: MapData = {
   // By Night (M34e): the lamps light their floors for the bots too; the signs are presentation only.
   lights: LAMPS.map((l) => ({ ...l, position: toWorld(l.position) })),
   signs: [...NEON_SIGNS, ...perimeterWindows()].map(signToWorld),
+  // Extraction (M48): the run's own data, placed on this layout in neonHeightsExtraction.ts.
+  extraction: neonHeightsExtraction({ toWorld, spawnToWorld, yards: SPAWNS }),
 };
 
 /** Layout facts the tests check against, in world coordinates, so they can't drift from the geometry. */
