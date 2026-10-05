@@ -122,6 +122,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
+- **M64** · The reload, case-opening and count bars fill smoothly in one motion (still step by step with Reduced motion on); the Key Bindings screen no longer holds on to the mouse wheel when no key is waiting
 - **M63** · Playing Neon Heights again with the same lighting reuses the built map instead of building it again; a match's shaders are compiled as it loads, so its first frame and first flag pickup hitch less; the GPU timer comes back after the graphics driver resets (#115)
 - **M54** · Accessibility: with no Reduced motion choice saved, the system setting applies as it changes; High Contrast mode shows the case prompt, coach and range readout; the empty key box's dash is easier to read; the debug overlay sits under the minimap in every browser; the respawn fade no longer stalls a frame (#113)
 - **M52** · At night the ground, wood and faces read in their own colours instead of near black: a bluer, brighter night sky and moon, and on Medium the shadows at night stay sharp near you (#111)
@@ -157,6 +158,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M50** · The crash report's Quality line reads properly (not "[object Object]") and the report adds the rules, the lighting, Retro pixels and an Extraction run's state (#107)
 
 ### Internal
+- **M64** · The performance check can play Extraction: its scripted player opens a case on Depot
 - **M51** · CI runs the slow tests in three parallel jobs beside the main check; the Extraction balance tests and the map Extraction blocks share one helper each; a smoke test plays Tournament Extraction with Retro pixels and Pro CQB against Pro (#110)
 - **M44** · Extraction cases: tests for the Use key, case rolls, drops and the haul, and a browser test of a run that opens the locker
 - **M45** · Extraction waves: tests for wave timing per difficulty, the reserve, regen points on Depot's real level, and bots setting off again

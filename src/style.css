@@ -2087,7 +2087,6 @@ kbd {
 
 .hud-reload div {
   height: 100%;
-  width: 0;
   background: var(--hud-fg);
 }
 
@@ -2438,11 +2437,23 @@ kbd {
 
 .sb-flag-bar b {
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 0;
+  inset: 0;
   background: var(--flag);
+}
+
+/* The progress fills (M64, audit UI-11: ui/timedFill.ts): full width, scaled from the left by one `transform`
+   transition whose duration the game sets once per run, not a width written per percent. Reduced motion takes the
+   transition away (below) and the game steps the fill per percent instead; forced colours leave the fills their colours
+   as the HUD, the scoreboard and the case prompt (each in the list at the end) already keep theirs. */
+.hud-reload div,
+.case-prompt-fill,
+.sb-flag-bar b {
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition-property: transform;
+  transition-timing-function: linear;
+  transition-duration: 0s;
 }
 
 .sb-flag.urgent .sb-flag-text {
@@ -2469,6 +2480,13 @@ kbd {
   animation: none;
 }
 
+/* The progress fills stop sliding: the game steps them per percent instead (ui/timedFill.ts, audit UI-11). */
+.reduced-motion .hud-reload div,
+.reduced-motion .case-prompt-fill,
+.reduced-motion .sb-flag-bar b {
+  transition-property: none;
+}
+
 .reduced-motion .hitfx-flash.show {
   animation-name: hitfx-flash-soft;
 }
@@ -2481,6 +2499,12 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   #app:not(.full-motion) .sb-flag.urgent .sb-flag-text {
     animation: none;
+  }
+
+  #app:not(.full-motion) .hud-reload div,
+  #app:not(.full-motion) .case-prompt-fill,
+  #app:not(.full-motion) .sb-flag-bar b {
+    transition-property: none;
   }
 
   #app:not(.full-motion) .hitfx-flash.show {
@@ -2669,7 +2693,6 @@ kbd {
 }
 
 .case-prompt-fill {
-  width: 0;
   height: 100%;
   background: var(--paper);
 }

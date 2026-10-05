@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FIGURE } from '../config/characters';
 import { TEAMMATE_MARKERS } from '../config/matchInfo';
 import { BODY } from '../config/movement';
@@ -48,14 +48,18 @@ describe('screen markers', () => {
   });
 });
 
-describe('screen markers after the camera moves', () => {
-  it('use where the camera is now, not where it was last rendered', () => {
+describe('screen markers and the camera matrices (audit UI-13)', () => {
+  it('use the matrices the caller made once for the frame, and never rebuild them per marker', () => {
     const cam = camera();
-    cam.rotation.y = -Math.PI / 2; // turned to face +X, without updating its matrices
-    const m = projectMarker(new THREE.Vector3(10, 0, 0), cam, W, H, M, { x: 0, y: 0, onScreen: false });
-    expect(m.onScreen).toBe(true);
-    expect(m.x).toBeCloseTo(W / 2, 6);
-    expect(m.y).toBeCloseTo(H / 2, 6);
+    cam.rotation.y = -Math.PI / 2; // turned to face +X
+    cam.updateMatrixWorld(); // the caller's one update, after the camera is placed
+    const update = vi.spyOn(cam, 'updateMatrixWorld');
+    const out = { x: 0, y: 0, onScreen: false };
+    for (let i = 0; i < 7; i++) projectMarker(new THREE.Vector3(10, 0, 0), cam, W, H, M, out);
+    expect(update).not.toHaveBeenCalled();
+    expect(out.onScreen).toBe(true);
+    expect(out.x).toBeCloseTo(W / 2, 6);
+    expect(out.y).toBeCloseTo(H / 2, 6);
   });
 });
 

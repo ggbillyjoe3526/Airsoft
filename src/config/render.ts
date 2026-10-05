@@ -1236,6 +1236,13 @@ export const HUD = {
   /** Extraction (M44): how long the line under the crosshair says what a case held, and that you dropped your finds (s). */
   caseFoundTime: 2.6,
   caseDroppedTime: 6,
+  /**
+   * A progress bar (reload, case, count) runs on one CSS transition, so the page is told once, not per percent (M64,
+   * audit UI-11). It starts the run again when the game's own progress is this many seconds off the transition's
+   * (a long frame), and stands the bar when that progress has not moved for this long (a pause), so the bar never
+   * reads a lie.
+   */
+  barDriftSeconds: 0.15,
   /** The round clock turns to a warning colour at or below this many seconds. */
   lowClockSeconds: 20,
   /** The result screen appears this long after the match-over whistles end (see matchOverScreenDelay). */

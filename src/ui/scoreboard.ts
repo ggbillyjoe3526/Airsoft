@@ -6,6 +6,7 @@ import type { RoundState } from '../sim/round';
 import type { ExtractionRules } from '../config/extraction';
 import { carriedNote, respawnNote, runLine } from './runStatus';
 import { flagLine } from './flagStatus';
+import { TimedFill } from './timedFill';
 
 /**
  * Top-centre scoreboard: rounds won per team either side of the round clock, with a pip per player
@@ -21,7 +22,8 @@ export class Scoreboard {
   private readonly clock: HTMLSpanElement;
   private readonly pips: HTMLElement[][];
   private readonly flag: HTMLDivElement;
-  private readonly flagFill: HTMLElement;
+  /** The strip's bar: the flag's height, or the exit count on one CSS transition (M64, audit UI-11). */
+  private readonly flagFill: TimedFill;
   private readonly flagText: HTMLSpanElement;
   private shownScore = [-1, -1];
   private shownSeconds = -1;
@@ -61,7 +63,7 @@ export class Scoreboard {
     this.pips = [0, 1].map((t) => Array.from(this.root.querySelectorAll(`.sb-team-${t} .sb-pips i`)) as HTMLElement[]);
     this.clock = this.root.querySelector('.sb-clock') as HTMLSpanElement;
     this.flag = this.root.querySelector('.sb-flag') as HTMLDivElement;
-    this.flagFill = this.root.querySelector('.sb-flag-bar b') as HTMLElement;
+    this.flagFill = new TimedFill(this.root.querySelector('.sb-flag-bar b') as HTMLElement);
     this.flagText = this.root.querySelector('.sb-flag-text') as HTMLSpanElement;
     this.respawn = this.root.querySelector('.sb-respawn') as HTMLSpanElement;
   }
@@ -132,12 +134,12 @@ export class Scoreboard {
       shown.warned = warned;
       shown.outcome = r.outcome;
       const line = runLine(r, round.clock, rules);
-      this.setRunFill(line.progress);
+      this.setRunFill(line.progress, r.countStatus === 'counting' && r.outcome === 'none' ? rules.extractTime - r.count : -1);
       this.flagText.textContent = line.text;
       if (line.urgent !== this.shownUrgent) this.flag.classList.toggle('urgent', (this.shownUrgent = line.urgent));
     } else if (r.countStatus === 'counting') {
       // The bar fills smoothly between the seconds.
-      this.setRunFill(r.count / rules.extractTime);
+      this.setRunFill(r.count / rules.extractTime, rules.extractTime - r.count);
     }
     // What you carry (M44) changes only as a case is opened, dropped or picked up again.
     if (respawnsLeft !== shown.respawns || r.carried.length !== shown.carried) {
@@ -149,12 +151,10 @@ export class Scoreboard {
     }
   }
 
-  /** The count's bar, touched only when its whole percent changes. */
-  private setRunFill(progress: number): void {
-    const percent = Math.floor(progress * 100);
-    if (percent === this.shownPercent) return;
-    this.shownPercent = percent;
-    this.flagFill.style.width = `${percent}%`;
+  /** The count's bar: running on one transition while it counts (`secondsLeft` to full, else -1), otherwise standing at `progress`. */
+  private setRunFill(progress: number, secondsLeft: number): void {
+    if (secondsLeft >= 0) this.flagFill.follow(progress, secondsLeft);
+    else this.flagFill.hold(progress);
   }
 
   /** Flag mode: ATK / DEF tags and the strip showing the flag's height, from your side. */
@@ -175,7 +175,7 @@ export class Scoreboard {
     this.shownPercent = percent;
     this.shownStatus = status;
     this.shownLive = live;
-    this.flagFill.style.width = `${percent}%`;
+    this.flagFill.hold(round.flag.progress);
     const line = flagLine(attackers === this.playerTeam, status, round.flag.progress, live);
     this.flagText.textContent = line.text;
     if (line.urgent !== this.shownUrgent) this.flag.classList.toggle('urgent', (this.shownUrgent = line.urgent));
