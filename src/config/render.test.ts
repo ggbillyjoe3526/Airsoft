@@ -25,6 +25,8 @@ const VISIBLE_AT_DPR_1: readonly (keyof QualitySettings)[] = QUALITY_FIELDS.filt
 
 /** The woods' surfaces (config NatureSurfaceId, M33i): bark, planks, stone, groundDetail. */
 const NATURE_SURFACES = 4;
+/** The city's surfaces (M34f): five finishes and glass. */
+const CITY_SURFACES = 6;
 
 describe('render quality presets (final alpha audit section 4)', () => {
   it('sets every field on every preset', () => {
@@ -116,7 +118,7 @@ describe('render quality presets (final alpha audit section 4)', () => {
 
   it('keeps the surface textures within each preset\'s GPU budget (REN-13)', () => {
     // Every map draws the core set; a map with the woods' surfaces (M33i) draws those four too, only then.
-    const core = Object.keys(SURFACES.worldSize).length - NATURE_SURFACES;
+    const core = Object.keys(SURFACES.worldSize).length - NATURE_SURFACES - CITY_SURFACES;
     // RGBA with mipmaps (a third more).
     const mb = (textures: number, size: number): number => (textures * size * size * 4 * 4) / 3 / 2 ** 20;
     for (const p of QUALITY_PRESETS) expect(Math.log2(QUALITY[p].textureSize) % 1, p).toBe(0); // a power of two, for mipmaps
@@ -128,6 +130,11 @@ describe('render quality presets (final alpha audit section 4)', () => {
     expect(mb(all, QUALITY.low.textureSize)).toBeLessThan(4.5);
     expect(mb(all, QUALITY.medium.textureSize)).toBeLessThan(17);
     expect(mb(all, QUALITY.high.textureSize)).toBeLessThan(68);
+    // Neon Heights (M34f): the core set, the city's six and the woods' boards (its planters and stalls).
+    const city = core + CITY_SURFACES + 1;
+    expect(mb(city, QUALITY.low.textureSize)).toBeLessThan(5.5);
+    expect(mb(city, QUALITY.medium.textureSize)).toBeLessThan(21);
+    expect(mb(city, QUALITY.high.textureSize)).toBeLessThan(82);
   });
 
   it('never draws more dust motes than the buffer holds', () => {

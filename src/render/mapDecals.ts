@@ -8,7 +8,8 @@ import { withoutEnvironment } from './surfaceMaterials';
  * every sign (the atlas) and one merged mesh of quads, each a few millimetres off the face it is painted on, so the
  * whole set is one draw call. Placed from the map's own blocks: a bay number on each container's long sides, a site
  * roundel on the long perimeter walls, a "SAFE ZONE" board on the perimeter wall by each dead zone, hazard chevrons on
- * barriers. A sign is left out where something stands in front of it. No brands, no team colours.
+ * barriers (not on a finished one, M34f). A sign is left out where something stands in front of it. No brands, no team
+ * colours.
  */
 
 const D = SURFACES.decals;
@@ -113,7 +114,8 @@ export function decalQuads(map: MapData, size: number = D.atlasSize): DecalQuad[
           add({ centre, axis: across, sign, width: D.stencilHeight * 2, height: D.stencilHeight, rect }, b);
         }
       }
-    } else if (b.kind === 'barrier' && b.surface !== 'metal') {
+    } else if (b.kind === 'barrier' && b.surface !== 'metal' && !b.finish) {
+      // (A finished barrier, M34f, is painted as its finish says: a city's steel railing, no site hazard chevrons.)
       const long: 0 | 2 = b.size.x >= b.size.z ? 0 : 2;
       const across: 0 | 2 = long === 0 ? 2 : 0;
       const width = 2 * halfOf(b, long) - 0.2;

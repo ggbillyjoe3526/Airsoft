@@ -1,12 +1,13 @@
 import { type Vec3, vec3 } from '../sim/vec';
-import type { BlockKind, MapBlock, MapData, MapSign, Overlook, RampRise, SpawnPoint } from './mapTypes';
+import type { BlockFinish, BlockKind, MapBlock, MapData, MapSign, Overlook, RampRise, SpawnPoint } from './mapTypes';
 import type { MapLight } from './nightSight';
 
 /**
  * "Neon Heights" (M34, the owner's approved concept v1, 2026-10-04): a closed-down neon market block turned airsoft
  * site, 46 × 30 m, three playable storeys (street ±0, Level 1 +3 m, Level 2 +6 m) linked by stairs only. Greybox by
- * day (M34c), Day or Night picked with the map (M34d), lamps, neon signs and lit windows by Night (M34e); art and sound
- * follow (M34f). Tagged dev until the owner calls it done (map/maps.ts).
+ * day (M34c), Day or Night picked with the map (M34d), lamps, neon signs and lit windows by Night (M34e), painted as
+ * a city (M34f: plaster and cladding in mint, magenta, cyan and amber on slate, an asphalt avenue with markings, paving,
+ * tiled floors, city props); sound follows. Tagged dev until the owner calls it done (map/maps.ts).
  *
  * Neon Avenue runs north–south down the middle. The west half (end 0, the attackers' in Attack / Defend): the West
  * Yard with the spawns, the Arcade with the Capsules hotel over it and a balcony over the avenue, and the Repair Shop
@@ -53,6 +54,51 @@ const FULL_COVER = 2.4;
 const SPAWN_WALL_HEIGHT = 2.6;
 const ROOF = 0.3;
 
+/**
+ * The city's paint (M34f, sRGB): the concept's mint, magenta and cyan pastels on slate for the three buildings (Repair
+ * Shop block, Arcade, Tower), amber for the walkways between them (the Walkway, the Sky Bridge), with magenta and teal
+ * accents. The cyan stops at hue 183° (linear), 28° short of the High Contrast team blue. Each building one colour; the
+ * city round the site slate; rooms pale; props their own. Nothing that reads as team blue or orange (mapMeshes.test.ts'
+ * rule, checked in neonHeightsArt.test.ts).
+ */
+const PAINT = {
+  slate: 0x7d8aa0,
+  arcade: 0xf3b6d8,
+  block: 0xa9e4cf,
+  tower: 0xa2e9ec,
+  amber: 0xf4e08c,
+  roof: 0xb4b8c0,
+  plaza: 0xd9d3c8,
+  room: 0xe9e5dd,
+  spawn: 0xcfd4dc,
+  rail: 0x464e5e,
+  road: 0xffffff,
+  paving: 0xffffff,
+  floor: 0xe4e8ec,
+  gallery: 0xd5dde4,
+  studio: 0x5a5e70,
+  counter: 0xe25fa4,
+  bar: 0x2fb59a,
+  pod: 0xeef3f6,
+  bench: 0x8d98a6,
+  bed: 0xe3f1ee,
+  screen: 0xbfe8dc,
+  desk: 0x9eaabb,
+  filing: 0x7d8796,
+  speakers: 0x353848,
+} as const;
+
+/** The city's night sky (M34f, a lighting override): its glow on the horizon and in the fog, a brighter sky fill. */
+const CITY_NIGHT = {
+  sky: { horizon: 0x33295a },
+  fog: { colour: 0x33295a },
+  hemi: { sky: 0x6a62a8, ground: 0x2c2638, intensity: 1 },
+  nightSky: { stars: 180 },
+} as const;
+
+/** The avenue's road (plan x, M34f): asphalt between paved pavements, the van parked at its west kerb. */
+const ROAD = [-2, 2.5] as const;
+
 /** Block from min/max extents, which is how the layout is drawn. */
 function box(kind: BlockKind, x0: number, x1: number, y0: number, y1: number, z0: number, z1: number): MapBlock {
   return { kind, center: vec3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), size: vec3(x1 - x0, y1 - y0, z1 - z0) };
@@ -67,6 +113,10 @@ function stair(x0: number, x1: number, z0: number, z1: number, y0: number, rise:
 const crate = (x: number, z: number, base = 0, w = CRATE, d = CRATE): MapBlock => box('crate', x, x + w, base, base + CRATE, z, z + d);
 /** Full cover (2.4 m), `w` east-west by `d` north-south, on the floor at `base`. */
 const tall = (kind: BlockKind, x: number, z: number, w: number, d: number, base = 0): MapBlock => box(kind, x, x + w, base, base + FULL_COVER, z, z + d);
+/** A block finished in `finish` and painted `paint` (M34f): its look only, its box and kind as they were. */
+const finished = (b: MapBlock, finish: BlockFinish, paint: number): MapBlock => ({ ...b, finish, paint });
+/** A timber planter where a crate stood (crouch cover, the same box). */
+const planter = (x: number, z: number, base = 0): MapBlock => ({ ...crate(x, z, base), kind: 'planter' });
 
 /** An opening in a wall: from `a` to `b` along it, open from `lo` to `hi` (heights above the storey's floor). */
 interface Opening {
@@ -138,13 +188,25 @@ function slab(area: Rect, top: number, holes: Rect[] = []): MapBlock[] {
 const railX = (z0: number, x0: number, x1: number, base: number): MapBlock => box('barrier', x0, x1, base, base + RAIL, z0, z0 + RAIL_THICKNESS);
 const railZ = (x0: number, z0: number, z1: number, base: number): MapBlock => box('barrier', x0, x0 + RAIL_THICKNESS, base, base + RAIL, z0, z1);
 
-/** The level: ground and perimeter. */
+/** How far the road's surface stands proud of the street's slab (look only, under the markings' `SIGNS.offset`). */
+const ROAD_LIFT = 0.005;
+
+/**
+ * The road: asphalt laid on the street's paving between the kerbs, as look-only decor (`MapData.decor`), so the street
+ * stays the one slab it was and plays exactly as before (M34f; splitting the slab moved the bots' grid and the physics'
+ * floors and shifted the balance guards).
+ */
+function road(): MapBlock {
+  return finished(box('floor', ROAD[0], ROAD[1], -GROUND_THICKNESS, ROAD_LIFT, -HALF_Z, HALF_Z), 'asphalt', PAINT.road);
+}
+
+/** The level: the street, one paved slab (the road is `road()`, look only), and the perimeter walls. */
 function ground(): MapBlock[] {
   const t = PERIMETER_THICKNESS;
   const x = HALF_X + t;
   const z = HALF_Z + t;
   return [
-    box('floor', -x, x, -GROUND_THICKNESS, 0, -z, z),
+    finished(box('floor', -x, x, -GROUND_THICKNESS, 0, -z, z), 'paving', PAINT.paving),
     box('wall', -x, x, 0, PERIMETER_HEIGHT, HALF_Z, z),
     box('wall', -x, x, 0, PERIMETER_HEIGHT, -z, -HALF_Z),
     box('wall', -x, -HALF_X, 0, PERIMETER_HEIGHT, -HALF_Z, HALF_Z),
@@ -166,8 +228,8 @@ function westYard(): MapBlock[] {
     // The spawn wall, open at both ends.
     box('wall', -18.2, -17.9, 0, SPAWN_WALL_HEIGHT, -5, 6),
     // Cover in front of the buildings, staggered so the yard's edge is no straight line.
-    tall('rack', -17.9, -9.5, 1.3, 2.4),
-    tall('rack', -17.9, 8.4, 2.1, 1),
+    tall('vending', -17.9, -9.5, 1.3, 2.4),
+    tall('vending', -17.9, 8.4, 2.1, 1),
     tall('wrapped', -16.6, -1.2, 1.6, 1.2),
   ];
 }
@@ -191,17 +253,13 @@ function arcade(): MapBlock[] {
     ...slab([x0 + WALL, x1 - WALL, z0 + WALL, z1 - WALL], STOREY, [[s[0], s[1], s[2], s[3]]]),
     box('wall', x0, x1, 2 * STOREY, 2 * STOREY + ROOF, z0, z1),
     // Arcade cabinets (full cover) and a prize counter (crouch).
-    tall('rack', -11.2, 1, 0.6, 3.4),
-    tall('rack', -8.2, 4.6, 0.6, 3.4),
-    tall('rack', -11.2, 6.8, 2.4, 0.6),
-    crate(-6.4, 0.2, 0, 1.6),
-    crate(-6, 7.4),
+    tall('cabinet', -11.2, 1, 0.6, 3.4),
+    tall('cabinet', -8.2, 4.6, 0.6, 3.4),
+    tall('cabinet', -11.2, 6.8, 2.4, 0.6),
+    finished(crate(-6.4, 0.2, 0, 1.6), 'tiles', PAINT.counter),
+    finished(crate(-6, 7.4), 'tiles', PAINT.counter),
     // Capsules: rows of sleeping pods, crouch cover.
-    crate(-11.6, 2.8, STOREY),
-    crate(-8.6, 2.8, STOREY),
-    crate(-11.6, 6.2, STOREY, 1.6),
-    crate(-8.2, 6.6, STOREY),
-    crate(-5.6, 0.2, STOREY),
+    ...[crate(-11.6, 2.8, STOREY), crate(-8.6, 2.8, STOREY), crate(-11.6, 6.2, STOREY, 1.6), crate(-8.2, 6.6, STOREY), crate(-5.6, 0.2, STOREY)].map((b) => finished(b, 'cladding', PAINT.pod)),
     tall('wrapped', -6.2, 4.2, 1.2, 1.2, STOREY),
   ];
 }
@@ -222,14 +280,14 @@ function noodleAlleyAndLanternLane(): MapBlock[] {
   return [
     // Noodle Alley: a noodle stall against the Arcade and a drinks stand against the perimeter, staggered so the
     // alley is never one straight line; bins and a booth.
-    crate(-13.4, 12.6),
-    tall('rack', -10.2, 10, 1.4, 2.8),
-    tall('rack', -6.6, 12.6, 1.4, 2.4),
-    tall('toilet', -4.6, 10.6, 1.0, 1.0),
-    // Lantern Lane: a shrine and a cart, full cover, staggered across the lane; crates.
-    tall('rack', -13, -5, 1, 1.6),
-    tall('rack', -8.6, -3.6, 1, 1.6),
-    crate(-10.6, -3.2),
+    planter(-13.4, 12.6),
+    tall('stall', -10.2, 10, 1.4, 2.8),
+    tall('vending', -6.6, 12.6, 1.4, 2.4),
+    tall('booth', -4.6, 10.6, 1.0, 1.0),
+    // Lantern Lane: a shrine and a cart, full cover, staggered across the lane; a planter.
+    tall('stall', -13, -5, 1, 1.6),
+    tall('stall', -8.6, -3.6, 1, 1.6),
+    planter(-10.6, -3.2),
   ];
 }
 
@@ -276,17 +334,17 @@ function repairBlock(): MapBlock[] {
     ...slab([e + WALL, x1 - WALL, z0, z1 - WALL], 2 * STOREY),
     box('wall', x0, x1, 3 * STOREY, 3 * STOREY + ROOF, z0, z1),
     // Repair Shop: workbenches and a shelf.
-    crate(-7.6, -11.4, 0, 1.6),
+    finished(crate(-7.6, -11.4, 0, 1.6), 'cladding', PAINT.bench),
     tall('rack', -5.2, -14.4, 1.2, 0.6),
-    crate(-6.2, -8.2),
+    finished(crate(-6.2, -8.2), 'cladding', PAINT.bench),
     // Clinic: beds and a screen.
-    crate(-7.8, -13.6, STOREY, 1.2, 1.6),
-    crate(-5.4, -10.6, STOREY),
-    tall('wrapped', -7.6, -8.4, 1.2, 0.6, STOREY),
+    finished(crate(-7.8, -13.6, STOREY, 1.2, 1.6), 'cladding', PAINT.bed),
+    finished(crate(-5.4, -10.6, STOREY), 'cladding', PAINT.bed),
+    finished(tall('wrapped', -7.6, -8.4, 1.2, 0.6, STOREY), 'plaster', PAINT.screen),
     // Studio: a mixing desk and speaker stacks.
-    crate(-6.8, -11.8, 2 * STOREY, 1.6),
-    tall('rack', -5, -14.2, 0.8, 0.8, 2 * STOREY),
-    crate(-7.6, -7.4, 2 * STOREY),
+    finished(crate(-6.8, -11.8, 2 * STOREY, 1.6), 'cladding', PAINT.speakers),
+    finished(tall('rack', -5, -14.2, 0.8, 0.8, 2 * STOREY), 'cladding', PAINT.speakers),
+    finished(crate(-7.6, -7.4, 2 * STOREY), 'cladding', PAINT.speakers),
     // A partition facing the Sky Bridge door: off the bridge you turn a corner, never walk straight in.
     box('wall', -5.2, -4.9, 2 * STOREY, 3 * STOREY, -9.4, -6.6),
   ];
@@ -308,8 +366,8 @@ function plaza(): MapBlock[] {
     ...slab([w[0], w[1], w[2], w[3]], STOREY),
     railZ(l[0], l[2], l[3], STOREY),
     railX(l[3] - RAIL_THICKNESS, l[0] + RAIL_THICKNESS, w[1] + RAIL_THICKNESS, STOREY),
-    crate(-15.6, -13.8),
-    crate(-12.4, -4.4 - CRATE),
+    planter(-15.6, -13.8),
+    planter(-12.4, -4.4 - CRATE),
   ];
 }
 
@@ -321,18 +379,18 @@ function avenue(): MapBlock[] {
   return [
     // A parked van and a kiosk (full cover), and billboard pillars against the walls, so no line runs the avenue's
     // length.
-    box('container', -2, 0.2, 0, FULL_COVER, 3, 7.6),
-    box('wall', 0.1, 1.5, 0, FULL_COVER, -3, -1.5),
-    tall('rack', 2.8, 4.8, 1.2, 1.2),
-    tall('rack', 1.4, 8.8, 1.6, 0.8),
-    tall('rack', -3.5, -12.6, 1.6, 1),
-    tall('rack', 1.4, -12, 2.6, 2),
-    tall('toilet', -3.5, -0.8, 1.6, 1.2),
+    box('van', -2, 0.2, 0, FULL_COVER, 3, 7.6),
+    finished(box('wall', 0.1, 1.5, 0, FULL_COVER, -3, -1.5), 'plaster', PAINT.amber),
+    tall('booth', 2.8, 4.8, 1.2, 1.2),
+    tall('vending', 1.4, 8.8, 1.6, 0.8),
+    tall('vending', -3.5, -12.6, 1.6, 1),
+    tall('booth', 1.4, -12, 2.6, 2),
+    tall('vending', -3.5, -0.8, 1.6, 1.2),
     // A phone booth at Noodle Alley's mouth (full cover, as the Back Alley's parcel stack is to the east) and planters
     // (crouch).
-    tall('toilet', -3.4, 13, 1.2, 1.2),
-    crate(-2.8, 11.2),
-    crate(-1.4, -9.6),
+    tall('booth', -3.4, 13, 1.2, 1.2),
+    planter(-2.8, 11.2),
+    planter(-1.4, -9.6),
     // The Sky Bridge: solid 1.2 m sides.
     ...slab([x0, x1, z0, z1], 2 * STOREY),
     box('wall', x0, x1, 2 * STOREY, 2 * STOREY + SIDE, z0 - RAIL_THICKNESS, z0),
@@ -396,28 +454,28 @@ function tower(): MapBlock[] {
     ...[1, 2, 3].map((i) => box('barrier', g[0] + ((i - 1) * STAIR_RUN) / 3, g[0] + (i * STAIR_RUN) / 3, 0, (i * STOREY) / 3 + RAIL, g[3], g[3] + RAIL_THICKNESS)),
     railZ(g[0] - RAIL_THICKNESS, g[2], g[3] + RAIL_THICKNESS, STOREY),
     box('wall', 13.7, 14, STOREY, 2 * STOREY - SLAB, inner[2], -7),
-    // Street: the bar counter, cover under the galleries and on the atrium floor, the store's shelving.
-    crate(4.8, 3.4, 0, 0.8, 2.4),
-    crate(5.6, -2.4),
-    crate(12.3, 3.2),
-    crate(8, 3.6),
-    crate(10.4, -1.6),
+    // Street: the bar counter, cover under the galleries and on the atrium floor (planters), the store's shelving.
+    finished(crate(4.8, 3.4, 0, 0.8, 2.4), 'tiles', PAINT.bar),
+    planter(5.6, -2.4),
+    planter(12.3, 3.2),
+    planter(8, 3.6),
+    planter(10.4, -1.6),
     tall('rack', 14.6, -2.6, 1.4, 0.6),
-    tall('rack', 9, 7.8, 1.6, 0.6),
-    crate(5.2, -8.2),
+    tall('vending', 9, 7.8, 1.6, 0.6),
+    planter(5.2, -8.2),
     // Level 1: offices and the galleries.
-    crate(5, 4.8, STOREY),
-    crate(12.3, -1, STOREY),
-    tall('wrapped', 5, -6.6, 1.6, 0.6, STOREY),
-    crate(9.6, 7.6, STOREY),
+    finished(crate(5, 4.8, STOREY), 'cladding', PAINT.desk),
+    finished(crate(12.3, -1, STOREY), 'cladding', PAINT.desk),
+    finished(tall('wrapped', 5, -6.6, 1.6, 0.6, STOREY), 'cladding', PAINT.filing),
+    finished(crate(9.6, 7.6, STOREY), 'cladding', PAINT.desk),
     tall('rack', 15, -4.6, 0.6, 1.6, STOREY),
     // Level 2: the gallery's cover.
-    crate(4.3, 0.4, 2 * STOREY, 0.9),
-    crate(10.4, 8, 2 * STOREY),
-    tall('wrapped', 8.6, -6.6, 1.2, 1.2, 2 * STOREY),
+    finished(crate(4.3, 0.4, 2 * STOREY, 0.9), 'cladding', PAINT.desk),
+    finished(crate(10.4, 8, 2 * STOREY), 'cladding', PAINT.desk),
+    finished(tall('wrapped', 8.6, -6.6, 1.2, 1.2, 2 * STOREY), 'cladding', PAINT.filing),
     // A partition facing the Sky Bridge door, as in the Studio.
     box('wall', 5.6, 5.9, 2 * STOREY, 3 * STOREY, -8.6, -6),
-    crate(5.2, 7.6, 2 * STOREY),
+    finished(crate(5.2, 7.6, 2 * STOREY), 'cladding', PAINT.desk),
   ];
 }
 
@@ -441,9 +499,57 @@ function eastAlleysAndYard(): MapBlock[] {
     tall('wrapped', 15.8, -12.4, 1.2, 1.2),
     // East Yard: the spawn wall, open at both ends.
     box('wall', 18.8, 19.1, 0, SPAWN_WALL_HEIGHT, -5, 6),
-    tall('rack', 17, -9.4, 1.8, 1.2),
+    tall('vending', 17, -9.4, 1.8, 1.2),
     tall('wrapped', 17, 8, 1.8, 1.2),
   ];
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The city's look (M34f): every wall, floor and rail without a finish of its own gets its building's.
+
+const inside = (r: Rect, x: number, z: number, pad = 0): boolean => x >= r[0] - pad && x <= r[1] + pad && z >= r[2] - pad && z <= r[3] + pad;
+/** Whether block `b` stands on the outline of building `r` (an outer wall, or the roof over it all). */
+function onOutline(b: MapBlock, r: Rect): boolean {
+  const e = 1e-6;
+  return b.center.x - b.size.x / 2 <= r[0] + e || b.center.x + b.size.x / 2 >= r[1] - e || b.center.z - b.size.z / 2 <= r[2] + e || b.center.z + b.size.z / 2 >= r[3] - e;
+}
+
+/** The buildings, each with its outside's finish and paint and its floors' tiles (rooms inside are pale plaster). */
+const BUILDINGS: { area: Rect; finish: BlockFinish; paint: number; floor: number }[] = [
+  { area: ARCADE, finish: 'plaster', paint: PAINT.arcade, floor: PAINT.floor },
+  { area: BLOCK, finish: 'plaster', paint: PAINT.block, floor: PAINT.floor },
+  { area: TOWER, finish: 'cladding', paint: PAINT.tower, floor: PAINT.gallery },
+];
+/** The open-air walkways: paved, their sides as the building they join. */
+const WALKS: { area: Rect; paint: number }[] = [
+  { area: BALCONY, paint: PAINT.arcade },
+  { area: FOOTBRIDGE, paint: PAINT.arcade },
+  { area: WALKWAY, paint: PAINT.amber },
+  { area: PLAZA_LANDING, paint: PAINT.plaza },
+  { area: PLAZA_STAIR, paint: PAINT.plaza },
+  { area: SKY_BRIDGE, paint: PAINT.amber },
+];
+
+/** Block `b` (plan coordinates) in the city's look, unless it has one of its own: rails steel, floors tiled or paved. */
+function dress(b: MapBlock): MapBlock {
+  if (b.finish || b.kind === 'ramp') return b;
+  if (b.kind === 'barrier') return finished(b, 'cladding', PAINT.rail);
+  const { x, z } = b.center;
+  const walk = WALKS.find((w) => inside(w.area, x, z, RAIL_THICKNESS + 0.01));
+  const building = BUILDINGS.find((r) => inside(r.area, x, z));
+  if (b.kind === 'floor') {
+    if (walk) return finished(b, 'paving', PAINT.plaza);
+    if (b.center.y > 2 * STOREY - 1 && inside(BLOCK, x, z) && x > BLOCK_STAIRWELL_EAST) return finished(b, 'tiles', PAINT.studio);
+    return finished(b, 'tiles', building?.floor ?? PAINT.floor);
+  }
+  if (b.kind !== 'wall') return b;
+  if (Math.abs(x) > HALF_X || Math.abs(z) > HALF_Z) return finished(b, 'plaster', PAINT.slate);
+  // A roof (not playable, drawn as wall): plain grey on top, a ceiling to the room under it.
+  if (b.size.y <= ROOF + 1e-6 && b.center.y > STOREY) return finished(b, 'plaster', PAINT.roof);
+  if (b.size.y <= SPAWN_WALL_HEIGHT + 1e-6 && b.center.y < SPAWN_WALL_HEIGHT && Math.abs(x) > 17) return finished(b, 'cladding', PAINT.spawn);
+  if (walk) return finished(b, walk.area === SKY_BRIDGE ? 'cladding' : 'plaster', walk.paint);
+  if (building) return onOutline(b, building.area) ? finished(b, building.finish, building.paint) : finished(b, 'plaster', PAINT.room);
+  return finished(b, 'plaster', PAINT.plaza);
 }
 
 const WEST_SPAWNS: SpawnPoint[] = [-3, -1.5, 0, 1.5, 3].map((z) => ({ position: vec3(-20.2, 0, z), yaw: -Math.PI / 2 }));
@@ -586,6 +692,39 @@ const NEON_SIGNS: MapSign[] = [
 ];
 
 /**
+ * Neon trim (M34f): a thin strip along the top of the Arcade's and the Tower's avenue faces, over their Level 1 windows,
+ * and along the outside of the Sky Bridge's sides.
+ */
+const TRIMS: MapSign[] = [
+  sign(-3.5, 5.85, 4, 11.6, 0.1, '+x', NEON.magenta),
+  sign(4, 5.85, 0.5, 20.6, 0.1, '-x', NEON.cyan),
+  sign((SKY_BRIDGE[0] + SKY_BRIDGE[1]) / 2, 2 * STOREY + 0.9, SKY_BRIDGE[2] - RAIL_THICKNESS, SKY_BRIDGE[1] - SKY_BRIDGE[0] - 0.4, 0.08, '-z', NEON.cyan),
+  sign((SKY_BRIDGE[0] + SKY_BRIDGE[1]) / 2, 2 * STOREY + 0.9, SKY_BRIDGE[3] + RAIL_THICKNESS, SKY_BRIDGE[1] - SKY_BRIDGE[0] - 0.4, 0.08, '+z', NEON.cyan),
+];
+
+/** A marking painted flat on the street (M34f): `w` along x by `d` along z, its middle at (x, z). */
+const mark = (x: number, z: number, w: number, d: number, colour: number): MapSign => ({ centre: vec3(x, 0, z), width: w, height: d, facing: '+y', colour, kind: 'paint' });
+const LINE_WHITE = 0xeceae2;
+const LINE_YELLOW = 0xe8c440;
+
+/**
+ * The avenue's road markings (M34f): a dashed centre line, kerb lines, zebra crossings at the Mid lane and south of the
+ * Sky Bridge, and a parking bay round the van; none under anything standing on the street (`standing`).
+ */
+function roadMarkings(standing: readonly MapBlock[]): MapSign[] {
+  const mid = (ROAD[0] + ROAD[1]) / 2;
+  const out: MapSign[] = [];
+  for (let z = -HALF_Z + 1; z < HALF_Z - 1; z += 3) out.push(mark(mid, z, 0.12, 1.5, LINE_WHITE));
+  for (let z = -HALF_Z + 0.5; z < HALF_Z - 0.5; z += 1) out.push(mark(ROAD[0] + 0.15, z, 0.1, 0.9, LINE_YELLOW), mark(ROAD[1] - 0.15, z, 0.1, 0.9, LINE_YELLOW));
+  for (const z of [1.9, -10.6]) for (let x = ROAD[0] + 0.45; x < ROAD[1] - 0.2; x += 0.9) out.push(mark(x, z, 0.45, 2, LINE_WHITE));
+  // The van's bay: its far side and both ends.
+  out.push(mark(0.45, 5.3, 0.1, 5.2, LINE_WHITE), mark(-0.8, 2.75, 2.5, 0.1, LINE_WHITE), mark(-0.8, 7.85, 2.5, 0.1, LINE_WHITE));
+  const under = (m: MapSign): boolean =>
+    standing.some((b) => Math.abs(m.centre.x - b.center.x) < (m.width + b.size.x) / 2 && Math.abs(m.centre.z - b.center.z) < (m.height + b.size.z) / 2);
+  return out.filter((m) => !under(m) && Math.abs(m.centre.z) + m.height / 2 < HALF_Z);
+}
+
+/**
  * The city round the site: rows of windows high on the perimeter walls' inner faces, some lit (a fixed pattern), the
  * rest dark glass; none where the Repair Shop block stands against the south wall.
  */
@@ -615,7 +754,7 @@ function perimeterWindows(): MapSign[] {
   return out;
 }
 
-const FLIP_FACING: Record<MapSign['facing'], MapSign['facing']> = { '+x': '+x', '-x': '-x', '+z': '-z', '-z': '+z' };
+const FLIP_FACING: Record<MapSign['facing'], MapSign['facing']> = { '+x': '+x', '-x': '-x', '+z': '-z', '-z': '+z', '+y': '+y' };
 const signToWorld = (s: MapSign): MapSign => ({ ...s, centre: toWorld(s.centre), facing: FLIP_FACING[s.facing] });
 
 const toWorld = (p: Vec3): Vec3 => vec3(p.x, p.y, -p.z);
@@ -631,27 +770,35 @@ function blockToWorld(b: MapBlock): MapBlock {
   const w: MapBlock = { kind: b.kind, center: toWorld(b.center), size: vec3(b.size.x + grow, b.size.y, b.size.z + grow) };
   if (b.rise) w.rise = FLIP_RISE[b.rise];
   if (b.surface) w.surface = b.surface;
+  if (b.finish) w.finish = b.finish;
+  if (b.paint !== undefined) w.paint = b.paint;
   return w;
 }
 /** Mirroring z turns a facing `yaw` (forward = (-sin yaw, -cos yaw)) into π - yaw. */
 const spawnToWorld = (s: SpawnPoint): SpawnPoint => ({ position: toWorld(s.position), yaw: Math.atan2(Math.sin(Math.PI - s.yaw), Math.cos(Math.PI - s.yaw)) });
 const rectToWorld = (r: Rect): Rect => [r[0], r[1], -r[3], -r[2]];
 
+/** Every block in plan coordinates, in the city's look (M34f). */
+const PLAN_BLOCKS: MapBlock[] = [
+  ...ground(),
+  ...westYard(),
+  ...arcade(),
+  ...balcony(),
+  ...footbridge(),
+  ...noodleAlleyAndLanternLane(),
+  ...repairBlock(),
+  ...plaza(),
+  ...avenue(),
+  ...tower(),
+  ...eastAlleysAndYard(),
+].map(dress);
+/** What stands on the street, for the road markings to keep clear of (M34f). */
+const ON_STREET = PLAN_BLOCKS.filter((b) => b.kind !== 'floor' && b.kind !== 'ramp' && Math.abs(b.center.y - b.size.y / 2) < 1e-6);
+
 export const NEON_HEIGHTS: MapData = {
   name: 'Neon Heights',
-  blocks: [
-    ...ground(),
-    ...westYard(),
-    ...arcade(),
-    ...balcony(),
-    ...footbridge(),
-    ...noodleAlleyAndLanternLane(),
-    ...repairBlock(),
-    ...plaza(),
-    ...avenue(),
-    ...tower(),
-    ...eastAlleysAndYard(),
-  ].map(blockToWorld),
+  blocks: PLAN_BLOCKS.map(blockToWorld),
+  decor: [road()].map(blockToWorld),
   killY: -10,
   spawns: [WEST_SPAWNS.map(spawnToWorld), EAST_SPAWNS.map(spawnToWorld)],
   deadZones: [WEST_DEAD_ZONE.map(spawnToWorld), EAST_DEAD_ZONE.map(spawnToWorld)],
@@ -662,10 +809,12 @@ export const NEON_HEIGHTS: MapData = {
   // Day or Night, picked on the map's option in the Map pop-up (M34d), Night the first time (the owner's default 10).
   // `night` goes with the first preset; map/lightingChoice.ts sets it for the one picked.
   night: true,
-  lighting: { presets: ['night', 'day'] },
+  // By Night the city lights its own sky (M34f): a violet glow low down, more light from the sky on every wall, and
+  // fewer stars than over the woods. Drawing only: what the bots see is the night field's (lamps and roofs).
+  lighting: { presets: ['night', 'day'], overrides: { night: CITY_NIGHT } },
   // By Night (M34e): the lamps light their floors for the bots too; the signs are presentation only.
   lights: LAMPS.map((l) => ({ ...l, position: toWorld(l.position) })),
-  signs: [...NEON_SIGNS, ...perimeterWindows()].map(signToWorld),
+  signs: [...NEON_SIGNS, ...TRIMS, ...perimeterWindows(), ...roadMarkings(ON_STREET)].map(signToWorld),
 };
 
 /** Layout facts the tests check against, in world coordinates, so they can't drift from the geometry. */
