@@ -23,7 +23,7 @@ acceptance:
   4. A careful-runner guard shows hunters appear in at least half the long runs (BAL-06, owner decision 5).
   5. DECISIONS, KNOWN_ISSUES rows 198 and 199, the PLAYTEST Difficulty line.
   6. Added in the build: guards at a lean post sweep only away from the lean's side, so a Woodland locker guard sees its way in (the Extraction guards' sight test crossed with the bigger home teams).
-status: building
+status: gates
 attempts: 0
 
 ## M73 · Neon Heights: the bar door over the avenue (Audit 2 BAL PR 3: BAL-04; only if M71 leaves the west under 45 %)

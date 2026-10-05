@@ -85,7 +85,8 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
       const sweep = Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
       // Leaning out (a guard's lean post, M55): sweep only away from the lean's side. The lean follows the look, so
       // turning towards that side swings the leaned eye back behind the cover it leans past (M72: a Woodland locker
-      // guard saw its way in for 69 % of its ticks). Positive yaw turns left, the side a lean of -1 goes.
+      // guard saw its way in for 69 % of its ticks). A lean of +1 is to the right and positive yaw turns left, so
+      // holdLean × |sweep| always turns away from the lean.
       look.yaw += b.holdLean !== 0 ? b.holdLean * Math.abs(sweep) : sweep;
     }
   }
