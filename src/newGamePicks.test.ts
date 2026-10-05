@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
 import type { ContentTag } from './config/content';
 import {
@@ -324,5 +324,30 @@ describe('the Rules picker and dev content, records and pay (M39)', () => {
     const kit = [{ asset: GAME_POOL.assets.find((a) => a.name === 'Red Dot')!.id, tier: 'common' }];
     expect(matchUsesDev(on('custom', 'hard'), kit, devPool, true)).toBe(true);
     expect(matchUsesDev(on('custom', 'hard', { factoryKit: true }), kit, devPool, true)).toBe(false);
+  });
+});
+
+describe('a dev map whose data has not arrived (M50)', () => {
+  // A fresh copy of map/maps.ts has Depot's data only, as at start-up before loadDevMaps (src/testSetup.ts registers every
+  // map in the shared copy). afterAll: later test files must not see a second copy of the modules.
+  afterAll(() => vi.resetModules());
+
+  it('plays as Depot even with Dev content on, and as itself once loadDevMaps has brought it in', async () => {
+    vi.resetModules();
+    const maps = await import('./map/maps');
+    const fresh = await import('./newGamePicks');
+    expect(maps.mapLoaded('woodland')).toBe(false);
+    for (const id of ['woodland', 'neonHeights'] as const) {
+      const p = picks({ map: id });
+      expect(fresh.playedPicks(p, true).map).toBe(DEFAULT_MAP);
+      expect(fresh.playedPicks(p, false).map).toBe(DEFAULT_MAP);
+    }
+    // A loaded map is untouched, and the team size follows the map that plays.
+    expect(fresh.playedPicks(picks({ map: 'depot' }), true).map).toBe('depot');
+    await maps.loadDevMaps();
+    expect(fresh.playedPicks(picks({ map: 'woodland' }), true).map).toBe('woodland');
+    expect(fresh.playedPicks(picks({ map: 'neonHeights' }), true).map).toBe('neonHeights');
+    // Dev content off still plays the default: loaded or not.
+    expect(fresh.playedPicks(picks({ map: 'woodland' }), false).map).toBe(DEFAULT_MAP);
   });
 });

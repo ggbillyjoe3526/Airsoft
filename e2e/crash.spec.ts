@@ -40,6 +40,14 @@ test('an error in play stops the game once, gives the controls back and shows a 
   expect(report).toMatch(/Tick: \d+/);
   expect(report).toContain('Error: TypeError: test crash in advance');
   expect(report).toContain('Stack:');
+  // The Quality row is the debug overlay's line (audit CORE-02), not the settings object; Rules and Lighting are new rows.
+  const qualityRow = report.split('\n').find((l) => l.startsWith('Quality:')) ?? '';
+  expect(qualityRow).not.toContain('[object Object]');
+  expect(qualityRow).toContain(' · scale ');
+  expect(qualityRow).toMatch(/^Quality: (low|medium|high|custom)( \(auto\))? · scale [\d.]+ · shadow map (\d+|off) · textures \d+$/);
+  expect(report).toMatch(/^Rules: \S+/m);
+  expect(report).toMatch(/^Lighting: \S+/m);
+  expect(report).toMatch(/^Retro pixels: \S/m);
 
   // Once: the loop stopped, so the error doesn't repeat every frame, and it never reached the page uncaught.
   await page.waitForTimeout(1500);
