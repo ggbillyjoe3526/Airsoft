@@ -9,7 +9,7 @@ import { initPhysics } from '../physics/physicsWorld';
 import { buildLevelRay, castLevelRay } from '../sim/levelRay';
 import { type Vec3, vec3 } from '../sim/vec';
 import type { MapBlock } from './mapTypes';
-import { MAPS } from './maps';
+import { MAPS, mapData } from './maps';
 import { NEON_HEIGHTS, NEON_HEIGHTS_LAYOUT } from './neonHeights';
 
 /**
@@ -272,7 +272,7 @@ describe('Neon Heights in the game (M34c acceptance 2)', () => {
 
   it('is the third map, dev, 4v4 standard and 5v5 at most, and has the spawns for 5v5', () => {
     const entry = MAPS.find((m) => m.id === 'neonHeights')!;
-    expect(entry.data).toBe(NEON_HEIGHTS);
+    expect(mapData(entry.id)).toBe(NEON_HEIGHTS);
     expect([entry.tag, entry.teamSize.standard, entry.teamSize.max]).toEqual(['dev', 4, 5]);
     expect(map.spawns[0]!.length).toBeGreaterThanOrEqual(entry.teamSize.max);
     expect(map.spawns[1]!.length).toBeGreaterThanOrEqual(entry.teamSize.max);

@@ -256,7 +256,7 @@ export class SaveManager {
 const SAVE_KEY_PREFIX = 'airsoft.save.';
 
 /** Each store's saved value (parsed); null for a store with nothing saved or something unreadable. */
-export function readStores(storage: Pick<Storage, 'getItem'>): StoreData {
+function readStores(storage: Pick<Storage, 'getItem'>): StoreData {
   const out: StoreData = {};
   for (const { id, key } of SAVE_STORES) {
     let v: unknown = null;

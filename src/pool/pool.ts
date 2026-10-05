@@ -520,10 +520,6 @@ export function assetOfReplica(pool: Pool, replica: ReplicaConfig): Asset | unde
   return pool.assets.find((a) => a.category === 'replica' && REPLICA_KEYS[a.key]?.id === replica.id);
 }
 
-export function tierOf(pool: Pool, id: string): RarityTier | undefined {
-  return pool.tiers.find((t) => t.id === id);
-}
-
 /** The tiers `asset` comes in (pool.md's Tiers column; all of them when it names none), commonest first (M32). */
 export function tiersOf(pool: Pool, asset: Asset): readonly RarityTier[] {
   if (!asset.tiers) return pool.tiers;
@@ -537,7 +533,7 @@ export function comesIn(asset: Asset, tier: string): boolean {
 }
 
 /** The tag of a replica whose power source is built in (the Cyber Pistol's battery, M32): none is fitted to it. */
-export const BUILT_IN_POWER = 'built-in-power';
+const BUILT_IN_POWER = 'built-in-power';
 
 /** True if replica `asset` has its power source built in (tagged BUILT_IN_POWER). */
 export function hasBuiltInPower(asset: Asset): boolean {

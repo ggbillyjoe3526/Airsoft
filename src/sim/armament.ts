@@ -23,7 +23,7 @@ export interface ReplicaAmmo {
 }
 
 /** Index of the fullest spare magazine, or -1 if the pouch is empty. */
-export function fullestSpare(ammo: ReplicaAmmo): number {
+function fullestSpare(ammo: ReplicaAmmo): number {
   let best = -1;
   for (let i = 0; i < ammo.pouch.length; i++) if (best < 0 || ammo.pouch[i]! > ammo.pouch[best]!) best = i;
   return best;

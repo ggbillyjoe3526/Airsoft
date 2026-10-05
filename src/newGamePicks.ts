@@ -6,7 +6,7 @@ import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from './config/modes';
 import type { LightingPresetId } from './config/render';
 import { LOADOUT } from './config/replicas';
 import { playsAtNight as nightOf } from './map/lightingChoice';
-import { DEFAULT_MAP, MAPS, type MapId, mapData, teamSizeOn } from './map/maps';
+import { DEFAULT_MAP, MAPS, type MapId, mapData, mapLoaded, teamSizeOn } from './map/maps';
 import { modeOffered } from './map/playableMode';
 import { botLight, rolledKitMayHoldDev } from './pool/botKit';
 import type { ItemRef } from './pool/collection';
@@ -32,7 +32,9 @@ export interface NewGamePicks {
  */
 export function playedPicks(p: NewGamePicks, devContent: boolean): NewGamePicks {
   const d = DEFAULT_MATCH_RULES;
-  const map = availableChoice(MAPS, p.map, devContent, DEFAULT_MAP);
+  // A dev map whose data hasn't arrived yet (M50, map/maps.ts loadDevMaps) plays as the default too.
+  const offered = availableChoice(MAPS, p.map, devContent, DEFAULT_MAP);
+  const map = mapLoaded(offered) ? offered : DEFAULT_MAP;
   const mode = availableChoice(MATCH_MODES, p.mode, devContent, DEFAULT_MODE);
   const ruleset = availableChoice(RULESETS, p.ruleset, devContent, DEFAULT_RULESET);
   return {

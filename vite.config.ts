@@ -1,15 +1,11 @@
 import type { HtmlTagDescriptor, Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { archivalDescribe, versionLabel } from './src/config/buildVersion.ts';
+import { CHUNK_BUDGET, chunkVerdict } from './src/config/chunkBudget.ts';
 import { LOADING } from './src/config/loading.ts';
 import { CONTENT_SECURITY_POLICY } from './src/config/page.ts';
 import { PRECOMPRESS, precompressedCopies } from './src/config/precompress.ts';
 
-/**
- * Size budgets in kB (minified, before gzip). Rapier inlines its WASM, so it gets its own budget: 4,333 kB measured at
- * @dimforge/rapier3d-compat 0.21.0 plus about 5 % (DECISIONS 2026-10-04), so an upgrade that grows it is a deliberate bump.
- */
-const CHUNK_BUDGET_KB = { rapier: 4550, default: 800 };
 
 /** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the
  * Pro guards on every map (M40) and the Extraction balance runs on every map (M46, M48) with them. */
@@ -19,8 +15,8 @@ const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 
 const ON_CI = Boolean((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.CI);
 
 /**
- * Checks every output chunk against its budget, so the game, three.js and Rapier chunks can't grow unnoticed: over
- * budget fails the build on CI and warns locally (audit L-12).
+ * Checks every output chunk against its budget (config/chunkBudget.ts), so the game, three.js and Rapier chunks can't
+ * grow unnoticed: over budget fails the build on CI and warns locally (audit L-12); within 10 % of it warns (CORE-01).
  */
 function chunkBudget(): Plugin {
   return {
@@ -29,12 +25,9 @@ function chunkBudget(): Plugin {
     generateBundle(_options, bundle) {
       for (const file of Object.values(bundle)) {
         if (file.type !== 'chunk') continue;
-        const kb = new TextEncoder().encode(file.code).length / 1000;
-        const budget = file.name === 'rapier' ? CHUNK_BUDGET_KB.rapier : CHUNK_BUDGET_KB.default;
-        if (kb <= budget) continue;
-        const message = `${file.fileName} is ${kb.toFixed(0)} kB, over its ${budget} kB budget (vite.config.ts)`;
-        if (ON_CI) this.error(message);
-        else this.warn(message);
+        const verdict = chunkVerdict(file.name, file.fileName, new TextEncoder().encode(file.code).length);
+        if (verdict.level === 'over' && ON_CI) this.error(verdict.message);
+        else if (verdict.level !== 'ok') this.warn(verdict.message);
       }
     },
   };
@@ -153,12 +146,15 @@ export default defineConfig(async () => ({
             { name: 'rapier', test: /node_modules[\\/]@dimforge/ },
             // The glTF loader and its helpers stay out: only a build with a figure model loads them (M25a).
             { name: 'three', test: /node_modules[\\/]three[\\/](?!examples[\\/]jsm[\\/](loaders|libs|utils[\\/]SkeletonUtils))/ },
+            // pool.md and stats.md (read at start, M26a) in their own small chunk (M50, audit CORE-01): the owner's
+            // table edits re-download it alone, and the game chunk's budget counts code.
+            { name: 'tables', test: /\.md(\?raw)?$/ },
           ],
         },
       },
     },
     // Vite's single global limit is set just above the Rapier chunk; per-chunk budgets are enforced by chunkBudget().
-    chunkSizeWarningLimit: CHUNK_BUDGET_KB.rapier,
+    chunkSizeWarningLimit: CHUNK_BUDGET.rapierKb,
   },
   test: {
     environment: 'node',
@@ -167,6 +163,8 @@ export default defineConfig(async () => ({
     // that stubs a global or spies on a shared object restores it (vi.unstubAllGlobals, mockRestore); a file that
     // resets the module registry resets it again when it ends (save/startGuardedStorage.test.ts).
     isolate: false,
+    // Every map's data before each file (M50): the game loads the dev maps' on demand, the tests read them all.
+    setupFiles: ['src/testSetup.ts'],
     // Two projects (audit CORE-15): `npx vitest run` (the gate, CI, `npm test`) runs both; `npx vitest run --project
     // fast` leaves out the headless bot-match guards for quick feedback while working. Every seed stays in `slow`.
     projects: [

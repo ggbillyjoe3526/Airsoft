@@ -303,7 +303,7 @@ export function spares(pool: Pool, c: Collection, item: ItemRef): number {
 }
 
 /** FC one spare copy of an item pays (its tier's Scrap FC). */
-export function scrapValue(pool: Pool, item: ItemRef): number {
+function scrapValue(pool: Pool, item: ItemRef): number {
   return pool.tiers.find((t) => t.id === item.tier)?.scrapFc ?? 0;
 }
 

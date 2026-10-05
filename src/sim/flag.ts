@@ -33,7 +33,7 @@ export function resetFlag(flag: FlagState, position: Vec3): void {
 }
 
 /** True if `c` is in play and close enough to the pole to work the rope. */
-export function atFlag(c: Character, flag: FlagState, rules: FlagRules): boolean {
+function atFlag(c: Character, flag: FlagState, rules: FlagRules): boolean {
   return isInPlay(c) && Math.hypot(c.position.x - flag.position.x, c.position.z - flag.position.z) <= rules.radius;
 }
 

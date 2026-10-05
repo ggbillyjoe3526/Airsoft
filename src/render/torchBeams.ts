@@ -24,7 +24,7 @@ import { withoutEnvironment } from './surfaceMaterials';
  */
 
 /** Whether any character carries a light on any replica: a match without one builds nothing for torches. */
-export function carriesTorch(characters: readonly Character[]): boolean {
+function carriesTorch(characters: readonly Character[]): boolean {
   return characters.some((c) => c.armament.parts.some((p) => !!p.light));
 }
 
@@ -34,7 +34,7 @@ export function torchSpotWanted(preset: LightingPreset, quality: Pick<QualitySet
 }
 
 /** A unit cone along -Z, its tip at the origin and its open end a unit circle at z = -1, fading along its length. */
-export function buildConeGeometry(segments: number = TORCH_BEAMS.coneSegments, fadeIn: number = TORCH_BEAMS.coneFadeIn): THREE.BufferGeometry {
+function buildConeGeometry(segments: number = TORCH_BEAMS.coneSegments, fadeIn: number = TORCH_BEAMS.coneFadeIn): THREE.BufferGeometry {
   const rings = 6;
   const pos: number[] = [];
   const col: number[] = [];
@@ -64,7 +64,7 @@ export function buildConeGeometry(segments: number = TORCH_BEAMS.coneSegments, f
 }
 
 /** A unit disc facing +Z, bright in the middle and fading to nothing at its rim (a glare, a lit spot). */
-export function buildSoftDisc(segments: number = TORCH_BEAMS.spotSegments): THREE.BufferGeometry {
+function buildSoftDisc(segments: number = TORCH_BEAMS.spotSegments): THREE.BufferGeometry {
   const pos: number[] = [0, 0, 0];
   const col: number[] = [1, 1, 1];
   const index: number[] = [];

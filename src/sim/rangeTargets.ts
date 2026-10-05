@@ -76,7 +76,7 @@ export function rayRangeTarget(o: Vec3, d: Vec3, maxT: number, target: RangeTarg
 const post: VerticalCapsule = { x: 0, z: 0, y0: 0, y1: 0, r: 0 };
 
 /** Distance along the unit ray to a steel plate's post (from the floor to its hanger, just behind the plate), or -1. */
-export function rayRangePost(o: Vec3, d: Vec3, maxT: number, target: RangeTarget): number {
+function rayRangePost(o: Vec3, d: Vec3, maxT: number, target: RangeTarget): number {
   if (target.kind !== 'steel') return -1;
   post.x = target.position.x;
   post.z = target.position.z - RANGE.postBehind;

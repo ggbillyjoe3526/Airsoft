@@ -104,7 +104,7 @@ function segmentDistance(x: number, z: number, a: { x: number; z: number }, b: {
 }
 
 /** The field's height at plan point (x, z). */
-export function woodlandHeight(x: number, z: number): number {
+function woodlandHeight(x: number, z: number): number {
   const slope = x <= SLOPE_X0 ? 0 : x <= SLOPE_X1 ? (SLOPE_RISE * (x - SLOPE_X0)) / (SLOPE_X1 - SLOPE_X0) : SLOPE_RISE + EAST_RISE * Math.min(1, (x - SLOPE_X1) / (SIZE_X - SLOPE_X1));
   const r = Math.hypot(x - KNOLL.x, z - KNOLL.z);
   const knoll = r <= KNOLL_TOP ? KNOLL_HEIGHT : r >= KNOLL_TOP + KNOLL_FALL ? 0 : (KNOLL_HEIGHT * (1 + Math.cos((Math.PI * (r - KNOLL_TOP)) / KNOLL_FALL))) / 2;

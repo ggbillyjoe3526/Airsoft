@@ -19,13 +19,14 @@ import { FramePacer } from './core/framePacer';
 import { SIM } from './config/sim';
 import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
 import { crashReport, type ReportField } from './core/crashReport';
+import { qualityLine, runReportLine } from './core/reportFields';
 import { KeyBindings } from './input/keyBindings';
 import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { mapUnderLighting } from './map/lightingChoice';
-import { type MapId, mapData } from './map/maps';
+import { lightingPicked, mapUnderLighting } from './map/lightingChoice';
+import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadFigureModel } from './render/externalModels';
@@ -237,7 +238,7 @@ export class Game {
    */
   private devEnabled = loadDevEnabled();
   private readonly devPicked: DevSettings = loadDevSettings();
-  private dev: DevSettings = activeDev(this.devEnabled, this.devPicked);
+  private dev: DevSettings = this.devInForce();
   /** The perf harness drives the player (`?script=perf`): the retro filter stays off so its budgets compare (M42). */
   private readonly scripted: boolean;
   /** The render quality in use (Settings → Graphics, M14; Custom since the final alpha audit) and what it resolves to. */
@@ -260,12 +261,16 @@ export class Game {
   /** Smoothed milliseconds a frame in the simulation and in the draw (the CPU side), for the debug overlay (REN-17). */
   private simMs = 0;
   private drawMs = 0;
+  /** Set by dispose(): work still in flight (the dev maps' fetch) then does nothing. */
+  private disposed = false;
   /** Up once the game has stopped on an error (crash); the loop never runs again. */
   private crashScreen: CrashScreen | null = null;
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
-    // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once.
-    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel()]);
+    // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
+    // on, so do the dev maps (M50), so New game can show a dev map picked last time.
+    const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
+    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel(), devMaps]);
     const game = new Game(container, options);
     game.renderer.figureModel = figureModel;
     return game;
@@ -646,8 +651,7 @@ export class Game {
 
   /** The debug overlay's quality line: the choice, and the render scale, pixel ratio and shadow map in force. */
   private qualityText(): string {
-    const q = this.quality;
-    return `${this.qualityChoice}${this.autoQuality ? ' (auto)' : ''} · scale ${q.renderScale} · shadow map ${q.shadows ? q.shadowMapSize : 'off'} · textures ${q.textureSize}`;
+    return qualityLine(this.qualityChoice, this.autoQuality, this.quality);
   }
 
   /** The debug overlay's antialiasing line (REN-21): asked for, given, and the samples per pixel. */
@@ -693,7 +697,7 @@ export class Game {
   /** A Dev setting changed, or the Dev tab was shown or hidden (M24): what applies now goes to the game and the session. */
   private applyDev(): void {
     const before = this.dev;
-    this.dev = activeDev(this.devEnabled, this.devPicked);
+    this.dev = this.devInForce();
     // Only on a change, so the debug keys (` / F3, ]) keep working as toggles.
     if (this.dev.showDebug !== before.showDebug) this.debug.setVisible(this.dev.showDebug);
     if (this.dev.showBbPaths !== before.showBbPaths) this.session?.combat.setBbPaths(this.dev.showBbPaths);
@@ -702,6 +706,21 @@ export class Game {
     // Unlock all gear and Dev content (M35) change what the Loadout offers and carries, and Dev content what New game
     // plays; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
+  }
+
+  /**
+   * The Dev settings that apply now (M24). Dev content (M35) waits for the dev maps' data (M50, map/maps.ts): turned on,
+   * it fetches them and applies once they are in, so a dev map is never listed or played before its data is here.
+   */
+  private devInForce(): DevSettings {
+    const dev = activeDev(this.devEnabled, this.devPicked);
+    if (!dev.devContent || allMapsLoaded()) return dev;
+    void loadDevMaps().then((loaded) => {
+      if (!loaded || this.disposed) return;
+      this.applyDev();
+      this.menus.refresh();
+    });
+    return { ...dev, devContent: false };
   }
 
   /** New game's picks as they play now (M35: a dev pick plays as its list's default while Dev content is off). */
@@ -739,6 +758,7 @@ export class Game {
   }
 
   dispose(): void {
+    this.disposed = true;
     cancelAnimationFrame(this.rafId);
     this.stopWatchingAway();
     window.removeEventListener('resize', this.showHudLook);
@@ -983,10 +1003,18 @@ export class Game {
       ['Seed', range ? this.options.seed : this.matchSeed],
       ['Map', read(() => (range ? 'range' : match ? match.setup.map.name : '-'))],
       ['Mode', read(() => (match ? `${match.mode}, ${match.setup.difficulty} (teammates ${match.setup.teammateDifficulty})` : range ? 'practice' : '-'))],
+      // The ruleset, the light the map plays under and the run's state (audit CORE-02): where most new crashes come from.
+      ['Rules', read(() => (match ? match.setup.ruleset : this.ruleset))],
+      ['Lighting', read(() => (match ? lightingPicked(match.setup.map) : '-'))],
       ['Round', read(() => (r ? `${r.number} (${r.phase}), score ${r.score[0]}–${r.score[1]}, draws ${r.draws}` : '-'))],
+      ...(match?.mode === 'extraction' && r ? [['Run', read(() => runReportLine(r.run))] as const] : []),
       ['Tick', read(() => s?.state.tick ?? '-')],
       ['Screen', read(() => ((this.pointer.locked || this.unlockedPlay) && s ? 'in play' : `menus: ${this.menus.screen}`))],
-      ['Quality', `${this.quality}${this.options.automaticQuality ? ' (automatic)' : ''}`],
+      ['Quality', read(() => this.qualityText())],
+      ['Retro pixels', read(() => {
+        const look = retroLookOf(this.dev, this.scripted);
+        return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
+      })],
       ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
       ['GPU', read(() => rendererName(this.renderer.renderer.getContext()))],
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],

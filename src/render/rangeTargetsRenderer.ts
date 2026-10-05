@@ -98,7 +98,7 @@ export function figureRotation(down: number): number {
  * A board's texture v (0..1 up the board) in the distance boards' atlas of `count` rows, board `row` from the top (the
  * canvas runs downwards and the texture is flipped, so the top row is the top of v). Exported for the tests.
  */
-export function signRow(v: number, row: number, count: number): number {
+function signRow(v: number, row: number, count: number): number {
   return 1 - (row + 1 - v) / count;
 }
 

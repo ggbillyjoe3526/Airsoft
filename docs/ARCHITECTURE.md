@@ -378,7 +378,12 @@ request. Each line names where it lives and what pins it.
   off (`contentPool`, `playedPicks`, `ChoiceDialog`/`OptionPicker.setDevContent`), never drops from Shots
   (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
   player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
-  `NotCounted` 'devContent'). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`.
+  `NotCounted` 'devContent'). Since M50 (audit CORE-01) the dev maps' data is in its own chunk (`map/devMaps.ts`),
+  fetched by `loadDevMaps` once Dev content is on (at start when it was left on): `MapEntry` carries no data, `mapData(id)`
+  reads what is loaded (the default map's for a dev map not loaded yet), and Dev content applies only once the dev maps
+  are in (`Game.devInForce`), so a dev map is never listed or played without its data. The unit tests register every
+  map before each file (`src/testSetup.ts`). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`,
+  `map/maps.test.ts`.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
   are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
   time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's

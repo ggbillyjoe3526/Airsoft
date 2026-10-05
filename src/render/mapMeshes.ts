@@ -785,7 +785,7 @@ function appendBuffers(into: Buffers, from: Buffers): void {
  * the same boxes plain, drawn into the shadow map in their place (the same silhouette, a fraction of the triangles).
  * Exported for the tests.
  */
-export function shadowProxy(mesh: THREE.Mesh, drawn: number): void {
+function shadowProxy(mesh: THREE.Mesh, drawn: number): void {
   const geo = mesh.geometry;
   const total = geo.index?.count ?? 0;
   geo.setDrawRange(0, drawn);
@@ -913,7 +913,7 @@ export function restyleMap(
 }
 
 /** Tree crowns and bushes cast shadows or not (MapLook.foliageShadows, M33i), in place. */
-export function setFoliageShadows(group: THREE.Group, on: boolean): void {
+function setFoliageShadows(group: THREE.Group, on: boolean): void {
   for (const name of ['map-canopy', 'map-foliage']) {
     const mesh = group.getObjectByName(name);
     if (mesh) mesh.castShadow = on;

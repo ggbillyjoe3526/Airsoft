@@ -39,7 +39,7 @@ export type ScaledStat = 'energy' | 'fireRate' | 'spread' | 'reload' | 'draw' | 
 export type TierShares = Readonly<Record<ScaledCategory, Readonly<Partial<Record<ScaledStat, number>>>>>;
 
 /** Which stats each category can take a share of: the ones the code applies (anything else is flagged). */
-export const SCALABLE: Readonly<Record<ScaledCategory, readonly ScaledStat[]>> = {
+const SCALABLE: Readonly<Record<ScaledCategory, readonly ScaledStat[]>> = {
   replica: ['energy', 'fireRate', 'spread', 'reload', 'draw'],
   battery: ['energy', 'fireRate'],
   gas: ['energy', 'fireRate'],

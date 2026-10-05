@@ -8,7 +8,7 @@ import { loadLightingPicks } from '../ui/menus/savedChoices';
 import type { MapData } from './mapTypes';
 import { DEPOT } from './depot';
 import { lightingChoices, lightingPicked, mapUnderLighting, parseLightingPick, playsAtNight } from './lightingChoice';
-import { MAPS } from './maps';
+import { MAPS, mapData } from './maps';
 import { NEON_HEIGHTS } from './neonHeights';
 import { WOODLAND } from './woodland';
 
@@ -18,7 +18,7 @@ describe('Day or Night on a map (M34d)', () => {
     expect(lightingChoices(WOODLAND)).toEqual(['night']);
     expect(lightingChoices(DEPOT)).toEqual(['day']);
     // The first preset is the default, and `night` goes with it.
-    for (const m of MAPS) expect(m.data.night ?? false, m.id).toBe(LIGHTING_PRESETS[lightingChoices(m.data)[0]!].night);
+    for (const m of MAPS) expect(mapData(m.id).night ?? false, m.id).toBe(LIGHTING_PRESETS[lightingChoices(mapData(m.id))[0]!].night);
   });
 
   it('picks a preset the map offers, else its first', () => {
@@ -98,7 +98,7 @@ describe('Day or Night on any map that lists both (M34d)', () => {
   });
 
   it('lists exactly one map in the game as offering both today: Neon Heights', () => {
-    expect(MAPS.filter((m) => lightingChoices(m.data).length > 1).map((m) => m.id)).toEqual(['neonHeights']);
+    expect(MAPS.filter((m) => lightingChoices(mapData(m.id)).length > 1).map((m) => m.id)).toEqual(['neonHeights']);
   });
 });
 
@@ -129,7 +129,8 @@ describe('the saved Day or Night pick (M34d)', () => {
 
 describe('the one night flag (M33h)', () => {
   it('equals the resolved preset night for every map and pick, and the map played under that pick', () => {
-    for (const { data } of MAPS) {
+    for (const { id } of MAPS) {
+      const data = mapData(id);
       for (const pick of [undefined, 'day', 'night'] as const) {
         expect(playsAtNight(data, pick)).toBe(resolveLighting(data, pick).night);
         expect(playsAtNight(mapUnderLighting(data, pick))).toBe(playsAtNight(data, pick));

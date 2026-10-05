@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_DIFFICULTY, DIFFICULTIES, type Difficulty, TEAMMATE_DIFFICULTIES } from './config/bots';
 import type { ContentTag } from './config/content';
 import {
@@ -19,7 +19,7 @@ import { matchEarnings } from './pool/armory';
 import { resultKey } from './stats/records';
 import { matchStanding } from './stats/settleMatch';
 import { DEFAULT_MODE, MATCH_MODES } from './config/modes';
-import { DEFAULT_MAP, MAPS } from './map/maps';
+import { DEFAULT_MAP, MAPS, mapData } from './map/maps';
 import { botsMayCarryDev, matchUsesDev, type NewGamePicks, pickTags, picksUseDev, playedPicks, playedTeamSize } from './newGamePicks';
 import { EXTRACTION, squadSize } from './config/extraction';
 import { BOT_LOADOUTS } from './config/bots';
@@ -67,7 +67,7 @@ describe('New game picks and dev content (M35)', () => {
     for (const map of MAPS) for (const mode of MATCH_MODES) {
       const p = picks({ map: map.id, mode: mode.id });
       // Extraction plays only on a map with its data (M43); elsewhere it plays as the default mode.
-      const offered = mode.id !== 'extraction' || map.data.extraction !== undefined;
+      const offered = mode.id !== 'extraction' || mapData(map.id).extraction !== undefined;
       expect(playedPicks(p, true)).toEqual(offered ? p : { ...p, mode: DEFAULT_MODE });
       expect(playedPicks(p, false).map).toBe(map.tag === 'dev' ? DEFAULT_MAP : map.id);
       expect(playedPicks(p, false).mode).toBe(mode.tag === 'dev' ? DEFAULT_MODE : mode.id);
@@ -324,5 +324,30 @@ describe('the Rules picker and dev content, records and pay (M39)', () => {
     const kit = [{ asset: GAME_POOL.assets.find((a) => a.name === 'Red Dot')!.id, tier: 'common' }];
     expect(matchUsesDev(on('custom', 'hard'), kit, devPool, true)).toBe(true);
     expect(matchUsesDev(on('custom', 'hard', { factoryKit: true }), kit, devPool, true)).toBe(false);
+  });
+});
+
+describe('a dev map whose data has not arrived (M50)', () => {
+  // A fresh copy of map/maps.ts has Depot's data only, as at start-up before loadDevMaps (src/testSetup.ts registers every
+  // map in the shared copy). afterAll: later test files must not see a second copy of the modules.
+  afterAll(() => vi.resetModules());
+
+  it('plays as Depot even with Dev content on, and as itself once loadDevMaps has brought it in', async () => {
+    vi.resetModules();
+    const maps = await import('./map/maps');
+    const fresh = await import('./newGamePicks');
+    expect(maps.mapLoaded('woodland')).toBe(false);
+    for (const id of ['woodland', 'neonHeights'] as const) {
+      const p = picks({ map: id });
+      expect(fresh.playedPicks(p, true).map).toBe(DEFAULT_MAP);
+      expect(fresh.playedPicks(p, false).map).toBe(DEFAULT_MAP);
+    }
+    // A loaded map is untouched, and the team size follows the map that plays.
+    expect(fresh.playedPicks(picks({ map: 'depot' }), true).map).toBe('depot');
+    await maps.loadDevMaps();
+    expect(fresh.playedPicks(picks({ map: 'woodland' }), true).map).toBe('woodland');
+    expect(fresh.playedPicks(picks({ map: 'neonHeights' }), true).map).toBe('neonHeights');
+    // Dev content off still plays the default: loaded or not.
+    expect(fresh.playedPicks(picks({ map: 'woodland' }), false).map).toBe(DEFAULT_MAP);
   });
 });

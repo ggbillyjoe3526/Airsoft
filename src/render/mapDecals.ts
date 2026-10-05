@@ -20,7 +20,7 @@ const COPING = SURFACES.wallCoping;
 export type AtlasRect = readonly [number, number, number, number];
 
 /** Bay numbers drawn in the atlas (cells of 256 × 128 in the top three rows). */
-export const STENCIL_COUNT = 12;
+const STENCIL_COUNT = 12;
 
 /** Where each sign is in the atlas (for its size, SURFACES.decals.atlasSize, in units of 1024 pixels). */
 export function atlasRects(size: number = D.atlasSize): { stencils: AtlasRect[]; roundel: AtlasRect; safeZone: AtlasRect; chevrons: AtlasRect } {

@@ -9,7 +9,7 @@ import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
 import { createCharacter } from '../sim/character';
 import { regenClear, type WaveSetup } from '../sim/extraction';
 import { vec3 } from '../sim/vec';
-import { MAPS } from './maps';
+import { MAPS, mapData } from './maps';
 
 /**
  * Regen points (M45) on every map with an extraction block, against the map's real level (Rapier, as the game sees
@@ -25,7 +25,8 @@ describe('Extraction regen points (M45)', () => {
     await initPhysics();
   });
 
-  for (const { label, data: map } of MAPS) {
+  for (const { id, label } of MAPS) {
+    const map = mapData(id);
     const x = map.extraction;
     if (!x) continue;
     describe(label, () => {

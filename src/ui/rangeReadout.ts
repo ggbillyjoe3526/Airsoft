@@ -1,5 +1,5 @@
 /** Before your first shot. */
-export const RANGE_INTRO = 'Practice range · spare magazines refill · Esc for the Loadout';
+const RANGE_INTRO = 'Practice range · spare magazines refill · Esc for the Loadout';
 
 /** What the practice range's readout shows about your last BB (M21). */
 export interface LastShot {
