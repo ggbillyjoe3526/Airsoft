@@ -20,7 +20,7 @@ acceptance:
   2. Gameplay first: the city puts no more into the footstep band than Depot's bed, by Day or Night, and is no louder than the yard; its calls are no louder than a bird.
   3. Everything else sounds as before: title-screen cues, the yard and the woods sample for sample; new cues last in SOUNDS with their own seeds, new loops rendered only for a map that plays them.
   4. Footsteps on the city's floors stay concrete, so play (ricochet materials) is unchanged.
-status: building
+status: gates
 attempts: 0
 
 ## M48 · Extraction on Woodland and Neon Heights

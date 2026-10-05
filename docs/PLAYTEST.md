@@ -1152,6 +1152,15 @@ Turn on Dev content (Settings → Dev), pick Neon Heights, play it once by Day a
 - [ ] Night: the sky is a soft purple with a few stars; indoor ceilings look plaster white by Day (a little olive by Night is known).
 - [ ] Depot and Woodland look exactly as before.
 
+## Neon Heights sound (M34g, dev content)
+
+Turn on Dev content, pick Neon Heights, play once by Day and once by Night.
+
+- [ ] Day: a low traffic hum, a faint drone whine passing overhead now and then, a shop door's "ding-dong" down the street; no birds.
+- [ ] Night: quieter traffic, the neon's hum and faint sizzle, arcade bleeps from a doorway now and then; no birds.
+- [ ] Footsteps, shots and bots are as easy to hear as on Depot; nothing in the city sounds grim or annoying after a few rounds.
+- [ ] Depot and Woodland sound exactly as before.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:
