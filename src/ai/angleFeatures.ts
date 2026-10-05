@@ -22,7 +22,7 @@ export interface AngleFeatures {
 
 type FeatureConfig = Pick<
   BotBehaviour,
-  'angleBushMinHeight' | 'anglePostMaxHalf' | 'angleLevelRise' | 'angleRampRun' | 'angleRampSlope' | 'angleFlatSlope' | 'angleLandingRun' | 'angleTopMerge'
+  'angleBushMinHeight' | 'anglePostMaxHalf' | 'anglePostSquareness' | 'angleLevelRise' | 'angleRampRun' | 'angleRampSlope' | 'angleFlatSlope' | 'angleLandingRun' | 'angleTopMerge'
 >;
 
 /** The four grid directions a ramp can run (column step, row step). */
@@ -37,6 +37,8 @@ export function angleFeaturesOf(nav: NavGrid, tallCover: readonly CoverBlock[], 
   const posts: number[] = [];
   for (const b of tallCover) {
     if (b.halfX > cfg.anglePostMaxHalf || b.halfZ > cfg.anglePostMaxHalf) continue;
+    // Round or square, as a trunk or a pillar is: a wall's short stub by a door or a window is no post.
+    if (Math.min(b.halfX, b.halfZ) < cfg.anglePostSquareness * Math.max(b.halfX, b.halfZ)) continue;
     posts.push(b.x, b.z, Math.max(b.halfX, b.halfZ));
   }
   const tops = rampTops(nav, cfg);
@@ -51,9 +53,9 @@ export function angleFeaturesOf(nav: NavGrid, tallCover: readonly CoverBlock[], 
 }
 
 /**
- * Stair and ramp tops: walkable nodes on the edge of a flat floor from which the floor falls (angleRampSlope or steeper
- * on average) by angleLevelRise or more onto another flat floor within angleRampRun. A hillside eases into a field that
- * still slopes instead of meeting a flat floor, so terrain has none. Neighbouring tops are merged.
+ * Stair and ramp tops: walkable nodes on a landing (flat floor behind, see `flat`) from which the floor falls
+ * (angleRampSlope or steeper on average) by angleLevelRise or more onto another landing within angleRampRun. A hillside
+ * eases into a field that still slopes instead of meeting a flat floor, so terrain has none. Neighbouring tops merge.
  */
 function rampTops(g: NavGrid, cfg: FeatureConfig): number[] {
   const found: number[] = [];
@@ -71,7 +73,7 @@ function rampTops(g: NavGrid, cfg: FeatureConfig): number[] {
       // The floor falls away from here (one lookup rules out every node of a flat floor).
       const first = neighbour(g, k, col + dc, row + dr);
       if (first < 0 || g.floorY[k]! - g.floorY[first]! <= flatStep) continue;
-      // Behind it, the upper floor: flat (checked first: it rules out nearly every node of a hillside).
+      // Behind it, a landing (checked first: it rules out nearly every node of a hillside).
       if (!flat(g, k, col, row, -dc, -dr, landing, flatStep)) continue;
       // Down the slope while it falls (a ramp's first cell may be only partly on it), to flat floor within angleRampRun:
       // a drop of angleLevelRise or more, at angleRampSlope or steeper on average.
@@ -99,15 +101,29 @@ function neighbour(g: NavGrid, k: number, col: number, row: number): number {
   return n >= 0 && canStep(g, k, n) ? n : -1;
 }
 
-/** True if the floor runs on from node `k` (in cell col, row) for `cells` cells along (dc, dr), never rising or falling more than `flatStep` a cell. */
+/**
+ * True if the floor runs on from node `k` (in cell col, row) for `cells` cells along (dc, dr), never rising or falling more
+ * than `flatStep` a cell, or up to a wall or the grid's edge after at least one such cell (a stairwell's landing turns a
+ * corner). A drop ends it.
+ */
 function flat(g: NavGrid, k: number, col: number, row: number, dc: number, dr: number, cells: number, flatStep: number): boolean {
   let at = k;
   for (let i = 1; i <= cells; i++) {
-    const next = neighbour(g, at, col + dc * i, row + dr * i);
-    if (next < 0 || Math.abs(g.floorY[next]! - g.floorY[at]!) > flatStep) return false;
+    const c = col + dc * i;
+    const r = row + dr * i;
+    const next = neighbour(g, at, c, r);
+    if (next < 0) return i > 1 && walled(g, at, c, r);
+    if (Math.abs(g.floorY[next]! - g.floorY[at]!) > flatStep) return false;
     at = next;
   }
   return true;
+}
+
+/** True if a character on node `k` can't step into cell (col, row) because it is off the grid or blocked at that floor (not a drop). */
+function walled(g: NavGrid, k: number, col: number, row: number): boolean {
+  if (col < 0 || row < 0 || col >= g.cols || row >= g.rows) return true;
+  const n = stepNode(g, k, row * g.cols + col);
+  return n >= 0 && g.walkable[n] !== 1;
 }
 
 const gridX = (g: NavGrid, col: number): number => g.minX + (col + 0.5) * g.cell;

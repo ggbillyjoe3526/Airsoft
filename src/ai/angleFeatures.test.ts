@@ -3,6 +3,7 @@ import { BOTS, botConfig } from '../config/bots';
 import { BODY } from '../config/movement';
 import { NAV } from '../config/nav';
 import { DEPOT, DEPOT_LAYOUT } from '../map/depot';
+import { NEON_HEIGHTS, NEON_HEIGHTS_LAYOUT } from '../map/neonHeights';
 import { type Bush, foliageDepth } from '../map/foliage';
 import type { MapData } from '../map/mapTypes';
 import { RAMP_YARD, STACK_HOUSE } from '../map/testYard';
@@ -122,7 +123,7 @@ describe('tree gaps (M40)', () => {
 describe('stair and ramp tops (M40)', () => {
   const topsOf = (f: AngleFeatures) => Array.from({ length: f.topCount }, (_, i) => vec3(f.tops[3 * i]!, f.tops[3 * i + 1]!, f.tops[3 * i + 2]!));
 
-  it('finds the top of each Depot dock ramp and each Stack House stair, and none on Woodland\'s hills', () => {
+  it('finds the top of each Depot dock ramp, each Stack House stair and the Neon Heights stairs, and none on Woodland\'s hills', () => {
     const depot = topsOf(featuresOf(DEPOT));
     const [west, east] = DEPOT_LAYOUT.dock.ramps;
     // The west ramp rises east to the dock's west end, the east ramp west to its east end.
@@ -140,6 +141,13 @@ describe('stair and ramp tops (M40)', () => {
     expect(stack).toHaveLength(2);
     for (const t of stack) expect(t.y).toBeCloseTo(3, 1);
     expect(topsOf(featuresOf(RAMP_YARD)).length).toBeGreaterThan(0);
+    // Neon Heights (three storeys, stairs only): every top found is a stair's top, and six of its seven stairs have one
+    // (measured 2026-10-05: the Plaza stair's is the one the landing rule misses).
+    const city = topsOf(featuresOf(NEON_HEIGHTS));
+    const links = NEON_HEIGHTS_LAYOUT.links;
+    const linkOf = (t: Vec3) => links.find((l) => Math.hypot(l.top.x - t.x, l.top.z - t.z) < 1.2 && Math.abs(l.top.y - t.y) < 0.1);
+    for (const t of city) expect(linkOf(t), `top at ${t.x}, ${t.y}, ${t.z}`).toBeDefined();
+    expect(new Set(city.map((t) => linkOf(t)!.name)).size).toBeGreaterThanOrEqual(6);
     // A hillside is not a stair: the Knoll's slopes ease into a field that still slopes.
     expect(featuresOf(WOODLAND).topCount).toBe(0);
   });
@@ -189,6 +197,26 @@ describe('stair and ramp tops (M40)', () => {
       expect(p.y).toBeCloseTo(DEPOT_LAYOUT.dockHeight + EYE, 1);
       expect(state.characters.length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('a stair top on Neon Heights\' stacked floors (M40)', () => {
+  it('from the street, holds the Grand stair\'s top on Level 1, where someone coming down appears', async () => {
+    await initPhysics();
+    const physics = new PhysicsWorld(NEON_HEIGHTS, BODY, 1 / 60);
+    const grand = NEON_HEIGHTS_LAYOUT.links.find((l) => l.name === 'Grand stair')!;
+    // On the street west of the stair's foot, looking east up it.
+    const eye = vec3(5, EYE, 9);
+    const EAST = -Math.PI / 2;
+    const atTop = (a: HeldAngle) => Math.hypot(a.point.x - grand.top.x, a.point.z - grand.top.z) < 1.2;
+    const without = angles(2);
+    expect(found(without, findHeldAngles(physics, eye, eye.y, EAST, BOTS, without)).some(atTop)).toBe(false);
+    const out = angles(2);
+    const held = found(out, findHeldAngles(physics, eye, eye.y, EAST, BOTS, out, featuresOf(NEON_HEIGHTS), 0)).find(atTop);
+    physics.dispose();
+    expect(held).toBeDefined();
+    // Head height on Level 1, a storey above the holder's own floor.
+    expect(held!.point.y).toBeCloseTo(NEON_HEIGHTS_LAYOUT.storey + EYE, 3);
   });
 });
 

@@ -143,18 +143,21 @@ export const BOT_BEHAVIOUR = {
    * Held angles beyond walls (M40, map data and nav only, ai/angleFeatures.ts). A bush at least angleBushMinHeight
    * (metres) tall stops a fan ray like a wall, so its edges are corners too. A gap of angleGapMin to angleGapMax
    * (metres) between two narrow tall blocks (trunks, posts: at most anglePostMaxHalf either side of their centre) is a
-   * doorway, held when the line of sight crosses it at least as squarely as angleGapFacing (the sine of the angle).
+   * doorway, held when the line of sight crosses it at least as squarely as angleGapFacing (the sine of the angle). A post
+   * is about as deep as it is wide (its short side at least anglePostSquareness of its long one): a wall's stub by a
+   * door or window is not one.
    */
   angleBushMinHeight: 1,
   anglePostMaxHalf: 0.75,
+  anglePostSquareness: 0.75,
   angleGapMin: 0.8,
   angleGapMax: 4,
   angleGapFacing: 0.5,
   /**
-   * A stair or ramp top (M40): the edge of a flat floor (no steeper than angleFlatSlope for angleLandingRun metres) where
-   * the floor falls, angleRampSlope per metre or steeper on average, by angleLevelRise (metres) or more onto another flat
-   * floor within angleRampRun (metres): where someone coming up or down appears. Tops within angleTopMerge (metres) count
-   * as one.
+   * A stair or ramp top (M40): the edge of a landing (floor no steeper than angleFlatSlope for angleLandingRun metres, or
+   * up to a wall) where the floor falls, angleRampSlope per metre or steeper on average, by angleLevelRise (metres) or
+   * more onto another landing within angleRampRun (metres): where someone coming up or down appears. Tops within
+   * angleTopMerge (metres) count as one.
    */
   angleLevelRise: 0.9,
   angleRampRun: 8,
