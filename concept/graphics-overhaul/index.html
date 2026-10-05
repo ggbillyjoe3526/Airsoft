@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Airsoft graphics overhaul concept</title>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+  #c { display: block; }
+  #ui { position: absolute; inset: 0; pointer-events: none; }
+  .tag { position: absolute; left: 1.2vw; bottom: 1.2vw; padding: .35vw .8vw; border-radius: .4vw; background: rgba(12,14,18,.62); color: #fff; font-weight: 700; letter-spacing: .08em; font-size: 1.05vw; }
+  .tag b { color: #ffcf4a; }
+  .label { position: absolute; transform: translate(-50%, 0); color: #1d2026; font-weight: 700; font-size: .95vw; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+  .label small { display: block; font-weight: 500; font-size: .75vw; color: #545b66; letter-spacing: .02em; text-transform: none; text-align: center; }
+  /* HUD (in-game shot) */
+  .hud-top { position: absolute; top: 2.4%; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 1.1vw; padding: .45vw 1.3vw; background: rgba(14,17,22,.55); border-radius: .5vw; color: #fff; font-weight: 800; letter-spacing: .1em; font-size: 1.05vw; backdrop-filter: blur(6px); }
+  .hud-top .b { color: #6aa8ff; } .hud-top .o { color: #ff9a3c; }
+  .hud-top .n { font-size: 1.7vw; } .hud-top .t { font-size: 1.5vw; letter-spacing: .04em; }
+  .pips { display: flex; gap: .25vw; } .pip { width: .55vw; height: .55vw; border-radius: 50%; }
+  .feed { position: absolute; top: 2.6%; right: 1.4%; background: rgba(14,17,22,.55); color: #fff; padding: .3vw .7vw; border-radius: .35vw; font-size: .85vw; font-weight: 600; border-left: .25vw solid #ff9a3c; }
+  .ammo { position: absolute; right: 2%; bottom: 3.5%; color: #fff; text-align: right; text-shadow: 0 .1vw .4vw rgba(0,0,0,.45); }
+  .ammo .w { font-size: .85vw; font-weight: 700; letter-spacing: .12em; opacity: .9; } .ammo .w span { margin-left: .5vw; padding: .1vw .35vw; border: 1px solid rgba(255,255,255,.6); border-radius: .2vw; font-size: .65vw; }
+  .ammo .c { font-size: 2.8vw; font-weight: 800; line-height: 1; }
+  .ammo .c small { font-size: 1.1vw; opacity: .7; font-weight: 600; }
+  .cross { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+  .cross i { position: absolute; background: #fff; box-shadow: 0 0 2px rgba(0,0,0,.8); }
+  .mini { position: absolute; left: 1.4%; top: 2.4%; width: 10.5vw; height: 10.5vw; border-radius: 50%; overflow: hidden; background: rgba(14,17,22,.5); border: .15vw solid rgba(255,255,255,.35); }
+  .hitbubble { position: absolute; transform: translate(-50%, -100%); background: #f2423a; color: #fff; font-weight: 900; font-size: 1.15vw; padding: .15vw .55vw; border-radius: .35vw; letter-spacing: .05em; box-shadow: 0 .2vw .6vw rgba(0,0,0,.3); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"></div>
+<script type="module" src="./main.ts"></script>
+</body>
+</html>
