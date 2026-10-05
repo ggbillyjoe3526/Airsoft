@@ -106,8 +106,8 @@ export interface Daylight {
    */
   reserveLights(n: number): void;
   /**
-   * Moves a view-fitted shadow map to the ground ahead of `camera` (High) and the light pools' real lights to the pools
-   * nearest it (M33f), fading over this frame's `dt` seconds. Call before drawing.
+   * Moves a view-fitted shadow map to the ground ahead of `camera` (High; Medium too at night, M52) and the light pools'
+   * real lights to the pools nearest it (M33f), fading over this frame's `dt` seconds. Call before drawing.
    */
   follow(camera: THREE.Camera, dt: number): void;
   /** Removes the lights, sky, trees, clouds, light pools and signs and frees the shadow map. */
@@ -171,7 +171,9 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   const focus = new THREE.Vector3();
   const setQuality = (q: QualitySettings): void => {
     applyShadowQuality(sun, q);
-    following = q.shadows && q.shadowFollowsView;
+    // At night the map follows the view on Medium too (M52, audit REN-08): the low moon stretches a whole-field fit to
+    // about three times the ground per texel it covers by day. By day Medium keeps the whole field.
+    following = q.shadows && (q.shadowFollowsView || preset.night);
     if (!following) {
       // The whole field again.
       cam.left = level.left;

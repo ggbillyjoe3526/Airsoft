@@ -96,7 +96,7 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
   choice({
     field: 'shadowFollowsView',
     label: 'Shadow range',
-    help: 'Near you: sharper shadows for about 25 m ahead, none beyond. Whole field: every shadow, softer edges.',
+    help: 'Near you: sharper shadows for about 25 m ahead, none beyond. Whole field: every shadow, softer edges. At night it is always near you.',
     cost: 'Free',
     needs: 'shadows',
     options: [
