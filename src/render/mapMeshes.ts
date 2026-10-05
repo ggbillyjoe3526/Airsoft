@@ -1,11 +1,18 @@
 import * as THREE from 'three';
 import { type QualitySettings, SURFACES, type SurfaceTextureId } from '../config/render';
+import { buildGroundGrid } from '../map/groundSurfaces';
 import type { BlockKind, MapBlock, MapData } from '../map/mapTypes';
 import { RAMP_FACES, rampCorners } from '../map/surfaces';
+import { terrainHeightAt } from '../map/terrain';
+import { buildCanopyMesh } from './canopyMeshes';
 import { appendCuboid, type Buffers, type Cuboid, type CuboidShape, emptyBuffers, FACES, PLAIN, type UvMode } from './cuboidMesh';
 import { buildFoliageMesh } from './foliageMeshes';
+import { appendFixtureSolids } from './lightFixtures';
+import { keyDirection, resolveLighting } from './lightingPreset';
+import { groundUnder } from '../map/nightSight';
 import { buildMapDecals, disposeMapDecals, drawDecalAtlas } from './mapDecals';
-import type { ProceduralTexture, SurfaceTextures } from './proceduralTextures';
+import { appendNatureShape, appendPebbles, isNatureKind } from './natureShapes';
+import { CORE_SURFACES, type ProceduralTexture, type SurfaceTextures, surfaceTexture } from './proceduralTextures';
 import { isSurfaceMaterial, setReliefMaps, type SurfaceMaterial, withoutEnvironment } from './surfaceMaterials';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
 import { buildTerrainMesh } from './terrainMeshes';
@@ -19,6 +26,8 @@ interface KindStyle {
   castShadow: boolean;
   /** Its sides darken towards their foot (SURFACES.grimeHeight): dirt and contact shade where they meet the ground. */
   grime: boolean;
+  /** With map detail, its faces are cut into tiles this size for the baked shade (default SURFACES.occlusion.cell). */
+  cell?: number;
 }
 
 /** Colours are warm and friendly: an airsoft site, not a military base. */
@@ -39,12 +48,30 @@ const STYLES: Record<BlockKind, KindStyle> = {
   sandbags: { texture: 'sandbag', uv: 'world', tints: [0xffffff, 0xeee6d6], castShadow: true, grime: true },
   generator: { texture: 'barrier', uv: 'world', tints: [0xcdb338, 0x5f7f52], castShadow: true, grime: true },
   skip: { texture: 'corrugated', uv: 'world', tints: [0xcdb338, 0x4f8a57, 0x7a8288], castShadow: true, grime: true },
-  // The woods (M33, greybox until Woodland's look): bark browns, grey stone, weathered boards.
-  tree: { texture: 'crate', uv: 'world', tints: [0x6b4f36, 0x5e4630, 0x75583c], castShadow: true, grime: false },
-  boulder: { texture: 'concrete', uv: 'world', tints: [0x8c9094, 0x7d8286, 0x9a968c], castShadow: true, grime: true },
-  log: { texture: 'crate', uv: 'world', tints: [0x8a6a48, 0x7c5e3e], castShadow: true, grime: true },
-  fence: { texture: 'crate', uv: 'world', tints: [0x6e5a44], castShadow: true, grime: true },
+  // The woods (M33; M33i's look, render/natureShapes.ts): trunks and logs in bark, boulders in stone, the fence in
+  // weathered boards. Trunks stay mid-value, so a figure in front of one still reads (readability first).
+  tree: { texture: 'bark', uv: 'world', tints: [0xccbca6, 0xbeb09a, 0xd4c4ae], castShadow: true, grime: true },
+  boulder: { texture: 'stone', uv: 'world', tints: [0xd6d2ca, 0xc8c4bc, 0xdcd6cc], castShadow: true, grime: true },
+  log: { texture: 'bark', uv: 'world', tints: [0xd2c0a4, 0xc6b69c], castShadow: true, grime: true },
+  // Long boundary panels with little near enough to shade them: coarse tiles (M33i, Medium's triangle ceiling).
+  fence: { texture: 'planks', uv: 'world', tints: [0xd8d0c4, 0xccc4b8], castShadow: true, grime: true, cell: SURFACES.occlusion.coarseCell },
 };
+
+/**
+ * The surface textures `map`'s meshes are painted with (M33i): the core set every map has, and the woods' ones its
+ * blocks, ground and light fixtures use, so a map draws only what it shows (Depot: the core set, as before).
+ */
+export function texturesFor(map: MapData): SurfaceTextureId[] {
+  const ids = new Set<SurfaceTextureId>(CORE_SURFACES);
+  for (const b of map.blocks) ids.add(styleOf(b).texture);
+  for (const l of map.lights ?? []) {
+    if (l.kind === 'fire') ids.add('stone').add('bark');
+    if (l.kind === 'lantern') ids.add('bark');
+  }
+  if (map.ground) ids.add('groundDetail');
+  if (map.ground?.patches.some((p) => p.surface === 'gravel')) ids.add('stone');
+  return [...ids];
+}
 
 /** A steel floor or ramp (MapBlock.surface 'metal', which also clanks underfoot): diamond tread plate in plain steel. */
 const METAL_PLATE: KindStyle = { texture: 'steelPlate', uv: 'world', tints: [0xf4f6f8], castShadow: false, grime: false };
@@ -595,10 +622,16 @@ export interface MapLook {
   detail: boolean;
   /** Steel tread plate as painted steel that picks up the sky (with Environment lighting). */
   steelSheen: boolean;
+  /**
+   * Tree crowns and bushes cast shadows (M33i): only where the shadow map follows the view (High), whose texels are
+   * fine enough for them and whose triangle budget has room; Medium's whole-field map is stretched already, and its
+   * 200k ceiling is spent on the figures at 5v5. Changed in place, never a rebuild. Absent: they cast.
+   */
+  foliageShadows?: boolean;
 }
 
 export function mapLookOf(q: QualitySettings): MapLook {
-  return { relief: q.surfaceRelief, normalMaps: q.normalMaps, detail: q.mapDetail, steelSheen: q.environment };
+  return { relief: q.surfaceRelief, normalMaps: q.normalMaps, detail: q.mapDetail, steelSheen: q.environment, foliageShadows: q.shadows && q.shadowFollowsView };
 }
 
 /** Whether going from one look to another needs the map built again (geometry or material kind changes). */
@@ -625,7 +658,7 @@ function surfaceMaterial(surface: ProceduralTexture, id: SurfaceTextureId, look:
 /** The surface a material paints (by its texture's name, a SurfaceTextureId), or null for one that isn't a surface. */
 function surfaceOf(mat: THREE.Material, textures: SurfaceTextures): ProceduralTexture | null {
   if (!isSurfaceMaterial(mat) || !mat.map || !Object.hasOwn(textures, mat.map.name)) return null;
-  return textures[mat.map.name as SurfaceTextureId];
+  return textures[mat.map.name as SurfaceTextureId] ?? null;
 }
 
 /** Surface relief on or off, as normal or bump maps, for a built map (Settings → Graphics): the shaders rebuild once. */
@@ -668,7 +701,7 @@ function pieceShape(piece: Piece, block: MapBlock, index: number, occ: Occluders
   const ground = block.kind === 'floor';
   return {
     bevel,
-    cell: O.cell,
+    cell: styleOf(block).cell ?? O.cell,
     shade: (x, y, z, nx, ny, nz) => {
       const k = occlusionShade(occlusionAt(occ, x, y, z, nx, ny, nz, O.lift, index), O.strength);
       return ground && ny > 0.9 ? k * (1 + SURFACES.groundNoise.amount * groundNoise(x, z)) : k;
@@ -735,8 +768,8 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
       const style = styleOf(block);
       const color = new THREE.Color().setHex(blockTint(block), THREE.SRGBColorSpace).multiplyScalar(blockShade(block));
       const e = entry(style.texture, castsShadow(block));
-      appendRamp(e.buf, block, textures[style.texture], color);
-      if (e.shadow) appendRamp(e.shadow, block, textures[style.texture], color);
+      appendRamp(e.buf, block, surfaceTexture(textures, style.texture), color);
+      if (e.shadow) appendRamp(e.shadow, block, surfaceTexture(textures, style.texture), color);
       continue;
     }
     for (const piece of blockPieces(block, map.blocks, look.detail)) pieces.push({ piece, block });
@@ -746,10 +779,19 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
   pieces.forEach(({ piece: p, block }, i) => {
     const bottom = block.center.y - block.size.y / 2;
     const e = entry(p.texture, p.castShadow);
-    const paint = { uv: p.uv, worldSize: textures[p.texture].worldSize, color: p.color, grimeFrom: p.grime ? bottom : null };
-    appendCuboid(e.buf, p.box, paint, pieceShape(p, block, i, occ));
+    const paint = { uv: p.uv, worldSize: surfaceTexture(textures, p.texture).worldSize, color: p.color, grimeFrom: p.grime ? bottom : null };
+    // The woods' trees, logs and boulders are shapes inside their box (M33i); the shadow map still takes the box.
+    if (isNatureKind(block.kind)) appendNatureShape(e.buf, block, paint, pieceShape(p, block, i, occ).shade);
+    else appendCuboid(e.buf, p.box, paint, pieceShape(p, block, i, occ));
     if (e.shadow) appendCuboid(e.shadow, p.box, paint, PLAIN);
   });
+  // M33i: the light fixtures' stones, logs, lanterns and posts, and the pebbles on gravel: drawn, never in the shadow map.
+  const groundAt = (x: number, z: number, below: number): number => groundUnder(map, x, z, below) ?? 0;
+  appendFixtureSolids(map, (texture) => entry(texture, true).buf, groundAt);
+  if (map.ground && map.terrain) {
+    const t = map.terrain;
+    appendPebbles(entry('stone', true).buf, map, (x, z) => terrainHeightAt(t, x, z) ?? 0);
+  }
 
   for (const [key, { buf, shadow, texture, castShadow }] of meshes) {
     const drawn = buf.indices.length;
@@ -761,7 +803,7 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.colors, 3));
     geo.setIndex(buf.indices);
     geo.computeBoundingSphere();
-    const mesh = new THREE.Mesh(geo, surfaceMaterial(textures[texture], texture, look));
+    const mesh = new THREE.Mesh(geo, surfaceMaterial(surfaceTexture(textures, texture), texture, look));
     mesh.name = `map-${key}`;
     mesh.castShadow = castShadow;
     if (shadow) shadowProxy(mesh, drawn);
@@ -770,8 +812,18 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
     mesh.updateMatrix();
     group.add(mesh);
   }
-  if (map.terrain) group.add(buildTerrainMesh(map.terrain));
-  const foliage = buildFoliageMesh(map.foliage ?? []);
+  // M33i: the ground's surfaces on the terrain, and its tree crowns; crowns and bushes baked towards the key light.
+  const grid = map.terrain ? buildGroundGrid(map) : null;
+  if (map.terrain) {
+    const detail = grid ? surfaceTexture(textures, 'groundDetail') : null;
+    group.add(buildTerrainMesh(map.terrain, grid && detail ? { grid, material: surfaceMaterial(detail, 'groundDetail', look), tile: detail.worldSize, mean: detail.mean ?? 1 } : null));
+  }
+  const moon = map.blocks.some((b) => b.kind === 'tree') || map.ground ? keyDirection(resolveLighting(map)) : null;
+  if (moon) {
+    const canopy = buildCanopyMesh(map.blocks, map.terrain, moon, look.foliageShadows ?? true);
+    if (canopy) group.add(canopy);
+  }
+  const foliage = buildFoliageMesh(map.foliage ?? [], map.ground ? moon : null, look.foliageShadows ?? true);
   if (foliage) group.add(foliage);
   if (look.detail && decalAtlas) {
     const decals = buildMapDecals(map, decalAtlas);
@@ -800,6 +852,7 @@ export function restyleMap(
   if (!mapNeedsRebuild(from, to)) {
     setMapTextures(group, textures);
     setMapRelief(group, textures, to);
+    setFoliageShadows(group, to.foliageShadows ?? true);
     trim();
     return group;
   }
@@ -809,6 +862,14 @@ export function restyleMap(
   parent?.add(next);
   trim();
   return next;
+}
+
+/** Tree crowns and bushes cast shadows or not (MapLook.foliageShadows, M33i), in place. */
+export function setFoliageShadows(group: THREE.Group, on: boolean): void {
+  for (const name of ['map-canopy', 'map-foliage']) {
+    const mesh = group.getObjectByName(name);
+    if (mesh) mesh.castShadow = on;
+  }
 }
 
 export function disposeMapMeshes(group: THREE.Group): void {

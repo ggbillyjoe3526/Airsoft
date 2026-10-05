@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ATMOSPHERE, type LightingPreset, LIGHTING_PRESETS, type QualitySettings, type SkyPalette, type TreeDetail } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
+import { buildNightSky } from './nightSky';
 import { withoutEnvironment } from './surfaceMaterials';
 
 /**
@@ -330,13 +331,9 @@ export function buildClouds(centre: THREE.Vector3, sun: THREE.Vector3, look: Clo
       softDisc(pos, col, idx, c, r, up, 14, 0.6, 0.85, look.clouds.opacity, (v) => cloudColour.copy(cloudShade).lerp(cloudTop, Math.min(1, Math.max(0, (v * ry + cy - baseY) / (ry * 1.4)))), floor);
     }
   }
-  // The sun: a soft white disc where the sunlight comes from, a little inside the dome.
-  const sunAt = at.copy(sun).multiplyScalar(ATMOSPHERE.skyRadius * 0.95).add(centre);
-  const sunRight = new THREE.Vector3(-sun.z, 0, sun.x).normalize();
-  const sunUp = new THREE.Vector3().crossVectors(sunRight, sun).normalize().negate();
-  const radius = ATMOSPHERE.skyRadius * 0.95 * Math.tan(look.key.disc.size / 2);
-  const sunColour = new THREE.Color(look.key.disc.colour);
-  softDisc(pos, col, idx, sunAt, sunRight.multiplyScalar(radius), sunUp.multiplyScalar(radius), 20, 0.55, 0.95, 1, () => sunColour);
+  // The sun: a soft white disc where the sunlight comes from, a little inside the dome (none at night: the moon is
+  // render/nightSky.ts's, on every quality, M33i).
+  if (look.key.disc.size > 0) addSunDisc(pos, col, idx, centre, sun, at, look);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
@@ -349,6 +346,16 @@ export function buildClouds(centre: THREE.Vector3, sun: THREE.Vector3, look: Clo
   return mesh;
 }
 
+/** The key light's soft disc in the sky (the sun by day). */
+function addSunDisc(pos: number[], col: number[], idx: number[], centre: THREE.Vector3, sun: THREE.Vector3, at: THREE.Vector3, look: CloudLook): void {
+  const sunAt = at.copy(sun).multiplyScalar(ATMOSPHERE.skyRadius * 0.95).add(centre);
+  const sunRight = new THREE.Vector3(-sun.z, 0, sun.x).normalize();
+  const sunUp = new THREE.Vector3().crossVectors(sunRight, sun).normalize().negate();
+  const radius = ATMOSPHERE.skyRadius * 0.95 * Math.tan(look.key.disc.size / 2);
+  const sunColour = new THREE.Color(look.key.disc.colour);
+  softDisc(pos, col, idx, sunAt, sunRight.multiplyScalar(radius), sunUp.multiplyScalar(radius), 20, 0.55, 0.95, 1, () => sunColour);
+}
+
 /** The world round the field: change its trees and clouds with the quality settings, dispose it with the match. */
 export interface Atmosphere {
   setQuality(quality: Pick<QualitySettings, 'trees' | 'clouds'>): void;
@@ -356,10 +363,10 @@ export interface Atmosphere {
 }
 
 /**
- * Adds the sky dome, the tree ring and the clouds round the field centred on `centre` (sun along `sunDirection`, a unit
- * vector towards the key light; `field` the map's bounds, for the hedge) at `quality`'s Trees and Clouds, and returns its
- * handle. Changing either setting rebuilds that mesh only. `preset` (M33f) paints the sky, the clouds and the key
- * light's disc: the day's unless a map's lighting says otherwise.
+ * Adds the sky dome, the tree ring, the clouds and a night preset's stars and moon round the field centred on `centre`
+ * (sun along `sunDirection`, a unit vector towards the key light; `field` the map's bounds, for the hedge) at `quality`'s
+ * Trees and Clouds, and returns its handle. Changing either setting rebuilds that mesh only. `preset` (M33f) paints the
+ * sky, the clouds and the key light's disc: the day's unless a map's lighting says otherwise.
  */
 export function addAtmosphere(
   scene: THREE.Scene,
@@ -372,6 +379,9 @@ export function addAtmosphere(
   const sky = buildSky(sunDirection, preset.sky);
   sky.position.copy(centre);
   scene.add(sky);
+  // The stars and moon of a night preset (M33i), on every quality.
+  const nightSky = buildNightSky(preset, sunDirection);
+  if (nightSky) scene.add(nightSky.group);
   let trees: THREE.Mesh | null = null;
   let clouds: THREE.Mesh | null = null;
   let treeLevel: TreeDetail | null = null;
@@ -402,6 +412,7 @@ export function addAtmosphere(
       trees = drop(trees);
       clouds = drop(clouds);
       drop(sky);
+      nightSky?.dispose();
     },
   };
 }

@@ -187,3 +187,38 @@ describe('the ground under a pool', () => {
     expect(groundUnder(TEST_YARD, 1000, 1000, 1)).toBeUndefined();
   });
 });
+
+describe('the fixtures in the pools (M33i)', () => {
+  it('adds Woodland’s flames, and embers where dust motes are on, switched with the quality', () => {
+    const scene = new THREE.Scene();
+    const pools = addLightPools(scene, WOODLAND, QUALITY.low);
+    const embers = scene.getObjectByName('fire-embers')!;
+    expect(scene.getObjectByName('fire-flames')).toBeDefined();
+    expect(embers.visible).toBe(QUALITY.low.dustMotes > 0);
+    pools.setQuality(QUALITY.medium);
+    expect(embers.visible).toBe(QUALITY.medium.dustMotes > 0);
+    expect(QUALITY.medium.dustMotes).toBeGreaterThan(0);
+    pools.setQuality({ poolLights: QUALITY.medium.poolLights });
+    expect(embers.visible).toBe(true);
+    pools.dispose();
+    expect(scene.getObjectByName('fire-flames')).toBeUndefined();
+  });
+
+  it('flickers a real fire light with its flames', () => {
+    const scene = new THREE.Scene();
+    const pools = addLightPools(scene, WOODLAND, QUALITY.high);
+    const lights = (): THREE.PointLight[] => scene.children.filter((o): o is THREE.PointLight => o instanceof THREE.PointLight);
+    const fire = WOODLAND.lights!.find((l) => l.kind === 'fire')!;
+    const eye = new THREE.Vector3(fire.position.x, fire.position.y + 1.6, fire.position.z);
+    // Settle first (a light fades in over POOL_LIGHTS.fadeSeconds), then watch it.
+    for (let i = 0; i < 300; i++) pools.follow(eye, 1 / 30);
+    const seen = new Set<number>();
+    for (let i = 0; i < 12; i++) {
+      pools.follow(eye, 0.07);
+      const near = lights().reduce((a, b) => (a.position.distanceTo(eye) < b.position.distanceTo(eye) ? a : b));
+      seen.add(Math.round(near.intensity * 1e4));
+    }
+    expect(seen.size).toBeGreaterThan(1);
+    pools.dispose();
+  });
+});

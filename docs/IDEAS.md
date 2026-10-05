@@ -27,6 +27,9 @@ Parking lot for future features. Do not implement unless asked.
   caps the wait; Easy ×0.5 → ×0.7, since Easy players most need their first unlocks.
 - **Hit players light up** (M33h plan, 2026-10-04): at night a hit player switches on a light as they call the hit,
   as at real night games, so the walk-off reads in the dark and nobody shoots a player already out.
+- **Ground cover on terrain maps** (M33i plan, deferred): tufts of grass, ferns and leaf piles scattered from
+  `MapData.ground`'s grid (grass on grass cells, ferns under the trees), as instanced cards on Medium and High only.
+  Left out of M33i for Medium's 200k-triangle ceiling at 5v5; needs a cheaper figure or a culled instance pass first.
 - **Bots with gear for Beta** (audit POOL-24, owner 2026-10-04: an idea for Beta): the player's kit outgrows bots that
   carry factory gear for ever on Easy and Normal (M29b gave Hard opponents rolled kits). Either give bots a tier dial by
   difficulty (read from `botConfig`), or make higher tiers lateral (Legendary: tighter spread, a touch more recoil or a

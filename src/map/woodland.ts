@@ -2,7 +2,7 @@ import { createRng, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import type { Bush } from './foliage';
 import type { MapLight } from './nightSight';
-import type { BlockKind, MapBlock, MapData, SpawnPoint } from './mapTypes';
+import type { BlockKind, GroundPatch, MapBlock, MapData, MapGround, SpawnPoint } from './mapTypes';
 import { buildTerrain, type Terrain, terrainHeightAt } from './terrain';
 
 /**
@@ -477,9 +477,45 @@ const LANTERN = { colour: 0xffd27a, radius: 5.5, height: 2.2 };
  * trees, dark.
  */
 const LIGHTS: readonly MapLight[] = [
-  ...[[4.5, 52], [115.5, 52]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + FIRE.height, worldZ(z!)), radius: FIRE.radius, colour: FIRE.colour })),
-  ...[[101, 52], [101, 42], [66, 27.5]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + LANTERN.height, worldZ(z!)), radius: LANTERN.radius, colour: LANTERN.colour })),
+  ...[[4.5, 52], [115.5, 52]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + FIRE.height, worldZ(z!)), radius: FIRE.radius, colour: FIRE.colour, kind: 'fire' as const })),
+  ...[[101, 52], [101, 42], [66, 27.5]].map(([x, z]) => ({ position: vec3(worldX(x!), ground(x!, z!) + LANTERN.height, worldZ(z!)), radius: LANTERN.radius, colour: LANTERN.colour, kind: 'lantern' as const })),
 ];
+
+// --- The ground (M33i) ---------------------------------------------------------------------------------------------
+
+/** Plan points to world ones, for a ground patch's path. */
+const pathOf = (points: readonly (readonly [number, number])[]): { x: number; z: number }[] => points.map(([x, z]) => ({ x: worldX(x), z: worldZ(z) }));
+
+/** The creek bed's line, every CREEK_STEP m of plan x, to where it ends. */
+const CREEK_STEP = 2;
+const creekLine = (): (readonly [number, number])[] => Array.from({ length: Math.floor(CREEK_END[1] / CREEK_STEP) + 1 }, (_, k) => [k * CREEK_STEP, creekZ(k * CREEK_STEP)] as const);
+
+/** Widths (m): the creek's gravel reaches a little up its banks; tracks are worn a little wider than a person. */
+const GRAVEL_WIDTH = 2 * (CREEK_BED + 0.6);
+const FOREST_TRACK_WIDTH = 2;
+const SUNKEN_TRACK_WIDTH = 2 * TRACK_BED;
+/** Trampled earth round each camp's fire. The spawns stay on grass: at night the tone mapping crushes a brown under the
+ * blue moon to near black, and a figure must read on the ground it starts on (KNOWN_ISSUES, M33i). */
+const FIRE_CLEARING = 4;
+
+/**
+ * Woodland's ground (M33i): meadow grass, leaf litter wherever the trees close overhead, the creek's dry gravel bed, the
+ * forest track along the Pine Belt lane and the sunken track as worn earth, trampled earth round the camp fires and in
+ * the fort, and the cabin's boards.
+ */
+const GROUND: MapGround = {
+  base: 'grass',
+  underTrees: 'leaves',
+  patches: [
+    { surface: 'earth', path: pathOf(LANE_POINTS[0]!.slice(1, 7)), width: FOREST_TRACK_WIDTH },
+    { surface: 'earth', path: pathOf([[TRACK.from.x, TRACK.from.z], [TRACK.to.x, TRACK.to.z]]), width: SUNKEN_TRACK_WIDTH },
+    { surface: 'earth', path: pathOf([[4.5, 52]]), width: FIRE_CLEARING },
+    { surface: 'earth', path: pathOf([[115.5, 52]]), width: FIRE_CLEARING },
+    { surface: 'earth', box: [worldX(95), worldX(107.5), worldZ(53.5), worldZ(40.5)] },
+    { surface: 'gravel', path: pathOf(creekLine()), width: GRAVEL_WIDTH },
+    { surface: 'wood', box: [worldX(62 + CABIN_WALL), worldX(70.4 - CABIN_WALL), worldZ(18 + CABIN_WALL), worldZ(26.4 - CABIN_WALL)] },
+  ] satisfies GroundPatch[],
+};
 
 const COVER: MapBlock[] = [...END0_CAMP, ...END1_CAMP, ...FORT, ...cabin(), ...BOULDERS, ...LOGS, ...APPROACH_COVER, OAK];
 const BLOCKS: MapBlock[] = [...fence(), ...COVER, ...woods(LANE_POINTS, COVER)];
@@ -498,6 +534,7 @@ export const WOODLAND: MapData = {
   terrain: TERRAIN,
   foliage: bushes(LANE_POINTS, BLOCKS),
   lights: LIGHTS,
+  ground: GROUND,
 };
 
 /** Layout facts the tests check against (world coordinates), exported so they can't drift from the geometry. */

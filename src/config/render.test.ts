@@ -23,6 +23,9 @@ const rank = (v: QualitySettings[keyof QualitySettings]): number => (typeof v ==
 /** Fields whose change shows on a screen at 100 % scaling (devicePixelRatio 1): all but the high-DPI cap. */
 const VISIBLE_AT_DPR_1: readonly (keyof QualitySettings)[] = QUALITY_FIELDS.filter((f) => f !== 'maxPixelRatio');
 
+/** The woods' surfaces (config NatureSurfaceId, M33i): bark, planks, stone, groundDetail. */
+const NATURE_SURFACES = 4;
+
 describe('render quality presets (final alpha audit section 4)', () => {
   it('sets every field on every preset', () => {
     for (const p of QUALITY_PRESETS) {
@@ -112,13 +115,19 @@ describe('render quality presets (final alpha audit section 4)', () => {
   });
 
   it('keeps the surface textures within each preset\'s GPU budget (REN-13)', () => {
-    const textures = Object.keys(SURFACES.worldSize).length;
+    // Every map draws the core set; a map with the woods' surfaces (M33i) draws those four too, only then.
+    const core = Object.keys(SURFACES.worldSize).length - NATURE_SURFACES;
     // RGBA with mipmaps (a third more).
-    const mb = (size: number): number => (textures * size * size * 4 * 4) / 3 / 2 ** 20;
+    const mb = (textures: number, size: number): number => (textures * size * size * 4 * 4) / 3 / 2 ** 20;
     for (const p of QUALITY_PRESETS) expect(Math.log2(QUALITY[p].textureSize) % 1, p).toBe(0); // a power of two, for mipmaps
-    expect(mb(QUALITY.low.textureSize)).toBeLessThan(3);
-    expect(mb(QUALITY.medium.textureSize)).toBeLessThan(12);
-    expect(mb(QUALITY.high.textureSize)).toBeLessThan(48);
+    expect(core).toBe(8);
+    expect(mb(core, QUALITY.low.textureSize)).toBeLessThan(3);
+    expect(mb(core, QUALITY.medium.textureSize)).toBeLessThan(12);
+    expect(mb(core, QUALITY.high.textureSize)).toBeLessThan(48);
+    const all = core + NATURE_SURFACES;
+    expect(mb(all, QUALITY.low.textureSize)).toBeLessThan(4.5);
+    expect(mb(all, QUALITY.medium.textureSize)).toBeLessThan(17);
+    expect(mb(all, QUALITY.high.textureSize)).toBeLessThan(68);
   });
 
   it('never draws more dust motes than the buffer holds', () => {

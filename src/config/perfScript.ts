@@ -1,6 +1,6 @@
 /**
  * The perf harness's player (pipeline/perf-run.mjs, `?script=perf` in the e2e build): about 75 s of a Depot match that
- * sees the whole field. Ticks at 60 Hz: 60 ticks is one second. The run is measured from the harness's warm-up (a few
+ * sees the whole field (the same steps play Woodland with `--map woodland`, M33i). Ticks at 60 Hz: 60 ticks is one second. The run is measured from the harness's warm-up (a few
  * seconds in) for 60 s, so the script runs past that. It assumes the player's round-start facing (the sim resets the
  * view each round); a round ending mid-script only moves the player back to a spawn, which is fine for a benchmark.
  */
