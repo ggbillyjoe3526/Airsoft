@@ -135,6 +135,8 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved across preset switches; contact shadows under every player on all presets (FA3, FA7)
 - Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High; barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
 - Replicas and attachments redesigned: blockier two-tone style with stippled grips; red dot as enclosed square hood, silencer hexagonal body (G2)
+- Players as masked humans (high-cut or bump helmet, balaclava, visor; no bare faces) in team camo with a team-colour plate carrier, or robots in a light or dark shell by team, mixed on both teams when Look › Robots is on; their replicas in the team's colours (G7)
+- Your first-person arms: dark gloves, team camo sleeves and armband, or robot arms when your player is a robot (G7)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 - Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet, vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under raised floors (M34f)
 
