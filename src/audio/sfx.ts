@@ -1,4 +1,4 @@
-import { AUDIO, CASE_OPEN_SOUND, caseWorkSound, matchOverBlastStart } from '../config/audio';
+import { AUDIO, CASE_OPEN_SOUND, caseWorkSound, FIRE_SOUND, matchOverBlastStart, type SoundLevel } from '../config/audio';
 import type { ReplicaConfig } from '../config/replicas';
 import { SIM_DT } from '../config/sim';
 import { cues, type ImpactMaterial, type ShotProfile, type SoundCue } from '../config/sounds';
@@ -6,17 +6,18 @@ import type { MapBlock } from '../map/mapTypes';
 import type { Character } from '../sim/character';
 import type { GameEvent } from '../sim/events';
 import { vec3, type Vec3 } from '../sim/vec';
-import { Birdsong } from './ambience';
+import { AmbientCalls } from './ambience';
 import type { AudioEngine } from './audioEngine';
 import { FoleyTracker, type FoleyMove } from './foley';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, type Muffle, muffleFor, type OcclusionQuery } from './occlusion';
+import { type Soundscape, YARD_BY_DAY } from './soundscape';
 import { surfaceUnder } from './soundMaterials';
 import { VoiceLimit } from './voiceLimit';
 import { Whistle } from './whistle';
 
 /** A playback level and per-play pitch spread (AUDIO.levels). */
-type Level = { readonly gain: number; readonly pitchSpread: number };
+type Level = SoundLevel;
 
 /** A sound playing (or scheduled): its source, its level, and when it starts on the audio clock. */
 interface Voice {
@@ -53,6 +54,9 @@ interface ReplicaSound {
 /** What every match's sound shares: the Game's audio engine (context, volume buses, every sound's buffers). */
 export type SfxSetup = AudioEngine;
 
+/** Spreads the fires' start points round their loop (the golden ratio's fraction: never two alike). */
+const GOLDEN = 0.618034;
+
 /** A random pitch factor within ± `spread` (presentation-only randomness, not the simulation's RNG). */
 function jitter(spread: number): number {
   return 1 + (Math.random() * 2 - 1) * spread;
@@ -76,10 +80,13 @@ export class Sfx {
   private outLevel: GainNode | null = null;
   /** You were out when the last tick looked. */
   private playerOut = false;
-  /** The outdoor bed's two looping copies, once play has started (audit CORE-34). */
+  /** The ambience's looping sources (its beds' copies, the fires' crackle), once play has started (audit CORE-34). */
   private readonly bed: AudioBufferSourceNode[] = [];
-  private readonly birds = new Birdsong();
-  private readonly birdAt = vec3();
+  /** Where the match is played (M33j): the field's ambience by day or night, the ground underfoot, its fires. */
+  private scene: Soundscape = YARD_BY_DAY;
+  /** The ambience's calls (birds by day, an owl in the woods at night), if it has any. */
+  private calls: AmbientCalls | null = new AmbientCalls(YARD_BY_DAY.ambience.call!);
+  private readonly callAt = vec3();
   /** Your own sounds: centred, into the world (so they echo too). */
   private self: GainNode | null = null;
   /** Interface cues and the whistle: dry, into the interface bus. */
@@ -117,6 +124,17 @@ export class Sfx {
     private readonly query: OcclusionQuery,
     private readonly engine: AudioEngine,
   ) {}
+
+  /**
+   * Where the match is played (M33j: audio/soundscape.ts soundscapeOf, from the map and its lighting preset's night
+   * flag): its ambience, the ground footsteps read and the fires that crackle. Renders the map's own sounds now (they
+   * are kept for the page), so call it as the match loads, before play starts. The yard by day until it is called.
+   */
+  setScene(scene: Soundscape): void {
+    this.scene = scene;
+    this.calls = scene.ambience.call ? new AmbientCalls(scene.ambience.call) : null;
+    this.engine.prepare(scene);
+  }
 
   /**
    * Pauses all sound with the game (and resumes it). Paused, this match's outlets are muted too, so a volume slider's
@@ -247,7 +265,8 @@ export class Sfx {
     }
     this.updateMuffling(characters, localId);
     this.updateOut(characters, localId);
-    if (this.listenerPlaced && this.birds.due(this.simTime, this.listener, this.birdAt)) this.oneShot('ambience.bird', this.birdAt, AUDIO.levels.bird);
+    const call = this.scene.ambience.call;
+    if (call && this.listenerPlaced && this.calls!.due(this.simTime, this.listener, this.callAt)) this.oneShot(call.cue, this.callAt, call.level);
     this.foley.update(characters, (c, move) => this.foleyMove(c, move, localId));
   }
 
@@ -286,7 +305,7 @@ export class Sfx {
         const c = characterOf(e.characterId);
         if (!c) return;
         // A hi-cap rattles on a quiet walk where no step is heard (M17b); it plays at a step's level, yours turned down.
-        const cue: SoundCue = e.kind === 'rattle' ? 'magRattle' : cues.step(surfaceUnder(this.blocks, c.position), e.kind);
+        const cue: SoundCue = e.kind === 'rattle' ? 'magRattle' : cues.step(surfaceUnder(this.blocks, c.position, this.scene.ground), e.kind);
         // Your own steps always play: they're how you judge your own pace and noise.
         if (c.id === localId) {
           this.play(cue, this.self!, L.ownStep);
@@ -580,30 +599,59 @@ export class Sfx {
   }
 
   /**
-   * The yard's outdoor bed, from the first moment of play (audit CORE-34): two copies of the loop half a loop apart,
-   * panned apart for width, into the world (so the effects slider sets it and it's muffled with the rest while you're
-   * out). Stopped when the match is disposed.
+   * The ambience, from the first moment of play (audit CORE-34): each of its beds as two copies of its loop half a loop
+   * apart, panned apart for width, and each camp fire's crackle where the fire is (M33j), all into the world (so the
+   * effects slider sets them and they're muffled with the rest while you're out). Stopped when the match is disposed.
    */
   private startAmbience(): void {
+    if (this.bed.length > 0) return;
     const ctx = this.ctx!;
-    const buffer = this.bed.length === 0 ? this.engine.ambienceBed() : null;
-    if (!buffer) return;
-    const a = AUDIO.ambience;
-    const level = ctx.createGain();
-    level.gain.value = a.gain;
-    level.connect(this.world!);
-    this.graph.push(level);
-    for (const side of [-1, 1]) {
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      src.loop = true;
-      const pan = ctx.createStereoPanner();
-      pan.pan.value = side * a.width;
-      src.connect(pan).connect(level);
-      this.graph.push(src, pan);
-      src.start(ctx.currentTime, side > 0 ? buffer.duration / 2 : 0);
-      this.bed.push(src);
+    for (const bed of this.scene.ambience.beds) {
+      const buffer = this.engine.loop(bed.loop);
+      if (!buffer) return;
+      const level = ctx.createGain();
+      level.gain.value = bed.gain;
+      level.connect(this.world!);
+      this.graph.push(level);
+      for (const side of [-1, 1]) {
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        const pan = ctx.createStereoPanner();
+        pan.pan.value = side * bed.width;
+        src.connect(pan).connect(level);
+        this.graph.push(src, pan);
+        src.start(ctx.currentTime, side > 0 ? buffer.duration / 2 : 0);
+        this.bed.push(src);
+      }
     }
+    this.scene.fires.forEach((at, i) => this.startFire(at, i));
+  }
+
+  /**
+   * Fire `i`'s crackle at `at` (M33j): a looping source through an equal-power panner that fades it to nothing at
+   * FIRE_SOUND.maxDistance (a linear roll-off), each fire starting at another point of the loop so two never crackle in step.
+   */
+  private startFire(at: Vec3, i: number): void {
+    const buffer = this.engine.loop(FIRE_SOUND.loop);
+    if (!buffer) return;
+    const ctx = this.ctx!;
+    const panner = ctx.createPanner();
+    panner.panningModel = FIRE_SOUND.panningModel;
+    panner.distanceModel = 'linear';
+    panner.refDistance = FIRE_SOUND.refDistance;
+    panner.maxDistance = FIRE_SOUND.maxDistance;
+    panner.rolloffFactor = FIRE_SOUND.rolloff;
+    this.placePanner(panner, at, 0);
+    const level = ctx.createGain();
+    level.gain.value = FIRE_SOUND.gain;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    src.connect(level).connect(panner).connect(this.world!);
+    this.graph.push(src, level, panner);
+    src.start(ctx.currentTime, ((i * GOLDEN) % 1) * buffer.duration);
+    this.bed.push(src);
   }
 
   // ---- Channels and buses -------------------------------------------------------------------

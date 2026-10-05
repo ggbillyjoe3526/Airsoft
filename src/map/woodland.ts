@@ -538,6 +538,8 @@ export const WOODLAND: MapData = {
   foliage: bushes(LANE_POINTS, BLOCKS),
   lights: LIGHTS,
   ground: GROUND,
+  // The woods' sounds (M33j): wind in the pines, and by night insects, an owl and the camp fires crackling.
+  ambience: 'woods',
   // Extraction (M48): the run's own data, placed on this layout in woodlandExtraction.ts.
   extraction: woodlandExtraction({ onGround, spawnAt, westCamp: SPAWNS[0] }),
 };

@@ -1,9 +1,10 @@
-import { AUDIO, VOLUME, type VolumeChannel } from '../config/audio';
+import { AUDIO, type LoopId, VOLUME, type VolumeChannel } from '../config/audio';
 import { cues, SHOT_PROFILES, type SoundCue } from '../config/sounds';
-import { renderAmbienceBed } from './ambience';
+import { renderAmbienceBed, renderLoop } from './ambience';
 import { volumeGain, type Volumes } from './audioMix';
 import { seededRandom } from './dsp';
-import { SoundLibrary, suppressedCopies } from './soundBank';
+import { renderMapCue, SoundLibrary, suppressedCopies } from './soundBank';
+import type { Soundscape } from './soundscape';
 
 /** Lets an audio context's promise (resume, suspend, close) settle quietly: a refusal changes nothing we rely on. */
 export function settle(p: Promise<void>): void {
@@ -63,6 +64,8 @@ export class AudioEngine {
   private reverb: AudioBuffer | null = null;
   /** The yard's outdoor bed, a loop (audit CORE-34). */
   private ambience: AudioBuffer | null = null;
+  /** The other loops a map played (M33j: the woods' wind and insects, a fire's crackle), rendered when first needed. */
+  private readonly loops = new Map<LoopId, AudioBuffer>();
   /** Between the effects bus and its limiter: dips the world under a cue that must be read (audit CORE-30). */
   private ducker: GainNode | null = null;
   /** The audio-clock time the current dip lets go, and how deep it is (a gentler cue never lifts a deeper dip). */
@@ -178,6 +181,36 @@ export class AudioEngine {
   }
 
   /**
+   * Loop `id` (config/audio.ts AMBIENT_LOOPS): the yard's bed from the title screen's rendering, any other rendered the
+   * first time a map asks for it and kept for the page (prepare does it as the match loads). Null without a context.
+   */
+  loop(id: LoopId): AudioBuffer | null {
+    if (id === 'yard') return this.ambienceBed();
+    const ctx = this.context();
+    if (!ctx) return null;
+    let buf = this.loops.get(id);
+    if (!buf) {
+      const job = renderLoop(id, AUDIO.renderRate);
+      let r = job.next();
+      while (!r.done) r = job.next();
+      buf = toBuffer(ctx, r.value);
+      this.loops.set(id, buf);
+    }
+    return buf;
+  }
+
+  /**
+   * Renders what `scene` plays beyond the title screen's sounds (M33j: its map cues and loops), once per page, so a map
+   * that never uses them costs nothing and the match never waits on them mid-play. Call as the match loads.
+   */
+  prepare(scene: Pick<Soundscape, 'cues' | 'loops'>): void {
+    const ctx = this.context();
+    if (!ctx) return;
+    for (const cue of scene.cues) if (!this.buffers.has(cue)) this.buffers.set(cue, renderMapCue(cue, AUDIO.renderRate).map((v) => toBuffer(ctx, v)));
+    for (const id of scene.loops) if (id !== 'yard') this.loop(id);
+  }
+
+  /**
    * Dips the world (the effects bus, not the interface) under a cue that must be read (audit CORE-30): down to the
    * shape's depth, held, then let back. Two automation events on one gain, no per-frame work. While a dip is on, the
    * deeper of the two depths and the later of the two ends win.
@@ -289,6 +322,7 @@ export class AudioEngine {
     this.ctx = null;
     this.buses.clear();
     this.buffers.clear();
+    this.loops.clear();
     this.reverb = null;
     this.ambience = null;
     this.ducker = null;

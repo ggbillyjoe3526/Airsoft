@@ -1,6 +1,7 @@
 import { AUDIO } from '../config/audio';
 import { blockMaterial, TERRAIN_MATERIAL } from '../config/materials';
 import type { FloorSurface, ImpactMaterial } from '../config/sounds';
+import { groundAt, type GroundGrid } from '../map/groundSurfaces';
 import type { MapBlock } from '../map/mapTypes';
 import { surfaceHeightAt } from '../map/surfaces';
 import { type Terrain, terrainHeightAt } from '../map/terrain';
@@ -11,9 +12,11 @@ const UNDERFOOT_REACH = 0.35;
 
 /**
  * The surface under a character's feet at `feet`: the highest floor or ramp top within reach of them, so a floor
- * overhead or one storey down never counts (map/surfaces.ts). Concrete where nothing says otherwise.
+ * overhead or one storey down never counts (map/surfaces.ts). With none, on a map with a ground grid (M33j: the one the
+ * terrain is painted from, map/groundSurfaces.ts), the ground's surface there: O(1), allocation-free. Concrete where
+ * nothing says otherwise.
  */
-export function surfaceUnder(blocks: readonly MapBlock[], feet: Vec3): FloorSurface {
+export function surfaceUnder(blocks: readonly MapBlock[], feet: Vec3, ground: GroundGrid | null = null): FloorSurface {
   let best: MapBlock | undefined;
   let bestTop = Number.NEGATIVE_INFINITY;
   for (const b of blocks) {
@@ -22,7 +25,8 @@ export function surfaceUnder(blocks: readonly MapBlock[], feet: Vec3): FloorSurf
     best = b;
     bestTop = top;
   }
-  return best?.surface ?? 'concrete';
+  if (best) return best.surface ?? 'concrete';
+  return ground ? groundAt(ground, feet.x, feet.z) : 'concrete';
 }
 
 /** True if `p` is inside block `b` grown by `margin` on every side. */
