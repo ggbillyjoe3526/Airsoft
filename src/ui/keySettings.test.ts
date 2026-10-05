@@ -10,8 +10,8 @@ class Box extends FakeElement {
   override addEventListener(type: string, fn: (e: unknown) => void): void {
     if (type === 'click') this.clicks.push(fn);
   }
-  override click(): void {
-    for (const fn of this.clicks) fn({ detail: 1, stopPropagation() {} });
+  override click(detail = 1): void {
+    for (const fn of this.clicks) fn({ detail, stopPropagation() {} });
   }
 }
 
@@ -86,5 +86,80 @@ describe('the Key Bindings wheel listener (audit UI-14)', () => {
     expect(wheels()).toHaveLength(1);
     settings.dispose();
     expect(win.registered).toEqual([]);
+  });
+});
+
+describe('every way a waiting box can stop waiting takes the wheel listener off (QA, M64 UI-14)', () => {
+  let win: ReturnType<typeof fakeWindow>;
+  let boxes: Box[];
+  let resetButton: Box;
+  const wheels = (): Registration[] => win.registered.filter((r) => r.type === 'wheel');
+  const keyEvent = (code: string): object => ({ code, repeat: false, preventDefault() {}, stopImmediatePropagation() {} });
+
+  beforeEach(() => {
+    vi.stubGlobal('document', { createElement: (tag: string) => (tag === 'button' ? new Box(tag) : new FakeElement(tag)) });
+    win = fakeWindow();
+    const settings = new KeySettings(new KeyBindings(null));
+    const root = settings.root as unknown as FakeElement;
+    boxes = root.children[0]!.children.flatMap((row) => row.children[1]!.children) as Box[];
+    resetButton = root.children.find((child) => child.className === 'key-reset') as Box;
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('keeps exactly one listener when the wait moves from one box to another, and none after Escape', () => {
+    boxes[0]!.click();
+    boxes[3]!.click();
+    boxes[5]!.click();
+    expect(wheels()).toHaveLength(1);
+    win.fire('keydown', keyEvent('Escape'));
+    expect(wheels()).toEqual([]);
+  });
+
+  it('is gone once a key is bound, once a key is cleared with Backspace, and after Reset All', () => {
+    boxes[0]!.click();
+    win.fire('keydown', keyEvent('KeyJ'));
+    expect(wheels()).toEqual([]);
+    boxes[1]!.click();
+    win.fire('keydown', keyEvent('Backspace'));
+    expect(wheels()).toEqual([]);
+    boxes[2]!.click();
+    expect(wheels()).toHaveLength(1);
+    resetButton.click();
+    expect(wheels()).toEqual([]);
+  });
+
+  it('is gone after the quick second click of a double-click cancels the wait', () => {
+    boxes[0]!.click();
+    boxes[0]!.click(2);
+    expect(wheels()).toEqual([]);
+  });
+
+  it('is gone when the mouse is pressed anywhere but on the waiting box', () => {
+    vi.stubGlobal('Node', class {});
+    boxes[0]!.click();
+    expect(wheels()).toHaveLength(1);
+    win.fire('mousedown', { target: {}, button: 0, detail: 1, preventDefault() {}, stopPropagation() {} });
+    expect(wheels()).toEqual([]);
+  });
+
+  it('leaves a waiting box waiting when the wheel reports no movement, and when a key is refused', () => {
+    boxes[0]!.click();
+    const idle = { deltaY: 0, preventDefault: vi.fn(), stopImmediatePropagation: vi.fn() };
+    win.fire('wheel', idle);
+    expect(idle.preventDefault).not.toHaveBeenCalled();
+    expect(wheels()).toHaveLength(1);
+    win.fire('keydown', keyEvent('F5')); // a browser key: refused, the box keeps waiting
+    expect(wheels()).toHaveLength(1);
+  });
+
+  it('binds the opposite wheel direction on a later wait, with the listener back on for it', () => {
+    boxes[0]!.click();
+    win.fire('wheel', { deltaY: -100, preventDefault() {}, stopImmediatePropagation() {} });
+    expect(wheels()).toEqual([]);
+    boxes[2]!.click();
+    expect(wheels()).toHaveLength(1);
+    win.fire('wheel', { deltaY: 100, preventDefault() {}, stopImmediatePropagation() {} });
+    expect(boxes[2]!.textContent).toContain(new KeyBindings(null).describe([WHEEL_CODES.down]));
+    expect(wheels()).toEqual([]);
   });
 });

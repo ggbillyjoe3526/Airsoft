@@ -85,3 +85,95 @@ describe('the HUD reload bar (M64, audit UI-11)', () => {
     expect(fill.style.transitionDuration).toBe('0s');
   });
 });
+
+describe('the HUD reload bar through a cancelled, chained, paused and calm reload (QA, M64 UI-11)', () => {
+  let hud: Hud;
+  let bar: HudElement;
+  let fill: HudElement;
+  let clock = 0;
+  let log: string[];
+  let reduced = false;
+  const armament = createArmament(LOADOUT);
+  const reloadTime = armament.handling[0]!.reloadTime;
+  const frame = (reload: number, ms = 1000 / 60): void => {
+    clock += ms;
+    armament.reload = reload;
+    hud.update(armament, LOADOUT, true, 0, null, ms / 1000);
+  };
+
+  beforeEach(() => {
+    clock = 0;
+    reduced = false;
+    vi.stubGlobal('document', { createElement: (tag: string) => new HudElement(tag) });
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    const parent = new HudElement('div');
+    hud = new Hud(parent as unknown as HTMLElement, () => 'R', DEFAULT_CROSSHAIR);
+    bar = (parent.children[0] as HudElement).querySelector('.hud-reload');
+    fill = bar.firstElementChild!;
+    armament.reload = 0;
+    // The fill's writes in order, on top of the HudElement's own counting.
+    const counted = fill.style;
+    log = [];
+    fill.style = new Proxy(counted, {
+      set(target, property: string, value: string) {
+        log.push(`${property}=${value}`);
+        return Reflect.set(target, property, value);
+      },
+    });
+    vi.stubGlobal('getComputedStyle', () => {
+      log.push('flush');
+      return { transitionProperty: reduced ? 'none' : 'transform' };
+    });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('snaps back to empty when a reload is cut half way (a weapon switch, a death, the round ending), and stays there', () => {
+    for (let i = 0; i < 30; i++) frame(reloadTime - i / 60);
+    log.length = 0;
+    frame(0); // cut
+    expect(bar.classList.contains('active')).toBe(false);
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)']);
+    for (let i = 0; i < 120; i++) frame(0); // two seconds on: the old transition would be done by now
+    expect(log.length).toBe(2);
+    expect(fill.style.transform).toBe('scaleX(0)');
+  });
+
+  it('starts a reload begun right after a cancelled one from empty, not from where the first got to', () => {
+    for (let i = 0; i < 30; i++) frame(reloadTime - i / 60);
+    frame(0);
+    log.length = 0;
+    frame(reloadTime);
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)', 'flush', `transitionDuration=${reloadTime}s`, 'transform=scaleX(1)']);
+    expect(bar.classList.contains('active')).toBe(true);
+  });
+
+  it('starts a second reload that follows the first within one frame (no empty frame between) from empty too', () => {
+    for (let i = 0; i < 20; i++) frame(reloadTime - i / 60);
+    frame(reloadTime - 0.9 * reloadTime); // the first one nearly finished ...
+    log.length = 0;
+    frame(reloadTime); // ... the next is seen full again
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)', 'flush', `transitionDuration=${reloadTime}s`, 'transform=scaleX(1)']);
+  });
+
+  it('runs again from the reload\'s own progress when the match is paused mid-reload and carries on', () => {
+    for (let i = 0; i < 15; i++) frame(reloadTime - i / 60);
+    const held = reloadTime - 14 / 60;
+    log.length = 0;
+    frame(held, 30_000); // paused 30 s: the sim's reload does not move
+    expect(log).toEqual(['transitionDuration=0s', `transform=scaleX(${1 - held / reloadTime})`, 'flush', `transitionDuration=${held}s`, 'transform=scaleX(1)']);
+    log.length = 0;
+    frame(held - 1 / 60); // and the bar keeps pace after
+    expect(log).toEqual([]);
+  });
+
+  it('steps the reload bar per percent and starts no transition under Reduced motion', () => {
+    reduced = true;
+    for (let i = 0; i * 1000 < reloadTime * 60_000; i++) frame(Math.max(0.001, reloadTime - i / 60));
+    expect(log.some((entry) => entry.startsWith('transitionDuration=') && entry !== 'transitionDuration=0s')).toBe(false);
+    expect(log.filter((entry) => entry.startsWith('transform=')).length).toBeGreaterThan(20); // a step per percent, not one run
+    expect(log.filter((entry) => entry.startsWith('transform=')).length).toBeLessThanOrEqual(102);
+  });
+});

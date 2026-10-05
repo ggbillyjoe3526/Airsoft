@@ -95,3 +95,89 @@ describe('a progress fill on one CSS transition (M64, audit UI-11)', () => {
     });
   });
 });
+
+describe('a bar whose run is cut short, followed, or switched under it (QA, M64 UI-11)', () => {
+  it('snaps back to empty when the run is cancelled half way, and the cut transition never finishes', () => {
+    const { fill, log, time } = setUp();
+    fill.follow(0, 1.5);
+    time(600);
+    fill.follow(0.4, 0.9);
+    log.length = 0;
+    fill.hold(0); // a weapon switch, a death or a round end
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)']); // duration zeroed first, so the rewind is instant
+    time(5000);
+    fill.hold(0);
+    expect(log.length).toBe(2); // nothing re-armed it, and a rewound bar is not written again
+  });
+
+  it('starts the next run from empty when it follows the first with no frame between (the game restarted its progress)', () => {
+    const { fill, log, time } = setUp();
+    fill.follow(0.95, 0.07); // a reload one frame from its end ...
+    time(1000 / 60);
+    log.length = 0;
+    fill.follow(0.01, 1.5); // ... and the next one, begun inside the same frame's ticks
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.01)', 'flush', 'transitionDuration=1.5s', 'transform=scaleX(1)']);
+  });
+
+  it('starts from empty on a run begun after a hold, whatever the clock says', () => {
+    const { fill, log, time } = setUp();
+    fill.follow(0, 1);
+    time(400);
+    fill.hold(0);
+    time(900);
+    log.length = 0;
+    fill.follow(0, 1.2);
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0)', 'flush', 'transitionDuration=1.2s', 'transform=scaleX(1)']);
+  });
+
+  it('runs again from the game\'s progress after a pause of any length, not from where the transition got to', () => {
+    const { fill, log, time } = setUp();
+    fill.follow(0, 2);
+    time(1000);
+    fill.follow(0.5, 1); // paused here: the game's progress stops, the clock goes on
+    log.length = 0;
+    time(31_000);
+    fill.follow(0.5, 1);
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.5)', 'flush', 'transitionDuration=1s', 'transform=scaleX(1)']);
+    log.length = 0;
+    time(31_500);
+    fill.follow(0.75, 0.5); // and it keeps pace with the game after the pause
+    expect(log).toEqual([]);
+  });
+
+  it('settles a run Reduced motion took the transition from into steps, when the run begins again (a pause for the setting)', () => {
+    const calm = { on: false };
+    const log: string[] = [];
+    const el = new FakeElement('div');
+    el.style = new Proxy({} as Record<string, string>, {
+      set(target, property: string, value: string) {
+        log.push(`${property}=${value}`);
+        target[property] = value;
+        return true;
+      },
+    });
+    vi.stubGlobal('getComputedStyle', () => ({ transitionProperty: calm.on ? 'none' : 'transform' }));
+    let clock = 0;
+    const fill = new TimedFill(el as unknown as HTMLElement, () => clock);
+    fill.follow(0.2, 2);
+    expect(log.at(-1)).toBe('transform=scaleX(1)');
+    calm.on = true; // the Settings menu is open: the game is paused while the clock goes on
+    clock = 4000;
+    log.length = 0;
+    fill.follow(0.2, 2);
+    expect(log).toEqual(['transitionDuration=0s', 'transform=scaleX(0.2)']); // rewound, and no transition armed
+    log.length = 0;
+    clock = 4100;
+    fill.follow(0.2504, 1.9);
+    fill.follow(0.26, 1.85);
+    expect(log).toEqual(['transform=scaleX(0.25)', 'transform=scaleX(0.26)']);
+  });
+
+  it('clamps a fraction outside 0..1 and writes a valid scale', () => {
+    const { fill, log } = setUp();
+    fill.follow(-0.3, 1);
+    expect(log[1]).toBe('transform=scaleX(0)');
+    fill.hold(1.7);
+    expect(log.at(-1)).toBe('transform=scaleX(1)');
+  });
+});
