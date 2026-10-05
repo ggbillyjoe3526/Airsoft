@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping } from 'three';
-import { describe, expect, it, vi } from 'vitest';
-import { ATMOSPHERE, LIGHTING_PRESETS, TONE_MAPPING } from '../config/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, TONE_MAPPING } from '../config/render';
 import { DEPOT } from '../map/depot';
 import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
@@ -230,5 +230,134 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
     r.setLighting(LIGHTING_PRESETS.night);
     r.setToneMapping('aces');
     expect(look(r).exposure).toBeCloseTo(TONE_MAPPING.exposure.aces * LIGHTING_PRESETS.night.exposureScale);
+  });
+});
+
+/**
+ * A Renderer built by its own constructor over a stand-in WebGLRenderer and context (Node has no WebGL): only what
+ * render, warmShaders and the context events touch. The context counts its losses: a query made before the last one
+ * is dead, and a lost context offers no extension (as the WebGL spec says) and makes no query.
+ */
+function stubbedRenderer() {
+  const ext = { TIME_ELAPSED_EXT: 1, GPU_DISJOINT_EXT: 2 };
+  const ctx = {
+    lost: false,
+    losses: 0,
+    queriesMade: 0,
+    /** beginQuery on a query of a lost context (INVALID_OPERATION in a browser). */
+    deadBegins: 0,
+    begunOn: [] as number[],
+    QUERY_RESULT_AVAILABLE: 10,
+    QUERY_RESULT: 11,
+    getExtension: (name: string) => (!ctx.lost && name === 'EXT_disjoint_timer_query_webgl2' ? ext : null),
+    createQuery: () => (ctx.lost ? null : { id: ++ctx.queriesMade, losses: ctx.losses }),
+    deleteQuery: () => undefined,
+    beginQuery: (_t: number, q: { id: number; losses: number }) => {
+      if (ctx.lost || q.losses !== ctx.losses) ctx.deadBegins++;
+      ctx.begunOn.push(q.id);
+    },
+    endQuery: () => undefined,
+    getQueryParameter: (_q: unknown, p: number) => (p === 10 ? true : 2_000_000),
+    getParameter: () => false,
+  };
+  const calls: string[] = [];
+  const canvas = new EventTarget();
+  const target = { name: 'retro target' };
+  let renderTarget: unknown = null;
+  const gl = {
+    domElement: canvas,
+    info: { autoReset: true, reset: () => undefined },
+    shadowMap: { enabled: false },
+    autoClear: true,
+    toneMapping: THREE.NoToneMapping,
+    toneMappingExposure: 1,
+    getContext: () => ctx,
+    getPixelRatio: () => 1,
+    setPixelRatio: () => undefined,
+    setSize: () => undefined,
+    setRenderTarget: (t: unknown) => void (renderTarget = t),
+    clearDepth: () => undefined,
+    render: () => void calls.push('render'),
+    compile: (scene: THREE.Scene) => {
+      calls.push(`compile ${scene.name} into ${renderTarget === null ? 'the canvas' : (renderTarget as { name: string }).name} with ${scene.environment ? 'the environment' : 'none'}`);
+      return new Set();
+    },
+  };
+  vi.stubGlobal('window', { addEventListener: () => undefined, removeEventListener: () => undefined, devicePixelRatio: 1, innerWidth: 1280, innerHeight: 720 });
+  vi.spyOn(Renderer.prototype as unknown as { makeWebGL: () => unknown }, 'makeWebGL').mockReturnValue(gl);
+  const r = new Renderer({ appendChild: () => undefined, clientWidth: 1280, clientHeight: 720 } as unknown as HTMLElement, QUALITY.medium);
+  r.scene.name = 'world';
+  // The prefiltered sky, as the sheen hands it over (no PMREM without WebGL).
+  const environment = new THREE.Texture();
+  const fields = r as unknown as Record<string, unknown>;
+  fields.sheen = { texture: () => environment, forget: () => undefined, dispose: () => undefined };
+  return {
+    r,
+    ctx,
+    calls,
+    useRetro: () => void (fields.retro = { renderTarget: target, present: (g: typeof gl) => g.setRenderTarget(null) }),
+    target: () => renderTarget,
+    lose: () => {
+      ctx.lost = true;
+      ctx.losses++;
+      canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true }));
+    },
+    restore: () => {
+      ctx.lost = false;
+      canvas.dispatchEvent(new Event('webglcontextrestored'));
+    },
+  };
+}
+
+describe('the shader warm-up (M63, audit REN-06)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('compiles the world and the held replica once, under the environment and target the first frame draws with', () => {
+    const { r, calls } = stubbedRenderer();
+    const overlay = { scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() };
+    r.warmShaders(overlay);
+    // The environment is set first: a program compiled without it would be compiled again on the first frame.
+    expect(calls).toEqual(['compile world into the canvas with the environment', 'compile replica into the canvas with none']);
+    // Frames compile nothing themselves.
+    r.render(overlay);
+    r.render(overlay);
+    expect(calls.slice(2)).toEqual(['render', 'render', 'render', 'render']);
+  });
+
+  it('compiles into the retro filter’s target while the filter is on (tone mapping depends on the target), then gives the canvas back', () => {
+    const { r, calls, useRetro, target } = stubbedRenderer();
+    useRetro();
+    r.warmShaders();
+    expect(calls).toEqual(['compile world into retro target with the environment']);
+    expect(target()).toBeNull();
+  });
+});
+
+describe('the GPU timer across a lost context (M63, audit REN-07)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('times the restored context with a query of its own, never one of the lost context', () => {
+    const { r, ctx, lose, restore } = stubbedRenderer();
+    r.gpuTiming = true;
+    r.render();
+    r.render();
+    expect(ctx.queriesMade).toBe(1);
+    expect(r.gpuMs).toBe(2);
+    lose();
+    // A frame drawn while the context is gone (before play stops) makes a timer the lost context can't serve.
+    r.render();
+    restore();
+    for (let frame = 0; frame < 3; frame++) r.render();
+    expect(ctx.queriesMade).toBe(2);
+    expect(ctx.begunOn.at(-1)).toBe(2);
+    expect(ctx.deadBegins).toBe(0);
+    // Timing again: the overlay's GPU milliseconds come back.
+    expect(r.gpuMs).toBe(2);
   });
 });
