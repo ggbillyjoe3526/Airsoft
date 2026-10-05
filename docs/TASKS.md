@@ -17,7 +17,7 @@ acceptance:
   4. Neon Heights by Night lists its pools and signs: a lit avenue, atrium and shopfronts, dark stairwells and back rooms (about 40 m sight in the light, 25 m in the open, 15 m indoors in the dark; 10 m under trees).
   5. Balance guards hold by Night after the sight changes (each end 40-60 % in Elimination, attackers 40-60 % in A/D, under 1 round in 10 on time); Woodland's night tests still pass.
   6. Unit tests for the sign mesh, the pool gating and both sight rules; the e2e plays Neon Heights by Night.
-status: gates
+status: critic
 attempts: 0
 
 The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
