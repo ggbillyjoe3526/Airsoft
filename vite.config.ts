@@ -9,7 +9,7 @@ import { PRECOMPRESS, precompressedCopies } from './src/config/precompress.ts';
 
 /** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the
  * Pro guards on every map (M40) and the Extraction balance runs on every map (M46, M48) with them. */
-const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 'src/ai/proBalance.test.ts', 'src/ai/*Match.extraction*.test.ts'];
+const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 'src/ai/proBalance.test.ts', 'src/ai/*Match.extraction*.test.ts', 'src/ai/*Match.levels*.test.ts'];
 
 /** True on a CI runner (the workflow's runner sets CI); read without Node's types, which the project doesn't load. */
 const ON_CI = Boolean((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.CI);
