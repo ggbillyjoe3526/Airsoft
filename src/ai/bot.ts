@@ -11,6 +11,7 @@ import { createRng, type RngState, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { type AimState, createAim } from './aim';
 import { createHeldAngle, type HeldAngle } from './angles';
+import type { AngleFeatures } from './angleFeatures';
 import { type CoverBlock, type CoverSpot, createCoverSpot } from './cover';
 import type { SightConditions } from './perception';
 
@@ -191,6 +192,8 @@ export interface BotWorld {
   tallCover: readonly CoverBlock[];
   /** What hides people besides walls: the map's bushes (M33e) and its dark (M33g); see visiblePart. Absent: daylight, no bushes. */
   sight?: SightConditions;
+  /** The map's bushes, posts and stair tops a held angle can be (M40), worked out once when first asked for. */
+  angleFeatures(): AngleFeatures;
   body: BodyConfig;
   hits: HitConfig;
   loadout: readonly ReplicaConfig[];
