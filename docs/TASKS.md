@@ -15,5 +15,5 @@ acceptance:
   2. The reload, case-opening and count bars are written a few times per run, not once per percent (`hud`, `casePrompt`, `scoreboard`, `timedFill` tests); under Reduced motion (class or system setting) they step per percent, and they keep their colours in forced colours (`styleSheet.test.ts`).
   3. `projectMarker` never recomputes the camera's world matrix; `MatchPresentation.frame` does it once per frame.
   4. The Key Bindings wheel listener exists only while a key box waits, and is gone when binding ends, the screen hides or it is disposed.
-status: qa
+status: gates
 attempts: 0
