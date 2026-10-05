@@ -40,12 +40,27 @@ function needs(ambience: Ambience, fires: readonly Vec3[], ground: GroundGrid | 
 export const YARD_BY_DAY: Soundscape = { ambience: AMBIENCES.yard.day, ground: null, fires: [], ...needs(AMBIENCES.yard.day, [], null) };
 
 /**
+ * Each map's soundscapes worked out so far, by day and at night (M65, audit AUD-01): New game's spare time works out the
+ * picked field's ahead of Play (AudioEngine.prefetch) and the match takes the same one back, so Woodland's ground grid
+ * (30-50 ms) isn't built twice. Weakly held, like the maps under lighting (map/lightingChoice.ts).
+ */
+const worked = new WeakMap<MapData, { day?: Soundscape; night?: Soundscape }>();
+
+/**
  * The soundscape of `map` played by day or at night (`night`: the session's resolved lighting preset's flag,
- * LightingPreset.night). MapData.ambience absent is the yard; no ambience has birds by night.
+ * LightingPreset.night). MapData.ambience absent is the yard; no ambience has birds by night. The same map and flag give
+ * the same object each time.
  */
 export function soundscapeOf(map: MapData, night: boolean): Soundscape {
-  const ambience = AMBIENCES[map.ambience ?? 'yard'][night ? 'night' : 'day'];
-  const ground = map.terrain ? buildGroundGrid(map) : null;
-  const fires = night ? (map.lights ?? []).filter((l) => l.kind === 'fire').map((l) => l.position) : [];
-  return { ambience, ground, fires, ...needs(ambience, fires, ground) };
+  let held = worked.get(map);
+  if (!held) worked.set(map, (held = {}));
+  const when = night ? 'night' : 'day';
+  let scene = held[when];
+  if (!scene) {
+    const ambience = AMBIENCES[map.ambience ?? 'yard'][when];
+    const ground = map.terrain ? buildGroundGrid(map) : null;
+    const fires = night ? (map.lights ?? []).filter((l) => l.kind === 'fire').map((l) => l.position) : [];
+    held[when] = scene = { ambience, ground, fires, ...needs(ambience, fires, ground) };
+  }
+  return scene;
 }

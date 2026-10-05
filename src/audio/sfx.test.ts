@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AMBIENCES, AUDIO, matchOverBlastStart } from '../config/audio';
+import { AMBIENCES, AUDIO, type LoopId, matchOverBlastStart } from '../config/audio';
 import { SIM_DT } from '../config/sim';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import type { SoundCue } from '../config/sounds';
@@ -12,13 +12,13 @@ import { NEON_HEIGHTS } from '../map/neonHeights';
 import { terrainHeightAt } from '../map/terrain';
 import { WOODLAND } from '../map/woodland';
 import { FIRE_SOUND } from '../config/audio';
-import { AmbientCalls } from './ambience';
+import { AmbientCalls, renderLoop } from './ambience';
 import { soundscapeOf } from './soundscape';
 import { AudioEngine, type IdleScheduler } from './audioEngine';
 import { volumeGain } from './audioMix';
 import type { OcclusionQuery } from './occlusion';
 import { Sfx } from './sfx';
-import { renderSoundsGradually, SoundLibrary, suppressedCopies } from './soundBank';
+import { finish, MAP_SOUND_RENDERERS, type MapSoundRenderers, renderMapCue, renderMapCueGradually, renderSoundsGradually, SoundLibrary, suppressedCopies } from './soundBank';
 import { fitParts } from '../sim/armament';
 
 // ---- A minimal stand-in for the Web Audio API (records what Sfx builds and connects) --------------
@@ -1895,5 +1895,184 @@ describe('M53 QA: the far channel, the listener fallback and the seeded calls on
     };
     for (const seed of [0, 77, 4000000000]) expect(firstOwl(seed), `seed ${seed}`).toBe(expected(seed));
     expect(new Set([0, 77, 4000000000, 5, 90210].map(expected)).size).toBeGreaterThan(1);
+  });
+});
+
+// ---- M65, audit AUD-01: the picked field's own sounds render in New game's spare time ----------------------------------
+
+describe("M65 (audit AUD-01): a field's own sounds render in the title screen's spare time, not in the Play click", () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const RATE = AUDIO.renderRate;
+
+  /** The real renderers, counting how often each map cue and loop is begun. */
+  function counting(): { render: MapSoundRenderers; begun: Map<string, number> } {
+    const begun = new Map<string, number>();
+    const count = (id: string): void => void begun.set(id, (begun.get(id) ?? 0) + 1);
+    return {
+      begun,
+      render: {
+        cue: (cue, rate) => (count(cue), MAP_SOUND_RENDERERS.cue(cue, rate)),
+        loop: (id, rate) => (count(id), MAP_SOUND_RENDERERS.loop(id, rate)),
+      },
+    };
+  }
+
+  /** An engine whose spare moments come on demand (no time left in each: one step per moment), with a light title bank. */
+  function engineAhead(render: MapSoundRenderers): { engine: AudioEngine; spare: ReturnType<typeof manualIdle> } {
+    const spare = manualIdle(0);
+    const library = new SoundLibrary((rate) => renderSoundsGradually(rate, 1));
+    return { engine: new AudioEngine({ ...VOLUMES }, library, spare.idle, render), spare };
+  }
+
+  /** Gives spare moments until no more are asked for; how many it took. */
+  function runOut(spare: ReturnType<typeof manualIdle>): number {
+    let moments = 0;
+    for (; spare.waiting() > 0; moments++) spare.run();
+    return moments;
+  }
+
+  /** The field's own loops (the yard's bed is the title screen's). */
+  const ownLoops = (field: { loops: readonly LoopId[] }): LoopId[] => field.loops.filter((id) => id !== 'yard');
+
+  /** Where two renderings first differ, bit for bit (-1: nowhere; a length mismatch differs at the shorter's end). */
+  function firstDifference(a: readonly Float32Array[], b: readonly Float32Array[]): number {
+    if (a.length !== b.length) return 0;
+    let at = 0;
+    for (let k = 0; k < a.length; k++) {
+      const x = a[k]!;
+      const y = b[k]!;
+      if (x.length !== y.length) return at + Math.min(x.length, y.length);
+      for (let i = 0; i < x.length; i++) if (!Object.is(x[i], y[i])) return at + i;
+      at += x.length;
+    }
+    return -1;
+  }
+
+  /** The engine's samples of `field`'s sounds are exactly those rendered in one go at Play before M65. */
+  function expectSameSamples(engine: AudioEngine, field: ReturnType<typeof soundscapeOf>): void {
+    for (const cue of field.cues) expect(firstDifference(engine.cueBuffers().get(cue)!.map((b) => b.getChannelData(0)), renderMapCue(cue, RATE)), cue).toBe(-1);
+    for (const id of field.loops) if (id !== 'yard') expect(firstDifference([engine.loop(id)!.getChannelData(0)], [finish(renderLoop(id, RATE))]), id).toBe(-1);
+  }
+
+  it('renders a map cue a variant at a time with the same samples as in one go, whatever is rendered between its steps', () => {
+    const job = renderMapCueGradually('ambience.arcade', RATE);
+    const steps: Float32Array[][] = [];
+    let r = job.next();
+    for (; !r.done; r = job.next()) steps.push(renderMapCue('ambience.chime', RATE, 1));
+    expect(steps).toHaveLength(AUDIO.variants - 1);
+    expect(firstDifference(r.value, renderMapCue('ambience.arcade', RATE))).toBe(-1);
+  });
+
+  it("renders Woodland's own sounds once, in spare moments: Play then makes no buffer, and they are the same samples", () => {
+    const { render, begun } = counting();
+    const { engine, spare } = engineAhead(render);
+    const woods = soundscapeOf(WOODLAND, true);
+    // The match takes back the soundscape worked out ahead (its ground grid is built once).
+    expect(soundscapeOf(WOODLAND, true)).toBe(woods);
+    let workedOut = 0;
+    engine.prefetch(() => (workedOut++, woods));
+    // Nothing in the pick's click: the field, then its sounds, a step per spare moment.
+    expect(workedOut).toBe(0);
+    expect(begun.size).toBe(0);
+    const moments = runOut(spare);
+    expect(workedOut).toBe(1);
+    expect(moments).toBeGreaterThan(woods.cues.length * AUDIO.variants + ownLoops(woods).length);
+    const ctx = FakeContext.last;
+    const made = ctx.buffersMade;
+    engine.prepare(woods);
+    expect(ctx.buffersMade).toBe(made);
+    expect(begun.size).toBe(woods.cues.length + ownLoops(woods).length);
+    expect([...begun.values()].every((n) => n === 1)).toBe(true);
+    expectSameSamples(engine, woods);
+  });
+
+  it('finishes at Play what the spare time began, from where it was, with the same samples, and nothing twice', () => {
+    const { render, begun } = counting();
+    const { engine, spare } = engineAhead(render);
+    const city = soundscapeOf(NEON_HEIGHTS, true);
+    const [firstLoop] = ownLoops(city);
+    engine.prefetch(() => city);
+    // Into the first loop: the cues are done, that loop is a second in.
+    while (!begun.has(firstLoop!)) spare.run();
+    engine.prepare(city);
+    const ctx = FakeContext.last;
+    const made = ctx.buffersMade;
+    // The spare moments still asked for find nothing left.
+    runOut(spare);
+    expect(ctx.buffersMade).toBe(made);
+    expect(begun.size).toBe(city.cues.length + ownLoops(city).length);
+    expect([...begun.values()].every((n) => n === 1)).toBe(true);
+    expectSameSamples(engine, city);
+  });
+
+  it('follows a new pick: what both fields play carries on, the rest is let go of unless a match played it', () => {
+    const { render, begun } = counting();
+    const { engine, spare } = engineAhead(render);
+    const day = soundscapeOf(WOODLAND, false);
+    const night = soundscapeOf(WOODLAND, true);
+    expect(night.cues).toContain(day.cues[0]);
+    engine.prefetch(() => day);
+    spare.run(); // the field worked out
+    spare.run(); // its first cue's first variant
+    spare.run(); // and its second
+    engine.prefetch(() => night);
+    runOut(spare);
+    const ctx = FakeContext.last;
+    const made = ctx.buffersMade;
+    engine.prepare(night);
+    expect(ctx.buffersMade).toBe(made);
+    expect([...begun.values()].every((n) => n === 1)).toBe(true);
+    expectSameSamples(engine, night);
+
+    // Neon Heights picked after a Woodland match: Woodland's sounds stay (played, kept as before M65) ...
+    const city = soundscapeOf(NEON_HEIGHTS, false);
+    engine.prefetch(() => city);
+    runOut(spare);
+    // ... then Neon Heights by Night: the day's own sounds, never played, are let go of.
+    const cityNight = soundscapeOf(NEON_HEIGHTS, true);
+    const dayOnlyCue = city.cues.find((c) => !cityNight.cues.includes(c))!;
+    const dayOnlyLoop = ownLoops(city).find((id) => !cityNight.loops.includes(id))!;
+    engine.prefetch(() => cityNight);
+    runOut(spare);
+    expect(engine.cueBuffers().has(dayOnlyCue)).toBe(false);
+    for (const cue of night.cues) expect(engine.cueBuffers().has(cue)).toBe(true);
+    for (const cue of cityNight.cues) expect(engine.cueBuffers().has(cue)).toBe(true);
+    // A loop let go of is rendered again if a match asks for it later; a played one never is.
+    engine.loop(dayOnlyLoop);
+    expect(begun.get(dayOnlyLoop)).toBe(2);
+    for (const id of ownLoops(night)) engine.loop(id);
+    for (const id of ownLoops(night)) expect(begun.get(id)).toBe(1);
+  });
+
+  it('renders nothing ahead while a match is played, and carries on once it is paused', () => {
+    const { render, begun } = counting();
+    const { engine, spare } = engineAhead(render);
+    engine.context();
+    engine.setRunning(true);
+    engine.prefetch(() => soundscapeOf(NEON_HEIGHTS, true));
+    runOut(spare);
+    expect(begun.size).toBe(0);
+    engine.setRunning(false);
+    expect(spare.waiting()).toBe(1);
+    runOut(spare);
+    expect(begun.size).toBeGreaterThan(0);
+  });
+
+  it('makes no context and renders nothing ahead where the browser has no Web Audio', () => {
+    vi.stubGlobal('AudioContext', undefined);
+    const { render, begun } = counting();
+    const { engine, spare } = engineAhead(render);
+    engine.prefetch(() => soundscapeOf(WOODLAND, true));
+    expect(spare.waiting()).toBe(0);
+    expect(begun.size).toBe(0);
   });
 });
