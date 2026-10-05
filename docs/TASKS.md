@@ -17,9 +17,9 @@ perf: required
 touches: src/map/, src/ai/, src/render/exitRenderer.ts, src/render/caseRenderer.ts, src/render/matchPresentation.ts, pipeline/perf-run.mjs, vite.config.ts
 acceptance:
   1. Each map's extraction block (insertions, exits, cases, regens, opponent starts), Woodland 15 min with 4 / 5 / 6 opponents, the city 10 min.
-  2. The data tests and balance runs of M45 and M46 pass on each.
+  2. The data tests and balance runs of M45 and M46 pass on each; on Woodland the Normal / Hard / Pro order is left to the Woodland balance pass (amended 2026-10-05 by the planning thread, DECISIONS M48).
 status: building
-attempts: 1
+attempts: 2
 
 ## M49 · Supply weekends and dated events
 tier: ui

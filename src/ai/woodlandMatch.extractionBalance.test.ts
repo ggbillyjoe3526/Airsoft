@@ -7,9 +7,9 @@ import { measureRuns, type RunMeasure } from './extractionRunSupport';
 /**
  * Extraction's balance on Woodland (M48), measured as on Depot (depotMatch.extractionBalance.test.ts): whole runs at
  * night, a bot runner by RUNNER_PLAN with two Normal teammates, against the home team at each level (4 / 5 / 6 of them
- * with a trio, three more than the squad). Measured 2026-10-05 over these seeds (DECISIONS M48). By night every level
- * sees only as far as the light lets it (map/nightSight.ts), so aim and reactions count for less than by day: Normal,
- * Hard and Pro come out close together (KNOWN_ISSUES), and only Easy is checked to be easier than each.
+ * with a trio, three more than the squad). Measured 2026-10-05 over these seeds (DECISIONS M48). Normal already beats
+ * the squad here, by day as by night, so Normal, Hard and Pro come out close together (KNOWN_ISSUES): only Easy is
+ * checked to be easier than each, and their order is left to the Woodland balance pass (M48 acceptance 2, amended).
  */
 const SEEDS = 48;
 const BANDS: Readonly<Record<Difficulty, { extract: readonly [number, number]; fcPerMinute: readonly [number, number] }>> = {
