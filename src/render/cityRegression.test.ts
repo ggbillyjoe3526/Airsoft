@@ -258,20 +258,21 @@ const PINNED = {
     "map-sandbag v288 i432 415cfe45/ef273595/28884735",
     "map-steelPlate v228 i336 64973f35/a3381b15/05c3e021",
   ],
+  // M55 (audit SIM-05): bark and stone re-pinned for the log and boulder moved out of what they stood in; the rest as before.
   woodlandDetail: [
-    "map-bark v24385 i57600 aecb788e/a6d10b3c/8b0c1934",
+    "map-bark v24385 i57600 1e3094ac/4141e084/1a4f2ef0",
     "map-canopy v12360 i0 fdc198ad/811c9dc5/32f7476c",
     "map-foliage v16800 i0 2c532a15/811c9dc5/5d0ab568",
     "map-planks v6500 i12600 c6e31599/7bb3ff75/ed848380",
-    "map-stone v12744 i13500 7676ede2/7ded4865/3c2f88af",
+    "map-stone v12744 i13500 2dde3ac6/ce9f0001/348f1a5a",
     "map-terrain v9801 i57600 70aec22c/006bce1d/b7c02c31",
   ],
   woodlandPlain: [
-    "map-bark v16737 i43260 52d8fdf2/a4df8806/8a343043",
+    "map-bark v16737 i43260 520da3d0/c0d34986/bdef9dd7",
     "map-canopy v12360 i0 fdc198ad/811c9dc5/32f7476c",
     "map-foliage v16800 i0 2c532a15/811c9dc5/5d0ab568",
     "map-planks v1600 i3000 f2129c69/f369fb4d/d1932a6d",
-    "map-stone v11880 i11880 e28ef356/a79d1799/08335fb3",
+    "map-stone v11880 i11880 6fb7b422/37285595/af931b4d",
     "map-terrain v9801 i57600 70aec22c/006bce1d/b7c02c31",
   ],
 } as const;
