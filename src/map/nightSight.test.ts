@@ -54,6 +54,11 @@ describe('night sight on floors (M34e)', () => {
     expect(nightSightRange(field, vec3(5, 3.25, 0))).toBe(NIGHT_SIGHT.open); // on the slab, open sky
   });
 
+  it('counts an underside exactly at roofFrom over the feet (heights kept in full precision)', () => {
+    const map: MapData = { ...OPEN_FIELD, blocks: [...OPEN_FIELD.blocks, { kind: 'floor', center: vec3(0, NIGHT_SIGHT.roofFrom + 0.15, 0), size: vec3(4, 0.3, 4) }], night: true };
+    expect(underRoof(buildNightField(map, NIGHT_SIGHT)!, vec3(0, 0, 0))).toBe(true);
+  });
+
   it('takes no roof from a deck far overhead, a tree, the floor underfoot or off the map', () => {
     const field = buildNightField(STACKED, NIGHT_SIGHT)!;
     expect(underRoof(field, vec3(22, 0, 0))).toBe(false); // 12 m up: past roofTo

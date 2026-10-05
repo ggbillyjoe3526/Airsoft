@@ -59,13 +59,13 @@ export interface NightField {
   /** 1 where the cell's centre is under the trees, row by row along z. */
   canopy: Uint8Array;
   /** Each pool's floor height (M34e): the walkable surface under its light (NaN where there is none). */
-  lightFloors: Float32Array;
+  lightFloors: Float64Array;
   /**
    * The undersides over each cell's centre (M34e), lowest first: `roofs[roofStart[c] .. roofStart[c + 1])` for cell c,
    * from every block but trees, whose bottom is above the lowest walkable surface there.
    */
   roofStart: Uint32Array;
-  roofs: Float32Array;
+  roofs: Float64Array;
 }
 
 /**
@@ -99,8 +99,8 @@ export function buildNightField(map: MapData, cfg: NightSightConfig): NightField
     z0 = Math.min(z0, b.center.z - b.size.z / 2);
     z1 = Math.max(z1, b.center.z + b.size.z / 2);
   }
-  const lightFloors = Float32Array.from(lights, (l) => groundUnder(map, l.position.x, l.position.z, l.position.y) ?? Number.NaN);
-  if (!Number.isFinite(x0)) return { sight: cfg, lights, minX: 0, minZ: 0, cell: cfg.canopyCell, cols: 0, rows: 0, canopy: new Uint8Array(0), lightFloors, roofStart: new Uint32Array(1), roofs: new Float32Array(0) };
+  const lightFloors = Float64Array.from(lights, (l) => groundUnder(map, l.position.x, l.position.z, l.position.y) ?? Number.NaN);
+  if (!Number.isFinite(x0)) return { sight: cfg, lights, minX: 0, minZ: 0, cell: cfg.canopyCell, cols: 0, rows: 0, canopy: new Uint8Array(0), lightFloors, roofStart: new Uint32Array(1), roofs: new Float64Array(0) };
   const cell = cfg.canopyCell;
   const cols = Math.max(1, Math.ceil((x1 - x0) / cell));
   const rows = Math.max(1, Math.ceil((z1 - z0) / cell));
@@ -124,7 +124,7 @@ export function buildNightField(map: MapData, cfg: NightSightConfig): NightField
 }
 
 /** The undersides over each cell's centre (NightField.roofs): every block but trees, lowest first. */
-function buildRoofs(map: MapData, x0: number, z0: number, cell: number, cols: number, rows: number): { roofStart: Uint32Array; roofs: Float32Array } {
+function buildRoofs(map: MapData, x0: number, z0: number, cell: number, cols: number, rows: number): { roofStart: Uint32Array; roofs: Float64Array } {
   const roofStart = new Uint32Array(cols * rows + 1);
   const all: number[] = [];
   const here: number[] = [];
@@ -144,7 +144,7 @@ function buildRoofs(map: MapData, x0: number, z0: number, cell: number, cols: nu
     }
   }
   roofStart[cols * rows] = all.length;
-  return { roofStart, roofs: Float32Array.from(all) };
+  return { roofStart, roofs: Float64Array.from(all) };
 }
 
 /**
