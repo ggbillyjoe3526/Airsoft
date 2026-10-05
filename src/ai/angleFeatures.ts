@@ -4,9 +4,10 @@ import { canStep, type NavGrid, stepNode } from '../nav/navGrid';
 import type { CoverBlock } from './cover';
 
 /**
- * What a held angle can be besides a wall's edge (M40): the map's own data and nav, worked out once per match (on the
- * first Pro fan, BotWorld.angleFeatures), never where anyone stands. Stair and ramp tops on layered floors, the narrow
- * tall blocks a tree gap is made of, and the bushes tall enough to hide someone (findHeldAngles reads all three).
+ * What a held angle can be besides a wall's edge (M40): the map's own data and nav, worked out once per match (as it
+ * loads, when a team holds angles; BotWorld.angleFeatures), never where anyone stands. Stair and ramp tops on layered
+ * floors, the narrow tall blocks a tree gap is made of, and the bushes tall enough to hide someone (findHeldAngles
+ * reads all three).
  */
 export interface AngleFeatures {
   nav: NavGrid;
