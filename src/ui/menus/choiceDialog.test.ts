@@ -221,4 +221,42 @@ describe('ChoiceDialog notes (M49)', () => {
     d.setNote('hard', null);
     expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', '', false]);
   });
+
+  it('hides the note with its option while dev content is off, and brings it back with the option', () => {
+    const d = new ChoiceDialog<Id>('Difficulty', OPTIONS, 'normal', 'difficulty' as never, () => {});
+    d.setNote('hard', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.');
+    const hard = entries(d).find((e) => e.name === 'Hard')!;
+    // The note sits inside the option's button, so the button's own hidden flag is what keeps it off screen.
+    expect(hard.button.hidden).toBe(true);
+    expect(hard.button.disabled).toBe(true);
+    d.setDevContent(true);
+    expect(hard.button.hidden).toBe(false);
+    expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.', true]);
+    d.setDevContent(false);
+    expect(hard.button.hidden).toBe(true);
+  });
+
+  it('keeps a note through a limit and a dev-content change, replaces it on the next setNote, and ignores an id it does not have', () => {
+    const d = new ChoiceDialog<Id>('Difficulty', OPTIONS, 'normal', 'difficulty' as never, () => {});
+    d.setDevContent(true);
+    d.setNote('hard', 'first');
+    d.limit((id) => id !== 'easy');
+    d.setDevContent(false);
+    d.setDevContent(true);
+    expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', 'first', true]);
+    d.setNote('hard', 'second');
+    expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', 'second', true]);
+    expect(() => d.setNote('nope' as Id, 'x')).not.toThrow();
+    // A note on one option leaves the others' notes alone.
+    expect(notes(d).filter(([, , showing]) => showing).map(([name]) => name)).toEqual(['Hard']);
+  });
+
+  it('does not change what is picked or what the dialog plays', () => {
+    const picked: Id[] = [];
+    const d = new ChoiceDialog<Id>('Difficulty', OPTIONS, 'normal', 'difficulty' as never, (id) => picked.push(id));
+    d.setNote('normal', 'a line');
+    d.setNote('normal', null);
+    expect(d.value).toBe('normal');
+    expect(picked).toEqual([]);
+  });
 });
