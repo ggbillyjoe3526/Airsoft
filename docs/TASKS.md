@@ -16,4 +16,4 @@ acceptance:
   3. `projectMarker` never recomputes the camera's world matrix; `MatchPresentation.frame` does it once per frame.
   4. The Key Bindings wheel listener exists only while a key box waits, and is gone when binding ends, the screen hides or it is disposed.
 status: gates
-attempts: 0
+attempts: 1
