@@ -39,7 +39,7 @@ acceptance:
   2. From halfway (Normal) hunters push to where the squad was last seen or heard: the bots' first push behaviour.
   3. Bot teammates take cover facing outwards while you open a case.
   4. Headless balance runs: extract rate and FC a minute per difficulty within bands, guarded by a test.
-status: open
+status: building
 attempts: 0
 
 ## M47 · Extraction: pay and records

@@ -9,7 +9,7 @@ import { characterHitVolume, createHitVolume, type HitVolume, rayCharacter } fro
 import { type Vec3, vec3, wrapAngle } from '../sim/vec';
 import { aimErrorSize, lookAngles, stepAim } from './aim';
 import { findHeldAngles, type HeldAngle } from './angles';
-import { type Bot, type BotWorld, pick, threatInMind } from './bot';
+import { type Bot, type BotWorld, holdYaw, pick, threatInMind } from './bot';
 import { hasReacted } from './botSenses';
 import { bodyPoint, lineClear } from './perception';
 
@@ -72,14 +72,16 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
   } else if (walking && b.careful && b.mode === 'advance' && slice(b, w, heldAngleLook(b, w, eye, walkYaw, false), cmd)) {
     // Slicing (M38): walking near the enemy, aim at the corner ahead someone could step out of, not where it walks,
     // and lean out past a near one to see round it a slice at a time.
-  } else if (walking && !(b.mode === 'advance' && !b.hunting && Math.cos(walkYaw - enemyYaw) < 0)) {
+  } else if (walking && !(b.mode === 'advance' && !b.hunting && b.role === 'none' && Math.cos(walkYaw - enemyYaw) < 0)) {
+    // (A run's home team, M46, walks its rounds facing the way it goes: there is no enemy side to keep facing.)
     look.yaw = walkYaw;
   } else {
     // Holding a point, or walking back along the lane: face the enemy side rather than turn our back. Holding, sweep
-    // the view slowly across it (AI-02) rather than stare one way.
-    look.yaw = enemyYaw;
+    // the view slowly across it (AI-02) rather than stare one way. A guard (M46) faces the way into its case.
+    const facing = holdYaw(b, w);
+    look.yaw = facing;
     // Pro (M37) aims at the corners someone would come round instead of sweeping.
-    if (b.holding && !(b.skill.holdsAngles && heldAngleLook(b, w, eye, enemyYaw, false))) {
+    if (b.holding && !(b.skill.holdsAngles && heldAngleLook(b, w, eye, facing, false))) {
       look.yaw += Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
     }
   }
