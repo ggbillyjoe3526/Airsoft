@@ -5,6 +5,7 @@ import { vec3 } from '../sim/vec';
 import { DEPOT } from './depot';
 import type { MapBlock, MapData } from './mapTypes';
 import { buildNightField, inLight, nightSightRange, underCanopy, underRoof } from './nightSight';
+import { terrainHeightAt, terrainMaxX, terrainMaxZ } from './terrain';
 import { WOODLAND } from './woodland';
 
 const trunk = (x: number, z: number): MapBlock => ({ kind: 'tree', center: vec3(x, 4.5, z), size: vec3(0.5, 9, 0.5) });
@@ -36,6 +37,25 @@ const STACKED: MapData = {
 };
 
 describe('night sight on floors (M34e)', () => {
+  it('lights the whole ground of every Woodland pool, uphill and downhill of the light (on terrain the floor is the ground underfoot)', () => {
+    const field = buildNightField(WOODLAND, NIGHT_SIGHT)!;
+    const t = WOODLAND.terrain!;
+    for (const [i, l] of WOODLAND.lights!.entries()) {
+      let samples = 0;
+      for (let dx = -l.radius; dx <= l.radius; dx += 0.25) {
+        for (let dz = -l.radius; dz <= l.radius; dz += 0.25) {
+          if (dx * dx + dz * dz > l.radius * l.radius * 0.999) continue;
+          const x = l.position.x + dx;
+          const z = l.position.z + dz;
+          if (x < t.minX || z < t.minZ || x > terrainMaxX(t) || z > terrainMaxZ(t)) continue;
+          samples++;
+          expect(inLight(field, vec3(x, terrainHeightAt(t, x, z)!, z)), `pool ${i} at (${x}, ${z})`).toBe(true);
+        }
+      }
+      expect(samples, `pool ${i}`).toBeGreaterThan(100);
+    }
+  });
+
   it('lights only the floor a pool hangs over, not the one above or below', () => {
     const field = buildNightField(STACKED, NIGHT_SIGHT)!;
     expect(inLight(field, vec3(0, 0, 0))).toBe(true);

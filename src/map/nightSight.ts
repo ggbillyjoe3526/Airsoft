@@ -1,7 +1,7 @@
 import type { Vec3 } from '../sim/vec';
 import type { MapData } from './mapTypes';
 import { surfaceHeightAt } from './surfaces';
-import { terrainHeightAt, terrainMaxX, terrainMaxZ } from './terrain';
+import { type Terrain, terrainHeightAt, terrainMaxX, terrainMaxZ } from './terrain';
 
 /**
  * A pool of light on a night field (M33g): a camp fire or a lantern at `position`, lighting the ground within `radius`
@@ -58,8 +58,13 @@ export interface NightField {
   rows: number;
   /** 1 where the cell's centre is under the trees, row by row along z. */
   canopy: Uint8Array;
-  /** Each pool's floor height (M34e): the walkable surface under its light (NaN where there is none). */
+  /**
+   * Each pool's floor height (M34e): the walkable surface under its light (NaN where there is none). On a map with
+   * terrain the ground under the feet is the floor instead (`terrain`), so a pool lights the whole of a slope.
+   */
   lightFloors: Float64Array;
+  /** The map's terrain, if it has one: its ground is every pool's floor (as groundUnder reads it). */
+  terrain?: Terrain | undefined;
   /**
    * The undersides over each cell's centre (M34e), lowest first: `roofs[roofStart[c] .. roofStart[c + 1])` for cell c,
    * from every block but trees, whose bottom is above the lowest walkable surface there.
@@ -74,14 +79,18 @@ export interface NightField {
  * there is none. (M33f; here since M34e, as night sight reads it too.)
  */
 export function groundUnder(map: MapData, x: number, z: number, below: number): number | undefined {
-  const t = map.terrain;
-  if (t) return terrainHeightAt(t, Math.min(terrainMaxX(t), Math.max(t.minX, x)), Math.min(terrainMaxZ(t), Math.max(t.minZ, z)));
+  if (map.terrain) return terrainGround(map.terrain, x, z);
   let best: number | undefined;
   for (const b of map.blocks) {
     const h = surfaceHeightAt(b, x, z);
     if (h !== undefined && h <= below && (best === undefined || h > best)) best = h;
   }
   return best;
+}
+
+/** The terrain's height at (x, z), past its edge the edge's. */
+function terrainGround(t: Terrain, x: number, z: number): number | undefined {
+  return terrainHeightAt(t, Math.min(terrainMaxX(t), Math.max(t.minX, x)), Math.min(terrainMaxZ(t), Math.max(t.minZ, z)));
 }
 
 /** The night field of `map`, or null for a daylight map. Tree trunks are its blocks of kind `tree`. */
@@ -100,7 +109,7 @@ export function buildNightField(map: MapData, cfg: NightSightConfig): NightField
     z1 = Math.max(z1, b.center.z + b.size.z / 2);
   }
   const lightFloors = Float64Array.from(lights, (l) => groundUnder(map, l.position.x, l.position.z, l.position.y) ?? Number.NaN);
-  if (!Number.isFinite(x0)) return { sight: cfg, lights, minX: 0, minZ: 0, cell: cfg.canopyCell, cols: 0, rows: 0, canopy: new Uint8Array(0), lightFloors, roofStart: new Uint32Array(1), roofs: new Float64Array(0) };
+  if (!Number.isFinite(x0)) return { sight: cfg, lights, minX: 0, minZ: 0, cell: cfg.canopyCell, cols: 0, rows: 0, canopy: new Uint8Array(0), lightFloors, roofStart: new Uint32Array(1), roofs: new Float64Array(0), terrain: map.terrain };
   const cell = cfg.canopyCell;
   const cols = Math.max(1, Math.ceil((x1 - x0) / cell));
   const rows = Math.max(1, Math.ceil((z1 - z0) / cell));
@@ -120,7 +129,7 @@ export function buildNightField(map: MapData, cfg: NightSightConfig): NightField
     }
   }
   const { roofStart, roofs } = buildRoofs(map, x0, z0, cell, cols, rows);
-  return { sight: cfg, lights, minX: x0, minZ: z0, cell, cols, rows, canopy, lightFloors, roofStart, roofs };
+  return { sight: cfg, lights, minX: x0, minZ: z0, cell, cols, rows, canopy, lightFloors, roofStart, roofs, terrain: map.terrain };
 }
 
 /** The undersides over each cell's centre (NightField.roofs): every block but trees, lowest first. */
@@ -149,7 +158,8 @@ function buildRoofs(map: MapData, x0: number, z0: number, cell: number, cols: nu
 
 /**
  * Whether `p` (feet) stands in one of the light pools: within the pool's radius across, and on the floor it lights
- * (M34e: from `poolBelow` under that floor to `poolAbove` over it), not on a floor above or below.
+ * (M34e: from `poolBelow` under that floor to `poolAbove` over it), not on a floor above or below. On terrain the floor is
+ * the ground under the feet, as the renderer lights it.
  */
 export function inLight(field: NightField, p: Vec3): boolean {
   for (let k = 0; k < field.lights.length; k++) {
@@ -157,7 +167,7 @@ export function inLight(field: NightField, p: Vec3): boolean {
     const dx = p.x - l.position.x;
     const dz = p.z - l.position.z;
     if (dx * dx + dz * dz > l.radius * l.radius) continue;
-    const floor = field.lightFloors[k]!;
+    const floor = field.terrain ? (terrainGround(field.terrain, p.x, p.z) ?? Number.NaN) : field.lightFloors[k]!;
     if (Number.isNaN(floor) || (p.y >= floor - field.sight.poolBelow && p.y <= floor + field.sight.poolAbove)) return true;
   }
   return false;

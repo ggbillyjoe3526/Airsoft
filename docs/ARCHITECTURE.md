@@ -353,5 +353,5 @@ request. Each line names where it lives and what pins it.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
   are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
   time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
-  `extraction` (M44 adds its `cases`). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
+  `extraction` (M44 adds its `cases`), M34e's `signs` (neon signs and lit windows, presentation only). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
   `map/extractionData.test.ts`.
