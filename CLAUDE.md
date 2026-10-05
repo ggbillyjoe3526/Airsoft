@@ -115,9 +115,9 @@ Detailed plan and build status: `docs/ROADMAP.md`.
 v0.1 is the core game with strong foundations (owner, 2026-10-01): two replicas (AEG, gas pistol), Depot,
 Elimination and Attack / Defend.
 
-1. **Phase 2 — Core gameplay (alpha, ships as `v0.1-alpha.2`):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, the Attack / Defend objective mode, all on Depot.
-2. **Phase 3 — Core foundations (alpha, `v0.1-alpha.3`):** leaning (Q / E peek), magazines and meaningful reloads (limited ammunition), a BB physics pass, movement and positioning over raw weapon stats, the audit fixes and elevation support (ramps, raised floors).
-3. **Phase 4 — Feel, presentation and onboarding (alpha):** weapon handling from the owner's `v0.1-alpha.3` playtest (fire modes, faster reloads, crouch toggle, steadier aim when still, optics as accessories with aiming down sights), a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), the Loadout (owner, 2026-10-03: primary and secondary replica, BB weight, hop-up, optics, grips, magazines), an audio rework, comfort, accessibility and browser basics (owner, 2026-10-03: invert mouse, reduced motion, aim and sprint toggles, colour-blind options, sound cues, pause on a hidden tab, fullscreen), match info (hit feed, teammate markers, scoreboard, end-of-match summary, local records, crosshair options), custom matches (rounds, round time, team size, teammate and opponent difficulty, a ricochets setting off by default), a practice range, three squad orders for bot teammates, art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
+1. **Phase 2 — Core gameplay (alpha, ships as 0.1 Dev 2):** controls, footsteps and sound, reload animations, hit reactions, smarter bots, the Attack / Defend objective mode, all on Depot.
+2. **Phase 3 — Core foundations (alpha, 0.1 Dev 3):** leaning (Q / E peek), magazines and meaningful reloads (limited ammunition), a BB physics pass, movement and positioning over raw weapon stats, the audit fixes and elevation support (ramps, raised floors).
+3. **Phase 4 — Feel, presentation and onboarding (alpha):** weapon handling from the owner's 0.1 Dev 3 playtest (fire modes, faster reloads, crouch toggle, steadier aim when still, optics as accessories with aiming down sights), a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), the Loadout (owner, 2026-10-03: primary and secondary replica, BB weight, hop-up, optics, grips, magazines), an audio rework, comfort, accessibility and browser basics (owner, 2026-10-03: invert mouse, reduced motion, aim and sprint toggles, colour-blind options, sound cues, pause on a hidden tab, fullscreen), match info (hit feed, teammate markers, scoreboard, end-of-match summary, local records, crosshair options), custom matches (rounds, round time, team size, teammate and opponent difficulty, a ricochets setting off by default), a practice range, three squad orders for bot teammates, art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
 4. **Beta (when the owner calls the game feature complete):** optimisation, final balance and tuning, bug fixing, stability, UX/QoL and polish.
 
 **After v0.1 (later versions, proposed in `docs/ROADMAP.md`):** more modes (TDM, Capture the Flag,
@@ -132,20 +132,22 @@ performance, stability, UX/QoL, polish and final tuning are beta. During alpha, 
 
 ### Versioning (authoritative policy)
 
-The number describes the product; an `-alpha`/`-beta` suffix describes its development state. Never move to
-`v0.2` just because a phase ends, time passes or small improvements pile up.
+The number describes the product; a Dev or Beta stage describes its development state. Never move to
+0.2 just because a phase ends, time passes or small improvements pile up.
 
-| Version | Meaning |
+| Version (git tag) | Meaning |
 |---|---|
-| `v0.1-alpha`, `v0.1-alpha.2`, `v0.1-alpha.3` … | **Alpha**: building the game. Systems and content can be added, gameplay can change a lot, breaking changes are fine, not feature complete. Each build number (`.2`, `.3`) is a full alpha release. In-between playtests use plain commits, never a tag. |
-| `v0.1-beta`, `v0.1-beta.2`, `v0.1-beta.3` … | **Beta**: starts when the owner calls the planned game feature complete. Bug fixes, balance, performance, stability, UX/QoL, polish, final tuning; no major new systems unless the owner approves. Open-ended number of builds. |
-| `v0.1` | First public release of the completed initial game, when the owner considers it a stable public product (not when a phase ends). |
-| `v0.1.1`, `v0.1.2` … | Fixes, performance, balance, small UI/UX or accessibility improvements, minor tuning, small content additions, maintenance. |
-| `v0.2`, `v0.3` … (each with `.x` maintenance) | A substantially expanded or evolved product: major new systems or modes, a large content expansion across systems, a core-loop redesign. No feature-count threshold; contents are not predefined. |
-| `v1.0` | The release the owner considers fully mature and stable. |
+| 0.1 Dev 1, 0.1 Dev 2, 0.1 Dev 3 … (`0.1-dev.1`, `0.1-dev.2` …) | **Dev** (called Alpha until 2026-10-05): building the game. Systems and content can be added, gameplay can change a lot, breaking changes are fine, not feature complete. Each build number (`.2`, `.3`) is a full Dev release. In-between playtests use plain commits, never a tag. |
+| 0.1 Beta 1, 0.1 Beta 2, 0.1 Beta 3 … (`0.1-beta.1`, `0.1-beta.2` …) | **Beta**: starts when the owner calls the planned game feature complete. Bug fixes, balance, performance, stability, UX/QoL, polish, final tuning; no major new systems unless the owner approves. Open-ended number of builds. |
+| 0.1.0 (`0.1.0`) | First public release of the completed initial game, when the owner considers it a stable public product (not when a phase ends). |
+| 0.1.1, 0.1.2 … (`0.1.1`, `0.1.2` …) | Fixes, performance, balance, small UI/UX or accessibility improvements, minor tuning, small content additions, maintenance. |
+| 0.2, 0.3 … (`0.2.0` …, each with `.x` maintenance) | A substantially expanded or evolved product: major new systems or modes, a large content expansion across systems, a core-loop redesign. No feature-count threshold; contents are not predefined. |
+| 1.0 (`1.0.0`) | The release the owner considers fully mature and stable. |
 
 - Milestones and critic cycles give development granularity; they don't each get a version.
-- Git tags use the dotted forms above, always with a dot (e.g. `v0.1-alpha.2`, never `v0.1-alpha-2`). Only full
+- Names are written as "0.1 Dev 5" or "0.1 Beta 1" (owner, 2026-10-05: Dev replaced Alpha; no "v"). Tags can't hold
+  spaces, so they use the dotted forms above (`0.1-dev.2`, never `0.1-dev-2`); a GitHub release is titled
+  "Airsoft 0.1 Dev 2". The old `v0.1-alpha` tags became `0.1-dev.1` to `0.1-dev.3` on 2026-10-05. Only full
   releases are tagged (owner, 2026-10-01): no letter checkpoints (`.2a`, `.2b`); the old ones are removed.
   The owner creates tags; don't create, rename or move them unless asked.
 - **After the owner tags a release** (owner, 2026-10-03), the docs move to the new tag without being asked. The
@@ -153,9 +155,9 @@ The number describes the product; an `-alpha`/`-beta` suffix describes its devel
   owner's release description:
   1. `README.md`: the title, the intro paragraph and its "New since …" list, the download link
      (`.../archive/refs/tags/<tag>.zip`), the unzipped folder name (`Airsoft-<tag without the v>`, e.g.
-     `Airsoft-0.1-alpha.3`) and the "What's in …" section.
+     `Airsoft-0.1-dev.3`) and the "What's in …" section.
   2. `docs/ROADMAP.md`: the builds table and the status rows that mention the release.
-  3. Any other "latest release" mention: run `grep -rn "alpha\.[0-9]\|beta\.[0-9]" README.md docs/ CLAUDE.md src/config/`
+  3. Any other "latest release" mention: run `grep -rn "dev\.[0-9]\|beta\.[0-9]\|Dev [0-9]\|Beta [0-9]" README.md docs/ CLAUDE.md src/config/`
      and update each line that names the previous release as current (history and policy examples stay as they are).
      The title screen's version needs nothing: it comes from `git describe` as the game is built (M24).
   4. The change records (owner, 2026-10-04): run the changelog agent (`.claude/agents/changelog.md`) with

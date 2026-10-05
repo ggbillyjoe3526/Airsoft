@@ -97,7 +97,13 @@ describe('Woodland at night (M33f, acceptance 2)', () => {
     // Linear fog at 40 m: still mostly see-through, but far trees and the fence line go into the dark.
     expect((40 - night.fog.near) / (night.fog.far - night.fog.near)).toBeLessThanOrEqual(0.3);
     expect(night.fog.far).toBeLessThan(day.fog.far);
-    expect(night.hemi.intensity).toBeLessThan(day.hemi.intensity / 2);
+    // The fill as light (linear luminance × intensity, sky and ground sides): M52 raised the night's intensity to 1 on
+    // darker colours (audit REN-02), so what it lights is still a small share of the day's.
+    const fill = (h: { sky: number; ground: number; intensity: number }, side: 'sky' | 'ground'): number => {
+      const c = new THREE.Color(h[side]);
+      return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) * h.intensity;
+    };
+    for (const side of ['sky', 'ground'] as const) expect(fill(night.hemi, side), side).toBeLessThan(fill(day.hemi, side) / 5);
     expect(night.key.intensity).toBeLessThan(day.key.intensity / 2);
     expect(night.environment.intensity).toBeLessThan(day.environment.intensity);
   });

@@ -163,7 +163,7 @@ export const MOVEMENT: MovementConfig = {
   leanQuietFrom: 0.5,
   accuracy: {
     stillBelow: 0.4,
-    // Owner's v0.1-alpha.3 playtest: standing still steadies to ×0.7, and walking with Shift costs ×1.15 (was 1.5).
+    // Owner's 0.1 Dev 3 playtest: standing still steadies to ×0.7, and walking with Shift costs ×1.15 (was 1.5).
     // M12a eased to ×0.7 over half a second; the owner found that too slow and smooth and asked for an "instant
     // lock" (2026-10-03), so it now takes a few ticks. Gentler than CS / Valorant, but the same idea.
     steady: 0.7,

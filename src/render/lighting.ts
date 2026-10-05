@@ -106,8 +106,8 @@ export interface Daylight {
    */
   reserveLights(n: number): void;
   /**
-   * Moves a view-fitted shadow map to the ground ahead of `camera` (High) and the light pools' real lights to the pools
-   * nearest it (M33f), fading over this frame's `dt` seconds. Call before drawing.
+   * Moves a view-fitted shadow map to the ground ahead of `camera` (High; Medium too at night on a field wider than the view, M52) and the light pools'
+   * real lights to the pools nearest it (M33f), fading over this frame's `dt` seconds. Call before drawing.
    */
   follow(camera: THREE.Camera, dt: number): void;
   /** Removes the lights, sky, trees, clouds, light pools and signs and frees the shadow map. */
@@ -166,12 +166,17 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   const level: ShadowBounds = { left: cam.left, right: cam.right, bottom: cam.bottom, top: cam.top };
   const viewHalf = LIGHTING.shadowView.radius + LIGHTING.shadowMargin;
   sun.shadow.bias = LIGHTING.shadowBias;
+  // The view's window is finer than the whole field's only where the field is wider than the window (M52).
+  const viewIsFiner = 2 * viewHalf < Math.max(level.right - level.left, level.top - level.bottom);
   let following = false;
   const forward = new THREE.Vector3();
   const focus = new THREE.Vector3();
   const setQuality = (q: QualitySettings): void => {
     applyShadowQuality(sun, q);
-    following = q.shadows && q.shadowFollowsView;
+    // At night the map follows the view on Medium too (M52, audit REN-08): the low moon stretches a whole-field fit to
+    // about three times the ground per texel it covers by day. By day Medium keeps the whole field, and so does a night
+    // field no wider than the view's window, whose whole-field texel is already the finer.
+    following = q.shadows && (q.shadowFollowsView || (preset.night && viewIsFiner));
     if (!following) {
       // The whole field again.
       cam.left = level.left;

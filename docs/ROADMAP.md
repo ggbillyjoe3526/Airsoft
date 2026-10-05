@@ -21,7 +21,7 @@ There are three separate layers:
 |---|---|---|
 | **Product version** | What the game is. | **v0.1**, the core game (not released yet). Everything up to the v0.1 release builds it. |
 | **Stage and builds** | Development state: alpha → beta → release, as tagged builds. | **Alpha.** |
-| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (`v0.1-alpha.3` tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13), match info (M19) and the Loadout feature (M17a, M17b, added by the owner) are done; comfort and accessibility (M18a controls and comfort, M18b accessibility and browser basics), squad orders (M22), custom matches (M20), the practice range (M21), the tutorial (M16) and the art pass (M14: VFX and lighting, procedural, with the Graphics quality picker back) are done: Phase 4 is feature complete, next the owner's audit, fixes and bug pass, then his playtest. The owner's `v0.1-alpha.3` and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
+| **Phases and milestones** | Units of work, each reviewed by the critic. Not versions. | Phase 3: done (0.1 Dev 3 tagged 2026-10-03). Phase 4 (the last alpha phase) is under way: weapon handling (M12), the Depot rework (M11), the menus (M15, pulled forward by the owner), the owner's M15 notes (M15b), the audio rework (M13), match info (M19) and the Loadout feature (M17a, M17b, added by the owner) are done; comfort and accessibility (M18a controls and comfort, M18b accessibility and browser basics), squad orders (M22), custom matches (M20), the practice range (M21), the tutorial (M16) and the art pass (M14: VFX and lighting, procedural, with the Graphics quality picker back) are done: Phase 4 is feature complete, next the owner's audit, fixes and bug pass, then his playtest. The owner's 0.1 Dev 3 and M15 playtest notes, his Loadout request and his feature picks are folded in (2026-10-03). |
 
 The path:
 1. **Alpha builds** while Phases 2–4 build v0.1.
@@ -37,16 +37,16 @@ directly), and its tagged commits are the releases. Later (about when v0.1 is do
 v0.2 starts; the owner decides when), work moves to an `alpha` branch: builds ready for testing are merged into
 `beta`, then, once tested, into `main` and tagged.
 
-**Builds so far.** The owner creates tags. They are dotted (e.g. `v0.1-alpha.2`), and only full releases are
+**Builds so far.** The owner creates tags. They are dotted (e.g. `0.1-dev.2`, said "0.1 Dev 2"), and only full releases are
 tagged (owner, 2026-10-01): playtests in between are plain commits.
 
 | Build | Date | What it was | Git tag |
 |---|---|---|---|
-| `v0.1-alpha` | 2026-09-30 | Phase 1, the playable single-player slice | `v0.1-alpha` |
-| (playtest) | 2026-09-30 | Phase 2 M1–M3, for the owner's playtest (commit d8c4568) | was `v0.1-alpha.2a`; removed after `v0.1-alpha.2` |
-| (checkpoint) | 2026-10-01 | Phase 2 M1–M4b (commit 08b37e3) | was `v0.1-alpha.2b`; removed after `v0.1-alpha.2` |
-| `v0.1-alpha.2` | 2026-10-01 | Phase 2 complete: Elimination and Attack / Defend on Depot | `v0.1-alpha.2` |
-| `v0.1-alpha.3` | 2026-10-03 | Phase 3 complete: leaning, magazines, BB physics, movement and positioning, audit fixes, elevation support | `v0.1-alpha.3` |
+| 0.1 Dev 1 | 2026-09-30 | Phase 1, the playable single-player slice | `0.1-dev.1` |
+| (playtest) | 2026-09-30 | Phase 2 M1–M3, for the owner's playtest (commit d8c4568) | was `v0.1-alpha.2a`; removed after `0.1-dev.2` |
+| (checkpoint) | 2026-10-01 | Phase 2 M1–M4b (commit 08b37e3) | was `v0.1-alpha.2b`; removed after `0.1-dev.2` |
+| 0.1 Dev 2 | 2026-10-01 | Phase 2 complete: Elimination and Attack / Defend on Depot | `0.1-dev.2` |
+| 0.1 Dev 3 | 2026-10-03 | Phase 3 complete: leaning, magazines, BB physics, movement and positioning, audit fixes, elevation support | `0.1-dev.3` |
 
 ## What v0.1 is (owner decision, 2026-10-01)
 
@@ -84,14 +84,14 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 
 | Stage · work | Status | Critic score |
 |---|---|---|
-| Alpha · Phase 1 (all) → **build `v0.1-alpha`** | Done | see REVIEWS.md |
+| Alpha · Phase 1 (all) → **build 0.1 Dev 1** | Done | see REVIEWS.md |
 | Alpha · Phase 2 · M1 Controls and map | Done | 8.6 |
 | Alpha · Phase 2 · M2 Sound you can play by | Done | 8.8 |
 | Alpha · Phase 2 · M3 Feel and feedback | Done (owner playtested 2a: no issues; arm hits stay off) | 8.8 |
 | Alpha · Phase 2 · M4a Difficulty levels, close-range lethality | Done | 8.7 |
 | Alpha · Phase 2 · M4b Crouch-peeking, team movement, varied routes, walking | Done | 8.2 |
 | Alpha · Phase 2 · M5 Objective mode: Attack / Defend | Done | 8.4 |
-| Alpha · Phase 2 · bug pass and M6 wrap-up → **build `v0.1-alpha.2`** | Done (tagged 2026-10-01) | |
+| Alpha · Phase 2 · bug pass and M6 wrap-up → **build 0.1 Dev 2** | Done (tagged 2026-10-01) | |
 | Alpha · Phase 3 · M7a Controls for leaning (swap key removed; Q / E free) | Done (small change, no critic) | |
 | Alpha · Phase 3 · M7b Leaning (peek left / right) | Done | 8.6 |
 | Alpha · Phase 3 · M8 Magazines and reloads | Done | 8.7 |
@@ -101,7 +101,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Phase 3 · Audit fixes 1: automatic checks on every pull request (Fable audit C-02, C-03) | Done | 9.0 |
 | Alpha · Phase 3 · Audit fixes 2: in-air spread debounce, render quality presets (C-01, C-04) | Done | 9.1 |
 | Alpha · Phase 3 · Elevation support: ramps and raised floors for bots and players (C-05) | Done | 9.0 |
-| Alpha · Phase 3 · bug pass → **build `v0.1-alpha.3`** | Done (tagged 2026-10-03; the owner's playtest notes went into Phase 4) | 9.0 |
+| Alpha · Phase 3 · bug pass → **build 0.1 Dev 3** | Done (tagged 2026-10-03; the owner's playtest notes went into Phase 4) | 9.0 |
 | Alpha · Phase 4 · M12a Weapon handling: fire modes, faster reloads, crouch toggle, steadier aim when still | Done (merged; owner played it: the crosshair should lock on faster, fixed in M12b) | 9.0 |
 | Alpha · Phase 4 · M12b Weapon handling: optics as accessories, aiming down sights, aiming sensitivity (plus the owner's M12a note: the crosshair locks on at once when you stop) | Done (merged; owner played it: "red dot works great", six notes for M12c) | 9.1 |
 | Alpha · Phase 4 · M12c The owner's M12b notes: the loadout off the pause screen, BBs drawn from the muzzle, the pistol facing forward, hop-up dials | Done (merged; owner's playtest next) | 9.0 |
@@ -139,7 +139,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M42 Retro pixel filter: a Dev tab switch for a 1990s look (chunky pixels, a small dithered palette), with Pixel size and Colours sliders; the HUD and menus stay sharp | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | In progress (M36 merged, #79; M37 merged, #82; M38 merged, #84; M39 merged, #90; M40 merged, #94; M41 built; the owner chose to start before the final alpha pass) | |
 | Alpha · Owner's 2026-10-04 requests · M43–M49 Extraction: a squad of one to three against a home team on a timed run, guarded cases of seeded loot, waves, exits held for a count, one automatic respawn per run, pay and records, Woodland and city data, supply weekends; tagged dev until the owner says it's done | Building: M43 the run, exits, clock and respawn done (owner to play it); M44 cases and loot done (owner to play it); M45 waves and regen done (owner to play it); M46 guards, patrols and hunters done (owner to play it); M47 pay and records done (shows once the mode is public); M48 Woodland and Neon Heights done (owner to play it); M49 supply events done (owner to play it) | 8/8 (M43, M44, M46, M47, M48, M49), 7/8 (M45) |
-| Alpha · Audit 2 · Implementing the full audit of 2026-10-05 (91 findings: 0 critical, 1 high, 18 medium, 51 low, 21 improvements; the owner confirmed all 34 decisions on their defaults) in five phases, M50 onwards | Building: M50 chunk headroom and the crash report done; M51 CI split and test hygiene done; M56 pool data guards done | 8/8 (M50), 7/8 (M51, M56) |
+| Alpha · Audit 2 · Implementing the full audit of 2026-10-05 (91 findings: 0 critical, 1 high, 18 medium, 51 low, 21 improvements; the owner confirmed all 34 decisions on their defaults) in five phases, M50 onwards | Building: M50 chunk headroom and the crash report done; M51 CI split and test hygiene done; M52 night readability done (owner to play it); M56 pool data guards done | 8/8 (M50), 7/8 (M51, M52, M56) |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -149,12 +149,12 @@ numbers are names, not the order.
 
 ## Alpha: building v0.1
 
-### Phase 1: Playable single-player slice → build `v0.1-alpha` (done)
+### Phase 1: Playable single-player slice → build 0.1 Dev 1 (done)
 
 The CLAUDE.md §6 slice: Depot greybox, AEG and pistol, BB ballistics, one-hit elimination with hit calling,
 bots, 3v3 rounds to 5, and a minimal HUD.
 
-### Phase 2: Core gameplay on Depot → build `v0.1-alpha.2` (done)
+### Phase 2: Core gameplay on Depot → build 0.1 Dev 2 (done)
 
 - **M1–M4b (done):** controls and a bigger Depot; sound you can play by (footsteps, positional sound);
   reload animation, hit reactions and smooth turning; difficulty levels; smarter bots (crouch-peeking,
@@ -164,7 +164,7 @@ bots, 3v3 rounds to 5, and a minimal HUD.
   with overtime while the rope is being worked. Sides swap at half-time. The mode is picked on the start
   screen, and Elimination stays.
 - **Bug pass**, then **M6. Wrap-up:** the owner playtests both modes, a 60 FPS check on the target laptop,
-  and the owner tags `v0.1-alpha.2`. A bug pass before each alpha build keeps the game playable; it
+  and the owner tags `0.1-dev.2`. A bug pass before each alpha build keeps the game playable; it
   isn't beta work.
   - Bug pass (2026-10-01): a soak of 48 long bot matches (both modes, all difficulties) found no crashes,
     NaNs or stuck rounds; bots now mind teammates moving into their line of fire.
@@ -172,12 +172,12 @@ bots, 3v3 rounds to 5, and a minimal HUD.
     in either mode; GPU memory is stable across match restarts (no leaks). The 60 FPS check on the target
     laptop is the owner's.
 
-### Phase 3: Core foundations → build `v0.1-alpha.3` (done)
+### Phase 3: Core foundations → build 0.1 Dev 3 (done)
 
 These systems shape how every later replica, mode and field plays, so they come before any new
 content. The game keeps the AEG and the gas pistol.
 
-- **M7. Leaning: peek left / right** (owner request after the v0.1-alpha.2 playtest)
+- **M7. Leaning: peek left / right** (owner request after the 0.1 Dev 2 playtest)
   - **M7a (done):** the "switch replica" key (Q) is removed, so Q and E are free. You switch replicas
     with 1, 2 or the mouse wheel.
   - **M7b (done):** hold Q / E to lean left / right and see around cover and corners without stepping
@@ -233,7 +233,7 @@ content. The game keeps the AEG and the gas pistol.
   Ramp blocks, a floor height per nav cell so bots route up and down, cover and walk-offs at the right height, and a
   ramp test map with its own headless match. One rule keeps it simple: walkable surfaces never overlap (no walkable
   floor under a mezzanine or bridge). Done before any Depot layout change.
-- **Bug pass** → the owner plays the whole playtest guide (`docs/PLAYTEST.md`) and tags `v0.1-alpha.3` when ready.
+- **Bug pass** → the owner plays the whole playtest guide (`docs/PLAYTEST.md`) and tags `0.1-dev.3` when ready.
   - Code bug pass (2026-10-02, committed straight to `main` at the owner's request): a read-through of all code
     plus headless soaks and a browser run found 9 bugs worth fixing now, all fixed: the hit marker and hit flash
     replayed after every pause, the Attack / Defend pole marker showed through the pause screen, the first
@@ -241,15 +241,15 @@ content. The game keeps the AEG and the gas pistol.
     could stand inside each other in the dead zone, an empty AEG stopped clicking (and auto-reloading) after a
     switch with the trigger held, bots ducked from their own BBs and fired into the wall beside them, and one bad
     frame time could stop the game clock for good. Smaller leftovers are in KNOWN_ISSUES.
-- **M11 (Depot rework)** moved to Phase 4 (owner, 2026-10-02), so `v0.1-alpha.3` ships with today's Depot layout.
-- **Done:** the owner playtested and tagged `v0.1-alpha.3` on 2026-10-03. The playtest notes are in Phase 4 below.
+- **M11 (Depot rework)** moved to Phase 4 (owner, 2026-10-02), so 0.1 Dev 3 ships with today's Depot layout.
+- **Done:** the owner playtested and tagged `0.1-dev.3` on 2026-10-03. The playtest notes are in Phase 4 below.
 
 ### Phase 4: Feel, presentation and onboarding (the last alpha phase)
 
 New content and systems that replace the greybox and placeholders, plus the handling and sound changes from the
-owner's `v0.1-alpha.3` playtest. This is alpha work, even though it makes the game look finished.
+owner's 0.1 Dev 3 playtest. This is alpha work, even though it makes the game look finished.
 
-**The owner's `v0.1-alpha.3` playtest notes (2026-10-03) and where each one went:**
+**The owner's 0.1 Dev 3 playtest notes (2026-10-03) and where each one went:**
 
 | # | Note | Goes to |
 |---|---|---|
@@ -668,7 +668,7 @@ each one went:**
     Range, New Game, Summary, Open, Enter Fullscreen, Reset All. Footer notes that only repeat the obvious are gone
     ("Changes save as you make them.", the pause menu's notes, the Settings tile's list); help lines on settings stay.
   - **Version:** the title screen shows the build being played, worked out from `git describe` as the game is built
-    (`v0.1-alpha.3` on a release, `v0.1-alpha.3+12 · abc1234` after it), or from `.git_archival.txt` in a release zip.
+    ("0.1 Dev 3" on a release, "0.1 Dev 3+12 · abc1234" after it), or from `.git_archival.txt` in a release zip.
     Nothing to bump at a release (`config/buildVersion.ts`, `vite.config.ts`).
   - **Field of view** defaults to 90° (was 100°). **Maps** get a one-line blurb: Depot is "An abandoned warehouse yard."
   - **Sound cues** (Settings → Accessibility): a size slider (60–200%) and a colour from the crosshair's list.
