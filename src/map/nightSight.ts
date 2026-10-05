@@ -14,7 +14,7 @@ export interface MapLight {
 
 /** How far a bot makes someone out at night (m), by the light the target stands in (config/bots.ts NIGHT_SIGHT). */
 export interface NightSightConfig {
-  /** In a light pool (later also with a torch on): as far as in daylight. */
+  /** In a light pool, or in a lit weapon torch's beam (M33h, map/torchLight.ts): as far as in daylight. */
   lit: number;
   /** In the open, by moonlight. */
   open: number;
@@ -25,6 +25,11 @@ export interface NightSightConfig {
   canopyRadius: number;
   /** The canopy is worked out on a grid of this cell size (m). */
   canopyCell: number;
+  /**
+   * A lit weapon torch (M33h) gives its holder away to anyone within this angle (degrees) of where it points: they are
+   * made out from `lit` metres, however dark it is round them.
+   */
+  torchSeenFromDeg: number;
 }
 
 /**
@@ -44,9 +49,13 @@ export interface NightField {
   canopy: Uint8Array;
 }
 
-/** The night field of `map`, or null for a daylight map. Tree trunks are its blocks of kind `tree`. */
-export function buildNightField(map: MapData, cfg: NightSightConfig): NightField | null {
-  if (!map.night) return null;
+/**
+ * The night field of `map`, or null for a daylight map. Tree trunks are its blocks of kind `tree`. `night`: whether it is
+ * played at night (M33h: the match passes its resolved lighting preset's flag, render/lightingPreset.ts playsAtNight);
+ * the map's own `night` when not given.
+ */
+export function buildNightField(map: MapData, cfg: NightSightConfig, night: boolean = map.night === true): NightField | null {
+  if (!night) return null;
   const lights = map.lights ?? [];
   const trees = map.blocks.filter((b) => b.kind === 'tree');
   let x0 = Number.POSITIVE_INFINITY;

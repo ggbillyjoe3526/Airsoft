@@ -1,10 +1,12 @@
 import { GRIPS, handlingOf, MAGAZINES } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
 import { BOT_BEHAVIOUR } from '../config/bots';
+import { LOADOUT_TEXT } from '../config/menus';
 import { MOVEMENT } from '../config/movement';
 import { SIM_DT } from '../config/sim';
 import { AIMING, OPTICS } from '../config/optics';
 import { BB_WEIGHT, HOP_UP, muzzleEnergy, muzzleVelocity, type ReplicaConfig } from '../config/replicas';
+import { TORCHES } from '../config/torches';
 import type { KitSlot } from '../pool/kit';
 import type { LoadoutModel, PlayerKit } from '../pool/loadoutModel';
 import { timeToSteady } from '../sim/accuracy';
@@ -115,6 +117,14 @@ export function muzzleReadout(slot: KitSlot): string {
   const heard = Math.round(base * handlingOf(slot.replica, slot.parts).heardScale);
   // The comparison only means something with a device fitted that changes it (FA13: "22 m (22 m without a silencer)").
   return slot.parts.muzzle && heard !== Math.round(base) ? `Bots hear your shots from ${heard} m (${base} m without a silencer).` : `Bots hear your shots from ${heard} m.`;
+}
+
+/** One line under the light (M33h): how far and how wide its beam lights at night. */
+export function lightReadout(slot: KitSlot): string {
+  const light = slot.parts.light;
+  if (!light) return LOADOUT_TEXT.noLight;
+  const t = TORCHES[light];
+  return `At night: lights ${t.reach} m ahead in a ${t.spillDeg}° cone, for you and for the bots. Off at the start of each round.`;
 }
 
 /** One line under the laser: the spread from the hip, as the crosshair shows it. */

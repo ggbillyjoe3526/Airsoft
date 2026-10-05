@@ -1,6 +1,7 @@
 import { factoryParts } from '../config/attachments';
 import { RANDOM_LOADOUT } from '../config/bots';
 import type { ReplicaConfig } from '../config/replicas';
+import { isLightId, type LightId } from '../config/torches';
 import { fitOptics, fitParts } from '../sim/armament';
 import { type Character, createCharacter } from '../sim/character';
 import { createRng, rngNext, type RngState } from '../sim/rng';
@@ -31,10 +32,15 @@ function drawItem(pool: Pool, asset: Asset, rng: RngState): ItemRef {
   return { asset: asset.id, tier: drawTier(tiersOf(pool, asset), rng).id };
 }
 
-/** A random fit for replica asset `replica`: a power source always (when one fits), each other slot a part or none. */
+/**
+ * A random fit for replica asset `replica`: a power source always (when one fits), each other slot a part or none. The
+ * light (M33h) is never rolled: bots carry one by rule on a night field (botLight), and skipping it before any draw
+ * keeps every seeded kit as it was.
+ */
 export function randomFit(pool: Pool, replica: Asset, rng: RngState, partChance: number = RANDOM_LOADOUT.partChance): ReplicaFit {
   const fit: ReplicaFit = { ...EMPTY_FIT };
   for (const slot of FIT_SLOTS) {
+    if (slot === 'light') continue;
     const options = pool.assets.filter((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
     // The roll is made whatever the options, so one slot's choices never shift the next slot's draws.
     const wanted = slot === 'power' || rngNext(rng) < partChance;
@@ -75,7 +81,33 @@ export function rolledKit(pool: Pool, loadout: readonly ReplicaConfig[], seed: n
  */
 export function rolledKitMayHoldDev(pool: Pool, loadout: readonly ReplicaConfig[]): boolean {
   const replicas = loadout.flatMap((r) => assetOfReplica(pool, r) ?? []);
-  return pool.assets.some((a) => a.tag === 'dev' && replicas.some((r) => a === r || (a.category !== 'replica' && fits(a, r))));
+  // A light is never rolled (randomFit): the bots' torches are their own rule (newGamePicks.ts botsCarryDevLight).
+  return pool.assets.some((a) => a.tag === 'dev' && a.category !== 'light' && replicas.some((r) => a === r || (a.category !== 'replica' && fits(a, r))));
+}
+
+/**
+ * The light every bot carries on a night field (M33h): the first light `pool` offers (contentPool: a dev torch only with
+ * Dev content on) whose Key the code knows, or null. Not rolled, at every difficulty, so seeded kits never shift.
+ */
+export function botLight(pool: Pool): LightId | null {
+  const light = pool.assets.find((a) => a.category === 'light' && isLightId(a.key));
+  return light ? (light.key as LightId) : null;
+}
+
+/**
+ * Fits `light` to each of bot `c`'s replicas it fits (by `pool`'s tags; a replica the pool doesn't list goes without),
+ * keeping every other part. A match build's step, never a tick's.
+ */
+export function fitBotLight(c: Character, pool: Pool, light: LightId | null): void {
+  if (!light) return;
+  const asset = pool.assets.find((a) => a.category === 'light' && a.key === light);
+  if (!asset) return;
+  const a = c.armament;
+  const parts = a.replicas.map((r, i) => {
+    const replica = assetOfReplica(pool, r);
+    return replica && fits(asset, replica) ? { ...a.parts[i]!, light } : a.parts[i]!;
+  });
+  fitParts(a, parts);
 }
 
 /** A character carrying `kit`: its replicas as the kit makes them, with the kit's optics and parts fitted. */

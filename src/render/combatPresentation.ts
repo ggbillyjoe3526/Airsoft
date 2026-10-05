@@ -6,16 +6,18 @@ import { impactMaterialAt } from '../audio/soundMaterials';
 import type { Action } from '../config/controls';
 import type { HitConfig } from '../config/hits';
 import type { CrosshairSettings } from '../config/matchInfo';
-import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, type QualitySettings } from '../config/render';
+import { BB_VISUALS, DUST_MOTES, GAS_PUFFS, HIT_PUFFS, HUD, IMPACT_DUST, IMPACT_PUFFS, IMPACT_RINGS, type LightingPreset, type QualitySettings } from '../config/render';
 import type { ImpactMaterial } from '../config/sounds';
 import type { MovementConfig } from '../config/movement';
 import { AIMING, type OpticId, OPTICS } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
+import { TORCHES } from '../config/torches';
 import type { MapData } from '../map/mapTypes';
 import type { WorldQuery } from '../sim/armament';
 import type { BB } from '../sim/ballistics';
 import type { Character } from '../sim/character';
 import type { GameState } from '../sim/state';
+import { lightInHand, torchLit } from '../sim/torch';
 import { Hud } from '../ui/hud';
 import { BBPathsDebug } from './bbPathsDebug';
 import { BBRenderer } from './bbRenderer';
@@ -169,6 +171,11 @@ export class CombatPresentation {
     this.sfx.unlock();
   }
 
+  /** The map's light (M33h, LightingPreset): the held replica is lit by its `viewmodel` group, the day's or the night's. */
+  setLighting(preset: LightingPreset): void {
+    this.viewmodel.setLighting(preset);
+  }
+
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
   setMotion(scale: MotionScale): void {
     this.viewmodel.setMotion(scale);
@@ -293,6 +300,8 @@ export class CombatPresentation {
     this.renderer.setZoom(1 + (OPTICS[this.aimOptic].zoom - 1) * this.aimBlend);
     this.viewmodel.setAspect(this.renderer.camera.aspect);
     const carry = p.sprinting ? 1 : sprintCarry(p.sprintLockout, this.movement.sprintFireLockout);
+    const light = lightInHand(p);
+    this.viewmodel.setTorch(torchLit(p), light ? TORCHES[light].colour : TORCHES.weaponTorch.colour);
     this.viewmodel.update(dt, yaw, pitch, Math.hypot(p.velocity.x, p.velocity.z), this.movement.runSpeed, carry, p.armament, p.status === 'calling', this.aimBlend);
     // The shot spread right now (replica × stance and movement), as pixels on screen at the centre.
     const cam = this.renderer.camera;

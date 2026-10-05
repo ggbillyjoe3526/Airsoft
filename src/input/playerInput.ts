@@ -65,6 +65,8 @@ export class PlayerInput {
   private reloadLatch = false;
   private fireLatch = false;
   private fireModeLatch = false;
+  /** The Weapon torch key pressed since the last tick (M33h). */
+  private torchLatch = false;
   /** A squad order key pressed (M22), or an order picked on the wheel (M23), since the last takeOrder. */
   private orderLatch: SquadCommand | null = null;
   private switchLatch = -1;
@@ -140,6 +142,7 @@ export class PlayerInput {
     if (kb.wasPressed('jump')) this.jumpLatch = true;
     if (kb.wasPressed('reload')) this.reloadLatch = true;
     if (kb.wasPressed('fireMode')) this.fireModeLatch = true;
+    if (kb.wasPressed('torch')) this.torchLatch = true;
     if (kb.wasPressed('orderFollow')) this.latchOrder('follow', false);
     if (kb.wasPressed('orderHold')) this.latchOrder('hold', false);
     if (kb.wasPressed('orderRegroup')) this.latchOrder('regroup', false);
@@ -251,6 +254,7 @@ export class PlayerInput {
     cmd.fire = !this.fireBlocked && (kb.isDown('fire') || this.fireLatch);
     cmd.switchTo = this.switchLatch;
     cmd.cycleFireMode = this.fireModeLatch;
+    cmd.toggleTorch = this.torchLatch;
     cmd.use = kb.isDown('use');
     this.clearOneShots();
   }
@@ -298,6 +302,7 @@ export class PlayerInput {
     this.reloadLatch = false;
     this.fireLatch = false;
     this.fireModeLatch = false;
+    this.torchLatch = false;
     this.orderLatch = null;
     this.switchLatch = -1;
   }

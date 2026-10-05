@@ -3,6 +3,7 @@ import { GAME_STATS } from '../config/gameStats';
 import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
 import type { ReplicaConfig } from '../config/replicas';
+import { isLightId, type LightId } from '../config/torches';
 import { NO_POWER_STATS, type PowerStats, type ScaledCategory, type ScaledStat, type TierShares } from '../config/statsFile';
 import type { ItemRef } from './collection';
 import { type Asset, type Pool, type RarityTier, replicaOf } from './pool';
@@ -20,9 +21,12 @@ export interface KitStats {
   tierShares: TierShares;
 }
 
-/** The customisable places on a replica, besides its BB weight and hop-up (which aren't pooled). */
-export type FitSlot = 'optic' | 'grip' | 'laser' | 'barrel' | 'muzzle' | 'magazine' | 'power';
-export const FIT_SLOTS: readonly FitSlot[] = ['optic', 'grip', 'laser', 'barrel', 'muzzle', 'magazine', 'power'];
+/**
+ * The customisable places on a replica, besides its BB weight and hop-up (which aren't pooled). The weapon light (M33h)
+ * comes last: bots' rolled kits skip it (pool/botKit.ts), so the slots before it draw as they did.
+ */
+export type FitSlot = 'optic' | 'grip' | 'laser' | 'barrel' | 'muzzle' | 'magazine' | 'power' | 'light';
+export const FIT_SLOTS: readonly FitSlot[] = ['optic', 'grip', 'laser', 'barrel', 'muzzle', 'magazine', 'power', 'light'];
 
 /** The asset category each fit slot takes. */
 export const FIT_CATEGORY = {
@@ -33,12 +37,13 @@ export const FIT_CATEGORY = {
   muzzle: 'muzzle',
   magazine: 'magazine',
   power: 'power',
+  light: 'light',
 } as const satisfies Record<FitSlot, Asset['category']>;
 
 /** What is fitted to one replica: an item in each slot, or null for "as it comes" (the power slot is never empty in use). */
 export type ReplicaFit = Record<FitSlot, ItemRef | null>;
 
-export const EMPTY_FIT: ReplicaFit = { optic: null, grip: null, laser: null, barrel: null, muzzle: null, magazine: null, power: null };
+export const EMPTY_FIT: ReplicaFit = { optic: null, grip: null, laser: null, barrel: null, muzzle: null, magazine: null, power: null, light: null };
 
 /** One slot of the player's kit: the replica as carried, and what goes on it. */
 export interface KitSlot {
@@ -51,10 +56,10 @@ function tier(pool: Pool, ref: ItemRef | null): RarityTier | undefined {
   return ref ? pool.tiers.find((t) => t.id === ref.tier) : undefined;
 }
 
-/** The tier scaling category of an asset: a power source by its type; null for one no tier improves (a grenade). */
+/** The tier scaling category of an asset: a power source by its type; null for one no tier improves (a grenade, a light). */
 export function scaledCategory(asset: Asset): ScaledCategory | null {
   if (asset.category === 'power') return asset.power?.type ?? null;
-  return asset.category === 'grenade' ? null : asset.category;
+  return asset.category === 'grenade' || asset.category === 'light' ? null : asset.category;
 }
 
 /** The tier's Bonus (0..1) an item brings to `stat` (its share in stats.md's Tier scaling); 0 for none. */
@@ -92,6 +97,12 @@ function fittedBarrel(pool: Pool, fit: ReplicaFit): BarrelId | null {
 function fittedMuzzle(pool: Pool, fit: ReplicaFit): MuzzleId | null {
   const key = fitted(pool, fit, 'muzzle')?.key;
   return key && key in MUZZLES ? (key as MuzzleId) : null;
+}
+
+/** The fitted weapon light's key (M33h), if the code knows it. */
+function fittedLight(pool: Pool, fit: ReplicaFit): LightId | null {
+  const key = fitted(pool, fit, 'light')?.key;
+  return isLightId(key) ? key : null;
 }
 
 /**
@@ -169,6 +180,7 @@ export function kitSlot(pool: Pool, item: ItemRef, fit: ReplicaFit, stats: KitSt
       laser,
       barrel: fittedBarrel(pool, fit),
       muzzle: fittedMuzzle(pool, fit),
+      light: fittedLight(pool, fit),
       tune: partTune(pool, fit, stats),
     },
   };

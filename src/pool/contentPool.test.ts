@@ -14,7 +14,9 @@ describe('the pool as the player and bots see it (M35)', () => {
     const shown = contentPool(mixed, false);
     expect(shown.assets.map((a) => a.name)).not.toContain('Red Dot');
     expect(shown.assets.map((a) => a.name)).not.toContain('Red Laser');
-    expect(shown.assets).toHaveLength(mixed.assets.length - 2);
+    // The Weapon Torch (M33h) is dev in the real pool.md: hidden too.
+    expect(shown.assets.map((a) => a.name)).not.toContain('Weapon Torch');
+    expect(shown.assets).toHaveLength(mixed.assets.length - 3);
     expect(shown.byId.has(asset('Red Dot').id)).toBe(false);
     expect(shown.byId.has(asset('AEG Rifle').id)).toBe(true);
     expect(shown.byId.size).toBe(shown.assets.length);
@@ -24,8 +26,9 @@ describe('the pool as the player and bots see it (M35)', () => {
 
   it('is the same pool while Dev content is on, and when nothing in it is dev', () => {
     expect(contentPool(mixed, true)).toBe(mixed);
-    expect(contentPool(pool, false)).toBe(pool);
     expect(contentPool(pool, true)).toBe(pool);
+    const allPublic = withTags(pool, { 'Weapon Torch': 'public' });
+    expect(contentPool(allPublic, false)).toBe(allPublic);
   });
 
   it('knows an item of a dev asset, and not one of a public or unlisted asset', () => {

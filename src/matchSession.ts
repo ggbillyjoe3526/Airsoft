@@ -16,9 +16,10 @@ import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
 import { PHYSICS } from './config/physics';
-import { matchOverScreenDelay, type QualitySettings } from './config/render';
+import { type LightingPreset, matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, REALCAP, type ReplicaConfig, replicaUnderRules } from './config/replicas';
-import { botKitSeed, carriedLoadout, chaseCarrier, chaseReady, kittedCharacter, randomKit } from './pool/botKit';
+import { TORCHES } from './config/torches';
+import { botKitSeed, botLight, carriedLoadout, chaseCarrier, chaseReady, fitBotLight, kittedCharacter, randomKit } from './pool/botKit';
 import { contentPool } from './pool/contentPool';
 import { rollRunCases } from './pool/caches';
 import { GAME_POOL } from './pool/gamePool';
@@ -41,6 +42,7 @@ import { addLighting, type Daylight } from './render/lighting';
 import { resolveLighting } from './render/lightingPreset';
 import { mapLookOf } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
+import { TorchBeams } from './render/torchBeams';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
 import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
@@ -50,6 +52,7 @@ import { isInPlay } from './sim/elimination';
 import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
+import { partsUnder } from './sim/torch';
 import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
@@ -62,6 +65,8 @@ import { pauseText, resultText, type ResultText } from './ui/matchStopText';
 import { rosterNames, statsBlocks, type TeamBlock } from './ui/statsRows';
 
 const PLAYER_ID = 0;
+/** The colour figures glow in someone's torch beam (M33h): the torches' cool white. */
+const TORCH_LIFT_COLOUR = TORCHES.weaponTorch.colour;
 /** The team the player is on at the start (Blue); the other team is the opponents. */
 const PLAYER_TEAM = 0;
 
@@ -135,6 +140,10 @@ export class MatchSession {
   private readonly nav: NavGrid;
   private readonly bots: BotController;
   private readonly daylight: Daylight;
+  /** The map's light as resolved (M33f): a night preset gives the bots their torches and draws the beams (M33h). */
+  private readonly lighting: LightingPreset;
+  /** The weapon torches drawn (M33h): nothing by day, or in a match where nobody carries one. */
+  private readonly torches: TorchBeams;
   /** A soft dark disc on the floor under every player (audit section 5, F5), on every preset. */
   private readonly contact: ContactShadows;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
@@ -188,6 +197,7 @@ export class MatchSession {
     // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
     // last map's; its lights, sky and light pools in the scene.
     const lighting = resolveLighting(map);
+    this.lighting = lighting;
     renderer.setLighting(lighting);
     this.daylight = addLighting(renderer.scene, map, quality, lighting);
     this.build.phase('lighting');
@@ -247,13 +257,18 @@ export class MatchSession {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
     input.restartScript();
     // The player is always on Blue.
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, map.night ?? false));
+    // The torches (M33h), once everyone is kitted: your own takes one of the night lights on Medium and High.
+    this.torches = new TorchBeams(this.state.characters, lighting, quality, this.physics, BODY, this.hits);
+    renderer.scene.add(this.torches.object);
+    this.daylight.reserveLights(this.torches.reserved);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night));
+    this.combat.setLighting(lighting);
     this.build.phase('replica, effects and sound');
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction);
@@ -393,6 +408,9 @@ export class MatchSession {
     const pitch = this.input.pitch + this.player.armament.recoil;
     updateFirstPersonCamera(this.renderer.camera, this.player, BODY, this.hits, alpha, this.input.yaw, pitch, this.motion.leanRoll);
     const spectating = this.match.frame(this.renderer.camera, alpha, dt, this.input.yaw, boardHeld);
+    // The torches from where the view is (M33h): yours from your eyes, or the watched player's.
+    this.torches.update(this.renderer.camera, spectating ? this.match.watchedCharacter : this.player, !spectating, alpha);
+    if (this.torches.active) this.match.setTorchLift(this.torches.lit, TORCH_LIFT_COLOUR);
     this.contact.update(alpha, spectating ? -1 : PLAYER_ID);
     const holding = this.bots.holdSpot(this.player, this.holdSpot);
     const order = this.bots.orderOf(this.player);
@@ -418,6 +436,8 @@ export class MatchSession {
    */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
+    this.torches.setQuality(quality);
+    this.daylight.reserveLights(this.torches.reserved);
     this.renderer.mapMeshes.restyle(this.renderer.surfaceTextures, mapLookOf(quality));
     this.match.setFigureShadows(quality.figureShadows);
     this.match.setFlagQuality(quality);
@@ -479,6 +499,7 @@ export class MatchSession {
     this.combat.dispose();
     this.match.dispose();
     this.contact.dispose();
+    this.torches.dispose();
     // Out of the scene, kept by the renderer for the next session on this map (freed there, CORE-33).
     this.renderer.mapMeshes.release();
     this.daylight.dispose();
@@ -515,6 +536,12 @@ export class MatchSession {
         else if (rolled) this.state.characters.push(this.underRules(chaseReady(kittedCharacter(id, team, randomKit(botPool, carriedLoadout(LOADOUT, id, carrier), botKitSeed(seed, id), BOT_PART_CHANCE[this.setup.difficulty])), carrier)));
         else this.state.characters.push(createCharacter(id, vec3(), 0, this.botLoadout, team));
       }
+    }
+    // On a night field every bot carries the offered torch (M33h): by rule, never rolled, so seeded kits don't shift.
+    // Not under the factory kit rule (M39): everyone carries LOADOUT as it comes.
+    if (this.lighting.night && !this.setup.rules.factoryKit) {
+      const light = botLight(botPool);
+      for (const c of this.state.characters) if (c.id !== PLAYER_ID) fitBotLight(c, botPool, light);
     }
     if (this.extraction) startRun(this.state.round, this.state.characters, this.ctx.round);
     else {
@@ -557,12 +584,12 @@ export class MatchSession {
 
   /**
    * Fits the picked optic, hop-up dials, BB weights, grips and magazines to the player's replicas (fresh magazines of
-   * the picked kind). A direct sim-state change, between rounds.
+   * the picked kind), and the weapon light only on a night preset (M33h). A direct sim-state change, between rounds.
    */
   private fitPickedLoadout(): void {
     const kit = this.kit;
     fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
-    fitParts(this.player.armament, kit.slots.map((s) => s.parts));
+    fitParts(this.player.armament, kit.slots.map((s) => partsUnder(s.parts, this.lighting.night)));
     setHopUps(this.player.armament, kit.hopUps);
     setBbWeights(this.player.armament, kit.bbWeights);
   }

@@ -481,6 +481,17 @@ describe('scripted player (perf harness, bug pass)', () => {
   });
 });
 
+describe('weapon torch key (M33h)', () => {
+  it('sends one toggle per press, never while held', () => {
+    const { keys, frame } = setup('toggle');
+    expect(frame().toggleTorch).toBe(false);
+    expect(frame(() => keys.press('torch')).toggleTorch).toBe(true);
+    expect(frame().toggleTorch).toBe(false); // still held: no second switch
+    keys.release('torch');
+    expect(frame(() => keys.press('torch')).toggleTorch).toBe(true);
+  });
+});
+
 describe('use key (M44: opens a case in Extraction)', () => {
   it('is in the command exactly while the Use action is held, and is not a one-shot', () => {
     const { keys, frame } = setup('toggle');

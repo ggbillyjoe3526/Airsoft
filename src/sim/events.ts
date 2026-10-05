@@ -15,6 +15,8 @@ export type GameEvent =
   /** Reload pressed but no spare magazine has more BBs than the loaded one: nothing happens (the HUD says why). */
   | { type: 'reloadRefused'; characterId: number; replicaId: string }
   | { type: 'draw'; characterId: number; replicaId: string }
+  /** A weapon torch was switched `on` or off (M33h): its click. */
+  | { type: 'torch'; characterId: number; on: boolean }
   /** The fire selector moved to `mode`. */
   | { type: 'fireMode'; characterId: number; replicaId: string; mode: FireMode }
   /** A BB hit level geometry; `ownerId` fired it. */

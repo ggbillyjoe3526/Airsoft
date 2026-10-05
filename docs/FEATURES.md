@@ -58,6 +58,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Bushes on any map that lists them: bots can't see someone deep in or behind one, BBs and people pass through, drawn on the minimap; Woodland has 70 (M33e)
 - Night sight on any night map: bots see 40 m into a light pool, 25 m in the open, 10 m under the trees (M33g)
 - Night lighting on any map that asks for it: a dark sky and haze, a low moon as the key light, light pools that glow and light the ground on every preset and light players on Medium and High (Graphics › Night lights: Off, Nearest 2, Nearest 4); Depot stays day (M33f)
+- Weapon torch on any night map (dev content, a starter Light on every replica): T switches it; its beam lights where you look, bots see 40 m into it and spot a lit torch facing them; your own is a real light on Medium and High in place of one pool light; the held replica is lit by the night (M33h)
 - Day or Night selector: maps offering both modes show a switch in the Map pop-up; your choice is saved per map (M34d)
 - Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend, with Day and Night modes (M34c, M34d)
 - Ramps and raised floors that players and bots use (Phase 3)

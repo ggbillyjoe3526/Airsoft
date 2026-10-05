@@ -23,10 +23,19 @@ interface FigureState {
   flinchZ: number;
   /** Its rifle had a silencer fitted when it was built (shown on Player detail `high`). */
   silencer: boolean;
+  /** Its rifle and its pistol had a weapon torch fitted when it was built (M33h; shown at every detail). */
+  rifleTorch: boolean;
+  pistolTorch: boolean;
+  /** The glow it was last given from others' torch beams (M33h; setTorchLift), so an unchanged one isn't set again. */
+  lift: number;
 }
 
-/** A rifle with a silencer fitted (BARE_KIT: as it comes). */
-const SILENCED: FigureKit = { rifleSilencer: true };
+/** True if `c` carries a replica of the kind (`pistol` or not) with a weapon torch fitted (M33h). */
+export function torchFitted(c: Character, pistol: boolean): boolean {
+  const a = c.armament;
+  for (let i = 0; i < a.replicas.length; i++) if ((a.replicas[i]!.look.model === 'pistol') === pistol && a.parts[i]?.light) return true;
+  return false;
+}
 
 /** True if `c` carries a rifle (not a pistol) with a silencer fitted (M29b): the detailed figure shows it. */
 export function rifleSilenced(c: Character): boolean {
@@ -103,8 +112,10 @@ export class CharacterRenderer {
   ) {
     for (const c of characters) {
       const silencer = rifleSilenced(c);
-      const { figure, material } = this.build(c, silencer);
-      this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer });
+      const rifleTorch = torchFitted(c, false);
+      const pistolTorch = torchFitted(c, true);
+      const { figure, material } = this.build(c, { rifleSilencer: silencer, rifleTorch, pistolTorch });
+      this.figures.push({ figure, material, phase: 0, lastX: c.position.x, lastZ: c.position.z, flinchAge: FIGURE.flinch.time, flinchX: 0, flinchZ: 0, silencer, rifleTorch, pistolTorch, lift: 0 });
     }
   }
 
@@ -121,27 +132,48 @@ export class CharacterRenderer {
   setDetail(level: DetailLevel): void {
     if (level === this.detail) return;
     this.detail = level;
-    for (let i = 0; i < this.characters.length; i++) this.rebuild(i, rifleSilenced(this.characters[i]!));
+    for (let i = 0; i < this.characters.length; i++) {
+      const c = this.characters[i]!;
+      this.rebuild(i, rifleSilenced(c), torchFitted(c, false), torchFitted(c, true));
+    }
     setReceiveShadows(this.object, this.receiveShadows);
   }
 
-  /** Figure `i` built again at the current detail, with or without a silencer on its rifle, keeping its walk and flinch. */
-  private rebuild(i: number, silencer: boolean): void {
+  /**
+   * Others' torch beams on the figures (M33h, render/torchBeams.ts `lit`, by character index): each glows `lit` of
+   * `colour`, an emissive uniform (no new shader). Changed only where it changed.
+   */
+  setTorchLift(lit: Float32Array, colour: number): void {
+    for (let i = 0; i < this.figures.length; i++) {
+      const s = this.figures[i]!;
+      const k = lit[i] ?? 0;
+      if (Math.abs(k - s.lift) < 1e-3) continue;
+      s.lift = k;
+      s.material.emissive.setHex(colour).multiplyScalar(k);
+    }
+  }
+
+  /** Figure `i` built again at the current detail with the parts it shows, keeping its walk and flinch. */
+  private rebuild(i: number, silencer: boolean, rifleTorch: boolean, pistolTorch: boolean): void {
     const s = this.figures[i]!;
     disposeFigure(s.figure);
     s.material.dispose();
-    const { figure, material } = this.build(this.characters[i]!, silencer);
+    const { figure, material } = this.build(this.characters[i]!, { rifleSilencer: silencer, rifleTorch, pistolTorch });
     s.figure = figure;
     s.material = material;
     s.silencer = silencer;
+    s.rifleTorch = rifleTorch;
+    s.pistolTorch = pistolTorch;
+    s.lift = 0;
   }
 
   /** One character's figure at the current detail, added to the scene, with its own copy of the material. */
-  private build(c: Character, silencer: boolean): { figure: Figure; material: THREE.MeshStandardMaterial } {
+  private build(c: Character, parts: FigureKit): { figure: Figure; material: THREE.MeshStandardMaterial } {
     const high = this.detail === 'high';
     // The detailed figure reads each vertex's roughness and metalness (glossy goggles and shells, steel barrels).
     const material = high ? useVertexFinish(this.material.clone()) : this.material.clone();
-    const kit = silencer ? SILENCED : BARE_KIT;
+    // A silencer shows on the detailed figure only (as before M33h); a torch at every detail.
+    const kit: FigureKit = parts.rifleSilencer || parts.rifleTorch || parts.pistolTorch ? parts : BARE_KIT;
     const figure = buildFigure(this.teamColors[c.team] ?? 0xffffff, material, this.calloutMaterial, c.id, this.model, FIGURE.detail[this.detail], kit);
     this.object.add(figure.root);
     return { figure, material };
@@ -166,13 +198,14 @@ export class CharacterRenderer {
     for (let i = 0; i < this.characters.length; i++) {
       const c = this.characters[i]!;
       const s = this.figures[i]!;
-      // Parts are fitted between rounds (fitParts): a detailed figure whose rifle gained or lost a silencer is rebuilt.
-      if (this.detail === 'high') {
-        const silencer = rifleSilenced(c);
-        if (silencer !== s.silencer) {
-          this.rebuild(i, silencer);
-          setReceiveShadows(s.figure.root, this.receiveShadows);
-        }
+      // Parts are fitted between rounds (fitParts): a figure whose replicas gained or lost a part it shows is rebuilt (a
+      // silencer on the detailed figure only, a torch at every detail, M33h).
+      const silencer = this.detail === 'high' ? rifleSilenced(c) : s.silencer;
+      const rifleTorch = torchFitted(c, false);
+      const pistolTorch = torchFitted(c, true);
+      if (silencer !== s.silencer || rifleTorch !== s.rifleTorch || pistolTorch !== s.pistolTorch) {
+        this.rebuild(i, silencer, rifleTorch, pistolTorch);
+        setReceiveShadows(s.figure.root, this.receiveShadows);
       }
       const f = s.figure;
       f.root.visible = c.id !== hiddenId;

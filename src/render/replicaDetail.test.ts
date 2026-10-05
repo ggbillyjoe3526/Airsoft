@@ -25,7 +25,7 @@ const trianglesOf = (root: THREE.Object3D): number => meshesOf(root).reduce((n, 
  */
 const drawn = (models: ReplicaModels, id: string): number => {
   const { group } = models.models.get(id)!;
-  const fitted = ['optic:', 'grip:', 'laser:', 'barrel:'];
+  const fitted = ['optic:', 'grip:', 'laser:', 'barrel:', 'light:'];
   let n = 0;
   for (const child of group.children) {
     if (fitted.some((kind) => child.name.startsWith(kind)) || child.name === 'sightsDown') continue;
