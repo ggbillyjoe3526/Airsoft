@@ -45,6 +45,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Extraction: your squad against a home team on an 8:00 run; exits counted out in 10 s, a late exit, one automatic respawn; dev content, Depot (M43)
 - Extraction cases: ammo cans, field cases and a marshal's locker opened by holding Use (G), heard by bots; FC, BB resupplies and parts, dropped when hit, kept only on extraction, shown on the summary in rarity colours (M44)
 - Extraction waves: hit opponents come back together every 75 s on Normal (100 Easy, 60 Hard and Pro) or once all are out, at regen points out of the squad's sight; one more for the last third (M45)
+- Extraction guards and hunters: two guards by the locker (one on Easy), patrols in pairs between the cases, hunters from half the run on Normal (a third on Hard and Pro); teammates cover you at a case (M46)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only the standard match counts for the records (M20)
 - Rules picker: Skirmish, Tournament, Pro CQB (dev) and Custom; named rulesets keep their own records, Custom never counts (M39)

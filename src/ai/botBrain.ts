@@ -172,14 +172,18 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   // What the bot still remembers of an enemy it saw or heard (memoryTime). Attack / Defend defenders
   // only go after what is near their pole; anything further off they hold their post for, and keep
   // watching that way (aimBot looks at lastKnown) until it is old news.
+  // A guard in Extraction (M46) is leashed the same way to its case, within guardLeash.
   const fresh = threatInMind(b, w);
-  const defending = flagRole(b, w) === 'defend';
-  const pole = w.round.flag.position;
-  const watchFromPost = fresh && defending && Math.hypot(b.lastKnown.x - pole.x, b.lastKnown.z - pole.z) > cfg.defendSearchRadius;
+  const guarding = b.role === 'guard';
+  const defending = flagRole(b, w) === 'defend' || guarding;
+  const post = guarding ? w.round.run.cases[b.guardCase]!.position : w.round.flag.position;
+  const leash = guarding ? cfg.guardLeash : cfg.defendSearchRadius;
+  const watchFromPost = fresh && defending && Math.hypot(b.lastKnown.x - post.x, b.lastKnown.z - post.z) > leash;
   const remembered = fresh && !watchFromPost;
   if (seeing && target) {
-    // A fresh contact at range while on the move: get behind close crouch cover first, then peek.
-    if ((b.mode === 'advance' || b.mode === 'search' || b.mode === 'order') && b.coverCooldown <= 0) {
+    // A fresh contact at range while on the move: get behind close crouch cover first, then peek. Not a hunter (M46):
+    // it pushes.
+    if ((b.mode === 'advance' || b.mode === 'search' || b.mode === 'order') && b.coverCooldown <= 0 && b.role !== 'hunter') {
       const d = Math.hypot(target.position.x - me.position.x, target.position.z - me.position.z);
       contactSearch.radius = cfg.contactCoverRadius;
       if (d >= b.skill.contactCoverMinDistance && takeCover(b, w, target, 0, contactSearch)) {
@@ -205,7 +209,8 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
   } else if (remembered) {
     if (b.mode !== 'search') {
       // Lost sight of someone still in play (M38): a bot with peekWatchTime first watches where they ducked out.
-      if (b.mode === 'fight' && b.contact && b.skill.peekWatchTime[1] > 0) b.watchUntil = w.time + pick(b.rng, b.skill.peekWatchTime);
+      // A hunter (M46) goes straight after them.
+      if (b.mode === 'fight' && b.contact && b.skill.peekWatchTime[1] > 0 && b.role !== 'hunter') b.watchUntil = w.time + pick(b.rng, b.skill.peekWatchTime);
       b.routeState = 'none';
       b.mode = 'search';
       startSearch(b, w);
@@ -218,7 +223,8 @@ function chooseMode(b: Bot, w: BotWorld, target: Character | undefined, dt: numb
     b.waitForTeam = false;
     b.holdLeft = 0; // a pause cut short by a fight doesn't resume somewhere else
     b.holdCover = false;
-    if (!b.hunting && b.laneIndex >= 0) b.laneIndex -= b.laneDir; // re-take the lane point we left
+    if (b.role === 'patrol' && b.patrolIndex >= 0) b.patrolIndex--; // re-take the patrol's stop we left (M46)
+    else if (!b.hunting && b.laneIndex >= 0) b.laneIndex -= b.laneDir; // re-take the lane point we left
   } else if (defending && !fresh) {
     b.hasLastKnown = false; // holding a post: stop watching where a noise was once it's old news
   }
@@ -309,7 +315,8 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
   // ahead. Hunting with nothing heard, trading a hit teammate or pushing late, it hurries.
   const trading = w.time - b.tradeAt < cfg.tradeTime;
   const near = b.skill.slicesCorners && (threatInMind(b, w) || (!b.hunting && w.inEnemyHalf(b)));
-  b.careful = near && !trading && (b.mode === 'advance' || b.mode === 'search') && !pushingLate(b, w);
+  const hunter = b.role === 'hunter';
+  b.careful = near && !trading && !hunter && (b.mode === 'advance' || b.mode === 'search') && !pushingLate(b, w);
   // Steer clear of anyone close by, or step out of their way (AI-01).
   const moving = keepApart(b, w, moveBot(b, w, cmd, dt, target), cmd);
   // Holding a lane point or a post: crouch once settled, where crouched eyes still see the enemy side (AI-02).
@@ -330,9 +337,11 @@ export function thinkBot(b: Bot, w: BotWorld, cmd: PlayerCommand, dt: number): v
     // Hurrying to an order (regroup, keeping up) sprints even with a fight just over, and through the small turns of
     // following someone (a looser forward gate), so it doesn't flick between run and sprint at each one.
     const hurry = b.mode === 'order' && b.orderRush;
-    cmd.sprint = hurry ? cmd.forward > SQUAD_ORDERS.sprintForward : (b.mode === 'advance' || b.mode === 'flag') && calm && cmd.forward > cfg.sprintForward;
+    // A hunter (M46) runs at where the squad was, footsteps and all: it pushes. A patrol keeps to a run.
+    const going = (b.mode === 'advance' && b.role !== 'patrol') || b.mode === 'flag' || (hunter && b.mode === 'search');
+    cmd.sprint = hurry ? cmd.forward > SQUAD_ORDERS.sprintForward : going && (calm || hunter) && cmd.forward > cfg.sprintForward;
     // Closing in on where someone was seen or heard: walk, so footsteps don't give us away (not while trading, M38).
-    cmd.walk ||= b.mode === 'search' && !trading && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < b.skill.searchWalkDistance;
+    cmd.walk ||= b.mode === 'search' && !trading && !hunter && Math.hypot(b.lastKnown.x - me.position.x, b.lastKnown.z - me.position.z) < b.skill.searchWalkDistance;
     if (b.careful) {
       cmd.walk = true;
       cmd.sprint = false;

@@ -32,6 +32,21 @@ import type { SightConditions } from './perception';
  */
 export type BotMode = 'advance' | 'fight' | 'cover' | 'search' | 'flag' | 'order';
 
+/**
+ * Extraction (M46; plan, section 3): a home-team bot's job in a run, which takes the place of its lane ('none' in the
+ * other modes, and on the squad). Fights, cover and searches still come first.
+ * - guard: posted at a case, holding cover facing the way in, going after noises only within guardLeash of it;
+ * - patrol: walking a round of the cases, in pairs, pausing at each;
+ * - hunter: from the run's huntersFrom on, making for where its team last saw or heard the squad, and pushing in.
+ */
+export type RunRole = 'none' | 'guard' | 'patrol' | 'hunter';
+
+/** A patrol's round (M46): stops in front of cases, in walking order, with the case each is for. A pair shares one. */
+export interface PatrolRound {
+  stops: Vec3[];
+  cases: number[];
+}
+
 /** What a bot remembers about one enemy it has seen (sight only; hearing never counts). */
 export interface Contact {
   /** Last time this enemy was in sight (s). */
@@ -183,6 +198,29 @@ export interface Bot {
   orderCatchingUp: boolean;
   /** Follow me: got ahead of its spot, so going a pace slower than the leader until back on it. */
   orderDroppingBack: boolean;
+  /**
+   * Follow me in Extraction (M46): covering the leader while they open a case, from `orderGoal` (crouched there with
+   * `orderCrouch`), watching `orderYaw`.
+   */
+  orderCovering: boolean;
+  orderCrouch: boolean;
+
+  // Extraction (M46): its job on the home team.
+  role: RunRole;
+  /** Guard: the case it guards (an index into the run's cases; -1 none), its post and the way it faces there (yaw). */
+  guardCase: number;
+  post: Vec3;
+  postYaw: number;
+  /**
+   * Patrol: its round (shared with its partner, if it has one) and the stop it is making for (-1: none yet). Of a pair,
+   * the lead walks the round and the other keeps with it, stop by stop (the other leads once the lead is out).
+   */
+  patrol: PatrolRound | undefined;
+  patrolIndex: number;
+  patrolPartner: Bot | undefined;
+  patrolLead: boolean;
+  /** Hunter: when the news of the squad it last went after was had (s). */
+  newsTaken: number;
 }
 
 /** Everything a bot's decisions depend on besides its own state. */
@@ -213,6 +251,11 @@ export interface BotWorld {
   aheadOfTeam(bot: Bot): boolean;
   /** True if `bot` stands past the middle of the map, towards the enemy's end (M38: near the enemy). */
   inEnemyHalf(bot: Bot): boolean;
+  /**
+   * Extraction (M46): the latest place `team`'s bots saw or heard someone of the squad, into `out`; returns when
+   * (s; -Infinity: never, and in the other modes).
+   */
+  squadNews(team: number, out: Vec3): number;
   /** Counts `point`'s hunt sector as just checked by `bot`'s team (a spot it found no route to, AI-07). */
   markVisited(bot: Bot, point: Vec3): void;
   /** Every bot in the match (teammates' cover spots and lane holds, AI-01). */
@@ -309,6 +352,17 @@ export function createBot(character: Character, seed: number, cfg: BotBehaviour,
     orderSettled: false,
     orderCatchingUp: false,
     orderDroppingBack: false,
+    orderCovering: false,
+    orderCrouch: false,
+    role: 'none',
+    guardCase: -1,
+    post: vec3(),
+    postYaw: 0,
+    patrol: undefined,
+    patrolIndex: -1,
+    patrolPartner: undefined,
+    patrolLead: false,
+    newsTaken: Number.NEGATIVE_INFINITY,
   };
   resetBot(bot, -1, 0, cfg);
   return bot;
@@ -368,6 +422,13 @@ export function resetBot(b: Bot, lane: number, startHold: number, cfg: BotBehavi
   b.order = 'none';
   b.orderLeader = undefined;
   b.orderRush = false;
+  b.orderCovering = false;
+  b.role = 'none';
+  b.guardCase = -1;
+  b.patrol = undefined;
+  b.patrolIndex = -1;
+  b.patrolPartner = undefined;
+  b.newsTaken = Number.NEGATIVE_INFINITY;
 }
 
 /** Drops the current target (its contact stays remembered for contactGrace). */
@@ -404,6 +465,11 @@ export function lastSeenAt(b: Bot): number {
 
 /** A random value in [min, max] from the bot's own seeded generator. */
 export const pick = (rng: RngState, r: readonly [number, number]): number => r[0] + rngNext(rng) * (r[1] - r[0]);
+
+/** The way `b` faces while holding still (M46): a guard the way into its case, everyone else the enemy's side. */
+export function holdYaw(b: Bot, w: BotWorld): number {
+  return b.role === 'guard' ? b.postYaw : (w.enemyYaw[b.character.team] ?? 0);
+}
 
 /** Flag mode: whether `b`'s team attacks or defends the pole this round ('none' in elimination). */
 export function flagRole(b: Bot, w: BotWorld): 'attack' | 'defend' | 'none' {
