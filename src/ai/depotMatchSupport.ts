@@ -344,3 +344,46 @@ export function expectCustomMatchesFair(mode: MatchMode): void {
     expect(friendlyHits, label).toBe(0);
   }
 }
+
+/** The tallies a balance guard reads (M40): rounds played, decided, won by the attackers, won by end 0, ended on time. */
+export interface BalanceTally {
+  rounds: number;
+  decided: number;
+  attackerWins: number;
+  end0Wins: number;
+  onTime: number;
+}
+
+/** Seeds 1..`seeds` of `mode` on `map` at `cfg`, both teams the same, `seconds` each: the balance tallies over them all. */
+export function tallyBalance(seeds: number, seconds: number, cfg: BotConfig, mode: MatchMode, map: MapData, teamSize: number): BalanceTally {
+  const t: BalanceTally = { rounds: 0, decided: 0, attackerWins: 0, end0Wins: 0, onTime: 0 };
+  for (let seed = 1; seed <= seeds; seed++) {
+    const stats = playMatch(seconds, seed, undefined, cfg, mode, ROUNDS, map, teamSize);
+    for (const r of stats.results) {
+      t.rounds++;
+      if (r.reason === 'time') t.onTime++;
+      if (r.winner === r.attackers) t.attackerWins++;
+      if (r.winner < 0) continue;
+      t.decided++;
+      if (r.winnerEnd === 0) t.end0Wins++;
+    }
+  }
+  return t;
+}
+
+/**
+ * The Pro balance guard (M40, the Esports plan's bands, owner 2026-10-04): in Attack / Defend the attackers win 40–60 % of
+ * rounds; in Elimination each end wins 40–60 % of the decided rounds; under 1 round in 10 ends on time.
+ */
+export function expectProBalance(t: BalanceTally, mode: MatchMode, label: string): void {
+  const said = `${label}: ${JSON.stringify(t)}`;
+  expect(t.rounds, said).toBeGreaterThan(0);
+  if (mode === 'attackDefend') {
+    expect(t.attackerWins / t.rounds, said).toBeGreaterThanOrEqual(0.4);
+    expect(t.attackerWins / t.rounds, said).toBeLessThanOrEqual(0.6);
+  } else {
+    expect(t.end0Wins / t.decided, said).toBeGreaterThanOrEqual(0.4);
+    expect(t.end0Wins / t.decided, said).toBeLessThanOrEqual(0.6);
+  }
+  expect(t.onTime / t.rounds, said).toBeLessThan(0.1);
+}

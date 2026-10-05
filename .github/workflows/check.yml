@@ -30,7 +30,9 @@ jobs:
     # 42 s before FA11b split it by mode), about 155 s of work in all. Measured 2026-10-04 in a 4-core container (FA11b,
     # audit CORE-15): the suite takes 3 min 08 s of CPU with files sharing a worker (vite.config.ts `isolate: false`;
     # 3 min 49 s isolated), so about 1.5-2 min on a 2-vCPU runner; 73-91 s of wall time there, with other work running.
-    timeout-minutes: 20
+    # The city guards (M34c) and the Pro guards on every map (M40, src/ai/*Match.pro*.test.ts, about 7 min of CPU in
+    # the container) took the job to about 13 min before M40 and an estimated 18-20 min after, so the limit is 30.
+    timeout-minutes: 30
     steps:
       # The whole history, so the scope gate can diff the pull request against its base and find the task block a
       # branch cleared before merging (pipeline/scope.mjs).

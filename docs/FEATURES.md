@@ -33,7 +33,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Bots
 
 - Bots patrol lanes, spot, react with a human delay, shoot with inaccuracy, take cover, keep apart from teammates and search (Phase 1, FA4)
-- Four difficulty levels (Easy, Normal, Hard, Pro), picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking); Pro holds angles at corners, answers pre-aimed peeks faster, slices corners, trades hits and holds crossfires as a team, shown only with Dev content on (M4a, M20, FA4, M36, M37, M38)
+- Four difficulty levels (Easy, Normal, Hard, Pro), picked for your teammates and the other team separately; each level changes reactions, aim and tactics (cover, flanking); Pro holds angles at corners, answers pre-aimed peeks faster, slices corners, trades hits and holds crossfires as a team, holds bush edges, tree gaps and stair tops and keeps out of the light at night, shown only with Dev content on (M4a, M20, FA4, M36, M37, M38, M40)
 - Bots crouch-peek over low cover, lean round corners, move as a team on varied routes and walk when it pays (M4b, M10)
 - Bots hear shots, near misses, hit calls and footsteps, less through walls (M2, M22)
 - In Attack / Defend defenders hold near the pole; one attacking bot raises the flag while the others guard it from cover (M5, FA4)

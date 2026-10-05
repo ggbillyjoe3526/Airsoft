@@ -16,6 +16,7 @@ import { createRng, type RngState, rngNext } from '../sim/rng';
 import { blockedShare } from '../sim/soundPath';
 import type { GameState } from '../sim/state';
 import { type Vec3, vec3 } from '../sim/vec';
+import { type AngleFeatures, angleFeaturesOf } from './angleFeatures';
 import { type Bot, type BotWorld, createBot, lastSeenAt, pick, resetBot } from './bot';
 import { thinkBot } from './botBrain';
 import type { CoverBlock } from './cover';
@@ -65,6 +66,7 @@ export class BotController {
   /** The characters the bots drive (players are the rest). */
   private readonly botCharacters = new Set<Character>();
   private readonly world: BotWorld;
+  private features: AngleFeatures | undefined;
   private readonly search: NavSearch;
   private readonly commandsById = new Map<number, PlayerCommand>();
   private readonly chest = vec3();
@@ -124,6 +126,7 @@ export class BotController {
       lowCover: opts.lowCover,
       tallCover: opts.tallCover,
       sight: opts.sight ?? OPEN_SIGHT,
+      angleFeatures: () => this.angleFeatures(),
       body: opts.body,
       hits: opts.hits,
       loadout: opts.loadout,
@@ -147,6 +150,14 @@ export class BotController {
       commands.set(c.id, this.commandFor(c.id));
     }
     this.planRound();
+    // A team that holds angles needs the map's features (M40): worked out now, as the match loads, not mid-round.
+    if (this.teamCfg.some((t) => t.holdsAngles || t.slicesCorners)) this.angleFeatures();
+  }
+
+  /** The map's angle features (M40), worked out on first use. */
+  private angleFeatures(): AngleFeatures {
+    this.features ??= angleFeaturesOf(this.opts.nav, this.opts.tallCover, this.world.sight?.foliage ?? [], this.opts.cfg);
+    return this.features;
   }
 
   /** @internal For tests that drive one bot step (shootBot, reloadBot) by hand: the world the bots think in. */
@@ -604,13 +615,19 @@ export class BotController {
 
   /**
    * A walkable spot worth checking for `bot`'s team: of a few random walkable spots, the one in the
-   * sector the team visited least recently (never-visited sectors further from home first).
+   * sector the team visited least recently (never-visited sectors further from home first, or with the skill's
+   * huntsMiddle nearer the middle of the map).
    */
   private huntPoint(bot: Bot, out: Vec3): boolean {
     const nav = this.opts.nav;
     const cfg = this.world.cfg;
     const visited = this.visited[bot.character.team]!;
     const home = this.spawnCentre[bot.character.team]!;
+    const enemy = this.spawnCentre[1 - bot.character.team]!;
+    // Pro (M40, huntsMiddle): the middle of the map, between the two ends, rather than the far end.
+    const middle = bot.skill.huntsMiddle;
+    const midX = (home.x + enemy.x) / 2;
+    const midZ = (home.z + enemy.z) / 2;
     let best = Number.POSITIVE_INFINITY;
     const cells = nav.cols * nav.rows;
     for (let k = 0, tries = 0; k < cfg.huntCandidates && tries < cfg.huntCandidates * cfg.huntTriesPerCandidate; tries++) {
@@ -624,8 +641,10 @@ export class BotController {
       const x = cellX(nav, cell % nav.cols);
       const z = cellZ(nav, Math.floor(cell / nav.cols));
       const seen = visited[this.sectorOf(x, z)]!;
-      // Stale sectors first (never visited counts as long ago); then prefer those far from home (the enemy's side).
-      const score = (Number.isFinite(seen) ? seen : NEVER) - Math.hypot(x - home.x, z - home.z) * cfg.huntFarBias;
+      // Stale sectors first (never visited counts as long ago); then prefer those far from home (the enemy's side), or
+      // with huntsMiddle those near the middle.
+      const lean = middle ? -Math.hypot(x - midX, z - midZ) * cfg.huntMiddleBias : Math.hypot(x - home.x, z - home.z) * cfg.huntFarBias;
+      const score = (Number.isFinite(seen) ? seen : NEVER) - lean;
       if (score < best) {
         best = score;
         out.x = x;

@@ -139,6 +139,32 @@ export const BOT_BEHAVIOUR = {
   angleRefresh: 2,
   /** ...or as soon as it has moved this far (metres) since it last looked. */
   angleMoveRefresh: 0.5,
+  /**
+   * Held angles beyond walls (M40, map data and nav only, ai/angleFeatures.ts). A bush at least angleBushMinHeight
+   * (metres) tall stops a fan ray like a wall, so its edges are corners too. A gap of angleGapMin to angleGapMax
+   * (metres) between two narrow tall blocks (trunks, posts: at most anglePostMaxHalf either side of their centre) is a
+   * doorway, held when the line of sight crosses it at least as squarely as angleGapFacing (the sine of the angle). A post
+   * is about as deep as it is wide (its short side at least anglePostSquareness of its long one): a wall's stub by a
+   * door or window is not one.
+   */
+  angleBushMinHeight: 1,
+  anglePostMaxHalf: 0.75,
+  anglePostSquareness: 0.75,
+  angleGapMin: 0.8,
+  angleGapMax: 4,
+  angleGapFacing: 0.5,
+  /**
+   * A stair or ramp top (M40): the edge of a landing (floor no steeper than angleFlatSlope for angleLandingRun metres, or
+   * up to a wall) where the floor falls, angleRampSlope per metre or steeper on average, by angleLevelRise (metres) or
+   * more onto another landing within angleRampRun (metres): where someone coming up or down appears. Tops within
+   * angleTopMerge (metres) count as one.
+   */
+  angleLevelRise: 0.9,
+  angleRampRun: 8,
+  angleRampSlope: 0.3,
+  angleFlatSlope: 0.02,
+  angleLandingRun: 1,
+  angleTopMerge: 1.5,
   /** Someone appearing within this angle (degrees) of where a bot already aims counts as pre-aimed (the skill's preAim*). */
   preAimConeDeg: 6,
   // ---- Clearing corners and team play (M38, for skills with slicesCorners / teamPlay) ---------------------------
@@ -328,6 +354,18 @@ export const BOT_BEHAVIOUR = {
   huntTriesPerCandidate: 20,
   /** Among never-visited sectors, each metre further from home counts like this many seconds staler. */
   huntFarBias: 0.01,
+  /**
+   * With the skill's huntsMiddle (M40), each metre nearer the middle of the map (halfway between the two ends) counts like
+   * this many seconds staler instead.
+   */
+  huntMiddleBias: 1,
+  /**
+   * With the skill's keepsDark (M40), a lane point in a light pool moves to the nearest dark spot on its floor within
+   * darkSpotRadius (metres), tried in rings darkSpotStep (metres) apart, darkSpotDirections round each.
+   */
+  darkSpotRadius: 8,
+  darkSpotStep: 1,
+  darkSpotDirections: 16,
   // ---- Flag mode -------------------------------------------------------------------------------
   /**
    * Bots stand at a random spot within this distance of the pole (metres): close enough to work the
@@ -430,6 +468,13 @@ export interface BotSkill {
   readonly peekWatchTime: readonly [number, number];
   /** Trades a hit teammate, moves in pairs, sets crossfires on defence and pushes late when behind (see tradeTime…). */
   readonly teamPlay: boolean;
+  /**
+   * Map balance (M40): its lane swept with no one found, it hunts the middle of the map rather than the far end (see
+   * huntMiddleBias), where the other team, which swept a lane of its own the other way, comes back through.
+   */
+  readonly huntsMiddle: boolean;
+  /** On a night field (M40), never holds a lane point in a light pool when a dark spot is near (see darkSpotRadius). */
+  readonly keepsDark: boolean;
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'pro';
@@ -499,6 +544,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     slicesCorners: false,
     peekWatchTime: [0, 0],
     teamPlay: false,
+    huntsMiddle: false,
+    keepsDark: false,
   },
   normal: {
     reactionTime: [0.35, 0.6],
@@ -523,6 +570,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     slicesCorners: false,
     peekWatchTime: [0, 0],
     teamPlay: false,
+    huntsMiddle: false,
+    keepsDark: false,
   },
   hard: {
     reactionTime: [0.25, 0.45],
@@ -547,6 +596,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     slicesCorners: false,
     peekWatchTime: [0, 0],
     teamPlay: false,
+    huntsMiddle: false,
+    keepsDark: false,
   },
   // Pro (M36, owner 2026-10-04): above Hard in every number, but its first BBs are still never dead on
   // (aimErrorStartMetres above zero) and it reacts no faster than Hard to someone it wasn't already aiming at. It plays
@@ -577,6 +628,8 @@ export const BOT_SKILL: Readonly<Record<Difficulty, BotSkill>> = {
     slicesCorners: true,
     peekWatchTime: [1.5, 3],
     teamPlay: true,
+    huntsMiddle: true,
+    keepsDark: true,
   },
 };
 
