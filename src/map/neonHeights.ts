@@ -582,9 +582,9 @@ const EAST_DEAD_ZONE = deadZone(22.2, 14.2, -0.9, -0.9, Math.PI / 2);
 const LANES: Vec3[][] = [
   // North: Noodle Alley, across the top of the avenue, the Back Alley door, the back hall.
   [vec3(-19.5, 0, 7.5), vec3(-14, 0, 11.8), vec3(-6, 0, 12), vec3(0.5, 0, 12.6), vec3(8, 0, 12.6), vec3(10.3, 0, 9.5), vec3(10.2, 0, 7.2)],
-  // Mid: through the Arcade, past the van, the bar door, the atrium. The east's last two holds are inside the bar's door
-  // line (M73, audit BAL-04). From (5.4, 1.7), out on the avenue at the door, the east took the first hit in 15 of 24
-  // Normal night rounds (seeds 1-4).
+  // Mid: through the Arcade, past the van, the bar door, the atrium. The east's last two holds are deep in the bar (M73,
+  // audit BAL-04): through the door they see 2.3 m of the avenue. From (5.4, 1.7), 1.1 m behind the door, they saw 4 m,
+  // and the east landed the first hit in 61 % of Normal night rounds (seeds 1-16); from here 50.5 %.
   [vec3(-19.5, 0, 4.8), vec3(-17, 0, 7), vec3(-16, 0, 1.2), vec3(-13.8, 0, 1.2), vec3(-9.4, 0, 2.2), vec3(-5.4, 0, 5.9), vec3(-2.7, 0, 5.9), vec3(-2.7, 0, 2.2), vec3(1.6, 0, 1.7), vec3(8.6, 0, 1.4), vec3(7.4, 0, 1)],
   // High: the plaza stair, the walkway and the footbridge door into the Clinic, the stairwell to the Studio, the Sky Bridge, the Tower's Level 2.
   [
