@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EXTRACTION } from '../../config/extraction';
+import { REALCAP_TEXT } from '../../config/matchRules';
 import { DEPOT } from '../../map/depot';
 import type { ExtractionData } from '../../map/mapTypes';
 import { describeRules, type MatchRulesText } from './rulesText';
@@ -59,6 +60,35 @@ describe('the Extraction rules shown on New game (M43)', () => {
 
   it('says the match is played as Elimination on a map without Extraction data', () => {
     expect(describeRules(RULES, 'extraction')).toBe('This map has no Extraction yet: the match is played as Elimination.');
+  });
+
+  it('names the Rules picker switches a run plays: semi only, realcap, the factory kit, teammates only on the minimap (M53, audit UI-01)', () => {
+    const switches = { winByTwo: true, timeOutToMorePlayers: true, heardOnMinimap: false, semiAutoOnly: true, realcap: true, factoryKit: true };
+    const text = describeRules({ ...RULES, switches }, 'extraction', X);
+    expect(text).toContain("Every replica fires semi only, bots' too.");
+    expect(text).toContain(`Realcap magazines for everyone: ${REALCAP_TEXT}.`);
+    expect(text).toContain('Everyone carries the factory rifle and pistol as they come.');
+    expect(text).toContain('The minimap shows your teammates only.');
+    // A run is one round on its own clock: the overtime and time-out switches are not said.
+    expect(text).not.toMatch(/two clear|more players left/);
+    // Skirmish's switches add nothing.
+    expect(describeRules({ ...RULES, switches: { ...switches, heardOnMinimap: true, semiAutoOnly: false, realcap: false, factoryKit: false } }, 'extraction', X)).toBe(describeRules(RULES, 'extraction', X));
+  });
+
+  it('says each switch once, in the same words as the other modes, and still says them in Elimination and Attack/Defend (M53 QA)', () => {
+    const switches = { winByTwo: false, timeOutToMorePlayers: false, heardOnMinimap: false, semiAutoOnly: true, realcap: true, factoryKit: true };
+    const sentences = ["Every replica fires semi only, bots' too.", `Realcap magazines for everyone: ${REALCAP_TEXT}.`, 'Everyone carries the factory rifle and pistol as they come.', 'The minimap shows your teammates only.'];
+    for (const mode of ['extraction', 'elimination', 'attackDefend'] as const) {
+      const text = describeRules({ ...RULES, switches }, mode, X);
+      for (const sentence of sentences) expect(text.split(sentence).length - 1, `${mode}: ${sentence}`).toBe(1);
+      expect(text.endsWith(sentences.map((x) => ' ' + x).join('')), mode).toBe(true);
+    }
+  });
+
+  it('keeps the switches in the fallback paragraph of a map with no Extraction data (played as Elimination), and a run says nothing of rounds', () => {
+    const switches = { winByTwo: true, timeOutToMorePlayers: true, heardOnMinimap: true, semiAutoOnly: true, realcap: false, factoryKit: false };
+    expect(describeRules({ ...RULES, switches }, 'extraction')).toBe('This map has no Extraction yet: the match is played as Elimination.');
+    expect(describeRules({ ...RULES, switches }, 'extraction', X)).not.toMatch(/First to|rounds wins/);
   });
 
   it("ignores Extraction data in the other modes' paragraphs", () => {

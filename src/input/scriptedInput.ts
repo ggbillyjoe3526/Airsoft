@@ -30,6 +30,8 @@ export interface ScriptStep {
   jump?: boolean;
   /** A loadout slot to switch to on this step's first tick. */
   switchTo?: number;
+  /** The Use key held (opens a case within reach; M64, audit UI-05). */
+  use?: boolean;
 }
 
 /** The step in force at `tick`: the last one whose `fromTick` is at or before it (null before the first). */
@@ -66,5 +68,6 @@ export function fillScriptedCommand(script: readonly ScriptStep[], tick: number,
   cmd.switchTo = first ? (step?.switchTo ?? -1) : -1;
   cmd.cycleFireMode = false;
   cmd.toggleTorch = false;
+  cmd.use = step?.use ?? false;
   return newYaw;
 }

@@ -106,7 +106,7 @@ ends the round). A hit character is eliminated
   `lightingPreset.ts` resolves one (`resolveLighting`, the key light turned to the map's `moonOver`). A map listing two
   presets offers Day | Night on its option in the Map pop-up (M34d, `map/lightingChoice.ts`, saved as
   `lighting.<map id>`): `mapUnderLighting` puts the pick first and sets `night` from it, so the same path, the bots'
-  night sight and glowing BBs follow it. Every session
+  night sight and glowing BBs follow it (the same object for the same map and pick, so the kept meshes are taken back, M63). Every session
   passes it to `Renderer.setLighting` (haze, background, exposure, environment) and `addLighting` (key light, fill, sky,
   clouds), and `lightPools.ts` draws the map's light pools (`MapData.lights`) under a night preset only (M34e): one glow
   mesh, one additive ground mesh and, on Medium and High, a fixed number of point lights on the pools nearest the eye
@@ -166,8 +166,10 @@ ends the round). A hit character is eliminated
   `Sfx.setScene` by `CombatPresentation.setLighting`) picks the field's ambience by day or night (`config/audio.ts`
   AMBIENCES: beds, calls, never birds at night), the camp fires that crackle, and the ground grid footsteps on terrain
   read after blocks (`map/groundSurfaces.ts`, the terrain's own). Cues and loops only some maps play (`MAP_CUE_SEEDS`,
-  `AMBIENT_LOOPS`) are rendered by `AudioEngine.prepare` as such a match loads, each from its own seed; the title
-  screen's cues keep their one shared stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
+  `AMBIENT_LOOPS`) are rendered each from its own seed in New game's spare time once such a field is picked
+  (`AudioEngine.prefetch`, M65; a new pick lets go of what no match has played), and `AudioEngine.prepare` finishes
+  whatever is left as the match loads (the build's `sound` phase); the title screen's cues keep their one shared
+  stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
   the `city` ambience (traffic and drones with a shop chime by day; traffic and a neon `hum` loop, `renderHum`, with
   arcade bleeps by night), Neon Heights' `MapData.ambience`; a field's own sounds stay within about 7 MB, and every
   map sound a page may keep within 12 MB.
@@ -275,7 +277,7 @@ ends the round). A hit character is eliminated
   and New game's choices. No map is loaded on the title and New game screens (M15b).
 - **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,
   navigation, the simulation, the bots, and the combat and match presentation. `Game` builds it on Play and disposes it
-  when the player leaves the match, so the next Play can load another map; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`; audit SIM-08). What Play does (build a match or the range, rebuild the range, reuse what is loaded) is the pure `core/sessionPlan.ts` `nextSessionAction`; the result and pause screens' text is `ui/matchStopText.ts`, through `MatchSession.resultView` / `pauseLine` (FA11b, audit CORE-05). The field's meshes come from `Renderer.mapMeshes` (`render/mapMeshCache.ts`), which keeps the last map's between sessions, so the same map again reuses them (audit CORE-33). A decided match is recorded and paid once, the frame it is decided, by the pure `stats/settleMatch.ts` (audit CORE-06). Its
+  when the player leaves the match, so the next Play can load another map; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`; audit SIM-08). What Play does (build a match or the range, rebuild the range, reuse what is loaded) is the pure `core/sessionPlan.ts` `nextSessionAction`; the result and pause screens' text is `ui/matchStopText.ts`, through `MatchSession.resultView` / `pauseLine` (FA11b, audit CORE-05). The field's meshes come from `Renderer.mapMeshes` (`render/mapMeshCache.ts`), which keeps the last map's between sessions, so the same map again reuses them (audit CORE-33); the build ends by compiling the scene's shaders (`Renderer.warmShaders`, M63, audit REN-06), so the first frame doesn't. A decided match is recorded and paid once, the frame it is decided, by the pure `stats/settleMatch.ts` (audit CORE-06). Its
   `MatchSetup` carries New game's Match rules (M20, `config/matchRules.ts`: team size, rounds to win, round time,
   friendly fire, ricochets), turned into the match's own round and hit rules, and a bot difficulty per team. Since M39
   it also carries the Rules picker's ruleset (`RULESETS`: one data entry each, laid over the Match pop-up's picks by

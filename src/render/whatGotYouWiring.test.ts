@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROUNDS } from '../config/hits';
 import { HITS } from '../config/hits';
+import { HUD } from '../config/render';
 import { BODY } from '../config/movement';
 import { TEAM_COLOUR_SETS } from '../config/teams';
 import { PRO_TIPS, proTip } from '../config/tutorial';
@@ -11,10 +12,11 @@ import { createGameState, type GameState } from '../sim/state';
 import { LOADOUT } from '../config/replicas';
 import { vec3 } from '../sim/vec';
 import { MatchStats } from '../stats/matchStats';
+import type { HitFeedback as HitFeedbackClass } from '../ui/hitFeedback';
 import type { MatchBoard as MatchBoardClass } from '../ui/matchBoard';
 import type { MatchPresentation as MatchPresentationClass } from './matchPresentation';
 
-// How MatchPresentation drives the "what got you" card and the Pro tips (M41). Every drawing class is auto-mocked (this
+// How MatchPresentation drives the "what got you" card and the Pro tips (M41), and says the run's news (M53). Every drawing class is auto-mocked (this
 // project has no DOM or GPU under Vitest); the card is a recording stand-in, so what is asserted is the presentation's own
 // logic: when the card is worded, cleared and allowed to show, and what tip the board is told.
 
@@ -81,10 +83,14 @@ vi.mock('./spectatorCamera', () => ({
 // real drawing classes; the mocks above only reach a fresh copy, so this file loads its own.
 let MatchPresentation: typeof MatchPresentationClass;
 let MatchBoard: typeof MatchBoardClass;
+let HitFeedback: typeof HitFeedbackClass;
+let banners: typeof import('../ui/roundBanner');
 beforeAll(async () => {
   vi.resetModules();
   ({ MatchPresentation } = await import('./matchPresentation'));
   ({ MatchBoard } = await import('../ui/matchBoard'));
+  ({ HitFeedback } = await import('../ui/hitFeedback'));
+  banners = await import('../ui/roundBanner');
 });
 // And resets again when it ends (vite.config.ts's rule, audit CORE-06), so later files in this worker don't load a second
 // copy of the modules beside the first.
@@ -287,5 +293,146 @@ describe('Pro briefing tips on the board', () => {
     r.frame();
     expect(r.board.setTip).toHaveBeenCalled();
     for (const call of vi.mocked(r.board.setTip).mock.calls) expect(call[0]).toBe('');
+  });
+});
+
+describe("the run's news is said and shown, not only written into the strip (M53, audit UI-02)", () => {
+  const exit = (name: string, late: boolean) => ({ name, position: vec3(), radius: 2.5, late, closed: false, open: !late });
+
+  function runRig(): Rig & { feedback: HitFeedbackClass } {
+    const r = rig();
+    r.state.round.run.exits.push(exit('Car park gate', false), exit('Staging yard gate', true), exit('North Gate road', true));
+    return { ...r, feedback: vi.mocked(HitFeedback).mock.instances[0]! };
+  }
+
+  it('says a late exit opening once, through the polite region, and shows it on the banner for a moment', () => {
+    const r = runRig();
+    r.frame();
+    event(r, { type: 'exitOpened', exit: 1 });
+    expect(r.feedback.announce).toHaveBeenCalledTimes(1);
+    expect(r.feedback.announce).toHaveBeenCalledWith('Staging yard gate is open');
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('Staging yard gate is open');
+    // Ticks with no news say nothing more, and the banner lets it go after HUD.runNewsTime.
+    r.match.afterTick(0);
+    r.state.time += HUD.runNewsTime;
+    r.frame();
+    expect(r.feedback.announce).toHaveBeenCalledTimes(1);
+    expect(r.feedback.setRoundMessage).not.toHaveBeenLastCalledWith('Staging yard gate is open');
+  });
+
+  it('names every exit that opened in the tick in one line, and says the minute left', () => {
+    const r = runRig();
+    r.state.events.push({ type: 'exitOpened', exit: 1 }, { type: 'exitOpened', exit: 2 });
+    r.match.afterTick(0);
+    r.state.events.length = 0;
+    expect(r.feedback.announce).toHaveBeenCalledExactlyOnceWith('Staging yard gate and North Gate road are open');
+    event(r, { type: 'runWarning', secondsLeft: 60 });
+    expect(r.feedback.announce).toHaveBeenLastCalledWith('Under a minute left');
+    expect(r.feedback.announce).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives the banner to the respawn first: back in at the insertion is the news that is yours', () => {
+    const r = runRig();
+    event(r, { type: 'respawned', characterId: PLAYER, respawnsLeft: 0 });
+    event(r, { type: 'runWarning', secondsLeft: 60 });
+    r.frame();
+    expect(r.feedback.announce).toHaveBeenCalledWith('Under a minute left');
+    expect(r.feedback.setRoundMessage).not.toHaveBeenLastCalledWith('Under a minute left');
+  });
+
+  it('shows the news right up to HUD.runNewsTime and not past it (M53 QA)', () => {
+    const r = runRig();
+    r.frame();
+    event(r, { type: 'exitOpened', exit: 1 });
+    r.state.time += HUD.runNewsTime - 0.01;
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('Staging yard gate is open');
+    r.state.time += 0.02;
+    r.frame();
+    expect(r.feedback.setRoundMessage).not.toHaveBeenLastCalledWith('Staging yard gate is open');
+  });
+
+  it('puts the later news on the banner when a second item comes inside the first one\'s moment, and says each once (M53 QA)', () => {
+    const r = runRig();
+    r.frame();
+    event(r, { type: 'exitOpened', exit: 1 });
+    r.state.time += 1;
+    event(r, { type: 'runWarning', secondsLeft: 60 });
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('Under a minute left');
+    // The new news holds for its own full moment from when it came.
+    r.state.time += HUD.runNewsTime - 0.5;
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('Under a minute left');
+    expect(r.feedback.announce).toHaveBeenCalledTimes(2);
+  });
+
+  it('puts an exit opening and the minute warning of one tick in one line and one announcement (M53 QA)', () => {
+    const r = runRig();
+    r.state.events.push({ type: 'runWarning', secondsLeft: 60 }, { type: 'exitOpened', exit: 2 });
+    r.match.afterTick(0);
+    r.state.events.length = 0;
+    expect(r.feedback.announce).toHaveBeenCalledExactlyOnceWith('North Gate road is open · Under a minute left');
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('North Gate road is open · Under a minute left');
+  });
+
+  it('says nothing and shows nothing for an exit the run does not have, nor for a tick with no news (M53 QA)', () => {
+    const r = runRig();
+    r.frame();
+    const shown = vi.mocked(r.feedback.setRoundMessage).mock.calls.length;
+    event(r, { type: 'exitOpened', exit: 9 });
+    r.match.afterTick(0);
+    r.frame();
+    expect(r.feedback.announce).not.toHaveBeenCalled();
+    expect(vi.mocked(r.feedback.setRoundMessage).mock.calls.length).toBe(shown);
+  });
+
+  it('does not put the news over the round-over banner: it is said, but the result owns the banner (M53 QA)', () => {
+    const r = runRig();
+    r.frame();
+    r.state.round.phase = 'over';
+    event(r, { type: 'runWarning', secondsLeft: 60 });
+    r.frame();
+    expect(r.feedback.announce).toHaveBeenCalledWith('Under a minute left');
+    expect(r.feedback.setRoundMessage).not.toHaveBeenLastCalledWith('Under a minute left');
+  });
+
+  it('lets a respawn that comes after the news take the banner, and hands it to the round banner once both lapse (M53 QA)', () => {
+    // roundBanner is auto-mocked here: give each banner words of its own so which one is up can be told.
+    vi.mocked(banners.respawnBanner).mockReturnValue('BACK IN');
+    vi.mocked(banners.roundBanner).mockReturnValue('ROUND');
+    const r = runRig();
+    r.frame();
+    event(r, { type: 'runWarning', secondsLeft: 60 });
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('Under a minute left');
+    r.state.time += 1;
+    event(r, { type: 'respawned', characterId: PLAYER, respawnsLeft: 0 });
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('BACK IN');
+    r.state.time += HUD.respawnMessageTime + 0.1;
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('ROUND');
+  });
+
+  it('keeps the respawn banner over news that comes while it is up, and shows the news after it if the news still has time (M53 QA)', () => {
+    vi.mocked(banners.respawnBanner).mockReturnValue('BACK IN');
+    vi.mocked(banners.roundBanner).mockReturnValue('ROUND');
+    const r = runRig();
+    r.frame();
+    event(r, { type: 'respawned', characterId: PLAYER, respawnsLeft: 0 });
+    r.state.time += 1;
+    event(r, { type: 'exitOpened', exit: 1 });
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('BACK IN');
+    // The respawn lapses first (it came first); the news, 1 s younger, still has its time.
+    r.state.time += HUD.respawnMessageTime - 1 + 0.05;
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('Staging yard gate is open');
+    r.state.time += 1;
+    r.frame();
+    expect(r.feedback.setRoundMessage).toHaveBeenLastCalledWith('ROUND');
   });
 });

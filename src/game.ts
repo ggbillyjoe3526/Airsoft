@@ -1,5 +1,6 @@
 import { AudioEngine } from './audio/audioEngine';
 import { loadVolumes } from './audio/audioMix';
+import { soundscapeOf } from './audio/soundscape';
 import { motionScale, type SoundCueColour, soundCueCss } from './config/accessibility';
 import type { VolumeChannel } from './config/audio';
 import type { Difficulty } from './config/bots';
@@ -25,7 +26,7 @@ import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { lightingPicked, mapUnderLighting } from './map/lightingChoice';
+import { lightingPicked, mapUnderLighting, playsAtNight } from './map/lightingChoice';
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
@@ -396,8 +397,8 @@ export class Game {
       tutorialDone: loadTutorialDone(),
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
-      map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true)) },
-      lighting: { initial: this.lighting, onChange: (m, light) => ((this.lighting[m] = light), (this.setupChanged = true)) },
+      map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true), this.prefetchFieldSounds()) },
+      lighting: { initial: this.lighting, onChange: (m, light) => ((this.lighting[m] = light), (this.setupChanged = true), this.prefetchFieldSounds()) },
       mode: {
         initial: this.mode,
         onChange: (m) => ((this.mode = m), (this.setupChanged = true)),
@@ -507,7 +508,22 @@ export class Game {
     window.addEventListener('pagehide', this.flushSettings);
     this.pointer.onError(() => this.menus.showHint(LOCK_REFUSED_HINT));
     this.audio.warmUp();
+    this.prefetchFieldSounds();
     this.renderer.warmUp();
+  }
+
+  /**
+   * The field New game would play now, under its Day/Night pick, has its own sounds rendered in the spare time after the
+   * title screen's (M65, audit AUD-01), so Play doesn't. Again on every map, lighting or Dev content change; a dev map
+   * only while Dev content is on and it is the pick (playedPicks).
+   */
+  private prefetchFieldSounds(): void {
+    const id = this.playedPicks().map;
+    const pick = this.lighting[id];
+    const base = mapData(id);
+    // The same map object (and so the same soundscape) the match is built with (play).
+    const map = mapUnderLighting(base, pick);
+    this.audio.prefetch(() => soundscapeOf(map, playsAtNight(base, pick)));
   }
 
   /** The tab hidden or the window's focus lost (M18b, audit CORE-20) stops play, as Esc would; this stops watching. */
@@ -724,6 +740,7 @@ export class Game {
     // Unlock all gear and Dev content (M35) change what the Loadout offers and carries, and Dev content what New game
     // plays; the next Play rebuilds the match with it.
     if (this.dev.unlockAllGear !== before.unlockAllGear || this.dev.devContent !== before.devContent) this.loadoutChanged = this.setupChanged = true;
+    if (this.dev.devContent !== before.devContent) this.prefetchFieldSounds();
   }
 
   /**

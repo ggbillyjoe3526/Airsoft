@@ -3,7 +3,8 @@ import { defaultTeammateDifficulty } from './bots';
 import { hasSavedTeammateDifficulty, loadDifficulty, loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
-import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, SKIRMISH_SWITCHES, TEAM_SIZE_CHOICES, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor, runRulesSummary } from './matchRules';
+import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, SKIRMISH_SWITCHES, TEAM_SIZE_CHOICES, standardMatchText, hitRulesFor, matchRulesSummary, offersRow, roundRulesFor, runRulesSummary, RUN_IGNORES, type MatchRules } from './matchRules';
+import { REALCAP } from './replicas';
 
 /** A browser store holding `fields` in the settings object. */
 function storageWith(fields: Record<string, unknown>): Storage {
@@ -147,5 +148,35 @@ describe('custom match rules (M20)', () => {
     expect(countsForRecords(DEFAULT_MATCH_RULES, 'easy', loadTeammateDifficulty())).toBe(true);
     vi.stubGlobal('localStorage', storageWith({ difficulty: 'easy', teammateDifficulty: 'easy' }));
     expect(loadTeammateDifficulty()).toBe('easy'); // a level the player picked stands
+  });
+});
+
+describe('M53 QA: what an Extraction run reads of the Rules picker (audit UI-01)', () => {
+  const fields = Object.keys(DEFAULT_MATCH_RULES) as (keyof MatchRules)[];
+
+  it('hides exactly the rows that feed the round rules a run overrides: every field roundRulesFor reads, except the squad size', () => {
+    const flipped = (f: keyof MatchRules): MatchRules => {
+      const v = DEFAULT_MATCH_RULES[f];
+      return { ...DEFAULT_MATCH_RULES, [f]: typeof v === 'boolean' ? !v : (v as number) + 1 };
+    };
+    const base = JSON.stringify(roundRulesFor(DEFAULT_MATCH_RULES));
+    const read = fields.filter((f) => JSON.stringify(roundRulesFor(flipped(f))) !== base && f !== 'teamSize');
+    expect([...RUN_IGNORES].sort()).toEqual(read.sort());
+    // The squad size, friendly fire and ricochets still apply in a run.
+    for (const f of ['teamSize', 'friendlyFire', 'ricochetsCount'] as const) expect(offersRow('custom', f, true), f).toBe(true);
+  });
+
+  it('names every kit and minimap switch on the Match button in a run, in the match summary\'s order, and none of the round rules', () => {
+    const all: MatchRules = { ...DEFAULT_MATCH_RULES, heardOnMinimap: false, semiAutoOnly: true, realcap: true, factoryKit: true, winByTwo: true, timeOutToMorePlayers: true };
+    const run = { baseOpponents: 2, runTime: 480 };
+    expect(runRulesSummary(all, run).detail).toBe(
+      `One 8:00 run. Friendly fire on; ricochets don't count. Minimap: teammates only. Semi only. Realcap ${REALCAP.magSize} × ${REALCAP.mags}. Factory kit for everyone.`,
+    );
+    // Skirmish's switches add nothing, as before M53.
+    expect(runRulesSummary(DEFAULT_MATCH_RULES, run).detail).toBe("One 8:00 run. Friendly fire on; ricochets don't count.");
+    // The elimination summary says the same notes after its own round rules.
+    expect(matchRulesSummary(all).detail).toBe(
+      `2:30 rounds. Friendly fire on; ricochets don't count. Win by two. Time-out: more players left wins. Minimap: teammates only. Semi only. Realcap ${REALCAP.magSize} × ${REALCAP.mags}. Factory kit for everyone.`,
+    );
   });
 });

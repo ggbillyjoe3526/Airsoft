@@ -15,6 +15,7 @@ import { countsForRecords, hitRulesFor, kitUnderRules, type MatchRules, recordsK
 import type { MatchMode } from './config/modes';
 import { BODY, MOVEMENT } from './config/movement';
 import { NAV } from './config/nav';
+import { perfScriptFor } from './config/perfScript';
 import { PHYSICS } from './config/physics';
 import { type LightingPreset, matchOverScreenDelay, type QualitySettings } from './config/render';
 import { LOADOUT, REALCAP, type ReplicaConfig, replicaUnderRules } from './config/replicas';
@@ -268,15 +269,20 @@ export class MatchSession {
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
+    // The perf harness's player (`?script=perf`) plays the script for this mode: Extraction's opens a case (M64, UI-05).
+    if (input.script) input.script = perfScriptFor(this.mode);
     input.restartScript();
     // The player is always on Blue.
     // The torches (M33h), once everyone is kitted: your own takes one of the night lights on Medium and High.
     this.torches = new TorchBeams(this.state.characters, lighting, quality, this.physics, BODY, this.hits);
     renderer.scene.add(this.torches.object);
     this.daylight.reserveLights(this.torches.reserved);
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night));
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed);
+    this.build.phase('replica and effects');
+    // The field's own sounds (M33j): whatever New game's spare time didn't render ahead is finished here (M65, audit
+    // AUD-01), so `?perf` shows what was left.
     this.combat.setLighting(lighting);
-    this.build.phase('replica, effects and sound');
+    this.build.phase('sound');
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction);
     this.match.setHitFacts(this.bots.lastHit);
@@ -290,6 +296,9 @@ export class MatchSession {
     renderer.scene.add(this.contact.object);
     input.ordersEnabled = true;
     this.build.phase('figures, flag and HUD');
+    // The scene is whole: its shaders are compiled now, not in the first frame (M63, audit REN-06).
+    this.combat.warmShaders();
+    this.build.phase('shaders');
   }
 
   /** Extraction's run context (the insertion, the home team's starts, the exits); undefined in the other modes. */

@@ -1,5 +1,6 @@
-import { AUDIO } from '../config/audio';
+import { AUDIO, type LoopId } from '../config/audio';
 import { MAP_CUE_SEEDS, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
+import { renderLoop } from './ambience';
 import { muffle, renderRecipe, seededRandom } from './dsp';
 
 /** Every sound, rendered: a few variants of each cue, as raw samples ready to copy into audio buffers. */
@@ -31,13 +32,32 @@ export function* renderSoundsGradually(
  * else has been rendered, and whichever maps were played first.
  */
 export function renderMapCue(cue: SoundCue, sampleRate: number, variants: number = AUDIO.variants): Float32Array[] {
+  return finish(renderMapCueGradually(cue, sampleRate, variants));
+}
+
+/**
+ * renderMapCue a variant at a time (M65, audit AUD-01): pauses (yields) after each variant but the last, so New game's
+ * spare time can render a field's sounds ahead of Play. The same samples however the steps are spread.
+ */
+export function* renderMapCueGradually(cue: SoundCue, sampleRate: number, variants: number = AUDIO.variants): Generator<void, Float32Array[]> {
   const seed = MAP_CUE_SEEDS[cue];
   if (seed === undefined) throw new Error(`${cue} is not a map cue`);
   const rand = seededRandom(seed);
   const list: Float32Array[] = [];
-  for (let v = 0; v < variants; v++) list.push(renderRecipe(SOUNDS[cue], sampleRate, rand));
+  for (let v = 0; v < variants; v++) {
+    if (v > 0) yield;
+    list.push(renderRecipe(SOUNDS[cue], sampleRate, rand));
+  }
   return list;
 }
+
+/** How a field's own sounds are rendered a step at a time (M65): a map cue's variants and a loop. A test can count the calls. */
+export interface MapSoundRenderers {
+  cue(cue: SoundCue, sampleRate: number): Generator<void, Float32Array[]>;
+  loop(id: LoopId, sampleRate: number): Generator<void, Float32Array>;
+}
+
+export const MAP_SOUND_RENDERERS: MapSoundRenderers = { cue: (cue, sampleRate) => renderMapCueGradually(cue, sampleRate), loop: renderLoop };
 
 /**
  * Renders `variants` versions of every title-screen cue in config/sounds.ts at `sampleRate`, all at once (test only: the game renders
@@ -47,8 +67,8 @@ export function renderSounds(sampleRate: number, variants: number = AUDIO.varian
   return finish(renderSoundsGradually(sampleRate, variants, seed));
 }
 
-/** Runs a gradual job to its end and returns its result. */
-function finish<T>(job: Generator<void, T>): T {
+/** Runs a gradual job to its end (from wherever it was left) and returns its result. */
+export function finish<T>(job: Generator<void, T>): T {
   for (;;) {
     const r = job.next();
     if (r.done) return r.value;

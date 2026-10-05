@@ -39,6 +39,16 @@ export interface BBGlow {
 const NO_GLOW: BBGlow = { player: [], others: false };
 
 /**
+ * Where the camera looks and its own up, in the world (M53, audit AUD-05): the ears' axes. The up tilts with the view's
+ * pitch and lean, so it stays perpendicular to where the camera looks, however steeply.
+ */
+export function listenerAxes(camera: THREE.Camera, forward: THREE.Vector3, up: THREE.Vector3): void {
+  camera.getWorldDirection(forward);
+  // getWorldDirection has brought the camera's world matrix up to date: its second column is the camera's up.
+  up.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+}
+
+/**
  * Every replica whose sounds the match needs: yours first (as you carry them), then any other a character carries. Bots
  * needn't carry what you do (you may leave the AEG at home, M32), and a replica without sounds would shoot silently.
  */
@@ -78,6 +88,7 @@ export class CombatPresentation {
   private readonly hud: Hud;
   private readonly sfx: Sfx;
   private readonly forward = new THREE.Vector3();
+  private readonly up = new THREE.Vector3();
   private readonly listenerPos = { x: 0, y: 0, z: 0 };
   private readonly muzzle = new THREE.Vector3();
   private readonly dir = { x: 0, y: 0, z: 0 };
@@ -128,8 +139,10 @@ export class CombatPresentation {
     private readonly hits: HitConfig,
     /** Whose BBs glow (M33b): yours by gear slot (your Loadout's choice on this field), and everyone else's. */
     private readonly glow: BBGlow = NO_GLOW,
+    /** The match's seed: the ambience's calls are timed from it (M53, audit AUD-07; Sfx). */
+    seed = 0,
   ) {
-    this.sfx = new Sfx(heardReplicas(loadout, state.characters), field.blocks, query, audio);
+    this.sfx = new Sfx(heardReplicas(loadout, state.characters), field.blocks, query, audio, seed);
     this.bbs = new BBRenderer(state.bbs, tickSeconds);
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
@@ -320,12 +333,17 @@ export class CombatPresentation {
     this.viewmodel.setScoped(sight !== null && OPTICS[sight].scope);
     this.hud.update(p.armament, this.loadout, p.status === 'alive', Math.tan(spread) * focalPx, sight, dt);
 
-    cam.getWorldDirection(this.forward);
+    listenerAxes(cam, this.forward, this.up);
     this.listenerPos.x = cam.position.x;
     this.listenerPos.y = cam.position.y;
     this.listenerPos.z = cam.position.z;
-    this.sfx.setListener(this.listenerPos, this.forward.x, this.forward.y, this.forward.z);
+    this.sfx.setListener(this.listenerPos, this.forward.x, this.forward.y, this.forward.z, this.up.x, this.up.y, this.up.z);
     this.sfx.placeSources(this.state.characters, this.player.id);
+  }
+
+  /** Compiles the world's and the held replica's shaders before the first frame (M63, audit REN-06: Renderer.warmShaders). */
+  warmShaders(): void {
+    this.renderer.warmShaders(this.overlay);
   }
 
   /** Draws the frame; the held replica only when the camera is in first person. */

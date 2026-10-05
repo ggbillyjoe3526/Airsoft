@@ -108,3 +108,28 @@ describe('Reduced motion with nothing saved (audit UI-07)', () => {
     expect(text).toMatch(/#app:not\(\.full-motion\) \.respawn-fade\.on\s*\{[^}]*animation-duration/);
   });
 });
+
+describe('the progress fills (audit UI-11)', () => {
+  const fills = ['.hud-reload div', '.case-prompt-fill', '.sb-flag-bar b'];
+
+  it('scale from the left on one transform transition, whose duration the game sets, not a width', () => {
+    const rule = blockOf(fills.join(',\n'));
+    expect(rule, 'one rule for the three fills').not.toBeNull();
+    expect(rule).toMatch(/width:\s*100%/);
+    expect(rule).toMatch(/transform:\s*scaleX\(0\)/);
+    expect(rule).toMatch(/transform-origin:\s*left/);
+    expect(rule).toMatch(/transition-property:\s*transform/);
+    expect(rule).toMatch(/transition-duration:\s*0s/);
+  });
+
+  it('lose the transition under Reduced motion, the setting and the system fallback, so the game steps them instead', () => {
+    expect(blockOf(fills.map((f) => `.reduced-motion ${f}`).join(',\n'))).toMatch(/transition-property:\s*none/);
+    const system = [...sheet.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{/g)].map((m) => blockOf('@media (prefers-reduced-motion: reduce)', m.index) ?? '').join('\n');
+    expect(system).toMatch(/#app:not\(\.full-motion\) \.hud-reload div,\s*#app:not\(\.full-motion\) \.case-prompt-fill,\s*#app:not\(\.full-motion\) \.sb-flag-bar b\s*\{[^}]*transition-property:\s*none/);
+  });
+
+  it('keep their colours in forced colours, inside the HUD, the scoreboard and the case prompt', () => {
+    const rule = /([^{}]+)\{\s*forced-color-adjust:\s*none;\s*\}/.exec(blockOf('@media (forced-colors: active)')!)?.[1] ?? '';
+    for (const owner of ['.hud', '.scoreboard', '.case-prompt']) expect(rule).toContain(owner);
+  });
+});
