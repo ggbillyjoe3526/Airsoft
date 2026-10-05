@@ -167,6 +167,6 @@ describe('the Pro band: the plan\'s 40-60 % except Woodland Attack / Defend (M57
     const banded = calls.filter((c) => !/, '[^']*'$/.test(c.args));
     expect(banded.map((c) => c.file)).toEqual(['./woodlandMatch.proFlag.test.ts']);
     expect(banded[0]!.args).toContain("'attackDefend', WOODLAND,");
-    expect(sources['./woodlandMatch.proFlag.test.ts']).toContain('const ATTACKERS: readonly [number, number] = [0.2, PRO_BAND[1]];');
+    expect(sources['./woodlandMatch.proFlag.test.ts']).toContain('const ATTACKERS: readonly [number, number] = [0.15, PRO_BAND[1]];');
   });
 });

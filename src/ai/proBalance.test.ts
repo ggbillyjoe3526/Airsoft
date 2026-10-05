@@ -77,8 +77,9 @@ describe('Pro-only map balance skills (M40)', () => {
       expect(pro.atPost).toBeGreaterThan(0);
       expect(hard.atPost).toBeGreaterThan(0);
       // Measured 2026-10-05 (M57, seeds 1-4, 120 s each, every bot carrying its torch as the game fits it): Pro in the
-      // light for 22 % of its time at a post (it stops a step short of the pool's edge; seed 1 alone 43 %), Hard for 93 %.
-      // Before M57 (no torches, seed 1 alone): Pro 24 %, Hard 94 %.
+      // light for 18 % of its time at a post (it stops a step short of the pool's edge), Hard for 92 % (on M55's maps;
+      // on the maps before M55, seed 1 alone read 43 % for Pro). Before M57 (no torches, seed 1 alone): Pro 24 %, Hard
+      // 94 %.
       expect(pro.lit / pro.atPost, said).toBeLessThan(0.35);
       expect(hard.lit / hard.atPost, said).toBeGreaterThan(0.8);
     });

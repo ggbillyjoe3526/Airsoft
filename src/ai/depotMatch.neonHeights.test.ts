@@ -11,6 +11,11 @@ import { expectGrounded, playMatch } from './depotMatchSupport';
 const TEAM_SIZE = 4;
 /** Level 1's floor is at +3 m: anyone above this stands on Level 2 (or high on a stair to it). */
 const LEVEL_2 = 5;
+/**
+ * The west end's share of the decided rounds, by lighting: by Day centred on the 45 % it measures over 96 seeds (M55),
+ * by Night the even 40-60 % (M57: with the torches the game fits every bot at night the west wins 54 % here).
+ */
+const WEST: Readonly<Record<LightingPresetId, readonly [number, number]>> = { day: [0.35, 0.55], night: [0.4, 0.6] };
 
 describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Neon Heights by %s over 16 seeds (M34c, M34d)', (light) => {
   const map = mapUnderLighting(NEON_HEIGHTS, light);
@@ -18,7 +23,7 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Ne
     await initPhysics();
   });
 
-  it('keeps the ends close and the rounds decided: the west end wins 35-55 %, under 1 round in 10 runs out the clock', { timeout: 300_000 }, () => {
+  it(`keeps the ends close and the rounds decided: the west end wins ${Math.round(WEST[light][0] * 100)}-${Math.round(WEST[light][1] * 100)} %, under 1 round in 10 runs out the clock`, { timeout: 300_000 }, () => {
     let rounds = 0;
     let decided = 0;
     let westWins = 0;
@@ -43,8 +48,10 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Ne
     // the balance: over seeds 1-96 the west won 44.5 % by day (44.9 % before) and 45.3 % by night (48.1 %), ±2.2 at one
     // standard error; here 39.8 % by day (33 of 83) and 50.6 % by night (43 of 85), ±5.5. The band is centred on that
     // 45 % (it was 40-60 %, its floor one standard error under it) until a layout change evens the ends (KNOWN_ISSUES).
-    expect(westWins / decided).toBeGreaterThanOrEqual(0.35);
-    expect(westWins / decided).toBeLessThanOrEqual(0.55);
+    // Every night figure so far played without the torches the game fits every bot at night; with them (M57, audit
+    // AI-02) the west wins 54.0 % here by night (47 of 87), none on time, so by Night the band stays 40-60 %.
+    expect(westWins / decided).toBeGreaterThanOrEqual(WEST[light][0]);
+    expect(westWins / decided).toBeLessThanOrEqual(WEST[light][1]);
     expect(onTime / rounds).toBeLessThan(0.1);
   });
 });
