@@ -134,22 +134,6 @@ describe('the progress fills (audit UI-11)', () => {
   });
 });
 
-describe("the menus' size step (M68, audit UI-12)", () => {
-  const rootBlock = blockOf(':root')!;
-  const tokens = [...rootBlock.matchAll(/(--(?:fs|control)-[a-z0-9]+):\s*([^;]+);/g)].map((m) => [m[1]!, m[2]!.trim()] as const);
-
-  it('scales every type and control token inside .menus by --menu-scale, from the same size as :root', () => {
-    expect(tokens.length).toBeGreaterThanOrEqual(14);
-    for (const [name, value] of tokens) {
-      expect(declared('.menus', name), name).toBe(`calc(${value} * var(--menu-scale, 1))`);
-    }
-  });
-
-  it("leaves :root's tokens as they are, so the HUD, which has its own --hud-scale, is not scaled twice", () => {
-    expect(rootBlock).not.toMatch(/--menu-scale/);
-  });
-});
-
 describe('the dead rules are gone (M68, audit UI-10)', () => {
   it('has no .settings-reload or .armory-row-count rule', () => {
     expect(sheet).not.toMatch(/\.settings-reload|\.armory-row-count/);

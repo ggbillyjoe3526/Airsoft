@@ -147,23 +147,6 @@ body {
   inset: 0;
   z-index: 20;
   color: var(--paper);
-  /* The menus' size step (M68, audit UI-12): --menu-scale is set on the game's container from the window's height
-     (config/matchInfo.ts menuScale, 1 up to 1080 px high). It scales the type and control tokens here only, so the HUD,
-     which has its own --hud-scale, keeps the :root values. Each value is the :root token's, times the scale. */
-  --fs-2xs: calc(11px * var(--menu-scale, 1));
-  --fs-xs: calc(12px * var(--menu-scale, 1));
-  --fs-sm: calc(13px * var(--menu-scale, 1));
-  --fs-md: calc(15px * var(--menu-scale, 1));
-  --fs-lg: calc(17px * var(--menu-scale, 1));
-  --fs-xl: calc(20px * var(--menu-scale, 1));
-  --fs-2xl: calc(24px * var(--menu-scale, 1));
-  --fs-3xl: calc(clamp(32px, 4vw, 44px) * var(--menu-scale, 1));
-  --fs-display: calc(clamp(56px, 10vw, 132px) * var(--menu-scale, 1));
-  --control-xs: calc(32px * var(--menu-scale, 1));
-  --control-sm: calc(36px * var(--menu-scale, 1));
-  --control-md: calc(40px * var(--menu-scale, 1));
-  --control-lg: calc(48px * var(--menu-scale, 1));
-  --control-xl: calc(56px * var(--menu-scale, 1));
 }
 
 .menus[hidden],
@@ -2592,7 +2575,7 @@ kbd {
   opacity: calc(0.9 * var(--hud-l3));
 }
 
-/* Extraction's exit markers (M43): the flag marker's frame with a door icon in the exit colour (the team colour set's, M68). */
+/* Extraction's exit markers (M43): the flag marker's frame with a door icon in the exit's green. */
 .flag-marker.exit-marker .flag-marker-icon {
   width: calc(12px * var(--hud-scale, 1));
   height: calc(16px * var(--hud-scale, 1));

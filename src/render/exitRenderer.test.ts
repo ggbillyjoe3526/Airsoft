@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { EXIT_VISUALS as V } from '../config/render';
-import { TEAM_COLOUR_SETS } from '../config/teams';
 import { buildTerrain, terrainHeightAt } from '../map/terrain';
 import { createRunState, type RunExit } from '../sim/extraction';
 import { vec3 } from '../sim/vec';
@@ -37,23 +36,6 @@ describe('ExitRenderer on terrain (M48)', () => {
   });
   afterAll(() => {
     vi.unstubAllGlobals();
-  });
-
-  it('paints an open exit’s ring and wash in the colour it is given, the standard set’s by default, and a shut one grey (M68, audit UI-15)', () => {
-    const run = createRunState();
-    run.exits = [exitAt(1, -2), { ...exitAt(-5, 4), open: false }];
-    const colours = (r: ExitRenderer): number[] =>
-      meshes(r.object)
-        .filter((m) => !(m instanceof THREE.InstancedMesh) && m.geometry instanceof THREE.RingGeometry)
-        .map((m) => (m.material as THREE.MeshBasicMaterial).color.getHex());
-    const picked = new ExitRenderer(run, SLOPE, 0x112233);
-    picked.update(run);
-    expect(colours(picked)).toEqual([0x112233, V.shutColor]);
-    const standard = new ExitRenderer(run, SLOPE);
-    standard.update(run);
-    expect(colours(standard)).toEqual([TEAM_COLOUR_SETS.standard.exit, V.shutColor]);
-    picked.dispose();
-    standard.dispose();
   });
 
   it('lays the ring and its wash on a slope just over the ground, so the uphill side is not buried', () => {

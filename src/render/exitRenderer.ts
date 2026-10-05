@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EXIT_VISUALS } from '../config/render';
-import { cssColor, TEAM_COLOUR_SETS } from '../config/teams';
+import { cssColor } from '../config/teams';
 import { type Terrain, terrainHeightAt } from '../map/terrain';
 import type { RunExit, RunState } from '../sim/extraction';
 
@@ -43,24 +43,24 @@ function drawBoard(text: string, color: number): THREE.CanvasTexture {
 
 /**
  * Extraction's exits in the world (M43): a painted ring with a faint wash inside, site cones round it and an EXIT sign
- * on a post, in the team colour set's exit colour while open and grey while a late exit is still shut; exits closed for
- * the run aren't drawn. Built once from the run's exits; each frame only swaps materials when an exit opens. Reads the
- * run state only. On a field with terrain (M48: Woodland) the ring, its wash, the cones and the post follow the
- * ground, so a slope buries none of them.
+ * on a post, green while open and grey while a late exit is still shut; exits closed for the run aren't drawn. Built
+ * once from the run's exits; each frame only swaps materials when an exit opens. Reads the run state only. On a field
+ * with terrain (M48: Woodland) the ring, its wash, the cones and the post follow the ground, so a slope buries none of
+ * them.
  */
 export class ExitRenderer {
   readonly object = new THREE.Group();
   private readonly exits: ExitMeshes[] = [];
   private readonly geometries: THREE.BufferGeometry[] = [];
-  private readonly ringOpen: THREE.MeshBasicMaterial;
+  private readonly ringOpen = new THREE.MeshBasicMaterial({ color: V.openColor, transparent: true, opacity: V.ringOpacity, depthWrite: false, side: THREE.DoubleSide });
   private readonly ringShut = new THREE.MeshBasicMaterial({ color: V.shutColor, transparent: true, opacity: V.ringOpacity, depthWrite: false, side: THREE.DoubleSide });
-  private readonly fillOpen: THREE.MeshBasicMaterial;
+  private readonly fillOpen = new THREE.MeshBasicMaterial({ color: V.openColor, transparent: true, opacity: V.fillOpacity, depthWrite: false, side: THREE.DoubleSide });
   private readonly fillShut = new THREE.MeshBasicMaterial({ color: V.shutColor, transparent: true, opacity: V.fillOpacity, depthWrite: false, side: THREE.DoubleSide });
   private readonly cone = new THREE.MeshStandardMaterial({ color: V.coneColor, roughness: 0.7 });
   private readonly post = new THREE.MeshStandardMaterial({ color: V.postColor, roughness: 0.6 });
-  private readonly openTexture: THREE.CanvasTexture;
+  private readonly openTexture = drawBoard(V.openText, V.openColor);
   private readonly shutTexture = drawBoard(V.shutText, V.shutColor);
-  private readonly boardOpen: THREE.MeshStandardMaterial;
+  private readonly boardOpen = new THREE.MeshStandardMaterial({ map: this.openTexture, roughness: 0.8, side: THREE.DoubleSide });
   private readonly boardShut = new THREE.MeshStandardMaterial({ map: this.shutTexture, roughness: 0.8, side: THREE.DoubleSide });
   private readonly cones: THREE.InstancedMesh;
   private readonly posts: THREE.InstancedMesh;
@@ -68,14 +68,7 @@ export class ExitRenderer {
   constructor(
     run: RunState,
     private readonly terrain: Terrain | null = null,
-    /** The open exits' colour: the picked team colour set's (teams.ts `exit`, M68, audit UI-15). */
-    openColor: number = TEAM_COLOUR_SETS.standard.exit,
   ) {
-    // The open look takes the colour set's exit colour, so these four are made here rather than where they are declared.
-    this.ringOpen = new THREE.MeshBasicMaterial({ color: openColor, transparent: true, opacity: V.ringOpacity, depthWrite: false, side: THREE.DoubleSide });
-    this.fillOpen = new THREE.MeshBasicMaterial({ color: openColor, transparent: true, opacity: V.fillOpacity, depthWrite: false, side: THREE.DoubleSide });
-    this.openTexture = drawBoard(V.openText, openColor);
-    this.boardOpen = new THREE.MeshStandardMaterial({ map: this.openTexture, roughness: 0.8, side: THREE.DoubleSide });
     const coneGeo = this.keep(new THREE.ConeGeometry(V.coneRadius, V.coneHeight, V.coneSegments));
     coneGeo.translate(0, V.coneHeight / 2, 0);
     const postGeo = this.keep(new THREE.CylinderGeometry(V.postRadius, V.postRadius, V.postHeight, 8));

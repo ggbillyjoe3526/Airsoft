@@ -1,6 +1,6 @@
 import { EXIT_VISUALS } from '../config/render';
 import { MINIMAP } from '../config/minimap';
-import { cssColor, TEAM_COLOUR_SETS } from '../config/teams';
+import { cssColor } from '../config/teams';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
@@ -37,7 +37,7 @@ export interface MinimapFrame {
   /** Where your teammates hold (null if they don't hold a spot), and in Attack / Defend the flagpole (null otherwise). */
   hold: { x: number; z: number } | null;
   flag: { x: number; z: number } | null;
-  /** Extraction (M43): the exits drawn (`exitCount` of `exits`), open ones in the colour set's exit colour, a late one still shut grey. */
+  /** Extraction (M43): the exits drawn (`exitCount` of `exits`), open ones green, a late one still shut grey. */
   exits: MinimapExit[];
   exitCount: number;
   /** Simulation time, for the heard players' fading. */
@@ -53,7 +53,8 @@ interface FieldLayer {
   depth: number;
 }
 
-/** A shut exit icon's colour (config/render.ts EXIT_VISUALS, as CSS); an open one takes the team colour set's. */
+/** Exit icons' colours (config/render.ts EXIT_VISUALS, as CSS). */
+const EXIT_OPEN = cssColor(EXIT_VISUALS.openColor);
 const EXIT_SHUT = cssColor(EXIT_VISUALS.shutColor);
 
 /** The step patch's dashed outline (made once). */
@@ -98,8 +99,6 @@ export class Minimap {
     foliage: readonly Bush[] = [],
     /** The map's storeys (M34c, MapData.storeys): one drawing of the field per storey. */
     storeys: readonly number[] = [],
-    /** The open exit icons' colour (CSS): the picked team colour set's exit colour (M68, audit UI-15). */
-    private readonly exitOpen: string = cssColor(TEAM_COLOUR_SETS.standard.exit),
   ) {
     this.root = document.createElement('canvas');
     this.root.className = 'minimap';
@@ -322,7 +321,7 @@ export class Minimap {
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.lineWidth = 3;
     ctx.stroke();
-    ctx.strokeStyle = e.open ? this.exitOpen : EXIT_SHUT;
+    ctx.strokeStyle = e.open ? EXIT_OPEN : EXIT_SHUT;
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
