@@ -34,6 +34,7 @@ const X: ExtractionContext = {
   exits: EXITS,
   respawnAfter: HITS.callTime,
   spawnLift: 0.05,
+  cases: [],
 };
 const CTX: RoundContext = { rules: RULES, spawns: [], spawnLift: 0.05, extraction: X };
 const ELIM = openFieldElimination([[{ position: vec3(-30, 0, 0), yaw: 0 }], [{ position: vec3(30, 0, 0), yaw: 0 }]]);
@@ -199,6 +200,7 @@ describe('Extraction run (M43)', () => {
       ],
       exits: EXITS,
       opponentStarts: STARTS,
+      cases: [],
     };
     const setup = { squad: 3, runner: 0, squadTeam: 0, respawnAfter: 1, spawnLift: 0 };
     const picked = new Set<number>();

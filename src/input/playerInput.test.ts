@@ -480,3 +480,19 @@ describe('scripted player (perf harness, bug pass)', () => {
     expect(tick().forward).toBe(1);
   });
 });
+
+describe('use key (M44: opens a case in Extraction)', () => {
+  it('is in the command exactly while the Use action is held, and is not a one-shot', () => {
+    const { keys, frame } = setup('toggle');
+    expect(frame().use).toBe(false);
+    expect(frame(() => keys.press('use')).use).toBe(true);
+    expect(frame().use).toBe(true); // still held: a case takes seconds, so it must not latch off after one tick
+    keys.release('use');
+    expect(frame().use).toBe(false);
+  });
+
+  it('is not set by any other key', () => {
+    const { keys, frame } = setup('toggle');
+    for (const a of ['fire', 'reload', 'jump', 'fireMode', 'crouch'] as const) expect(frame(() => keys.press(a)).use, a).toBe(false);
+  });
+});

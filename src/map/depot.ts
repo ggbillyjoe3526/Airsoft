@@ -1,5 +1,5 @@
 import { type Vec3, vec3 } from '../sim/vec';
-import type { BlockKind, ExitZone, MapBlock, MapData, RampRise, SpawnPoint } from './mapTypes';
+import type { BlockKind, CaseSpot, ExitZone, MapBlock, MapData, RampRise, SpawnPoint } from './mapTypes';
 
 /**
  * "Depot": a roofless warehouse yard, 50 × 32 m inside the walls, built around three lanes to one flagpole
@@ -330,6 +330,29 @@ const OPPONENT_STARTS: SpawnPoint[] = [
   [-11.8, 0, 11.4],
   [-15.0, 0, -6.6],
 ].map(([x, y, z]) => ({ position: vec3(x!, y!, z!), yaw: 0 }));
+/**
+ * Case spots (M44), by the cover of each part of the field: the marshal's locker in the office stores or at the dock's
+ * east end, field cases in rooms and yards, ammo cans along the lanes. Eleven spots, so every run leaves some empty.
+ * Yaw is the case's front, as a spawn's facing (its back to the wall or cover beside it).
+ */
+const LOCKER = ['locker', 'field-case'];
+const ROOM = ['field-case', 'ammo-can'];
+const LANE = ['ammo-can'];
+const CASE_SPOTS: CaseSpot[] = (
+  [
+    [16.0, 0, -14.6, Math.PI / 2, LOCKER], // the office stores' far corner
+    [10.0, DOCK_HEIGHT, 15.0, 0, LOCKER], // the dock's east end, by the north wall
+    [-7.2, 0, -14.6, -Math.PI / 2, ROOM], // the office's west room
+    [7.4, 0, -15.0, 0, ROOM], // the hall, by the stores' partition
+    [-7.2, 0, 14.6, 0, ROOM], // the staging yard, behind the rack
+    [13.0, 0, 3.8, Math.PI, ROOM], // the Bay, under the rack
+    [-10.6, 0, 0.0, -Math.PI / 2, LANE], // the crate yard's barrier
+    [19.0, 0, -6.0, -Math.PI / 2, LANE], // the back lot, by its container
+    [-11.4, 0, -8.6, Math.PI / 2, LANE], // the car park's generator
+    [12.4, 0, 11.6, Math.PI, LANE], // North Gate road
+    [-2.8, 0, 5.4, Math.PI / 2, LANE], // by the Main Gate's barrier
+  ] as const
+).map(([x, y, z, yaw, kinds]) => ({ position: vec3(x, y, z), yaw, kinds: [...kinds] }));
 /** A run on Depot: 8 minutes (plan, section 5), two opponents more than the squad (3 / 4 / 5). */
 const RUN_TIME = 480;
 const BASE_OPPONENTS = 2;
@@ -368,6 +391,7 @@ export const DEPOT: MapData = {
     ],
     exits: EXITS.map((e) => ({ ...e, position: toWorld(e.position) })),
     opponentStarts: OPPONENT_STARTS.map(spawnToWorld),
+    cases: CASE_SPOTS.map((c) => ({ ...spawnToWorld(c), kinds: c.kinds })),
   },
 };
 

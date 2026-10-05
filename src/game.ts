@@ -52,8 +52,8 @@ import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
-import type { Earnings } from './pool/armory';
-import type { Unpaid } from './ui/menus/summaryScreen';
+import type { Dispensed, Earnings } from './pool/armory';
+import { haulSummary, type Unpaid } from './ui/menus/summaryScreen';
 import { fcText } from './ui/menus/armoryScreen';
 import { loadDevEnabled, loadDevSettings } from './settings/dev';
 import { browserStorage, flushSettings, SETTINGS_KEY, saveSetting } from './settings/storage';
@@ -206,6 +206,8 @@ export class Game {
   private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
   /** What the last match paid in Field Credits (M26c), for its summary. */
   private lastEarnings: Earnings | null = null;
+  /** The last Extraction haul's parts as they went into the collection (M44), or null when it kept nothing. */
+  private lastHaul: Dispensed[] | null = null;
   /** Why the last match paid nothing, for the summary (audit POOL-22), or null when it paid. */
   private unpaidReason: Unpaid | null = null;
   /** Reduced motion (Settings → Accessibility), kept across matches. */
@@ -779,6 +781,7 @@ export class Game {
         rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
         chaseOwned: this.loadout.ownedChase(),
+        owned: { ...this.collection.owned },
         devContent: this.dev.devContent,
         devContentUsed: this.devContentUsed(picks),
         teamColours: TEAM_COLOUR_SETS[this.teamColours],
@@ -881,6 +884,7 @@ export class Game {
         records: recordsView(this.records, this.recordNews, s.setup.difficulty, s.mode, s.notCountedReason),
         fieldCredits: this.lastEarnings,
         unpaid: this.unpaidReason,
+        haul: haulSummary(GAME_POOL, s.runFinds(), this.lastHaul),
       });
     } else {
       this.menus.showPause(s.pauseLine(), this.matchSeed);
@@ -923,6 +927,7 @@ export class Game {
       this.recordNews = settled.news;
       saveRecords(this.records, browserStorage());
     }
+    this.lastHaul = settled.haul;
     if (settled.pay) {
       this.lastEarnings = settled.pay;
       this.unpaidReason = null;

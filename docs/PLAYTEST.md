@@ -1032,6 +1032,28 @@ Turn on Settings › Dev settings › Dev content, then New game › Mode › Ex
 - [ ] **Summary:** the teams read "your squad" and "home team"; no Field Credits; the records table has no
   Extraction column.
 
+## Extraction cases and loot (M44, dev content)
+
+Dev content on, Extraction on Depot, as above. While Extraction is dev content a run keeps nothing (M35's rule), so the
+summary says "Not kept"; everything else plays as it will.
+
+- [ ] **Cases:** an olive ammo can, a black field case with an orange band, a grey locker with a yellow band (in the
+  office stores or at the dock's east end) stand by cover; each run (another seed) puts them elsewhere.
+- [ ] **Opening:** walk up to one: "Hold G to open the field case" under the crosshair. Hold G: "Opening …" with a bar
+  (about 2 s for a can, 4 for a field case, 7 for the locker) and a rummaging sound (the locker ratchets). Let go
+  halfway: it starts again. Then the lid swings up (the locker's door out) and the line says what it held ("+35 FC",
+  "BB resupply · magazines topped up", "Rare Red Dot · +120 FC").
+- [ ] **Noise:** open the locker with an Orange bot nearby: it comes to look.
+- [ ] **Carrying:** the strip by the clock reads "Respawn ready · Carrying 155 FC and 1 part".
+- [ ] **Resupply:** empty a few magazines, open an ammo can with a resupply: your spares are full again.
+- [ ] **Hit:** get hit carrying finds: "You dropped what you carried where you were hit · go back for it"; back at the
+  insertion, the strip no longer says Carrying; a small bag in your team colour lies where you fell. Walk to it and hold
+  G: "Picked up …" at once, and Carrying is back.
+- [ ] **Extract:** get counted out carrying finds: the summary's "The haul" line says what you got out with (and, while
+  Extraction is dev content, "Not kept"), with the parts as tiles in their tier colours, rarest first.
+- [ ] **Caught out or out:** end a run any other way carrying finds: "Lost: … Only what you get out with is yours."
+- [ ] **Key:** Settings › Key bindings has "Use: open a case (hold)"; rebind it and the prompt names the new key.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:

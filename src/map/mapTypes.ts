@@ -178,4 +178,16 @@ export interface ExtractionData {
   exits: ExitZone[];
   /** Where the home team starts a run: at least base + 3 points, picked far from the insertion. */
   opponentStarts: SpawnPoint[];
+  /** Where cases can stand (M44): each run's seed places its cases on some of them (pool/caches.ts). */
+  cases: CaseSpot[];
+}
+
+/**
+ * A place a case can stand in an Extraction run (M44), facing `yaw` (its front, where you open it), and the kinds of
+ * case that suit it (pool.md's Caches Keys: a locker wants a wall at its back). The point is on walkable floor.
+ */
+export interface CaseSpot {
+  position: Vec3;
+  yaw: number;
+  kinds: string[];
 }
