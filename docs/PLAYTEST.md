@@ -1131,6 +1131,23 @@ the owner makes the mode public.
 - [ ] **Records:** an Extraction column in the grid (runs got out of as W, the rest as L) and three bests: Best haul,
   Extractions in a row, Fastest extraction with a case. Your Elimination "Wins in a row" is untouched by runs.
 
+## Extraction on Woodland and Neon Heights (M48, dev content)
+
+Dev settings > Dev content on, then the map, then Mode > Extraction.
+
+- [ ] **Woodland, in:** you start at the west camp or in the south-east woods below the Knoll, never beside the fort or
+  the cabin. A run lasts 15 minutes against four to six opponents at once (one per squad member more than three).
+- [ ] **Woodland, cases:** the marshal's locker stands in the cabin's west room or in the fort's north-east corner, and
+  is guarded; field cases and ammo cans by the woodpile, the big boulders, the log piles, the fallen trees and the oak.
+- [ ] **Woodland, out:** the logging track's gate (north fence, past the Pine Belt) and the cabin road's gate (south
+  fence) are open from the start; a late exit in the north-west or north-east woods opens with 3:00 left. On the
+  slopes each exit's ring, cones and sign stand on the ground, none of it sunk into the grass.
+- [ ] **Woodland by night:** the home team comes back in the woods, out of your sight; the cabin's lantern shows you to
+  anyone watching the door. Does Hard feel harder than Normal? (The bot runs say no: KNOWN_ISSUES.)
+- [ ] **Neon Heights:** a 10-minute run against three to five. The marshal's locker is on Level 2 (the Studio or the
+  Tower's top floor), field cases upstairs, ammo cans on the street; every exit is on the street at a corner of the
+  site (Noodle Alley, the Back Alley, late the plaza and the Drone Dock). Waves come back on every floor.
+
 ## Neon Heights by Night (M34e, dev content)
 
 Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Night is its default).
