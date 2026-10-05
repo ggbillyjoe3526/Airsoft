@@ -122,6 +122,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
+- **M53** · Sound: the countdown beep is loud enough to hear, distant sounds fade behind walls smoothly instead of in a step at 60 m, sounds stay placed when you look up or lean, the neon hum no longer doubles, and each match's birds and calls come at different times
+- **M53** · Extraction: the Match pop-up no longer offers rounds or round time, the one-minute warning and a late exit are announced (banner, screen reader, a double beep), and the rules text names every switch that is on
 - **M33j** · No birds sing at night any more, on any map (Woodland, Neon Heights by Night); footsteps on Woodland's ground no longer sound like concrete
 - **FA16** · Play here in a second tab no longer sometimes lands back on the "open in another tab" notice: the reloaded tab waits a moment for the other tab's save lock to be freed (#89)
 - **FA13** · Your left hand holds the rifle's handguard, thumb up the near side, instead of sitting under it; the raised hand when you're hit is one glove again (#76)
