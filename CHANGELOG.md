@@ -123,6 +123,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 
 ### Fixed
 - **M52** · At night the ground, wood and faces read in their own colours instead of near black: a bluer, brighter night sky and moon, and on Medium the shadows at night stay sharp near you (#111)
+- **M56** · pool.md: tiny Supply event percentages, a zero Difficulty multiplier, rising Odds and a missing or mis-cased Supply events column are reported at their line; a collection or records file saved by a newer version of the game is never overwritten (#112)
 - **M33j** · No birds sing at night any more, on any map (Woodland, Neon Heights by Night); footsteps on Woodland's ground no longer sound like concrete
 - **FA16** · Play here in a second tab no longer sometimes lands back on the "open in another tab" notice: the reloaded tab waits a moment for the other tab's save lock to be freed (#89)
 - **FA13** · Your left hand holds the rifle's handguard, thumb up the near side, instead of sitting under it; the raised hand when you're hit is one glove again (#76)

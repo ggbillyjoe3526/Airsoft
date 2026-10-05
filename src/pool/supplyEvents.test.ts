@@ -143,3 +143,28 @@ describe('the Mode pop-up’s supply line (M49)', () => {
     expect(supplyLine(event({ name: 'Quiet', fc: 1, parts: 1 }))).toBe('Quiet, until Sunday: cases as usual.');
   });
 });
+
+describe('Supply events, the plausibility floor and the header (M56, audit POOL-03, POOL-07)', () => {
+  const head = ['### Supply events', '| Supply event | Key | When | FC % | Part % |', '|---|---|---|---|---|'];
+  const table = (...rows: string[]) => loadPool([...head, ...rows].join('\n'));
+
+  it('reads a ratio where a percentage belongs as an error, leaving the row out: 1.25 is not 125 %', () => {
+    const p = table('| Typo weekend | typo | Friday to Sunday | 1.25 | 150 |', '| Thin | thin | Monday | 100 | 9.9 |', '| Floor | floor | Tuesday | 10 | 0 |');
+    expect(p.supplyEvents.map((e) => [e.key, e.fc, e.parts])).toEqual([['floor', 0.1, 0]]);
+    expect(p.errors).toContain('line 4: FC % is a percentage (125 for a quarter more, not 1.25): "1.25" is under the least, 10 (or 0 for none)');
+    expect(p.errors.some((e) => e.startsWith('line 5: Part %') && e.includes('"9.9" is under the least, 10'))).toBe(true);
+  });
+
+  it('reports a missing or mis-cased column once, at the header, instead of on every row', () => {
+    const p = loadPool(['### Supply events', '| Supply event | Key | when | FC % |', '|---|---|---|---|', '| A | a | Friday | 125 |', '| B | b | Monday | 125 |'].join('\n'));
+    expect(p.supplyEvents).toEqual([]);
+    const own = p.errors.filter((e) => !/^no "/.test(e));
+    expect(own).toEqual(['line 2: the Supply events table needs the columns Supply event, Key, When, FC %, Part %; missing: When (not "when": headers are read exactly), Part %']);
+  });
+
+  it('finds the table by its heading too, so a mis-cased first column is reported rather than read as no events', () => {
+    const p = loadPool(['### Supply events', '| supply event | Key | When | FC % | Part % |', '|---|---|---|---|---|', '| A | a | Friday | 125 | 150 |'].join('\n'));
+    expect(p.supplyEvents).toEqual([]);
+    expect(p.errors.some((e) => e.startsWith('line 2: the Supply events table needs the columns') && e.includes('Supply event (not "supply event"'))).toBe(true);
+  });
+});

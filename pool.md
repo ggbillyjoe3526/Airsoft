@@ -118,7 +118,8 @@ you own. Higher tiers carry a **Bonus %** that improves the asset a little (stat
 stats each category improves, and by how much of the Bonus). One hit is still one hit: rarity improves how a replica
 shoots and handles, never "damage".
 
-- **Odds %** is the chance that a dispensed asset comes in that tier. The odds must add up to 100.
+- **Odds %** is the chance that a dispensed asset comes in that tier. The odds must add up to 100, and they fall (or stay
+  level) down the table: a rarer tier never has higher odds than the one above it.
 - **Scrap FC** is what one spare copy pays back when you scrap it in the Armory (you always keep one).
 - The tiers are read from the table top to bottom, rarest last. **Adding a tier is just a new row**, wherever it
   belongs in the order; give it odds and take those odds from the others so they still add up to 100.
@@ -148,7 +149,7 @@ A shorter custom match pays less: Match played, Match won and each Round won are
 ÷ 5 (at most 1), so a first-to-5 match pays them in full. A Round won pays only for a round you played a part in (you
 hit an opponent in it, or were still in when it ended), so sitting a match out earns no more than taking part. The
 total is then multiplied by the difficulty, the lower of the opponents' and your teammates' (the opponents' alone
-when you have none):
+when you have none), at least 0.1:
 
 | Difficulty | Multiplier |
 |---|---|
@@ -231,6 +232,7 @@ that ends any other way keeps nothing. Key is what the maps' case spots use; lea
 
 Extras on top of Extraction (M49): while an event is on, every case a run places holds more. FC % scales each case's
 Field Credits (125 is a quarter more) and Part % its chance of a part (150 is half as often again, never past certain);
+each is 0 (none) or 10 to 1000, so a ratio typed by mistake (1.25 for 125) is reported, not read as almost nothing;
 how many cases there are, where they stand and how long they take stay as the Caches table has them. When says when an
 event is on, by the player's own clock: two weekdays for every week ("Friday to Sunday", from the first day's start to
 the last day's end), or two dates for a one-off ("2026-10-30 to 2026-11-01", both days included; a date alone is one

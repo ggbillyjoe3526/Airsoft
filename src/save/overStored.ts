@@ -17,3 +17,19 @@ export function overStored(store: ReadStore, key: string, fresh: Record<string, 
   }
   return fresh;
 }
+
+/**
+ * True if the object stored under `key` is from a newer version of its store than `version` (M56, audit POOL-01): this
+ * build then neither reads nor overwrites it, as the settings store does. Never throws: anything unreadable, or an
+ * object without a numeric version, is not newer.
+ */
+export function storedIsNewer(store: ReadStore, key: string, version: number): boolean {
+  try {
+    const raw: unknown = JSON.parse(store.getItem(key) ?? 'null');
+    const stored = raw && typeof raw === 'object' ? (raw as { version?: unknown }).version : undefined;
+    return typeof stored === 'number' && stored > version;
+  } catch {
+    // Unreadable: not newer.
+    return false;
+  }
+}

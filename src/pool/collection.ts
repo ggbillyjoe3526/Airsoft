@@ -1,4 +1,4 @@
-import { overStored } from '../save/overStored';
+import { overStored, storedIsNewer } from '../save/overStored';
 import { browserStorage } from '../settings/storage';
 import { comesIn, type Pool, tiersOf } from './pool';
 
@@ -136,7 +136,9 @@ function readStored(storage: Storage | null, fallbackSeed: number): Collection |
 
 /**
  * The saved collection, or a new one (starters only) if nothing valid is saved or storage is blocked. Items the pool no
- * longer has are kept in the save (a row taken out of pool.md and put back comes back owned) but never shown.
+ * longer has are kept in the save (a row taken out of pool.md and put back comes back owned) but never shown. A
+ * collection a newer build saved is not read (audit POOL-01): the new one lasts for the visit, as saveCollection never
+ * writes over it.
  */
 export function loadCollection(pool: Pool, seed: number, storage = browserStorage()): Collection {
   const c = readStored(storage, seed);
@@ -160,12 +162,14 @@ export function syncCollection(c: Collection, pool: Pool, storage = browserStora
 
 /**
  * Saves the collection as the next revision. Not over a newer one another tab saved since `c` was read or synced
- * (audit POOL-02): that would undo its Shots or earnings; false then, as when storage is full or blocked (the change
+ * (audit POOL-02): that would undo its Shots or earnings; nor over one from a newer version of the store (M56, audit
+ * POOL-01), which this build can't read and would wipe. False then, as when storage is full or blocked (the change
  * lasts for the visit).
  */
 export function saveCollection(c: Collection, storage = browserStorage()): boolean {
   if (!storage) return false;
   try {
+    if (storedIsNewer(storage, COLLECTION_KEY, COLLECTION_VERSION)) return false;
     if ((readStored(storage, c.seed)?.rev ?? 0) > (c.rev ?? 0)) return false;
     c.rev = (c.rev ?? 0) + 1;
     // Fields a newer build added stay (M31).
