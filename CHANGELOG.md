@@ -92,6 +92,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M34g** · Neon Heights (dev content) sound: traffic hum and drones by day with chimes, neon sizzle and arcade bleeps by night; Depot and Woodland unchanged
 
 ### Changed
+- **M69** · Woodland and Neon Heights each have an echo of their own (long and dark in the woods, brighter in the city), and the neon hum is easier to hear on small speakers
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
 - **M37** · Pro bots holding still aim at the corners and doorways you'd step out of, and answer a peek there faster; anywhere else no faster than Hard
@@ -159,6 +160,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M50** · The crash report's Quality line reads properly (not "[object Object]") and the report adds the rules, the lighting, Retro pixels and an Extraction run's state (#107)
 
 ### Internal
+- **M69** · Sound effects drop their silent tails and the countdown beep renders once, so the sounds take less memory
 - **M64** · The performance check can play Extraction: its scripted player opens a case on Depot (#118)
 - **M51** · CI runs the slow tests in three parallel jobs beside the main check; the Extraction balance tests and the map Extraction blocks share one helper each; a smoke test plays Tournament Extraction with Retro pixels and Pro CQB against Pro (#110)
 - **M57** · The night balance checks now play with the torches bots carry in a real match, and their bands use the new numbers (#120)
