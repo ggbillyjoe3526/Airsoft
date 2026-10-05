@@ -89,3 +89,5 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-05 | M50 | 1 | build thread | ✓ 22 s | ✓ 546 s | ✗ 298 s (devContent: Neon Heights Light group) | ✓ 73 s | ✓ | ✓ | – | Map dialog built variant switches before the dev maps loaded | – | – |
 | 2026-10-05 | M50 | 2 | build thread | ✓ 22 s | ✓ 591 s | ✓ 248 s | ✓ 55 s | ✗ (src/ui/testSupport.ts outside touches) | ✓ | – | touches widened | – | – |
 | 2026-10-05 | M50 | 3 | build thread | ✓ 26 s | ✓ 588 s | ✓ 241 s | ✓ 48 s | ✓ | ✓ | 8/8 Accept (core) | QA added 5 mutation-checked tests; performance review clean | ~1 h | QA, performance, critic |
+| 2026-10-05 | M52 | 1 | build thread | ✓ 27 s | ✓ 468 s | ✗ 195 s (woodland spec night key) | ✓ 39 s | ✓ | ✓ | – | e2e expectation still the old preset | – | – |
+| 2026-10-05 | M52 | 2 | build thread | ✓ 21 s | ✓ 456 s | ✓ 185 s | ✓ 38 s | ✓ | ✓ | 7/8 Accept (core) | QA found the small-map coarsening (fixed); performance review clean | ~1 h | QA, performance, critic |

@@ -106,7 +106,7 @@ export interface Daylight {
    */
   reserveLights(n: number): void;
   /**
-   * Moves a view-fitted shadow map to the ground ahead of `camera` (High; Medium too at night, M52) and the light pools'
+   * Moves a view-fitted shadow map to the ground ahead of `camera` (High; Medium too at night on a field wider than the view, M52) and the light pools'
    * real lights to the pools nearest it (M33f), fading over this frame's `dt` seconds. Call before drawing.
    */
   follow(camera: THREE.Camera, dt: number): void;

@@ -440,7 +440,7 @@ export const LIGHTING = {
    */
   shadowNormalBiasTexels: 0.5,
   /**
-   * The view-fitted shadow map (QualitySettings.shadowFollowsView: High, and Medium at night since M52): a disc of
+   * The view-fitted shadow map (QualitySettings.shadowFollowsView: High, and Medium at night on a field wider than the view since M52): a disc of
    * `radius` metres centred `ahead` metres in front of the camera along the ground (so 26 m ahead and 10 m behind are
    * shadowed). At 2048² the texels are 1.9 cm, against 2.9 cm for the whole of Depot; at 1024² 3.9 cm, against 10 cm
    * for the whole of Woodland under its low moon. The disc moves in whole texels, so edges don't crawl.
