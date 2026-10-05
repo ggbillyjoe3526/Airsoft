@@ -389,6 +389,11 @@ export function stepRun(run: RunState, characters: readonly Character[], ctx: Ex
   return 'none';
 }
 
+/** The home team's reserve (M45): characters made with the run past its cap, who join from its last part (none without waves). */
+export function reserveSize(ctx: Pick<ExtractionContext, 'waves' | 'rules'>): number {
+  return ctx.waves ? ctx.rules.lateExtra : 0;
+}
+
 /** Opponents in play at most with `clock` seconds left: the run's cap, and its late extra in the last part. */
 export function waveCap(waves: WaveSetup, clock: number): number {
   return waves.cap + (clock <= waves.lateFrom ? waves.lateExtra : 0);

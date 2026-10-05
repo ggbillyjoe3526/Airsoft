@@ -17,7 +17,7 @@ import { GAME_POOL } from '../pool/gamePool';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { eliminate, isInPlay } from '../sim/elimination';
-import { createRunContext, haulTotals, regenClear, runHaul } from '../sim/extraction';
+import { createRunContext, haulTotals, regenClear, reserveSize, runHaul } from '../sim/extraction';
 import { startRun } from '../sim/round';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
@@ -72,7 +72,7 @@ function setUpRun(seed: number) {
     extraction: run,
   });
   // The home team's cap and its reserve for the run's last part (M45).
-  const opponents = x.baseOpponents + squad + EXTRACTION.lateExtra;
+  const opponents = x.baseOpponents + squad + reserveSize(run);
   for (let id = 0; id < squad + opponents; id++) state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, id < squad ? 0 : 1));
   startRun(state.round, state.characters, ctx.round);
   for (const c of state.characters) physics.addCharacter(c);

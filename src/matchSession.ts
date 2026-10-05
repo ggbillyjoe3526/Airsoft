@@ -47,7 +47,7 @@ import { fitOptics, fitParts, setBbWeights, setHopUps } from './sim/armament';
 import { type Character, createCharacter, respawnCharacter } from './sim/character';
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { isInPlay } from './sim/elimination';
-import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, runFinds, runHaul } from './sim/extraction';
+import { createRunContext, type ExtractionContext, type FoundItem, haulTotals, reserveSize, runFinds, runHaul } from './sim/extraction';
 import { placeTeams, startRun } from './sim/round';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
 import { createWind } from './sim/wind';
@@ -535,7 +535,7 @@ export class MatchSession {
   /** Characters per team: the team sizes, and in Extraction the home team's reserve for the run's last part (M45). */
   private rosterSizes(): [number, number] {
     const [size, opposing] = this.teamSizes();
-    return [size, opposing + (this.extraction?.waves ? this.extraction.rules.lateExtra : 0)];
+    return [size, opposing + (this.extraction ? reserveSize(this.extraction) : 0)];
   }
 
   /**

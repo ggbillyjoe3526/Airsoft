@@ -10,7 +10,7 @@ import { createBBPool } from './ballistics';
 import { type Character, createCharacter } from './character';
 import { isInPlay, stepElimination } from './elimination';
 import type { GameEvent } from './events';
-import { type ExtractionContext, pickOpponentStarts, regenClear, type WaveSetup, waveCap } from './extraction';
+import { type ExtractionContext, pickOpponentStarts, regenClear, reserveSize, type WaveSetup, waveCap } from './extraction';
 import { createRoundState, type RoundContext, type RoundRules, type RoundState, startRun, stepRound } from './round';
 import { type Vec3, vec3 } from './vec';
 
@@ -172,6 +172,11 @@ describe('Extraction waves (M45)', () => {
     expect(waveCap(WAVES, round.clock)).toBe(4);
     expect(isInPlay(cs[5]!)).toBe(true);
     expect(inPlayAt(cs)).toBe(4);
+  });
+
+  it('sizes the reserve the session makes for the run: the late extra with waves, none without', () => {
+    expect(reserveSize(X)).toBe(EXTRACTION.lateExtra);
+    expect(reserveSize({ ...X, waves: undefined })).toBe(0);
   });
 
   it('leaves a hit opponent out for the run without waves (a map without regen points)', () => {
