@@ -31,6 +31,7 @@ import { type Character, createCharacter, respawnCharacter } from './sim/charact
 import { createCommand, type PlayerCommand } from './sim/commands';
 import { createRangeTargets } from './sim/rangeTargets';
 import { createSimContext, type SimContext, stepSimulation } from './sim/simulation';
+import { partsUnder } from './sim/torch';
 import { createWind } from './sim/wind';
 import { createGameState, type GameState } from './sim/state';
 import { vec3 } from './sim/vec';
@@ -69,6 +70,8 @@ export class RangeSession {
   private readonly targets: RangeTargetsRenderer;
   private readonly readout: RangeReadout;
   private readonly daylight: Daylight;
+  /** Whether the range is lit by a night preset (M33h: the weapon light is fitted only then). */
+  private readonly night: boolean;
   private readonly stepper = createStepper(SIM_DT, SIM.maxTicksPerFrame);
   private readonly commands = new Map<number, PlayerCommand>();
   private readonly playerCommand = createCommand();
@@ -113,6 +116,7 @@ export class RangeSession {
     // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
     // last map's; its lights, sky and light pools in the scene.
     const lighting = resolveLighting(map);
+    this.night = lighting.night;
     renderer.setLighting(lighting);
     this.daylight = addLighting(renderer.scene, map, quality, lighting);
 
@@ -291,11 +295,14 @@ export class RangeSession {
     this.renderer.setZoom(1);
   }
 
-  /** Fits the picked optic, parts, hop-up dials and BB weights to your replicas (fresh magazines of the picked kind). */
+  /**
+   * Fits the picked optic, parts, hop-up dials and BB weights to your replicas (fresh magazines of the picked kind); the
+   * weapon light only on a night preset, as in a match (M33h).
+   */
   private fitPickedLoadout(): void {
     const kit = this.setup.kit;
     fitOptics(this.player.armament, kit.slots.map((s) => s.optic));
-    fitParts(this.player.armament, kit.slots.map((s) => s.parts));
+    fitParts(this.player.armament, kit.slots.map((s) => partsUnder(s.parts, this.night)));
     setHopUps(this.player.armament, kit.hopUps);
     setBbWeights(this.player.armament, kit.bbWeights);
   }

@@ -91,6 +91,13 @@ export interface Character {
   armament: Armament;
   /** BBs pass through: the Dev settings' Ghost (M24), for the player only. Kept between rounds. */
   ghost: boolean;
+  /**
+   * The weapon torch on the replica in hand is on (M33h, sim/torch.ts): only while that replica has a light fitted and
+   * the character is in play. Off at every round's start and when hit.
+   */
+  torchOn: boolean;
+  /** Seconds since the torch was last switched (bots hold a state at least BOT_TORCH.minHold, so it never strobes). */
+  torchTime: number;
 }
 
 export function createCharacter(
@@ -144,6 +151,8 @@ export function createCharacter(
     using: false,
     armament: createArmament(loadout),
     ghost: false,
+    torchOn: false,
+    torchTime: 0,
   };
 }
 
@@ -204,6 +213,8 @@ export function respawnCharacter(c: Character): void {
   c.stillTime = 0;
   c.shakeCarry = 0;
   c.aiming = false;
+  c.torchOn = false;
+  c.torchTime = 0;
   c.using = false;
   c.status = 'alive';
   c.statusTime = 0;

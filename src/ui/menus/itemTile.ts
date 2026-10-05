@@ -14,6 +14,7 @@ export const CATEGORY_LABELS: Readonly<Record<Asset['category'], string>> = {
   magazine: 'Magazines',
   barrel: 'Barrels',
   muzzle: 'Muzzle parts',
+  light: 'Lights',
   grenade: 'Grenades',
 };
 

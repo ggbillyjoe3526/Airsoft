@@ -273,6 +273,9 @@ export class Sfx {
       case 'fireMode':
         this.playFrom(e.characterId, localId, characterOf, 'selector', L.mechanism);
         return;
+      case 'torch':
+        this.playFrom(e.characterId, localId, characterOf, 'torchClick', L.mechanism);
+        return;
       case 'draw':
         this.playFrom(e.characterId, localId, characterOf, 'draw', L.mechanism);
         return;

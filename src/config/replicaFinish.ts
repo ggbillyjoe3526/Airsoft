@@ -33,6 +33,11 @@ export const REPLICA_FINISH = {
   laserGlow: 2,
   laserBody: 0x400808,
   /**
+   * The weapon torch's lens (M33h): a dark glass while it is off; on, it glows the light's colour, emissive at `glow`
+   * (High) or flat (Low). Its bezel's knurling is `knurls` rubber rings.
+   */
+  torch: { lensOff: 0x2a3038, glow: 3, knurls: 3 },
+  /**
    * The Cyber Pistol's own colours (M32, the owner's reference photo): a mint slide and grip panels, hot pink accents,
    * on a black frame, the same on either team. Its polymer takes the speckle like the rest.
    */

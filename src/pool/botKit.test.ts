@@ -62,7 +62,8 @@ describe('bot kits (M29b)', () => {
       const full = randomFit(pool, replica, createRng(1), 1);
       for (const slot of FIT_SLOTS) {
         const any = pool.assets.some((a) => a.category === FIT_CATEGORY[slot] && fits(a, replica));
-        expect(full[slot] !== null, `${replica.name} ${slot}`).toBe(any);
+        // The light (M33h) is never rolled: bots carry one by rule on a night field (botLight).
+        expect(full[slot] !== null, `${replica.name} ${slot}`).toBe(any && slot !== 'light');
       }
     }
     const bare = randomFit(pool, aeg, createRng(1), 0);
@@ -153,8 +154,8 @@ describe('rolled bot kits and dev gear (M35)', () => {
 });
 
 describe('whether a rolled kit may hold dev gear (M35 rolledKitMayHoldDev)', () => {
-  it('is false for the real pool, whose every asset is public', () => {
-    expect(pool.assets.every((a) => a.tag === 'public')).toBe(true);
+  it('is false for the real pool, whose every asset but the dev Weapon Torch (never rolled, M33h) is public', () => {
+    expect(pool.assets.filter((a) => a.tag === 'dev').map((a) => a.name)).toEqual(['Weapon Torch']);
     expect(rolledKitMayHoldDev(pool, LOADOUT)).toBe(false);
   });
 
@@ -172,7 +173,7 @@ describe('whether a rolled kit may hold dev gear (M35 rolledKitMayHoldDev)', () 
   it('is false when the only dev asset fits no LOADOUT replica', () => {
     const stray = strayDevPart(pool);
     const devPool = withAssets(pool, [stray]);
-    expect(devPool.assets.filter((a) => a.tag === 'dev')).toEqual([stray]);
+    expect(devPool.assets.filter((a) => a.tag === 'dev' && a.category !== 'light')).toEqual([stray]);
     expect(LOADOUT.every((r) => !fits(stray, assetOfReplica(devPool, r)!))).toBe(true);
     expect(rolledKitMayHoldDev(devPool, LOADOUT)).toBe(false);
   });

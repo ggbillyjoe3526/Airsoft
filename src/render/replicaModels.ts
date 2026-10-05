@@ -7,6 +7,7 @@ import type { DetailLevel } from '../config/render';
 import { REPLICA_FINISH } from '../config/replicaFinish';
 import type { ReplicaConfig } from '../config/replicas';
 import { LASERS } from '../config/lasers';
+import { TORCHES } from '../config/torches';
 import { projectSpeckleUvs, type SpeckleTextures, speckleTextures } from './replicaFinish';
 
 /**
@@ -28,7 +29,7 @@ import { projectSpeckleUvs, type SpeckleTextures, speckleTextures } from './repl
 
 type Pt = readonly [forward: number, up: number];
 
-type MaterialKey = 'polymer' | 'furniture' | 'mag' | 'metal' | 'rubber' | 'orange' | 'lens' | 'laserLens' | 'bb' | 'glove' | 'sleeve' | 'armband' | 'mint' | 'pink';
+type MaterialKey = 'polymer' | 'furniture' | 'mag' | 'metal' | 'rubber' | 'orange' | 'lens' | 'laserLens' | 'torchLens' | 'bb' | 'glove' | 'sleeve' | 'armband' | 'mint' | 'pink';
 
 /** The replica and hand detail a viewmodel is built at (QualitySettings.replicaDetail and handDetail, FA8). */
 export interface ReplicaDetail {
@@ -96,6 +97,10 @@ function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: Spec
     laserLens: high
       ? new THREE.MeshStandardMaterial({ color: F.laserBody, emissive: LASERS.redLaser.colour, emissiveIntensity: F.laserGlow, roughness: 0.3, metalness: 0 })
       : new THREE.MeshBasicMaterial({ color: LASERS.redLaser.colour }),
+    // The weapon torch's lens (M33h): dark glass, lit by setTorchLit (a uniform: no shader is rebuilt by a switch).
+    torchLens: high
+      ? new THREE.MeshStandardMaterial({ color: F.torch.lensOff, emissive: TORCHES.weaponTorch.colour, emissiveIntensity: 0, roughness: 0.1, metalness: 0 })
+      : new THREE.MeshBasicMaterial({ color: F.torch.lensOff }),
     bb: new THREE.MeshStandardMaterial({ color: F.witnessBb, roughness: 0.35, metalness: 0, vertexColors }),
     // Olive gloves: clearly separate from the black polymer and tan furniture.
     glove: new THREE.MeshStandardMaterial({ color: 0x5d6146, roughness: 0.9, metalness: 0, vertexColors }),
@@ -202,11 +207,11 @@ class ModelBuilder {
     return this.add(key, geo, rounded ? 'box' : 'none');
   }
 
-  /** Cylinder lying along the forward axis. */
-  tube(key: MaterialKey, from: number, length: number, up: number, radius: number, segments = 14): this {
+  /** Cylinder lying along the forward axis (`x` across it: a part on the replica's side). */
+  tube(key: MaterialKey, from: number, length: number, up: number, radius: number, segments = 14, x = 0): this {
     const geo = new THREE.CylinderGeometry(radius, radius, length, segments);
     geo.rotateX(Math.PI / 2);
-    geo.translate(0, up, -(from + length / 2));
+    geo.translate(x, up, -(from + length / 2));
     return this.add(key, geo, 'none');
   }
 
@@ -562,6 +567,50 @@ function redLaser(b: ModelBuilder): void {
   b.tube('rubber', 0.034, 0.012, -0.033, 0.006, 10);
 }
 
+/**
+ * Where a weapon torch sits on a replica (M33h), in the model's (forward, up) and across (`x`): its body tube from
+ * `from`, `length` long and `radius` round, a wider head in front of it with the lens, and the mount to the rail (a box
+ * `mount` from forward → to, up y0 → y1, `width` wide at `mountX`).
+ */
+interface TorchLayout {
+  from: number;
+  length: number;
+  up: number;
+  x: number;
+  radius: number;
+  head: number;
+  headRadius: number;
+  mount: { from: number; to: number; y0: number; y1: number; width: number; x: number };
+}
+
+/** The AEG's: on the right of the handguard, ahead of the support hand, on the side rail. */
+export const AEG_TORCH: TorchLayout = { from: 0.325, length: 0.07, up: 0.034, x: 0.049, radius: 0.012, head: 0.024, headRadius: 0.016, mount: { from: 0.34, to: 0.375, y0: 0.026, y1: 0.042, width: 0.016, x: 0.036 } };
+/** The Gas Pistol's: under the dust cover, below where the Red Laser clips on, so the two read as one unit. */
+export const PISTOL_TORCH: TorchLayout = { from: 0.042, length: 0.044, up: -0.058, x: 0, radius: 0.0105, head: 0.014, headRadius: 0.0135, mount: { from: 0.05, to: 0.08, y0: -0.05, y1: -0.024, width: 0.014, x: 0 } };
+/** The Cyber Pistol's (its table was empty): a clamp under its slab dust cover. */
+export const CYBER_TORCH: TorchLayout = { from: 0.046, length: 0.046, up: -0.042, x: 0, radius: 0.0105, head: 0.014, headRadius: 0.0135, mount: { from: 0.056, to: 0.084, y0: -0.034, y1: -0.027, width: 0.014, x: 0 } };
+
+/**
+ * A weapon torch (M33h) at `t`: Low a six-sided body and head and a lens disc; High round, with a knurled bezel
+ * (REPLICA_FINISH.torch.knurls rubber rings), a rubber tailcap switch and a steel clamp screw. Its lens is `torchLens`.
+ */
+function weaponTorch(t: TorchLayout): PartDraw {
+  return (b) => {
+    const seg = b.high ? 16 : 6;
+    const m = t.mount;
+    b.box('polymer', m.from, m.to, m.y0, m.y1, m.width, m.x);
+    b.tube('polymer', t.from, t.length, t.up, t.radius, seg, t.x);
+    const head = t.from + t.length;
+    b.tube('polymer', head, t.head, t.up, t.headRadius, seg, t.x);
+    b.tube('torchLens', head + t.head, 0.0015, t.up, t.headRadius * 0.82, seg, t.x);
+    if (!b.high) return;
+    const step = t.head / (F.torch.knurls + 1);
+    for (let i = 1; i <= F.torch.knurls; i++) b.tube('rubber', head + i * step - 0.001, 0.002, t.up, t.headRadius + 0.0008, seg, t.x);
+    b.tube('rubber', t.from - 0.007, 0.007, t.up, t.radius * 0.8, seg, t.x);
+    b.crossTube('metal', (m.from + m.to) / 2, (m.y0 + m.y1) / 2, 0.003, m.width + 0.004, m.x, 8);
+  };
+}
+
 /** Where the laser's lens is (forward, up): the beam starts there. */
 const PISTOL_LASER_LENS: Pt = [0.093, -0.034];
 
@@ -646,23 +695,25 @@ const AEG_PARTS: Readonly<Record<string, PartDraw>> = {
   'grip:angled': angledGrip,
   'barrel:long': longBarrel,
   'barrel:tightBore': tightBoreBarrel,
+  'light:weaponTorch': weaponTorch(AEG_TORCH),
 };
 const AEG_MAGAZINES: Partial<Record<MagazineId, PartDraw>> = { standard: aegStandardMag, hiCap: aegHiCap, lowCap: aegLowCap };
 /** The muzzle devices by id ('none': the bare muzzle's own), drawn on the mount. */
 const AEG_MUZZLE_DEVICES: Readonly<Record<string, MuzzleDraw>> = { none: flashHider, silencer: silencer(AEG_MUZZLE, 0.019, 0.006) };
-const PISTOL_PARTS: Readonly<Record<string, PartDraw>> = { 'laser:redLaser': redLaser };
+const PISTOL_PARTS: Readonly<Record<string, PartDraw>> = { 'laser:redLaser': redLaser, 'light:weaponTorch': weaponTorch(PISTOL_TORCH) };
 const PISTOL_MAGAZINES: Partial<Record<MagazineId, PartDraw>> = { standard: pistolStandardMag, extended: pistolExtendedMag };
 /** A silencer a little narrower than the slide; the bare muzzle has no device of its own. */
 const PISTOL_MUZZLE_DEVICES: Readonly<Record<string, MuzzleDraw>> = { silencer: silencer(PISTOL_MUZZLE, 0.0135, 0.005) };
 
-/** Nothing fits the Cyber Pistol (M32): its table is its own magazine. */
+/** Nothing but a weapon torch (M33h) fits the Cyber Pistol (M32): its table is that and its own magazine. */
+const CYBER_PARTS: Readonly<Record<string, PartDraw>> = { 'light:weaponTorch': weaponTorch(CYBER_TORCH) };
 const CYBER_MAGAZINES: Partial<Record<MagazineId, PartDraw>> = { standard: cyberMag };
 
 /** Every part a replica's table draws, built and named (exported for the tests: one builder per entry). */
 export const REPLICA_PART_TABLES = {
   aeg: { parts: AEG_PARTS, magazines: AEG_MAGAZINES, muzzles: AEG_MUZZLE_DEVICES },
   pistol: { parts: PISTOL_PARTS, magazines: PISTOL_MAGAZINES, muzzles: PISTOL_MUZZLE_DEVICES },
-  cyber: { parts: {}, magazines: CYBER_MAGAZINES, muzzles: {} },
+  cyber: { parts: CYBER_PARTS, magazines: CYBER_MAGAZINES, muzzles: {} },
 } as const;
 
 /**
@@ -888,6 +939,7 @@ function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boo
   );
   buildForearm(support, leftWrist, [-0.16, -0.26, -0.28], undefined, detail.hands);
   const group = b.build(m);
+  for (const [name, draw] of Object.entries(CYBER_PARTS)) group.add(drawnPart(draw, m, detail, name));
   const magazine = magazinePart(CYBER_MAGAZINES, m, detail, GRIP_DOWN);
   group.add(magazine.group);
   // Down to the long magazine's base plate (the Gas Pistol's extended magazine's reach).
@@ -965,6 +1017,8 @@ export interface ReplicaModels {
    * then, and stays a dull painted grey without (it would look black). Low detail is as it was either way.
    */
   setReflections(on: boolean): void;
+  /** The weapon torch's lens glows (M33h): its torch is on. A uniform change, never a new shader. */
+  setTorchLit(on: boolean): void;
   dispose(): void;
 }
 
@@ -1016,6 +1070,11 @@ export function buildReplicaModels(loadout: readonly ReplicaConfig[], teamColor:
       const M = on ? F.metal.lit : F.metal.unlit;
       metal.metalness = M.metalness;
       metal.roughness = M.roughness;
+    },
+    setTorchLit(on) {
+      const lens = materials.torchLens;
+      if (lens instanceof THREE.MeshStandardMaterial) lens.emissiveIntensity = on ? F.torch.glow : 0;
+      else (lens as THREE.MeshBasicMaterial).color.setHex(on ? TORCHES.weaponTorch.colour : F.torch.lensOff);
     },
     dispose() {
       raisedHand.traverse((o) => {
