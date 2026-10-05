@@ -1,11 +1,13 @@
 import { beforeAll, describe, it } from 'vitest';
 import { botConfig } from '../config/bots';
+import { mapUnderLighting } from '../map/lightingChoice';
 import { NEON_HEIGHTS } from '../map/neonHeights';
 import { initPhysics } from '../physics/physicsWorld';
 import { expectProBalance, tallyBalance } from './depotMatchSupport';
 
-/** Neon Heights plays 4v4 (M34c), by day: the map has no night yet. */
+/** Neon Heights plays 4v4 (M34c); this guard plays it by Day (M34d's switch; Night is its default). */
 const TEAM_SIZE = 4;
+const DAY = mapUnderLighting(NEON_HEIGHTS, 'day');
 
 describe('a 4v4 Attack / Defend match on Neon Heights, both teams on Pro (M40)', () => {
   beforeAll(async () => {
@@ -17,6 +19,6 @@ describe('a 4v4 Attack / Defend match on Neon Heights, both teams on Pro (M40)',
     // 33-64 55 % (118 of 214). With tree-gap angles taken between any narrow blocks (a wall's stub by a door counted as a
     // post) it was 59 %: posts are now about square (anglePostSquareness). Hard on seeds 1-32: 55 % (128 of 231), none on
     // time. Re-measure with this test after any bot or layout change.
-    expectProBalance(tallyBalance(32, 400, botConfig('pro'), 'attackDefend', NEON_HEIGHTS, TEAM_SIZE), 'attackDefend', 'Neon Heights Pro');
+    expectProBalance(tallyBalance(32, 400, botConfig('pro'), 'attackDefend', DAY, TEAM_SIZE), 'attackDefend', 'Neon Heights Pro');
   });
 });
