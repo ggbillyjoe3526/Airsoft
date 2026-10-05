@@ -20,7 +20,7 @@ acceptance:
   2. Neon Heights painted with them by Day and Night: pastel buildings in mint, magenta, cyan and amber on slate, an asphalt avenue with markings, paved yards and lanes, tiled rooms, city props in place of the site props, neon trim; by Night a city sky glow and fewer stars through its lighting overrides.
   3. Play is unchanged: every block's box, ricochet material and walkable floor are the same as before (pinned), so the Neon Heights balance and Pro guards hold; the city's own textures are drawn only when it loads.
   4. Low stays within 100 draw calls and 150k triangles on Neon Heights; screenshots by Day and Night, Low and Medium, for the owner.
-status: gates
+status: critic
 attempts: 3
 
 ## M48 · Extraction on Woodland and Neon Heights
