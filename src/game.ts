@@ -24,7 +24,7 @@ import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
-import { type MapId, mapData, teamSizeOn } from './map/maps';
+import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
 import { loadFigureModel } from './render/externalModels';
@@ -48,7 +48,7 @@ import { loadoutTile } from './ui/loadoutChoice';
 import { type Collection, type ItemRef, loadCollection, saveCollection, syncCollection } from './pool/collection';
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
-import { matchUsesDev, type NewGamePicks, playedPicks } from './newGamePicks';
+import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
 import { collectionOwnership, gameOwnership, LoadoutModel } from './pool/loadoutModel';
 import { carryOverOldPicks } from './pool/oldPicks';
 import type { Earnings } from './pool/armory';
@@ -769,7 +769,7 @@ export class Game {
         difficulty: picks.difficulty,
         teammateDifficulty: picks.teammateDifficulty,
         ruleset: picks.ruleset,
-        rules: { ...picks.rules, teamSize: teamSizeOn(picks.map, picks.rules.teamSize) },
+        rules: { ...picks.rules, teamSize: playedTeamSize(picks) },
         kit: this.loadout.kit(),
         chaseOwned: this.loadout.ownedChase(),
         devContent: this.dev.devContent,

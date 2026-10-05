@@ -43,6 +43,18 @@ export type GameEvent =
   | { type: 'matchOver'; winner: number }
   | { type: 'roundStart'; round: number }
   /** The flag passed another notch of its rope, going up (`raising`) or being pulled down. */
-  | { type: 'flagRope'; position: Vec3; raising: boolean };
+  | { type: 'flagRope'; position: Vec3; raising: boolean }
+  /** Extraction (M43): a hit squad member is back at the insertion, with `respawnsLeft` more this run. */
+  | { type: 'respawned'; characterId: number; respawnsLeft: number }
+  /** Extraction: the runner's count at exit `exit` passed another second; `secondsLeft` to go. */
+  | { type: 'exitCount'; exit: number; secondsLeft: number }
+  /** Extraction: a late exit opened (index into RunState.exits). */
+  | { type: 'exitOpened'; exit: number }
+  /** Extraction: the marshal's whistle, `secondsLeft` before the run's time is up. */
+  | { type: 'runWarning'; secondsLeft: number };
 
-export type RoundEndReason = 'eliminated' | 'time' | 'captured';
+/**
+ * Why a round (in Extraction, the run) ended. Extraction: 'extracted' (counted out at an exit), 'out' (hit with no
+ * respawn left) or 'time' (caught out when time ran out).
+ */
+export type RoundEndReason = 'eliminated' | 'time' | 'captured' | 'extracted' | 'out';

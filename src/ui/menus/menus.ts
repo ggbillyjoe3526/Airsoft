@@ -10,6 +10,7 @@ import {
   MAGAZINE_CHOICES,
   type MatchRules,
   matchRulesSummary,
+  runRulesSummary,
   type RuleSwitch,
   MINIMAP_HEARD_CHOICES,
   offersSwitch,
@@ -26,13 +27,15 @@ import {
   TIME_OUT_CHOICES,
   WINS_NEEDED_CHOICES,
 } from '../../config/matchRules';
+import { squadSize } from '../../config/extraction';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
-import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapEntry, teamSizeOn } from '../../map/maps';
-import { playedPicks } from '../../newGamePicks';
+import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapEntry } from '../../map/maps';
+import { modeOffered } from '../../map/playableMode';
+import { playedPicks, playedTeamSize } from '../../newGamePicks';
 import { saveSetting } from '../../settings/storage';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
@@ -393,7 +396,7 @@ export class Menus {
     }));
     this.tagPicker(winsNeeded, (p) => String(p.rules.winsNeeded));
     // The size played: no more than the map in force has room for (M33).
-    this.tagPicker(teamSize, (p) => String(teamSizeOn(p.map, p.rules.teamSize)));
+    this.tagPicker(teamSize, (p) => String(playedTeamSize(p)));
     return [
       menuRow('Rules', 'Named rulesets have their own records; Custom never counts.', rules.root),
       this.switchRow('winsNeeded', menuRow('Rounds to win', '', winsNeeded.root)),
@@ -564,6 +567,8 @@ export class Menus {
     const devContent = this.opts.dev.devContent();
     this.mapDialog.setDevContent(devContent);
     this.modeDialog.setDevContent(devContent);
+    const offeredOn = mapEntry(this.mapDialog.value).data;
+    this.modeDialog.limit((id) => modeOffered(offeredOn, id));
     const played = playedPicks(
       { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, ruleset: this.ruleset, rules: this.matchRules },
       devContent,
@@ -571,13 +576,16 @@ export class Menus {
     // The Match pop-up offers the rules the ruleset as played leaves to you (M39).
     for (const s of this.switchRows) s.row.hidden = !offersSwitch(played.ruleset, s.field);
     // Each map offers as many players a side as it has room for (Depot 3v3, Woodland up to 5v5, M33).
+    // An Extraction run takes a squad of at most three (M43).
     const map = mapEntry(played.map);
-    this.teamSizePicker.limit((id) => Number(id) <= map.teamSize.max);
+    const run = played.mode === 'extraction' ? map.data.extraction : undefined;
+    const sizeMax = run ? squadSize(map.teamSize.max) : map.teamSize.max;
+    this.teamSizePicker.limit((id) => Number(id) <= sizeMax);
     for (const t of this.taggedPickers) t.picker.setDevContent(devContent, t.played(played));
-    const m = { ...played.rules, teamSize: teamSizeOn(map.id, played.rules.teamSize) };
+    const m = { ...played.rules, teamSize: playedTeamSize(played) };
     this.setup.map.set(this.mapDialog.label, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
-    const match = matchRulesSummary(m);
+    const match = run ? runRulesSummary(m, run) : matchRulesSummary(m);
     // Under a ruleset other than Skirmish the line starts with its name (M39).
     this.setup.match.set(match.value, played.ruleset === DEFAULT_RULESET ? match.detail : `${rulesetOf(played.ruleset).label}. ${match.detail}`);
     const opponents = difficultyLabel(played.difficulty);
@@ -588,7 +596,7 @@ export class Menus {
     );
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
     const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty, played.ruleset);
-    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter, switches: m }, this.modeDialog.value);
+    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter, switches: m }, played.mode, run);
     this.setup.setRules(setupNotes(rules, { recorded, cheating: this.opts.dev.cheating(), devContentUsed: this.opts.dev.devContentUsed(), ruleset: played.ruleset }));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);

@@ -138,6 +138,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M35 Public and dev content tags: every map, mode, difficulty and pooled asset tagged public or dev; dev content shown only with the Dev tab's Dev content switch, never in Shots, carried by bots only with it on, and kept out of the records and Field Credits | Done (owner to play it) | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M42 Retro pixel filter: a Dev tab switch for a 1990s look (chunky pixels, a small dithered palette), with Pixel size and Colours sliders; the HUD and menus stay sharp | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | In progress (M36 merged, #79; M37 merged, #82; M38 merged, #84; M39 built; the owner chose to start before the final alpha pass) | |
+| Alpha · Owner's 2026-10-04 requests · M43–M49 Extraction: a squad of one to three against a home team on a timed run, guarded cases of seeded loot, waves, exits held for a count, one automatic respawn per run, pay and records, Woodland and city data, supply weekends; tagged dev until the owner says it's done | Building: M43 the run, exits, clock and respawn done (owner to play it); M44–M49 next | 8/8 (M43) |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -851,6 +852,21 @@ pool, items 11, 12 and part of 14).
   - **M41. What got you, tips and tuning:** after you're hit, a card shows where the shot came from, whether that bot
     was holding the angle, how long you were in view and whether you were moving (every difficulty; on by default on
     Pro). Briefing tips for Pro, a playtest per map, then public when the owner says.
+- **M43–M49. Extraction** (owner, 2026-10-04: "Based on the popular extraction shooter genre"; plan approved 20:51 and
+  20:54 with every default except one: a single automatic respawn per run; the write-up is in the project's shared files,
+  `research/extraction-mode-2026-10-04.md`). A new mode, tagged dev until the owner says it's done:
+  - **M43. The run:** a squad of 1–3 (the team size) against a home team of the map's base plus the squad, one 8:00 run
+    on Depot, an insertion from the run's seed, exits (those near the insertion closed, a late one opening at 3:00 left),
+    10 s counted out in an open exit (paused by an opponent inside, reset on leaving), a whistle at 1:00, one automatic
+    respawn at the insertion when the hit call ends, bot teammates following you; the HUD strip, exit markers and
+    minimap icons, the banner and result wording.
+  - **M44. Cases and loot:** seeded case spots (ammo cans, field cases, a marshal's locker) opened by holding Use, FC
+    bundles, BB resupplies and pool parts drawn like a Shot's; a hit drops what you carry; finds are kept only on extraction.
+  - **M45. Waves and regen:** the home team comes back in waves from regen points out of your sight.
+  - **M46. Guards, patrols and hunters:** bots that guard cases (on M37's held angles), patrol and hunt the squad late.
+  - **M47. Pay and records:** an Extraction payout and its own records, within M35's dev rule while tagged dev.
+  - **M48. Woodland and city data:** insertions, exits, starts and case spots for the new maps once they are playable.
+  - **M49. Supply weekends and events:** a dated or owner-switched event with its own loot table.
 
 When the owner calls the game feature complete, alpha ends.
 

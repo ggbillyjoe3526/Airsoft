@@ -53,6 +53,8 @@ export type SoundCue =
   | 'radio.ack'
   | 'rope.up'
   | 'rope.down'
+  /** Extraction (M43): the exit's timer box beeping each second of the count. */
+  | 'count.beep'
   /** A bird somewhere round the yard: the ambience's sparse one-shots (audit CORE-34). */
   | 'ambience.bird';
 
@@ -374,6 +376,14 @@ export const SOUNDS: Readonly<Record<SoundCue, SoundRecipe>> = {
     pitchSpread: 0.03,
     timeSpread: 0.05,
     gainSpread: 0.05,
+  },
+
+  /** A site timer box's beep, as on a bomb prop: the exit counting you out (M43). */
+  'count.beep': {
+    layers: [{ kind: 'tone', wave: 'square', attack: 0.002, decay: 0.06, gain: 0.12, hz: 1650 }],
+    pitchSpread: 0,
+    timeSpread: 0,
+    gainSpread: 0,
   },
 
   // ---- The field -----------------------------------------------------------------------------

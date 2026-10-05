@@ -1,4 +1,6 @@
+import { EXIT_VISUALS } from '../config/render';
 import { MINIMAP } from '../config/minimap';
+import { cssColor } from '../config/teams';
 import type { Bush } from '../map/foliage';
 import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
@@ -9,6 +11,13 @@ export interface MinimapMate {
   x: number;
   z: number;
   hit: boolean;
+}
+
+/** An Extraction exit on the minimap. */
+export interface MinimapExit {
+  x: number;
+  z: number;
+  open: boolean;
 }
 
 /** What one frame of the minimap shows (filled in place by MatchPresentation, so nothing is made per frame). */
@@ -23,6 +32,9 @@ export interface MinimapFrame {
   /** Where your teammates hold (null if they don't hold a spot), and in Attack / Defend the flagpole (null otherwise). */
   hold: { x: number; z: number } | null;
   flag: { x: number; z: number } | null;
+  /** Extraction (M43): the exits drawn (`exitCount` of `exits`), open ones green, a late one still shut grey. */
+  exits: MinimapExit[];
+  exitCount: number;
   /** Simulation time, for the heard players' fading. */
   time: number;
 }
@@ -35,6 +47,10 @@ interface FieldLayer {
   width: number;
   depth: number;
 }
+
+/** Exit icons' colours (config/render.ts EXIT_VISUALS, as CSS). */
+const EXIT_OPEN = cssColor(EXIT_VISUALS.openColor);
+const EXIT_SHUT = cssColor(EXIT_VISUALS.shutColor);
 
 /** The step patch's dashed outline (made once). */
 const STEP_DASH: readonly number[] = [3, 3];
@@ -192,6 +208,7 @@ export class Minimap {
     ctx.restore();
 
     if (f.flag) this.drawFlag(f, scale, rim);
+    for (let i = 0; i < f.exitCount; i++) this.drawExit(f, f.exits[i]!, scale, rim);
     if (f.hold) this.drawHold(f, scale, rim);
     for (let i = 0; i < f.count; i++) this.drawMate(f, f.mates[i]!, scale, rim);
     this.drawYou();
@@ -257,6 +274,21 @@ export class Minimap {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     ctx.fill();
+    ctx.stroke();
+  }
+
+  /** An Extraction exit: a small square doorway, green while open, grey while it's a late exit still shut. */
+  private drawExit(f: MinimapFrame, e: MinimapExit, scale: number, rim: number): void {
+    const ctx = this.ctx!;
+    const p = toMinimap(f.yaw, f.x, f.z, e.x, e.z, scale, this.at);
+    clampToRim(p, rim - 7);
+    ctx.beginPath();
+    ctx.rect(p.x - 4, p.y - 5, 8, 10);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.strokeStyle = e.open ? EXIT_OPEN : EXIT_SHUT;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
   }
 

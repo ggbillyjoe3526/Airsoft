@@ -7,6 +7,7 @@ import { halfTimeAfterRound, roundDrawn, type RoundRules, type RoundState } from
  * "Round N" (with your job in flag mode) just after a round starts. Empty when there's nothing to say.
  */
 export function roundBanner(r: RoundState, playerTeam: number, showStart: boolean, secondsToNext: number, rules: RoundRules): string {
+  if (r.mode === 'extraction') return runBanner(r, showStart);
   if (r.phase === 'matchOver') return r.matchWinner === playerTeam ? 'You win the match!' : 'You lose the match';
   const flagMode = r.mode === 'attackDefend';
   if (r.phase === 'over') {
@@ -26,6 +27,21 @@ export function roundBanner(r: RoundState, playerTeam: number, showStart: boolea
   if (!flagMode) return `Round ${r.number}`;
   // Short, so it fits on one line beside the hit feed at 1280 px (KNOWN_ISSUES row 138): the scoreboard says the rest.
   return r.attackers === playerTeam ? `Round ${r.number} · Attack` : `Round ${r.number} · Defend`;
+}
+
+/** Extraction (M43): how the run ended, or what to do just after it starts. */
+function runBanner(r: RoundState, showStart: boolean): string {
+  if (r.phase === 'matchOver') {
+    if (r.reason === 'extracted') return 'Counted out · you made it!';
+    if (r.reason === 'time') return "Caught out · time's up";
+    return 'Out of the run';
+  }
+  return showStart ? 'Extraction · get to an exit' : '';
+}
+
+/** Said for a moment after you're back at the insertion from a hit (M43), with the respawns you have `left`. */
+export function respawnBanner(left: number): string {
+  return `Back in at the insertion · ${left === 0 ? 'no' : left} respawn${left > 1 ? 's' : ''} left`;
 }
 
 /** Before the countdown in the between-rounds message. */

@@ -3,7 +3,7 @@ import { defaultTeammateDifficulty } from './bots';
 import { hasSavedTeammateDifficulty, loadDifficulty, loadMatchRules, loadTeammateDifficulty } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { HITS, ROUNDS } from './hits';
-import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, SKIRMISH_SWITCHES, TEAM_SIZE_CHOICES, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor } from './matchRules';
+import { countsForRecords, DEFAULT_MATCH_RULES, formatRoundTime, SKIRMISH_SWITCHES, TEAM_SIZE_CHOICES, standardMatchText, hitRulesFor, matchRulesSummary, roundRulesFor, runRulesSummary } from './matchRules';
 
 /** A browser store holding `fields` in the settings object. */
 function storageWith(fields: Record<string, unknown>): Storage {
@@ -113,6 +113,11 @@ describe('custom match rules (M20)', () => {
     expect(formatRoundTime(90)).toBe('1:30');
     expect(formatRoundTime(300)).toBe('5:00');
     expect(matchRulesSummary(DEFAULT_MATCH_RULES)).toEqual({ value: '3v3 · first to 5', detail: "2:30 rounds. Friendly fire on; ricochets don't count." });
+    // Extraction (M43): the squad against the home team, one run.
+    expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, { baseOpponents: 2, runTime: 480 })).toEqual({
+      value: 'Squad of 2 · 4 in the home team',
+      detail: "One 8:00 run. Friendly fire on; ricochets don't count.",
+    });
   });
 
   it('read back what was saved, and the default for anything missing or off the menu', () => {

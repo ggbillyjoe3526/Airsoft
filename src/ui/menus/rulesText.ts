@@ -1,5 +1,7 @@
-import { type MatchRules, REALCAP_TEXT } from '../../config/matchRules';
+import { EXTRACTION } from '../../config/extraction';
+import { formatRoundTime, type MatchRules, REALCAP_TEXT } from '../../config/matchRules';
 import type { MatchMode } from '../../config/modes';
+import type { ExtractionData } from '../../map/mapTypes';
 
 /** What the New game screen needs to explain the match. */
 export interface MatchRulesText {
@@ -25,8 +27,25 @@ export interface MatchRulesText {
 /** A map end's name (0 is west, MapData.spawns). */
 const END_NAMES = ['west', 'east'] as const;
 
-/** The goal paragraph for `mode`. */
-export function describeRules(r: MatchRulesText, mode: MatchMode): string {
+/**
+ * Extraction's goal paragraph (M43): the squad, the home team's numbers, the clock, the exits and the one respawn. On a
+ * map without Extraction data the match is played as Elimination (MatchSession), and the paragraph says so.
+ */
+function describeRun(r: MatchRulesText, x: ExtractionData | undefined): string {
+  if (!x) return 'This map has no Extraction yet: the match is played as Elimination.';
+  const mates = r.teamSize - 1;
+  const squad = mates === 0 ? 'Solo: just you' : `You and ${mates} bot teammate${mates === 1 ? '' : 's'}, who follow you`;
+  return (
+    `${squad} (${r.playerTeam}), against ${x.baseOpponents + r.teamSize} ${r.enemyTeam} bots of the home team. ` +
+    `You have ${formatRoundTime(x.runTime)} to get to an open exit and stand in it for ${EXTRACTION.extractTime} s while you're counted out; ` +
+    `someone from the home team in the exit pauses the count. A late exit opens with ${formatRoundTime(EXTRACTION.lateExitAt)} left. ` +
+    `Hit once and you're back at the insertion straight away; hit again and you're out of the run.`
+  );
+}
+
+/** The goal paragraph for `mode` (Extraction: on a map with `extraction` data). */
+export function describeRules(r: MatchRulesText, mode: MatchMode, extraction?: ExtractionData): string {
+  if (mode === 'extraction') return describeRun(r, extraction);
   const minutes = Math.floor(r.roundTime / 60);
   const seconds = String(Math.round(r.roundTime % 60)).padStart(2, '0');
   const mates = r.teamSize - 1;

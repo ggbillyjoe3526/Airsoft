@@ -342,6 +342,15 @@ export class Sfx {
       case 'roundStart':
         this.roundStartWhistle();
         return;
+      case 'runWarning':
+        // Extraction (M43): one long blast, a minute to go.
+        this.whistle?.blast(AUDIO.roundOverWhistle, 0);
+        this.engine.duck(AUDIO.duck.whistle);
+        return;
+      case 'exitCount':
+        // The last second is the run's end: the whistle says that.
+        if (e.secondsLeft > 0) this.play('count.beep', this.ui!, L.countBeep);
+        return;
     }
   }
 
