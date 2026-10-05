@@ -16,4 +16,4 @@ acceptance:
   3. Under a night preset Medium's shadow map follows the view on a field wider than the view window (owner decision 7): Woodland's texels go from 10.2 to 3.9 cm and move in whole texels; by day, and at night on Neon Heights and Depot (already finer), Medium keeps the whole field, and Low has no shadows (lighting.test.ts, nightReadability.test.ts).
   4. KNOWN_ISSUES row 21 names the lamp point-light cause and is kept per the owner (decision 6); rows 22, 34, 162 and 167 are closed.
 status: gates
-attempts: 0
+attempts: 1
