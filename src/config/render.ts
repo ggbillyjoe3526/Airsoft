@@ -683,9 +683,9 @@ export const FOLIAGE_LOOK = {
  */
 export const GROUND_LOOK = {
   cell: 1,
-  // Trampled earth at the camps and tracks is a light, dry dirt: under the night's blue key light it is as bright as
-  // the grass it replaces (a red-brown reflects less of that light than green), so a figure on it reads. Leaf litter
-  // darker, and darker again under the trees.
+  // Trampled earth at the fires, tracks and fort is a light, dry dirt, lighter than the leaf litter, which is darker
+  // again under the trees. At night Neutral tone mapping still takes browns and greys near black (KNOWN_ISSUES), so the
+  // spawns stay on grass.
   colours: { leaves: 0x55482f, earth: 0x927d60, gravel: 0x857f72, wood: 0x76603f },
   blend: 1,
   underTreeShade: 0.72,
