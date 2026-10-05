@@ -186,7 +186,9 @@ ends the round). A hit character is eliminated
   round) and on the summary screen. `MatchPresentation` also feeds the hit feed (`ui/hitFeed.ts`, lines on simulation
   time) and projects the teammate markers (`ui/teammateMarkers.ts`, through `screenMarker.ts`). `stats/records.ts`
   keeps the local records under their own browser key (`airsoft.records`); `Game` adds a finished match once
-  (`MatchSession.takeMatchResult`). The crosshair (`ui/crosshair.ts`) is built and styled from Settings → Crosshair
+  (`MatchSession.takeMatchResult`). An Extraction run (M47, `MatchResult.run`) counts as a run and an extraction in its
+  cell and keeps its own bests (best haul, extractions in a row, fastest extraction with a find), apart from the
+  match-win streak; `recordsView` shows them with the mode's column. The crosshair (`ui/crosshair.ts`) is built and styled from Settings → Crosshair
   (`ui/crosshairSettings.ts`, saved as `crosshair.<part>`); the HUD opens its gap with the spread.
 - **ui/menus/** (M15, M15b): `Menus` shows one opaque screen at a time and reports choices to `game.ts`:
   the title screen, New game (`setupScreen.ts`: Map, Mode, Difficulty, Loadout, Settings, the rules from `rulesText.ts`,
@@ -245,7 +247,8 @@ ends the round). A hit character is eliminated
   Customise screen's Performance sheet (against `LoadoutModel.asItComes`), the gear slots' line and the Armory's
   tier line.
 - **Armory (M26c):** `pool/armory.ts` holds its rules, pure, over a `Collection`: `matchEarnings` (the FC a finished
-  match pays, from `MatchSession.takeOutcome`), `buyTokens`, `takeShots` (paid in Tokens, then FC; the draws carry on
+  match pays, from `MatchSession.takeOutcome`; an Extraction run, M47 `MatchOutcome.extraction`, pays the FC it got
+  out with and its hits instead of the match lines, and `grantHaul` adds only its parts), `buyTokens`, `takeShots` (paid in Tokens, then FC; the draws carry on
   from the collection's saved `sim/rng.ts` state mixed with fresh entropy per Shot, replayable with a fixed one; pity
   counts kept in the collection, FA10) and `scrapSpares` (one copy kept per asset, its best tier). `stats/settleMatch.ts`
   pays and records a decided match once (`MatchTakes`); `Game` syncs the collection with storage before changing it

@@ -91,7 +91,7 @@ describe('Pro records (M36 criterion 5)', () => {
     const old = { version: 1, results: { 'easy.elimination': { wins: 2, losses: 1 }, 'hard.attackDefend': { wins: 0, losses: 4 } }, bestAccuracy: 0.4, streak: 0, bestStreak: 3 };
     const store = memory({ [RECORDS_KEY]: JSON.stringify(old) });
     const r = loadRecords(store);
-    expect(r).toEqual({ results: old.results, bestAccuracy: 0.4, streak: 0, bestStreak: 3 });
+    expect(r).toEqual({ ...emptyRecords(), results: old.results, bestAccuracy: 0.4, streak: 0, bestStreak: 3 });
     expect(r.results['pro.elimination']).toBeUndefined();
     addMatch(r, win({ difficulty: 'pro' }));
     saveRecords(r, store);
@@ -121,7 +121,7 @@ describe('ruleset records (M39 criterion 4)', () => {
     const old = { version: 1, results: { 'easy.elimination': { wins: 2, losses: 1 } }, bestAccuracy: 0.4, streak: 0, bestStreak: 3 };
     const store = memory({ [RECORDS_KEY]: JSON.stringify(old) });
     const r = loadRecords(store);
-    expect(r).toEqual({ results: old.results, bestAccuracy: 0.4, streak: 0, bestStreak: 3 });
+    expect(r).toEqual({ ...emptyRecords(), results: old.results, bestAccuracy: 0.4, streak: 0, bestStreak: 3 });
     addMatch(r, win({ difficulty: 'hard', mode: 'attackDefend', ruleset: 'tournament' }));
     saveRecords(r, store);
     const saved = JSON.parse(store.data.get(RECORDS_KEY)!);
@@ -135,5 +135,53 @@ describe('ruleset records (M39 criterion 4)', () => {
     // Malformed ruleset keys are dropped one by one.
     const junk = memory({ [RECORDS_KEY]: JSON.stringify({ version: 1, rulesetResults: { 'pro.elimination': { wins: 1, losses: 0 }, 'a.b.c.d': { wins: 1 }, 'pro.elimination.custom': { wins: 2, losses: 0 } } }) });
     expect(Object.keys(loadRecords(junk).results)).toEqual(['pro.elimination.custom']);
+  });
+});
+
+describe('Extraction records (M47)', () => {
+  const run = (over: Partial<MatchResult> = {}, haulFc = 120, finds = 2, seconds = 200): MatchResult => ({
+    difficulty: 'normal',
+    mode: 'extraction',
+    won: true,
+    hits: 0,
+    bbsFired: 0,
+    run: { haulFc, finds, seconds },
+    ...over,
+  });
+
+  it('counts runs and extractions in the run’s cell, and leaves the match-win streak alone', () => {
+    const r = emptyRecords();
+    addMatch(r, win());
+    addMatch(r, run());
+    addMatch(r, run({ won: false }, 0, 0));
+    expect(r.results[resultKey('normal', 'extraction')]).toEqual({ wins: 1, losses: 1 });
+    expect(r).toMatchObject({ streak: 1, bestStreak: 1 });
+  });
+
+  it('keeps extractions in a row, the best haul and the fastest extraction with a find, and says when each is beaten', () => {
+    const r = emptyRecords();
+    expect(addMatch(r, run({}, 120, 2, 200))).toMatchObject({ bestHaul: true, bestExtractionStreak: true, fastestExtraction: true, bestStreak: false });
+    expect(addMatch(r, run({}, 80, 1, 150))).toMatchObject({ bestHaul: false, bestExtractionStreak: true, fastestExtraction: true });
+    // Out empty-handed but quicker: the streak goes on, but a run with no finds sets no fastest time.
+    expect(addMatch(r, run({}, 0, 0, 30))).toMatchObject({ bestHaul: false, bestExtractionStreak: true, fastestExtraction: false });
+    expect(r).toMatchObject({ bestHaul: 120, extractionStreak: 3, bestExtractionStreak: 3, fastestExtraction: 150 });
+    // A run you don't get out of ends the streak and sets nothing.
+    expect(addMatch(r, run({ won: false }, 0, 0, 20))).toMatchObject({ bestHaul: false, bestExtractionStreak: false, fastestExtraction: false });
+    expect(r).toMatchObject({ extractionStreak: 0, bestExtractionStreak: 3, fastestExtraction: 150 });
+    expect(addMatch(r, run({}, 300, 3, 400)).bestHaul).toBe(true);
+    expect(r.bestHaul).toBe(300);
+  });
+
+  it('saves and loads them, and loads a save from before M47 with empty ones', () => {
+    const store = memory();
+    const r = emptyRecords();
+    addMatch(r, run());
+    saveRecords(r, store);
+    expect(loadRecords(store)).toEqual(r);
+    const old = { version: 1, results: { 'normal.elimination': { wins: 2, losses: 1 } }, bestAccuracy: 0.3, streak: 1, bestStreak: 4 };
+    const loaded = loadRecords(memory({ [RECORDS_KEY]: JSON.stringify(old) }));
+    expect(loaded).toEqual({ ...emptyRecords(), results: old.results, bestAccuracy: 0.3, streak: 1, bestStreak: 4 });
+    const bad = { ...old, bestHaul: -5, extractionStreak: 'x', bestExtractionStreak: 2.5, fastestExtraction: 0 };
+    expect(loadRecords(memory({ [RECORDS_KEY]: JSON.stringify(bad) }))).toMatchObject({ bestHaul: null, extractionStreak: 0, bestExtractionStreak: 0, fastestExtraction: null });
   });
 });

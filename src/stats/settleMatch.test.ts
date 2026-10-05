@@ -42,8 +42,10 @@ describe('an Extraction haul (M44)', () => {
   it('goes into the collection with the pay, in the same settle (one save), the parts revealed new or spare', () => {
     const collection = newCollection(GAME_POOL, 1);
     const fc = collection.fc;
-    const settled = settleMatch(emptyRecords(), collection, null, { ...OUTCOME, haul: HAUL }, GAME_POOL.economy, false);
-    expect(collection.fc).toBe(fc + settled.pay!.total + 85);
+    const settled = settleMatch(emptyRecords(), collection, null, { ...OUTCOME, extraction: true, haul: HAUL }, GAME_POOL.economy, false);
+    // The haul's FC comes with the pay (M47): 85 got out with and 7 hits, on Normal.
+    expect(settled.pay!.total).toBe(85 + 7 * GAME_POOL.economy.earn.hit);
+    expect(collection.fc).toBe(fc + settled.pay!.total);
     expect(collection.owned[itemKey(grip.id, 'epic')]).toBe(1);
     expect(settled.haul).toEqual([{ item: HAUL.items[0], isNew: true }]);
   });

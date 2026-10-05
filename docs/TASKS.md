@@ -14,11 +14,11 @@ coordinator.
 ## M47 · Extraction: pay and records
 tier: ui
 perf: skip
-touches: src/pool/armory.ts, pool.md, src/stats/, src/ui/, src/matchSession.ts, src/game.ts
+touches: src/pool/armory.ts, src/pool/armory.test.ts, src/pool/caches.test.ts, pool.md, src/stats/, src/ui/, src/config/menus.ts, src/matchSession.ts, src/game.ts
 acceptance:
   1. A run pays the FC it extracts with plus 5 a hit, times the difficulty; out or caught out pays hits only.
   2. Records `difficulty.extraction` (runs and extractions), best haul, extraction streak, fastest extraction with a case; older saves load unchanged.
-status: open
+status: building
 attempts: 0
 
 ## M48 · Extraction on Woodland and Neon Heights

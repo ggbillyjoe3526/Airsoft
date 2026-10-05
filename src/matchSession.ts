@@ -333,8 +333,15 @@ export class MatchSession {
       const mine = this.stats.matchOf(this.player.id);
       // A named ruleset has its own cells (M39); Skirmish the plain ones, as before.
       const ruleset = recordsKeyOf(this.setup.ruleset) ?? '';
-      return { difficulty: this.setup.difficulty, mode: this.mode, ...(ruleset ? { ruleset } : {}), won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired };
+      return { difficulty: this.setup.difficulty, mode: this.mode, ...(ruleset ? { ruleset } : {}), won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired, ...this.runResult() };
     });
+  }
+
+  /** An Extraction run for the records (M47): what you got out with and how long the run took; nothing in the other modes. */
+  private runResult(): Pick<MatchResult, 'run'> {
+    if (!this.extraction) return {};
+    const haul = runHaul(this.state.round.run);
+    return { run: { haulFc: haulTotals(haul).fc, finds: haul.filter((f) => f.fc > 0 || f.item).length, seconds: this.rounds.roundTime - this.state.round.clock } };
   }
 
   /** Whether this match pays Field Credits at all: not with Dev settings that change play (M24), nor with dev content (M35). */
@@ -363,7 +370,9 @@ export class MatchSession {
       ...(this.rounds.teamSize > 1 ? { teammateDifficulty: this.setup.teammateDifficulty } : {}),
       // Custom rules pay no more than ×1.5 (M39): Pro's ×2 is for the named rulesets played as they are.
       ...(this.customRules ? { customRules: true } : {}),
-      // Extraction (M44): what you got out with goes into the collection with the pay.
+      // Extraction (M44): what you got out with goes into the collection with the pay, which is the haul's FC and your
+      // hits (M47).
+      ...(this.extraction ? { extraction: true } : {}),
       ...this.haulOutcome(),
     }));
   }

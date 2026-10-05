@@ -89,7 +89,7 @@ export function haulSummary(pool: Pool, finds: Omit<HaulSummary, 'pool' | 'kept'
  */
 export function haulLine(h: Omit<HaulSummary, 'pool'>): string {
   const outWhat = haulWhat(h.out);
-  if (h.extracted && outWhat) return h.kept ? HAUL_TEXT.kept(`+${outWhat}`) : HAUL_TEXT.notKept(outWhat);
+  if (h.extracted && outWhat) return h.kept ? HAUL_TEXT.kept(outWhat, h.out.items.length > 0, h.out.fc > 0) : HAUL_TEXT.notKept(outWhat);
   if (h.extracted) return haulWhat(h.found) ? HAUL_TEXT.leftBehind : HAUL_TEXT.emptyOut;
   const foundWhat = haulWhat(h.found);
   return foundWhat ? HAUL_TEXT.lost(foundWhat) : HAUL_TEXT.nothing;

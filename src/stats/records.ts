@@ -25,9 +25,18 @@ export interface Records {
   results: Partial<Record<string, WinLoss>>;
   /** Best share of BBs on an opponent in one match (0..1), over matches with enough BBs fired; null before one. */
   bestAccuracy: number | null;
-  /** Match wins in a row right now, and the most ever. */
+  /** Match wins in a row right now, and the most ever (Extraction runs count apart, below). */
   streak: number;
   bestStreak: number;
+  /**
+   * Extraction (M47): the most FC got out with in one run (null before a run with any), extractions in a row right now
+   * and the most ever, and the quickest extraction carrying at least one case's finds (seconds into the run; null before
+   * one). Saved beside the rest; a save from before M47 has none and loads as empty ones.
+   */
+  bestHaul: number | null;
+  extractionStreak: number;
+  bestExtractionStreak: number;
+  fastestExtraction: number | null;
 }
 
 /** A finished match, as the records see it. */
@@ -40,12 +49,33 @@ export interface MatchResult {
   /** Your BBs on an opponent, and BBs fired, over the match. */
   hits: number;
   bbsFired: number;
+  /** An Extraction run (M47): `won` is whether you got out; what you got out with and how long it took. */
+  run?: RunResult;
+}
+
+/** An Extraction run, as the records see it (M47). */
+export interface RunResult {
+  /** FC got out with (0 when out or caught out). */
+  haulFc: number;
+  /** Finds (FC or a part, a case's) you got out with. */
+  finds: number;
+  /** Seconds from the start of the run to its end. */
+  seconds: number;
 }
 
 /** What a match changed, for the "new record" tags on the summary. */
 export interface RecordNews {
   bestAccuracy: boolean;
   bestStreak: boolean;
+  /** Extraction's bests (M47). */
+  bestHaul: boolean;
+  bestExtractionStreak: boolean;
+  fastestExtraction: boolean;
+}
+
+/** A match that beat no best. */
+export function noNews(): RecordNews {
+  return { bestAccuracy: false, bestStreak: false, bestHaul: false, bestExtractionStreak: false, fastestExtraction: false };
 }
 
 /** Minimal storage (localStorage in the game, a map in tests). */
@@ -55,7 +85,7 @@ export interface RecordStore {
 }
 
 export function emptyRecords(): Records {
-  return { results: {}, bestAccuracy: null, streak: 0, bestStreak: 0 };
+  return { results: {}, bestAccuracy: null, streak: 0, bestStreak: 0, bestHaul: null, extractionStreak: 0, bestExtractionStreak: 0, fastestExtraction: null };
 }
 
 /** The records cell of a match: `${difficulty}.${mode}`, or with a named ruleset (M39) `${difficulty}.${mode}.${ruleset}`. */
@@ -88,6 +118,13 @@ export function loadRecords(store: RecordStore | null): Records {
     if (typeof best === 'number' && best >= 0 && best <= 1) records.bestAccuracy = best;
     records.streak = count(r.streak);
     records.bestStreak = Math.max(count(r.bestStreak), records.streak);
+    // Extraction's (M47): absent from older saves, which load as empty ones.
+    const haul = r.bestHaul;
+    if (typeof haul === 'number' && Number.isInteger(haul) && haul > 0) records.bestHaul = haul;
+    records.extractionStreak = count(r.extractionStreak);
+    records.bestExtractionStreak = Math.max(count(r.bestExtractionStreak), records.extractionStreak);
+    const fastest = r.fastestExtraction;
+    if (typeof fastest === 'number' && Number.isFinite(fastest) && fastest > 0) records.fastestExtraction = fastest;
   } catch {
     // Unreadable: treated as nothing saved.
   }
@@ -120,24 +157,46 @@ export function saveRecords(records: Records, store: RecordStore | null): void {
   }
 }
 
-/** Adds a finished match to `records` (in place) and says which bests it beat. */
+/**
+ * Adds a finished match to `records` (in place) and says which bests it beat. An Extraction run (M47, `m.run`) counts
+ * as a run and an extraction in its cell and keeps its own streak and bests; it leaves the match-win streak alone.
+ */
 export function addMatch(records: Records, m: MatchResult): RecordNews {
+  const news = noNews();
   const key = resultKey(m.difficulty, m.mode, m.ruleset);
   const wl = (records.results[key] ??= { wins: 0, losses: 0 });
   if (m.won) wl.wins++;
   else wl.losses++;
 
-  records.streak = m.won ? records.streak + 1 : 0;
-  const bestStreak = records.streak > records.bestStreak;
-  if (bestStreak) records.bestStreak = records.streak;
+  if (m.run) addRun(records, m.run, m.won, news);
+  else {
+    records.streak = m.won ? records.streak + 1 : 0;
+    news.bestStreak = records.streak > records.bestStreak;
+    if (news.bestStreak) records.bestStreak = records.streak;
+  }
 
-  let bestAccuracy = false;
   if (m.bbsFired >= STATS.minBBsForAccuracyRecord) {
     const acc = m.hits / m.bbsFired;
     if (records.bestAccuracy === null || acc > records.bestAccuracy) {
       records.bestAccuracy = acc;
-      bestAccuracy = true;
+      news.bestAccuracy = true;
     }
   }
-  return { bestAccuracy, bestStreak };
+  return news;
+}
+
+/** An Extraction run's streak and bests (M47): a run you got out of extends the streak, any other ends it. */
+function addRun(records: Records, run: RunResult, extracted: boolean, news: RecordNews): void {
+  records.extractionStreak = extracted ? records.extractionStreak + 1 : 0;
+  news.bestExtractionStreak = records.extractionStreak > records.bestExtractionStreak;
+  if (news.bestExtractionStreak) records.bestExtractionStreak = records.extractionStreak;
+  if (!extracted) return;
+  if (run.haulFc > 0 && (records.bestHaul === null || run.haulFc > records.bestHaul)) {
+    records.bestHaul = run.haulFc;
+    news.bestHaul = true;
+  }
+  if (run.finds > 0 && (records.fastestExtraction === null || run.seconds < records.fastestExtraction)) {
+    records.fastestExtraction = run.seconds;
+    news.fastestExtraction = true;
+  }
 }
