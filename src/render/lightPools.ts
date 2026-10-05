@@ -2,14 +2,12 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { POOL_LIGHTS, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
-import type { MapLight } from '../map/nightSight';
-import { surfaceHeightAt } from '../map/surfaces';
-import { terrainHeightAt, terrainMaxX, terrainMaxZ } from '../map/terrain';
+import { groundUnder, type MapLight } from '../map/nightSight';
 import { withoutEnvironment } from './surfaceMaterials';
 
 /**
  * The light pools of a night field drawn (M33f): the camp fires and lanterns of MapData.lights (M33g), on any map that
- * has them. Every pool glows on every preset (one unlit mesh for all). The ground under each is lit by one additive
+ * has them, under a night preset (M34e: render/lighting.ts adds none by Day). Every pool glows (one unlit mesh for all). The ground under each is lit by one additive
  * mesh for all pools, shaped to the ground; on Medium and High a fixed number of real point lights
  * (QualitySettings.poolLights) take the pools nearest the eye, and the ground mesh fades out under a pool while a real
  * light shines on it. A map without light pools gets nothing.
@@ -99,21 +97,8 @@ export function poolFalloff(t: number): number {
   return u * u;
 }
 
-/**
- * The walkable ground's height at (x, z) for a pool whose light hangs at `below` (m): the terrain's (past its edge, the
- * edge's, so a pool by the fence stays flat behind it), or the highest floor or ramp top under the light; undefined where
- * there is none.
- */
-export function groundUnder(map: MapData, x: number, z: number, below: number): number | undefined {
-  const t = map.terrain;
-  if (t) return terrainHeightAt(t, Math.min(terrainMaxX(t), Math.max(t.minX, x)), Math.min(terrainMaxZ(t), Math.max(t.minZ, z)));
-  let best: number | undefined;
-  for (const b of map.blocks) {
-    const h = surfaceHeightAt(b, x, z);
-    if (h !== undefined && h <= below && (best === undefined || h > best)) best = h;
-  }
-  return best;
-}
+// Where a pool's light falls: the walkable ground under it (M33f; in map/nightSight.ts since M34e, as night sight reads it too).
+export { groundUnder };
 
 const glowColour = new THREE.Color();
 const WHITE = new THREE.Color(0xffffff);
@@ -239,7 +224,8 @@ export interface LightPools {
   dispose(): void;
 }
 
-const NONE: LightPools = { setQuality: () => undefined, follow: () => undefined, dispose: () => undefined };
+/** No light pools: a map without them, or any map by Day (M34e). */
+export const NO_LIGHT_POOLS: LightPools = { setQuality: () => undefined, follow: () => undefined, dispose: () => undefined };
 
 /** The real point lights the pools get: the Night lights setting less the `reserved` ones (M33h), never below none. */
 export function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, reserved = 0): number {
@@ -252,7 +238,7 @@ export function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, res
  */
 export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<QualitySettings, 'poolLights'>, reserved = 0): LightPools {
   const pools = map.lights ?? [];
-  if (pools.length === 0) return NONE;
+  if (pools.length === 0) return NO_LIGHT_POOLS;
   const glow = buildPoolGlow(pools);
   const decal = buildPoolDecal(map, pools);
   scene.add(glow, decal.mesh);
