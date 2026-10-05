@@ -600,8 +600,8 @@ export const TORCH_BEAMS = {
 } as const;
 
 /**
- * Light pools on a night field (M33f, render/lightPools.ts; MapLight in map/nightSight.ts). Every pool glows on every
- * preset: a bright core (`core` of the pool's radius, its colour `coreWhite` of the way to white) inside faint additive halos (`size` times the core, at `alpha`; they
+ * Light pools on a night field (M33f, render/lightPools.ts; MapLight in map/nightSight.ts), drawn under a night preset
+ * only (M34e). Every pool glows: a bright core (`core` of the pool's radius, its colour `coreWhite` of the way to white) inside faint additive halos (`size` times the core, at `alpha`; they
  * add up towards the middle, so the glow fades out in steps), one mesh for all. The ground under a pool is lit by one additive mesh for all pools (a disc of `rings` × `segments`,
  * `strength` at the middle fading to nothing at the radius, `lift` off the ground), unless a real point light
  * (QualitySettings.poolLights) shines on it: those take the nearest pools to the eye, by distance to the pool's edge, and
@@ -626,6 +626,21 @@ export const POOL_LIGHTS = {
   reach: 1.5,
   decay: 2,
   intensityPerArea: 0.5,
+} as const;
+
+/**
+ * Signs and lit windows (M34e, render/mapSigns.ts; MapSign in map/mapTypes.ts), one mesh for all of a map's. By Night
+ * they are unlit and self-lit: a neon sign at its colour times `neon`, a window at `window`; by Day a neon sign is a
+ * painted board, its colour `paint` of the way to `board`, and a window is dark glass (`glass`), lit by the sun.
+ * Each stands `offset` m off its wall, so it never fights the wall for depth.
+ */
+export const SIGNS = {
+  neon: 1.4,
+  window: 0.7,
+  paint: 0.45,
+  board: 0x6a6f78,
+  glass: 0x27303a,
+  offset: 0.02,
 } as const;
 
 /**

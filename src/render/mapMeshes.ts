@@ -9,7 +9,7 @@ import { appendCuboid, type Buffers, type Cuboid, type CuboidShape, emptyBuffers
 import { buildFoliageMesh } from './foliageMeshes';
 import { appendFixtureSolids } from './lightFixtures';
 import { keyDirection, resolveLighting } from './lightingPreset';
-import { groundUnder } from './lightPools';
+import { groundUnder } from '../map/nightSight';
 import { buildMapDecals, disposeMapDecals, drawDecalAtlas } from './mapDecals';
 import { appendNatureShape, appendPebbles, isNatureKind } from './natureShapes';
 import { CORE_SURFACES, type ProceduralTexture, type SurfaceTextures, surfaceTexture } from './proceduralTextures';

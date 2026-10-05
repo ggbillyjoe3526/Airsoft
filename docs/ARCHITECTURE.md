@@ -101,8 +101,12 @@ ends the round). A hit character is eliminated
   `lighting.<map id>`): `mapUnderLighting` puts the pick first and sets `night` from it, so the same path, the bots'
   night sight and glowing BBs follow it. Every session
   passes it to `Renderer.setLighting` (haze, background, exposure, environment) and `addLighting` (key light, fill, sky,
-  clouds), and `lightPools.ts` draws the map's light pools (`MapData.lights`): one glow mesh, one additive ground mesh
-  and, on Medium and High, a fixed number of point lights on the pools nearest the eye (`QualitySettings.poolLights`). `mapMeshes.ts` turns each block
+  clouds), and `lightPools.ts` draws the map's light pools (`MapData.lights`) under a night preset only (M34e): one glow
+  mesh, one additive ground mesh and, on Medium and High, a fixed number of point lights on the pools nearest the eye
+  (`QualitySettings.poolLights`). `mapSigns.ts` draws a map's neon signs and lit windows (`MapData.signs`, M34e) as one
+  mesh of flat panels: unlit and self-lit by Night, Lambert (painted boards, dark glass) by Day. The bots read the dark
+  from `map/nightSight.ts`: a pool lights only the floor under it, and an unlit spot with a floor or roof overhead is
+  indoors in the dark (`NIGHT_SIGHT.indoor`, M34e). `mapMeshes.ts` turns each block
   into pieces (container frames, wall copings, pallets, all inside the block's bounds) merged per texture by
   `cuboidMesh.ts`, with grime shading near the ground; with Map detail the boxes are bevelled with a lighter edge,
   tiled, shaded by baked vertex occlusion (`vertexOcclusion.ts`) and ground noise, the props get extra pieces, the signs
@@ -351,5 +355,5 @@ request. Each line names where it lives and what pins it.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
   are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
   time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
-  `extraction` (M44 adds its `cases`). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
+  `extraction` (M44 adds its `cases`), M34e's `signs` (neon signs and lit windows, presentation only). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
   `map/extractionData.test.ts`.
