@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
-import { CASE_VISUALS as V } from '../config/render';
+import { describe, expect, it, vi } from 'vitest';
 import { createRunState, DROPPED_CASE, type RunCase } from '../sim/extraction';
 import { vec3 } from '../sim/vec';
 import { CaseRenderer } from './caseRenderer';
@@ -92,5 +91,50 @@ describe('CaseRenderer (M44, instanced in M48)', () => {
     expect(open.y).toBeCloseTo(shut.y, 6);
     expect(open.distanceTo(shut)).toBeGreaterThan(0.1);
     r.dispose();
+  });
+
+  it('gives a case dropped before the renderer was built plain meshes and the site cases after it their own instances, in run order', () => {
+    const run = createRunState();
+    run.cases = [runCase('ammo-can', 0), runCase(DROPPED_CASE, 3), runCase('ammo-can', 6), runCase('locker', 9)];
+    const r = new CaseRenderer(run, 0x3366ff);
+    // Two instanced cans, one locker; the dropped case is no instance of anything, and stands where it fell.
+    expect(named(r.object, 'case-bodies-ammo-can').count).toBe(2);
+    expect(named(r.object, 'case-bodies-locker').count).toBe(1);
+    expect(r.object.getObjectByName(`case-bodies-${DROPPED_CASE}`)).toBeUndefined();
+    const plain = r.object.children.filter((c) => !(c instanceof THREE.InstancedMesh));
+    expect(plain).toHaveLength(1);
+    expect(meshes(plain[0]!)).toHaveLength(2);
+    expect(plain[0]!.position.x).toBe(3);
+    // The third case is the second can: its lid opens at instance 1, not the dropped case's slot.
+    const lids = named(r.object, 'case-lids-ammo-can');
+    lids.geometry.computeBoundingBox();
+    const at = (i: number): THREE.Vector3 => lids.geometry.boundingBox!.getCenter(new THREE.Vector3()).applyMatrix4(instanceAt(lids, i));
+    const shut = at(1);
+    // The lid sits on its own spot, not on the dropped case's.
+    expect(Math.hypot(shut.x - 6, shut.z)).toBeLessThan(1);
+    run.cases[2]!.open = true;
+    r.update(run);
+    expect(at(1).y).toBeGreaterThan(shut.y);
+    expect(Math.hypot(at(0).x, at(0).z)).toBeLessThan(1);
+    expect(at(0).y).toBeCloseTo(shut.y, 5);
+    // Opening a site case builds nothing new: still the one plain pair.
+    expect(r.object.children.filter((c) => !(c instanceof THREE.InstancedMesh))).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('disposes every instanced mesh, the shared geometries and materials, and leaves the scene', () => {
+    const run = createRunState();
+    run.cases = [runCase('ammo-can', 0), runCase('locker', 4), runCase(DROPPED_CASE, 8)];
+    const r = new CaseRenderer(run, 0x3366ff);
+    const parent = new THREE.Group();
+    parent.add(r.object);
+    const all = meshes(r.object);
+    const instanced = all.filter((m): m is THREE.InstancedMesh => m instanceof THREE.InstancedMesh);
+    expect(instanced).toHaveLength(4);
+    const instanceSpies = instanced.map((m) => vi.spyOn(m, 'dispose'));
+    const spies = all.flatMap((m) => [vi.spyOn(m.geometry, 'dispose'), vi.spyOn(m.material as THREE.Material, 'dispose')]);
+    r.dispose();
+    for (const s of [...instanceSpies, ...spies]) expect(s).toHaveBeenCalled();
+    expect(r.object.parent).toBeNull();
   });
 });

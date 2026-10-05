@@ -37,4 +37,14 @@ describe('Neon Heights Extraction data (M48)', () => {
     expect(new Set(X.regens.map((r) => storeyOf(r.position.y))).size).toBe(3);
     expect(new Set(X.opponentStarts.map((r) => storeyOf(r.position.y))).size).toBe(3);
   });
+
+  it('keeps every case spot off the stair flights, whichever floor it is on', () => {
+    for (const c of X.cases) {
+      for (const l of NEON_HEIGHTS_LAYOUT.links) {
+        const [x0, x1, z0, z1] = l.area;
+        const inside = c.position.x >= x0 && c.position.x <= x1 && c.position.z >= z0 && c.position.z <= z1;
+        expect(inside, `${JSON.stringify(c.position)} in ${l.name}`).toBe(false);
+      }
+    }
+  });
 });

@@ -40,4 +40,16 @@ describe('Woodland Extraction data (M48)', () => {
       expect(far.length, ins.name).toBeGreaterThanOrEqual(1);
     }
   });
+
+  it('faces every insertion spawn into the field, towards the middle rather than the fence behind it', () => {
+    for (const ins of X.insertions) {
+      for (const s of ins.spawns) {
+        // A spawn's front is (-sin yaw, -cos yaw); the field's middle is the world's origin.
+        const front = { x: -Math.sin(s.yaw), z: -Math.cos(s.yaw) };
+        const toMiddle = { x: -s.position.x, z: -s.position.z };
+        const cos = (front.x * toMiddle.x + front.z * toMiddle.z) / Math.hypot(toMiddle.x, toMiddle.z);
+        expect(cos, `${ins.name} ${JSON.stringify(s.position)}`).toBeGreaterThan(0.5);
+      }
+    }
+  });
 });

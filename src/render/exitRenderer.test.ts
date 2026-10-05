@@ -92,4 +92,41 @@ describe('ExitRenderer on terrain (M48)', () => {
     for (const v of worldVertices(meshes(r.object)[0]!)) expect(v.y).toBeCloseTo(3 + V.ringLift, 5);
     r.dispose();
   });
+
+  it('hangs the EXIT board at the top of its post, on the ground the post stands on, however the field slopes', () => {
+    const run = createRunState();
+    run.exits = [exitAt(1, -2), exitAt(-6, 5)];
+    const r = new ExitRenderer(run, SLOPE);
+    r.object.updateMatrixWorld(true);
+    const all = meshes(r.object);
+    const posts = all.find((m): m is THREE.InstancedMesh => m instanceof THREE.InstancedMesh && m.name === 'exit-posts')!;
+    const boards = all.filter((m) => !(m instanceof THREE.InstancedMesh) && m.geometry instanceof THREE.PlaneGeometry);
+    expect(boards).toHaveLength(2);
+    const at = new THREE.Matrix4();
+    boards.forEach((board, i) => {
+      posts.getMatrixAt(i, at);
+      const foot = new THREE.Vector3().setFromMatrixPosition(at.premultiply(posts.matrixWorld));
+      const centre = new THREE.Vector3().setFromMatrixPosition(board.matrixWorld);
+      expect(Math.hypot(centre.x - foot.x, centre.z - foot.z), `board ${i} on its post`).toBeLessThan(1e-4);
+      expect(centre.y - groundAt(foot.x, foot.z), `board ${i} height above the ground`).toBeCloseTo(V.postHeight - V.boardHeight / 2, 4);
+    });
+    r.dispose();
+  });
+
+  it('disposes the instanced cones and posts, the geometries, the materials and the board textures, and leaves the scene', () => {
+    const run = createRunState();
+    run.exits = [exitAt(1, -2)];
+    const r = new ExitRenderer(run, SLOPE);
+    const parent = new THREE.Group();
+    parent.add(r.object);
+    const all = meshes(r.object);
+    const instanced = all.filter((m): m is THREE.InstancedMesh => m instanceof THREE.InstancedMesh);
+    expect(instanced.map((m) => m.name).sort()).toEqual(['exit-cones', 'exit-posts']);
+    const instanceSpies = instanced.map((m) => vi.spyOn(m, 'dispose'));
+    const geometrySpies = all.map((m) => vi.spyOn(m.geometry, 'dispose'));
+    const materialSpies = instanced.map((m) => vi.spyOn(m.material as THREE.Material, 'dispose'));
+    r.dispose();
+    for (const s of [...instanceSpies, ...geometrySpies, ...materialSpies]) expect(s).toHaveBeenCalled();
+    expect(r.object.parent).toBeNull();
+  });
 });
