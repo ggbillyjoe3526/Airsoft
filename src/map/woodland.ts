@@ -306,8 +306,8 @@ const APPROACH_COVER: MapBlock[] = [
   centred('log', 97, 60.9, 3, 0.9, CROUCH),
   centred('boulder', 92, 64.5, 2.4, 2, FULL),
   centred('boulder', 86.5, 68.9, 1.6, 1.4, CROUCH),
-  // Clear of the boulder beside it (M55, audit SIM-05: the two stood 0.2 m into each other).
-  centred('log', 103.6, 57.1, 0.9, 3, CROUCH),
+  // Ends against the boulder beside it (M55, audit SIM-05: the two stood 0.2 m into each other).
+  centred('log', 103.6, 57.3, 0.9, 2.8, CROUCH),
   centred('boulder', 102.6, 59.4, 1.6, 1.4, CROUCH),
   // Meadow, up the west face.
   centred('boulder', 76.5, 43.7, 1.6, 1.4, CROUCH),
@@ -315,8 +315,8 @@ const APPROACH_COVER: MapBlock[] = [
   centred('boulder', 87.5, 44, 1.6, 1.4, CROUCH),
   centred('log', 91.5, 49.3, 0.9, 3, CROUCH),
   // Creek, up the sunken track.
-  // Clear of the meadow tree beside it (M55, audit SIM-05: the trunk grew out of it).
-  centred('boulder', 84.8, 31.8, 1.6, 1.4, CROUCH),
+  // Against the meadow tree beside it (M55, audit SIM-05: the trunk grew out of it).
+  centred('boulder', 84.95, 31.8, 1.6, 1.4, CROUCH),
   centred('boulder', 91, 31.8, 1.6, 1.4, CROUCH),
   centred('log', 93.6, 32.6, 3, 0.9, CROUCH),
   centred('log', 97.5, 34.6, 3, 0.9, CROUCH),

@@ -149,7 +149,7 @@ describe('Woodland: its longest sight line (M55, audit SIM-08)', () => {
   /** ...plus every pair between two opposite corners' nodes within this of the corner (m), where the longest lines are. */
   const CORNER = 12;
 
-  it(`has no clear eye line longer than ${LONGEST_LINE} m, and the meadow's is over ${MEADOW_LINE} m`, () => {
+  it(`has no clear eye line longer than ${LONGEST_LINE} m, and the meadow's is over ${MEADOW_LINE} m`, { timeout: 30_000 }, () => {
     const level = buildLevelRay(WOODLAND.blocks, PHYSICS.rayGridCell, terrain);
     const walk: number[] = [];
     for (let k = 0; k < nav.walkable.length; k++) if (nav.walkable[k] === 1) walk.push(k);

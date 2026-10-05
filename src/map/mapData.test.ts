@@ -67,10 +67,18 @@ function blockClashes(blocks: readonly MapBlock[]): string[] {
 /**
  * Clashes left in on purpose, by map. Neon Heights' Plaza stair runs on 0.6 m under its landing's floor, which leaves a
  * 0.3 m lip at the landing's edge (the bots' grid has no way up that stair there); taking the floor off the stair's top
- * makes it a way up for the bots too, which changes how the map plays, so it waits for its own change (M55).
+ * makes it a way up for the bots too, which changes how the map plays, so it waits for its own change (M55). Two walls
+ * rise through a floor's edge: the Plaza stair's side wall, 1.2 m over the landing, and the grand stair's top balustrade,
+ * 1 m over Level 1 (each floor runs 0.15 to 0.3 m into it, out of sight). Cut, the wall's part over the floor would stand
+ * on it as new cover and roof the stair beside it at night; cut round it, the floor changes the bots' nav grid.
  */
 const KNOWN_CLASHES: Readonly<Record<string, readonly string[]>> = {
-  'Neon Heights': ['ramp at -13.90, 1.50, 9.00 and floor at -13.30, 2.85, 5.10 fill the same space'],
+  'Neon Heights': [
+    'ramp at -13.90, 1.50, 9.00 and floor at -13.30, 2.85, 5.10 fill the same space',
+    'wall at -13.05, 2.10, 9.00 and floor at -13.30, 2.85, 5.10 fill the same space',
+    'floor at 9.50, 2.85, 5.35 and barrier at 11.30, 2.00, 7.63 fill the same space',
+    'floor at 12.15, 2.85, -1.50 and barrier at 11.30, 2.00, 7.63 fill the same space',
+  ],
 };
 
 describe('every map’s blocks (M55, audit SIM-04, SIM-05)', () => {
