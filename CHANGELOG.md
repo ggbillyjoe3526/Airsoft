@@ -72,7 +72,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M39** · Tournament: first to 7, win by two, 2:00 rounds, time-outs to the team with more left, minimap teammates only; Pro CQB adds semi only, realcap
 - **M39** · Custom adds Overtime, Time-out, Minimap, Fire modes, Magazines and Kit rows; never counts for records, pays at most ×1.5
 - **M43** · Extraction (dev content, Depot): an 8:00 run against a home team; stand 10 s in an open exit to get out; one automatic respawn at the insertion (#83)
-- **M44** · Extraction cases: hold Use (G) to open ammo cans, field cases and a marshal's locker for FC, BBs and parts; a hit drops them; kept only if you get out
+- **M44** · Extraction cases: hold Use (G) to open ammo cans, field cases and a locker for FC, BBs and parts; a hit drops them; kept only if you get out
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
