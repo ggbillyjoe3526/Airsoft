@@ -223,7 +223,8 @@ export const AUDIO = {
   suppressed: { lowpassHz: 1400, volume: 0.45 },
   /**
    * The sounds are rendered in the browser's spare time on the title screen (audit M-09), a cue at a time, for as
-   * long as a spare moment has more than this many milliseconds left (a cue takes about 4 ms).
+   * long as a spare moment has more than this many milliseconds left (a cue takes about 4 ms). The picked field's own
+   * sounds follow the same way (M65, audit AUD-01), a map cue's variant or a second of a loop at a time (1-18 ms).
    */
   warmUpSliceMs: 5,
   /**

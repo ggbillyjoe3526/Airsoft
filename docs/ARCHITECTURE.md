@@ -166,8 +166,10 @@ ends the round). A hit character is eliminated
   `Sfx.setScene` by `CombatPresentation.setLighting`) picks the field's ambience by day or night (`config/audio.ts`
   AMBIENCES: beds, calls, never birds at night), the camp fires that crackle, and the ground grid footsteps on terrain
   read after blocks (`map/groundSurfaces.ts`, the terrain's own). Cues and loops only some maps play (`MAP_CUE_SEEDS`,
-  `AMBIENT_LOOPS`) are rendered by `AudioEngine.prepare` as such a match loads, each from its own seed; the title
-  screen's cues keep their one shared stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
+  `AMBIENT_LOOPS`) are rendered each from its own seed in New game's spare time once such a field is picked
+  (`AudioEngine.prefetch`, M65; a new pick lets go of what no match has played), and `AudioEngine.prepare` finishes
+  whatever is left as the match loads (the build's `sound` phase); the title screen's cues keep their one shared
+  stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
   the `city` ambience (traffic and drones with a shop chime by day; traffic and a neon `hum` loop, `renderHum`, with
   arcade bleeps by night), Neon Heights' `MapData.ambience`; a field's own sounds stay within about 7 MB, and every
   map sound a page may keep within 12 MB.

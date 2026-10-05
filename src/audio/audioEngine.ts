@@ -1,10 +1,13 @@
 import { AUDIO, type LoopId, VOLUME, type VolumeChannel } from '../config/audio';
 import { cues, SHOT_PROFILES, type SoundCue } from '../config/sounds';
-import { renderAmbienceBed, renderLoop } from './ambience';
+import { renderAmbienceBed } from './ambience';
 import { volumeGain, type Volumes } from './audioMix';
 import { seededRandom } from './dsp';
-import { renderMapCue, SoundLibrary, suppressedCopies } from './soundBank';
+import { finish, MAP_SOUND_RENDERERS, type MapSoundRenderers, SoundLibrary, suppressedCopies } from './soundBank';
 import type { Soundscape } from './soundscape';
+
+/** What a field plays beyond the title screen's sounds (M33j): its map cues and loops. */
+export type FieldSounds = Pick<Soundscape, 'cues' | 'loops'>;
 
 /** Lets an audio context's promise (resume, suspend, close) settle quietly: a refusal changes nothing we rely on. */
 export function settle(p: Promise<void>): void {
@@ -50,9 +53,9 @@ function* reverbImpulse(ctx: AudioContext): Generator<void, AudioBuffer> {
  * What every match's sound shares, kept by the Game for the page's lifetime (audit M-09): one audio context, the
  * volume buses (master; effects, the world, through its ducking and limiter; interface, straight to master) and every
  * sound as audio buffers (rendered at AUDIO.renderRate whatever the device's rate, audit CORE-03). The context is made
- * suspended when the game starts and the sounds are rendered in the title screen's spare time, so Play only builds
- * a match's own graph (audio/sfx.ts). The context runs only while a match is played, or for a volume slider's
- * preview. Where the browser has no Web Audio, or refuses a context, everything here is silent (audit M-04).
+ * suspended when the game starts and the sounds are rendered in the title screen's spare time, the picked field's own
+ * with them (M65, audit AUD-01), so Play only builds a match's own graph (audio/sfx.ts). The context runs only while a
+ * match is played, or for a volume slider's preview. Where the browser has no Web Audio, or refuses a context, everything here is silent (audit M-04).
  */
 export class AudioEngine {
   private ctx: AudioContext | null = null;
@@ -81,6 +84,20 @@ export class AudioEngine {
   onBlocked: (() => void) | null = null;
   /** The rendering still to do (null when it's done or not begun). */
   private warming: Generator<void> | null = null;
+  /**
+   * The picked field's own sounds, rendered ahead of Play in the title screen's spare time (M65, audit AUD-01): the
+   * field to work out at the next spare moment (prefetch), then what it plays; each map cue's and loop's rendering
+   * while it is under way; and those finished ahead that no match has played yet. Only the picked field's: a new pick
+   * lets go of the rest, so beyond what is kept today only that one field's sounds are held.
+   */
+  private aheadOf: (() => FieldSounds) | null = null;
+  private ahead: FieldSounds | null = null;
+  private readonly cueJobs = new Map<SoundCue, Generator<void, Float32Array[]>>();
+  private readonly loopJobs = new Map<LoopId, Generator<void, Float32Array>>();
+  private readonly unplayedCues = new Set<SoundCue>();
+  private readonly unplayedLoops = new Set<LoopId>();
+  /** A spare moment is asked for (pump). */
+  private pumping = false;
   /** A match is being played (setRunning): the context should run. */
   private running = false;
   /** Volume previews still sounding: the context runs for them, then suspends again unless a match is played. */
@@ -91,6 +108,7 @@ export class AudioEngine {
     readonly volumes: Volumes,
     private readonly library: SoundLibrary = new SoundLibrary(),
     private readonly idle: IdleScheduler = browserIdle,
+    private readonly render: MapSoundRenderers = MAP_SOUND_RENDERERS,
   ) {}
 
   /**
@@ -132,17 +150,20 @@ export class AudioEngine {
     const ctx = this.context();
     if (!ctx || this.warming || this.reverb) return;
     this.warming = this.warm(ctx);
-    const slice = (timeLeft: () => number): void => {
-      do {
-        if (!this.warming) return; // finished by a Play that couldn't wait, or disposed
-        if (this.warming.next().done) {
-          this.warming = null;
-          return;
-        }
-      } while (timeLeft() > AUDIO.warmUpSliceMs);
-      this.idle(slice);
-    };
-    this.idle(slice);
+    this.pump();
+  }
+
+  /**
+   * Starts rendering the picked field's own sounds (its map cues and loops) in the browser's spare time, after the
+   * title screen's (M65, audit AUD-01), so Play doesn't have to: call when New game's map or its Day/Night pick
+   * changes. `field` is worked out in a spare moment too (a field's ground grid takes a while). A new pick redirects
+   * the work: what both fields play carries on from where it was, the rest is let go of. Paused while a match is played.
+   * Whatever isn't done by Play, prepare finishes, with the same samples.
+   */
+  prefetch(field: () => FieldSounds): void {
+    if (!this.context()) return;
+    this.aheadOf = field;
+    this.pump();
   }
 
   /** Every sound's buffers, finishing the rendering now if the title screen didn't have the time. Empty without a context. */
@@ -190,10 +211,9 @@ export class AudioEngine {
     if (!ctx) return null;
     let buf = this.loops.get(id);
     if (!buf) {
-      const job = renderLoop(id, AUDIO.renderRate);
-      let r = job.next();
-      while (!r.done) r = job.next();
-      buf = toBuffer(ctx, r.value);
+      // From where New game's spare time left it, if it began there (M65).
+      buf = toBuffer(ctx, finish(this.loopJobs.get(id) ?? this.render.loop(id, AUDIO.renderRate)));
+      this.loopJobs.delete(id);
       this.loops.set(id, buf);
     }
     return buf;
@@ -201,13 +221,24 @@ export class AudioEngine {
 
   /**
    * Renders what `scene` plays beyond the title screen's sounds (M33j: its map cues and loops), once per page, so a map
-   * that never uses them costs nothing and the match never waits on them mid-play. Call as the match loads.
+   * that never uses them costs nothing and the match never waits on them mid-play. Call as the match loads. What New
+   * game's spare time rendered ahead (prefetch, M65) is taken as it is; what it began is finished from where it was.
    */
-  prepare(scene: Pick<Soundscape, 'cues' | 'loops'>): void {
+  prepare(scene: FieldSounds): void {
     const ctx = this.context();
     if (!ctx) return;
-    for (const cue of scene.cues) if (!this.buffers.has(cue)) this.buffers.set(cue, renderMapCue(cue, AUDIO.renderRate).map((v) => toBuffer(ctx, v)));
-    for (const id of scene.loops) if (id !== 'yard') this.loop(id);
+    for (const cue of scene.cues) {
+      // Played now: kept for the page, as every played field's sounds are.
+      this.unplayedCues.delete(cue);
+      if (this.buffers.has(cue)) continue;
+      this.buffers.set(cue, finish(this.cueJobs.get(cue) ?? this.render.cue(cue, AUDIO.renderRate)).map((v) => toBuffer(ctx, v)));
+      this.cueJobs.delete(cue);
+    }
+    for (const id of scene.loops) {
+      if (id === 'yard') continue;
+      this.unplayedLoops.delete(id);
+      this.loop(id);
+    }
   }
 
   /**
@@ -285,6 +316,8 @@ export class AudioEngine {
    */
   setRunning(running: boolean, fade = 0): void {
     this.running = running;
+    // Out of play, a field picked meanwhile renders on in the spare time (M65).
+    if (!running) this.pump();
     this.clearTimers();
     const ctx = this.ctx;
     if (!ctx) return;
@@ -317,6 +350,11 @@ export class AudioEngine {
   dispose(): void {
     this.clearTimers();
     this.warming = null;
+    this.aheadOf = this.ahead = null;
+    this.cueJobs.clear();
+    this.loopJobs.clear();
+    this.unplayedCues.clear();
+    this.unplayedLoops.clear();
     this.unavailable = true;
     if (this.ctx) settle(this.ctx.close());
     this.ctx = null;
@@ -380,6 +418,81 @@ export class AudioEngine {
     yield;
     this.ambience = toBuffer(ctx, yield* renderAmbienceBed(rate));
     this.reverb = yield* reverbImpulse(ctx);
+  }
+
+  /**
+   * Asks for spare moments until the rendering is done: in each, a step after another (a title cue, a map cue's variant,
+   * a second of a loop) for as long as more than AUDIO.warmUpSliceMs of it are left.
+   */
+  private pump(): void {
+    if (this.pumping || !(this.warming || this.aheadOf || this.ahead)) return;
+    this.pumping = true;
+    const slice = (timeLeft: () => number): void => {
+      do {
+        if (!this.step()) {
+          this.pumping = false;
+          return;
+        }
+      } while (timeLeft() > AUDIO.warmUpSliceMs);
+      this.idle(slice);
+    };
+    this.idle(slice);
+  }
+
+  /**
+   * One step of the spare-time rendering: the title screen's sounds first, then the picked field's (not while a match
+   * is played). False once there is nothing to do (finished by a Play that couldn't wait, or disposed).
+   */
+  private step(): boolean {
+    if (this.warming) {
+      if (this.warming.next().done) this.warming = null;
+      return true;
+    }
+    return !this.running && this.ctx !== null && this.stepAhead(this.ctx);
+  }
+
+  /** One step of the picked field's rendering (prefetch); false when it is all rendered. */
+  private stepAhead(ctx: AudioContext): boolean {
+    if (this.aheadOf) {
+      const field = this.aheadOf();
+      this.aheadOf = null;
+      this.ahead = field;
+      // Only the picked field's sounds are held ahead of Play: a new pick lets go of the rest, half-rendered or not.
+      for (const cue of [...this.cueJobs.keys()]) if (!field.cues.includes(cue)) this.cueJobs.delete(cue);
+      for (const id of [...this.loopJobs.keys()]) if (!field.loops.includes(id)) this.loopJobs.delete(id);
+      for (const cue of this.unplayedCues) if (!field.cues.includes(cue) && this.unplayedCues.delete(cue)) this.buffers.delete(cue);
+      for (const id of this.unplayedLoops) if (!field.loops.includes(id) && this.unplayedLoops.delete(id)) this.loops.delete(id);
+      return true;
+    }
+    const field = this.ahead;
+    if (!field) return false;
+    const rate = AUDIO.renderRate;
+    for (const cue of field.cues) {
+      if (this.buffers.has(cue)) continue;
+      const job = this.cueJobs.get(cue) ?? this.render.cue(cue, rate);
+      const r = job.next();
+      if (!r.done) this.cueJobs.set(cue, job);
+      else {
+        this.cueJobs.delete(cue);
+        this.buffers.set(cue, r.value.map((v) => toBuffer(ctx, v)));
+        this.unplayedCues.add(cue);
+      }
+      return true;
+    }
+    for (const id of field.loops) {
+      if (id === 'yard' || this.loops.has(id)) continue;
+      const job = this.loopJobs.get(id) ?? this.render.loop(id, rate);
+      const r = job.next();
+      if (!r.done) this.loopJobs.set(id, job);
+      else {
+        this.loopJobs.delete(id);
+        this.loops.set(id, toBuffer(ctx, r.value));
+        this.unplayedLoops.add(id);
+      }
+      return true;
+    }
+    this.ahead = null;
+    return false;
   }
 
   private finishWarmUp(): void {

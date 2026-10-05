@@ -278,8 +278,11 @@ export class MatchSession {
     renderer.scene.add(this.torches.object);
     this.daylight.reserveLights(this.torches.reserved);
     this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed);
+    this.build.phase('replica and effects');
+    // The field's own sounds (M33j): whatever New game's spare time didn't render ahead is finished here (M65, audit
+    // AUD-01), so `?perf` shows what was left.
     this.combat.setLighting(lighting);
-    this.build.phase('replica, effects and sound');
+    this.build.phase('sound');
     this.stats = new MatchStats(this.state.characters);
     this.match = new MatchPresentation(renderer.scene, container, renderer, this.state, this.player, BODY, this.hits, this.physics, this.teamSizes(), this.rounds, this.stats, (action) => input.keyName(action), setup.teamColours, map, renderer.figureModel, quality.figureDetail, this.extraction);
     this.match.setHitFacts(this.bots.lastHit);
