@@ -181,6 +181,19 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
       { id: '4', label: 'Nearest 4', value: 4 },
     ],
   }),
+  // G6: materials and baked lighting.
+  choice({
+    field: 'bakedLight',
+    label: 'Baked light',
+    help: 'Light bounced off walls and containers, worked out ahead of time: shaded alleys, colour on the ground beside a container.',
+    cost: 'Vertex: no per-pixel cost; Per pixel: one texture read per pixel',
+    options: [
+      { id: 'off', label: 'Off', value: 'off' },
+      { id: 'vertex', label: 'Vertex', value: 'vertex' },
+      { id: 'pixel', label: 'Per pixel', value: 'pixel' },
+    ],
+  }),
+  choice({ field: 'weathering', label: 'Weathering', help: 'Dirt at the foot of walls, rain streaks and rust on steel.', cost: 'GPU: small; rebuilds the map', options: onOff }),
   // FA8: the visual overhaul's rows (audit section 5, rows 17-20 and 23).
   choice({
     field: 'figureDetail',

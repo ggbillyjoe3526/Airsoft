@@ -1,3 +1,4 @@
+import type { BakeFileId } from './bakes/files';
 import type { AmbienceId } from '../config/audio';
 import type { LightingPreset, LightingPresetId } from '../config/render';
 import type { BlockSurface } from '../config/sounds';
@@ -141,6 +142,12 @@ export interface MapData {
    * slab, a few millimetres proud of it, so the floor under it stays one block and plays as it did. Absent: none.
    */
   decor?: readonly MapBlock[];
+  /**
+   * Baked bounce light (G6, render/bakedLight.ts): the map ships a probe file (src/map/bakes/, written by
+   * `node pipeline/bake-light.mjs`) and is drawn with it under the bake's lighting preset (config/bake.ts). Look only.
+   * Absent: no baked light (the night maps, lit by their own lamps).
+   */
+  bakedLight?: { file: BakeFileId };
   /**
    * How the map is lit (M33f, render/lightingPreset.ts): the lighting presets it can be played under, the first by
    * default (later a match-start choice picks among them, M34), and `moonOver`, a world point (x, z) the key light is

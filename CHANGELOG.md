@@ -90,6 +90,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M34f** · Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade, vending, stall, planter, booth, van); painted ground markings; plaster ceilings under raised floors
 - **M34f** · Neon Heights: pastel buildings (mint, pink, cyan, amber on slate), paved street with asphalt, neon trim, lit arcade cabinets; night: softer purple sky with city lighting and 180 stars
 - **M34g** · Neon Heights (dev content) sound: traffic hum and drones by day with chimes, neon sizzle and arcade bleeps by night; Depot and Woodland unchanged
+- **G6** · Depot by day: a lower, warmer sun with longer shadows, a bluer sky and fill, and light bounced off walls and containers into the shade (Baked light)
+- **G6** · New surfaces: grey precast concrete walls and rubble gabions in wire (no more sand); weathering on Medium and High (dirt at wall feet, rain streaks, rust) and stains on the ground
+- **G6** · New Custom graphics rows: Baked light (Off, Vertex, Per pixel) and Weathering; Low keeps its cost
 
 ### Changed
 - **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)

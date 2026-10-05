@@ -35,6 +35,13 @@ config, asset loading, docs; `trivial` is a one-constant change, a wording fix, 
 8. **Retry**: only the failed checks and evidence go back; four attempts in all, then the owner's auto-accept rule
    (gates green, at least 6/8 with checks 1 and 2 passing, leftovers to KNOWN_ISSUES) or a report to the owner.
 
+## `bake-light.mjs`
+
+`node pipeline/bake-light.mjs [map …]` bakes the bounce light of every map that opts in (`MapData.bakedLight`, G6) and
+writes its probe file, `src/map/bakes/<file>.probes.b64` (Node only, through Vite's module runner; about two seconds
+for Depot). Run it after changing a baked map's blocks or tints, the day lighting or `config/bake.ts`'s `bake` values:
+`src/map/bakes/bakes.test.ts` fails, naming the command, until the file matches. The same map gives the same bytes.
+
 ## `gate.mjs`
 
 ```
