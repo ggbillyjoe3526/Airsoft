@@ -232,6 +232,15 @@ function shrubs(field: THREE.Box3, sun: THREE.Vector3): THREE.BufferGeometry[] {
   return parts;
 }
 
+/**
+ * The Trees level the ring is drawn at: the setting's, but at most ATMOSPHERE.trees.nightWithOwnTrees under a night
+ * light (`night`) on a map with trees of its own (`ownTrees`: Woodland), whose canopy and haze hide the ring (M75, owner
+ * decision 8). Exported for the tests.
+ */
+export function horizonTreeLevel(setting: TreeDetail, night: boolean, ownTrees: boolean): TreeDetail {
+  return night && ownTrees ? (Math.min(setting, ATMOSPHERE.trees.nightWithOwnTrees) as TreeDetail) : setting;
+}
+
 /** The tree ring for a Trees setting, as one mesh (null for none). */
 function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[]): THREE.Mesh | null {
   if (level === 0) return null;
@@ -372,7 +381,7 @@ export interface Atmosphere {
  * (sun along `sunDirection`, a unit vector towards the key light; `field` the map's bounds, for the hedge) at `quality`'s
  * Trees and Clouds, and returns its handle. Changing either setting rebuilds that mesh only. `preset` (M33f) paints the
  * sky, the clouds and the key light's disc: the day's unless a map's lighting says otherwise. `skyline` (G8, a map's
- * MapDressing.skyline) joins the detailed ring.
+ * MapDressing.skyline) joins the detailed ring. `ownTrees`: the map has trees of its own (horizonTreeLevel).
  */
 export function addAtmosphere(
   scene: THREE.Scene,
@@ -382,6 +391,7 @@ export function addAtmosphere(
   field: THREE.Box3 | null = null,
   preset: LightingPreset = LIGHTING_PRESETS.day,
   skyline: readonly SkylinePiece[] = [],
+  ownTrees = false,
 ): Atmosphere {
   const sky = buildSky(sunDirection, preset.sky);
   sky.position.copy(centre);
@@ -401,10 +411,11 @@ export function addAtmosphere(
     return null;
   };
   const setQuality = (q: Pick<QualitySettings, 'trees' | 'clouds'>): void => {
-    if (q.trees !== treeLevel) {
+    const level = horizonTreeLevel(q.trees, preset.night, ownTrees);
+    if (level !== treeLevel) {
       trees = drop(trees);
-      treeLevel = q.trees;
-      trees = buildTrees(q.trees, centre, sunDirection, field, skyline);
+      treeLevel = level;
+      trees = buildTrees(level, centre, sunDirection, field, skyline);
       if (trees) scene.add(trees);
     }
     if (q.clouds !== (clouds !== null)) {

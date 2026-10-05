@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FIGURE, type FigureLook } from '../config/characters';
+import { FIGURE_SHADOW_PROXY } from '../config/render';
 import type { FigurePalette } from './figurePalette';
 import { camoShade, type PartBuilder, type PartLook } from './figureParts';
 import { band, ik, insideOf, type ProfileStop, shapedBand, shellGeo, V } from './figureShapes';
@@ -70,7 +71,7 @@ export function humanLeg(b: PartBuilder, pal: FigurePalette, side: number): void
     p.setY(i, p.getY(i) - (p.getY(i) > 0 ? toe * 0.42 : 0));
   }
   upper.deleteAttribute('normal');
-  b.addIn(new THREE.Matrix4(), upper, foot.x, foot.y - 0.05, foot.z - 0.045, G.boots, RUBBER);
+  b.addIn(new THREE.Matrix4(), upper, foot.x, foot.y - 0.05, foot.z - 0.045, G.boots, RUBBER, undefined, undefined, new THREE.BoxGeometry(0.11, 0.085, 0.29));
   b.box(G.sole, 0.118, 0.026, 0.305, foot.x, foot.y - 0.088, foot.z - 0.045, { finish: FIN.rubber });
   if (b.overhaul) for (let i = 0; i < 4; i++) b.box(G.rubber, 0.05, 0.006, 0.012, 0, foot.y - 0.01 + i * 0.03, -0.062 - (i < 1 ? 0.02 : 0), RUBBER, undefined, new THREE.Euler(0.2, 0, 0)); // laces
 }
@@ -92,7 +93,8 @@ export function humanBody(b: PartBuilder, look: FigureLook, pal: FigurePalette, 
   b.block(pal.main, 0.3, 0.34, 0.058, 0, 1.35 + hy, 0.135, TEAM);
   for (const side of [-1, 1]) {
     const cummerbund = band(0.26, 0.15, 0.022, 0.155, b.detail.band[0]).rotateY((side * Math.PI) / 2).scale(1.25, 1, 0.82); // wider than the torso's hit box (FIGURE.torso)
-    b.addIn(new THREE.Matrix4(), cummerbund, 0, 1.22 + hy, 0, pal.main, TEAM);
+    const cast = band(0.26, 0.15, 0.022, 0.155, 2).rotateY((side * Math.PI) / 2).scale(1.25, 1, 0.82);
+    b.addIn(new THREE.Matrix4(), cummerbund, 0, 1.22 + hy, 0, pal.main, TEAM, undefined, undefined, cast);
     b.box(G.gear, 0.06, 0.022, 0.25, side * 0.1, 1.505 + hy, 0, GEAR); // shoulder straps
   }
   // Three magazine pouches with the magazines' tops showing, an admin pouch with the team's patch.
@@ -158,7 +160,7 @@ function helmet(b: PartBuilder, look: FigureLook, pal: FigurePalette, H: THREE.M
   const shell = shellGeo(ws, hs, cut);
   const scale = V(0.118, 0.122, 0.128);
   if (b.overhaul) b.addIn(H, insideOf(shell, 0.95), 0, 0.148, 0.012, G.gearDark, { finish: FIN.fabric }, undefined, scale);
-  b.addIn(H, shell, 0, 0.148, 0.012, pal.main, SHELL, undefined, scale);
+  b.addIn(H, shell, 0, 0.148, 0.012, pal.main, SHELL, undefined, scale, shellGeo(FIGURE_SHADOW_PROXY.dome[0], FIGURE_SHADOW_PROXY.dome[1], cut));
   const cup = (x: number): void => {
     b.cylinder(G.gear, 0.04, 0.034, H, x, 0.128, 0.012, GEAR, new THREE.Euler(0, 0, Math.PI / 2));
   };

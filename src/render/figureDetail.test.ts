@@ -6,7 +6,7 @@ import { TEAM_COLOUR_SETS } from '../config/teams';
 import { fitParts } from '../sim/armament';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
-import { BARE_KIT, buildFigure, disposeFigure, type Figure, figureLooks } from './characterModels';
+import { BARE_KIT, buildFigure, disposeFigure, type Figure, type FigureDetail, type FigureKit, figureLooks, HUMAN_DRESS } from './characterModels';
 import { CharacterRenderer, rifleSilenced } from './characterRenderer';
 import { FINISH_ATTRIBUTE, hasVertexFinish, useVertexFinish } from './figureFinish';
 
@@ -17,7 +17,11 @@ const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
   });
   return out;
 };
-const tris = (o: THREE.Object3D): number => (o as THREE.Mesh).geometry.getAttribute('position').count / 3;
+/** Triangles the camera sees: the part's draw range (its shadow stand-ins after it are drawn in the shadow map only, M75). */
+const tris = (o: THREE.Object3D): number => {
+  const g = (o as THREE.Mesh).geometry;
+  return Math.min(g.drawRange.count, g.getAttribute('position').count) / 3;
+};
 /** Triangles drawn at once: both legs, the body and the largest of the three arm poses. */
 const drawn = (f: Figure): number => tris(f.legL) + tris(f.legR) + tris(f.upper.children[0]!) + Math.max(tris(f.aimRifle), tris(f.aimPistol), tris(f.hitPose));
 
@@ -130,6 +134,100 @@ describe('Player detail (FA8, QualitySettings.figureDetail)', () => {
     for (let i = 0; i < col.count; i++) if (Math.abs(col.getX(i) / gear.r - FIGURE.edgeLight) < 0.01 && Math.abs(col.getZ(i) / gear.b - FIGURE.edgeLight) < 0.01) lit++;
     expect(lit).toBeGreaterThan(0);
     disposeFigure(figure);
+  });
+});
+
+/** Triangles a part draws into the shadow map: its draw range while a shadow pass runs (render/shadowProxy.ts). */
+const shadowTris = (m: THREE.Mesh): number => {
+  const g = m.geometry;
+  m.onBeforeShadow({} as never, {} as never, {} as never, {} as never, g, {} as never, null as never);
+  const n = Math.min(g.drawRange.count, g.getAttribute('position').count - g.drawRange.start) / 3;
+  m.onAfterShadow({} as never, {} as never, {} as never, {} as never, g, {} as never, null as never);
+  return n;
+};
+
+describe('figure shadows (M75, audit REN-03 step 1)', () => {
+  const kits: FigureKit[] = [BARE_KIT, { rifleSilencer: true, rifleTorch: true, pistolTorch: true }];
+  const dresses = [HUMAN_DRESS, { ...HUMAN_DRESS, robot: true }];
+  const build = (detail: FigureDetail, id: number, kit: FigureKit, robot: boolean): Figure =>
+    buildFigure(0x3d8bff, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), id, null, detail, kit, robot ? dresses[1] : HUMAN_DRESS);
+
+  it('casts each detailed part\'s shadow from plain stand-ins, a fraction of its triangles, the camera\'s view unchanged', () => {
+    for (const robot of [false, true]) {
+      for (const kit of kits) {
+        for (const id of [0, 1, 2, 3, 4, 5]) {
+          const figure = build(FIGURE.detail.high, id, kit, robot);
+          let seenAll = 0;
+          let castAll = 0;
+          for (const m of meshesOf(figure.root)) {
+            const label = `${robot ? 'robot' : 'human'} look ${id}`;
+            const seen = tris(m);
+            const cast = shadowTris(m);
+            expect(m.castShadow).toBe(true);
+            expect(cast, label).toBeGreaterThan(0);
+            expect(cast, label).toBeLessThan(seen / 2);
+            // After the shadow pass the camera draws the part from its first vertex, as before.
+            expect(m.geometry.drawRange.start).toBe(0);
+            expect(tris(m)).toBe(seen);
+            seenAll += seen;
+            castAll += cast;
+          }
+          // About a quarter of the detailed figure's triangles in the shadow pass (it was all of them).
+          expect(castAll, `${robot ? 'robot' : 'human'} look ${id}`).toBeLessThan(seenAll * 0.35);
+          disposeFigure(figure);
+        }
+      }
+    }
+  });
+
+  it('keeps the Low figure as it was: no stand-ins (Low draws no shadows and its parts are plain)', () => {
+    for (const robot of [false, true]) {
+      const figure = build(FIGURE.detail.low, 0, BARE_KIT, robot);
+      for (const m of meshesOf(figure.root)) {
+        expect(m.geometry.drawRange.count).toBe(Infinity);
+        expect(shadowTris(m)).toBe(tris(m));
+      }
+      disposeFigure(figure);
+    }
+  });
+
+  // About a shadow texel: 1.9 cm on High, 3.9 cm on Medium at night (LIGHTING.shadowView), before the filter's blur.
+  const TEXEL = 0.035;
+  const ANTENNA = 0.07;
+
+  /** The figure's outline as `pose` shows it (legs, body and that arm pose): what the camera sees, and what casts. */
+  const outline = (f: Figure, pose: THREE.Object3D): { seen: THREE.Box3; cast: THREE.Box3 } => {
+    const seen = new THREE.Box3();
+    const cast = new THREE.Box3();
+    f.root.updateMatrixWorld(true);
+    const p = new THREE.Vector3();
+    for (const o of [f.legL, f.legR, f.upper.children[0]!, pose]) {
+      const m = o as THREE.Mesh;
+      const pos = m.geometry.getAttribute('position');
+      const drawn = m.geometry.drawRange.count;
+      for (let i = 0; i < pos.count; i++) (i < drawn ? seen : cast).expandByPoint(p.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld));
+    }
+    return { seen, cast };
+  };
+
+  it('keeps the figure\'s silhouette: in every pose the stand-ins span it to within a shadow texel on every side', () => {
+    for (const robot of [false, true]) {
+      for (const kit of kits) {
+        for (const id of [0, 1, 2, 3, 4, 5]) {
+          const figure = build(FIGURE.detail.high, id, kit, robot);
+          for (const [name, pose] of [['rifle', figure.aimRifle], ['pistol', figure.aimPistol], ['hit', figure.hitPose]] as const) {
+            const { seen, cast } = outline(figure, pose);
+            for (const axis of ['x', 'y', 'z'] as const) {
+              const label = `${robot ? 'robot' : 'human'} ${id} ${name} ${axis}`;
+              expect(Math.abs(cast.min[axis] - seen.min[axis]), label).toBeLessThan(TEXEL);
+              // The robot's antenna, 8 mm across, stands 7 cm over its head and casts nothing a texel would show.
+              expect(Math.abs(cast.max[axis] - seen.max[axis]), label).toBeLessThan(robot && axis === 'y' ? ANTENNA : TEXEL);
+            }
+          }
+          disposeFigure(figure);
+        }
+      }
+    }
   });
 });
 

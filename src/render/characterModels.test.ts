@@ -74,7 +74,11 @@ describe('buildFigure (M14 art pass)', () => {
     return out;
   };
 
-  const trianglesOf = (o: THREE.Object3D): number => (o as THREE.Mesh).geometry.getAttribute('position').count / 3;
+  /** Triangles the camera sees (the part's draw range: its shadow stand-ins after it are drawn in the shadow map only, M75). */
+  const trianglesOf = (o: THREE.Object3D): number => {
+    const g = (o as THREE.Mesh).geometry;
+    return Math.min(g.drawRange.count, g.getAttribute('position').count) / 3;
+  };
 
   it('is six merged meshes on the one material given (four drawn at once), with vertex colours and no UVs', () => {
     for (const id of [0, 1, 2, 3, 4, 5]) {

@@ -14,15 +14,15 @@ REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 ## M75 · Woodland Medium margin (Audit 2 REN PR 2: REN-03 steps 1 and 4, REN-04)
 tier: core
 perf: required
-touches: src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/exitRenderer.ts, src/render/atmosphere.ts, src/config/render.ts, src/config/graphics.ts, docs/KNOWN_ISSUES.md
+touches: src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/figureParts.ts, src/render/figureHuman.ts, src/render/figureRobot.ts, src/render/figureHands.ts, src/render/exitRenderer.ts, src/render/atmosphere.ts, src/render/lighting.ts, src/render/shadowProxy.ts, src/render/mapMeshes.ts, src/config/render.ts, src/config/renderLighting.ts, src/config/graphics.ts, docs/KNOWN_ISSUES.md
 contract: none
 acceptance:
   1. Figures cast shadows from a low-triangle proxy (High figure detail unchanged on screen).
   2. Extraction's exit rings, washes and boards are instanced: a fixed number of draw calls whatever the exit count.
   3. Woodland's horizon tree ring at night draws at `trees: 1` (owner decision 8).
   4. Woodland and Neon Heights Extraction on Medium measure at or under 120 draw calls in the container perf run; rows 166 and 189 updated.
-status: open
-attempts: 0
+status: building
+attempts: 1
 
 ## M76 · Perf gate matrix, baselines, quick-gate precompression and build label (Audit 2 CORE-C: CORE-03, CORE-10, CORE-11, CORE-12)
 tier: ui

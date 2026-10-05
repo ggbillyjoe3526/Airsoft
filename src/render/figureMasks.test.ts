@@ -6,7 +6,11 @@ import { TEAM_COLOUR_SETS } from '../config/teams';
 import { buildFigure, disposeFigure, type Figure, HUMAN_DRESS } from './characterModels';
 import { prepareFigureModel } from './externalModels';
 
-const tris = (o: THREE.Object3D): number => (o as THREE.Mesh).geometry.getAttribute('position').count / 3;
+/** Triangles the camera sees: the part's draw range (its shadow stand-ins after it are drawn in the shadow map only, M75). */
+const tris = (o: THREE.Object3D): number => {
+  const g = (o as THREE.Mesh).geometry;
+  return Math.min(g.drawRange.count, g.getAttribute('position').count) / 3;
+};
 const meshesOf = (root: THREE.Object3D): THREE.Mesh[] => {
   const out: THREE.Mesh[] = [];
   root.traverse((o) => o instanceof THREE.Mesh && out.push(o));

@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, RENDER } from '../config/render';
 import { DEPOT } from '../map/depot';
 import { RANGE_MAP } from '../map/range';
-import { addAtmosphere, buildClouds, shadedCrown, skyColour, treeRingStart } from './atmosphere';
-import { mapBoundingBox } from './lighting';
+import { WOODLAND } from '../map/woodland';
+import { addAtmosphere, buildClouds, horizonTreeLevel, shadedCrown, skyColour, treeRingStart } from './atmosphere';
+import { addLighting, mapBoundingBox } from './lighting';
+import { resolveLighting } from './lightingPreset';
 
 describe('skyColour', () => {
   const sun = new THREE.Vector3(1, 2, 0).normalize();
@@ -200,5 +202,43 @@ describe('the sky under a lighting preset (M33f)', () => {
       m.geometry.dispose();
       (m.material as THREE.Material).dispose();
     }
+  });
+});
+
+describe('the horizon ring at night on a map with its own trees (M75, owner decision 8)', () => {
+  const trees = (scene: THREE.Scene): number => {
+    const mesh = scene.getObjectByName('trees') as THREE.Mesh | undefined;
+    return mesh ? mesh.geometry.getAttribute('position').count / 3 : 0;
+  };
+
+  it('caps the ring at ATMOSPHERE.trees.nightWithOwnTrees by night in the woods, and keeps the setting anywhere else', () => {
+    const cap = ATMOSPHERE.trees.nightWithOwnTrees;
+    expect(cap).toBe(1);
+    for (const setting of [0, 1, 2] as const) {
+      expect(horizonTreeLevel(setting, true, true)).toBe(Math.min(setting, cap));
+      expect(horizonTreeLevel(setting, false, true)).toBe(setting);
+      expect(horizonTreeLevel(setting, true, false)).toBe(setting);
+    }
+  });
+
+  it('draws Woodland’s ring as the simple one on Medium by night, as Depot’s under the same night keeps the detailed one', () => {
+    const night = resolveLighting(WOODLAND);
+    expect(night.night).toBe(true);
+    expect(QUALITY.medium.trees).toBe(2);
+    const ring = (map: typeof WOODLAND, quality: typeof QUALITY.medium): { scene: THREE.Scene; dispose: () => void } => {
+      const scene = new THREE.Scene();
+      const lighting = addLighting(scene, map, quality, night);
+      return { scene, dispose: () => lighting.dispose() };
+    };
+    const woodsMedium = ring(WOODLAND, QUALITY.medium);
+    const woodsLow = ring(WOODLAND, QUALITY.low);
+    const depotMedium = ring(DEPOT, QUALITY.medium);
+    const depotLow = ring(DEPOT, QUALITY.low);
+    expect(trees(woodsMedium.scene)).toBe(trees(woodsLow.scene));
+    expect(trees(depotMedium.scene)).toBeGreaterThan(trees(depotLow.scene));
+    // Trees: None stays none.
+    const woodsNone = ring(WOODLAND, { ...QUALITY.medium, trees: 0 });
+    expect(trees(woodsNone.scene)).toBe(0);
+    for (const r of [woodsMedium, woodsLow, depotMedium, depotLow, woodsNone]) r.dispose();
   });
 });
