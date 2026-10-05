@@ -228,14 +228,18 @@ describe('M33j acceptance 3: footsteps on terrain sound like the ground underfoo
     }
   });
 
-  it('is gravel in the creek bed, boards in the cabin, earth at the spawns, grass on the meadow and leaves under the pines', () => {
+  it('is gravel in the creek bed, boards in the cabin, earth round the camp fires, grass at the spawns and on the meadow, and leaves under the pines', () => {
     const ground = soundscapeOf(WOODLAND, true).ground;
     const creek = patches.find((p) => p.surface === 'gravel')!.path!;
     const mid = creek[Math.floor(creek.length / 2)]!;
     expect(surfaceUnder(WOODLAND.blocks, at(mid.x, mid.z), ground)).toBe('gravel');
     const cabin = patches.find((p) => p.surface === 'wood')!.box!;
     expect(surfaceUnder(WOODLAND.blocks, at((cabin[0] + cabin[1]) / 2, (cabin[2] + cabin[3]) / 2), ground)).toBe('wood');
-    for (const s of WOODLAND.spawns.flat()) expect(surfaceUnder(WOODLAND.blocks, s.position, ground)).toBe('earth');
+    // The spawns stay on grass and the trampled earth is round the camp fires (M33i, DECISIONS).
+    for (const s of WOODLAND.spawns.flat()) expect(surfaceUnder(WOODLAND.blocks, s.position, ground)).toBe('grass');
+    for (const fire of WOODLAND.lights!.filter((l) => l.kind === 'fire')) {
+      expect(surfaceUnder(WOODLAND.blocks, at(fire.position.x + 0.8, fire.position.z), ground)).toBe('earth');
+    }
     expect(surfaceUnder(WOODLAND.blocks, at(45 - WOODLAND_LAYOUT.halfX, WOODLAND_LAYOUT.halfZ - 47.5), ground)).toBe('grass');
     const pine = WOODLAND.blocks.find((b) => b.kind === 'tree' && groundAt(grid, b.center.x, b.center.z) === 'leaves')!;
     expect(surfaceUnder(WOODLAND.blocks, at(pine.center.x + 0.6, pine.center.z), ground)).toBe('leaves');

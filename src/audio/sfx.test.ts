@@ -1516,7 +1516,7 @@ describe('M33j: the woods at night in a match', () => {
     }
   });
 
-  it("plays a bot's step on the creek's gravel as gravel, and yours on the spawn's earth as earth", () => {
+  it("plays a bot's step on the creek's gravel as gravel, and yours on the spawn's grass as grass", () => {
     const { sfx, ctx, engine, bot, characterOf } = match(WOODLAND, true);
     const creek = WOODLAND.ground!.patches.find((p) => p.surface === 'gravel')!.path!;
     const mid = creek[Math.floor(creek.length / 2)]!;
@@ -1527,7 +1527,7 @@ describe('M33j: the woods at night in a match', () => {
     sfx.onEvent(step(PLAYER), PLAYER, characterOf);
     const [theirs, yours] = ctx.sources.slice(before);
     expect(playsOf(engine, theirs!, 'step.gravel.run')).toBe(true);
-    expect(playsOf(engine, yours!, 'step.earth.run')).toBe(true);
+    expect(playsOf(engine, yours!, 'step.grass.run')).toBe(true);
   });
 
   it("renders Woodland's own sounds once, as the first match on it loads, and reuses them after", () => {
@@ -1646,7 +1646,7 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
     woods.sfx.onEvent(step(PLAYER), PLAYER, woods.characterOf);
     const [theirs, yours] = woods.ctx.sources.slice(before);
     expect(theirs!.buffer).not.toBeNull();
-    expect(engine.samples('step.earth.run').some((v) => v === (theirs!.buffer as FakeBuffer).data[0])).toBe(true);
+    expect(engine.samples('step.grass.run').some((v) => v === (theirs!.buffer as FakeBuffer).data[0])).toBe(true);
     expect(([...theirs!.outputs][0] as FakeGain).gain.value).toBe(AUDIO.levels.step.gain);
     expect(([...yours!.outputs][0] as FakeGain).gain.value).toBe(AUDIO.levels.ownStep.gain);
     woods.sfx.dispose();
