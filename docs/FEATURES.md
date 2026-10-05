@@ -14,6 +14,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - An AEG rifle (single, burst or auto on the fire selector), a gas pistol and an electric Cyber Pistol, switched with the wheel or keys (Phase 1, M12a, M32)
 - Cyber Pistol: electric semi, burst and auto; built-in battery, fits either gear slot (M32)
+- Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); new rifles start Cobalt, pistols Ghost; each saved per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c, M30)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
@@ -90,7 +91,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets with Custom option, frame-rate limit, show FPS, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA2, FA5)
+- Settings tabs: Graphics (quality presets with Custom option, frame-rate limit, show FPS, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility, Look (Robots, Realistic colours) (M15, M18a, M19, M24, FA2, FA5, G1)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison, restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if the save is from a newer version (M31)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
