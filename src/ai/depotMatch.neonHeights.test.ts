@@ -52,7 +52,8 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Ne
     // AI-02) the west wins 54.0 % here by night (47 of 87), none on time, so by Night the band stays 40-60 %. M71 (Audit
     // 2: every level hunts the middle and keeps out of the light, torches only for a close fight): 40.4 % by day (36 of
     // 89, 1 of 90 on time) and 43.2 % by night (38 of 88, none on time): the west under 45 % calls M73's lane point at
-    // the bar door (audit BAL-04, owner decision 6).
+    // the bar door (audit BAL-04, owner decision 6). With it (M73): 45.5 % by day (40 of 88, none on time) and 52.5 %
+    // by night (42 of 80, 2 of 82 on time).
     expect(westWins / decided).toBeGreaterThanOrEqual(WEST[light][0]);
     expect(westWins / decided).toBeLessThanOrEqual(WEST[light][1]);
     expect(onTime / rounds).toBeLessThan(0.1);
