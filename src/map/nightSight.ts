@@ -10,6 +10,11 @@ export interface MapLight {
   position: Vec3;
   radius: number;
   colour: number;
+  /**
+   * What gives the light (M33i, render/lightFixtures.ts): a camp fire (a ring of stones, burning logs, flickering
+   * flames) or a lantern (hung on the block beside it, or on a post). Absent: the pool alone, as before.
+   */
+  kind?: 'fire' | 'lantern';
 }
 
 /** How far a bot makes someone out at night (m), by the light the target stands in (config/bots.ts NIGHT_SIGHT). */

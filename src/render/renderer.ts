@@ -11,12 +11,13 @@ import {
   type TextureSize,
   type ToneMappingId,
 } from '../config/render';
+import type { MapData } from '../map/mapTypes';
 import type { FigureModel } from './externalModels';
 import { GpuTimer } from './gpuTimer';
 import { environmentLookOf } from './lightingPreset';
 import { MapMeshCache } from './mapMeshCache';
-import { mapLookOf } from './mapMeshes';
-import { createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
+import { mapLookOf, texturesFor } from './mapMeshes';
+import { addSurfaceTextures, createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
 import { RetroFilter, retroPixelAngle } from './retroFilter';
 import { releaseNormalMaps, usesNormalMaps } from './surfaceNormals';
@@ -275,6 +276,16 @@ export class Renderer {
       this.surfacesSize = this.quality.textureSize;
     }
     return this.surfaces;
+  }
+
+  /**
+   * The surface textures `map`'s meshes are painted with (M33i): the shared set (surfaceTextures), with the woods' ones
+   * (bark, boards, stone, the ground's tile) drawn into it the first time a map that uses them asks, at the set's size.
+   * A map that uses none (Depot) gets the set exactly as before.
+   */
+  surfaceTexturesFor(map: MapData): SurfaceTextures {
+    const set = this.surfaceTextures;
+    return addSurfaceTextures(set, texturesFor(map), this.surfacesSize ?? this.quality.textureSize, this.quality.anisotropy);
   }
 
   /**

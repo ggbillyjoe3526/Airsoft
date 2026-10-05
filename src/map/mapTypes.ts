@@ -112,6 +112,12 @@ export interface MapData {
    */
   lighting?: MapLighting;
   /**
+   * What the ground is (M33i, map/groundSurfaces.ts): grass, leaf litter, earth, gravel or boards, on one grid the
+   * terrain is painted from and footsteps will read (M33j), so what you see and hear underfoot agree. Absent: the ground
+   * is drawn as before and nothing reads it.
+   */
+  ground?: MapGround;
+  /**
    * Extraction (M43): where a squad goes in, where it can get out and where the home team starts. Maps without one
    * can't be played in Extraction.
    */
@@ -136,6 +142,30 @@ export interface Overlook {
   name: string;
   area: readonly [number, number, number, number];
   from: Vec3[];
+}
+
+/** What a patch of ground is (M33i): what it looks like, and later what it sounds like underfoot (M33j). */
+export type GroundSurface = 'grass' | 'leaves' | 'earth' | 'gravel' | 'wood';
+
+/**
+ * One patch of a map's ground (M33i): a band `width` metres wide along `path` (world x, z points; one point is a disc
+ * of that width), or the box `box` ([x0, x1, z0, z1], world metres).
+ */
+export interface GroundPatch {
+  surface: GroundSurface;
+  path?: readonly { x: number; z: number }[];
+  width?: number;
+  box?: readonly [number, number, number, number];
+}
+
+/**
+ * A map's ground (MapData.ground, M33i): `base` everywhere, `underTrees` where the trees close overhead (the night
+ * sight's canopy rule, map/nightSight.ts), then each patch in order over that (a later one wins).
+ */
+export interface MapGround {
+  base: GroundSurface;
+  underTrees?: GroundSurface;
+  patches: readonly GroundPatch[];
 }
 
 /** A tweak of a lighting preset for one map: any group's values (MapData.lighting.overrides). */

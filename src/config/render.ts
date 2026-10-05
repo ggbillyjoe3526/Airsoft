@@ -495,6 +495,12 @@ export interface LightingPreset {
    * (bounce from the beam); `figureLift` the glow a figure in someone's beam takes where no real light reaches it.
    */
   torch: { beam: number; glare: number; hitSpot: number; spot: number; spill: number; spillIntensity: number; figureLift: number };
+  /**
+   * The night sky (M33i, render/nightSky.ts): `stars` stars (0: none), and the moon's disc `moonSize` radians across in
+   * `moonColour` (0: none) inside a halo `halo` times as wide at `haloAlpha` at its middle. On every quality, so Low has
+   * its moon too. Nothing by day.
+   */
+  nightSky: { stars: number; moonSize: number; moonColour: number; halo: number; haloAlpha: number };
 }
 
 /** The held replica's own lights by day (VIEWMODEL.light): the day preset's `viewmodel` group is made of these. */
@@ -534,6 +540,7 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
       rim: { colour: VIEWMODEL_LIGHT.rimColor, intensity: VIEWMODEL_LIGHT.rimIntensity },
     },
     torch: { beam: 0, glare: 0, hitSpot: 0, spot: 0, spill: 0, spillIntensity: 0, figureLift: 0 },
+    nightSky: { stars: 0, moonSize: 0, moonColour: 0, halo: 0, haloAlpha: 0 },
   },
   night: {
     night: true,
@@ -544,7 +551,7 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
       colour: 0xb8c8ff,
       intensity: 0.6,
       offset: { x: Math.cos(MOON_ELEVATION) * MOON.distance, y: Math.sin(MOON_ELEVATION) * MOON.distance, z: 0 },
-      disc: { colour: 0xe8eeff, size: 0.045 },
+      disc: { colour: 0xe8eeff, size: 0 },
     },
     clouds: { shade: 0x121826, top: 0x3c475e, opacity: 0.5 },
     environment: { ground: 0x1c1f26, intensity: 0.2 },
@@ -553,6 +560,9 @@ export const LIGHTING_PRESETS: Readonly<Record<LightingPresetId, LightingPreset>
     // by day at night (KNOWN_ISSUES, M33f).
     viewmodel: { hemi: { sky: 0x6a7ca8, ground: 0x22242c, intensity: 0.55 }, key: { colour: 0xb8c8ff, intensity: 0.7 }, rim: { colour: 0x8fa6e0, intensity: 0.6 } },
     torch: { beam: 0.16, glare: 1, hitSpot: 0.55, spot: 160, spill: 0.6, spillIntensity: 0.8, figureLift: 0.35 },
+    // M33i: the moon and stars on every quality (render/nightSky.ts); the clouds' key disc is off (size 0), so Medium and
+    // High don't draw two moons.
+    nightSky: { stars: 520, moonSize: 0.05, moonColour: 0xf1f4ff, halo: 4.5, haloAlpha: 0.22 },
   },
 };
 
@@ -638,10 +648,160 @@ export const FOLIAGE_LOOK = {
   jitter: 0.12,
   lump: 0.14,
   detail: 1,
+  /**
+   * M33i, on a map lit by a key light from one side: the side facing it turns towards `rim` by up to `rimStrength`, and
+   * the leaves below `footFrom` (of the half-height, -1 the very foot) are `footShade` darker, baked. Same triangles.
+   */
+  rim: 0x8fa6d8,
+  rimStrength: 0.3,
+  footFrom: -0.4,
+  footShade: 0.7,
 } as const;
 
-/** The surface textures (render/proceduralTextures.ts), drawn on canvases as each match loads. */
-export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier' | 'sandbag' | 'gabion';
+/**
+ * A map's ground surfaces drawn (M33i, MapData.ground; render/terrainMeshes.ts): each surface's colour (sRGB; grass keeps
+ * TERRAIN_LOOK's low-to-high greens), the edge between two surfaces blended over the cells within `blend` cells of a
+ * vertex, ground under the trees `underTreeShade` darker again (the baked dark under the pines, CS-style), and the
+ * greyscale `groundDetail` tile over it all. `cell` (m) is the ground grid's (map/groundSurfaces.ts), which footsteps
+ * read too (M33j). Gravel is strewn with pebbles (`pebbles`: so many a square metre, `size` m across, sunk `sink` of
+ * their height into the ground, `depth` their width the other way) in the stone mesh: no draw call of their own.
+ */
+export const GROUND_LOOK = {
+  cell: 1,
+  colours: { leaves: 0x4a3f2c, earth: 0x5e4c37, gravel: 0x7d786d, wood: 0x6f5639 },
+  blend: 1,
+  underTreeShade: 0.72,
+  pebbles: { perSquareMetre: 0.9, size: [0.07, 0.17], height: 0.55, depth: [0.7, 1], sink: 0.35, tints: [0x8c877c, 0x77736a, 0x9a948a], seed: 3391 },
+} as const;
+
+/**
+ * The woods' shapes (M33i, render/natureShapes.ts): what Woodland's trees, logs and boulders are drawn as, each inside its
+ * block (what collides), never more than `maxGap` m short of any point of its box (a BB can stop that far from what you
+ * see; the owner's 8 cm). Every preset draws the same shapes (fair silhouettes for all).
+ * - `trunk`: an eight-sided post, its corners cut `chamfer` m along each side, lit as if round (normals point out from
+ *   its axis). Straight: a taper would leave more than `maxGap` at its top corners. No cap: its top is in its crown.
+ * - `log`: horizontal rounds along the block's long side, their edges cut `chamfer` m. A block over `crouchMax` m tall,
+ *   or one thinner than `roundFrom` m (a cabin wall), is courses about `course` m high, level with the world's so walls
+ *   meet course to course; lower, thicker blocks (fallen trees, log piles) are `rounds` rounds. A course a share
+ *   `shade` darker or lighter by its hash; cut ends `endTint` (the pale end grain).
+ * - `boulder`: a box rounded `radius` m at its edges, each face cut into `segments` × `segments` facets pushed in by up
+ *   to `lump` m (never at its edges), flat-shaded so the facets catch the light; facets facing up turn towards `moss`
+ *   by up to `mossShare`.
+ */
+export const NATURE_SHAPES = {
+  maxGap: 0.08,
+  trunk: { chamfer: 0.113 },
+  log: { course: 0.3, crouchMax: 1.3, roundFrom: 0.6, rounds: 2, chamfer: 0.1, shade: 0.1, endTint: 0xc9ad84 },
+  boulder: { radius: 0.1, segments: 3, lump: 0.065, moss: 0x5f6e46, mossShare: 0.3, seed: 6151 },
+} as const;
+
+/**
+ * Tree crowns (M33i, render/canopyMeshes.ts): one merged mesh over a map's `tree` blocks. A trunk `broadFrom` m across
+ * or more gets a broadleaf crown of `broad.lumps` lumps (icospheres of `broad.detail`, radius `broad.radius` of the
+ * trunk's height, centred at least `broad.lift` of it up, the side lumps `broad.spread` of the radius out); thinner ones
+ * a pine: a crown from `pine.apexAbove` m over the trunk's top down `pine.depth` of its height, as stacked
+ * `pine.sides`-sided cones (each tier `from`..`to` of that span, `radius` m), varied by up to `jitter` by its hash. No
+ * crown comes lower than `minBase` m over the ground, so it never hides a standing figure. A near-black green so crowns
+ * read as clean silhouettes against the night sky, darker underneath (`underShade`) and cooler on the moon's side
+ * (`rim` at up to `rimStrength`), baked. It casts shadows only where the shadow map follows the view (High).
+ */
+export const CANOPY = {
+  minBase: 3,
+  broadFrom: 1,
+  pine: { sides: 7, apexAbove: 1.3, depth: 0.66, tiers: [{ from: 0, to: 0.62, radius: 1.75 }, { from: 0.42, to: 1, radius: 1.15 }] },
+  broad: { lumps: 3, detail: 1, radius: 0.27, lift: 0.62, spread: 0.45 },
+  jitter: 0.15,
+  colours: [0x1d2c22, 0x22301f, 0x1a2a24],
+  underShade: 0.6,
+  rim: 0x8fa6d8,
+  rimStrength: 0.4,
+} as const;
+
+/**
+ * What gives a map's light (M33i, MapLight.kind; render/lightFixtures.ts and the map's meshes). A fire: `stones` stones
+ * round a ring `ringRadius` m out, `logs` charred logs crossed over it, and `flames.cards` crossed additive flame cards;
+ * a lantern: a housing `size` m (w, h) with glowing panes, on a bracket to a block within `bracketReach` m, else on a
+ * post `post` m square. Fires and panes flicker in the vertex shader (no CPU work on the mesh): the brightness times
+ * 1 + `amount` × a weighted sum of sines at `rates` (rad/s), the same as the real pool light's on Medium and High
+ * (render/lightPools.ts flicker). Embers: `perFire` sparks rising `rise` m over `life` s, drifting up to `spread` m,
+ * `size` m across, one draw for every fire, where dust motes are on (Medium, High).
+ */
+export const FIXTURES = {
+  fire: {
+    /** Stones: `stoneSize` m across, `stoneHeight` and `stoneDepth` of that, sunk `stoneSink` m, spaced with up to `stoneJitter` of a gap's turn. */
+    stones: 8,
+    ringRadius: 0.55,
+    stoneSize: [0.17, 0.25],
+    stoneHeight: 0.7,
+    stoneDepth: 0.85,
+    stoneSink: 0.03,
+    stoneJitter: 0.3,
+    stoneTint: 0x77726a,
+    /** Logs from `logOut` of their length out to `logIn` past the middle, rising `logRise` radii; six-sided, ends `logEndShade` darker. */
+    logs: 3,
+    logLength: 0.95,
+    logRadius: 0.07,
+    logOut: 0.5,
+    logIn: 0.1,
+    logRise: 3,
+    logSides: 6,
+    logEndShade: 0.5,
+    logTint: 0x3a2c22,
+    /**
+     * Flame cards `height` × `width` m, `lift` m off the ground, each in rows (`at` of the height, `width` share, colour,
+     * alpha); brightness flickers `flicker` times the light's, the tops sway `sway` m at `swayRates` (rad/s).
+     */
+    flames: {
+      cards: 3,
+      height: 0.85,
+      width: 0.55,
+      lift: 0.06,
+      rows: [
+        { at: 0, width: 1, colour: 0xffd27a, alpha: 0.9, sway: 0 },
+        { at: 0.4, width: 0.8, colour: 0xff8a2e, alpha: 0.7, sway: 0.4 },
+        { at: 1, width: 0.15, colour: 0xff5a1a, alpha: 0, sway: 1 },
+      ],
+      flicker: 2,
+      sway: 0.06,
+      swayRates: [5.3, 4.1],
+    },
+  },
+  /** Panes `paneHeight` of the housing's height, flickering `flicker` times as much as a fire. */
+  lantern: { size: [0.18, 0.26], frame: 0.02, tint: 0x2c2a28, pane: 0xffc870, paneAlpha: 0.8, paneHeight: 0.8, bracketReach: 0.5, post: 0.07, postTint: 0x5a4a3a, postSink: 0.05, flicker: 0.25 },
+  flicker: { amount: 0.18, rates: [7.3, 11.9, 17.3], weights: [0.5, 0.3, 0.2] },
+  /** Embers start up to `startHeight` m up, at `speed` (a range, times their life's pace), wobbling `wobble` m at `wobbleRate` rad/s. */
+  embers: { perFire: 20, rise: 2.4, life: 2.6, spread: 0.35, size: 0.035, colour: 0xffa64d, startHeight: 0.2, speed: [0.7, 1.3], wobble: 0.06, wobbleRate: 3, seed: 2203 },
+} as const;
+
+/**
+ * The night sky (M33i, render/nightSky.ts), on any preset whose `nightSky` asks for it, on every quality: `stars` points
+ * (the preset's count) on a sphere `radius` m round the camera, `starSize` px, above `minElevation` rad and fading towards
+ * the horizon until `fadeTo` rad, from a fixed seed; the moon a crisp disc where the key light comes from with a soft halo
+ * round it. Unfogged (they are the sky), no depth writes, drawn after the field and before the clouds. Both follow the
+ * camera, so they never shift as you move.
+ */
+export const NIGHT_SKY = {
+  radius: 190,
+  starSize: [1.1, 2.4],
+  minElevation: 0.06,
+  fadeTo: 0.5,
+  starTints: [0xffffff, 0xdfe8ff, 0xfff1d8],
+  seed: 7331,
+  moonSegments: 40,
+  haloSegments: 32,
+} as const;
+
+/** The surface textures every map's set has (render/proceduralTextures.ts), drawn on canvases at the title screen. */
+export type CoreSurfaceId = 'concrete' | 'blockWall' | 'crate' | 'corrugated' | 'steelPlate' | 'barrier' | 'sandbag' | 'gabion';
+
+/**
+ * The woods' surfaces (M33i): bark, weathered fence boards, stone with lichen and a greyscale ground tile. Drawn only
+ * when a map that uses them loads (render/mapMeshes.ts texturesFor), so Depot's textures and GPU memory are as before.
+ */
+export type NatureSurfaceId = 'bark' | 'planks' | 'stone' | 'groundDetail';
+
+/** Every surface texture (render/proceduralTextures.ts). */
+export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId;
 
 /**
  * The look of the field's surfaces and props (M14, render/proceduralTextures.ts and render/mapMeshes.ts). Everything
@@ -649,9 +809,9 @@ export type SurfaceTextureId = 'concrete' | 'blockWall' | 'crate' | 'corrugated'
  */
 export const SURFACES = {
   /** Metres one texture repeat covers, for the textures mapped in world space (crates are mapped once per face). */
-  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2 } satisfies Record<SurfaceTextureId, number>,
+  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2, bark: 1.6, planks: 1.6, stone: 1.6, groundDetail: 4 } satisfies Record<SurfaceTextureId, number>,
   /** How strongly each texture's light and dark read as relief when surface relief is on (bump scale). */
-  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 1.8 } satisfies Record<SurfaceTextureId, number>,
+  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 1.8, bark: 2.6, planks: 1.8, stone: 1.8, groundDetail: 1 } satisfies Record<SurfaceTextureId, number>,
   /**
    * Grime and contact shade near the floor: the sides of walls, containers, crates and barriers darken towards their
    * foot over this height (metres), to this share of their colour at the very bottom.
@@ -708,7 +868,7 @@ export const SURFACES = {
    * into a normal map (render/surfaceNormals.ts heightToNormal). The slope scale per surface, for the original
    * 256-pixel drawing (the maps at other sizes are scaled to match, so relief reads the same at any texture size).
    */
-  normalStrength: { concrete: 1.4, blockWall: 2.2, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2 } satisfies Record<SurfaceTextureId, number>,
+  normalStrength: { concrete: 1.4, blockWall: 2.2, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2 } satisfies Record<SurfaceTextureId, number>,
   /** The largest normal map (pixels a side): High's 1024² pictures are scaled down to it first (render/surfaceNormals.ts). */
   normalMapMaxSize: 512,
   /**
@@ -722,9 +882,10 @@ export const SURFACES = {
    * Baked vertex occlusion (F3, render/vertexOcclusion.ts; with map detail): each vertex casts a fixed fan of rays
    * `reach` metres out and darkens by up to `strength` by how much is blocked (nearer blocks count more), so corners,
    * the floor along a wall's foot and under the dock's lip sit in a soft shade. Faces are cut into `cell`-metre tiles so
-   * the shade has vertices to land on; rays start `lift` metres off the surface.
+   * the shade has vertices to land on (`coarseCell` for kinds that ask for it: Woodland's boundary fences, M33i); rays
+   * start `lift` metres off the surface.
    */
-  occlusion: { reach: 2, strength: 0.55, cell: 1.25, lift: 0.01 },
+  occlusion: { reach: 2, strength: 0.55, cell: 1.25, coarseCell: 4, lift: 0.01 },
   /**
    * Edge bevels (the art bible's "CS edge highlight"; with map detail): vertical and top edges of walls, crates,
    * containers, barriers and site props are cut at 45° `size` metres in, the cut a share `highlight` brighter. Pieces

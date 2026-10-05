@@ -182,14 +182,18 @@ describe('the sky under a lighting preset (M33f)', () => {
     dark.dispose();
   });
 
-  it('colours the clouds and the key light’s disc from the preset: dim clouds and a pale moon at night', () => {
+  it('colours the clouds from the preset: dim clouds at night, and no disc in them (the moon is the night sky’s, M33i)', () => {
     const day = buildClouds(new THREE.Vector3(), moon);
     const night = buildClouds(new THREE.Vector3(), moon, LIGHTING_PRESETS.night);
     const dayCol = day.geometry.getAttribute('color') as THREE.BufferAttribute;
     const nightCol = night.geometry.getAttribute('color') as THREE.BufferAttribute;
-    // The last vertex is the disc's rim; the first, a cloud's middle.
-    const disc = new THREE.Color(LIGHTING_PRESETS.night.key.disc.colour);
-    expect(nightCol.getX(nightCol.count - 1)).toBeCloseTo(disc.r, 6);
+    // By day the last vertex is the sun disc's rim (a middle and two rings of 20); at night the disc's size is 0 and the
+    // clouds hold no disc, so Medium and High never draw two moons (render/nightSky.ts draws it on every quality).
+    const sun = new THREE.Color(LIGHTING_PRESETS.day.key.disc.colour);
+    expect(dayCol.getX(dayCol.count - 1)).toBeCloseTo(sun.r, 6);
+    expect(LIGHTING_PRESETS.night.key.disc.size).toBe(0);
+    expect(nightCol.count).toBe(dayCol.count - (1 + 2 * 20));
+    // The first vertex is a cloud's middle.
     expect(nightCol.getX(0)).toBeLessThan(dayCol.getX(0) / 2);
     expect(nightCol.getW(0)).toBeLessThan(dayCol.getW(0));
     for (const m of [day, night]) {

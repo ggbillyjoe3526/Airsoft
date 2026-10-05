@@ -2,15 +2,15 @@ import { expect, test } from '@playwright/test';
 
 /**
  * M33e QA: Woodland (dev content, so Dev settings > Dev content) loads with its bushes
- * drawn as one shadow-casting mesh and the bots of its match given the same bushes, with no console error. Values are
+ * drawn as one mesh (casting shadows where the shadow map follows the view, M33i) and the bots of its match given the same bushes, with no console error. Values are
  * read through the e2e build's `window.airsoft`, no screenshot.
  */
 type Mesh = { name: string; castShadow: boolean; receiveShadow: boolean; geometry: { getAttribute: (n: string) => { count: number } } };
 type Airsoft = {
-  airsoft: { state: { tick: number } | null; renderer: { scene: { traverse: (f: (o: Mesh) => void) => void } } };
+  airsoft: { state: { tick: number } | null; renderer: { quality: { shadows: boolean; shadowFollowsView: boolean }; scene: { traverse: (f: (o: Mesh) => void) => void } } };
 };
 
-test('Woodland loads with its bushes drawn, in one mesh that casts and receives shadows, and no console errors', async ({ page }) => {
+test('Woodland loads with its bushes drawn, in one mesh that receives shadows, and no console errors', async ({ page }) => {
   test.setTimeout(180_000);
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
@@ -43,7 +43,10 @@ test('Woodland loads with its bushes drawn, in one mesh that casts and receives 
     (window as unknown as Airsoft).airsoft.renderer.scene.traverse((o) => {
       if (o.name === 'map-foliage') meshes.push(o);
     });
-    return meshes.map((m) => ({ castShadow: m.castShadow, receiveShadow: m.receiveShadow, vertices: m.geometry.getAttribute('position').count }));
+    const q = (window as unknown as Airsoft).airsoft.renderer.quality;
+    // Bushes cast shadows only where the shadow map follows the view (M33i: High; Medium's triangles go to the figures).
+    const casts = q.shadows && q.shadowFollowsView;
+    return meshes.map((m) => ({ castShadow: m.castShadow === casts, receiveShadow: m.receiveShadow, vertices: m.geometry.getAttribute('position').count }));
   });
   expect(foliage).toHaveLength(1);
   expect(foliage[0]!.castShadow).toBe(true);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { type Anisotropy, SURFACES, type SurfaceTextureId, type TextureSize } from '../config/render';
+import { type Anisotropy, type CoreSurfaceId, type NatureSurfaceId, SURFACES, type SurfaceTextureId, type TextureSize } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
+import { natureDrawers } from './natureTextures';
 
 /**
  * The field's surface textures, drawn on canvases as each match loads (M14 art pass: no downloaded assets, see
@@ -16,15 +17,49 @@ export interface ProceduralTexture {
   normal?: THREE.Texture;
 }
 
-export type SurfaceTextures = Record<SurfaceTextureId, ProceduralTexture>;
+/**
+ * A set of surface textures: every core one, and the woods' ones (M33i) once a map that uses them has asked for them
+ * (addSurfaceTextures; Renderer.surfaceTexturesFor), so a set no such map has used holds exactly what it did before.
+ */
+export type SurfaceTextures = Record<CoreSurfaceId, ProceduralTexture> & Partial<Record<NatureSurfaceId, ProceduralTexture>>;
+
+/** The core surfaces, the ones every set has. */
+export const CORE_SURFACES: readonly CoreSurfaceId[] = ['concrete', 'blockWall', 'crate', 'corrugated', 'steelPlate', 'barrier', 'sandbag', 'gabion'];
 
 /**
- * Draws every surface texture at `size` pixels a side (QualitySettings.textureSize, audit REN-13) with `anisotropy`
+ * Draws every core surface texture at `size` pixels a side (QualitySettings.textureSize, audit REN-13) with `anisotropy`
  * (QualitySettings.anisotropy). The drawings are the same at any size: every length is in units of the original
  * 256-pixel drawing (PX), and speckle counts cover the same share of the tile. Drawn once per size per game
  * (Renderer.surfaceTextures shares them between sessions).
  */
 export function createSurfaceTextures(size: TextureSize, anisotropy: Anisotropy): SurfaceTextures {
+  const draw = surfaceDrawer(size, anisotropy);
+  return Object.fromEntries(CORE_SURFACES.map((id) => [id, draw(id)])) as SurfaceTextures;
+}
+
+/**
+ * Draws into `set` each of `ids` it doesn't hold yet (M33i: the woods' textures, when a map that uses them loads), at
+ * `size` and `anisotropy` (the set's own). Returns the set.
+ */
+export function addSurfaceTextures(set: SurfaceTextures, ids: Iterable<SurfaceTextureId>, size: TextureSize, anisotropy: Anisotropy): SurfaceTextures {
+  let draw: ((id: SurfaceTextureId) => ProceduralTexture) | null = null;
+  for (const id of ids) {
+    if (set[id]) continue;
+    draw ??= surfaceDrawer(size, anisotropy);
+    set[id] = draw(id);
+  }
+  return set;
+}
+
+/** The surface texture `id` of `set`; throws if it isn't drawn (a map's meshes ask for theirs first: texturesFor). */
+export function surfaceTexture(set: SurfaceTextures, id: SurfaceTextureId): ProceduralTexture {
+  const t = set[id];
+  if (!t) throw new Error(`surface texture '${id}' is not drawn: ask the renderer for the map's set (surfaceTexturesFor)`);
+  return t;
+}
+
+/** A drawer of single surface textures at `size` pixels a side with `anisotropy`. */
+function surfaceDrawer(size: TextureSize, anisotropy: Anisotropy): (id: SurfaceTextureId) => ProceduralTexture {
   const SIZE = size;
   /** Pixels per unit of the textures' original 256-pixel drawings: line widths and sizes scale with it. */
   const PX = SIZE / 256;
@@ -456,22 +491,24 @@ export function createSurfaceTextures(size: TextureSize, anisotropy: Anisotropy)
     return finish(canvas, 'gabion');
   }
 
-  return {
-    concrete: concrete(),
-    blockWall: blockWall(),
-    crate: crate(),
-    corrugated: corrugated(),
-    steelPlate: steelPlate(),
-    barrier: barrier(),
-    sandbag: sandbag(),
-    gabion: gabion(),
+  const drawers: Record<SurfaceTextureId, () => ProceduralTexture> = {
+    concrete,
+    blockWall,
+    crate,
+    corrugated,
+    steelPlate,
+    barrier,
+    sandbag,
+    gabion,
+    ...natureDrawers({ SIZE, PX, makeCanvas, rgba, wrapped, speckle, blotches, crack, finish }),
   };
+  return (id) => drawers[id]();
 }
 
 export function disposeSurfaceTextures(t: SurfaceTextures): void {
-  for (const key of Object.keys(t) as SurfaceTextureId[]) {
-    t[key].texture.dispose();
-    t[key].normal?.dispose();
+  for (const surface of Object.values(t) as ProceduralTexture[]) {
+    surface.texture.dispose();
+    surface.normal?.dispose();
   }
 }
 
@@ -480,8 +517,8 @@ export function disposeSurfaceTextures(t: SurfaceTextures): void {
  * clamps it to what the graphics card offers).
  */
 export function setSurfaceAnisotropy(t: SurfaceTextures, anisotropy: Anisotropy): void {
-  for (const key of Object.keys(t) as SurfaceTextureId[]) {
-    for (const texture of [t[key].texture, t[key].normal]) {
+  for (const surface of Object.values(t) as ProceduralTexture[]) {
+    for (const texture of [surface.texture, surface.normal]) {
       if (!texture || texture.anisotropy === anisotropy) continue;
       texture.anisotropy = anisotropy;
       texture.needsUpdate = true;

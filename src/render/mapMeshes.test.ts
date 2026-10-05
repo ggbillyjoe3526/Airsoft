@@ -210,13 +210,13 @@ describe('the art pass on the map (M14)', () => {
     setMapTextures(group, large);
     expect(materials.map((m) => m.map!.name)).toEqual(surfaces);
     for (const m of materials) {
-      expect(m.map).toBe(large[m.map!.name as SurfaceTextureId].texture);
+      expect(m.map).toBe(large[m.map!.name as SurfaceTextureId]!.texture);
       expect(m.bumpMap).toBe(m.map);
     }
     // Relief off stays off.
     setMapRelief(group, large, { relief: false, normalMaps: false });
     setMapTextures(group, small);
-    expect(materials.every((m) => m.bumpMap === null && m.map === small[m.map!.name as SurfaceTextureId].texture)).toBe(true);
+    expect(materials.every((m) => m.bumpMap === null && m.map === small[m.map!.name as SurfaceTextureId]!.texture)).toBe(true);
     disposeMapMeshes(group);
   });
 
@@ -227,8 +227,10 @@ describe('the art pass on the map (M14)', () => {
     group.children.reduce((n, m) => n + Math.min((m as THREE.Mesh).geometry.index!.count, (m as THREE.Mesh).geometry.drawRange.count) / 3, 0);
 
   it('reads its look from the quality settings: Low is the look before map detail', () => {
-    expect(mapLookOf(QUALITY.low)).toEqual({ relief: false, normalMaps: false, detail: false, steelSheen: false });
-    expect(mapLookOf(QUALITY.medium)).toEqual(detailed);
+    expect(mapLookOf(QUALITY.low)).toEqual({ relief: false, normalMaps: false, detail: false, steelSheen: false, foliageShadows: false });
+    expect(mapLookOf(QUALITY.medium)).toEqual({ ...detailed, foliageShadows: false });
+    // Tree crowns cast shadows only where the shadow map follows the view (M33i): High.
+    expect(mapLookOf(QUALITY.high).foliageShadows).toBe(true);
     expect(mapNeedsRebuild(mapLookOf(QUALITY.medium), mapLookOf(QUALITY.high))).toBe(false);
     expect(mapNeedsRebuild(mapLookOf(QUALITY.low), mapLookOf(QUALITY.medium))).toBe(true);
     expect(mapNeedsRebuild(plain(true), plain(false))).toBe(false);
