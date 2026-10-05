@@ -356,7 +356,8 @@ request. Each line names where it lives and what pins it.
   the character controller the simulation sees; the simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.
 - **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`): simulation first, presentation
   after; `afterTick` is where stats, the HUD and sound read the tick's events. Pinned by the smoke test.
-- **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`): the
+- **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`, which
+  re-exports them from `config/renderQuality.ts` since G5 split it by concern; import from `config/render.ts`): the
   fields a preset or the Custom rows may set (every preset sets every field; `QUALITY` is the preset table; a choice is
   a preset, Low to Ultra (Ultra since G5, never the automatic pick), or `'custom'`, which resolves to High overlaid
   with the saved rows); `Renderer.setQuality` and

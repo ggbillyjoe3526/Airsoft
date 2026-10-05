@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import * as renderBarrel from './render';
+import * as renderEffects from './renderEffects';
+import * as renderLighting from './renderLighting';
+import * as renderQuality from './renderQuality';
+import * as renderSurfaces from './renderSurfaces';
+import * as renderView from './renderView';
 import {
   DETAIL_LEVELS,
   DUST_MOTES,
@@ -217,5 +223,28 @@ describe('Ultra (G5)', () => {
     expect(qualityChoiceOf({ ...QUALITY.ultra })).toBe('ultra');
     expect(resolveQuality('custom', {})).toEqual(QUALITY.high);
     expect(resolveQuality('custom', { reflections: true })).toEqual({ ...QUALITY.high, reflections: true });
+  });
+});
+
+// G5 split config/render.ts by concern; every importer still imports from it.
+describe('config/render.ts re-exports the split files (G5)', () => {
+  const parts = { renderEffects, renderLighting, renderQuality, renderSurfaces, renderView };
+
+  it('has every value each file exports, the same object, and nothing else', () => {
+    const all = new Set<string>();
+    for (const [file, mod] of Object.entries(parts)) {
+      for (const [name, value] of Object.entries(mod)) {
+        expect(all.has(name), `${name} in two files`).toBe(false);
+        all.add(name);
+        expect((renderBarrel as Record<string, unknown>)[name], `${file}.${name}`).toBe(value);
+      }
+    }
+    expect(new Set(Object.keys(renderBarrel))).toEqual(all);
+  });
+
+  it('keeps the names the file had before the split', () => {
+    for (const name of ['RENDER', 'ATMOSPHERE', 'FOV_SETTING', 'QUALITY', 'resolveQuality', 'FRAME_RATE_CAPS', 'LIGHTING_PRESETS', 'SURFACES', 'BB_VISUALS', 'HUD', 'VIEWMODEL', 'matchOverScreenDelay', 'FLAG_VISUALS']) {
+      expect(renderBarrel, name).toHaveProperty(name);
+    }
   });
 });

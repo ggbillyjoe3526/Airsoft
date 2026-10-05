@@ -8,7 +8,7 @@ keeps `status` and `attempts` current.
 ## G5 · Renderer and presets: Ultra, frame-rate choices and the post stack
 tier: core
 perf: required
-touches: src/config/render.ts, src/config/render.test.ts, src/config/graphics.ts, src/config/graphics.test.ts, src/config/post.ts, src/config/post.test.ts, src/render/renderer.ts, src/render/renderer.test.ts, src/render/post/, src/render/qualityStepDown.ts, src/render/qualityStepDown.test.ts, src/ui/menus/savedChoices.ts, src/ui/menus/savedChoices.test.ts, src/ui/graphicsSettings.ts, src/ui/graphicsSettings.test.ts, src/ui/menus/menus.test.ts, src/game.ts, pipeline/perf-run.mjs, pipeline/perf-budget.json, pipeline/baseline/, pipeline/README.md
+touches: src/config/render.ts, src/config/render.test.ts, src/config/renderView.ts, src/config/renderQuality.ts, src/config/renderLighting.ts, src/config/renderSurfaces.ts, src/config/renderEffects.ts, src/config/graphics.ts, src/config/graphics.test.ts, src/config/post.ts, src/config/post.test.ts, src/render/renderer.ts, src/render/renderer.test.ts, src/render/post/, src/render/qualityStepDown.ts, src/render/qualityStepDown.test.ts, src/ui/menus/savedChoices.ts, src/ui/menus/savedChoices.test.ts, src/ui/graphicsSettings.ts, src/ui/graphicsSettings.test.ts, src/ui/menus/menus.test.ts, src/game.ts, pipeline/perf-run.mjs, pipeline/perf-budget.json, pipeline/baseline/, pipeline/README.md
 contract: QualitySettings, QUALITY, QualityChoice (a new preset `ultra`; new fields added, none renamed); the settings store's `frameRateCap` (same key, one more value)
 acceptance:
   1. `QUALITY.ultra` exists above High: 4096 shadow map at the softest radius, render scale 1 with `maxPixelRatio` 2, the most dust motes the buffer holds, 8 night pool lights, every post effect on at full quality. The picker, `?quality=ultra`, `QUALITY_FIELDS`, Custom and the blurbs include it; `TIER_QUALITY` never picks it.
@@ -20,5 +20,6 @@ acceptance:
   7. Reflections are drawn only on surfaces flagged reflective (the map's glass meshes, or any mesh with `userData.reflective`); with none in the scene the pass draws nothing and allocates nothing.
   8. Every post target and pass is disposed on a quality change, a lost context and the antialiasing context swap, made again after, and resized with the window and the render scale (tests with a stub renderer).
   9. `pipeline/perf-run.mjs --preset ultra` runs Ultra and `--preset all` includes it; a `desktop` env measures a real GPU without CPU throttling and `--viewport` sets the size; the container baselines for Medium, High and Ultra are recorded.
+  10. `src/config/render.ts` is split by concern into files under about 600 lines (renderView, renderQuality, renderLighting, renderSurfaces, renderEffects) and re-exports every public name it had, so no importer changes; no change in behaviour (the lead's request, taken over from M78).
 status: building
 attempts: 0
