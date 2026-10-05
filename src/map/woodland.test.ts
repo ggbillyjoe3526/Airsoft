@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
 import { BODY } from '../config/movement';
-import { buildNavGrid, createNavSearch, findPath, floorAt, isWalkableAt } from '../nav/navGrid';
+import { buildNavGrid, createNavSearch, findPath, floorAt, isWalkableAt, nodeX, nodeZ } from '../nav/navGrid';
 import { buildLevelRay, castLevelRay } from '../sim/levelRay';
+import { createRng, rngNext } from '../sim/rng';
 import { type Vec3, vec3 } from '../sim/vec';
 import { mapData, mapEntry, teamSizeOn } from './maps';
 import { steepestSlope, terrainHeightAt, terrainMaxX, terrainMaxZ } from './terrain';
@@ -130,6 +131,48 @@ describe('Woodland: the two camps cannot see each other (M33d, acceptance 1)', (
     const hit = castLevelRay(level, from, vec3(dx / flat, 0, dz / flat), flat);
     expect(hit).toBeGreaterThan(0);
     expect(hit).toBeLessThan(flat);
+  });
+});
+
+describe('Woodland: its longest sight line (M55, audit SIM-08)', () => {
+  /**
+   * The longest clear line from a standing eye to a standing eye over the field (m). The meadow is open from the Knoll's
+   * east shoulder to the far west corner, about 130 m: intended (owner, 2026-10-05: the map is played at night, where the
+   * dark, not the ground, decides what anyone sees, and a BB doesn't carry that far). A change to the trees or the cover
+   * that opens a longer line fails here.
+   */
+  const LONGEST_LINE = 140;
+  /** ...and the meadow's line is there: the check is not blind. */
+  const MEADOW_LINE = 120;
+  /** Pairs of walkable nodes sampled (a fixed seed). */
+  const PAIRS = 40_000;
+
+  it(`has no clear eye line longer than ${LONGEST_LINE} m, and the meadow's is over ${MEADOW_LINE} m`, () => {
+    const level = buildLevelRay(WOODLAND.blocks, PHYSICS.rayGridCell, terrain);
+    const walk: number[] = [];
+    for (let k = 0; k < nav.walkable.length; k++) if (nav.walkable[k] === 1) walk.push(k);
+    const rng = createRng(9);
+    const from = vec3();
+    const dir = vec3();
+    let longest = 0;
+    for (let i = 0; i < PAIRS; i++) {
+      const a = walk[Math.floor(rngNext(rng) * walk.length)]!;
+      const b = walk[Math.floor(rngNext(rng) * walk.length)]!;
+      from.x = nodeX(nav, a);
+      from.y = nav.floorY[a]! + BODY.standEyeHeight;
+      from.z = nodeZ(nav, a);
+      dir.x = nodeX(nav, b) - from.x;
+      dir.y = nav.floorY[b]! + BODY.standEyeHeight - from.y;
+      dir.z = nodeZ(nav, b) - from.z;
+      const d = Math.hypot(dir.x, dir.y, dir.z);
+      if (d <= longest) continue;
+      dir.x /= d;
+      dir.y /= d;
+      dir.z /= d;
+      if (castLevelRay(level, from, dir, d) < 0) longest = d;
+    }
+    expect(longest).toBeLessThanOrEqual(LONGEST_LINE);
+    expect(longest).toBeGreaterThan(MEADOW_LINE);
   });
 });
 
