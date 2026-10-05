@@ -152,6 +152,36 @@ describe('Extraction cases (M44)', () => {
     expect(round.run.carried).toEqual([]);
   });
 
+  it('uses a resupply once: picking up what you dropped doesn’t top your magazines up again', () => {
+    const both: CaseSetup = { ...CASES[0]!, find: { fc: 30, resupply: true, item: null } };
+    const ctx: RoundContext = { ...CTX, extraction: { ...X, cases: [both] } };
+    const cs = squadAndHome();
+    const round = createRoundState(RULES, 'extraction');
+    startRun(round, cs, ctx);
+    const you = cs[0]!;
+    const run = (seconds: number): void => {
+      const bbs = createBBPool(4);
+      for (let i = 0; i < Math.round(seconds / DT); i++) {
+        for (const c of cs) stepElimination(c, HITS, DT);
+        stepRound(round, cs, bbs, ctx, [], DT);
+      }
+    };
+    standAt(you, -11, 0);
+    you.using = true;
+    run(4.1);
+    expect(round.run.carried).toEqual([both.find]);
+    you.using = false;
+    hit(you);
+    run(HITS.callTime + 0.1);
+    for (const a of you.armament.ammo) a.pouch.fill(0);
+    standAt(you, -11, 0);
+    you.using = true;
+    run(DT);
+    expect(round.run.cases[1]!.open).toBe(true);
+    expect(round.run.carried).toEqual([both.find]);
+    for (const a of you.armament.ammo) for (const m of a.pouch) expect(m).toBe(0);
+  });
+
   it('leaves the cases to the runner: a teammate holding Use beside one opens nothing', () => {
     const cs = squadAndHome();
     const round = newRun(cs);

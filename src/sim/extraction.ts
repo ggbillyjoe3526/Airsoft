@@ -410,7 +410,8 @@ function stepCases(run: RunState, runner: Character, rules: ExtractionRules, eve
   }
   k.open = true;
   for (const f of k.finds) {
-    if (f.resupply) refillSpares(runner.armament);
+    // A resupply was used where it was found; what you dropped holds only what you carried.
+    if (f.resupply && !k.dropped) refillSpares(runner.armament);
     if (f.fc > 0 || f.item) run.carried.push(f);
   }
   stopOpening(run);
