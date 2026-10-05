@@ -30,6 +30,8 @@ export interface PlayerCommand {
   switchTo: number;
   /** Step the active replica's fire selector to its next mode (one-shot). */
   cycleFireMode: boolean;
+  /** Use key held (M44): opens the case beside you in Extraction. */
+  use: boolean;
 }
 
 export function createCommand(): PlayerCommand {
@@ -48,5 +50,6 @@ export function createCommand(): PlayerCommand {
     reload: false,
     switchTo: -1,
     cycleFireMode: false,
+    use: false,
   };
 }

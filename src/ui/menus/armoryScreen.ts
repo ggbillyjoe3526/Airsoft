@@ -22,9 +22,9 @@ import {
 } from '../../pool/armory';
 import type { Collection, ItemRef } from '../../pool/collection';
 import { type Asset, comesIn, fcPerToken, isChase, type Pool } from '../../pool/pool';
-import { tierLine } from '../performanceSheet';
 import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
-import { itemIcon } from './icons';
+import { tierLine } from '../performanceSheet';
+import { CATEGORY_LABELS, itemTile, tierLabel } from './itemTile';
 import { backButton, el, menuButton, menuPage } from './menuParts';
 
 export interface ArmoryOptions {
@@ -38,19 +38,6 @@ export interface ArmoryOptions {
   onChange: () => void;
   onBack: () => void;
 }
-
-/** The category names the collection list groups items under, in the pool's order. */
-const CATEGORY_LABELS: Readonly<Record<Asset['category'], string>> = {
-  replica: 'Replicas',
-  power: 'Power sources',
-  optic: 'Optics',
-  grip: 'Grips',
-  laser: 'Lasers',
-  magazine: 'Magazines',
-  barrel: 'Barrels',
-  muzzle: 'Muzzle parts',
-  grenade: 'Grenades',
-};
 
 /** "1,600 FC". */
 export function fcText(fc: number): string {
@@ -314,7 +301,7 @@ export class ArmoryScreen {
         }),
       );
       b.dataset.action = `scrap1-${r.asset.id}`;
-      b.setAttribute('aria-label', `${ARMORY_TEXT.scrapOne} ${this.tierLabel(one)} ${r.asset.name} for ${fcText(oneFc)}`);
+      b.setAttribute('aria-label', `${ARMORY_TEXT.scrapOne} ${tierLabel(this.pool, one)} ${r.asset.name} for ${fcText(oneFc)}`);
       row.append(b);
     }
     if (r.spares > 1) {
@@ -349,27 +336,7 @@ export class ArmoryScreen {
   }
 
   private tile(item: ItemRef, note: string): HTMLDivElement {
-    const asset = this.pool.byId.get(item.asset)!;
-    const tile = el('div', 'item-tile armory-tile');
-    tile.dataset.tier = item.tier;
-    // The category with its drawing at the top (FA13), what it is at the bottom: tiles with a one-line name keep the same head.
-    const kind = el('span', 'item-note item-kind');
-    kind.innerHTML = itemIcon(asset);
-    kind.append(el('span', '', CATEGORY_LABELS[asset.category]));
-    tile.append(kind, el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(item)));
-    const adds = tierLine(this.pool, item);
-    if (adds) {
-      // A square tile holds three lines of it; the whole line is on hover and in the collection list.
-      const line = el('span', 'item-note tier-adds', adds);
-      line.title = adds;
-      tile.append(line);
-    }
-    tile.append(el('span', 'item-note', note));
-    return tile;
-  }
-
-  private tierLabel(item: ItemRef): string {
-    return this.pool.tiers.find((t) => t.id === item.tier)?.label ?? item.tier;
+    return itemTile(this.pool, item, note);
   }
 }
 

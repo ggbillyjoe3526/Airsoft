@@ -284,7 +284,7 @@ along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramp
 when body height is clear between them), spawns and dead-zone spots
 per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
 without one are elimination only) and an Extraction block (M43: insertions, exits, home-team starts, run time and base
-opponents; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
+opponents; M44: case spots, each naming the kinds of case it suits; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
 at an end every round start (in Attack / Defend the attackers start at end 0; in Elimination Blue starts at
 `RoundRules.eliminationFirstEnd`, the east on Depot)
 and swaps them at half-time, and `Character.end` says where a character started, for its dead zone and its bot's
@@ -309,7 +309,11 @@ request. Each line names where it lives and what pins it.
 - **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`): plain data, no Three.js or DOM; events are
   the only channel to presentation and are cleared each tick. Since M43 `RoundState.run` holds an Extraction run
   (`sim/extraction.ts`: exits, respawns used, the exit count, its outcome), and the events `respawned`, `exitCount`,
-  `exitOpened` and `runWarning` report it. Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`.
+  `exitOpened` and `runWarning` report it. Since M44 the run also holds its cases (placed and filled before it starts by
+  `pool/caches.ts rollRunCases`, carried in `ExtractionContext.cases`), what the runner carries, and the case being
+  opened; `PlayerCommand.use` (held) becomes `Character.using` for a character in play while the round is live, and
+  the events `caseNoise` (bots hear it), `caseOpened` and `caseDropped` report the cases. Pinned by
+  `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step, FA1); randomness only from `state.rng`. Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/`, implemented by `physics/physicsWorld.ts`): ray and shape casts and
@@ -333,7 +337,7 @@ request. Each line names where it lives and what pins it.
   the stores as their own modules store them. A save from any earlier `format` loads (one `MIGRATIONS` step per
   format); a later one is refused. `SAVE_FORMAT` goes up with any store's version or a new store (`STORES_BY_FORMAT`).
   Pinned by `save/saveFile.test.ts`.
-- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). An Access column on every asset table, `public` or `dev` (M35; blank reads as public, any other word leaves the row out). Pinned by `pool/pool.test.ts`.
+- **`pool.md`'s format** (`pool/poolFile.ts`): the hand-edited asset register the game reads. Power sources carry a Type, not a Power % (M29: what they do is in stats.md). A Pity table (`| Guarantee | Shots |`) and an "Unowned item weight" row in Tokens and Shots (FA10). Replicas have two optional columns, Tiers (the tiers an asset comes in) and Drop % (a chase item's own chance per Shot item), and the `built-in-power` tag for a replica whose power source is fixed (M32). An Access column on every asset table, `public` or `dev` (M35; blank reads as public, any other word leaves the row out). A Caches table (M44: `| Case | Key | Per run | Open s | Heard m | FC | BB resupply % | Part % | Parts from |`, `Pool.caseKinds`; the Key is what map data's case spots name, and a missing or unreadable table falls back to the shipped rows). Pinned by `pool/pool.test.ts`, `pool/caches.test.ts`.
 - **`stats.md`'s format** (`config/statsFile.ts`, M29): the hand-edited performance numbers (replicas and parts by Key,
   power sources by pool ID, Barrels and Muzzle parts by Key (M29b), Tier scaling, Site limits) the config modules lay
   over their built-in ones. Pinned by
@@ -349,5 +353,5 @@ request. Each line names where it lives and what pins it.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
   are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
   time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
-  `extraction`. Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
+  `extraction` (M44 adds its `cases`). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
   `map/extractionData.test.ts`.

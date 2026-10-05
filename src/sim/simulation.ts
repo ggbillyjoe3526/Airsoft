@@ -144,6 +144,7 @@ export function stepSimulation(
     }
     if (inPlay) stepAiming(c, cmd);
     else c.aiming = false;
+    c.using = inPlay && live && cmd.use;
     stepMovement(c, cmd, ctx.movement, dt, ctx.mover, ctx.scratch);
     rescueIfOutOfWorld(c, ctx.killY);
     stepLean(c, cmd, ctx.body, ctx.hits, ctx.movement, ctx.query, dt);

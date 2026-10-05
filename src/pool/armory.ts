@@ -29,6 +29,11 @@ export interface MatchOutcome {
    * capped at CUSTOM_RULES_PAY_CAP (Pro's ×2 is for the named rulesets). Absent: the standard match.
    */
   customRules?: boolean;
+  /**
+   * Extraction (M44): what the runner got out with, which goes into the collection with the pay, in the same save
+   * (settleMatch). Absent in the other modes and for a run that didn't extract.
+   */
+  haul?: { fc: number; items: readonly ItemRef[] };
 }
 
 /** A match's Field Credits, line by line as the summary shows them, and the total (after the difficulty). */
@@ -141,10 +146,10 @@ export function pityLeft(pool: Pool, c: Collection): { tier: RarityTier; shots: 
 }
 
 /** The asset of a draw at `tier`: any In Shots asset, one not yet owned at that tier (nor drawn already) weighted up. */
-function drawAsset(assets: readonly Asset[], tier: RarityTier, c: Collection, drawn: ReadonlySet<string>, weight: number, rng: RngState): Asset {
+function drawAsset(assets: readonly Asset[], tier: RarityTier, owned: Readonly<Record<string, number>>, drawn: ReadonlySet<string>, weight: number, rng: RngState): Asset {
   const w = (a: Asset): number => {
     const key = itemKey(a.id, tier.id);
-    return (c.owned[key] ?? 0) > 0 || drawn.has(key) ? 1 : weight;
+    return (owned[key] ?? 0) > 0 || drawn.has(key) ? 1 : weight;
   };
   let roll = rngNext(rng) * assets.reduce((sum, a) => sum + w(a), 0);
   for (const a of assets) {
@@ -207,7 +212,7 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy =
     for (let i = 0; i < perShot; i++) {
       const chased = drawChase(chase, rng);
       const tier = chased ? drawTier(tiersOf(pool, chased), rng) : drawTier(pool.tiers, rng);
-      const asset = chased ?? drawAsset(comingIn(tier), tier, c, drawn, e.unownedWeight, rng);
+      const asset = chased ?? drawAsset(comingIn(tier), tier, c.owned, drawn, e.unownedWeight, rng);
       drawn.add(itemKey(asset.id, tier.id));
       draws.push({ asset, tier });
     }
@@ -219,7 +224,7 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy =
       for (let i = draws.length - 1; i >= 0; i--) if (rank(draws[i]!.tier) < rank(draws[at]!.tier)) at = i;
       const tier = drawTier(pool.tiers, rng, floor);
       const others = new Set(draws.flatMap((d, i) => (i === at ? [] : [itemKey(d.asset.id, d.tier.id)])));
-      draws[at] = { tier, asset: drawAsset(comingIn(tier), tier, c, others, e.unownedWeight, rng) };
+      draws[at] = { tier, asset: drawAsset(comingIn(tier), tier, c.owned, others, e.unownedWeight, rng) };
     };
     if (tenFloor >= 0) {
       tenMet ||= draws.some((d) => rank(d.tier) >= tenFloor);
@@ -241,6 +246,34 @@ export function takeShots(pool: Pool, c: Collection, count: ShotCount, entropy =
   }
   c.seed = rng.s;
   return out;
+}
+
+/**
+ * A part found in an Extraction case (M44): drawn like a Shot's item (its tier by the Rarity odds from tier `from` up,
+ * then an asset that comes in it, one not owned at that tier, nor already `drawn` this run, `unownedWeight` times
+ * likelier), from the parts Shots can give (dispensable: never dev gear; no replicas, so no chase items). Pity is
+ * neither counted nor used: its guarantees are about Shots. Null with nothing to draw. Pure (it only moves `rng`).
+ */
+export function drawPart(pool: Pool, owned: Readonly<Record<string, number>>, from: string, drawn: ReadonlySet<string>, rng: RngState): ItemRef | null {
+  const parts = pool.assets.filter((a) => dispensable(a) && a.category !== 'replica' && !isChase(a));
+  if (parts.length === 0 || pool.tiers.length === 0) return null;
+  const tier = drawTier(pool.tiers, rng, Math.max(0, pool.tiers.findIndex((t) => t.id === from)));
+  const own = parts.filter((a) => comesIn(a, tier.id));
+  const asset = drawAsset(own.length > 0 ? own : parts, tier, owned, drawn, pool.economy.unownedWeight, rng);
+  return { asset: asset.id, tier: tier.id };
+}
+
+/**
+ * An Extraction haul goes into the collection (M44): its Field Credits earned and each part added, in the order found;
+ * the caller saves once. Returns the parts as the Armory's reveal shows them (new, or a spare). Pity is untouched.
+ */
+export function grantHaul(c: Collection, haul: { fc: number; items: readonly ItemRef[] }): Dispensed[] {
+  earn(c, haul.fc);
+  return haul.items.map((item) => {
+    const isNew = ownedCount(c, item) === 0;
+    addItem(c, item);
+    return { item, isNew };
+  });
 }
 
 /**

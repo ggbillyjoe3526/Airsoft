@@ -84,6 +84,8 @@ export interface Character {
    * walking pace. Bots never aim down sights.
    */
   aiming: boolean;
+  /** Holding the Use key this tick while in play (M44: opens a case in Extraction). Bots never use it. */
+  using: boolean;
   /** Seconds left in which a sprint's or a jump's shake still settles slowly (sim/accuracy.ts); 0 = locks on fast. */
   shakeCarry: number;
   armament: Armament;
@@ -139,6 +141,7 @@ export function createCharacter(
     stillTime: 0,
     shakeCarry: 0,
     aiming: false,
+    using: false,
     armament: createArmament(loadout),
     ghost: false,
   };
@@ -201,6 +204,7 @@ export function respawnCharacter(c: Character): void {
   c.stillTime = 0;
   c.shakeCarry = 0;
   c.aiming = false;
+  c.using = false;
   c.status = 'alive';
   c.statusTime = 0;
   c.hitBy = -1;

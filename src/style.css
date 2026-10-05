@@ -2607,6 +2607,58 @@ kbd {
   display: none;
 }
 
+/* Extraction's case prompt (M44): under the crosshair, "Hold G to open the field case", then a bar while you hold it */
+.case-prompt {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  translate: -50% 0;
+  scale: var(--hud-scale, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--hud-panel);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--paper);
+  text-shadow: var(--hud-shadow);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.case-prompt[hidden],
+.case-prompt-bar[hidden] {
+  display: none;
+}
+
+.case-prompt-bar {
+  width: 160px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.2);
+  overflow: hidden;
+}
+
+.case-prompt-fill {
+  width: 0;
+  height: 100%;
+  background: var(--paper);
+}
+
+/* The haul on the match summary (M44): its line, then the parts as the Armory reveals them */
+.summary-haul:empty {
+  display: none;
+}
+
+.summary-haul .armory-reveal-grid {
+  margin-top: 8px;
+}
+
 /* The minimap (M23), top left: the field round you, turned with your view (drawn on a canvas, ui/minimap.ts) */
 .minimap {
   position: absolute;

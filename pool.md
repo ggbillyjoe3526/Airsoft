@@ -205,6 +205,23 @@ has 15 % less spread, a 15 % quicker reload and draw, and 7.5 % more energy and 
 more rate of fire; a Legendary gas 7.5 % more energy; optics, grips, lasers, magazines, barrels and muzzle parts
 handle better (and a barrel shoots a little tighter).
 
+### Caches
+
+The cases an Extraction run places (M44, dev content for now). Each run's seed picks how many of each kind it gets
+(Per run), which of the map's case spots they stand on, and what each holds. You open a case by holding the Use key
+beside it for Open s seconds; while you do it makes a noise the bots hear within Heard m. Its Field Credits are rolled
+in the FC range; on its BB resupply % chance it holds a resupply instead (your spare magazines topped up there and
+then), and on its Part % chance it also holds one part, drawn like a Shot's: its tier by the Rarity odds from the
+Parts from tier up, then an asset by "Unowned item weight". Cases never give dev gear or replicas and never count
+towards Pity. What you find is yours only if you extract: a hit drops it where you fell (go back for it), and a run
+that ends any other way keeps nothing. Key is what the maps' case spots use; leave it as it is.
+
+| Case | Key | Per run | Open s | Heard m | FC | BB resupply % | Part % | Parts from |
+|---|---|---|---|---|---|---|---|---|
+| Ammo can | ammo-can | 4 to 6 | 2 | 8 | 15 to 40 | 40 | 0 | Common |
+| Field case | field-case | 2 to 3 | 4 | 14 | 40 to 80 | 0 | 30 | Common |
+| Marshal's locker | locker | 1 | 7 | 30 | 100 to 150 | 0 | 100 | Rare |
+
 ---
 
 ## Assets

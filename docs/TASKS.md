@@ -57,18 +57,6 @@ tagged dev with M35's content tag until the owner says it's done. M33 owns the m
 optional `extraction` block), the Pro thread owns held angles and team play (M37, M38): changes there go through the
 coordinator.
 
-## M44 · Extraction: cases and loot
-tier: core
-perf: required
-touches: src/sim/extraction.ts, src/config/extraction.ts, pool.md, src/pool/, src/map/mapTypes.ts, src/map/depot.ts, src/render/, src/ui/, src/config/controls.ts, src/input/, src/matchSession.ts, src/game.ts, src/save/, src/style.css, src/audio/
-acceptance:
-  1. Case spots in map data; each run's seed places ammo cans, field cases and one marshal's locker and rolls their contents from a Caches table in pool.md.
-  2. A rebindable Use key opens a case by holding it (2 / 4 / 7 s), with a noise bots hear; contents are FC bundles, BB resupplies (used at once) and pool parts drawn like a Shot's (rarity odds, unowned weight), never dev gear without Dev content, never touching pity.
-  3. A hit drops what you carry as a case where you fell; finds reach the collection only when you extract, in one save.
-  4. The summary reveals the haul with the Armory's rarity colours.
-status: open
-attempts: 0
-
 ## M45 · Extraction: waves and regen points
 tier: core
 perf: required
