@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { buildForearm, buildHand, type FingerCurl, type HandPose } from './handModels';
+import { buildForearm, buildHand, type FingerCurl, type GeometrySink, type HandPose, type V3 } from './handModels';
+import { buildRobotForearm, buildRobotHand } from './robotHands';
+import { FIGURE } from '../config/characters';
+import { figurePalette, robotShell } from './figurePalette';
 import type { MagazineId } from '../config/attachments';
 import type { DetailLevel } from '../config/render';
 import { REPLICA_FINISH } from '../config/replicaFinish';
@@ -97,7 +100,7 @@ export interface ReplicaColours {
  * guns. High detail (FA8): the speckle maps on polymer and rubber, vertex colours for the edge highlight, metallic steel
  * under a sheen, a glossy glass, a glowing laser lens.
  */
-function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: SpeckleTextures | null, colours: ReplicaColours, cyber: CyberColours): Record<MaterialKey, THREE.Material> {
+function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: SpeckleTextures | null, colours: ReplicaColours, cyber: CyberColours, arms: ArmStyle): Record<MaterialKey, THREE.Material> {
   const vertexColors = coloured(detail);
   const mean = F.speckle.grey / 255;
   const speckled = (color: number, roughness: number): THREE.MeshStandardMaterial =>
@@ -142,17 +145,56 @@ function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: Spec
       ? new THREE.MeshStandardMaterial({ color: F.torch.lensOff, emissive: TORCHES.weaponTorch.colour, emissiveIntensity: 0, roughness: 0.1, metalness: 0 })
       : new THREE.MeshBasicMaterial({ color: F.torch.lensOff }),
     bb: new THREE.MeshStandardMaterial({ color: F.witnessBb, roughness: 0.35, metalness: 0, vertexColors }),
-    // Olive gloves: clearly separate from the replica's colours.
-    glove: new THREE.MeshStandardMaterial({ color: 0x5d6146, roughness: 0.9, metalness: 0, vertexColors }),
-    sleeve: new THREE.MeshStandardMaterial({ color: 0x4a525c, roughness: 1, metalness: 0, vertexColors }),
-    // Team tape on the sleeve, as players wear at real sites.
-    armband: new THREE.MeshStandardMaterial({ color: teamColor, roughness: 0.7, metalness: 0, vertexColors }),
+    ...armMaterials(teamColor, arms, vertexColors),
   };
   // Vertex colours only darken (a colour can't pass white), so flat faces sit at VERTEX_BASE and the material is that
   // much brighter: a flat face is its colour as before, a bevel or worn edge lighter.
   if (vertexColors) for (const mat of Object.values(materials)) if (mat instanceof THREE.MeshStandardMaterial && mat.vertexColors) brighten(mat);
   return materials;
 }
+
+/**
+ * Whose arms hold the replicas (G7): the player's own, gloved, in their team's camo; or, when their slot is a robot (the
+ * Robots setting), a robot's, in the shell its figure wears (FIGURE.robot.shells by team).
+ */
+export interface ArmStyle {
+  robot: boolean;
+  shell: number;
+}
+
+/** A player's gloved arms. */
+export const HUMAN_ARMS: ArmStyle = { robot: false, shell: robotShell(0) };
+
+/**
+ * The arms' three materials, as the figures wear them (G7): dark gloves and the team's camo sleeves (figurePalette), or
+ * a robot's dark joints and satin shell; the team colour on the armband (a robot's panel) either way. Gloves and sleeves
+ * were olive and grey before; the same three materials, so neither costs a draw call more.
+ */
+function armMaterials(teamColor: number, arms: ArmStyle, vertexColors: boolean): Pick<Record<MaterialKey, THREE.Material>, 'glove' | 'sleeve' | 'armband'> {
+  const fabric = (color: number, roughness: number, metalness = 0): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({ color, roughness, metalness, vertexColors });
+  const [shellRough, shellMetal] = FIGURE.finish.robot;
+  return arms.robot
+    ? {
+        glove: fabric(FIGURE.robot.joint, FIGURE.finish.rubber[0]),
+        sleeve: fabric(arms.shell, shellRough, shellMetal),
+        armband: fabric(teamColor, shellRough, shellMetal),
+      }
+    : {
+        glove: fabric(FIGURE.colors.glove, 0.9),
+        sleeve: fabric(figurePalette(teamColor).camo, 1),
+        // Team tape on the sleeve, as players wear at real sites.
+        armband: fabric(teamColor, 0.7),
+      };
+}
+
+/** The hand and forearm builders for a style of arms. */
+interface ArmBuilders {
+  hand: (sink: GeometrySink, pose: HandPose, detail: DetailLevel) => V3;
+  forearm: (sink: GeometrySink, wrist: V3, elbow: V3, elbowRadius: number | undefined, detail: DetailLevel) => void;
+}
+
+const GLOVED: ArmBuilders = { hand: buildHand, forearm: buildForearm };
+const ROBOT: ArmBuilders = { hand: buildRobotHand, forearm: buildRobotForearm };
 
 /** A painted line, or (glow) one lit from within: emissive in its colour, so it reads in the dark and blooms where bloom is on. */
 function accentMaterial(color: number, glow: boolean, vertexColors: boolean): THREE.MeshStandardMaterial {
@@ -866,7 +908,7 @@ export type HandsShown = 'hands' | 'bare';
  * cheek riser and a block butt. Flip-up iron sights (folded down when an optic is fitted), a birdcage flash hider. The
  * optic is its own part, shown only when one is fitted. Every hand point and envelope is as before (AEG_HANDGUARD).
  */
-function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
+function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null): ReplicaModel {
   const b = new ModelBuilder(detail);
   // Upper receiver: the chamfered slab, its rail, the side plate over the ejection port, forward assist and charging handle.
   b.profile('polymer', [[-0.116, 0.012], [0.15, 0.012], [0.15, 0.058], [-0.094, 0.058], [-0.116, 0.04]], 0.056, 0.004);
@@ -933,20 +975,20 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   sightsDown.box('detail', 0.362, 0.396, 0.082, 0.089, 0.024);
 
   const support = new ModelBuilder(detail);
-  if (hands === 'hands') {
+  if (arms) {
     // Right hand on the pistol grip: back of the hand to the right, knuckle row running down the grip, three fingers
     // wrapped round its front, index finger straight along the frame (trigger discipline), thumb across the left of the
     // receiver.
-    const rightWrist = buildHand(
+    const rightWrist = arms.hand(
       b,
       { side: 'right', palm: [0.034, -0.092, -0.074], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.9, curl: [0.3, 0.3] } },
       detail.hands,
     );
-    buildForearm(b, rightWrist, [0.2, -0.3, -0.42], undefined, detail.hands);
+    arms.forearm(b, rightWrist, [0.2, -0.3, -0.42], undefined, detail.hands);
     // Left hand cradling the handguard: palm underneath, index finger forward, fingers curling up the right side, thumb
     // up the left side. Its own part: on reloads it cups the magazine's base plate.
-    const leftWrist = buildHand(support, AEG_SUPPORT_POSE, detail.hands);
-    buildForearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
+    const leftWrist = arms.hand(support, AEG_SUPPORT_POSE, detail.hands);
+    arms.forearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
   }
 
   const group = b.build(m);
@@ -963,19 +1005,19 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
 }
 
 /** The pistols' two-handed grip (the Gas and Cyber Pistols share the grip's line): the right hand round the grip, index finger along the frame; the left pressed against the grip, its fingers over the right hand's. */
-function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDetail): void {
-  const rightWrist = buildHand(
+function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDetail, arms: ArmBuilders): void {
+  const rightWrist = arms.hand(
     b,
     { side: 'right', palm: [0.03, -0.068, -0.078], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.6, curl: [0.2, 0.2] } },
     detail.hands,
   );
-  buildForearm(b, rightWrist, [0.1, -0.26, -0.3], undefined, detail.hands);
-  const leftWrist = buildHand(
+  arms.forearm(b, rightWrist, [0.1, -0.26, -0.3], undefined, detail.hands);
+  const leftWrist = arms.hand(
     support,
     { side: 'left', palm: [-0.034, -0.072, -0.066], across: GRIP_DOWN, back: [-1, 0, 0], fingers: [SUPPORT, SUPPORT, SUPPORT, SUPPORT], thumb: { swing: 0.3, curl: [0.1, 0.1] } },
     detail.hands,
   );
-  buildForearm(support, leftWrist, [-0.16, -0.26, -0.28], undefined, detail.hands);
+  arms.forearm(support, leftWrist, [-0.16, -0.26, -0.28], undefined, detail.hands);
 }
 
 /**
@@ -983,7 +1025,7 @@ function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDeta
  * along both sides, a frame with a railed dust cover and a squared trigger guard, a rectangular grip at a steady rake
  * with a short beavertail. High: front and rear serrations, stippled grip panels and a thumb ledge.
  */
-function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
+function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null): ReplicaModel {
   const b = new ModelBuilder(detail);
   // Slide, its accent line, the barrel hood in the ejection port, sights, muzzle.
   b.profile('polymer', [[-0.09, 0.0], [0.1, 0.0], [0.1, 0.03], [0.092, 0.036], [-0.08, 0.036], [-0.09, 0.03]], 0.032, 0.003);
@@ -1014,7 +1056,7 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
   if (b.high) b.crossTube('metal', 0.0, -0.017, 0.0022, 0.012, 0, 8); // its pivot pin
 
   const support = new ModelBuilder(detail);
-  if (hands === 'hands') pistolHands(b, support, detail);
+  if (arms) pistolHands(b, support, detail, arms);
   const group = b.build(m);
   for (const [name, draw] of Object.entries(PISTOL_PARTS)) group.add(drawnPart(draw, m, detail, name));
   group.getObjectByName('laser:redLaser')?.add(laserBeam(PISTOL_LASER_LENS));
@@ -1035,7 +1077,7 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
  * turns it grey and unlit). A top fin sight, a dark muzzle with a ring of light. It sits in the hands like the Gas
  * Pistol (the same grip line and hold), so the hands and the figures' pistol pose fit it unchanged.
  */
-function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
+function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null): ReplicaModel {
   const b = new ModelBuilder(detail);
   const muzzle = CYBER_MUZZLE.barrelEnd;
   // The slab over the barrel, chamfered nose and sloped back; the dust cover under it.
@@ -1062,7 +1104,7 @@ function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boo
   }
 
   const support = new ModelBuilder(detail);
-  if (hands === 'hands') pistolHands(b, support, detail);
+  if (arms) pistolHands(b, support, detail, arms);
   const group = b.build(m);
   for (const [name, draw] of Object.entries(CYBER_PARTS)) group.add(drawnPart(draw, m, detail, name));
   const magazine = magazinePart(CYBER_MAGAZINES, m, detail, GRIP_DOWN);
@@ -1161,14 +1203,14 @@ export const RAISED_HAND_POSE: HandPose = {
 };
 
 /** Left hand raised to call a hit: palm facing forward, fingers up, forearm dropping out of view. */
-function buildRaisedHand(m: Record<MaterialKey, THREE.Material>, detail: ReplicaDetail): THREE.Group {
+function buildRaisedHand(m: Record<MaterialKey, THREE.Material>, detail: ReplicaDetail, arms: ArmBuilders): THREE.Group {
   const b = new ModelBuilder(detail);
-  const wrist = buildHand(
+  const wrist = arms.hand(
     b,
     RAISED_HAND_POSE,
     detail.hands,
   );
-  buildForearm(b, wrist, [wrist[0] + 0.03, wrist[1] - 0.3, wrist[2] - 0.08], undefined, detail.hands);
+  arms.forearm(b, wrist, [wrist[0] + 0.03, wrist[1] - 0.3, wrist[2] - 0.08], undefined, detail.hands);
   return b.build(m);
 }
 
@@ -1185,9 +1227,11 @@ export function buildReplicaModels(
   detail: ReplicaDetail = LOW_DETAIL,
   paint: ReplicaPaint | null = null,
   hands: HandsShown = 'hands',
+  arms: ArmStyle = HUMAN_ARMS,
 ): ReplicaModels {
   const speckle = detail.replica === 'high' ? speckleTextures() : null;
-  const materials = createMaterials(teamColor, detail, speckle, F.unpainted, CYBER_COLOURS.bold);
+  const materials = createMaterials(teamColor, detail, speckle, F.unpainted, CYBER_COLOURS.bold, arms);
+  const builders = arms.robot ? ROBOT : GLOVED;
   const models = new Map<string, ReplicaModel>();
   // Every material made for a replica's own colours, to dispose and to switch with the sheen (setReflections).
   const painted: THREE.Material[] = [];
@@ -1196,9 +1240,9 @@ export function buildReplicaModels(
     const own = coloursOf(r, slot, paint);
     const mats = own ? paintedMaterials(materials, detail, own.colours, own.cyber) : materials;
     for (const key of PAINTED) if (mats[key] !== materials[key]) painted.push(mats[key]);
-    models.set(r.id, build(mats, orangeTips, detail, hands));
+    models.set(r.id, build(mats, orangeTips, detail, hands === 'hands' ? builders : null));
   });
-  const raisedHand = buildRaisedHand(materials, detail);
+  const raisedHand = buildRaisedHand(materials, detail, builders);
   const metals = [materials.metal, ...painted.filter((m) => (m as THREE.MeshStandardMaterial).metalness > 0)] as THREE.MeshStandardMaterial[];
   return {
     models,

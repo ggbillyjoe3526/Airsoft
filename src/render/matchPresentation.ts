@@ -42,6 +42,7 @@ import type { FigureModel } from './externalModels';
 import { FlagRenderer } from './flagRenderer';
 import { projectMarker, type ScreenMarker } from './screenMarker';
 import { SpectatorCamera } from './spectatorCamera';
+import { type FigureCrowd, HUMAN_CROWD } from './figureMix';
 
 /** The exit markers' colour (EXIT_VISUALS.openColor as CSS). */
 const EXIT_CSS = cssColor(EXIT_VISUALS.openColor);
@@ -148,10 +149,12 @@ export class MatchPresentation {
     figureDetail: DetailLevel = 'low',
     /** Extraction's run context (M43): its exits are drawn and marked; undefined in the other modes. */
     private readonly extraction?: ExtractionContext,
+    /** Which figures are robots this match and whether replicas are in Realistic colours (G7, Settings › Look). */
+    crowd: FigureCrowd = HUMAN_CROWD,
   ) {
     this.keyName = keyName;
     // Each figure holds its own active replica (Armament.replicas): rifle or pistol pose.
-    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail);
+    this.characters = new CharacterRenderer(state.characters, teamColours.figures, hits, figureModel, figureDetail, crowd);
     this.flag = new FlagRenderer(teamColours.figures, rules.flag.radius);
     scene.add(this.characters.object, this.flag.object);
     this.feedback = new HitFeedback(container, () => keyName('fire'));

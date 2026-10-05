@@ -99,10 +99,12 @@ describe('night swatches: moonlit ground reads, browns stay brown (M52, audit RE
     }
   });
 
-  it('lights every figure’s face above its dark kit (before M52: 17 to 25 in its strongest channel)', () => {
-    for (const look of FIGURE.looks) {
-      const c = up(look.skin);
-      expect(Math.max(...c), `skin ${look.skin.toString(16)} ${c.join(',')}`).toBeGreaterThanOrEqual(30);
+  // G7 masked every face (no skin left to light): what must read at night now is the team colour on the carrier and
+  // helmet, and the robots' light shell, above the dark kit (M52's floor for the faces, 30, kept).
+  it('lights every team colour and the light robot shell above the dark kit (before M52: faces 17 to 25)', () => {
+    for (const colour of [...TEAM_COLORS, FIGURE.robot.shells[0]!]) {
+      const c = up(colour);
+      expect(Math.max(...c), `#${colour.toString(16)} ${c.join(',')}`).toBeGreaterThanOrEqual(30);
     }
   });
 
