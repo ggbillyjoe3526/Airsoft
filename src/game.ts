@@ -14,7 +14,7 @@ import { ARMORY_TEXT, BROWSER_NOTES } from './config/menus';
 import type { MatchMode } from './config/modes';
 import { MOVEMENT } from './config/movement';
 import { GRAPHICS_TEXT } from './config/graphics';
-import { FRAME_TIMING, type FrameRateCap, QUALITY, QUALITY_CHOICES, QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset, type QualitySettings } from './config/render';
+import { FRAME_TIMING, type FrameRateCap, type LightingPresetId, QUALITY, QUALITY_CHOICES, QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset, type QualitySettings } from './config/render';
 import { FramePacer } from './core/framePacer';
 import { SIM } from './config/sim';
 import { applyTeamCss, TEAM_COLOUR_SETS, TEAMS, type TeamColourSetId } from './config/teams';
@@ -24,6 +24,7 @@ import { Keyboard } from './input/keyboard';
 import { browserKeyboardMap, watchKeyboardLayout } from './input/keyboardLayout';
 import { PlayerInput } from './input/playerInput';
 import { PointerLock } from './input/pointerLock';
+import { mapUnderLighting } from './map/lightingChoice';
 import { type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
@@ -70,6 +71,7 @@ import {
   loadFov,
   loadFrameRateCap,
   loadInvertMouse,
+  loadLightingPicks,
   loadMap,
   loadMatchRules,
   loadMode,
@@ -180,6 +182,8 @@ export class Game {
   private unlockedPlay = false;
   /** New game's choices: the next Play builds the match from them. */
   private map: MapId;
+  /** Each map's Day or Night pick (M34d). */
+  private readonly lighting: Partial<Record<MapId, LightingPresetId>>;
   private mode: MatchMode;
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   private difficulty: Difficulty;
@@ -275,6 +279,7 @@ export class Game {
     this.renderer.setFov(loadFov());
     this.renderer.setToneMapping(loadToneMapping());
     this.map = loadMap();
+    this.lighting = loadLightingPicks();
     this.mode = loadMode();
     this.difficulty = loadDifficulty();
     this.teammateDifficulty = loadTeammateDifficulty();
@@ -378,6 +383,7 @@ export class Game {
       onSkipTutorialStep: () => this.skipTutorial(false),
       onSkipTutorial: () => this.skipTutorial(true),
       map: { initial: this.map, onChange: (m) => ((this.map = m), (this.setupChanged = true)) },
+      lighting: { initial: this.lighting, onChange: (m, light) => ((this.lighting[m] = light), (this.setupChanged = true)) },
       mode: { initial: this.mode, onChange: (m) => ((this.mode = m), (this.setupChanged = true)) },
       difficulty: { initial: this.difficulty, onChange: (d) => ((this.difficulty = d), (this.setupChanged = true)) },
       teammateDifficulty: { initial: this.teammateDifficulty, follows: !hasSavedTeammateDifficulty(), onChange: (d) => ((this.teammateDifficulty = d), (this.setupChanged = true)) },
@@ -766,7 +772,8 @@ export class Game {
       this.matchCounted = false;
       const picks = this.playedPicks();
       this.session = new MatchSession(this.renderer, this.container, this.input, {
-        map: mapData(picks.map),
+        // Under the map's Day or Night pick (M34d): the one lighting path, night sight and glowing BBs follow it.
+        map: mapUnderLighting(mapData(picks.map), this.lighting[picks.map]),
         mode: picks.mode,
         difficulty: picks.difficulty,
         teammateDifficulty: picks.teammateDifficulty,
