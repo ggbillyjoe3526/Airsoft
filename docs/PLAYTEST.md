@@ -1087,6 +1087,21 @@ symptom to its numbers):
 - Stands in the light at night: `darkSpotRadius`, `darkSpotStep`.
 - The card's "moving": `WHAT_GOT_YOU.movingSpeed` in `src/config/matchInfo.ts`; the tips: `PRO_TIPS` in `src/config/tutorial.ts`.
 
+## Extraction waves (M45, dev content)
+
+Dev content on, Extraction on Depot, Normal, as above.
+
+- [ ] **A wave:** hit one Orange bot early. It walks off; about a minute and a quarter into the run (75 s on Normal) it
+  is back in play somewhere you can't see, and comes your way along a lane. On Easy the wait is longer (100 s), on Hard
+  shorter (60 s).
+- [ ] **A cleared field:** hit every Orange bot in play. A couple of seconds after the last hit call, the wave comes back
+  at once rather than waiting for the clock: never a long safe spell.
+- [ ] **Never in your face:** nobody comes back within about 15 m of you or anywhere you're looking at (watch the regen
+  spots: both spawn yards, the office rooms, the stores and hall, the yards, the Bay, the back lot, the car park, the
+  dock). Tell me if one ever appears in view.
+- [ ] **The last third:** with 2:40 left one more Orange bot joins the next wave (the scoreboard keeps its usual pips).
+- [ ] **The rules text:** New game › Mode › Extraction says hit opponents come back in waves.
+
 ## Neon Heights by Night (M34e, dev content)
 
 Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Night is its default).

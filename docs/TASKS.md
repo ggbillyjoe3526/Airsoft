@@ -11,16 +11,6 @@ tagged dev with M35's content tag until the owner says it's done. M33 owns the m
 optional `extraction` block), the Pro thread owns held angles and team play (M37, M38): changes there go through the
 coordinator.
 
-## M45 · Extraction: waves and regen points
-tier: core
-perf: required
-touches: src/sim/extraction.ts, src/config/extraction.ts, src/config/bots.ts, src/map/mapTypes.ts, src/map/depot.ts, src/ai/, src/matchSession.ts
-acceptance:
-  1. Hit opponents re-enter in waves: every 75 s on Normal (100 Easy, 60 Hard) or as soon as all are out, up to the cap; one more in play in the last third.
-  2. Regen points are map data; a returner uses one at least 15 m (Depot) from every squad member and out of their sight; tested on every map with an extraction block.
-status: open
-attempts: 0
-
 ## M46 · Extraction: guards, patrols and hunters
 tier: core
 perf: required

@@ -422,6 +422,9 @@ export class BotController {
         const range =
           e.kind === 'sprint' ? cfg.footstepHearingSprint : e.kind === 'land' ? cfg.footstepHearingLand : e.kind === 'rattle' ? cfg.footstepHearingRattle : cfg.footstepHearingRun;
         if (walker && isInPlay(walker)) this.hear(walker.team, walker.position, walker.position, time, walker.position, range, walker.id);
+      } else if (e.type === 'returned') {
+        // Extraction (M45): an opponent back in a wave sets out afresh from its regen point.
+        for (const b of this.bots) if (b.character.id === e.characterId) this.sendBack(b);
       } else if (e.type === 'caseNoise') {
         // Extraction (M44): a case being opened carries as far as its kind's Heard m (pool.md Caches), walls muffling it.
         const opener = this.character(state, e.characterId);
@@ -692,6 +695,25 @@ export class BotController {
     const i = Math.min(this.sectorCols - 1, Math.max(0, Math.floor((x - nav.minX) / size)));
     const j = Math.min(this.sectorRows - 1, Math.max(0, Math.floor((z - nav.minZ) / size)));
     return j * this.sectorCols + i;
+  }
+
+  /**
+   * A bot back in play mid-round (an Extraction wave, M45): what it knew is forgotten, and it walks a random lane on
+   * from that lane's point nearest its regen point, towards the other end, as if it had come that far.
+   */
+  private sendBack(b: Bot): void {
+    const lanes = this.opts.lanes;
+    const lane = lanes.length > 0 ? Math.floor(rngNext(this.planRng) * lanes.length) : 0;
+    resetBot(b, lane, 0, this.world.cfg);
+    const points = lanes[lane];
+    if (!points || points.length === 0) return;
+    const p = b.character.position;
+    let nearest = 0;
+    for (let i = 1; i < points.length; i++) {
+      if (Math.hypot(points[i]!.x - p.x, points[i]!.z - p.z) < Math.hypot(points[nearest]!.x - p.x, points[nearest]!.z - p.z)) nearest = i;
+    }
+    // laneIndex is the point last reached: the nearest one comes next.
+    b.laneIndex = nearest - b.laneDir;
   }
 
   private character(state: GameState, id: number): Character | undefined {
