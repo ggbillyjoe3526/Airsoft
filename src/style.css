@@ -717,6 +717,46 @@ body {
   border: 6px solid var(--orange);
 }
 
+/* An option's switch (M34d: Day | Night on a map): drawn inside its option's box, under its name and description (a
+   sibling of the option's button, as a button can't hold buttons). */
+.choice-option.has-variants {
+  padding-bottom: calc(var(--sp-4) + var(--control-xs) + var(--sp-3));
+}
+
+.choice-variants {
+  position: relative;
+  display: flex;
+  gap: var(--sp-2);
+  margin: calc(-1 * (var(--control-xs) + var(--sp-4) + var(--sp-3))) 0 var(--sp-4) calc(var(--sp-5) + 18px + var(--sp-4) + 2px);
+}
+
+.choice-variants[hidden] {
+  display: none;
+}
+
+.choice-variant {
+  min-height: var(--control-xs);
+  padding: 0 var(--sp-4);
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--menu-soft);
+  background: transparent;
+  border: 2px solid var(--menu-line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.choice-variant:hover {
+  color: var(--paper);
+  border-color: var(--menu-muted);
+}
+
+.choice-variant[aria-pressed='true'] {
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border-color: var(--orange);
+}
+
 .choice-text {
   display: flex;
   flex-direction: column;

@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
+import type { LightingPresetId } from '../config/render';
+import { mapUnderLighting } from '../map/lightingChoice';
 import { NEON_HEIGHTS } from '../map/neonHeights';
 import { initPhysics } from '../physics/physicsWorld';
 import { expectGrounded, playMatch } from './depotMatchSupport';
@@ -10,7 +12,8 @@ const TEAM_SIZE = 4;
 /** Level 1's floor is at +3 m: anyone above this stands on Level 2 (or high on a stair to it). */
 const LEVEL_2 = 5;
 
-describe('a 4v4 Elimination match on Neon Heights over 16 seeds (M34c)', () => {
+describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Neon Heights by %s over 16 seeds (M34c, M34d)', (light) => {
+  const map = mapUnderLighting(NEON_HEIGHTS, light);
   beforeAll(async () => {
     await initPhysics();
   });
@@ -21,7 +24,7 @@ describe('a 4v4 Elimination match on Neon Heights over 16 seeds (M34c)', () => {
     let westWins = 0;
     let onTime = 0;
     for (let seed = 1; seed <= 16; seed++) {
-      const stats = playMatch(300, seed, undefined, BOTS, 'elimination', ROUNDS, NEON_HEIGHTS, TEAM_SIZE, HITS);
+      const stats = playMatch(300, seed, undefined, BOTS, 'elimination', ROUNDS, map, TEAM_SIZE, HITS);
       for (const r of stats.results) {
         rounds++;
         if (r.reason === 'time') onTime++;
@@ -31,11 +34,11 @@ describe('a 4v4 Elimination match on Neon Heights over 16 seeds (M34c)', () => {
       }
       // Bots fight on every floor: someone alive got up to Level 2 in every match, and nobody fell off anything.
       expect(stats.maxAliveY, `seed ${seed}`).toBeGreaterThan(LEVEL_2);
-      expectGrounded(stats, NEON_HEIGHTS);
+      expectGrounded(stats, map);
     }
     // Measured 2026-10-04: the west end won 45 % of the decided rounds here (32 of 71), none ran out the clock. Over
     // seeds 1-96 the west won 44.5 % (KNOWN_ISSUES: the east is a little stronger, as Depot's was before FA4) and 2
-    // rounds in 499 ran out the clock. Re-measure with this test after any layout or bot change.
+    // rounds in 499 ran out the clock. By night (M34d, 2026-10-05) the west won 43 % here (32 of 74), none on time. Re-measure with this test after any layout or bot change.
     expect(westWins / decided).toBeGreaterThanOrEqual(0.4);
     expect(westWins / decided).toBeLessThanOrEqual(0.6);
     expect(onTime / rounds).toBeLessThan(0.1);

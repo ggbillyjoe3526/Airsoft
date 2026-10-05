@@ -84,3 +84,65 @@ describe('ChoiceDialog and dev content (M35)', () => {
     expect(d.value).toBe('easy');
   });
 });
+
+describe('ChoiceDialog switches on an option (M34d: Day | Night)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('document', fakeDocument());
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A dialog where Hard offers Day and Night (as a map may) and the rest offer one side or none. */
+  const make = () => {
+    const sides: Partial<Record<Id, string>> = {};
+    const picks: [Id, string][] = [];
+    const changes: Id[] = [];
+    const d = new ChoiceDialog<Id>('Map', OPTIONS, 'easy', 'difficulty' as never, (id) => changes.push(id), {
+      variants: {
+        label: 'Light',
+        of: (id) => (id === 'hard' ? [{ id: 'day', label: 'Day' }, { id: 'night', label: 'Night' }] : id === 'normal' ? [{ id: 'day', label: 'Day' }] : []),
+        picked: (id) => sides[id] ?? 'night',
+        onPick: (id, side) => {
+          sides[id] = side;
+          picks.push([id, side]);
+        },
+      },
+    });
+    const list = (d.root as unknown as FakeElement).children[1]!;
+    const group = list.children.find((c) => c.className.includes('choice-variants'))!;
+    return { d, list, group, picks, changes };
+  };
+  const pressed = (group: FakeElement): string[] => group.children.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent);
+
+  it('shows a switch only under an option with two sides or more, right under it', () => {
+    const { list, group } = make();
+    expect(list.children.filter((c) => c.className.includes('choice-variants'))).toHaveLength(1);
+    const at = list.children.indexOf(group);
+    expect(list.children[at - 1]!.children[1]!.children[0]!.textContent).toBe('Hard');
+    expect(group.children.map((b) => b.textContent)).toEqual(['Day', 'Night']);
+    expect(group.getAttribute('aria-label')).toBe('Hard: Light');
+    expect(pressed(group)).toEqual(['Night']);
+  });
+
+  it('picks the side and its option together, and shows the side picked', () => {
+    const { d, group, picks, changes } = make();
+    d.setDevContent(true);
+    group.children[0]!.click();
+    expect(picks).toEqual([['hard', 'day']]);
+    expect(changes).toEqual(['hard']);
+    expect(d.value).toBe('hard');
+    expect(pressed(group)).toEqual(['Day']);
+    // The other side, with the option already picked: the side changes, the option stays.
+    group.children[1]!.click();
+    expect(picks).toEqual([['hard', 'day'], ['hard', 'night']]);
+    expect(changes).toEqual(['hard']);
+    expect(pressed(group)).toEqual(['Night']);
+  });
+
+  it('hides the switch with its option (a dev option while Dev content is off)', () => {
+    const { d, group } = make();
+    expect(group.hidden).toBe(true);
+    d.setDevContent(true);
+    expect(group.hidden).toBe(false);
+  });
+});

@@ -19,6 +19,19 @@ export interface ChoiceDialogExtras<T extends string> {
   soonTag?: string;
   /** What a dev pick plays as while Dev content is off (the list's default; else its first option). */
   fallback?: T;
+  /** A switch under the options that have more than one side (M34d: Day | Night on a map). */
+  variants?: ChoiceVariants<T>;
+}
+
+/**
+ * The sides of an option's switch (M34d): `of` lists them (fewer than two: no switch), `picked` says which is on, and
+ * `onPick` reports a side picked. Picking a side picks its option too.
+ */
+export interface ChoiceVariants<T extends string> {
+  label: string;
+  of: (id: T) => readonly { id: string; label: string }[];
+  picked: (id: T) => string;
+  onPick: (id: T, variant: string) => void;
 }
 
 /**
@@ -30,6 +43,9 @@ export interface ChoiceDialogExtras<T extends string> {
 export class ChoiceDialog<T extends string> {
   readonly root: HTMLDialogElement;
   private readonly buttons = new Map<T, HTMLButtonElement>();
+  /** Each switch under an option (M34d), with its sides' buttons. */
+  private readonly switches = new Map<T, { root: HTMLElement; sides: { id: string; button: HTMLButtonElement }[] }>();
+  private readonly variants: ChoiceVariants<T> | undefined;
   /** The `soon` entries' buttons, with their tags. */
   private readonly soonButtons: { entry: SoonEntry; button: HTMLButtonElement }[] = [];
   private readonly fallback: T;
@@ -48,6 +64,7 @@ export class ChoiceDialog<T extends string> {
   ) {
     this.current = initial;
     this.fallback = extras.fallback ?? options[0]!.id;
+    this.variants = extras.variants;
     const soonTag = extras.soonTag ?? '';
     this.root = el('dialog', 'menu-dialog');
     this.root.setAttribute('aria-label', title);
@@ -60,17 +77,38 @@ export class ChoiceDialog<T extends string> {
       const text = el('span', 'choice-text');
       text.append(el('span', 'choice-name', option.label), el('span', 'choice-blurb', option.blurb));
       button.append(el('span', 'choice-dot'), text);
-      button.addEventListener('click', () => {
+      const pick = (): void => {
         if (option.id !== this.current) {
           this.current = option.id;
           saveSetting(field, option.id);
           onChange(option.id);
-          this.refresh();
         }
+        this.refresh();
         this.close();
-      });
+      };
+      button.addEventListener('click', pick);
       list.append(button);
       this.buttons.set(option.id, button);
+      const sides = this.variants?.of(option.id) ?? [];
+      if (this.variants && sides.length > 1) {
+        const variants = this.variants;
+        const group = el('div', 'choice-variants');
+        group.setAttribute('role', 'group');
+        group.setAttribute('aria-label', `${option.label}: ${variants.label}`);
+        const made = sides.map((side) => {
+          const b = el('button', 'choice-variant', side.label);
+          b.type = 'button';
+          b.addEventListener('click', () => {
+            variants.onPick(option.id, side.id);
+            pick();
+          });
+          group.append(b);
+          return { id: side.id, button: b };
+        });
+        button.classList.add('has-variants');
+        list.append(group);
+        this.switches.set(option.id, { root: group, sides: made });
+      }
     }
     for (const entry of extras.soon ?? []) {
       const button = el('button', 'choice-option soon');
@@ -144,6 +182,11 @@ export class ChoiceDialog<T extends string> {
       button.classList.toggle('selected', on);
       button.setAttribute('aria-pressed', String(on));
       button.hidden = button.disabled = !isAvailable(option.tag, this.devContent) || !this.offered(option.id);
+      const sw = this.switches.get(option.id);
+      if (!sw) continue;
+      sw.root.hidden = button.hidden;
+      const side = this.variants!.picked(option.id);
+      for (const { id, button: b } of sw.sides) b.setAttribute('aria-pressed', String(id === side));
     }
     for (const { entry, button } of this.soonButtons) button.hidden = !isAvailable(entry.tag, this.devContent);
   }

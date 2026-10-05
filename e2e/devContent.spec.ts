@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
  * dev content today: with the switch off the Map pop-up doesn't list it at all; on, it is listed under Depot like any
  * other map and can be picked (M33d); off again, it is hidden and Depot plays, while the pick stays saved. A test of
  * its own, so the long match test in boot.spec.ts plays the same way as before. Neon Heights (M34c) is dev content too,
- * listed and hidden with Woodland, and the second test plays it. Uses `?nolock` like the other smoke tests.
+ * listed and hidden with Woodland, and the second test picks it by Day (M34d's switch) and plays it. Uses `?nolock` like the other smoke tests.
  */
 test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked, and hides it again', async ({ page }) => {
   const errors: string[] = [];
@@ -76,7 +76,7 @@ test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked
   expect(errors, errors.join(' | ')).toEqual([]);
 });
 
-test('Neon Heights (dev content, M34c) loads and plays: the city builds, the HUD and minimap come up, no errors', async ({ page }) => {
+test('Neon Heights (dev content, M34c) picked by Day (M34d) loads and plays: the city builds, the HUD and minimap come up, no errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
@@ -94,8 +94,13 @@ test('Neon Heights (dev content, M34c) loads and plays: the city builds, the HUD
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
   await setup.getByRole('button', { name: /Map/i }).click();
-  await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Neon Heights/i }).click();
-  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Neon Heights');
+  // Day or Night on the map's option (M34d): Night the first time; picking Day picks the map with that light.
+  const light = page.getByRole('dialog', { name: 'Map' }).getByRole('group', { name: 'Neon Heights: Light' });
+  await expect(light.getByRole('button', { name: 'Night' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('dialog', { name: 'Map' }).getByRole('group', { name: /Depot/ })).toHaveCount(0);
+  await light.getByRole('button', { name: 'Day' }).click();
+  await expect(page.getByRole('dialog', { name: 'Map' })).toBeHidden();
+  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Neon Heights · Day');
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   expect(await page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null)).toBe(true);
@@ -103,8 +108,14 @@ test('Neon Heights (dev content, M34c) loads and plays: the city builds, the HUD
   await expect(page.locator('.minimap')).toBeVisible();
   // It is Neon Heights that was built (the session's setup names the map), with both teams in its yards: 4v4 is its
   // standard team size, so at least six stand in play, and Neon Heights' yards are at x -20 and +22.6 (Depot's -22.7 and 24).
-  type Played = { airsoft: { session: { setup: { map: { name: string } } }; state: { tick: number; characters: { position: { x: number; y: number } }[] } } };
+  type Played = { airsoft: { session: { setup: { map: { name: string; night?: boolean; lighting?: { presets: string[] } } } }; state: { tick: number; characters: { position: { x: number; y: number } }[] } } };
   expect(await page.evaluate(() => (window as unknown as Played).airsoft.session.setup.map.name)).toBe('Neon Heights');
+  // Played by Day: the day preset first for the lighting path, and no night for the bots' sight or glowing BBs.
+  const lit = await page.evaluate(() => {
+    const m = (window as unknown as Played).airsoft.session.setup.map;
+    return { night: m.night, first: m.lighting?.presets[0] };
+  });
+  expect(lit).toEqual({ night: false, first: 'day' });
   const placed = () => page.evaluate(() => (window as unknown as Played).airsoft.state.characters.map((c) => c.position));
   const yards = await placed();
   expect(yards.length).toBeGreaterThanOrEqual(6);

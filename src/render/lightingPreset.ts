@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { type LightingPreset, type LightingPresetId, LIGHTING_PRESETS } from '../config/render';
 import type { LightingOverride, MapData } from '../map/mapTypes';
+import { lightingChoices, lightingPicked } from '../map/lightingChoice';
 import { mapBoundingBox } from './lighting';
 import type { EnvironmentLook } from './replicaSheen';
 
@@ -10,18 +11,15 @@ import type { EnvironmentLook } from './replicaSheen';
  * take what this resolves. Every map can use every preset: nothing here knows any map by name.
  */
 
-/** The presets a map offers, the first its default: day for a map that says nothing about its lighting. */
-export function lightingChoices(map: MapData): readonly LightingPresetId[] {
-  return map.lighting?.presets ?? ['day'];
-}
+// The presets a map offers and the pick among them live with the map data (M34d, map/lightingChoice.ts).
+export { lightingChoices };
 
 /**
  * The lighting preset a map is played under: `choice` if the map offers it (M34's match-start pick), else the map's
  * first; with the map's overrides laid over it, group by group, and its key light turned towards `moonOver`.
  */
 export function resolveLighting(map: MapData, choice?: LightingPresetId): LightingPreset {
-  const offered = lightingChoices(map);
-  const id = choice !== undefined && offered.includes(choice) ? choice : offered[0]!;
+  const id = lightingPicked(map, choice);
   const preset = withOverride(LIGHTING_PRESETS[id], map.lighting?.overrides?.[id]);
   const over = map.lighting?.moonOver;
   if (!over) return preset;

@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOTS } from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
+import type { LightingPresetId } from '../config/render';
+import { mapUnderLighting } from '../map/lightingChoice';
 import { NEON_HEIGHTS } from '../map/neonHeights';
 import { initPhysics } from '../physics/physicsWorld';
 import { expectGrounded, playMatch } from './depotMatchSupport';
@@ -8,7 +10,8 @@ import { expectGrounded, playMatch } from './depotMatchSupport';
 /** Neon Heights plays 4v4 (M34c). */
 const TEAM_SIZE = 4;
 
-describe('a 4v4 Attack / Defend match on Neon Heights over 16 seeds (M34c)', () => {
+describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Attack / Defend match on Neon Heights by %s over 16 seeds (M34c, M34d)', (light) => {
+  const map = mapUnderLighting(NEON_HEIGHTS, light);
   beforeAll(async () => {
     await initPhysics();
   });
@@ -19,7 +22,7 @@ describe('a 4v4 Attack / Defend match on Neon Heights over 16 seeds (M34c)', () 
     let captures = 0;
     let onTime = 0;
     for (let seed = 1; seed <= 16; seed++) {
-      const stats = playMatch(300, seed, undefined, BOTS, 'attackDefend', ROUNDS, NEON_HEIGHTS, TEAM_SIZE, HITS);
+      const stats = playMatch(300, seed, undefined, BOTS, 'attackDefend', ROUNDS, map, TEAM_SIZE, HITS);
       // The attackers always start at the west end; the flag is on the Tower's atrium floor.
       expect(stats.results.every((r) => r.attackerEnd === 0)).toBe(true);
       for (const r of stats.results) {
@@ -29,10 +32,10 @@ describe('a 4v4 Attack / Defend match on Neon Heights over 16 seeds (M34c)', () 
         if (r.winner === r.attackers) attackWins++;
         expect(r.length).toBeLessThanOrEqual(ROUNDS.roundTime + ROUNDS.flag.maxOvertime + 0.1);
       }
-      expectGrounded(stats, NEON_HEIGHTS);
+      expectGrounded(stats, map);
     }
     // Measured 2026-10-04: attackers won 40 of 86 rounds here (47 %), 8 by raising the flag, none on time. Over seeds
-    // 1-32 they won 54 %, 32 of 178 rounds by raising the flag. Re-measure with this test after any layout or bot
+    // 1-32 they won 54 %, 32 of 178 rounds by raising the flag. By night (M34d, 2026-10-05) they won 39 of 87 here (45 %), 10 by raising it, none on time. Re-measure with this test after any layout or bot
     // change.
     expect(attackWins / rounds).toBeGreaterThanOrEqual(0.4);
     expect(attackWins / rounds).toBeLessThanOrEqual(0.6);
