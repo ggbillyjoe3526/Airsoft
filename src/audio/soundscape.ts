@@ -1,4 +1,4 @@
-import { AMBIENCES, type Ambience, FIRE_SOUND, type LoopId } from '../config/audio';
+import { AMBIENCES, type Ambience, FIRE_SOUND, type LoopId, type ReverbSpec } from '../config/audio';
 import { cues, FOOTSTEP_PACES, isMapCue, type SoundCue } from '../config/sounds';
 import { buildGroundGrid, GROUND_SURFACES, type GroundGrid } from '../map/groundSurfaces';
 import type { MapData } from '../map/mapTypes';
@@ -7,7 +7,7 @@ import type { Vec3 } from '../sim/vec';
 /**
  * What a match sounds like where it is played (M33j), worked out once from the map's data and the lighting preset's night
  * flag, never from a map's name: the field's ambience by day or by night, the ground grid footsteps read on terrain (the
- * one the terrain is painted from), the camp fires that crackle, and the map cues and loops all that needs rendered.
+ * one the terrain is painted from), the camp fires that crackle, and the map cues, loops and echo all that needs rendered.
  * Pure data: no Web Audio.
  */
 export interface Soundscape {
@@ -20,10 +20,12 @@ export interface Soundscape {
   readonly cues: readonly SoundCue[];
   /** The loops it plays (config/audio.ts AMBIENT_LOOPS). */
   readonly loops: readonly LoopId[];
+  /** The echo every in-world sound feeds (its ambience's; M69, audit AUD-10): AUDIO.reverb is the yard's. */
+  readonly reverb: ReverbSpec;
 }
 
-/** The ambience's map cues and loops, plus the fire's crackle if there is a fire. */
-function needs(ambience: Ambience, fires: readonly Vec3[], ground: GroundGrid | null): Pick<Soundscape, 'cues' | 'loops'> {
+/** The ambience's map cues, loops and echo, plus the fire's crackle if there is a fire. */
+function needs(ambience: Ambience, fires: readonly Vec3[], ground: GroundGrid | null): Pick<Soundscape, 'cues' | 'loops' | 'reverb'> {
   const loops: LoopId[] = ambience.beds.map((b) => b.loop);
   if (fires.length > 0) loops.push(FIRE_SOUND.loop);
   const wanted: SoundCue[] = [];
@@ -33,7 +35,7 @@ function needs(ambience: Ambience, fires: readonly Vec3[], ground: GroundGrid | 
     const present = new Set(ground.surface);
     for (const id of present) for (const pace of FOOTSTEP_PACES) wanted.push(cues.step(GROUND_SURFACES[id]!, pace));
   }
-  return { cues: wanted.filter(isMapCue), loops: [...new Set(loops)] };
+  return { cues: wanted.filter(isMapCue), loops: [...new Set(loops)], reverb: ambience.reverb };
 }
 
 /** The soundscape of a field with no data for it, by day: the yard, with its birds (Depot, the range). */

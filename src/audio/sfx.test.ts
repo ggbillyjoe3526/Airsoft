@@ -1449,7 +1449,9 @@ describe('M33j: Depot sounds exactly as before (its Sfx node graph pinned)', () 
     sfx.impact(vec3(3, 0.5, 0), 'concrete');
     const ctx = FakeContext.last;
     expect(ctx.sources.filter((s) => s.loop)).toHaveLength(2);
-    expect(fingerprint(graphOf(ctx))).toBe('a6925abd');
+    // Re-baked by M69 (owner decision 19, audit AUD-09): the five one-shots' buffers (two bird calls, two concrete steps,
+    // an impact) end at -60 dB of their peak; every node, setting, connection, the bed and the yard's echo as before.
+    expect(fingerprint(graphOf(ctx))).toBe('3f17962a');
     expect([...engine.cueBuffers().keys()].some((c) => c.startsWith('step.grass') || c === 'ambience.owl')).toBe(false);
   });
 });
@@ -1781,7 +1783,7 @@ describe('M53: mix and placement (audit AUD-02, AUD-03, AUD-05, AUD-07, AUD-12)'
     expect(ctx.sources).toHaveLength(2 * AUDIO.exitOpened.beeps);
   });
 
-  it("starts the neon bed's second copy a fifth of a hum cycle past half a loop; the other beds half a loop on (AUD-02)", () => {
+  it("starts the neon bed's second copy 0.119 of a hum cycle past half a loop; the other beds half a loop on (AUD-02, AUD-11)", () => {
     const engine = engineFor();
     const sfx = new Sfx(LOADOUT, NEON_HEIGHTS.blocks, OPEN, engine);
     sfx.setScene(soundscapeOf(NEON_HEIGHTS, true));
@@ -1794,7 +1796,7 @@ describe('M53: mix and placement (audit AUD-02, AUD-03, AUD-05, AUD-07, AUD-12)'
       const half = (engine.loop(bed.loop) as unknown as FakeBuffer).duration / 2;
       expect(loops.slice(2 * i, 2 * i + 2).map((s) => s.offset), bed.loop).toEqual([0, half + (bed.copyOffset ?? 0)]);
     });
-    expect(beds.find((b) => b.loop === 'neon')!.copyOffset).toBeCloseTo(0.002, 9);
+    expect(beds.find((b) => b.loop === 'neon')!.copyOffset).toBeCloseTo(0.00119, 9);
     expect(beds.find((b) => b.loop === 'traffic')!.copyOffset).toBeUndefined();
   });
 });
@@ -2342,7 +2344,7 @@ describe('M65 QA (audit AUD-01): picks, Play, Dev content, the range and Quit ar
     engine.prefetch(() => woods);
     expect(spare.waiting()).toBe(1);
     // The title screen's last step is the yard's echo: no field sound is begun before it is made.
-    const echoMade = (): boolean => engine['reverb'] !== null;
+    const echoMade = (): boolean => engine['reverbs'].has(AUDIO.reverb);
     while (begun.size === 0) {
       expect(spare.waiting()).toBe(1);
       spare.run();
@@ -2388,5 +2390,140 @@ describe('M65 QA (audit AUD-01): picks, Play, Dev content, the range and Quit ar
         expect(prefetched(entry.id, pick)).toBe(field);
       }
     }
+  });
+});
+
+// ---- M69: an echo per field (audit AUD-10) ---------------------------------------------------------------------------------
+
+describe('M69 (audit AUD-10): each field echoes as its own place, from its ambience data, rendered ahead of Play', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const woods = AMBIENCES.woods.night.reverb;
+  const city = AMBIENCES.city.night.reverb;
+
+  /** The convolver and wet level of the match built last on `ctx`. */
+  function echoOf(ctx: FakeContext): { buffer: FakeBuffer; wet: number } {
+    const conv = ctx.convolvers.at(-1)!;
+    return { buffer: conv.buffer as FakeBuffer, wet: ([...conv.outputs][0] as FakeGain).gain.value };
+  }
+
+  /** Zero crossings per second of an impulse's first channel: brighter noise crosses more often. */
+  const crossingRate = (b: FakeBuffer): number => {
+    const d = b.getChannelData(0);
+    let n = 0;
+    for (let i = 1; i < d.length; i++) if (d[i - 1]! < 0 !== d[i]! < 0) n++;
+    return n / b.duration;
+  };
+
+  it("takes the echo from the field's ambience, never the map's name: the woods long and dark, the city brighter, the yard's elsewhere", () => {
+    expect(AMBIENCES.woods.day.reverb).toBe(woods);
+    expect(AMBIENCES.city.day.reverb).toBe(city);
+    for (const night of [false, true]) {
+      expect(soundscapeOf(WOODLAND, night).reverb).toBe(woods);
+      expect(soundscapeOf(NEON_HEIGHTS, night).reverb).toBe(city);
+      expect(soundscapeOf({ ...DEPOT, ambience: 'woods' }, night).reverb).toBe(woods);
+    }
+    for (const map of [DEPOT, RANGE_MAP]) for (const night of [false, true]) expect(soundscapeOf(map, night).reverb).toBe(AUDIO.reverb);
+    expect(woods.seconds).toBeGreaterThan(AUDIO.reverb.seconds);
+    expect(woods.wet).toBeLessThan(AUDIO.reverb.wet);
+    expect(city.wet).toBeGreaterThan(AUDIO.reverb.wet);
+    expect(city.darkHz).toBeUndefined();
+    const seeds = [AUDIO.reverb, woods, city].map((r) => r.seed);
+    expect(new Set(seeds).size).toBe(3);
+  });
+
+  it('plays a Woodland match through the woods echo and a Neon Heights one through the city, then Depot through the yard as before', () => {
+    const engine = engineFor();
+    const yard = engine.reverbImpulse() as unknown as FakeBuffer;
+    for (const [map, spec] of [[WOODLAND, woods], [NEON_HEIGHTS, city], [DEPOT, AUDIO.reverb]] as const) {
+      const sfx = new Sfx(LOADOUT, map.blocks, OPEN, engine);
+      sfx.setScene(soundscapeOf(map, true));
+      sfx.unlock();
+      const { buffer, wet } = echoOf(FakeContext.last);
+      expect(buffer.numberOfChannels, map.name).toBe(2);
+      expect(buffer.sampleRate, map.name).toBe(48000);
+      expect(buffer.length, map.name).toBe(Math.round(48000 * spec.seconds));
+      expect(wet, map.name).toBe(spec.wet);
+      if (map === DEPOT) expect(buffer).toBe(yard);
+      sfx.dispose();
+    }
+    // The woods' highs rolled off: its noise crosses zero far less often than the city's or the yard's.
+    const dark = crossingRate(engine.reverbImpulse(woods) as unknown as FakeBuffer);
+    expect(dark).toBeLessThan(0.5 * crossingRate(engine.reverbImpulse(city) as unknown as FakeBuffer));
+    expect(dark).toBeLessThan(0.5 * crossingRate(yard));
+  });
+
+  it("renders the field's echo in New game's spare time: Play then makes no buffer, and it is the impulse made at Play", () => {
+    const spare = manualIdle(0);
+    const engine = new AudioEngine({ ...VOLUMES }, new SoundLibrary((rate) => renderSoundsGradually(rate, 1)), spare.idle);
+    const field = soundscapeOf(WOODLAND, true);
+    // As the Game does on the title screen: its sounds, then the picked field's.
+    engine.warmUp();
+    engine.prefetch(() => field);
+    for (let m = 0; spare.waiting() > 0; m++) {
+      if (m > 20000) throw new Error('never stops');
+      spare.run();
+    }
+    const ctx = FakeContext.last;
+    const made = ctx.buffersMade;
+    const sfx = new Sfx(LOADOUT, WOODLAND.blocks, OPEN, engine);
+    sfx.setScene(field);
+    sfx.unlock();
+    expect(ctx.buffersMade).toBe(made);
+    const ahead = echoOf(ctx).buffer;
+    sfx.dispose();
+    // The same samples as an engine that made it at Play.
+    const atPlay = engineFor().reverbImpulse(woods) as unknown as FakeBuffer;
+    expect(ahead.data).toEqual(atPlay.data);
+  });
+
+  it('lets go of an echo rendered ahead and never played when the pick changes, and keeps a played one', () => {
+    const spare = manualIdle(0);
+    const engine = new AudioEngine({ ...VOLUMES }, new SoundLibrary((rate) => renderSoundsGradually(rate, 1)), spare.idle);
+    const runOut = (): void => {
+      for (let m = 0; spare.waiting() > 0; m++) {
+        if (m > 20000) throw new Error('never stops');
+        spare.run();
+      }
+    };
+    const held = (): Map<unknown, unknown> => engine['reverbs'];
+    engine.prefetch(() => soundscapeOf(NEON_HEIGHTS, true));
+    runOut();
+    expect(held().has(city)).toBe(true);
+    engine.prefetch(() => soundscapeOf(WOODLAND, true));
+    runOut();
+    expect(held().has(city)).toBe(false);
+    expect(held().has(woods)).toBe(true);
+    // A Woodland match, then Neon Heights picked: the woods' echo was played, so it stays.
+    const sfx = new Sfx(LOADOUT, WOODLAND.blocks, OPEN, engine);
+    sfx.setScene(soundscapeOf(WOODLAND, true));
+    sfx.unlock();
+    sfx.dispose();
+    engine.prefetch(() => soundscapeOf(NEON_HEIGHTS, false));
+    runOut();
+    expect(held().has(woods)).toBe(true);
+    expect(held().has(city)).toBe(true);
+  });
+
+  it('follows a scene set after the graph is built: the convolver takes the new echo and level', () => {
+    const engine = engineFor();
+    const sfx = new Sfx(LOADOUT, WOODLAND.blocks, OPEN, engine);
+    sfx.unlock();
+    const ctx = FakeContext.last;
+    expect(echoOf(ctx).buffer).toBe(engine.reverbImpulse() as unknown as FakeBuffer);
+    sfx.setScene(soundscapeOf(WOODLAND, true));
+    expect(ctx.convolvers).toHaveLength(1);
+    expect(echoOf(ctx).buffer).toBe(engine.reverbImpulse(woods) as unknown as FakeBuffer);
+    expect(echoOf(ctx).wet).toBe(woods.wet);
+    sfx.dispose();
   });
 });
