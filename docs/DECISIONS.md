@@ -786,7 +786,7 @@ One line each: decision, then why.
 
 ## Audit 2 (M50 onwards) · implementing the full audit of 2026-10-05
 
-The owner's 34 decisions from the audit (`full-audit-2026-10-05.md` §8.1 and §4) went ahead on their defaults (thread reply 2026-10-05 09:31, any can be overridden); each is recorded here with the task that applies it.
+The owner's 34 decisions from the audit (`full-audit-2026-10-05.md` §8.1 and §4) went ahead on their defaults (thread reply 2026-10-05 09:31) and the owner confirmed them all (10:03: "happy with all those choices. go ahead"); any can still be overridden; each is recorded here with the task that applies it.
 
 - **2026-10-05 · M50 · Audit decision 1: the default chunk budget is 900 kB (was 800), with a warning from 90 %.** After moving the dev maps' data and the pool and stats tables out, the game chunk is 743 kB, still 93 % of 800; the next audit fixes would fail the build. 900 gives the rest of the audit room (83 %), and the warning at 90 % shows the next approach before a build fails. Rapier keeps its own pinned budget, with no early warning.
 - **2026-10-05 · M50 · The dev maps' data (Woodland, Neon Heights, their Extraction blocks: 26 kB) is its own chunk, fetched once Dev content is on; Dev content applies only once it is in.** A player who never turns Dev content on never downloads them; at start with Dev content left on the game waits for them alongside the physics, so a dev map picked last time is there. While the chunk is on its way (or if it can't be fetched) Dev content stays off, so a dev map is never listed or played without its data. A map that goes public moves its import into `map/maps.ts`.
