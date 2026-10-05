@@ -23,8 +23,8 @@ acceptance:
   4. The torch light refreshes at the perception rate, not every frame (AI-07); the aim wander's `* 3` is a named tuning value (AI-08).
   5. DECISIONS supersedes "Easy, Normal and Hard do neither" with the measured numbers; KNOWN_ISSUES rows 50, 160 and 186 updated.
   6. Added in the build: the habits alone left Woodland Attack / Defend attackers at 28 % (Normal and Hard) with torches against 40–45 % without, so a bot's torch comes on only for a fight within `BOT_TORCH.fightReach` and a search's last stretch (measured, DECISIONS, a test each); bots already sidestepping step apart when pressed together (the spacing guard crossed 0.5 %).
-status: retry 1
-attempts: 1
+status: accepted
+attempts: 2
 
 ## M72 · Extraction opponents per level, Woodland's berth, insertion grace, hunters measured (Audit 2 BAL PR 2 + SIM-C: BAL-03, BAL-05, BAL-06, SIM-03)
 tier: core
