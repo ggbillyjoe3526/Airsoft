@@ -11,8 +11,9 @@ import { PRECOMPRESS, precompressedCopies } from './src/config/precompress.ts';
  */
 const CHUNK_BUDGET_KB = { rapier: 4550, default: 800 };
 
-/** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`. */
-const SLOW_TESTS = 'src/ai/depotMatch*.test.ts';
+/** The headless bot-match guards (src/ai/depotMatchSupport.ts): most of the unit suite's time, project `slow`; the
+ * Pro guards on every map (M40) with them. */
+const SLOW_TESTS = ['src/ai/depotMatch*.test.ts', 'src/ai/*Match.pro*.test.ts', 'src/ai/proBalance.test.ts'];
 
 /** True on a CI runner (the workflow's runner sets CI); read without Node's types, which the project doesn't load. */
 const ON_CI = Boolean((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.CI);
@@ -170,8 +171,8 @@ export default defineConfig(async () => ({
     // fast` leaves out the headless bot-match guards for quick feedback while working. Every seed stays in `slow`.
     projects: [
       // The pipeline's own rules (pipeline/scope.mjs, pipeline/smokeReport.mjs) are tested here too.
-      { extends: true, test: { name: 'fast', include: ['src/**/*.test.ts', 'pipeline/**/*.test.mjs'], exclude: [SLOW_TESTS] } },
-      { extends: true, test: { name: 'slow', include: [SLOW_TESTS] } },
+      { extends: true, test: { name: 'fast', include: ['src/**/*.test.ts', 'pipeline/**/*.test.mjs'], exclude: SLOW_TESTS } },
+      { extends: true, test: { name: 'slow', include: SLOW_TESTS } },
     ],
   },
 }));
