@@ -439,6 +439,23 @@ export class Renderer {
     this.camera.updateProjectionMatrix();
   }
 
+  /**
+   * Compiles the shaders the first frame would (M63, audit REN-06): every material in the world and in `overlay` under
+   * the lights, haze, environment and render target that frame draws with, so a match's first frame (2 to 4 point
+   * lights and a spot at night) is not where they are compiled. Called once, as a session's build ends; Three.js keys
+   * each program on what it was compiled under, so the frame takes them as they are. Shadow depth shaders still compile
+   * on the first frame (Three.js makes them as it draws the shadow map).
+   */
+  warmShaders(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
+    if (this.environmentDirty) this.applyEnvironment();
+    const gl = this.gl;
+    const retro = this.retro;
+    if (retro) gl.setRenderTarget(retro.renderTarget);
+    gl.compile(this.scene, this.camera);
+    if (overlay) gl.compile(overlay.scene, overlay.camera);
+    if (retro) gl.setRenderTarget(null);
+  }
+
   /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */
   render(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
     if (this.environmentDirty) this.applyEnvironment();
@@ -580,11 +597,18 @@ export class Renderer {
     this.gpuTimer = null;
   }
 
+  /**
+   * The timer's query went with a lost context: forgotten rather than deleted (an object of a lost context can't be),
+   * and the next frame timed makes one on the context in use.
+   */
+  private forgetTimer(): void {
+    this.gpuTimer = null;
+  }
+
   private readonly contextLost = (e: Event): void => {
     // Without this the browser never gives the context back (Three.js does it too; repeating it is harmless).
     e.preventDefault();
-    // The timer's query went with the context.
-    this.gpuTimer = null;
+    this.forgetTimer();
     this.contextListener(true);
   };
 
@@ -593,6 +617,9 @@ export class Renderer {
     // environment on the next frame).
     this.sheen.forget();
     this.environmentDirty = true;
+    // A timer made while the context was gone (a frame drawn then) holds no query, or one of the lost context: the next
+    // frame makes a new one on the restored context (M63, audit REN-07).
+    this.forgetTimer();
     this.contextListener(false);
   };
 

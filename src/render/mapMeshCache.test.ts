@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QUALITY, SURFACES, type SurfaceTextureId } from '../config/render';
 import { DEPOT } from '../map/depot';
+import { mapUnderLighting } from '../map/lightingChoice';
+import { NEON_HEIGHTS } from '../map/neonHeights';
 import { RANGE_MAP } from '../map/range';
 import { MapMeshCache } from './mapMeshCache';
 import { type MapLook, mapLookOf } from './mapMeshes';
@@ -48,6 +50,30 @@ describe('the kept map meshes (audit CORE-33)', () => {
     cache.release();
     cache.clear();
     expect(freed()).toBeGreaterThan(0);
+  });
+
+  it('takes back a map played by Day or by Night when the same light is picked again, and builds again for the other (M63, audit REN-01)', () => {
+    const cache = new MapMeshCache(atlas);
+    const set = textures();
+    for (const pick of ['night', 'day'] as const) {
+      // What Game passes on each Play: the map under the saved Day or Night pick.
+      const first = cache.take(mapUnderLighting(NEON_HEIGHTS, pick), set, low);
+      expect(cache.reused, pick).toBe(false);
+      cache.release();
+      const freed = watchDisposal();
+      expect(cache.take(mapUnderLighting(NEON_HEIGHTS, pick), set, low), pick).toBe(first);
+      expect(cache.reused, pick).toBe(true);
+      expect(freed(), pick).toBe(0);
+      cache.release();
+      vi.restoreAllMocks();
+    }
+    // The other light is baked into the meshes (the foliage rim, the signs): Night after Day builds them again.
+    const day = cache.take(mapUnderLighting(NEON_HEIGHTS, 'day'), set, low);
+    cache.release();
+    expect(cache.take(mapUnderLighting(NEON_HEIGHTS, 'night'), set, low)).not.toBe(day);
+    expect(cache.reused).toBe(false);
+    cache.release();
+    cache.clear();
   });
 
   it('restyles kept meshes in place for a look that keeps their geometry (relief), and builds again for one that does not (map detail)', () => {

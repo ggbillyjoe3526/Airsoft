@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping } from 'three';
-import { describe, expect, it, vi } from 'vitest';
-import { ATMOSPHERE, LIGHTING_PRESETS, TONE_MAPPING } from '../config/render';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, TONE_MAPPING } from '../config/render';
 import { DEPOT } from '../map/depot';
 import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
@@ -230,5 +230,294 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
     r.setLighting(LIGHTING_PRESETS.night);
     r.setToneMapping('aces');
     expect(look(r).exposure).toBeCloseTo(TONE_MAPPING.exposure.aces * LIGHTING_PRESETS.night.exposureScale);
+  });
+});
+
+/**
+ * A Renderer built by its own constructor over a stand-in WebGLRenderer and context (Node has no WebGL): only what
+ * render, warmShaders and the context events touch. The context counts its losses: a query made before the last one
+ * is dead, and a lost context offers no extension (as the WebGL spec says) and makes no query.
+ */
+function stubbedRenderer() {
+  const ext = { TIME_ELAPSED_EXT: 1, GPU_DISJOINT_EXT: 2 };
+  const ctx = {
+    lost: false,
+    losses: 0,
+    queriesMade: 0,
+    /** beginQuery on a query of a lost context (INVALID_OPERATION in a browser). */
+    deadBegins: 0,
+    begunOn: [] as number[],
+    /** Each deleteQuery: the query's id, and whether its context was lost then or it belonged to a lost one. */
+    deleted: [] as { id: number; whileLost: boolean; stale: boolean }[],
+    /** What a finished query reports (ns). */
+    elapsed: 2_000_000,
+    QUERY_RESULT_AVAILABLE: 10,
+    QUERY_RESULT: 11,
+    getExtension: (name: string) => (!ctx.lost && name === 'EXT_disjoint_timer_query_webgl2' ? ext : null),
+    createQuery: () => (ctx.lost ? null : { id: ++ctx.queriesMade, losses: ctx.losses }),
+    deleteQuery: (q: { id: number; losses: number }) => void ctx.deleted.push({ id: q.id, whileLost: ctx.lost, stale: q.losses !== ctx.losses }),
+    beginQuery: (_t: number, q: { id: number; losses: number }) => {
+      if (ctx.lost || q.losses !== ctx.losses) ctx.deadBegins++;
+      ctx.begunOn.push(q.id);
+    },
+    endQuery: () => undefined,
+    getQueryParameter: (_q: unknown, p: number) => (p === 10 ? true : ctx.elapsed),
+    getParameter: () => false,
+  };
+  const calls: string[] = [];
+  const canvas = new EventTarget();
+  const target = { name: 'retro target' };
+  let renderTarget: unknown = null;
+  const gl = {
+    domElement: canvas,
+    info: { autoReset: true, reset: () => undefined },
+    shadowMap: { enabled: false },
+    autoClear: true,
+    toneMapping: THREE.NoToneMapping,
+    toneMappingExposure: 1,
+    getContext: () => ctx,
+    getPixelRatio: () => 1,
+    setPixelRatio: () => undefined,
+    setSize: () => undefined,
+    setRenderTarget: (t: unknown) => void (renderTarget = t),
+    clearDepth: () => undefined,
+    render: () => void calls.push('render'),
+    compile: (scene: THREE.Scene) => {
+      calls.push(`compile ${scene.name} into ${renderTarget === null ? 'the canvas' : (renderTarget as { name: string }).name} with ${scene.environment ? 'the environment' : 'none'}`);
+      return new Set();
+    },
+  };
+  vi.stubGlobal('window', { addEventListener: () => undefined, removeEventListener: () => undefined, devicePixelRatio: 1, innerWidth: 1280, innerHeight: 720 });
+  vi.spyOn(Renderer.prototype as unknown as { makeWebGL: () => unknown }, 'makeWebGL').mockReturnValue(gl);
+  const r = new Renderer({ appendChild: () => undefined, clientWidth: 1280, clientHeight: 720 } as unknown as HTMLElement, QUALITY.medium);
+  r.scene.name = 'world';
+  // The prefiltered sky, as the sheen hands it over (no PMREM without WebGL).
+  const environment = new THREE.Texture();
+  const fields = r as unknown as Record<string, unknown>;
+  fields.sheen = { texture: () => environment, forget: () => undefined, dispose: () => undefined };
+  return {
+    r,
+    ctx,
+    calls,
+    useRetro: () => void (fields.retro = { renderTarget: target, present: (g: typeof gl) => g.setRenderTarget(null) }),
+    target: () => renderTarget,
+    lose: () => {
+      ctx.lost = true;
+      ctx.losses++;
+      canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true }));
+    },
+    restore: () => {
+      ctx.lost = false;
+      canvas.dispatchEvent(new Event('webglcontextrestored'));
+    },
+  };
+}
+
+describe('the shader warm-up (M63, audit REN-06)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('compiles the world and the held replica once, under the environment and target the first frame draws with', () => {
+    const { r, calls } = stubbedRenderer();
+    const overlay = { scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() };
+    r.warmShaders(overlay);
+    // The environment is set first: a program compiled without it would be compiled again on the first frame.
+    expect(calls).toEqual(['compile world into the canvas with the environment', 'compile replica into the canvas with none']);
+    // Frames compile nothing themselves.
+    r.render(overlay);
+    r.render(overlay);
+    expect(calls.slice(2)).toEqual(['render', 'render', 'render', 'render']);
+  });
+
+  it('compiles into the retro filter’s target while the filter is on (tone mapping depends on the target), then gives the canvas back', () => {
+    const { r, calls, useRetro, target } = stubbedRenderer();
+    useRetro();
+    r.warmShaders();
+    expect(calls).toEqual(['compile world into retro target with the environment']);
+    expect(target()).toBeNull();
+  });
+});
+
+describe('the GPU timer across a lost context (M63, audit REN-07)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('times the restored context with a query of its own, never one of the lost context', () => {
+    const { r, ctx, lose, restore } = stubbedRenderer();
+    r.gpuTiming = true;
+    r.render();
+    r.render();
+    expect(ctx.queriesMade).toBe(1);
+    expect(r.gpuMs).toBe(2);
+    lose();
+    // A frame drawn while the context is gone (before play stops) makes a timer the lost context can't serve.
+    r.render();
+    restore();
+    for (let frame = 0; frame < 3; frame++) r.render();
+    expect(ctx.queriesMade).toBe(2);
+    expect(ctx.begunOn.at(-1)).toBe(2);
+    expect(ctx.deadBegins).toBe(0);
+    // Timing again: the overlay's GPU milliseconds come back.
+    expect(r.gpuMs).toBe(2);
+  });
+});
+
+/** The stand-in WebGLRenderer behind a stubbed Renderer, to watch what it is told. */
+const glOf = (r: Renderer) => (r as unknown as { gl: { setRenderTarget: (t: unknown) => void; compile: (...a: unknown[]) => unknown } }).gl;
+
+describe('the shader warm-up into the target the frame draws to (M63, audit REN-06, QA)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('with the retro filter on, compiles the world and the held replica into its target, then frames compile nothing and the canvas is the target again', () => {
+    const { r, calls, useRetro, target } = stubbedRenderer();
+    useRetro();
+    const targets = vi.spyOn(glOf(r), 'setRenderTarget');
+    const overlay = { scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() };
+    r.warmShaders(overlay);
+    expect(calls).toEqual(['compile world into retro target with the environment', 'compile replica into retro target with none']);
+    // Into the retro target for both compiles, then straight back to the canvas.
+    expect(targets.mock.calls.map(([t]) => (t === null ? 'canvas' : 'retro'))).toEqual(['retro', 'canvas']);
+    expect(target()).toBeNull();
+    for (let frame = 0; frame < 3; frame++) r.render(overlay);
+    expect(calls.slice(2).every((c) => c === 'render')).toBe(true);
+    expect(target()).toBeNull();
+  });
+
+  it('with the retro filter off, never moves the render target off the canvas', () => {
+    const { r, calls } = stubbedRenderer();
+    const targets = vi.spyOn(glOf(r), 'setRenderTarget');
+    r.warmShaders({ scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() });
+    expect(calls).toEqual(['compile world into the canvas with the environment', 'compile replica into the canvas with none']);
+    expect(targets).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Where the warm-up is called from (M63, audit REN-06): MatchSession needs a page to build (its HUD), so this reads the
+ * sources. One call in the whole game, at the end of MatchSession's constructor after the last thing it adds to the
+ * scene; no frame path, and not the range, calls it; and nothing but the warm-up compiles.
+ */
+describe('the shader warm-up runs once per match build, never per frame (M63, audit REN-06, QA)', () => {
+  const sources = import.meta.glob<string>(['/src/**/*.ts', '!/src/**/*.test.ts', '!/src/**/testSupport.ts', '!/src/**/*Support.ts', '!/src/**/*.d.ts'], { query: '?raw', import: 'default', eager: true });
+  /** The body of the block opened by the first `{` at or after `from` (braces balanced). */
+  const block = (text: string, from: number): string => {
+    const open = text.indexOf('{', from);
+    let depth = 0;
+    for (let i = open; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}' && --depth === 0) return text.slice(open, i + 1);
+    }
+    throw new Error('unbalanced');
+  };
+  // The signature ends its line with `{`: the body is that block.
+  const bodyOf = (text: string, head: string): string => {
+    const at = text.indexOf(head);
+    expect(at, head).toBeGreaterThanOrEqual(0);
+    return block(text, text.indexOf('{\n', at));
+  };
+
+  it('is called once in the game, from MatchSession’s constructor, after the scene is whole', () => {
+    expect(Object.keys(sources).length).toBeGreaterThan(100);
+    const callers = Object.entries(sources).flatMap(([file, text]) => [...text.matchAll(/\.warmShaders\(/g)].map(() => file));
+    // CombatPresentation.warmShaders hands over to Renderer.warmShaders: that and MatchSession's are the two calls.
+    expect(callers.sort()).toEqual(['/src/matchSession.ts', '/src/render/combatPresentation.ts']);
+    const ctor = bodyOf(sources['/src/matchSession.ts']!, '  constructor(');
+    const call = ctor.indexOf('this.combat.warmShaders()');
+    expect(call).toBeGreaterThan(0);
+    expect(ctor.split('warmShaders(').length - 1).toBe(1);
+    // Everything the session draws is in the scene by then.
+    for (const built of ['this.combat = new CombatPresentation', 'this.match = new MatchPresentation', 'renderer.scene.add(this.contact.object)', 'renderer.scene.add(this.torches.object)']) {
+      expect(ctor.indexOf(built), built).toBeGreaterThan(0);
+      expect(ctor.indexOf(built), built).toBeLessThan(call);
+    }
+    expect(ctor.slice(call)).not.toMatch(/scene\.add\(/);
+    // CombatPresentation's hand-over is its own method, not its frame.
+    const combat = sources['/src/render/combatPresentation.ts']!;
+    expect(bodyOf(combat, '  render(firstPerson')).not.toMatch(/warmShaders|compile/);
+    expect(bodyOf(combat, '  warmShaders(')).toMatch(/this\.renderer\.warmShaders\(this\.overlay\)/);
+    expect(sources['/src/rangeSession.ts']).not.toMatch(/warmShaders|compile\(/);
+  });
+
+  it('compiles nowhere but in Renderer.warmShaders: not in Renderer.render, nor anywhere else', () => {
+    const compiles = Object.entries(sources).flatMap(([file, text]) => [...text.matchAll(/\.compile(Async)?\(/g)].map(() => file));
+    expect(compiles).toEqual(['/src/render/renderer.ts', '/src/render/renderer.ts']);
+    const renderer = sources['/src/render/renderer.ts']!;
+    expect(bodyOf(renderer, '  warmShaders(').split('.compile(').length - 1).toBe(2);
+    expect(bodyOf(renderer, '  render(overlay')).not.toMatch(/compile|warmShaders/);
+  });
+});
+
+describe('the GPU timer across a lost context: forgotten, never deleted (M63, audit REN-07, QA)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('deletes no query of the lost context, times the restored one with its own query, and later deletes only that one', () => {
+    const { r, ctx, lose, restore } = stubbedRenderer();
+    r.gpuTiming = true;
+    r.render();
+    r.render();
+    expect(r.gpuMs).toBe(2);
+    lose();
+    // No frame while the context is gone: the restore alone must leave the old query behind.
+    restore();
+    expect(ctx.deleted).toEqual([]);
+    const before = ctx.begunOn.length;
+    ctx.elapsed = 5_000_000;
+    for (let frame = 0; frame < 3; frame++) r.render();
+    expect(ctx.queriesMade).toBe(2);
+    expect(ctx.begunOn.slice(before)).not.toContain(1);
+    expect(ctx.deadBegins).toBe(0);
+    // The restored context's own reading, not the lost timer's last one.
+    expect(r.gpuMs).toBe(5);
+    // Timing off afterwards frees the live query only.
+    r.gpuTiming = false;
+    r.render();
+    expect(ctx.deleted).toEqual([{ id: 2, whileLost: false, stale: false }]);
+    expect(r.gpuMs).toBeNaN();
+  });
+
+  it('turning GPU timing off while the context is lost deletes nothing, and turning it on after the restore times again', () => {
+    const { r, ctx, lose, restore } = stubbedRenderer();
+    r.gpuTiming = true;
+    r.render();
+    lose();
+    r.gpuTiming = false;
+    r.render();
+    expect(ctx.deleted).toEqual([]);
+    restore();
+    r.gpuTiming = true;
+    r.render();
+    r.render();
+    expect(ctx.deleted).toEqual([]);
+    expect(ctx.queriesMade).toBe(2);
+    expect(ctx.deadBegins).toBe(0);
+    expect(r.gpuMs).toBe(2);
+  });
+
+  it('survives losing the context twice with frames drawn while it is gone: one new query per restored context', () => {
+    const { r, ctx, lose, restore } = stubbedRenderer();
+    r.gpuTiming = true;
+    r.render();
+    for (let loss = 1; loss <= 2; loss++) {
+      lose();
+      r.render();
+      restore();
+      r.render();
+      r.render();
+      expect(ctx.queriesMade, `loss ${loss}`).toBe(loss + 1);
+      expect(ctx.begunOn.at(-1), `loss ${loss}`).toBe(loss + 1);
+      expect(r.gpuMs, `loss ${loss}`).toBe(2);
+    }
+    expect(ctx.deadBegins).toBe(0);
+    expect(ctx.deleted.filter((d) => d.whileLost || d.stale)).toEqual([]);
   });
 });
