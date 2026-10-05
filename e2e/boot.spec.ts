@@ -266,6 +266,20 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await settings.getByRole('group', { name: 'Sound cue colour' }).getByRole('button', { name: 'Yellow' }).click();
   await expect.poll(() => page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--cue-colour'))).toBe('#ffe94a');
   await expect(settings.getByRole('slider', { name: 'Sound cue size' })).toHaveValue('1');
+  // G1: the Look tab has Robots (Mixed by default) and Realistic colours (Bold by default); each pick is saved.
+  await settings.getByRole('tab', { name: /Look/i }).click();
+  await expect(settings.getByRole('tab', { name: /Look/i })).toHaveAttribute('aria-selected', 'true');
+  const robots = settings.getByRole('group', { name: 'Robots' });
+  const realistic = settings.getByRole('group', { name: 'Replica colours' });
+  await expect(robots.getByRole('button', { name: 'Mixed' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(realistic.getByRole('button', { name: 'Bold' })).toHaveAttribute('aria-pressed', 'true');
+  const savedLook = () => page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.settings') ?? '{}') as { robots?: string; realisticColours?: string });
+  await robots.getByRole('button', { name: 'Humans only' }).click();
+  await realistic.getByRole('button', { name: 'Realistic' }).click();
+  await expect.poll(savedLook).toMatchObject({ robots: 'off', realisticColours: 'on' });
+  await robots.getByRole('button', { name: 'Mixed' }).click();
+  await realistic.getByRole('button', { name: 'Bold' }).click();
+  await expect.poll(savedLook).toMatchObject({ robots: 'on', realisticColours: 'off' });
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   await expect(settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
   await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('90');

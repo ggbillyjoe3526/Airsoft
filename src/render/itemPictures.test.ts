@@ -198,3 +198,44 @@ describe('item pictures (G2)', () => {
     expect(toneMap(100)).toBeLessThanOrEqual(1);
   });
 });
+
+describe('item pictures after dispose (G2)', () => {
+  /** True when the promise has neither resolved nor rejected after the queued microtasks have run. */
+  async function stillPending(p: Promise<string>): Promise<boolean> {
+    const none = Symbol('pending');
+    const settled = await Promise.race([p.then(() => 'resolved', () => 'rejected'), new Promise((r) => setTimeout(() => r(none), 0))]);
+    return settled === none;
+  }
+
+  it('stops pending work: pictures queued before dispose are never drawn, nor is a frame kept waiting for them', async () => {
+    const target = fakeTarget();
+    const frames = manualFrames();
+    const pictures = new ItemPictures(target, frames.schedule);
+    const first = pictures.picture(rifle);
+    const second = pictures.picture({ ...rifle, scheme: 'acid' });
+    frames.frame(); // one drawn, the next is asked for
+    expect(target.draws).toHaveLength(1);
+    expect(frames.pending()).toBe(1);
+    pictures.dispose();
+    expect(pictures.waiting).toBe(0);
+    frames.frame(); // the frame that was already asked for finds nothing to do
+    expect(target.draws).toHaveLength(1);
+    expect(frames.pending()).toBe(0);
+    await expect(first).resolves.toMatch(/^picture:1:/);
+    expect(await stillPending(second)).toBe(true);
+    expect(target.disposed).toBe(true);
+  });
+
+  it('never draws a picture asked for after dispose, and asks for no frame for it', async () => {
+    const target = fakeTarget();
+    const frames = manualFrames();
+    const pictures = new ItemPictures(target, frames.schedule);
+    pictures.dispose();
+    const late = pictures.picture(rifle);
+    expect(frames.pending()).toBe(0);
+    frames.frame();
+    frames.frame();
+    expect(target.draws).toHaveLength(0);
+    expect(await stillPending(late)).toBe(true);
+  });
+});
