@@ -32,6 +32,8 @@ export interface PlayerCommand {
   cycleFireMode: boolean;
   /** Switch the weapon torch on the replica in hand on or off (one-shot; M33h, sim/torch.ts). */
   toggleTorch: boolean;
+  /** Use key held (M44): opens the case beside you in Extraction. */
+  use: boolean;
 }
 
 export function createCommand(): PlayerCommand {
@@ -51,5 +53,6 @@ export function createCommand(): PlayerCommand {
     switchTo: -1,
     cycleFireMode: false,
     toggleTorch: false,
+    use: false,
   };
 }

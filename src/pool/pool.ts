@@ -5,6 +5,7 @@ import { LASERS, type LaserId } from '../config/lasers';
 import { type OpticId, OPTICS } from '../config/optics';
 import { LIGHT_KEYS } from '../config/torches';
 import { AEG, CYBER_PISTOL, GAS_PISTOL, type ReplicaConfig } from '../config/replicas';
+import { type CaseKind, readCaseKinds } from './caches';
 import { type PoolRow, type PoolTable, readTables } from './poolFile';
 
 /**
@@ -108,6 +109,8 @@ export interface Pool {
   /** Commonest first, rarest last. */
   tiers: readonly RarityTier[];
   economy: Economy;
+  /** Extraction's kinds of case (M44, pool.md's Caches table), in the table's order. */
+  caseKinds: readonly CaseKind[];
   /** What couldn't be read, each with its pool.md line ("line 12: …"). Those rows are left out. */
   errors: readonly string[];
 }
@@ -183,6 +186,7 @@ export function loadPool(text: string): Pool {
   // By first column, so another table under the same heading (the Rarity section's Bonus table) is never misread.
   const tiers = readTiers(table('Tier'), fail, errors);
   const economy = readEconomy(table('Event'), table('Difficulty'), table('Setting'), table('Guarantee'), tiers, fail, errors);
+  const caseKinds = readCaseKinds(table('Case'), tiers, fail, errors);
   const assets: Asset[] = [];
   const byId = new Map<string, Asset>();
   // Each asset's pool.md line, for the fits check's messages (audit POOL-20: no scan of every row per asset).
@@ -217,7 +221,7 @@ export function loadPool(text: string): Pool {
   const misfits = checkFits(assets, lines, fail);
   const kept = assets.filter((a) => !misfits.has(a.id));
   for (const id of misfits) byId.delete(id);
-  return { assets: kept, byId, tiers, economy, errors };
+  return { assets: kept, byId, tiers, economy, caseKinds, errors };
 }
 
 function cell(row: PoolRow, header: string): string {

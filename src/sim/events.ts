@@ -51,7 +51,13 @@ export type GameEvent =
   /** Extraction: a late exit opened (index into RunState.exits). */
   | { type: 'exitOpened'; exit: number }
   /** Extraction: the marshal's whistle, `secondsLeft` before the run's time is up. */
-  | { type: 'runWarning'; secondsLeft: number };
+  | { type: 'runWarning'; secondsLeft: number }
+  /** Extraction (M44): case `case` (RunState.cases, of `kind`) is being opened; the noise carries `range` m (bots hear it). */
+  | { type: 'caseNoise'; characterId: number; case: number; kind: string; position: Vec3; range: number }
+  /** Extraction: case `case` was opened, its finds now carried (a BB resupply used). */
+  | { type: 'caseOpened'; characterId: number; case: number; kind: string; position: Vec3 }
+  /** Extraction: the runner was hit carrying finds; they lie in case `case` where they fell. */
+  | { type: 'caseDropped'; characterId: number; case: number };
 
 /**
  * Why a round (in Extraction, the run) ended. Extraction: 'extracted' (counted out at an exit), 'out' (hit with no

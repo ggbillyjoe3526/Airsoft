@@ -1011,6 +1011,9 @@ export const HUD = {
   roundStartMessageTime: 1.8,
   /** Extraction (M43): how long the banner says you're back in, after a respawn (seconds). */
   respawnMessageTime: 2.4,
+  /** Extraction (M44): how long the line under the crosshair says what a case held, and that you dropped your finds (s). */
+  caseFoundTime: 2.6,
+  caseDroppedTime: 6,
   /** The round clock turns to a warning colour at or below this many seconds. */
   lowClockSeconds: 20,
   /** The result screen appears this long after the match-over whistles end (see matchOverScreenDelay). */
@@ -1154,6 +1157,27 @@ export const EXIT_VISUALS = {
   markerHideWithin: 4,
   /** The marker's anchor above the exit's floor (m): about the top of the sign. */
   markerHeight: 2.4,
+} as const;
+
+/**
+ * Extraction's cases (M44): site props by pool.md Key, each a body with a lid that hinges up at the back (a door on
+ * its left side for the locker) and a painted band so it reads across a yard. Sizes in metres (width, height, depth;
+ * the front is the spot's facing). A kind with no entry looks like a field case. The dropped case wears your team's
+ * colour as its band.
+ */
+export const CASE_VISUALS = {
+  kinds: {
+    'ammo-can': { size: [0.42, 0.24, 0.2], lid: 0.05, opens: 'lid', body: 0x4f5a37, top: 0x46502f, band: 0xd9c14a, bandHeight: 0.04 },
+    'field-case': { size: [0.86, 0.3, 0.56], lid: 0.08, opens: 'lid', body: 0x25292b, top: 0x1c1f21, band: 0xe0782a, bandHeight: 0.05 },
+    locker: { size: [0.9, 1.8, 0.5], lid: 0.03, opens: 'door', body: 0x6b7378, top: 0x5c6368, band: 0xe8c547, bandHeight: 0.12 },
+    dropped: { size: [0.5, 0.26, 0.32], lid: 0.06, opens: 'lid', body: 0x5d5a3f, top: 0x524f36, band: 0xffffff, bandHeight: 0.05 },
+  },
+  /** How far an opened lid (rad, back over its hinge) and the locker's door (rad, outwards) swing. */
+  lidOpenAngle: 1.9,
+  doorOpenAngle: 1.7,
+  /** The band sits this far up the body (fraction of its height). */
+  bandAt: 0.62,
+  roughness: 0.75,
 } as const;
 
 export const FLAG_VISUALS = {

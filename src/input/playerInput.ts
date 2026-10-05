@@ -255,6 +255,7 @@ export class PlayerInput {
     cmd.switchTo = this.switchLatch;
     cmd.cycleFireMode = this.fireModeLatch;
     cmd.toggleTorch = this.torchLatch;
+    cmd.use = kb.isDown('use');
     this.clearOneShots();
   }
 

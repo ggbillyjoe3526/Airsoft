@@ -21,6 +21,16 @@ export interface ExtractionRules {
   maxSquad: number;
   /** An exit zone reaches this far up and down from its floor (m): about a storey, so a dock above an exit isn't in it. */
   exitHeightReach: number;
+  /**
+   * Cases (M44): the Use key opens one within this distance of the runner (m, horizontal), and this far up or down
+   * (m). How long each kind takes and how far it is heard are pool.md's Caches table.
+   */
+  caseReach: number;
+  caseHeightReach: number;
+  /** While a case is being opened it makes its noise every this many seconds (bots within its Heard m come). */
+  caseNoiseEvery: number;
+  /** Seconds to pick up what you dropped when you were hit (plan: no opening time, so the hold ends at once). */
+  dropOpenTime: number;
 }
 
 export const EXTRACTION: ExtractionRules = {
@@ -34,6 +44,11 @@ export const EXTRACTION: ExtractionRules = {
   countStep: 1,
   maxSquad: 3,
   exitHeightReach: 1,
+  /** An arm's length and a step: you stand by the case, not on it. */
+  caseReach: 1.5,
+  caseHeightReach: 1,
+  caseNoiseEvery: 1,
+  dropOpenTime: 0,
 };
 
 /** The squad a run plays with for the picked team size: the team size, at most `maxSquad` (a map may allow bigger teams). */

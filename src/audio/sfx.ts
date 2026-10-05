@@ -1,4 +1,4 @@
-import { AUDIO, matchOverBlastStart } from '../config/audio';
+import { AUDIO, CASE_OPEN_SOUND, caseWorkSound, matchOverBlastStart } from '../config/audio';
 import type { ReplicaConfig } from '../config/replicas';
 import { SIM_DT } from '../config/sim';
 import { cues, type ImpactMaterial, type ShotProfile, type SoundCue } from '../config/sounds';
@@ -350,6 +350,13 @@ export class Sfx {
       case 'exitCount':
         // The last second is the run's end: the whistle says that.
         if (e.secondsLeft > 0) this.play('count.beep', this.ui!, L.countBeep);
+        return;
+      case 'caseNoise':
+        // Extraction (M44): the locker's padlock, any other case's latches; heard where the case is.
+        this.oneShot(caseWorkSound(e.kind), e.position, L.caseWork);
+        return;
+      case 'caseOpened':
+        this.oneShot(CASE_OPEN_SOUND, e.position, L.caseOpen);
         return;
     }
   }

@@ -7,14 +7,16 @@ import { BODY, MOVEMENT } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
 import { LOADOUT } from '../config/replicas';
-import { runSeed } from '../core/seed';
+import { caseSeed, runSeed } from '../core/seed';
 import { DEPOT } from '../map/depot';
 import { buildNavGrid, createNavSearch } from '../nav/navGrid';
 import { initPhysics, PhysicsWorld } from '../physics/physicsWorld';
+import { rollRunCases } from '../pool/caches';
+import { GAME_POOL } from '../pool/gamePool';
 import { type Character, createCharacter } from '../sim/character';
-import type { PlayerCommand } from '../sim/commands';
+import { createCommand, type PlayerCommand } from '../sim/commands';
 import { eliminate, isInPlay } from '../sim/elimination';
-import { createRunContext } from '../sim/extraction';
+import { createRunContext, haulTotals, runHaul } from '../sim/extraction';
 import { startRun } from '../sim/round';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
@@ -36,7 +38,8 @@ function setUpRun(seed: number) {
   const rules = { ...ROUNDS, roundTime: x.runTime, winsNeeded: 1 };
   const physics = new PhysicsWorld(DEPOT, BODY, DT);
   const nav = buildNavGrid(DEPOT, NAV);
-  const run = createRunContext(x, { squad, seed: runSeed(seed), runner: 0, squadTeam: 0, respawnAfter: HITS.callTime, spawnLift: PHYSICS.groundRestGap });
+  const cases = rollRunCases(GAME_POOL, x.cases, {}, caseSeed(seed));
+  const run = createRunContext(x, { squad, seed: runSeed(seed), runner: 0, squadTeam: 0, respawnAfter: HITS.callTime, spawnLift: PHYSICS.groundRestGap, cases });
   const state = createGameState(seed, BALLISTICS.maxBBs, rules, 'extraction');
   const ctx = createSimContext({
     mover: physics,
@@ -102,7 +105,10 @@ function setUpRun(seed: number) {
   const elimination = { deadZones: DEPOT.deadZones, nav, navSearch: createNavSearch(nav), snap: NAV.snap };
   /** You're hit by the first opponent. */
   const hitYou = () => eliminate(you, squad, state.characters, elimination);
-  return { state, run, you, bots, play, moveYou, hitYou, dispose: () => physics.dispose() };
+  /** Your keys: you aren't a bot, so this is what you do each tick (standing still unless a test says otherwise). */
+  const yours = createCommand();
+  commands.set(you.id, yours);
+  return { state, run, you, yours, bots, play, moveYou, hitYou, dispose: () => physics.dispose() };
 }
 
 const mates = (cs: readonly Character[]) => cs.filter((c) => c.team === 0 && c.id !== 0);
@@ -133,6 +139,34 @@ describe('Extraction on Depot, headless (M43)', () => {
       expect(r.state.round.reason, `seed ${seed}`).toBe('extracted');
       r.dispose();
     }
+  });
+
+  it('opens the marshal’s locker with the Use key through the simulation, and you extract with what it held (M44)', () => {
+    const r = setUpRun(4);
+    r.play(2);
+    const run = r.state.round.run;
+    const at = run.cases.findIndex((k) => k.kind === 'locker');
+    const locker = run.cases[at]!;
+    // Beside it, facing it.
+    r.moveYou({ x: locker.position.x + Math.sin(locker.yaw) * -0.9, y: locker.position.y, z: locker.position.z + Math.cos(locker.yaw) * -0.9 });
+    r.yours.yaw = r.you.yaw;
+    r.yours.use = true;
+    let noise = 0;
+    r.play(locker.openTime + 0.2, () => {
+      for (const e of r.state.events) if (e.type === 'caseNoise') noise++;
+    });
+    // Loud all the way (bots hearing it: caseHearing.test.ts).
+    expect(noise).toBeGreaterThanOrEqual(Math.floor(locker.openTime));
+    expect(locker.open).toBe(true);
+    expect(run.carried).toEqual(locker.finds);
+    // The locker always holds a part, from Rare up (pool.md).
+    expect(['rare', 'veryRare', 'epic', 'legendary']).toContain(locker.finds[0]!.item!.tier);
+    r.yours.use = false;
+    r.moveYou(run.exits.find((e) => e.open)!.position);
+    r.play(r.run.rules.extractTime + 1);
+    expect(r.state.round.reason).toBe('extracted');
+    expect(haulTotals(runHaul(run)).items).toEqual([locker.finds[0]!.item]);
+    r.dispose();
   });
 
   it('brings you back at the insertion after a hit, and a second hit ends the run "out"', () => {

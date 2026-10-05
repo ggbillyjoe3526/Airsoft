@@ -22,6 +22,8 @@ export const DEFAULT_BINDINGS = {
   fireMode: ['KeyB'],
   /** Switches the weapon torch on the replica in hand on and off (M33h; T is free and the usual tactical-light key). */
   torch: ['KeyT'],
+  /** Hold beside a case to open it (M44, Extraction). G: E leans and F is Follow me; T is kept for a weapon torch. */
+  use: ['KeyG'],
   slot1: ['Digit1'],
   slot2: ['Digit2'],
   /** Hold to see the match so far: everyone's hits, BBs fired, accuracy and time alive (M19). */
@@ -65,6 +67,7 @@ export const REBINDABLE: readonly { action: Action; label: string }[] = [
   { action: 'reload', label: 'Reload' },
   { action: 'fireMode', label: 'Fire mode' },
   { action: 'torch', label: 'Weapon torch' },
+  { action: 'use', label: 'Use: open a case (hold)' },
   { action: 'slot1', label: 'Rifle' },
   { action: 'slot2', label: 'Pistol' },
   { action: 'scoreboard', label: 'Scoreboard (hold)' },

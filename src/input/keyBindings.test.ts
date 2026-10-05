@@ -217,6 +217,34 @@ describe('KeyBindings', () => {
     expect(b.codes('slot2')).toEqual(['KeyB']);
   });
 
+  it('opens cases on G by default, rebindable like any key (M44)', () => {
+    const store = new MemoryStore();
+    const b = new KeyBindings(store);
+    expect(b.codes('use')).toEqual(['KeyG']);
+    expect(b.actionOf('KeyG')).toBe('use');
+    expect(b.label('use')).toBe('G');
+    expect(b.rebind('use', 'KeyU')).toBe(true);
+    expect(b.actionOf('KeyU')).toBe('use');
+    expect(b.actionOf('KeyG')).toBeUndefined();
+    expect(new KeyBindings(store).codes('use')).toEqual(['KeyU']);
+    // Taking another action's key swaps, as everywhere else.
+    expect(b.rebind('use', 'KeyR')).toBe(true);
+    expect(b.codes('reload')).toEqual(['KeyU']);
+  });
+
+  it('gives a set saved before Use existed its default G, or leaves Use unbound when the player put G elsewhere (M44)', () => {
+    const before: Record<string, readonly string[]> = { ...DEFAULT_BINDINGS };
+    delete before.use;
+    const plain = new MemoryStore();
+    plain.setItem('airsoft.keyBindings', JSON.stringify(before));
+    expect(new KeyBindings(plain).codes('use')).toEqual(['KeyG']);
+    const taken = new MemoryStore();
+    taken.setItem('airsoft.keyBindings', JSON.stringify({ ...before, jump: ['KeyG'] }));
+    const b = new KeyBindings(taken);
+    expect(b.codes('jump')).toEqual(['KeyG']);
+    expect(b.codes('use')).toEqual([]);
+  });
+
   it('gives the order wheel Z in a set saved while Follow me was on Z; Follow me takes its new default (M23)', () => {
     const store = new MemoryStore();
     // A whole set saved before the wheel existed (every save writes every action), with one change: jump on J.

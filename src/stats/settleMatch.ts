@@ -1,13 +1,17 @@
-import { earn, type Earnings, type MatchOutcome, matchPay } from '../pool/armory';
+import { type Dispensed, earn, type Earnings, grantHaul, type MatchOutcome, matchPay } from '../pool/armory';
 import type { Collection } from '../pool/collection';
 import type { Economy } from '../pool/pool';
 import type { NotCounted } from '../ui/recordsView';
 import { addMatch, type MatchResult, type RecordNews, type Records } from './records';
 
-/** What settling a finished match changed: the records' news (null: nothing recorded) and its pay (null: none). */
+/**
+ * What settling a finished match changed: the records' news (null: nothing recorded), its pay (null: none) and the
+ * Extraction haul's parts as they went into the collection (null: no haul granted, M44).
+ */
 export interface SettledMatch {
   news: RecordNews | null;
   pay: Earnings | null;
+  haul: Dispensed[] | null;
 }
 
 /** What decides whether a match counts and pays. */
@@ -32,7 +36,8 @@ export function matchStanding(m: MatchStanding): { notCounted: NotCounted; unpai
 /**
  * A finished match goes into the records and pays its Field Credits (audit CORE-06): `result` and `outcome` are the
  * session's once-only takes (null when already taken, not counted or not paid). Changes `records` and `collection`;
- * the caller saves them. With the Armory switched off (Dev settings) nothing is paid.
+ * the caller saves them. With the Armory switched off (Dev settings) nothing is paid. An Extraction haul (M44) is
+ * granted with the pay, so it reaches the collection only from a run that pays, in the caller's one save.
  */
 export function settleMatch(
   records: Records,
@@ -45,7 +50,8 @@ export function settleMatch(
   const news = result ? addMatch(records, result) : null;
   const pay = outcome ? matchPay(economy, outcome, armoryOff) : null;
   if (pay) earn(collection, pay.total);
-  return { news, pay };
+  const haul = pay && outcome?.haul ? grantHaul(collection, outcome.haul) : null;
+  return { news, pay, haul };
 }
 
 /**

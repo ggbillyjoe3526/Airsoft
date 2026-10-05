@@ -151,6 +151,22 @@ export const ARMORY_TEXT = {
   unpaidDevContent: 'No Field Credits: this match used content still being built.',
 } as const;
 
+/** Extraction's haul on the match summary (M44): what the run found, and whether it went into your collection. */
+export const HAUL_TEXT = {
+  title: 'The haul',
+  kept: (what: string): string => `${what}, now in your collection.`,
+  notKept: (what: string): string => `${what}. Not kept: nothing from this run goes into your collection.`,
+  lost: (what: string): string => `Lost: ${what}. Only what you get out with is yours.`,
+  leftBehind: 'You got out, but what you dropped stayed where you fell.',
+  emptyOut: 'You got out with nothing.',
+  nothing: 'You found nothing on this run.',
+  /** Tile notes. */
+  new: 'New',
+  spare: 'Spare',
+  notKeptTile: 'Not kept',
+  lostTile: 'Lost',
+} as const;
+
 export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'save' | 'dev';
 
 /**
