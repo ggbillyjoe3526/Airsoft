@@ -72,6 +72,8 @@ export type SettingField =
   | `bbWeight.${string}`
   /** That replica's Glowing BBs choice (M33b): at night, always or off. */
   | `glowBBs.${string}`
+  /** That map's Day or Night pick (M34d, map/lightingChoice.ts), on a map that offers both. */
+  | `lighting.${string}`
   | `equip.${string}`
   | `fit.${string}`
   | `crosshair.${string}`

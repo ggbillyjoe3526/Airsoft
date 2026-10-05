@@ -4,7 +4,7 @@ import type { BlockKind, MapBlock, MapData, Overlook, RampRise, SpawnPoint } fro
 /**
  * "Neon Heights" (M34, the owner's approved concept v1, 2026-10-04): a closed-down neon market block turned airsoft
  * site, 46 × 30 m, three playable storeys (street ±0, Level 1 +3 m, Level 2 +6 m) linked by stairs only. Greybox by
- * day (M34c); night, art and sound follow (M34d-f). Tagged dev until the owner calls it done (map/maps.ts).
+ * day (M34c), Day or Night picked with the map (M34d); neon, art and sound follow (M34e-f). Tagged dev until the owner calls it done (map/maps.ts).
  *
  * Neon Avenue runs north–south down the middle. The west half (end 0, the attackers' in Attack / Defend): the West
  * Yard with the spawns, the Arcade with the Capsules hotel over it and a balcony over the avenue, and the Repair Shop
@@ -558,6 +558,10 @@ export const NEON_HEIGHTS: MapData = {
   flag: toWorld(POLE),
   storeys: [0, STOREY, 2 * STOREY],
   overlooks: OVERLOOKS.map((o) => ({ name: o.name, area: rectToWorld(o.area), from: o.from.map(toWorld) })),
+  // Day or Night, picked on the map's option in the Map pop-up (M34d), Night the first time (the owner's default 10).
+  // `night` goes with the first preset; map/lightingChoice.ts sets it for the one picked.
+  night: true,
+  lighting: { presets: ['night', 'day'] },
 };
 
 /** Layout facts the tests check against, in world coordinates, so they can't drift from the geometry. */
