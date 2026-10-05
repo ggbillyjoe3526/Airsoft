@@ -48,7 +48,7 @@ import { DebugOverlay } from './ui/debugOverlay';
 import { onFullscreenChange, relockAfterFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { GraphicsNotice } from './ui/graphicsNotice';
 import { loadoutTile } from './ui/loadoutChoice';
-import { type Collection, type ItemRef, loadCollection, saveCollection, syncCollection } from './pool/collection';
+import { type Collection, type ItemRef, loadCollection, saveCollection, saveOrReload, syncCollection } from './pool/collection';
 import { contentPool } from './pool/contentPool';
 import { GAME_POOL } from './pool/gamePool';
 import { matchUsesDev, type NewGamePicks, playedPicks, playedTeamSize } from './newGamePicks';
@@ -370,8 +370,9 @@ export class Game {
         collection: () => (syncCollection(this.collection, GAME_POOL), this.collection),
         equipped: () => this.equippedItems(),
         onChange: () => {
-          saveCollection(this.collection);
+          const reloaded = saveOrReload(this.collection, GAME_POOL);
           this.loadoutChanged = this.setupChanged = true;
+          return reloaded;
         },
         summary: () =>
           this.dev.disableArmory

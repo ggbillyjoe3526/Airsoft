@@ -34,8 +34,11 @@ export interface ArmoryOptions {
   collection: () => Collection;
   /** Every item you carry (the replicas and what is fitted to them), to say when a Shot's item became one of them. */
   equipped: () => readonly (ItemRef | null)[];
-  /** Something was bought, dispensed or scrapped: save the collection, and the Loadout follows it. */
-  onChange: () => void;
+  /**
+   * Something was bought, dispensed or scrapped: save the collection, and the Loadout follows it. True if another tab
+   * had saved first, so the collection was reloaded from its save and the change was not kept (M70, audit POOL-05).
+   */
+  onChange: () => boolean | void;
   onBack: () => void;
 }
 
@@ -64,13 +67,17 @@ export class ArmoryScreen {
   private last: Dispensed[] = [];
   /** The last Shot's items you now carry without picking them (a rarer copy of a replica or part left on its default). */
   private nowEquipped = new Set<string>();
+  /** Says once that the last change was not kept (M70, audit POOL-05); empty otherwise. */
+  private readonly notice = el('p', 'menu-readout armory-notice');
   private readonly back: HTMLButtonElement;
 
   constructor(private readonly opts: ArmoryOptions) {
     const page = menuPage('menu-armory', 'Armory');
     this.root = page.root;
     page.root.querySelector('.menu-heading')?.append(' ', el('span', 'beta-tag', ARMORY_TEXT.beta));
-    page.body.append(el('p', 'armory-free', ARMORY_TEXT.free));
+    page.body.append(el('p', 'armory-free', ARMORY_TEXT.free), this.notice);
+    // Always in the page, so a screen reader reads it out when it is filled.
+    this.notice.setAttribute('role', 'status');
     this.side = el('div', 'menu-panel armory-side');
     const main = el('div', 'menu-panel armory-main');
     this.reveal = el('div', 'armory-reveal');
@@ -93,6 +100,7 @@ export class ArmoryScreen {
     this.confirm.close();
     this.last = [];
     this.nowEquipped.clear();
+    this.notice.textContent = '';
     this.render();
   }
 
@@ -105,7 +113,13 @@ export class ArmoryScreen {
    * (data-action names) still there and enabled, else Back.
    */
   private changed(actions: readonly string[], focus?: () => HTMLElement | null): void {
-    this.opts.onChange();
+    const reloaded = this.opts.onChange() === true;
+    // The Shot's items are not in the collection now, so they are not shown as if they were.
+    if (reloaded) {
+      this.last = [];
+      this.nowEquipped.clear();
+    }
+    this.notice.textContent = reloaded ? ARMORY_TEXT.reloaded : '';
     this.render();
     (focus?.() ?? this.firstEnabled([...actions, 'shot-1', 'buy-1'])).focus({ preventScroll: true });
   }

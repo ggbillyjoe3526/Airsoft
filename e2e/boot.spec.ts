@@ -459,11 +459,16 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   expect(await shadowsOn()).toBe(true);
   expect(await multisampled()).toBe(true);
   expect(await page.locator('canvas.game-canvas').count()).toBe(1);
-  // A Custom row moves the picker to Custom; setting it back finds Medium again.
-  await settings.getByRole('group', { name: 'Shadows' }).getByRole('button', { name: 'Off' }).click();
+  // The Custom rows are folded under a preset (M68, audit UI-09): opened here, a row moves the picker to Custom, and
+  // setting it back finds Medium again.
+  const shadows = settings.getByRole('group', { name: 'Shadows' });
+  await expect(shadows).toBeHidden();
+  await settings.locator('summary', { hasText: 'Custom settings' }).click();
+  await expect(shadows).toBeVisible();
+  await shadows.getByRole('button', { name: 'Off' }).click();
   await expect(quality.getByRole('button', { name: 'Custom' })).toHaveAttribute('aria-pressed', 'true');
   expect(await shadowsOn()).toBe(false);
-  await settings.getByRole('group', { name: 'Shadows' }).getByRole('button', { name: 'On' }).click();
+  await shadows.getByRole('button', { name: 'On' }).click();
   await expect(quality.getByRole('button', { name: 'Medium' })).toHaveAttribute('aria-pressed', 'true');
   await quality.getByRole('button', { name: 'Low' }).click();
   await expect(quality.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');

@@ -180,3 +180,12 @@ export function saveCollection(c: Collection, storage = browserStorage()): boole
     return false;
   }
 }
+
+/**
+ * Saves `c`; if the save was refused because another tab saved first, `c` takes that save at once (M70, audit POOL-05).
+ * True then, so the screen can say the change was not kept. False when it saved, or when storage is full, blocked or
+ * from a newer build (nothing was taken from it: the change lasts for the visit).
+ */
+export function saveOrReload(c: Collection, pool: Pool, storage = browserStorage()): boolean {
+  return !saveCollection(c, storage) && syncCollection(c, pool, storage);
+}

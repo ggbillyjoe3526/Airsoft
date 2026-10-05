@@ -63,17 +63,22 @@ interface RowControl {
 /**
  * Settings → Graphics's quality rows (final alpha audit section 4, UI-06): the Quality picker (Low, Medium, High,
  * Custom), the frame-rate cap and FPS readout, and the Custom block with one row per quality setting, always showing
- * the values in force. Picking a preset shows its values on every row; changing a row turns the picker to Custom (or
- * to the preset the values now equal). The Custom rows' values are saved as `graphics.<field>` when the choice
- * becomes Custom, and row by row while it stays Custom; a preset's are never saved (the preset says them).
+ * the values in force (folded under a preset, M68). Picking a preset shows its values on every row; changing a row
+ * turns the picker to Custom (or to the preset the values now equal). The Custom rows' values are saved as
+ * `graphics.<field>` when the choice becomes Custom, and row by row while it stays Custom; a preset's are never saved
+ * (the preset says them).
  */
 export class GraphicsSettings {
   readonly qualityRow: HTMLDivElement;
   readonly frameRateRow: HTMLDivElement;
   readonly showFpsRow: HTMLDivElement;
   readonly toneMappingRow: HTMLDivElement;
-  /** The "Custom settings" heading and its rows. */
-  readonly customBlock: HTMLDivElement;
+  /**
+   * The "Custom settings" disclosure (M68, audit UI-09): its heading is the summary, then the rows. Open when the choice
+   * is Custom; under a preset it starts folded, and the player's own opening or folding stays for the session (the page
+   * is built once; nothing of it is saved).
+   */
+  readonly customBlock: HTMLDetailsElement;
   private readonly picker: OptionPicker<QualityChoice>;
   private readonly controls: RowControl[] = [];
   private choice: QualityChoice;
@@ -95,8 +100,9 @@ export class GraphicsSettings {
     const tone = new OptionPicker('Tone mapping', TONE_MAPPING_CHOICES, opts.toneMapping.initial, 'toneMapping', (id) => opts.toneMapping.onChange(id));
     this.toneMappingRow = menuRow('Tone mapping', GRAPHICS_TEXT.toneMappingHelp, tone.root);
 
-    this.customBlock = el('div', 'graphics-custom');
-    this.customBlock.append(el('h3', 'menu-kicker graphics-subhead', GRAPHICS_TEXT.customHeading), el('p', 'menu-readout', GRAPHICS_TEXT.customIntro));
+    this.customBlock = el('details', 'graphics-custom');
+    this.customBlock.open = this.choice === 'custom';
+    this.customBlock.append(el('summary', 'menu-kicker graphics-subhead', GRAPHICS_TEXT.customHeading), el('p', 'menu-readout', GRAPHICS_TEXT.customIntro));
     for (const row of GRAPHICS_ROWS) this.customBlock.append(this.buildRow(row));
     this.refreshNotes();
   }
@@ -111,6 +117,7 @@ export class GraphicsSettings {
     this.choice = choice;
     this.settings = settings;
     this.picker.show(choice);
+    this.unfoldForCustom();
     this.showRows();
   }
 
@@ -126,8 +133,14 @@ export class GraphicsSettings {
       this.settings = QUALITY[choice];
     }
     this.choice = choice;
+    this.unfoldForCustom();
     this.showRows();
     this.apply();
+  }
+
+  /** Picking Custom opens its block; any other pick leaves it as the player has it. */
+  private unfoldForCustom(): void {
+    if (this.choice === 'custom') this.customBlock.open = true;
   }
 
   /** A Custom row changed (its own control saved it). */

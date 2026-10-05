@@ -92,6 +92,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M34g** · Neon Heights (dev content) sound: traffic hum and drones by day with chimes, neon sizzle and arcade bleeps by night; Depot and Woodland unchanged
 
 ### Changed
+- **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)
+- **M68** · Settings → Graphics is shorter: the Custom rows fold away under Low, Medium and High and open when you pick Custom or click "Custom settings" (#121)
 - **M69** · Woodland and Neon Heights each have an echo of their own (long and dark in the woods, brighter in the city), and the neon hum is easier to hear on small speakers
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
@@ -123,6 +125,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
+- **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later (#122)
 - **M64** · The reload, case-opening and count bars fill smoothly in one motion (still step by step with Reduced motion on); the Key Bindings screen no longer holds on to the mouse wheel when no key is waiting (#118)
 - **M65** · A map's sounds are made while you're on the title screen, so pressing Play on Woodland or Neon Heights starts the match sooner (#119)
 - **M63** · Playing Neon Heights again with the same lighting reuses the built map instead of building it again; a match's shaders are compiled as it loads, so its first frame and first flag pickup hitch less; the GPU timer comes back after the graphics driver resets (#115)
@@ -160,6 +163,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M50** · The crash report's Quality line reads properly (not "[object Object]") and the report adds the rules, the lighting, Retro pixels and an Extraction run's state (#107)
 
 ### Internal
+- **M68** · Two unused style rules removed (#121)
 - **M69** · Sound effects drop their silent tails and the countdown beep renders once, so the sounds take less memory
 - **M64** · The performance check can play Extraction: its scripted player opens a case on Depot (#118)
 - **M51** · CI runs the slow tests in three parallel jobs beside the main check; the Extraction balance tests and the map Extraction blocks share one helper each; a smoke test plays Tournament Extraction with Retro pixels and Pro CQB against Pro (#110)

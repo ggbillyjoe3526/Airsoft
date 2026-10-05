@@ -109,7 +109,9 @@ export const ARMORY_TEXT = {
   /** Pity (audit POOL-01), one line per rule: "Legendary or rarer within 63 more Shots". */
   pity: (tier: string, shots: number) => `${tier} or rarer within ${shots} more ${shots === 1 ? 'Shot' : 'Shots'}`,
   pityKicker: 'Guaranteed',
-  odds: 'Rarity odds (each item drawn)',
+  /** Shown once when another tab saved first and this change was not kept (M70, audit POOL-05). */
+  reloaded: 'Another tab saved your collection first, so it was reloaded from that save. What you just did here was not kept.',
+  odds: 'Rarity odds (each item drawn, before pity)',
   /** Under the odds (audit POOL-04, POOL-05, POOL-26): how an asset is picked once its tier is drawn. */
   /** A chase item's own line under the odds (M32), e.g. the Cyber Pistol's. */
   chase: (name: string, tiers: string, percent: string, oneIn: number) =>
