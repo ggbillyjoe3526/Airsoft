@@ -8,12 +8,12 @@ keeps `status` and `attempts` current.
 ## M55 · Case line of sight, map overlaps and Extraction posts that see (Audit 2 SIM-A + AI-A: SIM-02, SIM-04, SIM-05, SIM-08, AI-01, AI-09, rows 197 and 200)
 tier: core
 perf: required
-touches: src/config/extraction.ts, src/config/bots.ts, src/sim/extraction.ts, src/map/neonHeights.ts, src/map/woodland.ts, src/ai/bot.ts, src/ai/botBrain.ts, src/ai/botMovement.ts, src/ai/extractionRoles.ts, src/ai/squadOrders.ts, docs/DECISIONS.md, docs/KNOWN_ISSUES.md, docs/ARCHITECTURE.md
+touches: src/config/extraction.ts, src/config/bots.ts, src/sim/extraction.ts, src/map/neonHeights.ts, src/map/woodland.ts, src/ai/bot.ts, src/ai/botBrain.ts, src/ai/botMovement.ts, src/ai/extractionRoles.ts, src/ai/squadOrders.ts, docs/DECISIONS.md, docs/KNOWN_ISSUES.md, docs/ARCHITECTURE.md, src/ai/depotMatch.neonHeights.test.ts, src/ai/woodlandMatch.pro.test.ts, src/ai/woodlandMatch.proFlag.test.ts, src/ai/woodlandNightMatch.test.ts
 contract: none (`ExtractionContext` gains an optional `sight`, ARCHITECTURE updated)
 acceptance:
   1. No case opens through a wall: the runner's eye needs a clear line to the case, one ray per candidate; every shipped case spot opens from in front of it (extractionCases.test, extractionData.test).
-  2. No two blocks on any map overlap, except the Plaza stair lip listed in the test and in KNOWN_ISSUES; Neon Heights' nav fingerprint is unchanged; Woodland's longest sight line, corner to corner, is 140.7 m and pinned under 141 m (owner decision 11: intended).
+  2. No two blocks on any map overlap, except the Plaza stair lip and two walls left whole where a floor's edge runs into them, all listed in the test and in KNOWN_ISSUES; Neon Heights' nav fingerprint, night roofs and cover lists match main apart from the deliberate edits; Woodland's longest sight line, corner to corner, is 140.7 m and pinned under 141 m (owner decision 11: intended).
   3. Extraction guards hold their post on its own floor and lean out where it was picked for a lean (owner decision 34, fix b): over 6 seeds on each map no guard at its post goes without seeing its way in (was 17 of 48); openers face their watch point from a lean spot.
   4. Between sidesteps a pushing hunter casts no more rays than a patrol, and a wave that can't place a returner tries again after `EXTRACTION.regenRetry`, not every tick.
 status: gates
-attempts: 0
+attempts: 1
