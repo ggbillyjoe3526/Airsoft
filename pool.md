@@ -157,6 +157,11 @@ when you have none):
 | Hard | 1.5 |
 | Pro | 2 |
 
+An Extraction run (M47, dev content for now) pays differently: no Match played, Match won or Round won, but the FC in
+the cases you get out with plus Hit on an opponent for each hit, all multiplied by the difficulty as above. A run you
+don't get out of (hit a second time, or still in at the end) pays your hits only, and walking out with nothing pays
+nothing more. The parts you get out with go straight into your collection.
+
 ### Tokens and Shots
 
 Shots are paid in Tokens. FC can be exchanged for Tokens at the rate below (0.00625 Tokens per FC, so 160 FC buys one

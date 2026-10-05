@@ -1120,6 +1120,17 @@ Dev content on, Extraction on Depot, Normal, as above.
   you, each facing a different way outwards, until you're done.
 - [ ] **Difficulty:** Easy should let you out with three cases most runs, Normal some runs, Hard rarely: say how it felt.
 
+## Extraction pay and records (M47, dev content)
+
+While Extraction is dev content a run pays nothing and enters no records (the summary says so), so these show only once
+the owner makes the mode public.
+
+- [ ] **Pay:** get out with a few cases on Normal. The summary's Field Credits read "Got out with N · M hits …", with no
+  Match played line; on Hard the total is half as much again. A run you don't get out of pays only your hits.
+- [ ] **The haul line:** "You got out with … The parts are in your collection. The FC is in your pay below."
+- [ ] **Records:** an Extraction column in the grid (runs got out of as W, the rest as L) and three bests: Best haul,
+  Extractions in a row, Fastest extraction with a case. Your Elimination "Wins in a row" is untouched by runs.
+
 ## Neon Heights by Night (M34e, dev content)
 
 Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Night is its default).

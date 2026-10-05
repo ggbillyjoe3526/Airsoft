@@ -34,6 +34,11 @@ export interface MatchOutcome {
    * (settleMatch). Absent in the other modes and for a run that didn't extract.
    */
   haul?: { fc: number; items: readonly ItemRef[] };
+  /**
+   * An Extraction run (M47): it pays the haul's FC and your hits, times the difficulty, with no match or round lines;
+   * out or caught out (no haul), your hits only.
+   */
+  extraction?: boolean;
 }
 
 /** A match's Field Credits, line by line as the summary shows them, and the total (after the difficulty). */
@@ -48,11 +53,7 @@ export interface Earnings {
 const FULL_MATCH_WINS = 5;
 
 export function matchEarnings(e: Economy, o: MatchOutcome): Earnings {
-  const scale = Math.min(1, Math.max(0, o.winsNeeded) / FULL_MATCH_WINS);
-  const lines = [{ label: 'Match played', fc: Math.round(e.earn.matchPlayed * scale) }];
-  if (o.won) lines.push({ label: 'Match won', fc: Math.round(e.earn.matchWon * scale) });
-  // Scaled like the match lines (audit POOL-09): a short 1v1 is no richer a farm than the standard match.
-  if (o.roundsWon > 0) lines.push({ label: `${o.roundsWon} ${o.roundsWon === 1 ? 'round' : 'rounds'} won`, fc: Math.round(e.earn.roundWon * o.roundsWon * scale) });
+  const lines = o.extraction ? runLines(o) : matchLines(e, o);
   if (o.hits > 0) lines.push({ label: `${o.hits} ${o.hits === 1 ? 'hit' : 'hits'} on an opponent`, fc: e.earn.hit * o.hits });
   // The lower of the two teams' (audit POOL-08): Hard teammates carrying you against Hard opponents pay as Hard only
   // if you're in there too, and Easy opponents never pay Hard rates.
@@ -63,6 +64,21 @@ export function matchEarnings(e: Economy, o: MatchOutcome): Earnings {
   );
   const total = Math.max(0, Math.round(lines.reduce((sum, l) => sum + l.fc, 0) * multiplier));
   return { lines, multiplier, total };
+}
+
+/** A match's own lines: Match played, Match won and the rounds won, scaled to its length. */
+function matchLines(e: Economy, o: MatchOutcome): Earnings['lines'] {
+  const scale = Math.min(1, Math.max(0, o.winsNeeded) / FULL_MATCH_WINS);
+  const lines = [{ label: 'Match played', fc: Math.round(e.earn.matchPlayed * scale) }];
+  if (o.won) lines.push({ label: 'Match won', fc: Math.round(e.earn.matchWon * scale) });
+  // Scaled like the match lines (audit POOL-09): a short 1v1 is no richer a farm than the standard match.
+  if (o.roundsWon > 0) lines.push({ label: `${o.roundsWon} ${o.roundsWon === 1 ? 'round' : 'rounds'} won`, fc: Math.round(e.earn.roundWon * o.roundsWon * scale) });
+  return lines;
+}
+
+/** An Extraction run's own line (M47): the FC got out with; nothing for walking out empty-handed or not getting out. */
+function runLines(o: MatchOutcome): Earnings['lines'] {
+  return o.haul && o.haul.fc > 0 ? [{ label: 'Got out with', fc: o.haul.fc }] : [];
 }
 
 /** What a decided match pays: its earnings, or nothing with the Armory switched off (Dev settings, M26d). */
@@ -264,11 +280,11 @@ export function drawPart(pool: Pool, owned: Readonly<Record<string, number>>, fr
 }
 
 /**
- * An Extraction haul goes into the collection (M44): its Field Credits earned and each part added, in the order found;
- * the caller saves once. Returns the parts as the Armory's reveal shows them (new, or a spare). Pity is untouched.
+ * An Extraction haul's parts go into the collection (M44), in the order found; its Field Credits come with the run's
+ * pay (M47, matchEarnings: times the difficulty). The caller saves once. Returns the parts as the Armory's reveal shows
+ * them (new, or a spare). Pity is untouched.
  */
-export function grantHaul(c: Collection, haul: { fc: number; items: readonly ItemRef[] }): Dispensed[] {
-  earn(c, haul.fc);
+export function grantHaul(c: Collection, haul: { readonly items: readonly ItemRef[] }): Dispensed[] {
   return haul.items.map((item) => {
     const isNew = ownedCount(c, item) === 0;
     addItem(c, item);

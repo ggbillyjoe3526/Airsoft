@@ -9,7 +9,8 @@ const none = { fc: 0, items: [] };
 
 describe("the summary's haul line (M44)", () => {
   it('says what you got out with, and whether it went into your collection', () => {
-    expect(haulLine({ extracted: true, found, out: found, kept: [] })).toBe('+145 FC and 1 part, now in your collection.');
+    expect(haulLine({ extracted: true, found, out: found, kept: [] })).toBe('You got out with 145 FC and 1 part. The parts are in your collection. The FC is in your pay below.');
+    expect(haulLine({ extracted: true, found, out: { fc: 145, items: [] }, kept: [] })).toBe('You got out with 145 FC. The FC is in your pay below.');
     expect(haulLine({ extracted: true, found, out: found, kept: null })).toBe('145 FC and 1 part. Not kept: nothing from this run goes into your collection.');
   });
 
