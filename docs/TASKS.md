@@ -15,5 +15,5 @@ acceptance:
   2. `MatchSession`'s constructor ends with exactly one `Renderer.warmShaders` call, which compiles the world and the held replica under the first frame's environment and render target; no frame calls `compile` and the Play flow is unchanged (`renderer.test.ts`).
   3. After a WebGL context is lost and restored, the next timed frame begins a query made on the restored context, never one from the lost context, and GPU ms comes back (`renderer.test.ts`).
   4. KNOWN_ISSUES row 161 is closed, with the shadow-depth remainder and the laptop check noted.
-status: qa
+status: gates
 attempts: 0
