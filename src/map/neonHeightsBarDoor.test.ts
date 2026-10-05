@@ -7,8 +7,8 @@ import { NEON_HEIGHTS } from './neonHeights';
 /**
  * M73 (audit BAL-04): the Tower's bar door opens on Neon Avenue, and the east's last mid-lane holds must sit inside the
  * door line, back in the bar. From (5.4, 1.7) (plan coordinates; z is mirrored in world coordinates), 1.1 m behind the
- * door, a holder watched a 7 m stretch of the avenue and took the first hit in 15 of 24 Normal night rounds; the lane
- * point now stands deeper in the door's line. The door is read off the map's wall blocks, not copied.
+ * door, a holder saw 4 m of the avenue through it and the east landed the first hit in 61 % of Normal night rounds; the
+ * lane's last points now stand deeper in the door's line. The door is read off the map's wall blocks, not copied.
  */
 
 const level = buildLevelRay(NEON_HEIGHTS.blocks);
