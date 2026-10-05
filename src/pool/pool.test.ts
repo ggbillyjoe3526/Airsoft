@@ -487,3 +487,78 @@ describe('M32 acceptance 1: the Cyber Pistol row and the Tiers and Drop % column
     expect(save.owned[itemKey('000001', 'common')]).toBe(1);
   });
 });
+
+describe('pool.md, plausibility guards (M56, audit POOL-02, POOL-03, POOL-06)', () => {
+  /**
+   * Every shipped ID and the asset it stands for (audit POOL-06). IDs are save keys (`000002@epic`, pity, fits, the
+   * chase row): renumbering a row would turn every player's copies into copies of whatever now holds the ID. A new row
+   * appends the next ID here; a removed row's ID stays out of pool.md and is never reused; a rename changes only its
+   * Name here. 000021 is the guide's example battery and stays free; loot cases take 000022 on.
+   */
+  it('pins every shipped pool ID to its asset', () => {
+    expect(Object.fromEntries(pool.assets.map((a) => [a.id, a.name]))).toEqual({
+      '000001': 'Gas Pistol',
+      '000002': 'AEG Rifle',
+      '000003': 'Standard Battery',
+      '000004': 'Green Gas',
+      '000005': 'Red Laser',
+      '000006': 'Vertical Grip',
+      '000007': 'Red Dot',
+      '000008': 'Red Gas',
+      '000009': 'Black Gas',
+      '000010': '2x Scope',
+      '000011': 'Angled Grip',
+      '000012': 'Hi-Cap Magazine',
+      '000013': 'Low-Cap Magazine',
+      '000014': 'Extended Magazine',
+      '000015': '11.1 V LiPo Battery',
+      '000016': 'Tight-Bore Barrel',
+      '000017': 'Long Barrel',
+      '000018': 'Silencer',
+      '000019': 'Cyber Pistol',
+      '000020': 'Weapon Torch',
+    });
+  });
+
+  it('flags Odds % that rise down the Rarity table (a Legendary on 46 % of draws), reading them as written', () => {
+    const inverted = mini('').replace('| Common | 70 | 0 | 5 |\n| Very Rare | 30 | 9 | 40 |', '| Common | 30 | 0 | 5 |\n| Very Rare | 70 | 9 | 40 |');
+    const p = loadPool(inverted);
+    expect(p.errors).toContain('line 2: Odds % may not rise down the table: a rarer tier is drawn less often');
+    expect(p.tiers.map((t) => [t.id, t.odds])).toEqual([
+      ['common', 0.3],
+      ['veryRare', 0.7],
+    ]);
+    expect(loadPool(mini('')).errors.some((e) => e.includes('Odds % may not rise'))).toBe(false);
+  });
+
+  it('refuses a Difficulty multiplier under 0.1 (a 0 pays nothing), leaving the row out for the built-in number', () => {
+    const swapped = poolText.replace('| Hard | 1.5 |', '| Hard | 0 |').replace('| Easy | 0.5 |', '| Easy | 0.05 |');
+    expect(swapped).not.toBe(poolText);
+    const p = loadPool(swapped);
+    expect(p.errors.some((e) => /^line \d+: Multiplier must be a number of 0\.1 or more, not "0"$/.test(e))).toBe(true);
+    expect(p.errors.some((e) => e.includes('not "0.05"'))).toBe(true);
+    expect(p.economy.difficulty).toEqual(DEFAULT_ECONOMY.difficulty);
+    const floor = loadPool(poolText.replace('| Easy | 0.5 |', '| Easy | 0.1 |'));
+    expect(floor.errors).toEqual([]);
+    expect(floor.economy.difficulty.easy).toBe(0.1);
+  });
+});
+
+describe('a collection from a newer version of the store (M56, audit POOL-01)', () => {
+  it('is neither read nor overwritten: the visit plays on a new collection that is never saved over it', () => {
+    const storage = new MemoryStorage();
+    const newer = JSON.stringify({ version: 2, owned: { '000007@legendary': 3 }, fc: 5000, tokens: 9, seed: 7, rev: 4, later: true });
+    storage.setItem('airsoft.collection', newer);
+    const c = loadCollection(pool, 1, storage);
+    expect(c.fc).toBe(0);
+    expect(c.owned['000007@legendary']).toBeUndefined();
+    c.fc = 40;
+    expect(saveCollection(c, storage)).toBe(false);
+    expect(syncCollection(c, pool, storage)).toBe(false);
+    expect(storage.getItem('airsoft.collection')).toBe(newer);
+    // This version and older objects (no version) are still saved over as before.
+    storage.setItem('airsoft.collection', JSON.stringify({ owned: {}, fc: 1 }));
+    expect(saveCollection(c, storage)).toBe(true);
+    expect(JSON.parse(storage.getItem('airsoft.collection')!)).toMatchObject({ version: 1, fc: 40 });
+  });
+});

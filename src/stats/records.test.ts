@@ -193,3 +193,19 @@ describe('an Extraction run’s record from its haul (M47)', () => {
     expect(runResultOf([], 30)).toEqual({ haulFc: 0, finds: 0, seconds: 30 });
   });
 });
+
+describe('records from a newer version of the store (M56, audit POOL-01)', () => {
+  it('are neither read nor overwritten: a match played meanwhile lasts for the session only', () => {
+    const newer = JSON.stringify({ version: 2, results: { 'normal.elimination': { wins: 40, losses: 2 } }, streak: 9, bestStreak: 12 });
+    const store = memory({ [RECORDS_KEY]: newer });
+    const r = loadRecords(store);
+    expect(r).toEqual(emptyRecords());
+    addMatch(r, win());
+    saveRecords(r, store);
+    expect(store.data.get(RECORDS_KEY)).toBe(newer);
+    // Records of this version are saved over as before.
+    store.data.set(RECORDS_KEY, JSON.stringify({ version: 1, streak: 0 }));
+    saveRecords(r, store);
+    expect(loadRecords(store)).toEqual(r);
+  });
+});
