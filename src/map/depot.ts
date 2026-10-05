@@ -353,6 +353,30 @@ const CASE_SPOTS: CaseSpot[] = (
     [-2.8, 0, 5.4, Math.PI / 2, LANE], // by the Main Gate's barrier
   ] as const
 ).map(([x, y, z, yaw, kinds]) => ({ position: vec3(x, y, z), yaw, kinds: [...kinds] }));
+/**
+ * The home team's regen points (M45): both spawn yards, the office's rooms, the stores and hall, the yards, the Bay, the
+ * back lot, the car park and the dock. A returner takes one at least REGEN_DISTANCE from the squad and out of its
+ * sight, so from any insertion several stay usable (extractionData.test.ts checks it with the real level).
+ */
+const REGENS: SpawnPoint[] = (
+  [
+    [-22.7, 0, 0.0, -Math.PI / 2], // the west spawn yard
+    [24.15, 0, 12.4, Math.PI / 2], // the east spawn yard
+    [-7.2, 0, -13.2, 0], // the office's west room
+    [7.4, 0, -13.4, 0], // the hall
+    [16.0, 0, -12.8, Math.PI / 2], // the office stores
+    [-7.2, 0, 13.0, Math.PI], // the staging yard, behind the rack
+    [13.0, 0, 6.8, Math.PI], // the Bay
+    [19.0, 0, -4.2, -Math.PI / 2], // the back lot
+    [-11.4, 0, -10.4, Math.PI / 2], // the car park
+    [0.4, DOCK_HEIGHT, 14.6, Math.PI], // the dock's west end
+    [-15.0, 0, -6.6, -Math.PI / 2], // the car park's road
+    [-11.8, 0, 11.4, Math.PI], // the staging yard's west side
+  ] as const
+).map(([x, y, z, yaw]) => ({ position: vec3(x, y, z), yaw }));
+/** The plan's 25 m is most of Depot's width; 15 m still keeps a returner out of your face. */
+const REGEN_DISTANCE = 15;
+
 /** A run on Depot: 8 minutes (plan, section 5), two opponents more than the squad (3 / 4 / 5). */
 const RUN_TIME = 480;
 const BASE_OPPONENTS = 2;
@@ -392,6 +416,8 @@ export const DEPOT: MapData = {
     exits: EXITS.map((e) => ({ ...e, position: toWorld(e.position) })),
     opponentStarts: OPPONENT_STARTS.map(spawnToWorld),
     cases: CASE_SPOTS.map((c) => ({ ...spawnToWorld(c), kinds: c.kinds })),
+    regens: REGENS.map(spawnToWorld),
+    regenDistance: REGEN_DISTANCE,
   },
 };
 

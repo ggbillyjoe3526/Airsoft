@@ -280,7 +280,7 @@ along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramp
 when body height is clear between them), spawns and dead-zone spots
 per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
 without one are elimination only) and an Extraction block (M43: insertions, exits, home-team starts, run time and base
-opponents; M44: case spots, each naming the kinds of case it suits; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
+opponents; M44: case spots, each naming the kinds of case it suits; M45: the home team's regen points and how far from the squad they must be; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
 at an end every round start (in Attack / Defend the attackers start at end 0; in Elimination Blue starts at
 `RoundRules.eliminationFirstEnd`, the east on Depot)
 and swaps them at half-time, and `Character.end` says where a character started, for its dead zone and its bot's
@@ -308,8 +308,11 @@ request. Each line names where it lives and what pins it.
   `exitOpened` and `runWarning` report it. Since M44 the run also holds its cases (placed and filled before it starts by
   `pool/caches.ts rollRunCases`, carried in `ExtractionContext.cases`), what the runner carries, and the case being
   opened; `PlayerCommand.use` (held) becomes `Character.using` for a character in play while the round is live, and
-  the events `caseNoise` (bots hear it), `caseOpened` and `caseDropped` report the cases. Pinned by
-  `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`.
+  the events `caseNoise` (bots hear it), `caseOpened` and `caseDropped` report the cases. Since M45 the run counts the
+  home team's waves (`ExtractionContext.waves`: regen points, the interval, the cap and its late extra, and the world
+  query the out-of-sight check casts through; `ExtractionContext.reserveAt`: where the reserve past the cap waits), and
+  the event `returned` reports an opponent back in a wave. Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`,
+  `sim/extractionCases.test.ts`, `sim/extractionWaves.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step, FA1); randomness only from `state.rng`. Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/`, implemented by `physics/physicsWorld.ts`): ray and shape casts and
@@ -349,5 +352,5 @@ request. Each line names where it lives and what pins it.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
   are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
   time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
-  `extraction` (M44 adds its `cases`). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
+  `extraction` (M44 adds its `cases`, M45 its `regens` and `regenDistance`). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
   `map/extractionData.test.ts`.

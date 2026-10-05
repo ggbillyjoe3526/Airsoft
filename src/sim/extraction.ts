@@ -1,6 +1,8 @@
 import { EXTRACTION, type ExtractionRules } from '../config/extraction';
+import type { BodyConfig } from '../config/movement';
 import type { ExitZone, ExtractionData, SpawnPoint } from '../map/mapTypes';
-import { type Character, respawnCharacter } from './character';
+import type { WorldQuery } from './armament';
+import { type Character, eyeHeight, respawnCharacter } from './character';
 import { isInPlay } from './elimination';
 import type { GameEvent } from './events';
 import { refillSpares } from './rangeTargets';
@@ -14,8 +16,9 @@ import { copy, type Vec3, vec3 } from './vec';
  * moment the hit call ends (owner, 2026-10-04: automatically, no walk back). Exits within `minExitDistance` of the
  * insertion are closed for the run; a late exit opens with `lateExitAt` seconds left. Cases (M44): the runner opens one
  * by holding the Use key beside it (its kind's opening time, making its noise as it goes), and carries what it held;
- * a hit drops all of it as a case where they fell, and it is theirs only if they extract. Plain data, stepped by
- * sim/round.ts.
+ * a hit drops all of it as a case where they fell, and it is theirs only if they extract. Waves (M45): hit opponents come
+ * back together, every so often or once none is left in play, at regen points out of the squad's sight, up to the
+ * run's cap (one more in its last third). Plain data, stepped by sim/round.ts.
  */
 
 export type RunOutcome = 'none' | 'extracted' | 'out' | 'time';
@@ -105,6 +108,31 @@ export interface RunState {
   noiseIn: number;
   /** What the runner carries: theirs if they extract, dropped as a case if they are hit. */
   carried: CaseFind[];
+  /** Seconds until the home team's next wave (M45), and whether one is due (waiting for its returners to fit in). */
+  waveIn: number;
+  waveDue: boolean;
+  /** Waves released so far. */
+  waves: number;
+  /** The regen point the next returner tries first: they take turns, so a wave doesn't come in on one spot. */
+  nextRegen: number;
+}
+
+/**
+ * The home team's waves in a run (M45): where and how often hit opponents come back, and how many may be in play.
+ * Without it (a test's run, a map without regen points) a hit opponent stays out.
+ */
+export interface WaveSetup {
+  regens: readonly SpawnPoint[];
+  /** A regen point is used only this far (m, horizontal) from every squad member. */
+  regenDistance: number;
+  /** Seconds between waves (EXTRACTION.waveEvery for the opponents' difficulty). */
+  every: number;
+  /** Opponents in play at most (base + squad), and how many more once `lateFrom` seconds are left. */
+  cap: number;
+  lateExtra: number;
+  lateFrom: number;
+  /** For the out-of-sight check: the world's static surfaces and the body a line of sight runs from and to. */
+  sight?: { query: WorldQuery; body: BodyConfig } | undefined;
 }
 
 /** What a run needs from the session: the rules, who the runner and the squad are, and the run's places. */
@@ -126,6 +154,13 @@ export interface ExtractionContext {
   spawnLift: number;
   /** The run's cases, placed and rolled (pool/caches.ts rollRunCases); none on a map without case spots. */
   cases: readonly CaseSetup[];
+  /** The home team's waves (M45); without them a hit opponent stays out. */
+  waves?: WaveSetup | undefined;
+  /**
+   * Where the home team's reserve waits until the run's last part (the dead zone at their end): the characters past
+   * the run's cap, who join in its waves once `lateFrom` seconds are left.
+   */
+  reserveAt?: readonly SpawnPoint[] | undefined;
 }
 
 export function createRunState(): RunState {
@@ -144,6 +179,10 @@ export function createRunState(): RunState {
     openProgress: 0,
     noiseIn: 0,
     carried: [],
+    waveIn: 0,
+    waveDue: false,
+    waves: 0,
+    nextRegen: 0,
   };
 }
 
@@ -185,6 +224,10 @@ export function resetRun(run: RunState, ctx: ExtractionContext, characterCount: 
   run.inReach = -1;
   stopOpening(run);
   run.carried = [];
+  run.waveIn = ctx.waves?.every ?? 0;
+  run.waveDue = false;
+  run.waves = 0;
+  run.nextRegen = 0;
 }
 
 /**
@@ -196,18 +239,28 @@ export function placeRun(characters: readonly Character[], ctx: ExtractionContex
   for (const c of characters) if (c.team === ctx.squadTeam) squad++;
   let slot = Math.max(0, Math.floor((ctx.insertion.length - squad) / 2));
   let start = 0;
+  let reserve = 0;
   for (const c of characters) {
     const home = c.team !== ctx.squadTeam;
     c.end = home ? 1 - ctx.insertionEnd : ctx.insertionEnd;
-    const s = home ? ctx.opponentStarts[start++] : ctx.insertion[slot++];
-    if (s) {
-      c.spawnPosition.x = s.position.x;
-      c.spawnPosition.y = s.position.y + ctx.spawnLift;
-      c.spawnPosition.z = s.position.z;
-      c.spawnYaw = s.yaw;
-    }
+    // The home team past the run's cap waits as the reserve, out of play in its dead zone, until the last part.
+    const reserved = home && ctx.waves !== undefined && start >= ctx.waves.cap;
+    const s = reserved ? ctx.reserveAt?.[reserve++ % Math.max(1, ctx.reserveAt.length)] : home ? ctx.opponentStarts[start++] : ctx.insertion[slot++];
+    if (s) setSpawn(c, s, ctx.spawnLift);
     respawnCharacter(c);
+    if (reserved) {
+      c.status = 'out';
+      c.statusTime = 0;
+      c.deadZoneYaw = c.spawnYaw;
+    }
   }
+}
+
+function setSpawn(c: Character, s: SpawnPoint, lift: number): void {
+  c.spawnPosition.x = s.position.x;
+  c.spawnPosition.y = s.position.y + lift;
+  c.spawnPosition.z = s.position.z;
+  c.spawnYaw = s.yaw;
 }
 
 /**
@@ -232,6 +285,14 @@ export interface RunSetup {
   rules?: ExtractionRules;
   /** The run's cases (pool/caches.ts rollRunCases), rolled from the same seed; none if absent. */
   cases?: readonly CaseSetup[];
+  /**
+   * Waves (M45): seconds between them (EXTRACTION.waveEvery for the opponents' difficulty) and what the out-of-sight
+   * check sees through; none (hit opponents stay out) if absent or the map has no regen points.
+   */
+  waveEvery?: number;
+  sight?: WaveSetup['sight'];
+  /** The map's dead zones, per end: the reserve waits in the home team's. */
+  deadZones?: readonly (readonly SpawnPoint[])[];
 }
 
 /**
@@ -241,17 +302,28 @@ export interface RunSetup {
 export function createRunContext(data: ExtractionData, setup: RunSetup): ExtractionContext {
   const rng = createRng(setup.seed);
   const insertion = data.insertions[Math.floor(rngNext(rng) * data.insertions.length)] ?? data.insertions[0]!;
+  const rules = setup.rules ?? EXTRACTION;
+  const cap = data.baseOpponents + setup.squad;
+  const waves: WaveSetup | undefined =
+    setup.waveEvery !== undefined && data.regens.length > 0
+      ? { regens: data.regens, regenDistance: data.regenDistance, every: setup.waveEvery, cap, lateExtra: rules.lateExtra, lateFrom: data.runTime * rules.lateShare, sight: setup.sight }
+      : undefined;
+  // The reserve takes the home dead zone's spots from its far end, so hit teammates walking off to its first ones
+  // don't stand on it.
+  const reserveAt = [...(setup.deadZones?.[1 - insertion.end] ?? [])].reverse();
   return {
-    rules: setup.rules ?? EXTRACTION,
+    rules,
     runner: setup.runner,
     squadTeam: setup.squadTeam,
     insertion: insertion.spawns,
     insertionEnd: insertion.end,
-    opponentStarts: pickOpponentStarts(data.opponentStarts, insertion.spawns, data.baseOpponents + setup.squad),
+    opponentStarts: pickOpponentStarts(data.opponentStarts, insertion.spawns, cap),
     exits: data.exits,
     respawnAfter: setup.respawnAfter,
     spawnLift: setup.spawnLift,
     cases: setup.cases ?? [],
+    waves,
+    reserveAt,
   };
 }
 
@@ -302,6 +374,7 @@ export function stepRun(run: RunState, characters: readonly Character[], ctx: Ex
     respawnCharacter(c);
     events.push({ type: 'respawned', characterId: c.id, respawnsLeft: rules.respawns - used - 1 });
   }
+  if (ctx.waves) stepWaves(run, characters, ctx, ctx.waves, clock, events, dt);
 
   if (runner && isInPlay(runner)) {
     stepCases(run, runner, rules, events, dt);
@@ -314,6 +387,117 @@ export function stepRun(run: RunState, characters: readonly Character[], ctx: Ex
   if (run.count >= rules.extractTime) return endRun(run, 'extracted');
   if (clock <= 0) return endRun(run, 'time');
   return 'none';
+}
+
+/** Opponents in play at most with `clock` seconds left: the run's cap, and its late extra in the last part. */
+export function waveCap(waves: WaveSetup, clock: number): number {
+  return waves.cap + (clock <= waves.lateFrom ? waves.lateExtra : 0);
+}
+
+/** A hit opponent ready to come back: out of play and done calling the hit (walking off, or out). */
+function waiting(c: Character, ctx: ExtractionContext): boolean {
+  return c.team !== ctx.squadTeam && !isInPlay(c) && c.status !== 'calling';
+}
+
+/**
+ * The home team's waves: one is due every `every` seconds (nobody waiting: that wave is empty), or as soon as nobody
+ * of theirs is left in play or calling a hit with someone waiting. A due wave brings back those waiting, up to the cap,
+ * each at the next regen point that is out of the squad's sight; whoever can't come in yet (no such point free) tries
+ * again next tick, until the wave is in.
+ */
+function stepWaves(run: RunState, characters: readonly Character[], ctx: ExtractionContext, waves: WaveSetup, clock: number, events: GameEvent[], dt: number): void {
+  let inPlay = 0;
+  let ready = 0;
+  let calling = 0;
+  for (const c of characters) {
+    if (c.team === ctx.squadTeam) continue;
+    if (isInPlay(c)) inPlay++;
+    else if (c.status === 'calling') calling++;
+    else ready++;
+  }
+  run.waveIn -= dt;
+  if (!run.waveDue) {
+    const cleared = inPlay === 0 && calling === 0 && ready > 0;
+    if (run.waveIn > 0 && !cleared) return;
+    run.waveIn = waves.every;
+    if (ready === 0) return;
+    run.waveDue = true;
+    run.waves++;
+  }
+  const cap = waveCap(waves, clock);
+  for (const c of characters) {
+    if (inPlay >= cap || ready === 0) break;
+    if (!waiting(c, ctx)) continue;
+    const at = freeRegen(run, characters, ctx, waves);
+    if (!at) break;
+    setSpawn(c, at, ctx.spawnLift);
+    respawnCharacter(c);
+    events.push({ type: 'returned', characterId: c.id });
+    inPlay++;
+    ready--;
+  }
+  // In (or as many as fit): the next wave counts from when this one was due.
+  if (ready === 0 || inPlay >= cap) run.waveDue = false;
+}
+
+/**
+ * The next regen point (taking turns from `run.nextRegen`) nobody in play stands on, far enough from and out of sight
+ * of the squad, or none.
+ */
+function freeRegen(run: RunState, characters: readonly Character[], ctx: ExtractionContext, waves: WaveSetup): SpawnPoint | undefined {
+  const n = waves.regens.length;
+  for (let k = 0; k < n; k++) {
+    const i = (run.nextRegen + k) % n;
+    const r = waves.regens[i]!;
+    if (taken(r, characters, ctx.rules) || !regenClear(r, characters, ctx, waves)) continue;
+    run.nextRegen = (i + 1) % n;
+    return r;
+  }
+  return undefined;
+}
+
+/** Whether someone in play stands within `regenClearance` of regen point `r`, on its floor (about a storey). */
+function taken(r: SpawnPoint, characters: readonly Character[], rules: ExtractionRules): boolean {
+  for (const c of characters) {
+    if (isInPlay(c) && flat(c.position, r.position) < rules.regenClearance && Math.abs(c.position.y - r.position.y) <= rules.exitHeightReach) return true;
+  }
+  return false;
+}
+
+// Scratch for the out-of-sight check (used only within one call).
+const eye = vec3();
+const seen = vec3();
+const dir = vec3();
+
+/** Whether regen point `r` is at least `regenDistance` from every squad member still on the field and out of their sight. */
+export function regenClear(r: SpawnPoint, characters: readonly Character[], ctx: Pick<ExtractionContext, 'squadTeam' | 'spawnLift' | 'rules'>, waves: WaveSetup): boolean {
+  for (const c of characters) {
+    if (c.team !== ctx.squadTeam || c.status === 'out') continue;
+    if (flat(c.position, r.position) < waves.regenDistance) return false;
+    const sight = waves.sight;
+    if (!sight) continue;
+    copy(eye, c.position);
+    eye.y += eyeHeight(c.crouchAmount, sight.body);
+    for (const share of ctx.rules.regenSeenAt) {
+      copy(seen, r.position);
+      seen.y += ctx.spawnLift + share * sight.body.height;
+      if (lineClear(sight.query, eye, seen)) return false;
+    }
+  }
+  return true;
+}
+
+/** True if nothing static stands between `a` and `b`. */
+function lineClear(query: WorldQuery, a: Vec3, b: Vec3): boolean {
+  dir.x = b.x - a.x;
+  dir.y = b.y - a.y;
+  dir.z = b.z - a.z;
+  const d = Math.hypot(dir.x, dir.y, dir.z);
+  if (d < 1e-6) return true;
+  dir.x /= d;
+  dir.y /= d;
+  dir.z /= d;
+  return query.raycastStatic(a, dir, d) < 0;
 }
 
 /** Respawns `c` has left this run (0 for anyone outside the squad). */

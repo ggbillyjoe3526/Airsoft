@@ -44,6 +44,8 @@ export type GameEvent =
   | { type: 'flagRope'; position: Vec3; raising: boolean }
   /** Extraction (M43): a hit squad member is back at the insertion, with `respawnsLeft` more this run. */
   | { type: 'respawned'; characterId: number; respawnsLeft: number }
+  /** Extraction (M45): a hit opponent back in play in a wave, at a regen point out of the squad's sight. */
+  | { type: 'returned'; characterId: number }
   /** Extraction: the runner's count at exit `exit` passed another second; `secondsLeft` to go. */
   | { type: 'exitCount'; exit: number; secondsLeft: number }
   /** Extraction: a late exit opened (index into RunState.exits). */

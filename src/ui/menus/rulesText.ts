@@ -28,8 +28,8 @@ export interface MatchRulesText {
 const END_NAMES = ['west', 'east'] as const;
 
 /**
- * Extraction's goal paragraph (M43): the squad, the home team's numbers, the clock, the exits and the one respawn. On a
- * map without Extraction data the match is played as Elimination (MatchSession), and the paragraph says so.
+ * Extraction's goal paragraph (M43): the squad, the home team's numbers and waves (M45), the clock, the exits and the one
+ * respawn. On a map without Extraction data the match is played as Elimination (MatchSession), and the paragraph says so.
  */
 function describeRun(r: MatchRulesText, x: ExtractionData | undefined): string {
   if (!x) return 'This map has no Extraction yet: the match is played as Elimination.';
@@ -37,6 +37,8 @@ function describeRun(r: MatchRulesText, x: ExtractionData | undefined): string {
   const squad = mates === 0 ? 'Solo: just you' : `You and ${mates} bot teammate${mates === 1 ? '' : 's'}, who follow you`;
   return (
     `${squad} (${r.playerTeam}), against ${x.baseOpponents + r.teamSize} ${r.enemyTeam} bots of the home team. ` +
+    // Waves (M45), on a map with regen points.
+    (x.regens.length > 0 ? `The ones you hit come back in waves, out of your sight, and one more joins them for the last third. ` : '') +
     `You have ${formatRoundTime(x.runTime)} to get to an open exit and stand in it for ${EXTRACTION.extractTime} s while you're counted out; ` +
     `someone from the home team in the exit pauses the count. A late exit opens with ${formatRoundTime(EXTRACTION.lateExitAt)} left. ` +
     `Hit once and you're back at the insertion straight away; hit again and you're out of the run.`

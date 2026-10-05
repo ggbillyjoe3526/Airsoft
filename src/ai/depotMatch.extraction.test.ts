@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BALLISTICS, WIND } from '../config/ballistics';
 import { BOTS, botConfig } from '../config/bots';
+import { EXTRACTION } from '../config/extraction';
 import { FOOTSTEPS } from '../config/footsteps';
 import { HITS, ROUNDS } from '../config/hits';
 import { BODY, MOVEMENT } from '../config/movement';
@@ -16,7 +17,7 @@ import { GAME_POOL } from '../pool/gamePool';
 import { type Character, createCharacter } from '../sim/character';
 import { createCommand, type PlayerCommand } from '../sim/commands';
 import { eliminate, isInPlay } from '../sim/elimination';
-import { createRunContext, haulTotals, runHaul } from '../sim/extraction';
+import { createRunContext, haulTotals, regenClear, runHaul } from '../sim/extraction';
 import { startRun } from '../sim/round';
 import { createSimContext, stepSimulation } from '../sim/simulation';
 import { createGameState } from '../sim/state';
@@ -39,7 +40,18 @@ function setUpRun(seed: number) {
   const physics = new PhysicsWorld(DEPOT, BODY, DT);
   const nav = buildNavGrid(DEPOT, NAV);
   const cases = rollRunCases(GAME_POOL, x.cases, {}, caseSeed(seed));
-  const run = createRunContext(x, { squad, seed: runSeed(seed), runner: 0, squadTeam: 0, respawnAfter: HITS.callTime, spawnLift: PHYSICS.groundRestGap, cases });
+  const run = createRunContext(x, {
+    squad,
+    seed: runSeed(seed),
+    runner: 0,
+    squadTeam: 0,
+    respawnAfter: HITS.callTime,
+    spawnLift: PHYSICS.groundRestGap,
+    cases,
+    waveEvery: EXTRACTION.waveEvery.normal,
+    sight: { query: physics, body: BODY },
+    deadZones: DEPOT.deadZones,
+  });
   const state = createGameState(seed, BALLISTICS.maxBBs, rules, 'extraction');
   const ctx = createSimContext({
     mover: physics,
@@ -59,7 +71,8 @@ function setUpRun(seed: number) {
     rounds: rules,
     extraction: run,
   });
-  const opponents = x.baseOpponents + squad;
+  // The home team's cap and its reserve for the run's last part (M45).
+  const opponents = x.baseOpponents + squad + EXTRACTION.lateExtra;
   for (let id = 0; id < squad + opponents; id++) state.characters.push(createCharacter(id, vec3(), 0, LOADOUT, id < squad ? 0 : 1));
   startRun(state.round, state.characters, ctx.round);
   for (const c of state.characters) physics.addCharacter(c);
@@ -105,10 +118,12 @@ function setUpRun(seed: number) {
   const elimination = { deadZones: DEPOT.deadZones, nav, navSearch: createNavSearch(nav), snap: NAV.snap };
   /** You're hit by the first opponent. */
   const hitYou = () => eliminate(you, squad, state.characters, elimination);
+  /** `c` is hit by you. */
+  const hitThem = (c: Character) => eliminate(c, you.id, state.characters, elimination);
   /** Your keys: you aren't a bot, so this is what you do each tick (standing still unless a test says otherwise). */
   const yours = createCommand();
   commands.set(you.id, yours);
-  return { state, run, you, yours, bots, play, moveYou, hitYou, dispose: () => physics.dispose() };
+  return { state, run, you, yours, bots, play, moveYou, hitYou, hitThem, physics, dispose: () => physics.dispose() };
 }
 
 const mates = (cs: readonly Character[]) => cs.filter((c) => c.team === 0 && c.id !== 0);
@@ -130,7 +145,8 @@ describe('Extraction on Depot, headless (M43)', () => {
           if (Math.hypot(m.position.x - r.you.position.x, m.position.z - r.you.position.z) < 8) near++;
         }
       });
-      expect(r.bots.orderOf(r.you), `seed ${seed}`).toBe('follow');
+      // Following you as long as any of them is still in play (a busy start can put both out of the run).
+      if (mates(r.state.characters).some(isInPlay)) expect(r.bots.orderOf(r.you), `seed ${seed}`).toBe('follow');
       expect(near / Math.max(1, ticks), `seed ${seed}: teammates near you`).toBeGreaterThan(0.8);
       const open = r.state.round.run.exits.find((e) => e.open)!;
       r.moveYou(open.position);
@@ -186,6 +202,47 @@ describe('Extraction on Depot, headless (M43)', () => {
     r.hitYou();
     r.play(HITS.callTime + 0.2);
     expect(r.state.round.reason).toBe('out');
+    r.dispose();
+  });
+
+  it('brings hit opponents back in the next wave at regen points out of the squad’s sight, and they come looking (M45)', () => {
+    const r = setUpRun(5);
+    const home = r.state.characters.filter((c) => c.team === 1);
+    const waves = r.run.waves!;
+    r.play(3);
+    // The cap in play, the reserve waiting.
+    expect(home.filter(isInPlay).length).toBe(waves.cap);
+    const hitNow = home.filter(isInPlay).slice(0, 2);
+    for (const c of hitNow) r.hitThem(c);
+    const squad = r.state.characters.filter((c) => c.team === 0);
+    const back: { id: number; clear: boolean; at: { x: number; z: number } }[] = [];
+    let most = 0;
+    r.play(waves.every + 2, () => {
+      most = Math.max(most, home.filter(isInPlay).length);
+      for (const e of r.state.events) {
+        if (e.type !== 'returned') continue;
+        const c = r.state.characters[e.characterId]!;
+        // Judged at the moment it came back, from where the squad stood then.
+        const regen = waves.regens.find((p) => Math.hypot(p.position.x - c.position.x, p.position.z - c.position.z) < 0.01)!;
+        back.push({ id: c.id, clear: regenClear(regen, squad, r.run, waves), at: { x: c.position.x, z: c.position.z } });
+        // Its bot starts afresh: nothing remembered, on a lane from the point nearest its regen point.
+        const bot = r.bots.bots.find((x) => x.character === c)!;
+        expect(bot.hasLastKnown).toBe(false);
+        const lane = DEPOT.lanes[bot.lane]!;
+        const next = lane[bot.laneIndex + bot.laneDir]!;
+        for (const p of lane) expect(Math.hypot(next.x - c.position.x, next.z - c.position.z)).toBeLessThanOrEqual(Math.hypot(p.x - c.position.x, p.z - c.position.z));
+      }
+    });
+    // Those hit here are back (and any the squad's bots hit meanwhile).
+    for (const c of hitNow) expect(back.map((b) => b.id), `Red ${c.id}`).toContain(c.id);
+    expect(back.every((b) => b.clear)).toBe(true);
+    expect(most).toBeLessThanOrEqual(waves.cap);
+    // Out of the reset, they set off: each is a few metres from where it came back.
+    r.play(6);
+    for (const b of back) {
+      const c = r.state.characters[b.id]!;
+      expect(Math.hypot(c.position.x - b.at.x, c.position.z - b.at.z), `Red ${b.id}`).toBeGreaterThan(2);
+    }
     r.dispose();
   });
 });

@@ -180,6 +180,13 @@ export interface ExtractionData {
   opponentStarts: SpawnPoint[];
   /** Where cases can stand (M44): each run's seed places its cases on some of them (pool/caches.ts). */
   cases: CaseSpot[];
+  /**
+   * The home team's regen points (M45): a hit opponent comes back in the next wave at one at least `regenDistance` m
+   * from every squad member and out of their sight. Several, spread over the map, so one is always free.
+   */
+  regens: SpawnPoint[];
+  /** How far a regen point must be from every squad member (m): the plan's 25, Depot's 15 for a small field. */
+  regenDistance: number;
 }
 
 /**
