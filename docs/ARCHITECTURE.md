@@ -166,7 +166,10 @@ ends the round). A hit character is eliminated
   AMBIENCES: beds, calls, never birds at night), the camp fires that crackle, and the ground grid footsteps on terrain
   read after blocks (`map/groundSurfaces.ts`, the terrain's own). Cues and loops only some maps play (`MAP_CUE_SEEDS`,
   `AMBIENT_LOOPS`) are rendered by `AudioEngine.prepare` as such a match loads, each from its own seed; the title
-  screen's cues keep their one shared stream and their samples (pinned in `audio/woodlandSound.test.ts`).
+  screen's cues keep their one shared stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
+  the `city` ambience (traffic and drones with a shop chime by day; traffic and a neon `hum` loop, `renderHum`, with
+  arcade bleeps by night), Neon Heights' `MapData.ambience`; a field's own sounds stay within about 7 MB, and every
+  map sound a page may keep within 12 MB.
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.

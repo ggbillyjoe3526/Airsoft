@@ -365,15 +365,17 @@ describe('M33j acceptance 1: no daytime birds under a night preset, on any map',
         const night = playsAtNight(entry.data, choice);
         const call = soundscapeOf(map, night).ambience.call?.cue;
         if (night) expect(call, `${entry.id} by ${choice}`).not.toBe('ambience.bird');
-        else expect(call, `${entry.id} by ${choice}`).toBe('ambience.bird');
+        // By day a bird, except where the field's ambience has its own day call (M34g: the city's shop chime).
+        else expect(call, `${entry.id} by ${choice}`).toBe(entry.data.ambience === 'city' ? 'ambience.chime' : 'ambience.bird');
       }
     }
   });
 
-  it('silences the birds on Neon Heights by Night and keeps them by Day; Depot is the yard by day, as before', () => {
-    expect(soundscapeOf(NEON_HEIGHTS, true).ambience).toBe(AMBIENCES.yard.night);
-    expect(soundscapeOf(NEON_HEIGHTS, true).ambience.call).toBeNull();
-    expect(soundscapeOf(NEON_HEIGHTS, false).ambience).toBe(AMBIENCES.yard.day);
+  it('plays the city on Neon Heights (M34g): arcade bleeps by Night, the shop chime by Day; Depot is the yard by day, as before', () => {
+    expect(soundscapeOf(NEON_HEIGHTS, true).ambience).toBe(AMBIENCES.city.night);
+    expect(soundscapeOf(NEON_HEIGHTS, true).ambience.call?.cue).toBe('ambience.arcade');
+    expect(soundscapeOf(NEON_HEIGHTS, false).ambience).toBe(AMBIENCES.city.day);
+    expect(soundscapeOf(NEON_HEIGHTS, false).ambience.call?.cue).toBe('ambience.chime');
     expect(soundscapeOf(DEPOT, false)).toEqual(YARD_BY_DAY);
   });
 });
@@ -418,11 +420,19 @@ describe('M33j acceptance 4: gameplay first, the ambience under BBs, footsteps a
 });
 
 describe('M33j acceptance 5: sounds render lazily, for the maps that use them', () => {
-  it('asks nothing more of Depot (or Neon Heights) than the title screen renders', () => {
-    for (const scene of [soundscapeOf(DEPOT, false), soundscapeOf(NEON_HEIGHTS, true), soundscapeOf(NEON_HEIGHTS, false)]) {
-      expect(scene.cues).toEqual([]);
-      expect(scene.loops).toEqual(['yard']);
-    }
+  it('asks nothing more of Depot than the title screen renders', () => {
+    const scene = soundscapeOf(DEPOT, false);
+    expect(scene.cues).toEqual([]);
+    expect(scene.loops).toEqual(['yard']);
+  });
+
+  it("asks for Neon Heights' own (M34g): traffic, drones and the chime by Day; traffic, neon and the arcade by Night; no ground steps", () => {
+    const day = soundscapeOf(NEON_HEIGHTS, false);
+    expect(day.cues).toEqual(['ambience.chime']);
+    expect([...day.loops].sort()).toEqual(['drones', 'traffic']);
+    const night = soundscapeOf(NEON_HEIGHTS, true);
+    expect(night.cues).toEqual(['ambience.arcade']);
+    expect([...night.loops].sort()).toEqual(['neon', 'traffic']);
   });
 
   it("asks for Woodland's own: a step for each ground it has, at each pace, the owl, the wind, the insects and the fire", () => {
@@ -432,14 +442,25 @@ describe('M33j acceptance 5: sounds render lazily, for the maps that use them', 
     expect([...scene.loops].sort()).toEqual(['crackle', 'insects', 'pines']);
   });
 
-  it('keeps the map sounds within a budget: each renders in a spare moment, all of them in about 7 MB', () => {
-    let samples = 0;
+  it("keeps the map sounds within a budget: each renders in a spare moment, a field's own in about 7 MB", () => {
+    const size = new Map<SoundCue, number>();
     for (const cue of Object.keys(MAP_CUE_SEEDS) as SoundCue[]) {
       const n = renderMapCue(cue, RATE).reduce((sum, v) => sum + v.length, 0);
       expect(n, cue).toBeLessThan(0.35e6);
-      samples += n;
+      size.set(cue, n);
     }
-    for (const id of ['pines', 'insects', 'crackle'] as const) samples += Math.round(AMBIENT_LOOPS[id].seconds * RATE);
-    expect(samples * 4, 'bytes').toBeLessThan(7.5e6);
+    // What a match loads beyond the title screen, per field and preset (M34g: per field, as only a field's own render).
+    for (const entry of MAPS) {
+      for (const choice of lightingChoices(entry.data)) {
+        const scene = soundscapeOf(mapUnderLighting(entry.data, choice), playsAtNight(entry.data, choice));
+        let samples = scene.cues.reduce((sum, c) => sum + size.get(c)!, 0);
+        for (const id of scene.loops) if (id !== 'yard') samples += Math.round(AMBIENT_LOOPS[id].seconds * RATE);
+        expect(samples * 4, `${entry.id} by ${choice}`).toBeLessThan(7.5e6);
+      }
+    }
+    // The page keeps what it rendered (AudioEngine), so a session that plays every field holds all of it: about 10.5 MB.
+    let all = [...size.values()].reduce((sum, n) => sum + n, 0);
+    for (const id of Object.keys(AMBIENT_LOOPS) as LoopId[]) if (id !== 'yard') all += Math.round(AMBIENT_LOOPS[id].seconds * RATE);
+    expect(all * 4, 'every map sound').toBeLessThan(12e6);
   });
 });

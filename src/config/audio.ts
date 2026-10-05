@@ -115,6 +115,9 @@ export const AUDIO = {
     bird: { gain: 0.35, pitchSpread: 0.08 },
     /** An owl somewhere in the woods at night (M33j): never above a bird's level. */
     owl: { gain: 0.3, pitchSpread: 0.04 },
+    /** A shop door's chime down the street by day, an arcade cabinet's bleeps by night (M34g): never above a bird. */
+    chime: { gain: 0.28, pitchSpread: 0.03 },
+    arcade: { gain: 0.22, pitchSpread: 0.05 },
   },
   /**
    * An AEG's motor: the first shot after the trigger has rested this many fire-rate cycles gets the spin-up whine,
@@ -274,10 +277,30 @@ export interface CrackleLoopSpec {
   readonly popLevel: number;
 }
 
-export type LoopSpec = NoiseLoopSpec | InsectLoopSpec | CrackleLoopSpec;
+/**
+ * A hum (audio/ambience.ts renderHum, M34g): harmonics of `hz` at `harmonics` levels (the first is `hz` itself), swelling
+ * `flickers` times a loop by `flickerDepth`, over a sizzle of noise round `buzzHz` pulsing at twice `hz` at `buzzLevel`
+ * (a neon tube's buzz). A loop of `seconds` (whole cycles of every tone and swell; the sizzle crossfaded over
+ * `crossfade`).
+ */
+export interface HumLoopSpec {
+  readonly kind: 'hum';
+  readonly seconds: number;
+  readonly crossfade: number;
+  readonly seed: number;
+  readonly hz: number;
+  readonly harmonics: readonly number[];
+  readonly flickers: number;
+  readonly flickerDepth: number;
+  readonly buzzHz: number;
+  readonly buzzQ: number;
+  readonly buzzLevel: number;
+}
+
+export type LoopSpec = NoiseLoopSpec | InsectLoopSpec | CrackleLoopSpec | HumLoopSpec;
 
 /** The ambience's looping sounds (M33j), each rendered once per page and only for a map that plays it. */
-export type LoopId = 'yard' | 'pines' | 'insects' | 'crackle';
+export type LoopId = 'yard' | 'pines' | 'insects' | 'crackle' | 'traffic' | 'drones' | 'neon';
 
 export const AMBIENT_LOOPS: Readonly<Record<LoopId, LoopSpec>> = {
   /** The yard's bed (audit CORE-34), as it always was: rendered on the title screen. */
@@ -317,10 +340,19 @@ export const AMBIENT_LOOPS: Readonly<Record<LoopId, LoopSpec>> = {
     popDecay: 0.018,
     popLevel: 1.2,
   },
+  /**
+   * The city's traffic (M34g): a low hum of tyres and engines from the streets round the block, under 500 Hz, swelling
+   * as three cars pass in a loop of 8 s (coprime with the drones' 5 s).
+   */
+  traffic: { kind: 'noise', seconds: 8, crossfade: 0.4, bandHz: 210, bandQ: 0.8, topHz: 480, rumbleHz: 90, rumbleMix: 0.9, gusts: 3, gustDepth: 0.55, seed: 3481 },
+  /** Delivery drones high over the block by day (M34g): a thin whine round 5 kHz, above the footstep band, two passes in 5 s. */
+  drones: { kind: 'noise', seconds: 5, crossfade: 0.3, bandHz: 5200, bandQ: 5, topHz: 7500, rumbleHz: 100, rumbleMix: 0, gusts: 2, gustDepth: 0.9, seed: 3482 },
+  /** The neon by night (M34g): a mains hum at 100 Hz and its low harmonics, and a faint tube sizzle round 6.5 kHz. */
+  neon: { kind: 'hum', seconds: 3, crossfade: 0.2, seed: 3483, hz: 100, harmonics: [1, 0.55, 0.3, 0.12], flickers: 2, flickerDepth: 0.25, buzzHz: 6500, buzzQ: 2, buzzLevel: 0.3 },
 };
 
 /** The fields' soundscapes (MapData.ambience; absent: the yard). */
-export type AmbienceId = 'yard' | 'woods';
+export type AmbienceId = 'yard' | 'woods' | 'city';
 
 /** A loop playing as a bed (two copies half a loop apart, panned `width` left and right) at `gain`. */
 export interface AmbienceBed {
@@ -371,12 +403,27 @@ const PINES_BED: AmbienceBed = { loop: 'pines', gain: 0.018, width: 0.75 };
 const INSECTS_BED: AmbienceBed = { loop: 'insects', gain: 0.009, width: 0.9 };
 
 /**
+ * The city's (M34g): traffic low under the footstep band, quieter by night; the drones and the neon's sizzle above it.
+ * Playful, not grim: the concept's "traffic hum, drones and chimes" by day, "neon buzz and arcade bleeps" by night.
+ */
+const TRAFFIC_BED: AmbienceBed = { loop: 'traffic', gain: 0.026, width: 0.8 };
+const TRAFFIC_NIGHT_BED: AmbienceBed = { loop: 'traffic', gain: 0.016, width: 0.8 };
+const DRONES_BED: AmbienceBed = { loop: 'drones', gain: 0.006, width: 0.9 };
+const NEON_BED: AmbienceBed = { loop: 'neon', gain: 0.012, width: 0.5 };
+
+/** A shop door's two-note chime somewhere down the street by day (M34g). */
+const CHIME: AmbientCallSpec = { cue: 'ambience.chime', level: AUDIO.levels.chime, every: [12, 28], distance: [12, 30], height: 2.5, seed: 3484 };
+/** An arcade cabinet's bleeps from a doorway by night (M34g). */
+const ARCADE: AmbientCallSpec = { cue: 'ambience.arcade', level: AUDIO.levels.arcade, every: [9, 22], distance: [10, 25], height: 1.2, seed: 3485 };
+
+/**
  * Every field's sound, by day and by night (M33j), picked by the lighting preset's night flag (never a map's name). The
  * engine's rule: no birds under a night preset, on any map.
  */
 export const AMBIENCES: Readonly<Record<AmbienceId, Readonly<Record<'day' | 'night', Ambience>>>> = {
   yard: { day: { beds: [YARD_BED], call: BIRDS }, night: { beds: [YARD_BED], call: null } },
   woods: { day: { beds: [PINES_BED], call: BIRDS }, night: { beds: [PINES_BED, INSECTS_BED], call: OWL } },
+  city: { day: { beds: [TRAFFIC_BED, DRONES_BED], call: CHIME }, night: { beds: [TRAFFIC_NIGHT_BED, NEON_BED], call: ARCADE } },
 };
 
 /**

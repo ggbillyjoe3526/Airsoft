@@ -100,7 +100,10 @@ describe('M33j QA acceptance 1: birds by day exactly as before, and none by nigh
     fingerprint(calls.map((c) => `${c.now.toFixed(4)}:${c.x.toFixed(4)},${c.y.toFixed(4)},${c.z.toFixed(4)}`).join('|'));
 
   it('sings every daytime ambience\'s birds at the times and places the yard\'s sang before M33j', () => {
-    for (const id of Object.keys(AMBIENCES) as AmbienceId[]) {
+    // Every field with birds by day (M34g: the city chimes instead).
+    const birdy = (Object.keys(AMBIENCES) as AmbienceId[]).filter((id) => AMBIENCES[id].day.call?.cue === 'ambience.bird');
+    expect(birdy).toEqual(['yard', 'woods']);
+    for (const id of birdy) {
       const call = AMBIENCES[id].day.call!;
       expect(call.cue, id).toBe('ambience.bird');
       expect(call.level, id).toEqual({ gain: 0.35, pitchSpread: 0.08 });
