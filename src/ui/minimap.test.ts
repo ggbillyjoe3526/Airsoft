@@ -10,6 +10,7 @@ import { planeTerrain, SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport
 /** Just enough DOM for the minimap without a browser: canvases without a 2D context, a container with inline style. */
 function fakeDom() {
   const vars = new Map<string, string>();
+  const classes = new Set<string>();
   const canvas = {
     width: 0,
     height: 0,
@@ -23,11 +24,15 @@ function fakeDom() {
   const ratio = { value: 1 };
   const parent = {
     style: { setProperty: (k: string, v: string) => void vars.set(k, v), getPropertyValue: (k: string) => vars.get(k) ?? '' },
+    classList: {
+      toggle: (c: string, on: boolean) => void (on ? classes.add(c) : classes.delete(c)),
+      remove: (c: string) => void classes.delete(c),
+    },
     appendChild: () => undefined,
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
   };
   (globalThis as { document?: unknown }).document = { createElement: () => canvas };
-  return { canvas, parent: parent as unknown as HTMLElement, vars, ratio };
+  return { canvas, parent: parent as unknown as HTMLElement, vars, ratio, classes };
 }
 
 const realDocument = globalThis.document;
@@ -60,6 +65,19 @@ describe('Minimap layout (audit UI-14, UI-04, UI-13)', () => {
     minimap.setVisible(false);
     expect(minimap.covers(16 + r, 16 + r)).toBe(false);
   });
+
+  it('marks its container while it shows, for the debug panel to sit below it (audit UI-06, no :has())', () => {
+    const dom = fakeDom();
+    const minimap = new Minimap(dom.parent, [], '#00f', '#f80');
+    expect(dom.classes.has('minimap-on')).toBe(false);
+    minimap.setVisible(true);
+    expect(dom.classes.has('minimap-on')).toBe(true);
+    minimap.setVisible(false);
+    expect(dom.classes.has('minimap-on')).toBe(false);
+    minimap.setVisible(true);
+    minimap.dispose();
+    expect(dom.classes.has('minimap-on')).toBe(false);
+  });
 });
 
 /**
@@ -70,6 +88,7 @@ function recordingDom() {
   const canvases: { width: number; height: number; fills: { style: string; x: number; y: number; w: number; h: number }[]; arcs: { style: string; x: number; y: number; r: number; after: number }[] }[] = [];
   const parent = {
     style: { setProperty: () => undefined, getPropertyValue: () => '' },
+    classList: { toggle: () => undefined, remove: () => undefined },
     appendChild: () => undefined,
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
   };
@@ -205,6 +224,7 @@ function pathDom() {
   const ops: Op[] = [];
   const parent = {
     style: { setProperty: () => undefined, getPropertyValue: () => '' },
+    classList: { toggle: () => undefined, remove: () => undefined },
     appendChild: () => undefined,
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
   };

@@ -65,6 +65,7 @@ import { screenWhenStopped } from './ui/menus/menuNav';
 import { Menus } from './ui/menus/menus';
 import { recordsView } from './ui/recordsView';
 import {
+  effectiveReducedMotion,
   hasSavedTeammateDifficulty,
   loadAimMode,
   loadAimSensitivity,
@@ -97,6 +98,8 @@ import {
   loadTutorialStep,
   loadWheelSelect,
   loadWhatGotYouMode,
+  motionClass,
+  systemReducedMotionQuery,
 } from './ui/menus/savedChoices';
 
 /** The player is the first character, on Blue (see MatchSession). */
@@ -213,8 +216,10 @@ export class Game {
   private lastHaul: Dispensed[] | null = null;
   /** Why the last match paid nothing, for the summary (audit POOL-22), or null when it paid. */
   private unpaidReason: Unpaid | null = null;
-  /** Reduced motion (Settings → Accessibility), kept across matches. */
+  /** Reduced motion (Settings → Accessibility), kept across matches; null until the player picks (audit UI-07). */
   private reducedMotion = loadReducedMotion();
+  /** The system's "reduce motion" setting, watched while the player has not picked (audit UI-07). */
+  private readonly systemMotion = systemReducedMotionQuery();
   /** The team colours and the on-screen sound cues (Settings → Accessibility, M18b). Colours apply from the next match. */
   private teamColours: TeamColourSetId = loadTeamColours();
   private soundCues = loadSoundCues();
@@ -437,7 +442,7 @@ export class Game {
       audio: { initial: this.audio.volumes, onChange: (channel, v) => this.changeVolume(channel, v), onRelease: (channel) => this.audio.preview(channel) },
       crosshair: { initial: this.crosshair, onChange: (c) => this.changeCrosshair(c) },
       accessibility: {
-        reducedMotion: { initial: this.reducedMotion, onChange: (on) => this.changeReducedMotion(on) },
+        reducedMotion: { initial: this.motionReduced(), onChange: (on) => this.changeReducedMotion(on) },
         // The figures are built with their colours, so a new set shows from the next match.
         // On the range they show from Resume (it's rebuilt where you stood, as after a loadout change).
         teamColours: { initial: this.teamColours, onChange: (set) => ((this.teamColours = set), (this.setupChanged = this.loadoutChanged = true)) },
@@ -475,6 +480,7 @@ export class Game {
     this.debug.setVisible(this.dev.showDebug);
     this.debug.setFpsReadout(loadShowFps());
     this.showMotion();
+    this.systemMotion?.addEventListener('change', this.systemMotionChanged);
     this.showTitleWarning();
     options.save.onChange(() => this.showTitleWarning());
     this.graphicsNotice = new GraphicsNotice(container, BROWSER_NOTES.graphicsLost);
@@ -603,14 +609,26 @@ export class Game {
     this.showMotion();
   }
 
+  /** Whether motion is reduced now: the player's pick, else the system's setting (audit UI-07). */
+  private motionReduced(): boolean {
+    return effectiveReducedMotion(this.reducedMotion, this.systemMotion?.matches ?? false);
+  }
+
   /**
    * Reduced motion for the HUD's CSS animations (style.css, audit M-03): `reduced-motion` calms them; `full-motion`
    * marks an explicit Off, so the stylesheet's `prefers-reduced-motion` fallback doesn't override the player's choice.
+   * Neither class before the player picks (audit UI-07), so that fallback follows the system live.
    */
   private showMotion(): void {
-    this.container.classList.toggle('reduced-motion', this.reducedMotion);
-    this.container.classList.toggle('full-motion', !this.reducedMotion);
+    const cls = motionClass(this.reducedMotion);
+    this.container.classList.toggle('reduced-motion', cls === 'reduced-motion');
+    this.container.classList.toggle('full-motion', cls === 'full-motion');
   }
+
+  /** The system's setting changed while the page is open: the 3D motion follows it too, until the player picks. */
+  private readonly systemMotionChanged = (): void => {
+    if (this.reducedMotion === null) this.session?.setMotion(motionScale(this.motionReduced()));
+  };
 
   /**
    * New quality settings (Settings → Graphics, or the game's own step-down when `automatic`): applied at once to the
@@ -762,6 +780,7 @@ export class Game {
     cancelAnimationFrame(this.rafId);
     this.stopWatchingAway();
     window.removeEventListener('resize', this.showHudLook);
+    this.systemMotion?.removeEventListener('change', this.systemMotionChanged);
     window.removeEventListener('pagehide', this.flushSettings);
     this.unwatchFullscreen();
     this.unwatchLayout();
@@ -829,7 +848,7 @@ export class Game {
       }, this.matchSeed, this.quality, this.audio, this.crosshair);
       if (this.options.perfLog) console.info(this.session.build.line());
       this.steppedDown = false;
-      this.session.setMotion(motionScale(this.reducedMotion));
+      this.session.setMotion(motionScale(this.motionReduced()));
       this.session.setSoundCues(this.soundCues);
       this.session.setHitFeedMode(this.hitFeedMode);
       this.session.setWhatGotYouMode(this.whatGotYouMode);
@@ -859,7 +878,7 @@ export class Game {
     }, this.options.seed, this.quality, this.audio, this.crosshair, pose, tutorialFrom);
     this.session.onTutorialStep = (step) => saveSetting('tutorialStep', step);
     this.steppedDown = false;
-    this.session.setMotion(motionScale(this.reducedMotion));
+    this.session.setMotion(motionScale(this.motionReduced()));
     this.applyDevTo(this.session);
     applyTeamCss(this.container, TEAM_COLOUR_SETS[this.teamColours]);
   }
