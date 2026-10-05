@@ -170,8 +170,8 @@ export const AUDIO = {
     /**
      * Beyond AUDIO.spatial.maxDistance no ray is cast (audit CORE-35): a character's channel keeps the share its last ray
      * found and closes from there to fully muffled over this many metres further out (M53, audit AUD-03), so a bot
-     * crossing the line is not muffled and cleared in a step. It closes in `farStep`-metre steps (a fifth of an octave
-     * each at most), so a far bot on the move doesn't re-aim the filter every tick.
+     * crossing the line is not muffled and cleared in a step. It closes in `farStep`-metre steps (about two fifths of an
+     * octave each at most), so a far bot on the move doesn't re-aim the filter every tick.
      */
     farRamp: 60,
     farStep: 5,

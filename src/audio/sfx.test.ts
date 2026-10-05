@@ -1704,7 +1704,7 @@ describe('M53: mix and placement (audit AUD-02, AUD-03, AUD-05, AUD-07, AUD-12)'
       sfx.afterTick(all, PLAYER);
       expect(octaves(aimedHz(channelFilter(ctx)!), inside), label).toBeLessThan(1);
       expect(casts, `${label}: no ray beyond the line`).toBe(rays);
-      // Further out it closes a step at a time, a fifth of an octave or less each, to fully muffled at the ramp's end.
+      // Further out it closes a step at a time, about two fifths of an octave or less each, to fully muffled at the ramp's end.
       let last = aimedHz(channelFilter(ctx)!);
       for (let d = max + 1; d <= max + AUDIO.occlusion.farRamp; d += 1) {
         bot.position.x = d;
