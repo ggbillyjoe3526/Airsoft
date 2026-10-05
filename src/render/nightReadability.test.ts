@@ -190,14 +190,16 @@ describe('Medium follows the view under any night preset, and only then (M52 cri
     expect(moves(WOODLAND, resolveLighting(WOODLAND), QUALITY.low)).toBe(false);
   });
 
-  it('on the small maps (Neon Heights’ Night pick, Depot under the moon) the fit is the view square’s own texel, about 3.9 cm', () => {
-    // The view fit is a fixed square (kept inside the level), so a level that already fits in it gets that square on
-    // Medium: 3.9 cm. (On Neon Heights' night the whole-field fit would have been 3.4 cm: a small coarsening, see the report.)
+  it('on the small maps (Neon Heights’ Night pick, Depot under the moon) Medium keeps the whole field: its texel is already finer than the view square’s', () => {
+    // The view fit is a fixed square kept inside the level; a level no wider than it would only lose texels (M52).
+    const square = (2 * (LIGHTING.shadowView.radius + LIGHTING.shadowMargin)) / QUALITY.medium.shadowMapSize;
     const neonNight = resolveLighting(mapUnderLighting(NEON_HEIGHTS, 'night'));
     for (const [map, preset] of [[NEON_HEIGHTS, neonNight], [DEPOT, LIGHTING_PRESETS.night]] as const) {
+      const field = fieldOf(map, preset);
       const m = lit(map, QUALITY.medium, preset);
       m.daylight.follow(eye(-9, 4), 0);
-      expect(shadowTexel(m.cam, QUALITY.medium.shadowMapSize) * 100).toBeCloseTo(((2 * (LIGHTING.shadowView.radius + LIGHTING.shadowMargin)) / QUALITY.medium.shadowMapSize) * 100, 0);
+      expect(width(m.cam), map.name).toBeCloseTo(field.width, 6);
+      expect(shadowTexel(m.cam, QUALITY.medium.shadowMapSize), map.name).toBeLessThan(square);
       m.daylight.dispose();
     }
   });

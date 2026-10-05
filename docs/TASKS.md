@@ -13,7 +13,7 @@ contract: none (`LightingPreset` shape unchanged). M52 changes the night presets
 acceptance:
   1. The night preset is candidate B (owner decision 5: hemi 0x3a4c78 / 0x2a2620 × 1, key 0xc8d4ff × 1, exposureScale 1.3) and the `LightingPreset` shape is unchanged.
   2. `render/nightSwatch.test.ts` passes, and fails with the old preset: earth reads (5,2,5), earth's red equals its blue, a skin reads 25; neon stays within 12 per channel and the team colours keep their hue by day and by night.
-  3. Under a night preset Medium's shadow map follows the view (owner decision 7): Woodland's texels go from 10.2 to 3.9 cm and move in whole texels; by day Medium keeps the whole field and Low has no shadows (lighting.test.ts).
+  3. Under a night preset Medium's shadow map follows the view on a field wider than the view window (owner decision 7): Woodland's texels go from 10.2 to 3.9 cm and move in whole texels; by day, and at night on Neon Heights and Depot (already finer), Medium keeps the whole field, and Low has no shadows (lighting.test.ts, nightReadability.test.ts).
   4. KNOWN_ISSUES row 21 names the lamp point-light cause and is kept per the owner (decision 6); rows 22, 34, 162 and 167 are closed.
 status: gates
 attempts: 0
