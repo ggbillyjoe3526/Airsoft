@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { itemKey, newCollection } from '../pool/collection';
 import { GAME_POOL } from '../pool/gamePool';
-import { emptyRecords, resultKey } from './records';
+import type { MatchOutcome } from '../pool/armory';
+import { emptyRecords, type MatchResult, resultKey } from './records';
 import { DEFAULT_MAP } from '../map/maps';
 import { DEFAULT_DIFFICULTY } from '../config/bots';
 import { DEFAULT_MATCH_RULES, DEFAULT_RULESET } from '../config/matchRules';
@@ -181,5 +182,95 @@ describe('what keeps a match out of the records and what pays (M35 matchStanding
     expect(matchStanding({ standardRules: false, devAssisted: true, devContentUsed: true })).toEqual({ notCounted: 'rules', unpaid: 'dev' });
     expect(matchStanding({ standardRules: false, devAssisted: false, devContentUsed: true })).toEqual({ notCounted: 'rules', unpaid: 'devContent' });
     expect(matchStanding({ standardRules: false, devAssisted: true, devContentUsed: false })).toEqual({ notCounted: 'rules', unpaid: 'dev' });
+  });
+});
+
+describe('settling an Extraction run (M47)', () => {
+  const grip = GAME_POOL.assets.find((a) => a.category === 'grip')!;
+  const HAUL = { fc: 120, items: [{ asset: grip.id, tier: 'rare' }] };
+  const earn = GAME_POOL.economy.earn;
+  const runResult = (over: { won: boolean }, run = { haulFc: 120, finds: 2, seconds: 200 }): MatchResult => ({
+    difficulty: 'normal',
+    mode: 'extraction',
+    hits: 3,
+    bbsFired: 0,
+    ...over,
+    run,
+  });
+  const runOutcome = (over: Partial<MatchOutcome> = {}): MatchOutcome => ({ extraction: true, won: true, roundsWon: 1, hits: 3, winsNeeded: 1, difficulty: 'normal', haul: HAUL, ...over });
+
+  it('records the run in its cell with its bests, apart from the match-win streak, and pays the haul and the hits in one settle', () => {
+    const records = emptyRecords();
+    const collection = newCollection(GAME_POOL, 1);
+    const fc = collection.fc;
+    const settled = settleMatch(records, collection, runResult({ won: true }), runOutcome(), GAME_POOL.economy, false);
+    expect(records.results[resultKey('normal', 'extraction')]).toEqual({ wins: 1, losses: 0 });
+    expect(records).toMatchObject({ streak: 0, bestStreak: 0, bestHaul: 120, extractionStreak: 1, bestExtractionStreak: 1, fastestExtraction: 200 });
+    expect(settled.news).toMatchObject({ bestHaul: true, bestExtractionStreak: true, fastestExtraction: true, bestStreak: false });
+    expect(settled.pay!.lines).toEqual([
+      { label: 'Got out with', fc: 120 },
+      { label: '3 hits on an opponent', fc: 3 * earn.hit },
+    ]);
+    // The FC arrives once, with the pay: the parts go in through the haul, not a second FC grant.
+    expect(collection.fc).toBe(fc + 120 + 3 * earn.hit);
+    expect(collection.owned[itemKey(grip.id, 'rare')]).toBe(1);
+    expect(settled.haul).toEqual([{ item: HAUL.items[0], isNew: true }]);
+  });
+
+  it('times the whole run pay by the difficulty', () => {
+    const collection = newCollection(GAME_POOL, 1);
+    const settled = settleMatch(emptyRecords(), collection, null, runOutcome({ difficulty: 'hard' }), GAME_POOL.economy, false);
+    expect(settled.pay!.total).toBe(Math.round((120 + 3 * earn.hit) * GAME_POOL.economy.difficulty.hard));
+    expect(collection.fc).toBe(settled.pay!.total);
+  });
+
+  it('pays your hits only for a run you are out of or caught out of, records a lost run and ends the streak', () => {
+    const records = emptyRecords();
+    settleMatch(records, newCollection(GAME_POOL, 1), runResult({ won: true }), runOutcome(), GAME_POOL.economy, false);
+    const collection = newCollection(GAME_POOL, 1);
+    const fc = collection.fc;
+    // No haul in the outcome (MatchSession carries one only from a run that got out with something).
+    const out = { extraction: true, won: false, roundsWon: 0, hits: 3, winsNeeded: 1, difficulty: 'normal' } as const;
+    const settled = settleMatch(records, collection, runResult({ won: false }, { haulFc: 0, finds: 0, seconds: 90 }), out, GAME_POOL.economy, false);
+    expect(settled.pay!.lines).toEqual([{ label: '3 hits on an opponent', fc: 3 * earn.hit }]);
+    expect(collection.fc).toBe(fc + 3 * earn.hit);
+    expect(settled.haul).toBeNull();
+    expect(records.results[resultKey('normal', 'extraction')]).toEqual({ wins: 1, losses: 1 });
+    expect(records).toMatchObject({ extractionStreak: 0, bestExtractionStreak: 1, bestHaul: 120, fastestExtraction: 200 });
+    expect(settled.news).toMatchObject({ bestHaul: false, bestExtractionStreak: false, fastestExtraction: false });
+  });
+
+  it('pays nothing and records nothing for a dev content run: both takes come back empty, whatever the run found', () => {
+    const standing = matchStanding({ standardRules: true, devAssisted: false, devContentUsed: true });
+    expect(standing).toEqual({ notCounted: 'devContent', unpaid: 'devContent' });
+    const takes = new MatchTakes();
+    const result = takes.result(true, standing.notCounted === '', () => runResult({ won: true }));
+    const outcome = takes.outcome(true, standing.unpaid === null, () => runOutcome());
+    expect(result).toBeNull();
+    expect(outcome).toBeNull();
+    const records = emptyRecords();
+    const collection = newCollection(GAME_POOL, 1);
+    const before = structuredClone(collection);
+    expect(settleMatch(records, collection, result, outcome, GAME_POOL.economy, false)).toEqual({ news: null, pay: null, haul: null });
+    expect(records).toEqual(emptyRecords());
+    expect(collection).toEqual(before);
+  });
+
+  it('records and pays the same run once the mode is no longer dev content (standing with nothing dev about it)', () => {
+    const standing = matchStanding({ standardRules: true, devAssisted: false, devContentUsed: false });
+    const takes = new MatchTakes();
+    const records = emptyRecords();
+    const collection = newCollection(GAME_POOL, 1);
+    const settled = settleMatch(
+      records,
+      collection,
+      takes.result(true, standing.notCounted === '', () => runResult({ won: true })),
+      takes.outcome(true, standing.unpaid === null, () => runOutcome()),
+      GAME_POOL.economy,
+      false,
+    );
+    expect(settled.news).not.toBeNull();
+    expect(settled.pay!.total).toBe(120 + 3 * earn.hit);
+    expect(records.extractionStreak).toBe(1);
   });
 });
