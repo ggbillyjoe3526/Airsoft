@@ -123,7 +123,7 @@ export const AEG: ReplicaConfig = withStats({
   fireRate: 13,
   magSize: 60,
   mags: 4,
-  // About 15% quicker than the first 2.1 s (owner's v0.1-alpha.3 playtest: "a tiny bit too slow").
+  // About 15% quicker than the first 2.1 s (owner's 0.1 Dev 3 playtest: "a tiny bit too slow").
   reloadTime: 1.8,
   drawTime: 0.45,
   // ~1 J with 0.25 g BBs, like a typical site-legal AEG: 88 m/s.
