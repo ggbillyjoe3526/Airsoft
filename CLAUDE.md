@@ -71,7 +71,7 @@ These are defaults to prototype, not final. Tune them through play.
 - On hit: the player hears a distinct "tick" impact, sees a hit indicator, and their character raises a hand ("HIT!" callout).
 - Eliminated players become a visible **"dead" state**: hand raised, walking off to the dead zone, cannot shoot, and cannot be targeted. They can still spectate.
 - Prototype bots always call their hits honestly. Honesty is enforced by the game, not the player.
-- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature, proposed for v0.2).
+- Later: a **medic mode** with a bleed-out timer, where a medic revives a hit player (owner, 2026-10-03: a future feature; 0.3 since 2026-10-05).
 
 **Replicas (Phase 1 needs only two)**
 - **AEG rifle**: full auto, medium range, medium magazine.
@@ -120,11 +120,11 @@ Elimination and Attack / Defend.
 3. **Phase 4 — Feel, presentation and onboarding (alpha):** weapon handling from the owner's 0.1 Dev 3 playtest (fire modes, faster reloads, crouch toggle, steadier aim when still, optics as accessories with aiming down sights), a Depot rework to the field checklist (moved from Phase 3, owner, 2026-10-02), the Loadout (owner, 2026-10-03: primary and secondary replica, BB weight, hop-up, optics, grips, magazines), an audio rework, comfort, accessibility and browser basics (owner, 2026-10-03: invert mouse, reduced motion, aim and sprint toggles, colour-blind options, sound cues, pause on a hidden tab, fullscreen), match info (hit feed, teammate markers, scoreboard, end-of-match summary, local records, crosshair options), custom matches (rounds, round time, team size, teammate and opponent difficulty, a ricochets setting off by default), a practice range, three squad orders for bot teammates, art pass, VFX and lighting, proper menus and a full settings screen (incl. accessibility options), onboarding.
 4. **Beta (when the owner calls the game feature complete):** optimisation, final balance and tuning, bug fixing, stability, UX/QoL and polish.
 
-**After v0.1 (later versions, proposed in `docs/ROADMAP.md`):** more modes (TDM, Capture the Flag,
-Domination, Bomb), more fields, replica platforms that differ mechanically (GBBR, spring sniper, SMG,
-shotgun, DMR, LMG …), bigger loadouts (gear, pouches and more parts, free from the start), chrono and tracer BBs, gas
-simulation, grenades, smoke and flash bombs, a medic mode, bigger teams (4v4 / 5v5), day and night maps, customisation,
-unlock-based progression (never levels), and team communication (wheel, pings, hand signals) once the bots are good enough. Don't build these during v0.1.
+**After 0.1 (later versions, each feature placed in a version in `docs/ROADMAP.md` by the feature triage of
+2026-10-05):** 0.2 the graphics overhaul; 0.3 the armoury and the rules (medic, TDM, Survival, Extraction public, field
+rule presets, chrono, gas simulation, grenades, parts and pouches, the first new replica types); 0.4 more fields and
+ways to play (Rush, Domination, Capture the Flag, prone, weather, callouts, bot personalities, team communication);
+0.5 kit, looks and progression (skins, challenges and badges). Don't build these during 0.1.
 
 **Placing work:** new systems, modes and content (maps, replicas, menus, art) are alpha; fixing, balance,
 performance, stability, UX/QoL, polish and final tuning are beta. During alpha, note beta-type work in
