@@ -53,6 +53,7 @@ describe('the automatic quality step-down (REN-03)', () => {
   });
 
   it('steps High to Medium to Low, and never a Custom mix or below Low', () => {
+    expect(presetBelow('ultra')).toBe('high');
     expect(presetBelow('high')).toBe('medium');
     expect(presetBelow('medium')).toBe('low');
     expect(presetBelow('low')).toBeNull();

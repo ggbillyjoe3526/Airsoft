@@ -14,9 +14,12 @@ import {
 import type { MapData } from '../map/mapTypes';
 import type { FigureModel } from './externalModels';
 import { GpuTimer } from './gpuTimer';
-import { environmentLookOf } from './lightingPreset';
+import { environmentLookOf, keyDirection } from './lightingPreset';
 import { MapMeshCache } from './mapMeshCache';
 import { mapLookOf, texturesFor } from './mapMeshes';
+import { type PostPassId, postPlan } from './post/postPlan';
+import { PostStack } from './post/postStack';
+import { findReflective } from './post/reflectionPass';
 import { addSurfaceTextures, createSurfaceTextures, disposeSurfaceTextures, setSurfaceAnisotropy, type SurfaceTextures } from './proceduralTextures';
 import { defaultEnvironmentLook, type EnvironmentLook, ReplicaSheen } from './replicaSheen';
 import { RetroFilter, retroPixelAngle } from './retroFilter';
@@ -202,6 +205,19 @@ export class Renderer {
   private retro: RetroFilter | null = null;
   /** Told when the graphics context is lost (true) and when it comes back (false); see onContextChange. */
   private contextListener: (lost: boolean) => void = () => undefined;
+  /**
+   * The post stack (G5, render/post/) for the quality in force, made on the first frame that wants it; null on Low (no
+   * post effect on: the frame is drawn straight to the screen as before), while the retro filter is on and while the
+   * context is lost. Disposed whole on a quality change, a lost context and the antialiasing swap (`postDirty`).
+   */
+  private post: PostStack | null = null;
+  private postDirty = true;
+  /** The context is lost: nothing is made for it until it comes back. */
+  private contextGone = false;
+  /** The reflective meshes in the scene (puddles, glass), looked for again after a session's build or a quality change. */
+  private readonly reflective: { mesh: THREE.Mesh; strength: number }[] = [];
+  private reflectiveDirty = true;
+  private readonly keyLight = new THREE.Vector3();
 
   /** `quality` is what the game loads with; everything in it can change later (setQuality). */
   constructor(
@@ -312,6 +328,7 @@ export class Renderer {
    */
   setLighting(preset: LightingPreset): void {
     this.lighting = preset;
+    this.post?.setLight(keyDirection(preset, this.keyLight), preset.night);
     this.applyHaze();
     this.setToneMapping(this.toneMapping);
     this.setEnvironmentLook(environmentLookOf(preset));
@@ -401,6 +418,10 @@ export class Renderer {
     // Kept map meshes no session holds go when this look would build them again (a held map follows its session).
     this.mapMeshes.trim(mapLookOf(quality));
     this.environmentDirty = true;
+    // The post stack is made again for the new settings on the next frame (G5); the map may be rebuilt, so its
+    // reflective meshes are looked for again.
+    this.dropPost();
+    this.reflectiveDirty = true;
     const replaced = quality.antialias !== this.contextAntialias && this.replaceContext(quality.antialias);
     this.gl.shadowMap.enabled = quality.shadows;
     this.resize();
@@ -413,6 +434,8 @@ export class Renderer {
    */
   setRetro(look: RetroLook | null): void {
     this.retroLook = look ? { ...look } : null;
+    // The retro filter draws instead of the post stack (a dev look): the stack goes while it is on, and comes back after.
+    this.dropPost();
     if (!look) {
       this.retro?.dispose();
       this.retro = null;
@@ -448,12 +471,19 @@ export class Renderer {
    */
   warmShaders(overlay?: { scene: THREE.Scene; camera: THREE.Camera }): void {
     if (this.environmentDirty) this.applyEnvironment();
+    // A session's build has just ended: its reflective meshes (if any) are found on the next frame.
+    this.reflectiveDirty = true;
     const gl = this.gl;
     const retro = this.retro;
-    if (retro) gl.setRenderTarget(retro.renderTarget);
+    // The world draws into the post stack's target when there is one (G5), the held replica onto the canvas after it.
+    const post = this.postStack();
+    const world = retro?.renderTarget ?? post?.sceneTarget ?? null;
+    const held = retro?.renderTarget ?? null;
+    if (world) gl.setRenderTarget(world);
     gl.compile(this.scene, this.camera);
+    if (world !== held) gl.setRenderTarget(held);
     if (overlay) gl.compile(overlay.scene, overlay.camera);
-    if (retro) gl.setRenderTarget(null);
+    if (held) gl.setRenderTarget(null);
   }
 
   /** Draws the world, then (optionally) an overlay scene such as the held replica on top of it. */
@@ -469,7 +499,15 @@ export class Renderer {
     const retro = this.retro;
     if (retro) gl.setRenderTarget(retro.renderTarget);
     gl.autoClear = true;
-    gl.render(this.scene, this.camera);
+    // The post stack (G5) draws the world through its passes onto the canvas; the held replica goes on top after it,
+    // so the temporal blend never smears it and the lens finish never covers it.
+    const post = this.postStack();
+    if (post) {
+      this.findReflective(post);
+      post.render(gl, this.scene, this.camera);
+    } else {
+      gl.render(this.scene, this.camera);
+    }
     this.overlayScene = overlay?.scene ?? null;
     if (overlay) {
       gl.autoClear = false;
@@ -480,9 +518,15 @@ export class Renderer {
     timer?.end();
   }
 
+  /** The post stack's passes in force, in order (the debug overlay): none on Low. */
+  get postPasses(): readonly PostPassId[] {
+    return this.post?.plan ?? [];
+  }
+
   dispose(): void {
     window.removeEventListener('resize', this.resize);
     this.unlisten(this.canvas);
+    this.dropPost();
     this.mapMeshes.clear();
     if (this.surfaces) disposeSurfaceTextures(this.surfaces);
     this.surfaces = null;
@@ -514,8 +558,55 @@ export class Renderer {
    * EXT_color_buffer_half_float or _float, near universal), else 8-bit.
    */
   private makeRetro(look: RetroLook): RetroFilter {
+    return new RetroFilter(look, this.drawsHalfFloat());
+  }
+
+  /** Whether the context can draw into half floats (WebGL 2 with EXT_color_buffer_half_float or _float, near universal). */
+  private drawsHalfFloat(): boolean {
     const ext = this.gl.extensions;
-    return new RetroFilter(look, ext.has('EXT_color_buffer_half_float') || ext.has('EXT_color_buffer_float'));
+    return ext.has('EXT_color_buffer_half_float') || ext.has('EXT_color_buffer_float');
+  }
+
+  /**
+   * The post stack for the quality in force (G5), made when it is first wanted after a change; null when the quality
+   * has no post effect (Low), while the retro filter is on and while the context is lost.
+   */
+  private postStack(): PostStack | null {
+    if (this.retroLook || this.contextGone) return null;
+    if (this.postDirty) {
+      this.postDirty = false;
+      // Low (no post effect on) makes nothing at all.
+      if (postPlan(this.quality).length > 0) {
+        const stack = new PostStack({ quality: this.quality, halfFloat: this.drawsHalfFloat() }, 1, 1);
+        this.post = stack;
+        stack.setLight(keyDirection(this.lighting, this.keyLight), this.lighting.night);
+        this.sizePost();
+        this.reflectiveDirty = true;
+      }
+    }
+    return this.post;
+  }
+
+  /** Frees the post stack; the next frame makes one again for the settings then in force. */
+  private dropPost(): void {
+    this.post?.dispose();
+    this.post = null;
+    this.postDirty = true;
+  }
+
+  /** The post stack at the drawing buffer's size (the window times the pixel ratio, render scale included). */
+  private sizePost(): void {
+    const pr = this.gl.getPixelRatio();
+    this.post?.setSize(Math.max(1, Math.floor(this.width * pr)), Math.max(1, Math.floor(this.height * pr)));
+  }
+
+  /** Hands the stack the scene's reflective meshes after the scene changed (a session's build, a quality change). */
+  private findReflective(post: PostStack): void {
+    if (!this.reflectiveDirty) return;
+    this.reflectiveDirty = false;
+    if (!post.wantsReflective) return;
+    findReflective(this.scene, this.reflective);
+    post.setReflectiveSurfaces(this.reflective);
   }
 
   /** A WebGL renderer with the game's output settings, on a canvas of its own. Throws if the browser refuses a context. */
@@ -547,6 +638,8 @@ export class Renderer {
     const old = this.gl;
     this.dropTimer();
     this.unlisten(old.domElement);
+    // The post stack's targets belong to the old context: freed with it, and made again on the new one's first frame.
+    this.dropPost();
     // The sheen's target is freed by the context that made it; the session asks for a new one (contextRestored), and
     // the scene's environment is made again on the next frame.
     this.sheen.dispose();
@@ -609,6 +702,9 @@ export class Renderer {
     // Without this the browser never gives the context back (Three.js does it too; repeating it is harmless).
     e.preventDefault();
     this.forgetTimer();
+    // The post stack goes with the context (its targets are gone) and is made again once the context is back.
+    this.dropPost();
+    this.contextGone = true;
     this.contextListener(true);
   };
 
@@ -617,6 +713,8 @@ export class Renderer {
     // environment on the next frame).
     this.sheen.forget();
     this.environmentDirty = true;
+    this.contextGone = false;
+    this.reflectiveDirty = true;
     // A timer made while the context was gone (a frame drawn then) holds no query, or one of the lost context: the next
     // frame makes a new one on the restored context (M63, audit REN-07).
     this.forgetTimer();
@@ -633,6 +731,7 @@ export class Renderer {
     this.gl.setPixelRatio(effectivePixelRatio(window.devicePixelRatio, this.quality));
     this.gl.setSize(w, h, false);
     this.retro?.resize(w, h, this.gl.getPixelRatio());
+    this.sizePost();
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   };

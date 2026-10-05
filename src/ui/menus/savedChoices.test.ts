@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../../settings/storage';
-import { effectiveReducedMotion, loadReducedMotion, motionClass } from './savedChoices';
+import { effectiveReducedMotion, loadFrameRateCap, loadReducedMotion, motionClass } from './savedChoices';
 
 function storageWith(fields: Record<string, unknown>): Storage {
   const data = new Map<string, string>([[SETTINGS_KEY, JSON.stringify({ version: SETTINGS_VERSION, ...fields })]]);
@@ -42,5 +42,29 @@ describe('reduced motion (audit UI-07)', () => {
     for (const bad of [true, false, 1, 0, 'ON', 'Off', '', null]) {
       expect(loadReducedMotion(storageWith({ reducedMotion: bad })), String(bad)).toBeNull();
     }
+  });
+});
+
+// G5: the frame-rate row gains 240 and Unlimited (the old Off, same id) under the same key, `frameRateCap`.
+describe('the frame-rate choice (G5)', () => {
+  it('is Unlimited (0) when nothing is saved, or nothing usable', () => {
+    expect(loadFrameRateCap(storageWith({}))).toBe(0);
+    expect(loadFrameRateCap(storageWith({ frameRateCap: 'fast' }))).toBe(0);
+    expect(loadFrameRateCap(storageWith({ frameRateCap: true }))).toBe(0);
+    expect(loadFrameRateCap(null)).toBe(0);
+  });
+
+  it('reads every value an earlier build saved as itself (FA2 saved off, 30, 60, 120 and 144 by id)', () => {
+    for (const [saved, cap] of [['off', 0], ['30', 30], ['60', 60], ['120', 120], ['144', 144]] as const) {
+      expect(loadFrameRateCap(storageWith({ frameRateCap: saved })), saved).toBe(cap);
+    }
+    expect(loadFrameRateCap(storageWith({ frameRateCap: '240' }))).toBe(240);
+  });
+
+  it('reads any other number of frames as the nearest choice', () => {
+    expect(loadFrameRateCap(storageWith({ frameRateCap: '75' }))).toBe(60);
+    expect(loadFrameRateCap(storageWith({ frameRateCap: 165 }))).toBe(144);
+    expect(loadFrameRateCap(storageWith({ frameRateCap: 360 }))).toBe(240);
+    expect(loadFrameRateCap(storageWith({ frameRateCap: 0 }))).toBe(0);
   });
 });

@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, TONE_MAPPING } from '../config/render';
+import { ATMOSPHERE, LIGHTING_PRESETS, QUALITY, type QualitySettings, TONE_MAPPING } from '../config/render';
 import { DEPOT } from '../map/depot';
 import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
 import { resolveLighting } from './lightingPreset';
 import type { SurfaceTextures } from './proceduralTextures';
+import { PostStack } from './post/postStack';
 import { handOverRenderer, releaseGpuResources, Renderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
 import { defaultEnvironmentLook, type EnvironmentLook, environmentKey } from './replicaSheen';
 
@@ -233,12 +234,16 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
   });
 });
 
+/** Medium without its bloom (G5): the frame drawn straight to the canvas, as every preset drew before the post stack. */
+const PLAIN = { ...QUALITY.medium, bloom: false };
+
 /**
  * A Renderer built by its own constructor over a stand-in WebGLRenderer and context (Node has no WebGL): only what
  * render, warmShaders and the context events touch. The context counts its losses: a query made before the last one
- * is dead, and a lost context offers no extension (as the WebGL spec says) and makes no query.
+ * is dead, and a lost context offers no extension (as the WebGL spec says) and makes no query. A scene drawn logs
+ * `render`, a post pass's full-screen quad `quad`.
  */
-function stubbedRenderer() {
+function stubbedRenderer(quality: QualitySettings = PLAIN) {
   const ext = { TIME_ELAPSED_EXT: 1, GPU_DISJOINT_EXT: 2 };
   const ctx = {
     lost: false,
@@ -281,7 +286,14 @@ function stubbedRenderer() {
     setSize: () => undefined,
     setRenderTarget: (t: unknown) => void (renderTarget = t),
     clearDepth: () => undefined,
-    render: () => void calls.push('render'),
+    render: (o: THREE.Object3D) => void calls.push(o instanceof THREE.Scene ? 'render' : 'quad'),
+    // What the post stack's passes touch (G5).
+    extensions: { has: () => true },
+    outputColorSpace: THREE.SRGBColorSpace,
+    getClearColor: (c: THREE.Color) => c,
+    getClearAlpha: () => 1,
+    setClearColor: () => undefined,
+    clear: () => undefined,
     compile: (scene: THREE.Scene) => {
       calls.push(`compile ${scene.name} into ${renderTarget === null ? 'the canvas' : (renderTarget as { name: string }).name} with ${scene.environment ? 'the environment' : 'none'}`);
       return new Set();
@@ -289,12 +301,12 @@ function stubbedRenderer() {
   };
   vi.stubGlobal('window', { addEventListener: () => undefined, removeEventListener: () => undefined, devicePixelRatio: 1, innerWidth: 1280, innerHeight: 720 });
   vi.spyOn(Renderer.prototype as unknown as { makeWebGL: () => unknown }, 'makeWebGL').mockReturnValue(gl);
-  const r = new Renderer({ appendChild: () => undefined, clientWidth: 1280, clientHeight: 720 } as unknown as HTMLElement, QUALITY.medium);
+  const r = new Renderer({ appendChild: () => undefined, clientWidth: 1280, clientHeight: 720 } as unknown as HTMLElement, quality);
   r.scene.name = 'world';
   // The prefiltered sky, as the sheen hands it over (no PMREM without WebGL).
   const environment = new THREE.Texture();
   const fields = r as unknown as Record<string, unknown>;
-  fields.sheen = { texture: () => environment, forget: () => undefined, dispose: () => undefined };
+  fields.sheen = { texture: () => environment, forget: () => undefined, dispose: () => undefined, trim: () => undefined };
   return {
     r,
     ctx,
@@ -519,5 +531,135 @@ describe('the GPU timer across a lost context: forgotten, never deleted (M63, au
     }
     expect(ctx.deadBegins).toBe(0);
     expect(ctx.deleted.filter((d) => d.whileLost || d.stale)).toEqual([]);
+  });
+});
+
+/** The renderer's post stack (G5), or null. */
+const postOf = (r: Renderer) => (r as unknown as { post: PostStack | null }).post;
+
+describe('the post stack on the renderer (G5)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  /** Where each scene drawn went: the post stack's target, a pass's target, or the canvas. */
+  function drawsOf(r: Renderer): string[] {
+    const gl = glOf(r) as unknown as { render: (o: THREE.Object3D) => void; setRenderTarget: (t: unknown) => void };
+    const log: string[] = [];
+    let target: unknown = null;
+    const set = gl.setRenderTarget;
+    gl.setRenderTarget = (t) => {
+      target = t;
+      set(t);
+    };
+    gl.render = (o) => {
+      if (!(o instanceof THREE.Scene)) return;
+      const post = postOf(r);
+      log.push(`${o.name || 'scene'} → ${target === null ? 'canvas' : target === post?.sceneTarget ? 'post' : 'other'}`);
+    };
+    return log;
+  }
+
+  it('builds no post stack on Low: the world and the held replica go straight to the canvas, as before', () => {
+    const { r } = stubbedRenderer(QUALITY.low);
+    const log = drawsOf(r);
+    const overlay = { scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() };
+    const built = vi.spyOn(PostStack.prototype, 'render');
+    r.render(overlay);
+    r.render(overlay);
+    expect(postOf(r)).toBeNull();
+    expect(r.postPasses).toEqual([]);
+    expect(built).not.toHaveBeenCalled();
+    expect(log).toEqual(['world → canvas', 'replica → canvas', 'world → canvas', 'replica → canvas']);
+  });
+
+  it('draws the world through the stack on High and the held replica on the canvas after it, never through the blend', () => {
+    const { r } = stubbedRenderer(QUALITY.high);
+    const log = drawsOf(r);
+    r.render({ scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() });
+    expect(r.postPasses).toEqual(['ao', 'lightShafts', 'taa', 'bloom', 'output']);
+    expect(log).toEqual(['world → post', 'replica → canvas']);
+    // At the drawing buffer's size (the stub's 1280 × 720 at pixel ratio 1).
+    expect([postOf(r)!.sceneTarget.width, postOf(r)!.sceneTarget.height]).toEqual([1280, 720]);
+  });
+
+  it('compiles the world for the stack’s target and the held replica for the canvas', () => {
+    const { r, calls } = stubbedRenderer(QUALITY.high);
+    const gl = glOf(r) as unknown as { setRenderTarget: (t: unknown) => void };
+    const set = gl.setRenderTarget;
+    gl.setRenderTarget = (t) => set(t === null ? null : Object.assign(t as object, { name: 'the post target' }));
+    r.warmShaders({ scene: Object.assign(new THREE.Scene(), { name: 'replica' }), camera: new THREE.PerspectiveCamera() });
+    expect(calls).toEqual(['compile world into the post target with the environment', 'compile replica into the canvas with none']);
+  });
+
+  it('disposes the stack on a quality change and builds the new one on the next frame', () => {
+    const { r } = stubbedRenderer(QUALITY.high);
+    r.render();
+    const first = postOf(r)!;
+    const dispose = vi.spyOn(first, 'dispose');
+    r.setQuality(QUALITY.ultra);
+    expect(dispose).toHaveBeenCalledTimes(1);
+    expect(postOf(r)).toBeNull();
+    r.render();
+    expect(r.postPasses).toEqual(['ao', 'reflections', 'lightShafts', 'taa', 'bloom', 'output', 'lens']);
+    // Down to Low: freed, and nothing made again.
+    const second = postOf(r)!;
+    const dispose2 = vi.spyOn(second, 'dispose');
+    r.setQuality({ ...QUALITY.low, antialias: true });
+    r.render();
+    expect(dispose2).toHaveBeenCalledTimes(1);
+    expect(postOf(r)).toBeNull();
+  });
+
+  it('frees the stack when the context is lost, draws plain while it is gone, and builds a new one once it is back', () => {
+    const { r, lose, restore } = stubbedRenderer(QUALITY.high);
+    const log = drawsOf(r);
+    r.render();
+    const first = postOf(r)!;
+    const dispose = vi.spyOn(first, 'dispose');
+    lose();
+    expect(dispose).toHaveBeenCalledTimes(1);
+    r.render();
+    expect(postOf(r)).toBeNull();
+    restore();
+    r.render();
+    expect(postOf(r)).not.toBeNull();
+    expect(postOf(r)).not.toBe(first);
+    expect(log).toEqual(['world → post', 'world → canvas', 'world → post']);
+  });
+
+  it('resizes the stack with the window and the render scale', () => {
+    const { r } = stubbedRenderer(QUALITY.high);
+    r.render();
+    const gl = glOf(r) as unknown as { getPixelRatio: () => number };
+    gl.getPixelRatio = () => 0.75;
+    (r as unknown as { resize: () => void }).resize();
+    expect([postOf(r)!.sceneTarget.width, postOf(r)!.sceneTarget.height]).toEqual([960, 540]);
+  });
+
+  it('hands the stack the scene’s reflective meshes after a build, and looks again only after the next', () => {
+    const { r } = stubbedRenderer(QUALITY.ultra);
+    const glass = Object.assign(new THREE.Mesh(new THREE.BoxGeometry()), { name: 'map-glass' });
+    r.scene.add(glass);
+    r.render();
+    const surfaces = vi.spyOn(postOf(r)!, 'setReflectiveSurfaces');
+    r.render();
+    expect(surfaces).not.toHaveBeenCalled();
+    r.warmShaders();
+    r.render();
+    expect(surfaces).toHaveBeenCalledTimes(1);
+    expect(surfaces.mock.calls[0]![0].map((s) => s.mesh)).toEqual([glass]);
+  });
+
+  it('gives way to the retro filter while it is on', () => {
+    const { r } = stubbedRenderer(QUALITY.high);
+    r.render();
+    const dispose = vi.spyOn(postOf(r)!, 'dispose');
+    (r as unknown as { makeRetro: () => unknown }).makeRetro = () => ({ renderTarget: {}, present: () => undefined, resize: () => undefined, setLook: () => undefined, dispose: () => undefined });
+    r.setRetro({ pixelSize: 3, levels: 8 } as unknown as Parameters<Renderer['setRetro']>[0]);
+    r.render();
+    expect(dispose).toHaveBeenCalled();
+    expect(postOf(r)).toBeNull();
   });
 });

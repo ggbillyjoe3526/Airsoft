@@ -43,7 +43,7 @@ import {
 import { DEFAULT_HIT_FEED_MODE, DEFAULT_WHAT_GOT_YOU_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOREBOARD_SIZE, WHAT_GOT_YOU_MODES, type WhatGotYouMode } from '../../config/matchInfo';
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
-import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
+import { frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
 import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER, TONE_MAPPING, type ToneMappingId } from '../../config/render';
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
@@ -188,10 +188,12 @@ export function loadCustomQuality(storage = browserStorage()): Partial<QualitySe
   return custom as Partial<QualitySettings>;
 }
 
-/** The frame-rate cap (Settings → Graphics; 0 = none, the default). */
-export function loadFrameRateCap(): FrameRateCap {
-  const id = loadChoice('frameRateCap', FRAME_RATE_CAP_CHOICES, 'off');
-  return FRAME_RATE_CAP_CHOICES.find((c) => c.id === id)!.value;
+/**
+ * The frame-rate choice (Settings → Graphics; 0 = Unlimited, the default). Every id an earlier build saved reads back as
+ * itself, any other number as the nearest choice (G5, config/graphics.ts frameRateCapFromSaved).
+ */
+export function loadFrameRateCap(storage = browserStorage()): FrameRateCap {
+  return loadSetting('frameRateCap', frameRateCapFromSaved, 0, storage);
 }
 
 /** Tone mapping (Settings → Graphics; F2): Neutral unless the player picked another (owner decision). */

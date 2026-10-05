@@ -112,11 +112,11 @@ export const ATMOSPHERE = {
  */
 export const FOV_SETTING = { min: 80, max: 120, step: 1 } as const;
 
-export type QualityPreset = 'low' | 'medium' | 'high';
+export type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 /** What the Quality picker and the settings store hold: a preset, or the player's own mix of the Custom rows. */
 export type QualityChoice = QualityPreset | 'custom';
 /** The presets, cheapest first. */
-export const QUALITY_PRESETS: readonly QualityPreset[] = ['low', 'medium', 'high'];
+export const QUALITY_PRESETS: readonly QualityPreset[] = ['low', 'medium', 'high', 'ultra'];
 
 /** Shadow map sizes (texels per side): each step is four times the depth fill and memory (4 / 16 / 64 MB). */
 export type ShadowMapSize = 1024 | 2048 | 4096;
@@ -220,10 +220,26 @@ export interface QualitySettings {
    * A fixed number for the match, so no shader is rebuilt as you move. Nothing on a map without light pools.
    */
   poolLights: PoolLightCount;
+  // G5: the post stack (render/post/, tuned in config/post.ts). All off draws the frame straight to the screen, as before.
+  /** Ambient occlusion (GTAO): soft shade where surfaces meet, worked out at this share of the resolution; 0 is off. */
+  ambientOcclusion: AmbientOcclusionScale;
+  /** Bloom: emissive accents, neon, glowing BBs and the sun's glare spill a soft glow. */
+  bloom: boolean;
+  /** Temporal antialiasing: a jittered view blended over frames, so grass, wire and rails stop shimmering in motion. */
+  temporalAA: boolean;
+  /** Light shafts from the sun or the moon, at reduced resolution, while it is on or near the screen. */
+  lightShafts: boolean;
+  /** Screen-space reflections, only on surfaces flagged reflective (puddles and glass). */
+  reflections: boolean;
+  /** Film grain and a slight colour fringe at the screen's edges. */
+  lensFinish: boolean;
 }
 
 /** Night lights (QualitySettings.poolLights): real point lights on the nearest light pools. */
-export type PoolLightCount = 0 | 2 | 4;
+export type PoolLightCount = 0 | 2 | 4 | 8;
+
+/** Ambient occlusion (QualitySettings.ambientOcclusion): off, half or full resolution. */
+export type AmbientOcclusionScale = 0 | 0.5 | 1;
 
 /** Trees round the field (QualitySettings.trees). */
 export type TreeDetail = 0 | 1 | 2;
@@ -232,16 +248,24 @@ export type TreeDetail = 0 | 1 | 2;
  * Render quality presets (M14; the ladder reworked by the final alpha audit, section 4, REN-01/02/23). High is the full
  * look for a discrete GPU; Medium is a true middle for integrated graphics (shadows, relief and smoothing, a smaller
  * shadow map and textures, no sheen); Low drops everything that costs fill rate and renders at 80 % of the screen's
- * resolution (REN-01). `?quality=low|medium|high|custom` overrides the saved pick for one visit, to measure frame cost
+ * resolution (REN-01). Ultra (G5) is above High for a fast discrete card at 4K: a 4096 shadow map at the softest radius,
+ * up to 2× high-DPI resolution, the most dust and night lights, and every post effect at full quality; the GPU check never
+ * picks it (TIER_QUALITY). `?quality=low|medium|high|ultra|custom` overrides the saved pick for one visit, to measure frame cost
  * (Phase 3 audit C-04).
  */
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
   low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false,
-    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0 },
+    environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0,
+    ambientOcclusion: 0, bloom: false, temporalAA: false, lightShafts: false, reflections: false, lensFinish: false },
   medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2 },
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2,
+    ambientOcclusion: 0, bloom: true, temporalAA: false, lightShafts: false, reflections: false, lensFinish: false },
   high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true,
-    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4 },
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4,
+    ambientOcclusion: 0.5, bloom: true, temporalAA: true, lightShafts: true, reflections: false, lensFinish: false },
+  ultra: { renderScale: 1, maxPixelRatio: 2, antialias: true, shadows: true, shadowMapSize: 4096, shadowRadius: 4, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 300, replicaSheen: true,
+    environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 8,
+    ambientOcclusion: 1, bloom: true, temporalAA: true, lightShafts: true, reflections: true, lensFinish: true },
 };
 
 /** The fields of a QualitySettings, in the order the Custom rows show them. */
@@ -304,8 +328,9 @@ export function startingQuality(
 /** The Quality picker's options (Settings → Graphics), cheapest first, then Custom. */
 export const QUALITY_CHOICES: readonly { id: QualityChoice; label: string; blurb: string }[] = [
   { id: 'low', label: 'Low', blurb: 'For integrated graphics: no shadows, relief, edge smoothing or dust, the plain map and sky, and 80 % resolution, scaled up.' },
-  { id: 'medium', label: 'Medium', blurb: 'Shadows, players in shade, surface relief, sky reflections, the detailed map, trees and clouds, at a lower cost: a good middle for most laptops.' },
-  { id: 'high', label: 'High', blurb: 'The full look: sharp textures, a finer shadow map that follows your view and dust in the sunlight.' },
+  { id: 'medium', label: 'Medium', blurb: 'Shadows, players in shade, surface relief, sky reflections, the detailed map, trees, clouds and a soft glow on lights, at a lower cost: a good middle for most laptops.' },
+  { id: 'high', label: 'High', blurb: 'For a gaming graphics card: sharp textures, a finer shadow map that follows your view, dust in the sunlight, soft shade where surfaces meet, light shafts and temporal smoothing.' },
+  { id: 'ultra', label: 'Ultra', blurb: 'For a fast graphics card at 4K: the sharpest, softest shadows, full-resolution shade, reflections in puddles and glass, the most dust and night lights, and a film finish.' },
   { id: 'custom', label: 'Custom', blurb: 'Your own mix of the rows below.' },
 ];
 
@@ -324,10 +349,10 @@ export function parseQuality(value: string | null): QualityChoice | null {
 export const QUALITY_STEP_DOWN = { windowSeconds: 2, p95Ms: 20, slowShare: 0.05, windows: 2, capSlack: 1.25, noticeSeconds: 5 } as const;
 
 /**
- * Frame-rate cap (Settings → Graphics; REN-16, CORE-25): frames a second the game draws at most (0 = as many as the
- * screen shows). Not part of a preset. The simulation keeps its 60 ticks a second whatever the cap.
+ * Frame-rate cap (Settings → Graphics; REN-16, CORE-25; 240 since G5): frames a second the game draws at most (0 =
+ * Unlimited, the default: as many as the screen shows). Not part of a preset. The simulation keeps its 60 ticks a second whatever the cap.
  */
-export const FRAME_RATE_CAPS = [0, 30, 60, 120, 144] as const;
+export const FRAME_RATE_CAPS = [0, 30, 60, 120, 144, 240] as const;
 export type FrameRateCap = (typeof FRAME_RATE_CAPS)[number];
 /**
  * A frame is drawn up to `slackMs` early, so a cap equal to the screen's rate never drops to every other frame on a
