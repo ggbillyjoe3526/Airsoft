@@ -98,7 +98,8 @@ describe('the map a match is given is never written into (M63, audit REN-01)', (
       sightConditionsOf(map, map.night);
     }
     expectUntouched();
-  });
+    // About 2 s alone; past the 5 s default twice under the gate's load (M65 report and QA run): room, not a slower build.
+  }, 20_000);
 
   it('builds the physics, the bots navigation and cover, and plays Elimination and Attack / Defend under each pick, writing nothing', () => {
     for (const map of played) {
