@@ -775,6 +775,13 @@ body {
   color: var(--menu-muted);
 }
 
+/* A note under an option's description (M49: the supply event on, under Extraction) */
+.choice-note {
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--hint);
+}
+
 /* Pop-ups of settings rows (New game's Match and Difficulty, M20): wide enough for a row's label beside its control */
 .rows-dialog {
   width: min(680px, calc(100vw - 32px));

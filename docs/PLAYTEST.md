@@ -1148,6 +1148,18 @@ Dev settings > Dev content on, then the map, then Mode > Extraction.
   Tower's top floor), field cases upstairs, ammo cans on the street; every exit is on the street at a corner of the
   site (Noodle Alley, the Back Alley, late the plaza and the Drone Dock). Waves come back on every floor.
 
+## Extraction supply events (M49, dev content)
+
+Dev settings > Dev content on, then Mode.
+
+- [ ] **Supply weekend:** on a Friday, Saturday or Sunday, the Mode pop-up says under Extraction "Supply weekend, until
+  Sunday: cases hold +25 % Field Credits and +50 % parts". On any other day it says nothing more.
+- [ ] **Richer cases:** a weekend run's cases hold more Field Credits than a weekday's (the summary's haul), and field
+  cases turn up a part more often. The cases themselves and where they stand are the same.
+- [ ] **Halloween night run:** set the computer's date to 30 or 31 October or 1 November 2026: the line names the
+  Halloween night run instead (+50 % FC, +100 % parts), until 1 Nov.
+- [ ] **pool.md:** change a row's FC % or When (say, today's weekday) and reload: the line follows it.
+
 ## Neon Heights by Night (M34e, dev content)
 
 Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Night is its default).

@@ -138,7 +138,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M35 Public and dev content tags: every map, mode, difficulty and pooled asset tagged public or dev; dev content shown only with the Dev tab's Dev content switch, never in Shots, carried by bots only with it on, and kept out of the records and Field Credits | Done (owner to play it) | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M42 Retro pixel filter: a Dev tab switch for a 1990s look (chunky pixels, a small dithered palette), with Pixel size and Colours sliders; the HUD and menus stay sharp | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | In progress (M36 merged, #79; M37 merged, #82; M38 merged, #84; M39 merged, #90; M40 merged, #94; M41 built; the owner chose to start before the final alpha pass) | |
-| Alpha · Owner's 2026-10-04 requests · M43–M49 Extraction: a squad of one to three against a home team on a timed run, guarded cases of seeded loot, waves, exits held for a count, one automatic respawn per run, pay and records, Woodland and city data, supply weekends; tagged dev until the owner says it's done | Building: M43 the run, exits, clock and respawn done (owner to play it); M44 cases and loot done (owner to play it); M45 waves and regen done (owner to play it); M46 guards, patrols and hunters done (owner to play it); M47 pay and records done (shows once the mode is public); M48 Woodland and Neon Heights done (owner to play it); M49 next | 8/8 (M43, M44, M46, M47, M48), 7/8 (M45) |
+| Alpha · Owner's 2026-10-04 requests · M43–M49 Extraction: a squad of one to three against a home team on a timed run, guarded cases of seeded loot, waves, exits held for a count, one automatic respawn per run, pay and records, Woodland and city data, supply weekends; tagged dev until the owner says it's done | Building: M43 the run, exits, clock and respawn done (owner to play it); M44 cases and loot done (owner to play it); M45 waves and regen done (owner to play it); M46 guards, patrols and hunters done (owner to play it); M47 pay and records done (shows once the mode is public); M48 Woodland and Neon Heights done (owner to play it); M49 supply events done (owner to play it) | 8/8 (M43, M44, M46, M47, M48, M49), 7/8 (M45) |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -892,7 +892,9 @@ pool, items 11, 12 and part of 14).
     woods, the locker in the cabin or the fort, exits halfway down the field and late ones in the north woods; Neon
     Heights runs 10 minutes against 3 / 4 / 5 with the locker on Level 2 and the exits on the street. Exits follow the
     ground on a slope. The balance guard runs on both maps.
-  - **M49. Supply weekends and events:** a dated or owner-switched event with its own loot table.
+  - **M49. Supply weekends and events:** pool.md's Supply events table: a Supply weekend every Friday to Sunday and
+    dated one-off events (a Halloween night run shipped), by the device's clock, each scaling what the cases hold (FC and
+    parts); the Mode pop-up says which is on, and a run keeps the event it started with.
 
 When the owner calls the game feature complete, alpha ends.
 

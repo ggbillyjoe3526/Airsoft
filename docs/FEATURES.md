@@ -48,6 +48,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Extraction guards and hunters: two guards by the locker (one on Easy), patrols in pairs between the cases, hunters from half the run on Normal (a third on Hard and Pro); teammates cover you at a case (M46)
 - Extraction pay and records: the FC you get out with plus your hits, times the difficulty (hits only if you don't get out); runs and extractions per difficulty, best haul, extractions in a row, fastest extraction with a case (M47)
 - Extraction on Woodland (15 min against 4 to 6, the locker in the cabin or the fort) and Neon Heights (10 min against 3 to 5, the locker on Level 2, exits on the street) (M48)
+- Extraction supply events: a Supply weekend every Friday to Sunday (+25 % FC, +50 % parts) and dated events from pool.md (Halloween night run 2026), by the device's clock, shown under Extraction on the Mode pop-up (M49)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only the standard match counts for the records (M20)
 - Rules picker: Skirmish, Tournament, Pro CQB (dev) and Custom; named rulesets keep their own records, Custom never counts (M39)

@@ -192,3 +192,71 @@ describe('ChoiceDialog switches on an option (M34d: Day | Night)', () => {
     expect(list.children.filter((c) => c.className.includes('choice-variants'))).toHaveLength(1);
   });
 });
+
+describe('ChoiceDialog notes (M49)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('document', fakeDocument());
+    vi.stubGlobal('localStorage', new MemoryStorage());
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Each option's note line (its text's third part) and whether it shows. */
+  const notes = (d: ChoiceDialog<Id>): [string, string, boolean][] =>
+    entries(d)
+      .filter((e) => e.button.className === 'choice-option' || e.button.className.includes('selected'))
+      .map((e) => {
+        const note = e.button.children[1]!.children[2]!;
+        return [e.name, note.textContent, !note.hidden];
+      });
+
+  it('shows a line under one option’s description when set, and takes it away with null', () => {
+    const d = new ChoiceDialog<Id>('Difficulty', OPTIONS, 'normal', 'difficulty' as never, () => {});
+    expect(notes(d).every(([, , showing]) => !showing)).toBe(true);
+    d.setNote('hard', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.');
+    expect(notes(d)).toEqual([
+      ['Easy', '', false],
+      ['Normal', '', false],
+      ['Hard', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.', true],
+    ]);
+    d.setNote('hard', null);
+    expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', '', false]);
+  });
+
+  it('hides the note with its option while dev content is off, and brings it back with the option', () => {
+    const d = new ChoiceDialog<Id>('Difficulty', OPTIONS, 'normal', 'difficulty' as never, () => {});
+    d.setNote('hard', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.');
+    const hard = entries(d).find((e) => e.name === 'Hard')!;
+    // The note sits inside the option's button, so the button's own hidden flag is what keeps it off screen.
+    expect(hard.button.hidden).toBe(true);
+    expect(hard.button.disabled).toBe(true);
+    d.setDevContent(true);
+    expect(hard.button.hidden).toBe(false);
+    expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', 'Supply weekend, until Sunday: cases hold +25 % Field Credits.', true]);
+    d.setDevContent(false);
+    expect(hard.button.hidden).toBe(true);
+  });
+
+  it('keeps a note through a limit and a dev-content change, replaces it on the next setNote, and ignores an id it does not have', () => {
+    const d = new ChoiceDialog<Id>('Difficulty', OPTIONS, 'normal', 'difficulty' as never, () => {});
+    d.setDevContent(true);
+    d.setNote('hard', 'first');
+    d.limit((id) => id !== 'easy');
+    d.setDevContent(false);
+    d.setDevContent(true);
+    expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', 'first', true]);
+    d.setNote('hard', 'second');
+    expect(notes(d).find(([name]) => name === 'Hard')).toEqual(['Hard', 'second', true]);
+    expect(() => d.setNote('nope' as Id, 'x')).not.toThrow();
+    // A note on one option leaves the others' notes alone.
+    expect(notes(d).filter(([, , showing]) => showing).map(([name]) => name)).toEqual(['Hard']);
+  });
+
+  it('does not change what is picked or what the dialog plays', () => {
+    const picked: Id[] = [];
+    const d = new ChoiceDialog<Id>('Difficulty', OPTIONS, 'normal', 'difficulty' as never, (id) => picked.push(id));
+    d.setNote('normal', 'a line');
+    d.setNote('normal', null);
+    expect(d.value).toBe('normal');
+    expect(picked).toEqual([]);
+  });
+});

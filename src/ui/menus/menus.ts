@@ -87,7 +87,8 @@ export interface MenusOptions {
   map: { initial: MapId; onChange: (m: MapId) => void };
   /** Each map's Day or Night pick (M34d), on the maps that offer both. */
   lighting: { initial: Partial<Record<MapId, LightingPresetId>>; onChange: (m: MapId, light: LightingPresetId) => void };
-  mode: { initial: MatchMode; onChange: (m: MatchMode) => void };
+  /** `supply`: the line under Extraction for the supply event on as the pop-up opens (M49), or null when none is. */
+  mode: { initial: MatchMode; onChange: (m: MatchMode) => void; supply?: () => string | null };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
   /** `follows`: no teammate level is saved yet, so it follows the opponents' picks until one is chosen. */
@@ -166,7 +167,10 @@ export class Menus {
     this.title = new TitleScreen(() => this.go('setup'), () => this.openRange(this.opts.onRange), () => this.openRange(this.opts.onTutorial), opts.tutorialDone);
     this.setup = new SetupScreen({
       onMap: () => this.mapDialog.open(),
-      onMode: () => this.modeDialog.open(),
+      onMode: () => {
+        this.modeDialog.setNote('extraction', opts.mode.supply?.() ?? null);
+        this.modeDialog.open();
+      },
       onMatch: () => this.matchDialog.open(),
       onDifficulty: () => this.difficultyDialog.open(),
       onLoadout: () => this.openLoadout('setup'),
