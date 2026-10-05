@@ -110,7 +110,13 @@ ends the round). A hit character is eliminated
   clouds), and `lightPools.ts` draws the map's light pools (`MapData.lights`) under a night preset only (M34e): one glow
   mesh, one additive ground mesh and, on Medium and High, a fixed number of point lights on the pools nearest the eye
   (`QualitySettings.poolLights`). `mapSigns.ts` draws a map's neon signs and lit windows (`MapData.signs`, M34e) as one
-  mesh of flat panels: unlit and self-lit by Night, Lambert (painted boards, dark glass) by Day. The bots read the dark
+  mesh of flat panels: unlit and self-lit by Night, Lambert (painted boards, dark glass) by Day. The woodland look
+  (M33i) is map data too: `natureShapes.ts` draws `tree`, `log` and `boulder` blocks as trunks, log courses and
+  faceted stones in the merged meshes (inside their boxes, no gap over 8 cm); `canopyMeshes.ts` hangs a crown over
+  every `tree` block; `terrainMeshes.ts` paints the ground from `MapData.ground`'s grid; `lightFixtures.ts` (built by
+  `lightPools.ts`) gives `MapLight.kind` fires and lanterns their stones, logs, flickering flames (vertex shader, one
+  shared clock) and embers; `nightSky.ts` (from `atmosphere.ts`) draws the moon and stars a preset's `nightSky` asks
+  for. The woods' textures are drawn only for a map that uses them (`mapMeshes.texturesFor`). The bots read the dark
   from `map/nightSight.ts`: a pool lights only the floor under it, and an unlit spot with a floor or roof overhead is
   indoors in the dark (`NIGHT_SIGHT.indoor`, M34e). `mapMeshes.ts` turns each block
   into pieces (container frames, wall copings, pallets, all inside the block's bounds) merged per texture by
@@ -367,5 +373,8 @@ request. Each line names where it lives and what pins it.
 - **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
   are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
   time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
-  `extraction` (M44 adds its `cases`, M45 its `regens` and `regenDistance`), M34e's `signs` (neon signs and lit windows, presentation only). Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
-  `map/extractionData.test.ts`.
+  `extraction` (M44 adds its `cases`, M45 its `regens` and `regenDistance`), M34e's `signs` (neon signs and lit windows,
+  presentation only), M33i's `ground` (the ground's patches: one grid, `map/groundSurfaces.ts`, that the terrain is
+  painted from and M33j's footsteps read) and `MapLight.kind` (`fire` or `lantern`: the light's fixture). Pinned by
+  `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
+  `render/depotLook.test.ts` (a map using none of M33i's fields builds as before).

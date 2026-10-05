@@ -64,6 +64,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Day or Night selector: maps offering both modes show a switch in the Map pop-up; your choice is saved per map (M34d)
 - Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend, with Day and Night modes (M34c, M34d)
 - Neon Heights by Night: 12 lamps light separate floors, neon signs glow, lit and dark windows on the perimeter (M34e)
+- The woodland look on any map that asks for it: trees, logs and boulders drawn as bark and stone inside their boxes, crowns over the trees, ground patches (gravel, earth, wood, leaf litter under the trees), camp fires with flickering flames and embers, lanterns, and a moon and stars under the night preset; first used by Woodland (M33i)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory

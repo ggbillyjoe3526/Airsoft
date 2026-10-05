@@ -10,10 +10,12 @@ function hash(n: number): number {
 
 /**
  * A map's bushes (M33e, MapData.foliage) as one merged mesh: each bush a lumpy icosphere stretched to its ellipsoid, in
- * a vertex-coloured dark green. One draw call for every bush on the map; they cast and receive shadows. No collider:
- * bushes are drawn only (bots read them through map/foliage.ts). Null when the map has none.
+ * a vertex-coloured dark green. One draw call for every bush on the map; they receive shadows and cast them when
+ * `castShadow` (MapLook.foliageShadows, M33i: where the shadow map follows the view). No collider:
+ * bushes are drawn only (bots read them through map/foliage.ts). Null when the map has none. `moon` (M33i): the unit
+ * direction towards the key light, for a baked rim and darker foot (null: the look before).
  */
-export function buildFoliageMesh(bushes: readonly Bush[]): THREE.Mesh | null {
+export function buildFoliageMesh(bushes: readonly Bush[], moon: THREE.Vector3 | null = null, castShadow = true): THREE.Mesh | null {
   if (bushes.length === 0) return null;
   const unit = new THREE.IcosahedronGeometry(1, FOLIAGE_LOOK.detail);
   const unitPos = unit.getAttribute('position');
@@ -21,6 +23,7 @@ export function buildFoliageMesh(bushes: readonly Bush[]): THREE.Mesh | null {
   const positions = new Float32Array(perBush * bushes.length * 3);
   const colors = new Float32Array(positions.length);
   const base = new THREE.Color().setHex(FOLIAGE_LOOK.colour, THREE.SRGBColorSpace);
+  const rim = new THREE.Color().setHex(FOLIAGE_LOOK.rim, THREE.SRGBColorSpace);
   const c = new THREE.Color();
   // Vertices that share a position must move together, or the lumps tear the surface open: key the push on the position.
   const key = (x: number, y: number, z: number): number => Math.round(x * 1000) * 73856093 ^ Math.round(y * 1000) * 19349663 ^ Math.round(z * 1000) * 83492791;
@@ -38,6 +41,11 @@ export function buildFoliageMesh(bushes: readonly Bush[]): THREE.Mesh | null {
       positions[o + 2] = bush.z + uz * bush.radius * push;
       // Darker underneath, lighter on top, with a little noise.
       c.copy(base).multiplyScalar((0.8 + 0.25 * (uy + 1) / 2) * (1 + FOLIAGE_LOOK.jitter * hash(k + 1)));
+      // M33i: a darker foot and a cool rim on the key light's side (the moon's at night), baked.
+      if (moon) {
+        if (uy < FOLIAGE_LOOK.footFrom) c.multiplyScalar(1 - (1 - FOLIAGE_LOOK.footShade) * ((FOLIAGE_LOOK.footFrom - uy) / (1 + FOLIAGE_LOOK.footFrom)));
+        c.lerp(rim, FOLIAGE_LOOK.rimStrength * Math.max(0, ux * moon.x + uy * moon.y + uz * moon.z));
+      }
       colors[o] = c.r;
       colors[o + 1] = c.g;
       colors[o + 2] = c.b;
@@ -51,7 +59,7 @@ export function buildFoliageMesh(bushes: readonly Bush[]): THREE.Mesh | null {
   geo.computeBoundingSphere();
   const mesh = new THREE.Mesh(geo, withoutEnvironment(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })));
   mesh.name = 'map-foliage';
-  mesh.castShadow = true;
+  mesh.castShadow = castShadow;
   mesh.receiveShadow = true;
   mesh.matrixAutoUpdate = false;
   mesh.updateMatrix();

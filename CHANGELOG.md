@@ -83,6 +83,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M47** · Extraction pay and records: a run pays what you get out with plus your hits, times the difficulty; its own bests (#101)
 - **M34e** · Neon Heights by Night: 12 lamps light separate floors, neon signs that glow and are painted by day, lit and dark windows on the perimeter; balanced at 47–48 % west, 52 % attackers
 - **M34e** · Night sight on night maps knows floors and roofs: an unlit spot under a roof is seen from 15 m
+- **M33i** · Woodland's look (dev content): bark trunks and log walls, faceted boulders, plank fences, pine and broadleaf crowns against the sky, gravel creek, earth tracks and leaf litter under the trees, camp fires with flickering flames and embers, lanterns, and a moon and stars at night on every preset; Depot unchanged
 
 ### Changed
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)

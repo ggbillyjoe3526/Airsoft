@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { POOL_LIGHTS, type QualitySettings } from '../config/render';
 import type { MapData } from '../map/mapTypes';
 import { groundUnder, type MapLight } from '../map/nightSight';
+import { buildLightFixtures, flicker, flickerSeed } from './lightFixtures';
 import { withoutEnvironment } from './surfaceMaterials';
 
 /**
@@ -216,9 +217,10 @@ function scaleDecal(d: PoolDecal, p: number, scale: number): void {
 export interface LightPools {
   /**
    * Night lights (QualitySettings.poolLights), less `reserved` taken by something else (M33h: your weapon torch's spot
-   * light), so the scene's real light count is the setting's.
+   * light), so the scene's real light count is the setting's. Fires' embers (M33i) where `dustMotes` is above 0 (kept as
+   * they are when it isn't given).
    */
-  setQuality(quality: Pick<QualitySettings, 'poolLights'>, reserved?: number): void;
+  setQuality(quality: PoolQuality, reserved?: number): void;
   /** Moves the real lights to the pools nearest `eye` (fading over `dt` seconds of this frame). Allocation-free. */
   follow(eye: THREE.Vector3, dt: number): void;
   dispose(): void;
@@ -226,6 +228,9 @@ export interface LightPools {
 
 /** No light pools: a map without them, or any map by Day (M34e). */
 export const NO_LIGHT_POOLS: LightPools = { setQuality: () => undefined, follow: () => undefined, dispose: () => undefined };
+
+/** What the pools follow of the quality settings: the night lights, and (M33i) whether embers rise from the fires. */
+export type PoolQuality = Pick<QualitySettings, 'poolLights'> & Partial<Pick<QualitySettings, 'dustMotes'>>;
 
 /** The real point lights the pools get: the Night lights setting less the `reserved` ones (M33h), never below none. */
 export function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, reserved = 0): number {
@@ -236,12 +241,15 @@ export function poolLightCount(quality: Pick<QualitySettings, 'poolLights'>, res
  * Adds `map`'s light pools to `scene` at `quality`'s Night lights, less `reserved` (M33h: taken by your torch's spot);
  * a map without pools gets nothing.
  */
-export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<QualitySettings, 'poolLights'>, reserved = 0): LightPools {
+export function addLightPools(scene: THREE.Scene, map: MapData, quality: PoolQuality, reserved = 0): LightPools {
   const pools = map.lights ?? [];
   if (pools.length === 0) return NO_LIGHT_POOLS;
   const glow = buildPoolGlow(pools);
   const decal = buildPoolDecal(map, pools);
   scene.add(glow, decal.mesh);
+  // M33i: the flames, lantern panes and embers of the lights that have a kind (render/lightFixtures.ts).
+  const fixtures = buildLightFixtures(map, (x, z, below) => groundUnder(map, x, z, below) ?? 0, (quality.dustMotes ?? 0) > 0);
+  if (fixtures) scene.add(fixtures.group);
   const decalScale = new Float32Array(pools.length).fill(1);
   let lights: THREE.PointLight[] = [];
   let state = createPoolLightState(0, pools.length);
@@ -252,7 +260,8 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<Qu
     }
     lights = [];
   };
-  const setQuality = (q: Pick<QualitySettings, 'poolLights'>, reserve = 0): void => {
+  const setQuality = (q: PoolQuality, reserve = 0): void => {
+    if (q.dustMotes !== undefined) fixtures?.setEmbers(q.dustMotes > 0);
     const count = poolLightCount(q, reserve);
     if (count === lights.length) return;
     dropLights();
@@ -276,6 +285,7 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<Qu
   return {
     setQuality,
     follow: (eye, dt) => {
+      fixtures?.advance(dt);
       if (lights.length === 0) return;
       stepPoolLights(state, pools, eye.x, eye.z, dt);
       for (let p = 0; p < pools.length; p++) {
@@ -294,11 +304,13 @@ export function addLightPools(scene: THREE.Scene, map: MapData, quality: Pick<Qu
         light.position.set(pool.position.x, pool.position.y, pool.position.z);
         light.color.setHex(pool.colour);
         light.distance = poolLightReach(pool);
-        light.intensity = poolLightIntensity(pool) * state.level[k]!;
+        // A fire's light flickers with its flames (M33i: the same curve, render/lightFixtures.ts).
+        light.intensity = poolLightIntensity(pool) * state.level[k]! * (fixtures && pool.kind === 'fire' ? flicker(fixtures.time, flickerSeed(p)) : 1);
       }
     },
     dispose: () => {
       dropLights();
+      fixtures?.dispose();
       scene.remove(glow, decal.mesh);
       glow.geometry.dispose();
       (glow.material as THREE.Material).dispose();

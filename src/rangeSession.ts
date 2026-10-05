@@ -112,7 +112,7 @@ export class RangeSession {
     this.loadout = setup.kit.slots.map((s) => s.replica);
     // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
     // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
-    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTextures, mapLookOf(quality)));
+    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality)));
     // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
     // last map's; its lights, sky and light pools in the scene.
     const lighting = resolveLighting(map);
@@ -263,7 +263,7 @@ export class RangeSession {
   /** New quality settings (Settings → Graphics): as MatchSession.setQuality. */
   setQuality(quality: QualitySettings): void {
     this.daylight.setQuality(quality);
-    this.renderer.mapMeshes.restyle(this.renderer.surfaceTextures, mapLookOf(quality));
+    this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(RANGE_MAP), mapLookOf(quality));
     this.targets.setReceiveShadows(quality.figureShadows);
     this.targets.setDetail(quality.mapDetail);
     this.combat.setQuality(quality);
