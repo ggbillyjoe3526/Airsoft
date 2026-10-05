@@ -178,7 +178,7 @@ export class MatchPresentation {
     };
     this.orderWheel = new OrderWheel(container, teamCss(player.team), keyName);
     if (extraction) {
-      this.exits = new ExitRenderer(run);
+      this.exits = new ExitRenderer(run, field.terrain ?? null);
       scene.add(this.exits.object);
       this.exitMarkers = run.exits.map((e) => (e.closed ? null : new FlagMarker(container, 'exit-marker')));
       this.respawnFade = document.createElement('div');

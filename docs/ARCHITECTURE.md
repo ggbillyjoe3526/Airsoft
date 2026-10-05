@@ -308,7 +308,7 @@ along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramp
 when body height is clear between them), spawns and dead-zone spots
 per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
 without one are elimination only) and an Extraction block (M43: insertions, exits, home-team starts, run time and base
-opponents; M44: case spots, each naming the kinds of case it suits; M45: the home team's regen points and how far from the squad they must be; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
+opponents; M44: case spots, each naming the kinds of case it suits; M45: the home team's regen points and how far from the squad they must be; M48: Woodland's and Neon Heights' blocks, each in a file of its own, `map/woodlandExtraction.ts` and `map/neonHeightsExtraction.ts`, placed on the layout through the map's own helpers; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
 at an end every round start (in Attack / Defend the attackers start at end 0; in Elimination Blue starts at
 `RoundRules.eliminationFirstEnd`, the east on Depot)
 and swaps them at half-time, and `Character.end` says where a character started, for its dead zone and its bot's
