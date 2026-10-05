@@ -258,7 +258,11 @@ export class Menus {
       pool: opts.armory.pool,
       collection: opts.armory.collection,
       equipped: opts.armory.equipped,
-      onChange: () => (opts.armory.onChange(), this.refreshSetup()),
+      onChange: () => {
+        const reloaded = opts.armory.onChange();
+        this.refreshSetup();
+        return reloaded;
+      },
       onBack: () => this.back(),
     });
     this.settings = new SettingsScreen({
