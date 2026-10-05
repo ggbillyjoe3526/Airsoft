@@ -1,10 +1,11 @@
 import type { ContentTag } from '../config/content';
 import { DEPOT } from './depot';
 import type { MapData } from './mapTypes';
+import { NEON_HEIGHTS } from './neonHeights';
 import { WOODLAND } from './woodland';
 
 /** The fields. More join as they are built (the v0.4 list). */
-export type MapId = 'depot' | 'woodland';
+export type MapId = 'depot' | 'woodland' | 'neonHeights';
 
 /** One field in New game's Map pop-up. */
 export interface MapEntry {
@@ -21,10 +22,21 @@ export interface MapEntry {
   teamSize: { standard: number; max: number };
 }
 
-/** The maps in the order New game's Map pop-up lists them. Woodland is dev content until the owner makes it public. */
+/**
+ * The maps in the order New game's Map pop-up lists them. Woodland and Neon Heights are dev content until the owner makes
+ * them public.
+ */
 export const MAPS: readonly MapEntry[] = [
   { id: 'depot', label: 'Depot', blurb: 'An abandoned warehouse yard.', tag: 'public', data: DEPOT, teamSize: { standard: 3, max: 3 } },
   { id: 'woodland', label: 'Woodland', blurb: 'A wide wood with a hill, at night.', tag: 'dev', data: WOODLAND, teamSize: { standard: 4, max: 5 } },
+  {
+    id: 'neonHeights',
+    label: 'Neon Heights',
+    blurb: 'A neon city block on three floors.',
+    tag: 'dev',
+    data: NEON_HEIGHTS,
+    teamSize: { standard: 4, max: 5 },
+  },
 ];
 
 /**

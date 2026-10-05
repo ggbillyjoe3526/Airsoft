@@ -6,9 +6,10 @@ import type { MapBlock } from '../map/mapTypes';
 import { type Terrain, terrainMaxX, terrainMaxZ, terrainRange, vertexHeight } from '../map/terrain';
 import { clampToRim, coverHeight, type HeardPlayer, insideCircle, type MapPoint, minimapPixelRatio, noiseAlpha, toMinimap } from './minimapView';
 
-/** A teammate as the minimap shows them: where they are, and whether they've called a hit (greyed). */
+/** A teammate as the minimap shows them: where they are (`y`: their feet), and whether they've called a hit (greyed). */
 export interface MinimapMate {
   x: number;
+  y: number;
   z: number;
   hit: boolean;
 }
@@ -22,8 +23,12 @@ export interface MinimapExit {
 
 /** What one frame of the minimap shows (filled in place by MatchPresentation, so nothing is made per frame). */
 export interface MinimapFrame {
-  /** The middle (where you are, or the player you watch) and the way the view looks (game yaw). */
+  /**
+   * The middle (where you are, or the player you watch), the height of its feet (which storey the minimap draws, on a
+   * map with several) and the way the view looks (game yaw).
+   */
   x: number;
+  y: number;
   z: number;
   yaw: number;
   /** Teammates in play or walking off (`count` of `mates` are used). */
@@ -65,7 +70,10 @@ const NO_DASH: readonly number[] = [];
 export class Minimap {
   private readonly root: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D | null;
-  private readonly field: FieldLayer | null;
+  /** The field drawing, one per storey (M34c) on a map with several, lowest first; else one. */
+  private readonly fields: (FieldLayer | null)[];
+  /** The map's storey heights (M34c), lowest first: empty on a map with one. */
+  private readonly storeys: readonly number[];
   /** The backing canvas's pixels per CSS pixel, and the HUD's scale (style.css --hud-scale), as last laid out. */
   private pixelRatio = 0;
   private scale = 0;
@@ -76,7 +84,10 @@ export class Minimap {
   /** Whether the other team shows where heard (M23); off under rules that show teammates only (M39). */
   private heardShown = true;
 
-  /** `blocks`: the map's; `mine` / `theirs`: the two teams' HUD colours (CSS); `terrain`: the map's ground, if any. */
+  /**
+   * `blocks`: the map's; `mine` / `theirs`: the two teams' HUD colours (CSS); `terrain`: the map's ground, if any;
+   * `storeys`: its storey heights (MapData.storeys), if it has more than one.
+   */
   constructor(
     private readonly parent: HTMLElement,
     blocks: readonly MapBlock[],
@@ -86,13 +97,16 @@ export class Minimap {
     terrain: Terrain | null = null,
     /** The map's bushes (M33e): drawn as soft green rounds over the ground, under the blocks. */
     foliage: readonly Bush[] = [],
+    /** The map's storeys (M34c, MapData.storeys): one drawing of the field per storey. */
+    storeys: readonly number[] = [],
   ) {
     this.root = document.createElement('canvas');
     this.root.className = 'minimap';
     this.root.hidden = true;
     this.root.setAttribute('aria-hidden', 'true');
     this.ctx = this.root.getContext('2d');
-    this.field = drawField(blocks, terrain, foliage);
+    this.storeys = storeys.length > 1 ? storeys : [];
+    this.fields = this.storeys.length > 0 ? this.storeys.map((_, i) => drawField(blocks, terrain, foliage, this.storeys, i)) : [drawField(blocks, terrain, foliage)];
     parent.appendChild(this.root);
     this.layout();
     // The window moved to a screen of another pixel ratio, browser zoom, or the HUD's size changed (audit UI-14).
@@ -161,13 +175,13 @@ export class Minimap {
     ctx.fillStyle = MINIMAP.colours.backdrop;
     ctx.fill();
     ctx.clip();
-    if (this.field) {
+    const field = this.fields[storeyOf(this.storeys, f.y)];
+    if (field) {
       ctx.translate(half, half);
       ctx.scale(scale, scale);
       ctx.rotate(f.yaw);
       ctx.translate(-f.x, -f.z);
-      const l = this.field;
-      ctx.drawImage(l.canvas, l.x, l.z, l.width, l.depth);
+      ctx.drawImage(field.canvas, field.x, field.z, field.width, field.depth);
     }
     ctx.restore();
 
@@ -227,7 +241,10 @@ export class Minimap {
     this.root.remove();
   }
 
-  /** A teammate: a dot in your team's colour, grey once hit, pinned to the rim (and hollow) when off the map's edge. */
+  /**
+   * A teammate: a dot in your team's colour, grey once hit, pinned to the rim (and hollow) when off the map's edge; on
+   * another storey than the one drawn (M34c), a small arrow over it pointing up or down to theirs.
+   */
   private drawMate(f: MinimapFrame, m: MinimapMate, scale: number, rim: number): void {
     const ctx = this.ctx!;
     const p = toMinimap(f.yaw, f.x, f.z, m.x, m.z, scale, this.at);
@@ -240,6 +257,19 @@ export class Minimap {
     ctx.globalAlpha = pinned ? 0.75 : 1;
     ctx.fill();
     ctx.stroke();
+    const other = this.storeys.length > 0 ? Math.sign(storeyOf(this.storeys, m.y) - storeyOf(this.storeys, f.y)) : 0;
+    if (other !== 0) {
+      // Above the dot: ▲ for a storey up, ▼ for one down.
+      const tip = p.y - 9 - 3 * other;
+      ctx.beginPath();
+      ctx.moveTo(p.x, tip);
+      ctx.lineTo(p.x + 3.5, tip + 6 * other);
+      ctx.lineTo(p.x - 3.5, tip + 6 * other);
+      ctx.closePath();
+      ctx.lineWidth = 1;
+      ctx.fill();
+      ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   }
 
@@ -311,11 +341,22 @@ export class Minimap {
   }
 }
 
+/** The storey (index into `storeys`) of feet at height `y`: the highest whose floor is at most MINIMAP.storeyPick above them. */
+export function storeyOf(storeys: readonly number[], y: number): number {
+  let i = 0;
+  while (i + 1 < storeys.length && storeys[i + 1]! <= y + MINIMAP.storeyPick) i++;
+  return i;
+}
+
 /**
  * The field from above, drawn once: the ground, raised floors and ramps, then low cover and walls, lowest first so a
  * crate on the dock shows over the dock. Null where the browser gives no 2D canvas (the minimap then shows only markers).
+ *
+ * On a map with several storeys (M34c) one drawing per storey `level`: cut away above it (no block that starts more
+ * than a body's height over its floor), with everything below its floor shaded darker, so the floor you're on and its
+ * walls read plainly over the street seen through a stairwell or an atrium.
  */
-function drawField(blocks: readonly MapBlock[], terrain: Terrain | null, foliage: readonly Bush[]): FieldLayer | null {
+function drawField(blocks: readonly MapBlock[], terrain: Terrain | null, foliage: readonly Bush[], storeys: readonly number[] = [], level = 0): FieldLayer | null {
   if (blocks.length === 0 && !terrain) return null;
   let x0 = terrain ? terrain.minX : Infinity;
   let z0 = terrain ? terrain.minZ : Infinity;
@@ -334,20 +375,35 @@ function drawField(blocks: readonly MapBlock[], terrain: Terrain | null, foliage
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
   const top = (b: MapBlock): number => b.center.y + b.size.y / 2;
+  const bottom = (b: MapBlock): number => b.center.y - b.size.y / 2;
   const walkable = (b: MapBlock): boolean => b.kind === 'floor' || b.kind === 'ramp';
-  // Ground first, then everything else from the lowest top up.
-  const order = [...blocks].sort((a, b) => Number(!walkable(a)) - Number(!walkable(b)) || top(a) - top(b));
+  // A storey's drawing: its floor's height, and what lies under it (drawn first, then shaded).
+  const base = storeys[level] ?? 0;
+  const cut = base + MINIMAP.storeyCut;
+  const under = (b: MapBlock): boolean => level > 0 && (walkable(b) ? top(b) < base - MINIMAP.floorContact : top(b) <= base + MINIMAP.floorContact);
+  // How tall a block stands over the floor it is on: on a storey's drawing, over that storey's floor at least.
+  const standsOn = (b: MapBlock): number => storeys.reduce((on, h) => (h <= bottom(b) + MINIMAP.floorContact ? h : on), 0);
+  // Ground first, then everything else from the lowest top up; on a storey's drawing, all of that under it first.
+  const order = blocks
+    .filter((b) => storeys.length === 0 || bottom(b) < cut)
+    .sort((a, b) => Number(under(b)) - Number(under(a)) || Number(!walkable(a)) - Number(!walkable(b)) || top(a) - top(b));
   const c = MINIMAP.colours;
   if (terrain) drawTerrain(ctx, terrain, x0, z0, s);
+  let shaded = level === 0;
   let bushesDrawn = foliage.length === 0;
   for (const b of order) {
-    // Bushes go over the ground (floors come first in `order`) and under the cover.
-    if (!bushesDrawn && !walkable(b)) {
+    // Bushes go over the ground (floors come first in `order`) and under the cover, and under a storey's shading.
+    if (!bushesDrawn && (!walkable(b) || (!shaded && !under(b)))) {
       drawBushes(ctx, foliage, x0, z0, s);
       bushesDrawn = true;
     }
-    ctx.fillStyle =
-      b.kind === 'floor' ? (top(b) > MINIMAP.raisedFloor ? c.raised : c.ground) : b.kind === 'ramp' ? c.ramp : coverHeight(b, blocks) <= MINIMAP.lowCoverTop ? c.low : c.tall;
+    if (!shaded && !under(b)) {
+      ctx.fillStyle = c.belowStorey;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      shaded = true;
+    }
+    const cover = Math.min(coverHeight(b, blocks), top(b) - standsOn(b));
+    ctx.fillStyle = b.kind === 'floor' ? (top(b) > MINIMAP.raisedFloor + base ? c.raised : c.ground) : b.kind === 'ramp' ? c.ramp : cover <= MINIMAP.lowCoverTop ? c.low : c.tall;
     ctx.fillRect((b.center.x - b.size.x / 2 - x0) * s, (b.center.z - b.size.z / 2 - z0) * s, b.size.x * s, b.size.z * s);
   }
   if (!bushesDrawn) drawBushes(ctx, foliage, x0, z0, s);
