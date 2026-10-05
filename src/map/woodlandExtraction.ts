@@ -1,9 +1,10 @@
 import type { Vec3 } from '../sim/vec';
-import type { CaseSpot, ExitZone, ExtractionData, SpawnPoint } from './mapTypes';
+import { FACING, placeRun, type RunPlan, SPOT_KINDS } from './extractionBlock';
+import type { ExtractionData, SpawnPoint } from './mapTypes';
 
 /**
  * Woodland's Extraction data (M48), in Woodland's plan coordinates (x 0–120 east, z 0–80 north, as woodland.ts draws
- * them). The field's owner keeps the layout; this file only places the run on it, so woodland.ts passes in how it
+ * them; the floor is the terrain, so every point's y is 0 and the placer finds the ground). The field's owner keeps the layout; this file only places the run on it, so woodland.ts passes in how it
  * puts a plan point on the ground. The data tests (extractionData.test.ts, extractionRegens.test.ts) check every point
  * against the real level, so a layout change that moves cover onto one of them fails there.
  *
@@ -33,29 +34,29 @@ const EXIT_RADIUS = 3;
 /** The south-east corner's spawns: in a line below the Knoll, facing up the field to the north-west. */
 const SOUTH_EAST = [109, 111.5, 114].map((x) => ({ x, z: 11, yaw: Math.PI * 0.75 }));
 
-const EXITS: readonly { name: string; x: number; z: number; late?: boolean }[] = [
-  { name: 'Logging track gate', x: 55, z: 76.5 },
-  { name: 'Cabin road gate', x: 66, z: 3.2 },
-  { name: 'North-west woods', x: 8, z: 71, late: true },
-  { name: 'North-east woods', x: 112, z: 73, late: true },
+const EXITS: RunPlan['exits'] = [
+  { name: 'Logging track gate', at: [55, 0, 76.5] },
+  { name: 'Cabin road gate', at: [66, 0, 3.2] },
+  { name: 'North-west woods', at: [8, 0, 71], late: true },
+  { name: 'North-east woods', at: [112, 0, 73], late: true },
 ];
 
 /** The home team's starting points: in the fort, the cabin, and on each lane, the farthest from the insertion first. */
-const OPPONENT_STARTS: readonly (readonly [number, number])[] = [
-  [100.5, 47],
-  [101, 44.5],
-  [64.2, 22.5],
-  [68.4, 23.8],
-  [55, 45.6],
-  [76, 46],
-  [55, 72],
-  [72, 72],
-  [38, 69.5],
-  [50, 17],
-  [34, 17.5],
-  [86, 29],
-  [24, 62],
-  [95, 60],
+const OPPONENT_STARTS: RunPlan['opponentStarts'] = [
+  [100.5, 0, 47],
+  [101, 0, 44.5],
+  [64.2, 0, 22.5],
+  [68.4, 0, 23.8],
+  [55, 0, 45.6],
+  [76, 0, 46],
+  [55, 0, 72],
+  [72, 0, 72],
+  [38, 0, 69.5],
+  [50, 0, 17],
+  [34, 0, 17.5],
+  [86, 0, 29],
+  [24, 0, 62],
+  [95, 0, 60],
 ];
 
 /**
@@ -65,29 +66,24 @@ const OPPONENT_STARTS: readonly (readonly [number, number])[] = [
  * lanes. Fifteen spots for a run's ten cases at most, so a run never has them all. Yaw is the case's front, as a spawn's
  * facing: its back to the wall or cover beside it.
  */
-const LOCKER = ['locker', 'field-case'];
-const ROOM = ['field-case', 'ammo-can'];
-const LANE = ['ammo-can'];
-const NORTH = Math.PI;
-const SOUTH = 0;
-const EAST = -Math.PI / 2;
-const WEST = Math.PI / 2;
-const CASE_SPOTS: readonly (readonly [number, number, number, readonly string[]])[] = [
-  [63.1, 19.2, EAST, LOCKER], // the cabin's west room, in its south-west corner
-  [106.7, 52.7, WEST, LOCKER], // the fort's north-east corner, behind the hut
-  [69.3, 25.3, WEST, ROOM], // the cabin's east room
-  [95.8, 41.3, EAST, ROOM], // the fort's south-west corner
-  [43.5, 63.6, SOUTH, ROOM], // the woodpile on the forest track
-  [47, 28.9, SOUTH, ROOM], // the big boulder above the creek
-  [104.5, 34.9, SOUTH, ROOM], // the big boulder at the top of the sunken track
-  [29, 26.4, NORTH, LANE], // the log pile above the creek
-  [91.7, 24.2, SOUTH, LANE], // the log pile by the track
-  [80, 38.6, NORTH, LANE], // the big boulder on the meadow's south side
-  [60, 54.6, NORTH, LANE], // the big boulder by the Pine Belt
-  [40, 51.6, NORTH, LANE], // the big boulder on the meadow's west side
-  [42.5, 38.5, SOUTH, LANE], // the fallen tree on the meadow
-  [55, 42.3, SOUTH, LANE], // the lone oak
-  [73.5, 59.5, NORTH, LANE], // the fallen tree under the Pine Belt
+const { locker: LOCKER, room: ROOM, lane: LANE } = SPOT_KINDS;
+const { north: NORTH, south: SOUTH, east: EAST, west: WEST } = FACING;
+const CASE_SPOTS: RunPlan['cases'] = [
+  [63.1, 0, 19.2, EAST, LOCKER], // the cabin's west room, in its south-west corner
+  [106.7, 0, 52.7, WEST, LOCKER], // the fort's north-east corner, behind the hut
+  [69.3, 0, 25.3, WEST, ROOM], // the cabin's east room
+  [95.8, 0, 41.3, EAST, ROOM], // the fort's south-west corner
+  [43.5, 0, 63.6, SOUTH, ROOM], // the woodpile on the forest track
+  [47, 0, 28.9, SOUTH, ROOM], // the big boulder above the creek
+  [104.5, 0, 34.9, SOUTH, ROOM], // the big boulder at the top of the sunken track
+  [29, 0, 26.4, NORTH, LANE], // the log pile above the creek
+  [91.7, 0, 24.2, SOUTH, LANE], // the log pile by the track
+  [80, 0, 38.6, NORTH, LANE], // the big boulder on the meadow's south side
+  [60, 0, 54.6, NORTH, LANE], // the big boulder by the Pine Belt
+  [40, 0, 51.6, NORTH, LANE], // the big boulder on the meadow's west side
+  [42.5, 0, 38.5, SOUTH, LANE], // the fallen tree on the meadow
+  [55, 0, 42.3, SOUTH, LANE], // the lone oak
+  [73.5, 0, 59.5, NORTH, LANE], // the fallen tree under the Pine Belt
 ];
 
 /**
@@ -95,34 +91,38 @@ const CASE_SPOTS: readonly (readonly [number, number, number, readonly string[]]
  * in the cabin and the fort, and behind each camp. A returner takes one at least REGEN_DISTANCE from the squad and out
  * of its sight, so wherever the squad is, the woods keep several usable (extractionRegens.test.ts).
  */
-const REGENS: readonly (readonly [number, number, number])[] = [
-  [20, 70, SOUTH],
-  [42, 75, SOUTH],
-  [68, 76, SOUTH],
-  [88, 74, SOUTH],
-  [100, 64, SOUTH],
-  [64.2, 22.5, NORTH],
-  [99, 50, SOUTH],
-  [20, 4.5, NORTH],
-  [44, 4.5, NORTH],
-  [84, 4.5, NORTH],
-  [104, 18, NORTH],
-  [116, 22, WEST],
-  [5, 22, EAST],
+const REGENS: RunPlan['regens'] = [
+  [20, 0, 70, SOUTH],
+  [42, 0, 75, SOUTH],
+  [68, 0, 76, SOUTH],
+  [88, 0, 74, SOUTH],
+  [100, 0, 64, SOUTH],
+  [64.2, 0, 22.5, NORTH],
+  [99, 0, 50, SOUTH],
+  [20, 0, 4.5, NORTH],
+  [44, 0, 4.5, NORTH],
+  [84, 0, 4.5, NORTH],
+  [104, 0, 18, NORTH],
+  [116, 0, 22, WEST],
+  [5, 0, 22, EAST],
 ];
 
 export function woodlandExtraction(at: WoodlandPlacer): ExtractionData {
-  return {
-    runTime: RUN_TIME,
-    baseOpponents: BASE_OPPONENTS,
-    insertions: [
-      { name: 'West camp', spawns: [...at.westCamp], end: 0 },
-      { name: 'South-east woods', spawns: SOUTH_EAST.map(at.spawnAt), end: 1 },
-    ],
-    exits: EXITS.map((e): ExitZone => ({ name: e.name, position: at.onGround(e.x, e.z), radius: EXIT_RADIUS, ...(e.late ? { late: true } : {}) })),
-    opponentStarts: OPPONENT_STARTS.map(([x, z]) => at.spawnAt({ x, z, yaw: 0 })),
-    cases: CASE_SPOTS.map(([x, z, yaw, kinds]): CaseSpot => ({ ...at.spawnAt({ x, z, yaw }), kinds: [...kinds] })),
-    regens: REGENS.map(([x, z, yaw]) => at.spawnAt({ x, z, yaw })),
-    regenDistance: REGEN_DISTANCE,
-  };
+  return placeRun(
+    {
+      runTime: RUN_TIME,
+      baseOpponents: BASE_OPPONENTS,
+      regenDistance: REGEN_DISTANCE,
+      exitRadius: EXIT_RADIUS,
+      insertions: [
+        { name: 'West camp', spawns: at.westCamp, end: 0 },
+        { name: 'South-east woods', spawns: SOUTH_EAST.map(at.spawnAt), end: 1 },
+      ],
+      exits: EXITS,
+      opponentStarts: OPPONENT_STARTS,
+      cases: CASE_SPOTS,
+      regens: REGENS,
+    },
+    { point: ([x, , z]) => at.onGround(x, z), spawn: ([x, , z], yaw) => at.spawnAt({ x, z, yaw }) },
+  );
 }

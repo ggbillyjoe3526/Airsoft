@@ -23,16 +23,13 @@ permissions:
   contents: read
 
 jobs:
+  # The build, the fast unit tests, the browser smoke test and the scope and changelog gates. The headless bot-match
+  # guards (vitest project `slow`) run beside it in the `slow` job's shards (audit CORE-04): measured 2026-10-05 in a
+  # 4-core container they are about 1,420 s of work (the longest file, Woodland's Extraction balance, 213 s), which in
+  # one job took the whole check towards its 30-minute limit. Split, each job is a few minutes; the limits are 20.
   check:
     runs-on: ubuntu-latest
-    # The headless bot-match tests (src/ai/depotMatch*.test.ts, vitest project `slow`) are most of the unit suite: the
-    # longest take 18-25 s each (custom, flag, ricochetFlag, ends, ricochet, customFlag; the custom-match file was
-    # 42 s before FA11b split it by mode), about 155 s of work in all. Measured 2026-10-04 in a 4-core container (FA11b,
-    # audit CORE-15): the suite takes 3 min 08 s of CPU with files sharing a worker (vite.config.ts `isolate: false`;
-    # 3 min 49 s isolated), so about 1.5-2 min on a 2-vCPU runner; 73-91 s of wall time there, with other work running.
-    # The city guards (M34c) and the Pro guards on every map (M40, src/ai/*Match.pro*.test.ts, about 7 min of CPU in
-    # the container) took the job to about 13 min before M40 and an estimated 18-20 min after, so the limit is 30.
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       # The whole history, so the scope gate can diff the pull request against its base and find the task block a
       # branch cleared before merging (pipeline/scope.mjs).
@@ -69,7 +66,7 @@ jobs:
       - name: Gates
         env:
           GATE_PR_TITLE: ${{ github.event.pull_request.title }}
-        run: node pipeline/gate.mjs --ci ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '' }}
+        run: node pipeline/gate.mjs --ci --tests fast ${{ github.event_name == 'pull_request' && '--base HEAD^1' || '' }}
       - name: Upload the gate report, the test reports and the smoke test report (screenshot inside)
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -79,5 +76,32 @@ jobs:
             pipeline/out/
             playwright-report/
             test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The headless bot-match guards (src/ai/depotMatch*.test.ts, the Pro, levels and Extraction balance guards), in three
+  # shares of their files (vitest --shard): no build or browser, so each starts on its tests at once.
+  slow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Slow guards, share ${{ matrix.shard }} of 3
+        run: node pipeline/gate.mjs --ci --tests slow --shard ${{ matrix.shard }}/3 --only tests
+      - name: Upload the gate report and the test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-report-slow-${{ matrix.shard }}
+          path: pipeline/out/
           if-no-files-found: ignore
           retention-days: 7
