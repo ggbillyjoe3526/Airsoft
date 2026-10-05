@@ -30,8 +30,8 @@ title, a short diff summary, and any new lines in `docs/DECISIONS.md`. Do this:
 
 The owner has tagged `<tag>` (for example `0.1-dev.4`, said "0.1 Dev 4"). Do this:
 
-1. In `CHANGELOG.md`, rename `## Unreleased` to `## <name> · <today's date>` (the spoken name, e.g. `## 0.1 Dev 4 · 2026-10-06`) and insert a fresh, empty `## Unreleased`
-   above it.
+1. In `CHANGELOG.md`, rename `## Unreleased` to `## <name> · <today's date>` (e.g. `## 0.1 Dev 4 · 2026-10-06`)
+   and insert a fresh, empty `## Unreleased` above it.
 2. Write `docs/patch-notes/<tag>.md` as plain patch notes (owner, 2026-10-05); the same text is the GitHub release
    description. A **New** list and a **Fixed** list, plus a **Changed** list only when something existing behaves
    differently (a rebalanced replica, a moved setting), built from the tag's changelog section. One short line per

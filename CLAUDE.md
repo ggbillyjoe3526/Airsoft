@@ -145,9 +145,9 @@ The number describes the product; a Dev or Beta stage describes its development 
 | 1.0 (`1.0.0`) | The release the owner considers fully mature and stable. |
 
 - Milestones and critic cycles give development granularity; they don't each get a version.
-- Names are said and written as "0.1 Dev 5", "0.1 Beta 1" (owner, 2026-10-05: Dev replaced Alpha; no "v"). Git tags
-  can't hold spaces, so they use the dotted forms above (e.g. `0.1-dev.2`, never `0.1-dev-2`), and a GitHub release
-  is titled "Airsoft 0.1 Dev 2". The old `v0.1-alpha` tags were renamed `0.1-dev.1` to `0.1-dev.3` on 2026-10-05. Only full
+- Names are written as "0.1 Dev 5" or "0.1 Beta 1" (owner, 2026-10-05: Dev replaced Alpha; no "v"). Tags can't hold
+  spaces, so they use the dotted forms above (`0.1-dev.2`, never `0.1-dev-2`); a GitHub release is titled
+  "Airsoft 0.1 Dev 2". The old `v0.1-alpha` tags became `0.1-dev.1` to `0.1-dev.3` on 2026-10-05. Only full
   releases are tagged (owner, 2026-10-01): no letter checkpoints (`.2a`, `.2b`); the old ones are removed.
   The owner creates tags; don't create, rename or move them unless asked.
 - **After the owner tags a release** (owner, 2026-10-03), the docs move to the new tag without being asked. The
