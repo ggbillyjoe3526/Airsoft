@@ -376,7 +376,9 @@ export function tallyBalance(seeds: number, seconds: number, cfg: BotConfig, mod
  * rounds; in Elimination each end wins 40–60 % of the decided rounds; under 1 round in 10 ends on time.
  */
 export function expectProBalance(t: BalanceTally, mode: MatchMode, label: string): void {
-  const said = `${label}: ${JSON.stringify(t)}`;
+  // One standard error of the measured share (audit BAL-07), so a failure says whether it is noise or a real move.
+  const n = mode === 'attackDefend' ? t.rounds : t.decided;
+  const said = `${label}: ${JSON.stringify(t)} (±${(50 / Math.sqrt(Math.max(1, n))).toFixed(0)} % at one standard error)`;
   expect(t.rounds, said).toBeGreaterThan(0);
   if (mode === 'attackDefend') {
     expect(t.attackerWins / t.rounds, said).toBeGreaterThanOrEqual(0.4);

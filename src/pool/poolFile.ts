@@ -82,3 +82,17 @@ export function readTables(text: string): PoolTable[] {
   }
   return tables;
 }
+
+/**
+ * What `t` lacks of the columns `wanted` (M56, audit POOL-07), as its header line's error says it: "missing: When" (with
+ * the header as typed when only its case differs: headers are read exactly); null when it has them all.
+ */
+export function missingColumns(t: PoolTable, wanted: readonly string[]): string | null {
+  const missing = wanted.filter((h) => !t.headers.includes(h));
+  if (missing.length === 0) return null;
+  const named = missing.map((h) => {
+    const typed = t.headers.find((x) => x.toLowerCase() === h.toLowerCase());
+    return typed === undefined ? h : `${h} (not "${typed}": headers are read exactly)`;
+  });
+  return `missing: ${named.join(', ')}`;
+}

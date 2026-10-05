@@ -7,7 +7,7 @@ import { SAVE_STORES } from './stores';
 
 const save: SaveData = {
   format: SAVE_FORMAT,
-  build: 'v0.1-alpha.3+40 · abc1234',
+  build: '0.1 Dev 3+40 · abc1234',
   savedAt: '2026-10-04T16:40:00.000Z',
   stores: {
     settings: { version: 1, fov: 95, 'equip.primary': '000001@common', laterField: 'kept' },
