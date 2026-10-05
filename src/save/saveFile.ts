@@ -6,7 +6,7 @@ import { SAVE_STORES, type StoreData, type StoreId } from './stores';
  * The save file (M31): readable JSON a player can keep and load in any browser. Pure: no DOM, no storage.
  *
  * ```
- * { "game": "Airsoft", "format": 1, "build": "v0.1-alpha.3+40 · abc1234", "savedAt": "2026-10-04T16:40:00.000Z",
+ * { "game": "Airsoft", "format": 1, "build": "0.1 Dev 3+40 · abc1234", "savedAt": "2026-10-04T16:40:00.000Z",
  *   "summary": { "fc": 120, ... }, "stores": { "settings": {...}, "keyBindings": {...}, ... }, "checksum": "sha256:..." }
  * ```
  *
