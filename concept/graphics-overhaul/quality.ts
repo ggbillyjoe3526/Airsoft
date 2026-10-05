@@ -32,6 +32,12 @@ export interface Preset {
   clouds: boolean;
   /** Render target multisampling. */
   msaa: number;
+  /** Baked light probes (v3): solid-grid voxel size, probe spacing and rays per probe; null for none. */
+  gi: { voxel: number; probe: number; rays: number } | null;
+  /** v3 particles: sunlit dust, smoke and steam (a count scale; 0 for none). */
+  particles: number;
+  /** v3 lens finish on Ultra: film grain and a trace of chromatic fringing at the screen's edge. */
+  lens: boolean;
 }
 
 const _q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
@@ -59,6 +65,9 @@ export const PRESETS: Record<PresetId, Preset> = {
     scenery: 'low',
     clouds: false,
     msaa: 0,
+    gi: off('gi') ? null : { voxel: 0.25, probe: 0.6, rays: 24 },
+    particles: off('particles') ? 0 : 0.35,
+    lens: false,
   },
   ultra: {
     id: 'ultra',
@@ -82,5 +91,8 @@ export const PRESETS: Record<PresetId, Preset> = {
     scenery: 'full',
     clouds: true,
     msaa: 4,
+    gi: off('gi') ? null : { voxel: 0.2, probe: 0.4, rays: 40 },
+    particles: off('particles') ? 0 : 1,
+    lens: !off('lens'),
   },
 };

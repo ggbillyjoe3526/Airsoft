@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GI_GLSL_APPLY, GI_GLSL_HEAD, giUniforms } from './gi';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Preset } from './quality';
@@ -88,6 +89,8 @@ export const MATS: Record<string, MatDef> = {
   // Replicas
   gunPolymer: { tex: T.polymer, texKey: 'polymer', rough: 0.5, rim: true },
   gunMetal: { tex: T.metal, texKey: 'metal', rough: 0.45, metal: 0.8, rim: true },
+  /** Painted (cerakote-like) receivers and slides: coloured, a soft sheen, not metallic. */
+  gunPaint: { tex: T.polymer, texKey: 'polymer', rough: 0.42, metal: 0.05, clearcoat: 0.25, rim: true },
   gunFurniture: { tex: T.polymer, texKey: 'polymer', rough: 0.55, rim: true },
   gunRubber: { tex: T.weave, texKey: 'weave', rough: 0.9, rim: true, normalScale: 2 },
   lens: { rough: 0.02, metal: 0.2, clearcoat: 1, envIntensity: 2, rim: true, opacity: 0.55, side: THREE.DoubleSide },
@@ -294,6 +297,104 @@ export function decalAtlas(): THREE.Texture {
         g.fillRect(0, 0, w, h);
       }
     }],
+    // v3: dirt and grit for the clutter pass (Depot's block bases, wall feet). Speckled blobs that survive the cut-out.
+    ['dirt', 768, 768, 256, 256, (g, w, h) => {
+      let sd = 5;
+      const r = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 900; i++) {
+        const a = r() * Math.PI * 2;
+        const d = Math.pow(r(), 0.7) * w * 0.48;
+        const x = w / 2 + Math.cos(a) * d;
+        const y = h / 2 + Math.sin(a) * d * 0.8;
+        g.fillStyle = `rgba(255,255,255,${0.35 + (1 - d / (w * 0.5)) * 0.65})`;
+        g.beginPath();
+        g.arc(x, y, 1 + r() * (9 - (d / w) * 10), 0, Math.PI * 2);
+        g.fill();
+      }
+    }],
+    ['grit', 1792, 1280, 256, 256, (g, w, h) => {
+      let sd = 9;
+      const r = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+      g.fillStyle = '#fff';
+      for (let i = 0; i < 420; i++) {
+        const x = r() * w;
+        const y = r() * h;
+        const s = 1 + r() * 4;
+        g.save();
+        g.translate(x, y);
+        g.rotate(r() * 6);
+        g.fillRect(-s, -s * 0.6, s * 2, s * 1.2);
+        g.restore();
+      }
+    }],
+    // v3: more fictional shipping lines, a second box code and two more tags, so no two containers read alike.
+    ['logoOrbit', 0, 1536, 1024, 256, (g, w, h) => {
+      g.strokeStyle = '#fff';
+      g.fillStyle = '#fff';
+      g.lineWidth = 22;
+      g.beginPath();
+      g.arc(120, h / 2, 82, 0, Math.PI * 2);
+      g.stroke();
+      g.beginPath();
+      g.arc(190, h / 2 - 50, 26, 0, Math.PI * 2);
+      g.fill();
+      g.font = 'bold 132px Arial Black, Arial, sans-serif';
+      g.textBaseline = 'middle';
+      g.fillText('ORBIT LINE', 250, h / 2 + 6);
+      void w;
+    }],
+    ['logoKestrel', 1024, 1536, 1024, 256, (g, w, h) => {
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.moveTo(30, h / 2 + 20);
+      g.lineTo(150, 40);
+      g.lineTo(260, h / 2 - 10);
+      g.lineTo(150, h / 2 - 40);
+      g.closePath();
+      g.fill();
+      g.font = 'italic bold 140px Arial, sans-serif';
+      g.textBaseline = 'middle';
+      g.fillText('KESTREL', 280, h / 2 + 8);
+      void w;
+    }],
+    ['logoNorda', 0, 1792, 1024, 256, (g, w, h) => {
+      g.fillStyle = '#fff';
+      g.fillRect(30, 40, 170, h - 80);
+      g.globalCompositeOperation = 'destination-out';
+      g.font = 'bold 150px Arial Black, Arial, sans-serif';
+      g.textBaseline = 'middle';
+      g.fillText('N', 58, h / 2 + 6);
+      g.globalCompositeOperation = 'source-over';
+      g.font = '300 150px Arial, sans-serif';
+      g.fillText('NORDA', 230, h / 2 + 6);
+      void w;
+    }],
+    ['codeB', 1024, 1792, 1024, 256, (g, w, h) => {
+      g.fillStyle = '#fff';
+      g.font = 'bold 120px Arial, sans-serif';
+      g.textBaseline = 'middle';
+      g.fillText('KSTU 118640 2', 20, h * 0.36);
+      g.font = 'bold 70px Arial, sans-serif';
+      g.fillText('45G1   TARE 3,750 KG', 22, h * 0.8);
+      void w;
+    }],
+    ['sprayC', 1536, 1024, 256, 256, (g, w, h) => {
+      // A quick team tag: a circle with a slash.
+      g.strokeStyle = '#fff';
+      g.lineWidth = 26;
+      g.beginPath();
+      g.arc(w / 2, h / 2, 90, 0, Math.PI * 2);
+      g.moveTo(w / 2 - 70, h / 2 + 70);
+      g.lineTo(w / 2 + 70, h / 2 - 70);
+      g.stroke();
+    }],
+    ['sprayD', 1792, 1024, 256, 256, (g, w, h) => {
+      g.fillStyle = '#fff';
+      g.font = 'bold 130px Arial Black, Arial, sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('07', w / 2, h / 2 + 8);
+    }],
   ];
   const c = document.createElement('canvas');
   c.width = S;
@@ -347,10 +448,19 @@ float gF(vec3 p){ return gN(p) * 0.5 + gN(p * 2.03) * 0.25 + gN(p * 4.01) * 0.12
  * Weathering works in world space, so it never repeats with the texture: dirt patches, grime splashed up the lowest
  * half metre of every wall, streaks running down from the tops, rust on painted steel.
  */
-function patch(m: THREE.Material, rim: boolean, grime: number, rust: number): void {
-  if (!rim && grime <= 0) return;
-  m.customProgramCacheKey = () => `p:${rim}:${grime}:${rust}`;
+function patch(m: THREE.Material, rim: boolean, grime: number, rust: number, gi = false): void {
+  if (!rim && grime <= 0 && !gi) return;
+  m.customProgramCacheKey = () => `p:${rim}:${grime}:${rust}:${gi}`;
   m.onBeforeCompile = (s) => {
+    if (gi) {
+      giUniforms(s.uniforms);
+      s.vertexShader = s.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vGiW; varying vec3 vGiN;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvGiW = (modelMatrix * vec4(transformed, 1.0)).xyz; vGiN = normalize(mat3(modelMatrix) * objectNormal);');
+      s.fragmentShader = s.fragmentShader
+        .replace('#include <common>', '#include <common>\n' + GI_GLSL_HEAD)
+        .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' + GI_GLSL_APPLY);
+    }
     if (rim) {
       s.uniforms.rimColor = RIM.color;
       s.uniforms.rimStrength = RIM.strength;
@@ -456,7 +566,7 @@ export class Kit {
       m.polygonOffsetFactor = -2;
       m.polygonOffsetUnits = -2;
     }
-    patch(m, !!(d.rim && this.p.rim), d.grime ?? 0, d.rust ?? 0);
+    patch(m, !!(d.rim && this.p.rim), d.grime ?? 0, d.rust ?? 0, !d.unlit);
     this.mats.set(key, m);
     return m;
   }

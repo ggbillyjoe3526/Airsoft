@@ -2,7 +2,8 @@
 import { chromium } from '@playwright/test';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
-const [dir, out, today, v1] = process.argv.slice(2);
+// v2 = the previous concept's folder (for version 2 against version 3 pairs).
+const [dir, out, today, v1, v2] = process.argv.slice(2);
 const url = (f) => `data:image/png;base64,${readFileSync(f).toString('base64')}`;
 const pairs = [
   ['compare-ingame', [`${dir}/low-ingame.png`, 'LOW', 'modern laptop, built-in graphics, 1080p, 60 fps target'], [`${dir}/ultra-ingame.png`, 'ULTRA', 'RTX 5090 class, 4K, up to 240 fps']],
@@ -10,11 +11,15 @@ const pairs = [
   ['compare-characters', [`${dir}/low-characters.png`, 'LOW', 'cut-down figures'], [`${dir}/ultra-characters.png`, 'ULTRA', 'full-detail figures']],
   ['compare-replicas', [`${dir}/low-replicas.png`, 'LOW', 'cut-down replicas'], [`${dir}/ultra-replicas.png`, 'ULTRA', 'full-detail replicas']],
   ['compare-arms', [`${dir}/low-arms.png`, 'LOW', 'first-person arms, cut-down'], [`${dir}/ultra-arms.png`, 'ULTRA', 'first-person arms, full detail']],
-  ['compare-ingame-robots', [`${dir}/ultra-ingame.png`, 'HUMANS', 'Ultra, the default'], [`${dir}/ultra-ingame-robots.png`, 'ROBOTS', 'Ultra, the alternative']],
+  ['compare-ingame-robots', [`${dir}/ultra-ingame.png`, 'HUMANS', 'Ultra, Robots setting off'], [`${dir}/ultra-ingame-robots.png`, 'ROBOTS', 'Ultra, Robots setting on']],
+  ['compare-colours', [`${dir}/ultra-schemes.png`, 'BOLD COLOURS', 'the default two-tone schemes'], [`${dir}/ultra-schemes-real.png`, 'REALISTIC COLOURS', 'the same replicas with the setting on']],
+  ['compare-woodland', [`${dir}/low-woodland-ingame.png`, 'LOW', 'Woodland at night'], [`${dir}/ultra-woodland-ingame.png`, 'ULTRA', 'Woodland at night']],
+  ['compare-neon', [`${dir}/low-neon-ingame.png`, 'LOW', 'Neon Heights at night'], [`${dir}/ultra-neon-ingame.png`, 'ULTRA', 'Neon Heights at night']],
   ['compare-today-vs-ultra', [today, 'TODAY', 'the current game (screenshot from 4 October)'], [`${dir}/ultra-ingame.png`, 'ULTRA', 'after the overhaul (concept)']],
   ['compare-today-vs-low', [today, 'TODAY', 'the current game (screenshot from 4 October)'], [`${dir}/low-ingame.png`, 'LOW', 'after the overhaul (concept)']],
 ];
-if (v1) for (const s of ['ingame', 'map', 'characters', 'replicas']) pairs.push([`compare-v1-vs-v2-${s}`, [`${v1}/ultra-${s}.png`, 'V1', 'first concept, Ultra'], [`${dir}/ultra-${s}.png`, 'V2', 'after your feedback, Ultra']]);
+if (v1 && v1 !== '-') for (const s of ['ingame', 'map', 'characters', 'replicas']) pairs.push([`compare-v1-vs-v2-${s}`, [`${v1}/ultra-${s}.png`, 'V1', 'first concept, Ultra'], [`${dir}/ultra-${s}.png`, 'V2', 'after your feedback, Ultra']]);
+if (v2) for (const s of ['ingame', 'map', 'characters', 'replicas', 'heads']) pairs.push([`compare-v2-vs-v3-${s}`, [`${v2}/ultra-${s}.png`, 'V2', 'second concept, Ultra'], [`${dir}/ultra-${s}.png`, 'V3', 'after your second round, Ultra']]);
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 const page = await browser.newPage();
 for (const [name, a, b] of pairs) {

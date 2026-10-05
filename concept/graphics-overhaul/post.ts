@@ -14,13 +14,16 @@ import type { Preset } from './quality';
 
 /** The colour grade both presets share: a touch more saturation, cool shadows, warm highlights, a soft vignette. */
 const GradeShader = {
-  uniforms: { tDiffuse: { value: null }, saturation: { value: 1.12 }, contrast: { value: 1.05 }, vignette: { value: 0.18 }, shadowTint: { value: new THREE.Color(0.2, 0.35, 0.75) }, highTint: { value: new THREE.Color(1.0, 0.85, 0.6) } },
+  uniforms: { tDiffuse: { value: null }, saturation: { value: 1.12 }, contrast: { value: 1.05 }, vignette: { value: 0.18 }, grain: { value: 0 }, fringe: { value: 0 }, shadowTint: { value: new THREE.Color(0.2, 0.35, 0.75) }, highTint: { value: new THREE.Color(1.0, 0.85, 0.6) } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float saturation; uniform float contrast; uniform float vignette; uniform vec3 shadowTint; uniform vec3 highTint;
+    uniform sampler2D tDiffuse; uniform float saturation; uniform float contrast; uniform float vignette; uniform float grain; uniform float fringe; uniform vec3 shadowTint; uniform vec3 highTint;
     varying vec2 vUv;
+    float hash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
     void main(){
       vec3 c = texture2D(tDiffuse, vUv).rgb;
+      // Lens: a trace of colour fringing that grows towards the corners (none at the centre, where you aim).
+      if (fringe > 0.0) { vec2 dd = (vUv - 0.5) * dot(vUv - 0.5, vUv - 0.5) * fringe; c.r = texture2D(tDiffuse, vUv - dd).r; c.b = texture2D(tDiffuse, vUv + dd).b; }
       float l = dot(c, vec3(0.299, 0.587, 0.114));
       c = mix(vec3(l), c, saturation);
       c = (c - 0.5) * contrast + 0.5;
@@ -28,6 +31,8 @@ const GradeShader = {
       c = mix(c, c * highTint * 1.08, l * l * 0.18);
       float v = smoothstep(0.9, 0.3, length((vUv - 0.5) * vec2(1.0, 0.8)));
       c *= mix(1.0 - vignette, 1.0, v);
+      // Film grain, strongest in the mid-tones.
+      if (grain > 0.0) c += (hash12(gl_FragCoord.xy) - 0.5) * grain * (1.0 - abs(l - 0.5) * 1.4);
       gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
     }`,
 };
@@ -161,7 +166,7 @@ export function makeComposer(renderer: THREE.WebGLRenderer, scene: THREE.Scene, 
     log.push('godrays');
   }
   if (p.bloom) {
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), o.bloom ?? 0.45, 0.55, 1.6));
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), (o.bloom ?? 0.45) * 1.2, 0.7, 1.35));
     log.push('bloom');
   }
   if (p.bloom && o.dof) {
@@ -169,8 +174,13 @@ export function makeComposer(renderer: THREE.WebGLRenderer, scene: THREE.Scene, 
     log.push('dof');
   }
   composer.addPass(new OutputPass());
-  composer.addPass(new ShaderPass(GradeShader));
-  log.push('output', 'grade');
+  const grade = new ShaderPass(GradeShader);
+  if (p.lens) {
+    grade.uniforms.grain!.value = 0.028;
+    grade.uniforms.fringe!.value = 0.006;
+  }
+  composer.addPass(grade);
+  log.push('output', p.lens ? 'grade+lens' : 'grade');
   if (p.smaa) {
     composer.addPass(new SMAAPass());
     log.push('smaa');

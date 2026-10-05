@@ -14,8 +14,12 @@ export type Pose = 'aim' | 'ready' | 'hit' | 'pistol' | 'run';
 export interface FigureOpts {
   team: 'blue' | 'orange';
   pose: Pose;
-  headgear?: 'helmet' | 'cap' | 'bump' | 'none';
-  face?: 'mask' | 'bare';
+  /**
+   * Every human covers the face (William, round 2: no caps, no bare faces): a high-cut helmet, a bump helmet, a full-face
+   * visor, or a balaclava hood, with goggles and a mesh mask unless the visor covers both.
+   */
+  headgear?: 'helmet' | 'bump' | 'visor' | 'hood';
+  face?: 'mask';
   pack?: boolean;
   skin?: number;
   hair?: number;
@@ -110,7 +114,7 @@ function skeleton(k: Kit, o: FigureOpts, t: Team): Skeleton {
 
   const k2 = new Kit(k.p);
   k2.envMap = k.envMap;
-  const rep = buildReplica(k2, weaponId, o.weaponOpts ?? (weaponId === 'aeg' ? { optic: 'redDot', grip: 'vertical', accent: t.main } : { accent: t.main }));
+  const rep = buildReplica(k2, weaponId, o.weaponOpts ?? (weaponId === 'aeg' ? { optic: 'redDot', grip: 'vertical', scheme: o.team === 'blue' ? 'cobalt' : 'signal' } : { scheme: o.team === 'blue' ? 'onyx' : 'coral' }));
   const wm = new THREE.Matrix4();
   const R = V(1, 0, 0);
   const L = V(-1, 0, 0);
@@ -244,19 +248,14 @@ function humanTorso(k: Kit, s: Skeleton, o: FigureOpts, t: Team, d: Detail): voi
 }
 
 function humanHead(k: Kit, s: Skeleton, o: FigureOpts, t: Team, d: Detail): void {
+  // Under a balaclava the whole head is cloth: no skin shows anywhere (art direction, v3).
+  const skin = o.headgear === 'hood' ? new THREE.Color(t.dark).multiplyScalar(0.85).getHex() : (o.skin ?? 0xd9a77e);
   const H = s.head;
-  const skin = o.skin ?? 0xd9a77e;
   const ws = d.full ? 28 : 10;
   const hs = d.full ? 20 : 7;
   // Skull, jaw, nose, ears and a brow: proportions of a real head, not a box.
   geoIn(k, 'skin', H, new THREE.SphereGeometry(1, ws, hs), 0, 0.15, 0.01, skin, undefined, V(0.088, 0.107, 0.1));
   geoIn(k, 'skin', H, new THREE.SphereGeometry(1, ws, hs), 0, 0.083, -0.022, skin, new THREE.Euler(0.25, 0, 0), V(0.07, 0.064, 0.084));
-  const nose = new THREE.BoxGeometry(0.024, 0.044, 0.03, 1, 2, 1);
-  const np = nose.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < np.count; i++) if (np.getY(i) > 0) np.setXYZ(i, np.getX(i) * 0.5, np.getY(i), np.getZ(i) + 0.008);
-  nose.computeVertexNormals();
-  // The mesh mask covers the nose, so only bare faces get one.
-  if ((o.face ?? 'mask') === 'bare') geoIn(k, 'skin', H, nose, 0, 0.116, -0.102, new THREE.Color(skin).multiplyScalar(0.97), new THREE.Euler(-0.18, 0, 0), V(0.95, 1.05, 1.05));
   for (const sd of [-1, 1]) {
     geoIn(k, 'skin', H, new THREE.SphereGeometry(1, 10, 8), sd * 0.088, 0.132, 0.014, new THREE.Color(skin).multiplyScalar(0.94), undefined, V(0.014, 0.032, 0.022));
     // Cheekbones and the line of the jaw.
@@ -265,44 +264,22 @@ function humanHead(k: Kit, s: Skeleton, o: FigureOpts, t: Team, d: Detail): void
   }
   // Chin.
   geoIn(k, 'skin', H, new THREE.SphereGeometry(1, 12, 8), 0, 0.05, -0.076, skin, undefined, V(0.026, 0.018, 0.02));
-  const face = o.face ?? 'mask';
-  if (face === 'bare') {
-    // Lips: a darker upper and lower lip, the line between them.
-    geoIn(k, 'skin', H, new THREE.CapsuleGeometry(0.006, 0.026, 3, 8).rotateZ(Math.PI / 2), 0, 0.081, -0.095, new THREE.Color(skin).multiplyScalar(0.82).lerp(new THREE.Color(0x9a4a42), 0.25));
-    geoIn(k, 'skin', H, new THREE.CapsuleGeometry(0.0068, 0.022, 3, 8).rotateZ(Math.PI / 2), 0, 0.069, -0.093, new THREE.Color(skin).multiplyScalar(0.85).lerp(new THREE.Color(0x9a4a42), 0.2));
-    geoIn(k, 'dark', H, new THREE.BoxGeometry(0.03, 0.0015, 0.004), 0, 0.075, -0.1, 0x3a2420);
-    if (o.beard) {
-      const beard = shellGeo(ws, hs, (f) => (f > 0.2 ? 3.1 : 3.1));
-      geoIn(k, 'hair', H, beard, 0, 0.083, -0.022, o.hair ?? 0x2d221b, new THREE.Euler(Math.PI + 0.25, 0, 0), V(0.075, 0.068, 0.089));
-    }
-  }
   const hg = o.headgear ?? 'helmet';
-  if (hg !== 'helmet') {
+  if (hg === 'bump' || hg === 'visor') {
     // Short hair at the back and sides.
     geoIn(k, 'hair', H, shellGeo(ws, hs, (f) => (f > 0 ? 1.55 - f * 0.55 : 1.55 - f * 0.5)), 0, 0.15, 0.012, o.hair ?? 0x2d221b, undefined, V(0.092, 0.111, 0.104));
   }
-  // Goggles: a strap round the head, a thick rubber frame, a mirrored lens in the team's tint, vents.
-  geoIn(k, 'gear', H, new THREE.CylinderGeometry(0.104, 0.104, 0.026, ws, 1, true), 0, 0.152, 0.012, GEAR_DARK);
-  // The frame dips over the nose and rounds off at its ends; the lens follows the same outline, inset.
-  const gs = d.full ? 44 : 8;
-  const noseCut = (xn: number, w: number, depth: number) => depth * Math.max(0, 1 - (xn / w) ** 2) ** 1.5;
-  const frameLo = (xn: number) => -0.029 + noseCut(xn, 0.19, 0.024) + 0.016 * xn ** 8;
-  const frameHi = (xn: number) => 0.029 - 0.004 * xn * xn - 0.014 * xn ** 8;
-  geoIn(k, 'figRubber', H, shapedBand(0.25, 0.02, 0.112, gs, d.full ? 6 : 2, frameLo, frameHi), 0, 0.15, 0.004, 0x1f2125);
-  const lensLo = (xn: number) => -0.021 + noseCut(xn, 0.22, 0.02) + 0.012 * xn ** 8;
-  const lensHi = (xn: number) => 0.021 - 0.003 * xn * xn - 0.01 * xn ** 8;
-  geoIn(k, 'mirror', H, shapedBand(0.218, 0.004, 0.124, gs, d.full ? 6 : 2, lensLo, lensHi, 0.003), 0, 0.151, 0.004, t.lens);
-  if (d.full) {
-    // A raised lip round the lens and a hinge-like clip at each end where the strap joins.
-    geoIn(k, 'figRubber', H, shapedBand(0.228, 0.006, 0.122, gs, 1, (xn) => lensHi(xn) - 0.001, (xn) => lensHi(xn) + 0.004), 0, 0.151, 0.004, 0x2a2c31);
-    geoIn(k, 'figRubber', H, shapedBand(0.228, 0.006, 0.122, gs, 1, (xn) => lensLo(xn) - 0.004, (xn) => lensLo(xn) + 0.001), 0, 0.151, 0.004, 0x2a2c31);
-    for (const sd of [-1, 1]) geoIn(k, 'gunPolymer', H, new THREE.BoxGeometry(0.008, 0.026, 0.02), sd * 0.111, 0.151, -0.02, 0x15161a, new THREE.Euler(0, sd * 0.35, 0));
+  if (hg === 'hood') {
+    // A balaclava over the whole head and neck in the team's dark colour, a neck gaiter fold, a team patch on top.
+    geoIn(k, 'cloth', H, new THREE.SphereGeometry(1, ws, hs), 0, 0.15, 0.012, t.dark, undefined, V(0.096, 0.118, 0.108));
+    geoIn(k, 'cloth', H, new THREE.SphereGeometry(1, ws, hs), 0, 0.083, -0.018, t.dark, new THREE.Euler(0.25, 0, 0), V(0.078, 0.07, 0.09));
+    if (d.full) geoIn(k, 'gear', H, band(0.06, 0.035, 0.004, 0.118, 6), 0, 0.235, -0.01, t.main, new THREE.Euler(-0.9, 0, 0));
   }
-  if (d.full) {
-    for (const x of [-0.05, -0.025, 0.025, 0.05]) geoIn(k, 'dark', H, new THREE.BoxGeometry(0.014, 0.004, 0.008), x, 0.178, -0.11 + Math.abs(x) * 0.15, 0x0f1012);
-    for (const sd of [-1, 1]) geoIn(k, 'figRubber', H, new THREE.BoxGeometry(0.012, 0.03, 0.018), sd * 0.103, 0.152, -0.03, 0x1f2125);
-  }
-  if (face === 'mask') {
+  // A neck gaiter on everyone, so no skin shows between the mask and the collar.
+  geoIn(k, 'cloth', H, new THREE.CylinderGeometry(0.064, 0.086, 0.115, ws, 2, true), 0, -0.005, 0.008, hg === 'hood' ? new THREE.Color(t.dark).multiplyScalar(0.85) : new THREE.Color(t.shirt).multiplyScalar(0.8));
+  if (hg === 'visor') visor(k, H, t, d);
+  else goggles(k, H, t, d, ws);
+  if (hg !== 'visor') {
     // A perforated steel mesh mask with rubber trim and its own strap.
     // Cupped round the mouth, its lower edge sweeping up towards the ears along the jaw.
     const ms = d.full ? 40 : 8;
@@ -314,7 +291,7 @@ function humanHead(k: Kit, s: Skeleton, o: FigureOpts, t: Team, d: Detail): void
     geoIn(k, 'figRubber', H, shapedBand(0.296, 0.01, 0.098, ms, 1, (xn) => maskLo(xn) - 0.005, (xn) => maskLo(xn) + 0.004, 0.018 * 0.6), 0, 0.085, -0.004, 0x1f2125);
     geoIn(k, 'gear', H, new THREE.CylinderGeometry(0.098, 0.098, 0.018, ws, 1, true), 0, 0.085, 0.014, GEAR_DARK);
   }
-  if (hg === 'helmet' || hg === 'bump') {
+  if (hg === 'helmet' || hg === 'bump' || hg === 'visor') {
     // A high-cut helmet: the shell comes down low at the back, high over the ears, to the brow at the front.
     const cut = (f: number, side: number) => (f >= 0 ? 1.66 - 0.36 * f : 1.66 + 0.5 * -f) - (hg === 'helmet' ? 0.16 * THREE.MathUtils.smoothstep(side, 0.75, 0.97) * (1 - Math.abs(f)) : 0);
     const shell = shellGeo(d.full ? 36 : 12, d.full ? 18 : 6, cut);
@@ -343,12 +320,44 @@ function humanHead(k: Kit, s: Skeleton, o: FigureOpts, t: Team, d: Detail): void
       if (d.full) for (const z of [-0.04, 0.0, 0.04]) for (const sd of [-1, 1]) geoIn(k, 'dark', H, new THREE.BoxGeometry(0.012, 0.006, 0.028), sd * 0.04, 0.258 - Math.abs(z) * 0.4, z, 0x111214);
       for (const sd of [-1, 1]) geoIn(k, 'gear', H, new THREE.CylinderGeometry(0.038, 0.04, 0.03, d.full ? 18 : 8).rotateZ(Math.PI / 2), sd * 0.1, 0.128, 0.012, GEAR);
     }
-  } else if (hg === 'cap') {
-    geoIn(k, 'cloth', H, shellGeo(d.full ? 28 : 10, d.full ? 10 : 4, () => 1.6), 0, 0.17, 0.008, t.main, undefined, V(0.1, 0.09, 0.11));
-    geoIn(k, 'cloth', H, band(0.17, 0.007, 0.08, 0.145, d.full ? 14 : 4), 0, 0.172, 0.006, t.dark, new THREE.Euler(-0.12, 0, 0));
-    geoIn(k, 'cloth', H, new THREE.SphereGeometry(0.008, 8, 6), 0, 0.262, 0.008, t.dark);
-    for (const sd of [-1, 1]) geoIn(k, 'gear', H, new THREE.CylinderGeometry(0.036, 0.038, 0.028, d.full ? 18 : 8).rotateZ(Math.PI / 2), sd * 0.098, 0.13, 0.012, GEAR);
+
   }
+}
+
+/** Goggles: a strap round the head, a thick rubber frame, a mirrored lens in the team's tint, vents. */
+function goggles(k: Kit, H: THREE.Matrix4, t: Team, d: Detail, ws: number): void {
+  geoIn(k, 'gear', H, new THREE.CylinderGeometry(0.104, 0.104, 0.026, ws, 1, true), 0, 0.152, 0.012, GEAR_DARK);
+  // The frame dips over the nose and rounds off at its ends; the lens follows the same outline, inset.
+  const gs = d.full ? 44 : 8;
+  const noseCut = (xn: number, w: number, depth: number) => depth * Math.max(0, 1 - (xn / w) ** 2) ** 1.5;
+  const frameLo = (xn: number) => -0.029 + noseCut(xn, 0.19, 0.024) + 0.016 * xn ** 8;
+  const frameHi = (xn: number) => 0.029 - 0.004 * xn * xn - 0.014 * xn ** 8;
+  geoIn(k, 'figRubber', H, shapedBand(0.25, 0.02, 0.112, gs, d.full ? 6 : 2, frameLo, frameHi), 0, 0.15, 0.004, 0x1f2125);
+  const lensLo = (xn: number) => -0.021 + noseCut(xn, 0.22, 0.02) + 0.012 * xn ** 8;
+  const lensHi = (xn: number) => 0.021 - 0.003 * xn * xn - 0.01 * xn ** 8;
+  geoIn(k, 'mirror', H, shapedBand(0.218, 0.004, 0.124, gs, d.full ? 6 : 2, lensLo, lensHi, 0.003), 0, 0.151, 0.004, t.lens);
+  if (d.full) {
+    // A raised lip round the lens and a hinge-like clip at each end where the strap joins.
+    geoIn(k, 'figRubber', H, shapedBand(0.228, 0.006, 0.122, gs, 1, (xn) => lensHi(xn) - 0.001, (xn) => lensHi(xn) + 0.004), 0, 0.151, 0.004, 0x2a2c31);
+    geoIn(k, 'figRubber', H, shapedBand(0.228, 0.006, 0.122, gs, 1, (xn) => lensLo(xn) - 0.004, (xn) => lensLo(xn) + 0.001), 0, 0.151, 0.004, 0x2a2c31);
+    for (const sd of [-1, 1]) geoIn(k, 'gunPolymer', H, new THREE.BoxGeometry(0.008, 0.026, 0.02), sd * 0.111, 0.151, -0.02, 0x15161a, new THREE.Euler(0, sd * 0.35, 0));
+  }
+  if (d.full) {
+    for (const x of [-0.05, -0.025, 0.025, 0.05]) geoIn(k, 'dark', H, new THREE.BoxGeometry(0.014, 0.004, 0.008), x, 0.178, -0.11 + Math.abs(x) * 0.15, 0x0f1012);
+    for (const sd of [-1, 1]) geoIn(k, 'figRubber', H, new THREE.BoxGeometry(0.012, 0.03, 0.018), sd * 0.103, 0.152, -0.03, 0x1f2125);
+  }
+}
+
+/** A full-face visor: a tinted shield from brow to chin on side pivots, a vented chin guard and a brow seal. */
+function visor(k: Kit, H: THREE.Matrix4, t: Team, d: Detail): void {
+  const vs = d.full ? 44 : 8;
+  const lo = (xn: number) => -0.066 + 0.05 * xn * xn;
+  const hi = (xn: number) => 0.054 - 0.01 * xn ** 6;
+  geoIn(k, 'mirror', H, shapedBand(0.3, 0.004, 0.126, vs, d.full ? 10 : 3, lo, hi, 0.016), 0, 0.12, 0.006, t.lens);
+  geoIn(k, 'figRubber', H, shapedBand(0.31, 0.012, 0.122, vs, 1, (xn) => hi(xn) - 0.004, (xn) => hi(xn) + 0.008, 0.01), 0, 0.12, 0.006, 0x1f2125);
+  geoIn(k, 'gunPolymer', H, shapedBand(0.24, 0.014, 0.12, vs, d.full ? 3 : 1, (xn) => lo(xn) - 0.026, (xn) => lo(xn) + 0.004, 0.014), 0, 0.12, 0.006, 0x24272c);
+  for (const sd of [-1, 1]) geoIn(k, 'gunPolymer', H, new THREE.CylinderGeometry(0.018, 0.018, 0.012, d.full ? 16 : 6).rotateZ(Math.PI / 2), sd * 0.122, 0.15, 0.012, t.main);
+  if (d.full) for (const x of [-0.03, -0.01, 0.01, 0.03]) geoIn(k, 'dark', H, new THREE.BoxGeometry(0.008, 0.012, 0.01), x, 0.04, -0.13, 0x0f1012);
 }
 
 function humanArms(k: Kit, s: Skeleton, t: Team, d: Detail, wrists: { side: number; wrist: THREE.Vector3; out: THREE.Vector3 }[], shoulders: [THREE.Vector3, THREE.Vector3], viewmodel = false): void {

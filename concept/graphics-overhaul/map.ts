@@ -184,9 +184,11 @@ function wall(k: Kit, b: Bounds, perimeter: boolean, office: boolean, band: numb
     const [x, z] = at(s);
     const c = V(x, 0, z).addScaledVector(inward, faceOff);
     const hsh = hashPos(x * 1.7, z * 2.3);
-    if (i % 5 === 2) decal(k, 'depot', c.clone().setY(b.y0 + 2.4), inward, 2.2, 0.55, 0xffffff);
-    else if (hsh > 0.72) decal(k, 'warning', c.clone().setY(b.y0 + 2.2).addScaledVector(along === 'x' ? V(1, 0, 0) : V(0, 0, 1), -0.8), inward, 0.45, 0.45, 0xffffff);
-    else if (hsh < 0.18) decal(k, 'sprayArrow', c.clone().setY(b.y0 + 1.6), inward, 1.4, 0.7, hsh < 0.09 ? PAL.blue : PAL.orange, along === 'x' ? 0 : Math.PI);
+    // One yard sign per wall, a warning here and there, a rare tag (William, round 2: sparing and varied).
+    if (i === Math.floor(bays / 2) && len > 20) decal(k, 'depot', c.clone().setY(b.y0 + 2.4), inward, 2.2, 0.55, 0xffffff);
+    else if (hsh > 0.86) decal(k, 'warning', c.clone().setY(b.y0 + 2.2).addScaledVector(along === 'x' ? V(1, 0, 0) : V(0, 0, 1), -0.8), inward, 0.45, 0.45, 0xffffff);
+    else if (hsh < 0.06) decal(k, 'sprayArrow', c.clone().setY(b.y0 + 1.6), inward, 1.4, 0.7, PAL.blue, along === 'x' ? 0 : Math.PI);
+    else if (hsh < 0.1) decal(k, 'sprayC', c.clone().setY(b.y0 + 1.4), inward, 0.7, 0.7, PAL.orange, hsh * 3);
   }
   if (!p.smallParts) return;
   // Anti-climb: cranked brackets on every post with three strands of barbed wire, leaning out.
@@ -341,17 +343,20 @@ function container(k: Kit, b: Bounds): void {
         k.box('galv', hq.x, hq.y, hq.z, w, 0.04, d, 0xb4b9be, { radius: 0.01 });
       }
     }
+    // Markings, used sparingly and varied (William, round 2): each box picks its own line (or none), its logo goes on
+    // one long side only, its code on the door end and one side, and only some boxes carry the safety plate.
+    const mr = hashPos(b.cx * 3.1 + s * 7.7, b.cz * 2.3 + s * 1.9);
+    const mr2 = hashPos(b.cz * 5.3 + s, b.cx * 1.7 - s * 3.1);
+    const logo = mr < 0.22 ? 'containerLogo' : mr < 0.4 ? 'logoOrbit' : mr < 0.55 ? 'logoKestrel' : mr < 0.68 ? 'logoNorda' : '';
+    const code = mr2 > 0.5 ? 'containerCode' : 'codeB';
     const endN = ax.clone();
-    decal(k, 'csc', P(de + 0.0, y0 + unitH * 0.62, -(W / 4 - 0.02)).addScaledVector(endN, 0.002), endN, 0.22, 0.2, 0xffffff);
-    decal(k, 'containerCode', P(de - 0.0, y0 + unitH - 0.42, W / 4 - 0.02).addScaledVector(endN, 0.002), endN, 0.9, 0.22, PAL.stencil);
-    // Markings on both long sides: the box code up top, a big line logo.
-    for (const c of [-1, 1]) {
-      const n = side.clone().multiplyScalar(c);
-      const face = c * (W / 2 - 0.035);
-      const ry = 0;
-      decal(k, 'containerCode', P(c * (L / 2 - 1.3), y0 + unitH - 0.45, face), n, 1.6, 0.4, PAL.stencil, ry);
-      decal(k, 'containerLogo', P(-c * 0.4, ym + 0.15, face), n, Math.min(2.8, L * 0.42), Math.min(0.7, L * 0.105), new THREE.Color(PAL.stencil).multiplyScalar(0.9), ry);
-    }
+    if (mr2 > 0.35) decal(k, 'csc', P(de + 0.0, y0 + unitH * 0.62, -(W / 4 - 0.02)).addScaledVector(endN, 0.002), endN, 0.22, 0.2, 0xffffff);
+    decal(k, code, P(de - 0.0, y0 + unitH - 0.42, W / 4 - 0.02).addScaledVector(endN, 0.002), endN, 0.9, 0.22, PAL.stencil);
+    const c = mr2 > 0.5 ? 1 : -1;
+    const n = side.clone().multiplyScalar(c);
+    const face = c * (W / 2 - 0.035);
+    if (mr2 < 0.8) decal(k, code, P(c * (L / 2 - 1.3), y0 + unitH - 0.45, face), n, 1.6, 0.4, PAL.stencil);
+    if (logo) decal(k, logo, P(-c * 0.4, ym + 0.15, face), n, Math.min(2.8, L * 0.42), Math.min(0.7, L * 0.105), new THREE.Color(PAL.stencil).multiplyScalar(0.9));
   }
 }
 
@@ -409,12 +414,14 @@ function crate(k: Kit, b: Bounds): void {
       bar(k, 'galv', x, b.cy + sy * (b.h / 2 + 0.002), z, 0.13, 0.004, 0.13, 0x9ea4aa);
     }
   }
-  // Stencils: arrows on one face, the lot stamp on another, a red FRAGILE on a third.
-  const r = hashPos(b.cx, b.cz);
-  decal(k, 'upArrows', V(b.cx + 0.25, b.cy + 0.05, b.z1 - 0.006), V(0, 0, 1), 0.34, 0.34, PAL.stencilDark);
-  decal(k, 'crateStamp', V(b.x0 + 0.006, b.cy + 0.1, b.cz), V(-1, 0, 0), Math.min(0.7, b.d * 0.6), Math.min(0.35, b.d * 0.3), PAL.stencilDark);
-  if (r > 0.3) decal(k, 'fragile', V(b.x1 - 0.006, b.cy - 0.1, b.cz), V(1, 0, 0), Math.min(0.6, b.d * 0.55), Math.min(0.3, b.d * 0.27), 0xb8322a, 0.08);
-  decal(k, 'crateStamp', V(b.cx - 0.1, b.cy - 0.15, b.z0 + 0.006), V(0, 0, -1), Math.min(0.7, b.w * 0.6), Math.min(0.35, b.w * 0.3), PAL.stencilDark);
+  // Stencils, sparingly (William, round 2): most crates carry one, some two, some none, on varying faces.
+  const r = hashPos(b.cx * 1.9, b.cz * 2.7);
+  const r2 = hashPos(b.cz * 3.3, b.cx * 0.9);
+  if (r < 0.28) return;
+  if (r2 < 0.5) decal(k, 'crateStamp', V(b.x0 + 0.006, b.cy + 0.1, b.cz), V(-1, 0, 0), Math.min(0.7, b.d * 0.6), Math.min(0.35, b.d * 0.3), PAL.stencilDark);
+  else decal(k, 'crateStamp', V(b.cx - 0.1, b.cy - 0.15, b.z0 + 0.006), V(0, 0, -1), Math.min(0.7, b.w * 0.6), Math.min(0.35, b.w * 0.3), PAL.stencilDark);
+  if (r > 0.75) decal(k, 'upArrows', V(b.cx + 0.25, b.cy + 0.05, b.z1 - 0.006), V(0, 0, 1), 0.34, 0.34, PAL.stencilDark);
+  else if (r > 0.6) decal(k, 'fragile', V(b.x1 - 0.006, b.cy - 0.1, b.cz), V(1, 0, 0), Math.min(0.6, b.d * 0.55), Math.min(0.3, b.d * 0.27), 0xb8322a, 0.08);
 }
 
 function barrier(k: Kit, b: Bounds): void {
@@ -490,9 +497,17 @@ function barrier(k: Kit, b: Bounds): void {
   for (const sgn of [-1, 1]) {
     const n = along === 'x' ? V(0, 0, sgn) : V(sgn, 0, 0);
     const c = V(b.cx, b.y0 + 0.75, b.cz).addScaledVector(n, t / 2);
-    const r = hashPos(b.cx + sgn, b.cz);
-    if (r > 0.45) decal(k, 'sprayArrow', c, n, Math.min(1.2, len * 0.6), 0.55, team, r > 0.7 ? Math.PI : 0);
-    else decal(k, r > 0.2 ? 'sprayA' : 'sprayB', c.setY(b.y0 + (tall ? 0.7 : b.h * 0.5)), n, 0.6, 0.6, 0xf2efe8);
+    // Sparse and varied: about one face in three gets a mark, of four kinds, a little off-centre and tilted.
+    const r = hashPos(b.cx * 1.3 + sgn * 2.1, b.cz * 0.7 - sgn);
+    const r2 = hashPos(b.cz * 2.9 + sgn, b.cx * 0.3);
+    if (r > 0.34) continue;
+    const off = (r2 - 0.5) * Math.min(1, len * 0.4);
+    c.addScaledVector(along === 'x' ? V(1, 0, 0) : V(0, 0, 1), off);
+    const tilt = (r2 - 0.5) * 0.3;
+    if (r < 0.1) decal(k, 'sprayArrow', c, n, Math.min(1.1, len * 0.55), 0.5, team, (r2 > 0.5 ? Math.PI : 0) + tilt);
+    else if (r < 0.18) decal(k, 'sprayC', c.setY(b.y0 + (tall ? 0.8 : b.h * 0.5)), n, 0.5, 0.5, team, tilt);
+    else if (r < 0.26) decal(k, 'sprayD', c.setY(b.y0 + (tall ? 1.1 : b.h * 0.55)), n, 0.45, 0.45, 0xf2efe8, tilt);
+    else decal(k, r2 > 0.5 ? 'sprayA' : 'sprayB', c.setY(b.y0 + (tall ? 0.7 : b.h * 0.5)), n, 0.55, 0.55, 0xf2efe8, tilt);
   }
 }
 
@@ -804,6 +819,154 @@ function groundDressing(k: Kit): void {
   }
 }
 
+/** A lumpy rubbish sack sitting on the ground: a squashed sphere pushed in and out, flat underneath. */
+function trashBag(s: number, seg: number, seed: number): THREE.BufferGeometry {
+  const g = new THREE.SphereGeometry(s, Math.max(8, seg), Math.max(6, seg >> 1));
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const n = 1 + (fbm(x * 3 + seed, z * 3 + y * 2, 3, 3, 9) - 0.5) * 0.45;
+    pos.setXYZ(i, x * n * 1.08, Math.max(y * 0.82 * n, -s * 0.55) + s * 0.55, z * n * 0.95);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * v3 clutter (set dressing only, William 17:30): dirt banked against block feet, and low junk tucked against wall,
+ * container, crate and barrier faces. Nothing is taller than a kerb except bags and cones pressed to a wall, nothing
+ * sits in a lane, and the game's collision is untouched. Ultra places everything; Low keeps the dirt and the bigger
+ * pieces (tyres, bags, boards) at a third of the count.
+ */
+function clutter(k: Kit): void {
+  const up = V(0, 1, 0);
+  const full = k.p.smallParts;
+  const seg = k.p.curveSegments;
+  const blocks = DEPOT.blocks.map(bounds);
+  const inside = (x: number, z: number, pad: number) => blocks.some((o) => o.y1 > 0.05 && x > o.x0 - pad && x < o.x1 + pad && z > o.z0 - pad && z < o.z1 + pad);
+  const rot = (ry: number, rx = 0, rz = 0) => new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz, 'YXZ'));
+  const at = (x: number, y: number, z: number, q: THREE.Quaternion, s = V(1, 1, 1)) => new THREE.Matrix4().compose(V(x, y, z), q, s);
+  const canCols = [0xd8402f, 0x2f7fd8, 0xe9e4d8, 0x3aa65a, 0xf2b42a];
+  const bagCols = [0x1d1f22, 0x2a2d31, 0x3b4a3a, 0x2f3d57];
+
+  // One junk item at (x, z), its back to a face whose outward normal is (nx, nz).
+  const item = (x: number, z: number, nx: number, nz: number, h: number) => {
+    const face = Math.atan2(nx, nz);
+    const kind = h < 0.08 ? 'can' : h < 0.16 ? 'paper' : h < 0.26 ? 'rubble' : h < 0.34 ? 'board' : h < 0.42 ? 'bag' : h < 0.5 ? 'tyre' : h < 0.58 ? 'bottle' : h < 0.64 ? 'coil' : h < 0.7 ? 'cone' : h < 0.8 ? 'grit' : 'none';
+    const big = kind === 'bag' || kind === 'tyre' || kind === 'board';
+    if (!full && (!big || hashPos(x * 3, z * 3) > 0.33)) return;
+    const r2 = hashPos(z, x);
+    switch (kind) {
+      case 'can': {
+        const lying = r2 > 0.4;
+        for (let i = 0; i < 1 + Math.floor(r2 * 3); i++) {
+          const ox = x + (hashPos(i, x) - 0.5) * 0.4;
+          const oz = z + (hashPos(z, i) - 0.5) * 0.4;
+          k.add('paintSteel', new THREE.CylinderGeometry(0.033, 0.033, 0.12, seg), at(ox, lying ? 0.033 : 0.06, oz, rot(r2 * 9 + i, 0, lying ? Math.PI / 2 : 0)), canCols[(i + Math.floor(r2 * 5)) % canCols.length], {});
+        }
+        break;
+      }
+      case 'bottle':
+        k.add('film', new THREE.CylinderGeometry(0.04, 0.04, 0.26, seg), at(x, 0.04, z, rot(r2 * 7, 0, Math.PI / 2)), 0xcfe6f2, {});
+        k.add('plastic', new THREE.CylinderGeometry(0.018, 0.018, 0.03, seg), at(x + Math.cos(r2 * 7) * 0.145, 0.04, z - Math.sin(r2 * 7) * 0.145, rot(r2 * 7, 0, Math.PI / 2)), 0x2f7fd8, {});
+        break;
+      case 'paper':
+        for (let i = 0; i < 3; i++) bar(k, i ? 'carton' : 'paint', x + (hashPos(i, z) - 0.5) * 0.7, 0.003 + i * 0.002, z + (hashPos(x, i) - 0.5) * 0.5, i ? 0.32 : 0.21, 0.004, i ? 0.24 : 0.3, i ? 0xc9a066 : 0xf1efe8, { ry: r2 * 6 + i });
+        break;
+      case 'rubble':
+        for (let i = 0; i < (full ? 7 : 3); i++) {
+          const s = 0.04 + hashPos(i, x + z) * 0.09;
+          k.add('rock', new THREE.DodecahedronGeometry(s, 0), at(x + (hashPos(i, z) - 0.5) * 0.6, s * 0.5, z + (hashPos(x, i) - 0.5) * 0.4, rot(i * 1.7, i, i * 0.5), V(1, 0.6, 1.2)), PAL.rocks[i % PAL.rocks.length], {});
+        }
+        decal(k, 'grit', V(x, 0.002, z), up, 1.2, 1.0, 0x6a655d, r2 * 6);
+        break;
+      case 'board': {
+        const len = 0.7 + r2 * 0.6;
+        // Leans on the face, or lies broken at its foot.
+        if (r2 > 0.5) k.add('planks', new THREE.BoxGeometry(0.1, len, 0.025), at(x + nx * 0.14, len * 0.48, z + nz * 0.14, rot(face, -0.28)), PAL.timber, {});
+        else {
+          k.add('planks', new THREE.BoxGeometry(len * 0.6, 0.025, 0.1), at(x, 0.013, z, rot(face + 1.3 + r2)), PAL.wood, {});
+          k.add('planks', new THREE.BoxGeometry(len * 0.4, 0.025, 0.1), at(x + 0.25, 0.03, z + 0.12, rot(face + 0.4, 0, 0.12)), PAL.wood, {});
+        }
+        break;
+      }
+      case 'bag':
+        for (let i = 0; i < 1 + Math.floor(r2 * 2.5); i++) {
+          const s = 0.2 + hashPos(i, x) * 0.08;
+          const ox = x - nz * (i - 0.5) * 0.42;
+          const oz = z + nx * (i - 0.5) * 0.42;
+          k.add('plastic', trashBag(s, seg, i + r2 * 10), at(ox + nx * 0.08, 0, oz + nz * 0.08, rot(i + r2 * 5)), bagCols[(i + Math.floor(r2 * 4)) % bagCols.length], {});
+          if (full) k.add('rubber', new THREE.ConeGeometry(0.05, 0.1, 6), at(ox + nx * 0.08, s * 1.32, oz + nz * 0.08, rot(i)), bagCols[i % 2], {});
+        }
+        break;
+      case 'tyre': {
+        const stack = r2 > 0.6 ? 2 : 1;
+        for (let i = 0; i < stack; i++) k.add('rubber', new THREE.TorusGeometry(0.27, 0.095, Math.max(6, seg >> 2), seg).rotateX(Math.PI / 2), at(x + nx * 0.06, 0.095 + i * 0.19, z + nz * 0.06, rot(i * 0.4, (i ? 0.08 : 0))), 0x26272a, {});
+        break;
+      }
+      case 'coil':
+        for (let i = 0; i < 4; i++) k.add('rubber', new THREE.TorusGeometry(0.17 + i * 0.006, 0.012, 5, seg).rotateX(Math.PI / 2), at(x, 0.012 + i * 0.022, z, rot(i)), 0xe2783a, {});
+        break;
+      case 'cone':
+        k.add('plastic', new THREE.ConeGeometry(0.14, 0.46, seg), at(x + nx * 0.1, 0.25, z + nz * 0.1, rot(0)), 0xef6a24, {});
+        k.box('plastic', x + nx * 0.1, 0.02, z + nz * 0.1, 0.36, 0.04, 0.36, 0xef6a24, { radius: 0.01 });
+        bar(k, 'paint', x + nx * 0.1, 0.27, z + nz * 0.1, 0.17, 0.05, 0.17, 0xf2efe8, { ry: 0.78 });
+        break;
+      case 'grit':
+        decal(k, 'grit', V(x, 0.002, z), up, 1.4, 1.1, 0x5f5a52, r2 * 6);
+        break;
+    }
+  };
+
+  for (const b of blocks) {
+    if (b.y0 > 0.05 || b.h < 0.5) continue;
+    // The four faces: walk along each, placing dirt and junk where the ground outside is free.
+    const faces: [number, number, number, number, number][] = [
+      [b.x0, b.z0, b.x1, b.z0, 0], // north face, normal -z
+      [b.x0, b.z1, b.x1, b.z1, 1], // south, +z
+      [b.x0, b.z0, b.x0, b.z1, 2], // west, -x
+      [b.x1, b.z0, b.x1, b.z1, 3], // east, +x
+    ];
+    for (const [ax, az, bx, bz, f] of faces) {
+      const nx = f === 2 ? -1 : f === 3 ? 1 : 0;
+      const nz = f === 0 ? -1 : f === 1 ? 1 : 0;
+      const len = Math.hypot(bx - ax, bz - az);
+      const step = 1.4;
+      for (let t = step * 0.5; t < len; t += step) {
+        const fx = ax + ((bx - ax) * t) / len;
+        const fz = az + ((bz - az) * t) / len;
+        const x = fx + nx * 0.3;
+        const z = fz + nz * 0.3;
+        if (Math.abs(x) > 24.6 || Math.abs(z) > 15.6 || inside(x, z, 0.05)) continue;
+        const h = hashPos(x * 1.7, z * 1.3);
+        // Dirt banks up against about half of the feet, long and thin along the face.
+        if (h > 0.45) decal(k, 'dirt', V(fx + nx * 0.22, 0.0018, fz + nz * 0.22), up, nx ? 0.7 : 1.6, nx ? 1.6 : 0.7, h > 0.75 ? 0x766a58 : 0x8c806c, (h - 0.5) * 0.6);
+        item(x, z, nx, nz, hashPos(z * 2.3, x * 0.9));
+      }
+    }
+  }
+
+  // Open-yard dirt patches and wind-blown litter, kept flat so they never read as cover.
+  let seed = 23;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < (full ? 34 : 14); i++) {
+    const x = -23 + rnd() * 46;
+    const z = -15 + rnd() * 30;
+    const s = 1.2 + rnd() * 2.4;
+    if (inside(x, z, -0.2)) continue;
+    decal(k, i % 3 ? 'dirt' : 'grit', V(x, 0.0016 + (i % 4) * 0.0002, z), up, s, s * (0.6 + rnd() * 0.5), i % 2 ? 0x83776a : 0x948876, rnd() * 6);
+  }
+  if (!full) return;
+  for (let i = 0; i < 18; i++) {
+    const x = -23 + rnd() * 46;
+    const z = -15 + rnd() * 30;
+    if (inside(x, z, 0.3)) continue;
+    bar(k, rnd() > 0.5 ? 'paint' : 'carton', x, 0.003, z, 0.18 + rnd() * 0.15, 0.004, 0.14 + rnd() * 0.16, rnd() > 0.5 ? 0xf1efe8 : 0xc9a066, { ry: rnd() * 6 });
+  }
+}
+
 /** Stencils, bay lines and lane markings painted on the yard, drawn on transparent planes. */
 function markings(group: THREE.Group, p: Preset): void {
   const paint = (tex: THREE.Texture, x: number, z: number, w: number, d: number, rot = 0, opacity = 0.9) => {
@@ -887,6 +1050,9 @@ function puddles(group: THREE.Group, p: Preset, kit: Kit): THREE.Mesh[] {
     [7.0, 8.4, 3.2, 1.8],
     [-14.5, 2.5, 2.2, 1.4],
     [2.2, -3.6, 1.8, 1.2],
+    // v3: two more, in dips by the walls and the car park, so the yard reads rained on.
+    [-19.5, -12.8, 2.4, 1.1],
+    [17.5, 12.6, 2.0, 1.3],
   ];
   for (const [x, z, w, d] of spots) {
     // An irregular outline: a ring of points pushed in and out by noise.
@@ -1011,6 +1177,7 @@ export function buildDepot(kit: Kit): BuiltMap {
   // The yard's concrete.
   kit.box('concrete', 0, -0.25, 0, 51, 0.5, 33, PAL.ground, { radius: 0 });
   groundDressing(kit);
+  clutter(kit);
   const flagCloth = DEPOT.flag ? flagPole(kit, DEPOT.flag.x, DEPOT.flag.z) : undefined;
   group.add(kit.build());
   if (flagCloth) group.add(flagCloth);
