@@ -331,8 +331,9 @@ export class MatchSession {
     const r = this.state.round;
     return this.takes.result(r.phase === 'matchOver', this.countsForRecords, () => {
       const mine = this.stats.matchOf(this.player.id);
-      // A named ruleset has its own cells (M39); Skirmish the plain ones, as before.
-      const ruleset = recordsKeyOf(this.setup.ruleset) ?? '';
+      // A named ruleset has its own cells (M39); Skirmish the plain ones, as before. An Extraction run plays the map's
+      // own rules whatever the ruleset, so it always goes in the plain cell (M47).
+      const ruleset = this.extraction ? '' : (recordsKeyOf(this.setup.ruleset) ?? '');
       return { difficulty: this.setup.difficulty, mode: this.mode, ...(ruleset ? { ruleset } : {}), won: r.matchWinner === this.player.team, hits: mine.hits, bbsFired: mine.bbsFired, ...this.runResult() };
     });
   }
