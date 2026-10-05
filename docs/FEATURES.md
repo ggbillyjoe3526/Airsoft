@@ -57,6 +57,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Night sight on any night map: bots see 40 m into a light pool, 25 m in the open, 10 m under the trees (M33g)
 - Night lighting on any map that asks for it: a dark sky and haze, a low moon as the key light, light pools that glow and light the ground on every preset and light players on Medium and High (Graphics › Night lights: Off, Nearest 2, Nearest 4); Depot stays day (M33f)
 - Weapon torch on any night map (dev content, a starter Light on every replica): T switches it; its beam lights where you look, bots see 40 m into it and spot a lit torch facing them; your own is a real light on Medium and High in place of one pool light; the held replica is lit by the night (M33h)
+- Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend (M34c)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
@@ -98,6 +99,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan showing each order's key; a HUD line shows the order (M22, M23, FA5)
 - A minimap: the field, teammates always, the other team where last heard (M23)
+- Minimap on multi-level maps shows the floor you stand on (floors below darker) and marks teammates on other floors with an up or down arrow (M34c)
 
 ## Audio
 
