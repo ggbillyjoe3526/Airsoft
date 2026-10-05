@@ -28,16 +28,18 @@ title, a short diff summary, and any new lines in `docs/DECISIONS.md`. Do this:
 
 ## On a release (`--release <tag>`)
 
-The owner has tagged `<tag>` (for example `v0.1-alpha.4`). Do this:
+The owner has tagged `<tag>` (for example `0.1-dev.4`, said "0.1 Dev 4"). Do this:
 
-1. In `CHANGELOG.md`, rename `## Unreleased` to `## <tag> · <today's date>` and insert a fresh, empty `## Unreleased`
-   above it.
-2. Write `docs/patch-notes/<tag>.md` in plain, player-facing language: a one-paragraph summary, then **New**,
-   **Changed**, **Fixed** lists from the tag's changelog section (merge the Internal group into one closing line, or
-   drop it), then **Known issues** from the rows of `docs/KNOWN_ISSUES.md` a player would meet. No task ids or pull
-   request numbers in the notes; those stay in the changelog.
-3. Replace the README's "New since …" paragraph with the summary paragraph, naming the previous tag.
-4. Report in at most 15 lines: the files written and the summary paragraph.
+1. In `CHANGELOG.md`, rename `## Unreleased` to `## <name> · <today's date>` (e.g. `## 0.1 Dev 4 · 2026-10-06`)
+   and insert a fresh, empty `## Unreleased` above it.
+2. Write `docs/patch-notes/<tag>.md` as plain patch notes (owner, 2026-10-05); the same text is the GitHub release
+   description. A **New** list and a **Fixed** list, plus a **Changed** list only when something existing behaves
+   differently (a rebalanced replica, a moved setting), built from the tag's changelog section. One short line per
+   item in player words. No version line or title (the release title carries the version), no summary paragraph, no
+   counts, task ids, pull request numbers, file names, phases, audits, tests or "next up"; drop the Internal group.
+3. Replace the README's "New since …" paragraph with one or two sentences drawn from the New list, naming the
+   previous release.
+4. Report in at most 15 lines: the files written and the README sentences.
 
 ## Style
 

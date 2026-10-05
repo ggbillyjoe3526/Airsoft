@@ -1,15 +1,15 @@
-# Airsoft — v0.1-alpha.3
+# Airsoft — 0.1 Dev 3
 
 A browser-based, first-person, round-based team shooter built around the feel of recreational airsoft:
 visible BBs, one hit and you're out, call your hit and walk off.
 
-**v0.1-alpha.3 (alpha: Phases 1 to 3).** On the warehouse map "Depot" you play a 3v3 against bots: you and two
+**0.1 Dev 3 (alpha: Phases 1 to 3).** On the warehouse map "Depot" you play a 3v3 against bots: you and two
 bot teammates (Blue) against three bots (Orange), with an AEG rifle and a gas pistol. One BB hit and you're
 out: your hand goes up, you walk off, and you spectate. Pick a mode on the New game screen (**Start**, then **Mode**):
 **Elimination** (knock out the whole other team) or **Attack / Defend** (raise your flag on the other team's
 pole, or keep yours down; sides swap at half-time). First to 5 rounds wins the match.
 
-New since v0.1-alpha.2: **leaning** around cover (Q / E), a limited set of **magazines** each round so reloads
+New since 0.1 Dev 2: **leaning** around cover (Q / E), a limited set of **magazines** each round so reloads
 matter, a **BB physics** pass (BBs take time to fly, slow down and drop at range), accuracy that depends on
 your stance and movement, a crosshair that matches where shots land, graphics quality presets, support for
 ramps and raised floors (no map uses them yet), automatic checks on every change, and nine bug fixes from a
@@ -29,11 +29,11 @@ Go to **https://nodejs.org**, download the **LTS** version (22 or newer), and in
 
 ### 2. Download the game
 
-Download v0.1-alpha.3 as a ZIP file:
+Download 0.1 Dev 3 as a ZIP file:
 
-**https://github.com/ggbillyjoe3526/Airsoft/archive/refs/tags/v0.1-alpha.3.zip**
+**https://github.com/ggbillyjoe3526/Airsoft/archive/refs/tags/0.1-dev.3.zip**
 
-Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `Airsoft-0.1-alpha.3`.
+Unzip it somewhere easy to find, for example your Desktop. You'll get a folder called `Airsoft-0.1-dev.3`.
 (Older versions are on the **Releases / Tags** page of the repository.)
 
 (If that link doesn't work, open **https://github.com/ggbillyjoe3526/Airsoft**, click the green **Code**
@@ -41,9 +41,9 @@ button, then **Download ZIP**. The folder will then be called `Airsoft-main`; us
 
 ### 3. Open a terminal in that folder
 
-- **Windows:** open the unzipped folder (`Airsoft-0.1-alpha.3`, or `Airsoft-main` if you used the Download ZIP
+- **Windows:** open the unzipped folder (`Airsoft-0.1-dev.3`, or `Airsoft-main` if you used the Download ZIP
   button), click the address bar at the top of the window, type `cmd` and press Enter.
-- **Mac:** right-click the unzipped folder (`Airsoft-0.1-alpha.3` or `Airsoft-main`) and choose **New Terminal at Folder**.
+- **Mac:** right-click the unzipped folder (`Airsoft-0.1-dev.3` or `Airsoft-main`) and choose **New Terminal at Folder**.
 - **Linux:** right-click inside the folder and choose **Open in Terminal**.
 
 ### 4. Install and start the game
@@ -158,7 +158,7 @@ Then open **http://localhost:4173**.
 
 ---
 
-## What's in v0.1-alpha.3 and what isn't
+## What's in 0.1 Dev 3 and what isn't
 
 **In:** one map (Depot), two replicas (AEG rifle, gas pistol), BB ballistics with hop-up, one-hit
 elimination with hit calling, two modes (Elimination; Attack / Defend with a flagpole, overtime and a
@@ -167,7 +167,7 @@ cover, move as a team, search, hunt, hear footsteps, hold and retake the pole), 
 and first-to-5 scoring, walk/run/sprint, rebindable keys, synthesised sounds with footsteps, reload
 animations, hit reactions and a minimal HUD.
 
-**Added in v0.1-alpha.3 (Phase 3, tagged 2026-10-03):** leaning (Q / E), a set of magazines per round with
+**Added in 0.1 Dev 3 (Phase 3, tagged 2026-10-03):** leaning (Q / E), a set of magazines per round with
 meaningful reloads, a BB physics pass, accuracy by stance and movement, support for ramps and raised floors,
 a crosshair that matches where shots land, render quality presets (`?quality=low|medium|high`, see below) and a
 code-wide bug pass (nine fixes).
@@ -176,8 +176,8 @@ code-wide bug pass (nine fixes).
 crouch toggle, steadier aim when still, optics with aiming down sights), a reworked Depot, an audio rework, then
 art, menus and settings, and a short tutorial. Progress and plans: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
-**Version names:** the game is being built as **v0.1**. Alpha releases (`v0.1-alpha`, `v0.1-alpha.2`,
-`v0.1-alpha.3` …) come first. Beta releases (`v0.1-beta` …) follow once it's feature complete, and **v0.1** is
+**Version names:** the game is being built as **0.1**. Dev releases (0.1 Dev 1, 0.1 Dev 2,
+0.1 Dev 3 …) come first. Beta releases (0.1 Beta 1 …) follow once it's feature complete, and **0.1.0** is
 the first public release. More modes, maps, replicas, loadouts and customisation come in later versions.
 
 **Branches:** `main` holds the latest stable release (for now, that includes alpha releases). Every change

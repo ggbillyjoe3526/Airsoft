@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROUNDS } from '../config/hits';
 import { HITS } from '../config/hits';
 import { BODY } from '../config/movement';
@@ -85,6 +85,11 @@ beforeAll(async () => {
   vi.resetModules();
   ({ MatchPresentation } = await import('./matchPresentation'));
   ({ MatchBoard } = await import('../ui/matchBoard'));
+});
+// And resets again when it ends (vite.config.ts's rule, audit CORE-06), so later files in this worker don't load a second
+// copy of the modules beside the first.
+afterAll(() => {
+  vi.resetModules();
 });
 
 const PLAYER = 0;

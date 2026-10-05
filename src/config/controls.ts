@@ -148,12 +148,12 @@ export const PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
 
 /**
  * How a stance key works: press once to turn it on and again to turn it off (toggle), or only while held.
- * Crouch, aim and sprint each have their own (M18; crouch since the owner's v0.1-alpha.3 playtest).
+ * Crouch, aim and sprint each have their own (M18; crouch since the owner's 0.1 Dev 3 playtest).
  */
 export type HoldMode = 'toggle' | 'hold';
 
 /**
- * The crouch key: toggle by default (owner's v0.1-alpha.3 playtest). In toggle mode, sprinting or jumping stands you up.
+ * The crouch key: toggle by default (owner's 0.1 Dev 3 playtest). In toggle mode, sprinting or jumping stands you up.
  */
 export type CrouchMode = HoldMode;
 
