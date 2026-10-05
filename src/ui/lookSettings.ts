@@ -20,6 +20,6 @@ export function lookSettings(opts: LookSettingsOptions): HTMLDivElement[] {
   });
   return [
     menuRow('Robots', 'Who the players are drawn as. From the next match.', robots.root),
-    menuRow('Realistic colours', 'Bold two-tone colour schemes, or plain real-world colours. Pick each replica’s scheme in Loadout › Customise. From the next match.', colours.root),
+    menuRow('Realistic colours', 'Bold two-tone colour schemes, or plain real-world colours. From the next match.', colours.root),
   ];
 }

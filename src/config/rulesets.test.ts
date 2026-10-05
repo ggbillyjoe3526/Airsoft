@@ -5,6 +5,7 @@ import { loadMatchRules, loadRuleset } from '../ui/menus/savedChoices';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../settings/storage';
 import { factoryParts } from './attachments';
 import { BOT_GLOW_BBS } from './glowBBs';
+import { defaultScheme } from './schemes';
 import { ROUNDS } from './hits';
 import {
   countsForRecords,
@@ -184,5 +185,14 @@ describe('replicas and kits under the rules (M39)', () => {
     expect(factory.hopUps).toEqual(LOADOUT.map((r) => r.hopUpDial));
     expect(factory.bbWeights).toEqual(LOADOUT.map((r) => r.bbWeight));
     expect(factory.glowBBs).toEqual(LOADOUT.map(() => BOT_GLOW_BBS));
+    // G1: the factory kit is painted as it comes (the rifle Cobalt, the pistol Ghost), not in the Armory kit's own picks.
+    expect(ARMORY_KIT.schemes).toEqual(['acid', 'onyx']);
+    expect(factory.schemes).toEqual(['cobalt', 'ghost']);
+    expect(factory.schemes).toEqual(LOADOUT.map(defaultScheme));
+  });
+
+  it('keeps your own colour schemes under the other rules (G1), and the factory kit rule under realcap too', () => {
+    expect(kitUnderRules(ARMORY_KIT, standardRulesOf('proCqb')).schemes).toEqual(['acid', 'onyx']);
+    expect(kitUnderRules(ARMORY_KIT, { ...DEFAULT_MATCH_RULES, factoryKit: true, realcap: true }).schemes).toEqual(['cobalt', 'ghost']);
   });
 });
