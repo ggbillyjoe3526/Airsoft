@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { DIFFICULTIES } from '../config/bots';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DIFFICULTIES, type Difficulty } from '../config/bots';
+import { MatchSession } from '../matchSession';
 import { DEFAULT_WHAT_GOT_YOU_MODE, WHAT_GOT_YOU_MODES, type WhatGotYouMode, whatGotYouShown } from '../config/matchInfo';
 import { PRO_TIPS, proTip } from '../config/tutorial';
 import { flushSettings, loadSetting, oneOf, saveSetting } from '../settings/storage';
 import { createHitFacts, type HitFacts } from '../sim/hitFacts';
 import { loadWhatGotYouMode } from './menus/savedChoices';
-import { describeBearing, whatGotYouText } from './whatGotYou';
+import { FakeElement } from './testSupport';
+import { describeBearing, WhatGotYouCard, whatGotYouText } from './whatGotYou';
 
 const DEG = Math.PI / 180;
 
@@ -101,5 +103,96 @@ describe('Pro briefing tips (M41)', () => {
     expect(proTip(1)).toBe(PRO_TIPS[0]);
     expect(proTip(PRO_TIPS.length + 1)).toBe(PRO_TIPS[0]);
     expect(proTip(2)).toBe(PRO_TIPS[1]);
+  });
+});
+
+describe('the What got you setting follows the opponents\' difficulty in a match (M41)', () => {
+  /** A match session with just what setWhatGotYouMode reads: its setup and its presentation (the real session needs a GPU and physics). */
+  function session(opponents: Difficulty, teammates: Difficulty) {
+    const shown: boolean[] = [];
+    const s = Object.create(MatchSession.prototype) as MatchSession;
+    Object.assign(s, { setup: { difficulty: opponents, teammateDifficulty: teammates }, match: { setWhatGotYou: (on: boolean) => shown.push(on) } });
+    return { s, shown };
+  }
+
+  it('Auto is on against Pro opponents and off against the rest, whatever the teammates\' level', () => {
+    for (const opp of DIFFICULTIES.map((d) => d.id)) {
+      for (const mate of DIFFICULTIES.map((d) => d.id)) {
+        const { s, shown } = session(opp, mate);
+        s.setWhatGotYouMode('auto');
+        expect(shown, `auto, opponents ${opp}, teammates ${mate}`).toEqual([opp === 'pro']);
+      }
+    }
+  });
+
+  it('a Pro pick for the teammates only does not turn Auto on', () => {
+    const { s, shown } = session('normal', 'pro');
+    s.setWhatGotYouMode('auto');
+    expect(shown).toEqual([false]);
+  });
+
+  it('On shows it and Off hides it at every opponent level', () => {
+    for (const d of DIFFICULTIES) {
+      const { s, shown } = session(d.id, 'normal');
+      s.setWhatGotYouMode('on');
+      s.setWhatGotYouMode('off');
+      expect(shown, d.id).toEqual([true, false]);
+    }
+  });
+});
+
+describe('the card\'s panel (M41)', () => {
+  /** The fake DOM plus the three calls the card makes that it lacks: querySelector (the card's two lines), replaceChildren and remove. */
+  function cardDocument() {
+    const lines = new Map<string, FakeElement>();
+    const withDomCalls = (tag: string) => {
+      const el = new FakeElement(tag) as FakeElement & Record<string, unknown>;
+      el.querySelector = (sel: string) => {
+        if (!lines.has(sel)) lines.set(sel, withDomCalls('div'));
+        return lines.get(sel);
+      };
+      el.replaceChildren = (...nodes: FakeElement[]) => {
+        el.children.length = 0;
+        el.children.push(...nodes);
+      };
+      el.remove = () => {};
+      return el;
+    };
+    return { createElement: withDomCalls, lines };
+  }
+
+  function card() {
+    const doc = cardDocument();
+    vi.stubGlobal('document', doc);
+    const parent = new FakeElement('div');
+    const c = new WhatGotYouCard(parent as unknown as HTMLElement);
+    const root = parent.children[0]!;
+    return { c, root, where: doc.lines.get('.what-got-you-where')!, notes: doc.lines.get('.what-got-you-notes')! };
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('is hidden until it has words and is allowed to show, then shows them', () => {
+    const { c, root, where, notes } = card();
+    expect(root.hidden).toBe(true);
+    c.setShown(true);
+    expect(root.hidden, 'allowed but nothing to say').toBe(true);
+    c.set({ where: 'Orange 2 · from ahead · 14 m', notes: ['a', 'b'] });
+    expect(root.hidden).toBe(false);
+    expect(where.textContent).toBe('Orange 2 · from ahead · 14 m');
+    expect(notes.children.map((n) => n.textContent)).toEqual(['a', 'b']);
+    c.setShown(false);
+    expect(root.hidden, 'not allowed (still in play, or a menu is up)').toBe(true);
+  });
+
+  it('is gone once cleared, until the next hit gives it new words', () => {
+    const { c, root, notes } = card();
+    c.setShown(true);
+    c.set({ where: 'x', notes: ['old'] });
+    c.clear();
+    expect(root.hidden).toBe(true);
+    c.set({ where: 'y', notes: [] });
+    expect(root.hidden).toBe(false);
+    expect(notes.children).toEqual([]);
   });
 });

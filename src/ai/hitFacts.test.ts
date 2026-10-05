@@ -5,7 +5,8 @@ import { createCharacter } from '../sim/character';
 import { createHitFacts, recordHitFacts } from '../sim/hitFacts';
 import { LOADOUT } from '../config/replicas';
 import { vec3 } from '../sim/vec';
-import { facing, duel, noWalls } from './testSupport';
+import { OPEN_FIELD } from '../sim/testSupport';
+import { facing, duel, noWalls, skirmish } from './testSupport';
 import { BOTS } from '../config/bots';
 
 // What the "what got you" card is told (M41): recorded at hit time from the shooting bot's own state.
@@ -171,5 +172,49 @@ describe('recordHitFacts', () => {
     recordHitFacts(out, 3, victim, shooter, false, null, null, WHAT_GOT_YOU.movingSpeed);
     expect(out).toBe(same);
     expect(out.moving).toBe(true);
+  });
+});
+
+describe('whose hits are recorded', () => {
+  it('leaves held and time in view unknown when a bot teammate hits the player (friendly fire)', () => {
+    const { state, bots } = skirmish(OPEN_FIELD, [
+      [0, 0, 0],
+      [0, -12, 1],
+      [4, 0, 0],
+    ]);
+    state.time = 5;
+    state.events.push({ type: 'characterHit', victimId: 0, shooterId: 2, position: vec3(), direction: vec3(-1, 0, 0), ricochet: false });
+    bots.observe(state);
+    expect(bots.lastHit).toMatchObject({ victimId: 0, shooterId: 2, friendly: true, held: null, inView: null });
+    // The same bot's shot at the same player, as an enemy's, would have said something (here: not held, no contact).
+    state.events.length = 0;
+    state.events.push({ type: 'characterHit', victimId: 0, shooterId: 1, position: vec3(), direction: vec3(0, 0, 1), ricochet: false });
+    bots.observe(state);
+    expect(bots.lastHit).toMatchObject({ friendly: false, held: false });
+  });
+
+  it('only the local player\'s own: a hit on a bot teammate (or an enemy) leaves the record as it was', () => {
+    // The player (id 0, Blue), an Orange bot (1) and a Blue bot teammate (2).
+    const { state, bots } = skirmish(OPEN_FIELD, [
+      [0, 0, 0],
+      [0, -12, 1],
+      [4, 0, 0],
+    ]);
+    const hit = (victimId: number, shooterId: number) => {
+      state.time += 1;
+      state.events.push({ type: 'characterHit', victimId, shooterId, position: vec3(), direction: vec3(0, 0, 1), ricochet: false });
+      bots.observe(state);
+      state.events.length = 0;
+    };
+    hit(2, 1);
+    expect(bots.lastHit.time, 'a teammate bot hit by the enemy').toBe(Number.NEGATIVE_INFINITY);
+    hit(1, 2);
+    expect(bots.lastHit.time, 'an enemy bot hit by the teammate').toBe(Number.NEGATIVE_INFINITY);
+    hit(0, 1);
+    expect(bots.lastHit).toMatchObject({ time: state.time, victimId: 0, shooterId: 1 });
+    const mine = bots.lastHit.time;
+    hit(2, 1);
+    expect(bots.lastHit.time, 'the teammate hit again').toBe(mine);
+    expect(bots.lastHit.victimId).toBe(0);
   });
 });
