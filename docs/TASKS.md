@@ -5,21 +5,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
 keeps `status` and `attempts` current.
 
-## M34d · Day or Night on any map that offers both
-tier: core
-perf: required
-contract: MapData (none changed: uses M33f's `lighting.presets`)
-touches: src/map/, src/render/, src/ui/, src/style.css, src/game.ts, src/settings/storage.ts, src/ai/, e2e/, docs/, CHANGELOG.md
-acceptance:
-  1. A map whose `lighting.presets` lists more than one preset shows a Day | Night switch on its option in the Map pop-up; picking a side picks that map with that light. Maps with one preset show no switch.
-  2. The pick is saved per map (`lighting.<map id>`), restored on the next visit; a map's first preset is its default (Neon Heights: Night first, owner's default 10).
-  3. The match plays under the picked preset through M33f's one lighting path: the renderer's light, `night` for glowing BBs and the bots' night sight all follow it. No second lighting path.
-  4. New game's Map tile names the light (e.g. "Neon Heights · Night") when the map offers a choice.
-  5. Neon Heights stays inside its balance guards at Night too (headless, 16 seeds).
-  6. Unit tests for the choice helper, the saved pick and the dialog's switch; the e2e plays Neon Heights by Day and checks the switch.
-status: gates
-attempts: 1 (gate 1: scope, the switch's styles in src/style.css were missing from touches)
-
 The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
 files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged dev with M35's content tag until the
 owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
