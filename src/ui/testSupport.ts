@@ -20,6 +20,9 @@ export class FakeElement {
   constructor(readonly tag: string) {}
 
   readonly classList = {
+    add: (...names: string[]): void => {
+      for (const name of names) this.classes.add(name);
+    },
     toggle: (name: string, force?: boolean): boolean => {
       const on = force ?? !this.classes.has(name);
       if (on) this.classes.add(name);

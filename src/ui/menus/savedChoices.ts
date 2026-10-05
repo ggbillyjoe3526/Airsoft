@@ -44,9 +44,10 @@ import { DEFAULT_HIT_FEED_MODE, HIT_FEED_MODES, type HitFeedMode, HUD_SIZE, SCOR
 import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
 import { AIMING } from '../../config/optics';
 import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, parseStored, SHOW_FPS_CHOICES, TONE_MAPPING_CHOICES } from '../../config/graphics';
-import { FOV_SETTING, type FrameRateCap, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER, TONE_MAPPING, type ToneMappingId } from '../../config/render';
+import { FOV_SETTING, type FrameRateCap, type LightingPresetId, QUALITY_CHOICES, type QualityChoice, type QualitySettings, RENDER, TONE_MAPPING, type ToneMappingId } from '../../config/render';
 import { DEFAULT_WHEEL_SELECT, WHEEL_SELECT_MODES, type WheelSelect } from '../../config/squad';
 import { DEFAULT_TEAM_COLOURS, TEAM_COLOUR_CHOICES, type TeamColourSetId } from '../../config/teams';
+import { lightingChoices, parseLightingPick } from '../../map/lightingChoice';
 import { DEFAULT_MAP, MAPS, type MapId } from '../../map/maps';
 import { browserStorage, loadSetting, numberIn, oneOf } from '../../settings/storage';
 import { loadChoice } from '../optionPicker';
@@ -143,6 +144,21 @@ export function loadMouseDpi(): number {
 /** The map picked on New game. */
 export function loadMap(): MapId {
   return loadChoice('map', MAPS, DEFAULT_MAP);
+}
+
+/**
+ * Each map's Day or Night pick (M34d), saved as `lighting.<map id>`: only for maps that offer more than one preset and
+ * only a preset the map offers; a map without a saved pick plays its first (MapData.lighting).
+ */
+export function loadLightingPicks(storage = browserStorage()): Partial<Record<MapId, LightingPresetId>> {
+  const picks: Partial<Record<MapId, LightingPresetId>> = {};
+  for (const m of MAPS) {
+    const offered = lightingChoices(m.data);
+    if (offered.length < 2) continue;
+    const pick = loadSetting(`lighting.${m.id}`, parseLightingPick, undefined, storage);
+    if (pick !== undefined && offered.includes(pick)) picks[m.id] = pick;
+  }
+  return picks;
 }
 
 /** The field of view (horizontal degrees on a 16:9 screen). */
