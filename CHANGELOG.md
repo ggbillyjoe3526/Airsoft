@@ -122,7 +122,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
-- **M54** · Accessibility: with no Reduced motion choice saved, the system setting applies as it changes; High Contrast mode shows the case prompt, coach and range readout; the empty key box's dash is easier to read; the debug overlay sits under the minimap in every browser; the respawn fade no longer stalls a frame
+- **M54** · Accessibility: with no Reduced motion choice saved, the system setting applies as it changes; High Contrast mode shows the case prompt, coach and range readout; the empty key box's dash is easier to read; the debug overlay sits under the minimap in every browser; the respawn fade no longer stalls a frame (#113)
 - **M52** · At night the ground, wood and faces read in their own colours instead of near black: a bluer, brighter night sky and moon, and on Medium the shadows at night stay sharp near you (#111)
 - **M56** · pool.md: tiny Supply event percentages, a zero Difficulty multiplier, rising Odds and a missing or mis-cased Supply events column are reported at their line; a collection or records file saved by a newer version of the game is never overwritten (#112)
 - **M33j** · No birds sing at night any more, on any map (Woodland, Neon Heights by Night); footsteps on Woodland's ground no longer sound like concrete
