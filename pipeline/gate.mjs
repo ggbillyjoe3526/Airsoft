@@ -5,6 +5,7 @@
  * back to the worker with this report; the critic runs only on a report where every gate passed.
  *
  *   node pipeline/gate.mjs [--task M27[,M28]] [--quick] [--no-smoke] [--perf] [--env container|laptop|ci] [--base origin/main] [--ci]
+ *                          [--tests all|fast|slow] [--shard k/n] [--only tests]
  *
  * Gates: build (tsc + vite build with the chunk budgets), tests (vitest), smoke (playwright), perf (only when the diff
  * touches a perf-relevant path, or --perf; needs pipeline/perf-run.mjs), scope (the diff stays inside the task's
@@ -12,6 +13,9 @@
  * --quick runs build and tests only. --ci is what the workflow runs: build, tests, smoke (no perf: a runner has no
  * baseline); without --task it takes the task ids from the pull request's title in GATE_PR_TITLE (audit CORE-08).
  * With no task, scope and changelog are skipped. Exit code 1 when any gate fails.
+ * CI splits the work across jobs (audit CORE-04): `--tests fast` runs the unit tests' fast project only, `--tests slow
+ * --shard k/n` one share of the headless bot-match guards (vitest's own sharding, by file), and `--only tests` runs
+ * the tests gate alone (no build, smoke, perf, scope or changelog). Without them every gate runs both projects.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -46,7 +50,17 @@ const options = {
   perf: flag('--perf'),
   env: value('--env', flag('--ci') ? 'ci' : 'container'),
   base: value('--base', 'origin/main'),
+  /** Which vitest project(s) the tests gate runs, and which share of their files (CI's jobs, audit CORE-04). */
+  tests: value('--tests', 'all'),
+  shard: value('--shard', null),
+  /** `--only tests`: just the tests gate (CI's slow-guard jobs); every other gate is skipped. */
+  only: value('--only', null),
 };
+if (!['all', 'fast', 'slow'].includes(options.tests)) throw new Error(`gate: --tests takes all, fast or slow, not ${options.tests}`);
+const shardOk = (s) => { const m = /^(\d+)\/(\d+)$/.exec(s); return m !== null && Number(m[1]) >= 1 && Number(m[1]) <= Number(m[2]); };
+if (options.shard !== null && !shardOk(options.shard)) throw new Error(`gate: --shard takes k/n with 1 ≤ k ≤ n, not ${options.shard}`);
+if (options.only !== null && options.only !== 'tests') throw new Error(`gate: --only takes tests, not ${options.only}`);
+const skipAllBut = (gate) => options.only !== null && options.only !== gate;
 
 mkdirSync(ARTIFACTS, { recursive: true });
 
@@ -104,7 +118,8 @@ function record(name, gate) {
 
 // 1. build: type check and the production build with its chunk budgets (vite.config.ts fails over budget on CI). Always
 // built; the stamp it leaves lets the smoke test's release server reuse dist/ (pipeline/build-cached.mjs).
-{
+if (skipAllBut('build')) record('build', { pass: null, reason: `skipped (--only ${options.only})` });
+else {
   const r = run('build', 'node', ['pipeline/build-cached.mjs', '--mode', 'production', '--force'], options.ci ? { CI: '1' } : {});
   record('build', { pass: r.ok, ms: r.ms, log: r.log, ...(r.ok ? {} : { evidence: tail(r.output) }) });
 }
@@ -112,7 +127,9 @@ function record(name, gate) {
 // 2. tests: the unit suite, with its JSON report as the artifact.
 {
   const json = join(ARTIFACTS, 'vitest.json');
-  const r = run('tests', 'npx', ['vitest', 'run', '--reporter=json', `--outputFile=${json}`]);
+  const projects = options.tests === 'all' ? [] : ['--project', options.tests];
+  const shard = options.shard ? [`--shard=${options.shard}`] : [];
+  const r = run('tests', 'npx', ['vitest', 'run', ...projects, ...shard, '--reporter=json', `--outputFile=${json}`]);
   let summary = { pass: r.ok, ms: r.ms, log: r.log };
   try {
     const data = JSON.parse(readFileSync(json, 'utf8'));
@@ -122,7 +139,7 @@ function record(name, gate) {
         if (t.status === 'failed') failed.push({ test: t.fullName, file: relative(ROOT, file.name), message: (t.failureMessages?.[0] ?? '').split('\n')[0] });
       }
     }
-    summary = { ...summary, total: data.numTotalTests, failed: data.numFailedTests, pass: r.ok && data.numFailedTests === 0 && data.numTotalTests > 0, report: relative(ROOT, json), ...(failed.length ? { failures: failed.slice(0, 20) } : {}) };
+    summary = { ...summary, projects: options.tests, ...(options.shard ? { shard: options.shard } : {}), total: data.numTotalTests, failed: data.numFailedTests, pass: r.ok && data.numFailedTests === 0 && data.numTotalTests > 0, report: relative(ROOT, json), ...(failed.length ? { failures: failed.slice(0, 20) } : {}) };
   } catch (e) {
     summary = { ...summary, pass: false, reason: `no readable vitest report (${e.message})`, evidence: tail(r.output) };
   }
@@ -130,7 +147,8 @@ function record(name, gate) {
 }
 
 // 3. smoke: the Playwright browser test of the e2e build; the spec itself asserts zero console errors and page errors.
-if (!options.smoke) {
+if (skipAllBut('smoke')) record('smoke', { pass: null, reason: `skipped (--only ${options.only})` });
+else if (!options.smoke) {
   record('smoke', { pass: null, reason: options.quick ? 'skipped (--quick)' : 'skipped (--no-smoke)' });
 } else {
   const json = join(ARTIFACTS, 'playwright.json');
@@ -149,7 +167,8 @@ if (!options.smoke) {
 }
 
 // 4. perf: the harness (pipeline/perf-run.mjs) against the budget and this environment's baseline.
-if (!perfRequired) {
+if (skipAllBut('perf')) record('perf', { pass: null, reason: `skipped (--only ${options.only})` });
+else if (!perfRequired) {
   record('perf', { pass: null, reason: 'not required (no perf-relevant path changed)' });
 } else if (options.quick || options.ci) {
   record('perf', { pass: null, reason: `required but skipped (${options.quick ? '--quick' : '--ci: no baseline on a runner'})` });
@@ -195,7 +214,8 @@ if (!perfRequired) {
 }
 
 // 5. scope: the diff stays inside the task's `touches` (plus tests and docs), and QA commits touch only tests.
-if (options.tasks.length === 0) {
+if (skipAllBut('scope')) record('scope', { pass: null, reason: `skipped (--only ${options.only})` });
+else if (options.tasks.length === 0) {
   record('scope', { pass: null, reason: 'skipped (no --task)' });
 } else {
   const blocks = options.tasks.map((id) => ({ id, block: findTaskBlock(tasksVersions(git, mergeBase, existsSync(TASKS) ? readFileSync(TASKS, 'utf8') : null), id) }));
@@ -219,7 +239,8 @@ if (options.tasks.length === 0) {
 }
 
 // 6. changelog: CHANGELOG.md names each task under Unreleased (the changelog agent writes that line).
-if (options.tasks.length === 0) {
+if (skipAllBut('changelog')) record('changelog', { pass: null, reason: `skipped (--only ${options.only})` });
+else if (options.tasks.length === 0) {
   record('changelog', { pass: null, reason: 'skipped (no --task)' });
 } else {
   const path = join(ROOT, 'CHANGELOG.md');

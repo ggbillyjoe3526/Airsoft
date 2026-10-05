@@ -1,5 +1,6 @@
 import { type Vec3, vec3 } from '../sim/vec';
-import type { CaseSpot, ExitZone, ExtractionData, SpawnPoint } from './mapTypes';
+import { FACING, placeRun, type RunPlan, SPOT_KINDS } from './extractionBlock';
+import type { ExtractionData, SpawnPoint } from './mapTypes';
 
 /**
  * Neon Heights' Extraction data (M48), in the map's plan coordinates (x east, z north, y the floor: street 0, Level 1
@@ -33,15 +34,15 @@ const STREET = 0;
 const LEVEL_1 = 3;
 const LEVEL_2 = 6;
 
-const EXITS: readonly { name: string; x: number; z: number; late?: boolean }[] = [
-  { name: 'Noodle Alley gate', x: -15, z: 12.5 },
-  { name: 'Back Alley gate', x: 10.6, z: 13.4 },
-  { name: 'Plaza gate', x: -18.4, z: -10.8, late: true },
-  { name: 'Drone Dock gate', x: 13.6, z: -13.2, late: true },
+const EXITS: RunPlan['exits'] = [
+  { name: 'Noodle Alley gate', at: [-15, STREET, 12.5] },
+  { name: 'Back Alley gate', at: [10.6, STREET, 13.4] },
+  { name: 'Plaza gate', at: [-18.4, STREET, -10.8], late: true },
+  { name: 'Drone Dock gate', at: [13.6, STREET, -13.2], late: true },
 ];
 
 /** The home team's starting points: in each building on each floor, and on the lanes, the farthest from the insertion first. */
-const OPPONENT_STARTS: readonly (readonly [number, number, number])[] = [
+const OPPONENT_STARTS: RunPlan['opponentStarts'] = [
   [9.5, STREET, -1.4],
   [10, LEVEL_1, -5],
   [10, LEVEL_2, -5],
@@ -61,14 +62,9 @@ const OPPONENT_STARTS: readonly (readonly [number, number, number])[] = [
  * street and the Capsules balcony. Sixteen spots for a run's ten cases at most. Yaw is the case's front, as a spawn's
  * facing: its back to the wall beside it.
  */
-const LOCKER = ['locker', 'field-case'];
-const ROOM = ['field-case', 'ammo-can'];
-const LANE = ['ammo-can'];
-const NORTH = Math.PI;
-const SOUTH = 0;
-const EAST = -Math.PI / 2;
-const WEST = Math.PI / 2;
-const CASE_SPOTS: readonly (readonly [number, number, number, number, readonly string[]])[] = [
+const { locker: LOCKER, room: ROOM, lane: LANE } = SPOT_KINDS;
+const { north: NORTH, south: SOUTH, east: EAST, west: WEST } = FACING;
+const CASE_SPOTS: RunPlan['cases'] = [
   [-7.6, LEVEL_2, -14.4, NORTH, LOCKER], // the Studio, against the south wall
   [16.1, LEVEL_2, -9.1, WEST, LOCKER], // the Tower's Level 2, in its south-east corner
   [-13.8, LEVEL_1, -1, EAST, ROOM], // the Capsules, in the south-west corner
@@ -91,7 +87,7 @@ const CASE_SPOTS: readonly (readonly [number, number, number, number, readonly s
  * The home team's regen points: rooms on every floor of both buildings, the alleys behind them and the yards behind
  * their spawn walls. A returner takes one at least REGEN_DISTANCE from the squad and out of its sight.
  */
-const REGENS: readonly (readonly [number, number, number, number])[] = [
+const REGENS: RunPlan['regens'] = [
   [-6, LEVEL_2, -12.6, NORTH],
   [-6, LEVEL_1, -11.8, NORTH],
   [-6.4, STREET, -12.6, NORTH],
@@ -108,18 +104,21 @@ const REGENS: readonly (readonly [number, number, number, number])[] = [
 ];
 
 export function neonHeightsExtraction(at: NeonHeightsPlacer): ExtractionData {
-  const spawn = (x: number, y: number, z: number, yaw: number): SpawnPoint => at.spawnToWorld({ position: vec3(x, y, z), yaw });
-  return {
-    runTime: RUN_TIME,
-    baseOpponents: BASE_OPPONENTS,
-    insertions: [
-      { name: 'West Yard', spawns: [...at.yards[0]!], end: 0 },
-      { name: 'East Yard', spawns: [...at.yards[1]!], end: 1 },
-    ],
-    exits: EXITS.map((e): ExitZone => ({ name: e.name, position: at.toWorld(vec3(e.x, STREET, e.z)), radius: EXIT_RADIUS, ...(e.late ? { late: true } : {}) })),
-    opponentStarts: OPPONENT_STARTS.map(([x, y, z]) => spawn(x, y, z, 0)),
-    cases: CASE_SPOTS.map(([x, y, z, yaw, kinds]): CaseSpot => ({ ...spawn(x, y, z, yaw), kinds: [...kinds] })),
-    regens: REGENS.map(([x, y, z, yaw]) => spawn(x, y, z, yaw)),
-    regenDistance: REGEN_DISTANCE,
-  };
+  return placeRun(
+    {
+      runTime: RUN_TIME,
+      baseOpponents: BASE_OPPONENTS,
+      regenDistance: REGEN_DISTANCE,
+      exitRadius: EXIT_RADIUS,
+      insertions: [
+        { name: 'West Yard', spawns: at.yards[0]!, end: 0 },
+        { name: 'East Yard', spawns: at.yards[1]!, end: 1 },
+      ],
+      exits: EXITS,
+      opponentStarts: OPPONENT_STARTS,
+      cases: CASE_SPOTS,
+      regens: REGENS,
+    },
+    { point: ([x, y, z]) => at.toWorld(vec3(x, y, z)), spawn: ([x, y, z], yaw) => at.spawnToWorld({ position: vec3(x, y, z), yaw }) },
+  );
 }
