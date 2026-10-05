@@ -1,20 +1,24 @@
-// Side-by-side comparisons: node concept/graphics-overhaul/compose.mjs <shotsDir> <outDir> <todayScreenshot>
+// Side-by-side comparisons: node concept/graphics-overhaul/compose.mjs <shotsDir> <outDir> [todayScreenshot|-] [v1ShotsDir]
 import { chromium } from '@playwright/test';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
-const [dir, out, today] = process.argv.slice(2);
+const [dir, out, today, v1] = process.argv.slice(2);
 const url = (f) => `data:image/png;base64,${readFileSync(f).toString('base64')}`;
 const pairs = [
   ['compare-ingame', [`${dir}/low-ingame.png`, 'LOW', 'modern laptop, built-in graphics, 1080p, 60 fps target'], [`${dir}/ultra-ingame.png`, 'ULTRA', 'RTX 5090 class, 4K, up to 240 fps']],
   ['compare-map', [`${dir}/low-map.png`, 'LOW', 'the Depot re-dressed'], [`${dir}/ultra-map.png`, 'ULTRA', 'the Depot re-dressed']],
   ['compare-characters', [`${dir}/low-characters.png`, 'LOW', 'cut-down figures'], [`${dir}/ultra-characters.png`, 'ULTRA', 'full-detail figures']],
   ['compare-replicas', [`${dir}/low-replicas.png`, 'LOW', 'cut-down replicas'], [`${dir}/ultra-replicas.png`, 'ULTRA', 'full-detail replicas']],
+  ['compare-arms', [`${dir}/low-arms.png`, 'LOW', 'first-person arms, cut-down'], [`${dir}/ultra-arms.png`, 'ULTRA', 'first-person arms, full detail']],
+  ['compare-ingame-robots', [`${dir}/ultra-ingame.png`, 'HUMANS', 'Ultra, the default'], [`${dir}/ultra-ingame-robots.png`, 'ROBOTS', 'Ultra, the alternative']],
   ['compare-today-vs-ultra', [today, 'TODAY', 'the current game (screenshot from 4 October)'], [`${dir}/ultra-ingame.png`, 'ULTRA', 'after the overhaul (concept)']],
   ['compare-today-vs-low', [today, 'TODAY', 'the current game (screenshot from 4 October)'], [`${dir}/low-ingame.png`, 'LOW', 'after the overhaul (concept)']],
 ];
+if (v1) for (const s of ['ingame', 'map', 'characters', 'replicas']) pairs.push([`compare-v1-vs-v2-${s}`, [`${v1}/ultra-${s}.png`, 'V1', 'first concept, Ultra'], [`${dir}/ultra-${s}.png`, 'V2', 'after your feedback, Ultra']]);
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 const page = await browser.newPage();
 for (const [name, a, b] of pairs) {
+  if (!existsSync(a[0] ?? '') || !existsSync(b[0] ?? '')) continue;
   const data = await page.evaluate(async ([a, b]) => {
     const load = (src) => new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = src; });
     const [ia, ib] = await Promise.all([load(a[0]), load(b[0])]);

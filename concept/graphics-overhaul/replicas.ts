@@ -28,7 +28,22 @@ export interface Replica {
   support: THREE.Vector3;
   butt: THREE.Vector3;
   sight: THREE.Vector3;
+  /** The firing hand's grip as an axis (top to bottom of the grip, replica space) with its half width and half depth. */
+  hand: GripWrap;
+  /** The support hand's grip (a vertical foregrip), when fitted. */
+  supportGrip?: GripWrap;
+  /** Where the trigger finger rests. */
+  trigger: THREE.Vector3;
 }
+
+export interface GripWrap {
+  top: THREE.Vector3;
+  bottom: THREE.Vector3;
+  hx: number;
+  hd: number;
+}
+
+const wrap = (top: [number, number, number], bottom: [number, number, number], hx: number, hd: number): GripWrap => ({ top: new THREE.Vector3(...top), bottom: new THREE.Vector3(...bottom), hx, hd });
 
 const BLACK = 0x3a3e46;
 const GUNMETAL = 0x484d56;
@@ -54,6 +69,34 @@ function profile(k: Kit, key: string, pts: P2[], w: number, tint: number, x = 0,
   const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0));
   m.setPosition(x - w / 2 + bt, 0, 0);
   k.add(key, geo, m, tint, {});
+}
+
+/** Front-view shape (x, up u) extruded along the bore from f0 to f1: hoods, rings, anything you look through. */
+function frontProfile(k: Kit, key: string, pts: P2[], f0: number, f1: number, tint: number, holes: P2[][] = []): void {
+  const shape = new THREE.Shape(pts.map(([x, u]) => new THREE.Vector2(x, u)));
+  for (const h of holes) shape.holes.push(new THREE.Path(h.map(([x, u]) => new THREE.Vector2(x, u))));
+  const bevel = k.p.bevelSegments > 0;
+  const bt = bevel ? 0.0015 : 0;
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: Math.max(0.001, f1 - f0 - 2 * bt),
+    bevelEnabled: bevel,
+    bevelThickness: bt,
+    bevelSize: bt * 0.8,
+    bevelSegments: Math.max(1, k.p.bevelSegments - 1),
+    curveSegments: k.p.smallParts ? 12 : 4,
+  });
+  k.add(key, geo, new THREE.Matrix4().makeTranslation(0, 0, -f1 + bt), tint, {});
+}
+
+/** A rounded-rectangle outline (x, u) centred at (0, cu), for front profiles. */
+function rrect(w: number, h: number, r: number, cu: number, n = 4): P2[] {
+  const out: P2[] = [];
+  const corners: [number, number, number][] = [[w / 2 - r, h / 2 - r, 0], [-w / 2 + r, h / 2 - r, Math.PI / 2], [-w / 2 + r, -h / 2 + r, Math.PI], [w / 2 - r, -h / 2 + r, Math.PI * 1.5]];
+  for (const [cx, cy, a0] of corners) for (let i = 0; i <= n; i++) {
+    const a = a0 + (i / n) * (Math.PI / 2);
+    out.push([cx + Math.cos(a) * r, cu + cy + Math.sin(a) * r]);
+  }
+  return out;
 }
 
 /** A box from forward f0..f1, up u0..u1, x half-width hw (centred at x). */
@@ -83,16 +126,34 @@ function orangeTip(k: Kit, f: number, u: number, r: number, len = 0.012): void {
 }
 
 function redDot(k: Kit, f0: number, u: number): THREE.Vector3 {
-  // Low mount, an angular hood (Marathon-ish), the emitter and a lens.
-  slab(k, 'gunMetal', f0, f0 + 0.05, u, u + 0.012, 0.014, BLACK);
-  profile(k, 'gunMetal', [[f0 - 0.005, u + 0.012], [f0 + 0.06, u + 0.012], [f0 + 0.06, u + 0.05], [f0 + 0.045, u + 0.06], [f0 + 0.005, u + 0.06], [f0 - 0.005, u + 0.048]], 0.034, BLACK, 0, [[[f0 + 0.002, u + 0.018], [f0 + 0.053, u + 0.018], [f0 + 0.053, u + 0.053], [f0 + 0.002, u + 0.053]]]);
-  k.box('lens', 0, u + 0.035, -(f0 + 0.05), 0.026, 0.032, 0.002, 0x8fe6c8, { radius: 0 });
-  if (k.p.emissive) k.box('figGlow', 0, u + 0.035, -(f0 + 0.049), 0.0022, 0.0022, 0.001, new THREE.Color(0xff2a2a).multiplyScalar(30), { radius: 0 });
+  // An enclosed reflex sight: a squared hood you look THROUGH along the bore, a tinted lens across the window, the
+  // dot on the lens, brightness buttons and a battery cap on the side, a low mount on the rail.
+  const axis = u + 0.034;
+  const len = 0.052;
+  slab(k, 'gunMetal', f0 - 0.002, f0 + len + 0.002, u, u + 0.01, 0.015, BLACK, 0, 0.002);
+  if (k.p.smallParts) for (const f of [f0 + 0.008, f0 + len - 0.012]) slab(k, 'gunMetal', f, f + 0.006, u - 0.004, u + 0.004, 0.017, GUNMETAL, 0, 0.001);
+  const outer = rrect(0.04, 0.046, 0.009, axis + 0.002, k.p.smallParts ? 5 : 2);
+  const window = rrect(0.03, 0.032, 0.006, axis + 0.002, k.p.smallParts ? 5 : 2).reverse();
+  frontProfile(k, 'gunMetal', outer, f0, f0 + len, BLACK, [window]);
+  // The lens sits two-thirds of the way forward, tilted a touch like a real reflex window.
+  const lens = new THREE.PlaneGeometry(0.031, 0.033);
+  const lm = new THREE.Matrix4().makeRotationX(-0.12);
+  lm.setPosition(0, axis + 0.002, -(f0 + len * 0.66));
+  k.add('lens', lens, lm, 0x7fd8c0, {});
+  const back = lens.clone().rotateY(Math.PI);
+  k.add('lens', back, lm, 0x7fd8c0, {});
+  if (k.p.emissive) k.add('figGlow', new THREE.SphereGeometry(0.0012, 8, 6), new THREE.Matrix4().makeTranslation(0, axis + 0.002, -(f0 + len * 0.66) + 0.0006), new THREE.Color(0xff2a2a).multiplyScalar(40), {});
+  // A sunshade lip over the front, the buttons and the battery cap.
+  slab(k, 'gunMetal', f0 + len - 0.004, f0 + len + 0.006, axis + 0.021, axis + 0.025, 0.017, BLACK, 0, 0.001);
   if (k.p.smallParts) {
-    slab(k, 'gunPolymer', f0 + 0.02, f0 + 0.035, u + 0.06, u + 0.066, 0.008, 0x55595f);
-    tube(k, 'gunMetal', f0 + 0.02, f0 + 0.032, u + 0.035, 0.007, BLACK, 12, 0.019);
+    for (const f of [f0 + 0.012, f0 + 0.024]) slab(k, 'gunRubber', f, f + 0.008, u + 0.008, u + 0.014, 0.003, 0x2a2d32, 0.021, 0.001);
+    tube(k, 'gunMetal', f0 + 0.03, f0 + 0.031, axis - 0.004, 0.0001, BLACK, 4);
+    const cap = new THREE.CylinderGeometry(0.0075, 0.0075, 0.006, 16).rotateZ(Math.PI / 2);
+    k.add('gunMetal', cap, new THREE.Matrix4().makeTranslation(0.022, axis - 0.004, -(f0 + 0.034)), GUNMETAL, {});
+    const turret = new THREE.CylinderGeometry(0.006, 0.006, 0.005, 16);
+    k.add('gunMetal', turret, new THREE.Matrix4().makeTranslation(0, axis + 0.0275, -(f0 + 0.022)), GUNMETAL, {});
   }
-  return new THREE.Vector3(0, u + 0.035, -f0);
+  return new THREE.Vector3(0, axis + 0.002, -f0);
 }
 
 function scope2x(k: Kit, f0: number, u: number): THREE.Vector3 {
@@ -101,7 +162,10 @@ function scope2x(k: Kit, f0: number, u: number): THREE.Vector3 {
   tube(k, 'gunMetal', f0 - 0.01, f0 + 0.12, axis, 0.0145, BLACK);
   tube(k, 'gunMetal', f0 + 0.1, f0 + 0.14, axis, 0.021, BLACK);
   tube(k, 'gunMetal', f0 - 0.04, f0 - 0.005, axis, 0.019, BLACK);
-  k.box('lens', 0, axis, -(f0 + 0.141), 0.034, 0.034, 0.002, 0x6fb4e8, { radius: 0.016 });
+  // Round lenses at both ends, facing along the bore.
+  tube(k, 'lens', f0 + 0.137, f0 + 0.1395, axis, 0.018, 0x6fb4e8, k.p.smallParts ? 32 : 12);
+  tube(k, 'lens', f0 - 0.0415, f0 - 0.039, axis, 0.0155, 0x6fb4e8, k.p.smallParts ? 32 : 12);
+  tube(k, 'gunRubber', f0 - 0.05, f0 - 0.04, axis, 0.0205, 0x1c1e22, k.p.smallParts ? 32 : 12);
   if (k.p.smallParts) {
     tube(k, 'gunPolymer', f0 + 0.05, f0 + 0.066, axis, 0.0152, 0x8a6a40, 24);
     const t = new THREE.CylinderGeometry(0.008, 0.008, 0.014, 16);
@@ -210,7 +274,16 @@ function buildAeg(k: Kit, o: ReplicaOpts): Replica {
     profile(k, 'gunFurniture', [[0.24, -0.002], [0.34, -0.002], [0.33, -0.022], [0.255, -0.05]], 0.03, fur);
   }
   if (o.torch) torch(k, 0.32, 0.034, 0.042);
-  return { group: new THREE.Group(), grip: new THREE.Vector3(0, -0.05, 0.045), support: new THREE.Vector3(0, -0.02, o.grip === 'vertical' ? -0.32 : -0.3), butt: new THREE.Vector3(0, 0.0, 0.36), sight };
+  return {
+    group: new THREE.Group(),
+    grip: new THREE.Vector3(0, -0.05, 0.045),
+    support: new THREE.Vector3(0, -0.02, o.grip === 'vertical' ? -0.32 : -0.3),
+    butt: new THREE.Vector3(0, 0.0, 0.36),
+    sight,
+    hand: wrap([0, -0.066, 0.048], [0, -0.136, 0.077], 0.017, 0.022),
+    supportGrip: o.grip === 'vertical' ? wrap([0, -0.026, -0.317], [0, -0.096, -0.315], 0.015, 0.016) : undefined,
+    trigger: new THREE.Vector3(0, -0.052, -0.001),
+  };
 }
 
 function buildPistol(k: Kit, o: ReplicaOpts): Replica {
@@ -235,12 +308,18 @@ function buildPistol(k: Kit, o: ReplicaOpts): Replica {
   slab(k, 'gunPolymer', 0.025, 0.1, -0.024, -0.012, 0.012, fur);
   profile(k, 'gunPolymer', [[-0.004, -0.012], [0.052, -0.012], [0.052, -0.045], [-0.008, -0.045]], 0.012, fur, 0, [[[0.002, -0.018], [0.046, -0.018], [0.046, -0.039], [-0.002, -0.039]]]);
   slab(k, 'gunMetal', 0.006, 0.012, -0.034, -0.012, 0.003, GUNMETAL);
-  profile(k, 'gunPolymer', [[0.0, -0.012], [-0.075, -0.012], [-0.09, 0.0], [-0.098, -0.004], [-0.085, -0.03], [-0.082, -0.125], [-0.03, -0.13], [-0.012, -0.05]], 0.031, fur);
-  if (small) for (let i = 0; i < 5; i++) slab(k, 'gunRubber', -0.078 + i * 0.002, -0.022 + i * 0.001, -0.06 - i * 0.012, -0.055 - i * 0.012, 0.0158, new THREE.Color(fur).multiplyScalar(0.78) as unknown as number, 0, 0.001);
-  // Magazine base (extended: a longer base pad).
+  // Grip: a solid, rectangular block at a steady 17° rake, straight front and back straps, the same width all the
+  // way down, a short beavertail on top. Stippled panels on both sides.
+  profile(k, 'gunPolymer', [[-0.012, -0.012], [-0.076, -0.012], [-0.092, -0.003], [-0.097, -0.009], [-0.08, -0.024], [-0.108, -0.126], [-0.104, -0.13], [-0.055, -0.13], [-0.052, -0.127], [-0.021, -0.02]], 0.032, fur);
+  if (small) {
+    const stip = new THREE.Color(fur).multiplyScalar(0.8) as unknown as number;
+    profile(k, 'gunRubber', [[-0.03, -0.04], [-0.076, -0.04], [-0.1, -0.118], [-0.056, -0.118]], 0.0336, stip);
+    slab(k, 'gunPolymer', -0.024, -0.02, -0.03, -0.024, 0.0165, fur, 0, 0.001); // a small thumb ledge
+  }
+  // Magazine base (extended: a longer base pad), squared to the grip.
   const ext = o.mag === 'extended' ? 0.03 : 0;
-  slab(k, 'gunPolymer', -0.085, -0.025, -0.14 - ext, -0.13, 0.017, BLACK, 0, 0.003);
-  if (ext) slab(k, 'gunPolymer', -0.082, -0.03, -0.13, -0.13 + 0.002, 0.0172, acc, 0, 0.0005);
+  profile(k, 'gunPolymer', [[-0.05, -0.128], [-0.11, -0.128], [-0.112, -0.14 - ext], [-0.052, -0.14 - ext]], 0.034, BLACK);
+  if (ext) slab(k, 'gunPolymer', -0.105, -0.055, -0.131, -0.129, 0.0172, acc, 0, 0.0005);
   // Barrel and orange tip.
   tube(k, 'gunMetal', 0.08, 0.107, 0.016, 0.0065, GUNMETAL, 16);
   if (o.muzzle === 'silencer') silencer(k, 0.107, 0.016, 0.0135, 0.1, acc);
@@ -251,7 +330,7 @@ function buildPistol(k: Kit, o: ReplicaOpts): Replica {
     tube(k, 'lens', 0.097, 0.0982, -0.037, 0.005, 0x802020, 16);
   }
   if (o.torch) torch(k, 0.035, -0.04, 0, 0.055);
-  return { group: new THREE.Group(), grip: new THREE.Vector3(0, -0.04, 0.045), support: new THREE.Vector3(0, -0.07, 0.04), butt: new THREE.Vector3(0, 0, 0.1), sight: new THREE.Vector3(0, 0.046, 0.06) };
+  return { group: new THREE.Group(), grip: new THREE.Vector3(0, -0.04, 0.045), support: new THREE.Vector3(0, -0.07, 0.04), butt: new THREE.Vector3(0, 0, 0.1), sight: new THREE.Vector3(0, 0.046, 0.06), hand: wrap([0, -0.04, 0.056], [0, -0.122, 0.0795], 0.016, 0.027), trigger: new THREE.Vector3(0, -0.026, -0.009) };
 }
 
 function buildCyber(k: Kit, o: ReplicaOpts): Replica {
@@ -262,7 +341,8 @@ function buildCyber(k: Kit, o: ReplicaOpts): Replica {
   const magenta = new THREE.Color(0xff3aa8).multiplyScalar(3);
   profile(k, 'gunPolymer', [[-0.09, -0.004], [0.11, -0.004], [0.12, 0.012], [0.11, 0.04], [-0.06, 0.044], [-0.09, 0.032]], 0.034, white);
   profile(k, 'gunPolymer', [[-0.004, -0.004], [0.06, -0.004], [0.06, -0.048], [-0.01, -0.048]], 0.012, 0x23262c, 0, [[[0.004, -0.012], [0.052, -0.012], [0.052, -0.04], [0.0, -0.04]]]);
-  profile(k, 'gunPolymer', [[0.0, -0.004], [-0.08, -0.004], [-0.1, -0.13], [-0.04, -0.138], [-0.016, -0.05]], 0.032, 0x23262c);
+  profile(k, 'gunPolymer', [[-0.004, -0.004], [-0.08, -0.004], [-0.094, -0.012], [-0.08, -0.024], [-0.108, -0.13], [-0.054, -0.13], [-0.02, -0.014]], 0.032, 0x23262c);
+  slab(k, 'gunPolymer', -0.112, -0.05, -0.142, -0.13, 0.0175, white, 0, 0.003);
   slab(k, 'gunPolymer', 0.06, 0.112, -0.03, -0.004, 0.014, white);
   // Light lines along both sides and a glowing core window.
   for (const s of [-1, 1]) {
@@ -270,14 +350,14 @@ function buildCyber(k: Kit, o: ReplicaOpts): Replica {
     if (small) slab(k, 'figGlow', -0.05, 0.02, 0.031, 0.033, 0.0007, cyan as unknown as number, s * 0.0172, 0);
     slab(k, 'figGlow', 0.0, 0.05, 0.004, 0.014, 0.0007, magenta as unknown as number, s * 0.0172, 0);
   }
-  slab(k, 'figGlow', -0.088, -0.086, -0.11, -0.03, 0.006, cyan as unknown as number, 0, 0);
+  profile(k, 'figGlow', [[-0.083, -0.03], [-0.087, -0.03], [-0.106, -0.112], [-0.102, -0.112]], 0.012, cyan as unknown as number);
   // Top fin sight and a muzzle with a cyan ring.
   profile(k, 'gunPolymer', [[-0.05, 0.044], [-0.02, 0.044], [-0.03, 0.056], [-0.046, 0.056]], 0.008, 0x23262c);
   tube(k, 'gunMetal', 0.112, 0.124, 0.02, 0.008, 0x23262c, 6);
   tube(k, 'figGlow', 0.124, 0.1245, 0.02, 0.0085, cyan as unknown as number, 6);
-  if (small) for (let i = 0; i < 4; i++) slab(k, 'gunPolymer', -0.093 + i * 0.002, -0.03, -0.06 - i * 0.016, -0.054 - i * 0.016, 0.0165, 0x3a3e46, 0, 0.001);
+  if (small) profile(k, 'gunRubber', [[-0.03, -0.04], [-0.076, -0.04], [-0.1, -0.118], [-0.056, -0.118]], 0.0336, 0x3a3e46);
   if (o.torch) torch(k, 0.04, -0.04, 0, 0.05);
-  return { group: new THREE.Group(), grip: new THREE.Vector3(0, -0.04, 0.045), support: new THREE.Vector3(0, -0.07, 0.04), butt: new THREE.Vector3(0, 0, 0.1), sight: new THREE.Vector3(0, 0.056, 0.04) };
+  return { group: new THREE.Group(), grip: new THREE.Vector3(0, -0.04, 0.045), support: new THREE.Vector3(0, -0.07, 0.04), butt: new THREE.Vector3(0, 0, 0.1), sight: new THREE.Vector3(0, 0.056, 0.04), hand: wrap([0, -0.04, 0.056], [0, -0.122, 0.0795], 0.016, 0.027), trigger: new THREE.Vector3(0, -0.026, -0.009) };
 }
 
 export function buildReplica(k: Kit, id: ReplicaId, o: ReplicaOpts = {}): Replica {

@@ -14,6 +14,7 @@ const shot = q.get('shot') ?? 'ingame';
 const W = Number(q.get('w') ?? innerWidth);
 const H = Number(q.get('h') ?? innerHeight);
 const hud = q.get('hud') !== '0';
+const robots = q.get('robots') === '1' || shot === 'robots' || shot === 'arms-robot';
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
@@ -103,6 +104,9 @@ function place(o: THREE.Object3D, x: number, z: number, yaw: number, y = 0): THR
 }
 
 let post: Parameters<typeof makeComposer>[6] = {};
+/** The hip-fire hold the in-game shots use, and the inspect hold (the replica turned to show its right side). */
+const HIP = { at: new THREE.Vector3(0.19, -0.235, -0.44), turn: new THREE.Euler(0.02, 0.09, -0.03, 'YXZ'), shoulders: [new THREE.Vector3(-0.16, -0.33, -0.03), new THREE.Vector3(0.25, -0.31, 0.1)] as [THREE.Vector3, THREE.Vector3] };
+const INSPECT = { at: new THREE.Vector3(0.03, -0.2, -0.5), turn: new THREE.Euler(0.08, -0.7, 0.1, 'YXZ'), shoulders: [new THREE.Vector3(-0.15, -0.3, -0.12), new THREE.Vector3(0.22, -0.31, 0.02)] as [THREE.Vector3, THREE.Vector3] };
 
 if (shot === 'ingame') {
   yard();
@@ -110,14 +114,26 @@ if (shot === 'ingame') {
   camera.position.set(-10.6, 1.62, 1.1);
   camera.lookAt(4, 1.3, 1.6);
   // Enemies: one stepping out past the centre container, one who called HIT by the Bay, a team-mate ahead on the right.
-  place(buildFigure(kit, { team: 'orange', pose: 'aim', headgear: 'helmet', face: 'mask' }).group, -1.7, 3.1, Math.PI / 2 - 0.25);
-  place(buildFigure(kit, { team: 'orange', pose: 'hit', headgear: 'cap', face: 'bare', skin: 0xb7835a }).group, 3.0, 5.3, Math.PI / 2 + 0.45);
-  place(buildFigure(kit, { team: 'blue', pose: 'run', headgear: 'bump', face: 'mask', skin: 0x8d5a3b }).group, -6.4, -0.9, -Math.PI / 2 - 0.2);
-  const vm = buildViewmodel(kit, 'blue', 'aeg', { optic: 'redDot', grip: 'vertical', torch: true, accent: 0x3a7fe6 });
-  vm.scale.setScalar(0.9);
+  place(buildFigure(kit, { team: 'orange', pose: 'aim', headgear: 'helmet', face: 'mask', robot: robots }).group, -1.7, 3.1, Math.PI / 2 - 0.25);
+  place(buildFigure(kit, { team: 'orange', pose: 'hit', headgear: 'cap', face: 'bare', skin: 0xb7835a, robot: robots }).group, 3.0, 5.3, Math.PI / 2 + 0.45);
+  place(buildFigure(kit, { team: 'blue', pose: 'run', headgear: 'bump', face: 'mask', skin: 0x8d5a3b, robot: robots }).group, -6.4, -0.9, -Math.PI / 2 - 0.2);
+  const vm = buildViewmodel(kit, 'blue', 'aeg', { optic: 'redDot', grip: 'vertical', torch: true, accent: 0x3a7fe6 }, { robot: robots, ...HIP });
   camera.add(vm);
   scene.add(camera);
   post = { sky, sunWorld, reflective, bloom: 0.4, godRays: 0.0 };
+} else if (shot === 'arms' || shot === 'arms-inspect' || shot === 'arms-robot' || shot === 'pistol') {
+  // First-person close-ups: what the player sees most of the time.
+  yard();
+  camera.fov = shot === 'arms' ? 72 : 62;
+  camera.position.set(-10.6, 1.62, 1.1);
+  camera.lookAt(4, 1.2, 0.6);
+  const vm =
+    shot === 'pistol'
+      ? buildViewmodel(kit, 'blue', 'pistol', { accent: 0x3a7fe6 }, { at: new THREE.Vector3(0.1, -0.1, -0.52), turn: new THREE.Euler(0.02, 0.42, -0.06, 'YXZ'), shoulders: [new THREE.Vector3(-0.13, -0.36, -0.03), new THREE.Vector3(0.21, -0.36, 0.03)] })
+      : buildViewmodel(kit, 'blue', 'aeg', { optic: 'redDot', grip: 'vertical', torch: true, accent: 0x3a7fe6 }, { robot: robots, ...(shot === 'arms' ? HIP : INSPECT) });
+  camera.add(vm);
+  scene.add(camera);
+  post = { sky, sunWorld, reflective, bloom: 0.35, godRays: 0.0 };
 } else if (shot === 'map') {
   yard();
   camera.near = 0.2;
@@ -142,21 +158,45 @@ if (shot === 'ingame') {
     m.position.set(x, 3, z);
     scene.add(m);
   }
-} else if (shot === 'characters') {
+} else if (shot === 'characters' || shot === 'robots') {
   studio(0xc5d0dc, 0xe4e7ea);
   camera.fov = 30;
   camera.position.set(0, 1.45, 7.6);
   camera.lookAt(0, 1.02, 0);
-  const figs: [Parameters<typeof buildFigure>[1], number, number, string, string][] = [
-    [{ team: 'blue', pose: 'aim', headgear: 'helmet', face: 'mask' }, -2.25, -0.55, 'Blue · rifle', 'helmet, mask, plate carrier'],
-    [{ team: 'blue', pose: 'ready', headgear: 'cap', face: 'bare', skin: 0x8d5a3b, pack: false }, -0.75, 0.35, 'Blue · low ready', 'cap, goggles, no pack'],
-    [{ team: 'orange', pose: 'pistol', headgear: 'bump', face: 'mask', skin: 0xe2b590, weapon: 'cyber' }, 0.75, -0.2, 'Orange · Cyber Pistol', 'bump helmet, mask'],
-    [{ team: 'orange', pose: 'hit', headgear: 'helmet', face: 'bare', skin: 0xb7835a }, 2.25, 0.25, 'Orange · called HIT', 'hand up, replica down'],
-  ];
+  const r = shot === 'robots';
+  const figs: [Parameters<typeof buildFigure>[1], number, number, string, string][] = r
+    ? [
+        [{ team: 'blue', pose: 'aim', robot: true }, -2.25, -0.55, 'Blue · rifle', 'light shell, team panels, chest rig'],
+        [{ team: 'blue', pose: 'ready', robot: true, pack: false }, -0.75, 0.35, 'Blue · low ready', 'no pack'],
+        [{ team: 'orange', pose: 'pistol', robot: true, weapon: 'cyber' }, 0.75, -0.2, 'Orange · Cyber Pistol', 'dark shell, team panels'],
+        [{ team: 'orange', pose: 'hit', robot: true }, 2.25, 0.25, 'Orange · called HIT', 'visor turns red'],
+      ]
+    : [
+        [{ team: 'blue', pose: 'aim', headgear: 'helmet', face: 'mask' }, -2.25, -0.55, 'Blue · rifle', 'high-cut helmet, mesh mask, plate carrier'],
+        [{ team: 'blue', pose: 'ready', headgear: 'cap', face: 'bare', skin: 0x8d5a3b, pack: false }, -0.75, 0.35, 'Blue · low ready', 'cap, goggles, no pack'],
+        [{ team: 'orange', pose: 'pistol', headgear: 'bump', face: 'mask', skin: 0xe2b590, weapon: 'cyber' }, 0.75, -0.2, 'Orange · Cyber Pistol', 'bump helmet, mesh mask'],
+        [{ team: 'orange', pose: 'hit', headgear: 'helmet', face: 'bare', skin: 0xb7835a }, 2.25, 0.25, 'Orange · called HIT', 'hand up, replica down'],
+      ];
   for (const [o, x, yaw] of figs) place(buildFigure(kit, o).group, x, 0, yaw + Math.PI);
   camera.updateMatrixWorld();
   for (const [, x, , t, s] of figs) label(new THREE.Vector3(x, -0.06, 0.4), t, s);
   post = { bloom: 0.5, aoRadius: 0.35, dof: undefined };
+} else if (shot === 'heads') {
+  // Close-up of the heads: helmet, cap, bump helmet, robot.
+  studio(0xc5d0dc, 0xe4e7ea);
+  camera.fov = 17;
+  camera.position.set(0, 1.62, 3.1);
+  camera.lookAt(0, 1.58, 0);
+  const figs: [Parameters<typeof buildFigure>[1], number, string, string][] = [
+    [{ team: 'blue', pose: 'ready', headgear: 'helmet', face: 'mask' }, -0.63, 'High-cut helmet', 'rails, shroud, headset, mesh mask'],
+    [{ team: 'blue', pose: 'ready', headgear: 'cap', face: 'bare', skin: 0x8d5a3b }, -0.21, 'Cap', 'framed goggles, mirrored lens'],
+    [{ team: 'orange', pose: 'ready', headgear: 'bump', face: 'mask', skin: 0xe2b590 }, 0.21, 'Bump helmet', 'vents, mesh mask'],
+    [{ team: 'orange', pose: 'ready', robot: true }, 0.63, 'Robot', 'visor, ear modules, antenna'],
+  ];
+  for (const [o, x] of figs) place(buildFigure(kit, o).group, x, 0, Math.PI + 0.5 * Math.sign(x));
+  camera.updateMatrixWorld();
+  for (const [, x, t, s] of figs) label(new THREE.Vector3(x, 1.9, 0.2), t, s);
+  post = { bloom: 0.4, aoRadius: 0.1, dof: undefined };
 } else if (shot === 'replicas') {
   studio(0xa7b0bb, 0x7d8692, true);
   camera.fov = 24;
