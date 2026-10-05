@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EXTRACTION } from '../config/extraction';
 import { createRunState, type RunExit, type RunState } from '../sim/extraction';
 import { vec3 } from '../sim/vec';
-import { respawnNote, runLine } from './runStatus';
+import { respawnNote, runLine, runNews } from './runStatus';
 
 const RULES = EXTRACTION;
 
@@ -78,5 +78,28 @@ describe('the respawn note', () => {
     expect(respawnNote(EXTRACTION.respawns)).toBe('Respawn ready');
     expect(respawnNote(1)).toBe('Respawn ready');
     expect(respawnNote(0)).toBe('No respawn left');
+  });
+});
+
+describe("the run's news, as said and shown (M53, audit UI-02)", () => {
+  it('says nothing when nothing happened', () => {
+    expect(runNews([], false)).toBe('');
+  });
+
+  it('names one exit, two exits and three or more, each in one line', () => {
+    expect(runNews(['Plaza gate'], false)).toBe('Plaza gate is open');
+    expect(runNews(['Plaza gate', 'Drone Dock gate'], false)).toBe('Plaza gate and Drone Dock gate are open');
+    expect(runNews(['A', 'B', 'C'], false)).toBe('A, B and C are open');
+  });
+
+  it('says the minute left alone, and after the exits when both come in one tick', () => {
+    expect(runNews([], true)).toBe('Under a minute left');
+    expect(runNews(['Plaza gate'], true)).toBe('Plaza gate is open · Under a minute left');
+  });
+
+  it('words the minute the way the strip does, so one phrase is kept in step', () => {
+    const strip = runLine(run({ exits: [exit('East gate')] }), RULES.warnAt, RULES).text;
+    expect(strip.startsWith('Under a minute')).toBe(true);
+    expect(runNews([], true).startsWith('Under a minute')).toBe(true);
   });
 });

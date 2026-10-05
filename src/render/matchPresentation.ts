@@ -28,6 +28,7 @@ import { HeardPlayers } from '../ui/minimapView';
 import { OrderWheel, wheelHint } from '../ui/orderWheel';
 import { restartAnimation } from '../ui/restartAnimation';
 import { respawnBanner, roundBanner } from '../ui/roundBanner';
+import { runNews } from '../ui/runStatus';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
 import { type OrderNotice, SquadOrderLine } from '../ui/squadOrderLine';
@@ -100,7 +101,7 @@ export class MatchPresentation {
   /** World yaw the BB that hit you came from (see showHit), and when. */
   private hitFromYaw = 0;
   /** What the round message on screen was built from, so its text is only rebuilt when that changes. */
-  private readonly shownRound = { phase: '', winner: -2, seconds: -1, number: -1, start: false, mode: '', respawned: false };
+  private readonly shownRound = { phase: '', winner: -2, seconds: -1, number: -1, start: false, mode: '', respawned: false, newsAt: -1 };
   private outLabelFor = Number.NaN;
   private outLabelText = '';
   /** False while the start/pause screen or the result screen is up: the pole marker stays hidden then. */
@@ -113,6 +114,10 @@ export class MatchPresentation {
   /** The respawn's fade from black, and when you were last back in (the banner says so for a moment). */
   private readonly respawnFade: HTMLDivElement | null = null;
   private respawnedAt = Number.NEGATIVE_INFINITY;
+  /** The run's news (M53, audit UI-02: late exits opened, a minute left), when it came, and the exits named in a tick. */
+  private runNewsText = '';
+  private runNewsAt = Number.NEGATIVE_INFINITY;
+  private readonly exitsOpened: string[] = [];
   private readonly runInfo = { rules: EXTRACTION, respawnsLeft: 0 };
   /** Extraction (M44): the cases in the world, and the prompt under the crosshair for opening one. */
   private readonly cases: CaseRenderer | null = null;
@@ -273,6 +278,7 @@ export class MatchPresentation {
 
   /** Call after every simulation tick, while that tick's events are still in the state. */
   afterTick(cameraYaw: number): void {
+    let warned = false;
     for (const e of this.state.events) {
       if (e.type === 'characterHit') {
         this.characters.flinch(e.victimId, e.direction);
@@ -301,6 +307,11 @@ export class MatchPresentation {
         if (k) this.casePrompt?.opened(k, this.state.time);
       } else if (e.type === 'caseDropped' && e.characterId === this.player.id) {
         this.casePrompt?.dropped(this.state.time);
+      } else if (e.type === 'exitOpened') {
+        const exit = this.state.round.run.exits[e.exit];
+        if (exit) this.exitsOpened.push(exit.name);
+      } else if (e.type === 'runWarning') {
+        warned = true;
       } else if (e.type === 'roundStart') {
         this.roundStartedAt = this.state.time;
         this.whatGotYou.clear();
@@ -315,6 +326,13 @@ export class MatchPresentation {
         this.soundCues.add(this.heard, this.state.time);
         if (this.characterOf(this.heard.sourceId)?.team !== this.player.team) this.heardPlayers.add(this.heard, this.listener.x, this.listener.z, this.state.time);
       }
+    }
+    // The run's turns are said, and shown for a moment, not only written into the strip (M53, audit UI-02).
+    if (this.exitsOpened.length > 0 || warned) {
+      this.runNewsText = runNews(this.exitsOpened, warned);
+      this.runNewsAt = this.state.time;
+      this.exitsOpened.length = 0;
+      this.feedback.announce(this.runNewsText);
     }
   }
 
@@ -626,16 +644,19 @@ export class MatchPresentation {
     const showStart = r.phase === 'live' && this.state.time - this.roundStartedAt < HUD.roundStartMessageTime;
     // Extraction: for a moment after you're back from a hit, the banner says how many respawns you have left.
     const respawned = r.phase === 'live' && this.state.time - this.respawnedAt < HUD.respawnMessageTime;
+    // And for a moment after the run's news (M53, audit UI-02), unless it is saying you're back in.
+    const newsAt = r.phase === 'live' && this.state.time - this.runNewsAt < HUD.runNewsTime ? this.runNewsAt : -1;
     const seconds = Math.max(1, Math.ceil(r.timer));
     const shown = this.shownRound;
-    if (shown.phase === r.phase && shown.winner === r.winner && shown.seconds === seconds && shown.number === r.number && shown.start === showStart && shown.mode === r.mode && shown.respawned === respawned) return;
+    if (shown.phase === r.phase && shown.winner === r.winner && shown.seconds === seconds && shown.number === r.number && shown.start === showStart && shown.mode === r.mode && shown.respawned === respawned && shown.newsAt === newsAt) return;
     shown.respawned = respawned;
+    shown.newsAt = newsAt;
     shown.phase = r.phase;
     shown.winner = r.winner;
     shown.seconds = seconds;
     shown.number = r.number;
     shown.start = showStart;
     shown.mode = r.mode;
-    this.feedback.setRoundMessage(respawned ? respawnBanner(this.runInfo.respawnsLeft) : roundBanner(r, this.player.team, showStart, seconds, this.rules));
+    this.feedback.setRoundMessage(respawned ? respawnBanner(this.runInfo.respawnsLeft) : newsAt >= 0 ? this.runNewsText : roundBanner(r, this.player.team, showStart, seconds, this.rules));
   }
 }

@@ -124,6 +124,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Fixed
 - **M54** · Accessibility: with no Reduced motion choice saved, the system setting applies as it changes; High Contrast mode shows the case prompt, coach and range readout; the empty key box's dash is easier to read; the debug overlay sits under the minimap in every browser; the respawn fade no longer stalls a frame (#113)
 - **M52** · At night the ground, wood and faces read in their own colours instead of near black: a bluer, brighter night sky and moon, and on Medium the shadows at night stay sharp near you (#111)
+- **M53** · Sound: the countdown beep is loud enough to hear, distant sounds fade behind walls smoothly instead of in a step at 60 m, sounds stay placed when you look up or lean, the neon hum no longer doubles, and each match's birds and calls come at different times (#114)
+- **M53** · Extraction: the Match pop-up no longer offers rounds or round time, the one-minute warning and a late exit are announced (banner, screen reader, a double beep), and the rules text names every switch that is on (#114)
 - **M56** · pool.md: tiny Supply event percentages, a zero Difficulty multiplier, rising Odds and a missing or mis-cased Supply events column are reported at their line; a collection or records file saved by a newer version of the game is never overwritten (#112)
 - **M33j** · No birds sing at night any more, on any map (Woodland, Neon Heights by Night); footsteps on Woodland's ground no longer sound like concrete
 - **FA16** · Play here in a second tab no longer sometimes lands back on the "open in another tab" notice: the reloaded tab waits a moment for the other tab's save lock to be freed (#89)
