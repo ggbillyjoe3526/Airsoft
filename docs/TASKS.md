@@ -13,8 +13,8 @@ touches: src/map/, src/render/, src/config/bots.ts, src/config/render.ts, src/ai
 acceptance:
   1. Self-lit signs (neon and lit windows) as map data any map can use (`MapData.signs`): one merged mesh for all of a map's signs, glowing by Night and painted by Day; a map without signs gets nothing.
   2. Light pools are drawn only when the map plays at night, so a Day pick shows none (Woodland unchanged).
-  3. Night sight on floors: a pool lights only the floor it hangs over (not the floors above or below), and a spot with a floor or roof overhead that no pool lights is dark (the canopy range), on any map.
-  4. Neon Heights by Night lists its pools and signs: a lit avenue, atrium and shopfronts, dark stairwells and back rooms (about 40 m sight in the light, 25 m in the open, 10 m indoors in the dark).
+  3. Night sight on floors: a pool lights only the floor it hangs over (not the floors above or below), and a spot with a floor or roof overhead that no pool lights is dark (the indoor range), on any map.
+  4. Neon Heights by Night lists its pools and signs: a lit avenue, atrium and shopfronts, dark stairwells and back rooms (about 40 m sight in the light, 25 m in the open, 15 m indoors in the dark; 10 m under trees).
   5. Balance guards hold by Night after the sight changes (each end 40-60 % in Elimination, attackers 40-60 % in A/D, under 1 round in 10 on time); Woodland's night tests still pass.
   6. Unit tests for the sign mesh, the pool gating and both sight rules; the e2e plays Neon Heights by Night.
 status: building
