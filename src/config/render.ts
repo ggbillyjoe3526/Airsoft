@@ -683,7 +683,10 @@ export const FOLIAGE_LOOK = {
  */
 export const GROUND_LOOK = {
   cell: 1,
-  colours: { leaves: 0x4a3f2c, earth: 0x5e4c37, gravel: 0x7d786d, wood: 0x6f5639 },
+  // Trampled earth at the camps and tracks is a light, dry dirt: under the night's blue key light it is as bright as
+  // the grass it replaces (a red-brown reflects less of that light than green), so a figure on it reads. Leaf litter
+  // darker, and darker again under the trees.
+  colours: { leaves: 0x55482f, earth: 0x927d60, gravel: 0x857f72, wood: 0x76603f },
   blend: 1,
   underTreeShade: 0.72,
   pebbles: { perSquareMetre: 0.45, size: [0.07, 0.17], height: 0.55, depth: [0.7, 1], sink: 0.35, tints: [0x8c877c, 0x77736a, 0x9a948a], seed: 3391 },

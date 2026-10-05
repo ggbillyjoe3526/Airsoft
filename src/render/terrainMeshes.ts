@@ -4,11 +4,15 @@ import { GROUND_SURFACES, type GroundGrid } from '../map/groundSurfaces';
 import { type Terrain, terrainMesh, terrainRange } from '../map/terrain';
 import { withoutEnvironment } from './surfaceMaterials';
 
-/** A map's ground drawn (M33i): its grid, the textured material and the tile's size (m) for the world UVs. */
+/**
+ * A map's ground drawn (M33i): its grid, the textured material, the tile's size (m) for the world UVs and its mean
+ * linear luminance (the colours are divided by it, so the tile is grain around 1, not a darkening).
+ */
 export interface GroundLook {
   grid: GroundGrid;
   material: THREE.Material;
   tile: number;
+  mean: number;
 }
 
 const surfaceColour = new THREE.Color();
@@ -62,7 +66,7 @@ export function buildTerrainMesh(t: Terrain, ground: GroundLook | null = null): 
     const k = (positions[v * 3 + 1]! - min) / span;
     // A fixed per-vertex jitter (a hash of the index), so the green isn't flat; no randomness at run time.
     const jitter = 1 + TERRAIN_LOOK.jitter * (((Math.imul(v + 1, 2654435761) >>> 0) / 0xffffffff) * 2 - 1);
-    if (ground) groundColour(ground.grid, positions[v * 3]!, positions[v * 3 + 2]!, k, low, high, blended).multiplyScalar(jitter);
+    if (ground) groundColour(ground.grid, positions[v * 3]!, positions[v * 3 + 2]!, k, low, high, blended).multiplyScalar(jitter / ground.mean);
     const out = ground ? blended : c.copy(low).lerp(high, k).multiplyScalar(jitter);
     colors[v * 3] = out.r;
     colors[v * 3 + 1] = out.g;

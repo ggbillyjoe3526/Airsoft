@@ -494,14 +494,14 @@ const creekLine = (): (readonly [number, number])[] => Array.from({ length: Math
 const GRAVEL_WIDTH = 2 * (CREEK_BED + 0.6);
 const FOREST_TRACK_WIDTH = 2;
 const SUNKEN_TRACK_WIDTH = 2 * TRACK_BED;
-/** Trampled earth round each camp's spawns and fire, inside the fort and at the cabin's doors. */
-const CAMP_WIDTH = 9;
+/** Trampled earth round each camp's fire. The spawns stay on grass: at night the tone mapping crushes a brown under the
+ * blue moon to near black, and a figure must read on the ground it starts on (KNOWN_ISSUES, M33i). */
 const FIRE_CLEARING = 4;
 
 /**
  * Woodland's ground (M33i): meadow grass, leaf litter wherever the trees close overhead, the creek's dry gravel bed, the
- * forest track along the Pine Belt lane and the sunken track as worn earth, trampled earth in the camps, round the fires
- * and in the fort, and the cabin's boards.
+ * forest track along the Pine Belt lane and the sunken track as worn earth, trampled earth round the camp fires and in
+ * the fort, and the cabin's boards.
  */
 const GROUND: MapGround = {
   base: 'grass',
@@ -509,8 +509,6 @@ const GROUND: MapGround = {
   patches: [
     { surface: 'earth', path: pathOf(LANE_POINTS[0]!.slice(1, 7)), width: FOREST_TRACK_WIDTH },
     { surface: 'earth', path: pathOf([[TRACK.from.x, TRACK.from.z], [TRACK.to.x, TRACK.to.z]]), width: SUNKEN_TRACK_WIDTH },
-    { surface: 'earth', path: pathOf([[6, 38], [6, 50]]), width: CAMP_WIDTH },
-    { surface: 'earth', path: pathOf([[114, 38], [114, 50]]), width: CAMP_WIDTH },
     { surface: 'earth', path: pathOf([[4.5, 52]]), width: FIRE_CLEARING },
     { surface: 'earth', path: pathOf([[115.5, 52]]), width: FIRE_CLEARING },
     { surface: 'earth', box: [worldX(95), worldX(107.5), worldZ(53.5), worldZ(40.5)] },
