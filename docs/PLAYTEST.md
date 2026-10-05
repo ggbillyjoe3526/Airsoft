@@ -1054,6 +1054,17 @@ summary says "Not kept"; everything else plays as it will.
 - [ ] **Caught out or out:** end a run any other way carrying finds: "Lost: … Only what you get out with is yours."
 - [ ] **Key:** Settings › Key bindings has "Use: open a case (hold)"; rebind it and the prompt names the new key.
 
+## Neon Heights by Night (M34e, dev content)
+
+Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Night is its default).
+
+- [ ] Night: the avenue, the atrium round the flag and the shopfronts (Arcade, bar, Repair Shop, Noodle Alley, Lantern Lane, Back Alley, Drone Dock) sit in lamp light; the stairwells and the Level 1 rooms are dark.
+- [ ] Night: neon signs glow on the walls, and the city's windows high on the perimeter walls are lit or dark; no sign flickers against its wall or covers a door or window.
+- [ ] Night: in a dark room a bot spots you only close up (about 15 m), in lamp light from far off; does that feel fair next to the moonlit street (25 m)?
+- [ ] Night on Medium or High: a lamp's light can show on the floor above its room (known issue); is it distracting?
+- [ ] Day: no lamps or glows anywhere; the signs are painted boards and the windows dark glass.
+- [ ] Woodland by night looks as before: the camp fires and lanterns, and bots see you anywhere in their light.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:

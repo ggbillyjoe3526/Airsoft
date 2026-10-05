@@ -5,21 +5,6 @@ commit, before its pull request merges (CI's scope gate finds the block in the b
 ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
 keeps `status` and `attempts` current.
 
-## M34e · Night light for Neon Heights: neon signs, lit rooms, dark stairwells
-tier: core
-perf: required
-contract: MapData (adds optional `signs`; `lights` keeps its shape)
-touches: src/map/, src/render/, src/config/bots.ts, src/config/render.ts, src/ai/, src/matchSession.ts, e2e/, docs/, CHANGELOG.md
-acceptance:
-  1. Self-lit signs (neon and lit windows) as map data any map can use (`MapData.signs`): one merged mesh for all of a map's signs, glowing by Night and painted by Day; a map without signs gets nothing.
-  2. Light pools are drawn only when the map plays at night, so a Day pick shows none (Woodland unchanged).
-  3. Night sight on floors: a pool lights only the floor it hangs over (not the floors above or below), and a spot with a floor or roof overhead that no pool lights is dark (the indoor range), on any map.
-  4. Neon Heights by Night lists its pools and signs: a lit avenue, atrium and shopfronts, dark stairwells and back rooms (about 40 m sight in the light, 25 m in the open, 15 m indoors in the dark; 10 m under trees).
-  5. Balance guards hold by Night after the sight changes (each end 40-60 % in Elimination, attackers 40-60 % in A/D, under 1 round in 10 on time); Woodland's night tests still pass.
-  6. Unit tests for the sign mesh, the pool gating and both sight rules; the e2e plays Neon Heights by Night.
-status: critic
-attempts: 1
-
 The Esports plan (owner approved 2026-10-04; ROADMAP M36–M41, DECISIONS "M36–M41", the plan in the project's shared
 files `research/esports-difficulty-2026-10-04.md`). Everything here is tagged dev with M35's content tag until the
 owner says it's done. Any change to `src/ai/perception.ts` or BotWorld's sight is announced to the coordinator
