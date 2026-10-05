@@ -615,5 +615,20 @@ export const BOTS: BotConfig = botConfig(DEFAULT_DIFFICULTY);
  * How far bots make someone out on a night field (M33g, map/nightSight.ts; the concept's first guesses, the same as
  * players by eye): 40 m in a light pool (as by day), 25 m in the moonlit open, 10 m under the trees. The target's light
  * decides; `viewDistance` still caps it. Ground is under the trees where 3 trunks stand within 4 m (on a 1 m grid).
+ * On floors (M34e): a pool lights its own floor, feet from 0.5 m under it to 2 m over it (a slope inside a camp fire's
+ * pool, never the next storey 3 m up); and feet with a block's underside 1.9 to 9.5 m over them are indoors, as dark as
+ * under the trees when no pool lights them (a doorway's lintel, a floor, a roof up to three storeys over a stairwell or
+ * an atrium, a bridge over a street).
  */
-export const NIGHT_SIGHT: NightSightConfig = { lit: 40, open: 25, canopy: 10, canopyTrees: 3, canopyRadius: 4, canopyCell: 1 };
+export const NIGHT_SIGHT: NightSightConfig = {
+  lit: 40,
+  open: 25,
+  canopy: 10,
+  canopyTrees: 3,
+  canopyRadius: 4,
+  canopyCell: 1,
+  poolBelow: 0.5,
+  poolAbove: 2,
+  roofFrom: 1.9,
+  roofTo: 9.5,
+};

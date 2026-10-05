@@ -4,7 +4,7 @@ import { OPEN_FIELD } from '../sim/testSupport';
 import { vec3 } from '../sim/vec';
 import { DEPOT } from './depot';
 import type { MapBlock, MapData } from './mapTypes';
-import { buildNightField, inLight, nightSightRange, underCanopy } from './nightSight';
+import { buildNightField, inLight, nightSightRange, underCanopy, underRoof } from './nightSight';
 import { WOODLAND } from './woodland';
 
 const trunk = (x: number, z: number): MapBlock => ({ kind: 'tree', center: vec3(x, 4.5, z), size: vec3(0.5, 9, 0.5) });
@@ -15,6 +15,52 @@ const NIGHT_YARD: MapData = {
   night: true,
   lights: [{ position: vec3(-10, 2, -10), radius: 5, colour: 0xffd27a }],
 };
+
+/**
+ * Two floors (M34e): the ground, a slab over x -5..15 whose top is at 3.25 m (underside 2.75 m), a sky-high deck over
+ * x 20..24 (underside 12 m), a lamp under the slab at (0, 2.5, 0) and one over it at (10, 5.5, 0).
+ */
+const STACKED: MapData = {
+  ...OPEN_FIELD,
+  blocks: [
+    ...OPEN_FIELD.blocks,
+    { kind: 'floor', center: vec3(5, 3, 0), size: vec3(20, 0.5, 10) },
+    { kind: 'wall', center: vec3(22, 12.25, 0), size: vec3(4, 0.5, 4) },
+    trunk(30, 0),
+  ],
+  night: true,
+  lights: [
+    { position: vec3(0, 2.5, 0), radius: 3, colour: 0xffffff },
+    { position: vec3(10, 5.5, 0), radius: 3, colour: 0xffffff },
+  ],
+};
+
+describe('night sight on floors (M34e)', () => {
+  it('lights only the floor a pool hangs over, not the one above or below', () => {
+    const field = buildNightField(STACKED, NIGHT_SIGHT)!;
+    expect(inLight(field, vec3(0, 0, 0))).toBe(true);
+    expect(inLight(field, vec3(0, 3.25, 0))).toBe(false); // on the slab, over the lower lamp
+    expect(inLight(field, vec3(10, 3.25, 0))).toBe(true);
+    expect(inLight(field, vec3(10, 0, 0))).toBe(false); // under the slab, below the upper lamp
+  });
+
+  it('makes an unlit spot under a floor or roof as dark as under the trees, and a lit one lit', () => {
+    const field = buildNightField(STACKED, NIGHT_SIGHT)!;
+    expect(underRoof(field, vec3(10, 0, 0))).toBe(true);
+    expect(nightSightRange(field, vec3(10, 0, 0))).toBe(NIGHT_SIGHT.canopy);
+    expect(nightSightRange(field, vec3(0, 0, 0))).toBe(NIGHT_SIGHT.lit);
+    expect(nightSightRange(field, vec3(5, 3.25, 0))).toBe(NIGHT_SIGHT.open); // on the slab, open sky
+  });
+
+  it('takes no roof from a deck far overhead, a tree, the floor underfoot or off the map', () => {
+    const field = buildNightField(STACKED, NIGHT_SIGHT)!;
+    expect(underRoof(field, vec3(22, 0, 0))).toBe(false); // 12 m up: past roofTo
+    expect(underRoof(field, vec3(30, 0, 0))).toBe(false); // a trunk is no roof
+    expect(underRoof(field, vec3(5, 3.25, 0))).toBe(false); // the slab is underfoot
+    expect(underRoof(field, vec3(500, 0, 500))).toBe(false);
+    expect(nightSightRange(field, vec3(22, 0, 0))).toBe(NIGHT_SIGHT.open);
+  });
+});
 
 describe('night sight (M33g)', () => {
   it('is null by day: Depot and any map without `night` keep daylight sight', () => {
@@ -31,10 +77,12 @@ describe('night sight (M33g)', () => {
     expect(NIGHT_SIGHT.open).toBeGreaterThan(NIGHT_SIGHT.canopy);
   });
 
-  it('counts the light pool by its radius on the ground, whatever the height', () => {
+  it('counts the light pool by its radius across the floor under it, whatever the height of the light itself', () => {
     const field = buildNightField(NIGHT_YARD, NIGHT_SIGHT)!;
-    expect(inLight(field, vec3(-10 + 4.9, 5, -10))).toBe(true);
+    expect(inLight(field, vec3(-10 + 4.9, 0, -10))).toBe(true);
     expect(inLight(field, vec3(-10 + 5.1, 0, -10))).toBe(false);
+    expect(inLight(field, vec3(-10, NIGHT_SIGHT.poolAbove, -10))).toBe(true); // jumping
+    expect(inLight(field, vec3(-10, NIGHT_SIGHT.poolAbove + 0.5, -10))).toBe(false); // a floor above
   });
 
   it('needs enough trunks close together for a canopy: a lone tree casts none', () => {

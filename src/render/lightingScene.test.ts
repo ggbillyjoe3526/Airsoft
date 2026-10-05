@@ -82,11 +82,11 @@ describe('addLighting lights the scene from the preset it is given (M33f, accept
 });
 
 describe('the light pools in the scene addLighting builds (M33f, acceptance 3)', () => {
-  it('glows every pool of Woodland on both presets, as one glow mesh and one ground mesh', () => {
+  it('glows every pool of Woodland by night, as one glow mesh and one ground mesh, and none by day (M34e: lamps off)', () => {
     const pools = WOODLAND.lights!;
     expect(pools.length).toBeGreaterThan(1);
     const reach = POOL_LIGHTS.core * Math.max(...POOL_LIGHTS.halos.map((h) => h.size), 1);
-    for (const preset of [night, day]) {
+    for (const preset of [night]) {
       const scene = new THREE.Scene();
       addLighting(scene, WOODLAND, QUALITY.low, preset);
       const glow = scene.getObjectByName('pool-glow') as THREE.Mesh;
@@ -106,6 +106,12 @@ describe('the light pools in the scene addLighting builds (M33f, acceptance 3)',
         for (let v = 0; v < groundPos.count; v++) widest = Math.max(widest, Math.hypot(groundPos.getX(v) - p.position.x, groundPos.getZ(v) - p.position.z) <= p.radius * 1.001 ? Math.hypot(groundPos.getX(v) - p.position.x, groundPos.getZ(v) - p.position.z) : 0);
         expect(widest, `ground of pool ${i}`).toBeGreaterThan(p.radius * 0.95);
       }
+    }
+    for (const [name, q] of QUALITIES) {
+      const byDay = new THREE.Scene();
+      addLighting(byDay, WOODLAND, q, day);
+      expect(byDay.children.filter((o) => o.name.startsWith('pool-')), name).toHaveLength(0);
+      expect(pointLights(byDay), name).toHaveLength(0);
     }
   });
 

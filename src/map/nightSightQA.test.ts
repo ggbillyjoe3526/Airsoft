@@ -196,7 +196,8 @@ describe("Woodland's light pools (acceptance 4)", () => {
     for (let x = -halfX + 0.5; x < halfX; x += 1) {
       for (let z = -halfZ + 0.5; z < halfZ; z += 1) {
         total++;
-        if (inLight(field, vec3(x, 0, z))) lit++;
+        // Feet on the ground: a pool lights only the floor under it (M34e).
+        if (inLight(field, vec3(x, terrainHeightAt(WOODLAND.terrain!, x, z), z))) lit++;
       }
     }
     expect(lit / total).toBeGreaterThan(0.02);
