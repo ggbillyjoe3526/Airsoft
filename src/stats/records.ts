@@ -1,7 +1,7 @@
 import type { Difficulty } from '../config/bots';
 import { RECORDS_KEY, STATS } from '../config/matchInfo';
 import type { MatchMode } from '../config/modes';
-import { overStored } from '../save/overStored';
+import { overStored, storedIsNewer } from '../save/overStored';
 import type { CaseFind } from '../sim/extraction';
 
 /**
@@ -153,10 +153,14 @@ function readResults(records: Records, raw: unknown, shape: RegExp): void {
   }
 }
 
-/** Saves the records. Non-critical: if storage is blocked they last for the session only. */
+/**
+ * Saves the records. Non-critical: if storage is blocked they last for the session only, as they do over records from
+ * a newer version of the store (M56, audit POOL-01: loadRecords doesn't read those, so writing would wipe them).
+ */
 export function saveRecords(records: Records, store: RecordStore | null): void {
   if (!store) return;
   try {
+    if (storedIsNewer(store, RECORDS_KEY, RECORDS_VERSION)) return;
     // The named rulesets' cells (M39) go beside the plain ones (RULESET_RESULTS_FIELD).
     const results: Partial<Record<string, WinLoss>> = {};
     const rulesetResults: Partial<Record<string, WinLoss>> = {};

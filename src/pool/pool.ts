@@ -138,6 +138,11 @@ export const DEFAULT_ECONOMY: Economy = {
 const MAX_FC_CELL = 1e6;
 /** The most Shots a pity rule may wait. */
 const MAX_PITY_SHOTS = 10000;
+/**
+ * The least a Difficulty multiplier may be (M56, audit POOL-03): the Supply events' 10 % floor as a multiplier. A 0 would
+ * pay nothing for every match at that difficulty, with no error to say why.
+ */
+const MIN_DIFFICULTY_MULTIPLIER = 0.1;
 
 /** Used if pool.md has no readable Rarity table: one tier, so the game still runs. */
 const FALLBACK_TIER: RarityTier = { id: 'common', label: 'Common', odds: 1, bonus: 0, scrapFc: 5 };
@@ -190,7 +195,8 @@ export function loadPool(text: string): Pool {
   const tiers = readTiers(table('Tier'), fail, errors);
   const economy = readEconomy(table('Event'), table('Difficulty'), table('Setting'), table('Guarantee'), tiers, fail, errors);
   const caseKinds = readCaseKinds(table('Case'), tiers, fail, errors);
-  const supplyEvents = readSupplyEvents(table('Supply event'), fail);
+  // Also by its heading, so a mis-typed first column is reported at the header, not read as no events (audit POOL-07).
+  const supplyEvents = readSupplyEvents(table('Supply event') ?? table('Supply events'), fail);
   const assets: Asset[] = [];
   const byId = new Map<string, Asset>();
   // Each asset's pool.md line, for the fits check's messages (audit POOL-20: no scan of every row per asset).
@@ -373,6 +379,9 @@ function readTiers(t: PoolTable | undefined, fail: (line: number, m: string) => 
     fail(t.line, 'tiers must be listed commonest first: Bonus % and Scrap FC may not fall down the table (read in Bonus order instead)');
     tiers.sort((a, b) => a.bonus - b.bonus || a.scrapFc - b.scrapFc);
   }
+  // A rarer tier is never drawn more often (M56, audit POOL-02): an Odds column typed upside down would hand out
+  // Legendaries on 46 % of draws. Reported like the sum below; the odds are read as written.
+  if (tiers.some((x, i) => i > 0 && x.odds > tiers[i - 1]!.odds)) fail(t.line, 'Odds % may not rise down the table: a rarer tier is drawn less often');
   const sum = tiers.reduce((s, x) => s + x.odds, 0);
   if (Math.abs(sum - 1) > 1e-6) fail(t.line, `the Odds % add up to ${Math.round(sum * 1000) / 10}, not 100`);
   return tiers;
@@ -422,7 +431,9 @@ function readEconomy(
   const earn = labelled(fc, 'Field Credits', { 'match played': 'matchPlayed', 'match won': 'matchWon', 'round won': 'roundWon', 'hit on an opponent': 'hit' } as const, 'FC', fail, errors, (row) =>
     numberCell(row, 'FC', fail, 0, MAX_FC_CELL),
   );
-  const diff = labelled(difficulty, 'Difficulty', { easy: 'easy', normal: 'normal', hard: 'hard', pro: 'pro' } as const, 'Multiplier', fail, errors, (row) => numberCell(row, 'Multiplier', fail));
+  const diff = labelled(difficulty, 'Difficulty', { easy: 'easy', normal: 'normal', hard: 'hard', pro: 'pro' } as const, 'Multiplier', fail, errors, (row) =>
+    numberCell(row, 'Multiplier', fail, MIN_DIFFICULTY_MULTIPLIER),
+  );
   const s = labelled(
     shots,
     'Tokens and Shots',

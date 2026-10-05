@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { lowCoverBlocks, tallCoverBlocks } from '../ai/cover';
+import { BOT_BEHAVIOUR, NIGHT_SIGHT } from '../config/bots';
 import { blockMaterial } from '../config/materials';
+import { BODY } from '../config/movement';
 import { NAV } from '../config/nav';
 import { LIGHTING_PRESETS, SIGNS } from '../config/render';
 import { TEAM_COLOUR_SETS } from '../config/teams';
@@ -10,6 +13,7 @@ import { resolveLighting } from '../render/lightingPreset';
 import { mapUnderLighting } from './lightingChoice';
 import { NEON_HEIGHTS } from './neonHeights';
 import type { MapBlock } from './mapTypes';
+import { buildNightField, underRoof } from './nightSight';
 
 /** FNV-1a of a string, as 8 hex digits. */
 function fnv(text: string): string {
@@ -45,15 +49,59 @@ export function navFingerprint(): string {
 describe('Neon Heights art (M34f)', () => {
   it('plays exactly as before its art: the same boxes in the same order, ricochets, slopes and footsteps', () => {
     // Pinned from main before M34f (2026-10-05, 4780b4a): 281 blocks, the street one slab. Re-pinned for M55 (audit
-    // SIM-04): 300 blocks, the same space filled without two blocks in one place (walls stop under the floors laid
-    // through them, the Sky Bridge ends at the Tower's wall, planters stand against walls); the nav grid below is as it was.
-    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('300:0424eac9');
+    // SIM-04): 297 blocks, the same space filled without two blocks in one place (walls stop under the floors laid
+    // into them, the Sky Bridge ends at the Tower's wall, planters stand against walls); the nav grid below is as it was.
+    expect(playFingerprint(NEON_HEIGHTS.blocks)).toBe('297:9333f1ea');
   });
 
   it('gives the bots exactly the same nav grid as before its art', () => {
     // Pinned from main before M34f (2026-10-05, 7ec2c27). The street split into three strips once laid this grid from
     // -23.509999999999998 instead of -23.51 and lifted the Pro attackers from 55 % to 64 %; the road is decor now.
     expect(navFingerprint()).toBe('52822:7b34b809');
+  });
+
+  it('gives the bots the same cover and night roofs after M55 seated its floors (audit SIM-04)', () => {
+    // A wall rising through a floor's edge, cut at the floor, would put its part over the floor on the bots' cover list
+    // and its strip beside the floor would roof the cells next to it at night (the Plaza stair's foot): such walls stay
+    // whole (seatFloors). The cover lists, pinned after M55: main's (a9c45dd), but for the planters butted against walls,
+    // the Sky Bridge's sides ending at the Tower and the stairwell's south wall starting past its west wall.
+    const nav = buildNavGrid(NEON_HEIGHTS, NAV);
+    const cover = [...lowCoverBlocks(NEON_HEIGHTS.blocks, nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), ...tallCoverBlocks(NEON_HEIGHTS.blocks, nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap)];
+    expect(`${cover.length}:${fnv(cover.map((c) => [c.x, c.z, c.halfX, c.halfZ].join(',')).join('|'))}`).toBe('180:0a302f02');
+    // Whether night sight counts each nav node indoors, pinned from main before M55 (2026-10-05, a9c45dd).
+    const field = buildNightField(mapUnderLighting(NEON_HEIGHTS, 'night'), NIGHT_SIGHT, true)!;
+    let roofed = '';
+    for (let k = 0; k < nav.floorY.length; k++) {
+      const c = nav.nodeCell[k]!;
+      roofed += underRoof(field, { x: nav.minX + ((c % nav.cols) + 0.5) * nav.cell, y: nav.floorY[k]!, z: nav.minZ + (Math.floor(c / nav.cols) + 0.5) * nav.cell }) ? '1' : '0';
+    }
+    expect(fnv(roofed)).toBe('94eda2d0');
+  });
+
+  it('fills the space it did before M55 moved its overlaps: the solid blocks (not the ramps) hold the same volume to a few cubic metres (QA)', () => {
+    // Measured on main before M55 (2026-10-05, claude/audit2-fixes-1padgo, 281 blocks): 2644.2 m³ of the solid blocks' union
+    // on a 0.2 m grid over the map's plan; M55's 297 blocks measure the same, but for a 0.1 m sliver of a planter at the
+    // grand stair's foot (0.13 m³ on a 0.1 m grid). Cutting a wall under a floor, or a strip beside it, and losing it
+    // is 3 to 5 m³.
+    const CELL = 0.2;
+    let volume = 0;
+    for (let x = -23.6 + CELL / 2; x < 23.6; x += CELL) {
+      for (let z = -15.6 + CELL / 2; z < 15.6; z += CELL) {
+        const spans: [number, number][] = [];
+        for (const b of NEON_HEIGHTS.blocks) {
+          if (b.kind === 'ramp' || Math.abs(x - b.center.x) >= b.size.x / 2 || Math.abs(z - b.center.z) >= b.size.z / 2) continue;
+          spans.push([b.center.y - b.size.y / 2, b.center.y + b.size.y / 2]);
+        }
+        spans.sort((p, q) => p[0] - q[0]);
+        let top = Number.NEGATIVE_INFINITY;
+        for (const [from, to] of spans) {
+          if (to <= top) continue;
+          volume += (to - Math.max(from, top)) * CELL * CELL;
+          top = to;
+        }
+      }
+    }
+    expect(Math.abs(volume - 2644.2)).toBeLessThan(0.5);
   });
 
   it('is a city: every wall, floor and rail finished, the street paving with an asphalt road, no site toilet or container left', () => {
@@ -112,7 +160,13 @@ describe('Neon Heights art (M34f)', () => {
     expect(night.night).toBe(true);
     expect(night.fog.colour).toBe(night.sky.horizon);
     expect(night.fog.colour).not.toBe(LIGHTING_PRESETS.night.fog.colour);
-    expect(night.hemi.intensity).toBeGreaterThan(LIGHTING_PRESETS.night.hemi.intensity);
+    // More sky light: the fill's sky side as light (linear luminance × intensity), since M52 lit the base night's fill
+    // at the city's intensity with a darker sky colour (audit REN-02).
+    const skyLight = (h: { sky: number; intensity: number }): number => {
+      const c = new THREE.Color(h.sky);
+      return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) * h.intensity;
+    };
+    expect(skyLight(night.hemi)).toBeGreaterThan(skyLight(LIGHTING_PRESETS.night.hemi) * 1.5);
     expect(night.nightSky!.stars).toBeLessThan(LIGHTING_PRESETS.night.nightSky!.stars);
     expect(night.fog.near).toBe(LIGHTING_PRESETS.night.fog.near); // only the colour
     expect(resolveLighting(mapUnderLighting(NEON_HEIGHTS, 'day'))).toEqual(LIGHTING_PRESETS.day);

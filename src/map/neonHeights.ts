@@ -796,12 +796,14 @@ function cut(b: MapBlock, x0: number, x1: number, y0: number, y1: number, z0: nu
 }
 
 /**
- * A floor laid through a block (a door's sill above the street, in the top of the wall of the storey below; a slab
- * over a stair's side wall, or through the balustrade beside the stair) takes that part of it (M55, audit SIM-04): the
- * block stops under the floor along its whole length, what is left beside the floor at the floor's height stays as
- * strips, and anything above the floor stands on it, so the level keeps its shape and no two blocks fill one space.
- * The block keeps its footprint and its foot, so the bots' cover (blocks standing on a floor, ai/cover.ts) reads the
- * same. Plan coordinates, before floors grow by SEAM.
+ * A floor laid into the top of a block (a door's sill above the street, in the top of the wall of the storey below; a
+ * slab over a wall, or over a stair's balustrade) takes that part of it (M55, audit SIM-04): the block stops under the
+ * floor along its whole length and what is left beside the floor at the floor's height stays as strips, so the level
+ * keeps its shape and no two blocks fill one space. The block keeps its footprint and its foot, so the bots' cover
+ * (ai/cover.ts) and night sight's roofs (map/nightSight.ts) read as before (neonHeightsArt.test.ts). A block that rises
+ * above the floor stays whole: cut, its part above would stand on the floor as new cover and its strips would roof the
+ * stair beside it at night, and cutting the floor round it instead changes the bots' nav grid (mapData.test.ts lists
+ * these). Plan coordinates, before floors grow by SEAM.
  */
 function seatFloors(blocks: readonly MapBlock[]): MapBlock[] {
   const floors = blocks.filter((b) => b.kind === 'floor');
@@ -809,7 +811,7 @@ function seatFloors(blocks: readonly MapBlock[]): MapBlock[] {
   for (const b of blocks) {
     const through =
       b.kind === 'floor' || b.kind === 'ramp' ? [] : floors.filter((f) => lo(f, 'y') > lo(b, 'y') + TOUCH && hi(f, 'y') <= hi(b, 'y') + TOUCH && overlaps(f, b, 'x') && overlaps(f, b, 'z'));
-    if (through.length === 0) {
+    if (through.length === 0 || through.some((f) => hi(b, 'y') - hi(f, 'y') > TOUCH)) {
       out.push(b);
       continue;
     }
@@ -823,7 +825,6 @@ function seatFloors(blocks: readonly MapBlock[]): MapBlock[] {
     let pieces: [number, number][] = [[lo(b, along), hi(b, along)]];
     for (const f of through) pieces = pieces.flatMap(([a, c]): [number, number][] => [[a, Math.min(c, lo(f, along))], [Math.max(a, hi(f, along)), c]]).filter(([a, c]) => c - a > TOUCH);
     for (const [a, c] of pieces) out.push(along === 'x' ? cut(b, a, c, under, over, lo(b, 'z'), hi(b, 'z')) : cut(b, lo(b, 'x'), hi(b, 'x'), under, over, a, c));
-    if (hi(b, 'y') - over > TOUCH) out.push(cut(b, lo(b, 'x'), hi(b, 'x'), over, hi(b, 'y'), lo(b, 'z'), hi(b, 'z')));
   }
   return out;
 }

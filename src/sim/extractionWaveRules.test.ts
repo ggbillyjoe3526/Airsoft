@@ -256,6 +256,50 @@ describe('regen points and the wave in the run', () => {
     expect(ticksWithRays).toBeLessThanOrEqual(Math.ceil(waited / EXTRACTION.regenRetry) + 1);
   });
 
+  it('waits out regenRetry after a look that found no free point: one that frees up sooner is not used until the next look (M55, QA)', () => {
+    let visible = true;
+    const query: WorldQuery = { raycastStatic: () => (visible ? -1 : 1) };
+    const { cs, round, ctx } = run(3, REGENS, { query, body: BODY });
+    hit(homeOf(cs)[0]!);
+    const events: GameEvent[] = [];
+    // The wave comes due and looks, finding every point in view: it will look again in regenRetry.
+    play(WAVE_EVERY + 1, round, cs, ctx, events);
+    expect(round.run.regenRetryIn).toBeGreaterThan(0);
+    visible = false;
+    play(EXTRACTION.regenRetry / 3, round, cs, ctx, events);
+    expect(events.some((e) => e.type === 'returned')).toBe(false);
+    play(EXTRACTION.regenRetry, round, cs, ctx, events);
+    expect(events.filter((e) => e.type === 'returned')).toHaveLength(1);
+  });
+
+  it('forgets a pending retry when a new run starts (M55, QA)', () => {
+    const query: WorldQuery = { raycastStatic: () => -1 };
+    const { cs, round, ctx } = run(3, REGENS, { query, body: BODY });
+    hit(homeOf(cs)[0]!);
+    play(WAVE_EVERY + 1, round, cs, ctx);
+    expect(round.run.regenRetryIn).toBeGreaterThan(0);
+    startRun(round, cs, ctx);
+    expect(round.run.regenRetryIn).toBe(0);
+  });
+
+  it('hands the sight it is given to the case check, so a case behind a wall stays shut (M55, QA)', () => {
+    const cases = [{ kind: 'field-case' as const, name: 'Field case', position: vec3(-10, 0, 0), yaw: 0, openTime: 1, heard: 0, find: { fc: 1, resupply: false, item: null } }];
+    const sight = { query: NEVER_SEEN, body: BODY };
+    expect(setup(1, undefined, { cases, sight }).sight).toBe(sight);
+    expect(setup(1, undefined, { cases }).sight).toBeUndefined();
+    for (const [walled, opens] of [[true, false], [false, true]] as const) {
+      const x = setup(1, undefined, { cases, ...(walled ? { sight } : {}) });
+      const cs = roster(1, 2);
+      const { round, ctx } = newRun(cs, x);
+      cs[0]!.position.x = -10.5;
+      cs[0]!.position.y = 0;
+      cs[0]!.position.z = 0;
+      cs[0]!.using = true;
+      play(3, round, cs, ctx);
+      expect(round.run.cases[0]!.open, walled ? 'behind a wall' : 'no wall').toBe(opens);
+    }
+  });
+
   it('does not count a second wave while the first is still waiting to come in', () => {
     const query: WorldQuery = { raycastStatic: () => -1 };
     const { cs, round, ctx } = run(3, REGENS, { query, body: BODY });

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type * as BotsConfig from '../config/bots';
 import { HITS, ROUNDS } from '../config/hits';
+import { SIM_DT } from '../config/sim';
 import type * as NightSight from '../map/nightSight';
 import type { MapData } from '../map/mapTypes';
 import { isInPlay } from '../sim/elimination';
@@ -46,6 +47,11 @@ describe('a 4v4 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', 
     let seenLit = 0;
     let seenDark = 0;
     let visibleBeyond = 0;
+    // Each character's night range over the last ticks, newest last: a bot looks every thinkInterval, so the target it
+    // has in view it saw where it stood up to that long ago. A step from the moonlit open in under the trees takes its
+    // range from 25 m to 10 m; M55's Woodland fixes dealt this seed bots that took that step between two looks.
+    const lookTicks = Math.ceil(BOTS.thinkInterval / SIM_DT) + 1;
+    const ranges = new Map<number, number[]>();
     let buildsAtFirstTick = -1;
     let sightRef: unknown;
     let gridRef: unknown;
@@ -58,8 +64,14 @@ describe('a 4v4 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', 
         gridRef = world.sight?.night?.canopy;
       }
       if (world.sight !== sightRef || world.sight?.night?.canopy !== gridRef) sightChanged = true;
-      if (state.tick % SAMPLE_EVERY !== 0 || state.round.phase !== 'live') return;
       const field = world.sight!.night!;
+      for (const c of state.characters) {
+        const recent = ranges.get(c.id) ?? [];
+        recent.push(nightSight.nightSightRange(field, c.position));
+        if (recent.length > lookTicks) recent.shift();
+        ranges.set(c.id, recent);
+      }
+      if (state.tick % SAMPLE_EVERY !== 0 || state.round.phase !== 'live') return;
       for (const b of controller.bots) {
         const me = b.character;
         if (!isInPlay(me)) continue;
@@ -70,9 +82,11 @@ describe('a 4v4 bot match on Woodland at night (M33g, acceptances 1, 2 and 5)', 
           if (dist > BOTS.viewDistance) continue;
           sampled++;
           if (dist > range && dist > BOTS.closeAwareness) hiddenByDark++;
-          // What a bot has in view as its target, it has within the range of the spot the target stands on.
+          // What a bot has in view as its target, it had within the range of the spot the target stood on when it last
+          // looked (and 0.6 m for how far either moved since).
           if (b.targetVisible && b.targetId === other.id) {
-            if (dist > range + 0.6 && dist > BOTS.closeAwareness) visibleBeyond++;
+            const lookedRange = Math.min(BOTS.viewDistance, Math.max(...ranges.get(other.id)!));
+            if (dist > lookedRange + 0.6 && dist > BOTS.closeAwareness) visibleBeyond++;
             if (nightSight.inLight(field, other.position)) seenLit++;
             else seenDark++;
           }

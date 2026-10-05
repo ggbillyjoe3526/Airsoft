@@ -2,7 +2,7 @@ import type { Vec3 } from '../sim/vec';
 import type { CaseSpot, ExitZone, ExtractionData, Insertion, SpawnPoint } from './mapTypes';
 
 /**
- * What every map's Extraction block shares (M50, audit CORE-16): its points written on the map's own plan, then placed
+ * What every map's Extraction block shares (M51, audit CORE-16): its points written on the map's own plan, then placed
  * on the level by the map's own helpers, so a map file holds only its numbers. Each map's data tests
  * (extractionData.test.ts, extractionRegens.test.ts) check every placed point against the real level.
  */

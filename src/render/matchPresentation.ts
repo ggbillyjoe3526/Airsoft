@@ -26,6 +26,7 @@ import { MatchBoard } from '../ui/matchBoard';
 import { Minimap, type MinimapFrame } from '../ui/minimap';
 import { HeardPlayers } from '../ui/minimapView';
 import { OrderWheel, wheelHint } from '../ui/orderWheel';
+import { restartAnimation } from '../ui/restartAnimation';
 import { respawnBanner, roundBanner } from '../ui/roundBanner';
 import { Scoreboard } from '../ui/scoreboard';
 import { type HeardSound, SoundCues, soundCueOf } from '../ui/soundCues';
@@ -293,12 +294,8 @@ export class MatchPresentation {
         this.whatGotYou.clear();
         this.feedback.setCalling(false);
         const fade = this.respawnFade;
-        if (fade) {
-          // Restarted each time: off, a reflow, on.
-          fade.classList.remove('on');
-          void fade.offsetWidth;
-          fade.classList.add('on');
-        }
+        // Restarted each time, with no forced layout on the frame the camera jumps (audit UI-08).
+        if (fade) restartAnimation(fade, 'on');
       } else if (e.type === 'caseOpened' && e.characterId === this.player.id) {
         const k = this.state.round.run.cases[e.case];
         if (k) this.casePrompt?.opened(k, this.state.time);

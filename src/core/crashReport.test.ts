@@ -12,7 +12,7 @@ describe('crash report (audit CORE-04)', () => {
   it('holds the build, the browser, every field in order, the error and its stack', () => {
     const text = crashReport({
       title: 'Airsoft crash report',
-      build: 'v0.1-alpha.3+4 · abc1234',
+      build: '0.1 Dev 3+4 · abc1234',
       userAgent: 'Mozilla/5.0 Test',
       fields: [
         ['Seed', 42],
@@ -26,7 +26,7 @@ describe('crash report (audit CORE-04)', () => {
     });
     expect(text.split('\n')).toEqual([
       'Airsoft crash report',
-      'Build: v0.1-alpha.3+4 · abc1234',
+      'Build: 0.1 Dev 3+4 · abc1234',
       'Browser: Mozilla/5.0 Test',
       'Seed: 42',
       'Map: depot',
