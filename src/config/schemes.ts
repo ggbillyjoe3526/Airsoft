@@ -4,7 +4,8 @@ import type { ReplicaConfig } from './replicas';
  * Replica colour schemes (graphics overhaul G1; William, 5 October 2026). Every replica is two-tone, like a painted
  * airsoft replica in the Marathon style: a `body` (receiver, frame, slide), `furniture` (stock, handguard, grip
  * panels), `detail` (magazines, rails, small parts), a thin `accent` line and the `steel` of its metal parts. The
- * player picks one of the eight bold schemes per replica in Loadout › Customise; bots carry their team's.
+ * player picks one of the eight bold schemes per replica (the Customise screen arrives with the menu redesign, G3;
+ * until then rifles stay Cobalt and pistols Ghost); bots carry their team's.
  *
  * The Realistic colours setting swaps each bold scheme for one plain family (black, wolf grey, ranger green or tan),
  * never mixed on one replica. Colours are sRGB hex.

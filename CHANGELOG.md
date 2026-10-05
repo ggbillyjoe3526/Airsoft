@@ -5,7 +5,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ## Unreleased
 
 ### Added
-- **G1** · Replica colour schemes (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost) saved per replica; Settings › Look: Robots (Mixed by default) and Realistic colours options
+- **G1** · Replica colour schemes (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost): rifles Cobalt and pistols Ghost for now; Settings › Look: Robots (Mixed by default) and Realistic colours options
 - **M33j** · Woodland's sounds (dev content): wind in the pines, insects and a distant owl at night, a crackle at each camp fire, and footsteps that sound like the ground underfoot (grass, leaf litter, earth, the creek's gravel, the cabin's boards), as loud as on concrete; Depot sounds exactly as before
 - **FA7** · Environment lighting on Medium and High: sky reflects in players, the flag, range targets and steel; contact shadows under every player on all presets (#71)
 - **FA7** · Settings → Graphics: tone mapping choice (Neutral, AgX, ACES) and relief maps option (Normal, Bump) (#71)

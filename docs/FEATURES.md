@@ -14,7 +14,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - An AEG rifle (single, burst or auto on the fire selector), a gas pistol and an electric Cyber Pistol, switched with the wheel or keys (Phase 1, M12a, M32)
 - Cyber Pistol: electric semi, burst and auto; built-in battery, fits either gear slot (M32)
-- Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); new rifles start Cobalt, pistols Ghost; each saved per replica (G1)
+- Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); rifles Cobalt and pistols Ghost until the Customise screen lets players pick one per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c, M30)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
