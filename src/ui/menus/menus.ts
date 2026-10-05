@@ -579,12 +579,12 @@ export class Menus {
     if (this.current === 'settings') this.settings.closed();
   }
 
-  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
   /** The light `id` plays under (M34d): its saved pick if it offers it, else its first preset. */
   private lightingOf(id: MapId): LightingPresetId {
     return lightingPicked(mapEntry(id).data, this.lightingPicks[id]);
   }
 
+  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
   private mapPicked(id: MapId): void {
     const size = mapEntry(id).teamSize.standard;
     if (this.matchRules.teamSize === size) return;
