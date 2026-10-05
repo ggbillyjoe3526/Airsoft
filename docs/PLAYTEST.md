@@ -1069,6 +1069,17 @@ Dev content on, Extraction on Depot, Normal, as above.
 - [ ] **The last third:** with 2:40 left one more Orange bot joins the next wave (the scoreboard keeps its usual pips).
 - [ ] **The rules text:** New game › Mode › Extraction says hit opponents come back in waves.
 
+## Neon Heights by Night (M34e, dev content)
+
+Turn on Dev content (Settings → Dev), pick Neon Heights in the Map pop-up (Night is its default).
+
+- [ ] Night: the avenue, the atrium round the flag and the shopfronts (Arcade, bar, Repair Shop, Noodle Alley, Lantern Lane, Back Alley, Drone Dock) sit in lamp light; the stairwells and the Level 1 rooms are dark.
+- [ ] Night: neon signs glow on the walls, and the city's windows high on the perimeter walls are lit or dark; no sign flickers against its wall or covers a door or window.
+- [ ] Night: in a dark room a bot spots you only close up (about 15 m), in lamp light from far off; does that feel fair next to the moonlit street (25 m)?
+- [ ] Night on Medium or High: a lamp's light can show on the floor above its room (known issue); is it distracting?
+- [ ] Day: no lamps or glows anywhere; the signs are painted boards and the windows dark glass.
+- [ ] Woodland by night looks as before: the camp fires and lanterns, and bots see you anywhere in their light.
+
 ## Reporting what you find
 
 Post each problem in the project chat, one message per problem. These four things let it be fixed without guessing:

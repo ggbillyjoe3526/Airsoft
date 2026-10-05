@@ -56,11 +56,12 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Sloping ground (terrain) for maps: walkable slopes and hills, BBs stop in earth with no bounce; first used by Woodland (M33c)
 - Woodland's layout: 120 × 80 m on a gentle slope up to the Knoll and its log fort, three lanes (Pine Belt, Meadow, Creek with the cabin), trees, boulders and logs; 4v4 by default, up to 5v5; dev content, playable with the Dev content switch on, and its matches aren't recorded or paid (M33d)
 - Bushes on any map that lists them: bots can't see someone deep in or behind one, BBs and people pass through, drawn on the minimap; Woodland has 70 (M33e)
-- Night sight on any night map: bots see 40 m into a light pool, 25 m in the open, 10 m under the trees (M33g)
+- Night sight on any night map: bots see 40 m into a light pool, 25 m in the open, 10 m under the trees, and 15 m in unlit spots under roofs or indoors (M33g, M34e)
 - Night lighting on any map that asks for it: a dark sky and haze, a low moon as the key light, light pools that glow and light the ground on every preset and light players on Medium and High (Graphics › Night lights: Off, Nearest 2, Nearest 4); Depot stays day (M33f)
 - Weapon torch on any night map (dev content, a starter Light on every replica): T switches it; its beam lights where you look, bots see 40 m into it and spot a lit torch facing them; your own is a real light on Medium and High in place of one pool light; the held replica is lit by the night (M33h)
 - Day or Night selector: maps offering both modes show a switch in the Map pop-up; your choice is saved per map (M34d)
 - Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend, with Day and Night modes (M34c, M34d)
+- Neon Heights by Night: 12 lamps light separate floors, neon signs glow, lit and dark windows on the perimeter (M34e)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
