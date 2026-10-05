@@ -3,7 +3,8 @@ import { LIGHTING, type LightingPreset, type QualitySettings } from '../config/r
 import type { MapData } from '../map/mapTypes';
 import { terrainMaxX, terrainMaxZ, terrainRange } from '../map/terrain';
 import { addAtmosphere } from './atmosphere';
-import { addLightPools } from './lightPools';
+import { addLightPools, NO_LIGHT_POOLS } from './lightPools';
+import { addMapSigns } from './mapSigns';
 
 /** World-space bounding box of every block in the map (walls, floor, props) and its sloping ground (M33c), if any. */
 export function mapBoundingBox(map: MapData): THREE.Box3 {
@@ -109,7 +110,7 @@ export interface Daylight {
    * nearest it (M33f), fading over this frame's `dt` seconds. Call before drawing.
    */
   follow(camera: THREE.Camera, dt: number): void;
-  /** Removes the lights, sky, trees, clouds and light pools and frees the shadow map. */
+  /** Removes the lights, sky, trees, clouds, light pools and signs and frees the shadow map. */
   dispose(): void;
 }
 
@@ -148,7 +149,8 @@ function applyNormalBias(sun: THREE.DirectionalLight): void {
 /**
  * Adds the map's light under `preset` (render/lightingPreset.ts resolveLighting; M33f), sized to the map: a sky fill, one
  * shadow-casting key light (the sun, or the moon at night), the world round it (render/atmosphere.ts: the sky dome, the
- * trees and clouds) and the map's light pools (render/lightPools.ts), and returns its handle.
+ * trees and clouds), the map's light pools (render/lightPools.ts; under a night preset only, M34e: by Day a lamp is off)
+ * and its signs (render/mapSigns.ts: glowing by Night, painted by Day), and returns its handle.
  */
 export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySettings, preset: LightingPreset): Daylight {
   const hemi = new THREE.HemisphereLight(preset.hemi.sky, preset.hemi.ground, preset.hemi.intensity);
@@ -185,7 +187,8 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
   scene.add(hemi, sun, sun.target);
   const sunDirection = sun.position.clone().sub(sun.target.position).normalize();
   const atmosphere = addAtmosphere(scene, sun.target.position, sunDirection, quality, box, preset);
-  const pools = addLightPools(scene, map, quality);
+  const pools = preset.night ? addLightPools(scene, map, quality) : NO_LIGHT_POOLS;
+  const signs = addMapSigns(scene, map, preset.night);
   let poolQuality: Pick<QualitySettings, 'poolLights'> = quality;
   let reserved = 0;
   return {
@@ -212,6 +215,7 @@ export function addLighting(scene: THREE.Scene, map: MapData, quality: QualitySe
     },
     dispose: () => {
       pools.dispose();
+      signs.dispose();
       atmosphere.dispose();
       scene.remove(hemi, sun, sun.target);
       sun.dispose();

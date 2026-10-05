@@ -105,6 +105,11 @@ export interface MapData {
    */
   lights?: readonly MapLight[];
   /**
+   * Signs and windows on the walls (M34e, render/mapSigns.ts): flat panels that glow by Night and are painted boards
+   * and dark glass by Day. Presentation only: they light nobody for the bots (light pools do). Absent: none.
+   */
+  signs?: readonly MapSign[];
+  /**
    * How the map is lit (M33f, render/lightingPreset.ts): the lighting presets it can be played under, the first by
    * default (later a match-start choice picks among them, M34), and `moonOver`, a world point (x, z) the key light is
    * turned towards from the field's centre (keeping its height), so a low moon rims that hill's top. `overrides` tweaks a
@@ -136,6 +141,20 @@ export interface Overlook {
   name: string;
   area: readonly [number, number, number, number];
   from: Vec3[];
+}
+
+/**
+ * A sign or a lit window (M34e): a `width` × `height` panel standing upright with its middle at `centre`, on the face
+ * of a wall that looks along `facing` (its front is that way). `neon`: a sign in `colour`; `window`: a window lit from
+ * inside, its glow `colour` (black: a dark window).
+ */
+export interface MapSign {
+  centre: Vec3;
+  width: number;
+  height: number;
+  facing: '+x' | '-x' | '+z' | '-z';
+  colour: number;
+  kind: 'neon' | 'window';
 }
 
 /** A tweak of a lighting preset for one map: any group's values (MapData.lighting.overrides). */

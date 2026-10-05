@@ -1,10 +1,12 @@
 import { type Vec3, vec3 } from '../sim/vec';
-import type { BlockKind, MapBlock, MapData, Overlook, RampRise, SpawnPoint } from './mapTypes';
+import type { BlockKind, MapBlock, MapData, MapSign, Overlook, RampRise, SpawnPoint } from './mapTypes';
+import type { MapLight } from './nightSight';
 
 /**
  * "Neon Heights" (M34, the owner's approved concept v1, 2026-10-04): a closed-down neon market block turned airsoft
  * site, 46 × 30 m, three playable storeys (street ±0, Level 1 +3 m, Level 2 +6 m) linked by stairs only. Greybox by
- * day (M34c), Day or Night picked with the map (M34d); neon, art and sound follow (M34e-f). Tagged dev until the owner calls it done (map/maps.ts).
+ * day (M34c), Day or Night picked with the map (M34d), lamps, neon signs and lit windows by Night (M34e); art and sound
+ * follow (M34f). Tagged dev until the owner calls it done (map/maps.ts).
  *
  * Neon Avenue runs north–south down the middle. The west half (end 0, the attackers' in Attack / Defend): the West
  * Yard with the spawns, the Arcade with the Capsules hotel over it and a balcony over the avenue, and the Repair Shop
@@ -517,6 +519,105 @@ const OVERLOOKS: Overlook[] = [
   { name: 'Atrium', area: ATRIUM, from: [vec3(6.4, STOREY, 1.5), vec3(12.6, STOREY, 1.1), vec3(9.5, 2 * STOREY, 6.6), vec3(9.5, 2 * STOREY, -3.6)] },
 ];
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Night light (M34e): lamps over the streets and in some rooms, neon signs, lit windows in the city round the site.
+
+/** Colours: street lamps, warm rooms, and the neon. */
+const STREET_LAMP = 0xbfeeff;
+const ROOM_LAMP = 0xffd6a0;
+const NEON = { magenta: 0xff2bd6, cyan: 0x22e6ff, amber: 0xffa531, lime: 0x8dff3a, violet: 0x9a6bff, red: 0xff3b4a } as const;
+const WINDOW_GLOW = [0xffc890, 0x9fd8ff, 0xffe2b0] as const;
+/** Lamps hang this far under the ceiling of a room, or this high over a street or alley. */
+const ROOM_LAMP_Y = STOREY - SLAB - 0.2;
+const STREET_LAMP_Y = 4.5;
+
+const lamp = (x: number, y: number, z: number, radius: number, colour: number): MapLight => ({ position: vec3(x, y, z), radius, colour });
+
+/**
+ * The pools (plan coordinates): each lights the floor under it (map/nightSight.ts). Five each side and two on the
+ * avenue: the west's Arcade, Noodle Alley, Lantern Lane, Repair Shop and Studio; the east's bar, atrium, Back Alley,
+ * Drone Dock and Level 2 gallery. Every Level 1 room and every stairwell is left dark, as are the spawn yards and the
+ * Sky Bridge (moonlit).
+ */
+const LAMPS: MapLight[] = [
+  // Neon Avenue, north and south of the van.
+  lamp(0.3, STREET_LAMP_Y, 11.5, 3.2, STREET_LAMP),
+  lamp(0.5, STREET_LAMP_Y, -4.5, 3.2, STREET_LAMP),
+  // West.
+  lamp(-9, ROOM_LAMP_Y, 4, 3, NEON.violet),
+  lamp(-11.5, 3.5, 12.8, 2.4, NEON.amber),
+  lamp(-10.5, ROOM_LAMP_Y, -3.4, 2.2, NEON.red),
+  lamp(-6, ROOM_LAMP_Y, -10.5, 2.2, ROOM_LAMP),
+  lamp(-6, 2 * STOREY + ROOM_LAMP_Y, -11, 2.2, NEON.magenta),
+  // East.
+  lamp(5.6, ROOM_LAMP_Y, 1.2, 2.2, ROOM_LAMP),
+  lamp(POLE.x, 2 * STOREY + ROOM_LAMP_Y, POLE.z, 2.4, ROOM_LAMP),
+  lamp(10, 3.5, 13.3, 2.2, NEON.cyan),
+  lamp(11, 3.5, -12.6, 2.4, STREET_LAMP),
+  lamp(10, 2 * STOREY + ROOM_LAMP_Y, -6.2, 2.2, NEON.cyan),
+];
+
+const sign = (x: number, y: number, z: number, width: number, height: number, facing: MapSign['facing'], colour: number): MapSign => ({
+  centre: vec3(x, y, z),
+  width,
+  height,
+  facing,
+  colour,
+  kind: 'neon',
+});
+
+/** Neon signs on the walls (plan coordinates, `facing` the way the wall looks; clear of every opening). */
+const NEON_SIGNS: MapSign[] = [
+  // The avenue: the Arcade under its balcony and up its Level 1, the Repair Shop, the Clinic's cross, the Studio.
+  sign(-3.5, 2.4, 2.2, 2.6, 0.5, '+x', NEON.magenta),
+  sign(-3.5, 4.5, 9.05, 0.8, 2.4, '+x', NEON.cyan),
+  sign(-3.5, 2.5, -12, 2, 0.5, '+x', NEON.amber),
+  sign(-3.5, 4.5, -13.5, 0.9, 0.9, '+x', NEON.lime),
+  sign(-3.5, 7.5, -13.8, 0.8, 2.4, '+x', NEON.violet),
+  // The Tower on the avenue: the bar over its door, a tall sign on Level 2.
+  sign(4, 2.6, 1.7, 1.8, 0.6, '-x', NEON.red),
+  sign(4, 7.5, 4.5, 1, 2.6, '-x', NEON.magenta),
+  // Noodle Alley, Lantern Lane, the Back Alley, the Drone Dock.
+  sign(-12.8, 2.5, 10, 1.6, 0.6, '+z', NEON.amber),
+  sign(-12.8, 3.2, HALF_Z, 1.4, 0.8, '-z', NEON.red),
+  sign(-10.2, 2.2, -5, 1.6, 0.5, '+z', NEON.red),
+  sign(12.5, 2.5, 11, 2, 0.5, '+z', NEON.cyan),
+  sign(9, 2.6, -10, 2.4, 0.6, '-z', NEON.lime),
+];
+
+/**
+ * The city round the site: rows of windows high on the perimeter walls' inner faces, some lit (a fixed pattern), the
+ * rest dark glass; none where the Repair Shop block stands against the south wall.
+ */
+function perimeterWindows(): MapSign[] {
+  const rows = [4.6, 6.6, 8.6];
+  const step = 2.6;
+  const out: MapSign[] = [];
+  const add = (x: number, z: number, facing: MapSign['facing'], col: number): void => {
+    rows.forEach((y, row) => {
+      const n = col * 7 + row * 3;
+      const colour = n % 5 < 3 ? WINDOW_GLOW[n % WINDOW_GLOW.length]! : 0x000000;
+      out.push({ centre: vec3(x, y, z), width: 1.3, height: 1.1, facing, colour, kind: 'window' });
+    });
+  };
+  const along = (half: number): number[] => {
+    const n = Math.floor((2 * half - 3) / step);
+    return Array.from({ length: n + 1 }, (_, i) => -((n * step) / 2) + i * step);
+  };
+  along(HALF_X).forEach((x, i) => {
+    add(x, HALF_Z, '-z', i);
+    if (x < BLOCK[0] - 1 || x > BLOCK[1] + 1) add(x, -HALF_Z, '+z', i + 1);
+  });
+  along(HALF_Z).forEach((z, i) => {
+    add(-HALF_X, z, '+x', i + 2);
+    add(HALF_X, z, '-x', i + 3);
+  });
+  return out;
+}
+
+const FLIP_FACING: Record<MapSign['facing'], MapSign['facing']> = { '+x': '+x', '-x': '-x', '+z': '-z', '-z': '+z' };
+const signToWorld = (s: MapSign): MapSign => ({ ...s, centre: toWorld(s.centre), facing: FLIP_FACING[s.facing] });
+
 const toWorld = (p: Vec3): Vec3 => vec3(p.x, p.y, -p.z);
 const FLIP_RISE: Record<RampRise, RampRise> = { '+x': '+x', '-x': '-x', '+z': '-z', '-z': '+z' };
 /**
@@ -562,6 +663,9 @@ export const NEON_HEIGHTS: MapData = {
   // `night` goes with the first preset; map/lightingChoice.ts sets it for the one picked.
   night: true,
   lighting: { presets: ['night', 'day'] },
+  // By Night (M34e): the lamps light their floors for the bots too; the signs are presentation only.
+  lights: LAMPS.map((l) => ({ ...l, position: toWorld(l.position) })),
+  signs: [...NEON_SIGNS, ...perimeterWindows()].map(signToWorld),
 };
 
 /** Layout facts the tests check against, in world coordinates, so they can't drift from the geometry. */

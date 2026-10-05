@@ -5,7 +5,8 @@ import { expect, test } from '@playwright/test';
  * dev content today: with the switch off the Map pop-up doesn't list it at all; on, it is listed under Depot like any
  * other map and can be picked (M33d); off again, it is hidden and Depot plays, while the pick stays saved. A test of
  * its own, so the long match test in boot.spec.ts plays the same way as before. Neon Heights (M34c) is dev content too,
- * listed and hidden with Woodland, and the second test picks it by Day (M34d's switch) and plays it. Uses `?nolock` like the other smoke tests.
+ * listed and hidden with Woodland, and the second test picks it by Day (M34d's switch) and plays it; the third plays it by
+ * Night, with its lamps and neon (M34e). Uses `?nolock` like the other smoke tests.
  */
 test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked, and hides it again', async ({ page }) => {
   const errors: string[] = [];
@@ -116,6 +117,12 @@ test('Neon Heights (dev content, M34c) picked by Day (M34d) loads and plays: the
     return { night: m.night, first: m.lighting?.presets[0] };
   });
   expect(lit).toEqual({ night: false, first: 'day' });
+  // By Day the lamps are off (M34e): no light pools in the scene, and the signs are painted boards.
+  const scene = await page.evaluate(() => {
+    const s = (window as unknown as { airsoft: { session: { renderer: { scene: { getObjectByName(n: string): unknown } } } } }).airsoft.session.renderer.scene;
+    return { pools: s.getObjectByName('pool-glow') !== undefined, signs: s.getObjectByName('map-signs') !== undefined };
+  });
+  expect(scene).toEqual({ pools: false, signs: true });
   const placed = () => page.evaluate(() => (window as unknown as Played).airsoft.state.characters.map((c) => c.position));
   const yards = await placed();
   expect(yards.length).toBeGreaterThanOrEqual(6);
@@ -129,6 +136,56 @@ test('Neon Heights (dev content, M34c) picked by Day (M34d) loads and plays: the
   const after = await placed();
   expect(after.some((p, i) => Math.hypot(p.x - yards[i]!.x, p.y - yards[i]!.y) > 1)).toBe(true);
   expect(Math.min(...after.map((p) => p.y))).toBeGreaterThanOrEqual(-0.5);
+  expect(errors, errors.join(' | ')).toEqual([]);
+});
+
+test('Neon Heights by Night (M34e, the default light) plays with its lamps lit and its neon glowing, no errors', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  await page.goto('/?nolock&seed=1');
+  await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start' }).click();
+  const setup = page.locator('.menu-setup');
+  await expect(setup).toBeVisible();
+  await setup.getByRole('button', { name: /^Settings/ }).click();
+  const settings = page.locator('.menu-settings');
+  await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
+  await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
+  await page.keyboard.press('Escape');
+  await setup.getByRole('button', { name: /Map/i }).click();
+  await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Neon Heights/i }).click();
+  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Neon Heights · Night');
+  await setup.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
+  await expect(page.locator('.hud')).toBeVisible();
+  type Lit = {
+    airsoft: {
+      session: { setup: { map: { name: string; night?: boolean; lights?: unknown[] } }; renderer: { scene: { getObjectByName(n: string): unknown } } };
+      state: { tick: number };
+    };
+  };
+  const seen = await page.evaluate(() => {
+    const { session } = (window as unknown as Lit).airsoft;
+    const scene = session.renderer.scene;
+    return {
+      name: session.setup.map.name,
+      night: session.setup.map.night,
+      lamps: (session.setup.map.lights ?? []).length,
+      pools: scene.getObjectByName('pool-glow') !== undefined,
+      signs: scene.getObjectByName('map-signs') !== undefined,
+    };
+  });
+  expect(seen.name).toBe('Neon Heights');
+  expect(seen.night).toBe(true);
+  expect(seen.lamps).toBeGreaterThan(0);
+  expect(seen.pools).toBe(true);
+  expect(seen.signs).toBe(true);
+  const tick = () => page.evaluate(() => (window as unknown as Lit).airsoft.state.tick);
+  const start = await tick();
+  await expect.poll(tick, { timeout: 60_000 }).toBeGreaterThan(start + 120);
   expect(errors, errors.join(' | ')).toEqual([]);
 });
 
