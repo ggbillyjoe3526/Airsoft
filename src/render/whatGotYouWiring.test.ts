@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROUNDS } from '../config/hits';
 import { HITS } from '../config/hits';
 import { BODY } from '../config/movement';
@@ -11,8 +11,8 @@ import { createGameState, type GameState } from '../sim/state';
 import { LOADOUT } from '../config/replicas';
 import { vec3 } from '../sim/vec';
 import { MatchStats } from '../stats/matchStats';
-import { MatchBoard } from '../ui/matchBoard';
-import { MatchPresentation } from './matchPresentation';
+import type { MatchBoard as MatchBoardClass } from '../ui/matchBoard';
+import type { MatchPresentation as MatchPresentationClass } from './matchPresentation';
 
 // How MatchPresentation drives the "what got you" card and the Pro tips (M41). Every drawing class is auto-mocked (this
 // project has no DOM or GPU under Vitest); the card is a recording stand-in, so what is asserted is the presentation's own
@@ -77,6 +77,16 @@ vi.mock('./spectatorCamera', () => ({
   },
 }));
 
+// Vitest runs files without isolation here, so an earlier file may already hold the real presentation module, wired to the
+// real drawing classes; the mocks above only reach a fresh copy, so this file loads its own.
+let MatchPresentation: typeof MatchPresentationClass;
+let MatchBoard: typeof MatchBoardClass;
+beforeAll(async () => {
+  vi.resetModules();
+  ({ MatchPresentation } = await import('./matchPresentation'));
+  ({ MatchBoard } = await import('../ui/matchBoard'));
+});
+
 const PLAYER = 0;
 const ENEMY = 1;
 const MATE = 2;
@@ -84,9 +94,9 @@ const MATE = 2;
 interface Rig {
   state: GameState;
   facts: HitFacts;
-  match: MatchPresentation;
+  match: MatchPresentationClass;
   card: SpyCard;
-  board: MatchBoard;
+  board: MatchBoardClass;
   player: ReturnType<typeof createCharacter>;
   hit: (victimId: number, shooterId?: number) => void;
   frame: (o?: { held?: boolean }) => void;
