@@ -111,6 +111,31 @@ export interface MapData {
    * preset's values for this map only. Absent: day.
    */
   lighting?: MapLighting;
+  /**
+   * Extraction (M43): where a squad goes in, where it can get out and where the home team starts. Maps without one
+   * can't be played in Extraction.
+   */
+  extraction?: ExtractionData;
+  /**
+   * Floor heights of a map with several storeys (M34c), lowest first (Neon Heights: street, +3, +6). The minimap draws
+   * the storey you stand on and marks teammates on other storeys as above or below. Absent: one storey.
+   */
+  storeys?: number[];
+  /**
+   * Where a floor can be watched from above (M34c, the pro layout's watch-angle list): each area of the ground with
+   * the windows and balconies that overlook it. Map data for bots and for the layout tests.
+   */
+  overlooks?: Overlook[];
+}
+
+/**
+ * One watched area (M34c): `area` is [x0, x1, z0, z1] on the floor below, `from` the standing spots (feet) above it
+ * that see into it.
+ */
+export interface Overlook {
+  name: string;
+  area: readonly [number, number, number, number];
+  from: Vec3[];
 }
 
 /** A tweak of a lighting preset for one map: any group's values (MapData.lighting.overrides). */
@@ -121,4 +146,36 @@ export interface MapLighting {
   presets: readonly [LightingPresetId, ...LightingPresetId[]];
   moonOver?: { x: number; z: number };
   overrides?: Partial<Record<LightingPresetId, LightingOverride>>;
+}
+
+/** A way off the field in Extraction: stand inside it for EXTRACTION.extractTime to be counted out. */
+export interface ExitZone {
+  /** What the HUD calls it ("Car park gate"). */
+  name: string;
+  /** Floor point at its middle. */
+  position: Vec3;
+  /** Radius (metres, horizontal) a squad member must be within. */
+  radius: number;
+  /** Opens only when EXTRACTION.lateExitAt seconds are left. */
+  late?: boolean;
+}
+
+/** A place a squad can go in at: its spawn points (one per member) and the end of the map whose lanes lead out of it. */
+export interface Insertion {
+  name: string;
+  spawns: SpawnPoint[];
+  /** The end (0 or 1) this insertion counts as, for lanes and dead zones: the home team plays from the other end. */
+  end: number;
+}
+
+/** A map's Extraction data (M43). The run's seed picks the insertion; exits near it are closed for that run. */
+export interface ExtractionData {
+  /** Seconds a run lasts on this map. */
+  runTime: number;
+  /** Opponents in play at once before the squad's share: base + squad size (Depot: 2, so 3 / 4 / 5). */
+  baseOpponents: number;
+  insertions: Insertion[];
+  exits: ExitZone[];
+  /** Where the home team starts a run: at least base + 3 points, picked far from the insertion. */
+  opponentStarts: SpawnPoint[];
 }

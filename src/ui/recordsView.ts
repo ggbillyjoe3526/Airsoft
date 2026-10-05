@@ -40,12 +40,14 @@ function notCountedLine(why: NotCounted): string {
 export function recordsView(records: Records, news: RecordNews, difficulty: Difficulty, mode: MatchMode, notCounted: NotCounted = ''): RecordsView {
   const counted = notCounted === '';
   if (!counted) news = NO_NEWS;
+  const modes = MATCH_MODES.filter((m) => isAvailable(m.tag, false));
   return {
-    modes: MATCH_MODES.map((m) => m.label),
-    // A dev level (Pro, M36) never enters the records (M35), so its row would stay empty: only public levels get one.
+    modes: modes.map((m) => m.label),
+    // A dev level (Pro, M36) or mode (Extraction, M43) never enters the records (M35), so its row or column would stay
+    // empty: only public ones get one.
     rows: DIFFICULTIES.filter((d) => isAvailable(d.tag, false)).map((d) => ({
       label: d.label,
-      cells: MATCH_MODES.map((m) => {
+      cells: modes.map((m) => {
         const wl = records.results[resultKey(d.id, m.id)];
         return { text: wl ? `${wl.wins} W · ${wl.losses} L` : '–', current: counted && d.id === difficulty && m.id === mode };
       }),

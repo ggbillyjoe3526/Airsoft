@@ -13,6 +13,7 @@ export const MAX_SEED = 0xffffffff;
  */
 const PLAN_STREAM = { multiplier: 15485863, offset: 12345 };
 const BOT_STREAM = { multiplier: 7919, perCharacter: 104729 };
+const RUN_STREAM = { multiplier: 32452843, offset: 9973 };
 
 /** The seed a `?seed=` value names, or undefined unless it is a whole number from 0 to MAX_SEED. */
 export function parseSeed(value: string | null): number | undefined {
@@ -39,4 +40,9 @@ export function planSeed(seed: number): number {
 /** The seed of bot `characterId`'s own stream for a game seeded with `seed`. */
 export function botSeed(seed: number, characterId: number): number {
   return deriveSeed(seed, BOT_STREAM.multiplier, Math.imul(characterId, BOT_STREAM.perCharacter));
+}
+
+/** The seed of an Extraction run's own stream (M43: its insertion; later its cases) for a game seeded with `seed`. */
+export function runSeed(seed: number): number {
+  return deriveSeed(seed, RUN_STREAM.multiplier, RUN_STREAM.offset);
 }

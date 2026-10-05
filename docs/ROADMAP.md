@@ -133,11 +133,12 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M31 Save system: everything saves automatically in the browser; Settings → Save downloads the save as a file and loads one back (side by side first, Undo after), three daily restore points, a format number with step-by-step migrations so older saves always load, one tab plays at a time | Done (owner to play it) | |
 | Alpha · Owner's 2026-10-04 requests · M33 Woodland, a second field at night (owner picked concept C, 2026-10-04): a wide, open wood with a gentle slope and a hill at one end, night only; a free weapon torch for every player; glowing BBs on the Loadout. M33a: Woodland greyed out as Coming soon in the Map pop-up. M33b: glowing BBs. M33c: sloping ground. M33d: the layout, behind Dev settings. M33e: bushes. M33g: night sight for bots. M33f: night lighting | In progress (M33a done #64, M33b done #65, M33c done; sketches approved) | M33a 7/8 |
 | Alpha · Owner's 2026-10-04 requests · M32 Cyber Pistol, a third replica (owner's design): a Legendary-only chase pistol from the Armory (1 in 400 Shot items), rifle power with pistol handling and almost no kick, Semi / Burst / Auto, no parts, a quiet futuristic sound; now and then an opponent on Hard carries it once you own one | Done (owner to play it) | 7/8 |
-| Alpha · Owner's 2026-10-04 requests · M34 Neon Heights, a third field (owner's concept v1, all defaults, 2026-10-04): a small, vertical futuristic city block, three playable floors, Day or Night picked on the map's tile, tagged dev until he calls it done. M34b: bot navigation for floors over floors | In progress (M34b done; M34c greybox next) | M34b 8/8 |
+| Alpha · Owner's 2026-10-04 requests · M34 Neon Heights, a third field (owner's concept v1, all defaults, 2026-10-04): a small, vertical futuristic city block, three playable floors, Day or Night picked on the map's tile, tagged dev until he calls it done. M34b: bot navigation for floors over floors | In progress (M34b, M34c done; M34d Day / Night next) | M34b 8/8, M34c 7/8 |
 | Alpha · Final alpha chain · Final alpha audit implemented (FA1–FA12, Fable audit of 2026-10-04: 148 findings, 0 critical, 4 high; the owner confirmed all twelve decisions): crash handling and sim fixes (#57), audio (#55), input, HUD and UI polish (#59), BB hot path (#60), build and pipeline hygiene (#61), Armory and economy (#63), bots and difficulty (#66), quality presets with Custom graphics and render cost (#67), the visual overhaul of figures, replicas and effects (#69) and of lighting, sky, map, flag and range (#71), the tab lock (#69), session plan, faster tests and map reuse (#73), screenshot pass fixes (#76) | Done (owner's playtest next; then the step 3 polish pass) | 7–8/8 per task |
 | Alpha · Owner's 2026-10-04 requests · M35 Public and dev content tags: every map, mode, difficulty and pooled asset tagged public or dev; dev content shown only with the Dev tab's Dev content switch, never in Shots, carried by bots only with it on, and kept out of the records and Field Credits | Done (owner to play it) | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M42 Retro pixel filter: a Dev tab switch for a 1990s look (chunky pixels, a small dithered palette), with Pixel size and Colours sliders; the HUD and menus stay sharp | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | In progress (M36 merged, #79; M37 merged, #82; M38 merged, #84; M39 built; the owner chose to start before the final alpha pass) | |
+| Alpha · Owner's 2026-10-04 requests · M43–M49 Extraction: a squad of one to three against a home team on a timed run, guarded cases of seeded loot, waves, exits held for a count, one automatic respawn per run, pay and records, Woodland and city data, supply weekends; tagged dev until the owner says it's done | Building: M43 the run, exits, clock and respawn done (owner to play it); M44–M49 next | 8/8 (M43) |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -845,6 +846,21 @@ pool, items 11, 12 and part of 14).
   - **M41. What got you, tips and tuning:** after you're hit, a card shows where the shot came from, whether that bot
     was holding the angle, how long you were in view and whether you were moving (every difficulty; on by default on
     Pro). Briefing tips for Pro, a playtest per map, then public when the owner says.
+- **M43–M49. Extraction** (owner, 2026-10-04: "Based on the popular extraction shooter genre"; plan approved 20:51 and
+  20:54 with every default except one: a single automatic respawn per run; the write-up is in the project's shared files,
+  `research/extraction-mode-2026-10-04.md`). A new mode, tagged dev until the owner says it's done:
+  - **M43. The run:** a squad of 1–3 (the team size) against a home team of the map's base plus the squad, one 8:00 run
+    on Depot, an insertion from the run's seed, exits (those near the insertion closed, a late one opening at 3:00 left),
+    10 s counted out in an open exit (paused by an opponent inside, reset on leaving), a whistle at 1:00, one automatic
+    respawn at the insertion when the hit call ends, bot teammates following you; the HUD strip, exit markers and
+    minimap icons, the banner and result wording.
+  - **M44. Cases and loot:** seeded case spots (ammo cans, field cases, a marshal's locker) opened by holding Use, FC
+    bundles, BB resupplies and pool parts drawn like a Shot's; a hit drops what you carry; finds are kept only on extraction.
+  - **M45. Waves and regen:** the home team comes back in waves from regen points out of your sight.
+  - **M46. Guards, patrols and hunters:** bots that guard cases (on M37's held angles), patrol and hunt the squad late.
+  - **M47. Pay and records:** an Extraction payout and its own records, within M35's dev rule while tagged dev.
+  - **M48. Woodland and city data:** insertions, exits, starts and case spots for the new maps once they are playable.
+  - **M49. Supply weekends and events:** a dated or owner-switched event with its own loot table.
 
 When the owner calls the game feature complete, alpha ends.
 

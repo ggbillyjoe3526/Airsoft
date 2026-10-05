@@ -66,7 +66,9 @@ ends the round). A hit character is eliminated
   lane), and `orderOf` tells the HUD's squad line (`ui/squadOrderLine.ts`) what is in force. The order wheel (M23):
   `PlayerInput` owns a `WheelPointer` (`input/orderWheel.ts`) that takes the mouse while the wheel key is held, and
   hands the pick to `takeOrder` like an order key; `ui/orderWheel.ts` draws it. The minimap (M23, `ui/minimap.ts`)
-  draws the map's blocks once per match on a canvas and each frame the teammates and `HeardPlayers`
+  draws the map's blocks once per match on a canvas (one per storey on a map with `storeys`, M34c: cut away a body's
+  height over that floor, what lies below shaded; the frame shows the storey of whoever's eyes the camera is at, and
+  teammates on another storey carry an up or down arrow) and each frame the teammates and `HeardPlayers`
   (`ui/minimapView.ts`), fed by the same heard sounds as the sound cues. Hearing (`hear`) casts the
   same wall rays as the audio's muffling (`sim/soundPath.ts`): through walls a bot hears at `wallHearing` of the range.
 - **core/fixedStepper**: accumulator that turns variable frame time into fixed ticks (max `SIM.maxTicksPerFrame`, 10, catch-up ticks per frame; 5 before FA1, audit SIM-14). Consequence (audit L-34): at 60 ticks/s, 10 ticks cover 167 ms, so below about 6 frames/s the rest of each frame's time is dropped and the whole game (round clock, reloads, BB flight, bots) runs in slow motion rather than spiralling into ever longer catch-up frames (frame time is also capped at `SIM.maxFrameDt`, 0.25 s). Only the debug overlay's "sim ticks/s" shows it; a browser drawing in software starts on Low to stay above it (M-02).
@@ -274,7 +276,8 @@ Maps are plain data (`map/mapTypes.ts`): axis-aligned blocks with a visual kind 
 along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramps; walkable surfaces may stack
 when body height is clear between them), spawns and dead-zone spots
 per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
-without one are elimination only). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
+without one are elimination only) and an Extraction block (M43: insertions, exits, home-team starts, run time and base
+opponents; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
 at an end every round start (in Attack / Defend the attackers start at end 0; in Elimination Blue starts at
 `RoundRules.eliminationFirstEnd`, the east on Depot)
 and swaps them at half-time, and `Character.end` says where a character started, for its dead zone and its bot's
@@ -297,7 +300,9 @@ request. Each line names where it lives and what pins it.
 - **`PlayerCommand`** (`sim/commands.ts`): one command per character per tick, absolute view angles; the only way
   input or bots drive the simulation. Pinned by `sim/simulation.test.ts`, `input/playerInput.test.ts`.
 - **`GameState` and `state.events`** (`sim/state.ts`, `sim/events.ts`): plain data, no Three.js or DOM; events are
-  the only channel to presentation and are cleared each tick. Pinned by `sim/simulation.test.ts`.
+  the only channel to presentation and are cleared each tick. Since M43 `RoundState.run` holds an Extraction run
+  (`sim/extraction.ts`: exits, respawns used, the exit count, its outcome), and the events `respawned`, `exitCount`,
+  `exitOpened` and `runWarning` report it. Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its
   phases (a parked out-of-play character goes straight to the elimination step, FA1); randomness only from `state.rng`. Pinned by the `sim/*.test.ts` files and the `ai/depotMatch*.test.ts` guards.
 - **`WorldQuery` and `CharacterMover`** (`sim/`, implemented by `physics/physicsWorld.ts`): ray and shape casts and
@@ -334,5 +339,8 @@ request. Each line names where it lives and what pins it.
   (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
   player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
   `NotCounted` 'devContent'). Pinned by `config/content.test.ts`, `pool/contentPool.test.ts`.
-- **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. Pinned by
-  `map/mapData.test.ts`, `nav/navGrid.test.ts`.
+- **The map block format** (`map/mapTypes.ts`): what `navGrid`, `mapMeshes` and the physics read. `MapData` fields
+  are only added, optional, so every map stays valid: M34c's `storeys` (the floor heights the minimap draws one at a
+  time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
+  `extraction`. Pinned by `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`,
+  `map/extractionData.test.ts`.

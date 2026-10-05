@@ -13,9 +13,10 @@ export class FlagMarker {
   private shownColor = '';
   private shownEdge = false;
 
-  constructor(parent: HTMLElement) {
+  /** `variant`: an extra class for another objective's marker (Extraction's exits: 'exit-marker'). */
+  constructor(parent: HTMLElement, variant = '') {
     this.root = document.createElement('div');
-    this.root.className = 'flag-marker';
+    this.root.className = variant ? `flag-marker ${variant}` : 'flag-marker';
     this.root.hidden = true;
     this.root.innerHTML = '<i class="flag-marker-icon"></i><span></span>';
     this.distance = this.root.querySelector('span') as HTMLSpanElement;

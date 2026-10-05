@@ -53,7 +53,8 @@ export function formatTime(seconds: number): string {
 
 /**
  * The table's blocks: your team, then the other, each player's numbers from `statsOf`, best hitters first (ties keep
- * the roster order). `markOut`: grey out the players hit this round (the live scoreboard).
+ * the roster order). `markOut`: grey out the players hit this round (the live scoreboard). `run`: an Extraction run
+ * (M43), one long round, so the teams are named for their side (your squad, the home team) instead of rounds won.
  */
 export function statsBlocks(
   characters: readonly Character[],
@@ -62,6 +63,7 @@ export function statsBlocks(
   score: readonly number[],
   player: Character,
   markOut: boolean,
+  run = false,
 ): TeamBlock[] {
   const order = [player.team, 1 - player.team];
   return order.map((team) => {
@@ -70,9 +72,10 @@ export function statsBlocks(
       .map((c, i) => ({ c, s: statsOf(c.id), i }))
       .sort((a, b) => b.s.hits - a.s.hits || a.i - b.i);
     const won = score[team] ?? 0;
+    const side = run ? (team === player.team ? 'your squad' : 'home team') : `${won} ${won === 1 ? 'round' : 'rounds'} won`;
     return {
       team,
-      title: `${TEAMS[team]!.name}${team === player.team ? ' (you)' : ''} · ${won} ${won === 1 ? 'round' : 'rounds'} won`,
+      title: `${TEAMS[team]!.name}${team === player.team ? ' (you)' : ''} · ${side}`,
       rows: sorted.map(({ c, s }) => ({
         name: names.get(c.id) ?? '',
         you: c.id === player.id,

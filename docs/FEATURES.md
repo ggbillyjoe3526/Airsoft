@@ -42,6 +42,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - Elimination: knock out the whole other team (Phase 1)
 - Attack / Defend: raise your flag on the other team's pole or keep yours down; overtime; sides swap at half-time (M5)
+- Extraction: your squad against a home team on an 8:00 run; exits counted out in 10 s, a late exit, one automatic respawn; dev content, Depot (M43)
 - 3v3 by default with a round clock; first to 5 rounds wins; a whistle starts each round (Phase 1)
 - Custom matches: rounds to win, round time, 1v1 to 3v3 (to 5v5 on maps with room, M33d), friendly fire, ricochets; only the standard match counts for the records (M20)
 - Rules picker: Skirmish, Tournament, Pro CQB (dev) and Custom; named rulesets keep their own records, Custom never counts (M39)
@@ -55,6 +56,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Bushes on any map that lists them: bots can't see someone deep in or behind one, BBs and people pass through, drawn on the minimap; Woodland has 70 (M33e)
 - Night sight on any night map: bots see 40 m into a light pool, 25 m in the open, 10 m under the trees (M33g)
 - Night lighting on any map that asks for it: a dark sky and haze, a low moon as the key light, light pools that glow and light the ground on every preset and light players on Medium and High (Graphics › Night lights: Off, Nearest 2, Nearest 4); Depot stays day (M33f)
+- Neon Heights: three-floor greybox market city with stairs, Sky Bridge and balcony, dev content, 4v4 to 5v5, Elimination and Attack / Defend (M34c)
 - Ramps and raised floors that players and bots use (Phase 3)
 
 ## Loadout, pool and Armory
@@ -96,6 +98,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 
 - Follow me (F), Hold here (X), Regroup (V), and a wheel on hold Z with Team plan showing each order's key; a HUD line shows the order (M22, M23, FA5)
 - A minimap: the field, teammates always, the other team where last heard (M23)
+- Minimap on multi-level maps shows the floor you stand on (floors below darker) and marks teammates on other floors with an up or down arrow (M34c)
 
 ## Audio
 
