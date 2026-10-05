@@ -1540,3 +1540,115 @@ describe('M33j: the woods at night in a match', () => {
     expect(FakeContext.last.buffersMade).toBe(made);
   });
 });
+
+// ---- M33j QA: lazy rendering, a match ending and switching fields -----------------------------------
+
+describe('M33j QA: the map sounds render only for the fields that play them, and stop with the match', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** A match on `map` as CombatPresentation and the session set it up: scene, unlock, listener at the first spawn, play. */
+  function matchOn(map: typeof DEPOT, night: boolean, engine: AudioEngine) {
+    const spawn = map.spawns[0][0]!.position;
+    const player = createCharacter(PLAYER, vec3(spawn.x, spawn.y, spawn.z), 0, LOADOUT, 0);
+    const bot = createCharacter(1, vec3(spawn.x + 3, spawn.y, spawn.z), 0, LOADOUT, 1);
+    const all = [player, bot];
+    const sfx = new Sfx(LOADOUT, map.blocks, OPEN, engine);
+    sfx.setScene(soundscapeOf(map, night));
+    sfx.unlock();
+    sfx.setListener(vec3(spawn.x, spawn.y + 1.6, spawn.z), 0, 0, -1);
+    sfx.setPaused(false);
+    return { sfx, ctx: FakeContext.last, player, bot, all, characterOf: (id: number) => all.find((c) => c.id === id) };
+  }
+  const isMapCueName = (c: string): boolean => /^step\.(grass|leaves|earth|gravel|wood)\./.test(c) || c === 'ambience.owl';
+
+  it('renders nothing beyond the title screen for Depot and Neon Heights (day or night): not a buffer more', () => {
+    const engine = engineFor();
+    // The title screen: every title cue, the yard's bed and the echo.
+    engine.cueBuffers();
+    engine.ambienceBed();
+    engine.reverbImpulse();
+    const ctx = FakeContext.last;
+    expect([...engine.cueBuffers().keys()].some(isMapCueName)).toBe(false);
+    const titleBuffers = ctx.buffersMade;
+    for (const [map, night] of [[DEPOT, false], [NEON_HEIGHTS, true], [NEON_HEIGHTS, false]] as const) {
+      const m = matchOn(map, night, engine);
+      for (let t = 0; t < Math.round(10 / SIM_DT); t++) m.sfx.afterTick(m.all, PLAYER);
+      m.sfx.onEvent(step(m.bot.id), PLAYER, m.characterOf);
+      m.sfx.dispose();
+      expect(ctx.buffersMade, map.name).toBe(titleBuffers);
+    }
+    expect([...engine.cueBuffers().keys()].some(isMapCueName)).toBe(false);
+  });
+
+  it("stops every Woodland loop when its match ends, and the next match on Depot plays only the yard's bed, its birds and concrete", () => {
+    const engine = engineFor();
+    const woods = matchOn(WOODLAND, true, engine);
+    const woodsLoops = woods.ctx.sources.filter((s) => s.loop);
+    expect(woodsLoops.length).toBeGreaterThan(4);
+    woods.sfx.dispose();
+    expect(woodsLoops.every((s) => s.stopAt === 0)).toBe(true);
+    expect(woodsLoops.every((s) => s.disconnected)).toBe(true);
+    expect(woods.ctx.panners.filter((p) => p.distanceModel === 'linear').every((p) => p.disconnected)).toBe(true);
+
+    // Switching field on the same engine (Play again on another map): nothing of the woods carries over.
+    const sourcesBefore = woods.ctx.sources.length;
+    const pannersBefore = woods.ctx.panners.length;
+    const depot = matchOn(DEPOT, false, engine);
+    expect(depot.ctx).toBe(woods.ctx);
+    const depotLoops = depot.ctx.sources.slice(sourcesBefore).filter((s) => s.loop);
+    expect(depotLoops).toHaveLength(2);
+    expect(depotLoops.every((s) => s.buffer === engine.ambienceBed())).toBe(true);
+    expect(depot.ctx.panners.slice(pannersBefore).some((p) => p.distanceModel === 'linear')).toBe(false);
+    for (let t = 0; t < Math.round(60 / SIM_DT); t++) depot.sfx.afterTick(depot.all, PLAYER);
+    const calls = depot.ctx.sources.slice(sourcesBefore).filter((s) => !s.loop);
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every((s) => plays(s, 'ambience.bird'))).toBe(true);
+    // A bot's step on Depot's yard floor is concrete again (no ground grid left behind), at a step's level.
+    const before = depot.ctx.sources.length;
+    depot.sfx.onEvent(step(depot.bot.id), PLAYER, depot.characterOf);
+    const [theirs] = depot.ctx.sources.slice(before);
+    expect(plays(theirs!, 'step.concrete.run')).toBe(true);
+    expect(([...theirs!.outputs][0] as FakeGain).gain.value).toBe(AUDIO.levels.step.gain);
+    depot.sfx.dispose();
+    expect(depotLoops.every((s) => s.stopAt === 0)).toBe(true);
+  });
+
+  it('switches Day | Night on Neon Heights without leaving the night silent of the bed or the day without birds', () => {
+    const engine = engineFor();
+    for (const night of [true, false, true]) {
+      const from = FakeContext.made > 0 ? FakeContext.last.sources.length : 0;
+      const m = matchOn(NEON_HEIGHTS, night, engine);
+      for (let t = 0; t < Math.round(60 / SIM_DT); t++) m.sfx.afterTick(m.all, PLAYER);
+      const mine = m.ctx.sources.slice(from);
+      expect(mine.filter((s) => s.loop && s.stopAt === null), `night ${night}`).toHaveLength(2);
+      const birds = mine.filter((s) => !s.loop && plays(s, 'ambience.bird'));
+      if (night) expect(birds).toHaveLength(0);
+      else expect(birds.length).toBeGreaterThan(0);
+      m.sfx.dispose();
+      expect(m.ctx.sources.filter((s) => s.loop && s.stopAt === null)).toHaveLength(0);
+    }
+  });
+
+  it("plays a step on Woodland's ground at the same level as a step on Depot's concrete", () => {
+    const engine = engineFor();
+    const woods = matchOn(WOODLAND, true, engine);
+    const before = woods.ctx.sources.length;
+    woods.sfx.onEvent(step(woods.bot.id), PLAYER, woods.characterOf);
+    woods.sfx.onEvent(step(PLAYER), PLAYER, woods.characterOf);
+    const [theirs, yours] = woods.ctx.sources.slice(before);
+    expect(theirs!.buffer).not.toBeNull();
+    expect(engine.samples('step.earth.run').some((v) => v === (theirs!.buffer as FakeBuffer).data[0])).toBe(true);
+    expect(([...theirs!.outputs][0] as FakeGain).gain.value).toBe(AUDIO.levels.step.gain);
+    expect(([...yours!.outputs][0] as FakeGain).gain.value).toBe(AUDIO.levels.ownStep.gain);
+    woods.sfx.dispose();
+  });
+});
