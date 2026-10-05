@@ -122,6 +122,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
 
 ### Fixed
+- **M65** · A map's sounds are made while you're on the title screen, so pressing Play on Woodland or Neon Heights starts the match sooner
 - **M63** · Playing Neon Heights again with the same lighting reuses the built map instead of building it again; a match's shaders are compiled as it loads, so its first frame and first flag pickup hitch less; the GPU timer comes back after the graphics driver resets (#115)
 - **M54** · Accessibility: with no Reduced motion choice saved, the system setting applies as it changes; High Contrast mode shows the case prompt, coach and range readout; the empty key box's dash is easier to read; the debug overlay sits under the minimap in every browser; the respawn fade no longer stalls a frame (#113)
 - **M52** · At night the ground, wood and faces read in their own colours instead of near black: a bluer, brighter night sky and moon, and on Medium the shadows at night stay sharp near you (#111)
