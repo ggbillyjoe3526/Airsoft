@@ -2,7 +2,9 @@ import { DIFFICULTIES, type Difficulty } from '../config/bots';
 import { standardMatchText } from '../config/matchRules';
 import { isAvailable } from '../config/content';
 import { MATCH_MODES, type MatchMode } from '../config/modes';
-import { type RecordNews, type Records, resultKey } from '../stats/records';
+import { noNews, type RecordNews, type Records, resultKey } from '../stats/records';
+import { fcText } from './menus/armoryScreen';
+import { formatTime } from './statsRows';
 
 /** How the records read on the summary screen: a wins and losses grid, then the bests. Pure, so it's tested without a page. */
 export interface RecordsView {
@@ -17,8 +19,6 @@ export interface RecordsView {
 
 /** After a match that used dev content (M35); the Field Credits line says it paid nothing. */
 export const DEV_CONTENT_NOT_RECORDED = "This match used content still being built, so it isn't in your records.";
-
-const NO_NEWS: RecordNews = { bestAccuracy: false, bestStreak: false };
 
 /**
  * Why a match isn't in the records: custom rules (M20; config/matchRules countsForRecords), Dev settings (M24), or
@@ -39,7 +39,7 @@ function notCountedLine(why: NotCounted): string {
  */
 export function recordsView(records: Records, news: RecordNews, difficulty: Difficulty, mode: MatchMode, notCounted: NotCounted = ''): RecordsView {
   const counted = notCounted === '';
-  if (!counted) news = NO_NEWS;
+  if (!counted) news = noNews();
   const modes = MATCH_MODES.filter((m) => isAvailable(m.tag, false));
   return {
     modes: modes.map((m) => m.label),
@@ -59,7 +59,22 @@ export function recordsView(records: Records, news: RecordNews, difficulty: Diff
         isNew: news.bestAccuracy,
       },
       { label: 'Wins in a row', value: `${records.streak} now · best ${records.bestStreak}`, isNew: news.bestStreak },
+      // Extraction's (M47), with its column: never while the mode is dev content, whose runs aren't recorded.
+      ...(modes.some((m) => m.id === 'extraction') ? extractionBests(records, news) : []),
     ],
     notCounted: counted ? '' : notCountedLine(notCounted),
   };
+}
+
+/** Extraction's bests (M47): the biggest haul, extractions in a row, and the quickest one with a case's finds. Pure. */
+export function extractionBests(records: Records, news: RecordNews): RecordsView['bests'] {
+  return [
+    { label: 'Best haul', value: records.bestHaul === null ? '–' : fcText(records.bestHaul), isNew: news.bestHaul },
+    { label: 'Extractions in a row', value: `${records.extractionStreak} now · best ${records.bestExtractionStreak}`, isNew: news.bestExtractionStreak },
+    {
+      label: 'Fastest extraction with a case',
+      value: records.fastestExtraction === null ? '–' : formatTime(records.fastestExtraction),
+      isNew: news.fastestExtraction,
+    },
+  ];
 }

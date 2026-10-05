@@ -5,8 +5,8 @@ import { LOADOUT } from '../config/replicas';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { emptyStats, type PlayerStats } from '../stats/matchStats';
-import { addMatch, emptyRecords } from '../stats/records';
-import { DEV_CONTENT_NOT_RECORDED, recordsView } from './recordsView';
+import { addMatch, emptyRecords, noNews } from '../stats/records';
+import { DEV_CONTENT_NOT_RECORDED, extractionBests, recordsView } from './recordsView';
 import { formatAccuracy, formatTime, rosterNames, statsBlocks } from './statsRows';
 
 /** You (0) and Blue 2 (1) against Orange 1 (2) and Orange 2 (3). */
@@ -53,7 +53,7 @@ describe('stats tables (M19)', () => {
   });
 });
 
-const NO_NEWS_FOR_TEST = { bestAccuracy: false, bestStreak: false };
+const NO_NEWS_FOR_TEST = noNews();
 
 describe('records view (M19)', () => {
   it('lists wins and losses per difficulty and mode, marks the one just played, and flags new bests', () => {
@@ -85,6 +85,26 @@ describe('records view (M19)', () => {
     expect(view.rows.flatMap((row) => row.cells).filter((c) => c.current)).toHaveLength(0);
   });
 
+  it('has no Extraction bests while it is dev content either (M47)', () => {
+    const view = recordsView(emptyRecords(), NO_NEWS_FOR_TEST, 'normal', 'extraction', 'devContent');
+    expect(view.bests.map((b) => b.label)).toEqual(['Best accuracy', 'Wins in a row']);
+  });
+
+  it('reads Extraction’s bests: the best haul, extractions in a row and the fastest with a find (M47)', () => {
+    const r = emptyRecords();
+    expect(extractionBests(r, NO_NEWS_FOR_TEST)).toEqual([
+      { label: 'Best haul', value: '–', isNew: false },
+      { label: 'Extractions in a row', value: '0 now · best 0', isNew: false },
+      { label: 'Fastest extraction with a case', value: '–', isNew: false },
+    ]);
+    const news = addMatch(r, { difficulty: 'normal', mode: 'extraction', won: true, hits: 0, bbsFired: 0, run: { haulFc: 1250, finds: 2, seconds: 95.4 } });
+    expect(extractionBests(r, news)).toEqual([
+      { label: 'Best haul', value: '1,250 FC', isNew: true },
+      { label: 'Extractions in a row', value: '1 now · best 1', isNew: true },
+      { label: 'Fastest extraction with a case', value: '1:35', isNew: true },
+    ]);
+  });
+
   it('has no Pro row while Pro is dev content, since a dev match never enters the records (M36, M35)', () => {
     const r = emptyRecords();
     const news = addMatch(r, { difficulty: 'hard', mode: 'elimination', won: true, hits: 3, bbsFired: 40 });
@@ -105,7 +125,7 @@ describe('records view (M19)', () => {
   });
 
   it('says Dev settings kept the match out of the records when they did (M24)', () => {
-    const view = recordsView(emptyRecords(), { bestAccuracy: true, bestStreak: false }, 'hard', 'attackDefend', 'dev');
+    const view = recordsView(emptyRecords(), { ...noNews(), bestAccuracy: true }, 'hard', 'attackDefend', 'dev');
     expect(view.notCounted).toContain('Dev settings');
     expect(view.bests.every((b) => !b.isNew)).toBe(true);
   });

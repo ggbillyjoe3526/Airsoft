@@ -568,3 +568,29 @@ describe('M32 acceptance 8: the Armory shows the chase item', () => {
     expect(revealSummary(pool, got.slice(0, 1))).not.toMatch(/Chase/);
   });
 });
+
+describe('Extraction pay (M47)', () => {
+  const run = { extraction: true, won: true, roundsWon: 1, hits: 3, winsNeeded: 1, difficulty: 'normal' } as const;
+  const haul = { fc: 120, items: [] };
+
+  it('pays the FC got out with plus each hit, with no match or round lines', () => {
+    const paid = matchEarnings(e, { ...run, haul });
+    expect(paid.lines).toEqual([
+      { label: 'Got out with', fc: 120 },
+      { label: '3 hits on an opponent', fc: 3 * e.earn.hit },
+    ]);
+    expect(paid.total).toBe(120 + 3 * e.earn.hit);
+  });
+
+  it('pays your hits only when out or caught out, and nothing for walking out empty-handed', () => {
+    expect(matchEarnings(e, { ...run, won: false }).lines).toEqual([{ label: '3 hits on an opponent', fc: 3 * e.earn.hit }]);
+    expect(matchEarnings(e, { ...run, hits: 0 }).total).toBe(0);
+  });
+
+  it('scales all of it by the difficulty, the lower of the home team’s and your teammates’', () => {
+    const hard = matchEarnings(e, { ...run, difficulty: 'hard', haul });
+    expect(hard.multiplier).toBe(e.difficulty.hard);
+    expect(hard.total).toBe(Math.round((120 + 3 * e.earn.hit) * e.difficulty.hard));
+    expect(matchEarnings(e, { ...run, difficulty: 'hard', teammateDifficulty: 'easy', haul }).multiplier).toBe(e.difficulty.easy);
+  });
+});

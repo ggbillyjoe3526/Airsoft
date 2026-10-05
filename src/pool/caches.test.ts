@@ -133,13 +133,14 @@ describe('parts found in cases', () => {
     expect(unowned / n).toBeGreaterThan(0.8);
   });
 
-  it('go into the collection only through grantHaul, FC and parts at once, and leave pity alone', () => {
+  it('go into the collection only through grantHaul, parts only (the FC is paid with the run, M47), and leave pity alone', () => {
     const c = newCollection(pool, 1);
     const pity = { ...c.pity };
     const fc = c.fc;
     const part = pool.assets.find((a) => a.category === 'grip')!;
-    const got = grantHaul(c, { fc: 85, items: [{ asset: part.id, tier: 'rare' }, { asset: part.id, tier: 'rare' }] });
-    expect(c.fc).toBe(fc + 85);
+    const haul = { fc: 85, items: [{ asset: part.id, tier: 'rare' }, { asset: part.id, tier: 'rare' }] };
+    const got = grantHaul(c, haul);
+    expect(c.fc).toBe(fc);
     expect(c.owned[itemKey(part.id, 'rare')]).toBe(2);
     expect(got.map((d) => d.isNew)).toEqual([true, false]);
     expect(c.pity).toEqual(pity);

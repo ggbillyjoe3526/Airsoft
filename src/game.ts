@@ -38,7 +38,7 @@ import { MatchSession } from './matchSession';
 import { type RangePose, RangeSession } from './rangeSession';
 import { teamEnd } from './sim/round';
 import type { GameState } from './sim/state';
-import { loadRecords, type RecordNews, type Records, saveRecords } from './stats/records';
+import { loadRecords, noNews, type RecordNews, type Records, saveRecords } from './stats/records';
 import { settleMatch } from './stats/settleMatch';
 import { loadCrosshair } from './ui/crosshair';
 import { CrashScreen } from './ui/crashScreen';
@@ -204,7 +204,7 @@ export class Game {
   private crosshair: CrosshairSettings = loadCrosshair();
   /** The local records (M19), and what the last match finished changed in them. */
   private readonly records: Records = loadRecords(browserStorage());
-  private recordNews: RecordNews = { bestAccuracy: false, bestStreak: false };
+  private recordNews: RecordNews = noNews();
   /** What the last match paid in Field Credits (M26c), for its summary. */
   private lastEarnings: Earnings | null = null;
   /** The last Extraction haul's parts as they went into the collection (M44), or null when it kept nothing. */
