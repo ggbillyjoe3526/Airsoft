@@ -271,15 +271,17 @@ describe('the pop-up line (M49 edge cases)', () => {
 });
 
 describe('the device’s own clock, not UTC (M49 edge cases)', () => {
+  /** Node's environment: the tests run in Node, but the game's types don't include its globals. */
+  const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
   /** Runs `body` with the process in another time zone (Node re-reads TZ when it changes), then puts the zone back. */
   function inZone(zone: string, body: () => void): void {
-    const was = process.env.TZ;
-    process.env.TZ = zone;
+    const was = env.TZ;
+    env.TZ = zone;
     try {
       body();
     } finally {
-      if (was === undefined) delete process.env.TZ;
-      else process.env.TZ = was;
+      if (was === undefined) delete env.TZ;
+      else env.TZ = was;
     }
   }
 
@@ -288,7 +290,7 @@ describe('the device’s own clock, not UTC (M49 edge cases)', () => {
     const halloween = { dated: { from: '2026-10-30', to: '2026-11-01' } };
     // Auckland (UTC+13 in October): 00:30 on Friday there is still Thursday in UTC. Honolulu (UTC-10): 23:30 Sunday there is Monday in UTC.
     inZone('Pacific/Auckland', () => {
-      expect(new Date(2026, 9, 9, 0, 30).getDate()).toBe(9); // the zone took effect
+      expect(new Date(2026, 9, 9, 0, 30).getTimezoneOffset()).toBe(-13 * 60); // the zone took effect
       expect(isOn(weekend, new Date(2026, 9, 9, 0, 30))).toBe(true);
       expect(isOn(weekend, new Date(2026, 9, 8, 23, 30))).toBe(false);
       expect(isOn(halloween, new Date(2026, 9, 30, 0, 30))).toBe(true);
