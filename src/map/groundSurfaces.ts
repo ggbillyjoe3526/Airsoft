@@ -6,8 +6,8 @@ import { terrainMaxX, terrainMaxZ } from './terrain';
 
 /**
  * A map's ground on one grid (M33i, MapData.ground): what each cell is (grass, leaf litter, earth, gravel, boards). The
- * terrain is painted from it (render/terrainMeshes.ts) and footsteps will read it (M33j), the same function for both, so
- * what you see underfoot is what you hear. Pure data: no Three.js.
+ * terrain is painted from it (render/terrainMeshes.ts) and footsteps read it (M33j, audio/soundMaterials.ts), the same
+ * function for both, so what you see underfoot is what you hear. Pure data: no Three.js.
  */
 
 /** The surfaces in grid order: a cell holds its surface's index here. */
