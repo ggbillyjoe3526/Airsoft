@@ -28,16 +28,30 @@ export function playsAtNight(map: MapData, choice?: LightingPresetId | null): bo
 }
 
 /**
+ * The maps already played under each preset (M63, audit REN-01): the same map and pick give back the same object, so
+ * the kept map meshes (render/mapMeshCache.ts, which compares maps by identity) are taken back on Play again, and the
+ * other pick builds them again (its light is baked into them). Weakly held: a map no one keeps goes with its entries.
+ */
+const underLighting = new WeakMap<MapData, Map<LightingPresetId, MapData>>();
+
+/**
  * The map as it plays under `choice`: the picked preset listed first, so the one lighting path (resolveLighting,
  * addLighting) draws it, and `night` set by that preset, so glowing BBs and the bots' night sight go with it. A map
- * with no lighting block, or with one preset, plays as it is.
+ * with no lighting block, or with one preset, plays as it is. The same map and pick give the same object each time.
  */
 export function mapUnderLighting(map: MapData, choice?: LightingPresetId | null): MapData {
   const lighting = map.lighting;
   if (!lighting || lighting.presets.length < 2) return map;
   const id = lightingPicked(map, choice);
-  const rest = lighting.presets.filter((p) => p !== id);
-  return { ...map, night: LIGHTING_PRESETS[id].night, lighting: { ...lighting, presets: [id, ...rest] } };
+  let picks = underLighting.get(map);
+  if (!picks) underLighting.set(map, (picks = new Map()));
+  let played = picks.get(id);
+  if (!played) {
+    const rest = lighting.presets.filter((p) => p !== id);
+    played = { ...map, night: LIGHTING_PRESETS[id].night, lighting: { ...lighting, presets: [id, ...rest] } };
+    picks.set(id, played);
+  }
+  return played;
 }
 
 /** What New game calls each preset. */
