@@ -307,7 +307,7 @@ body {
 
 /* Keyboard focus, one rule for every control (audit section 6, item 6): the orange ring, with a page-coloured gap
    under it so the ring reads on the orange buttons too. */
-.menus :is(button, [role='tab'], input, select, a, .setup-tile, .gear-slot, .item-tile, .item-chip):focus-visible,
+.menus :is(button, [role='tab'], input, select, a, summary, .setup-tile, .gear-slot, .item-tile, .item-chip):focus-visible,
 .menu-dialog :is(button, input):focus-visible,
 .crash-screen :is(button, textarea):focus-visible {
   outline: 2px solid var(--orange);
@@ -861,9 +861,34 @@ body {
   color: var(--menu-muted);
 }
 
-/* Settings → Graphics: the Custom settings block under the presets (the heading is a .menu-kicker) */
+/* Settings → Graphics: the Custom settings block under the presets, a disclosure (M68, audit UI-09): the summary is a
+   .menu-kicker with a chevron drawn in currentColor, so it follows forced colours and the heading's own colour. */
 .graphics-subhead {
-  margin: var(--sp-5) 0 var(--sp-1);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--control-sm);
+  margin: var(--sp-3) 0 var(--sp-1);
+  cursor: pointer;
+  list-style: none;
+}
+
+.graphics-subhead::-webkit-details-marker {
+  display: none;
+}
+
+.graphics-subhead::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+}
+
+.graphics-custom[open] > .graphics-subhead::before {
+  transform: rotate(45deg);
 }
 
 .graphics-custom > .menu-readout {
@@ -1447,20 +1472,6 @@ body {
 
 .settings-tab.selected svg {
   color: var(--orange);
-}
-
-.settings-reload {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-3) var(--sp-5);
-  padding: var(--sp-1) 0 var(--sp-3);
-}
-
-.settings-reload .menu-readout {
-  flex-basis: auto;
-  font-size: var(--fs-md);
-  color: var(--hint);
 }
 
 .settings-mouse {
@@ -3751,11 +3762,6 @@ kbd {
 .armory-row-name {
   flex: 1 1 160px;
   font-weight: 700;
-}
-
-.armory-row-count {
-  min-width: 2.5em;
-  color: var(--menu-muted);
 }
 
 /* What the copy's tier adds (M29), on a line of its own under the name */
