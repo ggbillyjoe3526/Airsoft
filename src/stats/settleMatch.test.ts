@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { itemKey, newCollection } from '../pool/collection';
 import { GAME_POOL } from '../pool/gamePool';
 import { emptyRecords, resultKey } from './records';
+import { DEFAULT_MAP } from '../map/maps';
+import { DEFAULT_DIFFICULTY } from '../config/bots';
+import { DEFAULT_MATCH_RULES, DEFAULT_RULESET } from '../config/matchRules';
+import { matchUsesDev, type NewGamePicks } from '../newGamePicks';
 import { MatchTakes, matchStanding, settleMatch } from './settleMatch';
 
 const RESULT = { difficulty: 'normal', mode: 'elimination', won: true, hits: 7, bbsFired: 40 } as const;
@@ -52,6 +56,56 @@ describe('an Extraction haul (M44)', () => {
     // A run that doesn't pay (Dev settings, dev content) or was settled already has no outcome to carry a haul.
     expect(settleMatch(emptyRecords(), collection, null, null, GAME_POOL.economy, false).haul).toBeNull();
     expect(collection).toEqual(before);
+  });
+});
+
+describe('an Extraction haul and dev content (M44)', () => {
+  const grip = GAME_POOL.assets.find((a) => a.category === 'grip')!;
+  const HAUL = { fc: 85, items: [{ asset: grip.id, tier: 'epic' }] };
+  const extraction: NewGamePicks = { map: DEFAULT_MAP, mode: 'extraction', difficulty: DEFAULT_DIFFICULTY, teammateDifficulty: DEFAULT_DIFFICULTY, ruleset: DEFAULT_RULESET, rules: { ...DEFAULT_MATCH_RULES } };
+
+  it('keeps nothing from an Extraction run today: the mode is dev content, so the run pays nothing and its haul goes nowhere', () => {
+    expect(matchUsesDev(extraction, [], GAME_POOL, true)).toBe(true);
+    const standing = matchStanding({ standardRules: true, devAssisted: false, devContentUsed: true });
+    expect(standing.unpaid).toBe('devContent');
+    const collection = newCollection(GAME_POOL, 1);
+    const before = structuredClone(collection);
+    const takes = new MatchTakes();
+    const outcome = takes.outcome(true, standing.unpaid === null, () => ({ ...OUTCOME, haul: HAUL }));
+    expect(outcome).toBeNull();
+    const settled = settleMatch(emptyRecords(), collection, null, outcome, GAME_POOL.economy, false);
+    expect(settled).toEqual({ news: null, pay: null, haul: null });
+    expect(collection).toEqual(before);
+  });
+
+  it('grants the haul once only: a second settle of the same decided run adds nothing', () => {
+    const takes = new MatchTakes();
+    const collection = newCollection(GAME_POOL, 1);
+    const first = takes.outcome(true, true, () => ({ ...OUTCOME, haul: HAUL }));
+    settleMatch(emptyRecords(), collection, null, first, GAME_POOL.economy, false);
+    const fc = collection.fc;
+    const owned = structuredClone(collection.owned);
+    const again = takes.outcome(true, true, () => ({ ...OUTCOME, haul: HAUL }));
+    expect(settleMatch(emptyRecords(), collection, null, again, GAME_POOL.economy, false).haul).toBeNull();
+    expect(collection.fc).toBe(fc);
+    expect(collection.owned).toEqual(owned);
+  });
+
+  it('grants a part you own already as a spare, FC with the pay, and leaves pity as it was', () => {
+    const collection = newCollection(GAME_POOL, 1);
+    const pity = structuredClone(collection.pity);
+    const haul = { fc: 10, items: [HAUL.items[0]!, HAUL.items[0]!] };
+    const settled = settleMatch(emptyRecords(), collection, null, { ...OUTCOME, haul }, GAME_POOL.economy, false);
+    expect(settled.haul!.map((d) => d.isNew)).toEqual([true, false]);
+    expect(collection.owned[itemKey(grip.id, 'epic')]).toBe(2);
+    expect(collection.pity).toEqual(pity);
+  });
+
+  it('leaves a run with nothing out of the haul: no outcome haul, no parts, the pay as for any match', () => {
+    const collection = newCollection(GAME_POOL, 1);
+    const settled = settleMatch(emptyRecords(), collection, null, OUTCOME, GAME_POOL.economy, false);
+    expect(settled.haul).toBeNull();
+    expect(settled.pay).not.toBeNull();
   });
 });
 

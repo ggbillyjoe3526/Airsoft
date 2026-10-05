@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { EXTRACTION } from '../config/extraction';
 import { NAV } from '../config/nav';
-import { buildNavGrid, isWalkableAt } from '../nav/navGrid';
-import { placeCases } from '../pool/caches';
+import { buildNavGrid, createNavSearch, findPath, isWalkableAt } from '../nav/navGrid';
+import { placeCases, rollRunCases } from '../pool/caches';
 import { GAME_POOL } from '../pool/gamePool';
 import { exitClosedFor, pickOpponentStarts } from '../sim/extraction';
 import { createRng } from '../sim/rng';
+import type { Vec3 } from '../sim/vec';
 import { MAPS } from './maps';
 import { modeOffered, playableMode } from './playableMode';
 
@@ -71,6 +72,30 @@ describe('Extraction map data (M43)', () => {
         for (let seed = 0; seed < 100; seed++) {
           const placed = placeCases(most, x.cases, createRng(seed));
           for (const k of most) expect(placed.filter((p) => p.kind.key === k.key).length, `${k.key} seed ${seed}`).toBe(k.count.max);
+        }
+      });
+
+      it('can be walked to from every insertion to every case spot (M44)', () => {
+        const search = createNavSearch(nav);
+        const out: Vec3[] = [];
+        for (const ins of x.insertions) {
+          for (const c of x.cases) expect(findPath(nav, search, ins.spawns[0]!.position, c.position, NAV.snap, out), `${ins.name} to ${JSON.stringify(c.position)}`).toBe(true);
+        }
+      });
+
+      it('rolls every run one marshal’s locker and each other kind within its pool.md count, on distinct spots of the map (M44)', () => {
+        const at = new Set(x.cases.map((c) => JSON.stringify(c.position)));
+        for (let seed = 0; seed < 200; seed++) {
+          const run = rollRunCases(GAME_POOL, x.cases, {}, seed);
+          expect(run.filter((c) => c.kind === 'locker'), `seed ${seed}`).toHaveLength(1);
+          for (const k of GAME_POOL.caseKinds) {
+            const n = run.filter((c) => c.kind === k.key).length;
+            expect(n, `${k.key} seed ${seed}`).toBeGreaterThanOrEqual(k.count.min);
+            expect(n, `${k.key} seed ${seed}`).toBeLessThanOrEqual(k.count.max);
+          }
+          const places = run.map((c) => JSON.stringify(c.position));
+          expect(new Set(places).size).toBe(places.length);
+          for (const p of places) expect(at.has(p)).toBe(true);
         }
       });
 

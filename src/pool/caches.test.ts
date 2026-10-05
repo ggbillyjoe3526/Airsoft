@@ -145,3 +145,79 @@ describe('parts found in cases', () => {
     expect(c.pity).toEqual(pity);
   });
 });
+
+describe('what a run’s cases hold, from the real pool (M44)', () => {
+  const owned = newCollection(pool, 1).owned;
+  const everyCase = (seeds: number, fn: (c: ReturnType<typeof rollRunCases>[number]) => void): void => {
+    for (let seed = 0; seed < seeds; seed++) for (const c of rollRunCases(pool, SPOTS, owned, seed)) fn(c);
+  };
+
+  it('never holds dev gear or anything Shots cannot give, with Dev content’s gear in the pool, over many runs', () => {
+    const tagged = withTags(pool, Object.fromEntries(pool.assets.filter((a) => a.category === 'grip' || a.category === 'magazine').map((a) => [a.name, 'dev' as const])));
+    expect(tagged.assets.filter((a) => a.tag === 'dev').length).toBeGreaterThan(2);
+    for (const p of [pool, tagged]) {
+      let parts = 0;
+      for (let seed = 0; seed < 300; seed++) {
+        for (const c of rollRunCases(p, SPOTS, owned, seed)) {
+          if (!c.find.item) continue;
+          parts++;
+          const asset = p.byId.get(c.find.item.asset)!;
+          expect(dispensable(asset), asset.name).toBe(true);
+          expect(asset.tag, asset.name).toBe('public');
+          expect(asset.category, asset.name).not.toBe('replica');
+        }
+      }
+      expect(parts).toBeGreaterThan(300);
+    }
+  });
+
+  it('draws a part’s tier by the Rarity odds from the case’s own floor up, never below it', () => {
+    const rare = pool.tiers.findIndex((t) => t.id === 'rare');
+    const above = pool.tiers.slice(rare);
+    const total = above.reduce((s, t) => s + t.odds, 0);
+    const counts = new Map<string, number>();
+    const rng = createRng(11);
+    const n = 6000;
+    for (let i = 0; i < n; i++) {
+      const f = rollFind(pool, kind('locker'), owned, new Set(), rng);
+      counts.set(f.item!.tier, (counts.get(f.item!.tier) ?? 0) + 1);
+    }
+    for (const t of pool.tiers.slice(0, rare)) expect(counts.get(t.id) ?? 0, t.id).toBe(0);
+    for (const t of above) {
+      const p = t.odds / total;
+      expect(Math.abs((counts.get(t.id) ?? 0) / n - p), t.id).toBeLessThan(4 * Math.sqrt((p * (1 - p)) / n) + 0.002);
+    }
+    // And a field case's parts start at the bottom of the table: Common is its commonest tier.
+    const field = { ...kind('field-case'), partChance: 1 };
+    const low = new Map<string, number>();
+    for (let i = 0; i < n; i++) {
+      const f = rollFind(pool, field, owned, new Set(), rng);
+      low.set(f.item!.tier, (low.get(f.item!.tier) ?? 0) + 1);
+    }
+    expect(low.get(pool.tiers[0]!.id) ?? 0).toBeGreaterThan(n * 0.4);
+  });
+
+  it('puts a run’s cases in the same places whatever the collection holds, and leaves the collection’s table alone', () => {
+    const frozen = Object.freeze({ ...owned });
+    const rich = Object.freeze(Object.fromEntries(pool.assets.flatMap((a) => pool.tiers.map((t) => [itemKey(a.id, t.id), 3] as const))));
+    for (let seed = 0; seed < 50; seed++) {
+      const a = rollRunCases(pool, SPOTS, frozen, seed);
+      const b = rollRunCases(pool, SPOTS, rich, seed);
+      expect(b.map((c) => [c.kind, c.position])).toEqual(a.map((c) => [c.kind, c.position]));
+    }
+    expect(frozen).toEqual(owned);
+  });
+
+  it('rolls an ammo can’s contents without a part, a field case’s part about 3 in 10 and the locker’s every time', () => {
+    const parts: Record<string, number> = { 'ammo-can': 0, 'field-case': 0, locker: 0 };
+    const total: Record<string, number> = { 'ammo-can': 0, 'field-case': 0, locker: 0 };
+    everyCase(400, (c) => {
+      total[c.kind]!++;
+      if (c.find.item) parts[c.kind]!++;
+    });
+    expect(parts['ammo-can']).toBe(0);
+    expect(parts.locker).toBe(total.locker);
+    expect(parts['field-case']! / total['field-case']!).toBeGreaterThan(0.2);
+    expect(parts['field-case']! / total['field-case']!).toBeLessThan(0.4);
+  });
+});

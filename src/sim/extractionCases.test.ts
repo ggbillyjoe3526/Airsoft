@@ -230,4 +230,118 @@ describe('Extraction cases (M44)', () => {
     expect(round.run.cases.every((k) => !k.open)).toBe(true);
     expect(round.run.carried).toEqual([]);
   });
+
+  it('makes no noise for a silent case (heard 0), but still opens it over its time', () => {
+    const quiet = { ...X, cases: [{ ...CASES[0]!, heard: 0 }] };
+    const ctx: RoundContext = { ...CTX, extraction: quiet };
+    const cs = squadAndHome();
+    const round = createRoundState(RULES, 'extraction');
+    startRun(round, cs, ctx);
+    standAt(cs[0]!, -11, 0);
+    cs[0]!.using = true;
+    const events: GameEvent[] = [];
+    const bbs = createBBPool(4);
+    for (let i = 0; i < Math.round(4.1 / DT); i++) stepRound(round, cs, bbs, ctx, events, DT);
+    expect(events.filter((e) => e.type === 'caseNoise')).toEqual([]);
+    expect(round.run.cases[0]!.open).toBe(true);
+  });
+
+  it('starts a different case from nothing when you step from one to another while holding Use', () => {
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const you = cs[0]!;
+    standAt(you, -11, 0);
+    you.using = true;
+    play(3, round, cs, []);
+    expect(round.run.opening).toBe(0);
+    expect(round.run.openProgress).toBeGreaterThan(2.9);
+    // The ammo can (2 s) is 5 m on: the progress on the field case isn't carried over to it.
+    standAt(you, -5.5, 0);
+    play(DT, round, cs, []);
+    expect(round.run.opening).toBe(1);
+    expect(round.run.openProgress).toBeLessThan(0.1);
+    expect(round.run.cases[1]!.open).toBe(false);
+    play(2, round, cs, []);
+    expect(round.run.cases[1]!.open).toBe(true);
+    expect(round.run.cases[0]!.open).toBe(false);
+  });
+
+  it('opens the nearer of two cases in reach, one at a time', () => {
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const you = cs[0]!;
+    // Between the field case (x = -10) and the ammo can (x = -5) the cases are 5 m apart: only one is within 1.5 m.
+    standAt(you, -6, 0);
+    expect(caseInReach(round.run, you, EXTRACTION)).toBe(1);
+    standAt(you, -9, 0);
+    expect(caseInReach(round.run, you, EXTRACTION)).toBe(0);
+    standAt(you, -7.5, 0);
+    expect(caseInReach(round.run, you, EXTRACTION)).toBe(-1);
+  });
+
+  it('stops opening the moment you are hit, and what a half-opened case holds is still in it', () => {
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const you = cs[0]!;
+    standAt(you, -11, 0);
+    you.using = true;
+    const events: GameEvent[] = [];
+    play(3, round, cs, events);
+    hit(you);
+    you.using = false; // the sim clears it for a character who is not in play
+    play(DT, round, cs, events);
+    expect(round.run.opening).toBe(-1);
+    expect(round.run.openProgress).toBe(0);
+    expect(round.run.cases[0]!.open).toBe(false);
+    expect(round.run.cases).toHaveLength(CASES.length);
+    expect(events.some((e) => e.type === 'caseDropped')).toBe(false);
+  });
+
+  it('drops nothing when you are hit with empty hands, and everything in one dropped case when carrying several finds', () => {
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const you = cs[0]!;
+    standAt(you, -11, 0);
+    hit(you);
+    const events: GameEvent[] = [];
+    play(HITS.callTime + 0.1, round, cs, events);
+    expect(round.run.cases).toHaveLength(CASES.length);
+    expect(events.some((e) => e.type === 'caseDropped')).toBe(false);
+
+    // Now two finds (the field case, then the ammo can's resupply and the locker's) and a hit: one case holds the lot.
+    const again = squadAndHome();
+    const second = newRun(again);
+    const me = again[0]!;
+    me.using = true;
+    standAt(me, -11, 0);
+    play(4.1, second, again, []);
+    standAt(me, -10, 0, 3);
+    play(7.1, second, again, []);
+    expect(second.run.carried.map((f) => f.fc)).toEqual([60, 120]);
+    me.using = false;
+    standAt(me, 0, 0);
+    hit(me);
+    play(DT, second, again, []);
+    const dropped = second.run.cases.filter((k) => k.dropped);
+    expect(dropped).toHaveLength(1);
+    expect(haulTotals(dropped[0]!.finds)).toEqual({ fc: 180, items: [CASES[0]!.find.item, CASES[2]!.find.item] });
+    expect(second.run.carried).toEqual([]);
+  });
+
+  it('shows the dropped case to nobody else: an opponent standing at it opens nothing', () => {
+    const cs = squadAndHome();
+    const round = newRun(cs);
+    const you = cs[0]!;
+    standAt(you, -11, 0);
+    you.using = true;
+    play(4.1, round, cs, []);
+    you.using = false;
+    standAt(you, -12, 3);
+    hit(you);
+    play(DT, round, cs, []);
+    standAt(cs[3]!, -12, 3);
+    cs[3]!.using = true;
+    play(2, round, cs, []);
+    expect(round.run.cases[3]!.open).toBe(false);
+  });
 });
