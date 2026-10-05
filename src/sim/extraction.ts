@@ -1,4 +1,5 @@
-import { EXTRACTION, type ExtractionRules } from '../config/extraction';
+import type { Difficulty } from '../config/bots';
+import { EXTRACTION, type ExtractionRules, homeTeamCap } from '../config/extraction';
 import type { BodyConfig } from '../config/movement';
 import type { ExitZone, ExtractionData, SpawnPoint } from '../map/mapTypes';
 import type { WorldQuery } from './armament';
@@ -269,6 +270,7 @@ export function placeRun(characters: readonly Character[], ctx: ExtractionContex
     const s = reserved ? ctx.reserveAt?.[reserve++ % Math.max(1, ctx.reserveAt.length)] : home ? ctx.opponentStarts[start++] : ctx.insertion[slot++];
     if (s) setSpawn(c, s, ctx.spawnLift);
     respawnCharacter(c);
+    if (!home) c.grace = ctx.rules.insertionGrace;
     if (reserved) {
       if (run) run.reserve[c.id] = true;
       c.status = 'out';
@@ -315,17 +317,19 @@ export interface RunSetup {
   sight?: WaveSetup['sight'];
   /** The map's dead zones, per end: the reserve waits in the home team's. */
   deadZones?: readonly (readonly SpawnPoint[])[];
+  /** The home team's level (Audit 2): its offset to the cap, EXTRACTION.opponentsByLevel (homeTeamCap). Absent: none. */
+  opponents?: Difficulty;
 }
 
 /**
  * A run's places on a map with Extraction `data`: the insertion picked from the run's seed, the home team's starts
- * (base + squad of them) far from it, and the exits.
+ * (base + squad of them, with the home team's level offset when given) far from it, and the exits.
  */
 export function createRunContext(data: ExtractionData, setup: RunSetup): ExtractionContext {
   const rng = createRng(setup.seed);
   const insertion = data.insertions[Math.floor(rngNext(rng) * data.insertions.length)] ?? data.insertions[0]!;
   const rules = setup.rules ?? EXTRACTION;
-  const cap = data.baseOpponents + setup.squad;
+  const cap = setup.opponents ? homeTeamCap(data.baseOpponents, setup.squad, setup.opponents, rules) : data.baseOpponents + setup.squad;
   const waves: WaveSetup | undefined =
     setup.waveEvery !== undefined && data.regens.length > 0
       ? { regens: data.regens, regenDistance: data.regenDistance, every: setup.waveEvery, cap, lateExtra: rules.lateExtra, lateFrom: data.runTime * rules.lateShare, sight: setup.sight }
@@ -385,6 +389,8 @@ export function stepRun(run: RunState, characters: readonly Character[], ctx: Ex
   // Hit: what the runner carries stays where they fell, before the respawn takes them back to the insertion.
   if (runner && !isInPlay(runner) && run.carried.length > 0) dropCarried(run, runner, rules, events);
   for (const c of characters) {
+    // The insertion grace runs out (Audit 2, SIM-03).
+    if (c.grace > 0) c.grace = Math.max(0, c.grace - dt);
     if (c.team !== ctx.squadTeam || isInPlay(c) || c.status === 'out') continue;
     // Back at the insertion the moment the hit call ends; a walk-off never starts (owner, 2026-10-04).
     if (c.status === 'calling' && c.statusTime < ctx.respawnAfter) continue;
@@ -395,6 +401,7 @@ export function stepRun(run: RunState, characters: readonly Character[], ctx: Ex
     }
     run.respawnsUsed[c.id] = used + 1;
     respawnCharacter(c);
+    c.grace = rules.insertionGrace;
     events.push({ type: 'respawned', characterId: c.id, respawnsLeft: rules.respawns - used - 1 });
   }
   if (ctx.waves) stepWaves(run, characters, ctx, ctx.waves, clock, events, dt);

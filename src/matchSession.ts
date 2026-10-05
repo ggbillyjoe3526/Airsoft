@@ -6,7 +6,7 @@ import type { SfxSetup } from './audio/sfx';
 import { FULL_MOTION, type MotionScale } from './config/accessibility';
 import { BALLISTICS, WIND } from './config/ballistics';
 import { BOT_BEHAVIOUR, BOT_LOADOUTS, BOT_PART_CHANCE, BOTS, type BotConfig, botConfig, type Difficulty, difficultyAtLeast } from './config/bots';
-import { EXTRACTION } from './config/extraction';
+import { EXTRACTION, homeTeamCap } from './config/extraction';
 import { FOOTSTEPS } from './config/footsteps';
 import type { HitConfig } from './config/hits';
 import { type DevSettings, devCheating } from './config/dev';
@@ -240,6 +240,8 @@ export class MatchSession {
             waveEvery: EXTRACTION.waveEvery[setup.difficulty],
             sight: { query: this.physics, body: BODY },
             deadZones: map.deadZones,
+            // The home team's size by its level (Audit 2, BAL-03).
+            opponents: setup.difficulty,
           })
         : undefined;
     // An Extraction run is one "round" of the map's run time (sim/round.ts); there is nothing to win twice.
@@ -274,7 +276,7 @@ export class MatchSession {
       this.state,
       this.state.characters.filter((c) => c !== this.player),
       this.commands,
-      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed },
+      { query: this.physics, nav: this.nav, navSnap: NAV.snap, lanes: map.lanes, lowCover: lowCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), tallCover: tallCoverBlocks(map.blocks, this.nav, BODY, BOT_BEHAVIOUR.lowCoverFloorGap), sight: sightConditionsOf(map, this.lighting.night), body: BODY, hits: this.hits, loadout: this.botLoadout, cfg: BOTS, teamCfg: teamBotConfigs(this.player.team, setup), seed, insertionBerth: map.extraction?.insertionBerth },
     );
     this.build.phase('simulation and bots');
     input.resetView(this.player.spawnYaw);
@@ -602,7 +604,7 @@ export class MatchSession {
   private teamSizes(): [number, number] {
     const size = this.setup.rules.teamSize;
     const x = this.setup.map.extraction;
-    return this.mode === 'extraction' && x ? [size, x.baseOpponents + size] : [size, size];
+    return this.mode === 'extraction' && x ? [size, homeTeamCap(x.baseOpponents, size, this.setup.difficulty)] : [size, size];
   }
 
   /** Characters per team: the team sizes, and in Extraction the home team's reserve for the run's last part (M45). */

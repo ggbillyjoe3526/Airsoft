@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import type { Difficulty } from '../config/bots';
 import { HITS } from '../config/hits';
 import { BODY } from '../config/movement';
 import { DEPOT } from '../map/depot';
@@ -21,10 +22,14 @@ const SEEDS = [1, 2, 3, 4, 5, 6];
 const SECONDS = 12;
 /** The share of its ticks at the post a guard sees its way in (measured: every guard well over this). */
 const SEEN_SHARE = 0.8;
-const MAPS: { name: string; map: MapData }[] = [
-  { name: 'Depot', map: DEPOT },
-  { name: 'Neon Heights', map: NEON_HEIGHTS },
-  { name: 'Woodland', map: WOODLAND },
+/**
+ * The home team's level: Normal, except on Depot, where only a field case's guard has a lean post and a Normal home
+ * team (one fewer since M72, EXTRACTION.opponentsByLevel) is two locker guards and a patrol pair, no field case guard.
+ */
+const MAPS: { name: string; map: MapData; opponents: Difficulty }[] = [
+  { name: 'Depot', map: DEPOT, opponents: 'hard' },
+  { name: 'Neon Heights', map: NEON_HEIGHTS, opponents: 'normal' },
+  { name: 'Woodland', map: WOODLAND, opponents: 'normal' },
 ];
 
 describe('Extraction: guards see their way in, on every map (M55, audit AI-01)', () => {
@@ -32,13 +37,13 @@ describe('Extraction: guards see their way in, on every map (M55, audit AI-01)',
     await initPhysics();
   });
 
-  for (const { name, map } of MAPS) {
+  for (const { name, map, opponents } of MAPS) {
     it(`${name}: no guard at its post goes without seeing its way in, over ${SEEDS.length} seeds`, () => {
       const eye = vec3();
       let guards = 0;
       let leanPosts = 0;
       for (const seed of SEEDS) {
-        const r = setUpRun({ seed, map });
+        const r = setUpRun({ seed, map, opponents });
         const held = new Map<Bot, { at: number; seen: number; leaned: number }>();
         r.play(SECONDS, () => {
           for (const b of r.bots.bots) {

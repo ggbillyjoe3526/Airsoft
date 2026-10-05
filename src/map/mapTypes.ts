@@ -281,6 +281,11 @@ export interface ExtractionData {
   regens: SpawnPoint[];
   /** How far a regen point must be from every squad member (m): the plan's 25, Depot's 15 for a small field. */
   regenDistance: number;
+  /**
+   * No case within this of the squad's insertion is guarded or patrolled (m; Audit 2, BAL-05). Absent: the bots' shared
+   * BOT_BEHAVIOUR.insertionBerth, sized for Depot; a bigger field sets its own.
+   */
+  insertionBerth?: number;
 }
 
 /**

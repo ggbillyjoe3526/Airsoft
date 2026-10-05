@@ -12,7 +12,7 @@ import { vec3, wrapAngle } from '../sim/vec';
 import type { Bot } from './bot';
 import { moveBot } from './botMovement';
 import { DT } from './depotMatchSupport';
-import { setUpRun } from './extractionRunSupport';
+import { SAME_SIZE_AT_EVERY_LEVEL, setUpRun } from './extractionRunSupport';
 import { eyeOf, lineClear } from './perception';
 
 /**
@@ -26,7 +26,7 @@ const home = (bots: readonly Bot[]) => bots.filter((b) => b.character.team === 1
 /** A run whose locker stands outside the insertion's berth (so it is guarded), from the first seed that has one. */
 function runWithGuardedLocker(opponents: Difficulty = 'normal', squad = 3) {
   for (let seed = 1; seed < 40; seed++) {
-    const r = setUpRun({ seed, opponents, squad });
+    const r = setUpRun({ seed, opponents, squad, rules: SAME_SIZE_AT_EVERY_LEVEL });
     const centre = r.run.insertion.reduce((s, p) => ({ x: s.x + p.position.x / r.run.insertion.length, z: s.z + p.position.z / r.run.insertion.length }), { x: 0, z: 0 });
     const locker = r.state.round.run.cases.findIndex((k) => k.kind === 'locker');
     if (locker >= 0 && flat(r.state.round.run.cases[locker]!.position, centre) >= cfg.insertionBerth) return { ...r, locker, centre };
@@ -82,7 +82,7 @@ describe('Extraction: the home team’s jobs (M46)', () => {
     const eye = vec3();
     let leanPosts = 0;
     for (const seed of [1, 2, 4]) {
-      const r = setUpRun({ seed });
+      const r = setUpRun({ seed, rules: SAME_SIZE_AT_EVERY_LEVEL });
       const held = new Map<Bot, { at: number; seen: number; leaned: number }>();
       r.play(15, () => {
         for (const b of home(r.bots.bots)) {

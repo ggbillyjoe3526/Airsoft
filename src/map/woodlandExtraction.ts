@@ -28,6 +28,11 @@ const RUN_TIME = 900;
 const BASE_OPPONENTS = 3;
 /** The plan's 25 m: the field is big enough to keep a returner well clear. */
 const REGEN_DISTANCE = 25;
+/**
+ * No case within 30 m of the insertion is guarded or patrolled (Audit 2, BAL-05): the nearest case spots are 24-36 m
+ * out, so the shared 15 m berth (sized for Depot) left every one on a patrol round and the run never started quiet.
+ */
+const INSERTION_BERTH = 30;
 /** Exits are wider than Depot's: a field this size is crossed at a run, not a walk. */
 const EXIT_RADIUS = 3;
 
@@ -122,6 +127,7 @@ export function woodlandExtraction(at: WoodlandPlacer): ExtractionData {
       opponentStarts: OPPONENT_STARTS,
       cases: CASE_SPOTS,
       regens: REGENS,
+      insertionBerth: INSERTION_BERTH,
     },
     { point: ([x, , z]) => at.onGround(x, z), spawn: ([x, , z], yaw) => at.spawnAt({ x, z, yaw }) },
   );

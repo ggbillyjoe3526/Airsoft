@@ -43,6 +43,18 @@ export interface ExtractionRules {
    * none is left in play, up to the run's cap (base + squad).
    */
   waveEvery: Readonly<Record<Difficulty, number>>;
+  /**
+   * The home team's size by its level (Audit 2, BAL-03; owner decision 1a): this many added to the map's baseOpponents
+   * plus the squad (at least 1 in all, homeTeamCap). A Normal home team is one smaller, a Pro one one larger: without
+   * it, every level met the same numbers and the first patrol fight decided the run whatever the level.
+   */
+  opponentsByLevel: Readonly<Record<Difficulty, number>>;
+  /**
+   * Seconds after going in, and after a respawn, that a squad member can neither be hit nor hit anyone (Audit 2,
+   * SIM-03; owner decision 8): a BB stops on them, or theirs stops on its target, with no hit. Covers the step out of
+   * the insertion when the home team is already looking at it.
+   */
+  insertionGrace: number;
   /** In the last part of the run (this share of its time left) the cap is this many higher. */
   lateShare: number;
   lateExtra: number;
@@ -80,6 +92,10 @@ export const EXTRACTION: ExtractionRules = {
   dropOpenTime: 0,
   /** The plan's numbers; Pro waves come as fast as Hard's (its bots are what make it harder). */
   waveEvery: { easy: 100, normal: 75, hard: 60, pro: 60 },
+  /** Measured on Woodland (audit check 9): Normal one fewer extracts 3 of 8 instead of 1 of 8; Pro one more, 0 of 8. */
+  opponentsByLevel: { easy: 0, normal: -1, hard: 0, pro: 1 },
+  /** About a step and a half out of the insertion at a run: long enough to see who is there, too short to cross the yard. */
+  insertionGrace: 3,
   /** "One more in play in the last third". */
   lateShare: 1 / 3,
   lateExtra: 1,
@@ -93,4 +109,13 @@ export const EXTRACTION: ExtractionRules = {
 /** The squad a run plays with for the picked team size: the team size, at most `maxSquad` (a map may allow bigger teams). */
 export function squadSize(picked: number, rules: ExtractionRules = EXTRACTION): number {
   return Math.min(picked, rules.maxSquad);
+}
+
+/**
+ * The home team in play at a run's start (its cap before the last part): the map's base, plus the squad, plus the
+ * offset for the home team's level, and at least 1. The match, the scoreboard, the rules text and the headless runs
+ * all size it through this, so they agree.
+ */
+export function homeTeamCap(baseOpponents: number, squad: number, level: Difficulty, rules: ExtractionRules = EXTRACTION): number {
+  return Math.max(1, baseOpponents + squad + rules.opponentsByLevel[level]);
 }

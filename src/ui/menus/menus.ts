@@ -632,7 +632,7 @@ export class Menus {
     const light = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[this.lightingOf(map.id)]}` : '';
     this.setup.map.set(`${this.mapDialog.label}${light}`, this.mapDialog.blurb);
     this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
-    const match = run ? runRulesSummary(m, run) : matchRulesSummary(m);
+    const match = run ? runRulesSummary(m, run, played.difficulty) : matchRulesSummary(m);
     // Under a ruleset other than Skirmish the line starts with its name (M39).
     this.setup.match.set(match.value, played.ruleset === DEFAULT_RULESET ? match.detail : `${rulesetOf(played.ruleset).label}. ${match.detail}`);
     const opponents = difficultyLabel(played.difficulty);
@@ -643,7 +643,7 @@ export class Menus {
     );
     const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
     const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty, played.ruleset);
-    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter, switches: m }, played.mode, run);
+    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter, switches: m, opponents: played.difficulty }, played.mode, run);
     this.setup.setRules(setupNotes(rules, { recorded, cheating: this.opts.dev.cheating(), devContentUsed: this.opts.dev.devContentUsed(), ruleset: played.ruleset }));
     const loadout = this.opts.loadout.summary();
     this.setup.loadout.set(loadout.replicas, loadout.detail);

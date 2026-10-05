@@ -14,7 +14,7 @@ REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 ## M72 · Extraction opponents per level, Woodland's berth, insertion grace, hunters measured (Audit 2 BAL PR 2 + SIM-C: BAL-03, BAL-05, BAL-06, SIM-03)
 tier: core
 perf: required
-touches: src/config/extraction.ts, src/config/bots.ts, src/sim/extraction.ts, src/matchSession.ts, src/ai/extractionRunSupport.ts, src/ai/extractionBalanceSupport.ts, src/ai/extractionRoles.ts, src/ai/botController.ts, src/map/mapTypes.ts, src/map/woodlandExtraction.ts, docs/ARCHITECTURE.md, docs/DECISIONS.md, docs/KNOWN_ISSUES.md, docs/PLAYTEST.md
+touches: src/config/extraction.ts, src/config/bots.ts, src/config/matchRules.ts, src/sim/extraction.ts, src/sim/character.ts, src/sim/bbs.ts, src/matchSession.ts, src/ai/extractionRunSupport.ts, src/ai/extractionBalanceSupport.ts, src/ai/extractionRoles.ts, src/ai/botController.ts, src/ai/botCombat.ts, src/map/mapTypes.ts, src/map/extractionBlock.ts, src/map/woodlandExtraction.ts, src/ui/menus/rulesText.ts, src/ui/menus/menus.ts, docs/ARCHITECTURE.md, docs/DECISIONS.md, docs/KNOWN_ISSUES.md, docs/PLAYTEST.md
 contract: map block format (optional `insertionBerth`, by addition)
 acceptance:
   1. `EXTRACTION.opponentsByLevel` `{ easy: 0, normal: -1, hard: 0, pro: 1 }` offsets the home team (at least 1); the match, the scoreboard and the headless runs size it through one helper (owner decision 1a).
@@ -22,7 +22,8 @@ acceptance:
   3. The three Extraction balance guards are re-measured at 48 seeds per level with bands ±15 points round the new figures; Woodland asserts Easy > Normal > Hard again.
   4. A careful-runner guard shows hunters appear in at least half the long runs (BAL-06, owner decision 5).
   5. DECISIONS, KNOWN_ISSUES rows 198 and 199, the PLAYTEST Difficulty line.
-status: open
+  6. Added in the build: guards at a lean post sweep only away from the lean's side, so a Woodland locker guard sees its way in (the Extraction guards' sight test crossed with the bigger home teams).
+status: building
 attempts: 0
 
 ## M73 · Neon Heights: the bar door over the avenue (Audit 2 BAL PR 3: BAL-04; only if M71 leaves the west under 45 %)
