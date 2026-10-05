@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUDIO, matchOverBlastStart } from '../config/audio';
+import { AMBIENCES, AUDIO, matchOverBlastStart } from '../config/audio';
 import { SIM_DT } from '../config/sim';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
 import type { SoundCue } from '../config/sounds';
@@ -12,6 +12,7 @@ import { NEON_HEIGHTS } from '../map/neonHeights';
 import { terrainHeightAt } from '../map/terrain';
 import { WOODLAND } from '../map/woodland';
 import { FIRE_SOUND } from '../config/audio';
+import { AmbientCalls } from './ambience';
 import { soundscapeOf } from './soundscape';
 import { AudioEngine, type IdleScheduler } from './audioEngine';
 import { volumeGain } from './audioMix';
@@ -1192,8 +1193,9 @@ describe('the final alpha audit: range, pause, mix and ambience (FA6)', () => {
     bot.position.x += AUDIO.spatial.moveEpsilon;
     sfx.placeSources(all, PLAYER);
     expect(writes()).toBe(made + 3);
-    // Beyond earshot: the channel isn't moved, no ray is cast and it counts as muffled...
-    bot.position.x = AUDIO.spatial.maxDistance + 10;
+    // Beyond earshot: the channel isn't moved, no ray is cast and, far enough out, it counts as muffled (M53: AUD-03)...
+    const far = AUDIO.spatial.maxDistance + AUDIO.occlusion.farRamp;
+    bot.position.x = far;
     sfx.placeSources(all, PLAYER);
     sfx.afterTick(all, PLAYER);
     expect(writes()).toBe(made + 3);
@@ -1208,7 +1210,7 @@ describe('the final alpha audit: range, pause, mix and ambience (FA6)', () => {
     sfx.placeSources(all, PLAYER);
     sfx.afterTick(all, PLAYER);
     expect(casts).toBe(0);
-    expect(panner.positionX.value).toBe(AUDIO.spatial.maxDistance + 10);
+    expect(panner.positionX.value).toBe(far);
     bot.status = 'alive';
     sfx.afterTick(all, PLAYER);
     expect(casts).toBe(AUDIO.occlusion.rayHeights.length);
@@ -1668,5 +1670,125 @@ describe('M33j QA: the map sounds render only for the fields that play them, and
     expect(([...theirs!.outputs][0] as FakeGain).gain.value).toBe(AUDIO.levels.step.gain);
     expect(([...yours!.outputs][0] as FakeGain).gain.value).toBe(AUDIO.levels.ownStep.gain);
     woods.sfx.dispose();
+  });
+});
+
+describe('M53: mix and placement (audit AUD-02, AUD-03, AUD-05, AUD-07, AUD-12)', () => {
+  beforeEach(() => {
+    FakeContext.made = 0;
+    FakeContext.rate = 48000;
+    vi.stubGlobal('AudioContext', FakeContext);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** Where a filter is headed: its last target, or its value if it was never eased. */
+  const aimedHz = (f: FakeFilter): number => f.frequency.targets.at(-1)?.value ?? f.frequency.value;
+  const octaves = (a: number, b: number): number => Math.abs(Math.log2(a / b));
+
+  it('lets a bot crossing the 60 m line keep its muffling, and closes it to fully muffled further out, without a ray (AUD-03)', () => {
+    for (const [query, label] of [[OPEN, 'in the open'], [WALLED, 'behind a wall']] as const) {
+      let casts = 0;
+      const counting: OcclusionQuery = { raycastStatic: (...a) => (casts++, query.raycastStatic(...a)) };
+      const { sfx, ctx, player, bot } = setup(counting);
+      const all = [player, bot];
+      const max = AUDIO.spatial.maxDistance;
+      bot.position.x = max - 1;
+      sfx.afterTick(all, PLAYER);
+      const inside = aimedHz(channelFilter(ctx)!);
+      const rays = casts;
+      bot.position.x = max + 1;
+      sfx.afterTick(all, PLAYER);
+      expect(octaves(aimedHz(channelFilter(ctx)!), inside), label).toBeLessThan(1);
+      expect(casts, `${label}: no ray beyond the line`).toBe(rays);
+      // Further out it closes a step at a time, a fifth of an octave or less each, to fully muffled at the ramp's end.
+      let last = aimedHz(channelFilter(ctx)!);
+      for (let d = max + 1; d <= max + AUDIO.occlusion.farRamp; d += 1) {
+        bot.position.x = d;
+        sfx.afterTick(all, PLAYER);
+        const now = aimedHz(channelFilter(ctx)!);
+        expect(octaves(now, last), `${label} at ${d} m`).toBeLessThanOrEqual(Math.log2(AUDIO.occlusion.openHz / AUDIO.occlusion.muffledHz) * (AUDIO.occlusion.farStep / AUDIO.occlusion.farRamp) + 1e-9);
+        last = now;
+      }
+      expect(last, label).toBeCloseTo(AUDIO.occlusion.muffledHz);
+      expect(casts, label).toBe(rays);
+    }
+  });
+
+  it("writes the listener's own up, the world's when none is given (AUD-05)", () => {
+    const { sfx, ctx } = setup();
+    const l = ctx.listener;
+    expect([l.upX!.value, l.upY!.value, l.upZ!.value]).toEqual([0, 1, 0]);
+    // Looking down at your feet: forward nearly straight down, up nearly level and at right angles to it.
+    const pitch = -1.55;
+    sfx.setListener(vec3(0, 1.6, 0), 0, Math.sin(pitch), -Math.cos(pitch), 0, Math.cos(pitch), Math.sin(pitch));
+    expect([l.upX!.value, l.upY!.value, l.upZ!.value]).toEqual([0, Math.cos(pitch), Math.sin(pitch)]);
+    expect(l.forwardY!.value * l.upY!.value + l.forwardZ!.value * l.upZ!.value).toBeCloseTo(0, 12);
+  });
+
+  it("times the ambience's calls from the match's seed: another seed, another first bird; seed 0 as before (AUD-07)", () => {
+    const firstBird = (seed: number): { tick: number; x: number; z: number } => {
+      const player = createCharacter(PLAYER, vec3(0, 0, 0), 0, LOADOUT, 0);
+      const sfx = new Sfx(LOADOUT, FLOOR, OPEN, engineFor(), seed);
+      sfx.unlock();
+      sfx.setListener(vec3(0, 1.6, 0), 0, 0, -1);
+      const ctx = FakeContext.last;
+      for (let tick = 0; tick < Math.round(AUDIO.ambience.birdEvery[1] / SIM_DT) + 1; tick++) {
+        sfx.afterTick([player], PLAYER);
+        const bird = ctx.sources.find((s) => plays(s, 'ambience.bird'));
+        if (bird) {
+          const p = destinationOf(bird) as FakePanner;
+          return { tick, x: p.positionX.value, z: p.positionZ.value };
+        }
+      }
+      throw new Error('no bird');
+    };
+    // Seed 0 sings as the call's own seed always did (woodlandSoundQA.test.ts pins those times).
+    const before = new AmbientCalls(AMBIENCES.yard.day.call!);
+    const at = vec3();
+    let tick = 0;
+    while (!before.due((tick + 1) * SIM_DT, vec3(0, 1.6, 0), at)) tick++;
+    expect(firstBird(0)).toMatchObject({ tick, x: at.x, z: at.z });
+    const a = firstBird(12345);
+    const b = firstBird(987654321);
+    expect(a).not.toEqual(firstBird(0));
+    expect(b).not.toEqual(a);
+    expect(firstBird(12345)).toEqual(a);
+  });
+
+  it('beeps twice, quickly and dry, when a late exit opens, once however many open in the tick, with no dip (AUD-12)', () => {
+    const { sfx, ctx, engine, player, characterOf } = setup();
+    const duck = vi.spyOn(engine, 'duck');
+    ctx.currentTime = 2;
+    sfx.onEvent({ type: 'exitOpened', exit: 1 }, PLAYER, characterOf);
+    sfx.onEvent({ type: 'exitOpened', exit: 3 }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(AUDIO.exitOpened.beeps);
+    expect(ctx.sources.every((s) => plays(s, 'count.beep') && playsDry(s, ctx))).toBe(true);
+    expect(ctx.sources.map((s) => s.startAt)).toEqual([2, 2 + AUDIO.exitOpened.gap]);
+    expect(duck).not.toHaveBeenCalled();
+    // The next tick's opening beeps again.
+    sfx.afterTick([player], PLAYER);
+    sfx.onEvent({ type: 'exitOpened', exit: 2 }, PLAYER, characterOf);
+    expect(ctx.sources).toHaveLength(2 * AUDIO.exitOpened.beeps);
+  });
+
+  it("starts the neon bed's second copy a fifth of a hum cycle past half a loop; the other beds half a loop on (AUD-02)", () => {
+    const engine = engineFor();
+    const sfx = new Sfx(LOADOUT, NEON_HEIGHTS.blocks, OPEN, engine);
+    sfx.setScene(soundscapeOf(NEON_HEIGHTS, true));
+    sfx.unlock();
+    sfx.setPaused(false);
+    const beds = AMBIENCES.city.night.beds;
+    const loops = FakeContext.last.sources.filter((s) => s.loop);
+    expect(loops).toHaveLength(2 * beds.length);
+    beds.forEach((bed, i) => {
+      const half = (engine.loop(bed.loop) as unknown as FakeBuffer).duration / 2;
+      expect(loops.slice(2 * i, 2 * i + 2).map((s) => s.offset), bed.loop).toEqual([0, half + (bed.copyOffset ?? 0)]);
+    });
+    expect(beds.find((b) => b.loop === 'neon')!.copyOffset).toBeCloseTo(0.002, 9);
+    expect(beds.find((b) => b.loop === 'traffic')!.copyOffset).toBeUndefined();
   });
 });

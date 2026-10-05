@@ -41,8 +41,23 @@ function describeRun(r: MatchRulesText, x: ExtractionData | undefined): string {
     (x.regens.length > 0 ? `The ones you hit come back in waves, out of your sight, ${lateJoin(x)}. ` : '') +
     `You have ${formatRoundTime(x.runTime)} to get to an open exit and stand in it for ${EXTRACTION.extractTime} s while you're counted out; ` +
     `someone from the home team in the exit pauses the count. A late exit opens with ${formatRoundTime(EXTRACTION.lateExitAt)} left. ` +
-    `Hit once and you're back at the insertion straight away; hit again and you're out of the run.`
+    `Hit once and you're back at the insertion straight away; hit again and you're out of the run.` +
+    // The Rules picker's switches hold in a run as in a match (M53, audit UI-01).
+    switchSentences(r.switches)
   );
+}
+
+/**
+ * The Rules picker's switches that change the kit or the minimap (M39), in words, each with its leading space; '' for
+ * none. Every mode plays them, Extraction too (M53, audit UI-01).
+ */
+function switchSentences(sw: MatchRulesText['switches']): string {
+  return [
+    sw?.semiAutoOnly ? ' Every replica fires semi only, bots\' too.' : '',
+    sw?.realcap ? ` Realcap magazines for everyone: ${REALCAP_TEXT}.` : '',
+    sw?.factoryKit ? ' Everyone carries the factory rifle and pistol as they come.' : '',
+    sw && !sw.heardOnMinimap ? ' The minimap shows your teammates only.' : '',
+  ].join('');
 }
 
 /** "and one more joins them with 2:40 left": the home team's reserve (M45), from the rules and the map's run time. */
@@ -67,13 +82,7 @@ export function describeRules(r: MatchRulesText, mode: MatchMode, extraction?: E
   const ricochets = r.ricochetsCount ? ' Ricochets count.' : " Ricochets don't count.";
   const sw = r.switches;
   const winBy = sw?.winByTwo ? `, by two clear: level at ${r.winsNeeded - 1} all, play on until one team is two ahead` : '';
-  const extra = [
-    sw?.semiAutoOnly ? ' Every replica fires semi only, bots\' too.' : '',
-    sw?.realcap ? ` Realcap magazines for everyone: ${REALCAP_TEXT}.` : '',
-    sw?.factoryKit ? ' Everyone carries the factory rifle and pistol as they come.' : '',
-    sw && !sw.heardOnMinimap ? ' The minimap shows your teammates only.' : '',
-  ].join('');
-  const end = `First to ${r.winsNeeded} rounds wins the match${winBy}. One hit and you're out.${fire}${ricochets}${extra}`;
+  const end = `First to ${r.winsNeeded} rounds wins the match${winBy}. One hit and you're out.${fire}${ricochets}${switchSentences(sw)}`;
   if (mode === 'attackDefend') {
     return (
       teams +

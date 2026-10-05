@@ -105,8 +105,12 @@ export const AUDIO = {
     hitMarker: { gain: 0.55, pitchSpread: 0 },
     /** A teammate's radio answering a squad order (M22). */
     radioAck: { gain: 0.5, pitchSpread: 0.02 },
-    /** Extraction's exit count (M43): the timer box's beeps, on the interface bus. */
-    countBeep: { gain: 0.45, pitchSpread: 0 },
+    /**
+     * Extraction's exit count (M43): the timer box's beeps, on the interface bus. Its recipe is quiet (0.12), so the level
+     * lifts it to about -16 dBFS at full volume (M53, audit AUD-04: it was -28.5, 18 dB under every other interface cue
+     * and lost under the fight at the exit); audio.test.ts keeps every interface cue within 20 dB of the hit tick.
+     */
+    countBeep: { gain: 1.9, pitchSpread: 0 },
     /** Extraction's cases (M44): worked while opened, and the lid popping. */
     caseWork: { gain: 0.8, pitchSpread: 0.06 },
     caseOpen: { gain: 0.9, pitchSpread: 0.05 },
@@ -163,6 +167,14 @@ export const AUDIO = {
     muffledGain: 0.55,
     smoothing: 0.07,
     surfaceGap: 0.2,
+    /**
+     * Beyond AUDIO.spatial.maxDistance no ray is cast (audit CORE-35): a character's channel keeps the share its last ray
+     * found and closes from there to fully muffled over this many metres further out (M53, audit AUD-03), so a bot
+     * crossing the line is not muffled and cleared in a step. It closes in `farStep`-metre steps (a fifth of an octave
+     * each at most), so a far bot on the move doesn't re-aim the filter every tick.
+     */
+    farRamp: 60,
+    farStep: 5,
   },
   /**
    * Other players' footsteps further than this (m) aren't played: about as far as bots hear a sprint. At most
@@ -196,6 +208,11 @@ export const AUDIO = {
   /** Round start: two short blasts, the second starting this many blast-lengths after the first. */
   roundStartWhistle: 0.14,
   roundStartWhistleGap: 1.6,
+  /**
+   * A late exit opening in Extraction (M53, audit AUD-12): this many of the exit count's beeps, `gap` seconds apart, on
+   * the interface bus and with no dip, so a player facing the other way hears that the plan can change.
+   */
+  exitOpened: { beeps: 2, gap: 0.12 },
   /** Match over: this many more long blasts after the round's, each this many blast-lengths apart. */
   matchOverBlasts: 3,
   matchOverWhistleGap: 1.3,
@@ -302,6 +319,9 @@ export type LoopSpec = NoiseLoopSpec | InsectLoopSpec | CrackleLoopSpec | HumLoo
 /** The ambience's looping sounds (M33j), each rendered once per page and only for a map that plays it. */
 export type LoopId = 'yard' | 'pines' | 'insects' | 'crackle' | 'traffic' | 'drones' | 'neon';
 
+/** The neon by night (M34g): a mains hum at 100 Hz and its low harmonics, and a faint tube sizzle round 6.5 kHz. */
+const NEON_LOOP: HumLoopSpec = { kind: 'hum', seconds: 3, crossfade: 0.2, seed: 3483, hz: 100, harmonics: [1, 0.55, 0.3, 0.12], flickers: 2, flickerDepth: 0.25, buzzHz: 6500, buzzQ: 2, buzzLevel: 0.3 };
+
 export const AMBIENT_LOOPS: Readonly<Record<LoopId, LoopSpec>> = {
   /** The yard's bed (audit CORE-34), as it always was: rendered on the title screen. */
   yard: { kind: 'noise', ...AUDIO.ambience },
@@ -347,18 +367,22 @@ export const AMBIENT_LOOPS: Readonly<Record<LoopId, LoopSpec>> = {
   traffic: { kind: 'noise', seconds: 8, crossfade: 0.4, bandHz: 210, bandQ: 0.8, topHz: 480, rumbleHz: 90, rumbleMix: 0.9, gusts: 3, gustDepth: 0.55, seed: 3481 },
   /** Delivery drones high over the block by day (M34g): a thin whine round 5 kHz, above the footstep band, two passes in 5 s. */
   drones: { kind: 'noise', seconds: 5, crossfade: 0.3, bandHz: 5200, bandQ: 5, topHz: 7500, rumbleHz: 100, rumbleMix: 0, gusts: 2, gustDepth: 0.9, seed: 3482 },
-  /** The neon by night (M34g): a mains hum at 100 Hz and its low harmonics, and a faint tube sizzle round 6.5 kHz. */
-  neon: { kind: 'hum', seconds: 3, crossfade: 0.2, seed: 3483, hz: 100, harmonics: [1, 0.55, 0.3, 0.12], flickers: 2, flickerDepth: 0.25, buzzHz: 6500, buzzQ: 2, buzzLevel: 0.3 },
+  neon: NEON_LOOP,
 };
 
 /** The fields' soundscapes (MapData.ambience; absent: the yard). */
 export type AmbienceId = 'yard' | 'woods' | 'city';
 
-/** A loop playing as a bed (two copies half a loop apart, panned `width` left and right) at `gain`. */
+/**
+ * A loop playing as a bed (two copies half a loop apart, panned `width` left and right) at `gain`. Half a loop apart, two
+ * copies of a noise loop are unrelated noise; a tonal loop's tones would be in step (M53, audit AUD-02), so its second
+ * copy starts `copyOffset` seconds further on (absent: 0), where the tones add as unrelated sounds do.
+ */
 export interface AmbienceBed {
   readonly loop: LoopId;
   readonly gain: number;
   readonly width: number;
+  readonly copyOffset?: number;
 }
 
 /**
@@ -409,7 +433,12 @@ const INSECTS_BED: AmbienceBed = { loop: 'insects', gain: 0.009, width: 0.9 };
 const TRAFFIC_BED: AmbienceBed = { loop: 'traffic', gain: 0.026, width: 0.8 };
 const TRAFFIC_NIGHT_BED: AmbienceBed = { loop: 'traffic', gain: 0.016, width: 0.8 };
 const DRONES_BED: AmbienceBed = { loop: 'drones', gain: 0.006, width: 0.9 };
-const NEON_BED: AmbienceBed = { loop: 'neon', gain: 0.012, width: 0.5 };
+/**
+ * The neon's second copy a fifth of a hum cycle on (M53, audit AUD-02): its harmonics then sit 72°, 144°, 216° and 288°
+ * from the first copy's, which for the stack's levels sums to twice one copy's power (citySound.test.ts), as the noise
+ * beds' copies do, and the hum has the bed's width. Half a loop alone is 150 whole cycles: the copies' hums were one.
+ */
+const NEON_BED: AmbienceBed = { loop: 'neon', gain: 0.012, width: 0.5, copyOffset: 1 / (5 * NEON_LOOP.hz) };
 
 /** A shop door's two-note chime somewhere down the street by day (M34g). */
 const CHIME: AmbientCallSpec = { cue: 'ambience.chime', level: AUDIO.levels.chime, every: [12, 28], distance: [12, 30], height: 2.5, seed: 3484 };

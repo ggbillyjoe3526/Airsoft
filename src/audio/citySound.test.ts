@@ -269,6 +269,24 @@ describe('M34g city acceptance 1: each new loop renders at its length and a loud
     expect(toneAt(twice, 100)).toBeCloseTo(toneAt(v, 100), 3);
   });
 
+  it("plays the neon bed's two copies with their hums apart: together twice one copy's hum power, as unrelated sounds add (M53, audit AUD-02)", () => {
+    const v = finish(renderLoop('neon', RATE));
+    const spec = AMBIENT_LOOPS.neon;
+    if (spec.kind !== 'hum') throw new Error('the neon is a hum');
+    const bed = AMBIENCES.city.night.beds.find((b) => b.loop === 'neon')!;
+    // The second copy as Sfx starts it: half a loop on, and the bed's copy offset more.
+    const shift = (v.length / 2 + Math.round((bed.copyOffset ?? 0) * RATE)) % v.length;
+    const both = new Float32Array(v.length);
+    for (let i = 0; i < v.length; i++) both[i] = v[i]! + v[(i + shift) % v.length]!;
+    const hum = (x: Float32Array): number => spec.harmonics.reduce((sum, _, h) => sum + toneAt(x, spec.hz * (h + 1)) ** 2, 0);
+    // In step (half a loop alone is 150 whole cycles) the hum would be four times one copy's: 3 dB over its sizzle.
+    expect(hum(both) / (2 * hum(v))).toBeGreaterThan(0.9);
+    expect(hum(both) / (2 * hum(v))).toBeLessThan(1.1);
+    // The sizzle stays as it was: unrelated noise half a loop apart.
+    expect(power(both) / (2 * power(v))).toBeGreaterThan(0.9);
+    expect(power(both) / (2 * power(v))).toBeLessThan(1.1);
+  });
+
   it('loops the traffic and the drones at coprime lengths (8 s and 5 s line up only every 40 s), and the neon coprime with both', () => {
     expect(gcd(AMBIENT_LOOPS.traffic.seconds, AMBIENT_LOOPS.drones.seconds)).toBe(1);
     expect(gcd(AMBIENT_LOOPS.traffic.seconds, AMBIENT_LOOPS.neon.seconds)).toBe(1);

@@ -36,6 +36,8 @@ interface Channel {
   gain: GainNode;
   /** The blocked share last applied (-1 before the first update). */
   share: number;
+  /** The blocked share the rays last found (0 before any), held beyond earshot (M53, audit AUD-03). */
+  rayShare: number;
   /** Where the panner was last put (the character's feet), so a character standing still costs no writes (CORE-35). */
   x: number;
   y: number;
@@ -85,7 +87,7 @@ export class Sfx {
   /** Where the match is played (M33j): the field's ambience by day or night, the ground underfoot, its fires. */
   private scene: Soundscape = YARD_BY_DAY;
   /** The ambience's calls (birds by day, an owl in the woods at night), if it has any. */
-  private calls: AmbientCalls | null = new AmbientCalls(YARD_BY_DAY.ambience.call!);
+  private calls: AmbientCalls | null;
   private readonly callAt = vec3();
   /** Your own sounds: centred, into the world (so they echo too). */
   private self: GainNode | null = null;
@@ -106,6 +108,8 @@ export class Sfx {
   private readonly motors = new Map<number, { motor: MotorSound; fireRate: number; out: AudioNode; spinDown: Voice | null; spinDownDue: boolean }>();
   /** Simulation time this match has run (s), counted in afterTick. */
   private simTime = 0;
+  /** When the last late exit's beeps played (simulation time; M53, audit AUD-12). */
+  private exitBeepedAt = -1;
   /** Motors whose wind-down is still to come (afterTick looks at them only then). */
   private spinDownsDue = 0;
   private readonly foley = new FoleyTracker();
@@ -123,7 +127,20 @@ export class Sfx {
     private readonly blocks: readonly MapBlock[],
     private readonly query: OcclusionQuery,
     private readonly engine: AudioEngine,
-  ) {}
+    /**
+     * The match's seed (M53, audit AUD-07): the ambience's calls are timed from it and each call's own seed, so no two
+     * matches hear their first bird on the same beat. 0 times them from the call's seed alone, as before M53.
+     */
+    private readonly seed = 0,
+  ) {
+    this.calls = this.callsOf(YARD_BY_DAY);
+  }
+
+  /** `scene`'s calls, timed for this match (null for none). */
+  private callsOf(scene: Soundscape): AmbientCalls | null {
+    const call = scene.ambience.call;
+    return call ? new AmbientCalls(call, (call.seed ^ this.seed) >>> 0) : null;
+  }
 
   /**
    * Where the match is played (M33j: audio/soundscape.ts soundscapeOf, from the map and its lighting preset's night
@@ -132,7 +149,7 @@ export class Sfx {
    */
   setScene(scene: Soundscape): void {
     this.scene = scene;
-    this.calls = scene.ambience.call ? new AmbientCalls(scene.ambience.call) : null;
+    this.calls = this.callsOf(scene);
     this.engine.prepare(scene);
   }
 
@@ -209,8 +226,11 @@ export class Sfx {
     }
   }
 
-  /** Keep the 3D listener at the camera. */
-  setListener(pos: Vec3, forwardX: number, forwardY: number, forwardZ: number): void {
+  /**
+   * Keep the 3D listener at the camera: where it is, where it looks, and its own up (M53, audit AUD-05: perpendicular to
+   * where it looks, so the ears' left and right stay well defined looking straight up or down; the world's up by default).
+   */
+  setListener(pos: Vec3, forwardX: number, forwardY: number, forwardZ: number, upX = 0, upY = 1, upZ = 0): void {
     this.listener.x = pos.x;
     this.listener.y = pos.y;
     this.listener.z = pos.z;
@@ -220,7 +240,7 @@ export class Sfx {
     if (!l.positionX) {
       // Firefox has no AudioParam listener properties; fall back to the older setters.
       l.setPosition(pos.x, pos.y, pos.z);
-      l.setOrientation(forwardX, forwardY, forwardZ, 0, 1, 0);
+      l.setOrientation(forwardX, forwardY, forwardZ, upX, upY, upZ);
       return;
     }
     // Plain value writes: no automation events pile up at 60+ updates per second.
@@ -230,9 +250,9 @@ export class Sfx {
     l.forwardX.value = forwardX;
     l.forwardY.value = forwardY;
     l.forwardZ.value = forwardZ;
-    l.upX.value = 0;
-    l.upY.value = 1;
-    l.upZ.value = 0;
+    l.upX.value = upX;
+    l.upY.value = upY;
+    l.upZ.value = upZ;
   }
 
   /**
@@ -370,6 +390,14 @@ export class Sfx {
         // The last second is the run's end: the whistle says that.
         if (e.secondsLeft > 0) this.play('count.beep', this.ui!, L.countBeep);
         return;
+      case 'exitOpened': {
+        // Extraction (M53, audit AUD-12): the count's beep, twice quickly, once however many exits open in the tick.
+        if (this.simTime === this.exitBeepedAt) return;
+        this.exitBeepedAt = this.simTime;
+        const t = this.ctx.currentTime;
+        for (let i = 0; i < AUDIO.exitOpened.beeps; i++) this.play('count.beep', this.ui!, L.countBeep, t + i * AUDIO.exitOpened.gap);
+        return;
+      }
       case 'caseNoise':
         // Extraction (M44): the locker's padlock, any other case's latches; heard where the case is.
         this.oneShot(caseWorkSound(e.kind), e.position, L.caseWork);
@@ -564,8 +592,13 @@ export class Sfx {
       // Out in the dead zone: nothing to hear, so no rays (audit CORE-35).
       if (c.id === localId || c.status === 'out') continue;
       const ch = this.channelOf(c);
-      // Beyond earshot: taken as fully muffled without casting a ray.
-      const share = this.distanceTo(c.position) > AUDIO.spatial.maxDistance ? 1 : blockedShare(this.query, this.listener, c.position);
+      // Beyond earshot no ray is cast: the last one's share closes to fully muffled over AUDIO.occlusion.farRamp metres
+      // further out, a step at a time (M53, audit AUD-03), rather than jumping to it at the line.
+      const o = AUDIO.occlusion;
+      const beyond = this.distanceTo(c.position) - AUDIO.spatial.maxDistance;
+      if (beyond <= 0) ch.rayShare = blockedShare(this.query, this.listener, c.position);
+      const far = Math.min(1, Math.max(0, (Math.floor(beyond / o.farStep) * o.farStep) / o.farRamp));
+      const share = ch.rayShare + (1 - ch.rayShare) * far;
       if (share === ch.share) continue;
       muffleFor(share, this.muffle);
       if (ch.share < 0) {
@@ -600,8 +633,9 @@ export class Sfx {
 
   /**
    * The ambience, from the first moment of play (audit CORE-34): each of its beds as two copies of its loop half a loop
-   * apart, panned apart for width, and each camp fire's crackle where the fire is (M33j), all into the world (so the
-   * effects slider sets them and they're muffled with the rest while you're out). Stopped when the match is disposed.
+   * apart (and a tonal loop's `copyOffset` more, M53), panned apart for width, and each camp fire's crackle where the
+   * fire is (M33j), all into the world (so the effects slider sets them and they're muffled with the rest while you're
+   * out). Stopped when the match is disposed.
    */
   private startAmbience(): void {
     if (this.bed.length > 0) return;
@@ -621,7 +655,8 @@ export class Sfx {
         pan.pan.value = side * bed.width;
         src.connect(pan).connect(level);
         this.graph.push(src, pan);
-        src.start(ctx.currentTime, side > 0 ? buffer.duration / 2 : 0);
+        // A tonal loop's second copy a little further on (M53, audit AUD-02: AmbienceBed.copyOffset).
+        src.start(ctx.currentTime, side > 0 ? (buffer.duration / 2 + (bed.copyOffset ?? 0)) % buffer.duration : 0);
         this.bed.push(src);
       }
     }
@@ -675,7 +710,7 @@ export class Sfx {
     filter.frequency.value = AUDIO.occlusion.openHz;
     const gain = ctx.createGain();
     panner.connect(filter).connect(gain).connect(this.world!);
-    ch = { panner, filter, gain, share: -1, x: c.position.x, y: c.position.y, z: c.position.z };
+    ch = { panner, filter, gain, share: -1, rayShare: 0, x: c.position.x, y: c.position.y, z: c.position.z };
     this.channels.set(c.id, ch);
     return ch;
   }

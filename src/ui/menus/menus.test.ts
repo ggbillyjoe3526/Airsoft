@@ -3,7 +3,7 @@ import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, sc
 import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { unpaidLine } from './summaryScreen';
 import { CUSTOM_NOT_RECORDED_NOTE, DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE, notRecordedNote, setupNotes } from './menus';
-import { DEFAULT_MATCH_RULES, REALCAP_TEXT, standardMatchText, standardRulesOf } from '../../config/matchRules';
+import { DEFAULT_MATCH_RULES, type MatchRules, offersRow, offersSwitch, REALCAP_TEXT, runRulesSummary, standardMatchText, standardRulesOf } from '../../config/matchRules';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';
 import { AEG, GAS_PISTOL } from '../../config/replicas';
@@ -239,6 +239,18 @@ describe('the Rules picker on New game (M39)', () => {
     expect(describeRules({ ...rules, switches: { ...DEFAULT_MATCH_RULES, factoryKit: true } }, 'elimination')).toContain('factory rifle and pistol');
     // Attack and Defend's time-out is the defenders' whatever the switch.
     expect(describeRules({ ...rules, switches: standardRulesOf('tournament') }, 'attackDefend')).toContain('win if the clock (2:00) runs out');
+  });
+
+  it('hides Rounds to win and Round time in an Extraction run, and the overtime and time-out switches with them (M53, audit UI-01)', () => {
+    const fields = Object.keys(DEFAULT_MATCH_RULES) as (keyof MatchRules)[];
+    expect(fields.filter((f) => offersRow('skirmish', f, true))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount']);
+    expect(fields.filter((f) => offersRow('custom', f, true))).toEqual(['teamSize', 'friendlyFire', 'ricochetsCount', 'heardOnMinimap', 'semiAutoOnly', 'realcap', 'factoryKit']);
+    // Outside a run (or on a map with no Extraction, played as Elimination), the ruleset alone decides, as before.
+    for (const r of ['skirmish', 'tournament', 'proCqb', 'custom'] as const) for (const f of fields) expect(offersRow(r, f, false), `${r} ${f}`).toBe(offersSwitch(r, f));
+    // And the Match button under a run still names the switches it plays.
+    expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, semiAutoOnly: true, heardOnMinimap: false }, { baseOpponents: 2, runTime: 480 }).detail).toBe(
+      "One 8:00 run. Friendly fire on; ricochets don't count. Minimap: teammates only. Semi only.",
+    );
   });
 
   it("says why a match won't count by its ruleset: Skirmish's note as before, a named ruleset's own standard, Custom never", () => {
