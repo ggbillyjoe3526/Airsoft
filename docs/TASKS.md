@@ -106,7 +106,7 @@ acceptance:
 ## M33h · Weapon torch
 tier: core
 perf: required
-touches: pool.md, stats.md, src/pool/, src/config/, src/sim/, src/input/, src/ai/perception.ts, src/ai/botBrain.ts, src/ai/botTorch.ts, src/map/nightSight.ts, src/map/torchLight.ts, src/render/, src/audio/, src/ui/, src/matchSession.ts, src/game.ts, src/newGamePicks.ts, src/save/, e2e/, docs/
+touches: pool.md, stats.md, src/pool/, src/config/, src/sim/, src/input/, src/ai/perception.ts, src/ai/botBrain.ts, src/ai/botTorch.ts, src/map/nightSight.ts, src/map/torchLight.ts, src/map/lightingChoice.ts, src/render/, src/audio/, src/ui/, src/matchSession.ts, src/rangeSession.ts, src/game.ts, src/newGamePicks.ts, src/save/, e2e/, docs/
 contract: a fitted Weapon Torch (pool 000020, slot `light`, Access dev) is switched with the Weapon torch key (T); on a night preset it lights a cone the holder and bots see further in and gives the holder away; the day preset builds nothing for it; real lights per quality stay fixed (the spot takes one of `poolLights`).
 acceptance:
   1. pool.md has a Lights table with 000020 Weapon Torch (Starter yes, In Shots no, Tiers Common, Access dev); existing saves get it; with Dev content off there is no Light slot, no torch in any match and Depot matches count and pay as today.
