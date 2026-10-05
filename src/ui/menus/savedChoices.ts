@@ -214,17 +214,34 @@ export function loadAimSensitivity(): number {
 }
 
 /**
- * Reduced motion (Settings → Accessibility). Until the player picks, it follows the system's "reduce motion" setting
- * (prefers-reduced-motion), which the browser reports.
+ * The saved Reduced motion choice (Settings → Accessibility), or null while the player has not picked (audit UI-07):
+ * then the system's "reduce motion" setting decides, live (`systemReducedMotionQuery`). Stored as before.
  */
-export function loadReducedMotion(): boolean {
-  let systemWants = false;
+export function loadReducedMotion(storage = browserStorage()): boolean | null {
+  const saved = loadSetting<'on' | 'off' | null>('reducedMotion', oneOf(REDUCED_MOTION_CHOICES.map((c) => c.id)), null, storage);
+  return saved === null ? null : saved === 'on';
+}
+
+/** The system's "reduce motion" setting (prefers-reduced-motion), which the browser reports; null where it has no media queries. */
+export function systemReducedMotionQuery(): MediaQueryList | null {
   try {
-    systemWants = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
   } catch {
-    // No media queries (tests): off.
+    return null;
   }
-  return loadChoice('reducedMotion', REDUCED_MOTION_CHOICES, systemWants ? 'on' : 'off') === 'on';
+}
+
+/** Whether motion is reduced: the player's pick, or while they have none the system's setting. */
+export function effectiveReducedMotion(saved: boolean | null, system: boolean): boolean {
+  return saved ?? system;
+}
+
+/**
+ * The class #app wears for the HUD's CSS animations (style.css, audit M-03 and UI-07): the player's pick, or none while
+ * they have not picked, so the stylesheet's `prefers-reduced-motion` rules follow the system live.
+ */
+export function motionClass(saved: boolean | null): 'reduced-motion' | 'full-motion' | null {
+  return saved === null ? null : saved ? 'reduced-motion' : 'full-motion';
 }
 
 /** The team colour set (Settings → Accessibility, M18b). */

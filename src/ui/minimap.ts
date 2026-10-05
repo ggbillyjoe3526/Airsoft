@@ -117,6 +117,9 @@ export class Minimap {
   setVisible(visible: boolean): void {
     this.visible = visible;
     this.root.hidden = !visible;
+    // A class on the container, so the debug panel can sit below the minimap while it shows (style.css, audit UI-06:
+    // a parent `:has()` rule is dropped by Firefox before 121).
+    this.parent.classList.toggle('minimap-on', visible);
     if (visible) this.layout();
   }
 
@@ -238,6 +241,7 @@ export class Minimap {
 
   dispose(): void {
     globalThis.removeEventListener?.('resize', this.layout);
+    this.parent.classList.remove('minimap-on');
     this.root.remove();
   }
 

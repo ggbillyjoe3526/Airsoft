@@ -93,8 +93,9 @@ body {
   inset: 0;
 }
 
-/* Reduced motion (Settings → Accessibility, or the system's unless the player picked full motion): menu transitions and
-   entrances take no time. */
+/* Reduced motion (Settings → Accessibility, or the system's unless the player picked): menu transitions and entrances
+   take no time. Game sets `reduced-motion` or `full-motion` once the player has picked, and neither before (audit UI-07),
+   so the media query below follows the system live. */
 #app.reduced-motion {
   --t-fast: 0ms;
   --t-med: 0ms;
@@ -133,8 +134,9 @@ body {
   font-size: var(--fs-xs);
 }
 
-/* Below the minimap (M23) while it shows, so the panel doesn't hide your arrow and the markers round you (bug pass). */
-:has(> .minimap:not([hidden])) > .debug-overlay {
+/* Below the minimap (M23) while it shows, so the panel doesn't hide your arrow and the markers round you (bug pass).
+   `Minimap.setVisible` sets the class on the container (audit UI-06; a parent `:has()` is dropped by Firefox < 121). */
+.minimap-on > .debug-overlay {
   top: calc(var(--hud-margin) + var(--minimap-size, 0px) + var(--sp-2));
 }
 
@@ -1507,7 +1509,8 @@ body {
 }
 
 .key-button.empty {
-  color: var(--menu-faint);
+  /* Muted, not faint: faint is 4.0:1 on the box's panel, muted 6.6:1 (audit UI-04). */
+  color: var(--menu-muted);
 }
 
 /* A row whose key another action just took (audit UI-05): a short flash, so the player sees what moved. */
@@ -1527,6 +1530,14 @@ body {
 .reduced-motion .key-row.moved {
   animation: none;
   background: rgba(255, 138, 42, 0.18);
+}
+
+/* Nothing saved: the system's "reduce motion" decides, live (audit UI-07; Game sets neither class then). */
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .key-row.moved {
+    animation: none;
+    background: rgba(255, 138, 42, 0.18);
+  }
 }
 
 .key-layout-note {
@@ -2586,6 +2597,12 @@ kbd {
 
 .reduced-motion .respawn-fade.on {
   animation-duration: 0.01s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .respawn-fade.on {
+    animation-duration: 0.01s;
+  }
 }
 
 /* Squad orders (M22): the order your bot teammates carry out, bottom left. */
@@ -3860,7 +3877,7 @@ kbd {
 
 /* Windows High Contrast / forced colours (audit UI-16): the browser would strip the HUD's colours and backgrounds, so
    the crosshair, team pips, the hit wedge and the sound cues would vanish or all turn one colour. The game's overlays
-   keep their own colours (they are drawn for contrast against the field already); the menus follow the system's. */
+   (the case prompt and the range's coach and readout, siblings of `.hud`, included: audit UI-03) keep their own colours (they are drawn for contrast against the field already); the menus follow the system's. */
 @media (forced-colors: active) {
   .hud,
   .hitfx,
@@ -3875,6 +3892,9 @@ kbd {
   .squad-order,
   .match-board,
   .what-got-you,
+  .case-prompt,
+  .coach,
+  .range-readout,
   .crosshair-preview,
   .crosshair-swatch,
   .team-swatch {
