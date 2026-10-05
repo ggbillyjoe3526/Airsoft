@@ -1231,6 +1231,8 @@ export const HUD = {
   roundStartMessageTime: 1.8,
   /** Extraction (M43): how long the banner says you're back in, after a respawn (seconds). */
   respawnMessageTime: 2.4,
+  /** Extraction (M53, audit UI-02): how long the banner says a late exit opened, or that a minute is left (seconds). */
+  runNewsTime: 2.4,
   /** Extraction (M44): how long the line under the crosshair says what a case held, and that you dropped your finds (s). */
   caseFoundTime: 2.6,
   caseDroppedTime: 6,

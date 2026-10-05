@@ -144,6 +144,17 @@ describe('sound synthesis (M13)', () => {
     }
   });
 
+  it('plays every interface cue within 20 dB of the hit tick, the exit count beep at about -16 dBFS (M53, audit AUD-04)', () => {
+    const L = AUDIO.levels;
+    const dbfs = (cue: SoundCue, level: { gain: number }): number => 20 * Math.log10(Math.max(...rendered.get(cue)!.map(peak)) * level.gain * AUDIO.masterVolume);
+    const tick = dbfs('hitTick', L.hitTick);
+    const ui: [SoundCue, { gain: number }][] = [['hitMarker', L.hitMarker], ['radio.ack', L.radioAck], ['count.beep', L.countBeep]];
+    for (const [cue, level] of ui) expect(dbfs(cue, level), `${cue} (dB under the hit tick)`).toBeGreaterThan(tick - 20);
+    // Raised from -28.5 dBFS so the count is heard over a fight at the exit, never above the hit tick.
+    expect(dbfs('count.beep', L.countBeep)).toBeGreaterThan(-17);
+    expect(dbfs('count.beep', L.countBeep)).toBeLessThan(-15);
+  });
+
   it("keeps a bot's sprint heard near the edge of earshot: within 28 dB of your own shot at 20 m (audit CORE-26)", () => {
     // The panner's inverse model (Web Audio spec), as Sfx sets it up for every positional sound.
     const s = AUDIO.spatial;

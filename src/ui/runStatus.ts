@@ -10,6 +10,9 @@ export interface RunLine {
   urgent: boolean;
 }
 
+/** The run's warning (the `runWarning` event, EXTRACTION.warnAt), in the strip and said aloud. */
+const UNDER_A_MINUTE = 'Under a minute';
+
 /**
  * The Extraction strip's line (M43), from the run and the seconds left: the count while you stand in an exit (or why it
  * has stopped), otherwise where you can get out, and when the late exit opens. Under a minute left it says so.
@@ -29,7 +32,21 @@ export function runLine(run: RunState, clock: number, rules: ExtractionRules): R
   const hurry = clock <= rules.warnAt;
   if (open.length === 0) return { text: `No exit open yet${lateNote}`, progress: 0, urgent: hurry };
   const where = `${open.length === 1 ? 'Exit' : 'Exits'}: ${open.join(', ')}`;
-  return { text: hurry ? `Under a minute · ${where}` : `${where}${lateNote}`, progress: 0, urgent: hurry };
+  return { text: hurry ? `${UNDER_A_MINUTE} · ${where}` : `${where}${lateNote}`, progress: 0, urgent: hurry };
+}
+
+/** The run's warning as the banner shows it and a screen reader says it (M53, audit UI-02). */
+const RUN_WARNING_NEWS = `${UNDER_A_MINUTE} left`;
+
+/**
+ * The run's news in a tick (M53, audit UI-02), as the banner shows it and a screen reader says it: the late exits that
+ * opened ("Plaza gate is open", "Plaza gate and Drone Dock gate are open") and the one-minute warning (`warned`); ''
+ * for none.
+ */
+export function runNews(opened: readonly string[], warned: boolean): string {
+  const last = opened[opened.length - 1];
+  const exits = last === undefined ? '' : opened.length === 1 ? `${last} is open` : `${opened.slice(0, -1).join(', ')} and ${last} are open`;
+  return exits && warned ? `${exits} · ${RUN_WARNING_NEWS}` : exits || (warned ? RUN_WARNING_NEWS : '');
 }
 
 /** The respawn note beside the strip: your one respawn is still there, or spent. */

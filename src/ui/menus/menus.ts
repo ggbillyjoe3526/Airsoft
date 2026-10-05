@@ -13,7 +13,7 @@ import {
   runRulesSummary,
   type RuleSwitch,
   MINIMAP_HEARD_CHOICES,
-  offersSwitch,
+  offersRow,
   OVERTIME_CHOICES,
   recordsKeyOf,
   RICOCHETS_COUNT_CHOICES,
@@ -609,12 +609,13 @@ export class Menus {
       { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, ruleset: this.ruleset, rules: this.matchRules },
       devContent,
     );
-    // The Match pop-up offers the rules the ruleset as played leaves to you (M39).
-    for (const s of this.switchRows) s.row.hidden = !offersSwitch(played.ruleset, s.field);
     // Each map offers as many players a side as it has room for (Depot 3v3, Woodland up to 5v5, M33).
     // An Extraction run takes a squad of at most three (M43).
     const map = mapEntry(played.map);
     const run = played.mode === 'extraction' ? mapData(map.id).extraction : undefined;
+    // The Match pop-up offers the rules the ruleset as played leaves to you (M39) and the match reads (M53, audit UI-01:
+    // not the rounds to win or the round time in an Extraction run).
+    for (const s of this.switchRows) s.row.hidden = !offersRow(played.ruleset, s.field, run !== undefined);
     const sizeMax = run ? squadSize(map.teamSize.max) : map.teamSize.max;
     this.teamSizePicker.limit((id) => Number(id) <= sizeMax);
     for (const t of this.taggedPickers) t.picker.setDevContent(devContent, t.played(played));

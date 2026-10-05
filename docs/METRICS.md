@@ -95,4 +95,5 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-05 | M54 | 1 | build thread | ✓ 21 s | ✓ 551 s | ✓ 225 s | – (skip) | ✓ | ✓ | 8/8 Accept (ui) | QA CSS pins and a saved-choice case | ~40 min | QA, critic |
 | 2026-10-05 | M52 | 1 | build thread | ✓ 27 s | ✓ 468 s | ✗ 195 s (woodland spec night key) | ✓ 39 s | ✓ | ✓ | – | e2e expectation still the old preset | – | – |
 | 2026-10-05 | M52 | 2 | build thread | ✓ 21 s | ✓ 456 s | ✓ 185 s | ✓ 38 s | ✓ | ✓ | 7/8 Accept (core) | QA found the small-map coarsening (fixed); performance review clean | ~1 h | QA, performance, critic |
+| 2026-10-05 | M53 | 1 | build thread | ✓ 24 s | ✓ 571 s | ✓ 222 s | ✓ 45 s | ✓ | ✓ | 7/8 Accept (core) | QA tests in six files; two comments corrected in records | ~1.5 h | QA, performance, critic |
 | 2026-10-05 | M56 | 1 | build thread | ✓ 22 s | ✓ 545 s | ✓ 222 s | – (skip) | ✓ | ✓ | 7/8 Accept (core) | QA 17 edge tests; docs nits fixed in records | ~45 min | QA, critic |

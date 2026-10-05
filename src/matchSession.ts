@@ -274,7 +274,7 @@ export class MatchSession {
     this.torches = new TorchBeams(this.state.characters, lighting, quality, this.physics, BODY, this.hits);
     renderer.scene.add(this.torches.object);
     this.daylight.reserveLights(this.torches.reserved);
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night));
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed);
     this.combat.setLighting(lighting);
     this.build.phase('replica, effects and sound');
     this.stats = new MatchStats(this.state.characters);

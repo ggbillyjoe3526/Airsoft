@@ -236,6 +236,20 @@ export function offersSwitch(ruleset: RulesetId, field: keyof MatchRules): boole
   return field !== 'strictMarshal' && !(field in rulesetOf(ruleset).fixed);
 }
 
+/**
+ * The Match pop-up's rows an Extraction run ignores (M53, audit UI-01): a run is one round of the map's own run time
+ * (MatchSession: `winsNeeded: 1`, `winBy: 1`), and ends on its own clock rather than by a time-out rule.
+ */
+export const RUN_IGNORES: readonly (keyof MatchRules)[] = ['winsNeeded', 'roundTime', 'winByTwo', 'timeOutToMorePlayers'];
+
+/**
+ * Whether the Match pop-up offers row `field` for the match as played (M53, audit UI-01): one `ruleset` leaves to you
+ * (offersSwitch), and in an Extraction run (`run`) one the run reads.
+ */
+export function offersRow(ruleset: RulesetId, field: keyof MatchRules, run: boolean): boolean {
+  return offersSwitch(ruleset, field) && !(run && RUN_IGNORES.includes(field));
+}
+
 /** The standard match of `ruleset` (DEFAULT_MATCH_RULES under its switches): what its records count. */
 export function standardRulesOf(ruleset: RulesetId): MatchRules {
   return rulesUnder(ruleset, DEFAULT_MATCH_RULES);
@@ -342,23 +356,29 @@ export function matchRulesSummary(m: MatchRules): { value: string; detail: strin
   const extra: string[] = [];
   if (m.winByTwo) extra.push('Win by two.');
   if (m.timeOutToMorePlayers) extra.push('Time-out: more players left wins.');
-  if (!m.heardOnMinimap) extra.push('Minimap: teammates only.');
-  if (m.semiAutoOnly) extra.push('Semi only.');
-  if (m.realcap) extra.push(`Realcap ${REALCAP.magSize} × ${REALCAP.mags}.`);
-  if (m.factoryKit) extra.push('Factory kit for everyone.');
   return {
     value: `${m.teamSize}v${m.teamSize} · first to ${m.winsNeeded}`,
-    detail: [`${formatRoundTime(m.roundTime)} rounds. Friendly fire ${m.friendlyFire ? 'on' : 'off'}; ricochets ${m.ricochetsCount ? 'count' : "don't count"}.`, ...extra].join(' '),
+    detail: [`${formatRoundTime(m.roundTime)} rounds. Friendly fire ${m.friendlyFire ? 'on' : 'off'}; ricochets ${m.ricochetsCount ? 'count' : "don't count"}.`, ...extra, ...kitNotes(m)].join(' '),
   };
+}
+
+/** The switches every mode plays (the minimap and the kit, M39), as the Match button's short notes. */
+function kitNotes(m: MatchRules): string[] {
+  const notes: string[] = [];
+  if (!m.heardOnMinimap) notes.push('Minimap: teammates only.');
+  if (m.semiAutoOnly) notes.push('Semi only.');
+  if (m.realcap) notes.push(`Realcap ${REALCAP.magSize} × ${REALCAP.mags}.`);
+  if (m.factoryKit) notes.push('Factory kit for everyone.');
+  return notes;
 }
 
 /**
  * New game's Match button in Extraction (M43): the squad against the map's home team, and the run's time, since a run
- * is one long round (the wins and round time picked don't apply).
+ * is one long round (the wins and round time picked don't apply), then the switches a run plays (M53, audit UI-01).
  */
 export function runRulesSummary(m: MatchRules, run: { baseOpponents: number; runTime: number }): { value: string; detail: string } {
   return {
     value: `Squad of ${m.teamSize} · ${run.baseOpponents + m.teamSize} in the home team`,
-    detail: `One ${formatRoundTime(run.runTime)} run. Friendly fire ${m.friendlyFire ? 'on' : 'off'}; ricochets ${m.ricochetsCount ? 'count' : "don't count"}.`,
+    detail: [`One ${formatRoundTime(run.runTime)} run. Friendly fire ${m.friendlyFire ? 'on' : 'off'}; ricochets ${m.ricochetsCount ? 'count' : "don't count"}.`, ...kitNotes(m)].join(' '),
   };
 }

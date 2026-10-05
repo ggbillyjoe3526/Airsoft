@@ -135,6 +135,15 @@ export class HitFeedback {
     this.spokenRound = spoken;
   }
 
+  /**
+   * News the round banner may not show for long, or at all (M53, audit UI-02: a late exit opening, a minute left), said
+   * once by a screen reader through the polite region. The banner showing the same words next is not said again.
+   */
+  announce(text: string): void {
+    this.news.textContent = text;
+    this.spokenRound = text;
+  }
+
   dispose(): void {
     this.root.remove();
   }
