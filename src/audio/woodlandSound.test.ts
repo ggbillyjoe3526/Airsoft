@@ -458,5 +458,9 @@ describe('M33j acceptance 5: sounds render lazily, for the maps that use them', 
         expect(samples * 4, `${entry.id} by ${choice}`).toBeLessThan(7.5e6);
       }
     }
+    // The page keeps what it rendered (AudioEngine), so a session that plays every field holds all of it: about 10.5 MB.
+    let all = [...size.values()].reduce((sum, n) => sum + n, 0);
+    for (const id of Object.keys(AMBIENT_LOOPS) as LoopId[]) if (id !== 'yard') all += Math.round(AMBIENT_LOOPS[id].seconds * RATE);
+    expect(all * 4, 'every map sound').toBeLessThan(12e6);
   });
 });

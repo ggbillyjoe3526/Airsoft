@@ -1157,7 +1157,7 @@ Turn on Dev content (Settings → Dev), pick Neon Heights, play it once by Day a
 Turn on Dev content, pick Neon Heights, play once by Day and once by Night.
 
 - [ ] Day: a low traffic hum, a faint drone whine passing overhead now and then, a shop door's "ding-dong" down the street; no birds.
-- [ ] Night: quieter traffic, the neon's hum and faint sizzle, arcade bleeps from a doorway now and then; no birds.
+- [ ] Night: quieter traffic, the neon's hum and faint sizzle (no click every 3 s), arcade bleeps from a doorway now and then; no birds.
 - [ ] Footsteps, shots and bots are as easy to hear as on Depot; nothing in the city sounds grim or annoying after a few rounds.
 - [ ] Depot and Woodland sound exactly as before.
 
