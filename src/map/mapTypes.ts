@@ -17,6 +17,11 @@ import type { Terrain } from './terrain';
  *
  * The woods (M33, Woodland): `tree` (a trunk; canopies come with Woodland's look), `boulder`, `log` (fallen trees,
  * log piles, log walls and the cabin) and `fence` (the field's edge).
+ *
+ * The city (M34f, render/cityProps.ts), solid to their bounds like the rest: `cabinet` (a row of arcade cabinets back
+ * to back), `vending` (a vending machine, its front on both long sides), `stall` (a market stall, cart or shrine: a
+ * counter under an awning), `planter` (a timber planter, crouch height), `booth` (a phone booth or kiosk: glass in a
+ * frame) and `van` (a parked van).
  */
 export type BlockKind =
   | 'floor'
@@ -36,7 +41,20 @@ export type BlockKind =
   | 'tree'
   | 'boulder'
   | 'log'
-  | 'fence';
+  | 'fence'
+  | 'cabinet'
+  | 'vending'
+  | 'stall'
+  | 'planter'
+  | 'booth'
+  | 'van';
+
+/**
+ * How a block is finished (M34f, any map): drawn in this surface instead of its kind's, in `MapBlock.paint` if given.
+ * `plaster`: smooth painted render; `cladding`: standing-seam metal panels; `tiles`: small glazed tiles; `asphalt`: a
+ * road; `paving`: square paving slabs. Drawing only: what a block is to BBs and footsteps is its kind and `surface`.
+ */
+export type BlockFinish = 'plaster' | 'cladding' | 'tiles' | 'asphalt' | 'paving';
 
 /** The way a ramp's top goes up: towards +x, -x, +z or -z. */
 export type RampRise = '+x' | '-x' | '+z' | '-z';
@@ -53,6 +71,13 @@ export interface MapBlock {
   rise?: RampRise;
   /** Floors and ramps: what footsteps on it sound like (concrete if not given). Presentation only. */
   surface?: FloorSurface;
+  /**
+   * Its finish (M34f): a finished block is drawn as one box in that surface (a wall keeps its coping), not as its kind's
+   * prop. Absent: its kind's look, as before.
+   */
+  finish?: BlockFinish;
+  /** Its colour (sRGB hex, M34f), in place of its kind's palette; it still varies a touch by position. */
+  paint?: number;
 }
 
 export interface SpawnPoint {
@@ -176,15 +201,16 @@ export interface MapGround {
 /**
  * A sign or a lit window (M34e): a `width` × `height` panel standing upright with its middle at `centre`, on the face
  * of a wall that looks along `facing` (its front is that way). `neon`: a sign in `colour`; `window`: a window lit from
- * inside, its glow `colour` (black: a dark window).
+ * inside, its glow `colour` (black: a dark window). M34f: `paint`, a marking painted in `colour` that never glows (lit
+ * like the surface under it), and `facing: '+y'`, lying flat on a floor's top, `width` along x and `height` along z.
  */
 export interface MapSign {
   centre: Vec3;
   width: number;
   height: number;
-  facing: '+x' | '-x' | '+z' | '-z';
+  facing: '+x' | '-x' | '+z' | '-z' | '+y';
   colour: number;
-  kind: 'neon' | 'window';
+  kind: 'neon' | 'window' | 'paint';
 }
 
 /** A tweak of a lighting preset for one map: any group's values (MapData.lighting.overrides). */

@@ -8,7 +8,7 @@ import { WOODLAND } from '../map/woodland';
 import { OPEN_FIELD } from '../sim/testSupport';
 import { vec3 } from '../sim/vec';
 import { addLighting } from './lighting';
-import { addMapSigns, buildSignGeometry, signColour } from './mapSigns';
+import { addMapSigns, buildSignGeometry, mapSignsOf, signColour } from './mapSigns';
 
 /**
  * M34e QA: Neon Heights' lamps and signs as addLighting draws them under each preset (pools by Night only, signs by both),
@@ -32,7 +32,8 @@ const eyeAt = (x: number, z: number): THREE.PerspectiveCamera => {
 
 describe('Neon Heights drawn under each preset (M34e acceptance 1 and 2)', () => {
   it('by Night: one pool glow, one pool ground and one unlit sign mesh with a quad for every sign', () => {
-    const signs = NEON_HEIGHTS.signs!;
+    // The city props' screens join the map's signs; its road markings are a mesh of their own (M34f).
+    const signs = mapSignsOf(NEON_HEIGHTS).filter((s) => s.kind !== 'paint');
     expect(signs.length).toBeGreaterThan(12);
     const scene = new THREE.Scene();
     addLighting(scene, NEON_HEIGHTS, QUALITY.low, night);
@@ -43,6 +44,9 @@ describe('Neon Heights drawn under each preset (M34e acceptance 1 and 2)', () =>
     expect(meshes[0]!.geometry.getAttribute('position').count).toBe(signs.length * 4);
     expect(meshes[0]!.material instanceof THREE.MeshBasicMaterial).toBe(true);
     expect((meshes[0]!.material as THREE.MeshBasicMaterial).fog).toBe(false); // the signs are the light: the fog does not dim them
+    const paint = scene.getObjectByName('map-paint') as THREE.Mesh;
+    expect(paint.material instanceof THREE.MeshLambertMaterial).toBe(true); // the markings never glow
+    expect(paint.geometry.getAttribute('position').count).toBe(NEON_HEIGHTS.signs!.filter((s) => s.kind === 'paint').length * 4);
   });
 
   it('by Day: no pool at all, no real light on any quality, and the same signs as painted Lambert boards', () => {
@@ -52,7 +56,7 @@ describe('Neon Heights drawn under each preset (M34e acceptance 1 and 2)', () =>
       expect(poolMeshes(scene), name).toHaveLength(0);
       expect(pointLights(scene), name).toHaveLength(0);
       const mesh = scene.getObjectByName('map-signs') as THREE.Mesh;
-      expect(mesh.geometry.getAttribute('position').count, name).toBe(NEON_HEIGHTS.signs!.length * 4);
+      expect(mesh.geometry.getAttribute('position').count, name).toBe(mapSignsOf(NEON_HEIGHTS).filter((s) => s.kind !== 'paint').length * 4);
       expect(mesh.material instanceof THREE.MeshLambertMaterial, name).toBe(true);
     }
   });
