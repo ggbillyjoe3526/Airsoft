@@ -154,7 +154,13 @@ ends the round). A hit character is eliminated
   by the Settings → Audio sliders (`audio/audioMix.ts`, saved in the settings store). Since FA6 the limiter and the
   ducking (your own hit, the whistles) sit on effects only; interface goes straight to master. Sounds render at
   `AUDIO.renderRate` whatever the device's rate; one-off sounds beyond `maxDistance` aren't played; while you're out
-  the world is muffled; a seeded outdoor bed and birds (`audio/ambience.ts`) play into the world.
+  the world is muffled; a seeded outdoor bed and birds (`audio/ambience.ts`) play into the world. Since M33j a match's
+  `Soundscape` (`audio/soundscape.ts`, pure: from the map's data and the lighting preset's night flag, set through
+  `Sfx.setScene` by `CombatPresentation.setLighting`) picks the field's ambience by day or night (`config/audio.ts`
+  AMBIENCES: beds, calls, never birds at night), the camp fires that crackle, and the ground grid footsteps on terrain
+  read after blocks (`map/groundSurfaces.ts`, the terrain's own). Cues and loops only some maps play (`MAP_CUE_SEEDS`,
+  `AMBIENT_LOOPS`) are rendered by `AudioEngine.prepare` as such a match loads, each from its own seed; the title
+  screen's cues keep their one shared stream and their samples (pinned in `audio/woodlandSound.test.ts`).
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
@@ -366,6 +372,7 @@ request. Each line names where it lives and what pins it.
   time) and `overlooks` (each watched area and the spots above that see it, for bots and the layout tests), M43's
   `extraction` (M44 adds its `cases`, M45 its `regens` and `regenDistance`), M34e's `signs` (neon signs and lit windows,
   presentation only), M33i's `ground` (the ground's patches: one grid, `map/groundSurfaces.ts`, that the terrain is
-  painted from and M33j's footsteps read) and `MapLight.kind` (`fire` or `lantern`: the light's fixture). Pinned by
+  painted from and M33j's footsteps read), `MapLight.kind` (`fire` or `lantern`: the light's fixture) and M33j's
+  `ambience` (the field's sound, absent the yard; `MapBlock.surface` keeps its two block values). Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
   `render/depotLook.test.ts` (a map using none of M33i's fields builds as before).
