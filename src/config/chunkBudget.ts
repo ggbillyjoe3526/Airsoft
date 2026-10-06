@@ -11,9 +11,10 @@ export const CHUNK_BUDGET = {
   rapierKb: 4550,
   /**
    * Every other chunk. 900 since M50 (DECISIONS 2026-10-05): the game chunk was 794 of 800 kB after Extraction, and 743
-   * with the dev maps and the pool and stats tables moved to chunks of their own.
+   * with the dev maps and the pool and stats tables moved to chunks of their own. 950 since M75 (DECISIONS 2026-10-06):
+   * the graphics overhaul (G1-G7, the menus) took it to 898, and M75's figure shadow stand-ins to 901.
    */
-  defaultKb: 900,
+  defaultKb: 950,
   /**
    * Share of the default budget at which the build warns, so the next approach is seen before a build fails (CORE-01).
    * Not Rapier's: its budget is a pin set 5 % over the library as measured.

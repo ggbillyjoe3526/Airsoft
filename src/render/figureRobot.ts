@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { FIGURE, type FigureLook } from '../config/characters';
 import type { FigurePalette } from './figurePalette';
-import type { PartBuilder, PartLook } from './figureParts';
+import { type PartBuilder, type PartLook, shadowLimb } from './figureParts';
 import { band, basis, ik, limbGeo, type ProfileStop, V } from './figureShapes';
 
 /**
@@ -29,7 +29,8 @@ function robotLimb(b: PartBuilder, pal: FigurePalette, a: THREE.Vector3, to: THR
   const sides = b.overhaul ? 8 : 6;
   const prof: readonly ProfileStop[] = [[0, ra * 0.92, ra * 0.88], [0.25, ra, ra * 0.95], [1, rb, rb * 0.94]];
   const from = a.clone().addScaledVector(dir, len * 0.12);
-  b.add(limbGeo(len * 0.8, prof, sides, b.overhaul ? 4 : 1).applyMatrix4(basis(dir, pole).setPosition(from)), pal.shell, SHELL);
+  const place = basis(dir, pole).setPosition(from);
+  b.add(limbGeo(len * 0.8, prof, sides, b.overhaul ? 4 : 1).applyMatrix4(place), pal.shell, SHELL, shadowLimb(len * 0.8, prof)?.applyMatrix4(place) ?? null);
   const frame = basis(dir, pole).setPosition(a);
   if (panel) b.box(pal.main, ra * 0.9, len * 0.32, 0.012, 0, len * 0.45, ra * 0.97, TEAM, frame);
   return frame;
@@ -90,7 +91,8 @@ export function robotBody(b: PartBuilder, look: FigureLook, pal: FigurePalette, 
   b.block(pal.main, 0.3, 0.26, 0.05, 0, 1.31 + hy, 0.14, TEAM);
   for (const side of [-1, 1]) {
     const cummerbund = band(0.26, 0.15, 0.022, 0.2, b.detail.band[0]).rotateY((side * Math.PI) / 2).scale(1, 1, 0.68);
-    b.addIn(new THREE.Matrix4(), cummerbund, 0, 1.26 + hy, 0, pal.main, TEAM);
+    const cast = band(0.26, 0.15, 0.022, 0.2, 2).rotateY((side * Math.PI) / 2).scale(1, 1, 0.68);
+    b.addIn(new THREE.Matrix4(), cummerbund, 0, 1.26 + hy, 0, pal.main, TEAM, undefined, undefined, cast);
     b.box(G.gearDark, 0.06, 0.26, 0.27, side * 0.11, 1.38 + hy, 0, GEAR); // the straps over the shoulders
     b.block(pal.shell, 0.12, 0.05, 0.14, side * 0.235, 1.5 + hy, 0, SHELL, undefined, new THREE.Euler(0, 0, -side * 0.35)); // shoulder caps
     b.box(pal.main, 0.11, 0.06, 0.012, side * 0.12, 1.44 + hy, -0.122, TEAM); // the chest's team panels

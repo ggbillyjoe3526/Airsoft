@@ -49,6 +49,12 @@ export const ATMOSPHERE = {
     colors: [0x5f8a4e, 0x6f9a52, 0x557d4c, 0x7aa05a],
     trunk: 0x6b5843,
     seed: 4141,
+    /**
+     * The most the ring draws under a night light on a map with trees of its own (Woodland; M75, owner decision 8 on
+     * audit REN-03): the haze closes in from 20 m and the map's own canopy stands in front, so the detailed ring's
+     * layered crowns (about 12k triangles on Medium) would not show. A Trees setting below it is kept.
+     */
+    nightWithOwnTrees: 1,
   },
   /**
    * The detailed ring (QualitySettings.trees 2; audit section 5 "Sky and trees"): more trees, broadleaves of two or
@@ -147,6 +153,27 @@ export const RETRO = {
    */
   bbMinPixels: 2,
   trailMinPixels: 1,
+} as const;
+
+/**
+ * Figures' shadow proxies (M75, audit REN-03 step 1; render/characterModels.ts): on the detailed figure (Player detail
+ * High; Low draws no shadows and its parts are plain already) each part of a figure casts its shadow from plain stand-ins kept after its drawn shapes in the same geometry (render/figureParts.ts, render/shadowProxy.ts):
+ * a box for each block, a closed tube of `sides` sides for each limb following its profile, a `ball` [sides, rings]
+ * for the head and a `dome` [sides, rings] for a helmet's shell; a fraction of the figure's triangles in the shadow
+ * pass, the same silhouette at a shadow texel (1.9 cm on High, LIGHTING.shadowView). Too small to show there, and
+ * casting nothing of their own: boxes and rods thinner than `minThickness` (lids, rails, a finger, a cable), limbs
+ * thinner than `minRadius` and balls smaller than `minBall` (joints, a jaw: the limbs and the head
+ * round them carry it). Bands, goggles, the mask and the visor hug a larger shape and cast nothing either.
+ */
+export const FIGURE_SHADOW_PROXY = {
+  sides: 6,
+  /** Rings along a limb's stand-in: enough to follow a thigh's or a calf's taper. */
+  limbRings: 2,
+  ball: [6, 4],
+  dome: [8, 3],
+  minThickness: 0.02,
+  minRadius: 0.02,
+  minBall: 0.1,
 } as const;
 
 /**

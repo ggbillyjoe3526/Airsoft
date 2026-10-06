@@ -160,7 +160,7 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
   choice({
     field: 'trees',
     label: 'Trees',
-    help: 'The trees round the field: none, a simple ring, or layered trees and a hedge.',
+    help: 'The trees round the field: none, a simple ring, or layered trees and a hedge (a simple ring at night in the woods, where the haze hides it).',
     cost: 'Small',
     options: [
       { id: 'none', label: 'None', value: 0 },

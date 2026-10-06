@@ -19,7 +19,8 @@ const lightsOf = (scene: THREE.Scene): THREE.Light[] => scene.children.filter((o
 const trianglesOf = (root: THREE.Object3D): number => {
   let n = 0;
   root.traverse((o) => {
-    if (o instanceof THREE.Mesh) n += (o.geometry.index ? o.geometry.index.count : o.geometry.getAttribute('position').count) / 3;
+    // What the camera draws: a figure part's shadow stand-ins after its draw range are not seen (M75).
+    if (o instanceof THREE.Mesh) n += Math.min(o.geometry.drawRange.count, o.geometry.index ? o.geometry.index.count : o.geometry.getAttribute('position').count) / 3;
   });
   return n;
 };

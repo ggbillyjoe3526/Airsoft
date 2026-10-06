@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FIGURE } from '../config/characters';
+import { FIGURE_SHADOW_PROXY } from '../config/render';
 import { FINISH_ATTRIBUTE } from './figureFinish';
 import { chamferBox, frameBetween, limbGeo, type ProfileStop, V } from './figureShapes';
+import { shadowProxy } from './shadowProxy';
 
 /** A figure's detail level (QualitySettings.figureDetail, FA8): segment counts and whether the overhaul's pieces show. */
 export type FigureDetail = (typeof FIGURE.detail)[keyof typeof FIGURE.detail];
@@ -32,6 +34,25 @@ const FIN = FIGURE.finish;
 const CHAMFER_SHARE = 0.3;
 const MAX_CHAMFER = 0.012;
 const IDENTITY = new THREE.Matrix4();
+const SHADOW = FIGURE_SHADOW_PROXY;
+
+/** A plain box standing in for a block in the shadow map, or null when it is too thin to show there. */
+function shadowBox(w: number, h: number, d: number): THREE.BufferGeometry | null {
+  return Math.min(w, h, d) < SHADOW.minThickness ? null : new THREE.BoxGeometry(w, h, d);
+}
+
+/**
+ * A limb's stand-in in the shadow map (limbGeo's frame): a closed tube of FIGURE_SHADOW_PROXY.sides following `prof`
+ * over `len`, or null when the limb is thinner than `minRadius` all along.
+ */
+export function shadowLimb(len: number, prof: readonly ProfileStop[]): THREE.BufferGeometry | null {
+  return prof.some(([, rx, rz]) => Math.max(rx, rz) >= SHADOW.minRadius) ? limbGeo(len, prof, SHADOW.sides, SHADOW.limbRings, true) : null;
+}
+
+/** A closed rod of FIGURE_SHADOW_PROXY.sides standing in for a cylinder `r` round and `h` long, or null when thinner than a box that casts. */
+function shadowCylinder(r: number, h: number): THREE.BufferGeometry | null {
+  return r * 2 < SHADOW.minThickness || h < SHADOW.minThickness ? null : new THREE.CylinderGeometry(r, r, h, SHADOW.sides);
+}
 
 /**
  * Camo blotches (the detailed figure, FIGURE.palette): a darker and a lighter tone where three crossed waves of the
@@ -53,6 +74,8 @@ export function camoShade(seed = 0): (x: number, y: number, z: number) => number
  */
 export class PartBuilder {
   private readonly geos: THREE.BufferGeometry[] = [];
+  /** The shadow stand-ins (M75): drawn into the shadow map in the shapes' place (render/shadowProxy.ts). */
+  private readonly shadows: THREE.BufferGeometry[] = [];
 
   constructor(readonly detail: FigureDetail = FIGURE.detail.low) {}
 
@@ -61,8 +84,28 @@ export class PartBuilder {
     return this.detail.overhaul;
   }
 
-  /** Adds `geo` (consumed) in `color`; a geometry without normals gets flat ones. */
-  add(geo: THREE.BufferGeometry, color: number, look: PartLook = {}): this {
+  /**
+   * Adds `geo` (consumed) in `color`; a geometry without normals gets flat ones. `shadow` (consumed), if given, stands
+   * in for it in the shadow map, already placed as `geo` is.
+   */
+  add(geo: THREE.BufferGeometry, color: number, look: PartLook = {}, shadow: THREE.BufferGeometry | null = null): this {
+    this.geos.push(this.paint(geo, color, look));
+    if (shadow) this.castOnly(shadow, color);
+    return this;
+  }
+
+  /**
+   * A stand-in in the shadow map only (consumed, already placed): what a cluster of thin shapes (the fingers) casts
+   * together. Only the detailed figure keeps stand-ins: the Low one is plain already and Low draws no shadows.
+   */
+  castOnly(geo: THREE.BufferGeometry, color: number): this {
+    if (this.overhaul) this.shadows.push(this.paint(geo, color, {}));
+    else geo.dispose();
+    return this;
+  }
+
+  /** `geo` without an index or UVs, with its colour (and on the detailed figure its finish) on every vertex. */
+  private paint(geo: THREE.BufferGeometry, color: number, look: PartLook): THREE.BufferGeometry {
     const g = geo.index ? geo.toNonIndexed() : geo;
     if (g !== geo) geo.dispose();
     g.deleteAttribute('uv');
@@ -90,15 +133,17 @@ export class PartBuilder {
       g.setAttribute(FINISH_ATTRIBUTE, new THREE.BufferAttribute(finish, 2));
     }
     g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    this.geos.push(g);
-    return this;
+    return g;
   }
 
-  /** `geo` (consumed) placed in `frame` at its local (x, y, z), turned by `turn` and scaled by `scale`. */
-  addIn(frame: THREE.Matrix4, geo: THREE.BufferGeometry, x: number, y: number, z: number, color: number, look?: PartLook, turn?: THREE.Euler, scale?: THREE.Vector3): this {
-    const local = new THREE.Matrix4().compose(V(x, y, z), new THREE.Quaternion().setFromEuler(turn ?? new THREE.Euler()), scale ?? V(1, 1, 1));
-    geo.applyMatrix4(frame.clone().multiply(local));
-    return this.add(geo, color, look);
+  /**
+   * `geo` (consumed) placed in `frame` at its local (x, y, z), turned by `turn` and scaled by `scale`; `shadow`
+   * (consumed), its stand-in in the shadow map, placed the same way. A sphere as large as a head
+   * (FIGURE_SHADOW_PROXY.minBall) brings a coarse one of its own when none is given.
+   */
+  addIn(frame: THREE.Matrix4, geo: THREE.BufferGeometry, x: number, y: number, z: number, color: number, look?: PartLook, turn?: THREE.Euler, scale?: THREE.Vector3, shadow: THREE.BufferGeometry | null = coarseBall(geo, scale)): this {
+    const m = frame.clone().multiply(new THREE.Matrix4().compose(V(x, y, z), new THREE.Quaternion().setFromEuler(turn ?? new THREE.Euler()), scale ?? V(1, 1, 1)));
+    return this.add(geo.applyMatrix4(m), color, look, shadow?.applyMatrix4(m) ?? null);
   }
 
   /**
@@ -107,12 +152,12 @@ export class PartBuilder {
    */
   block(color: number, w: number, h: number, d: number, x: number, y: number, z: number, look: PartLook = { edge: true }, frame: THREE.Matrix4 = IDENTITY, turn?: THREE.Euler): this {
     const geo = this.overhaul ? chamferBox(w, h, d, Math.min(MAX_CHAMFER, Math.min(w, h, d) * CHAMFER_SHARE)) : new THREE.BoxGeometry(w, h, d);
-    return this.addIn(frame, geo, x, y, z, color, look, turn);
+    return this.addIn(frame, geo, x, y, z, color, look, turn, undefined, shadowBox(w, h, d));
   }
 
   /** A box that stays plain at every detail (slivers, straps, small plates). */
   box(color: number, w: number, h: number, d: number, x: number, y: number, z: number, look?: PartLook, frame: THREE.Matrix4 = IDENTITY, turn?: THREE.Euler): this {
-    return this.addIn(frame, new THREE.BoxGeometry(w, h, d), x, y, z, color, look, turn);
+    return this.addIn(frame, new THREE.BoxGeometry(w, h, d), x, y, z, color, look, turn, undefined, shadowBox(w, h, d));
   }
 
   /**
@@ -125,15 +170,16 @@ export class PartBuilder {
     const len = a.distanceTo(b) + over * 2;
     const [sides, rings] = this.detail.limb;
     const frame = frameBetween(from, b.clone().addScaledVector(dir, over), ref);
-    this.add(limbGeo(len, prof, sides, rings, caps).applyMatrix4(frame), color, look);
+    this.add(limbGeo(len, prof, sides, rings, caps).applyMatrix4(frame), color, look, shadowLimb(len, prof)?.applyMatrix4(frame) ?? null);
     return frameBetween(a, b, ref);
   }
 
   /** A thin rod from `a` to `b` (a tube, an antenna, a piston): `sides` round, open-ended. */
   rod(color: number, a: THREE.Vector3, b: THREE.Vector3, r: number, look?: PartLook, sides = 6): this {
     const len = Math.max(1e-3, a.distanceTo(b));
+    const frame = frameBetween(a, b);
     const geo = new THREE.CylinderGeometry(r, r, len, sides, 1, true).translate(0, len / 2, 0);
-    return this.add(geo.applyMatrix4(frameBetween(a, b)), color, look);
+    return this.add(geo.applyMatrix4(frame), color, look, shadowCylinder(r, len)?.translate(0, len / 2, 0).applyMatrix4(frame) ?? null);
   }
 
   /** A sphere (a joint) of radius `r` at `c`, scaled by `scale`. */
@@ -144,26 +190,45 @@ export class PartBuilder {
 
   /** A short cylinder (a headset cup, a hinge, a ring) of radius `r` and `h` tall, its axis along `frame`'s Y. */
   cylinder(color: number, r: number, h: number, frame: THREE.Matrix4, x: number, y: number, z: number, look?: PartLook, turn?: THREE.Euler, open = false): this {
-    return this.addIn(frame, new THREE.CylinderGeometry(r, r, h, this.detail.cylinder, 1, open), x, y, z, color, look, turn);
+    return this.addIn(frame, new THREE.CylinderGeometry(r, r, h, this.detail.cylinder, 1, open), x, y, z, color, look, turn, undefined, shadowCylinder(r, h));
   }
 
-  /** Adds another builder's merged, already coloured parts transformed by `m`. */
+  /** Moves another builder's coloured shapes and shadow stand-ins into this one, transformed by `m`. */
   addPart(part: PartBuilder, m: THREE.Matrix4): this {
-    this.geos.push(part.geometry().applyMatrix4(m));
+    for (const g of part.geos) this.geos.push(g.applyMatrix4(m));
+    for (const g of part.shadows) this.shadows.push(g.applyMatrix4(m));
+    part.geos.length = 0;
+    part.shadows.length = 0;
     return this;
   }
 
-  geometry(): THREE.BufferGeometry {
-    const merged = mergeGeometries(this.geos);
-    for (const g of this.geos) g.dispose();
-    this.geos.length = 0;
-    if (!merged) throw new Error('empty figure part');
-    return merged;
-  }
-
+  /**
+   * The part as one mesh casting shadows: its shapes merged, its shadow stand-ins after them in the same geometry and
+   * drawn into the shadow map in the shapes' place (M75, audit REN-03 step 1; render/shadowProxy.ts).
+   */
   build(material: THREE.Material): THREE.Mesh {
-    const mesh = new THREE.Mesh(this.geometry(), material);
+    let drawn = 0;
+    for (const g of this.geos) drawn += g.getAttribute('position').count;
+    const all = [...this.geos, ...this.shadows];
+    const merged = all.length > 0 ? mergeGeometries(all) : null;
+    for (const g of all) g.dispose();
+    this.geos.length = 0;
+    this.shadows.length = 0;
+    if (!merged || drawn === 0) throw new Error('empty figure part');
+    const mesh = new THREE.Mesh(merged, material);
     mesh.castShadow = true;
+    if (merged.getAttribute('position').count > drawn) shadowProxy(mesh, drawn);
     return mesh;
   }
+}
+
+/**
+ * A coarse ball (FIGURE_SHADOW_PROXY.ball) standing in for `geo` when it is a sphere as large as a head once `scale`d,
+ * keeping its cut (a hood's or a dome's angles); null for anything else, which casts nothing of its own.
+ */
+function coarseBall(geo: THREE.BufferGeometry, scale?: THREE.Vector3): THREE.BufferGeometry | null {
+  if (!(geo instanceof THREE.SphereGeometry)) return null;
+  const p = geo.parameters;
+  if (p.radius * (scale ? Math.max(scale.x, scale.y, scale.z) : 1) < SHADOW.minBall) return null;
+  return new THREE.SphereGeometry(p.radius, SHADOW.ball[0], SHADOW.ball[1], p.phiStart, p.phiLength, p.thetaStart, p.thetaLength);
 }

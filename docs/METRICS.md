@@ -122,3 +122,7 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-06 | G8 | 1 | build thread | ✓ (tsc) | – (CI on the PR) | – (CI on the PR) | – (machine loaded; owed) | ✓ | ✓ | 7/8 Accept | 8: TASKS block split M96's lines | ~6 h | QA, critic |
 | 2026-10-06 | M73 | 2 | build thread | ✓ (tsc) | ✓ Neon Heights suites (20 files) | – (CI on the PR) | – (skip) | ✓ | ✓ | 8/8 Accept (core) | re-applied from the paused patches; guards to 48 seeds | ~40 min | critic |
 | 2026-10-06 | M74 | 1 | build thread | ✓ (tsc) | ✗ 3209/3211 (Neon Heights guards at 16 seeds; at 48 within noise, guards moved to 48 in M73) | – (CI on the PR) | ✓ container Low | ✓ | ✓ | 8/8 Accept (core) | re-applied from the paused patches | ~1 h | critic |
+| 2026-10-06 | M75 | 1 | build thread | ✓ | ✓ 3345 | ✗ 36/38 (the Extraction maps' spec counted one mesh per exit) | ✓ container Low | ✓ | ✓ | – (gate failed) | ported onto the G7 figures | ~2 h | changelog |
+| 2026-10-06 | M75 | 2 | build thread | ✓ | ✓ 3345 | ✓ 38/38 | ✓ container Low | ✓ | ✓ | 7/8 Retry (Haiku) | 1: Neon Heights Medium 134 against 120 | ~45 min | critic |
+| 2026-10-06 | M75 | 3 | build thread | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 7/8 Retry (Opus near-miss re-run) | 1: the build thread may not widen its criterion; owner card posted | ~10 min | critic |
+| 2026-10-06 | M75 | 4 | build thread | ✓ (CI) | ✓ (CI) | ✓ (CI) | ✓ | ✓ | ✓ | 8/8 Accept | owner ruling: Neon Heights Medium line 140; chunk budget 950 kB after CI's build failed at 901 of 900 | ~30 min | critic |

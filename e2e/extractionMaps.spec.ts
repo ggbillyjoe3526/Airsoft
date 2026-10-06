@@ -55,10 +55,15 @@ for (const map of [
     expect(drawn).toBeGreaterThanOrEqual(2);
     expect(run.cases.filter((k) => k === 'locker')).toHaveLength(1);
     expect(run.cases.length).toBeGreaterThanOrEqual(7);
-    // One group an exit drawn (its ring, wash and board), and every exit's cones and posts in two instanced meshes.
-    const exits = await page.evaluate(() => (window as unknown as Airsoft).airsoft.renderer.scene.getObjectByName('exits')?.children.map((c) => c.name) ?? []);
-    expect(exits.filter((n) => n !== 'exit-cones' && n !== 'exit-posts')).toHaveLength(drawn);
-    expect(exits.filter((n) => n === 'exit-cones' || n === 'exit-posts')).toHaveLength(2);
+    // Five draws whatever the exit count (M75): the rings and washes as one floor mesh, the open and shut boards, the
+    // cones and the posts instanced; one board and one post an exit drawn.
+    const exits = await page.evaluate(() =>
+      ((window as unknown as Airsoft).airsoft.renderer.scene.getObjectByName('exits')?.children ?? []).map((c) => ({ name: c.name, count: (c as { count?: number }).count ?? 1 })),
+    );
+    expect(exits.map((e) => e.name).sort()).toEqual(['exit-boards-open', 'exit-boards-shut', 'exit-cones', 'exit-floor', 'exit-posts']);
+    const count = (name: string): number => exits.find((e) => e.name === name)!.count;
+    expect(count('exit-boards-open') + count('exit-boards-shut')).toBe(drawn);
+    expect(count('exit-posts')).toBe(drawn);
     expect(errors).toEqual([]);
   });
 }

@@ -137,6 +137,8 @@ export function openHand(b: PartBuilder, wrist: THREE.Vector3, up: THREE.Vector3
   const palm = new THREE.Matrix4().makeBasis(R, U, Fc).setPosition(wrist.clone().addScaledVector(U, 0.05));
   const look: PartLook = { finish: st.robot ? FIN.robot : FIN.rubber, edge: true };
   b.block(st.main, 0.082, 0.095, 0.03, 0, 0, 0, look, palm);
+  // The fingers cast as one plate (M75): each is thinner than a shape that casts on its own.
+  b.castOnly(new THREE.BoxGeometry(0.076, 0.1, 0.02).translate(0, 0.09, 0).applyMatrix4(palm), st.main);
   if (!b.overhaul) {
     // Low: the fingers as one straight block, the thumb out to the side.
     b.block(st.main, 0.076, 0.08, 0.022, 0, 0.085, 0, look, palm);

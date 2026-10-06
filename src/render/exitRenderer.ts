@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EXIT_VISUALS } from '../config/render';
 import { cssColor } from '../config/teams';
 import { type Terrain, terrainHeightAt } from '../map/terrain';
@@ -7,13 +8,15 @@ import type { RunExit, RunState } from '../sim/extraction';
 const V = EXIT_VISUALS;
 /** Scratch for an instance's matrix while the exits are built. */
 const PLACE = new THREE.Matrix4();
+/** Components of the floor's colours: RGB and the see-through alpha (EXIT_VISUALS.ringOpacity and fillOpacity). */
+const RGBA = 4;
 
-/** One exit's meshes, and whether they were last drawn open. */
-interface ExitMeshes {
-  group: THREE.Group;
-  ring: THREE.Mesh;
-  fill: THREE.Mesh;
-  board: THREE.Mesh;
+/** One drawn exit: where its ring and wash sit in the floor's vertices, its board's place, the state last drawn. */
+interface ExitSlot {
+  /** Its ring's and wash's vertices in the floor geometry: [first, first + count). */
+  first: number;
+  count: number;
+  board: THREE.Matrix4;
   shownOpen: boolean | null;
 }
 
@@ -44,26 +47,34 @@ function drawBoard(text: string, color: number): THREE.CanvasTexture {
 /**
  * Extraction's exits in the world (M43): a painted ring with a faint wash inside, site cones round it and an EXIT sign
  * on a post, green while open and grey while a late exit is still shut; exits closed for the run aren't drawn. Built
- * once from the run's exits; each frame only swaps materials when an exit opens. Reads the run state only. On a field
- * with terrain (M48: Woodland) the ring, its wash, the cones and the post follow the ground, so a slope buries none of
- * them.
+ * once from the run's exits; a frame only repaints an exit when it opens. Reads the run state only. On a field with
+ * terrain (M48: Woodland) the ring, its wash, the cones and the post follow the ground, so a slope buries none of them.
+ *
+ * A fixed number of draws whatever the exit count (M75, audit REN-04): every ring and wash in one merged floor mesh
+ * (each draped on its own ground, so no two share a shape; their colour and see-through are per vertex, repainted when
+ * an exit opens), the boards in two instanced draws (open and shut: their faces are two textures), the cones in one
+ * and the posts in another (M48).
  */
 export class ExitRenderer {
   readonly object = new THREE.Group();
-  private readonly exits: ExitMeshes[] = [];
+  private readonly exits: ExitSlot[] = [];
   private readonly geometries: THREE.BufferGeometry[] = [];
-  private readonly ringOpen = new THREE.MeshBasicMaterial({ color: V.openColor, transparent: true, opacity: V.ringOpacity, depthWrite: false, side: THREE.DoubleSide });
-  private readonly ringShut = new THREE.MeshBasicMaterial({ color: V.shutColor, transparent: true, opacity: V.ringOpacity, depthWrite: false, side: THREE.DoubleSide });
-  private readonly fillOpen = new THREE.MeshBasicMaterial({ color: V.openColor, transparent: true, opacity: V.fillOpacity, depthWrite: false, side: THREE.DoubleSide });
-  private readonly fillShut = new THREE.MeshBasicMaterial({ color: V.shutColor, transparent: true, opacity: V.fillOpacity, depthWrite: false, side: THREE.DoubleSide });
+  /** The rings' and washes' one material: colour and alpha from the vertices (EXIT_VISUALS' colours and opacities). */
+  private readonly floorMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
   private readonly cone = new THREE.MeshStandardMaterial({ color: V.coneColor, roughness: 0.7 });
   private readonly post = new THREE.MeshStandardMaterial({ color: V.postColor, roughness: 0.6 });
   private readonly openTexture = drawBoard(V.openText, V.openColor);
   private readonly shutTexture = drawBoard(V.shutText, V.shutColor);
   private readonly boardOpen = new THREE.MeshStandardMaterial({ map: this.openTexture, roughness: 0.8, side: THREE.DoubleSide });
   private readonly boardShut = new THREE.MeshStandardMaterial({ map: this.shutTexture, roughness: 0.8, side: THREE.DoubleSide });
+  /** The open and shut colours in the working colour space, as the materials' `color` took them before M75. */
+  private readonly openColor = new THREE.Color(V.openColor);
+  private readonly shutColor = new THREE.Color(V.shutColor);
+  private readonly floor: THREE.Mesh;
   private readonly cones: THREE.InstancedMesh;
   private readonly posts: THREE.InstancedMesh;
+  private readonly boardsOpen: THREE.InstancedMesh;
+  private readonly boardsShut: THREE.InstancedMesh;
 
   constructor(
     run: RunState,
@@ -74,47 +85,89 @@ export class ExitRenderer {
     const postGeo = this.keep(new THREE.CylinderGeometry(V.postRadius, V.postRadius, V.postHeight, 8));
     postGeo.translate(0, V.postHeight / 2, 0);
     const boardGeo = this.keep(new THREE.PlaneGeometry(V.boardWidth, V.boardHeight));
-    // Every exit's cones in one instanced draw and every post in another (M48: on Woodland's Medium, a mesh each cost
-    // about forty draws with their shadows, past the budget).
     const drawn = run.exits.filter((e) => !e.closed);
-    this.cones = new THREE.InstancedMesh(coneGeo, this.cone, Math.max(1, drawn.length * V.cones));
-    this.posts = new THREE.InstancedMesh(postGeo, this.post, Math.max(1, drawn.length));
+    const capacity = Math.max(1, drawn.length);
+    this.cones = new THREE.InstancedMesh(coneGeo, this.cone, capacity * V.cones);
+    this.posts = new THREE.InstancedMesh(postGeo, this.post, capacity);
+    this.boardsOpen = new THREE.InstancedMesh(boardGeo, this.boardOpen, capacity);
+    this.boardsShut = new THREE.InstancedMesh(boardGeo, this.boardShut, capacity);
     this.cones.count = drawn.length * V.cones;
     this.posts.count = drawn.length;
     for (const m of [this.cones, this.posts]) m.castShadow = true;
     this.cones.name = 'exit-cones';
     this.posts.name = 'exit-posts';
-    for (let i = 0; i < drawn.length; i++) this.exits.push(this.build(drawn[i]!, i, boardGeo));
+    this.boardsOpen.name = 'exit-boards-open';
+    this.boardsShut.name = 'exit-boards-shut';
+    const floorParts: THREE.BufferGeometry[] = [];
+    let vertices = 0;
+    for (let i = 0; i < drawn.length; i++) {
+      const parts = this.build(drawn[i]!, i);
+      for (const g of parts.floor) floorParts.push(g);
+      this.exits.push({ first: vertices, count: parts.vertices, board: parts.board, shownOpen: null });
+      vertices += parts.vertices;
+    }
+    // No exits drawn (none in the run): an empty floor, which draws nothing.
+    const floorGeo = this.keep(floorParts.length > 0 ? mergeGeometries(floorParts)! : new THREE.BufferGeometry());
+    for (const g of floorParts) g.dispose();
+    this.floor = new THREE.Mesh(floorGeo, this.floorMaterial);
+    this.floor.name = 'exit-floor';
+    this.floor.visible = vertices > 0;
     for (const m of [this.cones, this.posts]) {
       m.instanceMatrix.needsUpdate = true;
       m.computeBoundingSphere();
     }
-    this.object.add(this.cones, this.posts);
+    this.placeBoards();
+    this.object.add(this.floor, this.cones, this.posts, this.boardsOpen, this.boardsShut);
     this.object.name = 'exits';
   }
 
-  /** Swaps an exit's look when it opens (a late exit), so nothing is rebuilt per frame. */
+  /** Repaints an exit when it opens (a late exit) and moves its board to the open draw; nothing is rebuilt per frame. */
   update(run: RunState): void {
     let i = 0;
+    let changed = false;
     for (const e of run.exits) {
       if (e.closed) continue;
-      const m = this.exits[i++];
-      if (!m || m.shownOpen === e.open) continue;
-      m.shownOpen = e.open;
-      m.ring.material = e.open ? this.ringOpen : this.ringShut;
-      m.fill.material = e.open ? this.fillOpen : this.fillShut;
-      m.board.material = e.open ? this.boardOpen : this.boardShut;
+      const slot = this.exits[i++];
+      if (!slot || slot.shownOpen === e.open) continue;
+      slot.shownOpen = e.open;
+      this.paint(slot, e.open);
+      changed = true;
     }
+    if (changed) this.placeBoards();
   }
 
   dispose(): void {
     for (const g of this.geometries) g.dispose();
-    for (const m of [this.ringOpen, this.ringShut, this.fillOpen, this.fillShut, this.cone, this.post, this.boardOpen, this.boardShut]) m.dispose();
-    this.cones.dispose();
-    this.posts.dispose();
+    for (const m of [this.floorMaterial, this.cone, this.post, this.boardOpen, this.boardShut]) m.dispose();
+    for (const m of [this.cones, this.posts, this.boardsOpen, this.boardsShut]) m.dispose();
     this.openTexture.dispose();
     this.shutTexture.dispose();
     this.object.removeFromParent();
+  }
+
+  /** Colours an exit's ring and wash open or shut, keeping each vertex's alpha. */
+  private paint(slot: ExitSlot, open: boolean): void {
+    const colour = this.floor.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const c = open ? this.openColor : this.shutColor;
+    for (let v = slot.first; v < slot.first + slot.count; v++) colour.setXYZ(v, c.r, c.g, c.b);
+    colour.addUpdateRange(slot.first * RGBA, slot.count * RGBA);
+    colour.needsUpdate = true;
+  }
+
+  /** Puts every exit's board in the open draw or the shut one by the state it shows (shut until first seen open). */
+  private placeBoards(): void {
+    let open = 0;
+    let shut = 0;
+    for (const slot of this.exits) {
+      if (slot.shownOpen) this.boardsOpen.setMatrixAt(open++, slot.board);
+      else this.boardsShut.setMatrixAt(shut++, slot.board);
+    }
+    for (const [m, count] of [[this.boardsOpen, open], [this.boardsShut, shut]] as const) {
+      m.count = count;
+      m.visible = count > 0;
+      m.instanceMatrix.needsUpdate = true;
+      if (count > 0) m.computeBoundingSphere();
+    }
   }
 
   /** Puts instance `i` of `mesh` on the ground at (dx, dz) from exit `e`'s middle (world, as the instances' parent is). */
@@ -130,13 +183,22 @@ export class ExitRenderer {
     return h === undefined ? 0 : h - e.position.y;
   }
 
-  /** Lays a flat geometry (in the exit's frame) onto the ground under it, once, as it is built. */
-  private drape(g: THREE.BufferGeometry, e: RunExit): void {
-    if (!this.terrain) return;
-    const p = g.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + this.groundOffset(e, p.getX(i), p.getZ(i)));
-    p.needsUpdate = true;
-    g.computeVertexNormals();
+  /**
+   * A flat piece of the floor (in the exit's frame) laid onto the ground under it, `lift` over it, moved to the exit
+   * and coloured shut with `alpha`: ready to merge (positions and colours only).
+   */
+  private floorPiece(g: THREE.BufferGeometry, e: RunExit, lift: number, alpha: number): THREE.BufferGeometry {
+    const piece = g.index ? g.toNonIndexed() : g;
+    if (piece !== g) g.dispose();
+    piece.deleteAttribute('uv');
+    piece.deleteAttribute('normal');
+    const p = piece.getAttribute('position') as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) + this.groundOffset(e, p.getX(i), p.getZ(i)) + lift);
+    piece.translate(e.position.x, e.position.y, e.position.z);
+    const colours = new Float32Array(p.count * RGBA);
+    for (let i = 0; i < p.count; i++) colours.set([this.shutColor.r, this.shutColor.g, this.shutColor.b, alpha], i * RGBA);
+    piece.setAttribute('color', new THREE.BufferAttribute(colours, RGBA));
+    return piece;
   }
 
   private keep<T extends THREE.BufferGeometry>(g: T): T {
@@ -144,21 +206,13 @@ export class ExitRenderer {
     return g;
   }
 
-  /** Builds exit `e`, the `index`th drawn: its own ring, wash and board, and its cones' and post's instances. */
-  private build(e: RunExit, index: number, boardGeo: THREE.BufferGeometry): ExitMeshes {
-    const group = new THREE.Group();
-    group.position.set(e.position.x, e.position.y, e.position.z);
-    const ringGeo = this.keep(new THREE.RingGeometry(e.radius - V.ringWidth, e.radius, V.ringSegments));
-    ringGeo.rotateX(-Math.PI / 2);
-    this.drape(ringGeo, e);
-    const ring = new THREE.Mesh(ringGeo, this.ringShut);
-    ring.position.y = V.ringLift;
-    const fillGeo = this.keep(new THREE.CircleGeometry(e.radius - V.ringWidth, V.ringSegments));
-    fillGeo.rotateX(-Math.PI / 2);
-    this.drape(fillGeo, e);
-    const fill = new THREE.Mesh(fillGeo, this.fillShut);
-    fill.position.y = V.ringLift * 0.5;
-    group.add(ring, fill);
+  /**
+   * Builds exit `e`, the `index`th drawn: its cones' and post's instances, its ring and wash as floor pieces (and their
+   * vertex count), and where its board hangs.
+   */
+  private build(e: RunExit, index: number): { floor: THREE.BufferGeometry[]; vertices: number; board: THREE.Matrix4 } {
+    const ring = this.floorPiece(new THREE.RingGeometry(e.radius - V.ringWidth, e.radius, V.ringSegments).rotateX(-Math.PI / 2), e, V.ringLift, V.ringOpacity);
+    const fill = this.floorPiece(new THREE.CircleGeometry(e.radius - V.ringWidth, V.ringSegments).rotateX(-Math.PI / 2), e, V.ringLift * 0.5, V.fillOpacity);
     for (let i = 0; i < V.cones; i++) {
       const a = (i / V.cones) * Math.PI * 2;
       const dx = Math.cos(a) * e.radius;
@@ -170,11 +224,10 @@ export class ExitRenderer {
     const px = Math.sin(toMiddle) * e.radius;
     const pz = Math.cos(toMiddle) * e.radius;
     this.place(this.posts, index, e, px, pz);
-    const board = new THREE.Mesh(boardGeo, this.boardShut);
-    board.position.set(px, this.groundOffset(e, px, pz) + V.postHeight - V.boardHeight / 2, pz);
-    board.rotation.y = toMiddle;
-    group.add(board);
-    this.object.add(group);
-    return { group, ring, fill, board, shownOpen: null };
+    const board = new THREE.Matrix4()
+      .makeRotationY(toMiddle)
+      .setPosition(e.position.x + px, e.position.y + this.groundOffset(e, px, pz) + V.postHeight - V.boardHeight / 2, e.position.z + pz);
+    const vertices = ring.getAttribute('position').count + fill.getAttribute('position').count;
+    return { floor: [ring, fill], vertices, board };
   }
 }
