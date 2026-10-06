@@ -9,7 +9,7 @@
  */
 export const ATMOSPHERE = {
   /** Sky dome colours: straight up, at the horizon, and below it (seen only over low walls). */
-  zenith: 0x5f9fd8,
+  zenith: 0x3f82d6,
   horizon: 0xd3e5f1,
   below: 0xc4d0cc,
   /** A warm glow round the sun's direction: its colour and how tightly it gathers (higher = smaller). */
@@ -168,17 +168,22 @@ export const CONTACT_SHADOWS = {
 } as const;
 
 /**
- * Bright, friendly daylight: a warm late-morning sun and a cool sky fill (M14). The hemisphere's ground colour is the
- * sunlit concrete's bounce, so shaded sides stay warm and readable, never murky.
+ * Bright, friendly daylight: a warm sun and a cool sky fill (M14). The hemisphere's ground colour is the sunlit
+ * concrete's bounce, so shaded sides stay warm and readable, never murky. G6 (the approved v3 look, Breath of the Wild's
+ * light): the sun lower (about 35° up) and warmer, so walls and figures take it across their faces and throw longer
+ * shadows, and a bluer, stronger sky fill, so the shade reads cool; the sun a touch stronger to keep the ground's light.
  */
 export const LIGHTING = {
-  hemiSky: 0xcfe2ff,
-  hemiGround: 0x8f8268,
-  hemiIntensity: 1.45,
-  sunColor: 0xffe4bd,
-  sunIntensity: 2.7,
-  /** Sun position relative to the map centre (metres): high enough that walls throw short, readable shadows. */
-  sunOffset: { x: 20, y: 42, z: 14 },
+  hemiSky: 0xb6d0f2,
+  hemiGround: 0xa08e70,
+  hemiIntensity: 1.6,
+  sunColor: 0xffd9aa,
+  sunIntensity: 3.1,
+  /**
+   * Sun position relative to the map centre (metres): about 35° above the horizon (G6; 60° before), as far out as
+   * before (49 m), so the shadow camera's reach is unchanged.
+   */
+  sunOffset: { x: 32.5, y: 27.8, z: 23 },
   /** Extra margin around the level box for the shadow camera (metres). */
   shadowMargin: 2,
   shadowBias: -0.0004,

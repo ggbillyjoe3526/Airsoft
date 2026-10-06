@@ -230,8 +230,9 @@ describe('the art pass on the map (M14)', () => {
     group.children.reduce((n, m) => n + Math.min((m as THREE.Mesh).geometry.index!.count, (m as THREE.Mesh).geometry.drawRange.count) / 3, 0);
 
   it('reads its look from the quality settings: Low is the look before map detail', () => {
-    expect(mapLookOf(QUALITY.low)).toEqual({ relief: false, normalMaps: false, detail: false, steelSheen: false, foliageShadows: false });
-    expect(mapLookOf(QUALITY.medium)).toEqual({ ...detailed, foliageShadows: false });
+    // G6: weathering from Medium, the baked light per vertex on Low and per pixel above (with the map's probes, none here).
+    expect(mapLookOf(QUALITY.low)).toEqual({ relief: false, normalMaps: false, detail: false, steelSheen: false, foliageShadows: false, weathering: false, bakedLight: 'vertex', probes: null });
+    expect(mapLookOf(QUALITY.medium)).toEqual({ ...detailed, foliageShadows: false, weathering: true, bakedLight: 'pixel', probes: null });
     // Tree crowns cast shadows only where the shadow map follows the view (M33i): High.
     expect(mapLookOf(QUALITY.high).foliageShadows).toBe(true);
     expect(mapNeedsRebuild(mapLookOf(QUALITY.medium), mapLookOf(QUALITY.high))).toBe(false);
@@ -254,9 +255,12 @@ describe('the art pass on the map (M14)', () => {
     expect(triangles(group)).toBeGreaterThan(2 * triangles(before));
     // The ground's vertex colours vary (occlusion along wall feet, ground variation); without detail it is one colour.
     const shades = (g: THREE.Group) => {
-      const m = g.getObjectByName('map-concrete-flat') as THREE.Mesh;
+      const m = g.getObjectByName('map-concrete') as THREE.Mesh;
       const c = m.geometry.getAttribute('color');
-      const values = Array.from({ length: c.count }, (_, i) => c.getY(i));
+      const pos = m.geometry.getAttribute('position');
+      const nor = m.geometry.getAttribute('normal');
+      const drawn = new Set(Array.from(m.geometry.index!.array).slice(0, Math.min(m.geometry.index!.count, m.geometry.drawRange.count)));
+      const values = [...drawn].filter((i) => nor.getY(i) > 0.9 && Math.abs(pos.getY(i)) < 0.05).map((i) => c.getY(i));
       return { min: Math.min(...values), max: Math.max(...values) };
     };
     expect(shades(before).max - shades(before).min).toBeLessThan(0.05);
@@ -286,11 +290,38 @@ describe('the art pass on the map (M14)', () => {
       expect(geo.drawRange.start).toBe(0);
       expect(geo.drawRange.count).toBe(drawn);
     }
-    // Without map detail every mesh draws all of itself everywhere.
+    // Without map detail every mesh draws all of itself to the camera.
     const before = buildMapMeshes(DEPOT, textures, plain(true));
-    for (const m of before.children as THREE.Mesh[]) expect(m.geometry.drawRange.count).toBe(Number.POSITIVE_INFINITY);
+    for (const m of before.children as THREE.Mesh[]) expect(Math.min(m.geometry.drawRange.count, m.geometry.index!.count)).toBe(m.geometry.index!.count);
     disposeMapMeshes(before);
     disposeMapMeshes(group);
+  });
+
+  it('merges a texture’s casting and non-casting pieces into one mesh, the shadow map drawing only the casters (G6)', () => {
+    for (const look of [plain(true), detailed]) {
+      const group = buildMapMeshes(DEPOT, textures, look, atlas);
+      const names = group.children.map((m) => m.name);
+      // One mesh per surface texture: no "-flat" twin.
+      expect(names.filter((n) => n.endsWith('-flat'))).toEqual([]);
+      expect(new Set(names).size).toBe(names.length);
+      // Depot's concrete: the casting slabs first, the ground (which casts nothing) after them, both drawn to the camera.
+      const concrete = group.getObjectByName('map-concrete') as THREE.Mesh;
+      const geo = concrete.geometry;
+      const drawn = Math.min(geo.drawRange.count, geo.index!.count);
+      concrete.onBeforeShadow({} as never, {} as never, {} as never, {} as never, geo, {} as never, null as never);
+      const shadow = { start: geo.drawRange.start, count: geo.drawRange.count };
+      concrete.onAfterShadow({} as never, {} as never, {} as never, {} as never, geo, {} as never, null as never);
+      expect(geo.drawRange.count).toBe(drawn);
+      // The ground's top (y 0, facing up) is drawn but never in the shadow map's range.
+      const pos = geo.getAttribute('position');
+      const nor = geo.getAttribute('normal');
+      const index = geo.index!.array;
+      const ground = (i: number): boolean => nor.getY(i) > 0.9 && Math.abs(pos.getY(i)) < 0.01;
+      const inRange = (from: number, count: number): boolean => Array.from(index.slice(from, from + count)).some(ground);
+      expect(inRange(0, drawn)).toBe(true);
+      expect(inRange(shadow.start, shadow.count)).toBe(false);
+      disposeMapMeshes(group);
+    }
   });
 
   it('restyles a built map in place, or builds it again (freeing the old one) when map detail or the steel changes', () => {

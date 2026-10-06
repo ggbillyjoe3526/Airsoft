@@ -25,7 +25,8 @@ import { contentPool } from './pool/contentPool';
 import { rollRunCases } from './pool/caches';
 import type { SupplyEvent } from './pool/supplyEvents';
 import { GAME_POOL } from './pool/gamePool';
-import { bbGlowFor, type PlayerKit } from './pool/loadoutModel';
+import { bbGlowFor, kitPaint, type PlayerKit } from './pool/loadoutModel';
+import type { LookSettings } from './config/look';
 import { SIM, SIM_DT } from './config/sim';
 import type { SquadCommand } from './config/squad';
 import { TEAMS, type TeamColours } from './config/teams';
@@ -40,10 +41,12 @@ import { PhysicsWorld } from './physics/physicsWorld';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { ContactShadows } from './render/contactShadows';
+import { bakedLightFor, bakedLightMode } from './render/bakedLight';
 import { addLighting, type Daylight } from './render/lighting';
 import { resolveLighting } from './render/lightingPreset';
 import { mapLookOf } from './render/mapMeshes';
 import { MatchPresentation } from './render/matchPresentation';
+import type { ProbeGrid } from './render/probeGrid';
 import { TorchBeams } from './render/torchBeams';
 import type { Renderer } from './render/renderer';
 import { canAimDownSights } from './sim/aiming';
@@ -115,6 +118,8 @@ export interface MatchSetup {
   supply?: SupplyEvent | null;
   /** The team colours picked on Settings → Accessibility (M18b): the figures, the flag and your armband. */
   teamColours: TeamColours;
+  /** Settings → Look (G1): robots and Realistic colours. Absent: their defaults. */
+  look?: LookSettings;
 }
 
 /** What an Extraction run found, for the summary (MatchSession.runFinds). */
@@ -149,6 +154,8 @@ export class MatchSession {
   private readonly daylight: Daylight;
   /** The map's light as resolved (M33f): a night preset gives the bots their torches and draws the beams (M33h). */
   private readonly lighting: LightingPreset;
+  /** The map's baked bounce light (G6, render/bakedLight.ts), or null when it has none. */
+  private readonly probes: ProbeGrid | null;
   /** The weapon torches drawn (M33h): nothing by day, or in a match where nobody carries one. */
   private readonly torches: TorchBeams;
   /** A soft dark disc on the floor under every player (audit section 5, F5), on every preset. */
@@ -198,7 +205,8 @@ export class MatchSession {
     this.botLoadout = LOADOUT.map((r) => replicaUnderRules(r, setup.rules));
     // The surface textures are the renderer's, shared by every session (audit L-04), and so are the last map's meshes,
     // kept between sessions (audit CORE-33): the same map again takes them back rather than building them.
-    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality)));
+    this.probes = bakedLightFor(map);
+    renderer.scene.add(renderer.mapMeshes.take(map, renderer.surfaceTexturesFor(map), mapLookOf(quality, this.probes)));
     this.build.phase('map meshes');
     if (renderer.mapMeshes.reused) this.build.notes.push('map meshes reused');
     // The map's light (M33f): its haze, exposure and environment on the renderer, set by every session so none keeps the
@@ -277,7 +285,7 @@ export class MatchSession {
     this.torches = new TorchBeams(this.state.characters, lighting, quality, this.physics, BODY, this.hits);
     renderer.scene.add(this.torches.object);
     this.daylight.reserveLights(this.torches.reserved);
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, this.hits, bbGlowFor(this.kit, this.lighting.night), seed, kitPaint(this.kit, setup.look));
     this.build.phase('replica and effects');
     // The field's own sounds (M33j): whatever New game's spare time didn't render ahead is finished here (M65, audit
     // AUD-01), so `?perf` shows what was left.
@@ -290,6 +298,7 @@ export class MatchSession {
     this.match.setProTips(difficultyAtLeast(setup.difficulty, 'pro'));
     this.match.setFigureShadows(quality.figureShadows);
     this.match.setFlagQuality(quality);
+    this.match.setBakedLight(bakedLightMode(quality.bakedLight, this.probes) === 'off' ? null : this.probes);
     // Teammates only on the minimap, with no heard patches, under rules that say so (M39).
     this.match.setHeardOnMinimap(setup.rules.heardOnMinimap);
     this.contact = new ContactShadows(this.state.characters, this.hits.vanishTime);
@@ -466,8 +475,9 @@ export class MatchSession {
     this.daylight.setQuality(quality);
     this.torches.setQuality(quality);
     this.daylight.reserveLights(this.torches.reserved);
-    this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(this.setup.map), mapLookOf(quality));
+    this.renderer.mapMeshes.restyle(this.renderer.surfaceTexturesFor(this.setup.map), mapLookOf(quality, this.probes));
     this.match.setFigureShadows(quality.figureShadows);
+    this.match.setBakedLight(bakedLightMode(quality.bakedLight, this.probes) === 'off' ? null : this.probes);
     this.match.setFlagQuality(quality);
     this.match.setFigureDetail(quality.figureDetail);
     this.combat.setQuality(quality);

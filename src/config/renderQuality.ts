@@ -109,6 +109,18 @@ export interface QualitySettings {
    * A fixed number for the match, so no shader is rebuilt as you move. Nothing on a map without light pools.
    */
   poolLights: PoolLightCount;
+  // G6: materials and baked lighting.
+  /**
+   * Baked bounce light (G6, render/bakedLight.ts) on a map that ships a bake (MapData.bakedLight): `pixel` reads the
+   * probe grid on every surface pixel (one 3D texture read), `vertex` bakes it into the map's vertex colours when the
+   * map is built (no per-pixel cost), `off` draws without it. Figures read it on the CPU either way.
+   */
+  bakedLight: BakedLightMode;
+  /**
+   * Weathering (G6, render/surfaceShader.ts): dirt creeping up from the ground, patches, rain streaks and rust on
+   * steel, worked out per pixel in world space, so it never repeats with the texture. A rebuild of the map's shaders.
+   */
+  weathering: boolean;
   // G5: the post stack (render/post/, tuned in config/post.ts). All off draws the frame straight to the screen, as before.
   /** Ambient occlusion (GTAO): soft shade where surfaces meet, worked out at this share of the resolution; 0 is off. */
   ambientOcclusion: AmbientOcclusionScale;
@@ -123,6 +135,11 @@ export interface QualitySettings {
   /** Film grain and a slight colour fringe at the screen's edges. */
   lensFinish: boolean;
 }
+
+/** How baked bounce light is drawn (QualitySettings.bakedLight). */
+export type BakedLightMode = 'off' | 'vertex' | 'pixel';
+/** The baked-light modes, cheapest first. */
+export const BAKED_LIGHT_MODES: readonly BakedLightMode[] = ['off', 'vertex', 'pixel'];
 
 /** Night lights (QualitySettings.poolLights): real point lights on the nearest light pools. */
 export type PoolLightCount = 0 | 2 | 4 | 8;
@@ -145,15 +162,19 @@ export type TreeDetail = 0 | 1 | 2;
 export const QUALITY: Record<QualityPreset, QualitySettings> = {
   low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false,
     environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0,
+    bakedLight: 'vertex', weathering: false,
     ambientOcclusion: 0, bloom: false, temporalAA: false, lightShafts: false, reflections: false, lensFinish: false },
   medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true,
     environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2,
+    bakedLight: 'pixel', weathering: true,
     ambientOcclusion: 0, bloom: true, temporalAA: false, lightShafts: false, reflections: false, lensFinish: false },
   high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true,
     environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4,
+    bakedLight: 'pixel', weathering: true,
     ambientOcclusion: 0.5, bloom: true, temporalAA: true, lightShafts: true, reflections: false, lensFinish: false },
   ultra: { renderScale: 1, maxPixelRatio: 2, antialias: true, shadows: true, shadowMapSize: 4096, shadowRadius: 4, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 300, replicaSheen: true,
     environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 8,
+    bakedLight: 'pixel', weathering: true,
     ambientOcclusion: 1, bloom: true, temporalAA: true, lightShafts: true, reflections: true, lensFinish: true },
 };
 

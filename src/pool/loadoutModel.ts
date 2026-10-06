@@ -1,5 +1,7 @@
 import { BOT_GLOW_BBS, bbsGlow, DEFAULT_GLOW_BBS, GLOW_BB_CHOICES, type GlowBBs } from '../config/glowBBs';
 import { HOP_UP, LOADOUT, type ReplicaConfig, validBbWeight } from '../config/replicas';
+import { DEFAULT_LOOK, type LookSettings } from '../config/look';
+import { defaultScheme, isSchemeId, type ReplicaPaint, type SchemeId } from '../config/schemes';
 import { loadSetting, numberIn, oneOf, saveSetting } from '../settings/storage';
 import { type Collection, inPool, type ItemRef, itemKey, parseItemKey } from './collection';
 import { isAvailable } from '../config/content';
@@ -27,6 +29,8 @@ export interface PlayerKit {
   bbWeights: readonly number[];
   /** Each slot's Glowing BBs choice (M33b); the session resolves it against the field's day or night. */
   glowBBs: readonly GlowBBs[];
+  /** Each slot's colour scheme (graphics overhaul G1): presentation only. */
+  schemes: readonly SchemeId[];
 }
 
 /**
@@ -35,6 +39,11 @@ export interface PlayerKit {
  */
 export function bbGlowFor(kit: PlayerKit, night: boolean): { player: boolean[]; others: boolean } {
   return { player: kit.glowBBs.map((g) => bbsGlow(g, night)), others: bbsGlow(BOT_GLOW_BBS, night) };
+}
+
+/** How the player's replicas are painted (G1): each slot's scheme, plain under Realistic colours (Settings › Look). */
+export function kitPaint(kit: PlayerKit, look: LookSettings = DEFAULT_LOOK): ReplicaPaint {
+  return { schemes: kit.schemes, realistic: look.realisticColours };
 }
 
 /** What the player can equip: the collection's items, or (Dev settings, M26d) everything. */
@@ -236,6 +245,20 @@ export class LoadoutModel {
     saveSetting(this.glowField(replicaId), choice);
   }
 
+  /**
+   * A replica asset's colour scheme (G1), or its default (a Cobalt rifle, a Ghost pistol). Cosmetic, so one pick per
+   * asset whether or not everything is unlocked: a colour picked on borrowed gear is waiting when the player owns it.
+   */
+  scheme(replicaId: string): SchemeId {
+    const r = this.replicaConfig(replicaId);
+    const fallback = r ? defaultScheme(r) : 'cobalt';
+    return loadSetting(`scheme.${replicaId}`, (raw) => (isSchemeId(raw) ? raw : undefined), fallback);
+  }
+
+  setScheme(replicaId: string, scheme: SchemeId): void {
+    saveSetting(`scheme.${replicaId}`, scheme);
+  }
+
   /** The kit slot for a replica item with its current fit: what the Customise screen's numbers describe. */
   slotKit(ref: ItemRef): KitSlot {
     return kitSlot(this.pool, ref, this.fitOf(ref.asset));
@@ -267,6 +290,7 @@ export class LoadoutModel {
       hopUps: refs.map((r) => this.hopUp(r.asset)),
       bbWeights: refs.map((r) => this.bbWeight(r.asset)),
       glowBBs: refs.map((r) => this.glowBBs(r.asset)),
+      schemes: refs.map((r) => this.scheme(r.asset)),
     };
   }
 

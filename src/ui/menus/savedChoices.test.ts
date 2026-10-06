@@ -143,3 +143,22 @@ describe('a Custom mix saved before the post rows, in full (G5 QA)', () => {
     expect(resolveQuality('custom', custom)).toEqual(QUALITY.high);
   });
 });
+
+// G6: two new Custom rows, Baked light and Weathering (graphics.bakedLight, graphics.weathering).
+describe('the baked light and weathering rows (G6)', () => {
+  it('reads a save from before them as their default (High’s), and reads them back once saved', () => {
+    const older = storageWith({ 'graphics.shadows': 'off' });
+    const custom = loadCustomQuality(older);
+    expect(custom.bakedLight).toBeUndefined();
+    expect(custom.weathering).toBeUndefined();
+    const q = resolveQuality('custom', custom);
+    expect(q.bakedLight).toBe(QUALITY.high.bakedLight);
+    expect(q.weathering).toBe(QUALITY.high.weathering);
+    expect(q.shadows).toBe(false);
+    const saved = loadCustomQuality(storageWith({ 'graphics.bakedLight': 'vertex', 'graphics.weathering': 'off' }));
+    expect(saved.bakedLight).toBe('vertex');
+    expect(saved.weathering).toBe(false);
+    // Nonsense is ignored.
+    expect(loadCustomQuality(storageWith({ 'graphics.bakedLight': 'sideways' })).bakedLight).toBeUndefined();
+  });
+});

@@ -203,9 +203,11 @@ test('Woodland: T switches your weapon torch, one real spot light in place of a 
   expect(off.spotIntensity).toBe(0);
   expect(off.points + off.spots).toBe(2); // Medium's two night lights, one of them the torch's
 
+  // A match's first frames under software rendering stall for 6 to 9 s (measured on G2, 5 October 2026), longer
+  // on a busy machine, so the switch gets 30 s to show.
   await page.keyboard.press('t');
-  await expect.poll(async () => (await look()).torchOn, { timeout: 10_000 }).toBe(true);
-  await expect.poll(async () => (await look()).spotIntensity, { timeout: 10_000 }).toBeGreaterThan(0);
+  await expect.poll(async () => (await look()).torchOn, { timeout: 30_000 }).toBe(true);
+  await expect.poll(async () => (await look()).spotIntensity, { timeout: 30_000 }).toBeGreaterThan(0);
   const on = await look();
   expect(on.points + on.spots).toBe(2);
   expect(on.programs).toBe(off.programs);

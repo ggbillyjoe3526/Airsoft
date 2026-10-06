@@ -6,7 +6,10 @@ import * as renderQuality from './renderQuality';
 import * as renderSurfaces from './renderSurfaces';
 import * as renderView from './renderView';
 import {
+  BAKED_LIGHT_MODES,
+  type BakedLightMode,
   DETAIL_LEVELS,
+  type DetailLevel,
   DUST_MOTES,
   effectivePixelRatio,
   parseQuality,
@@ -24,7 +27,8 @@ import {
 } from './render';
 
 /** A field's value on a cheapest-first scale: numbers and switches as numbers, a detail level by its place (FA8). */
-const rank = (v: QualitySettings[keyof QualitySettings]): number => (typeof v === 'string' ? DETAIL_LEVELS.indexOf(v) : Number(v));
+const rank = (v: QualitySettings[keyof QualitySettings]): number =>
+  typeof v === 'string' ? (BAKED_LIGHT_MODES.includes(v as BakedLightMode) ? BAKED_LIGHT_MODES.indexOf(v as BakedLightMode) : DETAIL_LEVELS.indexOf(v as DetailLevel)) : Number(v);
 
 /** Fields whose change shows on a screen at 100 % scaling (devicePixelRatio 1): all but the high-DPI cap. */
 const VISIBLE_AT_DPR_1: readonly (keyof QualitySettings)[] = QUALITY_FIELDS.filter((f) => f !== 'maxPixelRatio');
@@ -33,6 +37,8 @@ const VISIBLE_AT_DPR_1: readonly (keyof QualitySettings)[] = QUALITY_FIELDS.filt
 const NATURE_SURFACES = 4;
 /** The city's surfaces (M34f): five finishes and glass. */
 const CITY_SURFACES = 6;
+/** The texture library's own surfaces (G6, render/textureLibrary.ts) no map draws yet: painted steel, for G8 and G9. */
+const LIBRARY_SURFACES = 1;
 
 describe('render quality presets (final alpha audit section 4)', () => {
   it('sets every field on every preset', () => {
@@ -124,7 +130,7 @@ describe('render quality presets (final alpha audit section 4)', () => {
 
   it('keeps the surface textures within each preset\'s GPU budget (REN-13)', () => {
     // Every map draws the core set; a map with the woods' surfaces (M33i) draws those four too, only then.
-    const core = Object.keys(SURFACES.worldSize).length - NATURE_SURFACES - CITY_SURFACES;
+    const core = Object.keys(SURFACES.worldSize).length - NATURE_SURFACES - CITY_SURFACES - LIBRARY_SURFACES;
     // RGBA with mipmaps (a third more).
     const mb = (textures: number, size: number): number => (textures * size * size * 4 * 4) / 3 / 2 ** 20;
     for (const p of QUALITY_PRESETS) expect(Math.log2(QUALITY[p].textureSize) % 1, p).toBe(0); // a power of two, for mipmaps
@@ -283,7 +289,8 @@ describe('config/render.ts keeps every name it had before the split (G5 QA)', ()
     const post = ['ambientOcclusion', 'bloom', 'temporalAA', 'lightShafts', 'reflections', 'lensFinish'];
     expect(Object.keys(low).filter((k) => post.includes(k)).sort()).toEqual([...post].sort());
     expect(post.map((f) => low[f as keyof typeof low])).toEqual([0, false, false, false, false, false]);
-    expect(Object.keys(low)).toHaveLength(25 + post.length);
+    // 25 fields before G5, plus G6's two (bakedLight, weathering).
+    expect(Object.keys(low)).toHaveLength(25 + 2 + post.length);
   });
 
   it('keeps each file under about 600 lines', () => {

@@ -185,8 +185,14 @@ export type NatureSurfaceId = 'bark' | 'planks' | 'stone' | 'groundDetail';
  */
 export type CitySurfaceId = BlockFinish | 'glass';
 
+/**
+ * The texture library's own surfaces (G6, render/textureLibrary.ts): worn paint on steel for the set dressing to come
+ * (G8, G9). Drawn only when a map uses it, as the woods' and the city's are.
+ */
+export type LibrarySurfaceId = 'paint';
+
 /** Every surface texture (render/proceduralTextures.ts). */
-export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId | CitySurfaceId;
+export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId | CitySurfaceId | LibrarySurfaceId;
 
 /**
  * The look of the field's surfaces and props (M14, render/proceduralTextures.ts and render/mapMeshes.ts). Everything
@@ -194,9 +200,9 @@ export type SurfaceTextureId = CoreSurfaceId | NatureSurfaceId | CitySurfaceId;
  */
 export const SURFACES = {
   /** Metres one texture repeat covers, for the textures mapped in world space (crates are mapped once per face). */
-  worldSize: { concrete: 4, blockWall: 1.6, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2, bark: 1.6, planks: 1.6, stone: 1.6, groundDetail: 4, plaster: 2.4, cladding: 1.6, tiles: 0.6, asphalt: 3, paving: 1.2, glass: 1.2 } satisfies Record<SurfaceTextureId, number>,
+  worldSize: { concrete: 4, blockWall: 2, crate: 1.2, corrugated: 2, steelPlate: 1.2, barrier: 1, sandbag: 1.2, gabion: 1.2, paint: 1.2, bark: 1.6, planks: 1.6, stone: 1.6, groundDetail: 4, plaster: 2.4, cladding: 1.6, tiles: 0.6, asphalt: 3, paving: 1.2, glass: 1.2 } satisfies Record<SurfaceTextureId, number>,
   /** How strongly each texture's light and dark read as relief when surface relief is on (bump scale). */
-  relief: { concrete: 1.2, blockWall: 2.2, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 1.8, bark: 2.6, planks: 1.8, stone: 1.8, groundDetail: 1, plaster: 0.6, cladding: 1.6, tiles: 1.4, asphalt: 1.4, paving: 1.6, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
+  relief: { concrete: 1.2, blockWall: 1.6, crate: 1.6, corrugated: 3, steelPlate: 2.4, barrier: 0.8, sandbag: 2.4, gabion: 2.4, paint: 0.8, bark: 2.6, planks: 1.8, stone: 1.8, groundDetail: 1, plaster: 0.6, cladding: 1.6, tiles: 1.4, asphalt: 1.4, paving: 1.6, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
   /**
    * Grime and contact shade near the floor: the sides of walls, containers, crates and barriers darken towards their
    * foot over this height (metres), to this share of their colour at the very bottom.
@@ -236,7 +242,8 @@ export const SURFACES = {
      * shelf shows in front of the spine.
      */
     rack: { bay: 1.2, post: 0.08, beam: 0.1, beamSet: 0.01, loadInset: 0.04, spine: 0.04, headroom: 0.06, boxGap: 0.05, shortBoxes: [0.9, 0.84] },
-    gabion: { sandTop: 0.04, sandInset: 0.05 },
+    /** The gabion's open top: grey rubble (G6: never sand) set `topDrop` below the wire's rim, `topInset` in from it. */
+    gabion: { topDrop: 0.04, topInset: 0.05, topShade: 0.82 },
     ibc: { base: 0.14, inset: 0.05, bar: 0.03, lid: 0.12 },
     sandbags: { course: 0.2, inset: 0.025, topInset: 0.05 },
     generator: { skid: 0.1, inset: 0.04, louvres: 5, louvreFrom: 0.25, louvreStep: 0.1, louvreHeight: 0.04, louvreEnd: 0.2, panelWidth: 0.5, panelY: [0.6, 1.0] },
@@ -247,7 +254,6 @@ export const SURFACES = {
     latch: 0x2e3032,
     cardboard: 0xb8915e,
     film: 0xdfe3e6,
-    sand: 0xc8b48a,
     palletWood: 0xd8ccb4,
     strap: 0x34383c,
     cageSteel: 0x9aa0a6,
@@ -258,7 +264,7 @@ export const SURFACES = {
    * into a normal map (render/surfaceNormals.ts heightToNormal). The slope scale per surface, for the original
    * 256-pixel drawing (the maps at other sizes are scaled to match, so relief reads the same at any texture size).
    */
-  normalStrength: { concrete: 1.4, blockWall: 2.2, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2, plaster: 0.6, cladding: 1.8, tiles: 1.6, asphalt: 1.6, paving: 1.8, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
+  normalStrength: { concrete: 1.4, blockWall: 1.8, crate: 2, corrugated: 3.2, steelPlate: 2.8, barrier: 1, sandbag: 2.6, gabion: 2.6, paint: 1, bark: 2.8, planks: 2, stone: 2, groundDetail: 1.2, plaster: 0.6, cladding: 1.8, tiles: 1.6, asphalt: 1.6, paving: 1.8, glass: 0.4 } satisfies Record<SurfaceTextureId, number>,
   /** The largest normal map (pixels a side): High's 1024² pictures are scaled down to it first (render/surfaceNormals.ts). */
   normalMapMaxSize: 512,
   /**
@@ -318,6 +324,8 @@ export const SURFACES = {
     chevronHeight: 0.22,
     chevronY: 0.55,
     minWall: 6,
+    /** Atlas texels fainter than this are skipped (the mesh is blended, G6). */
+    alphaFloor: 0.02,
     stencil: '#f2efe6',
     paint: '#f2efe6',
     ink: '#2a2d30',
