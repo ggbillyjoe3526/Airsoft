@@ -57,7 +57,8 @@ describe('Depot after the woodland look (M33i: a map using none of it builds exa
   for (const detail of [false, true]) {
     it(`builds the same meshes, vertex for vertex, ${detail ? 'with' : 'without'} map detail`, () => {
       const group = buildMapMeshes(DEPOT, textures(), { relief: false, normalMaps: false, detail, steelSheen: detail, foliageShadows: true }, null);
-      const rows = group.children.map((o): Row => {
+      // G8: Depot's set dressing (its junk and puddles) is pinned by its own tests; every other mesh is as before.
+      const rows = group.children.filter((o) => o.name !== 'map-junk' && o.name !== 'map-puddles').map((o): Row => {
         const m = o as THREE.Mesh;
         const geo = m.geometry;
         const range = geo.drawRange.count;

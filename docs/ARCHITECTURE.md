@@ -141,6 +141,10 @@ ends the round). A hit character is eliminated
   `softDot.ts`), `bbRenderer.ts` (balls and camera-facing streak quads of a fixed on-screen width) and `dustMotes.ts`
   (faded out near the camera, size-capped in device pixels times the pixel ratio, hidden with Reduced motion); a pool
   with nothing in flight uploads nothing.
+  G8 (set dressing, `MapData.dressing`, look only): `mapDressing.ts` places it from the seed (pure); its marks join
+  the decal mesh (`dressingAtlas.ts`, atlas 1024 × 1536), junk and glow strips and the puddles are two meshes
+  (`dressingMeshes.ts`), the skyline joins the tree ring (`skyline.ts`), and `dressingEffects.ts` pools the chimney
+  smoke (`smokePlumes.ts`) and the dust feet kick up; play reads only `blocks`, so physics, nav, cover and sight never see it.
   The debug overlay shows the quality in force, pixel ratio, sim / draw / GPU milliseconds (`gpuTimer.ts`), the
   multisampling granted, draw calls and GPU object counts; Show FPS keeps its first line on screen. `Renderer.setFov` applies the
   Field of view setting (horizontal degrees on 16:9) at once; an optic's zoom narrows whatever is set.

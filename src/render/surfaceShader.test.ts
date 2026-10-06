@@ -96,7 +96,10 @@ describe('the surface shader patch (G6)', () => {
       ['high', true],
     ] as const) {
       const group = buildMapMeshes(DEPOT, textures, { ...mapLookOf(QUALITY[q]), relief: false }, null);
-      const keys = group.children.map((o) => ((o as THREE.Mesh).material as THREE.Material).customProgramCacheKey());
+      // G8: Depot's set dressing (its junk and its puddles) is two programs of its own from Medium, none on Low.
+      const dressing = group.children.filter((o) => o.name === 'map-junk' || o.name === 'map-puddles');
+      expect(dressing.length, q).toBe(weathered ? 2 : 0);
+      const keys = group.children.filter((o) => !dressing.includes(o)).map((o) => ((o as THREE.Mesh).material as THREE.Material).customProgramCacheKey());
       expect(keys.some((k) => k.includes(':wear')), q).toBe(weathered);
       if (!weathered) expect(keys.every((k) => k === 'without-environment')).toBe(true);
       // A handful of programs for the whole map (a match start compiles few).

@@ -138,7 +138,7 @@ function cellRandom(a: number, b: number, k: number): number {
 }
 
 /** True if a block other than `floor` stands over the ground rectangle within `clearance` above the floor's top. */
-function coveredAbove(blocks: readonly MapBlock[], floor: MapBlock, lo: readonly [number, number], hi: readonly [number, number], top: number, clearance: number): boolean {
+export function coveredAbove(blocks: readonly MapBlock[], floor: MapBlock, lo: readonly [number, number], hi: readonly [number, number], top: number, clearance: number): boolean {
   return blocks.some((b) => {
     if (b === floor) return false;
     if (b.center.x + b.size.x / 2 <= lo[0] || b.center.x - b.size.x / 2 >= hi[0]) return false;

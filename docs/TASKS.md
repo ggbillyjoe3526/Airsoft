@@ -340,5 +340,5 @@ acceptance:
   3. Low draws exactly what it drew before: no new mesh, draw call, triangle, texture or shader. Medium and High: at most four more draw calls (junk and strips, puddles, smoke, kicked dust while it flies), at most 15 000 more triangles on Depot, the decal atlas 1024 × 1536 (from 1024 × 1024); each cost stated in the code.
   4. Smoke and kicked dust are pooled with fixed buffers and allocate nothing per frame; under Reduced motion the smoke stands still, no dust is kicked up and the motes stay hidden; every new geometry, material and texture is freed with the map or the match.
   5. Placement is deterministic: the same map and `dressing.seed` give the same dressing every time; another seed gives another.
-status: building
+status: review
 attempts: 0
