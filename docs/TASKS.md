@@ -21,5 +21,5 @@ acceptance:
   8. Day lighting: a lower (about 35°), warmer sun, a bluer sky fill and a deeper sky (the environment map follows it); the night preset is unchanged.
   9. Collision, cover, sight lines and every map's block data unchanged (Neon Heights' order untouched).
   10. Quality fields `bakedLight` and `weathering` have a value on every preset and a Custom row; a saved Custom choice without them reads the default.
-status: building
-attempts: 0
+status: critic owed (built; build, smoke, perf, scope and changelog gates pass, tests fail only on timeouts under load in untouched suites; the build session had no Agent tool for QA, performance or the critic)
+attempts: 1
