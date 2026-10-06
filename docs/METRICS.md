@@ -3,6 +3,8 @@
 One row per attempt of a task run through the pipeline (`pipeline/README.md`). Gate columns are ✓, ✗ or – (not run),
 with seconds. Worker tokens are the totals the harness reports when a spawned worker finishes, per worker (QA,
 performance, triage, critic, changelog); the build thread's own tokens and the coordinator's are not visible here.
+From 2026-10-06 (token-efficiency plan, item 25) the cell also gives the build thread's own total when its session
+shows one (`thread 350k`); the rows before that date are the baseline the plan's later steps are measured against.
 
 | Date | Task | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -128,3 +130,4 @@ performance, triage, critic, changelog); the build thread's own tokens and the c
 | 2026-10-06 | M75 | 4 | build thread | ✓ (CI) | ✓ (CI) | ✓ (CI) | ✓ | ✓ | ✓ | 8/8 Accept | owner ruling: Neon Heights Medium line 140; chunk budget 950 kB after CI's build failed at 901 of 900 | ~30 min | critic |
 | 2026-10-06 | M76 | 1 | build thread | ✓ | ✓ 3364 | ✓ 38/38 | ✓ matrix, 8 combinations | ✓ | ✓ | 6/8 Retry (Haiku) | 7, 8: rebase marks left in KNOWN_ISSUES | ~1 h | critic |
 | 2026-10-06 | M76 | 2 | build thread | ✓ | ✓ 3364 | ✓ 38/38 | ✓ matrix, 8 combinations | ✓ | ✓ | 8/8 Accept (Haiku) | – | ~5 min | critic |
+| 2026-10-06 | TE1 | 1 | build thread | ✓ 26 s | ✓ fast (one contention timeout in citySound beside the critic's own run; passes alone and in a clean re-run) | ✓ 406 s | – not required | ✓ | ✓ | 8/8 Accept (Sonnet) | – (first build failed: `process` in playwright.config.ts without Node types) | ~1 h | changelog (Haiku) 20k with a curated brief (was 50k–107k), critic (Sonnet) 38k |

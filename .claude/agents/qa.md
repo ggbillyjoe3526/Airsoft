@@ -15,7 +15,8 @@ checks that such a commit touches nothing else. If the feature cannot be tested 
 
 ## How the project tests
 
-- **Vitest** (`npm run test`, about 105 s for the suite; `npx vitest run src/sim/foo.test.ts` for one file) for pure
+- **Vitest** (`npm run t` for the fast project and `npm run t:all` for everything, both printing dots and failures only;
+  `npx vitest run src/sim/foo.test.ts --reporter=dot` for one file) for pure
   logic: the simulation (`src/sim`), bots (`src/ai`), config, input mapping, stats, pool. Tests build state with the
   helpers in `src/sim/testSupport.ts` and drive `stepSimulation`; bot matches run headless through
   `src/ai/depotMatchSupport.ts` (keep a new match test file no longer than the longest today, about 50 s; audit CORE-15 is to shorten them). Randomness is seeded (`state.rng`).

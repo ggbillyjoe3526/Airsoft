@@ -3,7 +3,7 @@
 Open tasks only, one block each (format in `pipeline/README.md`). A task that lands leaves this file in its records
 commit, before its pull request merges (CI's scope gate finds the block in the branch's history): its REVIEWS line, its
 ROADMAP row and the CHANGELOG line are the record. The planning thread writes blocks; the build thread
-keeps `status` and `attempts` current.
+sets `status` and `attempts` once, in its records commit (no status-only commits).
 
 **Audit 2, what is left (2026-10-05 20:45 UTC).** Merged: M50–M57, M63–M65, M68, M70 (#107–#122). M69 (AUD PR 4) is
 accepted and lands with this list. Below, the rest of section 8 of the report
