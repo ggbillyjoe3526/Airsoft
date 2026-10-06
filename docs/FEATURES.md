@@ -99,6 +99,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42)
 - The build's version on the title screen (M24)
 - Menus in the concept look (G3): a top bar between matches (Play, Loadout, Armory, Range, Settings, wallet, version), key hints that are real buttons, map and mode picture cards on the Play screen, replica pictures on the Loadout, Customise and Armory, Settings grouped with a search and a note on every row
+- HUD in the concept look (G4): a score bar with slanted pips, score blocks and the match's aim under the clock; a framed square minimap with the map and round; hit feed rows with a BB mark and a Hit tag; a replica panel with the replica's picture, fire-mode chips and magazine bars; squad cards with the order keys; the Tab scoreboard on a navy panel
 
 ## HUD and match info
 

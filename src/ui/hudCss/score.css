@@ -1,0 +1,222 @@
+/* The score bar (ui/scoreboard.ts), top centre: each side's name and a slanted pip per player on a navy panel cut at
+   its outer corner, its rounds won on a solid block in its colour, and the clock between them with what wins the match
+   under it. Level 2 of the HUD. Its size is Settings → HUD → Scoreboard (--sb-scale), grown from its top centre; its
+   height at size 1 is --sb-height (style.css), which the hit banner, the OUT tag and the round line keep under. */
+.scoreboard {
+  position: absolute;
+  left: 50%;
+  top: var(--hud-margin);
+  opacity: var(--hud-l2);
+  translate: -50% 0;
+  scale: calc(var(--sb-scale, 1) * var(--sb-fit));
+  transform-origin: 50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--hud-fg);
+  font-family: var(--ui-font);
+  pointer-events: none;
+  z-index: 12;
+}
+
+.scoreboard[hidden] {
+  display: none;
+}
+
+/* On a narrow window it shrinks a little more, so it stays clear of the minimap and the hit feed (the feed's room is
+   worked out with the same factor, feed.css). */
+:root {
+  --sb-fit: 1;
+}
+
+@media (max-width: 1279px) {
+  :root {
+    --sb-fit: 0.78;
+  }
+}
+
+.sb-row {
+  display: flex;
+  align-items: stretch;
+  height: 56px;
+}
+
+/* A side: its name, its pips, its score; Orange's mirrored, so each cut corner is on the outside. */
+.sb-team {
+  display: flex;
+  align-items: stretch;
+  background: var(--hud-panel);
+}
+
+.sb-team-0 {
+  padding-left: var(--hud-cut);
+  clip-path: polygon(var(--hud-cut) 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.sb-team-1 {
+  flex-direction: row-reverse;
+  padding-right: var(--hud-cut);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--hud-cut)) 100%, 0 100%);
+}
+
+/* The name a step lighter than the team's colour, so it reads on the navy in every colour set. */
+.sb-name {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px 0 2px;
+  font: 800 19px/1 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--team) 72%, #fff);
+}
+
+.sb-team-1 .sb-name {
+  padding: 0 2px 0 10px;
+}
+
+/* "You" on your side: dark on the team's colour. */
+.sb-name em {
+  padding: 2px 5px 1px;
+  font: 700 15px/1 var(--ui-display);
+  font-style: normal;
+  letter-spacing: var(--ls-caps);
+  color: var(--ink);
+  background: var(--team);
+}
+
+/* Flag mode: ATK / DEF after the name. */
+.sb-role {
+  font: 700 15px/1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  color: var(--hud-fg);
+}
+
+.sb-role:empty {
+  display: none;
+}
+
+/* A pip per player, slanted, dimmed once they're out (a step in brightness, not colour alone). */
+.sb-pips {
+  align-self: center;
+  display: flex;
+  gap: 4px;
+  padding: 0 12px 0 2px;
+}
+
+.sb-team-1 .sb-pips {
+  padding: 0 2px 0 12px;
+}
+
+.sb-pips i {
+  width: 9px;
+  height: 20px;
+  background: var(--team);
+  transform: skewX(-14deg);
+}
+
+.sb-pips i.out {
+  opacity: 0.25;
+}
+
+/* Rounds won: dark figures on a solid block in the team's colour (legible on every set's colours). */
+.sb-score {
+  display: grid;
+  place-items: center;
+  min-width: 52px;
+  padding: 0 6px;
+  font: 800 38px/1 var(--ui-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--team);
+}
+
+/* The clock, with the match's aim under it ("First to 5", or the run's line in Extraction). */
+.sb-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 104px;
+  padding: 0 12px;
+  background: var(--hud-panel-solid);
+}
+
+.sb-clock {
+  font: 800 32px/1 var(--ui-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.sb-clock.low {
+  color: var(--danger);
+}
+
+.sb-aim {
+  font: 600 15px/1 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--menu-muted);
+}
+
+.sb-aim:empty {
+  display: none;
+}
+
+/* The strip under it (flag mode: how far up the flag is; Extraction: the exits and your respawn), tapering down. */
+.sb-flag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 4px 22px;
+  font: 600 15px/1.2 var(--ui-font);
+  white-space: nowrap;
+  background: var(--hud-panel);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 10px 100%);
+}
+
+.sb-flag[hidden] {
+  display: none;
+}
+
+.sb-flag-bar {
+  position: relative;
+  width: 96px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+/* Its fill runs on one transform transition, with the reload bar's (style.css, the progress fills). */
+.sb-flag-bar b {
+  position: absolute;
+  inset: 0;
+  background: var(--flag);
+}
+
+/* Extraction (M43): no round scores, and the respawn note beside the exit line. */
+.scoreboard.sb-run .sb-score {
+  display: none;
+}
+
+.sb-respawn {
+  padding: 2px 8px 1px;
+  font: 700 15px/1.1 var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.sb-respawn.spent {
+  color: var(--warning);
+}
+
+.sb-respawn[hidden] {
+  display: none;
+}

@@ -40,7 +40,7 @@ attempts: 0
 ## G4 · HUD restyle (graphics overhaul, 0.1 Dev 5)
 tier: ui
 perf: required
-touches: src/ui/, src/style.css, src/config/minimap.ts, src/config/matchInfo.ts, src/render/combatPresentation.ts, src/render/matchPresentation.ts, src/game.ts
+touches: src/ui/, src/style.css, src/main.ts, src/config/hudText.ts, src/config/minimap.ts, src/config/matchInfo.ts, src/render/combatPresentation.ts, src/render/matchPresentation.ts, src/game.ts
 contract: none (every HUD setting keeps its key and meaning; the HUD keeps its layout and positions)
 acceptance:
   1. Score bar (top centre): each team's name and a slanted pip per player (dimmed once out) on a navy panel with a cut outer corner, the score on a solid block in the team's colour, the clock between them with the match's aim under it ("First to 5"; the run's line in Extraction); "You" on your side, ATK / DEF, the flag strip, the low clock and the Scoreboard size setting kept.

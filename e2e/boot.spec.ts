@@ -391,8 +391,14 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(board.locator('tbody tr:not(:first-child)')).toHaveCount(4); // the 2v2 picked on Match
   await page.keyboard.up('Tab');
   await expect(board).toBeHidden(keyWait);
-  // The minimap (M23) is up while playing.
+  // The minimap (M23) is up while playing, with the map and round under it (G4).
   await expect(page.locator('.minimap')).toBeVisible();
+  await expect(page.locator('.minimap-caption')).toHaveText(/^Depot · Round \d+$/);
+  // G4: the score bar says what wins the match; the squad line has a card per player on your side, you first; the
+  // replica panel a chip per fire mode the AEG has.
+  await expect(page.locator('.sb-aim')).toHaveText(/^First to \d+/);
+  await expect(page.locator('.squad-card b')).toHaveText(['You', /\S/]);
+  await expect(page.locator('.hud-mode')).toHaveText(['Semi', 'Burst', 'Auto']);
   // The order wheel (M23) shows while Z is held; let go in the middle, it closes with no order given.
   const wheel = page.locator('.order-wheel');
   await page.keyboard.down('z');
@@ -443,7 +449,7 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect.poll(async () => Number(await mag.textContent()), { timeout: 30_000 }).toBe(full);
 
   // Fire selector: the AEG starts on auto, and B steps it to single (semi).
-  const fireMode = page.locator('.hud-firemode');
+  const fireMode = page.locator('.hud-mode.on');
   await expect(fireMode).toHaveText('Auto');
   await page.keyboard.press('b');
   await expect(fireMode).toHaveText('Semi', { timeout: 10_000 });

@@ -208,6 +208,12 @@ ends the round). A hit character is eliminated
   cell and keeps its own bests (best haul, extractions in a row, fastest extraction with a find), apart from the
   match-win streak; `recordsView` shows them with the mode's column. The crosshair (`ui/crosshair.ts`) is built and styled from Settings → Crosshair
   (`ui/crosshairSettings.ts`, saved as `crosshair.<part>`); the HUD opens its gap with the spread.
+- **The HUD's look (G4):** `ui/hud.css` imports one sheet per part (`ui/hudCss/`: score bar, minimap, hit feed, squad
+  line, replica panel, Tab scoreboard), loaded after the menus'; the words are `config/hudText.ts`. `ui/hud.ts` holds
+  the crosshair and sights and `ui/replicaPanel.ts` (the replica's picture from the game's `ItemPictures`, given by
+  `CombatPresentation.setReplicaPictures` with `kitSubjects`, fire-mode chips, ammo, magazine bars, reload and status);
+  `ui/squadBar.ts` puts the squad cards and order keys round `ui/squadOrderLine.ts`; the minimap draws on a square panel
+  with a caption and skips a frame that would draw the same (`FrameCheck`, `ui/minimapView.ts`).
 - **ui/menus/** (M15, M15b; the concept's look since G3): `Menus` shows one screen at a time over one backdrop
   picture (`chrome.ts`: the top bar, the key hints, the pre-blurred backdrop; no live blur) and reports choices to
   `game.ts`. Each screen is built the first time it opens and reused. The title screen; the Play screen

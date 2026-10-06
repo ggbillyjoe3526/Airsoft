@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 // The stylesheets pinned as text (audit UI-03, UI-04, UI-06, UI-07), the way bots.ts and maps.ts are in their tests:
 // they can't be drawn in Vitest, so these read their rules. style.css, then the menus' (ui/menus/menus.css and the
-// files it imports, G3), in the order the page loads them.
+// files it imports, G3) and the HUD's (ui/hud.css and its files, G4), in the order the page loads them.
 
 // Read from disk: Vitest empties a `?raw` import of a .css file (its CSS handling is off), and the project's types
 // don't include Node's, so the module name is built at run time.
@@ -18,13 +18,23 @@ function withImports(url: URL): { url: URL; text: string }[] {
 }
 
 const menuFiles = withImports(new URL('./ui/menus/menus.css', import.meta.url));
-const css = [readFileSync(new URL('./style.css', import.meta.url), 'utf8'), ...menuFiles.map((f) => f.text)].join('\n');
+const hudFiles = withImports(new URL('./ui/hud.css', import.meta.url));
+const css = [readFileSync(new URL('./style.css', import.meta.url), 'utf8'), ...menuFiles.map((f) => f.text), ...hudFiles.map((f) => f.text)].join('\n');
 
 /** A stylesheet without its comments, so a comment naming `:has()` or a class is not mistaken for a rule. */
 const uncomment = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//g, '');
 const sheet = uncomment(css);
 /** The menus' rules alone (G3). */
 const menuSheet = uncomment(menuFiles.map((f) => f.text).join('\n'));
+/** The HUD's rules alone (G4). */
+const hudSheet = uncomment(hudFiles.map((f) => f.text).join('\n'));
+
+/** Every text size a sheet sets in px: font-size, the font shorthand, and a clamp()'s or calc()'s smallest. */
+function textSizes(text: string): number[] {
+  const plain = [...text.matchAll(/(?:font-size:|font:[^;]*?)\s(?:calc\()?(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
+  const floors = [...text.matchAll(/font(?:-size)?:[^;]*clamp\((\d+)px/g)].map((m) => Number(m[1]));
+  return [...plain, ...floors];
+}
 
 /** The body of the first rule or at-rule whose prelude is exactly `prelude`, matched by braces. */
 function blockOf(prelude: string, from = 0): string | null {
@@ -224,5 +234,47 @@ describe('the menus\' sheets (G3)', () => {
 
   it('keep every file short (about 600 lines at most)', () => {
     for (const f of menuFiles) expect(f.text.split('\n').length, f.url.pathname).toBeLessThanOrEqual(640);
+  });
+});
+
+describe('the HUD\'s sheets (G4)', () => {
+  it('read every file hud.css imports, each part\'s rules among them', () => {
+    expect(hudFiles.length).toBe(7);
+    for (const rule of ['.scoreboard', '.minimap-frame', '.hit-feed-line', '.squad-card', '.hud-replica', '.match-board']) {
+      expect(blockOf(rule), rule).not.toBeNull();
+    }
+    // Moved, not copied: style.css keeps none of them.
+    const style = uncomment(readFileSync(new URL('./style.css', import.meta.url), 'utf8'));
+    for (const rule of ['.scoreboard', '.hit-feed-line', '.hud-replica', '.match-board', '.squad-order']) {
+      expect(style, rule).not.toMatch(new RegExp(`(^|\\})\\s*\\${rule}\\s*\\{`));
+    }
+  });
+
+  it('never set HUD text under 15 px', () => {
+    const sizes = textSizes(hudSheet);
+    expect(sizes.length).toBeGreaterThan(10);
+    expect(sizes.filter((px) => px < 15)).toEqual([]);
+    // No type-scale step under 15 px either (they are 11 to 13 px outside the menus).
+    expect(hudSheet).not.toMatch(/var\(--fs-(2xs|xs|sm)\)/);
+  });
+
+  it('never blur or filter live over the field, and keep every file short', () => {
+    expect(hudSheet).not.toMatch(/backdrop-filter|filter:/);
+    for (const f of hudFiles) expect(f.text.split('\n').length, f.url.pathname).toBeLessThanOrEqual(640);
+  });
+
+  it('draw the concept\'s shapes: slanted pips, cut corners, a rounded minimap, the current fire mode orange', () => {
+    expect(declared('.sb-pips i', 'transform')).toBe('skewX(-14deg)');
+    for (const rule of ['.sb-team-0', '.sb-team-1', '.hud-replica', '.match-board']) expect(declared(rule, 'clip-path'), rule).toMatch(/^polygon\(/);
+    expect(declared('.minimap', 'border-radius')).toBe('10px');
+    expect(declared('.hud-mode.on', 'background')).toBe('var(--orange)');
+    expect(declared('.hit-feed-line.you', 'box-shadow')).toContain('var(--menu-acid)');
+    expect(declared('.squad-card.hit', 'opacity')).toBe('0.6');
+  });
+
+  it('keep what keeps under the score bar on its height token, and the debug panel under the minimap\'s caption', () => {
+    expect(sheet).not.toMatch(/70px \* var\(--sb-scale/);
+    expect(blockOf('.hitfx-banner')).toMatch(/var\(--sb-height\) \* var\(--sb-scale, 1\)/);
+    expect(blockOf('.minimap-on > .debug-overlay')).toMatch(/--minimap-caption/);
   });
 });

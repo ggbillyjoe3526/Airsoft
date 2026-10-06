@@ -1,0 +1,45 @@
+/* The minimap (M23; G4 look), top left: the field round you, turned with your view, on a navy square with rounded
+   corners and a cool blue frame, the map and round under it. Drawn on a canvas (ui/minimap.ts) only when something on
+   it changes; its size (--minimap-size) is set on the container with the HUD's. Level 3 of the HUD. */
+.minimap-frame {
+  position: absolute;
+  left: var(--hud-edge-x);
+  top: var(--hud-margin);
+  opacity: var(--hud-l3);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 11;
+}
+
+.minimap-frame[hidden] {
+  display: none;
+}
+
+/* The corners round the canvas's own drawing; the frame is a ring outside it, so it hides nothing drawn. */
+.minimap {
+  display: block;
+  width: var(--minimap-size);
+  height: var(--minimap-size);
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px rgba(150, 180, 255, 0.3);
+}
+
+/* "Depot · Round 2": one line the minimap's width (--minimap-caption in style.css keeps room for it). */
+.minimap-caption {
+  max-width: var(--minimap-size);
+  margin: 0;
+  overflow: hidden;
+  font: 700 calc(15px * var(--hud-scale, 1)) / 1.2 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #dfe6f8;
+  text-shadow: var(--hud-shadow);
+}
+
+.minimap-caption:empty {
+  display: none;
+}

@@ -7,6 +7,9 @@ import { vec3 } from '../sim/vec';
 import { terrainMaxX, terrainMaxZ } from '../map/terrain';
 import { planeTerrain, SLOPE_YARD, SLOPE_YARD_TERRAIN } from '../map/testSupport';
 
+/** The minimap's frame and caption round its canvas (G4): plain elements, apart from the canvases the fakes record. */
+const plain = () => ({ className: '', hidden: false, textContent: '', setAttribute: () => undefined, append: () => undefined, remove: () => undefined });
+
 /** Just enough DOM for the minimap without a browser: canvases without a 2D context, a container with inline style. */
 function fakeDom() {
   const vars = new Map<string, string>();
@@ -31,7 +34,7 @@ function fakeDom() {
     appendChild: () => undefined,
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
   };
-  (globalThis as { document?: unknown }).document = { createElement: () => canvas };
+  (globalThis as { document?: unknown }).document = { createElement: (tag: string) => (tag === 'canvas' ? canvas : plain()) };
   return { canvas, parent: parent as unknown as HTMLElement, vars, ratio, classes };
 }
 
@@ -58,9 +61,10 @@ describe('Minimap layout (audit UI-14, UI-04, UI-13)', () => {
     minimap.setVisible(true);
     expect(dom.canvas.width).toBe(MINIMAP.size * 3);
     expect(dom.vars.get('--minimap-size')).toBe(`${MINIMAP.size * 1.5}px`);
-    // Its circle hides the teammate markers under it while it shows.
+    // Its square panel (G4) hides the teammate markers under it while it shows, into its corners.
     const r = (MINIMAP.size * 1.5) / 2;
     expect(minimap.covers(16 + r, 16 + r)).toBe(true);
+    expect(minimap.covers(16 + 2, 16 + 2 * r - 2)).toBe(true);
     expect(minimap.covers(16 + 2 * r + 5, 16 + r)).toBe(false);
     minimap.setVisible(false);
     expect(minimap.covers(16 + r, 16 + r)).toBe(false);
@@ -93,7 +97,8 @@ function recordingDom() {
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
   };
   (globalThis as { document?: unknown }).document = {
-    createElement: () => {
+    createElement: (tag: string) => {
+      if (tag !== 'canvas') return plain();
       const fills: { style: string; x: number; y: number; w: number; h: number }[] = [];
       const arcs: { style: string; x: number; y: number; r: number; after: number }[] = [];
       let fillStyle = '';
@@ -229,7 +234,8 @@ function pathDom() {
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
   };
   (globalThis as { document?: unknown }).document = {
-    createElement: () => {
+    createElement: (tag: string) => {
+      if (tag !== 'canvas') return plain();
       const mine = canvases.length === 0;
       const ctx = new Proxy({} as Record<string, unknown>, {
         get: (_t, key) => (mine ? (...args: unknown[]) => void ops.push({ op: String(key), args }) : () => undefined),

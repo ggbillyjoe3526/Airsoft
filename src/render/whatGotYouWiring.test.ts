@@ -62,6 +62,7 @@ vi.mock('../ui/roundBanner');
 vi.mock('../ui/scoreboard');
 vi.mock('../ui/soundCues');
 vi.mock('../ui/squadOrderLine');
+vi.mock('../ui/squadBar');
 vi.mock('../ui/teammateMarkers');
 vi.mock('./characterRenderer');
 vi.mock('./caseRenderer');

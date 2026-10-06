@@ -26,7 +26,7 @@ export class SquadBar {
   private readonly root: HTMLDivElement;
   private readonly line: SquadOrderLine;
   private readonly cards: { character: Character; root: HTMLElement; state: HTMLElement; shown: CardState | '' }[];
-  private readonly keys: { action: Action; item: HTMLElement; key: HTMLElement; shown: string }[];
+  private readonly keys: { action: Action; item: HTMLElement; key: HTMLElement; shown: string | null }[];
 
   /**
    * `members`: your side, you first; `names`: each player's name by id ("You", "Blue 2"); `keyName`: the key bound to an
@@ -66,9 +66,9 @@ export class SquadBar {
     this.keys = ORDER_KEYS.map(({ action, order }) => {
       const item = document.createElement('span');
       const key = document.createElement('kbd');
-      item.append(key, document.createTextNode(` ${HUD_TEXT.orders[order]}`));
+      item.append(key, ` ${HUD_TEXT.orders[order]}`);
       strip.append(item);
-      return { action, item, key, shown: '' };
+      return { action, item, key, shown: null }; // null: written on the first show, an unbound key included
     });
     // No teammates (a 1v1): no cards, no orders to give.
     deck.hidden = strip.hidden = members.length < 2;

@@ -1,0 +1,11 @@
+/* The HUD's look (graphics overhaul G4, the approved concept's): navy panels see-through over the field with a cut
+   corner, Barlow Condensed for the numbers and labels, each team's colour on a solid block. One file per part, in the
+   order they sit round the screen; the crosshair, the hit marker and the other overlays stay in style.css. Sizes are
+   before the HUD's size (--hud-scale) and the scoreboard's (--sb-scale); no HUD text is under 15 px (a stylesheet test
+   pins it, styleSheet.test.ts). */
+@import './hudCss/score.css';
+@import './hudCss/minimap.css';
+@import './hudCss/feed.css';
+@import './hudCss/squad.css';
+@import './hudCss/replica.css';
+@import './hudCss/board.css';

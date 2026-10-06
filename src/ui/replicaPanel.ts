@@ -143,14 +143,13 @@ export class ReplicaPanel {
     this.picture.show(this.source, this.subjects[slot] ?? null, drawing);
     if (this.chipModes !== replica.fireModes) {
       this.chipModes = replica.fireModes;
-      this.modes.textContent = '';
       this.chips = replica.fireModes.map((m) => {
         const chip = document.createElement('span');
         chip.className = 'hud-mode';
         chip.textContent = FIRE_MODE_LABELS[m];
-        this.modes.append(chip);
         return chip;
       });
+      this.modes.replaceChildren(...this.chips);
       this.shownMode = -1;
     }
     this.shownFill.length = 0; // different magazines: redraw every bar

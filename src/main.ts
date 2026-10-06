@@ -1,5 +1,6 @@
 import './style.css';
 import './ui/menus/menus.css';
+import './ui/hud.css';
 import { CRASH_TEXT, WEBGL_ERROR } from './config/crash';
 import { TAB_LOCK } from './config/save';
 import { LOADING } from './config/loading';
