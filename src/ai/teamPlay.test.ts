@@ -282,6 +282,10 @@ describe('watching where someone ducked out of sight', () => {
   // Blue's player stands in the open 12 m off, then steps into the hut.
   const map = field([HUT]);
 
+  /**
+   * `level`'s skill, hunting towards the far end as every level did when this was written: on seed 2 a Hard bot that
+   * hunts the middle (Audit 2) sets off away from the player before it has looked, which is not what this measures.
+   */
   function lose(level: 'hard' | 'pro', seed: number) {
     const { player, bots, run, state, commands } = skirmish(
       map,
@@ -294,7 +298,7 @@ describe('watching where someone ducked out of sight', () => {
     );
     unarmed(state.characters);
     const b = bots.bots[0]!;
-    setSkill(b, level);
+    setSkill(b, { ...botConfig(level), huntsMiddle: false });
     run(0.5);
     expect(b.targetVisible).toBe(true);
     player.position.x = 30;

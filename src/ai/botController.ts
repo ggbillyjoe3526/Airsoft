@@ -678,7 +678,8 @@ export class BotController {
     const visited = this.visited[bot.character.team]!;
     const home = this.spawnCentre[bot.character.team]!;
     const enemy = this.spawnCentre[1 - bot.character.team]!;
-    // Pro (M40, huntsMiddle): the middle of the map, between the two ends, rather than the far end.
+    // huntsMiddle (Pro since M40, every level since M71): the middle of the map, between the two ends, rather than the
+    // far end.
     const middle = bot.skill.huntsMiddle;
     const midX = (home.x + enemy.x) / 2;
     const midZ = (home.z + enemy.z) / 2;

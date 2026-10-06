@@ -11,20 +11,6 @@ accepted and lands with this list. Below, the rest of section 8 of the report
 POOL-D, Extraction pay (owner decision 23: keep until the playtest shows the extraction rate) and REN-03 step 3 with
 REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 
-## M71 · Every level hunts the middle and keeps out of the light (Audit 2 BAL PR 1: BAL-01, BAL-02, BAL-08, BAL-09, AI-03, AI-07, AI-08)
-tier: core
-perf: required
-touches: src/config/bots.ts, src/ai/botController.ts, src/ai/botMovement.ts, src/ai/botBrain.ts, src/ai/botTorch.ts, src/ai/aim.ts, src/ai/depotMatchSupport.ts, vite.config.ts, docs/DECISIONS.md, docs/KNOWN_ISSUES.md, docs/PLAYTEST.md
-contract: none
-acceptance:
-  1. Easy, Normal and Hard hunt the middle (`huntsMiddle`); Normal and Hard keep out of the light (`keepsDark`, owner decision 4); Pro is unchanged. `proBalance.test.ts` compares against the flags turned off.
-  2. New Woodland level guards (Elimination and Attack / Defend, Normal and Hard, 8 seeds): end 0 or attackers within 35–65 %, rounds on time under 10 % (owner decision 3); they run in the `slow` project.
-  3. The Depot, Neon Heights and difficulty guards touched by the change are re-measured; comments carry the new figures; bands move only where crossed.
-  4. The torch light refreshes at the perception rate, not every frame (AI-07); the aim wander's `* 3` is a named tuning value (AI-08).
-  5. DECISIONS supersedes "Easy, Normal and Hard do neither" with the measured numbers; KNOWN_ISSUES rows 50, 160 and 186 updated.
-status: open
-attempts: 0
-
 ## M72 · Extraction opponents per level, Woodland's berth, insertion grace, hunters measured (Audit 2 BAL PR 2 + SIM-C: BAL-03, BAL-05, BAL-06, SIM-03)
 tier: core
 perf: required

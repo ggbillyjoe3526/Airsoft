@@ -19,7 +19,9 @@ describe('a 4v4 Elimination match on Neon Heights by Night, both teams on Pro (M
     // AI-02, on M55's maps): the west end (end 0) wins 50.8 % of the decided rounds (93 of 183), 1 of 187 rounds ends
     // on time. Before M57 the guard played without torches: west 41.7 % (73 of 175), 3 of 180 on time; Hard on the same
     // seeds 41.2 % (75 of 182), none on time. By Day the east end is the stronger (KNOWN_ISSUES). Re-measure with this
-    // test after any bot, layout or night-sight change.
+    // test after any bot, layout or night-sight change. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
+    // torch comes on only for a fight within 20 m or a search's last stretch): west 42.2 % (70 of 166), 4 of 172 on
+    // time.
     expectProBalance(tallyBalance(32, 300, botConfig('pro'), 'elimination', NIGHT, TEAM_SIZE), 'elimination', 'Neon Heights by Night Pro');
   });
 });

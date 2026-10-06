@@ -1072,8 +1072,10 @@ Night). Pro pays ×2 but counts for nothing while it is dev content.
 - [ ] **Teammates on Pro:** Teammates › Pro: they hold angles, trade your hits and win their duels.
 - [ ] **Rules:** New game › Rules › Tournament and Pro CQB on Pro (M39) play as written.
 - [ ] **Per map:** is any approach unfair to attackers or defenders; does one end of the map win far more; at night on
-  Woodland and Neon Heights, do Pro bots stand in lantern light (they should not when a dark spot is near)? Does a
-  round ever drag to the clock with nobody left to find?
+  Woodland and Neon Heights, do Normal, Hard or Pro bots stand in lantern light (they should not when a dark spot is
+  near)? Does a round ever drag to the clock with nobody left to find, at any level (M71: every level hunts the middle)?
+- [ ] **Torches at night (M71):** a bot switches its torch on for a fight within about 20 m and for the last stretch of
+  a search (12 m from the spot at Normal, 20 m at Hard, 30 m at Pro), not on the way there: a beam far off across the field should be rare. Easy keeps it on on the move.
 
 **Tuning** (everything is in `src/config/bots.ts`, "Pro tuning", plus `BOT_SKILL.pro`; the comment there maps each
 symptom to its numbers):
@@ -1085,6 +1087,8 @@ symptom to its numbers):
 - Bunches up or trades badly: `tradeTime`, `tradeCoverRadius`, `boundDistance`, `crossfireTurnDeg`.
 - One end of a map wins, or rounds run to the clock: `huntMiddleBias`, `latePushTime`.
 - Stands in the light at night: `darkSpotRadius`, `darkSpotStep`.
+- Bots give themselves away with the torch too early, or fight in the dark too long: `BOT_TORCH.fightReach`, then
+  `searchWalkDistance` per level (the torch comes on within it of the spot a search heads for).
 - The card's "moving": `WHAT_GOT_YOU.movingSpeed` in `src/config/matchInfo.ts`; the tips: `PRO_TIPS` in `src/config/tutorial.ts`.
 
 ## Extraction waves (M45, dev content)

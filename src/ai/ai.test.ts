@@ -574,9 +574,15 @@ describe('bot modes', () => {
 });
 
 describe('bot hearing and targets', () => {
+  /**
+   * Hunting towards the far end, past the shooter (the open field's middle is off to one side of the duel, so a bot that
+   * hunts the middle, as every level has since Audit 2, walks out of earshot before the burst reaches it).
+   */
+  const FAR_END: BotConfig = { ...BOTS, huntsMiddle: false };
+
   it('keep one steady guess of an unseen shooter during a long burst', () => {
     const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 }; // can't see anyone
-    const { bots, run, commands } = duel(18, () => {}, walls);
+    const { bots, run, commands } = duel(18, () => {}, walls, FAR_END);
     const b = bots.bots[0]!;
     Object.assign(commands.get(0)!, { fire: true, pitch: 1.2 }); // a long burst into the air
     let jumps = 0;
@@ -599,7 +605,7 @@ describe('bot hearing and targets', () => {
 
   it('keep one steady guess when two unseen enemies near each other take turns firing', () => {
     const walls: WorldQuery = { raycastStatic: (_o, _d, max) => max * 0.5 };
-    const { state, bots, run, commands } = duel(18, (s) => s.characters.push(createCharacter(2, vec3(4, 0, 0), 0, LOADOUT, 0)), walls);
+    const { state, bots, run, commands } = duel(18, (s) => s.characters.push(createCharacter(2, vec3(4, 0, 0), 0, LOADOUT, 0)), walls, FAR_END);
     const b = bots.bots[0]!;
     const second = createCommand();
     commands.set(2, second);

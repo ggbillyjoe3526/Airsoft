@@ -26,7 +26,9 @@ describe('a 4v4 Elimination match on Woodland, both teams on Pro (M40)', () => {
     // M55 (audit SIM-05: a log and a boulder out of what they stood in) deals every seed again: end 0 52.3 % here (67 of
     // 128), 55.8 % over seeds 1-48 (53.6 % before, ±3.7 between the two). Every figure so far played without the torches
     // the game fits every bot at night; with them (M57, audit AI-02, on M55's maps) end 0 wins 50.4 % (62 of 123), none
-    // on time.
+    // on time. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
+    // torch comes on only for a fight within 20 m or a search's last stretch): end 0 60.0 % (69 of 115), 1 of 117 on time; on the ceiling, about two
+    // standard errors (4.6 points each) over M57's 50.4 %: the downhill end's edge (BAL-09) to watch.
     expectProBalance(tallyBalance(16, SECONDS, botConfig('pro'), 'elimination', WOODLAND, TEAM_SIZE), 'elimination', 'Woodland Pro');
   });
 });

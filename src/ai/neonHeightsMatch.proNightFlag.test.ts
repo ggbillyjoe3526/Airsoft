@@ -18,7 +18,9 @@ describe('a 4v4 Attack / Defend match on Neon Heights by Night, both teams on Pr
     // Measured 2026-10-05 (M57, seeds 1-32, 400 s each, every bot carrying the torch the game fits it at night, audit
     // AI-02, on M55's maps): attackers win 52.6 % (112 of 213 rounds), none on time. Before M57, without torches: 50.2
     // % (107 of 213), none on time; Hard on the same seeds 54.3 % (132 of 243), none on time. Re-measure with this test
-    // after any bot, layout or night-sight change.
+    // after any bot, layout or night-sight change. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
+    // torch comes on only for a fight within 20 m or a search's last stretch): 52.9 % (117 of
+    // 221), none on time.
     expectProBalance(tallyBalance(32, 400, botConfig('pro'), 'attackDefend', NIGHT, TEAM_SIZE), 'attackDefend', 'Neon Heights by Night Pro');
   });
 });

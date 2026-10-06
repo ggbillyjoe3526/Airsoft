@@ -11,6 +11,9 @@ import { expectCustomMatchesFair } from './depotMatchSupport';
  * rounds, and after the M30 / FA1 merge seeds 1-16 gave the west 33% of 1v1 Elimination rounds (17 of 51) while
  * seeds 17-32 gave 53% and 33-48 60% (49% over all 48; 55% before FA4). The two modes were one file until FA11b
  * (audit CORE-15: at about 42 s it was the suite's longest); the other mode is in depotMatch.custom.test.ts.
+ * M71 (Audit 2: every level hunts the middle, bots step aside when pressed together): Elimination west 51% of decided
+ * 1v1 rounds (66 of 129, 32 seeds) and 42% of 2v2 (28 of 66); Attack / Defend attackers 59% of 1v1 (80 of 136) and
+ * 48% of 2v2 (30 of 63); every round but two decided, no friendly hits.
  */
 describe('custom matches on Depot (M20): Attack / Defend', () => {
   beforeAll(async () => {
