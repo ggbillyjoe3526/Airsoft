@@ -176,7 +176,7 @@ export function buildPuddleMesh(layout: DressingLayout, probes: ProbeUniforms | 
   ];
   for (const p of layout.puddles) {
     const rng = createRng(p.seed);
-    for (let i = 0; i < n; i++) wobble[i] = 1 + (rngNext(rng) - 0.5) * 2 * P.wobble;
+    for (let i = 0; i < n; i++) wobble[i] = 1 - rngNext(rng) * P.wobble; // only in: the outline never leaves the checked rectangle
     const base = pos.length / 3;
     pos.push(p.x, p.y, p.z);
     col.push(water.r, water.g, water.b, P.alpha);

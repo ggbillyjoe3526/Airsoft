@@ -111,7 +111,7 @@ export const DRESSING = {
     bay: 4,
   },
   /**
-   * Puddles: an outline of `points` pushed in and out by up to `wobble` of its radius, a water middle (`water`, sRGB,
+   * Puddles: an outline of `points` pulled in by up to `wobble` of its radius (never out past the placed rectangle), a water middle (`water`, sRGB,
    * at `alpha`) inside `core` of the radius, then a wet margin fading out. Physically based and glossy (`roughness`),
    * so with Environment lighting on they mirror the sky; `reflective` is the strength the renderer's screen-space
    * reflections take (G5, `userData.reflective`). `lift` m over the floor, above the decals.

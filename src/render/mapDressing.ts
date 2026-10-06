@@ -59,7 +59,6 @@ export interface DressingLayout {
   strips: readonly GlowStrip[];
 }
 
-const EMPTY: DressingLayout = { decals: [], junk: [], puddles: [], strips: [] };
 
 /** A ground rectangle (x0, x1, z0, z1). */
 type Rect = readonly [number, number, number, number];
@@ -143,9 +142,11 @@ export function clearOfPlay(map: MapData, r: Rect, spots: readonly ClearSpot[] =
   const cz = (r[2] + r[3]) / 2;
   const reach = Math.hypot(r[1] - r[0], r[3] - r[2]) / 2;
   for (const lane of map.lanes) {
-    for (let i = 0; i + 1 < lane.length; i++) {
-      const a = lane[i]!;
-      const b = lane[i + 1]!;
+    // A one-point lane is a spot: its one "segment" runs from the point to itself.
+    for (let i = 0; i === 0 || i + 1 < lane.length; i++) {
+      const a = lane[i];
+      if (!a) break;
+      const b = lane[i + 1] ?? a;
       if (toSegment(cx, cz, a.x, a.z, b.x, b.z) - reach < J.laneClear) return false;
     }
   }
@@ -177,7 +178,7 @@ function floorQuad(x: number, y: number, z: number, axis: 0 | 2, sign: 1 | -1, a
 /** The dressing a map's data asks for, placed (none without `dressing`). */
 export function placeDressing(map: MapData, size: number = D.atlasSize): DressingLayout {
   const d = map.dressing;
-  if (!d) return EMPTY;
+  if (!d) return { decals: [], junk: [], puddles: [], strips: [] };
   const rng = createRng(d.seed);
   const out: DressingLayout = { decals: [], junk: [], puddles: [], strips: d.strips ?? [] };
   const cells = atlasRects(size).dressing;

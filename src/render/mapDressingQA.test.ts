@@ -50,8 +50,8 @@ describe('G8 QA: a map with no dressing', () => {
     expect(layout.junk.length + layout.decals.length + layout.puddles.length + layout.strips.length).toBe(0);
   });
 
-  // Bug: placeDressing returns one shared, mutable EMPTY layout, so a consumer's push leaks into every dressing-less map.
-  it.fails('returns a fresh layout each call (no shared mutable EMPTY)', () => {
+  // Was a bug (QA): one shared, mutable EMPTY layout, so a consumer's push leaked into every dressing-less map.
+  it('returns a fresh layout each call (no shared mutable EMPTY)', () => {
     placeDressing(BARE).junk.push({} as never);
     expect(placeDressing(BARE).junk).toHaveLength(0);
   });
@@ -122,8 +122,8 @@ describe('G8 QA: puddles', () => {
     expect(new Set(seeds).size).toBe(seeds.length);
   });
 
-  // Bug: the outline wobbles out to 1.35 x its half size, but only the nominal rectangle is checked against the floor and blocks.
-  it.fails("a puddle's wobbled outline stays on its floor and out from under a block beside it", () => {
+  // Was a bug (QA): the outline wobbled out to 1.35 x its half size, but only the nominal rectangle is checked.
+  it("a puddle's wobbled outline stays on its floor and out from under a block beside it", () => {
     const wall = block('wall', 0, 1.5, 6, 4, 3, 2);
     const map: MapData = {
       ...BARE,
@@ -255,8 +255,8 @@ describe('G8 QA: keeping clear of play', () => {
     expect(frontRect(piece)[3]).toBeCloseTo(junkRect(piece)[3] + 1.6, 9);
   });
 
-  // Bug: a lane with a single point is never tested (the loop needs two points), so junk can stand on it.
-  it.fails('refuses a piece on a one-point lane', () => {
+  // Was a bug (QA): a lane with a single point was never tested (the loop needed two points).
+  it('refuses a piece on a one-point lane', () => {
     const lane = mapWith({ lanes: [[{ x: 0, z: 0.64 }]] as never });
     expect(clearOfPlay(lane, junkRect(piece))).toBe(false);
   });
