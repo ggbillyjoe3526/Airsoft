@@ -7,7 +7,7 @@
  *   node pipeline/perf-run.mjs [--env container|laptop|desktop|ci] [--preset low|medium|high|ultra|all] [--cpu N]
  *                              [--ticks 3600] [--warmup-ticks 120] [--max-seconds 300] [--baseline] [--no-build]
  *                              [--chromium /path] [--channel chrome|msedge] [--headless] [--map depot|woodland|neon]
- *                              [--mode extraction] [--viewport 1920x1080]
+ *                              [--mode elimination|extraction] [--viewport 1920x1080] [--port 4181]
  *
  * The e2e bundle is reused when the source hasn't changed since it was built (pipeline/build-cached.mjs).
  *
@@ -22,12 +22,16 @@
  * frameTimeGatedEnvs). Draw calls, triangles, memory and heap are real everywhere.
  *
  * `--map woodland` (M33i) plays Woodland instead (dev content: Dev settings > Dev content on, then the map) with the same
- * script, and names its files perf-<env>-woodland-<preset>.json (baseline <env>-woodland[-<preset>].json); the gate
- * still reads Depot's run only. `--map neon` (M48) plays Neon Heights the same way.
+ * script, and names its files perf-<env>-woodland-<preset>.json (baseline <env>-woodland[-<preset>].json). `--map neon`
+ * (M48) plays Neon Heights the same way.
  *
  * `--mode extraction` (M48) plays an Extraction run instead of Elimination (dev content too): a trio against the map's
  * home team, the cases and exits drawn, with the same script; its files carry `-extraction` after the map's name. On
  * Woodland it is the heaviest scene the game has (ten characters at night, plan section 7).
+ *
+ * The gate (M76, audit CORE-03) runs one map, mode and preset at a time from perf-budget.json's `matrix` and reads
+ * perf-<env><tag>-<preset>.json (pipeline/perfMatrix.mjs names the files); perf-<env>.json stays Depot Elimination's
+ * budget-preset run for the performance agent.
  *
  * `--env laptop` measures the real GPU: no SwiftShader flags, a visible window (vsync, as a player sees it; --headless
  * to hide it) and the installed Chrome (`--channel chrome`, the default there; or `--chromium /path`).
@@ -39,10 +43,10 @@ import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { baselineFileName, perfTag, runFileName } from './perfMatrix.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'pipeline', 'out');
-const PORT = 4181;
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -63,12 +67,14 @@ const options = {
 };
 const [viewWidth, viewHeight] = options.viewport.split('x').map(Number);
 if (!(viewWidth > 0 && viewHeight > 0)) throw new Error('--viewport must be WIDTHxHEIGHT, e.g. 3840x2160');
+/** The preview server's port: --port for a second run beside another worktree's (the default 4181 is refused when busy). */
+const PORT = Number(value('--port', '4181'));
 const MAPS = { depot: /Depot/i, woodland: /Woodland/i, neon: /Neon Heights/i };
 const MODES = ['elimination', 'extraction'];
 if (!MODES.includes(options.mode)) throw new Error(`--mode must be one of ${MODES.join(', ')}`);
 if (!(options.map in MAPS)) throw new Error(`--map must be one of ${Object.keys(MAPS).join(', ')}`);
 /** Depot's files keep their names (what the gate and the baselines read); another map's carry its name. */
-const mapTag = `${options.map === 'depot' ? '' : `-${options.map}`}${options.mode === 'elimination' ? '' : `-${options.mode}`}`;
+const mapTag = perfTag(options.map, options.mode);
 options.cpu = Number(value('--cpu', budget.cpuThrottle?.[options.env] ?? 1));
 const presets = options.preset === 'all' ? PRESETS : [options.preset];
 if (!presets.every((p) => PRESETS.includes(p))) throw new Error(`--preset must be one of ${PRESETS.join(', ')} or all`);
@@ -228,14 +234,14 @@ async function measure(preset) {
 }
 
 /** The baseline file for a preset: `<env>.json` for the budget preset (what the gate compares), `<env>-<preset>.json` otherwise. */
-const baselineName = (preset) => (preset === budget.budgetPreset ? `${options.env}${mapTag}.json` : `${options.env}${mapTag}-${preset}.json`);
+const baselineName = (preset) => baselineFileName(options.env, { map: options.map, mode: options.mode, preset }, budget.budgetPreset);
 const round = (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
 for (const result of results) {
   for (const k of Object.keys(result.metrics)) result.metrics[k] = round(result.metrics[k]);
   const json = `${JSON.stringify(result, null, 2)}\n`;
-  const out = join(OUT, `perf-${options.env}${mapTag}-${result.preset}.json`);
+  const out = join(OUT, runFileName(options.env, result));
   writeFileSync(out, json);
-  // The gate reads the budget preset's run (and a single-preset run, as before), on Depot.
+  // Depot Elimination's budget-preset run (or a single-preset one) also as perf-<env>.json, what the performance agent reads.
   if (!mapTag && (result.preset === budget.budgetPreset || presets.length === 1)) writeFileSync(join(OUT, `perf-${options.env}.json`), json);
   console.log(`perf: ${relative(ROOT, out)}`);
   const m = result.metrics;

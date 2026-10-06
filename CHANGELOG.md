@@ -198,6 +198,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 
 ### Internal
 - **TE1** · Development uses fewer tokens: a shorter project guide (process detail moved to docs/PROCESS.md), a guard against reading huge files whole, automatic session setup, quiet test output (`npm run t`), and no status-only commits in the pipeline
+- **M76** · Perf gate matrix: every map in both modes on Low and Extraction on Medium with map-scoped baselines; quick builds skip precompression; build label from tags (#141)
 - **M75** · Rendering optimized on Medium: figure shadows from simplified stand-ins, Extraction exits merged to fewer draws, Woodland night horizon capped at Simple (#140)
 - **M68** · Two unused style rules removed (#121)
 - **M69** · Sound effects drop their silent tails and the countdown beep renders once, so the sounds take less memory (#124)
