@@ -1,0 +1,311 @@
+/*
+ * Settings' own rows (G3): key bindings, Reset All, the crosshair preview, the team colours and the Save group.
+ */
+
+/* Key bindings (Settings › Controls) */
+.key-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--sp-6);
+}
+
+.key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  min-height: var(--control-md);
+  font-size: var(--fs-md);
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.key-slots {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--sp-2);
+}
+
+.key-button {
+  min-width: 6.5em;
+  max-width: 9.5em;
+  min-height: var(--control-xs);
+  padding: 0 var(--sp-3);
+  font: 700 var(--fs-md) var(--ui-display);
+  letter-spacing: 0.06em;
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.key-button:hover {
+  border-color: var(--menu-muted);
+}
+
+.key-button.empty {
+  /* Muted, not faint, so the dash reads on the box's panel (audit UI-04). */
+  color: var(--menu-muted);
+}
+
+/* A row whose key another action just took (audit UI-05): a short flash, so the player sees what moved. */
+.key-row.moved {
+  animation: key-moved 1.4s ease-out;
+}
+
+@keyframes key-moved {
+  from {
+    background: rgba(255, 107, 26, 0.32);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.reduced-motion .key-row.moved {
+  animation: none;
+  background: rgba(255, 107, 26, 0.18);
+}
+
+/* Nothing saved: the system's "reduce motion" decides, live (audit UI-07; Game sets neither class then). */
+@media (prefers-reduced-motion: reduce) {
+  #app:not(.full-motion) .key-row.moved {
+    animation: none;
+    background: rgba(255, 107, 26, 0.18);
+  }
+}
+
+.key-layout-note {
+  margin: 4px 0 0;
+}
+
+.key-reset.armed {
+  color: var(--ink);
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.key-button.listening {
+  color: var(--ink);
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.key-note {
+  min-height: 1.3em;
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-md);
+  color: var(--hint);
+}
+
+/* Reset All: a ghost button (tertiary) until it is armed. */
+.key-reset {
+  min-height: var(--control-md);
+  margin-top: var(--sp-2);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: var(--ls-caps);
+  color: var(--menu-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.key-reset:hover {
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+}
+
+.key-reset.armed:hover {
+  color: var(--ink);
+  background: var(--orange-hover);
+}
+
+.menus kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  font: 700 var(--fs-sm) var(--ui-display);
+  line-height: 1.6;
+  text-align: center;
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  border-bottom-width: 2px;
+}
+
+/* The custom crosshair colour's box (audit UI-21), at the end of the colour buttons. */
+.crosshair-custom {
+  width: 40px;
+  height: var(--control-lg);
+  padding: 2px;
+  background: var(--menu-panel-hi);
+  border: 1px solid var(--menu-line);
+  cursor: pointer;
+}
+
+/* Settings › Gameplay: the crosshair's live preview, standing still and as when moving, on a mid-tone backdrop. */
+.crosshair-preview {
+  gap: 12px;
+}
+
+.crosshair-preview-cell {
+  position: relative;
+  flex: 0 0 150px;
+  height: 110px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #6f7a6a 0%, #8c8a7c 50%, #c9c4b3 100%);
+  border: 1px solid var(--menu-line);
+}
+
+.crosshair-preview-caption {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  font: 700 var(--fs-sm) var(--ui-display);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--hud-fg);
+  text-shadow: var(--hud-shadow);
+}
+
+.crosshair-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 7px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  vertical-align: -1px;
+}
+
+/* Settings › Accessibility: the picked team colours, as the figures wear them */
+.team-swatches {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.team-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 var(--fs-sm) var(--ui-font);
+}
+
+.team-swatch::before {
+  content: '';
+  width: 28px;
+  height: 14px;
+  background: var(--swatch);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Settings › Save file (M31) */
+.save-problem {
+  margin: 0 var(--sp-4) var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--warning);
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+}
+
+.save-status {
+  font-size: var(--fs-md);
+  color: var(--menu-soft);
+}
+
+.save-line {
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--menu-muted);
+}
+
+.save-message:not(:empty) {
+  color: var(--hint);
+}
+
+.save-restore-list {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+
+.save-restore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.save-restore .menu-button {
+  min-height: var(--control-sm);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-md);
+}
+
+.menu-row-control .menu-button.save-danger:not(:disabled) {
+  color: var(--danger);
+}
+
+/* A file dragged over the Save group: the panel shows it can take it. */
+.settings-tab-panel.save-drop {
+  outline: 2px dashed var(--orange);
+  outline-offset: var(--sp-2);
+}
+
+.save-compare {
+  width: 100%;
+  margin: 0 0 var(--sp-4);
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+
+.save-compare th,
+.save-compare td {
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.save-compare tr:first-child th {
+  font-size: var(--fs-sm);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--menu-muted);
+  border-top: 0;
+}
+
+.save-compare tr th:first-child {
+  font-weight: 600;
+  color: var(--menu-muted);
+}
+
+.save-dialog-note {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.save-dialog-note.warn {
+  color: var(--warning);
+}
+
+.save-dialog-actions,
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+
+.save-dialog-actions .menu-button {
+  min-height: var(--control-md);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-md);
+}

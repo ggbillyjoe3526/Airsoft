@@ -60,6 +60,8 @@ export class PictureSlot {
 
   constructor(className = '') {
     this.root = el('span', `pic-slot${className ? ` ${className}` : ''}`);
+    // Decoration: the tile's words name the item, and the empty slot's dash must not join a tab's or button's name.
+    this.root.setAttribute('aria-hidden', 'true');
     this.placeholder = el('span', 'pic-placeholder');
     this.img = el('img');
     this.img.alt = '';
