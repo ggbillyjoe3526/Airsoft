@@ -94,6 +94,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **G5** · Graphics effects: bloom from Medium; ambient occlusion, temporal smoothing and light shafts on High; reflections and film grain on Ultra
 
 ### Changed
+- **G5** · A Custom graphics mix saved before this build gets High's new effects (ambient occlusion, temporal smoothing, light shafts, bloom); each can be turned off under Custom
 - **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)
 - **M68** · Settings → Graphics is shorter: the Custom rows fold away under Low, Medium and High and open when you pick Custom or click "Custom settings" (#121)
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)

@@ -7,6 +7,7 @@ import { RANGE_MAP } from '../map/range';
 import { WOODLAND } from '../map/woodland';
 import { resolveLighting } from './lightingPreset';
 import type { SurfaceTextures } from './proceduralTextures';
+import { PostHost } from './post/postHost';
 import { PostStack } from './post/postStack';
 import { handOverRenderer, releaseGpuResources, Renderer, toneMappingOf, verticalFovFor, warmSurfacesInIdle, zoomedFov } from './renderer';
 import { defaultEnvironmentLook, type EnvironmentLook, environmentKey } from './replicaSheen';
@@ -191,6 +192,7 @@ describe('the lighting preset on the renderer (M33f, acceptance 4)', () => {
       lighting: LIGHTING_PRESETS.day,
       environmentLook: defaultEnvironmentLook(),
       environmentDirty: false,
+      post: new PostHost(() => false),
     });
     r.scene.background = new THREE.Color();
     r.scene.fog = new THREE.Fog(0xffffff);
@@ -535,7 +537,7 @@ describe('the GPU timer across a lost context: forgotten, never deleted (M63, au
 });
 
 /** The renderer's post stack (G5), or null. */
-const postOf = (r: Renderer) => (r as unknown as { post: PostStack | null }).post;
+const postOf = (r: Renderer) => (r as unknown as { post: PostHost }).post.current;
 
 describe('the post stack on the renderer (G5)', () => {
   afterEach(() => {
@@ -650,6 +652,21 @@ describe('the post stack on the renderer (G5)', () => {
     r.render();
     expect(surfaces).toHaveBeenCalledTimes(1);
     expect(surfaces.mock.calls[0]![0].map((s) => s.mesh)).toEqual([glass]);
+  });
+
+  it('lets go of the last map’s glass when the next session sets its light, with no shader warm-up between (the range)', () => {
+    const { r } = stubbedRenderer(QUALITY.ultra);
+    const glass = Object.assign(new THREE.Mesh(new THREE.BoxGeometry()), { name: 'map-glass' });
+    r.scene.add(glass);
+    r.render();
+    const reflection = (postOf(r) as unknown as { reflection: { mask: THREE.WebGLRenderTarget | null; proxies: unknown[] } }).reflection;
+    expect(reflection.proxies).toHaveLength(1);
+    // The range takes its map and sets its light (rangeSession.ts); it never warms the shaders.
+    r.scene.remove(glass);
+    r.setLighting(LIGHTING_PRESETS.day);
+    r.render();
+    expect(reflection.proxies).toHaveLength(0);
+    expect(reflection.mask).toBeNull();
   });
 
   it('gives way to the retro filter while it is on', () => {

@@ -90,7 +90,8 @@ ends the round). A hit character is eliminated
   (`qualityStepDown.ts`, never saved). It sets the render scale and DPI cap (`effectivePixelRatio`), antialiasing,
   shadows, the figures' shading, surface relief, texture size and filtering, dust, the replica's sheen and, from Medium
   up, the post stack (`render/post/`, G5: `postPlan` picks ambient occlusion, reflections, light shafts, temporal
-  smoothing, bloom and the lens finish per preset; Low builds none; the viewmodel is drawn after it, on the canvas):
+  smoothing, bloom and the lens finish per preset, and `PostHost` makes, sizes and frees the stack for the renderer; Low
+  builds none; the viewmodel is drawn after it, on the canvas):
   `Game.changeQuality` applies new settings at once through `Renderer.setQuality` (a new WebGL context on a new canvas
   when antialiasing changes; the pointer lock is on the container, so it survives) and `MatchSession.setQuality` (the
   daylight, `restyleMap`, the figures and `CombatPresentation.setQuality`). The frame-rate cap
