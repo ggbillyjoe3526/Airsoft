@@ -26,7 +26,7 @@ import {
 } from '../loadoutChoice';
 import { OptionPicker } from '../optionPicker';
 import { performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
-import { type MenuHint, hintsBar } from './chrome';
+import { type MenuHint, hintsBar, optionTick } from './chrome';
 import { itemIcon } from './icons';
 import type { PictureContext } from './kitStrip';
 import { tabAfterKey } from './menuNav';
@@ -345,7 +345,7 @@ export class CustomiseView {
       const words = el('span', 'option-words');
       words.append(el('span', 'option-name', SCHEMES[id].name));
       if (realistic) words.append(el('span', 'option-line', GEAR_TEXT.showsAs(FAMILIES[SCHEMES[id].family].name)));
-      b.append(slot.root, words, tick());
+      b.append(slot.root, words, optionTick());
       b.addEventListener('click', () => {
         if (this.opts.model.scheme(this.asset.id) === id) return;
         this.opts.model.setScheme(this.asset.id, id);
@@ -526,13 +526,6 @@ function key(ref: ItemRef): string {
   return `${ref.asset}@${ref.tier}`;
 }
 
-/** A picked option's round orange tick. */
-function tick(): HTMLSpanElement {
-  const t = el('span', 'option-tick');
-  t.setAttribute('aria-hidden', 'true');
-  return t;
-}
-
 /** An option's tile: its picture (or "None"), its name and its tier. */
 function optionTile(name: string, tier: string, pic: PictureSlot | null): HTMLButtonElement {
   const tile = el('button', 'option-tile');
@@ -540,7 +533,7 @@ function optionTile(name: string, tier: string, pic: PictureSlot | null): HTMLBu
   const words = el('span', 'option-words');
   words.append(el('span', 'option-name', name));
   if (tier) words.append(el('span', 'option-tier', tier));
-  tile.append(pic?.root ?? el('span', 'option-none', GEAR_TEXT.none), words, tick());
+  tile.append(pic?.root ?? el('span', 'option-none', GEAR_TEXT.none), words, optionTick());
   return tile;
 }
 

@@ -1,17 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
 
-// style.css pinned as text (audit UI-03, UI-04, UI-06, UI-07), the way bots.ts and maps.ts are in their tests: the
-// stylesheet can't be drawn in Vitest, so these read its rules.
+// The stylesheets pinned as text (audit UI-03, UI-04, UI-06, UI-07), the way bots.ts and maps.ts are in their tests:
+// they can't be drawn in Vitest, so these read their rules. style.css, then the menus' (ui/menus/menus.css and the
+// files it imports, G3), in the order the page loads them.
 
 // Read from disk: Vitest empties a `?raw` import of a .css file (its CSS handling is off), and the project's types
 // don't include Node's, so the module name is built at run time.
 const nodeFs = 'node:' + 'fs';
 const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync(path: URL, encoding: 'utf8'): string };
-const css = readFileSync(new URL('./style.css', import.meta.url), 'utf8');
 
-/** The stylesheet without its comments, so a comment naming `:has()` or a class is not mistaken for a rule. */
-const sheet = css.replace(/\/\*[\s\S]*?\*\//g, '');
+/** A stylesheet with its `@import`s read in their place, each import as its own file's text. */
+function withImports(url: URL): { url: URL; text: string }[] {
+  const text = readFileSync(url, 'utf8');
+  const imports = [...text.matchAll(/@import\s+'([^']+)';/g)].map((m) => new URL(m[1]!, url));
+  return [{ url, text: text.replace(/@import\s+'[^']+';/g, '') }, ...imports.flatMap(withImports)];
+}
+
+const menuFiles = withImports(new URL('./ui/menus/menus.css', import.meta.url));
+const css = [readFileSync(new URL('./style.css', import.meta.url), 'utf8'), ...menuFiles.map((f) => f.text)].join('\n');
+
+/** A stylesheet without its comments, so a comment naming `:has()` or a class is not mistaken for a rule. */
+const uncomment = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//g, '');
+const sheet = uncomment(css);
+/** The menus' rules alone (G3). */
+const menuSheet = uncomment(menuFiles.map((f) => f.text).join('\n'));
 
 /** The body of the first rule or at-rule whose prelude is exactly `prelude`, matched by braces. */
 function blockOf(prelude: string, from = 0): string | null {
@@ -183,5 +196,33 @@ describe('the Custom graphics disclosure in forced colours, Reduced motion and t
 
   it('sizes the summary as a control (36 px at least) so a touch or a pointer can hit it', () => {
     expect(declared('.graphics-subhead', 'min-height')).toBe('var(--control-sm)');
+  });
+});
+
+describe('the menus\' sheets (G3)', () => {
+  it('read every file menus.css imports, the screens\' own rules among them', () => {
+    expect(menuFiles.length).toBeGreaterThan(5);
+    expect(menuSheet).toMatch(/\.menu-topbar\s*\{/);
+    expect(menuSheet).toMatch(/\.settings-columns\s*\{/);
+  });
+
+  it('never set text under 15 px: no smaller size, in a font-size, a font shorthand or the type scale', () => {
+    const sizes = [...menuSheet.matchAll(/(?:font-size:|font:[^;]*?)\s(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(sizes.filter((px) => px < 15)).toEqual([]);
+    // A clamp()'s smallest size counts too.
+    const floors = [...menuSheet.matchAll(/font(?:-size)?:[^;]*clamp\((\d+)px/g)].map((m) => Number(m[1]));
+    expect(floors.filter((px) => px < 15)).toEqual([]);
+    for (const step of ['--fs-2xs', '--fs-xs', '--fs-sm']) expect(new RegExp(`${step}:\\s*15px`).test(menuSheet), step).toBe(true);
+    expect(menuSheet).not.toMatch(/font-size:\s*0(?![.\d])/);
+  });
+
+  it('never blur live: no backdrop-filter and no blur filter, anywhere on the menus', () => {
+    expect(menuSheet).not.toMatch(/backdrop-filter/);
+    expect(menuSheet).not.toMatch(/filter:\s*[^;]*blur\(/);
+  });
+
+  it('keep every file short (about 600 lines at most)', () => {
+    for (const f of menuFiles) expect(f.text.split('\n').length, f.url.pathname).toBeLessThanOrEqual(640);
   });
 });

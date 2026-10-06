@@ -1,16 +1,13 @@
-import { DIFFICULTIES, type Difficulty, defaultTeammateDifficulty } from '../../config/bots';
-import { countsForRecords, CUSTOM_RULES_PAY_CAP, DEFAULT_RULESET, type MatchRules, matchRulesSummary, recordsKeyOf, roundRulesFor, runRulesSummary, type RulesetId, rulesetOf, standardMatchText } from '../../config/matchRules';
-import { squadSize } from '../../config/extraction';
-import { mapStillFile } from '../../config/menuArt';
-import { PLAY_TEXT } from '../../config/menus';
-import { MATCH_MODES, type MatchMode } from '../../config/modes';
+import { type Difficulty, defaultTeammateDifficulty } from '../../config/bots';
+import type { MatchRules, RulesetId } from '../../config/matchRules';
+import type { MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { LightingPresetId, QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
-import { LIGHTING_LABELS, lightingChoices, lightingPicked } from '../../map/lightingChoice';
+import { lightingPicked } from '../../map/lightingChoice';
 import { type MapId, mapData, mapEntry } from '../../map/maps';
-import { type NewGamePicks, playedPicks, playedTeamSize } from '../../newGamePicks';
+import type { NewGamePicks } from '../../newGamePicks';
 import { saveSetting } from '../../settings/storage';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
@@ -19,15 +16,16 @@ import type { CrosshairSettingsOptions } from '../crosshairSettings';
 import type { HudSettingsOptions } from '../hudSettings';
 import type { LookSettingsOptions } from '../lookSettings';
 import { type ArmoryOptions, ArmoryScreen } from './armoryScreen';
-import { Backdrop, menuArt, type MenuHint, type NavPlace, TopBar } from './chrome';
+import { Backdrop, type MenuHint, type NavPlace, TopBar } from './chrome';
 import type { PictureContext } from './kitStrip';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
 import type { PictureSource } from './menuPictures';
 import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './menuNav';
-import { el } from './menuParts';
+import { el, watchScroll } from './menuParts';
 import { PauseScreen } from './pauseScreen';
 import { ResultScreen } from './resultScreen';
-import { describeRules, type MatchRulesText } from './rulesText';
+import { playView } from './playView';
+import type { MatchRulesText } from './rulesText';
 import { type SettingsOptions, SettingsScreen } from './settingsScreen';
 import { type PlayModel, type PlayView, SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
@@ -465,6 +463,7 @@ export class Menus implements PlayModel {
     screen.root.hidden = true;
     this.built[id] = screen;
     this.root.append(screen.root);
+    watchScroll(screen.root);
     this.refreshViews();
     if (this.hint) this.showHint(this.hint);
   }
@@ -496,11 +495,13 @@ export class Menus implements PlayModel {
   private navigate(place: NavPlace): void {
     // The place on show (the only one on the bar when opened from the pause menu) stays as it is.
     if (TOP_BAR_PLACES[this.current] === place) return;
+    // Back returns to the Play screen when the bar was used from there, else to the title (the places are its own).
+    const from: SettingsOrigin = this.current === 'setup' ? 'setup' : 'title';
     if (place === 'range') this.openRange(this.opts.onRange);
     else if (place === 'setup') this.openSetup();
-    else if (place === 'loadout') this.openLoadout('title');
-    else if (place === 'armory') this.openArmory('title');
-    else this.openSettings('title');
+    else if (place === 'loadout') this.openLoadout(from);
+    else if (place === 'armory') this.openArmory(from);
+    else this.openSettings(from);
   }
 
   /** Ends the match the player is leaving, then shows `screen`. */
@@ -654,42 +655,9 @@ export class Menus implements PlayModel {
     }
   }
 
-  /** The match as it will play: dev content's picks play as their defaults while Dev content is off (M35). */
+  /** The match as it will play (playView.ts). */
   private playView(): PlayView {
-    const devContent = this.opts.dev.devContent();
-    const played = playedPicks(this.picked, devContent);
-    // Each map offers as many players a side as it has room for (Depot 3v3, Woodland up to 5v5, M33).
-    // An Extraction run takes a squad of at most three (M43).
-    const map = mapEntry(played.map);
-    const run = played.mode === 'extraction' ? mapData(map.id).extraction : undefined;
-    const sizeMax = run ? squadSize(map.teamSize.max) : map.teamSize.max;
-    const m = { ...played.rules, teamSize: playedTeamSize(played) };
-    const light = this.lightingOf(map.id);
-    // A map that offers Day and Night names the one picked (M34d).
-    const lightLine = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[light]}` : '';
-    const still = mapStillFile(map.id, light);
-    const match = run ? runRulesSummary(m, run) : matchRulesSummary(m);
-    const opponents = difficultyLabel(played.difficulty);
-    const mates = difficultyLabel(played.teammateDifficulty);
-    const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty, played.ruleset);
-    const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
-    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter, switches: m }, played.mode, run);
-    const devContentUsed = this.opts.dev.devContentUsed();
-    const paid = this.opts.armory.wallet() !== null && !devContentUsed;
-    return {
-      played,
-      devContent,
-      run: run !== undefined,
-      sizeMax,
-      mapLine: `${map.label}${lightLine}`,
-      still: still ? menuArt(still) : null,
-      modeLabel: MATCH_MODES.find((o) => o.id === played.mode)?.label ?? played.mode,
-      rules: `${rulesetOf(played.ruleset).label} · ${match.value}`,
-      bots: m.teamSize === 1 || played.difficulty === played.teammateDifficulty ? PLAY_TEXT.botsLine(opponents) : PLAY_TEXT.botsLine(`${opponents} / ${mates}`),
-      notes: setupNotes(`${match.detail} ${rules}`, { recorded, cheating: this.opts.dev.cheating(), devContentUsed, ruleset: played.ruleset }),
-      loadout: this.opts.loadout.summary(),
-      pays: paid ? (played.ruleset === DEFAULT_RULESET || recordsKeyOf(played.ruleset) !== null ? PLAY_TEXT.pays : PLAY_TEXT.paysCapped(CUSTOM_RULES_PAY_CAP)) : '',
-    };
+    return playView(this.picked, this.opts, (id) => this.lightingOf(id));
   }
 }
 
@@ -698,44 +666,4 @@ function typing(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
   return target instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button'].includes(target.type);
-}
-
-/**
- * New game's text under its buttons: the rules, then why the match won't count, said before it is played: custom rules
- * (M20, not `recorded`), Dev settings that change play (M24, `cheating`), or dev content (M35, `devContentUsed`: in full,
- * or only that it won't pay when a note before it already says it won't be recorded). Pure.
- */
-export function setupNotes(rules: string, why: { recorded: boolean; cheating: boolean; devContentUsed: boolean; ruleset?: RulesetId }): string {
-  const notes = [rules];
-  if (!why.recorded) notes.push(notRecordedNote(why.ruleset ?? DEFAULT_RULESET));
-  else if (why.cheating) notes.push(DEV_NOT_RECORDED_NOTE);
-  if (why.devContentUsed) notes.push(notes.length > 1 ? DEV_CONTENT_PAY_NOTE : DEV_CONTENT_NOTE);
-  return notes.join(' ');
-}
-
-/** Under New game's rules while Dev settings that change play are on (M24). */
-export const DEV_NOT_RECORDED_NOTE = "Dev settings are on, so this match won't go into your records.";
-
-/**
- * Under New game's rules when the picks, the Loadout or the opponents' possible gear use dev content (M35); the second
- * when another note already says the match won't be recorded.
- */
-export const DEV_CONTENT_NOTE = "This match uses content still being built, so it won't go into your records or pay Field Credits.";
-export const DEV_CONTENT_PAY_NOTE = "It uses content still being built, so it won't pay Field Credits either.";
-
-/** Under New game's rules when the setup isn't the standard match. */
-export const NOT_RECORDED_NOTE = `This match won't go into your records, which count only the standard match: ${standardMatchText()}`;
-
-/** Under New game's rules when the setup isn't `ruleset`'s standard match (M39): Skirmish's note, its own, or Custom's. */
-export function notRecordedNote(ruleset: RulesetId): string {
-  if (ruleset === DEFAULT_RULESET) return NOT_RECORDED_NOTE;
-  if (recordsKeyOf(ruleset) === null) return CUSTOM_NOT_RECORDED_NOTE;
-  return `This match won't go into your ${rulesetOf(ruleset).label} records, which count only its standard match: ${standardMatchText(ruleset)}`;
-}
-
-/** Under New game's rules with the Custom ruleset (M39). */
-export const CUSTOM_NOT_RECORDED_NOTE = `Custom rules never go into your records, and pay no more than ×${CUSTOM_RULES_PAY_CAP}.`;
-
-function difficultyLabel(d: Difficulty): string {
-  return DIFFICULTIES.find((o) => o.id === d)?.label ?? d;
 }

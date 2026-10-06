@@ -5,7 +5,7 @@ import type { ItemRef } from '../../pool/collection';
 import { GEAR_SLOTS, type GearSlot, type LoadoutModel } from '../../pool/loadoutModel';
 import { type Asset, replicaOf } from '../../pool/pool';
 import { gearLine, performanceOf, sheetRows, tierBlurb } from '../performanceSheet';
-import { hintsBar, type MenuHint, sectionHead } from './chrome';
+import { hintsBar, type MenuHint, optionTick, sectionHead } from './chrome';
 import { CustomiseView } from './customiseView';
 import { ITEM_ICONS, itemIcon, MENU_ICONS } from './icons';
 import type { PictureContext } from './kitStrip';
@@ -178,7 +178,7 @@ export class LoadoutScreen {
       const note = el('span', 'item-note');
       const words = el('span', 'item-words');
       words.append(el('span', 'item-name', asset.name), el('span', 'item-tier', this.tierLabel(ref)));
-      button.append(pic.root, words, note, el('span', 'tier-bar'), el('span', 'option-tick'));
+      button.append(pic.root, words, note, el('span', 'tier-bar'), optionTick());
       button.addEventListener('click', () => this.equip(ref));
       // Right-click customises the equipped replica only: a misplaced right-click never swaps what you carry.
       button.addEventListener('contextmenu', (e) => {

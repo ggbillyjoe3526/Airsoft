@@ -24,7 +24,8 @@ import type { Collection, ItemRef } from '../../pool/collection';
 import { type Asset, comesIn, fcPerToken, isChase, type Pool } from '../../pool/pool';
 import { ConfirmDialog, noKeyRepeat } from './confirmDialog';
 import { tierLine } from '../performanceSheet';
-import { hintsBar, type MenuHint, tagPill } from './chrome';
+import { hintsBar, type MenuHint, sectionHead, tagPill } from './chrome';
+import { MENU_ICONS } from './icons';
 import { CATEGORY_LABELS, itemPicture, itemTile, tierLabel } from './itemTile';
 import type { PictureContext } from './kitStrip';
 import { el, menuButton } from './menuParts';
@@ -226,7 +227,10 @@ export class ArmoryScreen {
   private renderOdds(): void {
     const e = this.pool.economy;
     const odds = el('table', 'armory-odds');
-    odds.createCaption().textContent = ARMORY_TEXT.odds;
+    // The section head says it on screen; the caption names the table for a screen reader.
+    const caption = odds.createCaption();
+    caption.textContent = ARMORY_TEXT.odds;
+    caption.className = 'sr-only';
     const body = odds.createTBody();
     for (const { tier, percent } of tierChances(this.pool)) {
       const row = body.insertRow();
@@ -253,8 +257,36 @@ export class ArmoryScreen {
       part.style.setProperty('--share', String(percent));
       strip.append(part);
     }
-    const parts: (HTMLElement | null)[] = [strip, odds, perAsset, ...(chase.length > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.chaseKicker), ...chase] : [])];
+    const parts: (HTMLElement | null)[] = [
+      sectionHead('', ARMORY_TEXT.oddsTitle, ARMORY_TEXT.oddsNote),
+      strip,
+      odds,
+      perAsset,
+      ...(chase.length > 0 ? [el('p', 'menu-kicker', ARMORY_TEXT.chaseKicker), ...chase] : []),
+      this.steps(),
+    ];
     this.odds.replaceChildren(...parts.filter((x): x is HTMLElement => x !== null));
+  }
+
+  /** How it works: play, swap, take a Shot, each a card with its sign. */
+  private steps(): HTMLElement {
+    const e = this.pool.economy;
+    const { play, swap, shot } = ARMORY_TEXT.steps;
+    const list = el('ol', 'armory-steps');
+    list.setAttribute('aria-label', ARMORY_TEXT.stepsLabel);
+    const step = (icon: string, title: string, text: string): HTMLLIElement => {
+      const li = el('li', 'armory-step');
+      const head = el('span', 'armory-step-head');
+      head.insertAdjacentHTML('beforeend', icon);
+      li.append(head, el('strong', 'armory-step-title', title), el('span', 'armory-step-text', text));
+      return li;
+    };
+    list.append(
+      step(MENU_ICONS.trophy, play.title, play.text),
+      step(MENU_ICONS.crate, swap.title, swap.text(fcPerToken(e))),
+      step(MENU_ICONS.dice, shot.title, shot.text(e.assetsPerShot)),
+    );
+    return list;
   }
 
   private takeShots(n: ShotCount): void {
@@ -281,8 +313,11 @@ export class ArmoryScreen {
       tile.style.setProperty('--i', String(i));
       grid.append(tile);
     });
-    const head = el('h2', 'menu-panel-title', ARMORY_TEXT.dispensed);
-    head.tabIndex = -1;
+    // A section head like the odds'; its heading takes the keyboard after a Shot.
+    const head = el('div', 'menu-section-head');
+    const title = el('h2', 'menu-section-title', ARMORY_TEXT.dispensed);
+    title.tabIndex = -1;
+    head.append(title, el('span', 'menu-section-rule'));
     this.reveal.append(head, el('p', 'menu-readout armory-reveal-summary', revealSummary(this.pool, this.last)), grid);
   }
 
@@ -332,9 +367,11 @@ export class ArmoryScreen {
       const tier = this.pool.tiers[t]!;
       // A tier it never comes in (M32: the Cyber Pistol below Legendary) keeps its column, empty.
       const comes = comesIn(r.asset, tier.id) || n > 0;
-      const pip = el('span', `armory-pip${n > 0 ? ' is-owned' : ''}${comes ? '' : ' is-na'}`, n > 0 ? `×${n}` : comes ? '–' : '');
+      // A bar in the tier's colour when owned; the count is its name (and its tooltip), read out per tier.
+      const pip = el('span', `armory-pip${n > 0 ? ' is-owned' : ''}${comes ? '' : ' is-na'}`);
       pip.dataset.tier = tier.id;
       pip.title = `${tier.label}: ${n > 0 ? `×${n}` : comes ? ARMORY_TEXT.notOwned : ARMORY_TEXT.notInTier}`;
+      pip.setAttribute('role', 'img');
       pip.setAttribute('aria-label', pip.title);
       pips.append(pip);
     });

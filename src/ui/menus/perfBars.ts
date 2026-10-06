@@ -9,12 +9,15 @@ import { el } from './menuParts';
  */
 export function perfRows(rows: readonly SheetRow[]): HTMLElement[] {
   return rows.flatMap((r) => {
-    const value = el('dd', 'perf-value', r.value);
+    // The number (and its change) in one box, right-aligned against the label; the bar on its own line under both.
+    const value = el('dd', 'perf-value');
+    const num = el('span', 'perf-num', r.value);
+    value.append(num);
     if (r.delta) {
       const delta = el('span', `perf-delta${r.change ? ` perf-${r.change}` : ''}`, r.delta);
       if (r.change) delta.title = PERFORMANCE_SHEET[r.change];
-      value.append(' ', delta);
-      if (r.change) value.append(el('span', 'sr-only', ` (${PERFORMANCE_SHEET[r.change]})`));
+      num.append(' ', delta);
+      if (r.change) num.append(el('span', 'sr-only', ` (${PERFORMANCE_SHEET[r.change]})`));
     }
     if (r.share !== null) {
       const bar = el('span', `perf-bar${r.change ? ` perf-${r.change}` : ''}`);

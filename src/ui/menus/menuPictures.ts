@@ -76,6 +76,8 @@ export class PictureSlot {
     if (this.placeholder.innerHTML !== icon) this.placeholder.innerHTML = icon;
     this.img.hidden = true;
     this.root.classList.remove('has-picture');
+    // Nothing to show at all (no part fitted): the stylesheet draws the slot as empty.
+    this.root.classList.toggle('is-empty', !subject && icon === '');
     if (!source || !subject) return;
     source.picture(subject).then(
       (url) => {

@@ -94,6 +94,11 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M34g** · Neon Heights (dev content) sound: traffic hum and drones by day with chimes, neon sizzle and arcade bleeps by night; Depot and Woodland unchanged
 
 ### Changed
+- **G3** · New menus: a bold navy and orange look in Barlow type, a top bar (Play, Loadout, Armory, Range, Settings, your Field Credits and Tokens) and key hints along the bottom; text is never smaller than 15 px
+- **G3** · The Play screen shows maps and modes as picture cards (Day | Night on the card, a Dev tag on maps still being built) with the match rows and a Your match panel on the same page; the Map, Mode, Match and Difficulty pop-ups are gone
+- **G3** · Loadout and Customise show your replicas as pictures; Customise lists the parts down the left, Colour first, with each option as a picture tile beside the replica and its numbers
+- **G3** · Settings regrouped into Graphics, Display, Audio, Controls, Gameplay, Accessibility, Look, Save file and Dev, with a search box and a short note on every row
+- **G3** · The Armory's collection is a picture grid with a how-it-works strip; the title, pause, summary, result and loading screens take the new look
 - **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)
 - **M68** · Settings → Graphics is shorter: the Custom rows fold away under Low, Medium and High and open when you pick Custom or click "Custom settings" (#121)
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)

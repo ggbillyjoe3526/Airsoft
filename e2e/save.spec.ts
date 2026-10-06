@@ -20,8 +20,7 @@ function watchErrors(page: Page): () => string[] {
 
 async function openSaveTab(page: Page) {
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
-  await page.locator('.menu-setup').getByRole('button', { name: /Settings/i }).click();
+  await page.locator('.menu-title').getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('tab', { name: /Save/ }).click();
   return settings;
@@ -43,8 +42,8 @@ test('Settings → Save downloads the save and loads it back, with Undo', async 
   await expect(settings.getByRole('tabpanel', { name: /Save/ })).toContainText('Saved automatically');
   await expect(settings.getByText('Not downloaded yet.')).toBeVisible();
 
-  // Graphics → Field of view to 100°, then download: the file has it (the slider's pending write goes in first).
-  await settings.getByRole('tab', { name: /Graphics/ }).click();
+  // Display → Field of view to 100°, then download: the file has it (the slider's pending write goes in first).
+  await settings.getByRole('tab', { name: /Display/ }).click();
   await settings.getByRole('slider', { name: 'Field of view' }).fill('100');
   await settings.getByRole('tab', { name: /Save/ }).click();
   const [download] = await Promise.all([page.waitForEvent('download'), settings.getByRole('button', { name: 'Download', exact: true }).click()]);
@@ -60,7 +59,7 @@ test('Settings → Save downloads the save and loads it back, with Undo', async 
   await expect(settings.getByText(/Last downloaded just now/)).toBeVisible();
 
   // Change the FOV again, then load the file: the comparison shows, Replace reloads the game with the file's save.
-  await settings.getByRole('tab', { name: /Graphics/ }).click();
+  await settings.getByRole('tab', { name: /Display/ }).click();
   await settings.getByRole('slider', { name: 'Field of view' }).fill('80');
   await settings.getByRole('tab', { name: /Save/ }).click();
   await settings.locator('input[type="file"]').setInputFiles({ name: 'my-save.json', mimeType: 'application/json', buffer: Buffer.from(text) });
@@ -250,7 +249,7 @@ test('mid-match, the Save tab cannot load, restore, undo or delete, but still do
   await seedOnce(page, { 'airsoft.collection': { version: 1, owned: { '000001@common': 1 }, fc: 400, tokens: 0, seed: 1 } });
   await page.goto('/?nolock&seed=1');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-title-start').click();
   await page.locator('.menu-setup').getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 30_000 });
   // Tabbing away pauses the match (no pointer lock here).
@@ -315,7 +314,7 @@ test('with browser storage blocked the title and Save tab say so, and Download s
   await expect(settings.getByRole('button', { name: 'Load file' })).toBeDisabled();
   await expect(settings.getByRole('button', { name: 'Delete save', exact: true })).toBeDisabled();
 
-  await settings.getByRole('tab', { name: /Graphics/ }).click();
+  await settings.getByRole('tab', { name: /Display/ }).click();
   await settings.getByRole('slider', { name: 'Field of view' }).fill('101');
   await settings.getByRole('tab', { name: /Save/ }).click();
   const [download] = await Promise.all([page.waitForEvent('download'), settings.getByRole('button', { name: 'Download', exact: true }).click()]);
@@ -342,7 +341,7 @@ test('a browser save from a newer format is not overwritten: the title and Save 
   await expect(settings.getByRole('button', { name: 'Load file' })).toBeDisabled();
 
   // A change lasts for the visit (and a download has it) but the browser's save stays as it was.
-  await settings.getByRole('tab', { name: /Graphics/ }).click();
+  await settings.getByRole('tab', { name: /Display/ }).click();
   await settings.getByRole('slider', { name: 'Field of view' }).fill('100');
   await settings.getByRole('tab', { name: /Save/ }).click();
   const [download] = await Promise.all([page.waitForEvent('download'), settings.getByRole('button', { name: 'Download', exact: true }).click()]);
@@ -397,7 +396,7 @@ test('Play here writes what the first tab had pending before it stops saving', a
   });
   await page.goto('/?nolock&seed=1');
   const settings = await openSaveTab(page);
-  await settings.getByRole('tab', { name: /Graphics/ }).click();
+  await settings.getByRole('tab', { name: /Display/ }).click();
   await settings.getByRole('slider', { name: 'Field of view' }).fill('103');
   const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('airsoft.settings') ?? '{}').fov as number | undefined);
   expect(await stored()).not.toBe(103); // still pending

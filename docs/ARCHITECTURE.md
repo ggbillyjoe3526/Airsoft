@@ -104,7 +104,7 @@ ends the round). A hit character is eliminated
   out, `surfaceMaterials.ts`) and the tone mapping choice (`Renderer.setToneMapping`). Night lighting (M33f): a map
   names its lighting presets in its data (`MapData.lighting`, absent means day; `config/render.ts` `LIGHTING_PRESETS`),
   `lightingPreset.ts` resolves one (`resolveLighting`, the key light turned to the map's `moonOver`). A map listing two
-  presets offers Day | Night on its option in the Map pop-up (M34d, `map/lightingChoice.ts`, saved as
+  presets offers Day | Night on its card among the Play screen's maps (M34d, `map/lightingChoice.ts`, saved as
   `lighting.<map id>`): `mapUnderLighting` puts the pick first and sets `night` from it, so the same path, the bots'
   night sight and glowing BBs follow it (the same object for the same map and pick, so the kept meshes are taken back, M63). Every session
   passes it to `Renderer.setLighting` (haze, background, exposure, environment) and `addLighting` (key light, fill, sky,
@@ -208,11 +208,15 @@ ends the round). A hit character is eliminated
   cell and keeps its own bests (best haul, extractions in a row, fastest extraction with a find), apart from the
   match-win streak; `recordsView` shows them with the mode's column. The crosshair (`ui/crosshair.ts`) is built and styled from Settings → Crosshair
   (`ui/crosshairSettings.ts`, saved as `crosshair.<part>`); the HUD opens its gap with the spread.
-- **ui/menus/** (M15, M15b): `Menus` shows one opaque screen at a time and reports choices to `game.ts`:
-  the title screen, New game (`setupScreen.ts`: Map, Mode, Difficulty, Loadout, Settings, the rules from `rulesText.ts`,
-  Back and Play) with `ChoiceDialog` pop-ups (a `<dialog>`: Esc or × closes it) for map, mode and difficulty, the Loadout
-  screen (`loadoutScreen.ts`: slots, optic, hop-up dials, LATER rows), the Settings screen (`settingsScreen.ts`: tabs;
-  Key bindings reuses `ui/keySettings.ts`), the pause menu, the match summary (`summaryScreen.ts`, M19) and the result.
+- **ui/menus/** (M15, M15b; the concept's look since G3): `Menus` shows one screen at a time over one backdrop
+  picture (`chrome.ts`: the top bar, the key hints, the pre-blurred backdrop; no live blur) and reports choices to
+  `game.ts`. Each screen is built the first time it opens and reused. The title screen; the Play screen
+  (`setupScreen.ts`: Map and Mode as inline `ChoiceCards` with a picture each, the match rows inline in `matchPanel.ts`,
+  and a Your match panel whose text `playView.ts` works out); the Loadout (`loadoutScreen.ts`, with `customiseView.ts`'s
+  part tabs); the Armory; Settings (`settingsScreen.ts`: groups with a search, a note on every row; Key bindings reuses
+  `ui/keySettings.ts`); the pause menu, the match summary (`summaryScreen.ts`, M19) and the result. Replica, part and
+  scheme pictures come from the game's one `render/itemPictures.ts` (`menuPictures.ts` shows a placeholder until each
+  arrives); map and mode stills are files in `public/menu/` from `pipeline/map-stills.mjs` (`config/menuArt.ts`).
   `menuNav.ts` holds where Back goes and which menu opens when play stops (title before the first match, pause during
   one, the summary and then the result after it); leaving a match
   (Quit to title screen, Change setup, Title screen) calls `onLeaveMatch`, which unloads it. The placeholder lists and
@@ -281,7 +285,7 @@ ends the round). A hit character is eliminated
   when the player leaves the match, so the next Play can load another map; Play Again builds a new one with its own seed (`matchFlow.ts` `matchSeed`; audit SIM-08). What Play does (build a match or the range, rebuild the range, reuse what is loaded) is the pure `core/sessionPlan.ts` `nextSessionAction`; the result and pause screens' text is `ui/matchStopText.ts`, through `MatchSession.resultView` / `pauseLine` (FA11b, audit CORE-05). The field's meshes come from `Renderer.mapMeshes` (`render/mapMeshCache.ts`), which keeps the last map's between sessions, so the same map again reuses them (audit CORE-33); the build ends by compiling the scene's shaders (`Renderer.warmShaders`, M63, audit REN-06), so the first frame doesn't. A decided match is recorded and paid once, the frame it is decided, by the pure `stats/settleMatch.ts` (audit CORE-06). Its
   `MatchSetup` carries New game's Match rules (M20, `config/matchRules.ts`: team size, rounds to win, round time,
   friendly fire, ricochets), turned into the match's own round and hit rules, and a bot difficulty per team. Since M39
-  it also carries the Rules picker's ruleset (`RULESETS`: one data entry each, laid over the Match pop-up's picks by
+  it also carries the Rules picker's ruleset (`RULESETS`: one data entry each, laid over the match panel's picks by
   `playedPicks`) and its switches (win by two and the Elimination time-out in `RoundRules`, the minimap's heard
   patches, semi only and realcap through `kitUnderRules` / `replicaUnderRules`, the factory kit); a named ruleset's
   standard match files its records under `<difficulty>.<mode>.<ruleset>`, and custom rules pay at most ×1.5.
@@ -379,10 +383,10 @@ request. Each line names where it lives and what pins it.
   the config modules lay over their built-in ones. Pinned by
   `config/stats.test.ts`.
 - **Content tags** (`config/content.ts`, M35): every map, mode, difficulty, ruleset (`tag` on `MAPS`, `MATCH_MODES`,
-  `DIFFICULTIES`, `RULESETS` since M39) and pooled asset (`Asset.tag`, pool.md's Access) is `public` or `dev`; Match pop-up choices may carry
+  `DIFFICULTIES`, `RULESETS` since M39) and pooled asset (`Asset.tag`, pool.md's Access) is `public` or `dev`; Match panel choices may carry
   one (untagged is public). `isAvailable(tag, devContent)` is the one check; `devContent` is the Dev tab's Dev content
   switch (`dev.devContent`, applying only while Dev settings is ticked). Dev content is not shown anywhere while it is
-  off (`contentPool`, `playedPicks`, `ChoiceDialog`/`OptionPicker.setDevContent`), never drops from Shots
+  off (`contentPool`, `playedPicks`, `ChoiceCards`/`OptionPicker.setDevContent`), never drops from Shots
   (`dispensable`), and a match using any of it (`MatchSetup.devContentUsed` from `matchUsesDev`: its picks, the
   player's kit, or dev gear the opponents may roll) stays out of the records and pays nothing (`matchStanding`,
   `NotCounted` 'devContent'). Since M50 (audit CORE-01) the dev maps' data is in its own chunk (`map/devMaps.ts`),

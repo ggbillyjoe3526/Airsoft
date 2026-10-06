@@ -127,21 +127,18 @@ async function measure(preset) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: options.cpu });
   await page.goto(urlFor(preset));
   await page.waitForSelector('.menu-title-start', { timeout: 60_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  // The title's Play opens the Play screen (G3): the map and the mode are cards on it, Settings is on the top bar.
+  await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   if (options.map !== 'depot' || options.mode !== 'elimination') {
     // Dev content (Woodland, Neon Heights and Extraction are dev-tagged), then the map and the mode.
-    await setup.getByRole('button', { name: /Settings/i }).click();
+    await page.locator('.menu-topbar').getByRole('button', { name: 'Settings' }).click();
     const settings = page.locator('.menu-settings');
     await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
     await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
-    await page.keyboard.press('Escape');
-    await setup.getByRole('button', { name: /Map/i }).click();
-    await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: MAPS[options.map] }).click();
-    if (options.mode === 'extraction') {
-      await setup.getByRole('button', { name: /Mode/i }).click();
-      await page.getByRole('dialog', { name: 'Mode' }).getByRole('button', { name: /Extraction/i }).click();
-    }
+    await page.locator('.menu-topbar').getByRole('button', { name: 'Play' }).click();
+    await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: MAPS[options.map] }).first().click();
+    if (options.mode === 'extraction') await setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Extraction/i }).click();
   }
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await page.waitForFunction((t) => globalThis.airsoft?.state && globalThis.airsoft.state.tick >= t, options.warmupTicks, { timeout: 120_000 });

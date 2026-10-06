@@ -170,7 +170,8 @@ export class SetupScreen {
     this.facts.mode.textContent = view.modeLabel;
     this.facts.rules.textContent = view.rules;
     this.facts.teams.textContent = view.bots;
-    this.loadoutLine.textContent = view.loadout.detail ? `${view.loadout.replicas}. ${view.loadout.detail}` : view.loadout.replicas;
+    // The kit's cards name the replicas; the line says what is fitted (or names them, with nothing to add).
+    this.loadoutLine.textContent = view.loadout.detail || view.loadout.replicas;
     this.kit.update();
     this.rules.textContent = view.notes;
     this.pays.textContent = view.pays;

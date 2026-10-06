@@ -1438,18 +1438,12 @@ kbd {
   display: none;
 }
 
-.stats-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-md);
-  font-variant-numeric: tabular-nums;
-}
-
 /* Tables (audit section 6, item 18; G3 look): one head style, zebra rows instead of lines, numbers right-aligned with
    room; each team's block under a bar in its colour, each player with a drawn head in it (ui/headIcon.ts). */
 .stats-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
 }
 

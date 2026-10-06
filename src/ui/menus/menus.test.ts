@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CROSSHAIR_COLORS, CROSSHAIR_SHAPES, HIT_FEED_MODES, SCOREBOARD_SIZE, scoreboardScale } from '../../config/matchInfo';
 import { ARMORY_TEXT, SETTINGS_LATER, SETTINGS_TABS } from '../../config/menus';
 import { unpaidLine } from './summaryScreen';
-import { CUSTOM_NOT_RECORDED_NOTE, DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE, notRecordedNote, setupNotes } from './menus';
+import { CUSTOM_NOT_RECORDED_NOTE, DEV_CONTENT_NOTE, DEV_CONTENT_PAY_NOTE, DEV_NOT_RECORDED_NOTE, NOT_RECORDED_NOTE, notRecordedNote, setupNotes } from './playView';
 import { DEFAULT_MATCH_RULES, type MatchRules, offersRow, offersSwitch, REALCAP_TEXT, runRulesSummary, standardMatchText, standardRulesOf } from '../../config/matchRules';
 import { FOV_SETTING, QUALITY, QUALITY_CHOICES, RENDER } from '../../config/render';
 import { factoryParts } from '../../config/attachments';

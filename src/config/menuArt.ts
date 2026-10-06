@@ -8,8 +8,12 @@
 /** The folder under public/ the pictures are served from. */
 export const MENU_ART_DIR = 'menu';
 
-/** Where a picture's camera stands: over the field looking across it, or at eye height behind a team's start. */
-export type StillView = 'overview' | 'ground' | 'flag';
+/**
+ * Where a picture's camera stands: over the field looking across it from behind Blue's start, high over its middle (a
+ * city, whose streets only show from above), at eye height behind Blue's start, where the player first stands (a
+ * little higher), or on Blue's side of the flagpole looking at it.
+ */
+export type StillView = 'overview' | 'aerial' | 'ground' | 'street' | 'flag';
 
 export interface StillShot {
   /** The file under MENU_ART_DIR. */
@@ -24,15 +28,15 @@ export interface StillShot {
 export const MAP_STILLS: readonly StillShot[] = [
   { file: 'depot-day.jpg', map: 'depot', light: 'day', view: 'overview' },
   { file: 'woodland-night.jpg', map: 'woodland', light: 'night', view: 'overview' },
-  { file: 'neonHeights-night.jpg', map: 'neonHeights', light: 'night', view: 'overview' },
-  { file: 'neonHeights-day.jpg', map: 'neonHeights', light: 'day', view: 'overview' },
+  { file: 'neonHeights-night.jpg', map: 'neonHeights', light: 'night', view: 'aerial' },
+  { file: 'neonHeights-day.jpg', map: 'neonHeights', light: 'day', view: 'aerial' },
 ];
 
 /** The mode cards' pictures (by MatchMode): a moment that reads as the mode. */
 export const MODE_STILLS: Readonly<Record<string, StillShot>> = {
   elimination: { file: 'mode-elimination.jpg', map: 'depot', light: 'day', view: 'ground' },
   attackDefend: { file: 'mode-attackDefend.jpg', map: 'depot', light: 'day', view: 'flag' },
-  extraction: { file: 'mode-extraction.jpg', map: 'woodland', light: 'night', view: 'ground' },
+  extraction: { file: 'mode-extraction.jpg', map: 'woodland', light: 'night', view: 'street' },
 };
 
 /** Map stills and mode pictures: small JPEGs, a card's size at twice the density of a 1080p screen's half. */
@@ -51,6 +55,8 @@ export const BACKDROPS = {
 export const STILL_CAMERA: Readonly<Record<StillView, { back: number; up: number; lookUp: number; fov: number }>> = {
   overview: { back: 6, up: 14, lookUp: 0, fov: 55 },
   ground: { back: 1, up: 1.7, lookUp: 1.4, fov: 62 },
+  aerial: { back: 8, up: 30, lookUp: 0, fov: 60 },
+  street: { back: 0, up: 1.2, lookUp: 0, fov: 64 },
   flag: { back: 9, up: 3.2, lookUp: 1.8, fov: 58 },
 };
 

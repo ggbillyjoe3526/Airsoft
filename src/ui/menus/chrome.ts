@@ -1,6 +1,6 @@
 import { ARMORY_TEXT, MENU_TEXT } from '../../config/menus';
 import { BACKDROPS, MENU_ART_DIR } from '../../config/menuArt';
-import { NAV_ICONS } from './icons';
+import { MENU_ICONS, NAV_ICONS } from './icons';
 import { el } from './menuParts';
 
 /**
@@ -131,6 +131,14 @@ export function sectionHead(n: string, title: string, extra?: HTMLElement | stri
 /** A small tag: acid (good news), dev (content still being built), orange or blue. */
 export function tagPill(text: string, kind: '' | 'dev' | 'orange' | 'blue' | 'gold' = ''): HTMLSpanElement {
   return el('span', `tag-pill${kind ? ` tag-${kind}` : ''}`, text);
+}
+
+/** A picked tile's round orange tick (shown by the stylesheet on a `.selected` tile); decoration, the tile says it. */
+export function optionTick(): HTMLSpanElement {
+  const t = el('span', 'option-tick');
+  t.setAttribute('aria-hidden', 'true');
+  t.insertAdjacentHTML('afterbegin', MENU_ICONS.check);
+  return t;
 }
 
 /**

@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Dev content (M35): the Dev tab's Dev content switch shows content still being built and hides it again. Woodland is
- * dev content today: with the switch off the Map pop-up doesn't list it at all; on, it is listed under Depot like any
- * other map and can be picked (M33d); off again, it is hidden and Depot plays, while the pick stays saved. A test of
+ * Dev content (M35): the Dev group's Dev content switch shows content still being built and hides it again. Woodland is
+ * dev content today: with the switch off the Play screen's Map cards don't list it at all; on, it is listed after Depot,
+ * tagged Dev (G3), and can be picked (M33d); off again, it is hidden and Depot plays, while the pick stays saved. A test of
  * its own, so the long match test in boot.spec.ts plays the same way as before. Neon Heights (M34c) is dev content too,
  * listed and hidden with Woodland, and the second test picks it by Day (M34d's switch) and plays it; the third plays it by
  * Night, with its lamps and neon (M34e). Uses `?nolock` like the other smoke tests.
@@ -16,29 +16,20 @@ test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked
   });
   await page.goto('/?nolock&seed=1');
   await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await expect(setup).toBeVisible();
 
-  const mapDialog = page.getByRole('dialog', { name: 'Map' });
-  const woodland = mapDialog.getByRole('button', { name: /Woodland/i });
-  const neonHeights = mapDialog.getByRole('button', { name: /Neon Heights/i });
-  const openMap = async (): Promise<void> => {
-    await setup.getByRole('button', { name: /Map/i }).click();
-    await expect(mapDialog).toBeVisible();
-    await expect(mapDialog.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
-  };
-  const closeMap = async (): Promise<void> => {
-    await page.keyboard.press('Escape');
-    await expect(mapDialog).toBeHidden();
-    await expect(setup).toBeVisible();
-  };
+  const maps = setup.getByRole('group', { name: 'Map', exact: true });
+  const woodland = maps.getByRole('button', { name: /Woodland/i });
+  const neonHeights = maps.getByRole('button', { name: /Neon Heights/i });
+  const mapLine = setup.locator('.play-map-line');
   const devContent = async (on: boolean): Promise<void> => {
-    await setup.getByRole('button', { name: /^Settings/ }).click();
+    await page.locator('.menu-topbar').getByRole('button', { name: 'Settings' }).click();
     const settings = page.locator('.menu-settings');
     const devBox = settings.getByRole('checkbox', { name: 'Dev settings' });
     if (!(await devBox.isChecked())) await devBox.check();
-    await expect(settings.getByRole('tab', { name: /^Dev$/i })).toHaveAttribute('aria-selected', 'true');
+    await expect(settings.getByRole('tab', { name: /^Dev/i })).toHaveAttribute('aria-selected', 'true');
     const group = settings.getByRole('group', { name: 'Dev content' });
     await group.getByRole('button', { name: on ? 'On' : 'Off' }).click();
     await expect(group.getByRole('button', { name: on ? 'On' : 'Off' })).toHaveAttribute('aria-pressed', 'true');
@@ -47,32 +38,29 @@ test('the Dev content switch lists Woodland in the Map pop-up, lets it be picked
   };
 
   // Off (the default): Woodland isn't listed at all, not even greyed out.
-  await openMap();
+  await expect(maps.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
   await expect(woodland).toBeHidden();
   await expect(neonHeights).toBeHidden();
-  await closeMap();
 
-  // On: listed under Depot like any other map, no tag, and it can be picked (M33d).
+  // On: listed after Depot with a Dev tag, not Coming soon, and it can be picked (M33d).
   await devContent(true);
-  await openMap();
   await expect(woodland).toBeVisible();
   await expect(woodland).toBeEnabled();
   await expect(woodland).not.toContainText('Coming soon');
+  await expect(woodland.locator('.tag-dev')).toHaveText('Dev');
   await expect(neonHeights).toBeVisible();
   await expect(neonHeights).toBeEnabled();
   await woodland.click();
-  await expect(mapDialog).toBeHidden();
-  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Woodland');
+  await expect(woodland).toHaveAttribute('aria-pressed', 'true');
+  await expect(mapLine).toContainText('Woodland');
 
   // Off again: gone, and Depot plays; the pick stays saved, so turning the switch on brings Woodland back.
   await devContent(false);
-  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Depot');
-  await openMap();
+  await expect(mapLine).toContainText('Depot');
   await expect(woodland).toBeHidden();
   await expect(neonHeights).toBeHidden();
-  await closeMap();
   await devContent(true);
-  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Woodland');
+  await expect(mapLine).toContainText('Woodland');
 
   expect(errors, errors.join(' | ')).toEqual([]);
 });
@@ -85,23 +73,23 @@ test('Neon Heights (dev content, M34c) picked by Day (M34d) loads and plays: the
   });
   await page.goto('/?nolock&seed=1');
   await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await expect(setup).toBeVisible();
-  await setup.getByRole('button', { name: /^Settings/ }).click();
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
-  await setup.getByRole('button', { name: /Map/i }).click();
-  // Day or Night on the map's option (M34d): Night the first time; picking Day picks the map with that light.
-  const light = page.getByRole('dialog', { name: 'Map' }).getByRole('group', { name: 'Neon Heights: Light' });
+  // Day or Night on the map's card (M34d): Night the first time; picking Day picks the map with that light.
+  const maps = setup.getByRole('group', { name: 'Map', exact: true });
+  const light = maps.getByRole('group', { name: 'Neon Heights: Light' });
   await expect(light.getByRole('button', { name: 'Night' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('dialog', { name: 'Map' }).getByRole('group', { name: /Depot/ })).toHaveCount(0);
+  await expect(maps.getByRole('group', { name: /Depot/ })).toHaveCount(0);
   await light.getByRole('button', { name: 'Day' }).click();
-  await expect(page.getByRole('dialog', { name: 'Map' })).toBeHidden();
-  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Neon Heights · Day');
+  await expect(maps.getByRole('button', { name: /Neon Heights/i }).first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(setup.locator('.play-map-line')).toHaveText('Neon Heights · Day');
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   expect(await page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null)).toBe(true);
@@ -147,17 +135,16 @@ test('Neon Heights by Night (M34e, the default light) plays with its lamps lit a
   });
   await page.goto('/?nolock&seed=1');
   await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await expect(setup).toBeVisible();
-  await setup.getByRole('button', { name: /^Settings/ }).click();
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
-  await setup.getByRole('button', { name: /Map/i }).click();
-  await page.getByRole('dialog', { name: 'Map' }).getByRole('button', { name: /Neon Heights/i }).click();
-  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Neon Heights · Night');
+  await setup.getByRole('group', { name: 'Map', exact: true }).getByRole('button', { name: /Neon Heights/i }).first().click();
+  await expect(setup.locator('.play-map-line')).toHaveText('Neon Heights · Night');
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   await expect(page.locator('.hud')).toBeVisible();
@@ -202,13 +189,14 @@ test('with Dev content off there is no Light row, no torch in the match, and T d
   });
   await page.goto('/?nolock&seed=1');
   await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
-  await setup.getByRole('button', { name: /Loadout/i }).click();
+  await setup.getByRole('button', { name: 'Change Loadout' }).click();
   const loadout = page.locator('.menu-loadout');
   await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
-  await expect(loadout.getByRole('group', { name: 'Optic' })).toBeVisible();
-  await expect(loadout.getByRole('group', { name: 'Light' })).toHaveCount(0);
+  // Customise's parts are tabs (G3): Optic is offered, Light is not.
+  await expect(loadout.getByRole('tab', { name: /^Optic/ })).toBeVisible();
+  await expect(loadout.getByRole('tab', { name: /^Light/ })).toHaveCount(0);
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
@@ -255,19 +243,20 @@ test('Extraction: the locker asks for G, opens while held, is carried out throug
   });
   await page.goto('/?nolock&seed=1');
   await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await expect(setup).toBeVisible();
-  await setup.getByRole('button', { name: /^Settings/ }).click();
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
   await settings.getByRole('group', { name: 'Ghost' }).getByRole('button', { name: 'On' }).click();
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
-  await setup.getByRole('button', { name: /Mode/i }).click();
-  await page.getByRole('dialog', { name: 'Mode' }).getByRole('button', { name: /Extraction/i }).click();
-  await expect(setup.getByRole('button', { name: /Mode/i })).toContainText('Extraction');
+  const extraction = setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Extraction/i });
+  await extraction.click();
+  await expect(extraction).toHaveAttribute('aria-pressed', 'true');
+  await expect(setup.locator('.play-facts')).toContainText('Extraction');
   await setup.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 20_000 });
   const run = <T>(read: (r: Run, you: { x: number; y: number; z: number }) => T): Promise<T> =>
@@ -334,24 +323,26 @@ test('Extraction: the locker asks for G, opens while held, is carried out throug
   expect(errors, errors.join(' | ')).toEqual([]);
 });
 
-test('the Day | Night pick on Neon Heights (M34d) is named on the Map tile, kept through Dev content off and on, restored on the next visit, and reached by keyboard', async ({ page }) => {
+test('the Day | Night pick on Neon Heights (M34d) is named on the Play screen, kept through Dev content off and on, restored on the next visit, and reached by keyboard', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
   const setup = page.locator('.menu-setup');
-  const mapTile = setup.getByRole('button', { name: /Map/i });
-  const mapDialog = page.getByRole('dialog', { name: 'Map' });
-  const light = mapDialog.getByRole('group', { name: 'Neon Heights: Light' });
+  // The Map cards (G3) are on the Play screen itself; the picked map and its light are named in the aside's line.
+  const maps = setup.getByRole('group', { name: 'Map', exact: true });
+  const mapLine = setup.locator('.play-map-line');
+  const switches = maps.locator('.choice-variants:visible');
+  const light = maps.getByRole('group', { name: 'Neon Heights: Light' });
+  const neonHeights = maps.getByRole('button', { name: /Neon Heights/i }).first();
   const toSetup = async (): Promise<void> => {
-    await page.goto('/?nolock&seed=1');
     await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
-    await page.getByRole('button', { name: 'Start' }).click();
+    await page.locator('.menu-title-start').click();
     await expect(setup).toBeVisible();
   };
   const devContent = async (on: boolean): Promise<void> => {
-    await setup.getByRole('button', { name: /^Settings/ }).click();
+    await page.locator('.menu-topbar').getByRole('button', { name: 'Settings' }).click();
     const settings = page.locator('.menu-settings');
     const devBox = settings.getByRole('checkbox', { name: 'Dev settings' });
     if (!(await devBox.isChecked())) await devBox.check();
@@ -363,68 +354,58 @@ test('the Day | Night pick on Neon Heights (M34d) is named on the Map tile, kept
   };
   const savedLight = () => page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.settings') ?? '{}') as Record<string, unknown>)['lighting.neonHeights']);
 
+  await page.goto('/?nolock&seed=1');
   await toSetup();
-  // Depot (the default) offers one light: no switch, and the Map tile names no light.
-  await expect(mapTile).toContainText('Depot');
-  await expect(mapTile).not.toContainText('·');
+  // Depot (the default) offers one light: no switch, and the line names no light.
+  await expect(mapLine).toHaveText('Depot');
+  await expect(switches).toHaveCount(0);
   await devContent(true);
-  await mapTile.click();
-  await expect(mapDialog.getByRole('button', { name: /Woodland/i })).toBeVisible();
+  await expect(maps.getByRole('button', { name: /Woodland/i })).toBeVisible();
   // Only the map with two lights has a switch (not Depot, not Woodland), Night first.
-  await expect(mapDialog.getByRole('group')).toHaveCount(1);
+  await expect(switches).toHaveCount(1);
   await expect(light.getByRole('button')).toHaveText(['Day', 'Night']);
   await expect(light.getByRole('button', { name: 'Night' })).toHaveAttribute('aria-pressed', 'true');
   await expect(light.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'false');
   expect(await savedLight()).toBeUndefined();
-  // By keyboard: the picked map's own button has the focus, Tab reaches its Day then Night, Enter picks Day with the map.
-  await mapDialog.getByRole('button', { name: /Depot/i }).focus();
-  await mapDialog.getByRole('button', { name: /Neon Heights/i }).focus();
+  // By keyboard: Tab from the map's card reaches its Day then Night; Enter on Day picks the map with that light.
+  await neonHeights.focus();
   await page.keyboard.press('Tab');
   await expect(light.getByRole('button', { name: 'Day' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(light.getByRole('button', { name: 'Night' })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Enter');
-  await expect(mapDialog).toBeHidden();
-  await expect(mapTile).toContainText('Neon Heights · Day');
+  await expect(neonHeights).toHaveAttribute('aria-pressed', 'true');
+  await expect(mapLine).toHaveText('Neon Heights · Day');
   expect(await savedLight()).toBe('day');
 
-  // Opening the pop-up again shows the map and the side picked; the other side picks the same map under that light.
-  await mapTile.click();
-  await expect(mapDialog.getByRole('button', { name: /Neon Heights/i })).toHaveAttribute('aria-pressed', 'true');
-  await expect(light.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true');
+  // The other side picks the same map under that light, and back again.
   await light.getByRole('button', { name: 'Night' }).click();
-  await expect(mapTile).toContainText('Neon Heights · Night');
+  await expect(mapLine).toHaveText('Neon Heights · Night');
   expect(await savedLight()).toBe('night');
-  await mapTile.click();
   await light.getByRole('button', { name: 'Day' }).click();
-  await expect(mapTile).toContainText('Neon Heights · Day');
+  await expect(mapLine).toHaveText('Neon Heights · Day');
 
   // Dev content off: Depot plays and names no light, the switch is gone; the pick stays, so on again it is back.
   await devContent(false);
-  await expect(mapTile).toContainText('Depot');
-  await expect(mapTile).not.toContainText('·');
-  await mapTile.click();
-  await expect(mapDialog.getByRole('group')).toHaveCount(0); // a hidden switch is out of the accessibility tree
-  await page.keyboard.press('Escape');
+  await expect(mapLine).toHaveText('Depot');
+  await expect(switches).toHaveCount(0);
+  await expect(maps.getByRole('group', { name: /Light/ })).toHaveCount(0); // a hidden switch is out of the accessibility tree
   await devContent(true);
-  await expect(mapTile).toContainText('Neon Heights · Day');
+  await expect(mapLine).toHaveText('Neon Heights · Day');
 
   // The next visit: the map, the light and the switch come back as they were left.
   await page.reload();
-  await expect(page.locator('.menu-title-start')).toBeVisible({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
-  await expect(setup).toBeVisible();
-  await expect(mapTile).toContainText('Neon Heights · Day');
-  await mapTile.click();
+  await toSetup();
+  await expect(mapLine).toHaveText('Neon Heights · Day');
   await expect(light.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true');
   await expect(light.getByRole('button', { name: 'Night' })).toHaveAttribute('aria-pressed', 'false');
 
   // Another map picked later does not disturb the pick: back on Neon Heights it is still Day.
-  await mapDialog.getByRole('button', { name: /Woodland/i }).click();
-  await expect(mapTile).toContainText('Woodland');
-  await expect(mapTile).not.toContainText('·');
-  await mapTile.click();
+  await maps.getByRole('button', { name: /Woodland/i }).click();
+  await expect(mapLine).toHaveText('Woodland');
   await expect(light.getByRole('button', { name: 'Day' })).toHaveAttribute('aria-pressed', 'true');
+  await neonHeights.click();
+  await expect(mapLine).toHaveText('Neon Heights · Day');
   expect(errors, errors.join(' | ')).toEqual([]);
 });

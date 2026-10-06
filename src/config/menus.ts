@@ -113,6 +113,16 @@ export const ARMORY_TEXT = {
   /** Shown once when another tab saved first and this change was not kept (M70, audit POOL-05). */
   reloaded: 'Another tab saved your collection first, so it was reloaded from that save. What you just did here was not kept.',
   odds: 'Rarity odds (each item drawn, before pity)',
+  /** The odds' section head and its note (G3); `odds` stays the table's caption. */
+  oddsTitle: 'Rarity odds',
+  oddsNote: 'Each item drawn, before pity',
+  /** How it works, three steps under the odds (G3). */
+  stepsLabel: 'How the Armory works',
+  steps: {
+    play: { title: 'Play matches', text: 'Earn Field Credits, more for a win.' },
+    swap: { title: 'Swap for Tokens', text: (fcPerToken: number) => `${fcPerToken} FC buys one Token.` },
+    shot: { title: 'Take a Shot', text: (n: number) => `${n} random ${n === 1 ? 'asset' : 'assets'} each time.` },
+  },
   /** Under the odds (audit POOL-04, POOL-05, POOL-26): how an asset is picked once its tier is drawn. */
   /** A chase item's own line under the odds (M32), e.g. the Cyber Pistol's. */
   chase: (name: string, tiers: string, percent: string, oneIn: number) =>

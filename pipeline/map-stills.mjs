@@ -95,6 +95,8 @@ async function draw(shot) {
       const game = globalThis.airsoft;
       const state = game.state;
       const r = game.renderer;
+      // Where the game put the camera this frame: the player's eye at their start.
+      const eye = { position: r.camera.position.clone(), rotation: r.camera.rotation.clone() };
       const centre = (team) => {
         const own = state.characters.filter((c) => c.team === team);
         const sum = own.reduce((a, c) => ({ x: a.x + c.spawnPosition.x, y: a.y + c.spawnPosition.y, z: a.z + c.spawnPosition.z }), { x: 0, y: 0, z: 0 });
@@ -103,18 +105,24 @@ async function draw(shot) {
       const blue = centre(0);
       const orange = centre(1);
       // The flag view looks at the pole; the others across the field from Blue's start to Orange's.
-      const target = view === 'flag' ? state.round.flag.position : view === 'overview' ? { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2, z: (blue.z + orange.z) / 2 } : orange;
+      const target = view === 'flag' ? state.round.flag.position : view === 'overview' || view === 'aerial' ? { x: (blue.x + orange.x) / 2, y: (blue.y + orange.y) / 2, z: (blue.z + orange.z) / 2 } : orange;
       // Facing from Blue's start towards what it looks at, `back` metres behind Blue's start (or the pole, for the flag).
       const dx = target.x - blue.x;
       const dz = target.z - blue.z;
       const len = Math.hypot(dx, dz) || 1;
-      const from = view === 'flag' ? target : blue;
+      const from = view === 'flag' || view === 'aerial' ? target : blue;
       const cam = r.camera;
       cam.position.set(from.x - (dx / len) * camera.back, from.y + camera.up, from.z - (dz / len) * camera.back);
       cam.fov = camera.fov;
       cam.aspect = 16 / 9;
       cam.updateProjectionMatrix();
       cam.lookAt(target.x, target.y + camera.lookUp, target.z);
+      if (view === 'street') {
+        // Between tall walls the other start is out of sight: the player's own first view, from a little higher.
+        cam.position.copy(eye.position);
+        cam.position.y += camera.up;
+        cam.rotation.set(eye.rotation.x - 0.05, eye.rotation.y, 0, 'YXZ');
+      }
       r.render();
       const canvas = r.renderer.domElement;
       const shrink = (w, h, filter) => {

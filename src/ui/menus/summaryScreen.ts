@@ -53,6 +53,8 @@ export class SummaryScreen {
   readonly root: HTMLDivElement;
   readonly hints: readonly MenuHint[];
   private readonly result: HTMLHeadingElement;
+  private readonly outcome = el('span');
+  private readonly score = el('span', 'summary-score');
   private readonly table = new StatsTable('summary-table');
   private readonly records: HTMLDivElement;
   private readonly credits: HTMLDivElement;
@@ -63,6 +65,7 @@ export class SummaryScreen {
     this.root.hidden = true;
     const head = el('header', 'summary-head');
     this.result = el('h1', 'menu-heading summary-result');
+    this.result.append(this.outcome, this.score);
     head.append(el('p', 'menu-kicker', SUMMARY_TEXT.kicker), this.result);
     this.records = el('div', 'summary-records menu-card');
     this.credits = el('div', 'summary-credits menu-card');
@@ -83,7 +86,10 @@ export class SummaryScreen {
   }
 
   set(summary: MatchSummary): void {
-    this.result.textContent = summary.result;
+    // "You win!" large, the score after it smaller: one heading, read out as one line.
+    const cut = summary.result.indexOf(' · ');
+    this.outcome.textContent = cut < 0 ? summary.result : summary.result.slice(0, cut);
+    this.score.textContent = cut < 0 ? '' : ` ${summary.result.slice(cut + 3)}`;
     this.table.set(summary.blocks);
     this.records.replaceChildren(...recordsBlock(summary.records));
     const credits = creditsBlock(summary.fieldCredits ?? null, summary.unpaid ?? null);

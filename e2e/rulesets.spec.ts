@@ -14,7 +14,7 @@ type Airsoft = {
   };
 };
 
-/** Boots the e2e build and turns Dev settings and Dev content on (and Retro pixels when asked), back on New game. */
+/** Boots the e2e build and turns Dev settings and Dev content on (and Retro pixels when asked), back on the Play screen. */
 async function newGameWithDevContent(page: Page, errors: string[], retro: boolean): Promise<void> {
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
   page.on('console', (msg) => {
@@ -22,9 +22,9 @@ async function newGameWithDevContent(page: Page, errors: string[], retro: boolea
   });
   await page.goto('/?nolock&seed=4');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
-  await setup.getByRole('button', { name: /Settings/i }).click();
+  await page.locator('.menu-topbar').getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('checkbox', { name: 'Dev settings' }).check();
   await settings.getByRole('group', { name: 'Dev content' }).getByRole('button', { name: 'On' }).click();
@@ -33,13 +33,11 @@ async function newGameWithDevContent(page: Page, errors: string[], retro: boolea
   await expect(setup).toBeVisible();
 }
 
-/** Picks the ruleset in the Match pop-up. */
+/** Picks the ruleset in the Play screen's match panel (G3). */
 async function pickRules(page: Page, rules: string): Promise<void> {
-  await page.locator('.menu-setup').getByRole('button', { name: /Match/i }).click();
-  const dialog = page.getByRole('dialog', { name: 'Match' });
-  await dialog.getByRole('group', { name: 'Rules' }).getByRole('button', { name: rules }).click();
-  await expect(dialog.getByRole('group', { name: 'Rules' }).getByRole('button', { name: rules })).toHaveAttribute('aria-pressed', 'true');
-  await page.keyboard.press('Escape');
+  const group = page.locator('.menu-setup .match-panel').getByRole('group', { name: 'Rules' });
+  await group.getByRole('button', { name: rules }).click();
+  await expect(group.getByRole('button', { name: rules })).toHaveAttribute('aria-pressed', 'true');
 }
 
 /** Presses Play and waits for the match to run a few ticks. */
@@ -54,9 +52,9 @@ test('a Tournament Extraction run on Depot with Retro pixels on starts, and its 
   const errors: string[] = [];
   await newGameWithDevContent(page, errors, true);
   const setup = page.locator('.menu-setup');
-  await setup.getByRole('button', { name: /Mode/i }).click();
-  await page.getByRole('dialog', { name: 'Mode' }).getByRole('button', { name: /Extraction/i }).click();
-  await expect(setup.getByRole('button', { name: /Mode/i })).toContainText('Extraction');
+  const extraction = setup.getByRole('group', { name: 'Mode', exact: true }).getByRole('button', { name: /Extraction/i });
+  await extraction.click();
+  await expect(extraction).toHaveAttribute('aria-pressed', 'true');
   await pickRules(page, 'Tournament');
   await playAndWait(page);
 
@@ -78,11 +76,10 @@ test('a Pro CQB match against Pro opponents starts, and its report names the rul
   const errors: string[] = [];
   await newGameWithDevContent(page, errors, false);
   const setup = page.locator('.menu-setup');
-  await setup.getByRole('button', { name: /Difficulty/i }).click();
-  const dialog = page.getByRole('dialog', { name: 'Bot difficulty' });
-  await dialog.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Pro' }).click();
-  await dialog.getByRole('button', { name: 'Close' }).click();
-  await expect(setup.getByRole('button', { name: /Difficulty/i })).toContainText('Pro');
+  const opponents = setup.locator('.match-panel').getByRole('group', { name: 'Opponents' });
+  await opponents.getByRole('button', { name: 'Pro' }).click();
+  await expect(opponents.getByRole('button', { name: 'Pro' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(setup.locator('.play-facts')).toContainText('Pro');
   await pickRules(page, 'Pro CQB');
   await playAndWait(page);
 
