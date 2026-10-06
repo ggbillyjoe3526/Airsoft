@@ -94,8 +94,10 @@ describe('settings migration and the Custom graphics fields (final alpha audit s
     saveSetting('graphics.dustMotes', 9999, s); // out of range
     expect(loadCustomQuality(s)).toEqual({ renderScale: 0.7, shadows: false, textureSize: 256 });
     expect(resolveQuality('custom', loadCustomQuality(s))).toEqual({ ...QUALITY.high, renderScale: 0.7, shadows: false, textureSize: 256 });
-    // An unknown quality id is nothing saved.
+    // Ultra (G5) is a preset like the others; an unknown quality id is nothing saved.
     saveSetting('quality', 'ultra', s);
+    expect(loadSavedQuality(s)).toBe('ultra');
+    saveSetting('quality', 'epic', s);
     expect(loadSavedQuality(s)).toBeNull();
   });
 

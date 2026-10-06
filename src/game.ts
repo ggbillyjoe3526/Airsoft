@@ -31,6 +31,7 @@ import { lightingPicked, mapUnderLighting, playsAtNight } from './map/lightingCh
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
+import { loadBakedLight } from './render/bakedLight';
 import { loadFigureModel } from './render/externalModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
@@ -280,9 +281,9 @@ export class Game {
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
-    // on, so do the dev maps (M50), so New game can show a dev map picked last time.
+    // on, so do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
     const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
-    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel(), devMaps]);
+    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel(), devMaps, loadBakedLight()]);
     const game = new Game(container, options);
     game.renderer.figureModel = figureModel;
     return game;
@@ -348,6 +349,8 @@ export class Game {
         'pixel ratio': this.renderer.renderer.getPixelRatio(),
         'frame ms (sim / draw / GPU)': `${this.simMs.toFixed(1)} / ${this.drawMs.toFixed(1)} / ${Number.isNaN(this.renderer.gpuMs) ? 'n/a' : this.renderer.gpuMs.toFixed(1)}`,
         antialias: this.antialiasText(),
+        // G5: the post stack's passes in force (none on Low).
+        post: this.renderer.postPasses.join(' ') || 'none',
         'draw calls': this.renderer.renderer.info.render.calls,
         triangles: this.renderer.renderer.info.render.triangles,
         'programs / geometries / textures': `${this.renderer.renderer.info.programs?.length ?? 0} / ${this.renderer.renderer.info.memory.geometries} / ${this.renderer.renderer.info.memory.textures}`,
@@ -1065,6 +1068,7 @@ export class Game {
         const look = retroLookOf(this.dev, this.scripted);
         return look ? `${look.pixelSize} px, ${look.levels} levels` : 'off';
       })],
+      ['Post', read(() => this.renderer.postPasses.join(' ') || 'none')],
       ['Pixel ratio', read(() => this.renderer.renderer.getPixelRatio())],
       ['GPU', read(() => rendererName(this.renderer.renderer.getContext()))],
       ['Window', `${window.innerWidth} × ${window.innerHeight} at ${window.devicePixelRatio}`],

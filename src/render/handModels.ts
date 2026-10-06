@@ -99,13 +99,35 @@ function capsule(a: THREE.Vector3, b: THREE.Vector3, radius: number, detail: rea
   return geo;
 }
 
+/** A segment of a finger or the thumb: from `from` to `to`, `radius` thick, in the model's three.js space. */
+export interface HandSegment {
+  from: THREE.Vector3;
+  to: THREE.Vector3;
+  radius: number;
+}
+
 /**
- * Builds one gloved hand in the given pose and returns its wrist point (where the forearm starts). Hand detail `high`
- * (FA8, QualitySettings.handDetail) adds a lighter knuckle pad, darker seams at the finger joints and a rubber wrist
- * strap with a buckle; `low` is the hand as it was (REN-10's).
+ * Where a hand in `pose` puts its parts (shared by the gloved hand and the robot's, robotHands.ts): its palm's frame
+ * (`basis`, a rotation for either hand, see below) and centre, the fingers' 12 segments (index first, knuckle to tip),
+ * the thenar pad, the thumb's 2 segments, and the wrist from the heel of the hand (`wristA`) to where the forearm starts
+ * (`wristB`). `local(across, along, back)` is a point in the palm's own frame.
  */
-export function buildHand(sink: GeometrySink, pose: HandPose, detail: DetailLevel = 'low'): V3 {
-  const high = detail === 'high';
+export interface HandSkeleton {
+  basis: THREE.Matrix4;
+  centre: THREE.Vector3;
+  local: (u: number, v: number, w: number) => THREE.Vector3;
+  midAcross: number;
+  fingers: HandSegment[];
+  thenar: THREE.Vector3;
+  thumb: HandSegment[];
+  wristA: THREE.Vector3;
+  wristB: THREE.Vector3;
+}
+
+/** The hand's palm size (metres, gloved). */
+export const PALM_SIZE = PALM;
+
+export function handSkeleton(pose: HandPose): HandSkeleton {
   const a = toVec(pose.across).normalize();
   const n = toVec(pose.back).normalize();
   // Right hand: fingers = back × across; the left hand is its mirror image.
@@ -121,46 +143,29 @@ export function buildHand(sink: GeometrySink, pose: HandPose, detail: DetailLeve
       .addScaledVector(a, u - midAcross)
       .addScaledVector(d, v)
       .addScaledVector(nn, w);
-
-  // Palm: a padded, slightly thicker pad towards the heel of the hand.
-  const palm = new RoundedBoxGeometry(PALM.width, PALM.length, PALM.thickness, DETAIL.palmSegments, PALM.radius);
   // The left hand's (across, fingers, back) frame is a mirror image (that is how it mirrors the right hand), and a part
   // placed by a mirroring matrix is drawn inside out: its near faces culled, its far ones lit from behind (FA13: the
   // left hands' palms showed grey-blue with the fingers' roots seen through them). The parts placed this way are
   // symmetric across the knuckle row, so the left hand places them with that axis reversed: a rotation.
   const basis = new THREE.Matrix4().makeBasis(pose.side === 'left' ? a.clone().negate() : a, d, nn);
-  palm.applyMatrix4(basis);
-  palm.translate(centre.x, centre.y, centre.z);
-  sink.addGeometry('glove', palm);
 
-  // Fingers: chains of capsules, each joint bending towards the palm about the knuckle-row axis.
+  // Fingers: chains of segments, each joint bending towards the palm about the knuckle-row axis.
+  const fingers: HandSegment[] = [];
   for (let f = 0; f < 4; f++) {
     const k = KNUCKLES[f]!;
     let p = local(k.across, k.along - 0.006, 0.002);
     const dir = d.clone();
-    const up = nn.clone();
     const radius = FINGER_RADIUS[f]!;
     for (let s = 0; s < 3; s++) {
       const bend = pose.fingers[f]![s]!;
-      // Rotate the segment direction (and the local "back" vector) towards the palm side.
-      const q = new THREE.Quaternion().setFromAxisAngle(pose.side === 'right' ? a : a.clone().negate(), -bend);
-      dir.applyQuaternion(q);
-      up.applyQuaternion(q);
-      const len = SEGMENTS[f]![s]!;
-      const q2 = p.clone().addScaledVector(dir, len);
-      sink.addGeometry('glove', capsule(p, q2, radius * (1 - s * 0.07), DETAIL.finger, high));
-      p = q2;
+      dir.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(pose.side === 'right' ? a : a.clone().negate(), -bend));
+      const next = p.clone().addScaledVector(dir, SEGMENTS[f]![s]!);
+      fingers.push({ from: p, to: next, radius: radius * (1 - s * 0.07) });
+      p = next;
     }
   }
 
   // Thumb: from the heel of the hand on the index side, a fleshy pad, then two segments.
-  const thenar = new THREE.SphereGeometry(0.02, DETAIL.thenar[0], DETAIL.thenar[1]);
-  thenar.scale(1, 1.4, 0.75);
-  thenar.applyMatrix4(basis);
-  const tp = local(-0.03, -0.012, -0.006);
-  thenar.translate(tp.x, tp.y, tp.z);
-  sink.addGeometry('glove', thenar);
-
   const swing = pose.thumb.swing;
   const aim = pose.thumb.aim;
   const tDir = aim
@@ -173,49 +178,66 @@ export function buildHand(sink: GeometrySink, pose: HandPose, detail: DetailLeve
         .normalize();
   let tpos = local(-0.034, 0.004, -0.01);
   const tAxis = tDir.clone().cross(nn).normalize();
+  const thumb: HandSegment[] = [];
   for (let s = 0; s < 2; s++) {
     tDir.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(tAxis, pose.thumb.curl[s]!));
-    const len = s === 0 ? 0.034 : 0.028;
-    const next = tpos.clone().addScaledVector(tDir, len);
-    sink.addGeometry('glove', capsule(tpos, next, s === 0 ? 0.0115 : 0.0105, DETAIL.thumb, high));
+    const next = tpos.clone().addScaledVector(tDir, s === 0 ? 0.034 : 0.028);
+    thumb.push({ from: tpos, to: next, radius: s === 0 ? 0.0115 : 0.0105 });
     tpos = next;
   }
+  return {
+    basis,
+    centre,
+    local,
+    midAcross,
+    fingers,
+    thenar: local(-0.03, -0.012, -0.006),
+    thumb,
+    wristA: local(midAcross, -PALM.length / 2 + 0.006, 0),
+    wristB: local(midAcross, -PALM.length / 2 - 0.03, 0),
+  };
+}
+
+/** `geo` turned into the palm's frame and moved to `at`. */
+export function inPalm(geo: THREE.BufferGeometry, hand: HandSkeleton, at: THREE.Vector3): THREE.BufferGeometry {
+  return geo.applyMatrix4(hand.basis).translate(at.x, at.y, at.z);
+}
+
+/** A wrist point as the forearm takes it: (across, up, forward). */
+export const toV3 = (p: THREE.Vector3): V3 => [p.x, p.y, -p.z];
+
+/**
+ * Builds one gloved hand in the given pose and returns its wrist point (where the forearm starts). Hand detail `high`
+ * (FA8, QualitySettings.handDetail) adds a lighter knuckle pad, darker seams at the finger joints and a rubber wrist
+ * strap with a buckle; `low` is the hand as it was (REN-10's).
+ */
+export function buildHand(sink: GeometrySink, pose: HandPose, detail: DetailLevel = 'low'): V3 {
+  const high = detail === 'high';
+  const hand = handSkeleton(pose);
+  const { local, midAcross } = hand;
+
+  // Palm: a padded, slightly thicker pad towards the heel of the hand.
+  sink.addGeometry('glove', inPalm(new RoundedBoxGeometry(PALM.width, PALM.length, PALM.thickness, DETAIL.palmSegments, PALM.radius), hand, hand.centre));
+  for (const f of hand.fingers) sink.addGeometry('glove', capsule(f.from, f.to, f.radius, DETAIL.finger, high));
+  const thenar = new THREE.SphereGeometry(0.02, DETAIL.thenar[0], DETAIL.thenar[1]);
+  thenar.scale(1, 1.4, 0.75);
+  sink.addGeometry('glove', inPalm(thenar, hand, hand.thenar));
+  for (const t of hand.thumb) sink.addGeometry('glove', capsule(t.from, t.to, t.radius, DETAIL.thumb, high));
 
   // Wrist and glove cuff with a strap across the back.
-  const wristA = local(midAcross, -PALM.length / 2 + 0.006, 0);
-  const wristB = local(midAcross, -PALM.length / 2 - 0.03, 0);
-  sink.addGeometry('glove', capsule(wristA, wristB, 0.025, DETAIL.wrist));
-  const cuff = new THREE.CylinderGeometry(0.03, 0.028, 0.03, DETAIL.cuffSides);
-  cuff.applyMatrix4(basis);
-  const cuffAt = local(midAcross, -PALM.length / 2 - 0.022, 0);
-  cuff.translate(cuffAt.x, cuffAt.y, cuffAt.z);
-  sink.addGeometry('glove', cuff);
-  const strap = new RoundedBoxGeometry(0.034, 0.016, 0.008, DETAIL.strapSegments, 0.003);
-  strap.applyMatrix4(basis);
-  const strapAt = local(midAcross, -PALM.length / 2 - 0.02, 0.028);
-  strap.translate(strapAt.x, strapAt.y, strapAt.z);
-  sink.addGeometry('glove', strap);
+  sink.addGeometry('glove', capsule(hand.wristA, hand.wristB, 0.025, DETAIL.wrist));
+  sink.addGeometry('glove', inPalm(new THREE.CylinderGeometry(0.03, 0.028, 0.03, DETAIL.cuffSides), hand, local(midAcross, -PALM.length / 2 - 0.022, 0)));
+  sink.addGeometry('glove', inPalm(new RoundedBoxGeometry(0.034, 0.016, 0.008, DETAIL.strapSegments, 0.003), hand, local(midAcross, -PALM.length / 2 - 0.02, 0.028)));
   if (high) {
     // A padded knuckle guard across the back of the hand, a shade lighter than the glove.
     const pad = new RoundedBoxGeometry(PALM.width * 0.92, 0.024, 0.009, 1, 0.004);
     shadeVertices(pad, () => REPLICA_FINISH.hands.knuckleLight);
-    pad.applyMatrix4(basis);
-    const padAt = local(midAcross, PALM.length / 2 - 0.012, PALM.thickness / 2 + 0.002);
-    pad.translate(padAt.x, padAt.y, padAt.z);
-    sink.addGeometry('glove', pad);
+    sink.addGeometry('glove', inPalm(pad, hand, local(midAcross, PALM.length / 2 - 0.012, PALM.thickness / 2 + 0.002)));
     // A rubber strap round the cuff with a small metal buckle on the back.
-    const ring = new THREE.CylinderGeometry(0.0305, 0.0295, 0.011, DETAIL.cuffSides, 1, true);
-    ring.applyMatrix4(basis);
-    const ringAt = local(midAcross, -PALM.length / 2 - 0.016, 0);
-    ring.translate(ringAt.x, ringAt.y, ringAt.z);
-    sink.addGeometry('rubber', ring);
-    const buckle = new THREE.BoxGeometry(0.014, 0.013, 0.004);
-    buckle.applyMatrix4(basis);
-    const buckleAt = local(midAcross, -PALM.length / 2 - 0.016, 0.031);
-    buckle.translate(buckleAt.x, buckleAt.y, buckleAt.z);
-    sink.addGeometry('metal', buckle);
+    sink.addGeometry('rubber', inPalm(new THREE.CylinderGeometry(0.0305, 0.0295, 0.011, DETAIL.cuffSides, 1, true), hand, local(midAcross, -PALM.length / 2 - 0.016, 0)));
+    sink.addGeometry('metal', inPalm(new THREE.BoxGeometry(0.014, 0.013, 0.004), hand, local(midAcross, -PALM.length / 2 - 0.016, 0.031)));
   }
-  return [wristB.x, wristB.y, -wristB.z];
+  return toV3(hand.wristB);
 }
 
 /** Radius profile of a forearm from wrist (t = 0) to elbow (t = 1), as fractions of the elbow radius. */

@@ -5,7 +5,8 @@ import { HITS } from '../config/hits';
 import { createCharacter } from '../sim/character';
 import { vec3 } from '../sim/vec';
 import { TEAM_COLOUR_SETS } from '../config/teams';
-import { buildFigure, disposeFigure, figureLeanRoll, figureLooks, figureMuzzle, setReceiveShadows } from './characterModels';
+import { buildFigure, disposeFigure, figureLeanRoll, figureLooks, figureMuzzle, HUMAN_DRESS, setReceiveShadows } from './characterModels';
+import { figurePalette } from './figurePalette';
 
 describe('figureMuzzle', () => {
   it('matches the muzzle of the built figure for any position, yaw, pitch, crouch and lean', () => {
@@ -93,29 +94,33 @@ describe('buildFigure (M14 art pass)', () => {
     }
   });
 
-  it('wraps a broad band of team colour round the torso, under the arms, that reads across the map', () => {
-    for (const id of [0, 1, 2, 3, 4, 5]) {
-      const team = new THREE.Color(0xff8a2a);
-      const figure = buildFigure(0xff8a2a, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), id);
-      const body = figure.upper.children[0] as THREE.Mesh;
-      const pos = body.geometry.getAttribute('position');
-      const col = body.geometry.getAttribute('color');
-      // Team-coloured vertices on the torso (below the shoulder straps), in world heights.
-      const box = new THREE.Box3();
-      const p = new THREE.Vector3();
-      for (let i = 0; i < pos.count; i++) {
-        if (Math.abs(col.getX(i) - team.r) + Math.abs(col.getY(i) - team.g) + Math.abs(col.getZ(i) - team.b) > 1e-6) continue;
-        p.fromBufferAttribute(pos, i);
-        p.y += FIGURE.hipHeight;
-        if (p.y < FIGURE.shoulderHeight - 0.05) box.expandByPoint(p);
+  // G7 replaced M14's band (under the arms) with a plate carrier: its plates rise to the chest, as the concept's do.
+  it('wears a plate carrier in the team colour all round the torso (front, back and both sides) on humans and robots', () => {
+    for (const robot of [false, true]) {
+      for (const id of [0, 1, 2, 3, 4, 5]) {
+        const team = new THREE.Color(0xff8a2a);
+        const figure = buildFigure(0xff8a2a, new THREE.MeshStandardMaterial(), new THREE.SpriteMaterial(), id, null, undefined, undefined, { ...HUMAN_DRESS, robot });
+        const body = figure.upper.children[0] as THREE.Mesh;
+        const pos = body.geometry.getAttribute('position');
+        const col = body.geometry.getAttribute('color');
+        // Team-coloured vertices on the torso (from the hips to just over the shoulders), in world heights.
+        const box = new THREE.Box3();
+        const p = new THREE.Vector3();
+        for (let i = 0; i < pos.count; i++) {
+          if (Math.abs(col.getX(i) - team.r) + Math.abs(col.getY(i) - team.g) + Math.abs(col.getZ(i) - team.b) > 1e-6) continue;
+          p.fromBufferAttribute(pos, i);
+          p.y += FIGURE.hipHeight;
+          if (p.y > FIGURE.hipHeight && p.y < FIGURE.shoulderHeight + 0.1) box.expandByPoint(p);
+        }
+        const size = box.getSize(new THREE.Vector3());
+        expect(size.y, 'carrier height').toBeGreaterThanOrEqual(0.24);
+        // Seen from either side and from the front and back: wider and deeper than the torso.
+        expect(size.x, 'all the way round').toBeGreaterThan(FIGURE.torso.width);
+        expect(size.z, 'all the way round').toBeGreaterThan(FIGURE.torso.depth);
+        expect(box.min.z, 'front plate').toBeLessThan(-FIGURE.torso.depth / 2);
+        expect(box.max.z, 'back plate').toBeGreaterThan(FIGURE.torso.depth / 2);
+        disposeFigure(figure);
       }
-      const size = box.getSize(new THREE.Vector3());
-      expect(size.y, 'band height').toBeGreaterThanOrEqual(0.24);
-      expect(size.x, 'all the way round').toBeGreaterThan(FIGURE.torso.width);
-      expect(size.z, 'all the way round').toBeGreaterThan(FIGURE.torso.depth);
-      // Under the arms: the aiming elbows and the rifle's magazine sit above its top edge.
-      expect(box.max.y).toBeLessThanOrEqual(FIGURE.shoulderHeight - 0.2);
-      disposeFigure(figure);
     }
   });
 
@@ -135,33 +140,30 @@ describe('buildFigure (M14 art pass)', () => {
     }
   });
 
-  it('mixes six casual looks: varied clothes and headgear, most faces showing, both kinds of vest', () => {
+  it('mixes six looks over the four masked headgears (G7): helmets high-cut and bump, a balaclava, a visor', () => {
     const looks = [0, 1, 2, 3, 4, 5].map(figureLooks);
-    expect(new Set(looks.map((l) => `${l.top}-${l.trousers}-${l.headgear}`)).size).toBe(6);
-    expect(new Set(looks.map((l) => l.headgear)).size).toBe(3);
-    expect(new Set(looks.map((l) => l.vest)).size).toBe(2);
-    expect(new Set(looks.map((l) => l.skin)).size).toBeGreaterThanOrEqual(4);
-    expect(looks.filter((l) => l.mask === null).length).toBeGreaterThan(looks.length / 2);
+    expect(new Set(looks.map((l) => `${l.headgear}-${l.pack}-${l.radio}`)).size).toBe(6);
+    expect(new Set(looks.map((l) => l.headgear))).toEqual(new Set(['highCut', 'bump', 'balaclava', 'visor']));
+    expect(new Set(looks.map((l) => l.tone)).size).toBe(6);
     expect(figureLooks(6)).toBe(figureLooks(0));
   });
 
-  it('never dresses a figure in anything that reads as a team colour', () => {
-    const hsl = (hex: number): { h: number; s: number } => {
+  // G7: the clothes are no longer fixed colours: the camo and shirt take the team's own hue, greyed right down.
+  it('never dresses a figure in anything that reads as a team colour other than its own: camo and gear stay grey', () => {
+    const hsl = (hex: number): { h: number; s: number; l: number } => {
       const out = { h: 0, s: 0, l: 0 };
-      new THREE.Color(hex).getHSL(out);
-      return { h: out.h * 360, s: out.s };
+      new THREE.Color().setHex(hex, THREE.SRGBColorSpace).getHSL(out, THREE.SRGBColorSpace);
+      return out;
     };
-    const teams = Object.values(TEAM_COLOUR_SETS).flatMap((s) => s.figures).map(hsl);
-    for (const look of FIGURE.looks) {
-      for (const colour of [look.top, look.trousers, look.vestColor, look.pouches, look.hat, look.mask ?? 0]) {
-        const c = hsl(colour);
-        if (c.s < 0.3) continue; // greys, denim, sand: no hue to mistake
-        for (const t of teams) {
-          const d = Math.abs(c.h - t.h) % 360;
-          expect(Math.min(d, 360 - d), `#${colour.toString(16)} near a team colour`).toBeGreaterThan(20);
+    for (const set of Object.values(TEAM_COLOUR_SETS)) {
+      for (const team of set.figures) {
+        for (const tone of FIGURE.looks.map((l) => l.tone)) {
+          const pal = figurePalette(team, tone);
+          for (const colour of [pal.camo, pal.shirt]) expect(hsl(colour).s, `#${colour.toString(16)} for #${team.toString(16)}`).toBeLessThan(0.3);
         }
       }
     }
+    for (const [name, colour] of Object.entries(FIGURE.colors)) if (name !== 'torchLens') expect(hsl(colour).s, name).toBeLessThan(0.3); // the lens is a light
   });
 });
 

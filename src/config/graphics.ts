@@ -179,8 +179,22 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
       { id: 'off', label: 'Off', value: 0 },
       { id: '2', label: 'Nearest 2', value: 2 },
       { id: '4', label: 'Nearest 4', value: 4 },
+      { id: '8', label: 'Nearest 8', value: 8 },
     ],
   }),
+  // G6: materials and baked lighting.
+  choice({
+    field: 'bakedLight',
+    label: 'Baked light',
+    help: 'Light bounced off walls and containers, worked out ahead of time: shaded alleys, colour on the ground beside a container.',
+    cost: 'Vertex: no per-pixel cost; Per pixel: one texture read per pixel',
+    options: [
+      { id: 'off', label: 'Off', value: 'off' },
+      { id: 'vertex', label: 'Vertex', value: 'vertex' },
+      { id: 'pixel', label: 'Per pixel', value: 'pixel' },
+    ],
+  }),
+  choice({ field: 'weathering', label: 'Weathering', help: 'Dirt at the foot of walls, rain streaks and rust on steel.', cost: 'GPU: small; rebuilds the map', options: onOff }),
   // FA8: the visual overhaul's rows (audit section 5, rows 17-20 and 23).
   choice({
     field: 'figureDetail',
@@ -200,6 +214,29 @@ export const GRAPHICS_ROWS: readonly GraphicsRow[] = [
   choice({ field: 'bbGlow', label: 'BB glow', help: 'A soft warm glow round every BB in flight, so far BBs read as dots.', cost: 'GPU: small', options: onOff }),
   choice({ field: 'impactGrit', label: 'Impact grit', help: 'BBs throw chips of the surface they hit and a faint ring of dust.', cost: 'GPU: small', options: onOff }),
   choice({ field: 'laserBeam', label: 'Laser beam', help: 'A faint beam from the laser module. Real ones can’t be seen by day: a toy cue.', cost: 'Free', options: onOff }),
+  // G5: the post stack (render/post/). With every one off the frame is drawn straight to the screen, as on Low.
+  choice({
+    field: 'ambientOcclusion',
+    label: 'Ambient occlusion',
+    help: 'Soft shading where surfaces meet: corners, the feet of walls, under props.',
+    cost: 'GPU: about 10 % at half resolution, 25 % at full',
+    options: [
+      { id: 'off', label: 'Off', value: 0 },
+      { id: 'half', label: 'Half', value: 0.5 },
+      { id: 'full', label: 'Full', value: 1 },
+    ],
+  }),
+  choice({ field: 'bloom', label: 'Bloom', help: 'Lights, neon, glowing BBs and the sun spill a soft glow.', cost: 'GPU: about 5 %', options: onOff }),
+  choice({
+    field: 'temporalAA',
+    label: 'Temporal smoothing',
+    help: 'Smooths edges over several frames, so grass, wire and rails stop shimmering as you move. Replaces edge smoothing.',
+    cost: 'GPU: about 5 %; memory two screen-sized buffers',
+    options: onOff,
+  }),
+  choice({ field: 'lightShafts', label: 'Light shafts', help: 'Beams of sun or moonlight past walls and props when you look towards it.', cost: 'GPU: about 5 %, only facing the sun or moon', options: onOff }),
+  choice({ field: 'reflections', label: 'Reflections', help: 'Puddles and glass reflect what is around them. Nothing else pays for it.', cost: 'GPU: small to medium, only where puddles or glass are in view', options: onOff }),
+  choice({ field: 'lensFinish', label: 'Film grain and lens', help: 'A fine film grain and a slight colour fringe at the screen’s edges.', cost: 'GPU: small', options: onOff }),
 ];
 
 /** The row for a field (every QualitySettings field has one: config/graphics.test.ts). */
@@ -231,16 +268,34 @@ export function parseStored(row: GraphicsRow, raw: unknown): QualitySettings[key
   return v / row.perUnit;
 }
 
-/** The frame-rate cap row (not part of a preset). */
+/**
+ * The frame-rate row (not part of a preset; G5: 240 and Unlimited). Each choice is saved as `frameRateCap` by its id,
+ * Unlimited as `off`, the id it had when it was called Off, so a save from any earlier build reads back unchanged.
+ */
 export const FRAME_RATE_CAP_CHOICES: readonly { id: string; label: string; blurb: string; value: FrameRateCap }[] = FRAME_RATE_CAPS.map((cap) => ({
   id: cap === 0 ? 'off' : String(cap),
-  label: cap === 0 ? 'Off' : String(cap),
+  label: cap === 0 ? 'Unlimited' : String(cap),
   blurb:
     cap === 0
       ? 'As many frames as the screen shows.'
       : `At most ${cap} frames a second: a laptop runs cooler and quieter. The game still plays at 60 ticks a second.`,
   value: cap,
 }));
+
+/**
+ * A saved frame-rate choice back to its cap: an id the row offers as itself, any other number of frames (a hand-edited
+ * or foreign save) as the nearest choice, the higher on a tie; 0 or less as Unlimited. Undefined for anything else.
+ */
+export function frameRateCapFromSaved(raw: unknown): FrameRateCap | undefined {
+  const exact = FRAME_RATE_CAP_CHOICES.find((c) => c.id === raw);
+  if (exact) return exact.value;
+  const n = typeof raw === 'number' ? raw : typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : Number.NaN;
+  if (Number.isNaN(n)) return undefined;
+  if (n <= 0 || n === Number.POSITIVE_INFINITY) return 0;
+  let best: FrameRateCap = FRAME_RATE_CAPS[1];
+  for (const cap of FRAME_RATE_CAPS) if (cap > 0 && Math.abs(cap - n) <= Math.abs(best - n)) best = cap;
+  return best;
+}
 
 /** The tone mapping row (not part of a preset; audit section 5 F2, owner: Neutral by default). */
 export const TONE_MAPPING_CHOICES: readonly { id: ToneMappingId; label: string; blurb: string }[] = [
@@ -260,7 +315,7 @@ export const GRAPHICS_TEXT = {
   qualityHelp: 'Sets every row below. Lower it if the game stutters.',
   customHeading: 'Custom settings',
   customIntro: 'Each row applies at once. The cost after each one says what it takes from your graphics card.',
-  frameRateHelp: 'A cap on frames a second. Off follows the screen.',
+  frameRateHelp: 'The most frames a second the game draws. Unlimited follows the screen.',
   showFpsHelp: 'A frame counter while you play.',
   toneMappingHelp: 'How bright colours roll off to the screen. Free.',
   /** Under Edge smoothing when the browser gave no multisampling (Firefox on Linux, some drivers; REN-21). */

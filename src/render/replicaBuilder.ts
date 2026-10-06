@@ -7,6 +7,7 @@ import type { ReplicaConfig } from '../config/replicas';
 import { CYBER_COLOURS, type CyberColours, hasFixedColours, type ReplicaPaint, schemeColours } from '../config/schemes';
 import { LASERS } from '../config/lasers';
 import { TORCHES } from '../config/torches';
+import { armMaterials, type ArmStyle, HUMAN_ARMS } from './replicaArms';
 import { projectSpeckleUvs, type SpeckleTextures } from './replicaFinish';
 
 /**
@@ -83,7 +84,7 @@ export interface ReplicaColours {
  * guns. High detail (FA8): the speckle maps on polymer and rubber, vertex colours for the edge highlight, metallic steel
  * under a sheen, a glossy glass, a glowing laser lens.
  */
-export function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: SpeckleTextures | null, colours: ReplicaColours, cyber: CyberColours): Record<MaterialKey, THREE.Material> {
+export function createMaterials(teamColor: number, detail: ReplicaDetail, speckle: SpeckleTextures | null, colours: ReplicaColours, cyber: CyberColours, arms: ArmStyle = HUMAN_ARMS): Record<MaterialKey, THREE.Material> {
   const vertexColors = coloured(detail);
   const mean = F.speckle.grey / 255;
   const speckled = (color: number, roughness: number): THREE.MeshStandardMaterial =>
@@ -128,11 +129,8 @@ export function createMaterials(teamColor: number, detail: ReplicaDetail, speckl
       ? new THREE.MeshStandardMaterial({ color: F.torch.lensOff, emissive: TORCHES.weaponTorch.colour, emissiveIntensity: 0, roughness: 0.1, metalness: 0 })
       : new THREE.MeshBasicMaterial({ color: F.torch.lensOff }),
     bb: new THREE.MeshStandardMaterial({ color: F.witnessBb, roughness: 0.35, metalness: 0, vertexColors }),
-    // Olive gloves: clearly separate from the replica's colours.
-    glove: new THREE.MeshStandardMaterial({ color: 0x5d6146, roughness: 0.9, metalness: 0, vertexColors }),
-    sleeve: new THREE.MeshStandardMaterial({ color: 0x4a525c, roughness: 1, metalness: 0, vertexColors }),
-    // Team tape on the sleeve, as players wear at real sites.
-    armband: new THREE.MeshStandardMaterial({ color: teamColor, roughness: 0.7, metalness: 0, vertexColors }),
+    // The arms (G7): gloved in the team's camo, or a robot's shell (replicaArms.ts).
+    ...armMaterials(teamColor, arms, vertexColors),
   };
   // Vertex colours only darken (a colour can't pass white), so flat faces sit at VERTEX_BASE and the material is that
   // much brighter: a flat face is its colour as before, a bevel or worn edge lighter.

@@ -139,7 +139,7 @@ Milestones are development steps. Only the rows marked as builds become tagged r
 | Alpha · Owner's 2026-10-04 requests · M42 Retro pixel filter: a Dev tab switch for a 1990s look (chunky pixels, a small dithered palette), with Pixel size and Colours sliders; the HUD and menus stay sharp | Done | 8/8 |
 | Alpha · Owner's 2026-10-04 requests · M36–M41 Esports difficulty ("Pro"): bots that hold angles, clear corners and trade, a Rules picker (Skirmish, Tournament, Pro CQB, Custom), map balance guards and a "what got you" card; tagged dev until the owner says it's done | In progress (M36 merged, #79; M37 merged, #82; M38 merged, #84; M39 merged, #90; M40 merged, #94; M41 built; the owner chose to start before the final alpha pass) | |
 | Alpha · Owner's 2026-10-04 requests · M43–M49 Extraction: a squad of one to three against a home team on a timed run, guarded cases of seeded loot, waves, exits held for a count, one automatic respawn per run, pay and records, Woodland and city data, supply weekends; tagged dev until the owner says it's done | Building: M43 the run, exits, clock and respawn done (owner to play it); M44 cases and loot done (owner to play it); M45 waves and regen done (owner to play it); M46 guards, patrols and hunters done (owner to play it); M47 pay and records done (shows once the mode is public); M48 Woodland and Neon Heights done (owner to play it); M49 supply events done (owner to play it) | 8/8 (M43, M44, M46, M47, M48, M49), 7/8 (M45) |
-| Alpha · Audit 2 · Implementing the full audit of 2026-10-05 (91 findings: 0 critical, 1 high, 18 medium, 51 low, 21 improvements; the owner confirmed all 34 decisions on their defaults) in five phases, M50 onwards | Building: M50 chunk headroom and the crash report done; M51 CI split and test hygiene done; M52 night readability done (owner to play it); M56 pool data guards done; M54 accessibility and browser compat done; M53 Extraction announcements and the sound mix done; M63 map cache, shader warm-up and GPU timer restore done; M55 case sight, map overlaps and Extraction posts that see done; M64 perf harness Use key and HUD write trims done; M65 field sounds rendered in title-screen idle time done; M57 night guards play with torches done; M68 Graphics Custom rows fold done; M70 Armory odds caption and refused-save notice done | 8/8 (M50, M54, M57, M63, M65, M68, M70), 7/8 (M51, M52, M53, M55, M56, M64) |
+| Alpha · Audit 2 · Implementing the full audit of 2026-10-05 (91 findings: 0 critical, 1 high, 18 medium, 51 low, 21 improvements; the owner confirmed all 34 decisions on their defaults) in five phases, M50 onwards | Building: M50 chunk headroom and the crash report done; M51 CI split and test hygiene done; M52 night readability done (owner to play it); M56 pool data guards done; M54 accessibility and browser compat done; M53 Extraction announcements and the sound mix done; M63 map cache, shader warm-up and GPU timer restore done; M55 case sight, map overlaps and Extraction posts that see done; M64 perf harness Use key and HUD write trims done; M65 field sounds rendered in title-screen idle time done; M57 night guards play with torches done; M68 Graphics Custom rows fold done; M70 Armory odds caption and refused-save notice done; M69 field echoes, neon hum and trimmed sound tails done | 8/8 (M50, M54, M57, M63, M65, M68, M69, M70), 7/8 (M51, M52, M53, M55, M56, M64) |
 | Beta → **`v0.1-beta`** builds | Owner decides when | |
 | **`v0.1`** first public release | Owner decides when | |
 
@@ -897,6 +897,56 @@ pool, items 11, 12 and part of 14).
     dated one-off events (a Halloween night run shipped), by the device's clock, each scaling what the cases hold (FC and
     parts); the Mode pop-up says which is on, and a run keeps the event it started with.
 
+### The owner's 0.1 Dev 4 playtest notes (2026-10-06)
+
+Recorded only, nothing built yet. His words, the type and the reasoning per item are in the project's shared files
+(`plans/playtest-feedback-0.1-dev-4.md`). The 0.1 tasks are blocks M80–M96 in `docs/TASKS.md`, after the paused 0.1
+Dev 5 work (graphics, M71–M79, bug pass BP2). **Normal difficulty is the baseline** for every change (note 19): tune
+on Normal, then check that Easy, Hard and Pro still scale. He ruled on every conflict with an earlier decision on
+2026-10-06 (below the table and in DECISIONS).
+
+| # | Note | Goes to |
+|---|---|---|
+| 1 | The tutorial shows the scoreboard and the comm wheel when it names them; plainer but complete wording; a finish pop-up offering the practice range or the menu | M80 (0.1 Dev 5) |
+| 2 | Keep the Retro filter | M96 (0.1 Dev 5): public as soon as possible (ruled 2026-10-06; was 0.5 in the triage) |
+| 3 | Holster on 3 (1 primary, 2 secondary); sprinting holstered is faster but drawing to aim is slower; sprinting with the replica ready aims faster | M92 (0.1 Dev 6) |
+| 4 | Sort and filter replicas by rarity in the Loadout, and parts by rarity in Customise | M82 (0.1 Dev 5, after G3) |
+| 5 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight | 0.3 (new parts, through the content toolkit) |
+| 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5) |
+| 7 | A setting for a fixed or rotating minimap | M83 (0.1 Dev 5) |
+| 8 | Walking (Shift) while aiming down sights slows you further | M84 (0.1 Dev 5) |
+| 9 | The practice range and tutorial area in the new graphics | M81 (0.1 Dev 5, after G5 and G6; the graphics plan re-dresses only the three maps) |
+| 10 | Practice: moving targets, more target types, a timed high-score challenge (off by default) | M93 (0.1 Dev 6) |
+| 11 | Practice on any map with targets instead of bots; rename the range "Practice" | M94 (0.1 Dev 6) |
+| 12 | Practice with any unlocked replica and Customise; everything with Dev on | M95 (0.1 Dev 6) |
+| 13 | Woodland: too open, the far team visible from the start, the blue end's height edge; hidden starts; 5v5 default, 6v6, maybe Woodland only for 5v5 and 6v6 | M88 (0.1 Dev 5): 5v5 default, 6v6 allowed, Woodland only for those two (ruled 2026-10-06) |
+| 14 | More varied, less distracting ambience; an Ambience volume | M86 (0.1 Dev 5) |
+| 15 | Bots on both teams check spots that are plainly empty (corners); refine on every level | M87 (0.1 Dev 5, after M71) |
+| 16 | Every replica aims down sights: iron sights without an optic; hip fire stays viable | M84 (0.1 Dev 5): iron sights now, beside scopes (ruled 2026-10-06; replaces his 0.1 Dev 3 note 3) |
+| 17 | BBs seem to pass through the nearer bot and hit the one behind; check, and tighten hit detection | M85 (0.1 Dev 5) |
+| 18 | Modes and match settings make sense together (no Tournament rules in Extraction) | M89 (0.1 Dev 5) |
+| 19 | Normal difficulty is the baseline for all feedback; check every change on the other levels | Standing rule for M80–M95 |
+| 20 | Extraction loot looks like loot: crates and chests with a glow | 0.3, with Extraction going public |
+| 21 | Battle royale: pick a map and spawn point, a shrinking zone with a countdown outside it, start with nothing, weapons lie on the map as models, 10 players; experimental dev mode first | 0.4, dev first: an exception to the Free-for-all cut (ruled 2026-10-06); his answers below |
+| 22 | An inventory: owned items in the menus, carried items on I in a match; a small carry limit in Extraction; currency takes one slot | 0.3, with Extraction |
+| 23 | Extraction: solo against bots, more of them, quicker and closer waves, bots that hunt, guard and converge on an extraction, a longer extract timer, no respawn; a duo / trio revive later | 0.3, with Extraction: replaces his 2026-10-04 picks (squad of 3, one respawn) and the paused M72's "one opponent fewer on Normal" (ruled 2026-10-06); the revive goes with Medic |
+| 24 | More Dev settings for playtesting, starting with field credits and tokens on demand | M90 (0.1 Dev 5) |
+| 25 | With the Armory turned off in Dev, hide it instead of greying it | M83 (0.1 Dev 5) |
+| 26 | Softer, diffused torch beams that cast shadows | M91 (0.1 Dev 5, with the graphics work): shadows on High and Ultra only, Low as today for 60 fps (ruled 2026-10-06) |
+
+**His rulings (2026-10-06, after the notes):** the Retro look goes public as soon as possible (M96); Woodland takes the
+new team sizes (5v5 default, 6v6, only those two); iron sights now, beside scopes; torch shadows on the higher presets
+only, Low as today; Extraction follows these notes (solo, more and harder opponents, no respawn), replacing his
+2026-10-04 picks and the paused M72's fewer Normal opponents; battle royale goes ahead as an experimental dev mode,
+the exception to the Free-for-all cut.
+
+**Battle royale, his answers:** a found replica holds one magazine and no spares, so BBs must be looted or it runs dry;
+lootable replicas are rolled at random, with or without attachments that fit them (no loose attachments); items show
+their rarity colour; one or two supply crates drop mid-match, announced by a flare; four zone shrinks over about eight
+minutes with a 10-second countdown outside; two replicas plus a small pack; solo only for now; a placement screen,
+then spectating with Skip and Quit; no credits or records while it is dev, both in the finished version; throwables
+become loot once they exist.
+
 When the owner calls the game feature complete, alpha ends.
 
 ## Beta: finishing 0.1 (not scheduled yet)
@@ -939,9 +989,9 @@ complexity than player value). The owner confirmed it with his changes; the reas
   matches; Easy, Normal and Hard; Woodland with night play, the weapon torch, glowing BBs and 4v4 / 5v5; Pro.
 - **Stays dev, public later:** Neon Heights (0.2, with its new look), Extraction (0.3, once balanced), the
   Tournament and Pro CQB rule sets (0.3, folded into the field rule presets), the Retro pixel filter (0.5, as a
-  "Retro look" option).
+  "Retro look" option; pulled forward to 0.1 Dev 5 on 2026-10-06, M96).
 - **Cut:** Supply weekends and events, the Tone mapping choice, tracer BBs as their own option (glowing BBs do it),
-  Bomb, Intel grab, Free-for-all, the overshooting rule, gear that only changes looks as its own system (it joins
+  Bomb, Intel grab, Free-for-all (battle royale is the owner's exception, 2026-10-06), the overshooting rule, gear that only changes looks as its own system (it joins
   kit looks), a separate progression plan (the Armory is the progression), and the ideas listed under Declined in
   `docs/IDEAS.md`.
 
@@ -1032,6 +1082,10 @@ went**, updated by the feature triage (2026-10-05).
   bang, no shrapnel), smoke for cover and a flash bomb, for the Loadout's Grenades slot. How each one knocks players
   out or blinds them, how many you carry and how bots use them are designed when they come.
 - **Blender models** (owner, 2026-10-05): a separate art pass after the code-built models of 0.2.
+- **From the owner's 0.1 Dev 4 playtest** (2026-10-06, notes 5, 20, 22, 23; see the table under Alpha): a 2–4x
+  variable scope and a holographic sight; Extraction loot that looks like loot; an inventory (owned items in the
+  menus, carried items on I, a small carry limit in Extraction); an Extraction rework (solo, more and harder
+  opponents, no respawn; ruled 2026-10-06 over his earlier Extraction picks).
 
 ### 0.4: More fields and ways to play
 
@@ -1066,6 +1120,9 @@ went**, updated by the feature triage (2026-10-05).
 - **New replica types, the next three:** an SMG, a shotgun and a gas blowback rifle.
 - **Team communication** (once the bots can follow it): an action wheel or menu, pings and hand signals, with bots
   that act on them. Three orders and their wheel are already in (M22, M23). Waits on the bot AI; it can move.
+- **Battle royale** (owner's 0.1 Dev 4 playtest note 21, 2026-10-06): an experimental dev mode first: pick a map
+  and a spawn point, a shrinking zone, start with nothing and find gear, 10 players. The owner made it the
+  exception to the Free-for-all cut (2026-10-06); his answers are under the 0.1 Dev 4 playtest table.
 
 ### 0.5: Kit, looks and progression
 
@@ -1080,8 +1137,7 @@ went**, updated by the feature triage (2026-10-05).
   every asset at Rare or better in about 58, then a long tail of small tier gains with no milestones. Ideas:
   completion on the Armory tile ("23 / 84 · 3 Legendary"), milestones in `pool.md` ("Every optic owned → +1 Token"),
   more assets before tuning odds, Legendary 1 → 1.5 %, Easy ×0.5 → ×0.7.
-- **The Retro look** (owner, 2026-10-05: a fun future update): the Retro pixel filter (M42, in the Dev tab today)
-  becomes a public option.
+- **The Retro look:** moved to 0.1 Dev 5 (M96) by the owner on 2026-10-06.
 - **New replica types, the last:** an LMG (huge box mags, slow to move and aim, a bipod).
 - No real brand names or trademarked designs, ever (CLAUDE.md §4).
 

@@ -60,7 +60,8 @@ export class MapMeshCache {
    * the steel's sheen), kept otherwise (relief and texture size follow on the next take).
    */
   trim(look: MapLook): void {
-    if (!this.held && this.kept && mapNeedsRebuild(this.kept.look, look)) this.clear();
+    // The quality's look carries no map's baked light: the kept map's own is compared (G6).
+    if (!this.held && this.kept && mapNeedsRebuild(this.kept.look, { ...look, probes: this.kept.look.probes ?? null })) this.clear();
   }
 
   /**

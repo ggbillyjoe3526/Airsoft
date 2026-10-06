@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AMBIENCES, AUDIO, VOLUME } from '../config/audio';
 import { CYBER_PISTOL, LOADOUT } from '../config/replicas';
-import { cues, isMapCue, SHOT_PROFILES, SOUNDS, type SoundCue } from '../config/sounds';
+import { cues, isMapCue, SHOT_PROFILES, SOUNDS, type SoundCue, TITLE_CUES } from '../config/sounds';
 import { DEPOT } from '../map/depot';
 import type { MapBlock } from '../map/mapTypes';
 import { terrainHeightAt } from '../map/terrain';
@@ -15,7 +15,7 @@ import { recipeLength, renderRecipe, seededRandom, type SoundRecipe } from './ds
 import { type FoleyMove, FoleyTracker } from './foley';
 import { MotorSound } from './motor';
 import { blockedShare, lineBlocked, muffleFor, type OcclusionQuery } from './occlusion';
-import { renderMapCue, renderSounds, suppressedCopies } from './soundBank';
+import { renderMapCue, renderSounds, suppressedCopies, variantsOf } from './soundBank';
 import { impactMaterialAt, surfaceUnder } from './soundMaterials';
 
 const RATE = 48000;
@@ -57,7 +57,7 @@ function brightness(buf: Float32Array): number {
   return n / (buf.length / RATE);
 }
 
-/** Every cue's `variants` variants: the title screen's (one stream) and the map cues (each its own seed, M33j). */
+/** Every cue's variants, at most `variants`: the title screen's (one stream) and the map cues (each its own seed, M33j). */
 function renderEveryCue(variants: number): Map<SoundCue, Float32Array[]> {
   const all = renderSounds(RATE, variants);
   for (const cue of Object.keys(SOUNDS) as SoundCue[]) if (isMapCue(cue)) all.set(cue, renderMapCue(cue, RATE, variants));
@@ -70,7 +70,7 @@ describe('sound synthesis (M13)', () => {
   it('renders every cue: audible, finite, never clipping, fading to silence at the end', () => {
     for (const cue of Object.keys(SOUNDS) as SoundCue[]) {
       const variants = rendered.get(cue)!;
-      expect(variants, cue).toHaveLength(3);
+      expect(variants, cue).toHaveLength(variantsOf(cue, 3));
       for (const v of variants) {
         expect(v.every(Number.isFinite), `${cue} has NaN or Infinity`).toBe(true);
         const p = peak(v);
@@ -80,6 +80,31 @@ describe('sound synthesis (M13)', () => {
         expect(v.length / RATE, `${cue} is longer than its recipe allows`).toBeLessThanOrEqual(recipeLength(SOUNDS[cue]) + 0.01);
       }
     }
+  });
+
+  it('ends every cue where its sound has died away: the 64-sample fade right after its last sample above -60 dB of its peak (M69, audit AUD-09)', () => {
+    for (const [cue, variants] of rendered) {
+      for (const v of variants) {
+        // No more than the fade's 64 samples after the last sample above a thousandth of the peak.
+        const floor = peak(v) * 1e-3;
+        let last = v.length - 1;
+        while (last > 0 && Math.abs(v[last]!) <= floor) last--;
+        expect(v.length - 1 - last, `${cue}: silent tail`).toBeLessThanOrEqual(64);
+      }
+    }
+  });
+
+  it('renders one count.beep (its five differed only in phase) and keeps every other title cue as the stream gave it (M69, audit AUD-08)', { timeout: 15_000 }, () => {
+    expect(variantsOf('count.beep')).toBe(1);
+    for (const cue of TITLE_CUES) if (cue !== 'count.beep') expect(variantsOf(cue), cue).toBe(AUDIO.variants);
+    // A two-variant bank against the stream as it ran before M69: every title cue twice, in table order.
+    const bank = renderSounds(RATE, 2);
+    const rand = seededRandom(AUDIO.synthSeed);
+    for (const cue of TITLE_CUES) {
+      const before = [renderRecipe(SOUNDS[cue], RATE, rand), renderRecipe(SOUNDS[cue], RATE, rand)];
+      expect(bank.get(cue), cue).toEqual(before.slice(0, variantsOf(cue, 2)));
+    }
+    expect(bank.get('count.beep')).toHaveLength(1);
   });
 
   it('is deterministic for a seed, and its variants differ', () => {

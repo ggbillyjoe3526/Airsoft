@@ -10,16 +10,16 @@ const source = (file: string): string => sources[file]!;
 
 describe('the sessions pass the paint through (G1)', () => {
   it('the match builds its combat presentation with the kit painted by the Look settings', () => {
-    expect(source('./matchSession.ts')).toMatch(/new CombatPresentation\([^;]*kitPaint\(this\.kit, setup\.look\)\)/);
+    expect(source('./matchSession.ts')).toMatch(/new CombatPresentation\([^;]*kitPaint\(this\.kit, setup\.look\)[,)]/); // G7: the player's arms follow the paint
   });
 
   it('the range does too, and its setup type carries the Look settings', () => {
-    expect(source('./rangeSession.ts')).toMatch(/new CombatPresentation\([^;]*kitPaint\(setup\.kit, setup\.look\)\)/);
+    expect(source('./rangeSession.ts')).toMatch(/new CombatPresentation\([^;]*kitPaint\(setup\.kit, setup\.look\)[,)]/); // G7: the player's arms follow the paint
     expect(source('./rangeSession.ts')).toMatch(/RangeSetup = Pick<MatchSetup, [^>]*'look'/);
   });
 
   it('the combat presentation gives its paint to the viewmodel', () => {
-    expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*\bpaint\)/);
+    expect(source('./render/combatPresentation.ts')).toMatch(/new Viewmodel\([^;]*\bpaint[,)]/); // G7: the arms follow the paint
   });
 
   it('Game hands the Look settings it loaded to both the match and the range', () => {

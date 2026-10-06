@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { buildForearm, buildHand, type FingerCurl, type HandPose } from './handModels';
+import type { FingerCurl, HandPose } from './handModels';
+import { type ArmBuilders, armBuilders, type ArmStyle, HUMAN_ARMS } from './replicaArms';
 import type { MagazineId } from '../config/attachments';
 import { REPLICA_FINISH } from '../config/replicaFinish';
 import type { ReplicaConfig } from '../config/replicas';
@@ -11,6 +12,7 @@ import { AEG_GAS_BLOCK_END, AEG_MAGAZINES, AEG_MUZZLE, AEG_MUZZLE_DEVICES, AEG_P
 import { coloursOf, createMaterials, LOW_DETAIL, type MaterialKey, ModelBuilder, PAINTED, paintedMaterials, type Pt, type ReplicaDetail } from './replicaBuilder';
 
 // The public names that moved out with the split stay importable from here.
+export { type ArmStyle, HUMAN_ARMS } from './replicaArms';
 export { LOW_DETAIL, type ReplicaColours, type ReplicaDetail } from './replicaBuilder';
 export { AEG_MUZZLE, CYBER_MUZZLE, type MuzzleLayout, PISTOL_MUZZLE, REPLICA_PART_TABLES, RIFLE_OPTIC, RIFLE_SCOPE } from './replicaParts';
 
@@ -82,7 +84,7 @@ export type HandsShown = 'hands' | 'bare';
  * cheek riser and a block butt. Flip-up iron sights (folded down when an optic is fitted), a birdcage flash hider. The
  * optic is its own part, shown only when one is fitted. Every hand point and envelope is as before (AEG_HANDGUARD).
  */
-function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
+function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null): ReplicaModel {
   const b = new ModelBuilder(detail);
   // Upper receiver: the chamfered slab, its rail, the side plate over the ejection port, forward assist and charging handle.
   b.profile('polymer', [[-0.116, 0.012], [0.15, 0.012], [0.15, 0.058], [-0.094, 0.058], [-0.116, 0.04]], 0.056, 0.004);
@@ -149,20 +151,20 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
   sightsDown.box('detail', 0.362, 0.396, 0.082, 0.089, 0.024);
 
   const support = new ModelBuilder(detail);
-  if (hands === 'hands') {
+  if (arms) {
     // Right hand on the pistol grip: back of the hand to the right, knuckle row running down the grip, three fingers
     // wrapped round its front, index finger straight along the frame (trigger discipline), thumb across the left of the
     // receiver.
-    const rightWrist = buildHand(
+    const rightWrist = arms.hand(
       b,
       { side: 'right', palm: [0.034, -0.092, -0.074], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.9, curl: [0.3, 0.3] } },
       detail.hands,
     );
-    buildForearm(b, rightWrist, [0.2, -0.3, -0.42], undefined, detail.hands);
+    arms.forearm(b, rightWrist, [0.2, -0.3, -0.42], undefined, detail.hands);
     // Left hand cradling the handguard: palm underneath, index finger forward, fingers curling up the right side, thumb
     // up the left side. Its own part: on reloads it cups the magazine's base plate.
-    const leftWrist = buildHand(support, AEG_SUPPORT_POSE, detail.hands);
-    buildForearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
+    const leftWrist = arms.hand(support, AEG_SUPPORT_POSE, detail.hands);
+    arms.forearm(support, leftWrist, [-0.3, -0.28, 0.02], undefined, detail.hands);
   }
 
   const group = b.build(m);
@@ -179,19 +181,19 @@ function buildAeg(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, de
 }
 
 /** The pistols' two-handed grip (the Gas and Cyber Pistols share the grip's line): the right hand round the grip, index finger along the frame; the left pressed against the grip, its fingers over the right hand's. */
-function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDetail): void {
-  const rightWrist = buildHand(
+function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDetail, arms: ArmBuilders): void {
+  const rightWrist = arms.hand(
     b,
     { side: 'right', palm: [0.03, -0.068, -0.078], across: GRIP_DOWN, back: [1, 0, 0], fingers: [STRAIGHT_INDEX, WRAP, WRAP, WRAP], thumb: { swing: 0.6, curl: [0.2, 0.2] } },
     detail.hands,
   );
-  buildForearm(b, rightWrist, [0.1, -0.26, -0.3], undefined, detail.hands);
-  const leftWrist = buildHand(
+  arms.forearm(b, rightWrist, [0.1, -0.26, -0.3], undefined, detail.hands);
+  const leftWrist = arms.hand(
     support,
     { side: 'left', palm: [-0.034, -0.072, -0.066], across: GRIP_DOWN, back: [-1, 0, 0], fingers: [SUPPORT, SUPPORT, SUPPORT, SUPPORT], thumb: { swing: 0.3, curl: [0.1, 0.1] } },
     detail.hands,
   );
-  buildForearm(support, leftWrist, [-0.16, -0.26, -0.28], undefined, detail.hands);
+  arms.forearm(support, leftWrist, [-0.16, -0.26, -0.28], undefined, detail.hands);
 }
 
 /**
@@ -199,7 +201,7 @@ function pistolHands(b: ModelBuilder, support: ModelBuilder, detail: ReplicaDeta
  * along both sides, a frame with a railed dust cover and a squared trigger guard, a rectangular grip at a steady rake
  * with a short beavertail. High: front and rear serrations, stippled grip panels and a thumb ledge.
  */
-function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
+function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null): ReplicaModel {
   const b = new ModelBuilder(detail);
   // Slide, its accent line, the barrel hood in the ejection port, sights, muzzle.
   b.profile('polymer', [[-0.09, 0.0], [0.1, 0.0], [0.1, 0.03], [0.092, 0.036], [-0.08, 0.036], [-0.09, 0.03]], 0.032, 0.003);
@@ -230,7 +232,7 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
   if (b.high) b.crossTube('metal', 0.0, -0.017, 0.0022, 0.012, 0, 8); // its pivot pin
 
   const support = new ModelBuilder(detail);
-  if (hands === 'hands') pistolHands(b, support, detail);
+  if (arms) pistolHands(b, support, detail, arms);
   const group = b.build(m);
   for (const [name, draw] of Object.entries(PISTOL_PARTS)) group.add(drawnPart(draw, m, detail, name));
   group.getObjectByName('laser:redLaser')?.add(laserBeam(PISTOL_LASER_LENS));
@@ -251,7 +253,7 @@ function buildPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean,
  * turns it grey and unlit). A top fin sight, a dark muzzle with a ring of light. It sits in the hands like the Gas
  * Pistol (the same grip line and hold), so the hands and the figures' pistol pose fit it unchanged.
  */
-function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, hands: HandsShown): ReplicaModel {
+function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boolean, detail: ReplicaDetail, arms: ArmBuilders | null): ReplicaModel {
   const b = new ModelBuilder(detail);
   const muzzle = CYBER_MUZZLE.barrelEnd;
   // The slab over the barrel, chamfered nose and sloped back; the dust cover under it.
@@ -278,7 +280,7 @@ function buildCyberPistol(m: Record<MaterialKey, THREE.Material>, orangeTip: boo
   }
 
   const support = new ModelBuilder(detail);
-  if (hands === 'hands') pistolHands(b, support, detail);
+  if (arms) pistolHands(b, support, detail, arms);
   const group = b.build(m);
   for (const [name, draw] of Object.entries(CYBER_PARTS)) group.add(drawnPart(draw, m, detail, name));
   const magazine = magazinePart(CYBER_MAGAZINES, m, detail, GRIP_DOWN);
@@ -377,14 +379,14 @@ export const RAISED_HAND_POSE: HandPose = {
 };
 
 /** Left hand raised to call a hit: palm facing forward, fingers up, forearm dropping out of view. */
-function buildRaisedHand(m: Record<MaterialKey, THREE.Material>, detail: ReplicaDetail): THREE.Group {
+function buildRaisedHand(m: Record<MaterialKey, THREE.Material>, detail: ReplicaDetail, arms: ArmBuilders): THREE.Group {
   const b = new ModelBuilder(detail);
-  const wrist = buildHand(
+  const wrist = arms.hand(
     b,
     RAISED_HAND_POSE,
     detail.hands,
   );
-  buildForearm(b, wrist, [wrist[0] + 0.03, wrist[1] - 0.3, wrist[2] - 0.08], undefined, detail.hands);
+  arms.forearm(b, wrist, [wrist[0] + 0.03, wrist[1] - 0.3, wrist[2] - 0.08], undefined, detail.hands);
   return b.build(m);
 }
 
@@ -401,9 +403,12 @@ export function buildReplicaModels(
   detail: ReplicaDetail = LOW_DETAIL,
   paint: ReplicaPaint | null = null,
   hands: HandsShown = 'hands',
+  /** Whose arms hold them (G7): the player's gloved ones, or a robot's when their slot is a robot. */
+  arms: ArmStyle = HUMAN_ARMS,
 ): ReplicaModels {
   const speckle = detail.replica === 'high' ? speckleTextures() : null;
-  const materials = createMaterials(teamColor, detail, speckle, F.unpainted, CYBER_COLOURS.bold);
+  const materials = createMaterials(teamColor, detail, speckle, F.unpainted, CYBER_COLOURS.bold, arms);
+  const builders = armBuilders(arms);
   const models = new Map<string, ReplicaModel>();
   // Every material made for a replica's own colours, to dispose and to switch with the sheen (setReflections).
   const painted: THREE.Material[] = [];
@@ -412,9 +417,9 @@ export function buildReplicaModels(
     const own = coloursOf(r, slot, paint);
     const mats = own ? paintedMaterials(materials, detail, own.colours, own.cyber) : materials;
     for (const key of PAINTED) if (mats[key] !== materials[key]) painted.push(mats[key]);
-    models.set(r.id, build(mats, orangeTips, detail, hands));
+    models.set(r.id, build(mats, orangeTips, detail, hands === 'hands' ? builders : null));
   });
-  const raisedHand = buildRaisedHand(materials, detail);
+  const raisedHand = buildRaisedHand(materials, detail, builders);
   const metals = [materials.metal, ...painted.filter((m) => (m as THREE.MeshStandardMaterial).metalness > 0)] as THREE.MeshStandardMaterial[];
   return {
     models,

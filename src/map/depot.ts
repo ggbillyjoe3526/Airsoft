@@ -419,6 +419,8 @@ export const DEPOT: MapData = {
     regens: REGENS.map(spawnToWorld),
     regenDistance: REGEN_DISTANCE,
   },
+  // G6: bounce light baked by `node pipeline/bake-light.mjs` (re-bake after any change to the blocks; a test says so).
+  bakedLight: { file: 'depot' },
 };
 
 /** Layout facts the tests check against (in world coordinates), exported so they can't drift from the geometry. */

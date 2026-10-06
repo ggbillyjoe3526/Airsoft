@@ -4,7 +4,7 @@ import { LIGHTING_PRESETS, type LightingPreset, VIEWMODEL } from '../config/rend
 import type { ReplicaConfig } from '../config/replicas';
 import type { ReplicaPaint } from '../config/schemes';
 import type { Armament } from '../sim/armament';
-import { buildReplicaModels, fitMuzzle, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
+import { type ArmStyle, buildReplicaModels, fitMuzzle, HUMAN_ARMS, LOW_DETAIL, type MagazinePart, type MuzzleMount, type ReplicaDetail, type ReplicaModels, type SupportHandPart } from './replicaModels';
 
 const smooth = (t: number): number => {
   const c = Math.max(0, Math.min(1, t));
@@ -132,6 +132,8 @@ export class Viewmodel {
     detail: ReplicaDetail = LOW_DETAIL,
     /** Each replica's colour scheme by loadout slot, and Realistic colours (G1); null: the black and tan of before. */
     private readonly paint: ReplicaPaint | null = null,
+    /** The player's own arms (G7): gloved, or a robot's when their slot is a robot (the Robots setting). */
+    private readonly arms: ArmStyle = HUMAN_ARMS,
   ) {
     this.camera = new THREE.PerspectiveCamera(VIEWMODEL.fov, aspect, VIEWMODEL.near, VIEWMODEL.far);
     // Soft sky fill, a warm key from above-right and a cool rim from behind to separate the silhouette.
@@ -148,7 +150,7 @@ export class Viewmodel {
 
   /** Builds every replica (and the raised hand) at `detail` and puts them in the rig. */
   private build(detail: ReplicaDetail): ReplicaModels {
-    const replicas = buildReplicaModels(this.loadout, this.teamColor, VIEWMODEL.orangeTips, detail, this.paint);
+    const replicas = buildReplicaModels(this.loadout, this.teamColor, VIEWMODEL.orangeTips, detail, this.paint, 'hands', this.arms);
     this.slots.length = 0;
     this.beams = [];
     for (const r of this.loadout) {

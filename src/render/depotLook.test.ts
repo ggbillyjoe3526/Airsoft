@@ -11,7 +11,9 @@ import { CORE_SURFACES, type SurfaceTextures } from './proceduralTextures';
 /**
  * Depot builds exactly as before the woodland look (M33i owner rule): its map meshes, vertex for vertex, as captured from
  * the code before M33i (main 0438405) with the same look and stand-in textures. A change here is a change to Depot's
- * look: deliberate ones re-capture the pin and say so in DECISIONS.
+ * look: deliberate ones re-capture the pin and say so in DECISIONS. Re-captured for G6: the concrete's casting and
+ * non-casting pieces are one mesh (the ground drawn after the slabs, out of the shadow map's range), the gabions' tops
+ * are rubble (the gabion texture, no sand) and the precast walls' texture repeats every 2 m (their UVs).
  */
 
 /** FNV-1a over a float array rounded to 1e-4 (stable across platforms for these sizes). */
@@ -27,25 +29,23 @@ type Row = [string, boolean, number, number, number | null, string, number, numb
 const PIN: Record<'plain' | 'detail', Row[]> = {
   plain: [
     ['map-steelPlate', true, 228, 336, null, 'steelPlate', 1687633717, 96722977, 2738363157, 2591861685],
-    ['map-concrete-flat', false, 24, 36, null, 'concrete', 1137673573, 3544548069, 2060928901, 1881639589],
-    ['map-blockWall', true, 768, 1440, null, 'blockWall', 1607307813, 16672525, 3275768781, 879862725],
-    ['map-concrete', true, 768, 1152, null, 'concrete', 1751144565, 3260711293, 2456104117, 2627312069],
+    ['map-concrete', true, 648, 972, 972, 'concrete', 2128768533, 2435460381, 1611042853, 3175850853],
+    ['map-blockWall', true, 768, 1440, null, 'blockWall', 1607307813, 16672525, 2280480309, 879862725],
     ['map-barrier', true, 7048, 11100, null, 'barrier', 1784704581, 707736317, 4144938713, 3048512101],
     ['map-crate', true, 1816, 2748, null, 'crate', 1511588965, 3625141501, 1560544645, 3011479333],
     ['map-corrugated', true, 5304, 8676, null, 'corrugated', 2633553733, 1344298709, 952225461, 3811663397],
     ['map-sandbag', true, 288, 432, null, 'sandbag', 1096613445, 680019765, 4012324245, 2927012421],
-    ['map-gabion', true, 192, 360, null, 'gabion', 1605974341, 515675013, 986400037, 1389156933],
+    ['map-gabion', true, 336, 576, null, 'gabion', 3917581061, 355657397, 4189000705, 526193029],
   ],
   detail: [
     ['map-steelPlate', true, 774, 1368, 1032, 'steelPlate', 838859125, 3890357677, 1140776278, 1856083041],
-    ['map-concrete-flat', false, 2544, 13596, null, 'concrete', 793087381, 2437466098, 1622325765, 1465649253],
-    ['map-blockWall', true, 6230, 18114, 16674, 'blockWall', 2209911561, 428390416, 1734986152, 873620969],
-    ['map-concrete', true, 3334, 7320, 6060, 'concrete', 2595516061, 2882884187, 1669426319, 1164892581],
+    ['map-concrete', true, 5582, 20460, 19416, 'concrete', 3488080045, 478623096, 526800199, 1656451013],
+    ['map-blockWall', true, 6230, 18114, 16674, 'blockWall', 2209911561, 428390416, 2985850169, 873620969],
     ['map-barrier', true, 21140, 33372, 20760, 'barrier', 3191135753, 2695292710, 3093672965, 2646408605],
     ['map-crate', true, 6584, 9888, 5268, 'crate', 1394211205, 3958199917, 524222949, 3907965557],
     ['map-corrugated', true, 24024, 46782, 37674, 'corrugated', 3201333815, 2735355188, 1833331958, 1580581405],
     ['map-sandbag', true, 1176, 1800, 1368, 'sandbag', 718864357, 2216120893, 1353423407, 4156775293],
-    ['map-gabion', true, 710, 1272, 912, 'gabion', 1140737997, 621078860, 1770631493, 184300833],
+    ['map-gabion', true, 1006, 1728, 1152, 'gabion', 2623655341, 4174580944, 145423981, 3485225441],
   ],
 };
 

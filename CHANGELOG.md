@@ -7,6 +7,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 ### Added
 - **G1** · Replica colour schemes (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost): rifles Cobalt and pistols Ghost for now; Settings › Look: Robots (Mixed by default) and Realistic colours options
 - **G2** · Replicas rebuilt blockier, two-tone with stippled grips; red dot and silencer redesigned; Cyber Pistol white with cyan glow and magenta core, grey and unlit in Realistic mode
+- **G7** · Players rebuilt: masked humans (high-cut or bump helmet, balaclava, visor) in team camo and a team-colour plate carrier, and robots in a light or dark shell
+- **G7** · Settings › Look › Robots now mixes humans and robots on both teams each match; others' replicas show their team's colours (plain with Realistic colours)
+- **G7** · Your hands: dark gloves, sleeves in your team's camo and its armband; robot arms when your player is a robot
 - **M33j** · Woodland's sounds (dev content): wind in the pines, insects and a distant owl at night, a crackle at each camp fire, and footsteps that sound like the ground underfoot (grass, leaf litter, earth, the creek's gravel, the cabin's boards), as loud as on concrete; Depot sounds exactly as before
 - **FA7** · Environment lighting on Medium and High: sky reflects in players, the flag, range targets and steel; contact shadows under every player on all presets (#71)
 - **FA7** · Settings → Graphics: tone mapping choice (Neutral, AgX, ACES) and relief maps option (Normal, Bump) (#71)
@@ -92,8 +95,14 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M34f** · Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade, vending, stall, planter, booth, van); painted ground markings; plaster ceilings under raised floors
 - **M34f** · Neon Heights: pastel buildings (mint, pink, cyan, amber on slate), paved street with asphalt, neon trim, lit arcade cabinets; night: softer purple sky with city lighting and 180 stars
 - **M34g** · Neon Heights (dev content) sound: traffic hum and drones by day with chimes, neon sizzle and arcade bleeps by night; Depot and Woodland unchanged
+- **G6** · Depot by day: a lower, warmer sun with longer shadows, a bluer sky and fill, and light bounced off walls and containers into the shade (Baked light)
+- **G6** · New surfaces: grey precast concrete walls and rubble gabions in wire (no more sand); weathering on Medium and High (dirt at wall feet, rain streaks, rust) and stains on the ground
+- **G6** · New Custom graphics rows: Baked light (Off, Vertex, Per pixel) and Weathering; Low keeps its cost
+- **G5** · Ultra graphics preset for fast graphics cards: soft 4096 shadows, up to 2× resolution, the most dust and night lights; never picked automatically
+- **G5** · Graphics effects: bloom from Medium; ambient occlusion, temporal smoothing and light shafts on High; reflections and film grain on Ultra
 
 ### Changed
+- **G5** · A Custom graphics mix saved before this build gets High's new effects (ambient occlusion, temporal smoothing, light shafts, bloom); each can be turned off under Custom
 - **G3** · New menus: a bold navy and orange look in Barlow type, a top bar (Play, Loadout, Armory, Range, Settings, your Field Credits and Tokens) and key hints along the bottom; text is never smaller than 15 px
 - **G3** · The Play screen shows maps and modes as picture cards (Day | Night on the card, a Dev tag on maps still being built) with the match rows and a Your match panel on the same page; the Map, Mode, Match and Difficulty pop-ups are gone
 - **G3** · Loadout and Customise show your replicas as pictures; Customise lists the parts down the left, Colour first, with each option as a picture tile beside the replica and its numbers
@@ -101,6 +110,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **G3** · The Armory's collection is a picture grid with a how-it-works strip; the title, pause, summary, result and loading screens take the new look
 - **M70** · The Armory's odds caption says the odds are for each item drawn, before pity (#122)
 - **M68** · Settings → Graphics is shorter: the Custom rows fold away under Low, Medium and High and open when you pick Custom or click "Custom settings" (#121)
+- **M69** · Woodland and Neon Heights each have an echo of their own (long and dark in the woods, brighter in the city), and the neon hum is easier to hear on small speakers (#124)
 - **FA13** · Loadout and Armory tiles show a small line drawing of the item where the empty space was (#76)
 - **FA11b** · Quit, then Play on the same map, is quicker: the map's meshes are kept and reused instead of rebuilt (#73)
 - **M37** · Pro bots holding still aim at the corners and doorways you'd step out of, and answer a peek there faster; anywhere else no faster than Hard
@@ -129,6 +139,8 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA12** · BB and line-of-sight checks against the map are 15–25× faster, with the same results (#60)
 - **M35** · Woodland's Coming soon entry shows only with Dev content on; a match using dev content stays out of the records and pays no Field Credits (#70)
 - **M43** · The summary's records table has no column for a mode still being built (its matches aren't recorded) (#83)
+- **G5** · Frame-rate limit choices are Unlimited (the default), 30, 60, 120, 144 and 240; an older saved limit becomes the nearest choice
+- **G5** · Graphics › Night lights adds Nearest 8
 
 ### Fixed
 - **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later (#122)
@@ -170,6 +182,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 
 ### Internal
 - **M68** · Two unused style rules removed (#121)
+- **M69** · Sound effects drop their silent tails and the countdown beep renders once, so the sounds take less memory (#124)
 - **M64** · The performance check can play Extraction: its scripted player opens a case on Depot (#118)
 - **M51** · CI runs the slow tests in three parallel jobs beside the main check; the Extraction balance tests and the map Extraction blocks share one helper each; a smoke test plays Tournament Extraction with Retro pixels and Pro CQB against Pro (#110)
 - **M57** · The night balance checks now play with the torches bots carry in a real match, and their bands use the new numbers (#120)
@@ -198,6 +211,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **FA11a** · TypeScript stricter (exactOptionalPropertyTypes); GitHub checks verify scope and changelog; dead code removed (#61)
 - **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 - **M50** · Woodland and Neon Heights download only once Dev content is on, the pool and stats tables are a file of their own, and the code size budget is 900 kB with a warning at 90 % (#107)
+- **G5** · The perf harness measures Ultra (`--preset all` and `--preset ultra`), a desktop environment and any window size (`--viewport`)
 
 ## 0.1 Dev 3 · 2026-10-03
 
