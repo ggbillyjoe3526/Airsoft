@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SURFACES } from '../config/render';
 import { type StainKind, WEATHERING } from '../config/weathering';
 import type { MapBlock, MapData } from '../map/mapTypes';
+import { drawDressingCells } from './dressingAtlas';
 import { withoutEnvironment } from './surfaceMaterials';
 
 /**
@@ -11,7 +12,9 @@ import { withoutEnvironment } from './surfaceMaterials';
  * roundel on the long perimeter walls, a "SAFE ZONE" board on the perimeter wall by each dead zone, hazard chevrons on
  * barriers (not on a finished one, M34f). A sign is left out where something stands in front of it. No brands, no team
  * colours. With them, stains on the floors (G6: oil, dirt, cracks, tyre marks, scuffs; WEATHERING.stains), never under
- * a block. The atlas's cells never overlap (atlasRects); the mesh is blended, so the stains fade at their edges.
+ * a block. The atlas's cells never overlap (atlasRects); the mesh is blended, so the stains fade at their edges. G8: the
+ * map's set dressing adds its own quads (render/mapDressing.ts dressingDecals: dirt, litter, logos, sprays, signs), drawn
+ * from a third of the atlas below the first square, so the whole lot stays one draw call.
  */
 
 const D = SURFACES.decals;
@@ -24,6 +27,26 @@ export type AtlasRect = readonly [number, number, number, number];
 /** Bay numbers drawn in the atlas (cells of 256 × 128 in the top three rows). */
 const STENCIL_COUNT = 12;
 
+/** The atlas is this many times as tall as it is wide (G8: the dressing's cells sit under the first square). */
+export const ATLAS_TALL = 1.5;
+
+/** The atlas' height in pixels for its width `size`. */
+export const atlasHeight = (size: number = D.atlasSize): number => size * ATLAS_TALL;
+
+/** The set dressing's pictures (G8, render/dressingAtlas.ts draws them). */
+export interface DressingCells {
+  /** The shipping lines' logos, one per DRESSING.decals.logo.names. */
+  logos: AtlasRect[];
+  /** Dirt banked against a block's foot, thick along the cell's bottom edge. */
+  banks: AtlasRect[];
+  arrow: AtlasRect;
+  tag: AtlasRect;
+  warning: AtlasRect;
+  grit: AtlasRect;
+  contact: AtlasRect;
+  litter: AtlasRect[];
+}
+
 /** Every picture's place in the atlas. */
 export interface AtlasLayout {
   stencils: AtlasRect[];
@@ -32,6 +55,8 @@ export interface AtlasLayout {
   chevrons: AtlasRect;
   /** The ground stains (G6), each kind's variants. */
   stains: Record<StainKind, AtlasRect[]>;
+  /** The set dressing's (G8), in the atlas' last third. */
+  dressing: DressingCells;
 }
 
 /** Where each picture is in the atlas (for its size, SURFACES.decals.atlasSize, in units of 1024 pixels). */
@@ -52,17 +77,30 @@ export function atlasRects(size: number = D.atlasSize): AtlasLayout {
       tyre: [r(0, 896, 512, 128)],
       scuffs: [r(512, 896, 512, 128)],
     },
+    dressing: {
+      logos: [r(0, 1024, 512, 128), r(512, 1024, 512, 128), r(0, 1152, 512, 128), r(512, 1152, 512, 128)],
+      banks: [r(0, 1280, 512, 128), r(512, 1280, 512, 128)],
+      arrow: r(0, 1408, 256, 128),
+      tag: r(256, 1408, 128, 128),
+      warning: r(384, 1408, 128, 128),
+      grit: r(512, 1408, 128, 128),
+      contact: r(640, 1408, 128, 128),
+      litter: [r(768, 1408, 128, 128), r(896, 1408, 128, 128)],
+    },
   };
 }
 
 /** Every rectangle of a layout, in one list (the tests check that none overlaps another). */
 export function allAtlasRects(layout: AtlasLayout): AtlasRect[] {
-  return [...layout.stencils, layout.roundel, layout.safeZone, layout.chevrons, ...Object.values(layout.stains).flat()];
+  const d = layout.dressing;
+  const dressing = [...d.logos, ...d.banks, d.arrow, d.tag, d.warning, d.grit, d.contact, ...d.litter];
+  return [...layout.stencils, layout.roundel, layout.safeZone, layout.chevrons, ...Object.values(layout.stains).flat(), ...dressing];
 }
 
 /**
  * One painted quad: its centre, the outward normal of its face (an axis, ±1: a wall's side, or a floor's top, axis 1),
- * its size (m) and its picture. On a floor, its width runs along x and its height along -z.
+ * its size (m) and its picture. On a floor, its width runs along x and its height along -z, turned `turn` quarter turns
+ * (G8: x, then -z, -x, +z is the picture's up). `tint` (sRGB, G8: a spray's colour) multiplies the picture; white if absent.
  */
 export interface DecalQuad {
   centre: [number, number, number];
@@ -71,18 +109,24 @@ export interface DecalQuad {
   width: number;
   height: number;
   rect: AtlasRect;
+  turn?: 0 | 1 | 2 | 3;
+  tint?: number;
 }
 
 const hashOf = (b: MapBlock): number => (Math.imul(Math.round(Math.abs(b.center.x) * 10), 73856093) ^ Math.imul(Math.round(b.center.z * 10), 83492791)) >>> 0;
 
+/** A floor picture's right and up per quarter turn (DecalQuad.turn): up is -z, -x, +z, +x. */
+const FLOOR_RIGHT: readonly [number, number, number][] = [[1, 0, 0], [0, 0, -1], [-1, 0, 0], [0, 0, 1]];
+const FLOOR_UP: readonly [number, number, number][] = [[0, 0, -1], [-1, 0, 0], [0, 0, 1], [1, 0, 0]];
+
 /** The face's "right" (seen from in front of it) for an outward normal along `axis` with `sign`. */
-function rightOf(axis: 0 | 1 | 2, sign: 1 | -1): [number, number, number] {
-  return axis === 0 ? [0, 0, -sign] : axis === 2 ? [sign, 0, 0] : [1, 0, 0];
+function rightOf(axis: 0 | 1 | 2, sign: 1 | -1, turn = 0): readonly [number, number, number] {
+  return axis === 0 ? [0, 0, -sign] : axis === 2 ? [sign, 0, 0] : FLOOR_RIGHT[turn]!;
 }
 
-/** The face's "up" in the picture: up the wall, or away from you across a floor (-z). */
-function upOf(axis: 0 | 1 | 2): [number, number, number] {
-  return axis === 1 ? [0, 0, -1] : [0, 1, 0];
+/** The face's "up" in the picture: up the wall, or away from you across a floor (-z, or as turned). */
+function upOf(axis: 0 | 1 | 2, turn = 0): readonly [number, number, number] {
+  return axis === 1 ? FLOOR_UP[turn]! : [0, 1, 0];
 }
 
 /** A number in [0, 1) from integers (the stains' placement: the same map always gets the same stains). */
@@ -150,7 +194,7 @@ export function floorStains(map: MapData, size: number = D.atlasSize): DecalQuad
 }
 
 /** True if a block other than `self` (and the floors) stands within `clearance` in front of the quad. */
-function blocked(q: DecalQuad, blocks: readonly MapBlock[], self: MapBlock, clearance: number): boolean {
+export function decalBlocked(q: DecalQuad, blocks: readonly MapBlock[], self: MapBlock, clearance: number): boolean {
   const r = rightOf(q.axis, q.sign);
   const lo = [0, 0, 0];
   const hi = [0, 0, 0];
@@ -177,7 +221,7 @@ export function decalQuads(map: MapData, size: number = D.atlasSize): DecalQuad[
   const blocks = map.blocks;
   const clearance = 0.3;
   const add = (q: DecalQuad, self: MapBlock): boolean => {
-    if (blocked(q, blocks, self, clearance)) return false;
+    if (decalBlocked(q, blocks, self, clearance)) return false;
     out.push(q);
     return true;
   };
@@ -295,7 +339,7 @@ export function decalQuads(map: MapData, size: number = D.atlasSize): DecalQuad[
 export function drawDecalAtlas(size: number = D.atlasSize): THREE.Texture {
   const canvas = document.createElement('canvas');
   canvas.width = size;
-  canvas.height = size;
+  canvas.height = atlasHeight(size);
   const g = canvas.getContext('2d');
   if (!g) throw new Error('2D canvas unavailable');
   const rects = atlasRects(size);
@@ -366,6 +410,7 @@ export function drawDecalAtlas(size: number = D.atlasSize): THREE.Texture {
     g.restore();
   }
   drawStains(g, rects.stains, k);
+  drawDressingCells(g, rects.dressing, k);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.name = 'decals';
@@ -471,20 +516,28 @@ function drawStains(g: CanvasRenderingContext2D, stains: AtlasLayout['stains'], 
   }
 }
 
-/** The signs and stains as one mesh (null when the map has none); `atlas` makes the texture (the tests pass a stand-in). */
-export function buildMapDecals(map: MapData, atlas: () => THREE.Texture = drawDecalAtlas): THREE.Mesh | null {
-  const quads = decalQuads(map);
+/**
+ * The signs and stains as one mesh (null when the map has none), with `extra` quads (G8: the map's set dressing,
+ * render/mapDressing.ts dressingDecals); `atlas` makes the texture (the tests pass a stand-in). Drawn before the other
+ * blended things (DECAL_RENDER_ORDER): it lies flat on the field, and everything else blended stands in front of it.
+ */
+export function buildMapDecals(map: MapData, atlas: () => THREE.Texture = drawDecalAtlas, extra: readonly DecalQuad[] = []): THREE.Mesh | null {
+  const quads = extra.length > 0 ? [...decalQuads(map), ...extra] : decalQuads(map);
   if (quads.length === 0) return null;
   const positions: number[] = [];
   const normals: number[] = [];
   const uvs: number[] = [];
+  const colors: number[] = [];
   const indices: number[] = [];
   const size = D.atlasSize;
+  const tall = atlasHeight(size);
+  const tint = new THREE.Color();
   for (const q of quads) {
-    const r = rightOf(q.axis, q.sign);
-    const u = upOf(q.axis);
+    const r = rightOf(q.axis, q.sign, q.turn);
+    const u = upOf(q.axis, q.turn);
     const n = [0, 0, 0];
     n[q.axis] = q.sign;
+    tint.setHex(q.tint ?? 0xffffff, THREE.SRGBColorSpace);
     const base = positions.length / 3;
     const [rx, ry, rw, rh] = q.rect;
     for (const [su, sv] of [
@@ -497,8 +550,9 @@ export function buildMapDecals(map: MapData, atlas: () => THREE.Texture = drawDe
       const b = sv * (q.height / 2);
       positions.push(q.centre[0] + r[0] * a + u[0] * b, q.centre[1] + r[1] * a + u[1] * b, q.centre[2] + r[2] * a + u[2] * b);
       normals.push(n[0]!, n[1]!, n[2]!);
+      colors.push(tint.r, tint.g, tint.b);
       // The canvas runs downwards and the texture is flipped (flipY): v = 1 at the canvas top.
-      uvs.push((rx + ((su + 1) / 2) * rw) / size, 1 - (ry + ((1 - sv) / 2) * rh) / size);
+      uvs.push((rx + ((su + 1) / 2) * rw) / size, 1 - (ry + ((1 - sv) / 2) * rh) / tall);
     }
     indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
@@ -506,19 +560,37 @@ export function buildMapDecals(map: MapData, atlas: () => THREE.Texture = drawDe
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geo.setIndex(indices);
   geo.computeBoundingSphere();
-  // Blended (G6): the stains fade at their edges; the texels with nothing on them are skipped.
+  // Blended (G6): the stains fade at their edges; the texels with nothing on them are skipped. Vertex colours (G8): a
+  // spray's paint over its white drawing; white everywhere else.
   const material = withoutEnvironment(
-    new THREE.MeshLambertMaterial({ map: atlas(), transparent: true, depthWrite: false, alphaTest: D.alphaFloor, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    new THREE.MeshLambertMaterial({
+      map: atlas(),
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      alphaTest: D.alphaFloor,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    }),
   );
   const mesh = new THREE.Mesh(geo, material);
   mesh.name = 'map-decals';
   mesh.receiveShadow = true;
+  mesh.renderOrder = DECAL_RENDER_ORDER;
   mesh.matrixAutoUpdate = false;
   mesh.updateMatrix();
   return mesh;
 }
+
+/**
+ * The decals' draw order among the blended things (G8): first, as they lie flat on the field's faces; the puddles
+ * (render/dressingMeshes.ts) next, over the stains; then smoke, dust and BBs, which stand in front of both.
+ */
+export const DECAL_RENDER_ORDER = -2;
 
 /** Frees the signs' texture (its mesh's geometry and material go with the map's, disposeMapMeshes). */
 export function disposeMapDecals(group: THREE.Group): void {
