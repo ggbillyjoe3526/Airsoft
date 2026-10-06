@@ -19,13 +19,22 @@ function coloursOf(root: THREE.Object3D, scale = 1): Set<number> {
 
 describe('Replica paint (G1)', () => {
   it('draws each replica in its own scheme: body, furniture, details, accent line and steel', () => {
-    const models = buildReplicaModels([AEG, GAS_PISTOL], 0x3d8bff, false, LOW_DETAIL, { schemes: ['signal', 'acid'], realistic: false });
-    const rifle = coloursOf(models.models.get(AEG.id)!.group);
-    const pistol = coloursOf(models.models.get(GAS_PISTOL.id)!.group);
-    for (const part of ['body', 'furniture', 'detail', 'accent', 'steel'] as const) expect(rifle.has(SCHEMES.signal[part]), part).toBe(true);
-    for (const part of ['body', 'furniture', 'detail', 'accent', 'steel'] as const) expect(pistol.has(SCHEMES.acid[part]), part).toBe(true);
-    expect(pistol.has(SCHEMES.signal.furniture)).toBe(false);
-    models.dispose();
+    // On Low the steel shares the detail material (G2: no more draw calls than before), so it shows on High only.
+    const levels = [
+      [LOW_DETAIL, ['body', 'furniture', 'detail', 'accent']],
+      [HIGH, ['body', 'furniture', 'detail', 'accent', 'steel']],
+    ] as const;
+    for (const [detail, parts] of levels) {
+      const models = buildReplicaModels([AEG, GAS_PISTOL], 0x3d8bff, false, detail, { schemes: ['signal', 'acid'], realistic: false });
+      // High's vertex-coloured materials are brightened by 1 / wearLight (see below), so either form counts.
+      const both = (root: THREE.Object3D): Set<number> => new Set([...coloursOf(root), ...coloursOf(root, 1 / REPLICA_FINISH.wearLight)]);
+      const rifle = detail.replica === 'high' ? both(models.models.get(AEG.id)!.group) : coloursOf(models.models.get(AEG.id)!.group);
+      const pistol = detail.replica === 'high' ? both(models.models.get(GAS_PISTOL.id)!.group) : coloursOf(models.models.get(GAS_PISTOL.id)!.group);
+      for (const part of parts) expect(rifle.has(SCHEMES.signal[part]), `${detail.replica} ${part}`).toBe(true);
+      for (const part of parts) expect(pistol.has(SCHEMES.acid[part]), `${detail.replica} ${part}`).toBe(true);
+      expect(pistol.has(SCHEMES.signal.furniture)).toBe(false);
+      models.dispose();
+    }
   });
 
   it('draws the scheme’s plain family under Realistic colours, and the black and tan of before with no paint', () => {

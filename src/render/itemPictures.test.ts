@@ -114,6 +114,33 @@ describe('item pictures (G2)', () => {
     expect(again).not.toBe(first);
     frames.frame();
     await expect(again).resolves.toMatch(/^picture:/);
+    // The failed draw's model left the scene: the retry draws what a clean first draw does.
+    const clean = fakeTarget();
+    const cleanFrames = manualFrames();
+    const fresh = new ItemPictures(clean, cleanFrames.schedule);
+    const once = fresh.picture(rifle);
+    cleanFrames.frame();
+    await once;
+    expect(target.draws.at(-1)!.meshes).toBe(clean.draws[0]!.meshes);
+    fresh.dispose();
+  });
+
+  it('moves the muzzle device out to a fitted long barrel\'s end, as the viewmodel does', () => {
+    const box = (o: THREE.Object3D): THREE.Box3 => new THREE.Box3().setFromObject(o);
+    for (const muzzle of ['none', 'silencer'] as const) {
+      const models = buildReplicaModels([AEG], 0, false, HIGH, null, 'bare');
+      const model = models.models.get(AEG.id)!;
+      model.group.updateMatrixWorld(true);
+      fitParts(model, { barrel: 'long', muzzle });
+      model.group.updateMatrixWorld(true);
+      const barrelFront = box(model.group.getObjectByName('barrel:long')!).min.z;
+      const device = box(model.group.getObjectByName(`muzzle:${muzzle}`)!);
+      // The device starts at the long barrel's front and runs on past it (forward is -z).
+      expect(device.max.z, muzzle).toBeGreaterThanOrEqual(barrelFront - 0.002);
+      expect(device.max.z, muzzle).toBeLessThanOrEqual(barrelFront + 0.02);
+      expect(device.min.z, muzzle).toBeLessThan(barrelFront);
+      models.dispose();
+    }
   });
 
   it('builds the replicas bare for a picture: the same replica, no hands or sleeves', () => {
@@ -139,11 +166,12 @@ describe('item pictures (G2)', () => {
 
   it('shows the fitted parts (and the standard magazine, the bare muzzle and the iron sights with no optic)', () => {
     const models = buildReplicaModels([AEG], 0, false, undefined, null, 'bare');
-    const { group } = models.models.get(AEG.id)!;
+    const model = models.models.get(AEG.id)!;
+    const { group } = model;
     const shown = (name: string): boolean => group.getObjectByName(name)!.visible;
-    fitParts(group, {});
+    fitParts(model, {});
     expect([shown('magazine:standard'), shown('muzzle:none'), shown('sightsUp'), shown('optic:redDot'), shown('sightsDown')]).toEqual([true, true, true, false, false]);
-    fitParts(group, { optic: 'redDot', magazine: 'hiCap', muzzle: 'silencer' });
+    fitParts(model, { optic: 'redDot', magazine: 'hiCap', muzzle: 'silencer' });
     expect([shown('optic:redDot'), shown('magazine:hiCap'), shown('magazine:standard'), shown('muzzle:silencer'), shown('muzzle:none'), shown('sightsUp'), shown('sightsDown')]).toEqual([
       true,
       true,

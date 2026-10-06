@@ -264,6 +264,13 @@ function onBevel(kind: EdgeKind, nx: number, ny: number, nz: number): boolean {
   return axes >= 2;
 }
 
+/**
+ * On Low, the small dark parts share the detail material (steel, rubber and stippled panels are all dark greys there and
+ * plain without the High finish), so the two-tone models with their accent line cost no more draw calls than the plainer
+ * models before G2.
+ */
+const LOW_SHARED: Partial<Record<MaterialKey, MaterialKey>> = { metal: 'detail', rubber: 'detail', stipple: 'detail' };
+
 /** Collects parts per material and merges them into one mesh per material. */
 export class ModelBuilder {
   private readonly parts = new Map<MaterialKey, THREE.BufferGeometry[]>();
@@ -414,7 +421,8 @@ export class ModelBuilder {
     return group;
   }
 
-  private add(key: MaterialKey, geo: THREE.BufferGeometry, edge: EdgeKind): this {
+  private add(asked: MaterialKey, geo: THREE.BufferGeometry, edge: EdgeKind): this {
+    const key = this.high ? asked : (LOW_SHARED[asked] ?? asked);
     if (this.high && SPECKLED[key] !== undefined) projectSpeckleUvs(geo, SPECKLED[key]! / F.speckle.size);
     else geo.deleteAttribute('uv');
     if (coloured(this.detail)) this.colour(geo, this.high ? edge : 'none');
