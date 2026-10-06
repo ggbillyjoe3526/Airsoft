@@ -1,110 +1,144 @@
 import { HITS } from './hits';
 
-/** What a figure wears on its head: a cap, a bump helmet with a headset, or just its hair with a sweatband. */
-export type Headgear = 'cap' | 'helmet' | 'hair';
-/** Over the top: a light chest rig (front panel and pouches) or a plate carrier (front and back plates, a pack). */
-export type Vest = 'rig' | 'carrier';
+/**
+ * What a human figure wears on its head (graphics overhaul G7; William, round 2: no bare faces): a high-cut helmet with
+ * rails and a headset, a bump helmet, a balaclava, or a helmet with a full-face visor. Every one covers the face: the
+ * goggles and a mesh mask, or the visor, and a neck gaiter below.
+ */
+export type Headgear = 'highCut' | 'bump' | 'balaclava' | 'visor';
 
-/** One figure's looks: casual clothes, the vest and headgear over them, its skin, and a mesh mask or a bare face. */
+/** One figure's looks: its headgear, whether it carries a pack and a radio, and how light its camo is. */
 export interface FigureLook {
-  readonly top: number;
-  readonly trousers: number;
-  readonly vest: Vest;
-  readonly vestColor: number;
-  readonly pouches: number;
   readonly headgear: Headgear;
-  /** The cap, helmet or hair colour. */
-  readonly hat: number;
-  /** A mesh lower-face mask in this colour, or null: goggles only, the face shows. */
-  readonly mask: number | null;
-  readonly skin: number;
-  /** A hoodie: its hood lies behind the neck on the detailed figure (QualitySettings.figureDetail, FA8). */
-  readonly hood: boolean;
+  /** A hydration pack on the carrier's back. */
+  readonly pack: boolean;
+  /** A radio pouch on the left of the carrier, its antenna up past the shoulder (on the detailed figure). */
+  readonly radio: boolean;
+  /** Its camo and shirt this many times as light as the team's (FIGURE.palette), so a team doesn't look cloned. */
+  readonly tone: number;
 }
 
 /**
- * The six looks (M14 rework): a weekend game at a site, not a military unit. Hoodies, tees, jeans and work trousers in
- * greys, sand, cream and greens, with a mix of rigs and carriers, caps, helmets and bare heads; most faces show
- * (goggles only), two wear a mesh mask in a light or matching colour. Figure `id` wears look `id % 6`, so every player
- * in a 3 v 3 looks different. None of these reads as a team colour (characterModels.test.ts).
+ * The six looks (G7, from the concept's four heads): every head masked, a mix of packs and radios, a little lighter or
+ * darker camo each. Figure `id` wears look `id % 6`, so every player in a 3 v 3 looks different. Robots take the pack.
  */
 const LOOKS: readonly FigureLook[] = [
-  { top: 0x4d5157, trousers: 0x4b5263, vest: 'rig', vestColor: 0x2f3134, pouches: 0x3b3e42, headgear: 'cap', hat: 0x2a2b2d, mask: null, skin: 0xe3b796, hood: true }, // charcoal hoodie, jeans
-  { top: 0xbcad8e, trousers: 0x5e584c, vest: 'carrier', vestColor: 0x958c6a, pouches: 0x7d7660, headgear: 'helmet', hat: 0xa08c68, mask: 0xb3a689, skin: 0xc68e68, hood: false }, // sand tee, brown work trousers
-  { top: 0x587a50, trousers: 0x8f8466, vest: 'rig', vestColor: 0x63674e, pouches: 0x55593f, headgear: 'hair', hat: 0x2a2622, mask: null, skin: 0x8a5a3c, hood: true }, // green hoodie, khakis
-  { top: 0x9fa0a3, trousers: 0x35373b, vest: 'carrier', vestColor: 0x6c6e52, pouches: 0x5f6148, headgear: 'cap', hat: 0x5b5e4a, mask: null, skin: 0xf0c9a8, hood: false }, // grey tee, black trousers
-  { top: 0xd2c8b0, trousers: 0x515a6b, vest: 'rig', vestColor: 0x958c6a, pouches: 0x7d7660, headgear: 'helmet', hat: 0x2c2d2f, mask: 0x8d8f92, skin: 0xd9a47e, hood: true }, // cream hoodie, jeans
-  { top: 0x7a7d62, trousers: 0x6a6d70, vest: 'carrier', vestColor: 0x34363a, pouches: 0x44474b, headgear: 'hair', hat: 0x4a4038, mask: null, skin: 0xb57a52, hood: false }, // olive tee, grey trousers
+  { headgear: 'highCut', pack: true, radio: true, tone: 1 },
+  { headgear: 'balaclava', pack: false, radio: false, tone: 0.92 },
+  { headgear: 'visor', pack: true, radio: false, tone: 1.06 },
+  { headgear: 'bump', pack: false, radio: true, tone: 0.96 },
+  { headgear: 'bump', pack: true, radio: false, tone: 1.08 },
+  { headgear: 'highCut', pack: false, radio: false, tone: 0.98 },
 ];
 
+/** A colour as [hue, saturation, lightness] in sRGB, each 0..1; a hue of -1 takes the team colour's own. */
+export type Hsl = readonly [hue: number, sat: number, light: number];
+
 /**
- * Third-person look of players and bots: chunky stylised players at a weekend game (M14, reworked): casual clothes
- * under a chest rig or a plate carrier, full-seal goggles (a mesh mask on some), a cap, a bump helmet with a headset or
- * bare hair, knee and elbow pads, gloves, and the team colour as tape: a broad band round the torso (about a quarter
- * of a metre tall, under the arms, so it reads across the map), armbands, a band on the headgear and on each thigh.
- * Colours are flat vertex colours on one material per figure, so each figure costs a handful of draw calls.
+ * Third-person figures (graphics overhaul G7, the v3 concept William approved): airsoft players in camo under a plate
+ * carrier, every face covered, or robots in a light or dark shell wearing the same carrier. Blocky and near-modular
+ * (Marathon), bold colour (Valorant). The team colour is exact on the carrier all round the torso, the knee pads, the
+ * armbands and the helmets, so teams read across the map; everything else is derived from it (FIGURE.palette), so the
+ * colour-blind sets dress their teams too. Colours are flat vertex colours on one material per figure, so each figure
+ * costs four draw calls.
  */
 export const FIGURE = {
   colors: {
-    skin: 0xd9a47e,
+    glove: 0x26292e,
+    /** Pouches, straps and headset cups; the darker for webbing, belts and the hood under a helmet. */
+    gear: 0x4b5059,
+    gearDark: 0x2b2f35,
     boots: 0x3a332b,
-    gloves: 0x2f302c,
-    pads: 0x3b3d36,
-    goggles: 0x1c1f24,
-    lens: 0xa8dcf0,
-    headset: 0x26282a,
-    replica: 0x26282c,
-    furniture: 0xb49a70,
+    sole: 0x24221f,
+    /** Rubber: goggle frames, a mask's trim, a visor's seal. */
+    rubber: 0x1f2125,
+    /** Moulded black plastic: rails, a magazine's top, an antenna. */
+    polymer: 0x24272c,
+    /** The perforated steel mesh mask. */
+    mask: 0x5f646b,
+    buckle: 0x9ea4aa,
     /** A weapon torch's lens on a figure's replica (M33h): pale glass; its glow is the torch beams' glare. */
     torchLens: 0xdde6ee,
   },
+  /**
+   * How a team's clothes are derived from its colour (`teamColor`, the colour-blind sets included): warm team colours
+   * (hue below `warmBelow` or above `warmAbove`) dress in tan camo, the rest in a cool grey of their own hue, both too
+   * grey to be read as a team colour. The goggles' tint and the robots' glow take the team's hue; its dark (a back
+   * panel, a balaclava) is its colour this much less saturated and lighter.
+   */
+  palette: {
+    warmBelow: 0.2,
+    warmAbove: 0.92,
+    camo: { cool: [-1, 0.11, 0.47], warm: [0.11, 0.26, 0.58] } as Readonly<Record<'cool' | 'warm', Hsl>>,
+    shirt: { cool: [-1, 0.12, 0.37], warm: [0.11, 0.21, 0.5] } as Readonly<Record<'cool' | 'warm', Hsl>>,
+    lens: [-1, 0.55, 0.25] as Hsl,
+    glow: [-1, 1, 0.64] as Hsl,
+    dark: { sat: 0.85, light: 0.58 },
+    /** The neck gaiter: the shirt this bright. */
+    gaiter: 0.8,
+    /** Camo blotches on the detailed figure: its darker and lighter tones, and the blotches' size (metres). */
+    camoDark: 0.74,
+    camoLight: 1.14,
+    camoScale: 0.11,
+  },
+  /**
+   * Robots (Settings › Look › Robots): a light shell for the first team and a dark one for the second, as the concept
+   * (light and dark tell the teams apart with little colour vision too), dark joints, chrome pistons, a dark visor.
+   */
+  robot: {
+    shells: [0xd9dee4, 0x4b5159] as readonly number[],
+    joint: 0x2c3036,
+    chrome: 0xc9cdd3,
+    visor: 0x10161e,
+  },
   looks: LOOKS,
-  /** The team tape round the torso: height (metres) and its centre above the torso's bottom. */
-  teamBand: { height: 0.26, centre: 0.17 },
   /** The figures' one material: matte fabric and plastic. */
   roughness: 0.82,
   /** Body layout (metres, feet at y = 0, facing -Z). Head height and crouch come from the hit volume so they always match. */
   hipHeight: HITS.lean.pivotHeight,
-  /** Limb radii (metres): thigh at the hip and at the knee, shin at the calf; upper arm, forearm. */
-  legRadius: 0.085,
-  kneeRadius: 0.068,
-  shinRadius: 0.064,
-  hipSpread: 0.1,
+  /** The thigh's widest radius, the hips' spread, and the torso's box (the hit volume is built round these). */
+  legRadius: 0.092,
+  hipSpread: 0.095,
   torso: { width: 0.4, height: 0.56, depth: 0.24, bottom: HITS.lean.pivotHeight },
   shoulderHeight: 1.43,
-  shoulderSpread: 0.22,
-  armRadius: 0.055,
-  forearmRadius: 0.047,
-  /** Mesh detail: segments round each limb and sphere (a figure stays a few thousand triangles). */
-  radialSegments: 8,
+  shoulderSpread: 0.2,
+  /** Upper arm and forearm lengths (metres): elbows sit between shoulder and wrist by two-bone IK. */
+  upperArm: 0.3,
+  forearm: 0.29,
+  /** The knee and the foot's frame below the hip, and the ankle above the foot (metres). */
+  knee: 0.44,
+  foot: 0.82,
+  ankle: 0.04,
   /**
-   * Player detail (QualitySettings.figureDetail, FA8; audit section 5 "Third-person figures and kit"). `low` is the figure
-   * as it was (Low's cost). `high` rounds the limbs and head further, shapes the head (jaw, ears), gives the goggles a
-   * framed band with a glossy lens, the gloves a thumb and knuckle pad, the kit lids, soles, cuffs, a hood and a
-   * hydration tube, darkens the torso's lower third and the hem (a baked "ambient occlusion") and lightens every bevel
-   * (the CS edge highlight). Segments: limbs, spheres, and the head's [sides, rings]; `wrap`: an arc's and a full ring's.
+   * Player detail (QualitySettings.figureDetail, FA8). `low` is Low's cost: plain blocks, limbs 8 sides round in two
+   * rings, mitten hands. `high` chamfers every block (its bevels a shade lighter: the CS edge highlight), rounds limbs
+   * and shells further, prints camo blotches, splits the hands into fingers and adds the small kit (laces, vents,
+   * webbing, a boom mic, an antenna, pistons). [sides, rings] of limbs, the head, helmet shells and joints; `band`:
+   * [pieces, rows] of a curved band (goggles, a mask); `cylinder`: sides of a headset cup or a hinge.
    */
   detail: {
-    low: { radialSegments: 8, sphereSegments: 10, head: [10, 6], wrap: [10, 14], overhaul: false },
-    high: { radialSegments: 10, sphereSegments: 12, head: [14, 10], wrap: [16, 20], overhaul: true },
+    low: { limb: [8, 2], head: [10, 6], shell: [12, 6], joint: [6, 4], band: [6, 1], cylinder: 8, overhaul: false },
+    high: { limb: [10, 4], head: [14, 8], shell: [18, 8], joint: [10, 6], band: [12, 2], cylinder: 12, overhaul: true },
   },
   /**
    * The detailed figure's finishes (FA8, render/figureFinish.ts): [roughness, metalness] per vertex on the figure's one
-   * material. Fabric stays matte; the goggle lens and helmet shells are moulded and glossy; the replica is toy polymer
-   * with a painted-steel barrel. Shapes on top: bevels this much lighter (`edgeLight`), the torso's lower third and hem
-   * down to `hemShade` of its colour, cuffs and soles `cuffShade` and `soleShade` of theirs, lids `lidLight` lighter.
+   * material. Fabric stays matte; goggle lenses, visors and helmet shells are moulded and glossy; robot shells satin;
+   * replicas toy polymer with painted-steel barrels. Shapes on top: bevels this much lighter (`edgeLight`), cuffs and
+   * soles `cuffShade` and `soleShade` of their colour, lids `lidLight` lighter.
    */
   finish: {
     fabric: [0.82, 0],
-    skin: [0.6, 0],
     lens: [0.08, 0.25],
     shell: [0.38, 0.08],
+    robot: [0.45, 0.12],
     polymer: [0.5, 0],
     steel: [0.4, 0.65],
+    /** The mesh mask: perforated steel reads as a dull grey at range, not a mirror. */
+    mesh: [0.55, 0.25],
+    chrome: [0.22, 0.9],
     rubber: [0.92, 0],
   },
   edgeLight: 1.1,
-  hemShade: 0.8,
   cuffShade: 0.84,
   soleShade: 0.55,
   lidLight: 1.15,
@@ -129,6 +163,8 @@ export const FIGURE = {
    */
   torch: { size: 0.032, length: 0.11, rifleSide: 0.045, rifleAt: 0.72, pistolBelow: 0.035, pistolLength: 0.07, pistolSize: 0.8, lensSize: 0.8, lensDepth: 0.008 },
   headRadius: 0.11,
+  /** The head is built in a frame at the base of the neck, this far below the head's centre. */
+  neckBelowHead: 0.15,
   headHeight: HITS.headHeight,
   /** Crouched, the upper body drops this far and the legs fold to fit. */
   crouchDrop: HITS.crouchDrop,
@@ -138,6 +174,12 @@ export const FIGURE = {
   /** Legs swing only above this speed (m/s); a jump bigger than `maxStride` (m) in one frame is a teleport, not a step. */
   walkingSpeed: 0.2,
   maxStride: 1,
+  /**
+   * Calling a hit: the raised hand's wrist this high (metres, standing), and the rifle hanging from the other hand this
+   * far (radians) off straight down, muzzle forward.
+   */
+  hitHand: 1.98,
+  hangTilt: 0.25,
   /** Players out in the dead zone hold their replica pointing at the ground (radians of aim pitch). */
   outAimPitch: -0.9,
   /**
