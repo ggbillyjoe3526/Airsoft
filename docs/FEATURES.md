@@ -160,3 +160,4 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Debug overlay (` or F3): frame rate, frame time, seed, position, draw calls, triangles, GPU object counts (Phase 1, Phase 3)
 - BB flight paths drawn in the world (]) (Phase 1)
 - `?seed=N`, `?quality=low|medium|high|ultra`, `?nolock` on the dev server and in the smoke test build (Phase 3)
+- `npm run t` and `npm run t:all`: tests with dots and failures only (TE1)
