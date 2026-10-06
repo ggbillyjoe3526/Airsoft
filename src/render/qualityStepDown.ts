@@ -1,4 +1,4 @@
-import { QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset } from '../config/render';
+import { QUALITY_PRESETS, QUALITY_STEP_DOWN, type QualityChoice, type QualityPreset } from '../config/render';
 
 /**
  * The automatic quality step-down (audit REN-03): frame times while playing, judged in windows of
@@ -37,7 +37,12 @@ export function slowFrameMs(frameRateCap: number): number {
   return Math.max(QUALITY_STEP_DOWN.p95Ms, frameRateCap > 0 ? (1000 / frameRateCap) * QUALITY_STEP_DOWN.capSlack : 0);
 }
 
-/** The preset one step down from `choice`, or null: Low is the floor, and a Custom mix is the player's own. */
+/**
+ * The preset one step down from `choice`, or null: Low is the floor, and a Custom mix is the player's own. Ultra steps to
+ * High, though only an automatic pick steps down and the game never picks Ultra itself (G5).
+ */
 export function presetBelow(choice: QualityChoice): QualityPreset | null {
-  return choice === 'high' ? 'medium' : choice === 'medium' ? 'low' : null;
+  if (choice === 'custom') return null;
+  const i = QUALITY_PRESETS.indexOf(choice);
+  return i > 0 ? QUALITY_PRESETS[i - 1]! : null;
 }

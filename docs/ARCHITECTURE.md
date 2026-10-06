@@ -88,7 +88,10 @@ ends the round). A hit character is eliminated
   → Graphics and saved, `?quality=` for a visit, or else the GPU's preset (`gpuCheck.ts` `probeGpu`/`gpuTier`: Low in
   software, Medium on integrated graphics, High on a discrete card), which steps down by itself on slow frames
   (`qualityStepDown.ts`, never saved). It sets the render scale and DPI cap (`effectivePixelRatio`), antialiasing,
-  shadows, the figures' shading, surface relief, texture size and filtering, dust and the replica's sheen:
+  shadows, the figures' shading, surface relief, texture size and filtering, dust, the replica's sheen and, from Medium
+  up, the post stack (`render/post/`, G5: `postPlan` picks ambient occlusion, reflections, light shafts, temporal
+  smoothing, bloom and the lens finish per preset, and `PostHost` makes, sizes and frees the stack for the renderer; Low
+  builds none; the viewmodel is drawn after it, on the canvas):
   `Game.changeQuality` applies new settings at once through `Renderer.setQuality` (a new WebGL context on a new canvas
   when antialiasing changes; the pointer lock is on the container, so it survives) and `MatchSession.setQuality` (the
   daylight, `restyleMap`, the figures and `CombatPresentation.setQuality`). The frame-rate cap
@@ -368,9 +371,11 @@ request. Each line names where it lives and what pins it.
   the character controller the simulation sees; the simulation never calls Rapier. Pinned by `physics/physicsWorld.test.ts`.
 - **`MatchSession.advance(dt)` / `draw(dt)` / `afterTick()`** (`matchSession.ts`): simulation first, presentation
   after; `afterTick` is where stats, the HUD and sound read the tick's events. Pinned by the smoke test.
-- **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`): the
+- **`QualitySettings`, `QUALITY`, `QualityChoice`, `resolveQuality`, `qualityChoiceOf`** (`config/render.ts`, which
+  re-exports them from `config/renderQuality.ts` since G5 split it by concern; import from `config/render.ts`): the
   fields a preset or the Custom rows may set (every preset sets every field; `QUALITY` is the preset table; a choice is
-  a preset or `'custom'`, which resolves to High overlaid with the saved rows); `Renderer.setQuality` and
+  a preset, Low to Ultra (Ultra since G5, never the automatic pick), or `'custom'`, which resolves to High overlaid
+  with the saved rows); `Renderer.setQuality` and
   `MatchSession.setQuality` apply them at once, antialiasing included. Fields are added, never renamed: a new field
   takes a value on every preset, a row in `config/graphics.ts` and a `graphics.<field>` store key, with no further
   contract change (G6 added `bakedLight` and `weathering`). Pinned by `config/render.test.ts`, `config/graphics.test.ts`,
@@ -379,7 +384,8 @@ request. Each line names where it lives and what pins it.
   renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
   "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added: `quality`
   holds a `QualityChoice`; `graphics.<field>` holds a Custom row (an option id or a slider position), `frameRateCap`
-  and `showFps` the two Graphics rows outside the presets (FA2), all read with a fallback, so version 1 stands. Pinned
+  (Unlimited, 30, 60, 120, 144 or 240; an older number reads as the nearest, G5) and `showFps` the two Graphics rows
+  outside the presets (FA2), all read with a fallback, so version 1 stands. Pinned
   by `settings/storage.test.ts`. Since M31 `browserStorage()` returns the save system's guarded storage once it has
   started (same keys, same values).
 - **The save file format** (`save/saveFile.ts`, M31): `{ game, format, build, savedAt, summary, stores, checksum }`,

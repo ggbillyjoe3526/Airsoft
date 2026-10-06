@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import * as renderBarrel from './render';
+import * as renderEffects from './renderEffects';
+import * as renderLighting from './renderLighting';
+import * as renderQuality from './renderQuality';
+import * as renderSurfaces from './renderSurfaces';
+import * as renderView from './renderView';
 import {
   BAKED_LIGHT_MODES,
   type BakedLightMode,
@@ -154,9 +160,10 @@ describe('render quality presets (final alpha audit section 4)', () => {
     expect(parseQuality('low')).toBe('low');
     expect(parseQuality('medium')).toBe('medium');
     expect(parseQuality('high')).toBe('high');
+    expect(parseQuality('ultra')).toBe('ultra');
     expect(parseQuality(null)).toBeNull();
     expect(parseQuality('')).toBeNull();
-    expect(parseQuality('ultra')).toBeNull();
+    expect(parseQuality('epic')).toBeNull();
     expect(parseQuality('toString')).toBeNull(); // not fooled by inherited object keys
   });
 
@@ -173,7 +180,122 @@ describe('render quality presets (final alpha audit section 4)', () => {
     expect(startingQuality('custom', null, { dustMotes: 0 }, 'integrated')).toEqual({ choice: 'custom', settings: { ...QUALITY.high, dustMotes: 0 }, automatic: false });
   });
 
-  it('offers the three presets and Custom on the picker, cheapest first', () => {
+  it('offers the four presets and Custom on the picker, cheapest first', () => {
     expect(QUALITY_CHOICES.map((c) => c.id)).toEqual([...QUALITY_PRESETS, 'custom']);
+  });
+});
+
+describe('Ultra (G5)', () => {
+  /** The fields that cost frame time or memory as they rise (all but the look-only and free ones). */
+  const COST_FIELDS = QUALITY_FIELDS.filter((f) => f !== 'shadowRadius' && f !== 'shadowFollowsView' && f !== 'laserBeam');
+
+  it('is the top of the ladder: Ultra ≥ High ≥ Medium ≥ Low in every cost field', () => {
+    expect(QUALITY_PRESETS).toEqual(['low', 'medium', 'high', 'ultra']);
+    for (let i = 1; i < QUALITY_PRESETS.length; i++) {
+      for (const f of COST_FIELDS) {
+        expect(rank(QUALITY[QUALITY_PRESETS[i]!][f]), `${QUALITY_PRESETS[i]}.${f}`).toBeGreaterThanOrEqual(rank(QUALITY[QUALITY_PRESETS[i - 1]!][f]));
+      }
+    }
+  });
+
+  it('takes the 4096 shadow map at the softest radius, 2× high-DPI, the most dust and night lights, every effect at full', () => {
+    expect(QUALITY.ultra).toMatchObject({ renderScale: 1, maxPixelRatio: 2, shadowMapSize: 4096, shadowRadius: 4, dustMotes: DUST_MOTES.max, poolLights: 8 });
+    expect(QUALITY.ultra).toMatchObject({ ambientOcclusion: 1, bloom: true, temporalAA: true, lightShafts: true, reflections: true, lensFinish: true });
+    expect(effectivePixelRatio(2, QUALITY.ultra)).toBe(2);
+  });
+
+  it('sets the post stack per preset: none on Low, bloom on Medium, half-resolution shade, shafts and TAA on High', () => {
+    const post = (p: keyof typeof QUALITY) => {
+      const q = QUALITY[p];
+      return [q.ambientOcclusion, q.bloom, q.temporalAA, q.lightShafts, q.reflections, q.lensFinish];
+    };
+    expect(post('low')).toEqual([0, false, false, false, false, false]);
+    expect(post('medium')).toEqual([0, true, false, false, false, false]);
+    expect(post('high')).toEqual([0.5, true, true, true, false, false]);
+    expect(post('ultra')).toEqual([1, true, true, true, true, true]);
+  });
+
+  it('is never the game’s own pick, on any GPU', () => {
+    for (const tier of ['software', 'integrated', 'discrete', 'unknown'] as const) {
+      expect(TIER_QUALITY[tier]).not.toBe('ultra');
+      expect(startingQuality(null, null, {}, tier).choice).not.toBe('ultra');
+    }
+    // Picked or asked for, it holds.
+    expect(startingQuality('ultra', null, {}, 'integrated')).toEqual({ choice: 'ultra', settings: QUALITY.ultra, automatic: false });
+    expect(startingQuality(null, 'ultra', {}, 'software').choice).toBe('ultra');
+  });
+
+  it('is named by its settings, and Custom stays High overlaid with the saved rows', () => {
+    expect(qualityChoiceOf({ ...QUALITY.ultra })).toBe('ultra');
+    expect(resolveQuality('custom', {})).toEqual(QUALITY.high);
+    expect(resolveQuality('custom', { reflections: true })).toEqual({ ...QUALITY.high, reflections: true });
+  });
+});
+
+// G5 split config/render.ts by concern; every importer still imports from it.
+describe('config/render.ts re-exports the split files (G5)', () => {
+  const parts = { renderEffects, renderLighting, renderQuality, renderSurfaces, renderView };
+
+  it('has every value each file exports, the same object, and nothing else', () => {
+    const all = new Set<string>();
+    for (const [file, mod] of Object.entries(parts)) {
+      for (const [name, value] of Object.entries(mod)) {
+        expect(all.has(name), `${name} in two files`).toBe(false);
+        all.add(name);
+        expect((renderBarrel as Record<string, unknown>)[name], `${file}.${name}`).toBe(value);
+      }
+    }
+    expect(new Set(Object.keys(renderBarrel))).toEqual(all);
+  });
+
+  it('keeps the names the file had before the split', () => {
+    for (const name of ['RENDER', 'ATMOSPHERE', 'FOV_SETTING', 'QUALITY', 'resolveQuality', 'FRAME_RATE_CAPS', 'LIGHTING_PRESETS', 'SURFACES', 'BB_VISUALS', 'HUD', 'VIEWMODEL', 'matchOverScreenDelay', 'FLAG_VISUALS']) {
+      expect(renderBarrel, name).toHaveProperty(name);
+    }
+  });
+});
+
+// G5 QA: every public value render.ts had before the split, by name (the list is the file's exports on main before G5).
+describe('config/render.ts keeps every name it had before the split (G5 QA)', () => {
+  const BEFORE_THE_SPLIT = [
+    'ATMOSPHERE', 'BB_VISUALS', 'CANOPY', 'CASE_VISUALS', 'CITY_PROPS', 'CONTACT_SHADOWS', 'DETAIL_LEVELS', 'DUST_MOTES', 'ENVIRONMENT', 'EXIT_VISUALS',
+    'FIXTURES', 'FLAG_VISUALS', 'FOLIAGE_LOOK', 'FOV_SETTING', 'FRAME_PACING', 'FRAME_RATE_CAPS', 'FRAME_TIMING', 'GAS_PUFFS', 'GROUND_LOOK', 'HIT_PUFFS',
+    'HUD', 'IMPACT_DUST', 'IMPACT_GRIT', 'IMPACT_PUFFS', 'IMPACT_RINGS', 'LIGHTING', 'LIGHTING_PRESETS', 'NATURE_SHAPES', 'NIGHT_SKY', 'POOL_LIGHTS',
+    'QUALITY', 'QUALITY_CHOICES', 'QUALITY_FIELDS', 'QUALITY_PRESETS', 'QUALITY_STEP_DOWN', 'RENDER', 'REPLICA_SHEEN', 'RETRO', 'SIGNS', 'SPECTATOR',
+    'SURFACES', 'TERRAIN_LOOK', 'TIER_QUALITY', 'TONE_MAPPING', 'TORCH_BEAMS', 'VIEWMODEL', 'effectivePixelRatio', 'matchOverScreenDelay', 'parseQuality',
+    'qualityChoiceOf', 'resolveQuality', 'startingQuality',
+  ];
+
+  it('still exports each of them, each defined', () => {
+    for (const name of BEFORE_THE_SPLIT) {
+      expect(Object.keys(renderBarrel), name).toContain(name);
+      expect((renderBarrel as Record<string, unknown>)[name], name).toBeDefined();
+    }
+  });
+
+  it('leaves every field Low, Medium and High had before G5 at the value it had (Low drawn exactly as before)', () => {
+    // The presets' values on main before G5, field by field; G5 only adds the post fields.
+    const BEFORE = {
+      low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false, environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0 },
+      medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2 },
+      high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4 },
+    } as const;
+    for (const p of ['low', 'medium', 'high'] as const) expect(renderBarrel.QUALITY[p], p).toMatchObject(BEFORE[p]);
+    expect(renderBarrel.FRAME_RATE_CAPS.slice(0, 5)).toEqual([0, 30, 60, 120, 144]);
+  });
+
+  it('turns no post effect on for Low and adds nothing else to it: the post fields are its only new ones', () => {
+    const { low } = renderBarrel.QUALITY;
+    const post = ['ambientOcclusion', 'bloom', 'temporalAA', 'lightShafts', 'reflections', 'lensFinish'];
+    expect(Object.keys(low).filter((k) => post.includes(k)).sort()).toEqual([...post].sort());
+    expect(post.map((f) => low[f as keyof typeof low])).toEqual([0, false, false, false, false, false]);
+    // 25 fields before G5, plus G6's two (bakedLight, weathering).
+    expect(Object.keys(low)).toHaveLength(25 + 2 + post.length);
+  });
+
+  it('keeps each file under about 600 lines', () => {
+    const sources = import.meta.glob<string>('./render{View,Quality,Lighting,Surfaces,Effects}.ts', { query: '?raw', import: 'default', eager: true });
+    expect(Object.keys(sources)).toHaveLength(5);
+    for (const [file, text] of Object.entries(sources)) expect(text.split('\n').length, file).toBeLessThanOrEqual(600);
   });
 });

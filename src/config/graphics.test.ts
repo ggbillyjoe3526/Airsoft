@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAME_RATE_CAP_CHOICES, GRAPHICS_ROWS, graphicsKey, graphicsRow, parseStored, rowEnabled, storedValue, TONE_MAPPING_CHOICES } from './graphics';
+import { FRAME_RATE_CAP_CHOICES, frameRateCapFromSaved, GRAPHICS_ROWS, graphicsKey, graphicsRow, parseStored, rowEnabled, storedValue, TONE_MAPPING_CHOICES } from './graphics';
 import { FRAME_RATE_CAPS, QUALITY, QUALITY_CHOICES, QUALITY_FIELDS, QUALITY_PRESETS, resolveQuality, TONE_MAPPING } from './render';
 
 describe('the Custom graphics rows (final alpha audit section 4, UI-06)', () => {
@@ -83,20 +83,99 @@ describe('the shadow rows', () => {
 });
 
 describe('the Night lights row (M33f)', () => {
-  it('comes after Clouds and offers off, the nearest 2 and the nearest 4, saved by name', () => {
+  it('comes after Clouds and offers off, the nearest 2, 4 and (G5, Ultra) 8, saved by name', () => {
     const fields = GRAPHICS_ROWS.map((r) => r.field);
     expect(fields[fields.indexOf('clouds') + 1]).toBe('poolLights');
     const row = graphicsRow('poolLights')!;
     if (row.kind !== 'choice') throw new Error('Night lights is a choice row');
     expect(row.label).toBe('Night lights');
-    expect(row.options.map((o) => [o.label, o.value])).toEqual([['Off', 0], ['Nearest 2', 2], ['Nearest 4', 4]]);
+    expect(row.options.map((o) => [o.label, o.value])).toEqual([['Off', 0], ['Nearest 2', 2], ['Nearest 4', 4], ['Nearest 8', 8]]);
     expect(parseStored(row, storedValue(row, 2))).toBe(2);
     expect(parseStored(row, '3')).toBeUndefined();
   });
 
   it('is no real lights on Low, two on Medium and four on High; Custom is High’s unless saved otherwise', () => {
-    expect([QUALITY.low.poolLights, QUALITY.medium.poolLights, QUALITY.high.poolLights]).toEqual([0, 2, 4]);
+    expect([QUALITY.low.poolLights, QUALITY.medium.poolLights, QUALITY.high.poolLights, QUALITY.ultra.poolLights]).toEqual([0, 2, 4, 8]);
     expect(resolveQuality('custom', {}).poolLights).toBe(4);
     expect(resolveQuality('custom', { poolLights: 0 })).toEqual({ ...QUALITY.high, poolLights: 0 });
+  });
+});
+
+describe('the post stack’s rows and the frame-rate row (G5)', () => {
+  const POST_FIELDS = ['ambientOcclusion', 'bloom', 'temporalAA', 'lightShafts', 'reflections', 'lensFinish'] as const;
+
+  it('adds one row per post effect at the end, each with a sentence-case note and a cost, saved as graphics.<field>', () => {
+    expect(GRAPHICS_ROWS.slice(-POST_FIELDS.length).map((r) => r.field)).toEqual([...POST_FIELDS]);
+    for (const f of POST_FIELDS) {
+      const row = graphicsRow(f)!;
+      expect(row.help[0], f).toMatch(/[A-Z]/);
+      expect(row.help.endsWith('.'), f).toBe(true);
+      expect(row.cost, f).toMatch(/^(GPU|Free|Small)/);
+      expect(graphicsKey(f)).toBe(`graphics.${f}`);
+    }
+  });
+
+  it('saves ambient occlusion by name: off, half or full resolution', () => {
+    const row = graphicsRow('ambientOcclusion')!;
+    expect([0, 0.5, 1].map((v) => storedValue(row, v))).toEqual(['off', 'half', 'full']);
+    expect(parseStored(row, 'half')).toBe(0.5);
+    expect(parseStored(row, 'quarter')).toBeUndefined();
+  });
+
+  it('offers 30, 60, 120, 144, 240 and Unlimited, Unlimited first under the id Off had', () => {
+    expect(FRAME_RATE_CAP_CHOICES.map((c) => c.label)).toEqual(['Unlimited', '30', '60', '120', '144', '240']);
+    expect(FRAME_RATE_CAP_CHOICES.map((c) => c.id)).toEqual(['off', '30', '60', '120', '144', '240']);
+  });
+
+  it('reads a saved frame-rate id as itself and any other number as the nearest choice, the higher on a tie', () => {
+    for (const c of FRAME_RATE_CAP_CHOICES) expect(frameRateCapFromSaved(c.id)).toBe(c.value);
+    expect(frameRateCapFromSaved(50)).toBe(60);
+    expect(frameRateCapFromSaved('90')).toBe(120); // 30 from 60 and from 120: the higher
+    expect(frameRateCapFromSaved(200)).toBe(240);
+    expect(frameRateCapFromSaved(1000)).toBe(240);
+    expect(frameRateCapFromSaved(10)).toBe(30);
+    expect(frameRateCapFromSaved(-1)).toBe(0);
+    expect(frameRateCapFromSaved('')).toBeUndefined();
+    expect(frameRateCapFromSaved('unlimited')).toBeUndefined();
+    expect(frameRateCapFromSaved(null)).toBeUndefined();
+  });
+});
+
+describe('the saved frame-rate choice, every value an older build or a hand-edit could hold (G5 QA)', () => {
+  /** An independent reading: the choice closest to `n` frames, the higher on a tie, Unlimited for 0 or less. */
+  const nearest = (n: number): number => {
+    if (n <= 0) return 0;
+    const caps = FRAME_RATE_CAPS.filter((c) => c > 0);
+    const best = Math.min(...caps.map((c) => Math.abs(c - n)));
+    return Math.max(...caps.filter((c) => Math.abs(c - n) === best));
+  };
+
+  it('reads every whole number of frames from -5 to 1000 as the nearest choice, as a number and as text', () => {
+    for (let n = -5; n <= 1000; n++) {
+      expect(frameRateCapFromSaved(n), `${n}`).toBe(nearest(n));
+      expect(frameRateCapFromSaved(String(n)), `"${n}"`).toBe(nearest(n));
+    }
+  });
+
+  it('puts each tie to the higher choice: 45, 90, 132 and 192', () => {
+    expect([45, 90, 132, 192].map((n) => frameRateCapFromSaved(n))).toEqual([60, 120, 144, 240]);
+  });
+
+  it('reads fractions, exponents, hex, padding and infinity as numbers, and any other text, object or value as nothing', () => {
+    expect(frameRateCapFromSaved(59.9)).toBe(60);
+    expect(frameRateCapFromSaved('1e2')).toBe(120);
+    expect(frameRateCapFromSaved('0x3c')).toBe(60);
+    expect(frameRateCapFromSaved(' 144 ')).toBe(144);
+    expect(frameRateCapFromSaved(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(frameRateCapFromSaved('Infinity')).toBe(0);
+    expect(frameRateCapFromSaved(Number.MAX_VALUE)).toBe(240);
+    expect(frameRateCapFromSaved(Number.NEGATIVE_INFINITY)).toBe(0);
+    for (const junk of [Number.NaN, 'NaN', 'Off', 'OFF', 'unlimited', '60fps', '--', '   ', '', null, undefined, true, false, [], [60], {}, { value: 60 }]) {
+      expect(frameRateCapFromSaved(junk), JSON.stringify(junk) ?? 'undefined').toBeUndefined();
+    }
+  });
+
+  it('only ever answers a choice the row offers', () => {
+    for (const raw of [-1, 0, 1, 31, 61, 130, 300, 'off', '30', 1e9]) expect(FRAME_RATE_CAPS as readonly unknown[], String(raw)).toContain(frameRateCapFromSaved(raw));
   });
 });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GRAPHICS_ROWS, graphicsKey, storedValue } from '../config/graphics';
 import { QUALITY, resolveQuality, type QualityChoice } from '../config/render';
-import { loadCustomQuality } from './menus/savedChoices';
+import { loadCustomQuality, loadFrameRateCap } from './menus/savedChoices';
 import { MemoryStorage } from '../pool/testStorage';
 import { GraphicsSettings } from './graphicsSettings';
 import { FakeElement } from './testSupport';
@@ -198,5 +198,96 @@ describe('what Custom saves is the same with the fold in the page (M68 QA, audit
     const back = resolveQuality('custom', loadCustomQuality());
     expect(back).toEqual({ ...QUALITY.high, shadows: false });
     expect(block(build('custom')).open).toBe(true);
+  });
+});
+
+/** A picker built with its changes recorded: what the game is told, in order. */
+function buildRecording(initial: QualityChoice, frameRate = 0) {
+  const told = { quality: [] as [QualityChoice, unknown][], cap: [] as number[] };
+  const g = new GraphicsSettings({
+    quality: {
+      initial,
+      settings: initial === 'custom' ? { ...QUALITY.high, shadows: false } : QUALITY[initial],
+      onChange: (c, s) => void told.quality.push([c, s]),
+      status: () => ({ antialiased: true, antialiasPending: false, maxAnisotropy: 16 }),
+    },
+    frameRateCap: { initial: frameRate as 0, onChange: (cap) => void told.cap.push(cap) },
+    showFps: { initial: false, onChange: () => {} },
+    toneMapping: { initial: 'neutral', onChange: () => {} },
+  });
+  return { g, told };
+}
+
+const pressed = (group: QueryElement): string[] => group.querySelectorAll('button').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent);
+
+describe('Ultra and the frame-rate row in the settings (G5 QA)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('document', { createElement: (tag: string) => new QueryElement(tag) });
+    storage = new MemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('offers Ultra after High, and picking it applies and saves it and shows every post row at its Ultra value', () => {
+    const { g, told } = buildRecording('high');
+    expect((g.qualityRow as unknown as QueryElement).querySelectorAll('button').map((b) => b.textContent)).toEqual(['Low', 'Medium', 'High', 'Ultra', 'Custom']);
+    qualityButton(g, 'Ultra').click();
+    expect(told.quality).toEqual([['ultra', QUALITY.ultra]]);
+    expect(saved().quality).toBe('ultra');
+    expect(pressed(rowGroup(g, 'Ambient occlusion'))).toEqual(['Full']);
+    for (const label of ['Bloom', 'Temporal smoothing', 'Light shafts', 'Reflections', 'Film grain and lens']) expect(pressed(rowGroup(g, label)), label).toEqual(['On']);
+    expect(pressed(rowGroup(g, 'Night lights'))).toEqual(['Nearest 8']);
+    // High and Low put them back.
+    qualityButton(g, 'High').click();
+    expect(pressed(rowGroup(g, 'Ambient occlusion'))).toEqual(['Half']);
+    expect(pressed(rowGroup(g, 'Reflections'))).toEqual(['Off']);
+    qualityButton(g, 'Low').click();
+    expect(pressed(rowGroup(g, 'Ambient occlusion'))).toEqual(['Off']);
+    expect(pressed(rowGroup(g, 'Bloom'))).toEqual(['Off']);
+  });
+
+  it('turns the picker to Custom when one Ultra row changes, and back to Ultra when it is put back', () => {
+    const { g, told } = buildRecording('ultra');
+    expect(qualityButton(g, 'Ultra').getAttribute('aria-pressed')).toBe('true');
+    const click = (row: string, label: string) => rowGroup(g, row).querySelectorAll('button').find((b) => b.textContent === label)!.click();
+    click('Reflections', 'Off');
+    expect(qualityButton(g, 'Custom').getAttribute('aria-pressed')).toBe('true');
+    expect(qualityButton(g, 'Ultra').getAttribute('aria-pressed')).not.toBe('true');
+    expect(told.quality.at(-1)![0]).toBe('custom');
+    expect(resolveQuality('custom', loadCustomQuality())).toEqual({ ...QUALITY.ultra, reflections: false });
+    click('Reflections', 'On');
+    expect(qualityButton(g, 'Ultra').getAttribute('aria-pressed')).toBe('true');
+    expect(told.quality.at(-1)![0]).toBe('ultra');
+    // Half the shade on Ultra is neither Ultra nor High.
+    click('Ambient occlusion', 'Half');
+    expect(qualityButton(g, 'Custom').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('shows the pre-G5 Custom mix with High’s post rows, and saves a post row by name when it is changed', () => {
+    const { g } = buildRecording('custom');
+    expect(pressed(rowGroup(g, 'Ambient occlusion'))).toEqual(['Half']);
+    expect(pressed(rowGroup(g, 'Temporal smoothing'))).toEqual(['On']);
+    rowGroup(g, 'Ambient occlusion').querySelectorAll('button').find((b) => b.textContent === 'Full')!.click();
+    expect(saved()['graphics.ambientOcclusion']).toBe('full');
+    expect(loadCustomQuality().ambientOcclusion).toBe(1);
+  });
+
+  it('offers Unlimited first, then 30, 60, 120, 144 and 240, shows the saved one, and an unknown initial as Unlimited', () => {
+    const labels = (g: GraphicsSettings) => (g.frameRateRow as unknown as QueryElement).querySelectorAll('button').map((b) => b.textContent);
+    expect(labels(buildRecording('high').g)).toEqual(['Unlimited', '30', '60', '120', '144', '240']);
+    expect(pressed(buildRecording('high', 240).g.frameRateRow as unknown as QueryElement)).toEqual(['240']);
+    expect(pressed(buildRecording('high', 0).g.frameRateRow as unknown as QueryElement)).toEqual(['Unlimited']);
+    expect(pressed(buildRecording('high', 75).g.frameRateRow as unknown as QueryElement)).toEqual(['Unlimited']);
+  });
+
+  it('tells the game each choice as its number of frames and saves it under frameRateCap by id, Unlimited as off', () => {
+    const { g, told } = buildRecording('high', 60);
+    const pick = (label: string) => (g.frameRateRow as unknown as QueryElement).querySelectorAll('button').find((b) => b.textContent === label)!.click();
+    for (const [label, cap, id] of [['240', 240, '240'], ['144', 144, '144'], ['Unlimited', 0, 'off'], ['30', 30, '30']] as const) {
+      pick(label);
+      expect(told.cap.at(-1), label).toBe(cap);
+      expect(saved().frameRateCap, label).toBe(id);
+      expect(loadFrameRateCap(), label).toBe(cap);
+    }
   });
 });
