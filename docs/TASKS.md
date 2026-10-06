@@ -128,17 +128,195 @@ acceptance:
 status: open
 attempts: 0
 
-## G7 · Characters and arms (graphics overhaul, 0.1 Dev 5)
+**The owner's 0.1 Dev 4 playtest notes (2026-10-06).** Recorded on his ask, not built yet; they follow the Audit 2
+tasks above and the rest of the paused 0.1 Dev 5 work. His words and the per-item reasoning are in the project's shared
+files (`plans/playtest-feedback-0.1-dev-4.md`); the table under Alpha in `docs/ROADMAP.md` maps all 26 notes. M80–M91
+are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 go to 0.3 and 0.4 (ROADMAP).
+Every block below carries note 19: tune on Normal, then check that Easy, Hard and Pro still scale. `touches` are
+first guesses; the build thread confirms them before it starts. Items with an open ruling (notes 13, 16, 26) wait for
+the owner before the build.
+
+## M80 · The tutorial shows what it teaches (playtest note 1)
+tier: ui
+perf: skip
+touches: src/tutorial/, src/config/tutorial.ts, src/ui/scoreboard.ts, src/ui/orderWheel.ts, src/ui/menus/, docs/PLAYTEST.md
+contract: none
+acceptance:
+  1. When the tutorial names the scoreboard or the comm wheel (hold Z), it opens it on screen for the player to see.
+  2. Every tutorial line is reworded: plain words, complete enough to say how the thing works.
+  3. Finishing the tutorial shows a clear "Tutorial complete" pop-up with two choices: the practice range or the menu.
+status: open
+attempts: 0
+
+## M81 · The practice range and tutorial area in the new look (playtest note 9)
+tier: ui
+perf: required
+touches: src/map/range.ts, src/map/testYard.ts, src/render/, src/rangeSession.ts
+contract: none
+acceptance:
+  1. After graphics G5 and G6 merge, the range and tutorial area use the new materials, baked light and post stack on every preset, re-dressed in the art direction like Depot (G8).
+  2. Low still holds its frame budget on the range.
+status: open
+attempts: 0
+
+## M82 · Sort and filter by rarity (playtest note 4)
+tier: ui
+perf: skip
+touches: src/ui/menus/loadoutScreen.ts, src/ui/menus/itemTile.ts, src/ui/loadoutChoice.ts, src/save/
+contract: none
+acceptance:
+  1. The Loadout's replica list sorts by rarity and can hide chosen rarity tiers (for example show only Epic and Legendary).
+  2. Customise does the same for parts.
+  3. The choice is remembered between visits. Built after the menu redesign (G3).
+status: open
+attempts: 0
+
+## M83 · Small menu and HUD options: skip a round, minimap turn, hidden Armory (playtest notes 6, 7, 25)
+tier: ui
+perf: skip
+touches: src/render/spectatorCamera.ts, src/matchFlow.ts, src/ui/minimap.ts, src/ui/minimapView.ts, src/config/minimap.ts, src/ui/hudSettings.ts, src/ui/menus/, src/config/dev.ts
+contract: none
+acceptance:
+  1. The spectator camera offers "Skip to next round", which plays the rest of the round out at once and goes to the next.
+  2. A setting picks a fixed (north-up) or rotating minimap.
+  3. With "Disable Armory" on in Dev, the Armory is gone from every menu instead of greyed.
+status: open
+attempts: 0
+
+## M84 · Iron sights on every replica, and walking while aiming (playtest notes 8, 16)
+tier: core
+perf: skip
+touches: src/sim/aiming.ts, src/sim/movement.ts, src/sim/accuracy.ts, src/config/optics.ts, src/config/movement.ts, src/render/replicaModels.ts, src/render/cameraRig.ts
+contract: none
+acceptance:
+  1. Every replica aims down sights; with no optic fitted the view lines up its iron sights. Aiming is more accurate than hip fire, and hip fire stays viable (measured on Normal against bots).
+  2. Holding walk (Shift) while aiming slows the player below the aiming pace.
+  3. Waits on the owner's ruling: note 16 reverses his 0.1 Dev 3 note 3 (aim only with a scope fitted).
+status: open
+attempts: 0
+
+## M85 · BBs stop at the first body they hit (playtest note 17)
 tier: core
 perf: required
-touches: src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/figureMix.ts, src/render/figureParts.ts, src/render/figureShapes.ts, src/render/figurePalette.ts, src/render/figureHuman.ts, src/render/figureRobot.ts, src/render/figureHands.ts, src/render/figureReplicas.ts, src/render/handModels.ts, src/render/robotHands.ts, src/render/replicaModels.ts, src/render/viewmodel.ts, src/render/combatPresentation.ts, src/render/matchPresentation.ts, src/matchSession.ts, src/rangeSession.ts, src/config/characters.ts, src/config/replicaFinish.ts, src/config/look.ts, src/config/matchInfo.ts, src/render/replicaBuilder.ts, src/render/replicaArms.ts
-contract: none (buildFigure's rig, figureMuzzle and FIGURE.rifle / FIGURE.pistol stay; a figure model's parts still replace the built ones)
+touches: src/sim/bbs.ts, src/sim/hitbox.ts, src/sim/ricochet.ts, src/sim/simulation.ts
+contract: none
 acceptance:
-  1. Figures are humans and robots built in code. With Robots on, every team of two or more mixes both looks from the match seed (robotFigures, apart from the sim's stream); off, every figure is human. No skin shows on any head.
-  2. Four masked human heads (high-cut helmet, bump helmet, balaclava, full-face visor) and a robot head; the team colour is exact on every part of every figure (plate carrier all round the torso, knee pads, armbands), colour-blind sets included; robots wear a light or dark shell by team; third-person replicas are the blocky two-tone replicas in the team's bot scheme (Realistic colours honoured, the Cyber Pistol in its own colours).
-  3. The rig behaves as before: six merged meshes on one vertex-coloured material, muzzles where figureMuzzle says, aim, pistol and hit poses, the HIT! callout, a fitted silencer and torch; a figure model's named parts still replace the code-built ones, on robots too.
-  4. Low draws no more triangles per part and no more draw calls per figure than before G7 (legs 424, body 1,392, rifle arms 1,064, pistol arms 824, hit pose 1,028; four drawn at once); High stays under 7,500 triangles drawn per figure.
-  5. First-person arms in the new style: dark gloves, camo sleeves from the team colour, the team armband; robot arms (shell, joints, team panel) when the player's own slot is a robot; hands keep every grip pose; Low no dearer in triangles or draw calls.
-  6. Every geometry and material made is disposed when a figure or the arms are rebuilt and when the match ends.
-status: building
+  1. A reproduction test: two bots in a line, the nearer one hit; it shows whether a BB can reach the one behind.
+  2. A BB that hits a body knocks that player out and stops (it does not travel on); a test fails without the fix.
+  3. Hit volumes match the drawn figure closely enough that a BB only hits what the player can see; checked on every pose (standing, crouched, leaning, walking off).
+status: open
+attempts: 0
+
+## M86 · More varied ambience and an Ambience volume (playtest note 14)
+tier: ui
+perf: skip
+touches: src/audio/, src/config/audio.ts, src/ui/audioSettings.ts
+contract: none
+acceptance:
+  1. Each map's ambience has more variety (layers and one-off sounds at random gaps), kept quiet enough not to mask footsteps.
+  2. Audio settings get an "Ambience volume" slider; field ambience no longer sits only under Effects.
+status: open
+attempts: 0
+
+## M87 · Bots stop clearing empty corners (playtest notes 15, 19)
+tier: core
+perf: required
+touches: src/ai/botBrain.ts, src/ai/botMovement.ts, src/ai/angles.ts, src/ai/perception.ts, src/config/bots.ts
+contract: none
+acceptance:
+  1. Bots on both teams skip spots they have seen to be empty recently or that a teammate cleared; a test shows fewer visits to dead ends than today.
+  2. Built after the paused audit task M71 (which changes how bots hunt); the balance guards on every map and level stay in their bands.
+status: open
+attempts: 0
+
+## M88 · Woodland: hidden starts, a smaller height edge, bigger teams (playtest note 13)
+tier: core
+perf: required
+touches: src/map/woodland.ts, src/map/terrain.ts, src/map/maps.ts, src/newGamePicks.ts, src/config/teams.ts
+contract: none
+acceptance:
+  1. Neither team can see the other from its start: cover (a building, thick trees or a rise) hides each spawn.
+  2. The blue end's height edge at the start is reduced; Elimination and Attack / Defend stay within 35–65 % per end on Normal.
+  3. Team size follows the owner's ruling (suggested: 5v5 default, 6v6 allowed); Low holds its frame budget with the largest size.
+  4. Waits on the owner's ruling (Woodland was designed for 4v4 with Custom up to 5v5).
+status: open
+attempts: 0
+
+## M89 · Modes and match settings fit together (playtest note 18)
+tier: ui
+perf: skip
+touches: src/config/modes.ts, src/config/matchRules.ts, src/map/playableMode.ts, src/ui/menus/setupScreen.ts, src/newGamePicks.ts
+contract: none
+acceptance:
+  1. A table of every mode against every match setting and rule set says which fit; the ones that don't (Tournament rules in Extraction, for example) are hidden for that mode.
+  2. A test walks every mode and checks that no hidden setting can be picked.
+status: open
+attempts: 0
+
+## M90 · More Dev settings for playtesting (playtest note 24)
+tier: ui
+perf: skip
+touches: src/config/dev.ts, src/ui/devSettings.ts, src/settings/dev.ts, src/pool/, src/save/, src/game.ts
+contract: none
+acceptance:
+  1. Dev settings can give field credits and tokens on demand, so the Armory's cases can be tested without playing matches.
+  2. More aids, each marked a cheat where it should keep records clean: free case openings, reset the save, the map's time of day, end the round now, bots hold fire, spectate any bot, show what each bot is doing.
+status: open
+attempts: 0
+
+## M91 · Softer torch beams that cast shadows (playtest note 26)
+tier: core
+perf: required
+touches: src/render/torchBeams.ts, src/map/torchLight.ts, src/config/torches.ts, src/render/lighting.ts
+contract: none
+acceptance:
+  1. The beam is soft and diffused, not a bright white cone (built with or after graphics G5).
+  2. A torch casts shadows behind what it lights (a tree in the beam shadows the ground behind it), on the presets the owner rules (suggested: your own torch, Medium and up).
+  3. Waits on the owner's ruling (the graphics plan keeps shadow lights to the sun or moon and the nearest fire).
+status: open
+attempts: 0
+
+## M92 · Holster and two kinds of sprint (playtest note 3)
+tier: core
+perf: skip
+touches: src/sim/armament.ts, src/sim/movement.ts, src/sim/commands.ts, src/sim/aiming.ts, src/input/keyBindings.ts, src/config/controls.ts, src/config/movement.ts, src/render/handPoses.ts
+contract: PlayerCommand (a holster slot, by addition)
+acceptance:
+  1. Key 3 holsters (1 primary, 2 secondary), rebindable.
+  2. Sprinting holstered is a little faster than sprinting with a replica; drawing to aim from holstered takes longer (with a draw animation) than raising from a ready sprint.
+  3. Bots use the same rules through the same commands.
+status: open
+attempts: 0
+
+## M93 · Practice: moving targets, new target types, a timed challenge (playtest note 10)
+tier: core
+perf: skip
+touches: src/sim/rangeTargets.ts, src/render/rangeTargetsRenderer.ts, src/map/range.ts, src/rangeSession.ts, src/config/range.ts, src/ui/rangeReadout.ts
+contract: none
+acceptance:
+  1. Moving targets and more target kinds (for example small, pop-up and swinging).
+  2. A timed challenge, off by default: hit as many targets as you can in a set time; the best score is kept.
+status: open
+attempts: 0
+
+## M94 · Practice on any map (playtest note 11)
+tier: core
+perf: required
+touches: src/rangeSession.ts, src/map/, src/sim/rangeTargets.ts, src/ui/menus/
+contract: none
+acceptance:
+  1. The practice range is renamed "Practice"; it offers the range and every playable map (Dev maps with Dev content on).
+  2. On a map, targets (M93's kinds) stand where bots would play, and there are no bots.
+status: open
+attempts: 0
+
+## M95 · Practice with any unlocked replica (playtest note 12)
+tier: ui
+perf: skip
+touches: src/rangeSession.ts, src/ui/menus/loadoutScreen.ts, src/ui/loadoutChoice.ts, src/config/dev.ts
+contract: none
+acceptance:
+  1. In Practice the player picks any replica they own and can Customise it freely.
+  2. With Dev settings on (Unlock all gear), every replica and part is available.
+status: open
 attempts: 0
