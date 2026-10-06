@@ -780,6 +780,16 @@ describe('every post target, material and texture is freed on each teardown path
     },
   };
 
+  it('builds the stack again when antialiasing is swapped while the context is lost (the old restore never comes)', () => {
+    const s = postRenderer(QUALITY.high);
+    s.r.render();
+    expect(postOf(s.r)).not.toBeNull();
+    s.lose();
+    expect(s.r.setQuality({ ...QUALITY.high, antialias: false })).toBe(true);
+    s.r.render();
+    expect(postOf(s.r), 'post effects come back on the new context').not.toBeNull();
+  });
+
   for (const [name, path] of Object.entries(paths)) {
     it(`frees all of Ultra's stack, the reflection mask too, on ${name}, and makes the whole stack again after`, () => {
       const s = postRenderer(QUALITY.ultra);

@@ -662,6 +662,13 @@ export class Renderer {
     this.gl = next;
     this.contextAntialias = antialias;
     this.listen(next.domElement);
+    // A swap while the old context was lost: its restore event will never come (the old canvas is no longer heard), and
+    // the new context is live, so the renderer and the session carry on as after a restore (G5 QA).
+    if (this.contextGone) {
+      this.contextGone = false;
+      this.reflectiveDirty = true;
+      this.contextListener(false);
+    }
     if (this.retroLook) this.retro = this.makeRetro(this.retroLook);
     return true;
   }
