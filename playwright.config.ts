@@ -27,8 +27,9 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 90_000,
   // The HTML report (playwright-report/) keeps the in-match screenshot; CI uploads it. The JSON report is what the
-  // pipeline's gate script reads (pipeline/gate.mjs).
-  reporter: [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'pipeline/out/qa-artifacts/playwright.json' }]],
+  // pipeline's gate script reads (pipeline/gate.mjs). Locally the console gets dots, not a line per test, because a model
+  // reads it (token-efficiency plan, item 20); CI keeps the list.
+  reporter: [[process.env.CI ? 'list' : 'dot'], ['html', { open: 'never' }], ['json', { outputFile: 'pipeline/out/qa-artifacts/playwright.json' }]],
   use: {
     baseURL: `http://localhost:${PORT}`,
     screenshot: 'only-on-failure',

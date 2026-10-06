@@ -893,3 +893,11 @@ complexity than player value); the owner confirmed it with his changes. The plac
 - **2026-10-06 · Dev 6 and Dev 7 · 26 features move into 0.1 from 0.2–0.5, Beta and new ideas; Claude placed them, the owner can move any.** Dev 6 takes the smaller items and those that build on today's systems (presets, the chrono, gas, sights, bots' names and gear, skins); Dev 7 the bigger new systems (medic, the Extraction rework, grenades, rigs, the sniper, comms, weather, sound and foliage). The list is in ROADMAP.
 - **2026-10-06 · Spring sniper · The next replica is a spring sniper rifle, and the owner is asked how to build it and its specs before work starts.** His words. The SMG and shotgun come after it.
 - **2026-10-06 · Hit calls · No dead rag, night light or shouted "HIT!" for now: the hit system is good enough as it is.** Reverses the triage's Beta place for the night light; he may revisit.
+
+## Token efficiency (owner, 2026-10-06)
+
+- **2026-10-06 · Process · The owner approved the recommended set of the token-efficiency plan; models and effort levels stay as they are.** Steps TE1 (now), TE2 (in the docs rewrite) and TE3 (pipeline, before M80) in ROADMAP › Token efficiency; items 8, 21 and 22 wait for his word.
+- **2026-10-06 · CLAUDE.md · Kept to about 10 KB; versioning, releases, sessions, the bug pass and the critic table moved verbatim to `docs/PROCESS.md`.** CLAUDE.md is loaded on every turn of every thread and agent; section numbers stay so §-references still work.
+- **2026-10-06 · Hooks · A Read of a text file over 40 KB without a line range is stopped (`.claude/hooks/read-guard.mjs`); a cloud session installs dependencies and sets the Chromium path at start.** The guard fails open; 40 KB lets every source file but the biggest tests through and stops the long docs.
+- **2026-10-06 · Tests · `npm run t` and `npm run t:all` print dots and failures only; local Playwright prints dots, CI keeps the list.** The gate reads the JSON reports, so nothing it checks changes.
+- **2026-10-06 · Pipeline · No status-only commits; one push with work and records; a check that only a changed criterion can pass goes to the owner at once.** M75 spent attempts 2 to 4 on such a check.

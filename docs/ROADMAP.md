@@ -151,8 +151,29 @@ numbers are names, not the order.
 
 ### Phase 1: Playable single-player slice → build 0.1 Dev 1 (done)
 
-The CLAUDE.md §6 slice: Depot greybox, AEG and pistol, BB ballistics, one-hit elimination with hit calling,
-bots, 3v3 rounds to 5, and a minimal HUD.
+Depot greybox, AEG and pistol, BB ballistics, one-hit elimination with hit calling, bots, 3v3 rounds to 5, and a
+minimal HUD. Its goal, as it stood in `CLAUDE.md` §6 until 2026-10-06:
+
+#### Definition of done
+
+- Game loads in the browser from `npm run dev` and from a static production build.
+- Click to play, pointer lock, WASD + mouse controls.
+- One small greybox map (warehouse or CQB arena) with cover, 2–3 routes, and clear sightlines.
+- Two replicas (AEG + pistol) with reloads, ammo counter, and weapon switching.
+- BB projectiles with travel time, arc, and visible trails.
+- One-hit elimination with hit calling for players and bots.
+- Bots that patrol, take cover roughly, spot the player, and shoot with human-like reaction time and inaccuracy.
+- Round flow: 3v3 (player + 2 bots vs 3 bots), elimination wins the round, first to 5 rounds wins the match.
+- Minimal HUD: crosshair, ammo, round timer, score, hit feedback.
+- Runs at a stable **60 FPS** on a mid-range laptop with integrated graphics.
+- Unit tests pass for ballistics, hit rules, and round state.
+
+#### A player must be able to
+
+Spawn, understand the goal, move naturally, fire BBs, feel the replica, hit a bot, understand when they themselves were hit, finish a round, and want to play another.
+
+**Out of scope for Phase 1:** multiplayer, objectives, progression, cosmetics, menus beyond a start screen, real art assets.
+
 
 ### Phase 2: Core gameplay on Depot → build 0.1 Dev 2 (done)
 
@@ -1002,6 +1023,20 @@ surrender or knife tag; the dead rag, a light on hit players at night and a shou
 enough as it is); throwing a decoy; a mag-check key; hand-made scenarios; a "good game" line-up after the match.
 
 When the owner calls the game feature complete, alpha ends.
+
+### Token efficiency (owner, 2026-10-06)
+
+The owner approved the recommended set of the token-efficiency plan (`plans/token-efficiency-plan.md` in the project's
+shared files; item numbers below are the plan's). Models and effort levels stay as they are.
+
+| Step | Items | When | Status |
+|---|---|---|---|
+| TE1 | 2 shorter CLAUDE.md (process detail in `docs/PROCESS.md`), 9 ask the owner at once, 10 lean thread start, 12 one push, 13 no status commits, 20 quiet test output, 23 session setup hook, 24 big-file read guard, 25 measure | Now (after M76) | In review |
+| TE1 (memory) | 5 project memory at about 5 KB, 11 fresh threads for follow-ons, 14 pause on a branch, not in patch folders | With TE1, by the coordinator | Open |
+| TE2 | 1 finished history to `docs/archive/`, 3 one record file per task, 4 one-line record formats, 6 HANDOFF shrunk or retired, 7 one-page module map | Inside the Dev 5 docs rewrite (after BP2) | Open |
+| TE3 | 15 review packet for the critic and QA, 16 performance agent only on a flagged perf run, 17 (a) leaner changelog agent, 18 near-miss re-run only for judgment checks, 19 failures-only gate summary | Before the Dev 4 playtest items (M80 onwards) | Open |
+| Later | 8 fewer chat lines, 21 lighter local test run, 22 bot balance as a report | Only on the owner's word | Not approved |
+| Gradual | 26 split the largest files when a task already edits them | Ongoing | Open |
 
 ## Beta: finishing 0.1 (not scheduled yet)
 

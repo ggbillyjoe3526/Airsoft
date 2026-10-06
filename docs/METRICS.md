@@ -3,6 +3,8 @@
 One row per attempt of a task run through the pipeline (`pipeline/README.md`). Gate columns are ✓, ✗ or – (not run),
 with seconds. Worker tokens are the totals the harness reports when a spawned worker finishes, per worker (QA,
 performance, triage, critic, changelog); the build thread's own tokens and the coordinator's are not visible here.
+From 2026-10-06 (token-efficiency plan, item 25) the cell also gives the build thread's own total when its session
+shows one (`thread 350k`); the rows before that date are the baseline the plan's later steps are measured against.
 
 | Date | Task | Attempt | Worker model | build | tests | smoke | perf | scope | changelog | Critic | Retry reason | Wall time | Worker tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
