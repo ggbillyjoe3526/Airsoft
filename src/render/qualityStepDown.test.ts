@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { QUALITY_STEP_DOWN } from '../config/render';
+import { QUALITY, QUALITY_CHOICES, QUALITY_PRESETS, QUALITY_STEP_DOWN, type QualityChoice, startingQuality } from '../config/render';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './qualityStepDown';
 
 /** Feeds `seconds` of frames: `slowShare` of them at `slowMs`, the rest at 10 ms. Returns whether the watch fired. */
@@ -58,5 +58,39 @@ describe('the automatic quality step-down (REN-03)', () => {
     expect(presetBelow('medium')).toBe('low');
     expect(presetBelow('low')).toBeNull();
     expect(presetBelow('custom')).toBeNull();
+  });
+});
+
+describe('Ultra and the automatic step-down (G5 QA)', () => {
+  it('walks Ultra down through High, Medium and Low in order, one preset at a time, each a cheaper one', () => {
+    const walked: string[] = [];
+    for (let at: QualityChoice | null = 'ultra'; at; at = presetBelow(at)) walked.push(at);
+    expect(walked).toEqual(['ultra', 'high', 'medium', 'low']);
+    for (const preset of QUALITY_PRESETS.slice(1)) {
+      const below = presetBelow(preset)!;
+      expect(QUALITY_PRESETS.indexOf(below), preset).toBe(QUALITY_PRESETS.indexOf(preset) - 1);
+      expect(QUALITY[below].renderScale, preset).toBeLessThanOrEqual(QUALITY[preset].renderScale);
+    }
+  });
+
+  it('never lands on Ultra when stepping down, and none of the game’s own picks for any GPU is Ultra', () => {
+    for (const choice of QUALITY_CHOICES) expect(presetBelow(choice.id), choice.id).not.toBe('ultra');
+    for (const tier of ['software', 'integrated', 'discrete', 'unknown'] as const) {
+      const start = startingQuality(null, null, {}, tier);
+      expect(start.choice).not.toBe('ultra');
+      // The game's pick (automatic) is the only one that steps; its whole way down never touches Ultra.
+      expect(start.automatic).toBe(true);
+      for (let at: QualityChoice | null = start.choice; at; at = presetBelow(at)) expect(at).not.toBe('ultra');
+    }
+  });
+
+  it('keeps a player’s own Ultra (picked, saved or asked for in the address) out of the automatic step-down', () => {
+    expect(startingQuality('ultra', null, {}, 'discrete').automatic).toBe(false);
+    expect(startingQuality(null, 'ultra', {}, 'discrete').automatic).toBe(false);
+    expect(startingQuality(null, 'ultra', {}, 'software')).toMatchObject({ choice: 'ultra', automatic: false });
+  });
+
+  it('judges Ultra at a 240 cap as slow only by the usual 20 ms, since 240 frames a second is faster than that', () => {
+    expect(slowFrameMs(240)).toBe(QUALITY_STEP_DOWN.p95Ms);
   });
 });

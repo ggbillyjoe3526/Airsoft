@@ -248,3 +248,47 @@ describe('config/render.ts re-exports the split files (G5)', () => {
     }
   });
 });
+
+// G5 QA: every public value render.ts had before the split, by name (the list is the file's exports on main before G5).
+describe('config/render.ts keeps every name it had before the split (G5 QA)', () => {
+  const BEFORE_THE_SPLIT = [
+    'ATMOSPHERE', 'BB_VISUALS', 'CANOPY', 'CASE_VISUALS', 'CITY_PROPS', 'CONTACT_SHADOWS', 'DETAIL_LEVELS', 'DUST_MOTES', 'ENVIRONMENT', 'EXIT_VISUALS',
+    'FIXTURES', 'FLAG_VISUALS', 'FOLIAGE_LOOK', 'FOV_SETTING', 'FRAME_PACING', 'FRAME_RATE_CAPS', 'FRAME_TIMING', 'GAS_PUFFS', 'GROUND_LOOK', 'HIT_PUFFS',
+    'HUD', 'IMPACT_DUST', 'IMPACT_GRIT', 'IMPACT_PUFFS', 'IMPACT_RINGS', 'LIGHTING', 'LIGHTING_PRESETS', 'NATURE_SHAPES', 'NIGHT_SKY', 'POOL_LIGHTS',
+    'QUALITY', 'QUALITY_CHOICES', 'QUALITY_FIELDS', 'QUALITY_PRESETS', 'QUALITY_STEP_DOWN', 'RENDER', 'REPLICA_SHEEN', 'RETRO', 'SIGNS', 'SPECTATOR',
+    'SURFACES', 'TERRAIN_LOOK', 'TIER_QUALITY', 'TONE_MAPPING', 'TORCH_BEAMS', 'VIEWMODEL', 'effectivePixelRatio', 'matchOverScreenDelay', 'parseQuality',
+    'qualityChoiceOf', 'resolveQuality', 'startingQuality',
+  ];
+
+  it('still exports each of them, each defined', () => {
+    for (const name of BEFORE_THE_SPLIT) {
+      expect(Object.keys(renderBarrel), name).toContain(name);
+      expect((renderBarrel as Record<string, unknown>)[name], name).toBeDefined();
+    }
+  });
+
+  it('leaves every field Low, Medium and High had before G5 at the value it had (Low drawn exactly as before)', () => {
+    // The presets' values on main before G5, field by field; G5 only adds the post fields.
+    const BEFORE = {
+      low: { renderScale: 0.8, maxPixelRatio: 1, antialias: false, shadows: false, shadowMapSize: 1024, shadowRadius: 1, shadowFollowsView: false, figureShadows: false, surfaceRelief: false, textureSize: 256, anisotropy: 1, dustMotes: 0, replicaSheen: false, environment: false, normalMaps: false, mapDetail: false, trees: 1, clouds: false, figureDetail: 'low', replicaDetail: 'low', handDetail: 'low', bbGlow: false, impactGrit: false, laserBeam: false, poolLights: 0 },
+      medium: { renderScale: 1, maxPixelRatio: 1.25, antialias: true, shadows: true, shadowMapSize: 1024, shadowRadius: 1.5, shadowFollowsView: false, figureShadows: true, surfaceRelief: true, textureSize: 512, anisotropy: 4, dustMotes: 90, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 2 },
+      high: { renderScale: 1, maxPixelRatio: 1.5, antialias: true, shadows: true, shadowMapSize: 2048, shadowRadius: 2.5, shadowFollowsView: true, figureShadows: true, surfaceRelief: true, textureSize: 1024, anisotropy: 16, dustMotes: 180, replicaSheen: true, environment: true, normalMaps: true, mapDetail: true, trees: 2, clouds: true, figureDetail: 'high', replicaDetail: 'high', handDetail: 'high', bbGlow: true, impactGrit: true, laserBeam: false, poolLights: 4 },
+    } as const;
+    for (const p of ['low', 'medium', 'high'] as const) expect(renderBarrel.QUALITY[p], p).toMatchObject(BEFORE[p]);
+    expect(renderBarrel.FRAME_RATE_CAPS.slice(0, 5)).toEqual([0, 30, 60, 120, 144]);
+  });
+
+  it('turns no post effect on for Low and adds nothing else to it: the post fields are its only new ones', () => {
+    const { low } = renderBarrel.QUALITY;
+    const post = ['ambientOcclusion', 'bloom', 'temporalAA', 'lightShafts', 'reflections', 'lensFinish'];
+    expect(Object.keys(low).filter((k) => post.includes(k)).sort()).toEqual([...post].sort());
+    expect(post.map((f) => low[f as keyof typeof low])).toEqual([0, false, false, false, false, false]);
+    expect(Object.keys(low)).toHaveLength(25 + post.length);
+  });
+
+  it('keeps each file under about 600 lines', () => {
+    const sources = import.meta.glob<string>('./render{View,Quality,Lighting,Surfaces,Effects}.ts', { query: '?raw', import: 'default', eager: true });
+    expect(Object.keys(sources)).toHaveLength(5);
+    for (const [file, text] of Object.entries(sources)) expect(text.split('\n').length, file).toBeLessThanOrEqual(600);
+  });
+});

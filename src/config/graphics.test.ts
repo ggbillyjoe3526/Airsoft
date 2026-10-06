@@ -140,3 +140,42 @@ describe('the post stack’s rows and the frame-rate row (G5)', () => {
     expect(frameRateCapFromSaved(null)).toBeUndefined();
   });
 });
+
+describe('the saved frame-rate choice, every value an older build or a hand-edit could hold (G5 QA)', () => {
+  /** An independent reading: the choice closest to `n` frames, the higher on a tie, Unlimited for 0 or less. */
+  const nearest = (n: number): number => {
+    if (n <= 0) return 0;
+    const caps = FRAME_RATE_CAPS.filter((c) => c > 0);
+    const best = Math.min(...caps.map((c) => Math.abs(c - n)));
+    return Math.max(...caps.filter((c) => Math.abs(c - n) === best));
+  };
+
+  it('reads every whole number of frames from -5 to 1000 as the nearest choice, as a number and as text', () => {
+    for (let n = -5; n <= 1000; n++) {
+      expect(frameRateCapFromSaved(n), `${n}`).toBe(nearest(n));
+      expect(frameRateCapFromSaved(String(n)), `"${n}"`).toBe(nearest(n));
+    }
+  });
+
+  it('puts each tie to the higher choice: 45, 90, 132 and 192', () => {
+    expect([45, 90, 132, 192].map((n) => frameRateCapFromSaved(n))).toEqual([60, 120, 144, 240]);
+  });
+
+  it('reads fractions, exponents, hex, padding and infinity as numbers, and any other text, object or value as nothing', () => {
+    expect(frameRateCapFromSaved(59.9)).toBe(60);
+    expect(frameRateCapFromSaved('1e2')).toBe(120);
+    expect(frameRateCapFromSaved('0x3c')).toBe(60);
+    expect(frameRateCapFromSaved(' 144 ')).toBe(144);
+    expect(frameRateCapFromSaved(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(frameRateCapFromSaved('Infinity')).toBe(0);
+    expect(frameRateCapFromSaved(Number.MAX_VALUE)).toBe(240);
+    expect(frameRateCapFromSaved(Number.NEGATIVE_INFINITY)).toBe(0);
+    for (const junk of [Number.NaN, 'NaN', 'Off', 'OFF', 'unlimited', '60fps', '--', '   ', '', null, undefined, true, false, [], [60], {}, { value: 60 }]) {
+      expect(frameRateCapFromSaved(junk), JSON.stringify(junk) ?? 'undefined').toBeUndefined();
+    }
+  });
+
+  it('only ever answers a choice the row offers', () => {
+    for (const raw of [-1, 0, 1, 31, 61, 130, 300, 'off', '30', 1e9]) expect(FRAME_RATE_CAPS as readonly unknown[], String(raw)).toContain(frameRateCapFromSaved(raw));
+  });
+});

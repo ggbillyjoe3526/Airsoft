@@ -279,3 +279,156 @@ describe('reflections only on reflective surfaces (G5)', () => {
     noRefl.dispose();
   });
 });
+
+/** The reflection pass of a stack, and what it holds (private: the QA reaches in for the objects it must free). */
+const reflectionOf = (stack: PostStack) => (stack as unknown as { reflection: { mask: THREE.WebGLRenderTarget | null; proxies: { mesh: THREE.Mesh }[] } }).reflection;
+const taaOf = (stack: PostStack) =>
+  (stack as unknown as { passes: { id: string; valid?: boolean; resolve?: THREE.ShaderMaterial }[] }).passes.find((p) => p.id === 'taa')!;
+
+describe('the reflection pass frees what it allocates (G5 QA)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('frees the mask and every stand-in material each time the surfaces change, so repeated toggles leak nothing, and all on dispose', () => {
+    const freedTargets = new Set<unknown>();
+    const freedMaterials = new Set<unknown>();
+    vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose').mockImplementation(function (this: unknown) {
+      freedTargets.add(this);
+    });
+    vi.spyOn(THREE.Material.prototype, 'dispose').mockImplementation(function (this: unknown) {
+      freedMaterials.add(this);
+    });
+    const stack = stackFor('ultra');
+    const geo = new THREE.PlaneGeometry();
+    const puddle = (strength: number) => Object.assign(new THREE.Mesh(geo), { userData: { reflective: strength } });
+    const madeMasks = new Set<THREE.WebGLRenderTarget>();
+    const madeMaterials = new Set<THREE.Material>();
+    const take = () => {
+      const r = reflectionOf(stack);
+      if (r.mask) madeMasks.add(r.mask);
+      for (const p of r.proxies) madeMaterials.add(p.mesh.material as THREE.Material);
+    };
+    for (let i = 0; i < 6; i++) {
+      stack.setReflectiveSurfaces([{ mesh: puddle(0.5), strength: 0.5 }, { mesh: puddle(0.7), strength: 0.7 }]);
+      take();
+      // One more surface: the old stand-ins go, new ones come.
+      stack.setReflectiveSurfaces([{ mesh: puddle(0.5), strength: 0.5 }]);
+      take();
+      stack.setReflectiveSurfaces([]);
+      expect(reflectionOf(stack).mask).toBeNull();
+      expect(reflectionOf(stack).proxies).toHaveLength(0);
+      // Everything made so far is already freed, before the stack's own disposal.
+      for (const t of madeMasks) expect(freedTargets.has(t), `round ${i}: a mask left`).toBe(true);
+      for (const m of madeMaterials) expect(freedMaterials.has(m), `round ${i}: a stand-in material left`).toBe(true);
+    }
+    expect(madeMasks.size).toBe(6);
+    expect(madeMaterials.size).toBe(18);
+    // A mask held at disposal goes too.
+    stack.setReflectiveSurfaces([{ mesh: puddle(0.9), strength: 0.9 }]);
+    const last = reflectionOf(stack).mask!;
+    const lastMaterial = reflectionOf(stack).proxies[0]!.mesh.material;
+    expect(freedTargets.has(last)).toBe(false);
+    stack.dispose();
+    expect(freedTargets.has(last)).toBe(true);
+    expect(freedMaterials.has(lastMaterial)).toBe(true);
+  });
+});
+
+describe('the stack at awkward sizes (G5 QA)', () => {
+  it('keeps every target a whole number of pixels, at least one, from a 1 × 1 buffer to an odd one, each at its own share', () => {
+    const puddle = new THREE.Mesh(new THREE.PlaneGeometry());
+    puddle.userData.reflective = 0.6;
+    for (const [w, h] of [[1, 1], [3, 2], [201, 101], [1, 1]] as const) {
+      for (const preset of ['high', 'ultra'] as const) {
+        const stack = stackFor(preset, 64, 36);
+        stack.setReflectiveSurfaces([{ mesh: puddle, strength: 0.6 }]);
+        const { gl } = stubGl();
+        stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera());
+        stack.setSize(w, h);
+        const sizes = [...reachable(stack, THREE.WebGLRenderTarget)].map((t) => [t.width, t.height] as const);
+        for (const [tw, th] of sizes) {
+          expect(Number.isInteger(tw) && Number.isInteger(th), `${preset} ${w}x${h}: ${tw}x${th}`).toBe(true);
+          expect(tw, `${preset} ${w}x${h}`).toBeGreaterThanOrEqual(1);
+          expect(th, `${preset} ${w}x${h}`).toBeGreaterThanOrEqual(1);
+        }
+        const names = new Set(sizes.map(([tw, th]) => `${tw}x${th}`));
+        expect(names, `${preset} ${w}x${h}: the scene's own size`).toContain(`${w}x${h}`);
+        const share = (s: number) => `${Math.max(1, Math.round(w * s))}x${Math.max(1, Math.round(h * s))}`;
+        expect(names, `${preset} ${w}x${h}: the light shafts`).toContain(share(POST.lightShafts.resolution));
+        // Half-resolution shade on High, full on Ultra (so Ultra has no half-size shade target but the shafts').
+        expect(names, `${preset} ${w}x${h}: the shade`).toContain(share(QUALITY[preset].ambientOcclusion));
+        stack.dispose();
+      }
+    }
+  });
+
+  it('resizes the temporal history, the reflection mask and every ping-pong target with the buffer, and leaves none at the old size', () => {
+    const stack = stackFor('ultra', 64, 36);
+    const puddle = new THREE.Mesh(new THREE.PlaneGeometry());
+    stack.setReflectiveSurfaces([{ mesh: puddle, strength: 0.6 }]);
+    const { gl } = stubGl();
+    stack.render(gl, new THREE.Scene(), new THREE.PerspectiveCamera()); // makes the ping-pong targets
+    stack.setSize(320, 180);
+    const targets = [...reachable(stack, THREE.WebGLRenderTarget)];
+    expect(targets.length).toBeGreaterThan(6);
+    // The reflection mask follows (the window's size, not a share of it).
+    expect([reflectionOf(stack).mask!.width, reflectionOf(stack).mask!.height]).toEqual([320, 180]);
+    for (const t of targets) expect([t.width, t.height], 'a target left at the old size').not.toEqual([64, 36]);
+    // Full-size ones: the scene's, two ping-pong, two history, the shade pair, the mask.
+    expect(targets.filter((t) => t.width === 320 && t.height === 180).length).toBeGreaterThanOrEqual(8);
+    stack.dispose();
+  });
+
+  it('does nothing for a size it already has (no target is made again)', () => {
+    const stack = stackFor('ultra', 64, 36);
+    const resized = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'setSize');
+    stack.setSize(64, 36);
+    expect(resized).not.toHaveBeenCalled();
+    resized.mockRestore();
+    stack.dispose();
+  });
+});
+
+describe('the temporal blend across frames, a resize and a cut (G5 QA)', () => {
+  it('has no history on its first frame, uses it on the next, and starts over after a resize or a reset', () => {
+    const stack = stackFor('high');
+    const { gl } = stubGl();
+    const camera = new THREE.PerspectiveCamera();
+    const has = () => taaOf(stack).resolve!.uniforms.hasHistory!.value;
+    stack.render(gl, new THREE.Scene(), camera);
+    expect(has()).toBe(0);
+    stack.render(gl, new THREE.Scene(), camera);
+    expect(has()).toBe(1);
+    stack.setSize(80, 45);
+    stack.render(gl, new THREE.Scene(), camera);
+    expect(has(), 'a history of the old size is never read').toBe(0);
+    stack.render(gl, new THREE.Scene(), camera);
+    expect(has()).toBe(1);
+    stack.reset();
+    stack.render(gl, new THREE.Scene(), camera);
+    expect(has(), 'after a cut or a restored context').toBe(0);
+    stack.dispose();
+  });
+
+  it('walks eight jitter steps and repeats them, each within half a pixel, and puts the inverse projection back too', () => {
+    const camera = new THREE.PerspectiveCamera(60, 16 / 9, 0.05, 250);
+    const plain = [...camera.projectionMatrix.elements];
+    const plainInverse = [...camera.projectionMatrixInverse.elements];
+    const stack = stackFor('high', 64, 36);
+    const { gl, draws } = stubGl();
+    for (let i = 0; i < POST.taa.jitterSamples * 2; i++) {
+      stack.render(gl, new THREE.Scene(), camera);
+      expect([...camera.projectionMatrix.elements], `frame ${i}: projection`).toEqual(plain);
+      expect([...camera.projectionMatrixInverse.elements], `frame ${i}: inverse`).toEqual(plainInverse);
+    }
+    const scenes = draws.filter((d) => d.what === 'scene').map((d) => d.projection);
+    const n = POST.taa.jitterSamples;
+    expect(new Set(scenes.slice(0, n).map((p) => p.join()))).toHaveProperty('size', n);
+    for (let i = 0; i < n; i++) expect(scenes[i + n], `step ${i} comes round again`).toEqual(scenes[i]);
+    for (const p of scenes) {
+      // A step moves the picture by at most half a pixel: 1 / width in NDC.
+      expect(Math.abs(p[8]! - plain[8]!)).toBeLessThanOrEqual(1 / 64 + 1e-9);
+      expect(Math.abs(p[9]! - plain[9]!)).toBeLessThanOrEqual(1 / 36 + 1e-9);
+    }
+    stack.dispose();
+  });
+});

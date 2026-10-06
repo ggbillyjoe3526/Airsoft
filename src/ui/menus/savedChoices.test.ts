@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SETTINGS_KEY, SETTINGS_VERSION } from '../../settings/storage';
-import { QUALITY, resolveQuality } from '../../config/render';
+import { graphicsKey, GRAPHICS_ROWS, storedValue } from '../../config/graphics';
+import { QUALITY, qualityChoiceOf, resolveQuality } from '../../config/render';
 import { effectiveReducedMotion, loadCustomQuality, loadFrameRateCap, loadReducedMotion, motionClass } from './savedChoices';
 
 function storageWith(fields: Record<string, unknown>): Storage {
@@ -83,5 +84,62 @@ describe('a Custom mix saved before the post rows (G5)', () => {
   it('reads the new rows when saved', () => {
     const custom = loadCustomQuality(storageWith({ 'graphics.ambientOcclusion': 'full', 'graphics.reflections': 'on', 'graphics.poolLights': '8' }));
     expect(custom).toEqual({ ambientOcclusion: 1, reflections: true, poolLights: 8 });
+  });
+});
+
+describe('the frame-rate choice from saves of every shape (G5 QA)', () => {
+  const raw = (value: string): Storage => {
+    const data = new Map<string, string>([[SETTINGS_KEY, value]]);
+    return { getItem: (k: string) => data.get(k) ?? null, setItem: () => undefined, removeItem: () => undefined, clear: () => undefined, key: () => null, length: 1 };
+  };
+
+  it('is Unlimited from a save that is not JSON, from a newer build’s save, and from any value that is not a number of frames', () => {
+    expect(loadFrameRateCap(raw('{not json'))).toBe(0);
+    expect(loadFrameRateCap(raw(JSON.stringify({ version: SETTINGS_VERSION + 1, frameRateCap: '60' })))).toBe(0);
+    expect(loadFrameRateCap(raw(JSON.stringify([60])))).toBe(0);
+    for (const junk of [null, [], {}, '', 'Off', 'sixty', false]) expect(loadFrameRateCap(storageWith({ frameRateCap: junk })), JSON.stringify(junk)).toBe(0);
+  });
+
+  it('keeps a saved 144 (the old top choice) at 144 and a saved 240 at 240, as text or as a number', () => {
+    expect(loadFrameRateCap(storageWith({ frameRateCap: '144' }))).toBe(144);
+    expect(loadFrameRateCap(storageWith({ frameRateCap: 144 }))).toBe(144);
+    expect(loadFrameRateCap(storageWith({ frameRateCap: 240 }))).toBe(240);
+    expect(loadFrameRateCap(storageWith({ frameRateCap: -30 }))).toBe(0);
+  });
+});
+
+describe('a Custom mix saved before the post rows, in full (G5 QA)', () => {
+  /** What a build before G5 saved for Medium's fields as a Custom mix (every graphics row, none of the six new ones). */
+  const OLD_ROWS = Object.keys(QUALITY.medium).filter((f) => !['ambientOcclusion', 'bloom', 'temporalAA', 'lightShafts', 'reflections', 'lensFinish'].includes(f));
+
+  it('with every old row at Medium’s value is a Custom mix of Medium and High’s post rows, not Medium, High or Ultra', () => {
+    const fields: Record<string, unknown> = { quality: 'custom' };
+    for (const row of GRAPHICS_ROWS) {
+      if (!OLD_ROWS.includes(row.field)) continue;
+      const v = storedValue(row, QUALITY.medium[row.field]);
+      if (v !== undefined) fields[graphicsKey(row.field)] = v;
+    }
+    const custom = loadCustomQuality(storageWith(fields));
+    expect(Object.keys(custom).sort()).toEqual([...OLD_ROWS].sort());
+    const q = resolveQuality('custom', custom);
+    for (const f of OLD_ROWS) expect(q[f as keyof typeof q], f).toEqual(QUALITY.medium[f as keyof typeof q]);
+    expect([q.ambientOcclusion, q.bloom, q.temporalAA, q.lightShafts, q.reflections, q.lensFinish]).toEqual([0.5, true, true, true, false, false]);
+    expect(qualityChoiceOf(q)).toBe('custom');
+  });
+
+  it('with every old row at High’s value reads as High, and never as Ultra', () => {
+    const fields: Record<string, unknown> = { quality: 'custom' };
+    for (const row of GRAPHICS_ROWS) {
+      if (!OLD_ROWS.includes(row.field)) continue;
+      const v = storedValue(row, QUALITY.high[row.field]);
+      if (v !== undefined) fields[graphicsKey(row.field)] = v;
+    }
+    expect(qualityChoiceOf(resolveQuality('custom', loadCustomQuality(storageWith(fields))))).toBe('high');
+  });
+
+  it('ignores a new row saved with a value it does not offer, and keeps High’s', () => {
+    const custom = loadCustomQuality(storageWith({ 'graphics.ambientOcclusion': 'quarter', 'graphics.bloom': 'maybe', 'graphics.reflections': 1, 'graphics.lensFinish': null }));
+    expect(custom).toEqual({});
+    expect(resolveQuality('custom', custom)).toEqual(QUALITY.high);
   });
 });
