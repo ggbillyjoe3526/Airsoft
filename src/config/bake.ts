@@ -60,7 +60,7 @@ export const BAKED_LIGHT = {
      * 1 - `indirectShare` × (1 - sky visibility) + `bounce` × the bounce light: the sky fill's share of a sunlit
      * surface's light, and the bounce over the sun and fill's sum, on Low's Lambert surfaces.
      */
-    vertex: { cell: 4, indirectShare: 0.45, bounce: 0.45 },
+    vertex: { cell: 6, indirectShare: 0.45, bounce: 0.45 },
     /**
      * Figures (every preset, render/characterRenderer.ts): read `height` metres above their feet; their colour is scaled as
      * a vertex's (`indirectShare`), and the bounce glows on them at `bounce` (an emissive term, no new shader).

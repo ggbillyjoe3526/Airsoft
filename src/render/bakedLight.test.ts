@@ -93,10 +93,10 @@ describe('Low: the baked light in the vertex colours, at no per-pixel cost (G6)'
     expect(lit.userData.probes).toBeUndefined();
   });
 
-  it('cuts big faces into tiles for the light to land on, within a few thousand triangles', () => {
+  it('cuts big faces into tiles for the light to land on, within about a thousand triangles (Low’s budget)', () => {
     const added = triangles(lit) - triangles(off);
     expect(added).toBeGreaterThan(0);
-    expect(added).toBeLessThan(2500);
+    expect(added).toBeLessThan(1500);
   });
 
   it('darkens what stands where the sky is hidden and tints what is open with the bounce', () => {
