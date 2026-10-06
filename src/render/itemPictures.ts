@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ITEM_PICTURE } from '../config/itemPictures';
 import type { ReplicaConfig } from '../config/replicas';
 import type { SchemeId } from '../config/schemes';
-import { buildReplicaModels, type ReplicaDetail } from './replicaModels';
+import { buildReplicaModels, fitMuzzle, type ReplicaDetail, type ReplicaModel } from './replicaModels';
 
 /**
  * Item pictures (graphics overhaul G2): small images of a replica, a part or a colour scheme for the menus, drawn by the
@@ -126,34 +126,39 @@ export class ItemPictures {
   private draw(subject: PictureSubject): string {
     const [width, height] = pictureSize(subject);
     const models = buildReplicaModels([subject.replica], 0, false, PICTURE_DETAIL, { schemes: [subject.scheme], realistic: subject.realistic }, 'bare');
+    const model = models.models.get(subject.replica.id)!;
     try {
-      const { group } = models.models.get(subject.replica.id)!;
-      if (subject.part) showOnly(group, subject.part);
-      else fitParts(group, subject.fit ?? {});
-      this.scene.add(group);
-      frameItem(this.camera, visibleBox(group), width / height);
+      if (subject.part) showOnly(model.group, subject.part);
+      else fitParts(model, subject.fit ?? {});
+      this.scene.add(model.group);
+      frameItem(this.camera, visibleBox(model.group), width / height);
       const pixels = this.target.draw(this.scene, this.camera, width, height);
-      this.scene.remove(group);
       return this.target.encode(finishPixels(pixels, width, height), width, height);
     } finally {
+      // Taken out even when the draw fails, so a later picture never draws this one's model too.
+      this.scene.remove(model.group);
       models.dispose();
     }
   }
 }
 
-/** Shows the parts in `fit` (and the standard magazine, the bare muzzle's own device and the iron sights up when no optic is fitted). */
-export function fitParts(model: THREE.Object3D, fit: PictureFit): void {
-  model.traverse((o) => {
+/**
+ * Shows the parts in `fit` (and the standard magazine, the bare muzzle's own device and the iron sights up when no optic
+ * is fitted), and moves the muzzle device out to the fitted barrel's end, as the viewmodel does.
+ */
+export function fitParts(model: ReplicaModel, fit: PictureFit): void {
+  model.group.traverse((o) => {
     const [kind, id] = o.name.split(':');
     if (!id || !kind || !PART_KINDS.includes(kind)) return;
     const wanted = fit[kind as PartKind] ?? (kind === 'magazine' ? 'standard' : kind === 'muzzle' ? 'none' : undefined);
     o.visible = id === wanted;
   });
   const optic = fit.optic != null;
-  const up = model.getObjectByName('sightsUp');
-  const down = model.getObjectByName('sightsDown');
+  const up = model.group.getObjectByName('sightsUp');
+  const down = model.group.getObjectByName('sightsDown');
   if (up) up.visible = !optic;
   if (down) down.visible = optic;
+  fitMuzzle(model.mount, fit.barrel ?? null, fit.muzzle ?? null);
 }
 
 /** Hides everything but the part named `name` ('kind:id'): an attachment's own picture. */
