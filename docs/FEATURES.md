@@ -142,6 +142,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 - Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet, vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under raised floors (M34f)
 - Baked bounce light on Depot (per pixel on Medium and High, in the map's vertices on Low, on the players too), weathered surfaces and ground stains, precast concrete walls and rubble gabions, a lower, warmer day sun (G6)
+- Set dressing on Depot from Medium: dirt, junk, litter, puddles, logos, sprays, signs and glow strips; an industrial skyline with chimney smoke on Detailed trees; dust kicked up by feet (G8)
 
 ## Practice range and tutorial
 

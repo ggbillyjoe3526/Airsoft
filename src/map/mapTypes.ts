@@ -172,6 +172,12 @@ export interface MapData {
    */
   extraction?: ExtractionData;
   /**
+   * Set dressing (G8, render/mapDressing.ts): dirt, junk, puddles, marks, glow strips, the skyline round the field and
+   * its smoke, the motes' tint and the dust feet kick up. Look only: nothing in it collides, is walked on, hides anyone
+   * or is read by play (physics, nav, cover, sight and sound read `blocks`). Absent: none, the map draws as before.
+   */
+  dressing?: MapDressing;
+  /**
    * Floor heights of a map with several storeys (M34c), lowest first (Neon Heights: street, +3, +6). The minimap draws
    * the storey you stand on and marks teammates on other storeys as above or below. Absent: one storey.
    */
@@ -297,3 +303,50 @@ export interface CaseSpot {
   yaw: number;
   kinds: string[];
 }
+
+/**
+ * A map's set dressing (G8, MapData.dressing). Every random choice (which faces get dirt or junk, which kind, which
+ * logo, the puddles' outlines) comes from `seed`, so the same map always looks the same. Each part is optional.
+ */
+export interface MapDressing {
+  seed: number;
+  /**
+   * Clutter on the floors (map detail): the chance each slot along a block's foot gets a bank of dirt, and loose junk
+   * (no taller than DRESSING.junk.maxHeight, against the face, never in a lane, a doorway or by a spawn); `litter`, the
+   * chance each square of open floor gets scraps of paper.
+   */
+  clutter?: { dirt: number; junk: number; litter: number };
+  /** Puddles on the floor (map detail): the middle (world x, z) and the size (m); never under a block. */
+  puddles?: readonly DressingPuddle[];
+  /** Marks (map detail): the chance a container gets a shipping line's logo, and a 4 m bay of wall a spray or a sign. */
+  marks?: { logos: number; walls: number };
+  /** Small glow strips on block faces (map detail): self-lit by day and night, as signs are placed (MapSign). */
+  strips?: readonly GlowStrip[];
+  /** The skyline round the field (Trees: Detailed), with smoke from its chimneys. */
+  skyline?: readonly SkylinePiece[];
+  /** The dust motes' colour (sRGB). */
+  motes?: { tint: number };
+  /** Dust kicked up by sprinting and landing feet (Impact grit): its colour (sRGB) and size (1: DRESSING.kickedDust). */
+  kickedDust?: { tint: number; scale: number };
+}
+
+/** A puddle (MapDressing.puddles): `width` along x and `depth` along z, its outline seeded. */
+export interface DressingPuddle {
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+}
+
+/** A small glow strip (MapDressing.strips): a sign's panel that is always lit. */
+export type GlowStrip = Omit<MapSign, 'kind'>;
+
+/**
+ * A building or structure beyond the field (MapDressing.skyline), standing on the ground at (x, z): `width` along x and
+ * `depth` along z (swapped when `turned`), `height` tall, in `colour` (sRGB, the kind's own if absent). A shed's doors
+ * and a crane's beam face the field. A chimney with `smoke` smokes. A power line runs its pylons through `points`.
+ */
+export type SkylinePiece =
+  | { kind: 'shed' | 'waterTower' | 'crane' | 'containers'; x: number; z: number; width: number; depth: number; height: number; turned?: boolean; colour?: number }
+  | { kind: 'chimney'; x: number; z: number; width: number; depth: number; height: number; smoke?: boolean; colour?: number }
+  | { kind: 'powerLine'; points: readonly { x: number; z: number }[]; height: number };

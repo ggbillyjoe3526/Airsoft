@@ -24,6 +24,7 @@ import { BBPathsDebug } from './bbPathsDebug';
 import { BBRenderer } from './bbRenderer';
 import { figureMuzzle, type FigureHold } from './characterModels';
 import { holdsPistol } from './characterRenderer';
+import { DressingEffects } from './dressingEffects';
 import { DustMotes } from './dustMotes';
 import { ImpactGrit, shooterSide } from './impactGrit';
 import { ImpactPuffs } from './impactPuffs';
@@ -81,6 +82,8 @@ export class CombatPresentation {
   private readonly gasPuffs = new ImpactPuffs(GAS_PUFFS);
   /** Dust drifting in the sunlight round the camera (M14); how much is the quality settings' (at most the Custom row's top). */
   private readonly motes = new DustMotes(DUST_MOTES.max);
+  /** The map's chimney smoke and kicked-up dust (G8, MapDressing; nothing for a map without them, or on Low). */
+  private readonly dressing: DressingEffects;
   /** The impact dust's tint per material (linear colours, made once). */
   private readonly dustTints = new Map<ImpactMaterial, THREE.Color>();
   /** The settings in use, to light the replica again after a lost or replaced graphics context (contextRestored). */
@@ -153,6 +156,8 @@ export class CombatPresentation {
     this.paths = new BBPathsDebug(state.bbs);
     renderer.scene.add(this.bbs.object, this.puffs.object, this.grit.object, this.hitPuffs.object, this.gasPuffs.object, this.motes.object, this.paths.object);
     for (const [material, dust] of Object.entries(IMPACT_DUST)) this.dustTints.set(material as ImpactMaterial, new THREE.Color(dust.tint));
+    this.motes.setMapDust(field.dressing?.motes?.tint ?? null);
+    this.dressing = new DressingEffects(renderer.scene, field.dressing);
     this.viewmodel = new Viewmodel(renderer.camera.aspect, teamColor, loadout, { replica: quality.replicaDetail, hands: quality.handDetail }, paint, arms);
     this.overlay = { scene: this.viewmodel.scene, camera: this.viewmodel.camera };
     this.hud = new Hud(container, keyName, crosshair);
@@ -171,6 +176,7 @@ export class CombatPresentation {
     this.viewmodel.setLaserBeam(quality.laserBeam);
     this.bbs.setGlow(quality.bbGlow);
     this.grit.setEnabled(quality.impactGrit);
+    this.dressing.setQuality(quality);
     if (quality.impactGrit && !this.rings) {
       this.rings = new ImpactPuffs(IMPACT_RINGS);
       this.renderer.scene.add(this.rings.object);
@@ -202,12 +208,14 @@ export class CombatPresentation {
   setLighting(preset: LightingPreset): void {
     this.viewmodel.setLighting(preset);
     this.sfx.setScene(soundscapeOf(this.field, preset.night));
+    this.dressing.setNight(preset.night);
   }
 
   /** Reduced motion changed on Settings → Accessibility: the held replica's bob, sway and kick. */
   setMotion(scale: MotionScale): void {
     this.viewmodel.setMotion(scale);
     this.motes.setMotion(scale.dust > 0);
+    this.dressing.setMotion(scale.dust > 0);
   }
 
   /** The crosshair changed on Settings → Crosshair. */
@@ -254,6 +262,7 @@ export class CombatPresentation {
   afterTick(): void {
     this.paths.recordTick();
     this.sfx.afterTick(this.state.characters, this.player.id);
+    this.dressing.afterTick(this.state.events, this.state.characters, this.renderer.camera.position);
     for (const e of this.state.events) {
       if (e.type === 'roundStart') {
         this.viewmodel.resetSway(); // the view snaps to the spawn yaw
@@ -314,6 +323,7 @@ export class CombatPresentation {
     this.gasPuffs.update(dt, this.renderer.camera);
     this.motes.setPixelRatio(this.renderer.renderer.getPixelRatio());
     this.motes.update(dt, this.renderer.camera.position, this.state.wind);
+    this.dressing.update(dt, this.renderer.camera, this.state.wind);
     this.paths.update();
 
     const p = this.player;
@@ -365,6 +375,7 @@ export class CombatPresentation {
     this.hitPuffs.dispose();
     this.gasPuffs.dispose();
     this.motes.dispose();
+    this.dressing.dispose();
     this.viewmodel.setEnvironment(null);
     this.paths.dispose();
     this.viewmodel.dispose();

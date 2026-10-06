@@ -100,6 +100,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **G6** · New Custom graphics rows: Baked light (Off, Vertex, Per pixel) and Weathering; Low keeps its cost
 - **G5** · Ultra graphics preset for fast graphics cards: soft 4096 shadows, up to 2× resolution, the most dust and night lights; never picked automatically
 - **G5** · Graphics effects: bloom from Medium; ambient occlusion, temporal smoothing and light shafts on High; reflections and film grain on Ultra
+- **G8** · Depot is dressed on Medium and up: grey dirt at block feet, junk and litter against walls, glossy puddles, a few logos, sprays, warning signs and glow strips
+- **G8** · Beyond Depot's walls on Detailed trees: sheds, a water tower, a crane, stacked containers, a power line and two smoking chimneys
+- **G8** · Sprinting and landing kick up a little dust on Depot (Impact grit); the dust in the air is greyer and hangs low; Low looks as before
 
 ### Changed
 - **G5** · A Custom graphics mix saved before this build gets High's new effects (ambient occlusion, temporal smoothing, light shafts, bloom); each can be turned off under Custom
@@ -224,6 +227,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M33c** · Sloping ground for maps (physics, BBs, sight, bot routes, minimap); BBs land in earth with no bounce. Groundwork for Woodland
 - **M50** · Woodland and Neon Heights download only once Dev content is on, the pool and stats tables are a file of their own, and the code size budget is 900 kB with a warning at 90 % (#107)
 - **G5** · The perf harness measures Ultra (`--preset all` and `--preset ultra`), a desktop environment and any window size (`--viewport`)
+- **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it
 
 ## 0.1 Dev 3 · 2026-10-03
 
