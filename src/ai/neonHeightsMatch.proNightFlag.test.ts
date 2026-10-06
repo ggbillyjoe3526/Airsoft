@@ -20,7 +20,8 @@ describe('a 4v4 Attack / Defend match on Neon Heights by Night, both teams on Pr
     // % (107 of 213), none on time; Hard on the same seeds 54.3 % (132 of 243), none on time. Re-measure with this test
     // after any bot, layout or night-sight change. M71 (Audit 2: every level hunts the middle, Normal and up keep out of the light, bots step aside when pressed together, a
     // torch comes on only for a fight within 20 m or a search's last stretch): 52.9 % (117 of
-    // 221), none on time.
+    // 221), none on time. M73 (the east's last mid-lane holds inside the bar's door line): 57.3 % (125 of 218), none on
+    // time.
     expectProBalance(tallyBalance(32, 400, botConfig('pro'), 'attackDefend', NIGHT, TEAM_SIZE), 'attackDefend', 'Neon Heights by Night Pro');
   });
 });

@@ -12,23 +12,23 @@ const TEAM_SIZE = 4;
 /** Level 1's floor is at +3 m: anyone above this stands on Level 2 (or high on a stair to it). */
 const LEVEL_2 = 5;
 /**
- * The west end's share of the decided rounds, by lighting: by Day centred on the 45 % it measures over 96 seeds (M55),
- * by Night the even 40-60 % (M57: with the torches the game fits every bot at night the west wins 54 % here).
+ * The west end's share of the decided rounds, by lighting: the even 40-60 % both ways since M73 put the east's bar-door
+ * holds deep in the bar (the west 45.7 % by Day, 48.3 % by Night over seeds 1-48; by Day it was centred on 45 % before, M55).
  */
-const WEST: Readonly<Record<LightingPresetId, readonly [number, number]>> = { day: [0.35, 0.55], night: [0.4, 0.6] };
+const WEST: Readonly<Record<LightingPresetId, readonly [number, number]>> = { day: [0.4, 0.6], night: [0.4, 0.6] };
 
-describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Neon Heights by %s over 16 seeds (M34c, M34d)', (light) => {
+describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Neon Heights by %s over 48 seeds (M34c, M34d)', (light) => {
   const map = mapUnderLighting(NEON_HEIGHTS, light);
   beforeAll(async () => {
     await initPhysics();
   });
 
-  it(`keeps the ends close and the rounds decided: the west end wins ${Math.round(WEST[light][0] * 100)}-${Math.round(WEST[light][1] * 100)} %, under 1 round in 10 runs out the clock`, { timeout: 300_000 }, () => {
+  it(`keeps the ends close and the rounds decided: the west end wins ${Math.round(WEST[light][0] * 100)}-${Math.round(WEST[light][1] * 100)} %, under 1 round in 10 runs out the clock`, { timeout: 900_000 }, () => {
     let rounds = 0;
     let decided = 0;
     let westWins = 0;
     let onTime = 0;
-    for (let seed = 1; seed <= 16; seed++) {
+    for (let seed = 1; seed <= 48; seed++) {
       const stats = playMatch(300, seed, undefined, BOTS, 'elimination', ROUNDS, map, TEAM_SIZE, HITS);
       for (const r of stats.results) {
         rounds++;
@@ -52,7 +52,10 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Ne
     // AI-02) the west wins 54.0 % here by night (47 of 87), none on time, so by Night the band stays 40-60 %. M71 (Audit
     // 2: every level hunts the middle and keeps out of the light, torches only for a close fight): 40.4 % by day (36 of
     // 89, 1 of 90 on time) and 43.2 % by night (38 of 88, none on time): the west under 45 % calls M73's lane point at
-    // the bar door (audit BAL-04, owner decision 6).
+    // the bar door (audit BAL-04, owner decision 6). With it (M73): 45.5 % by day (40 of 88, none on time) and 52.5 %
+    // by night (42 of 80, 2 of 82 on time). Seeds 1-48 since 2026-10-06 (16 left the Day figure a standard error from its
+    // floor, ±5.5): before M73's lane point 44.0 % by day (121 of 275) and 44.1 % by night (119 of 270); with it 45.7 %
+    // by day (126 of 276) and 48.3 % by night (125 of 259), ±3.
     expect(westWins / decided).toBeGreaterThanOrEqual(WEST[light][0]);
     expect(westWins / decided).toBeLessThanOrEqual(WEST[light][1]);
     expect(onTime / rounds).toBeLessThan(0.1);

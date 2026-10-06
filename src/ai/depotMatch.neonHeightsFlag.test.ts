@@ -41,7 +41,9 @@ describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Attack / Defend match o
     // raising it, none on time. Re-measure with this test after any layout or bot change. M71 (Audit 2: every level
     // hunts the middle and keeps out of the light, torches only for a close fight): by day 56 of 93 (60.2 %), 21 by
     // raising it; by night 50 of 93 (53.8 %), 10; none on time. The ceiling is the levels' 65 % since (LEVELS_BAND, owner
-    // decision 3): Normal attackers who now come through the middle win one round in 93 more than 60 %.
+    // decision 3): Normal attackers who now come through the middle win one round in 93 more than 60 %. M73 (the east's
+    // last mid-lane holds inside the bar's door line): 46.0 % by day (40 of 87, 10 by raising it) and 50.5 % by night
+    // (46 of 91, 19); none on time.
     const said = `${light}: attackers ${attackWins} of ${rounds}, ${captures} by raising it, ${onTime} on time`;
     expect(attackWins / rounds, said).toBeGreaterThanOrEqual(0.4);
     expect(attackWins / rounds, said).toBeLessThanOrEqual(LEVELS_BAND[1]);

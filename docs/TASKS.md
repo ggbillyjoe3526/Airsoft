@@ -11,17 +11,6 @@ accepted and lands with this list. Below, the rest of section 8 of the report
 POOL-D, Extraction pay (owner decision 23: keep until the playtest shows the extraction rate) and REN-03 step 3 with
 REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 
-## M73 · Neon Heights: the bar door over the avenue (Audit 2 BAL PR 3: BAL-04; only if M71 leaves the west under 45 %)
-tier: core
-perf: skip
-touches: src/map/neonHeights.ts, docs/DECISIONS.md, docs/KNOWN_ISSUES.md
-contract: none
-acceptance:
-  1. Measured after M71 by night at Normal, 16 seeds. If the west takes at least 45 %, the task closes with the figure recorded in KNOWN_ISSUES rows 20 and 184 and no code change.
-  2. Otherwise the mid lane point moves inside the bar's door line (owner decision 6), then a planter only if that is not enough; the east takes at most 55 % of first hits and the Neon Heights guards read 45–55 %.
-status: open
-attempts: 0
-
 ## M74 · Route searches that fit a tick (Audit 2 SIM-B + AI-D: SIM-01, AI-04)
 tier: core
 perf: required
