@@ -55,7 +55,8 @@ function savedKeys(rows: readonly FakeElement[]): string[] {
   for (const node of rows.flatMap(walk)) {
     if (node.tag === 'button') node.click();
     if (node.tag === 'input' && node.type === 'range') {
-      node.value = String((Number(node.min) + Number(node.max)) / 2 + Number(node.step));
+      const range = node as FakeElement & { value: string; min: string; max: string; step: string };
+      range.value = String((Number(range.min) + Number(range.max)) / 2 + Number(range.step));
       fire(node, 'input');
     }
   }

@@ -217,6 +217,19 @@ describe('the menus\' sheets (G3)', () => {
     expect(menuSheet).not.toMatch(/font-size:\s*0(?![.\d])/);
   });
 
+  it('set every note in sentence case at full contrast: no capitals, no fading, a full-contrast colour (text, soft, muted, or a hint or warning colour)', () => {
+    const notes = ['.menu-row-help', '.choice-blurb', '.key-note', '.graphics-note', '.save-dialog-note'];
+    const rules = [...sheet.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => m[1]!.split(',').some((sel) => notes.some((n) => new RegExp(`${n.replace('.', '\\.')}(?![\\w-])`).test(sel))));
+    expect(rules.length).toBeGreaterThan(0);
+    for (const [, prelude, body] of rules) {
+      expect(body, prelude).not.toMatch(/text-transform:\s*uppercase/);
+      const opacity = /(?:^|[;\s])opacity:\s*([\d.]+)/.exec(body!);
+      if (opacity) expect(Number(opacity[1]), prelude).toBeGreaterThanOrEqual(1);
+      const colour = /(?:^|[;\s])color:\s*([^;]+)/.exec(body!);
+      if (colour) expect(colour[1]!.trim(), prelude).toMatch(/^var\(--(paper|menu-soft|menu-muted|hint|warning)\)$/);
+    }
+  });
+
   it('never blur live: no backdrop-filter and no blur filter, anywhere on the menus', () => {
     expect(menuSheet).not.toMatch(/backdrop-filter/);
     expect(menuSheet).not.toMatch(/filter:\s*[^;]*blur\(/);

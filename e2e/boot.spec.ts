@@ -270,6 +270,14 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.getByRole('button', { name: 'Reload, main key: T' })).toHaveText('T');
   const savedReload = await page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.keyBindings') ?? '{}') as { reload?: string[] }).reload);
   expect(savedReload).toEqual(['KeyT']);
+  // A note on every row of every group (G3 criterion 8); back to Controls for the search below.
+  const tabs = settings.getByRole('tab');
+  for (let i = 0; i < (await tabs.count()); i++) {
+    await tabs.nth(i).click();
+    const bare = settings.locator('.menu-row').filter({ visible: true }).filter({ hasNot: page.locator('.menu-row-help') });
+    await expect(bare, await tabs.nth(i).innerText()).toHaveCount(0);
+  }
+  await group(/Controls/i).click();
   // Search (G3): every group's rows that match, a note on each; clearing it shows the group again.
   const search = settings.getByRole('searchbox', { name: 'Search settings' });
   await search.fill('sensitivity');

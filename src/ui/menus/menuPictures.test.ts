@@ -39,7 +39,7 @@ describe('pictures never hold a screen up (G3, criterion 9)', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(slot.root.classList.contains('has-picture')).toBe(true);
-    expect(slot.root.children[1]!.src).toBe('blob:one');
+    expect((slot.root.children[1] as HTMLImageElement).src).toBe('blob:one');
   });
 
   it('asks once for a subject shown again, and ignores a picture that comes after another was asked for', async () => {
@@ -57,7 +57,7 @@ describe('pictures never hold a screen up (G3, criterion 9)', () => {
     arrive(1, 'blob:fresh');
     await Promise.resolve();
     await Promise.resolve();
-    expect(slot.root.children[1]!.src).toBe('blob:fresh');
+    expect((slot.root.children[1] as HTMLImageElement).src).toBe('blob:fresh');
   });
 
   it('keeps the drawing when a picture cannot be made (a lost context), without an unhandled rejection', async () => {
