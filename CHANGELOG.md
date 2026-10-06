@@ -197,6 +197,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M50** · The crash report's Quality line reads properly (not "[object Object]") and the report adds the rules, the lighting, Retro pixels and an Extraction run's state (#107)
 
 ### Internal
+- **M76** · Perf gate matrix: every map in both modes on Low and Extraction on Medium with map-scoped baselines; quick builds skip precompression; build label from tags
 - **M75** · Rendering optimized on Medium: figure shadows from simplified stand-ins, Extraction exits merged to fewer draws, Woodland night horizon capped at Simple (#140)
 - **M68** · Two unused style rules removed (#121)
 - **M69** · Sound effects drop their silent tails and the countdown beep renders once, so the sounds take less memory (#124)
@@ -230,7 +231,6 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M50** · Woodland and Neon Heights download only once Dev content is on, the pool and stats tables are a file of their own, and the code size budget is 900 kB with a warning at 90 % (#107)
 - **G5** · The perf harness measures Ultra (`--preset all` and `--preset ultra`), a desktop environment and any window size (`--viewport`)
 - **G8** · Set dressing never collides or blocks sight: Depot's colliders, routes, cover and bot sight are tested identical with and without it
-- **M76** · Perf gate matrix: every map in both modes on Low and Extraction on Medium with map-scoped baselines; quick builds skip precompression; build label from tags
 
 ## 0.1 Dev 3 · 2026-10-03
 
