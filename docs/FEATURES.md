@@ -91,13 +91,14 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets with Custom option, frame-rate limit, show FPS, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility, Look (Robots, Realistic colours) (M15, M18a, M19, M24, FA2, FA5, G1)
+- Settings groups: Graphics (quality presets with Custom option, frame-rate limit), Display (fullscreen, field of view, tone mapping, show FPS), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Gameplay (crosshair, HUD), Accessibility, Look (Robots, Realistic colours), Save file, with a search box and a note on every row (M15, M18a, M19, M24, FA2, FA5, G1, G3)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison, restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if the save is from a newer version (M31)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
 - HUD size slider (0.8–1.5) in Settings > HUD (FA5)
 - A hidden Dev tab: debug info, BB paths, game speed, bottomless magazines, ghost, Disable Armory, Unlock all gear, Diagnostics Copy, Dev content switch, Retro pixels (M24, M26d, FA1, M35, M42)
 - The build's version on the title screen (M24)
+- Menus in the concept look (G3): a top bar between matches (Play, Loadout, Armory, Range, Settings, wallet, version), key hints that are real buttons, map and mode picture cards on the Play screen, replica pictures on the Loadout, Customise and Armory, Settings grouped with a search and a note on every row
 
 ## HUD and match info
 

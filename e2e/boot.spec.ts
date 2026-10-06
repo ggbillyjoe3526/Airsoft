@@ -80,70 +80,60 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const matchLoaded = () => page.evaluate(() => (window as unknown as { airsoft: { state: unknown } }).airsoft.state !== null);
   expect(await matchLoaded()).toBe(false);
 
-  // Title → Start → New game, with the picked mode's rules under the four buttons.
-  await page.getByRole('button', { name: 'Start' }).click();
+  // Title → Play → the Play screen (G3): the map and the mode as cards, the Match section, and Your match beside them
+  // with the picked mode's rules.
+  await page.locator('.menu-title-start').click();
   const setup = page.locator('.menu-setup');
   await expect(setup).toBeVisible();
   await expect(page.locator('.setup-rules')).not.toBeEmpty();
+  // The top bar (G3) shows the place on screen and the wallet.
+  const topBar = page.locator('.menu-topbar');
+  await expect(topBar.getByRole('button', { name: 'Play' })).toHaveAttribute('aria-current', 'page');
 
-  // Map opens a pop-up listing Depot, the default.
-  await setup.getByRole('button', { name: /Map/i }).click();
-  const mapDialog = page.getByRole('dialog', { name: 'Map' });
-  await expect(mapDialog).toBeVisible();
-  await expect(mapDialog.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
+  // The Map cards: Depot, the default, picked.
+  const maps = setup.getByRole('group', { name: 'Map', exact: true });
+  await expect(maps.getByRole('button', { name: /Depot/i })).toHaveAttribute('aria-pressed', 'true');
   // Woodland is dev content (M35): not listed at all while Dev content is off (devContent.spec.ts turns it on).
-  await expect(mapDialog.getByRole('button', { name: /Woodland/i })).toBeHidden();
-  await mapDialog.getByRole('button', { name: /Depot/i }).click();
-  await expect(mapDialog).toBeHidden();
-  await expect(setup.getByRole('button', { name: /Map/i })).toContainText('Depot');
+  await expect(maps.getByRole('button', { name: /Woodland/i })).toBeHidden();
+  await maps.getByRole('button', { name: /Depot/i }).click();
+  await expect(setup.locator('.play-map-line')).toHaveText('Depot');
 
-  // Match (M20): rounds to win, round time, team size, friendly fire and ricochets; the button sums them up.
-  await expect(setup.getByRole('button', { name: /Match/i })).toContainText('3v3 · first to 5');
-  await setup.getByRole('button', { name: /Match/i }).click();
-  const matchDialog = page.getByRole('dialog', { name: 'Match' });
-  await expect(matchDialog).toBeVisible();
-  await expect(matchDialog.getByRole('group', { name: 'Ricochets count' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
+  // Match (M20): rounds to win, round time, team size, friendly fire and ricochets; Your match sums them up.
+  const facts = setup.locator('.play-facts');
+  await expect(facts).toContainText('3v3 · first to 5');
+  const match = setup.locator('.match-panel');
+  await expect(match.getByRole('group', { name: 'Ricochets count' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
   // Rules (M39): Skirmish is picked, Tournament and Pro CQB are dev content (hidden with Dev content off), Custom opens
   // every switch; Skirmish and a named ruleset show only the rows they leave to the player.
-  const rulesGroup = matchDialog.getByRole('group', { name: 'Rules' });
+  const rulesGroup = match.getByRole('group', { name: 'Rules' });
   await expect(rulesGroup.getByRole('button', { name: 'Skirmish' })).toHaveAttribute('aria-pressed', 'true');
   await expect(rulesGroup.getByRole('button', { name: 'Tournament' })).toBeHidden();
   await expect(rulesGroup.getByRole('button', { name: 'Pro CQB' })).toBeHidden();
-  await expect(matchDialog.getByRole('group', { name: 'Overtime' })).toBeHidden();
+  await expect(match.getByRole('group', { name: 'Overtime' })).toBeHidden();
   await rulesGroup.getByRole('button', { name: 'Custom' }).click();
-  await expect(matchDialog.getByRole('group', { name: 'Overtime' })).toBeVisible();
-  await expect(matchDialog.getByRole('group', { name: 'Fire modes' })).toBeVisible();
+  await expect(match.getByRole('group', { name: 'Overtime' })).toBeVisible();
+  await expect(match.getByRole('group', { name: 'Fire modes' })).toBeVisible();
   await expect(page.locator('.setup-rules')).toContainText('never go into your records'); // Custom never goes into the records, and says so
   await rulesGroup.getByRole('button', { name: 'Skirmish' }).click();
-  await expect(matchDialog.getByRole('group', { name: 'Overtime' })).toBeHidden();
-  await matchDialog.getByRole('group', { name: 'Team size' }).getByRole('button', { name: '2v2' }).click();
-  await matchDialog.getByRole('group', { name: 'Rounds to win' }).getByRole('button', { name: '3' }).click();
-  await page.keyboard.press('Escape');
-  await expect(matchDialog).toBeHidden();
-  await expect(setup).toBeVisible(); // Esc closed the pop-up only
-  await expect(setup.getByRole('button', { name: /Match/i })).toContainText('2v2 · first to 3');
+  await expect(match.getByRole('group', { name: 'Overtime' })).toBeHidden();
+  await match.getByRole('group', { name: 'Team size' }).getByRole('button', { name: '2v2' }).click();
+  await match.getByRole('group', { name: 'Rounds to win' }).getByRole('button', { name: '3' }).click();
+  await expect(facts).toContainText('2v2 · first to 3');
   await expect(page.locator('.setup-rules')).toContainText('you and 1 bot teammate');
   await expect(page.locator('.setup-rules')).toContainText("won't go into your records"); // custom rules, said before Play
 
-  // Difficulty opens a pop-up with a level for the opponents and one for your teammates; the button shows both.
-  await setup.getByRole('button', { name: /Difficulty/i }).click();
-  const dialog = page.getByRole('dialog', { name: 'Bot difficulty' });
-  await expect(dialog).toBeVisible();
+  // Difficulty: a level for the opponents and one for your teammates; Your match shows both.
   // Nothing saved for the teammates yet: they follow the opponents' level until picked.
-  await dialog.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Hard' }).click();
-  await expect(dialog.getByRole('group', { name: 'Teammates' }).getByRole('button', { name: 'Hard' })).toHaveAttribute('aria-pressed', 'true');
-  await dialog.getByRole('group', { name: 'Teammates' }).getByRole('button', { name: 'Normal' }).click();
-  await dialog.getByRole('button', { name: 'Close' }).click();
-  await expect(dialog).toBeHidden();
-  await expect(setup.getByRole('button', { name: /Difficulty/i })).toContainText('Hard / Normal');
+  await match.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Hard' }).click();
+  await expect(match.getByRole('group', { name: 'Teammates' }).getByRole('button', { name: 'Hard' })).toHaveAttribute('aria-pressed', 'true');
+  await match.getByRole('group', { name: 'Teammates' }).getByRole('button', { name: 'Normal' }).click();
+  await expect(facts).toContainText('Hard / Normal');
   await expect(page.locator('.setup-rules')).toContainText('2:30 rounds'); // the custom-rules note names the whole standard
-  await setup.getByRole('button', { name: /Difficulty/i }).click();
-  await dialog.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Normal' }).click();
-  await dialog.getByRole('button', { name: 'Close' }).click();
+  await match.getByRole('group', { name: 'Opponents' }).getByRole('button', { name: 'Normal' }).click();
 
-  // The Loadout screen (M26b): three gear slots, the AEG Rifle and Gas Pistol equipped, Grenades empty. Right-click the
-  // Primary slot to customise the rifle: fit the red dot and heavier BBs before the match.
-  await setup.getByRole('button', { name: /Loadout/i }).click();
+  // The Loadout screen (M26b; G3 look): three gear slots, the AEG Rifle and Gas Pistol equipped, Grenades empty.
+  // Right-click the Primary slot to customise the rifle: fit the red dot and heavier BBs before the match.
+  await setup.getByRole('button', { name: 'Change Loadout' }).click();
   const loadout = page.locator('.menu-loadout');
   await expect(loadout).toBeVisible();
   await expect(loadout.locator('.gear-slot')).toHaveCount(3);
@@ -151,10 +141,16 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(primary).toHaveAttribute('aria-pressed', 'true');
   await expect(loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ })).toBeVisible();
   await expect(loadout.getByRole('button', { name: /^Grenades: Empty/ })).toBeVisible();
+  await expect(primary.locator('.gear-stats')).toHaveText('0.97 J · 13 BBs/s · 60 BBs');
   await primary.click({ button: 'right' });
   await expect(loadout.getByRole('heading', { name: /Customise: AEG Rifle/ })).toBeVisible();
-  // The Performance sheet (M29) sits beside the parts: the numbers of the rifle as it comes, and the gear slot's stat line.
-  const sheet = loadout.getByLabel('Performance');
+  // Customise opens on Colour, the first part, with the keyboard on its tab; the parts are tabs down the left.
+  const partTab = (name: string) => loadout.getByRole('tab', { name: new RegExp(`^${name}`) });
+  await expect(partTab('Colour')).toHaveAttribute('aria-selected', 'true');
+  await expect(partTab('Colour')).toBeFocused();
+  await partTab('Optic').click();
+  // The Performance sheet (M29) sits beside the parts: the numbers of the rifle as it comes.
+  const sheet = loadout.locator('.customise-perf');
   await expect(sheet).toBeVisible();
   await expect(sheet.getByText('Energy', { exact: true })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^0\.97 J/ })).toBeVisible();
@@ -162,20 +158,20 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(sheet.locator('dd', { hasText: /^60 × 4 \(240\)/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^no optic/ })).toBeVisible();
   for (const label of ['Muzzle speed', 'BB weight', 'On target to', 'Time to 20 m', 'Spread', 'Recoil', 'Reload', 'Draw', 'Aim raise', 'Shots heard from']) await expect(sheet.getByText(label, { exact: true })).toBeVisible();
-  await expect(primary.locator('.gear-stats')).toHaveText('0.97 J · 13 BBs/s · 60 BBs');
   const optic = loadout.getByRole('group', { name: 'Optic' });
-  await expect(optic.getByRole('button', { name: 'Iron Sights' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(optic.getByRole('button', { name: 'Iron Sights' })).toBeFocused(); // the first part, for the keyboard
+  await expect(optic.getByRole('button', { name: /Iron Sights/ })).toHaveAttribute('aria-pressed', 'true');
   await optic.getByRole('button', { name: /Red Dot/ }).click();
   await expect(optic.getByRole('button', { name: /Red Dot/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(partTab('Optic')).toContainText('Red Dot');
+  await partTab('BBs').click();
   const rifleWeight = loadout.getByRole('slider', { name: 'AEG Rifle BB weight' });
   await expect(rifleWeight).toHaveValue('0.25');
   await rifleWeight.fill('0.28');
   // The sheet follows the BB weight slider: a heavier BB is a little more energy, marked against the rifle as it comes.
   await expect(sheet.locator('dd', { hasText: /^0\.99 J/ })).toBeVisible();
   await expect(sheet.locator('dd', { hasText: /^0\.28 g/ })).toBeVisible();
-  await expect(sheet.locator('dd', { hasText: /^0\.99 J/ }).locator('.perf-better')).toHaveText(/^\+\d/);
-  await expect(sheet.locator('dd', { hasText: /^\d+ m\/s/ }).locator('.perf-worse')).toHaveText(/^−\d/);
+  await expect(sheet.locator('dd', { hasText: /^0\.99 J/ }).locator('.perf-delta.perf-better')).toHaveText(/^\+\d/);
+  await expect(sheet.locator('dd', { hasText: /^\d+ m\/s/ }).locator('.perf-delta.perf-worse')).toHaveText(/^−\d/);
   // The red dot just fitted shows as its raise time instead of "no optic".
   await expect(sheet.locator('dd', { hasText: /^\d\.\d\d s/ }).last()).toBeVisible();
   await expect(loadout.getByText(/Leaves the barrel at \d+ m\/s .* Longest reach at about 75% hop-up/).first()).toBeVisible();
@@ -192,43 +188,49 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(loadout.locator('.item-grid')).toBeVisible();
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('Red Dot');
-  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('0.28 g / 0.20 g BBs');
+  const loadoutLine = setup.locator('.play-loadout-line');
+  await expect(loadoutLine).toContainText('Red Dot');
+  await expect(loadoutLine).toContainText('0.28 g / 0.20 g BBs');
 
   // Attachments: the 2x scope, a Rare angled grip and a hi-cap on the rifle, each with its numbers under it.
-  await setup.getByRole('button', { name: /Loadout/i }).click();
+  await setup.getByRole('button', { name: 'Change Loadout' }).click();
   await loadout.getByRole('button', { name: /^Customise AEG Rifle/ }).click();
+  await partTab('Optic').click();
   await loadout.getByRole('group', { name: 'Optic' }).getByRole('button', { name: /2x Scope/ }).click();
+  await partTab('Grip').click();
   const rifleGrip = loadout.getByRole('group', { name: 'Grip' });
-  await expect(rifleGrip.getByRole('button', { name: 'No Grip' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(rifleGrip.getByRole('button', { name: /No Grip/ })).toHaveAttribute('aria-pressed', 'true');
   await rifleGrip.getByRole('button', { name: /Angled Grip/ }).click();
   await expect(rifleGrip.getByRole('button', { name: /Angled Grip/ })).toContainText('Rare');
   // The numbers themselves are the unit tests' (loadoutChoice.test.ts); here only that they show (audit L-10).
   await expect(loadout.getByText(/Brings the AEG Rifle up in [\d.]+ s/)).toBeVisible();
+  // The optic's line names the grip that steadies it: on the Optic part, where it belongs (G3: one part at a time).
+  await partTab('Optic').click();
   await expect(loadout.getByText(/Up to your eye in [\d.]+ s with the angled grip\./)).toBeVisible();
+  await partTab('Magazine').click();
   await loadout.getByRole('group', { name: 'Magazine' }).getByRole('button', { name: /Hi-Cap/ }).click();
   // The magazine's line sits under its tiles, in the same row.
   const hiCapLine = loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Magazine' }) }).getByText(/\d+ BBs each, \d+ carried \(\d+ in all\)\. Reload [\d.]+ s\./);
   await expect(hiCapLine).toBeVisible();
   const hiCap = Number((await hiCapLine.textContent())!.match(/(\d+) BBs each/)![1]); // checked in the match below
-  await expect(loadout.getByText('Skins').first()).toBeAttached(); // greyed as LATER
-  // The pistol has no top rail: its Optic row says so. Esc goes back to the gear like Back.
+  await expect(partTab('Skins')).toHaveAttribute('aria-disabled', 'true'); // in a later version
+  // The pistol has no top rail: its Optic part is greyed. Esc goes back to the gear like Back.
   await page.keyboard.press('Escape');
   await loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ }).click({ button: 'right' });
-  await expect(loadout.locator('.menu-row.later', { hasText: 'Optic' })).toBeVisible();
+  await expect(partTab('Optic')).toHaveAttribute('aria-disabled', 'true');
   await page.keyboard.press('Escape');
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(setup.getByRole('button', { name: /Loadout/i })).toContainText('2x Scope · Angled Grip · Hi-Cap Magazine');
+  await expect(loadoutLine).toContainText('2x Scope · Angled Grip · Hi-Cap Magazine');
 
-  // The Armory (M26c), next to the Loadout: beta and free. The saved 400 FC buy a Token (160 FC), and a Shot dispenses
-  // three assets into the collection.
-  const armoryTile = setup.getByRole('button', { name: /Armory/i });
-  await expect(armoryTile).toContainText('400 FC');
-  await armoryTile.click();
+  // The Armory (M26c), on the top bar with the wallet: beta and free. The saved 400 FC buy a Token (160 FC), and a Shot
+  // dispenses three assets into the collection.
+  const wallet = topBar.locator('.menu-chip-fc');
+  await expect(wallet).toContainText('400 FC');
+  await topBar.getByRole('button', { name: 'Armory' }).click();
   const armory = page.locator('.menu-armory');
   await expect(armory).toBeVisible();
   await expect(armory.locator('.menu-heading .beta-tag')).toHaveText(/beta/i);
-  await expect(armory.getByText(/^Completely free/)).toBeVisible();
+  await expect(armory.getByText(/^Completely free/).first()).toBeVisible();
   await armory.getByRole('button', { name: /^Buy 1 Token/ }).click();
   await expect(armory.locator('.armory-balance')).toContainText('240 FC');
   await armory.getByRole('button', { name: /^1 Shot/ }).click();
@@ -236,13 +238,21 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(armory.locator('.armory-balance')).toContainText('240 FC'); // paid with the Token
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
-  await expect(armoryTile).toContainText('240 FC');
+  await expect(wallet).toContainText('240 FC');
 
-  // Settings: its own screen with tabs; Esc works as Back and returns to New game, with focus back on the Settings tile.
-  await setup.getByRole('button', { name: /Settings/i }).click();
+  // Settings (G3): the groups down the left, opening on Graphics; Esc works as Back and returns to the Play screen.
+  await topBar.getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await expect(settings).toBeVisible();
+  const group = (name: string | RegExp) => settings.getByRole('tab', { name });
+  await expect(group(/Graphics/i)).toHaveAttribute('aria-selected', 'true');
+  await expect(settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
+  // Display: the field of view and fullscreen, out of the old Graphics tab.
+  await group(/Display/i).click();
+  await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('90');
+  await expect(settings.getByRole('button', { name: 'Enter Fullscreen' })).toBeVisible();
   // Controls (M18): the sensitivity as cm/360 at the mouse's DPI; typing a cm/360 moves the slider to match.
+  await group(/Controls/i).click();
   const cm = settings.getByRole('spinbutton', { name: /cm per 360/ });
   await expect(cm).toHaveValue(/^\d+\.\d$/); // worked out from the sensitivity and DPI (sensitivity.test.ts has the sums)
   await cm.fill('40');
@@ -250,7 +260,33 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await expect(settings.getByRole('slider', { name: 'Mouse sensitivity' })).toHaveValue('0.5');
   await expect(settings.getByRole('group', { name: 'Aim button' }).getByRole('button', { name: 'Hold' })).toHaveAttribute('aria-pressed', 'true');
   await expect(settings.getByRole('group', { name: 'Order wheel' }).getByRole('button', { name: 'Hover' })).toHaveAttribute('aria-pressed', 'true');
-  await settings.getByRole('tab', { name: /Accessibility/i }).click();
+  // The key bindings sit under Controls (G3). Fire and aim are bindings like the rest (M18), on the mouse buttons by
+  // default. A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T,
+  // is saved, and the match below reloads on T.
+  await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
+  await settings.getByRole('button', { name: 'Reload, main key: R' }).click();
+  await expect(settings.getByRole('button', { name: 'Reload, main key: waiting for a key' })).toBeVisible();
+  await page.keyboard.press('KeyT');
+  await expect(settings.getByRole('button', { name: 'Reload, main key: T' })).toHaveText('T');
+  const savedReload = await page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.keyBindings') ?? '{}') as { reload?: string[] }).reload);
+  expect(savedReload).toEqual(['KeyT']);
+  // A note on every row of every group (G3 criterion 8); back to Controls for the search below.
+  const tabs = settings.getByRole('tab');
+  for (let i = 0; i < (await tabs.count()); i++) {
+    await tabs.nth(i).click();
+    const bare = settings.locator('.menu-row').filter({ visible: true }).filter({ hasNot: page.locator('.menu-row-help') });
+    await expect(bare, await tabs.nth(i).innerText()).toHaveCount(0);
+  }
+  await group(/Controls/i).click();
+  // Search (G3): every group's rows that match, a note on each; clearing it shows the group again.
+  const search = settings.getByRole('searchbox', { name: 'Search settings' });
+  await search.fill('sensitivity');
+  await expect(settings.getByRole('slider', { name: 'Mouse sensitivity' })).toBeVisible();
+  await expect(settings.getByRole('slider', { name: 'Aiming sensitivity' })).toBeVisible();
+  await expect(settings.locator('.key-row').first()).toBeHidden();
+  await search.fill('');
+  await expect(settings.locator('.key-row').first()).toBeVisible();
+  await group(/Accessibility/i).click();
   await expect(settings.getByRole('group', { name: 'Reduced motion' }).getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
   // Reduced motion reaches the HUD's CSS animations through a class on the container (audit M-03); back off for the match.
   const reducedMotion = settings.getByRole('group', { name: 'Reduced motion' });
@@ -266,9 +302,9 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await settings.getByRole('group', { name: 'Sound cue colour' }).getByRole('button', { name: 'Yellow' }).click();
   await expect.poll(() => page.evaluate(() => document.getElementById('app')!.style.getPropertyValue('--cue-colour'))).toBe('#ffe94a');
   await expect(settings.getByRole('slider', { name: 'Sound cue size' })).toHaveValue('1');
-  // G1: the Look tab has Robots (Mixed by default) and Realistic colours (Bold by default); each pick is saved.
-  await settings.getByRole('tab', { name: /Look/i }).click();
-  await expect(settings.getByRole('tab', { name: /Look/i })).toHaveAttribute('aria-selected', 'true');
+  // G1: the Look group has Robots (Mixed by default) and Realistic colours (Bold by default); each pick is saved.
+  await group(/Look/i).click();
+  await expect(group(/Look/i)).toHaveAttribute('aria-selected', 'true');
   const robots = settings.getByRole('group', { name: 'Robots' });
   const realistic = settings.getByRole('group', { name: 'Replica colours' });
   await expect(robots.getByRole('button', { name: 'Mixed' })).toHaveAttribute('aria-pressed', 'true');
@@ -280,49 +316,36 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   await robots.getByRole('button', { name: 'Mixed' }).click();
   await realistic.getByRole('button', { name: 'Bold' }).click();
   await expect.poll(savedLook).toMatchObject({ robots: 'on', realisticColours: 'off' });
-  await settings.getByRole('tab', { name: /Graphics/i }).click();
-  await expect(settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(settings.getByRole('slider', { name: 'Field of view' })).toHaveValue('90');
-  await expect(settings.getByRole('button', { name: 'Enter Fullscreen' })).toBeVisible();
-  await settings.getByRole('tab', { name: /Key Bindings/i }).click();
-  // Fire and aim are bindings like the rest (M18), on the mouse buttons by default.
-  await expect(settings.locator('.key-row').first()).toContainText('Left mouse');
-  // A rebind by a real key press (audit L-27): each key box is named for its action (L-31); Reload moves to T, is saved,
-  // and the match below reloads on T.
-  await settings.getByRole('button', { name: 'Reload, main key: R' }).click();
-  await expect(settings.getByRole('button', { name: 'Reload, main key: waiting for a key' })).toBeVisible();
-  await page.keyboard.press('KeyT');
-  await expect(settings.getByRole('button', { name: 'Reload, main key: T' })).toHaveText('T');
-  const savedReload = await page.evaluate(() => (JSON.parse(localStorage.getItem('airsoft.keyBindings') ?? '{}') as { reload?: string[] }).reload);
-  expect(savedReload).toEqual(['KeyT']);
-  await settings.getByRole('tab', { name: /Audio/i }).click();
+  await group(/Audio/i).click();
   await expect(settings.getByRole('slider', { name: /volume/i })).toHaveCount(3);
-  // The tabs follow the tabs pattern (audit L-31): Arrow Up from Audio picks HUD (M24) and moves the focus there.
-  await page.keyboard.press('ArrowUp');
-  await expect(settings.getByRole('tab', { name: /HUD/i })).toHaveAttribute('aria-selected', 'true');
+  // The groups follow the tabs pattern (audit L-31): Arrow Down from Audio picks Controls, then Gameplay, and moves
+  // the focus there.
+  await page.keyboard.press('ArrowDown');
+  await expect(group(/Controls/i)).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('ArrowDown');
+  await expect(group(/Gameplay/i)).toHaveAttribute('aria-selected', 'true');
+  await expect(group(/Gameplay/i)).toBeFocused();
+  // Gameplay (G3): the HUD's rows (M24) with the crosshair's.
   await expect(settings.getByRole('slider', { name: 'Scoreboard size' })).toHaveValue('1.3');
   await expect(settings.getByRole('group', { name: 'Hit feed' }).getByRole('button', { name: 'Fade' })).toHaveAttribute('aria-pressed', 'true');
-  // M41: the What got you row is on the HUD tab, Auto by default (shown against Pro opponents only).
+  // M41: the What got you row, Auto by default (shown against Pro opponents only).
   const whatGotYou = settings.getByRole('group', { name: 'What got you' });
   await expect(whatGotYou).toBeVisible();
   await expect(whatGotYou.getByRole('button')).toHaveText(['Auto', 'On', 'Off']);
   await expect(whatGotYou.getByRole('button', { name: 'Auto' })).toHaveAttribute('aria-pressed', 'true');
   // Crosshair (M19): a live preview, standing still and moving; the shape picked shows on both and in the match.
-  await page.keyboard.press('ArrowUp');
-  await expect(settings.getByRole('tab', { name: /Crosshair/i })).toHaveAttribute('aria-selected', 'true');
-  await expect(settings.getByRole('tab', { name: /Crosshair/i })).toBeFocused();
   const previews = settings.locator('.crosshair-preview .hud-crosshair');
   await expect(previews).toHaveCount(2);
   await settings.getByRole('button', { name: 'Circle' }).click();
   await expect(previews.first()).toHaveClass(/\bshape-circle\b/);
-  // M24: the Dev tab is hidden until its box is ticked; its settings apply only while it is (Debug info shows the panel).
-  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toBeHidden();
+  // M24: the Dev group is hidden until its box is ticked; its settings apply only while it is (Debug info shows the panel).
+  await expect(group(/^Dev/i)).toBeHidden();
   const devBox = settings.getByRole('checkbox', { name: 'Dev settings' });
   await devBox.check();
-  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toHaveAttribute('aria-selected', 'true');
+  await expect(group(/^Dev/i)).toHaveAttribute('aria-selected', 'true');
   await settings.getByRole('group', { name: 'Debug info' }).getByRole('button', { name: 'On' }).click();
   await expect(page.locator('.debug-overlay')).toBeVisible();
-  // M42: the Retro pixels switch (off) and its two sliders sit on the Dev tab; the smoke run leaves the filter off.
+  // M42: the Retro pixels switch (off) and its two sliders sit on the Dev group; the smoke run leaves the filter off.
   const retro = settings.getByRole('group', { name: 'Retro pixels' });
   await expect(retro).toBeVisible();
   await expect(retro.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true');
@@ -331,21 +354,21 @@ test('the game boots, starts a match, fires, reloads and aims without errors', a
   const retroColours = settings.getByRole('slider', { name: 'Colours' });
   await expect(retroPixelSize).toHaveValue('4');
   await expect(retroColours).toHaveValue('6');
-  const devPanel = settings.getByRole('tabpanel', { name: 'Dev' });
+  const devPanel = settings.locator('#settings-panel-dev');
   await expect(devPanel.getByText('4 px', { exact: true })).toBeVisible();
   await expect(devPanel.getByText('216', { exact: true })).toBeVisible();
-  // M26d: Disable Armory greys out New game's Armory tile while it applies.
-  const armoryTileEl = page.locator('.menu-setup .setup-tile', { hasText: 'Armory' });
+  // M26d: Disable Armory greys out the top bar's Armory while it applies.
+  const armoryPlace = topBar.getByRole('button', { name: 'Armory' });
   await settings.getByRole('group', { name: 'Disable Armory' }).getByRole('button', { name: 'On' }).click();
-  await expect(armoryTileEl).toBeDisabled();
+  await expect(armoryPlace).toBeDisabled();
   await devBox.uncheck();
   await expect(page.locator('.debug-overlay')).toBeHidden();
-  await expect(armoryTileEl).toBeEnabled();
-  await expect(settings.getByRole('tab', { name: /^Dev$/i })).toBeHidden();
-  await expect(settings.getByRole('tab', { name: /Controls/i })).toHaveAttribute('aria-selected', 'true');
+  await expect(armoryPlace).toBeEnabled();
+  await expect(group(/^Dev/i)).toBeHidden();
+  await expect(group(/Graphics/i)).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('Escape');
   await expect(setup).toBeVisible();
-  await expect(setup.getByRole('button', { name: /Settings/i })).toBeFocused();
+  await expect(setup.locator(':focus')).toHaveCount(1); // the keyboard is back on the Play screen
 
   const teamCss = () => page.evaluate(() => getComputedStyle(document.getElementById('app')!).getPropertyValue('--team-1').trim());
   const standardOrange = await teamCss(); // the stylesheet's until a match applies the picked set
@@ -613,50 +636,56 @@ for (const withParts of [false, true]) {
     }, withParts);
     await page.goto('/?nolock&seed=1&quality=low');
     await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-    await page.getByRole('button', { name: 'Start' }).click();
-    const setup = page.locator('.menu-setup');
-    await setup.getByRole('button', { name: /Loadout/i }).click();
+    // The title's Loadout (G3), then Customise on the rifle: its parts are tabs, Barrel and Muzzle among them.
+    await page.locator('.menu-title').getByRole('button', { name: 'Loadout' }).click();
     const loadout = page.locator('.menu-loadout');
     await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
     await expect(loadout.getByRole('heading', { name: /Customise: AEG Rifle/ })).toBeVisible();
-    const sheet = loadout.getByLabel('Performance');
+    const partTab = (name: string) => loadout.getByRole('tab', { name: new RegExp(`^${name}`) });
+    await partTab('Barrel').click();
+    const sheet = loadout.locator('.customise-perf');
     const heardFrom = sheet.locator('dt', { hasText: 'Shots heard from' }).locator('xpath=following-sibling::dd[1]');
     const barrel = loadout.getByRole('group', { name: 'Barrel', exact: true });
     const muzzle = loadout.getByRole('group', { name: 'Muzzle', exact: true });
     // The AEG takes both: "as it comes" is picked, and shots carry 22 m.
-    await expect(barrel.getByRole('button', { name: 'Standard' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(muzzle.getByRole('button', { name: 'None' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(barrel.getByRole('button', { name: /Standard/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(heardFrom).toHaveText(/^22 m/);
     if (!withParts) {
       // Nothing is offered that the player does not own; the Armory hint says where to get them.
       await expect(barrel.getByRole('button')).toHaveCount(1);
-      await expect(muzzle.getByRole('button')).toHaveCount(1);
       await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Barrel', exact: true }) }).getByText('Unlock more in the Armory.')).toBeVisible();
+      await partTab('Muzzle').click();
+      await expect(muzzle.getByRole('button', { name: /None/ })).toHaveAttribute('aria-pressed', 'true');
+      await expect(muzzle.getByRole('button')).toHaveCount(1);
       await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Muzzle', exact: true }) }).getByText('Unlock more in the Armory.')).toBeVisible();
     } else {
       await expect(barrel.getByRole('button')).toHaveCount(3);
       await expect(barrel.getByRole('button', { name: /Tight-Bore Barrel/ })).toBeVisible();
-      await expect(muzzle.getByRole('button')).toHaveCount(2);
       await barrel.getByRole('button', { name: /Long Barrel/ }).click();
       await expect(barrel.getByRole('button', { name: /Long Barrel/ })).toHaveAttribute('aria-pressed', 'true');
       await expect(loadout.locator('.menu-row', { has: page.getByRole('group', { name: 'Barrel', exact: true }) }).getByText(/Brings it up in [\d.]+ s\./)).toBeVisible();
       // A long barrel is front-heavy: a slower draw is marked worse, the extra energy better.
-      await expect(sheet.locator('dt', { hasText: /^Draw$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-worse')).toHaveText(/^\+15%/);
-      await expect(sheet.locator('dt', { hasText: /^Energy$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-better')).toHaveText(/^\+8%/);
+      await expect(sheet.locator('dt', { hasText: /^Draw$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-delta.perf-worse')).toHaveText(/^\+15%/);
+      await expect(sheet.locator('dt', { hasText: /^Energy$/ }).locator('xpath=following-sibling::dd[1]').locator('.perf-delta.perf-better')).toHaveText(/^\+8%/);
       // The silencer halves how far shots are heard, which the sheet marks as better, and says it to the player.
+      await partTab('Muzzle').click();
+      await expect(muzzle.getByRole('button', { name: /None/ })).toHaveAttribute('aria-pressed', 'true');
+      await expect(muzzle.getByRole('button')).toHaveCount(2);
       await muzzle.getByRole('button', { name: /Silencer/ }).click();
       await expect(heardFrom).toHaveText(/^11 m/);
-      await expect(heardFrom.locator('.perf-better')).toHaveText(/^−50%/);
+      await expect(heardFrom.locator('.perf-delta.perf-better')).toHaveText(/^−50%/);
       await expect(loadout.getByText('Bots hear your shots from 11 m (22 m without a silencer).')).toBeVisible();
     }
     // The pistol's barrel is fixed (a greyed row), and its muzzle is threaded: owned, it offers the silencer.
     await page.keyboard.press('Escape');
     await loadout.getByRole('button', { name: /^Secondary: Gas Pistol/ }).click({ button: 'right' });
     await expect(loadout.getByRole('heading', { name: /Customise: Gas Pistol/ })).toBeVisible();
-    await expect(loadout.locator('.menu-row.later', { hasText: 'Barrel' })).toContainText('Fixed barrel');
+    await expect(partTab('Barrel')).toHaveAttribute('aria-disabled', 'true');
+    await expect(partTab('Barrel')).toContainText('Fixed barrel');
     await expect(loadout.getByRole('group', { name: 'Barrel', exact: true })).toHaveCount(0);
+    await partTab('Muzzle').click();
     const pistolMuzzle = loadout.getByRole('group', { name: 'Muzzle', exact: true });
-    await expect(pistolMuzzle.getByRole('button', { name: 'None' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pistolMuzzle.getByRole('button', { name: /None/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(pistolMuzzle.getByRole('button')).toHaveCount(withParts ? 2 : 1);
     expect(errors).toEqual([]);
   });
@@ -668,6 +697,8 @@ test('the game boots to the title screen on High', async ({ page }) => {
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
   });
+  // FC enough for Ten Shots, saved before the game reads the collection (the bug-pass check below opens its pop-up).
+  await page.addInitScript(() => localStorage.setItem('airsoft.collection', JSON.stringify({ version: 1, owned: {}, fc: 2000, tokens: 0, seed: 1 })));
   await page.goto('/?nolock&seed=1&quality=high');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
   // Asked for in the address, so the warning doesn't claim Low was picked.
@@ -675,17 +706,19 @@ test('the game boots to the title screen on High', async ({ page }) => {
   await expect(page.locator('.menu-title-warning')).not.toContainText('set to Low');
   const shadows = await page.evaluate(() => (window as unknown as { airsoft: { renderer: { renderer: { shadowMap: { enabled: boolean } } } } }).airsoft.renderer.renderer.shadowMap.enabled);
   expect(shadows).toBe(true);
-  // A pop-up open when the graphics context is lost closes, so the notice isn't under it (bug pass).
-  await page.getByRole('button', { name: 'Start' }).click();
-  await page.locator('.menu-setup').getByRole('button', { name: /Difficulty/i }).click();
-  await expect(page.getByRole('dialog', { name: 'Bot difficulty' })).toBeVisible();
+  // A pop-up open when the graphics context is lost closes, so the notice isn't under it (bug pass): the Armory's Ten
+  // Shots asks first.
+  await page.locator('.menu-title').getByRole('button', { name: 'Armory' }).click();
+  await page.locator('.menu-armory').getByRole('button', { name: /^10 Shots/ }).click();
+  const ask = page.getByRole('dialog', { name: 'Take 10 Shots?' });
+  await expect(ask).toBeVisible();
   await page.evaluate(() => {
     const lose = document.querySelector('canvas')!.getContext('webgl2')!.getExtension('WEBGL_lose_context')!;
     (window as unknown as { lose: WEBGL_lose_context }).lose = lose;
     lose.loseContext();
   });
   await expect(page.locator('.graphics-notice')).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByRole('dialog', { name: 'Bot difficulty' })).toBeHidden();
+  await expect(ask).toBeHidden();
   await page.evaluate(() => (window as unknown as { lose: WEBGL_lose_context }).lose.restoreContext());
   await expect(page.locator('.graphics-notice')).toBeHidden({ timeout: 10_000 });
   expect(errors).toEqual([]);
@@ -702,13 +735,12 @@ test('the practice range opens from the title screen and reads out the last BB',
   // and draws fast enough in software on a CI runner (as the first test).
   await page.goto('/?nolock&seed=1&quality=medium');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
-  await page.locator('.menu-setup').getByRole('button', { name: /Settings/i }).click();
+  await page.locator('.menu-title').getByRole('button', { name: 'Settings' }).click();
   const settings = page.locator('.menu-settings');
   await settings.getByRole('tab', { name: /Graphics/i }).click();
   await settings.getByRole('group', { name: 'Quality' }).getByRole('button', { name: 'Low' }).click();
   await page.keyboard.press('Escape');
-  await page.locator('.menu-setup').getByRole('button', { name: 'Back' }).click();
+  await expect(page.locator('.menu-title')).toBeVisible();
   // A refused mouse lock (Practice Range or Tutorial clicked too soon after Esc) says so on the title too (audit L-29).
   await page.evaluate(() => document.dispatchEvent(new Event('pointerlockerror')));
   await expect(page.locator('.menu-title .menu-hint')).toContainText('Click again');
@@ -780,6 +812,7 @@ test('the practice range opens from the title screen and reads out the last BB',
   await pauseMenu.getByRole('button', { name: 'Loadout' }).click();
   const loadout = page.locator('.menu-loadout');
   await loadout.getByRole('button', { name: /^Primary: AEG Rifle/ }).click({ button: 'right' });
+  await loadout.getByRole('tab', { name: /^BBs/ }).click();
   await loadout.getByRole('slider', { name: 'AEG Rifle BB weight' }).fill('0.3');
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();
   await loadout.getByRole('button', { name: 'Back', exact: true }).click();

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { SETTINGS_TABS } from '../../config/menus';
+import { MENU_TEXT, SETTINGS_TABS } from '../../config/menus';
+import { MATCH_MODES } from '../../config/modes';
 import { GAME_POOL } from '../../pool/gamePool';
-import { FEED_ICONS, ITEM_ICONS, itemIcon, PAUSE_ICONS, SETTINGS_TAB_ICONS, SETUP_ICONS, WARNING_ICON } from './icons';
+import { FEED_ICONS, ITEM_ICONS, itemIcon, MENU_ICONS, MODE_ICONS, NAV_ICONS, PAUSE_ICONS, SETTINGS_TAB_ICONS, WARNING_ICON } from './icons';
 
-const ALL = [
-  ...Object.values(SETUP_ICONS),
+const ALL: string[] = [
+  ...Object.values(NAV_ICONS),
+  ...Object.values(MENU_ICONS),
+  ...Object.values(MODE_ICONS),
   ...Object.values(SETTINGS_TAB_ICONS),
   ...Object.values(PAUSE_ICONS),
   ...Object.values(FEED_ICONS),
@@ -13,8 +16,10 @@ const ALL = [
 ];
 
 describe('menu icons (audit section 6, item 19)', () => {
-  it('gives every Settings tab an icon', () => {
+  it('gives every Settings group and every place on the top bar an icon (G3)', () => {
     for (const tab of SETTINGS_TABS) expect(SETTINGS_TAB_ICONS[tab.id]).toMatch(/^<svg /);
+    for (const place of MENU_TEXT.nav) expect(NAV_ICONS[place.id]).toMatch(/^<svg /);
+    for (const mode of MATCH_MODES) expect(MODE_ICONS[mode.id]).toMatch(/^<svg /);
   });
 
   it('are decoration only: hidden from screen readers and out of the tab order, so the label stays the name', () => {

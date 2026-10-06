@@ -1,42 +1,13 @@
-import { DIFFICULTIES, type Difficulty, defaultTeammateDifficulty, TEAMMATE_DIFFICULTIES } from '../../config/bots';
-import {
-  countsForRecords,
-  CUSTOM_RULES_PAY_CAP,
-  DEFAULT_RULESET,
-  FIRE_MODE_CHOICES,
-  FRIENDLY_FIRE_CHOICES,
-  formatRoundTime,
-  KIT_CHOICES,
-  MAGAZINE_CHOICES,
-  type MatchRules,
-  matchRulesSummary,
-  runRulesSummary,
-  type RuleSwitch,
-  MINIMAP_HEARD_CHOICES,
-  offersRow,
-  OVERTIME_CHOICES,
-  recordsKeyOf,
-  RICOCHETS_COUNT_CHOICES,
-  ROUND_TIME_SETTING,
-  roundRulesFor,
-  RULESETS,
-  type RulesetId,
-  rulesetOf,
-  standardMatchText,
-  TEAM_SIZE_CHOICES,
-  TIME_OUT_CHOICES,
-  WINS_NEEDED_CHOICES,
-} from '../../config/matchRules';
-import { squadSize } from '../../config/extraction';
-import { DEFAULT_MODE, MATCH_MODES, type MatchMode } from '../../config/modes';
+import { type Difficulty, defaultTeammateDifficulty } from '../../config/bots';
+import type { MatchRules, RulesetId } from '../../config/matchRules';
+import type { MatchMode } from '../../config/modes';
 import { PAUSE_ESC_GUARD_MS } from '../../config/controls';
 import type { LightingPresetId, QualityChoice, QualitySettings } from '../../config/render';
 import type { GraphicsSettingsOptions } from '../graphicsSettings';
 import type { KeyBindings } from '../../input/keyBindings';
-import { LIGHTING_LABELS, lightingChoices, lightingPicked } from '../../map/lightingChoice';
-import { COMING_MAPS, COMING_SOON_TAG, DEFAULT_MAP, MAPS, type MapId, mapData, mapEntry } from '../../map/maps';
-import { modeOffered } from '../../map/playableMode';
-import { playedPicks, playedTeamSize } from '../../newGamePicks';
+import { lightingPicked } from '../../map/lightingChoice';
+import { type MapId, mapData, mapEntry } from '../../map/maps';
+import type { NewGamePicks } from '../../newGamePicks';
 import { saveSetting } from '../../settings/storage';
 import type { AccessibilitySettingsOptions } from '../accessibilitySettings';
 import type { AudioSettingsOptions } from '../audioSettings';
@@ -44,35 +15,41 @@ import type { ControlsSettingsOptions } from '../controlsSettings';
 import type { CrosshairSettingsOptions } from '../crosshairSettings';
 import type { HudSettingsOptions } from '../hudSettings';
 import type { LookSettingsOptions } from '../lookSettings';
-import { ChoiceDialog } from './choiceDialog';
 import { type ArmoryOptions, ArmoryScreen } from './armoryScreen';
+import { Backdrop, type MenuHint, type NavPlace, TopBar } from './chrome';
+import type { PictureContext } from './kitStrip';
 import { type LoadoutOptions, LoadoutScreen } from './loadoutScreen';
+import type { PictureSource } from './menuPictures';
 import { backTarget, escResumes, type MenuScreen, type SettingsOrigin } from './menuNav';
-import { el, menuRow, rangeControl } from './menuParts';
-import { OptionPicker } from '../optionPicker';
-import { RowsDialog } from './rowsDialog';
+import { el, watchScroll } from './menuParts';
 import { PauseScreen } from './pauseScreen';
 import { ResultScreen } from './resultScreen';
-import { describeRules, type MatchRulesText } from './rulesText';
+import { playView } from './playView';
+import type { MatchRulesText } from './rulesText';
 import { type SettingsOptions, SettingsScreen } from './settingsScreen';
-import { SetupScreen } from './setupScreen';
+import { type PlayModel, type PlayView, SetupScreen } from './setupScreen';
 import { type MatchSummary, SummaryScreen } from './summaryScreen';
-import { TitleScreen } from './titleScreen';
+import { type NextMatch, TitleScreen } from './titleScreen';
 
-/** The parts of the rules text that the Match pop-up doesn't change (team names, the flag, who attacks first). */
+/** The parts of the rules text that the Match section doesn't change (team names, the flag, who attacks first). */
 export type FixedRulesText = Omit<MatchRulesText, 'teamSize' | 'winsNeeded' | 'roundTime' | 'halfTimeAfter' | 'friendlyFire' | 'ricochetsCount' | 'switches'>;
 
-/** The order a map's Day | Night switch lists its sides (M34d). */
-const LIGHTING_ORDER: readonly LightingPresetId[] = ['day', 'night'];
+/** The wallet the menus show: Field Credits and Tokens, or null while the Armory is switched off (Dev settings). */
+export type MenuWallet = { fc: number; tokens: number } | null;
 
 /** What the menus show and what they report back to the game. */
 export interface MenusOptions {
   rules: FixedRulesText;
   bindings: KeyBindings;
-  /** The Loadout screen's model and change hook, and the summary New game's Loadout button shows. */
-  loadout: Omit<LoadoutOptions, 'onBack'> & { summary: () => { replicas: string; detail: string } };
-  /** The Armory (M26c): its pool and the collection it changes, and New game's Armory button (balance and line). */
-  armory: Omit<ArmoryOptions, 'onBack'> & { summary: () => { value: string; detail: string; disabled: boolean } };
+  /**
+   * The game's picture studio (G3, render/itemPictures.ts): the menus ask it for replica, part and scheme pictures and
+   * show a drawing until each arrives. Null where there is none (a test): every item keeps its drawing.
+   */
+  pictures: PictureSource | null;
+  /** The Loadout screen's model and change hook, and the line the Play screen shows under your kit. */
+  loadout: Omit<LoadoutOptions, 'onBack' | 'context'> & { summary: () => { replicas: string; detail: string } };
+  /** The Armory (M26c): its pool and the collection it changes, and the wallet on the top bar and the title. */
+  armory: Omit<ArmoryOptions, 'onBack' | 'context'> & { wallet: () => MenuWallet };
   /** Start (or resume) play: Play on New game, Resume, Play Again. */
   onPlay: () => void;
   /** The player leaves the match (Quit; New Game or Quit after it): it is unloaded. */
@@ -88,13 +65,13 @@ export interface MenusOptions {
   map: { initial: MapId; onChange: (m: MapId) => void };
   /** Each map's Day or Night pick (M34d), on the maps that offer both. */
   lighting: { initial: Partial<Record<MapId, LightingPresetId>>; onChange: (m: MapId, light: LightingPresetId) => void };
-  /** `supply`: the line under Extraction for the supply event on as the pop-up opens (M49), or null when none is. */
+  /** `supply`: the line under Extraction for the supply event on as the Play screen opens (M49), or null when none is. */
   mode: { initial: MatchMode; onChange: (m: MatchMode) => void; supply?: () => string | null };
   /** The opponents' bot difficulty and your bot teammates' (M20). */
   difficulty: { initial: Difficulty; onChange: (d: Difficulty) => void };
   /** `follows`: no teammate level is saved yet, so it follows the opponents' picks until one is chosen. */
   teammateDifficulty: { initial: Difficulty; follows: boolean; onChange: (d: Difficulty) => void };
-  /** The Match pop-up's rules (M20), and its Rules row (M39). */
+  /** The Match section's rules (M20), and its Rules row (M39). */
   matchRules: { initial: MatchRules; onChange: (m: MatchRules) => void };
   ruleset: { initial: RulesetId; onChange: (r: RulesetId) => void };
   controls: ControlsSettingsOptions;
@@ -105,7 +82,7 @@ export interface MenusOptions {
   crosshair: CrosshairSettingsOptions;
   accessibility: AccessibilitySettingsOptions;
   hud: HudSettingsOptions;
-  /** Settings › Look (G1). */
+  /** Settings › Look (G1); its Realistic colours also decides how the menus' replica pictures look. */
   look: LookSettingsOptions;
   /**
    * The Dev tab (M24); `cheating`: a Dev setting now in force keeps the next match out of the records. `devContent`:
@@ -117,42 +94,54 @@ export interface MenusOptions {
   save: SettingsOptions['save'];
 }
 
+/** A screen as the menus hold it: its page and the key hints along its foot. */
+interface Screen {
+  readonly root: HTMLElement;
+  readonly hints?: readonly MenuHint[];
+}
+
+/** The screens with the top bar over them, each as the place it marks. */
+const TOP_BAR_PLACES: Partial<Record<MenuScreen, NavPlace>> = { setup: 'setup', loadout: 'loadout', armory: 'armory', settings: 'settings' };
+
+/** The screens whose backdrop is darkened all over: dense pages read better on an even ground. */
+const EVEN_BACKDROP: ReadonlySet<MenuScreen> = new Set(['loadout', 'armory', 'settings', 'summary']);
+
 /**
- * The game's menus (M15, M15b): the title screen, New game with its Map, Mode and Difficulty pop-ups, the Loadout and
- * Settings screens, the pause menu, and the match's end: the summary (M19) and the result. One opaque screen shows at a time; the game says which one
- * when play stops (showTitle / showPause / showResult) and the buttons move between the rest.
+ * The game's menus (M15, M15b; G3 look): the title, the Play screen (New game: map, mode and match on one page), the
+ * Loadout, the Armory and Settings under a shared top bar, the pause menu, and the match's end: the summary (M19) and the
+ * result. One screen shows at a time over one backdrop picture; the game says which when play stops (showTitle /
+ * showPause / showResult) and the buttons and the top bar move between the rest. Each screen is built the first time it
+ * opens; nothing here runs per frame.
  */
-export class Menus {
+export class Menus implements PlayModel {
   private readonly root: HTMLDivElement;
-  private readonly title: TitleScreen;
-  private readonly setup: SetupScreen;
-  private readonly loadout: LoadoutScreen;
-  private readonly armory: ArmoryScreen;
-  private readonly settings: SettingsScreen;
-  private readonly pause: PauseScreen;
-  private readonly summary: SummaryScreen;
-  private readonly result: ResultScreen;
-  private readonly mapDialog: ChoiceDialog<MapId>;
+  private readonly backdrop = new Backdrop();
+  private readonly topBar: TopBar;
+  private readonly context: PictureContext;
+  private readonly built: Partial<Record<MenuScreen, Screen>> = {};
+  private title?: TitleScreen;
+  private setup?: SetupScreen;
+  private loadout?: LoadoutScreen;
+  private armory?: ArmoryScreen;
+  private settings?: SettingsScreen;
+  private pause?: PauseScreen;
+  private summary?: SummaryScreen;
+  private result?: ResultScreen;
+  /** New game's picks as made (a dev pick stays; playedPicks says how they play). `rules` is changed in place. */
+  private readonly picked: NewGamePicks;
   /** Each map's Day or Night pick (M34d). */
   private readonly lightingPicks: Partial<Record<MapId, LightingPresetId>>;
-  private readonly modeDialog: ChoiceDialog<MatchMode>;
-  private readonly matchDialog: RowsDialog;
-  /** The Match pop-up's team sizes: each map offers as many as it has room for (M33). */
-  private teamSizePicker!: OptionPicker<string>;
-  private readonly difficultyDialog: RowsDialog;
-  /** The pickers whose options may be dev content (M35), with the pick each shows as it plays. */
-  private readonly taggedPickers: { picker: OptionPicker<string>; played: (p: ReturnType<typeof playedPicks>) => string }[] = [];
-  /** The Match pop-up's rows by the rule each sets (M39): a row shows only while the ruleset leaves its rule to you. */
-  private readonly switchRows: { field: keyof MatchRules; row: HTMLElement }[] = [];
-  /** What the Match and Difficulty pop-ups have picked. */
-  private readonly matchRules: MatchRules;
-  private ruleset: RulesetId;
-  private difficulty: Difficulty;
-  private teammateDifficulty: Difficulty;
-  private readonly screens: Record<MenuScreen, HTMLElement>;
+  /** Until a teammate level is picked (and saved), teammates follow the opponents' level, as every bot did before M20. */
+  private teammatesFollow: boolean;
+  private realistic: boolean;
+  private tutorialDone: boolean;
+  /** Set before the screens they belong on are built: shown as each is. */
+  private titleWarning = '';
+  private shownQuality: { choice: QualityChoice; settings: QualitySettings } | null = null;
+  private hint = '';
   private current: MenuScreen = 'title';
-  /** Where the Loadout was opened from: New game, or the practice range's pause menu (M21). */
-  private loadoutFrom: SettingsOrigin = 'setup';
+  /** Where Settings, the Loadout and the Armory were opened from, so Back returns there. */
+  private readonly origins: Record<'settings' | 'loadout' | 'armory', SettingsOrigin> = { settings: 'title', loadout: 'title', armory: 'title' };
   /** What had the focus on each screen when it was left, so Back puts the keyboard where it was. */
   private readonly lastFocus = new Map<MenuScreen, HTMLElement>();
   /** When the pause menu last came up (performance.now()), so the Esc that brought it doesn't resume too. */
@@ -163,159 +152,25 @@ export class Menus {
     private readonly opts: MenusOptions,
   ) {
     this.root = el('div', 'menus');
-    this.matchRules = { ...opts.matchRules.initial };
-    this.ruleset = opts.ruleset.initial;
-    this.difficulty = opts.difficulty.initial;
-    this.teammateDifficulty = opts.teammateDifficulty.initial;
-    this.title = new TitleScreen(() => this.go('setup'), () => this.openRange(this.opts.onRange), () => this.openRange(this.opts.onTutorial), opts.tutorialDone);
-    this.setup = new SetupScreen({
-      onMap: () => this.mapDialog.open(),
-      onMode: () => {
-        this.modeDialog.setNote('extraction', opts.mode.supply?.() ?? null);
-        this.modeDialog.open();
-      },
-      onMatch: () => this.matchDialog.open(),
-      onDifficulty: () => this.difficultyDialog.open(),
-      onLoadout: () => this.openLoadout('setup'),
-      onArmory: () => this.openArmory(),
-      onSettings: () => this.openSettings('setup'),
-      onBack: () => this.back(),
-      onPlay: () => this.play(),
-    });
-    this.lightingPicks = { ...opts.lighting.initial };
-    this.mapDialog = new ChoiceDialog(
-      'Map',
-      MAPS,
-      opts.map.initial,
-      'map',
-      (m) => {
-        opts.map.onChange(m);
-        this.mapPicked(m);
-        this.refreshSetup();
-      },
-      {
-        soon: COMING_MAPS,
-        soonTag: COMING_SOON_TAG,
-        fallback: DEFAULT_MAP,
-        // Day | Night on a map that offers both (M34d): picking a side picks the map with that light.
-        variants: {
-          label: 'Light',
-          of: (id) => LIGHTING_ORDER.filter((l) => lightingChoices(mapData(id)).includes(l)).map((l) => ({ id: l, label: LIGHTING_LABELS[l] })),
-          picked: (id) => this.lightingOf(id),
-          onPick: (id, light) => {
-            const l = light as LightingPresetId;
-            if (this.lightingOf(id) === l) return;
-            this.lightingPicks[id] = l;
-            saveSetting(`lighting.${id}`, l);
-            opts.lighting.onChange(id, l);
-            this.refreshSetup();
-          },
-        },
-      },
-    );
-    this.modeDialog = new ChoiceDialog(
-      'Game mode',
-      MATCH_MODES,
-      opts.mode.initial,
-      'mode',
-      (m) => {
-        opts.mode.onChange(m);
-        this.refreshSetup();
-      },
-      { fallback: DEFAULT_MODE },
-    );
-    this.matchDialog = new RowsDialog('Match', this.matchRows());
-    // Until a teammate level is picked (and saved), teammates follow the opponents' level, as every bot did before M20.
-    let teammatesFollow = opts.teammateDifficulty.follows;
-    const teammates = new OptionPicker('Teammates', TEAMMATE_DIFFICULTIES, this.teammateDifficulty, 'teammateDifficulty', (d) => {
-      teammatesFollow = false;
-      this.teammateDifficulty = d;
-      opts.teammateDifficulty.onChange(d);
-      this.refreshSetup();
-    });
-    const opponents = new OptionPicker('Opponents', DIFFICULTIES, this.difficulty, 'difficulty', (d) => {
-      this.difficulty = d;
-      opts.difficulty.onChange(d);
-      if (teammatesFollow) {
-        this.teammateDifficulty = defaultTeammateDifficulty(d);
-        teammates.show(this.teammateDifficulty);
-        opts.teammateDifficulty.onChange(this.teammateDifficulty);
-      }
-      this.refreshSetup();
-    });
-    this.tagPicker(opponents, (p) => p.difficulty);
-    this.tagPicker(teammates, (p) => p.teammateDifficulty);
-    this.difficultyDialog = new RowsDialog('Bot difficulty', [
-      menuRow('Opponents', 'The other team\'s bots.', opponents.root),
-      menuRow('Teammates', 'Your bot teammates (none in a 1v1).', teammates.root),
-    ]);
-    // Every loadout change also refreshes New game's Loadout button.
-    const lo = opts.loadout;
-    this.loadout = new LoadoutScreen({
-      model: lo.model,
-      onChange: () => (lo.onChange(), this.refreshSetup()),
-      onBack: () => this.back(),
-    });
-    // What the Armory gives can change the Loadout's picks and New game's buttons.
-    this.armory = new ArmoryScreen({
-      pool: opts.armory.pool,
-      collection: opts.armory.collection,
-      equipped: opts.armory.equipped,
-      onChange: () => {
-        const reloaded = opts.armory.onChange();
-        this.refreshSetup();
-        return reloaded;
-      },
-      onBack: () => this.back(),
-    });
-    this.settings = new SettingsScreen({
-      bindings: opts.bindings,
-      controls: opts.controls,
-      fov: opts.fov,
-      graphics: opts.graphics,
-      audio: opts.audio,
-      crosshair: opts.crosshair,
-      accessibility: opts.accessibility,
-      hud: opts.hud,
-      look: opts.look,
-      // New game's note on the records follows the Dev settings.
-      dev: {
-        ...opts.dev,
-        onChange: (id, value) => (opts.dev.onChange(id, value), this.refreshSetup()),
-        onEnabled: (on) => (opts.dev.onEnabled(on), this.refreshSetup()),
-      },
-      save: opts.save,
-      onBack: () => this.back(),
-    });
-    this.pause = new PauseScreen({
-      onResume: () => this.play(),
-      onLoadout: () => this.openLoadout('pause'),
-      onSettings: () => this.openSettings('pause'),
-      onQuit: () => this.leaveMatch('title'),
-      onSkipStep: () => opts.onSkipTutorialStep(),
-      onSkipTutorial: () => opts.onSkipTutorial(),
-    });
-    this.summary = new SummaryScreen(() => this.go('result'));
-    this.result = new ResultScreen({
-      onPlayAgain: () => this.play(),
-      onSummary: () => this.go('summary'),
-      onChangeSetup: () => this.leaveMatch('setup'),
-      onTitle: () => this.leaveMatch('title'),
-    });
-    this.screens = {
-      title: this.title.root,
-      setup: this.setup.root,
-      loadout: this.loadout.root,
-      armory: this.armory.root,
-      settings: this.settings.root,
-      pause: this.pause.root,
-      summary: this.summary.root,
-      result: this.result.root,
+    this.picked = {
+      map: opts.map.initial,
+      mode: opts.mode.initial,
+      difficulty: opts.difficulty.initial,
+      teammateDifficulty: opts.teammateDifficulty.initial,
+      ruleset: opts.ruleset.initial,
+      rules: { ...opts.matchRules.initial },
     };
-    this.root.append(...Object.values(this.screens), this.mapDialog.root, this.modeDialog.root, this.matchDialog.root, this.difficultyDialog.root);
+    this.lightingPicks = { ...opts.lighting.initial };
+    this.teammatesFollow = opts.teammateDifficulty.follows;
+    this.realistic = opts.look.initial.realisticColours;
+    this.tutorialDone = opts.tutorialDone;
+    this.context = { pictures: opts.pictures, realistic: () => this.realistic };
+    this.topBar = new TopBar((place) => this.navigate(place));
+    this.topBar.root.hidden = true;
+    this.root.append(this.backdrop.root, this.topBar.root);
     parent.appendChild(this.root);
     window.addEventListener('keydown', this.onKeyDown);
-    this.refreshSetup();
+    this.refreshViews();
   }
 
   /** The screen on show (while the menus are). */
@@ -332,17 +187,18 @@ export class Menus {
    * `tutorial`: its coach is running there (Skip step, Skip tutorial).
    */
   showPause(status: string, seed: number, range = false, tutorial = false): void {
-    this.pause.setStatus(status);
-    this.pause.setSeed(seed);
-    this.pause.setRange(range, tutorial);
+    const pause = this.pauseScreen();
+    pause.setStatus(status);
+    pause.setSeed(seed);
+    pause.setRange(range, tutorial);
     this.pauseShownAt = performance.now();
     this.go('pause');
   }
 
   /** The match's end: the summary first, then (Continue) the result, "You win!" and the score line. */
   showResult(headline: string, detail: string, summary: MatchSummary): void {
-    this.result.set(headline, detail);
-    this.summary.set(summary);
+    this.resultScreen().set(headline, detail);
+    this.summaryScreen().set(summary);
     this.go('summary');
   }
 
@@ -360,138 +216,299 @@ export class Menus {
     this.root.inert = blocked;
     // A pop-up is a modal dialog, drawn above everything (the notice too) and closed by Esc even while inert (bug pass).
     if (blocked) this.closeDialogs();
-    if (!blocked && !this.root.hidden) this.screens[this.current].querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true });
+    if (!blocked && !this.root.hidden) this.built[this.current]?.root.querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true });
   }
 
   /** A warning on the title screen ('' hides it): the browser runs without hardware acceleration. */
   showTitleWarning(text: string): void {
-    this.title.setWarning(text);
+    this.titleWarning = text;
+    this.title?.setWarning(text);
   }
 
   /** Shows a quality choice on Settings → Graphics without saving it (the game's own step-down, REN-03). */
   showQuality(choice: QualityChoice, settings: QualitySettings): void {
-    this.settings.showQuality(choice, settings);
+    this.shownQuality = { choice, settings };
+    this.settings?.showQuality(choice, settings);
   }
 
-  /** A short message under the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */
+  /** A short message by the play buttons, e.g. when the browser refuses the mouse lock (empty to clear). */
   showHint(text: string): void {
-    this.title.showHint(text);
-    this.setup.showHint(text);
-    this.pause.showHint(text);
-    this.result.showHint(text);
+    this.hint = text;
+    this.title?.showHint(text);
+    this.setup?.showHint(text);
+    this.pause?.showHint(text);
+    this.result?.showHint(text);
   }
 
   dispose(): void {
     window.removeEventListener('keydown', this.onKeyDown);
-    this.settings.dispose();
+    this.settings?.dispose();
     this.root.remove();
   }
 
-  /** A picker whose options may be dev content (M35): refreshSetup offers or hides them and shows `played`. */
-  private tagPicker<T extends string>(picker: OptionPicker<T>, played: (p: ReturnType<typeof playedPicks>) => T): OptionPicker<T> {
-    this.taggedPickers.push({ picker: picker as unknown as OptionPicker<string>, played });
-    return picker;
+  /** The tutorial was just played through (M16). */
+  markTutorialDone(): void {
+    this.tutorialDone = true;
+    this.title?.setTutorialDone(true);
   }
 
-  /**
-   * The Match pop-up's rows: the Rules row (M39), then rounds to win, round time, team size, friendly fire and whether
-   * ricochets count, then the Rules picker's switches (M39). A row shows only while the ruleset leaves its rule to you
-   * (refreshSetup): Skirmish the first five, Tournament and Pro CQB the team size, Custom every one.
-   */
-  private matchRows(): HTMLElement[] {
-    const m = this.matchRules;
-    const changed = (): void => {
-      this.opts.matchRules.onChange({ ...m });
-      this.refreshSetup();
-    };
-    const rules = this.tagPicker(
-      new OptionPicker('Rules', RULESETS, this.ruleset, 'ruleset', (r) => {
-        this.ruleset = r;
-        this.opts.ruleset.onChange(r);
-        this.refreshSetup();
-      }),
-      (p) => p.ruleset,
-    );
-    /** A two-way switch row for rule `field` (M39). */
-    const toggle = <T extends string>(field: RuleSwitch, label: string, help: string, choices: readonly { id: T; label: string; blurb: string }[], save: Parameters<typeof saveSetting>[0], on: T, off: T): HTMLElement =>
-      this.switchRow(
-        field,
-        menuRow(
-          label,
-          help,
-          new OptionPicker(label, choices, m[field] ? on : off, save, (v) => {
-            m[field] = v === on;
-            changed();
-          }).root,
-        ),
-      );
-    const winsNeeded = new OptionPicker('Rounds to win', WINS_NEEDED_CHOICES, String(m.winsNeeded), 'winsNeeded', (v) => {
-      m.winsNeeded = Number(v);
-      changed();
-    });
-    const teamSize = (this.teamSizePicker = new OptionPicker('Team size', TEAM_SIZE_CHOICES, String(m.teamSize), 'teamSize', (v) => {
-      m.teamSize = Number(v);
-      changed();
-    }));
-    this.tagPicker(winsNeeded, (p) => String(p.rules.winsNeeded));
-    // The size played: no more than the map in force has room for (M33).
-    this.tagPicker(teamSize, (p) => String(playedTeamSize(p)));
-    return [
-      menuRow('Rules', 'Named rulesets have their own records; Custom never counts.', rules.root),
-      this.switchRow('winsNeeded', menuRow('Rounds to win', '', winsNeeded.root)),
-      this.switchRow(
-        'roundTime',
-        menuRow(
-          'Round time',
-          'Out of time: a draw in Elimination, the defenders\' round in Attack and Defend.',
-          rangeControl('Round time', ROUND_TIME_SETTING, m.roundTime, formatRoundTime, 'roundTime', (v) => {
-            m.roundTime = v;
-            changed();
-          }),
-        ),
-      ),
-      this.switchRow('teamSize', menuRow('Team size', 'Bigger teams come with bigger fields.', teamSize.root)),
-      this.switchRow(
-        'friendlyFire',
-        menuRow(
-          'Friendly fire',
-          '',
-          new OptionPicker('Friendly fire', FRIENDLY_FIRE_CHOICES, m.friendlyFire ? 'on' : 'off', 'friendlyFire', (v) => {
-            m.friendlyFire = v === 'on';
-            changed();
-          }).root,
-        ),
-      ),
-      this.switchRow(
-        'ricochetsCount',
-        menuRow(
-          'Ricochets count',
-          'BBs bounce off concrete and steel either way.',
-          new OptionPicker('Ricochets count', RICOCHETS_COUNT_CHOICES, m.ricochetsCount ? 'on' : 'off', 'ricochets', (v) => {
-            m.ricochetsCount = v === 'on';
-            changed();
-          }).root,
-        ),
-      ),
-      toggle('winByTwo', 'Overtime', 'Half-time stays one round short of the win.', OVERTIME_CHOICES, 'overtime', 'on', 'off'),
-      toggle('timeOutToMorePlayers', 'Time-out', 'Elimination only: in Attack and Defend the defenders hold.', TIME_OUT_CHOICES, 'timeOut', 'morePlayers', 'draw'),
-      toggle('heardOnMinimap', 'Minimap', 'The hit marker and the "you\'re hit" pointer stay either way.', MINIMAP_HEARD_CHOICES, 'minimapHeard', 'on', 'off'),
-      toggle('semiAutoOnly', 'Fire modes', 'For everyone, bots included.', FIRE_MODE_CHOICES, 'fireModes', 'semi', 'any'),
-      toggle('realcap', 'Magazines', 'For everyone, bots included.', MAGAZINE_CHOICES, 'magazines', 'realcap', 'carried'),
-      toggle('factoryKit', 'Kit', 'Your Loadout is locked for the match either way.', KIT_CHOICES, 'matchKit', 'factory', 'own'),
-    ];
+  /** The screens again, after something outside the menus changed what they show (a match paid Field Credits). */
+  refresh(): void {
+    this.refreshViews();
   }
 
-  /** `row`, shown only while the ruleset in force leaves rule `field` to the player (M39, refreshSetup). */
-  private switchRow(field: keyof MatchRules, row: HTMLElement): HTMLElement {
-    this.switchRows.push({ field, row });
-    return row;
+  // The Play screen's model (PlayModel): the picks as made, each change saved and reported to the game.
+
+  picks(): Readonly<NewGamePicks> {
+    return this.picked;
+  }
+
+  /** The light `id` plays under (M34d): its saved pick if it offers it, else its first preset. */
+  lightingOf(id: MapId): LightingPresetId {
+    return lightingPicked(mapData(id), this.lightingPicks[id]);
+  }
+
+  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
+  setMap(id: MapId): void {
+    this.picked.map = id;
+    this.opts.map.onChange(id);
+    const size = mapEntry(id).teamSize.standard;
+    if (this.picked.rules.teamSize !== size) {
+      this.picked.rules.teamSize = size;
+      saveSetting('teamSize', String(size));
+      this.opts.matchRules.onChange({ ...this.picked.rules });
+    }
+    this.refreshViews();
+  }
+
+  setLight(id: MapId, light: LightingPresetId): void {
+    if (this.lightingOf(id) === light) return;
+    this.lightingPicks[id] = light;
+    saveSetting(`lighting.${id}`, light);
+    this.opts.lighting.onChange(id, light);
+    this.refreshViews();
+  }
+
+  setMode(mode: MatchMode): void {
+    this.picked.mode = mode;
+    this.opts.mode.onChange(mode);
+    this.refreshViews();
+  }
+
+  supply(): string | null {
+    return this.opts.mode.supply?.() ?? null;
+  }
+
+  setRuleset(r: RulesetId): void {
+    this.picked.ruleset = r;
+    this.opts.ruleset.onChange(r);
+    this.refreshViews();
+  }
+
+  setRules(rules: MatchRules): void {
+    Object.assign(this.picked.rules, rules);
+    this.opts.matchRules.onChange({ ...this.picked.rules });
+    this.refreshViews();
+  }
+
+  setDifficulty(d: Difficulty): void {
+    this.picked.difficulty = d;
+    this.opts.difficulty.onChange(d);
+    if (this.teammatesFollow) {
+      this.picked.teammateDifficulty = defaultTeammateDifficulty(d);
+      this.opts.teammateDifficulty.onChange(this.picked.teammateDifficulty);
+    }
+    this.refreshViews();
+  }
+
+  setTeammates(d: Difficulty): void {
+    this.teammatesFollow = false;
+    this.picked.teammateDifficulty = d;
+    this.opts.teammateDifficulty.onChange(d);
+    this.refreshViews();
+  }
+
+  // The screens, each built the first time it is needed.
+
+  private titleScreen(): TitleScreen {
+    if (!this.title) {
+      const t = (this.title = new TitleScreen(
+        {
+          onPlay: () => this.openSetup(),
+          onTutorial: () => this.openRange(this.opts.onTutorial),
+          onRange: () => this.openRange(this.opts.onRange),
+          onLoadout: () => this.openLoadout('title'),
+          onArmory: () => this.openArmory('title'),
+          onSettings: () => this.openSettings('title'),
+        },
+        this.tutorialDone,
+        this.opts.loadout.model,
+        this.context,
+      ));
+      t.setWarning(this.titleWarning);
+      this.add('title', t);
+    }
+    return this.title;
+  }
+
+  private setupScreen(): SetupScreen {
+    if (!this.setup) {
+      this.setup = new SetupScreen(this, this.opts.loadout.model, this.context, {
+        onLoadout: () => this.openLoadout('setup'),
+        onBack: () => this.back(),
+        onPlay: () => this.play(),
+      });
+      this.add('setup', this.setup);
+    }
+    return this.setup;
+  }
+
+  private loadoutScreen(): LoadoutScreen {
+    if (!this.loadout) {
+      const lo = this.opts.loadout;
+      // Every loadout change also shows on the title's and the Play screen's kit.
+      this.loadout = new LoadoutScreen({ model: lo.model, context: this.context, onChange: () => (lo.onChange(), this.refreshViews()), onBack: () => this.back() });
+      this.add('loadout', this.loadout);
+    }
+    return this.loadout;
+  }
+
+  private armoryScreen(): ArmoryScreen {
+    if (!this.armory) {
+      const a = this.opts.armory;
+      this.armory = new ArmoryScreen({
+        pool: a.pool,
+        collection: a.collection,
+        equipped: a.equipped,
+        context: this.context,
+        // What the Armory gives can change the Loadout's picks and the wallet.
+        onChange: () => {
+          const reloaded = a.onChange();
+          this.refreshViews();
+          return reloaded;
+        },
+        onBack: () => this.back(),
+      });
+      this.add('armory', this.armory);
+    }
+    return this.armory;
+  }
+
+  private settingsScreen(): SettingsScreen {
+    if (!this.settings) {
+      const o = this.opts;
+      const s = (this.settings = new SettingsScreen({
+        bindings: o.bindings,
+        controls: o.controls,
+        fov: o.fov,
+        graphics: o.graphics,
+        audio: o.audio,
+        crosshair: o.crosshair,
+        accessibility: o.accessibility,
+        hud: o.hud,
+        // Realistic colours also changes how the menus draw the replicas.
+        look: { ...o.look, onChange: (look) => ((this.realistic = look.realisticColours), o.look.onChange(look), this.refreshViews()) },
+        // The Play screen's note on the records follows the Dev settings.
+        dev: {
+          ...o.dev,
+          onChange: (id, value) => (o.dev.onChange(id, value), this.refreshViews()),
+          onEnabled: (on) => (o.dev.onEnabled(on), this.refreshViews()),
+        },
+        save: o.save,
+        onBack: () => this.back(),
+      }));
+      if (this.shownQuality) s.showQuality(this.shownQuality.choice, this.shownQuality.settings);
+      this.add('settings', s);
+    }
+    return this.settings;
+  }
+
+  private pauseScreen(): PauseScreen {
+    if (!this.pause) {
+      this.pause = new PauseScreen({
+        onResume: () => this.play(),
+        onLoadout: () => this.openLoadout('pause'),
+        onSettings: () => this.openSettings('pause'),
+        onQuit: () => this.leaveMatch('title'),
+        onSkipStep: () => this.opts.onSkipTutorialStep(),
+        onSkipTutorial: () => this.opts.onSkipTutorial(),
+      });
+      this.add('pause', this.pause);
+    }
+    return this.pause;
+  }
+
+  private summaryScreen(): SummaryScreen {
+    if (!this.summary) {
+      this.summary = new SummaryScreen(() => this.go('result'));
+      this.add('summary', this.summary);
+    }
+    return this.summary;
+  }
+
+  private resultScreen(): ResultScreen {
+    if (!this.result) {
+      this.result = new ResultScreen({
+        onPlayAgain: () => this.play(),
+        onSummary: () => this.go('summary'),
+        onChangeSetup: () => this.leaveMatch('setup'),
+        onTitle: () => this.leaveMatch('title'),
+      });
+      this.add('result', this.result);
+    }
+    return this.result;
+  }
+
+  private add(id: MenuScreen, screen: Screen): void {
+    screen.root.hidden = true;
+    this.built[id] = screen;
+    this.root.append(screen.root);
+    watchScroll(screen.root);
+    this.refreshViews();
+    if (this.hint) this.showHint(this.hint);
+  }
+
+  private screenOf(id: MenuScreen): Screen {
+    switch (id) {
+      case 'title':
+        return this.titleScreen();
+      case 'setup':
+        return this.setupScreen();
+      case 'loadout':
+        return this.loadoutScreen();
+      case 'armory':
+        return this.armoryScreen();
+      case 'settings':
+        return this.settingsScreen();
+      case 'pause':
+        return this.pauseScreen();
+      case 'summary':
+        return this.summaryScreen();
+      case 'result':
+        return this.resultScreen();
+    }
+  }
+
+  // Moving between the screens.
+
+  /** A place on the top bar: the screens it opens return to the title on Back. */
+  private navigate(place: NavPlace): void {
+    // The place on show (the only one on the bar when opened from the pause menu) stays as it is.
+    if (TOP_BAR_PLACES[this.current] === place) return;
+    // Back returns to the Play screen when the bar was used from there, else to the title (the places are its own).
+    const from: SettingsOrigin = this.current === 'setup' ? 'setup' : 'title';
+    if (place === 'range') this.openRange(this.opts.onRange);
+    else if (place === 'setup') this.openSetup();
+    else if (place === 'loadout') this.openLoadout(from);
+    else if (place === 'armory') this.openArmory(from);
+    else this.openSettings(from);
   }
 
   /** Ends the match the player is leaving, then shows `screen`. */
   private leaveMatch(screen: 'title' | 'setup'): void {
     this.opts.onLeaveMatch();
-    this.go(screen);
+    if (screen === 'setup') this.openSetup();
+    else this.go(screen);
   }
 
   private play(): void {
@@ -504,31 +521,37 @@ export class Menus {
     open();
   }
 
-  /** The tutorial was just played through (M16). */
-  markTutorialDone(): void {
-    this.title.setTutorialDone(true);
+  private openSetup(): void {
+    this.setupScreen().opened();
+    this.go('setup');
   }
 
   private openLoadout(from: SettingsOrigin): void {
-    this.loadoutFrom = from;
+    this.origins.loadout = from;
     // What you own may have changed since it was last open (the Armory, M26c).
-    this.loadout.refresh();
+    this.loadoutScreen().refresh();
     this.go('loadout');
   }
 
-  private openArmory(): void {
-    if (this.opts.armory.summary().disabled) return;
-    this.armory.refresh();
+  private openArmory(from: SettingsOrigin): void {
+    if (this.opts.armory.wallet() === null) return;
+    this.origins.armory = from;
+    this.armoryScreen().refresh();
     this.go('armory');
   }
 
   private openSettings(from: SettingsOrigin): void {
-    this.settings.openFrom(from);
+    this.origins.settings = from;
+    this.settingsScreen().openFrom(from);
     this.go('settings');
   }
 
+  private target(): MenuScreen | null {
+    return backTarget(this.current, this.origins.settings, this.origins.loadout, this.origins.armory);
+  }
+
   private back(): void {
-    const target = backTarget(this.current, this.settings.openedFrom, this.loadoutFrom);
+    const target = this.target();
     if (!target) return;
     // No match is ever under way on New game, but a Play whose mouse lock was refused leaves one built and unstarted:
     // leaving for the title unloads it, so no map stays loaded behind the title screen.
@@ -539,161 +562,108 @@ export class Menus {
   /** Shows `screen`. Going back, the focus returns to where it was on that screen (the tile you opened, say). */
   private go(screen: MenuScreen, returning = false): void {
     const focused = document.activeElement;
-    if (focused instanceof HTMLElement && this.screens[this.current].contains(focused)) this.lastFocus.set(this.current, focused);
+    const was = this.built[this.current];
+    if (focused instanceof HTMLElement && was?.root.contains(focused)) this.lastFocus.set(this.current, focused);
     this.leave();
     this.showHint('');
+    const shown = this.screenOf(screen);
     this.current = screen;
-    for (const [id, node] of Object.entries(this.screens)) node.hidden = id !== screen;
+    for (const [id, s] of Object.entries(this.built)) s.root.hidden = id !== screen;
     this.root.hidden = false;
+    const place = TOP_BAR_PLACES[screen] ?? null;
+    this.topBar.root.hidden = place === null;
+    this.root.classList.toggle('has-topbar', place !== null);
+    // Opened from the pause menu (a match is under way), only the screen itself shows on the bar.
+    const fromPause = (screen === 'settings' && this.origins.settings === 'pause') || (screen === 'loadout' && this.origins.loadout === 'pause');
+    this.topBar.show(place, fromPause);
+    this.backdrop.show(screen === 'title' ? 'title' : 'blurred', EVEN_BACKDROP.has(screen));
     // The screen's main button takes the keyboard focus, so Enter does the obvious thing (Play, Resume …).
     const previous = returning ? this.lastFocus.get(screen) : undefined;
-    (previous ?? this.screens[screen].querySelector<HTMLElement>('[data-autofocus]'))?.focus({ preventScroll: true });
+    (previous ?? shown.root.querySelector<HTMLElement>('[data-autofocus]'))?.focus({ preventScroll: true });
   }
 
   /**
-   * Esc on Loadout, Settings or New game acts as Back, and on the pause menu resumes like its Resume button (audit
-   * UI-09; a refused mouse lock shows the usual "click again" hint). A pop-up closes itself on Esc, and Settings swallows
-   * the Esc that cancels a key binding before it gets here.
+   * Esc on the Play screen, the Loadout, the Armory or Settings acts as Back, on the title opens Settings, and on the
+   * pause menu resumes like its Resume button (audit UI-09; a refused mouse lock shows the usual "click again" hint). A
+   * pop-up closes itself on Esc, and Settings swallows the Esc that cancels a key binding or clears its search before it
+   * gets here. Any other key a screen's hints name (T Tutorial, C Customise, / Search, Space 1 Shot) does what they say.
    */
   private readonly onKeyDown = (e: KeyboardEvent): void => {
-    if (e.code !== 'Escape' || this.root.hidden || this.dialogOpen()) return;
+    if (this.root.hidden || this.root.inert || this.dialogOpen()) return;
+    if (e.code !== 'Escape') {
+      this.hintKey(e);
+      return;
+    }
     if (escResumes(this.current, performance.now() - this.pauseShownAt, e.repeat, PAUSE_ESC_GUARD_MS)) {
       e.preventDefault();
       this.play();
       return;
     }
     // On the Loadout, Esc first closes a replica's Customise view (M26b).
-    if (this.current === 'loadout' && this.loadout.handleEscape()) {
+    if (this.current === 'loadout' && this.loadout?.handleEscape()) {
       e.preventDefault();
       return;
     }
-    if (backTarget(this.current, this.settings.openedFrom, this.loadoutFrom) === null) return;
+    if (this.current === 'title' && !e.repeat) {
+      e.preventDefault();
+      this.openSettings('title');
+      return;
+    }
+    if (this.target() === null) return;
     e.preventDefault();
     this.back();
   };
 
-  /** Any pop-up open (New game's, or the Save tab's, M31): Esc is its own. */
+  /** A key one of the screen's hints names: not while typing, with a modifier held, or as a held key repeats. */
+  private hintKey(e: KeyboardEvent): void {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return;
+    const hint = this.built[this.current]?.hints?.find((h) => h.code === e.code && h.run);
+    if (!hint) return;
+    // An idle key (Space) presses a focused button instead while a control has the keyboard.
+    const active = document.activeElement;
+    if (hint.idle && active instanceof HTMLElement && active !== document.body && this.root.contains(active)) return;
+    e.preventDefault();
+    hint.run!();
+  }
+
+  /** Any pop-up open (a confirm, the Save tab's, M31): Esc is its own. */
   private dialogOpen(): boolean {
     return this.root.querySelector('dialog[open]') !== null;
   }
 
   private closeDialogs(): void {
-    this.mapDialog.close();
-    this.modeDialog.close();
-    this.matchDialog.close();
-    this.difficultyDialog.close();
     for (const d of this.root.querySelectorAll('dialog[open]')) (d as HTMLDialogElement).close();
   }
 
   /** Tidies up the screen being left: closes a pop-up, stops waiting for a key press. */
   private leave(): void {
     this.closeDialogs();
-    if (this.current === 'settings') this.settings.closed();
+    if (this.current === 'settings') this.settings?.closed();
   }
 
-  /** The light `id` plays under (M34d): its saved pick if it offers it, else its first preset. */
-  private lightingOf(id: MapId): LightingPresetId {
-    return lightingPicked(mapData(id), this.lightingPicks[id]);
+  /** The Play screen, the title's next match and the wallet show what is picked and owned now. */
+  private refreshViews(): void {
+    const wallet = this.opts.armory.wallet();
+    this.topBar.setWallet(wallet, wallet === null);
+    if (!this.title && !this.setup) return;
+    const view = this.playView();
+    this.setup?.refresh(view);
+    if (this.title) {
+      this.title.setWallet(wallet);
+      const next: NextMatch = { still: view.still, mapLine: view.mapLine, modeLine: `${view.modeLabel} · ${view.bots}`, rulesLine: view.rules };
+      this.title.setNext(next);
+    }
   }
 
-  /** A map was picked: the team size becomes the map's own (Depot 3v3, Woodland 4v4, M33), and is saved. */
-  private mapPicked(id: MapId): void {
-    const size = mapEntry(id).teamSize.standard;
-    if (this.matchRules.teamSize === size) return;
-    this.matchRules.teamSize = size;
-    saveSetting('teamSize', String(size));
-    this.opts.matchRules.onChange({ ...this.matchRules });
-  }
-
-  /** The New game buttons and the rules under them show what is picked now. */
-  private refreshSetup(): void {
-    // What is picked, as it plays: dev content's picks play as their defaults while Dev content is off (M35).
-    const devContent = this.opts.dev.devContent();
-    this.mapDialog.setDevContent(devContent);
-    this.modeDialog.setDevContent(devContent);
-    const offeredOn = mapData(this.mapDialog.value);
-    this.modeDialog.limit((id) => modeOffered(offeredOn, id));
-    const played = playedPicks(
-      { map: this.mapDialog.value, mode: this.modeDialog.value, difficulty: this.difficulty, teammateDifficulty: this.teammateDifficulty, ruleset: this.ruleset, rules: this.matchRules },
-      devContent,
-    );
-    // Each map offers as many players a side as it has room for (Depot 3v3, Woodland up to 5v5, M33).
-    // An Extraction run takes a squad of at most three (M43).
-    const map = mapEntry(played.map);
-    const run = played.mode === 'extraction' ? mapData(map.id).extraction : undefined;
-    // The Match pop-up offers the rules the ruleset as played leaves to you (M39) and the match reads (M53, audit UI-01:
-    // not the rounds to win or the round time in an Extraction run).
-    for (const s of this.switchRows) s.row.hidden = !offersRow(played.ruleset, s.field, run !== undefined);
-    const sizeMax = run ? squadSize(map.teamSize.max) : map.teamSize.max;
-    this.teamSizePicker.limit((id) => Number(id) <= sizeMax);
-    for (const t of this.taggedPickers) t.picker.setDevContent(devContent, t.played(played));
-    const m = { ...played.rules, teamSize: playedTeamSize(played) };
-    // A map that offers Day and Night names the one picked (M34d).
-    const light = lightingChoices(mapData(map.id)).length > 1 ? ` · ${LIGHTING_LABELS[this.lightingOf(map.id)]}` : '';
-    this.setup.map.set(`${this.mapDialog.label}${light}`, this.mapDialog.blurb);
-    this.setup.mode.set(this.modeDialog.label, this.modeDialog.blurb);
-    const match = run ? runRulesSummary(m, run, played.difficulty) : matchRulesSummary(m);
-    // Under a ruleset other than Skirmish the line starts with its name (M39).
-    this.setup.match.set(match.value, played.ruleset === DEFAULT_RULESET ? match.detail : `${rulesetOf(played.ruleset).label}. ${match.detail}`);
-    const opponents = difficultyLabel(played.difficulty);
-    const mates = difficultyLabel(played.teammateDifficulty);
-    this.setup.difficulty.set(
-      m.teamSize === 1 || played.difficulty === played.teammateDifficulty ? opponents : `${opponents} / ${mates}`,
-      m.teamSize === 1 ? `Your opponent: ${opponents}. No teammates in a 1v1.` : `Opponents ${opponents}, teammates ${mates}.`,
-    );
-    const halfTimeAfter = roundRulesFor(m).halfTimeAfter;
-    const recorded = countsForRecords(m, played.difficulty, played.teammateDifficulty, played.ruleset);
-    const rules = describeRules({ ...this.opts.rules, ...m, halfTimeAfter, switches: m, opponents: played.difficulty }, played.mode, run);
-    this.setup.setRules(setupNotes(rules, { recorded, cheating: this.opts.dev.cheating(), devContentUsed: this.opts.dev.devContentUsed(), ruleset: played.ruleset }));
-    const loadout = this.opts.loadout.summary();
-    this.setup.loadout.set(loadout.replicas, loadout.detail);
-    const armory = this.opts.armory.summary();
-    this.setup.armory.set(armory.value, armory.detail);
-    this.setup.armory.setDisabled(armory.disabled);
-  }
-
-  /** New game's buttons again, after something outside the menus changed them (a match paid Field Credits). */
-  refresh(): void {
-    this.refreshSetup();
+  /** The match as it will play (playView.ts). */
+  private playView(): PlayView {
+    return playView(this.picked, this.opts, (id) => this.lightingOf(id));
   }
 }
 
-/**
- * New game's text under its buttons: the rules, then why the match won't count, said before it is played: custom rules
- * (M20, not `recorded`), Dev settings that change play (M24, `cheating`), or dev content (M35, `devContentUsed`: in full,
- * or only that it won't pay when a note before it already says it won't be recorded). Pure.
- */
-export function setupNotes(rules: string, why: { recorded: boolean; cheating: boolean; devContentUsed: boolean; ruleset?: RulesetId }): string {
-  const notes = [rules];
-  if (!why.recorded) notes.push(notRecordedNote(why.ruleset ?? DEFAULT_RULESET));
-  else if (why.cheating) notes.push(DEV_NOT_RECORDED_NOTE);
-  if (why.devContentUsed) notes.push(notes.length > 1 ? DEV_CONTENT_PAY_NOTE : DEV_CONTENT_NOTE);
-  return notes.join(' ');
-}
-
-/** Under New game's rules while Dev settings that change play are on (M24). */
-export const DEV_NOT_RECORDED_NOTE = "Dev settings are on, so this match won't go into your records.";
-
-/**
- * Under New game's rules when the picks, the Loadout or the opponents' possible gear use dev content (M35); the second
- * when another note already says the match won't be recorded.
- */
-export const DEV_CONTENT_NOTE = "This match uses content still being built, so it won't go into your records or pay Field Credits.";
-export const DEV_CONTENT_PAY_NOTE = "It uses content still being built, so it won't pay Field Credits either.";
-
-/** Under New game's rules when the setup isn't the standard match. */
-export const NOT_RECORDED_NOTE = `This match won't go into your records, which count only the standard match: ${standardMatchText()}`;
-
-/** Under New game's rules when the setup isn't `ruleset`'s standard match (M39): Skirmish's note, its own, or Custom's. */
-export function notRecordedNote(ruleset: RulesetId): string {
-  if (ruleset === DEFAULT_RULESET) return NOT_RECORDED_NOTE;
-  if (recordsKeyOf(ruleset) === null) return CUSTOM_NOT_RECORDED_NOTE;
-  return `This match won't go into your ${rulesetOf(ruleset).label} records, which count only its standard match: ${standardMatchText(ruleset)}`;
-}
-
-/** Under New game's rules with the Custom ruleset (M39). */
-export const CUSTOM_NOT_RECORDED_NOTE = `Custom rules never go into your records, and pay no more than ×${CUSTOM_RULES_PAY_CAP}.`;
-
-function difficultyLabel(d: Difficulty): string {
-  return DIFFICULTIES.find((o) => o.id === d)?.label ?? d;
+/** Whether a key goes into a text box (Settings' search, a number box), so no hint key acts on it. */
+function typing(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+  return target instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button'].includes(target.type);
 }

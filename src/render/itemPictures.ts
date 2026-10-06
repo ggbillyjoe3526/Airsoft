@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ITEM_PICTURE } from '../config/itemPictures';
 import type { ReplicaConfig } from '../config/replicas';
 import type { SchemeId } from '../config/schemes';
-import { buildReplicaModels, fitMuzzle, type ReplicaDetail, type ReplicaModel } from './replicaModels';
+import { buildReplicaModels, fitMuzzle, REPLICA_PART_TABLES, type ReplicaDetail, type ReplicaModel } from './replicaModels';
 
 /**
  * Item pictures (graphics overhaul G2): small images of a replica, a part or a colour scheme for the menus, drawn by the
@@ -140,6 +140,19 @@ export class ItemPictures {
       models.dispose();
     }
   }
+}
+
+/**
+ * The key of the replica a part's own picture is drawn on (`part` as 'kind:id'): the first of the AEG, the pistol and the
+ * Cyber Pistol whose model has it, or null when none does (the menus show the part's icon then).
+ */
+export function partHost(part: string): keyof typeof REPLICA_PART_TABLES | null {
+  const [kind, id] = part.split(':');
+  for (const key of Object.keys(REPLICA_PART_TABLES) as (keyof typeof REPLICA_PART_TABLES)[]) {
+    const table = REPLICA_PART_TABLES[key];
+    if (kind === 'magazine' ? id! in table.magazines : kind === 'muzzle' ? id! in table.muzzles : part in table.parts) return key;
+  }
+  return null;
 }
 
 /**
@@ -290,6 +303,34 @@ export function webglPictureTarget(gl: THREE.WebGLRenderer): PictureTarget {
     dispose() {
       rt?.dispose();
       rt = null;
+    },
+  };
+}
+
+/**
+ * A target that follows the game's renderer (graphics overhaul G3): the Renderer swaps its WebGL renderer when
+ * anti-aliasing changes, so each picture is drawn with the one `current` returns now, and the render target made for an
+ * earlier one is let go. `make` builds the target for one renderer (webglPictureTarget; a fake in the tests).
+ */
+export function followingPictureTarget<R>(current: () => R, make: (gl: R) => PictureTarget): PictureTarget {
+  let gl: R | null = null;
+  let inner: PictureTarget | null = null;
+  const target = (): PictureTarget => {
+    const now = current();
+    if (now !== gl || !inner) {
+      inner?.dispose();
+      gl = now;
+      inner = make(now);
+    }
+    return inner;
+  };
+  return {
+    draw: (scene, camera, width, height) => target().draw(scene, camera, width, height),
+    encode: (rgba, width, height) => target().encode(rgba, width, height),
+    dispose() {
+      inner?.dispose();
+      inner = null;
+      gl = null;
     },
   };
 }

@@ -1,6 +1,7 @@
 /**
- * How the menus join up (owner's design, 2026-10-03). Before a match: Title → Start → New game, whose Map, Mode and
- * Difficulty buttons open a pop-up and whose Loadout and Settings buttons open a screen of their own. Esc in a match
+ * How the menus join up (owner's design, 2026-10-03; G3). Before a match: the title, whose buttons (and the top bar on
+ * every screen after it) open the Play screen (New game: map, mode and match on one page), the Loadout, the Armory and
+ * Settings. Each screen's Back returns to where it was opened from. Esc in a match
  * opens the pause menu (Resume, Settings, Quit). After a match: the summary (M19: everyone's numbers
  * and your records; Continue), then the result (Play Again, New Game, Summary to look
  * again). The loadout is reached only through New game, so never mid-match; the practice range (M21, from the title)
@@ -8,19 +9,22 @@
  */
 export type MenuScreen = 'title' | 'setup' | 'loadout' | 'armory' | 'settings' | 'pause' | 'summary' | 'result';
 
-/** Where Settings (or, on the practice range, the Loadout) was opened from, and so where its Back button returns. */
-export type SettingsOrigin = 'setup' | 'pause';
+/**
+ * Where Settings, the Loadout or the Armory was opened from, and so where its Back button returns: the title (or the top
+ * bar), the Play screen, or the pause menu (Settings; the Loadout on the practice range).
+ */
+export type SettingsOrigin = 'title' | 'setup' | 'pause';
 
 /** Where a screen's Back button goes, or null for screens without one (title, pause, summary, result). */
-export function backTarget(screen: MenuScreen, settingsFrom: SettingsOrigin, loadoutFrom: SettingsOrigin = 'setup'): MenuScreen | null {
+export function backTarget(screen: MenuScreen, settingsFrom: SettingsOrigin, loadoutFrom: SettingsOrigin = 'setup', armoryFrom: SettingsOrigin = 'setup'): MenuScreen | null {
   switch (screen) {
     case 'setup':
       return 'title';
     case 'loadout':
       return loadoutFrom;
-    // The Armory (M26c) is reached only from New game.
+    // The Armory (M26c) is reached from the title and the top bar, never mid-match.
     case 'armory':
-      return 'setup';
+      return armoryFrom;
     case 'settings':
       return settingsFrom;
     default:

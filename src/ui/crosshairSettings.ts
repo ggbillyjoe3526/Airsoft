@@ -51,7 +51,7 @@ export function crosshairSettings(opts: CrosshairSettingsOptions): HTMLDivElemen
   const px = (v: number): string => `${v} px`;
   return [
     menuRow('Preview', 'Your BBs land inside the arms (or the ring): it opens as you move.', preview),
-    menuRow('Shape', '', new OptionPicker('Shape', CROSSHAIR_SHAPES, current.shape, 'crosshair.shape', (v) => change('shape', v)).root),
+    menuRow('Shape', 'Arms, a ring or a dot: how the crosshair is drawn.', new OptionPicker('Shape', CROSSHAIR_SHAPES, current.shape, 'crosshair.shape', (v) => change('shape', v)).root),
     menuRow('Size', 'Length of the arms (the cross shapes).', rangeControl('Crosshair size', CROSSHAIR_RANGES.size, current.size, px, 'crosshair.size', (v) => change('size', v))),
     menuRow(
       'Thickness',
@@ -63,14 +63,14 @@ export function crosshairSettings(opts: CrosshairSettingsOptions): HTMLDivElemen
       'Space in the middle when your aim is steady.',
       rangeControl('Crosshair gap', CROSSHAIR_RANGES.gap, current.gap, px, 'crosshair.gap', (v) => change('gap', v)),
     ),
-    menuRow('Colour', '', colourPicker(current, change)),
+    menuRow('Colour', 'One that stands out on every map. Blue and orange are left out: they are the teams’.', colourPicker(current, change)),
     menuRow(
       'Opacity',
-      '',
+      'How solid the crosshair is drawn.',
       rangeControl('Crosshair opacity', CROSSHAIR_RANGES.opacity, current.opacity, (v) => `${Math.round(v * 100)}%`, 'crosshair.opacity', (v) => change('opacity', v)),
     ),
-    menuRow('Spread', '', new OptionPicker('Spread', CROSSHAIR_DYNAMIC, current.dynamic, 'crosshair.dynamic', (v) => change('dynamic', v)).root),
-    menuRow('Outline', '', new OptionPicker('Outline', CROSSHAIR_OUTLINES, current.outline, 'crosshair.outline', (v) => change('outline', v)).root),
+    menuRow('Spread', 'Whether the crosshair opens as you move and fire.', new OptionPicker('Spread', CROSSHAIR_DYNAMIC, current.dynamic, 'crosshair.dynamic', (v) => change('dynamic', v)).root),
+    menuRow('Outline', 'A thin dark edge round the crosshair.', new OptionPicker('Outline', CROSSHAIR_OUTLINES, current.outline, 'crosshair.outline', (v) => change('outline', v)).root),
   ];
 }
 

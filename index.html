@@ -12,8 +12,9 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <!--
       The loading screen (audit UI-12, section 6 item 13), styled here so it is right from the first paint, before
-      style.css: the menus' colours (style.css :root), the wordmark, and a 2 px bar that slides until the game's code
-      runs and fills it with the real progress (ui/loadingScreen.ts).
+      style.css: the menus' colours (G3: the navy ground and the orange), the slanted wordmark with its orange bar, and a
+      bar that slides until the game's code runs and fills it with the real progress (ui/loadingScreen.ts). The menus'
+      fonts arrive with the game's code, so this screen keeps the system's.
     -->
     <style>
       html,
@@ -22,8 +23,8 @@
         height: 100%;
         overflow: hidden;
         color-scheme: dark;
-        background: #16181d;
-        color: #f7f3ea;
+        background: #070d1f;
+        color: #f1f5ff;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       }
 
@@ -35,34 +36,41 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 20px;
-        background: #16181d;
+        gap: 24px;
+        background: radial-gradient(120% 90% at 50% 40%, #0e1834, #070d1f 70%);
       }
 
       .loading-wordmark {
+        display: flex;
+        align-items: center;
+        gap: 0.3em;
         margin: 0;
         font-size: clamp(40px, 6vw, 72px);
         font-weight: 900;
+        font-style: italic;
         line-height: 1;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.02em;
       }
 
       .loading-wordmark span {
-        color: #ff8a2a;
+        width: 0.42em;
+        height: 0.9em;
+        background: #ff6b1a;
+        transform: skewX(-14deg);
       }
 
       .loading-bar {
         position: relative;
-        width: min(320px, 60vw);
-        height: 2px;
+        width: min(360px, 60vw);
+        height: 4px;
         overflow: hidden;
-        background: #3a3f4a;
+        background: #1d2a4d;
       }
 
       .loading-bar div {
         position: absolute;
         inset: 0;
-        background: #ff8a2a;
+        background: #ff6b1a;
         transform: scaleX(0);
         transform-origin: 0 50%;
         transition: transform 0.2s ease-out;
@@ -97,9 +105,9 @@
       .loading-text,
       .loading-noscript {
         margin: 0;
-        font-size: 13px;
-        letter-spacing: 0.06em;
-        color: #8f8b82;
+        font-size: 15px;
+        letter-spacing: 0.08em;
+        color: #b4c0dc;
       }
 
       .loading-noscript {
@@ -141,7 +149,7 @@
   <body>
     <div id="app"></div>
     <div id="loading">
-      <p class="loading-wordmark">AIRSOFT<span>.</span></p>
+      <p class="loading-wordmark"><span aria-hidden="true"></span>AIRSOFT</p>
       <div class="loading-bar indeterminate" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"><div></div></div>
       <p class="loading-text" aria-live="polite">Loading…</p>
       <noscript><p class="loading-noscript">Airsoft runs on JavaScript. Turn it on for this site in your browser's settings, then reload the page.</p></noscript>

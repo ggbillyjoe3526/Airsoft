@@ -59,6 +59,8 @@ export const SAVE_TEXT = {
   undoLabel: 'Undo last load or delete',
   undoHelp: (what: string) => `Brings back the save from before ${what}.`,
   undoNone: 'Nothing to undo.',
+  /** The Undo row's note (G3: every row has one). */
+  undoNote: 'Takes back a load, a restore or a delete made by mistake.',
   undoButton: 'Undo',
   restoreLabel: 'Restore points',
   restoreHelp: `The browser keeps your save from each of the last ${RESTORE_POINTS} days you played. They go too if the browser's data is cleared: download a save for that.`,

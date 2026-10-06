@@ -1,0 +1,316 @@
+/*
+ * The pause menu, the match's end (summary and result), the pop-ups and the title's warning (G3).
+ */
+
+/* The pause menu: a column on the left, over the shared blurred backdrop. */
+.menu-pause {
+  justify-content: center;
+}
+
+.menu-pause-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: min(460px, 100%);
+  margin: auto 0;
+  padding: var(--sp-6);
+  background: rgba(12, 20, 42, 0.94);
+  border: 1px solid var(--menu-line-soft);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+
+.menu-pause-panel .menu-button:not(.menu-button-big) {
+  justify-content: flex-start;
+}
+
+.menu-pause-status {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-lg);
+  color: var(--menu-muted);
+}
+
+.menu-pause-seed {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-faint);
+}
+
+/* The match summary: the result over the tables, your Field Credits and records beside them. */
+.summary-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: clamp(16px, 1.8vw, 32px);
+}
+
+.summary-result {
+  font-size: clamp(40px, 4.2vw, 84px);
+  line-height: 0.95;
+  font-style: italic;
+}
+
+.summary-score {
+  margin-left: 0.3em;
+  font-size: 0.5em;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--orange-text);
+  white-space: nowrap;
+}
+
+.summary-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 26vw, 500px);
+  gap: clamp(16px, 2vw, 40px);
+  align-items: start;
+}
+
+.summary-main {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.summary-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.summary-credits,
+.summary-haul,
+.summary-records {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}
+
+.summary-credits-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-credits-total strong {
+  font: 800 clamp(34px, 2.6vw, 52px) / 1 var(--ui-display);
+  color: var(--paper);
+}
+
+.records-grid {
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.records-grid th,
+.records-grid td {
+  padding: 3px var(--sp-4) 3px 0;
+  text-align: left;
+}
+
+.records-grid thead th {
+  font: 600 var(--fs-sm) var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.records-grid tbody th {
+  font-weight: 700;
+}
+
+.records-grid td.current {
+  font-weight: 800;
+  color: var(--orange-text);
+}
+
+.records-not-counted {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.records-bests {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-md);
+}
+
+.records-best-label {
+  margin-right: 8px;
+  color: var(--menu-muted);
+}
+
+.records-new {
+  margin-left: 8px;
+  padding: 2px 7px;
+  font: 800 var(--fs-sm) var(--ui-display);
+  font-style: normal;
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--ink);
+  background: #ffc21a;
+}
+
+/* The result: the headline large, Play again under it, the rest beside each other. */
+.menu-result {
+  justify-content: center;
+}
+
+.menu-result-centre {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: auto;
+  padding-left: clamp(0px, 3vw, 56px);
+}
+
+.menu-result-headline {
+  margin: 0;
+  font-size: clamp(64px, 8vw, 150px);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.9;
+  color: var(--menu-blue);
+}
+
+.menu-result-detail {
+  margin: 0;
+  font: 700 clamp(22px, 2vw, 36px) var(--ui-display);
+  letter-spacing: 0.04em;
+}
+
+.menu-result-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: min(560px, 100%);
+  margin: clamp(24px, 4vw, 64px) 0 auto;
+  padding-left: clamp(0px, 3vw, 56px);
+}
+
+.menu-result-buttons,
+.menu-result-more {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.menu-result-more {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Pop-ups (a confirm, the Save group's): a panel over a darkened page. No live blur behind them. */
+.menu-dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  font: 500 var(--fs-md) / 1.4 var(--ui-font);
+  color: var(--paper);
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.menu-dialog[open] {
+  animation: dialog-enter var(--t-med) var(--ease) both;
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+/* The backdrop takes literal colours: older browsers don't pass custom properties into ::backdrop. */
+.menu-dialog::backdrop {
+  background: rgba(7, 13, 31, 0.8);
+}
+
+.menu-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+
+.menu-dialog-title {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.menu-close {
+  display: grid;
+  place-items: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  padding: 0;
+  color: var(--menu-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.menu-close:hover {
+  color: var(--paper);
+  background: var(--menu-panel-hi);
+}
+
+.menu-close svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* Asking before a big spend (audit POOL-03) */
+.confirm-text {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--menu-soft);
+}
+
+/* The title's warning: the browser draws without hardware acceleration (M18b), a slim banner with its sign. */
+/* In the page's flow above the wordmark, so it never covers the title's words; clear of the wallet on the right. */
+.menu-title-warning {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  align-self: flex-start;
+  gap: var(--sp-3);
+  max-width: min(900px, calc(100% - 380px));
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--warning);
+  background: var(--menu-panel);
+  border: 1px solid var(--menu-line);
+}
+
+.menu-title-warning svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

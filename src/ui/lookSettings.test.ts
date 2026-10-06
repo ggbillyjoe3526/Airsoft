@@ -26,7 +26,10 @@ describe('Settings › Look (G1 acceptance 3)', () => {
   it('is a tab of the Settings screen, built (not a placeholder), between Accessibility and Save', () => {
     const ids = SETTINGS_TABS.map((t) => t.id);
     expect(ids.indexOf('look')).toBe(ids.indexOf('accessibility') + 1);
-    expect(SETTINGS_TABS.find((t) => t.id === 'look')).toMatchObject({ label: 'Look', later: false });
+    // G3 dropped the placeholder tabs (and their `later` flag): every listed tab is built.
+    const look = SETTINGS_TABS.find((t) => t.id === 'look');
+    expect(look).toMatchObject({ label: 'Look' });
+    expect(look).not.toHaveProperty('later', true);
   });
 
   it('has two rows, Robots and Realistic colours, showing the defaults: Mixed (robots on) and Bold (realistic off)', () => {

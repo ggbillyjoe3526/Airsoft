@@ -1,7 +1,7 @@
 import { handlingOf } from '../config/attachments';
 import { BALLISTICS } from '../config/ballistics';
 import { BOT_BEHAVIOUR } from '../config/bots';
-import { PERFORMANCE_SHEET } from '../config/menus';
+import { PERFORMANCE_BARS, PERFORMANCE_SHEET } from '../config/menus';
 import { AIMING, OPTICS } from '../config/optics';
 import { BB_WEIGHT, muzzleEnergy, muzzleVelocity } from '../config/replicas';
 import type { ScaledStat } from '../config/statsFile';
@@ -81,19 +81,31 @@ export interface SheetRow {
   /** The change against the replica as it comes, e.g. "+7%"; '' when there is none worth showing. */
   delta: string;
   change: Change;
+  /** How full its bar is drawn (G3), 0 to 1 (PERFORMANCE_BARS); null for a stat with no number (no optic). */
+  share: number | null;
 }
 
 /** How a stat compares: higher is better, lower is better, or it is a trade-off shown without a colour. */
 type Better = 'higher' | 'lower' | 'neither';
 
-function row(label: string, value: string, now: number | null, then: number | null, better: Better): SheetRow {
-  if (now === null || then === null || !Number.isFinite(now) || !Number.isFinite(then) || then === 0) return { label, value, delta: '', change: null };
+type Bar = (typeof PERFORMANCE_BARS)[Exclude<keyof typeof PERFORMANCE_BARS, 'min'>];
+
+/** How full a stat's bar is: `v` along its span, at least PERFORMANCE_BARS.min, at most full. */
+export function barShare(v: number | null, bar: Bar): number | null {
+  if (v === null || !Number.isFinite(v)) return null;
+  const t = (v - bar.from) / (bar.to - bar.from);
+  return Math.min(1, Math.max(PERFORMANCE_BARS.min, t));
+}
+
+function row(label: string, value: string, now: number | null, then: number | null, better: Better, bar: Bar): SheetRow {
+  const share = barShare(now, bar);
+  if (now === null || then === null || !Number.isFinite(now) || !Number.isFinite(then) || then === 0) return { label, value, delta: '', change: null, share };
   const pct = (now / then - 1) * 100;
-  if (Math.abs(pct) < PERFORMANCE_SHEET.minChangePercent) return { label, value, delta: '', change: null };
+  if (Math.abs(pct) < PERFORMANCE_SHEET.minChangePercent) return { label, value, delta: '', change: null, share };
   const shown = Math.abs(pct) < 10 ? Math.round(pct * 10) / 10 : Math.round(pct);
   const delta = `${shown > 0 ? '+' : '−'}${Math.abs(shown)}%`;
-  if (better === 'neither') return { label, value, delta, change: null };
-  return { label, value, delta, change: (pct > 0) === (better === 'higher') ? 'better' : 'worse' };
+  if (better === 'neither') return { label, value, delta, change: null, share };
+  return { label, value, delta, change: (pct > 0) === (better === 'higher') ? 'better' : 'worse', share };
 }
 
 function rate(r: number): string {
@@ -109,19 +121,19 @@ function reach(m: number, readoutRange: number): string {
 export function sheetRows(now: Performance, factory: Performance, readoutRange: number): SheetRow[] {
   const t = PERFORMANCE_SHEET.labels;
   return [
-    row(t.energy, `${now.energy.toFixed(2)} J${now.capped ? ` (${t.siteLimit})` : ''}`, now.energy, factory.energy, 'higher'),
-    row(t.speed, `${Math.round(now.velocity)} m/s (${Math.round(now.chronoFps)} fps)`, now.velocity, factory.velocity, 'higher'),
-    row(t.bbWeight, `${now.grams.toFixed(2)} g`, now.grams, factory.grams, 'neither'),
-    row(t.fireRate, `${now.semiOnly ? `${t.upTo} ` : ''}${rate(now.fireRate)} BBs/s`, now.fireRate, factory.fireRate, 'higher'),
-    row(t.onTarget, reach(now.onTargetTo, readoutRange), now.onTargetTo, factory.onTargetTo, 'higher'),
-    row(t.timeTo(BB_WEIGHT.timeReadoutDistance), Number.isFinite(now.timeTo) ? `${now.timeTo.toFixed(2)} s` : t.neverGets, now.timeTo, factory.timeTo, 'lower'),
-    row(t.spread, `${now.spread.toFixed(2)}°`, now.spread, factory.spread, 'lower'),
-    row(t.recoil, `${now.recoil.toFixed(2)}°`, now.recoil, factory.recoil, 'lower'),
-    row(t.magazines, `${now.magSize} × ${now.mags} (${now.magSize * now.mags})`, now.magSize * now.mags, factory.magSize * factory.mags, 'neither'),
-    row(t.reload, `${now.reload.toFixed(2)} s`, now.reload, factory.reload, 'lower'),
-    row(t.draw, `${now.draw.toFixed(2)} s`, now.draw, factory.draw, 'lower'),
-    row(t.raise, now.raise === null ? t.noOptic : `${now.raise.toFixed(2)} s`, now.raise, factory.raise, 'lower'),
-    row(t.heardFrom, `${Math.round(now.heardFrom)} m`, now.heardFrom, factory.heardFrom, 'lower'),
+    row(t.energy, `${now.energy.toFixed(2)} J${now.capped ? ` (${t.siteLimit})` : ''}`, now.energy, factory.energy, 'higher', PERFORMANCE_BARS.energy),
+    row(t.speed, `${Math.round(now.velocity)} m/s (${Math.round(now.chronoFps)} fps)`, now.velocity, factory.velocity, 'higher', PERFORMANCE_BARS.speed),
+    row(t.bbWeight, `${now.grams.toFixed(2)} g`, now.grams, factory.grams, 'neither', PERFORMANCE_BARS.bbWeight),
+    row(t.fireRate, `${now.semiOnly ? `${t.upTo} ` : ''}${rate(now.fireRate)} BBs/s`, now.fireRate, factory.fireRate, 'higher', PERFORMANCE_BARS.fireRate),
+    row(t.onTarget, reach(now.onTargetTo, readoutRange), now.onTargetTo, factory.onTargetTo, 'higher', PERFORMANCE_BARS.onTarget),
+    row(t.timeTo(BB_WEIGHT.timeReadoutDistance), Number.isFinite(now.timeTo) ? `${now.timeTo.toFixed(2)} s` : t.neverGets, now.timeTo, factory.timeTo, 'lower', PERFORMANCE_BARS.timeTo),
+    row(t.spread, `${now.spread.toFixed(2)}°`, now.spread, factory.spread, 'lower', PERFORMANCE_BARS.spread),
+    row(t.recoil, `${now.recoil.toFixed(2)}°`, now.recoil, factory.recoil, 'lower', PERFORMANCE_BARS.recoil),
+    row(t.magazines, `${now.magSize} × ${now.mags} (${now.magSize * now.mags})`, now.magSize * now.mags, factory.magSize * factory.mags, 'neither', PERFORMANCE_BARS.magazines),
+    row(t.reload, `${now.reload.toFixed(2)} s`, now.reload, factory.reload, 'lower', PERFORMANCE_BARS.reload),
+    row(t.draw, `${now.draw.toFixed(2)} s`, now.draw, factory.draw, 'lower', PERFORMANCE_BARS.draw),
+    row(t.raise, now.raise === null ? t.noOptic : `${now.raise.toFixed(2)} s`, now.raise, factory.raise, 'lower', PERFORMANCE_BARS.raise),
+    row(t.heardFrom, `${Math.round(now.heardFrom)} m`, now.heardFrom, factory.heardFrom, 'lower', PERFORMANCE_BARS.heardFrom),
   ];
 }
 
