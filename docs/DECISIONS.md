@@ -881,3 +881,10 @@ complexity than player value); the owner confirmed it with his changes. The plac
 - **2026-10-06 · M91 · Torches cast shadows on High and Ultra only; Low keeps today's beams.** Keeps Low's 60 fps target; an exception to the graphics plan's shadow-light limit on the higher presets.
 - **2026-10-06 · Extraction (0.3) · Solo against bots, more and more aggressive opponents, quicker and closer waves, a longer extract timer, no respawn.** The owner's latest notes; replace his 2026-10-04 picks (squad of 3, one respawn) and the paused M72's one opponent fewer on Normal.
 - **2026-10-06 · Battle royale (0.4, dev first) · Goes ahead as an experimental dev mode, the exception to the Free-for-all cut.** The owner's idea; his answers on loot, zone and pay are in ROADMAP under the 0.1 Dev 4 playtest table.
+
+## The owner's feature picks for 0.1 Dev 6 and Dev 7 (2026-10-06)
+
+- **2026-10-06 · Versions · Dev builds continue (0.1 Dev 6, Dev 7 …) until the owner calls the game feature complete; Beta then adds no features.** Beta is bug fixes, QoL, balance, refinement and polish. So the features parked in Beta move into Dev builds or become maybes.
+- **2026-10-06 · Dev 6 and Dev 7 · 26 features move into 0.1 from 0.2–0.5, Beta and new ideas; Claude placed them, the owner can move any.** Dev 6 takes the smaller items and those that build on today's systems (presets, the chrono, gas, sights, bots' names and gear, skins); Dev 7 the bigger new systems (medic, the Extraction rework, grenades, rigs, the sniper, comms, weather, sound and foliage). The list is in ROADMAP.
+- **2026-10-06 · Spring sniper · The next replica is a spring sniper rifle, and the owner is asked how to build it and its specs before work starts.** His words. The SMG and shotgun come after it.
+- **2026-10-06 · Hit calls · No dead rag, night light or shouted "HIT!" for now: the hit system is good enough as it is.** Reverses the triage's Beta place for the night light; he may revisit.
