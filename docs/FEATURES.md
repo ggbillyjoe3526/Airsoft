@@ -137,6 +137,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Replicas and attachments redesigned: blockier two-tone style with stippled grips; red dot as enclosed square hood, silencer hexagonal body (G2)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 - Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet, vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under raised floors (M34f)
+- Baked bounce light on Depot (per pixel on Medium and High, in the map's vertices on Low, on the players too), weathered surfaces and ground stains, precast concrete walls and rubble gabions, a lower, warmer day sun (G6)
 
 ## Practice range and tutorial
 

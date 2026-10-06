@@ -31,6 +31,7 @@ import { lightingPicked, mapUnderLighting, playsAtNight } from './map/lightingCh
 import { allMapsLoaded, loadDevMaps, type MapId, mapData } from './map/maps';
 import { initPhysics } from './physics/physicsWorld';
 import { awayWatch } from './core/awayWatch';
+import { loadBakedLight } from './render/bakedLight';
 import { loadFigureModel } from './render/externalModels';
 import { FrameTimeWatch, presetBelow, slowFrameMs } from './render/qualityStepDown';
 import { rendererName } from './render/gpuCheck';
@@ -278,9 +279,9 @@ export class Game {
 
   static async create(container: HTMLElement, options: GameOptions): Promise<Game> {
     // A figure model (M25a) loads alongside the physics; with none in the build this resolves at once. With Dev content
-    // on, so do the dev maps (M50), so New game can show a dev map picked last time.
+    // on, so do the dev maps (M50), so New game can show a dev map picked last time. The maps' baked light (G6) too.
     const devMaps = activeDev(loadDevEnabled(), loadDevSettings()).devContent ? loadDevMaps() : null;
-    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel(), devMaps]);
+    const [, figureModel] = await Promise.all([initPhysics(), loadFigureModel(), devMaps, loadBakedLight()]);
     const game = new Game(container, options);
     game.renderer.figureModel = figureModel;
     return game;

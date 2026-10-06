@@ -124,7 +124,16 @@ ends the round). A hit character is eliminated
   `cuboidMesh.ts`, with grime shading near the ground; with Map detail the boxes are bevelled with a lighter edge,
   tiled, shaded by baked vertex occlusion (`vertexOcclusion.ts`) and ground noise, the props get extra pieces, the signs
   are one alpha-tested mesh (`mapDecals.ts`), and the shadow map draws each mesh's plain boxes from a second index range
-  of the same geometry. `contactShadows.ts` lays a soft disc under every figure on every preset (one instanced draw).
+  of the same geometry. G6 (materials and baked light): one mesh per texture, its shadow casters first, so the shadow
+  map draws only them (an index range); the precast walls, rubble gabions and worn paint are pure texel drawings
+  (`textureLibrary.ts`, `texelNoise.ts`; their wear in `config/weathering.ts`); with Weathering the surfaces' shaders
+  add world-space grime, streaks and rust (`surfaceShader.ts`, one program per variant by `customProgramCacheKey`), and
+  the signs' mesh, now blended, carries stains on the floors (never under a block). Baked bounce light: a map that opts
+  in (`MapData.bakedLight`) ships a probe file (`map/bakes/`, written offline by `pipeline/bake-light.mjs` from
+  `lightBake.ts`: voxelised pieces, rays from a probe grid; `probeGrid.ts` reads and samples it), loaded as the game
+  starts (`bakedLight.ts`); Medium and High read it per pixel from a 3D texture (`surfaceShader.ts`), Low bakes it into
+  the map's vertex colours (no shader, no draw call), and the figures read the probes round them each frame on the CPU
+  (`CharacterRenderer.setBakedLight`: colour and emissive). `contactShadows.ts` lays a soft disc under every figure on every preset (one instanced draw).
   Effects are pooled: `impactPuffs.ts` (impact dust tinted by material, hit puffs, a gas pistol's puffs; soft dots from
   `softDot.ts`), `bbRenderer.ts` (balls and camera-facing streak quads of a fixed on-screen width) and `dustMotes.ts`
   (faded out near the camera, size-capped in device pixels times the pixel ratio, hidden with Reduced motion); a pool
@@ -361,7 +370,8 @@ request. Each line names where it lives and what pins it.
   a preset or `'custom'`, which resolves to High overlaid with the saved rows); `Renderer.setQuality` and
   `MatchSession.setQuality` apply them at once, antialiasing included. Fields are added, never renamed: a new field
   takes a value on every preset, a row in `config/graphics.ts` and a `graphics.<field>` store key, with no further
-  contract change. Pinned by `config/render.test.ts`, `config/graphics.test.ts`, `render/renderer.test.ts`.
+  contract change (G6 added `bakedLight` and `weathering`). Pinned by `config/render.test.ts`, `config/graphics.test.ts`,
+  `render/renderer.test.ts`.
 - **The settings store keys** (`settings/storage.ts`, `settings/dev.ts`): saved under `airsoft.*`, versioned;
   renaming a key needs a migration: one `case` in `migrate` (FA5; the per-setting keys of the first builds are its
   "version 0"), and an object from a newer version is never read or overwritten. Fields are only ever added: `quality`
@@ -402,6 +412,7 @@ request. Each line names where it lives and what pins it.
   `ambience` (the field's sound, absent the yard; `MapBlock.surface` keeps its two block values), and M34f's
   `MapBlock.finish` and `paint` (look only), six city prop kinds (each with a `BLOCK_MATERIALS` ricochet material,
   collided as its box) and `MapSign` `facing: '+y'` with `kind: 'paint'` (flat markings) and `MapData.decor` (look-only blocks: drawn,
-  never collided, walked, seen through or heard). Pinned by
+  never collided, walked, seen through or heard), and G6's `bakedLight` (the name of the map's probe file; look only,
+  each file pinned to its map by `map/bakes/bakes.test.ts`, which names the bake command when they differ). Pinned by
   `map/mapData.test.ts`, `nav/navGrid.test.ts`, `map/neonHeights.test.ts`, `map/extractionData.test.ts`,
   `render/depotLook.test.ts` (a map using none of M33i's fields builds as before), `render/cityLook.test.ts` and `map/neonHeightsArt.test.ts` (M34f: Neon Heights' boxes, materials and floors pinned).
