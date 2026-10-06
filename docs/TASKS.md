@@ -36,3 +36,19 @@ acceptance:
   10. Keyboard and screen readers: every control keeps a role and a name, focus returns where it was, and the browser tests drive the new screens by role and name and pass.
 status: building
 attempts: 0
+
+## G4 · HUD restyle (graphics overhaul, 0.1 Dev 5)
+tier: ui
+perf: required
+touches: src/ui/, src/style.css, src/config/minimap.ts, src/config/matchInfo.ts, src/render/combatPresentation.ts, src/render/matchPresentation.ts, src/game.ts
+contract: none (every HUD setting keeps its key and meaning; the HUD keeps its layout and positions)
+acceptance:
+  1. Score bar (top centre): each team's name and a slanted pip per player (dimmed once out) on a navy panel with a cut outer corner, the score on a solid block in the team's colour, the clock between them with the match's aim under it ("First to 5"; the run's line in Extraction); "You" on your side, ATK / DEF, the flag strip, the low clock and the Scoreboard size setting kept.
+  2. Minimap (top left): a framed navy panel with rounded corners holding the turned field (teammates pinned to its edge), with the map and round under it ("Depot · Round 2"); the canvas is drawn again only when something on it changed (where you stand or look, a teammate, the hold spot, the flag, an exit, a heard patch still fading, its size), a test counting the draws.
+  3. Hit feed (top right): one navy row per hit, the shooter, a BB mark and who called it in their team colours, with a Hit tag; your own rows marked with an acid edge; friendly and ricochet tags, Fade and Keep kept; a screen reader still hears "<who> called HIT · <shooter>".
+  4. Replica panel (bottom right): the carried replica's picture in its scheme with its parts (ItemPictures, the drawing until it arrives), its name, a chip per fire mode it has with the current one orange, the loaded BBs large, the BBs in the spare magazines and how many there are, and a bar per spare magazine filled to its BBs with the one a reload takes marked; the reload bar and the status line kept.
+  5. Squad line (bottom left): a card per player on your side (You first) with a head icon (src/ui/headIcon.ts) in the team colour, the name and what they are doing (In play, the order in force, Hit), greyed once hit; under it the order keys as the player bound them; the order line's notices kept for screen readers.
+  6. The Tab scoreboard (.match-board): a navy panel with a cut corner, each team under a bar in its colour with its score, your row marked; same rows and columns.
+  7. Every HUD setting still works (HUD size, Scoreboard size, Hit feed, What got you, sound cues, crosshair); no per-frame allocation, DOM written only on a change; Low draws the same.
+status: building
+attempts: 0
