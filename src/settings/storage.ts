@@ -18,7 +18,7 @@ export const SETTINGS_VERSION = 1;
 
 /**
  * What each setting is called in the stored object (`hopUp.<replica id>` and `bbWeight.<replica id>`: that replica's
- * hop-up dial and BB weight; `glowBBs.<replica id>`: its Glowing BBs choice; `equip.<gear slot>`: the replica item in that Loadout slot and `fit.<asset id>.<fit slot>`:
+ * hop-up dial and BB weight; `glowBBs.<replica id>`: its Glowing BBs choice; `scheme.<replica id>`: its colour scheme; `equip.<gear slot>`: the replica item in that Loadout slot and `fit.<asset id>.<fit slot>`:
  * the item fitted there (M26b, pool/loadoutModel.ts; `equip.dev.*` and `fit.dev.*` hold the picks made with Dev
  * settings → Unlock all gear, M26d); `volume.<channel>`: a volume slider on Settings → Audio;
  * `crosshair.<part>`: Settings → Crosshair).
@@ -94,6 +94,11 @@ export type SettingField =
   | 'hudSize'
   /** Settings → Controls → Raw mouse input (audit UI-20). */
   | 'rawInput'
+  /** Settings → Look (graphics overhaul G1): robots mixed in with humans, and replicas in realistic colours. */
+  | 'robots'
+  | 'realisticColours'
+  /** A replica asset's colour scheme (G1, config/schemes.ts), picked in Loadout › Customise. */
+  | `scheme.${string}`
   /** The Dev settings (M24, settings/dev.ts): `dev.enabled` and one per entry in config/dev.ts. */
   | `dev.${string}`;
 

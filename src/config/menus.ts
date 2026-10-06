@@ -171,7 +171,7 @@ export const HAUL_TEXT = {
   lostTile: 'Lost',
 } as const;
 
-export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'save' | 'dev';
+export type SettingsTab = 'controls' | 'keys' | 'graphics' | 'crosshair' | 'hud' | 'audio' | 'accessibility' | 'look' | 'save' | 'dev';
 
 /**
  * The Settings screen's tabs, top to bottom. `later`: nothing on it is built yet. `hidden`: shown only once the
@@ -185,6 +185,8 @@ export const SETTINGS_TABS: readonly { id: SettingsTab; label: string; later: bo
   { id: 'hud', label: 'HUD', later: false },
   { id: 'audio', label: 'Audio', later: false },
   { id: 'accessibility', label: 'Accessibility', later: false },
+  /** Robots and Realistic colours (graphics overhaul G1). */
+  { id: 'look', label: 'Look', later: false },
   /** The save: download, load, restore points (M31). */
   { id: 'save', label: 'Save', later: false },
   { id: 'dev', label: 'Dev', later: false, hidden: true },
@@ -202,6 +204,7 @@ export const SETTINGS_LATER: Readonly<Record<SettingsTab, readonly { label: stri
   hud: [],
   audio: [{ label: 'Voices (hit calls)', help: '' }],
   accessibility: [],
+  look: [],
   save: [],
   dev: [],
 };

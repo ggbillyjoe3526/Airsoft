@@ -35,6 +35,8 @@ export const SETTINGS_TAB_ICONS: Record<SettingsTab, string> = {
   hud: icon('<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M6.5 7.5h3M14.5 16.5h3M10 7.5h4"/>'),
   audio: icon('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>'),
   accessibility: icon('<circle cx="12" cy="4.5" r="1.8"/><path d="M5 8.5l7 1.5 7-1.5M12 10v4.5M12 14.5l-3.5 6M12 14.5l3.5 6"/>'),
+  // A paint swatch fan: the Look tab (G1).
+  look: icon('<path d="M5 20.5l9-15.5 3.5 2-9 15.5z"/><path d="M8.5 22.5h12v-4h-9.7M7 17.5h.01"/>'),
   // A floppy disk: the save (M31).
   save: icon('<path d="M4.5 3.5h12l3 3v13a1 1 0 0 1-1 1h-14a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M7.5 3.5v5h8v-5M7.5 20.5v-6h9v6"/>'),
   dev: icon('<path d="M8.5 7L3.5 12l5 5M15.5 7l5 5-5 5"/>'),

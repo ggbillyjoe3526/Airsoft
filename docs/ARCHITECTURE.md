@@ -166,7 +166,7 @@ ends the round). A hit character is eliminated
   one-off world sounds (BB impacts, the flag's rope) get a panner of their own, disconnected when they end. Footsteps
   sound by the surface underfoot (`MapBlock.surface`), BB impacts by the block they hit (`audio/soundMaterials.ts`),
   and crouching, standing and leaning rustle (`audio/foley.ts`, presentation only: bots hear what they did before).
-  Buses: master, effects (in-world, with the yard's reverb) and interface (hit tick, hit marker, whistle, dry), set
+  Buses: master, effects (in-world, with the field's echo) and interface (hit tick, hit marker, whistle, dry), set
   by the Settings → Audio sliders (`audio/audioMix.ts`, saved in the settings store). Since FA6 the limiter and the
   ducking (your own hit, the whistles) sit on effects only; interface goes straight to master. Sounds render at
   `AUDIO.renderRate` whatever the device's rate; one-off sounds beyond `maxDistance` aren't played; while you're out
@@ -181,7 +181,9 @@ ends the round). A hit character is eliminated
   stream and their samples (pinned in `audio/woodlandSound.test.ts`). M34g adds
   the `city` ambience (traffic and drones with a shop chime by day; traffic and a neon `hum` loop, `renderHum`, with
   arcade bleeps by night), Neon Heights' `MapData.ambience`; a field's own sounds stay within about 7 MB, and every
-  map sound a page may keep within 12 MB.
+  map sound a page may keep within 12 MB. Since M69 each ambience names its echo (`Ambience.reverb`: the yard's
+  `AUDIO.reverb`, the woods' and the city's own), rendered at the context's rate with the field's other sounds, and a
+  cue's buffer ends where it falls under -60 dB of its peak (`SoundRecipe.variants` sets a cue's own variant count).
 - **sim/lean.ts**: leaning (hold Q / E). One geometry: the upper body tilts about a hip pivot (`hits.lean`), so
   `leanOffset` moves any point above the hips sideways and a little down. `stepLean` (after movement) eases the lean
   in and out, drops it in the air and clamps it with sideways rays so the head and shoulders stay clear of walls.
@@ -282,7 +284,7 @@ ends the round). A hit character is eliminated
   (`syncCollection`: another tab's newer revision wins) and saves it (`saveOrReload`: if another tab saved first, the
   save is reloaded and the screen says the change was not kept); `ui/menus/armoryScreen.ts` is the screen, opened from
   New game's Armory tile, with `confirmDialog.ts` before big spends.
-- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
+- **render/replicaModels.ts + handModels.ts**: first-person replicas (AR-pattern AEG, polymer pistol) and gloved hands built in code from extruded profiles, capsules and lathe shapes, merged per material; poses are data. `replicaBuilder.ts` holds the materials and the builder, `replicaParts.ts` the fittable parts; `itemPictures.ts` draws the same models off screen for the menus (G2). The viewmodel's scene can reflect a prefiltered room environment (`Viewmodel.setEnvironment`, the replica's sheen).
 - **game.ts**: composition root and main loop: the app that outlives matches (renderer, input, menus, debug overlay)
   and New game's choices. No map is loaded on the title and New game screens (M15b).
 - **matchSession.ts**: one match on one map (`map/maps.ts` lists the maps): the field's meshes and lighting, physics,

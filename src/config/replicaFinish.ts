@@ -38,10 +38,18 @@ export const REPLICA_FINISH = {
    */
   torch: { lensOff: 0x2a3038, glow: 3, knurls: 3 },
   /**
-   * The Cyber Pistol's own colours (M32, the owner's reference photo): a mint slide and grip panels, hot pink accents,
-   * on a black frame, the same on either team. Its polymer takes the speckle like the rest.
+   * A replica drawn without a scheme (nothing calls for one: a tool or a test): the black and tan of before G2, with a
+   * grey accent line. Each held replica is otherwise drawn in its scheme (config/schemes.ts).
    */
-  cyber: { mint: 0x9fe3cf, pink: 0xe8336d },
+  unpainted: { body: 0x2a2c31, furniture: 0xb79c70, detail: 0x363a40, accent: 0x7d838c, steel: 0x5f646c },
+  /** A glowing accent line (Ghost's cyan line, the Cyber Pistol's lines and core): emissive at this strength. */
+  accentGlow: 2.5,
+  /** The red dot's dot, seen on the sight's glass (high): a tiny bead lit like the laser's lens. */
+  dot: { radius: 0.0011 },
+  /** Stippled grip panels and foregrip bands (G2): the furniture's colour this bright. */
+  stippleShade: 0.72,
+  /** The steps a profile's rounded corners (`corner`) and its bevel (`bevel`) are drawn in, per replica detail. */
+  profileSteps: { low: { corner: 3, bevel: 1 }, high: { corner: 5, bevel: 2 } },
   /** BBs seen through the standard magazine's witness window. */
   witnessBb: 0xfff4dc,
   /** Real rail slots: a tooth every `pitch`, `tooth` long. */
@@ -53,11 +61,12 @@ export const REPLICA_FINISH = {
    */
   barrel: { radius: 0.009, sleeveRadius: 0.0105, collar: 0.012, collarRadius: 0.0118, fluteWidth: 0.003, fluteDepth: 0.0006, segments: 16 },
   /**
-   * A silencer on high (M29b): a steel thread `adapter` this long at `adapterShare` of its radius, end caps `capStep`
-   * narrower than the body, two rubber grip bands `band` long `bandInset` from the caps and `bandProud` proud, the dark
-   * bore at the front (`boreShare` of its radius, `boreDepth` deep), `segments` round.
+   * A silencer (M29b; six-sided since G2): an accent `ring` this long at `ringAt` of the body, `ringProud` proud of it.
+   * High adds a steel thread `adapter` this long at `adapterShare` of its radius, end caps `capStep` narrower than the
+   * body, `grooves` steel bands round its back, the dark bore at the front (`boreShare` of its radius, `boreDepth` deep),
+   * the round parts `segments` round.
    */
-  silencer: { adapter: 0.008, adapterShare: 0.66, capStep: 0.0015, band: 0.012, bandInset: 0.006, bandProud: 0.0005, boreShare: 0.35, boreDepth: 0.002, segments: 24 },
+  silencer: { ring: 0.005, ringAt: 0.2, ringProud: 1.04, adapter: 0.008, adapterShare: 0.66, capStep: 0.0015, grooves: 4, groovePitch: 0.006, boreShare: 0.35, boreDepth: 0.002, segments: 24 },
   /**
    * The laser beam (QualitySettings.laserBeam, off on every preset): a line from the lens this long in the viewmodel's
    * space, fading out, at this opacity (additive). No dot is drawn in the world yet, so it stops short of anything.

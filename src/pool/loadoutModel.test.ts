@@ -3,7 +3,7 @@ import { GAME_STATS } from '../config/gameStats';
 import { AEG, CYBER_PISTOL, GAS_PISTOL } from '../config/replicas';
 import { type ItemRef, itemKey } from './collection';
 import { GAME_POOL } from './gamePool';
-import { bbGlowFor, collectionOwnership, gameOwnership, LoadoutModel, type Ownership } from './loadoutModel';
+import { bbGlowFor, collectionOwnership, gameOwnership, kitPaint, LoadoutModel, type Ownership } from './loadoutModel';
 import { EMPTY_FIT, FIT_SLOTS } from './kit';
 import { newCollection } from './collection';
 import { MemoryStorage } from './testStorage';
@@ -99,6 +99,42 @@ describe('Loadout model (M26b)', () => {
     model.setHopUp(id('Gas Pistol'), 0.4);
     expect(model.kit().bbWeights).toEqual([0.3, GAS_PISTOL.bbWeight]);
     expect(model.kit().hopUps).toEqual([AEG.hopUpDial, 0.4]);
+  });
+
+  describe('Colour schemes (G1)', () => {
+    it('starts the rifle Cobalt and the pistol Ghost, and keeps each replica its own pick in the kit', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      expect(model.kit().schemes).toEqual(['cobalt', 'ghost']);
+      model.setScheme(id('Gas Pistol'), 'hazard');
+      expect(model.scheme(id('Gas Pistol'))).toBe('hazard');
+      expect(model.scheme(id('AEG Rifle'))).toBe('cobalt');
+      model.equip('primary', item('Gas Pistol'));
+      expect(model.kit().schemes).toEqual(['hazard', 'cobalt']);
+    });
+
+    it('saves the pick by replica asset id, and an older save without it (or with a stranger value) reads the default', () => {
+      const model = new LoadoutModel(pool, owning(STARTERS));
+      model.setScheme(id('AEG Rifle'), 'teal');
+      const stored = JSON.parse(localStorage.getItem('airsoft.settings')!) as Record<string, unknown>;
+      expect(stored[`scheme.${id('AEG Rifle')}`]).toBe('teal');
+      // A version 1 object from before G1 (no scheme keys), and one holding a value this build doesn't know.
+      localStorage.setItem('airsoft.settings', JSON.stringify({ version: 1, [`hopUp.${id('AEG Rifle')}`]: 0.5, [`scheme.${id('Gas Pistol')}`]: 'chrome' }));
+      const later = new LoadoutModel(pool, owning(STARTERS));
+      expect(later.kit().schemes).toEqual(['cobalt', 'ghost']);
+      expect(later.hopUp(id('AEG Rifle'))).toBe(0.5);
+    });
+
+    it('keeps one pick per replica whether or not everything is unlocked (a colour is cosmetic)', () => {
+      const dev = new LoadoutModel(pool, { ...owning(STARTERS), sandboxed: () => true });
+      dev.setScheme(id('AEG Rifle'), 'acid');
+      expect(new LoadoutModel(pool, owning(STARTERS)).scheme(id('AEG Rifle'))).toBe('acid');
+    });
+
+    it('paints the kit plain under Realistic colours (kitPaint)', () => {
+      const kit = new LoadoutModel(pool, owning(STARTERS)).kit();
+      expect(kitPaint(kit)).toEqual({ schemes: ['cobalt', 'ghost'], realistic: false });
+      expect(kitPaint(kit, { robots: true, realisticColours: true })).toEqual({ schemes: ['cobalt', 'ghost'], realistic: true });
+    });
   });
 
   describe('Glowing BBs (M33b)', () => {

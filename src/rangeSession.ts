@@ -17,7 +17,7 @@ import type { MatchSetup } from './matchSession';
 import { RANGE_MAP } from './map/range';
 import { buildNavGrid } from './nav/navGrid';
 import { PhysicsWorld } from './physics/physicsWorld';
-import { bbGlowFor } from './pool/loadoutModel';
+import { bbGlowFor, kitPaint } from './pool/loadoutModel';
 import { updateFirstPersonCamera } from './render/cameraRig';
 import { CombatPresentation } from './render/combatPresentation';
 import { addLighting, type Daylight } from './render/lighting';
@@ -44,7 +44,7 @@ import { type LastShot, lastShotText, RangeReadout } from './ui/rangeReadout';
 const PLAYER_ID = 0;
 
 /** What the range needs from New game's choices: the loadout (the match rules don't apply). */
-export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours'>;
+export type RangeSetup = Pick<MatchSetup, 'kit' | 'teamColours' | 'look'>;
 
 /** Where you stand and which way you face: kept when the range is rebuilt for a new loadout. */
 export interface RangePose {
@@ -155,7 +155,7 @@ export class RangeSession {
     input.ordersEnabled = false;
     if (pose) input.pitch = pose.pitch;
 
-    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false), seed);
+    this.combat = new CombatPresentation(renderer, container, this.state, this.player, this.loadout, MOVEMENT, this.physics, setup.teamColours.figures[this.player.team]!, SIM_DT, map, audio, (action) => input.keyName(action), crosshair, quality, HITS, bbGlowFor(setup.kit, map.night ?? false), seed, kitPaint(setup.kit, setup.look));
     // The held replica's light and the range's sound, by day or at night (M33j: the sound follows the preset's flag).
     this.combat.setLighting(lighting);
     this.combat.skipStartWhistle();

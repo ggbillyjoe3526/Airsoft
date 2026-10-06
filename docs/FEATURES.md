@@ -13,7 +13,8 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 ## Replicas and BBs
 
 - An AEG rifle (single, burst or auto on the fire selector), a gas pistol and an electric Cyber Pistol, switched with the wheel or keys (Phase 1, M12a, M32)
-- Cyber Pistol: electric semi, burst and auto; built-in battery, fits either gear slot (M32)
+- Cyber Pistol: electric semi, burst and auto; white slab with glowing cyan lines and magenta core, plain grey and unlit with Realistic colours; built-in battery, fits either gear slot (M32, G2)
+- Replica colour schemes: eight two-tone colours (Cobalt, Signal, Acid, Teal, Hazard, Coral, Onyx, Ghost); rifles Cobalt and pistols Ghost until the Customise screen lets players pick one per replica (G1)
 - BBs are real projectiles: visible flight with air physics and drag, travel time, drop, and hop-up lift set by a dial per replica (Phase 1, M9, M12c, M30)
 - BB weight from 0.20 to 0.30 g per replica, with the speed, reach and flight time shown (M17a, M26b)
 - Wind: a light breeze each match drifts BBs downwind; dust in the air drifts with it too (M30)
@@ -90,7 +91,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Title screen, New game (Map, Match, Difficulty, Loadout, Settings, Play), pause, match summary and result screens (M15, M15b, M24); the pause screen shows the match's seed for bug reports (BP1)
 - Error screen on crash with the seed, a report, Reload and Copy Report buttons; Play Again starts a new match with its own seed (FA1)
 - No map is loaded until Play (M15b)
-- Settings tabs: Graphics (quality presets with Custom option, frame-rate limit, show FPS, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility (M15, M18a, M19, M24, FA2, FA5)
+- Settings tabs: Graphics (quality presets with Custom option, frame-rate limit, show FPS, field of view), Audio, Controls (every action rebindable, mouse buttons and mouse wheel), Crosshair, HUD, Accessibility, Look (Robots, Realistic colours) (M15, M18a, M19, M24, FA2, FA5, G1)
 - Save system: automatic saving in the browser, download to a JSON file, load from file with a side-by-side comparison, restore points (one per day), Undo the last load, Delete and start over; warns if storage is blocked or full, or if the save is from a newer version (M31)
 - Mouse sensitivity as cm/360 at a typed DPI, invert mouse, aim and sprint as hold or toggle; raw mouse input setting (M18a, FA5)
 - Key names in Settings follow your keyboard layout (AZERTY, QWERTZ, etc.) where the browser can tell; second key per action; Backspace or Delete clears a binding (FA5)
@@ -133,6 +134,7 @@ agent (`.claude/agents/changelog.md`) keeps this file; `CHANGELOG.md` has the sa
 - Graphics Settings: frame-rate limit, show FPS counter and tone mapping choice (Neutral, AgX, ACES); preset selected from graphics card on first run (Medium for integrated, High for discrete) (FA2, FA7)
 - Raised dock and ramps cast shadows; BB streaks consistent on any screen; replica sheen now on Medium and preserved across preset switches; contact shadows under every player on all presets (FA3, FA7)
 - Players, replicas, parts and hands rebuilt in Counter-Strike / Valorant style with more detail on Medium and High; barrels and silencer model details on High; third-person rifles show a fitted silencer (FA8)
+- Replicas and attachments redesigned: blockier two-tone style with stippled grips; red dot as enclosed square hood, silencer hexagonal body (G2)
 - An optional glTF player model dropped into the assets folder replaces the built-in figures (M25a)
 - Block surface finishes and paints (plaster, metal, glazed tiles, asphalt, paving); six city props (arcade cabinet, vending machine, market stall, planter, phone booth, delivery van); painted ground markings and plaster ceilings under raised floors (M34f)
 - Baked bounce light on Depot (per pixel on Medium and High, in the map's vertices on Low, on the players too), weathered surfaces and ground stains, precast concrete walls and rubble gabions, a lower, warmer day sun (G6)
