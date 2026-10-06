@@ -131,10 +131,10 @@ attempts: 0
 **The owner's 0.1 Dev 4 playtest notes (2026-10-06).** Recorded on his ask, not built yet; they follow the Audit 2
 tasks above and the rest of the paused 0.1 Dev 5 work. His words and the per-item reasoning are in the project's shared
 files (`plans/playtest-feedback-0.1-dev-4.md`); the table under Alpha in `docs/ROADMAP.md` maps all 26 notes. M80–M91
-are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 go to 0.3 and 0.4 (ROADMAP).
+and M96 are 0.1 Dev 5 fixes and changes, M92–M95 suggested 0.1 Dev 6 features. Notes 5, 20–23 go to 0.3 and 0.4 (ROADMAP).
 Every block below carries note 19: tune on Normal, then check that Easy, Hard and Pro still scale. `touches` are
-first guesses; the build thread confirms them before it starts. Items with an open ruling (notes 13, 16, 26) wait for
-the owner before the build.
+first guesses; the build thread confirms them before it starts. The owner ruled on every conflict on 2026-10-06
+(ROADMAP, under the playtest table).
 
 ## M80 · The tutorial shows what it teaches (playtest note 1)
 tier: ui
@@ -191,7 +191,7 @@ contract: none
 acceptance:
   1. Every replica aims down sights; with no optic fitted the view lines up its iron sights. Aiming is more accurate than hip fire, and hip fire stays viable (measured on Normal against bots).
   2. Holding walk (Shift) while aiming slows the player below the aiming pace.
-  3. Waits on the owner's ruling: note 16 reverses his 0.1 Dev 3 note 3 (aim only with a scope fitted).
+  3. Owner's ruling (2026-10-06): iron sights now, beside scopes; this replaces his 0.1 Dev 3 note 3 (aim only with a scope fitted).
 status: open
 attempts: 0
 
@@ -237,8 +237,7 @@ contract: none
 acceptance:
   1. Neither team can see the other from its start: cover (a building, thick trees or a rise) hides each spawn.
   2. The blue end's height edge at the start is reduced; Elimination and Attack / Defend stay within 35–65 % per end on Normal.
-  3. Team size follows the owner's ruling (suggested: 5v5 default, 6v6 allowed); Low holds its frame budget with the largest size.
-  4. Waits on the owner's ruling (Woodland was designed for 4v4 with Custom up to 5v5).
+  3. Owner's ruling (2026-10-06): Woodland takes the team sizes of note 13: 5v5 by default, 6v6 allowed, and only 5v5 and 6v6 offered there. Low holds its frame budget at 6v6.
 status: open
 attempts: 0
 
@@ -271,8 +270,7 @@ touches: src/render/torchBeams.ts, src/map/torchLight.ts, src/config/torches.ts,
 contract: none
 acceptance:
   1. The beam is soft and diffused, not a bright white cone (built with or after graphics G5).
-  2. A torch casts shadows behind what it lights (a tree in the beam shadows the ground behind it), on the presets the owner rules (suggested: your own torch, Medium and up).
-  3. Waits on the owner's ruling (the graphics plan keeps shadow lights to the sun or moon and the nearest fire).
+  2. A torch casts shadows behind what it lights (a tree in the beam shadows the ground behind it), on the higher presets only (High and Ultra); Low keeps today's beams and its 60 fps target (owner's ruling, 2026-10-06).
 status: open
 attempts: 0
 
@@ -318,5 +316,16 @@ contract: none
 acceptance:
   1. In Practice the player picks any replica they own and can Customise it freely.
   2. With Dev settings on (Unlock all gear), every replica and part is available.
+status: open
+attempts: 0
+
+## M96 · The Retro look goes public (owner's ruling on playtest note 2)
+tier: ui
+perf: skip
+touches: src/config/dev.ts, src/ui/devSettings.ts, src/ui/graphicsSettings.ts, src/ui/lookSettings.ts, src/render/retroFilter.ts, src/settings/, docs/PLAYTEST.md
+contract: none
+acceptance:
+  1. The Retro pixel filter (M42) leaves the Dev tab and becomes a public "Retro look" option with its Pixel size and Colours sliders, as soon as possible in 0.1 Dev 5 (owner, 2026-10-06: "I've tested it and I'm happy with it").
+  2. A saved Dev choice carries over to the public setting.
 status: open
 attempts: 0
