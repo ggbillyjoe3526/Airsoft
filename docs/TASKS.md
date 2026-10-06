@@ -22,7 +22,7 @@ acceptance:
   3. `--quick` skips precompression; the full gate and CI keep it (owner decision 3).
   4. A CI or pipeline build reads its version from tags (CI fetches them), not "build <sha>".
 status: gates
-attempts: 1
+attempts: 2
 
 ## M77 · Hot-path trims (Audit 2 SIM-D: SIM-06, SIM-07, REN-10)
 tier: core
