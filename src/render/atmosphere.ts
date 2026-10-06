@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { ATMOSPHERE, type LightingPreset, LIGHTING_PRESETS, type QualitySettings, type SkyPalette, type TreeDetail } from '../config/render';
 import { createRng, rngNext, type RngState } from '../sim/rng';
+import type { SkylinePiece } from '../map/mapTypes';
 import { buildNightSky } from './nightSky';
+import { skylineClear, skylineGeometries } from './skyline';
 import { withoutEnvironment } from './surfaceMaterials';
 
 /**
@@ -154,8 +156,9 @@ function simpleTrees(centre: THREE.Vector3, field: THREE.Box3 | null): THREE.Buf
 /**
  * The detailed ring (Trees: Detailed): more trees, broadleaves of two or three stacked crowns, pines of two cone tiers,
  * seven-sided trunks, every crown self-shaded; and a hedge of shrubs round `field` (the map's bounds), just outside it.
+ * With a map's `skyline` (G8, render/skyline.ts) its pieces join the ring, and the trees standing on them are left out.
  */
-function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null): THREE.BufferGeometry[] {
+function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[] = []): THREE.BufferGeometry[] {
   const T = ATMOSPHERE.trees;
   const D = ATMOSPHERE.detailedTrees;
   const rng = createRng(T.seed);
@@ -163,6 +166,7 @@ function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.B
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < D.count; i++) {
     const { x, z, height, color, broad } = placeTree(rng, i, D.count, centre, ringMin);
+    if (skyline.length > 0 && !skylineClear(skyline, x, z)) continue;
     const trunkHeight = height * 0.25;
     parts.push(painted(new THREE.CylinderGeometry(height * 0.025, height * 0.035, trunkHeight, D.trunkSides).translate(x, trunkHeight / 2, z), T.trunk));
     if (broad) {
@@ -189,6 +193,7 @@ function detailedTrees(centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.B
     }
   }
   if (field) parts.push(...shrubs(field, sun));
+  parts.push(...skylineGeometries(skyline, centre));
   return parts;
 }
 
@@ -228,9 +233,9 @@ function shrubs(field: THREE.Box3, sun: THREE.Vector3): THREE.BufferGeometry[] {
 }
 
 /** The tree ring for a Trees setting, as one mesh (null for none). */
-function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null): THREE.Mesh | null {
+function buildTrees(level: TreeDetail, centre: THREE.Vector3, sun: THREE.Vector3, field: THREE.Box3 | null, skyline: readonly SkylinePiece[]): THREE.Mesh | null {
   if (level === 0) return null;
-  const parts = level === 1 ? simpleTrees(centre, field) : detailedTrees(centre, sun, field);
+  const parts = level === 1 ? simpleTrees(centre, field) : detailedTrees(centre, sun, field, skyline);
   const merged = mergeGeometries(parts);
   for (const p of parts) p.dispose();
   if (!merged) throw new Error('no trees');
@@ -366,7 +371,8 @@ export interface Atmosphere {
  * Adds the sky dome, the tree ring, the clouds and a night preset's stars and moon round the field centred on `centre`
  * (sun along `sunDirection`, a unit vector towards the key light; `field` the map's bounds, for the hedge) at `quality`'s
  * Trees and Clouds, and returns its handle. Changing either setting rebuilds that mesh only. `preset` (M33f) paints the
- * sky, the clouds and the key light's disc: the day's unless a map's lighting says otherwise.
+ * sky, the clouds and the key light's disc: the day's unless a map's lighting says otherwise. `skyline` (G8, a map's
+ * MapDressing.skyline) joins the detailed ring.
  */
 export function addAtmosphere(
   scene: THREE.Scene,
@@ -375,6 +381,7 @@ export function addAtmosphere(
   quality: Pick<QualitySettings, 'trees' | 'clouds'>,
   field: THREE.Box3 | null = null,
   preset: LightingPreset = LIGHTING_PRESETS.day,
+  skyline: readonly SkylinePiece[] = [],
 ): Atmosphere {
   const sky = buildSky(sunDirection, preset.sky);
   sky.position.copy(centre);
@@ -397,7 +404,7 @@ export function addAtmosphere(
     if (q.trees !== treeLevel) {
       trees = drop(trees);
       treeLevel = q.trees;
-      trees = buildTrees(q.trees, centre, sunDirection, field);
+      trees = buildTrees(q.trees, centre, sunDirection, field, skyline);
       if (trees) scene.add(trees);
     }
     if (q.clouds !== (clouds !== null)) {

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { DRESSING } from '../config/dressing';
 import { DUST_MOTES } from '../config/render';
 import { createRng, rngNext } from '../sim/rng';
 import { softDotTexture } from './softDot';
@@ -34,6 +35,12 @@ export function moteFade(distance: number, edge: number): number {
  * frame into a buffer made once. How many show is the quality preset's; reduced motion hides them. Each mote's alpha
  * (moteFade) keeps the ones right by the camera from turning into blurry blobs, and the shader caps the point size.
  */
+/** A map's motes' fade with height over the ground (G8, DRESSING.motes): 1 up to `full` m, 0 from `none` m. */
+export function moteHeightFade(y: number): number {
+  const M = DRESSING.motes;
+  return Math.max(0, Math.min(1, (M.none - y) / (M.none - M.full)));
+}
+
 export class DustMotes {
   readonly object: THREE.Points;
   private readonly base: Float32Array;
@@ -51,6 +58,8 @@ export class DustMotes {
   /** How far the air has carried the motes so far (m, per axis, kept within the box). */
   private readonly drift = { x: 0, y: 0, z: 0 };
   private motionOn = true;
+  /** A map's dust (G8, MapDressing.motes): its colour, and the motes thinning out with height. */
+  private hangsLow = false;
 
   /** `max`: the most motes any preset shows (the buffer's size). */
   constructor(private readonly max: number) {
@@ -118,6 +127,15 @@ export class DustMotes {
     this.setCount(this.count);
   }
 
+  /**
+   * A map's own dust (G8, MapDressing.motes; null: the default): the motes take its tint (sRGB) and fade with height
+   * over the ground (DRESSING.motes: dust hangs low). The same draw and shader; only a colour and the CPU's alphas.
+   */
+  setMapDust(tint: number | null): void {
+    (this.object.material as THREE.PointsMaterial).color.setHex(tint ?? DUST_MOTES.color);
+    this.hangsLow = tint !== null;
+  }
+
   /** Moves the motes on by `dt` round the camera at `eye`, carried by the match's `wind` (m/s; M30): dust rides the air. */
   update(dt: number, eye: { x: number; y: number; z: number }, wind: { x: number; y: number; z: number }): void {
     if (!this.object.visible) return;
@@ -137,7 +155,8 @@ export class DustMotes {
       const dx = this.positions[j]! - eye.x;
       const dy = this.positions[j + 1]! - eye.y;
       const dz = this.positions[j + 2]! - eye.z;
-      this.alphas[i * 4 + 3] = moteFade(Math.hypot(dx, dy, dz), Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)));
+      const fade = moteFade(Math.hypot(dx, dy, dz), Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)));
+      this.alphas[i * 4 + 3] = this.hangsLow ? fade * moteHeightFade(this.positions[j + 1]!) : fade;
     }
     this.attribute.needsUpdate = true;
     this.alphaAttribute.needsUpdate = true;

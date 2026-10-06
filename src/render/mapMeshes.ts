@@ -14,7 +14,9 @@ import { buildFoliageMesh } from './foliageMeshes';
 import { appendFixtureSolids } from './lightFixtures';
 import { keyDirection, resolveLighting } from './lightingPreset';
 import { groundUnder } from '../map/nightSight';
+import { buildJunkMesh, buildPuddleMesh } from './dressingMeshes';
 import { buildMapDecals, disposeMapDecals, drawDecalAtlas } from './mapDecals';
+import { placeDressing } from './mapDressing';
 import { appendNatureShape, appendPebbles, isNatureKind } from './natureShapes';
 import type { ProbeGrid } from './probeGrid';
 import { CORE_SURFACES, type ProceduralTexture, type SurfaceTextures, surfaceTexture } from './proceduralTextures';
@@ -937,10 +939,13 @@ export function buildMapMeshes(map: MapData, textures: SurfaceTextures, look: Ma
   }
   const foliage = buildFoliageMesh(map.foliage ?? [], map.ground ? moon : null, look.foliageShadows ?? true);
   if (foliage) group.add(foliage);
+  // G8: a map's set dressing with map detail: its decals join the decal mesh, its junk, strips and puddles two meshes.
+  const dressing = look.detail ? placeDressing(map) : null;
   if (look.detail && decalAtlas) {
-    const decals = buildMapDecals(map, decalAtlas);
+    const decals = buildMapDecals(map, decalAtlas, dressing?.decals);
     if (decals) group.add(decals);
   }
+  if (dressing) for (const mesh of [buildJunkMesh(dressing, probes), buildPuddleMesh(dressing, probes)]) if (mesh) group.add(mesh);
   return group;
 }
 

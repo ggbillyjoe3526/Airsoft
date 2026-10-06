@@ -43,8 +43,9 @@ function meshFingerprint(map: MapData, detail: boolean): string[] {
     { relief: false, normalMaps: false, detail, steelSheen: false },
     null,
   );
+  // G8: a map's set dressing (its junk and puddles) is pinned by its own tests; every other mesh is as before.
   return group.children
-    .filter((c): c is THREE.Mesh => c instanceof THREE.Mesh)
+    .filter((c): c is THREE.Mesh => c instanceof THREE.Mesh && c.name !== 'map-junk' && c.name !== 'map-puddles')
     .map((m) => {
       const g = m.geometry;
       const a = (n: string): ArrayLike<number> =>

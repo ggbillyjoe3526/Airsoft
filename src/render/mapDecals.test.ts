@@ -4,7 +4,7 @@ import { SURFACES } from '../config/render';
 import { WEATHERING } from '../config/weathering';
 import { DEPOT } from '../map/depot';
 import type { MapBlock } from '../map/mapTypes';
-import { allAtlasRects, atlasRects, buildMapDecals, decalQuads, floorStains } from './mapDecals';
+import { allAtlasRects, atlasHeight, atlasRects, buildMapDecals, decalQuads, floorStains } from './mapDecals';
 
 const D = SURFACES.decals;
 
@@ -57,12 +57,16 @@ describe('map signs (decals, map asset group)', () => {
 
   it('draws every picture from inside the atlas, no two cells overlapping (G6: the stains among them)', () => {
     const all = allAtlasRects(rects);
-    expect(all.length).toBe(rects.stencils.length + 3 + Object.values(rects.stains).flat().length);
+    const d = rects.dressing;
+    const dressing = d.logos.length + d.banks.length + d.litter.length + 5;
+    expect(all.length).toBe(rects.stencils.length + 3 + Object.values(rects.stains).flat().length + dressing);
+    // G8: the atlas is 1024 × 1536 (the dressing's cells in its last third).
+    expect(atlasHeight()).toBe(D.atlasSize * 1.5);
     for (const r of all) {
       expect(r[0]).toBeGreaterThanOrEqual(0);
       expect(r[1]).toBeGreaterThanOrEqual(0);
       expect(r[0] + r[2]).toBeLessThanOrEqual(D.atlasSize);
-      expect(r[1] + r[3]).toBeLessThanOrEqual(D.atlasSize);
+      expect(r[1] + r[3]).toBeLessThanOrEqual(atlasHeight());
     }
     for (let i = 0; i < all.length; i++) {
       for (let j = i + 1; j < all.length; j++) {
