@@ -897,6 +897,43 @@ pool, items 11, 12 and part of 14).
     dated one-off events (a Halloween night run shipped), by the device's clock, each scaling what the cases hold (FC and
     parts); the Mode pop-up says which is on, and a run keeps the event it started with.
 
+### The owner's 0.1 Dev 4 playtest notes (2026-10-06)
+
+Recorded only, nothing built yet. His words, the type and the reasoning per item are in the project's shared files
+(`plans/playtest-feedback-0.1-dev-4.md`). The 0.1 tasks are blocks M80–M95 in `docs/TASKS.md`, after the paused 0.1
+Dev 5 work (graphics, M71–M79, bug pass BP2). **Normal difficulty is the baseline** for every change (note 19): tune
+on Normal, then check that Easy, Hard and Pro still scale. Items marked ⚖ conflict with an earlier decision and wait
+for his ruling.
+
+| # | Note | Goes to |
+|---|---|---|
+| 1 | The tutorial shows the scoreboard and the comm wheel when it names them; plainer but complete wording; a finish pop-up offering the practice range or the menu | M80 (0.1 Dev 5) |
+| 2 | Keep the Retro filter | Kept. ⚖ The feature triage makes it a public "Retro look" in 0.5; he may want it sooner |
+| 3 | Holster on 3 (1 primary, 2 secondary); sprinting holstered is faster but drawing to aim is slower; sprinting with the replica ready aims faster | M92 (0.1 Dev 6) |
+| 4 | Sort and filter replicas by rarity in the Loadout, and parts by rarity in Customise | M82 (0.1 Dev 5, after G3) |
+| 5 | A 2–4x variable scope (mouse wheel while aiming) and a holographic sight | 0.3 (new parts, through the content toolkit) |
+| 6 | Skip to the next round from the spectator camera | M83 (0.1 Dev 5) |
+| 7 | A setting for a fixed or rotating minimap | M83 (0.1 Dev 5) |
+| 8 | Walking (Shift) while aiming down sights slows you further | M84 (0.1 Dev 5) |
+| 9 | The practice range and tutorial area in the new graphics | M81 (0.1 Dev 5, after G5 and G6; the graphics plan re-dresses only the three maps) |
+| 10 | Practice: moving targets, more target types, a timed high-score challenge (off by default) | M93 (0.1 Dev 6) |
+| 11 | Practice on any map with targets instead of bots; rename the range "Practice" | M94 (0.1 Dev 6) |
+| 12 | Practice with any unlocked replica and Customise; everything with Dev on | M95 (0.1 Dev 6) |
+| 13 | Woodland: too open, the far team visible from the start, the blue end's height edge; hidden starts; 5v5 default, 6v6, maybe Woodland only for 5v5 and 6v6 | M88 (0.1 Dev 5). ⚖ Woodland is 4v4 with Custom up to 5v5 (design and triage); 6v6 is above today's cap |
+| 14 | More varied, less distracting ambience; an Ambience volume | M86 (0.1 Dev 5) |
+| 15 | Bots on both teams check spots that are plainly empty (corners); refine on every level | M87 (0.1 Dev 5, after M71) |
+| 16 | Every replica aims down sights: iron sights without an optic; hip fire stays viable | M84 (0.1 Dev 5). ⚖ Reverses his 0.1 Dev 3 note 3 (aim only with a scope fitted) |
+| 17 | BBs seem to pass through the nearer bot and hit the one behind; check, and tighten hit detection | M85 (0.1 Dev 5) |
+| 18 | Modes and match settings make sense together (no Tournament rules in Extraction) | M89 (0.1 Dev 5) |
+| 19 | Normal difficulty is the baseline for all feedback; check every change on the other levels | Standing rule for M80–M95 |
+| 20 | Extraction loot looks like loot: crates and chests with a glow | 0.3. ⚖ Extraction was deferred from Beta to 0.3 (triage) |
+| 21 | Battle royale: pick a map and spawn point, a shrinking zone with a countdown outside it, start with nothing, weapons lie on the map as models, 10 players; experimental dev mode first | 0.4, dev first. ⚖ The triage cut Free-for-all for good; questions queued |
+| 22 | An inventory: owned items in the menus, carried items on I in a match; a small carry limit in Extraction; currency takes one slot | 0.3 (with Extraction). ⚖ Tied to Extraction's deferral |
+| 23 | Extraction: solo against bots, more of them, quicker and closer waves, bots that hunt, guard and converge on an extraction, a longer extract timer, no respawn; a duo / trio revive later | 0.3 (with Extraction). ⚖ His 2026-10-04 picks (squad of 3, one respawn); paused M72 gives Normal one opponent fewer; revive overlaps Medic |
+| 24 | More Dev settings for playtesting, starting with field credits and tokens on demand | M90 (0.1 Dev 5) |
+| 25 | With the Armory turned off in Dev, hide it instead of greying it | M83 (0.1 Dev 5) |
+| 26 | Softer, diffused torch beams that cast shadows | M91 (0.1 Dev 5, with the graphics work). ⚖ The graphics plan keeps shadow lights to the sun or moon and the nearest fire |
+
 When the owner calls the game feature complete, alpha ends.
 
 ## Beta: finishing 0.1 (not scheduled yet)
@@ -1032,6 +1069,10 @@ went**, updated by the feature triage (2026-10-05).
   bang, no shrapnel), smoke for cover and a flash bomb, for the Loadout's Grenades slot. How each one knocks players
   out or blinds them, how many you carry and how bots use them are designed when they come.
 - **Blender models** (owner, 2026-10-05): a separate art pass after the code-built models of 0.2.
+- **From the owner's 0.1 Dev 4 playtest** (2026-10-06, notes 5, 20, 22, 23; see the table under Alpha): a 2–4x
+  variable scope and a holographic sight; Extraction loot that looks like loot; an inventory (owned items in the
+  menus, carried items on I, a small carry limit in Extraction); an Extraction rework (solo, more and harder
+  opponents, no respawn). Several conflict with earlier decisions and wait for his ruling.
 
 ### 0.4: More fields and ways to play
 
@@ -1066,6 +1107,9 @@ went**, updated by the feature triage (2026-10-05).
 - **New replica types, the next three:** an SMG, a shotgun and a gas blowback rifle.
 - **Team communication** (once the bots can follow it): an action wheel or menu, pings and hand signals, with bots
   that act on them. Three orders and their wheel are already in (M22, M23). Waits on the bot AI; it can move.
+- **Battle royale** (owner's 0.1 Dev 4 playtest note 21, 2026-10-06): an experimental dev mode first: pick a map
+  and a spawn point, a shrinking zone, start with nothing and find gear, 10 players. The triage cut Free-for-all,
+  so this waits for his ruling; his open questions are in the playtest notes file.
 
 ### 0.5: Kit, looks and progression
 
