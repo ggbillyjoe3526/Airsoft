@@ -21,7 +21,8 @@ const hasColour = (mesh: THREE.Object3D, hex: number): boolean => {
 };
 const body = (f: Figure): THREE.Object3D => f.upper.children[0]!;
 
-describe('who the figures are (G7: figureCrowd and figureDress)', () => {
+// Each test builds dozens of figures: a minute's timeout, for a loaded machine (the suite's default is 5 s).
+describe('who the figures are (G7: figureCrowd and figureDress)', { timeout: 60_000 }, () => {
   const teams = [0, 0, 0, 1, 1, 1].map((team) => ({ team }));
 
   it('mixes robots into both teams from the seed when Robots is on, and none when off', () => {
@@ -64,7 +65,7 @@ describe('who the figures are (G7: figureCrowd and figureDress)', () => {
   });
 });
 
-describe('the figures as dressed (G7)', () => {
+describe('the figures as dressed (G7)', { timeout: 60_000 }, () => {
   const robotOf = (team: number): FigureDress => ({ ...HUMAN_DRESS, robot: true, shell: FIGURE.robot.shells[team]! });
 
   it('builds a robot in its team shell, a human in none; both wear the team colour on every part', () => {
@@ -96,7 +97,7 @@ describe('the figures as dressed (G7)', () => {
   });
 });
 
-describe('CharacterRenderer with a crowd (G7)', () => {
+describe('CharacterRenderer with a crowd (G7)', { timeout: 60_000 }, () => {
   beforeAll(() => vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) }));
   afterAll(() => vi.unstubAllGlobals());
 

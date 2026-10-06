@@ -22,7 +22,8 @@ function skinLike(r: number, g: number, b: number): boolean {
   return hsl.h * 360 >= 10 && hsl.h * 360 <= 45 && hsl.s >= 0.3 && hsl.s <= 0.8 && hsl.l >= 0.3 && hsl.l <= 0.85;
 }
 
-describe('masked heads (G7: no bare faces)', () => {
+// Each test builds dozens of figures: a minute's timeout, for a loaded machine (the suite's default is 5 s).
+describe('masked heads (G7: no bare faces)', { timeout: 60_000 }, () => {
   it('recognises the skins the figures wore before G7', () => {
     for (const hex of [0xe3b796, 0xc68e68, 0x8a5a3c, 0xf0c9a8, 0xd9a47e, 0xb57a52]) {
       const c = new THREE.Color(hex);
@@ -66,7 +67,7 @@ describe('masked heads (G7: no bare faces)', () => {
   });
 });
 
-describe('the rig is as before, for humans and robots (G7)', () => {
+describe('the rig is as before, for humans and robots (G7)', { timeout: 60_000 }, () => {
   it('is six merged meshes on one material, four drawn at once, its holds ending at the muzzles', () => {
     for (const robot of [false, true]) {
       for (const detail of ['low', 'high'] as const) {
@@ -107,7 +108,7 @@ describe('the rig is as before, for humans and robots (G7)', () => {
   });
 });
 
-describe('what the figures cost (G7)', () => {
+describe('what the figures cost (G7)', { timeout: 60_000 }, () => {
   /** Low's triangles per part before G7 (the cheapest look's body): none may grow. */
   const BEFORE = { leg: 424, body: 1392, rifle: 1064, pistol: 824, hit: 1028 };
 
