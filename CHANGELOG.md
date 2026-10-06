@@ -155,7 +155,7 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/). Lines na
 - **M72** · A squad member just in or back from respawn has a 3 s grace: BBs neither hit them nor hit anyone from them
 - **M72** · Woodland's Extraction: the home team keeps 30 m from the insertion at the start
 - **M72** · Extraction guards at their posts lean out and watch the way in instead of turning to the wall
-- **M73** · Neon Heights (dev content): the east team's bots hold the middle from deeper in the bar, so the two ends are closer to even
+- **M73** · Neon Heights (dev content): the east team's bots hold the middle from deeper in the bar, so the two ends are closer to even (#137)
 
 ### Fixed
 - **M70** · If another open tab of the game saved your collection first, the Armory now reloads it at once and says so, instead of quietly undoing your Shot later (#122)
