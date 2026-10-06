@@ -14,7 +14,7 @@ REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 ## M75 · Woodland Medium margin (Audit 2 REN PR 2: REN-03 steps 1 and 4, REN-04)
 tier: core
 perf: required
-touches: src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/figureParts.ts, src/render/figureHuman.ts, src/render/figureRobot.ts, src/render/figureHands.ts, src/render/exitRenderer.ts, src/render/atmosphere.ts, src/render/lighting.ts, src/render/shadowProxy.ts, src/render/mapMeshes.ts, src/config/render.ts, src/config/renderLighting.ts, src/config/graphics.ts, docs/KNOWN_ISSUES.md
+touches: src/render/characterModels.ts, src/render/characterRenderer.ts, src/render/figureParts.ts, src/render/figureHuman.ts, src/render/figureRobot.ts, src/render/figureHands.ts, src/render/exitRenderer.ts, src/render/atmosphere.ts, src/render/lighting.ts, src/render/shadowProxy.ts, src/render/mapMeshes.ts, src/config/render.ts, src/config/renderLighting.ts, src/config/graphics.ts, src/config/chunkBudget.ts, docs/KNOWN_ISSUES.md
 contract: none
 acceptance:
   1. Figures cast shadows from a low-triangle proxy (High figure detail unchanged on screen).
