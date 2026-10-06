@@ -1,0 +1,555 @@
+/*
+ * The title and the Play screen (G3): the wordmark and the next match, the kit strip, the map and mode cards, the
+ * Match section and Your match.
+ */
+
+/* The title: the wordmark over the field, Play and the places under it, a tip and the next match on the right. */
+.menu-title {
+  padding-top: clamp(24px, 4vw, 72px);
+}
+
+.title-wallet {
+  position: absolute;
+  top: clamp(16px, 2vw, 32px);
+  right: var(--menu-gutter);
+}
+
+.title-body {
+  display: grid;
+  grid-template-columns: minmax(320px, 680px) minmax(300px, 520px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 'hero hero' 'actions side';
+  justify-content: space-between;
+  align-items: end;
+  gap: clamp(24px, 3vw, 56px) var(--sp-6);
+  width: 100%;
+  padding-left: clamp(0px, 4.2vw, 72px);
+  flex: 1 0 auto;
+}
+
+.title-hero {
+  grid-area: hero;
+  align-self: start;
+}
+
+.title-kicker {
+  margin: 0 0 var(--sp-2);
+  font: 600 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+.menu-title-wordmark {
+  gap: 0.25em;
+  font: italic 800 clamp(72px, 9vw, 176px) / 0.9 var(--ui-display);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.menu-title-wordmark i {
+  width: 0.5em;
+  height: 0.78em;
+}
+
+.menu-title-tagline {
+  margin: var(--sp-4) 0 0;
+  font-size: clamp(20px, 1.6vw, 30px);
+  font-weight: 500;
+  color: var(--paper);
+}
+
+.title-actions {
+  grid-area: actions;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.title-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.title-list .menu-button {
+  justify-content: flex-start;
+  min-height: clamp(48px, 3vw, 58px);
+  padding: 0 var(--sp-5);
+  font-size: clamp(20px, 1.3vw, 25px);
+  font-weight: 800;
+  background: rgba(14, 24, 52, 0.92);
+}
+
+.title-list .menu-button .tag-pill {
+  margin-left: auto;
+}
+
+.title-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.title-tip {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: var(--sp-4) var(--sp-5);
+  font-size: var(--fs-lg);
+  line-height: 1.4;
+  border-left: 4px solid var(--menu-acid);
+  clip-path: none;
+}
+
+.title-tip svg.icon {
+  margin-top: 2px;
+  color: var(--menu-acid);
+}
+
+.title-next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}
+
+.title-next-row {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: center;
+}
+
+.title-next-still {
+  flex: 0 0 44%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--menu-panel-hi);
+}
+
+.title-next-still img,
+.play-still img,
+.choice-card-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.title-next-map {
+  margin: 0 0 6px;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.title-next-line {
+  margin: 0;
+  font-size: var(--fs-lg);
+  color: var(--menu-muted);
+}
+
+/* The kit you carry: one picture card per slot, its name over the foot, its tier along the bottom. */
+.kit-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
+.kit-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: clamp(88px, 6.4vw, 120px);
+  overflow: hidden;
+  border: 1px solid var(--menu-line-soft);
+}
+
+.kit-pic {
+  position: absolute;
+  inset: 0;
+}
+
+.kit-name {
+  position: relative;
+  padding: 26px 12px 10px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: linear-gradient(0deg, rgba(5, 10, 26, 0.92), rgba(5, 10, 26, 0));
+}
+
+/* The Play screen: Map, Mode and Match on the left; your match, your kit and Play on the right. */
+.play-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 25vw, 480px);
+  gap: clamp(20px, 2vw, 40px);
+  align-items: start;
+}
+
+.play-main {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 1.6vw, 28px);
+  min-width: 0;
+}
+
+/* Three cards across while they fit at 240 px each (fewer, as wide, when there are fewer). */
+.choice-cards {
+  --cards-gap: clamp(10px, 1vw, 20px);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(240px, calc((100% - 2 * var(--cards-gap)) / 3)), 1fr));
+  gap: var(--cards-gap);
+}
+
+.choice-card-wrap {
+  position: relative;
+  display: flex;
+}
+
+.choice-card {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  gap: var(--sp-4);
+  min-height: 96px;
+  padding: var(--sp-4);
+  overflow: hidden;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.choice-card:hover {
+  border-color: var(--menu-muted);
+}
+
+.choice-card.selected {
+  border: 2px solid var(--orange);
+  box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.22);
+}
+
+.choice-card-pic {
+  position: absolute;
+  inset: 0;
+  background: var(--menu-panel-hi);
+}
+
+/* Over the picture: a dark foot for the words. */
+.map-cards .choice-card-pic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(5, 10, 26, 0.95) 8%, rgba(5, 10, 26, 0) 55%);
+}
+
+.map-cards .choice-card {
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+}
+
+.choice-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.choice-name {
+  font-size: clamp(22px, 1.6vw, 30px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.choice-blurb {
+  font-size: var(--fs-md);
+  line-height: 1.35;
+  color: var(--paper);
+}
+
+.choice-note {
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--menu-acid);
+}
+
+/* A card's tags: Dev at the top-left, the map's one light (Night) at the bottom-right, clear of its words. */
+.choice-card-tags {
+  position: absolute;
+  inset: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.map-cards .choice-card-tags .tag-blue {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+
+.map-cards .choice-text {
+  padding-right: 72px;
+}
+
+.choice-card-tags:empty {
+  display: none;
+}
+
+.choice-tick {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: #fff;
+  background: var(--orange);
+  border-radius: 50%;
+}
+
+.choice-card.selected .choice-tick {
+  display: grid;
+}
+
+.choice-tick svg.icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 3;
+}
+
+/* The mode cards: the picture on the left third, the sign and the words beside it. */
+.mode-cards .choice-card {
+  align-items: center;
+  min-height: clamp(110px, 8vw, 150px);
+  padding-left: calc(33% + var(--sp-4));
+}
+
+.mode-cards .choice-card-pic {
+  inset: 0 auto 0 0;
+  width: 33%;
+}
+
+.choice-card-icon {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+
+.choice-card-icon svg.icon {
+  width: 34px;
+  height: 34px;
+}
+
+.mode-cards .choice-card-icon {
+  left: calc(16.5% - 17px);
+  top: calc(50% - 17px);
+}
+
+/* On a mode card the tag sits top-right, left of the tick a picked card shows. */
+.mode-cards .choice-card-tags {
+  inset: 14px 54px auto auto;
+}
+
+.choice-card.soon {
+  cursor: default;
+}
+
+.choice-card.soon .choice-name {
+  color: var(--menu-faint);
+}
+
+/* Day | Night on a map card: over the top-left of the picture, apart from the card's own button. */
+.choice-variants {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.choice-card-wrap.has-variants .choice-card-tags {
+  top: 58px;
+}
+
+.choice-variant {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--control-xs);
+  padding: 0 12px;
+  font: 700 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--menu-muted);
+  background: rgba(7, 13, 31, 0.82);
+  border: 1px solid var(--menu-line);
+  cursor: pointer;
+}
+
+.choice-variant:hover {
+  color: var(--paper);
+}
+
+.choice-variant[aria-pressed='true'] {
+  color: var(--paper);
+  border-color: var(--orange);
+  box-shadow: inset 0 -3px 0 var(--orange);
+}
+
+/* The Match section: the Rules row across, then the rows in two columns, each a label over its options. */
+.match-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.match-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2) clamp(16px, 2vw, 40px);
+}
+
+.match-panel .menu-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-top: 0;
+}
+
+.match-panel .menu-row-name {
+  flex: none;
+}
+
+.match-panel .menu-row-control,
+.match-panel .picker {
+  flex: none;
+  width: 100%;
+}
+
+.match-panel .picker-row {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.match-rules-row .picker-button {
+  min-height: 56px;
+}
+
+/* Your match: the still, the map, the facts, your kit and Play. It stays in view as the left column scrolls, no taller
+   than the window, the rules' note scrolling inside it so Play is always on screen. */
+.play-aside {
+  /* Sticky offsets count from inside the screen's own padding (under the top bar already). */
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 0.9vh, 14px);
+  max-height: calc(100vh - var(--topbar-h) - var(--page-top) - var(--hints-h));
+  padding: var(--sp-5);
+  /* A window too short for it all still reaches Play, by scrolling the panel. */
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.play-aside > * {
+  flex: none;
+}
+
+.play-aside > .setup-rules {
+  flex: 0 1 auto;
+  min-height: 4.5em;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.play-still {
+  aspect-ratio: 16 / 9;
+  max-height: 18vh;
+  overflow: hidden;
+  background: var(--menu-panel-hi);
+}
+
+.play-map-line {
+  margin: var(--sp-2) 0 0;
+  font-size: clamp(28px, 2vw, 40px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.play-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px var(--sp-5);
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+.play-facts dd {
+  margin: 0;
+}
+
+.play-loadout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--sp-2);
+}
+
+.play-loadout-line,
+.setup-rules {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--menu-muted);
+}
+
+.setup-rules {
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 4px solid var(--menu-acid);
+}
+
+.play-pays {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+.play-pays::before {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffc21a;
+}
+
+.play-button {
+  margin-top: var(--sp-2);
+}
+
+.play-aside .kit-card {
+  min-height: clamp(80px, 9vh, 112px);
+}

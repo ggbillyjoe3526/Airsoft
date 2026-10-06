@@ -1,0 +1,387 @@
+/*
+ * Customise (G3): the parts down the left, the replica large in the middle with its options, the colour schemes.
+ */
+
+/* Customise: the parts down the left, the replica large in the middle with its options under it, its numbers right. */
+.customise-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 var(--sp-4);
+  font: 600 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.customise-crumbs b {
+  color: var(--orange-text);
+}
+
+.customise-crumb {
+  padding: 4px 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--menu-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.customise-crumb:hover {
+  color: var(--paper);
+}
+
+.customise-layout {
+  display: grid;
+  grid-template-columns: clamp(260px, 21vw, 400px) minmax(0, 1fr) clamp(280px, 21vw, 400px);
+  gap: clamp(16px, 1.4vw, 28px);
+  align-items: start;
+}
+
+.customise-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.customise-part {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 60px;
+  padding: 6px;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.customise-part:hover {
+  border-color: var(--menu-muted);
+}
+
+.customise-part.selected {
+  background: linear-gradient(90deg, rgba(255, 107, 26, 0.28), rgba(255, 107, 26, 0.08));
+  border-color: var(--orange);
+  box-shadow: inset 4px 0 0 var(--orange);
+}
+
+.customise-part.fixed,
+.customise-part.later {
+  cursor: default;
+}
+
+.customise-part.fixed .customise-part-name,
+.customise-part.later .customise-part-name {
+  color: var(--menu-faint);
+}
+
+.customise-part > .pic-slot,
+.part-swatch,
+.part-blank {
+  flex: none;
+  width: 76px;
+  height: 48px;
+}
+
+.part-blank {
+  border: 1px dashed var(--menu-line);
+}
+
+/* A part slot with nothing fitted (iron sights, the standard barrel): a dash in a dashed box. */
+.customise-part > .pic-slot.is-empty {
+  background: none;
+  border: 1px dashed var(--menu-line);
+}
+
+.customise-part > .pic-slot.is-empty .pic-placeholder::before {
+  content: '–';
+  font-size: var(--fs-lg);
+  color: var(--menu-muted);
+}
+
+.part-swatch {
+  background: linear-gradient(135deg, var(--a, #3f8cff) 50%, var(--b, #11141c) 50%);
+}
+
+.customise-part-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.customise-part-name {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.customise-part-value {
+  overflow: hidden;
+  font-size: var(--fs-md);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--menu-muted);
+}
+
+.customise-centre {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.customise-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.customise-hero {
+  order: 2;
+  aspect-ratio: 2 / 1;
+  max-height: 36vh;
+  background: none;
+}
+
+.customise-head {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customise-title {
+  margin: 0;
+  font-size: clamp(44px, 3.6vw, 68px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+}
+
+.customise-line {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+
+.customise-summary {
+  margin: 0;
+  max-width: 48em;
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.customise-note {
+  margin: 4px 0 0;
+  font-size: var(--fs-md);
+  color: var(--menu-acid);
+}
+
+.customise-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.customise-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--sp-4);
+}
+
+.customise-panel-title {
+  margin: 0;
+  font: 800 clamp(22px, 1.6vw, 30px) / 1 var(--ui-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.customise-panel-note,
+.customise-later {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+}
+
+.fit-row {
+  padding: 0;
+  border: 0;
+}
+
+.fit-row > .menu-row-name {
+  display: none;
+}
+
+/* Options and colour schemes as picture tiles. */
+.option-grid,
+.scheme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.option-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 150px;
+  padding: var(--sp-3);
+  overflow: hidden;
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.option-tile:hover {
+  border-color: var(--menu-muted);
+}
+
+.option-tile.selected {
+  border: 2px solid var(--orange);
+  box-shadow: 0 0 0 4px rgba(255, 107, 26, 0.22);
+}
+
+.option-tile > .pic-slot {
+  position: absolute;
+  inset: 0 0 30%;
+  background: none;
+}
+
+.option-none {
+  position: absolute;
+  inset: 0 0 40%;
+  display: grid;
+  place-items: center;
+  font: 800 var(--fs-2xl) / 1 var(--ui-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--menu-faint);
+}
+
+.option-words {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option-name {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+
+.option-line {
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.fit-readout:empty {
+  display: none;
+}
+
+/* Colour: what the scheme applies to, Realistic colours and the families it maps to. */
+.customise-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.colour-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+}
+
+.colour-applies {
+  margin: 0;
+  font: 800 var(--fs-xl) / 1.1 var(--ui-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.colour-note {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  color: var(--menu-soft);
+}
+
+.colour-other {
+  aspect-ratio: 2 / 1;
+  background: none;
+  border: 1px solid var(--menu-line-soft);
+}
+
+.colour-real-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--menu-line-soft);
+}
+
+.colour-real-title {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.colour-real-state {
+  font: 700 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--menu-muted);
+}
+
+.colour-real-state.on {
+  color: var(--menu-acid);
+}
+
+.family-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.family-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 90px;
+  padding: 8px 10px;
+  border: 1px solid var(--menu-line-soft);
+}
+
+.family-tile.selected {
+  border-color: var(--orange);
+}
+
+.family-tile .pic-slot {
+  position: absolute;
+  inset: 0 0 26%;
+  background: none;
+}
+
+.family-tile .option-name {
+  position: relative;
+  font-size: var(--fs-md);
+}

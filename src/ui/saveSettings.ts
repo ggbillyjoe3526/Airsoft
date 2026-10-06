@@ -53,7 +53,7 @@ export class SaveSettings {
       menuRow(SAVE_TEXT.statusLabel, `${SAVE_TEXT.statusHelp} ${SAVE_TEXT.privateHint}`, control(this.status)),
       menuRow(SAVE_TEXT.downloadLabel, SAVE_TEXT.downloadHelp, control(download, this.downloadedLine)),
       menuRow(SAVE_TEXT.loadLabel, SAVE_TEXT.loadHelp, control(load, this.fileInput, this.loadMessage)),
-      menuRow(SAVE_TEXT.undoLabel, '', control(undo, this.undoHelp)),
+      menuRow(SAVE_TEXT.undoLabel, SAVE_TEXT.undoNote, control(undo, this.undoHelp)),
       menuRow(SAVE_TEXT.restoreLabel, SAVE_TEXT.restoreHelp, this.restoreList),
       menuRow(SAVE_TEXT.protectLabel, SAVE_TEXT.protectHelp, control(this.protectButton, this.protectLine)),
       menuRow(SAVE_TEXT.deleteLabel, SAVE_TEXT.deleteHelp, control(del)),

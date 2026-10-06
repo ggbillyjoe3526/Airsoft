@@ -1,7 +1,8 @@
 /**
  * A just-enough fake DOM for Vitest (no jsdom or happy-dom here): `document.createElement` gives FakeElements that keep
  * their children, class names, hidden/disabled flags and click handlers, enough to build an OptionPicker or a
- * ChoiceDialog and read back what it shows. Install with vi.stubGlobal('document', fakeDocument()).
+ * ChoiceCards and read back what it shows. Install with vi.stubGlobal('document', fakeDocument()). A string appended
+ * becomes a '#text' child holding it.
  */
 export class FakeElement {
   className = '';
@@ -11,7 +12,11 @@ export class FakeElement {
   type = '';
   open = false;
   innerHTML = '';
-  style: Record<string, string> = {};
+  src = '';
+  alt = '';
+  decoding = '';
+  /** Inline styles by name; style.setProperty('--share', '0.5') sets style['--share'], as the CSSOM's does. */
+  style: Record<string, string> = fakeStyle();
   readonly children: FakeElement[] = [];
   private readonly attrs = new Map<string, string>();
   private readonly listeners = new Map<string, ((e: unknown) => void)[]>();
@@ -43,16 +48,30 @@ export class FakeElement {
   }
   /** The element this one was put in (append, appendChild, prepend, after), for `after`. */
   parent: FakeElement | null = null;
-  append(...nodes: FakeElement[]): void {
-    for (const n of nodes) n.parent = this;
-    this.children.push(...nodes);
+  append(...nodes: (FakeElement | string)[]): void {
+    for (const n of nodes) {
+      const node = typeof n === 'string' ? textNode(n) : n;
+      node.parent = this;
+      this.children.push(node);
+    }
+  }
+  removeAttribute(name: string): void {
+    this.attrs.delete(name);
+  }
+  hasAttribute(name: string): boolean {
+    return this.attrs.has(name);
+  }
+  /** The text of this element and everything in it, as the DOM's textContent reads it when it has children. */
+  get text(): string {
+    return this.children.length === 0 ? this.textContent : this.children.map((c) => c.text).join('');
   }
   appendChild(node: FakeElement): FakeElement {
     node.parent = this;
     this.children.push(node);
     return node;
   }
-  prepend(node: FakeElement): void {
+  prepend(n: FakeElement | string): void {
+    const node = typeof n === 'string' ? textNode(n) : n;
     node.parent = this;
     this.children.unshift(node);
   }
@@ -87,6 +106,26 @@ export class FakeElement {
   getBoundingClientRect(): { left: number; right: number; top: number; bottom: number } {
     return { left: 0, right: 0, top: 0, bottom: 0 };
   }
+}
+
+function fakeStyle(): Record<string, string> {
+  const style: Record<string, string> = {};
+  // Out of sight of a test's toEqual on the styles: not an own enumerable property.
+  Object.defineProperty(style, 'setProperty', { value: (name: string, value: string) => (style[name] = value), enumerable: false, writable: true });
+  return style;
+}
+
+function textNode(text: string): FakeElement {
+  const node = new FakeElement('#text');
+  node.textContent = text;
+  return node;
+}
+
+/** Every element under `root` (itself included) whose class list has `name`, in document order. */
+export function findAll(root: FakeElement, name: string): FakeElement[] {
+  const found = root.classList.contains(name) ? [root] : [];
+  for (const c of root.children) found.push(...findAll(c, name));
+  return found;
 }
 
 export function fakeDocument(): { createElement: (tag: string) => FakeElement } {

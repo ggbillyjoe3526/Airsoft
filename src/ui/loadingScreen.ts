@@ -1,7 +1,7 @@
 import { LOADING } from '../config/loading';
 
 /**
- * The loading screen index.html draws before any script runs (audit UI-12): the wordmark, a 2 px bar and a line of
+ * The loading screen index.html draws before any script runs (audit UI-12): the wordmark, a bar and a line of
  * text. The page shows the bar sliding (nothing is known yet); once the game's code runs it fills to what has really
  * happened (CORE-10), says which step is under way, and goes when the game is ready.
  */

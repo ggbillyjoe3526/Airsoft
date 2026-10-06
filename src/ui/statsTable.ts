@@ -1,4 +1,5 @@
 import { teamCss } from '../config/teams';
+import { headIcon } from './headIcon';
 import type { StatsRow, TeamBlock } from './statsRows';
 
 const COLUMNS: readonly { key: Exclude<keyof StatsRow, 'name' | 'you' | 'out'>; label: string; title: string }[] = [
@@ -19,7 +20,8 @@ export class StatsTable {
   readonly root: HTMLTableElement;
   private shape = '';
   private titles: HTMLTableCellElement[] = [];
-  private rows: { tr: HTMLTableRowElement; cells: HTMLTableCellElement[] }[][] = [];
+  /** Each player's row: its name (beside the head drawing, G3) and its number cells. */
+  private rows: { tr: HTMLTableRowElement; name: HTMLSpanElement; cells: HTMLTableCellElement[] }[][] = [];
 
   constructor(className = '') {
     this.root = document.createElement('table');
@@ -34,11 +36,11 @@ export class StatsTable {
       setText(this.titles[b]!, block.title);
       for (let r = 0; r < block.rows.length; r++) {
         const row = block.rows[r]!;
-        const { tr, cells } = this.rows[b]![r]!;
+        const { tr, name, cells } = this.rows[b]![r]!;
         if (tr.classList.contains('you') !== row.you) tr.classList.toggle('you', row.you);
         if (tr.classList.contains('out') !== row.out) tr.classList.toggle('out', row.out);
-        setText(cells[0]!, row.name);
-        for (let i = 0; i < COLUMNS.length; i++) setText(cells[i + 1]!, row[COLUMNS[i]!.key]);
+        setText(name, row.name);
+        for (let i = 0; i < COLUMNS.length; i++) setText(cells[i]!, row[COLUMNS[i]!.key]);
       }
     }
   }
@@ -67,8 +69,12 @@ export class StatsTable {
       this.titles.push(title);
       return block.rows.map(() => {
         const tr = body.insertRow();
-        const cells = [0, ...COLUMNS].map(() => tr.insertCell());
-        return { tr, cells };
+        const player = tr.insertCell();
+        player.className = 'stats-player';
+        const name = document.createElement('span');
+        player.append(headIcon(), name);
+        const cells = COLUMNS.map(() => tr.insertCell());
+        return { tr, name, cells };
       });
     });
   }

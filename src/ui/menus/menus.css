@@ -1,0 +1,21 @@
+/*
+ * The menus (graphics overhaul G3): every screen before, between and after matches, in the concept's look (bold, vibrant,
+ * readable: deep navy, an orange that moves you on, Barlow and Barlow Condensed). Imported after style.css, whose :root
+ * holds the shared tokens; the menus' own sizes are set on .menus in css/base.css. Text is never under 15 px here, notes are in
+ * sentence case at full contrast, and nothing behind a screen is blurred live: the backdrop is one picture, blurred when
+ * it was made (pipeline/map-stills.mjs).
+ */
+
+/* One file per screen or concern, each kept short; narrow.css last so its window-size rules win. */
+@import './css/fonts.css';
+@import './css/base.css';
+@import './css/controls.css';
+@import './css/play.css';
+@import './css/rows.css';
+@import './css/loadout.css';
+@import './css/customise.css';
+@import './css/settings.css';
+@import './css/settings-rows.css';
+@import './css/armory.css';
+@import './css/end.css';
+@import './css/narrow.css';

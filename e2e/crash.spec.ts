@@ -18,7 +18,7 @@ test('an error in play stops the game once, gives the controls back and shows a 
   });
   await page.goto('/?nolock&seed=7');
   await page.waitForSelector('.menu-title-start', { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Start' }).click();
+  await page.locator('.menu-title-start').click();
   await page.locator('.menu-setup').getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.locator('.menus')).toBeHidden({ timeout: 10_000 });
   await expect.poll(() => page.evaluate(() => (window as unknown as Airsoft).airsoft.state?.tick ?? 0), { timeout: 30_000 }).toBeGreaterThan(10);

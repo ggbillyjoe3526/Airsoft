@@ -10,43 +10,74 @@ function icon(paths: string): string {
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths}</svg>`;
 }
 
-const GEAR = icon(
-  '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.5"/>',
-);
-const BACKPACK = icon('<path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/><rect x="5" y="6" width="14" height="15" rx="3"/><path d="M9 13h6M9 13v3"/>');
+/** A shape filled in the text's colour (no outline): the play arrow, the rifle, the star. */
+const solid = (d: string): string => `<path d="${d}" fill="currentColor" stroke="none"/>`;
 
-/** New game's tiles, by the tile. */
-export const SETUP_ICONS = {
-  map: icon('<path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21z"/><circle cx="12" cy="10" r="2.3"/>'),
-  mode: icon('<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>'),
-  match: icon('<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M10 2.5h4M12 2.5V6"/>'),
-  difficulty: icon('<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-5"/><circle cx="12" cy="17" r="1.2"/>'),
-  loadout: BACKPACK,
-  armory: icon('<path d="M3.5 8L12 3.5 20.5 8v8L12 20.5 3.5 16z"/><path d="M3.5 8L12 12.5 20.5 8M12 12.5v8"/>'),
-  settings: GEAR,
+const SLIDERS = icon('<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>');
+const RIFLE = icon(solid('M1.5 9.5h13l1.6-1.6h5.4v3.2h-3.6l-1.2 1.6h-4.5l-2.4 5.6H6.6l1.2-5.6H1.5z'));
+const CRATE = icon('<path d="M3 7.5l9-4.5 9 4.5v9l-9 4.5-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/>');
+const TARGET = icon('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>');
+const PLAY = icon(solid('M7 4.5l12.5 7.5L7 19.5z'));
+const INFO = icon('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>');
+
+/** The top bar's places (G3), by the place, and the title screen's buttons beside them. */
+export const NAV_ICONS = {
+  setup: PLAY,
+  loadout: RIFLE,
+  armory: CRATE,
+  range: TARGET,
+  settings: SLIDERS,
+  tutorial: INFO,
 } as const;
 
-/** The Settings tabs, by the tab. */
+/** The menus' small signs (G3): a tick on what is picked, a lock, the search box, Day and Night, an arrow on the way on. */
+export const MENU_ICONS = {
+  check: icon('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+  lock: icon('<rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+  search: icon('<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/>'),
+  sun: icon('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  moon: icon('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+  arrowRight: icon('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+  hand: icon(
+    '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V3.5a1.5 1.5 0 0 1 3 0V11M14 11V4.5a1.5 1.5 0 0 1 3 0V13M17 9.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-6.2-3.8L3.5 13.5a1.5 1.5 0 0 1 2.6-1.5L8 15"/>',
+  ),
+  info: INFO,
+  star: icon(solid('M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z')),
+  trophy: icon('<path d="M7 3.5h10v5a5 5 0 0 1-10 0z"/><path d="M7 5H3.5v1.5A3.5 3.5 0 0 0 7 10M17 5h3.5v1.5A3.5 3.5 0 0 1 17 10M12 13.5V18M8 21h8M9 18h6"/>'),
+  dice: icon('<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
+  crate: CRATE,
+  coin: icon('<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/>'),
+} as const;
+
+/** The mode cards (G3), by the mode. */
+export const MODE_ICONS = {
+  elimination: icon('<circle cx="12" cy="12" r="8"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="2" fill="currentColor"/>'),
+  attackDefend: icon('<path d="M5 22V2.5M5 3h13.5l-3 4.5 3 4.5H5"/>'),
+  extraction: icon('<path d="M14 3.5H5v17h9"/><path d="M10 12h11M17 8l4 4-4 4"/>'),
+} as const;
+
+/** The Settings groups, by the group. */
 export const SETTINGS_TAB_ICONS: Record<SettingsTab, string> = {
-  controls: icon('<rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 3v6.5M6.5 9.5h11"/>'),
-  keys: icon('<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7.5 14h9"/>'),
-  graphics: icon('<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/>'),
-  crosshair: icon('<circle cx="12" cy="12" r="7.5"/><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5"/>'),
-  hud: icon('<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M6.5 7.5h3M14.5 16.5h3M10 7.5h4"/>'),
-  audio: icon('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>'),
-  accessibility: icon('<circle cx="12" cy="4.5" r="1.8"/><path d="M5 8.5l7 1.5 7-1.5M12 10v4.5M12 14.5l-3.5 6M12 14.5l3.5 6"/>'),
-  // A paint swatch fan: the Look tab (G1).
-  look: icon('<path d="M5 20.5l9-15.5 3.5 2-9 15.5z"/><path d="M8.5 22.5h12v-4h-9.7M7 17.5h.01"/>'),
+  graphics: icon('<path d="M3 17l5-6 4 4 3-3 6 5"/><rect x="2.5" y="3.5" width="19" height="17" rx="1.5"/><circle cx="16" cy="8" r="1.6"/>'),
+  display: icon('<rect x="2.5" y="4" width="19" height="12.5" rx="1.5"/><path d="M8 20.5h8M12 16.5v4"/>'),
+  audio: icon('<path d="M4 9.5h3.5L12.5 5v14l-5-4.5H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>'),
+  controls: icon('<rect x="6.5" y="2.5" width="11" height="19" rx="5.5"/><path d="M12 6.5v4"/>'),
+  gameplay: icon('<path d="M5 21V3.5M5 4h12l-2.5 4L17 12H5"/>'),
+  accessibility: icon('<circle cx="12" cy="4.5" r="2"/><path d="M4 8.5l8 1.5 8-1.5M12 10v4.5l-3.5 7M12 14.5l3.5 7"/>'),
+  // A palette: the Look group (G1).
+  look: icon(
+    '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.9 1.8-1.8 0-1.4-1.4-1.8-1.4-3.1 0-1 .8-1.8 1.8-1.8h2.4A4.4 4.4 0 0 0 21 9.9C21 6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.3" fill="currentColor"/><circle cx="10" cy="7" r="1.3" fill="currentColor"/><circle cx="15" cy="7" r="1.3" fill="currentColor"/>',
+  ),
   // A floppy disk: the save (M31).
-  save: icon('<path d="M4.5 3.5h12l3 3v13a1 1 0 0 1-1 1h-14a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M7.5 3.5v5h8v-5M7.5 20.5v-6h9v6"/>'),
+  save: icon('<path d="M5 3.5h11l3.5 3.5v13.5h-15z"/><path d="M8 3.5v5h7v-5M8 20.5v-6h8v6"/>'),
   dev: icon('<path d="M8.5 7L3.5 12l5 5M15.5 7l5 5-5 5"/>'),
 };
 
 /** The pause menu's buttons. */
 export const PAUSE_ICONS = {
-  resume: icon('<path d="M7 4.5v15l12-7.5z"/>'),
-  loadout: BACKPACK,
-  settings: GEAR,
+  resume: PLAY,
+  loadout: RIFLE,
+  settings: SLIDERS,
   quit: icon('<path d="M14 4.5H6.5v15H14M10.5 12h10M17 8.5l3.5 3.5-3.5 3.5"/>'),
 } as const;
 

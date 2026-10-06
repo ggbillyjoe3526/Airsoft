@@ -1,0 +1,326 @@
+/*
+ * Settings (G3): search and the groups on the left, the group's rows in the middle, about the row on the right.
+ */
+
+/* Settings: the search box and the groups on the left, the group's rows in the middle, about the row on the right. */
+.settings-columns {
+  display: grid;
+  grid-template-columns: clamp(250px, 19vw, 380px) minmax(0, 1fr) clamp(260px, 20vw, 420px);
+  gap: clamp(16px, 1.6vw, 32px);
+  align-items: start;
+}
+
+.settings-side {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.settings-search {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 56px;
+  padding: 0 var(--sp-4);
+  color: var(--menu-muted);
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line);
+}
+
+.settings-search:focus-within {
+  border-color: var(--orange);
+}
+
+.settings-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  font: 500 var(--fs-lg) var(--ui-font);
+  color: var(--paper);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.settings-search input::placeholder {
+  color: var(--menu-faint);
+}
+
+.settings-search-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--menu-muted);
+}
+
+.settings-search-note:empty {
+  display: none;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 64px;
+  padding: 8px var(--sp-4);
+  font: inherit;
+  color: var(--paper);
+  text-align: left;
+  background: rgba(14, 24, 52, 0.92);
+  border: 1px solid var(--menu-line-soft);
+  cursor: pointer;
+}
+
+.settings-tab svg.icon {
+  width: 26px;
+  height: 26px;
+  color: var(--menu-muted);
+}
+
+.settings-tab:hover {
+  border-color: var(--menu-muted);
+}
+
+.settings-tab.selected {
+  background: linear-gradient(90deg, rgba(255, 107, 26, 0.28), rgba(255, 107, 26, 0.08));
+  border-color: var(--orange);
+}
+
+.settings-tab.selected svg.icon {
+  color: var(--orange-text);
+}
+
+/* "The current place": a 4 px orange bar on the left of the group you're on. */
+.settings-tab.selected::before,
+.gear-slot.selected::before {
+  content: '';
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: 4px;
+  background: var(--orange);
+}
+
+.settings-tab-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-tab-name {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.05em;
+}
+
+.settings-tab-blurb {
+  font-size: var(--fs-sm);
+  color: var(--menu-soft);
+}
+
+/* A short window: the groups drop their blurbs (the name is what is read out anyway), so the rail and the Dev switch
+   fit above the key hints without scrolling. */
+@media (max-height: 900px) {
+  .settings-search {
+    min-height: 48px;
+  }
+
+  .settings-tab {
+    min-height: 48px;
+    padding-block: 4px;
+  }
+
+  .settings-tab-blurb {
+    display: none;
+  }
+}
+
+.settings-tab-save {
+  margin-top: var(--sp-3);
+}
+
+/* The box that shows the hidden Dev group (M24): a switch under the groups. */
+.settings-dev-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--control-md);
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--menu-muted);
+  cursor: pointer;
+}
+
+.settings-dev-toggle:hover,
+.settings-dev-toggle:focus-within {
+  color: var(--paper);
+}
+
+/* The real box covers the whole switch, unseen: a click anywhere on it ticks the box itself. */
+.settings-dev-toggle input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggle-track {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 13px;
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: #cfd8ee;
+  border-radius: 50%;
+  transition: translate var(--t-fast) var(--ease);
+}
+
+.settings-dev-toggle input:checked + .toggle-track {
+  background: var(--orange);
+}
+
+.settings-dev-toggle input:checked + .toggle-track::after {
+  translate: 22px 0;
+  background: #fff;
+}
+
+.settings-dev-toggle input:focus-visible + .toggle-track {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.settings-panels {
+  min-width: 0;
+}
+
+.settings-tab-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(12, 20, 42, 0.86);
+  border: 1px solid var(--menu-line-soft);
+}
+
+.settings-tab-panel + .settings-tab-panel {
+  margin-top: var(--sp-4);
+}
+
+.settings-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--sp-4);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+}
+
+.settings-panel-title {
+  margin: 0;
+  font-size: clamp(36px, 3vw, 60px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.settings-panel-blurb {
+  margin: 0;
+  font-size: var(--fs-lg);
+  color: var(--menu-soft);
+}
+
+.settings-subhead {
+  margin: var(--sp-4) var(--sp-4) var(--sp-2);
+  font: 700 var(--fs-md) / 1 var(--ui-display);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--orange-text);
+}
+
+.settings-tab-panel > .menu-readout,
+.settings-tab-panel > .picker-blurb,
+.settings-keys,
+.settings-tab-panel > .graphics-custom,
+.settings-tab-panel > .key-settings {
+  margin-left: var(--sp-4);
+  margin-right: var(--sp-4);
+}
+
+.settings-tab-panel .menu-row:hover,
+.settings-tab-panel .menu-row:focus-within {
+  background: rgba(63, 140, 255, 0.08);
+  box-shadow: inset 4px 0 0 var(--menu-blue);
+}
+
+/* A search that matches nothing in a group hides its rows; the groups with matches show their heads. */
+.search-miss {
+  display: none !important;
+}
+
+.settings-about {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+}
+
+.settings-about-title {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.settings-about-text {
+  margin: 0;
+  font-size: var(--fs-lg);
+  line-height: 1.45;
+}
+
+.settings-about-cost {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--orange-text);
+}
+
+.settings-about-cost:empty {
+  display: none;
+}
+
+.settings-tip {
+  margin: var(--sp-4) 0 0;
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  background: rgba(200, 255, 46, 0.06);
+  border: 1px solid rgba(200, 255, 46, 0.35);
+}
+
+.settings-tip b {
+  color: var(--menu-acid);
+}
+
+.settings-fullscreen {
+  min-width: 8em;
+}
