@@ -11,20 +11,6 @@ accepted and lands with this list. Below, the rest of section 8 of the report
 POOL-D, Extraction pay (owner decision 23: keep until the playtest shows the extraction rate) and REN-03 step 3 with
 REN-12 (when 4v4 and 5v5 go public); both stay in KNOWN_ISSUES.
 
-## TE1 · Token efficiency step 1: shorter CLAUDE.md, hooks, quiet test output, pipeline habits
-tier: ui
-perf: skip
-touches: CLAUDE.md, docs/PROCESS.md, docs/ROADMAP.md, docs/DECISIONS.md, docs/METRICS.md, docs/REVIEWS.md, docs/TASKS.md, docs/FEATURES.md, CHANGELOG.md, .claude/, package.json, playwright.config.ts, pipeline/hooks.test.mjs
-contract: none
-acceptance:
-  1. CLAUDE.md is at most about 10 KB; every rule it drops is in `docs/PROCESS.md` or `docs/ROADMAP.md`, and its section numbers are unchanged.
-  2. A Read of a text file over 40 KB without a range is stopped with a grep-first message; ranged reads, small files and bad input pass.
-  3. A cloud session installs dependencies when missing and sets PLAYWRIGHT_CHROMIUM; a local session is untouched.
-  4. `npm run t` and `npm run t:all` print dots and failures only; the gate's JSON reports are unchanged.
-  5. The pipeline skill has no status-only commits, one push with the records, and the ask-the-owner-at-once rule.
-status: open
-attempts: 0
-
 ## M77 · Hot-path trims (Audit 2 SIM-D: SIM-06, SIM-07, REN-10)
 tier: core
 perf: required
