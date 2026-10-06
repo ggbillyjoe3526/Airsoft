@@ -21,8 +21,8 @@ acceptance:
   2. Extraction's exit rings, washes and boards are instanced: a fixed number of draw calls whatever the exit count.
   3. Woodland's horizon tree ring at night draws at `trees: 1` (owner decision 8).
   4. Woodland and Neon Heights Extraction on Medium measure at or under 120 draw calls in the container perf run; rows 166 and 189 updated.
-status: critic
-attempts: 2
+status: retry 3 (waiting on the owner's Neon Heights Medium ruling)
+attempts: 3
 
 ## M76 · Perf gate matrix, baselines, quick-gate precompression and build label (Audit 2 CORE-C: CORE-03, CORE-10, CORE-11, CORE-12)
 tier: ui
