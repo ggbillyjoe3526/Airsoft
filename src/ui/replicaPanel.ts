@@ -1,8 +1,8 @@
+import { HUD_TEXT } from '../config/hudText';
 import { FIRE_MODE_LABELS, type FireMode, type ReplicaConfig } from '../config/replicas';
 import type { PictureSubject } from '../render/itemPictures';
 import { type Armament, canReload, nextSpare, type ReplicaAmmo, spareBBs } from '../sim/armament';
 import { emptyMagHint, isLowAmmo } from './ammoStatus';
-import { HUD_TEXT } from '../config/hudText';
 import { ITEM_ICONS } from './menus/icons';
 import { PictureSlot, type PictureSource } from './menus/menuPictures';
 import { TimedFill } from './timedFill';

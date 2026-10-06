@@ -1,7 +1,7 @@
-import { HUD_TEXT } from '../config/hudText';
 import * as THREE from 'three';
 import type { Action } from '../config/controls';
 import { EXTRACTION } from '../config/extraction';
+import { HUD_TEXT } from '../config/hudText';
 import type { HitConfig } from '../config/hits';
 import { type HitFeedMode, TEAMMATE_MARKERS } from '../config/matchInfo';
 import type { BodyConfig } from '../config/movement';
