@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXTRACTION } from '../config/extraction';
+import { EXTRACTION, homeTeamCap } from '../config/extraction';
 import { BODY } from '../config/movement';
 import { NAV } from '../config/nav';
 import { PHYSICS } from '../config/physics';
@@ -30,13 +30,15 @@ describe('Extraction map data (M43)', () => {
     const x = map.extraction;
     if (!x) continue;
     const nav = buildNavGrid(map, NAV);
+    /** The biggest home team a run starts with: a full squad against the level with the most opponents (M72, BAL-03). */
+    const most = Math.max(...Object.keys(EXTRACTION.opponentsByLevel).map((level) => homeTeamCap(x.baseOpponents, MAX_SQUAD, level as keyof typeof EXTRACTION.opponentsByLevel)));
     describe(label, () => {
       it('has walkable insertions for a full squad, starts for the most opponents, and exits you can stand in', () => {
         for (const ins of x.insertions) {
           expect(ins.spawns.length, ins.name).toBeGreaterThanOrEqual(MAX_SQUAD);
           for (const s of ins.spawns) expect(isWalkableAt(nav, s.position.x, s.position.y, s.position.z), ins.name).toBe(true);
         }
-        expect(x.opponentStarts.length).toBeGreaterThanOrEqual(x.baseOpponents + MAX_SQUAD);
+        expect(x.opponentStarts.length).toBeGreaterThanOrEqual(most);
         for (const s of x.opponentStarts) expect(isWalkableAt(nav, s.position.x, s.position.y, s.position.z), JSON.stringify(s.position)).toBe(true);
         for (const e of x.exits) {
           let ok = 0;
@@ -63,7 +65,7 @@ describe('Extraction map data (M43)', () => {
 
       it('starts the home team well away from the squad', () => {
         for (const ins of x.insertions) {
-          for (const s of pickOpponentStarts(x.opponentStarts, ins.spawns, x.baseOpponents + MAX_SQUAD)) {
+          for (const s of pickOpponentStarts(x.opponentStarts, ins.spawns, most)) {
             for (const sp of ins.spawns) expect(Math.hypot(s.position.x - sp.position.x, s.position.z - sp.position.z), ins.name).toBeGreaterThan(15);
           }
         }

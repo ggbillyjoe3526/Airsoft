@@ -115,10 +115,13 @@ describe('custom match rules (M20)', () => {
     expect(formatRoundTime(300)).toBe('5:00');
     expect(matchRulesSummary(DEFAULT_MATCH_RULES)).toEqual({ value: '3v3 · first to 5', detail: "2:30 rounds. Friendly fire on; ricochets don't count." });
     // Extraction (M43): the squad against the home team, one run.
-    expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, { baseOpponents: 2, runTime: 480 })).toEqual({
+    expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, { baseOpponents: 2, runTime: 480 }, 'easy')).toEqual({
       value: 'Squad of 2 · 4 in the home team',
       detail: "One 8:00 run. Friendly fire on; ricochets don't count.",
     });
+    // The home team's size follows its level (Audit 2, EXTRACTION.opponentsByLevel): Normal is the baseline, Pro one more.
+    expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, { baseOpponents: 2, runTime: 480 }, 'normal').value).toBe('Squad of 2 · 4 in the home team');
+    expect(runRulesSummary({ ...DEFAULT_MATCH_RULES, teamSize: 2 }, { baseOpponents: 2, runTime: 480 }, 'pro').value).toBe('Squad of 2 · 5 in the home team');
   });
 
   it('read back what was saved, and the default for anything missing or off the menu', () => {
@@ -169,11 +172,11 @@ describe('M53 QA: what an Extraction run reads of the Rules picker (audit UI-01)
   it('names every kit and minimap switch on the Match button in a run, in the match summary\'s order, and none of the round rules', () => {
     const all: MatchRules = { ...DEFAULT_MATCH_RULES, heardOnMinimap: false, semiAutoOnly: true, realcap: true, factoryKit: true, winByTwo: true, timeOutToMorePlayers: true };
     const run = { baseOpponents: 2, runTime: 480 };
-    expect(runRulesSummary(all, run).detail).toBe(
+    expect(runRulesSummary(all, run, 'normal').detail).toBe(
       `One 8:00 run. Friendly fire on; ricochets don't count. Minimap: teammates only. Semi only. Realcap ${REALCAP.magSize} × ${REALCAP.mags}. Factory kit for everyone.`,
     );
     // Skirmish's switches add nothing, as before M53.
-    expect(runRulesSummary(DEFAULT_MATCH_RULES, run).detail).toBe("One 8:00 run. Friendly fire on; ricochets don't count.");
+    expect(runRulesSummary(DEFAULT_MATCH_RULES, run, 'normal').detail).toBe("One 8:00 run. Friendly fire on; ricochets don't count.");
     // The elimination summary says the same notes after its own round rules.
     expect(matchRulesSummary(all).detail).toBe(
       `2:30 rounds. Friendly fire on; ricochets don't count. Win by two. Time-out: more players left wins. Minimap: teammates only. Semi only. Realcap ${REALCAP.magSize} × ${REALCAP.mags}. Factory kit for everyone.`,

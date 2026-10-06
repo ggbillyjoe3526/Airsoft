@@ -12,16 +12,18 @@ const SEEDS = 48;
 const BANDS: ExtractionBands = {
   // Measured: Easy 65 % and 54 FC a minute, Normal 19 % and 20, Hard 19 % and 24, Pro 25 % and 33. With the torches the
   // game fits every bot at night (M57, audit AI-02, on M55's maps): Easy 52 % (25 of 48) and 48, Normal 10 % (5) and 13,
-  // Hard 12.5 % (6) and 17.5, Pro 19 % (9) and 24; Easy's and Normal's floors moved down (45 to 35 %, 5 to 3 %): each
-  // measure sat about one standard error above its old floor. The Extraction balance pass (BAL PR 2) sets them again.
-  // M71 (Audit 2: every level hunts the middle and keeps out of the light, a torch only for a fight within 20 m or a
-  // search's last stretch): Easy 56 % (27) and 45, Normal 35.4 % (17) and 35, Hard 19 % (9) and 19, Pro 25 % (12) and
-  // 29: Easy, Normal and Hard come out in order again. Normal's ceiling moved 35 to 50 % (it read 35.4 %); BAL PR 2
-  // (M72) sets every band round its own figures.
-  easy: { extract: [0.35, 0.8], fcPerMinute: [30, 80] },
-  normal: { extract: [0.03, 0.5], fcPerMinute: [5, 40] },
-  hard: { extract: [0.05, 0.35], fcPerMinute: [5, 45] },
-  pro: { extract: [0.08, 0.4], fcPerMinute: [10, 55] },
+  // Hard 12.5 % (6) and 17.5, Pro 19 % (9) and 24. M71 (Audit 2: every level hunts the middle and keeps out of the
+  // light, a torch only for a fight within 20 m or a search's last stretch): Easy 56 % (27) and 45, Normal 35.4 % (17)
+  // and 35, Hard 19 % (9) and 19, Pro 25 % (12) and 29.
+  // M72 (Audit 2 BAL-03, owner decisions 1a and 8: the home team one more at Pro, a 3 s grace for
+  // the squad at the insertion and after a respawn, and the home team
+  // keeping 30 m from Woodland's insertion), seeds 1-48: Easy 54 % (26) and 45, Normal (the baseline, the base
+  // plus the squad, owner 2026-10-06) 33 % (16) and 32, Hard 15 % (7) and 15, Pro 19 % (9) and 21: Easy, Normal and Hard in order again, asserted below. Each band is
+  // the figure ±15 points (extract) and ±20 FC a minute, floored at 0.
+  easy: { extract: [0.39, 0.69], fcPerMinute: [25, 65] },
+  normal: { extract: [0.18, 0.48], fcPerMinute: [12, 52] },
+  hard: { extract: [0, 0.3], fcPerMinute: [0, 35] },
+  pro: { extract: [0.04, 0.34], fcPerMinute: [1, 41] },
 };
 
-describeExtractionBalance('Extraction balance on Woodland (M48)', WOODLAND, { seeds: SEEDS, bands: BANDS, harder: [['easy', 'normal'], ['easy', 'hard'], ['easy', 'pro']], timeoutMs: 900_000 });
+describeExtractionBalance('Extraction balance on Woodland (M48)', WOODLAND, { seeds: SEEDS, bands: BANDS, harder: [['easy', 'normal'], ['normal', 'hard'], ['easy', 'pro']], timeoutMs: 900_000 });

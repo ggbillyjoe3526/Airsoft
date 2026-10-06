@@ -1,4 +1,5 @@
-import { EXTRACTION } from '../../config/extraction';
+import type { Difficulty } from '../../config/bots';
+import { EXTRACTION, homeTeamCap } from '../../config/extraction';
 import { formatRoundTime, type MatchRules, REALCAP_TEXT } from '../../config/matchRules';
 import type { MatchMode } from '../../config/modes';
 import type { ExtractionData } from '../../map/mapTypes';
@@ -20,6 +21,8 @@ export interface MatchRulesText {
   /** The match's friendly fire and ricochet rules (M20). */
   friendlyFire: boolean;
   ricochetsCount: boolean;
+  /** The opponents' level: in Extraction it sizes the home team (homeTeamCap); absent, the map's base plus the squad. */
+  opponents?: Difficulty;
   /** The Rules picker's switches (M39); absent, as the game always played. */
   switches?: Pick<MatchRules, 'winByTwo' | 'timeOutToMorePlayers' | 'heardOnMinimap' | 'semiAutoOnly' | 'realcap' | 'factoryKit'>;
 }
@@ -36,7 +39,7 @@ function describeRun(r: MatchRulesText, x: ExtractionData | undefined): string {
   const mates = r.teamSize - 1;
   const squad = mates === 0 ? 'Solo: just you' : `You and ${mates} bot teammate${mates === 1 ? '' : 's'}, who follow you`;
   return (
-    `${squad} (${r.playerTeam}), against ${x.baseOpponents + r.teamSize} ${r.enemyTeam} bots of the home team. ` +
+    `${squad} (${r.playerTeam}), against ${r.opponents ? homeTeamCap(x.baseOpponents, r.teamSize, r.opponents) : x.baseOpponents + r.teamSize} ${r.enemyTeam} bots of the home team. ` +
     // Waves (M45), on a map with regen points.
     (x.regens.length > 0 ? `The ones you hit come back in waves, out of your sight, ${lateJoin(x)}. ` : '') +
     `You have ${formatRoundTime(x.runTime)} to get to an open exit and stand in it for ${EXTRACTION.extractTime} s while you're counted out; ` +

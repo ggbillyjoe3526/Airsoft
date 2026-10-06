@@ -82,7 +82,12 @@ export function aimBot(b: Bot, w: BotWorld, target: Character | undefined, eye: 
     look.yaw = facing;
     // Pro (M37) aims at the corners someone would come round instead of sweeping.
     if (b.holding && !(b.skill.holdsAngles && heldAngleLook(b, w, eye, facing, false))) {
-      look.yaw += Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
+      const sweep = Math.sin((2 * Math.PI * b.teamWait) / cfg.holdSweepPeriod) * cfg.holdSweepDeg * DEG;
+      // Leaning out (a guard's lean post, M55): sweep only away from the lean's side. The lean follows the look, so
+      // turning towards that side swings the leaned eye back behind the cover it leans past (M72: a Woodland locker
+      // guard saw its way in for 69 % of its ticks). A lean of +1 is to the right and positive yaw turns left, so
+      // holdLean × |sweep| always turns away from the lean.
+      look.yaw += b.holdLean !== 0 ? b.holdLean * Math.abs(sweep) : sweep;
     }
   }
   stepAim(b.aim, look.yaw, look.pitch, 0, cfg, b.skill, b.rng, dt);

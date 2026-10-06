@@ -337,7 +337,7 @@ along its `rise`; `map/surfaces.ts` gives the walkable height of floors and ramp
 when body height is clear between them), spawns and dead-zone spots
 per end of the map (0 west, 1 east), bot lanes from end 0 to end 1, and optionally one flagpole at end 1 (maps
 without one are elimination only) and an Extraction block (M43: insertions, exits, home-team starts, run time and base
-opponents; M44: case spots, each naming the kinds of case it suits; M45: the home team's regen points and how far from the squad they must be; M48: Woodland's and Neon Heights' blocks, each in a file of its own, `map/woodlandExtraction.ts` and `map/neonHeightsExtraction.ts`, placed on the layout through the map's own helpers; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
+opponents; M44: case spots, each naming the kinds of case it suits; M45: the home team's regen points and how far from the squad they must be; M72: optionally `insertionBerth`, the metres the home team's bots keep from the insertion at the start (Woodland 30); M48: Woodland's and Neon Heights' blocks, each in a file of its own, `map/woodlandExtraction.ts` and `map/neonHeightsExtraction.ts`, placed on the layout through the map's own helpers; `map/playableMode.ts` falls back to Elimination on a map without the data a mode needs). Teams don't own an end: `round.ts` (`teamEnd`, `placeTeams`) puts each team
 at an end every round start (in Attack / Defend the attackers start at end 0; in Elimination Blue starts at
 `RoundRules.eliminationFirstEnd`, the east on Depot)
 and swaps them at half-time, and `Character.end` says where a character started, for its dead zone and its bot's
@@ -370,7 +370,7 @@ request. Each line names where it lives and what pins it.
   home team's waves (`ExtractionContext.waves`: regen points, the interval, the cap and its late extra, and the world
   query the out-of-sight check casts through; `ExtractionContext.reserveAt`: where the reserve past the cap waits), and
   the event `returned` reports an opponent back in a wave. Since M55 `ExtractionContext.sight` (optional: the world
-  query and body) lets a case open only in the runner's line of sight; without it cases open by reach alone. Since M46 the run names the squad's team (`RunState.squadTeam`). The `torch` event (M33h) reports a weapon light switched on
+  query and body) lets a case open only in the runner's line of sight; without it cases open by reach alone. Since M46 the run names the squad's team (`RunState.squadTeam`). Since M72 `Character.grace` counts down a squad member's insertion grace (BBs neither hit it nor are hit by it; a BB it stops reports `bbImpact`, no hit). The `torch` event (M33h) reports a weapon light switched on
   or off. Pinned by `sim/simulation.test.ts`, `sim/extraction.test.ts`, `sim/extractionCases.test.ts`,
   `sim/extractionWaves.test.ts`, `sim/torch.test.ts`.
 - **`stepSimulation(state, commands, ctx, dt)`** (`sim/simulation.ts`): the fixed 60 Hz step and the order of its

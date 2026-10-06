@@ -43,7 +43,7 @@ export class RunRoles {
   private readonly slots: GuardSlot[] = [];
   /** The patrols and returners hunt from now on. */
   private hunting = false;
-  /** The cases within insertionBerth of the squad's insertion: never guarded nor patrolled. */
+  /** The cases within the berth of the squad's insertion: never guarded nor patrolled. */
   private readonly berth: boolean[] = [];
   /** The latest place the home team saw or heard the squad, and when (s). */
   private readonly news = vec3();
@@ -60,12 +60,13 @@ export class RunRoles {
 
   /**
    * The run's start: guards to the locker (and a field case), patrols in pairs over the rest; no field case's guard and
-   * no patrol round within insertionBerth of `insertion` (the middle of the squad's insertion). The locker is guarded
+   * no patrol round within `berth` metres of `insertion` (the middle of the squad's insertion; the map's
+   * ExtractionData.insertionBerth, else BOT_BEHAVIOUR.insertionBerth). The locker is guarded
    * wherever it stands: it is the run's prize.
    */
-  start(bots: readonly Bot[], w: BotWorld, insertion: Vec3): void {
+  start(bots: readonly Bot[], w: BotWorld, insertion: Vec3, berth: number = w.cfg.insertionBerth): void {
     const cases = w.round.run.cases;
-    for (const k of cases) this.berth.push(flat(k.position, insertion) < w.cfg.insertionBerth);
+    for (const k of cases) this.berth.push(flat(k.position, insertion) < berth);
     const team = bots.filter((b) => b.character.team === this.home && isInPlay(b.character));
     const locker = cases.findIndex((k) => k.kind === LOCKER && !k.open);
     const lockerGuards = locker >= 0 ? Math.min(this.skill.lockerGuards, team.length) : 0;

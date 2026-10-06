@@ -54,6 +54,8 @@ export interface BotControllerOptions {
    */
   teamCfg?: readonly BotConfig[];
   seed: number;
+  /** Extraction: the map's insertion berth (ExtractionData.insertionBerth; absent, BOT_BEHAVIOUR.insertionBerth). */
+  insertionBerth?: number | undefined;
 }
 
 /**
@@ -585,7 +587,7 @@ export class BotController {
     if (round.mode === 'extraction') {
       const home = 1 - round.run.squadTeam;
       this.run = new RunRoles(home, round.clock, this.cfgOf(home));
-      this.run.start(this.bots, this.world, this.spawnCentre[round.run.squadTeam]!);
+      this.run.start(this.bots, this.world, this.spawnCentre[round.run.squadTeam]!, this.opts.insertionBerth);
     }
   }
 
