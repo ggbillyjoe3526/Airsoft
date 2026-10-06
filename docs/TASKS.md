@@ -20,7 +20,7 @@ acceptance:
   1. Measured after M71 by night at Normal, 16 seeds. If the west takes at least 45 %, the task closes with the figure recorded in KNOWN_ISSUES rows 20 and 184 and no code change.
   2. Otherwise the mid lane point moves inside the bar's door line (owner decision 6), then a planter only if that is not enough; the east takes at most 55 % of first hits and the Neon Heights guards read 45–55 %.
 status: gates
-attempts: 0
+attempts: 1
 
 ## M74 · Route searches that fit a tick (Audit 2 SIM-B + AI-D: SIM-01, AI-04)
 tier: core

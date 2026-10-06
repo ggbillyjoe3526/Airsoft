@@ -584,8 +584,10 @@ const LANES: Vec3[][] = [
   [vec3(-19.5, 0, 7.5), vec3(-14, 0, 11.8), vec3(-6, 0, 12), vec3(0.5, 0, 12.6), vec3(8, 0, 12.6), vec3(10.3, 0, 9.5), vec3(10.2, 0, 7.2)],
   // Mid: through the Arcade, past the van, the bar door, the atrium. The east's last two holds are deep in the bar (M73,
   // audit BAL-04): through the door they see 2.3 m of the avenue. From (5.4, 1.7), 1.1 m behind the door, they saw 4 m,
-  // and the east landed the first hit in 61 % of Normal night rounds (seeds 1-16); from here 50.5 %.
-  [vec3(-19.5, 0, 4.8), vec3(-17, 0, 7), vec3(-16, 0, 1.2), vec3(-13.8, 0, 1.2), vec3(-9.4, 0, 2.2), vec3(-5.4, 0, 5.9), vec3(-2.7, 0, 5.9), vec3(-2.7, 0, 2.2), vec3(1.6, 0, 1.7), vec3(7.4, 0, 1), vec3(8.6, 0, 1.4)],
+  // and the east landed the first hit in 61 % of Normal night rounds (seeds 1-16); from here 50.5 %. The deeper hold is
+  // the second-last point, the one a defender holding forward takes: in walking order (7.4, 1) then (8.6, 1.4) the
+  // first-hit share read 62.5 %, and (8.6, 1.4) then (9.8, 1.4) put three Normal guards just outside 45-55 % (M73).
+  [vec3(-19.5, 0, 4.8), vec3(-17, 0, 7), vec3(-16, 0, 1.2), vec3(-13.8, 0, 1.2), vec3(-9.4, 0, 2.2), vec3(-5.4, 0, 5.9), vec3(-2.7, 0, 5.9), vec3(-2.7, 0, 2.2), vec3(1.6, 0, 1.7), vec3(8.6, 0, 1.4), vec3(7.4, 0, 1)],
   // High: the plaza stair, the walkway and the footbridge door into the Clinic, the stairwell to the Studio, the Sky Bridge, the Tower's Level 2.
   [
     vec3(-19.5, 0, -6.5),

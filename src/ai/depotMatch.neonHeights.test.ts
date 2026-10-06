@@ -12,10 +12,10 @@ const TEAM_SIZE = 4;
 /** Level 1's floor is at +3 m: anyone above this stands on Level 2 (or high on a stair to it). */
 const LEVEL_2 = 5;
 /**
- * The west end's share of the decided rounds, by lighting: by Day centred on the 45 % it measures over 96 seeds (M55),
- * by Night the even 40-60 % (M57: with the torches the game fits every bot at night the west wins 54 % here).
+ * The west end's share of the decided rounds, by lighting: the even 40-60 % both ways since M73 put the east's bar-door
+ * holds deep in the bar (the west 45.5 % by Day, 52.5 % by Night here; by Day it was centred on 45 % before, M55).
  */
-const WEST: Readonly<Record<LightingPresetId, readonly [number, number]>> = { day: [0.35, 0.55], night: [0.4, 0.6] };
+const WEST: Readonly<Record<LightingPresetId, readonly [number, number]>> = { day: [0.4, 0.6], night: [0.4, 0.6] };
 
 describe.each<LightingPresetId>(['day', 'night'])('a 4v4 Elimination match on Neon Heights by %s over 16 seeds (M34c, M34d)', (light) => {
   const map = mapUnderLighting(NEON_HEIGHTS, light);
