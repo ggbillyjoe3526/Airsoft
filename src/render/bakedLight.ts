@@ -28,10 +28,10 @@ let loading: Promise<void> | null = null;
 export function loadBakedLight(): Promise<void> {
   loading ??= Promise.all(
     (Object.keys(BAKE_FILES) as BakeFileId[]).map((id) =>
-      BAKE_FILES[id]().then(
-        (text) => void loaded.set(id, decodeProbeFile(fromBase64(text))),
-        (error: unknown) => console.warn(`The baked light file ${id} could not be loaded; that map is drawn without it.`, error),
-      ),
+      BAKE_FILES[id]()
+        .then((text) => void loaded.set(id, decodeProbeFile(fromBase64(text))))
+        // A file that loads but does not decode is left out too: catching after the decode keeps it from stopping the game's start.
+        .catch((error: unknown) => console.warn(`The baked light file ${id} could not be loaded; that map is drawn without it.`, error)),
     ),
   ).then(() => undefined);
   return loading;

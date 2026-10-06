@@ -22,11 +22,8 @@ afterEach(() => {
 });
 
 describe('a probe file that does not decode (G6 QA)', () => {
-  // KNOWN DEFECT (QA, G6): render/bakedLight.ts loadBakedLight catches a file that fails to load but not one that fails to
-  // decode (the error handler of `.then(ok, error)` does not see `ok`'s throw), so loadBakedLight() rejects and Game.create
-  // (Promise.all) fails to boot. Marked `fails` so the suite stays green; when the worker fixes it this test goes red:
-  // change `it.fails` to `it`.
-  it.fails('is left out with a warning, as one that does not load is: loading resolves and the map draws without baked light', async () => {
+  // QA found loadBakedLight rejecting on a file that loads but fails to decode, which stopped Game.create; fixed in G6.
+  it('is left out with a warning, as one that does not load is: loading resolves and the map draws without baked light', async () => {
     const { bakedLightFor, loadBakedLight } = await loadedOverGarbage();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await expect(loadBakedLight()).resolves.toBeUndefined();
